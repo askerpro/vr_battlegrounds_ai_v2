@@ -1,0 +1,58 @@
+# UltimateXR — Контекст проекта (точка входа)
+
+> **Для Copilot:** этот файл — точка входа. При работе с UltimateXR всегда начинай отсюда.
+> Детали по каждому модулю — в соответствующих файлах этой папки.
+
+---
+
+## Проект
+
+**Название:** VR Battlegrounds AI  
+**Репозиторий:** https://github.com/askerpro/vr_battlegrounds_ai (ветка: `dev`)  
+**Разработчик:** новичок в Unity/C#/VR, изучает итерационно
+
+| Параметр | Значение |
+|---|---|
+| Движок | Unity (URP v17.0.3) |
+| Платформа | Android — Oculus Quest 2 / Quest 3 |
+| XR SDK | `com.unity.xr.oculus` v4.4.0 |
+| Ввод | `com.unity.inputsystem` v1.11.2 |
+| XR Management | `com.unity.xr.management` v4.5.4 |
+
+---
+
+## Библиотека UltimateXR
+
+- **Путь:** `Assets/ultimate-xr/`
+- **Namespace:** `UltimateXR.*`
+- **Скрипты рантайма:** `Assets/ultimate-xr/Runtime/Scripts/`
+- **Документация (оригинал):** `Assets/ultimate-xr/Docs/guides/`
+- **Контекст для ИИ:** `Assets/ultimate-xr/Docs/_context/` ? текущая папка
+
+> Ссылки вида `/guides/<name>` в документации = `Assets/ultimate-xr/Docs/guides/<name>.md`
+
+---
+
+## Файлы контекста
+
+| Файл | Содержание | Статус |
+|---|---|---|
+| `README.md` | Этот файл — точка входа | ? Готов |
+| `architecture.md` | Все модули, ключевые классы, диаграмма | ? Готов |
+| `avatar-guide.md` | Аватары, rig, HandsIntegration | ? Готов |
+| `interactions.md` | Grabbing, UxrGrabbableObject, события | ? Готов |
+| `locomotion.md` | Телепортация, smooth movement | ? Готов |
+| `ui.md` | VR UI, лазерные указки, fingertip | ? Готов |
+| `scripting.md` | Паттерны кода, примеры API, input | ? Готов |
+| `progress.md` | Прогресс изучения, заметки, TODO | ? Создать по мере работы |
+
+---
+
+## Игровые механики (заполнять по мере разработки)
+
+| Механика | Статус | Файл контекста |
+|---|---|---|
+| Передвижение (телепорт) | ? Не реализовано | `locomotion.md` |
+| Захват оружия | ? Не реализовано | `interactions.md` |
+| Стрельба | ? Не реализовано | `architecture.md` ? Weapons |
+| VR UI (меню) | ? Не реализовано | `ui.md` |

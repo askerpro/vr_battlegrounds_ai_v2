@@ -143,6 +143,21 @@ bool peeking = UxrCameraWallFade.IsAvatarPeekingThroughGeometry(UxrAvatar.LocalA
 
 **Принцип:** все изменения ? `UxrManager.ComponentStateChanged` ? сериализация ? сеть ? `ExecuteStateSyncEvent` на другом устройстве.
 
+### Mirror (сетевой фреймворк проекта)
+
+**Путь:** `Assets/Mirror/`
+
+| Аспект | Решение |
+|---|---|
+| Базовый класс сетевых объектов | `NetworkBehaviour` |
+| Управление сессией | `NetworkManager` |
+| Серверные команды | `[Command]` — вызов от клиента на сервер |
+| Обновление клиентов | `[ClientRpc]` — вызов с сервера на всех клиентов |
+| Синхронизация полей | `[SyncVar]` |
+| Топология | Host = администратор арены |
+
+> **Для Copilot:** серверная логика (`MatchManager`, `RoundManager`, `SetManager`) выполняется только на сервере (`[Server]`). Клиенты получают обновления через `[ClientRpc]`. Для синхронизации VR-состояния использовать `UxrNetworkImplementation` + Mirror.
+
 ---
 
 ## Модуль 8: Animation / Tweening — `Runtime/Scripts/Animation/`
@@ -195,5 +210,5 @@ UxrManager (Singleton)
 | UI | `Runtime/Scripts/UI/` | ? Базовое знакомство |
 | Animation | `Runtime/Scripts/Animation/` | ? Базовое знакомство |
 | CameraUtils | `Runtime/Scripts/CameraUtils/` | ? Базовое знакомство |
-| Networking | `Runtime/Scripts/Networking/` | ? Не изучено |
+| Networking | `Runtime/Scripts/Networking/` | ? Mirror — базовое знакомство |
 | Devices | `Runtime/Scripts/Devices/` | ? Не изучено |

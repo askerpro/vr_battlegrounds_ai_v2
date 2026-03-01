@@ -18,6 +18,7 @@
 | XR SDK | `com.unity.xr.oculus` v4.4.0 |
 | Ввод | `com.unity.inputsystem` v1.11.2 |
 | XR Management | `com.unity.xr.management` v4.5.4 |
+| Сеть | Mirror (Assets/Mirror/) |
 
 ---
 
@@ -46,13 +47,17 @@
 | `scripting.md` | Паттерны кода, примеры API, input | ? Готов |
 | `progress.md` | Прогресс изучения, заметки, TODO | ? Создать по мере работы |
 
+> **Документация игры** (геймплей, механики, архитектура матча) находится отдельно: `Assets/Docs/`
+
 ---
 
-## Игровые механики (заполнять по мере разработки)
+## Игровые механики
+
+> Документация игры находится в `Assets/Docs/`. Ниже — только механики, связанные с UltimateXR SDK.
 
 | Механика | Статус | Файл контекста |
 |---|---|---|
-| Передвижение (телепорт) | ? Не реализовано | `locomotion.md` |
 | Захват оружия | ? Не реализовано | `interactions.md` |
 | Стрельба | ? Не реализовано | `architecture.md` ? Weapons |
-| VR UI (меню) | ? Не реализовано | `ui.md` |
+| VR UI (меню администратора) | ? Не реализовано | `ui.md` |
+| Mirror + UxrNetworkImplementation | ? Не реализовано | `architecture.md` ? Networking |

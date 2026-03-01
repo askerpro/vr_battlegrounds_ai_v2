@@ -13,6 +13,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
 | Ввод | `com.unity.inputsystem` v1.11.2 |
 | XR Management | `com.unity.xr.management` v4.5.4 |
 | VR фреймворк | UltimateXR (VRMADA), локально в `Assets/ultimate-xr/` |
+| Сеть | Mirror, локально в `Assets/Mirror/` |
 
 ## UltimateXR — ключевые факты
 - Все классы библиотеки имеют префикс `Uxr` (namespace: `UltimateXR.*`)
@@ -26,9 +27,15 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
 - Документация UltimateXR: `Assets/ultimate-xr/Docs/guides/`
 
 ## Контекст проекта (детально)
-Подробная документация для ИИ-помощника находится в `Assets/ultimate-xr/Docs/_context/`:
+Документация разделена на две части:
+
+**Документация UltimateXR SDK** — `Assets/ultimate-xr/Docs/_context/`:
 - `README.md` — точка входа: платформа, зависимости, список файлов контекста
 - `architecture.md` — все модули UltimateXR, ключевые классы, диаграмма зависимостей
+
+**Документация игры** — `Assets/Docs/`:
+- `README.md` — точка входа в документацию игры
+- `gameplay.md` — геймплей, структура матча, режимы, менеджеры, физическая арена
 
 ## Стиль кода
 - Язык комментариев и документации: русский
@@ -41,18 +48,19 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
 > Эти файлы — живая документация. Они должны обновляться по мере изучения проекта.
 
 ### Когда обновлять
-- После изучения нового модуля UltimateXR ? обновить или создать соответствующий файл в `Assets/ultimate-xr/Docs/_context/`
-- После добавления новой игровой механики ? добавить описание в `README.md` раздел "Механики"
-- После решения нетривиальной задачи ? зафиксировать в `progress.md`
-- После изменения архитектуры проекта ? обновить `architecture.md`
+- После изучения нового модуля UltimateXR — обновить или создать соответствующий файл в `Assets/ultimate-xr/Docs/_context/`
+- После добавления новой игровой механики — обновить `Assets/Docs/gameplay.md`
+- После решения нетривиальной задачи — зафиксировать в `progress.md`
+- После изменения архитектуры проекта — обновить `architecture.md`
 
 ### Какой файл обновлять
 | Что изучил / сделал | Файл |
 |---|---|
-| Новый модуль UltimateXR (Avatar, Grabbing, UI…) | `_context/<module>.md` (создать если нет) |
-| Общая архитектура, новые зависимости | `_context/architecture.md` |
-| Прогресс, заметки, решённые проблемы | `_context/progress.md` (создать если нет) |
+| Новый модуль UltimateXR (Avatar, Grabbing, UI…) | `Assets/ultimate-xr/Docs/_context/<module>.md` (создать если нет) |
+| Общая архитектура, новые зависимости | `Assets/ultimate-xr/Docs/_context/architecture.md` |
+| Прогресс, заметки, решённые проблемы | `Assets/ultimate-xr/Docs/_context/progress.md` (создать если нет) |
 | Изменился стек или платформа | Этот файл (`copilot-instructions.md`) |
+| Новая игровая механика, режим, изменение архитектуры матча | `Assets/Docs/gameplay.md` |
 
 ### Формат обновления
 При изучении нового модуля попроси Copilot:

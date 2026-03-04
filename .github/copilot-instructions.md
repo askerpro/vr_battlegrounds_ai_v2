@@ -12,8 +12,8 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
 | XR SDK | `com.unity.xr.oculus` v4.4.0 |
 | Ввод | `com.unity.inputsystem` v1.11.2 |
 | XR Management | `com.unity.xr.management` v4.5.4 |
-| VR фреймворк | UltimateXR (VRMADA), локально в `Assets/ultimate-xr/` |
-| Сеть | Mirror, локально в `Assets/Mirror/` |
+| VR фреймворк | UltimateXR (VRMADA), локально в `Assets/ThirdParty/ultimate-xr/` |
+| Сеть | Mirror, локально в `Assets/ThirdParty/Mirror/` |
 
 ## UltimateXR — ключевые факты
 - Все классы библиотеки имеют префикс `Uxr` (namespace: `UltimateXR.*`)
@@ -23,13 +23,13 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
 - Захват объектов: `UxrGrabbableObject` + `UxrGrabber` ? обрабатывает `UxrGrabManager`
 - Телепортация: `UxrTeleportLocomotion`
 - Оружие: `UxrFirearmWeapon` (наследует `UxrGrabbableObject`)
-- Скрипты рантайма: `Assets/ultimate-xr/Runtime/Scripts/`
-- Документация UltimateXR: `Assets/ultimate-xr/Docs/guides/`
+- Скрипты рантайма: `Assets/ThirdParty/ultimate-xr/Runtime/Scripts/`
+- Документация UltimateXR: `Assets/ThirdParty/ultimate-xr/Docs/guides/`
 
 ## Контекст проекта (детально)
 Документация разделена на две части:
 
-**Документация UltimateXR SDK** — `Assets/ultimate-xr/Docs/_context/`:
+**Документация UltimateXR SDK** — `Assets/ThirdParty/ultimate-xr/Docs/_context/`:
 - `README.md` — точка входа: платформа, зависимости, список файлов контекста
 - `architecture.md` — все модули UltimateXR, ключевые классы, диаграмма зависимостей
 
@@ -48,7 +48,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
 > Эти файлы — живая документация. Они должны обновляться по мере изучения проекта.
 
 ### Когда обновлять
-- После изучения нового модуля UltimateXR — обновить или создать соответствующий файл в `Assets/ultimate-xr/Docs/_context/`
+- После изучения нового модуля UltimateXR — обновить или создать соответствующий файл в `Assets/ThirdParty/ultimate-xr/Docs/_context/`
 - После добавления новой игровой механики — обновить `Assets/Docs/gameplay.md`
 - После решения нетривиальной задачи — зафиксировать в `progress.md`
 - После изменения архитектуры проекта — обновить `architecture.md`
@@ -56,12 +56,26 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
 ### Какой файл обновлять
 | Что изучил / сделал | Файл |
 |---|---|
-| Новый модуль UltimateXR (Avatar, Grabbing, UI…) | `Assets/ultimate-xr/Docs/_context/<module>.md` (создать если нет) |
-| Общая архитектура, новые зависимости | `Assets/ultimate-xr/Docs/_context/architecture.md` |
-| Прогресс, заметки, решённые проблемы | `Assets/ultimate-xr/Docs/_context/progress.md` (создать если нет) |
+| Новый модуль UltimateXR (Avatar, Grabbing, UI…) | `Assets/ThirdParty/ultimate-xr/Docs/_context/<module>.md` (создать если нет) |
+| Общая архитектура, новые зависимости | `Assets/ThirdParty/ultimate-xr/Docs/_context/architecture.md` |
+| Прогресс, заметки, решённые проблемы | `Assets/ThirdParty/ultimate-xr/Docs/_context/progress.md` (создать если нет) |
 | Изменился стек или платформа | Этот файл (`copilot-instructions.md`) |
 | Новая игровая механика, режим, изменение архитектуры матча | `Assets/Docs/gameplay.md` |
 
 ### Формат обновления
 При изучении нового модуля попроси Copilot:
 > "Обнови `_context/architecture.md` — добавь раздел по [модуль], который мы только что разобрали"
+
+---
+
+## Правила работы Copilot с инструментами
+
+### Чтение файлов
+- **Всегда** использовать `get_file` с параметром `includeLineNumbers: true`
+- Это единственный способ получить корректное содержимое без проблем с кодировкой
+
+### Команды терминала
+- **Никогда** не использовать многострочные команды в одном вызове `run_command_in_terminal`
+- PowerShell переходит в режим ожидания `>>` при многострочном вводе — команда зависает
+- Каждый вызов `run_command_in_terminal` должен содержать **ровно одну команду**
+- Если нужно выполнить несколько команд — делать отдельный вызов для каждой

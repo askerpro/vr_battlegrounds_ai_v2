@@ -1,5 +1,5 @@
 > **Для Copilot:** это точка входа в документацию **игры** VR Battlegrounds AI.
-> Документация UltimateXR SDK находится отдельно: `Assets/ultimate-xr/Docs/_context/`
+> Документация UltimateXR SDK находится отдельно: `Assets/ThirdParty/ultimate-xr/Docs/_context/`
 
 ---
 
@@ -14,7 +14,7 @@
 
 ## Игровые ассеты проекта
 
-Все ассеты игры хранятся в `Assets/` (исключая `Assets/ultimate-xr/` — это SDK).
+Все ассеты игры хранятся в `Assets/` (исключая `Assets/ThirdParty/` — сторонние библиотеки).
 
 | Путь | Содержание |
 |---|---|
@@ -28,5 +28,5 @@
 ## Быстрая навигация
 
 - **Геймплей, режимы, матч, менеджеры** ? [`gameplay.md`](gameplay.md)
-- **UltimateXR SDK (аватар, захват, оружие, UI)** ? [`Assets/ultimate-xr/Docs/_context/README.md`](../ultimate-xr/Docs/_context/README.md)
-- **Mirror (сетевой фреймворк)** ? [`Assets/ultimate-xr/Docs/_context/architecture.md`](../ultimate-xr/Docs/_context/architecture.md) ? раздел Networking
+- **UltimateXR SDK (аватар, захват, оружие, UI)** ? [`Assets/ThirdParty/ultimate-xr/Docs/_context/README.md`](../ThirdParty/ultimate-xr/Docs/_context/README.md)
+- **Mirror (сетевой фреймворк)** ? [`Assets/ThirdParty/ultimate-xr/Docs/_context/architecture.md`](../ThirdParty/ultimate-xr/Docs/_context/architecture.md) ? раздел Networking

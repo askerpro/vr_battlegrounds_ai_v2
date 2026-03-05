@@ -61,6 +61,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
 | Прогресс, заметки, решённые проблемы | `Assets/ThirdParty/ultimate-xr/Docs/_context/progress.md` (создать если нет) |
 | Изменился стек или платформа | Этот файл (`copilot-instructions.md`) |
 | Новая игровая механика, режим, изменение архитектуры матча | `Assets/Docs/gameplay.md` |
+| **Патчи SDK UltimateXR** (сломан оригинал, список правок) | `Assets/ThirdParty/UltimateXR/Docs/_context/sdk-patches.md` |
 
 ### Формат обновления
 При изучении нового модуля попроси Copilot:

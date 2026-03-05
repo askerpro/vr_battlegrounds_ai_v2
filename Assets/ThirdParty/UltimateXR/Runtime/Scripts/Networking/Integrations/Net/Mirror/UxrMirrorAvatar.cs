@@ -25,7 +25,7 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
     {
         #region Inspector Properties/Serialized Fields
 
-        [Tooltip("List of objects that will be disabled when the avatar is in local mode, to avoid intersections with the camera for example")] [SerializeField] private List<GameObject> _localDisabledGameObjects;
+        [Tooltip("List of objects that will be disabled when the avatar is in local mode, to avoid intersections with the camera for example")][SerializeField] private List<GameObject> _localDisabledGameObjects;
 
         #endregion
 
@@ -64,8 +64,36 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
         /// <inheritdoc />
         public void InitializeNetworkAvatar(UxrAvatar avatar, bool isLocal, string uniqueId, string avatarName)
         {
-            IsLocal           = isLocal;
-            AvatarName        = avatarName;
+            // Удаляем статическую проверку, чтобы позволить повторную инициализацию при смене сцены
+            if (_avatarInitialized && Avatar == avatar)
+            {
+                // Если уже инициализирован тот же аватар, просто обновляем статус ownership
+                if (IsLocal != isLocal)
+                {
+                    IsLocal = isLocal;
+                    avatar.AvatarMode = isLocal ? UxrAvatarMode.Local : UxrAvatarMode.UpdateExternally;
+
+                    if (isLocal)
+                    {
+                        LocalDisabledGameObjects.ForEach(o => o.SetActive(false));
+                    }
+
+                    if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
+                    {
+                        Debug.Log($"{UxrConstants.NetworkingModule} Re-initializing avatar ownership: {avatarName}, IsLocal={isLocal}, NetId={netId}, UniqueId={uniqueId}");
+                    }
+                }
+                return;
+            }
+
+            if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
+            {
+                Debug.Log($"{UxrConstants.NetworkingModule} Initializing avatar: {avatarName}, IsLocal={isLocal}, NetId={netId}, UniqueId={uniqueId}");
+            }
+
+            IsLocal = isLocal;
+            Avatar = avatar;
+            AvatarName = avatarName;
             avatar.AvatarMode = isLocal ? UxrAvatarMode.Local : UxrAvatarMode.UpdateExternally;
 
             if (isLocal)
@@ -74,6 +102,16 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
             }
 
             avatar.CombineUniqueId(uniqueId.GetGuid(), true);
+
+            // Вызываем событие спавна аватара
+            AvatarSpawned?.Invoke();
+
+            if (UxrInstanceManager.HasInstance)
+            {
+                UxrInstanceManager.Instance.NotifyNetworkSpawn(Avatar.gameObject);
+            }
+
+            _avatarInitialized = true;
         }
 
         #endregion
@@ -125,6 +163,55 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
 
         #region Event Trigger Methods
 
+        public override void OnStartServer()
+        {
+            Avatar = GetComponent<UxrAvatar>();
+
+            InitializeNetworkAvatar(Avatar, netIdentity.isOwned, netId.ToString(), $"Player {netId} ({(netIdentity.isOwned ? "Local" : "External")})");
+
+            base.OnStartServer();
+        }
+
+        public override void OnStartLocalPlayer()
+        {
+            base.OnStartLocalPlayer();
+
+            if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
+            {
+                Debug.Log($"{UxrConstants.NetworkingModule} OnStartLocalPlayer: NetId={netId}, isOwned={netIdentity.isOwned}");
+            }
+
+            // Принудительная инициализация как локального аватара
+            if (!_avatarInitialized || !IsLocal)
+            {
+                Avatar = GetComponent<UxrAvatar>();
+                InitializeNetworkAvatar(Avatar, true, netId.ToString(), $"Player {netId} (Local)");
+            }
+
+            UxrManager.ComponentStateChanged += UxrManager_ComponentStateChanged;
+
+            if (!netIdentity.isServer)
+            {
+                byte[] localAvatarState = UxrManager.Instance.SaveStateChanges(new List<GameObject> { Avatar.gameObject }, null, UxrStateSaveLevel.ChangesSinceBeginning, UxrGlobalSettings.Instance.NetFormatInitialState);
+
+                if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
+                {
+                    Debug.Log($"{UxrConstants.NetworkingModule} Requesting global state and sending local avatar state in {localAvatarState.Length} bytes.");
+                }
+
+                // Send the initial avatar state to the server and request the current scene state.  
+                // Call after AvatarSpawned() in case any event handler changes the avatar state.
+                CmdNewAvatarJoined(localAvatarState);
+            }
+            else
+            {
+                // Server creates the session and doesn't need to send the initial state.
+                _initialStateLoaded = true;
+            }
+
+            Debug.Log($"{UxrConstants.NetworkingModule} {nameof(UxrMirrorAvatar)}.{nameof(OnStartLocalPlayer)}: Is Local? {IsLocal}, Name: {AvatarName}. NetId: {netId}, UniqueId: {Avatar.UniqueId}.");
+        }
+
         /// <inheritdoc />
         public override void OnStartClient()
         {
@@ -132,44 +219,12 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
 
             InitializeNetworkAvatar(Avatar, netIdentity.isOwned, netId.ToString(), $"Player {netId} ({(netIdentity.isOwned ? "Local" : "External")})");
 
-            if (netIdentity.isOwned)
-            {
-                UxrManager.ComponentStateChanged += UxrManager_ComponentStateChanged;
-            }
-
             if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
             {
                 Debug.Log($"{UxrConstants.NetworkingModule} {nameof(UxrMirrorAvatar)}.{nameof(OnStartClient)}: Is Local? {IsLocal}, Name: {AvatarName}. NetId: {netId}, UniqueId: {Avatar.UniqueId}.");
             }
 
-            AvatarSpawned?.Invoke();
-
-            if (UxrInstanceManager.HasInstance)
-            {
-                UxrInstanceManager.Instance.NotifyNetworkSpawn(Avatar.gameObject);
-            }
-
-            if (netIdentity.isOwned)
-            {
-                if (!netIdentity.isServer)
-                {
-                    byte[] localAvatarState = UxrManager.Instance.SaveStateChanges(new List<GameObject> { Avatar.gameObject }, null, UxrStateSaveLevel.ChangesSinceBeginning, UxrGlobalSettings.Instance.NetFormatInitialState);
-
-                    if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
-                    {
-                        Debug.Log($"{UxrConstants.NetworkingModule} Requesting global state and sending local avatar state in {localAvatarState.Length} bytes.");
-                    }
-
-                    // Send the initial avatar state to the server and request the current scene state.  
-                    // Call after AvatarSpawned() in case any event handler changes the avatar state.
-                    CmdNewAvatarJoined(localAvatarState);
-                }
-                else
-                {
-                    // Server creates the session and doesn't need to send the initial state.
-                    s_initialStateLoaded = true;
-                }
-            }
+            base.OnStartClient();
         }
 
         /// <inheritdoc />
@@ -186,6 +241,49 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
             }
 
             AvatarDespawned?.Invoke();
+
+            base.OnStopClient();
+        }
+
+        /// <summary>
+        /// Вызывается при уничтожении объекта для корректной очистки ресурсов
+        /// </summary>
+        private void OnDestroy()
+        {
+            if (netIdentity && netIdentity.isOwned)
+            {
+                UxrManager.ComponentStateChanged -= UxrManager_ComponentStateChanged;
+            }
+
+            _avatarInitialized = false;
+
+            if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
+            {
+                Debug.Log($"{UxrConstants.NetworkingModule} {nameof(UxrMirrorAvatar)}.{nameof(OnDestroy)}: Is Local? {IsLocal}, Name: {AvatarName}, NetId: {(netIdentity ? netId.ToString() : "null")}");
+            }
+
+            if (UxrInstanceManager.HasInstance)
+            {
+                UxrInstanceManager.Instance.DestroyGameObject(Avatar.gameObject);
+            }
+        }
+
+        /// <summary>
+        /// Обработка события изменения сцены в Mirror
+        /// </summary>
+        /// <param name="sceneName">Имя новой сцены</param>
+        public void OnNetworkSceneChanged(string sceneName)
+        {
+            // Сбрасываем флаг загрузки начального состояния, так как мы в новой сцене
+            _initialStateLoaded = false;
+
+            if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
+            {
+                Debug.Log($"{UxrConstants.NetworkingModule} Scene changed to {sceneName}, reset initial state loading flag.");
+            }
+
+            // NetworkBehaviour не имеет базовой реализации OnNetworkSceneChanged,
+            // поэтому мы не вызываем здесь base метод
         }
 
         #endregion
@@ -257,7 +355,7 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
             }
 
             UxrManager.Instance.LoadStateChanges(serializedStateData);
-            s_initialStateLoaded = true;
+            _initialStateLoaded = true;
         }
 
         /// <summary>
@@ -295,7 +393,7 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
                 return;
             }
 
-            if (s_initialStateLoaded == false)
+            if (_initialStateLoaded == false)
             {
                 // Ignore sync events until the initial state is sent, to make sure the syncs are only processed after the initial state.
                 return;
@@ -313,7 +411,10 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
 
         #region Private Types & Data
 
-        private static bool s_initialStateLoaded;
+        // Сделали переменную экземпляра вместо статичной, чтобы не блокировать повторную инициализацию для других аватаров
+        private bool _avatarInitialized = false;
+
+        private bool _initialStateLoaded;
 
         private string _avatarName;
 

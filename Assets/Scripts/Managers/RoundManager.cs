@@ -1,5 +1,6 @@
 using Mirror;
 using VrBattlegrounds.GameModes;
+using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Managers
 {
@@ -16,7 +17,6 @@ namespace VrBattlegrounds.Managers
         [Server]
         public void StartRound()
         {
-            // TODO: проверить готовность всех игроков
             isRoundActive = true;
             RpcOnRoundStarted();
         }
@@ -27,6 +27,24 @@ namespace VrBattlegrounds.Managers
             isRoundActive = false;
             _activeGameMode?.OnRoundEnd();
             RpcOnRoundEnded(winner);
+        }
+
+        /// <summary>
+        /// Вызывается PlayerController при гибели игрока.
+        /// Делегирует проверку условий победы активному GameMode.
+        /// </summary>
+        [Server]
+        public void OnPlayerDied(PlayerController player)
+        {
+            if (!isRoundActive)
+                return;
+
+            Team winner = _activeGameMode != null
+                ? _activeGameMode.CheckWinCondition()
+                : Team.None;
+
+            if (winner != Team.None)
+                EndRound(winner);
         }
 
         [ClientRpc]

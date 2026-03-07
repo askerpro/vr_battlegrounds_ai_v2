@@ -1,45 +1,45 @@
-> **Для Copilot:** это точка входа в документацию **игры** VR Battlegrounds AI.
-> Документация UltimateXR SDK находится отдельно: `Assets/ThirdParty/UltimateXR/Docs/_context/`
+> **Р”Р»СЏ Copilot:** СЌС‚Рѕ С‚РѕС‡РєР° РІС…РѕРґР° РІ РґРѕРєСѓРјРµРЅС‚Р°С†РёСЋ **РёРіСЂС‹** VR Battlegrounds AI.
+> Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ UltimateXR SDK РЅР°С…РѕРґРёС‚СЃСЏ РѕС‚РґРµР»СЊРЅРѕ: `Assets/ThirdParty/UltimateXR/Docs/_context/`
 
 ---
 
-## Структура папки `Assets/Docs/`
+## РЎС‚СЂСѓРєС‚СѓСЂР° РїР°РїРєРё `Assets/Docs/`
 
-| Файл | Содержание | Статус |
+| Р¤Р°Р№Р» | РЎРѕРґРµСЂР¶Р°РЅРёРµ | РЎС‚Р°С‚СѓСЃ |
 |---|---|---|
-| `README.md` | Этот файл — точка входа | ? Готов |
-| `gameplay.md` | Игровые механики, структура матча, режимы, менеджеры | ? Готов |
+| `README.md` | Р­С‚РѕС‚ С„Р°Р№Р» вЂ” С‚РѕС‡РєР° РІС…РѕРґР° | + Р“РѕС‚РѕРІ |
+| `gameplay.md` | РРіСЂРѕРІС‹Рµ РјРµС…Р°РЅРёРєРё, СЃС‚СЂСѓРєС‚СѓСЂР° РјР°С‚С‡Р°, СЂРµР¶РёРјС‹, РјРµРЅРµРґР¶РµСЂС‹ | + Р“РѕС‚РѕРІ |
 
 ---
 
-## Игровые ассеты проекта
+## РРіСЂРѕРІС‹Рµ Р°СЃСЃРµС‚С‹ РїСЂРѕРµРєС‚Р°
 
-Все ассеты игры хранятся в `Assets/` (исключая `Assets/ThirdParty/` — сторонние библиотеки).
+Р’СЃРµ Р°СЃСЃРµС‚С‹ РёРіСЂС‹ С…СЂР°РЅСЏС‚СЃСЏ РІ `Assets/` (РёСЃРєР»СЋС‡Р°СЏ `Assets/ThirdParty/` вЂ” СЃС‚РѕСЂРѕРЅРЅРёРµ Р±РёР±Р»РёРѕС‚РµРєРё).
 
-| Путь | Содержание |
+| РџСѓС‚СЊ | РЎРѕРґРµСЂР¶Р°РЅРёРµ |
 |---|---|
-| `Assets/Scripts/` | Игровые скрипты (создать по мере разработки) |
-| `Assets/Scenes/` | Сцены игры |
-| `Assets/Prefabs/` | Префабы игровых объектов |
-| `Assets/Prefabs/Player/` | Префабы игроков |
-| `Assets/Docs/` | Документация игры (этот файл) |
+| `Assets/Scripts/` | РРіСЂРѕРІС‹Рµ СЃРєСЂРёРїС‚С‹ (СЃРѕР·РґР°С‚СЊ РїРѕ РјРµСЂРµ СЂР°Р·СЂР°Р±РѕС‚РєРё) |
+| `Assets/Scenes/` | РЎС†РµРЅС‹ РёРіСЂС‹ |
+| `Assets/Prefabs/` | РџСЂРµС„Р°Р±С‹ РёРіСЂРѕРІС‹С… РѕР±СЉРµРєС‚РѕРІ |
+| `Assets/Prefabs/Player/` | РџСЂРµС„Р°Р±С‹ РёРіСЂРѕРєРѕРІ |
+| `Assets/Docs/` | Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ РёРіСЂС‹ (СЌС‚РѕС‚ С„Р°Р№Р») |
 
 ---
 
-## Ключевые префабы
+## РљР»СЋС‡РµРІС‹Рµ РїСЂРµС„Р°Р±С‹
 
-| Префаб | Путь | Описание |
+| РџСЂРµС„Р°Р± | РџСѓС‚СЊ | РћРїРёСЃР°РЅРёРµ |
 |---|---|---|
-| Игрок | `Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab` | Сетевой аватар игрока. Вариант `CyborgAvatar_URP`. Содержит `UxrAvatar`, `UxrMirrorAvatar`, `NetworkIdentity`. **Требует `PlayerController`** (добавить вручную). |
+| РРіСЂРѕРє | `Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab` | РЎРµС‚РµРІРѕР№ Р°РІР°С‚Р°СЂ РёРіСЂРѕРєР°. Р’Р°СЂРёР°РЅС‚ `CyborgAvatar_URP`. РЎРѕРґРµСЂР¶РёС‚ `UxrAvatar`, `UxrMirrorAvatar`, `NetworkIdentity`. **РўСЂРµР±СѓРµС‚ `PlayerController`** (РґРѕР±Р°РІРёС‚СЊ РІСЂСѓС‡РЅСѓСЋ). |
 
-> **Для Copilot (MCP):** все изменения компонентов игрока вносить в префаб `Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab`, а не на объекты сцены напрямую.
+> **Р”Р»СЏ Copilot (MCP):** РІСЃРµ РёР·РјРµРЅРµРЅРёСЏ РєРѕРјРїРѕРЅРµРЅС‚РѕРІ РёРіСЂРѕРєР° РІРЅРѕСЃРёС‚СЊ РІ РїСЂРµС„Р°Р± `Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab`, Р° РЅРµ РЅР° РѕР±СЉРµРєС‚С‹ СЃС†РµРЅС‹ РЅР°РїСЂСЏРјСѓСЋ.
 
 ---
 
-## Быстрая навигация
+## Р‘С‹СЃС‚СЂР°СЏ РЅР°РІРёРіР°С†РёСЏ
 
-- **Карты: структура, добавление, быстрый запуск** ? [`gameplay.md#карты`](gameplay.md#карты)
-- **Инструменты отладки (DebugOrchestrator, DebugBootstrapConfig)** ? [`gameplay.md#инструменты-отладки`](gameplay.md#инструменты-отладки)
-- **Геймплей, режимы, матч, менеджеры** ? [`gameplay.md`](gameplay.md)
-- **UltimateXR SDK (аватар, захват, оружие, UI)** ? [`Assets/ThirdParty/UltimateXR/Docs/_context/README.md`](../ThirdParty/UltimateXR/Docs/_context/README.md)
-- **Mirror (сетевой фреймворк)** ? [`Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md`](../ThirdParty/UltimateXR/Docs/_context/architecture.md) ? раздел Networking
+- **РљР°СЂС‚С‹: СЃС‚СЂСѓРєС‚СѓСЂР°, РґРѕР±Р°РІР»РµРЅРёРµ, Р±С‹СЃС‚СЂС‹Р№ Р·Р°РїСѓСЃРє** -- [`gameplay.md#РєР°СЂС‚С‹`](gameplay.md#РєР°СЂС‚С‹)
+- **РРЅСЃС‚СЂСѓРјРµРЅС‚С‹ РѕС‚Р»Р°РґРєРё (DebugOrchestrator, DebugBootstrapConfig)** -- [`gameplay.md#РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹-РѕС‚Р»Р°РґРєРё`](gameplay.md#РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹-РѕС‚Р»Р°РґРєРё)
+- **Р“РµР№РјРїР»РµР№, СЂРµР¶РёРјС‹, РјР°С‚С‡, РјРµРЅРµРґР¶РµСЂС‹** -- [`gameplay.md`](gameplay.md)
+- **UltimateXR SDK (Р°РІР°С‚Р°СЂ, Р·Р°С…РІР°С‚, РѕСЂСѓР¶РёРµ, UI)** -- [`Assets/ThirdParty/UltimateXR/Docs/_context/README.md`](../ThirdParty/UltimateXR/Docs/_context/README.md)
+- **Mirror (СЃРµС‚РµРІРѕР№ С„СЂРµР№РјРІРѕСЂРє)** -- [`Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md`](../ThirdParty/UltimateXR/Docs/_context/architecture.md) ? СЂР°Р·РґРµР» Networking

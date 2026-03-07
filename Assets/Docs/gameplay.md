@@ -9,16 +9,16 @@
 
 ```
 Assets/
-??? Scenes/
-?   ??? Maps/
-?       ??? Arena_Warehouse.unity   ? сцена карты
-?       ??? ...
-??? Data/
-    ??? Maps/
-        ??? MapRegistry.asset       ? единственный реестр карт (MapRegistry SO)
-        ??? Map_Warehouse.asset     ? данные карты (MapData SO)
-        ??? Map_Warehouse_Preview.png
-        ??? ...
++-- Scenes/
+|   +-- Maps/
+|       +-- Arena_Warehouse.unity   -- сцена карты
+|       +-- ...
++-- Data/
+    +-- Maps/
+        +-- MapRegistry.asset       -- единственный реестр карт (MapRegistry SO)
+        +-- Map_Warehouse.asset     -- данные карты (MapData SO)
+        +-- Map_Warehouse_Preview.png
+        +-- ...
 ```
 
 ### Классы
@@ -41,8 +41,8 @@ Assets/
 ### Как добавить новую карту
 
 1. **Создать сцену:** `Assets/Scenes/Maps/Arena_NewMap.unity`
-2. **Добавить в Build Settings:** `File ? Build Settings ? Add Open Scenes`
-3. **Создать MapData asset:** правая кнопка в Project ? `Create ? VrBattlegrounds ? Map Data`
+2. **Добавить в Build Settings:** `File --> Build Settings --> Add Open Scenes`
+3. **Создать MapData asset:** правая кнопка в Project --> `Create --> VrBattlegrounds --> Map Data`
    - `sceneName` = точное имя файла сцены без расширения (например `Arena_NewMap`)
    - `preview` = скриншот карты (импортировать как Sprite)
 4. **Добавить в реестр:** открыть `Assets/Data/Maps/MapRegistry.asset`, добавить новый `MapData` в массив `maps[]`
@@ -54,10 +54,10 @@ Assets/
 Используется `DebugOrchestrator` + `DebugBootstrapConfig`. Флоу:
 
 ```
-Play ? OfflineScene ? NetworkManager поднимает хост ? OnlineScene (Sandbox)
-  ? GameNetworkManager.ServerSceneChanged срабатывает
-  ? DebugOrchestrator.TryAutoLoadMap() ? ServerChangeScene(autoLoadMapScene)
-  ? Arena_NewMap загружается автоматически
+Play --> OfflineScene --> NetworkManager поднимает хост --> OnlineScene (Sandbox)
+  --> GameNetworkManager.ServerSceneChanged срабатывает
+  --> DebugOrchestrator.TryAutoLoadMap() --> ServerChangeScene(autoLoadMapScene)
+  --> Arena_NewMap загружается автоматически
 ```
 
 Чтобы запустить конкретную карту сразу:
@@ -82,7 +82,7 @@ Play ? OfflineScene ? NetworkManager поднимает хост ? OnlineScene (
 **Как подключить (один раз):**
 1. Создать пустой GameObject в OfflineScene, назвать `DebugOrchestrator`
 2. Добавить компонент `DebugOrchestrator`
-3. Создать asset: `Create ? VrBattlegrounds ? Debug Bootstrap Config`
+3. Создать asset: `Create --> VrBattlegrounds --> Debug Bootstrap Config`
 4. Назначить asset в поле `Config`
 
 **Чтобы отключить** — деактивировать GameObject или снять флаг `Enabled` в конфиге.
@@ -101,13 +101,13 @@ Play ? OfflineScene ? NetworkManager поднимает хост ? OnlineScene (
 
 ```
 Play
- ? OfflineScene загружается
- ? NetworkManager поднимает хост ? OnlineScene (Sandbox)
- ? GameNetworkManager.ServerSceneChanged ? DebugOrchestrator.TryAutoLoadMap()
- ? ServerChangeScene(autoLoadMapScene)  ? если поле заполнено
- ? Карта загружается
- ? UxrAvatar.LocalAvatarChanged ? назначается команда
- ? PlayerConnected ? N ? если игроков ? minPlayersToAutoStart ? StartMatch()
+ --> OfflineScene загружается
+ --> NetworkManager поднимает хост --> OnlineScene (Sandbox)
+ --> GameNetworkManager.ServerSceneChanged --> DebugOrchestrator.TryAutoLoadMap()
+ --> ServerChangeScene(autoLoadMapScene)  -- если поле заполнено
+ --> Карта загружается
+ --> UxrAvatar.LocalAvatarChanged --> назначается команда
+ --> PlayerConnected --> N -- если игроков >= minPlayersToAutoStart --> StartMatch()
 ```
 
 > **Для Copilot:** `DebugOrchestrator` не содержит игровой логики — только вызовы публичных API менеджеров. При добавлении новой механики с параметрами отладки — добавить поле в `DebugBootstrapConfig`, обработать в `DebugOrchestrator`.
@@ -134,7 +134,7 @@ Play
 | Террористы | `Team.Terrorists` |
 | Спецназ | `Team.SpecialForces` |
 
-Смена команд происходит **автоматически** между сетами (террористы ? спецназ).
+Смена команд происходит **автоматически** между сетами (террористы --> спецназ).
 
 ---
 
@@ -145,8 +145,8 @@ Play
 ### Базовый класс режима
 ```
 GameMode (abstract)
-    ??? RespawnMode        ? Режим 1: возрождение при возврате на спавн
-    ??? EliminationMode    ? Режим 2: раунд до полного уничтожения команды
+    +-- RespawnMode        -- Режим 1: возрождение при возврате на спавн
+    +-- EliminationMode    -- Режим 2: раунд до полного уничтожения команды
 ```
 
 ### Режим 1 — Respawn (приоритет реализации)
@@ -166,11 +166,11 @@ GameMode (abstract)
 
 ```
 Match (5 карт)
-??? Map (карта ? 5)
-    ??? Set (сет ? 10 на матч = 2 сета на карту ? 5 карт)
-        ??? Сет 1: Команда A = Террористы, Команда B = Спецназ
-        ??? Сет 2: Команда A = Спецназ,    Команда B = Террористы  ? смена сторон
-        ??? Победитель сета ? +1 очко команде
++-- Map (карта x5)
+    +-- Set (сет --> 10 на матч = 2 сета на карту x5 карт)
+        +-- Сет 1: Команда A = Террористы, Команда B = Спецназ
+        +-- Сет 2: Команда A = Спецназ,    Команда B = Террористы  -- смена сторон
+        +-- Победитель сета --> +1 очко команде
 ```
 
 **Подсчёт победителя матча:** команда, набравшая больше сетов из 10, побеждает.
@@ -190,7 +190,7 @@ Match (5 карт)
 | Выбор режима игры | `RespawnMode` / `EliminationMode` |
 | Управление матчем | Запустить / Остановить / Продолжить |
 
-- Управление передаётся `MatchManager` ? `SetManager` ? `RoundManager`
+- Управление передаётся `MatchManager` --> `SetManager` --> `RoundManager`
 - Только Host видит кнопки управления матчем (проверка `isServer`)
 
 ### Префаб игрока
@@ -208,7 +208,7 @@ Match (5 карт)
 | `NetworkIdentity` | идентификатор Mirror |
 | `NetworkTransformUnreliable` | синхронизация трансформа |
 | `UxrActor` | система урона UltimateXR |
-| `PlayerController` | ? команда, жизни, смерть, возрождение |
+| `PlayerController` | -- команда, жизни, смерть, возрождение |
 
 > **Для Copilot (MCP):** при добавлении или изменении компонентов игрока — работать с этим префабом, не с объектами сцены:
 > `Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab`
@@ -236,8 +236,8 @@ Match (5 карт)
 
 ```
 MatchManager              — управляет всем матчем (5 карт, счёт, победитель)
-??? SetManager            — управляет сетом (смена команд, счёт сетов)
-    ??? RoundManager      — управляет раундом (готовность, старт, конец раунда)
++-- SetManager            — управляет сетом (смена команд, счёт сетов)
+    +-- RoundManager      — управляет раундом (готовность, старт, конец раунда)
 ```
 
 ### MatchManager
@@ -267,7 +267,7 @@ MatchManager              — управляет всем матчем (5 кар
 | Сетевой фреймворк | Mirror (`Assets/Mirror/`) |
 | Синхронизация UXR | `UxrNetworkManager` + адаптер под Mirror |
 | Авторитетный сервер | Host = администратор арены |
-| Синхронизация состояния | `UxrManager.ComponentStateChanged` ? Mirror RPC |
+| Синхронизация состояния | `UxrManager.ComponentStateChanged` --> Mirror RPC |
 
 > **Для Copilot:** серверная логика (MatchManager, RoundManager, SetManager) выполняется только на **сервере** (`[Server]` атрибут Mirror). Клиенты получают обновления через `ClientRpc`. Состояние игроков синхронизируется через `NetworkBehaviour` + UltimateXR networking адаптер.
 
@@ -277,14 +277,14 @@ MatchManager              — управляет всем матчем (5 кар
 
 | Механика | Статус | Приоритет |
 |---|---|---|
-| Физическое передвижение по арене | ? Не реализовано | — |
-| Команды (Terrorist / SpecialForces) | ? Не реализовано | Высокий |
-| MatchManager | ? Не реализовано | Высокий |
-| SetManager (смена команд) | ? Не реализовано | Высокий |
-| RoundManager (готовность, старт, конец) | ? Не реализовано | Высокий |
-| GameMode — Respawn | ? Не реализовано | **Первый приоритет** |
-| GameMode — Elimination | ? Не реализовано | Средний |
-| Mirror интеграция | ? Не реализовано | Высокий |
-| Администраторский интерфейс (`AdminMenuController`) | ?? Заготовка | Средний |
-| Меню игрока (`PlayerMenuController`) | ?? Заготовка | Средний |
-| Калибровка VR (`VrCalibrationController`) | ?? Заготовка | Средний |
+| Физическое передвижение по арене | - Не реализовано | — |
+| Команды (Terrorist / SpecialForces) | - Не реализовано | Высокий |
+| MatchManager | - Не реализовано | Высокий |
+| SetManager (смена команд) | - Не реализовано | Высокий |
+| RoundManager (готовность, старт, конец) | - Не реализовано | Высокий |
+| GameMode — Respawn | - Не реализовано | **Первый приоритет** |
+| GameMode — Elimination | - Не реализовано | Средний |
+| Mirror интеграция | - Не реализовано | Высокий |
+| Администраторский интерфейс (`AdminMenuController`) | ~ Заготовка | Средний |
+| Меню игрока (`PlayerMenuController`) | ~ Заготовка | Средний |
+| Калибровка VR (`VrCalibrationController`) | ~ Заготовка | Средний |

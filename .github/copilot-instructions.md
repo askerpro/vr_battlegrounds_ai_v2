@@ -149,7 +149,27 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 **Почему важно:** Visual Studio на Windows RU создаёт новые файлы в **Windows-1251** по умолчанию.
 Если PowerShell читает такой файл как UTF-8 и перезаписывает — кириллица превращается в `?` / U+FFFD.
 
-**Правило для PowerShell-скриптов:** всегда явно указывать кодировку при чтении и записи:
+### Правило для Copilot: создание и редактирование файлов
+
+**Новые файлы** — всегда создавать через инструмент `create_file`.
+IDE-инструмент `create_file` создаёт файл в кодировке Windows-1251 (системная кодировка Windows RU).
+После создания **обязательно** конвертировать в UTF-8 командой:
+
+```powershell
+$b=[System.IO.File]::ReadAllBytes("путь\к\файлу.cs"); $t=[System.Text.Encoding]::GetEncoding(1251).GetString($b); [System.IO.File]::WriteAllText("путь\к\файлу.cs",$t,[System.Text.UTF8Encoding]::new($false))
+```
+
+Или использовать готовый скрипт-шаблон `C:\Temp\to_utf8.ps1` (один аргумент — путь к файлу).
+
+**Редактирование существующих файлов** — использовать инструменты `replace_string_in_file` / `multi_replace_string_in_file`.
+Они работают с файлом напрямую через IDE без изменения кодировки — безопасно.
+
+**Никогда не использовать** `run_command_in_terminal` для записи содержимого файла
+(PowerShell `Set-Content`, `Out-File`, `>` оператор) — кодировка будет неверной.
+
+### Правило для PowerShell-скриптов
+
+Всегда явно указывать кодировку при чтении и записи:
 ```powershell
 # Читать WIN-1251 файл (если создан IDE до добавления .editorconfig)
 $text = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::GetEncoding(1251))

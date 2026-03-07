@@ -18,19 +18,19 @@
 | XR SDK | `com.unity.xr.oculus` v4.4.0 |
 | Ввод | `com.unity.inputsystem` v1.11.2 |
 | XR Management | `com.unity.xr.management` v4.5.4 |
-| Сеть | Mirror (Assets/Mirror/) |
+| Сеть | Mirror (`Assets/ThirdParty/Mirror/`) |
 
 ---
 
 ## Библиотека UltimateXR
 
-- **Путь:** `Assets/ultimate-xr/`
+- **Путь:** `Assets/ThirdParty/UltimateXR/`
 - **Namespace:** `UltimateXR.*`
-- **Скрипты рантайма:** `Assets/ultimate-xr/Runtime/Scripts/`
-- **Документация (оригинал):** `Assets/ultimate-xr/Docs/guides/`
-- **Контекст для ИИ:** `Assets/ultimate-xr/Docs/_context/` ? текущая папка
+- **Скрипты рантайма:** `Assets/ThirdParty/UltimateXR/Runtime/Scripts/`
+- **Документация (оригинал):** `Assets/ThirdParty/UltimateXR/Docs/guides/`
+- **Контекст для ИИ:** `Assets/ThirdParty/UltimateXR/Docs/_context/` ← текущая папка
 
-> Ссылки вида `/guides/<name>` в документации = `Assets/ultimate-xr/Docs/guides/<name>.md`
+> Ссылки вида `/guides/<name>` в документации = `Assets/ThirdParty/UltimateXR/Docs/guides/<name>.md`
 
 ---
 

@@ -1,10 +1,8 @@
 # VR Battlegrounds AI — Copilot Instructions
 
-# VR Battlegrounds AI — Copilot Instructions
-
 ## Проект
 VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
-- Репозиторий: https://github.com/askerpro/vr_battlegrounds_ai (ветка: `dev`)
+- Репозиторий: https://github.com/askerpro/vr_battlegrounds_ai
 - Разработчик — новичок в Unity, C# и VR SDK, активно изучает технологии итерационно.
 
 ## Стек и зависимости
@@ -28,6 +26,10 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 - Скрипты рантайма: `Assets/ThirdParty/UltimateXR/Runtime/Scripts/`
 - Документация UltimateXR: `Assets/ThirdParty/UltimateXR/Docs/guides/`
 
+> **Для Copilot:** исходники UltimateXR SDK доступны через `get_file` по полному пути —
+> проект `UltimateXR.csproj` входит в workspace. При вопросах об API лучше читать исходники напрямую,
+> чем полагаться на `.md` документацию. Полный список файлов: `get_files_in_project("UltimateXR.csproj")`.
+
 ## Контекст проекта (детально)
 Документация разделена на две части:
 
@@ -36,8 +38,14 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 - `architecture.md` — все модули UltimateXR, ключевые классы, диаграмма зависимостей
 
 **Документация игры** — `Assets/Docs/`:
-- `README.md` — точка входа в документацию игры
+- `README.md` — список всех скриптов, классов, зависимостей проекта
 - `gameplay.md` — геймплей, структура матча, режимы, менеджеры, физическая арена
+
+> **Важно для Copilot:** инструмент `get_file` работает только для файлов из `.csproj` проектов
+> или открытых вкладок редактора. Файлы `.md` в него **не входят** — читать их через `get_file` нельзя.
+> Для чтения `.md` документации использовать терминал:
+> `[System.IO.File]::ReadAllText("F:\UnityProjects\Vr_Battlegrounds_ai\Assets\Docs\README.md", [System.Text.Encoding]::UTF8)`
+> Или просить пользователя открыть файл через `#file:` в контексте чата.
 
 ## Стиль кода
 - Язык комментариев и документации: русский
@@ -45,48 +53,29 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 
 ---
 
+## Правила работы со сценами
+
+- ✅ Смена сцены — **только** через `MapManager.Instance.LoadMap(sceneName)`
+- ❌ Никогда не вызывать `NetworkManager.singleton.ServerChangeScene(...)` напрямую — Mirror запрещает вызов из своих колбэков
+- ❌ Никогда не вызывать `SceneManager.LoadScene(...)` напрямую — клиенты не синхронизируются
+
+> Детали реализации `MapManager` — в [`Assets/Docs/README.md`](../Assets/Docs/README.md).
+
+---
+
+## Принцип разделения ответственности
+
+Сетевой транспорт и игровая логика — в разных классах. Детали — в [`Assets/Docs/README.md`](../Assets/Docs/README.md).
+
+---
+
 ## Система логирования
 
-Проект использует собственную систему логирования вместо прямых вызовов `Debug.Log`.
+- ❌ Никогда не писать `Debug.Log` / `Debug.LogWarning` напрямую в игровых скриптах
+- ✅ Всегда использовать `GameLog.*` с категорией из `GameSettings.Instance`
+- Уровни по важности: поток — `Verbose`, события — `Info`, проблемы — `Warning`, сбои — `Error`
 
-### Файлы системы
-| Файл | Назначение |
-|---|---|
-| `Assets/Scripts/Core/LogLevel.cs` | Enum уровней: `None`, `Errors`, `Warnings`, `Info`, `Verbose` |
-| `Assets/Scripts/Core/GameSettings.cs` | ScriptableObject с настройками уровней по категориям |
-| `Assets/Scripts/Core/GameLog.cs` | Статический хелпер — единственная точка вызова логов |
-| `Assets/Resources/GameSettings.asset` | Экземпляр настроек, загружается через `Resources.Load` |
-
-### Уровни логирования (`LogLevel`)
-```
-None (0) → Errors (1) → Warnings (2) → Info (3) → Verbose (4)
-```
-Уровни иерархические: `Info` включает `Warnings` и `Errors`.
-
-### Категории логов в `GameSettings`
-| Свойство | Категория | Затрагивает |
-|---|---|---|
-| `LogLevelNetwork` | Сеть | `GameNetworkManager`, `MapManager`, `GameNetworkDiscovery` |
-| `LogLevelPlayer` | Игрок | `PlayerController` |
-| `LogLevelMatch` | Матч | `MatchManager`, `SetManager`, `RoundManager` |
-| `LogLevelDebug` | Отладка | `DebugOrchestrator` и DevTools (по умолчанию `Verbose`) |
-
-### Использование `GameLog`
-```csharp
-// Info и Verbose — пишут только если уровень категории достаточен
-GameLog.Info(GameSettings.Instance.LogLevelNetwork, "[MapManager] Загрузка карты...");
-GameLog.Verbose(GameSettings.Instance.LogLevelNetwork, "[MapManager] Детали события...");
-GameLog.Warning(GameSettings.Instance.LogLevelPlayer, "[PlayerController] Предупреждение");
-
-// Error — пишет всегда, без проверки уровня
-GameLog.Error("[GameNetworkManager] Критическая ошибка");
-```
-
-### Правила для Copilot
-- **Никогда** не писать `Debug.Log` / `Debug.LogWarning` напрямую в игровых скриптах
-- Всегда использовать `GameLog.*` с подходящей категорией из `GameSettings.Instance`
-- Выбирать уровень по важности: рутинный поток — `Verbose`, ключевые события — `Info`, проблемы — `Warning`, фатальные сбои — `Error`
-- `GameSettings.Instance` загружается лениво из `Resources/GameSettings.asset` — безопасно вызывать из `Awake`/`Start` и далее
+> API логирования, категории и примеры — в [`Assets/Docs/README.md`](../Assets/Docs/README.md).
 
 ---
 
@@ -113,6 +102,22 @@ GameLog.Error("[GameNetworkManager] Критическая ошибка");
 ### Формат обновления
 При изучении нового модуля попроси Copilot:
 > "Обнови `_context/architecture.md` — добавь раздел по [модуль], который мы только что разобрали"
+
+---
+
+## Правила работы с терминалом PowerShell
+
+Многострочные команды зависают — PowerShell ожидает ввода вместо выполнения.
+
+- ✅ Использовать однострочные команды (через `;` или pipeline)
+- ✅ Если нужен многострочный скрипт — записать во временный файл, выполнить, удалить:
+  ```
+  Set-Content $env:TEMP\tmp.ps1 'строка1 ...'  # создать
+  powershell -File $env:TEMP\tmp.ps1            # выполнить
+  Remove-Item $env:TEMP\tmp.ps1                 # удалить
+  ```
+- ❌ Никогда не вводить многострочные блоки напрямую в `run_command_in_terminal`
+- ✅ Для git-команд всегда использовать `git --no-pager ...` — иначе git открывает пейджер `less`, который зависает и ждёт `q`
 
 ---
 
@@ -176,102 +181,3 @@ GameLog.Error("[GameNetworkManager] Критическая ошибка");
 | Патчи UltimateXR SDK, правки, обходы API | `Assets/ThirdParty/UltimateXR/Docs/_context/sdk-patches.md` |
 | Прогресс, баги, тестирование, planned задачи | `Assets/ThirdParty/UltimateXR/Docs/_context/progress.md` |
 | Зависимости, пакеты, инструкции Copilot, патчи SDK | `copilot-instructions.md` |
-
----
-
-## Правила работы Copilot с инструментами
-
-### Кодировка файлов проекта
-
-**Единственная кодировка проекта — UTF-8 без BOM.**
-
-Зафиксировано в `.editorconfig` (charset = utf-8) и `.gitattributes` (text=auto eol=crlf).
-
-| Тип файла | Кодировка |
-|---|---|
-| `*.cs` — скрипты игры | UTF-8 без BOM |
-| `*.md` — документация | UTF-8 без BOM |
-| `*.unity`, `*.prefab`, `*.asset` | UTF-8 без BOM (Unity YAML) |
-
-**Почему важно:** Visual Studio на Windows RU создаёт новые файлы в **Windows-1251** по умолчанию.
-Если PowerShell читает такой файл как UTF-8 и перезаписывает — кириллица превращается в `?` / U+FFFD.
-
-### Правило для Copilot: создание и редактирование файлов
-
-**Новые файлы** — всегда создавать через инструмент `create_file`.
-Инструмент `create_file` создаёт файл в системной кодировке Windows (Windows-1251 на Windows RU).
-После создания **обязательно** конвертировать в UTF-8 командой:
-
-```powershell
-powershell -File "C:\Temp\to_utf8.ps1" "путь\к\файлу.cs"
-```
-
-**Редактирование существующих файлов** — использовать инструменты `replace_string_in_file` / `multi_replace_string_in_file`.
-Они работают с файлом напрямую через IDE без изменения кодировки — безопасно.
-
-**Никогда не использовать** `run_command_in_terminal` для записи содержимого файла
-(PowerShell `Set-Content`, `Out-File`, `>` оператор) — кодировка будет неверной.
-
-### Настройка Visual Studio на UTF-8 (один раз вручную)
-
-Visual Studio на Windows RU создаёт новые файлы в WIN-1251 даже при наличии `.editorconfig`.
-Чтобы это исправить:
-
-1. Открыть `Tools --> Options --> Environment --> Documents`
-2. Включить: **"Save documents as Unicode when data cannot be saved in codepage"**
-3. Дополнительно: при сохранении любого файла через `File --> Save As --> Save with Encoding` выбрать **Unicode (UTF-8 without signature)**
-
-> После этой настройки файлы, созданные через VS (Add New Item, Ctrl+N), будут сохраняться
-> в UTF-8 при наличии символов вне ASCII. Файлы без кириллицы останутся ASCII — это нормально,
-> ASCII совместим с UTF-8.
-
-### Правило для PowerShell-скриптов
-
-Всегда явно указывать кодировку при чтении и записи:
-```powershell
-# Читать WIN-1251 файл (если создан IDE до добавления .editorconfig)
-$text = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::GetEncoding(1251))
-# Читать UTF-8 файл (все новые файлы)
-$text = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
-# Записывать всегда UTF-8 без BOM
-$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-[System.IO.File]::WriteAllText($path, $text, $utf8NoBom)
-```
-
-**Определить кодировку неизвестного файла** — запустить `C:\Temp\scan_enc2.ps1` или проверить первые байты:
-- `EF BB BF` = UTF-8 с BOM
-- `FF FE` = UTF-16 LE
-- байты `D0 xx` / `D1 xx` = UTF-8 без BOM (кириллица)
-- байты `C0-FF` одиночные = Windows-1251
-
-### Чтение файлов
-- **Всегда** использовать IDE-инструмент `get_file` с параметром `includeLineNumbers: true`
-- `get_file` должен быть основным путём IDE к файлу — это единственный способ корректного чтения без проблем с кодировкой
-- **Не использовать** `run_command_in_terminal` для чтения файлов (`cat`, `type`, `Get-Content`) — это приведёт к ошибкам кодировки и неверному чтению UTF-8 контента
-
-### Команды терминала
-- **Никогда** не использовать многострочные команды в одном вызове `run_command_in_terminal`
-- PowerShell переходит в режим ожидания `>>` при многострочном вводе — команда зависает
-- Каждый вызов `run_command_in_terminal` должен содержать **ровно одну команду**
-- Если нужно выполнить несколько команд — делать отдельный вызов для каждой
-
-### Причины зависания терминала (PowerShell)
-
-Следующие конструкции вешают PowerShell в бесконечный режим ожидания `>>`:
-
-| Причина | Пример — что сломается |
-|---|---|
-| Обратный апостроф `` ` `` внутри строки в кавычках | `` "UxrGrabber` + `UxrGrabber`" `` — `` ` `` это escape-символ PS |
-| Незакрытая скобка, кавычка или фигурная скобка | `$t.Substring($idx + 5` — PS ждёт закрывающую `)` |
-| Цепочка через `;` с 5+ операторами в одной строке | Длинные однострочники с вложенными выражениями |
-| Кириллица в here-string (`@'...'@`) через терминал | Кодировка терминала ломает многобайтовые символы |
-
-**Решение для сложной логики** — писать скрипт в файл через `create_file`, запускать одной командой:
-```powershell
-powershell -File "C:\Temp\my_script.ps1"
-```
-
-**Если терминал завис** (бесконечный спиннер или `>>`):
-1. Нажать **Ctrl+C** в терминале Visual Studio
-2. Дождаться возврата приглашения `PS F:\...>`
-3. Переписать команду без проблемных символов или вынести в `.ps1` файл

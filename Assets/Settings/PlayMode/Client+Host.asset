@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a689d91966dfb46499fb63f130d9b905, type: 3}
-  m_Name: Host+Client
+  m_Name: Client+Host
   m_EditorClassIdentifier: 
-  m_Description: Host + Client
+  m_Description: Client and Host
   m_EnableEditors: 1
   m_MainEditorInstance:
     Name: Main Editor
@@ -20,7 +20,7 @@ MonoBehaviour:
     m_Nodes:
     - Main Editor|0_run
     - Main Editor|0_deploy
-    m_PlayerTag: Host
+    m_PlayerTag: Client
     m_InitialScene: {fileID: 0}
   m_EditorInstances:
   - Name: Player 2
@@ -28,7 +28,7 @@ MonoBehaviour:
     m_Nodes:
     - Player 2|1_run
     - Player 2|1_deploy
-    m_PlayerTag: Client
+    m_PlayerTag: Host
     m_InitialScene: {fileID: 0}
     m_AdvancedConfiguration:
       StreamLogsToMainEditor: 0

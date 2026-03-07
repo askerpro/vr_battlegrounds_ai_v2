@@ -53,7 +53,7 @@ namespace VrBattlegrounds.Core
         [SerializeField] private LogLevel _logLevelPlayer = LogLevel.Info;
 
         [Header("Логи — Матч")]
-        [Tooltip("MatchManager, SetManager, RoundManager")]
+        [Tooltip("GameplayManager, SetManager, RoundManager")]
         [SerializeField] private LogLevel _logLevelMatch = LogLevel.Info;
 
         [Header("Логи — Отладка")]
@@ -70,7 +70,7 @@ namespace VrBattlegrounds.Core
         /// <summary>Уровень логов игрока (PlayerController).</summary>
         public LogLevel LogLevelPlayer   => _logLevelPlayer;
 
-        /// <summary>Уровень логов матча (MatchManager, SetManager, RoundManager).</summary>
+        /// <summary>Уровень логов матча (GameplayManager, SetManager, RoundManager).</summary>
         public LogLevel LogLevelMatch    => _logLevelMatch;
 
         /// <summary>Уровень логов инструментов отладки (DebugOrchestrator).</summary>

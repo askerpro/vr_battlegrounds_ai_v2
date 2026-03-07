@@ -28,7 +28,7 @@ namespace VrBattlegrounds.DevTools
 
         [Header("Матч")]
         [Tooltip("Автоматически запустить матч как только подключится достаточно игроков.")]
-        public bool autoStartMatch = true;
+        public bool autoStartGameplay = true;
 
         [Tooltip("Минимальное количество игроков для автостарта матча.")]
         [Min(1)]

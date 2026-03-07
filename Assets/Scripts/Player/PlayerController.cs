@@ -127,8 +127,8 @@ namespace VrBattlegrounds.Player
 
             // Уведомляем активный режим о гибели игрока.
             // EliminationMode делегирует в RoundManager; другие режимы обрабатывают по-своему.
-            if (MatchManager.Instance != null)
-                MatchManager.Instance.OnPlayerDied(this);
+            if (GameplayManager.Instance != null)
+                GameplayManager.Instance.OnPlayerDied(this);
         }
 
         /// <summary>Возрождает игрока на заданной точке спавна.</summary>

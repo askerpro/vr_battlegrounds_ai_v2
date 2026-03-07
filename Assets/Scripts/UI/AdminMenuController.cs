@@ -32,7 +32,7 @@ namespace VrBattlegrounds.UI
         }
 
         /// <summary>
-        /// Устанавливает выбранную карту в GameManager.
+        /// Устанавливает выбранную карту в SessionManager.
         /// Вызывается элементом выбора карты в UI.
         /// </summary>
         /// <param name="mapIndex">Индекс карты в MapRegistry.maps</param>
@@ -44,12 +44,12 @@ namespace VrBattlegrounds.UI
             if (mapIndex < 0 || mapIndex >= _mapRegistry.maps.Length)
                 return;
 
-            string currentModeId = GameManager.Instance != null ? GameManager.Instance.SelectedModeId : "";
-            GameManager.Instance?.SetSession(_mapRegistry.maps[mapIndex].sceneName, currentModeId);
+            string currentModeId = SessionManager.Instance != null ? SessionManager.Instance.SelectedModeId : "";
+            SessionManager.Instance?.SetSession(_mapRegistry.maps[mapIndex].sceneName, currentModeId);
         }
 
         /// <summary>
-        /// Устанавливает выбранный игровой режим в GameManager.
+        /// Устанавливает выбранный игровой режим в SessionManager.
         /// Вызывается элементом выбора режима в UI.
         /// </summary>
         /// <param name="modeIndex">Индекс режима в GameModeRegistry.modes</param>
@@ -61,8 +61,8 @@ namespace VrBattlegrounds.UI
             if (modeIndex < 0 || modeIndex >= _gameModeRegistry.modes.Length)
                 return;
 
-            string currentMap = GameManager.Instance != null ? GameManager.Instance.SelectedMapScene : "";
-            GameManager.Instance?.SetSession(currentMap, _gameModeRegistry.modes[modeIndex].modeId);
+            string currentMap = SessionManager.Instance != null ? SessionManager.Instance.SelectedMapScene : "";
+            SessionManager.Instance?.SetSession(currentMap, _gameModeRegistry.modes[modeIndex].modeId);
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace VrBattlegrounds.UI
             if (!NetworkServer.active)
                 return;
 
-            GameManager.Instance?.StartSession();
+            SessionManager.Instance?.StartSession();
         }
 
         /// <summary>
@@ -86,7 +86,7 @@ namespace VrBattlegrounds.UI
             if (!NetworkServer.active)
                 return;
 
-            MatchManager.Instance?.StartMatch();
+            GameplayManager.Instance?.StartGameplay();
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace VrBattlegrounds.UI
             if (!NetworkServer.active)
                 return;
 
-            MatchManager.Instance?.StopMatch();
+            GameplayManager.Instance?.StopGameplay();
             MapManager.Instance?.LoadMap("Lobby");
         }
 

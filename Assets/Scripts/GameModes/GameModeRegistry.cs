@@ -5,7 +5,7 @@ namespace VrBattlegrounds.GameModes
     /// <summary>
     /// Реестр всех доступных игровых режимов.
     /// Создать: ПКМ в Project → Create → VrBattlegrounds → Game Mode Registry
-    /// Один asset на проект — назначить в Inspector GameManager и AdminMenuController.
+    /// Один asset на проект — назначить в Inspector SessionManager и AdminMenuController.
     /// </summary>
     [CreateAssetMenu(
         fileName = "GameModeRegistry",

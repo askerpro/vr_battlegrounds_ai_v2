@@ -12,7 +12,7 @@ namespace VrBattlegrounds.GameModes
     /// <see cref="modePrefab"/> — префаб с компонентом <see cref="GameMode"/>.
     /// MatchManager инстанцирует его при StartMatch() и уничтожает при StopMatch().
     /// Команды из <see cref="teams"/> передаются в режим через <see cref="GameMode.Initialize"/>.
-    /// По сети передаётся только строка <see cref="modeId"/> через SyncVar в GameManager.
+    /// По сети передаётся только строка <see cref="modeId"/> через SyncVar в SessionManager.
     /// </summary>
     [CreateAssetMenu(
         fileName = "GameModeData_",
@@ -37,6 +37,9 @@ namespace VrBattlegrounds.GameModes
 
         [Tooltip("Префаб с компонентом GameMode. Инстанцируется MatchManager-ом при StartMatch, уничтожается при StopMatch.\nПрефаб должен содержать компонент-наследник GameMode (RespawnMode, EliminationMode).")]
         public GameObject modePrefab;
+
+        [Tooltip("Префаб интерфейса игрока (VR HUD). Спавнится компонентом PlayerHUDManager локального игрока внутрь его UI-контейнера при старте матча/подключении.")]
+        public GameObject hudPrefab;
 
         public override string ToString() => displayName;
     }

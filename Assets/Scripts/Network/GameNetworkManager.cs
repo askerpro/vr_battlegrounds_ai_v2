@@ -9,7 +9,7 @@ namespace VrBattlegrounds.Network
     /// <summary>
     /// Сетевой менеджер игры на базе Mirror.
     /// Единственная ответственность: управление сетевыми подключениями.
-    /// Логика команд и старт матча — в подписчиках событий (MatchManager, DebugOrchestrator).
+    /// Логика команд и старт матча — в подписчиках событий (GameplayManager, DebugOrchestrator).
     /// </summary>
     public class GameNetworkManager : NetworkManager
     {

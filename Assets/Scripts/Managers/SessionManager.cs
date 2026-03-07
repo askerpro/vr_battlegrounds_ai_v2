@@ -17,9 +17,9 @@ namespace VrBattlegrounds.Managers
     ///   — Администратор вызывает SetSession(mapScene, modeId) через AdminMenuController
     ///   — MatchManager читает SelectedGameModeData и SelectedMap при StartMatch()
     /// </summary>
-    public class GameManager : NetworkBehaviour
+    public class SessionManager : NetworkBehaviour
     {
-        public static GameManager Instance { get; private set; }
+        public static SessionManager Instance { get; private set; }
 
         [Header("Реестры")]
         [Tooltip("Реестр всех карт. Назначить MapRegistry asset.")]
@@ -43,19 +43,19 @@ namespace VrBattlegrounds.Managers
             {
                 if (_gameModeRegistry == null)
                 {
-                    GameLog.Error("[GameManager] SelectedGameModeData: _gameModeRegistry не назначен в Inspector!");
+                    GameLog.Error("[SessionManager] SelectedGameModeData: _gameModeRegistry не назначен в Inspector!");
                     return null;
                 }
                 if (string.IsNullOrEmpty(_selectedModeId))
                 {
                     GameLog.Warning(GameSettings.Instance.LogLevelMatch,
-                        "[GameManager] SelectedGameModeData: режим не выбран (_selectedModeId пуст).");
+                        "[SessionManager] SelectedGameModeData: режим не выбран (_selectedModeId пуст).");
                     return null;
                 }
                 GameModeData result = _gameModeRegistry.GetById(_selectedModeId);
                 if (result == null)
                     GameLog.Error(
-                        $"[GameManager] SelectedGameModeData: режим '{_selectedModeId}' не найден в реестре. " +
+                        $"[SessionManager] SelectedGameModeData: режим '{_selectedModeId}' не найден в реестре. " +
                         $"Доступные режимы: {string.Join(", ", System.Array.ConvertAll(_gameModeRegistry.modes, m => m != null ? m.modeId : "null"))}");
                 return result;
             }
@@ -88,14 +88,14 @@ namespace VrBattlegrounds.Managers
             if (string.IsNullOrEmpty(mapScene))
             {
                 GameLog.Warning(GameSettings.Instance.LogLevelMatch,
-                    "[GameManager] SetSession: пустое имя карты — игнорируем.");
+                    "[SessionManager] SetSession: пустое имя карты — игнорируем.");
                 return;
             }
 
             if (string.IsNullOrEmpty(modeId))
             {
                 GameLog.Warning(GameSettings.Instance.LogLevelMatch,
-                    "[GameManager] SetSession: пустой modeId — игнорируем.");
+                    "[SessionManager] SetSession: пустой modeId — игнорируем.");
                 return;
             }
 
@@ -103,7 +103,7 @@ namespace VrBattlegrounds.Managers
             _selectedModeId = modeId;
 
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[GameManager] Сессия настроена: карта={mapScene}, режим={modeId}");
+                $"[SessionManager] Сессия настроена: карта={mapScene}, режим={modeId}");
         }
 
         /// <summary>
@@ -116,18 +116,18 @@ namespace VrBattlegrounds.Managers
         {
             if (string.IsNullOrEmpty(_selectedMapScene))
             {
-                GameLog.Error("[GameManager] StartSession: карта не выбрана.");
+                GameLog.Error("[SessionManager] StartSession: карта не выбрана.");
                 return;
             }
 
             if (string.IsNullOrEmpty(_selectedModeId))
             {
-                GameLog.Error("[GameManager] StartSession: режим не выбран.");
+                GameLog.Error("[SessionManager] StartSession: режим не выбран.");
                 return;
             }
 
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[GameManager] Запуск сессии: карта={_selectedMapScene}, режим={_selectedModeId}");
+                $"[SessionManager] Запуск сессии: карта={_selectedMapScene}, режим={_selectedModeId}");
 
             MapManager.Instance?.LoadMap(_selectedMapScene);
         }

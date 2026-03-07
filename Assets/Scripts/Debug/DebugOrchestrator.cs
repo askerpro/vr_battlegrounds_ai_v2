@@ -77,7 +77,7 @@ namespace VrBattlegrounds.DevTools
 
             TryAssignTeam(player);
             TryTeleportToSpawnZone(player);
-            TryStartMatch();
+            TryStartGameplay();
         }
 
         private void TryTeleportToSpawnZone(PlayerController player)
@@ -113,12 +113,12 @@ namespace VrBattlegrounds.DevTools
         /// Проверяет условия автостарта и запускает матч если они выполнены.
         /// Вызывается как при подключении игроков, так и после загрузки сцены карты.
         /// </summary>
-        private void TryStartMatch()
+        private void TryStartGameplay()
         {
-            if (!_config.autoStartMatch)
+            if (!_config.autoStartGameplay)
             {
                 GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
-                    "[DebugOrchestrator] TryStartMatch: autoStartMatch выключен.");
+                    "[DebugOrchestrator] TryStartGameplay: autoStartGameplay выключен.");
                 return;
             }
 
@@ -126,51 +126,51 @@ namespace VrBattlegrounds.DevTools
             int playerCount = playersManager != null ? playersManager.Players.Count : 0;
 
             GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                $"[DebugOrchestrator] TryStartMatch: игроков={playerCount}, минимум={_config.minPlayersToAutoStart}");
+                $"[DebugOrchestrator] TryStartGameplay: игроков={playerCount}, минимум={_config.minPlayersToAutoStart}");
 
             if (playersManager == null)
             {
                 GameLog.Warning(GameSettings.Instance.LogLevelDebug,
-                    "[DebugOrchestrator] TryStartMatch: PlayersManager.Instance == null. Повторная попытка через 1 кадр.");
-                StartCoroutine(RetryStartMatchCoroutine());
+                    "[DebugOrchestrator] TryStartGameplay: PlayersManager.Instance == null. Повторная попытка через 1 кадр.");
+                StartCoroutine(RetryStartGameplayCoroutine());
                 return;
             }
 
             if (playerCount < _config.minPlayersToAutoStart)
             {
                 GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
-                    $"[DebugOrchestrator] TryStartMatch: недостаточно игроков ({playerCount}/{_config.minPlayersToAutoStart}).");
+                    $"[DebugOrchestrator] TryStartGameplay: недостаточно игроков ({playerCount}/{_config.minPlayersToAutoStart}).");
                 return;
             }
 
-            MatchManager matchManager = MatchManager.Instance;
+            GameplayManager matchManager = GameplayManager.Instance;
             if (matchManager == null)
             {
-                // MatchManager живёт только в сцене карты — при первом подключении в Offline сцене это нормально.
+                // GameplayManager живёт только в сцене карты — при первом подключении в Offline сцене это нормально.
                 GameLog.Warning(GameSettings.Instance.LogLevelDebug,
-                    "[DebugOrchestrator] TryStartMatch: MatchManager.Instance == null — " +
+                    "[DebugOrchestrator] TryStartGameplay: GameplayManager.Instance == null — " +
                     "возможно карта ещё не загружена. Матч запустится после загрузки карты.");
                 return;
             }
 
-            if (matchManager.IsMatchActive)
+            if (matchManager.IsGameplayActive)
             {
                 GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
-                    "[DebugOrchestrator] TryStartMatch: матч уже активен.");
+                    "[DebugOrchestrator] TryStartGameplay: матч уже активен.");
                 return;
             }
 
             GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                $"[DebugOrchestrator] TryStartMatch: достаточно игроков ({playerCount}) и карта загружена — запускаем матч.");
-            matchManager.StartMatch();
+                $"[DebugOrchestrator] TryStartGameplay: достаточно игроков ({playerCount}) и карта загружена — запускаем матч.");
+            matchManager.StartGameplay();
 
         }
 
-        private System.Collections.IEnumerator RetryStartMatchCoroutine()
+        private System.Collections.IEnumerator RetryStartGameplayCoroutine()
         {
             yield return null; // 1 кадр
-            GameLog.Verbose(GameSettings.Instance.LogLevelDebug, "[DebugOrchestrator] RetryStartMatchCoroutine: повторный вызов TryStartMatch.");
-            TryStartMatch();
+            GameLog.Verbose(GameSettings.Instance.LogLevelDebug, "[DebugOrchestrator] RetryStartGameplayCoroutine: повторный вызов TryStartGameplay.");
+            TryStartGameplay();
         }
 
         /// <summary>
@@ -235,9 +235,9 @@ namespace VrBattlegrounds.DevTools
 
             TryAutoLoadMap();
 
-            // Игроки подключились ДО загрузки карты (в Offline-сцене) — MatchManager тогда не существовал.
+            // Игроки подключились ДО загрузки карты (в Offline-сцене) — GameplayManager тогда не существовал.
             // Теперь карта загружена — пробуем запустить матч.
-            TryStartMatch();
+            TryStartGameplay();
         }
 
         private void TryAutoLoadMap()
@@ -253,10 +253,10 @@ namespace VrBattlegrounds.DevTools
                 return;
             }
 
-            // Устанавливаем режим через GameManager до загрузки карты — MatchManager прочитает его при старте.
-            if (!string.IsNullOrEmpty(_config.autoGameModeId) && GameManager.Instance != null)
+            // Устанавливаем режим через SessionManager до загрузки карты — GameplayManager прочитает его при старте.
+            if (!string.IsNullOrEmpty(_config.autoGameModeId) && SessionManager.Instance != null)
             {
-                GameManager.Instance.SetSession(_config.autoLoadMapScene, _config.autoGameModeId);
+                SessionManager.Instance.SetSession(_config.autoLoadMapScene, _config.autoGameModeId);
                 GameLog.Info(GameSettings.Instance.LogLevelDebug,
                     $"[DebugOrchestrator] Сессия установлена: карта={_config.autoLoadMapScene}, режим={_config.autoGameModeId}");
             }

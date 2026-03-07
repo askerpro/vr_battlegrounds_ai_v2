@@ -1,4 +1,4 @@
-# VR Battlegrounds AI — Copilot Instructions
+# VR Battlegrounds AI — Правила ИИ-помощника
 
 ## Проект
 VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
@@ -26,7 +26,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 - Скрипты рантайма: `Assets/ThirdParty/UltimateXR/Runtime/Scripts/`
 - Документация UltimateXR: `Assets/ThirdParty/UltimateXR/Docs/guides/`
 
-> **Для Copilot:** исходники UltimateXR SDK доступны через `get_file` по полному пути —
+> **Для ИИ-помощника:** исходники UltimateXR SDK доступны через `get_file` по полному пути —
 > проект `UltimateXR.csproj` входит в workspace. При вопросах об API лучше читать исходники напрямую,
 > чем полагаться на `.md` документацию. Полный список файлов: `get_files_in_project("UltimateXR.csproj")`.
 
@@ -41,7 +41,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 - `README.md` — список всех скриптов, классов, зависимостей проекта
 - `gameplay.md` — геймплей, структура матча, режимы, менеджеры, физическая арена
 
-> **Важно для Copilot:** инструмент `get_file` работает только для файлов из `.csproj` проектов
+> **Важно для ИИ-помощника:** инструмент `get_file` работает только для файлов из `.csproj` проектов
 > или открытых вкладок редактора. Файлы `.md` в него **не входят** — читать их через `get_file` нельзя.
 > Для чтения `.md` документации использовать терминал:
 > `[System.IO.File]::ReadAllText("F:\UnityProjects\Vr_Battlegrounds_ai\Assets\Docs\README.md", [System.Text.Encoding]::UTF8)`
@@ -81,6 +81,8 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 
 ## Инструкция по обновлению документации
 
+> **ГЛАВНОЕ ПРАВИЛО:** При добавлении любой новой логики, механики, компонента или менеджера — **ОБЯЗАТЕЛЬНО** по своей инициативе обновите соответствующий раздел документации (`README.md`, `gameplay.md` и др.). Если подходящего раздела нет — добавьте новый. Не оставляйте новый код без документации.
+
 > Эти файлы — живая документация. Они должны обновляться по мере изучения проекта.
 
 ### Когда обновлять
@@ -95,12 +97,12 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 | Новый модуль UltimateXR (Avatar, Grabbing, UI…) | `Assets/ThirdParty/UltimateXR/Docs/_context/<module>.md` (создать если нет) |
 | Общая архитектура, новые зависимости | `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md` |
 | Прогресс, заметки, решённые проблемы | `Assets/ThirdParty/UltimateXR/Docs/_context/progress.md` (создать если нет) |
-| Изменился стек или платформа | Этот файл (`copilot-instructions.md`) |
+| Изменился стек или платформа | Этот файл (`.agentrules`) |
 | Новая игровая механика, режим, изменение архитектуры матча | `Assets/Docs/gameplay.md` |
 | **Патчи SDK UltimateXR** (правки исходников, обходы API) | `Assets/ThirdParty/UltimateXR/Docs/_context/sdk-patches.md` |
 
 ### Формат обновления
-При изучении нового модуля попроси Copilot:
+При изучении нового модуля ИИ-помощник должен делать следующее:
 > "Обнови `_context/architecture.md` — добавь раздел по [модуль], который мы только что разобрали"
 
 ---
@@ -145,7 +147,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 
 ## Стиль общения и поведение
 
-Специализация — помощь в Unity, C# и VR SDK. Copilot должен:
+Специализация — помощь в Unity, C# и VR SDK. ИИ-помощник должен:
 
 ### Уточнять контекст реализации по запросу
 - Запрос про архитектуру -- предлагает варианты с учётом кода, проверяет допущения
@@ -166,7 +168,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 
 ## Управление документацией при коммите
 
-> **Обязательно:** перед выполнением коммита Copilot **всегда** актуализирует документацию.
+> **Обязательно:** перед выполнением коммита ИИ-помощник **всегда** актуализирует документацию.
 
 ### Процесс работы с коммитом (Commit Workflow)
 
@@ -177,7 +179,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
    - Новый SDK, патчи библиотеки UltimateXR? -- обновить `Assets/ThirdParty/UltimateXR/Docs/_context/sdk-patches.md`
    - Новая архитектура, паттерны, архитектурные изменения? -- обновить `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md`
    - Новый прогресс / статус реализации? -- обновить `Assets/ThirdParty/UltimateXR/Docs/_context/progress.md`
-   - Новые зависимости, пакеты, инструкции Copilot, патчи SDK? -- обновить этот файл (`copilot-instructions.md`)
+   - Новые зависимости, правила агента, патчи SDK? -- обновить этот файл (`.agentrules`)
 3. **Создать коммиты** — разбивать изменения файлы по логическим единицам
 4. **Финализировать коммит** — проверить сообщение коммита в соответствии с принятой стратегией
 
@@ -189,4 +191,4 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 | Новые паттерны, менеджеры, архитектурные изменения | `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md` |
 | Патчи UltimateXR SDK, правки, обходы API | `Assets/ThirdParty/UltimateXR/Docs/_context/sdk-patches.md` |
 | Прогресс, баги, тестирование, planned задачи | `Assets/ThirdParty/UltimateXR/Docs/_context/progress.md` |
-| Зависимости, пакеты, инструкции Copilot, патчи SDK | `copilot-instructions.md` |
+| Зависимости, пакеты, инструкции ИИ, патчи SDK | `.agentrules` |

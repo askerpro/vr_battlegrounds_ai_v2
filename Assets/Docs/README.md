@@ -109,6 +109,7 @@ MatchManager       — матч (5 карт, счёт, победитель)
 |---|---|---|
 | `MapData` | `Maps/MapData.cs` | ScriptableObject с данными карты. |
 | `MapRegistry` | `Maps/MapRegistry.cs` | ScriptableObject-список всех карт. Назначить в `AdminMenuController._mapRegistry`. |
+| `TeamSpawnZone` | `Maps/TeamSpawnZone.cs` | Коллайдер зоны возрождения для команды. Проверяет присутствие игроков. |
 
 **Поля `MapData`:**
 

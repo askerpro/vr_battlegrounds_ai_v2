@@ -45,6 +45,42 @@ namespace VrBattlegrounds.Maps
                 GameLog.Warning(GameSettings.Instance.LogLevelMatch, 
                     $"[TeamSpawnZone] У SpawnZone на объекте {gameObject.name} не назначена команда (_team).");
             }
+            else
+            {
+                UpdateColor();
+            }
+        }
+
+        private void OnValidate()
+        {
+            UpdateColor();
+        }
+
+        private void UpdateColor()
+        {
+            if (_team != null)
+            {
+                MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
+                if (meshRenderer != null)
+                {
+                    // Create a mutable copy of the material so we don't accidentally modify the shared asset
+                    if (Application.isPlaying)
+                    {
+                        meshRenderer.material.color = _team.color;
+                    }
+                    else
+                    {
+                        // In edit mode we shouldn't create material instances that leak, 
+                        // but setting sharedMaterial color changes the asset for everyone.
+                        // For a SpawnZone preview, using a MaterialPropertyBlock is safest and cleanest.
+                        MaterialPropertyBlock block = new MaterialPropertyBlock();
+                        meshRenderer.GetPropertyBlock(block);
+                        block.SetColor("_BaseColor", _team.color);
+                        block.SetColor("_Color", _team.color); // support both URP and standard shaders
+                        meshRenderer.SetPropertyBlock(block);
+                    }
+                }
+            }
         }
 
         private void OnTriggerEnter(Collider other)

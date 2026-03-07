@@ -1,5 +1,5 @@
 using Mirror;
-using UltimateXR.Avatar;
+using Mirror;
 using UnityEngine;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
@@ -13,7 +13,8 @@ namespace VrBattlegrounds.DevTools
     /// <summary>
     /// Оркестратор быстрой инициализации для отладки.
     /// Подписывается на события GameNetworkManager и выполняет заскриптованный
-    /// сценарий из DebugBootstrapConfig: назначает команду, загружает карту, запускает матч.
+    /// сценарий из DebugBootstrapConfig: равномерно распределяет игроков по командам,
+    /// загружает карту, запускает матч.
     ///
     /// Не меняет продакшн-код — использует те же публичные API, что и обычная игра.
     ///
@@ -43,7 +44,6 @@ namespace VrBattlegrounds.DevTools
             GameNetworkManager.PlayerConnected    += OnPlayerConnected;
             GameNetworkManager.PlayerDisconnected += OnPlayerDisconnected;
             GameNetworkManager.ServerSceneChanged += OnServerSceneChanged;
-            UxrAvatar.LocalAvatarChanged          += OnLocalAvatarChanged;
         }
 
         private void OnDisable()
@@ -51,7 +51,6 @@ namespace VrBattlegrounds.DevTools
             GameNetworkManager.PlayerConnected    -= OnPlayerConnected;
             GameNetworkManager.PlayerDisconnected -= OnPlayerDisconnected;
             GameNetworkManager.ServerSceneChanged -= OnServerSceneChanged;
-            UxrAvatar.LocalAvatarChanged          -= OnLocalAvatarChanged;
         }
 
         private void Start()
@@ -61,60 +60,160 @@ namespace VrBattlegrounds.DevTools
         }
 
         /// <summary>
-        /// Вызывается когда локальный аватар готов.
-        /// Назначает команду локальному игроку.
-        /// </summary>
-        private void OnLocalAvatarChanged(object sender, UxrAvatarEventArgs e)
-        {
-            if (e.Avatar == null)
-                return;
-
-            PlayerController localPlayer = e.Avatar.GetComponent<PlayerController>();
-            if (localPlayer == null)
-                return;
-
-            if (!NetworkServer.active)
-                return;
-
-            localPlayer.Team = _config.autoTeam;
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                $"[DebugOrchestrator] Команда назначена: {_config.autoTeam}");
-        }
-
-        /// <summary>
         /// Вызывается при каждом подключении игрока.
-        /// Если игроков достаточно и autoStartMatch включён — стартует матч.
+        /// Назначает команду (равномерное распределение) и при необходимости стартует матч.
         /// </summary>
         private void OnPlayerConnected(PlayerController player)
         {
-            if (!NetworkServer.active || !_config.autoStartMatch)
+            if (!NetworkServer.active)
+            {
+                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                    "[DebugOrchestrator] OnPlayerConnected: сервер не активен, пропуск.");
                 return;
+            }
+
+            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                $"[DebugOrchestrator] OnPlayerConnected: игрок={player.name}");
+
+            TryAssignTeam(player);
+            TryStartMatch();
+        }
+
+        private void OnPlayerDisconnected(PlayerController player)
+        {
+            GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                $"[DebugOrchestrator] OnPlayerDisconnected: игрок={player.name}");
+        }
+
+        /// <summary>
+        /// Проверяет условия автостарта и запускает матч если они выполнены.
+        /// Вызывается как при подключении игроков, так и после загрузки сцены карты.
+        /// </summary>
+        private void TryStartMatch()
+        {
+            if (!_config.autoStartMatch)
+            {
+                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                    "[DebugOrchestrator] TryStartMatch: autoStartMatch выключен.");
+                return;
+            }
 
             PlayersManager playersManager = PlayersManager.Instance;
-            if (playersManager == null || playersManager.Players.Count < _config.minPlayersToAutoStart)
+            int playerCount = playersManager != null ? playersManager.Players.Count : 0;
+
+            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                $"[DebugOrchestrator] TryStartMatch: игроков={playerCount}, минимум={_config.minPlayersToAutoStart}");
+
+            if (playersManager == null)
+            {
+                GameLog.Warning(GameSettings.Instance.LogLevelDebug,
+                    "[DebugOrchestrator] TryStartMatch: PlayersManager.Instance == null. Повторная попытка через 1 кадр.");
+                StartCoroutine(RetryStartMatchCoroutine());
                 return;
+            }
+
+            if (playerCount < _config.minPlayersToAutoStart)
+            {
+                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                    $"[DebugOrchestrator] TryStartMatch: недостаточно игроков ({playerCount}/{_config.minPlayersToAutoStart}).");
+                return;
+            }
 
             MatchManager matchManager = MatchManager.Instance;
             if (matchManager == null)
+            {
+                // MatchManager живёт только в сцене карты — при первом подключении в Offline сцене это нормально.
+                GameLog.Warning(GameSettings.Instance.LogLevelDebug,
+                    "[DebugOrchestrator] TryStartMatch: MatchManager.Instance == null — " +
+                    "возможно карта ещё не загружена. Матч запустится после загрузки карты.");
                 return;
+            }
+
+            if (matchManager.IsMatchActive)
+            {
+                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                    "[DebugOrchestrator] TryStartMatch: матч уже активен.");
+                return;
+            }
 
             GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                $"[DebugOrchestrator] Достаточно игроков ({playersManager.Players.Count}) — запускаем матч");
+                $"[DebugOrchestrator] TryStartMatch: достаточно игроков ({playerCount}) и карта загружена — запускаем матч.");
             matchManager.StartMatch();
+
         }
 
-        private void OnPlayerDisconnected(PlayerController player) { }
+        private System.Collections.IEnumerator RetryStartMatchCoroutine()
+        {
+            yield return null; // 1 кадр
+            GameLog.Verbose(GameSettings.Instance.LogLevelDebug, "[DebugOrchestrator] RetryStartMatchCoroutine: повторный вызов TryStartMatch.");
+            TryStartMatch();
+        }
+
+        /// <summary>
+        /// Назначает игроку команду с наименьшим числом участников (round-robin по балансу).
+        /// Если teamsForAutoAssign пуст — команда не назначается.
+        /// </summary>
+        private void TryAssignTeam(PlayerController player)
+        {
+            if (_config.teamsForAutoAssign == null || _config.teamsForAutoAssign.Count == 0)
+            {
+                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                    "[DebugOrchestrator] TryAssignTeam: teamsForAutoAssign пуст — команда не назначается.");
+                return;
+            }
+
+            PlayersManager pm = PlayersManager.Instance;
+
+            TeamData bestTeam = null;
+            int bestCount = int.MaxValue;
+
+            foreach (TeamData team in _config.teamsForAutoAssign)
+            {
+                if (team == null) continue;
+
+                // Считаем сколько игроков уже в этой команде (не считая только что подключившегося)
+                int count = 0;
+                if (pm != null)
+                {
+                    foreach (PlayerController p in pm.Players)
+                    {
+                        if (p != player && p.Team == team)
+                            count++;
+                    }
+                }
+
+                if (count < bestCount)
+                {
+                    bestCount = count;
+                    bestTeam  = team;
+                }
+            }
+
+            if (bestTeam == null) return;
+
+            player.Team = bestTeam;
+            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                $"[DebugOrchestrator] Команда назначена игроку {player.name}: {bestTeam.displayName} (в команде: {bestCount + 1})");
+        }
 
         /// <summary>
         /// Вызывается когда сервер завершил загрузку сцены.
         /// Если задан autoLoadMapScene — загружает карту.
+        /// После загрузки сцены карты пытается запустить матч (игроки могли подключиться раньше).
         /// </summary>
         private void OnServerSceneChanged(string sceneName)
         {
             if (!NetworkServer.active)
                 return;
 
+            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                $"[DebugOrchestrator] OnServerSceneChanged: сцена='{sceneName}'");
+
             TryAutoLoadMap();
+
+            // Игроки подключились ДО загрузки карты (в Offline-сцене) — MatchManager тогда не существовал.
+            // Теперь карта загружена — пробуем запустить матч.
+            TryStartMatch();
         }
 
         private void TryAutoLoadMap()
@@ -126,8 +225,16 @@ namespace VrBattlegrounds.DevTools
             if (_mapLoadRequested)
             {
                 GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
-                    $"[DebugOrchestrator] Карта уже была запрошена, повторный вызов игнорируется.");
+                    "[DebugOrchestrator] Карта уже была запрошена, повторный вызов игнорируется.");
                 return;
+            }
+
+            // Устанавливаем режим через GameManager до загрузки карты — MatchManager прочитает его при старте.
+            if (!string.IsNullOrEmpty(_config.autoGameModeId) && GameManager.Instance != null)
+            {
+                GameManager.Instance.SetSession(_config.autoLoadMapScene, _config.autoGameModeId);
+                GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                    $"[DebugOrchestrator] Сессия установлена: карта={_config.autoLoadMapScene}, режим={_config.autoGameModeId}");
             }
 
             _mapLoadRequested = true;

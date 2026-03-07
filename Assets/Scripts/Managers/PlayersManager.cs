@@ -20,44 +20,39 @@ namespace VrBattlegrounds.Managers
     {
         public static PlayersManager Instance { get; private set; }
 
-        private readonly List<PlayerController> _players = new List<PlayerController>();
+        [Header("Отладка (только чтение)")]
+        [Tooltip("Список имён всех подключённых игроков (только для инспектора, обновляется автоматически)")]
+        [SerializeField] private string[] _playerNames = new string[0];
 
-        /// <summary>Все подключённые игроки (только для чтения).</summary>
-        public IReadOnlyList<PlayerController> Players => _players;
+        /// <summary>
+        /// Все подключённые игроки (только для чтения, динамически из NetworkServer.connections).
+        /// </summary>
+        public IReadOnlyList<PlayerController> Players
+        {
+            get
+            {
+                if (!NetworkServer.active)
+                    return System.Array.Empty<PlayerController>();
+                var list = Mirror.NetworkServer.connections.Values
+                    .Select(conn => conn != null && conn.identity != null ? conn.identity.GetComponent<PlayerController>() : null)
+                    .Where(pc => pc != null)
+                    .ToList();
+                // Для инспектора
+                _playerNames = list.Select(p => p != null ? p.name : "null").ToArray();
+                return list;
+            }
+        }
 
         private void Awake()
         {
             if (Instance != null && Instance != this)
             {
+                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, "[PlayersManager] Awake: Instance уже существует, уничтожаю дубликат.");
                 Destroy(gameObject);
                 return;
             }
             Instance = this;
-        }
-
-        private void OnEnable()
-        {
-            GameNetworkManager.PlayerConnected += OnPlayerConnected;
-            GameNetworkManager.PlayerDisconnected += OnPlayerDisconnected;
-        }
-
-        private void OnDisable()
-        {
-            GameNetworkManager.PlayerConnected -= OnPlayerConnected;
-            GameNetworkManager.PlayerDisconnected -= OnPlayerDisconnected;
-        }
-
-        private void OnPlayerConnected(PlayerController player)
-        {
-            if (!_players.Contains(player))
-                _players.Add(player);
-            GameLog.Verbose(GameSettings.Instance.LogLevelNetwork, $"[PlayersManager] Игрок добавлен: {player.name}");
-        }
-
-        private void OnPlayerDisconnected(PlayerController player)
-        {
-            _players.Remove(player);
-            GameLog.Verbose(GameSettings.Instance.LogLevelNetwork, $"[PlayersManager] Игрок удалён: {player.name}");
+            GameLog.Info(GameSettings.Instance.LogLevelNetwork, "[PlayersManager] Awake: Instance установлен.");
         }
 
         /// <summary>Только живые игроки указанной команды.</summary>
@@ -65,7 +60,7 @@ namespace VrBattlegrounds.Managers
         {
             if (team == null)
                 return Enumerable.Empty<PlayerController>();
-            return _players.Where(p => p.TeamIndex == team.teamIndex && p.IsAlive);
+            return Players.Where(p => p.TeamIndex == team.teamIndex && p.IsAlive);
         }
 
         /// <summary>Все игроки указанной команды.</summary>
@@ -73,7 +68,7 @@ namespace VrBattlegrounds.Managers
         {
             if (team == null)
                 return Enumerable.Empty<PlayerController>();
-            return _players.Where(p => p.TeamIndex == team.teamIndex);
+            return Players.Where(p => p.TeamIndex == team.teamIndex);
         }
     }
 }

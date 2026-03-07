@@ -9,12 +9,14 @@
 |---|---|
 | `README.md` | Этот файл — технический справочник: скрипты, классы, API, компоненты |
 | `gameplay.md` | Геймдизайн: что делает игрок, правила, режимы, структура матча |
+| `game-manager.md` | GameManager, система режимов: создание assets, настройка, поток действий |
 
 ---
 
 ## Быстрая навигация
 
 - **Геймплей, режимы, матч, арена** → [`gameplay.md`](gameplay.md)
+- **GameManager, режимы, assets, настройка** → [`game-manager.md`](game-manager.md)
 - **UltimateXR SDK** → `Assets/ThirdParty/UltimateXR/Docs/_context/README.md` (открыть через `#file:`)
 - **Архитектура UltimateXR** → `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md`
 
@@ -29,7 +31,9 @@
 | `Assets/Scenes/Maps/` | Сцены карт (например `Arena_Warehouse.unity`) |
 | `Assets/Prefabs/` | Префабы |
 | `Assets/Prefabs/Player/` | Префаб игрока |
+| `Assets/Prefabs/GameModes/` | Префабы режимов (`RespawnMode.prefab`, `EliminationMode.prefab`) |
 | `Assets/Data/Maps/` | `MapRegistry.asset` + `MapData` assets |
+| `Assets/Data/GameModes/` | `GameModeRegistry.asset` + `GameModeData` assets |
 | `Assets/Data/Teams/` | `TeamData` assets (`Terrorists.asset`, `SpecialForces.asset`) |
 | `Assets/Resources/` | `GameSettings.asset` (загружается через `Resources.Load`) |
 
@@ -59,9 +63,10 @@
 |---|---|---|
 | `PlayersManager` | `Managers/PlayersManager.cs` | Список игроков, фильтрация: `Players`, `GetAlivePlayers(team)`, `GetPlayers(team)`. Синглтон на том же GO что и `NetworkManager`. |
 | `MapManager` | `Managers/MapManager.cs` | **Единственная точка входа для смены карты.** Откладывает `ServerChangeScene` на конец кадра через корутину. |
-| `MatchManager` | `Managers/MatchManager.cs` | Матч: счёт, победитель, `StartMatch()`. |
-| `SetManager` | `Managers/SetManager.cs` | Сет: N раундов, смена сторон. |
-| `RoundManager` | `Managers/RoundManager.cs` | Раунд: FSM (Countdown → Active → Ended), таймер, победа через `GameMode`. |
+| `GameManager` | `Managers/GameManager.cs` | Хранит выбор сессии (карта + режим). DontDestroyOnLoad вместе с NetworkManager. SyncVar реплицирует выбор клиентам. Методы: `SetSession()`, `StartSession()`. |
+| `MatchManager` | `Managers/MatchManager.cs` | Матч: счёт, победитель, `StartMatch()`, `StopMatch()`. Режим ищет по `modeId` из `GameManager`. |
+| `SetManager` | `Managers/SetManager.cs` | Сет: N раундов, смена сторон, `ForceStop()`. |
+| `RoundManager` | `Managers/RoundManager.cs` | Раунд: FSM (Countdown → Active → Ended), таймер, победа через `GameMode`, `ForceStop()`. |
 
 **Иерархия менеджеров матча:**
 
@@ -79,9 +84,11 @@ MatchManager       — матч (5 карт, счёт, победитель)
 
 | Класс | Файл | Описание |
 |---|---|---|
-| `GameMode` | `GameModes/GameMode.cs` | Абстрактный базовый класс. Методы: `CheckWinCondition`, `CanRespawn`, `OnRoundEnd`. |
-| `EliminationMode` | `GameModes/EliminationMode.cs` | Раунд до полного уничтожения команды. Использует `PlayersManager.GetAlivePlayers`. |
-| `RespawnMode` | `GameModes/RespawnMode.cs` | Возрождение при возврате на спавн. |
+| `GameMode` | `GameModes/GameMode.cs` | Абстрактный базовый класс. Поле `ModeId` — строковый ключ для поиска. Методы: `CheckWinCondition`, `CanRespawn`, `OnRoundEnd`. |
+| `EliminationMode` | `GameModes/EliminationMode.cs` | Раунд до полного уничтожения команды. ModeId = `elimination`. |
+| `RespawnMode` | `GameModes/RespawnMode.cs` | Возрождение при возврате на спавн. ModeId = `respawn`. |
+| `GameModeData` | `GameModes/GameModeData.cs` | ScriptableObject: `modeId`, `displayName`, `icon`. Создать: `Create > VrBattlegrounds > Game Mode Data`. |
+| `GameModeRegistry` | `GameModes/GameModeRegistry.cs` | ScriptableObject-список режимов. `GetById(modeId)`. Назначить в `GameManager` и `AdminMenuController`. |
 
 > При добавлении нового режима — создать наследника `GameMode`, переопределить `OnRoundEnd`, `CanRespawn`, `CheckWinCondition`. Не менять базовую логику `RoundManager`.
 
@@ -178,8 +185,8 @@ MatchManager       — матч (5 карт, счёт, победитель)
 
 **Последовательность событий при старте:**
 ```
-Play → OfflineScene → NetworkManager поднимает хост → OnlineScene
-  → ServerSceneChanged → DebugOrchestrator.TryAutoLoadMap()
+Play → OfflineScene → NetworkManager поднимает хост → Lobby
+→ ServerSceneChanged → DebugOrchestrator.TryAutoLoadMap()
   → MapManager.LoadMap(autoLoadMapScene)
   → Карта загружается
   → LocalAvatarChanged → назначается команда
@@ -217,12 +224,14 @@ Play → OfflineScene → NetworkManager поднимает хост → OnlineS
 | `PlayersManager` | ✅ Реализовано | — |
 | `MapManager` | ✅ Реализовано | — |
 | `DebugOrchestrator` | ✅ Реализовано | — |
+| `GameManager` | ✅ Реализовано | — |
+| `GameModeData` / `GameModeRegistry` | ✅ Реализовано | — |
+| `MatchManager` | ✅ Реализовано | — |
+| `SetManager` | ✅ Реализовано | — |
+| `RoundManager` | ✅ Реализовано | — |
 | `GameMode` — Respawn | ⬜ Не реализовано | **Первый приоритет** |
 | Команды | ⬜ Не реализовано | Высокий |
-| `MatchManager` | ⬜ Не реализовано | Высокий |
-| `SetManager` | ⬜ Не реализовано | Высокий |
-| `RoundManager` | ⬜ Не реализовано | Высокий |
 | `GameMode` — Elimination | ⬜ Не реализовано | Средний |
-| `AdminMenuController` | 🔧 Заготовка | Средний |
+| `AdminMenuController` | 🔧 Обновлено | Средний |
 | `PlayerMenuController` | 🔧 Заготовка | Средний |
 | `VrCalibrationController` | 🔧 Заготовка | Средний |

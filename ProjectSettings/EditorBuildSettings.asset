@@ -12,11 +12,14 @@ EditorBuildSettings:
     path: Assets/Scenes/Offline.unity
     guid: dba1a51651ebbe549a5d33233d39056f
   - enabled: 1
-    path: Assets/Scenes/Sandbox.unity
+    path: Assets/Scenes/Lobby.unity
     guid: c22e7a6000e9ae04084851d7befadb60
   - enabled: 1
     path: Assets/Scenes/Maps/TestMap1.unity
     guid: 36e927488d4c5664b97e0d523de1e232
+  - enabled: 1
+    path: Assets/Scenes/Maps/TestMap2.unity
+    guid: 39ea13d8e4e286c4e942c5a17b9de85b
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: 9f9c2f9685095974c94c16cd4c07194e, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

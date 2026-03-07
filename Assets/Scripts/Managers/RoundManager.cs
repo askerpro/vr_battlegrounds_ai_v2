@@ -1,6 +1,5 @@
-using UnityEngine;
-using Mirror;
-using UnityEngine;
+﻿using UnityEngine;
+using System;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
@@ -9,166 +8,129 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Managers
 {
     /// <summary>
-    /// Управляет раундом: FSM состояний, обратный отсчёт, таймер раунда.
-    /// Выполняется только на сервере (SetManager создаёт и запускает раунды).
+    /// Чистая серверная логика раунда: FSM состояний, обратный отсчёт, таймер.
+    /// Не является MonoBehaviour — создаётся через new RoundManager() из EliminationMode.
+    ///
+    /// Тик обновляется вызовом Tick(deltaTime) из EliminationMode.Update().
+    /// Сетевая синхронизация (SyncVar, ClientRpc) — в EliminationMode.
     /// </summary>
-    public class RoundManager : NetworkBehaviour
+    public class RoundManager
     {
-        /// <summary>Уведомляет SetManager о завершении раунда. Null = ничья.</summary>
-        public event System.Action<TeamData> RoundEnded;
+        /// <summary>Срабатывает при завершении раунда. Null = ничья.</summary>
+        public event Action<TeamData> RoundEnded;
 
-        [Header("Настройки раунда")]
-        [SerializeField] private float _countdownDuration = 3f;
-        [SerializeField] private float _roundDuration = 90f;
+        private float _countdownDuration;
+        private float _roundDuration;
+        private float _countdownTimer;
+        private float _roundTimer;
+        private RoundState _roundState = RoundState.Ended;
 
-        [SyncVar] private RoundState _roundState = RoundState.Ended;
-        [SyncVar] private float _countdownTimer;
-        [SyncVar] private float _roundTimer;
+        private EliminationMode _eliminationMode;
 
-        private GameMode _activeGameMode;
-
-        /// <summary>Текущее состояние раунда (синхронизировано на клиентах).</summary>
         public RoundState State => _roundState;
+        public float RoundTimeRemaining => Math.Max(0f, _roundDuration - _roundTimer);
+        public float CountdownTimeRemaining => Math.Max(0f, _countdownDuration - _countdownTimer);
 
-        /// <summary>Оставшееся время раунда в секундах.</summary>
-        public float RoundTimeRemaining => Mathf.Max(0f, _roundDuration - _roundTimer);
-
-        /// <summary>Оставшееся время обратного отсчёта в секундах.</summary>
-        public float CountdownTimeRemaining => Mathf.Max(0f, _countdownDuration - _countdownTimer);
-
-        [Server]
-        public void StartRound(GameMode gameMode)
+        public void StartRound(EliminationMode mode, float countdownDuration, float roundDuration)
         {
-            _activeGameMode = gameMode;
+            _eliminationMode = mode;
+            _countdownDuration = countdownDuration;
+            _roundDuration = roundDuration;
             _countdownTimer = 0f;
             _roundTimer = 0f;
-            SetState(RoundState.Countdown);
-            RpcOnRoundStarted();
+            _roundState = RoundState.Countdown;
             GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Раунд начат, запущен обратный отсчёт");
         }
 
-        [Server]
+        /// <summary>Продолжить сет — запустить следующий раунд с теми же настройками.</summary>
+        public void StartNextRound(EliminationMode mode)
+        {
+            StartRound(mode, _countdownDuration, _roundDuration);
+        }
+
         public void EndRound(TeamData winner)
         {
-            if (_roundState == RoundState.Ended)
-                return;
-
-            _activeGameMode?.OnRoundEnd();
-            SetState(RoundState.Ended);
+            if (_roundState == RoundState.Ended) return;
+            _roundState = RoundState.Ended;
             string winnerName = winner != null ? winner.displayName : "ничья";
-            RpcOnRoundEnded(winnerName);
+            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                $"[RoundManager] Раунд завершён, победитель: {winnerName}");
             RoundEnded?.Invoke(winner);
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, $"[RoundManager] Раунд завершён, победитель: {winnerName}");
         }
 
         /// <summary>
-        /// Вызывается PlayerController при гибели игрока.
-        /// Делегирует проверку условий победы активному GameMode.
+        /// Вызывается EliminationMode при гибели игрока.
+        /// Проверяет условие победы и завершает раунд если нужно.
         /// </summary>
-        [Server]
         public void OnPlayerDied(PlayerController player)
         {
-            if (_roundState != RoundState.Active)
-                return;
+            if (_roundState != RoundState.Active) return;
 
-            GameLog.Verbose(GameSettings.Instance.LogLevelMatch, $"[RoundManager] Игрок {player.name} погиб — проверяем условие победы");
+            GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+                $"[RoundManager] Игрок {player.name} погиб — проверяем условие победы");
 
-            TeamData winner = _activeGameMode?.CheckWinCondition();
-
-            // null при активном режиме = раунд продолжается; null без режима = сразу ничья
-            bool roundOver = _activeGameMode == null || winner != null || IsAllTeamsDead();
-
-            if (roundOver)
-                EndRound(winner);
+            TeamData winner = _eliminationMode?.CheckRoundWinCondition();
+            bool roundOver = _eliminationMode == null || winner != null || IsAllTeamsDead();
+            if (roundOver) EndRound(winner);
         }
 
-        private void Update()
+        /// <summary>
+        /// Тик логики раунда. Вызывается из EliminationMode.Update() только на сервере.
+        /// Возвращает true если состояние изменилось (для синхронизации SyncVar в EliminationMode).
+        /// </summary>
+        public bool Tick(float deltaTime)
         {
-            if (!isServer)
-                return;
-
             switch (_roundState)
             {
                 case RoundState.Countdown:
-                    UpdateCountdown();
-                    break;
+                    _countdownTimer += deltaTime;
+                    if (_countdownTimer >= _countdownDuration)
+                    {
+                        _countdownTimer = _countdownDuration;
+                        _roundState = RoundState.Active;
+                        GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                            "[RoundManager] Обратный отсчёт завершён — раунд активен");
+                        return true;
+                    }
+                    return false;
+
                 case RoundState.Active:
-                    UpdateRoundTimer();
-                    break;
+                    _roundTimer += deltaTime;
+                    if (_roundTimer >= _roundDuration)
+                    {
+                        GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                            "[RoundManager] Время раунда истекло — ничья");
+                        EndRound(null);
+                        return true;
+                    }
+                    return false;
+
+                default:
+                    return false;
             }
         }
 
-        [Server]
-        private void UpdateCountdown()
+        public void ForceStop()
         {
-            _countdownTimer += Time.deltaTime;
-
-            if (_countdownTimer >= _countdownDuration)
-            {
-                _countdownTimer = _countdownDuration;
-                SetState(RoundState.Active);
-                GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Обратный отсчёт завершён — раунд активен");
-            }
+            _roundState = RoundState.Ended;
+            _eliminationMode = null;
+            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Раунд принудительно остановлен");
         }
 
-        [Server]
-        private void UpdateRoundTimer()
-        {
-            _roundTimer += Time.deltaTime;
-
-            if (_roundTimer >= _roundDuration)
-            {
-                GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Время раунда истекло — ничья");
-                EndRound(null);
-            }
-        }
-
-        /// <summary>Все команды активного режима мертвы — раунд должен завершиться ничьей.</summary>
-        [Server]
         private bool IsAllTeamsDead()
         {
-            if (_activeGameMode == null)
-                return false;
-
+            if (_eliminationMode == null) return false;
             PlayersManager pm = PlayersManager.Instance;
-            if (pm == null)
-                return false;
-
-            foreach (TeamData team in _activeGameMode.Teams)
+            if (pm == null) return false;
+            foreach (TeamData team in _eliminationMode.Teams)
             {
-                if (team == null)
-                    continue;
-
+                if (team == null) continue;
                 foreach (PlayerController _ in pm.GetAlivePlayers(team))
                     return false;
             }
             return true;
         }
-
-        [Server]
-        private void SetState(RoundState newState)
-        {
-            _roundState = newState;
-        }
-
-        [ClientRpc]
-        private void RpcOnRoundStarted()
-        {
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Раунд начат (клиент)");
-        }
-
-        [ClientRpc]
-        private void RpcOnRoundEnded(string winnerName)
-        {
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, $"[RoundManager] Раунд завершён (клиент), победитель: {winnerName}");
-        }
     }
 
-    /// <summary>Состояния раунда.</summary>
-    public enum RoundState
-    {
-        Countdown,
-        Active,
-        Ended
-    }
+    public enum RoundState { Countdown, Active, Ended }
 }

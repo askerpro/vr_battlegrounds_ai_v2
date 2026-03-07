@@ -1,3 +1,5 @@
+using System;
+using Mirror;
 using UnityEngine;
 using VrBattlegrounds;
 
@@ -5,31 +7,59 @@ namespace VrBattlegrounds.GameModes
 {
     /// <summary>
     /// Абстрактный базовый класс игрового режима.
-    /// Новые режимы наследуют этот класс и переопределяют
-    /// OnRoundEnd, CanRespawn, CheckWinCondition.
     ///
-    /// Список команд задаётся в Inspector через поле <see cref="teams"/>.
-    /// Это позволяет одному режиму работать с любым набором команд из TeamRegistry.
+    /// Каждый режим самостоятельно управляет своей внутренней структурой —
+    /// сетами, раундами, таймерами или любой другой логикой.
+    ///
+    /// MatchManager инстанцирует префаб режима через NetworkServer.Spawn,
+    /// вызывает Initialize() → StartMatch(), и ждёт события MatchEnded.
+    /// При StopMatch() вызывает StopMatch() на режиме и уничтожает инстанс.
     /// </summary>
-    public abstract class GameMode : MonoBehaviour
+    public abstract class GameMode : NetworkBehaviour
     {
-        [Header("Команды")]
-        [Tooltip("Команды, участвующие в этом режиме. Назначить TeamData assets из TeamRegistry.")]
-        [SerializeField] protected TeamData[] teams = new TeamData[0];
+        /// <summary>
+        /// Срабатывает когда режим определил победителя матча.
+        /// Null = ничья. Подписывается MatchManager.
+        /// </summary>
+        public event Action<TeamData> MatchEnded;
 
-        /// <summary>Команды, участвующие в этом режиме (только чтение).</summary>
-        public TeamData[] Teams => teams;
+        // Команды передаются через Initialize() — не хранятся в Inspector
+        private TeamData[] _teams = new TeamData[0];
 
-        /// <summary>Вызывается при завершении раунда.</summary>
-        public abstract void OnRoundEnd();
+        /// <summary>Команды, участвующие в матче (только чтение).</summary>
+        public TeamData[] Teams => _teams;
+
+        /// <summary>
+        /// Инициализирует режим командами перед стартом.
+        /// Вызывается MatchManager-ом сразу после NetworkServer.Spawn.
+        /// </summary>
+        public void Initialize(TeamData[] teams)
+        {
+            _teams = teams ?? new TeamData[0];
+        }
+
+        /// <summary>Запускает матч. Вызывается MatchManager-ом на сервере.</summary>
+        public abstract void StartMatch();
+
+        /// <summary>
+        /// Принудительно останавливает матч без определения победителя.
+        /// Вызывается MatchManager-ом при StopMatch() администратора.
+        /// </summary>
+        public abstract void StopMatch();
+
+        /// <summary>
+        /// Возвращает текущий счёт команды (фраги, раунды, сеты — зависит от режима).
+        /// Используется UI для отображения счёта.
+        /// </summary>
+        public abstract int GetScore(TeamData team);
 
         /// <summary>Может ли игрок возродиться в текущем режиме.</summary>
         public abstract bool CanRespawn();
 
         /// <summary>
-        /// Проверяет условие победы.
-        /// Возвращает победившую TeamData, или null если раунд продолжается / ничья.
+        /// Вызвать из конкретного режима когда определён победитель матча.
         /// </summary>
-        public abstract TeamData CheckWinCondition();
+        protected void RaiseMatchEnded(TeamData winner) => MatchEnded?.Invoke(winner);
     }
 }
+

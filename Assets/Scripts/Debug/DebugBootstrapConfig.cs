@@ -1,4 +1,6 @@
 using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine;
 using VrBattlegrounds;
 
 namespace VrBattlegrounds.DevTools
@@ -21,8 +23,8 @@ namespace VrBattlegrounds.DevTools
         public bool enabled = true;
 
         [Header("Игрок")]
-        [Tooltip("Команда, которая будет назначена локальному игроку автоматически. Назначить TeamData asset из TeamRegistry.")]
-        public TeamData autoTeam;
+        [Tooltip("Команды для автоматического распределения игроков. Каждый новый игрок идёт в команду с наименьшим числом участников. Оставить пустым — команду не назначать.")]
+        public List<TeamData> teamsForAutoAssign = new List<TeamData>();
 
         [Header("Матч")]
         [Tooltip("Автоматически запустить матч как только подключится достаточно игроков.")]
@@ -35,5 +37,9 @@ namespace VrBattlegrounds.DevTools
         [Header("Карта")]
         [Tooltip("Автоматически загрузить эту сцену при старте сервера. Оставить пустым — не грузить.")]
         public string autoLoadMapScene = "";
+
+        [Tooltip("Идентификатор режима (modeId из GameModeData), который запустится после загрузки карты. " +
+                 "Оставить пустым — не устанавливать режим автоматически. Пример: \"elimination\".")]
+        public string autoGameModeId = "elimination";
     }
 }

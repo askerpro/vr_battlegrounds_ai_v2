@@ -9,14 +9,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fc5c173fbbbfe3f488a69fd5836076f7, type: 3}
-  m_Name: DebugBootstrapConfig
+  m_Script: {fileID: 11500000, guid: e182b6931fb88d34cb4fc95e7a4c1534, type: 3}
+  m_Name: Elimination_GameModeData
   m_EditorClassIdentifier: 
-  enabled: 1
-  teamsForAutoAssign:
+  modeId: elimination
+  displayName: "\u041B\u0438\u043A\u0432\u0438\u0434\u0430\u0446\u0438\u044F"
+  icon: {fileID: 0}
+  description: 
+  teams:
   - {fileID: 11400000, guid: 294548aeb7148344ea5bfd4c522cc7b7, type: 2}
   - {fileID: 11400000, guid: 6a1b2f4f562e0d4468069d2c11f06576, type: 2}
-  autoStartMatch: 1
-  minPlayersToAutoStart: 1
-  autoLoadMapScene: TestMap1
-  autoGameModeId: elimination
+  modePrefab: {fileID: 7322410552265810670, guid: 1f7c1a457f11c3a4a9d7e3d08a60d561, type: 3}

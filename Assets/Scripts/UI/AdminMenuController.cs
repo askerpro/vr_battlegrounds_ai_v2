@@ -1,27 +1,28 @@
 using Mirror;
-using Mirror;
 using UnityEngine;
+using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Maps;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.UI
 {
     /// <summary>
     /// Меню администратора арены (только для Host/Server).
     /// Администратор — первый подключившийся игрок (Host).
-    /// Предоставляет управление матчем: выбор карты, режима, старт/стоп/пауза.
+    /// Предоставляет управление сессией: выбор карты, режима, старт/стоп матча.
     ///
     /// Активируется только если текущий клиент является сервером.
     /// Если Host одновременно игрок — ему доступны и AdminMenu, и PlayerMenu.
     /// </summary>
     public class AdminMenuController : MonoBehaviour
     {
-        [Header("Зависимости")]
-        [SerializeField] private MatchManager _matchManager;
-
-        [Header("Настройки карт")]
+        [Header("Реестры")]
         [Tooltip("Реестр всех доступных карт. Назначить MapRegistry asset.")]
         [SerializeField] private MapRegistry _mapRegistry;
+
+        [Tooltip("Реестр всех доступных режимов. Назначить GameModeRegistry asset.")]
+        [SerializeField] private GameModeRegistry _gameModeRegistry;
 
         private void Start()
         {
@@ -31,52 +32,80 @@ namespace VrBattlegrounds.UI
         }
 
         /// <summary>
-        /// Запускает матч с выбранной картой и режимом.
-        /// Вызывается кнопкой UI.
+        /// Устанавливает выбранную карту в GameManager.
+        /// Вызывается элементом выбора карты в UI.
+        /// </summary>
+        /// <param name="mapIndex">Индекс карты в MapRegistry.maps</param>
+        public void OnMapSelected(int mapIndex)
+        {
+            if (!NetworkServer.active || _mapRegistry == null)
+                return;
+
+            if (mapIndex < 0 || mapIndex >= _mapRegistry.maps.Length)
+                return;
+
+            string currentModeId = GameManager.Instance != null ? GameManager.Instance.SelectedModeId : "";
+            GameManager.Instance?.SetSession(_mapRegistry.maps[mapIndex].sceneName, currentModeId);
+        }
+
+        /// <summary>
+        /// Устанавливает выбранный игровой режим в GameManager.
+        /// Вызывается элементом выбора режима в UI.
+        /// </summary>
+        /// <param name="modeIndex">Индекс режима в GameModeRegistry.modes</param>
+        public void OnModeSelected(int modeIndex)
+        {
+            if (!NetworkServer.active || _gameModeRegistry == null)
+                return;
+
+            if (modeIndex < 0 || modeIndex >= _gameModeRegistry.modes.Length)
+                return;
+
+            string currentMap = GameManager.Instance != null ? GameManager.Instance.SelectedMapScene : "";
+            GameManager.Instance?.SetSession(currentMap, _gameModeRegistry.modes[modeIndex].modeId);
+        }
+
+        /// <summary>
+        /// Загружает выбранную карту и запускает сессию.
+        /// Вызывается кнопкой "Начать игру" в UI.
+        /// </summary>
+        public void OnStartSessionPressed()
+        {
+            if (!NetworkServer.active)
+                return;
+
+            GameManager.Instance?.StartSession();
+        }
+
+        /// <summary>
+        /// Запускает матч на текущей карте.
+        /// Вызывается кнопкой "Старт матча" в UI.
         /// </summary>
         public void OnStartMatchPressed()
         {
             if (!NetworkServer.active)
                 return;
 
-            _matchManager.StartMatch();
+            MatchManager.Instance?.StartMatch();
         }
 
         /// <summary>
-        /// Останавливает текущий матч.
-        /// Вызывается кнопкой UI.
+        /// Останавливает текущий матч и возвращает всех в Lobby.
+        /// Вызывается кнопкой "Стоп / Выйти в лобби" в UI.
         /// </summary>
         public void OnStopMatchPressed()
         {
             if (!NetworkServer.active)
                 return;
 
-            // TODO: вызвать MatchManager.StopMatch() когда метод будет реализован
+            MatchManager.Instance?.StopMatch();
+            MapManager.Instance?.LoadMap("Lobby");
         }
 
-        /// <summary>
-        /// Загружает карту по индексу из MapRegistry.
-        /// Вызывается элементом выбора карты в UI.
-        /// </summary>
-        /// <param name="mapIndex">Индекс карты в MapRegistry.maps</param>
-        public void OnMapSelected(int mapIndex)
-        {
-            if (!NetworkServer.active)
-                return;
-
-            if (_mapRegistry == null || mapIndex < 0 || mapIndex >= _mapRegistry.maps.Length)
-            {
-                Debug.LogWarning($"[AdminMenuController] Некорректный индекс карты или не назначен MapRegistry: {mapIndex}");
-                return;
-            }
-
-            string sceneName = _mapRegistry.maps[mapIndex].sceneName;
-            NetworkManager.singleton.ServerChangeScene(sceneName);
-        }
-
-        /// <summary>
-        /// Возвращает список карт для построения UI меню.
-        /// </summary>
+        /// <summary>Возвращает список карт для построения UI меню.</summary>
         public MapData[] GetMaps() => _mapRegistry != null ? _mapRegistry.maps : new MapData[0];
+
+        /// <summary>Возвращает список режимов для построения UI меню.</summary>
+        public GameModeData[] GetModes() => _gameModeRegistry != null ? _gameModeRegistry.modes : new GameModeData[0];
     }
 }

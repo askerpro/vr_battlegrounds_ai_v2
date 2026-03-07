@@ -18,18 +18,42 @@ namespace VrBattlegrounds.Player
     [RequireComponent(typeof(UxrActor))]
     public class PlayerController : NetworkBehaviour
     {
+        // ── Отображение в Inspector (только для чтения, обновляются через hook) ──
+
+        [Header("Состояние (только чтение)")]
+        [Tooltip("Текущая команда игрока.")]
+        [SerializeField] private TeamData _teamDisplay;
+
+        [Tooltip("Жив ли игрок.")]
+        [SerializeField] private bool _isAliveDisplay;
+
+        // ── Сетевые данные ────────────────────────────────────────────────────
+
         /// <summary>
         /// teamIndex = 0 означает "нет команды".
-        /// Соответствует TeamData.teamIndex из TeamRegistry.
+        /// hook вызывается на всех клиентах при каждом изменении значения.
         /// </summary>
-        [SyncVar] private int _teamIndex = 0;
-        [SyncVar] private bool _isAlive = true;
+        [SyncVar(hook = nameof(OnTeamIndexChanged))]
+        private int _teamIndex = 0;
+
+        [SyncVar(hook = nameof(OnIsAliveChanged))]
+        private bool _isAlive = true;
+
+        // ── Публичный API ─────────────────────────────────────────────────────
 
         /// <summary>Данные команды игрока. Null если команда не назначена.</summary>
         public TeamData Team
         {
             get => TeamRegistry.Instance?.GetByIndex(_teamIndex);
-            set => _teamIndex = value != null ? value.teamIndex : 0;
+            set
+            {
+                int newIndex = value != null ? value.teamIndex : 0;
+                if (_teamIndex == newIndex) return;
+                _teamIndex = newIndex;
+                RefreshDisplay();
+                GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                    $"[PlayerController] {name}: команда назначена → {(value != null ? value.displayName : "нет")}");
+            }
         }
 
         /// <summary>Числовой индекс команды (для сетевой синхронизации).</summary>
@@ -37,13 +61,14 @@ namespace VrBattlegrounds.Player
 
         public bool IsAlive => _isAlive;
 
+        // ── Unity lifecycle ───────────────────────────────────────────────────
+
         private UxrActor _actor;
 
         private void Awake()
         {
             _actor = GetComponent<UxrActor>();
             _actor.AutomaticDeadHandling = false;
-
             _actor.DamageReceived += OnDamageReceived;
         }
 
@@ -53,31 +78,57 @@ namespace VrBattlegrounds.Player
                 _actor.DamageReceived -= OnDamageReceived;
         }
 
-        /// <summary>
-        /// Вызывается UxrActor при получении урона.
-        /// Если HP упали до нуля — инициируем смерть на сервере.
-        /// </summary>
+        public override void OnStartClient()
+        {
+            // Обновляем display-поля после того как SyncVar пришли с сервера
+            RefreshDisplay();
+        }
+
+        // ── SyncVar hooks (вызываются на всех клиентах при изменении) ─────────
+
+        private void OnTeamIndexChanged(int oldIndex, int newIndex)
+        {
+            RefreshDisplay();
+            TeamData team = TeamRegistry.Instance?.GetByIndex(newIndex);
+            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                $"[PlayerController] {name}: команда изменена → {(team != null ? team.displayName : "нет")}");
+        }
+
+        private void OnIsAliveChanged(bool oldValue, bool newValue)
+        {
+            RefreshDisplay();
+        }
+
+        // ── Внутреннее ───────────────────────────────────────────────────────
+
+        /// <summary>Синхронизирует display-поля в Inspector с текущим состоянием.</summary>
+        private void RefreshDisplay()
+        {
+            _teamDisplay   = TeamRegistry.Instance?.GetByIndex(_teamIndex);
+            _isAliveDisplay = _isAlive;
+        }
+
+        // ── Игровая логика ────────────────────────────────────────────────────
+
         private void OnDamageReceived(object sender, UxrDamageEventArgs e)
         {
-            if (!isServer)
-                return;
-
-            if (e.Dies || _actor.Life <= 0f)
-                Die();
+            if (!isServer) return;
+            if (e.Dies || _actor.Life <= 0f) Die();
         }
 
         /// <summary>Убивает игрока на сервере и уведомляет клиентов.</summary>
         [Server]
         public void Die()
         {
-            if (!_isAlive)
-                return;
+            if (!_isAlive) return;
 
             _isAlive = false;
             RpcOnDied();
 
-            RoundManager roundManager = FindObjectOfType<RoundManager>();
-            roundManager?.OnPlayerDied(this);
+            // Уведомляем активный режим о гибели игрока.
+            // EliminationMode делегирует в RoundManager; другие режимы обрабатывают по-своему.
+            if (MatchManager.Instance != null)
+                MatchManager.Instance.OnPlayerDied(this);
         }
 
         /// <summary>Возрождает игрока на заданной точке спавна.</summary>
@@ -89,14 +140,12 @@ namespace VrBattlegrounds.Player
             RpcOnRespawned(spawnPoint.position, spawnPoint.rotation);
         }
 
-        /// <summary>Синхронизирует анимацию смерти / деактивацию на всех клиентах.</summary>
         [ClientRpc]
         private void RpcOnDied()
         {
             // TODO: воспроизвести анимацию смерти, скрыть модель
         }
 
-        /// <summary>Синхронизирует позицию возрождения на всех клиентах.</summary>
         [ClientRpc]
         private void RpcOnRespawned(Vector3 position, Quaternion rotation)
         {
@@ -104,3 +153,4 @@ namespace VrBattlegrounds.Player
         }
     }
 }
+

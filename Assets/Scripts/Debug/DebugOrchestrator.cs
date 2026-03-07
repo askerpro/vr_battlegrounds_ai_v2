@@ -13,6 +13,7 @@ namespace VrBattlegrounds.DevTools
     /// сценарий из DebugBootstrapConfig: назначает команду, загружает карту, запускает матч.
     ///
     /// Не меняет продакшн-код — использует те же публичные API, что и обычная игра.
+    /// Загрузку карт делегирует MapManager — не знает о нюансах Mirror.
     ///
     /// Как использовать:
     ///   1. Добавить этот компонент на любой GameObject в сцене (например "DebugOrchestrator").
@@ -58,7 +59,7 @@ namespace VrBattlegrounds.DevTools
         /// Вызывается когда локальный аватар готов.
         /// Назначает команду локальному игроку.
         /// </summary>
-        private void OnLocalAvatarChanged(object sender, UltimateXR.Avatar.UxrAvatarEventArgs e)
+        private void OnLocalAvatarChanged(object sender, UxrAvatarEventArgs e)
         {
             if (e.Avatar == null)
                 return;
@@ -72,7 +73,7 @@ namespace VrBattlegrounds.DevTools
                 return;
 
             localPlayer.Team = _config.autoTeam;
-            UnityEngine.Debug.Log($"[DebugOrchestrator] Команда назначена: {_config.autoTeam}");
+            Debug.Log($"[DebugOrchestrator] Команда назначена: {_config.autoTeam}");
         }
 
         /// <summary>
@@ -94,17 +95,17 @@ namespace VrBattlegrounds.DevTools
             int totalPlayers = networkManager.Players.Count;
             if (totalPlayers < _config.minPlayersToAutoStart)
             {
-                UnityEngine.Debug.Log($"[DebugOrchestrator] Игроков: {totalPlayers}/{_config.minPlayersToAutoStart} — ожидаем ещё.");
+                Debug.Log($"[DebugOrchestrator] Игроков: {totalPlayers}/{_config.minPlayersToAutoStart} — ожидаем ещё.");
                 return;
             }
 
             if (MatchManager.Instance == null)
             {
-                UnityEngine.Debug.LogWarning("[DebugOrchestrator] MatchManager не найден — матч не запущен.");
+                Debug.LogWarning("[DebugOrchestrator] MatchManager не найден — матч не запущен.");
                 return;
             }
 
-            UnityEngine.Debug.Log("[DebugOrchestrator] Автостарт матча.");
+            Debug.Log("[DebugOrchestrator] Автостарт матча.");
             MatchManager.Instance.StartMatch();
         }
 
@@ -131,16 +132,22 @@ namespace VrBattlegrounds.DevTools
         }
 
         /// <summary>
-        /// Загружает карту автоматически если задана в конфиге.
-        /// Вызывать только после подъёма сервера на онлайн-сцене.
+        /// Загружает карту из конфига через MapManager.
+        /// Все нюансы Mirror (отложенная загрузка) инкапсулированы в MapManager.
         /// </summary>
         private void TryAutoLoadMap()
         {
             if (string.IsNullOrEmpty(_config.autoLoadMapScene))
                 return;
 
+            if (MapManager.Instance == null)
+            {
+                Debug.LogWarning("[DebugOrchestrator] MapManager не найден — автозагрузка карты невозможна.");
+                return;
+            }
+
             Debug.Log($"[DebugOrchestrator] Автозагрузка карты: {_config.autoLoadMapScene}");
-            NetworkManager.singleton.ServerChangeScene(_config.autoLoadMapScene);
+            MapManager.Instance.LoadMap(_config.autoLoadMapScene);
         }
     }
 }

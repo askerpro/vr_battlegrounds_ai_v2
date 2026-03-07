@@ -1,80 +1,80 @@
-# UltimateXR — Взаимодействие с объектами (Grabbing / Manipulation)
+# UltimateXR вЂ” Р’Р·Р°РёРјРѕРґРµР№СЃС‚РІРёРµ СЃ РѕР±СЉРµРєС‚Р°РјРё (Grabbing / Manipulation)
 
-> Источник: `Assets/ultimate-xr/Docs/guides/manipulation.md`  
-> Скрипты: `Assets/ultimate-xr/Runtime/Scripts/Manipulation/`
+> РСЃС‚РѕС‡РЅРёРє: `Assets/ultimate-xr/Docs/guides/manipulation.md`  
+> РЎРєСЂРёРїС‚С‹: `Assets/ultimate-xr/Runtime/Scripts/Manipulation/`
 
 ---
 
-## Ключевые классы
+## РљР»СЋС‡РµРІС‹Рµ РєР»Р°СЃСЃС‹
 
-| Класс | Назначение |
+| РљР»Р°СЃСЃ | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |---|---|
-| `UxrGrabbableObject` | Компонент на объекте — делает его захватываемым |
-| `UxrGrabber` | Компонент на руке аватара (внутри BigHandsIntegration) |
-| `UxrGrabManager` | Синглтон — управляет всеми захватами автоматически |
-| `UxrGrabbableObjectAnchor` | Точка размещения объекта (snap point на уровне) |
-| `UxrGrabPointShape` | Расширенные формы точек захвата |
+| `UxrGrabbableObject` | РљРѕРјРїРѕРЅРµРЅС‚ РЅР° РѕР±СЉРµРєС‚Рµ вЂ” РґРµР»Р°РµС‚ РµРіРѕ Р·Р°С…РІР°С‚С‹РІР°РµРјС‹Рј |
+| `UxrGrabber` | РљРѕРјРїРѕРЅРµРЅС‚ РЅР° СЂСѓРєРµ Р°РІР°С‚Р°СЂР° (РІРЅСѓС‚СЂРё BigHandsIntegration) |
+| `UxrGrabManager` | РЎРёРЅРіР»С‚РѕРЅ вЂ” СѓРїСЂР°РІР»СЏРµС‚ РІСЃРµРјРё Р·Р°С…РІР°С‚Р°РјРё Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё |
+| `UxrGrabbableObjectAnchor` | РўРѕС‡РєР° СЂР°Р·РјРµС‰РµРЅРёСЏ РѕР±СЉРµРєС‚Р° (snap point РЅР° СѓСЂРѕРІРЅРµ) |
+| `UxrGrabPointShape` | Р Р°СЃС€РёСЂРµРЅРЅС‹Рµ С„РѕСЂРјС‹ С‚РѕС‡РµРє Р·Р°С…РІР°С‚Р° |
 
 ---
 
-## Быстрый старт
+## Р‘С‹СЃС‚СЂС‹Р№ СЃС‚Р°СЂС‚
 
-1. Добавить компонент `UxrGrabbableObject` на любой GameObject ? объект уже можно хватать
-2. `UxrGrabManager` создаётся автоматически, никаких дополнительных настроек сцены не нужно
-3. Аватар должен иметь компоненты `UxrGrabber` на руках (в BigHandsIntegration — уже есть)
+1. Р”РѕР±Р°РІРёС‚СЊ РєРѕРјРїРѕРЅРµРЅС‚ `UxrGrabbableObject` РЅР° Р»СЋР±РѕР№ GameObject ? РѕР±СЉРµРєС‚ СѓР¶Рµ РјРѕР¶РЅРѕ С…РІР°С‚Р°С‚СЊ
+2. `UxrGrabManager` СЃРѕР·РґР°С‘С‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё, РЅРёРєР°РєРёС… РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹С… РЅР°СЃС‚СЂРѕРµРє СЃС†РµРЅС‹ РЅРµ РЅСѓР¶РЅРѕ
+3. РђРІР°С‚Р°СЂ РґРѕР»Р¶РµРЅ РёРјРµС‚СЊ РєРѕРјРїРѕРЅРµРЅС‚С‹ `UxrGrabber` РЅР° СЂСѓРєР°С… (РІ BigHandsIntegration вЂ” СѓР¶Рµ РµСЃС‚СЊ)
 
 ---
 
-## Проверка состояния захвата
+## РџСЂРѕРІРµСЂРєР° СЃРѕСЃС‚РѕСЏРЅРёСЏ Р·Р°С…РІР°С‚Р°
 
 ```csharp
-// Захвачен ли объект?
+// Р—Р°С…РІР°С‡РµРЅ Р»Рё РѕР±СЉРµРєС‚?
 bool isGrabbed = UxrGrabManager.Instance.IsBeingGrabbed(grabbableObject);
-bool isGrabbed2 = grabbableObject.IsBeingGrabbed; // то же самое
+bool isGrabbed2 = grabbableObject.IsBeingGrabbed; // С‚Рѕ Р¶Рµ СЃР°РјРѕРµ
 
-// Какой объект держит левая рука?
+// РљР°РєРѕР№ РѕР±СЉРµРєС‚ РґРµСЂР¶РёС‚ Р»РµРІР°СЏ СЂСѓРєР°?
 if (UxrGrabManager.Instance.GetObjectBeingGrabbed(avatar, UxrHandSide.Left, out UxrGrabbableObject obj))
     Debug.Log(obj.name);
 
-// Какая рука держит объект?
+// РљР°РєР°СЏ СЂСѓРєР° РґРµСЂР¶РёС‚ РѕР±СЉРµРєС‚?
 if (UxrGrabManager.Instance.GetGrabbingHand(grabbableObject, 0, out UxrGrabber grabber))
-    Debug.Log($"{grabber.Avatar.name} держит {grabber.Side} рукой");
+    Debug.Log($"{grabber.Avatar.name} РґРµСЂР¶РёС‚ {grabber.Side} СЂСѓРєРѕР№");
 ```
 
 ---
 
-## Управление захватом из кода
+## РЈРїСЂР°РІР»РµРЅРёРµ Р·Р°С…РІР°С‚РѕРј РёР· РєРѕРґР°
 
 ```csharp
-// Зафиксировать объект (нельзя двигать)
+// Р—Р°С„РёРєСЃРёСЂРѕРІР°С‚СЊ РѕР±СЉРµРєС‚ (РЅРµР»СЊР·СЏ РґРІРёРіР°С‚СЊ)
 grabbableObject.IsLockedInPlace = true;
 
-// Принудительно отпустить
+// РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ РѕС‚РїСѓСЃС‚РёС‚СЊ
 UxrGrabManager.Instance.ReleaseGrabs(grabbableObject, true);
-grabbableObject.ReleaseGrabs(true); // то же самое
+grabbableObject.ReleaseGrabs(true); // С‚Рѕ Р¶Рµ СЃР°РјРѕРµ
 
-// Разместить объект на anchor
+// Р Р°Р·РјРµСЃС‚РёС‚СЊ РѕР±СЉРµРєС‚ РЅР° anchor
 UxrGrabManager.Instance.PlaceObject(grabbableObject, anchor, UxrPlacementType.Immediate, true);
 UxrGrabManager.Instance.PlaceObject(grabbableObject, anchor, UxrPlacementType.Smooth, true);
 
-// Включить/выключить точку захвата
+// Р’РєР»СЋС‡РёС‚СЊ/РІС‹РєР»СЋС‡РёС‚СЊ С‚РѕС‡РєСѓ Р·Р°С…РІР°С‚Р°
 grabbableObject.SetGrabPointEnabled(0, false);
 grabbableObject.EnableAllGrabPoints();
 ```
 
 ---
 
-## События захвата
+## РЎРѕР±С‹С‚РёСЏ Р·Р°С…РІР°С‚Р°
 
 ```csharp
 private void OnEnable()
 {
-    UxrGrabManager.Instance.ObjectGrabbing += OnObjectGrabbing;   // до захвата
-    UxrGrabManager.Instance.ObjectGrabbed  += OnObjectGrabbed;    // после захвата
-    UxrGrabManager.Instance.ObjectReleasing += OnObjectReleasing; // до отпускания
-    UxrGrabManager.Instance.ObjectReleased  += OnObjectReleased;  // после отпускания
-    UxrGrabManager.Instance.ObjectPlacing   += OnObjectPlacing;   // до размещения на anchor
-    UxrGrabManager.Instance.ObjectPlaced    += OnObjectPlaced;    // после размещения на anchor
+    UxrGrabManager.Instance.ObjectGrabbing += OnObjectGrabbing;   // РґРѕ Р·Р°С…РІР°С‚Р°
+    UxrGrabManager.Instance.ObjectGrabbed  += OnObjectGrabbed;    // РїРѕСЃР»Рµ Р·Р°С…РІР°С‚Р°
+    UxrGrabManager.Instance.ObjectReleasing += OnObjectReleasing; // РґРѕ РѕС‚РїСѓСЃРєР°РЅРёСЏ
+    UxrGrabManager.Instance.ObjectReleased  += OnObjectReleased;  // РїРѕСЃР»Рµ РѕС‚РїСѓСЃРєР°РЅРёСЏ
+    UxrGrabManager.Instance.ObjectPlacing   += OnObjectPlacing;   // РґРѕ СЂР°Р·РјРµС‰РµРЅРёСЏ РЅР° anchor
+    UxrGrabManager.Instance.ObjectPlaced    += OnObjectPlaced;    // РїРѕСЃР»Рµ СЂР°Р·РјРµС‰РµРЅРёСЏ РЅР° anchor
 }
 
 private void OnDisable()
@@ -90,7 +90,7 @@ private void OnDisable()
 
 ---
 
-## Скорость захваченного объекта
+## РЎРєРѕСЂРѕСЃС‚СЊ Р·Р°С…РІР°С‡РµРЅРЅРѕРіРѕ РѕР±СЉРµРєС‚Р°
 
 ```csharp
 Vector3 velocity        = UxrGrabManager.Instance.GetGrabbedObjectVelocity(grabbableObject);
@@ -99,10 +99,10 @@ Vector3 angularVelocity = UxrGrabManager.Instance.GetGrabbedObjectAngularVelocit
 
 ---
 
-## Настройка позы руки при захвате оружия
+## РќР°СЃС‚СЂРѕР№РєР° РїРѕР·С‹ СЂСѓРєРё РїСЂРё Р·Р°С…РІР°С‚Рµ РѕСЂСѓР¶РёСЏ
 
 ```csharp
-// Изменить blend значение позы (например, нажатие триггера на пистолете)
+// РР·РјРµРЅРёС‚СЊ blend Р·РЅР°С‡РµРЅРёРµ РїРѕР·С‹ (РЅР°РїСЂРёРјРµСЂ, РЅР°Р¶Р°С‚РёРµ С‚СЂРёРіРіРµСЂР° РЅР° РїРёСЃС‚РѕР»РµС‚Рµ)
 if (UxrGrabManager.Instance.GetGrabbingHand(grabbableGun, 0, out UxrGrabber grabber))
 {
     float triggerPress = UxrAvatar.LocalAvatarInput.GetInput1D(grabber.Side, UxrInput1D.Trigger);
@@ -112,24 +112,24 @@ if (UxrGrabManager.Instance.GetGrabbingHand(grabbableGun, 0, out UxrGrabber grab
 
 ---
 
-## Скрытие рук при захвате
+## РЎРєСЂС‹С‚РёРµ СЂСѓРє РїСЂРё Р·Р°С…РІР°С‚Рµ
 
-В инспекторе `UxrGrabbableObject` включи **Hide Hand Renderer** — руки скрываются при захвате.  
-Это "Tomato Presence" — объект заменяет руку визуально, ощущение присутствия сохраняется.
+Р’ РёРЅСЃРїРµРєС‚РѕСЂРµ `UxrGrabbableObject` РІРєР»СЋС‡Рё **Hide Hand Renderer** вЂ” СЂСѓРєРё СЃРєСЂС‹РІР°СЋС‚СЃСЏ РїСЂРё Р·Р°С…РІР°С‚Рµ.  
+Р­С‚Рѕ "Tomato Presence" вЂ” РѕР±СЉРµРєС‚ Р·Р°РјРµРЅСЏРµС‚ СЂСѓРєСѓ РІРёР·СѓР°Р»СЊРЅРѕ, РѕС‰СѓС‰РµРЅРёРµ РїСЂРёСЃСѓС‚СЃС‚РІРёСЏ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ.
 
 ---
 
-## Для шутера: оружие как UxrGrabbableObject
+## Р”Р»СЏ С€СѓС‚РµСЂР°: РѕСЂСѓР¶РёРµ РєР°Рє UxrGrabbableObject
 
-Класс `UxrFirearmWeapon` наследует от `UxrWeapon`, который наследует от `UxrGrabbableObject`.  
-Оружие — это захватываемый объект с дополнительной логикой стрельбы.  
-Требует компонент `UxrProjectileSource` на том же GameObject.
+РљР»Р°СЃСЃ `UxrFirearmWeapon` РЅР°СЃР»РµРґСѓРµС‚ РѕС‚ `UxrWeapon`, РєРѕС‚РѕСЂС‹Р№ РЅР°СЃР»РµРґСѓРµС‚ РѕС‚ `UxrGrabbableObject`.  
+РћСЂСѓР¶РёРµ вЂ” СЌС‚Рѕ Р·Р°С…РІР°С‚С‹РІР°РµРјС‹Р№ РѕР±СЉРµРєС‚ СЃ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕР№ Р»РѕРіРёРєРѕР№ СЃС‚СЂРµР»СЊР±С‹.  
+РўСЂРµР±СѓРµС‚ РєРѕРјРїРѕРЅРµРЅС‚ `UxrProjectileSource` РЅР° С‚РѕРј Р¶Рµ GameObject.
 
 ```csharp
-// Подписка на событие выстрела
+// РџРѕРґРїРёСЃРєР° РЅР° СЃРѕР±С‹С‚РёРµ РІС‹СЃС‚СЂРµР»Р°
 firearmWeapon.ProjectileShot += (triggerIndex) => {
-    Debug.Log($"Выстрел из триггера {triggerIndex}");
+    Debug.Log($"Р’С‹СЃС‚СЂРµР» РёР· С‚СЂРёРіРіРµСЂР° {triggerIndex}");
 };
 ```
 
-> Детали по оружию — в `Assets/ultimate-xr/Docs/_context/architecture.md` ? раздел Weapons
+> Р”РµС‚Р°Р»Рё РїРѕ РѕСЂСѓР¶РёСЋ вЂ” РІ `Assets/ultimate-xr/Docs/_context/architecture.md` ? СЂР°Р·РґРµР» Weapons

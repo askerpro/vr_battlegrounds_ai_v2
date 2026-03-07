@@ -3,19 +3,19 @@ using UnityEngine;
 namespace VrBattlegrounds.Maps
 {
     /// <summary>
-    /// Реестр всех доступных карт.
-    /// Создать: правая кнопка в Project ? Create ? VrBattlegrounds ? Map Registry.
-    /// Один asset на проект — назначить в Inspector GameNetworkManager или AdminMenuController.
+    /// Р РµРµСЃС‚СЂ РІСЃРµС… РґРѕСЃС‚СѓРїРЅС‹С… РєР°СЂС‚.
+    /// РЎРѕР·РґР°С‚СЊ: РїСЂР°РІР°СЏ РєРЅРѕРїРєР° РІ Project ? Create ? VrBattlegrounds ? Map Registry.
+    /// РћРґРёРЅ asset РЅР° РїСЂРѕРµРєС‚ вЂ” РЅР°Р·РЅР°С‡РёС‚СЊ РІ Inspector GameNetworkManager РёР»Рё AdminMenuController.
     /// </summary>
     [CreateAssetMenu(
         fileName = "MapRegistry",
         menuName  = "VrBattlegrounds/Map Registry")]
     public class MapRegistry : ScriptableObject
     {
-        [Tooltip("Все карты, доступные для выбора в меню администратора.")]
+        [Tooltip("Р’СЃРµ РєР°СЂС‚С‹, РґРѕСЃС‚СѓРїРЅС‹Рµ РґР»СЏ РІС‹Р±РѕСЂР° РІ РјРµРЅСЋ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.")]
         public MapData[] maps = new MapData[0];
 
-        /// <summary>Найти карту по имени сцены.</summary>
+        /// <summary>РќР°Р№С‚Рё РєР°СЂС‚Сѓ РїРѕ РёРјРµРЅРё СЃС†РµРЅС‹.</summary>
         public MapData GetBySceneName(string sceneName)
         {
             foreach (MapData map in maps)

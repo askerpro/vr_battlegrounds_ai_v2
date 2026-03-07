@@ -1,78 +1,78 @@
-# UltimateXR — Передвижение (Locomotion)
+# UltimateXR вЂ” РџРµСЂРµРґРІРёР¶РµРЅРёРµ (Locomotion)
 
-> Источник: `Assets/ultimate-xr/Docs/guides/locomotion.md`  
-> Скрипты: `Assets/ultimate-xr/Runtime/Scripts/Locomotion/`
-
----
-
-## Ключевые классы
-
-| Класс | Описание |
-|---|---|
-| `UxrLocomotion` | Базовый класс любого передвижения |
-| `UxrTeleportLocomotion` | Телепортация через дугу из контроллера |
-| `UxrTeleportLocomotionBase` | Базовый класс телепортации |
-| `UxrSmoothLocomotion` | Плавное передвижение (джойстик, как FPS) |
+> РСЃС‚РѕС‡РЅРёРє: `Assets/ultimate-xr/Docs/guides/locomotion.md`  
+> РЎРєСЂРёРїС‚С‹: `Assets/ultimate-xr/Runtime/Scripts/Locomotion/`
 
 ---
 
-## Телепортация (по умолчанию в аватаре)
+## РљР»СЋС‡РµРІС‹Рµ РєР»Р°СЃСЃС‹
 
-Компоненты `UxrTeleportLocomotion` уже есть в BigHandsIntegration ? ForwardLeft / ForwardRight.  
-Один компонент на каждую руку.
-
-### Ключевые параметры в инспекторе
-
-| Параметр | Описание |
+| РљР»Р°СЃСЃ | РћРїРёСЃР°РЅРёРµ |
 |---|---|
-| `Controller Hand` | Какая рука управляет телепортом |
-| `Translation Type` | Тип телепорта: Immediate / Smooth / Fade |
-| `Translation Fade Color` | Цвет затемнения при Fade |
-| `Translation Fade Seconds` | Длительность затемнения |
-| `Rotation Type` | Тип поворота: Immediate / Smooth / Fade |
-| `Rotation Step Degrees` | Градусы поворота за один шаг |
-| `Allow Joystick Back Step` | Разрешить шаг назад джойстиком |
-| `Back Step Distance` | Дистанция шага назад |
-| `Parent To Destination` | Привязывать аватар к платформе назначения |
-
-### Параметры дуги
-
-| Параметр | Описание |
-|---|---|
-| `Arc Segments` | Количество сегментов дуги (2–1000) |
-| `Arc Width` | Ширина дуги (0.01–0.4) |
-| `Arc Material Valid` | Материал дуги при допустимой цели |
-| `Arc Material Invalid` | Материал дуги при недопустимой цели |
-| `Raycast Steps Quality` | Качество raycast дуги |
+| `UxrLocomotion` | Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ Р»СЋР±РѕРіРѕ РїРµСЂРµРґРІРёР¶РµРЅРёСЏ |
+| `UxrTeleportLocomotion` | РўРµР»РµРїРѕСЂС‚Р°С†РёСЏ С‡РµСЂРµР· РґСѓРіСѓ РёР· РєРѕРЅС‚СЂРѕР»Р»РµСЂР° |
+| `UxrTeleportLocomotionBase` | Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ С‚РµР»РµРїРѕСЂС‚Р°С†РёРё |
+| `UxrSmoothLocomotion` | РџР»Р°РІРЅРѕРµ РїРµСЂРµРґРІРёР¶РµРЅРёРµ (РґР¶РѕР№СЃС‚РёРє, РєР°Рє FPS) |
 
 ---
 
-## Телепортация из кода
+## РўРµР»РµРїРѕСЂС‚Р°С†РёСЏ (РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІ Р°РІР°С‚Р°СЂРµ)
+
+РљРѕРјРїРѕРЅРµРЅС‚С‹ `UxrTeleportLocomotion` СѓР¶Рµ РµСЃС‚СЊ РІ BigHandsIntegration ? ForwardLeft / ForwardRight.  
+РћРґРёРЅ РєРѕРјРїРѕРЅРµРЅС‚ РЅР° РєР°Р¶РґСѓСЋ СЂСѓРєСѓ.
+
+### РљР»СЋС‡РµРІС‹Рµ РїР°СЂР°РјРµС‚СЂС‹ РІ РёРЅСЃРїРµРєС‚РѕСЂРµ
+
+| РџР°СЂР°РјРµС‚СЂ | РћРїРёСЃР°РЅРёРµ |
+|---|---|
+| `Controller Hand` | РљР°РєР°СЏ СЂСѓРєР° СѓРїСЂР°РІР»СЏРµС‚ С‚РµР»РµРїРѕСЂС‚РѕРј |
+| `Translation Type` | РўРёРї С‚РµР»РµРїРѕСЂС‚Р°: Immediate / Smooth / Fade |
+| `Translation Fade Color` | Р¦РІРµС‚ Р·Р°С‚РµРјРЅРµРЅРёСЏ РїСЂРё Fade |
+| `Translation Fade Seconds` | Р”Р»РёС‚РµР»СЊРЅРѕСЃС‚СЊ Р·Р°С‚РµРјРЅРµРЅРёСЏ |
+| `Rotation Type` | РўРёРї РїРѕРІРѕСЂРѕС‚Р°: Immediate / Smooth / Fade |
+| `Rotation Step Degrees` | Р“СЂР°РґСѓСЃС‹ РїРѕРІРѕСЂРѕС‚Р° Р·Р° РѕРґРёРЅ С€Р°Рі |
+| `Allow Joystick Back Step` | Р Р°Р·СЂРµС€РёС‚СЊ С€Р°Рі РЅР°Р·Р°Рґ РґР¶РѕР№СЃС‚РёРєРѕРј |
+| `Back Step Distance` | Р”РёСЃС‚Р°РЅС†РёСЏ С€Р°РіР° РЅР°Р·Р°Рґ |
+| `Parent To Destination` | РџСЂРёРІСЏР·С‹РІР°С‚СЊ Р°РІР°С‚Р°СЂ Рє РїР»Р°С‚С„РѕСЂРјРµ РЅР°Р·РЅР°С‡РµРЅРёСЏ |
+
+### РџР°СЂР°РјРµС‚СЂС‹ РґСѓРіРё
+
+| РџР°СЂР°РјРµС‚СЂ | РћРїРёСЃР°РЅРёРµ |
+|---|---|
+| `Arc Segments` | РљРѕР»РёС‡РµСЃС‚РІРѕ СЃРµРіРјРµРЅС‚РѕРІ РґСѓРіРё (2вЂ“1000) |
+| `Arc Width` | РЁРёСЂРёРЅР° РґСѓРіРё (0.01вЂ“0.4) |
+| `Arc Material Valid` | РњР°С‚РµСЂРёР°Р» РґСѓРіРё РїСЂРё РґРѕРїСѓСЃС‚РёРјРѕР№ С†РµР»Рё |
+| `Arc Material Invalid` | РњР°С‚РµСЂРёР°Р» РґСѓРіРё РїСЂРё РЅРµРґРѕРїСѓСЃС‚РёРјРѕР№ С†РµР»Рё |
+| `Raycast Steps Quality` | РљР°С‡РµСЃС‚РІРѕ raycast РґСѓРіРё |
+
+---
+
+## РўРµР»РµРїРѕСЂС‚Р°С†РёСЏ РёР· РєРѕРґР°
 
 ```csharp
-// Мгновенная телепортация
+// РњРіРЅРѕРІРµРЅРЅР°СЏ С‚РµР»РµРїРѕСЂС‚Р°С†РёСЏ
 UxrManager.Instance.MoveAvatarTo(UxrAvatar.LocalAvatar, Vector3.zero);
 
-// С fadeout/fadein (быстрый вариант)
+// РЎ fadeout/fadein (Р±С‹СЃС‚СЂС‹Р№ РІР°СЂРёР°РЅС‚)
 UxrManager.Instance.TeleportLocalAvatar(Vector3.zero, Quaternion.identity, UxrTranslationType.Fade);
 
-// С fadeout/fadein + async/await
+// РЎ fadeout/fadein + async/await
 await UxrManager.Instance.TeleportLocalAvatarAsync(Vector3.zero, Quaternion.identity, UxrTranslationType.Fade);
 
-// С привязкой к платформе (движущиеся объекты)
+// РЎ РїСЂРёРІСЏР·РєРѕР№ Рє РїР»Р°С‚С„РѕСЂРјРµ (РґРІРёР¶СѓС‰РёРµСЃСЏ РѕР±СЉРµРєС‚С‹)
 UxrManager.Instance.TeleportLocalAvatarRelative(destination, true, destination.position, Quaternion.identity, UxrTranslationType.Fade);
 
-// С коллбэками (делать что-то пока экран затемнён)
+// РЎ РєРѕР»Р»Р±СЌРєР°РјРё (РґРµР»Р°С‚СЊ С‡С‚Рѕ-С‚Рѕ РїРѕРєР° СЌРєСЂР°РЅ Р·Р°С‚РµРјРЅС‘РЅ)
 UxrManager.Instance.TeleportLocalAvatar(
     Vector3.zero, Quaternion.identity, UxrTranslationType.Fade, 0.3f,
-    () => { /* экран чёрный — меняй сцену */ },
-    () => { /* экран снова виден — играй звук */ }
+    () => { /* СЌРєСЂР°РЅ С‡С‘СЂРЅС‹Р№ вЂ” РјРµРЅСЏР№ СЃС†РµРЅСѓ */ },
+    () => { /* СЌРєСЂР°РЅ СЃРЅРѕРІР° РІРёРґРµРЅ вЂ” РёРіСЂР°Р№ Р·РІСѓРє */ }
 );
 ```
 
 ---
 
-## Событие перемещения аватара
+## РЎРѕР±С‹С‚РёРµ РїРµСЂРµРјРµС‰РµРЅРёСЏ Р°РІР°С‚Р°СЂР°
 
 ```csharp
 private void OnEnable()  => UxrManager.AvatarMoved += OnAvatarMoved;
@@ -80,54 +80,54 @@ private void OnDisable() => UxrManager.AvatarMoved -= OnAvatarMoved;
 
 private void OnAvatarMoved(object sender, UxrAvatarMoveEventArgs e)
 {
-    Debug.Log($"Аватар переместился: {e.OldPosition} ? {e.NewPosition}");
+    Debug.Log($"РђРІР°С‚Р°СЂ РїРµСЂРµРјРµСЃС‚РёР»СЃСЏ: {e.OldPosition} ? {e.NewPosition}");
 }
 ```
 
 ---
 
-## Плавное передвижение (UxrSmoothLocomotion)
+## РџР»Р°РІРЅРѕРµ РїРµСЂРµРґРІРёР¶РµРЅРёРµ (UxrSmoothLocomotion)
 
-Альтернатива телепортации. Более иммерсивно, но может вызывать укачивание.
+РђР»СЊС‚РµСЂРЅР°С‚РёРІР° С‚РµР»РµРїРѕСЂС‚Р°С†РёРё. Р‘РѕР»РµРµ РёРјРјРµСЂСЃРёРІРЅРѕ, РЅРѕ РјРѕР¶РµС‚ РІС‹Р·С‹РІР°С‚СЊ СѓРєР°С‡РёРІР°РЅРёРµ.
 
-**Подключение:**
-1. Отключить все `UxrTeleportLocomotion` на аватаре
-2. Добавить `UxrSmoothLocomotion` на любой объект в иерархии аватара
+**РџРѕРґРєР»СЋС‡РµРЅРёРµ:**
+1. РћС‚РєР»СЋС‡РёС‚СЊ РІСЃРµ `UxrTeleportLocomotion` РЅР° Р°РІР°С‚Р°СЂРµ
+2. Р”РѕР±Р°РІРёС‚СЊ `UxrSmoothLocomotion` РЅР° Р»СЋР±РѕР№ РѕР±СЉРµРєС‚ РІ РёРµСЂР°СЂС…РёРё Р°РІР°С‚Р°СЂР°
 
-**Управление (по умолчанию):**
-- Левый джойстик ? движение
-- Правый джойстик ? поворот
+**РЈРїСЂР°РІР»РµРЅРёРµ (РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ):**
+- Р›РµРІС‹Р№ РґР¶РѕР№СЃС‚РёРє ? РґРІРёР¶РµРЅРёРµ
+- РџСЂР°РІС‹Р№ РґР¶РѕР№СЃС‚РёРє ? РїРѕРІРѕСЂРѕС‚
 
-**Ключевые параметры:**
+**РљР»СЋС‡РµРІС‹Рµ РїР°СЂР°РјРµС‚СЂС‹:**
 
-| Параметр | Описание |
+| РџР°СЂР°РјРµС‚СЂ | РћРїРёСЃР°РЅРёРµ |
 |---|---|
-| `Meters Per Second Normal` | Скорость обычного движения |
-| `Meters Per Second Sprint` | Скорость бега |
-| `Walk Direction` | Относительно чего считать вперёд: контроллер / аватар / камера |
-| `Rotation Degrees Per Second` | Скорость поворота |
-| `Gravity` | Гравитация (?9.81 = земная) |
-| `Max Step Height` | Максимальная высота ступеньки |
-| `Max Slope Degrees` | Максимальный угол подъёма |
-| `Capsule Radius` | Радиус тела (в метрах) |
+| `Meters Per Second Normal` | РЎРєРѕСЂРѕСЃС‚СЊ РѕР±С‹С‡РЅРѕРіРѕ РґРІРёР¶РµРЅРёСЏ |
+| `Meters Per Second Sprint` | РЎРєРѕСЂРѕСЃС‚СЊ Р±РµРіР° |
+| `Walk Direction` | РћС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ С‡РµРіРѕ СЃС‡РёС‚Р°С‚СЊ РІРїРµСЂС‘Рґ: РєРѕРЅС‚СЂРѕР»Р»РµСЂ / Р°РІР°С‚Р°СЂ / РєР°РјРµСЂР° |
+| `Rotation Degrees Per Second` | РЎРєРѕСЂРѕСЃС‚СЊ РїРѕРІРѕСЂРѕС‚Р° |
+| `Gravity` | Р“СЂР°РІРёС‚Р°С†РёСЏ (?9.81 = Р·РµРјРЅР°СЏ) |
+| `Max Step Height` | РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РІС‹СЃРѕС‚Р° СЃС‚СѓРїРµРЅСЊРєРё |
+| `Max Slope Degrees` | РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СѓРіРѕР» РїРѕРґСЉС‘РјР° |
+| `Capsule Radius` | Р Р°РґРёСѓСЃ С‚РµР»Р° (РІ РјРµС‚СЂР°С…) |
 
 ---
 
-## Создание своей системы передвижения
+## РЎРѕР·РґР°РЅРёРµ СЃРІРѕРµР№ СЃРёСЃС‚РµРјС‹ РїРµСЂРµРґРІРёР¶РµРЅРёСЏ
 
 ```csharp
 public class MyLocomotion : UxrLocomotion
 {
-    // Плавное (каждый кадр) или дискретное (по событию)?
+    // РџР»Р°РІРЅРѕРµ (РєР°Р¶РґС‹Р№ РєР°РґСЂ) РёР»Рё РґРёСЃРєСЂРµС‚РЅРѕРµ (РїРѕ СЃРѕР±С‹С‚РёСЋ)?
     public override bool IsSmoothLocomotion => true;
 
     protected override void UpdateLocomotion()
     {
-        // Используй методы UxrManager для перемещения:
+        // РСЃРїРѕР»СЊР·СѓР№ РјРµС‚РѕРґС‹ UxrManager РґР»СЏ РїРµСЂРµРјРµС‰РµРЅРёСЏ:
         UxrManager.Instance.TranslateAvatar(Avatar, delta);
         UxrManager.Instance.RotateAvatar(Avatar, degrees);
     }
 }
 ```
 
-> Использовать методы `UxrManager` (не `transform.position`) — это важно для сетевой синхронизации и LOD.
+> РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РјРµС‚РѕРґС‹ `UxrManager` (РЅРµ `transform.position`) вЂ” СЌС‚Рѕ РІР°Р¶РЅРѕ РґР»СЏ СЃРµС‚РµРІРѕР№ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё Рё LOD.

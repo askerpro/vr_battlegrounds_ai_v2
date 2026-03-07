@@ -5,29 +5,29 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.UI
 {
     /// <summary>
-    /// Меню игрока. Доступно всем подключённым клиентам.
-    /// Позволяет выбрать команду и запустить калибровку VR-шлема.
+    /// РњРµРЅСЋ РёРіСЂРѕРєР°. Р”РѕСЃС‚СѓРїРЅРѕ РІСЃРµРј РїРѕРґРєР»СЋС‡С‘РЅРЅС‹Рј РєР»РёРµРЅС‚Р°Рј.
+    /// РџРѕР·РІРѕР»СЏРµС‚ РІС‹Р±СЂР°С‚СЊ РєРѕРјР°РЅРґСѓ Рё Р·Р°РїСѓСЃС‚РёС‚СЊ РєР°Р»РёР±СЂРѕРІРєСѓ VR-С€Р»РµРјР°.
     ///
-    /// Выбор команды отправляется на сервер через Command (CmdRequestTeam).
-    /// Финальное назначение команды остаётся за сервером (GameNetworkManager).
+    /// Р’С‹Р±РѕСЂ РєРѕРјР°РЅРґС‹ РѕС‚РїСЂР°РІР»СЏРµС‚СЃСЏ РЅР° СЃРµСЂРІРµСЂ С‡РµСЂРµР· Command (CmdRequestTeam).
+    /// Р¤РёРЅР°Р»СЊРЅРѕРµ РЅР°Р·РЅР°С‡РµРЅРёРµ РєРѕРјР°РЅРґС‹ РѕСЃС‚Р°С‘С‚СЃСЏ Р·Р° СЃРµСЂРІРµСЂРѕРј (GameNetworkManager).
     /// </summary>
     public class PlayerMenuController : MonoBehaviour
     {
-        [Header("Зависимости")]
+        [Header("Р—Р°РІРёСЃРёРјРѕСЃС‚Рё")]
         [SerializeField] private VrCalibrationController _calibration;
 
         private PlayerController _localPlayer;
 
         private void Start()
         {
-            // Ищем PlayerController локального игрока через UxrAvatar или NetworkClient
-            // Заполняется после полной инициализации сети
-            // TODO: подписаться на событие LocalAvatarStarted для надёжной инициализации
+            // РС‰РµРј PlayerController Р»РѕРєР°Р»СЊРЅРѕРіРѕ РёРіСЂРѕРєР° С‡РµСЂРµР· UxrAvatar РёР»Рё NetworkClient
+            // Р—Р°РїРѕР»РЅСЏРµС‚СЃСЏ РїРѕСЃР»Рµ РїРѕР»РЅРѕР№ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё СЃРµС‚Рё
+            // TODO: РїРѕРґРїРёСЃР°С‚СЊСЃСЏ РЅР° СЃРѕР±С‹С‚РёРµ LocalAvatarStarted РґР»СЏ РЅР°РґС‘Р¶РЅРѕР№ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё
         }
 
         /// <summary>
-        /// Запрос на смену команды на "Террористы".
-        /// Вызывается кнопкой UI.
+        /// Р—Р°РїСЂРѕСЃ РЅР° СЃРјРµРЅСѓ РєРѕРјР°РЅРґС‹ РЅР° "РўРµСЂСЂРѕСЂРёСЃС‚С‹".
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ РєРЅРѕРїРєРѕР№ UI.
         /// </summary>
         public void OnSelectTerroristsPressed()
         {
@@ -35,8 +35,8 @@ namespace VrBattlegrounds.UI
         }
 
         /// <summary>
-        /// Запрос на смену команды на "Спецназ".
-        /// Вызывается кнопкой UI.
+        /// Р—Р°РїСЂРѕСЃ РЅР° СЃРјРµРЅСѓ РєРѕРјР°РЅРґС‹ РЅР° "РЎРїРµС†РЅР°Р·".
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ РєРЅРѕРїРєРѕР№ UI.
         /// </summary>
         public void OnSelectSpecialForcesPressed()
         {
@@ -44,8 +44,8 @@ namespace VrBattlegrounds.UI
         }
 
         /// <summary>
-        /// Запускает процедуру калибровки VR-шлема.
-        /// Вызывается кнопкой UI.
+        /// Р—Р°РїСѓСЃРєР°РµС‚ РїСЂРѕС†РµРґСѓСЂСѓ РєР°Р»РёР±СЂРѕРІРєРё VR-С€Р»РµРјР°.
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ РєРЅРѕРїРєРѕР№ UI.
         /// </summary>
         public void OnCalibratePressed()
         {
@@ -53,18 +53,18 @@ namespace VrBattlegrounds.UI
         }
 
         /// <summary>
-        /// Отправляет запрос на смену команды.
-        /// Сервер принимает решение — принять или отклонить запрос.
+        /// РћС‚РїСЂР°РІР»СЏРµС‚ Р·Р°РїСЂРѕСЃ РЅР° СЃРјРµРЅСѓ РєРѕРјР°РЅРґС‹.
+        /// РЎРµСЂРІРµСЂ РїСЂРёРЅРёРјР°РµС‚ СЂРµС€РµРЅРёРµ вЂ” РїСЂРёРЅСЏС‚СЊ РёР»Рё РѕС‚РєР»РѕРЅРёС‚СЊ Р·Р°РїСЂРѕСЃ.
         /// </summary>
         private void RequestTeam(Team team)
         {
             if (_localPlayer == null)
             {
-                Debug.LogWarning("[PlayerMenuController] Локальный PlayerController не найден");
+                Debug.LogWarning("[PlayerMenuController] Р›РѕРєР°Р»СЊРЅС‹Р№ PlayerController РЅРµ РЅР°Р№РґРµРЅ");
                 return;
             }
 
-            // TODO: реализовать CmdRequestTeam в PlayerController
+            // TODO: СЂРµР°Р»РёР·РѕРІР°С‚СЊ CmdRequestTeam РІ PlayerController
             // _localPlayer.CmdRequestTeam(team);
         }
     }

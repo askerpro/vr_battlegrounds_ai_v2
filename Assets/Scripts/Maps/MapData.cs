@@ -3,35 +3,35 @@ using UnityEngine;
 namespace VrBattlegrounds.Maps
 {
     /// <summary>
-    /// Данные об игровой карте.
-    /// Создать: правая кнопка в Project ? Create ? VrBattlegrounds ? Map Data.
-    /// Один asset на карту — добавить в список MapRegistry.
+    /// Р”Р°РЅРЅС‹Рµ РѕР± РёРіСЂРѕРІРѕР№ РєР°СЂС‚Рµ.
+    /// РЎРѕР·РґР°С‚СЊ: РїСЂР°РІР°СЏ РєРЅРѕРїРєР° РІ Project ? Create ? VrBattlegrounds ? Map Data.
+    /// РћРґРёРЅ asset РЅР° РєР°СЂС‚Сѓ вЂ” РґРѕР±Р°РІРёС‚СЊ РІ СЃРїРёСЃРѕРє MapRegistry.
     /// </summary>
     [CreateAssetMenu(
         fileName = "MapData_",
         menuName  = "VrBattlegrounds/Map Data")]
     public class MapData : ScriptableObject
     {
-        [Header("Основное")]
-        [Tooltip("Отображаемое название карты в меню.")]
+        [Header("РћСЃРЅРѕРІРЅРѕРµ")]
+        [Tooltip("РћС‚РѕР±СЂР°Р¶Р°РµРјРѕРµ РЅР°Р·РІР°РЅРёРµ РєР°СЂС‚С‹ РІ РјРµРЅСЋ.")]
         public string displayName = "";
 
-        [Tooltip("Имя сцены Unity (должно совпадать с именем в Build Settings).")]
+        [Tooltip("РРјСЏ СЃС†РµРЅС‹ Unity (РґРѕР»Р¶РЅРѕ СЃРѕРІРїР°РґР°С‚СЊ СЃ РёРјРµРЅРµРј РІ Build Settings).")]
         public string sceneName = "";
 
-        [Header("Визуал")]
-        [Tooltip("Превью-скриншот карты для меню выбора.")]
+        [Header("Р’РёР·СѓР°Р»")]
+        [Tooltip("РџСЂРµРІСЊСЋ-СЃРєСЂРёРЅС€РѕС‚ РєР°СЂС‚С‹ РґР»СЏ РјРµРЅСЋ РІС‹Р±РѕСЂР°.")]
         public Sprite preview;
 
-        [Tooltip("Краткое описание карты (опционально).")]
+        [Tooltip("РљСЂР°С‚РєРѕРµ РѕРїРёСЃР°РЅРёРµ РєР°СЂС‚С‹ (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ).")]
         [TextArea(2, 4)]
         public string description = "";
 
-        [Header("Параметры арены")]
-        [Tooltip("Физические размеры игровой зоны в метрах (X = ширина, Z = глубина).")]
+        [Header("РџР°СЂР°РјРµС‚СЂС‹ Р°СЂРµРЅС‹")]
+        [Tooltip("Р¤РёР·РёС‡РµСЃРєРёРµ СЂР°Р·РјРµСЂС‹ РёРіСЂРѕРІРѕР№ Р·РѕРЅС‹ РІ РјРµС‚СЂР°С… (X = С€РёСЂРёРЅР°, Z = РіР»СѓР±РёРЅР°).")]
         public Vector2 arenaSizeMeters = new Vector2(10f, 10f);
 
-        [Tooltip("Максимальное количество игроков на карте.")]
+        [Tooltip("РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РёРіСЂРѕРєРѕРІ РЅР° РєР°СЂС‚Рµ.")]
         [Min(2)]
         public int maxPlayers = 10;
     }

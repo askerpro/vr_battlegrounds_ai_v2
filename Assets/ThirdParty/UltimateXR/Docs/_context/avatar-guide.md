@@ -1,137 +1,137 @@
-# UltimateXR — Аватар
+# UltimateXR вЂ” РђРІР°С‚Р°СЂ
 
-> Источник: `Assets/ultimate-xr/Docs/guides/avatar.md`  
-> Скрипты: `Assets/ultimate-xr/Runtime/Scripts/Avatar/`
+> РСЃС‚РѕС‡РЅРёРє: `Assets/ultimate-xr/Docs/guides/avatar.md`  
+> РЎРєСЂРёРїС‚С‹: `Assets/ultimate-xr/Runtime/Scripts/Avatar/`
 
 ---
 
-## Ключевые классы
+## РљР»СЋС‡РµРІС‹Рµ РєР»Р°СЃСЃС‹
 
-| Класс | Назначение |
+| РљР»Р°СЃСЃ | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |---|---|
-| `UxrAvatar` | Главный компонент аватара на корневом GameObject |
-| `UxrAvatarController` | Базовый класс логики управления |
-| `UxrStandardAvatarController` | Стандартный контроллер: жесты рук, взаимодействие |
-| `UxrAvatarRig` | Описание скелета (кости, руки, голова) |
-| `UxrAvatarHand` | Данные руки (кости пальцев по сторонам) |
+| `UxrAvatar` | Р“Р»Р°РІРЅС‹Р№ РєРѕРјРїРѕРЅРµРЅС‚ Р°РІР°С‚Р°СЂР° РЅР° РєРѕСЂРЅРµРІРѕРј GameObject |
+| `UxrAvatarController` | Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ Р»РѕРіРёРєРё СѓРїСЂР°РІР»РµРЅРёСЏ |
+| `UxrStandardAvatarController` | РЎС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РєРѕРЅС‚СЂРѕР»Р»РµСЂ: Р¶РµСЃС‚С‹ СЂСѓРє, РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёРµ |
+| `UxrAvatarRig` | РћРїРёСЃР°РЅРёРµ СЃРєРµР»РµС‚Р° (РєРѕСЃС‚Рё, СЂСѓРєРё, РіРѕР»РѕРІР°) |
+| `UxrAvatarHand` | Р”Р°РЅРЅС‹Рµ СЂСѓРєРё (РєРѕСЃС‚Рё РїР°Р»СЊС†РµРІ РїРѕ СЃС‚РѕСЂРѕРЅР°Рј) |
 
 ---
 
-## Доступ к аватару из кода
+## Р”РѕСЃС‚СѓРї Рє Р°РІР°С‚Р°СЂСѓ РёР· РєРѕРґР°
 
 ```csharp
-// Получить локальный аватар (под управлением пользователя)
+// РџРѕР»СѓС‡РёС‚СЊ Р»РѕРєР°Р»СЊРЅС‹Р№ Р°РІР°С‚Р°СЂ (РїРѕРґ СѓРїСЂР°РІР»РµРЅРёРµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ)
 UxrAvatar myAvatar = UxrAvatar.LocalAvatar;
 
-// Ввод контроллеров
+// Р’РІРѕРґ РєРѕРЅС‚СЂРѕР»Р»РµСЂРѕРІ
 UxrAvatar.LocalAvatarInput.GetButtonsPressDown(UxrHandSide.Left, UxrInputButtons.Button1);
 
-// Позиция камеры (глаза пользователя)
+// РџРѕР·РёС†РёСЏ РєР°РјРµСЂС‹ (РіР»Р°Р·Р° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ)
 Vector3 cameraPos = UxrAvatar.LocalAvatar.CameraPosition;
 
-// Направление взгляда
+// РќР°РїСЂР°РІР»РµРЅРёРµ РІР·РіР»СЏРґР°
 Vector3 viewDir = UxrAvatar.LocalAvatar.CameraForward;
 ```
 
 ---
 
-## Готовые префабы аватаров
+## Р“РѕС‚РѕРІС‹Рµ РїСЂРµС„Р°Р±С‹ Р°РІР°С‚Р°СЂРѕРІ
 
-Находятся в `Assets/ultimate-xr/Runtime/Prefabs/Avatars/`:
+РќР°С…РѕРґСЏС‚СЃСЏ РІ `Assets/ultimate-xr/Runtime/Prefabs/Avatars/`:
 
-| Префаб | Описание |
+| РџСЂРµС„Р°Р± | РћРїРёСЃР°РЅРёРµ |
 |---|---|
-| `BigHandsAvatar_URP` | Большие руки, для URP (наш проект) |
-| `SmallHandsAvatar_URP` | Маленькие руки, для URP |
-| `BigHandsAvatar_BRP` | Большие руки, для Built-in RP |
-| `SmallHandsAvatar_BRP` | Маленькие руки, для Built-in RP |
+| `BigHandsAvatar_URP` | Р‘РѕР»СЊС€РёРµ СЂСѓРєРё, РґР»СЏ URP (РЅР°С€ РїСЂРѕРµРєС‚) |
+| `SmallHandsAvatar_URP` | РњР°Р»РµРЅСЊРєРёРµ СЂСѓРєРё, РґР»СЏ URP |
+| `BigHandsAvatar_BRP` | Р‘РѕР»СЊС€РёРµ СЂСѓРєРё, РґР»СЏ Built-in RP |
+| `SmallHandsAvatar_BRP` | РњР°Р»РµРЅСЊРєРёРµ СЂСѓРєРё, РґР»СЏ Built-in RP |
 
-> ?? Всегда создавай **Prefab Variant** своего аватара через кнопку Fix в инспекторе!  
-> Это защищает изменения при обновлении библиотеки.
+> ?? Р’СЃРµРіРґР° СЃРѕР·РґР°РІР°Р№ **Prefab Variant** СЃРІРѕРµРіРѕ Р°РІР°С‚Р°СЂР° С‡РµСЂРµР· РєРЅРѕРїРєСѓ Fix РІ РёРЅСЃРїРµРєС‚РѕСЂРµ!  
+> Р­С‚Рѕ Р·Р°С‰РёС‰Р°РµС‚ РёР·РјРµРЅРµРЅРёСЏ РїСЂРё РѕР±РЅРѕРІР»РµРЅРёРё Р±РёР±Р»РёРѕС‚РµРєРё.
 
 ---
 
-## Структура объекта аватара
+## РЎС‚СЂСѓРєС‚СѓСЂР° РѕР±СЉРµРєС‚Р° Р°РІР°С‚Р°СЂР°
 
 ```
 [AvatarRoot]  ? UxrAvatar + UxrStandardAvatarController
-    ??? BigHandsIntegration  ? поддержка всех контроллеров
-            ??? LeftHand / RightHand   ? виртуальные руки (IK)
-            ?       ??? UxrGrabber     ? компонент захвата на каждой руке
+    ??? BigHandsIntegration  ? РїРѕРґРґРµСЂР¶РєР° РІСЃРµС… РєРѕРЅС‚СЂРѕР»Р»РµСЂРѕРІ
+            ??? LeftHand / RightHand   ? РІРёСЂС‚СѓР°Р»СЊРЅС‹Рµ СЂСѓРєРё (IK)
+            ?       ??? UxrGrabber     ? РєРѕРјРїРѕРЅРµРЅС‚ Р·Р°С…РІР°С‚Р° РЅР° РєР°Р¶РґРѕР№ СЂСѓРєРµ
             ??? ForwardLeft / ForwardRight
-            ?       ??? UxrTeleportLocomotion  ? телепорт (по умолчанию включён)
-            ?       ??? UxrLaserPointer        ? лазер для UI (по умолчанию выключен)
-            ??? [FingerTips на пальцах]        ? прямое касание UI
+            ?       ??? UxrTeleportLocomotion  ? С‚РµР»РµРїРѕСЂС‚ (РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІРєР»СЋС‡С‘РЅ)
+            ?       ??? UxrLaserPointer        ? Р»Р°Р·РµСЂ РґР»СЏ UI (РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІС‹РєР»СЋС‡РµРЅ)
+            ??? [FingerTips РЅР° РїР°Р»СЊС†Р°С…]        ? РїСЂСЏРјРѕРµ РєР°СЃР°РЅРёРµ UI
 ```
 
-> ?? Не перемещай руки внутри аватара — они должны быть выровнены с BigHandsIntegration!
+> ?? РќРµ РїРµСЂРµРјРµС‰Р°Р№ СЂСѓРєРё РІРЅСѓС‚СЂРё Р°РІР°С‚Р°СЂР° вЂ” РѕРЅРё РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ РІС‹СЂРѕРІРЅРµРЅС‹ СЃ BigHandsIntegration!
 
 ---
 
-## Режимы аватара
+## Р РµР¶РёРјС‹ Р°РІР°С‚Р°СЂР°
 
 ```csharp
-// Переключить в режим "управляется извне" (для сети/replay)
+// РџРµСЂРµРєР»СЋС‡РёС‚СЊ РІ СЂРµР¶РёРј "СѓРїСЂР°РІР»СЏРµС‚СЃСЏ РёР·РІРЅРµ" (РґР»СЏ СЃРµС‚Рё/replay)
 avatar.AvatarMode = UxrAvatarMode.UpdateExternally;
 ```
 
-| Режим | Описание |
+| Р РµР¶РёРј | РћРїРёСЃР°РЅРёРµ |
 |---|---|
-| `UxrAvatarMode.Local` | Управляется пользователем (по умолчанию) |
-| `UxrAvatarMode.UpdateExternally` | Управляется снаружи (сеть, replay) |
+| `UxrAvatarMode.Local` | РЈРїСЂР°РІР»СЏРµС‚СЃСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј (РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ) |
+| `UxrAvatarMode.UpdateExternally` | РЈРїСЂР°РІР»СЏРµС‚СЃСЏ СЃРЅР°СЂСѓР¶Рё (СЃРµС‚СЊ, replay) |
 
 ---
 
-## Режимы рендера
+## Р РµР¶РёРјС‹ СЂРµРЅРґРµСЂР°
 
 ```csharp
-// Показать аватар (руки/тело)
+// РџРѕРєР°Р·Р°С‚СЊ Р°РІР°С‚Р°СЂ (СЂСѓРєРё/С‚РµР»Рѕ)
 UxrAvatar.LocalAvatar.RenderMode = UxrAvatarRenderModes.Avatar;
 
-// Показать контроллеры + руки поверх (IK)
+// РџРѕРєР°Р·Р°С‚СЊ РєРѕРЅС‚СЂРѕР»Р»РµСЂС‹ + СЂСѓРєРё РїРѕРІРµСЂС… (IK)
 UxrAvatar.LocalAvatar.RenderMode = UxrAvatarRenderModes.AllControllers;
 UxrAvatar.LocalAvatar.ShowControllerHands = true;
 ```
 
 ---
 
-## Доступ к костям скелета
+## Р”РѕСЃС‚СѓРї Рє РєРѕСЃС‚СЏРј СЃРєРµР»РµС‚Р°
 
 ```csharp
-// Кость руки
+// РљРѕСЃС‚СЊ СЂСѓРєРё
 UxrAvatarHand leftHand = UxrAvatar.LocalAvatar.GetHand(UxrHandSide.Left);
 Vector3 thumbTip = leftHand.Thumb.Distal.position;
 
-// Голова
+// Р“РѕР»РѕРІР°
 Vector3 headPos = UxrAvatar.LocalAvatar.AvatarRig.Head.Head.position;
 
-// Все кости одной руки
+// Р’СЃРµ РєРѕСЃС‚Рё РѕРґРЅРѕР№ СЂСѓРєРё
 foreach (Transform bone in UxrAvatar.LocalAvatar.GetHand(UxrHandSide.Right))
     Debug.Log(bone.name);
 ```
 
 ---
 
-## Fadeout экрана
+## Fadeout СЌРєСЂР°РЅР°
 
 ```csharp
-// Затемнить экран
+// Р—Р°С‚РµРјРЅРёС‚СЊ СЌРєСЂР°РЅ
 UxrAvatar.LocalAvatar.CameraFade.EnableFadeColor(Color.black, 1.0f);
 
-// Убрать затемнение
+// РЈР±СЂР°С‚СЊ Р·Р°С‚РµРјРЅРµРЅРёРµ
 UxrAvatar.LocalAvatar.CameraFade.DisableFadeColor();
 ```
 
 ---
 
-## Настройка позы руки по умолчанию
+## РќР°СЃС‚СЂРѕР№РєР° РїРѕР·С‹ СЂСѓРєРё РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
 
 ```csharp
 UxrStandardAvatarController ctrl = UxrAvatar.LocalAvatar.AvatarController as UxrStandardAvatarController;
 
-// Переопределить позу
+// РџРµСЂРµРѕРїСЂРµРґРµР»РёС‚СЊ РїРѕР·Сѓ
 ctrl.LeftHandDefaultPoseNameOverride = "myPoseName";
 
-// Сбросить
+// РЎР±СЂРѕСЃРёС‚СЊ
 ctrl.LeftHandDefaultPoseNameOverride = null;
 ```

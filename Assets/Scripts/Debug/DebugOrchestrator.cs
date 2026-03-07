@@ -8,16 +8,16 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.DevTools
 {
     /// <summary>
-    /// Оркестратор быстрой инициализации для отладки.
-    /// Подписывается на события GameNetworkManager и выполняет заскриптованный
-    /// сценарий из DebugBootstrapConfig: назначает команду, загружает карту, запускает матч.
+    /// РћСЂРєРµСЃС‚СЂР°С‚РѕСЂ Р±С‹СЃС‚СЂРѕР№ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё РґР»СЏ РѕС‚Р»Р°РґРєРё.
+    /// РџРѕРґРїРёСЃС‹РІР°РµС‚СЃСЏ РЅР° СЃРѕР±С‹С‚РёСЏ GameNetworkManager Рё РІС‹РїРѕР»РЅСЏРµС‚ Р·Р°СЃРєСЂРёРїС‚РѕРІР°РЅРЅС‹Р№
+    /// СЃС†РµРЅР°СЂРёР№ РёР· DebugBootstrapConfig: РЅР°Р·РЅР°С‡Р°РµС‚ РєРѕРјР°РЅРґСѓ, Р·Р°РіСЂСѓР¶Р°РµС‚ РєР°СЂС‚Сѓ, Р·Р°РїСѓСЃРєР°РµС‚ РјР°С‚С‡.
     ///
-    /// Не меняет продакшн-код — использует те же публичные API, что и обычная игра.
+    /// РќРµ РјРµРЅСЏРµС‚ РїСЂРѕРґР°РєС€РЅ-РєРѕРґ вЂ” РёСЃРїРѕР»СЊР·СѓРµС‚ С‚Рµ Р¶Рµ РїСѓР±Р»РёС‡РЅС‹Рµ API, С‡С‚Рѕ Рё РѕР±С‹С‡РЅР°СЏ РёРіСЂР°.
     ///
-    /// Как использовать:
-    ///   1. Добавить этот компонент на любой GameObject в сцене (например "DebugOrchestrator").
-    ///   2. Назначить DebugBootstrapConfig в поле Config.
-    ///   3. Чтобы отключить — деактивировать GameObject.
+    /// РљР°Рє РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ:
+    ///   1. Р”РѕР±Р°РІРёС‚СЊ СЌС‚РѕС‚ РєРѕРјРїРѕРЅРµРЅС‚ РЅР° Р»СЋР±РѕР№ GameObject РІ СЃС†РµРЅРµ (РЅР°РїСЂРёРјРµСЂ "DebugOrchestrator").
+    ///   2. РќР°Р·РЅР°С‡РёС‚СЊ DebugBootstrapConfig РІ РїРѕР»Рµ Config.
+    ///   3. Р§С‚РѕР±С‹ РѕС‚РєР»СЋС‡РёС‚СЊ вЂ” РґРµР°РєС‚РёРІРёСЂРѕРІР°С‚СЊ GameObject.
     /// </summary>
     public class DebugOrchestrator : MonoBehaviour
     {
@@ -55,8 +55,8 @@ namespace VrBattlegrounds.DevTools
         }
 
         /// <summary>
-        /// Вызывается когда локальный аватар готов.
-        /// Назначает команду локальному игроку.
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ РєРѕРіРґР° Р»РѕРєР°Р»СЊРЅС‹Р№ Р°РІР°С‚Р°СЂ РіРѕС‚РѕРІ.
+        /// РќР°Р·РЅР°С‡Р°РµС‚ РєРѕРјР°РЅРґСѓ Р»РѕРєР°Р»СЊРЅРѕРјСѓ РёРіСЂРѕРєСѓ.
         /// </summary>
         private void OnLocalAvatarChanged(object sender, UltimateXR.Avatar.UxrAvatarEventArgs e)
         {
@@ -67,17 +67,17 @@ namespace VrBattlegrounds.DevTools
             if (localPlayer == null)
                 return;
 
-            // Команду назначает только сервер
+            // РљРѕРјР°РЅРґСѓ РЅР°Р·РЅР°С‡Р°РµС‚ С‚РѕР»СЊРєРѕ СЃРµСЂРІРµСЂ
             if (!NetworkServer.active)
                 return;
 
             localPlayer.Team = _config.autoTeam;
-            UnityEngine.Debug.Log($"[DebugOrchestrator] Команда назначена: {_config.autoTeam}");
+            UnityEngine.Debug.Log($"[DebugOrchestrator] РљРѕРјР°РЅРґР° РЅР°Р·РЅР°С‡РµРЅР°: {_config.autoTeam}");
         }
 
         /// <summary>
-        /// Вызывается при каждом подключении игрока.
-        /// Проверяет условие автостарта матча.
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ РїСЂРё РєР°Р¶РґРѕРј РїРѕРґРєР»СЋС‡РµРЅРёРё РёРіСЂРѕРєР°.
+        /// РџСЂРѕРІРµСЂСЏРµС‚ СѓСЃР»РѕРІРёРµ Р°РІС‚РѕСЃС‚Р°СЂС‚Р° РјР°С‚С‡Р°.
         /// </summary>
         private void OnPlayerConnected(PlayerController player)
         {
@@ -94,28 +94,28 @@ namespace VrBattlegrounds.DevTools
             int totalPlayers = networkManager.Players.Count;
             if (totalPlayers < _config.minPlayersToAutoStart)
             {
-                UnityEngine.Debug.Log($"[DebugOrchestrator] Игроков: {totalPlayers}/{_config.minPlayersToAutoStart} — ожидаем ещё.");
+                UnityEngine.Debug.Log($"[DebugOrchestrator] РРіСЂРѕРєРѕРІ: {totalPlayers}/{_config.minPlayersToAutoStart} вЂ” РѕР¶РёРґР°РµРј РµС‰С‘.");
                 return;
             }
 
             if (MatchManager.Instance == null)
             {
-                UnityEngine.Debug.LogWarning("[DebugOrchestrator] MatchManager не найден — матч не запущен.");
+                UnityEngine.Debug.LogWarning("[DebugOrchestrator] MatchManager РЅРµ РЅР°Р№РґРµРЅ вЂ” РјР°С‚С‡ РЅРµ Р·Р°РїСѓС‰РµРЅ.");
                 return;
             }
 
-            UnityEngine.Debug.Log("[DebugOrchestrator] Автостарт матча.");
+            UnityEngine.Debug.Log("[DebugOrchestrator] РђРІС‚РѕСЃС‚Р°СЂС‚ РјР°С‚С‡Р°.");
             MatchManager.Instance.StartMatch();
         }
 
         /// <summary>
-        /// Вызывается при отключении игрока. Зарезервировано для будущей логики.
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ РїСЂРё РѕС‚РєР»СЋС‡РµРЅРёРё РёРіСЂРѕРєР°. Р—Р°СЂРµР·РµСЂРІРёСЂРѕРІР°РЅРѕ РґР»СЏ Р±СѓРґСѓС‰РµР№ Р»РѕРіРёРєРё.
         /// </summary>
         private void OnPlayerDisconnected(PlayerController player) { }
 
         /// <summary>
-        /// Срабатывает при каждой смене сцены на сервере.
-        /// Автозагрузку карты делает только если загружена onlineScene (сцена после подъёма сервера).
+        /// РЎСЂР°Р±Р°С‚С‹РІР°РµС‚ РїСЂРё РєР°Р¶РґРѕР№ СЃРјРµРЅРµ СЃС†РµРЅС‹ РЅР° СЃРµСЂРІРµСЂРµ.
+        /// РђРІС‚РѕР·Р°РіСЂСѓР·РєСѓ РєР°СЂС‚С‹ РґРµР»Р°РµС‚ С‚РѕР»СЊРєРѕ РµСЃР»Рё Р·Р°РіСЂСѓР¶РµРЅР° onlineScene (СЃС†РµРЅР° РїРѕСЃР»Рµ РїРѕРґСЉС‘РјР° СЃРµСЂРІРµСЂР°).
         /// </summary>
         private void OnServerSceneChanged(string sceneName)
         {
@@ -123,7 +123,7 @@ namespace VrBattlegrounds.DevTools
             if (nm == null)
                 return;
 
-            // Автозагрузку делаем только если загрузилась именно onlineScene
+            // РђРІС‚РѕР·Р°РіСЂСѓР·РєСѓ РґРµР»Р°РµРј С‚РѕР»СЊРєРѕ РµСЃР»Рё Р·Р°РіСЂСѓР·РёР»Р°СЃСЊ РёРјРµРЅРЅРѕ onlineScene
             if (sceneName != nm.onlineScene)
                 return;
 
@@ -131,15 +131,15 @@ namespace VrBattlegrounds.DevTools
         }
 
         /// <summary>
-        /// Загружает карту автоматически если задана в конфиге.
-        /// Вызывать только после подъёма сервера на онлайн-сцене.
+        /// Р—Р°РіСЂСѓР¶Р°РµС‚ РєР°СЂС‚Сѓ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РµСЃР»Рё Р·Р°РґР°РЅР° РІ РєРѕРЅС„РёРіРµ.
+        /// Р’С‹Р·С‹РІР°С‚СЊ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ РїРѕРґСЉС‘РјР° СЃРµСЂРІРµСЂР° РЅР° РѕРЅР»Р°Р№РЅ-СЃС†РµРЅРµ.
         /// </summary>
         private void TryAutoLoadMap()
         {
             if (string.IsNullOrEmpty(_config.autoLoadMapScene))
                 return;
 
-            Debug.Log($"[DebugOrchestrator] Автозагрузка карты: {_config.autoLoadMapScene}");
+            Debug.Log($"[DebugOrchestrator] РђРІС‚РѕР·Р°РіСЂСѓР·РєР° РєР°СЂС‚С‹: {_config.autoLoadMapScene}");
             NetworkManager.singleton.ServerChangeScene(_config.autoLoadMapScene);
         }
     }

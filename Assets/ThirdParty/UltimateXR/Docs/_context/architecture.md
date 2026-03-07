@@ -1,131 +1,131 @@
-# UltimateXR — Архитектура и структура модулей
+# UltimateXR вЂ” РђСЂС…РёС‚РµРєС‚СѓСЂР° Рё СЃС‚СЂСѓРєС‚СѓСЂР° РјРѕРґСѓР»РµР№
 
-> Обновлено: первичное сканирование кодовой базы и документации  
-> Источники: `Runtime/Scripts/`, `Docs/guides/`
+> РћР±РЅРѕРІР»РµРЅРѕ: РїРµСЂРІРёС‡РЅРѕРµ СЃРєР°РЅРёСЂРѕРІР°РЅРёРµ РєРѕРґРѕРІРѕР№ Р±Р°Р·С‹ Рё РґРѕРєСѓРјРµРЅС‚Р°С†РёРё  
+> РСЃС‚РѕС‡РЅРёРєРё: `Runtime/Scripts/`, `Docs/guides/`
 
 ---
 
-## Базовые классы (иерархия наследования)
+## Р‘Р°Р·РѕРІС‹Рµ РєР»Р°СЃСЃС‹ (РёРµСЂР°СЂС…РёСЏ РЅР°СЃР»РµРґРѕРІР°РЅРёСЏ)
 
 ```
 MonoBehaviour
-    ??? UxrComponent                   ? основа всех компонентов UXR
-            ??? UxrComponent<T>        ? EnabledComponents / AllComponents для типа T
-            ??? UxrAvatarComponent<T>  ? компоненты, привязанные к конкретному аватару
-            ??? UxrSingleton<T>        ? паттерн Singleton (Instance)
+    ??? UxrComponent                   ? РѕСЃРЅРѕРІР° РІСЃРµС… РєРѕРјРїРѕРЅРµРЅС‚РѕРІ UXR
+            ??? UxrComponent<T>        ? EnabledComponents / AllComponents РґР»СЏ С‚РёРїР° T
+            ??? UxrAvatarComponent<T>  ? РєРѕРјРїРѕРЅРµРЅС‚С‹, РїСЂРёРІСЏР·Р°РЅРЅС‹Рµ Рє РєРѕРЅРєСЂРµС‚РЅРѕРјСѓ Р°РІР°С‚Р°СЂСѓ
+            ??? UxrSingleton<T>        ? РїР°С‚С‚РµСЂРЅ Singleton (Instance)
 ```
 
-**Правило:** любой компонент UltimateXR имеет:
-- `UniqueId` — уникальный идентификатор (для сети и сохранений)
-- `EnabledComponents` — статическая итерация по всем активным компонентам типа
-- `GlobalEnabled` / `GlobalDisabled` — события включения/выключения
+**РџСЂР°РІРёР»Рѕ:** Р»СЋР±РѕР№ РєРѕРјРїРѕРЅРµРЅС‚ UltimateXR РёРјРµРµС‚:
+- `UniqueId` вЂ” СѓРЅРёРєР°Р»СЊРЅС‹Р№ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ (РґР»СЏ СЃРµС‚Рё Рё СЃРѕС…СЂР°РЅРµРЅРёР№)
+- `EnabledComponents` вЂ” СЃС‚Р°С‚РёС‡РµСЃРєР°СЏ РёС‚РµСЂР°С†РёСЏ РїРѕ РІСЃРµРј Р°РєС‚РёРІРЅС‹Рј РєРѕРјРїРѕРЅРµРЅС‚Р°Рј С‚РёРїР°
+- `GlobalEnabled` / `GlobalDisabled` вЂ” СЃРѕР±С‹С‚РёСЏ РІРєР»СЋС‡РµРЅРёСЏ/РІС‹РєР»СЋС‡РµРЅРёСЏ
 
 ---
 
-## Центральный менеджер — `UxrManager`
+## Р¦РµРЅС‚СЂР°Р»СЊРЅС‹Р№ РјРµРЅРµРґР¶РµСЂ вЂ” `UxrManager`
 
-**Путь:** `Runtime/Scripts/Core/UxrManager.cs`  
-**Доступ:** `UxrManager.Instance` (Singleton, создаётся автоматически)
+**РџСѓС‚СЊ:** `Runtime/Scripts/Core/UxrManager.cs`  
+**Р”РѕСЃС‚СѓРї:** `UxrManager.Instance` (Singleton, СЃРѕР·РґР°С‘С‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё)
 
-**Отвечает за:**
-- Обновление всех аватаров каждый кадр в правильном порядке
-- Перемещение / телепортацию аватаров
-- Единую точку всех изменений состояния (`ComponentStateChanged`)
-- Сериализацию состояния сцены (save / load / replay / sync-on-join)
-- Прекэширование префабов при загрузке (`IUxrPrecacheable`)
+**РћС‚РІРµС‡Р°РµС‚ Р·Р°:**
+- РћР±РЅРѕРІР»РµРЅРёРµ РІСЃРµС… Р°РІР°С‚Р°СЂРѕРІ РєР°Р¶РґС‹Р№ РєР°РґСЂ РІ РїСЂР°РІРёР»СЊРЅРѕРј РїРѕСЂСЏРґРєРµ
+- РџРµСЂРµРјРµС‰РµРЅРёРµ / С‚РµР»РµРїРѕСЂС‚Р°С†РёСЋ Р°РІР°С‚Р°СЂРѕРІ
+- Р•РґРёРЅСѓСЋ С‚РѕС‡РєСѓ РІСЃРµС… РёР·РјРµРЅРµРЅРёР№ СЃРѕСЃС‚РѕСЏРЅРёСЏ (`ComponentStateChanged`)
+- РЎРµСЂРёР°Р»РёР·Р°С†РёСЋ СЃРѕСЃС‚РѕСЏРЅРёСЏ СЃС†РµРЅС‹ (save / load / replay / sync-on-join)
+- РџСЂРµРєСЌС€РёСЂРѕРІР°РЅРёРµ РїСЂРµС„Р°Р±РѕРІ РїСЂРё Р·Р°РіСЂСѓР·РєРµ (`IUxrPrecacheable`)
 
-**Ключевые события:**
+**РљР»СЋС‡РµРІС‹Рµ СЃРѕР±С‹С‚РёСЏ:**
 
-| Событие | Когда |
+| РЎРѕР±С‹С‚РёРµ | РљРѕРіРґР° |
 |---|---|
-| `AvatarsUpdating` / `AvatarsUpdated` | До/после обновления аватаров |
-| `StageUpdating` / `StageUpdated` | Каждый этап кадра |
-| `AvatarMoved` | Аватар переместился |
-| `ComponentStateChanged` | Любое изменение состояния компонента в сцене |
+| `AvatarsUpdating` / `AvatarsUpdated` | Р”Рѕ/РїРѕСЃР»Рµ РѕР±РЅРѕРІР»РµРЅРёСЏ Р°РІР°С‚Р°СЂРѕРІ |
+| `StageUpdating` / `StageUpdated` | РљР°Р¶РґС‹Р№ СЌС‚Р°Рї РєР°РґСЂР° |
+| `AvatarMoved` | РђРІР°С‚Р°СЂ РїРµСЂРµРјРµСЃС‚РёР»СЃСЏ |
+| `ComponentStateChanged` | Р›СЋР±РѕРµ РёР·РјРµРЅРµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ РєРѕРјРїРѕРЅРµРЅС‚Р° РІ СЃС†РµРЅРµ |
 
 ---
 
-## Модуль 1: Avatar — `Runtime/Scripts/Avatar/`
+## РњРѕРґСѓР»СЊ 1: Avatar вЂ” `Runtime/Scripts/Avatar/`
 
-| Класс | Назначение |
+| РљР»Р°СЃСЃ | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |---|---|
-| `UxrAvatar` | Главный компонент аватара |
-| `UxrAvatarController` | Базовый класс логики управления |
-| `UxrStandardAvatarController` | Стандартная логика: жесты рук, взаимодействие |
-| `UxrAvatarRig` | Описание скелета (кости рук, голова, тело) |
-| `UxrAvatarHand` | Данные одной руки (кости пальцев) |
+| `UxrAvatar` | Р“Р»Р°РІРЅС‹Р№ РєРѕРјРїРѕРЅРµРЅС‚ Р°РІР°С‚Р°СЂР° |
+| `UxrAvatarController` | Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ Р»РѕРіРёРєРё СѓРїСЂР°РІР»РµРЅРёСЏ |
+| `UxrStandardAvatarController` | РЎС‚Р°РЅРґР°СЂС‚РЅР°СЏ Р»РѕРіРёРєР°: Р¶РµСЃС‚С‹ СЂСѓРє, РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёРµ |
+| `UxrAvatarRig` | РћРїРёСЃР°РЅРёРµ СЃРєРµР»РµС‚Р° (РєРѕСЃС‚Рё СЂСѓРє, РіРѕР»РѕРІР°, С‚РµР»Рѕ) |
+| `UxrAvatarHand` | Р”Р°РЅРЅС‹Рµ РѕРґРЅРѕР№ СЂСѓРєРё (РєРѕСЃС‚Рё РїР°Р»СЊС†РµРІ) |
 
-**Префабы:** `BigHandsAvatar_URP`, `SmallHandsAvatar_URP` (в `Runtime/Prefabs/Avatars/`)  
-**Подробнее:** `Assets/ultimate-xr/Docs/_context/avatar-guide.md`
+**РџСЂРµС„Р°Р±С‹:** `BigHandsAvatar_URP`, `SmallHandsAvatar_URP` (РІ `Runtime/Prefabs/Avatars/`)  
+**РџРѕРґСЂРѕР±РЅРµРµ:** `Assets/ultimate-xr/Docs/_context/avatar-guide.md`
 
 ---
 
-## Модуль 2: Manipulation — `Runtime/Scripts/Manipulation/`
+## РњРѕРґСѓР»СЊ 2: Manipulation вЂ” `Runtime/Scripts/Manipulation/`
 
-| Класс | Назначение |
+| РљР»Р°СЃСЃ | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |---|---|
-| `UxrGrabbableObject` | Делает объект захватываемым |
-| `UxrGrabber` | Компонент руки (в BigHandsIntegration) |
-| `UxrGrabManager` | Синглтон управления захватами (авто-создаётся) |
-| `UxrGrabbableObjectAnchor` | Точка размещения объекта |
-| `UxrGrabPointShape` | Расширенные формы точек захвата |
+| `UxrGrabbableObject` | Р”РµР»Р°РµС‚ РѕР±СЉРµРєС‚ Р·Р°С…РІР°С‚С‹РІР°РµРјС‹Рј |
+| `UxrGrabber` | РљРѕРјРїРѕРЅРµРЅС‚ СЂСѓРєРё (РІ BigHandsIntegration) |
+| `UxrGrabManager` | РЎРёРЅРіР»С‚РѕРЅ СѓРїСЂР°РІР»РµРЅРёСЏ Р·Р°С…РІР°С‚Р°РјРё (Р°РІС‚Рѕ-СЃРѕР·РґР°С‘С‚СЃСЏ) |
+| `UxrGrabbableObjectAnchor` | РўРѕС‡РєР° СЂР°Р·РјРµС‰РµРЅРёСЏ РѕР±СЉРµРєС‚Р° |
+| `UxrGrabPointShape` | Р Р°СЃС€РёСЂРµРЅРЅС‹Рµ С„РѕСЂРјС‹ С‚РѕС‡РµРє Р·Р°С…РІР°С‚Р° |
 
-**Подробнее:** `Assets/ultimate-xr/Docs/_context/interactions.md`
+**РџРѕРґСЂРѕР±РЅРµРµ:** `Assets/ultimate-xr/Docs/_context/interactions.md`
 
 ---
 
-## Модуль 3: Locomotion — `Runtime/Scripts/Locomotion/`
+## РњРѕРґСѓР»СЊ 3: Locomotion вЂ” `Runtime/Scripts/Locomotion/`
 
-| Класс | Назначение |
+| РљР»Р°СЃСЃ | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |---|---|
-| `UxrLocomotion` | Базовый класс любого передвижения |
-| `UxrTeleportLocomotion` | Телепортация через дугу из контроллера |
-| `UxrSmoothLocomotion` | Плавное FPS-подобное передвижение |
+| `UxrLocomotion` | Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ Р»СЋР±РѕРіРѕ РїРµСЂРµРґРІРёР¶РµРЅРёСЏ |
+| `UxrTeleportLocomotion` | РўРµР»РµРїРѕСЂС‚Р°С†РёСЏ С‡РµСЂРµР· РґСѓРіСѓ РёР· РєРѕРЅС‚СЂРѕР»Р»РµСЂР° |
+| `UxrSmoothLocomotion` | РџР»Р°РІРЅРѕРµ FPS-РїРѕРґРѕР±РЅРѕРµ РїРµСЂРµРґРІРёР¶РµРЅРёРµ |
 
-**Подробнее:** `Assets/ultimate-xr/Docs/_context/locomotion.md`
+**РџРѕРґСЂРѕР±РЅРµРµ:** `Assets/ultimate-xr/Docs/_context/locomotion.md`
 
 ---
 
-## Модуль 4: Mechanics / Weapons — `Runtime/Scripts/Mechanics/Weapons/`
+## РњРѕРґСѓР»СЊ 4: Mechanics / Weapons вЂ” `Runtime/Scripts/Mechanics/Weapons/`
 
-| Класс | Назначение |
+| РљР»Р°СЃСЃ | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |---|---|
-| `UxrWeapon` | Базовый класс оружия |
-| `UxrFirearmWeapon` | Огнестрельное оружие (стрельба, патроны, отдача) |
-| `UxrFirearmTrigger` | Один триггер: тип снаряда, цикл, частота, отдача |
-| `UxrProjectileSource` | Источник снарядов (обязателен на том же GameObject) |
+| `UxrWeapon` | Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ РѕСЂСѓР¶РёСЏ |
+| `UxrFirearmWeapon` | РћРіРЅРµСЃС‚СЂРµР»СЊРЅРѕРµ РѕСЂСѓР¶РёРµ (СЃС‚СЂРµР»СЊР±Р°, РїР°С‚СЂРѕРЅС‹, РѕС‚РґР°С‡Р°) |
+| `UxrFirearmTrigger` | РћРґРёРЅ С‚СЂРёРіРіРµСЂ: С‚РёРї СЃРЅР°СЂСЏРґР°, С†РёРєР», С‡Р°СЃС‚РѕС‚Р°, РѕС‚РґР°С‡Р° |
+| `UxrProjectileSource` | РСЃС‚РѕС‡РЅРёРє СЃРЅР°СЂСЏРґРѕРІ (РѕР±СЏР·Р°С‚РµР»РµРЅ РЅР° С‚РѕРј Р¶Рµ GameObject) |
 
-> `UxrFirearmWeapon` требует `UxrProjectileSource` на том же объекте.  
-> Оружие является `UxrGrabbableObject` — его можно подбирать руками.
+> `UxrFirearmWeapon` С‚СЂРµР±СѓРµС‚ `UxrProjectileSource` РЅР° С‚РѕРј Р¶Рµ РѕР±СЉРµРєС‚Рµ.  
+> РћСЂСѓР¶РёРµ СЏРІР»СЏРµС‚СЃСЏ `UxrGrabbableObject` вЂ” РµРіРѕ РјРѕР¶РЅРѕ РїРѕРґР±РёСЂР°С‚СЊ СЂСѓРєР°РјРё.
 
 ```csharp
-firearmWeapon.ProjectileShot += (triggerIndex) => { /* выстрел */ };
+firearmWeapon.ProjectileShot += (triggerIndex) => { /* РІС‹СЃС‚СЂРµР» */ };
 ```
 
 ---
 
-## Модуль 5: UI — `Runtime/Scripts/UI/`
+## РњРѕРґСѓР»СЊ 5: UI вЂ” `Runtime/Scripts/UI/`
 
-| Класс | Назначение |
+| РљР»Р°СЃСЃ | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |---|---|
-| `UxrPointerInputModule` | Замена Unity EventSystem модуля для VR |
-| `UxrCanvas` | Добавляется на Canvas для VR-взаимодействия |
-| `UxrLaserPointer` | Лазерный указатель с руки |
-| `UxrFingerTip` | Прямое касание UI пальцем |
+| `UxrPointerInputModule` | Р—Р°РјРµРЅР° Unity EventSystem РјРѕРґСѓР»СЏ РґР»СЏ VR |
+| `UxrCanvas` | Р”РѕР±Р°РІР»СЏРµС‚СЃСЏ РЅР° Canvas РґР»СЏ VR-РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёСЏ |
+| `UxrLaserPointer` | Р›Р°Р·РµСЂРЅС‹Р№ СѓРєР°Р·Р°С‚РµР»СЊ СЃ СЂСѓРєРё |
+| `UxrFingerTip` | РџСЂСЏРјРѕРµ РєР°СЃР°РЅРёРµ UI РїР°Р»СЊС†РµРј |
 
-**Подробнее:** `Assets/ultimate-xr/Docs/_context/ui.md`
+**РџРѕРґСЂРѕР±РЅРµРµ:** `Assets/ultimate-xr/Docs/_context/ui.md`
 
 ---
 
-## Модуль 6: CameraUtils — `Runtime/Scripts/CameraUtils/`
+## РњРѕРґСѓР»СЊ 6: CameraUtils вЂ” `Runtime/Scripts/CameraUtils/`
 
-| Класс | Назначение |
+| РљР»Р°СЃСЃ | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |---|---|
-| `UxrCameraWallFade` | Затемнение при столкновении головы со стеной |
+| `UxrCameraWallFade` | Р—Р°С‚РµРјРЅРµРЅРёРµ РїСЂРё СЃС‚РѕР»РєРЅРѕРІРµРЅРёРё РіРѕР»РѕРІС‹ СЃРѕ СЃС‚РµРЅРѕР№ |
 
-**Режимы:**
-- `AllowTraverse` — затемнение при прохождении сквозь геометрию
-- `Strict` — экран чёрный до возврата на прежнее место
+**Р РµР¶РёРјС‹:**
+- `AllowTraverse` вЂ” Р·Р°С‚РµРјРЅРµРЅРёРµ РїСЂРё РїСЂРѕС…РѕР¶РґРµРЅРёРё СЃРєРІРѕР·СЊ РіРµРѕРјРµС‚СЂРёСЋ
+- `Strict` вЂ” СЌРєСЂР°РЅ С‡С‘СЂРЅС‹Р№ РґРѕ РІРѕР·РІСЂР°С‚Р° РЅР° РїСЂРµР¶РЅРµРµ РјРµСЃС‚Рѕ
 
 ```csharp
 bool peeking = UxrCameraWallFade.IsAvatarPeekingThroughGeometry(UxrAvatar.LocalAvatar);
@@ -133,82 +133,82 @@ bool peeking = UxrCameraWallFade.IsAvatarPeekingThroughGeometry(UxrAvatar.LocalA
 
 ---
 
-## Модуль 7: Networking — `Runtime/Scripts/Networking/`
+## РњРѕРґСѓР»СЊ 7: Networking вЂ” `Runtime/Scripts/Networking/`
 
-| Класс | Назначение |
+| РљР»Р°СЃСЃ | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |---|---|
-| `UxrNetworkManager` | Синглтон сетевой синхронизации |
-| `UxrNetworkImplementation` | Абстрактный адаптер под конкретный сетевой SDK |
-| `UxrNetworkVoiceImplementation` | Адаптер голосового чата |
+| `UxrNetworkManager` | РЎРёРЅРіР»С‚РѕРЅ СЃРµС‚РµРІРѕР№ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё |
+| `UxrNetworkImplementation` | РђР±СЃС‚СЂР°РєС‚РЅС‹Р№ Р°РґР°РїС‚РµСЂ РїРѕРґ РєРѕРЅРєСЂРµС‚РЅС‹Р№ СЃРµС‚РµРІРѕР№ SDK |
+| `UxrNetworkVoiceImplementation` | РђРґР°РїС‚РµСЂ РіРѕР»РѕСЃРѕРІРѕРіРѕ С‡Р°С‚Р° |
 
-**Принцип:** все изменения ? `UxrManager.ComponentStateChanged` ? сериализация ? сеть ? `ExecuteStateSyncEvent` на другом устройстве.
+**РџСЂРёРЅС†РёРї:** РІСЃРµ РёР·РјРµРЅРµРЅРёСЏ ? `UxrManager.ComponentStateChanged` ? СЃРµСЂРёР°Р»РёР·Р°С†РёСЏ ? СЃРµС‚СЊ ? `ExecuteStateSyncEvent` РЅР° РґСЂСѓРіРѕРј СѓСЃС‚СЂРѕР№СЃС‚РІРµ.
 
-### Mirror (сетевой фреймворк проекта)
+### Mirror (СЃРµС‚РµРІРѕР№ С„СЂРµР№РјРІРѕСЂРє РїСЂРѕРµРєС‚Р°)
 
-**Путь:** `Assets/Mirror/`
+**РџСѓС‚СЊ:** `Assets/Mirror/`
 
-| Аспект | Решение |
+| РђСЃРїРµРєС‚ | Р РµС€РµРЅРёРµ |
 |---|---|
-| Базовый класс сетевых объектов | `NetworkBehaviour` |
-| Управление сессией | `NetworkManager` |
-| Серверные команды | `[Command]` — вызов от клиента на сервер |
-| Обновление клиентов | `[ClientRpc]` — вызов с сервера на всех клиентов |
-| Синхронизация полей | `[SyncVar]` |
-| Топология | Host = администратор арены |
+| Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ СЃРµС‚РµРІС‹С… РѕР±СЉРµРєС‚РѕРІ | `NetworkBehaviour` |
+| РЈРїСЂР°РІР»РµРЅРёРµ СЃРµСЃСЃРёРµР№ | `NetworkManager` |
+| РЎРµСЂРІРµСЂРЅС‹Рµ РєРѕРјР°РЅРґС‹ | `[Command]` вЂ” РІС‹Р·РѕРІ РѕС‚ РєР»РёРµРЅС‚Р° РЅР° СЃРµСЂРІРµСЂ |
+| РћР±РЅРѕРІР»РµРЅРёРµ РєР»РёРµРЅС‚РѕРІ | `[ClientRpc]` вЂ” РІС‹Р·РѕРІ СЃ СЃРµСЂРІРµСЂР° РЅР° РІСЃРµС… РєР»РёРµРЅС‚РѕРІ |
+| РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РїРѕР»РµР№ | `[SyncVar]` |
+| РўРѕРїРѕР»РѕРіРёСЏ | Host = Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ Р°СЂРµРЅС‹ |
 
-> **Для Copilot:** серверная логика (`MatchManager`, `RoundManager`, `SetManager`) выполняется только на сервере (`[Server]`). Клиенты получают обновления через `[ClientRpc]`. Для синхронизации VR-состояния использовать `UxrNetworkImplementation` + Mirror.
+> **Р”Р»СЏ Copilot:** СЃРµСЂРІРµСЂРЅР°СЏ Р»РѕРіРёРєР° (`MatchManager`, `RoundManager`, `SetManager`) РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РЅР° СЃРµСЂРІРµСЂРµ (`[Server]`). РљР»РёРµРЅС‚С‹ РїРѕР»СѓС‡Р°СЋС‚ РѕР±РЅРѕРІР»РµРЅРёСЏ С‡РµСЂРµР· `[ClientRpc]`. Р”Р»СЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё VR-СЃРѕСЃС‚РѕСЏРЅРёСЏ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ `UxrNetworkImplementation` + Mirror.
 
 ---
 
-## Модуль 8: Animation / Tweening — `Runtime/Scripts/Animation/`
+## РњРѕРґСѓР»СЊ 8: Animation / Tweening вЂ” `Runtime/Scripts/Animation/`
 
-| Класс | Назначение |
+| РљР»Р°СЃСЃ | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |---|---|
-| `UxrAnimatedTransform` | Анимация позиции/поворота/масштаба |
-| `UxrAnimatedMaterial` | Анимация параметров материала |
-| `UxrCanvasAlphaTween` | Fade in/out для Canvas |
-| `UxrTextContentTween` | Анимация текста (эффект печатной машинки) |
-| `UxrInterpolationSettings` | Настройки интерполяции (easing, delay, loop) |
+| `UxrAnimatedTransform` | РђРЅРёРјР°С†РёСЏ РїРѕР·РёС†РёРё/РїРѕРІРѕСЂРѕС‚Р°/РјР°СЃС€С‚Р°Р±Р° |
+| `UxrAnimatedMaterial` | РђРЅРёРјР°С†РёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ РјР°С‚РµСЂРёР°Р»Р° |
+| `UxrCanvasAlphaTween` | Fade in/out РґР»СЏ Canvas |
+| `UxrTextContentTween` | РђРЅРёРјР°С†РёСЏ С‚РµРєСЃС‚Р° (СЌС„С„РµРєС‚ РїРµС‡Р°С‚РЅРѕР№ РјР°С€РёРЅРєРё) |
+| `UxrInterpolationSettings` | РќР°СЃС‚СЂРѕР№РєРё РёРЅС‚РµСЂРїРѕР»СЏС†РёРё (easing, delay, loop) |
 
 ---
 
-## Модуль 9: Devices — `Runtime/Scripts/Devices/`
+## РњРѕРґСѓР»СЊ 9: Devices вЂ” `Runtime/Scripts/Devices/`
 
-Абстракция над контроллерами. Определяет устройство автоматически.  
-Поддерживает: Oculus/Meta Quest, SteamVR, WaveXR, PicoXR, Windows Mixed Reality.
+РђР±СЃС‚СЂР°РєС†РёСЏ РЅР°Рґ РєРѕРЅС‚СЂРѕР»Р»РµСЂР°РјРё. РћРїСЂРµРґРµР»СЏРµС‚ СѓСЃС‚СЂРѕР№СЃС‚РІРѕ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.  
+РџРѕРґРґРµСЂР¶РёРІР°РµС‚: Oculus/Meta Quest, SteamVR, WaveXR, PicoXR, Windows Mixed Reality.
 
 ---
 
-## Диаграмма зависимостей
+## Р”РёР°РіСЂР°РјРјР° Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№
 
 ```
 UxrManager (Singleton)
-    ??? обновляет ??? UxrAvatar
-    ?                     ??? управляется ??? UxrStandardAvatarController
-    ?                                               ??? содержит ??? UxrGrabber (руки)
+    ??? РѕР±РЅРѕРІР»СЏРµС‚ ??? UxrAvatar
+    ?                     ??? СѓРїСЂР°РІР»СЏРµС‚СЃСЏ ??? UxrStandardAvatarController
+    ?                                               ??? СЃРѕРґРµСЂР¶РёС‚ ??? UxrGrabber (СЂСѓРєРё)
     ?
-    ??? управляет ??? UxrGrabManager (Singleton, авто)
-    ?                     ??? следит за ??? UxrGrabbableObject
-    ?                                             ??? UxrFirearmWeapon (оружие)
+    ??? СѓРїСЂР°РІР»СЏРµС‚ ??? UxrGrabManager (Singleton, Р°РІС‚Рѕ)
+    ?                     ??? СЃР»РµРґРёС‚ Р·Р° ??? UxrGrabbableObject
+    ?                                             ??? UxrFirearmWeapon (РѕСЂСѓР¶РёРµ)
     ?
-    ??? управляет ??? UxrNetworkManager (Singleton)
+    ??? СѓРїСЂР°РІР»СЏРµС‚ ??? UxrNetworkManager (Singleton)
     ?
-    ??? события ????? ComponentStateChanged ??? Network / Replay / Save
+    ??? СЃРѕР±С‹С‚РёСЏ ????? ComponentStateChanged ??? Network / Replay / Save
 ```
 
 ---
 
-## Статус изучения модулей
+## РЎС‚Р°С‚СѓСЃ РёР·СѓС‡РµРЅРёСЏ РјРѕРґСѓР»РµР№
 
-| Модуль | Путь | Статус |
+| РњРѕРґСѓР»СЊ | РџСѓС‚СЊ | РЎС‚Р°С‚СѓСЃ |
 |---|---|---|
-| Core / UxrManager | `Runtime/Scripts/Core/` | ? Базовое знакомство |
-| Avatar | `Runtime/Scripts/Avatar/` | ? Базовое знакомство |
-| Manipulation | `Runtime/Scripts/Manipulation/` | ? Базовое знакомство |
-| Locomotion | `Runtime/Scripts/Locomotion/` | ? Базовое знакомство |
-| Weapons | `Runtime/Scripts/Mechanics/Weapons/` | ? Базовое знакомство |
-| UI | `Runtime/Scripts/UI/` | ? Базовое знакомство |
-| Animation | `Runtime/Scripts/Animation/` | ? Базовое знакомство |
-| CameraUtils | `Runtime/Scripts/CameraUtils/` | ? Базовое знакомство |
-| Networking | `Runtime/Scripts/Networking/` | ? Mirror — базовое знакомство |
-| Devices | `Runtime/Scripts/Devices/` | ? Не изучено |
+| Core / UxrManager | `Runtime/Scripts/Core/` | ? Р‘Р°Р·РѕРІРѕРµ Р·РЅР°РєРѕРјСЃС‚РІРѕ |
+| Avatar | `Runtime/Scripts/Avatar/` | ? Р‘Р°Р·РѕРІРѕРµ Р·РЅР°РєРѕРјСЃС‚РІРѕ |
+| Manipulation | `Runtime/Scripts/Manipulation/` | ? Р‘Р°Р·РѕРІРѕРµ Р·РЅР°РєРѕРјСЃС‚РІРѕ |
+| Locomotion | `Runtime/Scripts/Locomotion/` | ? Р‘Р°Р·РѕРІРѕРµ Р·РЅР°РєРѕРјСЃС‚РІРѕ |
+| Weapons | `Runtime/Scripts/Mechanics/Weapons/` | ? Р‘Р°Р·РѕРІРѕРµ Р·РЅР°РєРѕРјСЃС‚РІРѕ |
+| UI | `Runtime/Scripts/UI/` | ? Р‘Р°Р·РѕРІРѕРµ Р·РЅР°РєРѕРјСЃС‚РІРѕ |
+| Animation | `Runtime/Scripts/Animation/` | ? Р‘Р°Р·РѕРІРѕРµ Р·РЅР°РєРѕРјСЃС‚РІРѕ |
+| CameraUtils | `Runtime/Scripts/CameraUtils/` | ? Р‘Р°Р·РѕРІРѕРµ Р·РЅР°РєРѕРјСЃС‚РІРѕ |
+| Networking | `Runtime/Scripts/Networking/` | ? Mirror вЂ” Р±Р°Р·РѕРІРѕРµ Р·РЅР°РєРѕРјСЃС‚РІРѕ |
+| Devices | `Runtime/Scripts/Devices/` | ? РќРµ РёР·СѓС‡РµРЅРѕ |

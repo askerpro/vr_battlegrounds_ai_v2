@@ -1,123 +1,123 @@
-# UltimateXR — Скриптинг: паттерны и примеры API
+# UltimateXR вЂ” РЎРєСЂРёРїС‚РёРЅРі: РїР°С‚С‚РµСЂРЅС‹ Рё РїСЂРёРјРµСЂС‹ API
 
-> Источник: `Assets/ultimate-xr/Docs/guides/scripting.md`, `scripting-how-do-i.md`  
-> Скрипты: `Assets/ultimate-xr/Runtime/Scripts/`
+> РСЃС‚РѕС‡РЅРёРє: `Assets/ultimate-xr/Docs/guides/scripting.md`, `scripting-how-do-i.md`  
+> РЎРєСЂРёРїС‚С‹: `Assets/ultimate-xr/Runtime/Scripts/`
 
 ---
 
-## Базовая архитектура компонентов
+## Р‘Р°Р·РѕРІР°СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂР° РєРѕРјРїРѕРЅРµРЅС‚РѕРІ
 
-Все компоненты UltimateXR наследуют от `UxrComponent` (? `MonoBehaviour`):
+Р’СЃРµ РєРѕРјРїРѕРЅРµРЅС‚С‹ UltimateXR РЅР°СЃР»РµРґСѓСЋС‚ РѕС‚ `UxrComponent` (? `MonoBehaviour`):
 
 ```
 MonoBehaviour
-    ??? UxrComponent              ? итерация, UniqueId, события включения
-            ??? UxrComponent<T>   ? EnabledComponents, AllComponents для типа T
-            ??? UxrAvatarComponent<T>  ? компоненты, привязанные к аватару
+    ??? UxrComponent              ? РёС‚РµСЂР°С†РёСЏ, UniqueId, СЃРѕР±С‹С‚РёСЏ РІРєР»СЋС‡РµРЅРёСЏ
+            ??? UxrComponent<T>   ? EnabledComponents, AllComponents РґР»СЏ С‚РёРїР° T
+            ??? UxrAvatarComponent<T>  ? РєРѕРјРїРѕРЅРµРЅС‚С‹, РїСЂРёРІСЏР·Р°РЅРЅС‹Рµ Рє Р°РІР°С‚Р°СЂСѓ
 ```
 
 ```csharp
-// Итерация по всем компонентам типа T в сцене
+// РС‚РµСЂР°С†РёСЏ РїРѕ РІСЃРµРј РєРѕРјРїРѕРЅРµРЅС‚Р°Рј С‚РёРїР° T РІ СЃС†РµРЅРµ
 foreach (UxrGrabbableObject obj in UxrGrabbableObject.EnabledComponents)
     Debug.Log(obj.name);
 
-// Уникальный ID объекта (для сети / сохранений)
+// РЈРЅРёРєР°Р»СЊРЅС‹Р№ ID РѕР±СЉРµРєС‚Р° (РґР»СЏ СЃРµС‚Рё / СЃРѕС…СЂР°РЅРµРЅРёР№)
 string id = component.UniqueId;
 
-// Найти компонент по ID
+// РќР°Р№С‚Рё РєРѕРјРїРѕРЅРµРЅС‚ РїРѕ ID
 if (UxrComponent.TryGetComponentById(id, out UxrComponent comp))
     Debug.Log(comp.name);
 ```
 
 ---
 
-## Input (ввод с контроллеров)
+## Input (РІРІРѕРґ СЃ РєРѕРЅС‚СЂРѕР»Р»РµСЂРѕРІ)
 
 ```csharp
-// Нажата ли кнопка (разовое событие)
+// РќР°Р¶Р°С‚Р° Р»Рё РєРЅРѕРїРєР° (СЂР°Р·РѕРІРѕРµ СЃРѕР±С‹С‚РёРµ)
 bool pressed = UxrAvatar.LocalAvatarInput.GetButtonsPressDown(UxrHandSide.Left, UxrInputButtons.Button1);
 
-// Удерживается ли кнопка
+// РЈРґРµСЂР¶РёРІР°РµС‚СЃСЏ Р»Рё РєРЅРѕРїРєР°
 bool held = UxrAvatar.LocalAvatarInput.GetButtonsPress(UxrHandSide.Left, UxrInputButtons.Trigger);
 
-// Две кнопки одновременно
+// Р”РІРµ РєРЅРѕРїРєРё РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ
 bool both = UxrAvatar.LocalAvatarInput.GetButtonsPress(UxrHandSide.Left, UxrInputButtons.Button1 | UxrInputButtons.Button2);
 
-// Аналоговый ввод (триггер 0.0–1.0)
+// РђРЅР°Р»РѕРіРѕРІС‹Р№ РІРІРѕРґ (С‚СЂРёРіРіРµСЂ 0.0вЂ“1.0)
 float trigger = UxrAvatar.LocalAvatarInput.GetInput1D(UxrHandSide.Right, UxrInput1D.Trigger);
 
-// Подписка на события кнопок
+// РџРѕРґРїРёСЃРєР° РЅР° СЃРѕР±С‹С‚РёСЏ РєРЅРѕРїРѕРє
 UxrControllerInput.GlobalButtonStateChanged += (sender, e) => {
     Debug.Log($"{e.HandSide} {e.Button} {e.ButtonEventType}");
 };
 
-// Направление контроллера
+// РќР°РїСЂР°РІР»РµРЅРёРµ РєРѕРЅС‚СЂРѕР»Р»РµСЂР°
 Vector3 forward = UxrAvatar.LocalAvatar.GetControllerInputForward(UxrHandSide.Right).forward;
 
-// Левша/правша
+// Р›РµРІС€Р°/РїСЂР°РІС€Р°
 UxrAvatar.LocalAvatarInput.Handedness = UxrHandedness.Left;
 
-// Отключить ввод
+// РћС‚РєР»СЋС‡РёС‚СЊ РІРІРѕРґ
 UxrAvatar.LocalAvatarInput.SetIgnoreControllerInput(UxrHandSide.Left, true);
 ```
 
 ---
 
-## Скорость рук
+## РЎРєРѕСЂРѕСЃС‚СЊ СЂСѓРє
 
 ```csharp
-// Мгновенная скорость (текущий - прошлый кадр)
+// РњРіРЅРѕРІРµРЅРЅР°СЏ СЃРєРѕСЂРѕСЃС‚СЊ (С‚РµРєСѓС‰РёР№ - РїСЂРѕС€Р»С‹Р№ РєР°РґСЂ)
 Vector3 vel = UxrAvatar.LocalAvatar.GetGrabber(UxrHandSide.Right).Velocity;
 
-// Сглаженная скорость (несколько кадров)
+// РЎРіР»Р°Р¶РµРЅРЅР°СЏ СЃРєРѕСЂРѕСЃС‚СЊ (РЅРµСЃРєРѕР»СЊРєРѕ РєР°РґСЂРѕРІ)
 Vector3 smoothVel = UxrAvatar.LocalAvatar.GetGrabber(UxrHandSide.Right).SmoothVelocity;
 ```
 
 ---
 
-## Haptics (тактильная отдача)
+## Haptics (С‚Р°РєС‚РёР»СЊРЅР°СЏ РѕС‚РґР°С‡Р°)
 
 ```csharp
-// Импульс на конкретную руку
+// РРјРїСѓР»СЊСЃ РЅР° РєРѕРЅРєСЂРµС‚РЅСѓСЋ СЂСѓРєСѓ
 UxrAvatar.LocalAvatar.ControllerInput.SendHapticFeedback(UxrHandSide.Left, UxrHapticClipType.Click, 1.0f);
 
-// Импульс на руки, которые держат объект
+// РРјРїСѓР»СЊСЃ РЅР° СЂСѓРєРё, РєРѕС‚РѕСЂС‹Рµ РґРµСЂР¶Р°С‚ РѕР±СЉРµРєС‚
 UxrAvatar.LocalAvatar.ControllerInput.SendGrabbableHapticFeedback(grabbableObject, UxrHapticClipType.RumbleFreqNormal);
 
-// Вибрация на основе аудиоклипа
+// Р’РёР±СЂР°С†РёСЏ РЅР° РѕСЃРЅРѕРІРµ Р°СѓРґРёРѕРєР»РёРїР°
 UxrAvatar.LocalAvatar.ControllerInput.SendHapticFeedback(UxrHandSide.Left, new UxrHapticClip(audioClip, UxrHapticClickType.Click));
 ```
 
 ---
 
-## Навигация / компас (подсказки для пользователя)
+## РќР°РІРёРіР°С†РёСЏ / РєРѕРјРїР°СЃ (РїРѕРґСЃРєР°Р·РєРё РґР»СЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ)
 
 ```csharp
-// Указать на объект (взгляд)
+// РЈРєР°Р·Р°С‚СЊ РЅР° РѕР±СЉРµРєС‚ (РІР·РіР»СЏРґ)
 UxrCompass.Instance.SetTarget(myObject.transform, UxrCompassDisplayMode.Look);
 
-// Указать место на полу (куда идти)
+// РЈРєР°Р·Р°С‚СЊ РјРµСЃС‚Рѕ РЅР° РїРѕР»Сѓ (РєСѓРґР° РёРґС‚Рё)
 UxrCompass.Instance.SetTarget(floor.transform, UxrCompassDisplayMode.Location);
 
-// Указать объект для захвата
+// РЈРєР°Р·Р°С‚СЊ РѕР±СЉРµРєС‚ РґР»СЏ Р·Р°С…РІР°С‚Р°
 UxrCompass.Instance.SetTarget(weapon.transform, UxrCompassDisplayMode.Grab);
 
-// Выключить компас
+// Р’С‹РєР»СЋС‡РёС‚СЊ РєРѕРјРїР°СЃ
 UxrCompass.Instance.SetTarget(null);
 ```
 
 ---
 
-## Анимации (твинеры)
+## РђРЅРёРјР°С†РёРё (С‚РІРёРЅРµСЂС‹)
 
 ```csharp
-// Мигание цветом материала
+// РњРёРіР°РЅРёРµ С†РІРµС‚РѕРј РјР°С‚РµСЂРёР°Р»Р°
 UxrAnimatedMaterial.AnimateBlinkColor(gameObject, "_BaseColor", startColor, endColor);
 
-// Перемещение объекта
+// РџРµСЂРµРјРµС‰РµРЅРёРµ РѕР±СЉРµРєС‚Р°
 UxrAnimatedTransform.Translate(gameObject, UxrTransformTranslationSpace.World, Vector3.forward * 3.0f);
 
-// Анимация позиции (bounce)
+// РђРЅРёРјР°С†РёСЏ РїРѕР·РёС†РёРё (bounce)
 UxrAnimatedTransform.PositionInterpolation(gameObject,
     UxrTransformTranslationSpace.Local,
     Vector3.zero, Vector3.up * 2.0f,
@@ -128,14 +128,14 @@ UxrCanvasAlphaTween.FadeIn(canvasGroup, fadeSeconds, delaySeconds);
 UxrCanvasAlphaTween.Animate(canvasGroup, canvasGroup.alpha, 0.0f,
     new UxrInterpolationSettings(fadeSeconds)).SetFinishedActions(UxrTweenFinishedActions.DeactivateGameObject);
 
-// Эффект печатной машинки
+// Р­С„С„РµРєС‚ РїРµС‡Р°С‚РЅРѕР№ РјР°С€РёРЅРєРё
 UxrTextContentTween.Animate(textComponent.gameObject, string.Empty, playerName,
     new UxrInterpolationSettings(durationSeconds, delaySeconds));
 ```
 
 ---
 
-## Обновление после рендера аватаров
+## РћР±РЅРѕРІР»РµРЅРёРµ РїРѕСЃР»Рµ СЂРµРЅРґРµСЂР° Р°РІР°С‚Р°СЂРѕРІ
 
 ```csharp
 private void OnEnable()  => UxrManager.AvatarsUpdated += OnAvatarsUpdated;
@@ -143,14 +143,14 @@ private void OnDisable() => UxrManager.AvatarsUpdated -= OnAvatarsUpdated;
 
 private void OnAvatarsUpdated()
 {
-    // Вызывается каждый кадр после обновления всех аватаров
+    // Р’С‹Р·С‹РІР°РµС‚СЃСЏ РєР°Р¶РґС‹Р№ РєР°РґСЂ РїРѕСЃР»Рµ РѕР±РЅРѕРІР»РµРЅРёСЏ РІСЃРµС… Р°РІР°С‚Р°СЂРѕРІ
 }
 ```
 
 ---
 
-## Советы по навигации в коде UltimateXR
+## РЎРѕРІРµС‚С‹ РїРѕ РЅР°РІРёРіР°С†РёРё РІ РєРѕРґРµ UltimateXR
 
-- `Ctrl+M, Ctrl+O` — свернуть всё до определений (быстрый обзор класса)
-- `Ctrl+M, Ctrl+L` — развернуть всё
-- Все классы, методы и свойства задокументированы XML-комментариями ? Intellisense/Rider подскажет
+- `Ctrl+M, Ctrl+O` вЂ” СЃРІРµСЂРЅСѓС‚СЊ РІСЃС‘ РґРѕ РѕРїСЂРµРґРµР»РµРЅРёР№ (Р±С‹СЃС‚СЂС‹Р№ РѕР±Р·РѕСЂ РєР»Р°СЃСЃР°)
+- `Ctrl+M, Ctrl+L` вЂ” СЂР°Р·РІРµСЂРЅСѓС‚СЊ РІСЃС‘
+- Р’СЃРµ РєР»Р°СЃСЃС‹, РјРµС‚РѕРґС‹ Рё СЃРІРѕР№СЃС‚РІР° Р·Р°РґРѕРєСѓРјРµРЅС‚РёСЂРѕРІР°РЅС‹ XML-РєРѕРјРјРµРЅС‚Р°СЂРёСЏРјРё ? Intellisense/Rider РїРѕРґСЃРєР°Р¶РµС‚

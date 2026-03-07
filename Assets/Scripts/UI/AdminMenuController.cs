@@ -7,32 +7,32 @@ using VrBattlegrounds.Maps;
 namespace VrBattlegrounds.UI
 {
     /// <summary>
-    /// Меню администратора арены (только для Host/Server).
-    /// Администратор — первый подключившийся игрок (Host).
-    /// Предоставляет управление матчем: выбор карты, режима, старт/стоп/пауза.
+    /// РњРµРЅСЋ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° Р°СЂРµРЅС‹ (С‚РѕР»СЊРєРѕ РґР»СЏ Host/Server).
+    /// РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ вЂ” РїРµСЂРІС‹Р№ РїРѕРґРєР»СЋС‡РёРІС€РёР№СЃСЏ РёРіСЂРѕРє (Host).
+    /// РџСЂРµРґРѕСЃС‚Р°РІР»СЏРµС‚ СѓРїСЂР°РІР»РµРЅРёРµ РјР°С‚С‡РµРј: РІС‹Р±РѕСЂ РєР°СЂС‚С‹, СЂРµР¶РёРјР°, СЃС‚Р°СЂС‚/СЃС‚РѕРї/РїР°СѓР·Р°.
     ///
-    /// Активируется только если текущий клиент является сервером.
-    /// Если Host одновременно игрок — ему доступны и AdminMenu, и PlayerMenu.
+    /// РђРєС‚РёРІРёСЂСѓРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РµСЃР»Рё С‚РµРєСѓС‰РёР№ РєР»РёРµРЅС‚ СЏРІР»СЏРµС‚СЃСЏ СЃРµСЂРІРµСЂРѕРј.
+    /// Р•СЃР»Рё Host РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ РёРіСЂРѕРє вЂ” РµРјСѓ РґРѕСЃС‚СѓРїРЅС‹ Рё AdminMenu, Рё PlayerMenu.
     /// </summary>
     public class AdminMenuController : MonoBehaviour
     {
-        [Header("Зависимости")]
+        [Header("Р—Р°РІРёСЃРёРјРѕСЃС‚Рё")]
         [SerializeField] private MatchManager _matchManager;
 
-        [Header("Настройки карт")]
-        [Tooltip("Реестр всех доступных карт. Назначить MapRegistry asset.")]
+        [Header("РќР°СЃС‚СЂРѕР№РєРё РєР°СЂС‚")]
+        [Tooltip("Р РµРµСЃС‚СЂ РІСЃРµС… РґРѕСЃС‚СѓРїРЅС‹С… РєР°СЂС‚. РќР°Р·РЅР°С‡РёС‚СЊ MapRegistry asset.")]
         [SerializeField] private MapRegistry _mapRegistry;
 
         private void Start()
         {
-            // Меню администратора видно только серверу / хосту
+            // РњРµРЅСЋ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° РІРёРґРЅРѕ С‚РѕР»СЊРєРѕ СЃРµСЂРІРµСЂСѓ / С…РѕСЃС‚Сѓ
             bool isAdmin = NetworkServer.active;
             gameObject.SetActive(isAdmin);
         }
 
         /// <summary>
-        /// Запускает матч с выбранной картой и режимом.
-        /// Вызывается кнопкой UI.
+        /// Р—Р°РїСѓСЃРєР°РµС‚ РјР°С‚С‡ СЃ РІС‹Р±СЂР°РЅРЅРѕР№ РєР°СЂС‚РѕР№ Рё СЂРµР¶РёРјРѕРј.
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ РєРЅРѕРїРєРѕР№ UI.
         /// </summary>
         public void OnStartMatchPressed()
         {
@@ -43,22 +43,22 @@ namespace VrBattlegrounds.UI
         }
 
         /// <summary>
-        /// Останавливает текущий матч.
-        /// Вызывается кнопкой UI.
+        /// РћСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ С‚РµРєСѓС‰РёР№ РјР°С‚С‡.
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ РєРЅРѕРїРєРѕР№ UI.
         /// </summary>
         public void OnStopMatchPressed()
         {
             if (!NetworkServer.active)
                 return;
 
-            // TODO: вызвать MatchManager.StopMatch() когда метод будет реализован
+            // TODO: РІС‹Р·РІР°С‚СЊ MatchManager.StopMatch() РєРѕРіРґР° РјРµС‚РѕРґ Р±СѓРґРµС‚ СЂРµР°Р»РёР·РѕРІР°РЅ
         }
 
         /// <summary>
-        /// Загружает карту по индексу из MapRegistry.
-        /// Вызывается элементом выбора карты в UI.
+        /// Р—Р°РіСЂСѓР¶Р°РµС‚ РєР°СЂС‚Сѓ РїРѕ РёРЅРґРµРєСЃСѓ РёР· MapRegistry.
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ СЌР»РµРјРµРЅС‚РѕРј РІС‹Р±РѕСЂР° РєР°СЂС‚С‹ РІ UI.
         /// </summary>
-        /// <param name="mapIndex">Индекс карты в MapRegistry.maps</param>
+        /// <param name="mapIndex">РРЅРґРµРєСЃ РєР°СЂС‚С‹ РІ MapRegistry.maps</param>
         public void OnMapSelected(int mapIndex)
         {
             if (!NetworkServer.active)
@@ -66,7 +66,7 @@ namespace VrBattlegrounds.UI
 
             if (_mapRegistry == null || mapIndex < 0 || mapIndex >= _mapRegistry.maps.Length)
             {
-                Debug.LogWarning($"[AdminMenuController] Некорректный индекс карты или не назначен MapRegistry: {mapIndex}");
+                Debug.LogWarning($"[AdminMenuController] РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РёРЅРґРµРєСЃ РєР°СЂС‚С‹ РёР»Рё РЅРµ РЅР°Р·РЅР°С‡РµРЅ MapRegistry: {mapIndex}");
                 return;
             }
 
@@ -75,7 +75,7 @@ namespace VrBattlegrounds.UI
         }
 
         /// <summary>
-        /// Возвращает список карт для построения UI меню.
+        /// Р’РѕР·РІСЂР°С‰Р°РµС‚ СЃРїРёСЃРѕРє РєР°СЂС‚ РґР»СЏ РїРѕСЃС‚СЂРѕРµРЅРёСЏ UI РјРµРЅСЋ.
         /// </summary>
         public MapData[] GetMaps() => _mapRegistry != null ? _mapRegistry.maps : new MapData[0];
     }

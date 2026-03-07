@@ -6,20 +6,20 @@ using UnityEngine;
 namespace VrBattlegrounds.Network
 {
     /// <summary>
-    /// Управляет автоматическим определением роли приложения (сервер / клиент / хост)
-    /// и запускает Mirror NetworkDiscovery в соответствии с этой ролью.
+    /// РЈРїСЂР°РІР»СЏРµС‚ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёРј РѕРїСЂРµРґРµР»РµРЅРёРµРј СЂРѕР»Рё РїСЂРёР»РѕР¶РµРЅРёСЏ (СЃРµСЂРІРµСЂ / РєР»РёРµРЅС‚ / С…РѕСЃС‚)
+    /// Рё Р·Р°РїСѓСЃРєР°РµС‚ Mirror NetworkDiscovery РІ СЃРѕРѕС‚РІРµС‚СЃС‚РІРёРё СЃ СЌС‚РѕР№ СЂРѕР»СЊСЋ.
     ///
-    /// Логика выбора роли при старте (вне редактора):
-    ///   - Headless-билд (нет дисплея) ? сервер
-    ///   - Обычный билд                ? клиент (ищет сервер через AutoDiscovery)
+    /// Р›РѕРіРёРєР° РІС‹Р±РѕСЂР° СЂРѕР»Рё РїСЂРё СЃС‚Р°СЂС‚Рµ (РІРЅРµ СЂРµРґР°РєС‚РѕСЂР°):
+    ///   - Headless-Р±РёР»Рґ (РЅРµС‚ РґРёСЃРїР»РµСЏ) ? СЃРµСЂРІРµСЂ
+    ///   - РћР±С‹С‡РЅС‹Р№ Р±РёР»Рґ                ? РєР»РёРµРЅС‚ (РёС‰РµС‚ СЃРµСЂРІРµСЂ С‡РµСЂРµР· AutoDiscovery)
     ///
-    /// В редакторе роль выбирается вручную через кнопки OnGUI.
+    /// Р’ СЂРµРґР°РєС‚РѕСЂРµ СЂРѕР»СЊ РІС‹Р±РёСЂР°РµС‚СЃСЏ РІСЂСѓС‡РЅСѓСЋ С‡РµСЂРµР· РєРЅРѕРїРєРё OnGUI.
     /// </summary>
     [RequireComponent(typeof(NetworkDiscovery))]
     public class GameNetworkDiscovery : MonoBehaviour
     {
         /// <summary>
-        /// Роль, в которой работает данный экземпляр приложения.
+        /// Р РѕР»СЊ, РІ РєРѕС‚РѕСЂРѕР№ СЂР°Р±РѕС‚Р°РµС‚ РґР°РЅРЅС‹Р№ СЌРєР·РµРјРїР»СЏСЂ РїСЂРёР»РѕР¶РµРЅРёСЏ.
         /// </summary>
         public enum AppRole
         {
@@ -30,7 +30,7 @@ namespace VrBattlegrounds.Network
 
         #region Inspector Properties/Serialized Fields
 
-        [Tooltip("Показывать UI выбора роли в редакторе во время Play Mode")]
+        [Tooltip("РџРѕРєР°Р·С‹РІР°С‚СЊ UI РІС‹Р±РѕСЂР° СЂРѕР»Рё РІ СЂРµРґР°РєС‚РѕСЂРµ РІРѕ РІСЂРµРјСЏ Play Mode")]
         [SerializeField] private bool _useEditorUI = true;
 
         #endregion
@@ -38,7 +38,7 @@ namespace VrBattlegrounds.Network
         #region Public Properties
 
         /// <summary>
-        /// Текущая роль приложения. Null до момента выбора/определения роли.
+        /// РўРµРєСѓС‰Р°СЏ СЂРѕР»СЊ РїСЂРёР»РѕР¶РµРЅРёСЏ. Null РґРѕ РјРѕРјРµРЅС‚Р° РІС‹Р±РѕСЂР°/РѕРїСЂРµРґРµР»РµРЅРёСЏ СЂРѕР»Рё.
         /// </summary>
         public AppRole? CurrentRole { get; private set; }
 
@@ -53,7 +53,7 @@ namespace VrBattlegrounds.Network
 
         private void Start()
         {
-            // Пробуем определить роль по тегу Multiplayer Play Mode
+            // РџСЂРѕР±СѓРµРј РѕРїСЂРµРґРµР»РёС‚СЊ СЂРѕР»СЊ РїРѕ С‚РµРіСѓ Multiplayer Play Mode
             AppRole? tagRole = TryGetRoleFromPlayerTag();
             if (tagRole.HasValue)
             {
@@ -61,20 +61,20 @@ namespace VrBattlegrounds.Network
                 return;
             }
 
-            // В редакторе без тега — ручной выбор через UI
+            // Р’ СЂРµРґР°РєС‚РѕСЂРµ Р±РµР· С‚РµРіР° вЂ” СЂСѓС‡РЅРѕР№ РІС‹Р±РѕСЂ С‡РµСЂРµР· UI
             if (Application.isEditor)
             {
                 return;
             }
 
-            // В билде роль определяется автоматически по наличию дисплея
+            // Р’ Р±РёР»РґРµ СЂРѕР»СЊ РѕРїСЂРµРґРµР»СЏРµС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїРѕ РЅР°Р»РёС‡РёСЋ РґРёСЃРїР»РµСЏ
             AppRole role = Mirror.Utils.IsHeadless() ? AppRole.Server : AppRole.Client;
             ApplyRole(role);
         }
 
         /// <summary>
-        /// Читает теги Multiplayer Play Mode текущего экземпляра редактора.
-        /// Возвращает роль если найден тег "Host", "Server" или "Client".
+        /// Р§РёС‚Р°РµС‚ С‚РµРіРё Multiplayer Play Mode С‚РµРєСѓС‰РµРіРѕ СЌРєР·РµРјРїР»СЏСЂР° СЂРµРґР°РєС‚РѕСЂР°.
+        /// Р’РѕР·РІСЂР°С‰Р°РµС‚ СЂРѕР»СЊ РµСЃР»Рё РЅР°Р№РґРµРЅ С‚РµРі "Host", "Server" РёР»Рё "Client".
         /// </summary>
         private static AppRole? TryGetRoleFromPlayerTag()
         {
@@ -89,7 +89,7 @@ namespace VrBattlegrounds.Network
 
         private void OnDestroy()
         {
-            // Отписываемся от Discovery при уничтожении
+            // РћС‚РїРёСЃС‹РІР°РµРјСЃСЏ РѕС‚ Discovery РїСЂРё СѓРЅРёС‡С‚РѕР¶РµРЅРёРё
             if (_discovery != null)
             {
                 _discovery.OnServerFound.RemoveListener(OnServerFound);
@@ -120,18 +120,18 @@ namespace VrBattlegrounds.Network
         #region Private Methods
 
         /// <summary>
-        /// Применяет выбранную роль: запускает сеть и Discovery в нужном режиме.
+        /// РџСЂРёРјРµРЅСЏРµС‚ РІС‹Р±СЂР°РЅРЅСѓСЋ СЂРѕР»СЊ: Р·Р°РїСѓСЃРєР°РµС‚ СЃРµС‚СЊ Рё Discovery РІ РЅСѓР¶РЅРѕРј СЂРµР¶РёРјРµ.
         /// </summary>
         private void ApplyRole(AppRole role)
         {
             if (CurrentRole != null)
             {
-                Debug.LogWarning($"[GameNetworkDiscovery] Роль уже выбрана: {CurrentRole}. Повторный вызов игнорируется.");
+                Debug.LogWarning($"[GameNetworkDiscovery] Р РѕР»СЊ СѓР¶Рµ РІС‹Р±СЂР°РЅР°: {CurrentRole}. РџРѕРІС‚РѕСЂРЅС‹Р№ РІС‹Р·РѕРІ РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ.");
                 return;
             }
 
             CurrentRole = role;
-            Debug.Log($"[GameNetworkDiscovery] Запуск в режиме: {role}");
+            Debug.Log($"[GameNetworkDiscovery] Р—Р°РїСѓСЃРє РІ СЂРµР¶РёРјРµ: {role}");
 
             switch (role)
             {
@@ -153,7 +153,7 @@ namespace VrBattlegrounds.Network
         }
 
         /// <summary>
-        /// Останавливает сеть и сбрасывает роль.
+        /// РћСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ СЃРµС‚СЊ Рё СЃР±СЂР°СЃС‹РІР°РµС‚ СЂРѕР»СЊ.
         /// </summary>
         private void StopCurrent()
         {
@@ -182,11 +182,11 @@ namespace VrBattlegrounds.Network
         }
 
         /// <summary>
-        /// Вызывается когда клиент обнаружил сервер в локальной сети.
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ РєРѕРіРґР° РєР»РёРµРЅС‚ РѕР±РЅР°СЂСѓР¶РёР» СЃРµСЂРІРµСЂ РІ Р»РѕРєР°Р»СЊРЅРѕР№ СЃРµС‚Рё.
         /// </summary>
         private void OnServerFound(ServerResponse response)
         {
-            Debug.Log($"[GameNetworkDiscovery] Сервер найден: {response.serverId} | {response.EndPoint} | {response.uri}");
+            Debug.Log($"[GameNetworkDiscovery] РЎРµСЂРІРµСЂ РЅР°Р№РґРµРЅ: {response.serverId} | {response.EndPoint} | {response.uri}");
 
             _discovery.StopDiscovery();
             _discovery.OnServerFound.RemoveListener(OnServerFound);
@@ -200,24 +200,24 @@ namespace VrBattlegrounds.Network
 
         private void DrawRoleSelectionUI()
         {
-            GUI.Box(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Выбор режима запуска");
+            GUI.Box(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Р’С‹Р±РѕСЂ СЂРµР¶РёРјР° Р·Р°РїСѓСЃРєР°");
             _posY += ButtonHeight;
 
-            if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Запустить как Server"))
+            if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Р—Р°РїСѓСЃС‚РёС‚СЊ РєР°Рє Server"))
             {
                 ApplyRole(AppRole.Server);
             }
 
             _posY += ButtonHeight;
 
-            if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Запустить как Host"))
+            if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Р—Р°РїСѓСЃС‚РёС‚СЊ РєР°Рє Host"))
             {
                 ApplyRole(AppRole.Host);
             }
 
             _posY += ButtonHeight;
 
-            if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Запустить как Client"))
+            if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Р—Р°РїСѓСЃС‚РёС‚СЊ РєР°Рє Client"))
             {
                 ApplyRole(AppRole.Client);
             }
@@ -225,16 +225,16 @@ namespace VrBattlegrounds.Network
 
         private void DrawStopUI()
         {
-            string label = $"Режим: {CurrentRole}";
+            string label = $"Р РµР¶РёРј: {CurrentRole}";
             GUI.Box(new Rect(0, _posY, ButtonWidth, ButtonHeight), label);
             _posY += ButtonHeight;
 
             string stopLabel = CurrentRole switch
             {
-                AppRole.Server => "Остановить Server",
-                AppRole.Host   => "Остановить Host",
-                AppRole.Client => "Отключить Client",
-                _              => "Остановить",
+                AppRole.Server => "РћСЃС‚Р°РЅРѕРІРёС‚СЊ Server",
+                AppRole.Host   => "РћСЃС‚Р°РЅРѕРІРёС‚СЊ Host",
+                AppRole.Client => "РћС‚РєР»СЋС‡РёС‚СЊ Client",
+                _              => "РћСЃС‚Р°РЅРѕРІРёС‚СЊ",
             };
 
             if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), stopLabel))
@@ -250,7 +250,7 @@ namespace VrBattlegrounds.Network
         private const int ButtonWidth  = 220;
         private const int ButtonHeight = 40;
 
-        // Теги Multiplayer Play Mode для автоматического выбора роли
+        // РўРµРіРё Multiplayer Play Mode РґР»СЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРіРѕ РІС‹Р±РѕСЂР° СЂРѕР»Рё
         private const string TagHost   = "Host";
         private const string TagServer = "Server";
         private const string TagClient = "Client";

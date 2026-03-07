@@ -1,21 +1,21 @@
-# UltimateXR SDK — Патчи и отступления от оригинала
+# UltimateXR SDK вЂ” РџР°С‚С‡Рё Рё РѕС‚СЃС‚СѓРїР»РµРЅРёСЏ РѕС‚ РѕСЂРёРіРёРЅР°Р»Р°
 
-Этот файл документирует **все изменения**, внесённые в код `Assets/ThirdParty/UltimateXR/`.  
-При обновлении SDK необходимо **повторно применить** эти патчи вручную.
+Р­С‚РѕС‚ С„Р°Р№Р» РґРѕРєСѓРјРµРЅС‚РёСЂСѓРµС‚ **РІСЃРµ РёР·РјРµРЅРµРЅРёСЏ**, РІРЅРµСЃС‘РЅРЅС‹Рµ РІ РєРѕРґ `Assets/ThirdParty/UltimateXR/`.  
+РџСЂРё РѕР±РЅРѕРІР»РµРЅРёРё SDK РЅРµРѕР±С…РѕРґРёРјРѕ **РїРѕРІС‚РѕСЂРЅРѕ РїСЂРёРјРµРЅРёС‚СЊ** СЌС‚Рё РїР°С‚С‡Рё РІСЂСѓС‡РЅСѓСЋ.
 
 ---
 
-## Патч 1: UxrMirrorAvatar — исправление синхронизации в режиме Server+Client
+## РџР°С‚С‡ 1: UxrMirrorAvatar вЂ” РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё РІ СЂРµР¶РёРјРµ Server+Client
 
-**Файл:** `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Networking/Integrations/Net/Mirror/UxrMirrorAvatar.cs`  
-**Ветка:** `dev`  
-**Дата:** 2025
+**Р¤Р°Р№Р»:** `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Networking/Integrations/Net/Mirror/UxrMirrorAvatar.cs`  
+**Р’РµС‚РєР°:** `dev`  
+**Р”Р°С‚Р°:** 2025
 
-### Проблема
+### РџСЂРѕР±Р»РµРјР°
 
-В оригинальном SDK `UxrMirrorAvatar` не работал корректно в режиме **выделенного сервера + отдельного клиента** (Server+Client).
+Р’ РѕСЂРёРіРёРЅР°Р»СЊРЅРѕРј SDK `UxrMirrorAvatar` РЅРµ СЂР°Р±РѕС‚Р°Р» РєРѕСЂСЂРµРєС‚РЅРѕ РІ СЂРµР¶РёРјРµ **РІС‹РґРµР»РµРЅРЅРѕРіРѕ СЃРµСЂРІРµСЂР° + РѕС‚РґРµР»СЊРЅРѕРіРѕ РєР»РёРµРЅС‚Р°** (Server+Client).
 
-При подключении клиента к серверу `LoadStateChanges` выдавал предупреждения:
+РџСЂРё РїРѕРґРєР»СЋС‡РµРЅРёРё РєР»РёРµРЅС‚Р° Рє СЃРµСЂРІРµСЂСѓ `LoadStateChanges` РІС‹РґР°РІР°Р» РїСЂРµРґСѓРїСЂРµР¶РґРµРЅРёСЏ:
 
 ```
 UxrManager.LoadStateChanges(): Cannot deserialize a component. Skipping:
@@ -23,41 +23,41 @@ UxrComponentNotFoundException: Could not find the given component using
 UxrUniqueIdImplementer.TryGetComponentById(). Id is <guid>.
 ```
 
-Результат: начальное состояние сцены не применялось к клиенту.
+Р РµР·СѓР»СЊС‚Р°С‚: РЅР°С‡Р°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ СЃС†РµРЅС‹ РЅРµ РїСЂРёРјРµРЅСЏР»РѕСЃСЊ Рє РєР»РёРµРЅС‚Сѓ.
 
-### Причина
+### РџСЂРёС‡РёРЅР°
 
-**Проблема 1 — `_initialStateLoaded` был `static`:**
+**РџСЂРѕР±Р»РµРјР° 1 вЂ” `_initialStateLoaded` Р±С‹Р» `static`:**
 
 ```csharp
-// ОРИГИНАЛ (неправильно)
+// РћР РР“РРќРђР› (РЅРµРїСЂР°РІРёР»СЊРЅРѕ)
 private static bool _initialStateLoaded;
 ```
 
-Статическое поле разделялось между всеми экземплярами `UxrMirrorAvatar` в процессе.  
-Когда Player 1 (сервер-хост) устанавливал `_initialStateLoaded = true`, это мгновенно
-влияло на Player 2 — `RpcComponentStateChanged` начинал обрабатываться до того, как
-клиент 2 получил глобальное состояние.
+РЎС‚Р°С‚РёС‡РµСЃРєРѕРµ РїРѕР»Рµ СЂР°Р·РґРµР»СЏР»РѕСЃСЊ РјРµР¶РґСѓ РІСЃРµРјРё СЌРєР·РµРјРїР»СЏСЂР°РјРё `UxrMirrorAvatar` РІ РїСЂРѕС†РµСЃСЃРµ.  
+РљРѕРіРґР° Player 1 (СЃРµСЂРІРµСЂ-С…РѕСЃС‚) СѓСЃС‚Р°РЅР°РІР»РёРІР°Р» `_initialStateLoaded = true`, СЌС‚Рѕ РјРіРЅРѕРІРµРЅРЅРѕ
+РІР»РёСЏР»Рѕ РЅР° Player 2 вЂ” `RpcComponentStateChanged` РЅР°С‡РёРЅР°Р» РѕР±СЂР°Р±Р°С‚С‹РІР°С‚СЊСЃСЏ РґРѕ С‚РѕРіРѕ, РєР°Рє
+РєР»РёРµРЅС‚ 2 РїРѕР»СѓС‡РёР» РіР»РѕР±Р°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ.
 
-**Проблема 2 — отсутствие инициализации GUID на сервере:**
+**РџСЂРѕР±Р»РµРјР° 2 вЂ” РѕС‚СЃСѓС‚СЃС‚РІРёРµ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё GUID РЅР° СЃРµСЂРІРµСЂРµ:**
 
-В оригинале `InitializeNetworkAvatar` (и внутри него `CombineUniqueId`) вызывался
-только из `OnStartClient`. На **выделенном сервере** `OnStartClient` **не вызывается**
-для объектов чужих игроков — только `OnStartServer`. Поэтому при получении
-`CmdNewAvatarJoined` аватар клиента ещё не имел правильных GUID в реестре UltimateXR,
-и `LoadStateChanges` не мог найти компоненты по ID.
+Р’ РѕСЂРёРіРёРЅР°Р»Рµ `InitializeNetworkAvatar` (Рё РІРЅСѓС‚СЂРё РЅРµРіРѕ `CombineUniqueId`) РІС‹Р·С‹РІР°Р»СЃСЏ
+С‚РѕР»СЊРєРѕ РёР· `OnStartClient`. РќР° **РІС‹РґРµР»РµРЅРЅРѕРј СЃРµСЂРІРµСЂРµ** `OnStartClient` **РЅРµ РІС‹Р·С‹РІР°РµС‚СЃСЏ**
+РґР»СЏ РѕР±СЉРµРєС‚РѕРІ С‡СѓР¶РёС… РёРіСЂРѕРєРѕРІ вЂ” С‚РѕР»СЊРєРѕ `OnStartServer`. РџРѕСЌС‚РѕРјСѓ РїСЂРё РїРѕР»СѓС‡РµРЅРёРё
+`CmdNewAvatarJoined` Р°РІР°С‚Р°СЂ РєР»РёРµРЅС‚Р° РµС‰С‘ РЅРµ РёРјРµР» РїСЂР°РІРёР»СЊРЅС‹С… GUID РІ СЂРµРµСЃС‚СЂРµ UltimateXR,
+Рё `LoadStateChanges` РЅРµ РјРѕРі РЅР°Р№С‚Рё РєРѕРјРїРѕРЅРµРЅС‚С‹ РїРѕ ID.
 
-### Применённые изменения
+### РџСЂРёРјРµРЅС‘РЅРЅС‹Рµ РёР·РјРµРЅРµРЅРёСЏ
 
-1. **`_initialStateLoaded` изменён с `static` на instance-поле:**
+1. **`_initialStateLoaded` РёР·РјРµРЅС‘РЅ СЃ `static` РЅР° instance-РїРѕР»Рµ:**
 
 ```csharp
-// ИСПРАВЛЕНО
+// РРЎРџР РђР’Р›Р•РќРћ
 private bool _initialStateLoaded;
 ```
 
-2. **Добавлен `OnStartServer`** — инициализирует аватар (и рекурсивно GUID всех
-   дочерних компонентов) на сервере при спавне объекта:
+2. **Р”РѕР±Р°РІР»РµРЅ `OnStartServer`** вЂ” РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµС‚ Р°РІР°С‚Р°СЂ (Рё СЂРµРєСѓСЂСЃРёРІРЅРѕ GUID РІСЃРµС…
+   РґРѕС‡РµСЂРЅРёС… РєРѕРјРїРѕРЅРµРЅС‚РѕРІ) РЅР° СЃРµСЂРІРµСЂРµ РїСЂРё СЃРїР°РІРЅРµ РѕР±СЉРµРєС‚Р°:
 
 ```csharp
 public override void OnStartServer()
@@ -69,35 +69,35 @@ public override void OnStartServer()
 }
 ```
 
-3. **`InitializeNetworkAvatar` защищена от двойного вызова** через флаг `_avatarInitialized`,
-   чтобы повторный вызов из `OnStartClient` после `OnStartServer` не вызывал
-   `CombineUniqueId` дважды (что сломало бы GUID):
+3. **`InitializeNetworkAvatar` Р·Р°С‰РёС‰РµРЅР° РѕС‚ РґРІРѕР№РЅРѕРіРѕ РІС‹Р·РѕРІР°** С‡РµСЂРµР· С„Р»Р°Рі `_avatarInitialized`,
+   С‡С‚РѕР±С‹ РїРѕРІС‚РѕСЂРЅС‹Р№ РІС‹Р·РѕРІ РёР· `OnStartClient` РїРѕСЃР»Рµ `OnStartServer` РЅРµ РІС‹Р·С‹РІР°Р»
+   `CombineUniqueId` РґРІР°Р¶РґС‹ (С‡С‚Рѕ СЃР»РѕРјР°Р»Рѕ Р±С‹ GUID):
 
 ```csharp
 if (_avatarInitialized && Avatar == avatar)
 {
-    // обновляем только ownership, без повторного CombineUniqueId
+    // РѕР±РЅРѕРІР»СЏРµРј С‚РѕР»СЊРєРѕ ownership, Р±РµР· РїРѕРІС‚РѕСЂРЅРѕРіРѕ CombineUniqueId
     return;
 }
 ```
 
-4. **`OnStartLocalPlayer` выделен отдельно** для явной инициализации локального
-   аватара и подписки на события синхронизации.
+4. **`OnStartLocalPlayer` РІС‹РґРµР»РµРЅ РѕС‚РґРµР»СЊРЅРѕ** РґР»СЏ СЏРІРЅРѕР№ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё Р»РѕРєР°Р»СЊРЅРѕРіРѕ
+   Р°РІР°С‚Р°СЂР° Рё РїРѕРґРїРёСЃРєРё РЅР° СЃРѕР±С‹С‚РёСЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё.
 
-### Режимы работы после патча
+### Р РµР¶РёРјС‹ СЂР°Р±РѕС‚С‹ РїРѕСЃР»Рµ РїР°С‚С‡Р°
 
-| Режим | Статус |
+| Р РµР¶РёРј | РЎС‚Р°С‚СѓСЃ |
 |---|---|
-| Host + Client (один процесс) | ? Работает |
-| Dedicated Server + Client | ? Работает |
+| Host + Client (РѕРґРёРЅ РїСЂРѕС†РµСЃСЃ) | ? Р Р°Р±РѕС‚Р°РµС‚ |
+| Dedicated Server + Client | ? Р Р°Р±РѕС‚Р°РµС‚ |
 
-### Как повторить при обновлении SDK
+### РљР°Рє РїРѕРІС‚РѕСЂРёС‚СЊ РїСЂРё РѕР±РЅРѕРІР»РµРЅРёРё SDK
 
-При обновлении UltimateXR SDK нужно:
+РџСЂРё РѕР±РЅРѕРІР»РµРЅРёРё UltimateXR SDK РЅСѓР¶РЅРѕ:
 
-1. Найти файл `UxrMirrorAvatar.cs`
-2. Изменить `private static bool _initialStateLoaded` ? `private bool _initialStateLoaded`
-3. Добавить `OnStartServer` с вызовом `InitializeNetworkAvatar`
-4. Добавить защиту от двойного вызова в `InitializeNetworkAvatar` через флаг `_avatarInitialized`
-5. Убедиться что `AvatarSpawned` и `UxrInstanceManager.NotifyNetworkSpawn` вызываются
-   внутри `InitializeNetworkAvatar`, а не отдельно в `OnStartClient`
+1. РќР°Р№С‚Рё С„Р°Р№Р» `UxrMirrorAvatar.cs`
+2. РР·РјРµРЅРёС‚СЊ `private static bool _initialStateLoaded` ? `private bool _initialStateLoaded`
+3. Р”РѕР±Р°РІРёС‚СЊ `OnStartServer` СЃ РІС‹Р·РѕРІРѕРј `InitializeNetworkAvatar`
+4. Р”РѕР±Р°РІРёС‚СЊ Р·Р°С‰РёС‚Сѓ РѕС‚ РґРІРѕР№РЅРѕРіРѕ РІС‹Р·РѕРІР° РІ `InitializeNetworkAvatar` С‡РµСЂРµР· С„Р»Р°Рі `_avatarInitialized`
+5. РЈР±РµРґРёС‚СЊСЃСЏ С‡С‚Рѕ `AvatarSpawned` Рё `UxrInstanceManager.NotifyNetworkSpawn` РІС‹Р·С‹РІР°СЋС‚СЃСЏ
+   РІРЅСѓС‚СЂРё `InitializeNetworkAvatar`, Р° РЅРµ РѕС‚РґРµР»СЊРЅРѕ РІ `OnStartClient`

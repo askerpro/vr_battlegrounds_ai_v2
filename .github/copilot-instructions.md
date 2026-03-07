@@ -134,6 +134,38 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 
 ## Правила работы Copilot с инструментами
 
+### Кодировка файлов проекта
+
+**Единственная кодировка проекта — UTF-8 без BOM.**
+
+Зафиксировано в `.editorconfig` (charset = utf-8) и `.gitattributes` (text=auto eol=crlf).
+
+| Тип файла | Кодировка |
+|---|---|
+| `*.cs` — скрипты игры | UTF-8 без BOM |
+| `*.md` — документация | UTF-8 без BOM |
+| `*.unity`, `*.prefab`, `*.asset` | UTF-8 без BOM (Unity YAML) |
+
+**Почему важно:** Visual Studio на Windows RU создаёт новые файлы в **Windows-1251** по умолчанию.
+Если PowerShell читает такой файл как UTF-8 и перезаписывает — кириллица превращается в `?` / U+FFFD.
+
+**Правило для PowerShell-скриптов:** всегда явно указывать кодировку при чтении и записи:
+```powershell
+# Читать WIN-1251 файл (если создан IDE до добавления .editorconfig)
+$text = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::GetEncoding(1251))
+# Читать UTF-8 файл (все новые файлы)
+$text = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+# Записывать всегда UTF-8 без BOM
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+[System.IO.File]::WriteAllText($path, $text, $utf8NoBom)
+```
+
+**Определить кодировку неизвестного файла** — запустить `C:\Temp\scan_enc2.ps1` или проверить первые байты:
+- `EF BB BF` = UTF-8 с BOM
+- `FF FE` = UTF-16 LE
+- байты `D0 xx` / `D1 xx` = UTF-8 без BOM (кириллица)
+- байты `C0-FF` одиночные = Windows-1251
+
 ### Чтение файлов
 - **Всегда** использовать IDE-инструмент `get_file` с параметром `includeLineNumbers: true`
 - `get_file` должен быть основным путём IDE к файлу — это единственный способ корректного чтения без проблем с кодировкой

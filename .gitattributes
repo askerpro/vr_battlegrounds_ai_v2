@@ -1,7 +1,28 @@
 ###############################################################################
 # Set default behavior to automatically normalize line endings.
-* text=auto
+* text=auto eol=crlf
 
+# Unity YAML merge driver
+*.unity text merge=unityyamlmerge eol=crlf
+*.prefab text merge=unityyamlmerge eol=crlf
+*.asset text merge=unityyamlmerge eol=crlf
+*.meta text eol=crlf
+*.controller text merge=unityyamlmerge eol=crlf
+*.anim text merge=unityyamlmerge eol=crlf
+# Source and docs - UTF-8
+*.cs text eol=crlf
+*.md text eol=crlf
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.tga binary
+*.fbx binary
+*.dll binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
 # Set default behavior for command prompt diff.
 #
 # This is need for earlier builds of msysgit that does not have it on by

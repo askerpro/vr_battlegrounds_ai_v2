@@ -76,7 +76,31 @@ namespace VrBattlegrounds.DevTools
                 $"[DebugOrchestrator] OnPlayerConnected: игрок={player.name}");
 
             TryAssignTeam(player);
+            TryTeleportToSpawnZone(player);
             TryStartMatch();
+        }
+
+        private void TryTeleportToSpawnZone(PlayerController player)
+        {
+            if (player.Team == null) return;
+
+            // Ищем спавн зону для назначенной команды
+            TeamSpawnZone targetZone = null;
+            TeamSpawnZone[] zones = FindObjectsOfType<TeamSpawnZone>();
+            foreach (var zone in zones)
+            {
+                if (zone.Team == player.Team)
+                {
+                    targetZone = zone;
+                    break;
+                }
+            }
+
+            if (targetZone != null)
+            {
+                GameLog.Info(GameSettings.Instance.LogLevelDebug, $"[DebugOrchestrator] {player.name} начинает в зоне спавна команды {player.Team.displayName}");
+                player.Respawn(targetZone.transform);
+            }
         }
 
         private void OnPlayerDisconnected(PlayerController player)

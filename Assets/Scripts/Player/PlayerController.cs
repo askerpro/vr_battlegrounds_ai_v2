@@ -149,7 +149,15 @@ namespace VrBattlegrounds.Player
         [ClientRpc]
         private void RpcOnRespawned(Vector3 position, Quaternion rotation)
         {
-            transform.SetPositionAndRotation(position, rotation);
+            UltimateXR.Avatar.UxrAvatar avatar = GetComponent<UltimateXR.Avatar.UxrAvatar>();
+            if (avatar != null && UltimateXR.Core.UxrManager.Instance != null)
+            {
+                UltimateXR.Core.UxrManager.Instance.MoveAvatarTo(avatar, position, rotation * Vector3.forward);
+            }
+            else
+            {
+                transform.SetPositionAndRotation(position, rotation);
+            }
         }
     }
 }

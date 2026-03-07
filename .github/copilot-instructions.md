@@ -45,6 +45,51 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 
 ---
 
+## Система логирования
+
+Проект использует собственную систему логирования вместо прямых вызовов `Debug.Log`.
+
+### Файлы системы
+| Файл | Назначение |
+|---|---|
+| `Assets/Scripts/Core/LogLevel.cs` | Enum уровней: `None`, `Errors`, `Warnings`, `Info`, `Verbose` |
+| `Assets/Scripts/Core/GameSettings.cs` | ScriptableObject с настройками уровней по категориям |
+| `Assets/Scripts/Core/GameLog.cs` | Статический хелпер — единственная точка вызова логов |
+| `Assets/Resources/GameSettings.asset` | Экземпляр настроек, загружается через `Resources.Load` |
+
+### Уровни логирования (`LogLevel`)
+```
+None (0) → Errors (1) → Warnings (2) → Info (3) → Verbose (4)
+```
+Уровни иерархические: `Info` включает `Warnings` и `Errors`.
+
+### Категории логов в `GameSettings`
+| Свойство | Категория | Затрагивает |
+|---|---|---|
+| `LogLevelNetwork` | Сеть | `GameNetworkManager`, `MapManager`, `GameNetworkDiscovery` |
+| `LogLevelPlayer` | Игрок | `PlayerController` |
+| `LogLevelMatch` | Матч | `MatchManager`, `SetManager`, `RoundManager` |
+| `LogLevelDebug` | Отладка | `DebugOrchestrator` и DevTools (по умолчанию `Verbose`) |
+
+### Использование `GameLog`
+```csharp
+// Info и Verbose — пишут только если уровень категории достаточен
+GameLog.Info(GameSettings.Instance.LogLevelNetwork, "[MapManager] Загрузка карты...");
+GameLog.Verbose(GameSettings.Instance.LogLevelNetwork, "[MapManager] Детали события...");
+GameLog.Warning(GameSettings.Instance.LogLevelPlayer, "[PlayerController] Предупреждение");
+
+// Error — пишет всегда, без проверки уровня
+GameLog.Error("[GameNetworkManager] Критическая ошибка");
+```
+
+### Правила для Copilot
+- **Никогда** не писать `Debug.Log` / `Debug.LogWarning` напрямую в игровых скриптах
+- Всегда использовать `GameLog.*` с подходящей категорией из `GameSettings.Instance`
+- Выбирать уровень по важности: рутинный поток — `Verbose`, ключевые события — `Info`, проблемы — `Warning`, фатальные сбои — `Error`
+- `GameSettings.Instance` загружается лениво из `Resources/GameSettings.asset` — безопасно вызывать из `Awake`/`Start` и далее
+
+---
+
 ## Инструкция по обновлению документации
 
 > Эти файлы — живая документация. Они должны обновляться по мере изучения проекта.

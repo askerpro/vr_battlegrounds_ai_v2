@@ -9,12 +9,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f53179de82da78042a99d0d76f7956e4, type: 3}
-  m_Name: MapData_TestMap1
+  m_Script: {fileID: 11500000, guid: fc5c173fbbbfe3f488a69fd5836076f7, type: 3}
+  m_Name: DebugBootstrapConfig
   m_EditorClassIdentifier: 
-  displayName: TestMap1
-  sceneName: TestMap1
-  preview: {fileID: 0}
-  description: TestMap1
-  arenaSizeMeters: {x: 10, y: 10}
-  maxPlayers: 10
+  enabled: 1
+  autoTeam: 1
+  autoStartMatch: 1
+  minPlayersToAutoStart: 1
+  autoLoadMapScene: TestMap1

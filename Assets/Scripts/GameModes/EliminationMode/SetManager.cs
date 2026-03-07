@@ -1,10 +1,10 @@
-﻿using Mirror;
+using Mirror;
 using System;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 
-namespace VrBattlegrounds.Managers
+namespace VrBattlegrounds.GameModes
 {
     /// <summary>
     /// Чистая серверная логика сета: проводит N раундов, считает очки, определяет победителя.

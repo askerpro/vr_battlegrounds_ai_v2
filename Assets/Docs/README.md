@@ -65,8 +65,8 @@
 | `MapManager` | `Managers/MapManager.cs` | **Единственная точка входа для смены карты.** Откладывает `ServerChangeScene` на конец кадра через корутину. |
 | `GameManager` | `Managers/GameManager.cs` | Хранит выбор сессии (карта + режим). DontDestroyOnLoad вместе с NetworkManager. SyncVar реплицирует выбор клиентам. Методы: `SetSession()`, `StartSession()`. |
 | `MatchManager` | `Managers/MatchManager.cs` | Матч: счёт, победитель, `StartMatch()`, `StopMatch()`. Режим ищет по `modeId` из `GameManager`. |
-| `SetManager` | `Managers/SetManager.cs` | Сет: N раундов, смена сторон, `ForceStop()`. |
-| `RoundManager` | `Managers/RoundManager.cs` | Раунд: FSM (Countdown → Active → Ended), таймер, победа через `GameMode`, `ForceStop()`. |
+| `SetManager` | `GameModes/EliminationMode/SetManager.cs` | Сет: N раундов, смена сторон, `ForceStop()`. |
+| `RoundManager` | `GameModes/EliminationMode/RoundManager.cs` | Раунд: FSM (Countdown → Active → Ended), таймер, победа через `GameMode`, `ForceStop()`. |
 
 **Иерархия менеджеров матча:**
 
@@ -85,7 +85,7 @@ MatchManager       — матч (5 карт, счёт, победитель)
 | Класс | Файл | Описание |
 |---|---|---|
 | `GameMode` | `GameModes/GameMode.cs` | Абстрактный базовый класс. Поле `ModeId` — строковый ключ для поиска. Методы: `CheckWinCondition`, `CanRespawn`, `OnRoundEnd`. |
-| `EliminationMode` | `GameModes/EliminationMode.cs` | Раунд до полного уничтожения команды. ModeId = `elimination`. |
+| `EliminationMode` | `GameModes/EliminationMode/EliminationMode.cs` | Раунд до полного уничтожения команды. ModeId = `elimination`. |
 | `RespawnMode` | `GameModes/RespawnMode.cs` | Возрождение при возврате на спавн. ModeId = `respawn`. |
 | `GameModeData` | `GameModes/GameModeData.cs` | ScriptableObject: `modeId`, `displayName`, `icon`. Создать: `Create > VrBattlegrounds > Game Mode Data`. |
 | `GameModeRegistry` | `GameModes/GameModeRegistry.cs` | ScriptableObject-список режимов. `GetById(modeId)`. Назначить в `GameManager` и `AdminMenuController`. |

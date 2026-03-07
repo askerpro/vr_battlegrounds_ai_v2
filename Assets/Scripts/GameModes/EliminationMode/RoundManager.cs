@@ -1,11 +1,12 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Player;
+using VrBattlegrounds.Managers;
 
-namespace VrBattlegrounds.Managers
+namespace VrBattlegrounds.GameModes
 {
     /// <summary>
     /// Чистая серверная логика раунда: FSM состояний, обратный отсчёт, таймер.

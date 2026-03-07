@@ -121,13 +121,9 @@ namespace VrBattlegrounds.GameModes
         private bool IsAllTeamsDead()
         {
             if (_eliminationMode == null) return false;
-            PlayersManager pm = PlayersManager.Instance;
-            if (pm == null) return false;
-            foreach (TeamData team in _eliminationMode.Teams)
+            foreach (var state in _eliminationMode.TeamStates.Values)
             {
-                if (team == null) continue;
-                foreach (PlayerController _ in pm.GetAlivePlayers(team))
-                    return false;
+                if (state.HasAlivePlayers()) return false;
             }
             return true;
         }

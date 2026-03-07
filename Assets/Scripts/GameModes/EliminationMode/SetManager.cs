@@ -1,5 +1,6 @@
 using Mirror;
 using System;
+using System.Collections.Generic;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
@@ -23,40 +24,38 @@ namespace VrBattlegrounds.GameModes
         private int _roundsPerSet;
         private int _currentRound;
 
-        private int _teamAIndex;
-        private int _teamBIndex;
-        private int _teamARoundScore;
-        private int _teamBRoundScore;
+        private Dictionary<int, int> _teamRoundScores = new Dictionary<int, int>();
 
         private EliminationMode _eliminationMode;
         private float _countdownDuration;
         private float _roundDuration;
 
-        public int TeamARoundScore => _teamARoundScore;
-        public int TeamBRoundScore => _teamBRoundScore;
+        public IReadOnlyDictionary<int, int> TeamRoundScores => _teamRoundScores;
 
         public SetManager(RoundManager roundManager)
         {
             _roundManager = roundManager;
         }
 
-        public void StartSet(TeamData teamA, TeamData teamB, EliminationMode mode,
+        public void StartSet(TeamData[] teams, EliminationMode mode,
                              int roundsPerSet, float countdownDuration, float roundDuration)
         {
-            _teamAIndex = teamA != null ? teamA.teamIndex : 0;
-            _teamBIndex = teamB != null ? teamB.teamIndex : 0;
             _eliminationMode = mode;
             _roundsPerSet = roundsPerSet;
             _countdownDuration = countdownDuration;
             _roundDuration = roundDuration;
-            _teamARoundScore = 0;
-            _teamBRoundScore = 0;
             _currentRound = 0;
+            
+            _teamRoundScores.Clear();
+            foreach (var t in teams)
+            {
+                if (t != null) _teamRoundScores[t.teamIndex] = 0;
+            }
 
             _roundManager.RoundEnded += OnRoundEnded;
 
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[SetManager] Сет начат: {teamA} vs {teamB}, раундов: {_roundsPerSet}");
+                $"[SetManager] Сет начат, раундов: {_roundsPerSet}");
 
             StartNextRound();
         }
@@ -73,31 +72,41 @@ namespace VrBattlegrounds.GameModes
         {
             _roundManager.RoundEnded -= OnRoundEnded;
 
-            if (winner != null)
+            if (winner != null && _teamRoundScores.ContainsKey(winner.teamIndex))
             {
-                if (winner.teamIndex == _teamAIndex) _teamARoundScore++;
-                else if (winner.teamIndex == _teamBIndex) _teamBRoundScore++;
+                _teamRoundScores[winner.teamIndex]++;
             }
-
-            TeamData teamA = TeamRegistry.Instance?.GetByIndex(_teamAIndex);
-            TeamData teamB = TeamRegistry.Instance?.GetByIndex(_teamBIndex);
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[SetManager] Счёт раундов: {teamA} {_teamARoundScore} : {_teamBRoundScore} {teamB}");
 
             int roundsToWin = _roundsPerSet / 2 + 1;
-            if (_teamARoundScore >= roundsToWin)
+            TeamData setWinner = null;
+            int highestRounds = 0;
+            bool isTie = false;
+
+            foreach (var kvp in _teamRoundScores)
             {
-                FinishSet(teamA);
+                if (kvp.Value > highestRounds)
+                {
+                    highestRounds = kvp.Value;
+                    setWinner = TeamRegistry.Instance.GetByIndex(kvp.Key);
+                    isTie = false;
+                }
+                else if (kvp.Value == highestRounds)
+                {
+                    isTie = true;
+                }
+
+                if (kvp.Value >= roundsToWin)
+                {
+                    setWinner = TeamRegistry.Instance.GetByIndex(kvp.Key);
+                    isTie = false;
+                    break;
+                }
             }
-            else if (_teamBRoundScore >= roundsToWin)
+
+            if (isTie) setWinner = null;
+
+            if (highestRounds >= roundsToWin || _currentRound >= _roundsPerSet)
             {
-                FinishSet(teamB);
-            }
-            else if (_currentRound >= _roundsPerSet)
-            {
-                TeamData setWinner = _teamARoundScore > _teamBRoundScore ? teamA
-                    : _teamBRoundScore > _teamARoundScore ? teamB
-                    : null;
                 FinishSet(setWinner);
             }
             else
@@ -115,14 +124,11 @@ namespace VrBattlegrounds.GameModes
             SetEnded?.Invoke(winner);
         }
 
-        /// <summary>Меняет команды A и B местами для следующего сета (смена сторон).</summary>
+        /// <summary>Смена сторон (опционально для будущих реализаций N-команд).</summary>
         public void SwapTeams()
         {
-            (_teamAIndex, _teamBIndex) = (_teamBIndex, _teamAIndex);
-            TeamData a = TeamRegistry.Instance?.GetByIndex(_teamAIndex);
-            TeamData b = TeamRegistry.Instance?.GetByIndex(_teamBIndex);
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[SetManager] Смена сторон: A={a}, B={b}");
+                $"[SetManager] Смена сторон вызвана, но физическая логика смены спавнов пока не реализована.");
         }
 
         /// <summary>Принудительно останавливает сет. Вызывается EliminationMode.StopMatch().</summary>

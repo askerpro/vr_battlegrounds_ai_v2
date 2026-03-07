@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Mirror;
 using UnityEngine;
 using VrBattlegrounds;
@@ -33,16 +33,14 @@ namespace VrBattlegrounds.GameModes
         [Tooltip("Максимальная длительность раунда (сек).")]
         [SerializeField] private float _roundDuration = 90f;
 
-        // Счёт матча — синхронизируется клиентам для UI
-        [SyncVar] private int _teamASetScore;
-        [SyncVar] private int _teamBSetScore;
+        // Счёт матча теперь синхронизируется через базовый класс GameMode
 
         // Состояние раунда — синхронизируется для UI (таймер, countdown)
         [SyncVar] private RoundState _roundState = RoundState.Ended;
         [SyncVar] private float _roundTimer;
         [SyncVar] private float _countdownTimer;
 
-        // Серверные машины состояний — создаются при StartMatch, не требуют NetworkBehaviour
+        // Серверные машины состояний — создаются при StartGameplay, не требуют NetworkBehaviour
         private SetManager _setManager;
         private RoundManager _roundManager;
 
@@ -56,34 +54,25 @@ namespace VrBattlegrounds.GameModes
 
         public override bool CanRespawn() => false;
 
-        public override int GetScore(TeamData team)
-        {
-            if (team == null || Teams.Length < 2) return 0;
-            if (team.teamIndex == Teams[0].teamIndex) return _teamASetScore;
-            if (team.teamIndex == Teams[1].teamIndex) return _teamBSetScore;
-            return 0;
-        }
-
         [Server]
-        public override void StartMatch()
+        public override void StartGameplay()
         {
-            _teamASetScore = 0;
-            _teamBSetScore = 0;
 
             // Создаём менеджеры как обычные C# объекты — без GameObject, без NetworkBehaviour
             _roundManager = new RoundManager();
             _setManager = new SetManager(_roundManager);
             _setManager.SetEnded += OnSetEnded;
 
+            string teamsStr = string.Join(" vs ", Teams.Select(t => t != null ? t.displayName : "null"));
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[EliminationMode] Матч начат: {Teams[0]} vs {Teams[1]}, " +
+                $"[EliminationMode] Матч начат: {teamsStr}, " +
                 $"сетов: {_maxSets}, раундов в сете: {_roundsPerSet}");
 
             StartNextSet(swapSides: false);
         }
 
         [Server]
-        public override void StopMatch()
+        public override void StopGameplay()
         {
             if (_setManager != null)
             {
@@ -94,7 +83,7 @@ namespace VrBattlegrounds.GameModes
             _setManager = null;
 
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[EliminationMode] Матч остановлен. Счёт сетов: {_teamASetScore}:{_teamBSetScore}");
+                $"[EliminationMode] Матч остановлен.");
         }
 
         // ── Тик (делегирует в RoundManager) ─────────────────────────────────
@@ -124,7 +113,7 @@ namespace VrBattlegrounds.GameModes
                 _setManager.SwapTeams();
 
             _setManager.SetEnded += OnSetEnded;
-            _setManager.StartSet(Teams[0], Teams[1], this, _roundsPerSet, _countdownDuration, _roundDuration);
+            _setManager.StartSet(Teams, this, _roundsPerSet, _countdownDuration, _roundDuration);
         }
 
         [Server]
@@ -132,38 +121,43 @@ namespace VrBattlegrounds.GameModes
         {
             _setManager.SetEnded -= OnSetEnded;
 
-            if (winner != null)
+            if (winner != null && _teamStates.TryGetValue(winner.teamIndex, out TeamRuntimeData winnerState))
             {
-                if (winner.teamIndex == Teams[0].teamIndex) _teamASetScore++;
-                else if (winner.teamIndex == Teams[1].teamIndex) _teamBSetScore++;
+                winnerState.AddScore(1);
             }
-
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[EliminationMode] Счёт сетов: {Teams[0]} {_teamASetScore} : {_teamBSetScore} {Teams[1]}");
 
             int setsToWin = _maxSets / 2 + 1;
-            if (_teamASetScore >= setsToWin)
+            TeamData matchWinner = null;
+            int totalSetsPlayed = 0;
+            int highestSets = 0;
+
+            foreach (var state in _teamStates.Values)
             {
-                RaiseMatchEnded(Teams[0]);
+                totalSetsPlayed += state.Score;
+                if (state.Score > highestSets)
+                {
+                    highestSets = state.Score;
+                    matchWinner = state.Team;
+                }
+                else if (state.Score == highestSets)
+                {
+                    matchWinner = null; // tie
+                }
+
+                if (state.Score >= setsToWin)
+                {
+                    matchWinner = state.Team;
+                    break;
+                }
             }
-            else if (_teamBSetScore >= setsToWin)
+
+            if (highestSets >= setsToWin || totalSetsPlayed >= _maxSets)
             {
-                RaiseMatchEnded(Teams[1]);
+                RaiseGameplayEnded(matchWinner);
             }
             else
             {
-                int setsPlayed = _teamASetScore + _teamBSetScore;
-                if (setsPlayed >= _maxSets)
-                {
-                    TeamData matchWinner = _teamASetScore > _teamBSetScore ? Teams[0]
-                        : _teamBSetScore > _teamASetScore ? Teams[1]
-                        : null;
-                    RaiseMatchEnded(matchWinner);
-                }
-                else
-                {
-                    StartNextSet(swapSides: true);
-                }
+                StartNextSet(swapSides: true);
             }
         }
 
@@ -173,18 +167,14 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         public TeamData CheckRoundWinCondition()
         {
-            PlayersManager pm = PlayersManager.Instance;
-            if (pm == null) return null;
-
             TeamData lastAlive = null;
             int aliveTeamsCount = 0;
 
-            foreach (TeamData team in Teams)
+            foreach (var state in TeamStates.Values)
             {
-                if (team == null) continue;
-                if (pm.GetAlivePlayers(team).Any())
+                if (state.HasAlivePlayers())
                 {
-                    lastAlive = team;
+                    lastAlive = state.Team;
                     aliveTeamsCount++;
                 }
             }

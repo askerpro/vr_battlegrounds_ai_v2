@@ -1,5 +1,7 @@
 # VR Battlegrounds AI — Copilot Instructions
 
+# VR Battlegrounds AI — Copilot Instructions
+
 ## Проект
 VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity.
 - Репозиторий: https://github.com/askerpro/vr_battlegrounds_ai (ветка: `dev`)
@@ -152,7 +154,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 ### Правило для Copilot: создание и редактирование файлов
 
 **Новые файлы** — всегда создавать через инструмент `create_file`.
-IDE-инструмент `create_file` создаёт файл в кодировке Windows-1251 (системная кодировка Windows RU).
+Инструмент `create_file` создаёт файл в системной кодировке Windows (Windows-1251 на Windows RU).
 После создания **обязательно** конвертировать в UTF-8 командой:
 
 ```powershell

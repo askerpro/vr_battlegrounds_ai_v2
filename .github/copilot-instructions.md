@@ -156,16 +156,27 @@ IDE-инструмент `create_file` создаёт файл в кодиров
 После создания **обязательно** конвертировать в UTF-8 командой:
 
 ```powershell
-$b=[System.IO.File]::ReadAllBytes("путь\к\файлу.cs"); $t=[System.Text.Encoding]::GetEncoding(1251).GetString($b); [System.IO.File]::WriteAllText("путь\к\файлу.cs",$t,[System.Text.UTF8Encoding]::new($false))
+powershell -File "C:\Temp\to_utf8.ps1" "путь\к\файлу.cs"
 ```
-
-Или использовать готовый скрипт-шаблон `C:\Temp\to_utf8.ps1` (один аргумент — путь к файлу).
 
 **Редактирование существующих файлов** — использовать инструменты `replace_string_in_file` / `multi_replace_string_in_file`.
 Они работают с файлом напрямую через IDE без изменения кодировки — безопасно.
 
 **Никогда не использовать** `run_command_in_terminal` для записи содержимого файла
 (PowerShell `Set-Content`, `Out-File`, `>` оператор) — кодировка будет неверной.
+
+### Настройка Visual Studio на UTF-8 (один раз вручную)
+
+Visual Studio на Windows RU создаёт новые файлы в WIN-1251 даже при наличии `.editorconfig`.
+Чтобы это исправить:
+
+1. Открыть `Tools --> Options --> Environment --> Documents`
+2. Включить: **"Save documents as Unicode when data cannot be saved in codepage"**
+3. Дополнительно: при сохранении любого файла через `File --> Save As --> Save with Encoding` выбрать **Unicode (UTF-8 without signature)**
+
+> После этой настройки файлы, созданные через VS (Add New Item, Ctrl+N), будут сохраняться
+> в UTF-8 при наличии символов вне ASCII. Файлы без кириллицы останутся ASCII — это нормально,
+> ASCII совместим с UTF-8.
 
 ### Правило для PowerShell-скриптов
 

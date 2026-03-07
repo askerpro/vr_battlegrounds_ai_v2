@@ -98,7 +98,7 @@ namespace VrBattlegrounds.Managers
             // Если игроки уже есть — грузим сразу (повторная смена карты).
             // Если нет — подписываемся на PlayerConnected и ждём первого спавна.
             GameNetworkManager nm = NetworkManager.singleton as GameNetworkManager;
-            bool playerAlreadySpawned = nm != null && nm.Players.Count > 0;
+            bool playerAlreadySpawned = PlayersManager.Instance != null && PlayersManager.Instance.Players.Count > 0;
 
             if (!playerAlreadySpawned)
             {
@@ -121,11 +121,19 @@ namespace VrBattlegrounds.Managers
                 _waitingForPlayer = false;
 
                 if (elapsed >= timeout)
+                {
                     GameLog.Warning(GameSettings.Instance.LogLevelNetwork,
                         $"[MapManager] PlayerConnected не пришёл за {timeout}s — продолжаем загрузку.");
+                }
                 else
+                {
                     GameLog.Verbose(GameSettings.Instance.LogLevelNetwork,
-                        "[MapManager] PlayerConnected получен, загружаем карту.");
+                        "[MapManager] PlayerConnected получен, ждём конца кадра...");
+
+                    // Ждём ещё один кадр: Mirror должен завершить внутреннюю обработку
+                    // AddPlayer (Ready, SpawnObjects) до того, как мы сменим сцену.
+                    yield return null;
+                }
             }
             else
             {

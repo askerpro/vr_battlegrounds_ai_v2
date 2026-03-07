@@ -1,8 +1,12 @@
+using VrBattlegrounds;
+
 namespace VrBattlegrounds.GameModes
 {
     /// <summary>
     /// Режим 1: возрождение при физическом возврате на точку спавна.
     /// Раунд не имеет ограничения по жизням.
+    ///
+    /// Команды, участвующие в режиме, задаются через поле <c>teams</c> в Inspector.
     /// </summary>
     public class RespawnMode : GameMode
     {
@@ -13,10 +17,10 @@ namespace VrBattlegrounds.GameModes
 
         public override bool CanRespawn() => true;
 
-        public override Team CheckWinCondition()
+        public override TeamData CheckWinCondition()
         {
             // TODO: условие победы (по времени или по счёту)
-            return Team.None;
+            return null;
         }
     }
 }

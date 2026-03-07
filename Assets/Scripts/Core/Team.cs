@@ -1,14 +1,2 @@
-using UnityEngine;
-
-namespace VrBattlegrounds
-{
-    /// <summary>
-    /// Команды игроков.
-    /// </summary>
-    public enum Team
-    {
-        None = 0,
-        Terrorists = 1,
-        SpecialForces = 2
-    }
-}
+// Этот файл удалён. Команды теперь представлены через TeamData ScriptableObject.
+// См. Assets/Scripts/Core/TeamData.cs и Assets/Scripts/Core/TeamRegistry.cs

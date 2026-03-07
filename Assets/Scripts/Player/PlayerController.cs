@@ -1,6 +1,8 @@
 using Mirror;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
+using VrBattlegrounds;
+using VrBattlegrounds.Core;
 using VrBattlegrounds.Managers;
 
 namespace VrBattlegrounds.Player
@@ -9,18 +11,29 @@ namespace VrBattlegrounds.Player
     /// Контроллер игрока. Управляет командой и состоянием (жив/мёртв).
     /// Живёт на том же GameObject, что и UxrMirrorAvatar и UxrActor.
     /// Использует физическое перемещение по арене (телепортация не используется).
+    ///
+    /// Команда хранится как <see cref="TeamData.teamIndex"/> (int) — синхронизируется через SyncVar.
+    /// Объект <see cref="TeamData"/> получается из <see cref="TeamRegistry"/> по индексу.
     /// </summary>
     [RequireComponent(typeof(UxrActor))]
     public class PlayerController : NetworkBehaviour
     {
-        [SyncVar] private Team _team = Team.None;
+        /// <summary>
+        /// teamIndex = 0 означает "нет команды".
+        /// Соответствует TeamData.teamIndex из TeamRegistry.
+        /// </summary>
+        [SyncVar] private int _teamIndex = 0;
         [SyncVar] private bool _isAlive = true;
 
-        public Team Team
+        /// <summary>Данные команды игрока. Null если команда не назначена.</summary>
+        public TeamData Team
         {
-            get => _team;
-            set => _team = value;
+            get => TeamRegistry.Instance?.GetByIndex(_teamIndex);
+            set => _teamIndex = value != null ? value.teamIndex : 0;
         }
+
+        /// <summary>Числовой индекс команды (для сетевой синхронизации).</summary>
+        public int TeamIndex => _teamIndex;
 
         public bool IsAlive => _isAlive;
 
@@ -72,7 +85,7 @@ namespace VrBattlegrounds.Player
         public void Respawn(Transform spawnPoint)
         {
             _isAlive = true;
-            _actor.Life = _actor.GetComponent<UxrActor>() != null ? 100f : 100f;
+            _actor.Life = 100f;
             RpcOnRespawned(spawnPoint.position, spawnPoint.rotation);
         }
 

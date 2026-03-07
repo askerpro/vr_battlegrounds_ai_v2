@@ -1,6 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System;
 using Mirror;
 using UnityEngine;
 using VrBattlegrounds.Player;
@@ -23,20 +22,6 @@ namespace VrBattlegrounds.Network
         /// <summary>Сервер завершил загрузку сцены. Параметр — имя загруженной сцены.</summary>
         public static event Action<string> ServerSceneChanged;
 
-        /// <summary>Все подключённые игроки (только сервер).</summary>
-        private readonly List<PlayerController> _players = new List<PlayerController>();
-
-        /// <summary>Все подключённые игроки (только для чтения).</summary>
-        public IReadOnlyList<PlayerController> Players => _players;
-
-        /// <summary>Только живые игроки указанной команды.</summary>
-        public IEnumerable<PlayerController> GetAlivePlayers(Team team) =>
-            _players.Where(p => p.Team == team && p.IsAlive);
-
-        /// <summary>Все игроки указанной команды.</summary>
-        public IEnumerable<PlayerController> GetPlayers(Team team) =>
-            _players.Where(p => p.Team == team);
-
         public override void OnServerSceneChanged(string sceneName)
         {
             base.OnServerSceneChanged(sceneName);
@@ -51,7 +36,6 @@ namespace VrBattlegrounds.Network
             if (player == null)
                 return;
 
-            _players.Add(player);
             PlayerConnected?.Invoke(player);
         }
 
@@ -62,7 +46,6 @@ namespace VrBattlegrounds.Network
                 PlayerController player = conn.identity.GetComponent<PlayerController>();
                 if (player != null)
                 {
-                    _players.Remove(player);
                     PlayerDisconnected?.Invoke(player);
                 }
             }

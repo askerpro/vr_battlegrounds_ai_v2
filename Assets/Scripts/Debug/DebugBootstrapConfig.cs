@@ -1,10 +1,11 @@
 using UnityEngine;
+using VrBattlegrounds;
 
 namespace VrBattlegrounds.DevTools
 {
     /// <summary>
     /// Параметры отладочного сценария инициализации.
-    /// Создать: правая кнопка в Project ? Create ? VrBattlegrounds ? Debug Bootstrap Config.
+    /// Создать: правая кнопка в Project -> Create -> VrBattlegrounds -> Debug Bootstrap Config.
     /// Назначить в Inspector компонента DebugOrchestrator на сцене.
     ///
     /// Чтобы отключить быструю инициализацию — деактивировать GameObject с DebugOrchestrator
@@ -20,8 +21,8 @@ namespace VrBattlegrounds.DevTools
         public bool enabled = true;
 
         [Header("Игрок")]
-        [Tooltip("Команда, которая будет назначена локальному игроку автоматически.")]
-        public Team autoTeam = Team.Terrorists;
+        [Tooltip("Команда, которая будет назначена локальному игроку автоматически. Назначить TeamData asset из TeamRegistry.")]
+        public TeamData autoTeam;
 
         [Header("Матч")]
         [Tooltip("Автоматически запустить матч как только подключится достаточно игроков.")]

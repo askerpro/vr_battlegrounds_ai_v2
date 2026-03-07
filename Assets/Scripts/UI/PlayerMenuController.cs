@@ -1,5 +1,6 @@
 using Mirror;
 using UnityEngine;
+using VrBattlegrounds;
 using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.UI
@@ -9,7 +10,10 @@ namespace VrBattlegrounds.UI
     /// Позволяет выбрать команду и запустить калибровку VR-шлема.
     ///
     /// Выбор команды отправляется на сервер через Command (CmdRequestTeam).
-    /// Финальное назначение команды остаётся за сервером (GameNetworkManager).
+    /// Финальное назначение команды остаётся за сервером.
+    ///
+    /// Кнопки команд создаются динамически из TeamRegistry — добавление новой команды
+    /// не требует изменений в этом классе.
     /// </summary>
     public class PlayerMenuController : MonoBehaviour
     {
@@ -20,27 +24,22 @@ namespace VrBattlegrounds.UI
 
         private void Start()
         {
-            // Ищем PlayerController локального игрока через UxrAvatar или NetworkClient
-            // Заполняется после полной инициализации сети
             // TODO: подписаться на событие LocalAvatarStarted для надёжной инициализации
         }
 
         /// <summary>
-        /// Запрос на смену команды на "Террористы".
-        /// Вызывается кнопкой UI.
+        /// Запрос на смену команды по teamIndex.
+        /// Вызывается кнопкой UI — передаётся teamIndex из TeamData.
         /// </summary>
-        public void OnSelectTerroristsPressed()
+        public void OnSelectTeamPressed(int teamIndex)
         {
-            RequestTeam(Team.Terrorists);
-        }
-
-        /// <summary>
-        /// Запрос на смену команды на "Спецназ".
-        /// Вызывается кнопкой UI.
-        /// </summary>
-        public void OnSelectSpecialForcesPressed()
-        {
-            RequestTeam(Team.SpecialForces);
+            TeamData team = TeamRegistry.Instance?.GetByIndex(teamIndex);
+            if (team == null)
+            {
+                Debug.LogWarning($"[PlayerMenuController] Команда с teamIndex={teamIndex} не найдена в TeamRegistry");
+                return;
+            }
+            RequestTeam(team);
         }
 
         /// <summary>
@@ -52,11 +51,7 @@ namespace VrBattlegrounds.UI
             _calibration?.Calibrate();
         }
 
-        /// <summary>
-        /// Отправляет запрос на смену команды.
-        /// Сервер принимает решение — принять или отклонить запрос.
-        /// </summary>
-        private void RequestTeam(Team team)
+        private void RequestTeam(TeamData team)
         {
             if (_localPlayer == null)
             {
@@ -65,7 +60,7 @@ namespace VrBattlegrounds.UI
             }
 
             // TODO: реализовать CmdRequestTeam в PlayerController
-            // _localPlayer.CmdRequestTeam(team);
+            // _localPlayer.CmdRequestTeam(team.teamIndex);
         }
     }
 }

@@ -1,9 +1,12 @@
 using Mirror;
 using UltimateXR.Avatar;
 using UnityEngine;
+using VrBattlegrounds;
+using VrBattlegrounds.Core;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
+using VrBattlegrounds.Maps;
 
 namespace VrBattlegrounds.DevTools
 {
@@ -13,7 +16,6 @@ namespace VrBattlegrounds.DevTools
     /// сценарий из DebugBootstrapConfig: назначает команду, загружает карту, запускает матч.
     ///
     /// Не меняет продакшн-код — использует те же публичные API, что и обычная игра.
-    /// Загрузку карт делегирует MapManager — не знает о нюансах Mirror.
     ///
     /// Как использовать:
     ///   1. Добавить этот компонент на любой GameObject в сцене (например "DebugOrchestrator").
@@ -23,6 +25,9 @@ namespace VrBattlegrounds.DevTools
     public class DebugOrchestrator : MonoBehaviour
     {
         [SerializeField] private DebugBootstrapConfig _config;
+
+        // Флаг: карта уже была запрошена в этой сессии — не грузить повторно.
+        private bool _mapLoadRequested;
 
         private void Awake()
         {
@@ -68,86 +73,67 @@ namespace VrBattlegrounds.DevTools
             if (localPlayer == null)
                 return;
 
-            // Команду назначает только сервер
             if (!NetworkServer.active)
                 return;
 
             localPlayer.Team = _config.autoTeam;
-            Debug.Log($"[DebugOrchestrator] Команда назначена: {_config.autoTeam}");
+            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                $"[DebugOrchestrator] Команда назначена: {_config.autoTeam}");
         }
 
         /// <summary>
         /// Вызывается при каждом подключении игрока.
-        /// Проверяет условие автостарта матча.
+        /// Если игроков достаточно и autoStartMatch включён — стартует матч.
         /// </summary>
         private void OnPlayerConnected(PlayerController player)
         {
-            if (!_config.autoStartMatch)
+            if (!NetworkServer.active || !_config.autoStartMatch)
                 return;
 
-            if (!NetworkServer.active)
+            PlayersManager playersManager = PlayersManager.Instance;
+            if (playersManager == null || playersManager.Players.Count < _config.minPlayersToAutoStart)
                 return;
 
-            GameNetworkManager networkManager = NetworkManager.singleton as GameNetworkManager;
-            if (networkManager == null)
+            MatchManager matchManager = MatchManager.Instance;
+            if (matchManager == null)
                 return;
 
-            int totalPlayers = networkManager.Players.Count;
-            if (totalPlayers < _config.minPlayersToAutoStart)
-            {
-                Debug.Log($"[DebugOrchestrator] Игроков: {totalPlayers}/{_config.minPlayersToAutoStart} — ожидаем ещё.");
-                return;
-            }
-
-            if (MatchManager.Instance == null)
-            {
-                Debug.LogWarning("[DebugOrchestrator] MatchManager не найден — матч не запущен.");
-                return;
-            }
-
-            Debug.Log("[DebugOrchestrator] Автостарт матча.");
-            MatchManager.Instance.StartMatch();
+            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                $"[DebugOrchestrator] Достаточно игроков ({playersManager.Players.Count}) — запускаем матч");
+            matchManager.StartMatch();
         }
 
-        /// <summary>
-        /// Вызывается при отключении игрока. Зарезервировано для будущей логики.
-        /// </summary>
         private void OnPlayerDisconnected(PlayerController player) { }
 
         /// <summary>
-        /// Срабатывает при каждой смене сцены на сервере.
-        /// Автозагрузку карты делает только если загружена onlineScene (сцена после подъёма сервера).
+        /// Вызывается когда сервер завершил загрузку сцены.
+        /// Если задан autoLoadMapScene — загружает карту.
         /// </summary>
         private void OnServerSceneChanged(string sceneName)
         {
-            GameNetworkManager nm = NetworkManager.singleton as GameNetworkManager;
-            if (nm == null)
-                return;
-
-            // Автозагрузку делаем только если загрузилась именно onlineScene
-            if (sceneName != nm.onlineScene)
+            if (!NetworkServer.active)
                 return;
 
             TryAutoLoadMap();
         }
 
-        /// <summary>
-        /// Загружает карту из конфига через MapManager.
-        /// Все нюансы Mirror (отложенная загрузка) инкапсулированы в MapManager.
-        /// </summary>
         private void TryAutoLoadMap()
         {
             if (string.IsNullOrEmpty(_config.autoLoadMapScene))
                 return;
 
-            if (MapManager.Instance == null)
+            // Загружаем карту только один раз за сессию.
+            if (_mapLoadRequested)
             {
-                Debug.LogWarning("[DebugOrchestrator] MapManager не найден — автозагрузка карты невозможна.");
+                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                    $"[DebugOrchestrator] Карта уже была запрошена, повторный вызов игнорируется.");
                 return;
             }
 
-            Debug.Log($"[DebugOrchestrator] Автозагрузка карты: {_config.autoLoadMapScene}");
-            MapManager.Instance.LoadMap(_config.autoLoadMapScene);
+            _mapLoadRequested = true;
+            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                $"[DebugOrchestrator] Автозагрузка карты: {_config.autoLoadMapScene}");
+            MapManager.Instance?.LoadMap(_config.autoLoadMapScene);
         }
     }
 }

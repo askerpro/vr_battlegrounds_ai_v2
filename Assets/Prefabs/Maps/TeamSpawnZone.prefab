@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 952510269781632304}
   - component: {fileID: 9210815879232927498}
   - component: {fileID: 7724186148100631373}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: TeamSpawnZone
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -30,9 +30,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4944276574430791300}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: 8.73}
-  m_LocalScale: {x: 15.5, y: 2, z: 1.5}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 8.73}
+  m_LocalScale: {x: 15.5, y: 7.4428, z: 2.8125}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -71,7 +71,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _team: {fileID: 11400000, guid: 6a1b2f4f562e0d4468069d2c11f06576, type: 2}
+  _xrayMaterial: {fileID: 2100000, guid: 48855c54f58bc764a9cf0b0a9f0818ee, type: 2}
   _playersInZoneCount: 0
+  _currentRoundState: 0
 --- !u!64 &6238407203769571636
 MeshCollider:
   m_ObjectHideFlags: 0

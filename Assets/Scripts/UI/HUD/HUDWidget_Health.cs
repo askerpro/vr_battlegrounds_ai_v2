@@ -30,8 +30,7 @@ namespace VrBattlegrounds.UI.HUD
         {
             if (_localPlayer == null) return;
 
-            // TODO: внедрить реальную систему здоровья, когда она появится в PlayerController
-            float currentHealth = 100f;
+            float currentHealth = _localPlayer.Health;
             float maxHealth = 100f; 
 
             if (_healthBar != null)

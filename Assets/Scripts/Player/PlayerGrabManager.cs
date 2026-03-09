@@ -13,13 +13,20 @@ namespace VrBattlegrounds.Player
     {
         private List<UxrGrabber> _grabbers = new List<UxrGrabber>();
         private PlayerController _playerController;
+        private UxrAvatar _avatar;
 
         #region Unity
 
         private void Awake()
         {
             _playerController = GetComponent<PlayerController>();
+            _avatar = GetComponent<UxrAvatar>();
             _grabbers.AddRange(GetComponentsInChildren<UxrGrabber>(true));
+
+            if (_playerController != null)
+            {
+                _playerController.PlayerDied += OnPlayerDied;
+            }
         }
 
         private void OnEnable()
@@ -38,6 +45,14 @@ namespace VrBattlegrounds.Player
                 {
                     grabber.CanGrabDelegate = null;
                 }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_playerController != null)
+            {
+                _playerController.PlayerDied -= OnPlayerDied;
             }
         }
 
@@ -60,6 +75,28 @@ namespace VrBattlegrounds.Player
             }
 
             return true;
+        }
+
+        private void OnPlayerDied(PlayerController controller)
+        {
+            ReleaseAllGrabbedObjects();
+        }
+
+        public void ReleaseAllGrabbedObjects()
+        {
+            if (_avatar == null) return;
+
+            var grabManager = UxrGrabManager.Instance;
+            if (grabManager == null) return;
+
+            // Release objects from each grabber
+            foreach (var grabber in _grabbers)
+            {
+                if (grabber.GrabbedObject != null)
+                {
+                    grabManager.ReleaseObject(grabber, grabber.GrabbedObject, true);
+                }
+            }
         }
 
         #endregion

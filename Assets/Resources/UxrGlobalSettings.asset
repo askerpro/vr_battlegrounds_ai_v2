@@ -21,7 +21,7 @@ MonoBehaviour:
   _logLevelNetworking: 3
   _logLevelRendering: 3
   _logLevelUI: 3
-  _logLevelWeapons: 3
+  _logLevelWeapons: 5
   _netFormatInitialState: 1
   _netFormatStateSync: 0
   _syncGrabbablePhysics: 1

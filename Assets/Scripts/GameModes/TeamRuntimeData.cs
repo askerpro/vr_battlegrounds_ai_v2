@@ -40,6 +40,9 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Общее количество игроков в команде.</summary>
         public int PlayersCount => Players.Count();
 
+        /// <summary>Есть ли в команде хотя бы один подключенный игрок?</summary>
+        public bool HasPlayers() => Players.Any();
+
         /// <summary>Есть ли в команде хотя бы один живой игрок?</summary>
         public bool HasAlivePlayers() => AlivePlayers.Any();
 

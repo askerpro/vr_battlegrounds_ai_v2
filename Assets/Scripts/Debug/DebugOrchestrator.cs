@@ -123,23 +123,11 @@ namespace VrBattlegrounds.DevTools
             }
 
             PlayersManager playersManager = PlayersManager.Instance;
-            int playerCount = playersManager != null ? playersManager.Players.Count : 0;
-
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                $"[DebugOrchestrator] TryStartGameplay: игроков={playerCount}, минимум={_config.minPlayersToAutoStart}");
-
             if (playersManager == null)
             {
                 GameLog.Warning(GameSettings.Instance.LogLevelDebug,
                     "[DebugOrchestrator] TryStartGameplay: PlayersManager.Instance == null. Повторная попытка через 1 кадр.");
                 StartCoroutine(RetryStartGameplayCoroutine());
-                return;
-            }
-
-            if (playerCount < _config.minPlayersToAutoStart)
-            {
-                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
-                    $"[DebugOrchestrator] TryStartGameplay: недостаточно игроков ({playerCount}/{_config.minPlayersToAutoStart}).");
                 return;
             }
 
@@ -161,7 +149,7 @@ namespace VrBattlegrounds.DevTools
             }
 
             GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                $"[DebugOrchestrator] TryStartGameplay: достаточно игроков ({playerCount}) и карта загружена — запускаем матч.");
+                "[DebugOrchestrator] TryStartGameplay: попытка запустить матч (GameMode сам дождется нужных условий).");
             matchManager.StartGameplay();
 
         }

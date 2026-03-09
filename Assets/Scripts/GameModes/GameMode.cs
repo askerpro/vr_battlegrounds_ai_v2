@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using VrBattlegrounds;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.GameModes
 {
@@ -98,8 +99,36 @@ namespace VrBattlegrounds.GameModes
             }
         }
 
-        /// <summary>Запускает матч. Вызывается GameplayManager-ом на сервере.</summary>
-        public abstract void StartGameplay();
+        /// <summary>
+        /// Вызывается менеджером для запуска матча.
+        /// Режим сам решает, когда он готов фактически начать игру (например, дождавшись нужного количества игроков).
+        /// </summary>
+        /// <summary>
+        /// Вызывается менеджером для запуска матча.
+        /// Режим сам решает, когда он готов фактически начать игру (по умолчанию - ждет CanStartGameplay).
+        /// </summary>
+        [Server]
+        public virtual void StartGameplayWhenReady()
+        {
+            StartCoroutine(WaitAndStartGameplayRoutine());
+        }
+
+        [Server]
+        private System.Collections.IEnumerator WaitAndStartGameplayRoutine()
+        {
+            GameLog.Info(GameSettings.Instance.LogLevelMatch, $"[{GetType().Name}] Ожидание выполнения условий старта матча...");
+            yield return new WaitUntil(CanStartGameplay);
+            
+            StartGameplay();
+        }
+
+        /// <summary>
+        /// Условие готовности режима к фактическому старту (например, наличие игроков в командах).
+        /// </summary>
+        protected abstract bool CanStartGameplay();
+
+        /// <summary>Секвенция фактического запуска матча. Запускается внутренне из StartGameplayWhenReady.</summary>
+        protected abstract void StartGameplay();
 
         /// <summary>
         /// Принудительно останавливает матч без определения победителя.

@@ -40,6 +40,15 @@ namespace VrBattlegrounds.Maps
             _boxCollider = GetComponent<BoxCollider>();
             _boxCollider.isTrigger = true;
 
+            // Ensure there's a kinematic rigidbody so trigger events fire regardless of the player's rigidbody setup
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                rb = gameObject.AddComponent<Rigidbody>();
+            }
+            rb.isKinematic = true;
+            rb.useGravity = false;
+
             if (_team == null)
             {
                 GameLog.Warning(GameSettings.Instance.LogLevelMatch, 

@@ -99,7 +99,9 @@ namespace VrBattlegrounds.UI.HUD
 
         private void HandleRoundStateChanged(RoundState state)
         {
-            if (state == RoundState.Countdown)
+            if (state == RoundState.WaitingForPlayers)
+                ShowNotification("Зайдите в свою зону спавна", 3f);
+            else if (state == RoundState.Countdown)
                 ShowNotification("Приготовьтесь!", 3f);
             else if (state == RoundState.Active)
                 ShowNotification("В бой!", 2f);

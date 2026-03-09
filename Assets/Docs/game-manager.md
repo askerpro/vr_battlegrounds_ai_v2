@@ -12,6 +12,20 @@
 
 ```
 DontDestroyOnLoad GO
+> Обновлять при изменении `GameManager`, `GameModeData`, `GameModeRegistry` или архитектуры выбора режима.
+
+---
+
+# GameManager — выбор сессии (карта + режим)
+
+## Что такое GameManager
+
+`GameManager` — синглтон `NetworkBehaviour`, который **переживает смену сцен** (живёт на том же GameObject что и `GameNetworkManager` и `MapManager`).
+
+**Единственная ответственность:** хранить выбор администратора — карту и режим — и синхронизировать их на всех клиентах через `SyncVar`.
+
+```
+DontDestroyOnLoad GO
   ├── GameNetworkManager
   ├── MapManager
   └── GameManager          ← карта + режим для следующей сессии
@@ -19,7 +33,7 @@ DontDestroyOnLoad GO
 
 **Почему не MapManager и не MatchManager:**
 - `MapManager` — транспорт (грузит сцены), не хранит состояние
-- `MatchManager` — живёт в сцене карты и уничтожается при её смене
+- `GameplayManager` — живёт в сцене карты и уничтожается при её смене
 
 ---
 
@@ -48,12 +62,13 @@ DontDestroyOnLoad GO
 **Поток жизни режима:**
 ```
 GameModeData.modePrefab
-  → NetworkServer.Spawn  (MatchManager.StartMatch)
+  → NetworkServer.Spawn  (GameplayManager.StartGameplay)
   → GameMode.Initialize(teams)
-  → GameMode.StartMatch()          ← режим сам управляет сетами/раундами/таймером
-  → GameMode.MatchEnded event      ← режим сигнализирует о завершении
-  → MatchManager.OnMatchEnded
-  → NetworkServer.UnSpawn + Destroy (MatchManager.CleanupGameMode)
+  → GameMode.StartGameplayWhenReady()  ← режим сам проверяет CanStartGameplay()
+  → GameMode.StartMatch()              ← режим сам управляет сетами/раундами/таймером
+  → GameMode.MatchEnded event          ← режим сигнализирует о завершении
+  → GameplayManager.OnMatchEnded
+  → NetworkServer.UnSpawn + Destroy (GameplayManager.CleanupGameMode)
 ```
 
 **Почему `GameMode : NetworkBehaviour` а не `MonoBehaviour`:**
@@ -72,9 +87,9 @@ GameModeData.modePrefab
 
 Для каждого режима — отдельный префаб:
 
-1. **ПКМ в Hierarchy → Create Empty**, назвать `RespawnModePrefab`
-2. Добавить компонент `RespawnMode` (или `EliminationMode`)
-3. **Сохранить как префаб**: перетащить в `Assets/Prefabs/GameModes/`
+1.  **ПКМ в Hierarchy → Create Empty**, назвать `RespawnModePrefab`
+2.  Добавить компонент `RespawnMode` (или `EliminationMode`)
+3.  **Сохранить как префаб**: перетащить в `Assets/Prefabs/GameModes/`
 
 ```
 Assets/Prefabs/GameModes/
@@ -153,16 +168,16 @@ Assets/Prefabs/GameModes/
   → [Карта загружается]
 
 Администратор нажимает "Старт матча" → AdminMenuController.OnStartMatchPressed()
-  → MatchManager.StartMatch()
+  → GameplayManager.StartMatch()
   → читает GameManager.SelectedModeId
   → находит GameMode-компонент по modeId
-  → запускает матч
+  → запускает матч (ожидая `CanStartGameplay()`)
 
 [Матч идёт]
 Администратор нажимает "Стоп / Лобби" → AdminMenuController.OnStopMatchPressed()
-  → MatchManager.StopMatch()
+  → GameplayManager.StopMatch()
   → MapManager.LoadMap("Lobby")
-  → [Lobby загружается, MatchManager уничтожен]
+  → [Lobby загружается, GameplayManager уничтожен]
   → GameManager.SelectedModeId и SelectedMapScene — сохранены
 ```
 
@@ -170,24 +185,24 @@ Assets/Prefabs/GameModes/
 
 ## Добавление нового режима
 
-1. Создать класс-наследник `GameMode`:
-   ```csharp
-   public class MyMode : GameMode
-   {
-       // Команды приходят через Initialize() — не задавать в Inspector
-       public override void OnRoundEnd() { ... }
-       public override bool CanRespawn() => false;
-       public override TeamData CheckWinCondition() { ... }
-   }
-   ```
+1.  Создать класс-наследник `GameMode`:
+    ```csharp
+    public class MyMode : GameMode
+    {
+        // Команды приходят через Initialize() — не задавать в Inspector
+        public override void OnRoundEnd() { ... }
+        public override bool CanRespawn() => false;
+        public override TeamData CheckWinCondition() { ... }
+    }
+    ```
 
-2. Создать префаб: `Assets/Prefabs/GameModes/MyMode.prefab` с компонентом `MyMode`
+2.  Создать префаб: `Assets/Prefabs/GameModes/MyMode.prefab` с компонентом `MyMode`
 
-3. Создать `GameModeData` asset: `modeId = "my_mode"`, назначить `modePrefab` и `teams[]`
+3.  Создать `GameModeData` asset: `modeId = "my_mode"`, назначить `modePrefab` и `teams[]`
 
-4. Добавить asset в `GameModeRegistry.modes[]`
+4.  Добавить asset в `GameModeRegistry.modes[]`
 
-> Менять `MatchManager`, `SetManager`, `RoundManager` и сцены карт **не нужно**.
+> Менять `GameplayManager`, `SetManager`, `RoundManager` и сцены карт **не нужно**.
 
 ---
 

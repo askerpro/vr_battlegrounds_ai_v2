@@ -169,7 +169,7 @@ namespace VrBattlegrounds.Managers
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
                 $"[GameplayManager] Запуск режима: {gameModeData.modeId} ({gameModeData.displayName})");
 
-            _gameMode.StartGameplay();
+            _gameMode.StartGameplayWhenReady();
         }
 
         /// <summary>

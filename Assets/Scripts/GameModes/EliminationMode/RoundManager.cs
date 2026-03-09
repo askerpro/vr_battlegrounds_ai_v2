@@ -1,10 +1,12 @@
 using UnityEngine;
 using System;
+using System.Linq;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Managers;
+using VrBattlegrounds.Maps;
 
 namespace VrBattlegrounds.GameModes
 {
@@ -24,6 +26,7 @@ namespace VrBattlegrounds.GameModes
         private float _roundDuration;
         private float _countdownTimer;
         private float _roundTimer;
+        private TeamSpawnZone[] _spawnZones;
         private RoundState _roundState = RoundState.Ended;
 
         private EliminationMode _eliminationMode;
@@ -39,8 +42,10 @@ namespace VrBattlegrounds.GameModes
             _roundDuration = roundDuration;
             _countdownTimer = 0f;
             _roundTimer = 0f;
-            _roundState = RoundState.Countdown;
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Раунд начат, запущен обратный отсчёт");
+            _spawnZones = UnityEngine.Object.FindObjectsOfType<TeamSpawnZone>();
+            
+            _roundState = RoundState.WaitingForPlayers;
+            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Ожидание готовности игроков для старта раунда (заход в spawn-зоны)");
         }
 
         /// <summary>Продолжить сет — запустить следующий раунд с теми же настройками.</summary>
@@ -86,6 +91,16 @@ namespace VrBattlegrounds.GameModes
         {
             switch (_roundState)
             {
+                case RoundState.WaitingForPlayers:
+                    if (AreAllPlayersReady())
+                    {
+                        _roundState = RoundState.Countdown;
+                        GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                            "[RoundManager] Все игроки в зонах — запущен обратный отсчёт");
+                        return true;
+                    }
+                    return false;
+
                 case RoundState.Countdown:
                     _countdownTimer += deltaTime;
                     if (_countdownTimer >= _countdownDuration)
@@ -130,7 +145,21 @@ namespace VrBattlegrounds.GameModes
             }
             return true;
         }
+
+        private bool AreAllPlayersReady()
+        {
+            // 1. Проверяем что все игроки в своих spawn зонах (используя System.Linq)
+            if (_spawnZones != null && _spawnZones.Length > 0)
+            {
+                if (!_spawnZones.All(zone => zone.AreAllTeamPlayersInZone()))
+                    return false;
+            }
+
+            // 2. В будущем здесь могут быть другие проверки (например, выбор оружия)
+
+            return true;
+        }
     }
 
-    public enum RoundState { Countdown, Active, Ended }
+    public enum RoundState { WaitingForPlayers, Countdown, Active, Ended }
 }

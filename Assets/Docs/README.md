@@ -64,14 +64,14 @@
 | `PlayersManager` | `Managers/PlayersManager.cs` | Список игроков, фильтрация: `Players`, `GetAlivePlayers(team)`, `GetPlayers(team)`. Синглтон на том же GO что и `NetworkManager`. |
 | `MapManager` | `Managers/MapManager.cs` | **Единственная точка входа для смены карты.** Откладывает `ServerChangeScene` на конец кадра через корутину. |
 | `GameManager` | `Managers/GameManager.cs` | Хранит выбор сессии (карта + режим). DontDestroyOnLoad вместе с NetworkManager. SyncVar реплицирует выбор клиентам. Методы: `SetSession()`, `StartSession()`. |
-| `MatchManager` | `Managers/MatchManager.cs` | Матч: счёт, победитель, `StartMatch()`, `StopMatch()`. Режим ищет по `modeId` из `GameManager`. |
+| `GameplayManager` | `Managers/GameplayManager.cs` | Матч: счёт, победитель, `StartGameplay()`, `StopGameplay()`. Режим ищет по `modeId` из `GameManager`. |
 | `SetManager` | `GameModes/EliminationMode/SetManager.cs` | Сет: N раундов, смена сторон, `ForceStop()`. |
-| `RoundManager` | `GameModes/EliminationMode/RoundManager.cs` | Раунд: FSM (Countdown → Active → Ended), таймер, победа через `GameMode`, `ForceStop()`. |
+| `RoundManager` | `GameModes/EliminationMode/RoundManager.cs` | Раунд: FSM (WaitingForPlayers → Countdown → Active → Ended), таймер, победа через `GameMode`, `ForceStop()`. |
 
 **Иерархия менеджеров матча:**
 
 ```
-MatchManager       — матч (5 карт, счёт, победитель)
+GameplayManager       — матч (5 карт, счёт, победитель)
 └── SetManager     — сет (смена команд, счёт сетов)
     └── RoundManager — раунд (готовность, старт, конец)
 ```
@@ -157,6 +157,7 @@ MatchManager       — матч (5 карт, счёт, победитель)
 
 | Класс | Файл | Описание |
 |---|---|---|
+| `AdminMenuController` | `UI/AdminMenuController.cs` | Меню администратора: выбор карты, режима, управление матчем. Только Host. |
 | `PlayerMenuController` | `UI/PlayerMenuController.cs` | Меню игрока: выбор команды, калибровка VR. |
 | `HUDWidget_GameNotification` | `UI/HUD/HUDWidget_GameNotification.cs` | Слушает семантические `GameMode` события и локализует уведомления. |
 | `PlayerHUDManager` | `UI/HUD/PlayerHUDManager.cs` | Спавнит и управляет дочерними виджетами HUD привязанными к голове игрока. |
@@ -199,7 +200,7 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
   → MapManager.LoadMap(autoLoadMapScene)
   → Карта загружается
   → LocalAvatarChanged → назначается команда
-  → PlayerConnected → если игроков >= min → StartMatch()
+  → PlayerConnected → если `GameMode.CanStartGameplay()` → `GameplayManager.StartGameplay()`
 ```
 
 ---
@@ -235,12 +236,13 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `DebugOrchestrator` | ✅ Реализовано | — |
 | `GameManager` | ✅ Реализовано | — |
 | `GameModeData` / `GameModeRegistry` | ✅ Реализовано | — |
-| `MatchManager` | ✅ Реализовано | — |
+| `GameplayManager` | ✅ Реализовано | — |
 | `SetManager` | ✅ Реализовано | — |
 | `RoundManager` | ✅ Реализовано | — |
-| `GameMode` — Respawn | ⬜ Не реализовано | **Первый приоритет** |
-| Команды | ⬜ Не реализовано | Высокий |
-| `GameMode` — Elimination | ⬜ Не реализовано | Средний |
+| `GameMode` — Respawn | ✅ Реализовано | — |
+| Команды | ✅ Реализовано | — |
+| `GameMode` — Elimination | ✅ Реализовано | — |
 | `AdminMenuController` | 🔧 Обновлено | Средний |
 | `PlayerMenuController` | 🔧 Заготовка | Средний |
 | `VrCalibrationController` | 🔧 Заготовка | Средний |
+| `EliminationModeEditor` | ✅ Реализовано | — |

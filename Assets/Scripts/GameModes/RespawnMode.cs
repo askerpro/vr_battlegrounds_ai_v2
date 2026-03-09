@@ -4,6 +4,7 @@ using Mirror;
 using UnityEngine;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.GameModes
@@ -28,7 +29,14 @@ namespace VrBattlegrounds.GameModes
 
         public override bool CanRespawn() => true;
 
-        public override void StartGameplay()
+        protected override bool CanStartGameplay()
+        {
+            // Ожидаем, пока на сервере появится хотя бы 1 игрок, чтобы запустить таймер
+            return PlayersManager.Instance != null && PlayersManager.Instance.Players.Count > 0;
+        }
+
+        [Server]
+        protected override void StartGameplay()
         {
             _timeRemaining = _matchDuration;
             _matchActive = true;

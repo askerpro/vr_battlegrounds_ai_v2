@@ -63,8 +63,14 @@ namespace VrBattlegrounds.GameModes
 
         public override bool CanRespawn() => false;
 
+        protected override bool CanStartGameplay()
+        {
+            // Ликвидация может начаться только когда во всех командах есть хотя бы один живой игрок
+            return _teamStates.Values.All(t => t.HasPlayers());
+        }
+
         [Server]
-        public override void StartGameplay()
+        protected override void StartGameplay()
         {
 
             // Создаём менеджеры как обычные C# объекты — без GameObject, без NetworkBehaviour

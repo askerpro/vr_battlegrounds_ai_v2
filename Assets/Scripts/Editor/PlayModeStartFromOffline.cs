@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEditor.SceneManagement;
 using VrBattlegrounds.DevTools;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.Editor
 {
@@ -64,6 +65,11 @@ namespace VrBattlegrounds.Editor
         {
             if (state == PlayModeStateChange.ExitingEditMode)
             {
+                // Принудительно обновляем начальную сцену перед самым стартом
+                UpdateState();
+                
+                GameLog.Info(LogLevel.Info, $"[PlayModeStartFromOffline] Exiting Edit Mode. playModeStartScene is {(EditorSceneManager.playModeStartScene != null ? EditorSceneManager.playModeStartScene.name : "null")}");
+
                 if (!EditorPrefs.GetBool(PrefKey, true)) return;
 
                 Scene activeScene = EditorSceneManager.GetActiveScene();

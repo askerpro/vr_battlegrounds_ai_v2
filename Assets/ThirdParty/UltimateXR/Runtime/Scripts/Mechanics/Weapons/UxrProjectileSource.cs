@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrProjectileSource.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using UltimateXR.Core.Caching;
 using UltimateXR.Core.Components;
 using UnityEngine;
+using UltimateXR.Networking;
 
 namespace UltimateXR.Mechanics.Weapons
 {
@@ -106,6 +107,9 @@ namespace UltimateXR.Mechanics.Weapons
         {
             if (shotTypeIndex >= 0 && shotTypeIndex < _shotTypes.Count)
             {
+                Debug.Log($"[UxrProjectileSource] Shoot execution. Index: {shotTypeIndex}, Pos: {projectileSource}. IsServer: {UxrNetworkManager.IsServer}, IsClient: {UxrNetworkManager.IsClient}");
+                BeginSync();
+
                 if (_shotTypes[shotTypeIndex].PrefabInstantiateOnTipWhenShot)
                 {
                     GameObject newInstance = Instantiate(_shotTypes[shotTypeIndex].PrefabInstantiateOnTipWhenShot, _shotTypes[shotTypeIndex].Tip.position, _shotTypes[shotTypeIndex].Tip.rotation);
@@ -131,6 +135,8 @@ namespace UltimateXR.Mechanics.Weapons
                 {
                     _weaponAnimator.SetTrigger(_shotTypes[shotTypeIndex].ShotAnimationVarName);
                 }
+
+                EndSyncMethod(new object[] { shotTypeIndex, projectileSource, projectileOrientation });
             }
         }
 

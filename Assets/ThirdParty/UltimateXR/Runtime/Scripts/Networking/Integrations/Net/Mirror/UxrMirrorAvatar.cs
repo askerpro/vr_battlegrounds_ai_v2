@@ -64,10 +64,10 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
         /// <inheritdoc />
         public void InitializeNetworkAvatar(UxrAvatar avatar, bool isLocal, string uniqueId, string avatarName)
         {
-            // Удаляем статическую проверку, чтобы позволить повторную инициализацию при смене сцены
+            // РЈРґР°Р»СЏРµРј СЃС‚Р°С‚РёС‡РµСЃРєСѓСЋ РїСЂРѕРІРµСЂРєСѓ, С‡С‚РѕР±С‹ РїРѕР·РІРѕР»РёС‚СЊ РїРѕРІС‚РѕСЂРЅСѓСЋ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЋ РїСЂРё СЃРјРµРЅРµ СЃС†РµРЅС‹
             if (_avatarInitialized && Avatar == avatar)
             {
-                // Если уже инициализирован тот же аватар, просто обновляем статус ownership
+                // Р•СЃР»Рё СѓР¶Рµ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅ С‚РѕС‚ Р¶Рµ Р°РІР°С‚Р°СЂ, РїСЂРѕСЃС‚Рѕ РѕР±РЅРѕРІР»СЏРµРј СЃС‚Р°С‚СѓСЃ ownership
                 if (IsLocal != isLocal)
                 {
                     IsLocal = isLocal;
@@ -103,7 +103,7 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
 
             avatar.CombineUniqueId(uniqueId.GetGuid(), true);
 
-            // Вызываем событие спавна аватара
+            // Р’С‹Р·С‹РІР°РµРј СЃРѕР±С‹С‚РёРµ СЃРїР°РІРЅР° Р°РІР°С‚Р°СЂР°
             AvatarSpawned?.Invoke();
 
             if (UxrInstanceManager.HasInstance)
@@ -131,16 +131,23 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
 
         #region Event Handling Methods
 
-        /// <summary>
-        ///     Called when a component in UltimateXR had a state change.
-        /// </summary>
-        /// <param name="component">Component</param>
-        /// <param name="eventArgs">Event parameters</param>
         private void UxrManager_ComponentStateChanged(IUxrStateSync component, UxrSyncEventArgs eventArgs)
         {
-            if (!netIdentity.isOwned)
+            // If we are a client, we only send events for objects we own OR if we are the local player sending a command.
+            // If we are the server, we send events for any object that changed its state (like damaged NPCs or environmental objects).
+            
+            // РќР° РєР»РёРµРЅС‚Рµ: С€Р»С‘Рј С‚РѕР»СЊРєРѕ РµСЃР»Рё РјС‹ - РІР»Р°РґРµР»СЊС†С‹ (Р»РѕРєР°Р»СЊРЅС‹Р№ РёРіСЂРѕРє).
+            // РќР° СЃРµСЂРІРµСЂРµ: С€Р»С‘Рј РµСЃР»Рё РјС‹ - "РјР°СЃС‚РµСЂ" (РЅР°Р·РЅР°С‡РµРЅРЅС‹Р№ РІРµС‰Р°С‚РµР»СЊ), С‡С‚РѕР±С‹ РёР·Р±РµР¶Р°С‚СЊ РґСѓР±Р»РёРєР°С‚РѕРІ RPC РѕС‚ РєР°Р¶РґРѕРіРѕ РёРіСЂРѕРєР°.
+            if (isServer)
             {
-                return;
+                if (_serverBroadcaster != this)
+                {
+                    return;
+                }
+            }
+            else if (!isOwned)
+            {
+                 return;
             }
 
             if (eventArgs.Options.HasFlag(UxrStateSyncOptions.Network))
@@ -149,12 +156,21 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
 
                 if (serializedEvent != null)
                 {
-                    if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Verbose)
+                    if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
                     {
-                        Debug.Log($"{UxrConstants.NetworkingModule} Sending {serializedEvent.Length} bytes from {component.Component.name} ({component.UniqueId}) {eventArgs}");
+                        Debug.Log($"{UxrConstants.NetworkingModule} Sending state sync: {component.Component.name} ({component.UniqueId}), Event: {eventArgs.GetType().Name}, Size: {serializedEvent.Length}. IsServer: {isServer}, IsOwned: {isOwned}");
                     }
 
-                    CmdComponentStateChanged(serializedEvent);
+                    if (isServer)
+                    {
+                        // РњС‹ РЅР° СЃРµСЂРІРµСЂРµ (Host РёР»Рё Dedicated), СЂР°СЃСЃС‹Р»Р°РµРј РІСЃРµРј РєР»РёРµРЅС‚Р°Рј
+                        RpcComponentStateChanged(serializedEvent);
+                    }
+                    else
+                    {
+                        // РњС‹ РЅР° РєР»РёРµРЅС‚Рµ, РѕС‚РїСЂР°РІР»СЏРµРј РєРѕРјР°РЅРґСѓ СЃРµСЂРІРµСЂСѓ
+                        CmdComponentStateChanged(serializedEvent);
+                    }
                 }
             }
         }
@@ -169,7 +185,27 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
 
             InitializeNetworkAvatar(Avatar, netIdentity.isOwned, netId.ToString(), $"Player {netId} ({(netIdentity.isOwned ? "Local" : "External")})");
 
+            // РќР° СЃРµСЂРІРµСЂРµ РїРѕРґРїРёСЃС‹РІР°РµРјСЃСЏ РЅР° СЃРѕР±С‹С‚РёСЏ РёР·РјРµРЅРµРЅРёР№, С‡С‚РѕР±С‹ С‚СЂР°РЅСЃР»РёСЂРѕРІР°С‚СЊ РёС… РєР»РёРµРЅС‚Р°Рј (РґР»СЏ NPC Рё РїСЂРѕС‡РµРіРѕ)
+            UxrManager.ComponentStateChanged += UxrManager_ComponentStateChanged;
+            
+            if (_serverBroadcaster == null)
+            {
+                _serverBroadcaster = this;
+            }
+
             base.OnStartServer();
+        }
+
+        public override void OnStopServer()
+        {
+            UxrManager.ComponentStateChanged -= UxrManager_ComponentStateChanged;
+            
+            if (_serverBroadcaster == this)
+            {
+                _serverBroadcaster = null;
+            }
+            
+            base.OnStopServer();
         }
 
         public override void OnStartLocalPlayer()
@@ -181,7 +217,7 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
                 Debug.Log($"{UxrConstants.NetworkingModule} OnStartLocalPlayer: NetId={netId}, isOwned={netIdentity.isOwned}");
             }
 
-            // Принудительная инициализация как локального аватара
+            // РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅР°СЏ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РєР°Рє Р»РѕРєР°Р»СЊРЅРѕРіРѕ Р°РІР°С‚Р°СЂР°
             if (!_avatarInitialized || !IsLocal)
             {
                 Avatar = GetComponent<UxrAvatar>();
@@ -207,6 +243,9 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
             {
                 // Server creates the session and doesn't need to send the initial state.
                 _initialStateLoaded = true;
+                
+                // РќР° РҐРѕСЃС‚Рµ OnStartServer СѓР¶Рµ РїРѕРґРїРёСЃР°Р» РЅР°СЃ РЅР° СЃРѕР±С‹С‚РёСЏ, РЅРѕ OnStartLocalPlayer РІС‹Р·С‹РІР°РµС‚СЃСЏ С‚РѕР¶Рµ.
+                // РќР°Рј РЅРµ РЅСѓР¶РЅРѕ РїРѕРґРїРёСЃС‹РІР°С‚СЊСЃСЏ РґРІР°Р¶РґС‹.
             }
 
             Debug.Log($"{UxrConstants.NetworkingModule} {nameof(UxrMirrorAvatar)}.{nameof(OnStartLocalPlayer)}: Is Local? {IsLocal}, Name: {AvatarName}. NetId: {netId}, UniqueId: {Avatar.UniqueId}.");
@@ -246,7 +285,7 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
         }
 
         /// <summary>
-        /// Вызывается при уничтожении объекта для корректной очистки ресурсов
+        /// Р’С‹Р·С‹РІР°РµС‚СЃСЏ РїСЂРё СѓРЅРёС‡С‚РѕР¶РµРЅРёРё РѕР±СЉРµРєС‚Р° РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ РѕС‡РёСЃС‚РєРё СЂРµСЃСѓСЂСЃРѕРІ
         /// </summary>
         private void OnDestroy()
         {
@@ -269,12 +308,12 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
         }
 
         /// <summary>
-        /// Обработка события изменения сцены в Mirror
+        /// РћР±СЂР°Р±РѕС‚РєР° СЃРѕР±С‹С‚РёСЏ РёР·РјРµРЅРµРЅРёСЏ СЃС†РµРЅС‹ РІ Mirror
         /// </summary>
-        /// <param name="sceneName">Имя новой сцены</param>
+        /// <param name="sceneName">РРјСЏ РЅРѕРІРѕР№ СЃС†РµРЅС‹</param>
         public void OnNetworkSceneChanged(string sceneName)
         {
-            // Сбрасываем флаг загрузки начального состояния, так как мы в новой сцене
+            // РЎР±СЂР°СЃС‹РІР°РµРј С„Р»Р°Рі Р·Р°РіСЂСѓР·РєРё РЅР°С‡Р°Р»СЊРЅРѕРіРѕ СЃРѕСЃС‚РѕСЏРЅРёСЏ, С‚Р°Рє РєР°Рє РјС‹ РІ РЅРѕРІРѕР№ СЃС†РµРЅРµ
             _initialStateLoaded = false;
 
             if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
@@ -282,8 +321,8 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
                 Debug.Log($"{UxrConstants.NetworkingModule} Scene changed to {sceneName}, reset initial state loading flag.");
             }
 
-            // NetworkBehaviour не имеет базовой реализации OnNetworkSceneChanged,
-            // поэтому мы не вызываем здесь base метод
+            // NetworkBehaviour РЅРµ РёРјРµРµС‚ Р±Р°Р·РѕРІРѕР№ СЂРµР°Р»РёР·Р°С†РёРё OnNetworkSceneChanged,
+            // РїРѕСЌС‚РѕРјСѓ РјС‹ РЅРµ РІС‹Р·С‹РІР°РµРј Р·РґРµСЃСЊ base РјРµС‚РѕРґ
         }
 
         #endregion
@@ -328,6 +367,15 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
         [Command]
         private void CmdComponentStateChanged(byte[] serializedEventData)
         {
+            if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
+            {
+                Debug.Log($"{UxrConstants.NetworkingModule} Server received CmdComponentStateChanged. Size: {serializedEventData.Length}. Applying and broadcasting.");
+            }
+
+            // РЎРµСЂРІРµСЂ РїСЂРёРјРµРЅСЏРµС‚ СЃРѕСЃС‚РѕСЏРЅРёРµ Сѓ СЃРµР±СЏ
+            UxrManager.Instance.ExecuteStateSyncEvent(serializedEventData);
+
+            // Р СЂР°СЃСЃС‹Р»Р°РµС‚ РѕСЃС‚Р°Р»СЊРЅС‹Рј РєР»РёРµРЅС‚Р°Рј
             RpcComponentStateChanged(serializedEventData);
         }
 
@@ -387,21 +435,32 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
         [ClientRpc]
         private void RpcComponentStateChanged(byte[] serializedEventData)
         {
-            if (netIdentity.isOwned)
+            if (isServer)
             {
-                // Don't execute on the source of the event.
+                // РЎРµСЂРІРµСЂ (РІРєР»СЋС‡Р°СЏ РҐРѕСЃС‚) РёРіРЅРѕСЂРёСЂСѓРµС‚ RPC, С‚Р°Рє РєР°Рє РѕРЅ Р»РёР±Рѕ СЃР°Рј РµРіРѕ РїРѕСЂРѕРґРёР», Р»РёР±Рѕ СѓР¶Рµ РїСЂРёРјРµРЅРёР» РІ Cmd.
                 return;
             }
 
-            if (_initialStateLoaded == false)
+            if (isOwned)
+            {
+                // Р’Р»Р°РґРµР»РµС† РѕР±СЉРµРєС‚Р° (С‚РѕС‚ РєС‚Рѕ РїРѕСЃР»Р°Р» Cmd) РёРіРЅРѕСЂРёСЂСѓРµС‚ RPC.
+                return;
+            }
+
+            if (!_avatarInitialized || _initialStateLoaded == false)
             {
                 // Ignore sync events until the initial state is sent, to make sure the syncs are only processed after the initial state.
                 return;
             }
 
+            if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
+            {
+                Debug.Log($"{UxrConstants.NetworkingModule} Receiving state sync on {AvatarName}: {serializedEventData.Length} bytes");
+            }
+
             if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Verbose)
             {
-                Debug.Log($"{UxrConstants.NetworkingModule} Receiving {serializedEventData.Length} bytes of data. Base64: {Convert.ToBase64String(serializedEventData)}");
+                Debug.Log($"{UxrConstants.NetworkingModule} Receiving {serializedEventData.Length} bytes of data on {AvatarName}. Base64: {Convert.ToBase64String(serializedEventData)}");
             }
 
             UxrManager.Instance.ExecuteStateSyncEvent(serializedEventData);
@@ -411,10 +470,11 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
 
         #region Private Types & Data
 
-        // Сделали переменную экземпляра вместо статичной, чтобы не блокировать повторную инициализацию для других аватаров
+        // РЎРґРµР»Р°Р»Рё РїРµСЂРµРјРµРЅРЅСѓСЋ СЌРєР·РµРјРїР»СЏСЂР° РІРјРµСЃС‚Рѕ СЃС‚Р°С‚РёС‡РЅРѕР№, С‡С‚РѕР±С‹ РЅРµ Р±Р»РѕРєРёСЂРѕРІР°С‚СЊ РїРѕРІС‚РѕСЂРЅСѓСЋ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЋ РґР»СЏ РґСЂСѓРіРёС… Р°РІР°С‚Р°СЂРѕРІ
         private bool _avatarInitialized = false;
 
-        private bool _initialStateLoaded;
+        private static bool _initialStateLoaded;
+        private static UxrMirrorAvatar _serverBroadcaster;
 
         private string _avatarName;
 

@@ -26,3 +26,4 @@ MonoBehaviour:
   _netFormatStateSync: 0
   _syncGrabbablePhysics: 1
   _grabbableSyncIntervalSeconds: 1
+  _optimizeEditorFocus: 0

@@ -37,6 +37,7 @@ namespace UltimateXR.Editor.Core.Settings
             _propNetFormatStateSync              = serializedObject.FindProperty(PropertyNetFormatStateSync);
             _propNetSyncGrabbablePhysics         = serializedObject.FindProperty(PropertyNetSyncGrabbablePhysics);
             _propNetGrabbableSyncIntervalSeconds = serializedObject.FindProperty(PropertyNetGrabbableSyncIntervalSeconds);
+            _propOptimizeEditorFocus             = serializedObject.FindProperty(PropertyOptimizeEditorFocus);
         }
 
         /// <inheritdoc />
@@ -45,6 +46,15 @@ namespace UltimateXR.Editor.Core.Settings
             serializedObject.Update();
 
             EditorGUILayout.TextArea($"{UxrConstants.UltimateXR} version: {UxrConstants.Version}");
+
+            // General
+
+            _showGeneral = UxrEditorUtils.FoldoutStylish("General", _showGeneral);
+
+            if (_showGeneral)
+            {
+                EditorGUILayout.PropertyField(_propOptimizeEditorFocus, ContentOptimizeEditorFocus);
+            }
 
             // Log level configuration
 
@@ -101,6 +111,7 @@ namespace UltimateXR.Editor.Core.Settings
         private GUIContent ContentNetFormatStateSync              { get; } = new GUIContent("State Sync Msg Format",             "Selects the message format to use when exchanging state synchronization updates. Compression has a little CPU overhead but will use less bandwidth.");
         private GUIContent ContentNetSyncGrabbablePhysics         { get; } = new GUIContent("Sync Grabbable Physics",            "Selects whether to sync grabbable objects with rigidbodies that have no NetworkTransform/NetworkRidibody set up. This keeps position/rotation and speeds manually in sync by sending periodic messages.");
         private GUIContent ContentNetGrabbableSyncIntervalSeconds { get; } = new GUIContent("Grabbable Sync Interval (Seconds)", "Selects the interval in seconds grabbable objects with rigidbodies are kept in sync when there are no NetworkTransform/NetworkRidibody set up. Lower values will send RPC messages more frequently but will increase bandwidth.");
+        private GUIContent ContentOptimizeEditorFocus             { get; } = new GUIContent("Optimize Editor Focus",             "Sets whether to optimize CPU/GPU usage when the Unity Editor instance loses focus. If enabled, XR subsystems will be stopped and post-update mode will be set to None when focus is lost.");
 
         private const string PropertyLogLevelAnimation               = "_logLevelAnimation";
         private const string PropertyLogLevelAvatar                  = "_logLevelAvatar";
@@ -116,6 +127,7 @@ namespace UltimateXR.Editor.Core.Settings
         private const string PropertyNetFormatStateSync              = "_netFormatStateSync";
         private const string PropertyNetSyncGrabbablePhysics         = "_syncGrabbablePhysics";
         private const string PropertyNetGrabbableSyncIntervalSeconds = "_grabbableSyncIntervalSeconds";
+        private const string PropertyOptimizeEditorFocus             = "_optimizeEditorFocus";
 
         private SerializedProperty _propLogLevelAnimation;
         private SerializedProperty _propLogLevelAvatar;
@@ -131,7 +143,9 @@ namespace UltimateXR.Editor.Core.Settings
         private SerializedProperty _propNetFormatStateSync;
         private SerializedProperty _propNetSyncGrabbablePhysics;
         private SerializedProperty _propNetGrabbableSyncIntervalSeconds;
+        private SerializedProperty _propOptimizeEditorFocus;
 
+        private bool _showGeneral    = true;
         private bool _showLogLevels  = true;
         private bool _showNetworking = true;
 

@@ -6,6 +6,7 @@
 using System;
 using UltimateXR.Core.Components;
 using UnityEngine;
+using UltimateXR.Networking;
 
 namespace UltimateXR.Mechanics.Weapons
 {
@@ -68,13 +69,25 @@ namespace UltimateXR.Mechanics.Weapons
         public float Life
         {
             get => _life;
-            set => _life = value;
+            set
+            {
+                if (Mathf.Approximately(_life, value))
+                {
+                    return;
+                }
+
+                Debug.Log($"[UxrActor] Life changed: {_life} -> {value}. IsServer: {UxrNetworkManager.IsServer}, IsClient: {UxrNetworkManager.IsClient}");
+
+                BeginSync();
+                _life = value;
+                EndSyncProperty(value);
+            }
         }
 
         /// <summary>
         ///     Gets whether the actor is dead.
         /// </summary>
-        public bool IsDead { get; private set; }
+        public bool IsDead => _life <= 0f;
 
         #endregion
 
@@ -144,6 +157,8 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="e">Damage event parameters</param>
         private void OnReceiveDamage(UxrDamageEventArgs e)
         {
+            Debug.Log($"[UxrActor] OnReceiveDamage on {name}. IsServer: {UxrNetworkManager.IsServer}, IsClient: {UxrNetworkManager.IsClient}, Damage: {e.Damage}, Current Life: {_life}");
+
             if (IsDead)
             {
                 return;
@@ -153,33 +168,60 @@ namespace UltimateXR.Mechanics.Weapons
 
             if (!e.IsCanceled)
             {
-                if (_automaticDamageHandling)
+                // Only subtract health on the server
+                if (_automaticDamageHandling && UxrNetworkManager.NoSessionOrSessionOwner)
                 {
-                    _life -= e.Damage;
+                    Life -= e.Damage;
                 }
 
                 if (_life <= 0.0f)
                 {
-                    // Deadly damage
-                    DieInternal();
+                    // Deadly damage handling is already synchronized in DieInternal if called on server
+                    if (UxrNetworkManager.NoSessionOrSessionOwner)
+                    {
+                        DieInternal();
+                    }
                 }
                 else
                 {
-                    // Non-deadly damage
-
-                    if (_animator != null && string.IsNullOrEmpty(_takeDamageAnimationTriggerVarName) == false)
+                    // Non-deadly damage: trigger effects and events.
+                    // Only the server triggers the synced effects.
+                    if (UxrNetworkManager.NoSessionOrSessionOwner)
                     {
-                        _animator.SetTrigger(_takeDamageAnimationTriggerVarName);
+                        Debug.Log($"[UxrActor] Server calling PlayDamageEffects. Damage: {e.Damage}");
+                        PlayDamageEffects(e.DamageType, e.RaycastHit.point);
                     }
-
-                    if (_takeDamageAudioClip)
+                    else
                     {
-                        AudioSource.PlayClipAtPoint(_takeDamageAudioClip, transform.position);
+                        Debug.Log($"[UxrActor] Client received damage locally. Waiting for server sync.");
                     }
 
                     DamageReceived?.Invoke(this, e);
                 }
             }
+        }
+
+        /// <summary>
+        ///     Plays the damage effects (animation and sound) on all clients.
+        /// </summary>
+        /// <param name="damageType">Type of damage received</param>
+        /// <param name="position">World position of the impact</param>
+        public void PlayDamageEffects(UxrDamageType damageType, Vector3 position)
+        {
+            Debug.Log($"[UxrActor] PlayDamageEffects execution. IsServer: {UxrNetworkManager.IsServer}, IsClient: {UxrNetworkManager.IsClient}");
+            BeginSync();
+
+            if (_animator != null && string.IsNullOrEmpty(_takeDamageAnimationTriggerVarName) == false)
+            {
+                _animator.SetTrigger(_takeDamageAnimationTriggerVarName);
+            }
+
+            if (_takeDamageAudioClip)
+            {
+                AudioSource.PlayClipAtPoint(_takeDamageAudioClip, transform.position);
+            }
+
+            EndSyncMethod(new object[] { damageType, position });
         }
 
         #endregion
@@ -191,8 +233,9 @@ namespace UltimateXR.Mechanics.Weapons
         /// </summary>
         private void DieInternal()
         {
+            BeginSync();
+
             Life   = 0.0f;
-            IsDead = true;
 
             if (_animator != null && string.IsNullOrEmpty(_dieAnimationTriggerVarName) == false)
             {
@@ -210,6 +253,8 @@ namespace UltimateXR.Mechanics.Weapons
             {
                 Destroy(gameObject, _destroyAfterDeadSeconds > 0.0f ? _destroyAfterDeadSeconds : 0.0f);
             }
+
+            EndSyncMethod();
         }
 
         #endregion

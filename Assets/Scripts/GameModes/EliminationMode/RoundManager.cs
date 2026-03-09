@@ -46,6 +46,8 @@ namespace VrBattlegrounds.GameModes
             
             _roundState = RoundState.WaitingForPlayers;
             GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Ожидание готовности игроков для старта раунда (заход в spawn-зоны)");
+            
+            _eliminationMode.PrepareNextRound();
         }
 
         /// <summary>Продолжить сет — запустить следующий раунд с теми же настройками.</summary>
@@ -155,7 +157,14 @@ namespace VrBattlegrounds.GameModes
                     return false;
             }
 
-            // 2. В будущем здесь могут быть другие проверки (например, выбор оружия)
+            // 2. Проверяем что все игроки во всех командах живы
+            if (_eliminationMode != null)
+            {
+                if (!_eliminationMode.TeamStates.Values.All(state => state.AreAllPlayersAlive()))
+                    return false;
+            }
+
+            // 3. В будущем здесь могут быть другие проверки (например, выбор оружия)
 
             return true;
         }

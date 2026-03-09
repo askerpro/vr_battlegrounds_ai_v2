@@ -2033,6 +2033,11 @@ namespace UltimateXR.Core
         private void HandleEditorFocusChange()
         {
 #if UNITY_EDITOR
+            if (!UxrGlobalSettings.Instance.OptimizeEditorFocus)
+            {
+                return;
+            }
+
             // Используем комбинированную проверку для точного определения фокуса именно этого инстанса
             bool isEditorFocused = EditorWindowFocusHelper.IsInstanceActiveCombined();
 

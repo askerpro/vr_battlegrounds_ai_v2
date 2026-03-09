@@ -46,8 +46,8 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Есть ли в команде хотя бы один живой игрок?</summary>
         public bool HasAlivePlayers() => AlivePlayers.Any();
 
-        /// <summary>Все ли игроки в этой команде мертвы?</summary>
-        public bool IsAllPlayersDead() => !HasAlivePlayers();
+        /// <summary>Все ли подключённые игроки в этой команде живы?</summary>
+        public bool AreAllPlayersAlive() => Players.All(p => p.IsAlive);
 
         /// <summary>Добавить очки команде.</summary>
         public void AddScore(int points = 1)

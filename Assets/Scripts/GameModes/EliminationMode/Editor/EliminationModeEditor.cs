@@ -46,7 +46,7 @@ namespace VrBattlegrounds.Editor
 
             // 2. Статус раунда
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Статус раунда (Elimination)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField($"Статус раунда {mode.CurrentRoundNumber}/{mode.RoundsPerSet} (Elimination)", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Текущее состояние:", mode.CurrentRoundState.ToString());
             
             if (mode.CurrentRoundState == RoundState.Countdown)
@@ -59,9 +59,19 @@ namespace VrBattlegrounds.Editor
             }
             EditorGUILayout.EndVertical();
 
-            // 3. Статистика сетов и команд
+            // 3. Статистика раундов в сете
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Счёт по сетам", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Счёт по раундам в текущем сете", EditorStyles.boldLabel);
+            foreach (var teamState in mode.TeamStates.Values)
+            {
+                int roundScore = mode.GetRoundScore(teamState.Team);
+                EditorGUILayout.LabelField($"{teamState.Team.displayName}:", $"{roundScore} побед");
+            }
+            EditorGUILayout.EndVertical();
+
+            // 4. Статистика сетов и команд
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField("Счёт по сетам в матче", EditorStyles.boldLabel);
             
             int totalSetsPlayed = 0;
             foreach (var teamState in mode.TeamStates.Values)

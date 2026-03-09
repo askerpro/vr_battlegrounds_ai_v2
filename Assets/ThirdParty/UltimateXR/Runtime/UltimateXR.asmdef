@@ -23,7 +23,8 @@
         "Mirror.Components",
         "Mirror.Transports",
         "DissonanceVoip",
-        "FishNet.Runtime"
+        "FishNet.Runtime",
+        "Unity.XR.Management"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

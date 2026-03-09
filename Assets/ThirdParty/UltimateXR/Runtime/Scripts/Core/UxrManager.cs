@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrManager.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -187,6 +187,13 @@ namespace UltimateXR.Core
 
         // Properties
 
+#if UNITY_EDITOR
+        public bool prevIsEditorFocused = true;
+        private UxrPostUpdateMode _savedPostUpdateMode = UxrPostUpdateMode.LateUpdate;
+#endif
+
+        // Properties
+
         /// <summary>
         ///     Gets or sets when to perform the post-update. The post-update updates among others the avatar animation (hand
         ///     poses, manipulation mechanics and Inverse Kinematics).
@@ -196,7 +203,13 @@ namespace UltimateXR.Core
         public UxrPostUpdateMode PostUpdateMode
         {
             get => _postUpdateMode;
-            set => _postUpdateMode = value;
+            set
+            {
+                _postUpdateMode = value;
+#if UNITY_EDITOR
+                _savedPostUpdateMode = _postUpdateMode;
+#endif
+            }
         }
 
         /// <summary>
@@ -1199,6 +1212,15 @@ namespace UltimateXR.Core
         /// </summary>
         private void Update()
         {
+#if UNITY_EDITOR
+            HandleEditorFocusChange();
+
+            if (!prevIsEditorFocused)
+            {
+                return;
+            }
+#endif
+
             OnUpdating();
             OnUpdatingStage(UxrUpdateStage.Update);
 
@@ -2005,6 +2027,48 @@ namespace UltimateXR.Core
                     }
                 }
             }
+        }
+
+
+        private void HandleEditorFocusChange()
+        {
+#if UNITY_EDITOR
+            // Используем комбинированную проверку для точного определения фокуса именно этого инстанса
+            bool isEditorFocused = EditorWindowFocusHelper.IsInstanceActiveCombined();
+
+            if (prevIsEditorFocused == isEditorFocused ) { return; }
+
+            // focus changed
+            Debug.Log($"Application focus changed: This Unity Editor instance focus changed from {prevIsEditorFocused} to {isEditorFocused}");
+
+            prevIsEditorFocused = isEditorFocused;
+
+            try
+            {
+#if ULTIMATEXR_UNITY_XR_MANAGEMENT
+                var xrGeneralSettings = UnityEngine.XR.Management.XRGeneralSettings.Instance;
+                if (xrGeneralSettings?.Manager != null)
+                {
+                    if (isEditorFocused)
+                    {
+                        // Restart subsystems
+                        xrGeneralSettings.Manager.StartSubsystems();
+                        _postUpdateMode = _savedPostUpdateMode;
+                    }
+                    else
+                    {
+                        _postUpdateMode = UxrPostUpdateMode.None;
+                        // Stop subsystems
+                        xrGeneralSettings.Manager.StopSubsystems();
+                    }
+                }
+#endif
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error managing XR subsystems: {e}");
+            }
+#endif
         }
 
         #endregion

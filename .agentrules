@@ -179,6 +179,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 3. **Обновить документацию** — определить, какие файлы документации затронуты:
    - Новые классы, модули, зависимости, интеграции? -- обновить `Assets/Docs/README.md`
    - Новые игровые механики / режимы игры? -- обновить `Assets/Docs/gameplay.md`
+   - Значимые изменения, фиксы, рефакторинг? -- обновить `Assets/Docs/CHANGELOG.md`
    - Новый SDK, патчи библиотеки UltimateXR? -- обновить `Assets/ThirdParty/UltimateXR/Docs/_context/sdk-patches.md`
    - Новая архитектура, паттерны, архитектурные изменения? -- обновить `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md`
    - Новый прогресс / статус реализации? -- обновить `Assets/ThirdParty/UltimateXR/Docs/_context/progress.md`
@@ -191,6 +192,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 |---|---|
 | Новые скрипты/классы/компоненты | `Assets/Docs/README.md` |
 | Геймплей, режимы, матчи, игровая логика | `Assets/Docs/gameplay.md` |
+| Значимые изменения, фиксы, рефакторинг | `Assets/Docs/CHANGELOG.md` |
 | Новые паттерны, менеджеры, архитектурные изменения | `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md` |
 | Патчи UltimateXR SDK, правки, обходы API | `Assets/ThirdParty/UltimateXR/Docs/_context/sdk-patches.md` |
 | Прогресс, баги, тестирование, planned задачи | `Assets/ThirdParty/UltimateXR/Docs/_context/progress.md` |

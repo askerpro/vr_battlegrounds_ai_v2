@@ -118,7 +118,7 @@ namespace VrBattlegrounds.GameModes
         {
             if (!isServer || _roundManager == null) return;
 
-            // Тик логики — если состояние изменилось, синхронизируем SyncVar
+            RoundState previousState = _roundState;
             bool changed = _roundManager.Tick(Time.deltaTime);
 
             // Обновляем SyncVar каждый тик
@@ -126,7 +126,7 @@ namespace VrBattlegrounds.GameModes
             _roundTimer = _roundDuration - _roundManager.RoundTimeRemaining;
             _countdownTimer = _countdownDuration - _roundManager.CountdownTimeRemaining;
 
-            if (changed)
+            if (changed || _roundState != previousState)
                 RpcOnRoundStateChanged(_roundState);
 
             // Синхронизируем счёт раундов из SetManager

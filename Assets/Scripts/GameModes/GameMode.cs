@@ -24,6 +24,14 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         public event Action<TeamData> GameplayEnded;
 
+        // ── Глобальные семантические события для UI (Клиент) ───────────────
+
+        /// <summary>Срабатывает на клиенте при старте матча.</summary>
+        public static event Action OnMatchStartedLocal;
+
+        /// <summary>Срабатывает на клиенте при завершении матча. Null = ничья.</summary>
+        public static event Action<TeamData> OnMatchEndedLocal;
+
         // Команды передаются через Initialize() на сервере.
         private TeamData[] _teams = new TeamData[0];
 
@@ -123,7 +131,26 @@ namespace VrBattlegrounds.GameModes
         /// <summary>
         /// Вызвать из конкретного режима когда определён победитель матча.
         /// </summary>
-        protected void RaiseGameplayEnded(TeamData winner) => GameplayEnded?.Invoke(winner);
+        protected void RaiseGameplayEnded(TeamData winner) 
+        {
+            RpcOnMatchEnded(winner != null ? winner.teamIndex : -1);
+            GameplayEnded?.Invoke(winner);
+        }
+
+        // ── Сетевые вызовы для UI ──────────────────────────────────────────
+
+        [ClientRpc]
+        protected void RpcOnMatchStarted()
+        {
+            OnMatchStartedLocal?.Invoke();
+        }
+
+        [ClientRpc]
+        protected void RpcOnMatchEnded(int winnerIndex)
+        {
+            TeamData winner = winnerIndex >= 0 ? TeamRegistry.Instance.GetByIndex(winnerIndex) : null;
+            OnMatchEndedLocal?.Invoke(winner);
+        }
     }
 }
 

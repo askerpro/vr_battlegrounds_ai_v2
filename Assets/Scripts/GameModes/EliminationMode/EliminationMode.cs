@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Mirror;
 using UnityEngine;
@@ -43,6 +44,14 @@ namespace VrBattlegrounds.GameModes
         // Серверные машины состояний — создаются при StartGameplay, не требуют NetworkBehaviour
         private SetManager _setManager;
         private RoundManager _roundManager;
+
+        // ── Глобальные семантические события для UI (Клиент) ───────────────
+
+        public static event Action<int> OnSetStartedLocal;
+        public static event Action<TeamData> OnSetEndedLocal;
+        public static event Action<int> OnRoundStartedLocal;
+        public static event Action<TeamData> OnRoundEndedLocal;
+        public static event Action<RoundState> OnRoundStateChangedLocal;
 
         // ── Публичные свойства для UI ────────────────────────────────────────
 
@@ -113,6 +122,10 @@ namespace VrBattlegrounds.GameModes
                 _setManager.SwapTeams();
 
             _setManager.SetEnded += OnSetEnded;
+            
+            int currentSet = 1 + _teamStates.Values.Sum(s => s.Score);
+            RpcOnSetStarted(currentSet);
+
             _setManager.StartSet(Teams, this, _roundsPerSet, _countdownDuration, _roundDuration);
         }
 
@@ -197,6 +210,33 @@ namespace VrBattlegrounds.GameModes
         {
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
                 $"[EliminationMode] Состояние раунда (клиент): {newState}");
+            OnRoundStateChangedLocal?.Invoke(newState);
+        }
+
+        [ClientRpc]
+        public void RpcOnSetStarted(int setNum)
+        {
+            OnSetStartedLocal?.Invoke(setNum);
+        }
+
+        [ClientRpc]
+        public void RpcOnSetEnded(int winnerIndex)
+        {
+            TeamData winner = winnerIndex >= 0 ? TeamRegistry.Instance.GetByIndex(winnerIndex) : null;
+            OnSetEndedLocal?.Invoke(winner);
+        }
+
+        [ClientRpc]
+        public void RpcOnRoundStarted(int roundNum)
+        {
+            OnRoundStartedLocal?.Invoke(roundNum);
+        }
+
+        [ClientRpc]
+        public void RpcOnRoundEnded(int winnerIndex)
+        {
+            TeamData winner = winnerIndex >= 0 ? TeamRegistry.Instance.GetByIndex(winnerIndex) : null;
+            OnRoundEndedLocal?.Invoke(winner);
         }
     }
 }

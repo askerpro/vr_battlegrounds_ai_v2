@@ -56,7 +56,7 @@ namespace VrBattlegrounds.GameModes
 
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
                 $"[SetManager] Сет начат, раундов: {_roundsPerSet}");
-
+            
             StartNextRound();
         }
 
@@ -65,6 +65,7 @@ namespace VrBattlegrounds.GameModes
             _currentRound++;
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
                 $"[SetManager] Раунд {_currentRound}/{_roundsPerSet}");
+            _eliminationMode.RpcOnRoundStarted(_currentRound);
             _roundManager.StartRound(_eliminationMode, _countdownDuration, _roundDuration);
         }
 
@@ -121,6 +122,9 @@ namespace VrBattlegrounds.GameModes
             string winnerName = winner != null ? winner.displayName : "ничья";
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
                 $"[SetManager] Сет завершён, победитель: {winnerName}");
+            
+            _eliminationMode.RpcOnSetEnded(winner != null ? winner.teamIndex : -1);
+
             SetEnded?.Invoke(winner);
         }
 

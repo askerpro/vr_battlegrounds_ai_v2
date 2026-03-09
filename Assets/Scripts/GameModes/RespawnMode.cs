@@ -36,6 +36,8 @@ namespace VrBattlegrounds.GameModes
             string teamsStr = string.Join(", ", Teams.Select(t => t != null ? t.displayName : "null"));
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
                 $"[RespawnMode] Матч начат: {teamsStr}, время: {_matchDuration}с");
+            
+            RpcOnMatchStarted();
         }
 
         [Server]

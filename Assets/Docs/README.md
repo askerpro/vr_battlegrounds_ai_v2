@@ -157,8 +157,14 @@ MatchManager       — матч (5 карт, счёт, победитель)
 
 | Класс | Файл | Описание |
 |---|---|---|
-| `AdminMenuController` | `UI/AdminMenuController.cs` | Меню администратора: выбор карты, режима, управление матчем. Только Host. |
 | `PlayerMenuController` | `UI/PlayerMenuController.cs` | Меню игрока: выбор команды, калибровка VR. |
+| `HUDWidget_GameNotification` | `UI/HUD/HUDWidget_GameNotification.cs` | Слушает семантические `GameMode` события и локализует уведомления. |
+| `PlayerHUDManager` | `UI/HUD/PlayerHUDManager.cs` | Спавнит и управляет дочерними виджетами HUD привязанными к голове игрока. |
+
+**Система Уведомлений (Event-Driven Notifications):**
+- Игровые режимы (`EliminationMode`, `RespawnMode`) вызывают `[ClientRpc]`, которые на клиенте поднимают "Чистые семантические события C#" (например `OnRoundEndedLocal(TeamData)`).
+- Режимы не знают про UI и не генерируют текст ("Победили Синие").
+- Автономные UI-виджеты (как `HUDWidget_GameNotification`) подписываются на эти события, сами формируют финальную строку (с учетом имен команд) и отображают её.
 
 ---
 

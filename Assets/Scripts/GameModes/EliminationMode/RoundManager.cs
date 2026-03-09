@@ -56,6 +56,9 @@ namespace VrBattlegrounds.GameModes
             string winnerName = winner != null ? winner.displayName : "ничья";
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
                 $"[RoundManager] Раунд завершён, победитель: {winnerName}");
+            
+            _eliminationMode?.RpcOnRoundEnded(winner != null ? winner.teamIndex : -1);
+
             RoundEnded?.Invoke(winner);
         }
 

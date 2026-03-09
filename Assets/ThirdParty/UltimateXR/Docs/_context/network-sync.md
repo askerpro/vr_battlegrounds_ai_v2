@@ -80,3 +80,29 @@ UltimateXR использует систему уникальных ID для и
 1. Проверьте, что `UniqueId` аватара одинаков на сервере и клиентах.
 2. Проверьте использование `CombineUniqueId`, так как это может менять ID во время выполнения.
 3. Помните о баге фреймворка в `TryGetComponentById<T>`; при необходимости используйте не-generic версию `TryGetComponentById` с ручным приведением типов.
+
+## Синхронизация движения и IK
+
+Синхронизация перемещения аватара в UltimateXR + Mirror обычно полагается на стандартные компоненты Mirror (`NetworkTransformUnreliable`), но имеет свои особенности взаимодействия с системой IK.
+
+### 1. Режимы аватара
+*   **Local**: Обновляется через `UxrAvatarController` (например, `UxrStandardAvatarController`), который считывает данные с трекеров.
+*   **UpdateExternally**: Режим для удаленных аватаров. Их позиция и ротация устанавливаются сетевым SDK. В `UxrMirrorAvatar` этот режим устанавливается при инициализации не-локального игрока.
+
+### 2. Взаимодействие с UxrManager
+`UxrManager.PostUpdate` выполняет обновление аватаров в несколько этапов:
+1.  **AvatarUsingTracking**: Только для `LocalAvatarControllers`.
+2.  **Manipulation**: Для всех `EnabledAvatarControllers`.
+3.  **Animation**: Для всех аватаров. Если аватар локальный — вызывается `UpdateAvatarAnimation`. Если удаленный — только `UpdateHandPoseTransforms`.
+4.  **PostProcess**: Для всех `EnabledAvatarControllers`. Здесь вызывается `UpdateAvatarPostProcess`, который внутри вызывает `SolveBodyIK`.
+
+### 3. Выявленные проблемы с IK на удаленных аватарах
+
+> [!IMPORTANT]
+> **Критическая ошибка в `UxrBodyIK.PreSolveAvatarIK`**
+> При расчете IK для удаленных аватаров метод `PreSolveAvatarIK` пытается получить доступ к `_avatar.CameraComponent.transform`. Однако у удаленных аватаров (особенно в Mirror-интеграции) камера часто отсутствует или отключена. В `UxrAvatar.cs` свойство `CameraComponent` возвращает `null`, если камера не найдена, что приводит к `NullReferenceException` в `UxrBodyIK.cs:227`.
+> 
+> **Симптомы**: Удаленные аватары "замерзают", так как выполнение IK-расчета прерывается исключением каждый кадр.
+> 
+> **Решение**: Добавить проверку на `null` для `CameraComponent` или `CameraTransform` в `UxrBodyIK` перед использованием.
+

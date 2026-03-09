@@ -12,7 +12,9 @@
 ### Изменено
 - **Рефакторинг менеджеров**: `MatchManager` переименован в `GameplayManager` для подготовки к PvE режимам.
 - **HUD**: Обновлен `HUDWidget_GameNotification` для отображения статуса ожидания игроков.
-- **Документация**: Обновлены `README.md`, `gameplay.md`, `game-manager.md`.
+- **Ограничение оружия (Refactored)**: Введен глобальный флаг `WeaponSystemEnabled` и хук `GlobalUsageCheck` в `UxrWeaponManager`. Теперь `GameplayManager` централизованно управляет всей системой боя, отключая расчёты пуль и использование оружия вне активных фаз раунда.
+- **События смерти**: Добавлено событие `Died` в `UxrActor` и `PlayerDied` в `PlayerController` для уведомления систем игры о гибели игрока в контексте UltimateXR.
+- **Документация**: Обновлены `README.md`, `gameplay.md`, `game-manager.md`, обновлен `walkthrough.md`.
 
 ---
 

@@ -192,9 +192,17 @@ PrefabInstance:
       propertyPath: _team
       value: 
       objectReference: {fileID: 11400000, guid: 294548aeb7148344ea5bfd4c522cc7b7, type: 2}
+    - target: {fileID: 456398918869496865, guid: a910f49dc7e618f43b52a821b6b9305e, type: 3}
+      propertyPath: _xrayMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 48855c54f58bc764a9cf0b0a9f0818ee, type: 2}
     - target: {fileID: 4944276574430791300, guid: a910f49dc7e618f43b52a821b6b9305e, type: 3}
       propertyPath: m_Name
       value: SpawnZone_CT
+      objectReference: {fileID: 0}
+    - target: {fileID: 4944276574430791300, guid: a910f49dc7e618f43b52a821b6b9305e, type: 3}
+      propertyPath: m_Layer
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 5042512467116852883, guid: a910f49dc7e618f43b52a821b6b9305e, type: 3}
       propertyPath: m_LocalScale.z
@@ -291,9 +299,17 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1890410295}
     m_Modifications:
+    - target: {fileID: 456398918869496865, guid: a910f49dc7e618f43b52a821b6b9305e, type: 3}
+      propertyPath: _xrayMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 48855c54f58bc764a9cf0b0a9f0818ee, type: 2}
     - target: {fileID: 4944276574430791300, guid: a910f49dc7e618f43b52a821b6b9305e, type: 3}
       propertyPath: m_Name
       value: SpawnZone_Terrorists
+      objectReference: {fileID: 0}
+    - target: {fileID: 4944276574430791300, guid: a910f49dc7e618f43b52a821b6b9305e, type: 3}
+      propertyPath: m_Layer
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 5042512467116852883, guid: a910f49dc7e618f43b52a821b6b9305e, type: 3}
       propertyPath: m_LocalScale.z

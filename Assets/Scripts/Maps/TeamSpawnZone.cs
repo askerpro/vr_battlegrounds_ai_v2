@@ -4,6 +4,8 @@ using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Managers;
+using VrBattlegrounds.GameModes;
+using Mirror;
 
 namespace VrBattlegrounds.Maps
 {
@@ -19,8 +21,13 @@ namespace VrBattlegrounds.Maps
         [Tooltip("Команда, которой принадлежит эта зона")]
         [SerializeField] private TeamData _team;
 
+        [Header("Visibility Settings")]
+        [Tooltip("Материал для эффекта X-ray (видимость сквозь стены)")]
+        [SerializeField] private Material _xrayMaterial;
+
         [Header("Debug View (ReadOnly)")]
         [SerializeField] private int _playersInZoneCount;
+        [SerializeField] private RoundState _currentRoundState;
 
         /// <summary>Срабатывает когда игрок входит в зону. Передаётся сам контроллер игрока.</summary>
         public event Action<TeamSpawnZone, PlayerController> PlayerEntered;
@@ -29,6 +36,9 @@ namespace VrBattlegrounds.Maps
         public event Action<TeamSpawnZone, PlayerController> PlayerExited;
 
         private BoxCollider _boxCollider;
+        private MeshRenderer _meshRenderer;
+        private Material _originalMaterial;
+        private PlayerController _localPlayer;
         
         // HashSet защищает от множественных коллайдеров одного игрока (например, если рэгдолл задел триггер 3 костями)
         private readonly HashSet<PlayerController> _playersInZone = new HashSet<PlayerController>();
@@ -39,6 +49,12 @@ namespace VrBattlegrounds.Maps
         {
             _boxCollider = GetComponent<BoxCollider>();
             _boxCollider.isTrigger = true;
+            _meshRenderer = GetComponent<MeshRenderer>();
+
+            if (_meshRenderer != null)
+            {
+                _originalMaterial = _meshRenderer.sharedMaterial;
+            }
 
             // Ensure there's a kinematic rigidbody so trigger events fire regardless of the player's rigidbody setup
             Rigidbody rb = GetComponent<Rigidbody>();
@@ -56,6 +72,87 @@ namespace VrBattlegrounds.Maps
             }
             else
             {
+                UpdateColor();
+            }
+        }
+
+        private void OnEnable()
+        {
+            EliminationMode.OnRoundStateChangedLocal += OnRoundStateChanged;
+            UpdateVisibility();
+        }
+
+        private void OnDisable()
+        {
+            EliminationMode.OnRoundStateChangedLocal -= OnRoundStateChanged;
+            if (_localPlayer != null)
+            {
+                _localPlayer.PlayerDied -= OnLocalPlayerDied;
+            }
+        }
+
+        private void Update()
+        {
+            // Пытаемся найти локального игрока, если ещё не нашли
+            if (_localPlayer == null && NetworkClient.localPlayer != null)
+            {
+                _localPlayer = NetworkClient.localPlayer.GetComponent<PlayerController>();
+                if (_localPlayer != null)
+                {
+                    _localPlayer.PlayerDied += OnLocalPlayerDied;
+                    UpdateVisibility();
+                }
+            }
+        }
+
+        private void OnRoundStateChanged(RoundState newState)
+        {
+            _currentRoundState = newState;
+            UpdateVisibility();
+        }
+
+        private void OnLocalPlayerDied(PlayerController player)
+        {
+            UpdateVisibility();
+        }
+
+        private void UpdateVisibility()
+        {
+            if (_meshRenderer == null) return;
+
+            // Базовая логика: 
+            // - Вне активного раунда (ожидание, отсчёт, конец) — зона видна всем.
+            // - В активном раунде — зона видна ТОЛЬКО мёртвым игрокам СВОЕЙ команды.
+
+            bool isVisible = true;
+
+            if (_currentRoundState == RoundState.Active)
+            {
+                // Если раунд активен, проверяем локального игрока
+                if (_localPlayer != null)
+                {
+                    bool isDead = !_localPlayer.IsAlive;
+                    bool isSameTeam = _localPlayer.Team == _team;
+                    
+                    // Видим только если мы мертвы и из этой же команды
+                    isVisible = isDead && isSameTeam;
+                }
+                else
+                {
+                    // Если локальный игрок ещё не заспавнился в активном раунде — скрываем
+                    isVisible = false;
+                }
+            }
+
+            _meshRenderer.enabled = isVisible;
+
+            if (isVisible)
+            {
+                // Если мы мертвы и видим зону в активном раунде — используем X-ray материал
+                bool useXray = (_currentRoundState == RoundState.Active && _localPlayer != null && !_localPlayer.IsAlive);
+                _meshRenderer.sharedMaterial = useXray && _xrayMaterial != null ? _xrayMaterial : _originalMaterial;
+                
+                // Перекрашиваем, если сменили материал
                 UpdateColor();
             }
         }

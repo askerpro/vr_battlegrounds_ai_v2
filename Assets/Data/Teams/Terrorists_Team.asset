@@ -15,4 +15,4 @@ MonoBehaviour:
   teamIndex: 2
   displayName: Terrorists
   icon: {fileID: 0}
-  color: {r: 1, g: 0, b: 0.7391076, a: 1}
+  color: {r: 1, g: 0, b: 0.7391076, a: 0.21176471}

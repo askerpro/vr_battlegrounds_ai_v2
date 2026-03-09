@@ -15,4 +15,4 @@ MonoBehaviour:
   teamIndex: 1
   displayName: CounterTerrorists
   icon: {fileID: 0}
-  color: {r: 0, g: 0.024693727, b: 1, a: 1}
+  color: {r: 0, g: 0.024693727, b: 1, a: 0.12941177}

@@ -7,6 +7,7 @@ using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Player;
+using UltimateXR.Mechanics.Weapons;
 
 namespace VrBattlegrounds.Managers
 {
@@ -98,6 +99,21 @@ namespace VrBattlegrounds.Managers
             {
                 _roundStateDisplay = "—";
                 _timerDisplay      = 0f;
+            }
+
+            // Управляем доступностью оружия через UxrWeaponManager
+            if (UxrWeaponManager.HasInstance)
+            {
+                bool weaponsEnabled = true;
+                if (_gameMode is EliminationMode elim)
+                {
+                    weaponsEnabled = elim.CurrentRoundState == RoundState.Active;
+                }
+                
+                if (UxrWeaponManager.Instance.WeaponSystemEnabled != weaponsEnabled)
+                {
+                    UxrWeaponManager.Instance.SetWeaponSystemEnabled(weaponsEnabled);
+                }
             }
         }
 

@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrFirearmWeapon.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -210,6 +210,11 @@ namespace UltimateXR.Mechanics.Weapons
         /// </returns>
         public bool TryToShootRound(int triggerIndex)
         {
+            if (!CanUse)
+            {
+                return false;
+            }
+
             if (triggerIndex < 0 || triggerIndex >= _triggers.Count)
             {
                 return false;

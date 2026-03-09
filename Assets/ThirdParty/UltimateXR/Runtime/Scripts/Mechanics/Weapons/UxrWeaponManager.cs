@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrWeaponManager.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -47,6 +47,11 @@ namespace UltimateXR.Mechanics.Weapons
         /// </summary>
         public void UpdateManager()
         {
+            if (!WeaponSystemEnabled)
+            {
+                return;
+            }
+
             UpdateProjectiles();
         }
 

@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrGrabbableObject.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -1100,6 +1100,11 @@ namespace UltimateXR.Manipulation
         /// <returns>Whether the object can be grabbed by the grabber using the given grab point</returns>
         public bool CanBeGrabbedByGrabber(UxrGrabber grabber, int grabPoint)
         {
+            if (grabber != null && grabber.CanGrabDelegate != null && grabber.CanGrabDelegate(this, grabPoint) == false)
+            {
+                return false;
+            }
+
             if (_grabPointEnabledStates.ContainsKey(grabPoint))
             {
                 // It always is false when it exists. This has manually been set up by SetGrabPointEnabled()

@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrActor.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -12,7 +12,7 @@ namespace UltimateXR.Mechanics.Weapons
     /// <summary>
     ///     An actor in the Weapons module is an entity that can inflict and/or take damage.
     /// </summary>
-    public class UxrActor : UxrComponent<UxrActor>
+    public partial class UxrActor : UxrComponent<UxrActor>
     {
         #region Inspector Properties/Serialized Fields
 
@@ -25,6 +25,7 @@ namespace UltimateXR.Mechanics.Weapons
         [SerializeField] private float     _destroyAfterDeadSeconds = -1.0f;
         [SerializeField] private bool      _automaticDamageHandling = true;
         [SerializeField] private bool      _automaticDeadHandling   = true;
+        [SerializeField] private bool      _autoDestroyOnDie        = true;
 
         #endregion
 
@@ -152,8 +153,6 @@ namespace UltimateXR.Mechanics.Weapons
 
             if (!e.IsCanceled)
             {
-                bool destroy = false;
-                
                 if (_automaticDamageHandling)
                 {
                     _life -= e.Damage;
@@ -162,15 +161,7 @@ namespace UltimateXR.Mechanics.Weapons
                 if (_life <= 0.0f)
                 {
                     // Deadly damage
-
-                    if (_automaticDeadHandling)
-                    {
-                        destroy = true;
-                    }
-                    else
-                    {
-                        IsDead = true;
-                    }
+                    DieInternal();
                 }
                 else
                 {
@@ -185,13 +176,8 @@ namespace UltimateXR.Mechanics.Weapons
                     {
                         AudioSource.PlayClipAtPoint(_takeDamageAudioClip, transform.position);
                     }
-                }
 
-                DamageReceived?.Invoke(this, e);
-
-                if (destroy)
-                {
-                    DieInternal();
+                    DamageReceived?.Invoke(this, e);
                 }
             }
         }
@@ -218,7 +204,12 @@ namespace UltimateXR.Mechanics.Weapons
                 AudioSource.PlayClipAtPoint(_dieAudioClip, transform.position);
             }
 
-            Destroy(gameObject, _destroyAfterDeadSeconds > 0.0f ? _destroyAfterDeadSeconds : 0.0f);
+            Died?.Invoke(this);
+
+            if (_autoDestroyOnDie)
+            {
+                Destroy(gameObject, _destroyAfterDeadSeconds > 0.0f ? _destroyAfterDeadSeconds : 0.0f);
+            }
         }
 
         #endregion

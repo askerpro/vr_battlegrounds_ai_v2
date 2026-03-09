@@ -1,3 +1,4 @@
+using System;
 using Mirror;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
@@ -18,6 +19,9 @@ namespace VrBattlegrounds.Player
     [RequireComponent(typeof(UxrActor))]
     public class PlayerController : NetworkBehaviour
     {
+        /// <summary>Событие смерти игрока.</summary>
+        public event Action<PlayerController> PlayerDied;
+
         // ── Отображение в Inspector (только для чтения, обновляются через hook) ──
 
         [Header("Состояние (только чтение)")]
@@ -70,18 +74,27 @@ namespace VrBattlegrounds.Player
             _actor = GetComponent<UxrActor>();
             _actor.AutomaticDeadHandling = false;
             _actor.DamageReceived += OnDamageReceived;
+            _actor.Died += OnActorDied;
         }
 
         private void OnDestroy()
         {
             if (_actor != null)
+            {
                 _actor.DamageReceived -= OnDamageReceived;
+                _actor.Died -= OnActorDied;
+            }
         }
 
         public override void OnStartClient()
         {
             // Обновляем display-поля после того как SyncVar пришли с сервера
             RefreshDisplay();
+        }
+
+        private void OnActorDied(UxrActor actor)
+        {
+            PlayerDied?.Invoke(this);
         }
 
         // ── SyncVar hooks (вызываются на всех клиентах при изменении) ─────────

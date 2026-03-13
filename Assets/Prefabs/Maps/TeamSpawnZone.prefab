@@ -11,10 +11,8 @@ GameObject:
   - component: {fileID: 5042512467116852883}
   - component: {fileID: 8144069038061665446}
   - component: {fileID: 456398918869496865}
-  - component: {fileID: 6238407203769571636}
   - component: {fileID: 952510269781632304}
   - component: {fileID: 9210815879232927498}
-  - component: {fileID: 7724186148100631373}
   m_Layer: 8
   m_Name: TeamSpawnZone
   m_TagString: Untagged
@@ -32,7 +30,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 8.73}
-  m_LocalScale: {x: 15.5, y: 7.4428, z: 2.8125}
+  m_LocalScale: {x: 15.5, y: 7.4428, z: 3.0454688}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -47,7 +45,7 @@ BoxCollider:
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 512
   m_ExcludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -70,32 +68,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dfbd3903553de884b97d6c43d56a5abf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _team: {fileID: 11400000, guid: 6a1b2f4f562e0d4468069d2c11f06576, type: 2}
+  _team: {fileID: 0}
   _xrayMaterial: {fileID: 2100000, guid: 48855c54f58bc764a9cf0b0a9f0818ee, type: 2}
   _playersInZoneCount: 0
   _currentRoundState: 0
---- !u!64 &6238407203769571636
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4944276574430791300}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 0}
 --- !u!33 &952510269781632304
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -149,24 +125,3 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &7724186148100631373
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4944276574430791300}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}

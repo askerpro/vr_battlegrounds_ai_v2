@@ -4550,6 +4550,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 3e8d7ecd-4788-4ee2-8f6a-378b13ba0edd
       objectReference: {fileID: 0}
+    - target: {fileID: 9042948311470002378, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
     - target: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       propertyPath: m_Name
       value: PlayerControllersCyborgAvatar
@@ -5230,12 +5234,12 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0.25, y: 0.22, z: 0.18}
+  m_Center: {x: 0, y: 0.04, z: 0}
 --- !u!54 &1469807557082203909
 Rigidbody:
   m_ObjectHideFlags: 0

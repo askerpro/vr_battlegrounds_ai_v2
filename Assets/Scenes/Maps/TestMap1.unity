@@ -31246,6 +31246,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1890410295}
     m_Modifications:
+    - target: {fileID: 456398918869496865, guid: a910f49dc7e618f43b52a821b6b9305e, type: 3}
+      propertyPath: _team
+      value: 
+      objectReference: {fileID: 11400000, guid: 6a1b2f4f562e0d4468069d2c11f06576, type: 2}
     - target: {fileID: 4944276574430791300, guid: a910f49dc7e618f43b52a821b6b9305e, type: 3}
       propertyPath: m_Name
       value: SpawnZone_Terrorists

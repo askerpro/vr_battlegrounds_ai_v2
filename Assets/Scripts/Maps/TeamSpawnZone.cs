@@ -32,16 +32,33 @@ namespace VrBattlegrounds.Maps
         /// <summary>Срабатывает когда игрок входит в зону. Передаётся сам контроллер игрока.</summary>
         public event Action<TeamSpawnZone, PlayerController> PlayerEntered;
         
-        /// <summary>Срабатывает когда игрок покидает зону.</summary>
+        /// <summary>Срабатывает когда игрок покидает зону (перестал быть полностью внутри или вышел совсем).</summary>
         public event Action<TeamSpawnZone, PlayerController> PlayerExited;
 
         private BoxCollider _boxCollider;
         private MeshRenderer _meshRenderer;
         private Material _originalMaterial;
         private PlayerController _localPlayer;
-        
-        // HashSet защищает от множественных коллайдеров одного игрока (например, если рэгдолл задел триггер 3 костями)
+
+        // Игроки, которые физически касаются триггера (кандидаты на проверку полного входа)
+        private readonly HashSet<PlayerController> _playersTouching = new HashSet<PlayerController>();
+
+        // Игроки, чья голова ПОЛНОСТЬЮ внутри зоны. 
+        // Именно этот список видят внешние скрипты через GetPlayersInZone() и события.
         private readonly HashSet<PlayerController> _playersInZone = new HashSet<PlayerController>();
+
+        // Оптимизированная проверка полного нахождения:
+        // Кешируем уменьшенный Bounds зоны (zone minus head half-extents).
+        // Если центр камеры игрока лежит внутри _shrunkenBounds → голова гарантированно целиком внутри зоны.
+        // Одна операция Bounds.Contains = 3 float-сравнения — дёшево для 10 игроков/кадр.
+        private Bounds _shrunkenBounds;
+
+        /// <summary>Половина размера коллайдера головы игрока (Camera BoxCollider). </summary>
+        private static readonly Vector3 HeadHalfExtents = new Vector3(0.125f, 0.11f, 0.09f);
+
+        // Кеш: PlayerController → Transform камеры, чтобы не делать GetComponentInChildren каждый Stay
+        private readonly Dictionary<PlayerController, Transform> _cameraTransformCache =
+            new Dictionary<PlayerController, Transform>();
 
         public TeamData Team => _team;
 
@@ -65,15 +82,32 @@ namespace VrBattlegrounds.Maps
             rb.isKinematic = true;
             rb.useGravity = false;
 
+            // Предрассчитываем уменьшенный Bounds для быстрой проверки полного нахождения.
+            // Bounds пересчитывается при Awake — объект должен быть уже на своей финальной позиции.
+            RebuildShrunkenBounds();
+
             if (_team == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelMatch, 
+                GameLog.Warning(GameSettings.Instance.LogLevelMatch,
                     $"[TeamSpawnZone] У SpawnZone на объекте {gameObject.name} не назначена команда (_team).");
             }
             else
             {
                 UpdateColor();
             }
+        }
+
+        /// <summary>
+        /// Пересчитывает уменьшенный Bounds зоны.
+        /// Вызывать при изменении позиции/размера зоны (например при инициализации или ресайзе).
+        /// </summary>
+        private void RebuildShrunkenBounds()
+        {
+            Bounds zoneBounds = _boxCollider.bounds; // world-space AABB
+            _shrunkenBounds = new Bounds(
+                zoneBounds.center,
+                zoneBounds.size - HeadHalfExtents * 2f // уменьшаем на полный размер головы
+            );
         }
 
         private void OnEnable()
@@ -184,28 +218,73 @@ namespace VrBattlegrounds.Maps
         private void OnTriggerEnter(Collider other)
         {
             PlayerController player = other.GetComponentInParent<PlayerController>();
-            
-            // Если коллайдер не принадлежит игроку или игрок УЖЕ в списке — игнорируем
-            if (player != null && _playersInZone.Add(player))
+
+            // Если коллайдер не принадлежит игроку или игрок УЖЕ касается — игнорируем
+            if (player != null && _playersTouching.Add(player))
             {
+                // Кешируем Transform камеры один раз при первом контакте игрока с зоной
+                if (!_cameraTransformCache.ContainsKey(player))
+                {
+                    Camera cam = player.GetComponentInChildren<Camera>(true);
+                    if (cam != null)
+                        _cameraTransformCache[player] = cam.transform;
+                }
+            }
+        }
+
+        private void OnTriggerStay(Collider other)
+        {
+            // Быстрая проверка полного нахождения: O(1) на игрока
+            PlayerController player = other.GetComponentInParent<PlayerController>();
+            if (player == null || !_playersTouching.Contains(player)) return;
+
+            if (!_cameraTransformCache.TryGetValue(player, out Transform camT) || camT == null) return;
+
+            bool isCurrentlyFullyInside = _shrunkenBounds.Contains(camT.position);
+            bool wasAlreadyFullyInside = _playersInZone.Contains(player);
+
+            if (isCurrentlyFullyInside && !wasAlreadyFullyInside)
+            {
+                // СОБЫТИЕ: Игрок зашёл ЦЕЛИКОМ
+                _playersInZone.Add(player);
                 _playersInZoneCount = _playersInZone.Count;
+                
                 PlayerEntered?.Invoke(this, player);
-                GameLog.Verbose(GameSettings.Instance.LogLevelMatch, 
-                    $"[TeamSpawnZone] Игрок {player.name} вошёл в зону '{name}'");
+                
+                GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+                    $"[TeamSpawnZone] Игрок {player.name} вошёл в зону '{name}' (полное нахождение)");
+            }
+            else if (!isCurrentlyFullyInside && wasAlreadyFullyInside)
+            {
+                // СОБЫТИЕ: Игрок больше не внутри целиком (но всё ещё касается колайдером)
+                _playersInZone.Remove(player);
+                _playersInZoneCount = _playersInZone.Count;
+                
+                PlayerExited?.Invoke(this, player);
+                
+                GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+                    $"[TeamSpawnZone] Игрок {player.name} покинул зону '{name}' (вышел из режима полного нахождения)");
             }
         }
 
         private void OnTriggerExit(Collider other)
         {
             PlayerController player = other.GetComponentInParent<PlayerController>();
-            
-            // Пытаемся удалить. Если игрока там и не было (удалился другим коллайдером), Remove вернёт false
-            if (player != null && _playersInZone.Remove(player))
+
+            // Если игрок совсем перестал касаться триггера
+            if (player != null && _playersTouching.Remove(player))
             {
-                _playersInZoneCount = _playersInZone.Count;
-                PlayerExited?.Invoke(this, player);
-                GameLog.Verbose(GameSettings.Instance.LogLevelMatch, 
-                    $"[TeamSpawnZone] Игрок {player.name} покинул зону '{name}'");
+                // Если он до этого момента считался "внутри целиком", вызываем событие выхода
+                if (_playersInZone.Remove(player))
+                {
+                    _playersInZoneCount = _playersInZone.Count;
+                    PlayerExited?.Invoke(this, player);
+                    
+                    GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+                        $"[TeamSpawnZone] Игрок {player.name} покинул зону '{name}' (вышел совсем)");
+                }
+
+                _cameraTransformCache.Remove(player);
             }
         }
 
@@ -249,13 +328,49 @@ namespace VrBattlegrounds.Maps
             return result;
         }
 
-        /// <summary>Проверяет, все ли ЖИВЫЕ члены команды находятся в этом триггере.</summary>
+        /// <summary>Проверяет, все ли ЖИВЫЕ члены команды находятся в этом триггере (касание).</summary>
         public bool AreAllTeamPlayersInZone()
         {
             if (_team == null || PlayersManager.Instance == null) return false;
-            
+
             var notInZone = GetTeamPlayersNotInZone();
             return notInZone.Count == 0;
+        }
+
+        // ─── Полное нахождение (голова целиком внутри) ────────────────────────────
+
+        /// <summary>
+        /// Быстрая проверка: голова игрока (Camera BoxCollider) целиком внутри зоны.
+        /// Алгоритм: центр камеры должен лежать в уменьшенном Bounds зоны (zone − head_size).
+        /// Точность ~±HeadHalfExtents (5–12 см), скорость O(1).
+        /// </summary>
+        public bool IsPlayerFullyInZone(PlayerController player)
+        {
+            if (player == null || !_playersTouching.Contains(player)) return false;
+            if (!_cameraTransformCache.TryGetValue(player, out Transform camT) || camT == null) return false;
+            return _shrunkenBounds.Contains(camT.position);
+        }
+
+        /// <summary>
+        /// Возвращает true, если все ЖИВЫЕ игроки команды полностью (головой) внутри зоны.
+        /// Оптимизировано: проверяем текущий состав _playersInZone.
+        /// </summary>
+        public bool AreAllTeamPlayersFullyInZone()
+        {
+            if (_team == null || PlayersManager.Instance == null) return false;
+
+            foreach (PlayerController alive in PlayersManager.Instance.GetAlivePlayers(_team))
+            {
+                if (!_playersInZone.Contains(alive))
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>Возвращает копию множества игроков, голова которых ПОЛНОСТЬЮ внутри зоны.</summary>
+        public List<PlayerController> GetPlayersFullyInZone()
+        {
+            return new List<PlayerController>(_playersInZone);
         }
     }
 }

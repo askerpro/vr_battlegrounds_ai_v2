@@ -32,7 +32,8 @@ MonoBehaviour
 - Перемещение / телепортацию аватаров
 - Единую точку всех изменений состояния (`ComponentStateChanged`)
 - Сериализацию состояния сцены (save / load / replay / sync-on-join)
-- Прекэширование префабов при загрузке (`IUxrPrecacheable`)
+- **Прекэширование (Precaching):** Прогрев ресурсов путем инстанцирования объектов `IUxrPrecacheable` (взрывы, выстрелы и т.д.) перед камерой при включении локального аватара. 
+    - *Важно:* В системе была исправлена ошибка, при которой `ParticleSystem` проигрывались при прекэшировании (теперь они принудительно останавливаются).
 
 **Ключевые события:**
 
@@ -98,9 +99,14 @@ MonoBehaviour
 > `UxrFirearmWeapon` требует `UxrProjectileSource` на том же объекте.  
 > Оружие является `UxrGrabbableObject` — его можно подбирать руками.
 
-```csharp
-firearmWeapon.ProjectileShot += (triggerIndex) => { /* выстрел */ };
-```
+### Система урона — `UxrActor`
+**Путь:** `Runtime/Scripts/Mechanics/Weapons/UxrActor.cs`
+
+Базовый компонент для любого объекта, который может получать урон.
+- **События:** `DamageReceived`, `Death`.
+- **Методы:** `ReceiveImpact`, `ReceiveExplosion`.
+- **Логика:** При смерти вызывает `DieInternal`, который проигрывает анимации и звуки смерти.
+- **Интеграция:** Игрок имеет этот компонент; `PlayerController` подписывается на события `UxrActor` для управления игровым состоянием жизни.
 
 ---
 
@@ -202,13 +208,13 @@ UxrManager (Singleton)
 
 | Модуль | Путь | Статус |
 |---|---|---|
-| Core / UxrManager | `Runtime/Scripts/Core/` | ? Базовое знакомство |
-| Avatar | `Runtime/Scripts/Avatar/` | ? Базовое знакомство |
-| Manipulation | `Runtime/Scripts/Manipulation/` | ? Базовое знакомство |
-| Locomotion | `Runtime/Scripts/Locomotion/` | ? Базовое знакомство |
-| Weapons | `Runtime/Scripts/Mechanics/Weapons/` | ? Базовое знакомство |
-| UI | `Runtime/Scripts/UI/` | ? Базовое знакомство |
-| Animation | `Runtime/Scripts/Animation/` | ? Базовое знакомство |
-| CameraUtils | `Runtime/Scripts/CameraUtils/` | ? Базовое знакомство |
-| Networking | `Runtime/Scripts/Networking/` | ? Mirror — базовое знакомство |
-| Devices | `Runtime/Scripts/Devices/` | ? Не изучено |
+| Core / UxrManager | `Runtime/Scripts/Core/` | ✅ Глубокое изучение (Precaching) |
+| Avatar | `Runtime/Scripts/Avatar/` | ✅ Изучено (Init sequence) |
+| Manipulation | `Runtime/Scripts/Manipulation/` | 🟡 Базовое знакомство |
+| Locomotion | `Runtime/Scripts/Locomotion/` | 🟡 Базовое знакомство |
+| Weapons | `Runtime/Scripts/Mechanics/Weapons/` | ✅ Глубокое изучение (UxrActor) |
+| UI | `Runtime/Scripts/UI/` | 🟡 Базовое знакомство |
+| Animation | `Runtime/Scripts/Animation/` | 🟡 Базовое знакомство |
+| CameraUtils | `Runtime/Scripts/CameraUtils/` | 🟡 Базовое знакомство |
+| Networking | `Runtime/Scripts/Networking/` | ✅ Mirror — глубокое знакомство |
+| Devices | `Runtime/Scripts/Devices/` | ❌ Не изучено |

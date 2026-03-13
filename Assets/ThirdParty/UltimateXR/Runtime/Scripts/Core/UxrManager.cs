@@ -1949,6 +1949,15 @@ namespace UltimateXR.Core
                                 {
                                     audioSource.enabled = false;
                                 }
+
+                                // Avoid particle effects
+                                ParticleSystem[] particleSystems = dynamicInstance.GetComponentsInChildren<ParticleSystem>(true);
+                                foreach (ParticleSystem particleSystem in particleSystems)
+                                {
+                                    var main = particleSystem.main;
+                                    main.playOnAwake = false;
+                                    particleSystem.Stop();
+                                }
                             }
                         }
                     }

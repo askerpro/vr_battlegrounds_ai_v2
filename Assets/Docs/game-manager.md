@@ -183,6 +183,19 @@ Assets/Prefabs/GameModes/
 
 ---
 
+## Этапы инициализации
+
+Жизненный цикл системы при старте:
+
+1.  **Avatar Setup**: `UxrAvatar` пробуждается и устанавливает `LocalAvatar`.
+2.  **Registration**: Генерируется событие `LocalAvatarChanged`.
+3.  **Precaching**: `UxrManager` ловит активацию аватара и запускает `TryPrecaching()`.
+    - Все объекты с `IUxrPrecacheable` создаются перед камерой на несколько кадров.
+    - Экран в этот момент затемнен через `UxrCameraFade`.
+4.  **Gameplay Start**: Когда аватар готов и сервер разрешил, `GameplayManager` запускает логику режима.
+
+---
+
 ## Добавление нового режима
 
 1.  Создать класс-наследник `GameMode`:

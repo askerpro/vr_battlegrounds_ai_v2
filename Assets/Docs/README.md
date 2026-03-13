@@ -1,5 +1,6 @@
 > **Для Copilot:** это точка входа в документацию **игры** VR Battlegrounds AI.
 > Обновлять при добавлении новых классов, модулей, зависимостей или изменении архитектуры.
+> Обязательно документировать обнаруженные побочные эффекты SDK (например, систему Precaching).
 
 ---
 
@@ -65,6 +66,7 @@
 | `MapManager` | `Managers/MapManager.cs` | **Единственная точка входа для смены карты.** Откладывает `ServerChangeScene` на конец кадра через корутину. |
 | `GameManager` | `Managers/GameManager.cs` | Хранит выбор сессии (карта + режим). DontDestroyOnLoad вместе с NetworkManager. SyncVar реплицирует выбор клиентам. Методы: `SetSession()`, `StartSession()`. |
 | `GameplayManager` | `Managers/GameplayManager.cs` | Матч: счёт, победитель, `StartGameplay()`, `StopGameplay()`. Режим ищет по `modeId` из `GameManager`. |
+| `UxrActor` | `UltimateXR/.../UxrActor.cs` | Базовая система урона UltimateXR. Игрок умирает, когда `UxrActor` вызывает событие смерти. |
 | `SetManager` | `GameModes/EliminationMode/SetManager.cs` | Сет: N раундов, смена сторон, `ForceStop()`. |
 | `RoundManager` | `GameModes/EliminationMode/RoundManager.cs` | Раунд: FSM (WaitingForPlayers → Countdown → Active → Ended), таймер, победа через `GameMode`, `ForceStop()`. |
 
@@ -98,7 +100,7 @@ GameplayManager       — матч (5 карт, счёт, победитель)
 
 | Класс | Файл | Описание |
 |---|---|---|
-| `PlayerController` | `Player/PlayerController.cs` | Состояние: здоровье, команда (`TeamIndex`), `IsAlive`. |
+| `PlayerController` | `Player/PlayerController.cs` | Состояние: здоровье, команда (`TeamIndex`), `IsAlive`. Подписывается на `UxrActor.Death`. |
 | `VrCalibrationController` | `Player/VrCalibrationController.cs` | Калибровка позиции аватара относительно физической арены. |
 
 ---
@@ -199,8 +201,9 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 → ServerSceneChanged → DebugOrchestrator.TryAutoLoadMap()
   → MapManager.LoadMap(autoLoadMapScene)
   → Карта загружается
-  → LocalAvatarChanged → назначается команда
-  → PlayerConnected → если `GameMode.CanStartGameplay()` → `GameplayManager.StartGameplay()`
+→ ClientConnected / LocalAvatarChanged → сигнал менеджеру о готовности аватара
+→ Начинается процесс **Precaching** в `UxrManager` (инстанцирование объектов `IUxrPrecacheable`)
+→ PlayerConnected → если `GameMode.CanStartGameplay()` → `GameplayManager.StartGameplay()`
 ```
 
 ---

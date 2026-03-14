@@ -61,6 +61,7 @@ MonoBehaviour:
   _activateOnPlaced: {fileID: 0}
   _activateOnEmpty: {fileID: 0}
   _allowSwap: 0
+  _grabProxy: {fileID: 0}
 --- !u!1 &239341688976474358
 GameObject:
   m_ObjectHideFlags: 0
@@ -995,7 +996,6 @@ GameObject:
   m_Component:
   - component: {fileID: 7695565288744341765}
   - component: {fileID: 5461951019063062379}
-  - component: {fileID: 7501609885209479840}
   m_Layer: 0
   m_Name: BackGrabProxy
   m_TagString: Untagged
@@ -1103,19 +1103,6 @@ MonoBehaviour:
   _dropSnapMode: 3
   _dropProximityTransformUseSelf: 1
   _dropProximityTransform: {fileID: 0}
---- !u!114 &7501609885209479840
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6202491618745530447}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0da05607b1105004a8652a38e02befcc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _targetAnchor: {fileID: 2870306224442569267}
 --- !u!1 &6518648763131582236
 GameObject:
   m_ObjectHideFlags: 0
@@ -1279,6 +1266,7 @@ MonoBehaviour:
   _activateOnPlaced: {fileID: 0}
   _activateOnEmpty: {fileID: 0}
   _allowSwap: 1
+  _grabProxy: {fileID: 5461951019063062379}
 --- !u!1 &7203294997568423065
 GameObject:
   m_ObjectHideFlags: 0
@@ -1434,6 +1422,7 @@ MonoBehaviour:
   _activateOnPlaced: {fileID: 0}
   _activateOnEmpty: {fileID: 0}
   _allowSwap: 0
+  _grabProxy: {fileID: 0}
 --- !u!1 &7608998417904736639
 GameObject:
   m_ObjectHideFlags: 0

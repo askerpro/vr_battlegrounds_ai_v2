@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrManipulationEventArgs.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -203,6 +203,15 @@ namespace UltimateXR.Manipulation
             private set => _placementOptions = value;
         }
 
+        /// <summary>
+        ///     Gets whether the event was the result of an object being ejected (e.g., swapped out of an anchor).
+        /// </summary>
+        public bool IsEjected
+        {
+            get => _isEjected;
+            private set => _isEjected = value;
+        }
+
         #endregion
 
         #region Internal Types & Data
@@ -301,6 +310,7 @@ namespace UltimateXR.Manipulation
             serializer.Serialize(ref _grabPointIndex);
             serializer.Serialize(ref _isMultiHands);
             serializer.Serialize(ref _isSwitchHands);
+            serializer.Serialize(ref _isEjected);
 
             if (EventType == UxrManipulationEventType.Grab)
             {
@@ -452,17 +462,19 @@ namespace UltimateXR.Manipulation
                                                           UxrGrabber               grabber,
                                                           int                      grabPointIndex = 0,
                                                           bool                     isMultiHands   = false,
-                                                          bool                     isSwitchHands  = false)
+                                                          bool                     isSwitchHands  = false,
+                                                          bool                     isEjected      = false)
         {
             UxrManipulationEventArgs eventArgs = new UxrManipulationEventArgs(UxrManipulationEventType.Remove);
-
+ 
             eventArgs.GrabbableObject = grabbableObject;
             eventArgs.GrabbableAnchor = grabbableAnchor;
             eventArgs.Grabber         = grabber;
             eventArgs.GrabPointIndex  = grabPointIndex;
             eventArgs.IsMultiHands    = isMultiHands;
             eventArgs.IsSwitchHands   = isSwitchHands;
-
+            eventArgs.IsEjected       = isEjected;
+ 
             return eventArgs;
         }
 
@@ -568,6 +580,7 @@ namespace UltimateXR.Manipulation
         private Vector3                  _releaseVelocity;
         private Vector3                  _releaseAngularVelocity;
         private UxrPlacementOptions      _placementOptions;
+        private bool                     _isEjected;
         private Vector3                  _grabberLocalObjectPosition;
         private Quaternion               _grabberLocalObjectRotation;
         private Vector3                  _grabberLocalSnapPosition;

@@ -385,9 +385,10 @@ namespace UltimateXR.Manipulation
             // Raise events
 
             UxrGrabbableObjectAnchor sourceAnchor    = grabbableObject.CurrentAnchor;
-            UxrManipulationEventArgs removeEventArgs = UxrManipulationEventArgs.FromRemove(grabbableObject, sourceAnchor, null, -1);
+            UxrManipulationEventArgs removeEventArgs = UxrManipulationEventArgs.FromRemove(grabbableObject, sourceAnchor, null, -1, false, false, unparent);
 
             OnObjectRemoving(removeEventArgs, propagateEvents);
+            grabbableObject.RaiseRemovingEvent(removeEventArgs);
 
             if (propagateEvents)
             {
@@ -412,6 +413,11 @@ namespace UltimateXR.Manipulation
                 }
                 else
                 {
+                    if (unparent)
+                    {
+                        // Removed direct call to UxrReturnGrabbableObject.ClearReturnData
+                    }
+
                     ChangeGrabbableObjectParent(grabbableObject, unparent ? null : grabbableObject.CurrentAnchor.transform.parent);
                 }
             }
@@ -432,6 +438,7 @@ namespace UltimateXR.Manipulation
             // Raise events
 
             OnObjectRemoved(removeEventArgs, propagateEvents);
+            grabbableObject.RaiseRemovedEvent(removeEventArgs);
 
             if (propagateEvents)
             {

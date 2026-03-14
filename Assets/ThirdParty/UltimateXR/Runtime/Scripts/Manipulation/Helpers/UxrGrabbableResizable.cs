@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrGrabbableResizable.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -126,6 +126,8 @@ namespace UltimateXR.Manipulation.Helpers
 
         /// <inheritdoc />
         public event EventHandler<UxrManipulationEventArgs> Placed;
+        public event EventHandler<UxrManipulationEventArgs> Removing;
+        public event EventHandler<UxrManipulationEventArgs> Removed;
 
         /// <inheritdoc />
         public void ResetPositionAndState(bool propagateEvents)

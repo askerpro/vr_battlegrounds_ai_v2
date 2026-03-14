@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrReturnGrabbableObject.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -39,6 +39,27 @@ namespace UltimateXR.Manipulation.Helpers
             {
                 returnComponent.CancelReturn();
             }
+        }
+
+        /// <summary>
+        ///     Clears any return data if the given object has a <see cref="UxrReturnGrabbableObject" /> component.
+        /// </summary>
+        /// <param name="grabbableObject">Object to try to clear the return data of</param>
+        public static void ClearReturnData(UxrGrabbableObject grabbableObject)
+        {
+            if (grabbableObject != null && grabbableObject.gameObject.TryGetComponent<UxrReturnGrabbableObject>(out var returnComponent))
+            {
+                returnComponent.ClearLastAnchor();
+            }
+        }
+
+        /// <summary>
+        ///     Clears the last anchor and cancels any pending return.
+        /// </summary>
+        public void ClearLastAnchor()
+        {
+            _lastObjectAnchor = null;
+            CancelReturn();
         }
 
         #endregion
@@ -126,6 +147,20 @@ namespace UltimateXR.Manipulation.Helpers
             if (e.GrabbableAnchor != null)
             {
                 _lastObjectAnchor = e.GrabbableAnchor;
+            }
+        }
+
+        /// <summary>
+        ///     Called by the base class whenever the object is removed from an anchor.
+        /// </summary>
+        /// <param name="e">Contains all grab event parameters</param>
+        protected override void OnObjectRemoved(UxrManipulationEventArgs e)
+        {
+            base.OnObjectRemoved(e);
+
+            if (e.IsEjected)
+            {
+                ClearLastAnchor();
             }
         }
 

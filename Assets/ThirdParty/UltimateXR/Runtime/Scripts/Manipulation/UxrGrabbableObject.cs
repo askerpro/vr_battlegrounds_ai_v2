@@ -917,6 +917,12 @@ namespace UltimateXR.Manipulation
         public event EventHandler<UxrManipulationEventArgs> Placed;
 
         /// <inheritdoc />
+        public event EventHandler<UxrManipulationEventArgs> Removing;
+
+        /// <inheritdoc />
+        public event EventHandler<UxrManipulationEventArgs> Removed;
+
+        /// <inheritdoc />
         public void ResetPositionAndState(bool propagateEvents)
         {
             transform.localPosition = InitialLocalPosition;
@@ -1488,6 +1494,24 @@ namespace UltimateXR.Manipulation
         internal bool GetGrabPointSnapModeAffectsRotation(int grabPoint, UxrHandSnapDirection snapDirection)
         {
             return snapDirection == GetGrabPoint(grabPoint).SnapDirection && GetSnapModeAffectsRotation(GetGrabPoint(grabPoint).SnapMode);
+        }
+
+        /// <summary>
+        ///     Raises the <see cref="Removing" /> event.
+        /// </summary>
+        /// <param name="e">Event parameters</param>
+        internal void RaiseRemovingEvent(UxrManipulationEventArgs e)
+        {
+            Removing?.Invoke(this, e);
+        }
+
+        /// <summary>
+        ///     Raises the <see cref="Removed" /> event.
+        /// </summary>
+        /// <param name="e">Event parameters</param>
+        internal void RaiseRemovedEvent(UxrManipulationEventArgs e)
+        {
+            Removed?.Invoke(this, e);
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="IUxrGrabbable.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -126,6 +126,16 @@ namespace UltimateXR.Manipulation
         ///     The grab event parameters use the same values as <see cref="Placed" />.
         /// </summary>
         public event EventHandler<UxrManipulationEventArgs> Placed;
+
+        /// <summary>
+        ///     Event called when the object is about to be removed from an anchor.
+        /// </summary>
+        public event EventHandler<UxrManipulationEventArgs> Removing;
+
+        /// <summary>
+        ///     Event called right after the object was removed from an anchor.
+        /// </summary>
+        public event EventHandler<UxrManipulationEventArgs> Removed;
 
         /// <summary>
         ///     Gets the associated <see cref="GameObject" />. Since all components that implement the interface will be assigned

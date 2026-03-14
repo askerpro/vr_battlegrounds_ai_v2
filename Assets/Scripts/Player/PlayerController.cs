@@ -57,7 +57,7 @@ namespace VrBattlegrounds.Player
 
         // ── Unity lifecycle ───────────────────────────────────────────────────
 
-        private UxrActor _actor;
+        public UxrActor _actor;
 
         private void Awake()
         {

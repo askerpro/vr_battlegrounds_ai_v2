@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: GameSettings
   m_EditorClassIdentifier: 
   _logLevelNetwork: 0
-  _logLevelPlayer: 3
-  _logLevelMatch: 4
-  _logLevelDebug: 4
+  _logLevelPlayer: 0
+  _logLevelMatch: 0
+  _logLevelDebug: 0

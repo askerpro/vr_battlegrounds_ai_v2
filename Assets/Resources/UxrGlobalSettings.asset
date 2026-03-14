@@ -12,18 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b3db1704eb60974193c9750a4ac54e7, type: 3}
   m_Name: UxrGlobalSettings
   m_EditorClassIdentifier: 
-  _logLevelAnimation: 2
-  _logLevelAvatar: 2
-  _logLevelCore: 3
-  _logLevelDevices: 3
-  _logLevelLocomotion: 3
-  _logLevelManipulation: 3
-  _logLevelNetworking: 3
-  _logLevelRendering: 3
-  _logLevelUI: 3
-  _logLevelWeapons: 5
+  _logLevelAnimation: 1
+  _logLevelAvatar: 1
+  _logLevelCore: 1
+  _logLevelDevices: 1
+  _logLevelLocomotion: 1
+  _logLevelManipulation: 1
+  _logLevelNetworking: 1
+  _logLevelRendering: 1
+  _logLevelUI: 1
+  _logLevelWeapons: 1
   _netFormatInitialState: 1
   _netFormatStateSync: 0
   _syncGrabbablePhysics: 1
   _grabbableSyncIntervalSeconds: 1
-  _optimizeEditorFocus: 0
+  _optimizeEditorFocus: 1

@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrGrabbableObjectAnchor.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -55,6 +55,7 @@ namespace UltimateXR.Manipulation
         [SerializeField] private GameObject   _activateOnHandNearAndGrabbable;
         [SerializeField] private GameObject   _activateOnPlaced;
         [SerializeField] private GameObject   _activateOnEmpty;
+        [SerializeField] private bool         _allowSwap;
 
         #endregion
 
@@ -185,6 +186,16 @@ namespace UltimateXR.Manipulation
         {
             get => _activateOnEmpty;
             set => _activateOnEmpty = value;
+        }
+
+        /// <summary>
+        ///     When enabled, placing a new compatible object on this anchor will
+        ///     automatically eject the current occupant instead of rejecting placement.
+        /// </summary>
+        public bool AllowSwap
+        {
+            get => _allowSwap;
+            set => _allowSwap = value;
         }
 
         #endregion

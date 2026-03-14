@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrGrabManager.Manipulation.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -161,7 +161,7 @@ namespace UltimateXR.Manipulation
                 }
             }
 
-            if (anchor == null || (anchor != null && anchor.CurrentPlacedObject != null))
+            if (anchor == null || (anchor.CurrentPlacedObject != null && !anchor.AllowSwap))
             {
                 return false;
             }
@@ -176,6 +176,13 @@ namespace UltimateXR.Manipulation
             
             // This method will be synchronized. It will generate a new frame when recording a replay to ensure smooth interpolation when re-parenting.
             BeginSync(UxrStateSyncOptions.Default | UxrStateSyncOptions.GenerateNewFrame);
+
+            // Eject current occupant if AllowSwap is enabled
+            if (anchor.AllowSwap && anchor.CurrentPlacedObject != null)
+            {
+                UxrGrabbableObject ejected = anchor.CurrentPlacedObject;
+                RemoveObjectFromAnchor(ejected, propagateEvents, true);
+            }
 
             grabbableObject.PlacementOptions = placementOptions;
 
@@ -342,7 +349,8 @@ namespace UltimateXR.Manipulation
         /// </summary>
         /// <param name="grabbableObject">Grabbable object to remove from the anchor</param>
         /// <param name="propagateEvents">Whether to propagate events</param>
-        public void RemoveObjectFromAnchor(UxrGrabbableObject grabbableObject, bool propagateEvents)
+        /// <param name="unparent">Whether to also unparent (set parent to null) for world-space ejection</param>
+        public void RemoveObjectFromAnchor(UxrGrabbableObject grabbableObject, bool propagateEvents, bool unparent = false)
         {
             if (grabbableObject == null || grabbableObject.CurrentAnchor == null)
             {
@@ -398,7 +406,7 @@ namespace UltimateXR.Manipulation
                 }
                 else
                 {
-                    ChangeGrabbableObjectParent(grabbableObject, grabbableObject.CurrentAnchor.transform.parent);
+                    ChangeGrabbableObjectParent(grabbableObject, unparent ? null : grabbableObject.CurrentAnchor.transform.parent);
                 }
             }
 
@@ -424,7 +432,7 @@ namespace UltimateXR.Manipulation
                 sourceAnchor.RaiseRemovedEvent(removeEventArgs);
             }
             
-            EndSyncMethod(new object[] { grabbableObject, propagateEvents });
+            EndSyncMethod(new object[] { grabbableObject, propagateEvents, unparent });
         }
 
         /// <summary>

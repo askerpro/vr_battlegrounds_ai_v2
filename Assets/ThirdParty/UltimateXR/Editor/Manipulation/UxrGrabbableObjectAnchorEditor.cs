@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrGrabbableObjectAnchorEditor.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -34,6 +34,7 @@ namespace UltimateXR.Editor.Manipulation
             _propActivateOnHandNearAndGrabbable = serializedObject.FindProperty("_activateOnHandNearAndGrabbable");
             _propActivateOnPlaced               = serializedObject.FindProperty("_activateOnPlaced");
             _propActivateOnEmpty                = serializedObject.FindProperty("_activateOnEmpty");
+            _propAllowSwap                      = serializedObject.FindProperty("_allowSwap");
         }
 
         /// <summary>
@@ -50,6 +51,7 @@ namespace UltimateXR.Editor.Manipulation
 
             EditorGUILayout.PropertyField(_propCompatibleTags,   ContentCompatibleTags, true);
             EditorGUILayout.PropertyField(_propMaxPlaceDistance, ContentMaxPlaceDistance);
+            EditorGUILayout.PropertyField(_propAllowSwap,        ContentAllowSwap);
 
             popup = EditorGUILayout.Popup(ContentDropAlignmentOptions, _propAlignTransformUseSelf.boolValue ? 0 : 1, new[] { new GUIContent("Use self transform"), new GUIContent("Use other transform") });
 
@@ -102,6 +104,7 @@ namespace UltimateXR.Editor.Manipulation
         private GUIContent ContentActivateOnHandNearAndGrabbable { get; } = new GUIContent("Activate On Hand Near And Grabbable", $"GameObject that will be enabled/disabled depending on if there is a {nameof(UxrGrabbableObject)} currently placed and a {nameof(UxrGrabber)} is close enough to grab it");
         private GUIContent ContentActivateOnPlaced               { get; } = new GUIContent("Activate On Placed",                  $"GameObject that will be enabled/disabled depending on if there is a {nameof(UxrGrabbableObject)} currently placed on it");
         private GUIContent ContentActivateOnEmpty                { get; } = new GUIContent("Activate On Empty",                   $"GameObject that will be enabled/disabled depending on if there is a {nameof(UxrGrabbableObject)} currently NOT placed on it");
+        private GUIContent ContentAllowSwap                    { get; } = new GUIContent("Allow Swap",                         "When enabled, placing a new compatible object on this anchor will automatically eject the current occupant instead of rejecting placement");
 
         private SerializedProperty _propCompatibleTags;
         private SerializedProperty _propMaxPlaceDistance;
@@ -114,6 +117,7 @@ namespace UltimateXR.Editor.Manipulation
         private SerializedProperty _propActivateOnHandNearAndGrabbable;
         private SerializedProperty _propActivateOnPlaced;
         private SerializedProperty _propActivateOnEmpty;
+        private SerializedProperty _propAllowSwap;
 
         #endregion
     }

@@ -60,6 +60,7 @@ MonoBehaviour:
   _activateOnHandNearAndGrabbable: {fileID: 0}
   _activateOnPlaced: {fileID: 0}
   _activateOnEmpty: {fileID: 0}
+  _allowSwap: 0
 --- !u!1 &239341688976474358
 GameObject:
   m_ObjectHideFlags: 0
@@ -1226,7 +1227,6 @@ GameObject:
   m_Component:
   - component: {fileID: 3879979666488203583}
   - component: {fileID: 2870306224442569267}
-  - component: {fileID: 984530917844477101}
   m_Layer: 0
   m_Name: Anchor_Back
   m_TagString: Untagged
@@ -1278,22 +1278,7 @@ MonoBehaviour:
   _activateOnHandNearAndGrabbable: {fileID: 0}
   _activateOnPlaced: {fileID: 0}
   _activateOnEmpty: {fileID: 0}
---- !u!114 &984530917844477101
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7098044686718711117}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bafff6f0bf6f2cf49904941c905cbff1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _uxrUniqueId: 888323f3-6e31-45a5-824b-30ca50045d58
-  __prefabGuid: 8e0e06323e4754f479a9f19788554652
-  __isInPrefab: 1
-  _anchor: {fileID: 2870306224442569267}
+  _allowSwap: 1
 --- !u!1 &7203294997568423065
 GameObject:
   m_ObjectHideFlags: 0
@@ -1448,6 +1433,7 @@ MonoBehaviour:
   _activateOnHandNearAndGrabbable: {fileID: 0}
   _activateOnPlaced: {fileID: 0}
   _activateOnEmpty: {fileID: 0}
+  _allowSwap: 0
 --- !u!1 &7608998417904736639
 GameObject:
   m_ObjectHideFlags: 0

@@ -1237,7 +1237,7 @@ namespace UltimateXR.Manipulation
         /// <returns>Whether it is near enough to be placed</returns>
         public bool CanBePlacedOnAnchor(UxrGrabbableObjectAnchor anchor, out float distance)
         {
-            if (anchor.enabled && anchor.gameObject.activeInHierarchy && anchor.CurrentPlacedObject == null && anchor.IsCompatibleObject(this))
+            if (anchor.enabled && anchor.gameObject.activeInHierarchy && (anchor.CurrentPlacedObject == null || anchor.AllowSwap) && anchor.IsCompatibleObject(this))
             {
                 distance = Vector3.Distance(DropProximityTransform.position, anchor.DropProximityTransform.position);
 

@@ -152,3 +152,38 @@ if (_avatarInitialized && Avatar == avatar)
 4. Добавить `if (!CanUse) return false;` в начало `UxrFirearmWeapon.TryToShootRound()`.
 5. Добавить проверку `grabber.CanGrabDelegate` в начало `UxrGrabbableObject.CanBeGrabbedByGrabber()`.
 6. Убедиться, что файлы `.Custom.cs` присутствуют в папках рядом с оригиналами.
+
+---
+
+## Патч 3: Интегрированная система свапа предметов (Slot Swapping)
+
+**Файлы:**
+- `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObjectAnchor.cs`
+- `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObject.cs`
+- `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.Manipulation.cs`
+- `Assets/ThirdParty/UltimateXR/Editor/Manipulation/UxrGrabbableObjectAnchorEditor.cs`
+
+**Дата:** 2026-03-15
+
+### Проблема
+
+В оригинальном SDK нет нативной возможности заменить предмет в анчере, просто поднеся к нему другой предмет (Slot Swapping). Анчер либо занят, либо свободен. Это вынуждало писать внешние скрипты-костыли, которые работали неэффективно (через `Update`) и плохо синхронизировались по сети.
+
+### Применённые изменения
+
+1. **UxrGrabbableObjectAnchor**: Добавлено поле `_allowSwap` и свойство `AllowSwap`. Если включено, анчер разрешает "перехват" слота новым предметом.
+2. **UxrGrabbableObject**: Метод `CanBePlacedOnAnchor` теперь учитывает флаг `AllowSwap` при проверке занятости слота.
+3. **UxrGrabManager (Ejection Logic)**: 
+   - Метод `RemoveObjectFromAnchor` расширен параметром `bool unparent = false`. Позволяет принудительно отцепить предмет от иерархии игрока (world-space ejection), вместо стандартного поведения "оставаться у родителя анчера".
+   - Метод `PlaceObject` теперь автоматически выбрасывает старый предмет, если `AllowSwap` включен. Логика встроена внутрь `BeginSync` для гарантированной сетевой синхронизации (транзакционность выброса и установки).
+4. **Editor**: Кастомный инспектор `UxrGrabbableObjectAnchorEditor` обновлен для отображения галочки "Allow Swap".
+
+### Как повторить при обновлении SDK
+
+1. В `UxrGrabbableObjectAnchor` добавить `[SerializeField] bool _allowSwap` и публичное свойство.
+2. В `UxrGrabbableObject.CanBePlacedOnAnchor` изменить проверку занятости: `if (anchor.CurrentPlacedObject != null && !anchor.AllowSwap)`.
+3. В `UxrGrabManager.Manipulation.cs`:
+   - Обновить сигнатуру `RemoveObjectFromAnchor`, добавить `unparent` в логику смены родителя (строка ~412) и в `EndSyncMethod`.
+   - В `PlaceObject` добавить блок выброса старого предмета `RemoveObjectFromAnchor(ejected, propagateEvents, true)` сразу после `BeginSync`.
+4. Обновить `UxrGrabbableObjectAnchorEditor.cs`, чтобы рисовать новое поле через `EditorGUILayout.PropertyField`.
+

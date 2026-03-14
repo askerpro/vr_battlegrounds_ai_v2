@@ -577,6 +577,11 @@ namespace UltimateXR.Manipulation
         }
 
         /// <summary>
+        ///     Gets the <see cref="UxrGrabbableObjectAnchor" /> this object is a proxy for, or null if it isn't a proxy.
+        /// </summary>
+        internal UxrGrabbableObjectAnchor ProxyForAnchor { get; set; }
+
+        /// <summary>
         ///     Gets or sets whether the object can be placed on an <see cref="UxrGrabbableObjectAnchor" />.
         /// </summary>
         public bool IsPlaceable

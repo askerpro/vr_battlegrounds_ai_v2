@@ -55,7 +55,8 @@ namespace UltimateXR.Manipulation
         [SerializeField] private GameObject   _activateOnHandNearAndGrabbable;
         [SerializeField] private GameObject   _activateOnPlaced;
         [SerializeField] private GameObject   _activateOnEmpty;
-        [SerializeField] private bool         _allowSwap;
+        [SerializeField] private bool               _allowSwap;
+        [SerializeField] private UxrGrabbableObject _grabProxy;
 
         #endregion
 
@@ -198,6 +199,29 @@ namespace UltimateXR.Manipulation
             set => _allowSwap = value;
         }
 
+        /// <summary>
+        ///     Gets or sets the proxy object that can be used to grab the object placed in this anchor.
+        /// </summary>
+        public UxrGrabbableObject GrabProxy
+        {
+            get => _grabProxy;
+            set
+            {
+                if (_grabProxy != null)
+                {
+                    _grabProxy.ProxyForAnchor = null;
+                }
+
+                _grabProxy = value;
+
+                if (_grabProxy != null)
+                {
+                    _grabProxy.ProxyForAnchor = this;
+                    UpdateGrabProxyState();
+                }
+            }
+        }
+
         #endregion
 
         #region Public Methods
@@ -322,6 +346,14 @@ namespace UltimateXR.Manipulation
             {
                 _activateOnHandNearAndGrabbable.SetActive(false);
             }
+
+            if (_grabProxy != null)
+            {
+                _grabProxy.ProxyForAnchor = this;
+            }
+
+            Placed  += (s, e) => UpdateGrabProxyState();
+            Removed += (s, e) => UpdateGrabProxyState();
         }
 
         /// <summary>
@@ -330,6 +362,11 @@ namespace UltimateXR.Manipulation
         protected override void OnDestroy()
         {
             base.OnDestroy();
+
+            if (_grabProxy != null)
+            {
+                _grabProxy.ProxyForAnchor = null;
+            }
 
             _placingValidators.Clear();
         }
@@ -350,6 +387,8 @@ namespace UltimateXR.Manipulation
             {
                 _activateOnEmpty.SetActive(CurrentPlacedObject == null);
             }
+
+            UpdateGrabProxyState();
         }
 
         #endregion
@@ -418,6 +457,17 @@ namespace UltimateXR.Manipulation
             }
 
             return _compatibleTags.Contains(otherTag);
+        }
+
+        /// <summary>
+        ///     Updating the proxy's grabbable state so that it can only be grabbed if there is an object to redirect to.
+        /// </summary>
+        private void UpdateGrabProxyState()
+        {
+            if (_grabProxy != null)
+            {
+                _grabProxy.IsGrabbable = CurrentPlacedObject != null;
+            }
         }
 
         #endregion

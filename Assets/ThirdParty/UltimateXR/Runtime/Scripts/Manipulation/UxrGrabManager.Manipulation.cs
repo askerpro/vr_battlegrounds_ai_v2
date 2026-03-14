@@ -95,6 +95,12 @@ namespace UltimateXR.Manipulation
         /// <param name="propagateEvents">Whether to propagate events</param>
         public void GrabObject(UxrGrabber grabber, UxrGrabbableObject grabbableObject, int grabPoint, bool propagateEvents)
         {
+            if (grabbableObject != null && grabbableObject.ProxyForAnchor != null && grabbableObject.ProxyForAnchor.CurrentPlacedObject != null)
+            {
+                grabbableObject = grabbableObject.ProxyForAnchor.CurrentPlacedObject;
+                grabPoint       = 0;
+            }
+
             GrabObject(grabber, grabbableObject, grabPoint, null, propagateEvents);
         }
 

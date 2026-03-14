@@ -173,8 +173,20 @@ if (_avatarInitialized && Avatar == avatar)
 
 1. **UxrGrabbableObjectAnchor**: Добавлено поле `_allowSwap` и свойство `AllowSwap`. Если включено, анчер разрешает "перехват" слота новым предметом.
 2. **UxrGrabbableObject**: Метод `CanBePlacedOnAnchor` теперь учитывает флаг `AllowSwap` при проверке занятости слота.
-3. **UxrGrabManager (Ejection Logic)**: 
-   - Метод `RemoveObjectFromAnchor` расширен параметром `bool unparent = false`. Позволяет принудительно отцепить предмет от иерархии игрока (world-space ejection), вместо стандартного поведения "оставаться у родителя анчера".
+3.- **UxrGrabManager.Manipulation.cs (RemoveObjectFromAnchor):** Теперь принимает `bool unparent = false`.
+
+### 4. Нативная поддержка Grab Proxy (Redirection)
+**Файлы:**
+- `UxrGrabbableObject.cs`
+- `UxrGrabbableObjectAnchor.cs`
+- `UxrGrabManager.Manipulation.cs`
+- `UxrGrabbableObjectAnchorEditor.cs`
+
+**Описание:** Логика "плечевого кармана" теперь встроена в SDK. Анчер может иметь ссылку на `GrabProxy`. При попытке схватить прокси, менеджер автоматически перенаправляет захват на предмет в анчере.
+- **UxrGrabbableObject:** Добавлено свойство `ProxyForAnchor`.
+- **UxrGrabbableObjectAnchor:** Добавлено поле `Grab Proxy`. Анчер управляет состоянием `IsGrabbable` у прокси (включает, только если в анчере есть предмет).
+- **UxrGrabManager:** Переадресация происходит внутри `GrabObject`, что исключает дублирование событий.
+ Позволяет принудительно отцепить предмет от иерархии игрока (world-space ejection), вместо стандартного поведения "оставаться у родителя анчера".
    - Метод `PlaceObject` теперь автоматически выбрасывает старый предмет, если `AllowSwap` включен. Логика встроена внутрь `BeginSync` для гарантированной сетевой синхронизации (транзакционность выброса и установки).
 4. **Editor**: Кастомный инспектор `UxrGrabbableObjectAnchorEditor` обновлен для отображения галочки "Allow Swap".
 

@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrEditorUtils.Paths.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -63,7 +63,7 @@ namespace UltimateXR.Editor
         }
 #endif
 
-        public static string HandPosePresetsPath => PathExt.Combine(FullInstallationPath, "Editor/Manipulation/HandPoses/HandPosePresets");
+        public static string HandPosePresetsPath => PathExt.Normalize(PathExt.Combine(FullInstallationPath, "../Editor/Manipulation/HandPoses/HandPosePresets"));
 
         #endregion
 

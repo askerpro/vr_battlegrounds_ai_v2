@@ -1511,6 +1511,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 1122ce60-8be9-4de5-90a7-316354373c21
       objectReference: {fileID: 0}
+    - target: {fileID: 8080005682541851921, guid: 6112527c66de1c34c9738c780e843457, type: 3}
+      propertyPath: _previewPosesRegenerationType
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8128276806892875278, guid: 6112527c66de1c34c9738c780e843457, type: 3}
       propertyPath: m_RootOrder
       value: 1

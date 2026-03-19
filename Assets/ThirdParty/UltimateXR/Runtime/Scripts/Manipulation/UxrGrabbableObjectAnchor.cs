@@ -12,6 +12,29 @@ using UnityEngine;
 namespace UltimateXR.Manipulation
 {
     /// <summary>
+    /// Event arguments for proxy grab resolution. Allows overriding the default behavior of grabbing the Anchor's CurrentPlacedObject.
+    /// </summary>
+    public class UxrProxyResolveEventArgs : EventArgs
+    {
+        public UxrGrabber Grabber { get; }
+        public UxrGrabbableObject Target { get; set; }
+
+        public UxrProxyResolveEventArgs(UxrGrabber grabber, UxrGrabbableObject defaultTarget)
+        {
+            Grabber = grabber;
+            Target = defaultTarget;
+        }
+    }
+
+    /// <summary>
+    /// Event arguments for querying whether the grab proxy should be grabbable.
+    /// </summary>
+    public class UxrProxyGrabbableEventArgs : EventArgs
+    {
+        public bool IsGrabbable { get; set; }
+    }
+
+    /// <summary>
     ///     Component that, added to a <see cref="GameObject" />, will enable <see cref="UxrGrabbableObject" /> objects to be
     ///     placed on it.
     ///     Some of the main features of grabbable object anchors are:
@@ -86,6 +109,27 @@ namespace UltimateXR.Manipulation
         ///     Event called right after an object that was placed on the anchor ended its smooth placing transition.
         /// </summary>
         public event EventHandler<UxrManipulationEventArgs> SmoothPlaceTransitionEnded;
+
+        /// <summary>
+        ///     Event called when a proxy is grabbed, before resolving the target. Subscribers can change the `Target` property to return a UxrGrabbableObject to be given to the hand.
+        /// </summary>
+        public event EventHandler<UxrProxyResolveEventArgs> ProxyGrabResolving;
+
+        /// <summary>
+        ///     Called by UxrGrabManager to resolve the target of a proxy grab.
+        /// </summary>
+        public UxrGrabbableObject ProvideProxyTarget(UxrGrabber grabber)
+        {
+            if (ProxyGrabResolving != null)
+            {
+                UxrProxyResolveEventArgs e = new UxrProxyResolveEventArgs(grabber, CurrentPlacedObject);
+                ProxyGrabResolving(this, e);
+                if (e.Target != null)
+                    return e.Target;
+            }
+
+            return CurrentPlacedObject;
+        }
 
         /// <summary>
         ///     Gets the <see cref="Transform" /> that will be used to snap the <see cref="UxrGrabbableObject" /> placed on it.
@@ -460,13 +504,27 @@ namespace UltimateXR.Manipulation
         }
 
         /// <summary>
-        ///     Updating the proxy's grabbable state so that it can only be grabbed if there is an object to redirect to.
+        ///     Event to query if the proxy should be grabbable. Allows subscribers to override the default state.
         /// </summary>
-        private void UpdateGrabProxyState()
+        public event EventHandler<UxrProxyGrabbableEventArgs> ProxyGrabbableQuery;
+
+        /// <summary>
+        ///     Updating the proxy's grabbable state so that it can only be grabbed if there is an object to redirect to, or if a third-party allows it via ProxyGrabbableQuery.
+        /// </summary>
+        public void UpdateGrabProxyState()
         {
             if (_grabProxy != null)
             {
-                _grabProxy.IsGrabbable = CurrentPlacedObject != null;
+                bool isGrabbable = CurrentPlacedObject != null;
+
+                if (ProxyGrabbableQuery != null)
+                {
+                    UxrProxyGrabbableEventArgs e = new UxrProxyGrabbableEventArgs { IsGrabbable = isGrabbable };
+                    ProxyGrabbableQuery(this, e);
+                    isGrabbable = e.IsGrabbable;
+                }
+
+                _grabProxy.IsGrabbable = isGrabbable;
             }
         }
 

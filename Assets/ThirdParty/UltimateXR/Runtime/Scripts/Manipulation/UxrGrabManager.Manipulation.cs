@@ -95,10 +95,20 @@ namespace UltimateXR.Manipulation
         /// <param name="propagateEvents">Whether to propagate events</param>
         public void GrabObject(UxrGrabber grabber, UxrGrabbableObject grabbableObject, int grabPoint, bool propagateEvents)
         {
-            if (grabbableObject != null && grabbableObject.ProxyForAnchor != null && grabbableObject.ProxyForAnchor.CurrentPlacedObject != null)
+            if (grabbableObject != null && grabbableObject.ProxyForAnchor != null)
             {
-                grabbableObject = grabbableObject.ProxyForAnchor.CurrentPlacedObject;
-                grabPoint       = 0;
+                UxrGrabbableObject proxyTarget = grabbableObject.ProxyForAnchor.ProvideProxyTarget(grabber);
+                if (proxyTarget != null)
+                {
+                    grabbableObject = proxyTarget;
+                    grabPoint       = 0;
+                }
+                else
+                {
+                    // Safety check: The proxy exists but has no target.
+                    // Doing a grab on the proxy itself is forbidden (it's a locked empty shell).
+                    return;
+                }
             }
 
             GrabObject(grabber, grabbableObject, grabPoint, null, propagateEvents);

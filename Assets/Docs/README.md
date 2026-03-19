@@ -11,6 +11,8 @@
 | `README.md` | Этот файл — технический справочник: скрипты, классы, API, компоненты |
 | `gameplay.md` | Геймдизайн: что делает игрок, правила, режимы, структура матча |
 | `game-manager.md` | GameManager, система режимов: создание assets, настройка, поток действий |
+| `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
+| `AI_Navigation.md` | 🤖 Технические инструкции для ИИ-агентов (правила оптимизированного поиска M.A.P.) |
 
 ---
 
@@ -18,6 +20,7 @@
 
 - **Геймплей, режимы, матч, арена** → [`gameplay.md`](gameplay.md)
 - **GameManager, режимы, assets, настройка** → [`game-manager.md`](game-manager.md)
+- **История изменений (Changelog)** → [`CHANGELOG.md`](CHANGELOG.md)
 - **UltimateXR SDK** → `Assets/ThirdParty/UltimateXR/Docs/_context/README.md` (открыть через `#file:`)
 - **Архитектура UltimateXR** → `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md`
 

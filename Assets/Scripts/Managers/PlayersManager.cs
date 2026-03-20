@@ -16,7 +16,7 @@ namespace VrBattlegrounds.Managers
     /// не зависит от деталей Mirror напрямую.
     /// Только сервер.
     /// </summary>
-    public class PlayersManager : NetworkBehaviour
+    public class PlayersManager : MonoBehaviour
     {
         public static PlayersManager Instance { get; private set; }
 

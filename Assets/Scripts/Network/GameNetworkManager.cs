@@ -1,7 +1,7 @@
 using System;
-using System;
 using Mirror;
 using UnityEngine;
+using VrBattlegrounds.Core;
 using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Network
@@ -21,6 +21,26 @@ namespace VrBattlegrounds.Network
 
         /// <summary>Сервер завершил загрузку сцены. Параметр — имя загруженной сцены.</summary>
         public static event Action<string> ServerSceneChanged;
+
+        [Header("Server Context")]
+        [Tooltip("Префаб SessionManager, который будет спавниться при старте сервера.")]
+        [SerializeField] private GameObject _sessionContextPrefab;
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+
+            if (_sessionContextPrefab != null)
+            {
+                GameObject sessionInstance = Instantiate(_sessionContextPrefab);
+                NetworkServer.Spawn(sessionInstance);
+                GameLog.Info(GameSettings.Instance.LogLevelNetwork, "[GameNetworkManager] SessionContext (SessionManager) успешно заспавнен сервером.");
+            }
+            else
+            {
+                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, "[GameNetworkManager] Префаб SessionContext не назначен, сессия не будет отслеживаться!");
+            }
+        }
 
         public override void OnServerSceneChanged(string sceneName)
         {

@@ -71,10 +71,12 @@ namespace VrBattlegrounds.Managers
         {
             if (Instance != null && Instance != this)
             {
-                Destroy(this);
+                Destroy(gameObject);
                 return;
             }
             Instance = this;
+            transform.SetParent(null); // Ensure it's a root object
+            DontDestroyOnLoad(gameObject); // Survive scene transitions
         }
 
         /// <summary>

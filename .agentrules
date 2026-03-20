@@ -47,7 +47,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 - Телепортация: `UxrTeleportLocomotion`
 - Оружие: `UxrFirearmWeapon` (наследует `UxrGrabbableObject`)
 - Скрипты рантайма: `Assets/ThirdParty/UltimateXR/Runtime/Scripts/`
-- Документация UltimateXR: `Assets/ThirdParty/UltimateXR/Docs/guides/`
+- Документация UltimateXR: `Docs/UltimateXR/guides/`
 
 > **Для ИИ-помощника:** исходники UltimateXR SDK доступны через `get_file` по полному пути —
 > проект `UltimateXR.csproj` входит в workspace. При вопросах об API лучше читать исходники напрямую,
@@ -56,7 +56,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 ## Контекст проекта (детально)
 Документация разделена на две части:
 
-**Документация UltimateXR SDK** — `Assets/ThirdParty/UltimateXR/Docs/_context/`:
+**Документация UltimateXR SDK** — `Docs/UltimateXR/`:
 - `README.md` — точка входа: платформа, зависимости, список файлов контекста
 - `architecture.md` — все модули UltimateXR, ключевые классы, диаграмма зависимостей
 - `known-issues.md` — **⚠️ ЧИТАТЬ ПЕРВЫМ при расследовании любого бага:** известные неочевидные поведения SDK, исправленные и открытые проблемы
@@ -84,8 +84,8 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 Прежде чем лезть в код, выполнять расследование бага или отвечать на архитектурный вопрос:
 
 1. **Прочитать `Assets/Docs/README.md`** — карта проекта, ключевые скрипты, зависимости
-2. **Прочитать `Assets/ThirdParty/UltimateXR/Docs/_context/known-issues.md`** — известные баги и неочевидные поведения SDK
-3. **Прочитать `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md`** — архитектура UltimateXR
+2. **Прочитать `Docs/UltimateXR/known-issues.md`** — известные баги и неочевидные поведения SDK
+3. **Прочитать `Docs/UltimateXR/architecture.md`** — архитектура UltimateXR
 4. Только после этого — открывать файлы кода
 
 **Исключения** (можно пропустить чтение документации):
@@ -152,11 +152,11 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
    | API менеджера / поток действий | `game-manager.md` или `README.md` |
 
 3. **Если подходящего файла не существует — создать новый:**
-   - Создать `Assets/ThirdParty/UltimateXR/Docs/_context/<название>.md`  
+   - Создать `Docs/UltimateXR/<название>.md`  
      или `Assets/Docs/<название>.md` в зависимости от темы
    - Добавить ссылку на него в **точки входа**:
      - `Assets/Docs/README.md` (раздел «Быстрая навигация»)
-     - `Assets/ThirdParty/UltimateXR/Docs/_context/README.md` (если касается UltimateXR)
+     - `Docs/UltimateXR/README.md` (если касается UltimateXR)
      - `.agentrules` (раздел «Контекст проекта»)
 
 4. **Формат записи** — кратко, конкретно, с примерами:
@@ -204,7 +204,7 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 > Эти файлы — живая документация. Они должны обновляться по мере изучения проекта.
 
 ### Когда обновлять
-- После изучения нового модуля UltimateXR — обновить или создать соответствующий файл в `Assets/ThirdParty/UltimateXR/Docs/_context/`
+- После изучения нового модуля UltimateXR — обновить или создать соответствующий файл в `Docs/UltimateXR/`
 - После добавления новой игровой механики — обновить `Assets/Docs/gameplay.md`
 - После решения нетривиальной задачи — зафиксировать в `progress.md`
 - После изменения архитектуры проекта — обновить `architecture.md`
@@ -212,15 +212,15 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 ### Какой файл обновлять
 | Что изучил / сделал | Файл |
 |---|---|
-| Новый модуль UltimateXR (Avatar, Grabbing, UI…) | `Assets/ThirdParty/UltimateXR/Docs/_context/<module>.md` (создать если нет) |
-| Общая архитектура, новые зависимости | `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md` |
-| Прогресс, заметки, решённые проблемы | `Assets/ThirdParty/UltimateXR/Docs/_context/progress.md` (создать если нет) |
+| Новый модуль UltimateXR (Avatar, Grabbing, UI…) | `Docs/UltimateXR/<module>.md` (создать если нет) |
+| Общая архитектура, новые зависимости | `Docs/UltimateXR/architecture.md` |
+| Прогресс, заметки, решённые проблемы | `Docs/UltimateXR/progress.md` (создать если нет) |
 | Изменился стек или платформа | Этот файл (`.agentrules`) |
 | Новая игровая механика, режим, изменение архитектуры матча | `Assets/Docs/gameplay.md` |
-| **Патчи SDK UltimateXR** (правки исходников, обходы API) | `Assets/ThirdParty/UltimateXR/Docs/_context/sdk-patches.md` |
+| **Патчи SDK UltimateXR** (правки исходников, обходы API) | `Docs/UltimateXR/sdk-patches.md` |
 
 ### Формат обновления и изучения новых модулей
-> **Обязательно:** При изучении нового функционала или модуля (например, из UltimateXR SDK), ИИ-помощник **обязан** самостоятельно написать саммари (сводку) и добавить раздел в соответствующий файл документации в `Assets/ThirdParty/UltimateXR/Docs/_context/` (создать новый, если нужно). Не нужно ждать явного указания пользователя.
+> **Обязательно:** При изучении нового функционала или модуля (например, из UltimateXR SDK), ИИ-помощник **обязан** самостоятельно написать саммари (сводку) и добавить раздел в соответствующий файл документации в `Docs/UltimateXR/` (создать новый, если нужно). Не нужно ждать явного указания пользователя.
 
 ---
 
@@ -298,10 +298,10 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
    - Новые классы, модули, зависимости, интеграции? → обновить `Assets/Docs/README.md`
    - Новые игровые механики / режимы игры? → обновить `Assets/Docs/gameplay.md`
    - Значимые изменения, фиксы, рефакторинг? → обновить `Assets/Docs/CHANGELOG.md`
-   - Новый SDK, патчи библиотеки UltimateXR? → обновить `Assets/ThirdParty/UltimateXR/Docs/_context/sdk-patches.md`
-   - Новая архитектура, паттерны, архитектурные изменения? → обновить `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md`
-   - **Баг или неочевидное поведение компонента?** → добавить в `Assets/ThirdParty/UltimateXR/Docs/_context/known-issues.md`
-   - Новый прогресс / статус реализации? → обновить `Assets/ThirdParty/UltimateXR/Docs/_context/progress.md`
+   - Новый SDK, патчи библиотеки UltimateXR? → обновить `Docs/UltimateXR/sdk-patches.md`
+   - Новая архитектура, паттерны, архитектурные изменения? → обновить `Docs/UltimateXR/architecture.md`
+   - **Баг или неочевидное поведение компонента?** → добавить в `Docs/UltimateXR/known-issues.md`
+   - Новый прогресс / статус реализации? → обновить `Docs/UltimateXR/progress.md`
    - Новые зависимости, правила агента, патчи SDK? → обновить этот файл (`.agentrules`)
 4. **Создать коммиты** — разбивать изменения файлы по логическим единицам
 5. **Финализировать коммит** — проверить сообщение коммита в соответствии с принятой стратегией
@@ -312,8 +312,8 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 | Новые скрипты/классы/компоненты | `Assets/Docs/README.md` |
 | Геймплей, режимы, матчи, игровая логика | `Assets/Docs/gameplay.md` |
 | Значимые изменения, фиксы, рефакторинг | `Assets/Docs/CHANGELOG.md` |
-| Новые паттерны, менеджеры, архитектурные изменения | `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md` |
-| Патчи UltimateXR SDK, правки, обходы API | `Assets/ThirdParty/UltimateXR/Docs/_context/sdk-patches.md` |
-| **Баги, неочевидные поведения SDK, побочные эффекты** | **`Assets/ThirdParty/UltimateXR/Docs/_context/known-issues.md`** |
-| Прогресс, баги, тестирование, planned задачи | `Assets/ThirdParty/UltimateXR/Docs/_context/progress.md` |
+| Новые паттерны, менеджеры, архитектурные изменения | `Docs/UltimateXR/architecture.md` |
+| Патчи UltimateXR SDK, правки, обходы API | `Docs/UltimateXR/sdk-patches.md` |
+| **Баги, неочевидные поведения SDK, побочные эффекты** | **`Docs/UltimateXR/known-issues.md`** |
+| Прогресс, баги, тестирование, planned задачи | `Docs/UltimateXR/progress.md` |
 | Зависимости, пакеты, инструкции ИИ, патчи SDK | `.agentrules` |

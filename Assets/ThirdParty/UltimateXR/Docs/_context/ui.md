@@ -1,7 +1,7 @@
 # UltimateXR — VR UI (Интерфейс пользователя)
 
-> Источник: `Assets/ultimate-xr/Docs/guides/ui-interaction.md`  
-> Скрипты: `Assets/ultimate-xr/Runtime/Scripts/UI/`
+> Источник: `Assets/ThirdParty/UltimateXR/Docs/guides/ui-interaction.md`  
+> Скрипты: `Assets/ThirdParty/UltimateXR/Runtime/Scripts/UI/`
 
 ---
 

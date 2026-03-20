@@ -1,7 +1,7 @@
 # UltimateXR — Передвижение (Locomotion)
 
-> Источник: `Assets/ultimate-xr/Docs/guides/locomotion.md`  
-> Скрипты: `Assets/ultimate-xr/Runtime/Scripts/Locomotion/`
+> Источник: `Assets/ThirdParty/UltimateXR/Docs/guides/locomotion.md`  
+> Скрипты: `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Locomotion/`
 
 ---
 

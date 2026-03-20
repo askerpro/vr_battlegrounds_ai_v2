@@ -1,7 +1,7 @@
 # UltimateXR — Взаимодействие с объектами (Grabbing / Manipulation)
 
-> Источник: `Assets/ultimate-xr/Docs/guides/manipulation.md`  
-> Скрипты: `Assets/ultimate-xr/Runtime/Scripts/Manipulation/`
+> Источник: `Assets/ThirdParty/UltimateXR/Docs/guides/manipulation.md`  
+> Скрипты: `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/`
 
 ---
 
@@ -132,4 +132,4 @@ firearmWeapon.ProjectileShot += (triggerIndex) => {
 };
 ```
 
-> Детали по оружию — в `Assets/ultimate-xr/Docs/_context/architecture.md` ? раздел Weapons
+> Детали по оружию — в `Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md` ? раздел Weapons

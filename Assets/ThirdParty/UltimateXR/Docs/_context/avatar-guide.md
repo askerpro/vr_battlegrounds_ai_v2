@@ -1,7 +1,7 @@
 # UltimateXR — Аватар
 
-> Источник: `Assets/ultimate-xr/Docs/guides/avatar.md`  
-> Скрипты: `Assets/ultimate-xr/Runtime/Scripts/Avatar/`
+> Источник: `Assets/ThirdParty/UltimateXR/Docs/guides/avatar.md`  
+> Скрипты: `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Avatar/`
 
 ---
 
@@ -37,7 +37,7 @@ Vector3 viewDir = UxrAvatar.LocalAvatar.CameraForward;
 
 ## Готовые префабы аватаров
 
-Находятся в `Assets/ultimate-xr/Runtime/Prefabs/Avatars/`:
+Находятся в `Assets/ThirdParty/UltimateXR/Runtime/Prefabs/Avatars/`:
 
 | Префаб | Описание |
 |---|---|

@@ -57,7 +57,7 @@ MonoBehaviour
 | `UxrAvatarHand` | Данные одной руки (кости пальцев) |
 
 **Префабы:** `BigHandsAvatar_URP`, `SmallHandsAvatar_URP` (в `Runtime/Prefabs/Avatars/`)  
-**Подробнее:** `Assets/ultimate-xr/Docs/_context/avatar-guide.md`
+**Подробнее:** `Assets/ThirdParty/UltimateXR/Docs/_context/avatar-guide.md`
 
 ---
 
@@ -71,7 +71,7 @@ MonoBehaviour
 | `UxrGrabbableObjectAnchor` | Точка размещения объекта |
 | `UxrGrabPointShape` | Расширенные формы точек захвата |
 
-**Подробнее:** `Assets/ultimate-xr/Docs/_context/interactions.md`
+**Подробнее:** `Assets/ThirdParty/UltimateXR/Docs/_context/interactions.md`
 
 ---
 
@@ -83,7 +83,7 @@ MonoBehaviour
 | `UxrTeleportLocomotion` | Телепортация через дугу из контроллера |
 | `UxrSmoothLocomotion` | Плавное FPS-подобное передвижение |
 
-**Подробнее:** `Assets/ultimate-xr/Docs/_context/locomotion.md`
+**Подробнее:** `Assets/ThirdParty/UltimateXR/Docs/_context/locomotion.md`
 
 ---
 
@@ -119,7 +119,7 @@ MonoBehaviour
 | `UxrLaserPointer` | Лазерный указатель с руки |
 | `UxrFingerTip` | Прямое касание UI пальцем |
 
-**Подробнее:** `Assets/ultimate-xr/Docs/_context/ui.md`
+**Подробнее:** `Assets/ThirdParty/UltimateXR/Docs/_context/ui.md`
 
 ---
 

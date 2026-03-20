@@ -1,7 +1,7 @@
 # UltimateXR — Скриптинг: паттерны и примеры API
 
-> Источник: `Assets/ultimate-xr/Docs/guides/scripting.md`, `scripting-how-do-i.md`  
-> Скрипты: `Assets/ultimate-xr/Runtime/Scripts/`
+> Источник: `Assets/ThirdParty/UltimateXR/Docs/guides/scripting.md`, `scripting-how-do-i.md`  
+> Скрипты: `Assets/ThirdParty/UltimateXR/Runtime/Scripts/`
 
 ---
 

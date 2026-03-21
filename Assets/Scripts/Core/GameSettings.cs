@@ -60,6 +60,10 @@ namespace VrBattlegrounds.Core
         [Tooltip("DebugOrchestrator и другие DevTools")]
         [SerializeField] private LogLevel _logLevelDebug = LogLevel.Verbose;
 
+        [Header("Логи — Интерфейс")]
+        [Tooltip("UI менеджеры, меню, кнопки, HUD")]
+        [SerializeField] private LogLevel _logLevelUI = LogLevel.Info;
+
         #endregion
 
         #region Properties
@@ -75,6 +79,9 @@ namespace VrBattlegrounds.Core
 
         /// <summary>Уровень логов инструментов отладки (DebugOrchestrator).</summary>
         public LogLevel LogLevelDebug    => _logLevelDebug;
+
+        /// <summary>Уровень логов интерфейса.</summary>
+        public LogLevel LogLevelUI       => _logLevelUI;
 
         #endregion
     }

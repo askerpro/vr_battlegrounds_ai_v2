@@ -154,6 +154,7 @@ GameplayManager       — матч (5 карт, счёт, победитель)
 | `LogLevelNetwork` | Сеть | `GameNetworkManager`, `MapManager`, `GameNetworkDiscovery` |
 | `LogLevelPlayer` | Игрок | `PlayerController` |
 | `LogLevelMatch` | Матч | `MatchManager`, `SetManager`, `RoundManager` |
+| `LogLevelUI` | Интерфейс | `MenuController`, `LocalMenuManager`, Кнопки, HUD |
 | `LogLevelDebug` | Отладка | `DebugOrchestrator` (по умолчанию `Verbose`) |
 
 ---

@@ -18,3 +18,6 @@ MonoBehaviour:
   description: TestMap1
   arenaSizeMeters: {x: 10, y: 10}
   maxPlayers: 10
+  supportedModes:
+  - {fileID: 11400000, guid: afb25111c4746e745a3afa391f5fd8a0, type: 2}
+  - {fileID: 11400000, guid: e8ad037e06055544e847c6a94f5682b0, type: 2}

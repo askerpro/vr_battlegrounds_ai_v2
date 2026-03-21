@@ -1,4 +1,5 @@
 using UnityEngine;
+using VrBattlegrounds.GameModes;
 
 namespace VrBattlegrounds.Maps
 {
@@ -34,5 +35,9 @@ namespace VrBattlegrounds.Maps
         [Tooltip("Максимальное количество игроков на карте.")]
         [Min(2)]
         public int maxPlayers = 10;
+
+        [Header("Игровые Режимы")]
+        [Tooltip("Список режимов, которые поддерживаются на этой карте.")]
+        public GameModeData[] supportedModes;
     }
 }

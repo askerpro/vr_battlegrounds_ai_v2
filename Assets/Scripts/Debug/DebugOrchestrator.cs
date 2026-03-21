@@ -37,6 +37,12 @@ namespace VrBattlegrounds.DevTools
                 gameObject.SetActive(false);
                 return;
             }
+
+            if (_config.hostIsAdmin)
+            {
+                AppRoleManager.SetDebugOverride(ClientDeviceRole.PlayerAdmin);
+                GameLog.Info(GameSettings.Instance.LogLevelDebug, "[DebugOrchestrator] Роль переопределена на PlayerAdmin (из конфига).");
+            }
         }
 
         private void OnEnable()

@@ -1,4 +1,3 @@
-using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine;
 using VrBattlegrounds;
@@ -21,6 +20,9 @@ namespace VrBattlegrounds.DevTools
         [Header("Общие настройки")]
         [Tooltip("Включить быструю инициализацию. Выключить = обычный старт игры.")]
         public bool enabled = true;
+
+        [Tooltip("Если true, хост (игрок, запустивший сервер в редакторе) автоматически получает гибридную роль PlayerAdmin.")]
+        public bool hostIsAdmin = true;
 
         [Header("Игрок")]
         [Tooltip("Команды для автоматического распределения игроков. Каждый новый игрок идёт в команду с наименьшим числом участников. Оставить пустым — команду не назначать.")]

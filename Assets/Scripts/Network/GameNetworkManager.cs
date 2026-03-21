@@ -13,6 +13,10 @@ namespace VrBattlegrounds.Network
     /// </summary>
     public class GameNetworkManager : NetworkManager
     {
+        [Header("Roles & Prefabs")]
+        [Tooltip("Реестр маппингов ролей на префабы. Если роль не найдена, спавнится стандартный playerPrefab.")]
+        [SerializeField] private RolePrefabRegistry _roleRegistry;
+
         /// <summary>Игрок подключился и спавнился на сервере.</summary>
         public static event Action<PlayerController> PlayerConnected;
 
@@ -25,6 +29,13 @@ namespace VrBattlegrounds.Network
         [Header("Server Context")]
         [Tooltip("Префаб SessionManager, который будет спавниться при старте сервера.")]
         [SerializeField] private GameObject _sessionContextPrefab;
+
+        public override void Awake()
+        {
+            base.Awake();
+            // Отключаем автоматический спавн Mirror, так как будем сами отправлять RoleJoinMessage
+            autoCreatePlayer = false;
+        }
 
         public override void OnStartServer()
         {
@@ -40,6 +51,8 @@ namespace VrBattlegrounds.Network
             {
                 GameLog.Warning(GameSettings.Instance.LogLevelNetwork, "[GameNetworkManager] Префаб SessionContext не назначен, сессия не будет отслеживаться!");
             }
+            
+            NetworkServer.RegisterHandler<RoleJoinMessage>(OnRoleJoinMessage);
         }
 
         public override void OnServerSceneChanged(string sceneName)
@@ -72,5 +85,70 @@ namespace VrBattlegrounds.Network
 
             base.OnServerDisconnect(conn);
         }
+
+        // ==============================================================================
+        // CUSTOM SPAWN LOGIC (Role-based)
+        // ==============================================================================
+
+        public override void OnClientSceneChanged()
+        {
+            base.OnClientSceneChanged();
+            
+            // Если сцена загрузилась и мы готовы, отправляем серверу запрос на спавн с нашей ролью
+            if (NetworkClient.ready && NetworkClient.connection.identity == null)
+            {
+                NetworkClient.Send(new RoleJoinMessage { role = AppRoleManager.LocalRole });
+            }
+        }
+
+        public override void OnClientConnect()
+        {
+            base.OnClientConnect();
+            
+            // Если мы подключились и сцена уже загружена (NetworkManager базовый делает нас ready)
+            if (NetworkClient.ready && NetworkClient.connection.identity == null)
+            {
+                NetworkClient.Send(new RoleJoinMessage { role = AppRoleManager.LocalRole });
+            }
+        }
+
+        private void OnRoleJoinMessage(NetworkConnectionToClient conn, RoleJoinMessage msg)
+        {
+            GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Получен RoleJoinMessage: {msg.role}");
+
+            if (conn.identity != null)
+            {
+                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, "[GameNetworkManager] Игрок уже заспавнен для этого соединения.");
+                return;
+            }
+
+            GameObject prefabToSpawn = playerPrefab;
+
+            if (_roleRegistry != null && _roleRegistry.rolePrefabs != null)
+            {
+                foreach (var mapping in _roleRegistry.rolePrefabs)
+                {
+                    if (mapping.role == msg.role && mapping.prefab != null)
+                    {
+                        prefabToSpawn = mapping.prefab;
+                        break;
+                    }
+                }
+            }
+
+            if (prefabToSpawn == null)
+            {
+                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Не найден префаб для спавна роли {msg.role} (playerPrefab и RolePrefabMapping не настроены)!");
+                return;
+            }
+
+            Transform startPos = GetStartPosition();
+            GameObject playerInstance = startPos != null
+                ? Instantiate(prefabToSpawn, startPos.position, startPos.rotation)
+                : Instantiate(prefabToSpawn);
+
+            playerInstance.name = $"{prefabToSpawn.name} [connId={conn.connectionId}]";
+            NetworkServer.AddPlayerForConnection(conn, playerInstance);
+        }    
     }
 }

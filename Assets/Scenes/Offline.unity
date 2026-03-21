@@ -635,6 +635,7 @@ MonoBehaviour:
   evaluationMethod: 0
   evaluationInterval: 3
   timeInterpolationGui: 0
+  _roleRegistry: {fileID: 0}
   _sessionContextPrefab: {fileID: 7659987172694362790, guid: c1053b4395a92db499991404aa9ad731, type: 3}
 --- !u!114 &1388965141
 MonoBehaviour:
@@ -714,6 +715,54 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ad7804b8cbd1d64ba725f3564c45a98, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &2005334698
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2005334699}
+  - component: {fileID: 2005334700}
+  m_Layer: 0
+  m_Name: MenuManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2005334699
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005334698}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2066333834}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2005334700
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005334698}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c1d470eacb5b114fb3014e7b68af461, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _adminLobbyMenuPrefab: {fileID: 943663235452170145, guid: 6eabc31c534f3b140af5bc5058c50aa0, type: 3}
+  _playerLobbyMenuPrefab: {fileID: 4522163831034419188, guid: 6b707737da98fd4439075e2fd4a6e654, type: 3}
+  _adminInGameMenuPrefab: {fileID: 943663235452170145, guid: 6eabc31c534f3b140af5bc5058c50aa0, type: 3}
+  _playerInGameMenuPrefab: {fileID: 4522163831034419188, guid: 6b707737da98fd4439075e2fd4a6e654, type: 3}
 --- !u!1 &2066333833
 GameObject:
   m_ObjectHideFlags: 0
@@ -750,6 +799,7 @@ Transform:
   - {fileID: 1440503813}
   - {fileID: 363739060}
   - {fileID: 599786229}
+  - {fileID: 2005334699}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2066333835

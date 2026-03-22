@@ -208,3 +208,34 @@ if (_avatarInitialized && Avatar == avatar)
    - В `PlaceObject` добавить блок выброса старого предмета `RemoveObjectFromAnchor(ejected, propagateEvents, true)` сразу после `BeginSync`.
 4. Обновить `UxrGrabbableObjectAnchorEditor.cs`, чтобы рисовать новое поле через `EditorGUILayout.PropertyField`.
 
+---
+
+## Патч 4: Глобальное смещение высоты трекинга (Global Height Offset)
+
+**Файлы:**
+- `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Devices/UxrControllerTracking.cs`
+
+**Дата:** 2026-03-22
+
+### Проблема
+
+В UltimateXR при телепортации аватар всегда сбрасывается на высоту Y=0 (уровень виртуального пола). Если игрок ниже или выше стандартного роста, и необходимо откалибровать высоту, нельзя просто сдвинуть `UxrAvatar` (т.к. телепортация это сбросит). Приходится двигать внутренние компоненты: `CameraController` и руки.
+Однако компоненты рук жестко привязаны к локальным координатам сенсоров шлема. Необходимо было добавить способ применять глобальный оффсет к считываемым данным трекеров без написания костыльных драйверов (типа `TrackedPoseDriverExt`), которые бы ломали нативную локомоцию.
+
+### Применённые изменения
+
+1. **UxrControllerTracking**: 
+   - Добавлено статическое свойство `GlobalHeightOffset`.
+   - Свойства `SensorLeftPos` и `SensorRightPos` (возвращающие мировые координаты сенсоров) изменены: теперь они прибавляют `GlobalHeightOffset` к оси Y локальной позиции сенсора, перед тем как перевести её в мировые координаты (`Avatar.transform.TransformPoint`).
+
+### Как связать с игрой
+В проекте используется `PhysicalSpaceSyncManager.cs`, который при калибровке сдвигает `CameraController.localPosition.y` и одновременно записывает смещение в `UltimateXR.Devices.UxrControllerTracking.GlobalHeightOffset`.
+
+### Как повторить при обновлении SDK
+1. В `UxrControllerTracking` добавить `public static float GlobalHeightOffset { get; set; } = 0f;`
+2. Изменить геттеры для `SensorLeftPos` и `SensorRightPos`:
+```csharp
+   Vector3 pos = LocalAvatarLeftHandSensorPos; // или Right
+   pos.y += GlobalHeightOffset;
+   return Avatar.transform.TransformPoint(pos);
+```

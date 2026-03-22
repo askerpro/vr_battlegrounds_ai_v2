@@ -64,6 +64,10 @@ namespace VrBattlegrounds.Core
         [Tooltip("UI менеджеры, меню, кнопки, HUD")]
         [SerializeField] private LogLevel _logLevelUI = LogLevel.Info;
 
+        [Header("Логи — Физическое пространство")]
+        [Tooltip("Скрытые настройки калибровки (PhysicalSpaceSyncManager, HUD)")]
+        [SerializeField] private LogLevel _logLevelPhysicalSpace = LogLevel.Info;
+
         #endregion
 
         #region Properties
@@ -82,6 +86,9 @@ namespace VrBattlegrounds.Core
 
         /// <summary>Уровень логов интерфейса.</summary>
         public LogLevel LogLevelUI       => _logLevelUI;
+
+        /// <summary>Уровень логов физического пространства.</summary>
+        public LogLevel LogLevelPhysicalSpace => _logLevelPhysicalSpace;
 
         #endregion
     }

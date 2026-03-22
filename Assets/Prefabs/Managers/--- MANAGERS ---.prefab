@@ -335,6 +335,8 @@ GameObject:
   m_Component:
   - component: {fileID: 3502816837047104478}
   - component: {fileID: 6337546042798986851}
+  - component: {fileID: 4713239937560617107}
+  - component: {fileID: 9171964167861690565}
   m_Layer: 0
   m_Name: --- MANAGERS ---
   m_TagString: Untagged
@@ -376,6 +378,49 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: efd47228e1374a6468c7c6d07915c4e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &4713239937560617107
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5402926717599270886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 968fb5c905edc0b40b05d4704ea2a148, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _realToVirtualOffset: {x: 0, y: 0, z: 0}
+  _realToVirtualRotation: {x: 0, y: 0, z: 0, w: 1}
+  _realToVirtualScale: 1
+--- !u!114 &9171964167861690565
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5402926717599270886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3ae844afa23c4c41805c668d5cc013f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hudContent: {fileID: 0}
+  instructionText: {fileID: 0}
+  startMessage: "\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0438\u0440\u0443\u0439\u0442\u0435
+    \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u043B\u0435\u0440 \u0441 \u0442\u043E\u0447\u043A\u043E\u0439
+    1"
+  firstAnchorMessage: "\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0438\u0440\u0443\u0439\u0442\u0435
+    \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u043B\u0435\u0440 \u0441 \u0442\u043E\u0447\u043A\u043E\u0439
+    2"
+  completedMessage: "\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0430\u0446\u0438\u044F
+    \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430!"
+  cancelledMessage: "\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0430\u0446\u0438\u044F
+    \u043E\u0442\u043C\u0435\u043D\u0435\u043D\u0430"
+  messageDisplayDuration: 2
 --- !u!1 &6094611266226496600
 GameObject:
   m_ObjectHideFlags: 0

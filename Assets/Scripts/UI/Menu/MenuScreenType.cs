@@ -7,7 +7,7 @@ namespace VrBattlegrounds.UI.Menu
         Settings = 2,
         TeamSelection = 3,
         SessionSetup = 4,
-        Calibration = 5,
+        PhysicalSpaceSync = 5,
         MapManager = 6,
         MatchManager = 7,
     }

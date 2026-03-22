@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrControllerTracking.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -7,8 +7,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UltimateXR.Animation.Interpolation;
+using UltimateXR.Avatar;
 using UltimateXR.Core;
 using UltimateXR.Core.Settings;
+using UltimateXR.Extensions.Unity;
 using UltimateXR.Extensions.Unity.Math;
 using UnityEngine;
 using UnityEngine.XR;
@@ -60,11 +62,32 @@ namespace UltimateXR.Devices
         /// <inheritdoc />
         public bool HasRightHandSensorSetup => _rightHandSensor != null;
 
-        /// <inheritdoc />
-        public Vector3 SensorLeftPos => Avatar.transform.TransformPoint(LocalAvatarLeftHandSensorPos);
+        /// <summary>
+        /// Глобальный вертикальный оффсет для калибровки высоты контроллеров аватара.
+        /// </summary>
+        public static float GlobalHeightOffset { get; set; } = 0f;
 
         /// <inheritdoc />
-        public Vector3 SensorRightPos => Avatar.transform.TransformPoint(LocalAvatarRightHandSensorPos);
+        public Vector3 SensorLeftPos 
+        {
+            get
+            {
+                Vector3 pos = LocalAvatarLeftHandSensorPos;
+                pos.y += GlobalHeightOffset;
+                return Avatar.transform.TransformPoint(pos);
+            }
+        }
+
+        /// <inheritdoc />
+        public Vector3 SensorRightPos 
+        {
+            get
+            {
+                Vector3 pos = LocalAvatarRightHandSensorPos;
+                pos.y += GlobalHeightOffset;
+                return Avatar.transform.TransformPoint(pos);
+            }
+        }
 
         /// <inheritdoc />
         public Quaternion SensorLeftRot => Avatar.transform.rotation * LocalAvatarLeftHandSensorRot;

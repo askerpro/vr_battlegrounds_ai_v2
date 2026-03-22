@@ -30,6 +30,12 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         [SerializeField] private float _heightOffset = 0f; // Stores the physical to virtual floor difference
         [SerializeField] private float _accumulatedHeightOffset = 0f; // Tracks the total vertical shift applied
 
+        [Header("Scene Transition Sync")]
+        [Tooltip("If true, the avatar's last known global position and rotation will be reapplied when it respawns in a new scene.")]
+        [SerializeField] private bool _preserveAvatarPositionAcrossScenes = true;
+        private Vector3? _lastSavedAvatarPosition = null;
+        private Quaternion? _lastSavedAvatarRotation = null;
+
         // Calibration State
         private List<PhysicalSpaceAnchor> _virtualAnchors = new List<PhysicalSpaceAnchor>();
         private Vector3[] _realAnchorPositions = new Vector3[2];
@@ -47,6 +53,20 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         public event Action OnHeightCalibrationStarted;
         public event Action OnHeightCalibrationCompleted;
 
+        public bool TryGetSavedAvatarTransform(out Vector3 position, out Quaternion rotation)
+        {
+            if (_preserveAvatarPositionAcrossScenes && _lastSavedAvatarPosition.HasValue && _lastSavedAvatarRotation.HasValue)
+            {
+                position = _lastSavedAvatarPosition.Value;
+                rotation = _lastSavedAvatarRotation.Value;
+                return true;
+            }
+
+            position = Vector3.zero;
+            rotation = Quaternion.identity;
+            return false;
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -58,26 +78,60 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             DontDestroyOnLoad(gameObject);
         }
 
-        private bool _initialOffsetApplied = false;
+        private void OnEnable()
+        {
+            UxrAvatar.GlobalAvatarMoved += UxrAvatar_GlobalAvatarMoved;
+            UxrAvatar.LocalAvatarStarted += UxrAvatar_LocalAvatarStarted;
+        }
+
+        private void OnDisable()
+        {
+            UxrAvatar.GlobalAvatarMoved -= UxrAvatar_GlobalAvatarMoved;
+            UxrAvatar.LocalAvatarStarted -= UxrAvatar_LocalAvatarStarted;
+        }
 
         private void Start()
         {
-            // Initialization
+            // Apply if avatar is already present on startup
+            if (UxrAvatar.LocalAvatar != null)
+            {
+                ApplySyncToAvatar();
+            }
         }
 
-        private void OnDestroy()
+        private void UxrAvatar_GlobalAvatarMoved(object sender, UxrAvatarMoveEventArgs e)
         {
+            UxrAvatar avatar = sender as UxrAvatar;
+            // Сохраняем корневые координаты (position and rotation) локального аватара
+            if (_preserveAvatarPositionAcrossScenes && UxrAvatar.LocalAvatar != null && avatar == UxrAvatar.LocalAvatar)
+            {
+                _lastSavedAvatarPosition = avatar.transform.position;
+                _lastSavedAvatarRotation = avatar.transform.rotation;
+            }
+        }
+
+        private void UxrAvatar_LocalAvatarStarted(object sender, UxrAvatarStartedEventArgs e)
+        {
+            ApplySyncToAvatar();
+        }
+
+        private void ApplySyncToAvatar()
+        {
+            if (UxrAvatar.LocalAvatar == null) return;
+
+            // Если была проведена калибровка комнаты по физическим якорям - она в приоритете
+            if (_realToVirtualScale > 0)
+            {
+                ApplyAvatarTransform();
+            }
+
+            // Мировая позиция между сценами теперь восстанавливается сетью (GameNetworkManager) при спавне.
+            // Нам остается только восстановить локальное смещение высоты камеры (калибровку роста).
+            ApplyAvatarHeight();
         }
 
         private void Update()
         {
-            if (!_initialOffsetApplied && UxrAvatar.LocalAvatar != null && _realToVirtualScale > 0)
-            {
-                _initialOffsetApplied = true;
-                ApplyAvatarTransform();
-                ApplyAvatarHeight();
-            }
-
             if (IsCalibratingHeight)
             {
                 // Both hands can be used to touch the floor
@@ -212,7 +266,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             // (или на уровне земли по мнению локомоции). 
             // Значит, идеальный виртуальный пол всегда равен мировой Y-координате корня 아ватарa.
             float avatarFloorY = UxrAvatar.LocalAvatar.transform.position.y;
-            
+
             // Если контроллер по мировой высоте не совпадает с корнем аватара, значит физический пол отличается от виртуального
             float deltaY = avatarFloorY - controllerPos.y;
 
@@ -247,7 +301,6 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             // так как префаб аватара создается с нулевыми локальными оффсетами.
             ApplyHeightDelta(_accumulatedHeightOffset);
         }
-
         private void CalculateTransform()
         {
             Vector3 virtualA = _virtualAnchors[0].transform.position;

@@ -52,7 +52,7 @@ namespace VrBattlegrounds.Network
                 GameLog.Warning(GameSettings.Instance.LogLevelNetwork, "[GameNetworkManager] Префаб SessionContext не назначен, сессия не будет отслеживаться!");
             }
             
-            NetworkServer.RegisterHandler<RoleJoinMessage>(OnRoleJoinMessage);
+            NetworkServer.RegisterHandler<PlayerJoinMessage>(OnPlayerJoinMessage);
         }
 
         public override void OnServerSceneChanged(string sceneName)
@@ -97,7 +97,7 @@ namespace VrBattlegrounds.Network
             // Если сцена загрузилась и мы готовы, отправляем серверу запрос на спавн с нашей ролью
             if (NetworkClient.ready && NetworkClient.connection.identity == null)
             {
-                NetworkClient.Send(new RoleJoinMessage { role = AppRoleManager.LocalRole });
+                SendRoleJoinMessage();
             }
         }
 
@@ -108,13 +108,29 @@ namespace VrBattlegrounds.Network
             // Если мы подключились и сцена уже загружена (NetworkManager базовый делает нас ready)
             if (NetworkClient.ready && NetworkClient.connection.identity == null)
             {
-                NetworkClient.Send(new RoleJoinMessage { role = AppRoleManager.LocalRole });
+                SendRoleJoinMessage();
             }
         }
 
-        private void OnRoleJoinMessage(NetworkConnectionToClient conn, RoleJoinMessage msg)
+        private void SendRoleJoinMessage()
         {
-            GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Получен RoleJoinMessage: {msg.role}");
+            var msg = new PlayerJoinMessage { role = AppRoleManager.LocalRole };
+            
+            if (VrBattlegrounds.PhysicalSpaceUtils.PhysicalSpaceSyncManager.Instance != null &&
+                VrBattlegrounds.PhysicalSpaceUtils.PhysicalSpaceSyncManager.Instance.TryGetSavedAvatarTransform(out Vector3 pos, out Quaternion rot))
+            {
+                msg.hasSavedPosition = true;
+                msg.savedPosition = pos;
+                msg.savedRotation = rot;
+                GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Sending PlayerJoinMessage with saved coordinates: {pos}");
+            }
+            
+            NetworkClient.Send(msg);
+        }
+
+        private void OnPlayerJoinMessage(NetworkConnectionToClient conn, PlayerJoinMessage msg)
+        {
+            GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Получен PlayerJoinMessage: {msg.role}");
 
             if (conn.identity != null)
             {
@@ -143,9 +159,18 @@ namespace VrBattlegrounds.Network
             }
 
             Transform startPos = GetStartPosition();
-            GameObject playerInstance = startPos != null
-                ? Instantiate(prefabToSpawn, startPos.position, startPos.rotation)
-                : Instantiate(prefabToSpawn);
+            
+            Vector3 spawnPos = startPos != null ? startPos.position : Vector3.zero;
+            Quaternion spawnRot = startPos != null ? startPos.rotation : Quaternion.identity;
+
+            if (msg.hasSavedPosition)
+            {
+                spawnPos = msg.savedPosition;
+                spawnRot = msg.savedRotation;
+                GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Spawning {msg.role} at saved position: {spawnPos}");
+            }
+
+            GameObject playerInstance = Instantiate(prefabToSpawn, spawnPos, spawnRot);
 
             playerInstance.name = $"{prefabToSpawn.name} [connId={conn.connectionId}]";
             NetworkServer.AddPlayerForConnection(conn, playerInstance);

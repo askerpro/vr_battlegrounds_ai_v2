@@ -148,6 +148,8 @@ GameplayManager       — матч (5 карт, счёт, победитель)
 | `LogLevel` | `Core/LogLevel.cs` | Enum: `None / Errors / Warnings / Info / Verbose`. |
 | `TeamData` | `Core/TeamData.cs` | ScriptableObject с данными команды. По сети синхронизируется только `int teamIndex`. |
 | `TeamRegistry` | `Core/TeamRegistry.cs` | Реестр команд. |
+| `AppRoleManager` | `Core/AppRoleManager.cs` | Хранит текущую `DeviceRole` (VR/PC/Server) и `NetworkRole` (Host/Client), используется для сборки UI и логики. |
+| `PersistentRoot` | `Managers/PersistentRoot.cs` | Глобальный DontDestroyOnLoad узел. Отвечает за инстанцирование глобальных менеджеров (например, `SessionManager`). |
 
 **Категории логов в `GameSettings`:**
 

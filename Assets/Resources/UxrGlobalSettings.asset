@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _logLevelAnimation: 1
   _logLevelAvatar: 1
-  _logLevelCore: 1
+  _logLevelCore: 5
   _logLevelDevices: 1
   _logLevelLocomotion: 1
-  _logLevelManipulation: 1
+  _logLevelManipulation: 5
   _logLevelNetworking: 1
   _logLevelRendering: 1
   _logLevelUI: 1

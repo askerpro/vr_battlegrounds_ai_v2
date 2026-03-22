@@ -11,6 +11,7 @@
 | `README.md` | Этот файл — технический справочник: скрипты, классы, API, компоненты |
 | `gameplay.md` | Геймдизайн: что делает игрок, правила, режимы, структура матча |
 | `game-manager.md` | GameManager, система режимов: создание assets, настройка, поток действий |
+| `ui-menu-architecture.md` | Архитектура UI Меню (MVC), экраны, префабы, контроллеры |
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
 | `AI_Navigation.md` | 🤖 Технические инструкции для ИИ-агентов (правила оптимизированного поиска M.A.P.) |
 
@@ -20,6 +21,7 @@
 
 - **Геймплей, режимы, матч, арена** → [`gameplay.md`](gameplay.md)
 - **GameManager, режимы, assets, настройка** → [`game-manager.md`](game-manager.md)
+- **Архитектура UI Меню (MVC)** → [`ui-menu-architecture.md`](ui-menu-architecture.md)
 - **История изменений (Changelog)** → [`CHANGELOG.md`](CHANGELOG.md)
 - **UltimateXR SDK** → `Docs/UltimateXR/README.md` (открыть через `#file:`)
 - **Архитектура UltimateXR** → `Docs/UltimateXR/architecture.md`
@@ -163,8 +165,10 @@ GameplayManager       — матч (5 карт, счёт, победитель)
 
 | Класс | Файл | Описание |
 |---|---|---|
-| `AdminMenuController` | `UI/AdminMenuController.cs` | Меню администратора: выбор карты, режима, управление матчем. Только Host. |
-| `PlayerMenuController` | `UI/PlayerMenuController.cs` | Меню игрока: выбор команды, калибровка VR. |
+| `MenuController` | `UI/Menu/MenuController.cs` | Глобальный MVC контроллер меню, управляет открытием, поворотом. |
+| `LocalMenuManager` | `UI/Menu/LocalMenuManager.cs` | Запрашивает префаб меню в зависимости от контекста сцены и спавнит его. |
+| `MenuScreen` | `UI/Menu/MenuScreen.cs` | Базовый класс для экранов планшета (SessionSetup, Calibration и т.д.) |
+| `MenuPrefabRegistry` | `UI/Menu/MenuPrefabRegistry.cs` | Дерево префабов (Role -> Context -> GameMode), хранящее ссылки на GameObject'ы планшетов. |
 | `HUDWidget_GameNotification` | `UI/HUD/HUDWidget_GameNotification.cs` | Слушает семантические `GameMode` события и локализует уведомления. |
 | `PlayerHUDManager` | `UI/HUD/PlayerHUDManager.cs` | Спавнит и управляет дочерними виджетами HUD привязанными к голове игрока. |
 
@@ -249,7 +253,8 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `GameMode` — Respawn | ✅ Реализовано | — |
 | Команды | ✅ Реализовано | — |
 | `GameMode` — Elimination | ✅ Реализовано | — |
-| `AdminMenuController` | 🔧 Обновлено | Средний |
-| `PlayerMenuController` | 🔧 Заготовка | Средний |
+| MVC Архитектура Меню (`MenuController`) | ✅ Реализовано | — |
+| `MenuSessionSetup` (Выбор карт/режимов) | ✅ Реализовано | — |
+| `MenuTeamSelection` (Выбор команды) | 🔧 В процессе | Средний |
 | `VrCalibrationController` | 🔧 Заготовка | Средний |
 | `EliminationModeEditor` | ✅ Реализовано | — |

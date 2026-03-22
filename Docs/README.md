@@ -10,6 +10,7 @@
 |---|---|
 | `README.md` | Этот файл — технический справочник: скрипты, классы, API, компоненты |
 | `gameplay.md` | Геймдизайн: что делает игрок, правила, режимы, структура матча |
+| `magazine-pocket.md` | Механика "умного магазина" (Smart Magazine Pocket) |
 | `game-manager.md` | GameManager, система режимов: создание assets, настройка, поток действий |
 | `ui-menu-architecture.md` | Архитектура UI Меню (MVC), экраны, префабы, контроллеры |
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
@@ -20,6 +21,7 @@
 ## Быстрая навигация
 
 - **Геймплей, режимы, матч, арена** → [`gameplay.md`](gameplay.md)
+- **Умный магазин (Magazine Pocket)** → [`magazine-pocket.md`](magazine-pocket.md)
 - **GameManager, режимы, assets, настройка** → [`game-manager.md`](game-manager.md)
 - **Архитектура UI Меню (MVC)** → [`ui-menu-architecture.md`](ui-menu-architecture.md)
 - **История изменений (Changelog)** → [`CHANGELOG.md`](CHANGELOG.md)

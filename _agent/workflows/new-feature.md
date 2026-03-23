@@ -10,8 +10,8 @@ description: how to add a new feature / добавить новый класс /
 
 Прежде чем что-либо создавать:
 
-1. **`Assets/Docs/README.md`** — список существующих классов, чтобы не дублировать логику
-2. **`Assets/Docs/gameplay.md`** — как новая механика вписывается в геймплей
+1. **`Docs/README.md`** — список существующих классов, чтобы не дублировать логику
+2. **`Docs/gameplay.md`** — как новая механика вписывается в геймплей
 3. **`Assets/ThirdParty/UltimateXR/Docs/_context/architecture.md`** — нет ли готового компонента в UltimateXR SDK
 
 ### Шаг 2 — Определить место в архитектуре
@@ -48,10 +48,10 @@ description: how to add a new feature / добавить новый класс /
 
 | Что добавлено | Документация |
 |---|---|
-| Новый класс / скрипт / компонент | `Assets/Docs/README.md` (таблица ключевых скриптов) |
-| Новая игровая механика / режим | `Assets/Docs/gameplay.md` |
-| Новый менеджер сессии / flow | `Assets/Docs/game-manager.md` |
-| Новый GameMode | `Assets/Docs/game-manager.md` + `Assets/Docs/gameplay.md` |
+| Новый класс / скрипт / компонент | `Docs/README.md` (таблица ключевых скриптов) |
+| Новая игровая механика / режим | `Docs/gameplay.md` |
+| Новый менеджер сессии / flow | `Docs/game-manager.md` |
+| Новый GameMode | `Docs/game-manager.md` + `Docs/gameplay.md` |
 | Новая зависимость от UltimateXR API | `Docs/UltimateXRty/UltimateXR/Docs/_context/architecture.md` |
 | Изменение архитектуры | `Docs/UltimateXRty/UltimateXR/Docs/_context/architecture.md` |
 

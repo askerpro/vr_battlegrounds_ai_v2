@@ -26,7 +26,7 @@ description: how to debug a bug / расследование бага / поче
 Понять контекст компонентов, участвующих в проблеме.
 
 **Файлы:**
-- `Assets/Docs/README.md` — ключевые скрипты проекта
+- `Docs/README.md` — ключевые скрипты проекта
 - `Docs/UltimateXRty/UltimateXR/Docs/_context/architecture.md` — архитектура UltimateXR
 
 ### Шаг 4 — Воспроизвести и локализовать проблему
@@ -81,13 +81,13 @@ description: how to debug a bug / расследование бага / поче
    | Неочевидное поведение / побочный эффект SDK | `known-issues.md` |
    | Как работает компонент UltimateXR | `UltimateXR/Docs/_context/<модуль>.md` |
    | Патч или правка исходников SDK | `sdk-patches.md` |
-   | Связь между игровыми системами проекта | `Assets/Docs/README.md` или `architecture.md` |
+   | Связь между игровыми системами проекта | `Docs/README.md` или `architecture.md` |
 
 2. **Если подходящего файла не существует — создать новый:**
    - Путь: `Docs/UltimateXRty/UltimateXR/Docs/_context/<название>.md` (UltimateXR)
-     или `Assets/Docs/<название>.md` (игровая логика)
+     или `Docs/<название>.md` (игровая логика)
    - Добавить ссылку в точки входа:
-     - `Assets/Docs/README.md` → раздел «Быстрая навигация»
+     - `Docs/README.md` → раздел «Быстрая навигация»
      - `Docs/UltimateXRty/UltimateXR/Docs/_context/README.md` (если UltimateXR)
      - `.agentrules` → раздел «Контекст проекта»
 

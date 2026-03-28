@@ -14,5 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   teamIndex: 1
   displayName: CounterTerrorists
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 0c6c01bbcff9d1f47bcaa70851ac626a, type: 3}
   color: {r: 0, g: 0.024693727, b: 1, a: 0.12941177}
+  avatars:
+  - {fileID: 11400000, guid: e87626fd3cfe71a40ad04285711cd9e6, type: 2}
+  - {fileID: 11400000, guid: aa7239403227fbe4aa083d60d51f2e1f, type: 2}
+  - {fileID: 11400000, guid: 1ddecfa30d061594a8ec136af687d7d6, type: 2}

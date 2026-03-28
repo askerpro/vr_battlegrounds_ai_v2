@@ -32,7 +32,7 @@ namespace VrBattlegrounds.GameModes
         protected override bool CanStartGameplay()
         {
             // Ожидаем, пока на сервере появится хотя бы 1 игрок, чтобы запустить таймер
-            return PlayersManager.Instance != null && PlayersManager.Instance.Players.Count > 0;
+            return PlayersManager.Instance != null && PlayersManager.Instance.Sessions.Count > 0;
         }
 
         [Server]

@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: UxrGlobalSettings
   m_EditorClassIdentifier: 
   _logLevelAnimation: 1
-  _logLevelAvatar: 1
+  _logLevelAvatar: 5
   _logLevelCore: 5
   _logLevelDevices: 1
-  _logLevelLocomotion: 1
+  _logLevelLocomotion: 5
   _logLevelManipulation: 5
-  _logLevelNetworking: 1
+  _logLevelNetworking: 5
   _logLevelRendering: 1
   _logLevelUI: 1
   _logLevelWeapons: 1

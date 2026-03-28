@@ -42,7 +42,7 @@ namespace VrBattlegrounds.GameModes
             _roundDuration = roundDuration;
             _countdownTimer = 0f;
             _roundTimer = 0f;
-            _spawnZones = UnityEngine.Object.FindObjectsOfType<TeamSpawnZone>();
+            _spawnZones = UnityEngine.Object.FindObjectsByType<TeamSpawnZone>(FindObjectsSortMode.None);
             
             _roundState = RoundState.WaitingForPlayers;
             GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Ожидание готовности игроков для старта раунда (заход в spawn-зоны)");

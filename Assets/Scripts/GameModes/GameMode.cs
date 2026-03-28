@@ -4,6 +4,8 @@ using Mirror;
 using UnityEngine;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Player;
+using VrBattlegrounds.Managers;
 
 namespace VrBattlegrounds.GameModes
 {
@@ -49,6 +51,29 @@ namespace VrBattlegrounds.GameModes
         private void Awake()
         {
             _syncedTeamIndices.Callback += OnTeamIndicesChanged;
+        }
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            GameplayManager.OnPlayerTeamChangeRequested += OnPlayerTeamChange;
+        }
+
+        public override void OnStopServer()
+        {
+            base.OnStopServer();
+            GameplayManager.OnPlayerTeamChangeRequested -= OnPlayerTeamChange;
+        }
+
+        /// <summary>
+        /// Вызывается сервером (через GameplayManager) когда игрок подтвердил смену команды.
+        /// Здесь режим может сбросить статистику игрока, вычесть очки и т.д.
+        /// </summary>
+        [Server]
+        protected virtual void OnPlayerTeamChange(PlayerSession session, int newTeamId, int newAvatarId)
+        {
+            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                $"[{GetType().Name}] Игрок {session.PlayerName} меняет команду на {newTeamId}. (Место для сброса статистики)");
         }
 
         private void Start()
@@ -118,7 +143,7 @@ namespace VrBattlegrounds.GameModes
         {
             GameLog.Info(GameSettings.Instance.LogLevelMatch, $"[{GetType().Name}] Ожидание выполнения условий старта матча...");
             yield return new WaitUntil(CanStartGameplay);
-            
+
             StartGameplay();
         }
 
@@ -160,7 +185,7 @@ namespace VrBattlegrounds.GameModes
         /// <summary>
         /// Вызвать из конкретного режима когда определён победитель матча.
         /// </summary>
-        protected void RaiseGameplayEnded(TeamData winner) 
+        protected void RaiseGameplayEnded(TeamData winner)
         {
             RpcOnMatchEnded(winner != null ? winner.teamIndex : -1);
             GameplayEnded?.Invoke(winner);

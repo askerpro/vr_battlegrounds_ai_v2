@@ -78,7 +78,7 @@ namespace VrBattlegrounds.Editor
             {
                 totalSetsPlayed += teamState.Score;
                 EditorGUILayout.LabelField($"{teamState.Team.displayName} (Побед в сетах):", teamState.Score.ToString());
-                EditorGUILayout.LabelField($"   - Живых игроков:", teamState.AlivePlayers.Count().ToString());
+                EditorGUILayout.LabelField($"   - Живых игроков:", teamState.AliveSessions.Count().ToString());
             }
 
             EditorGUILayout.LabelField("Текущий сет:", (totalSetsPlayed + 1).ToString());

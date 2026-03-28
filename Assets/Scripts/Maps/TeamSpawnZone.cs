@@ -31,7 +31,7 @@ namespace VrBattlegrounds.Maps
 
         /// <summary>Срабатывает когда игрок входит в зону. Передаётся сам контроллер игрока.</summary>
         public event Action<TeamSpawnZone, PlayerController> PlayerEntered;
-        
+
         /// <summary>Срабатывает когда игрок покидает зону (перестал быть полностью внутри или вышел совсем).</summary>
         public event Action<TeamSpawnZone, PlayerController> PlayerExited;
 
@@ -166,8 +166,8 @@ namespace VrBattlegrounds.Maps
                 if (_localPlayer != null)
                 {
                     bool isDead = !_localPlayer.IsAlive;
-                    bool isSameTeam = _localPlayer.Team == _team;
-                    
+                    bool isSameTeam = _localPlayer.Session.Team == _team;
+
                     // Видим только если мы мертвы и из этой же команды
                     isVisible = isDead && isSameTeam;
                 }
@@ -185,7 +185,7 @@ namespace VrBattlegrounds.Maps
                 // Если мы мертвы и видим зону в активном раунде — используем X-ray материал
                 bool useXray = (_currentRoundState == RoundState.Active && _localPlayer != null && !_localPlayer.IsAlive);
                 _meshRenderer.sharedMaterial = useXray && _xrayMaterial != null ? _xrayMaterial : _originalMaterial;
-                
+
                 // Перекрашиваем, если сменили материал
                 UpdateColor();
             }
@@ -248,9 +248,9 @@ namespace VrBattlegrounds.Maps
                 // СОБЫТИЕ: Игрок зашёл ЦЕЛИКОМ
                 _playersInZone.Add(player);
                 _playersInZoneCount = _playersInZone.Count;
-                
+
                 PlayerEntered?.Invoke(this, player);
-                
+
                 GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
                     $"[TeamSpawnZone] Игрок {player.name} вошёл в зону '{name}' (полное нахождение)");
             }
@@ -259,9 +259,9 @@ namespace VrBattlegrounds.Maps
                 // СОБЫТИЕ: Игрок больше не внутри целиком (но всё ещё касается колайдером)
                 _playersInZone.Remove(player);
                 _playersInZoneCount = _playersInZone.Count;
-                
+
                 PlayerExited?.Invoke(this, player);
-                
+
                 GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
                     $"[TeamSpawnZone] Игрок {player.name} покинул зону '{name}' (вышел из режима полного нахождения)");
             }
@@ -279,7 +279,7 @@ namespace VrBattlegrounds.Maps
                 {
                     _playersInZoneCount = _playersInZone.Count;
                     PlayerExited?.Invoke(this, player);
-                    
+
                     GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
                         $"[TeamSpawnZone] Игрок {player.name} покинул зону '{name}' (вышел совсем)");
                 }
@@ -302,7 +302,7 @@ namespace VrBattlegrounds.Maps
 
             foreach (var p in _playersInZone)
             {
-                if (p.Team == _team)
+                if (p.Session.Team == _team)
                 {
                     result.Add(p);
                 }
@@ -316,15 +316,16 @@ namespace VrBattlegrounds.Maps
             List<PlayerController> result = new List<PlayerController>();
             if (_team == null || PlayersManager.Instance == null) return result;
 
-            IEnumerable<PlayerController> allAliveInTeam = PlayersManager.Instance.GetAlivePlayers(_team);
-            foreach (var alivePlayer in allAliveInTeam)
+            IEnumerable<PlayerSession> allAliveInTeam = PlayersManager.Instance.GetAlivePlayers(_team);
+            foreach (var session in allAliveInTeam)
             {
-                if (!_playersInZone.Contains(alivePlayer))
+                var alivePlayer = session.ActiveAvatar;
+                if (alivePlayer != null && !_playersInZone.Contains(alivePlayer))
                 {
                     result.Add(alivePlayer);
                 }
             }
-            
+
             return result;
         }
 
@@ -359,9 +360,10 @@ namespace VrBattlegrounds.Maps
         {
             if (_team == null || PlayersManager.Instance == null) return false;
 
-            foreach (PlayerController alive in PlayersManager.Instance.GetAlivePlayers(_team))
+            foreach (PlayerSession session in PlayersManager.Instance.GetAlivePlayers(_team))
             {
-                if (!_playersInZone.Contains(alive))
+                var alive = session.ActiveAvatar;
+                if (alive != null && !_playersInZone.Contains(alive))
                     return false;
             }
             return true;

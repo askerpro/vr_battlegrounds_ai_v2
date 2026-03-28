@@ -31,23 +31,23 @@ namespace VrBattlegrounds.GameModes
             set => _gameMode.SetScore(Team, value);
         }
 
-        /// <summary>Все подключенные игроки этой команды.</summary>
-        public IEnumerable<PlayerController> Players => PlayersManager.Instance.GetPlayers(Team);
+        /// <summary>Все подключенные сессии игроков этой команды.</summary>
+        public IEnumerable<PlayerSession> Sessions => PlayersManager.Instance.GetPlayers(Team);
 
-        /// <summary>Только живые игроки этой команды.</summary>
-        public IEnumerable<PlayerController> AlivePlayers => PlayersManager.Instance.GetAlivePlayers(Team);
+        /// <summary>Только живые сессии игроков этой команды.</summary>
+        public IEnumerable<PlayerSession> AliveSessions => PlayersManager.Instance.GetAlivePlayers(Team);
 
         /// <summary>Общее количество игроков в команде.</summary>
-        public int PlayersCount => Players.Count();
+        public int PlayersCount => Sessions.Count();
 
         /// <summary>Есть ли в команде хотя бы один подключенный игрок?</summary>
-        public bool HasPlayers() => Players.Any();
+        public bool HasPlayers() => Sessions.Any();
 
         /// <summary>Есть ли в команде хотя бы один живой игрок?</summary>
-        public bool HasAlivePlayers() => AlivePlayers.Any();
+        public bool HasAlivePlayers() => AliveSessions.Any();
 
-        /// <summary>Все ли подключённые игроки в этой команде живы?</summary>
-        public bool AreAllPlayersAlive() => Players.All(p => p.IsAlive);
+        /// <summary>Все ли подключённые игроки в этой команде живы (и заспавнены)?</summary>
+        public bool AreAllPlayersAlive() => Sessions.All(s => s.ActiveAvatar != null && s.ActiveAvatar.IsAlive);
 
         /// <summary>Добавить очки команде.</summary>
         public void AddScore(int points = 1)

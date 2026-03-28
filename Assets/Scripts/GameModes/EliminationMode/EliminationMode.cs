@@ -240,7 +240,7 @@ namespace VrBattlegrounds.GameModes
         [Server]
         public void PrepareNextRound()
         {
-            var zones = UnityEngine.Object.FindObjectsOfType<Maps.TeamSpawnZone>();
+            var zones = UnityEngine.Object.FindObjectsByType<Maps.TeamSpawnZone>(FindObjectsSortMode.None);
 
             foreach (var teamState in _teamStates.Values)
             {
@@ -248,9 +248,10 @@ namespace VrBattlegrounds.GameModes
                 var zone = zones.FirstOrDefault(z => z.Team == team);
                 if (zone == null) continue;
 
-                foreach (var player in teamState.Players)
+                foreach (var session in teamState.Sessions)
                 {
-                    if (player.IsAlive) continue;
+                    var player = session.ActiveAvatar;
+                    if (player == null || player.IsAlive) continue;
 
                     // Если игрок уже в зоне - респавним сразу
                     if (zone.GetPlayersInZone().Contains(player))

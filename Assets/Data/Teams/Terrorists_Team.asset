@@ -14,5 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   teamIndex: 2
   displayName: Terrorists
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 3081c0a74f4230c4db9f5a4c4c736ec4, type: 3}
   color: {r: 1, g: 0, b: 0.7391076, a: 0.21176471}
+  avatars:
+  - {fileID: 11400000, guid: e87626fd3cfe71a40ad04285711cd9e6, type: 2}
+  - {fileID: 11400000, guid: 765815f6f8d1186499b355cbd079ba4d, type: 2}
+  - {fileID: 11400000, guid: 322b307f56bf6fa4f8dc69b4ed0d2da8, type: 2}

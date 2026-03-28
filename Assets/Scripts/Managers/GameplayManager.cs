@@ -6,9 +6,11 @@ using UnityEngine;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
+using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
 using UltimateXR.Mechanics.Weapons;
 
+using VrBattlegrounds.Player.Avatars;
 namespace VrBattlegrounds.Managers
 {
     /// <summary>
@@ -62,11 +64,11 @@ namespace VrBattlegrounds.Managers
 
             if (_gameMode == null)
             {
-                _gameModeDisplay  = "—";
+                _gameModeDisplay = "—";
                 _roundStateDisplay = "—";
-                _timerDisplay     = 0f;
-                _scoreADisplay    = 0;
-                _scoreBDisplay    = 0;
+                _timerDisplay = 0f;
+                _scoreADisplay = 0;
+                _scoreBDisplay = 0;
                 return;
             }
 
@@ -83,22 +85,22 @@ namespace VrBattlegrounds.Managers
                 {
                     case RoundState.Countdown:
                         _roundStateDisplay = "Countdown";
-                        _timerDisplay      = elimination.CountdownTimeRemaining;
+                        _timerDisplay = elimination.CountdownTimeRemaining;
                         break;
                     case RoundState.Active:
                         _roundStateDisplay = "Active";
-                        _timerDisplay      = elimination.RoundTimeRemaining;
+                        _timerDisplay = elimination.RoundTimeRemaining;
                         break;
                     default:
                         _roundStateDisplay = "Ended";
-                        _timerDisplay      = 0f;
+                        _timerDisplay = 0f;
                         break;
                 }
             }
             else
             {
                 _roundStateDisplay = "—";
-                _timerDisplay      = 0f;
+                _timerDisplay = 0f;
             }
 
             // Управляем доступностью оружия через UxrWeaponManager
@@ -109,7 +111,7 @@ namespace VrBattlegrounds.Managers
                 {
                     weaponsEnabled = elim.CurrentRoundState == RoundState.Active;
                 }
-                
+
                 if (UxrWeaponManager.Instance.WeaponSystemEnabled != weaponsEnabled)
                 {
                     UxrWeaponManager.Instance.SetWeaponSystemEnabled(weaponsEnabled);
@@ -262,6 +264,29 @@ namespace VrBattlegrounds.Managers
         {
             if (_gameMode is EliminationMode elimination)
                 elimination.OnPlayerDied(player);
+        }
+
+        /// <summary>Глобальное серверное событие: Игрок запросил смену команды/скина.</summary>
+        public static event Action<PlayerSession, int, int> OnPlayerTeamChangeRequested;
+
+        /// <summary>
+        /// Централизованный вход для обработки смены команды и скина сервером.
+        /// Обеспечивает вызов всех необходимых хуков (сброс статы) перед физической сменой.
+        /// </summary>
+        [Server]
+        public void ProcessTeamChangeRequest(PlayerSession session, int newTeamId, int newAvatarId)
+        {
+            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                $"[GameplayManager] Игрок {session.PlayerName} запросил смену: Команда {newTeamId}, Скин {newAvatarId}");
+
+            // 1. Уведомляем другие системы (GameMode, Stats)
+            OnPlayerTeamChangeRequested?.Invoke(session, newTeamId, newAvatarId);
+
+            // 2. Делегируем фактическую смену AvatarManager (там происходит Spawn нового префаба)
+            if (AvatarManager.Instance != null)
+            {
+                AvatarManager.Instance.ChangeAvatar(session.connectionToClient, session, newTeamId, newAvatarId);
+            }
         }
     }
 }

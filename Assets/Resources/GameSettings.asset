@@ -15,5 +15,6 @@ MonoBehaviour:
   _logLevelNetwork: 4
   _logLevelPlayer: 4
   _logLevelMatch: 0
-  _logLevelDebug: 0
+  _logLevelDebug: 4
   _logLevelUI: 4
+  _logLevelPhysicalSpace: 4

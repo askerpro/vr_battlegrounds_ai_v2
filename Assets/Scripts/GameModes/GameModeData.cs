@@ -1,6 +1,5 @@
 using UnityEngine;
 
-using UnityEngine;
 using VrBattlegrounds;
 
 namespace VrBattlegrounds.GameModes

@@ -47,7 +47,7 @@ namespace VrBattlegrounds.Managers
 
         private void OnDestroy()
         {
-            GameNetworkManager.PlayerConnected -= OnPlayerConnectedForLoad;
+            PlayersManager.OnSessionConnected -= OnPlayerConnectedForLoad;
             if (Instance == this)
                 Instance = null;
         }
@@ -98,7 +98,7 @@ namespace VrBattlegrounds.Managers
             // Если игроки уже есть — грузим сразу (повторная смена карты).
             // Если нет — подписываемся на PlayerConnected и ждём первого спавна.
             GameNetworkManager nm = NetworkManager.singleton as GameNetworkManager;
-            bool playerAlreadySpawned = PlayersManager.Instance != null && PlayersManager.Instance.Players.Count > 0;
+            bool playerAlreadySpawned = PlayersManager.Instance != null && PlayersManager.Instance.Sessions.Count > 0;
 
             if (!playerAlreadySpawned)
             {
@@ -106,7 +106,7 @@ namespace VrBattlegrounds.Managers
                     $"[MapManager] Загрузка карты '{sceneName}': ждём события PlayerConnected...");
 
                 _waitingForPlayer = true;
-                GameNetworkManager.PlayerConnected += OnPlayerConnectedForLoad;
+                PlayersManager.OnSessionConnected += OnPlayerConnectedForLoad;
 
                 // Таймаут на случай Server-only режима без Host-клиента
                 const float timeout = 5f;
@@ -117,7 +117,7 @@ namespace VrBattlegrounds.Managers
                     yield return null;
                 }
 
-                GameNetworkManager.PlayerConnected -= OnPlayerConnectedForLoad;
+                PlayersManager.OnSessionConnected -= OnPlayerConnectedForLoad;
                 _waitingForPlayer = false;
 
                 if (elapsed >= timeout)
@@ -154,7 +154,7 @@ namespace VrBattlegrounds.Managers
         /// <summary>
         /// Обработчик PlayerConnected — сигнализирует корутине что игрок заспавнился.
         /// </summary>
-        private void OnPlayerConnectedForLoad(PlayerController player)
+        private void OnPlayerConnectedForLoad(PlayerSession session)
         {
             _waitingForPlayer = false;
         }

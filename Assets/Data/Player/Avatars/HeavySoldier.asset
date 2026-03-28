@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88307b99885a9ee44b21c008eaa7f591, type: 3}
+  m_Name: HeavySoldier
+  m_EditorClassIdentifier: 
+  skinIndex: 1
+  displayName: Heave Soldier
+  icon: {fileID: 21300000, guid: 3c8ca4abc21da964797019f8ad224450, type: 3}
+  skinPrefab: {fileID: 2742905235829345489, guid: fefcf679beb2d0f42b6cce742988357e, type: 3}

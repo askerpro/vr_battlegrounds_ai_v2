@@ -1,10 +1,11 @@
 using Mirror;
 using System;
+using VrBattlegrounds.Managers;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
-using VrBattlegrounds.Managers;
+using VrBattlegrounds.Network;
 using static Codice.Client.Commands.WkTree.WorkspaceTreeNode;
 
 namespace VrBattlegrounds.Player
@@ -25,33 +26,41 @@ namespace VrBattlegrounds.Player
 
         // ── Сетевые данные ────────────────────────────────────────────────────
 
+
+
         /// <summary>
-        /// teamIndex = 0 означает "нет команды".
-        /// hook вызывается на всех клиентах при каждом изменении значения.
+        /// Сетевой ID сессии, к которой привязан этот аватар
         /// </summary>
-        [SyncVar(hook = nameof(OnTeamIndexChanged))]
-        private int _teamIndex = 0;
+        [SyncVar] public uint SessionNetId;
 
-        // ── Публичный API ─────────────────────────────────────────────────────
-
-        /// <summary>Данные команды игрока. Null если команда не назначена.</summary>
-        public TeamData Team
+        /// <summary>
+        /// Ссылка на PlayerSession, если он уже заспавнен на клиенте/сервере
+        /// </summary>
+        public PlayerSession Session
         {
-            get => TeamRegistry.Instance?.GetByIndex(_teamIndex);
-            set
+            get
             {
-                int newIndex = value != null ? value.teamIndex : 0;
-                if (_teamIndex == newIndex) return;
-                _teamIndex = newIndex;
-                GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                    $"[PlayerController] {name}: команда назначена → {(value != null ? value.displayName : "нет")}");
+                if (SessionNetId == 0) return null;
+                // На сервере можем искать в spawned
+                if (NetworkServer.active && NetworkServer.spawned.TryGetValue(SessionNetId, out NetworkIdentity sIdentity))
+                    return sIdentity.GetComponent<PlayerSession>();
+                // На клиенте - аналогично
+                if (NetworkClient.active && NetworkClient.spawned.TryGetValue(SessionNetId, out NetworkIdentity cIdentity))
+                    return cIdentity.GetComponent<PlayerSession>();
+
+                return null;
             }
         }
 
+        // ── Публичный API ─────────────────────────────────────────────────────
+
+        /// <summary>Данные команды игрока. Null если команда не назначена или сессия отсутствует.</summary>
+        public TeamData Team => Session != null ? Session.Team : null;
+
         public float Health => _actor != null ? _actor.Life : 0f;
 
-        /// <summary>Числовой индекс команды (для сетевой синхронизации).</summary>
-        public int TeamIndex => _teamIndex;
+        /// <summary>Числовой индекс команды.</summary>
+        public int TeamIndex => Session != null ? Session.TeamIndex : 0;
 
         public bool IsAlive => !_actor.IsDead;
 
@@ -88,12 +97,7 @@ namespace VrBattlegrounds.Player
 
         // ── SyncVar hooks (вызываются на всех клиентах при изменении) ─────────
 
-        private void OnTeamIndexChanged(int oldIndex, int newIndex)
-        {
-            TeamData team = TeamRegistry.Instance?.GetByIndex(newIndex);
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                $"[PlayerController] {name}: команда изменена → {(team != null ? team.displayName : "нет")}");
-        }
+
 
         private void OnIsAliveChanged(bool oldValue, bool newValue)
         {
@@ -106,7 +110,7 @@ namespace VrBattlegrounds.Player
         private void OnDamageReceived(object sender, UxrDamageEventArgs e)
         {
             GameLog.Verbose(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: получен урон {e.Damage:F1} (тип: {e.DamageType}). Текущее здоровье: {_actor.Life:F1}", this);
-            
+
             if (!isServer) return;
         }
 
@@ -115,7 +119,7 @@ namespace VrBattlegrounds.Player
         public void Die()
         {
             GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: смерть подтверждена на сервере. Переход в режим наблюдателя.", this);
-            
+
             // Trigger spectator mode on server for synchronization
             var spectator = GetComponent<SpectatorController>();
             if (spectator != null)
@@ -135,7 +139,7 @@ namespace VrBattlegrounds.Player
         [Server]
         public void Respawn(Transform spawnPoint)
         {
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: респаун на точке {spawnPoint.name} ({spawnPoint.position})", this);
+            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: респаун на точке {spawnPoint.name} ({spawnPoint.position})\nStack Trace:\n{new System.Diagnostics.StackTrace()}", this);
             _actor.Life = 100f;
 
             var spectator = GetComponent<SpectatorController>();
@@ -158,6 +162,15 @@ namespace VrBattlegrounds.Player
             if (grabManager != null)
             {
                 grabManager.ReleaseAllGrabbedObjects();
+            }
+        }
+
+        [Server]
+        public void RestoreHealth(float health)
+        {
+            if (_actor != null)
+            {
+                _actor.Life = health;
             }
         }
 

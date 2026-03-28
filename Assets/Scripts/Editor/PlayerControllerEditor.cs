@@ -32,17 +32,17 @@ namespace VrBattlegrounds.Editor
                 // Здоровье
                 float health = player.Health;
                 Color healthColor = Color.Lerp(Color.red, Color.green, health / 100f);
-                
+
                 Rect rect = EditorGUILayout.GetControlRect(false, 20);
                 EditorGUI.ProgressBar(rect, health / 100f, $"Health: {health:F1}");
-                
+
                 EditorGUILayout.Space(2);
 
                 // Команда
-                var team = player.Team;
+                var team = player.Session.Team;
                 string teamName = team != null ? team.displayName : "No Team";
                 EditorGUILayout.LabelField("Team", teamName);
-                
+
                 if (team != null)
                 {
                     EditorGUILayout.LabelField("Team Index", player.TeamIndex.ToString());

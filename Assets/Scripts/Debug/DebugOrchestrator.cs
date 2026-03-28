@@ -1,4 +1,5 @@
-using Mirror;
+using System.Collections.Generic;
+using System.Linq;
 using Mirror;
 using UnityEngine;
 using VrBattlegrounds;
@@ -6,6 +7,7 @@ using VrBattlegrounds.Core;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
+using VrBattlegrounds.Player.Avatars;
 using VrBattlegrounds.Maps;
 
 namespace VrBattlegrounds.DevTools
@@ -30,32 +32,36 @@ namespace VrBattlegrounds.DevTools
         // Флаг: карта уже была запрошена в этой сессии — не грузить повторно.
         private bool _mapLoadRequested;
 
+        // Трекаем уже заспавненные сессии на текущей карте (для фильтрации смены скина)
+        private HashSet<uint> _initializedSessions = new HashSet<uint>();
+
         private void Awake()
         {
             if (_config == null || !_config.enabled)
             {
-                gameObject.SetActive(false);
                 return;
             }
 
             if (_config.hostIsAdmin)
             {
-                AppRoleManager.SetDebugOverride(ClientDeviceRole.PlayerAdmin);
-                GameLog.Info(GameSettings.Instance.LogLevelDebug, "[DebugOrchestrator] Роль переопределена на PlayerAdmin (из конфига).");
+                // Запуск в качестве хоста
+                LocalClientProfile.SetDebugOverride(ClientDeviceType.VR, true, GameRole.Player);
             }
         }
 
         private void OnEnable()
         {
-            GameNetworkManager.PlayerConnected    += OnPlayerConnected;
-            GameNetworkManager.PlayerDisconnected += OnPlayerDisconnected;
+            PlayersManager.OnSessionConnected += HandlePlayerConnected;
+            PlayersManager.OnSessionDisconnected += HandlePlayerDisconnected;
+            AvatarManager.OnAvatarSpawned += HandleAvatarSpawned;
             GameNetworkManager.ServerSceneChanged += OnServerSceneChanged;
         }
 
         private void OnDisable()
         {
-            GameNetworkManager.PlayerConnected    -= OnPlayerConnected;
-            GameNetworkManager.PlayerDisconnected -= OnPlayerDisconnected;
+            PlayersManager.OnSessionConnected -= HandlePlayerConnected;
+            PlayersManager.OnSessionDisconnected -= HandlePlayerDisconnected;
+            AvatarManager.OnAvatarSpawned -= HandleAvatarSpawned;
             GameNetworkManager.ServerSceneChanged -= OnServerSceneChanged;
         }
 
@@ -66,36 +72,50 @@ namespace VrBattlegrounds.DevTools
         }
 
         /// <summary>
-        /// Вызывается при каждом подключении игрока.
+        /// Вызывается при каждом подключении игрока (создании сессии).
         /// Назначает команду (равномерное распределение) и при необходимости стартует матч.
         /// </summary>
-        private void OnPlayerConnected(PlayerController player)
+        private void HandlePlayerConnected(PlayerSession session)
         {
             if (!NetworkServer.active)
             {
                 GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
-                    "[DebugOrchestrator] OnPlayerConnected: сервер не активен, пропуск.");
+                    "[DebugOrchestrator] HandlePlayerConnected: сервер не активен, пропуск.");
                 return;
             }
 
             GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                $"[DebugOrchestrator] OnPlayerConnected: игрок={player.name}");
+                $"[DebugOrchestrator] HandlePlayerConnected: сессия={session.PlayerName}");
 
-            TryAssignTeam(player);
-            TryTeleportToSpawnZone(player);
+            TryAssignTeam(session);
             TryStartGameplay();
+        }
+
+        private void HandleAvatarSpawned(PlayerController avatar)
+        {
+            if (avatar == null) return;
+
+            // Если игрок уже был первично инициализирован на этой карте, не трогаем (например, при смене скина)
+            if (_initializedSessions.Contains(avatar.SessionNetId))
+            {
+                GameLog.Verbose(GameSettings.Instance.LogLevelDebug, $"[DebugOrchestrator] Аватар для {avatar.name} (SessionNetId={avatar.SessionNetId}) уже был инициализирован. Пропускаем телепорт на базу.");
+                return;
+            }
+
+            _initializedSessions.Add(avatar.SessionNetId);
+            TryTeleportToSpawnZone(avatar);
         }
 
         private void TryTeleportToSpawnZone(PlayerController player)
         {
-            if (player.Team == null) return;
+            if (player.Session.Team == null) return;
 
             // Ищем спавн зону для назначенной команды
             TeamSpawnZone targetZone = null;
-            TeamSpawnZone[] zones = FindObjectsOfType<TeamSpawnZone>();
+            TeamSpawnZone[] zones = Object.FindObjectsByType<TeamSpawnZone>(FindObjectsSortMode.None);
             foreach (var zone in zones)
             {
-                if (zone.Team == player.Team)
+                if (zone.Team == player.Session.Team)
                 {
                     targetZone = zone;
                     break;
@@ -104,15 +124,15 @@ namespace VrBattlegrounds.DevTools
 
             if (targetZone != null)
             {
-                GameLog.Info(GameSettings.Instance.LogLevelDebug, $"[DebugOrchestrator] {player.name} начинает в зоне спавна команды {player.Team.displayName}");
+                GameLog.Info(GameSettings.Instance.LogLevelDebug, $"[DebugOrchestrator] {player.name} начинает в зоне спавна команды {player.Session.Team.displayName}");
                 player.Respawn(targetZone.transform);
             }
         }
 
-        private void OnPlayerDisconnected(PlayerController player)
+        private void HandlePlayerDisconnected(PlayerSession session)
         {
             GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
-                $"[DebugOrchestrator] OnPlayerDisconnected: игрок={player.name}");
+                $"[DebugOrchestrator] HandlePlayerDisconnected: сессия={(session != null ? session.PlayerName : "null")}");
         }
 
         /// <summary>
@@ -169,11 +189,10 @@ namespace VrBattlegrounds.DevTools
 
         /// <summary>
         /// Назначает игроку команду с наименьшим числом участников (round-robin по балансу).
-        /// Если teamsForAutoAssign пуст — команда не назначается.
         /// </summary>
-        private void TryAssignTeam(PlayerController player)
+        private void TryAssignTeam(PlayerSession session)
         {
-            if (_config.teamsForAutoAssign == null || _config.teamsForAutoAssign.Count == 0)
+            if (_config.teamsForAutoAssign == null || _config.teamsForAutoAssign.Count == 0 || session == null)
             {
                 GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
                     "[DebugOrchestrator] TryAssignTeam: teamsForAutoAssign пуст — команда не назначается.");
@@ -181,7 +200,6 @@ namespace VrBattlegrounds.DevTools
             }
 
             PlayersManager pm = PlayersManager.Instance;
-
             TeamData bestTeam = null;
             int bestCount = int.MaxValue;
 
@@ -189,29 +207,27 @@ namespace VrBattlegrounds.DevTools
             {
                 if (team == null) continue;
 
-                // Считаем сколько игроков уже в этой команде (не считая только что подключившегося)
+                // Считаем сколько сессий в этой команде
                 int count = 0;
                 if (pm != null)
                 {
-                    foreach (PlayerController p in pm.Players)
-                    {
-                        if (p != player && p.Team == team)
-                            count++;
-                    }
+                    count = pm.GetPlayers(team).Count();
                 }
 
                 if (count < bestCount)
                 {
                     bestCount = count;
-                    bestTeam  = team;
+                    bestTeam = team;
                 }
             }
 
             if (bestTeam == null) return;
 
-            player.Team = bestTeam;
             GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                $"[DebugOrchestrator] Команда назначена игроку {player.name}: {bestTeam.displayName} (в команде: {bestCount + 1})");
+                $"[DebugOrchestrator] Команда назначена сессии {session.PlayerName}: {bestTeam.displayName}");
+
+            session.TeamIndex = (byte)bestTeam.teamIndex;
+            session.AvatarIndex = 0; // Скин по умолчанию
         }
 
         /// <summary>
@@ -228,6 +244,9 @@ namespace VrBattlegrounds.DevTools
                 $"[DebugOrchestrator] OnServerSceneChanged: сцена='{sceneName}'");
 
             TryAutoLoadMap();
+
+            // При смене сцены очищаем трекер спавнов, так как все аватары будут пересозданы
+            _initializedSessions.Clear();
 
             // Игроки подключились ДО загрузки карты (в Offline-сцене) — GameplayManager тогда не существовал.
             // Теперь карта загружена — пробуем запустить матч.

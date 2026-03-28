@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Player;
+using VrBattlegrounds.Player.Avatars;
+using VrBattlegrounds.Managers;
 
 namespace VrBattlegrounds.Network
 {
@@ -13,17 +16,8 @@ namespace VrBattlegrounds.Network
     /// </summary>
     public class GameNetworkManager : NetworkManager
     {
-        [Header("Roles & Prefabs")]
-        [Tooltip("Реестр маппингов ролей на префабы. Если роль не найдена, спавнится стандартный playerPrefab.")]
-        [SerializeField] private RolePrefabRegistry _roleRegistry;
 
-        /// <summary>Игрок подключился и спавнился на сервере.</summary>
-        public static event Action<PlayerController> PlayerConnected;
-
-        /// <summary>Игрок отключился от сервера.</summary>
-        public static event Action<PlayerController> PlayerDisconnected;
-
-        /// <summary>Сервер завершил загрузку сцены. Параметр — имя загруженной сцены.</summary>
+        /// <summary>Сервер завершил загрузку сцены.</summary>
         public static event Action<string> ServerSceneChanged;
 
         [Header("Server Context")]
@@ -33,7 +27,6 @@ namespace VrBattlegrounds.Network
         public override void Awake()
         {
             base.Awake();
-            // Отключаем автоматический спавн Mirror, так как будем сами отправлять RoleJoinMessage
             autoCreatePlayer = false;
         }
 
@@ -45,14 +38,10 @@ namespace VrBattlegrounds.Network
             {
                 GameObject sessionInstance = Instantiate(_sessionContextPrefab);
                 NetworkServer.Spawn(sessionInstance);
-                GameLog.Info(GameSettings.Instance.LogLevelNetwork, "[GameNetworkManager] SessionContext (SessionManager) успешно заспавнен сервером.");
             }
-            else
-            {
-                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, "[GameNetworkManager] Префаб SessionContext не назначен, сессия не будет отслеживаться!");
-            }
-            
-            NetworkServer.RegisterHandler<PlayerJoinMessage>(OnPlayerJoinMessage);
+
+            NetworkServer.RegisterHandler<GamePlayerConnectMessage>(OnGamePlayerConnect);
+            NetworkServer.RegisterHandler<SpectatorConnectMessage>(OnSpectatorConnect);
         }
 
         public override void OnServerSceneChanged(string sceneName)
@@ -61,29 +50,20 @@ namespace VrBattlegrounds.Network
             ServerSceneChanged?.Invoke(sceneName);
         }
 
+        // Вызывается когда клиент базово подключился, но мы ждем PlayerJoinMessage для спавна
         public override void OnServerAddPlayer(NetworkConnectionToClient conn)
         {
-            base.OnServerAddPlayer(conn);
-
-            PlayerController player = conn.identity.GetComponent<PlayerController>();
-            if (player == null)
-                return;
-
-            PlayerConnected?.Invoke(player);
+            // Мы не спавним ничего автоматически. Спавн идет в OnPlayerJoinMessage
         }
 
         public override void OnServerDisconnect(NetworkConnectionToClient conn)
         {
-            if (conn.identity != null)
+            if (PlayersManager.Instance != null)
             {
-                PlayerController player = conn.identity.GetComponent<PlayerController>();
-                if (player != null)
-                {
-                    PlayerDisconnected?.Invoke(player);
-                }
+                PlayersManager.Instance.UnregisterSession(conn);
             }
 
-            base.OnServerDisconnect(conn);
+            base.OnServerDisconnect(conn); // Mirror автоматически уничтожает Owned objects (сессию и аватар)
         }
 
         // ==============================================================================
@@ -93,87 +73,69 @@ namespace VrBattlegrounds.Network
         public override void OnClientSceneChanged()
         {
             base.OnClientSceneChanged();
-            
-            // Если сцена загрузилась и мы готовы, отправляем серверу запрос на спавн с нашей ролью
             if (NetworkClient.ready && NetworkClient.connection.identity == null)
-            {
-                SendRoleJoinMessage();
-            }
+                SendConnectMessage();
         }
 
         public override void OnClientConnect()
         {
             base.OnClientConnect();
-            
-            // Если мы подключились и сцена уже загружена (NetworkManager базовый делает нас ready)
             if (NetworkClient.ready && NetworkClient.connection.identity == null)
-            {
-                SendRoleJoinMessage();
-            }
+                SendConnectMessage();
         }
 
-        private void SendRoleJoinMessage()
+        private void SendConnectMessage()
         {
-            var msg = new PlayerJoinMessage { role = AppRoleManager.LocalRole };
-            
-            if (VrBattlegrounds.PhysicalSpaceUtils.PhysicalSpaceSyncManager.Instance != null &&
-                VrBattlegrounds.PhysicalSpaceUtils.PhysicalSpaceSyncManager.Instance.TryGetSavedAvatarTransform(out Vector3 pos, out Quaternion rot))
+            // Берем или генерируем deviceToken для сессии (сохраняется у клиента локально)
+            string token = UnityEngine.PlayerPrefs.GetString("DeviceToken", "");
+            if (string.IsNullOrEmpty(token))
             {
-                msg.hasSavedPosition = true;
-                msg.savedPosition = pos;
-                msg.savedRotation = rot;
-                GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Sending PlayerJoinMessage with saved coordinates: {pos}");
-            }
-            
-            NetworkClient.Send(msg);
-        }
-
-        private void OnPlayerJoinMessage(NetworkConnectionToClient conn, PlayerJoinMessage msg)
-        {
-            GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Получен PlayerJoinMessage: {msg.role}");
-
-            if (conn.identity != null)
-            {
-                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, "[GameNetworkManager] Игрок уже заспавнен для этого соединения.");
-                return;
+                token = System.Guid.NewGuid().ToString();
+                UnityEngine.PlayerPrefs.SetString("DeviceToken", token);
+                UnityEngine.PlayerPrefs.Save();
             }
 
-            GameObject prefabToSpawn = playerPrefab;
-
-            if (_roleRegistry != null && _roleRegistry.rolePrefabs != null)
+            if (LocalClientProfile.LocalRole == GameRole.Player)
             {
-                foreach (var mapping in _roleRegistry.rolePrefabs)
+                var msg = new GamePlayerConnectMessage(
+                    token, 
+                    LocalClientProfile.LocalDeviceType, 
+                    1, 
+                    0
+                );
+
+                NetworkClient.Send(msg);
+            }
+            else
+            {
+                var msg = new SpectatorConnectMessage
                 {
-                    if (mapping.role == msg.role && mapping.prefab != null)
-                    {
-                        prefabToSpawn = mapping.prefab;
-                        break;
-                    }
-                }
+                    deviceToken = token,
+                    deviceType = LocalClientProfile.LocalDeviceType,
+                    isAdmin = LocalClientProfile.IsLocalAdmin
+                };
+                NetworkClient.Send(msg);
             }
+        }
 
-            if (prefabToSpawn == null)
+        // Removed SetupPlayerSession as it's now internal to PlayersManager
+
+        private void OnGamePlayerConnect(NetworkConnectionToClient conn, GamePlayerConnectMessage msg)
+        {
+            if (PlayersManager.Instance != null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Не найден префаб для спавна роли {msg.role} (playerPrefab и RolePrefabMapping не настроены)!");
-                return;
+                PlayersManager.Instance.HandlePlayerConnect(conn, msg);
             }
-
-            Transform startPos = GetStartPosition();
-            
-            Vector3 spawnPos = startPos != null ? startPos.position : Vector3.zero;
-            Quaternion spawnRot = startPos != null ? startPos.rotation : Quaternion.identity;
-
-            if (msg.hasSavedPosition)
+            else
             {
-                spawnPos = msg.savedPosition;
-                spawnRot = msg.savedRotation;
-                GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Spawning {msg.role} at saved position: {spawnPos}");
+                GameLog.Error("[GameNetworkManager] PlayersManager is missing! Cannot handle player connection.");
             }
+        }
 
-            GameObject playerInstance = Instantiate(prefabToSpawn, spawnPos, spawnRot);
+        private void OnSpectatorConnect(NetworkConnectionToClient conn, SpectatorConnectMessage msg)
+        {
+            GameLog.Warning(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Подключение Spectator (Device: {msg.deviceType}, Admin: {msg.isAdmin}) пока не реализовано.");
+        }
 
-            playerInstance.name = $"{prefabToSpawn.name} [connId={conn.connectionId}]";
-            NetworkServer.AddPlayerForConnection(conn, playerInstance);
-        }    
     }
 }

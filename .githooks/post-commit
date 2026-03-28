@@ -1,22 +1,42 @@
 #!/bin/bash
 
-# Получаем точный текст последнего коммита, который вы только что сделали в Git
+# Получаем точный текст последнего коммита
 COMMIT_MSG=$(git log -1 --format=%B)
 
 echo ""
 echo "========================================="
 echo "🔄 Дублируем коммит в Unity Version Control (Plastic SCM)..."
 
-# Регистрируем в Plastic все новые/неотслеживаемые файлы 
-cm add -R . > /dev/null 2>&1
+FILES=()
 
-# Делаем коммит всех измененных, добавленных и удаленных файлов с тем же сообщением
-cm ci -a -c "$COMMIT_MSG"
+# Получаем строго те файлы, которые попали в этот коммит Git (с поддержкой пробелов через -z)
+while IFS= read -r -d $'\0' file; do
+    if [ -z "$file" ]; then continue; fi
+    
+    FILES+=("$file")
+    
+    if [ -e "$file" ]; then
+        # Файл существует (Добавлен/Изменен в текущем Git-коммите)
+        # Регистрируем новые файлы (для существующих cm выкинет ошибку в null)
+        cm add "$file" > /dev/null 2>&1
+    else
+        # Файл удален в Git-коммите
+        cm rm "$file" > /dev/null 2>&1
+    fi
+done < <(git diff-tree -z --no-commit-id --name-only -r HEAD)
 
-if [ $? -eq 0 ]; then
-    echo "✅ Успешно скопировано в Plastic SCM!"
+if [ ${#FILES[@]} -gt 0 ]; then
+    # Делаем коммит конкретных файлов в Plastic с тем же сообщением
+    cm ci "${FILES[@]}" -c "$COMMIT_MSG"
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Успешно скопировано в Plastic SCM!"
+    else
+        echo "⚠️ Ошибка коммита или Plastic SCM уже синхронизирован."
+    fi
 else
-    echo "⚠️ Изменения для Plastic SCM не найдены или произошла ошибка."
+    echo "⚠️ Измененные файлы в Git-коммите не найдены."
 fi
+
 echo "========================================="
 echo ""

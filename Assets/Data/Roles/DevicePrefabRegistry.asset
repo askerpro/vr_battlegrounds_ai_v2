@@ -10,10 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7db30042dd7df8041b7d196806e8a52d, type: 3}
-  m_Name: RolePrefabRegistry
+  m_Name: DevicePrefabRegistry
   m_EditorClassIdentifier: 
-  rolePrefabs:
-  - role: 0
+  devicePrefabs:
+  - deviceType: 0
+    spawnStrategy: 1
     prefab: {fileID: 4613916165338528910, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
-  - role: 2
+  - deviceType: 1
+    spawnStrategy: 0
     prefab: {fileID: 4613916165338528910, guid: 8e0e06323e4754f479a9f19788554652, type: 3}

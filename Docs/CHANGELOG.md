@@ -2,6 +2,20 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-03-28]
+### Добавлено
+- **Документация Архитектуры Сессий**: Добавлен файл [`Docs/session-architecture.md`](session-architecture.md), подробно описывающий паттерн разделения логики `PlayerSession` и визуальных кукол аватаров.
+- **Инструментарий `Avatar Maintenance` (`Assets/Editor/`)**: Создан набор редакторских утилит (`CheckSkeletons`, `CreateBaseAvatars`, `FixAvatarRenderers`, `FixHandTrackingCache`) для массовой настройки, экстракции и поправки скелетов базовых `UltimateXR` аватаров прямо в инспекторе. 
+- **Модель сессий и аватаров (`Avatar Subsystem`)**: Внедрены реестры скинов (`AvatarRegistry`, `SkinRegistry`), профили девайсов клиентов (`ClientDeviceType`), логика стратегий спавна аватаров (`AvatarSpawnStrategy`, `TeamAvatarStrategy`) и обработчик потери сессий (`SessionRecoveryManager`). Сетевая логика теперь отделяет "сессию" (счет, команда) от "тела" игрока.
+- **Поддержка Spectator Connect**: Реализованы раздельные сообщения при подключении к серверу для игроков (`GamePlayerConnectMessage`) и наблюдателей (`SpectatorConnectMessage`) вместо единого `PlayerJoinMessage`.
+
+### Изменено
+- **UI и HUD Интеграция**: Виджеты счета, таймеры команд, меню и `PlayerHUDManager` адаптированы к новой системе сессий. Так как `PlayerSession` теперь является локальным игроком (`isLocalPlayer=true`), HUD-составляющие куклы завязаны на событие `OnStartAuthority` от Mirror.
+- **Игровые Режимы (Elimination / Respawn)**: Менеджеры раундов и игровые циклы (`GameplayManager`, `GameMode`, `RoundManager`) переписаны для взаимодействия со стойкими `PlayerSession`. Очки и статистика сохраняются при уничтожении куклы скина.
+- **Plastic SCM Хуки (`.githooks/post-commit`)**: Хук для дублирования коммитов в `cm ci` переведен с монолитного `cm ci -a` на пофайловое сопоставление дерева через `git diff-tree`. Это позволяет изолированно коммитить и пушить в Plastic только выбранные stage файлы (Interactive commits).
+
+---
+
 ## [2026-03-23]
 ### Добавлено
 - **Модульный Level Design**: Внедрена система блокаутов `LD_Alphabet`, содержащая 10 стандартных префабов (укрытия, змейки, доритос, цилиндры, инкапсуляторы столбов).

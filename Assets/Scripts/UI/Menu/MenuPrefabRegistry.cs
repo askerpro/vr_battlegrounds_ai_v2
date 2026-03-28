@@ -22,7 +22,7 @@ namespace VrBattlegrounds.UI.Menu
     [System.Serializable]
     public class RoleMenuConfig
     {
-        public ClientDeviceRole Role;
+        public ClientDeviceType DeviceType;
 
         [Header("Scene Menus")]
         public GameObject OfflineMenuPrefab;
@@ -40,9 +40,9 @@ namespace VrBattlegrounds.UI.Menu
         [Tooltip("Configure menus per role. E.g. one for Player, one for VRAdmin.")]
         public List<RoleMenuConfig> RoleConfigurations = new List<RoleMenuConfig>();
 
-        public GameObject GetMenuPrefab(ClientDeviceRole role, SceneMenuContext context, GameModeData currentGameMode = null)
+        public GameObject GetMenuPrefab(ClientDeviceType deviceType, SceneMenuContext context, GameModeData currentGameMode = null)
         {
-            var config = RoleConfigurations.Find(c => c.Role == role);
+            var config = RoleConfigurations.Find(c => c.DeviceType == deviceType);
             if (config == null) return null;
 
             switch (context)

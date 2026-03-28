@@ -21,7 +21,7 @@ namespace VrBattlegrounds.UI.HUD
         {
             if (_scoreText == null) return;
 
-            GameMode mode = FindObjectOfType<GameMode>();
+            GameMode mode = FindFirstObjectByType<GameMode>();
             if (mode == null || mode.Teams == null)
             {
                 _scoreText.text = "Счет: --";

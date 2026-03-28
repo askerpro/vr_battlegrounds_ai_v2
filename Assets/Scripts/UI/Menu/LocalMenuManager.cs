@@ -79,14 +79,14 @@ namespace VrBattlegrounds.UI.Menu
                 else if (sceneName == "Lobby") context = SceneMenuContext.Lobby;
             }
 
-            ClientDeviceRole role = AppRoleManager.LocalRole;
+            ClientDeviceType deviceType = LocalClientProfile.LocalDeviceType;
             GameObject prefabToSpawn = null;
 
             if (_menuRegistry != null)
             {
                 // In the future, pass currentGameMode instead of null to allow custom menus per Game Mode
-                prefabToSpawn = _menuRegistry.GetMenuPrefab(role, context, null);
-                GameLog.Info(GameSettings.Instance.LogLevelUI, $"[LocalMenuManager] Spawn context menu (Role: {role}, Context: {context}) -> {(prefabToSpawn != null ? prefabToSpawn.name : "NULL")}");
+                prefabToSpawn = _menuRegistry.GetMenuPrefab(deviceType, context, null);
+                GameLog.Info(GameSettings.Instance.LogLevelUI, $"[LocalMenuManager] Spawn context menu (Device: {deviceType}, Context: {context}) -> {(prefabToSpawn != null ? prefabToSpawn.name : "NULL")}");
             }
             else
             {

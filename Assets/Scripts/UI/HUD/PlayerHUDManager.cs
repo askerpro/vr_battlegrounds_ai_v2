@@ -26,14 +26,15 @@ namespace VrBattlegrounds.Player.UI
             _playerController = GetComponent<PlayerController>();
         }
 
-        public override void OnStartLocalPlayer()
+        public override void OnStartAuthority()
         {
-            base.OnStartLocalPlayer();
-            
+            base.OnStartAuthority();
+
             if (_hudContainer == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, 
-                    $"[{nameof(PlayerHUDManager)}] HUD Container не назначен на префабе игрока!");
+                string error = $"[{nameof(PlayerHUDManager)}] HUD Container не назначен на префабе игрока!";
+                Debug.LogError(error);
+                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, error);
                 return;
             }
 
@@ -46,10 +47,19 @@ namespace VrBattlegrounds.Player.UI
 
         private void SetupHUDForCurrentMode()
         {
-            if (SessionManager.Instance == null || string.IsNullOrEmpty(SessionManager.Instance.SelectedModeId))
+            if (SessionManager.Instance == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, 
-                    $"[{nameof(PlayerHUDManager)}] Нет активной сессии в SessionManager. HUD не заспавнен.");
+                string error = $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: SessionManager.Instance равен null. Возможно, сцена загрузилась неверно.";
+                Debug.LogError(error);
+                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, error);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(SessionManager.Instance.SelectedModeId))
+            {
+                string error = $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: В SessionManager пустой SelectedModeId. Это может быть из-за задержки сети при входе на сервер.";
+                Debug.LogWarning(error);
+                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, error);
                 return;
             }
 
@@ -58,35 +68,44 @@ namespace VrBattlegrounds.Player.UI
 
             if (modeData == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, 
-                    $"[{nameof(PlayerHUDManager)}] GameMode '{modeId}' не найден в реестре.");
+                string error = $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: GameMode '{modeId}' не найден в реестре.";
+                Debug.LogError(error);
+                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, error);
                 return;
             }
 
             if (modeData.hudPrefab == null)
             {
-                GameLog.Verbose(GameSettings.Instance.LogLevelPlayer, 
-                    $"[{nameof(PlayerHUDManager)}] GameMode '{modeId}' не имеет hudPrefab. HUD не будет показан.");
+                string error = $"[{nameof(PlayerHUDManager)}] GameMode '{modeId}' не имеет hudPrefab. HUD не заспавнен.";
+                Debug.LogWarning(error);
+                GameLog.Verbose(GameSettings.Instance.LogLevelPlayer, error);
                 return;
             }
 
             // Удаляем старый HUD если есть
             ClearHUD();
 
-            // Спавним новый HUD, делаем _hudContainer его родителем
-            _activeHudInstance = Instantiate(modeData.hudPrefab, _hudContainer);
-            
-            // Сбрасываем трансформации (чтобы префаб встал ровно по центру и с нужным скейлом)
-            RectTransform hudRect = _activeHudInstance.GetComponent<RectTransform>();
-            if (hudRect != null)
+            try
             {
-                hudRect.localPosition = Vector3.zero;
-                hudRect.localRotation = Quaternion.identity;
-                hudRect.localScale = Vector3.one;
-            }
+                // Спавним новый HUD, делаем _hudContainer его родителем
+                _activeHudInstance = Instantiate(modeData.hudPrefab, _hudContainer);
 
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer, 
-                $"[{nameof(PlayerHUDManager)}] Спавн HUD префаба '{modeData.hudPrefab.name}' для режима '{modeId}'.");
+                // Сбрасываем трансформации (чтобы префаб встал ровно по центру и с нужным скейлом)
+                RectTransform hudRect = _activeHudInstance.GetComponent<RectTransform>();
+                if (hudRect != null)
+                {
+                    hudRect.localPosition = Vector3.zero;
+                    hudRect.localRotation = Quaternion.identity;
+                    hudRect.localScale = Vector3.one;
+                }
+
+                GameLog.Info(GameSettings.Instance.LogLevelPlayer,
+                    $"[{nameof(PlayerHUDManager)}] Успешный спавн HUD префаба '{modeData.hudPrefab.name}' для режима '{modeId}'.");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[{nameof(PlayerHUDManager)}] Фатальная ошибка при спавне HUD для '{modeId}': {ex.Message}\n{ex.StackTrace}");
+            }
         }
 
         private void ClearHUD()
@@ -114,10 +133,10 @@ namespace VrBattlegrounds.Player.UI
         /// Отправляет уведомление конкретному игроку (Вызывать только на сервере).
         /// </summary>
         [Server]
-        public static void SendToPlayer(PlayerController player, string message, float duration = 3f)
+        public static void SendToPlayer(PlayerSession player, string message, float duration = 3f)
         {
             if (player == null || player.connectionToClient == null) return;
-            
+
             PlayerHUDManager hud = player.GetComponent<PlayerHUDManager>();
             if (hud != null)
             {
@@ -133,10 +152,13 @@ namespace VrBattlegrounds.Player.UI
         public static void SendToAll(string message, float duration = 3f)
         {
             if (PlayersManager.Instance == null) return;
-            
-            foreach (PlayerController player in PlayersManager.Instance.Players)
+
+            foreach (PlayerSession session in PlayersManager.Instance.Sessions)
             {
-                SendToPlayer(player, message, duration);
+                if (session != null)
+                {
+                    SendToPlayer(session, message, duration);
+                }
             }
         }
     }

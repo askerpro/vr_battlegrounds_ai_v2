@@ -21,7 +21,7 @@ namespace VrBattlegrounds.UI.HUD
         {
             if (_scoreText == null) return;
 
-            EliminationMode mode = FindObjectOfType<EliminationMode>();
+            EliminationMode mode = FindFirstObjectByType<EliminationMode>();
             if (mode == null || mode.Teams == null)
             {
                 _scoreText.text = "Счет: --";

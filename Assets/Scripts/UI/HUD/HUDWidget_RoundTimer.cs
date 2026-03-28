@@ -18,7 +18,7 @@ namespace VrBattlegrounds.UI.HUD
         {
             if (_timerText == null) return;
 
-            EliminationMode mode = FindObjectOfType<EliminationMode>();
+            EliminationMode mode = FindFirstObjectByType<EliminationMode>();
             if (mode == null)
             {
                 _timerText.text = "--:--";

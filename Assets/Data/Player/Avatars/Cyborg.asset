@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88307b99885a9ee44b21c008eaa7f591, type: 3}
   m_Name: Cyborg
   m_EditorClassIdentifier: 
-  skinIndex: 0
   displayName: Cyborg Default
-  icon: {fileID: 21300000, guid: 5e2e84f8208662b4796438f05398fd72, type: 3}
-  skinPrefab: {fileID: 4613916165338528910, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
+  icon: {fileID: 21300000, guid: 344aa7777f38b104e88ea695408d47f0, type: 3}
+  prefab: {fileID: 4613916165338528910, guid: 8e0e06323e4754f479a9f19788554652, type: 3}

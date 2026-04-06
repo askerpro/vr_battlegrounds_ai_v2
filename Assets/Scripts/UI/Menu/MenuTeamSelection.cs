@@ -1,4 +1,3 @@
-using Mirror;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Player;
@@ -6,44 +5,72 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.UI.Menu
 {
     /// <summary>
-    /// Единый экран выбора команды и скина для игрока.
-    /// Перенесен из устаревшего PlayerMenuController в новую архитектуру MenuScreen.
-    /// Автоматически заполняет список доступных команд и их скинов.
+    /// Двухэтапный экран выбора команды и скина.
+    /// Этап 1: выбор команды (большие карточки TeamCardButton).
+    /// Этап 2: выбор скина (грид аватаров выбранной команды).
     /// </summary>
     public class MenuTeamSelection : MenuScreen
     {
+        [Header("UI Levels")]
+        [SerializeField] private GameObject _level1TeamSelection;
+        [SerializeField] private GameObject _level2AvatarSelection;
+
         [Header("UI Containers")]
-        [SerializeField] private Transform _tabsContainer;
+        [SerializeField] private Transform _teamsContainer;
         [SerializeField] private Transform _avatarsListContainer;
 
         [Header("UI Prefabs")]
-        [SerializeField] private GameObject _tabButtonPrefab;
+        [SerializeField] private GameObject _teamCardPrefab;
         [SerializeField] private GameObject _avatarButtonPrefab;
 
         private int _selectedTeamIndex = 0;
         private int _selectedAvatarIndex = 0;
 
-        // Кэшируем созданные кнопки для обновления их визуала (interactable)
-        private System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button> _teamButtons = new System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button>();
-        private System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button> _avatarButtons = new System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button>();
+        // Кэшируем созданные кнопки для обновления их визуала
+        private System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button> _teamButtons
+            = new System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button>();
+        private System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button> _avatarButtons
+            = new System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button>();
 
         public override void Show()
         {
             base.Show();
 
-            // Если игрок уже имеет установленные значения, берем их
+            // Берём текущие значения из сессии игрока, если есть
             if (PlayerSession.LocalSession != null)
             {
                 _selectedTeamIndex = PlayerSession.LocalSession.TeamIndex;
                 _selectedAvatarIndex = PlayerSession.LocalSession.AvatarIndex;
             }
 
+            ShowTeamSelectionState();
+        }
+
+        /// <summary>
+        /// Кнопка «← Назад» — возврат на этап 1.
+        /// </summary>
+        public void BackToTeamSelection()
+        {
+            ShowTeamSelectionState();
+        }
+
+        /// <summary>
+        /// Показывает этап 1 — выбор команды.
+        /// </summary>
+        private void ShowTeamSelectionState()
+        {
+            if (_level1TeamSelection) _level1TeamSelection.SetActive(true);
+            if (_level2AvatarSelection) _level2AvatarSelection.SetActive(false);
+
             PopulateTeams();
         }
 
+        /// <summary>
+        /// Заполняет контейнер карточками команд из TeamRegistry.
+        /// </summary>
         private void PopulateTeams()
         {
-            ClearContainer(_tabsContainer);
+            ClearContainer(_teamsContainer);
             _teamButtons.Clear();
 
             // Пытаемся получить команды для текущего режима
@@ -54,7 +81,7 @@ namespace VrBattlegrounds.UI.Menu
                 availableTeams = VrBattlegrounds.Managers.SessionManager.Instance.SelectedGameModeData.teams;
             }
 
-            // Если режима нет или список пуст, берем все команды из реестра
+            // Если режима нет или список пуст — берем все команды из реестра
             if (availableTeams == null || availableTeams.Length == 0)
             {
                 availableTeams = TeamRegistry.Instance.teams;
@@ -62,7 +89,8 @@ namespace VrBattlegrounds.UI.Menu
 
             if (availableTeams == null || availableTeams.Length == 0)
             {
-                Debug.LogWarning("[MenuTeamSelection] Нет доступных команд для отображения!");
+                GameLog.Warning(GameSettings.Instance.LogLevelUI,
+                    "[MenuTeamSelection] Нет доступных команд для отображения!");
                 return;
             }
 
@@ -70,60 +98,57 @@ namespace VrBattlegrounds.UI.Menu
             {
                 if (team == null) continue;
 
-                GameObject btnObj = Instantiate(_tabButtonPrefab, _tabsContainer);
-                btnObj.name = $"Tab_Team_{team.teamIndex}";
+                GameObject cardObj = Instantiate(_teamCardPrefab, _teamsContainer);
+                cardObj.name = $"Card_Team_{team.teamIndex}";
 
-                UnityEngine.UI.Button btn = btnObj.GetComponent<UnityEngine.UI.Button>();
-                SetButtonText(btnObj, team.displayName);
+                UnityEngine.UI.Button btn = cardObj.GetComponent<UnityEngine.UI.Button>();
 
-                UnityEngine.UI.Image btnImage = btnObj.GetComponent<UnityEngine.UI.Image>();
-                if (btnImage != null && team.icon != null)
-                {
-                    btnImage.sprite = team.icon;
-                }
+                // Устанавливаем иконку на дочерний Image (Thumbnail/Icon)
+                SetButtonIcon(cardObj, team.icon);
+
+                // Устанавливаем название команды
+                SetButtonText(cardObj, team.displayName);
 
                 int capturedTeamIndex = team.teamIndex;
-                btn.onClick.AddListener(() => OnTeamTabSelected(capturedTeamIndex));
+                btn.onClick.AddListener(() => OnTeamCardSelected(capturedTeamIndex));
 
                 _teamButtons[team.teamIndex] = btn;
             }
 
-            // Если ранее сохраненная команда не найдена в доступных, берем первую
+            // Если ранее сохраненная команда не найдена — берем первую
             if (!_teamButtons.ContainsKey(_selectedTeamIndex))
             {
                 _selectedTeamIndex = availableTeams[0].teamIndex;
             }
-
-            // Автоматически выбираем активную команду
-            OnTeamTabSelected(_selectedTeamIndex);
         }
 
         /// <summary>
-        /// Вызывается при нажатии на вкладку/кнопку команды.
+        /// Вызывается при нажатии на карточку команды. Переход на этап 2 — выбор скина.
         /// </summary>
-        public void OnTeamTabSelected(int teamIndex)
+        public void OnTeamCardSelected(int teamIndex)
         {
             _selectedTeamIndex = teamIndex;
 
             TeamData team = TeamRegistry.Instance?.GetByIndex(teamIndex);
             if (team == null)
             {
-                Debug.LogWarning($"[MenuTeamSelection] Команда с teamIndex={teamIndex} не найдена в TeamRegistry");
+                GameLog.Warning(GameSettings.Instance.LogLevelUI,
+                    $"[MenuTeamSelection] Команда с teamIndex={teamIndex} не найдена в TeamRegistry");
                 return;
             }
 
-            Debug.Log($"[MenuTeamSelection] Выбрана вкладка команды: {team.name} (Index: {team.teamIndex})");
+            GameLog.Info(GameSettings.Instance.LogLevelUI,
+                $"[MenuTeamSelection] Выбрана команда: {team.displayName} (Index: {team.teamIndex}). Переход к скинам.");
 
-            // Обновляем визуал кнопок команд
-            foreach (var kvp in _teamButtons)
-            {
-                if (kvp.Value != null)
-                    kvp.Value.interactable = (kvp.Key != teamIndex);
-            }
+            if (_level1TeamSelection) _level1TeamSelection.SetActive(false);
+            if (_level2AvatarSelection) _level2AvatarSelection.SetActive(true);
 
             PopulateAvatars(team);
         }
 
+        /// <summary>
+        /// Заполняет грид аватаров для выбранной команды.
+        /// </summary>
         private void PopulateAvatars(TeamData team)
         {
             ClearContainer(_avatarsListContainer);
@@ -131,8 +156,9 @@ namespace VrBattlegrounds.UI.Menu
 
             if (team.avatars == null || team.avatars.Count == 0)
             {
-                Debug.LogWarning($"[MenuTeamSelection] У команды {team.displayName} нет доступных скинов.");
-                _selectedAvatarIndex = 0; // fallback
+                GameLog.Warning(GameSettings.Instance.LogLevelUI,
+                    $"[MenuTeamSelection] У команды {team.displayName} нет доступных скинов.");
+                _selectedAvatarIndex = 0;
                 return;
             }
 
@@ -146,55 +172,37 @@ namespace VrBattlegrounds.UI.Menu
 
                 UnityEngine.UI.Button btn = btnObj.GetComponent<UnityEngine.UI.Button>();
 
-                SetButtonText(btnObj, !string.IsNullOrEmpty(avatarData.displayName) ? avatarData.displayName : avatarData.name);
+                SetButtonText(btnObj, !string.IsNullOrEmpty(avatarData.displayName)
+                    ? avatarData.displayName : avatarData.name);
 
-                // Устанавливаем иконку на корневой компонент Image кнопки, как просил пользователь
-                UnityEngine.UI.Image btnImage = btnObj.GetComponent<UnityEngine.UI.Image>();
-                if (btnImage != null && avatarData.icon != null)
-                {
-                    btnImage.sprite = avatarData.icon;
-                }
+                // Иконка скина 
+                SetButtonIcon(btnObj, avatarData.icon);
 
                 int capturedAvatarIndex = i;
                 btn.onClick.AddListener(() => OnAvatarSelected(capturedAvatarIndex));
 
                 _avatarButtons[i] = btn;
             }
-
-            // Сбрасываем выбранный скин на 0 по умолчанию при смене команды (если только этот скин уже не 0)
-            OnAvatarSelected(0);
         }
 
         /// <summary>
-        /// Вызывается при нажатии на кнопку скина из списка.
+        /// Вызывается при нажатии на кнопку скина — применяет выбор и закрывает меню.
         /// </summary>
         public void OnAvatarSelected(int avatarIndex)
         {
             _selectedAvatarIndex = avatarIndex;
-            Debug.Log($"[MenuTeamSelection] Выбран скин индекс: {avatarIndex}. Ожидание подтверждения...");
+            GameLog.Info(GameSettings.Instance.LogLevelUI,
+                $"[MenuTeamSelection] Выбран скин индекс: {avatarIndex}. Применяем и закрываем меню.");
 
-            // Обновляем визуал кнопок скинов
-            foreach (var kvp in _avatarButtons)
-            {
-                if (kvp.Value != null)
-                    kvp.Value.interactable = (kvp.Key != avatarIndex);
-            }
-        }
-
-        /// <summary>
-        /// Вызывается при нажатии на кнопку Применить / Выбрать.
-        /// Отправляет финальный запрос на сервер.
-        /// </summary>
-        public void OnApplyPressed()
-        {
             if (PlayerSession.LocalSession == null)
             {
-                Debug.LogWarning("[MenuTeamSelection] Локальный PlayerSession не найден. Невозможно отправить запрос на сервер.");
+                GameLog.Warning(GameSettings.Instance.LogLevelUI,
+                    "[MenuTeamSelection] Локальный PlayerSession не найден. Невозможно отправить запрос.");
                 return;
             }
 
             PlayerSession.LocalSession.CmdRequestTeamChange(_selectedTeamIndex, _selectedAvatarIndex);
-            Debug.Log($"[MenuTeamSelection] Запрошена смена команды на {_selectedTeamIndex} и скина на {_selectedAvatarIndex}");
+            Hide();
         }
 
         private void ClearContainer(Transform container)
@@ -216,6 +224,37 @@ namespace VrBattlegrounds.UI.Menu
 
             var txtStd = btnObj.GetComponentInChildren<UnityEngine.UI.Text>();
             if (txtStd != null) { txtStd.text = textValue; }
+        }
+
+        private void SetButtonIcon(GameObject btnObj, Sprite iconSprite)
+        {
+            if (iconSprite == null) return;
+
+            // Сначала ищем по новому шаблону: Thumbnail_Container/Thumbnail или просто Thumbnail
+            Transform thumbObj = btnObj.transform.Find("Thumbnail_Container/Thumbnail") 
+                                 ?? btnObj.transform.Find("Thumbnail")
+                                 ?? btnObj.transform.Find("Icon");
+
+            if (thumbObj != null)
+            {
+                var img = thumbObj.GetComponent<UnityEngine.UI.Image>();
+                if (img != null)
+                {
+                    img.sprite = iconSprite;
+                    return;
+                }
+            }
+
+            // Если ничего не нашли, попробуем найти первый Image, у которого имя не совпадает с корнем и не Background
+            var images = btnObj.GetComponentsInChildren<UnityEngine.UI.Image>();
+            foreach (var img in images)
+            {
+                if (img.gameObject == btnObj) continue; // Пропускаем корень (рамку кнопки)
+                if (img.gameObject.name.Contains("BG") || img.gameObject.name.Contains("Background")) continue; // Пропускаем фоны
+                
+                img.sprite = iconSprite;
+                return;
+            }
         }
     }
 }

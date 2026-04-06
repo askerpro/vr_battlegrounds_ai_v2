@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88307b99885a9ee44b21c008eaa7f591, type: 3}
   m_Name: MilitaryCap
   m_EditorClassIdentifier: 
-  skinIndex: 2
   displayName: Military Cap
   icon: {fileID: 21300000, guid: 105b48d8a460fb54daeef9b9c48ab996, type: 3}
-  skinPrefab: {fileID: 4377996439677510663, guid: b31dfde9386913b4e9cab4ac415b9f43, type: 3}
+  prefab: {fileID: 4377996439677510663, guid: b31dfde9386913b4e9cab4ac415b9f43, type: 3}

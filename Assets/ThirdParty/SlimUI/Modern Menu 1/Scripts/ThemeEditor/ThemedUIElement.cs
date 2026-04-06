@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
@@ -24,7 +24,7 @@ namespace SlimUI.ModernMenu{
 			message = gameObject;
 
 			if(isText){
-				message.GetComponent<TextMeshPro>().color = themeController.textColor;
+				message.GetComponent<TMP_Text>().color = themeController.textColor;
 			}
 		}
 	}

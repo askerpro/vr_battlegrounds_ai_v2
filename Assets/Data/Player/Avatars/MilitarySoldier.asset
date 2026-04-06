@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88307b99885a9ee44b21c008eaa7f591, type: 3}
   m_Name: MilitarySoldier
   m_EditorClassIdentifier: 
-  skinIndex: 3
   displayName: Military Soldier
   icon: {fileID: 21300000, guid: 911ea923a0ce933409e25abcbdaf13fd, type: 3}
-  skinPrefab: {fileID: 4364455917087469262, guid: bd98bf240c755954a85c5957e7e6e2cc, type: 3}
+  prefab: {fileID: 4364455917087469262, guid: bd98bf240c755954a85c5957e7e6e2cc, type: 3}

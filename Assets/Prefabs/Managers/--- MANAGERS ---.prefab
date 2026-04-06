@@ -491,6 +491,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4998990732103549019}
   - component: {fileID: 3541546179208433636}
+  - component: {fileID: 5784865614044551698}
   m_Layer: 0
   m_Name: DebugOrchestrator
   m_TagString: Untagged
@@ -526,6 +527,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _config: {fileID: 11400000, guid: 483743af4bc125a44ab56ede6a0e0148, type: 2}
+--- !u!114 &5784865614044551698
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6094611266226496600}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5512c7a47e2e3c0408dcf4e30cd99dc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _superSize: 2
+  _outputFolder: Screenshots
+  _cooldown: 0.5
 --- !u!1 &6153485858246054502
 GameObject:
   m_ObjectHideFlags: 0

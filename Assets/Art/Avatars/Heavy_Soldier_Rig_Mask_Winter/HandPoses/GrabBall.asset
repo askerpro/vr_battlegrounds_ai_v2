@@ -1,0 +1,3232 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3e4dbcd197921446835b52ba65d418e, type: 3}
+  m_Name: GrabBall
+  m_EditorClassIdentifier: 
+  _handPoseAssetVersion: 0
+  _poseType: 2
+  _handDescriptorLeft:
+    _index:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+    _middle:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+    _ring:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+    _little:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+    _thumb:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+  _handDescriptorRight:
+    _index:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+    _middle:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+    _ring:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+    _little:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+    _thumb:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+  _handDescriptorOpenLeft:
+    _index:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9843714
+          e01: -0.1154185
+          e02: -0.13300918
+          e03: -0.05402498
+          e10: -0.10829115
+          e11: -0.99232787
+          e12: 0.059652302
+          e13: 0.0060563656
+          e20: -0.13887374
+          e21: -0.04431629
+          e22: -0.98931795
+          e23: 0.020023037
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.97680056, y: -0.04737725, z: -0.20884427}
+        _up: {x: 0.04238431, y: 0.99869984, z: -0.028320916}
+        _forward: {x: 0.20991458, y: 0.018812036, z: 0.9775387}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.8866827
+          e01: 0.36550212
+          e02: -0.2831994
+          e03: -0.112484775
+          e10: 0.41491213
+          e11: -0.8992641
+          e12: 0.13846296
+          e13: 0.012487804
+          e20: -0.20406257
+          e21: -0.24027558
+          e22: -0.94901323
+          e23: 0.028270451
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9848037, y: -0.06265743, z: -0.16197471}
+        _up: {x: 0.13545069, y: 0.8608273, z: 0.49054015}
+        _forward: {x: 0.108696185, y: -0.50502527, z: 0.8562329}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.8866827
+          e01: 0.36550212
+          e02: -0.2831994
+          e03: -0.112484775
+          e10: 0.41491213
+          e11: -0.8992641
+          e12: 0.13846296
+          e13: 0.012487804
+          e20: -0.20406257
+          e21: -0.24027558
+          e22: -0.94901323
+          e23: 0.028270451
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.92530024, y: -0.112280354, z: -0.36223266}
+        _up: {x: 0.27176544, y: 0.8625189, z: 0.42685443}
+        _forward: {x: 0.26450515, y: -0.49341092, z: 0.8286029}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.9043291
+          e01: 0.31263587
+          e02: -0.29059863
+          e03: -0.14210537
+          e10: 0.36365807
+          e11: -0.9207884
+          e12: 0.14107153
+          e13: -0.0013731784
+          e20: -0.22347593
+          e21: -0.23325369
+          e22: -0.94638854
+          e23: 0.03508755
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9999657, y: -0.0056808884, z: -0.0060140905}
+        _up: {x: 0.0053274003, y: 0.99834627, z: -0.0572392}
+        _forward: {x: 0.006329275, y: 0.057205383, z: 0.99834234}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.7491157
+          e01: 0.5950611
+          e02: -0.2910804
+          e03: -0.16372557
+          e10: 0.65076905
+          e11: -0.74318177
+          e12: 0.15549962
+          e13: -0.010066954
+          e20: -0.12379392
+          e21: -0.30591348
+          e22: -0.9439767
+          e23: 0.0404301
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9998928, y: -0.013998414, z: 0.004272236}
+        _up: {x: 0.011747291, y: 0.9417061, z: 0.33623117}
+        _forward: {x: -0.008729888, y: -0.3361451, z: 0.9417697}
+    _middle:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9953091
+          e01: -0.09322115
+          e02: -0.02587523
+          e03: -0.05391814
+          e10: -0.09255969
+          e11: -0.99537563
+          e12: 0.025688833
+          e13: 0.0050031445
+          e20: -0.02815036
+          e21: -0.02317329
+          e22: -0.9993351
+          e23: 0.0017454532
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9947072, y: -0.023243135, z: -0.10008569}
+        _up: {x: 0.022910444, y: 0.99972755, z: -0.0044725165}
+        _forward: {x: 0.10016237, y: 0.002155829, z: 0.9949688}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.9626742
+          e01: 0.2521754
+          e02: -0.09831603
+          e03: -0.11596624
+          e10: 0.26203376
+          e11: -0.95931274
+          e12: 0.10515276
+          e13: 0.0107735945
+          e20: -0.067798905
+          e21: -0.12698996
+          e22: -0.9895842
+          e23: 0.0035005182
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9941714, y: -0.072569385, z: -0.07973063}
+        _up: {x: 0.0957368, y: 0.93431133, z: 0.34336078}
+        _forward: {x: 0.04957574, y: -0.3489928, z: 0.9358132}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.9626742
+          e01: 0.2521754
+          e02: -0.09831603
+          e03: -0.11596624
+          e10: 0.26203376
+          e11: -0.95931274
+          e12: 0.10515276
+          e13: 0.0107735945
+          e20: -0.067798905
+          e21: -0.12698996
+          e22: -0.9895842
+          e23: 0.0035005182
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9792609, y: -0.09582915, z: -0.17850724}
+        _up: {x: 0.15102741, y: 0.9325717, z: 0.3278727}
+        _forward: {x: 0.13505103, y: -0.34803244, z: 0.927704}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.9133105
+          e01: 0.3935759
+          e02: -0.104698814
+          e03: -0.15354991
+          e10: 0.4036786
+          e11: -0.9088808
+          e12: 0.104781225
+          e13: 0.00054294517
+          e20: -0.053919427
+          e21: -0.13796245
+          e22: -0.98896873
+          e23: 0.006147258
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9999794, y: -0.0013313972, z: -0.006283644}
+        _up: {x: 0.0022593674, y: 0.9886711, z: 0.15008149}
+        _forward: {x: 0.006012657, y: -0.15009247, z: 0.9886537}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.81227106
+          e01: 0.5740019
+          e02: -0.10362174
+          e03: -0.1806432
+          e10: 0.5831288
+          e11: -0.80318713
+          e12: 0.121865325
+          e13: -0.011431837
+          e20: -0.013276755
+          e21: -0.1594125
+          e22: -0.9871227
+          e23: 0.007746688
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9998517, y: -0.01535817, z: 0.0077806516}
+        _up: {x: 0.013397876, y: 0.97790736, z: 0.20860793}
+        _forward: {x: -0.010812594, y: -0.20847265, z: 0.9779684}
+    _ring:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9919756
+          e01: -0.08945738
+          e02: 0.089341074
+          e03: -0.052388296
+          e10: -0.08772284
+          e11: -0.9958758
+          e12: -0.023164641
+          e13: 0.004513283
+          e20: 0.09104483
+          e21: 0.015141569
+          e22: -0.9957319
+          e23: -0.011750969
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99970675, y: 0.014988924, z: 0.019026663}
+        _up: {x: -0.01503109, y: 0.9998851, z: 0.0020742596}
+        _forward: {x: -0.018993378, y: -0.0023597162, z: 0.99981683}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.95198363
+          e01: 0.26860857
+          e02: 0.14688964
+          e03: -0.112852395
+          e10: 0.27373913
+          e11: -0.961679
+          e12: -0.01552156
+          e13: 0.009860518
+          e20: 0.13709141
+          e21: 0.054985713
+          e22: -0.98903126
+          e23: -0.01730059
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99829245, y: -0.0126582505, z: 0.057026364}
+        _up: {x: -0.008476291, y: 0.93451595, z: 0.35582057}
+        _forward: {x: -0.057796128, y: -0.3556963, z: 0.9328128}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.95198363
+          e01: 0.26860857
+          e02: 0.14688964
+          e03: -0.112852395
+          e10: 0.27373913
+          e11: -0.961679
+          e12: -0.01552156
+          e13: 0.009860518
+          e20: 0.13709141
+          e21: 0.054985713
+          e22: -0.98903126
+          e23: -0.01730059
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9971069, y: 0.0021719667, z: 0.075983845}
+        _up: {x: -0.02927882, y: 0.93344194, z: 0.3575325}
+        _forward: {x: -0.070149936, y: -0.3587229, z: 0.9308045}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.9099845
+          e01: 0.38742757
+          e02: 0.14774345
+          e03: -0.14767301
+          e10: 0.3938349
+          e11: -0.9190473
+          e12: -0.015699262
+          e13: -0.00015217788
+          e20: 0.12970085
+          e21: 0.07247263
+          e22: -0.9889013
+          e23: -0.022315133
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9999994, y: 0.0004073603, z: 0.00078200013}
+        _up: {x: -0.0005035502, y: 0.99187934, z: 0.12718093}
+        _forward: {x: -0.0007238141, y: -0.12718132, z: 0.9918792}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.69421214
+          e01: 0.7043893
+          e02: 0.14800395
+          e03: -0.17360172
+          e10: 0.71406734
+          e11: -0.6998285
+          e12: -0.018666597
+          e13: -0.011373468
+          e20: 0.09042878
+          e21: 0.11864339
+          e22: -0.9888107
+          e23: -0.026010444
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9999955, y: 0.0028346307, z: -0.00091982965}
+        _up: {x: -0.002270838, y: 0.92467356, z: 0.38075462}
+        _forward: {x: 0.0019298253, y: -0.38075078, z: 0.9246756}
+    _little:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.97171813
+          e01: -0.071877405
+          e02: 0.22493924
+          e03: -0.04862333
+          e10: -0.061905365
+          e11: -0.99677414
+          e12: -0.05108518
+          e13: 0.002768587
+          e20: 0.22788541
+          e21: 0.035715476
+          e22: -0.9730331
+          e23: -0.026522692
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.98698765, y: 0.030530324, z: 0.15787314}
+        _up: {x: -0.034283, y: 0.9991897, z: 0.021101303}
+        _forward: {x: -0.15710093, y: -0.026239105, z: 0.98723394}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.87815773
+          e01: 0.14032397
+          e02: 0.45732713
+          e03: -0.103431165
+          e10: 0.27065137
+          e11: -0.9340275
+          e12: -0.23311168
+          e13: 0.0062608914
+          e20: 0.39444488
+          e21: 0.32848513
+          e22: -0.85820246
+          e23: -0.039376464
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.94983816, y: 0.16883695, z: 0.2632521}
+        _up: {x: -0.24034736, y: 0.9326597, z: 0.2690334}
+        _forward: {x: -0.20010182, y: -0.3188102, z: 0.9264551}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.87815773
+          e01: 0.14032397
+          e02: 0.45732713
+          e03: -0.103431165
+          e10: 0.27065137
+          e11: -0.9340275
+          e12: -0.23311168
+          e13: 0.0062608914
+          e20: 0.39444488
+          e21: 0.32848513
+          e22: -0.85820246
+          e23: -0.039376464
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.8903331, y: 0.19079152, z: 0.41340804}
+        _up: {x: -0.31145963, y: 0.9175069, z: 0.24733487}
+        _forward: {x: -0.33211526, y: -0.34897032, z: 0.87631}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.86173666
+          e01: 0.22886387
+          e02: 0.45280394
+          e03: -0.13252628
+          e10: 0.36184883
+          e11: -0.902826
+          e12: -0.23231733
+          e13: -0.0027064835
+          e20: 0.355634
+          e21: 0.3640429
+          e22: -0.8608123
+          e23: -0.052444447
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99998605, y: -0.002233963, z: -0.0047865915}
+        _up: {x: 0.0027024911, y: 0.99496156, z: 0.10022235}
+        _forward: {x: 0.00453857, y: -0.10023388, z: 0.99495363}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.6846271
+          e01: 0.5713752
+          e02: 0.45256636
+          e03: -0.15134475
+          e10: 0.7057823
+          e11: -0.67477036
+          e12: -0.21577112
+          e13: -0.010608687
+          e20: 0.18209198
+          e21: 0.46713606
+          e22: -0.86523247
+          e23: -0.06021102
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9998531, y: -0.016601788, z: 0.0042105895}
+        _up: {x: 0.013365391, y: 0.91002417, z: 0.4143396}
+        _forward: {x: -0.010710533, y: -0.41422254, z: 0.91011256}
+    _thumb:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.6159541
+          e01: -0.36500305
+          e02: -0.6981213
+          e03: -0.042795833
+          e10: 0.49360865
+          e11: -0.51183546
+          e12: 0.70311815
+          e13: -0.014722008
+          e20: -0.61396354
+          e21: -0.7776872
+          e22: -0.13509846
+          e23: 0.029782493
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.0800225, y: -0.63709193, z: -0.76662266}
+        _up: {x: 0.75278693, y: 0.5427516, z: -0.37246844}
+        _forward: {x: 0.65338224, y: -0.5472977, z: 0.5230268}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.6159541
+          e01: -0.36500305
+          e02: -0.6981213
+          e03: -0.042795833
+          e10: 0.49360865
+          e11: -0.51183546
+          e12: 0.70311815
+          e13: -0.014722008
+          e20: -0.61396354
+          e21: -0.7776872
+          e22: -0.13509846
+          e23: 0.029782493
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.0800225, y: -0.63709193, z: -0.76662266}
+        _up: {x: 0.75278693, y: 0.5427516, z: -0.37246844}
+        _forward: {x: 0.65338224, y: -0.5472977, z: 0.5230268}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.6441593
+          e01: -0.35071656
+          e02: -0.6797475
+          e03: -0.05984233
+          e10: 0.45235395
+          e11: -0.5419447
+          e12: 0.7082881
+          e13: -0.028382374
+          e20: -0.616794
+          e21: -0.7637368
+          e22: -0.19045074
+          e23: 0.04677397
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99828583, y: 0.0336941, z: 0.04785365}
+        _up: {x: -0.033028826, y: 0.9993474, z: -0.014627435}
+        _forward: {x: -0.048315257, y: 0.013021804, z: 0.9987472}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.69659775
+          e01: -0.22956818
+          e02: -0.6797426
+          e03: -0.081150256
+          e10: 0.54216963
+          e11: -0.45207673
+          e12: 0.7082928
+          e13: -0.043345977
+          e20: -0.4698973
+          e21: -0.861931
+          e22: -0.1904508
+          e23: 0.067176804
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 1.0000001, y: -0.0000042598317, z: 0.0000053392073}
+        _up: {x: 0.0000033218128, y: 0.9838023, z: 0.17925659}
+        _forward: {x: -0.0000061204446, y: -0.17925659, z: 0.9838025}
+  _handDescriptorOpenRight:
+    _index:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9843724
+          e01: 0.115412794
+          e02: -0.1330082
+          e03: -0.054024763
+          e10: 0.10828557
+          e11: -0.9923291
+          e12: -0.059651434
+          e13: -0.006056241
+          e20: -0.13887227
+          e21: 0.044316337
+          e22: -0.98931843
+          e23: 0.020022886
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.97680074, y: 0.04737718, z: 0.20884462}
+        _up: {x: -0.042384375, y: 0.9987004, z: -0.028319918}
+        _forward: {x: -0.20991479, y: 0.018811207, z: 0.97753865}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.88668066
+          e01: -0.36550778
+          e02: -0.28319904
+          e03: -0.11248456
+          e10: -0.41491774
+          e11: -0.8992624
+          e12: -0.13846122
+          e13: -0.0124874
+          e20: -0.20406137
+          e21: 0.24027506
+          e22: -0.9490139
+          e23: 0.028270341
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9848037, y: 0.06265736, z: 0.16197476}
+        _up: {x: -0.1354507, y: 0.860827, z: 0.4905403}
+        _forward: {x: -0.108696334, y: -0.50502557, z: 0.85623264}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.88668066
+          e01: -0.36550778
+          e02: -0.28319904
+          e03: -0.11248456
+          e10: -0.41491774
+          e11: -0.8992624
+          e12: -0.13846122
+          e13: -0.0124874
+          e20: -0.20406137
+          e21: 0.24027506
+          e22: -0.9490139
+          e23: 0.028270341
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9253004, y: 0.1122801, z: 0.3622331}
+        _up: {x: -0.27176565, y: 0.86251867, z: 0.4268554}
+        _forward: {x: -0.26450536, y: -0.49341217, z: 0.8286021}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.9043274
+          e01: -0.31264174
+          e02: -0.29059824
+          e03: -0.14210534
+          e10: -0.36366388
+          e11: -0.92078716
+          e12: -0.1410698
+          e13: 0.0013739996
+          e20: -0.22347458
+          e21: 0.23325326
+          e22: -0.9463892
+          e23: 0.035087183
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99996567, y: 0.0056808987, z: 0.0060139983}
+        _up: {x: -0.005327536, y: 0.99834645, z: -0.05723939}
+        _forward: {x: -0.0063291923, y: 0.057205353, z: 0.99834245}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.74911225
+          e01: -0.59506583
+          e02: -0.2910803
+          e03: -0.16372533
+          e10: -0.650774
+          e11: -0.7431788
+          e12: -0.1554979
+          e13: 0.010068047
+          e20: -0.123793006
+          e21: 0.30591255
+          e22: -0.94397736
+          e23: 0.04042981
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9998928, y: 0.013998522, z: -0.004272062}
+        _up: {x: -0.011747258, y: 0.941706, z: 0.3362312}
+        _forward: {x: 0.008729762, y: -0.33614472, z: 0.9417698}
+    _middle:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9953099
+          e01: 0.09321556
+          e02: -0.025874017
+          e03: -0.053918168
+          e10: 0.0925539
+          e11: -0.9953766
+          e12: -0.02568865
+          e13: -0.0050029014
+          e20: -0.028148837
+          e21: 0.023173379
+          e22: -0.9993361
+          e23: 0.0017453148
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9947082, y: 0.023243234, z: 0.10008607}
+        _up: {x: -0.022910533, y: 0.99972767, z: -0.004471514}
+        _forward: {x: -0.10016258, y: 0.0021549177, z: 0.9949687}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.96267307
+          e01: -0.2521803
+          e02: -0.09831495
+          e03: -0.11596647
+          e10: -0.262039
+          e11: -0.9593109
+          e12: -0.10515258
+          e13: -0.010772965
+          e20: -0.0677972
+          e21: 0.12698975
+          e22: -0.98958534
+          e23: 0.0035001263
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99417144, y: 0.072569855, z: 0.0797303}
+        _up: {x: -0.095736936, y: 0.9343106, z: 0.3433601}
+        _forward: {x: -0.04957531, y: -0.34899226, z: 0.9358134}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.96267307
+          e01: -0.2521803
+          e02: -0.09831495
+          e03: -0.11596647
+          e10: -0.262039
+          e11: -0.9593109
+          e12: -0.10515258
+          e13: -0.010772965
+          e20: -0.0677972
+          e21: 0.12698975
+          e22: -0.98958534
+          e23: 0.0035001263
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.97926193, y: 0.09582964, z: 0.17850739}
+        _up: {x: -0.15102777, y: 0.9325709, z: 0.3278728}
+        _forward: {x: -0.13505091, y: -0.34803298, z: 0.92770374}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.91330904
+          e01: -0.39357996
+          e02: -0.104697324
+          e03: -0.15355024
+          e10: -0.4036828
+          e11: -0.90887827
+          e12: -0.10478145
+          e13: -0.00054224033
+          e20: -0.05391727
+          e21: 0.13796216
+          e22: -0.98896986
+          e23: 0.0061472976
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9999793, y: 0.0013316151, z: 0.0062831226}
+        _up: {x: -0.002259588, y: 0.9886711, z: 0.15008073}
+        _forward: {x: -0.0060120896, y: -0.15009183, z: 0.9886537}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.8122692
+          e01: -0.57400525
+          e02: -0.1036197
+          e03: -0.18064368
+          e10: -0.58313185
+          e11: -0.80318415
+          e12: -0.12186605
+          e13: 0.011433048
+          e20: -0.013274005
+          e21: 0.15941188
+          e22: -0.9871239
+          e23: 0.007746506
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9998517, y: 0.015358402, z: -0.0077814003}
+        _up: {x: -0.013397799, y: 0.9779077, z: 0.20860744}
+        _forward: {x: 0.010813395, y: -0.20847222, z: 0.97796863}
+    _ring:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9919761
+          e01: 0.0894517
+          e02: 0.08934247
+          e03: -0.052388366
+          e10: 0.08771707
+          e11: -0.99587655
+          e12: 0.023164151
+          e13: -0.0045133037
+          e20: 0.091046154
+          e21: -0.015141397
+          e22: -0.99573284
+          e23: -0.011751078
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9997078, y: -0.014988696, z: -0.019026218}
+        _up: {x: 0.015030895, y: 0.99988514, z: 0.002075355}
+        _forward: {x: 0.018992987, y: -0.0023606378, z: 0.9998168}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.9519821
+          e01: -0.26861405
+          e02: 0.1468909
+          e03: -0.11285266
+          e10: -0.27374473
+          e11: -0.9616776
+          e12: 0.015520467
+          e13: -0.009859911
+          e20: 0.1370927
+          e21: -0.05498577
+          e22: -0.9890321
+          e23: -0.017300569
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99829245, y: 0.012658491, z: -0.057026282}
+        _up: {x: 0.008475994, y: 0.9345159, z: 0.35582042}
+        _forward: {x: 0.057796065, y: -0.35569623, z: 0.93281287}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.9519821
+          e01: -0.26861405
+          e02: 0.1468909
+          e03: -0.11285266
+          e10: -0.27374473
+          e11: -0.9616776
+          e12: 0.015520467
+          e13: -0.009859911
+          e20: 0.1370927
+          e21: -0.05498577
+          e22: -0.9890321
+          e23: -0.017300569
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9971079, y: -0.0021714529, z: -0.075983286}
+        _up: {x: 0.029278217, y: 0.9334415, z: 0.3575334}
+        _forward: {x: 0.070149645, y: -0.35872373, z: 0.9308041}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.9099822
+          e01: -0.38743302
+          e02: 0.14774418
+          e03: -0.14767304
+          e10: -0.39384043
+          e11: -0.9190454
+          e12: 0.015697604
+          e13: 0.00015292736
+          e20: 0.12970184
+          e21: -0.07247217
+          e22: -0.9889022
+          e23: -0.022315117
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9999996, y: -0.00040669326, z: -0.0007816017}
+        _up: {x: 0.0005027776, y: 0.99187946, z: 0.1271809}
+        _forward: {x: 0.00072356075, y: -0.12718137, z: 0.9918792}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.6942082
+          e01: -0.7043935
+          e02: 0.14800401
+          e03: -0.1736018
+          e10: -0.71407175
+          e11: -0.6998244
+          e12: 0.018665036
+          e13: 0.011374705
+          e20: 0.09042934
+          e21: -0.11864293
+          e22: -0.9888118
+          e23: -0.026010502
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99999565, y: -0.0028344651, z: 0.00092049286}
+        _up: {x: 0.002270484, y: 0.9246734, z: 0.38075477}
+        _forward: {x: -0.0019303947, y: -0.3807509, z: 0.92467564}
+    _little:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.97171825
+          e01: 0.071871854
+          e02: 0.22494082
+          e03: -0.048623376
+          e10: 0.061899673
+          e11: -0.9967756
+          e12: 0.051083885
+          e13: -0.0027687757
+          e20: 0.22788675
+          e21: -0.035715424
+          e22: -0.9730326
+          e23: -0.026522944
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.98698753, y: -0.030529978, z: -0.15787286}
+        _up: {x: 0.034282904, y: 0.99919057, z: 0.02110238}
+        _forward: {x: 0.15710062, y: -0.026240062, z: 0.9872338}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.878156
+          e01: -0.14032952
+          e02: 0.45732918
+          e03: -0.10343126
+          e10: -0.27065715
+          e11: -0.93402785
+          e12: 0.23310846
+          e13: -0.0062603103
+          e20: 0.39444572
+          e21: -0.32848465
+          e22: -0.85820204
+          e23: -0.03937646
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9498385, y: -0.16883627, z: -0.26325148}
+        _up: {x: 0.24034654, y: 0.93265986, z: 0.269034}
+        _forward: {x: 0.20010146, y: -0.31881037, z: 0.92645514}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.878156
+          e01: -0.14032952
+          e02: 0.45732918
+          e03: -0.10343126
+          e10: -0.27065715
+          e11: -0.93402785
+          e12: 0.23310846
+          e13: -0.0062603103
+          e20: 0.39444572
+          e21: -0.32848465
+          e22: -0.85820204
+          e23: -0.03937646
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.89033353, y: -0.19079041, z: -0.41340733}
+        _up: {x: 0.31145874, y: 0.91750777, z: 0.2473366}
+        _forward: {x: 0.3321146, y: -0.34897164, z: 0.8763097}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.8617343
+          e01: -0.22886975
+          e02: 0.4528057
+          e03: -0.132526
+          e10: -0.3618547
+          e11: -0.90282583
+          e12: 0.2323135
+          e13: 0.002707239
+          e20: 0.3556346
+          e21: -0.36404198
+          e22: -0.8608123
+          e23: -0.05244464
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99998593, y: 0.0022346855, z: 0.0047867144}
+        _up: {x: -0.0027031528, y: 0.9949612, z: 0.10022269}
+        _forward: {x: -0.0045387805, y: -0.10023408, z: 0.99495375}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.6846224
+          e01: -0.5713794
+          e02: 0.45256823
+          e03: -0.15134433
+          e10: -0.70578754
+          e11: -0.6747676
+          e12: 0.2157674
+          e13: 0.010609596
+          e20: 0.18209304
+          e21: -0.46713564
+          e22: -0.8652323
+          e23: -0.06021101
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99985343, y: 0.01660169, z: -0.004210791}
+        _up: {x: -0.013365262, y: 0.91002434, z: 0.4143394}
+        _forward: {x: 0.010710702, y: -0.4142227, z: 0.91011274}
+    _thumb:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.6159523
+          e01: 0.36499965
+          e02: -0.69812566
+          e03: -0.042795725
+          e10: -0.49361217
+          e11: -0.5118381
+          e12: -0.70311505
+          e13: 0.014722075
+          e20: -0.61396253
+          e21: 0.7776884
+          e22: -0.13509971
+          e23: 0.02978256
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.08002239, y: 0.63709205, z: 0.76662374}
+        _up: {x: -0.75278753, y: 0.5427522, z: -0.37246856}
+        _forward: {x: -0.65338224, y: -0.54729813, z: 0.52302617}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.6159523
+          e01: 0.36499965
+          e02: -0.69812566
+          e03: -0.042795725
+          e10: -0.49361217
+          e11: -0.5118381
+          e12: -0.70311505
+          e13: 0.014722075
+          e20: -0.61396253
+          e21: 0.7776884
+          e22: -0.13509971
+          e23: 0.02978256
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.08002239, y: 0.63709205, z: 0.76662374}
+        _up: {x: -0.75278753, y: 0.5427522, z: -0.37246856}
+        _forward: {x: -0.65338224, y: -0.54729813, z: 0.52302617}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.6441586
+          e01: 0.35071304
+          e02: -0.67975163
+          e03: -0.059842244
+          e10: -0.45235777
+          e11: -0.5419473
+          e12: -0.7082852
+          e13: 0.028382689
+          e20: -0.6167935
+          e21: 0.76373786
+          e22: -0.19045214
+          e23: 0.046773992
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9982859, y: -0.03369422, z: -0.04785371}
+        _up: {x: 0.033028793, y: 0.9993475, z: -0.0146275805}
+        _forward: {x: 0.048315566, y: 0.013021719, z: 0.9987482}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.6965966
+          e01: 0.2295647
+          e02: -0.6797466
+          e03: -0.08115007
+          e10: -0.5421739
+          e11: -0.45207858
+          e12: -0.70829
+          e13: 0.043346234
+          e20: -0.46989653
+          e21: 0.8619321
+          e22: -0.19045225
+          e23: 0.067176774
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99999994, y: 0.0000044698727, z: -0.0000055450496}
+        _up: {x: -0.0000033122958, y: 0.9838022, z: 0.17925683}
+        _forward: {x: 0.0000061244004, y: -0.1792567, z: 0.9838022}
+  _handDescriptorClosedLeft:
+    _index:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9843714
+          e01: -0.1154185
+          e02: -0.13300918
+          e03: -0.05402498
+          e10: -0.10829115
+          e11: -0.99232787
+          e12: 0.059652302
+          e13: 0.0060563656
+          e20: -0.13887374
+          e21: -0.04431629
+          e22: -0.98931795
+          e23: 0.020023037
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.97680056, y: -0.04737725, z: -0.20884427}
+        _up: {x: 0.04238431, y: 0.99869984, z: -0.028320916}
+        _forward: {x: 0.20991458, y: 0.018812036, z: 0.9775387}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.36967036
+          e01: 0.7324927
+          e02: -0.5716629
+          e03: -0.112484775
+          e10: 0.928821
+          e11: -0.27462897
+          e12: 0.24873762
+          e13: 0.012487804
+          e20: 0.025203256
+          e21: -0.62292355
+          e22: -0.78187674
+          e23: 0.028270451
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.8643989, y: -0.14619896, z: -0.48108262}
+        _up: {x: 0.5024589, y: 0.2155845, z: 0.83729243}
+        _forward: {x: -0.01869736, y: -0.9654789, z: 0.2598099}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.36967036
+          e01: 0.7324927
+          e02: -0.5716629
+          e03: -0.112484775
+          e10: 0.928821
+          e11: -0.27462897
+          e12: 0.24873762
+          e13: 0.012487804
+          e20: 0.025203256
+          e21: -0.62292355
+          e22: -0.78187674
+          e23: 0.028270451
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.73716253, y: -0.19601187, z: -0.64666116}
+        _up: {x: 0.6756994, y: 0.20725022, z: 0.7074445}
+        _forward: {x: -0.004646844, y: -0.95845026, z: 0.2852223}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: -0.30960527
+          e01: 0.7936848
+          e02: -0.5236499
+          e03: -0.12483371
+          e10: 0.9194659
+          e11: 0.39024612
+          e12: 0.04785841
+          e13: -0.018540805
+          e20: 0.24233685
+          e21: -0.4666611
+          e22: -0.8505883
+          e23: 0.027428456
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9763105, y: 0.1331384, z: -0.17056362}
+        _up: {x: 0.008220183, y: 0.7648893, z: 0.6441091}
+        _forward: {x: 0.21621798, y: -0.63025266, z: 0.745675}
+      _distal:
+        _transformRelativeToHand:
+          e00: -0.7950854
+          e01: 0.3958466
+          e02: -0.45950505
+          e03: -0.11743225
+          e10: 0.41136348
+          e11: 0.90869987
+          e12: 0.07102623
+          e13: -0.04052287
+          e20: 0.44566783
+          e21: -0.13255176
+          e22: -0.88533074
+          e23: 0.021634784
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9970708, y: 0.076164916, z: -0.0069768494}
+        _up: {x: -0.051049277, y: 0.7306507, z: 0.68084013}
+        _forward: {x: 0.056953706, y: -0.6784899, z: 0.73239887}
+    _middle:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9953091
+          e01: -0.09322115
+          e02: -0.02587523
+          e03: -0.05391814
+          e10: -0.09255969
+          e11: -0.99537563
+          e12: 0.025688833
+          e13: 0.0050031445
+          e20: -0.02815036
+          e21: -0.02317329
+          e22: -0.9993351
+          e23: 0.0017454532
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9947072, y: -0.023243135, z: -0.10008569}
+        _up: {x: 0.022910444, y: 0.99972755, z: -0.0044725165}
+        _forward: {x: 0.10016237, y: 0.002155829, z: 0.9949688}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.49667177
+          e01: 0.8669981
+          e02: -0.040391654
+          e03: -0.11596624
+          e10: 0.86500144
+          e11: -0.49062964
+          e12: 0.10514358
+          e13: 0.0107735945
+          e20: 0.07134191
+          e21: -0.08716068
+          e22: -0.9936365
+          e23: 0.0035005182
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9967217, y: -0.077866144, z: -0.02196306}
+        _up: {x: 0.052065272, y: 0.40955788, z: 0.9107971}
+        _forward: {x: -0.0619251, y: -0.9089551, z: 0.41226947}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.49667177
+          e01: 0.8669981
+          e02: -0.040391654
+          e03: -0.11596624
+          e10: 0.86500144
+          e11: -0.49062964
+          e12: 0.10514358
+          e13: 0.0107735945
+          e20: 0.07134191
+          e21: -0.08716068
+          e22: -0.9936365
+          e23: 0.0035005182
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9874625, y: -0.10105921, z: -0.12126187}
+        _up: {x: 0.15240045, y: 0.4101997, z: 0.899172}
+        _forward: {x: -0.04112802, y: -0.9063793, z: 0.42045838}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: -0.6372698
+          e01: 0.73847383
+          e02: -0.22032665
+          e03: -0.13535632
+          e10: 0.7633557
+          e11: 0.6441157
+          e12: -0.049022432
+          e13: -0.02299724
+          e20: 0.105714016
+          e21: -0.19942817
+          e22: -0.9741935
+          e23: 0.0007150761
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9717393, y: -0.08205953, z: -0.2213354}
+        _up: {x: 0.2360555, y: 0.34161538, z: 0.90971243}
+        _forward: {x: 0.00096100644, y: -0.9362506, z: 0.35133165}
+      _distal:
+        _transformRelativeToHand:
+          e00: -0.9425108
+          e01: 0.321733
+          e02: -0.09033987
+          e03: -0.116452016
+          e10: 0.32716838
+          e11: 0.9434603
+          e12: -0.053325325
+          e13: -0.045642223
+          e20: 0.06807556
+          e21: -0.07981611
+          e22: -0.9944824
+          e23: -0.0024209714
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9913365, y: 0.09726645, z: -0.088266075}
+        _up: {x: -0.03938079, y: 0.8612066, z: 0.5067273}
+        _forward: {x: 0.12530285, y: -0.49886152, z: 0.8575761}
+    _ring:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9919756
+          e01: -0.08945738
+          e02: 0.089341074
+          e03: -0.052388296
+          e10: -0.08772284
+          e11: -0.9958758
+          e12: -0.023164641
+          e13: 0.004513283
+          e20: 0.09104483
+          e21: 0.015141569
+          e22: -0.9957319
+          e23: -0.011750969
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99970675, y: 0.014988924, z: 0.019026663}
+        _up: {x: -0.01503109, y: 0.9998851, z: 0.0020742596}
+        _forward: {x: -0.018993378, y: -0.0023597162, z: 0.99981683}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.4242091
+          e01: 0.901659
+          e02: 0.08401008
+          e03: -0.112852395
+          e10: 0.9026602
+          e11: -0.42844906
+          e12: 0.04045043
+          e13: 0.009860518
+          e20: 0.07246651
+          e21: 0.05867312
+          e22: -0.99564373
+          e23: -0.01730059
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9979622, y: -0.062874444, z: -0.010860679}
+        _up: {x: 0.032057356, y: 0.34691018, z: 0.9373504}
+        _forward: {x: -0.055167735, y: -0.93578845, z: 0.34821886}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.4242091
+          e01: 0.901659
+          e02: 0.08401008
+          e03: -0.112852395
+          e10: 0.9026602
+          e11: -0.42844906
+          e12: 0.04045043
+          e13: 0.009860518
+          e20: 0.07246651
+          e21: 0.05867312
+          e22: -0.99564373
+          e23: -0.01730059
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99882096, y: -0.047883213, z: 0.007998797}
+        _up: {x: 0.009030086, y: 0.345139, z: 0.9385082}
+        _forward: {x: -0.047699492, y: -0.93732953, z: 0.34516436}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: -0.6224365
+          e01: 0.7780728
+          e02: 0.08470887
+          e03: -0.12836853
+          e10: 0.7823952
+          e11: 0.62143254
+          e12: 0.04098097
+          e13: -0.023156162
+          e20: -0.02075471
+          e21: 0.091783844
+          e22: -0.9955628
+          e23: -0.01995135
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99999964, y: 0.0004074901, z: 0.00078119873}
+        _up: {x: -0.00088081614, y: 0.4406894, z: 0.8976592}
+        _forward: {x: 0.000021511241, y: -0.8976594, z: 0.44068953}
+      _distal:
+        _transformRelativeToHand:
+          e00: -0.96539676
+          e01: 0.24567267
+          e02: 0.08748776
+          e03: -0.11063359
+          e10: 0.24997558
+          e11: 0.96733993
+          e12: 0.04202262
+          e13: -0.04544944
+          e20: -0.07430659
+          e21: 0.06243824
+          e22: -0.995279
+          e23: -0.019359706
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9999957, y: 0.0028355515, z: -0.00092060503}
+        _up: {x: -0.0017080408, y: 0.7980187, z: 0.60263044}
+        _forward: {x: 0.0024434538, y: -0.6026261, z: 0.79802}
+    _little:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.97171813
+          e01: -0.071877405
+          e02: 0.22493924
+          e03: -0.04862333
+          e10: -0.061905365
+          e11: -0.99677414
+          e12: -0.05108518
+          e13: 0.002768587
+          e20: 0.22788541
+          e21: 0.035715476
+          e22: -0.9730331
+          e23: -0.026522692
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.98698765, y: 0.030530324, z: 0.15787314}
+        _up: {x: -0.034283, y: 0.9991897, z: 0.021101303}
+        _forward: {x: -0.15710093, y: -0.026239105, z: 0.98723394}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.10544953
+          e01: 0.9120241
+          e02: 0.39634967
+          e03: -0.103431165
+          e10: 0.9881689
+          e11: -0.14074135
+          e12: 0.06094983
+          e13: 0.0062608914
+          e20: 0.111370474
+          e21: 0.3852332
+          e22: -0.9160747
+          e23: -0.039376464
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9774113, y: -0.1219598, z: 0.17260703}
+        _up: {x: -0.16250464, y: 0.088491954, z: 0.98273164}
+        _forward: {x: -0.1351281, y: -0.9885825, z: 0.066674076}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.10544953
+          e01: 0.9120241
+          e02: 0.39634967
+          e03: -0.103431165
+          e10: 0.9881689
+          e11: -0.14074135
+          e12: 0.06094983
+          e13: 0.0062608914
+          e20: 0.111370474
+          e21: 0.3852332
+          e22: -0.9160747
+          e23: -0.039376464
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9417573, y: -0.09654933, z: 0.32213703}
+        _up: {x: -0.31781194, y: 0.057672966, z: 0.94639826}
+        _forward: {x: -0.10995276, y: -0.9936564, z: 0.023629462}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: -0.4474058
+          e01: 0.8029627
+          e02: 0.39380127
+          e03: -0.10692481
+          e10: 0.88368464
+          e11: 0.4646574
+          e12: 0.056533515
+          e13: -0.026479015
+          e20: -0.1375883
+          e21: 0.3732894
+          e22: -0.91745585
+          e23: -0.04306564
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99998605, y: -0.0022348182, z: -0.0047866143}
+        _up: {x: 0.004613912, y: 0.81072795, z: 0.5854049}
+        _forward: {x: 0.0025724077, y: -0.5854192, z: 0.8107268}
+      _distal:
+        _transformRelativeToHand:
+          e00: -0.8755087
+          e01: 0.30033377
+          e02: 0.3785294
+          e03: -0.09715417
+          e10: 0.34427664
+          e11: 0.937398
+          e12: 0.052531537
+          e13: -0.04577683
+          e20: -0.3390555
+          e21: 0.17631057
+          e22: -0.92409784
+          e23: -0.04006124
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.999853, y: -0.01660157, z: 0.0042100335}
+        _up: {x: 0.00950916, y: 0.7425402, z: 0.66973406}
+        _forward: {x: -0.014244923, y: -0.6695958, z: 0.74258894}
+    _thumb:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.6950786
+          e01: -0.1654651
+          e02: -0.6996336
+          e03: -0.042795833
+          e10: 0.7136065
+          e11: 0.040538643
+          e12: 0.69937336
+          e13: -0.014722008
+          e20: -0.087359525
+          e21: -0.9853823
+          e22: 0.14625439
+          e23: 0.029782493
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: -0.200682, y: -0.6332257, z: -0.7474975}
+        _up: {x: 0.97066885, y: -0.025406344, z: -0.23907492}
+        _forward: {x: 0.132397, y: -0.7735505, z: 0.6197507}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.6950786
+          e01: -0.1654651
+          e02: -0.6996336
+          e03: -0.042795833
+          e10: 0.7136065
+          e11: 0.040538643
+          e12: 0.69937336
+          e13: -0.014722008
+          e20: -0.087359525
+          e21: -0.9853823
+          e22: 0.14625439
+          e23: 0.029782493
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: -0.200682, y: -0.6332257, z: -0.7474975}
+        _up: {x: 0.97066885, y: -0.025406344, z: -0.23907492}
+        _forward: {x: 0.132397, y: -0.7735505, z: 0.6197507}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.55340195
+          e01: -0.3548771
+          e02: -0.7535308
+          e03: -0.062032197
+          e10: 0.78974855
+          e11: 0.51103187
+          e12: 0.33932918
+          e13: -0.034470934
+          e20: 0.26465824
+          e21: -0.78288513
+          e22: 0.5630696
+          e23: 0.032200333
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.8468643, y: -0.41639972, z: -0.33080533}
+        _up: {x: 0.4911852, y: 0.8508771, z: 0.18640062}
+        _forward: {x: 0.20385751, y: -0.32034275, z: 0.92510694}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.6174353
+          e01: 0.22577026
+          e02: -0.7535261
+          e03: -0.08033784
+          e10: 0.07114679
+          e11: 0.93797266
+          e12: 0.33933154
+          e13: -0.06059492
+          e20: 0.7833979
+          e21: -0.26312613
+          e22: 0.5630744
+          e23: 0.023445545
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 1, y: -0.0000042433676, z: 0.000005715027}
+        _up: {x: -0.000002012855, y: 0.60521036, z: 0.7960655}
+        _forward: {x: -0.0000068635713, y: -0.7960654, z: 0.6052104}
+  _handDescriptorClosedRight:
+    _index:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9843724
+          e01: 0.115412794
+          e02: -0.1330082
+          e03: -0.054024763
+          e10: 0.10828557
+          e11: -0.9923291
+          e12: -0.059651434
+          e13: -0.006056241
+          e20: -0.13887227
+          e21: 0.044316337
+          e22: -0.98931843
+          e23: 0.020022886
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.97680074, y: 0.04737718, z: 0.20884462}
+        _up: {x: -0.042384375, y: 0.9987004, z: -0.028319918}
+        _forward: {x: -0.20991479, y: 0.018811207, z: 0.97753865}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.36966506
+          e01: -0.73249507
+          e02: -0.57166344
+          e03: -0.11248456
+          e10: -0.9288238
+          e11: -0.27462447
+          e12: -0.24873467
+          e13: -0.0124874
+          e20: 0.025204184
+          e21: 0.6229227
+          e22: -0.7818775
+          e23: 0.028270341
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.8643986, y: 0.14619918, z: 0.48108274}
+        _up: {x: -0.50245917, y: 0.21558397, z: 0.8372923}
+        _forward: {x: 0.018697724, y: -0.9654788, z: 0.25980964}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.36966506
+          e01: -0.73249507
+          e02: -0.57166344
+          e03: -0.11248456
+          e10: -0.9288238
+          e11: -0.27462447
+          e12: -0.24873467
+          e13: -0.0124874
+          e20: 0.025204184
+          e21: 0.6229227
+          e22: -0.7818775
+          e23: 0.028270341
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.7371623, y: 0.19601169, z: 0.64666164}
+        _up: {x: -0.67569995, y: 0.20724913, z: 0.7074443}
+        _forward: {x: 0.0046472866, y: -0.95845085, z: 0.28522116}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: -0.3096111
+          e01: -0.79368323
+          e02: -0.52364916
+          e03: -0.12483344
+          e10: -0.9194646
+          e11: 0.39025137
+          e12: -0.047855094
+          e13: 0.01854148
+          e20: 0.24233636
+          e21: 0.46666002
+          e22: -0.85058916
+          e23: 0.02742806
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9763106, y: -0.13313863, z: 0.17056409}
+        _up: {x: -0.0082202805, y: 0.7648893, z: 0.6441094}
+        _forward: {x: -0.21621859, y: -0.6302526, z: 0.7456752}
+      _distal:
+        _transformRelativeToHand:
+          e00: -0.7950886
+          e01: -0.39584124
+          e02: -0.4595044
+          e03: -0.11743166
+          e10: -0.41135857
+          e11: 0.90870297
+          e12: -0.07102325
+          e13: 0.040523466
+          e20: 0.4456666
+          e21: 0.13255125
+          e22: -0.8853316
+          e23: 0.021634424
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99707067, y: -0.0761649, z: 0.006977023}
+        _up: {x: 0.051049184, y: 0.73065054, z: 0.6808401}
+        _forward: {x: -0.056953732, y: -0.6784899, z: 0.73239875}
+    _middle:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9953099
+          e01: 0.09321556
+          e02: -0.025874017
+          e03: -0.053918168
+          e10: 0.0925539
+          e11: -0.9953766
+          e12: -0.02568865
+          e13: -0.0050029014
+          e20: -0.028148837
+          e21: 0.023173379
+          e22: -0.9993361
+          e23: 0.0017453148
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9947082, y: 0.023243234, z: 0.10008607}
+        _up: {x: -0.022910533, y: 0.99972767, z: -0.004471514}
+        _forward: {x: -0.10016258, y: 0.0021549177, z: 0.9949687}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.49666798
+          e01: -0.8669995
+          e02: -0.040391304
+          e03: -0.11596647
+          e10: -0.8650038
+          e11: -0.49062523
+          e12: -0.105143875
+          e13: -0.010772965
+          e20: 0.07134284
+          e21: 0.08716004
+          e22: -0.9936375
+          e23: 0.0035001263
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99672174, y: 0.07786667, z: 0.021963492}
+        _up: {x: -0.052065857, y: 0.40955865, z: 0.9107956}
+        _forward: {x: 0.061925355, y: -0.9089543, z: 0.41227067}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.49666798
+          e01: -0.8669995
+          e02: -0.040391304
+          e03: -0.11596647
+          e10: -0.8650038
+          e11: -0.49062523
+          e12: -0.105143875
+          e13: -0.010772965
+          e20: 0.07134284
+          e21: 0.08716004
+          e22: -0.9936375
+          e23: 0.0035001263
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9874634, y: 0.101059824, z: 0.12126278}
+        _up: {x: -0.15240125, y: 0.41019955, z: 0.8991707}
+        _forward: {x: 0.041128207, y: -0.9063791, z: 0.42045867}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: -0.6372725
+          e01: -0.7384708
+          e02: -0.22032622
+          e03: -0.13535662
+          e10: -0.76335245
+          e11: 0.64411926
+          e12: 0.049023587
+          e13: 0.022998001
+          e20: 0.10571372
+          e21: 0.19942817
+          e22: -0.9741945
+          e23: 0.0007151308
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.97173905, y: 0.08205982, z: 0.22133619}
+        _up: {x: -0.23605634, y: 0.34161553, z: 0.90971214}
+        _forward: {x: -0.00096105994, y: -0.9362507, z: 0.35133186}
+      _distal:
+        _transformRelativeToHand:
+          e00: -0.9425112
+          e01: -0.3217298
+          e02: -0.090339795
+          e03: -0.11645189
+          e10: -0.32716447
+          e11: 0.94346154
+          e12: 0.05332595
+          e13: 0.045643
+          e20: 0.06807531
+          e21: 0.07981644
+          e22: -0.9944833
+          e23: -0.0024211484
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9913366, y: -0.09726618, z: 0.08826595}
+        _up: {x: 0.039380748, y: 0.8612069, z: 0.5067267}
+        _forward: {x: -0.12530261, y: -0.4988609, z: 0.85757625}
+    _ring:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.9919761
+          e01: 0.0894517
+          e02: 0.08934247
+          e03: -0.052388366
+          e10: 0.08771707
+          e11: -0.99587655
+          e12: 0.023164151
+          e13: -0.0045133037
+          e20: 0.091046154
+          e21: -0.015141397
+          e22: -0.99573284
+          e23: -0.011751078
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9997078, y: -0.014988696, z: -0.019026218}
+        _up: {x: 0.015030895, y: 0.99988514, z: 0.002075355}
+        _forward: {x: 0.018992987, y: -0.0023606378, z: 0.9998168}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.42420393
+          e01: -0.9016615
+          e02: 0.08401054
+          e03: -0.11285266
+          e10: -0.90266293
+          e11: -0.42844394
+          e12: -0.040450897
+          e13: -0.009859911
+          e20: 0.072466835
+          e21: -0.058673743
+          e22: -0.99564475
+          e23: -0.017300569
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9979624, y: 0.062874384, z: 0.010861232}
+        _up: {x: -0.032057844, y: 0.34691027, z: 0.9373503}
+        _forward: {x: 0.055167414, y: -0.9357886, z: 0.34821898}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.42420393
+          e01: -0.9016615
+          e02: 0.08401054
+          e03: -0.11285266
+          e10: -0.90266293
+          e11: -0.42844394
+          e12: -0.040450897
+          e13: -0.009859911
+          e20: 0.072466835
+          e21: -0.058673743
+          e22: -0.99564475
+          e23: -0.017300569
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99882215, y: 0.047883354, z: -0.00799772}
+        _up: {x: -0.0090310285, y: 0.34513816, z: 0.9385084}
+        _forward: {x: 0.047699273, y: -0.93733, z: 0.34516346}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: -0.6224415
+          e01: -0.7780689
+          e02: 0.0847086
+          e03: -0.12836857
+          e10: -0.7823915
+          e11: 0.621438
+          e12: -0.04098125
+          e13: 0.023156656
+          e20: -0.020754827
+          e21: -0.09178373
+          e22: -0.99556386
+          e23: -0.019951323
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9999996, y: -0.00040690415, z: -0.00078071933}
+        _up: {x: 0.000880124, y: 0.44068873, z: 0.8976595}
+        _forward: {x: -0.000021200192, y: -0.89765996, z: 0.44068906}
+      _distal:
+        _transformRelativeToHand:
+          e00: -0.9653985
+          e01: -0.24566647
+          e02: 0.087487236
+          e03: -0.11063313
+          e10: -0.24996907
+          e11: 0.967342
+          e12: -0.0420228
+          e13: 0.04544992
+          e20: -0.07430647
+          e21: -0.06243789
+          e22: -0.9952799
+          e23: -0.019359654
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99999565, y: -0.0028352938, z: 0.0009205869}
+        _up: {x: 0.0017078564, y: 0.79801834, z: 0.6026304}
+        _forward: {x: -0.002443273, y: -0.6026263, z: 0.79801977}
+    _little:
+      _hasMetacarpalInfo: 1
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0.97171825
+          e01: 0.071871854
+          e02: 0.22494082
+          e03: -0.048623376
+          e10: 0.061899673
+          e11: -0.9967756
+          e12: 0.051083885
+          e13: -0.0027687757
+          e20: 0.22788675
+          e21: -0.035715424
+          e22: -0.9730326
+          e23: -0.026522944
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.98698753, y: -0.030529978, z: -0.15787286}
+        _up: {x: 0.034282904, y: 0.99919057, z: 0.02110238}
+        _forward: {x: 0.15710062, y: -0.026240062, z: 0.9872338}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.105443716
+          e01: -0.91202414
+          e02: 0.3963508
+          e03: -0.10343126
+          e10: -0.9881707
+          e11: -0.14073603
+          e12: -0.06095224
+          e13: -0.0062603103
+          e20: 0.11137052
+          e21: -0.38523468
+          e22: -0.91607386
+          e23: -0.03937646
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.97741115, y: 0.121959746, z: -0.17260732}
+        _up: {x: 0.162505, y: 0.08849203, z: 0.9827316}
+        _forward: {x: 0.13512808, y: -0.9885824, z: 0.06667395}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.105443716
+          e01: -0.91202414
+          e02: 0.3963508
+          e03: -0.10343126
+          e10: -0.9881707
+          e11: -0.14073603
+          e12: -0.06095224
+          e13: -0.0062603103
+          e20: 0.11137052
+          e21: -0.38523468
+          e22: -0.91607386
+          e23: -0.03937646
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.94175696, y: 0.09654992, z: -0.32213682}
+        _up: {x: 0.31781194, y: 0.05767223, z: 0.94639814}
+        _forward: {x: 0.10995277, y: -0.9936572, z: 0.02362834}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: -0.44741067
+          e01: -0.80295926
+          e02: 0.39380264
+          e03: -0.1069246
+          e10: -0.8836827
+          e11: 0.4646627
+          e12: -0.056536026
+          e13: 0.026479313
+          e20: -0.13758926
+          e21: -0.3732909
+          e22: -0.9174549
+          e23: -0.0430659
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.99998623, y: 0.0022345714, z: 0.0047864863}
+        _up: {x: -0.0046136393, y: 0.81072783, z: 0.585405}
+        _forward: {x: -0.002572411, y: -0.5854191, z: 0.81072664}
+      _distal:
+        _transformRelativeToHand:
+          e00: -0.8755101
+          e01: -0.30032822
+          e02: 0.3785306
+          e03: -0.09715378
+          e10: -0.34427196
+          e11: 0.93740046
+          e12: -0.052534424
+          e13: 0.04577701
+          e20: -0.3390569
+          e21: -0.17631154
+          e22: -0.9240969
+          e23: -0.040061284
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.9998532, y: 0.01660161, z: -0.0042106053}
+        _up: {x: -0.009508791, y: 0.74254036, z: 0.6697338}
+        _forward: {x: 0.014245227, y: -0.66959554, z: 0.74258924}
+    _thumb:
+      _hasMetacarpalInfo: 0
+      _metacarpal:
+        _transformRelativeToHand:
+          e00: 0
+          e01: 0
+          e02: 0
+          e03: 0
+          e10: 0
+          e11: 0
+          e12: 0
+          e13: 0
+          e20: 0
+          e21: 0
+          e22: 0
+          e23: 0
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 0
+        _right: {x: 0, y: 0, z: 0}
+        _up: {x: 0, y: 0, z: 0}
+        _forward: {x: 0, y: 0, z: 0}
+      _proximal:
+        _transformRelativeToHand:
+          e00: 0.6950749
+          e01: 0.16546415
+          e02: -0.6996383
+          e03: -0.042795725
+          e10: -0.7136104
+          e11: 0.040537875
+          e12: -0.69936997
+          e13: 0.014722075
+          e20: -0.08735843
+          e21: 0.9853834
+          e22: 0.1462536
+          e23: 0.02978256
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: -0.20068255, y: 0.63322544, z: 0.74749845}
+        _up: {x: -0.9706696, y: -0.025406528, z: -0.23907539}
+        _forward: {x: -0.13239695, y: -0.7735508, z: 0.61974996}
+      _proximalNoMetacarpal:
+        _transformRelativeToHand:
+          e00: 0.6950749
+          e01: 0.16546415
+          e02: -0.6996383
+          e03: -0.042795725
+          e10: -0.7136104
+          e11: 0.040537875
+          e12: -0.69936997
+          e13: 0.014722075
+          e20: -0.08735843
+          e21: 0.9853834
+          e22: 0.1462536
+          e23: 0.02978256
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: -0.20068255, y: 0.63322544, z: 0.74749845}
+        _up: {x: -0.9706696, y: -0.025406528, z: -0.23907539}
+        _forward: {x: -0.13239695, y: -0.7735508, z: 0.61974996}
+      _intermediate:
+        _transformRelativeToHand:
+          e00: 0.55339825
+          e01: 0.3548793
+          e02: -0.7535336
+          e03: -0.062032014
+          e10: -0.78975207
+          e11: 0.5110309
+          e12: -0.33932555
+          e13: 0.03447121
+          e20: 0.2646598
+          e21: 0.78288585
+          e22: 0.56306916
+          e23: 0.032200254
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 0.84686434, y: 0.41639993, z: 0.330805}
+        _up: {x: -0.49118572, y: 0.8508768, z: 0.18640098}
+        _forward: {x: -0.20385715, y: -0.32034332, z: 0.92510766}
+      _distal:
+        _transformRelativeToHand:
+          e00: 0.6174344
+          e01: -0.22576675
+          e02: -0.7535291
+          e03: -0.08033756
+          e10: -0.071149
+          e11: 0.93797505
+          e12: -0.33932787
+          e13: 0.06059521
+          e20: 0.7833999
+          e21: 0.26312461
+          e22: 0.5630739
+          e23: 0.023445588
+          e30: 0
+          e31: 0
+          e32: 0
+          e33: 1
+        _right: {x: 1.0000001, y: 0.0000041513554, z: -0.0000056712356}
+        _up: {x: 0.0000020656626, y: 0.6052097, z: 0.79606634}
+        _forward: {x: 0.0000067150977, y: -0.79606616, z: 0.60520977}

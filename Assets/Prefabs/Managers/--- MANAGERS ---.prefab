@@ -453,6 +453,8 @@ MonoBehaviour:
   _realToVirtualScale: 1
   _heightOffset: 0
   _accumulatedHeightOffset: 0
+  _accumulatedScaleMultiplier: 1
+  baseModelEyeHeight: 1.75
   _preserveAvatarPositionAcrossScenes: 1
 --- !u!114 &9171964167861690565
 MonoBehaviour:

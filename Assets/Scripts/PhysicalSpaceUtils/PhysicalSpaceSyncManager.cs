@@ -29,6 +29,31 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         [SerializeField] private float _realToVirtualScale = 1f;
         [SerializeField] private float _heightOffset = 0f; // Stores the physical to virtual floor difference
         [SerializeField] private float _accumulatedHeightOffset = 0f; // Tracks the total vertical shift applied
+        [SerializeField] private float _accumulatedScaleMultiplier = 1f; // Target scale for player proportions
+
+        private float ExpectedEyeHeight
+        {
+            get
+            {
+                if (UxrAvatar.LocalAvatar != null)
+                {
+                    var controller = UxrAvatar.LocalAvatar.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
+                    if (controller != null)
+                    {
+                        var field = typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController).GetField("_bodyIKSettings", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        if (field != null)
+                        {
+                            var settings = (UltimateXR.Animation.IK.UxrBodyIKSettings)field.GetValue(controller);
+                            if (settings != null) return settings.EyesBaseHeight;
+                        }
+                    }
+                }
+                return 1.75f;
+            }
+        }
+
+        public enum HeightCalibrationPhase { None, Floor, PlayerScale }
+        public HeightCalibrationPhase CurrentHeightCalibrationPhase { get; private set; } = HeightCalibrationPhase.None;
 
         [Header("Scene Transition Sync")]
         [Tooltip("If true, the avatar's last known global position and rotation will be reapplied when it respawns in a new scene.")]
@@ -41,7 +66,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         private Vector3[] _realAnchorPositions = new Vector3[2];
         private int _currentAnchorIndex = 0;
         public bool IsCalibrating { get; private set; } = false;
-        public bool IsCalibratingHeight { get; private set; } = false;
+        public bool IsCalibratingHeight => CurrentHeightCalibrationPhase != HeightCalibrationPhase.None;
 
         // Events
         public event Action OnCalibrationStarted;
@@ -134,16 +159,14 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         {
             if (IsCalibratingHeight)
             {
-                // Both hands can be used to touch the floor
+                // Both hands can be used to touch the floor or press button
                 if (UxrAvatar.LocalAvatarInput.GetButtonsPressUp(UxrHandSide.Left, UxrInputButtons.Button1))
                 {
-                    Vector3 controllerPos = UxrAvatar.LocalAvatarInput.GetController3DModel(UxrHandSide.Left).transform.position;
-                    RegisterHeightCalibration(controllerPos);
+                    ProcessHeightCalibrationStep(UxrHandSide.Left);
                 }
                 else if (UxrAvatar.LocalAvatarInput.GetButtonsPressUp(UxrHandSide.Right, UxrInputButtons.Button1))
                 {
-                    Vector3 controllerPos = UxrAvatar.LocalAvatarInput.GetController3DModel(UxrHandSide.Right).transform.position;
-                    RegisterHeightCalibration(controllerPos);
+                    ProcessHeightCalibrationStep(UxrHandSide.Right);
                 }
                 return;
             }
@@ -238,45 +261,60 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         }
 
         /// <summary>
-        /// Begins the height calibration process. User should place controller on the physical floor.
+        /// Begins the height calibration process (Phase 1: Floor).
         /// </summary>
         public void BeginHeightCalibration()
         {
-            if (IsCalibrating) return; // Don't mix calibrations
+            if (IsCalibrating || IsCalibratingHeight) return; // Don't mix calibrations
 
-            IsCalibratingHeight = true;
+            CurrentHeightCalibrationPhase = HeightCalibrationPhase.Floor;
             OnHeightCalibrationStarted?.Invoke();
-            GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, "[PhysicalSpaceSyncManager] Height Calibration started. Please touch the physical floor with a controller and press Button 1.");
+            GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, "[PhysicalSpaceSyncManager] Phase 1: Height Calibration started. Please touch the physical floor with a controller and press Button 1.");
         }
 
-        private void RegisterHeightCalibration(Vector3 controllerPos)
+        private void ProcessHeightCalibrationStep(UxrHandSide hand)
         {
-            if (!IsCalibratingHeight || UxrAvatar.LocalAvatar == null) return;
+            if (UxrAvatar.LocalAvatar == null) return;
 
-            IsCalibratingHeight = false;
+            if (CurrentHeightCalibrationPhase == HeightCalibrationPhase.Floor)
+            {
+                // PHASE 1: СИНХРОНИЗАЦИЯ ПОЛА
+                Vector3 controllerPos = UxrAvatar.LocalAvatarInput.GetController3DModel(hand).transform.position;
+                
+                float avatarFloorY = UxrAvatar.LocalAvatar.transform.position.y;
+                float deltaY = avatarFloorY - controllerPos.y;
 
-            // controllerPos = The world position of the true tracker when touching the physical floor
-            // UxrAvatar root Y = The "0" floor of the virtual world.
-            // When touching the physical floor, the tracker's World Y *should* be at root.Y.
-            // If the physical floor is higher/lower than virtual Y, the tracker's Y will show the difference.
-            // We want the virtual Camera Controller to shift by that difference.
+                _heightOffset = deltaY;
+                _accumulatedHeightOffset += deltaY;
 
-            // Насколько контроллер сейчас выше/ниже нужного виртуального пола (который для нас всегда 0 относительно корня аватара)?
-            // Так как мы применяем смещения ВНУТРИ аватара (локально), корень аватара всегда остается на Y=0 
-            // (или на уровне земли по мнению локомоции). 
-            // Значит, идеальный виртуальный пол всегда равен мировой Y-координате корня 아ватарa.
-            float avatarFloorY = UxrAvatar.LocalAvatar.transform.position.y;
+                ApplyHeightDelta(deltaY);
 
-            // Если контроллер по мировой высоте не совпадает с корнем аватара, значит физический пол отличается от виртуального
-            float deltaY = avatarFloorY - controllerPos.y;
+                CurrentHeightCalibrationPhase = HeightCalibrationPhase.PlayerScale;
+                GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, $"[PhysicalSpaceSyncManager] Phase 1 Floor Registered. Delta: {deltaY}. Phase 2: Stand upright and press Button 1 to calibrate scale.");
+            }
+            else if (CurrentHeightCalibrationPhase == HeightCalibrationPhase.PlayerScale)
+            {
+                // PHASE 2: МАСШТАБ ТЕЛА СИНХРОНИЗАЦИЯ
+                if (UxrAvatar.LocalAvatar.CameraComponent == null) return;
 
-            _heightOffset = deltaY;
-            _accumulatedHeightOffset += deltaY;
+                // We calculate global height of the headset relative to the avatar's ground level.
+                // Using LocalPosition ignores the Phase 1 floor offset (deltaY applied to CameraController).
+                float playerRealHeight = UxrAvatar.LocalAvatar.CameraComponent.transform.position.y - UxrAvatar.LocalAvatar.transform.position.y;
 
-            ApplyHeightDelta(deltaY);
+                if (playerRealHeight < 0.6f)
+                {
+                    GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace, "[PhysicalSpaceSyncManager] HMD is too low. Please stand up in your full height and press Button 1 again.");
+                    return;
+                }
 
-            OnHeightCalibrationCompleted?.Invoke();
-            GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, $"[PhysicalSpaceSyncManager] Height Calibration completed. AvatarFloor: {avatarFloorY}, Delta: {deltaY}, Total accumulated: {_accumulatedHeightOffset}");
+                _accumulatedScaleMultiplier = playerRealHeight / ExpectedEyeHeight;
+                ApplyScale();
+
+                CurrentHeightCalibrationPhase = HeightCalibrationPhase.None;
+                OnHeightCalibrationCompleted?.Invoke();
+                
+                GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, $"[PhysicalSpaceSyncManager] Phase 2 Scale Registered. HMD Height: {playerRealHeight}m. Extents Scale: {_accumulatedScaleMultiplier:F2}");
+            }
         }
 
         private void ApplyHeightDelta(float deltaY)
@@ -300,6 +338,61 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             // При спавне или старте сцены мы должны применить всё накопленное смещение разом,
             // так как префаб аватара создается с нулевыми локальными оффсетами.
             ApplyHeightDelta(_accumulatedHeightOffset);
+            ApplyScale();
+        }
+
+        private void ApplyScale()
+        {
+            if (UxrAvatar.LocalAvatar == null) return;
+
+            var controller = UxrAvatar.LocalAvatar.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
+            if (controller == null)
+            {
+                GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace, "UxrStandardAvatarController not found. Cannot apply scale.");
+                return;
+            }
+
+            // Масштабируем внутренний скелет (Dummy Forward), а не всё трекинг-пространство UxrAvatar,
+            // чтобы у игрока не сломался двуручный хват оружия (рассинхрон расстояний в реале и виаре).
+            Transform dummyForward = UxrAvatar.LocalAvatar.transform.Find("Dummy Forward");
+            float oldScale = 1f;
+
+            if (dummyForward != null)
+            {
+                oldScale = dummyForward.localScale.x;
+                dummyForward.localScale = new Vector3(_accumulatedScaleMultiplier, _accumulatedScaleMultiplier, _accumulatedScaleMultiplier);
+            }
+            else
+            {
+                GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace, "Dummy Forward not found on Avatar. Scale wasn't applied correctly.");
+                return;
+            }
+
+            // Пересчитываем мировые векторы смещения внутри приватных переменных UxrBodyIK с помощью рефлексии
+            float relativeScale = _accumulatedScaleMultiplier / oldScale;
+            if (Mathf.Approximately(relativeScale, 1f)) return;
+
+            var bodyIKField = typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController).GetField("_bodyIK", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var bodyIK = bodyIKField?.GetValue(controller);
+            if (bodyIK == null) return;
+
+            var type = bodyIK.GetType();
+
+            var forwardPosField = type.GetField("_avatarForwardPosRelativeToNeck", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (forwardPosField != null)
+            {
+                Vector3 val = (Vector3)forwardPosField.GetValue(bodyIK);
+                forwardPosField.SetValue(bodyIK, val * relativeScale);
+            }
+
+            var neckPosField = type.GetField("_neckPosRelativeToEyes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (neckPosField != null)
+            {
+                Vector3 val = (Vector3)neckPosField.GetValue(bodyIK);
+                neckPosField.SetValue(bodyIK, val * relativeScale);
+            }
+            
+            GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, $"[PhysicalSpaceSyncManager] Dynamic IK Scale applied. Relative Scale Delta: {relativeScale}");
         }
         private void CalculateTransform()
         {

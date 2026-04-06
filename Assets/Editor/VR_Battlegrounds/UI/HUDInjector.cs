@@ -6,7 +6,7 @@ namespace VrBattlegrounds.EditorScripts
 {
     public static class HUDInjector
     {
-        [MenuItem("VrBattlegrounds/Tools/Inject HUD to Avatar")]
+        [MenuItem("Tools/VR Battlegrounds/UI/Inject HUD to Avatar")]
         public static void Inject()
         {
             string prefabPath = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";

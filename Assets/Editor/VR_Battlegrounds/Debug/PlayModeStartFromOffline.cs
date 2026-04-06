@@ -19,7 +19,7 @@ namespace VrBattlegrounds.Editor
         private const string PrefKey = "VrBattlegrounds.StartFromOffline";
 
         // Добавляем пункт в менюшку для возможности выключения этого поведения
-        [MenuItem("VrBattlegrounds/Start from Offline Scene")]
+        [MenuItem("Tools/VR Battlegrounds/Debug/Start from Offline Scene")]
         public static void ToggleAction()
         {
             bool enabled = EditorPrefs.GetBool(PrefKey, true);
@@ -27,10 +27,10 @@ namespace VrBattlegrounds.Editor
             UpdateState();
         }
 
-        [MenuItem("VrBattlegrounds/Start from Offline Scene", true)]
+        [MenuItem("Tools/VR Battlegrounds/Debug/Start from Offline Scene", true)]
         public static bool ToggleActionValidate()
         {
-            Menu.SetChecked("VrBattlegrounds/Start from Offline Scene", EditorPrefs.GetBool(PrefKey, true));
+            Menu.SetChecked("Tools/VR Battlegrounds/Debug/Start from Offline Scene", EditorPrefs.GetBool(PrefKey, true));
             return true;
         }
 

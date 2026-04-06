@@ -8,7 +8,7 @@ namespace VrBattlegrounds.Editor
     {
         private const string PrefabPath = "Assets/Prefabs/Maps/TeamSpawnZone.prefab";
 
-        [MenuItem("GameObject/VrBattlegrounds/Team Spawn Zone", false, 10)]
+        [MenuItem("GameObject/VR Battlegrounds/Team Spawn Zone", false, 10)]
         public static void CreateTeamSpawnZone(MenuCommand menuCommand)
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);

@@ -7,7 +7,7 @@ namespace VrBattlegrounds.EditorScripts
 {
     public static class HUDPrefabGenerator
     {
-        [MenuItem("VrBattlegrounds/Tools/Generate Elimination HUD")]
+        [MenuItem("Tools/VR Battlegrounds/UI/Generate Elimination HUD")]
         public static void GenerateHUD()
         {
             GameObject root = new GameObject("EliminationHUD");

@@ -67,7 +67,7 @@ namespace VrBattlegrounds.DevTools
 
         private void Start()
         {
-            if (!_config.enabled)
+            if (_config == null || !_config.enabled)
                 return;
         }
 
@@ -77,6 +77,8 @@ namespace VrBattlegrounds.DevTools
         /// </summary>
         private void HandlePlayerConnected(PlayerSession session)
         {
+            if (_config == null || !_config.enabled) return;
+
             if (!NetworkServer.active)
             {
                 GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
@@ -93,6 +95,8 @@ namespace VrBattlegrounds.DevTools
 
         private void HandleAvatarSpawned(PlayerController avatar)
         {
+            if (_config == null || !_config.enabled) return;
+
             if (avatar == null) return;
 
             // Если игрок уже был первично инициализирован на этой карте, не трогаем (например, при смене скина)
@@ -131,6 +135,8 @@ namespace VrBattlegrounds.DevTools
 
         private void HandlePlayerDisconnected(PlayerSession session)
         {
+            if (_config == null || !_config.enabled) return;
+
             GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
                 $"[DebugOrchestrator] HandlePlayerDisconnected: сессия={(session != null ? session.PlayerName : "null")}");
         }
@@ -237,6 +243,8 @@ namespace VrBattlegrounds.DevTools
         /// </summary>
         private void OnServerSceneChanged(string sceneName)
         {
+            if (_config == null || !_config.enabled) return;
+
             if (!NetworkServer.active)
                 return;
 

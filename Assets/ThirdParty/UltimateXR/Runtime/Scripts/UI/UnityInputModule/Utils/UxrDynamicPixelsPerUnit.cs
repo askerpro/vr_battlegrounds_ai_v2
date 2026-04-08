@@ -56,7 +56,7 @@ namespace UltimateXR.UI.UnityInputModule.Utils
         protected override void OnDisable()
         {
             base.OnDisable();
-            UxrAvatar.GlobalAvatarMoved += UxrAvatar_GlobalAvatarMoved;
+            UxrAvatar.GlobalAvatarMoved -= UxrAvatar_GlobalAvatarMoved;
         }
 
         #endregion
@@ -72,12 +72,14 @@ namespace UltimateXR.UI.UnityInputModule.Utils
         {
             UxrAvatar avatar = sender as UxrAvatar;
             
-            if (avatar == UxrAvatar.LocalAvatar && Time.time - _timeLastUpdate > _updateSeconds)
+            if (_canvasScaler == null || avatar != UxrAvatar.LocalAvatar || Time.time - _timeLastUpdate <= _updateSeconds)
             {
-                _timeLastUpdate = Time.time;
-                float distance = Vector3.Distance(avatar.CameraPosition, _canvasScaler.transform.position);
-                _canvasScaler.dynamicPixelsPerUnit = Mathf.Lerp(_pixelsPerUnitNear, _pixelsPerUnitFar, Mathf.Clamp01((distance - _rangeNear) / (_rangeFar - _rangeNear)));
+                return;
             }
+
+            _timeLastUpdate = Time.time;
+            float distance = Vector3.Distance(avatar.CameraPosition, _canvasScaler.transform.position);
+            _canvasScaler.dynamicPixelsPerUnit = Mathf.Lerp(_pixelsPerUnitNear, _pixelsPerUnitFar, Mathf.Clamp01((distance - _rangeNear) / (_rangeFar - _rangeNear)));
         }
 
         #endregion

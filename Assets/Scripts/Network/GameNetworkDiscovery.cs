@@ -1,6 +1,6 @@
 using Mirror;
 using Mirror.Discovery;
-using Unity.Multiplayer.Playmode;
+
 using UnityEngine;
 
 namespace VrBattlegrounds.Network
@@ -78,7 +78,7 @@ namespace VrBattlegrounds.Network
         /// </summary>
         private static AppRole? TryGetRoleFromPlayerTag()
         {
-            foreach (string tag in CurrentPlayer.ReadOnlyTags())
+            foreach (string tag in Unity.Multiplayer.PlayMode.CurrentPlayer.ReadOnlyTags())
             {
                 if (string.Equals(tag, TagHost,   System.StringComparison.OrdinalIgnoreCase)) return AppRole.Host;
                 if (string.Equals(tag, TagServer, System.StringComparison.OrdinalIgnoreCase)) return AppRole.Server;

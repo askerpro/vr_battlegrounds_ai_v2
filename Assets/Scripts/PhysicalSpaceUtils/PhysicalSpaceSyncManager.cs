@@ -100,7 +100,9 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 return;
             }
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+
+            // DontDestroyOnLoad обеспечивается родительским PersistentRoot.
+            // Вызов DontDestroyOnLoad напрямую вызывает ошибку, если объект не корневой.
         }
 
         private void OnEnable()

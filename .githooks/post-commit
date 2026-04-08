@@ -7,36 +7,20 @@ echo ""
 echo "========================================="
 echo "🔄 Дублируем коммит в Unity Version Control (Plastic SCM)..."
 
-FILES=()
+# Группируем операции для повышения производительности и обхода лимита на длину аргументов
+# Добавляем новые файлы (фильтр A)
+git diff-tree -z --no-commit-id --name-only --diff-filter=A -r HEAD | xargs -0 -r cm add > /dev/null 2>&1
 
-# Получаем строго те файлы, которые попали в этот коммит Git (с поддержкой пробелов через -z)
-while IFS= read -r -d $'\0' file; do
-    if [ -z "$file" ]; then continue; fi
-    
-    FILES+=("$file")
-    
-    if [ -e "$file" ]; then
-        # Файл существует (Добавлен/Изменен в текущем Git-коммите)
-        # Регистрируем новые файлы (для существующих cm выкинет ошибку в null)
-        cm add "$file" > /dev/null 2>&1
-    else
-        # Файл удален в Git-коммите
-        cm rm "$file" > /dev/null 2>&1
-    fi
-done < <(git diff-tree -z --no-commit-id --name-only -r HEAD)
+# Удаляем удаленные файлы (фильтр D)
+git diff-tree -z --no-commit-id --name-only --diff-filter=D -r HEAD | xargs -0 -r cm rm > /dev/null 2>&1
 
-if [ ${#FILES[@]} -gt 0 ]; then
-    # Делаем коммит конкретных файлов в Plastic с тем же сообщением
-    cm ci "${FILES[@]}" -c "$COMMIT_MSG"
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Успешно скопировано в Plastic SCM!"
-    else
-        echo "⚠️ Ошибка коммита или Plastic SCM уже синхронизирован."
-    fi
+# Коммитим все измененные пути передавая их через stdin (-)
+git diff-tree --no-commit-id --name-only -r HEAD | cm ci -a -c "$COMMIT_MSG" -
+
+if [ $? -eq 0 ]; then
+    echo "✅ Успешно скопировано в Plastic SCM!"
 else
-    echo "⚠️ Измененные файлы в Git-коммите не найдены."
+    echo "⚠️ Ошибка коммита или Plastic SCM уже синхронизирован."
 fi
-
 echo "========================================="
 echo ""

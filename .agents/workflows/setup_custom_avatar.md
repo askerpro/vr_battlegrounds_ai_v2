@@ -49,6 +49,14 @@ description: Master Orchestration Workflow for setting up a custom FBX avatar fo
 **Инструкция:** Выполни воркфлоу из файла:
 `workflows/setup_custom_avatar/04_unity_prefab_setup.md`
 
+> **Дефолтные настройки UxrStandardAvatarController (Body IK)**
+> Должны быть заданы непосредственно на префабе рига (напр. `Heavy_Soldier_Rig_Mask_Winter`):
+> - `Use Arm IK`: **True**, `Use Leg IK`: **True**, `Use Body IK`: **True**
+> - `Lock Body Pivot`: **False**, `Body Pivot Rotation Speed`: **0.2**
+> - Ветка Bend: Spine `0.2`, Chest `0.3`, UpperChest `0.4`
+> - Ветка Torsion: Spine `0.4`, Chest `0.8`, UpperChest `0.2`
+> - `Neck Head Balance`: **0.748**
+
 ---
 
 ## Шаг 5: Генерация поз кистей (UXR Hand Poses)
@@ -56,6 +64,21 @@ description: Master Orchestration Workflow for setting up a custom FBX avatar fo
 
 **Инструкция:** Направь пользователя или выполни действия по инструкции:
 `workflows/setup_custom_avatar/05_uxr_hand_poses.md`
+
+---
+
+## Шаг 6: Интеграция Legs Animator (Процедурная анимация ног)
+> **Цель:** Настроить процедурную анимацию ног и устранить проблему "проваливания" ботинок сквозь пол при приседаниях в шлеме.
+> ⚠️ **ВАЖНО:** Эти компоненты должны висеть на самом объекте модели/рига (например: `Heavy_Soldier_Rig_Mask_Winter`), до того как он будет вложен в игровой `PlayerBase`.
+
+**Инструкция:**
+1. Добавь на корень модели компонент `Legs Animator` (от FImpossible Creations). 
+   - Автоматически должны подхватиться `Mecanim` (Animator) и тазовая кость `Hips` (например, `pelvis`).
+   - Дефолтные настройки модулей: убедись, что активированы кастомные пресеты `Extra_Rotation Stability` и `UxrLamStepFurther`.
+2. Добавь кастомный скрипт-мост `LegsAnimatorUxrBridge` (находится в `Assets/Integration/LegsAnimatorUxrBridge.cs`).
+3. Задай эталонные параметры моста `LegsAnimatorUxrBridge`:
+   - `Use Dynamic Floor Offset`: **Checked (true)**
+   - `Foot Height Offset`: **0.15** (динамический отступ от пола, чтобы ботинки не проваливались).
 
 ---
 

@@ -35,7 +35,7 @@ namespace ROVR.Character.IK
             _stepForwardOffset = helper.RequestVariable("IK Step Forward Offset", 0.5f);
             
             if (_cachedPosition == null)
-                CachePositionTransform(LA.gameObject.transform);
+                CachePositionTransform(LA.BaseTransform);
         }
 
         public override void OnPreLateUpdate(LegsAnimator.LegsAnimatorCustomModuleHelper helper)

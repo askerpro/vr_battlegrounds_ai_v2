@@ -27,9 +27,11 @@ description: Подготовка настроенного VR аватара —
 2. Назвать по шаблону: `{ModelName}_Base_Avatar` (например, `Heavy_Soldier_Base_Avatar`)
 3. Открыть в Prefab Mode
 4. Перетащить подготовленный префаб модели (из Части 1) внутрь как дочерний объект
-5. **Скопировать** настройки `UxrAvatar` и `UxrAvatarController` из модели → в рутовый GO варианта
-6. **Удалить** `UxrAvatar` и `UxrAvatarController` из внутреннего GO модели (чтобы не было дублей)
-7. Сохранить префаб
+5. **Скопировать** настройки `UxrAvatar` и `UxrStandardAvatarController` из модели → в рутовый GO варианта 
+   *(они уже должны быть эталонно настроены на этапе setup_custom_avatar)*.
+6. **Удалить** `UxrAvatar` и `UxrStandardAvatarController` из внутреннего GO модели (чтобы не было дублей).
+7. ⚠️ **ВАЖНО:** Компоненты процедурной анимации ног (`Legs Animator` и `LegsAnimatorUxrBridge`) **ДОЛЖНЫ ОСТАТЬСЯ** на внутреннем объекте рига (например, `Heavy_Soldier_Rig_Mask_Winter`), так как они управляют его локальным Animator'ом! Не переноси их на рут.
+8. Сохранить префаб
 
 ---
 

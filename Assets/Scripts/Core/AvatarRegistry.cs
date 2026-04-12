@@ -8,7 +8,7 @@ namespace VrBattlegrounds.Core
     ///
     /// Создать: ПКМ в Project -> Create -> VrBattlegrounds -> Skin Registry
     /// </summary>
-    [CreateAssetMenu(fileName = "AvatarRegistry", menuName = "VrBattlegrounds/AvatarRegistry")]
+    [CreateAssetMenu(fileName = "AvatarRegistry", menuName = "VR Battlegrounds/AvatarRegistry")]
     public class AvatarRegistry : ScriptableObject
     {
         private static AvatarRegistry s_instance;

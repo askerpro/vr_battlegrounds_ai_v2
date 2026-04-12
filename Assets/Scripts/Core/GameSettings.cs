@@ -12,7 +12,7 @@ namespace VrBattlegrounds.Core
     /// </summary>
     [CreateAssetMenu(
         fileName = "GameSettings",
-        menuName  = "VrBattlegrounds/Game Settings")]
+        menuName  = "VR Battlegrounds/Game Settings")]
     public class GameSettings : ScriptableObject
     {
         #region Singleton
@@ -68,6 +68,10 @@ namespace VrBattlegrounds.Core
         [Tooltip("Скрытые настройки калибровки (PhysicalSpaceSyncManager, HUD)")]
         [SerializeField] private LogLevel _logLevelPhysicalSpace = LogLevel.Info;
 
+        [Header("Логи — Арсенал")]
+        [Tooltip("ArsenalWallController, WeaponSlotController, DogTagController")]
+        [SerializeField] private LogLevel _logLevelArsenal = LogLevel.Info;
+
         #endregion
 
         #region Properties
@@ -89,6 +93,9 @@ namespace VrBattlegrounds.Core
 
         /// <summary>Уровень логов физического пространства.</summary>
         public LogLevel LogLevelPhysicalSpace => _logLevelPhysicalSpace;
+
+        /// <summary>Уровень логов арсенала (ArsenalWallController, WeaponSlotController, DogTagController).</summary>
+        public LogLevel LogLevelArsenal => _logLevelArsenal;
 
         #endregion
     }

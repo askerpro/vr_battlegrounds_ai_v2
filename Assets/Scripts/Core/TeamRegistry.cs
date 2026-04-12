@@ -13,7 +13,7 @@ namespace VrBattlegrounds
     /// </summary>
     [CreateAssetMenu(
         fileName = "TeamRegistry",
-        menuName  = "VrBattlegrounds/Team Registry")]
+        menuName  = "VR Battlegrounds/Team Registry")]
     public class TeamRegistry : ScriptableObject
     {
         #region Singleton

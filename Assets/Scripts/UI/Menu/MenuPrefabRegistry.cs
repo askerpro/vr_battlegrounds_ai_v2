@@ -34,7 +34,7 @@ namespace VrBattlegrounds.UI.Menu
         public List<GameModeMenuMapping> SpecificGameModeMenus = new List<GameModeMenuMapping>();
     }
 
-    [CreateAssetMenu(fileName = "MenuPrefabRegistry", menuName = "VrBattlegrounds/UI/Menu Prefab Registry")]
+    [CreateAssetMenu(fileName = "MenuPrefabRegistry", menuName = "VR Battlegrounds/UI/Menu Prefab Registry")]
     public class MenuPrefabRegistry : ScriptableObject
     {
         [Tooltip("Configure menus per role. E.g. one for Player, one for VRAdmin.")]

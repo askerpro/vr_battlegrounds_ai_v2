@@ -6,7 +6,7 @@ namespace VrBattlegrounds.Core
     /// Данные скина (аватара) игрока — название, иконка, префаб.
     /// Создать: ПКМ в Project -> Create -> VrBattlegrounds -> AvatarData
     /// </summary>
-    [CreateAssetMenu(fileName = "AvatarData", menuName = "VrBattlegrounds/AvatarData")]
+    [CreateAssetMenu(fileName = "AvatarData", menuName = "VR Battlegrounds/AvatarData")]
     public class AvatarData : ScriptableObject
     {
         [Tooltip("Отображаемое название скина в UI")]

@@ -4,7 +4,7 @@ using VrBattlegrounds.Network;
 using VrBattlegrounds.Core;
 namespace VrBattlegrounds.Player.Avatars
 {
-    [CreateAssetMenu(fileName = "TeamAvatarStrategy", menuName = "VrBattlegrounds/Core/Strategies/Team Avatar")]
+    [CreateAssetMenu(fileName = "TeamAvatarStrategy", menuName = "VR Battlegrounds/Core/Strategies/Team Avatar")]
     public class TeamAvatarStrategy : AvatarSpawnStrategy
     {
         [Tooltip("Префаб, который будет выдан, если у команды нет скина или команда не выбрана.")]

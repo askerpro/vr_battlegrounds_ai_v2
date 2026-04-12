@@ -27,3 +27,11 @@
 ✅ **Для контекстного меню создания объектов (Иерархия):**
 Используйте префикс `GameObject/VR Battlegrounds/`.
 `[MenuItem("GameObject/VR Battlegrounds/Team Spawn Zone", false, 10)]`
+
+✅ **Для меню создания ассетов (CreateAssetMenu):**
+Используйте префикс `VR Battlegrounds/` в `menuName`. Писать слитно (VrBattlegrounds) — **ОШИБКА**.
+`[CreateAssetMenu(fileName = "GameSettings", menuName = "VR Battlegrounds/Game Settings")]`
+
+**ГЛАВНОЕ ПРАВИЛО НАИМЕНОВАНИЯ:**
+Всегда используйте вариант **`VR Battlegrounds`** (с пробелом и заглавными VR). 
+Избегайте старого слитного варианта `VrBattlegrounds` в любых пунктах меню (`MenuItem`, `CreateAssetMenu`), чтобы не создавать дублирующихся корневых директорий в редакторе.

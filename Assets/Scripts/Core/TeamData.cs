@@ -12,7 +12,7 @@ namespace VrBattlegrounds
     /// </summary>
     [CreateAssetMenu(
         fileName = "TeamData",
-        menuName = "VrBattlegrounds/Team Data")]
+        menuName = "VR Battlegrounds/Team Data")]
     public class TeamData : ScriptableObject
     {
         [Tooltip("Уникальный числовой идентификатор команды. Используется в SyncVar и для поиска в TeamRegistry.\n0 = зарезервировано для 'нет команды'.")]

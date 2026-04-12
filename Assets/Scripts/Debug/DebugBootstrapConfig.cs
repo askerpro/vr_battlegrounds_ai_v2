@@ -14,7 +14,7 @@ namespace VrBattlegrounds.DevTools
     /// </summary>
     [CreateAssetMenu(
         fileName = "DebugBootstrapConfig",
-        menuName  = "VrBattlegrounds/Debug Bootstrap Config")]
+        menuName  = "VR Battlegrounds/Debug Bootstrap Config")]
     public class DebugBootstrapConfig : ScriptableObject
     {
         [Header("Общие настройки")]

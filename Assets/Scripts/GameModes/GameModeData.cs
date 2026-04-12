@@ -15,7 +15,7 @@ namespace VrBattlegrounds.GameModes
     /// </summary>
     [CreateAssetMenu(
         fileName = "GameModeData_",
-        menuName  = "VrBattlegrounds/Game Mode Data")]
+        menuName  = "VR Battlegrounds/Game Mode Data")]
     public class GameModeData : ScriptableObject
     {
         [Tooltip("Уникальный строковый идентификатор режима.\nПример: 'respawn', 'elimination'")]

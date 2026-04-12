@@ -10,7 +10,7 @@ namespace VrBattlegrounds.Maps
     /// </summary>
     [CreateAssetMenu(
         fileName = "MapData_",
-        menuName  = "VrBattlegrounds/Map Data")]
+        menuName  = "VR Battlegrounds/Map Data")]
     public class MapData : ScriptableObject
     {
         [Header("Основное")]

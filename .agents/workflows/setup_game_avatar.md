@@ -72,7 +72,22 @@ description: Подготовка настроенного VR аватара —
 
 ---
 
-## Шаг 4: Регистрация аватара в системе выбора
+## Шаг 4: Настройка UI (HUD)
+
+> **Цель:** Инициализировать WorldSpace Canvas (HUDContainer) внутри камеры аватара и назначить его в скрипт `PlayerHUDManager`.
+
+1. При выделенном рутовом GO аватара на сцене (НЕ в Prefab Mode)
+2. Меню: **Tools → VR Battlegrounds → Avatars → Inject HUD to Selected Avatar**
+3. Скрипт автоматически:
+   - Найдёт камеру в иерархии аватара
+   - Создаст `HUDContainer` (Canvas, RenderMode: WorldSpace), если его ещё нет
+   - Разместит его перед локальной камерой игрока
+   - Назначит созданный контейнер в поле `_hudContainer` компонента `PlayerHUDManager`
+4. Применить изменения префаба (Overrides → Apply All)
+
+---
+
+## Шаг 5: Регистрация аватара в системе выбора
 
 > **Цель:** Добавить аватар в AvatarData для отображения в UI выбора персонажа.
 
@@ -83,7 +98,7 @@ description: Подготовка настроенного VR аватара —
 
 ---
 
-## Шаг 5: Тестирование
+## Шаг 6: Тестирование
 
 1. Запустить сцену в VR (или через XR Simulator)
 2. Проверить:
@@ -93,6 +108,7 @@ description: Подготовка настроенного VR аватара —
    - [ ] Магазины кладутся/извлекаются из MagazinePocket
    - [ ] BackGrabProxy позволяет достать оружие рукой из-за спины
    - [ ] Нет клиппинга камеры с мешем головы
+   - [ ] HUD игрока (здоровье, счет) отображается корректно перед лицом и следует за взглядом
 
 ---
 
@@ -102,6 +118,7 @@ description: Подготовка настроенного VR аватара —
 |---|---|
 | `Tools/VR Battlegrounds/Avatars/Save Pocket Prefabs from Selected` | Извлекает карманы из эталона → префабы |
 | `Tools/VR Battlegrounds/Avatars/Add Weapon Pockets to Selected Avatar` | Добавляет/обновляет карманы на аватаре |
+| `Tools/VR Battlegrounds/Avatars/Inject HUD to Selected Avatar` | Создаёт WorldSpace Canvas для HUD и назначает его |
 
 ## Справка: структура карманов
 

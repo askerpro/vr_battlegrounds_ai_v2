@@ -9,7 +9,7 @@ namespace VrBattlegrounds.Maps
     /// </summary>
     [CreateAssetMenu(
         fileName = "MapRegistry",
-        menuName  = "VrBattlegrounds/Map Registry")]
+        menuName  = "VR Battlegrounds/Map Registry")]
     public class MapRegistry : ScriptableObject
     {
         [Tooltip("Все карты, доступные для выбора в меню администратора.")]

@@ -9,7 +9,7 @@ namespace VrBattlegrounds.GameModes
     /// </summary>
     [CreateAssetMenu(
         fileName = "GameModeRegistry",
-        menuName  = "VrBattlegrounds/Game Mode Registry")]
+        menuName  = "VR Battlegrounds/Game Mode Registry")]
     public class GameModeRegistry : ScriptableObject
     {
         [Tooltip("Все режимы, доступные для выбора в меню администратора.")]

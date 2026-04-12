@@ -25,5 +25,6 @@ VR-шутер для Oculus Quest 2/3, разрабатываемый на Unity
 7. 🐛 **Если ищешь баг / расследуешь проблему**: читай `.agents/rules/debug.md`
 8. ✨ **Если добавляешь новую фичу**: читай `.agents/rules/new_feature.md`
 9. 🧰 **Если создаешь или редактируешь Editor-скрипты**: читай `.agents/rules/editor_scripts.md`
+10. 🔌 **Если `execute_code` не работает или работаешь с Unity MCP**: читай `.agents/rules/unity_mcp.md`
 
 > **Внимание!** Главное правило "Шаг 0" — всегда проверяй `Docs/README.md` и `Docs/UltimateXR/known-issues.md` перед погружением в код!

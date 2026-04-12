@@ -103,3 +103,6 @@ InitTestScene*.unity*
 /[Aa]ssets/ThirdParty/TextMesh Pro/Examples & Extras/
 /[Aa]ssets/ThirdParty/TextMesh Pro/Examples & Extras.meta
 /[Aa]ssets/ThirdParty/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset
+
+# Embedded MCP package — local patched fork (execute_code fix)
+/Packages/com.coplaydev.unity-mcp/

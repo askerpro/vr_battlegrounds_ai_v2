@@ -19,5 +19,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 6a1b2f4f562e0d4468069d2c11f06576, type: 2}
   autoStartGameplay: 1
   minPlayersToAutoStart: 1
-  autoLoadMapScene: Lobby
+  autoLoadMapScene: TestMap1
   autoGameModeId: elimination
+  fallbackEditorRole: 1
+  autoStartFallbackRole: 1

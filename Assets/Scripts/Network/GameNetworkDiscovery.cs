@@ -61,9 +61,21 @@ namespace VrBattlegrounds.Network
                 return;
             }
 
-            // В редакторе без тега — ручной выбор через UI
+            // В редакторе без тега — фоллбэк из BootstrapConfig или ручной выбор через UI
             if (Application.isEditor)
             {
+                var orchestrator = FindFirstObjectByType<VrBattlegrounds.DevTools.DebugOrchestrator>();
+                if (orchestrator != null && orchestrator.Config != null && orchestrator.Config.autoStartFallbackRole)
+                {
+                    ApplyRole(orchestrator.Config.fallbackEditorRole);
+                    return;
+                }
+
+                if (_useEditorUI)
+                {
+                    CreateRuntimeUI();
+                    UpdateRuntimeUI();
+                }
                 return;
             }
 
@@ -96,24 +108,7 @@ namespace VrBattlegrounds.Network
             }
         }
 
-        private void OnGUI()
-        {
-            if (!Application.isEditor || !_useEditorUI)
-            {
-                return;
-            }
 
-            _posY = 0;
-
-            if (CurrentRole == null)
-            {
-                DrawRoleSelectionUI();
-            }
-            else
-            {
-                DrawStopUI();
-            }
-        }
 
         #endregion
 
@@ -179,6 +174,7 @@ namespace VrBattlegrounds.Network
             }
 
             CurrentRole = null;
+            UpdateRuntimeUI();
         }
 
         /// <summary>
@@ -196,50 +192,160 @@ namespace VrBattlegrounds.Network
 
         #endregion
 
-        #region Editor UI
+        #region Editor UI (Runtime Canvas)
 
-        private void DrawRoleSelectionUI()
+        private GameObject _uiCanvas;
+        private GameObject _selectionPanel;
+        private GameObject _stopPanel;
+        private UnityEngine.UI.Text _statusText;
+
+        private void CreateRuntimeUI()
         {
-            GUI.Box(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Выбор режима запуска");
-            _posY += ButtonHeight;
+            if (_uiCanvas != null) return;
 
-            if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Запустить как Server"))
+            // Canvas
+            _uiCanvas = new GameObject("GameNetworkDiscovery_UI");
+            DontDestroyOnLoad(_uiCanvas);
+
+            var canvas = _uiCanvas.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 9999;
+            
+            _uiCanvas.AddComponent<UnityEngine.UI.CanvasScaler>().uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ConstantPixelSize;
+            _uiCanvas.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+
+            // Базовые панели
+            _selectionPanel = CreatePanel("SelectionPanel");
+            _stopPanel = CreatePanel("StopPanel");
+            _stopPanel.SetActive(false);
+
+            // Кнопки выбора
+            CreateButton(_selectionPanel.transform, "Запустить как Server", 0, () => ApplyRoleSafe(AppRole.Server));
+            CreateButton(_selectionPanel.transform, "Запустить как Host",   1, () => ApplyRoleSafe(AppRole.Host));
+            CreateButton(_selectionPanel.transform, "Запустить как Client", 2, () => ApplyRoleSafe(AppRole.Client));
+
+            // Статус текст
+            var textObj = new GameObject("StatusText");
+            textObj.transform.SetParent(_selectionPanel.transform, false);
+            _statusText = textObj.AddComponent<UnityEngine.UI.Text>();
+            _statusText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _statusText.fontSize = 14;
+            _statusText.color = Color.yellow;
+            _statusText.alignment = TextAnchor.MiddleCenter;
+            var textRect = textObj.GetComponent<RectTransform>();
+            textRect.anchorMin = new Vector2(0, 1);
+            textRect.anchorMax = new Vector2(1, 1);
+            textRect.pivot = new Vector2(0.5f, 1);
+            textRect.anchoredPosition = new Vector2(0, -140);
+            textRect.sizeDelta = new Vector2(0, 30);
+
+            // Панель стопа - статус
+            var stopLabelObj = new GameObject("RoleText");
+            stopLabelObj.transform.SetParent(_stopPanel.transform, false);
+            var roleText = stopLabelObj.AddComponent<UnityEngine.UI.Text>();
+            roleText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            roleText.fontSize = 16;
+            roleText.color = Color.white;
+            roleText.alignment = TextAnchor.MiddleCenter;
+            var rRect = stopLabelObj.GetComponent<RectTransform>();
+            rRect.anchorMin = new Vector2(0, 1);
+            rRect.anchorMax = new Vector2(1, 1);
+            rRect.pivot = new Vector2(0.5f, 1);
+            rRect.anchoredPosition = new Vector2(0, -10);
+            rRect.sizeDelta = new Vector2(0, 40);
+
+            CreateButton(_stopPanel.transform, "Остановить", 1, StopCurrent);
+        }
+
+        private GameObject CreatePanel(string name)
+        {
+            var panel = new GameObject(name);
+            panel.transform.SetParent(_uiCanvas.transform, false);
+            var panelImage = panel.AddComponent<UnityEngine.UI.Image>();
+            panelImage.color = new Color(0, 0, 0, 0.85f);
+            var panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0, 1);
+            panelRect.anchorMax = new Vector2(0, 1);
+            panelRect.pivot = new Vector2(0, 1);
+            panelRect.anchoredPosition = new Vector2(10, -10);
+            panelRect.sizeDelta = new Vector2(250, 180);
+            return panel;
+        }
+
+        private void CreateButton(Transform parent, string label, int index, UnityEngine.Events.UnityAction onClick)
+        {
+            var btnObj = new GameObject($"Btn_{index}");
+            btnObj.transform.SetParent(parent, false);
+            var img = btnObj.AddComponent<UnityEngine.UI.Image>();
+            img.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+            var btn = btnObj.AddComponent<UnityEngine.UI.Button>();
+            btn.onClick.AddListener(onClick);
+
+            var cb = btn.colors;
+            cb.highlightedColor = new Color(0.4f, 0.4f, 0.4f, 1f);
+            cb.pressedColor = new Color(0.6f, 0.6f, 0.6f, 1f);
+            btn.colors = cb;
+
+            var rect = btnObj.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0, 1);
+            rect.anchorMax = new Vector2(1, 1);
+            rect.pivot = new Vector2(0.5f, 1);
+            rect.anchoredPosition = new Vector2(0, -10 - (index * 45));
+            rect.sizeDelta = new Vector2(-20, 40);
+
+            var textObj = new GameObject("Text");
+            textObj.transform.SetParent(btnObj.transform, false);
+            var text = textObj.AddComponent<UnityEngine.UI.Text>();
+            text.text = label;
+            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.fontSize = 16;
+            text.color = Color.white;
+            text.alignment = TextAnchor.MiddleCenter;
+            var textRect = textObj.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+        }
+
+        private void UpdateRuntimeUI()
+        {
+            if (_uiCanvas == null) return;
+
+            if (CurrentRole == null)
             {
-                ApplyRole(AppRole.Server);
+                _selectionPanel.SetActive(true);
+                _stopPanel.SetActive(false);
             }
-
-            _posY += ButtonHeight;
-
-            if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Запустить как Host"))
+            else
             {
-                ApplyRole(AppRole.Host);
-            }
+                _selectionPanel.SetActive(false);
+                _stopPanel.SetActive(true);
 
-            _posY += ButtonHeight;
+                var roleText = _stopPanel.transform.GetChild(0).GetComponent<UnityEngine.UI.Text>();
+                roleText.text = $"Режим: {CurrentRole}";
 
-            if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), "Запустить как Client"))
-            {
-                ApplyRole(AppRole.Client);
+                var stopBtnText = _stopPanel.transform.GetChild(1).GetChild(0).GetComponent<UnityEngine.UI.Text>();
+                stopBtnText.text = CurrentRole switch
+                {
+                    AppRole.Server => "Остановить Server",
+                    AppRole.Host   => "Остановить Host",
+                    AppRole.Client => "Отключить Client",
+                    _              => "Остановить",
+                };
             }
         }
 
-        private void DrawStopUI()
+        private void ApplyRoleSafe(AppRole role)
         {
-            string label = $"Режим: {CurrentRole}";
-            GUI.Box(new Rect(0, _posY, ButtonWidth, ButtonHeight), label);
-            _posY += ButtonHeight;
-
-            string stopLabel = CurrentRole switch
+            try
             {
-                AppRole.Server => "Остановить Server",
-                AppRole.Host   => "Остановить Host",
-                AppRole.Client => "Отключить Client",
-                _              => "Остановить",
-            };
-
-            if (GUI.Button(new Rect(0, _posY, ButtonWidth, ButtonHeight), stopLabel))
+                ApplyRole(role);
+                UpdateRuntimeUI();
+            }
+            catch (System.Exception e)
             {
-                StopCurrent();
+                if (_statusText != null) _statusText.text = "Ошибка! См. консоль";
+                Debug.LogError($"[GameNetworkDiscovery] Ошибка при ApplyRole({role}):\n{e}");
             }
         }
 

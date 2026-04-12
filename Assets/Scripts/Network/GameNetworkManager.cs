@@ -95,6 +95,12 @@ namespace VrBattlegrounds.Network
                 UnityEngine.PlayerPrefs.Save();
             }
 
+#if UNITY_EDITOR
+            // Чтобы редактор и билд на одном ПК (имеющие общие PlayerPrefs),
+            // а также клоны редактора (ParrelSync) воспринимались сервером как разные устройства:
+            token += "_editor_" + UnityEngine.Application.dataPath.GetHashCode();
+#endif
+
             if (LocalClientProfile.LocalRole == GameRole.Player)
             {
                 var msg = new GamePlayerConnectMessage(

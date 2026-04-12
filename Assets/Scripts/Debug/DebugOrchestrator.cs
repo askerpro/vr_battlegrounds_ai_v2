@@ -28,12 +28,16 @@ namespace VrBattlegrounds.DevTools
     public class DebugOrchestrator : MonoBehaviour
     {
         [SerializeField] private DebugBootstrapConfig _config;
+        public DebugBootstrapConfig Config => _config;
 
         // Флаг: карта уже была запрошена в этой сессии — не грузить повторно.
         private bool _mapLoadRequested;
 
         // Трекаем уже заспавненные сессии на текущей карте (для фильтрации смены скина)
         private HashSet<uint> _initializedSessions = new HashSet<uint>();
+
+        // Трекаем девайсы, которым мы уже назначили стартовую команду, чтобы не ломать её при реконнекте/смене карты
+        private HashSet<string> _assignedDevices = new HashSet<string>();
 
         private void Awake()
         {
@@ -193,15 +197,20 @@ namespace VrBattlegrounds.DevTools
             TryStartGameplay();
         }
 
-        /// <summary>
-        /// Назначает игроку команду с наименьшим числом участников (round-robin по балансу).
-        /// </summary>
         private void TryAssignTeam(PlayerSession session)
         {
             if (_config.teamsForAutoAssign == null || _config.teamsForAutoAssign.Count == 0 || session == null)
             {
                 GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
                     "[DebugOrchestrator] TryAssignTeam: teamsForAutoAssign пуст — команда не назначается.");
+                return;
+            }
+
+            // Если игрок уже подключался ранее и ему бала назначена команда, оставляем её (восстановится из snapshot).
+            if (!string.IsNullOrEmpty(session.DeviceToken) && _assignedDevices.Contains(session.DeviceToken))
+            {
+                GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                    $"[DebugOrchestrator] Игроку {session.PlayerName} (Device: {session.DeviceToken}) команда уже назначалась ранее. Пропускаем автобалансировку.");
                 return;
             }
 
@@ -234,6 +243,11 @@ namespace VrBattlegrounds.DevTools
 
             session.TeamIndex = (byte)bestTeam.teamIndex;
             session.AvatarIndex = 0; // Скин по умолчанию
+
+            if (!string.IsNullOrEmpty(session.DeviceToken))
+            {
+                _assignedDevices.Add(session.DeviceToken);
+            }
         }
 
         /// <summary>

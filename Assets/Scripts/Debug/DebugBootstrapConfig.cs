@@ -43,5 +43,12 @@ namespace VrBattlegrounds.DevTools
         [Tooltip("Идентификатор режима (modeId из GameModeData), который запустится после загрузки карты. " +
                  "Оставить пустым — не устанавливать режим автоматически. Пример: \"elimination\".")]
         public string autoGameModeId = "elimination";
+
+        [Header("Сеть (Редактор)")]
+        [Tooltip("Роль по умолчанию при запуске без тегов Multiplayer Play Mode.")]
+        public VrBattlegrounds.Network.GameNetworkDiscovery.AppRole fallbackEditorRole = VrBattlegrounds.Network.GameNetworkDiscovery.AppRole.Host;
+
+        [Tooltip("Автоматически использовать fallback роль (пропустить UI выбор)")]
+        public bool autoStartFallbackRole = false;
     }
 }

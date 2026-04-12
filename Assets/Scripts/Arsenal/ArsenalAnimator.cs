@@ -88,8 +88,16 @@ namespace VrBattlegrounds.Arsenal
         /// </summary>
         public void SetOpenImmediate()
         {
+            if (_animator == null) _animator = GetComponent<Animator>();
+            if (_animator == null || _animator.runtimeAnimatorController == null || !_animator.isActiveAndEnabled) return;
+            
             _isAnimating = false;
             _animator.Play(StateIdleOpen, 0, 0f);
+
+            if (_animator.gameObject.activeInHierarchy)
+            {
+                _animator.Update(0f);
+            }
         }
 
         /// <summary>
@@ -97,8 +105,17 @@ namespace VrBattlegrounds.Arsenal
         /// </summary>
         public void SetClosedImmediate()
         {
+            if (_animator == null) _animator = GetComponent<Animator>();
+            if (_animator == null || _animator.runtimeAnimatorController == null || !_animator.isActiveAndEnabled) return;
+
             _isAnimating = false;
             _animator.Play(StateIdleClosed, 0, 0f);
+            
+            // Note: Animator.Update can throw if not fully initialized or if no valid states exist
+            if (_animator.gameObject.activeInHierarchy)
+            {
+                _animator.Update(0f);
+            }
         }
 
         // ── Animation Events (called from clips) ──────────────

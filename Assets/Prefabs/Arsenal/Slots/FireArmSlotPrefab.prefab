@@ -216,7 +216,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: 79428fccff81ea1468bcd7d68a3b1cdd, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -284,8 +284,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
-  _uxrUniqueId: 734a45a9-8e3f-4cce-a6c5-daa426c69eee
-  __prefabGuid: 
+  _uxrUniqueId: daab23fa-84be-47dd-bc7b-89aa2c18df6b
+  __prefabGuid: a465f540d467e0e469042f73de34f97a
   __isInPrefab: 0
   _compatibleTags: []
   _maxPlaceDistance: 0.1
@@ -400,8 +400,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
-  _uxrUniqueId: 3dcfe920-0aa4-4929-87d1-3db6d00bb3a7
-  __prefabGuid: 
+  _uxrUniqueId: 41573585-f060-462a-87b5-658eb26e4ebd
+  __prefabGuid: a465f540d467e0e469042f73de34f97a
   __isInPrefab: 0
   _compatibleTags: []
   _maxPlaceDistance: 0.1

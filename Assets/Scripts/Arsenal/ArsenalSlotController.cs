@@ -52,6 +52,19 @@ namespace VrBattlegrounds.Arsenal
         {
             if (_itemAnchor == null)
                 _itemAnchor = GetComponentInChildren<UxrGrabbableObjectAnchor>();
+
+            // В Play mode удаляем превью-объекты, которые визуализировал кастомный эдитор (ArsenalSlotEditorBase)
+            // Иначе они останутся на сцене как мусор и будут наслаиваться на реальные игровые объекты.
+            if (UnityEngine.Application.isPlaying)
+            {
+                foreach (Transform child in GetComponentsInChildren<Transform>(true))
+                {
+                    if (child.gameObject.name == "__ItemPreview__" || child.gameObject.name == "__MagPreview__")
+                    {
+                        Destroy(child.gameObject);
+                    }
+                }
+            }
         }
 
         protected virtual void OnEnable()
@@ -88,12 +101,10 @@ namespace VrBattlegrounds.Arsenal
 
             if (_itemAnchor != null && _spawnedItem == null)
             {
-                _spawnedItem = Instantiate(
-                    _weaponInfo.WeaponPrefab,
-                    _itemAnchor.transform.position + _weaponInfo.WeaponPositionOffset,
-                    Quaternion.Euler(_weaponInfo.WeaponRotationOffset),
-                    _itemAnchor.transform
-                );
+                _spawnedItem = Instantiate(_weaponInfo.WeaponPrefab, _itemAnchor.transform);
+                _spawnedItem.transform.localPosition = _weaponInfo.WeaponPositionOffset;
+                _spawnedItem.transform.localRotation = Quaternion.Euler(_weaponInfo.WeaponRotationOffset);
+                
                 _spawnedItem.name = _weaponInfo.WeaponId + "_instance";
 
                 var weaponComp = _spawnedItem.GetComponent<WeaponComponent>();

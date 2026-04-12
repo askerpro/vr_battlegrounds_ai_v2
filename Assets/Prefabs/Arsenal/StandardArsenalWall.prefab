@@ -88,7 +88,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: a5434a79cc0e7fe43bc2ca1643297303, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -125,7 +125,7 @@ GameObject:
   - component: {fileID: 7925909786626601696}
   - component: {fileID: 6421868257074152575}
   m_Layer: 0
-  m_Name: Niche_Top (1)
+  m_Name: Niche_Bottom
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -140,8 +140,8 @@ Transform:
   m_GameObject: {fileID: 690654331259815547}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.0685, y: 0.4263, z: 0.368}
-  m_LocalScale: {x: 2.4399583, y: 0.8294043, z: 1}
+  m_LocalPosition: {x: 0.0685, y: 0.4419, z: 0.368}
+  m_LocalScale: {x: 2.4399583, y: 0.86050695, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3200393458374160985}
@@ -200,7 +200,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: a5434a79cc0e7fe43bc2ca1643297303, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -252,7 +252,7 @@ Transform:
   m_GameObject: {fileID: 862439878303274239}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.0847, y: 2.756, z: 0.062}
+  m_LocalPosition: {x: 0.0847, y: 1.494, z: 0.062}
   m_LocalScale: {x: 2.019302, y: 1.373513, z: 0.02}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -312,7 +312,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: f466ea21155184549bd8caf8a26e81bf, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -424,7 +424,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: a5434a79cc0e7fe43bc2ca1643297303, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -473,7 +473,7 @@ Transform:
   m_GameObject: {fileID: 1366119916200286779}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.807, z: -0.114}
+  m_LocalPosition: {x: 0, y: 0.823, z: 0.232}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -577,7 +577,7 @@ Transform:
   m_GameObject: {fileID: 6760599703604446423}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.936, z: 0.252}
+  m_LocalPosition: {x: 0, y: 1.018, z: 0.252}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -615,8 +615,8 @@ Transform:
   m_GameObject: {fileID: 6900870834505405660}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.0808, y: 1.8796, z: 0.581}
-  m_LocalScale: {x: 2.485357, y: 3.7589386, z: 0.5}
+  m_LocalPosition: {x: 0.0808, y: 2.3963, z: 0.581}
+  m_LocalScale: {x: 2.485357, y: 2.7256062, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3200393458374160985}
@@ -675,7 +675,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: a5434a79cc0e7fe43bc2ca1643297303, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -787,7 +787,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: a5434a79cc0e7fe43bc2ca1643297303, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1089,7 +1089,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02b6e99c921c36a499327967a9bf61fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalWallController
-  _allSlots: []
+  _allSlots:
+  - {fileID: 1168087525902213604}
+  - {fileID: 2144311526860754001}
+  - {fileID: 3623244426086669382}
+  - {fileID: 5793449726812312411}
+  - {fileID: 6355200298212342617}
+  - {fileID: 1281922750216681366}
+  - {fileID: 7495203312567248837}
+  - {fileID: 6930238828490459782}
   _dogTagController: {fileID: 2183449382615808369}
   _animator: {fileID: 7921192570042127094}
 --- !u!95 &6813650175331169599
@@ -1139,7 +1147,7 @@ Animation:
   m_Animations:
   - {fileID: 7400000, guid: c356495885135564faa001b1b4273495, type: 2}
   m_WrapMode: 0
-  m_PlayAutomatically: 1
+  m_PlayAutomatically: 0
   m_AnimatePhysics: 0
   m_UpdateMode: 0
   m_CullingType: 0
@@ -1834,11 +1842,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6647454409383110205, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6647454409383110205, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _uxrUniqueId
-      value: 099f2e4b-81d0-4320-872a-0da76a85ead8
+      value: 46dfc411-ecdc-44bb-a32d-be7f5f28c922
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __isInPrefab
@@ -1846,11 +1854,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _uxrUniqueId
-      value: 75250a5d-2582-4205-9ecc-d806ce5bc820
+      value: bde069a6-9d83-4bf3-8c6d-bc5e40de5fc5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7590518040989781441, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_Name
@@ -1866,6 +1878,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 256126373268200356, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
   m_PrefabInstance: {fileID: 1246988253024090179}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &6355200298212342617 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 1246988253024090179}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
 --- !u!1001 &2130263628065932171
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1924,11 +1947,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6398143880287876599, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6398143880287876599, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _uxrUniqueId
-      value: 1b6e5cdf-76de-4218-8e00-b140d50e37c4
+      value: bc39de06-e05c-4c82-9468-049a54551cd0
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __isInPrefab
@@ -1936,11 +1959,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _uxrUniqueId
-      value: c2b9c931-306b-4827-9483-e6a72d3006d4
+      value: 4d0278e9-43c9-49d6-afcd-8f66ab62b8bf
+      objectReference: {fileID: 0}
+    - target: {fileID: 7916389798647193099, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_Name
@@ -1956,6 +1983,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 506572431453128814, guid: a465f540d467e0e469042f73de34f97a, type: 3}
   m_PrefabInstance: {fileID: 2130263628065932171}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &5793449726812312411 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 2130263628065932171}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
 --- !u!1001 &2411759488220800223
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2010,11 +2048,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6647454409383110205, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6647454409383110205, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _uxrUniqueId
-      value: 30151fbd-19cf-44ac-80e4-dbf51d1dc7f0
+      value: 3bfc7e85-a653-458e-a3cc-0bb0b79c5f62
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __isInPrefab
@@ -2022,11 +2060,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _uxrUniqueId
-      value: a9d9188e-4dc3-452e-92ad-f36e31f8f211
+      value: f9fc849e-9118-49a7-8e28-e4d26a5285ad
+      objectReference: {fileID: 0}
+    - target: {fileID: 7590518040989781441, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_Name
@@ -2064,6 +2106,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1967469076101268335, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
   m_PrefabInstance: {fileID: 2411759488220800223}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7495203312567248837 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 2411759488220800223}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
 --- !u!1001 &2505541214704566663
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2946,11 +2999,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6647454409383110205, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6647454409383110205, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _uxrUniqueId
-      value: 16c4c0a6-dfd1-47bb-bf74-327961929915
+      value: 2f063744-2641-4b72-af91-198c0d7f3c71
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __isInPrefab
@@ -2958,11 +3011,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _uxrUniqueId
-      value: da663d3f-b01f-42b4-87d5-1fc2d929c0a8
+      value: e5201dfd-130e-4cf8-a145-09be5bf1374e
+      objectReference: {fileID: 0}
+    - target: {fileID: 7590518040989781441, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_Name
@@ -3006,6 +3063,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1967469076101268335, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
   m_PrefabInstance: {fileID: 2977198991386200476}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &6930238828490459782 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 2977198991386200476}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
 --- !u!1001 &3358390049176149397
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5376,11 +5444,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6398143880287876599, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6398143880287876599, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _uxrUniqueId
-      value: 5fa4b53c-5964-4a29-a4f6-c058c0d3887a
+      value: 7410b57f-20b8-4577-b947-4bac5116a97a
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __isInPrefab
@@ -5388,11 +5456,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _uxrUniqueId
-      value: 611f4288-92d3-416e-910a-c23b7d6ef12c
+      value: 6ffa7039-283d-4f69-8c5a-335d0add9c5d
+      objectReference: {fileID: 0}
+    - target: {fileID: 7916389798647193099, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_Name
@@ -5403,6 +5475,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+--- !u!114 &2144311526860754001 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 5779349051442650241}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
 --- !u!4 &6283625006698058991 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 506572431453128814, guid: a465f540d467e0e469042f73de34f97a, type: 3}
@@ -5462,11 +5545,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6647454409383110205, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6647454409383110205, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _uxrUniqueId
-      value: e9e2b2c5-89d6-4e76-945e-31ba85bfcc8e
+      value: e945d33f-f342-4b00-b69e-186fd5ee1af9
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __isInPrefab
@@ -5474,11 +5557,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _uxrUniqueId
-      value: 1ce82024-9d79-4eff-8e58-0a43f0114abc
+      value: 73ec037d-4ae7-4668-9178-64a8fc63571c
+      objectReference: {fileID: 0}
+    - target: {fileID: 7590518040989781441, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_Name
@@ -5495,6 +5582,17 @@ PrefabInstance:
       addedObject: {fileID: 2944358426566138995}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+--- !u!114 &1281922750216681366 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 6392376132424627340}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
 --- !u!4 &4898670142043453411 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1967469076101268335, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
@@ -5564,11 +5662,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6398143880287876599, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6398143880287876599, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _uxrUniqueId
-      value: 095d1eb3-718d-4994-b976-ce4f80fbdc82
+      value: cc42c171-5cca-4694-9fae-f60920c4b26e
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __isInPrefab
@@ -5576,11 +5674,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _uxrUniqueId
-      value: 9f779e9e-1586-487c-aca5-ead18fd08d96
+      value: e6bf0028-ed66-41a2-b7b5-c44afd2dd8fb
       objectReference: {fileID: 0}
     - target: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_Name
@@ -5591,6 +5689,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+--- !u!114 &1168087525902213604 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 6756421733693141300}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
 --- !u!4 &6540375873143912794 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 506572431453128814, guid: a465f540d467e0e469042f73de34f97a, type: 3}
@@ -5864,11 +5973,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6398143880287876599, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6398143880287876599, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _uxrUniqueId
-      value: 111c56f2-4f98-477e-b4e9-71687464817f
+      value: fb270905-02a2-4db6-9732-abb340a5664e
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __isInPrefab
@@ -5876,11 +5985,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __prefabGuid
-      value: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _uxrUniqueId
-      value: 17bc106f-1cb2-4602-ad23-acb7be4fb25a
+      value: 4cc4aa20-e2ff-4210-a5bc-3a62f24295dd
+      objectReference: {fileID: 0}
+    - target: {fileID: 7916389798647193099, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_Name
@@ -5891,6 +6004,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+--- !u!114 &3623244426086669382 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 9204822402292911254}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
 --- !u!4 &8699175220637795576 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 506572431453128814, guid: a465f540d467e0e469042f73de34f97a, type: 3}

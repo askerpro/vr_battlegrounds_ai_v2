@@ -63,6 +63,15 @@ namespace VrBattlegrounds.Arsenal
                 _animator = GetComponent<ArsenalAnimator>();
         }
 
+        private void Start()
+        {
+            // Синхронизируем визуальное состояние с логическим на старте
+            if (_currentState == ArsenalState.Closed)
+            {
+                SetClosedImmediate();
+            }
+        }
+
         private void OnEnable()
         {
             EliminationMode.OnRoundStateChangedLocal += HandleRoundStateChanged;
@@ -99,6 +108,7 @@ namespace VrBattlegrounds.Arsenal
         [ContextMenu("Open Arsenal")]
         public void OpenArsenal()
         {
+            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] OpenArsenal called! Current state: {_currentState}");
             if (_currentState == ArsenalState.Open || _currentState == ArsenalState.Opening)
             {
                 GameLog.Warning(ArsenalLog, "[Arsenal] Arsenal is already open/opening.");
@@ -125,6 +135,7 @@ namespace VrBattlegrounds.Arsenal
         [ContextMenu("Force Close")]
         public void ForceClose()
         {
+            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] ForceClose called! Current state: {_currentState}");
             if (_currentState == ArsenalState.Closed) return;
             BeginClosing();
         }
@@ -135,10 +146,17 @@ namespace VrBattlegrounds.Arsenal
         [ContextMenu("Set Closed Immediate")]
         public void SetClosedImmediate()
         {
+            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] SetClosedImmediate called! Current state: {_currentState}");
             _currentState = ArsenalState.Closed;
+
+            if (_allSlots == null || _allSlots.Length == 0)
+                _allSlots = GetComponentsInChildren<ArsenalSlotController>();
 
             foreach (var slot in _allSlots)
                 slot.Lock();
+
+            if (_animator == null)
+                _animator = GetComponent<ArsenalAnimator>();
 
             if (_animator != null)
                 _animator.SetClosedImmediate();
@@ -226,12 +244,17 @@ namespace VrBattlegrounds.Arsenal
 
         private void HandleRoundStateChanged(RoundState newState)
         {
+            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] HandleRoundStateChanged received: {newState}. Arsenal State: {_currentState}");
             switch (newState)
             {
                 case RoundState.Equipment:
                     if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing)
                     {
                         OpenArsenal();
+                    }
+                    else
+                    {
+                        GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] Ignoring Open command because state is already {_currentState}");
                     }
                     break;
                 
@@ -240,6 +263,10 @@ namespace VrBattlegrounds.Arsenal
                     if (_currentState == ArsenalState.Open || _currentState == ArsenalState.Opening)
                     {
                         ForceClose();
+                    }
+                    else
+                    {
+                        GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] Ignoring Close command because state is {_currentState}");
                     }
                     break;
             }

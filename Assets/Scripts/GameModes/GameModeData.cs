@@ -24,6 +24,10 @@ namespace VrBattlegrounds.GameModes
         [Tooltip("Отображаемое название режима в UI.")]
         public string displayName = "";
 
+        [Tooltip("Минимальное количество игроков (суммарно) для начала матча.")]
+        [Min(1)]
+        public int minPlayersToStart = 2;
+
         [Tooltip("Иконка режима для меню администратора.")]
         public Sprite icon;
 

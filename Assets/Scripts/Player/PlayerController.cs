@@ -34,6 +34,27 @@ namespace VrBattlegrounds.Player
         [SyncVar] public uint SessionNetId;
 
         /// <summary>
+        /// Имя игрока, полученное из сессии для синхронизации имени объекта
+        /// </summary>
+        [SyncVar(hook = nameof(OnAvatarPlayerNameChanged))]
+        public string AvatarPlayerName;
+
+        private void OnAvatarPlayerNameChanged(string oldName, string newName)
+        {
+            if (string.IsNullOrEmpty(newName)) return;
+            string postfix = netIdentity.isOwned ? " (Local)" : " (Remote)";
+            string debugName = $"{newName}{postfix}";
+
+            gameObject.name = debugName;
+
+            var uxrAvatar = GetComponent<UltimateXR.Networking.Integrations.Net.Mirror.UxrMirrorAvatar>();
+            if (uxrAvatar != null && uxrAvatar.AvatarName != debugName)
+            {
+                uxrAvatar.AvatarName = debugName;
+            }
+        }
+
+        /// <summary>
         /// Ссылка на PlayerSession, если он уже заспавнен на клиенте/сервере
         /// </summary>
         public PlayerSession Session
@@ -73,6 +94,15 @@ namespace VrBattlegrounds.Player
             _actor = GetComponent<UxrActor>();
             _actor.DamageReceived += OnDamageReceived;
             _actor.Died += OnActorDied;
+        }
+
+        private void Start()
+        {
+            // Убеждаемся что синхронизированное имя применяется после всех OnStartClient/OnStartServer и UXR инициализации
+            if (!string.IsNullOrEmpty(AvatarPlayerName))
+            {
+                OnAvatarPlayerNameChanged("", AvatarPlayerName);
+            }
         }
 
         private void OnDestroy()

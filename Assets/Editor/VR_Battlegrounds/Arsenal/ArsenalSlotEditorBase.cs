@@ -118,6 +118,9 @@ namespace VrBattlegrounds.Editor.Arsenal
             preview.hideFlags = HideFlags.DontSave;
             SetHideFlagsRecursive(preview.transform, HideFlags.DontSave);
 
+            var netId = preview.GetComponent<Mirror.NetworkIdentity>();
+            if (netId != null) DestroyImmediate(netId, true);
+
             DisableRuntimeComponents(preview);
         }
 
@@ -423,7 +426,9 @@ namespace VrBattlegrounds.Editor.Arsenal
 
             if (itemAnchor != null)
             {
-                _previewItem = (GameObject)PrefabUtility.InstantiatePrefab(weaponInfo.WeaponPrefab);
+                // Use standard Instantiate to avoid creating a connected prefab instance.
+                // This allows us to safely destroy NetworkIdentity and other components without warnings.
+                _previewItem = (GameObject)GameObject.Instantiate(weaponInfo.WeaponPrefab);
                 if (_previewItem != null)
                 {
                     SetupPreviewObject(_previewItem, ItemPreviewName, itemAnchor.transform,

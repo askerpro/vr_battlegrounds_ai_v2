@@ -55,6 +55,11 @@ namespace VrBattlegrounds.Player
 
         // ── Unity Lifecycle ───────────────────────────────────────────────────
 
+        private void Awake()
+        {
+            DontDestroyOnLoad(gameObject);
+        }
+
         public override void OnStartServer()
         {
             base.OnStartServer();

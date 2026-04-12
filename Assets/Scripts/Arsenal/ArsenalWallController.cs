@@ -1,4 +1,6 @@
 using UnityEngine;
+using Mirror;
+using UltimateXR.Manipulation;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Player;
@@ -12,7 +14,7 @@ namespace VrBattlegrounds.Arsenal
     /// Animation is delegated to <see cref="ArsenalAnimator"/>.
     /// Slot interaction logic lives in <see cref="ArsenalSlotController"/> subclasses.
     /// </summary>
-    public class ArsenalWallController : MonoBehaviour
+    public class ArsenalWallController : NetworkBehaviour
     {
         // ── Inspector ──────────────────────────────────────────
         [Header("Arsenal Slots")]
@@ -72,6 +74,83 @@ namespace VrBattlegrounds.Arsenal
             }
         }
 
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            ReplenishWeaponsNetwork(true);
+        }
+
+        [Server]
+        private void ReplenishWeaponsNetwork(bool forceAll = false)
+        {
+            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] ReplenishWeaponsNetwork. ForceAll: {forceAll}");
+            
+            if (_allSlots == null || _allSlots.Length == 0)
+                _allSlots = GetComponentsInChildren<ArsenalSlotController>();
+
+            for (int i = 0; i < _allSlots.Length; i++)
+            {
+                var slot = _allSlots[i];
+                if (slot.WeaponData == null || slot.WeaponData.WeaponPrefab == null) continue;
+
+                if (forceAll || slot.NeedsReplenishment())
+                {
+                    // Instantiate inactive so UxrGrabbableObject.Awake() doesn't fire yet
+                    var prefab = slot.WeaponData.WeaponPrefab;
+                    bool wasActive = prefab.activeSelf;
+                    prefab.SetActive(false);
+                    
+                    GameObject spawned = Instantiate(prefab);
+                    prefab.SetActive(wasActive);
+                    
+                    // Disable _autoCreateStartAnchor before activation —
+                    // otherwise UXR creates a rogue "Auto Anchor" parent in Awake()
+                    DisableAutoAnchor(spawned);
+                    
+                    spawned.SetActive(true);
+                    
+                    // Assign on server BEFORE Spawn —
+                    // Mirror captures current parent in the spawn message.
+                    slot.AssignNetworkItem(spawned);
+
+                    NetworkServer.Spawn(spawned);
+                    
+                    // RPC for remote clients (host already assigned above)
+                    RpcAssignItemToSlot(i, spawned.GetComponent<NetworkIdentity>());
+                }
+            }
+        }
+
+        [ClientRpc]
+        private void RpcAssignItemToSlot(int slotIndex, NetworkIdentity spawnedIdentity)
+        {
+            // Host already did AssignNetworkItem on server side — skip
+            if (isServer) return;
+            
+            if (slotIndex < 0 || slotIndex >= _allSlots.Length) return;
+            if (spawnedIdentity == null) return;
+            
+            _allSlots[slotIndex].AssignNetworkItem(spawnedIdentity.gameObject);
+        }
+        
+        /// <summary>
+        /// Disables _autoCreateStartAnchor on UxrGrabbableObject via reflection.
+        /// Must be called BEFORE the GameObject is activated (before Awake fires).
+        /// Otherwise UXR creates a rogue "Auto Anchor" parent that pulls weapons out of slots.
+        /// </summary>
+        private static void DisableAutoAnchor(GameObject obj)
+        {
+            var grabbable = obj.GetComponent<UxrGrabbableObject>();
+            if (grabbable == null) return;
+            
+            var field = typeof(UxrGrabbableObject).GetField(
+                "_autoCreateStartAnchor",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            if (field != null)
+                field.SetValue(grabbable, false);
+        }
+
         private void OnEnable()
         {
             EliminationMode.OnRoundStateChangedLocal += HandleRoundStateChanged;
@@ -103,12 +182,13 @@ namespace VrBattlegrounds.Arsenal
         // ── Public API ─────────────────────────────────────────
 
         /// <summary>
-        /// Opens the arsenal for a new prep phase (with animation).
+        /// Opens the arsenal for a new prep phase.
         /// </summary>
+        /// <param name="immediate">If true, snaps open instantly without animation.</param>
         [ContextMenu("Open Arsenal")]
-        public void OpenArsenal()
+        public void OpenArsenal(bool immediate = false)
         {
-            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] OpenArsenal called! Current state: {_currentState}");
+            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] OpenArsenal called! Current state: {_currentState}, Immediate: {immediate}");
             if (_currentState == ArsenalState.Open || _currentState == ArsenalState.Opening)
             {
                 GameLog.Warning(ArsenalLog, "[Arsenal] Arsenal is already open/opening.");
@@ -118,13 +198,14 @@ namespace VrBattlegrounds.Arsenal
             _currentState = ArsenalState.Opening;
             GameLog.Info(ArsenalLog, "[Arsenal] Arsenal OPENING — prep phase starting...");
 
-            if (_animator != null)
+            if (_animator != null && !immediate)
             {
                 _animator.PlayOpenSequence(OnOpenComplete);
             }
             else
             {
-                // No animator — open immediately
+                // No animator or immediate requested
+                if (_animator != null) _animator.SetOpenImmediate();
                 OnOpenComplete();
             }
         }
@@ -153,10 +234,13 @@ namespace VrBattlegrounds.Arsenal
                 _allSlots = GetComponentsInChildren<ArsenalSlotController>();
 
             foreach (var slot in _allSlots)
+            {
                 slot.Lock();
+            }
 
             if (_animator == null)
                 _animator = GetComponent<ArsenalAnimator>();
+
 
             if (_animator != null)
                 _animator.SetClosedImmediate();
@@ -168,10 +252,9 @@ namespace VrBattlegrounds.Arsenal
         {
             _currentState = ArsenalState.Open;
 
-            // Spawn items and unlock all slots
+            // Unlock all slots
             foreach (var slot in _allSlots)
             {
-                slot.SpawnItem();
                 slot.Unlock();
             }
 
@@ -222,10 +305,6 @@ namespace VrBattlegrounds.Arsenal
         {
             _currentState = ArsenalState.Closed;
 
-            // Despawn items
-            foreach (var slot in _allSlots)
-                slot.DespawnItem();
-
             GameLog.Info(ArsenalLog, "[Arsenal] Arsenal CLOSED.");
             OnArsenalClosed?.Invoke();
         }
@@ -247,10 +326,17 @@ namespace VrBattlegrounds.Arsenal
             GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] HandleRoundStateChanged received: {newState}. Arsenal State: {_currentState}");
             switch (newState)
             {
+                case RoundState.Setup:
+                    if (isServer)
+                    {
+                        ReplenishWeaponsNetwork(false);
+                    }
+                    break;
+
                 case RoundState.Equipment:
                     if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing)
                     {
-                        OpenArsenal();
+                        OpenArsenal(false);
                     }
                     else
                     {

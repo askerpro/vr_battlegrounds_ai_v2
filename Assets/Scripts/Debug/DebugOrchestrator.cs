@@ -184,8 +184,24 @@ namespace VrBattlegrounds.DevTools
                 return;
             }
 
+            int minPlayers = 1;
+            var sessionManager = VrBattlegrounds.Managers.SessionManager.Instance;
+            if (sessionManager != null && sessionManager.SelectedGameModeData != null)
+            {
+                minPlayers = _config.minPlayersOverride > 0
+                    ? _config.minPlayersOverride
+                    : sessionManager.SelectedGameModeData.minPlayersToStart;
+            }
+
+            if (playersManager.Sessions.Count < minPlayers)
+            {
+                GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                    $"[DebugOrchestrator] TryStartGameplay: недостаточно игроков ({playersManager.Sessions.Count}/{minPlayers}). Ждем остальных.");
+                return;
+            }
+
             GameLog.Info(GameSettings.Instance.LogLevelDebug,
-                "[DebugOrchestrator] TryStartGameplay: попытка запустить матч (GameMode сам дождется нужных условий).");
+                "[DebugOrchestrator] TryStartGameplay: попытка запустить матч (условия по игрокам выполнены).");
             matchManager.StartGameplay();
 
         }

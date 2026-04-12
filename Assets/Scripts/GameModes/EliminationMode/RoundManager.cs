@@ -16,10 +16,10 @@ namespace VrBattlegrounds.GameModes
 
         private float _countdownDuration;
         private float _roundDuration;
-        
+
         private float _stateTimer;
         private float _roundTimer;
-        
+
         private TeamSpawnZone[] _spawnZones;
         private RoundState _roundState = RoundState.Setup;
 
@@ -32,10 +32,10 @@ namespace VrBattlegrounds.GameModes
 
         public RoundState State => _roundState;
         public float RoundTimeRemaining => Math.Max(0f, _roundDuration - _roundTimer);
-        
-        public float CountdownTimeRemaining 
+
+        public float CountdownTimeRemaining
         {
-            get 
+            get
             {
                 if (_roundState == RoundState.Countdown) return Math.Max(0f, _countdownDuration - _stateTimer);
                 if (_roundState == RoundState.Scoreboard) return Math.Max(0f, ScoreboardDuration - _stateTimer);
@@ -49,16 +49,16 @@ namespace VrBattlegrounds.GameModes
             _eliminationMode = mode;
             _countdownDuration = countdownDuration;
             _roundDuration = roundDuration;
-            
+
             _stateTimer = 0f;
             _roundTimer = 0f;
 
             if (_spawnZones == null || _spawnZones.Length == 0)
                 _spawnZones = UnityEngine.Object.FindObjectsByType<TeamSpawnZone>(FindObjectsSortMode.None);
-            
+
             _roundState = RoundState.Setup;
             GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Выполняем очистку и телепортацию (Setup phase)");
-            
+
             _eliminationMode.PrepareNextRound();
         }
 
@@ -70,13 +70,13 @@ namespace VrBattlegrounds.GameModes
         public void EndRound(TeamData winner)
         {
             if (_roundState == RoundState.Resolution || _roundState == RoundState.Scoreboard) return;
-            
+
             _roundState = RoundState.Resolution;
             _stateTimer = 0f;
-            
+
             string winnerName = winner != null ? winner.displayName : "ничья";
             GameLog.Info(GameSettings.Instance.LogLevelMatch, $"[RoundManager] Раунд математически завершён, фаза Resolution. Победитель: {winnerName}");
-            
+
             _eliminationMode?.RpcOnRoundEnded(winner != null ? winner.teamIndex : -1);
             RoundEnded?.Invoke(winner);
         }
@@ -192,22 +192,20 @@ namespace VrBattlegrounds.GameModes
                     // Ожидаем готовности только от тех, кто жив (участвует в текущем раунде)
                     var alivePlayers = PlayersManager.Instance.GetAlivePlayers(state.Team);
                     totalAlive += alivePlayers.Count();
-                    foreach (var s in alivePlayers) 
+                    foreach (var s in alivePlayers)
                     {
                         if (!s.IsReadyForRound) falseReasonCount++;
                     }
                 }
-                
+
                 // Если ещё никто не успел заспавниться, мы не готовы переходить к отсчёту.
                 if (totalAlive == 0)
                 {
-                    GameLog.Verbose(GameSettings.Instance.LogLevelMatch, "[RoundManager DEBUG] AreAllPlayersReady: totalAlive == 0, waiting for players to spawn.");
                     return false;
                 }
-                
+
                 if (falseReasonCount > 0)
                 {
-                    GameLog.Verbose(GameSettings.Instance.LogLevelMatch, $"[RoundManager DEBUG] AreAllPlayersReady: {falseReasonCount} players are NOT ready.");
                     return false;
                 }
             }
@@ -220,7 +218,7 @@ namespace VrBattlegrounds.GameModes
         public string GetPendingReadinessStatus()
         {
             if (_eliminationMode == null) return "No elimination mode";
-            
+
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             bool allReady = true;
 
@@ -245,19 +243,19 @@ namespace VrBattlegrounds.GameModes
 #endif
     }
 
-    public enum RoundState 
-    { 
+    public enum RoundState
+    {
         /// <summary>Техническая микрофаза. Очистка, телепортация.</summary>
-        Setup, 
+        Setup,
         /// <summary>Основное время закупки. Арсенал открыт.</summary>
-        Equipment, 
+        Equipment,
         /// <summary>Все готовы. Идет таймер 3-5 секунд. Арсенал закрывается, патроны спавнятся.</summary>
-        Countdown, 
+        Countdown,
         /// <summary>Активный бой. Урон включен.</summary>
-        Combat, 
+        Combat,
         /// <summary>Кто-то победил. Короткая пауза (SlowMo).</summary>
-        Resolution, 
+        Resolution,
         /// <summary>Вывод итогов (Scoreboard) на несколько секунд.</summary>
-        Scoreboard 
+        Scoreboard
     }
 }

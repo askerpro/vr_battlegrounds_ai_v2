@@ -9,8 +9,8 @@ namespace VrBattlegrounds.Player.Avatars
         /// <summary>
         /// Возвращает префаб для спавна на основе параметров подключения игрока.
         /// </summary>
-        /// <param name="msg">Сообщение подключения с данными игрока.</param>
+        /// <param name="session">Сессия с данными игрока.</param>
         /// <param name="globalFallback">Дефолтный префаб из AvatarManager на случай, если стратегия не может вернуть свой.</param>
-        public abstract GameObject GetPrefab(GamePlayerConnectMessage msg, GameObject globalFallback);
+        public abstract GameObject GetPrefab(PlayerSession session, GameObject globalFallback);
     }
 }

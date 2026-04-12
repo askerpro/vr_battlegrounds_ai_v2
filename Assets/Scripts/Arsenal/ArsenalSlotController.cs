@@ -88,31 +88,43 @@ namespace VrBattlegrounds.Arsenal
         // ── Public API ─────────────────────────────────────────
 
         /// <summary>
-        /// Spawns the item on the slot anchor based on <see cref="_weaponInfo"/>.
+        /// Checks if the slot is physically empty (i.e. the item was taken),
+        /// meaning it needs to be replenished for the next round.
+        /// </summary>
+        public bool NeedsReplenishment()
+        {
+            return !IsItemPresent;
+        }
+
+        /// <summary>
+        /// Assigns a network-spawned item to the slot anchor based on <see cref="_weaponInfo"/>.
         /// Override in subclasses to spawn decorative extras (magazines, etc.).
         /// </summary>
-        public virtual void SpawnItem()
+        public virtual void AssignNetworkItem(GameObject spawnedItem)
         {
-            if (_weaponInfo == null || _weaponInfo.WeaponPrefab == null)
+            if (_weaponInfo == null || spawnedItem == null)
             {
-                GameLog.Warning(ArsenalLog, $"[Arsenal] Slot '{name}' has no WeaponInfo or Prefab assigned.");
+                GameLog.Warning(ArsenalLog, $"[Arsenal] Slot '{name}' failed to assign network item (missing info or object).");
                 return;
             }
 
-            if (_itemAnchor != null && _spawnedItem == null)
-            {
-                _spawnedItem = Instantiate(_weaponInfo.WeaponPrefab, _itemAnchor.transform);
-                _spawnedItem.transform.localPosition = _weaponInfo.WeaponPositionOffset;
-                _spawnedItem.transform.localRotation = Quaternion.Euler(_weaponInfo.WeaponRotationOffset);
-                
-                _spawnedItem.name = _weaponInfo.WeaponId + "_instance";
+            // Assign the object reference locally
+            _spawnedItem = spawnedItem;
+            
+            // Parent to slot anchor and apply offset.
+            // Mirror supports runtime reparenting of spawned NetworkIdentity objects
+            // (nested NI is only forbidden in prefabs, not at runtime).
+            _spawnedItem.transform.SetParent(_itemAnchor.transform);
+            _spawnedItem.transform.localPosition = _weaponInfo.WeaponPositionOffset;
+            _spawnedItem.transform.localRotation = Quaternion.Euler(_weaponInfo.WeaponRotationOffset);
+            
+            _spawnedItem.name = _weaponInfo.WeaponId + "_instance";
 
-                var weaponComp = _spawnedItem.GetComponent<WeaponComponent>();
-                if (weaponComp == null) weaponComp = _spawnedItem.AddComponent<WeaponComponent>();
-                weaponComp.Init(_weaponInfo);
+            var weaponComp = _spawnedItem.GetComponent<WeaponComponent>();
+            if (weaponComp == null) weaponComp = _spawnedItem.AddComponent<WeaponComponent>();
+            weaponComp.Init(_weaponInfo);
 
-                GameLog.Info(ArsenalLog, $"[Arsenal] Spawned '{_weaponInfo.DisplayName}' on slot '{name}'.");
-            }
+            GameLog.Info(ArsenalLog, $"[Arsenal] Assigned network weapon '{_weaponInfo.DisplayName}' to slot '{name}'.");
 
             SetLightColor(_availableColor);
         }

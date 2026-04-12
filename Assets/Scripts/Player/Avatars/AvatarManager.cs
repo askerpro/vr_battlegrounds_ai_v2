@@ -44,7 +44,7 @@ namespace VrBattlegrounds.Player.Avatars
             if (_combatAvatarStrategy != null)
             {
                 // Для боевых игроков всегда используем эту стратегию (TeamAvatarStrategy)
-                prefabToSpawn = _combatAvatarStrategy.GetPrefab(msg, _playerPrefab);
+                prefabToSpawn = _combatAvatarStrategy.GetPrefab(session, _playerPrefab);
             }
             else
             {
@@ -87,6 +87,7 @@ namespace VrBattlegrounds.Player.Avatars
             if (avatarClass != null)
             {
                 avatarClass.SessionNetId = session.netId;
+                avatarClass.AvatarPlayerName = session.PlayerName;
 
                 if (snapshot != null && snapshot.NeedsPhysicalRestore)
                 {
@@ -128,6 +129,7 @@ namespace VrBattlegrounds.Player.Avatars
             if (newPc != null)
             {
                 newPc.SessionNetId = session.netId;
+                newPc.AvatarPlayerName = session.PlayerName;
             }
 
             session.ActiveAvatar = newPc;

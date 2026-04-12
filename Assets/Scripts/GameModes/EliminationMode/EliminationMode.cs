@@ -19,6 +19,13 @@ namespace VrBattlegrounds.GameModes
     ///
     /// Не возрождает игроков между раундами.
     /// </summary>
+    public enum EliminationMatchState
+    {
+        WaitingForPlayers,
+        Active,
+        Finished
+    }
+
     public class EliminationMode : GameMode
     {
         [Header("Настройки")]
@@ -37,6 +44,7 @@ namespace VrBattlegrounds.GameModes
         // Счёт матча теперь синхронизируется через базовый класс GameMode
 
         // Состояние раунда — синхронизируется для UI (таймер, countdown)
+        [SyncVar] private EliminationMatchState _matchState = EliminationMatchState.WaitingForPlayers;
         [SyncVar] private RoundState _roundState = RoundState.Setup;
         [SyncVar] private float _roundTimer;
         [SyncVar] private float _countdownTimer;
@@ -59,6 +67,7 @@ namespace VrBattlegrounds.GameModes
 
         // ── Публичные свойства для UI ────────────────────────────────────────
 
+        public EliminationMatchState CurrentMatchState => _matchState;
         public RoundState CurrentRoundState => _roundState;
         public float RoundTimeRemaining => Mathf.Max(0f, _roundDuration - _roundTimer);
         public float CountdownTimeRemaining => Mathf.Max(0f, _countdownDuration - _countdownTimer);
@@ -77,14 +86,35 @@ namespace VrBattlegrounds.GameModes
 
         protected override bool CanStartGameplay()
         {
-            // Ликвидация может начаться только когда во всех командах есть хотя бы один живой игрок
+            // Базовый класс больше не ждет. Наша локальная машина состояний ждет появления игроков.
+            return true;
+        }
+
+        private bool IsPlayersReady()
+        {
+            var sessionManager = VrBattlegrounds.Managers.SessionManager.Instance;
+            int minPlayers = 2;
+            if (sessionManager != null && sessionManager.SelectedGameModeData != null)
+            {
+                minPlayers = sessionManager.SelectedGameModeData.minPlayersToStart;
+            }
+
+            int currentPlayers = PlayersManager.Instance.Sessions.Count();
+            if (currentPlayers < minPlayers) return false;
+
             return _teamStates.Values.All(t => t.HasPlayers());
         }
 
         [Server]
         protected override void StartGameplay()
         {
+            _matchState = EliminationMatchState.WaitingForPlayers;
+            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[EliminationMode] Матч инициализирован. Ждем игроков.");
+        }
 
+        [Server]
+        private void InitializeActiveGame()
+        {
             // Создаём менеджеры как обычные C# объекты — без GameObject, без NetworkBehaviour
             _roundManager = new RoundManager();
             _setManager = new SetManager(_roundManager);
@@ -92,7 +122,7 @@ namespace VrBattlegrounds.GameModes
 
             string teamsStr = string.Join(" vs ", Teams.Select(t => t != null ? t.displayName : "null"));
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[EliminationMode] Матч начат: {teamsStr}, " +
+                $"[EliminationMode] Активная игра начата: {teamsStr}, " +
                 $"сетов: {_maxSets}, раундов в сете: {_roundsPerSet}");
 
             StartNextSet(swapSides: false);
@@ -117,7 +147,24 @@ namespace VrBattlegrounds.GameModes
 
         private void Update()
         {
-            if (!isServer || _roundManager == null) return;
+            if (!isServer) return;
+
+            if (_matchState == EliminationMatchState.WaitingForPlayers)
+            {
+                if (IsPlayersReady())
+                {
+                    _matchState = EliminationMatchState.Active;
+                    InitializeActiveGame();
+                }
+                return;
+            }
+
+            if (_matchState == EliminationMatchState.Finished) return;
+
+            if (GameplayManager.Instance != null && GameplayManager.Instance.CurrentState == GameplayState.Paused)
+                return;
+
+            if (_roundManager == null) return;
 
             RoundState previousState = _roundState;
             bool changed = _roundManager.Tick(Time.deltaTime);
@@ -152,7 +199,7 @@ namespace VrBattlegrounds.GameModes
                 _setManager.SwapTeams();
 
             _setManager.SetEnded += OnSetEnded;
-            
+
             int currentSet = 1 + _teamStates.Values.Sum(s => s.Score);
             RpcOnSetStarted(currentSet);
 

@@ -13,6 +13,13 @@ using UltimateXR.Mechanics.Weapons;
 using VrBattlegrounds.Player.Avatars;
 namespace VrBattlegrounds.Managers
 {
+    public enum GameplayState
+    {
+        NotActive,
+        Active,
+        Paused
+    }
+
     /// <summary>
     /// Тонкий оркестратор матча: инстанцирует префаб режима через NetworkServer.Spawn,
     /// передаёт ему команды и ждёт события GameMode.GameplayEnded.
@@ -27,81 +34,20 @@ namespace VrBattlegrounds.Managers
         /// <summary>Матч завершён. Null = ничья.</summary>
         public event Action<TeamData> GameplayEnded;
 
-        [SyncVar] private bool _gameplayActive;
+        [SyncVar] private GameplayState _currentState = GameplayState.NotActive;
 
         private GameMode _gameMode;
         private GameObject _gameModeInstance;
 
-        public bool IsGameplayActive => _gameplayActive;
+        public GameplayState CurrentState => _currentState;
+        public bool IsGameplayActive => _currentState == GameplayState.Active;
 
-        // ── Отображение в Inspector (только чтение, обновляются каждый кадр) ──
-
-        [Header("Состояние матча (только чтение)")]
-        [Tooltip("Идёт ли матч прямо сейчас.")]
-        [SerializeField] private bool _gameplayActiveDisplay;
-
-        [Tooltip("Активный игровой режим.")]
-        [SerializeField] private string _gameModeDisplay = "—";
-
-        [Tooltip("Состояние раунда (только EliminationMode).")]
-        [SerializeField] private string _roundStateDisplay = "—";
-
-        [Tooltip("Оставшееся время раунда или обратного отсчёта (сек).")]
-        [SerializeField] private float _timerDisplay;
-
-        [Tooltip("Счёт команды A (сеты или фраги).")]
-        [SerializeField] private int _scoreADisplay;
-
-        [Tooltip("Счёт команды B.")]
-        [SerializeField] private int _scoreBDisplay;
+        public GameMode ActiveGameMode => _gameMode;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────
 
         private void Update()
         {
-            // Обновляем display-поля в реальном времени — видны в Inspector во время Play Mode
-            _gameplayActiveDisplay = _gameplayActive;
-
-            if (_gameMode == null)
-            {
-                _gameModeDisplay = "—";
-                _roundStateDisplay = "—";
-                _timerDisplay = 0f;
-                _scoreADisplay = 0;
-                _scoreBDisplay = 0;
-                return;
-            }
-
-            _gameModeDisplay = _gameMode.GetType().Name;
-
-            TeamData[] teams = _gameMode.Teams;
-            _scoreADisplay = teams != null && teams.Length > 0 ? _gameMode.GetScore(teams[0]) : 0;
-            _scoreBDisplay = teams != null && teams.Length > 1 ? _gameMode.GetScore(teams[1]) : 0;
-
-            // Таймер и состояние раунда — специфичны для EliminationMode
-            if (_gameMode is EliminationMode elimination)
-            {
-                switch (elimination.CurrentRoundState)
-                {
-                    case RoundState.Countdown:
-                        _roundStateDisplay = "Countdown";
-                        _timerDisplay = elimination.CountdownTimeRemaining;
-                        break;
-                    case RoundState.Combat:
-                        _roundStateDisplay = "Combat";
-                        _timerDisplay = elimination.RoundTimeRemaining;
-                        break;
-                    default:
-                        _roundStateDisplay = "Ended";
-                        _timerDisplay = 0f;
-                        break;
-                }
-            }
-            else
-            {
-                _roundStateDisplay = "—";
-                _timerDisplay = 0f;
-            }
 
             // Управляем доступностью оружия через UxrWeaponManager
             if (UxrWeaponManager.HasInstance)
@@ -128,9 +74,9 @@ namespace VrBattlegrounds.Managers
         [Server]
         public void StartGameplay()
         {
-            if (_gameplayActive)
+            if (_currentState != GameplayState.NotActive)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelMatch, "[GameplayManager] Матч уже идёт");
+                GameLog.Warning(GameSettings.Instance.LogLevelMatch, "[GameplayManager] Матч уже идёт или на паузе");
                 return;
             }
 
@@ -182,7 +128,7 @@ namespace VrBattlegrounds.Managers
             _gameMode.Initialize(gameModeData.teams);
             _gameMode.GameplayEnded += OnGameplayEnded;
 
-            _gameplayActive = true;
+            _currentState = GameplayState.Active;
 
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
                 $"[GameplayManager] Запуск режима: {gameModeData.modeId} ({gameModeData.displayName})");
@@ -197,7 +143,7 @@ namespace VrBattlegrounds.Managers
         [Server]
         public void StopGameplay()
         {
-            if (!_gameplayActive)
+            if (_currentState == GameplayState.NotActive)
             {
                 GameLog.Warning(GameSettings.Instance.LogLevelMatch, "[GameplayManager] StopGameplay: матч не активен");
                 return;
@@ -206,16 +152,36 @@ namespace VrBattlegrounds.Managers
             _gameMode?.StopGameplay();
             CleanupGameMode();
 
-            _gameplayActive = false;
+            _currentState = GameplayState.NotActive;
             GameLog.Info(GameSettings.Instance.LogLevelMatch, "[GameplayManager] Матч остановлен администратором");
             RpcOnMatchStopped();
+        }
+
+        [Server]
+        public void PauseGameplay()
+        {
+            if (_currentState == GameplayState.Active)
+            {
+                _currentState = GameplayState.Paused;
+                GameLog.Info(GameSettings.Instance.LogLevelMatch, "[GameplayManager] Матч поставлен на паузу");
+            }
+        }
+
+        [Server]
+        public void ResumeGameplay()
+        {
+            if (_currentState == GameplayState.Paused)
+            {
+                _currentState = GameplayState.Active;
+                GameLog.Info(GameSettings.Instance.LogLevelMatch, "[GameplayManager] Матч снят с паузы");
+            }
         }
 
         [Server]
         private void OnGameplayEnded(TeamData winner)
         {
             CleanupGameMode();
-            _gameplayActive = false;
+            _currentState = GameplayState.NotActive;
 
             string winnerName = winner != null ? winner.displayName : "ничья";
             GameLog.Info(GameSettings.Instance.LogLevelMatch,

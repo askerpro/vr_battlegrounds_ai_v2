@@ -36,9 +36,9 @@ namespace VrBattlegrounds.Arsenal
             }
         }
 
-        public override void SpawnItem()
+        public override void AssignNetworkItem(GameObject spawnedItem)
         {
-            base.SpawnItem();
+            base.AssignNetworkItem(spawnedItem);
 
             // Spawn decorative magazine
             if (_magAnchor != null && WeaponData != null &&

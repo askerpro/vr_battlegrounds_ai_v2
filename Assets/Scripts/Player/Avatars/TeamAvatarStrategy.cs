@@ -10,25 +10,25 @@ namespace VrBattlegrounds.Player.Avatars
         [Tooltip("Префаб, который будет выдан, если у команды нет скина или команда не выбрана.")]
         [SerializeField] private GameObject fallbackPrefab;
 
-        public override GameObject GetPrefab(GamePlayerConnectMessage msg, GameObject globalFallback)
+        public override GameObject GetPrefab(PlayerSession session, GameObject globalFallback)
         {
-            TeamData teamData = TeamRegistry.Instance.GetByIndex(msg.teamId);
+            TeamData teamData = TeamRegistry.Instance.GetByIndex(session.TeamIndex);
             if (teamData != null)
             {
-                GameObject avatarPrefab = teamData.GetAvatarPrefab(msg.avatarId);
+                GameObject avatarPrefab = teamData.GetAvatarPrefab(session.AvatarIndex);
                 if (avatarPrefab != null)
                 {
-                    GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[AvatarManager/TeamAvatarStrategy] Выбран скин '{avatarPrefab.name}' для команды '{teamData.displayName}' (teamId: {msg.teamId}, avatarId: {msg.avatarId})");
+                    GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[AvatarManager/TeamAvatarStrategy] Выбран скин '{avatarPrefab.name}' для команды '{teamData.displayName}' (teamId: {session.TeamIndex}, avatarId: {session.AvatarIndex})");
                     return avatarPrefab;
                 }
                 else
                 {
-                    GameLog.Warning(GameSettings.Instance.LogLevelPlayer, $"[AvatarManager/TeamAvatarStrategy] Не удалось найти скин с ID {msg.avatarId} для команды {msg.teamId}!");
+                    GameLog.Warning(GameSettings.Instance.LogLevelPlayer, $"[AvatarManager/TeamAvatarStrategy] Не удалось найти скин с ID {session.AvatarIndex} для команды {session.TeamIndex}!");
                 }
             }
             else
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, $"[AvatarManager/TeamAvatarStrategy] Команда с ID {msg.teamId} не найдена в TeamRegistry!");
+                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, $"[AvatarManager/TeamAvatarStrategy] Команда с ID {session.TeamIndex} не найдена в TeamRegistry!");
             }
 
             return fallbackPrefab != null ? fallbackPrefab : globalFallback;

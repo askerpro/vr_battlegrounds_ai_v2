@@ -57,7 +57,7 @@ namespace VrBattlegrounds.Editor.Arsenal
 
             if (magAnchor != null)
             {
-                _previewMagazine = (GameObject)PrefabUtility.InstantiatePrefab(weaponInfo.MagazinePrefab);
+                _previewMagazine = (GameObject)GameObject.Instantiate(weaponInfo.MagazinePrefab);
                 if (_previewMagazine != null)
                 {
                     SetupPreviewObject(_previewMagazine, MagPreviewName, magAnchor.transform,

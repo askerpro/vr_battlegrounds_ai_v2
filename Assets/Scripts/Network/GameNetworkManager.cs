@@ -50,10 +50,26 @@ namespace VrBattlegrounds.Network
             ServerSceneChanged?.Invoke(sceneName);
         }
 
-        // Вызывается когда клиент базово подключился, но мы ждем PlayerJoinMessage для спавна
         public override void OnServerAddPlayer(NetworkConnectionToClient conn)
         {
             // Мы не спавним ничего автоматически. Спавн идет в OnPlayerJoinMessage
+        }
+
+        public override void OnServerReady(NetworkConnectionToClient conn)
+        {
+            base.OnServerReady(conn);
+
+            // Когда клиент полностью загрузил новую сцену, Mirror уничтожил старый аватар.
+            // Нам нужно возродить его, если PlayerSession остался жив.
+            if (PlayersManager.Instance != null && AvatarManager.Instance != null)
+            {
+                var session = PlayersManager.Instance.GetSession(conn);
+                if (session != null && session.ActiveAvatar == null)
+                {
+                    // Спавним новый физический аватар на основе существующих данных (TeamIndex / AvatarIndex)
+                    AvatarManager.Instance.ChangeAvatar(conn, session, session.TeamIndex, session.AvatarIndex);
+                }
+            }
         }
 
         public override void OnServerDisconnect(NetworkConnectionToClient conn)
@@ -106,7 +122,7 @@ namespace VrBattlegrounds.Network
                 var msg = new GamePlayerConnectMessage(
                     token, 
                     LocalClientProfile.LocalDeviceType, 
-                    1, 
+                    0, 
                     0
                 );
 

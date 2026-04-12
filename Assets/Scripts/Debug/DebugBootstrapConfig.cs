@@ -32,9 +32,9 @@ namespace VrBattlegrounds.DevTools
         [Tooltip("Автоматически запустить матч как только подключится достаточно игроков.")]
         public bool autoStartGameplay = true;
 
-        [Tooltip("Минимальное количество игроков для автостарта матча.")]
-        [Min(1)]
-        public int minPlayersToAutoStart = 1;
+        [Tooltip("Переопределить минимальное количество игроков для старта (0 = использовать значение из GameModeData). Удобно использовать 1 для соло отладки.")]
+        [Min(0)]
+        public int minPlayersOverride = 1;
 
         [Header("Карта")]
         [Tooltip("Автоматически загрузить эту сцену при старте сервера. Оставить пустым — не грузить.")]

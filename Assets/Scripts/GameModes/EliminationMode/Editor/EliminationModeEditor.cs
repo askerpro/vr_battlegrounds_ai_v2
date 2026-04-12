@@ -46,16 +46,21 @@ namespace VrBattlegrounds.Editor
 
             // 2. Статус раунда
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField($"Статус раунда {mode.CurrentRoundNumber}/{mode.RoundsPerSet} (Elimination)", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Текущее состояние:", mode.CurrentRoundState.ToString());
+            // Active Timers
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Phase Timers", EditorStyles.boldLabel);
             
-            if (mode.CurrentRoundState == RoundState.Countdown)
+            string pendingConditions = mode.RoundManager.GetPendingReadinessStatus();
+            EditorGUILayout.HelpBox(pendingConditions, MessageType.Info);
+            
+            if (mode.CurrentRoundState == RoundState.Setup || mode.CurrentRoundState == RoundState.Equipment || 
+                mode.CurrentRoundState == RoundState.Countdown || mode.CurrentRoundState == RoundState.Scoreboard || mode.CurrentRoundState == RoundState.Resolution)
             {
-                EditorGUILayout.LabelField("Обратный отсчёт:", mode.CountdownTimeRemaining.ToString("F1") + " сек");
+                EditorGUILayout.LabelField($"Time Left: {mode.RoundManager.CountdownTimeRemaining:F1}s", EditorStyles.label);
             }
-            else if (mode.CurrentRoundState == RoundState.Active)
+            else if (mode.CurrentRoundState == RoundState.Combat)
             {
-                EditorGUILayout.LabelField("Осталось времени:", mode.RoundTimeRemaining.ToString("F1") + " сек");
+                EditorGUILayout.LabelField($"Combat Time Remaining: {mode.RoundManager.RoundTimeRemaining:F1}s", EditorStyles.label);
             }
             EditorGUILayout.EndVertical();
 

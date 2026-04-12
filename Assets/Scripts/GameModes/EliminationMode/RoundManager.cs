@@ -10,47 +10,58 @@ using VrBattlegrounds.Maps;
 
 namespace VrBattlegrounds.GameModes
 {
-    /// <summary>
-    /// Чистая серверная логика раунда: FSM состояний, обратный отсчёт, таймер.
-    /// Не является MonoBehaviour — создаётся через new RoundManager() из EliminationMode.
-    ///
-    /// Тик обновляется вызовом Tick(deltaTime) из EliminationMode.Update().
-    /// Сетевая синхронизация (SyncVar, ClientRpc) — в EliminationMode.
-    /// </summary>
     public class RoundManager
     {
-        /// <summary>Срабатывает при завершении раунда. Null = ничья.</summary>
         public event Action<TeamData> RoundEnded;
 
         private float _countdownDuration;
         private float _roundDuration;
-        private float _countdownTimer;
+        
+        private float _stateTimer;
         private float _roundTimer;
+        
         private TeamSpawnZone[] _spawnZones;
-        private RoundState _roundState = RoundState.Ended;
+        private RoundState _roundState = RoundState.Setup;
 
         private EliminationMode _eliminationMode;
 
+        // Configurations for new phases
+        private const float SetupDuration = 1.0f;
+        private const float ResolutionDuration = 3.0f;
+        private const float ScoreboardDuration = 5.0f;
+
         public RoundState State => _roundState;
         public float RoundTimeRemaining => Math.Max(0f, _roundDuration - _roundTimer);
-        public float CountdownTimeRemaining => Math.Max(0f, _countdownDuration - _countdownTimer);
+        
+        public float CountdownTimeRemaining 
+        {
+            get 
+            {
+                if (_roundState == RoundState.Countdown) return Math.Max(0f, _countdownDuration - _stateTimer);
+                if (_roundState == RoundState.Scoreboard) return Math.Max(0f, ScoreboardDuration - _stateTimer);
+                if (_roundState == RoundState.Resolution) return Math.Max(0f, ResolutionDuration - _stateTimer);
+                return 0f;
+            }
+        }
 
         public void StartRound(EliminationMode mode, float countdownDuration, float roundDuration)
         {
             _eliminationMode = mode;
             _countdownDuration = countdownDuration;
             _roundDuration = roundDuration;
-            _countdownTimer = 0f;
-            _roundTimer = 0f;
-            _spawnZones = UnityEngine.Object.FindObjectsByType<TeamSpawnZone>(FindObjectsSortMode.None);
             
-            _roundState = RoundState.WaitingForPlayers;
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Ожидание готовности игроков для старта раунда (заход в spawn-зоны)");
+            _stateTimer = 0f;
+            _roundTimer = 0f;
+
+            if (_spawnZones == null || _spawnZones.Length == 0)
+                _spawnZones = UnityEngine.Object.FindObjectsByType<TeamSpawnZone>(FindObjectsSortMode.None);
+            
+            _roundState = RoundState.Setup;
+            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Выполняем очистку и телепортацию (Setup phase)");
             
             _eliminationMode.PrepareNextRound();
         }
 
-        /// <summary>Продолжить сет — запустить следующий раунд с теми же настройками.</summary>
         public void StartNextRound(EliminationMode mode)
         {
             StartRound(mode, _countdownDuration, _roundDuration);
@@ -58,71 +69,93 @@ namespace VrBattlegrounds.GameModes
 
         public void EndRound(TeamData winner)
         {
-            if (_roundState == RoundState.Ended) return;
-            _roundState = RoundState.Ended;
+            if (_roundState == RoundState.Resolution || _roundState == RoundState.Scoreboard) return;
+            
+            _roundState = RoundState.Resolution;
+            _stateTimer = 0f;
+            
             string winnerName = winner != null ? winner.displayName : "ничья";
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[RoundManager] Раунд завершён, победитель: {winnerName}");
+            GameLog.Info(GameSettings.Instance.LogLevelMatch, $"[RoundManager] Раунд математически завершён, фаза Resolution. Победитель: {winnerName}");
             
             _eliminationMode?.RpcOnRoundEnded(winner != null ? winner.teamIndex : -1);
-
             RoundEnded?.Invoke(winner);
         }
 
-        /// <summary>
-        /// Вызывается EliminationMode при гибели игрока.
-        /// Проверяет условие победы и завершает раунд если нужно.
-        /// </summary>
         public void OnPlayerDied(PlayerController player)
         {
-            if (_roundState != RoundState.Active) return;
+            if (_roundState != RoundState.Combat) return;
 
-            GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
-                $"[RoundManager] Игрок {player.name} погиб — проверяем условие победы");
+            GameLog.Verbose(GameSettings.Instance.LogLevelMatch, $"[RoundManager] Игрок {player.name} погиб — проверяем условие победы");
 
             TeamData winner = _eliminationMode?.CheckRoundWinCondition();
             bool roundOver = _eliminationMode == null || winner != null || IsAllTeamsDead();
             if (roundOver) EndRound(winner);
         }
 
-        /// <summary>
-        /// Тик логики раунда. Вызывается из EliminationMode.Update() только на сервере.
-        /// Возвращает true если состояние изменилось (для синхронизации SyncVar в EliminationMode).
-        /// </summary>
         public bool Tick(float deltaTime)
         {
             switch (_roundState)
             {
-                case RoundState.WaitingForPlayers:
+                case RoundState.Setup:
+                    _stateTimer += deltaTime;
+                    if (_stateTimer >= SetupDuration)
+                    {
+                        _stateTimer = 0f;
+                        _roundState = RoundState.Equipment;
+                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Setup завершен. Фаза закупки (Equipment)");
+                        return true;
+                    }
+                    return false;
+
+                case RoundState.Equipment:
                     if (AreAllPlayersReady())
                     {
                         _roundState = RoundState.Countdown;
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                            "[RoundManager] Все игроки в зонах — запущен обратный отсчёт");
+                        _stateTimer = 0f;
+                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Все условия оборудования выполнены. Countdown (FreezeTime) запущен");
                         return true;
                     }
                     return false;
 
                 case RoundState.Countdown:
-                    _countdownTimer += deltaTime;
-                    if (_countdownTimer >= _countdownDuration)
+                    _stateTimer += deltaTime;
+                    if (_stateTimer >= _countdownDuration)
                     {
-                        _countdownTimer = _countdownDuration;
-                        _roundState = RoundState.Active;
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                            "[RoundManager] Обратный отсчёт завершён — раунд активен");
+                        _stateTimer = 0f;
+                        _roundState = RoundState.Combat;
+                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Countdown завершен. Бой начался (Combat)!");
                         return true;
                     }
                     return false;
 
-                case RoundState.Active:
+                case RoundState.Combat:
                     _roundTimer += deltaTime;
                     if (_roundTimer >= _roundDuration)
                     {
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                            "[RoundManager] Время раунда истекло — ничья");
+                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Время раунда истекло — ничья");
                         EndRound(null);
                         return true;
+                    }
+                    return false;
+
+                case RoundState.Resolution:
+                    _stateTimer += deltaTime;
+                    if (_stateTimer >= ResolutionDuration)
+                    {
+                        _stateTimer = 0f;
+                        _roundState = RoundState.Scoreboard;
+                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Resolution завершено. Scoreboard");
+                        return true;
+                    }
+                    return false;
+
+                case RoundState.Scoreboard:
+                    _stateTimer += deltaTime;
+                    if (_stateTimer >= ScoreboardDuration)
+                    {
+                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Цикл завершен. Начинаем следующий раунд.");
+                        StartNextRound(_eliminationMode);
+                        return true; // We changed state back to Setup
                     }
                     return false;
 
@@ -133,7 +166,7 @@ namespace VrBattlegrounds.GameModes
 
         public void ForceStop()
         {
-            _roundState = RoundState.Ended;
+            _roundState = RoundState.Resolution;
             _eliminationMode = null;
             GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Раунд принудительно остановлен");
         }
@@ -150,25 +183,62 @@ namespace VrBattlegrounds.GameModes
 
         private bool AreAllPlayersReady()
         {
-            // 1. Проверяем что все игроки в своих spawn зонах (используя System.Linq)
-            if (_spawnZones != null && _spawnZones.Length > 0)
-            {
-                if (!_spawnZones.All(zone => zone.AreAllTeamPlayersInZone()))
-                    return false;
-            }
-
-            // 2. Проверяем что все игроки во всех командах живы
             if (_eliminationMode != null)
             {
-                if (!_eliminationMode.TeamStates.Values.All(state => state.AreAllPlayersAlive()))
-                    return false;
+                foreach (var state in _eliminationMode.TeamStates.Values)
+                {
+                    // Ожидаем готовности только от тех, кто жив (участвует в текущем раунде)
+                    var alivePlayers = PlayersManager.Instance.GetAlivePlayers(state.Team);
+                    if (!alivePlayers.All(s => s.IsReadyForRound))
+                        return false;
+                }
             }
-
-            // 3. В будущем здесь могут быть другие проверки (например, выбор оружия)
 
             return true;
         }
+
+#if UNITY_EDITOR
+        public string GetPendingReadinessStatus()
+        {
+            if (_eliminationMode == null) return "No elimination mode";
+            
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            bool allReady = true;
+
+            foreach (var state in _eliminationMode.TeamStates.Values)
+            {
+                var alivePlayers = PlayersManager.Instance.GetAlivePlayers(state.Team);
+                foreach (var s in alivePlayers)
+                {
+                    if (!s.IsReadyForRound)
+                    {
+                        allReady = false;
+                        sb.AppendLine($"- {s.PlayerName}:");
+                        if (!s.IsInSpawnZone) sb.AppendLine("   [!] Not in spawn zone");
+                        if (!s.HasGrabbedDogTag) sb.AppendLine("   [!] Dog tag not grabbed");
+                    }
+                }
+            }
+
+            if (allReady) return "All Players Ready!";
+            return sb.ToString();
+        }
+#endif
     }
 
-    public enum RoundState { WaitingForPlayers, Countdown, Active, Ended }
+    public enum RoundState 
+    { 
+        /// <summary>Техническая микрофаза. Очистка, телепортация.</summary>
+        Setup, 
+        /// <summary>Основное время закупки. Арсенал открыт.</summary>
+        Equipment, 
+        /// <summary>Все готовы. Идет таймер 3-5 секунд. Арсенал закрывается, патроны спавнятся.</summary>
+        Countdown, 
+        /// <summary>Активный бой. Урон включен.</summary>
+        Combat, 
+        /// <summary>Кто-то победил. Короткая пауза (SlowMo).</summary>
+        Resolution, 
+        /// <summary>Вывод итогов (Scoreboard) на несколько секунд.</summary>
+        Scoreboard 
+    }
 }

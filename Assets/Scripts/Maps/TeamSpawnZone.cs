@@ -160,7 +160,7 @@ namespace VrBattlegrounds.Maps
 
             bool isVisible = true;
 
-            if (_currentRoundState == RoundState.Active)
+            if (_currentRoundState == RoundState.Combat)
             {
                 // Если раунд активен, проверяем локального игрока
                 if (_localPlayer != null)
@@ -183,7 +183,7 @@ namespace VrBattlegrounds.Maps
             if (isVisible)
             {
                 // Если мы мертвы и видим зону в активном раунде — используем X-ray материал
-                bool useXray = (_currentRoundState == RoundState.Active && _localPlayer != null && !_localPlayer.IsAlive);
+                bool useXray = (_currentRoundState == RoundState.Combat && _localPlayer != null && !_localPlayer.IsAlive);
                 _meshRenderer.sharedMaterial = useXray && _xrayMaterial != null ? _xrayMaterial : _originalMaterial;
 
                 // Перекрашиваем, если сменили материал
@@ -249,6 +249,11 @@ namespace VrBattlegrounds.Maps
                 _playersInZone.Add(player);
                 _playersInZoneCount = _playersInZone.Count;
 
+                if (NetworkServer.active && player.Session != null)
+                {
+                    player.Session.ServerSetInSpawnZone(true);
+                }
+
                 PlayerEntered?.Invoke(this, player);
 
                 GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
@@ -259,6 +264,11 @@ namespace VrBattlegrounds.Maps
                 // СОБЫТИЕ: Игрок больше не внутри целиком (но всё ещё касается колайдером)
                 _playersInZone.Remove(player);
                 _playersInZoneCount = _playersInZone.Count;
+
+                if (NetworkServer.active && player.Session != null)
+                {
+                    player.Session.ServerSetInSpawnZone(false);
+                }
 
                 PlayerExited?.Invoke(this, player);
 
@@ -278,6 +288,12 @@ namespace VrBattlegrounds.Maps
                 if (_playersInZone.Remove(player))
                 {
                     _playersInZoneCount = _playersInZone.Count;
+
+                    if (NetworkServer.active && player.Session != null)
+                    {
+                        player.Session.ServerSetInSpawnZone(false);
+                    }
+
                     PlayerExited?.Invoke(this, player);
 
                     GameLog.Verbose(GameSettings.Instance.LogLevelMatch,

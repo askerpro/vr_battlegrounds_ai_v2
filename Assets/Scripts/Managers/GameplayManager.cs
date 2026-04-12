@@ -87,8 +87,8 @@ namespace VrBattlegrounds.Managers
                         _roundStateDisplay = "Countdown";
                         _timerDisplay = elimination.CountdownTimeRemaining;
                         break;
-                    case RoundState.Active:
-                        _roundStateDisplay = "Active";
+                    case RoundState.Combat:
+                        _roundStateDisplay = "Combat";
                         _timerDisplay = elimination.RoundTimeRemaining;
                         break;
                     default:
@@ -109,7 +109,7 @@ namespace VrBattlegrounds.Managers
                 bool weaponsEnabled = true;
                 if (_gameMode is EliminationMode elim)
                 {
-                    weaponsEnabled = elim.CurrentRoundState == RoundState.Active;
+                    weaponsEnabled = elim.CurrentRoundState == RoundState.Combat;
                 }
 
                 if (UxrWeaponManager.Instance.WeaponSystemEnabled != weaponsEnabled)

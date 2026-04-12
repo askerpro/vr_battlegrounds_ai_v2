@@ -40,6 +40,13 @@ namespace VrBattlegrounds.Player
         [SyncVar] public int Deaths = 0;
         [SyncVar] public int Score = 0;
 
+        // ── Статус готовности (Round State) ───────────────────────────────────
+        
+        [SyncVar] public bool IsInSpawnZone = false;
+        [SyncVar] public bool HasGrabbedDogTag = false;
+
+        public bool IsReadyForRound => IsInSpawnZone && HasGrabbedDogTag;
+
         // Ссылка на текущий физический аватар (куклу).
         // Может на клиенте быть null, если скин ещё не заспавнился.
         public PlayerController ActiveAvatar { get; set; }
@@ -105,6 +112,26 @@ namespace VrBattlegrounds.Player
                 // Если матч не идет, меняем напрямую
                 AvatarManager.Instance.ChangeAvatar(connectionToClient, this, newTeamId, newAvatarId);
             }
+        }
+
+        [Command]
+        public void CmdSetDogTagGrabbed(bool state)
+        {
+            HasGrabbedDogTag = state;
+            GameLog.Verbose(GameSettings.Instance.LogLevelPlayer, $"[PlayerSession] {PlayerName} dog tag grabbed set to {state}");
+        }
+
+        [Server]
+        public void ServerSetInSpawnZone(bool state)
+        {
+            IsInSpawnZone = state;
+        }
+
+        [Server]
+        public void ServerResetRoundReadiness()
+        {
+            HasGrabbedDogTag = false;
+            IsInSpawnZone = false;
         }
     }
 }

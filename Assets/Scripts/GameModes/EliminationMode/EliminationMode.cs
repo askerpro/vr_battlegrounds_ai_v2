@@ -37,7 +37,7 @@ namespace VrBattlegrounds.GameModes
         // Счёт матча теперь синхронизируется через базовый класс GameMode
 
         // Состояние раунда — синхронизируется для UI (таймер, countdown)
-        [SyncVar] private RoundState _roundState = RoundState.Ended;
+        [SyncVar] private RoundState _roundState = RoundState.Setup;
         [SyncVar] private float _roundTimer;
         [SyncVar] private float _countdownTimer;
         [SyncVar] private int _currentRound;
@@ -47,6 +47,7 @@ namespace VrBattlegrounds.GameModes
         // Серверные машины состояний — создаются при StartGameplay, не требуют NetworkBehaviour
         private SetManager _setManager;
         private RoundManager _roundManager;
+        public RoundManager RoundManager => _roundManager;
 
         // ── Глобальные семантические события для UI (Клиент) ───────────────
 

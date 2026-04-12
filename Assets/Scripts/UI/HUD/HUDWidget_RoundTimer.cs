@@ -37,13 +37,16 @@ namespace VrBattlegrounds.UI.HUD
             // Меняем цвет в зависимости от стейта раунда
             switch (mode.CurrentRoundState)
             {
+                case RoundState.Equipment:
                 case RoundState.Countdown:
                     _timerText.color = _countdownColor;
                     break;
-                case RoundState.Active:
+                case RoundState.Combat:
                     _timerText.color = _activeColor;
                     break;
-                case RoundState.Ended:
+                case RoundState.Setup:
+                case RoundState.Resolution:
+                case RoundState.Scoreboard:
                     _timerText.color = _endedColor;
                     break;
             }

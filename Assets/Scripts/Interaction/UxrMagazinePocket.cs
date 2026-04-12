@@ -91,6 +91,21 @@ namespace VrBattlegrounds.Interaction
             }
         }
 
+        public void ForceStoreItem(UxrGrabbableObject item)
+        {
+            StoreItem(item);
+        }
+
+        public void Clear()
+        {
+            foreach (var item in _storedItems)
+            {
+                if (item != null) Destroy(item.gameObject);
+            }
+            _storedItems.Clear();
+            if (_anchor != null) _anchor.UpdateGrabProxyState();
+        }
+
         private void StoreItem(UxrGrabbableObject item)
         {
             _storedItems.Add(item);

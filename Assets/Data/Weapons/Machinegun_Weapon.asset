@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 086e9e8eb4d89c54ab6a6f0b06011b0e, type: 3}
+  m_Name: Machinegun_Weapon
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
+  _displayName: Machinegun
+  _weaponId: Machinegun
+  _description: 
+  _weaponPrefab: {fileID: 7352647028226897614, guid: 4a28fd7096bf0994eac0a22cbb3a922c, type: 3}
+  _magazinePrefab: {fileID: 4349744495954637256, guid: ff6c66ad770fc1f42854b90cb14b7ad0, type: 3}
+  _price: 2700
+  _category: 0
+  _weaponPositionOffset: {x: 0, y: 0, z: 0}
+  _weaponRotationOffset: {x: 0, y: 0, z: 0}
+  _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _icon: {fileID: 0}

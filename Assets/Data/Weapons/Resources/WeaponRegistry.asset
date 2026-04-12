@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c81ce2171ead3a945b61381a929af5fd, type: 3}
+  m_Name: WeaponRegistry
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponRegistry
+  _weapons:
+  - {fileID: 11400000, guid: b2e37e600ab1893469a53e2d5940e98b, type: 2}
+  - {fileID: 11400000, guid: 16e9377ecb9b1bb41929e8aa3a7d3ae9, type: 2}
+  - {fileID: 11400000, guid: bf5b7399e87929c45ae98591db37ec71, type: 2}

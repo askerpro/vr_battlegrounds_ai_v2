@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 086e9e8eb4d89c54ab6a6f0b06011b0e, type: 3}
+  m_Name: Gun_Weapon
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
+  _displayName: Gun
+  _weaponId: Gun
+  _description: 
+  _weaponPrefab: {fileID: 1322554604466671563, guid: a9d715d8903fb4640b9d200d10aa876d, type: 3}
+  _magazinePrefab: {fileID: 7658064994636483981, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+  _price: 1500
+  _category: 1
+  _weaponPositionOffset: {x: 0, y: 0, z: 0}
+  _weaponRotationOffset: {x: 0, y: 0, z: 0}
+  _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _icon: {fileID: 0}

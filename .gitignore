@@ -102,4 +102,4 @@ InitTestScene*.unity*
 # Ignore TextMesh Pro examples as they often auto-modify
 /[Aa]ssets/ThirdParty/TextMesh Pro/Examples & Extras/
 /[Aa]ssets/ThirdParty/TextMesh Pro/Examples & Extras.meta
-Assets/ThirdParty/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset
+/[Aa]ssets/ThirdParty/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset

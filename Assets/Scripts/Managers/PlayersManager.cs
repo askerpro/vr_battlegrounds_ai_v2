@@ -52,7 +52,7 @@ namespace VrBattlegrounds.Managers
             GameLog.Info(GameSettings.Instance.LogLevelNetwork, "[PlayersManager] Awake: Instance установлен.");
         }
 
-        private PlayerSession CreatePlayerSession(NetworkConnectionToClient conn, GameRole role, string deviceToken, ClientDeviceType deviceType, bool isAdmin, SessionSnapshot snapshot = null)
+        private PlayerSession CreatePlayerSession(NetworkConnectionToClient conn, GameRole role, string deviceToken, ClientDeviceType deviceType, bool isAdmin, SessionSnapshot snapshot = null, int initialTeamId = 0, int initialAvatarId = 0)
         {
             if (_playerSessionPrefab == null)
             {
@@ -79,6 +79,8 @@ namespace VrBattlegrounds.Managers
             else
             {
                 session.PlayerName = role + "_" + UnityEngine.Random.Range(1000, 9999);
+                session.TeamIndex = initialTeamId;
+                session.AvatarIndex = initialAvatarId;
             }
 
             NetworkServer.AddPlayerForConnection(conn, sessionGO);
@@ -104,13 +106,7 @@ namespace VrBattlegrounds.Managers
                 msg.avatarId = snapshot.AvatarIndex;
             }
 
-            PlayerSession session = CreatePlayerSession(conn, GameRole.Player, msg.deviceToken, msg.deviceType, false, snapshot);
-
-            if (snapshot == null)
-            {
-                session.TeamIndex = msg.teamId;
-                session.AvatarIndex = msg.avatarId;
-            }
+            PlayerSession session = CreatePlayerSession(conn, GameRole.Player, msg.deviceToken, msg.deviceType, false, snapshot, msg.teamId, msg.avatarId);
 
             // Спавним физический аватар
             if (AvatarManager.Instance != null)

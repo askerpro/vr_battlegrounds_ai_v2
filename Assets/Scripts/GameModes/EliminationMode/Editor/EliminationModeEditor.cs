@@ -50,17 +50,24 @@ namespace VrBattlegrounds.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Phase Timers", EditorStyles.boldLabel);
             
-            string pendingConditions = mode.RoundManager.GetPendingReadinessStatus();
-            EditorGUILayout.HelpBox(pendingConditions, MessageType.Info);
-            
-            if (mode.CurrentRoundState == RoundState.Setup || mode.CurrentRoundState == RoundState.Equipment || 
-                mode.CurrentRoundState == RoundState.Countdown || mode.CurrentRoundState == RoundState.Scoreboard || mode.CurrentRoundState == RoundState.Resolution)
+            if (mode.RoundManager != null)
             {
-                EditorGUILayout.LabelField($"Time Left: {mode.RoundManager.CountdownTimeRemaining:F1}s", EditorStyles.label);
+                string pendingConditions = mode.RoundManager.GetPendingReadinessStatus();
+                EditorGUILayout.HelpBox(pendingConditions, MessageType.Info);
+                
+                if (mode.CurrentRoundState == RoundState.Setup || mode.CurrentRoundState == RoundState.Equipment || 
+                    mode.CurrentRoundState == RoundState.Countdown || mode.CurrentRoundState == RoundState.Scoreboard || mode.CurrentRoundState == RoundState.Resolution)
+                {
+                    EditorGUILayout.LabelField($"Time Left: {mode.RoundManager.CountdownTimeRemaining:F1}s", EditorStyles.label);
+                }
+                else if (mode.CurrentRoundState == RoundState.Combat)
+                {
+                    EditorGUILayout.LabelField($"Combat Time Remaining: {mode.RoundManager.RoundTimeRemaining:F1}s", EditorStyles.label);
+                }
             }
-            else if (mode.CurrentRoundState == RoundState.Combat)
+            else
             {
-                EditorGUILayout.LabelField($"Combat Time Remaining: {mode.RoundManager.RoundTimeRemaining:F1}s", EditorStyles.label);
+                EditorGUILayout.HelpBox("RoundManager is missing or not initialized yet.", MessageType.Warning);
             }
             EditorGUILayout.EndVertical();
 

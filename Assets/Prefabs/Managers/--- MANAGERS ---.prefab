@@ -219,7 +219,6 @@ MonoBehaviour:
   - {fileID: 4613916165338528910, guid: 4eff023a7e941cd4cb62dd10b4b5469e, type: 3}
   - {fileID: 6800616272644675311, guid: af480974a3e0c9a438abc245d0558ac5, type: 3}
   - {fileID: 7322410552265810670, guid: 1f7c1a457f11c3a4a9d7e3d08a60d561, type: 3}
-  - {fileID: 2742905235829345489, guid: fefcf679beb2d0f42b6cce742988357e, type: 3}
   - {fileID: 5773889775595434469, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
   - {fileID: 4377996439677510663, guid: b31dfde9386913b4e9cab4ac415b9f43, type: 3}
   - {fileID: 4364455917087469262, guid: bd98bf240c755954a85c5957e7e6e2cc, type: 3}
@@ -229,6 +228,7 @@ MonoBehaviour:
   - {fileID: 338657906523908372, guid: f1b60699e720e0a4783daac156f0262b, type: 3}
   - {fileID: 7659987172694362790, guid: c1053b4395a92db499991404aa9ad731, type: 3}
   - {fileID: 6256560083164897890, guid: 68eee568a642d694287a8062e674278e, type: 3}
+  - {fileID: 3863316331985776183, guid: fefcf679beb2d0f42b6cce742988357e, type: 3}
   exceptionsDisconnect: 1
   snapshotSettings:
     bufferTimeMultiplier: 2
@@ -454,7 +454,6 @@ MonoBehaviour:
   _heightOffset: 0
   _accumulatedHeightOffset: 0
   _accumulatedScaleMultiplier: 1
-  baseModelEyeHeight: 1.75
   _preserveAvatarPositionAcrossScenes: 1
 --- !u!114 &9171964167861690565
 MonoBehaviour:

@@ -185,15 +185,34 @@ namespace VrBattlegrounds.GameModes
         {
             if (_eliminationMode != null)
             {
+                int totalAlive = 0;
+                int falseReasonCount = 0;
                 foreach (var state in _eliminationMode.TeamStates.Values)
                 {
                     // Ожидаем готовности только от тех, кто жив (участвует в текущем раунде)
                     var alivePlayers = PlayersManager.Instance.GetAlivePlayers(state.Team);
-                    if (!alivePlayers.All(s => s.IsReadyForRound))
-                        return false;
+                    totalAlive += alivePlayers.Count();
+                    foreach (var s in alivePlayers) 
+                    {
+                        if (!s.IsReadyForRound) falseReasonCount++;
+                    }
+                }
+                
+                // Если ещё никто не успел заспавниться, мы не готовы переходить к отсчёту.
+                if (totalAlive == 0)
+                {
+                    GameLog.Verbose(GameSettings.Instance.LogLevelMatch, "[RoundManager DEBUG] AreAllPlayersReady: totalAlive == 0, waiting for players to spawn.");
+                    return false;
+                }
+                
+                if (falseReasonCount > 0)
+                {
+                    GameLog.Verbose(GameSettings.Instance.LogLevelMatch, $"[RoundManager DEBUG] AreAllPlayersReady: {falseReasonCount} players are NOT ready.");
+                    return false;
                 }
             }
 
+            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager DEBUG] AreAllPlayersReady: True!");
             return true;
         }
 

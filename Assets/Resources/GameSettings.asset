@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _logLevelNetwork: 4
   _logLevelPlayer: 4
-  _logLevelMatch: 0
+  _logLevelMatch: 4
   _logLevelDebug: 4
   _logLevelUI: 4
   _logLevelPhysicalSpace: 4
+  _logLevelArsenal: 4

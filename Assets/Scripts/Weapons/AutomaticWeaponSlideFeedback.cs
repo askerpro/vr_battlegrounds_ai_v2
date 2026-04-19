@@ -34,6 +34,12 @@ namespace VrBattlegrounds.Weapons
 
         [SerializeField] [Range(0f, 1f)] private float _slideThreshold = 0.7f;
 
+        [Tooltip("Автовозврат затвора в позицию покоя, когда его отпустили.")]
+        [SerializeField] private bool _autoReturnOnRelease = true;
+
+        [Tooltip("Скорость автовозврата затвора (м/с вдоль оси хода).")]
+        [SerializeField] [Min(0f)] private float _autoReturnSpeed = 1.5f;
+
         [Tooltip("Вколоть патрон (Reload): на возврате затвора в переднее положение. Работает вместе с UxrShotCycle.ManualReload.")]
         [SerializeField] private bool _chamberRoundOnSlideReturn = true;
 
@@ -96,12 +102,19 @@ namespace VrBattlegrounds.Weapons
 
             dir.Normalize();
 
+            bool isGrabbed = UxrGrabManager.Instance != null && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
+
+            if (_autoReturnOnRelease && !isGrabbed)
+            {
+                ApplyAutoReturn(dir);
+            }
+
             Vector3 delta   = _slide.transform.localPosition - _localStart;
             float   absDist = Mathf.Abs(Vector3.Dot(delta, dir));
             float   current = absDist / denom;
 
             // Лог во время взаимодействия (когда игрок держит затвор)
-            if (_logBoltCycle && UxrGrabManager.Instance.IsBeingGrabbed(_slide))
+            if (_logBoltCycle && isGrabbed)
             {
                 if (Time.time >= _nextLogTime)
                 {
@@ -145,7 +158,7 @@ namespace VrBattlegrounds.Weapons
         {
             Vector3 pos = _slide.transform.position;
 
-            if (loaded)
+            if (loaded && HasClip(_audioSlideForwardWhenLoaded))
             {
                 _audioSlideForwardWhenLoaded.Play(pos);
             }
@@ -161,7 +174,7 @@ namespace VrBattlegrounds.Weapons
         {
             Vector3 pos = _slide.transform.position;
 
-            if (loaded)
+            if (loaded && HasClip(_audioSlideBackWhenLoaded))
             {
                 _audioSlideBackWhenLoaded.Play(pos);
             }
@@ -182,6 +195,31 @@ namespace VrBattlegrounds.Weapons
             }
 
             UxrAvatar.LocalAvatarInput.SendHapticFeedback(grabber.Side, clip);
+        }
+
+        private void ApplyAutoReturn(Vector3 direction)
+        {
+            if (_autoReturnSpeed <= 0f)
+            {
+                return;
+            }
+
+            Vector3 localPosition = _slide.transform.localPosition;
+            float   axisDelta     = Vector3.Dot(_localStart - localPosition, direction);
+            float   step          = _autoReturnSpeed * Time.deltaTime;
+
+            if (Mathf.Abs(axisDelta) <= step)
+            {
+                _slide.transform.localPosition = localPosition + direction * axisDelta;
+                return;
+            }
+
+            _slide.transform.localPosition = localPosition + direction * Mathf.Sign(axisDelta) * step;
+        }
+
+        private static bool HasClip(UxrAudioSample sample)
+        {
+            return sample != null && sample.Clip != null;
         }
 
         private void LogBoltCycle(string message)

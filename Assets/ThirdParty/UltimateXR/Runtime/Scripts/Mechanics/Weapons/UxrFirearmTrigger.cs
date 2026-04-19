@@ -25,6 +25,7 @@ namespace UltimateXR.Mechanics.Weapons
 
         [SerializeField] private int                      _projectileShotIndex;
         [SerializeField] private UxrShotCycle             _cycleType;
+        [SerializeField] private bool                     _useHasReloadedForSemiAndFullAuto;
         [SerializeField] private int                      _maxShotFrequency;
         [SerializeField] private UxrAudioSample           _shotAudio;
         [SerializeField] private UxrAudioSample           _shotAudioNoAmmo;
@@ -55,6 +56,14 @@ namespace UltimateXR.Mechanics.Weapons
         ///     Gets the shot cycle type.
         /// </summary>
         public UxrShotCycle CycleType => _cycleType;
+
+        /// <summary>
+        ///     If true, <see cref="UxrShotCycle.SemiAutomatic" /> and <see cref="UxrShotCycle.FullyAutomatic" /> also require a
+        ///     chambered round (<see cref="UxrFirearmWeapon.IsLoaded" />) before shooting. The chambered flag is cleared when the
+        ///     magazine is removed or attached (rack again via <see cref="UxrFirearmWeapon.Reload" />), not after each shot.
+        ///     Ignored for <see cref="UxrShotCycle.ManualReload" />.
+        /// </summary>
+        public bool UseHasReloadedForSemiAndFullAuto => _useHasReloadedForSemiAndFullAuto;
 
         /// <summary>
         ///     Gets the maximum shooting frequency.

@@ -239,3 +239,56 @@ if (_avatarInitialized && Avatar == avatar)
    pos.y += GlobalHeightOffset;
    return Avatar.transform.TransformPoint(pos);
 ```
+
+---
+
+## Патч 5: Chambered-state для Semi/Full Auto (опционально)
+
+**Файлы:**
+- `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmTrigger.cs`
+- `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs`
+
+**Дата:** 2026-04-19
+
+### Проблема
+
+В базовом SDK логика `HasReloaded` (патрон в патроннике) полноценно используется для `ManualReload`,
+а для `SemiAutomatic`/`FullyAutomatic` поведение не позволяло опционально требовать досылание после
+смены магазина.
+
+### Применённые изменения
+
+1. **UxrFirearmTrigger**
+    - Добавлено сериализуемое поле `_useHasReloadedForSemiAndFullAuto`.
+    - Добавлено публичное свойство `UseHasReloadedForSemiAndFullAuto`.
+
+2. **UxrFirearmWeapon**
+    - `Reload(int triggerIndex)` вынесен на общий путь через `SetTriggerHasReloadedSynced(int, bool)`.
+    - В ветках `SemiAutomatic` и `FullyAutomatic` добавлен опциональный учет `runtimeTrigger.HasReloaded`
+       при включенном `UseHasReloadedForSemiAndFullAuto`.
+    - В `MagTarget_Removed` и `MagTarget_Placed` при включенном флаге патронник сбрасывается:
+       `SetTriggerHasReloadedSynced(i, false)`.
+    - Звук "пустого" триггера (`ShotAudioNoAmmo`) теперь также проигрывается при состоянии "магазин есть,
+       но патрон не дослан" (для этого режима).
+
+### Практический результат
+
+- Для оружия с `SemiAutomatic`/`FullyAutomatic` можно включить реалистичную механику:
+   после установки/смены магазина требуется ручной cycle затвора (внешним скриптом, например через
+   вызов `Reload(triggerIndex)` на возврате затвора).
+
+### Как повторить при обновлении SDK
+
+1. В `UxrFirearmTrigger` добавить:
+```csharp
+[SerializeField] private bool _useHasReloadedForSemiAndFullAuto;
+public bool UseHasReloadedForSemiAndFullAuto => _useHasReloadedForSemiAndFullAuto;
+```
+
+2. В `UxrFirearmWeapon`:
+    - Добавить `SetTriggerHasReloadedSynced(int triggerIndex, bool hasReloaded)` и использовать его из `Reload()`.
+    - В `UxrManager_AvatarsUpdated()` для `SemiAutomatic`/`FullyAutomatic` использовать `HasReloaded` условно,
+       по `trigger.UseHasReloadedForSemiAndFullAuto`.
+    - В `MagTarget_Removed()` и `MagTarget_Placed()` сбрасывать `HasReloaded` для соответствующего trigger
+       при включенном флаге.
+    - Обновить условие проигрывания `ShotAudioNoAmmo`, чтобы учитывать состояние "не дослан патрон".

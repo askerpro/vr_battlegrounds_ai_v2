@@ -161,6 +161,7 @@ GameplayManager       — матч (5 карт, счёт, победитель)
 | `LogLevelPlayer` | Игрок | `PlayerController` |
 | `LogLevelMatch` | Матч | `MatchManager`, `SetManager`, `RoundManager` |
 | `LogLevelUI` | Интерфейс | `MenuController`, `LocalMenuManager`, Кнопки, HUD |
+| `LogLevelWeaponSystem` | Weapon System | Механики оружия (`UxrFirearmWeapon`, `AutomaticWeaponSlideFeedback`) |
 | `LogLevelDebug` | Отладка | `DebugOrchestrator` (по умолчанию `Verbose`) |
 
 ---

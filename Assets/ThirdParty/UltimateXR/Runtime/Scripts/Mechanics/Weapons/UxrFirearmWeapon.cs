@@ -65,13 +65,21 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="triggerIndex">Index in <see cref="_triggers" /></param>
         public void Reload(int triggerIndex)
         {
+            SetTriggerHasReloadedSynced(triggerIndex, true);
+        }
+
+        /// <summary>
+        ///     Sets <see cref="RuntimeTriggerInfo.HasReloaded" /> and synchronizes state (same path as <see cref="Reload" />).
+        /// </summary>
+        private void SetTriggerHasReloadedSynced(int triggerIndex, bool hasReloaded)
+        {
             if (!_runtimeTriggers.TryGetValue(triggerIndex, out RuntimeTriggerInfo runtimeTrigger))
             {
                 return;
             }
 
             BeginSync();
-            runtimeTrigger.HasReloaded = true;
+            runtimeTrigger.HasReloaded = hasReloaded;
             EndSyncMethod(new object[] { triggerIndex });
         }
 
@@ -455,17 +463,43 @@ namespace UltimateXR.Mechanics.Weapons
                         }
 
                         case UxrShotCycle.SemiAutomatic:
+                        {
+                            if (trigger.UseHasReloadedForSemiAndFullAuto)
+                            {
+                                shoot = runtimeTrigger.TriggerPressStarted && runtimeTrigger.HasReloaded;
+                            }
+                            else
+                            {
+                                shoot = runtimeTrigger.TriggerPressStarted;
+                            }
 
-                            shoot = runtimeTrigger.TriggerPressStarted;
                             break;
+                        }
 
                         case UxrShotCycle.FullyAutomatic:
+                        {
+                            if (trigger.UseHasReloadedForSemiAndFullAuto)
+                            {
+                                shoot = runtimeTrigger.TriggerPressed && runtimeTrigger.HasReloaded;
+                            }
+                            else
+                            {
+                                shoot = runtimeTrigger.TriggerPressed;
+                            }
 
-                            shoot = runtimeTrigger.TriggerPressed;
                             break;
+                        }
                     }
 
-                    if (runtimeTrigger.TriggerPressStarted && GetAmmoLeft(i) == 0)
+                    bool shouldPlayNoAmmoSound = GetAmmoLeft(i) == 0;
+
+                    if (!shouldPlayNoAmmoSound && trigger.UseHasReloadedForSemiAndFullAuto && trigger.CycleType != UxrShotCycle.ManualReload)
+                    {
+                        // Same user-facing feedback as "empty": mag can be present, but chamber is not ready yet.
+                        shouldPlayNoAmmoSound = !runtimeTrigger.HasReloaded;
+                    }
+
+                    if (runtimeTrigger.TriggerPressStarted && shouldPlayNoAmmoSound)
                     {
                         trigger.ShotAudioNoAmmo?.Play(trigger.TriggerTransform != null ? trigger.TriggerTransform.position : trigger.TriggerGrabbable.GetGrabPointGrabProximityTransform(grabber, trigger.GrabbableGrabPointIndex).position);
                     }
@@ -524,16 +558,25 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="e">Event parameters</param>
         private void MagTarget_Removed(object sender, UxrManipulationEventArgs e)
         {
-            foreach (UxrFirearmTrigger trigger in _triggers)
+            for (int i = 0; i < _triggers.Count; i++)
             {
-                if (e.GrabbableAnchor == trigger.AmmunitionMagAnchor)
-                {
-                    Collider magCollider = e.GrabbableObject.GetComponentInChildren<Collider>();
+                UxrFirearmTrigger trigger = _triggers[i];
 
-                    if (magCollider != null)
-                    {
-                        magCollider.enabled = true;
-                    }
+                if (e.GrabbableAnchor != trigger.AmmunitionMagAnchor)
+                {
+                    continue;
+                }
+
+                Collider magCollider = e.GrabbableObject.GetComponentInChildren<Collider>();
+
+                if (magCollider != null)
+                {
+                    magCollider.enabled = true;
+                }
+
+                if (trigger.UseHasReloadedForSemiAndFullAuto)
+                {
+                    SetTriggerHasReloadedSynced(i, false);
                 }
             }
         }
@@ -545,16 +588,25 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="e">Event parameters</param>
         private void MagTarget_Placed(object sender, UxrManipulationEventArgs e)
         {
-            foreach (UxrFirearmTrigger trigger in _triggers)
+            for (int i = 0; i < _triggers.Count; i++)
             {
-                if (e.GrabbableAnchor == trigger.AmmunitionMagAnchor)
-                {
-                    Collider magCollider = e.GrabbableObject.GetComponentInChildren<Collider>();
+                UxrFirearmTrigger trigger = _triggers[i];
 
-                    if (magCollider != null)
-                    {
-                        magCollider.enabled = false;
-                    }
+                if (e.GrabbableAnchor != trigger.AmmunitionMagAnchor)
+                {
+                    continue;
+                }
+
+                Collider magCollider = e.GrabbableObject.GetComponentInChildren<Collider>();
+
+                if (magCollider != null)
+                {
+                    magCollider.enabled = false;
+                }
+
+                if (trigger.UseHasReloadedForSemiAndFullAuto)
+                {
+                    SetTriggerHasReloadedSynced(i, false);
                 }
             }
         }

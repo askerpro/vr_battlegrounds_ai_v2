@@ -349,7 +349,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
-  _weaponInfo: {fileID: 11400000, guid: 16e9377ecb9b1bb41929e8aa3a7d3ae9, type: 2}
+  _weaponInfo: {fileID: 11400000, guid: 4f810565631ae0c40bce683a1d290f39, type: 2}
   _itemAnchor: {fileID: 6398143880287876599}
   _slotLight: {fileID: 7916389798647193099}
   _availableColor: {r: 1, g: 0.85, b: 0.6, a: 1}

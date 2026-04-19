@@ -103,7 +103,7 @@ namespace VrBattlegrounds.Editor.Arsenal
             {
                 if (go == null) continue;
                 if (go.name == previewName && (go.hideFlags & HideFlags.DontSave) != 0)
-                    DestroyImmediate(go);
+                    DestroyPreviewObjectSafe(go);
             }
         }
 
@@ -138,7 +138,7 @@ namespace VrBattlegrounds.Editor.Arsenal
             }
             foreach (var go in toDestroy)
             {
-                DestroyImmediate(go);
+                DestroyPreviewObjectSafe(go);
             }
         }
 
@@ -459,7 +459,7 @@ namespace VrBattlegrounds.Editor.Arsenal
 
             if (_previewItem != null)
             {
-                DestroyImmediate(_previewItem);
+                DestroyPreviewObjectSafe(_previewItem);
                 _previewItem = null;
             }
 
@@ -480,6 +480,40 @@ namespace VrBattlegrounds.Editor.Arsenal
                 child.gameObject.hideFlags = flags;
                 SetHideFlagsRecursive(child, flags);
             }
+        }
+
+        private static void DestroyPreviewObjectSafe(GameObject previewObject)
+        {
+            if (previewObject == null)
+            {
+                return;
+            }
+
+            // Avoid stale inspector targets when a hidden preview object gets destroyed.
+            bool isSelectionAffected = Selection.activeObject == previewObject ||
+                                       IsSelectionChildOf(previewObject.transform);
+
+            if (isSelectionAffected)
+            {
+                Selection.activeObject = null;
+            }
+
+            DestroyImmediate(previewObject);
+        }
+
+        private static bool IsSelectionChildOf(Transform root)
+        {
+            if (root == null)
+            {
+                return false;
+            }
+
+            if (Selection.activeGameObject == null)
+            {
+                return false;
+            }
+
+            return Selection.activeGameObject.transform.IsChildOf(root);
         }
 
         private static void DisableRuntimeComponents(GameObject go)

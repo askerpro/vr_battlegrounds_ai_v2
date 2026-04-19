@@ -70,6 +70,11 @@ namespace VrBattlegrounds.Editor.Arsenal
         {
             if (_previewMagazine != null)
             {
+                if (Selection.activeObject == _previewMagazine)
+                {
+                    Selection.activeObject = null;
+                }
+
                 DestroyImmediate(_previewMagazine);
                 _previewMagazine = null;
             }

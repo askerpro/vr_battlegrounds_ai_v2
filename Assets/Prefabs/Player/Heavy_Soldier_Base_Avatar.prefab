@@ -2987,7 +2987,7 @@ MonoBehaviour:
   LocalWorldUp: 1
   DisableCustomModules: 0
   CustomModules:
-  - Enabled: 1
+  - Enabled: 0
     Parent: {fileID: 7110888537194328433}
     ModuleReference: {fileID: 11400000, guid: 7d9bd86d54a7a594cb1793f9533e2e00, type: 2}
     customStringList: []
@@ -3014,7 +3014,7 @@ MonoBehaviour:
     variables:
     - VariableName: IK Step Forward Offset
       Tooltip: 
-      _value: {x: 0.5, y: 0, z: 0, w: 0}
+      _value: {x: 0.17, y: 0, z: 0, w: 0}
       _string: 
       _curve:
         serializedVersion: 2
@@ -3148,7 +3148,7 @@ MonoBehaviour:
   PushHipsOnLegMove: 0
   NormalizePush: 0
   PushReactionSpeed: 0.3
-  PushYBlend: 1
+  PushYBlend: 0
   HipsStretchPreventer: 0
   StretchPreventerSpeed: 0.8
   StabilizeOnIsMoving: 0.5
@@ -3418,12 +3418,12 @@ MonoBehaviour:
       m_RotationOrder: 4
     DoStepAnimationOnDistanceFactor: 0.055
   UseGluing: 1
-  MainGlueBlend: 1
+  MainGlueBlend: 0.9035195
   GlueRangeThreshold: 0.5
   GlueFadeInSpeed: 0.85
   AllowGlueBelowFoot: 0.2
-  GlueFadeOutSpeed: 0.5
-  UnglueOn: 30
+  GlueFadeOutSpeed: 1.35
+  UnglueOn: 24
   AllowGlueDrag: 0.6
   GlueMode: 2
   OnlyLocalAnimation: 0
@@ -3431,15 +3431,15 @@ MonoBehaviour:
   LegElevateBlend: 0.6
   LegElevateHeightLimit: 0.6
   FootRotationBlend: 1
-  FootAlignRapidity: 0.75
-  AnimateFeet: 1
+  FootAlignRapidity: 0.85
+  AnimateFeet: 0
   LimitFeetYaw: 30
   AnimationFloorLevel: 0.001
   _Editor_Foldout_Setup_LegsList: 1
   _Editor_EnsureCount: 0
   _Editor_OnValidateTrigger: 1
   _EditorAllowAutoUpdateFeetParams: 1
-  _EditorCategory: 0
+  _EditorCategory: 1
   _EditorSetupCategory: 2
   _EditorMotionCategory: 1
   _EditorExtraCategory: 2
@@ -3483,9 +3483,9 @@ MonoBehaviour:
   ZeroStepsOnNoRaycast: 0
   NoRaycast_KeepAttachedUntilStretch: 1.1
   BodyStepDown: 0.5
-  MaxBodyStepUp: 0
+  MaxBodyStepUp: 0.32
   UngroundFadeSpeed: 0.1
-  IsMovingFadeSpeed: 0.4
+  IsMovingFadeSpeed: 1
   LegsAnimatorBlend: 1
   _Editor_DefaultModuleOnStart: {fileID: 11400000, guid: 7d9bd86d54a7a594cb1793f9533e2e00, type: 2}
   _Editor_LegHelperModule: {fileID: 11400000, guid: 0645fbea8059aec47aa6ae9d2c93c1d4, type: 2}
@@ -3503,6 +3503,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VRBattlegrounds.Integration.LegsAnimatorUxrBridge
   useDynamicFloorOffset: 1
   footHeightOffset: 0.15
+  movementThreshold: 0.025
+  movementSmoothing: 1
 --- !u!137 &399149647547126127 stripped
 SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 1024359521536782834, guid: 0849dce527793b843a199594717dae67, type: 3}
@@ -4451,16 +4453,8 @@ PrefabInstance:
       value: Anchor_Hip_R
       objectReference: {fileID: 0}
     - target: {fileID: 6253055138344724079, guid: e85179cfc4f8951489db4431c9a2787a, type: 3}
-      propertyPath: __isInPrefab
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6253055138344724079, guid: e85179cfc4f8951489db4431c9a2787a, type: 3}
       propertyPath: __prefabGuid
       value: fefcf679beb2d0f42b6cce742988357e
-      objectReference: {fileID: 0}
-    - target: {fileID: 6253055138344724079, guid: e85179cfc4f8951489db4431c9a2787a, type: 3}
-      propertyPath: _uxrUniqueId
-      value: ef693fe3-db40-46cc-ab4f-2db4c3e434ce
       objectReference: {fileID: 0}
     - target: {fileID: 8307818155674225495, guid: e85179cfc4f8951489db4431c9a2787a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -9862,16 +9856,8 @@ PrefabInstance:
       value: Anchor_Back
       objectReference: {fileID: 0}
     - target: {fileID: 4039922446074013793, guid: fcab0bc004ae6ed4aae0bb3c3254641b, type: 3}
-      propertyPath: __isInPrefab
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4039922446074013793, guid: fcab0bc004ae6ed4aae0bb3c3254641b, type: 3}
       propertyPath: __prefabGuid
       value: fefcf679beb2d0f42b6cce742988357e
-      objectReference: {fileID: 0}
-    - target: {fileID: 4039922446074013793, guid: fcab0bc004ae6ed4aae0bb3c3254641b, type: 3}
-      propertyPath: _uxrUniqueId
-      value: f8d6d8d8-6ed5-401e-b9ea-28105aed030d
       objectReference: {fileID: 0}
     - target: {fileID: 4039922446074013793, guid: fcab0bc004ae6ed4aae0bb3c3254641b, type: 3}
       propertyPath: _dropProximityTransformUseSelf
@@ -9981,7 +9967,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7766718133056454390, guid: 7951754884d879c49b618c63887f5ec9, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7766718133056454390, guid: 7951754884d879c49b618c63887f5ec9, type: 3}
       propertyPath: __prefabGuid
@@ -9989,23 +9975,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7766718133056454390, guid: 7951754884d879c49b618c63887f5ec9, type: 3}
       propertyPath: _uxrUniqueId
-      value: 70c61ab3-dd99-4902-b4d6-e3a12889f96b
+      value: cefa3fff-87ac-4322-b02d-7cb9e055c59c
       objectReference: {fileID: 0}
     - target: {fileID: 7766718133056454390, guid: 7951754884d879c49b618c63887f5ec9, type: 3}
       propertyPath: _useParenting
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9001001627641878202, guid: 7951754884d879c49b618c63887f5ec9, type: 3}
-      propertyPath: __isInPrefab
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 9001001627641878202, guid: 7951754884d879c49b618c63887f5ec9, type: 3}
       propertyPath: __prefabGuid
       value: fefcf679beb2d0f42b6cce742988357e
-      objectReference: {fileID: 0}
-    - target: {fileID: 9001001627641878202, guid: 7951754884d879c49b618c63887f5ec9, type: 3}
-      propertyPath: _uxrUniqueId
-      value: 6c7685a5-5975-41aa-9afc-f7f8abbad316
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

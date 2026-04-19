@@ -3,8 +3,10 @@
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
 // --------------------------------------------------------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UltimateXR.Avatar;
 using UltimateXR.Core;
 using UltimateXR.Extensions.Unity;
@@ -364,7 +366,7 @@ namespace UltimateXR.Editor.Manipulation
                         if (EditorGUI.EndChangeCheck())
                         {
                             Transform snapTransformNew = gripPoseInfoProperty.FindPropertyRelative(PropertyGripAlignTransformHandLeft).objectReferenceValue as Transform;
-                            Object[]  targetObjects    = property.serializedObject.targetObjects;
+                            UnityEngine.Object[] targetObjects = property.serializedObject.targetObjects;
 
                             if (targetObjects.Length == 1 && snapTransformNew != null && !snapTransformNew.HasParent((targetObjects[0] as UxrGrabbableObject).transform))
                             {
@@ -386,7 +388,7 @@ namespace UltimateXR.Editor.Manipulation
                         if (EditorGUI.EndChangeCheck())
                         {
                             Transform snapTransformNew = gripPoseInfoProperty.FindPropertyRelative(PropertyGripAlignTransformHandRight).objectReferenceValue as Transform;
-                            Object[]  targetObjects    = property.serializedObject.targetObjects;
+                            UnityEngine.Object[] targetObjects = property.serializedObject.targetObjects;
 
                             if (targetObjects.Length == 1 && snapTransformNew && !snapTransformNew.HasParent((targetObjects[0] as UxrGrabbableObject).transform))
                             {
@@ -557,19 +559,48 @@ namespace UltimateXR.Editor.Manipulation
                     Undo.RegisterCreatedObjectUndo(snapParent.gameObject, "New snap parent");
                 }
 
-                // Try to expand parent
+                // Try to expand parent (Unity 6.4+ uses EntityId; older editors use int instance ID).
 
                 var hierarchyWindowType = typeof(EditorWindow).Assembly.GetType("UnityEditor.SceneHierarchyWindow");
 
                 if (hierarchyWindowType != null)
                 {
                     EditorApplication.ExecuteMenuItem("Window/General/Hierarchy");
-                    var methodInfo      = hierarchyWindowType.GetMethod("SetExpandedRecursive");
                     var hierarchyWindow = EditorWindow.focusedWindow;
 
-                    if (methodInfo != null && hierarchyWindow != null)
+                    if (hierarchyWindow != null)
                     {
-                        methodInfo.Invoke(hierarchyWindow, new object[] { snapParent.gameObject.GetInstanceID(), true });
+                        const BindingFlags methodFlags = BindingFlags.Public | BindingFlags.Instance;
+
+                        var methodInt = hierarchyWindowType.GetMethod("SetExpandedRecursive",
+                                                                      methodFlags,
+                                                                      null,
+                                                                      new[] { typeof(int), typeof(bool) },
+                                                                      null);
+
+                        if (methodInt != null)
+                        {
+                            methodInt.Invoke(hierarchyWindow, new object[] { snapParent.gameObject.GetInstanceID(), true });
+                        }
+                        else
+                        {
+                            var getEntityId = typeof(UnityEngine.Object).GetMethod("GetEntityId", methodFlags, null, Type.EmptyTypes, null);
+
+                            if (getEntityId != null)
+                            {
+                                var methodEntity = hierarchyWindowType.GetMethod("SetExpandedRecursive",
+                                                                                 methodFlags,
+                                                                                 null,
+                                                                                 new[] { getEntityId.ReturnType, typeof(bool) },
+                                                                                 null);
+
+                                if (methodEntity != null)
+                                {
+                                    var entityId = getEntityId.Invoke(snapParent.gameObject, null);
+                                    methodEntity.Invoke(hierarchyWindow, new[] { entityId, true });
+                                }
+                            }
+                        }
                     }
                 }
 

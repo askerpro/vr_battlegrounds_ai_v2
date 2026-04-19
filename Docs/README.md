@@ -14,6 +14,7 @@
 | `game-manager.md` | GameManager, система режимов: создание assets, настройка, поток действий |
 | `ui-menu-architecture.md` | Архитектура UI Меню (MVC), экраны, префабы, контроллеры |
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
+| `version-control.md` | Git/Plastic workflow: автодублирование коммитов, хук, диагностика |
 | `AI_Navigation.md` | 🤖 Технические инструкции для ИИ-агентов (правила оптимизированного поиска M.A.P.) |
 
 ---
@@ -25,6 +26,7 @@
 - **GameManager, режимы, assets, настройка** → [`game-manager.md`](game-manager.md)
 - **Архитектура UI Меню (MVC)** → [`ui-menu-architecture.md`](ui-menu-architecture.md)
 - **История изменений (Changelog)** → [`CHANGELOG.md`](CHANGELOG.md)
+- **Git/Plastic workflow и post-commit hook** → [`version-control.md`](version-control.md)
 - **UltimateXR SDK** → `Docs/UltimateXR/README.md` (открыть через `#file:`)
 - **Архитектура UltimateXR** → `Docs/UltimateXR/architecture.md`
 

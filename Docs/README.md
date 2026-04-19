@@ -15,6 +15,7 @@
 | `ui-menu-architecture.md` | Архитектура UI Меню (MVC), экраны, префабы, контроллеры |
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
 | `version-control.md` | Git/Plastic workflow: автодублирование коммитов, хук, диагностика |
+| `unity-mcp.md` | Локальный фикс Unity MCP `execute_code` на Windows (MAX_PATH) |
 | `AI_Navigation.md` | 🤖 Технические инструкции для ИИ-агентов (правила оптимизированного поиска M.A.P.) |
 
 ---
@@ -27,6 +28,7 @@
 - **Архитектура UI Меню (MVC)** → [`ui-menu-architecture.md`](ui-menu-architecture.md)
 - **История изменений (Changelog)** → [`CHANGELOG.md`](CHANGELOG.md)
 - **Git/Plastic workflow и post-commit hook** → [`version-control.md`](version-control.md)
+- **Unity MCP: фикс execute_code (Windows)** → [`unity-mcp.md`](unity-mcp.md)
 - **UltimateXR SDK** → `Docs/UltimateXR/README.md` (открыть через `#file:`)
 - **Архитектура UltimateXR** → `Docs/UltimateXR/architecture.md`
 

@@ -15,8 +15,9 @@ MonoBehaviour:
   _displayName: Gun
   _weaponId: Gun
   _description: 
-  _weaponPrefab: {fileID: 1322554604466671563, guid: a9d715d8903fb4640b9d200d10aa876d, type: 3}
+  _weaponPrefab: {fileID: 1013363612589426, guid: a89abddac5809dc47a6715d7ebeab24e, type: 3}
   _magazinePrefab: {fileID: 7658064994636483981, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+  _maxMagazineCount: 4
   _price: 1500
   _category: 1
   _weaponPositionOffset: {x: 0, y: 0, z: 0}

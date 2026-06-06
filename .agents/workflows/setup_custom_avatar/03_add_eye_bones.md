@@ -7,7 +7,16 @@ description: Blender script to add LeftEye and RightEye bones to the avatar's ar
 Этот скрипт добавляет "виртуальные" кости глаз (`LeftEye` и `RightEye`) внутрь кости головы в Blender.
 Благодаря этому, Unity при импорте FBX автоматически распознает их и замапит в Humanoid-риг, а UltimateXR (UxrAvatar) автоматически использует их для вычисления `Eyes Base Height` и `Eyes Forward Offset`, что убережет камеру от клиппинга кусков шлема или лица.
 
-## Инструкция для ИИ
+## Актуальный запуск через Unity Tools
+Выдели FBX asset в Unity Project window и запусти:
+`Tools/VR Battlegrounds/Avatars/Custom Avatar Pipeline/3. Add Eye Bones And Map Humanoid`
+
+Команда запускает Blender-скрипт:
+`Assets/Editor/VR_Battlegrounds/Avatars/BlenderScripts/add_eye_bones.py`
+
+После экспорта Unity автоматически вызывает `ApplyEyeMapping.MapEyes(assetPath)`, чтобы прописать `LeftEye` и `RightEye` в Humanoid mapping выбранного FBX.
+
+## Legacy: Инструкция для ИИ
 Если ты выполняешь этот шаг отдельно от других, загрузи FBX, выполни код ниже через `mcp_blender_execute_blender_code`, а потом экспортируй обратно. 
 Если ты объединяешь шаги, просто добавь логику из этого Python-блока к своему скрипту перед финальным экспортом.
 

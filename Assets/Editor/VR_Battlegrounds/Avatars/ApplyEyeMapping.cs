@@ -3,14 +3,21 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace VrBattlegrounds.Editor.UXR
+namespace VRBattlegrounds.Editor
 {
     public class ApplyEyeMapping : UnityEditor.Editor
     {
         [MenuItem("Tools/VR Battlegrounds/Avatars/Map Eyes To FBX")]
         public static void MapEyes()
         {
-            string fbxPath = "Assets/ThirdParty/Military Soldier Mega Bundle/Heavy Soldier/Mesh/Heavy_Soldier_Rig_Mask_Winter.fbx";
+            if (!CustomAvatarPipelineMenu.TryGetSelectedFbxAssetPath(out string fbxPath, true))
+                return;
+
+            MapEyes(fbxPath);
+        }
+
+        public static void MapEyes(string fbxPath)
+        {
             ModelImporter importer = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
 
             if (importer == null)

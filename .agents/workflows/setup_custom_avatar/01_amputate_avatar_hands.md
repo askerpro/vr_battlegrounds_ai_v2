@@ -8,7 +8,16 @@ description: How to amputate avatar hands/gloves for modular VR hand replacement
 
 Этот воркфлоу использует MCP Blender для поиска всех вершин, полностью зависимых от костей кистей и пальцев, и чистого удаления этих полигонов из FBX-файла без разрушения иерархии и разверток (UV mappings) остального аватара.
 
-## Шаг 1: Скрипт Ампутации
+## Актуальный запуск через Unity Tools
+Выдели FBX asset в Unity Project window и запусти:
+`Tools/VR Battlegrounds/Avatars/Custom Avatar Pipeline/1. Amputate Selected FBX Hands`
+
+Эта команда берет выбранный FBX, запускает Blender в background mode и выполняет актуальный скрипт:
+`Assets/Editor/VR_Battlegrounds/Avatars/BlenderScripts/amputate_avatar_hands.py`
+
+Ниже оставлен legacy-вариант для справки, если нужно выполнить код вручную через Blender MCP.
+
+## Legacy: Скрипт Ампутации
 Скопируйте следующий код и передайте его в `mcp_blender_execute_blender_code`. Не забудьте в переменной `filename` указать путь к вашему FBX-аватару. 
 
 ```python

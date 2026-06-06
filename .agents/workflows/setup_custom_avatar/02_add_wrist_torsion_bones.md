@@ -8,7 +8,16 @@ description: How to add UltimateXR compatible wrist torsion bones and fix forear
 
 Этот воркфлоу описывает, как с помощью MCP инструмента `mcp_blender_execute_blender_code` (Python скрипта внутри Blender) автоматически сгенерировать 3 дополнительные twist-кости (`lowerarm_twist_02`, `03`, `04`) для левой и правой руки, и математически гладко перераспределить на них веса вершин (Skin Weights).
 
-## Шаг 1: Подготовка скрипта
+## Актуальный запуск через Unity Tools
+Выдели FBX asset в Unity Project window и запусти:
+`Tools/VR Battlegrounds/Avatars/Custom Avatar Pipeline/2. Add Wrist Torsion Bones`
+
+Эта команда берет выбранный FBX, запускает Blender в background mode и выполняет актуальный скрипт:
+`Assets/Editor/VR_Battlegrounds/Avatars/BlenderScripts/add_wrist_torsion_bones.py`
+
+Ниже оставлен legacy-вариант для справки, если нужно выполнить код вручную через Blender MCP.
+
+## Legacy: Подготовка скрипта
 Скопируйте следующий Python-скрипт. Вам нужно будет только подставить абсолютный путь к вашему FBX в переменную `filename` и убедиться, что названия костей (`lowerarm`, `hand`) совпадают с вашим скелетом.
 
 ```python

@@ -1,0 +1,320 @@
+fileFormatVersion: 2
+guid: f3103f1152877d843bca0d3310dfd136
+ModelImporter:
+  serializedVersion: 24200
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lit
+    second: {fileID: 2100000, guid: 700513120adce8d41b154f1a53a667d7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: accessory_patch_raider
+    second: {fileID: 2100000, guid: 0ef2efe9917511b4182f87ec1fd7320b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: alice_headset_wrap
+    second: {fileID: 2100000, guid: bdff3a174cbef9d40b083d6e97263d41, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: ar_mag
+    second: {fileID: 2100000, guid: d715eb29ff9d6b842aa1e65412726fc6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: base_male_arm_l_skintone_04
+    second: {fileID: 2100000, guid: adb5210cd53c0e547b440e87af38a433, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: buckle_master_beige
+    second: {fileID: 2100000, guid: 3e245e761c78cc544b17f0876ec9eb82, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: buckle_master_coyote
+    second: {fileID: 2100000, guid: a001ef0795b03454e963980c7cc933f2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: disk_strobe
+    second: {fileID: 2100000, guid: 5a68cc42e10230b4d8ba535a046589bb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: electrical_tape_a
+    second: {fileID: 2100000, guid: 9e3f5f55f90902042afe1dde2ca3f1c9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: head_sc_m_montano
+    second: {fileID: 2100000, guid: 57868a1b313eb704eb03187ccb73a9ff, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: head_sc_m_montano_eyes
+    second: {fileID: 2100000, guid: 438b401a9688500408675e236e9b349b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: head_shared_inside_mouth
+    second: {fileID: 2100000, guid: 9709513b1763e91438f7e4640a467fa4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: hero_alex_boot_b
+    second: {fileID: 2100000, guid: c36b1d7e35664ef4d9548f2c72dd2d4d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: hero_alex_carabiner_a
+    second: {fileID: 2100000, guid: 9a7d138b447866e4bbbfe79843ef9e91, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: hero_alex_dump_pouch_rolled_coyote
+    second: {fileID: 2100000, guid: e7a1bc7fbf4e9db4d81d66c8b945d9ec, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: hero_alex_pistol_mag_pouch_coyote
+    second: {fileID: 2100000, guid: c000fb18b9f1f1248a004c58b9afbe1a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: holster_extender
+    second: {fileID: 2100000, guid: a8c8fae3b49860240b5301b5bc4a7deb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: kyle_desert_watch
+    second: {fileID: 2100000, guid: 7be68344055fa0143999647bb46097c6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: marine_raider_jacket_hood_down
+    second: {fileID: 2100000, guid: d5b73435c9c15d04d83372b27d0c7c9f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: mp_western_vm_gloves_murphy_1_1
+    second: {fileID: 2100000, guid: 311ead15a380c1f4184931428de8cd44, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: pararescue_altimeter_glass
+    second: {fileID: 2100000, guid: b183a4988306962449d9b649860d2b27, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: pararescue_mag_ar
+    second: {fileID: 2100000, guid: 7a61bc83524d2b34a80d57244bdafbf1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: pararescue_patch_flag_low_viz
+    second: {fileID: 2100000, guid: c393034ca6569e441b8ac7b64a3b40aa, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: pararescue_shears_black
+    second: {fileID: 2100000, guid: 47c5d9ef2a1e9b040a8b301f0c35c6d4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: plastic_handcuffs_a_yellow
+    second: {fileID: 2100000, guid: 9c4d1c5e519e59a43a4f7c84217d5504, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: price_holster_black
+    second: {fileID: 2100000, guid: 42122d62995255141b080a68c8137aaa, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: raiders_folding_hat
+    second: {fileID: 2100000, guid: b93b190baa405954ab0c9c5833477439, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sas_urban_hydration_a
+    second: {fileID: 2100000, guid: 3f28853cc00ee3c40b863479a930dd40, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sas_urban_vest_coyote
+    second: {fileID: 2100000, guid: 1b1c6b2a19689624facdad147cdc534b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: seal_team_v3_u_headset_b
+    second: {fileID: 2100000, guid: 06d607cb952d92246a3506b6dfd6fdbd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: shooting_glasses_clear
+    second: {fileID: 2100000, guid: 2feba75c74a67b64c9127b11d9caac87, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: shooting_glasses_frame
+    second: {fileID: 2100000, guid: fbb3f12f8d3084d44a74bf91caf6afb6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: spetsnaz_radio
+    second: {fileID: 2100000, guid: 6855ad011d9917a4ab545d7aee111270, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: spetsnaz_radio_pouch
+    second: {fileID: 2100000, guid: 448bbf0a4598b7748adc6a0788af71b0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: stencil_patch_urban_g25
+    second: {fileID: 2100000, guid: 48c7dbf5ed9267847bd9dcc94f749c4c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: texture_mat_holster_Albedo
+    second: {fileID: 2100000, guid: e06e8707cfdc6024b9558b099319efeb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tourniquet_rolled
+    second: {fileID: 2100000, guid: 866869ffe29d1c040994117305ca008a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: usmc_fannypack_brown
+    second: {fileID: 2100000, guid: 5c8f1e69a64ab2646bdc21bc7a3113cb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: usmc_grenade_pouch_brown
+    second: {fileID: 2100000, guid: 231af48b84d41c8418e9c38f09dc30e9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: usmc_ir_patch
+    second: {fileID: 2100000, guid: ec9e5a384e9d5a04dab9bd2925cdabb7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: usmc_raiders_pants_a
+    second: {fileID: 2100000, guid: 53a4bc4a654df2f46818a80278f69104, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: wyatt_ar_mag_pouch_coyote
+    second: {fileID: 2100000, guid: a6197dc92ff1a6b49a584535538d95f2, type: 2}
+  materials:
+    materialImportMode: 2
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 0.01
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 0
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 0.0001
+    rootMotionBoneName: RL_BoneRoot
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 2
+  humanoidOversampling: 1
+  avatarSetup: 1
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -2,6 +2,23 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-08-16]
+### Исправлено
+- **Сборка под Android (Quest)**: Editor-скрипты лежали в семи папках `Assets/Scripts/**/Editor/`, накрытых `VrBattlegrounds.asmdef` с пустым `includePlatforms`. Своей editor-сборки они не образовывали (в `Library/ScriptAssemblies/` был только `VrBattlegrounds.dll`), поэтому `using UnityEditor` попадал в рантайм-сборку для всех платформ. Пять файлов при этом были без `#if UNITY_EDITOR`. Все скрипты перенесены в `Assets/Editor/VR_Battlegrounds/` (`Arsenal/`, `Gameplay/`), опустевшие папки удалены. Это то самое нарушение, от которого предостерегает `.agents/rules/editor_scripts.md`.
+- **Хук `post-commit` (Plastic SCM)**: не работал с 2026-03-28. Пофайловый вариант через `git diff-tree ... | cm ci -a -c "$MSG" -` был построен на допущении, что `cm ci` читает пути из stdin — такого режима у Plastic CLI нет, и `-` уходил ему как ещё один путь. Ошибки `cm add` / `cm rm` при этом глушились в `/dev/null`, поэтому поломка была не видна. Хук переписан на один чекин всего воркспейса (`cm ci . -a --applychanged --private`), ошибки теперь выводятся. Добавлен фолбэк на путь к `cm.exe`, если его нет в `PATH`.
+- **`.gitattributes`**: правило `* text=auto eol=crlf` при свежем clone превращало `.githooks/post-commit` в CRLF, ломая shebang. Добавлено исключение `.githooks/** text eol=lf` и `*.sh text eol=lf`.
+
+### Добавлено
+- **Инфраструктура для ИИ-агентов**: `CLAUDE.md` как единый источник правды (автозагрузка), `.claude/settings.json` с allowlist прав и `GIT_PAGER=cat`, слэш-команды `/commit`, `/debug`, `/feature`, `/unity-check`, `/docs-sync`, хук `.claude/hooks/sdk-patch-guard.ps1` (требует фиксировать правки исходников UltimateXR в `sdk-patches.md`).
+
+### Изменено
+- **Правила агентов схлопнуты**: четыре параллельных набора (`.agentrules`, `.cursorrules` на 26 КБ, `.clinerules`, `.github/copilot-instructions.md`) разошлись между собой — в них были устаревшие версии пакетов (URP 17.0.3 против 17.4.0, xr.oculus 4.4.0 против 4.5.4, inputsystem 1.11.2 против 1.19.0) и ссылка на несуществующий путь `_agent/workflows/`. Все четыре превращены в указатели на `CLAUDE.md`. Из `.agents/rules/` удалены шесть файлов, поглощённых `CLAUDE.md` и слэш-командами.
+- **Обязательное чтение отменено**: «Шаг 0» требовал 840 строк документации перед любой задачей. Заменён таблицей маршрутизации «задача → что читать» в `CLAUDE.md`.
+- **`.mcp.json`**: был в формате VS Code (ключ `servers`), из-за чего Claude Code его не читал. Переведён на `mcpServers` со stdio-транспортом `mcpforunityserver`.
+- **`Docs/README.md`**: в индекс добавлены пропущенные `session-architecture.md`, `level-design.md`, `Roadmap.md`, `Arsenal/`, `LegsAnimator_UI_Reference_RU.md`. Файл `Docs/AI_Navigation.md` удалён — правила поиска переехали в `CLAUDE.md`.
+
+---
+
 ## [2026-03-28]
 ### Добавлено
 - **Документация Архитектуры Сессий**: Добавлен файл [`Docs/session-architecture.md`](session-architecture.md), подробно описывающий паттерн разделения логики `PlayerSession` и визуальных кукол аватаров.

@@ -1,16 +1,8 @@
 {
   "mcpServers": {
     "unityMCP": {
-      "type": "stdio",
-      "command": "C:\\Users\\asker\\.local\\bin\\uvx.exe",
-      "args": [
-        "--offline",
-        "--from",
-        "mcpforunityserver==10.1.2",
-        "mcp-for-unity",
-        "--transport",
-        "stdio"
-      ]
+      "type": "http",
+      "url": "http://127.0.0.1:8080/mcp"
     }
   }
 }

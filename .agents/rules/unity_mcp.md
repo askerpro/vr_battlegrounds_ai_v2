@@ -1,16 +1,106 @@
 # Unity MCP — Правила и Известные Проблемы
 
-## execute_code — Ошибка MAX_PATH на Windows
+Версии на 2026-08-16: пакет `com.coplaydev.unity-mcp` **10.1.2** (источник — Git, ветка `main`,
+живёт в `Library/PackageCache/`), python-сервер `mcpforunityserver` **10.1.2**.
+
+## Транспорт: клиент и Unity должны сходиться в одной точке
 
 ### Симптом
-Вызов `execute_code` падает с ошибкой:
-```
-Execution failed: Error running mono.exe: Имя файла или его расширение имеет слишком большую длину.
-```
+Инструменты `mcp__unityMCP__*` падают с `No Unity Editor instances found`, при этом Unity
+запущен, а в его консоли бридж рапортует `Connection verification successful`.
+Ресурс `mcpforunity://instances` возвращает `instance_count: 0`.
 
 ### Причина
-`CSharpCodeProvider` (CodeDom) передаёт **все** referenced assemblies (~100+) как аргументы командной строки `mono.exe`.
-Суммарная длина путей вроде `C:\Program Files\Unity\Hub\Editor\6000.x.xf1\Editor\Data\...` превышает лимит Windows (~32KB).
+«Транспорт» — это два независимых звена, и настраиваются они в разных местах:
+
+```
+Claude Code ──[stdio | http]── сервер mcp-for-unity ──[TCP 6400+ | WebSocket 8080]── Unity
+             ↑ .mcp.json                              ↑ окно MCP for Unity в редакторе
+```
+
+Если в редакторе выбран WebSocket-режим, Unity подключается к HTTP-хабу, который поднимает
+сам редактор (`--transport http --http-url http://127.0.0.1:8080`, pid лежит в
+`Library/MCPForUnity/RunState/mcp_http_<порт>.pid`). А `.mcp.json` со `stdio` порождает
+**второй, отдельный** серверный процесс, который ищет Unity сканом старых TCP-портов, не
+находит и отдаёт `0 instances`. Два сервера, между ними ничего.
+
+### Диагностика
+```powershell
+# 1. Хаб жив и на каком порту
+Get-ChildItem "$PWD\Library\MCPForUnity\RunState"        # имя pid-файла содержит порт
+Invoke-WebRequest http://127.0.0.1:8080/health -UseBasicParsing
+
+# 2. Кто слушает порт и с какими аргументами запущен
+Get-NetTCPConnection -State Listen -LocalPort 8080 | Select-Object OwningProcess
+Get-CimInstance Win32_Process -Filter "ProcessId=<pid>" | Select-Object CommandLine
+
+# 3. Что делает наш серверный процесс
+Get-Content "$env:LOCALAPPDATA\UnityMCP\Logs\unity_mcp_server.log" -Tail 30
+
+# 4. Каким транспортом видит себя бридж внутри Unity
+Select-String "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Pattern 'MCP-FOR-UNITY'
+```
+
+### Рабочая конфигурация проекта
+`.mcp.json` цепляется к уже поднятому хабу, своего сервера не плодит:
+
+```json
+{
+  "mcpServers": {
+    "unityMCP": { "type": "http", "url": "http://127.0.0.1:8080/mcp" }
+  }
+}
+```
+
+Почему http, а не stdio: разницы в скорости нет (всё через loopback, любой вызов упирается
+в главный поток Unity), зато один общий сервер на всех клиентов, штатное переживание
+доменного релоада (`[HTTP Reload] Resume succeeded`) и включённые project-scoped tools
+(`execute_custom_tool`), которых в stdio-режиме не было.
+
+Плата — порт прибит в конфиге. Если Unity поднимет хаб на другом порту, поправить `url`
+по имени pid-файла в `RunState/`. После правки `.mcp.json` — реконнект (`/mcp`).
+
+## Скилл `unity-mcp-skill`
+
+Лежит в `C:\Users\asker\.claude\skills\unity-mcp-skill\`, ставится **синхронизацией самого
+плагина** (маркер `.unity-mcp-skill-sync`). Править его файлы бессмысленно — затрёт при
+следующем обновлении. Проектные правила писать только сюда, в репозиторий.
+
+- Вызывается по имени папки — `unity-mcp-skill`. Во frontmatter стоит другое имя
+  (`unity-mcp-orchestrator`), оно не используется.
+- Когда звать: автоматизация редактора — GameObject, компоненты, сцены, префабы, скриншоты,
+  тесты. Один раз в начале такой задачи. Для чтения консоли и ошибок компиляции достаточно
+  `/unity-check`.
+- Что берёт на себя: схемы инструментов, `batch_execute` (лимит 25 команд, значение видно
+  в `mcpforunity://editor/state` → `batch_execute_max_commands`), скриншоты с
+  `include_image=true` и `capture_source="scene_view"`, поллинг `run_tests` → `get_test_job`,
+  восстановление после `stale_file` через `get_sha`.
+- Чего он не знает: правил проекта. `GameLog`, `MapManager.LoadMap`, запрет `Editor/` внутри
+  `Assets/Scripts/` — всё это только в `CLAUDE.md`, скилл её не заменяет.
+- ⚠️ Не выполнять его совет про `manage_editor(action="deploy_package"/"restore_package")` —
+  это перезапишет установленный пакет MCP вместе с любыми локальными патчами.
+- В поставке битые ссылки на `references/resources-reference.md` и
+  `references/probuilder-guide.md` — синк их не кладёт. Реально есть только
+  `tools-reference.md` и `workflows.md`.
+
+## execute_code — MAX_PATH (историческое, только 9.x)
+
+**В 10.1.2 не воспроизводится.** Проверка:
+
+```
+execute_code → action: execute, code: return 42;
+```
+Сейчас отвечает `{"result": 42, "compiler": "codedom"}` — на CodeDom, без всякого патча.
+Пакет при этом обычный, из `Library/PackageCache/`; embedded-копии в `Packages/` нет и не нужно.
+
+Ниже — рецепт для 9.x. Применять, **только** если проект откатили на старую версию и
+`execute_code` снова падает с `Имя файла или его расширение имеет слишком большую длину`.
+Цена вопроса — embed пакета, то есть заморозка его версии.
+
+### Причина (9.x)
+`CSharpCodeProvider` (CodeDom) передавал **все** referenced assemblies (~100+) аргументами
+командной строки `mono.exe`. Суммарная длина путей вида
+`C:\Program Files\Unity\Hub\Editor\6000.x.xf1\Editor\Data\...` превышала лимит Windows (~32 КБ).
 
 ### Исправление (Embed + Patch)
 
@@ -97,9 +187,3 @@ refresh_unity → compile: request, mode: force, scope: all
 ```
 execute_code → action: execute, code: return "It works!";
 ```
-
-### Проверка статуса
-Если `execute_code` уже работает — патч применён и повторно делать не нужно.
-Быстрая проверка: `execute_code → action: execute, code: return 42;`
-- Если `success: true` → всё ОК.
-- Если ошибка `MAX_PATH` → применить патч выше.

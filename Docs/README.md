@@ -11,6 +11,9 @@
 | Файл | Содержание |
 |---|---|
 | `README.md` | Этот файл — технический справочник: скрипты, классы, API, компоненты |
+| `tasks/` | **Очередь работ по аудиту:** [индекс со статусами и графом блокировок](tasks/README.md) + файлы задач `T-01`…`T-24` |
+| `audit/` | Аудит 2026-08 (справочники, не меняются): [находки](audit/network-audit-2026-08.md), [оценка архитектуры](audit/architecture-review-2026-08.md) |
+| `testing.md` | Тестирование: шесть уровней от юнит-тестов до чек-листа в шлеме |
 | `gameplay.md` | Геймдизайн: что делает игрок, правила, режимы, структура матча |
 | `session-architecture.md` | Сессия, роли устройств (VR/PC/Server), Host/Client |
 | `game-manager.md` | GameManager, система режимов: создание assets, настройка, поток действий |
@@ -28,6 +31,10 @@
 
 ## Быстрая навигация
 
+- **Что чинить прямо сейчас, что чем блокировано** → [`tasks/README.md`](tasks/README.md)
+- **Как тестировать сеть и VR** → [`testing.md`](testing.md)
+- **Аудит: 21 находка** → [`audit/network-audit-2026-08.md`](audit/network-audit-2026-08.md)
+- **Аудит: 5 корневых решений архитектуры** → [`audit/architecture-review-2026-08.md`](audit/architecture-review-2026-08.md)
 - **Геймплей, режимы, матч, арена** → [`gameplay.md`](gameplay.md)
 - **Сессия, роли устройств, Host/Client** → [`session-architecture.md`](session-architecture.md)
 - **GameManager, режимы, assets, настройка** → [`game-manager.md`](game-manager.md)

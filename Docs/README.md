@@ -1,6 +1,8 @@
-> **Для Copilot:** это точка входа в документацию **игры** VR Battlegrounds AI.
-> Обновлять при добавлении новых классов, модулей, зависимостей или изменении архитектуры.
+> Точка входа в документацию **игры** VR Battlegrounds AI: скрипты, классы, API, компоненты.
+> Обновлять при добавлении классов, модулей, зависимостей или изменении архитектуры.
 > Обязательно документировать обнаруженные побочные эффекты SDK (например, систему Precaching).
+>
+> Правила работы агентов, жёсткие ограничения и правила поиска — в [`CLAUDE.md`](../CLAUDE.md).
 
 ---
 
@@ -10,27 +12,36 @@
 |---|---|
 | `README.md` | Этот файл — технический справочник: скрипты, классы, API, компоненты |
 | `gameplay.md` | Геймдизайн: что делает игрок, правила, режимы, структура матча |
-| `magazine-pocket.md` | Механика "умного магазина" (Smart Magazine Pocket) |
+| `session-architecture.md` | Сессия, роли устройств (VR/PC/Server), Host/Client |
 | `game-manager.md` | GameManager, система режимов: создание assets, настройка, поток действий |
 | `ui-menu-architecture.md` | Архитектура UI Меню (MVC), экраны, префабы, контроллеры |
+| `magazine-pocket.md` | Механика "умного магазина" (Smart Magazine Pocket) |
+| `level-design.md` | Проектирование карт и арен |
+| `Arsenal/` | Стена арсенала: [дизайн](Arsenal/ArsenalWall_Design_RU.md), [код](Arsenal/Arsenal_Code_Architecture_RU.md) |
+| `LegsAnimator_UI_Reference_RU.md` | Справочник по параметрам Legs Animator |
+| `Roadmap.md` | План развития проекта |
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
 | `version-control.md` | Git/Plastic workflow: автодублирование коммитов, хук, диагностика |
 | `unity-mcp.md` | Локальный фикс Unity MCP `execute_code` на Windows (MAX_PATH) |
-| `AI_Navigation.md` | 🤖 Технические инструкции для ИИ-агентов (правила оптимизированного поиска M.A.P.) |
 
 ---
 
 ## Быстрая навигация
 
 - **Геймплей, режимы, матч, арена** → [`gameplay.md`](gameplay.md)
-- **Умный магазин (Magazine Pocket)** → [`magazine-pocket.md`](magazine-pocket.md)
+- **Сессия, роли устройств, Host/Client** → [`session-architecture.md`](session-architecture.md)
 - **GameManager, режимы, assets, настройка** → [`game-manager.md`](game-manager.md)
 - **Архитектура UI Меню (MVC)** → [`ui-menu-architecture.md`](ui-menu-architecture.md)
+- **Умный магазин (Magazine Pocket)** → [`magazine-pocket.md`](magazine-pocket.md)
+- **Стена арсенала** → [`Arsenal/Arsenal_Code_Architecture_RU.md`](Arsenal/Arsenal_Code_Architecture_RU.md)
+- **Проектирование карт** → [`level-design.md`](level-design.md)
+- **План развития** → [`Roadmap.md`](Roadmap.md)
 - **История изменений (Changelog)** → [`CHANGELOG.md`](CHANGELOG.md)
 - **Git/Plastic workflow и post-commit hook** → [`version-control.md`](version-control.md)
 - **Unity MCP: фикс execute_code (Windows)** → [`unity-mcp.md`](unity-mcp.md)
-- **UltimateXR SDK** → `Docs/UltimateXR/README.md` (открыть через `#file:`)
-- **Архитектура UltimateXR** → `Docs/UltimateXR/architecture.md`
+- **UltimateXR SDK** → [`UltimateXR/README.md`](UltimateXR/README.md)
+- **Архитектура UltimateXR** → [`UltimateXR/architecture.md`](UltimateXR/architecture.md)
+- **Известные проблемы SDK** → [`UltimateXR/known-issues.md`](UltimateXR/known-issues.md)
 
 ---
 

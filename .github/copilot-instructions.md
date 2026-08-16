@@ -1,12 +1,7 @@
-Please read and strictly follow the instructions in the `.agentrules` file located in the root of this project.
+# Правила проекта — см. CLAUDE.md
 
-Instruction for AI Assistant:
-Proceed to read `.agentrules` via your file reading tools and use its content as your project rules.
+Единственный источник правды для ИИ-агентов — файл `CLAUDE.md` в корне репозитория.
+Прочитай его и следуй ему.
 
----
-
-## Ограничения чтения файлов (Legacy Copilot/Cursor)
-Если инструмент `get_file` работает только для файлов из `.csproj` проектов или открытых вкладок редактора, а файлы `.md` в него не входят:
-Для чтения `.md` документации используйте терминал PowerShell:
-`[System.IO.File]::ReadAllText("F:\UnityProjects\Vr_Battlegrounds_ai\Docs\README.md", [System.Text.Encoding]::UTF8)`
-Или активно просите пользователя открыть файл через `#file:` в контексте чата.
+Углублённые правила по зонам — `.agents/rules/`.
+Пошаговые процедуры — `.claude/commands/` и `.agents/workflows/`.

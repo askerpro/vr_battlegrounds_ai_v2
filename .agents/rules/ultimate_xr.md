@@ -1,19 +1,38 @@
 # UltimateXR — ключевые факты
-- Все классы библиотеки имеют префикс `Uxr` (namespace: `UltimateXR.*`)
+
+Фреймворк VRMADA, вендорится локально в `Assets/ThirdParty/UltimateXR/`.
+
+- Все классы с префиксом `Uxr`, namespace `UltimateXR.*`
 - Базовые классы: `UxrComponent<T>`, `UxrAvatarComponent<T>`, `UxrSingleton<T>`
-- Главный менеджер: `UxrManager.Instance` — управляет аватарами, событиями, состоянием
+- Главный менеджер: `UxrManager.Instance` — аватары, события, состояние
 - Аватар управляется через `UxrStandardAvatarController`, не напрямую через `UxrAvatar`
-- Захват объектов: `UxrGrabbableObject` + `UxrGrabber` -- обрабатывает `UxrGrabManager`
+- Захват: `UxrGrabbableObject` + `UxrGrabber`, обрабатывает `UxrGrabManager`
 - Телепортация: `UxrTeleportLocomotion`
 - Оружие: `UxrFirearmWeapon` (наследует `UxrGrabbableObject`)
-- Скрипты рантайма локально: `Assets/ThirdParty/UltimateXR/Runtime/Scripts/`
-- Документация UltimateXR: `Docs/UltimateXR/guides/`
+- Урон и смерть: `UxrActor` — события `Death`, `DamageReceived`
 
-> **Для ИИ-помощника:** исходники UltimateXR SDK доступны через полные пути.
-> `UltimateXR.csproj` входит в workspace. При вопросах об API лучше читать исходники напрямую.
+## Где смотреть API
 
-## Связанная документация UltimateXR в `Docs/UltimateXR/`
-- `README.md` — точка входа
-- `architecture.md` — все модули UltimateXR
-- `known-issues.md` — **⚠️ ЧИТАТЬ ПЕРВЫМ при расследовании бага:** неочевидные поведения SDK
-- `sdk-patches.md` — все правки внесённые в исходники UltimateXR
+**Исходники точнее документации.** Runtime-скрипты SDK лежат в
+`Assets/ThirdParty/UltimateXR/Runtime/Scripts/` — читай их напрямую через `Read`, а для
+поиска класса используй `Grep` с `path="Assets/ThirdParty/UltimateXR"`.
+
+Ограничивай поиск этой папкой явно: в ней 1383 `.cs`, и без скоупа она забивает выдачу
+по всему остальному проекту.
+
+## Документация SDK в `Docs/UltimateXR/`
+
+| Файл | Когда нужен |
+|---|---|
+| `known-issues.md` | ⚠️ Первым при расследовании любого бага — неочевидные поведения SDK |
+| `sdk-patches.md` | Все наши правки в исходниках SDK. Обязателен к обновлению при новой правке |
+| `architecture.md` | Обзор модулей и связей |
+| `interactions.md`, `locomotion.md`, `ui.md`, `network-sync.md`, `scripting.md` | Разборы по темам |
+| `avatar-guide.md`, `avatar_and_manager.md` | Аватары |
+| `guides/` | Официальные гайды VRMADA |
+
+## Правки исходников SDK
+
+Любое изменение внутри `Assets/ThirdParty/UltimateXR/` обязано попасть в `sdk-patches.md` —
+иначе оно потеряется при обновлении SDK. Хук `.claude/hooks/sdk-patch-guard.ps1` напомнит
+об этом автоматически.

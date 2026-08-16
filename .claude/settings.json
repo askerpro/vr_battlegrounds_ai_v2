@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "GIT_PAGER": "cat",
+    "PAGER": "cat"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git blame:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git stash list:*)",
+      "Bash(rg:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(du:*)",
+      "PowerShell(Get-ChildItem:*)",
+      "PowerShell(Get-Content:*)",
+      "PowerShell(Get-Item:*)",
+      "PowerShell(Test-Path:*)",
+      "PowerShell(Select-String:*)",
+      "PowerShell(Measure-Object:*)",
+      "PowerShell(Get-Process:*)",
+      "mcp__unityMCP__read_console",
+      "mcp__unityMCP__list_resources",
+      "mcp__unityMCP__validate_script",
+      "mcp__unityMCP__manage_editor"
+    ],
+    "deny": [
+      "Read(./Library/**)",
+      "Read(./Temp/**)",
+      "Read(./obj/**)",
+      "Read(./Build/**)",
+      "Read(./Builds/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/sdk-patch-guard.ps1\""
+          }
+        ]
+      }
+    ]
+  }
+}

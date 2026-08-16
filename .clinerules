@@ -1,7 +1,8 @@
-Please read and strictly follow the instructions in the `.agentrules` file located in the root of this project.
+# Правила проекта — см. CLAUDE.md
 
-Instruction for AI Assistant:
-Proceed to read `.agentrules` via your file reading tools and use its content as your project rules.
+Единственный источник правды для ИИ-агентов — файл `CLAUDE.md` в корне репозитория.
+Прочитай его и следуй ему.
 
-OPTIMIZATION HINT FOR SLASH COMMANDS:
-Whenever the user runs a slash command like `/start`, `/commit`, `/debug`, or `/new-feature`, you MUST NOT use `find_by_name` or `list_dir` to search for the workflow. The workflow files are explicitly located at `[project_root]/_agent/workflows/`. Directly use `view_file` on `[project_root]/_agent/workflows/<command>.md` to load them immediately.
+Пошаговые процедуры лежат в `.claude/commands/` (`commit`, `debug`, `feature`,
+`unity-check`, `docs-sync`) и `.agents/workflows/` (многошаговые пайплайны).
+Пути `_agent/workflows/`, упоминавшегося здесь раньше, не существует.

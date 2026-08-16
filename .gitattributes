@@ -2,6 +2,11 @@
 # Set default behavior to automatically normalize line endings.
 * text=auto eol=crlf
 
+# Shell-скрипты и git-хуки обязаны оставаться с LF.
+# С CRLF shebang превращается в "#!/bin/bash\r", и хук молча падает
+# с "bad interpreter" при свежем clone на Windows.
+.githooks/** text eol=lf
+*.sh text eol=lf
 # Unity YAML merge driver
 *.unity text merge=unityyamlmerge eol=crlf
 *.prefab text merge=unityyamlmerge eol=crlf

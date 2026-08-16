@@ -35,6 +35,13 @@
 # Visual Studio cache directory
 .vs/
 
+# VS Code: коммитим только общекомандные конфиги, остальное — мусор расширений
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
 # Gradle cache directory
 .gradle/
 
@@ -44,6 +51,7 @@ ExportedObj/
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.suo
 *.tmp
 *.user

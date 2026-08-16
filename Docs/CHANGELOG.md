@@ -17,6 +17,7 @@
 - **Обязательное чтение отменено**: «Шаг 0» требовал 840 строк документации перед любой задачей. Заменён таблицей маршрутизации «задача → что читать» в `CLAUDE.md`.
 - **`.mcp.json`**: был в формате VS Code (ключ `servers`), из-за чего Claude Code его не читал. Переведён на `mcpServers` со stdio-транспортом `mcpforunityserver`.
 - **`Docs/README.md`**: в индекс добавлены пропущенные `session-architecture.md`, `level-design.md`, `Roadmap.md`, `Arsenal/`, `LegsAnimator_UI_Reference_RU.md`. Файл `Docs/AI_Navigation.md` удалён — правила поиска переехали в `CLAUDE.md`.
+- **`.gitignore` — `*.slnx` и `.vscode/`**: Unity 6 генерирует solution в новом XML-формате `.slnx` рядом со старым `.sln`, а тот игнорировался с самого начала. Файл перечисляет 118 путей к `*.csproj`, которые тоже в игноре, порядок проектов в нём не отсортирован — в репозитории он давал бы шумные диффы и ссылки в никуда. `*.slnx` добавлен рядом с `*.sln`. Для `.vscode/` заведён белый список (`settings.json`, `tasks.json`, `launch.json`, `extensions.json`): конфиг «Attach to Unity» и YAML-ассоциации для `.unity`/`.prefab`/`.meta` полезны и переносимы, а локальный мусор расширений в репозиторий не попадёт.
 
 ---
 

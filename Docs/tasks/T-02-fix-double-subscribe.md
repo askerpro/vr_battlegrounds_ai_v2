@@ -16,15 +16,21 @@
 
 ## Что делать
 
-В `Assets/Scripts/GameModes/EliminationMode/EliminationMode.cs` удалить повторную
-подписку в `StartNextSet` (строка ~201):
+В `Assets/Scripts/GameModes/EliminationMode/EliminationMode.cs` удалить подписку
+в `InitializeActiveGame` (строка ~121):
 
 ```csharp
-_setManager.SetEnded += OnSetEnded;   // ← убрать, подписка уже сделана в InitializeActiveGame
+_setManager.SetEnded += OnSetEnded;   // ← убрать
 ```
 
-Подписка должна быть ровно одна, в `InitializeActiveGame` (строка ~121). Отписка —
-в `StopGameplay`.
+> **Убирать надо именно эту, а не подписку в `StartNextSet`.** Подписка в `StartNextSet` —
+> часть цикла перевзведения: `OnSetEnded` отписывается в первой же строке обработчика
+> (строка ~215) и подписывается заново при старте следующего сета. Уберёшь её —
+> и после первого сета `SetEnded` перестанет обрабатываться вовсе.
+>
+> Сам приём «отписаться в обработчике, подписаться при следующем запуске» хрупкий:
+> подписка и отписка разнесены по трём местам, поэтому ошибка и стала возможной.
+> Окончательно это лечит [T-09](T-09-explicit-round-fsm.md).
 
 ## Почему это ломает игру
 

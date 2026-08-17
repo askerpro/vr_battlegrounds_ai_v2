@@ -137,8 +137,11 @@ namespace VrBattlegrounds.Managers
                 // Сохраняем стейт в память перед отключением
                 if (SessionRecoveryManager.Instance != null && !string.IsNullOrEmpty(session.DeviceToken))
                 {
-                    PlayerController avatar = (conn.identity != null) ? conn.identity.GetComponent<PlayerController>() : null;
-                    SessionRecoveryManager.Instance.SaveDisconnectedSession(session.DeviceToken, session, avatar);
+                    // conn.identity — это PlayerSession (она назначена объектом игрока в
+                    // AddPlayerForConnection), а не аватар. Раньше здесь был
+                    // conn.identity.GetComponent<PlayerController>(), который всегда возвращал null,
+                    // из-за чего здоровье и позиция не сохранялись никогда.
+                    SessionRecoveryManager.Instance.SaveDisconnectedSession(session.DeviceToken, session, session.ActiveAvatar);
                 }
 
                 _sessions.Remove(session);

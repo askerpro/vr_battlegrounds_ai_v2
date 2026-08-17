@@ -6,7 +6,6 @@ using UnityEngine;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Network;
-using static Codice.Client.Commands.WkTree.WorkspaceTreeNode;
 
 namespace VrBattlegrounds.Player
 {

@@ -426,7 +426,15 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             if (UxrAvatar.LocalAvatar == null) return;
 
             Vector3 newPosition = TransformRealToVirtual(UxrAvatar.LocalAvatar.transform.position);
-            newPosition = Vector3.Scale(newPosition, new Vector3(1, UxrAvatar.LocalAvatar.transform.position.y, 1));
+
+            // Высоту оставляем как есть. Калибровка по якорям выравнивает только плоскость пола:
+            // в CalculateTransform оба направления сплющены через Scale(1, 0, 1), поэтому поворот
+            // чисто вокруг Y, а Y-компонента _realToVirtualOffset определяется случайной высотой,
+            // на которой игрок держал контроллер при регистрации точки. Рост калибруется отдельно
+            // (BeginHeightCalibration → ApplyHeightDelta).
+            // Здесь было Vector3.Scale(newPosition, new Vector3(1, position.y, 1)) — умножение Y
+            // на саму себя: при y = 0 высота обнулялась, при y = 2 давала 4.
+            newPosition.y = UxrAvatar.LocalAvatar.transform.position.y;
 
             // Rotate the local avatar's current rotation by the calculated yaw difference
             Quaternion newRotation = UxrAvatar.LocalAvatar.transform.rotation * Quaternion.Euler(0, _realToVirtualRotation.eulerAngles.y, 0);

@@ -118,7 +118,9 @@ namespace VrBattlegrounds.GameModes
             // Создаём менеджеры как обычные C# объекты — без GameObject, без NetworkBehaviour
             _roundManager = new RoundManager();
             _setManager = new SetManager(_roundManager);
-            _setManager.SetEnded += OnSetEnded;
+            // Подписка делается в StartNextSet: OnSetEnded отписывается в начале обработчика
+            // и перевзводится на следующий сет. Вторая подписка здесь давала двойной вызов
+            // и удвоение счёта сетов.
 
             string teamsStr = string.Join(" vs ", Teams.Select(t => t != null ? t.displayName : "null"));
             GameLog.Info(GameSettings.Instance.LogLevelMatch,

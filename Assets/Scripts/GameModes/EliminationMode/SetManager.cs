@@ -113,7 +113,11 @@ namespace VrBattlegrounds.GameModes
             else
             {
                 _roundManager.RoundEnded += OnRoundEnded;
-                _roundManager.StartNextRound(_eliminationMode);
+                // Именно собственный StartNextRound(), а не одноимённый метод RoundManager:
+                // он инкрементирует _currentRound, шлёт RpcOnRoundStarted и сам зовёт
+                // _roundManager.StartRound(...). Через RoundManager счётчик раундов не растёт,
+                // и сет никогда не заканчивается по исчерпанию раундов.
+                StartNextRound();
             }
         }
 

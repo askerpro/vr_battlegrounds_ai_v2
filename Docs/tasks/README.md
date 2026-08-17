@@ -118,9 +118,9 @@
 | [T-04](T-04-session-recovery-avatar-ref.md) | `session.ActiveAvatar` вместо `conn.identity` | NET-05 | — | T-11 | 2 | 15 мин | 🔧 |
 | [T-05](T-05-gamelog-owns-category.md) | `GameLog` знает свою категорию | BUILD-02, Корень 5 | — | — | 0 | полдня | ⬜ |
 | [T-06](T-06-android-build-gate.md) | Ворота компиляции под Android | — | T-01 | — | 0 | 1 час | ✅ |
-| [T-07](T-07-test-assembly-and-first-tests.md) | Сборка тестов + юнит-тесты | — | — | T-08, T-09 | 1 | 1 день | 🔧 |
+| [T-07](T-07-test-assembly-and-first-tests.md) | Сборка тестов + юнит-тесты | — | — | T-08, T-09 | 1 | 1 день | ✅ |
 | [T-25](T-25-setmanager-round-counter.md) | Счётчик раундов в `SetManager` не растёт | MATCH-06 | — | — | 1 | 30 мин | ✅ |
-| [T-26](T-26-network-test-harness.md) | Харнесс сетевых тестов в процессе (ярусы A, B) | — | — | T-27; проверку T-02, T-04, T-11 | A/B | полдня | ⬜ |
+| [T-26](T-26-network-test-harness.md) | Харнесс сетевых тестов в процессе (ярусы A, B) | — | — | T-27; проверку T-02, T-04, T-11 | A/B | полдня | ✅ |
 | [T-27](T-27-two-process-e2e.md) | E2E на двух процессах (ярус C) | — | T-26 | проверку T-12, T-13, T-14 | C | 2–3 дня | ⬜ |
 | [T-08](T-08-fix-tie-detection.md) | Победитель сета через переданные команды, не через реестр | MATCH-04 | T-07 | — | 1 | 2 часа | ⬜ |
 | [T-09](T-09-explicit-round-fsm.md) | Явная машина состояний раунда | MATCH-01, MATCH-02, Корень 4 | T-07 | T-10 | 1 | 1 день | ⬜ |

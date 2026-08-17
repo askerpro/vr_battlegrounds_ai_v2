@@ -66,6 +66,7 @@
 | `Assets/Data/GameModes/` | `GameModeRegistry.asset` + `GameModeData` assets |
 | `Assets/Data/Teams/` | `TeamData` assets (`Terrorists.asset`, `SpecialForces.asset`) |
 | `Assets/Resources/` | `GameSettings.asset` (загружается через `Resources.Load`) |
+| `Assets/Tests/EditMode/` | EditMode-тесты (`VrBattlegrounds.Tests.EditMode.asmdef`, только редактор) |
 
 ---
 
@@ -253,6 +254,22 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `CoreAvatarSetup`, `HandsIntegrationSetup`, `ControllerAndCameraSetup`, `FinalizeRigMappingSetup`, `CreatePrefabSetup`, `HandPosesSetup` | Атомарные шаги `UXR Setup Wizard`, которые можно запускать вручную или через `CustomAvatarPipelineMenu`. |
 
 Ручной быстрый путь: выделить FBX asset в Project window и запустить `Tools/VR Battlegrounds/Avatars/Custom Avatar Pipeline/Run Full Selected FBX Pipeline`.
+
+---
+
+### Тесты — `Assets/Tests/EditMode/`
+
+Сборка `VrBattlegrounds.Tests.EditMode` (`includePlatforms: ["Editor"]`, поэтому в билд
+под Quest не попадает). Прогон: `run_tests(mode="EditMode", assembly_names=[...])`.
+
+| Класс / файл | Назначение |
+|---|---|
+| `SetManagerScoringTests` | Подсчёт победителя сета в `SetManager` — чистая логика, без сети. |
+| `Network/MirrorTestHarness` | Базовый класс сетевых тестов: поднимает Mirror сервером **без сокета** (ярус A) и, по требованию, локального клиента (ярус B). Сбрасывает синглтоны проекта между тестами. Рецепт и границы — [`testing.md`](testing.md#как-тестировать-сетевую-логику). |
+| `Network/EliminationModeServerTests` | Серверная логика режима: заполнение `TeamStates`, одно очко за выигранный сет (T-02). Первый тест — проверка самого харнесса. |
+| `Network/HostClientHarnessTests` | Ярус B: локальный клиент поднялся, `SpawnMessage` доходит до `NetworkClient.spawned`. |
+| `Network/PlayerSessionReplicationTests` | Репликация `PlayerSession` через настоящую сериализацию Mirror: `TeamIndex` доезжает, `ActiveAvatar` — нет (T-11). |
+| `Network/SessionRecoveryTests` | Снимок сессии при отключении: позиция, здоровье, флаг `NeedsPhysicalRestore` (T-04). |
 
 ---
 

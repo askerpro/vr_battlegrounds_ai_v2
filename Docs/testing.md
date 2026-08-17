@@ -9,7 +9,8 @@
 тем быстрее и чаще он гоняется, и тем меньше багов должно доезжать до верхних.
 Уровни 3 и 4 ловят большинство сетевых расхождений.
 
-**Текущее покрытие: 0 тестов.** Сборки для тестов в проекте нет.
+**Текущее покрытие: 15 EditMode-тестов** (`VrBattlegrounds.Tests.EditMode`, ~1 с):
+6 на чистую логику сета и 9 на серверную логику через сетевой харнесс.
 
 ---
 
@@ -20,7 +21,9 @@
 | `com.unity.test-framework 1.6.0` | `Packages/manifest.json` | установлен |
 | `com.unity.multiplayer.playmode 2.0.2` | `Packages/manifest.json` | установлен |
 | Чтение тегов виртуальных игроков | `GameNetworkDiscovery.cs:93` | работает |
-| Сборка (`.asmdef`) для тестов | — | **нет, нужна** |
+| Сборка (`.asmdef`) для тестов | `Assets/Tests/EditMode/` | есть |
+| Харнесс сетевых тестов (ярусы A и B) | `Assets/Tests/EditMode/Network/MirrorTestHarness.cs` | есть |
+| Сборка для PlayMode-тестов | — | **нет, нужна** |
 
 Половина инфраструктуры для уровня 3 уже собрана.
 
@@ -117,50 +120,145 @@ Mirror поднимается целиком внутри одного проц�
 
 Отсюда три уровня сетевых тестов, по возрастанию охвата и цены.
 
+Ярусы A и B реализованы: базовый класс `MirrorTestHarness`
+(`Assets/Tests/EditMode/Network/`). Ниже — рецепт, проверенный прогоном, а не чтением
+исходников. Первоначальный вариант рецепта был неполон и не работал; расхождения
+отмечены явно.
+
+### Главная особенность EditMode: Unity не вызывает `Awake`
+
+Ни `AddComponent`, ни `Instantiate` в EditMode не запускают `Awake` — он вызывается
+только в Play-режиме. Для Mirror это значит:
+
+| Что не проинициализировано | Что ломается |
+|---|---|
+| `KcpTransport.Awake` | внутренние `KcpServer`/`KcpClient` равны null → NRE в `ServerStop()` при TearDown |
+| `NetworkIdentity.Awake` | пуст массив `NetworkBehaviours`, у компонентов null в `netIdentity` → NRE при любом обращении к `isServer`, `netId`, `SyncList` |
+| `Awake` менеджеров проекта | `PlayersManager.Instance` и прочие синглтоны остаются null |
+
+Поэтому харнесс дёргает `Awake` вручную через рефлексию. У `NetworkIdentity` метод
+`internal` — Mirror сделал его таким намеренно, комментарий в исходнике:
+«Awake is only called in Play mode. internal so we can call it during unit tests too».
+
 ### Ярус A · Сервер без сокета (в одном процессе)
 
-Mirror можно поднять сервером, **не открывая сеть**: флаг `NetworkServer.listen = false`
+Mirror поднимается сервером, **не открывая сеть**: флаг `NetworkServer.listen = false`
 заставляет `Listen()` пропустить `Transport.active.ServerStart()`. Транспорт при этом
-нужен как объект — `Initialize()` подписывает на его события.
+нужен как объект — `Initialize()` делает `Debug.Assert(Transport.active != null)`
+и подписывается на его события.
 
 ```csharp
 // SetUp
 _transportObject = new GameObject("TestTransport");
-Transport.active = _transportObject.AddComponent<KcpTransport>();
+KcpTransport transport = _transportObject.AddComponent<KcpTransport>();
+ВызватьAwake(transport);        // ← иначе NRE в TearDown
+transport.enabled = false;      // ← ServerEarlyUpdate не должен тикать сокет
+Transport.active = transport;
+
 NetworkServer.listen = false;   // сокет не открывается
 NetworkServer.Listen(4);        // NetworkServer.active == true
 
 // TearDown — порядок важен
+NetworkClient.Shutdown();
 NetworkServer.Shutdown();
 Transport.active = null;
 Object.DestroyImmediate(_transportObject);
+```
+
+Сетевой объект создаётся так (порядок компонентов важен):
+
+```csharp
+GameObject go = new GameObject("Mode");
+go.AddComponent<NetworkIdentity>();       // сначала идентити, иначе OnValidate пишет Error
+EliminationMode mode = go.AddComponent<EliminationMode>();
+ВызватьAwake(go.GetComponent<NetworkIdentity>());  // связывает netIdentity у всех NetworkBehaviour
+NetworkServer.Spawn(go);
 ```
 
 Что становится доступно: `[Server]`-методы исполняются, `[ClientRpc]` не пишет
 `called without an active server`, `NetworkServer.Spawn` работает, `NetworkIdentity`
 получают `netId`.
 
-**Проверяет:** серверную логику матча, спавн сессий и аватаров, смену команды,
-двойные подписки. **Не проверяет:** репликацию — клиента нет.
+**Проверяет:** серверную логику матча, счёт сетов, двойные подписки, снимок сессии
+при отключении. **Не проверяет:** репликацию — клиента нет.
 
 ### Ярус B · Host-режим в одном процессе
 
-То же плюс локальный клиент:
+`NetworkClient.ConnectHost()` **недостаточно** — он только создаёт пару локальных
+соединений. Полный рецепт:
 
 ```csharp
 NetworkClient.ConnectHost();
-// ... NetworkClient.Ready(), если нужен спавн игроку
+HostMode.InvokeOnConnected();                          // регистрирует соединение в NetworkServer.connections
+NetworkServer.localConnection.isAuthenticated = true;  // в бою флаг ставит NetworkManager
+NetworkClient.connection.isAuthenticated = true;
+NetworkClient.Ready();
+ПрокрутитьСеть();                                      // разобрать очереди сообщений
 ```
 
-`LocalConnectionToClient` / `LocalConnectionToServer` передают сообщения напрямую,
-без сокета. `SyncVar` и RPC начинают ходить.
+Без `InvokeOnConnected` список `NetworkServer.connections` пуст, `Broadcast()` не зовёт
+`connection.Update()`, и очередь сообщений не разбирается никогда. Без `isAuthenticated`
+сервер рвёт соединение на первом же сообщении: *«Received message Mirror.ReadyMessage
+that required authentication»*.
 
-**Проверяет:** долетают ли `SyncVar` до клиента, восстановление сессии, связь
-сессия ↔ аватар, реакции клиента на смену фазы. **Не проверяет:** разницу
-между `Host` и `ServerOnly` и реальную сериализацию по сети.
+В EditMode не крутится PlayerLoop, поэтому сетевой цикл нужно гонять руками —
+через рефлексию, все четыре метода `internal`:
+
+```csharp
+NetworkServer.NetworkEarlyUpdate();
+NetworkClient.NetworkEarlyUpdate();
+NetworkServer.NetworkLateUpdate();   // разбирает очередь клиент → сервер
+NetworkClient.NetworkLateUpdate();   // разбирает очередь сервер → клиент
+```
+
+Сообщение проходит в одну сторону за два прохода (сначала flush батча, потом разбор
+очереди), поэтому харнесс делает три итерации.
+
+**Проверяет:** доходят ли `SpawnMessage` до клиента, регистрацию объекта
+в `NetworkClient.spawned`, серверную обработку `ReadyMessage`.
+
+> ⚠️ **Ярус B почти ничего не доказывает про SyncVar.** В host-режиме сервер и клиент
+> делят **один и тот же экземпляр** объекта: `NetworkClient.OnHostClientSpawn` просто
+> кладёт ссылку из `NetworkServer.spawned` в `NetworkClient.spawned`. Никакой
+> сериализации не происходит, поэтому проверка «SyncVar долетел» на ярусе B зеленеет
+> сама собой и не ловит ничего.
 
 > Ограничение яруса B: `NetworkClient` в Mirror статический. Двух независимых клиентов
 > в одном процессе не сделать — только сервер плюс один локальный клиент.
+
+### Ярус A+ · Репликация через настоящую сериализацию
+
+Обходит слепое пятно яруса B, оставаясь в одном процессе. Состояние серверного объекта
+прогоняется через реальный сериализатор Mirror и применяется к **отдельному**
+объекту-двойнику — ровно так это работает у удалённого клиента:
+
+```csharp
+NetworkWriter owner = new NetworkWriter(), observers = new NetworkWriter();
+serverIdentity.SerializeServer(true, owner, observers);          // internal
+clientIdentity.DeserializeClient(new NetworkReader(observers.ToArray()), true);
+```
+
+Двойник — обычный объект с `NetworkIdentity`, не заспавненный на сервере. Так проверено,
+что `PlayerSession.TeamIndex`, `PlayerName`, `Score` действительно уезжают по сети,
+а `ActiveAvatar` — нет (находка T-11: это обычное C#-свойство, не SyncVar).
+
+**Не проверяет:** порядок доставки, дельта-сериализацию (тесты гоняют только
+`initialState = true`), разницу ролей `Host` и `ServerOnly`.
+
+### Чего харнесс не умеет (границы EditMode)
+
+| Не работает | Почему | Куда переносить |
+|---|---|---|
+| `PlayersManager.HandlePlayerConnect`, `AvatarManager.SpawnAvatar`/`ChangeAvatar` | внутри `Instantiate` + `NetworkServer.Spawn`; у клона не вызван `Awake`, `NetworkBehaviours` пуст → NRE в `OnStartServer` | уровень 2, PlayMode |
+| `NetworkServer.SpawnObjects()` | подхватывает **все** `NetworkIdentity` открытой в редакторе сцены, у которых тоже не вызван `Awake` → NRE, а затем и в `Shutdown` → `CleanupSpawned` | никогда не звать в EditMode |
+| Корутины (`StartGameplayWhenReady`, `WaitUntil`) | без Play-режима не крутятся | уровень 2 или вызов приватного метода напрямую |
+| Всё, что зависит от `Time.deltaTime` в `Update` | `Update` не вызывается | `RoundManager.Tick(deltaTime)` — принимает шаг параметром |
+| Дельта-репликация SyncVar | харнесс гоняет только `initialState = true` | уровень 2 |
+| Различие `Host` и `ServerOnly` | сервер в одном процессе всегда host | ярус C |
+
+Отдельно: логи Mirror. `LogAssert.ignoreFailingMessages` тестовый фреймворк сбрасывает
+после `SetUp`, поэтому флаг надо ставить **первой строкой каждого теста** — иначе
+`Error` из Mirror валит тест до проверки утверждений.
 
 ### Ярус C · Два процесса (настоящий e2e)
 
@@ -188,9 +286,9 @@ NetworkClient.ConnectHost();
 
 | Задача | Ярус | Почему |
 |---|---|---|
-| T-02 двойная подписка | A | `InitializeActiveGame` помечен `[Server]` |
-| T-04 восстановление сессии | B | нужен клиент, который отключается и возвращается |
-| T-11 связь сессия ↔ аватар | B | проверяется, что `ActiveAvatar` виден клиенту |
+| T-02 двойная подписка | A | `InitializeActiveGame` помечен `[Server]`. **Закрыто тестом** `Победа_в_сете_даёт_одно_очко` |
+| T-04 восстановление сессии | A + PlayMode | снимок при отключении проверяется на ярусе A (**закрыто**); восстановление позиции при переподключении — только уровень 2: код внутри делает `Instantiate` + `Spawn` |
+| T-11 связь сессия ↔ аватар | A+ | `ActiveAvatar` — не SyncVar, до клиента не доезжает. **Зафиксировано тестом** `ActiveAvatar_не_долетает_до_клиента`; на ярусе B проверка была бы ложно-зелёной |
 | T-12 канал состояния | **C** | ломается только при сервере, не являющемся клиентом |
 | T-13 фаза как состояние | **C** | `ClientRpc` в `ServerOnly` — суть находки NET-06 |
 | T-14 масштаб калибровки | **C** | нужны два разных клиента |

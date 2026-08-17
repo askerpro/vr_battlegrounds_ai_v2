@@ -4,6 +4,9 @@
     "references": [
         "VrBattlegrounds",
         "Mirror",
+        "Mirror.Transports",
+        "kcp2k",
+        "UltimateXR",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

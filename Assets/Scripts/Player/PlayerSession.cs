@@ -20,6 +20,14 @@ namespace VrBattlegrounds.Player
         // ── События сервера ───────────────────────────────────────────────────
         public event Action<PlayerSession> OnSessionReady;
 
+        /// <summary>
+        /// Аватар локального игрока появился, сменился (скин, карта) или исчез (null).
+        /// Замена опроса в <c>Update</c>: клиентскому коду больше не нужно каждый кадр
+        /// спрашивать «мой аватар уже заспавнился?».
+        /// На выделенном сервере не срабатывает — там нет локальной сессии.
+        /// </summary>
+        public static event Action<PlayerController> LocalAvatarChanged;
+
         // ── Сетевые данные (Хранятся на сервере, синхронизируются всем) ───────
 
         [SyncVar] public string DeviceToken = string.Empty;
@@ -47,9 +55,50 @@ namespace VrBattlegrounds.Player
 
         public bool IsReadyForRound => IsInSpawnZone && HasGrabbedDogTag;
 
-        // Ссылка на текущий физический аватар (куклу).
-        // Может на клиенте быть null, если скин ещё не заспавнился.
-        public PlayerController ActiveAvatar { get; set; }
+        // ── Связь с аватаром ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// netId текущего физического аватара (куклы) — единственный источник правды о связи.
+        /// Реплицируется, поэтому «где мой аватар» может спросить и клиент, а не только сервер.
+        /// Ноль означает «аватара нет»: ещё не заспавнен или уничтожен при смене карты.
+        /// </summary>
+        [SyncVar(hook = nameof(OnActiveAvatarNetIdChanged))]
+        public uint ActiveAvatarNetId;
+
+        /// <summary>Разрешённая ссылка на аватар. Кэш, источник правды — <see cref="ActiveAvatarNetId"/>.</summary>
+        private PlayerController _activeAvatar;
+
+        /// <summary>
+        /// Текущий физический аватар (кукла). Доступен и на сервере, и на клиенте.
+        ///
+        /// Ссылка кэшируется. Если кэш пуст — аватар уничтожен либо netId приехал раньше,
+        /// чем сам объект заспавнился, — выполняется отложенное разрешение по netId.
+        /// Присваивать имеет смысл только на сервере: он владеет <see cref="ActiveAvatarNetId"/>.
+        /// </summary>
+        public PlayerController ActiveAvatar
+        {
+            get
+            {
+                // Сравнение с null по-Unity ловит и уничтоженный аватар (смена скина, смена карты).
+                if (_activeAvatar == null) ResolveActiveAvatar();
+                return _activeAvatar;
+            }
+            set
+            {
+                if (value != null && value.netId == 0)
+                {
+                    GameLog.Warning(GameSettings.Instance.LogLevelPlayer,
+                        $"[PlayerSession] {PlayerName}: аватар назначен до NetworkServer.Spawn — netId ещё 0, клиенты связь не получат.");
+                }
+
+                ActiveAvatarNetId = value != null ? value.netId : 0u;
+
+                // На выделенном сервере хук SyncVar не вызывается (Mirror зовёт его только
+                // в host-режиме), поэтому связь проставляем здесь же. Повторный вызов
+                // из хука безвреден — LinkAvatar идемпотентен.
+                LinkAvatar(value);
+            }
+        }
 
         public TeamData Team => TeamRegistry.Instance?.GetByIndex(TeamIndex);
 
@@ -73,6 +122,11 @@ namespace VrBattlegrounds.Player
             if (isLocalPlayer)
             {
                 LocalSession = this;
+
+                // Хук ActiveAvatarNetId мог отработать раньше: Mirror применяет SyncVar
+                // до вызова OnStartClient, и тогда LocalSession ещё не был назначен,
+                // а событие ушло «в никуда». Досылаем текущее состояние подписчикам.
+                LocalAvatarChanged?.Invoke(ActiveAvatar);
             }
             GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerSession] {netId} started on client for {PlayerName}.");
         }
@@ -90,6 +144,59 @@ namespace VrBattlegrounds.Player
             TeamData team = TeamRegistry.Instance?.GetByIndex(newIndex);
             GameLog.Info(GameSettings.Instance.LogLevelDebug,
                 $"[PlayerSession] {PlayerName} команда изменена → {(team != null ? team.displayName : "нет")}");
+        }
+
+        /// <summary>
+        /// Пришёл новый netId аватара. Разрешаем его в ссылку на каждой машине.
+        /// Если объекта ещё нет в spawned (порядок доставки спавнов не гарантирован),
+        /// связь закроется с другой стороны — из <c>PlayerController.OnStartClient</c>.
+        /// </summary>
+        private void OnActiveAvatarNetIdChanged(uint oldNetId, uint newNetId)
+        {
+            ResolveActiveAvatar();
+        }
+
+        // ── Разрешение связи ──────────────────────────────────────────────────
+
+        /// <summary>Ищет аватар по <see cref="ActiveAvatarNetId"/> и обновляет кэш.</summary>
+        private void ResolveActiveAvatar()
+        {
+            if (ActiveAvatarNetId == 0)
+            {
+                LinkAvatar(null);
+                return;
+            }
+
+            NetworkIdentity identity = Mirror.Utils.GetSpawnedInServerOrClient(ActiveAvatarNetId);
+            LinkAvatar(identity != null ? identity.GetComponent<PlayerController>() : null);
+        }
+
+        /// <summary>
+        /// Ставит ссылку с обеих сторон и оповещает подписчиков, если это локальный игрок.
+        /// Идемпотентен: повторный вызов с той же ссылкой ничего не делает.
+        /// </summary>
+        private void LinkAvatar(PlayerController avatar)
+        {
+            // Именно ReferenceEquals, а не ==: уничтоженный аватар по-Unity равен null,
+            // и переход «был аватар → его больше нет» иначе остался бы незамеченным.
+            if (ReferenceEquals(_activeAvatar, avatar)) return;
+
+            _activeAvatar = avatar;
+
+            if (avatar != null) avatar.LinkSession(this);
+
+            if (LocalSession == this) LocalAvatarChanged?.Invoke(avatar);
+        }
+
+        /// <summary>
+        /// Аватар сообщает, что он заспавнился. Закрывает гонку «netId приехал раньше объекта».
+        /// Чужой аватар игнорируется: источник правды о связи — <see cref="ActiveAvatarNetId"/>,
+        /// который ставит только сервер.
+        /// </summary>
+        internal void NotifyAvatarSpawned(PlayerController avatar)
+        {
+            if (avatar == null || avatar.netId != ActiveAvatarNetId) return;
+            LinkAvatar(avatar);
         }
 
         // ── Клиентские команды ────────────────────────────────────────────────

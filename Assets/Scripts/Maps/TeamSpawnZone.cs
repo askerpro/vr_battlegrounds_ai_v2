@@ -113,30 +113,56 @@ namespace VrBattlegrounds.Maps
         private void OnEnable()
         {
             EliminationMode.OnRoundStateChangedLocal += OnRoundStateChanged;
+            PlayerSession.LocalAvatarChanged += OnLocalAvatarChanged;
+
+            // Аватар мог заспавниться раньше, чем включилась зона: зоны живут в сцене карты,
+            // а сессия переживает её загрузку.
+            OnLocalAvatarChanged(PlayerSession.LocalSession != null
+                ? PlayerSession.LocalSession.ActiveAvatar
+                : null);
+
             UpdateVisibility();
         }
 
         private void OnDisable()
         {
             EliminationMode.OnRoundStateChangedLocal -= OnRoundStateChanged;
+            PlayerSession.LocalAvatarChanged -= OnLocalAvatarChanged;
+
             if (_localPlayer != null)
             {
                 _localPlayer.PlayerDied -= OnLocalPlayerDied;
             }
+            _localPlayer = null;
         }
 
-        private void Update()
+        /// <summary>
+        /// Локальный аватар появился, сменился или исчез.
+        ///
+        /// Раньше зона искала его в <c>Update</c> каждый кадр — и искала не там:
+        /// в <c>NetworkClient.localPlayer</c> лежит <see cref="PlayerSession"/>, а не аватар,
+        /// поэтому поиск не находил ничего никогда (находка NET-04). Теперь связь
+        /// реплицируется, и зона просто подписана на её изменение.
+        /// </summary>
+        private void OnLocalAvatarChanged(PlayerController avatar)
         {
-            // Пытаемся найти локального игрока, если ещё не нашли
-            if (_localPlayer == null && NetworkClient.localPlayer != null)
+            // ReferenceEquals, а не ==: уничтоженный аватар по-Unity равен null,
+            // и переход «был → уничтожен» иначе не обработался бы.
+            if (ReferenceEquals(_localPlayer, avatar)) return;
+
+            if (_localPlayer != null)
             {
-                _localPlayer = NetworkClient.localPlayer.GetComponent<PlayerController>();
-                if (_localPlayer != null)
-                {
-                    _localPlayer.PlayerDied += OnLocalPlayerDied;
-                    UpdateVisibility();
-                }
+                _localPlayer.PlayerDied -= OnLocalPlayerDied;
             }
+
+            _localPlayer = avatar;
+
+            if (_localPlayer != null)
+            {
+                _localPlayer.PlayerDied += OnLocalPlayerDied;
+            }
+
+            UpdateVisibility();
         }
 
         private void OnRoundStateChanged(RoundState newState)
@@ -166,7 +192,10 @@ namespace VrBattlegrounds.Maps
                 if (_localPlayer != null)
                 {
                     bool isDead = !_localPlayer.IsAlive;
-                    bool isSameTeam = _localPlayer.Session.Team == _team;
+                    // Session проверяется на null: до этой правки ветка не исполнялась никогда
+                    // (_localPlayer всегда оставался null), теперь она рабочая — и на клиенте
+                    // сессия может ещё не разрешиться.
+                    bool isSameTeam = _localPlayer.Session != null && _localPlayer.Session.Team == _team;
 
                     // Видим только если мы мертвы и из этой же команды
                     isVisible = isDead && isSameTeam;

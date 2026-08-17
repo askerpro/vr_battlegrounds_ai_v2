@@ -30,7 +30,11 @@ namespace VrBattlegrounds.Player
         /// <summary>
         /// Сетевой ID сессии, к которой привязан этот аватар
         /// </summary>
-        [SyncVar] public uint SessionNetId;
+        [SyncVar(hook = nameof(OnSessionNetIdChanged))]
+        public uint SessionNetId;
+
+        /// <summary>Разрешённая сессия. Кэш, источник правды — <see cref="SessionNetId"/>.</summary>
+        private PlayerSession _session;
 
         /// <summary>
         /// Имя игрока, полученное из сессии для синхронизации имени объекта
@@ -54,22 +58,52 @@ namespace VrBattlegrounds.Player
         }
 
         /// <summary>
-        /// Ссылка на PlayerSession, если он уже заспавнен на клиенте/сервере
+        /// Сессия, к которой привязан аватар. Ссылка кэшируется в <c>OnStartServer</c> /
+        /// <c>OnStartClient</c>: через это свойство идут <see cref="Team"/> и
+        /// <see cref="TeamIndex"/>, которые вызываются в циклах по всем игрокам, а поиск
+        /// в словаре spawned на каждое обращение обходился недёшево.
+        ///
+        /// Если кэш пуст (сессия ещё не заспавнилась к моменту старта аватара —
+        /// порядок доставки спавнов не гарантирован), разрешение повторяется лениво.
         /// </summary>
         public PlayerSession Session
         {
             get
             {
-                if (SessionNetId == 0) return null;
-                // На сервере можем искать в spawned
-                if (NetworkServer.active && NetworkServer.spawned.TryGetValue(SessionNetId, out NetworkIdentity sIdentity))
-                    return sIdentity.GetComponent<PlayerSession>();
-                // На клиенте - аналогично
-                if (NetworkClient.active && NetworkClient.spawned.TryGetValue(SessionNetId, out NetworkIdentity cIdentity))
-                    return cIdentity.GetComponent<PlayerSession>();
-
-                return null;
+                if (_session == null) CacheSession();
+                return _session;
             }
+        }
+
+        /// <summary>
+        /// Разрешает <see cref="SessionNetId"/> в ссылку и закрывает связь с обратной стороны:
+        /// сессия могла получить наш netId раньше, чем мы заспавнились, и не суметь его разрешить.
+        /// </summary>
+        private void CacheSession()
+        {
+            _session = null;
+            if (SessionNetId == 0) return;
+
+            NetworkIdentity identity = Mirror.Utils.GetSpawnedInServerOrClient(SessionNetId);
+            if (identity == null) return;
+
+            _session = identity.GetComponent<PlayerSession>();
+            if (_session != null) _session.NotifyAvatarSpawned(this);
+        }
+
+        /// <summary>
+        /// Проставляет сессию извне — зовётся самой сессией, когда та разрешила
+        /// свой <c>ActiveAvatarNetId</c>. Избавляет аватар от повторного поиска в словаре.
+        /// </summary>
+        internal void LinkSession(PlayerSession session)
+        {
+            _session = session;
+        }
+
+        /// <summary>Сессия сменилась — кэш протух.</summary>
+        private void OnSessionNetIdChanged(uint oldNetId, uint newNetId)
+        {
+            _session = null;
         }
 
         // ── Публичный API ─────────────────────────────────────────────────────
@@ -113,8 +147,16 @@ namespace VrBattlegrounds.Player
             }
         }
 
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            CacheSession();
+        }
+
         public override void OnStartClient()
         {
+            base.OnStartClient();
+            CacheSession();
         }
 
         private void OnActorDied(UxrActor actor)

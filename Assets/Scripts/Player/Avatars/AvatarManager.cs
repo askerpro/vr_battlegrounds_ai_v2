@@ -95,11 +95,13 @@ namespace VrBattlegrounds.Player.Avatars
                 }
             }
 
-            session.ActiveAvatar = avatarClass;
-
             // Спавним аватар и отдаем авторитет игроку.
             // Теперь PlayerSession является PlayerObject, поэтому здесь используем обычный Spawn(avatar, conn).
             NetworkServer.Spawn(avatarInstance, conn);
+
+            // Связь проставляется строго ПОСЛЕ спавна: до него netId равен нулю,
+            // и клиенты получили бы пустую ссылку на аватар.
+            session.ActiveAvatar = avatarClass;
 
             OnAvatarSpawned?.Invoke(avatarClass);
         }
@@ -132,10 +134,12 @@ namespace VrBattlegrounds.Player.Avatars
                 newPc.AvatarPlayerName = session.PlayerName;
             }
 
-            session.ActiveAvatar = newPc;
-
             // Спавним новый физический аватар с авторитетом клиента
             NetworkServer.Spawn(newPlayerInstance, conn);
+
+            // Только после спавна: netId нового аватара нужен клиентам, иначе связь
+            // на них останется указывать на уже уничтоженный старый аватар.
+            session.ActiveAvatar = newPc;
 
             if (oldAvatar != null)
             {

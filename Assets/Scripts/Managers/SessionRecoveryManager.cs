@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using System.Collections.Generic;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Core;
@@ -12,6 +13,12 @@ namespace VrBattlegrounds.Managers
         public string PlayerName;
         public int TeamIndex;
         public int AvatarIndex;
+
+        /// <summary>
+        /// Момент сохранения, секунды от старта процесса. По нему считается возраст записи:
+        /// ждать вернувшегося игрока имеет смысл в пределах матча, а не бесконечно.
+        /// </summary>
+        public double SavedAtSeconds;
 
         // Stats
         public int Kills;
@@ -33,7 +40,24 @@ namespace VrBattlegrounds.Managers
     {
         public static SessionRecoveryManager Instance { get; private set; }
 
+        [Header("Время жизни снимков")]
+        [Tooltip("Сколько минут ждать вернувшегося игрока. Старше — снимок выбрасывается, " +
+                 "и игрок заходит как новый. Ноль и меньше отключают срок годности.")]
+        [SerializeField] private float _snapshotLifetimeMinutes = 7f;
+
+        [Tooltip("Потолок числа хранимых снимков. При переполнении выбрасывается самый старый.")]
+        [SerializeField] private int _maxStoredSnapshots = 32;
+
         private Dictionary<string, SessionSnapshot> _disconnectedSessions = new Dictionary<string, SessionSnapshot>();
+
+        /// <summary>
+        /// Часы менеджера. Отдельным полем, потому что иначе срок годности проверяется
+        /// только реальным ожиданием — в тесте это семь минут простоя.
+        /// </summary>
+        private Func<double> _timeSource = () => Time.realtimeSinceStartupAsDouble;
+
+        /// <summary>Записей в хранилище. Нужен, чтобы за ростом словаря можно было следить снаружи.</summary>
+        public int StoredSnapshotsCount => _disconnectedSessions.Count;
 
         private void Awake()
         {
@@ -59,7 +83,8 @@ namespace VrBattlegrounds.Managers
                 Kills = session.Kills,
                 Deaths = session.Deaths,
                 Score = session.Score,
-                NeedsPhysicalRestore = false
+                NeedsPhysicalRestore = false,
+                SavedAtSeconds = _timeSource()
             };
 
             if (avatar != null)
@@ -77,12 +102,19 @@ namespace VrBattlegrounds.Managers
 
             _disconnectedSessions[deviceToken] = snapshot;
             GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[SessionRecoveryManager] Saved session for {session.PlayerName} (Token: {deviceToken}).");
+
+            DropExpiredSnapshots();
+            DropOldestWhileOverLimit();
         }
 
         [Server]
         public SessionSnapshot GetAndRemoveSavedSession(string deviceToken)
         {
             if (string.IsNullOrEmpty(deviceToken)) return null;
+
+            // Чистим перед выдачей, а не по таймеру: так протухший снимок не вернётся
+            // даже в тот единственный кадр, когда уборка ещё не подоспела.
+            DropExpiredSnapshots();
 
             if (_disconnectedSessions.TryGetValue(deviceToken, out SessionSnapshot snapshot))
             {
@@ -92,6 +124,73 @@ namespace VrBattlegrounds.Managers
             }
 
             return null;
+        }
+
+        // ── Срок годности ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Выбрасывает снимки старше <see cref="_snapshotLifetimeMinutes"/>.
+        ///
+        /// Зачем вообще. Запись удалялась только при удачном переподключении того же
+        /// устройства (находка NET-10). Игрок, ушедший насовсем, оставлял её навсегда,
+        /// и хранилище росло всё время жизни сервера.
+        /// </summary>
+        private void DropExpiredSnapshots()
+        {
+            if (_snapshotLifetimeMinutes <= 0f) return; // срок годности отключён
+            if (_disconnectedSessions.Count == 0) return;
+
+            double deadline = _timeSource() - _snapshotLifetimeMinutes * 60.0;
+
+            List<string> expired = null;
+            foreach (KeyValuePair<string, SessionSnapshot> entry in _disconnectedSessions)
+            {
+                if (entry.Value.SavedAtSeconds > deadline) continue;
+
+                if (expired == null) expired = new List<string>();
+                expired.Add(entry.Key);
+            }
+
+            if (expired == null) return;
+
+            foreach (string token in expired)
+            {
+                GameLog.Info(GameSettings.Instance.LogLevelPlayer,
+                    $"[SessionRecoveryManager] Снимок {_disconnectedSessions[token].PlayerName} (Token: {token}) " +
+                    $"старше {_snapshotLifetimeMinutes} мин — выброшен.");
+                _disconnectedSessions.Remove(token);
+            }
+        }
+
+        /// <summary>
+        /// Держит хранилище в пределах <see cref="_maxStoredSnapshots"/>, выбрасывая самые
+        /// старые записи. Страховка на случай, когда отключений больше, чем успевает
+        /// съесть срок годности.
+        /// </summary>
+        private void DropOldestWhileOverLimit()
+        {
+            if (_maxStoredSnapshots <= 0) return; // лимит отключён
+
+            while (_disconnectedSessions.Count > _maxStoredSnapshots)
+            {
+                string oldestToken = null;
+                double oldestTime = double.MaxValue;
+
+                foreach (KeyValuePair<string, SessionSnapshot> entry in _disconnectedSessions)
+                {
+                    if (entry.Value.SavedAtSeconds >= oldestTime) continue;
+
+                    oldestTime = entry.Value.SavedAtSeconds;
+                    oldestToken = entry.Key;
+                }
+
+                if (oldestToken == null) return; // защита от зацикливания
+
+                GameLog.Info(GameSettings.Instance.LogLevelPlayer,
+                    $"[SessionRecoveryManager] Хранилище переполнено ({_maxStoredSnapshots}) — " +
+                    $"выброшен самый старый снимок (Token: {oldestToken}).");
+                _disconnectedSessions.Remove(oldestToken);
+            }
         }
     }
 }

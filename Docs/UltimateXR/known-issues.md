@@ -223,23 +223,31 @@ if (_autoCreateStartAnchor)
 
 ### Решение
 
-В `ArsenalWallController.ReplenishWeaponsNetwork()` инстанцируем префаб **деактивированным**,
-отключаем флаг через reflection, затем активируем:
+В `ArsenalWallController.ReplenishWeaponsNetwork()` инстанцируем оружие **под выключенным
+контейнером** (у ребёнка выключенного родителя `Awake` не срабатывает), отключаем флаг
+через reflection и только потом выпускаем объект наружу:
 
 ```csharp
-// 1. Деактивируем префаб, чтобы Awake не сработал при Instantiate
-var prefab = slot.WeaponData.WeaponPrefab;
-bool wasActive = prefab.activeSelf;
-prefab.SetActive(false);
-GameObject spawned = Instantiate(prefab);
-prefab.SetActive(wasActive);
+// 1. Рождаем под выключенным контейнером — Awake не сработает
+GameObject spawned = Instantiate(slot.WeaponData.WeaponPrefab, InactiveSpawnRoot, false);
 
 // 2. Отключаем _autoCreateStartAnchor через reflection
 DisableAutoAnchor(spawned);
 
-// 3. Активируем — Awake сработает, но Auto Anchor не создастся
+// 3. Выпускаем наружу — здесь и сработает Awake, но Auto Anchor не создастся
 spawned.SetActive(true);
+spawned.transform.SetParent(null, false);
 ```
+
+`InactiveSpawnRoot` — пустой выключенный объект, лениво создаваемый под самой стеной,
+поэтому уезжает вместе с ней при смене карты.
+
+> **Так было до T-22 — не возвращать.** Раньше вместо контейнера выключали сам префаб:
+> `prefab.SetActive(false)` … `prefab.SetActive(wasActive)`. Это мутация **ассета**, а не
+> инстанса (находка VR-04): `SetActive` на корне префаб-ассета метит его грязным, и флаг
+> не гаснет после возврата состояния — правка утекает в репозиторий. Плюс исключение
+> между двумя вызовами оставило бы префаб выключенным насовсем. Сторож —
+> `Assets/Tests/EditMode/Arsenal/ArsenalPrefabMutationTests.cs`.
 
 Метод `DisableAutoAnchor`:
 

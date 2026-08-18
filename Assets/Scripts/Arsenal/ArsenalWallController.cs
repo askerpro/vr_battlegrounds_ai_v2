@@ -163,6 +163,38 @@ namespace VrBattlegrounds.Arsenal
             ApplyPhaseToState(newState);
         }
 
+        /// <summary>
+        /// Выключенный контейнер, под которым рождается оружие.
+        ///
+        /// Зачем. <c>UxrGrabbableObject.Awake()</c> обязан отработать уже с выключенным
+        /// <c>_autoCreateStartAnchor</c>, иначе UXR создаёт лишний «Auto Anchor» и вытаскивает
+        /// оружие из слота. Отложить <c>Awake</c> можно только неактивностью, а трогать ради
+        /// этого сам префаб нельзя — он ассет (VR-04). Выключенный родитель даёт то же самое,
+        /// не касаясь ассета.
+        ///
+        /// Живёт под стеной, поэтому уезжает вместе с ней при смене карты. Собственный
+        /// трансформ значения не имеет: оружие выходит наружу через
+        /// <c>SetParent(null, worldPositionStays: false)</c> и сохраняет локальные значения
+        /// префаба, ровно как при обычном <c>Instantiate</c>.
+        /// </summary>
+        private Transform InactiveSpawnRoot
+        {
+            get
+            {
+                if (_inactiveSpawnRoot == null)
+                {
+                    GameObject root = new GameObject("InactiveSpawnRoot");
+                    root.transform.SetParent(transform, false);
+                    root.SetActive(false);
+                    _inactiveSpawnRoot = root.transform;
+                }
+
+                return _inactiveSpawnRoot;
+            }
+        }
+
+        private Transform _inactiveSpawnRoot;
+
         [Server]
         private void ReplenishWeaponsNetwork(bool forceAll = false)
         {
@@ -178,20 +210,23 @@ namespace VrBattlegrounds.Arsenal
 
                 if (forceAll || slot.NeedsReplenishment())
                 {
-                    // Instantiate inactive so UxrGrabbableObject.Awake() doesn't fire yet
-                    var prefab = slot.WeaponData.WeaponPrefab;
-                    bool wasActive = prefab.activeSelf;
-                    prefab.SetActive(false);
-                    
-                    GameObject spawned = Instantiate(prefab);
-                    prefab.SetActive(wasActive);
-                    
+                    // Инстанцируем под выключенным контейнером: у ребёнка выключенного
+                    // родителя Awake не срабатывает, пока родителя не включат. Раньше для
+                    // той же цели выключали сам префаб — то есть ассет, а не инстанс:
+                    // в редакторе это метило его грязным, а исключение между выключением
+                    // и обратным включением оставляло префаб выключенным навсегда (VR-04).
+                    GameObject spawned = Instantiate(slot.WeaponData.WeaponPrefab, InactiveSpawnRoot, false);
+
                     // Disable _autoCreateStartAnchor before activation —
                     // otherwise UXR creates a rogue "Auto Anchor" parent in Awake()
                     DisableAutoAnchor(spawned);
-                    
+
+                    // Порядок важен: сначала activeSelf (объект всё ещё спит под выключенным
+                    // родителем), и только потом выход из контейнера — там и сработает Awake,
+                    // уже с отключённым авто-якорем и на своём мировом трансформе.
                     spawned.SetActive(true);
-                    
+                    spawned.transform.SetParent(null, false);
+
                     // Assign on server BEFORE Spawn —
                     // Mirror captures current parent in the spawn message.
                     slot.AssignNetworkItem(spawned);

@@ -41,8 +41,9 @@ namespace VrBattlegrounds.Tests.Network
             Assert.IsNotNull(_teamA, "В реестре нет команды с teamIndex=1");
             Assert.IsNotNull(_teamB, "В реестре нет команды с teamIndex=2");
 
-            // PrepareNextRound ходит в PlayersManager.Instance напрямую (через TeamRuntimeData),
-            // поэтому менеджер нужен даже там, где живых игроков нет.
+            // PrepareNextRound после NET-12 ходит через IPlayerRoster и менеджера не требует,
+            // но EliminationMode.IsPlayersReady разыменовывает PlayersManager.Instance
+            // напрямую (находка NET-18) — менеджер поднимается ради неё.
             CreateManager<PlayersManager>("PlayersManager");
 
             _mode = CreateNetworkComponent<EliminationMode>("EliminationMode");

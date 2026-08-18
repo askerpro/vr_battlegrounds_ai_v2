@@ -10,18 +10,28 @@ namespace VrBattlegrounds.GameModes
     /// Серверная логическая обёртка над командой во время матча.
     /// Не является сетевым компонентом (NetworkBehaviour), используется
     /// исключительно GameMode на сервере для удобной работы с командой.
-    /// Источником правды об игроках выступает глобальный PlayersManager.
+    ///
+    /// Источник правды об игроках — <see cref="IPlayerRoster"/>, а не напрямую
+    /// <see cref="PlayersManager"/>. Раньше обёртка дёргала синглтон без проверки,
+    /// и <c>EliminationMode.PrepareNextRound</c> падал с NRE везде, где менеджера нет:
+    /// в сцене, открытой без сети, и в любом тесте логики матча (находка NET-12).
+    /// Реестр отвечает пустым списком — команда просто оказывается без игроков.
     /// </summary>
     public class TeamRuntimeData
     {
         public TeamData Team { get; private set; }
-        
-        private readonly GameMode _gameMode;
 
-        public TeamRuntimeData(TeamData team, GameMode mode)
+        private readonly GameMode _gameMode;
+        private readonly IPlayerRoster _roster;
+
+        /// <param name="roster">
+        /// Откуда брать игроков. По умолчанию — боевой реестр поверх <see cref="PlayersManager"/>.
+        /// </param>
+        public TeamRuntimeData(TeamData team, GameMode mode, IPlayerRoster roster = null)
         {
             Team = team;
             _gameMode = mode;
+            _roster = roster ?? new PlayersManagerRoster();
         }
 
         /// <summary>Текущий счет команды (синхронизируется через GameMode).</summary>
@@ -32,10 +42,10 @@ namespace VrBattlegrounds.GameModes
         }
 
         /// <summary>Все подключенные сессии игроков этой команды.</summary>
-        public IEnumerable<PlayerSession> Sessions => PlayersManager.Instance.GetPlayers(Team);
+        public IEnumerable<PlayerSession> Sessions => _roster.GetPlayers(Team);
 
         /// <summary>Только живые сессии игроков этой команды.</summary>
-        public IEnumerable<PlayerSession> AliveSessions => PlayersManager.Instance.GetAlivePlayers(Team);
+        public IEnumerable<PlayerSession> AliveSessions => _roster.GetAlivePlayers(Team);
 
         /// <summary>Общее количество игроков в команде.</summary>
         public int PlayersCount => Sessions.Count();

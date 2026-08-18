@@ -354,6 +354,32 @@ Mirror зовёт `OnStartLocalPlayer` лишь на **объекте игрок
 
 ---
 
+### NET-18 · Низкий · `EliminationMode.IsPlayersReady` падает без `PlayersManager`
+
+> Найдено 2026-08-19 при работе над NET-12.
+
+**Где:** `Assets/Scripts/GameModes/EliminationMode/EliminationMode.cs:136`
+
+```csharp
+int currentPlayers = PlayersManager.Instance.Sessions.Count();
+```
+
+Тот же корень, что у NET-12, только в другом месте: синглтон разыменовывается без проверки.
+После перевода `TeamRuntimeData` на `IPlayerRoster` это последний путь режима, которому
+менеджер нужен физически, — тесты `EliminationModeServerTests` и `RoundPhaseFlowTests`
+поднимают `PlayersManager` именно ради него.
+
+**Последствие.** В бою `PlayersManager` живёт в префабе менеджеров и почти всегда есть,
+поэтому находка низкая. Но режим по-прежнему нельзя запустить в изоляции, и сцена,
+открытая без менеджеров, уронит `Update` режима на первом же кадре.
+
+**Как чинить.** `IsPlayersReady` спрашивает у реестра «сколько всего игроков» — это тот же
+вопрос, что уже умеет `IPlayerRoster.GetPlayers`, только без разбивки по командам. Либо
+добавить в реестр счёт по всем командам, либо проверить `PlayersManager.Instance != null`
+и вернуть `false`.
+
+---
+
 ## Логика матча (MATCH)
 
 ### MATCH-01 · Критично · Двойная подписка удваивает счёт сетов

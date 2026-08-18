@@ -37,8 +37,9 @@ namespace VrBattlegrounds.Tests.Network
             Assert.IsNotNull(_teamA, "В реестре нет команды с teamIndex=1");
             Assert.IsNotNull(_teamB, "В реестре нет команды с teamIndex=2");
 
-            // TeamRuntimeData.Sessions ходит в PlayersManager.Instance напрямую,
-            // поэтому менеджер нужен даже там, где игроков нет.
+            // TeamRuntimeData после NET-12 ходит через IPlayerRoster и без менеджера
+            // не падает, а вот EliminationMode.IsPlayersReady разыменовывает
+            // PlayersManager.Instance напрямую (находка NET-18) — менеджер нужен ради неё.
             CreateManager<PlayersManager>("PlayersManager");
 
             _mode = CreateNetworkComponent<EliminationMode>("EliminationMode");

@@ -47,11 +47,10 @@ namespace VrBattlegrounds.Maps
         // Именно этот список видят внешние скрипты через GetPlayersInZone() и события.
         private readonly HashSet<PlayerController> _playersInZone = new HashSet<PlayerController>();
 
-        // Оптимизированная проверка полного нахождения:
-        // Кешируем уменьшенный Bounds зоны (zone minus head half-extents).
-        // Если центр камеры игрока лежит внутри _shrunkenBounds → голова гарантированно целиком внутри зоны.
-        // Одна операция Bounds.Contains = 3 float-сравнения — дёшево для 10 игроков/кадр.
-        private Bounds _shrunkenBounds;
+        // Проверка полного нахождения считается на лету, в локальных координатах коллайдера
+        // (см. IsHeadCenterInZone). Раньше здесь лежал кэш мирового AABB, посчитанный в Awake, —
+        // он и был находкой VR-05: зона, которую подвинули после Awake, проверялась по старому
+        // месту, а у повёрнутой зоны AABB заметно больше самой зоны.
 
         /// <summary>Половина размера коллайдера головы игрока (Camera BoxCollider). </summary>
         private static readonly Vector3 HeadHalfExtents = new Vector3(0.125f, 0.11f, 0.09f);
@@ -82,10 +81,6 @@ namespace VrBattlegrounds.Maps
             rb.isKinematic = true;
             rb.useGravity = false;
 
-            // Предрассчитываем уменьшенный Bounds для быстрой проверки полного нахождения.
-            // Bounds пересчитывается при Awake — объект должен быть уже на своей финальной позиции.
-            RebuildShrunkenBounds();
-
             if (_team == null)
             {
                 GameLog.Warning(GameSettings.Instance.LogLevelMatch,
@@ -98,16 +93,45 @@ namespace VrBattlegrounds.Maps
         }
 
         /// <summary>
-        /// Пересчитывает уменьшенный Bounds зоны.
-        /// Вызывать при изменении позиции/размера зоны (например при инициализации или ресайзе).
+        /// Голова игрока целиком внутри зоны? На вход — мировая позиция центра камеры.
+        ///
+        /// Считается в локальных координатах коллайдера, а не через мировой AABB. Причин две.
+        /// Во-первых, AABB повёрнутой зоны заметно больше самой зоны, и точка за её гранью
+        /// считалась внутренней — обещанной в комментарии точности «±5–12 см» для повёрнутых
+        /// зон не было вовсе. Во-вторых, кэшировать теперь нечего: зона, которую подвинули,
+        /// повернули или отмасштабировали после <c>Awake</c>, проверяется по своему текущему
+        /// положению, а не по тому, где она была на старте (находка VR-05).
+        ///
+        /// Приближение осталось одно: голова считается коробкой, выровненной по осям зоны, —
+        /// её собственный поворот не учитывается. Точность ~±<see cref="HeadHalfExtents"/>
+        /// (5–12 см), стоимость — одно умножение точки на матрицу и три сравнения.
         /// </summary>
-        private void RebuildShrunkenBounds()
+        public bool IsHeadCenterInZone(Vector3 worldHeadCenter)
         {
-            Bounds zoneBounds = _boxCollider.bounds; // world-space AABB
-            _shrunkenBounds = new Bounds(
-                zoneBounds.center,
-                zoneBounds.size - HeadHalfExtents * 2f // уменьшаем на полный размер головы
-            );
+            Vector3 local = transform.InverseTransformPoint(worldHeadCenter) - _boxCollider.center;
+
+            // Размер головы задан в метрах мира — переводим в локальные единицы коллайдера.
+            Vector3 scale = transform.lossyScale;
+            Vector3 headHalf = new Vector3(
+                ToLocalExtent(HeadHalfExtents.x, scale.x),
+                ToLocalExtent(HeadHalfExtents.y, scale.y),
+                ToLocalExtent(HeadHalfExtents.z, scale.z));
+
+            // Насколько центр головы может отойти от центра зоны, оставаясь целиком внутри.
+            // Отрицательное значение по любой оси означает, что зона уже головы и целиком
+            // в неё не поместиться — сравнение по модулю само вернёт false.
+            Vector3 allowed = _boxCollider.size * 0.5f - headHalf;
+
+            return Mathf.Abs(local.x) <= allowed.x
+                && Mathf.Abs(local.y) <= allowed.y
+                && Mathf.Abs(local.z) <= allowed.z;
+        }
+
+        /// <summary>Мировой размер в локальные единицы. Нулевой масштаб схлопывает зону в ничто.</summary>
+        private static float ToLocalExtent(float worldExtent, float scale)
+        {
+            float absScale = Mathf.Abs(scale);
+            return absScale > Mathf.Epsilon ? worldExtent / absScale : float.PositiveInfinity;
         }
 
         private void OnEnable()
@@ -269,7 +293,7 @@ namespace VrBattlegrounds.Maps
 
             if (!_cameraTransformCache.TryGetValue(player, out Transform camT) || camT == null) return;
 
-            bool isCurrentlyFullyInside = _shrunkenBounds.Contains(camT.position);
+            bool isCurrentlyFullyInside = IsHeadCenterInZone(camT.position);
             bool wasAlreadyFullyInside = _playersInZone.Contains(player);
 
             if (isCurrentlyFullyInside && !wasAlreadyFullyInside)
@@ -347,7 +371,10 @@ namespace VrBattlegrounds.Maps
 
             foreach (var p in _playersInZone)
             {
-                if (p.Session.Team == _team)
+                // Session — null в окне между спавном аватара и спавном его сессии
+                // (порядок доставки спавнов Mirror не гарантирует). Раньше здесь
+                // вылетал NullReferenceException и уносил с собой весь вызывающий код.
+                if (p != null && p.Session != null && p.Session.Team == _team)
                 {
                     result.Add(p);
                 }
@@ -387,14 +414,13 @@ namespace VrBattlegrounds.Maps
 
         /// <summary>
         /// Быстрая проверка: голова игрока (Camera BoxCollider) целиком внутри зоны.
-        /// Алгоритм: центр камеры должен лежать в уменьшенном Bounds зоны (zone − head_size).
-        /// Точность ~±HeadHalfExtents (5–12 см), скорость O(1).
+        /// Геометрия — в <see cref="IsHeadCenterInZone"/>, здесь только поиск камеры игрока.
         /// </summary>
         public bool IsPlayerFullyInZone(PlayerController player)
         {
             if (player == null || !_playersTouching.Contains(player)) return false;
             if (!_cameraTransformCache.TryGetValue(player, out Transform camT) || camT == null) return false;
-            return _shrunkenBounds.Contains(camT.position);
+            return IsHeadCenterInZone(camT.position);
         }
 
         /// <summary>

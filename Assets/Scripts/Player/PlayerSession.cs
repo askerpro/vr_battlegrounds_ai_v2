@@ -131,6 +131,25 @@ namespace VrBattlegrounds.Player
             GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerSession] {netId} started on client for {PlayerName}.");
         }
 
+        /// <summary>
+        /// Клиент отключился или сессию деспавнили. Снимаем статическую ссылку, иначе она
+        /// указывает на уничтоженный объект: <see cref="LocalSession"/> — единственный путь
+        /// клиентского кода к своему аватару (T-11), и висящая ссылка выглядит как живая.
+        ///
+        /// Сравнение с <c>this</c> обязательно. При переподключении новая сессия успевает
+        /// встать в <see cref="LocalSession"/> раньше, чем Mirror доберётся до деспавна
+        /// старой, — безусловное обнуление стёрло бы ссылку на актуальную сессию.
+        /// </summary>
+        public override void OnStopClient()
+        {
+            base.OnStopClient();
+
+            if (LocalSession == this)
+            {
+                LocalSession = null;
+            }
+        }
+
         // ── SyncVar Hooks ─────────────────────────────────────────────────────
 
         private void OnPlayerNameChanged(string oldName, string newName)

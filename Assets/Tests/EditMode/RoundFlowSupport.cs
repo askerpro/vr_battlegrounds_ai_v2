@@ -34,6 +34,15 @@ namespace VrBattlegrounds.Tests
             list.Add(session);
         }
 
+        /// <summary>
+        /// Все игроки команды. В заглушке совпадает с живыми: мёртвых сюда не кладут,
+        /// а вопрос «сколько всего в команде» задаёт <c>TeamRuntimeData</c>.
+        /// </summary>
+        public IEnumerable<PlayerSession> GetPlayers(TeamData team)
+        {
+            return GetAlivePlayers(team);
+        }
+
         public IEnumerable<PlayerSession> GetAlivePlayers(TeamData team)
         {
             if (team == null) return new PlayerSession[0];

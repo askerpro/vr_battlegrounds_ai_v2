@@ -130,13 +130,13 @@
 | [T-13](T-13-round-phase-as-state.md) | Фаза раунда как состояние, не событие | NET-06, NET-08, MATCH-03, Корень 3 | T-12 | T-15, T-19 | C | 1 день | ✅ |
 | [T-14](T-14-sync-calibration-scale.md) | Синхронизация масштаба калибровки роста | VR-01 | T-12 | — | 4 | 4–6 часов | ⬜ |
 | [T-15](T-15-arsenal-state-replication.md) | Состояние арсенала: общее + `IsItemPresent` | NET-07, NET-13 | T-13 | — | C | 4 часа | ✅ |
-| [T-16](T-16-spawnzone-bounds-and-nulls.md) | `TeamSpawnZone`: границы и null-проверки | VR-05 | T-11 | — | 3 | 2 часа | ⬜ |
+| [T-16](T-16-spawnzone-bounds-and-nulls.md) | `TeamSpawnZone`: границы и null-проверки | VR-05 | T-11 | — | 3 | 2 часа | ✅ |
 | [T-17](T-17-explicit-init-order.md) | Явный порядок инициализации менеджеров | Корень 5 | T-12 | — | 3 | 1 день | ⬜ |
-| [T-18](T-18-local-refs-cleanup.md) | Сброс `LocalSession` и мёртвый `OnNetworkSceneChanged` | NET-11 | T-12 | — | 2 | 1 час | ⬜ |
+| [T-18](T-18-local-refs-cleanup.md) | Сброс `LocalSession` и мёртвый `OnNetworkSceneChanged` | NET-11 | T-12 | — | 2 | 1 час | ✅ |
 | [T-19](T-19-round-timers-networktime.md) | Таймеры раунда через `NetworkTime` | NET-09 | T-13 | — | 3 | 3 часа | ⬜ |
-| [T-20](T-20-session-recovery-ttl.md) | TTL для `SessionRecoveryManager` | NET-10 | — | — | 2 | 1 час | ⬜ |
+| [T-20](T-20-session-recovery-ttl.md) | TTL для `SessionRecoveryManager` | NET-10 | — | — | 2 | 1 час | ✅ |
 | [T-21](T-21-document-sdk-reflection.md) | Зафиксировать рефлексию в SDK-доках | VR-03 | — | — | только доки | 1 час | ⬜ |
-| [T-22](T-22-arsenal-prefab-mutation.md) | `ReplenishWeaponsNetwork` не мутирует префаб | VR-04 | — | — | 3 | 1 час | ⬜ |
+| [T-22](T-22-arsenal-prefab-mutation.md) | `ReplenishWeaponsNetwork` не мутирует префаб | VR-04 | — | — | 3 | 1 час | ✅ |
 | [T-23](T-23-decision-lag-compensation.md) | **Решение:** компенсация задержки при попаданиях | — | — | — | только доки | 3–4 часа | ⬜ |
 | [T-24](T-24-decision-projectile-simulation.md) | **Решение:** где симулировать пули | — | — | — | только доки | 2–3 часа | ⬜ |
 

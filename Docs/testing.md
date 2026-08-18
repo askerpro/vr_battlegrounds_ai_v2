@@ -1,4 +1,4 @@
-# Тестирование: сетевая логика и VR-механики
+﻿# Тестирование: сетевая логика и VR-механики
 
 > Живой документ. Обновлять при добавлении уровней, сценариев и тестовых сборок.
 >
@@ -9,8 +9,9 @@
 тем быстрее и чаще он гоняется, и тем меньше багов должно доезжать до верхних.
 Уровни 3 и 4 ловят большинство сетевых расхождений.
 
-**Текущее покрытие: 23 EditMode-теста** (`VrBattlegrounds.Tests.EditMode`, ~1 с):
-6 на чистую логику сета и 12 на серверную логику и репликацию через сетевой харнесс.
+**Текущее покрытие: 28 EditMode-тестов** (`VrBattlegrounds.Tests.EditMode`, ~0.5 с):
+6 на чистую логику сета, 5 на фазы раунда и 17 на серверную логику и репликацию
+через сетевой харнесс.
 
 ---
 
@@ -64,13 +65,36 @@ Editor-скрипт с `[MenuItem("Tools/VR Battlegrounds/Debug/Проверит
 C#-классы, без `MonoBehaviour`, а `RoundManager.Tick(float deltaTime)` принимает шаг времени
 параметром — значит, весь раунд прогоняется за миллисекунды.
 
-**Блокеры** (снимаются в [T-05](tasks/T-05-gamelog-owns-category.md)
-и [T-07](tasks/T-07-test-assembly-and-first-tests.md)):
+**Блокеры сняты:**
 
-1. `GameLog.*(GameSettings.Instance.LogLevelX, ...)` — обращение к ассету, которого
-   в EditMode-тесте нет;
-2. `RoundManager.AreAllPlayersReady` ходит в `PlayersManager.Instance`;
-3. `RoundManager.StartRound` ходит в `FindObjectsByType<TeamSpawnZone>`.
+1. `GameLog.*(GameSettings.Instance.LogLevelX, ...)` — `GameSettings.Instance` создаёт
+   ассет на лету, если его нет (T-05);
+2. `RoundManager.AreAllPlayersReady` ходил в `PlayersManager.Instance` — теперь спрашивает
+   `IPlayerRoster`, в тестах это `StubPlayerRoster` (T-09);
+3. `RoundManager.StartRound` искал `TeamSpawnZone` через `FindObjectsByType` — поле было
+   мёртвым, удалено (T-09).
+
+### Как прогнать раунд целиком
+
+`EliminationMode.ServerTick(float deltaTime)` — серверный шаг матча отдельно от `Update`:
+шаг времени приходит параметром, поэтому весь матч крутится без Play-режима. Оснастка —
+`Assets/Tests/EditMode/RoundFlowSupport.cs`:
+
+- `StubPlayerRoster` — отвечает на единственный вопрос машины раунда «кто жив и готов».
+  Без него фаза `Equipment` вечна: живой аватар в EditMode не поднимается, поэтому
+  `PlayersManager.GetAlivePlayers` всегда пуст.
+- `RoundFlowDriver` — прокрутка фиксированным шагом с записью наблюдённых фаз,
+  `AdvanceUntil(...)`, `PhaseSequence()`, `FirstRunLength(...)` и читаемый след
+  `Setup x3 -> Equipment x1 -> ...` для сообщений об ошибке.
+
+Шаг **0.25 с** выбран не случайно: это двоично точное число, поэтому сумма шагов не
+«уползает» и число тиков в фазе точно равно длительность / шаг. С шагом 0.1 накопление
+30 раз даёт 2.9999998, и тест на длительность врал бы на один тик.
+
+> **Гонять фазы надо через `Tick`, а не через «раунд закончился».** Тест, дёргающий конец
+> раунда напрямую, в `Tick` вообще не заходит — именно так в проекте прятался второй
+> экземпляр MATCH-06, и именно поэтому пропущенные фазы `Resolution`/`Scoreboard`
+> (MATCH-02) годами не ловились.
 
 ### Первые пять тестов
 

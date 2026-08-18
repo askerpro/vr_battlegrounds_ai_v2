@@ -1,4 +1,4 @@
-> Точка входа в документацию **игры** VR Battlegrounds AI: скрипты, классы, API, компоненты.
+﻿> Точка входа в документацию **игры** VR Battlegrounds AI: скрипты, классы, API, компоненты.
 > Обновлять при добавлении классов, модулей, зависимостей или изменении архитектуры.
 > Обязательно документировать обнаруженные побочные эффекты SDK (например, систему Precaching).
 >
@@ -112,16 +112,20 @@
 | `GameManager` | `Managers/GameManager.cs` | Хранит выбор сессии (карта + режим). DontDestroyOnLoad вместе с NetworkManager. SyncVar реплицирует выбор клиентам. Методы: `SetSession()`, `StartSession()`. |
 | `GameplayManager` | `Managers/GameplayManager.cs` | Матч: счёт, победитель, `StartGameplay()`, `StopGameplay()`. Режим ищет по `modeId` из `GameManager`. |
 | `UxrActor` | `UltimateXR/.../UxrActor.cs` | Базовая система урона UltimateXR. Игрок умирает, когда `UxrActor` вызывает событие смерти. |
-| `SetManager` | `GameModes/EliminationMode/SetManager.cs` | Сет: N раундов, смена сторон, `ForceStop()`. |
-| `RoundManager` | `GameModes/EliminationMode/RoundManager.cs` | Раунд: FSM (`Setup → Equipment → Countdown → Combat → Resolution → Scoreboard`), таймер, победа через `GameMode`, `ForceStop()`. Фазу наружу раздаёт `EliminationMode` — см. [gameplay.md](gameplay.md#фаза-раунда--состояние-а-не-событие). |
+| `SetManager` | `GameModes/EliminationMode/SetManager.cs` | Сет: N раундов, счёт раундов, смена сторон, `ForceStop()`. Владелец машины раунда: тикает её и применяет единственный переход, который она не делает сама, — «итоги показаны → новый раунд». Исход сета отдаёт обязательным колбэком конструктора, а не событием. |
+| `RoundManager` | `GameModes/EliminationMode/RoundManager.cs` | Машина фаз раунда: таблица переходов `Setup → Equipment → Countdown → Combat → Resolution → Scoreboard`, таймеры, `RequestRoundEnd()`, `ForceStop()`. Про `EliminationMode` не знает; о живых игроках спрашивает `IPlayerRoster`. `Tick()` возвращает переход значением — см. [gameplay.md](gameplay.md#машина-состояний-раунда-кто-чем-владеет). Фазу наружу раздаёт `EliminationMode`. |
 
 **Иерархия менеджеров матча:**
 
 ```
-GameplayManager       — матч (5 карт, счёт, победитель)
-└── SetManager     — сет (смена команд, счёт сетов)
-    └── RoundManager — раунд (готовность, старт, конец)
+GameplayManager      — матч (5 карт, счёт, победитель)
+└── EliminationMode  — сетевая оболочка: SyncVar, ClientRpc, ServerTick
+    └── SetManager   — сет: раунды, счёт раундов, владелец перехода «раунд → раунд»
+        └── RoundManager — фазы раунда: таблица переходов и таймеры
 ```
+
+`SetManager` и `RoundManager` — обычные C#-классы, не `MonoBehaviour` и не сетевые:
+создаются через `new`, тикаются из `EliminationMode.ServerTick(deltaTime)`.
 
 Серверная логика выполняется только на сервере (`[Server]` Mirror). Клиенты получают обновления через `ClientRpc`.
 
@@ -136,6 +140,7 @@ GameplayManager       — матч (5 карт, счёт, победитель)
 | `RespawnMode` | `GameModes/RespawnMode.cs` | Возрождение при возврате на спавн. ModeId = `respawn`. |
 | `GameModeData` | `GameModes/GameModeData.cs` | ScriptableObject: `modeId`, `displayName`, `icon`. Создать: `Create > VrBattlegrounds > Game Mode Data`. |
 | `GameModeRegistry` | `GameModes/GameModeRegistry.cs` | ScriptableObject-список режимов. `GetById(modeId)`. Назначить в `GameManager` и `AdminMenuController`. |
+| `IPlayerRoster` | `GameModes/IPlayerRoster.cs` | Узкий доступ логики матча к списку игроков: «кто в этой команде жив». Боевая реализация `PlayersManagerRoster` — обёртка над `PlayersManager.Instance`. Нужен, чтобы машину раунда можно было прогнать EditMode-тестом: живой аватар в EditMode не поднимается. |
 
 > При добавлении нового режима — создать наследника `GameMode`, переопределить `OnRoundEnd`, `CanRespawn`, `CheckWinCondition`. Не менять базовую логику `RoundManager`.
 
@@ -300,9 +305,11 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 
 | Класс / файл | Назначение |
 |---|---|
-| `SetManagerScoringTests` | Подсчёт победителя сета в `SetManager` — чистая логика, без сети. |
+| `SetManagerScoringTests` | Подсчёт победителя сета в `SetManager` — чистая логика, без сети. Раунды проигрываются прокруткой `SetManager.Tick`. |
+| `RoundFlowSupport` | Общая оснастка тестов матча: `StubPlayerRoster` (подставной реестр игроков) и `RoundFlowDriver` (прокрутка фиксированным шагом 0.25 с с записью наблюдённых фаз). |
 | `Network/MirrorTestHarness` | Базовый класс сетевых тестов: поднимает Mirror сервером **без сокета** (ярус A) и, по требованию, локального клиента (ярус B). Сбрасывает синглтоны проекта между тестами. Рецепт и границы — [`testing.md`](testing.md#как-тестировать-сетевую-логику). |
 | `Network/EliminationModeServerTests` | Серверная логика режима: заполнение `TeamStates`, одно очко за выигранный сет (T-02). Первый тест — проверка самого харнесса. |
+| `Network/RoundPhaseFlowTests` | Фазы раунда боевым путём `ServerTick → SetManager → RoundManager` (T-09, MATCH-02): все шесть фаз по порядку, длительность `Resolution` и `Scoreboard` в тиках, рост номера раунда после полного цикла (сторож MATCH-06), запрет заканчивать сет раньше экрана итогов. |
 | `Network/HostClientHarnessTests` | Ярус B: локальный клиент поднялся, `SpawnMessage` доходит до `NetworkClient.spawned`. |
 | `Network/PlayerSessionReplicationTests` | Репликация `PlayerSession` через настоящую сериализацию Mirror: `TeamIndex` и связь с аватаром доезжают до клиента, смена скина переключает связь, гонка спавнов чинится аватаром, `PlayerController.Session` кэшируется (T-11). |
 | `Network/SessionRecoveryTests` | Снимок сессии при отключении: позиция, здоровье, флаг `NeedsPhysicalRestore` (T-04). |

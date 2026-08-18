@@ -113,7 +113,7 @@
 | ID | Задача | Находки | Блокирована | Блокирует | Уровень | Оценка | Статус |
 |---|---|---|---|---|---|---|---|
 | [T-01](T-01-remove-codice-using.md) | Удалить editor-only `using` из `PlayerController` | BUILD-01 | — | T-06 | 0 | 5 мин | ✅ |
-| [T-02](T-02-fix-double-subscribe.md) | Убрать двойную подписку `SetEnded` | MATCH-01 | — | — | 3 | 10 мин | 🔧 |
+| [T-02](T-02-fix-double-subscribe.md) | Убрать двойную подписку `SetEnded` | MATCH-01 | — | — | 3 | 10 мин | ✅ |
 | [T-03](T-03-fix-apply-avatar-transform.md) | Починить `Vector3.Scale` в `ApplyAvatarTransform` | VR-02 | — | — | 5 | 15 мин | 🔧 |
 | [T-04](T-04-session-recovery-avatar-ref.md) | `session.ActiveAvatar` вместо `conn.identity` | NET-05 | — | T-11 | 2 | 15 мин | 🔧 |
 | [T-05](T-05-gamelog-owns-category.md) | `GameLog` знает свою категорию | BUILD-02, Корень 5 | — | — | 0 | полдня | ⬜ |
@@ -123,7 +123,7 @@
 | [T-26](T-26-network-test-harness.md) | Харнесс сетевых тестов в процессе (ярусы A, B) | — | — | T-27; проверку T-02, T-04, T-11 | A/B | полдня | ✅ |
 | [T-27](T-27-two-process-e2e.md) | E2E на двух процессах (ярус C) | — | T-26 | проверку T-12, T-13, T-14 | C | 2–3 дня | ✅ |
 | [T-08](T-08-fix-tie-detection.md) | Победитель сета через переданные команды, не через реестр | MATCH-04 | T-07 | — | 1 | 2 часа | ⬜ |
-| [T-09](T-09-explicit-round-fsm.md) | Явная машина состояний раунда | MATCH-01, MATCH-02, Корень 4 | T-07 | T-10 | 1 | 1 день | ⬜ |
+| [T-09](T-09-explicit-round-fsm.md) | Явная машина состояний раунда | MATCH-01, MATCH-02, MATCH-06, Корень 4 | T-07 | T-10 | 1 | 1 день | ✅ |
 | [T-10](T-10-respawn-subscription-cleanup.md) | Снятие подписок отложенного респавна | MATCH-05 | T-09 | — | 3 | 2 часа | ⬜ |
 | [T-11](T-11-session-avatar-link.md) | Двусторонняя связь сессия ↔ аватар | NET-04, NET-05, Корень 2 | T-04 | T-12, T-16 | A+ | полдня | ✅ |
 | [T-12](T-12-state-channel-to-session.md) | Канал состояния на объект уровня сессии | NET-01, NET-02, NET-03, NET-15, Корень 1 | T-11 | T-13, T-14, T-17, T-18 | C | 1–2 дня | ✅ |

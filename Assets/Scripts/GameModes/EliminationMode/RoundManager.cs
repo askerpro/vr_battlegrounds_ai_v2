@@ -1,18 +1,122 @@
-using UnityEngine;
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
-using VrBattlegrounds.GameModes;
-using VrBattlegrounds.Player;
-using VrBattlegrounds.Managers;
-using VrBattlegrounds.Maps;
 
 namespace VrBattlegrounds.GameModes
 {
+    /// <summary>
+    /// Что произошло с машиной раунда за один тик. Переход возвращается значением,
+    /// а не выполняется побочным эффектом внутри обработчика — именно из-за побочных
+    /// эффектов фазы Resolution и Scoreboard раньше пропускались (MATCH-02).
+    /// </summary>
+    public readonly struct RoundTickResult
+    {
+        /// <summary>Машина сменила фазу сама.</summary>
+        public readonly bool PhaseChanged;
+
+        /// <summary>
+        /// Раунд прожит целиком: экран итогов показан. Машина остановлена и ждёт,
+        /// пока владелец решит — начать следующий раунд или закончить сет.
+        /// </summary>
+        public readonly bool CycleCompleted;
+
+        /// <summary>Фаза, из которой шёл переход.</summary>
+        public readonly RoundState From;
+
+        /// <summary>Фаза, в которую шёл переход.</summary>
+        public readonly RoundState To;
+
+        private RoundTickResult(bool phaseChanged, bool cycleCompleted, RoundState from, RoundState to)
+        {
+            PhaseChanged = phaseChanged;
+            CycleCompleted = cycleCompleted;
+            From = from;
+            To = to;
+        }
+
+        /// <summary>Ничего не произошло: фаза продолжается.</summary>
+        public static RoundTickResult Nothing =>
+            new RoundTickResult(false, false, RoundState.Setup, RoundState.Setup);
+
+        /// <summary>Машина перешла в новую фазу.</summary>
+        public static RoundTickResult Moved(RoundState from, RoundState to) =>
+            new RoundTickResult(true, false, from, to);
+
+        /// <summary>Цикл раунда закончен, переход применяет владелец машины.</summary>
+        public static RoundTickResult Completed(RoundState from, RoundState to) =>
+            new RoundTickResult(false, true, from, to);
+    }
+
+    /// <summary>
+    /// Машина состояний одного раунда. Обычный C#-класс: без MonoBehaviour, без сети
+    /// и без доступа к сцене — поэтому весь раунд прогоняется EditMode-тестом
+    /// за миллисекунды.
+    ///
+    /// **Кто меняет фазу.** Только <see cref="Tick"/> и только по таблице
+    /// <see cref="Transitions"/>. Всё, что приходит снаружи (гибель игрока), — это
+    /// заявка <see cref="RequestRoundEnd"/>, а не смена фазы. Раньше фазу меняли из
+    /// трёх мест, причём внутри обработчиков событий, и цепочка
+    /// «конец раунда → SetManager → старт следующего раунда» замыкалась в одном кадре:
+    /// фаза Resolution жила до следующей строки, а ветки Resolution и Scoreboard
+    /// в Tick были недостижимы (MATCH-02, корень 4).
+    ///
+    /// **Чего машина не делает.** Она не начинает следующий раунд. Переход
+    /// «итоги показаны → новый раунд» помечен в таблице как <c>appliedByOwner</c>:
+    /// его применяет <see cref="SetManager"/>, потому что только он знает, не пора ли
+    /// вместо нового раунда закончить сет. Второй владелец этого перехода обошёл бы
+    /// счётчик раундов и <c>RpcOnRoundStarted</c> (MATCH-06).
+    /// </summary>
     public class RoundManager
     {
-        public event Action<TeamData> RoundEnded;
+        /// <summary>Техническая подготовка: очистка и телепортация.</summary>
+        public const float SetupDuration = 1.0f;
+
+        /// <summary>Пауза после победы, до экрана итогов.</summary>
+        public const float ResolutionDuration = 3.0f;
+
+        /// <summary>Экран итогов раунда.</summary>
+        public const float ScoreboardDuration = 5.0f;
+
+        /// <summary>
+        /// Таблица переходов раунда — единственное место, где описано, из какой фазы
+        /// в какую и по какому условию переходит раунд. Читается сверху вниз как
+        /// сценарий: строки идут в порядке фаз, а два выхода из Combat стоят рядом.
+        ///
+        /// Порядок строк значим только внутри одной фазы: побеждает первая подошедшая.
+        /// </summary>
+        private static readonly PhaseTransition[] Transitions =
+        {
+            new PhaseTransition(RoundState.Setup, RoundState.Equipment,
+                m => m._stateTimer >= SetupDuration,
+                "подготовка закончена"),
+
+            new PhaseTransition(RoundState.Equipment, RoundState.Countdown,
+                m => m.AreAllPlayersReady(),
+                "все живые игроки готовы"),
+
+            new PhaseTransition(RoundState.Countdown, RoundState.Combat,
+                m => m._stateTimer >= m._countdownDuration,
+                "обратный отсчёт истёк"),
+
+            new PhaseTransition(RoundState.Combat, RoundState.Resolution,
+                m => m._roundEndRequested,
+                "исход раунда определён"),
+
+            new PhaseTransition(RoundState.Combat, RoundState.Resolution,
+                m => m._roundTimer >= m._roundDuration,
+                "время раунда истекло — ничья"),
+
+            new PhaseTransition(RoundState.Resolution, RoundState.Scoreboard,
+                m => m._stateTimer >= ResolutionDuration,
+                "пауза после победы истекла"),
+
+            // Единственная строка, которую машина не применяет сама: следующий раунд
+            // начинает владелец. См. комментарий к классу.
+            new PhaseTransition(RoundState.Scoreboard, RoundState.Setup,
+                m => m._stateTimer >= ScoreboardDuration,
+                "итоги показаны", appliedByOwner: true)
+        };
 
         private float _countdownDuration;
         private float _roundDuration;
@@ -20,17 +124,37 @@ namespace VrBattlegrounds.GameModes
         private float _stateTimer;
         private float _roundTimer;
 
-        private TeamSpawnZone[] _spawnZones;
         private RoundState _roundState = RoundState.Setup;
 
-        private EliminationMode _eliminationMode;
+        /// <summary>Победитель текущего раунда. null — ничья либо раунд ещё идёт.</summary>
+        private TeamData _roundWinner;
 
-        // Configurations for new phases
-        private const float SetupDuration = 1.0f;
-        private const float ResolutionDuration = 3.0f;
-        private const float ScoreboardDuration = 5.0f;
+        /// <summary>Пришла заявка на завершение боя. Применяет её ближайший <see cref="Tick"/>.</summary>
+        private bool _roundEndRequested;
+
+        /// <summary>Цикл раунда прожит: машина стоит, пока владелец не начнёт следующий раунд.</summary>
+        private bool _awaitingOwner;
+
+        /// <summary>Матч остановлен принудительно — тикать больше нечего.</summary>
+        private bool _stopped;
+
+        /// <summary>Откуда машина узнаёт о живых игроках. В игре — обёртка над PlayersManager.</summary>
+        private readonly IPlayerRoster _roster;
+
+        /// <summary>Команды текущего раунда. Нужны только чтобы спросить о готовности.</summary>
+        private IReadOnlyList<TeamData> _teams = new TeamData[0];
+
+        /// <param name="roster">Источник данных об игроках. null — боевой PlayersManager.</param>
+        public RoundManager(IPlayerRoster roster = null)
+        {
+            _roster = roster ?? new PlayersManagerRoster();
+        }
 
         public RoundState State => _roundState;
+
+        /// <summary>Победитель раунда. Осмысленен с момента входа в Resolution. null — ничья.</summary>
+        public TeamData RoundWinner => _roundWinner;
+
         public float RoundTimeRemaining => Math.Max(0f, _roundDuration - _roundTimer);
 
         public float CountdownTimeRemaining
@@ -44,188 +168,157 @@ namespace VrBattlegrounds.GameModes
             }
         }
 
-        public void StartRound(EliminationMode mode, float countdownDuration, float roundDuration)
+        /// <summary>
+        /// Начинает раунд с фазы Setup. Единственный способ вернуть машину в работу
+        /// после того, как она доиграла цикл. Зовётся только владельцем.
+        /// </summary>
+        public void StartRound(IReadOnlyList<TeamData> teams, float countdownDuration, float roundDuration)
         {
-            _eliminationMode = mode;
+            _teams = teams ?? new TeamData[0];
             _countdownDuration = countdownDuration;
             _roundDuration = roundDuration;
 
             _stateTimer = 0f;
             _roundTimer = 0f;
 
-            if (_spawnZones == null || _spawnZones.Length == 0)
-                _spawnZones = UnityEngine.Object.FindObjectsByType<TeamSpawnZone>(FindObjectsSortMode.None);
+            _roundWinner = null;
+            _roundEndRequested = false;
+            _awaitingOwner = false;
+            _stopped = false;
 
             _roundState = RoundState.Setup;
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Выполняем очистку и телепортацию (Setup phase)");
 
-            _eliminationMode.PrepareNextRound();
+            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                "[RoundManager] Раунд начат: очистка и телепортация (Setup)");
         }
 
-        public void StartNextRound(EliminationMode mode)
+        /// <summary>
+        /// Заявка «бой пора заканчивать», с победителем или без (ничья).
+        /// Фазу не меняет: её сменит ближайший <see cref="Tick"/> по таблице переходов.
+        /// Так у машины остаётся ровно одна точка смены состояния.
+        /// </summary>
+        public void RequestRoundEnd(TeamData winner)
         {
-            StartRound(mode, _countdownDuration, _roundDuration);
-        }
+            if (_roundState != RoundState.Combat || _roundEndRequested) return;
 
-        public void EndRound(TeamData winner)
-        {
-            if (_roundState == RoundState.Resolution || _roundState == RoundState.Scoreboard) return;
-
-            _roundState = RoundState.Resolution;
-            _stateTimer = 0f;
+            _roundWinner = winner;
+            _roundEndRequested = true;
 
             string winnerName = winner != null ? winner.displayName : "ничья";
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, $"[RoundManager] Раунд математически завершён, фаза Resolution. Победитель: {winnerName}");
-
-            _eliminationMode?.RpcOnRoundEnded(winner != null ? winner.teamIndex : -1);
-            RoundEnded?.Invoke(winner);
+            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                $"[RoundManager] Исход боя определён. Победитель: {winnerName}");
         }
 
-        public void OnPlayerDied(PlayerController player)
+        /// <summary>
+        /// Шаг машины. Возвращает произошедший переход — применять его последствия
+        /// (счёт, оповещение клиентов, следующий раунд) обязан вызывающий код.
+        /// </summary>
+        public RoundTickResult Tick(float deltaTime)
         {
-            if (_roundState != RoundState.Combat) return;
+            if (_stopped || _awaitingOwner) return RoundTickResult.Nothing;
 
-            GameLog.Verbose(GameSettings.Instance.LogLevelMatch, $"[RoundManager] Игрок {player.name} погиб — проверяем условие победы");
+            _stateTimer += deltaTime;
+            if (_roundState == RoundState.Combat) _roundTimer += deltaTime;
 
-            TeamData winner = _eliminationMode?.CheckRoundWinCondition();
-            bool roundOver = _eliminationMode == null || winner != null || IsAllTeamsDead();
-            if (roundOver) EndRound(winner);
-        }
-
-        public bool Tick(float deltaTime)
-        {
-            switch (_roundState)
+            foreach (PhaseTransition transition in Transitions)
             {
-                case RoundState.Setup:
-                    _stateTimer += deltaTime;
-                    if (_stateTimer >= SetupDuration)
-                    {
-                        _stateTimer = 0f;
-                        _roundState = RoundState.Equipment;
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Setup завершен. Фаза закупки (Equipment)");
-                        return true;
-                    }
-                    return false;
+                if (transition.From != _roundState) continue;
+                if (!transition.When(this)) continue;
 
-                case RoundState.Equipment:
-                    if (AreAllPlayersReady())
-                    {
-                        _roundState = RoundState.Countdown;
-                        _stateTimer = 0f;
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Все условия оборудования выполнены. Countdown (FreezeTime) запущен");
-                        return true;
-                    }
-                    return false;
+                if (transition.AppliedByOwner)
+                {
+                    // Машина доиграла раунд и останавливается. Что дальше — новый раунд
+                    // или конец сета — решает владелец, он же и применит переход.
+                    _awaitingOwner = true;
 
-                case RoundState.Countdown:
-                    _stateTimer += deltaTime;
-                    if (_stateTimer >= _countdownDuration)
-                    {
-                        _stateTimer = 0f;
-                        _roundState = RoundState.Combat;
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Countdown завершен. Бой начался (Combat)!");
-                        return true;
-                    }
-                    return false;
+                    GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                        $"[RoundManager] {transition.From}: {transition.Reason}. Цикл раунда завершён.");
 
-                case RoundState.Combat:
-                    _roundTimer += deltaTime;
-                    if (_roundTimer >= _roundDuration)
-                    {
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Время раунда истекло — ничья");
-                        EndRound(null);
-                        return true;
-                    }
-                    return false;
+                    return RoundTickResult.Completed(transition.From, transition.To);
+                }
 
-                case RoundState.Resolution:
-                    _stateTimer += deltaTime;
-                    if (_stateTimer >= ResolutionDuration)
-                    {
-                        _stateTimer = 0f;
-                        _roundState = RoundState.Scoreboard;
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Resolution завершено. Scoreboard");
-                        return true;
-                    }
-                    return false;
+                _roundState = transition.To;
+                _stateTimer = 0f;
 
-                case RoundState.Scoreboard:
-                    _stateTimer += deltaTime;
-                    if (_stateTimer >= ScoreboardDuration)
-                    {
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Цикл завершен. Начинаем следующий раунд.");
-                        StartNextRound(_eliminationMode);
-                        return true; // We changed state back to Setup
-                    }
-                    return false;
+                GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                    $"[RoundManager] {transition.From} → {transition.To}: {transition.Reason}");
 
-                default:
-                    return false;
+                return RoundTickResult.Moved(transition.From, transition.To);
             }
+
+            return RoundTickResult.Nothing;
         }
 
+        /// <summary>Останавливает машину: тики перестают что-либо делать до StartRound.</summary>
         public void ForceStop()
         {
-            _roundState = RoundState.Resolution;
-            _eliminationMode = null;
+            _stopped = true;
             GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Раунд принудительно остановлен");
-        }
-
-        private bool IsAllTeamsDead()
-        {
-            if (_eliminationMode == null) return false;
-            foreach (var state in _eliminationMode.TeamStates.Values)
-            {
-                if (state.HasAlivePlayers()) return false;
-            }
-            return true;
         }
 
         private bool AreAllPlayersReady()
         {
-            if (_eliminationMode != null)
+            int totalAlive = 0;
+            int notReadyCount = 0;
+
+            foreach (TeamData team in _teams)
             {
-                int totalAlive = 0;
-                int falseReasonCount = 0;
-                foreach (var state in _eliminationMode.TeamStates.Values)
+                // Ожидаем готовности только от тех, кто жив — то есть участвует в раунде.
+                foreach (var session in _roster.GetAlivePlayers(team))
                 {
-                    // Ожидаем готовности только от тех, кто жив (участвует в текущем раунде)
-                    var alivePlayers = PlayersManager.Instance.GetAlivePlayers(state.Team);
-                    totalAlive += alivePlayers.Count();
-                    foreach (var s in alivePlayers)
-                    {
-                        if (!s.IsReadyForRound) falseReasonCount++;
-                    }
-                }
-
-                // Если ещё никто не успел заспавниться, мы не готовы переходить к отсчёту.
-                if (totalAlive == 0)
-                {
-                    return false;
-                }
-
-                if (falseReasonCount > 0)
-                {
-                    return false;
+                    totalAlive++;
+                    if (!session.IsReadyForRound) notReadyCount++;
                 }
             }
 
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager DEBUG] AreAllPlayersReady: True!");
+            // Пока никто не заспавнился, переходить к отсчёту не с кем.
+            if (totalAlive == 0) return false;
+            if (notReadyCount > 0) return false;
+
+            GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+                "[RoundManager] Все живые игроки готовы к раунду");
             return true;
         }
 
+        /// <summary>Строка таблицы переходов.</summary>
+        private readonly struct PhaseTransition
+        {
+            /// <summary>Фаза, из которой возможен переход.</summary>
+            public readonly RoundState From;
+
+            /// <summary>Фаза, в которую он ведёт.</summary>
+            public readonly RoundState To;
+
+            /// <summary>Условие перехода. Аргумент — сама машина, чтобы правило читало её таймеры.</summary>
+            public readonly Func<RoundManager, bool> When;
+
+            /// <summary>Причина перехода. Уходит в лог, чтобы траектория раунда читалась по логам.</summary>
+            public readonly string Reason;
+
+            /// <summary>Переход применяет владелец машины, а не она сама.</summary>
+            public readonly bool AppliedByOwner;
+
+            public PhaseTransition(RoundState from, RoundState to, Func<RoundManager, bool> when,
+                                   string reason, bool appliedByOwner = false)
+            {
+                From = from;
+                To = to;
+                When = when;
+                Reason = reason;
+                AppliedByOwner = appliedByOwner;
+            }
+        }
+
 #if UNITY_EDITOR
+        /// <summary>Почему раунд стоит в фазе Equipment — для инспектора режима.</summary>
         public string GetPendingReadinessStatus()
         {
-            if (_eliminationMode == null) return "No elimination mode";
-
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             bool allReady = true;
 
-            foreach (var state in _eliminationMode.TeamStates.Values)
+            foreach (TeamData team in _teams)
             {
-                var alivePlayers = PlayersManager.Instance.GetAlivePlayers(state.Team);
-                foreach (var s in alivePlayers)
+                foreach (var s in _roster.GetAlivePlayers(team))
                 {
                     if (!s.IsReadyForRound)
                     {

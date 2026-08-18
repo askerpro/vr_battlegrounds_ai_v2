@@ -1,10 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VrBattlegrounds;
 using VrBattlegrounds.GameModes;
+using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Tests
 {
@@ -15,11 +16,14 @@ namespace VrBattlegrounds.Tests
     /// EliminationMode нужен ему как параметр: его методы помечены [Server]
     /// и вне сервера Mirror их заглушает.
     ///
+    /// Раунды проигрываются прокруткой <see cref="SetManager.Tick"/>, а не прямым
+    /// «раунд закончился»: после T-09 очко за раунд начисляется при входе в фазу
+    /// Resolution, а исход сета решается при выходе из Scoreboard. Тест, дёргающий
+    /// конец раунда напрямую, не заходит в Tick и обеих точек не касается.
+    ///
     /// Побочный эффект: SetManager дёргает [ClientRpc] RpcOnRoundStarted,
     /// на который Mirror пишет в консоль Error «called without an active server».
     /// Это шум харнесса, а не ошибка логики, поэтому логи глушатся.
-    /// Сама необходимость это глушить — признак того, что подсчёт очков сцеплен
-    /// с сетевым слоем; развязывает это T-09.
     /// </summary>
     public class SetManagerScoringTests
     {
@@ -27,6 +31,10 @@ namespace VrBattlegrounds.Tests
         private EliminationMode _mode;
         private RoundManager _roundManager;
         private SetManager _setManager;
+        private RoundFlowDriver _driver;
+
+        /// <summary>Объекты сессий-заглушек: удаляются в TearDown, в сцене ничего не остаётся.</summary>
+        private readonly List<GameObject> _sessionObjects = new List<GameObject>();
 
         private TeamData _teamA;
         private TeamData _teamB;
@@ -72,17 +80,40 @@ namespace VrBattlegrounds.Tests
             _modeObject = new GameObject("TestEliminationMode");
             _mode = _modeObject.AddComponent<EliminationMode>();
 
-            _roundManager = new RoundManager();
-            _setManager = new SetManager(_roundManager);
+            // Живого аватара в EditMode нет, а без него реестр игроков пуст и раунд
+            // навсегда стоит в фазе Equipment. Подменяем только источник данных.
+            StubPlayerRoster roster = new StubPlayerRoster();
+            roster.Add(_teamA, CreateReadySession("PlayerA"));
+            roster.Add(_teamB, CreateReadySession("PlayerB"));
 
             _setEndedWinners.Clear();
             _scoresAtSetEnd.Clear();
 
-            _setManager.SetEnded += w =>
+            // Наблюдатель исхода сета передаётся конструктором: события SetEnded больше нет,
+            // поэтому подписаться дважды (MATCH-01) не на что даже в тесте.
+            _roundManager = new RoundManager(roster);
+            _setManager = new SetManager(_roundManager, w =>
             {
                 _setEndedWinners.Add(w);
                 _scoresAtSetEnd.Add(DumpScores());
-            };
+            });
+
+            _driver = new RoundFlowDriver(dt => _setManager.Tick(dt), () => _roundManager.State);
+        }
+
+        /// <summary>Сессия игрока, который стоит в зоне спавна и взял жетон.</summary>
+        private PlayerSession CreateReadySession(string name)
+        {
+            GameObject go = new GameObject(name);
+            _sessionObjects.Add(go);
+
+            // Сначала NetworkIdentity: без неё NetworkBehaviour.OnValidate пишет Error.
+            go.AddComponent<Mirror.NetworkIdentity>();
+            PlayerSession session = go.AddComponent<PlayerSession>();
+
+            session.IsInSpawnZone = true;
+            session.HasGrabbedDogTag = true;
+            return session;
         }
 
         [TearDown]
@@ -90,6 +121,12 @@ namespace VrBattlegrounds.Tests
         {
             // _teamA / _teamB — ассеты из реестра, уничтожать их нельзя.
             if (_modeObject != null) Object.DestroyImmediate(_modeObject);
+
+            foreach (GameObject go in _sessionObjects)
+            {
+                if (go != null) Object.DestroyImmediate(go);
+            }
+            _sessionObjects.Clear();
         }
 
         private string DumpScores()
@@ -110,7 +147,14 @@ namespace VrBattlegrounds.Tests
 
             foreach (TeamData winner in roundWinners)
             {
-                _roundManager.EndRound(winner);
+                _driver.AdvanceUntil(() => _roundManager.State == RoundState.Combat, "фазы Combat");
+                _roundManager.RequestRoundEnd(winner);
+
+                // Раунд считается прожитым, когда машина вернулась в Setup следующего
+                // раунда либо сет закончился и новый раунд уже не начнётся.
+                _driver.AdvanceUntil(
+                    () => _roundManager.State == RoundState.Setup || _setEndedWinners.Count > 0,
+                    "конца цикла раунда");
             }
         }
 
@@ -118,7 +162,8 @@ namespace VrBattlegrounds.Tests
         private void AssertSetEnded(TeamData expectedWinner, string because)
         {
             Assert.AreEqual(1, _setEndedWinners.Count,
-                because + "\nSetEnded должен сработать ровно один раз. Счёт: " + DumpScores());
+                because + "\nИсход сета должен сообщаться ровно один раз. Счёт: " + DumpScores() +
+                "\nПройденные фазы: " + _driver.DumpSequence());
 
             TeamData actual = _setEndedWinners[0];
             string actualName = actual != null ? actual.displayName : "ничья";

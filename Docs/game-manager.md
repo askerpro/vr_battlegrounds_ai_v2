@@ -72,7 +72,15 @@ GameModeData.modePrefab
 ```
 
 **Почему `GameMode : NetworkBehaviour` а не `MonoBehaviour`:**
-`SetManager` и `RoundManager` внутри `EliminationMode` спавнятся через `NetworkServer.Spawn` — они должны быть видны клиентам. Если бы `GameMode` был `MonoBehaviour`, эти дочерние объекты не получили бы сетевой идентификатор.
+режим сам держит реплицируемое состояние матча — счёт команд, номер раунда, фазу раунда
+(`SyncVar`, `SyncList`, `SyncDictionary`) — и сам шлёт `ClientRpc`. Без `NetworkBehaviour`
+клиентам не досталось бы ничего из этого.
+
+> `SetManager` и `RoundManager` при этом **не** сетевые и даже не `MonoBehaviour`: это
+> обычные C#-объекты, создаваемые через `new` в `EliminationMode.InitializeActiveGame`,
+> и тикает их `EliminationMode.ServerTick`. Вся сеть — в режиме, вся логика матча — в них.
+> Именно поэтому их целиком покрывают EditMode-тесты. (Раньше здесь было написано, что они
+> спавнятся через `NetworkServer.Spawn` — это никогда не соответствовало коду.)
 
 **Что умеет каждый режим самостоятельно:**
 

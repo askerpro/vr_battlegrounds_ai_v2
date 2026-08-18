@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Mirror;
 using UnityEngine;
@@ -71,6 +71,13 @@ namespace VrBattlegrounds.GameModes
         private RoundManager _roundManager;
         public RoundManager RoundManager => _roundManager;
 
+        /// <summary>
+        /// Откуда машина раунда узнаёт о живых игроках. null — боевой <c>PlayersManager</c>.
+        /// Точка подмены для EditMode-тестов: с заглушкой фазы раунда прогоняются
+        /// без живых аватаров. Ставить только до <c>InitializeActiveGame</c>.
+        /// </summary>
+        public IPlayerRoster PlayerRoster { get; set; }
+
         // ── Глобальные семантические события для UI (Клиент) ───────────────
 
         public static event Action<int> OnSetStartedLocal;
@@ -142,12 +149,13 @@ namespace VrBattlegrounds.GameModes
         [Server]
         private void InitializeActiveGame()
         {
-            // Создаём менеджеры как обычные C# объекты — без GameObject, без NetworkBehaviour
-            _roundManager = new RoundManager();
-            _setManager = new SetManager(_roundManager);
-            // Подписка делается в StartNextSet: OnSetEnded отписывается в начале обработчика
-            // и перевзводится на следующий сет. Вторая подписка здесь давала двойной вызов
-            // и удвоение счёта сетов.
+            _matchState = EliminationMatchState.Active;
+
+            // Создаём менеджеры как обычные C# объекты — без GameObject, без NetworkBehaviour.
+            // Связывание с OnSetEnded живёт ровно здесь, в конструкторе: событий у SetManager
+            // нет, поэтому подписаться дважды (MATCH-01) физически не на что.
+            _roundManager = new RoundManager(PlayerRoster);
+            _setManager = new SetManager(_roundManager, OnSetEnded);
 
             string teamsStr = string.Join(" vs ", Teams.Select(t => t != null ? t.displayName : "null"));
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
@@ -162,7 +170,6 @@ namespace VrBattlegrounds.GameModes
         {
             if (_setManager != null)
             {
-                _setManager.SetEnded -= OnSetEnded;
                 _setManager.ForceStop();
             }
             _roundManager = null;
@@ -177,14 +184,20 @@ namespace VrBattlegrounds.GameModes
         private void Update()
         {
             if (!isServer) return;
+            ServerTick(Time.deltaTime);
+        }
 
+        /// <summary>
+        /// Один серверный шаг матча. Отдельно от <c>Update</c> намеренно: шаг времени
+        /// приходит параметром, поэтому весь матч прогоняется EditMode-тестом
+        /// за миллисекунды, без Play-режима и без <c>Time.deltaTime</c>.
+        /// </summary>
+        [Server]
+        public void ServerTick(float deltaTime)
+        {
             if (_matchState == EliminationMatchState.WaitingForPlayers)
             {
-                if (IsPlayersReady())
-                {
-                    _matchState = EliminationMatchState.Active;
-                    InitializeActiveGame();
-                }
+                if (IsPlayersReady()) InitializeActiveGame();
                 return;
             }
 
@@ -193,9 +206,9 @@ namespace VrBattlegrounds.GameModes
             if (GameplayManager.Instance != null && GameplayManager.Instance.CurrentState == GameplayState.Paused)
                 return;
 
-            if (_roundManager == null) return;
+            if (_setManager == null) return;
 
-            _roundManager.Tick(Time.deltaTime);
+            _setManager.Tick(deltaTime);
 
             // Обновляем SyncVar каждый тик
             ServerSetRoundState(_roundManager.State);
@@ -223,8 +236,6 @@ namespace VrBattlegrounds.GameModes
             if (swapSides)
                 _setManager.SwapTeams();
 
-            _setManager.SetEnded += OnSetEnded;
-
             int currentSet = 1 + _teamStates.Values.Sum(s => s.Score);
             RpcOnSetStarted(currentSet);
 
@@ -237,8 +248,6 @@ namespace VrBattlegrounds.GameModes
         [Server]
         private void OnSetEnded(TeamData winner)
         {
-            _setManager.SetEnded -= OnSetEnded;
-
             if (winner != null && _teamStates.TryGetValue(winner.teamIndex, out TeamRuntimeData winnerState))
             {
                 winnerState.AddScore(1);
@@ -303,11 +312,31 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>
         /// Вызывается PlayerController при гибели игрока в этом режиме.
+        /// Условие победы считает режим — он владеет составом команд; машина раунда
+        /// получает только заявку «бой пора заканчивать».
         /// </summary>
         [Server]
         public void OnPlayerDied(PlayerController player)
         {
-            _roundManager?.OnPlayerDied(player);
+            if (_roundManager == null || _roundManager.State != RoundState.Combat) return;
+
+            GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+                $"[EliminationMode] Игрок {player.name} погиб — проверяем условие победы");
+
+            TeamData winner = CheckRoundWinCondition();
+            if (winner == null && !AreAllTeamsDead()) return;
+
+            _roundManager.RequestRoundEnd(winner);
+        }
+
+        /// <summary>Ни в одной команде не осталось живых — выигрывать раунд некому.</summary>
+        private bool AreAllTeamsDead()
+        {
+            foreach (TeamRuntimeData state in _teamStates.Values)
+            {
+                if (state.HasAlivePlayers()) return false;
+            }
+            return true;
         }
 
         [Server]

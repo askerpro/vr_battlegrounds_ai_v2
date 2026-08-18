@@ -1,6 +1,8 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
+using UnityEngine;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
+using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Tests.Network
 {
@@ -17,6 +19,7 @@ namespace VrBattlegrounds.Tests.Network
         private EliminationMode _mode;
         private TeamData _teamA;
         private TeamData _teamB;
+        private RoundFlowDriver _driver;
 
         [SetUp]
         public void PrepareMode()
@@ -40,6 +43,42 @@ namespace VrBattlegrounds.Tests.Network
 
             _mode = CreateNetworkComponent<EliminationMode>("EliminationMode");
             SpawnOnServer(_mode);
+
+            // Живых аватаров в EditMode не поднять, а без них раунд вечно стоит
+            // в фазе Equipment и до конца сета дело не доходит.
+            StubPlayerRoster roster = new StubPlayerRoster();
+            roster.Add(_teamA, CreateReadySession("PlayerA"));
+            roster.Add(_teamB, CreateReadySession("PlayerB"));
+            _mode.PlayerRoster = roster;
+
+            _driver = new RoundFlowDriver(dt => _mode.ServerTick(dt), () => _mode.CurrentRoundState);
+        }
+
+        /// <summary>Сессия игрока, который стоит в зоне спавна и взял жетон.</summary>
+        private PlayerSession CreateReadySession(string name)
+        {
+            GameObject go = CreateNetworkObject(name);
+            PlayerSession session = go.AddComponent<PlayerSession>();
+            EnableNetworking(go);
+
+            session.IsInSpawnZone = true;
+            session.HasGrabbedDogTag = true;
+            return session;
+        }
+
+        /// <summary>
+        /// Доводит текущий раунд до боя, объявляет победителя и прокручивает раунд
+        /// целиком — до момента, когда сменится номер раунда.
+        /// </summary>
+        private void PlayRound(TeamData winner)
+        {
+            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat");
+
+            int roundBefore = _mode.CurrentRoundNumber;
+            _mode.RoundManager.RequestRoundEnd(winner);
+
+            _driver.AdvanceUntil(() => _mode.CurrentRoundNumber != roundBefore,
+                "конца цикла раунда " + roundBefore);
         }
 
         /// <summary>
@@ -62,8 +101,10 @@ namespace VrBattlegrounds.Tests.Network
         }
 
         /// <summary>
-        /// Находка T-02: двойная подписка на SetEnded удваивала счёт сетов.
-        /// Тест недостижим без сервера — <c>InitializeActiveGame</c> помечен <c>[Server]</c>.
+        /// Находка T-02: двойная подписка на SetEnded удваивала счёт сетов. После T-09
+        /// события SetEnded нет вовсе — наблюдатель передаётся конструктором SetManager,
+        /// поэтому подписаться дважды не на что. Тест остаётся сторожем этой развязки.
+        /// Недостижим без сервера — <c>InitializeActiveGame</c> помечен <c>[Server]</c>.
         /// </summary>
         [Test, Order(1)]
         public void Победа_в_сете_даёт_одно_очко()
@@ -74,18 +115,21 @@ namespace VrBattlegrounds.Tests.Network
 
             // Штатный вход — Update() → InitializeActiveGame(), но Update ждёт подключённых
             // игроков, а StartGameplayWhenReady крутит корутину, которой в EditMode нет.
-            // Зовём напрямую: это тот же серверный путь, включая обе подписки на SetEnded.
+            // Зовём напрямую: это тот же серверный путь, включая связывание с OnSetEnded.
             InvokePrivateMethod(_mode, "InitializeActiveGame");
             Assert.IsNotNull(_mode.RoundManager,
                 "InitializeActiveGame не создал RoundManager — значит [Server]-заглушка всё ещё срабатывает.");
 
             // roundsPerSet = 3 → порог 2 победы, сет заканчивается досрочно после двух раундов.
-            _mode.RoundManager.EndRound(_teamA);
-            _mode.RoundManager.EndRound(_teamA);
+            // Раунды проигрываются прокруткой ServerTick: очко за сет начисляется только
+            // после того, как экран итогов прожил свои пять секунд.
+            PlayRound(_teamA);
+            PlayRound(_teamA);
 
             Assert.AreEqual(1, _mode.TeamStates[_teamA.teamIndex].Score,
                 "За один выигранный сет команда должна получить ровно одно очко. " +
-                "Двойка здесь = вернулась двойная подписка на SetEnded (T-02).");
+                "Двойка здесь = вернулось двойное оповещение об исходе сета (T-02). " +
+                "Пройденные фазы: " + _driver.DumpSequence());
 
             Assert.AreEqual(0, _mode.TeamStates[_teamB.teamIndex].Score,
                 "Проигравшая команда не должна получить очков за сет.");

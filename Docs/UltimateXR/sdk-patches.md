@@ -5,102 +5,113 @@
 
 ---
 
-## Патч 1: UxrMirrorAvatar — исправление синхронизации в режиме Server+Client
+## Патч 1: UxrMirrorAvatar — канал состояния вынесен на объект уровня сессии
 
-**Файл:** `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Networking/Integrations/Net/Mirror/UxrMirrorAvatar.cs`  
-**Ветка:** `dev`  
-**Дата:** 2025
+**Файл:** `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Networking/Integrations/Net/Mirror/UxrMirrorAvatar.cs`
+**Дата:** 2026-08-18 (задача T-12, заменяет предыдущую редакцию патча от 2025)
+**Парный код проекта:** `Assets/Scripts/Network/NetworkStateRelay.cs`
 
 ### Проблема
 
-В оригинальном SDK `UxrMirrorAvatar` не работал корректно в режиме **выделенного сервера + отдельного клиента** (Server+Client).
-
-При подключении клиента к серверу `LoadStateChanges` выдавал предупреждения:
-
-```
-UxrManager.LoadStateChanges(): Cannot deserialize a component. Skipping:
-UxrComponentNotFoundException: Could not find the given component using
-UxrUniqueIdImplementer.TryGetComponentById(). Id is <guid>.
-```
-
-Результат: начальное состояние сцены не применялось к клиенту.
-
-### Причина
-
-**Проблема 1 — `_initialStateLoaded` был `static`:**
+В SDK транспорт канала состояния UltimateXR (сериализованные `byte[]`-блобы, которыми
+едут захваты предметов, состояние оружия и **здоровье со смертью**) живёт прямо
+в `UxrMirrorAvatar` — компоненте на аватаре. А аватар в этом проекте пересоздаётся
+при смене скина, смене команды и **каждой смене карты**. Держался канал на двух
+статических полях:
 
 ```csharp
-// ОРИГИНАЛ (неправильно)
-private static bool _initialStateLoaded;
+private static bool           _initialStateLoaded;   // получен ли начальный снимок сцены
+private static UxrMirrorAvatar _serverBroadcaster;   // кто на сервере вещает события
 ```
 
-Статическое поле разделялось между всеми экземплярами `UxrMirrorAvatar` в процессе.  
-Когда Player 1 (сервер-хост) устанавливал `_initialStateLoaded = true`, это мгновенно
-влияло на Player 2 — `RpcComponentStateChanged` начинал обрабатываться до того, как
-клиент 2 получил глобальное состояние.
+Отсюда три отказа сразу:
 
-**Проблема 2 — отсутствие инициализации GUID на сервере:**
+| | Что ломалось |
+|---|---|
+| **NET-02** | `AvatarManager.ChangeAvatar` спавнит новый аватар, потом уничтожает старый. Новый в `OnStartServer` видит непустое `_serverBroadcaster` и вещателем не становится, старый в `OnStopServer` поле обнуляет — вещателя не остаётся. Здоровье и смерть перестают доезжать до клиентов. |
+| **NET-01** | `_initialStateLoaded` общий на процесс: один клиент влиял на решение другого, применять ли пришедшее событие. |
+| **NET-03** | Подписка на `UxrManager.ComponentStateChanged` стояла и в `OnStartServer`, и в `OnStartLocalPlayer`. На хосте отрабатывали обе — каждое изменение уходило клиентам двумя Rpc, а отписка была одна. |
 
-В оригинале `InitializeNetworkAvatar` (и внутри него `CombineUniqueId`) вызывался
-только из `OnStartClient`. На **выделенном сервере** `OnStartClient` **не вызывается**
-для объектов чужих игроков — только `OnStartServer`. Поэтому при получении
-`CmdNewAvatarJoined` аватар клиента ещё не имел правильных GUID в реестре UltimateXR,
-и `LoadStateChanges` не мог найти компоненты по ID.
+Отдельно вскрылось прогоном яруса C (см. NET-15 в
+[`../audit/network-audit-2026-08.md`](../audit/network-audit-2026-08.md)): весь приём
+состояния на клиентах был мёртв. `_initialStateLoaded` выставлялся только
+в `OnStartLocalPlayer`, а этот колбэк Mirror зовёт лишь на объекте игрока
+(`NetworkServer.AddPlayerForConnection`). В проекте объект игрока — `PlayerSession`,
+не аватар, поэтому `OnStartLocalPlayer` у `UxrMirrorAvatar` не вызывался никогда,
+флаг оставался `false`, и `RpcComponentStateChanged` выходил по нему в самом начале.
+
+### Прошлая редакция патча и почему её больше нет
+
+Патч 2025 года лечил ту же боль иначе: делал `_initialStateLoaded` полем экземпляра
+и добавлял `OnStartServer` с `InitializeNetworkAvatar`. Первая половина **откатилась**
+(на момент аудита 2026-08 поле снова было `static`, а рядом появилось второе
+статическое поле, которого в документе не было вовсе). Это и есть причина, по которой
+лечение симптома заменено на перенос: пока канал живёт в аватаре, любая правка держится
+на честном слове.
 
 ### Применённые изменения
 
-1. **`_initialStateLoaded` изменён с `static` на instance-поле:**
+Из `UxrMirrorAvatar` **удалено** — целиком переехало в `NetworkStateRelay`:
 
-```csharp
-// ИСПРАВЛЕНО
-private bool _initialStateLoaded;
-```
+- поля `_initialStateLoaded` и `_serverBroadcaster` (в классе не осталось ни одного
+  статического поля);
+- обработчик `UxrManager_ComponentStateChanged` и обе подписки на
+  `UxrManager.ComponentStateChanged` (в `OnStartServer` и в `OnStartLocalPlayer`),
+  а также отписки в `OnStopServer`, `OnStopClient`, `OnDestroy`;
+- `CmdComponentStateChanged`, `RpcComponentStateChanged` — транспорт событий;
+- `CmdNewAvatarJoined`, `TargetLoadGlobalState`, `RpcLoadAvatarState` — начальная
+  синхронизация состояния сцены;
+- `OnStopServer` — после выноса в нём не осталось ничего своего;
+- `OnNetworkSceneChanged` — публичный метод, который только сбрасывал
+  `_initialStateLoaded`; его никто не вызывал (NET-11), а сбрасывать стало нечего.
 
-2. **Добавлен `OnStartServer`** — инициализирует аватар (и рекурсивно GUID всех
-   дочерних компонентов) на сервере при спавне объекта:
+В `UxrMirrorAvatar` **осталось** только то, что действительно про аватар:
+`InitializeNetworkAvatar` с `CombineUniqueId` и флагом `_avatarInitialized`,
+`OnStartServer` / `OnStartClient` / `OnStartLocalPlayer` (инициализация и ownership),
+`OnStopClient` и `OnDestroy` с событиями `AvatarSpawned` / `AvatarDespawned`,
+`RequestAuthority` + `CmdRequestAuthority`.
 
-```csharp
-public override void OnStartServer()
-{
-    Avatar = GetComponent<UxrAvatar>();
-    InitializeNetworkAvatar(Avatar, netIdentity.isOwned, netId.ToString(),
-        $"Player {netId} ({(netIdentity.isOwned ? "Local" : "External")})");
-    base.OnStartServer();
-}
-```
+Наверху класса стоит `<remarks>` с указанием, куда переехал канал.
 
-3. **`InitializeNetworkAvatar` защищена от двойного вызова** через флаг `_avatarInitialized`,
-   чтобы повторный вызов из `OnStartClient` после `OnStartServer` не вызывал
-   `CombineUniqueId` дважды (что сломало бы GUID):
+Пункты 2 и 3 прошлой редакции патча (инициализация GUID в `OnStartServer` и защита
+`InitializeNetworkAvatar` от двойного вызова) **сохранены** — они про аватар и по-прежнему
+нужны выделенному серверу.
 
-```csharp
-if (_avatarInitialized && Avatar == avatar)
-{
-    // обновляем только ownership, без повторного CombineUniqueId
-    return;
-}
-```
+### Куда переехало
 
-4. **`OnStartLocalPlayer` выделен отдельно** для явной инициализации локального
-   аватара и подписки на события синхронизации.
+`VrBattlegrounds.Network.NetworkStateRelay` — `NetworkBehaviour` на префабе
+`Assets/Prefabs/Managers/SessionContext.prefab`, рядом с `SessionManager`. Префаб
+спавнится один раз в `GameNetworkManager.OnStartServer` и живёт до остановки сервера,
+поэтому канал больше не связан со временем жизни аватара. Экземпляр ровно один
+на процесс — состояние канала хранится обычными полями, статики в релее нет.
+
+Начальный снимок сцены релей запрашивает сам: в `OnStartClient` и заново на каждый
+`GameNetworkManager.ClientSceneChanged` (после смены сцены прежние объекты уничтожены).
+
+### Как повторить при обновлении SDK
+
+1. Открыть `UxrMirrorAvatar.cs` и удалить из него весь канал состояния: оба статических
+   поля, обработчик `UxrManager_ComponentStateChanged` со всеми подписками и отписками,
+   `CmdComponentStateChanged`, `RpcComponentStateChanged`, `CmdNewAvatarJoined`,
+   `TargetLoadGlobalState`, `RpcLoadAvatarState`, `OnNetworkSceneChanged`.
+2. Оставить `InitializeNetworkAvatar` (с `CombineUniqueId` и `_avatarInitialized`),
+   `OnStartServer` с вызовом `InitializeNetworkAvatar`, `OnStartClient`,
+   `OnStartLocalPlayer` без работы с каналом, `OnStopClient`, `OnDestroy`,
+   `RequestAuthority` / `CmdRequestAuthority`.
+3. Проверить, что в классе не осталось ни одного статического поля.
+4. Убедиться, что `NetworkStateRelay` висит на `SessionContext.prefab`.
+
+Первые три пункта закрыты EditMode-тестами
+`Assets/Tests/EditMode/Network/NetworkStateRelayTests.cs`, четвёртый — там же.
+Поведение целиком проверяет ярус C: сценарий `avatar-swap-death-replication`
+(`powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -Scenario avatar-swap-death-replication`).
 
 ### Режимы работы после патча
 
 | Режим | Статус |
 |---|---|
-| Host + Client (один процесс) | ? Работает |
-| Dedicated Server + Client | ? Работает |
-
-### Как повторить при обновлении SDK
-
-При обновлении UltimateXR SDK нужно:
-
-1. Найти файл `UxrMirrorAvatar.cs`
-2. Изменить `private static bool _initialStateLoaded` ? `private bool _initialStateLoaded`
-3. Добавить `OnStartServer` с вызовом `InitializeNetworkAvatar`
-4. Добавить защиту от двойного вызова в `InitializeNetworkAvatar` через флаг `_avatarInitialized`
-5. Убедиться что `AvatarSpawned` и `UxrInstanceManager.NotifyNetworkSpawn` вызываются
-   внутри `InitializeNetworkAvatar`, а не отдельно в `OnStartClient`
+| Dedicated Server + 2 клиента | проверено ярусом C: смерть доезжает и до, и после смены аватара |
+| Host + Client (один процесс) | подписка ровно одна (EditMode, ярус B) |
 
 ---
 

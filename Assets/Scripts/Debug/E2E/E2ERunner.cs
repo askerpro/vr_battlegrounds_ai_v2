@@ -182,6 +182,7 @@ namespace VrBattlegrounds.DevTools.E2E
         private static IEnumerable<IE2EScenario> All()
         {
             yield return new DedicatedServerArsenalScenario();
+            yield return new AvatarSwapDeathReplicationScenario();
         }
 
         private static IE2EScenario Resolve(string name)

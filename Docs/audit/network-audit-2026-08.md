@@ -272,6 +272,37 @@ InvalidOperationException: ... ArsenalWall (N) has no valid sceneId yet
 
 ---
 
+### NET-15 · Критично · Канал состояния UltimateXR не доезжал до клиентов вообще
+
+> Найдено 2026-08-18 прогоном яруса C при работе над T-12. Подтверждено логами:
+> сервер пишет `Sending state sync`, ни один клиент не пишет `Receiving state sync`,
+> `UxrComponentNotFoundException` при этом нет ни у кого.
+
+**Где:** `UxrMirrorAvatar.cs` (в редакции до T-12), строки 227 и 245
+**Закрыта:** [T-12](../tasks/T-12-state-channel-to-session.md)
+
+`RpcComponentStateChanged` выходил в самом начале по условию `_initialStateLoaded == false`.
+Единственные места, где флаг становился `true`, — `OnStartLocalPlayer` (ветка сервера)
+и `TargetLoadGlobalState`, а последний отправлялся в ответ на `CmdNewAvatarJoined`,
+который тоже уходил только из `OnStartLocalPlayer`.
+
+Mirror зовёт `OnStartLocalPlayer` лишь на **объекте игрока** — том, который передан
+в `NetworkServer.AddPlayerForConnection`. В этом проекте объект игрока —
+`PlayerSession` (`PlayersManager.cs:86`), а аватар спавнится отдельно через
+`NetworkServer.Spawn(avatar, conn)`: он *owned*, но не *localPlayer*. Значит
+`UxrMirrorAvatar.OnStartLocalPlayer` не вызывался никогда, флаг оставался `false`
+на всех клиентах, и весь входящий канал состояния молча отбрасывался.
+
+**Последствие.** На выделенном сервере до клиентов не доезжали ни здоровье, ни смерть,
+ни состояние захватов и оружия — то есть NET-02 маскировала более грубый отказ:
+канал не работал и **до** смены аватара тоже. На хосте не видно: там сервер применяет
+изменения у себя, а `RpcComponentStateChanged` сам себя игнорирует по `isServer`.
+
+Это же объясняет, почему находка не всплыла раньше: разница `Host` и `ServerOnly`
+проверяется только ярусом C, который появился за день до этого (T-27).
+
+---
+
 ## Логика матча (MATCH)
 
 ### MATCH-01 · Критично · Двойная подписка удваивает счёт сетов

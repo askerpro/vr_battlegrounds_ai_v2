@@ -84,7 +84,8 @@
 
 | Класс | Файл | Описание |
 |---|---|---|
-| `GameNetworkManager` | `Network/GameNetworkManager.cs` | Сетевой транспорт Mirror. Только коллбэки подключения, события `PlayerConnected/Disconnected/ServerSceneChanged`. Никакой игровой логики. |
+| `GameNetworkManager` | `Network/GameNetworkManager.cs` | Сетевой транспорт Mirror. Только коллбэки подключения, события `PlayerConnected/Disconnected/ServerSceneChanged/ClientSceneChanged`. Никакой игровой логики. |
+| `NetworkStateRelay` | `Network/NetworkStateRelay.cs` | Транспорт **канала состояния UltimateXR** — `byte[]`-блобы, которыми едут захваты, состояние оружия и здоровье со смертью. Живёт на `SessionContext.prefab`, спавнится один раз при старте сервера. Раньше канал проходил через `UxrMirrorAvatar` и ломался при каждой смене аватара (T-12, [`UltimateXR/sdk-patches.md`](UltimateXR/sdk-patches.md), Патч 1). |
 
 **Статические события `GameNetworkManager`:**
 
@@ -93,6 +94,12 @@
 | `PlayerConnected` | Игрок заспавнился на сервере | `PlayersManager`, `MapManager`, `DebugOrchestrator` |
 | `PlayerDisconnected` | Игрок отключился | `PlayersManager` |
 | `ServerSceneChanged` | Сервер завершил загрузку сцены | `DebugOrchestrator` |
+| `ClientSceneChanged` | Клиент завершил загрузку сцены | `NetworkStateRelay` (перезапрашивает снимок состояния) |
+
+**Два канала репликации.** Первый — штатный Mirror (`SyncVar`, `ClientRpc`): команда, счёт,
+выбор карты, фаза раунда. Второй — канал состояния UltimateXR через `NetworkStateRelay`:
+захваты предметов, состояние оружия, **здоровье и смерть** (`UxrActor.Life` — синхронизируемое
+свойство). Каналы независимы: разные модели авторитета и разные гарантии порядка.
 
 ---
 
@@ -293,6 +300,7 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `Network/HostClientHarnessTests` | Ярус B: локальный клиент поднялся, `SpawnMessage` доходит до `NetworkClient.spawned`. |
 | `Network/PlayerSessionReplicationTests` | Репликация `PlayerSession` через настоящую сериализацию Mirror: `TeamIndex` и связь с аватаром доезжают до клиента, смена скина переключает связь, гонка спавнов чинится аватаром, `PlayerController.Session` кэшируется (T-11). |
 | `Network/SessionRecoveryTests` | Снимок сессии при отключении: позиция, здоровье, флаг `NeedsPhysicalRestore` (T-04). |
+| `Network/NetworkStateRelayTests` | Канал состояния как объект сессии (T-12): подписка на хосте ровно одна (NET-03), отписка при остановке сервера, отсутствие статики в `UxrMirrorAvatar` и в релее, наличие релея и ненулевой `assetId` на `SessionContext.prefab`. Саму доставку блобов проверяет ярус C — в host-режиме она была бы ложно-зелёной. |
 
 ---
 
@@ -301,6 +309,7 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | Префаб | Путь | Описание |
 |---|---|---|
 | Игрок | `Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab` | PrefabVariant на основе `CyborgAvatar_URP`. |
+| Контекст сессии | `Assets/Prefabs/Managers/SessionContext.prefab` | Сетевые сервисы уровня сессии: `SessionManager` (выбор карты и режима) и `NetworkStateRelay` (канал состояния UltimateXR). Спавнится один раз в `GameNetworkManager.OnStartServer`, живёт до остановки сервера. |
 
 **Компоненты префаба игрока:**
 
@@ -308,7 +317,7 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 |---|---|
 | `UxrAvatar` | VR-тело, руки, камера |
 | `UxrStandardAvatarController` | Обновление аватара по вводу контроллеров |
-| `UxrMirrorAvatar` | Сетевая синхронизация аватара через Mirror |
+| `UxrMirrorAvatar` | Инициализация сетевого аватара, `CombineUniqueId`, ownership. Канал состояния через него **не идёт** — он в `NetworkStateRelay` |
 | `NetworkIdentity` | Идентификатор Mirror |
 | `NetworkTransformUnreliable` | Синхронизация трансформа |
 | `UxrActor` | Система урона UltimateXR |

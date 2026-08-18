@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6290475690433236430}
   - component: {fileID: 7144737216436713564}
   - component: {fileID: 7084803014390581751}
+  - component: {fileID: 548351888320764724}
   m_Layer: 0
   m_Name: SessionContext
   m_TagString: Untagged
@@ -67,3 +68,18 @@ MonoBehaviour:
   syncInterval: 0
   _mapRegistry: {fileID: 11400000, guid: 71b7b06f6e5c4e246a1df765ec535257, type: 2}
   _gameModeRegistry: {fileID: 11400000, guid: f8f3650e0967c6a4196fa716df9628b3, type: 2}
+--- !u!114 &548351888320764724
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7659987172694362790}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7321f34f31300a948950d1ca04cb8456, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Network.NetworkStateRelay
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0

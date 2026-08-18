@@ -20,6 +20,13 @@ namespace VrBattlegrounds.Network
         /// <summary>Сервер завершил загрузку сцены.</summary>
         public static event Action<string> ServerSceneChanged;
 
+        /// <summary>
+        /// Клиент завершил загрузку сцены. Всё, что было в предыдущей, уничтожено,
+        /// поэтому подписчикам нужно заново получить состояние сцены с сервера —
+        /// см. <see cref="NetworkStateRelay"/>.
+        /// </summary>
+        public static event Action ClientSceneChanged;
+
         [Header("Server Context")]
         [Tooltip("Префаб SessionManager, который будет спавниться при старте сервера.")]
         [SerializeField] private GameObject _sessionContextPrefab;
@@ -91,6 +98,8 @@ namespace VrBattlegrounds.Network
             base.OnClientSceneChanged();
             if (NetworkClient.ready && NetworkClient.connection.identity == null)
                 SendConnectMessage();
+
+            ClientSceneChanged?.Invoke();
         }
 
         public override void OnClientConnect()

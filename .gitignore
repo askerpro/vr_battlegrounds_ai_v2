@@ -114,3 +114,7 @@ InitTestScene*.unity*
 
 # Embedded MCP package — local patched fork (execute_code fix)
 /Packages/com.coplaydev.unity-mcp/
+
+# Плеер и артефакты e2e-прогонов (ярус C, Tools/e2e/Run-E2E.ps1)
+/Build/
+/Tools/e2e/results/

@@ -33,6 +33,7 @@
 
 - **Что чинить прямо сейчас, что чем блокировано** → [`tasks/README.md`](tasks/README.md)
 - **Как тестировать сеть и VR** → [`testing.md`](testing.md)
+- **Прогнать e2e на двух процессах одной командой** → [`testing.md`](testing.md#ярус-c--два-процесса-настоящий-e2e)
 - **Аудит: 21 находка** → [`audit/network-audit-2026-08.md`](audit/network-audit-2026-08.md)
 - **Аудит: 5 корневых решений архитектуры** → [`audit/architecture-review-2026-08.md`](audit/architecture-review-2026-08.md)
 - **Геймплей, режимы, матч, арена** → [`gameplay.md`](gameplay.md)
@@ -67,6 +68,13 @@
 | `Assets/Data/Teams/` | `TeamData` assets (`Terrorists.asset`, `SpecialForces.asset`) |
 | `Assets/Resources/` | `GameSettings.asset` (загружается через `Resources.Load`) |
 | `Assets/Tests/EditMode/` | EditMode-тесты (`VrBattlegrounds.Tests.EditMode.asmdef`, только редактор) |
+
+Вне `Assets/`:
+
+| Путь | Содержание |
+|---|---|
+| `Tools/e2e/` | Дирижёр e2e-прогона на двух процессах (ярус C) и артефакты прогонов в `results/` |
+| `Build/e2e/` | Собранный плеер для e2e (в `.gitignore`) |
 
 ---
 
@@ -214,6 +222,21 @@ GameplayManager       — матч (5 карт, счёт, победитель)
 | `DebugOrchestrator` | `Debug/DebugOrchestrator.cs` | Автостарт при Play: назначает команду, грузит карту, стартует матч. Только вызовы публичных API. |
 | `DebugBootstrapConfig` | `Debug/DebugBootstrapConfig.cs` | ScriptableObject с параметрами `DebugOrchestrator`. |
 | `PlayModeStartFromOffline` | `Editor/PlayModeStartFromOffline.cs` | Скрипт редактора. Автоматически перехватывает Play Mode, заставляя Unity стартовать с Offline-сцены и прокидывая текущую сцену в конфиг. |
+
+**Харнесс e2e на двух процессах (ярус C) — `Assets/Scripts/Debug/E2E/`**
+
+Как запускать и на что смотреть — [`testing.md`](testing.md#ярус-c--два-процесса-настоящий-e2e).
+Весь код закрыт `#if !VRBG_NO_E2E` и без аргумента `-e2eScenario` не поднимается.
+
+| Класс | Файл | Описание |
+|---|---|---|
+| `E2ERunner` | `Debug/E2E/E2ERunner.cs` | Точка входа. Поднимается через `[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]`, если задан `-e2eScenario`. Прокручивает сценарий вручную, чтобы поймать исключение, и гарантирует запись файла вердикта при любом исходе. Реестр сценариев — метод `All()`. |
+| `E2EContext` | `Debug/E2E/E2EContext.cs` | Разбор аргументов командной строки: `-e2eScenario`, `-e2eRole`, `-e2eResult`, `-e2eTimeout`, `-e2eMap`, `-e2eClients`, `-e2eServerAddress`, `-e2eDeviceToken`. |
+| `E2EResult`, `E2ECheck` | `Debug/E2E/E2EResult.cs` | Машиночитаемый вердикт. Проверки объявляются заранее (`Declare`), поэтому недошедшие несут причину обрыва. JSON пишется чистым ASCII. |
+| `IE2EScenario` | `Debug/E2E/IE2EScenario.cs` | Контракт сценария: имя для CLI и корутина `Run`. |
+| `DedicatedServerArsenalScenario` | `Debug/E2E/Scenarios/DedicatedServerArsenalScenario.cs` | Сценарий `dedicated-server-arsenal` — находка NET-06. Роль сервера гонит матч и выносит вердикт, роли клиентов занимают команды и служат контролем: то же событие на них срабатывает. |
+| `E2EPlayerBuilder` | `Editor/VR_Battlegrounds/Debug/E2EPlayerBuilder.cs` | Сборка плеера под Windows в `Build/e2e/`. Меню `Tools/VR Battlegrounds/Debug/Собрать e2e-плеер (Windows)`, для CI — `RunBatch`. |
+| `Run-E2E.ps1` | `Tools/e2e/Run-E2E.ps1` | Дирижёр: добивает осиротевшие процессы, проверяет свежесть билда, поднимает сервер и клиентов, ждёт вердикты, гасит процессы, сводит отчёт. Хранить **в UTF-8 с BOM**. |
 
 **Поля `DebugBootstrapConfig`:**
 

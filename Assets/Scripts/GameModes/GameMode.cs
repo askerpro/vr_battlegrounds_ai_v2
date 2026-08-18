@@ -66,6 +66,28 @@ namespace VrBattlegrounds.GameModes
         }
 
         /// <summary>
+        /// Клиенту ссылка на активный режим нужна не меньше, чем серверу: через неё
+        /// <see cref="GameplayManager"/> читает фазу раунда и блокирует оружие вне боя.
+        /// Без этого поле <c>_gameMode</c> заполнялось только в серверном StartGameplay,
+        /// на клиенте оставалось null, и блокировка не работала (MATCH-03).
+        /// </summary>
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            if (GameplayManager.Instance != null)
+                GameplayManager.Instance.RegisterActiveGameMode(this);
+        }
+
+        public override void OnStopClient()
+        {
+            if (GameplayManager.Instance != null)
+                GameplayManager.Instance.UnregisterActiveGameMode(this);
+
+            base.OnStopClient();
+        }
+
+        /// <summary>
         /// Вызывается сервером (через GameplayManager) когда игрок подтвердил смену команды.
         /// Здесь режим может сбросить статистику игрока, вычесть очки и т.д.
         /// </summary>

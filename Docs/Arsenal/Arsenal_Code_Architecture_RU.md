@@ -22,7 +22,9 @@
 
 Сцена арсенала разбита на модульные компоненты-контроллеры для соблюдения SRP.
 
-*   `ArsenalWallController` (**MonoBehaviour**) — Корень и оркестратор. Управляет глобальными состояниями (`Closed`, `Opening`, `Open`, `Closing`). Подписан на изменения стадий раунда глобального игрового мода (`EliminationMode.OnRoundStateChangedLocal`). Управляет дочерними слотами.
+*   `ArsenalWallController` (**NetworkBehaviour**) — Корень и оркестратор. Управляет глобальными состояниями (`Closed`, `Opening`, `Open`, `Closing`). Управляет дочерними слотами. Подписан на фазу раунда **двумя разными подписками**:
+    *   `EliminationMode.OnRoundStateChangedLocal` (подписка в `OnEnable`) — визуальный жизненный цикл стены: открыть в `Equipment`, закрыть в `Countdown`/`Combat`. Исполняется на каждой машине, включая выделенный сервер.
+    *   `EliminationMode.OnRoundStateChangedServer` (подписка в `OnStartServer`) — авторитетное пополнение слотов `ReplenishWeaponsNetwork(false)` в фазе `Setup`. Проверок роли внутри обработчиков нет: раньше внутри клиентского обработчика стояла ветка `if (isServer)`, и на выделенном сервере она не исполнялась никогда (находка NET-06). Подробнее — [«Фаза раунда»](../gameplay.md#фаза-раунда--состояние-а-не-событие).
 *   `ArsenalSlotController` (и наследники: `FirearmSlotController`, `ShelfItemSlotController`) — Управляют одной конкретной ячейкой на стене или полке. Отвечают за:
     *   Спавн/Деспавн конкретного `WeaponInfo`.
     *   Блокировку (`Lock`/`Unlock`) возможности взять предмет (через UxrGrabbableObjectAnchor).

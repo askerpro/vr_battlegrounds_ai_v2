@@ -65,7 +65,7 @@ namespace VrBattlegrounds.GameModes
             _currentRound++;
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
                 $"[SetManager] Раунд {_currentRound}/{_roundsPerSet}");
-            _eliminationMode.RpcOnRoundStarted(_currentRound);
+            _eliminationMode.ServerBeginRound(_currentRound);
             _roundManager.StartRound(_eliminationMode, _countdownDuration, _roundDuration);
         }
 
@@ -114,7 +114,7 @@ namespace VrBattlegrounds.GameModes
             {
                 _roundManager.RoundEnded += OnRoundEnded;
                 // Именно собственный StartNextRound(), а не одноимённый метод RoundManager:
-                // он инкрементирует _currentRound, шлёт RpcOnRoundStarted и сам зовёт
+                // он инкрементирует _currentRound, зовёт ServerBeginRound и сам зовёт
                 // _roundManager.StartRound(...). Через RoundManager счётчик раундов не растёт,
                 // и сет никогда не заканчивается по исчерпанию раундов.
                 StartNextRound();

@@ -77,7 +77,29 @@ namespace VrBattlegrounds.Arsenal
         public override void OnStartServer()
         {
             base.OnStartServer();
+
+            // Авторитетная реакция на фазу приходит по серверному каналу, а не через
+            // клиентский обработчик: раньше внутри HandleRoundStateChanged стояла ветка
+            // `if (isServer)`, и на выделенном сервере она не исполнялась никогда (NET-06).
+            EliminationMode.OnRoundStateChangedServer -= ServerHandleRoundStateChanged;
+            EliminationMode.OnRoundStateChangedServer += ServerHandleRoundStateChanged;
+
             ReplenishWeaponsNetwork(true);
+        }
+
+        public override void OnStopServer()
+        {
+            EliminationMode.OnRoundStateChangedServer -= ServerHandleRoundStateChanged;
+            base.OnStopServer();
+        }
+
+        /// <summary>Серверная реакция на смену фазы. Только авторитетные действия, без визуала.</summary>
+        [Server]
+        private void ServerHandleRoundStateChanged(RoundState newState)
+        {
+            if (newState != RoundState.Setup) return;
+
+            ReplenishWeaponsNetwork(false);
         }
 
         [Server]
@@ -168,6 +190,11 @@ namespace VrBattlegrounds.Arsenal
         private void OnDisable()
         {
             EliminationMode.OnRoundStateChangedLocal -= HandleRoundStateChanged;
+
+            // Подписка серверного канала снимается и здесь: статическое событие переживает
+            // объект, а уничтоженная стена в списке подписчиков — это MissingReference на
+            // ближайшей смене фазы. Повторное отписывание безвредно.
+            EliminationMode.OnRoundStateChangedServer -= ServerHandleRoundStateChanged;
 
             if (_dogTagController != null)
                 _dogTagController.OnTagGrabbed -= HandleTagGrabbed;
@@ -321,18 +348,16 @@ namespace VrBattlegrounds.Arsenal
             OnSlotChanged?.Invoke(slot, false);
         }
 
+        /// <summary>
+        /// Локальная реакция на фазу — визуальный жизненный цикл стены. Исполняется на каждой
+        /// машине, включая выделенный сервер: фаза раздаётся из состояния, а не из ClientRpc.
+        /// Авторитетное пополнение слотов сюда не входит — оно в <see cref="ServerHandleRoundStateChanged"/>.
+        /// </summary>
         private void HandleRoundStateChanged(RoundState newState)
         {
             GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] HandleRoundStateChanged received: {newState}. Arsenal State: {_currentState}");
             switch (newState)
             {
-                case RoundState.Setup:
-                    if (isServer)
-                    {
-                        ReplenishWeaponsNetwork(false);
-                    }
-                    break;
-
                 case RoundState.Equipment:
                     if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing)
                     {

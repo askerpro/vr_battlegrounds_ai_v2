@@ -113,7 +113,7 @@
 | `GameplayManager` | `Managers/GameplayManager.cs` | Матч: счёт, победитель, `StartGameplay()`, `StopGameplay()`. Режим ищет по `modeId` из `GameManager`. |
 | `UxrActor` | `UltimateXR/.../UxrActor.cs` | Базовая система урона UltimateXR. Игрок умирает, когда `UxrActor` вызывает событие смерти. |
 | `SetManager` | `GameModes/EliminationMode/SetManager.cs` | Сет: N раундов, смена сторон, `ForceStop()`. |
-| `RoundManager` | `GameModes/EliminationMode/RoundManager.cs` | Раунд: FSM (WaitingForPlayers → Countdown → Active → Ended), таймер, победа через `GameMode`, `ForceStop()`. |
+| `RoundManager` | `GameModes/EliminationMode/RoundManager.cs` | Раунд: FSM (`Setup → Equipment → Countdown → Combat → Resolution → Scoreboard`), таймер, победа через `GameMode`, `ForceStop()`. Фазу наружу раздаёт `EliminationMode` — см. [gameplay.md](gameplay.md#фаза-раунда--состояние-а-не-событие). |
 
 **Иерархия менеджеров матча:**
 
@@ -216,9 +216,15 @@ GameplayManager       — матч (5 карт, счёт, победитель)
 | `PlayerHUDManager` | `UI/HUD/PlayerHUDManager.cs` | Спавнит и управляет дочерними виджетами HUD привязанными к голове игрока. |
 
 **Система Уведомлений (Event-Driven Notifications):**
-- Игровые режимы (`EliminationMode`, `RespawnMode`) вызывают `[ClientRpc]`, которые на клиенте поднимают "Чистые семантические события C#" (например `OnRoundEndedLocal(TeamData)`).
+- Разовые уведомления (`OnRoundEndedLocal`, `OnSetStartedLocal`, `OnRoundStartedLocal`) игровые режимы шлют через `[ClientRpc]`: их не нужно знать задним числом.
 - Режимы не знают про UI и не генерируют текст ("Победили Синие").
 - Автономные UI-виджеты (как `HUDWidget_GameNotification`) подписываются на эти события, сами формируют финальную строку (с учетом имен команд) и отображают её.
+
+**Что нужно знать вновь подключившемуся — состояние, а не событие.** Фаза раунда
+(`EliminationMode.OnRoundStateChangedLocal`) раздаётся не из `ClientRpc`, а из хука
+`[SyncVar] _roundState` — см. [«Фаза раунда»](gameplay.md#фаза-раунда--состояние-а-не-событие).
+Правило общее: `ClientRpc` годится для «раунд начался» со звуком, но не для того,
+что определяет текущее состояние мира.
 
 ---
 

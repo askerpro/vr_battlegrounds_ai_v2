@@ -45,10 +45,24 @@ namespace VrBattlegrounds.GameModes
 
         // Состояние раунда — синхронизируется для UI (таймер, countdown)
         [SyncVar] private EliminationMatchState _matchState = EliminationMatchState.WaitingForPlayers;
-        [SyncVar] private RoundState _roundState = RoundState.Setup;
+
+        /// <summary>
+        /// Фаза раунда. Единственный источник правды — эта переменная, а не сетевое сообщение:
+        /// вновь подключившийся клиент получает её начальным значением спавна.
+        /// Раздачу подписчикам делает <see cref="ApplyRoundStateLocal"/>.
+        /// </summary>
+        [SyncVar(hook = nameof(OnRoundStateSynced))]
+        private RoundState _roundState = RoundState.Setup;
+
         [SyncVar] private float _roundTimer;
         [SyncVar] private float _countdownTimer;
         [SyncVar] private int _currentRound;
+
+        /// <summary>Фаза, уже разданная локальным подписчикам на этой машине.</summary>
+        private RoundState _appliedRoundState = RoundState.Setup;
+
+        /// <summary>Была ли фаза раздана хотя бы раз (отличает «ещё ничего» от «раздали Setup»).</summary>
+        private bool _roundStateApplied;
 
         private readonly SyncDictionary<int, int> _syncedRoundScores = new SyncDictionary<int, int>();
 
@@ -63,7 +77,20 @@ namespace VrBattlegrounds.GameModes
         public static event Action<TeamData> OnSetEndedLocal;
         public static event Action<int> OnRoundStartedLocal;
         public static event Action<TeamData> OnRoundEndedLocal;
+
+        /// <summary>
+        /// Фаза раунда изменилась на ЭТОЙ машине. Срабатывает одинаково на обычном клиенте,
+        /// на хосте и на выделенном сервере — раздача идёт от <see cref="_roundState"/>,
+        /// а не от сетевого сообщения. Для представления: арсенал, HUD, зоны спавна.
+        /// </summary>
         public static event Action<RoundState> OnRoundStateChangedLocal;
+
+        /// <summary>
+        /// Фаза раунда изменилась, и эта машина — сервер. Для авторитетных реакций,
+        /// которые обязан выполнить именно сервер (пополнение слотов арсенала и т.п.).
+        /// Подписываться только из <c>OnStartServer</c>: на клиенте не срабатывает никогда.
+        /// </summary>
+        public static event Action<RoundState> OnRoundStateChangedServer;
 
         // ── Публичные свойства для UI ────────────────────────────────────────
 
@@ -168,16 +195,12 @@ namespace VrBattlegrounds.GameModes
 
             if (_roundManager == null) return;
 
-            RoundState previousState = _roundState;
-            bool changed = _roundManager.Tick(Time.deltaTime);
+            _roundManager.Tick(Time.deltaTime);
 
             // Обновляем SyncVar каждый тик
-            _roundState = _roundManager.State;
+            ServerSetRoundState(_roundManager.State);
             _roundTimer = _roundDuration - _roundManager.RoundTimeRemaining;
             _countdownTimer = _countdownDuration - _roundManager.CountdownTimeRemaining;
-
-            if (changed || _roundState != previousState)
-                RpcOnRoundStateChanged(_roundState);
 
             // Синхронизируем счёт раундов из SetManager
             if (_setManager != null)
@@ -333,12 +356,57 @@ namespace VrBattlegrounds.GameModes
             }
         }
 
-        [ClientRpc]
-        private void RpcOnRoundStateChanged(RoundState newState)
+        // ── Фаза раунда: состояние, а не событие ─────────────────────────────
+        //
+        // Раздача одинакова на всех машинах, но приходит с разных сторон:
+        //   · обычный клиент — из хука SyncVar, который Mirror зовёт в OnDeserialize;
+        //   · хост — из того же хука: в сеттере Mirror зовёт его при NetworkServer.activeHost;
+        //   · выделенный сервер — из ServerSetRoundState, потому что в сеттере хук
+        //     под ServerOnly не срабатывает (Mirror.NetworkBehaviour.GeneratedSyncVarSetter).
+        //
+        // Поэтому ApplyRoundStateLocal идемпотентна по значению: под хостом её зовут дважды,
+        // и второй вызов обязан быть пустым. Подряд идущих одинаковых фаз в машине состояний
+        // нет (Setup → Equipment → Countdown → Combat → Resolution → Scoreboard → Setup),
+        // так что гашение по значению ничего не теряет.
+
+        /// <summary>Меняет фазу на сервере: пишет состояние и поднимает обе раздачи.</summary>
+        [Server]
+        private void ServerSetRoundState(RoundState newState)
         {
+            if (_roundState == newState) return;
+
+            _roundState = newState;
+            ApplyRoundStateLocal(newState);
+            OnRoundStateChangedServer?.Invoke(newState);
+        }
+
+        /// <summary>Хук SyncVar: фаза приехала с сервера.</summary>
+        private void OnRoundStateSynced(RoundState oldState, RoundState newState)
+        {
+            ApplyRoundStateLocal(newState);
+        }
+
+        /// <summary>Раздаёт фазу локальным подписчикам этой машины ровно один раз на значение.</summary>
+        private void ApplyRoundStateLocal(RoundState state)
+        {
+            if (_roundStateApplied && _appliedRoundState == state) return;
+
+            _roundStateApplied = true;
+            _appliedRoundState = state;
+
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                $"[EliminationMode] Состояние раунда (клиент): {newState}");
-            OnRoundStateChangedLocal?.Invoke(newState);
+                $"[EliminationMode] Фаза раунда: {state}");
+            OnRoundStateChangedLocal?.Invoke(state);
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            // Поздний клиент получает фазу начальным значением спавна. Хук на нём не сработает,
+            // если пришедшее значение совпало с дефолтом поля (Setup), — раздаём явно,
+            // иначе подписчики так и не узнают, в какой фазе идёт раунд.
+            ApplyRoundStateLocal(_roundState);
         }
 
         [ClientRpc]
@@ -354,10 +422,22 @@ namespace VrBattlegrounds.GameModes
             OnSetEndedLocal?.Invoke(winner);
         }
 
-        [ClientRpc]
-        public void RpcOnRoundStarted(int roundNum)
+        /// <summary>
+        /// Начало раунда на сервере. Номер раунда — состояние, поэтому пишется в SyncVar
+        /// серверным кодом; Rpc остаётся разовым уведомлением для UI (NET-08).
+        /// Раньше присваивание жило внутри Rpc: на выделенном сервере он не исполняется,
+        /// и <see cref="CurrentRoundNumber"/> навсегда оставался нулём.
+        /// </summary>
+        [Server]
+        public void ServerBeginRound(int roundNum)
         {
             _currentRound = roundNum;
+            RpcOnRoundStarted(roundNum);
+        }
+
+        [ClientRpc]
+        private void RpcOnRoundStarted(int roundNum)
+        {
             OnRoundStartedLocal?.Invoke(roundNum);
         }
 

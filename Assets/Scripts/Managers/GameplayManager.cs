@@ -46,10 +46,29 @@ namespace VrBattlegrounds.Managers
 
         // ── Unity lifecycle ───────────────────────────────────────────────────
 
+        /// <summary>
+        /// Клиент увидел заспавненный режим и сообщает о нём. На сервере ссылку ставит
+        /// <see cref="StartGameplay"/>; повторная запись того же объекта на хосте безвредна.
+        /// </summary>
+        internal void RegisterActiveGameMode(GameMode mode)
+        {
+            if (mode == null) return;
+            _gameMode = mode;
+        }
+
+        /// <summary>Режим уничтожен на этой машине. Снимаем ссылку, если она указывает на него.</summary>
+        internal void UnregisterActiveGameMode(GameMode mode)
+        {
+            if (_gameMode == mode) _gameMode = null;
+        }
+
         private void Update()
         {
 
-            // Управляем доступностью оружия через UxrWeaponManager
+            // Управляем доступностью оружия через UxrWeaponManager.
+            // Фаза читается из режима, а он теперь известен и клиенту (MATCH-03):
+            // раньше _gameMode заполнялся только серверным StartGameplay, на клиенте
+            // оставался null, и оружие не блокировалось вне боя.
             if (UxrWeaponManager.HasInstance)
             {
                 bool weaponsEnabled = true;

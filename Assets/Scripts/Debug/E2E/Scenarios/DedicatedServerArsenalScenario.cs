@@ -1,4 +1,4 @@
-// Ярус C (два процесса) — сценарий dedicated-server-arsenal, находка NET-06.
+// Ярус C (два процесса) — сценарий dedicated-server-arsenal: находки NET-06, NET-13, NET-07.
 #if !VRBG_NO_E2E
 using System.Collections;
 using System.Collections.Generic;
@@ -14,29 +14,37 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.DevTools.E2E.Scenarios
 {
     /// <summary>
-    /// Сценарий <c>dedicated-server-arsenal</c> — находка <b>NET-06</b>.
+    /// Сценарий <c>dedicated-server-arsenal</c> — находки <b>NET-06</b>, <b>NET-13</b>, <b>NET-07</b>.
     ///
-    /// Что доказывает. Смена фазы раунда рассылается через
+    /// <b>NET-06.</b> Смена фазы раунда рассылалась через
     /// <c>[ClientRpc] EliminationMode.RpcOnRoundStateChanged</c>, который поднимает
     /// статическое событие <see cref="EliminationMode.OnRoundStateChangedLocal"/>.
     /// В режиме <c>ServerOnly</c> ClientRpc локально не исполняется, поэтому на
-    /// выделенном сервере событие не срабатывает, и
-    /// <c>ArsenalWallController.HandleRoundStateChanged</c> не вызывается никогда:
-    /// стена не открывается и слоты не пополняются. На хосте баг не виден —
-    /// там сервер сам является клиентом и Rpc исполняется локально.
+    /// выделенном сервере событие не срабатывало, и стена арсенала не открывалась
+    /// и не пополнялась. На хосте баг не виден — там сервер сам является клиентом.
+    /// Закрыта T-13: фаза стала состоянием (<c>SyncVar</c>), а не сообщением.
+    ///
+    /// <b>NET-13.</b> <c>ArsenalSlotController.IsItemPresent</c> читал
+    /// <c>UxrGrabbableObjectAnchor.CurrentPlacedObject</c>, который сетевая выдача
+    /// оружия не заполняет. Проверка сравнивает занятость слота с фактически
+    /// заспавненным под якорем оружием: до T-15 — 0 против 64.
+    ///
+    /// <b>NET-07.</b> Состояние стены было обычным полем: каждая машина вела её сама.
+    /// Проверка кросс-процессная: <c>client-1</c> дёргает жетон на общей стене,
+    /// а сервер и <c>client-2</c> обязаны увидеть, что она закрылась. До T-15
+    /// закрывалась она только у инициатора.
     ///
     /// Роли:
     /// <list type="bullet">
     /// <item><c>server</c> — гонит матч и выносит вердикт;</item>
+    /// <item><c>client-1</c> — подключается, занимает место в команде и берёт жетон;</item>
     /// <item><c>client-N</c> — подключается и занимает место в команде,
     ///       без двух игроков матч не стартует (<c>minPlayersToStart = 2</c>,
-    ///       плюс требование «в каждой команде есть игрок»).</item>
+    ///       плюс требование «в каждой команде есть игрок»), и наблюдает за стеной.</item>
     /// </list>
     ///
-    /// Ожидаемый результат на текущем коде — <b>красный</b>: зелёные проверки 1–5
-    /// подтверждают, что конфигурация действительно собралась и матч пошёл,
-    /// красные 6–7 — это сама находка. Зелёный итог означал бы, что сценарий
-    /// ничего не проверяет.
+    /// Общая стена выбирается по наименьшему <c>netId</c>: он одинаков во всех
+    /// процессах, а <c>FindObjectsByType</c> порядок не гарантирует.
     /// </summary>
     public class DedicatedServerArsenalScenario : IE2EScenario
     {
@@ -51,11 +59,27 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckPhase     = "серверная машина раунда сменила фазу Setup -> Equipment";
         private const string CheckEvent     = "смена фазы раунда дошла до локальных подписчиков на сервере";
         private const string CheckArsenal   = "стена арсенала открылась в фазе Equipment на сервере";
+        private const string CheckPresence  = "слот считает себя занятым, когда оружие в нём есть (NET-13)";
+        private const string CheckTagClose  = "жетон, взятый на клиенте, закрыл общую стену и на сервере (NET-07)";
 
         private const string CheckClientConnected = "клиент подключился к серверу";
         private const string CheckClientSession   = "сервер создал сессию для клиента";
         private const string CheckClientMap       = "клиент переехал на карту вместе с сервером";
         private const string CheckClientEvent     = "смена фазы раунда дошла до клиента (контроль к NET-06)";
+        private const string CheckClientArsenal   = "стена арсенала открыта и у этого клиента";
+        private const string CheckClientTagPull   = "жетон взят на этом клиенте — общая стена пошла закрываться";
+        private const string CheckClientTagSeen   = "закрытие стены по чужому жетону доехало до этого клиента (NET-07)";
+
+        /// <summary>Роль, которая дёргает жетон. Остальные клиенты только наблюдают.</summary>
+        private const string TagInitiatorRole = "client-1";
+
+        /// <summary>
+        /// Сколько ждать после «стена открылась», прежде чем дёрнуть жетон.
+        /// Пауза нужна, чтобы сервер успел записать свою проверку про открытую стену:
+        /// закрытие, прилетевшее в середине его пятисекундной выдержки, сделало бы
+        /// проверку 7 неверной по посторонней причине.
+        /// </summary>
+        private const float TagPullDelay = 10f;
 
         // ── Наблюдение ────────────────────────────────────────────────────
 
@@ -81,8 +105,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private IEnumerator RunServer(E2EContext context, E2EResult result)
         {
-            result.Declare(CheckDedicated, CheckClients, CheckMap, CheckInitial,
-                           CheckPhase, CheckEvent, CheckArsenal);
+            result.Declare(CheckDedicated, CheckClients, CheckMap, CheckInitial, CheckPresence,
+                           CheckPhase, CheckEvent, CheckArsenal, CheckTagClose);
 
             // ── 1. Выделенный сервер ──────────────────────────────────────
             float deadline = Now + 60f;
@@ -198,12 +222,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             // ── 4. Начальное пополнение (OnStartServer) ───────────────────
-            // Занятость слота смотрим по WeaponComponent под якорем, а не по
-            // ArsenalSlotController.IsItemPresent: последний читает
-            // UxrGrabbableObjectAnchor.CurrentPlacedObject, а AssignNetworkItem
-            // только перепарентит объект и через UxrGrabManager.PlaceObject
-            // не проходит — значит CurrentPlacedObject остаётся null всегда
-            // и IsItemPresent врёт независимо от роли процесса.
+            // Факт «оружие в слоте есть» считаем по WeaponComponent под якорем:
+            // именно его навешивает AssignNetworkItem, и от учёта UltimateXR
+            // этот подсчёт не зависит вовсе. Публичное IsItemPresent считаем
+            // отдельно и сравниваем с ним — это и есть проверка NET-13.
             int slotsTotal = 0;
             int configured = 0;
             int withWeapon = 0;
@@ -222,9 +244,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             bool initialOk = configured > 0 && withWeapon > 0;
             result.Set(CheckInitial, initialOk,
                 $"слотов на всех стенах: {slotsTotal}, настроено оружием: {configured}, " +
-                $"с реально заспавненным оружием: {withWeapon} " +
-                $"(IsItemPresent при этом показывает {reportedPresent}: AssignNetworkItem только перепарентит объект " +
-                "и не проходит через UxrGrabManager, поэтому CurrentPlacedObject остаётся null). " +
+                $"с реально заспавненным оружием: {withWeapon}. " +
                 (initialOk
                     ? "ReplenishWeaponsNetwork(true) из OnStartServer отработал — значит харнесс видит состояние слотов"
                     : configured == 0
@@ -237,9 +257,21 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield break;
             }
 
+            // ── 5. Занятость слотов совпадает с фактом (NET-13) ───────────
+            bool presenceOk = reportedPresent == withWeapon;
+            result.Set(CheckPresence, presenceOk,
+                $"слотов с реально заспавненным оружием: {withWeapon}, " +
+                $"из них слот считает себя занятым: {reportedPresent}. " +
+                (presenceOk
+                    ? "IsItemPresent совпадает с фактом, значит NeedsReplenishment() не врёт " +
+                      "и в фазе Setup оружие не заспавнится поверх лежащего"
+                    : "IsItemPresent врёт (NET-13): занятость читается из UxrGrabbableObjectAnchor.CurrentPlacedObject, " +
+                      "а сетевая выдача идёт мимо UxrGrabManager и его не заполняет. Следствие — NeedsReplenishment() " +
+                      "всегда true, и ReplenishWeaponsNetwork(false) в каждой фазе Setup дублирует оружие на стене."));
+
             string arsenalStatesBefore = DescribeWallStates(walls);
 
-            // ── 5. Матч и фазы раунда ─────────────────────────────────────
+            // ── 6. Матч и фазы раунда ─────────────────────────────────────
             EliminationMode.OnRoundStateChangedLocal += OnRoundStateEvent;
 
             try
@@ -306,7 +338,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     yield return null;
                 }
 
-                // ── 6. Дошло ли событие до локальных подписчиков ──────────
+                // ── 7. Дошло ли событие до локальных подписчиков ──────────
                 bool eventOk = _eventPhases.Count > 0;
                 result.Set(CheckEvent, eventOk,
                     eventOk
@@ -315,7 +347,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                           $"{Join(_syncVarPhases)}. Это NET-06: событие поднимается только внутри " +
                           "[ClientRpc] RpcOnRoundStateChanged, а в режиме ServerOnly ClientRpc локально не исполняется.");
 
-                // ── 7. Открылась ли хотя бы одна стена ───────────────────
+                // ── 8. Открылась ли хотя бы одна стена ───────────────────
                 int opened = 0;
                 foreach (ArsenalWallController wall in walls)
                 {
@@ -333,12 +365,64 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                           "ArsenalWallController.HandleRoundStateChanged на выделенном сервере не вызывается " +
                           "(следствие NET-06), поэтому ни OpenArsenal, ни ReplenishWeaponsNetwork(false) не выполняются.");
 
+                if (!arsenalOk)
+                {
+                    result.Summary = "стена не открылась, проверять закрытие по жетону нечего";
+                    yield break;
+                }
+
+                // ── 9. Жетон, взятый на клиенте, закрывает общую стену ────
+                ArsenalWallController shared = PickSharedWall(walls);
+                if (shared == null)
+                {
+                    result.Set(CheckTagClose, false,
+                        $"ни одна из {walls.Length} стен не заспавнена Mirror (netId == 0 у всех) — " +
+                        "общий объект не выбрать, и репликация состояния тут ни при чём. " +
+                        "Похоже на NET-14: у стен нет sceneId.");
+                    result.Summary = "стены не заспавнены, вердикт по NET-07 вынести нельзя";
+                    yield break;
+                }
+
+                GameLog.Info(Log,
+                    $"[E2E] Жду закрытия общей стены netId={shared.netId} " +
+                    $"(её должен закрыть {TagInitiatorRole}, взяв жетон)");
+
+                deadline = Now + 60f;
+                while (shared.CurrentState == ArsenalWallController.ArsenalState.Open && Now < deadline)
+                    yield return null;
+
+                RoundState phaseAtClose = elimination.CurrentRoundState;
+                bool wallLeftOpen = shared.CurrentState != ArsenalWallController.ArsenalState.Open;
+
+                // Фаза обязана остаться Equipment: выход из неё требует готовности всех
+                // живых игроков, а инициатор дёргает жетон мимо PlayerSession. Если фаза
+                // всё же сменилась, стену закрыл переход по фазе, и проверка ничего не значит.
+                bool tagCloseOk = wallLeftOpen && phaseAtClose == RoundState.Equipment;
+
+                result.Set(CheckTagClose, tagCloseOk,
+                    tagCloseOk
+                        ? $"стена netId={shared.netId} перешла в {shared.CurrentState}, фаза при этом осталась " +
+                          $"{phaseAtClose} — значит закрыл её именно жетон клиента, а не переход по фазе. " +
+                          "Состояние стены общее"
+                        : !wallLeftOpen
+                            ? $"за 60 с стена netId={shared.netId} осталась Open, хотя {TagInitiatorRole} взял жетон " +
+                              "(смотри его лог и client-1.json). Это NET-07: состояние стены — обычное поле, " +
+                              "и закрытие живёт только на той машине, где схватили жетон"
+                            : $"стена закрылась, но фаза успела уйти в {phaseAtClose} — закрыть её мог переход по фазе. " +
+                              "Проверка недействительна, а не провалена: смотри, почему раунд ушёл из Equipment.");
+
                 result.Summary = result.AllChecksGreen
-                    ? "все проверки зелёные — NET-06 больше не воспроизводится"
+                    ? "все проверки зелёные — NET-06, NET-13 и NET-07 больше не воспроизводятся"
                     : (!eventOk || !arsenalOk)
-                        ? "NET-06 подтверждена: конфигурация собралась (проверки 1-5 зелёные), " +
+                        ? "NET-06 подтверждена: конфигурация собралась, " +
                           "но смена фазы раунда до серверной логики не доходит"
-                        : "есть красные проверки, см. detail";
+                        : !presenceOk && !tagCloseOk
+                            ? "подтверждены NET-13 (слот не видит своё оружие) и NET-07 (состояние стены не реплицируется)"
+                            : !presenceOk
+                                ? "подтверждена NET-13: слот не видит лежащее в нём оружие"
+                                : !tagCloseOk
+                                    ? "подтверждена NET-07: состояние стены не реплицируется"
+                                    : "есть красные проверки, см. detail";
             }
             finally
             {
@@ -352,7 +436,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private IEnumerator RunClient(E2EContext context, E2EResult result)
         {
-            result.Declare(CheckClientConnected, CheckClientSession, CheckClientMap, CheckClientEvent);
+            bool isTagInitiator = context.Role == TagInitiatorRole;
+
+            result.Declare(CheckClientConnected, CheckClientSession, CheckClientMap, CheckClientEvent,
+                           CheckClientArsenal,
+                           isTagInitiator ? CheckClientTagPull : CheckClientTagSeen);
 
             DisableDebugOrchestrator();
 
@@ -441,9 +529,114 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                       "Тогда сигнал теряется раньше, чем в ClientRpc: смотри server.log на предмет " +
                       "смены фазы раунда вообще");
 
+            // ── Общая стена: та же самая во всех процессах ────────────────
+            // Выбираем по наименьшему netId: FindObjectsByType порядок не гарантирует,
+            // а netId сцены Mirror раздаёт с сервера, и он одинаков у всех.
+            ArsenalWallController shared = null;
+            deadline = Now + 90f;
+            while (shared == null && Now < deadline)
+            {
+                shared = PickSharedWall(Object.FindObjectsByType<ArsenalWallController>(FindObjectsInactive.Include));
+                if (shared == null)
+                    yield return null;
+            }
+
+            if (shared == null)
+            {
+                result.Set(CheckClientArsenal, false,
+                    "за 90 с на клиенте не нашлось ни одной заспавненной стены арсенала " +
+                    $"(на карте '{context.Map}'). Либо карта не загрузилась, либо Mirror не заспавнил стены — " +
+                    "у объекта сцены нет sceneId (NET-14).");
+                result.Summary = "клиент не увидел стену арсенала";
+                yield break;
+            }
+
+            deadline = Now + 90f;
+            while (shared.CurrentState != ArsenalWallController.ArsenalState.Open && Now < deadline)
+                yield return null;
+
+            bool arsenalOpen = shared.CurrentState == ArsenalWallController.ArsenalState.Open;
+            result.Set(CheckClientArsenal, arsenalOpen,
+                arsenalOpen
+                    ? $"стена netId={shared.netId} открыта у этого клиента"
+                    : $"за 90 с стена netId={shared.netId} осталась в состоянии {shared.CurrentState}. " +
+                      "Клиент не видит открытого арсенала: либо состояние до него не доехало, " +
+                      "либо стена не открылась и на сервере — сверься с server.json.");
+
+            if (!arsenalOpen)
+            {
+                result.Summary = "клиент не увидел открытую стену, проверять закрытие по жетону нечего";
+                yield break;
+            }
+
+            if (isTagInitiator)
+                yield return PullDogTag(shared, result);
+            else
+                yield return WatchWallClose(shared, result);
+
             result.Summary = result.AllChecksGreen
-                ? "клиент подключился, получил сессию, карту и увидел смену фазы раунда"
+                ? "клиент подключился, получил сессию, карту, фазу раунда и увидел общую стену"
                 : "клиент не дошёл до состояния, в котором сервер может выносить вердикт";
+        }
+
+        /// <summary>
+        /// Роль инициатора: берёт жетон на общей стене. Дёргаем событие
+        /// <see cref="DogTagController.OnTagGrabbed"/> напрямую — это ровно то, что
+        /// поднимает <c>OnTagRemoved</c> при настоящем захвате, а руки в прогоне без
+        /// шлема взяться неоткуда. Игрока передаём null: тогда готовность не уйдёт
+        /// в <c>PlayerSession</c>, раунд не выйдет из <c>Equipment</c>, и стену
+        /// закроет именно жетон, а не переход по фазе.
+        /// </summary>
+        private IEnumerator PullDogTag(ArsenalWallController shared, E2EResult result)
+        {
+            // Пауза, чтобы сервер успел записать свою проверку про открытую стену.
+            float until = Now + TagPullDelay;
+            while (Now < until)
+                yield return null;
+
+            DogTagController dogTag = shared.GetComponentInChildren<DogTagController>(true);
+            if (dogTag == null)
+            {
+                result.Set(CheckClientTagPull, false,
+                    $"у стены netId={shared.netId} нет DogTagController — жетон брать нечем. " +
+                    "Проверить закрытие по жетону на этой карте нельзя.");
+                yield break;
+            }
+
+            GameLog.Info(Log, $"[E2E] Беру жетон на стене netId={shared.netId}");
+            dogTag.OnTagGrabbed?.Invoke(null);
+
+            float deadline = Now + 30f;
+            while (shared.CurrentState == ArsenalWallController.ArsenalState.Open && Now < deadline)
+                yield return null;
+
+            bool closed = shared.CurrentState != ArsenalWallController.ArsenalState.Open;
+            result.Set(CheckClientTagPull, closed,
+                closed
+                    ? $"жетон взят, стена netId={shared.netId} перешла в {shared.CurrentState}"
+                    : $"за 30 с после захвата жетона стена netId={shared.netId} осталась Open. " +
+                      "Закрытие не сработало даже у инициатора — дальше проверять нечего, " +
+                      "красные проверки на сервере и втором клиенте этим и объясняются.");
+        }
+
+        /// <summary>
+        /// Роль наблюдателя: жетон берёт другой клиент, а эта машина обязана увидеть,
+        /// что общая стена закрылась. До T-15 закрытие жило только у инициатора — это NET-07.
+        /// </summary>
+        private IEnumerator WatchWallClose(ArsenalWallController shared, E2EResult result)
+        {
+            float deadline = Now + 90f;
+            while (shared.CurrentState == ArsenalWallController.ArsenalState.Open && Now < deadline)
+                yield return null;
+
+            bool closed = shared.CurrentState != ArsenalWallController.ArsenalState.Open;
+            result.Set(CheckClientTagSeen, closed,
+                closed
+                    ? $"стена netId={shared.netId} закрылась и здесь ({shared.CurrentState}), " +
+                      $"хотя жетон брал {TagInitiatorRole} — состояние стены общее"
+                    : $"за 90 с стена netId={shared.netId} осталась Open, хотя {TagInitiatorRole} взял жетон " +
+                      "(его вердикт — в client-1.json). Это NET-07: состояние стены — обычное поле, " +
+                      "и закрытие живёт только на машине инициатора.");
         }
 
         // ══════════════════════════════════════════════════════════════════
@@ -473,6 +666,25 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 return 0;
 
             return slot.ItemAnchor.GetComponentsInChildren<WeaponComponent>(true).Length;
+        }
+
+        /// <summary>
+        /// Стена, которую все процессы понимают одинаково: с наименьшим ненулевым
+        /// <c>netId</c>. Порядок <c>FindObjectsByType</c> в разных процессах разный,
+        /// а netId сетевого объекта сцены раздаёт сервер — он общий. Возвращает null,
+        /// если ни одна стена не заспавнена.
+        /// </summary>
+        private static ArsenalWallController PickSharedWall(ArsenalWallController[] walls)
+        {
+            ArsenalWallController best = null;
+
+            foreach (ArsenalWallController wall in walls)
+            {
+                if (wall == null || wall.netId == 0) continue;
+                if (best == null || wall.netId < best.netId) best = wall;
+            }
+
+            return best;
         }
 
         /// <summary>Сводка состояний стен вида «Closed x16» — чтобы detail не разросся.</summary>

@@ -34,7 +34,41 @@ namespace VrBattlegrounds.Arsenal
         public System.Action<ArsenalSlotController> OnItemReturned;
 
         // ── Properties ─────────────────────────────────────────
-        public bool IsItemPresent  => _itemAnchor != null && _itemAnchor.CurrentPlacedObject != null;
+
+        /// <summary>
+        /// Предмет, который сейчас лежит в слоте, или null.
+        ///
+        /// Источников два, потому что предмет попадает в слот двумя разными путями.
+        /// Штатный — игрок кладёт его руками: учёт ведёт <see cref="UxrGrabManager"/>,
+        /// и предмет виден в <c>UxrGrabbableObjectAnchor.CurrentPlacedObject</c>.
+        /// Сетевой — <see cref="AssignNetworkItem"/> перепарентит под якорь объект,
+        /// уже заспавненный Mirror'ом; через <see cref="UxrGrabManager"/> он не проходит,
+        /// поэтому <c>CurrentPlacedObject</c> остаётся пустым.
+        ///
+        /// Опора только на <c>CurrentPlacedObject</c> и была находкой NET-13: всё, что
+        /// появилось на стене по сети, слот считал отсутствующим.
+        ///
+        /// Сетевой предмет числится в слоте, пока он жив и висит под якорем. Когда игрок
+        /// его забирает, <see cref="UxrGrabManager"/> перепарентит объект к аватару
+        /// (<c>UxrGrabbableObject.UseParenting</c> включён по умолчанию), и слот пустеет.
+        /// </summary>
+        public GameObject CurrentItem
+        {
+            get
+            {
+                if (_itemAnchor == null) return null;
+
+                if (_itemAnchor.CurrentPlacedObject != null)
+                    return _itemAnchor.CurrentPlacedObject.gameObject;
+
+                if (_spawnedItem != null && _spawnedItem.transform.IsChildOf(_itemAnchor.transform))
+                    return _spawnedItem;
+
+                return null;
+            }
+        }
+
+        public bool IsItemPresent  => CurrentItem != null;
         public bool IsConfigured   => _weaponInfo != null;
         public int Price           => _weaponInfo != null ? _weaponInfo.Price : 0;
         public string DisplayName  => _weaponInfo != null ? _weaponInfo.DisplayName : "Empty";
@@ -126,6 +160,11 @@ namespace VrBattlegrounds.Arsenal
 
             GameLog.Info(ArsenalLog, $"[Arsenal] Assigned network weapon '{_weaponInfo.DisplayName}' to slot '{name}'.");
 
+            // Оружие приезжает позже, чем стена успевает заблокировать слоты: закрытая
+            // стена блокирует их в Start(), а пополнение идёт из OnStartServer и из фазы
+            // Setup. Без этой строки предмет появлялся хватаемым в закрытом арсенале.
+            SetItemGrabbable(!IsLocked);
+
             SetLightColor(_availableColor);
         }
 
@@ -151,8 +190,7 @@ namespace VrBattlegrounds.Arsenal
         {
             IsLocked = true;
 
-            if (_itemAnchor != null && _itemAnchor.CurrentPlacedObject != null)
-                _itemAnchor.CurrentPlacedObject.enabled = false;
+            SetItemGrabbable(false);
 
             SetLightState(false);
             GameLog.Info(ArsenalLog, $"[Arsenal] Slot '{DisplayName}' locked.");
@@ -165,11 +203,25 @@ namespace VrBattlegrounds.Arsenal
         {
             IsLocked = false;
 
-            if (_itemAnchor != null && _itemAnchor.CurrentPlacedObject != null)
-                _itemAnchor.CurrentPlacedObject.enabled = true;
+            SetItemGrabbable(true);
 
             SetLightColor(_availableColor);
             GameLog.Info(ArsenalLog, $"[Arsenal] Slot '{DisplayName}' unlocked.");
+        }
+
+        /// <summary>
+        /// Включает или выключает захват предмета, лежащего в слоте.
+        /// Ищет предмет через <see cref="CurrentItem"/>, а не через
+        /// <c>CurrentPlacedObject</c>: для выданного по сети оружия второе всегда пусто,
+        /// и блокировка слота была пустым вызовом (NET-13).
+        /// </summary>
+        private void SetItemGrabbable(bool grabbable)
+        {
+            GameObject item = CurrentItem;
+            if (item == null) return;
+
+            UxrGrabbableObject grab = item.GetComponent<UxrGrabbableObject>();
+            if (grab != null) grab.enabled = grabbable;
         }
 
         /// <summary>

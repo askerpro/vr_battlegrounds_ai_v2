@@ -13,6 +13,20 @@ namespace VrBattlegrounds.Arsenal
     ///
     /// Animation is delegated to <see cref="ArsenalAnimator"/>.
     /// Slot interaction logic lives in <see cref="ArsenalSlotController"/> subclasses.
+    ///
+    /// <para>
+    /// <b>Стена общая, состояние — серверное (T-15, находка NET-07).</b> Объект лежит
+    /// в сцене карты, один на всех, и его содержимое уже авторитетно: слоты пополняет
+    /// <see cref="ReplenishWeaponsNetwork"/> через <c>NetworkServer.Spawn</c>. Состояние
+    /// стены живёт там же — в <c>SyncVar</c>, который пишет только сервер. Клиент не
+    /// решает, открыта стена или закрыта: он получает состояние репликацией, а закрыть
+    /// её просит командой. Подключившийся посреди фазы получает актуальное состояние
+    /// начальным значением спавна.
+    /// </para>
+    /// <para>
+    /// Готовность конкретного игрока — это <b>не</b> состояние стены: она живёт
+    /// на <c>PlayerSession.HasGrabbedDogTag</c> и реплицируется отдельно.
+    /// </para>
     /// </summary>
     public class ArsenalWallController : NetworkBehaviour
     {
@@ -34,9 +48,33 @@ namespace VrBattlegrounds.Arsenal
             Closing
         }
 
+        /// <summary>
+        /// Состояние стены. Единственный источник правды — эта переменная: пишет её
+        /// сервер, клиенту она приезжает репликацией, в том числе начальным значением
+        /// спавна. Представление раздаёт <see cref="ApplyStateLocal"/>.
+        /// </summary>
+        [SyncVar(hook = nameof(OnStateSynced))]
         private ArsenalState _currentState = ArsenalState.Closed;
+
+        /// <summary>Состояние, уже применённое к представлению на этой машине.</summary>
+        private ArsenalState _appliedState = ArsenalState.Closed;
+
+        /// <summary>Применялось ли состояние хоть раз (отличает «ещё ничего» от «применили Closed»).</summary>
+        private bool _stateApplied;
+
         public ArsenalState CurrentState => _currentState;
         private LogLevel ArsenalLog => GameSettings.Instance.LogLevelArsenal;
+
+        /// <summary>
+        /// Стена не участвует в репликации: объект не заспавнен Mirror. Так выглядит
+        /// сцена, открытая без сети (проверка в редакторе), и стена без <c>sceneId</c>
+        /// (NET-14). Тогда SyncVar никто не пришлёт, и состояние приходится вести самой —
+        /// иначе стена не откроется никогда.
+        /// </summary>
+        private bool IsStandalone => !isServer && !isClient;
+
+        /// <summary>Вправе ли эта машина менять состояние стены.</summary>
+        private bool CanWriteState => isServer || IsStandalone;
 
         // ── Events ─────────────────────────────────────────────
         /// <summary>Fired when the arsenal fully opens (after animation).</summary>
@@ -55,6 +93,16 @@ namespace VrBattlegrounds.Arsenal
 
         private void Awake()
         {
+            EnsureReferences();
+        }
+
+        /// <summary>
+        /// Достаёт ссылки, которые не проставлены в инспекторе. Вызывается не только
+        /// из <c>Awake</c>: состояние может приехать с сервера раньше, чем стена
+        /// успеет стартовать штатно.
+        /// </summary>
+        private void EnsureReferences()
+        {
             if (_allSlots == null || _allSlots.Length == 0)
                 _allSlots = GetComponentsInChildren<ArsenalSlotController>();
 
@@ -67,11 +115,19 @@ namespace VrBattlegrounds.Arsenal
 
         private void Start()
         {
-            // Синхронизируем визуальное состояние с логическим на старте
-            if (_currentState == ArsenalState.Closed)
-            {
-                SetClosedImmediate();
-            }
+            // Приводим визуал к состоянию. На клиенте SyncVar мог приехать раньше Start —
+            // тогда стена сразу встанет в актуальную позу, а не мигнёт закрытой.
+            ApplyStateLocal(_currentState);
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            // Поздний клиент получает состояние начальным значением спавна. Хук на нём
+            // не сработает, если пришедшее значение совпало с дефолтом поля (Closed), —
+            // раздаём явно. Тот же приём, что у фазы раунда в EliminationMode.
+            ApplyStateLocal(_currentState);
         }
 
         public override void OnStartServer()
@@ -93,13 +149,18 @@ namespace VrBattlegrounds.Arsenal
             base.OnStopServer();
         }
 
-        /// <summary>Серверная реакция на смену фазы. Только авторитетные действия, без визуала.</summary>
+        /// <summary>
+        /// Серверная реакция на смену фазы: пополнение слотов и смена состояния стены.
+        /// Оба действия авторитетны — состояние стены общее (T-15), поэтому и открытие,
+        /// и закрытие по фазе объявляет сервер, а клиенты получают их репликацией.
+        /// </summary>
         [Server]
         private void ServerHandleRoundStateChanged(RoundState newState)
         {
-            if (newState != RoundState.Setup) return;
+            if (newState == RoundState.Setup)
+                ReplenishWeaponsNetwork(false);
 
-            ReplenishWeaponsNetwork(false);
+            ApplyPhaseToState(newState);
         }
 
         [Server]
@@ -210,6 +271,8 @@ namespace VrBattlegrounds.Arsenal
 
         /// <summary>
         /// Opens the arsenal for a new prep phase.
+        /// Состояние стены общее, поэтому вызывать имеет смысл только на сервере
+        /// (или когда стена вне сети).
         /// </summary>
         /// <param name="immediate">If true, snaps open instantly without animation.</param>
         [ContextMenu("Open Arsenal")]
@@ -222,19 +285,7 @@ namespace VrBattlegrounds.Arsenal
                 return;
             }
 
-            _currentState = ArsenalState.Opening;
-            GameLog.Info(ArsenalLog, "[Arsenal] Arsenal OPENING — prep phase starting...");
-
-            if (_animator != null && !immediate)
-            {
-                _animator.PlayOpenSequence(OnOpenComplete);
-            }
-            else
-            {
-                // No animator or immediate requested
-                if (_animator != null) _animator.SetOpenImmediate();
-                OnOpenComplete();
-            }
+            SetState(immediate ? ArsenalState.Open : ArsenalState.Opening);
         }
 
         /// <summary>
@@ -244,8 +295,9 @@ namespace VrBattlegrounds.Arsenal
         public void ForceClose()
         {
             GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] ForceClose called! Current state: {_currentState}");
-            if (_currentState == ArsenalState.Closed) return;
-            BeginClosing();
+            if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing) return;
+
+            SetState(ArsenalState.Closing);
         }
 
         /// <summary>
@@ -255,35 +307,138 @@ namespace VrBattlegrounds.Arsenal
         public void SetClosedImmediate()
         {
             GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] SetClosedImmediate called! Current state: {_currentState}");
-            _currentState = ArsenalState.Closed;
 
-            if (_allSlots == null || _allSlots.Length == 0)
-                _allSlots = GetComponentsInChildren<ArsenalSlotController>();
+            SetState(ArsenalState.Closed);
 
-            foreach (var slot in _allSlots)
+            // Состояние могло уже быть Closed — тогда SetState пустой, а поза стены
+            // всё равно обязана стать закрытой: метод для того и существует.
+            ApplyStateLocal(ArsenalState.Closed, force: true);
+        }
+
+        // ── Private: состояние ─────────────────────────────────
+
+        /// <summary>
+        /// Меняет состояние стены. Писать его вправе только сервер: стена общая.
+        /// У клиента вызов пустой — состояние приедет репликацией.
+        /// </summary>
+        private void SetState(ArsenalState newState)
+        {
+            if (!CanWriteState)
             {
-                slot.Lock();
+                GameLog.Warning(ArsenalLog,
+                    $"[Arsenal] Попытка сменить состояние стены на клиенте ({_currentState} -> {newState}). " +
+                    "Состояние общее и его задаёт сервер — запрос игнорирован.");
+                return;
             }
 
-            if (_animator == null)
-                _animator = GetComponent<ArsenalAnimator>();
+            if (_currentState == newState) return;
 
+            _currentState = newState;
 
-            if (_animator != null)
-                _animator.SetClosedImmediate();
+            // Хук SyncVar под ServerOnly не срабатывает (Mirror зовёт его в сеттере
+            // только при NetworkServer.activeHost), поэтому раздаём вручную. Под хостом
+            // раздача пройдёт дважды — на этот случай ApplyStateLocal идемпотентна.
+            ApplyStateLocal(newState);
+        }
+
+        /// <summary>Хук SyncVar: состояние приехало с сервера.</summary>
+        private void OnStateSynced(ArsenalState oldState, ArsenalState newState)
+        {
+            ApplyStateLocal(newState);
+        }
+
+        /// <summary>
+        /// Применяет состояние к представлению этой машины ровно один раз на значение.
+        /// </summary>
+        /// <param name="state">Состояние, которое надо показать.</param>
+        /// <param name="force">Применить, даже если это состояние уже применялось.</param>
+        private void ApplyStateLocal(ArsenalState state, bool force = false)
+        {
+            if (!force && _stateApplied && _appliedState == state) return;
+
+            EnsureReferences();
+
+            bool initial = !_stateApplied;
+
+            _stateApplied = true;
+            _appliedState = state;
+
+            switch (state)
+            {
+                case ArsenalState.Opening:
+                    PlayOpening();
+                    break;
+
+                case ArsenalState.Open:
+                    ApplyOpen();
+                    break;
+
+                case ArsenalState.Closing:
+                    PlayClosing();
+                    break;
+
+                case ArsenalState.Closed:
+                    // Стена стартует закрытой — это не событие закрытия, а исходная поза.
+                    ApplyClosed(raiseEvent: !initial);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Реакция на фазу раунда: что стена должна показывать в этой фазе.
+        /// Общая точка для серверного канала и для стены вне сети.
+        /// </summary>
+        private void ApplyPhaseToState(RoundState phase)
+        {
+            switch (phase)
+            {
+                case RoundState.Equipment:
+                    if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing)
+                        SetState(ArsenalState.Opening);
+                    break;
+
+                case RoundState.Countdown:
+                case RoundState.Combat:
+                    if (_currentState == ArsenalState.Open || _currentState == ArsenalState.Opening)
+                        SetState(ArsenalState.Closing);
+                    break;
+            }
         }
 
         // ── Private: Lifecycle ─────────────────────────────────
 
-        private void OnOpenComplete()
+        private void PlayOpening()
         {
-            _currentState = ArsenalState.Open;
+            GameLog.Info(ArsenalLog, "[Arsenal] Arsenal OPENING — prep phase starting...");
 
-            // Unlock all slots
-            foreach (var slot in _allSlots)
+            if (_animator != null)
             {
-                slot.Unlock();
+                _animator.PlayOpenSequence(HandleOpenSequenceFinished);
+                return;
             }
+
+            HandleOpenSequenceFinished();
+        }
+
+        /// <summary>
+        /// Анимация открытия доиграла. Состояние <c>Open</c> объявляет сервер: если бы
+        /// его ставила каждая машина сама, слоты разблокировались бы у всех в своё время
+        /// и стена перестала бы быть общей.
+        /// </summary>
+        private void HandleOpenSequenceFinished()
+        {
+            SetStateIfAuthoritative(ArsenalState.Open);
+        }
+
+        private void ApplyOpen()
+        {
+            // Догоняем позу, если анимацию не проигрывали: поздний клиент, immediate,
+            // либо состояние приехало раньше, чем доиграла своя анимация.
+            if (_animator != null && !_animator.IsAnimating)
+                _animator.SetOpenImmediate();
+
+            foreach (var slot in _allSlots)
+                slot.Unlock();
 
             if (_dogTagController != null)
                 _dogTagController.ResetTag();
@@ -292,48 +447,106 @@ namespace VrBattlegrounds.Arsenal
             OnArsenalOpened?.Invoke();
         }
 
-        private void HandleTagGrabbed(PlayerController player)
+        private void PlayClosing()
         {
-            if (_currentState != ArsenalState.Open) return;
-            
-            if (player != null && player.isOwned && player.Session != null)
-            {
-                player.Session.CmdSetDogTagGrabbed(true);
-            }
-            
-            BeginClosing();
-        }
-
-        private void BeginClosing()
-        {
-            _currentState = ArsenalState.Closing;
             GameLog.Info(ArsenalLog, "[Arsenal] Arsenal CLOSING — locking all slots...");
 
-            // Lock all slots immediately
+            // Слоты блокируются сразу: возвращать оружие на стену уже нельзя.
             foreach (var slot in _allSlots)
                 slot.Lock();
 
             if (_dogTagController != null)
                 _dogTagController.Disable();
 
-            // Play close animation
             if (_animator != null)
             {
-                _animator.PlayCloseSequence(OnCloseComplete);
+                _animator.PlayCloseSequence(HandleCloseSequenceFinished);
+                return;
             }
-            else
-            {
-                // No animator — close immediately
-                OnCloseComplete();
-            }
+
+            HandleCloseSequenceFinished();
         }
 
-        private void OnCloseComplete()
+        private void HandleCloseSequenceFinished()
         {
-            _currentState = ArsenalState.Closed;
+            SetStateIfAuthoritative(ArsenalState.Closed);
+        }
+
+        private void ApplyClosed(bool raiseEvent)
+        {
+            foreach (var slot in _allSlots)
+                slot.Lock();
+
+            if (_dogTagController != null)
+                _dogTagController.Disable();
+
+            if (_animator != null && !_animator.IsAnimating)
+                _animator.SetClosedImmediate();
 
             GameLog.Info(ArsenalLog, "[Arsenal] Arsenal CLOSED.");
-            OnArsenalClosed?.Invoke();
+
+            if (raiseEvent)
+                OnArsenalClosed?.Invoke();
+        }
+
+        /// <summary>
+        /// Продвигает состояние, если эта машина вправе его писать. Клиент здесь молчит:
+        /// он ждёт значения с сервера, и предупреждение <see cref="SetState"/> было бы
+        /// ложной тревогой — это штатный ход событий, а не попытка обойти сервер.
+        /// </summary>
+        private void SetStateIfAuthoritative(ArsenalState newState)
+        {
+            if (!CanWriteState) return;
+
+            SetState(newState);
+        }
+
+        // ── Private: Жетон ─────────────────────────────────────
+
+        private void HandleTagGrabbed(PlayerController player)
+        {
+            if (_currentState != ArsenalState.Open) return;
+
+            // Готовность игрока — его собственное состояние, оно живёт на сессии
+            // и реплицируется отдельно от стены.
+            if (player != null && player.isOwned && player.Session != null)
+            {
+                player.Session.CmdSetDogTagGrabbed(true);
+            }
+
+            // Закрыть общую стену вправе только сервер, поэтому клиент шлёт команду.
+            if (isClient && !isServer)
+            {
+                CmdCloseByDogTag();
+                return;
+            }
+
+            ServerCloseByDogTag();
+        }
+
+        /// <summary>
+        /// Жетон схватили у клиента. <c>requiresAuthority = false</c>: стена — объект
+        /// сцены, владельца среди клиентов у неё нет.
+        /// </summary>
+        [Command(requiresAuthority = false)]
+        private void CmdCloseByDogTag()
+        {
+            ServerCloseByDogTag();
+        }
+
+        /// <summary>
+        /// Закрытие стены по жетону — общая точка для команды клиента, для хоста
+        /// и для стены вне сети.
+        ///
+        /// Без атрибута <c>[Server]</c> намеренно: метод обслуживает и стену вне сети,
+        /// где <c>NetworkServer.active</c> ложно и заглушка Mirror съела бы вызов.
+        /// Право записи проверяет <see cref="SetState"/>.
+        /// </summary>
+        private void ServerCloseByDogTag()
+        {
+            if (_currentState != ArsenalState.Open && _currentState != ArsenalState.Opening) return;
+
+            SetState(ArsenalState.Closing);
         }
 
         // ── Private: Slot Events ───────────────────────────────
@@ -349,38 +562,20 @@ namespace VrBattlegrounds.Arsenal
         }
 
         /// <summary>
-        /// Локальная реакция на фазу — визуальный жизненный цикл стены. Исполняется на каждой
-        /// машине, включая выделенный сервер: фаза раздаётся из состояния, а не из ClientRpc.
-        /// Авторитетное пополнение слотов сюда не входит — оно в <see cref="ServerHandleRoundStateChanged"/>.
+        /// Локальная реакция на фазу. Исполняется на каждой машине, включая выделенный
+        /// сервер, но после T-15 состояние стены общее и задаёт его сервер — представление
+        /// приезжает хуком <see cref="OnStateSynced"/>, а не отсюда.
+        ///
+        /// Здесь остался только случай <see cref="IsStandalone"/>: стена не заспавнена,
+        /// реплицировать состояние некому, и вести его приходится самой.
         /// </summary>
         private void HandleRoundStateChanged(RoundState newState)
         {
             GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] HandleRoundStateChanged received: {newState}. Arsenal State: {_currentState}");
-            switch (newState)
-            {
-                case RoundState.Equipment:
-                    if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing)
-                    {
-                        OpenArsenal(false);
-                    }
-                    else
-                    {
-                        GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] Ignoring Open command because state is already {_currentState}");
-                    }
-                    break;
-                
-                case RoundState.Countdown:
-                case RoundState.Combat:
-                    if (_currentState == ArsenalState.Open || _currentState == ArsenalState.Opening)
-                    {
-                        ForceClose();
-                    }
-                    else
-                    {
-                        GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] Ignoring Close command because state is {_currentState}");
-                    }
-                    break;
-            }
+
+            if (!IsStandalone) return;
+
+            ApplyPhaseToState(newState);
         }
     }
 }

@@ -1,0 +1,195 @@
+using NUnit.Framework;
+using UltimateXR.Manipulation;
+using UnityEngine;
+using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.GameModes;
+using VrBattlegrounds.Tests.Network;
+
+namespace VrBattlegrounds.Tests.ArsenalWall
+{
+    /// <summary>
+    /// Состояние стены арсенала — находка NET-07, задача T-15.
+    ///
+    /// Что доказывает. <c>ArsenalWallController</c> наследует <c>NetworkBehaviour</c>,
+    /// но <c>_currentState</c> был обычным полем: каждая машина открывала и закрывала
+    /// стену сама. Захват жетона закрывал арсенал только у того, кто его схватил,
+    /// а подключившийся позже видел стену закрытой независимо от фазы раунда.
+    ///
+    /// Решение — «общая стена»: состояние живёт в <c>SyncVar</c>, пишет его сервер,
+    /// клиент только просит закрыть. Разбор — <c>Docs/Arsenal/Arsenal_Code_Architecture_RU.md</c>.
+    ///
+    /// Почему репликация проверяется двойником, а не host-режимом: в host-режиме
+    /// сервер и клиент делят один экземпляр объекта, и «долетело» получилось бы
+    /// зелёным на пустом месте. <see cref="MirrorTestHarness.ReplicateToClient"/>
+    /// гоняет состояние через настоящую сериализацию Mirror.
+    ///
+    /// Аниматор стенам в тесте не даём: без него открытие и закрытие завершаются
+    /// синхронно, и проверка не зависит от длины клипа.
+    /// </summary>
+    public class ArsenalWallStateReplicationTests : MirrorTestHarness
+    {
+        private const ArsenalWallController.ArsenalState Closed = ArsenalWallController.ArsenalState.Closed;
+        private const ArsenalWallController.ArsenalState Open = ArsenalWallController.ArsenalState.Open;
+
+        /// <summary>
+        /// Стена с одним слотом. <see cref="WeaponInfo"/> слоту не задаём:
+        /// тогда <c>ReplenishWeaponsNetwork</c> его пропускает, и тесту не нужно
+        /// регистрировать сетевой префаб оружия.
+        /// </summary>
+        private ArsenalWallController CreateWall(string name)
+        {
+            GameObject wallObject = CreateNetworkObject(name);
+
+            GameObject slotObject = new GameObject("Slot");
+            slotObject.transform.SetParent(wallObject.transform);
+
+            GameObject anchorObject = new GameObject("ItemAnchor");
+            anchorObject.transform.SetParent(slotObject.transform);
+
+            ArsenalSlotController slot = slotObject.AddComponent<ArsenalSlotController>();
+            SetPrivateField(slot, "_itemAnchor", anchorObject.AddComponent<UxrGrabbableObjectAnchor>());
+
+            ArsenalWallController wall = wallObject.AddComponent<ArsenalWallController>();
+            EnableNetworking(wallObject);
+
+            // В EditMode Unity не зовёт ни Awake, ни Start. Без Awake у стены пуст
+            // список слотов, без Start не применено начальное состояние.
+            InvokeLifecycleMethod(wall, "Awake");
+            InvokeLifecycleMethod(wall, "Start");
+
+            return wall;
+        }
+
+        /// <summary>Стена на сервере: заспавнена, значит состояние пишет она.</summary>
+        private ArsenalWallController CreateServerWall(string name)
+        {
+            ArsenalWallController wall = CreateWall(name);
+            SpawnOnServer(wall);
+            return wall;
+        }
+
+        private void SendPhaseToServer(ArsenalWallController wall, RoundState phase)
+        {
+            InvokePrivateMethod(wall, "ServerHandleRoundStateChanged", phase);
+        }
+
+        // ── Сервер ведёт состояние ──────────────────────────────────────────
+
+        [Test]
+        public void Серверный_канал_фазы_открывает_стену()
+        {
+            SilenceMirrorNoise();
+
+            ArsenalWallController wall = CreateServerWall("ServerWall");
+            Assert.AreEqual(Closed, wall.CurrentState, "Контроль: стена стартует закрытой.");
+
+            SendPhaseToServer(wall, RoundState.Equipment);
+
+            Assert.AreEqual(Open, wall.CurrentState,
+                "Фаза Equipment пришла по серверному каналу, а стена осталась закрытой. " +
+                "Состояние общее — открывать её обязан сервер, иначе клиентам нечего реплицировать.");
+        }
+
+        [Test]
+        public void Серверный_канал_фазы_закрывает_стену_к_бою()
+        {
+            SilenceMirrorNoise();
+
+            ArsenalWallController wall = CreateServerWall("ServerWall");
+            SendPhaseToServer(wall, RoundState.Equipment);
+            Assert.AreEqual(Open, wall.CurrentState, "Контроль: к бою стена должна подойти открытой.");
+
+            SendPhaseToServer(wall, RoundState.Countdown);
+
+            Assert.AreEqual(Closed, wall.CurrentState,
+                "Обратный отсчёт начался, а арсенал остался открытым.");
+        }
+
+        // ── Репликация ──────────────────────────────────────────────────────
+
+        [Test]
+        public void Состояние_стены_доезжает_до_позднего_клиента()
+        {
+            SilenceMirrorNoise();
+
+            ArsenalWallController server = CreateServerWall("ServerWall");
+            ArsenalWallController client = CreateWall("ClientWall");
+
+            bool openedOnClient = false;
+            client.OnArsenalOpened += () => openedOnClient = true;
+
+            SendPhaseToServer(server, RoundState.Equipment);
+
+            Assert.AreEqual(Open, server.CurrentState, "Контроль: на сервере стена открылась.");
+            Assert.AreEqual(Closed, client.CurrentState,
+                "Контроль: до репликации двойник обязан быть закрыт, иначе тест ничего не проверяет.");
+
+            // initialState=true — ровно то, что получает подключившийся посреди фазы.
+            ReplicateToClient(server, client);
+
+            Assert.AreEqual(Open, client.CurrentState,
+                "Состояние стены не доехало до клиента. Подключившийся в фазе Equipment " +
+                "видит закрытый арсенал — это NET-07.");
+            Assert.IsTrue(openedOnClient,
+                "Состояние доехало, но представление не отработало: хук SyncVar не проиграл " +
+                "открытие, слоты у клиента остались заблокированными.");
+        }
+
+        [Test]
+        public void Закрытие_по_жетону_доезжает_до_остальных()
+        {
+            SilenceMirrorNoise();
+
+            ArsenalWallController server = CreateServerWall("ServerWall");
+            ArsenalWallController client = CreateWall("ClientWall");
+
+            SendPhaseToServer(server, RoundState.Equipment);
+            ReplicateToClient(server, client);
+            Assert.AreEqual(Open, client.CurrentState, "Контроль: у клиента стена открыта.");
+
+            // Точка, в которую приходит команда клиента, схватившего жетон.
+            InvokePrivateMethod(server, "ServerCloseByDogTag");
+
+            Assert.AreEqual(Closed, server.CurrentState,
+                "Жетон взят, а сервер стену не закрыл — закрывать её больше некому.");
+
+            ReplicateToClient(server, client);
+
+            Assert.AreEqual(Closed, client.CurrentState,
+                "Один игрок взял жетон, а у остальных арсенал остался открытым — это NET-07.");
+        }
+
+        // ── Кто вправе менять состояние ─────────────────────────────────────
+
+        [Test]
+        public void Локальный_обработчик_фазы_не_трогает_состояние_заспавненной_стены()
+        {
+            SilenceMirrorNoise();
+
+            ArsenalWallController wall = CreateServerWall("ServerWall");
+
+            // OnRoundStateChangedLocal приходит на каждую машину, включая сервер.
+            // Для общей стены это канал представления, а не источник состояния.
+            InvokePrivateMethod(wall, "HandleRoundStateChanged", RoundState.Equipment);
+
+            Assert.AreEqual(Closed, wall.CurrentState,
+                "Локальный обработчик фазы сам сменил состояние заспавненной стены. " +
+                "Тогда каждая машина снова ведёт стену независимо, и SyncVar ничего не решает.");
+        }
+
+        [Test]
+        public void Стена_вне_сети_ведёт_состояние_сама()
+        {
+            SilenceMirrorNoise();
+
+            // Не спавним: так выглядит сцена, открытая без сети, и стена без sceneId (NET-14).
+            ArsenalWallController wall = CreateWall("OfflineWall");
+
+            InvokePrivateMethod(wall, "HandleRoundStateChanged", RoundState.Equipment);
+
+            Assert.AreEqual(Open, wall.CurrentState,
+                "Реплицировать состояние некому, а локальный путь отключён — " +
+                "стена не откроется никогда.");
+        }
+    }
+}

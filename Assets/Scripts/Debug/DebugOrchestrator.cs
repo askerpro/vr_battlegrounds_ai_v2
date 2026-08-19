@@ -25,6 +25,7 @@ namespace VrBattlegrounds.DevTools
     ///   2. Назначить DebugBootstrapConfig в поле Config.
     ///   3. Чтобы отключить — деактивировать GameObject.
     /// </summary>
+    [DefaultExecutionOrder(ManagerOrder.DebugOrchestrator)]
     public class DebugOrchestrator : MonoBehaviour
     {
         [SerializeField] private DebugBootstrapConfig _config;
@@ -59,6 +60,10 @@ namespace VrBattlegrounds.DevTools
             PlayersManager.OnSessionDisconnected += HandlePlayerDisconnected;
             AvatarManager.OnAvatarSpawned += HandleAvatarSpawned;
             GameNetworkManager.ServerSceneChanged += OnServerSceneChanged;
+
+            // Подписка вместо угадывания. Оркестратор матча живёт в сцене карты и
+            // появляется позже нас; раньше это обходилось повторной попыткой «через кадр».
+            GameplayManager.SubscribeToInstance(HandleGameplayManagerReady);
         }
 
         private void OnDisable()
@@ -67,6 +72,23 @@ namespace VrBattlegrounds.DevTools
             PlayersManager.OnSessionDisconnected -= HandlePlayerDisconnected;
             AvatarManager.OnAvatarSpawned -= HandleAvatarSpawned;
             GameNetworkManager.ServerSceneChanged -= OnServerSceneChanged;
+
+            GameplayManager.UnsubscribeFromInstance(HandleGameplayManagerReady);
+        }
+
+        /// <summary>
+        /// Оркестратор матча появился (загрузилась карта). Условия автостарта могли
+        /// выполниться ещё в лобби — проверяем их сразу, не дожидаясь нового подключения.
+        /// </summary>
+        private void HandleGameplayManagerReady(GameplayManager manager)
+        {
+            if (_config == null || !_config.enabled) return;
+            if (!NetworkServer.active) return;
+
+            GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                "[DebugOrchestrator] GameplayManager готов — пробуем запустить матч.");
+
+            TryStartGameplay();
         }
 
         private void Start()
@@ -161,19 +183,25 @@ namespace VrBattlegrounds.DevTools
             PlayersManager playersManager = PlayersManager.Instance;
             if (playersManager == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelDebug,
-                    "[DebugOrchestrator] TryStartGameplay: PlayersManager.Instance == null. Повторная попытка через 1 кадр.");
-                StartCoroutine(RetryStartGameplayCoroutine());
+                // Постоянный менеджер: если его нет после инициализации, повторная попытка
+                // через кадр ничего не изменит — состав проверяет ManagerBootstrap и он же
+                // об этом уже написал. Здесь просто выходим.
+                GameLog.Error(
+                    "[DebugOrchestrator] TryStartGameplay: PlayersManager.Instance пуст. " +
+                    "Состав постоянных менеджеров объявлен в ManagerBootstrap, " +
+                    "времена жизни — Docs/session-architecture.md.");
                 return;
             }
 
             GameplayManager matchManager = GameplayManager.Instance;
             if (matchManager == null)
             {
-                // GameplayManager живёт только в сцене карты — при первом подключении в Offline сцене это нормально.
-                GameLog.Warning(GameSettings.Instance.LogLevelDebug,
-                    "[DebugOrchestrator] TryStartGameplay: GameplayManager.Instance == null — " +
-                    "возможно карта ещё не загружена. Матч запустится после загрузки карты.");
+                // Норма, а не сбой: GameplayManager живёт в сцене карты, и пока игрок
+                // в лобби его нет. Ждать не нужно — на его появление мы подписаны
+                // (HandleGameplayManagerReady), и попытка повторится сама.
+                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                    "[DebugOrchestrator] TryStartGameplay: карта ещё не загружена. " +
+                    "Матч запустится по сигналу GameplayManager.");
                 return;
             }
 
@@ -204,13 +232,6 @@ namespace VrBattlegrounds.DevTools
                 "[DebugOrchestrator] TryStartGameplay: попытка запустить матч (условия по игрокам выполнены).");
             matchManager.StartGameplay();
 
-        }
-
-        private System.Collections.IEnumerator RetryStartGameplayCoroutine()
-        {
-            yield return null; // 1 кадр
-            GameLog.Verbose(GameSettings.Instance.LogLevelDebug, "[DebugOrchestrator] RetryStartGameplayCoroutine: повторный вызов TryStartGameplay.");
-            TryStartGameplay();
         }
 
         private void TryAssignTeam(PlayerSession session)
@@ -286,9 +307,11 @@ namespace VrBattlegrounds.DevTools
             // При смене сцены очищаем трекер спавнов, так как все аватары будут пересозданы
             _initializedSessions.Clear();
 
-            // Игроки подключились ДО загрузки карты (в Offline-сцене) — GameplayManager тогда не существовал.
-            // Теперь карта загружена — пробуем запустить матч.
-            TryStartGameplay();
+            // Матч отсюда не запускаем. Игроки могли подключиться ещё в лобби, когда
+            // GameplayManager не существовал, — но на его появление мы подписаны
+            // (HandleGameplayManagerReady), и сигнал приходит раньше этого колбэка:
+            // объекты сцены просыпаются в момент её загрузки, а OnServerSceneChanged
+            // Mirror зовёт уже после.
         }
 
         private void TryAutoLoadMap()

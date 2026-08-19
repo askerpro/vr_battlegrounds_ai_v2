@@ -15,6 +15,7 @@ namespace VrBattlegrounds.Managers
     ///
     /// Singleton: живёт на том же GameObject, что и NetworkManager (DontDestroyOnLoad).
     /// </summary>
+    [DefaultExecutionOrder(ManagerOrder.MapManager)]
     public class MapManager : MonoBehaviour
     {
         public static MapManager Instance { get; private set; }
@@ -33,7 +34,6 @@ namespace VrBattlegrounds.Managers
 
         private Coroutine _loadCoroutine;
         private string _pendingScene;
-        private bool _waitingForPlayer;
 
         private void Awake()
         {
@@ -47,7 +47,6 @@ namespace VrBattlegrounds.Managers
 
         private void OnDestroy()
         {
-            PlayersManager.OnSessionConnected -= OnPlayerConnectedForLoad;
             if (Instance == this)
                 Instance = null;
         }
@@ -85,61 +84,37 @@ namespace VrBattlegrounds.Managers
         }
 
         /// <summary>
-        /// Ждёт события PlayerConnected (игрок заспавнился на сервере),
-        /// только потом вызывает ServerChangeScene.
-        /// Это гарантирует что сервер уже обработал AddPlayer для текущей сцены
-        /// и не получит дублирующий AddPlayer после смены сцены.
+        /// Ждёт, пока Mirror закончит начатые <c>AddPlayer</c>, и только потом зовёт
+        /// <c>ServerChangeScene</c>: иначе сервер получит дублирующий <c>AddPlayer</c>
+        /// уже после смены сцены.
+        ///
+        /// <para>
+        /// Здесь было ожидание первого <c>PlayerConnected</c> с таймаутом в пять секунд —
+        /// то есть «подождём, вдруг кто-нибудь подключится». Таймаут стоял ради
+        /// Server-only режима без host-клиента: там ждать было некого, и загрузка
+        /// каждый раз стоила пять секунд и предупреждения в логе. Теперь вместо
+        /// времени проверяется само условие — <see cref="ConnectionsSettled" />.
+        /// </para>
         /// </summary>
         private IEnumerator DeferredLoadMap(string sceneName)
         {
             IsLoading = true;
+            _pendingScene = sceneName;
             MapLoadStarted?.Invoke(sceneName);
 
-            // Если игроки уже есть — грузим сразу (повторная смена карты).
-            // Если нет — подписываемся на PlayerConnected и ждём первого спавна.
-            GameNetworkManager nm = NetworkManager.singleton as GameNetworkManager;
-            bool playerAlreadySpawned = PlayersManager.Instance != null && PlayersManager.Instance.Sessions.Count > 0;
-
-            if (!playerAlreadySpawned)
+            if (!ConnectionsSettled())
             {
                 GameLog.Verbose(GameSettings.Instance.LogLevelNetwork,
-                    $"[MapManager] Загрузка карты '{sceneName}': ждём события PlayerConnected...");
+                    $"[MapManager] Загрузка карты '{sceneName}': ждём, пока Mirror закончит AddPlayer " +
+                    $"({DescribeUnsettled()})...");
 
-                _waitingForPlayer = true;
-                PlayersManager.OnSessionConnected += OnPlayerConnectedForLoad;
-
-                // Таймаут на случай Server-only режима без Host-клиента
-                const float timeout = 5f;
-                float elapsed = 0f;
-                while (_waitingForPlayer && elapsed < timeout)
-                {
-                    elapsed += Time.unscaledDeltaTime;
+                while (!ConnectionsSettled())
                     yield return null;
-                }
-
-                PlayersManager.OnSessionConnected -= OnPlayerConnectedForLoad;
-                _waitingForPlayer = false;
-
-                if (elapsed >= timeout)
-                {
-                    GameLog.Warning(GameSettings.Instance.LogLevelNetwork,
-                        $"[MapManager] PlayerConnected не пришёл за {timeout}s — продолжаем загрузку.");
-                }
-                else
-                {
-                    GameLog.Verbose(GameSettings.Instance.LogLevelNetwork,
-                        "[MapManager] PlayerConnected получен, ждём конца кадра...");
-
-                    // Ждём ещё один кадр: Mirror должен завершить внутреннюю обработку
-                    // AddPlayer (Ready, SpawnObjects) до того, как мы сменим сцену.
-                    yield return null;
-                }
             }
-            else
-            {
-                GameLog.Verbose(GameSettings.Instance.LogLevelNetwork,
-                    $"[MapManager] Игроки уже есть, загружаем карту '{sceneName}' сразу.");
-            }
+
+            // Ещё кадр: Mirror должен завершить внутреннюю обработку AddPlayer
+            // (Ready, SpawnObjects) до того, как мы сменим сцену.
+            yield return null;
 
             GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[MapManager] ServerChangeScene: {sceneName}");
             CurrentMap = sceneName;
@@ -152,11 +127,56 @@ namespace VrBattlegrounds.Managers
         }
 
         /// <summary>
-        /// Обработчик PlayerConnected — сигнализирует корутине что игрок заспавнился.
+        /// Условие готовности к смене сцены: ни одно соединение не находится
+        /// в середине <c>AddPlayer</c>.
+        ///
+        /// <para>
+        /// «В середине» — это <c>isReady</c> без <c>identity</c>. Клиент сообщил, что
+        /// догрузил текущую сцену, но сессию сервер ему ещё не создал: игра спавнит её
+        /// не автоматически, а в ответ на свой <c>GamePlayerConnectMessage</c>
+        /// (<c>autoCreatePlayer = false</c>). Сменить сцену в этом промежутке и значит
+        /// получить второй <c>AddPlayer</c> в новой сцене.
+        /// </para>
+        ///
+        /// <para>
+        /// Соединение, которое ещё не <c>isReady</c>, ждать не нужно и вредно: оно
+        /// не начинало <c>AddPlayer</c>, а после <c>ServerChangeScene</c> пройдёт весь
+        /// путь заново — ровно как клиент, подключившийся кадром позже. Ждать его
+        /// значило бы зависнуть навсегда на клиенте, который до сессии не доходит
+        /// (например, роль наблюдателя: <c>SpectatorConnectMessage</c> сессию не создаёт).
+        /// </para>
+        ///
+        /// <para>
+        /// Ни одного соединения — условие выполнено сразу. Это и есть тот случай,
+        /// ради которого стоял таймаут.
+        /// </para>
         /// </summary>
-        private void OnPlayerConnectedForLoad(PlayerSession session)
+        private static bool ConnectionsSettled()
         {
-            _waitingForPlayer = false;
+            foreach (NetworkConnectionToClient conn in NetworkServer.connections.Values)
+            {
+                if (conn == null) continue;
+
+                if (conn.isReady && conn.identity == null)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>Кого именно ждём — для лога, чтобы зависание было видно по имени.</summary>
+        private static string DescribeUnsettled()
+        {
+            int total = NetworkServer.connections.Count;
+            int pending = 0;
+
+            foreach (NetworkConnectionToClient conn in NetworkServer.connections.Values)
+            {
+                if (conn != null && conn.isReady && conn.identity == null)
+                    pending++;
+            }
+
+            return $"соединений {total}, из них без сессии {pending}";
         }
     }
 }

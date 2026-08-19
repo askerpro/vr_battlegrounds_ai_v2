@@ -210,7 +210,7 @@ namespace VrBattlegrounds.Player
         [Server]
         public void Respawn(Transform spawnPoint)
         {
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: респаун на точке {spawnPoint.name} ({spawnPoint.position})\nStack Trace:\n{new System.Diagnostics.StackTrace()}", this);
+            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: респаун на точке {spawnPoint.name} ({spawnPoint.position})", this);
             _actor.Life = 100f;
 
             var spectator = GetComponent<SpectatorController>();

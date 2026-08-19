@@ -17,6 +17,7 @@ namespace VrBattlegrounds.Managers
     ///   — Администратор вызывает SetSession(mapScene, modeId) через AdminMenuController
     ///   — MatchManager читает SelectedGameModeData и SelectedMap при StartMatch()
     /// </summary>
+    [DefaultExecutionOrder(ManagerOrder.SessionManager)]
     public class SessionManager : NetworkBehaviour
     {
         public static SessionManager Instance { get; private set; }

@@ -44,6 +44,7 @@ namespace VrBattlegrounds.Network
     ///     принадлежала.
     ///     </para>
     /// </summary>
+    [DefaultExecutionOrder(VrBattlegrounds.Managers.ManagerOrder.NetworkStateRelay)]
     public class NetworkStateRelay : NetworkBehaviour
     {
         /// <summary>Релей текущего процесса. Null, пока сервер не поднят.</summary>

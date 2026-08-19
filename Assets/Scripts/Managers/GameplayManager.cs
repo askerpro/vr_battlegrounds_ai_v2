@@ -27,6 +27,7 @@ namespace VrBattlegrounds.Managers
     /// Вся логика матча (сеты, раунды, таймеры, счёт) живёт внутри конкретного GameMode.
     /// GameplayManager не знает о структуре режима — только Start/Stop и результат.
     /// </summary>
+    [DefaultExecutionOrder(ManagerOrder.GameplayManager)]
     public class GameplayManager : NetworkBehaviour
     {
         public static GameplayManager Instance { get; private set; }
@@ -84,10 +85,62 @@ namespace VrBattlegrounds.Managers
             }
         }
 
+        /// <summary>
+        /// Оркестратор матча появился на этой машине и готов принимать команды.
+        ///
+        /// <para>
+        /// В отличие от остальных менеджеров он живёт не в <c>PersistentRoot</c>, а в сцене
+        /// карты: режим существует только на карте. Значит <c>Instance</c> равен null всё
+        /// время, пока игрок в лобби, и это норма, а не сбой. Событие даёт подписаться
+        /// на его появление вместо того, чтобы опрашивать <c>Instance</c> каждый кадр
+        /// или пробовать «ещё раз через кадр».
+        /// </para>
+        ///
+        /// <para>
+        /// Опоздавший подписчик не теряет сигнал: <see cref="SubscribeToInstance" />
+        /// сразу отдаёт уже существующий экземпляр. Иначе система, стартовавшая позже
+        /// загрузки карты, снова начала бы угадывать.
+        /// </para>
+        /// </summary>
+        private static event Action<GameplayManager> InstanceReady;
+
+        /// <summary>
+        /// Подписка на появление оркестратора матча. Если он уже есть — обработчик
+        /// вызывается немедленно, ещё до возврата из метода.
+        /// </summary>
+        public static void SubscribeToInstance(Action<GameplayManager> handler)
+        {
+            if (handler == null) return;
+
+            InstanceReady += handler;
+
+            if (Instance != null) handler(Instance);
+        }
+
+        /// <summary>Отписка. Обязательна в <c>OnDisable</c>: событие статическое и переживает сцену.</summary>
+        public static void UnsubscribeFromInstance(Action<GameplayManager> handler)
+        {
+            if (handler == null) return;
+            InstanceReady -= handler;
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
+
+            InstanceReady?.Invoke(this);
+        }
+
+        /// <summary>
+        /// Карта выгружена — оркестратор уничтожен вместе с ней. Снимаем статическую ссылку:
+        /// уничтоженный объект равен null по правилам Unity, но не по правилам C#, и код,
+        /// сравнивающий через <c>ReferenceEquals</c> или кэширующий ссылку, увидел бы живой
+        /// менеджер там, где его уже нет.
+        /// </summary>
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
         }
 
         [Server]

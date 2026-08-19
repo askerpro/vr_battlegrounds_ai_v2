@@ -108,7 +108,7 @@
 | Класс | Файл | Описание |
 |---|---|---|
 | `PlayersManager` | `Managers/PlayersManager.cs` | Список игроков, фильтрация: `Players`, `GetAlivePlayers(team)`, `GetPlayers(team)`. Синглтон на том же GO что и `NetworkManager`. |
-| `MapManager` | `Managers/MapManager.cs` | **Единственная точка входа для смены карты.** Откладывает `ServerChangeScene` на конец кадра через корутину. |
+| `MapManager` | `Managers/MapManager.cs` | **Единственная точка входа для смены карты.** Откладывает `ServerChangeScene` на конец кадра через корутину. Ждёт не по таймеру, а по условию `ConnectionsSettled()` — ни одно соединение не в середине `AddPlayer` (T-17). |
 | `GameManager` | `Managers/GameManager.cs` | Хранит выбор сессии (карта + режим). DontDestroyOnLoad вместе с NetworkManager. SyncVar реплицирует выбор клиентам. Методы: `SetSession()`, `StartSession()`. |
 | `GameplayManager` | `Managers/GameplayManager.cs` | Матч: счёт, победитель, `StartGameplay()`, `StopGameplay()`. Режим ищет по `modeId` из `GameManager`. |
 | `UxrActor` | `UltimateXR/.../UxrActor.cs` | Базовая система урона UltimateXR. Игрок умирает, когда `UxrActor` вызывает событие смерти. |
@@ -194,7 +194,9 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | `TeamData` | `Core/TeamData.cs` | ScriptableObject с данными команды. По сети синхронизируется только `int teamIndex`. |
 | `TeamRegistry` | `Core/TeamRegistry.cs` | Реестр команд. |
 | `AppRoleManager` | `Core/AppRoleManager.cs` | Хранит текущую `DeviceRole` (VR/PC/Server) и `NetworkRole` (Host/Client), используется для сборки UI и логики. |
-| `PersistentRoot` | `Managers/PersistentRoot.cs` | Глобальный DontDestroyOnLoad узел. Отвечает за инстанцирование глобальных менеджеров (например, `SessionManager`). |
+| `PersistentRoot` | `Managers/PersistentRoot.cs` | Глобальный DontDestroyOnLoad узел и точка входа инициализации: `Awake` объявляет состав менеджеров, `Start` его проверяет. Сам состав — в `ManagerBootstrap`. |
+| `ManagerOrder` | `Managers/ManagerOrder.cs` | **Единственное место, где записан порядок инициализации менеджеров** (T-17). Константы отсюда подставляются в `[DefaultExecutionOrder]` на самих менеджерах. Добавляешь менеджер — сначала строка здесь, потом атрибут на классе. |
+| `ManagerBootstrap` | `Managers/ManagerBootstrap.cs` | Объявленный состав постоянных менеджеров и проверка, что он поднялся. Поднимает событие `Ready` (опоздавший подписчик получает сигнал сразу) — подписка вместо опроса «а появился ли сосед». Менеджеры не создаёт: они лежат готовыми на префабе `--- MANAGERS ---`. Таблица времён жизни — [`session-architecture.md`](session-architecture.md#времена-жизни-менеджеров-t-17). |
 
 **Категории логов в `GameSettings`:**
 
@@ -253,6 +255,7 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | `E2EResult`, `E2ECheck` | `Debug/E2E/E2EResult.cs` | Машиночитаемый вердикт. Проверки объявляются заранее (`Declare`), поэтому недошедшие несут причину обрыва. JSON пишется чистым ASCII. |
 | `IE2EScenario` | `Debug/E2E/IE2EScenario.cs` | Контракт сценария: имя для CLI и корутина `Run`. |
 | `DedicatedServerArsenalScenario` | `Debug/E2E/Scenarios/DedicatedServerArsenalScenario.cs` | Сценарий `dedicated-server-arsenal` — находки NET-06, NET-13, NET-07. Роль сервера гонит матч и выносит вердикт; клиенты занимают команды, служат контролем к NET-06 и участвуют в проверке общей стены: `client-1` берёт жетон, сервер и `client-2` обязаны увидеть, что стена закрылась. Общий объект выбирается по наименьшему `netId`. |
+| `CalibrationScaleReplicationScenario` | `Debug/E2E/Scenarios/CalibrationScaleReplicationScenario.cs` | Сценарий `calibration-scale-replication` — находка VR-01 (T-14). Два клиента объявляют разные пропорции (0.80 и 1.30); вердикт с двух сторон — сервер сверяет свои экземпляры аватаров (он считает попадания), каждый клиент сверяет **чужой** аватар. Саму калибровку не проверяет: она требует шлема, клиенты шлют готовый результат. |
 | `E2EPlayerBuilder` | `Editor/VR_Battlegrounds/Debug/E2EPlayerBuilder.cs` | Сборка плеера под Windows в `Build/e2e/`. Меню `Tools/VR Battlegrounds/Debug/Собрать e2e-плеер (Windows)`, для CI — `RunBatch`. |
 | `Run-E2E.ps1` | `Tools/e2e/Run-E2E.ps1` | Дирижёр: добивает осиротевшие процессы, проверяет свежесть билда, поднимает сервер и клиентов, ждёт вердикты, гасит процессы, сводит отчёт. Хранить **в UTF-8 с BOM**. |
 
@@ -316,6 +319,9 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `Network/PlayerSessionReplicationTests` | Репликация `PlayerSession` через настоящую сериализацию Mirror: `TeamIndex` и связь с аватаром доезжают до клиента, смена скина переключает связь, гонка спавнов чинится аватаром, `PlayerController.Session` кэшируется (T-11). |
 | `Network/SessionRecoveryTests` | Снимок сессии при отключении: позиция, здоровье, флаг `NeedsPhysicalRestore` (T-04). |
 | `Network/NetworkStateRelayTests` | Канал состояния как объект сессии (T-12): подписка на хосте ровно одна (NET-03), отписка при остановке сервера, отсутствие статики в `UxrMirrorAvatar` и в релее, наличие релея и ненулевой `assetId` на `SessionContext.prefab`. Саму доставку блобов проверяет ярус C — в host-режиме она была бы ложно-зелёной. |
+| `Network/CalibrationScaleReplicationTests` | Пропорции игрока (T-14, VR-01): границы значения на сервере и отказ от NaN, репликация `CalibrationScale` настоящей сериализацией Mirror, применение масштаба к **чужому** аватару (а не только к `UxrAvatar.LocalAvatar`), идемпотентность, переезд масштаба на пересозданный аватар. Три из шести были красными до правки. |
+| `Network/MapLoadReadinessTests` | Условие готовности к смене карты (T-17): все четыре сочетания `isReady` × `identity` плюс проверка, что условие берётся по всем соединениям сразу. Заменяет собой пятисекундный таймаут в `MapManager`. |
+| `Managers/ManagerInitOrderTests` | Порядок инициализации (T-17): у каждого менеджера есть `[DefaultExecutionOrder]` со значением из `ManagerOrder`, значения не совпадают, корень раньше всех, сеть позже тех, кого зовёт из колбэков, состав `ManagerBootstrap` состоит только из синглтонов. Стережёт пару «константа ↔ атрибут», которая расходится молча. |
 | `Arsenal/ArsenalSlotOccupancyTests` | Занятость слота арсенала (T-15, NET-13): после сетевой выдачи слот занят и пополнения не просит, а когда предмет унесли или уничтожили — снова пустеет. Плюс блокировка: заблокированный слот действительно выключает захват предмета. |
 | `Arsenal/ArsenalWallStateReplicationTests` | Состояние стены арсенала (T-15, NET-07): серверный канал фазы открывает и закрывает стену, состояние доезжает до позднего клиента настоящей сериализацией Mirror, закрытие по жетону расходится всем, локальный обработчик фазы заспавненную стену не трогает, а незаспавненная ведёт состояние сама. |
 

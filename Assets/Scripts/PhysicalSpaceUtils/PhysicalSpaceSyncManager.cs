@@ -19,6 +19,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
     /// Inherits from MonoBehaviour as calibration logic is entirely local to the client's physical space.
     /// Virtual position changes are naturally synced by the avatar's NetworkTransform.
     /// </summary>
+    [DefaultExecutionOrder(VrBattlegrounds.Managers.ManagerOrder.PhysicalSpaceSyncManager)]
     public class PhysicalSpaceSyncManager : MonoBehaviour
     {
         public static PhysicalSpaceSyncManager Instance { get; private set; }
@@ -90,6 +91,16 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 return 1.75f;
             }
         }
+
+        /// <summary>
+        /// Результат калибровки роста: отношение роста игрока к базовому росту глаз аватара.
+        /// Единица означает «не калибровался».
+        ///
+        /// Значение локальное по происхождению, но не по применению: чужие машины должны
+        /// видеть игрока в его пропорциях, иначе коллайдеры разъезжаются с картинкой (VR-01).
+        /// Наружу его отдаёт <c>PlayerSession.CalibrationScale</c> — сюда сеть не заходит.
+        /// </summary>
+        public float AccumulatedScaleMultiplier => _accumulatedScaleMultiplier;
 
         public enum HeightCalibrationPhase { None, Floor, PlayerScale }
         public HeightCalibrationPhase CurrentHeightCalibrationPhase { get; private set; } = HeightCalibrationPhase.None;
@@ -384,9 +395,35 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
         private void ApplyScale()
         {
-            if (UxrAvatar.LocalAvatar == null) return;
+            ApplyScaleToAvatar(UxrAvatar.LocalAvatar, _accumulatedScaleMultiplier);
+        }
 
-            var controller = UxrAvatar.LocalAvatar.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
+        /// <summary>
+        /// Применяет пропорции игрока к <b>любому</b> аватару — своему или чужому.
+        ///
+        /// <para>
+        /// Метод статический и принимает аватар параметром именно потому, что зовут его
+        /// с двух сторон: локально после калибровки (<see cref="ApplyScale" />) и на каждой
+        /// машине из хука <c>PlayerSession.CalibrationScale</c>, когда значение приехало
+        /// по сети. Раньше масштаб применялся только к <c>UxrAvatar.LocalAvatar</c>, из-за
+        /// чего чужие аватары оставались в исходных пропорциях, а коллайдеры расходились
+        /// с картинкой — находка VR-01.
+        /// </para>
+        ///
+        /// <para>
+        /// Идемпотентен: <c>localScale</c> ставится абсолютным значением, а правка IK идёт
+        /// от отношения нового масштаба к старому и на повторном вызове с тем же значением
+        /// вырождается в единицу. Поэтому двойное применение (локальный аватар получает
+        /// масштаб и из <see cref="ApplyAvatarHeight" />, и из сетевого хука) безопасно.
+        /// </para>
+        /// </summary>
+        /// <param name="avatar">Аватар-получатель. <c>null</c> игнорируется молча: аватар мог ещё не заспавниться.</param>
+        /// <param name="scaleMultiplier">Отношение роста игрока к базовому росту глаз аватара.</param>
+        public static void ApplyScaleToAvatar(UxrAvatar avatar, float scaleMultiplier)
+        {
+            if (avatar == null) return;
+
+            var controller = avatar.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
             if (controller == null)
             {
                 GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace, "UxrStandardAvatarController not found. Cannot apply scale.");
@@ -395,13 +432,17 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             // Масштабируем внутренний скелет (Dummy Forward), а не всё трекинг-пространство UxrAvatar,
             // чтобы у игрока не сломался двуручный хват оружия (рассинхрон расстояний в реале и виаре).
-            Transform dummyForward = UxrAvatar.LocalAvatar.transform.Find("Dummy Forward");
+            //
+            // "Dummy Forward" создаёт сам SDK в UxrStandardAvatarController.Awake (UxrBodyIK.Initialize),
+            // причём независимо от UxrAvatarMode. Поэтому объект есть и на удалённых аватарах,
+            // и своего NetworkTransform у него быть не может — он не часть префаба.
+            Transform dummyForward = avatar.transform.Find("Dummy Forward");
             float oldScale = 1f;
 
             if (dummyForward != null)
             {
                 oldScale = dummyForward.localScale.x;
-                dummyForward.localScale = new Vector3(_accumulatedScaleMultiplier, _accumulatedScaleMultiplier, _accumulatedScaleMultiplier);
+                dummyForward.localScale = new Vector3(scaleMultiplier, scaleMultiplier, scaleMultiplier);
             }
             else
             {
@@ -409,8 +450,15 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 return;
             }
 
-            // Пересчитываем мировые векторы смещения внутри приватных переменных UxrBodyIK с помощью рефлексии
-            float relativeScale = _accumulatedScaleMultiplier / oldScale;
+            // Пересчитываем мировые векторы смещения внутри приватных переменных UxrBodyIK с помощью рефлексии.
+            //
+            // Для удалённого аватара (UxrAvatarMode.UpdateExternally) эта правка холостая:
+            // UxrManager решает body IK только у аватара с AvatarMode.Local, остальным крутит
+            // лишь позы кистей. Видимый размер там задаёт один localScale выше. Правку всё равно
+            // делаем безусловно, а не по AvatarMode: режим аватару проставляет UxrMirrorAvatar,
+            // и ветвление по нему привязало бы масштаб к порядку инициализации сети. Холостая
+            // запись в два Vector3 дешевле такой зависимости.
+            float relativeScale = scaleMultiplier / oldScale;
             if (Mathf.Approximately(relativeScale, 1f)) return;
 
             var bodyIKField = ResolveSdkField(

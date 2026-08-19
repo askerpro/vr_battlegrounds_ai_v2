@@ -36,6 +36,7 @@ namespace VrBattlegrounds.Managers
     /// Серверный менеджер для сохранения состояния игроков при отключении и восстановления при переподключении.
     /// Работает поверх Mirror, идентифицируя игроков по deviceToken.
     /// </summary>
+    [DefaultExecutionOrder(ManagerOrder.SessionRecoveryManager)]
     public class SessionRecoveryManager : MonoBehaviour
     {
         public static SessionRecoveryManager Instance { get; private set; }

@@ -14,6 +14,7 @@ namespace VrBattlegrounds.Network
     /// Единственная ответственность: управление сетевыми подключениями.
     /// Логика команд и старт матча — в подписчиках событий (GameplayManager, DebugOrchestrator).
     /// </summary>
+    [DefaultExecutionOrder(ManagerOrder.GameNetworkManager)]
     public class GameNetworkManager : NetworkManager
     {
 

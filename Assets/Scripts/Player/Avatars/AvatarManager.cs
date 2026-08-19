@@ -13,6 +13,7 @@ namespace VrBattlegrounds.Player.Avatars
     /// Отвечает за инстанцирование, горячую замену и позиционирование физических аватаров (PlayerController)
     /// для подключенных сессий (PlayerSession). Содержит всю логику префабов, скинов и точек спавна.
     /// </summary>
+    [DefaultExecutionOrder(VrBattlegrounds.Managers.ManagerOrder.AvatarManager)]
     public class AvatarManager : MonoBehaviour
     {
         public static AvatarManager Instance { get; private set; }

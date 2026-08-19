@@ -252,21 +252,36 @@ namespace VrBattlegrounds.Arsenal
         }
         
         /// <summary>
-        /// Disables _autoCreateStartAnchor on UxrGrabbableObject via reflection.
-        /// Must be called BEFORE the GameObject is activated (before Awake fires).
-        /// Otherwise UXR creates a rogue "Auto Anchor" parent that pulls weapons out of slots.
+        /// Гасит приватное поле <c>UxrGrabbableObject._autoCreateStartAnchor</c> через рефлексию.
+        /// Звать строго до активации объекта (до его <c>Awake</c>), иначе UltimateXR успевает
+        /// создать «Auto Anchor»-родителя, который вытаскивает оружие из слота.
+        ///
+        /// Публичного способа отключить флаг в SDK нет. Зависимость от внутреннего имени
+        /// молчаливая: при обновлении UltimateXR она не даст ошибки компиляции, поэтому
+        /// ненайденное поле логируется как <c>Error</c>. Разбор и кандидат на вынос
+        /// в <c>.Custom.cs</c> — Docs/UltimateXR/sdk-patches.md, раздел
+        /// «Зависимости от приватных членов SDK».
         /// </summary>
         private static void DisableAutoAnchor(GameObject obj)
         {
             var grabbable = obj.GetComponent<UxrGrabbableObject>();
             if (grabbable == null) return;
-            
+
             var field = typeof(UxrGrabbableObject).GetField(
                 "_autoCreateStartAnchor",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
-            if (field != null)
-                field.SetValue(grabbable, false);
+
+            if (field == null)
+            {
+                GameLog.Error(
+                    "[ArsenalWallController] В UxrGrabbableObject больше нет приватного поля " +
+                    "\"_autoCreateStartAnchor\". UltimateXR обновился и переименовал его — " +
+                    "оружие будет вылетать из слотов арсенала. См. Docs/UltimateXR/sdk-patches.md, " +
+                    "раздел «Зависимости от приватных членов SDK».", obj);
+                return;
+            }
+
+            field.SetValue(grabbable, false);
         }
 
         private void OnEnable()

@@ -23,6 +23,13 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>Живые сессии команды: аватар заспавнен и не мёртв.</summary>
         IEnumerable<PlayerSession> GetAlivePlayers(TeamData team);
+
+        /// <summary>
+        /// Все подключённые сессии, без разбивки по командам, — включая тех, кто ещё
+        /// не выбрал сторону. Именно этим числом режим решает, набралось ли людей
+        /// на старт матча; суммой по командам его не заменить (находка NET-18).
+        /// </summary>
+        IEnumerable<PlayerSession> GetAllPlayers();
     }
 
     /// <summary>
@@ -47,6 +54,14 @@ namespace VrBattlegrounds.GameModes
             if (manager == null) return Enumerable.Empty<PlayerSession>();
 
             return manager.GetAlivePlayers(team);
+        }
+
+        public IEnumerable<PlayerSession> GetAllPlayers()
+        {
+            PlayersManager manager = PlayersManager.Instance;
+            if (manager == null) return Enumerable.Empty<PlayerSession>();
+
+            return manager.Sessions;
         }
     }
 }

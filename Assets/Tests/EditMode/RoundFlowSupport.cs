@@ -51,6 +51,15 @@ namespace VrBattlegrounds.Tests
                 ? (IEnumerable<PlayerSession>)list
                 : new PlayerSession[0];
         }
+
+        /// <summary>Все положенные в заглушку сессии — тем же числом, что видит режим.</summary>
+        public IEnumerable<PlayerSession> GetAllPlayers()
+        {
+            foreach (List<PlayerSession> list in _byTeam.Values)
+            {
+                foreach (PlayerSession session in list) yield return session;
+            }
+        }
     }
 
     /// <summary>

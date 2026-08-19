@@ -36,6 +36,9 @@ namespace VrBattlegrounds.Tests
         /// <summary>Объекты сессий-заглушек: удаляются в TearDown, в сцене ничего не остаётся.</summary>
         private readonly List<GameObject> _sessionObjects = new List<GameObject>();
 
+        /// <summary>Синтетические TeamData: это не ассеты проекта, их обязательно уничтожать.</summary>
+        private readonly List<TeamData> _createdTeams = new List<TeamData>();
+
         private TeamData _teamA;
         private TeamData _teamB;
 
@@ -62,20 +65,14 @@ namespace VrBattlegrounds.Tests
         {
             LogAssert.ignoreFailingMessages = true;
 
-            // Команды берём из реального реестра, а не создаём на лету:
-            // SetManager определяет победителя через TeamRegistry.GetByIndex(),
-            // а не через переданный массив teams. С синтетическими TeamData
-            // этот поиск возвращает null, и тест проверял бы не то.
-            // Сама эта скрытая зависимость от глобального реестра — замечание к коду,
-            // см. Docs/tasks/T-08.
-            TeamRegistry registry = TeamRegistry.Instance;
-            Assert.IsNotNull(registry, "TeamRegistry.Instance не загрузился из Resources");
-
-            _teamA = registry.GetByIndex(1);
-            _teamB = registry.GetByIndex(2);
-
-            Assert.IsNotNull(_teamA, "В реестре нет команды с teamIndex=1");
-            Assert.IsNotNull(_teamB, "В реестре нет команды с teamIndex=2");
+            // Команды синтетические, с индексами, которых в TeamRegistry заведомо нет.
+            // Это и есть проверка T-08: победитель сета обязан определяться по составу,
+            // переданному в StartSet, а не по глобальному реестру. Пока SetManager искал
+            // команду через TeamRegistry.GetByIndex(), на этих индексах он получал null —
+            // то есть «ничья» вместо победы, — и тест приходилось кормить командами
+            // из реестра, чтобы он вообще что-то проверял.
+            _teamA = CreateTeam("Синтетическая A", 901);
+            _teamB = CreateTeam("Синтетическая B", 902);
 
             _modeObject = new GameObject("TestEliminationMode");
             _mode = _modeObject.AddComponent<EliminationMode>();
@@ -101,6 +98,21 @@ namespace VrBattlegrounds.Tests
             _driver = new RoundFlowDriver(dt => _setManager.Tick(dt), () => _roundManager.State);
         }
 
+        /// <summary>
+        /// Команда, созданная на лету. В <c>TeamRegistry</c> её нет и быть не должно:
+        /// именно этим тест отличает счёт по переданному составу от счёта по реестру.
+        /// </summary>
+        private TeamData CreateTeam(string displayName, int teamIndex)
+        {
+            TeamData team = ScriptableObject.CreateInstance<TeamData>();
+            team.name = displayName;
+            team.displayName = displayName;
+            team.teamIndex = teamIndex;
+
+            _createdTeams.Add(team);
+            return team;
+        }
+
         /// <summary>Сессия игрока, который стоит в зоне спавна и взял жетон.</summary>
         private PlayerSession CreateReadySession(string name)
         {
@@ -119,7 +131,6 @@ namespace VrBattlegrounds.Tests
         [TearDown]
         public void TearDown()
         {
-            // _teamA / _teamB — ассеты из реестра, уничтожать их нельзя.
             if (_modeObject != null) Object.DestroyImmediate(_modeObject);
 
             foreach (GameObject go in _sessionObjects)
@@ -127,6 +138,13 @@ namespace VrBattlegrounds.Tests
                 if (go != null) Object.DestroyImmediate(go);
             }
             _sessionObjects.Clear();
+
+            // Команды созданы тестом, а не загружены из Resources — утекут, если их не убрать.
+            foreach (TeamData team in _createdTeams)
+            {
+                if (team != null) Object.DestroyImmediate(team);
+            }
+            _createdTeams.Clear();
         }
 
         private string DumpScores()

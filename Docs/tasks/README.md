@@ -122,9 +122,9 @@
 | [T-25](T-25-setmanager-round-counter.md) | Счётчик раундов в `SetManager` не растёт | MATCH-06 | — | — | 1 | 30 мин | ✅ |
 | [T-26](T-26-network-test-harness.md) | Харнесс сетевых тестов в процессе (ярусы A, B) | — | — | T-27; проверку T-02, T-04, T-11 | A/B | полдня | ✅ |
 | [T-27](T-27-two-process-e2e.md) | E2E на двух процессах (ярус C) | — | T-26 | проверку T-12, T-13, T-14 | C | 2–3 дня | ✅ |
-| [T-08](T-08-fix-tie-detection.md) | Победитель сета через переданные команды, не через реестр | MATCH-04 | T-07 | — | 1 | 2 часа | ⬜ |
+| [T-08](T-08-fix-tie-detection.md) | Победитель сета через переданные команды, не через реестр | MATCH-04 | T-07 | — | 1 | 2 часа | ✅ |
 | [T-09](T-09-explicit-round-fsm.md) | Явная машина состояний раунда | MATCH-01, MATCH-02, MATCH-06, Корень 4 | T-07 | T-10 | 1 | 1 день | ✅ |
-| [T-10](T-10-respawn-subscription-cleanup.md) | Снятие подписок отложенного респавна | MATCH-05 | T-09 | — | 3 | 2 часа | ⬜ |
+| [T-10](T-10-respawn-subscription-cleanup.md) | Снятие подписок отложенного респавна | MATCH-05 | T-09 | — | 3 | 2 часа | ✅ |
 | [T-11](T-11-session-avatar-link.md) | Двусторонняя связь сессия ↔ аватар | NET-04, NET-05, Корень 2 | T-04 | T-12, T-16 | A+ | полдня | ✅ |
 | [T-12](T-12-state-channel-to-session.md) | Канал состояния на объект уровня сессии | NET-01, NET-02, NET-03, NET-15, Корень 1 | T-11 | T-13, T-14, T-17, T-18 | C | 1–2 дня | ✅ |
 | [T-13](T-13-round-phase-as-state.md) | Фаза раунда как состояние, не событие | NET-06, NET-08, MATCH-03, Корень 3 | T-12 | T-15, T-19 | C | 1 день | ✅ |
@@ -133,9 +133,9 @@
 | [T-16](T-16-spawnzone-bounds-and-nulls.md) | `TeamSpawnZone`: границы и null-проверки | VR-05 | T-11 | — | 3 | 2 часа | ✅ |
 | [T-17](T-17-explicit-init-order.md) | Явный порядок инициализации менеджеров | Корень 5 | T-12 | — | 3 | 1 день | ⬜ |
 | [T-18](T-18-local-refs-cleanup.md) | Сброс `LocalSession` и мёртвый `OnNetworkSceneChanged` | NET-11 | T-12 | — | 2 | 1 час | ✅ |
-| [T-19](T-19-round-timers-networktime.md) | Таймеры раунда через `NetworkTime` | NET-09 | T-13 | — | 3 | 3 часа | ⬜ |
+| [T-19](T-19-round-timers-networktime.md) | Таймеры раунда через `NetworkTime` | NET-09 | T-13 | — | 3 | 3 часа | ✅ |
 | [T-20](T-20-session-recovery-ttl.md) | TTL для `SessionRecoveryManager` | NET-10 | — | — | 2 | 1 час | ✅ |
-| [T-21](T-21-document-sdk-reflection.md) | Зафиксировать рефлексию в SDK-доках | VR-03 | — | — | только доки | 1 час | ⬜ |
+| [T-21](T-21-document-sdk-reflection.md) | Зафиксировать рефлексию в SDK-доках | VR-03 | — | — | только доки | 1 час | ✅ |
 | [T-22](T-22-arsenal-prefab-mutation.md) | `ReplenishWeaponsNetwork` не мутирует префаб | VR-04 | — | — | 3 | 1 час | ✅ |
 | [T-23](T-23-decision-lag-compensation.md) | **Решение:** компенсация задержки при попаданиях | — | — | — | только доки | 3–4 часа | ⬜ |
 | [T-24](T-24-decision-projectile-simulation.md) | **Решение:** где симулировать пули | — | — | — | только доки | 2–3 часа | ⬜ |

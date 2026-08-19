@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Mirror;
 using UnityEngine;
@@ -54,8 +55,24 @@ namespace VrBattlegrounds.GameModes
         [SyncVar(hook = nameof(OnRoundStateSynced))]
         private RoundState _roundState = RoundState.Setup;
 
-        [SyncVar] private float _roundTimer;
-        [SyncVar] private float _countdownTimer;
+        /// <summary>
+        /// Момент начала текущей фазы по <see cref="NetworkTime"/>. Пишется ровно один раз
+        /// на фазу, остаток каждая машина считает локально и потому рисует плавно.
+        ///
+        /// Раньше в сеть уезжало само значение таймера, и присваивалось оно в тике каждый
+        /// кадр: объект был грязным до конца матча, а в HUD значение приходило ступеньками
+        /// раз в <c>syncInterval</c> (NET-09).
+        /// </summary>
+        [SyncVar] private double _phaseStartTime;
+
+        /// <summary>
+        /// Сколько секунд боя израсходовал раунд. Во время боя не пишется — остаток
+        /// считается от <see cref="_phaseStartTime"/>; значение фиксируется один раз,
+        /// на выходе из <see cref="RoundState.Combat"/>, чтобы экран итогов показывал
+        /// остаток на момент конца боя, как и до перевода таймеров на NetworkTime.
+        /// </summary>
+        [SyncVar] private float _combatElapsed;
+
         [SyncVar] private int _currentRound;
 
         /// <summary>Фаза, уже разданная локальным подписчикам на этой машине.</summary>
@@ -66,17 +83,17 @@ namespace VrBattlegrounds.GameModes
 
         private readonly SyncDictionary<int, int> _syncedRoundScores = new SyncDictionary<int, int>();
 
+        /// <summary>
+        /// Живые подписки отложенного респавна. Список нужен именно потому, что подписка
+        /// может так и не сработать: снять её иначе, чем изнутри обработчика, было нечем
+        /// (MATCH-05). Только сервер — на клиенте <c>PrepareNextRound</c> не исполняется.
+        /// </summary>
+        private readonly List<PendingRespawn> _pendingRespawns = new List<PendingRespawn>();
+
         // Серверные машины состояний — создаются при StartGameplay, не требуют NetworkBehaviour
         private SetManager _setManager;
         private RoundManager _roundManager;
         public RoundManager RoundManager => _roundManager;
-
-        /// <summary>
-        /// Откуда машина раунда узнаёт о живых игроках. null — боевой <c>PlayersManager</c>.
-        /// Точка подмены для EditMode-тестов: с заглушкой фазы раунда прогоняются
-        /// без живых аватаров. Ставить только до <c>InitializeActiveGame</c>.
-        /// </summary>
-        public IPlayerRoster PlayerRoster { get; set; }
 
         // ── Глобальные семантические события для UI (Клиент) ───────────────
 
@@ -103,8 +120,45 @@ namespace VrBattlegrounds.GameModes
 
         public EliminationMatchState CurrentMatchState => _matchState;
         public RoundState CurrentRoundState => _roundState;
-        public float RoundTimeRemaining => Mathf.Max(0f, _roundDuration - _roundTimer);
-        public float CountdownTimeRemaining => Mathf.Max(0f, _countdownDuration - _countdownTimer);
+        /// <summary>Сколько секунд идёт текущая фаза. Считается локально, без обращения к сети.</summary>
+        private float PhaseElapsed => (float)Math.Max(0d, NetworkTime.time - _phaseStartTime);
+
+        /// <summary>
+        /// Остаток времени раунда. Боевое время расходуется только в фазе Combat:
+        /// до неё показывается полная длительность, после — то, что оставалось
+        /// в момент конца боя. Так же считал и <c>RoundManager</c> до T-19.
+        /// </summary>
+        public float RoundTimeRemaining
+        {
+            get
+            {
+                float elapsed = _roundState == RoundState.Combat ? PhaseElapsed : _combatElapsed;
+                return Mathf.Max(0f, _roundDuration - elapsed);
+            }
+        }
+
+        /// <summary>
+        /// Остаток текущей паузы: обратного отсчёта, паузы после победы или экрана итогов.
+        /// Вне этих трёх фаз паузы нет, поэтому ноль. Набор фаз повторяет
+        /// <see cref="RoundManager.CountdownTimeRemaining"/> — свойство читает HUD.
+        /// </summary>
+        public float CountdownTimeRemaining
+        {
+            get
+            {
+                switch (_roundState)
+                {
+                    case RoundState.Countdown:
+                        return Mathf.Max(0f, _countdownDuration - PhaseElapsed);
+                    case RoundState.Resolution:
+                        return Mathf.Max(0f, RoundManager.ResolutionDuration - PhaseElapsed);
+                    case RoundState.Scoreboard:
+                        return Mathf.Max(0f, RoundManager.ScoreboardDuration - PhaseElapsed);
+                    default:
+                        return 0f;
+                }
+            }
+        }
         public int CurrentRoundNumber => _currentRound;
         public int RoundsPerSet => _roundsPerSet;
 
@@ -124,6 +178,15 @@ namespace VrBattlegrounds.GameModes
             return true;
         }
 
+        /// <summary>
+        /// Набралось ли людей, чтобы начинать матч.
+        ///
+        /// Об игроках спрашиваем <see cref="GameMode.PlayerRoster"/>, а не
+        /// <c>PlayersManager.Instance</c> напрямую: синглтон разыменовывался без проверки,
+        /// и режим падал с NRE на первом же кадре везде, где менеджера нет, — в сцене,
+        /// открытой без сети, и в любом тесте логики матча (находка NET-18).
+        /// Нет менеджера — реестр отвечает пустым списком, и матч просто не начинается.
+        /// </summary>
         private bool IsPlayersReady()
         {
             var sessionManager = VrBattlegrounds.Managers.SessionManager.Instance;
@@ -133,7 +196,7 @@ namespace VrBattlegrounds.GameModes
                 minPlayers = sessionManager.SelectedGameModeData.minPlayersToStart;
             }
 
-            int currentPlayers = PlayersManager.Instance.Sessions.Count();
+            int currentPlayers = PlayerRoster.GetAllPlayers().Count();
             if (currentPlayers < minPlayers) return false;
 
             return _teamStates.Values.All(t => t.HasPlayers());
@@ -175,6 +238,9 @@ namespace VrBattlegrounds.GameModes
             _roundManager = null;
             _setManager = null;
 
+            // Раунда больше не будет — ждать возвращения в зону некому и незачем.
+            ClearPendingRespawns();
+
             GameLog.Info(GameSettings.Instance.LogLevelMatch,
                 $"[EliminationMode] Матч остановлен.");
         }
@@ -210,10 +276,9 @@ namespace VrBattlegrounds.GameModes
 
             _setManager.Tick(deltaTime);
 
-            // Обновляем SyncVar каждый тик
+            // Единственное, что может измениться за тик, — фаза. Таймеры в сеть больше
+            // не пишутся: клиент считает остаток сам, от момента старта фазы (NET-09).
             ServerSetRoundState(_roundManager.State);
-            _roundTimer = _roundDuration - _roundManager.RoundTimeRemaining;
-            _countdownTimer = _countdownDuration - _roundManager.CountdownTimeRemaining;
 
             // Синхронизируем счёт раундов из SetManager
             if (_setManager != null)
@@ -245,6 +310,15 @@ namespace VrBattlegrounds.GameModes
             _setManager.StartSet(Teams, this, _roundsPerSet, _countdownDuration, _roundDuration);
         }
 
+        /// <summary>
+        /// Сет доигран: начисляем очко и решаем, закончился ли матч.
+        ///
+        /// Победитель матча берётся из <see cref="_teamStates"/> — состава, переданного
+        /// в <c>Initialize</c>, — а не из глобального <c>TeamRegistry</c>. Считается
+        /// в два прохода по той же причине, что и победитель сета: сравнение с текущим
+        /// максимумом внутри одного прохода взводит ничью на первой же итерации,
+        /// когда максимум ещё равен нулю (MATCH-04).
+        /// </summary>
         [Server]
         private void OnSetEnded(TeamData winner)
         {
@@ -254,29 +328,30 @@ namespace VrBattlegrounds.GameModes
             }
 
             int setsToWin = _maxSets / 2 + 1;
-            TeamData matchWinner = null;
+
+            // Проход 1 — сколько сетов сыграно всего и каков максимум.
             int totalSetsPlayed = 0;
             int highestSets = 0;
-
-            foreach (var state in _teamStates.Values)
+            foreach (TeamRuntimeData state in _teamStates.Values)
             {
                 totalSetsPlayed += state.Score;
-                if (state.Score > highestSets)
-                {
-                    highestSets = state.Score;
-                    matchWinner = state.Team;
-                }
-                else if (state.Score == highestSets)
-                {
-                    matchWinner = null; // tie
-                }
-
-                if (state.Score >= setsToWin)
-                {
-                    matchWinner = state.Team;
-                    break;
-                }
+                if (state.Score > highestSets) highestSets = state.Score;
             }
+
+            // Проход 2 — сколько команд набрали максимум и кто первая из них.
+            int leadersCount = 0;
+            TeamData leader = null;
+            foreach (TeamRuntimeData state in _teamStates.Values)
+            {
+                if (state.Score != highestSets) continue;
+
+                leadersCount++;
+                if (leader == null) leader = state.Team;
+            }
+
+            // Ничья — несколько лидеров либо нулевой максимум: матч, в котором никто
+            // не выиграл ни одного сета, победителя не имеет.
+            TeamData matchWinner = highestSets > 0 && leadersCount == 1 ? leader : null;
 
             if (highestSets >= setsToWin || totalSetsPlayed >= _maxSets)
             {
@@ -342,6 +417,14 @@ namespace VrBattlegrounds.GameModes
         [Server]
         public void PrepareNextRound()
         {
+            // Раунд начинается заново — обработчики прошлого раунда снимаются все разом,
+            // до того как повесить новые. Раньше подписка снималась только изнутри себя
+            // самой, то есть исключительно когда игрок вернулся в зону. Не вернулся —
+            // подписка жила вечно, замыкание держало ссылку на уничтоженный
+            // PlayerController, а в следующем раунде срабатывало и возрождало игрока
+            // посреди боя (MATCH-05).
+            ClearPendingRespawns();
+
             var zones = UnityEngine.Object.FindObjectsByType<Maps.TeamSpawnZone>(FindObjectsSortMode.None);
 
             foreach (var teamState in _teamStates.Values)
@@ -368,21 +451,53 @@ namespace VrBattlegrounds.GameModes
                         GameLog.Info(GameSettings.Instance.LogLevelMatch,
                             $"[EliminationMode] Игрок {player.name} не в зоне — ожидание возвращения для респауна.");
 
-                        Action<Maps.TeamSpawnZone, PlayerController> onEntered = null;
-                        onEntered = (z, p) =>
+                        PendingRespawn pending = new PendingRespawn { Zone = zone };
+                        pending.Handler = (z, p) =>
                         {
-                            if (p == player)
-                            {
-                                z.PlayerEntered -= onEntered;
-                                p.Respawn(z.transform);
-                                GameLog.Info(GameSettings.Instance.LogLevelMatch,
-                                    $"[EliminationMode] Игрок {player.name} вернулся в зону — отложенный респаун выполнен.");
-                            }
+                            if (p != player) return;
+
+                            z.PlayerEntered -= pending.Handler;
+                            _pendingRespawns.Remove(pending);
+
+                            p.Respawn(z.transform);
+                            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                                $"[EliminationMode] Игрок {player.name} вернулся в зону — отложенный респаун выполнен.");
                         };
-                        zone.PlayerEntered += onEntered;
+
+                        zone.PlayerEntered += pending.Handler;
+                        _pendingRespawns.Add(pending);
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Снимает все отложенные подписки на вход в зону спавна. Зовётся в начале каждого
+        /// раунда и при остановке матча — это единственные два момента, после которых
+        /// прошлые обработчики заведомо не нужны.
+        /// </summary>
+        [Server]
+        private void ClearPendingRespawns()
+        {
+            foreach (PendingRespawn pending in _pendingRespawns)
+            {
+                if (pending.Zone != null) pending.Zone.PlayerEntered -= pending.Handler;
+            }
+
+            _pendingRespawns.Clear();
+        }
+
+        /// <summary>
+        /// Отложенный респавн: игрок погиб и к началу раунда оказался вне своей зоны.
+        /// Зона и обработчик хранятся парой, потому что снять подписку можно только
+        /// имея на руках ровно тот делегат, который на неё вешали.
+        ///
+        /// Класс, а не структура: обработчик вычёркивает себя из списка по ссылке.
+        /// </summary>
+        private sealed class PendingRespawn
+        {
+            public Maps.TeamSpawnZone Zone;
+            public Action<Maps.TeamSpawnZone, PlayerController> Handler;
         }
 
         // ── Фаза раунда: состояние, а не событие ─────────────────────────────
@@ -404,7 +519,13 @@ namespace VrBattlegrounds.GameModes
         {
             if (_roundState == newState) return;
 
+            // Выход из боя — единственный момент, когда боевое время перестаёт течь.
+            // Дальше _phaseStartTime уже про другую фазу, поэтому остаток замораживаем.
+            if (_roundState == RoundState.Combat) _combatElapsed = PhaseElapsed;
+
             _roundState = newState;
+            _phaseStartTime = NetworkTime.time;
+
             ApplyRoundStateLocal(newState);
             OnRoundStateChangedServer?.Invoke(newState);
         }
@@ -461,6 +582,14 @@ namespace VrBattlegrounds.GameModes
         public void ServerBeginRound(int roundNum)
         {
             _currentRound = roundNum;
+
+            // Отметку старта фазы ставим и здесь, а не только в ServerSetRoundState:
+            // раунд начинается с Setup, а это же значение стоит в _roundState по умолчанию,
+            // поэтому в первом раунде смены состояния — а значит и отметки — не случилось бы,
+            // и весь раунд считался бы от нуля (T-19).
+            _combatElapsed = 0f;
+            _phaseStartTime = NetworkTime.time;
+
             RpcOnRoundStarted(roundNum);
         }
 

@@ -31,6 +31,41 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         [SerializeField] private float _accumulatedHeightOffset = 0f; // Tracks the total vertical shift applied
         [SerializeField] private float _accumulatedScaleMultiplier = 1f; // Target scale for player proportions
 
+        // ── Рефлексия во внутренности UltimateXR ─────────────────────────────
+        //
+        // Калибровка роста читает и правит приватные поля SDK: публичного доступа к ним
+        // нет. Зависимость жёсткая и молчаливая — переименованное при обновлении поле
+        // не даёт ошибки компиляции, рефлексия просто вернёт null, и рост перестанет
+        // калиброваться без единого сообщения. Поэтому каждое обращение идёт через
+        // ResolveSdkField, который на ненайденное поле пишет Error.
+        //
+        // Полный список точек, что сломается и есть ли публичная альтернатива —
+        // Docs/UltimateXR/sdk-patches.md, раздел «Зависимости от приватных членов SDK».
+
+        private const System.Reflection.BindingFlags SdkPrivateField =
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+
+        /// <summary>
+        /// Приватное поле SDK по имени. Отсутствие поля — это сломавшееся обновление
+        /// UltimateXR, а не штатная ситуация, поэтому здесь <c>Error</c> с именем поля
+        /// и типа: иначе поломка видна только по жалобам на рост, спустя неделю.
+        /// </summary>
+        private static System.Reflection.FieldInfo ResolveSdkField(Type sdkType, string fieldName)
+        {
+            System.Reflection.FieldInfo field = sdkType.GetField(fieldName, SdkPrivateField);
+
+            if (field == null)
+            {
+                GameLog.Error(
+                    $"[PhysicalSpaceSyncManager] В типе {sdkType.FullName} больше нет приватного поля " +
+                    $"\"{fieldName}\". UltimateXR обновился и переименовал его — калибровка роста " +
+                    "работать не будет. См. Docs/UltimateXR/sdk-patches.md, " +
+                    "раздел «Зависимости от приватных членов SDK».");
+            }
+
+            return field;
+        }
+
         private float ExpectedEyeHeight
         {
             get
@@ -40,7 +75,9 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                     var controller = UxrAvatar.LocalAvatar.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
                     if (controller != null)
                     {
-                        var field = typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController).GetField("_bodyIKSettings", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        var field = ResolveSdkField(
+                            typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController), "_bodyIKSettings");
+
                         if (field != null)
                         {
                             var settings = (UltimateXR.Animation.IK.UxrBodyIKSettings)field.GetValue(controller);
@@ -48,6 +85,8 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                         }
                     }
                 }
+
+                // Запасной рост глаз: аватара ещё нет либо настройки IK не достались.
                 return 1.75f;
             }
         }
@@ -374,20 +413,28 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             float relativeScale = _accumulatedScaleMultiplier / oldScale;
             if (Mathf.Approximately(relativeScale, 1f)) return;
 
-            var bodyIKField = typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController).GetField("_bodyIK", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var bodyIK = bodyIKField?.GetValue(controller);
-            if (bodyIK == null) return;
+            var bodyIKField = ResolveSdkField(
+                typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController), "_bodyIK");
+            if (bodyIKField == null) return;
+
+            var bodyIK = bodyIKField.GetValue(controller);
+            if (bodyIK == null)
+            {
+                GameLog.Error("[PhysicalSpaceSyncManager] UxrStandardAvatarController._bodyIK пуст — " +
+                              "пересчитать смещения IK не от чего, аватар останется в старых пропорциях.");
+                return;
+            }
 
             var type = bodyIK.GetType();
 
-            var forwardPosField = type.GetField("_avatarForwardPosRelativeToNeck", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var forwardPosField = ResolveSdkField(type, "_avatarForwardPosRelativeToNeck");
             if (forwardPosField != null)
             {
                 Vector3 val = (Vector3)forwardPosField.GetValue(bodyIK);
                 forwardPosField.SetValue(bodyIK, val * relativeScale);
             }
 
-            var neckPosField = type.GetField("_neckPosRelativeToEyes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var neckPosField = ResolveSdkField(type, "_neckPosRelativeToEyes");
             if (neckPosField != null)
             {
                 Vector3 val = (Vector3)neckPosField.GetValue(bodyIK);

@@ -26,9 +26,9 @@ namespace VrBattlegrounds.Tests.Network
         {
             SilenceMirrorNoise();
 
-            // Команды берём из реального реестра: код ищет победителя через
-            // TeamRegistry.GetByIndex(), синтетические TeamData он не найдёт.
-            // Индексы команд — 1 и 2; 0 зарезервирован под «нет команды».
+            // Команды берём из реального реестра — здесь это уже не вынужденно
+            // (после T-08 подсчёт идёт по переданному составу), а просто ближе к бою.
+            // Индексы команд — 1 и 2; 0 зарезервировано под «нет команды».
             TeamRegistry registry = TeamRegistry.Instance;
             Assert.IsNotNull(registry, "TeamRegistry.Instance не загрузился из Resources");
 
@@ -37,11 +37,8 @@ namespace VrBattlegrounds.Tests.Network
             Assert.IsNotNull(_teamA, "В реестре нет команды с teamIndex=1");
             Assert.IsNotNull(_teamB, "В реестре нет команды с teamIndex=2");
 
-            // TeamRuntimeData после NET-12 ходит через IPlayerRoster и без менеджера
-            // не падает, а вот EliminationMode.IsPlayersReady разыменовывает
-            // PlayersManager.Instance напрямую (находка NET-18) — менеджер нужен ради неё.
-            CreateManager<PlayersManager>("PlayersManager");
-
+            // PlayersManager здесь намеренно не поднимается: после NET-12 и NET-18 режим
+            // спрашивает об игроках только IPlayerRoster и работает без синглтона вовсе.
             _mode = CreateNetworkComponent<EliminationMode>("EliminationMode");
             SpawnOnServer(_mode);
 
@@ -99,6 +96,56 @@ namespace VrBattlegrounds.Tests.Network
             Assert.AreEqual(2, _mode.TeamStates.Count,
                 "Initialize помечен [Server]. Count == 0 означает, что сервер Mirror не поднят " +
                 "и харнесс не работает: все остальные сетевые тесты в этой сборке недостоверны.");
+        }
+
+        /// <summary>
+        /// Находка NET-18: проверка готовности игроков разыменовывала
+        /// <c>PlayersManager.Instance</c> без проверки, и на первом же кадре режим падал
+        /// везде, где менеджера нет, — в сцене, открытой без сети, и в любом тесте логики
+        /// матча. Тот же корень, что у NET-12, лечится так же: вопрос об игроках задаётся
+        /// <see cref="IPlayerRoster"/>, а он отсутствие менеджера переживает.
+        ///
+        /// Тик здесь идёт в состоянии <c>WaitingForPlayers</c> — это единственная ветка,
+        /// которая спрашивает о готовности.
+        /// </summary>
+        [Test, Order(2)]
+        public void Тик_без_PlayersManager_не_падает()
+        {
+            SilenceMirrorNoise();
+
+            Assert.IsNull(PlayersManager.Instance,
+                "Тест проверяет не то, что думает: PlayersManager кто-то поднял, " +
+                "и отсутствие синглтона больше не проверяется.");
+
+            _mode.Initialize(new[] { _teamA, _teamB });
+
+            Assert.DoesNotThrow(() => _mode.ServerTick(RoundFlowDriver.Step),
+                "Режим ждёт игроков и разыменовывает PlayersManager.Instance напрямую (NET-18).\n" +
+                "Без менеджера это NRE на первом же кадре Update.");
+
+            Assert.AreEqual(EliminationMatchState.Active, _mode.CurrentMatchState,
+                "Игроки в реестре есть, значит матч обязан начаться и без PlayersManager:\n" +
+                "после NET-18 единственный источник сведений об игроках — IPlayerRoster,\n" +
+                "и режим целиком запускается в изоляции от синглтонов.");
+        }
+
+        /// <summary>
+        /// Оборотная сторона предыдущего теста: убрав падение, нельзя было заодно
+        /// убрать саму проверку. Пустой реестр — матч стоит и ждёт.
+        /// </summary>
+        [Test, Order(3)]
+        public void Матч_не_начинается_с_пустым_реестром_игроков()
+        {
+            SilenceMirrorNoise();
+
+            _mode.PlayerRoster = new StubPlayerRoster();
+            _mode.Initialize(new[] { _teamA, _teamB });
+
+            _mode.ServerTick(RoundFlowDriver.Step);
+
+            Assert.AreEqual(EliminationMatchState.WaitingForPlayers, _mode.CurrentMatchState,
+                "Игроков нет — матч начинаться не должен. Переход в Active означает,\n" +
+                "что проверка готовности перестала что-либо проверять.");
         }
 
         /// <summary>

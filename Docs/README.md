@@ -135,12 +135,12 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 
 | Класс | Файл | Описание |
 |---|---|---|
-| `GameMode` | `GameModes/GameMode.cs` | Абстрактный базовый класс. Поле `ModeId` — строковый ключ для поиска. Методы: `CheckWinCondition`, `CanRespawn`, `OnRoundEnd`. |
-| `EliminationMode` | `GameModes/EliminationMode/EliminationMode.cs` | Раунд до полного уничтожения команды. ModeId = `elimination`. |
+| `GameMode` | `GameModes/GameMode.cs` | Абстрактный базовый класс. Поле `ModeId` — строковый ключ для поиска. Методы: `CheckWinCondition`, `CanRespawn`, `OnRoundEnd`. Свойство `PlayerRoster` — откуда режим узнаёт об игроках; по умолчанию `PlayersManagerRoster`, в тестах подменяется. Состояния команд (`TeamRuntimeData`) получают этот же реестр в `Initialize`. |
+| `EliminationMode` | `GameModes/EliminationMode/EliminationMode.cs` | Раунд до полного уничтожения команды. ModeId = `elimination`. Сетевая оболочка сета и раунда: `SyncVar` фазы с хуком, `ServerTick`, `ClientRpc` для UI. Таймеры фаз считаются от `NetworkTime` — в сеть уезжает только момент старта фазы (T-19). Отложенные респавны держит списком и снимает в начале каждого раунда (T-10). |
 | `RespawnMode` | `GameModes/RespawnMode.cs` | Возрождение при возврате на спавн. ModeId = `respawn`. |
 | `GameModeData` | `GameModes/GameModeData.cs` | ScriptableObject: `modeId`, `displayName`, `icon`. Создать: `Create > VrBattlegrounds > Game Mode Data`. |
 | `GameModeRegistry` | `GameModes/GameModeRegistry.cs` | ScriptableObject-список режимов. `GetById(modeId)`. Назначить в `GameManager` и `AdminMenuController`. |
-| `IPlayerRoster` | `GameModes/IPlayerRoster.cs` | Узкий доступ логики матча к списку игроков: «кто в этой команде жив». Боевая реализация `PlayersManagerRoster` — обёртка над `PlayersManager.Instance`. Нужен, чтобы машину раунда можно было прогнать EditMode-тестом: живой аватар в EditMode не поднимается. |
+| `IPlayerRoster` | `GameModes/IPlayerRoster.cs` | Узкий доступ логики матча к списку игроков: `GetPlayers(team)`, `GetAlivePlayers(team)`, `GetAllPlayers()`. Боевая реализация `PlayersManagerRoster` — обёртка над `PlayersManager.Instance`, отсутствие менеджера отдаёт пустым списком. **Единственный источник сведений об игроках для режима** (NET-12, NET-18): благодаря этому весь серверный путь матча гоняется EditMode-тестом без живых аватаров и без синглтонов. |
 
 > При добавлении нового режима — создать наследника `GameMode`, переопределить `OnRoundEnd`, `CanRespawn`, `CheckWinCondition`. Не менять базовую логику `RoundManager`.
 
@@ -305,10 +305,12 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 
 | Класс / файл | Назначение |
 |---|---|
-| `SetManagerScoringTests` | Подсчёт победителя сета в `SetManager` — чистая логика, без сети. Раунды проигрываются прокруткой `SetManager.Tick`. |
+| `SetManagerScoringTests` | Подсчёт победителя сета в `SetManager` — чистая логика, без сети. Раунды проигрываются прокруткой `SetManager.Tick`. Команды синтетические, с индексами, которых нет в `TeamRegistry`: так проверяется, что счёт идёт по переданному составу, а не по глобальному реестру (T-08). |
 | `RoundFlowSupport` | Общая оснастка тестов матча: `StubPlayerRoster` (подставной реестр игроков) и `RoundFlowDriver` (прокрутка фиксированным шагом 0.25 с с записью наблюдённых фаз). |
 | `Network/MirrorTestHarness` | Базовый класс сетевых тестов: поднимает Mirror сервером **без сокета** (ярус A) и, по требованию, локального клиента (ярус B). Сбрасывает синглтоны проекта между тестами. Рецепт и границы — [`testing.md`](testing.md#как-тестировать-сетевую-логику). |
-| `Network/EliminationModeServerTests` | Серверная логика режима: заполнение `TeamStates`, одно очко за выигранный сет (T-02). Первый тест — проверка самого харнесса. |
+| `Network/EliminationModeServerTests` | Серверная логика режима: заполнение `TeamStates`, одно очко за выигранный сет (T-02), запуск матча без `PlayersManager` и остановка при пустом реестре (NET-18). Первый тест — проверка самого харнесса. |
+| `Network/RespawnSubscriptionTests` | Жизненный цикл отложенного респавна (T-10, MATCH-05): за три раунда обработчики на `TeamSpawnZone.PlayerEntered` не копятся, а подписка пропущенного раунда не срабатывает в бою следующего. Число подписчиков читается из поля события рефлексией — поднять field-like event снаружи нельзя. |
+| `Network/RoundTimerNetworkTimeTests` | Таймеры фаз через `NetworkTime` (T-19, NET-09): тик внутри фазы не помечает объект грязным (при этом смена фазы — помечает, это контрольный тест), остаток отсчёта и боя считается от момента старта фазы, до боя показывается полная длительность, после боя остаток замирает. |
 | `Network/RoundPhaseFlowTests` | Фазы раунда боевым путём `ServerTick → SetManager → RoundManager` (T-09, MATCH-02): все шесть фаз по порядку, длительность `Resolution` и `Scoreboard` в тиках, рост номера раунда после полного цикла (сторож MATCH-06), запрет заканчивать сет раньше экрана итогов. |
 | `Network/HostClientHarnessTests` | Ярус B: локальный клиент поднялся, `SpawnMessage` доходит до `NetworkClient.spawned`. |
 | `Network/PlayerSessionReplicationTests` | Репликация `PlayerSession` через настоящую сериализацию Mirror: `TeamIndex` и связь с аватаром доезжают до клиента, смена скина переключает связь, гонка спавнов чинится аватаром, `PlayerController.Session` кэшируется (T-11). |

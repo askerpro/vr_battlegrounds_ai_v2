@@ -115,36 +115,38 @@ namespace VrBattlegrounds.GameModes
         /// <summary>
         /// Экран итогов показан целиком. Либо сет продолжается новым раундом,
         /// либо здесь и заканчивается.
+        ///
+        /// Победитель считается в два прохода: сначала максимум очков, потом — сколько
+        /// команд его набрали. Одним проходом это писать нельзя: сравнение с текущим
+        /// максимумом на первой же итерации даёт <c>0 == 0</c> и взводит ничью до того,
+        /// как посчитан хоть один результат, а дальше исход зависит от порядка обхода
+        /// словаря, который в C# не гарантирован (MATCH-04).
         /// </summary>
         private void DecideAfterScoreboard()
         {
             int roundsToWin = _roundsPerSet / 2 + 1;
-            TeamData setWinner = null;
-            int highestRounds = 0;
-            bool isTie = false;
 
+            // Проход 1 — максимум очков за раунды.
+            int highestRounds = 0;
             foreach (var kvp in _teamRoundScores)
             {
-                if (kvp.Value > highestRounds)
-                {
-                    highestRounds = kvp.Value;
-                    setWinner = TeamRegistry.Instance.GetByIndex(kvp.Key);
-                    isTie = false;
-                }
-                else if (kvp.Value == highestRounds)
-                {
-                    isTie = true;
-                }
-
-                if (kvp.Value >= roundsToWin)
-                {
-                    setWinner = TeamRegistry.Instance.GetByIndex(kvp.Key);
-                    isTie = false;
-                    break;
-                }
+                if (kvp.Value > highestRounds) highestRounds = kvp.Value;
             }
 
-            if (isTie) setWinner = null;
+            // Проход 2 — сколько команд набрали этот максимум и кто первая из них.
+            int leadersCount = 0;
+            TeamData leader = null;
+            foreach (var kvp in _teamRoundScores)
+            {
+                if (kvp.Value != highestRounds) continue;
+
+                leadersCount++;
+                if (leader == null) leader = FindTeam(kvp.Key);
+            }
+
+            // Ничья — это либо несколько лидеров, либо нулевой максимум: если никто
+            // не выиграл ни одного раунда, победителя у сета нет даже при одной команде.
+            TeamData setWinner = highestRounds > 0 && leadersCount == 1 ? leader : null;
 
             if (highestRounds >= roundsToWin || _currentRound >= _roundsPerSet)
             {
@@ -154,6 +156,22 @@ namespace VrBattlegrounds.GameModes
             {
                 StartNextRound();
             }
+        }
+
+        /// <summary>
+        /// Команда сета по её индексу. Ищется в составе, переданном в <see cref="StartSet"/>,
+        /// а не в глобальном <c>TeamRegistry</c>: сет обязан считаться от того состава,
+        /// с которым его начали. Через реестр отсутствующий индекс молча превращался
+        /// в <c>null</c>, то есть в «ничью», а сам подсчёт нельзя было проверить
+        /// без загруженного реестра (T-08).
+        /// </summary>
+        private TeamData FindTeam(int teamIndex)
+        {
+            foreach (TeamData team in _teams)
+            {
+                if (team != null && team.teamIndex == teamIndex) return team;
+            }
+            return null;
         }
 
         /// <summary>

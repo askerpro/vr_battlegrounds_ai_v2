@@ -42,6 +42,23 @@ namespace VrBattlegrounds.GameModes
         protected readonly SyncDictionary<int, int> _teamScores = new SyncDictionary<int, int>();
         protected readonly Dictionary<int, TeamRuntimeData> _teamStates = new Dictionary<int, TeamRuntimeData>();
 
+        private IPlayerRoster _roster;
+
+        /// <summary>
+        /// Откуда режим узнаёт о подключённых игроках. По умолчанию — боевой реестр
+        /// поверх <see cref="PlayersManager"/>, который отсутствие менеджера переживает
+        /// (NET-12, NET-18). Точка подмены для EditMode-тестов: с заглушкой весь серверный
+        /// путь режима прогоняется без живых аватаров и без синглтонов.
+        ///
+        /// Ставить только до <c>Initialize</c>: состояния команд запоминают реестр в момент
+        /// создания.
+        /// </summary>
+        public IPlayerRoster PlayerRoster
+        {
+            get => _roster ?? (_roster = new PlayersManagerRoster());
+            set => _roster = value;
+        }
+
         /// <summary>Команды, участвующие в матче.</summary>
         public TeamData[] Teams => _teams;
 
@@ -141,7 +158,7 @@ namespace VrBattlegrounds.GameModes
                 {
                     _syncedTeamIndices.Add(t.teamIndex);
                     _teamScores[t.teamIndex] = 0;
-                    _teamStates[t.teamIndex] = new TeamRuntimeData(t, this);
+                    _teamStates[t.teamIndex] = new TeamRuntimeData(t, this, PlayerRoster);
                 }
             }
         }

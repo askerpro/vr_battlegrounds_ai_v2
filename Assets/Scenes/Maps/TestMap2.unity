@@ -179,6 +179,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -200,9 +202,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!33 &1420668107
 MeshFilter:
@@ -296,6 +300,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 548083280364229341, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
+      propertyPath: sceneId
+      value: 935054731
+      objectReference: {fileID: 0}
+    - target: {fileID: 2961095821286075536, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
+      propertyPath: sceneId
+      value: 1007314139
+      objectReference: {fileID: 0}
+    - target: {fileID: 4332166325931728795, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
+      propertyPath: sceneId
+      value: 1801043516
+      objectReference: {fileID: 0}
+    - target: {fileID: 4515658723285516358, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
+      propertyPath: sceneId
+      value: 2319350496
+      objectReference: {fileID: 0}
+    - target: {fileID: 6084656020976144292, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
+      propertyPath: sceneId
+      value: 1158881197
+      objectReference: {fileID: 0}
     - target: {fileID: 8186738890033574889, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
       propertyPath: m_Name
       value: Environment
@@ -339,6 +363,18 @@ PrefabInstance:
     - target: {fileID: 8228492788742738035, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8294163928438652244, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
+      propertyPath: sceneId
+      value: 1038046024
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497057729906975629, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
+      propertyPath: sceneId
+      value: 4083417182
+      objectReference: {fileID: 0}
+    - target: {fileID: 8878870182442061572, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
+      propertyPath: sceneId
+      value: 2217804287
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

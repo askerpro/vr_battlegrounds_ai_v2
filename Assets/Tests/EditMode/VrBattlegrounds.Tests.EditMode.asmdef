@@ -4,6 +4,7 @@
     "references": [
         "VrBattlegrounds",
         "Mirror",
+        "Mirror.Components",
         "Mirror.Transports",
         "kcp2k",
         "UltimateXR",

@@ -414,6 +414,65 @@ int currentPlayers = PlayersManager.Instance.Sessions.Count();
 а не по `.exe`. Дирижёр `Run-E2E.ps1` так и делает — берёт максимум из обоих, — а вот
 глазами дату `.exe` читать бесполезно.
 
+### NET-20 · Критично · После разрыва клиент не может переподключиться до перезапуска процесса
+
+> Найдено 2026-08-19 при построении сценария `session-recovery-on-reconnect` (ярус C).
+> Воспроизведено прогоном пять раз подряд, диагностировано по состоянию статик Mirror.
+
+**Где:** `Assets/Scripts/Managers/PersistentRoot.cs` ·
+`Assets/Scripts/PhysicalSpaceUtils/PhysicalSpaceSyncManager.cs:145-152`
+(в связке с `Mirror/Core/NetworkManager.cs:675-700, 951-960`)
+
+Цепочка целиком:
+
+1. Соединение рвётся. `NetworkManager.OnClientDisconnectInternal` гасит клиента, выносит
+   объект `NetworkManager` из `DontDestroyOnLoad` в текущую сцену и через кадр грузит
+   `offlineScene` (`Assets/Scenes/Offline.unity`) — то есть **уничтожает сам себя**
+   загрузкой этой сцены.
+2. Загрузка ставит `NetworkClient.isLoadingScene = true` и заполняет
+   `NetworkManager.loadingSceneAsync`. Закрыть их обязан `UpdateScene()` из `LateUpdate`
+   того самого менеджера, которого уже нет.
+3. Сцена `Offline` поднимает **вторую** копию префаба `--- MANAGERS ---`. `PersistentRoot`
+   дубликаты не отсеивает (в нём нет проверки `Instance`), поэтому копия создаётся целиком,
+   а разбирают её по частям сами менеджеры: `PhysicalSpaceSyncManager.Awake` видит занятый
+   `Instance` и делает `Destroy(gameObject)` — **на корне ветки**, потому что висит
+   на самом корне префаба.
+4. `GameNetworkManager` просыпается позже (порядок `-1800` против `-1860`), и Mirror
+   в `InitializeSingleton` уводит его из-под обречённого корня: `transform.SetParent(null)`.
+   Объект переживает уничтожение ветки, но остаётся **выключенным**: Unity перестаёт
+   вызывать его сообщения ещё в момент `Destroy` родителя. Наблюдалось прямо:
+   `NetworkManager.singleton` не null, `mode` меняется на `ClientOnly`, а
+   `isActiveAndEnabled == false`. По той же причине `GameNetworkDiscovery.Start` на новой
+   копии не выполняется — Discovery после разрыва не ищет сервер вообще.
+5. Итог: `LateUpdate` менеджера не вызывается никогда, `isLoadingScene` навсегда `true`.
+   А `NetworkClient.OnTransportData` при взведённом флаге **не разбирает входящие сообщения**
+   (`NetworkClient.cs:346`). Клиент физически подключается — KCP-хендшейк проходит, сервер
+   видит соединение авторизованным, — но не видит ни `SceneMessage`, ни спавнов, навсегда
+   остаётся в `Offline` и сессии не получает.
+
+**Последствие.** Любой разрыв — кик, потеря сети, выход в лобби через `StopClient` —
+делает клиент неработоспособным до перезапуска приложения. На Quest это выглядит как
+«вылетел из матча и больше не заходит». Восстановление сессии (ARCH-01) при этом
+недостижимо в принципе: возвращаться некому.
+
+**Как чинить (не сделано, нужна отдельная задача).** Три независимых слоя, чинить стоит
+все:
+
+- `PersistentRoot` обязан отсеивать дубликат целиком в `Awake` (проверка `Instance`
+  на корне), а не позволять разбирать ветку по одному компоненту. Тогда `Destroy` корня
+  не понадобится и `GameNetworkManager` не окажется зомби;
+- `PhysicalSpaceSyncManager` не должен звать `Destroy(gameObject)` для компонента,
+  висящего на **корне** общей ветки: это выходит за границы его ответственности;
+- после разрыва нужен явный путь возврата (перезапуск `GameNetworkDiscovery`), иначе
+  клиент, даже исправный, никого не ищет.
+
+Сценарий `session-recovery-on-reconnect` обходит пункты 2 и 4 руками — включает объект
+менеджера и сбрасывает `isLoadingScene`, — обход помечен в коде ссылкой на эту находку.
+Без обхода проверять ARCH-01 нечем; но обход и есть доказательство: после него
+переподключение проходит с первого раза.
+
+---
+
 ### MATCH-01 · Критично · Двойная подписка удваивает счёт сетов
 
 **Где:** `EliminationMode.cs:121` (InitializeActiveGame) и `:201` (StartNextSet)
@@ -574,9 +633,16 @@ _roundManager.StartNextRound(_eliminationMode);   // ← RoundManager, счёт�
 остаётся в исходных пропорциях. Коллайдеры едут за костями — стрелять надо в одно место,
 а видно другое.
 
-Смещение высоты (`_accumulatedHeightOffset`) при этом реплицируется: оно двигает
-`CameraController`, а на камере `NetworkTransform` в мировых координатах есть.
-**Расходится именно масштаб.**
+> **Поправка 2026-08-19.** Утверждение «смещение высоты при этом реплицируется» было
+> **неверным**, и это ошибка аудита, а не кода. Проверено: у всех 14 `NetworkTransform`
+> в аватарных префабах `coordinateSpace: 0`, а это `Local`
+> (`Mirror/Components/NetworkTransform/NetworkTransformBase.cs:25`) — синхронизируется
+> `localPosition` того объекта, на котором висит компонент. `ApplyHeightDelta` двигает
+> `CameraController`, то есть **родителя** камеры, а на нём `NetworkTransform` нет ни
+> у одного из шести префабов.
+>
+> Значит не реплицируется и смещение высоты тоже — заведено отдельной находкой **VR-08**.
+> Масштаб исправлен в T-14 независимо.
 
 > Требует подтверждения в редакторе: предположение о выключенном `syncScale` на префабе
 > аватара сделано по коду настройки UltimateXR, сам префаб не открывался.
@@ -677,6 +743,94 @@ GameLog.Info(GameSettings.Instance.LogLevelPlayer,
 
 **Как чинить.** Проверить, чем этот префаб отличается от остальных пяти — вероятно
 он собран не по общему шаблону. Правка префабная, не кодовая.
+
+> **Разобрано 2026-08-19. Формулировка уточнена, суть подтверждена и усилена.**
+>
+> Объект `Camera Controller` у `Heavy_Soldier_Base_Avatar` **есть** — но не там, где его
+> ищет SDK. Префаб единственный из шести является вариантом `PlayerBase.prefab`
+> (Military_Cap, Military_Soldier, Spy и PlayerControllersCyborgAvatar — варианты
+> `Assets/ThirdParty/UltimateXR/Runtime/Prefabs/Avatars/CyborgAvatar_URP.prefab`).
+> В нём удалены **все три** унаследованных ребёнка корня — `Camera Controller`, `Cyborg`,
+> `BigHandsIntegration`, — а вместо них добавлен вложенный префаб
+> `Assets/Prefabs/Avatars/Heavy_Soldier_Rig_Mask_Winter.prefab`, у которого свой
+> `Camera Controller/Camera` внутри. То есть пивот камеры лежит **на уровень глубже**,
+> чем у остальных пяти.
+>
+> Почему это хуже, чем «объекта нет». `UxrAvatar.InitializeCamera`
+> (`Assets/ThirdParty/UltimateXR/Runtime/Scripts/Avatar/UxrAvatar.cs:1285-1304`) ищет пивот
+> подъёмом от камеры вверх, пока родитель не станет корнем аватара. У Heavy подъём
+> останавливается на `Heavy_Soldier_Rig_Mask_Winter`, и `UxrAvatar.CameraController`
+> указывает на **весь риг вместе с телом, костями, карманами и IK-руками**. Условие выхода
+> из цикла при этом выполнено, поэтому предупреждение SDK «Error finding Camera Controller»
+> **не печатается** — подмена происходит молча. `PhysicalSpaceSyncManager.ApplyHeightDelta`
+> (`:376-382`) двигает `CameraController.localPosition`: у пяти аватаров это смещает камеру,
+> у Heavy — персонажа целиком. Дополнительно затронуты `UxrAvatar.SetCameraAtFloorLevel`
+> и `_startCameraControllerHeight`.
+>
+> Вторая половина находки подтверждается как есть: `NetworkTransform` у Heavy ровно один,
+> на корне. У остальных пяти их два и больше, второй — на объекте `Camera`.
+>
+> **Ещё расхождения между шестью префабами** (этой задачей не чинятся, зафиксированы,
+> чтобы не искать заново):
+>
+> | Расхождение | Кто отличается |
+> |---|---|
+> | База наследования | Heavy — вариант `PlayerBase`; четыре других — варианты `CyborgAvatar_URP`; `PlayerBase` — самостоятельный префаб |
+> | `NetworkTransform` на кистях `Hand_Left`/`Hand_Right` | есть только у `PlayerBase` и `PlayerControllersCyborgAvatar` (всего по 4 NT); у Military_Cap / Military_Soldier / Spy — 2, у Heavy — 1 |
+> | `BoxCollider` + `Rigidbody` на объекте `Camera` | нет только у Heavy |
+> | `UxrCameraFade` на камере | только у Heavy |
+> | `UxrDummyControllerInput` на корне | только у Heavy |
+> | `LegsAnimator` + `LegsAnimatorUxrBridge` | только у Heavy (на корне рига) |
+> | `Ghost`, `BackGrabProxy` | только у `PlayerBase` и `PlayerControllersCyborgAvatar` |
+> | `MagazinePocket`, `Anchor_Hip_R`, `Anchor_Back` | нет у Military_Cap / Military_Soldier / Spy |
+> | Висячая запись `m_RemovedGameObjects: 1333949650355697866` | у Military_Cap / Military_Soldier / Spy; в `CyborgAvatar_URP` такого объекта нет — след старого обновления SDK |
+> | `PlayerLoadoutManager`, `NetworkAnimator` | нет ни у одного из шести |
+>
+> Настройки самих `NetworkTransformUnreliable` у всех тринадцати штук **идентичны**:
+> `syncDirection: ClientToServer`, `syncPosition: 1`, `syncRotation: 1`, `syncScale: 0`,
+> `onlySyncOnChange: 1`, `compressRotation: 1`, `coordinateSpace: Local`,
+> чувствительности 0.01. Расходится только их наличие.
+>
+> Сторож на будущее уже есть: EditMode-тесты
+> `PrefabCompositionTests.У_каждого_аватара_пивот_камеры_прямой_потомок_корня` и
+> `PrefabCompositionTests.У_каждого_аватара_камера_несёт_NetworkTransform` красны
+> на текущем состоянии проекта и позеленеют после правки префаба.
+
+---
+
+### VR-08 · Высокий · Смещение высоты не реплицируется ни у одного аватара
+
+> Найдено 2026-08-19 при разборе VR-07. Проверено чтением YAML всех шести префабов
+> и исходников Mirror, не предположением.
+
+**Где:** `Assets/Scripts/PhysicalSpaceUtils/PhysicalSpaceSyncManager.cs:373-383` ·
+`NetworkTransform` на объекте `Camera` во всех аватарных префабах
+
+Заметка в [VR-01](#vr-01--высокий--калибровка-роста-меняет-геометрию-только-локально)
+утверждает: «Смещение высоты (`_accumulatedHeightOffset`) при этом реплицируется: оно
+двигает `CameraController`, а на камере `NetworkTransform` в мировых координатах есть».
+Вторая половина утверждения неверна.
+
+- `ApplyHeightDelta` меняет `CameraController.localPosition` — то есть позицию **родителя**
+  камеры.
+- `NetworkTransform` стоит на самой `Camera`, и у всех тринадцати экземпляров во всех шести
+  префабах `coordinateSpace: 0`. В этой версии Mirror `enum CoordinateSpace { Local, World }`
+  (`Components/NetworkTransform/NetworkTransformBase.cs:25`), то есть 0 — это **Local**,
+  и синхронизируется `target.localPosition` (`:167`).
+- Локальная позиция камеры относительно `Camera Controller` при калибровке пола **не
+  меняется** — меняется позиция самого контроллера. На объекте `Camera Controller`
+  `NetworkTransform` нет ни у одного из шести префабов.
+
+**Последствие.** Реплицируется только трекинг головы внутри игровой зоны. Смещение,
+которое даёт калибровка пола, остаётся локальным: на чужих экранах игрок стоит на исходной
+высоте. Это ровно то последствие, которое VR-07 приписывает одному префабу, — на деле оно
+общее для всех шести, а `Heavy_Soldier_Base_Avatar` вдобавок теряет и сам трекинг головы
+(у него нет второго `NetworkTransform` вовсе).
+
+**Как чинить (не сделано).** Вешать `NetworkTransform` на `Camera Controller`, а не на
+`Camera` — либо переводить существующий на `CoordinateSpace.World`. Первое дешевле по
+трафику (контроллер двигается только при калибровке), но тогда трекинг головы требует
+своего канала. Решение стоит принимать вместе с задачей по VR-07: обе про один узел.
 
 ---
 

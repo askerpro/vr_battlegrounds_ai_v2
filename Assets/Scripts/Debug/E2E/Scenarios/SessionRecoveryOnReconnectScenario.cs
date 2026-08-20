@@ -395,8 +395,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     $"за 180 с клиент с токеном '{deviceToken}' не вернулся. Сейчас на сервере: " +
                     $"{DescribeSessions()}; {DescribeConnections()}; " +
                     $"сцена сервера='{NetworkManager.networkSceneName}'. " +
-                    "Возврат клиент выполняет сам (сценарий зовёт StartClient): " +
-                    "штатного автоматического переподключения в игре нет — см. NET-20. " +
+                    "Возврат инициирует сам сценарий прямым StartClient, не дожидаясь " +
+                    "UDP-броадкаста Discovery. Первое, что стоит проверить в client-1.log, — " +
+                    "не завис ли клиент с isLoadingScene=true и выключенным NetworkManager: " +
+                    "так выглядит возврат находки NET-20. " +
                     "Смотри client-1.log.");
                 result.Summary = "клиент не переподключился — вердикт о восстановлении вынести нельзя";
                 yield break;
@@ -602,13 +604,17 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             // ── Возврат ───────────────────────────────────────────────────
-            // Сам процесс возврата в игре не автоматизирован, и это отдельная
-            // находка (см. NET-20 в аудите): после разрыва Mirror уводит клиента
-            // в сцену Offline, но её копия префаба менеджеров — дубликат, и
-            // GameNetworkDiscovery из неё до Start не доживает. Прежний экземпляр
-            // роль уже выбрал (CurrentRole != null) и повторно её не применяет,
-            // поэтому Discovery больше никого не ищет. Значит переподключается
-            // сам сценарий — иначе проверять восстановление было бы не на чем.
+            // После разрыва Mirror уводит клиента в сцену Offline, а её копия
+            // префаба менеджеров поднимает новый GameNetworkDiscovery, который
+            // в билде сам выбирает роль Client и снова начинает искать сервер.
+            // До исправления NET-20 этого не происходило: дубликат ветки гасили
+            // прямо в Awake, и «спасшийся» объект Mirror оставался выключенным —
+            // ни Discovery, ни LateUpdate менеджера не работали.
+            //
+            // Сценарий всё равно подключается сам, прямым StartClient: ждать
+            // UDP-броадкаст дольше и менее детерминированно, а проверяем мы здесь
+            // восстановление сессии, а не работу Discovery. ConnectDirectly
+            // останавливает Discovery, поэтому два пути не гоняются наперегонки.
             //
             // deviceToken при этом не меняется: он лежит в PlayerPrefs
             // с самого старта харнесса, а GameNetworkManager.SendConnectMessage
@@ -644,7 +650,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             GameLog.Info(Log, $"[E2E] Разрыв обработан (менеджер сменился={managerReplaced}), " +
                               $"начинаю возврат. {DescribeNetwork()}");
 
-            yield return ReviveClientAfterOfflineScene();
+            ReportClientStateAfterOfflineScene();
 
             deadline = Now + 60f;
             float nextAttempt = 0f;
@@ -691,39 +697,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             deadline = Now + 60f;
             nextReport = Now + 15f;
-            float stuckSince = -1f;
 
             while (!HasFreshSession(firstSessionNetId) && Now < deadline)
             {
-                // Тот же NET-20, но уже на загрузке карты: сцена карты активна,
-                // а Mirror по-прежнему считает, что грузится, и потому не объявляет
-                // клиента готовым. Ready() зовётся из OnClientSceneChanged, а его
-                // зовёт FinishLoadScene — тот самый шаг, который не выполняется.
-                bool loadLooksFinished = NetworkClient.isLoadingScene &&
-                                         SceneManager.GetActiveScene().name == context.Map;
-
-                if (!loadLooksFinished)
-                {
-                    stuckSince = -1f;
-                }
-                else if (stuckSince < 0f)
-                {
-                    stuckSince = Now;
-                }
-                else if (Now - stuckSince > 5f)
-                {
-                    GameLog.Warning(Log, $"[E2E] Карта '{context.Map}' уже активна, а Mirror всё ещё " +
-                                         "считает её загружающейся — довожу шаг вручную (NET-20).");
-
-                    NetworkManager.loadingSceneAsync = null;
-                    NetworkClient.isLoadingScene = false;
-
-                    if (NetworkManager.singleton != null)
-                        NetworkManager.singleton.OnClientSceneChanged();
-
-                    stuckSince = -1f;
-                }
-
                 if (Now >= nextReport)
                 {
                     GameLog.Info(Log, $"[E2E] Жду новую сессию: {DescribeNetwork()}");
@@ -822,58 +798,43 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         }
 
         /// <summary>
-        ///     Приводит клиента в состояние, из которого возможно переподключение.
+        ///     Снимок состояния клиента сразу после возврата в сцену <c>Offline</c>.
         ///
         ///     <para>
-        ///     Зачем это вообще нужно (находка <b>NET-20</b>). После разрыва Mirror
-        ///     уводит клиента в сцену <c>Offline</c>, и загрузка этой сцены уничтожает
-        ///     тот самый <c>NetworkManager</c>, который её начал. Закрыть загрузку
-        ///     обязан <c>UpdateScene()</c> из <c>LateUpdate</c> менеджера — а звать его
-        ///     некому. В результате навсегда остаются взведёнными
-        ///     <c>NetworkClient.isLoadingScene</c> и <c>NetworkManager.loadingSceneAsync</c>,
-        ///     а <c>NetworkClient.OnTransportData</c> при взведённом флаге <b>не разбирает
-        ///     входящие сообщения вовсе</b>. Соединение устанавливается, сервер шлёт
-        ///     <c>SceneMessage</c> — клиент его не видит, остаётся в <c>Offline</c>
-        ///     и сессии не получает. Проверено прогоном.
+        ///     Метод <b>ничего не чинит</b> — только пишет в лог. Здесь был обход
+        ///     находки <b>NET-20</b>: сценарий руками включал объект
+        ///     <c>NetworkManager</c> и сбрасывал <c>NetworkClient.isLoadingScene</c>,
+        ///     иначе клиент не разбирал входящие сообщения и переподключиться
+        ///     не мог в принципе. Обход снят: возврат в строй после разрыва —
+        ///     ответственность игрового кода, а не харнесса, и именно это утверждение
+        ///     сценарий теперь и проверяет.
         ///     </para>
         ///
         ///     <para>
-        ///     Сценарий снимает эти флаги, чтобы проверять восстановление сессии,
-        ///     а не этот отказ. Правкой игрового кода это не является: трогаются
-        ///     только статики Mirror внутри тестового процесса.
+        ///     Диагностику оставили: если переподключение снова сломается, первая
+        ///     же строка лога покажет, в каком из трёх состояний застрял клиент —
+        ///     менеджера нет, менеджер выключен, или флаг загрузки сцены не снят.
         ///     </para>
         /// </summary>
-        private IEnumerator ReviveClientAfterOfflineScene()
+        private void ReportClientStateAfterOfflineScene()
         {
             NetworkManager manager = NetworkManager.singleton;
 
-            // Сначала — самый безобидный случай: менеджер есть, но его Unity-сообщения
-            // не вызываются. Тогда достаточно вернуть объект в строй, и Mirror
-            // доведёт загрузку сам.
-            if (manager != null && !manager.isActiveAndEnabled)
-            {
-                GameLog.Warning(Log, $"[E2E] NetworkManager '{manager.gameObject.name}' неактивен — " +
-                                     "его LateUpdate не вызывается, значит UpdateScene никогда не закроет " +
-                                     "загрузку сцены. Включаю объект.");
-                manager.gameObject.SetActive(true);
-                manager.enabled = true;
+            if (manager == null)
+                GameLog.Warning(Log, "[E2E] После возврата в Offline NetworkManager.singleton пуст.");
+            else if (!manager.isActiveAndEnabled)
+                GameLog.Warning(Log, $"[E2E] После возврата в Offline NetworkManager '{manager.gameObject.name}' " +
+                                     "неактивен: его LateUpdate не вызывается, значит UpdateScene никогда " +
+                                     "не закроет загрузку сцены (NET-20).");
 
-                float wait = Now + 3f;
-                while (Now < wait)
-                    yield return null;
-            }
+            if (NetworkClient.isLoadingScene || NetworkManager.loadingSceneAsync != null)
+                GameLog.Warning(Log, "[E2E] После возврата в Offline у клиента не снят признак загрузки сцены " +
+                                     $"(isLoadingScene={NetworkClient.isLoadingScene}, " +
+                                     $"loadingSceneAsync={(NetworkManager.loadingSceneAsync != null)}). " +
+                                     "При взведённом флаге NetworkClient.OnTransportData не разбирает входящие " +
+                                     "сообщения вовсе — переподключение невозможно (NET-20).");
 
-            if (!NetworkClient.isLoadingScene && NetworkManager.loadingSceneAsync == null)
-                yield break;
-
-            GameLog.Warning(Log, "[E2E] У клиента зависла загрузка сцены после возврата в Offline " +
-                                 $"(isLoadingScene={NetworkClient.isLoadingScene}, " +
-                                 $"loadingSceneAsync={(NetworkManager.loadingSceneAsync != null)}). " +
-                                 "Снимаю флаги вручную — это NET-20: без обхода клиент не разбирает " +
-                                 "входящие сообщения и переподключиться не может в принципе.");
-
-            NetworkManager.loadingSceneAsync = null;
-            NetworkClient.isLoadingScene = false;
+            GameLog.Info(Log, $"[E2E] Состояние клиента после возврата в Offline: {DescribeNetwork()}");
         }
 
         /// <summary>Состояние сети клиента одной строкой — единственный способ разобрать зависший возврат по логу.</summary>

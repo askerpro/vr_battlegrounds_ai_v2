@@ -76,6 +76,46 @@ namespace VrBattlegrounds.Player
         /// <summary>Верхняя граница пропорций: выше начинается уже не игрок, а способ занять пол-арены.</summary>
         public const float MaxCalibrationScale = 1.5f;
 
+        /// <summary>
+        /// Смещение пола, снятое первым шагом калибровки высоты: на столько поднят
+        /// пивот камеры относительно префаба. Ноль — «пол не калибровался».
+        ///
+        /// <para>
+        /// Живёт здесь по той же причине, что и <see cref="CalibrationScale" />: это
+        /// характеристика физического пространства игрока, она переживает смену скина,
+        /// команды и карты, а аватар при каждом из этих событий пересоздаётся.
+        /// </para>
+        ///
+        /// <para>
+        /// До этой правки смещение не уезжало никуда (<b>VR-08</b>).
+        /// <c>ApplyHeightDelta</c> двигает <c>UxrAvatar.CameraController</c> — родителя
+        /// камеры, — а <c>NetworkTransform</c> во всех шести аватарных префабах стоит
+        /// на самой <c>Camera</c> и синхронизирует <c>localPosition</c>
+        /// (<c>coordinateSpace: Local</c>). Локальная позиция камеры относительно
+        /// пивота при калибровке пола не меняется — меняется позиция пивота, а на нём
+        /// <c>NetworkTransform</c> нет ни у одного префаба. Итог: на чужих экранах
+        /// игрок стоял на исходной высоте.
+        /// </para>
+        /// </summary>
+        [SyncVar(hook = nameof(OnCalibrationHeightOffsetChanged))]
+        public float CalibrationHeightOffset;
+
+        /// <summary>
+        /// Предел смещения пола по модулю, метры. Значение приходит от клиента и двигает
+        /// голову аватара, то есть точку попадания в неё, — поэтому граница жёсткая
+        /// и проверяется на сервере. Полтора метра с запасом перекрывают любую разницу
+        /// между виртуальным полом и физическим.
+        /// </summary>
+        public const float MaxCalibrationHeightOffset = 1.5f;
+
+        /// <summary>
+        /// Сколько смещения уже наложено на <b>текущий</b> аватар. Нужен, потому что
+        /// <see cref="PhysicalSpaceSyncManager.ShiftAvatarCameraPivot" /> сдвигает, а не
+        /// ставит: базовая высота пивота у каждого префаба своя. Обнуляется при смене
+        /// аватара — новый приходит из префаба, то есть со сдвигом ноль.
+        /// </summary>
+        private float _appliedHeightOffset;
+
         // ── Статус готовности (Round State) ───────────────────────────────────
         
         [SyncVar] public bool IsInSpawnZone = false;
@@ -213,11 +253,12 @@ namespace VrBattlegrounds.Player
 
             if (!_subscribedToCalibration)
             {
-                sync.OnHeightCalibrationCompleted += PublishLocalCalibrationScale;
+                sync.OnHeightCalibrationCompleted += PublishLocalCalibration;
+                sync.OnFloorHeightCalibrated += PublishLocalCalibration;
                 _subscribedToCalibration = true;
             }
 
-            PublishLocalCalibrationScale();
+            PublishLocalCalibration();
         }
 
         private void UnsubscribeFromLocalCalibration()
@@ -225,18 +266,27 @@ namespace VrBattlegrounds.Player
             if (!_subscribedToCalibration) return;
 
             PhysicalSpaceSyncManager sync = PhysicalSpaceSyncManager.Instance;
-            if (sync != null) sync.OnHeightCalibrationCompleted -= PublishLocalCalibrationScale;
+            if (sync != null)
+            {
+                sync.OnHeightCalibrationCompleted -= PublishLocalCalibration;
+                sync.OnFloorHeightCalibrated -= PublishLocalCalibration;
+            }
 
             _subscribedToCalibration = false;
         }
 
-        /// <summary>Отправляет серверу текущий результат калибровки роста.</summary>
-        private void PublishLocalCalibrationScale()
+        /// <summary>
+        /// Отправляет серверу текущий результат калибровки физического пространства:
+        /// пропорции игрока и смещение пола. Оба значения снимаются одной процедурой
+        /// в два шага, поэтому и уезжают вместе.
+        /// </summary>
+        private void PublishLocalCalibration()
         {
             PhysicalSpaceSyncManager sync = PhysicalSpaceSyncManager.Instance;
             if (sync == null) return;
 
             CmdSetCalibrationScale(sync.AccumulatedScaleMultiplier);
+            CmdSetCalibrationHeightOffset(sync.AccumulatedHeightOffset);
         }
 
         // ── SyncVar Hooks ─────────────────────────────────────────────────────
@@ -274,6 +324,16 @@ namespace VrBattlegrounds.Player
             ApplyCalibrationScale();
         }
 
+        /// <summary>
+        /// Приехало новое смещение пола. Ставим его аватару на этой машине.
+        /// Если аватара ещё нет — молчим: смещение доложит <see cref="ApplyCalibrationHeightOffset" />
+        /// из <see cref="LinkAvatar" />, когда аватар заспавнится.
+        /// </summary>
+        private void OnCalibrationHeightOffsetChanged(float oldOffset, float newOffset)
+        {
+            ApplyCalibrationHeightOffset();
+        }
+
         // ── Разрешение связи ──────────────────────────────────────────────────
 
         /// <summary>Ищет аватар по <see cref="ActiveAvatarNetId"/> и обновляет кэш.</summary>
@@ -301,12 +361,18 @@ namespace VrBattlegrounds.Player
 
             _activeAvatar = avatar;
 
+            // Новый аватар пришёл из префаба, то есть пивот камеры у него не сдвинут.
+            // Счётчик наложенного обязан обнулиться раньше, чем ApplyCalibrationHeightOffset
+            // посчитает, сколько досылать.
+            _appliedHeightOffset = 0f;
+
             if (avatar != null) avatar.LinkSession(this);
 
             // Аватар пересоздаётся при смене скина, команды и карты, а пропорции игрока
             // живут в сессии и переживают это. Досылаем их каждому новому аватару —
             // иначе после первой же смены скина игрок снова стал бы стандартного роста.
             ApplyCalibrationScale();
+            ApplyCalibrationHeightOffset();
 
             if (LocalSession == this) LocalAvatarChanged?.Invoke(avatar);
         }
@@ -325,6 +391,37 @@ namespace VrBattlegrounds.Player
             if (uxrAvatar == null) return;
 
             PhysicalSpaceSyncManager.ApplyScaleToAvatar(uxrAvatar, CalibrationScale);
+        }
+
+        /// <summary>
+        /// Ставит <see cref="CalibrationHeightOffset" /> пивоту камеры текущего аватара.
+        /// Зовётся с тех же двух сторон, что и <see cref="ApplyCalibrationScale" />, и
+        /// по той же причине: порядок «приехал SyncVar» и «появился аватар» не определён.
+        ///
+        /// <para>
+        /// <b>Свой аватар пропускается.</b> Ему смещение уже наложил
+        /// <c>PhysicalSpaceSyncManager.ApplyAvatarHeight</c> при спавне — там же ставится
+        /// <c>UxrControllerTracking.GlobalHeightOffset</c>, отвечающий за трекинг
+        /// собственных рук. Наложить второй раз значило бы поднять себя вдвое, а
+        /// разбирать здесь, «сколько уже сделал менеджер», — завести второго владельца
+        /// у одного значения. Владелец локального смещения — менеджер, владелец
+        /// удалённого — сессия.
+        /// </para>
+        /// </summary>
+        private void ApplyCalibrationHeightOffset()
+        {
+            if (_activeAvatar == null) return;
+
+            var uxrAvatar = _activeAvatar.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+            if (uxrAvatar == null) return;
+
+            if (ReferenceEquals(uxrAvatar, UltimateXR.Avatar.UxrAvatar.LocalAvatar)) return;
+
+            float delta = CalibrationHeightOffset - _appliedHeightOffset;
+            if (Mathf.Approximately(delta, 0f)) return;
+
+            PhysicalSpaceSyncManager.ShiftAvatarCameraPivot(uxrAvatar, delta);
+            _appliedHeightOffset = CalibrationHeightOffset;
         }
 
         /// <summary>
@@ -423,6 +520,60 @@ namespace VrBattlegrounds.Player
             }
 
             normalized = Mathf.Clamp(scale, MinCalibrationScale, MaxCalibrationScale);
+            return true;
+        }
+
+        /// <summary>
+        /// Клиент сообщает результат калибровки пола. Дальше значение расходится
+        /// SyncVar-ом, и каждая машина сдвигает пивот камеры своего экземпляра
+        /// этого аватара.
+        ///
+        /// Границы проверяются на сервере по той же причине, что и у масштаба:
+        /// смещение двигает голову аватара, то есть точку попадания в неё.
+        /// </summary>
+        [Command]
+        public void CmdSetCalibrationHeightOffset(float offset)
+        {
+            if (!TryNormalizeCalibrationHeightOffset(offset, out float normalized))
+            {
+                GameLog.Warning(GameSettings.Instance.LogLevelPlayer,
+                    $"[PlayerSession] {PlayerName}: пришло нечисловое смещение пола — запрос отброшен.");
+                return;
+            }
+
+            if (!Mathf.Approximately(normalized, offset))
+            {
+                GameLog.Warning(GameSettings.Instance.LogLevelPlayer,
+                    $"[PlayerSession] {PlayerName}: смещение пола {offset:F2} м вне границ " +
+                    $"±{MaxCalibrationHeightOffset:F2} м — обрезано до {normalized:F2} м.");
+            }
+
+            CalibrationHeightOffset = normalized;
+
+            // На выделенном сервере хук SyncVar не вызывается — Mirror зовёт его только
+            // в host-режиме, — поэтому применяем здесь же: попадания считает сервер,
+            // а смещение двигает голову.
+            ApplyCalibrationHeightOffset();
+
+            GameLog.Info(GameSettings.Instance.LogLevelPlayer,
+                $"[PlayerSession] {PlayerName}: смещение пола принято сервером — {normalized:F2} м");
+        }
+
+        /// <summary>
+        /// Приводит присланное клиентом смещение пола к допустимому. Вынесен отдельным
+        /// чистым методом по той же причине, что и <see cref="TryNormalizeCalibrationScale" />:
+        /// тело <c>[Command]</c> weaver переписывает и напрямую из теста его не вызвать.
+        /// </summary>
+        /// <returns><c>false</c>, если значение нечисловое и принимать его нельзя вовсе.</returns>
+        public static bool TryNormalizeCalibrationHeightOffset(float offset, out float normalized)
+        {
+            if (float.IsNaN(offset) || float.IsInfinity(offset))
+            {
+                normalized = 0f;
+                return false;
+            }
+
+            normalized = Mathf.Clamp(offset, -MaxCalibrationHeightOffset, MaxCalibrationHeightOffset);
             return true;
         }
 

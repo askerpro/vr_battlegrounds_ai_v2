@@ -102,6 +102,16 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         /// </summary>
         public float AccumulatedScaleMultiplier => _accumulatedScaleMultiplier;
 
+        /// <summary>
+        /// Результат калибровки пола: суммарный вертикальный сдвиг пивота камеры, метры.
+        /// Ноль означает «пол не калибровался».
+        ///
+        /// Как и масштаб, значение локальное по происхождению и общее по применению:
+        /// без него чужие машины показывают игрока на исходной высоте (VR-08).
+        /// Наружу его отдаёт <c>PlayerSession.CalibrationHeightOffset</c>.
+        /// </summary>
+        public float AccumulatedHeightOffset => _accumulatedHeightOffset;
+
         public enum HeightCalibrationPhase { None, Floor, PlayerScale }
         public HeightCalibrationPhase CurrentHeightCalibrationPhase { get; private set; } = HeightCalibrationPhase.None;
 
@@ -128,6 +138,17 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         public event Action OnHeightCalibrationStarted;
         public event Action OnHeightCalibrationCompleted;
 
+        /// <summary>
+        /// Отработал первый шаг калибровки высоты — синхронизация пола, — и
+        /// <see cref="AccumulatedHeightOffset" /> изменился.
+        ///
+        /// Отдельное событие, а не <see cref="OnHeightCalibrationCompleted" />, потому
+        /// что «завершено» поднимается только после второго шага (масштаб). Игрок,
+        /// который откалибровал пол и до масштаба не дошёл, иначе не разослал бы
+        /// свою высоту вообще.
+        /// </summary>
+        public event Action OnFloorHeightCalibrated;
+
         public bool TryGetSavedAvatarTransform(out Vector3 position, out Quaternion rotation)
         {
             if (_preserveAvatarPositionAcrossScenes && _lastSavedAvatarPosition.HasValue && _lastSavedAvatarRotation.HasValue)
@@ -142,17 +163,34 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             return false;
         }
 
+        /// <summary>
+        /// Отсев дубликата — только собственного компонента.
+        ///
+        /// <para>
+        /// Здесь стоял <c>Destroy(gameObject)</c>, и это была находка <b>NET-20</b>:
+        /// компонент висит на <b>корне</b> общей ветки менеджеров, поэтому уничтожал
+        /// не себя, а всех соседей разом. Отсев дубликата всей ветки — работа
+        /// <see cref="Managers.PersistentRoot" />, который делает это в <c>Start</c>,
+        /// когда все <c>Awake</c> отработали. Ранний <c>Destroy</c> корня оставлял
+        /// выключенным <c>NetworkManager</c>, успевший уйти из ветки своим ходом.
+        /// </para>
+        /// </summary>
         private void Awake()
         {
             if (Instance != null && Instance != this)
             {
-                Destroy(gameObject);
+                Destroy(this);
                 return;
             }
             Instance = this;
 
             // DontDestroyOnLoad обеспечивается родительским PersistentRoot.
             // Вызов DontDestroyOnLoad напрямую вызывает ошибку, если объект не корневой.
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
         }
 
         private void OnEnable()
@@ -340,6 +378,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 _accumulatedHeightOffset += deltaY;
 
                 ApplyHeightDelta(deltaY);
+                OnFloorHeightCalibrated?.Invoke();
 
                 CurrentHeightCalibrationPhase = HeightCalibrationPhase.PlayerScale;
                 GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, $"[PhysicalSpaceSyncManager] Phase 1 Floor Registered. Delta: {deltaY}. Phase 2: Stand upright and press Button 1 to calibrate scale.");
@@ -374,15 +413,53 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             if (deltaY == 0f) return;
 
             // 1. Смещаем системную камеру локально
-            var cameraController = UxrAvatar.LocalAvatar.CameraController;
-            if (cameraController != null)
+            ShiftAvatarCameraPivot(UxrAvatar.LocalAvatar, deltaY);
+
+            // 2. Смещаем трекинг рук глобально, изменяя константу в исходниках UXR.
+            //    Это про руки своего игрока, поэтому в ShiftAvatarCameraPivot не уехало:
+            //    чужому аватару глобальный офсет трекинга не нужен и вреден.
+            UltimateXR.Devices.UxrControllerTracking.GlobalHeightOffset = _accumulatedHeightOffset;
+        }
+
+        /// <summary>
+        /// Сдвигает пивот камеры <b>любого</b> аватара по вертикали — своего или чужого.
+        ///
+        /// <para>
+        /// Вынесено из <see cref="ApplyHeightDelta" /> по той же причине, по которой
+        /// в T-14 вынесли <see cref="ApplyScaleToAvatar" />: результат калибровки пола
+        /// нужен не только той машине, где калибровались. Тело удалённого аватара
+        /// собирает <c>UxrBodyIK</c>, и шею он ставит от мировой позиции камеры
+        /// (<c>UxrBodyIK.cs:227</c>), а <c>UxrManager</c> решает IK у <b>всех</b>
+        /// аватаров, не только у локального (<c>UxrManager.cs:1901-1908</c>). Значит
+        /// не сдвинутый пивот на чужой машине — это не «невидимая камера не там»,
+        /// а игрок, стоящий не на своей высоте (находка VR-08).
+        /// </para>
+        ///
+        /// <para>
+        /// Сдвиг, а не установка: базовая высота пивота у каждого префаба своя, и
+        /// абсолютное значение потребовало бы её знать. Учёт того, сколько уже
+        /// наложено, ведёт вызывающая сторона — <c>PlayerSession</c>, у которой
+        /// на каждый аватар ровно одна связь и известен момент её появления.
+        /// </para>
+        /// </summary>
+        /// <param name="avatar">Аватар-получатель. <c>null</c> игнорируется молча.</param>
+        /// <param name="deltaY">Насколько сдвинуть пивот вверх, метры.</param>
+        public static void ShiftAvatarCameraPivot(UxrAvatar avatar, float deltaY)
+        {
+            if (avatar == null || deltaY == 0f) return;
+
+            Transform cameraController = avatar.CameraController;
+
+            if (cameraController == null)
             {
-                var localPos = cameraController.localPosition;
-                cameraController.localPosition = new Vector3(localPos.x, localPos.y + deltaY, localPos.z);
+                GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace,
+                    $"[PhysicalSpaceSyncManager] У аватара '{avatar.name}' нет пивота камеры — " +
+                    "смещение высоты применить некуда.");
+                return;
             }
 
-            // 2. Смещаем трекинг рук глобально, изменяя константу в исходниках UXR
-            UltimateXR.Devices.UxrControllerTracking.GlobalHeightOffset = _accumulatedHeightOffset;
+            Vector3 localPos = cameraController.localPosition;
+            cameraController.localPosition = new Vector3(localPos.x, localPos.y + deltaY, localPos.z);
         }
 
         public void ApplyAvatarHeight()
@@ -452,12 +529,16 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             // Пересчитываем мировые векторы смещения внутри приватных переменных UxrBodyIK с помощью рефлексии.
             //
-            // Для удалённого аватара (UxrAvatarMode.UpdateExternally) эта правка холостая:
-            // UxrManager решает body IK только у аватара с AvatarMode.Local, остальным крутит
-            // лишь позы кистей. Видимый размер там задаёт один localScale выше. Правку всё равно
-            // делаем безусловно, а не по AvatarMode: режим аватару проставляет UxrMirrorAvatar,
-            // и ветвление по нему привязало бы масштаб к порядку инициализации сети. Холостая
-            // запись в два Vector3 дешевле такой зависимости.
+            // Правка нужна и удалённому аватару, а не только своему. Здесь раньше стояло
+            // обратное утверждение — «UxrManager решает body IK только у аватара с
+            // AvatarMode.Local» — и оно неверно: на стадии Animation действительно
+            // обновляется только локальный, а вот PostProcess, где и вызывается
+            // SolveBodyIK, UxrManager прогоняет по EnabledAvatarControllers, то есть
+            // по всем (UxrManager.cs:1901-1908). Отдельно от Animation крутится только
+            // UpdateHandPoseTransforms.
+            //
+            // Поэтому же VR-08 вообще заметна глазом: шею удалённого аватара ставит
+            // тот же IK от мировой позиции камеры (UxrBodyIK.cs:227).
             float relativeScale = scaleMultiplier / oldScale;
             if (Mathf.Approximately(relativeScale, 1f)) return;
 

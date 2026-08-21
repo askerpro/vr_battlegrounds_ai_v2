@@ -29,7 +29,6 @@ namespace VrBattlegrounds.DevTools.E2E
         private float _startedRealtime;
         private bool _finished;
 
-        private LogLevel Log => GameSettings.Instance.LogLevelDebug;
 
         // ── Бутстрап ───────────────────────────────────────────────────────
 
@@ -70,7 +69,7 @@ namespace VrBattlegrounds.DevTools.E2E
             // от «плеер не стартовал».
             _result.WriteTo(_context.ResultPath);
 
-            GameLog.Info(Log, $"[E2E] Старт харнесса: {_context}");
+            GameLog.Debug.Info($"[E2E] Старт харнесса: {_context}");
         }
 
         private void Start()
@@ -154,9 +153,9 @@ namespace VrBattlegrounds.DevTools.E2E
             _result.DurationSeconds = Time.realtimeSinceStartup - _startedRealtime;
             _result.WriteTo(_context.ResultPath);
 
-            GameLog.Info(Log, $"[E2E] Вердикт: passed={_result.Passed}, status={_result.Status}, {_result.Summary}");
+            GameLog.Debug.Info($"[E2E] Вердикт: passed={_result.Passed}, status={_result.Status}, {_result.Summary}");
             foreach (E2ECheck check in _result.Checks)
-                GameLog.Info(Log, $"[E2E]   [{(check.Passed ? "OK  " : "FAIL")}] {check.Name} — {check.Detail}");
+                GameLog.Debug.Info($"[E2E]   [{(check.Passed ? "OK  " : "FAIL")}] {check.Name} — {check.Detail}");
 
             // Клиентские роли держат процесс живым до конца прогона: если клиент
             // выйдет раньше сервера, сервер потеряет игрока и его вердикт станет

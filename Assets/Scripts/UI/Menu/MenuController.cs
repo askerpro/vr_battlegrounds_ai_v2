@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UltimateXR.Avatar;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.UI.Menu
 {
@@ -24,7 +25,7 @@ namespace VrBattlegrounds.UI.Menu
         {
             if (Instance != null && Instance != this)
             {
-                Debug.LogWarning("[MenuController] Новое меню заменяет старый (ещё не удалённый) инстанс.");
+                GameLog.UI.Warning("[MenuController] Новое меню заменяет старый (ещё не удалённый) инстанс.");
             }
             Instance = this;
         }
@@ -33,7 +34,7 @@ namespace VrBattlegrounds.UI.Menu
         {
             if (view == null)
             {
-                Debug.LogError("[MenuController] Cannot initialize with a null MenuView.");
+                GameLog.Error("[MenuController] Cannot initialize with a null MenuView.");
                 return;
             }
 
@@ -45,7 +46,7 @@ namespace VrBattlegrounds.UI.Menu
 
             if (_currentView.MenuRoot == null)
             {
-                Debug.LogError("[MenuController] MenuView.MenuRoot is not assigned!");
+                GameLog.Error("[MenuController] MenuView.MenuRoot is not assigned!");
                 return;
             }
 
@@ -55,7 +56,7 @@ namespace VrBattlegrounds.UI.Menu
             {
                 if (screen.ScreenType == MenuScreenType.None)
                 {
-                    Debug.LogWarning($"[MenuController] MenuScreen '{screen.name}' has no type assigned (None). Ignored.");
+                    GameLog.UI.Warning($"[MenuController] MenuScreen '{screen.name}' has no type assigned (None). Ignored.");
                     continue;
                 }
 
@@ -65,7 +66,7 @@ namespace VrBattlegrounds.UI.Menu
                 }
                 else
                 {
-                    Debug.LogWarning($"[MenuController] Duplicate MenuScreenType {screen.ScreenType} found on '{screen.name}'. Ignored.");
+                    GameLog.UI.Warning($"[MenuController] Duplicate MenuScreenType {screen.ScreenType} found on '{screen.name}'. Ignored.");
                 }
             }
 
@@ -142,7 +143,7 @@ namespace VrBattlegrounds.UI.Menu
         {
             if (!_screens.ContainsKey(screenType))
             {
-                Debug.LogWarning($"[MenuController] Attempted to switch to unknown screen type: {screenType}");
+                GameLog.UI.Warning($"[MenuController] Attempted to switch to unknown screen type: {screenType}");
                 return;
             }
 

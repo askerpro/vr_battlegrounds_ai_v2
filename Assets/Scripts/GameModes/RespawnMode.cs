@@ -42,7 +42,7 @@ namespace VrBattlegrounds.GameModes
             _matchActive = true;
 
             string teamsStr = string.Join(", ", Teams.Select(t => t != null ? t.displayName : "null"));
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[RespawnMode] Матч начат: {teamsStr}, время: {_matchDuration}с");
             
             RpcOnMatchStarted();
@@ -52,7 +52,7 @@ namespace VrBattlegrounds.GameModes
         public override void StopGameplay()
         {
             _matchActive = false;
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[RespawnMode] Матч остановлен.");
         }
 
@@ -91,7 +91,7 @@ namespace VrBattlegrounds.GameModes
                 killerState.AddScore(1);
             }
 
-            GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Verbose(
                 $"[RespawnMode] Фраг: {killer.name} ({killerTeam.displayName}).");
         }
 
@@ -119,7 +119,7 @@ namespace VrBattlegrounds.GameModes
             if (isTie) winner = null;
 
             string winnerName = winner != null ? winner.displayName : "ничья";
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[RespawnMode] Таймер истёк. Победитель: {winnerName}. Макс. фрагов: {maxFrags}");
 
             RaiseGameplayEnded(winner);

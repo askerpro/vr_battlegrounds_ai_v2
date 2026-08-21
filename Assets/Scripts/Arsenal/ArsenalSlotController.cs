@@ -78,7 +78,6 @@ namespace VrBattlegrounds.Arsenal
         // ── State ──────────────────────────────────────────────
         protected bool IsLocked { get; private set; }
         private GameObject _spawnedItem;
-        protected LogLevel ArsenalLog => GameSettings.Instance.LogLevelArsenal;
 
         // ── Unity ──────────────────────────────────────────────
 
@@ -138,7 +137,7 @@ namespace VrBattlegrounds.Arsenal
         {
             if (_weaponInfo == null || spawnedItem == null)
             {
-                GameLog.Warning(ArsenalLog, $"[Arsenal] Slot '{name}' failed to assign network item (missing info or object).");
+                GameLog.Arsenal.Warning($"[Arsenal] Slot '{name}' failed to assign network item (missing info or object).");
                 return;
             }
 
@@ -158,7 +157,7 @@ namespace VrBattlegrounds.Arsenal
             if (weaponComp == null) weaponComp = _spawnedItem.AddComponent<WeaponComponent>();
             weaponComp.Init(_weaponInfo);
 
-            GameLog.Info(ArsenalLog, $"[Arsenal] Assigned network weapon '{_weaponInfo.DisplayName}' to slot '{name}'.");
+            GameLog.Arsenal.Info($"[Arsenal] Assigned network weapon '{_weaponInfo.DisplayName}' to slot '{name}'.");
 
             // Оружие приезжает позже, чем стена успевает заблокировать слоты: закрытая
             // стена блокирует их в Start(), а пополнение идёт из OnStartServer и из фазы
@@ -193,7 +192,7 @@ namespace VrBattlegrounds.Arsenal
             SetItemGrabbable(false);
 
             SetLightState(false);
-            GameLog.Info(ArsenalLog, $"[Arsenal] Slot '{DisplayName}' locked.");
+            GameLog.Arsenal.Info($"[Arsenal] Slot '{DisplayName}' locked.");
         }
 
         /// <summary>
@@ -206,7 +205,7 @@ namespace VrBattlegrounds.Arsenal
             SetItemGrabbable(true);
 
             SetLightColor(_availableColor);
-            GameLog.Info(ArsenalLog, $"[Arsenal] Slot '{DisplayName}' unlocked.");
+            GameLog.Arsenal.Info($"[Arsenal] Slot '{DisplayName}' unlocked.");
         }
 
         /// <summary>
@@ -243,7 +242,7 @@ namespace VrBattlegrounds.Arsenal
         {
             if (IsLocked) return;
 
-            GameLog.Info(ArsenalLog, $"[Arsenal] Item returned to slot '{DisplayName}'.");
+            GameLog.Arsenal.Info($"[Arsenal] Item returned to slot '{DisplayName}'.");
             SetLightColor(_availableColor);
             OnItemReturned?.Invoke(this);
         }
@@ -252,7 +251,7 @@ namespace VrBattlegrounds.Arsenal
         {
             if (IsLocked) return;
 
-            GameLog.Info(ArsenalLog, $"[Arsenal] Item taken from slot '{DisplayName}'.");
+            GameLog.Arsenal.Info($"[Arsenal] Item taken from slot '{DisplayName}'.");
             SetLightColor(_takenColor);
             OnItemTaken?.Invoke(this);
         }

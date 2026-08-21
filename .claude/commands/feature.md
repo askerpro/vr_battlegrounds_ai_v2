@@ -28,7 +28,7 @@ description: Добавить новую фичу по архитектуре п
 | Сеть | `NetworkBehaviour`, `[SyncVar]`, `[Command]`, `[ClientRpc]` |
 | Здоровье и смерть | Подписка на `UxrActor.Death` / `UxrActor.DamageReceived` |
 | Смена сцены | Только `MapManager.Instance.LoadMap()` |
-| Логирование | Только `GameLog.*` с категорией из `GameSettings` |
+| Логирование | Только канал категории: `GameLog.Match.Info(...)`, `GameLog.UI.Warning(...)` |
 | Editor-утилита | Только `Assets/Editor/VR_Battlegrounds/<категория>/` |
 
 Жёсткие правила и почему они жёсткие — в `CLAUDE.md`.

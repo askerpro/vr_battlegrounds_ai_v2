@@ -102,7 +102,7 @@ namespace VrBattlegrounds.Managers
             }
 
             _disconnectedSessions[deviceToken] = snapshot;
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[SessionRecoveryManager] Saved session for {session.PlayerName} (Token: {deviceToken}).");
+            GameLog.Player.Info($"[SessionRecoveryManager] Saved session for {session.PlayerName} (Token: {deviceToken}).");
 
             DropExpiredSnapshots();
             DropOldestWhileOverLimit();
@@ -120,7 +120,7 @@ namespace VrBattlegrounds.Managers
             if (_disconnectedSessions.TryGetValue(deviceToken, out SessionSnapshot snapshot))
             {
                 _disconnectedSessions.Remove(deviceToken);
-                GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[SessionRecoveryManager] Restoring session for {snapshot.PlayerName} (Token: {deviceToken}).");
+                GameLog.Player.Info($"[SessionRecoveryManager] Restoring session for {snapshot.PlayerName} (Token: {deviceToken}).");
                 return snapshot;
             }
 
@@ -156,7 +156,7 @@ namespace VrBattlegrounds.Managers
 
             foreach (string token in expired)
             {
-                GameLog.Info(GameSettings.Instance.LogLevelPlayer,
+                GameLog.Player.Info(
                     $"[SessionRecoveryManager] Снимок {_disconnectedSessions[token].PlayerName} (Token: {token}) " +
                     $"старше {_snapshotLifetimeMinutes} мин — выброшен.");
                 _disconnectedSessions.Remove(token);
@@ -187,7 +187,7 @@ namespace VrBattlegrounds.Managers
 
                 if (oldestToken == null) return; // защита от зацикливания
 
-                GameLog.Info(GameSettings.Instance.LogLevelPlayer,
+                GameLog.Player.Info(
                     $"[SessionRecoveryManager] Хранилище переполнено ({_maxStoredSnapshots}) — " +
                     $"выброшен самый старый снимок (Token: {oldestToken}).");
                 _disconnectedSessions.Remove(oldestToken);

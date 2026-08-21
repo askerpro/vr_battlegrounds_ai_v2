@@ -58,7 +58,7 @@ namespace VrBattlegrounds.Arsenal
                 foreach (var rb in _spawnedMagazine.GetComponentsInChildren<Rigidbody>(true))
                     rb.isKinematic = true;
 
-                GameLog.Info(ArsenalLog, $"[Arsenal] Spawned decorative magazine for '{WeaponData.DisplayName}'.");
+                GameLog.Arsenal.Info($"[Arsenal] Spawned decorative magazine for '{WeaponData.DisplayName}'.");
             }
         }
 

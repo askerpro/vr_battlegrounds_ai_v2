@@ -206,7 +206,7 @@ namespace VrBattlegrounds.GameModes
         protected override void StartGameplay()
         {
             _matchState = EliminationMatchState.WaitingForPlayers;
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[EliminationMode] Матч инициализирован. Ждем игроков.");
+            GameLog.Match.Info("[EliminationMode] Матч инициализирован. Ждем игроков.");
         }
 
         [Server]
@@ -221,7 +221,7 @@ namespace VrBattlegrounds.GameModes
             _setManager = new SetManager(_roundManager, OnSetEnded);
 
             string teamsStr = string.Join(" vs ", Teams.Select(t => t != null ? t.displayName : "null"));
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[EliminationMode] Активная игра начата: {teamsStr}, " +
                 $"сетов: {_maxSets}, раундов в сете: {_roundsPerSet}");
 
@@ -241,7 +241,7 @@ namespace VrBattlegrounds.GameModes
             // Раунда больше не будет — ждать возвращения в зону некому и незачем.
             ClearPendingRespawns();
 
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[EliminationMode] Матч остановлен.");
         }
 
@@ -395,7 +395,7 @@ namespace VrBattlegrounds.GameModes
         {
             if (_roundManager == null || _roundManager.State != RoundState.Combat) return;
 
-            GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Verbose(
                 $"[EliminationMode] Игрок {player.name} погиб — проверяем условие победы");
 
             TeamData winner = CheckRoundWinCondition();
@@ -441,14 +441,14 @@ namespace VrBattlegrounds.GameModes
                     // Если игрок уже в зоне - респавним сразу
                     if (zone.GetPlayersInZone().Contains(player))
                     {
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                        GameLog.Match.Info(
                             $"[EliminationMode] Игрок {player.name} уже в зоне — респаун сразу.");
                         player.Respawn(zone.transform);
                     }
                     else
                     {
                         // Если нет - создаем разовое событие для респауна при входе
-                        GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                        GameLog.Match.Info(
                             $"[EliminationMode] Игрок {player.name} не в зоне — ожидание возвращения для респауна.");
 
                         PendingRespawn pending = new PendingRespawn { Zone = zone };
@@ -460,7 +460,7 @@ namespace VrBattlegrounds.GameModes
                             _pendingRespawns.Remove(pending);
 
                             p.Respawn(z.transform);
-                            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                            GameLog.Match.Info(
                                 $"[EliminationMode] Игрок {player.name} вернулся в зону — отложенный респаун выполнен.");
                         };
 
@@ -544,7 +544,7 @@ namespace VrBattlegrounds.GameModes
             _roundStateApplied = true;
             _appliedRoundState = state;
 
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[EliminationMode] Фаза раунда: {state}");
             OnRoundStateChangedLocal?.Invoke(state);
         }

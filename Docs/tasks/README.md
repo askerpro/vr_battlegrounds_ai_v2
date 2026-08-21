@@ -116,7 +116,7 @@
 | [T-02](T-02-fix-double-subscribe.md) | Убрать двойную подписку `SetEnded` | MATCH-01 | — | — | 3 | 10 мин | ✅ |
 | [T-03](T-03-fix-apply-avatar-transform.md) | Починить `Vector3.Scale` в `ApplyAvatarTransform` | VR-02 | — | — | 5 | 15 мин | 🔧 |
 | [T-04](T-04-session-recovery-avatar-ref.md) | `session.ActiveAvatar` вместо `conn.identity` | NET-05 | — | T-11 | C | 15 мин | ✅ |
-| [T-05](T-05-gamelog-owns-category.md) | `GameLog` знает свою категорию | BUILD-02, Корень 5 | — | — | 0 | полдня | ⬜ |
+| [T-05](T-05-gamelog-owns-category.md) | `GameLog` знает свою категорию | BUILD-02, Корень 5 | — | — | C | полдня | ✅ |
 | [T-06](T-06-android-build-gate.md) | Ворота компиляции под Android | — | T-01 | — | 0 | 1 час | ✅ |
 | [T-07](T-07-test-assembly-and-first-tests.md) | Сборка тестов + юнит-тесты | — | — | T-08, T-09 | 1 | 1 день | ✅ |
 | [T-25](T-25-setmanager-round-counter.md) | Счётчик раундов в `SetManager` не растёт | MATCH-06 | — | — | 1 | 30 мин | ✅ |

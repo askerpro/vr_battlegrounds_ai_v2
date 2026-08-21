@@ -64,19 +64,19 @@ namespace VrBattlegrounds.Managers
         {
             if (!NetworkServer.active)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, "[MapManager] LoadMap вызван не на сервере — игнорируем.");
+                GameLog.Network.Warning("[MapManager] LoadMap вызван не на сервере — игнорируем.");
                 return;
             }
 
             if (string.IsNullOrEmpty(sceneName))
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, "[MapManager] LoadMap: пустое имя сцены — игнорируем.");
+                GameLog.Network.Warning("[MapManager] LoadMap: пустое имя сцены — игнорируем.");
                 return;
             }
 
             if (IsLoading)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, $"[MapManager] LoadMap: уже идёт загрузка, запрос на '{sceneName}' игнорируется.");
+                GameLog.Network.Warning($"[MapManager] LoadMap: уже идёт загрузка, запрос на '{sceneName}' игнорируется.");
                 return;
             }
 
@@ -104,7 +104,7 @@ namespace VrBattlegrounds.Managers
 
             if (!ConnectionsSettled())
             {
-                GameLog.Verbose(GameSettings.Instance.LogLevelNetwork,
+                GameLog.Network.Verbose(
                     $"[MapManager] Загрузка карты '{sceneName}': ждём, пока Mirror закончит AddPlayer " +
                     $"({DescribeUnsettled()})...");
 
@@ -116,7 +116,7 @@ namespace VrBattlegrounds.Managers
             // (Ready, SpawnObjects) до того, как мы сменим сцену.
             yield return null;
 
-            GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[MapManager] ServerChangeScene: {sceneName}");
+            GameLog.Network.Info($"[MapManager] ServerChangeScene: {sceneName}");
             CurrentMap = sceneName;
             NetworkManager.singleton.ServerChangeScene(sceneName);
 

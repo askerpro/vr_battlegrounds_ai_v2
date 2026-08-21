@@ -101,7 +101,7 @@ namespace VrBattlegrounds.Managers
         {
             if (_isDuplicate)
             {
-                GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Info(
                     $"[PersistentRoot] Сцена подняла вторую копию ветки менеджеров ('{gameObject.name}') — " +
                     "уничтожаю её целиком. Живой корень поднялся при старте процесса и пережил смену сцены.");
 

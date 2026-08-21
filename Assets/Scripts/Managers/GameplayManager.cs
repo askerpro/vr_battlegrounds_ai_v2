@@ -148,7 +148,7 @@ namespace VrBattlegrounds.Managers
         {
             if (_currentState != GameplayState.NotActive)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelMatch, "[GameplayManager] Матч уже идёт или на паузе");
+                GameLog.Match.Warning("[GameplayManager] Матч уже идёт или на паузе");
                 return;
             }
 
@@ -202,7 +202,7 @@ namespace VrBattlegrounds.Managers
 
             _currentState = GameplayState.Active;
 
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[GameplayManager] Запуск режима: {gameModeData.modeId} ({gameModeData.displayName})");
 
             _gameMode.StartGameplayWhenReady();
@@ -217,7 +217,7 @@ namespace VrBattlegrounds.Managers
         {
             if (_currentState == GameplayState.NotActive)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelMatch, "[GameplayManager] StopGameplay: матч не активен");
+                GameLog.Match.Warning("[GameplayManager] StopGameplay: матч не активен");
                 return;
             }
 
@@ -225,7 +225,7 @@ namespace VrBattlegrounds.Managers
             CleanupGameMode();
 
             _currentState = GameplayState.NotActive;
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[GameplayManager] Матч остановлен администратором");
+            GameLog.Match.Info("[GameplayManager] Матч остановлен администратором");
             RpcOnMatchStopped();
         }
 
@@ -235,7 +235,7 @@ namespace VrBattlegrounds.Managers
             if (_currentState == GameplayState.Active)
             {
                 _currentState = GameplayState.Paused;
-                GameLog.Info(GameSettings.Instance.LogLevelMatch, "[GameplayManager] Матч поставлен на паузу");
+                GameLog.Match.Info("[GameplayManager] Матч поставлен на паузу");
             }
         }
 
@@ -245,7 +245,7 @@ namespace VrBattlegrounds.Managers
             if (_currentState == GameplayState.Paused)
             {
                 _currentState = GameplayState.Active;
-                GameLog.Info(GameSettings.Instance.LogLevelMatch, "[GameplayManager] Матч снят с паузы");
+                GameLog.Match.Info("[GameplayManager] Матч снят с паузы");
             }
         }
 
@@ -256,7 +256,7 @@ namespace VrBattlegrounds.Managers
             _currentState = GameplayState.NotActive;
 
             string winnerName = winner != null ? winner.displayName : "ничья";
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[GameplayManager] Матч завершён, победитель: {winnerName}");
 
             GameplayEnded?.Invoke(winner);
@@ -283,14 +283,14 @@ namespace VrBattlegrounds.Managers
         [ClientRpc]
         private void RpcOnGameplayEnded(string winnerName)
         {
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[GameplayManager] Матч завершён (клиент), победитель: {winnerName}");
         }
 
         [ClientRpc]
         private void RpcOnMatchStopped()
         {
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[GameplayManager] Матч остановлен (клиент)");
+            GameLog.Match.Info("[GameplayManager] Матч остановлен (клиент)");
         }
 
         /// <summary>
@@ -314,7 +314,7 @@ namespace VrBattlegrounds.Managers
         [Server]
         public void ProcessTeamChangeRequest(PlayerSession session, int newTeamId, int newAvatarId)
         {
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[GameplayManager] Игрок {session.PlayerName} запросил смену: Команда {newTeamId}, Скин {newAvatarId}");
 
             // 1. Уведомляем другие системы (GameMode, Stats)

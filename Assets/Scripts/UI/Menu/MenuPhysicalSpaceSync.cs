@@ -19,7 +19,7 @@ namespace VrBattlegrounds.UI.Menu
             }
             else
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelUI, "[MenuCalibration] PhysicalSpaceSyncManager is not found in the scene! Ensure it is attached to the Global Managers.");
+                GameLog.UI.Warning("[MenuCalibration] PhysicalSpaceSyncManager is not found in the scene! Ensure it is attached to the Global Managers.");
             }
         }
 
@@ -31,7 +31,7 @@ namespace VrBattlegrounds.UI.Menu
             }
             else
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelUI, "[MenuCalibration] PhysicalSpaceSyncManager is not found!");
+                GameLog.UI.Warning("[MenuCalibration] PhysicalSpaceSyncManager is not found!");
             }
         }
     }

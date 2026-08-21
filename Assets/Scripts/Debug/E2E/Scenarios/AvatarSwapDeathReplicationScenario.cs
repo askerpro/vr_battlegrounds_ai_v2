@@ -118,7 +118,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// <summary>Сколько событий канала состояния сервер породил за текущую фазу.</summary>
         private int _stateEventsInPhase;
 
-        private LogLevel Log => GameSettings.Instance.LogLevelDebug;
 
         public IEnumerator Run(E2EContext context, E2EResult result)
         {
@@ -211,7 +210,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return null;
 
                 string teamsReport = AssignTeams(sessionManager);
-                GameLog.Info(Log, $"[E2E] Команды распределены: {teamsReport}");
+                GameLog.Debug.Info($"[E2E] Команды распределены: {teamsReport}");
 
                 MapManager.Instance.LoadMap(context.Map);
 
@@ -314,7 +313,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     yield break;
                 }
 
-                GameLog.Info(Log, $"[E2E] Смена аватара у {Describe(swapTarget)} ({swapReason}); " +
+                GameLog.Debug.Info($"[E2E] Смена аватара у {Describe(swapTarget)} ({swapReason}); " +
                                   $"жертва {Describe(victim)}");
 
                 // ── 5. Контроль: смерть ДО смены аватара ──────────────────
@@ -482,7 +481,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             if (!NetworkClient.isConnected && !string.IsNullOrEmpty(context.ServerAddress))
             {
-                GameLog.Info(Log, $"[E2E] Discovery молчит 30 с, подключаюсь напрямую к {context.ServerAddress}");
+                GameLog.Debug.Info($"[E2E] Discovery молчит 30 с, подключаюсь напрямую к {context.ServerAddress}");
 
                 Mirror.Discovery.NetworkDiscovery discovery = Object.FindFirstObjectByType<Mirror.Discovery.NetworkDiscovery>();
                 if (discovery != null)
@@ -571,7 +570,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 if (phase != lastPhase)
                 {
-                    GameLog.Info(Log, $"[E2E] Клиент видит фазу прогона: {phase}");
+                    GameLog.Debug.Info($"[E2E] Клиент видит фазу прогона: {phase}");
                     lastPhase = phase;
                 }
 
@@ -607,7 +606,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     {
                         local.CmdSetDogTagGrabbed(seesDead);
                         sentDead = seesDead;
-                        GameLog.Info(Log, $"[E2E] Клиент сообщает серверу: вижу мёртвого={seesDead}");
+                        GameLog.Debug.Info($"[E2E] Клиент сообщает серверу: вижу мёртвого={seesDead}");
                     }
 
                     if (phase == PhaseControlKill && seesDead) sawDeadControl = true;
@@ -937,7 +936,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 return;
 
             orchestrator.enabled = false;
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 "[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
         }
     }

@@ -89,7 +89,7 @@ namespace VrBattlegrounds.UI.Menu
 
             if (availableTeams == null || availableTeams.Length == 0)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelUI,
+                GameLog.UI.Warning(
                     "[MenuTeamSelection] Нет доступных команд для отображения!");
                 return;
             }
@@ -132,12 +132,12 @@ namespace VrBattlegrounds.UI.Menu
             TeamData team = TeamRegistry.Instance?.GetByIndex(teamIndex);
             if (team == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelUI,
+                GameLog.UI.Warning(
                     $"[MenuTeamSelection] Команда с teamIndex={teamIndex} не найдена в TeamRegistry");
                 return;
             }
 
-            GameLog.Info(GameSettings.Instance.LogLevelUI,
+            GameLog.UI.Info(
                 $"[MenuTeamSelection] Выбрана команда: {team.displayName} (Index: {team.teamIndex}). Переход к скинам.");
 
             if (_level1TeamSelection) _level1TeamSelection.SetActive(false);
@@ -156,7 +156,7 @@ namespace VrBattlegrounds.UI.Menu
 
             if (team.avatars == null || team.avatars.Count == 0)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelUI,
+                GameLog.UI.Warning(
                     $"[MenuTeamSelection] У команды {team.displayName} нет доступных скинов.");
                 _selectedAvatarIndex = 0;
                 return;
@@ -191,12 +191,12 @@ namespace VrBattlegrounds.UI.Menu
         public void OnAvatarSelected(int avatarIndex)
         {
             _selectedAvatarIndex = avatarIndex;
-            GameLog.Info(GameSettings.Instance.LogLevelUI,
+            GameLog.UI.Info(
                 $"[MenuTeamSelection] Выбран скин индекс: {avatarIndex}. Применяем и закрываем меню.");
 
             if (PlayerSession.LocalSession == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelUI,
+                GameLog.UI.Warning(
                     "[MenuTeamSelection] Локальный PlayerSession не найден. Невозможно отправить запрос.");
                 return;
             }

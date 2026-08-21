@@ -68,7 +68,7 @@ namespace VrBattlegrounds.Editor
                 // Принудительно обновляем начальную сцену перед самым стартом
                 UpdateState();
                 
-                GameLog.Info(LogLevel.Info, $"[PlayModeStartFromOffline] Exiting Edit Mode. playModeStartScene is {(EditorSceneManager.playModeStartScene != null ? EditorSceneManager.playModeStartScene.name : "null")}");
+                GameLog.Debug.Info($"[PlayModeStartFromOffline] Exiting Edit Mode. playModeStartScene is {(EditorSceneManager.playModeStartScene != null ? EditorSceneManager.playModeStartScene.name : "null")}");
 
                 if (!EditorPrefs.GetBool(PrefKey, true)) return;
 

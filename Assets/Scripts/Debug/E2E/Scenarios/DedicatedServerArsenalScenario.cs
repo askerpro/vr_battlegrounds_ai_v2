@@ -89,7 +89,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// <summary>Фазы, увиденные опросом SyncVar (то, что реально происходит на сервере).</summary>
         private readonly List<RoundState> _syncVarPhases = new List<RoundState>();
 
-        private LogLevel Log => GameSettings.Instance.LogLevelDebug;
 
         public IEnumerator Run(E2EContext context, E2EResult result)
         {
@@ -173,7 +172,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             yield return null;
 
             string teamsReport = AssignTeams(sessionManager);
-            GameLog.Info(Log, $"[E2E] Команды распределены: {teamsReport}");
+            GameLog.Debug.Info($"[E2E] Команды распределены: {teamsReport}");
 
             if (MapManager.Instance == null)
             {
@@ -383,7 +382,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     yield break;
                 }
 
-                GameLog.Info(Log,
+                GameLog.Debug.Info(
                     $"[E2E] Жду закрытия общей стены netId={shared.netId} " +
                     $"(её должен закрыть {TagInitiatorRole}, взяв жетон)");
 
@@ -459,7 +458,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             if (!NetworkClient.isConnected && !string.IsNullOrEmpty(context.ServerAddress))
             {
-                GameLog.Info(Log, $"[E2E] Discovery молчит 30 с, подключаюсь напрямую к {context.ServerAddress}");
+                GameLog.Debug.Info($"[E2E] Discovery молчит 30 с, подключаюсь напрямую к {context.ServerAddress}");
 
                 Mirror.Discovery.NetworkDiscovery discovery = Object.FindFirstObjectByType<Mirror.Discovery.NetworkDiscovery>();
                 if (discovery != null)
@@ -603,7 +602,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield break;
             }
 
-            GameLog.Info(Log, $"[E2E] Беру жетон на стене netId={shared.netId}");
+            GameLog.Debug.Info($"[E2E] Беру жетон на стене netId={shared.netId}");
             dogTag.OnTagGrabbed?.Invoke(null);
 
             float deadline = Now + 30f;
@@ -648,7 +647,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private void OnRoundStateEvent(RoundState state)
         {
             _eventPhases.Add(state);
-            GameLog.Info(Log, $"[E2E] OnRoundStateChangedLocal -> {state}");
+            GameLog.Debug.Info($"[E2E] OnRoundStateChangedLocal -> {state}");
         }
 
         /// <summary>
@@ -745,7 +744,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             // enabled=false вызывает OnDisable, а он снимает все подписки орchestrator-а.
             orchestrator.enabled = false;
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 "[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
         }
 

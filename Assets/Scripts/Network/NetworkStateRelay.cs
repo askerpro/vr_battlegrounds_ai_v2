@@ -63,7 +63,6 @@ namespace VrBattlegrounds.Network
         /// <summary>Подписан ли релей на <see cref="UxrManager.ComponentStateChanged" />.</summary>
         private bool _subscribed;
 
-        private static LogLevel Log => GameSettings.Instance.LogLevelNetwork;
 
         // ── Жизненный цикл ────────────────────────────────────────────────
 
@@ -94,7 +93,7 @@ namespace VrBattlegrounds.Network
             _initialStateLoaded = true;
             Subscribe();
 
-            GameLog.Info(Log, "[NetworkStateRelay] Канал состояния поднят на сервере.");
+            GameLog.Network.Info("[NetworkStateRelay] Канал состояния поднят на сервере.");
         }
 
         public override void OnStopServer()
@@ -165,7 +164,7 @@ namespace VrBattlegrounds.Network
             if (serializedEvent == null)
                 return;
 
-            GameLog.Verbose(Log,
+            GameLog.Network.Verbose(
                 $"[NetworkStateRelay] Отправка состояния: {component.Component.name} " +
                 $"({eventArgs.GetType().Name}), {serializedEvent.Length} Б, isServer={isServer}");
 
@@ -182,7 +181,7 @@ namespace VrBattlegrounds.Network
                 // Клиент между сценами: до NetworkClient.Ready() Mirror команду не примет
                 // и ругнётся в лог. Отправлять всё равно нечего — сервер пересоберёт
                 // состояние сцены и отдаст его начальным снимком.
-                GameLog.Verbose(Log,
+                GameLog.Network.Verbose(
                     "[NetworkStateRelay] Изменение состояния не отправлено: клиент ещё не готов (смена сцены).");
             }
         }
@@ -230,7 +229,7 @@ namespace VrBattlegrounds.Network
 
             if (!_initialStateLoaded)
             {
-                GameLog.Verbose(Log,
+                GameLog.Network.Verbose(
                     "[NetworkStateRelay] Событие состояния отброшено: начальный снимок ещё не получен.");
                 return;
             }
@@ -256,7 +255,7 @@ namespace VrBattlegrounds.Network
             if (!NetworkClient.active)
                 return;
 
-            GameLog.Info(Log, "[NetworkStateRelay] Запрашиваю у сервера начальный снимок состояния сцены.");
+            GameLog.Network.Info("[NetworkStateRelay] Запрашиваю у сервера начальный снимок состояния сцены.");
             CmdRequestInitialState();
         }
 
@@ -275,7 +274,7 @@ namespace VrBattlegrounds.Network
                 UxrStateSaveLevel.ChangesSinceBeginning,
                 UxrGlobalSettings.Instance.NetFormatInitialState);
 
-            GameLog.Info(Log,
+            GameLog.Network.Info(
                 $"[NetworkStateRelay] Отдаю начальный снимок клиенту {sender.connectionId}: " +
                 $"{(state != null ? state.Length : 0)} Б.");
 
@@ -296,7 +295,7 @@ namespace VrBattlegrounds.Network
 
             _initialStateLoaded = true;
 
-            GameLog.Info(Log,
+            GameLog.Network.Info(
                 $"[NetworkStateRelay] Начальный снимок применён ({(serializedState != null ? serializedState.Length : 0)} Б). " +
                 "Канал состояния открыт.");
         }

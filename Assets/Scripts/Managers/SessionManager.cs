@@ -49,7 +49,7 @@ namespace VrBattlegrounds.Managers
                 }
                 if (string.IsNullOrEmpty(_selectedModeId))
                 {
-                    GameLog.Warning(GameSettings.Instance.LogLevelMatch,
+                    GameLog.Match.Warning(
                         "[SessionManager] SelectedGameModeData: режим не выбран (_selectedModeId пуст).");
                     return null;
                 }
@@ -90,14 +90,14 @@ namespace VrBattlegrounds.Managers
         {
             if (string.IsNullOrEmpty(mapScene))
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelMatch,
+                GameLog.Match.Warning(
                     "[SessionManager] SetSession: пустое имя карты — игнорируем.");
                 return;
             }
 
             if (string.IsNullOrEmpty(modeId))
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelMatch,
+                GameLog.Match.Warning(
                     "[SessionManager] SetSession: пустой modeId — игнорируем.");
                 return;
             }
@@ -105,7 +105,7 @@ namespace VrBattlegrounds.Managers
             _selectedMapScene = mapScene;
             _selectedModeId = modeId;
 
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[SessionManager] Сессия настроена: карта={mapScene}, режим={modeId}");
         }
 
@@ -129,7 +129,7 @@ namespace VrBattlegrounds.Managers
                 return;
             }
 
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[SessionManager] Запуск сессии: карта={_selectedMapScene}, режим={_selectedModeId}");
 
             MapManager.Instance?.LoadMap(_selectedMapScene);

@@ -34,7 +34,7 @@ namespace VrBattlegrounds.UI.Menu
             }
             else
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelUI, $"[SwitchMenuButton] MenuController is null. Cannot switch to {_targetScreen}.");
+                GameLog.UI.Warning($"[SwitchMenuButton] MenuController is null. Cannot switch to {_targetScreen}.");
             }
         }
     }

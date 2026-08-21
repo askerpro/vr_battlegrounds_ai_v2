@@ -72,7 +72,7 @@ namespace VrBattlegrounds.GameModes
                 if (t != null) _teamRoundScores[t.teamIndex] = 0;
             }
 
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[SetManager] Сет начат, раундов: {_roundsPerSet}");
 
             StartNextRound();
@@ -106,7 +106,7 @@ namespace VrBattlegrounds.GameModes
             }
 
             string winnerName = winner != null ? winner.displayName : "ничья";
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[SetManager] Раунд {_currentRound}/{_roundsPerSet} завершён, победитель: {winnerName}");
 
             _eliminationMode.RpcOnRoundEnded(winner != null ? winner.teamIndex : -1);
@@ -181,7 +181,7 @@ namespace VrBattlegrounds.GameModes
         private void StartNextRound()
         {
             _currentRound++;
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[SetManager] Раунд {_currentRound}/{_roundsPerSet}");
 
             _eliminationMode.ServerBeginRound(_currentRound);
@@ -194,7 +194,7 @@ namespace VrBattlegrounds.GameModes
             _setFinished = true;
 
             string winnerName = winner != null ? winner.displayName : "ничья";
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[SetManager] Сет завершён, победитель: {winnerName}");
 
             _eliminationMode.RpcOnSetEnded(winner != null ? winner.teamIndex : -1);
@@ -205,7 +205,7 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Смена сторон (опционально для будущих реализаций N-команд).</summary>
         public void SwapTeams()
         {
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[SetManager] Смена сторон вызвана, но физическая логика смены спавнов пока не реализована.");
         }
 
@@ -214,7 +214,7 @@ namespace VrBattlegrounds.GameModes
         {
             _setFinished = true;
             _roundManager.ForceStop();
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[SetManager] Сет принудительно остановлен");
+            GameLog.Match.Info("[SetManager] Сет принудительно остановлен");
         }
     }
 }

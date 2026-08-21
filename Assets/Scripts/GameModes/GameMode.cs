@@ -111,7 +111,7 @@ namespace VrBattlegrounds.GameModes
         [Server]
         protected virtual void OnPlayerTeamChange(PlayerSession session, int newTeamId, int newAvatarId)
         {
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[{GetType().Name}] Игрок {session.PlayerName} меняет команду на {newTeamId}. (Место для сброса статистики)");
         }
 
@@ -180,7 +180,7 @@ namespace VrBattlegrounds.GameModes
         [Server]
         private System.Collections.IEnumerator WaitAndStartGameplayRoutine()
         {
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, $"[{GetType().Name}] Ожидание выполнения условий старта матча...");
+            GameLog.Match.Info($"[{GetType().Name}] Ожидание выполнения условий старта матча...");
             yield return new WaitUntil(CanStartGameplay);
 
             StartGameplay();

@@ -107,7 +107,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckClientMirror    = "обратный канал наблюдения проверен эхом SyncVar";
         private const string CheckClientRemote    = "чужой аватар отмасштабирован по пропорциям своего игрока";
 
-        private LogLevel Log => GameSettings.Instance.LogLevelDebug;
 
         public IEnumerator Run(E2EContext context, E2EResult result)
         {
@@ -193,7 +192,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return null;
 
                 string teamsReport = AssignTeams(sessionManager);
-                GameLog.Info(Log, $"[E2E] Команды распределены: {teamsReport}");
+                GameLog.Debug.Info($"[E2E] Команды распределены: {teamsReport}");
 
                 MapManager.Instance.LoadMap(context.Map);
 
@@ -339,7 +338,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             DisableDebugOrchestrator();
 
             float myScale = TargetScaleFor(context.Role);
-            GameLog.Info(Log, $"[E2E] Роль {context.Role}: объявляю пропорции {myScale:F2}");
+            GameLog.Debug.Info($"[E2E] Роль {context.Role}: объявляю пропорции {myScale:F2}");
 
             // ── Подключение ───────────────────────────────────────────────
             float deadline = Now + 30f;
@@ -348,7 +347,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             if (!NetworkClient.isConnected && !string.IsNullOrEmpty(context.ServerAddress))
             {
-                GameLog.Info(Log, $"[E2E] Discovery молчит 30 с, подключаюсь напрямую к {context.ServerAddress}");
+                GameLog.Debug.Info($"[E2E] Discovery молчит 30 с, подключаюсь напрямую к {context.ServerAddress}");
 
                 Mirror.Discovery.NetworkDiscovery discovery = Object.FindFirstObjectByType<Mirror.Discovery.NetworkDiscovery>();
                 if (discovery != null)
@@ -436,7 +435,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 if (phase != lastPhase)
                 {
-                    GameLog.Info(Log, $"[E2E] Клиент видит фазу прогона: {phase}");
+                    GameLog.Debug.Info($"[E2E] Клиент видит фазу прогона: {phase}");
                     lastPhase = phase;
                 }
 
@@ -464,7 +463,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 {
                     local.CmdSetCalibrationScale(myScale);
                     declared = true;
-                    GameLog.Info(Log, $"[E2E] Клиент отправил пропорции {myScale:F2}");
+                    GameLog.Debug.Info($"[E2E] Клиент отправил пропорции {myScale:F2}");
                 }
 
                 // Сверяем чужие аватары с пропорциями их сессий.
@@ -480,7 +479,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     if (ok && !sawRemoteScaled)
                     {
                         sawRemoteScaled = true;
-                        GameLog.Info(Log, $"[E2E] Клиент видит чужой аватар в его пропорциях: {seen}");
+                        GameLog.Debug.Info($"[E2E] Клиент видит чужой аватар в его пропорциях: {seen}");
                     }
 
                     if (sawRemoteScaled != reportedMatch)
@@ -551,7 +550,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 return;
 
             orchestrator.enabled = false;
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 "[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
         }
 

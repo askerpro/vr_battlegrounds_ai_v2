@@ -155,7 +155,7 @@ namespace VrBattlegrounds.Player
             {
                 if (value != null && value.netId == 0)
                 {
-                    GameLog.Warning(GameSettings.Instance.LogLevelPlayer,
+                    GameLog.Player.Warning(
                         $"[PlayerSession] {PlayerName}: аватар назначен до NetworkServer.Spawn — netId ещё 0, клиенты связь не получат.");
                 }
 
@@ -180,7 +180,7 @@ namespace VrBattlegrounds.Player
         public override void OnStartServer()
         {
             base.OnStartServer();
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerSession] {netId} started on server for {PlayerName}.");
+            GameLog.Player.Info($"[PlayerSession] {netId} started on server for {PlayerName}.");
             OnSessionReady?.Invoke(this);
         }
 
@@ -198,7 +198,7 @@ namespace VrBattlegrounds.Player
 
                 SubscribeToLocalCalibration();
             }
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerSession] {netId} started on client for {PlayerName}.");
+            GameLog.Player.Info($"[PlayerSession] {netId} started on client for {PlayerName}.");
         }
 
         /// <summary>
@@ -245,7 +245,7 @@ namespace VrBattlegrounds.Player
 
             if (sync == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer,
+                GameLog.Player.Warning(
                     $"[PlayerSession] {PlayerName}: PhysicalSpaceSyncManager.Instance пуст — " +
                     "пропорции игрока не поедут на другие машины.");
                 return;
@@ -294,13 +294,13 @@ namespace VrBattlegrounds.Player
         private void OnPlayerNameChanged(string oldName, string newName)
         {
             gameObject.name = $"PlayerSession_{newName}";
-            GameLog.Info(GameSettings.Instance.LogLevelDebug, $"[PlayerSession] {netId} name changed → {newName}");
+            GameLog.Debug.Info($"[PlayerSession] {netId} name changed → {newName}");
         }
 
         private void OnTeamIndexChanged(int oldIndex, int newIndex)
         {
             TeamData team = TeamRegistry.Instance?.GetByIndex(newIndex);
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 $"[PlayerSession] {PlayerName} команда изменена → {(team != null ? team.displayName : "нет")}");
         }
 
@@ -442,7 +442,7 @@ namespace VrBattlegrounds.Player
         {
             if (AvatarManager.Instance != null)
             {
-                GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerSession] {PlayerName}: Клиент запросил смену скина на ID {newAvatarId}");
+                GameLog.Player.Info($"[PlayerSession] {PlayerName}: Клиент запросил смену скина на ID {newAvatarId}");
                 AvatarManager.Instance.ChangeAvatar(connectionToClient, this, this.TeamIndex, newAvatarId);
             }
         }
@@ -452,7 +452,7 @@ namespace VrBattlegrounds.Player
         {
             if (GameplayManager.Instance != null)
             {
-                GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerSession] {PlayerName}: Клиент запросил смену команды на {newTeamId} и скина на {newAvatarId}");
+                GameLog.Player.Info($"[PlayerSession] {PlayerName}: Клиент запросил смену команды на {newTeamId} и скина на {newAvatarId}");
                 GameplayManager.Instance.ProcessTeamChangeRequest(this, newTeamId, newAvatarId);
             }
             else if (AvatarManager.Instance != null)
@@ -466,7 +466,7 @@ namespace VrBattlegrounds.Player
         public void CmdSetDogTagGrabbed(bool state)
         {
             HasGrabbedDogTag = state;
-            GameLog.Verbose(GameSettings.Instance.LogLevelPlayer, $"[PlayerSession] {PlayerName} dog tag grabbed set to {state}");
+            GameLog.Player.Verbose($"[PlayerSession] {PlayerName} dog tag grabbed set to {state}");
         }
 
         /// <summary>
@@ -482,14 +482,14 @@ namespace VrBattlegrounds.Player
         {
             if (!TryNormalizeCalibrationScale(scale, out float normalized))
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer,
+                GameLog.Player.Warning(
                     $"[PlayerSession] {PlayerName}: пришёл нечисловой масштаб калибровки — запрос отброшен.");
                 return;
             }
 
             if (!Mathf.Approximately(normalized, scale))
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer,
+                GameLog.Player.Warning(
                     $"[PlayerSession] {PlayerName}: масштаб калибровки {scale:F2} вне границ " +
                     $"[{MinCalibrationScale:F2}; {MaxCalibrationScale:F2}] — обрезан до {normalized:F2}.");
             }
@@ -501,7 +501,7 @@ namespace VrBattlegrounds.Player
             // масштаб двигает коллайдеры, а попадания считает именно он.
             ApplyCalibrationScale();
 
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer,
+            GameLog.Player.Info(
                 $"[PlayerSession] {PlayerName}: пропорции игрока приняты сервером — {normalized:F2}");
         }
 
@@ -536,14 +536,14 @@ namespace VrBattlegrounds.Player
         {
             if (!TryNormalizeCalibrationHeightOffset(offset, out float normalized))
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer,
+                GameLog.Player.Warning(
                     $"[PlayerSession] {PlayerName}: пришло нечисловое смещение пола — запрос отброшен.");
                 return;
             }
 
             if (!Mathf.Approximately(normalized, offset))
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer,
+                GameLog.Player.Warning(
                     $"[PlayerSession] {PlayerName}: смещение пола {offset:F2} м вне границ " +
                     $"±{MaxCalibrationHeightOffset:F2} м — обрезано до {normalized:F2} м.");
             }
@@ -555,7 +555,7 @@ namespace VrBattlegrounds.Player
             // а смещение двигает голову.
             ApplyCalibrationHeightOffset();
 
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer,
+            GameLog.Player.Info(
                 $"[PlayerSession] {PlayerName}: смещение пола принято сервером — {normalized:F2} м");
         }
 

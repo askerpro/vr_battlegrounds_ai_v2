@@ -69,7 +69,7 @@ namespace VrBattlegrounds.Player
         {
             if (_magazinePocket == null) return;
 
-            GameLog.Info(GameSettings.Instance.LogLevelArsenal, $"[LoadoutManager] Scanning weapons to request magazines for '{gameObject.name}'...");
+            GameLog.Arsenal.Info($"[LoadoutManager] Scanning weapons to request magazines for '{gameObject.name}'...");
 
             _magazinePocket.Clear();
 
@@ -147,7 +147,7 @@ namespace VrBattlegrounds.Player
 
             if (spawnedMags.Count > 0)
             {
-                GameLog.Info(GameSettings.Instance.LogLevelArsenal, $"[LoadoutManager] Server spawned {spawnedMags.Count} magazines for client.");
+                GameLog.Arsenal.Info($"[LoadoutManager] Server spawned {spawnedMags.Count} magazines for client.");
                 TargetReceiveMagazines(connectionToClient, spawnedMags.ToArray());
             }
         }

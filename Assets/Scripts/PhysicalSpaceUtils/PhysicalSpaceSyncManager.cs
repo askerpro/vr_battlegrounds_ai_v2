@@ -294,7 +294,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             UpdateAnchorHighlights();
 
             OnCalibrationStarted?.Invoke();
-            GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, "[PhysicalSpaceSyncManager] Calibration started. Please proceed to Point 1.");
+            GameLog.PhysicalSpace.Info("[PhysicalSpaceSyncManager] Calibration started. Please proceed to Point 1.");
         }
 
         /// <summary>
@@ -309,7 +309,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             ResetAnchorHighlights();
 
             OnCalibrationCancelled?.Invoke();
-            GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, "[PhysicalSpaceSyncManager] Calibration cancelled.");
+            GameLog.PhysicalSpace.Info("[PhysicalSpaceSyncManager] Calibration cancelled.");
         }
 
         private void CollectAnchors()
@@ -323,7 +323,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             if (!IsCalibrating || _currentAnchorIndex > 1) return;
 
             _realAnchorPositions[_currentAnchorIndex] = realControllerPosition;
-            GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, $"[PhysicalSpaceSyncManager] Point {_currentAnchorIndex} registered at real space pos: {realControllerPosition}");
+            GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Point {_currentAnchorIndex} registered at real space pos: {realControllerPosition}");
 
             if (_currentAnchorIndex == 0)
             {
@@ -332,7 +332,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 _currentAnchorIndex++;
                 UpdateAnchorHighlights();
 
-                GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, "[PhysicalSpaceSyncManager] Move to Point 2.");
+                GameLog.PhysicalSpace.Info("[PhysicalSpaceSyncManager] Move to Point 2.");
             }
             else if (_currentAnchorIndex == 1)
             {
@@ -346,7 +346,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 ResetAnchorHighlights();
 
                 OnCalibrationCompleted?.Invoke();
-                GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, "[PhysicalSpaceSyncManager] Calibration completed. Virtual offset applied.");
+                GameLog.PhysicalSpace.Info("[PhysicalSpaceSyncManager] Calibration completed. Virtual offset applied.");
             }
         }
 
@@ -359,7 +359,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             CurrentHeightCalibrationPhase = HeightCalibrationPhase.Floor;
             OnHeightCalibrationStarted?.Invoke();
-            GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, "[PhysicalSpaceSyncManager] Phase 1: Height Calibration started. Please touch the physical floor with a controller and press Button 1.");
+            GameLog.PhysicalSpace.Info("[PhysicalSpaceSyncManager] Phase 1: Height Calibration started. Please touch the physical floor with a controller and press Button 1.");
         }
 
         private void ProcessHeightCalibrationStep(UxrHandSide hand)
@@ -381,7 +381,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 OnFloorHeightCalibrated?.Invoke();
 
                 CurrentHeightCalibrationPhase = HeightCalibrationPhase.PlayerScale;
-                GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, $"[PhysicalSpaceSyncManager] Phase 1 Floor Registered. Delta: {deltaY}. Phase 2: Stand upright and press Button 1 to calibrate scale.");
+                GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Phase 1 Floor Registered. Delta: {deltaY}. Phase 2: Stand upright and press Button 1 to calibrate scale.");
             }
             else if (CurrentHeightCalibrationPhase == HeightCalibrationPhase.PlayerScale)
             {
@@ -394,7 +394,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
                 if (playerRealHeight < 0.6f)
                 {
-                    GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace, "[PhysicalSpaceSyncManager] HMD is too low. Please stand up in your full height and press Button 1 again.");
+                    GameLog.PhysicalSpace.Warning("[PhysicalSpaceSyncManager] HMD is too low. Please stand up in your full height and press Button 1 again.");
                     return;
                 }
 
@@ -404,7 +404,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 CurrentHeightCalibrationPhase = HeightCalibrationPhase.None;
                 OnHeightCalibrationCompleted?.Invoke();
                 
-                GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, $"[PhysicalSpaceSyncManager] Phase 2 Scale Registered. HMD Height: {playerRealHeight}m. Extents Scale: {_accumulatedScaleMultiplier:F2}");
+                GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Phase 2 Scale Registered. HMD Height: {playerRealHeight}m. Extents Scale: {_accumulatedScaleMultiplier:F2}");
             }
         }
 
@@ -452,7 +452,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             if (cameraController == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace,
+                GameLog.PhysicalSpace.Warning(
                     $"[PhysicalSpaceSyncManager] У аватара '{avatar.name}' нет пивота камеры — " +
                     "смещение высоты применить некуда.");
                 return;
@@ -503,7 +503,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             var controller = avatar.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
             if (controller == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace, "UxrStandardAvatarController not found. Cannot apply scale.");
+                GameLog.PhysicalSpace.Warning("UxrStandardAvatarController not found. Cannot apply scale.");
                 return;
             }
 
@@ -523,7 +523,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             }
             else
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace, "Dummy Forward not found on Avatar. Scale wasn't applied correctly.");
+                GameLog.PhysicalSpace.Warning("Dummy Forward not found on Avatar. Scale wasn't applied correctly.");
                 return;
             }
 
@@ -570,7 +570,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 neckPosField.SetValue(bodyIK, val * relativeScale);
             }
             
-            GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, $"[PhysicalSpaceSyncManager] Dynamic IK Scale applied. Relative Scale Delta: {relativeScale}");
+            GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Dynamic IK Scale applied. Relative Scale Delta: {relativeScale}");
         }
         private void CalculateTransform()
         {
@@ -591,7 +591,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             Vector3 realBInVirtual = _realToVirtualRotation * (realB * _realToVirtualScale);
             _realToVirtualOffset = Vector3.Scale(virtualB - realBInVirtual, new Vector3(1, 1, 1));
 
-            GameLog.Info(GameSettings.Instance.LogLevelPhysicalSpace, $"[PhysicalSpaceSyncManager] Calculated Offset: {_realToVirtualOffset}, Rotation: {_realToVirtualRotation.eulerAngles}");
+            GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Calculated Offset: {_realToVirtualOffset}, Rotation: {_realToVirtualRotation.eulerAngles}");
         }
 
         /// <summary>
@@ -659,7 +659,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             if (virtualSpaceLayer == -1 || realSpaceLayer == -1)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace, "[PhysicalSpaceSyncManager] 'VirtualSpace' or 'RealSpace' layers not found in project settings. Camera culling toggle ignored.");
+                GameLog.PhysicalSpace.Warning("[PhysicalSpaceSyncManager] 'VirtualSpace' or 'RealSpace' layers not found in project settings. Camera culling toggle ignored.");
                 return;
             }
 

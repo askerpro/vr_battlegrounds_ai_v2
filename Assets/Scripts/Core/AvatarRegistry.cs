@@ -25,7 +25,7 @@ namespace VrBattlegrounds.Core
                     s_instance = Resources.Load<AvatarRegistry>(nameof(AvatarRegistry));
 
                 if (s_instance == null)
-                    Debug.LogError("[AvatarRegistry] Файл Resources/AvatarRegistry.asset не найден. Создайте его через Create -> VrBattlegrounds -> AvatarRegistry.");
+                    GameLog.Error("[AvatarRegistry] Файл Resources/AvatarRegistry.asset не найден. Создайте его через Create -> VrBattlegrounds -> AvatarRegistry.");
 
                 return s_instance;
             }
@@ -40,7 +40,7 @@ namespace VrBattlegrounds.Core
             if(index >= 0 && index < avatars.Length)
                 return avatars[index];
 
-            Debug.LogWarning($"[AvatarRegistry] Аватар с index={index} не найден.");
+            GameLog.Player.Warning($"[AvatarRegistry] Аватар с index={index} не найден.");
             return null;
         }
     }

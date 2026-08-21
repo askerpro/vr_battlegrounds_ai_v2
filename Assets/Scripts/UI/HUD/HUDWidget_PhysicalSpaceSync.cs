@@ -34,7 +34,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             }
             else
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPhysicalSpace, "[MenuPhysicalSpaceSyncHUD] PhysicalSpaceSyncManager is not found in the scene.");
+                GameLog.PhysicalSpace.Warning("[MenuPhysicalSpaceSyncHUD] PhysicalSpaceSyncManager is not found in the scene.");
             }
         }
 

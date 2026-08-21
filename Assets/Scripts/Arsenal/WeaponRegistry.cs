@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.Arsenal
 {
@@ -27,7 +28,7 @@ namespace VrBattlegrounds.Arsenal
                     s_instance = Resources.Load<WeaponRegistry>(nameof(WeaponRegistry));
 
                 if (s_instance == null)
-                    Debug.LogError("[WeaponRegistry] Файл WeaponRegistry.asset не найден в папке Resources. Положите его туда.");
+                    GameLog.Error("[WeaponRegistry] Файл WeaponRegistry.asset не найден в папке Resources. Положите его туда.");
 
                 return s_instance;
             }

@@ -86,11 +86,11 @@ namespace VrBattlegrounds.UI.Menu
             {
                 // In the future, pass currentGameMode instead of null to allow custom menus per Game Mode
                 prefabToSpawn = _menuRegistry.GetMenuPrefab(deviceType, context, null);
-                GameLog.Info(GameSettings.Instance.LogLevelUI, $"[LocalMenuManager] Spawn context menu (Device: {deviceType}, Context: {context}) -> {(prefabToSpawn != null ? prefabToSpawn.name : "NULL")}");
+                GameLog.UI.Info($"[LocalMenuManager] Spawn context menu (Device: {deviceType}, Context: {context}) -> {(prefabToSpawn != null ? prefabToSpawn.name : "NULL")}");
             }
             else
             {
-                Debug.LogError("[LocalMenuManager] _menuRegistry is not assigned! Cannot spawn UI.");
+                GameLog.Error("[LocalMenuManager] _menuRegistry is not assigned! Cannot spawn UI.");
             }
 
             if (prefabToSpawn != null)
@@ -98,14 +98,14 @@ namespace VrBattlegrounds.UI.Menu
                 _activeMenuInstance = Instantiate(prefabToSpawn, transform);
                 _activeMenuInstance.SetActive(false); // <--- Скрываем весь префаб (включая планшет) сразу после спавна 
 
-                GameLog.Verbose(GameSettings.Instance.LogLevelUI, $"[LocalMenuManager] Спавн контекст-меню: {prefabToSpawn.name}");
+                GameLog.UI.Verbose($"[LocalMenuManager] Спавн контекст-меню: {prefabToSpawn.name}");
 
                 MenuView view = _activeMenuInstance.GetComponent<MenuView>();
                 if (view != null) 
                 {
                     if (MenuController.Instance == null)
                     {
-                        Debug.Log("[LocalMenuManager] MenuController missing on Managers. Auto-adding it.");
+                        GameLog.UI.Info("[LocalMenuManager] MenuController missing on Managers. Auto-adding it.");
                         gameObject.AddComponent<MenuController>();
                     }
                     
@@ -113,12 +113,12 @@ namespace VrBattlegrounds.UI.Menu
                 }
                 else
                 {
-                    Debug.LogWarning($"[LocalMenuManager] Prefab {prefabToSpawn.name} is missing a MenuView component! MVC injection skipped.");
+                    GameLog.UI.Warning($"[LocalMenuManager] Prefab {prefabToSpawn.name} is missing a MenuView component! MVC injection skipped.");
                 }
             }
             else
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelUI, "[LocalMenuManager] Нет префаба для текущего контекста. Меню не заспавнено.");
+                GameLog.UI.Warning("[LocalMenuManager] Нет префаба для текущего контекста. Меню не заспавнено.");
             }
         }
     }

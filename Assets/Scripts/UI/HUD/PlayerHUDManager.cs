@@ -33,8 +33,8 @@ namespace VrBattlegrounds.Player.UI
             if (_hudContainer == null)
             {
                 string error = $"[{nameof(PlayerHUDManager)}] HUD Container не назначен на префабе игрока!";
-                Debug.LogError(error);
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, error);
+                GameLog.Error(error);
+                GameLog.Player.Warning(error);
                 return;
             }
 
@@ -50,16 +50,16 @@ namespace VrBattlegrounds.Player.UI
             if (SessionManager.Instance == null)
             {
                 string error = $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: SessionManager.Instance равен null. Возможно, сцена загрузилась неверно.";
-                Debug.LogError(error);
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, error);
+                GameLog.Error(error);
+                GameLog.Player.Warning(error);
                 return;
             }
 
             if (string.IsNullOrEmpty(SessionManager.Instance.SelectedModeId))
             {
                 string error = $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: В SessionManager пустой SelectedModeId. Это может быть из-за задержки сети при входе на сервер.";
-                Debug.LogWarning(error);
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, error);
+                GameLog.Player.Warning(error);
+                GameLog.Player.Warning(error);
                 return;
             }
 
@@ -69,16 +69,16 @@ namespace VrBattlegrounds.Player.UI
             if (modeData == null)
             {
                 string error = $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: GameMode '{modeId}' не найден в реестре.";
-                Debug.LogError(error);
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, error);
+                GameLog.Error(error);
+                GameLog.Player.Warning(error);
                 return;
             }
 
             if (modeData.hudPrefab == null)
             {
                 string error = $"[{nameof(PlayerHUDManager)}] GameMode '{modeId}' не имеет hudPrefab. HUD не заспавнен.";
-                Debug.LogWarning(error);
-                GameLog.Verbose(GameSettings.Instance.LogLevelPlayer, error);
+                GameLog.Player.Warning(error);
+                GameLog.Player.Verbose(error);
                 return;
             }
 
@@ -99,12 +99,12 @@ namespace VrBattlegrounds.Player.UI
                     hudRect.localScale = Vector3.one;
                 }
 
-                GameLog.Info(GameSettings.Instance.LogLevelPlayer,
+                GameLog.Player.Info(
                     $"[{nameof(PlayerHUDManager)}] Успешный спавн HUD префаба '{modeData.hudPrefab.name}' для режима '{modeId}'.");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[{nameof(PlayerHUDManager)}] Фатальная ошибка при спавне HUD для '{modeId}': {ex.Message}\n{ex.StackTrace}");
+                GameLog.Error($"[{nameof(PlayerHUDManager)}] Фатальная ошибка при спавне HUD для '{modeId}': {ex.Message}\n{ex.StackTrace}");
             }
         }
 

@@ -72,8 +72,8 @@ C#-классы, без `MonoBehaviour`, а `RoundManager.Tick(float deltaTime)`
 
 **Блокеры сняты:**
 
-1. `GameLog.*(GameSettings.Instance.LogLevelX, ...)` — `GameSettings.Instance` создаёт
-   ассет на лету, если его нет (T-05);
+1. `GameLog.<Категория>.*(...)` — категорию знает сам логгер, а `GameSettings.Instance`
+   создаёт ассет на лету, если его нет (T-05);
 2. `RoundManager.AreAllPlayersReady` ходил в `PlayersManager.Instance` — теперь спрашивает
    `IPlayerRoster`, в тестах это `StubPlayerRoster` (T-09);
 3. `RoundManager.StartRound` искал `TeamSpawnZone` через `FindObjectsByType` — поле было

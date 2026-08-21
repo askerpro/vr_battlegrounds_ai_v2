@@ -161,7 +161,7 @@ namespace VrBattlegrounds.Player
 
         private void OnActorDied(UxrActor actor)
         {
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: UxrActor сообщил о смерти.", this);
+            GameLog.Player.Info($"[PlayerController] {name}: UxrActor сообщил о смерти.", this);
 
             Die();
         }
@@ -172,7 +172,7 @@ namespace VrBattlegrounds.Player
 
         private void OnIsAliveChanged(bool oldValue, bool newValue)
         {
-            GameLog.Verbose(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: сетевое состояние жизни изменено {oldValue} -> {newValue}", this);
+            GameLog.Player.Verbose($"[PlayerController] {name}: сетевое состояние жизни изменено {oldValue} -> {newValue}", this);
         }
 
 
@@ -180,7 +180,7 @@ namespace VrBattlegrounds.Player
 
         private void OnDamageReceived(object sender, UxrDamageEventArgs e)
         {
-            GameLog.Verbose(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: получен урон {e.Damage:F1} (тип: {e.DamageType}). Текущее здоровье: {_actor.Life:F1}", this);
+            GameLog.Player.Verbose($"[PlayerController] {name}: получен урон {e.Damage:F1} (тип: {e.DamageType}). Текущее здоровье: {_actor.Life:F1}", this);
 
             if (!isServer) return;
         }
@@ -189,7 +189,7 @@ namespace VrBattlegrounds.Player
         [Server]
         public void Die()
         {
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: смерть подтверждена на сервере. Переход в режим наблюдателя.", this);
+            GameLog.Player.Info($"[PlayerController] {name}: смерть подтверждена на сервере. Переход в режим наблюдателя.", this);
 
             // Trigger spectator mode on server for synchronization
             var spectator = GetComponent<SpectatorController>();
@@ -210,7 +210,7 @@ namespace VrBattlegrounds.Player
         [Server]
         public void Respawn(Transform spawnPoint)
         {
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[PlayerController] {name}: респаун на точке {spawnPoint.name} ({spawnPoint.position})", this);
+            GameLog.Player.Info($"[PlayerController] {name}: респаун на точке {spawnPoint.name} ({spawnPoint.position})", this);
             _actor.Life = 100f;
 
             var spectator = GetComponent<SpectatorController>();

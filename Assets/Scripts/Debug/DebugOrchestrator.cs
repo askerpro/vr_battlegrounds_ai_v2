@@ -85,7 +85,7 @@ namespace VrBattlegrounds.DevTools
             if (_config == null || !_config.enabled) return;
             if (!NetworkServer.active) return;
 
-            GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Verbose(
                 "[DebugOrchestrator] GameplayManager готов — пробуем запустить матч.");
 
             TryStartGameplay();
@@ -107,12 +107,12 @@ namespace VrBattlegrounds.DevTools
 
             if (!NetworkServer.active)
             {
-                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Verbose(
                     "[DebugOrchestrator] HandlePlayerConnected: сервер не активен, пропуск.");
                 return;
             }
 
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 $"[DebugOrchestrator] HandlePlayerConnected: сессия={session.PlayerName}");
 
             TryAssignTeam(session);
@@ -128,7 +128,7 @@ namespace VrBattlegrounds.DevTools
             // Если игрок уже был первично инициализирован на этой карте, не трогаем (например, при смене скина)
             if (_initializedSessions.Contains(avatar.SessionNetId))
             {
-                GameLog.Verbose(GameSettings.Instance.LogLevelDebug, $"[DebugOrchestrator] Аватар для {avatar.name} (SessionNetId={avatar.SessionNetId}) уже был инициализирован. Пропускаем телепорт на базу.");
+                GameLog.Debug.Verbose($"[DebugOrchestrator] Аватар для {avatar.name} (SessionNetId={avatar.SessionNetId}) уже был инициализирован. Пропускаем телепорт на базу.");
                 return;
             }
 
@@ -154,7 +154,7 @@ namespace VrBattlegrounds.DevTools
 
             if (targetZone != null)
             {
-                GameLog.Info(GameSettings.Instance.LogLevelDebug, $"[DebugOrchestrator] {player.name} начинает в зоне спавна команды {player.Session.Team.displayName}");
+                GameLog.Debug.Info($"[DebugOrchestrator] {player.name} начинает в зоне спавна команды {player.Session.Team.displayName}");
                 player.Respawn(targetZone.transform);
             }
         }
@@ -163,7 +163,7 @@ namespace VrBattlegrounds.DevTools
         {
             if (_config == null || !_config.enabled) return;
 
-            GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Verbose(
                 $"[DebugOrchestrator] HandlePlayerDisconnected: сессия={(session != null ? session.PlayerName : "null")}");
         }
 
@@ -175,7 +175,7 @@ namespace VrBattlegrounds.DevTools
         {
             if (!_config.autoStartGameplay)
             {
-                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Verbose(
                     "[DebugOrchestrator] TryStartGameplay: autoStartGameplay выключен.");
                 return;
             }
@@ -199,7 +199,7 @@ namespace VrBattlegrounds.DevTools
                 // Норма, а не сбой: GameplayManager живёт в сцене карты, и пока игрок
                 // в лобби его нет. Ждать не нужно — на его появление мы подписаны
                 // (HandleGameplayManagerReady), и попытка повторится сама.
-                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Verbose(
                     "[DebugOrchestrator] TryStartGameplay: карта ещё не загружена. " +
                     "Матч запустится по сигналу GameplayManager.");
                 return;
@@ -207,7 +207,7 @@ namespace VrBattlegrounds.DevTools
 
             if (matchManager.IsGameplayActive)
             {
-                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Verbose(
                     "[DebugOrchestrator] TryStartGameplay: матч уже активен.");
                 return;
             }
@@ -223,12 +223,12 @@ namespace VrBattlegrounds.DevTools
 
             if (playersManager.Sessions.Count < minPlayers)
             {
-                GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Info(
                     $"[DebugOrchestrator] TryStartGameplay: недостаточно игроков ({playersManager.Sessions.Count}/{minPlayers}). Ждем остальных.");
                 return;
             }
 
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 "[DebugOrchestrator] TryStartGameplay: попытка запустить матч (условия по игрокам выполнены).");
             matchManager.StartGameplay();
 
@@ -238,7 +238,7 @@ namespace VrBattlegrounds.DevTools
         {
             if (_config.teamsForAutoAssign == null || _config.teamsForAutoAssign.Count == 0 || session == null)
             {
-                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Verbose(
                     "[DebugOrchestrator] TryAssignTeam: teamsForAutoAssign пуст — команда не назначается.");
                 return;
             }
@@ -246,7 +246,7 @@ namespace VrBattlegrounds.DevTools
             // Если игрок уже подключался ранее и ему бала назначена команда, оставляем её (восстановится из snapshot).
             if (!string.IsNullOrEmpty(session.DeviceToken) && _assignedDevices.Contains(session.DeviceToken))
             {
-                GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Info(
                     $"[DebugOrchestrator] Игроку {session.PlayerName} (Device: {session.DeviceToken}) команда уже назначалась ранее. Пропускаем автобалансировку.");
                 return;
             }
@@ -275,7 +275,7 @@ namespace VrBattlegrounds.DevTools
 
             if (bestTeam == null) return;
 
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 $"[DebugOrchestrator] Команда назначена сессии {session.PlayerName}: {bestTeam.displayName}");
 
             session.TeamIndex = (byte)bestTeam.teamIndex;
@@ -299,7 +299,7 @@ namespace VrBattlegrounds.DevTools
             if (!NetworkServer.active)
                 return;
 
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 $"[DebugOrchestrator] OnServerSceneChanged: сцена='{sceneName}'");
 
             TryAutoLoadMap();
@@ -322,7 +322,7 @@ namespace VrBattlegrounds.DevTools
             // Загружаем карту только один раз за сессию.
             if (_mapLoadRequested)
             {
-                GameLog.Verbose(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Verbose(
                     "[DebugOrchestrator] Карта уже была запрошена, повторный вызов игнорируется.");
                 return;
             }
@@ -331,12 +331,12 @@ namespace VrBattlegrounds.DevTools
             if (!string.IsNullOrEmpty(_config.autoGameModeId) && SessionManager.Instance != null)
             {
                 SessionManager.Instance.SetSession(_config.autoLoadMapScene, _config.autoGameModeId);
-                GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Info(
                     $"[DebugOrchestrator] Сессия установлена: карта={_config.autoLoadMapScene}, режим={_config.autoGameModeId}");
             }
 
             _mapLoadRequested = true;
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 $"[DebugOrchestrator] Автозагрузка карты: {_config.autoLoadMapScene}");
             MapManager.Instance?.LoadMap(_config.autoLoadMapScene);
         }

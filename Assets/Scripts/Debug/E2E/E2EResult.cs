@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.DevTools.E2E
 {
@@ -185,7 +186,7 @@ namespace VrBattlegrounds.DevTools.E2E
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.LogError($"[E2E] Не удалось записать результат в '{path}': {e.Message}");
+                GameLog.Error($"[E2E] Не удалось записать результат в '{path}': {e.Message}");
             }
         }
 

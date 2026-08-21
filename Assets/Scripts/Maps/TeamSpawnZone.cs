@@ -83,7 +83,7 @@ namespace VrBattlegrounds.Maps
 
             if (_team == null)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelMatch,
+                GameLog.Match.Warning(
                     $"[TeamSpawnZone] У SpawnZone на объекте {gameObject.name} не назначена команда (_team).");
             }
             else
@@ -309,7 +309,7 @@ namespace VrBattlegrounds.Maps
 
                 PlayerEntered?.Invoke(this, player);
 
-                GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+                GameLog.Match.Verbose(
                     $"[TeamSpawnZone] Игрок {player.name} вошёл в зону '{name}' (полное нахождение)");
             }
             else if (!isCurrentlyFullyInside && wasAlreadyFullyInside)
@@ -325,7 +325,7 @@ namespace VrBattlegrounds.Maps
 
                 PlayerExited?.Invoke(this, player);
 
-                GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+                GameLog.Match.Verbose(
                     $"[TeamSpawnZone] Игрок {player.name} покинул зону '{name}' (вышел из режима полного нахождения)");
             }
         }
@@ -349,7 +349,7 @@ namespace VrBattlegrounds.Maps
 
                     PlayerExited?.Invoke(this, player);
 
-                    GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+                    GameLog.Match.Verbose(
                         $"[TeamSpawnZone] Игрок {player.name} покинул зону '{name}' (вышел совсем)");
                 }
 

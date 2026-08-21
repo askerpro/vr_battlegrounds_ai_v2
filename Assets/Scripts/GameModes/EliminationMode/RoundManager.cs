@@ -188,7 +188,7 @@ namespace VrBattlegrounds.GameModes
 
             _roundState = RoundState.Setup;
 
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 "[RoundManager] Раунд начат: очистка и телепортация (Setup)");
         }
 
@@ -205,7 +205,7 @@ namespace VrBattlegrounds.GameModes
             _roundEndRequested = true;
 
             string winnerName = winner != null ? winner.displayName : "ничья";
-            GameLog.Info(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Info(
                 $"[RoundManager] Исход боя определён. Победитель: {winnerName}");
         }
 
@@ -231,7 +231,7 @@ namespace VrBattlegrounds.GameModes
                     // или конец сета — решает владелец, он же и применит переход.
                     _awaitingOwner = true;
 
-                    GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                    GameLog.Match.Info(
                         $"[RoundManager] {transition.From}: {transition.Reason}. Цикл раунда завершён.");
 
                     return RoundTickResult.Completed(transition.From, transition.To);
@@ -240,7 +240,7 @@ namespace VrBattlegrounds.GameModes
                 _roundState = transition.To;
                 _stateTimer = 0f;
 
-                GameLog.Info(GameSettings.Instance.LogLevelMatch,
+                GameLog.Match.Info(
                     $"[RoundManager] {transition.From} → {transition.To}: {transition.Reason}");
 
                 return RoundTickResult.Moved(transition.From, transition.To);
@@ -253,7 +253,7 @@ namespace VrBattlegrounds.GameModes
         public void ForceStop()
         {
             _stopped = true;
-            GameLog.Info(GameSettings.Instance.LogLevelMatch, "[RoundManager] Раунд принудительно остановлен");
+            GameLog.Match.Info("[RoundManager] Раунд принудительно остановлен");
         }
 
         private bool AreAllPlayersReady()
@@ -275,7 +275,7 @@ namespace VrBattlegrounds.GameModes
             if (totalAlive == 0) return false;
             if (notReadyCount > 0) return false;
 
-            GameLog.Verbose(GameSettings.Instance.LogLevelMatch,
+            GameLog.Match.Verbose(
                 "[RoundManager] Все живые игроки готовы к раунду");
             return true;
         }

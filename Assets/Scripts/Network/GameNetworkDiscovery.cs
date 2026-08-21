@@ -2,6 +2,7 @@ using Mirror;
 using Mirror.Discovery;
 
 using UnityEngine;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.Network
 {
@@ -121,12 +122,12 @@ namespace VrBattlegrounds.Network
         {
             if (CurrentRole != null)
             {
-                Debug.LogWarning($"[GameNetworkDiscovery] Роль уже выбрана: {CurrentRole}. Повторный вызов игнорируется.");
+                GameLog.Network.Warning($"[GameNetworkDiscovery] Роль уже выбрана: {CurrentRole}. Повторный вызов игнорируется.");
                 return;
             }
 
             CurrentRole = role;
-            Debug.Log($"[GameNetworkDiscovery] Запуск в режиме: {role}");
+            GameLog.Network.Info($"[GameNetworkDiscovery] Запуск в режиме: {role}");
 
             switch (role)
             {
@@ -182,7 +183,7 @@ namespace VrBattlegrounds.Network
         /// </summary>
         private void OnServerFound(ServerResponse response)
         {
-            Debug.Log($"[GameNetworkDiscovery] Сервер найден: {response.serverId} | {response.EndPoint} | {response.uri}");
+            GameLog.Network.Info($"[GameNetworkDiscovery] Сервер найден: {response.serverId} | {response.EndPoint} | {response.uri}");
 
             _discovery.StopDiscovery();
             _discovery.OnServerFound.RemoveListener(OnServerFound);
@@ -345,7 +346,7 @@ namespace VrBattlegrounds.Network
             catch (System.Exception e)
             {
                 if (_statusText != null) _statusText.text = "Ошибка! См. консоль";
-                Debug.LogError($"[GameNetworkDiscovery] Ошибка при ApplyRole({role}):\n{e}");
+                GameLog.Error($"[GameNetworkDiscovery] Ошибка при ApplyRole({role}):\n{e}");
             }
         }
 

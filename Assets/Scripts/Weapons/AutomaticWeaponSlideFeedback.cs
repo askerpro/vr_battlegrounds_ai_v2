@@ -229,14 +229,7 @@ namespace VrBattlegrounds.Weapons
                 return;
             }
 
-            if (GameSettings.Instance != null)
-            {
-                GameLog.Info(GameSettings.Instance.LogLevelWeaponSystem, $"[Bolt][{gameObject.name}] {message}", this);
-            }
-            else
-            {
-                GameLog.Info(LogLevel.Info, $"[Bolt][{gameObject.name}] {message}", this);
-            }
+            GameLog.WeaponSystem.Info($"[Bolt][{gameObject.name}] {message}", this);
         }
 
         private void CaptureSlideRestLocalPosition()

@@ -64,7 +64,7 @@ namespace VrBattlegrounds.Core
         {
             if (!Application.isEditor)
             {
-                Debug.LogWarning("[LocalClientProfile] Попытка переопределить настройки вне редактора!");
+                GameLog.Debug.Warning("[LocalClientProfile] Попытка переопределить настройки вне редактора!");
                 return;
             }
             _localDeviceOverride = deviceType;

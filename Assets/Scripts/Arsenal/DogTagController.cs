@@ -34,7 +34,6 @@ namespace VrBattlegrounds.Arsenal
 
         // ── State ──────────────────────────────────────────────
         private bool _hasBeenGrabbed;
-        private LogLevel ArsenalLog => GameSettings.Instance.LogLevelArsenal;
 
         // ── Unity ──────────────────────────────────────────────
 
@@ -75,7 +74,7 @@ namespace VrBattlegrounds.Arsenal
             if (_tagObject != null)
                 _tagObject.enabled = true;
 
-            GameLog.Info(ArsenalLog, "[Arsenal] Dog tag reset — ready for new prep phase.");
+            GameLog.Arsenal.Info("[Arsenal] Dog tag reset — ready for new prep phase.");
         }
 
         /// <summary>
@@ -98,7 +97,7 @@ namespace VrBattlegrounds.Arsenal
             _hasBeenGrabbed = true;
             SetLight(_grabColor, true);
 
-            GameLog.Info(ArsenalLog, "[Arsenal] DOG TAG GRABBED — Arsenal closing!");
+            GameLog.Arsenal.Info("[Arsenal] DOG TAG GRABBED — Arsenal closing!");
             
             PlayerController player = null;
             if (e.Grabber != null && e.Grabber.Avatar != null)

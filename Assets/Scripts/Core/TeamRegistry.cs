@@ -1,4 +1,5 @@
 using UnityEngine;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds
 {
@@ -32,7 +33,7 @@ namespace VrBattlegrounds
                     s_instance = Resources.Load<TeamRegistry>(nameof(TeamRegistry));
 
                 if (s_instance == null)
-                    Debug.LogError("[TeamRegistry] Файл Resources/TeamRegistry.asset не найден. Создайте его через Create -> VrBattlegrounds -> Team Registry.");
+                    GameLog.Error("[TeamRegistry] Файл Resources/TeamRegistry.asset не найден. Создайте его через Create -> VrBattlegrounds -> Team Registry.");
 
                 return s_instance;
             }
@@ -55,7 +56,7 @@ namespace VrBattlegrounds
                     return teams[i];
             }
 
-            Debug.LogWarning($"[TeamRegistry] Команда с teamIndex={teamIndex} не найдена.");
+            GameLog.Match.Warning($"[TeamRegistry] Команда с teamIndex={teamIndex} не найдена.");
             return null;
         }
 

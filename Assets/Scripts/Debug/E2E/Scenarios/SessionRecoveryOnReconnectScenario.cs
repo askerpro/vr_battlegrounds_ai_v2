@@ -99,7 +99,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckClientDropped     = "клиент увидел разрыв соединения, инициированный сервером";
         private const string CheckClientReconnected = "клиент вернулся и получил новую живую сессию";
 
-        private LogLevel Log => GameSettings.Instance.LogLevelDebug;
 
         public IEnumerator Run(E2EContext context, E2EResult result)
         {
@@ -191,7 +190,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             // индекс команды. С индексом 0 (значение по умолчанию новой сессии) аватара
             // после переезда на карту не будет вовсе: проверено прогоном.
             string teamsReport = AssignFirstTeam(sessionManager);
-            GameLog.Info(Log, $"[E2E] Команды распределены: {teamsReport}");
+            GameLog.Debug.Info($"[E2E] Команды распределены: {teamsReport}");
 
             TeamData markedTeam = LastTeamOf(sessionManager);
             MapManager.Instance.LoadMap(context.Map);
@@ -322,7 +321,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield break;
             }
 
-            GameLog.Info(Log, $"[E2E] Состояние набрано для {deviceToken}: команда={markedTeamIndex}, " +
+            GameLog.Debug.Info($"[E2E] Состояние набрано для {deviceToken}: команда={markedTeamIndex}, " +
                               $"счёт={MarkedScore}, здоровье={expectedHealth:F0}, позиция={Fmt(expectedPosition)}");
 
             // ── 7. Разрыв соединения ──────────────────────────────────────
@@ -336,7 +335,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield break;
             }
 
-            GameLog.Info(Log, $"[E2E] Рву соединение connId={connection.connectionId}");
+            GameLog.Debug.Info($"[E2E] Рву соединение connId={connection.connectionId}");
             connection.Disconnect();
 
             deadline = Now + 60f;
@@ -380,7 +379,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             {
                 if (Now >= nextConnectionReport)
                 {
-                    GameLog.Info(Log, $"[E2E] Жду возврата клиента: {DescribeConnections()}, " +
+                    GameLog.Debug.Info($"[E2E] Жду возврата клиента: {DescribeConnections()}, " +
                                       $"сцена сервера='{NetworkManager.networkSceneName}'");
                     nextConnectionReport = Now + 15f;
                 }
@@ -519,7 +518,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             if (!NetworkClient.isConnected && !string.IsNullOrEmpty(context.ServerAddress))
             {
-                GameLog.Info(Log, $"[E2E] Discovery молчит 30 с, подключаюсь напрямую к {context.ServerAddress}");
+                GameLog.Debug.Info($"[E2E] Discovery молчит 30 с, подключаюсь напрямую к {context.ServerAddress}");
                 ConnectDirectly(context.ServerAddress);
 
                 deadline = Now + 30f;
@@ -647,7 +646,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             // Сцена Offline подняла свою копию менеджеров — дирижёр отладки среди них.
             DisableDebugOrchestrator();
 
-            GameLog.Info(Log, $"[E2E] Разрыв обработан (менеджер сменился={managerReplaced}), " +
+            GameLog.Debug.Info($"[E2E] Разрыв обработан (менеджер сменился={managerReplaced}), " +
                               $"начинаю возврат. {DescribeNetwork()}");
 
             ReportClientStateAfterOfflineScene();
@@ -677,7 +676,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 {
                     // Страховка от того же зависания: если connectState завис
                     // в Connecting, сбрасываем клиента и пробуем заново.
-                    GameLog.Warning(Log, "[E2E] connectState завис в Connecting — сбрасываю NetworkClient.Shutdown()");
+                    GameLog.Debug.Warning("[E2E] connectState завис в Connecting — сбрасываю NetworkClient.Shutdown()");
                     NetworkClient.Shutdown();
                     connectingSince = -1f;
                     nextAttempt = 0f;
@@ -685,7 +684,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 if (Now >= nextReport)
                 {
-                    GameLog.Info(Log, $"[E2E] Возврат в процессе: {DescribeNetwork()}");
+                    GameLog.Debug.Info($"[E2E] Возврат в процессе: {DescribeNetwork()}");
                     nextReport = Now + 10f;
                 }
 
@@ -693,7 +692,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             bool reconnected = NetworkClient.isConnected;
-            GameLog.Info(Log, $"[E2E] Итог возврата: подключён={reconnected}. {DescribeNetwork()}");
+            GameLog.Debug.Info($"[E2E] Итог возврата: подключён={reconnected}. {DescribeNetwork()}");
 
             deadline = Now + 60f;
             nextReport = Now + 15f;
@@ -702,7 +701,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             {
                 if (Now >= nextReport)
                 {
-                    GameLog.Info(Log, $"[E2E] Жду новую сессию: {DescribeNetwork()}");
+                    GameLog.Debug.Info($"[E2E] Жду новую сессию: {DescribeNetwork()}");
                     nextReport = Now + 15f;
                 }
 
@@ -773,7 +772,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 {
                     if (local.HasGrabbedDogTag)
                     {
-                        GameLog.Info(Log, $"[E2E] Флаг обратного канала подтверждён эхом на сессии netId={local.netId}");
+                        GameLog.Debug.Info($"[E2E] Флаг обратного канала подтверждён эхом на сессии netId={local.netId}");
                         yield break;
                     }
 
@@ -784,7 +783,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                         if (reportedNetId != local.netId)
                         {
-                            GameLog.Info(Log, $"[E2E] Клиент поднимает флаг обратного канала на сессии netId={local.netId}");
+                            GameLog.Debug.Info($"[E2E] Клиент поднимает флаг обратного канала на сессии netId={local.netId}");
                             reportedNetId = local.netId;
                         }
                     }
@@ -793,7 +792,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return null;
             }
 
-            GameLog.Warning(Log, $"[E2E] За {budgetSeconds:F0} с эхо флага обратного канала не пришло " +
+            GameLog.Debug.Warning($"[E2E] За {budgetSeconds:F0} с эхо флага обратного канала не пришло " +
                                  $"(NetworkClient.ready={NetworkClient.ready})");
         }
 
@@ -821,20 +820,20 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             NetworkManager manager = NetworkManager.singleton;
 
             if (manager == null)
-                GameLog.Warning(Log, "[E2E] После возврата в Offline NetworkManager.singleton пуст.");
+                GameLog.Debug.Warning("[E2E] После возврата в Offline NetworkManager.singleton пуст.");
             else if (!manager.isActiveAndEnabled)
-                GameLog.Warning(Log, $"[E2E] После возврата в Offline NetworkManager '{manager.gameObject.name}' " +
+                GameLog.Debug.Warning($"[E2E] После возврата в Offline NetworkManager '{manager.gameObject.name}' " +
                                      "неактивен: его LateUpdate не вызывается, значит UpdateScene никогда " +
                                      "не закроет загрузку сцены (NET-20).");
 
             if (NetworkClient.isLoadingScene || NetworkManager.loadingSceneAsync != null)
-                GameLog.Warning(Log, "[E2E] После возврата в Offline у клиента не снят признак загрузки сцены " +
+                GameLog.Debug.Warning("[E2E] После возврата в Offline у клиента не снят признак загрузки сцены " +
                                      $"(isLoadingScene={NetworkClient.isLoadingScene}, " +
                                      $"loadingSceneAsync={(NetworkManager.loadingSceneAsync != null)}). " +
                                      "При взведённом флаге NetworkClient.OnTransportData не разбирает входящие " +
                                      "сообщения вовсе — переподключение невозможно (NET-20).");
 
-            GameLog.Info(Log, $"[E2E] Состояние клиента после возврата в Offline: {DescribeNetwork()}");
+            GameLog.Debug.Info($"[E2E] Состояние клиента после возврата в Offline: {DescribeNetwork()}");
         }
 
         /// <summary>Состояние сети клиента одной строкой — единственный способ разобрать зависший возврат по логу.</summary>
@@ -880,7 +879,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 return;
             }
 
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 $"[E2E] Подключаюсь к '{NetworkManager.singleton.networkAddress}'");
             NetworkManager.singleton.StartClient();
         }
@@ -1033,7 +1032,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 return;
 
             orchestrator.enabled = false;
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 "[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
         }
     }

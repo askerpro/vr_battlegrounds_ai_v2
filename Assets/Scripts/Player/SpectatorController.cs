@@ -32,7 +32,7 @@ namespace VrBattlegrounds.Player
         {
             if (_isSpectating == value) return;
             
-            GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[SpectatorController] {name}: режим наблюдения {(value ? "включен" : "выключен")} (сервер)", this);
+            GameLog.Player.Info($"[SpectatorController] {name}: режим наблюдения {(value ? "включен" : "выключен")} (сервер)", this);
             _isSpectating = value;
         }
 
@@ -50,13 +50,13 @@ namespace VrBattlegrounds.Player
 
         private void OnSpectatingChanged(bool oldValue, bool newValue)
         {
-            GameLog.Verbose(GameSettings.Instance.LogLevelPlayer, $"[SpectatorController] {name}: SyncVar наблюдателя изменено {oldValue} -> {newValue}", this);
+            GameLog.Player.Verbose($"[SpectatorController] {name}: SyncVar наблюдателя изменено {oldValue} -> {newValue}", this);
             UpdateVisuals(newValue);
         }
 
         private void UpdateVisuals(bool spectating)
         {
-            GameLog.Verbose(GameSettings.Instance.LogLevelPlayer, $"[SpectatorController] {name}: обновление визуализации (spectating={spectating})", this);
+            GameLog.Player.Verbose($"[SpectatorController] {name}: обновление визуализации (spectating={spectating})", this);
             if (Geo != null) Geo.SetActive(!spectating);
             if (Ghost != null) Ghost.SetActive(spectating);
         }

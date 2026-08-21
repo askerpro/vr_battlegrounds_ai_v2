@@ -49,7 +49,7 @@ namespace VrBattlegrounds.Player.Avatars
             }
             else
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, "[AvatarManager] _combatAvatarStrategy is missing. Using fallback.");
+                GameLog.Player.Warning("[AvatarManager] _combatAvatarStrategy is missing. Using fallback.");
             }
 
             if (prefabToSpawn == null)

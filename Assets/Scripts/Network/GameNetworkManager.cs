@@ -166,7 +166,7 @@ namespace VrBattlegrounds.Network
 
         private void OnSpectatorConnect(NetworkConnectionToClient conn, SpectatorConnectMessage msg)
         {
-            GameLog.Warning(GameSettings.Instance.LogLevelNetwork, $"[GameNetworkManager] Подключение Spectator (Device: {msg.deviceType}, Admin: {msg.isAdmin}) пока не реализовано.");
+            GameLog.Network.Warning($"[GameNetworkManager] Подключение Spectator (Device: {msg.deviceType}, Admin: {msg.isAdmin}) пока не реализовано.");
         }
 
     }

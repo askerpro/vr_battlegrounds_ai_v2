@@ -42,11 +42,11 @@ namespace VrBattlegrounds.DevTools
             if (!Directory.Exists(_absoluteOutputPath))
             {
                 Directory.CreateDirectory(_absoluteOutputPath);
-                GameLog.Info(GameSettings.Instance.LogLevelDebug,
+                GameLog.Debug.Info(
                     $"[VRScreenshotCapture] Создана папка для скриншотов: {_absoluteOutputPath}");
             }
 
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 $"[VRScreenshotCapture] Инициализирован. Скриншоты → {_absoluteOutputPath}. Нажмите B для захвата.");
         }
 
@@ -73,7 +73,7 @@ namespace VrBattlegrounds.DevTools
 
             ScreenCapture.CaptureScreenshot(fullPath, _superSize);
 
-            GameLog.Info(GameSettings.Instance.LogLevelDebug,
+            GameLog.Debug.Info(
                 $"[VRScreenshotCapture] 📸 Скриншот сохранён: {fullPath}");
         }
     }

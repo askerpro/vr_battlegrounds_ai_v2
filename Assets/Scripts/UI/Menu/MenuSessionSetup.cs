@@ -47,7 +47,7 @@ namespace VrBattlegrounds.UI.Menu
 
             if (_gameModeRegistry == null || _gameModeRegistry.modes == null || _gameModeRegistry.modes.Length == 0)
             {
-                Debug.LogWarning("[MenuSessionSetup] Реестр режимов пуст или не назначен!");
+                GameLog.UI.Warning("[MenuSessionSetup] Реестр режимов пуст или не назначен!");
                 return;
             }
 
@@ -104,7 +104,7 @@ namespace VrBattlegrounds.UI.Menu
 
             if (_mapRegistry == null || _mapRegistry.maps == null)
             {
-                Debug.LogWarning("[MenuSessionSetup] MapRegistry не назначен или пуст!");
+                GameLog.UI.Warning("[MenuSessionSetup] MapRegistry не назначен или пуст!");
                 return;
             }
 
@@ -163,7 +163,7 @@ namespace VrBattlegrounds.UI.Menu
         {
             // Сохраняем логику, как было в Armada
             SessionManager.Instance?.SetSession(sceneName, _selectedMode?.modeId);
-            GameLog.Info(GameSettings.Instance.LogLevelUI, $"[MenuSessionSetup] Режим: {_selectedMode?.displayName}, Выбрана карта: {sceneName}");
+            GameLog.UI.Info($"[MenuSessionSetup] Режим: {_selectedMode?.displayName}, Выбрана карта: {sceneName}");
             
             // Сразу запускаем старт после выбора (или можно сделать отдельную кнопку 'Start')
             SessionManager.Instance?.StartSession();

@@ -188,8 +188,9 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 
 | Класс | Файл | Описание |
 |---|---|---|
-| `GameLog` | `Core/GameLog.cs` | Единственная точка логирования. Никогда не использовать `Debug.Log` напрямую. |
-| `GameSettings` | `Core/GameSettings.cs` | ScriptableObject с уровнями логирования по категориям. |
+| `GameLog` | `Core/GameLog.cs` | Единственная точка логирования. Категорию знает сам логгер: `GameLog.Match.Info("...")`, `GameLog.Player.Verbose("...", this)`. Каналы `Network`, `Player`, `Match`, `Debug`, `WeaponSystem`, `UI`, `PhysicalSpace`, `Arsenal` — один в один поля `GameSettings`. `GameLog.Error(...)` пишется всегда, независимо от уровня. Никогда не использовать `Debug.Log` напрямую. |
+| `GameLogChannel` | `Core/GameLog.cs` | Канал одной категории (`readonly struct`). Уровень тянет из `GameSettings` **в момент вызова**, поэтому правка `GameSettings.asset` в инспекторе действует без перезапуска. `IsEnabled(level)` — для случаев, где дорога сама сборка строки. |
+| `GameSettings` | `Core/GameSettings.cs` | ScriptableObject с уровнями логирования по категориям. Без ассета в `Resources/` отдаёт экземпляр со значениями по умолчанию, а не `null`. |
 | `LogLevel` | `Core/LogLevel.cs` | Enum: `None / Errors / Warnings / Info / Verbose`. |
 | `TeamData` | `Core/TeamData.cs` | ScriptableObject с данными команды. По сети синхронизируется только `int teamIndex`. |
 | `TeamRegistry` | `Core/TeamRegistry.cs` | Реестр команд. |

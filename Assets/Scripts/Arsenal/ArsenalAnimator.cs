@@ -27,7 +27,6 @@ namespace VrBattlegrounds.Arsenal
 
         // ── References ─────────────────────────────────────────
         private Animator _animator;
-        private LogLevel ArsenalLog => GameSettings.Instance.LogLevelArsenal;
 
         // ── Callbacks ──────────────────────────────────────────
         private System.Action _onCloseComplete;
@@ -55,14 +54,14 @@ namespace VrBattlegrounds.Arsenal
         {
             if (_isAnimating)
             {
-                GameLog.Warning(ArsenalLog, "[Arsenal Anim] Animation already in progress.");
+                GameLog.Arsenal.Warning("[Arsenal Anim] Animation already in progress.");
                 return;
             }
 
             _isAnimating = true;
             _onCloseComplete = onComplete;
             _animator.SetTrigger(TriggerClose);
-            GameLog.Info(ArsenalLog, "[Arsenal Anim] Close sequence triggered.");
+            GameLog.Arsenal.Info("[Arsenal Anim] Close sequence triggered.");
         }
 
         /// <summary>
@@ -73,14 +72,14 @@ namespace VrBattlegrounds.Arsenal
         {
             if (_isAnimating)
             {
-                GameLog.Warning(ArsenalLog, "[Arsenal Anim] Animation already in progress.");
+                GameLog.Arsenal.Warning("[Arsenal Anim] Animation already in progress.");
                 return;
             }
 
             _isAnimating = true;
             _onOpenComplete = onComplete;
             _animator.SetTrigger(TriggerOpen);
-            GameLog.Info(ArsenalLog, "[Arsenal Anim] Open sequence triggered.");
+            GameLog.Arsenal.Info("[Arsenal Anim] Open sequence triggered.");
         }
 
         /// <summary>
@@ -127,7 +126,7 @@ namespace VrBattlegrounds.Arsenal
         public void OnCloseAnimationComplete()
         {
             _isAnimating = false;
-            GameLog.Info(ArsenalLog, "[Arsenal Anim] Close sequence complete.");
+            GameLog.Arsenal.Info("[Arsenal Anim] Close sequence complete.");
             _onCloseComplete?.Invoke();
             _onCloseComplete = null;
         }
@@ -138,7 +137,7 @@ namespace VrBattlegrounds.Arsenal
         public void OnOpenAnimationComplete()
         {
             _isAnimating = false;
-            GameLog.Info(ArsenalLog, "[Arsenal Anim] Open sequence complete.");
+            GameLog.Arsenal.Info("[Arsenal Anim] Open sequence complete.");
             _onOpenComplete?.Invoke();
             _onOpenComplete = null;
         }

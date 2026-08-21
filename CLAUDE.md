@@ -22,8 +22,12 @@ VR-шутер для Oculus Quest 2/3. Unity **6000.4.1f1**, URP. Над про�
 
 Нарушение ломает билд или игру. Проверяй до того, как писать код.
 
-- **Логи** — только `GameLog.*` с категорией из `GameSettings.Instance`. `Debug.Log` в игровых
-  скриптах запрещён. Уровни: `Verbose` поток, `Info` события, `Warning` проблемы, `Error` сбои.
+- **Логи** — только через канал категории: `GameLog.Match.Info("...")`, `GameLog.Player.Verbose("...", this)`.
+  Категорию знает сам логгер, `GameSettings` в вызове не упоминается. Каналы: `Network`,
+  `Player`, `Match`, `Debug`, `WeaponSystem`, `UI`, `PhysicalSpace`, `Arsenal`.
+  `Debug.Log` в игровых скриптах запрещён — единственное исключение сам `GameLog.cs`.
+  Уровни: `Verbose` поток, `Info` события, `Warning` проблемы, `Error` сбои.
+  Ошибка вне категории — `GameLog.Error("...")`, пишется всегда.
 - **Смена сцены** — только `MapManager.Instance.LoadMap(sceneName)`. Прямые
   `SceneManager.LoadScene(...)` и `NetworkManager.singleton.ServerChangeScene(...)` запрещены:
   Mirror не даёт звать смену сцены из своих колбэков, клиенты рассинхронизируются.

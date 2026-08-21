@@ -18,17 +18,17 @@ namespace VrBattlegrounds.Player.Avatars
                 GameObject avatarPrefab = teamData.GetAvatarPrefab(session.AvatarIndex);
                 if (avatarPrefab != null)
                 {
-                    GameLog.Info(GameSettings.Instance.LogLevelPlayer, $"[AvatarManager/TeamAvatarStrategy] Выбран скин '{avatarPrefab.name}' для команды '{teamData.displayName}' (teamId: {session.TeamIndex}, avatarId: {session.AvatarIndex})");
+                    GameLog.Player.Info($"[AvatarManager/TeamAvatarStrategy] Выбран скин '{avatarPrefab.name}' для команды '{teamData.displayName}' (teamId: {session.TeamIndex}, avatarId: {session.AvatarIndex})");
                     return avatarPrefab;
                 }
                 else
                 {
-                    GameLog.Warning(GameSettings.Instance.LogLevelPlayer, $"[AvatarManager/TeamAvatarStrategy] Не удалось найти скин с ID {session.AvatarIndex} для команды {session.TeamIndex}!");
+                    GameLog.Player.Warning($"[AvatarManager/TeamAvatarStrategy] Не удалось найти скин с ID {session.AvatarIndex} для команды {session.TeamIndex}!");
                 }
             }
             else
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelPlayer, $"[AvatarManager/TeamAvatarStrategy] Команда с ID {session.TeamIndex} не найдена в TeamRegistry!");
+                GameLog.Player.Warning($"[AvatarManager/TeamAvatarStrategy] Команда с ID {session.TeamIndex} не найдена в TeamRegistry!");
             }
 
             return fallbackPrefab != null ? fallbackPrefab : globalFallback;

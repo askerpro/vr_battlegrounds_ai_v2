@@ -124,15 +124,13 @@ namespace VrBattlegrounds.Managers
         /// </summary>
         internal static void Declare()
         {
-            LogLevel level = GameSettings.Instance.LogLevelDebug;
-
-            if (level < LogLevel.Verbose) return;
+            if (!GameLog.Debug.IsEnabled(LogLevel.Verbose)) return;
 
             List<string> lines = new List<string>();
             foreach (ManagerSlot slot in PersistentRoster)
                 lines.Add($"  {slot.Order,6}  {slot.Type.Name} — {slot.Lifetime}");
 
-            GameLog.Verbose(level,
+            GameLog.Debug.Verbose(
                 "[ManagerBootstrap] Объявленный порядок постоянных менеджеров:\n" +
                 string.Join("\n", lines.ToArray()));
         }
@@ -152,7 +150,6 @@ namespace VrBattlegrounds.Managers
         {
             if (IsReady) return;
 
-            LogLevel level = GameSettings.Instance.LogLevelDebug;
             List<string> missing = new List<string>();
 
             foreach (ManagerSlot slot in PersistentRoster)
@@ -168,12 +165,12 @@ namespace VrBattlegrounds.Managers
                     "Docs/session-architecture.md.";
 
                 if (slot.Required) GameLog.Error(message);
-                else GameLog.Warning(level, message);
+                else GameLog.Debug.Warning(message);
             }
 
             IsReady = true;
 
-            GameLog.Info(level, missing.Count == 0
+            GameLog.Debug.Info(missing.Count == 0
                 ? $"[ManagerBootstrap] Постоянные менеджеры готовы: {PersistentRoster.Length} из {PersistentRoster.Length}."
                 : $"[ManagerBootstrap] Постоянные менеджеры готовы частично, нет: {string.Join(", ", missing.ToArray())}.");
 

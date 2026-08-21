@@ -63,7 +63,6 @@ namespace VrBattlegrounds.Arsenal
         private bool _stateApplied;
 
         public ArsenalState CurrentState => _currentState;
-        private LogLevel ArsenalLog => GameSettings.Instance.LogLevelArsenal;
 
         /// <summary>
         /// Стена не участвует в репликации: объект не заспавнен Mirror. Так выглядит
@@ -198,7 +197,7 @@ namespace VrBattlegrounds.Arsenal
         [Server]
         private void ReplenishWeaponsNetwork(bool forceAll = false)
         {
-            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] ReplenishWeaponsNetwork. ForceAll: {forceAll}");
+            GameLog.Arsenal.Info($"[Arsenal DEBUG] ReplenishWeaponsNetwork. ForceAll: {forceAll}");
             
             if (_allSlots == null || _allSlots.Length == 0)
                 _allSlots = GetComponentsInChildren<ArsenalSlotController>();
@@ -328,10 +327,10 @@ namespace VrBattlegrounds.Arsenal
         [ContextMenu("Open Arsenal")]
         public void OpenArsenal(bool immediate = false)
         {
-            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] OpenArsenal called! Current state: {_currentState}, Immediate: {immediate}");
+            GameLog.Arsenal.Info($"[Arsenal DEBUG] OpenArsenal called! Current state: {_currentState}, Immediate: {immediate}");
             if (_currentState == ArsenalState.Open || _currentState == ArsenalState.Opening)
             {
-                GameLog.Warning(ArsenalLog, "[Arsenal] Arsenal is already open/opening.");
+                GameLog.Arsenal.Warning("[Arsenal] Arsenal is already open/opening.");
                 return;
             }
 
@@ -344,7 +343,7 @@ namespace VrBattlegrounds.Arsenal
         [ContextMenu("Force Close")]
         public void ForceClose()
         {
-            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] ForceClose called! Current state: {_currentState}");
+            GameLog.Arsenal.Info($"[Arsenal DEBUG] ForceClose called! Current state: {_currentState}");
             if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing) return;
 
             SetState(ArsenalState.Closing);
@@ -356,7 +355,7 @@ namespace VrBattlegrounds.Arsenal
         [ContextMenu("Set Closed Immediate")]
         public void SetClosedImmediate()
         {
-            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] SetClosedImmediate called! Current state: {_currentState}");
+            GameLog.Arsenal.Info($"[Arsenal DEBUG] SetClosedImmediate called! Current state: {_currentState}");
 
             SetState(ArsenalState.Closed);
 
@@ -375,7 +374,7 @@ namespace VrBattlegrounds.Arsenal
         {
             if (!CanWriteState)
             {
-                GameLog.Warning(ArsenalLog,
+                GameLog.Arsenal.Warning(
                     $"[Arsenal] Попытка сменить состояние стены на клиенте ({_currentState} -> {newState}). " +
                     "Состояние общее и его задаёт сервер — запрос игнорирован.");
                 return;
@@ -459,7 +458,7 @@ namespace VrBattlegrounds.Arsenal
 
         private void PlayOpening()
         {
-            GameLog.Info(ArsenalLog, "[Arsenal] Arsenal OPENING — prep phase starting...");
+            GameLog.Arsenal.Info("[Arsenal] Arsenal OPENING — prep phase starting...");
 
             if (_animator != null)
             {
@@ -493,13 +492,13 @@ namespace VrBattlegrounds.Arsenal
             if (_dogTagController != null)
                 _dogTagController.ResetTag();
 
-            GameLog.Info(ArsenalLog, "[Arsenal] Arsenal OPENED — prep phase started.");
+            GameLog.Arsenal.Info("[Arsenal] Arsenal OPENED — prep phase started.");
             OnArsenalOpened?.Invoke();
         }
 
         private void PlayClosing()
         {
-            GameLog.Info(ArsenalLog, "[Arsenal] Arsenal CLOSING — locking all slots...");
+            GameLog.Arsenal.Info("[Arsenal] Arsenal CLOSING — locking all slots...");
 
             // Слоты блокируются сразу: возвращать оружие на стену уже нельзя.
             foreach (var slot in _allSlots)
@@ -533,7 +532,7 @@ namespace VrBattlegrounds.Arsenal
             if (_animator != null && !_animator.IsAnimating)
                 _animator.SetClosedImmediate();
 
-            GameLog.Info(ArsenalLog, "[Arsenal] Arsenal CLOSED.");
+            GameLog.Arsenal.Info("[Arsenal] Arsenal CLOSED.");
 
             if (raiseEvent)
                 OnArsenalClosed?.Invoke();
@@ -621,7 +620,7 @@ namespace VrBattlegrounds.Arsenal
         /// </summary>
         private void HandleRoundStateChanged(RoundState newState)
         {
-            GameLog.Info(ArsenalLog, $"[Arsenal DEBUG] HandleRoundStateChanged received: {newState}. Arsenal State: {_currentState}");
+            GameLog.Arsenal.Info($"[Arsenal DEBUG] HandleRoundStateChanged received: {newState}. Arsenal State: {_currentState}");
 
             if (!IsStandalone) return;
 

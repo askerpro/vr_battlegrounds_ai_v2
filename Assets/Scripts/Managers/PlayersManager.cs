@@ -45,12 +45,12 @@ namespace VrBattlegrounds.Managers
         {
             if (Instance != null && Instance != this)
             {
-                GameLog.Warning(GameSettings.Instance.LogLevelNetwork, "[PlayersManager] Awake: Instance уже существует, уничтожаю дубликат.");
+                GameLog.Network.Warning("[PlayersManager] Awake: Instance уже существует, уничтожаю дубликат.");
                 Destroy(gameObject);
                 return;
             }
             Instance = this;
-            GameLog.Info(GameSettings.Instance.LogLevelNetwork, "[PlayersManager] Awake: Instance установлен.");
+            GameLog.Network.Info("[PlayersManager] Awake: Instance установлен.");
         }
 
         private PlayerSession CreatePlayerSession(NetworkConnectionToClient conn, GameRole role, string deviceToken, ClientDeviceType deviceType, bool isAdmin, SessionSnapshot snapshot = null, int initialTeamId = 0, int initialAvatarId = 0)
@@ -92,7 +92,7 @@ namespace VrBattlegrounds.Managers
 
         public void HandlePlayerConnect(NetworkConnectionToClient conn, GamePlayerConnectMessage msg)
         {
-            GameLog.Info(GameSettings.Instance.LogLevelNetwork, $"[PlayersManager] Получен GamePlayerConnectMessage. Device: {msg.deviceType}");
+            GameLog.Network.Info($"[PlayersManager] Получен GamePlayerConnectMessage. Device: {msg.deviceType}");
             if (conn.identity != null) return;
 
             SessionSnapshot snapshot = null;

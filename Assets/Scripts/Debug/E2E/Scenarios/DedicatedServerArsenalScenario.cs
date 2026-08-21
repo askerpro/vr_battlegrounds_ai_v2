@@ -81,6 +81,25 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// </summary>
         private const float TagPullDelay = 10f;
 
+        /// <summary>
+        /// Сколько инициатор ждёт возврата состояния после захвата жетона.
+        /// Срок щедрый намеренно: он покрывает круг «Command → сервер → SyncVar → клиент»
+        /// с любым разумным запасом, а нестабильность TEST-01 лечится не им, а тем,
+        /// что сервер больше не гасит процесс до отчёта клиентов
+        /// (см. <see cref="ReportVerdictReady"/>).
+        /// </summary>
+        private const float TagCloseWait = 30f;
+
+        /// <summary>Сколько наблюдатель ждёт закрытия стены по чужому жетону.</summary>
+        private const float TagSeenWait = 90f;
+
+        /// <summary>
+        /// Сколько сервер ждёт отчётов клиентов, прежде чем погасить процесс.
+        /// Истечение срока — не отказ проверки, а предупреждение: клиентские
+        /// вердикты после него могут оказаться недостоверными.
+        /// </summary>
+        private const float ClientVerdictWait = 45f;
+
         // ── Наблюдение ────────────────────────────────────────────────────
 
         /// <summary>Фазы, пришедшие через <c>OnRoundStateChangedLocal</c> (то, что ловит арсенал).</summary>
@@ -410,6 +429,14 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                             : $"стена закрылась, но фаза успела уйти в {phaseAtClose} — закрыть её мог переход по фазе. " +
                               "Проверка недействительна, а не провалена: смотри, почему раунд ушёл из Equipment.");
 
+                // ── 10. Барьер: не гасим сервер, пока клиенты не вынесли вердикт ──
+                // Свой вердикт сервер выносит в тот же кадр, в котором применил Command
+                // инициатора, — а инициатору состояние возвращается только следующей
+                // рассылкой SyncVar. Application.Quit сразу после вердикта обрывал связь
+                // раньше эха примерно в трети прогонов: это и есть TEST-01. Барьер не
+                // проверка: он ничего не утверждает об игре, он лишь удерживает процесс.
+                yield return WaitForClientVerdicts(context);
+
                 result.Summary = result.AllChecksGreen
                     ? "все проверки зелёные — NET-06, NET-13 и NET-07 больше не воспроизводятся"
                     : (!eventOk || !arsenalOk)
@@ -427,6 +454,71 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             {
                 EliminationMode.OnRoundStateChangedLocal -= OnRoundStateEvent;
             }
+        }
+
+        /// <summary>
+        /// Держит серверный процесс живым, пока каждый клиент не отчитается, что
+        /// записал свою проверку по жетону (см. <see cref="ReportVerdictReady"/>).
+        ///
+        /// Истечение срока не красит ни одну проверку: сервер своё уже проверил,
+        /// а достоверность клиентских вердиктов видна по их собственным файлам.
+        /// Но в лог это обязано попасть — иначе следующий разбор снова начнётся
+        /// с гадания, почему клиент увидел не то же, что сервер.
+        /// </summary>
+        private static IEnumerator WaitForClientVerdicts(E2EContext context)
+        {
+            E2EWaitOutcome barrier = new E2EWaitOutcome();
+
+            yield return E2EWait.Until(barrier,
+                $"все {context.ExpectedClients} клиент(а) отчитались, что записали свою проверку по жетону",
+                ClientVerdictWait,
+                () => ReportedVerdicts() >= context.ExpectedClients,
+                () => $"отчитались {ReportedVerdicts()} из {context.ExpectedClients}; " +
+                      $"сессии: {DescribeVerdictReports()}; " +
+                      $"подключений на сервере: {NetworkServer.connections.Count}");
+
+            if (barrier.Succeeded)
+            {
+                GameLog.Debug.Info(
+                    $"[E2E] {barrier.Diagnosis} Сервер можно гасить — эхо SyncVar до клиентов доехало.");
+                yield break;
+            }
+
+            GameLog.Debug.Info(
+                $"[E2E] {barrier.Diagnosis} Гашу сервер не дождавшись: клиентские вердикты " +
+                "могли не успеть — сверься с client-*.json.");
+        }
+
+        /// <summary>Сколько сессий подняли флаг «мой вердикт по жетону записан».</summary>
+        private static int ReportedVerdicts()
+        {
+            if (PlayersManager.Instance == null)
+                return 0;
+
+            int reported = 0;
+            foreach (PlayerSession session in PlayersManager.Instance.Sessions)
+            {
+                if (session != null && session.HasGrabbedDogTag)
+                    reported++;
+            }
+
+            return reported;
+        }
+
+        /// <summary>Кто отчитался, а кто нет — для диагностики барьера.</summary>
+        private static string DescribeVerdictReports()
+        {
+            if (PlayersManager.Instance == null)
+                return "PlayersManager отсутствует";
+
+            List<string> parts = new List<string>();
+            foreach (PlayerSession session in PlayersManager.Instance.Sessions)
+            {
+                if (session == null) continue;
+                parts.Add($"{session.PlayerName}[{session.DeviceToken}]={(session.HasGrabbedDogTag ? "да" : "нет")}");
+            }
+
+            return parts.Count == 0 ? "сессий нет" : string.Join(", ", parts.ToArray());
         }
 
         // ══════════════════════════════════════════════════════════════════
@@ -547,6 +639,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     $"(на карте '{context.Map}'). Либо карта не загрузилась, либо Mirror не заспавнил стены — " +
                     "у объекта сцены нет sceneId (NET-14).");
                 result.Summary = "клиент не увидел стену арсенала";
+                // Отчитываемся и на провальном пути: серверу незачем ждать полный
+                // срок того, кто уже сдался.
+                ReportVerdictReady();
                 yield break;
             }
 
@@ -565,6 +660,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             if (!arsenalOpen)
             {
                 result.Summary = "клиент не увидел открытую стену, проверять закрытие по жетону нечего";
+                ReportVerdictReady();
                 yield break;
             }
 
@@ -589,33 +685,64 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private IEnumerator PullDogTag(ArsenalWallController shared, E2EResult result)
         {
             // Пауза, чтобы сервер успел записать свою проверку про открытую стену.
-            float until = Now + TagPullDelay;
-            while (Now < until)
-                yield return null;
+            yield return E2EWait.Hold(TagPullDelay);
+
+            // netId запоминаем заранее. При обрыве связи Mirror зовёт NetworkIdentity.Reset,
+            // и netId обнуляется прямо на живом объекте — вердикт, читающий его в конце,
+            // сообщал бы про мифическую «стену netId=0».
+            uint wallNetId = shared.netId;
 
             DogTagController dogTag = shared.GetComponentInChildren<DogTagController>(true);
             if (dogTag == null)
             {
                 result.Set(CheckClientTagPull, false,
-                    $"у стены netId={shared.netId} нет DogTagController — жетон брать нечем. " +
+                    $"у стены netId={wallNetId} нет DogTagController — жетон брать нечем. " +
                     "Проверить закрытие по жетону на этой карте нельзя.");
+                ReportVerdictReady();
                 yield break;
             }
 
-            GameLog.Debug.Info($"[E2E] Беру жетон на стене netId={shared.netId}");
+            // Состояние на момент захвата. Если стена к этому мгновению уже не Open,
+            // ждать «выхода из Open» бессмысленно: условие выполнено заранее и проверка
+            // стала бы зелёной, ничего не проверив.
+            ArsenalWallController.ArsenalState stateAtGrab = shared.CurrentState;
+            if (stateAtGrab != ArsenalWallController.ArsenalState.Open)
+            {
+                result.Set(CheckClientTagPull, false,
+                    $"стена netId={wallNetId} была уже в {stateAtGrab} к моменту захвата жетона — " +
+                    "закрывать нечего, и проверка ничего не значила бы. Смотри, кто закрыл её раньше: " +
+                    "выдержка перед захватом рассчитана на то, что фаза остаётся Equipment.");
+                ReportVerdictReady();
+                yield break;
+            }
+
+            GameLog.Debug.Info($"[E2E] Беру жетон на стене netId={wallNetId}");
             dogTag.OnTagGrabbed?.Invoke(null);
 
-            float deadline = Now + 30f;
-            while (shared.CurrentState == ArsenalWallController.ArsenalState.Open && Now < deadline)
-                yield return null;
+            // Ждём не «сколько-нибудь», а именно возврата состояния: захват уходит
+            // Command'ом на сервер, сервер пишет SyncVar, и обратно оно приезжает
+            // ближайшей рассылкой. Пропажа связи означает, что ответа уже не будет, —
+            // ждать оставшийся срок незачем, и в вердикте это должно быть названо.
+            E2EWaitOutcome wait = new E2EWaitOutcome();
+            yield return E2EWait.Until(wait,
+                $"стена netId={wallNetId} вышла из Open после захвата жетона",
+                TagCloseWait,
+                () => shared.CurrentState != ArsenalWallController.ArsenalState.Open,
+                () => DescribeWallWait(shared, wallNetId),
+                () => NetworkClient.isConnected
+                    ? null
+                    : "связь с сервером пропала — SyncVar с новым состоянием вернуться уже не может " +
+                      "(сервер погас раньше, чем ответил; см. TEST-01)");
 
-            bool closed = shared.CurrentState != ArsenalWallController.ArsenalState.Open;
-            result.Set(CheckClientTagPull, closed,
-                closed
-                    ? $"жетон взят, стена netId={shared.netId} перешла в {shared.CurrentState}"
-                    : $"за 30 с после захвата жетона стена netId={shared.netId} осталась Open. " +
-                      "Закрытие не сработало даже у инициатора — дальше проверять нечего, " +
-                      "красные проверки на сервере и втором клиенте этим и объясняются.");
+            result.Set(CheckClientTagPull, wait.Succeeded,
+                wait.Succeeded
+                    ? $"жетон взят, стена netId={wallNetId} перешла в {shared.CurrentState} " +
+                      $"за {wait.Elapsed:F2} с"
+                    : wait.Diagnosis + " Закрытие не сработало даже у инициатора — " +
+                      "дальше проверять нечего, красные проверки на сервере и втором клиенте " +
+                      "этим и объясняются.");
+
+            ReportVerdictReady();
         }
 
         /// <summary>
@@ -624,18 +751,71 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// </summary>
         private IEnumerator WatchWallClose(ArsenalWallController shared, E2EResult result)
         {
-            float deadline = Now + 90f;
-            while (shared.CurrentState == ArsenalWallController.ArsenalState.Open && Now < deadline)
-                yield return null;
+            uint wallNetId = shared.netId;
 
-            bool closed = shared.CurrentState != ArsenalWallController.ArsenalState.Open;
-            result.Set(CheckClientTagSeen, closed,
-                closed
-                    ? $"стена netId={shared.netId} закрылась и здесь ({shared.CurrentState}), " +
-                      $"хотя жетон брал {TagInitiatorRole} — состояние стены общее"
-                    : $"за 90 с стена netId={shared.netId} осталась Open, хотя {TagInitiatorRole} взял жетон " +
-                      "(его вердикт — в client-1.json). Это NET-07: состояние стены — обычное поле, " +
-                      "и закрытие живёт только на машине инициатора.");
+            E2EWaitOutcome wait = new E2EWaitOutcome();
+            yield return E2EWait.Until(wait,
+                $"стена netId={wallNetId} вышла из Open после чужого жетона",
+                TagSeenWait,
+                () => shared.CurrentState != ArsenalWallController.ArsenalState.Open,
+                () => DescribeWallWait(shared, wallNetId),
+                () => NetworkClient.isConnected
+                    ? null
+                    : "связь с сервером пропала — состояние стены сюда уже не приедет " +
+                      "(сервер погас раньше, чем разослал; см. TEST-01)");
+
+            result.Set(CheckClientTagSeen, wait.Succeeded,
+                wait.Succeeded
+                    ? $"стена netId={wallNetId} закрылась и здесь ({shared.CurrentState}) " +
+                      $"за {wait.Elapsed:F2} с, хотя жетон брал {TagInitiatorRole} — состояние стены общее"
+                    : wait.Diagnosis + $" Жетон брал {TagInitiatorRole}, его вердикт — в client-1.json. " +
+                      "Если тот увидел закрытие у себя, а сюда оно не доехало — это NET-07: " +
+                      "состояние стены живёт только на машине инициатора.");
+
+            ReportVerdictReady();
+        }
+
+        /// <summary>
+        /// Снимок состояния для диагностики ожидания стены. Помимо самого состояния
+        /// показывает связь и текущий <c>netId</c>: обнулившийся netId при живой ссылке —
+        /// верный признак того, что объект отцепили от сети, а не что стена «не та».
+        /// </summary>
+        private static string DescribeWallWait(ArsenalWallController wall, uint expectedNetId)
+        {
+            string netIdNote = wall.netId == expectedNetId
+                ? $"netId={wall.netId}"
+                : $"netId был {expectedNetId}, стал {wall.netId} — объект отцеплён от сети";
+
+            return $"состояние стены={wall.CurrentState}, {netIdNote}, " +
+                   $"связь с сервером={(NetworkClient.isConnected ? "есть" : "нет")}, " +
+                   $"сцена='{SceneManager.GetActiveScene().name}'";
+        }
+
+        /// <summary>
+        /// Обратный канал «свой вердикт по жетону я вынес».
+        ///
+        /// Зачем. Сервер узнаёт о закрытии стены в тот же кадр, в котором применил
+        /// <c>Command</c> клиента, и сразу гасит процесс — а инициатору состояние
+        /// возвращается только следующей рассылкой <c>SyncVar</c>. Обрыв связи
+        /// опережал эхо примерно в трети прогонов: это и была TEST-01. Флаг
+        /// <c>HasGrabbedDogTag</c> используется как сигнал «мою проверку я записал»,
+        /// и сервер ждёт его от каждого клиента, прежде чем выйти.
+        ///
+        /// Фазу раунда сигнал сдвинуть не может: <c>AreAllPlayersReady</c> требует
+        /// готовности всех живых игроков, а её достигнет только последний отчитавшийся —
+        /// то есть заведомо после того, как все проверки уже записаны.
+        /// </summary>
+        private static void ReportVerdictReady()
+        {
+            PlayerSession local = PlayerSession.LocalSession;
+            if (local == null)
+            {
+                GameLog.Debug.Info("[E2E] Отчитаться о вердикте нечем: локальной сессии нет");
+                return;
+            }
+
+            GameLog.Debug.Info("[E2E] Вердикт по жетону записан — отчитываюсь серверу");
+            local.CmdSetDogTagGrabbed(true);
         }
 
         // ══════════════════════════════════════════════════════════════════

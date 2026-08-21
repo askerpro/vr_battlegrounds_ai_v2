@@ -30,11 +30,11 @@ namespace VrBattlegrounds.Player.UI
         {
             base.OnStartAuthority();
 
+            // Ошибка сборки префаба: контейнера нет, значит HUD не появится никогда
+            // и сам собой не починится. Error.
             if (_hudContainer == null)
             {
-                string error = $"[{nameof(PlayerHUDManager)}] HUD Container не назначен на префабе игрока!";
-                GameLog.Error(error);
-                GameLog.Player.Warning(error);
+                GameLog.UI.Error($"[{nameof(PlayerHUDManager)}] HUD Container не назначен на префабе игрока!", this);
                 return;
             }
 
@@ -47,38 +47,43 @@ namespace VrBattlegrounds.Player.UI
 
         private void SetupHUDForCurrentMode()
         {
+            // Сбой порядка инициализации: HUD спавнится после загрузки карты, к этому
+            // моменту менеджер сессии обязан существовать. Error.
             if (SessionManager.Instance == null)
             {
-                string error = $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: SessionManager.Instance равен null. Возможно, сцена загрузилась неверно.";
-                GameLog.Error(error);
-                GameLog.Player.Warning(error);
+                GameLog.UI.Error(
+                    $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: SessionManager.Instance равен null. " +
+                    "Возможно, сцена загрузилась неверно.", this);
                 return;
             }
 
+            // Единственная из пяти веток, которая лечится сама: режим доезжает до клиента
+            // по сети и на момент спавна аватара может быть ещё не получен. Warning.
             if (string.IsNullOrEmpty(SessionManager.Instance.SelectedModeId))
             {
-                string error = $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: В SessionManager пустой SelectedModeId. Это может быть из-за задержки сети при входе на сервер.";
-                GameLog.Player.Warning(error);
-                GameLog.Player.Warning(error);
+                GameLog.UI.Warning(
+                    $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: в SessionManager пустой SelectedModeId. " +
+                    "Это может быть из-за задержки сети при входе на сервер.", this);
                 return;
             }
 
             string modeId = SessionManager.Instance.SelectedModeId;
             GameModeData modeData = SessionManager.Instance.SelectedGameModeData;
 
+            // Режим выбран, но в реестре его нет — рассинхрон данных, сам не исправится. Error.
             if (modeData == null)
             {
-                string error = $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: GameMode '{modeId}' не найден в реестре.";
-                GameLog.Error(error);
-                GameLog.Player.Warning(error);
+                GameLog.UI.Error(
+                    $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: GameMode '{modeId}' не найден в реестре.", this);
                 return;
             }
 
+            // Режим найден и исправен, у него просто нет своего HUD. Игра работает,
+            // но игрок остаётся без интерфейса — это проблема, а не сбой. Warning.
             if (modeData.hudPrefab == null)
             {
-                string error = $"[{nameof(PlayerHUDManager)}] GameMode '{modeId}' не имеет hudPrefab. HUD не заспавнен.";
-                GameLog.Player.Warning(error);
-                GameLog.Player.Verbose(error);
+                GameLog.UI.Warning(
+                    $"[{nameof(PlayerHUDManager)}] GameMode '{modeId}' не имеет hudPrefab. HUD не заспавнен.", this);
                 return;
             }
 
@@ -99,12 +104,12 @@ namespace VrBattlegrounds.Player.UI
                     hudRect.localScale = Vector3.one;
                 }
 
-                GameLog.Player.Info(
+                GameLog.UI.Info(
                     $"[{nameof(PlayerHUDManager)}] Успешный спавн HUD префаба '{modeData.hudPrefab.name}' для режима '{modeId}'.");
             }
             catch (System.Exception ex)
             {
-                GameLog.Error($"[{nameof(PlayerHUDManager)}] Фатальная ошибка при спавне HUD для '{modeId}': {ex.Message}\n{ex.StackTrace}");
+                GameLog.UI.Error($"[{nameof(PlayerHUDManager)}] Фатальная ошибка при спавне HUD для '{modeId}': {ex.Message}\n{ex.StackTrace}");
             }
         }
 

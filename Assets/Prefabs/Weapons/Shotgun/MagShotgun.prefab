@@ -55,5 +55,30 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2469819177281156579, guid: 4b400d3160fb5de469c36589be9d5fe5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4463702150871382182}
   m_SourcePrefab: {fileID: 100100000, guid: 4b400d3160fb5de469c36589be9d5fe5, type: 3}
+--- !u!1 &5837573240272137203 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2469819177281156579, guid: 4b400d3160fb5de469c36589be9d5fe5, type: 3}
+  m_PrefabInstance: {fileID: 8306245860999912976}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4463702150871382182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5837573240272137203}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b91ecbcc199f4492b9a91e820070131, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror::Mirror.NetworkIdentity
+  sceneId: 0
+  _assetId: 2057188125
+  serverOnly: 0
+  visibility: 0
+  hasSpawned: 0

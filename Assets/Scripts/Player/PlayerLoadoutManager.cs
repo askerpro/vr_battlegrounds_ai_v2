@@ -9,6 +9,7 @@ using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Interaction;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Player
 {
@@ -135,11 +136,17 @@ namespace VrBattlegrounds.Player
 
                 for (int i = 0; i < info.MaxMagazineCount; i++)
                 {
-                    GameObject magGo = Instantiate(info.MagazinePrefab);
-                    
+                    // Создание и спавн ведёт сетевой слой: он гасит «Auto Anchor» до Awake
+                    // и выравнивает UniqueId по netId. Без выравнивания вставка магазина
+                    // не применится на другой машине — это NET-16, см. NetworkUxrIdentity.
+                    GameObject magGo = NetworkUxrIdentity.CreateInstance(info.MagazinePrefab);
+                    if (magGo == null) continue;
+
+                    magGo.SetActive(true);
+
                     // Network Server handles giving authority back to the requesting client
-                    NetworkServer.Spawn(magGo, connectionToClient);
-                    
+                    NetworkUxrIdentity.SpawnServerObject(magGo, connectionToClient);
+
                     var netId = magGo.GetComponent<NetworkIdentity>();
                     if (netId != null) spawnedMags.Add(netId);
                 }

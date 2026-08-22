@@ -370,7 +370,7 @@ clientIdentity.DeserializeClient(new NetworkReader(observers.ToArray()), true);
 `calibration-scale-replication` (VR-01, зелёный после T-14, гоняется на обеих картах),
 `session-recovery-on-reconnect` (ARCH-01, зелёный после исправления NET-20, `-Clients 1`),
 `player-death-signal` (остаток NET-04, зелёный после правки `PlayerController`, `-Clients 1`),
-`arsenal-item-grab` (NET-16/NET-17, **детерминированно красный**, `-Clients 1`).**
+`arsenal-item-grab` (NET-16/NET-17/NET-23, зелёный после выравнивания `UniqueId`, `-Clients 1`).**
 Вердикт выносит не человек, глядя в два окна, а сам сценарий: каждый процесс пишет
 машиночитаемый JSON.
 Без этого ярус C остаётся ручным уровнем 4 и агент не может закрыть на нём задачу.

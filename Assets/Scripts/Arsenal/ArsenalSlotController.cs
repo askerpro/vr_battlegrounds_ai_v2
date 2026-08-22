@@ -42,11 +42,17 @@ namespace VrBattlegrounds.Arsenal
         /// Штатный — игрок кладёт его руками: учёт ведёт <see cref="UxrGrabManager"/>,
         /// и предмет виден в <c>UxrGrabbableObjectAnchor.CurrentPlacedObject</c>.
         /// Сетевой — <see cref="AssignNetworkItem"/> перепарентит под якорь объект,
-        /// уже заспавненный Mirror'ом; через <see cref="UxrGrabManager"/> он не проходит,
-        /// поэтому <c>CurrentPlacedObject</c> остаётся пустым.
+        /// уже заспавненный Mirror'ом.
         ///
-        /// Опора только на <c>CurrentPlacedObject</c> и была находкой NET-13: всё, что
-        /// появилось на стене по сети, слот считал отсутствующим.
+        /// Второй источник (<c>_spawnedItem</c> под якорем) остаётся страховкой: опора
+        /// только на <c>CurrentPlacedObject</c> и была находкой NET-13, а с тех пор
+        /// сетевая выдача научилась заводить учёт UltimateXR сама
+        /// (<c>UxrGrabbableObject.SetNetworkAnchor</c>).
+        ///
+        /// Оба источника проверяются одинаково: предмет числится в слоте, только пока он
+        /// физически висит под якорем. Учёт якоря сам по себе не доказательство — предмет
+        /// могли перепарентить мимо <see cref="UxrGrabManager"/>, и тогда слот обязан
+        /// считаться пустым, иначе он не пополнится никогда.
         ///
         /// Сетевой предмет числится в слоте, пока он жив и висит под якорем. Когда игрок
         /// его забирает, <see cref="UxrGrabManager"/> перепарентит объект к аватару
@@ -58,8 +64,10 @@ namespace VrBattlegrounds.Arsenal
             {
                 if (_itemAnchor == null) return null;
 
-                if (_itemAnchor.CurrentPlacedObject != null)
-                    return _itemAnchor.CurrentPlacedObject.gameObject;
+                UxrGrabbableObject placed = _itemAnchor.CurrentPlacedObject;
+
+                if (placed != null && placed.transform.IsChildOf(_itemAnchor.transform))
+                    return placed.gameObject;
 
                 if (_spawnedItem != null && _spawnedItem.transform.IsChildOf(_itemAnchor.transform))
                     return _spawnedItem;
@@ -143,15 +151,23 @@ namespace VrBattlegrounds.Arsenal
 
             // Assign the object reference locally
             _spawnedItem = spawnedItem;
-            
+
             // Parent to slot anchor and apply offset.
             // Mirror supports runtime reparenting of spawned NetworkIdentity objects
             // (nested NI is only forbidden in prefabs, not at runtime).
             _spawnedItem.transform.SetParent(_itemAnchor.transform);
             _spawnedItem.transform.localPosition = _weaponInfo.WeaponPositionOffset;
             _spawnedItem.transform.localRotation = Quaternion.Euler(_weaponInfo.WeaponRotationOffset);
-            
+
             _spawnedItem.name = _weaponInfo.WeaponId + "_instance";
+
+            // Учёт «предмет лежит в этом якоре» ведёт UltimateXR, и сетевая выдача обязана
+            // его завести: без CurrentAnchor менеджер захвата при уходе предмета не поднимает
+            // у якоря событие Removed, и слот не узнаёт, что оружие унесли (NET-17).
+            // Тихо — потому что выдача не действие игрока: положение предмета приехало
+            // спавн-сообщением Mirror, а каждая машина приходит к одному и тому же учёту сама.
+            UxrGrabbableObject grabbable = _spawnedItem.GetComponent<UxrGrabbableObject>();
+            if (grabbable != null) grabbable.SetNetworkAnchor(_itemAnchor);
 
             var weaponComp = _spawnedItem.GetComponent<WeaponComponent>();
             if (weaponComp == null) weaponComp = _spawnedItem.AddComponent<WeaponComponent>();
@@ -175,6 +191,11 @@ namespace VrBattlegrounds.Arsenal
         {
             if (_spawnedItem != null)
             {
+                // Снимаем учёт до уничтожения: иначе якорь остаётся с ссылкой
+                // на удалённый предмет и считает себя занятым.
+                UxrGrabbableObject grabbable = _spawnedItem.GetComponent<UxrGrabbableObject>();
+                if (grabbable != null) grabbable.SetNetworkAnchor(null);
+
                 Destroy(_spawnedItem);
                 _spawnedItem = null;
             }

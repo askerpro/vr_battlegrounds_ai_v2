@@ -58,6 +58,28 @@ namespace VrBattlegrounds.Network
             ServerSceneChanged?.Invoke(sceneName);
         }
 
+        /// <summary>
+        /// Клиент поднялся. Сразу подменяем спавн сетевых префабов с компонентами
+        /// UltimateXR: их <c>UniqueId</c> обязан совпасть с серверным, иначе ни один
+        /// захват, выстрел или вставка магазина не будут применены на другой машине
+        /// (находка NET-16). Подробности — <see cref="NetworkUxrIdentity"/>.
+        ///
+        /// Позже нельзя: спавн-сообщения приходят сразу после готовности клиента.
+        /// Раньше тоже нельзя: штатную регистрацию префабов Mirror делает в
+        /// <c>RegisterClientMessages</c>, то есть непосредственно перед этим вызовом.
+        /// </summary>
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+            NetworkUxrIdentity.InstallClientSpawnHandlers();
+        }
+
+        public override void OnStopClient()
+        {
+            NetworkUxrIdentity.UninstallClientSpawnHandlers();
+            base.OnStopClient();
+        }
+
         public override void OnServerAddPlayer(NetworkConnectionToClient conn)
         {
             // Мы не спавним ничего автоматически. Спавн идет в OnPlayerJoinMessage

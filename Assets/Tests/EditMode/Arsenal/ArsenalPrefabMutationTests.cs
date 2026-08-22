@@ -4,6 +4,7 @@ using UltimateXR.Manipulation;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Network;
 using VrBattlegrounds.Tests.Network;
 
 namespace VrBattlegrounds.Tests.ArsenalWall
@@ -146,10 +147,12 @@ namespace VrBattlegrounds.Tests.ArsenalWall
 
             Replenish(wall);
 
-            FieldInfo field = typeof(ArsenalWallController).GetField(
-                "_inactiveSpawnRoot", BindingFlags.Instance | BindingFlags.NonPublic);
+            // Контейнер переехал из стены в сетевой слой: отложенный Awake нужен не только
+            // арсеналу, но и любому сетевому спавну объектов UltimateXR (NET-16).
+            FieldInfo field = typeof(NetworkUxrIdentity).GetField(
+                "_dormitory", BindingFlags.Static | BindingFlags.NonPublic);
 
-            Transform root = field != null ? (Transform)field.GetValue(wall) : null;
+            Transform root = field != null ? (Transform)field.GetValue(null) : null;
             if (root == null) Assert.Pass("Отложенный Awake сделан без выключенного контейнера — проверять нечего.");
 
             Assert.AreEqual(0, root.childCount,

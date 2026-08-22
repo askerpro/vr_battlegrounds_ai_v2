@@ -306,11 +306,78 @@ public bool UseHasReloadedForSemiAndFullAuto => _useHasReloadedForSemiAndFullAut
 
 ---
 
+## Патч 6: UxrGrabbableObject.Custom — публичный доступ к стартовому якорю
+
+**Файл:** `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObject.Custom.cs`
+**Дата:** 2026-08-22 (находки NET-16 и NET-17)
+**Парный код проекта:** `Assets/Scripts/Network/NetworkUxrIdentity.cs`,
+`Assets/Scripts/Arsenal/ArsenalSlotController.cs`
+
+### Проблема
+
+Объект UltimateXR, созданный в рантайме и заспавненный Mirror, обязан родиться одинаково
+на всех машинах. В оригинальном SDK этому мешают две приватные вещи.
+
+1. **`_autoCreateStartAnchor`** — сериализованный флаг, по которому `Awake` создаёт объекту
+   родителя-якорь «`<имя>` Auto Anchor». Якорь создаётся **в рантайме**, его `UniqueId`
+   на каждой машине свой, а событие захвата ссылается на него полем `_grabbableAnchor`.
+   На принимающей стороне ссылка не разрешается, и всё событие отвергается с
+   `UxrComponentNotFoundException`. Публичного способа погасить флаг нет; проект гасил его
+   рефлексией из `ArsenalWallController` — молчаливая зависимость, ломающаяся при
+   переименовании поля.
+
+2. **`CurrentAnchor` и `UxrGrabbableObjectAnchor.CurrentPlacedObject`** объявлены с
+   `internal set`, то есть недоступны из сборки игры. Сетевая выдача предмета
+   (`ArsenalSlotController.AssignNetworkItem`) перепарентит уже заспавненный объект под якорь
+   слота, но учёт UltimateXR при этом оставался пустым — и при захвате `UxrGrabManager`
+   не поднимал у якоря событие `Removed`. Слот арсенала не узнавал, что оружие унесли
+   (NET-17). Публичный `UxrGrabManager.PlaceObject` для этого не годится: он обёрнут
+   в `BeginSync` и породил бы сетевое событие на каждую выдачу — на сервере веерную
+   рассылку 64 событий, а у клиента ещё и команду серверу «положи предмет»,
+   то есть подмену авторитета.
+
+### Применённые изменения
+
+Файл `UxrGrabbableObject.Custom.cs` уже существовал (частичный класс из **Патча 2**).
+В него добавлено:
+
+```csharp
+public bool AutoCreateStartAnchor
+{
+    get => _autoCreateStartAnchor;
+    set => _autoCreateStartAnchor = value;
+}
+
+public void SetNetworkAnchor(UxrGrabbableObjectAnchor anchor)
+{
+    if (CurrentAnchor == anchor) return;
+    if (CurrentAnchor != null && CurrentAnchor.CurrentPlacedObject == this)
+        CurrentAnchor.CurrentPlacedObject = null;
+    CurrentAnchor = anchor;
+    if (anchor != null) anchor.CurrentPlacedObject = this;
+}
+```
+
+Оригинальные файлы SDK **не менялись**: `internal set` доступен, потому что частичный класс
+компилируется в ту же сборку `UltimateXR`.
+
+Рефлексия по `_autoCreateStartAnchor` из `ArsenalWallController` **удалена** — гасит флаг
+теперь `NetworkUxrIdentity.CreateInstance` через новое свойство, и не у одного корневого
+компонента, а у всех в иерархии.
+
+### Как повторить при обновлении SDK
+
+1. Восстановить файл `UxrGrabbableObject.Custom.cs` с обоими членами.
+2. Проверить, что поля `_autoCreateStartAnchor`, `_currentAnchor` и `_currentPlacedObject`
+   не переименованы — иначе правка не скомпилируется, и это **хорошо**: отказ громкий.
+3. Прогнать EditMode-набор `NetworkUxrIdentityTests` и сценарий яруса C `arsenal-item-grab`.
+
+---
+
 ## Зависимости от приватных членов SDK (рефлексия)
 
 **Дата:** 2026-08-19 (задача T-21, находка VR-03)
-**Файлы проекта:** `Assets/Scripts/PhysicalSpaceUtils/PhysicalSpaceSyncManager.cs`,
-`Assets/Scripts/Arsenal/ArsenalWallController.cs`
+**Файлы проекта:** `Assets/Scripts/PhysicalSpaceUtils/PhysicalSpaceSyncManager.cs`
 
 ### Почему это здесь
 
@@ -330,7 +397,6 @@ public bool UseHasReloadedForSemiAndFullAuto => _useHasReloadedForSemiAndFullAut
 | `PhysicalSpaceSyncManager.ApplyScale` | `UxrStandardAvatarController._bodyIK` | чтение | добраться до самого объекта `UxrBodyIK`, чьи смещения надо пересчитать под новый масштаб | смещения IK не пересчитываются; после калибровки роста голова и шея аватара стоят не на месте |
 | `PhysicalSpaceSyncManager.ApplyScale` | `UxrBodyIK._avatarForwardPosRelativeToNeck` | чтение + запись | вектор «шея → перёд аватара» посчитан один раз в масштабе 1; масштабируем вместе с телом | тело разворачивается не туда при масштабе, отличном от единицы |
 | `PhysicalSpaceSyncManager.ApplyScale` | `UxrBodyIK._neckPosRelativeToEyes` | чтение + запись | вектор «глаза → шея», та же история | голова садится не на шею |
-| `ArsenalWallController.DisableAutoAnchor` | `UxrGrabbableObject._autoCreateStartAnchor` | запись | погасить флаг **до** активации объекта: иначе `Awake` SDK создаёт «Auto Anchor»-родителя, который вытаскивает оружие из слота | оружие вылетает из слотов стены арсенала |
 | `AvatarSwapDeathReplicationScenario` (ярус C) | `UxrMirrorAvatar._serverBroadcaster` | чтение, static | сценарий проверяет, что после **Патча 1** этого поля в SDK больше нет | ничего: отсутствие поля здесь — ожидаемый результат, а не поломка |
 
 ### Громкий отказ вместо тихого
@@ -343,7 +409,6 @@ public bool UseHasReloadedForSemiAndFullAuto => _useHasReloadedForSemiAndFullAut
   типа и ссылкой на этот раздел. Через неё идут все четыре обращения.
 - Отдельно логируется случай, когда поле нашлось, но `_bodyIK` пуст: пересчитывать
   смещения не от чего.
-- `ArsenalWallController.DisableAutoAnchor` пишет свой `GameLog.Error` с контекстом-объектом.
 - Сценарий яруса C **намеренно молчит**: он и рассчитан на отсутствие поля.
 
 ### Кандидаты на вынос в публичный API
@@ -354,7 +419,7 @@ API меняет поведение и требует проверки в шле
 
 | Член | Насколько просто | Комментарий |
 |---|---|---|
-| `UxrGrabbableObject._autoCreateStartAnchor` | **кандидат номер один** | Поле сериализованное, менять его до `Awake` — легальный сценарий. Достаточно публичного свойства в `UxrGrabbableObject.Custom.cs` |
+| ~~`UxrGrabbableObject._autoCreateStartAnchor`~~ | **сделано 2026-08-22** | Вынесено в публичное свойство `AutoCreateStartAnchor` — см. **Патч 6**. Рефлексии по этому полю в проекте больше нет |
 | `UxrStandardAvatarController._bodyIKSettings` | просто | Свойство только на чтение в `.Custom.cs` закрывает случай целиком |
 | `UxrStandardAvatarController._bodyIK` | просто | Аналогично, свойство на чтение |
 | `UxrBodyIK._avatarForwardPosRelativeToNeck`, `._neckPosRelativeToEyes` | сложнее | Нужна запись во внутреннее состояние IK. Правильнее не открывать поля, а добавить в `UxrBodyIK` метод вида `RescaleBodyProportions(float relativeScale)` — тогда знание о том, что именно надо домножить, останется в SDK |

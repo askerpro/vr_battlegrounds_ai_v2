@@ -81,10 +81,10 @@ namespace VrBattlegrounds.Tests.ArsenalWall
                 "Это NET-13: занятость читается из UxrGrabbableObjectAnchor.CurrentPlacedObject, " +
                 "который сетевая выдача не заполняет — она идёт мимо UxrGrabManager.");
 
-            Assert.IsNull(anchor.CurrentPlacedObject,
-                "Контроль: сетевая выдача через UxrGrabManager не проходит, поэтому " +
-                "CurrentPlacedObject обязан остаться пустым. Если он заполнился, тест " +
-                "проверяет уже не тот путь.");
+            Assert.AreSame(slot.CurrentItem, anchor.CurrentPlacedObject.gameObject,
+                "Сетевая выдача обязана завести учёт UltimateXR: без CurrentPlacedObject " +
+                "(и парного CurrentAnchor у предмета) менеджер захвата не поднимет у якоря " +
+                "событие Removed, и слот не узнает, что оружие унесли, — это NET-17.");
         }
 
         [Test]

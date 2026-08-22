@@ -1,8 +1,8 @@
 using UnityEngine;
 using Mirror;
-using UltimateXR.Manipulation;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
+using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Arsenal
@@ -56,6 +56,40 @@ namespace VrBattlegrounds.Arsenal
         [SyncVar(hook = nameof(OnStateSynced))]
         private ArsenalState _currentState = ArsenalState.Closed;
 
+        /// <summary>
+        /// Что лежит в слотах: индекс слота → <c>netId</c> выданного предмета.
+        ///
+        /// <para>
+        /// <b>Это состояние, а не событие (NET-23).</b> Раньше слот на клиенте узнавал
+        /// о своём предмете единственным разовым <c>ClientRpc</c>, который сервер слал
+        /// сразу после <c>NetworkServer.Spawn</c>. На выделенном сервере этот момент
+        /// приходится на середину загрузки карты у клиента: тот ещё не <c>isReady</c>,
+        /// а <c>ClientRpc</c> уходит только готовым наблюдателям. Предметы доезжали
+        /// обычными спавн-сообщениями — уже без всякой привязки, и слот у клиента
+        /// оставался пустым с точки зрения кода: <c>Lock()</c> не запирал лежащее в нём
+        /// оружие, а вся будущая экономика опиралась бы на пустоту.
+        /// </para>
+        ///
+        /// <para>
+        /// Состояние переживает и позднее подключение, и смену карты: клиент получает
+        /// словарь начальным значением спавна и раздаёт его в <see cref="OnStartClient"/>.
+        /// Тот же вывод, что у фазы раунда и у состояния стены выше.
+        /// </para>
+        /// </summary>
+        private readonly SyncDictionary<int, uint> _slotItems = new SyncDictionary<int, uint>();
+
+        /// <summary>
+        /// Слоты, чью привязку клиент получил, но ещё не смог применить: предмет с таким
+        /// <c>netId</c> у клиента пока не заспавнен. Порядок спавн-сообщений и дельт
+        /// <c>SyncDictionary</c> Mirror не согласовывает, поэтому ждать приходится явно.
+        /// </summary>
+        private readonly System.Collections.Generic.HashSet<int> _pendingSlotBindings =
+            new System.Collections.Generic.HashSet<int>();
+
+        /// <summary>Буфер разобранных привязок: не хочется плодить мусор в <c>Update</c>.</summary>
+        private readonly System.Collections.Generic.List<int> _resolvedSlotBindings =
+            new System.Collections.Generic.List<int>();
+
         /// <summary>Состояние, уже применённое к представлению на этой машине.</summary>
         private ArsenalState _appliedState = ArsenalState.Closed;
 
@@ -65,7 +99,7 @@ namespace VrBattlegrounds.Arsenal
         public ArsenalState CurrentState => _currentState;
 
         /// <summary>
-        /// Слоты стены в том порядке, в каком их адресует <see cref="RpcAssignItemToSlot" />.
+        /// Слоты стены в том порядке, в каком их адресует <see cref="_slotItems" />.
         /// Порядок одинаков во всех процессах — на этом держится вся сетевая выдача оружия,
         /// потому что по сети едет индекс слота, а не ссылка на него.
         /// </summary>
@@ -141,6 +175,97 @@ namespace VrBattlegrounds.Arsenal
             // не сработает, если пришедшее значение совпало с дефолтом поля (Closed), —
             // раздаём явно. Тот же приём, что у фазы раунда в EliminationMode.
             ApplyStateLocal(_currentState);
+
+            // На хосте предметы разложил сервер, второй раз не надо.
+            if (isServer) return;
+
+            _slotItems.OnChange += HandleSlotItemChanged;
+
+            foreach (var pair in _slotItems)
+                QueueSlotBinding(pair.Key);
+
+            ResolvePendingSlotBindings();
+        }
+
+        public override void OnStopClient()
+        {
+            if (!isServer)
+                _slotItems.OnChange -= HandleSlotItemChanged;
+
+            base.OnStopClient();
+        }
+
+        /// <summary>
+        /// Привязка «предмет → слот» приехала или изменилась. Применить её прямо здесь
+        /// получается не всегда: предмет мог ещё не заспавниться у клиента.
+        /// </summary>
+        private void HandleSlotItemChanged(SyncIDictionary<int, uint>.Operation op, int slotIndex, uint oldItemNetId)
+        {
+            if (op == SyncIDictionary<int, uint>.Operation.OP_ADD ||
+                op == SyncIDictionary<int, uint>.Operation.OP_SET)
+            {
+                QueueSlotBinding(slotIndex);
+            }
+        }
+
+        private void QueueSlotBinding(int slotIndex)
+        {
+            EnsureReferences();
+
+            if (slotIndex < 0 || slotIndex >= _allSlots.Length) return;
+
+            _pendingSlotBindings.Add(slotIndex);
+        }
+
+        private void Update()
+        {
+            if (_pendingSlotBindings.Count > 0)
+                ResolvePendingSlotBindings();
+        }
+
+        /// <summary>
+        /// Пытается выдать слотам предметы, которые уже приехали к клиенту. То, что ещё
+        /// не приехало, остаётся в очереди до следующего кадра.
+        /// </summary>
+        private void ResolvePendingSlotBindings()
+        {
+            if (_pendingSlotBindings.Count == 0) return;
+
+            _resolvedSlotBindings.Clear();
+
+            foreach (int slotIndex in _pendingSlotBindings)
+            {
+                if (!_slotItems.TryGetValue(slotIndex, out uint itemNetId))
+                {
+                    // Привязку успели снять — ждать больше нечего.
+                    _resolvedSlotBindings.Add(slotIndex);
+                    continue;
+                }
+
+                if (!NetworkClient.spawned.TryGetValue(itemNetId, out NetworkIdentity item) || item == null)
+                    continue;
+
+                // Mirror кладёт объект в список заспавненных раньше, чем включает его:
+                // до включения Awake не отработал. Привязываться в этот момент нельзя —
+                // UxrGrabbableObject.Awake выставляет CurrentAnchor из своего стартового
+                // якоря (у нас пустого) и стёр бы учёт, который заводит AssignNetworkItem.
+                // Тогда слот у клиента не узнал бы об уходе предмета (NET-17), а положение
+                // предмета переписал бы спавн-пакет.
+                if (!item.gameObject.activeInHierarchy)
+                    continue;
+
+                ArsenalSlotController slot = _allSlots[slotIndex];
+
+                if (slot != null && slot.CurrentItem != item.gameObject)
+                    slot.AssignNetworkItem(item.gameObject);
+
+                _resolvedSlotBindings.Add(slotIndex);
+            }
+
+            foreach (int slotIndex in _resolvedSlotBindings)
+                _pendingSlotBindings.Remove(slotIndex);
+
+            _resolvedSlotBindings.Clear();
         }
 
         public override void OnStartServer()
@@ -176,43 +301,11 @@ namespace VrBattlegrounds.Arsenal
             ApplyPhaseToState(newState);
         }
 
-        /// <summary>
-        /// Выключенный контейнер, под которым рождается оружие.
-        ///
-        /// Зачем. <c>UxrGrabbableObject.Awake()</c> обязан отработать уже с выключенным
-        /// <c>_autoCreateStartAnchor</c>, иначе UXR создаёт лишний «Auto Anchor» и вытаскивает
-        /// оружие из слота. Отложить <c>Awake</c> можно только неактивностью, а трогать ради
-        /// этого сам префаб нельзя — он ассет (VR-04). Выключенный родитель даёт то же самое,
-        /// не касаясь ассета.
-        ///
-        /// Живёт под стеной, поэтому уезжает вместе с ней при смене карты. Собственный
-        /// трансформ значения не имеет: оружие выходит наружу через
-        /// <c>SetParent(null, worldPositionStays: false)</c> и сохраняет локальные значения
-        /// префаба, ровно как при обычном <c>Instantiate</c>.
-        /// </summary>
-        private Transform InactiveSpawnRoot
-        {
-            get
-            {
-                if (_inactiveSpawnRoot == null)
-                {
-                    GameObject root = new GameObject("InactiveSpawnRoot");
-                    root.transform.SetParent(transform, false);
-                    root.SetActive(false);
-                    _inactiveSpawnRoot = root.transform;
-                }
-
-                return _inactiveSpawnRoot;
-            }
-        }
-
-        private Transform _inactiveSpawnRoot;
-
         [Server]
         private void ReplenishWeaponsNetwork(bool forceAll = false)
         {
             GameLog.Arsenal.Info($"[Arsenal DEBUG] ReplenishWeaponsNetwork. ForceAll: {forceAll}");
-            
+
             if (_allSlots == null || _allSlots.Length == 0)
                 _allSlots = GetComponentsInChildren<ArsenalSlotController>();
 
@@ -223,78 +316,30 @@ namespace VrBattlegrounds.Arsenal
 
                 if (forceAll || slot.NeedsReplenishment())
                 {
-                    // Инстанцируем под выключенным контейнером: у ребёнка выключенного
-                    // родителя Awake не срабатывает, пока родителя не включат. Раньше для
-                    // той же цели выключали сам префаб — то есть ассет, а не инстанс:
-                    // в редакторе это метило его грязным, а исключение между выключением
-                    // и обратным включением оставляло префаб выключенным навсегда (VR-04).
-                    GameObject spawned = Instantiate(slot.WeaponData.WeaponPrefab, InactiveSpawnRoot, false);
+                    // Создание инстанса ведёт сетевой слой: он же гасит «Auto Anchor»
+                    // до Awake и выравнивает UniqueId после спавна. Стена о идентичности
+                    // предметов не знает и знать не должна — см. NetworkUxrIdentity.
+                    GameObject spawned = NetworkUxrIdentity.CreateInstance(slot.WeaponData.WeaponPrefab);
+                    if (spawned == null) continue;
 
-                    // Disable _autoCreateStartAnchor before activation —
-                    // otherwise UXR creates a rogue "Auto Anchor" parent in Awake()
-                    DisableAutoAnchor(spawned);
-
-                    // Порядок важен: сначала activeSelf (объект всё ещё спит под выключенным
-                    // родителем), и только потом выход из контейнера — там и сработает Awake,
-                    // уже с отключённым авто-якорем и на своём мировом трансформе.
                     spawned.SetActive(true);
-                    spawned.transform.SetParent(null, false);
 
-                    // Assign on server BEFORE Spawn —
-                    // Mirror captures current parent in the spawn message.
+                    // Привязка к слоту — до Spawn: Mirror кладёт в спавн-сообщение
+                    // текущий трансформ объекта.
                     slot.AssignNetworkItem(spawned);
 
-                    NetworkServer.Spawn(spawned);
-                    
-                    // RPC for remote clients (host already assigned above)
-                    RpcAssignItemToSlot(i, spawned.GetComponent<NetworkIdentity>());
+                    NetworkUxrIdentity.SpawnServerObject(spawned);
+
+                    // Привязка «предмет → слот» — состояние, а не сообщение (NET-23).
+                    // Разовый ClientRpc здесь не работал по построению: на выделенном
+                    // сервере выдача приходится на середину загрузки карты у клиента,
+                    // когда тот ещё не isReady, и до него рассылка не доходит вовсе.
+                    NetworkIdentity identity = spawned.GetComponent<NetworkIdentity>();
+
+                    if (identity != null && identity.netId != 0)
+                        _slotItems[i] = identity.netId;
                 }
             }
-        }
-
-        [ClientRpc]
-        private void RpcAssignItemToSlot(int slotIndex, NetworkIdentity spawnedIdentity)
-        {
-            // Host already did AssignNetworkItem on server side — skip
-            if (isServer) return;
-            
-            if (slotIndex < 0 || slotIndex >= _allSlots.Length) return;
-            if (spawnedIdentity == null) return;
-            
-            _allSlots[slotIndex].AssignNetworkItem(spawnedIdentity.gameObject);
-        }
-        
-        /// <summary>
-        /// Гасит приватное поле <c>UxrGrabbableObject._autoCreateStartAnchor</c> через рефлексию.
-        /// Звать строго до активации объекта (до его <c>Awake</c>), иначе UltimateXR успевает
-        /// создать «Auto Anchor»-родителя, который вытаскивает оружие из слота.
-        ///
-        /// Публичного способа отключить флаг в SDK нет. Зависимость от внутреннего имени
-        /// молчаливая: при обновлении UltimateXR она не даст ошибки компиляции, поэтому
-        /// ненайденное поле логируется как <c>Error</c>. Разбор и кандидат на вынос
-        /// в <c>.Custom.cs</c> — Docs/UltimateXR/sdk-patches.md, раздел
-        /// «Зависимости от приватных членов SDK».
-        /// </summary>
-        private static void DisableAutoAnchor(GameObject obj)
-        {
-            var grabbable = obj.GetComponent<UxrGrabbableObject>();
-            if (grabbable == null) return;
-
-            var field = typeof(UxrGrabbableObject).GetField(
-                "_autoCreateStartAnchor",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            if (field == null)
-            {
-                GameLog.Error(
-                    "[ArsenalWallController] В UxrGrabbableObject больше нет приватного поля " +
-                    "\"_autoCreateStartAnchor\". UltimateXR обновился и переименовал его — " +
-                    "оружие будет вылетать из слотов арсенала. См. Docs/UltimateXR/sdk-patches.md, " +
-                    "раздел «Зависимости от приватных членов SDK».", obj);
-                return;
-            }
-
-            field.SetValue(grabbable, false);
         }
 
         private void OnEnable()

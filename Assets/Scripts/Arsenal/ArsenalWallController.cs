@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Mirror;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
@@ -19,13 +19,24 @@ namespace VrBattlegrounds.Arsenal
     /// в сцене карты, один на всех, и его содержимое уже авторитетно: слоты пополняет
     /// <see cref="ReplenishWeaponsNetwork"/> через <c>NetworkServer.Spawn</c>. Состояние
     /// стены живёт там же — в <c>SyncVar</c>, который пишет только сервер. Клиент не
-    /// решает, открыта стена или закрыта: он получает состояние репликацией, а закрыть
-    /// её просит командой. Подключившийся посреди фазы получает актуальное состояние
+    /// решает, открыта стена или закрыта: он получает состояние репликацией.
+    /// Подключившийся посреди фазы получает актуальное состояние
     /// начальным значением спавна.
     /// </para>
     /// <para>
     /// Готовность конкретного игрока — это <b>не</b> состояние стены: она живёт
-    /// на <c>PlayerSession.HasGrabbedDogTag</c> и реплицируется отдельно.
+    /// на <c>PlayerSession.ReadyState</c> и реплицируется отдельно.
+    /// </para>
+    /// <para>
+    /// <b>Стену закрывает фаза, а не жетон (T-29, дефект RDY-01).</b> Пока состояние
+    /// стены было локальным, «взял жетон — закрыл арсенал» работало как личное действие.
+    /// После T-15 стена стала общей, и то же правило означало уже другое: первый
+    /// взявший жетон закрывал арсенал <b>всем</b>, и второй игрок оставался
+    /// без снаряжения. Теперь жетон объявляет готовность своего игрока
+    /// (<c>PlayerSession.CmdSetReady</c>), а закрывается стена там же, где и раньше, —
+    /// в <see cref="ApplyPhaseToState"/> при выходе из <c>Equipment</c>. Готовность всех
+    /// живых игроков и есть условие этого выхода, поэтому «закрылась по общей готовности»
+    /// и «закрылась по началу отсчёта» — один и тот же момент, а правило остаётся одно.
     /// </para>
     /// </summary>
     public class ArsenalWallController : NetworkBehaviour
@@ -611,50 +622,39 @@ namespace VrBattlegrounds.Arsenal
 
         // ── Private: Жетон ─────────────────────────────────────
 
+        /// <summary>
+        /// Жетон взят: игрок объявляет готовность к раунду. Стену это не закрывает —
+        /// см. разбор RDY-01 в комментарии к классу.
+        ///
+        /// Команду шлёт владелец сессии — сам игрок. Стена о готовности не знает ничего
+        /// сверх того, что переслала жест по адресу: решение «пора закрываться» принимает
+        /// сервер, и приходит оно фазой раунда.
+        /// </summary>
         private void HandleTagGrabbed(PlayerController player)
         {
             if (_currentState != ArsenalState.Open) return;
 
-            // Готовность игрока — его собственное состояние, оно живёт на сессии
-            // и реплицируется отдельно от стены.
-            if (player != null && player.isOwned && player.Session != null)
+            if (player == null || player.Session == null)
             {
-                player.Session.CmdSetDogTagGrabbed(true);
-            }
-
-            // Закрыть общую стену вправе только сервер, поэтому клиент шлёт команду.
-            if (isClient && !isServer)
-            {
-                CmdCloseByDogTag();
+                GameLog.Arsenal.Info(
+                    "[Arsenal] Жетон взят, но игрок не определён — объявлять готовность не за кого.");
                 return;
             }
 
-            ServerCloseByDogTag();
-        }
+            if (!player.isOwned)
+            {
+                // Чужой аватар: его готовность объявит его собственная машина.
+                return;
+            }
 
-        /// <summary>
-        /// Жетон схватили у клиента. <c>requiresAuthority = false</c>: стена — объект
-        /// сцены, владельца среди клиентов у неё нет.
-        /// </summary>
-        [Command(requiresAuthority = false)]
-        private void CmdCloseByDogTag()
-        {
-            ServerCloseByDogTag();
-        }
+            // Готовность игрока — его собственное состояние, оно живёт на сессии
+            // и реплицируется отдельно от стены. Жест записываем тоже: он остаётся
+            // отдельным фактом и служит обратным каналом сценариям яруса C.
+            player.Session.CmdSetDogTagGrabbed(true);
+            player.Session.CmdSetReady(true);
 
-        /// <summary>
-        /// Закрытие стены по жетону — общая точка для команды клиента, для хоста
-        /// и для стены вне сети.
-        ///
-        /// Без атрибута <c>[Server]</c> намеренно: метод обслуживает и стену вне сети,
-        /// где <c>NetworkServer.active</c> ложно и заглушка Mirror съела бы вызов.
-        /// Право записи проверяет <see cref="SetState"/>.
-        /// </summary>
-        private void ServerCloseByDogTag()
-        {
-            if (_currentState != ArsenalState.Open && _currentState != ArsenalState.Opening) return;
-
-            SetState(ArsenalState.Closing);
+            GameLog.Arsenal.Info(
+                $"[Arsenal] Жетон взят игроком {player.Session.PlayerName} — объявлена готовность к раунду.");
         }
 
         // ── Private: Slot Events ───────────────────────────────

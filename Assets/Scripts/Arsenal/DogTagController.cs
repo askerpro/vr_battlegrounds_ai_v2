@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UltimateXR.Manipulation;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Player;
@@ -6,9 +6,22 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Arsenal
 {
     /// <summary>
-    /// Controls the Dog Tag panel on the Arsenal Wall.
-    /// When the player grabs the dog tag, it triggers the arsenal closing sequence.
-    /// The dog tag is the "point of no return" — once grabbed, the arsenal closes.
+    /// Панель жетона на стене арсенала.
+    ///
+    /// <para>
+    /// Жетон — <b>жест, которым игрок объявляет готовность к раунду</b>, и больше ничего.
+    /// Стену он не закрывает: она общая, и закрытие по первому жетону оставляло остальных
+    /// без снаряжения (RDY-01, задача T-29). Захват уходит в
+    /// <see cref="OnTagGrabbed"/>, дальше — <c>ArsenalWallController.HandleTagGrabbed</c>
+    /// → <c>PlayerSession.CmdSetReady(true)</c>.
+    /// </para>
+    ///
+    /// <para>
+    /// Взять жетон можно один раз за фазу закупки: <see cref="_hasBeenGrabbed"/>
+    /// сбрасывает только <see cref="ResetTag"/>, а его зовут при открытии стены.
+    /// Это оставляет открытым RDY-03 — отменивший готовность не может объявить её
+    /// заново жетоном; разбор в <c>Docs/audit/network-audit-2026-08.md</c>.
+    /// </para>
     /// </summary>
     public class DogTagController : MonoBehaviour
     {
@@ -24,8 +37,9 @@ namespace VrBattlegrounds.Arsenal
 
         // ── Events ─────────────────────────────────────────────
         /// <summary>
-        /// Fired when the player grabs the dog tag from the rack.
-        /// ArsenalWallController subscribes to this to start the closing sequence.
+        /// Игрок снял жетон со стойки. Подписан <c>ArsenalWallController</c> — он
+        /// пересылает жест на сессию игрока, где тот превращается в готовность.
+        /// Игрок может быть <c>null</c>: захват без определённого владельца.
         /// </summary>
         public System.Action<PlayerController> OnTagGrabbed;
 
@@ -97,7 +111,7 @@ namespace VrBattlegrounds.Arsenal
             _hasBeenGrabbed = true;
             SetLight(_grabColor, true);
 
-            GameLog.Arsenal.Info("[Arsenal] DOG TAG GRABBED — Arsenal closing!");
+            GameLog.Arsenal.Info("[Arsenal] Жетон взят — игрок объявляет готовность к раунду.");
             
             PlayerController player = null;
             if (e.Grabber != null && e.Grabber.Avatar != null)

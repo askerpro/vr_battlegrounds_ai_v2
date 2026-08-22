@@ -1,4 +1,4 @@
-using Mirror;
+﻿using Mirror;
 using System;
 using VrBattlegrounds.Managers;
 using UnityEngine;
@@ -116,12 +116,52 @@ namespace VrBattlegrounds.Player
         /// </summary>
         private float _appliedHeightOffset;
 
-        // ── Статус готовности (Round State) ───────────────────────────────────
-        
-        [SyncVar] public bool IsInSpawnZone = false;
-        [SyncVar] public bool HasGrabbedDogTag = false;
+        // ── Готовность к раунду ───────────────────────────────────────────────
+        //
+        // Три разных вещи, которые раньше были слиты в одну (T-29):
+        //   · ReadyState      — намерение игрока: «я закончил, начинайте».
+        //   · IsInSpawnZone   — физическое условие: игрок стоит в своей зоне спавна.
+        //   · HasGrabbedDogTag — жест, которым намерение обычно и объявляется.
+        //
+        // Готовность выводилась из двух последних (`IsInSpawnZone && HasGrabbedDogTag`),
+        // и у неё не было отмены: передумал — уже никак. Теперь готовность — явное
+        // состояние, а жест и зона остались тем, чем являются: способом её объявить
+        // и условием её сохранять.
 
-        public bool IsReadyForRound => IsInSpawnZone && HasGrabbedDogTag;
+        /// <summary>
+        /// Явная готовность игрока к раунду. Единственный источник правды.
+        ///
+        /// Поле приватное намеренно: писать его вправе только
+        /// <see cref="ServerSetReady" />, и это единственная точка записи во всём
+        /// проекте. Клиент своё намерение сообщает командой <see cref="CmdSetReady" />.
+        /// </summary>
+        [SyncVar(hook = nameof(OnReadyStateChanged))]
+        private bool _readyState;
+
+        /// <summary>
+        /// Объявил ли игрок готовность к раунду. Читается и на сервере, и на клиенте:
+        /// значение реплицируется, поэтому вновь подключившийся получает его начальным
+        /// значением спавна, а не ждёт следующего изменения.
+        /// </summary>
+        public bool ReadyState => _readyState;
+
+        /// <summary>
+        /// Игрок физически находится в своей зоне спавна. <b>Условие</b> готовности,
+        /// а не сама готовность: выход из зоны её снимает
+        /// (см. <see cref="ServerSetInSpawnZone" />).
+        /// </summary>
+        [SyncVar] public bool IsInSpawnZone = false;
+
+        /// <summary>
+        /// Жетон в арсенале взят. Жест, которым игрок объявляет готовность, — но не она
+        /// сама: жетон берут один раз за фазу, а готовность можно и отменить.
+        ///
+        /// Поле осталось публичным и свободно записываемым командой
+        /// <see cref="CmdSetDogTagGrabbed" />, потому что сценарии яруса C используют
+        /// его как единственный обратный канал «клиент → сервер» (см. `Docs/testing.md`).
+        /// Фазу раунда оно больше не двигает.
+        /// </summary>
+        [SyncVar] public bool HasGrabbedDogTag = false;
 
         // ── Связь с аватаром ──────────────────────────────────────────────────
 
@@ -295,6 +335,17 @@ namespace VrBattlegrounds.Player
         {
             gameObject.name = $"PlayerSession_{newName}";
             GameLog.Debug.Info($"[PlayerSession] {netId} name changed → {newName}");
+        }
+
+        /// <summary>
+        /// Готовность приехала с сервера. Нужен только клиентской стороне: на выделенном
+        /// сервере Mirror хук в сеттере не зовёт, и там сообщение пишет
+        /// <see cref="ServerSetReady" />.
+        /// </summary>
+        private void OnReadyStateChanged(bool oldState, bool newState)
+        {
+            GameLog.Player.Verbose(
+                $"[PlayerSession] {PlayerName}: готовность {(newState ? "объявлена" : "снята")} (реплицировано)");
         }
 
         private void OnTeamIndexChanged(int oldIndex, int newIndex)
@@ -577,17 +628,79 @@ namespace VrBattlegrounds.Player
             return true;
         }
 
+        /// <summary>
+        /// Зона спавна: игрок вошёл в свою зону или вышел из неё. Зовёт
+        /// <see cref="Maps.TeamSpawnZone" /> на сервере.
+        ///
+        /// Выход из зоны снимает готовность — в этом и состоит роль зоны как
+        /// <b>условия</b>: объявить «я готов» можно жестом, но стоять при этом
+        /// полагается у себя на спавне (T-29).
+        /// </summary>
         [Server]
         public void ServerSetInSpawnZone(bool state)
         {
+            if (IsInSpawnZone == state) return;
+
             IsInSpawnZone = state;
+
+            if (!state && _readyState)
+                ServerSetReady(false, "игрок вышел из зоны спавна");
         }
 
-        [Server]
+        /// <summary>
+        /// Единственная точка записи готовности. Всё, что меняет готовность, — жест
+        /// с жетоном, отмена игроком, выход из зоны, предел ожидания, начало нового
+        /// раунда — проходит здесь и оставляет в логе причину.
+        ///
+        /// Без атрибута <c>[Server]</c> намеренно: метод зовётся в том числе
+        /// из <see cref="GameModes.RoundReadiness" />, а тот гоняется EditMode-тестами
+        /// без поднятого сервера Mirror — заглушка Mirror съела бы вызов, и тест зеленел
+        /// бы впустую. Право записи здесь и так серверное: клиенту принадлежит только
+        /// <see cref="CmdSetReady" />.
+        /// </summary>
+        /// <param name="ready">Новое состояние готовности.</param>
+        /// <param name="reason">Почему готовность изменилась — уходит в лог как есть.</param>
+        public void ServerSetReady(bool ready, string reason = null)
+        {
+            if (_readyState == ready) return;
+
+            _readyState = ready;
+
+            GameLog.Player.Info(
+                $"[PlayerSession] {PlayerName}: готовность {(ready ? "объявлена" : "снята")}" +
+                (string.IsNullOrEmpty(reason) ? "." : $" — {reason}."));
+        }
+
+        /// <summary>
+        /// Намерение игрока: «я закончил» либо «я передумал». Отмена возможна всё то
+        /// время, пока раунд ждёт готовности; как только пошёл обратный отсчёт, менять
+        /// уже нечего — фаза сменилась, и решение принято.
+        ///
+        /// Нахождения в зоне спавна команда не требует. Объявить готовность игрок может
+        /// откуда угодно, но <see cref="ServerSetInSpawnZone" /> тут же снимет её, если
+        /// он не у себя на спавне, — так зона остаётся условием, не превращаясь
+        /// в ловушку: жетон висит на стене арсенала, и отказ принять жест «потому что
+        /// ты стоишь на шаг в стороне» оставил бы игрока без второй попытки —
+        /// жетон берут один раз за фазу.
+        /// </summary>
+        [Command]
+        public void CmdSetReady(bool ready)
+        {
+            ServerSetReady(ready, ready ? "игрок объявил готовность" : "игрок отменил готовность");
+        }
+
+        /// <summary>
+        /// Сбрасывает готовность к началу нового раунда: каждый раунд её объявляют
+        /// заново. Жест тоже сбрасывается — жетон в открывшемся арсенале снова на месте.
+        ///
+        /// Раньше метод существовал, но его никто не звал: готовность прошлого раунда
+        /// доживала до следующего, и фаза <c>Equipment</c> второго раунда кончалась,
+        /// не начавшись (T-29).
+        /// </summary>
         public void ServerResetRoundReadiness()
         {
             HasGrabbedDogTag = false;
-            IsInSpawnZone = false;
+            ServerSetReady(false, "начался новый раунд");
         }
     }
 }

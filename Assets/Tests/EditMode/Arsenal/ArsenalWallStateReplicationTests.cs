@@ -1,8 +1,9 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using UltimateXR.Manipulation;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.GameModes;
+using VrBattlegrounds.Player;
 using VrBattlegrounds.Tests.Network;
 
 namespace VrBattlegrounds.Tests.ArsenalWall
@@ -15,8 +16,12 @@ namespace VrBattlegrounds.Tests.ArsenalWall
     /// стену сама. Захват жетона закрывал арсенал только у того, кто его схватил,
     /// а подключившийся позже видел стену закрытой независимо от фазы раунда.
     ///
-    /// Решение — «общая стена»: состояние живёт в <c>SyncVar</c>, пишет его сервер,
-    /// клиент только просит закрыть. Разбор — <c>Docs/Arsenal/Arsenal_Code_Architecture_RU.md</c>.
+    /// Решение — «общая стена»: состояние живёт в <c>SyncVar</c>, и пишет его только
+    /// сервер. Разбор — <c>Docs/Arsenal/Arsenal_Code_Architecture_RU.md</c>.
+    ///
+    /// С T-29 у стены остался ровно один повод закрыться — выход из фазы <c>Equipment</c>.
+    /// Жетон стену не трогает: он объявляет готовность своего игрока, а закрытие
+    /// по первому жетону оставляло второго игрока без снаряжения (RDY-01).
     ///
     /// Почему репликация проверяется двойником, а не host-режимом: в host-режиме
     /// сервер и клиент делят один экземпляр объекта, и «долетело» получилось бы
@@ -136,7 +141,7 @@ namespace VrBattlegrounds.Tests.ArsenalWall
         }
 
         [Test]
-        public void Закрытие_по_жетону_доезжает_до_остальных()
+        public void Закрытие_по_фазе_доезжает_до_остальных()
         {
             SilenceMirrorNoise();
 
@@ -147,16 +152,40 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             ReplicateToClient(server, client);
             Assert.AreEqual(Open, client.CurrentState, "Контроль: у клиента стена открыта.");
 
-            // Точка, в которую приходит команда клиента, схватившего жетон.
-            InvokePrivateMethod(server, "ServerCloseByDogTag");
+            // Единственная точка, из которой стена теперь закрывается: сервер объявил
+            // выход из фазы закупки. До T-29 сюда же приходила команда клиента,
+            // схватившего жетон, — и закрывала арсенал всем сразу (RDY-01).
+            SendPhaseToServer(server, RoundState.Countdown);
 
             Assert.AreEqual(Closed, server.CurrentState,
-                "Жетон взят, а сервер стену не закрыл — закрывать её больше некому.");
+                "Отсчёт начался, а сервер стену не закрыл — закрывать её больше некому.");
 
             ReplicateToClient(server, client);
 
             Assert.AreEqual(Closed, client.CurrentState,
-                "Один игрок взял жетон, а у остальных арсенал остался открытым — это NET-07.");
+                "Сервер закрыл стену, а у остальных арсенал остался открытым — это NET-07.");
+        }
+
+        // ── Жетон больше не закрывает общую стену (RDY-01) ───────────────────
+
+        [Test]
+        public void Жетон_не_закрывает_общую_стену()
+        {
+            SilenceMirrorNoise();
+
+            ArsenalWallController wall = CreateServerWall("ServerWall");
+            SendPhaseToServer(wall, RoundState.Equipment);
+            Assert.AreEqual(Open, wall.CurrentState, "Контроль: стена открыта, жетон брать есть с чего.");
+
+            // Ровно то, что поднимает DogTagController при настоящем захвате.
+            InvokePrivateMethod(wall, "HandleTagGrabbed", (PlayerController)null);
+
+            Assert.AreEqual(Open, wall.CurrentState,
+                "Жетон закрыл общую стену. После T-15 стена одна на всех, поэтому первый же " +
+                "взявший жетон оставлял остальных без снаряжения — это RDY-01.\n" +
+                "Закрывать стену вправе только выход из фазы Equipment; жетон объявляет " +
+                "готовность своего игрока и больше ничего.\n" +
+                "Кросс-процессное доказательство — сценарий яруса C round-readiness-match.");
         }
 
         // ── Кто вправе менять состояние ─────────────────────────────────────

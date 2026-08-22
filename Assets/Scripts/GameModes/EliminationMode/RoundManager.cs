@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
@@ -92,8 +92,16 @@ namespace VrBattlegrounds.GameModes
                 "подготовка закончена"),
 
             new PhaseTransition(RoundState.Equipment, RoundState.Countdown,
-                m => m.AreAllPlayersReady(),
+                m => m._readiness.AllReady,
                 "все живые игроки готовы"),
+
+            // Предел ожидания. Строка отдельная и стоит ниже, чтобы в логе была видна
+            // разница: раунд начался потому, что все готовы, или потому, что ждать
+            // дальше некогда. Само правило матча применяет RoundReadiness — здесь
+            // условие остаётся чистым, как и все остальные в таблице.
+            new PhaseTransition(RoundState.Equipment, RoundState.Countdown,
+                m => m._readiness.IsSatisfied,
+                "предел ожидания готовности истёк"),
 
             new PhaseTransition(RoundState.Countdown, RoundState.Combat,
                 m => m._stateTimer >= m._countdownDuration,
@@ -138,19 +146,34 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Матч остановлен принудительно — тикать больше нечего.</summary>
         private bool _stopped;
 
-        /// <summary>Откуда машина узнаёт о живых игроках. В игре — обёртка над PlayersManager.</summary>
-        private readonly IPlayerRoster _roster;
+        /// <summary>
+        /// Готовность игроков к раунду: кто готов, кого ждём, не истёк ли предел ожидания.
+        /// Машина сама этот вопрос не решает — она только читает ответ (T-29).
+        /// </summary>
+        private readonly RoundReadiness _readiness;
 
         /// <summary>Команды текущего раунда. Нужны только чтобы спросить о готовности.</summary>
         private IReadOnlyList<TeamData> _teams = new TeamData[0];
 
         /// <param name="roster">Источник данных об игроках. null — боевой PlayersManager.</param>
-        public RoundManager(IPlayerRoster roster = null)
+        /// <param name="timeLimit">
+        ///     Предел ожидания готовности, секунды. Ноль и меньше — предела нет.
+        /// </param>
+        /// <param name="timeoutRule">Правило матча при истечении предела.</param>
+        public RoundManager(IPlayerRoster roster = null,
+                            float timeLimit = RoundReadiness.DefaultTimeLimit,
+                            RoundReadinessTimeoutRule timeoutRule = RoundReadinessTimeoutRule.AutoReady)
         {
-            _roster = roster ?? new PlayersManagerRoster();
+            _readiness = new RoundReadiness(roster, timeLimit, timeoutRule);
         }
 
         public RoundState State => _roundState;
+
+        /// <summary>
+        /// Состав готовых и неготовых. Читают режим (чтобы отдать его клиентам)
+        /// и инспектор — обоим нужно одно и то же и из одного места.
+        /// </summary>
+        public RoundReadiness Readiness => _readiness;
 
         /// <summary>Победитель раунда. Осмысленен с момента входа в Resolution. null — ничья.</summary>
         public TeamData RoundWinner => _roundWinner;
@@ -188,6 +211,11 @@ namespace VrBattlegrounds.GameModes
 
             _roundState = RoundState.Setup;
 
+            // Готовность объявляется заново каждый раунд: она значит «я закончил дела
+            // в арсенале сейчас», а не «когда-то закончил». Без сброса фаза Equipment
+            // второго раунда кончалась бы, не начавшись (T-29).
+            _readiness.Reset(_teams);
+
             GameLog.Match.Info(
                 "[RoundManager] Раунд начат: очистка и телепортация (Setup)");
         }
@@ -219,6 +247,12 @@ namespace VrBattlegrounds.GameModes
 
             _stateTimer += deltaTime;
             if (_roundState == RoundState.Combat) _roundTimer += deltaTime;
+
+            // Готовность пересчитывается до разбора таблицы, и только в той фазе, где
+            // её ждут. Здесь же применяется предел ожидания — единственный побочный
+            // эффект тика помимо смены фазы, и он вынесен из условий перехода
+            // намеренно: условия в таблице обязаны оставаться чистыми.
+            if (_roundState == RoundState.Equipment) _readiness.Evaluate(_teams, _stateTimer);
 
             foreach (PhaseTransition transition in Transitions)
             {
@@ -256,30 +290,6 @@ namespace VrBattlegrounds.GameModes
             GameLog.Match.Info("[RoundManager] Раунд принудительно остановлен");
         }
 
-        private bool AreAllPlayersReady()
-        {
-            int totalAlive = 0;
-            int notReadyCount = 0;
-
-            foreach (TeamData team in _teams)
-            {
-                // Ожидаем готовности только от тех, кто жив — то есть участвует в раунде.
-                foreach (var session in _roster.GetAlivePlayers(team))
-                {
-                    totalAlive++;
-                    if (!session.IsReadyForRound) notReadyCount++;
-                }
-            }
-
-            // Пока никто не заспавнился, переходить к отсчёту не с кем.
-            if (totalAlive == 0) return false;
-            if (notReadyCount > 0) return false;
-
-            GameLog.Match.Verbose(
-                "[RoundManager] Все живые игроки готовы к раунду");
-            return true;
-        }
-
         /// <summary>Строка таблицы переходов.</summary>
         private readonly struct PhaseTransition
         {
@@ -309,31 +319,16 @@ namespace VrBattlegrounds.GameModes
             }
         }
 
-#if UNITY_EDITOR
-        /// <summary>Почему раунд стоит в фазе Equipment — для инспектора режима.</summary>
+        /// <summary>
+        /// Почему раунд стоит в фазе Equipment. Раньше метод жил под <c>#if UNITY_EDITOR</c>
+        /// и в собранной игре не существовал вовсе — то есть ответ на вопрос «кого ждём»
+        /// был доступен ровно там, где он не нужен. Теперь состав неготовых считает
+        /// <see cref="RoundReadiness" />, и он один для инспектора, логов и клиентов.
+        /// </summary>
         public string GetPendingReadinessStatus()
         {
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            bool allReady = true;
-
-            foreach (TeamData team in _teams)
-            {
-                foreach (var s in _roster.GetAlivePlayers(team))
-                {
-                    if (!s.IsReadyForRound)
-                    {
-                        allReady = false;
-                        sb.AppendLine($"- {s.PlayerName}:");
-                        if (!s.IsInSpawnZone) sb.AppendLine("   [!] Not in spawn zone");
-                        if (!s.HasGrabbedDogTag) sb.AppendLine("   [!] Dog tag not grabbed");
-                    }
-                }
-            }
-
-            if (allReady) return "All Players Ready!";
-            return sb.ToString();
+            return _readiness.Describe();
         }
-#endif
     }
 
     public enum RoundState

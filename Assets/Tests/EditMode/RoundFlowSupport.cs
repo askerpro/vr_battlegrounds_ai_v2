@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using NUnit.Framework;
@@ -58,6 +58,24 @@ namespace VrBattlegrounds.Tests
             foreach (List<PlayerSession> list in _byTeam.Values)
             {
                 foreach (PlayerSession session in list) yield return session;
+            }
+        }
+
+        /// <summary>
+        /// Объявляет готовность всем сессиям заглушки — заменяет собой то, что в игре
+        /// делает игрок, взявший жетон.
+        ///
+        /// Звать приходится <b>каждый тик</b>, а не один раз в SetUp: с T-29 готовность
+        /// сбрасывается в начале каждого раунда, и тест, объявивший её однажды, застрял бы
+        /// в фазе <c>Equipment</c> второго раунда. Раньше готовность была липкой —
+        /// и это само по себе было дефектом: фаза закупки второго раунда кончалась,
+        /// не начавшись.
+        /// </summary>
+        public void DeclareAllReady()
+        {
+            foreach (PlayerSession session in GetAllPlayers())
+            {
+                if (session != null) session.ServerSetReady(true, "тест: игрок объявил готовность");
             }
         }
     }

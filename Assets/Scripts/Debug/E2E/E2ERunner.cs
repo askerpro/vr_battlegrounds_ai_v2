@@ -1,4 +1,4 @@
-// Ярус C (два процесса) — точка входа харнесса внутри плеера.
+﻿// Ярус C (два процесса) — точка входа харнесса внутри плеера.
 #if !VRBG_NO_E2E
 using System;
 using System.Collections;
@@ -187,6 +187,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new ArsenalItemGrabScenario();
             yield return new PlayerDeathSignalScenario();
             yield return new ShotPipelineBudgetScenario();
+            yield return new RoundReadinessMatchScenario();
         }
 
         private static IE2EScenario Resolve(string name)

@@ -1,4 +1,4 @@
-// Ярус C (два процесса) — сценарий dedicated-server-arsenal: находки NET-06, NET-13, NET-07.
+﻿// Ярус C (два процесса) — сценарий dedicated-server-arsenal: находки NET-06, NET-13, NET-07.
 #if !VRBG_NO_E2E
 using System.Collections;
 using System.Collections.Generic;
@@ -30,17 +30,23 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// заспавненным под якорем оружием: до T-15 — 0 против 64.
     ///
     /// <b>NET-07.</b> Состояние стены было обычным полем: каждая машина вела её сама.
-    /// Проверка кросс-процессная: <c>client-1</c> дёргает жетон на общей стене,
-    /// а сервер и <c>client-2</c> обязаны увидеть, что она закрылась. До T-15
-    /// закрывалась она только у инициатора.
+    /// Проверка кросс-процессная: сервер закрывает общую стену, а оба клиента обязаны
+    /// увидеть закрытие у себя. До T-15 оно жило только на машине инициатора.
+    ///
+    /// <b>RDY-01 (T-29).</b> Спусковым крючком закрытия был жетон, и после T-15 это
+    /// означало: первый взявший жетон закрывает арсенал <b>всем</b>. Теперь закрытие —
+    /// следствие общей готовности, и сценарий проверяет обе половины правила:
+    /// пока готов один игрок из двух, стена обязана оставаться открытой у всех;
+    /// как только готовы все — закрыться у всех. Готовность выставляет сервер
+    /// (<c>PlayerSession.ServerSetReady</c>), поэтому клиентам не нужно
+    /// договариваться между собой о времени.
     ///
     /// Роли:
     /// <list type="bullet">
-    /// <item><c>server</c> — гонит матч и выносит вердикт;</item>
-    /// <item><c>client-1</c> — подключается, занимает место в команде и берёт жетон;</item>
-    /// <item><c>client-N</c> — подключается и занимает место в команде,
-    ///       без двух игроков матч не стартует (<c>minPlayersToStart = 2</c>,
-    ///       плюс требование «в каждой команде есть игрок»), и наблюдает за стеной.</item>
+    /// <item><c>server</c> — гонит матч, объявляет готовность и выносит вердикт;</item>
+    /// <item><c>client-N</c> — подключается, занимает место в команде (без игрока
+    ///       в каждой команде матч не стартует: <c>minPlayersToStart = 2</c> плюс
+    ///       требование «в каждой команде есть игрок») и наблюдает за общей стеной.</item>
     /// </list>
     ///
     /// Общая стена выбирается по наименьшему <c>netId</c>: он одинаков во всех
@@ -60,38 +66,36 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckEvent     = "смена фазы раунда дошла до локальных подписчиков на сервере";
         private const string CheckArsenal   = "стена арсенала открылась в фазе Equipment на сервере";
         private const string CheckPresence  = "слот считает себя занятым, когда оружие в нём есть (NET-13)";
-        private const string CheckTagClose  = "жетон, взятый на клиенте, закрыл общую стену и на сервере (NET-07)";
+        private const string CheckRdyOpen   = "готов один игрок из двух — общая стена осталась открытой (RDY-01)";
+        private const string CheckRdyClose  = "готовы все — общая стена закрылась на сервере";
 
         private const string CheckClientConnected = "клиент подключился к серверу";
         private const string CheckClientSession   = "сервер создал сессию для клиента";
         private const string CheckClientMap       = "клиент переехал на карту вместе с сервером";
         private const string CheckClientEvent     = "смена фазы раунда дошла до клиента (контроль к NET-06)";
         private const string CheckClientArsenal   = "стена арсенала открыта и у этого клиента";
-        private const string CheckClientTagPull   = "жетон взят на этом клиенте — общая стена пошла закрываться";
-        private const string CheckClientTagSeen   = "закрытие стены по чужому жетону доехало до этого клиента (NET-07)";
-
-        /// <summary>Роль, которая дёргает жетон. Остальные клиенты только наблюдают.</summary>
-        private const string TagInitiatorRole = "client-1";
+        private const string CheckClientRdyOpen   = "пока готов один игрок, стена у этого клиента остаётся открытой (RDY-01)";
+        private const string CheckClientRdyClose  = "закрытие общей стены доехало до этого клиента (NET-07)";
 
         /// <summary>
-        /// Сколько ждать после «стена открылась», прежде чем дёрнуть жетон.
-        /// Пауза нужна, чтобы сервер успел записать свою проверку про открытую стену:
-        /// закрытие, прилетевшее в середине его пятисекундной выдержки, сделало бы
-        /// проверку 7 неверной по посторонней причине.
+        /// Сколько ждать после «стена открылась», прежде чем объявить готовность
+        /// за первого игрока. Пауза нужна, чтобы сервер успел записать свою проверку
+        /// про открытую стену.
         /// </summary>
-        private const float TagPullDelay = 10f;
+        private const float ReadyDelay = 10f;
 
         /// <summary>
-        /// Сколько инициатор ждёт возврата состояния после захвата жетона.
-        /// Срок щедрый намеренно: он покрывает круг «Command → сервер → SyncVar → клиент»
-        /// с любым разумным запасом, а нестабильность TEST-01 лечится не им, а тем,
-        /// что сервер больше не гасит процесс до отчёта клиентов
-        /// (см. <see cref="ReportVerdictReady"/>).
+        /// Сколько держим состояние «готов ровно один». Срок содержательный, а не
+        /// диагностический: именно в это окно стена обязана оставаться открытой,
+        /// и его же клиенты используют, чтобы записать свою половину проверки RDY-01.
         /// </summary>
-        private const float TagCloseWait = 30f;
+        private const float RdyHold = 10f;
 
-        /// <summary>Сколько наблюдатель ждёт закрытия стены по чужому жетону.</summary>
-        private const float TagSeenWait = 90f;
+        /// <summary>Сколько ждём закрытия общей стены после готовности всех.</summary>
+        private const float WallCloseWait = 90f;
+
+        /// <summary>Сколько клиент ждёт состояния, которое объявляет сервер.</summary>
+        private const float ReadyStateWait = 120f;
 
         /// <summary>
         /// Сколько сервер ждёт отчётов клиентов, прежде чем погасить процесс.
@@ -124,7 +128,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private IEnumerator RunServer(E2EContext context, E2EResult result)
         {
             result.Declare(CheckDedicated, CheckClients, CheckMap, CheckInitial, CheckPresence,
-                           CheckPhase, CheckEvent, CheckArsenal, CheckTagClose);
+                           CheckPhase, CheckEvent, CheckArsenal, CheckRdyOpen, CheckRdyClose);
 
             // ── 1. Выделенный сервер ──────────────────────────────────────
             float deadline = Now + 60f;
@@ -389,11 +393,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     yield break;
                 }
 
-                // ── 9. Жетон, взятый на клиенте, закрывает общую стену ────
+                // ── 9. Готовность одного игрока стену не закрывает (RDY-01) ──
                 ArsenalWallController shared = PickSharedWall(walls);
                 if (shared == null)
                 {
-                    result.Set(CheckTagClose, false,
+                    result.Set(CheckRdyOpen, false,
                         $"ни одна из {walls.Length} стен не заспавнена Mirror (netId == 0 у всех) — " +
                         "общий объект не выбрать, и репликация состояния тут ни при чём. " +
                         "Похоже на NET-14: у стен нет sceneId.");
@@ -401,54 +405,91 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     yield break;
                 }
 
+                // Пауза, чтобы клиенты успели увидеть открытую стену и записать свою
+                // проверку про неё.
+                yield return E2EWait.Hold(ReadyDelay);
+
+                List<PlayerSession> allSessions = AllSessions();
+                if (allSessions.Count < 2)
+                {
+                    result.Set(CheckRdyOpen, false,
+                        $"сессий на сервере {allSessions.Count}, а RDY-01 живёт только при двух и более: " +
+                        "весь дефект в том, что готовность одного игрока задевает другого.");
+                    result.Summary = "игроков меньше двух, RDY-01 не проверить";
+                    yield return WaitForClientVerdicts(context);
+                    yield break;
+                }
+
+                PlayerSession first = allSessions[0];
                 GameLog.Debug.Info(
-                    $"[E2E] Жду закрытия общей стены netId={shared.netId} " +
-                    $"(её должен закрыть {TagInitiatorRole}, взяв жетон)");
+                    $"[E2E] Объявляю готовность за {first.PlayerName} и держу {RdyHold:F0} с — " +
+                    "стена netId=" + shared.netId + " обязана остаться открытой");
 
-                deadline = Now + 60f;
-                while (shared.CurrentState == ArsenalWallController.ArsenalState.Open && Now < deadline)
-                    yield return null;
+                first.ServerSetReady(true, "e2e: первый игрок объявил готовность");
 
-                RoundState phaseAtClose = elimination.CurrentRoundState;
-                bool wallLeftOpen = shared.CurrentState != ArsenalWallController.ArsenalState.Open;
+                yield return E2EWait.Hold(RdyHold);
 
-                // Фаза обязана остаться Equipment: выход из неё требует готовности всех
-                // живых игроков, а инициатор дёргает жетон мимо PlayerSession. Если фаза
-                // всё же сменилась, стену закрыл переход по фазе, и проверка ничего не значит.
-                bool tagCloseOk = wallLeftOpen && phaseAtClose == RoundState.Equipment;
+                bool stillOpen = shared.CurrentState == ArsenalWallController.ArsenalState.Open;
+                RoundState phaseAtHold = elimination.CurrentRoundState;
 
-                result.Set(CheckTagClose, tagCloseOk,
-                    tagCloseOk
-                        ? $"стена netId={shared.netId} перешла в {shared.CurrentState}, фаза при этом осталась " +
-                          $"{phaseAtClose} — значит закрыл её именно жетон клиента, а не переход по фазе. " +
-                          "Состояние стены общее"
-                        : !wallLeftOpen
-                            ? $"за 60 с стена netId={shared.netId} осталась Open, хотя {TagInitiatorRole} взял жетон " +
-                              "(смотри его лог и client-1.json). Это NET-07: состояние стены — обычное поле, " +
-                              "и закрытие живёт только на той машине, где схватили жетон"
-                            : $"стена закрылась, но фаза успела уйти в {phaseAtClose} — закрыть её мог переход по фазе. " +
-                              "Проверка недействительна, а не провалена: смотри, почему раунд ушёл из Equipment.");
+                result.Set(CheckRdyOpen, stillOpen && phaseAtHold == RoundState.Equipment,
+                    stillOpen && phaseAtHold == RoundState.Equipment
+                        ? $"готов 1 игрок из {allSessions.Count}, и за {RdyHold:F0} с стена netId={shared.netId} " +
+                          $"осталась Open, фаза осталась {phaseAtHold}. Арсенал закрывается по общей готовности, " +
+                          "а не по первому игроку"
+                        : !stillOpen
+                            ? $"стена netId={shared.netId} ушла в {shared.CurrentState}, хотя готов только " +
+                              $"{first.PlayerName}. Это RDY-01: стена одна на всех, и закрытие по первому " +
+                              "оставляет остальных без снаряжения"
+                            : $"фаза ушла в {phaseAtHold}, хотя готов только {first.PlayerName} — " +
+                              "раунд не вправе выходить из закупки, пока готовы не все живые игроки");
 
-                // ── 10. Барьер: не гасим сервер, пока клиенты не вынесли вердикт ──
-                // Свой вердикт сервер выносит в тот же кадр, в котором применил Command
-                // инициатора, — а инициатору состояние возвращается только следующей
-                // рассылкой SyncVar. Application.Quit сразу после вердикта обрывал связь
-                // раньше эха примерно в трети прогонов: это и есть TEST-01. Барьер не
-                // проверка: он ничего не утверждает об игре, он лишь удерживает процесс.
+                // ── 10. Готовы все — стена закрывается у всех (NET-07) ────
+                foreach (PlayerSession session in allSessions)
+                    session.ServerSetReady(true, "e2e: игрок объявил готовность");
+
+                E2EWaitOutcome closed = new E2EWaitOutcome();
+                yield return E2EWait.Until(closed,
+                    $"стена netId={shared.netId} вышла из Open после готовности всех",
+                    WallCloseWait,
+                    () => shared.CurrentState != ArsenalWallController.ArsenalState.Open,
+                    () => $"состояние стены={shared.CurrentState}, фаза={elimination.CurrentRoundState}, " +
+                          $"готовность: {DescribeReadiness(allSessions)}",
+                    () => NetworkServer.connections.Count > 0
+                        ? null
+                        : "на сервере не осталось подключений");
+
+                bool rdyCloseOk = closed.Succeeded;
+                result.Set(CheckRdyClose, rdyCloseOk,
+                    rdyCloseOk
+                        ? closed.Diagnosis + $" Фаза при этом {elimination.CurrentRoundState}: " +
+                          "готовность всех живых игроков и есть условие выхода из закупки, " +
+                          "поэтому закрытие по общей готовности и закрытие по началу отсчёта — один момент."
+                        : closed.Diagnosis + " Готовность объявлена за всех, а арсенал так и не закрылся: " +
+                          "к бою он обязан быть закрыт.");
+
+                // ── 11. Барьер: не гасим сервер, пока клиенты не вынесли вердикт ──
+                // Свой вердикт сервер выносит в тот же кадр, в котором сменил состояние,
+                // а до клиентов оно доезжает только следующей рассылкой SyncVar.
+                // Application.Quit сразу после вердикта обрывал связь раньше эха
+                // примерно в трети прогонов: это и есть TEST-01. Барьер не проверка:
+                // он ничего не утверждает об игре, он лишь удерживает процесс.
                 yield return WaitForClientVerdicts(context);
 
                 result.Summary = result.AllChecksGreen
-                    ? "все проверки зелёные — NET-06, NET-13 и NET-07 больше не воспроизводятся"
+                    ? "все проверки зелёные — NET-06, NET-13, NET-07 и RDY-01 больше не воспроизводятся"
                     : (!eventOk || !arsenalOk)
                         ? "NET-06 подтверждена: конфигурация собралась, " +
                           "но смена фазы раунда до серверной логики не доходит"
-                        : !presenceOk && !tagCloseOk
-                            ? "подтверждены NET-13 (слот не видит своё оружие) и NET-07 (состояние стены не реплицируется)"
+                        : !presenceOk && !stillOpen
+                            ? "подтверждены NET-13 (слот не видит своё оружие) и RDY-01 (стена закрылась по первому готовому)"
                             : !presenceOk
                                 ? "подтверждена NET-13: слот не видит лежащее в нём оружие"
-                                : !tagCloseOk
-                                    ? "подтверждена NET-07: состояние стены не реплицируется"
-                                    : "есть красные проверки, см. detail";
+                                : !stillOpen
+                                    ? "подтверждён RDY-01: общая стена закрывается по первому готовому игроку"
+                                    : !rdyCloseOk
+                                        ? "стена не закрылась даже при готовности всех"
+                                        : "есть красные проверки, см. detail";
             }
             finally
             {
@@ -489,20 +530,25 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 "могли не успеть — сверься с client-*.json.");
         }
 
-        /// <summary>Сколько сессий подняли флаг «мой вердикт по жетону записан».</summary>
+        /// <summary>
+        /// Кто уже отчитался. Накопительно: начало нового раунда сбрасывает
+        /// <c>HasGrabbedDogTag</c> вместе с готовностью, и мгновенный снимок флагов
+        /// после такого сброса увидел бы ноль.
+        /// </summary>
+        private static readonly HashSet<uint> ReportedVerdictIds = new HashSet<uint>();
+
         private static int ReportedVerdicts()
         {
             if (PlayersManager.Instance == null)
-                return 0;
+                return ReportedVerdictIds.Count;
 
-            int reported = 0;
             foreach (PlayerSession session in PlayersManager.Instance.Sessions)
             {
                 if (session != null && session.HasGrabbedDogTag)
-                    reported++;
+                    ReportedVerdictIds.Add(session.netId);
             }
 
-            return reported;
+            return ReportedVerdictIds.Count;
         }
 
         /// <summary>Кто отчитался, а кто нет — для диагностики барьера.</summary>
@@ -527,11 +573,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private IEnumerator RunClient(E2EContext context, E2EResult result)
         {
-            bool isTagInitiator = context.Role == TagInitiatorRole;
-
+            // Роли инициатора больше нет: готовность объявляет сервер, а оба клиента
+            // проверяют одно и то же — что общая стена ведёт себя одинаково у всех.
             result.Declare(CheckClientConnected, CheckClientSession, CheckClientMap, CheckClientEvent,
-                           CheckClientArsenal,
-                           isTagInitiator ? CheckClientTagPull : CheckClientTagSeen);
+                           CheckClientArsenal, CheckClientRdyOpen, CheckClientRdyClose);
 
             DisableDebugOrchestrator();
 
@@ -664,10 +709,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield break;
             }
 
-            if (isTagInitiator)
-                yield return PullDogTag(shared, result);
-            else
-                yield return WatchWallClose(shared, result);
+            yield return WatchReadinessGate(shared, result);
 
             result.Summary = result.AllChecksGreen
                 ? "клиент подключился, получил сессию, карту, фазу раунда и увидел общую стену"
@@ -675,88 +717,76 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         }
 
         /// <summary>
-        /// Роль инициатора: берёт жетон на общей стене. Дёргаем событие
-        /// <see cref="DogTagController.OnTagGrabbed"/> напрямую — это ровно то, что
-        /// поднимает <c>OnTagRemoved</c> при настоящем захвате, а руки в прогоне без
-        /// шлема взяться неоткуда. Игрока передаём null: тогда готовность не уйдёт
-        /// в <c>PlayerSession</c>, раунд не выйдет из <c>Equipment</c>, и стену
-        /// закроет именно жетон, а не переход по фазе.
+        /// Обе половины правила закрытия, увиденные с клиента.
+        ///
+        /// <para>
+        /// Первая — <b>RDY-01</b>: пока готовность объявил один игрок из двух, стена
+        /// обязана оставаться открытой. Момент «готов ровно один» определяется по
+        /// реплицированному состоянию сессий, а не по договорённости о времени:
+        /// синхронизировать два клиентских процесса по часам было бы гаданием.
+        /// </para>
+        ///
+        /// <para>
+        /// Вторая — <b>NET-07</b>: как только готовы все, закрытие, объявленное сервером,
+        /// обязано доехать сюда. До T-15 состояние стены жило на каждой машине своё.
+        /// </para>
         /// </summary>
-        private IEnumerator PullDogTag(ArsenalWallController shared, E2EResult result)
+        private IEnumerator WatchReadinessGate(ArsenalWallController shared, E2EResult result)
         {
-            // Пауза, чтобы сервер успел записать свою проверку про открытую стену.
-            yield return E2EWait.Hold(TagPullDelay);
-
             // netId запоминаем заранее. При обрыве связи Mirror зовёт NetworkIdentity.Reset,
             // и netId обнуляется прямо на живом объекте — вердикт, читающий его в конце,
             // сообщал бы про мифическую «стену netId=0».
             uint wallNetId = shared.netId;
 
-            DogTagController dogTag = shared.GetComponentInChildren<DogTagController>(true);
-            if (dogTag == null)
-            {
-                result.Set(CheckClientTagPull, false,
-                    $"у стены netId={wallNetId} нет DogTagController — жетон брать нечем. " +
-                    "Проверить закрытие по жетону на этой карте нельзя.");
-                ReportVerdictReady();
-                yield break;
-            }
-
-            // Состояние на момент захвата. Если стена к этому мгновению уже не Open,
-            // ждать «выхода из Open» бессмысленно: условие выполнено заранее и проверка
-            // стала бы зелёной, ничего не проверив.
-            ArsenalWallController.ArsenalState stateAtGrab = shared.CurrentState;
-            if (stateAtGrab != ArsenalWallController.ArsenalState.Open)
-            {
-                result.Set(CheckClientTagPull, false,
-                    $"стена netId={wallNetId} была уже в {stateAtGrab} к моменту захвата жетона — " +
-                    "закрывать нечего, и проверка ничего не значила бы. Смотри, кто закрыл её раньше: " +
-                    "выдержка перед захватом рассчитана на то, что фаза остаётся Equipment.");
-                ReportVerdictReady();
-                yield break;
-            }
-
-            GameLog.Debug.Info($"[E2E] Беру жетон на стене netId={wallNetId}");
-            dogTag.OnTagGrabbed?.Invoke(null);
-
-            // Ждём не «сколько-нибудь», а именно возврата состояния: захват уходит
-            // Command'ом на сервер, сервер пишет SyncVar, и обратно оно приезжает
-            // ближайшей рассылкой. Пропажа связи означает, что ответа уже не будет, —
-            // ждать оставшийся срок незачем, и в вердикте это должно быть названо.
-            E2EWaitOutcome wait = new E2EWaitOutcome();
-            yield return E2EWait.Until(wait,
-                $"стена netId={wallNetId} вышла из Open после захвата жетона",
-                TagCloseWait,
-                () => shared.CurrentState != ArsenalWallController.ArsenalState.Open,
+            E2EWaitOutcome oneReady = new E2EWaitOutcome();
+            yield return E2EWait.Until(oneReady,
+                "ровно один игрок объявил готовность",
+                ReadyStateWait,
+                () => ReadyCount() == 1,
                 () => DescribeWallWait(shared, wallNetId),
                 () => NetworkClient.isConnected
                     ? null
-                    : "связь с сервером пропала — SyncVar с новым состоянием вернуться уже не может " +
-                      "(сервер погас раньше, чем ответил; см. TEST-01)");
+                    : "связь с сервером пропала — состояние готовности сюда уже не приедет");
 
-            result.Set(CheckClientTagPull, wait.Succeeded,
-                wait.Succeeded
-                    ? $"жетон взят, стена netId={wallNetId} перешла в {shared.CurrentState} " +
-                      $"за {wait.Elapsed:F2} с"
-                    : wait.Diagnosis + " Закрытие не сработало даже у инициатора — " +
-                      "дальше проверять нечего, красные проверки на сервере и втором клиенте " +
-                      "этим и объясняются.");
+            if (!oneReady.Succeeded)
+            {
+                result.Set(CheckClientRdyOpen, false,
+                    oneReady.Diagnosis + " Состояние «готов ровно один» до клиента не доехало, " +
+                    "и проверять на нём RDY-01 нельзя.");
+            }
+            else
+            {
+                // Ждём не события, а его отсутствия, поэтому здесь именно выдержка:
+                // стена обязана оставаться открытой всё то время, пока готов не каждый.
+                float until = Now + RdyHold * 0.5f;
+                bool stayedOpen = true;
 
-            ReportVerdictReady();
-        }
+                while (Now < until)
+                {
+                    if (ReadyCount() > 1) break;   // сервер уже объявил готовность за всех
 
-        /// <summary>
-        /// Роль наблюдателя: жетон берёт другой клиент, а эта машина обязана увидеть,
-        /// что общая стена закрылась. До T-15 закрытие жило только у инициатора — это NET-07.
-        /// </summary>
-        private IEnumerator WatchWallClose(ArsenalWallController shared, E2EResult result)
-        {
-            uint wallNetId = shared.netId;
+                    if (shared.CurrentState != ArsenalWallController.ArsenalState.Open)
+                    {
+                        stayedOpen = false;
+                        break;
+                    }
+
+                    yield return null;
+                }
+
+                result.Set(CheckClientRdyOpen, stayedOpen,
+                    stayedOpen
+                        ? $"готовность объявил один игрок, а стена netId={wallNetId} у этого клиента " +
+                          "осталась открытой — экипироваться ещё можно"
+                        : $"стена netId={wallNetId} закрылась ({shared.CurrentState}), пока готов был только " +
+                          "один игрок. Это RDY-01: стена одна на всех, и закрытие по первому готовому " +
+                          "оставляет остальных без снаряжения.");
+            }
 
             E2EWaitOutcome wait = new E2EWaitOutcome();
             yield return E2EWait.Until(wait,
-                $"стена netId={wallNetId} вышла из Open после чужого жетона",
-                TagSeenWait,
+                $"стена netId={wallNetId} вышла из Open после готовности всех",
+                ReadyStateWait,
                 () => shared.CurrentState != ArsenalWallController.ArsenalState.Open,
                 () => DescribeWallWait(shared, wallNetId),
                 () => NetworkClient.isConnected
@@ -764,15 +794,31 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     : "связь с сервером пропала — состояние стены сюда уже не приедет " +
                       "(сервер погас раньше, чем разослал; см. TEST-01)");
 
-            result.Set(CheckClientTagSeen, wait.Succeeded,
+            result.Set(CheckClientRdyClose, wait.Succeeded,
                 wait.Succeeded
                     ? $"стена netId={wallNetId} закрылась и здесь ({shared.CurrentState}) " +
-                      $"за {wait.Elapsed:F2} с, хотя жетон брал {TagInitiatorRole} — состояние стены общее"
-                    : wait.Diagnosis + $" Жетон брал {TagInitiatorRole}, его вердикт — в client-1.json. " +
-                      "Если тот увидел закрытие у себя, а сюда оно не доехало — это NET-07: " +
-                      "состояние стены живёт только на машине инициатора.");
+                      $"за {wait.Elapsed:F2} с — состояние стены общее"
+                    : wait.Diagnosis + " Сервер объявил закрытие (см. server.json), а сюда оно " +
+                      "не доехало — это NET-07: состояние стены живёт только на машине сервера.");
 
             ReportVerdictReady();
+        }
+
+        /// <summary>
+        /// Сколько сессий на этой машине объявили готовность. На клиенте
+        /// <c>PlayersManager</c> пуст (он серверный), поэтому сессии ищутся по сцене:
+        /// сами объекты Mirror спавнит всем наблюдателям, а <c>ReadyState</c> —
+        /// обычный <c>SyncVar</c>.
+        /// </summary>
+        private static int ReadyCount()
+        {
+            int ready = 0;
+            foreach (PlayerSession session in Object.FindObjectsByType<PlayerSession>(FindObjectsInactive.Include))
+            {
+                if (session != null && session.ReadyState) ready++;
+            }
+
+            return ready;
         }
 
         /// <summary>
@@ -801,9 +847,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// <c>HasGrabbedDogTag</c> используется как сигнал «мою проверку я записал»,
         /// и сервер ждёт его от каждого клиента, прежде чем выйти.
         ///
-        /// Фазу раунда сигнал сдвинуть не может: <c>AreAllPlayersReady</c> требует
-        /// готовности всех живых игроков, а её достигнет только последний отчитавшийся —
-        /// то есть заведомо после того, как все проверки уже записаны.
+        /// Фазу раунда сигнал сдвинуть не может вовсе: с T-29 <c>HasGrabbedDogTag</c> —
+        /// чистый жест, готовность живёт отдельным состоянием, и служебный флаг
+        /// сценария на ход матча не влияет никак.
         /// </summary>
         private static void ReportVerdictReady()
         {
@@ -856,11 +902,24 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private static ArsenalWallController PickSharedWall(ArsenalWallController[] walls)
         {
             ArsenalWallController best = null;
+            uint bestNetId = 0;
 
             foreach (ArsenalWallController wall in walls)
             {
-                if (wall == null || wall.netId == 0) continue;
-                if (best == null || wall.netId < best.netId) best = wall;
+                if (wall == null) continue;
+
+                // netId читается через NetworkIdentity, а у только что подгруженного
+                // объекта сцены её ещё может не быть: Mirror связывает компоненты
+                // в Awake, и до этого обращение к netId — NullReferenceException.
+                // Клиент доходит сюда раньше, чем Mirror успевает заспавнить сцену.
+                NetworkIdentity identity = wall.GetComponent<NetworkIdentity>();
+                if (identity == null || identity.netId == 0) continue;
+
+                if (best == null || identity.netId < bestNetId)
+                {
+                    best = wall;
+                    bestNetId = identity.netId;
+                }
             }
 
             return best;
@@ -888,6 +947,32 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private static int SessionCount()
         {
             return PlayersManager.Instance != null ? PlayersManager.Instance.Sessions.Count : 0;
+        }
+
+        /// <summary>Серверный список сессий копией — по нему сценарий объявляет готовность.</summary>
+        private static List<PlayerSession> AllSessions()
+        {
+            List<PlayerSession> list = new List<PlayerSession>();
+            if (PlayersManager.Instance == null) return list;
+
+            foreach (PlayerSession session in PlayersManager.Instance.Sessions)
+            {
+                if (session != null) list.Add(session);
+            }
+
+            return list;
+        }
+
+        private static string DescribeReadiness(List<PlayerSession> sessions)
+        {
+            List<string> parts = new List<string>();
+            foreach (PlayerSession session in sessions)
+            {
+                if (session == null) continue;
+                parts.Add($"{session.PlayerName}={(session.ReadyState ? "готов" : "не готов")}");
+            }
+
+            return parts.Count == 0 ? "сессий нет" : string.Join(", ", parts.ToArray());
         }
 
         /// <summary>

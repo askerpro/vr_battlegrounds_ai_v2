@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using VrBattlegrounds.GameModes;
@@ -27,6 +27,7 @@ namespace VrBattlegrounds.Tests.Network
         private TeamData _teamA;
         private TeamData _teamB;
         private RoundFlowDriver _driver;
+        private StubPlayerRoster _roster;
 
         [SetUp]
         public void PrepareMatch()
@@ -48,15 +49,28 @@ namespace VrBattlegrounds.Tests.Network
 
             // Живых аватаров в EditMode не поднять, а без них фаза Equipment вечна.
             // Подменяем только источник данных об игроках — сама машина остаётся боевой.
-            StubPlayerRoster roster = new StubPlayerRoster();
-            roster.Add(_teamA, CreateReadySession("PlayerA"));
-            roster.Add(_teamB, CreateReadySession("PlayerB"));
-            _mode.PlayerRoster = roster;
+            _roster = new StubPlayerRoster();
+            _roster.Add(_teamA, CreateReadySession("PlayerA"));
+            _roster.Add(_teamB, CreateReadySession("PlayerB"));
+            _mode.PlayerRoster = _roster;
 
-            _driver = new RoundFlowDriver(dt => _mode.ServerTick(dt), () => _mode.CurrentRoundState);
+            // Готовность объявляется перед каждым тиком: с T-29 она живёт один раунд,
+            // а эти тесты прогоняют их несколько подряд. Так заглушка играет роль
+            // игроков, которые каждый раунд заново берут жетон.
+            _driver = new RoundFlowDriver(
+                dt =>
+                {
+                    _roster.DeclareAllReady();
+                    _mode.ServerTick(dt);
+                },
+                () => _mode.CurrentRoundState);
         }
 
-        /// <summary>Сессия игрока, который стоит в зоне спавна и взял жетон.</summary>
+        /// <summary>
+        /// Сессия игрока, который стоит в своей зоне спавна. Готовность здесь не
+        /// объявляется: с T-29 она сбрасывается каждый раунд, поэтому её объявляет
+        /// заново перед каждым тиком <c>StubPlayerRoster.DeclareAllReady</c>.
+        /// </summary>
         private PlayerSession CreateReadySession(string name)
         {
             GameObject go = CreateNetworkObject(name);
@@ -64,7 +78,6 @@ namespace VrBattlegrounds.Tests.Network
             EnableNetworking(go);
 
             session.IsInSpawnZone = true;
-            session.HasGrabbedDogTag = true;
             return session;
         }
 

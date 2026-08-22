@@ -42,6 +42,15 @@ namespace VrBattlegrounds.GameModes
         [Tooltip("Максимальная длительность раунда (сек).")]
         [SerializeField] private float _roundDuration = 90f;
 
+        [Header("Готовность к раунду (T-29)")]
+        [Tooltip("Сколько секунд фаза Equipment ждёт готовности всех живых игроков. " +
+                 "Ноль и меньше — ждать без предела.")]
+        [SerializeField] private float _readinessTimeLimit = RoundReadiness.DefaultTimeLimit;
+
+        [Tooltip("Что делать, когда предел ожидания истёк, а готовы не все.")]
+        [SerializeField] private RoundReadinessTimeoutRule _readinessTimeoutRule =
+            RoundReadinessTimeoutRule.AutoReady;
+
         // Счёт матча теперь синхронизируется через базовый класс GameMode
 
         // Состояние раунда — синхронизируется для UI (таймер, countdown)
@@ -84,6 +93,29 @@ namespace VrBattlegrounds.GameModes
         private readonly SyncDictionary<int, int> _syncedRoundScores = new SyncDictionary<int, int>();
 
         /// <summary>
+        /// Кого раунд ждёт: <c>netId</c> сессий живых игроков, не объявивших готовность.
+        ///
+        /// <para>
+        /// <b>Состояние, а не событие</b> — по той же причине, что и фаза раунда.
+        /// Состав неготовых нужен HUD'у, чтобы показать «ждём Петю», а вновь
+        /// подключившийся обязан узнать его сам: список приезжает начальным значением
+        /// спавна, а не следующим изменением. Разовым <c>ClientRpc</c> это не решается
+        /// (урок Корня 3).
+        /// </para>
+        ///
+        /// <para>
+        /// Почему <c>netId</c>, а не имена: имя игрок вправе сменить, а сессию по netId
+        /// клиент разрешает сам через <c>NetworkClient.spawned</c> — и получает
+        /// не строку, а объект, у которого можно спросить команду и всё остальное.
+        /// Список пуст вне фазы <c>Equipment</c>: в остальных фазах готовности не ждут.
+        /// </para>
+        /// </summary>
+        private readonly SyncList<uint> _pendingReadiness = new SyncList<uint>();
+
+        /// <summary>Буфер сравнения: не хочется писать SyncList каждый тик без изменений.</summary>
+        private readonly List<uint> _pendingReadinessBuffer = new List<uint>();
+
+        /// <summary>
         /// Живые подписки отложенного респавна. Список нужен именно потому, что подписка
         /// может так и не сработать: снять её иначе, чем изнутри обработчика, было нечем
         /// (MATCH-05). Только сервер — на клиенте <c>PrepareNextRound</c> не исполняется.
@@ -120,6 +152,19 @@ namespace VrBattlegrounds.GameModes
 
         public EliminationMatchState CurrentMatchState => _matchState;
         public RoundState CurrentRoundState => _roundState;
+
+        /// <summary>
+        /// Кого раунд ждёт — <c>netId</c> сессий неготовых живых игроков. Доступно
+        /// и на сервере, и на клиенте; подписаться на изменения можно через
+        /// <c>PendingReadiness.OnChange</c>.
+        /// </summary>
+        public SyncList<uint> PendingReadiness => _pendingReadiness;
+
+        /// <summary>Предел ожидания готовности, секунды. Ноль и меньше — предела нет.</summary>
+        public float ReadinessTimeLimit => _readinessTimeLimit;
+
+        /// <summary>Правило матча при истечении предела ожидания.</summary>
+        public RoundReadinessTimeoutRule ReadinessTimeoutRule => _readinessTimeoutRule;
         /// <summary>Сколько секунд идёт текущая фаза. Считается локально, без обращения к сети.</summary>
         private float PhaseElapsed => (float)Math.Max(0d, NetworkTime.time - _phaseStartTime);
 
@@ -217,7 +262,7 @@ namespace VrBattlegrounds.GameModes
             // Создаём менеджеры как обычные C# объекты — без GameObject, без NetworkBehaviour.
             // Связывание с OnSetEnded живёт ровно здесь, в конструкторе: событий у SetManager
             // нет, поэтому подписаться дважды (MATCH-01) физически не на что.
-            _roundManager = new RoundManager(PlayerRoster);
+            _roundManager = new RoundManager(PlayerRoster, _readinessTimeLimit, _readinessTimeoutRule);
             _setManager = new SetManager(_roundManager, OnSetEnded);
 
             string teamsStr = string.Join(" vs ", Teams.Select(t => t != null ? t.displayName : "null"));
@@ -240,6 +285,10 @@ namespace VrBattlegrounds.GameModes
 
             // Раунда больше не будет — ждать возвращения в зону некому и незачем.
             ClearPendingRespawns();
+
+            // И готовности ждать больше не от кого: список обязан опустеть, иначе HUD
+            // остановленного матча так и будет показывать «ждём Петю».
+            _pendingReadiness.Clear();
 
             GameLog.Match.Info(
                 $"[EliminationMode] Матч остановлен.");
@@ -279,6 +328,8 @@ namespace VrBattlegrounds.GameModes
             // Единственное, что может измениться за тик, — фаза. Таймеры в сеть больше
             // не пишутся: клиент считает остаток сам, от момента старта фазы (NET-09).
             ServerSetRoundState(_roundManager.State);
+
+            ServerPublishPendingReadiness();
 
             // Синхронизируем счёт раундов из SetManager
             if (_setManager != null)
@@ -528,6 +579,50 @@ namespace VrBattlegrounds.GameModes
 
             ApplyRoundStateLocal(newState);
             OnRoundStateChangedServer?.Invoke(newState);
+        }
+
+        // ── Состав неготовых: тоже состояние ─────────────────────────────────
+
+        /// <summary>
+        /// Выкладывает клиентам список тех, кого раунд ждёт. Зовётся каждый серверный тик,
+        /// но пишет <see cref="_pendingReadiness" /> только когда состав действительно
+        /// изменился: <c>SyncList</c> шлёт дельту на каждую операцию, и переписывание
+        /// одного и того же состава давало бы ровно тот же фоновый трафик, из-за которого
+        /// таймеры фаз в своё время съехали на <c>NetworkTime</c> (NET-09).
+        /// </summary>
+        [Server]
+        private void ServerPublishPendingReadiness()
+        {
+            _pendingReadinessBuffer.Clear();
+
+            // Ждать готовности имеет смысл только в той фазе, где её ждут. В остальных
+            // список обязан быть пуст, иначе HUD покажет «ждём Петю» посреди боя.
+            if (_roundManager != null && _roundState == RoundState.Equipment)
+            {
+                foreach (PlayerSession session in _roundManager.Readiness.Pending)
+                {
+                    if (session != null) _pendingReadinessBuffer.Add(session.netId);
+                }
+            }
+
+            if (SamePendingReadiness(_pendingReadinessBuffer)) return;
+
+            _pendingReadiness.Clear();
+            foreach (uint netId in _pendingReadinessBuffer)
+                _pendingReadiness.Add(netId);
+        }
+
+        /// <summary>Совпадает ли выложенный состав с только что посчитанным.</summary>
+        private bool SamePendingReadiness(List<uint> fresh)
+        {
+            if (_pendingReadiness.Count != fresh.Count) return false;
+
+            for (int i = 0; i < fresh.Count; i++)
+            {
+                if (_pendingReadiness[i] != fresh[i]) return false;
+            }
+
+            return true;
         }
 
         /// <summary>Хук SyncVar: фаза приехала с сервера.</summary>

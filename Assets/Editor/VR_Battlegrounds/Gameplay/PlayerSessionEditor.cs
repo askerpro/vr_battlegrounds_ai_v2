@@ -1,4 +1,4 @@
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Player;
 
@@ -14,12 +14,14 @@ namespace VrBattlegrounds.Player
             PlayerSession session = (PlayerSession)target;
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Debug Readiness", EditorStyles.boldLabel);
-            
+            EditorGUILayout.LabelField("Готовность к раунду", EditorStyles.boldLabel);
+
             GUI.enabled = false;
-            EditorGUILayout.Toggle("Is In Spawn Zone", session.IsInSpawnZone);
-            EditorGUILayout.Toggle("Has Grabbed Dog Tag", session.HasGrabbedDogTag);
-            EditorGUILayout.Toggle("Is Ready For Round", session.IsReadyForRound);
+            // Готовность — явное состояние; зона и жетон стоят рядом как условие и жест,
+            // из которых она больше не выводится (T-29).
+            EditorGUILayout.Toggle("Готов к раунду (ReadyState)", session.ReadyState);
+            EditorGUILayout.Toggle("В зоне спавна (условие)", session.IsInSpawnZone);
+            EditorGUILayout.Toggle("Жетон взят (жест)", session.HasGrabbedDogTag);
             GUI.enabled = true;
         }
     }

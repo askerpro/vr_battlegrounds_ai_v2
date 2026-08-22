@@ -32,6 +32,7 @@ namespace VrBattlegrounds.Tests
         private RoundManager _roundManager;
         private SetManager _setManager;
         private RoundFlowDriver _driver;
+        private StubPlayerRoster _roster;
 
         /// <summary>Объекты сессий-заглушек: удаляются в TearDown, в сцене ничего не остаётся.</summary>
         private readonly List<GameObject> _sessionObjects = new List<GameObject>();
@@ -79,23 +80,32 @@ namespace VrBattlegrounds.Tests
 
             // Живого аватара в EditMode нет, а без него реестр игроков пуст и раунд
             // навсегда стоит в фазе Equipment. Подменяем только источник данных.
-            StubPlayerRoster roster = new StubPlayerRoster();
-            roster.Add(_teamA, CreateReadySession("PlayerA"));
-            roster.Add(_teamB, CreateReadySession("PlayerB"));
+            _roster = new StubPlayerRoster();
+            _roster.Add(_teamA, CreateReadySession("PlayerA"));
+            _roster.Add(_teamB, CreateReadySession("PlayerB"));
 
             _setEndedWinners.Clear();
             _scoresAtSetEnd.Clear();
 
             // Наблюдатель исхода сета передаётся конструктором: события SetEnded больше нет,
             // поэтому подписаться дважды (MATCH-01) не на что даже в тесте.
-            _roundManager = new RoundManager(roster);
+            _roundManager = new RoundManager(_roster);
             _setManager = new SetManager(_roundManager, w =>
             {
                 _setEndedWinners.Add(w);
                 _scoresAtSetEnd.Add(DumpScores());
             });
 
-            _driver = new RoundFlowDriver(dt => _setManager.Tick(dt), () => _roundManager.State);
+            // Готовность объявляется перед каждым тиком: с T-29 она живёт ровно один
+            // раунд, а сет здесь прогоняется целиком. Так заглушка играет игроков,
+            // которые каждый раунд заново берут жетон.
+            _driver = new RoundFlowDriver(
+                dt =>
+                {
+                    _roster.DeclareAllReady();
+                    _setManager.Tick(dt);
+                },
+                () => _roundManager.State);
         }
 
         /// <summary>
@@ -113,7 +123,11 @@ namespace VrBattlegrounds.Tests
             return team;
         }
 
-        /// <summary>Сессия игрока, который стоит в зоне спавна и взял жетон.</summary>
+        /// <summary>
+        /// Сессия игрока, который стоит в своей зоне спавна. Готовность здесь не
+        /// объявляется: с T-29 она сбрасывается каждый раунд, и объявляет её заново
+        /// перед каждым тиком <c>StubPlayerRoster.DeclareAllReady</c>.
+        /// </summary>
         private PlayerSession CreateReadySession(string name)
         {
             GameObject go = new GameObject(name);
@@ -124,7 +138,6 @@ namespace VrBattlegrounds.Tests
             PlayerSession session = go.AddComponent<PlayerSession>();
 
             session.IsInSpawnZone = true;
-            session.HasGrabbedDogTag = true;
             return session;
         }
 

@@ -184,6 +184,8 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new AvatarSwapDeathReplicationScenario();
             yield return new CalibrationScaleReplicationScenario();
             yield return new SessionRecoveryOnReconnectScenario();
+            yield return new ArsenalItemGrabScenario();
+            yield return new PlayerDeathSignalScenario();
         }
 
         private static IE2EScenario Resolve(string name)

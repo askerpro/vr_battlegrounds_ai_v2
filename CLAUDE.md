@@ -28,9 +28,13 @@ VR-шутер для Oculus Quest 2/3. Unity **6000.4.1f1**, URP. Над про�
   `Debug.Log` в игровых скриптах запрещён — единственное исключение сам `GameLog.cs`.
   Уровни: `Verbose` поток, `Info` события, `Warning` проблемы, `Error` сбои.
   Ошибка вне категории — `GameLog.Error("...")`, пишется всегда.
-- **Смена сцены** — только `MapManager.Instance.LoadMap(sceneName)`. Прямые
-  `SceneManager.LoadScene(...)` и `NetworkManager.singleton.ServerChangeScene(...)` запрещены:
-  Mirror не даёт звать смену сцены из своих колбэков, клиенты рассинхронизируются.
+- **Смена сцены внутри живой сессии** — только `MapManager.Instance.LoadMap(sceneName)`. Прямые
+  `SceneManager.LoadScene(...)` и `NetworkManager.singleton.ServerChangeScene(...)` из игрового
+  кода запрещены: Mirror не даёт звать смену сцены из своих колбэков, клиенты рассинхронизируются.
+  **Законное исключение — поля `offlineScene` и `onlineScene` у `GameNetworkManager`:** вход
+  в сессию и выход из неё ведёт сам Mirror, своим внутренним таймингом. Их не чистить, разбор —
+  NET-21 в `Docs/audit/network-audit-2026-08.md`. Правило про `MapManager` — про смену **карты**
+  на живом сервере, а не про то, как клиент попадает в меню после разрыва.
 - **Editor-скрипты** — только в `Assets/Editor/VR_Battlegrounds/<категория>/`. Папка `Editor`
   внутри `Assets/Scripts/` затянет `UnityEditor` в Android-билд Quest → фатальная ошибка
   компиляции. Категории: `Avatars/`, `UI/`, `Gameplay/`, `Debug/`, `VersionControl/`.

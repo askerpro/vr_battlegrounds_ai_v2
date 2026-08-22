@@ -65,6 +65,20 @@ namespace VrBattlegrounds.Arsenal
         public ArsenalState CurrentState => _currentState;
 
         /// <summary>
+        /// Слоты стены в том порядке, в каком их адресует <see cref="RpcAssignItemToSlot" />.
+        /// Порядок одинаков во всех процессах — на этом держится вся сетевая выдача оружия,
+        /// потому что по сети едет индекс слота, а не ссылка на него.
+        /// </summary>
+        public System.Collections.Generic.IReadOnlyList<ArsenalSlotController> Slots
+        {
+            get
+            {
+                EnsureReferences();
+                return _allSlots;
+            }
+        }
+
+        /// <summary>
         /// Стена не участвует в репликации: объект не заспавнен Mirror. Так выглядит
         /// сцена, открытая без сети (проверка в редакторе), и стена без <c>sceneId</c>
         /// (NET-14). Тогда SyncVar никто не пришлёт, и состояние приходится вести самой —

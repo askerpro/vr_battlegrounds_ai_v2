@@ -368,7 +368,9 @@ clientIdentity.DeserializeClient(new NetworkReader(observers.ToArray()), true);
 **Реализовано (T-27). Сценарии: `dedicated-server-arsenal` (NET-06, зелёный после T-13),
 `avatar-swap-death-replication` (NET-01/NET-02/NET-15, зелёный после T-12),
 `calibration-scale-replication` (VR-01, зелёный после T-14, гоняется на обеих картах),
-`session-recovery-on-reconnect` (ARCH-01, **красный** — подсистема не размещена в проекте).**
+`session-recovery-on-reconnect` (ARCH-01, зелёный после исправления NET-20, `-Clients 1`),
+`player-death-signal` (остаток NET-04, зелёный после правки `PlayerController`, `-Clients 1`),
+`arsenal-item-grab` (NET-16/NET-17, **детерминированно красный**, `-Clients 1`).**
 Вердикт выносит не человек, глядя в два окна, а сам сценарий: каждый процесс пишет
 машиночитаемый JSON.
 Без этого ярус C остаётся ручным уровнем 4 и агент не может закрыть на нём задачу.
@@ -595,6 +597,31 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
   (нужен человек или MCP со сценой). На `TestMap1` этого нет.
 - **На `TestMap1` восемь стен арсенала.** Не дефект сам по себе, но проверки про арсенал
   обязаны агрегировать по всем стенам, а не брать `FindFirstObjectByType`.
+
+#### Что в headless доступно вопреки ожиданиям
+
+Замерено 2026-08-22. Два действия, которые считались требующими шлема (уровень 5),
+на самом деле доступны сценарию яруса C, и это заметно поднимает потолок автономной проверки.
+
+- **Настоящий захват предмета.** `UxrGrabManager.Instance.GrabObject(grabber, grabbableObject,
+  grabPoint, propagateEvents)` публичен, а `UxrGrabber` у аватара есть и без шлема
+  (`PlayerSession.LocalSession.ActiveAvatar.GetComponentInChildren<UxrGrabber>()`).
+  Захват проходит целиком: события `Grabbing`/`Grabbed`/`Removing`/`Removed`, перепарент,
+  запрос авторитета, отправка события в канал состояния.
+  **Оговорка:** предмет в руке не остаётся. Ближайший `UxrGrabManager.UpdateManipulation`
+  в том же кадре видит «кнопка не нажата» (ввода в headless нет) и отпускает предмет.
+  Поэтому факт захвата надо ловить событием `UxrGrabManager.ObjectGrabbed`, а не проверкой
+  `grabber.GrabbedObject != null` — иначе проверка меряет отсутствующий ввод, а не код.
+- **Настоящий смертельный урон.** `UxrActor.ReceiveDamage(damage)` публичен и на сервере
+  работает: урон уводит актора в приватный `DieInternal`, тот обнуляет `Life`, поднимает
+  `Died` и уезжает каналом состояния — у клиента метод переигрывается целиком.
+  Это единственный способ проверить путь `UxrActor.Died`; присвоение `Life = 0`
+  (`PlayerController.RestoreHealth(0)`) даёт только число и мимо `Died` проходит.
+
+Общее для обоих: аватар у клиента появится, только если сессии назначена команда,
+которую знает `TeamRegistry`, — `AvatarManager.ChangeAvatar` молча выходит иначе.
+Поэтому даже сценарий без матча обязан звать `SessionManager.SetSession(map, "elimination")`
+и разложить сессии по командам до `MapManager.LoadMap`.
 
 #### Чего на ярусе C ещё нет
 

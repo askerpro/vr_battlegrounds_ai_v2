@@ -159,11 +159,42 @@ namespace VrBattlegrounds.Player
             CacheSession();
         }
 
+        /// <summary>
+        /// <see cref="UxrActor" /> сообщил о смерти. Метод исполняется на <b>каждой</b>
+        /// машине: смертельный урон уводит актора в приватный <c>DieInternal</c>, а его
+        /// канал состояния UltimateXR переигрывает у клиентов — там и поднимается
+        /// <c>UxrActor.Died</c>.
+        ///
+        /// <para>
+        /// Поэтому локальных подписчиков (<see cref="Maps.TeamSpawnZone" />,
+        /// <see cref="PlayerGrabManager" />) оповещают именно здесь, а не в
+        /// <see cref="Die" />. <c>Die</c> помечен <c>[Server]</c>, и на выделенном сервере
+        /// у клиента это заглушка: событие <see cref="PlayerDied" /> не доходило до клиента
+        /// вовсе, и мёртвый игрок видел свою зону спавна не в момент гибели, а на ближайшей
+        /// смене фазы раунда (остаток находки NET-04). На хосте не воспроизводилось —
+        /// там <c>Die</c> исполняется по-настоящему.
+        /// </para>
+        ///
+        /// <para>
+        /// Почему сигнал берётся из <c>Died</c>, а не из отдельного <c>SyncVar</c> с хуком.
+        /// Источник правды о жизни один — <c>UxrActor.Life</c>, и едет он каналом состояния.
+        /// Второй, мирроровский, канал того же факта разъезжался бы с первым по времени,
+        /// и подписчик, читающий <see cref="IsAlive" /> прямо в обработчике (а зона спавна
+        /// делает именно так), мог бы увидеть ещё живого игрока. Здесь же <c>Life</c>
+        /// обнуляется в первой строке <c>DieInternal</c>, то есть до самого события.
+        /// </para>
+        /// </summary>
         private void OnActorDied(UxrActor actor)
         {
             GameLog.Player.Info($"[PlayerController] {name}: UxrActor сообщил о смерти.", this);
 
-            Die();
+            PlayerDied?.Invoke(this);
+
+            // NetworkServer.active, а не isServer: это ровно та проверка, которую
+            // подставляет weaver в [Server]-метод, и она не разыменовывает netIdentity —
+            // значит ведёт себя одинаково и у аватара, ещё не попавшего в сеть.
+            if (NetworkServer.active)
+                Die();
         }
 
         // ── SyncVar hooks (вызываются на всех клиентах при изменении) ─────────
@@ -185,7 +216,18 @@ namespace VrBattlegrounds.Player
             if (!isServer) return;
         }
 
-        /// <summary>Убивает игрока на сервере и уведомляет клиентов.</summary>
+        /// <summary>
+        /// Серверная половина смерти: режим наблюдателя, сброс предметов из рук
+        /// на клиентах и оповещение игрового режима.
+        ///
+        /// <para>
+        /// Локальных подписчиков отсюда больше не оповещают — <see cref="PlayerDied" />
+        /// поднимает <see cref="OnActorDied" /> на каждой машине. Единственный штатный
+        /// вызывающий этого метода — он же. Убить игрока из игрового кода следует
+        /// уроном (<c>UxrActor.ReceiveDamage</c>), а не прямым вызовом: сам по себе
+        /// <c>Die</c> здоровье не трогает, и без урона игрок остался бы «мёртвым, но живым».
+        /// </para>
+        /// </summary>
         [Server]
         public void Die()
         {
@@ -199,7 +241,6 @@ namespace VrBattlegrounds.Player
             }
 
             RpcOnDied();
-            PlayerDied?.Invoke(this);
 
             // Уведомляем активный режим о гибели игрока.
             if (GameplayManager.Instance != null)
@@ -222,13 +263,19 @@ namespace VrBattlegrounds.Player
             RpcOnRespawned(spawnPoint.position, spawnPoint.rotation);
         }
 
+        /// <summary>
+        /// Страховка на случай, если канал состояния UltimateXR молчит: предметы
+        /// из рук обязаны выпасть у всех.
+        ///
+        /// С исправлением остатка NET-04 это дублирование: <see cref="PlayerGrabManager" />
+        /// подписан на <see cref="PlayerDied" />, а тот теперь поднимается на каждой машине
+        /// из <see cref="OnActorDied" />. Оставлено намеренно — каналы независимы,
+        /// и повторный сброс предметов безвреден, тогда как их пропажа из-за молчащего
+        /// канала состояния видна игроку сразу.
+        /// </summary>
         [ClientRpc]
         private void RpcOnDied()
         {
-            // PlayerGrabManager already subscribes to PlayerDied event
-            // which is invoked in Die() on server. But events are not networked.
-            // We need to make sure items are dropped on all clients or handled by server.
-            // UltimateXR usually handles it locally, but we can force it here.
             var grabManager = GetComponent<PlayerGrabManager>();
             if (grabManager != null)
             {

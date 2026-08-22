@@ -15,6 +15,7 @@
 | `audit/` | Аудит 2026-08 (справочники, не меняются): [находки](audit/network-audit-2026-08.md), [оценка архитектуры](audit/architecture-review-2026-08.md) |
 | `testing.md` | Тестирование: шесть уровней от юнит-тестов до чек-листа в шлеме |
 | `gameplay.md` | Геймдизайн: что делает игрок, правила, режимы, структура матча |
+| `combat-networking.md` | Бой по сети: решения T-23 (компенсация задержки) и T-24 (где симулировать пули), замеры и методики |
 | `session-architecture.md` | Сессия, роли устройств (VR/PC/Server), Host/Client |
 | `game-manager.md` | GameManager, система режимов: создание assets, настройка, поток действий |
 | `ui-menu-architecture.md` | Архитектура UI Меню (MVC), экраны, префабы, контроллеры |
@@ -37,6 +38,7 @@
 - **Аудит: 21 находка** → [`audit/network-audit-2026-08.md`](audit/network-audit-2026-08.md)
 - **Аудит: 5 корневых решений архитектуры** → [`audit/architecture-review-2026-08.md`](audit/architecture-review-2026-08.md)
 - **Геймплей, режимы, матч, арена** → [`gameplay.md`](gameplay.md)
+- **Попадания и снаряды по сети: задержка, цена симуляции, решения** → [`combat-networking.md`](combat-networking.md)
 - **Сессия, роли устройств, Host/Client** → [`session-architecture.md`](session-architecture.md)
 - **GameManager, режимы, assets, настройка** → [`game-manager.md`](game-manager.md)
 - **Архитектура UI Меню (MVC)** → [`ui-menu-architecture.md`](ui-menu-architecture.md)
@@ -263,6 +265,7 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | `SessionRecoveryOnReconnectScenario` | `Debug/E2E/Scenarios/SessionRecoveryOnReconnectScenario.cs` | Сценарий `session-recovery-on-reconnect` — находка ARCH-01, красный на текущем коде. Одному клиенту раздаётся состояние (имя, команда, скин, счёт, здоровье, позиция), сервер рвёт соединение, клиент возвращается тем же `deviceToken`. Роль клиента целиком служит контролем «переподключение работает», вердикт о восстановлении выносит сервер. Запускать с `-Clients 1`. Обход NET-20 снят 2026-08-21 — сценарий зелёный без него и служит сторожем переподключения. |
 | `ArsenalItemGrabScenario` | `Debug/E2E/Scenarios/ArsenalItemGrabScenario.cs` | Сценарий `arsenal-item-grab` — находки NET-16 и NET-17, **детерминированно красный** на текущем коде. Клиент берёт оружие настоящим `UxrGrabManager.GrabObject`, сервер проверяет, ушёл ли предмет из его слота. Матч не запускается: стены открывает сам сценарий с сервера. Общий предмет выбирается по наименьшему `netId` среди заспавненных в рантайме (`sceneId == 0`) хватаемых объектов, поэтому проверка не зависит от привязки предмет→слот у клиента (NET-23). Печатает `UniqueId` предмета с обеих сторон — их расхождение и есть корень NET-16. Запускать с `-Clients 1`. |
 | `PlayerDeathSignalScenario` | `Debug/E2E/Scenarios/PlayerDeathSignalScenario.cs` | Сценарий `player-death-signal` — остаток находки NET-04. Сервер бьёт аватар клиента настоящим уроном (`UxrActor.ReceiveDamage`), клиент проверяет две вещи подряд: доехало ли состояние (`IsAlive`) и пришло ли уведомление (`PlayerController.PlayerDied`). Контроль зелёный при красном уведомлении — находка в чистом виде. В отличие от `avatar-swap-death-replication`, идёт **через** `UxrActor.Died`: тот ходит мимо намеренно. Запускать с `-Clients 1`. |
+| `ShotPipelineBudgetScenario` | `Debug/E2E/Scenarios/ShotPipelineBudgetScenario.cs` | Сценарий `shot-pipeline-budget` — **измерительный**, для решений T-23 и T-24 (см. [`combat-networking.md`](combat-networking.md)). Сервер стреляет из оружия арсенала (`UxrProjectileSource.Shoot`), обе стороны считают живые снаряды по корню сцены и снимают `rtt` / `NetworkClient.bufferTime`. Единственная фальсифицируемая проверка — «у клиента появились свои снаряды»: её краснота опровергла бы посылку T-24 о том, что каждая машина симулирует все пули. Порогов «хорошо/плохо» внутри нет намеренно. Запускать с `-Clients 1`. |
 | `E2EPlayerBuilder` | `Editor/VR_Battlegrounds/Debug/E2EPlayerBuilder.cs` | Сборка плеера под Windows в `Build/e2e/`. Меню `Tools/VR Battlegrounds/Debug/Собрать e2e-плеер (Windows)`, для CI — `RunBatch`. |
 | `Run-E2E.ps1` | `Tools/e2e/Run-E2E.ps1` | Дирижёр: добивает осиротевшие процессы, проверяет свежесть билда, поднимает сервер и клиентов, ждёт вердикты, гасит процессы, сводит отчёт. Хранить **в UTF-8 с BOM**. |
 

@@ -72,7 +72,7 @@ Grep  pattern="ClassName"  path="Assets/Editor"     # редакторные у�
 | Задача | Читать |
 |---|---|
 | Архитектура, «где что лежит» | `Docs/README.md` |
-| Расследование бага | `Docs/UltimateXR/known-issues.md` → `sdk-patches.md`, затем `/debug` |
+| **Расследование бага** | **`Docs/troubleshooting.md` — индекс по симптому, читать первым** → `Docs/UltimateXR/known-issues.md` → `sdk-patches.md`, затем `/debug` |
 | Новая фича | `Docs/README.md` (нет ли дубля) → `Docs/gameplay.md`, затем `/feature` |
 | API UltimateXR | исходники `Assets/ThirdParty/UltimateXR/Runtime/Scripts/` — точнее, чем `.md` |
 | Модули UltimateXR обзорно | `Docs/UltimateXR/architecture.md` |

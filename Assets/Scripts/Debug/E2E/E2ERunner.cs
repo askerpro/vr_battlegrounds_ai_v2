@@ -189,6 +189,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new ShotPipelineBudgetScenario();
             yield return new RoundReadinessMatchScenario();
             yield return new WeaponHitDamageScenario();
+            yield return new AvatarSpawnPointScenario();
         }
 
         private static IE2EScenario Resolve(string name)

@@ -58,18 +58,18 @@ namespace VrBattlegrounds.Player.Avatars
                 return;
             }
 
-            // Восстановление позиции
-            Vector3 spawnPos = Vector3.zero;
-            Quaternion spawnRot = Quaternion.identity;
+            // Точка спавна: зона своей команды, запасной вариант — точка Mirror.
+            // Раньше здесь спрашивался только NetworkManager.GetStartPosition(), а на картах
+            // проекта нет ни одного NetworkStartPosition — то есть первичный спавн тоже
+            // приземлялся в начало координат (см. WPN-03).
+            AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(session.Team);
+            LogSpawnPoint("SpawnAvatar", session, spawnPoint);
 
-            // Пытаемся получить стартовую позицию из NetworkManager
-            Transform startPos = NetworkManager.singleton.GetStartPosition();
-            if (startPos != null)
-            {
-                spawnPos = startPos.position;
-                spawnRot = startPos.rotation;
-            }
+            Vector3 spawnPos = spawnPoint.Position;
+            Quaternion spawnRot = spawnPoint.Rotation;
 
+            // Снимок восстановления и сохранённая позиция бьют точку спавна: игрок
+            // переподключился и обязан вернуться туда, где был, а не на базу.
             if (snapshot != null && snapshot.NeedsPhysicalRestore)
             {
                 spawnPos = snapshot.Position;
@@ -107,6 +107,29 @@ namespace VrBattlegrounds.Player.Avatars
             OnAvatarSpawned?.Invoke(avatarClass);
         }
 
+        /// <summary>
+        /// Пересоздаёт физический аватар сессии под новую команду и/или скин.
+        ///
+        /// <para>
+        /// <b>Откуда берётся позиция.</b> Один вызов обслуживает три разных события, и
+        /// правильный ответ у каждого свой (находка <b>WPN-03</b>):
+        /// </para>
+        /// <list type="bullet">
+        /// <item><b>Смена скина внутри карты.</b> Старый аватар жив, команда та же —
+        ///       позиция берётся у него. Телепортировать игрока за смену внешнего вида
+        ///       нельзя: он стоит там, куда пришёл сам.</item>
+        /// <item><b>Пересоздание после смены карты.</b> Старого аватара нет: Mirror
+        ///       уничтожил его вместе со сценой, а <c>GameNetworkManager.OnServerReady</c>
+        ///       зовёт этот метод заново. Брать позицию не у кого — нужна точка спавна.
+        ///       Раньше в этой ветке стоял <c>Vector3.zero</c>, и все игроки материализовались
+        ///       в начале координат карты, вплотную к реквизиту.</item>
+        /// <item><b>Смена команды.</b> Старый аватар жив, но игрок теперь на другой стороне.
+        ///       Оставить его на месте — значит поставить в чужую базу: зона спавна
+        ///       противника засчитала бы его как «в зоне» (<c>TeamSpawnZone</c> считает всех,
+        ///       кто внутри), а до своей базы пришлось бы идти через всю карту. Поэтому
+        ///       смена команды переносит на точку спавна <b>новой</b> команды.</item>
+        /// </list>
+        /// </summary>
         [Server]
         public void ChangeAvatar(NetworkConnectionToClient conn, PlayerSession session, int teamId, int avatarId)
         {
@@ -116,14 +139,33 @@ namespace VrBattlegrounds.Player.Avatars
             GameObject avatarPrefab = teamData.GetAvatarPrefab(avatarId);
             if (avatarPrefab == null) return;
 
+            // Команду сравниваем до записи в сессию: после неё разницы уже не видно.
+            bool teamChanged = session.TeamIndex != teamId;
+
             // Обновляем сессию (логически данные хранятся в сессии)
             session.TeamIndex = teamId;
             session.AvatarIndex = avatarId;
 
             // Находим текущий активный аватар, чтобы забрать его координаты и потом уничтожить
             PlayerController oldAvatar = session.ActiveAvatar;
-            Vector3 spawnPos = oldAvatar != null ? oldAvatar.transform.position : Vector3.zero;
-            Quaternion spawnRot = oldAvatar != null ? oldAvatar.transform.rotation : Quaternion.identity;
+
+            Vector3 spawnPos;
+            Quaternion spawnRot;
+
+            if (oldAvatar != null && !teamChanged)
+            {
+                spawnPos = oldAvatar.transform.position;
+                spawnRot = oldAvatar.transform.rotation;
+            }
+            else
+            {
+                AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(teamData);
+                LogSpawnPoint(oldAvatar == null ? "ChangeAvatar/после смены карты" : "ChangeAvatar/смена команды",
+                              session, spawnPoint);
+
+                spawnPos = spawnPoint.Position;
+                spawnRot = spawnPoint.Rotation;
+            }
 
             GameObject newPlayerInstance = Instantiate(avatarPrefab, spawnPos, spawnRot);
             newPlayerInstance.name = $"{avatarPrefab.name} [connId={conn.connectionId}]";
@@ -148,6 +190,40 @@ namespace VrBattlegrounds.Player.Avatars
             }
 
             OnAvatarSpawned?.Invoke(newPc);
+        }
+
+        /// <summary>
+        /// Пишет в лог, откуда взялась точка спавна.
+        ///
+        /// <para>
+        /// Начало координат — единственный уровень <c>Warning</c>, и только когда команда
+        /// известна: значит на карте нет её зоны спавна, и игрок сейчас появится посреди
+        /// геометрии. Команда без назначения (подключение в лобби до выбора стороны) —
+        /// штатный случай, спрашивать зоны там не о чем.
+        /// </para>
+        /// </summary>
+        private static void LogSpawnPoint(string stage, PlayerSession session, AvatarSpawnPoint point)
+        {
+            string who = session != null ? session.PlayerName : "(нет сессии)";
+
+            if (point.Source != AvatarSpawnPointSource.WorldOrigin)
+            {
+                GameLog.Player.Info($"[AvatarManager] {stage}: {who} — {point}");
+                return;
+            }
+
+            TeamData team = session != null ? session.Team : null;
+            if (team == null)
+            {
+                GameLog.Player.Info(
+                    $"[AvatarManager] {stage}: {who} — команда не назначена, точки спавна нет, ставим в начало координат.");
+                return;
+            }
+
+            GameLog.Player.Warning(
+                $"[AvatarManager] {stage}: {who} — у команды '{team.displayName}' нет зоны спавна на сцене " +
+                $"'{UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}', а NetworkStartPosition на карте " +
+                "не нашлось. Аватар создан в начале координат — скорее всего внутри геометрии.");
         }
     }
 }

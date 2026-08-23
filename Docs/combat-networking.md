@@ -455,7 +455,19 @@ timelineOffset». Ошибка в метрах = это время × скоро
 |---|---|---|
 | `CollisionLayerMask = 0` и `CreateDecalLayerMask = 0` | первый `UxrProjectileSource` на `M16_Rifle_prefab` и `Gun_real` | попадания невозможны в принципе; ни урона, ни декалей, ни рикошетов |
 | Два `UxrProjectileSource` на одном объекте | там же | `GetCachedComponent<T>` берёт первый; второй (скорость 80, дальность 300, маска 0x1) — мёртвый груз с чужим `__prefabGuid` |
-| Нет `UxrProjectileSource` и `UxrFirearmWeapon` вовсе | `Machinegun.prefab`, `Shotgun.prefab` | два из четырёх стволов арсенала физически не умеют стрелять |
+| Маска `0x1` вместо `0x9` | `Machinegun.prefab`, `Shotgun.prefab`, `Gun.prefab` | стрелять умеют и по игрокам попадают, но пуля не гаснет о пол: слоя `Ground` в маске нет |
+
+> **Поправка 2026-08-23.** В первой редакции этой таблицы третьей строкой стояло
+> «нет `UxrProjectileSource` и `UxrFirearmWeapon` вовсе у `Machinegun` и `Shotgun`».
+> Неверно: оба компонента у них есть — это префаб-варианты сэмплов UltimateXR,
+> и маска приходит унаследованной от базового префаба. Замер на живой сцене
+> (сценарий `weapon-hit-damage`) даёт `0x1`. Полностью сломаны ровно два ствола,
+> у которых маску обнулили руками.
+
+Находка **доказана**, а не выведена: сценарий яруса C `weapon-hit-damage` стреляет
+в живого игрока настоящим `UxrFirearmWeapon` и показывает, что `Life` не меняется,
+а с подменённой на `Default | Ground` маской тот же выстрел снимает 25 HP.
+Разбор — в [T-28](tasks/T-28-weapon-prefab-config.md).
 
 ---
 
@@ -465,6 +477,10 @@ timelineOffset». Ошибка в метрах = это время × скоро
 # ярус C, три прогона подряд — числа должны совпадать в пределах разброса CPU
 powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
   -Scenario shot-pipeline-budget -Map TestMap1 -Clients 1
+
+# сторож попаданий: красный, пока маски в префабах нулевые
+powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
+  -Scenario weapon-hit-damage -Clients 1 -Timeout 420 -SkipStaleCheck
 ```
 
 Артефакты — `Tools/e2e/results/<дата>-shot-pipeline-budget/`. Сценарий **измерительный**:

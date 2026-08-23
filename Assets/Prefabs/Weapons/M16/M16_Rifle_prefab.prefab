@@ -15,7 +15,6 @@ GameObject:
   - component: {fileID: 3244963856679855688}
   - component: {fileID: 7841617247810068713}
   - component: {fileID: 6263930388854702037}
-  - component: {fileID: 8375111652120686473}
   m_Layer: 0
   m_Name: M16_Rifle_prefab
   m_TagString: Untagged
@@ -240,14 +239,14 @@ MonoBehaviour:
     _prefabInstantiateOnTipParent: 1
     _projectilePrefab: {fileID: 1764550164022644, guid: 202a7e2e1bd74f9488ee980a6afbe005, type: 3}
     _projectileSpeed: 150
-    _projectileMaxDistance: 1000
+    _projectileMaxDistance: 120
     _projectileLength: 0.03
     _projectileDamageNear: 25
     _projectileDamageFar: 25
     _projectileImpactForceMultiplier: 1
     _collisionLayerMask:
       serializedVersion: 2
-      m_Bits: 0
+      m_Bits: 9
     _prefabInstantiateOnImpact: {fileID: 1022521639413414, guid: 83d69800434987942892ec7dd9f8dc18, type: 3}
     _prefabInstantiateOnImpactLife: 1
     _prefabScenarioImpactDecal: {fileID: 114299524112685340, guid: 267e46138001231408dd8586e173f40a, type: 3}
@@ -255,7 +254,7 @@ MonoBehaviour:
     _decalFadeoutDuration: 3
     _createDecalLayerMask:
       serializedVersion: 2
-      m_Bits: 0
+      m_Bits: 9
 --- !u!114 &7583823459805705513
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -315,7 +314,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Mirror::Mirror.NetworkIdentity
   sceneId: 0
-  _assetId: 567018157
+  _assetId: 0
   serverOnly: 0
   visibility: 0
   hasSpawned: 0
@@ -410,48 +409,6 @@ MonoBehaviour:
     _fallbackClipType: 10
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
---- !u!114 &8375111652120686473
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1013363612589426}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1b09fc2a58519c04382be9afd085eb88, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _uxrUniqueId: 5c0df1d1-21a8-49e9-ab82-b405ab352f24
-  __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
-  _weaponAnimator: {fileID: 0}
-  _shotTypes:
-  - _shotSource: {fileID: 0}
-    _tip: {fileID: 0}
-    _useAutomaticProjectileTrajectory: 1
-    _shotAnimationVarName: 
-    _prefabInstantiateOnTipWhenShot: {fileID: 1971160054012638, guid: f4df92ef522938149b7113698d2923c8, type: 3}
-    _prefabInstantiateOnTipLife: 1
-    _prefabInstantiateOnTipParent: 0
-    _projectilePrefab: {fileID: 1764550164022644, guid: 168e8ad883db2bf498885d471a11dcad, type: 3}
-    _projectileSpeed: 80
-    _projectileMaxDistance: 300
-    _projectileLength: 0.34
-    _projectileDamageNear: 40
-    _projectileDamageFar: 40
-    _projectileImpactForceMultiplier: 50
-    _collisionLayerMask:
-      serializedVersion: 2
-      m_Bits: 1
-    _prefabInstantiateOnImpact: {fileID: 1022521639413414, guid: e33956c826e010447ba9bfb497e2ee67, type: 3}
-    _prefabInstantiateOnImpactLife: 1
-    _prefabScenarioImpactDecal: {fileID: 114299524112685340, guid: c4b5432c46d046f44bf1914227cd9126, type: 3}
-    _prefabScenarioImpactDecalLife: 10
-    _decalFadeoutDuration: 3
-    _createDecalLayerMask:
-      serializedVersion: 2
-      m_Bits: 1
 --- !u!1 &120659856615955718
 GameObject:
   m_ObjectHideFlags: 0

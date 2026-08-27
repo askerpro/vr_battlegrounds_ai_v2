@@ -72,7 +72,7 @@ namespace VrBattlegrounds.Tests.Network
             SpawnOnServer(session);
 
             session.PlayerName = name;
-            session.ServerSetInSpawnZone(true);
+            session.ServerEnterSpawnZone(session.TeamIndex);
             return session;
         }
 
@@ -178,7 +178,7 @@ namespace VrBattlegrounds.Tests.Network
             _playerA.ServerSetReady(true, "тест");
             _playerB.ServerSetReady(true, "тест");
 
-            _playerA.ServerSetInSpawnZone(false);
+            _playerA.ServerExitSpawnZone(_playerA.TeamIndex);
 
             Assert.IsFalse(_playerA.ReadyState,
                 "Игрок вышел из зоны спавна, а готовность осталась.\n" +
@@ -199,8 +199,8 @@ namespace VrBattlegrounds.Tests.Network
 
             AdvanceToEquipment();
             _playerA.ServerSetReady(true, "тест");
-            _playerA.ServerSetInSpawnZone(false);
-            _playerA.ServerSetInSpawnZone(true);
+            _playerA.ServerExitSpawnZone(_playerA.TeamIndex);
+            _playerA.ServerEnterSpawnZone(_playerA.TeamIndex);
 
             Assert.IsFalse(_playerA.ReadyState,
                 "Возврат в зону сам собой вернул готовность. Готовность — намерение, " +

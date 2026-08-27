@@ -118,8 +118,41 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         [Header("Scene Transition Sync")]
         [Tooltip("If true, the avatar's last known global position and rotation will be reapplied when it respawns in a new scene.")]
         [SerializeField] private bool _preserveAvatarPositionAcrossScenes = true;
-        private Vector3? _lastSavedAvatarPosition = null;
-        private Quaternion? _lastSavedAvatarRotation = null;
+
+        // ── Место игрока, которое переживает смену карты ──────────────────────
+        //
+        // Здесь лежала МИРОВАЯ поза аватара, и это была находка CAL-02: клиент клал её
+        // в GamePlayerConnectMessage, а сервер применял дословно. Обе карты проекта
+        // собраны из одного префаба арены, но в TestMap1 он повёрнут на 90° вокруг Y
+        // относительно TestMap2 и Lobby — значит одна и та же мировая точка означает
+        // на соседней карте другое место арены. Хранить надо позицию ОТНОСИТЕЛЬНО
+        // ЯКОРЕЙ: они отмечают одни и те же физические метки в комнате, и поза
+        // относительно них у карт общая (см. PhysicalSpaceAnchorFrame).
+        //
+        // Пересчёт делается здесь, а не при отправке сообщения, и это существенно:
+        // к моменту отправки клиент уже переехал на карту сервера, старой сцены нет,
+        // и переводить мировую позицию было бы не по чему.
+
+        private Vector3? _savedPlacePosition;
+        private Quaternion? _savedPlaceRotation;
+        private string _savedPlaceMap = string.Empty;
+
+        /// <summary>Система координат якорей той сцены, что сейчас активна. Кэш.</summary>
+        private PhysicalSpaceAnchorFrame _sceneFrame;
+
+        /// <summary>Дескриптор сцены, для которой построен <see cref="_sceneFrame" />. Ноль — ни для какой.</summary>
+        private int _sceneFrameHandle;
+
+        /// <summary>Когда снова пробовать построить систему координат, если прошлый раз не вышло.</summary>
+        private float _nextFrameAttempt;
+
+        /// <summary>
+        /// Как часто повторять неудачную попытку построить систему координат якорей,
+        /// секунды. Поиск якорей идёт через <c>FindObjectsByType</c>, а спрашивают его
+        /// на каждое движение аватара: на сцене без якорей (Offline, меню) без паузы
+        /// это был бы полный обход сцены каждый кадр.
+        /// </summary>
+        private const float FrameRetryPeriod = 1f;
 
         // Calibration State
         private List<PhysicalSpaceAnchor> _virtualAnchors = new List<PhysicalSpaceAnchor>();
@@ -171,18 +204,110 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         /// </summary>
         public event Action OnFloorHeightCalibrated;
 
-        public bool TryGetSavedAvatarTransform(out Vector3 position, out Quaternion rotation)
+        /// <summary>
+        /// Где стоял аватар этой машины в последний раз — <b>в системе координат
+        /// якорей</b> той карты, где он стоял.
+        ///
+        /// <para>
+        /// Единственный потребитель — <c>GamePlayerConnectMessage</c>: игрок приносит
+        /// своё место с собой, когда подключается к серверу, стоящему уже на другой
+        /// карте. Применять его или нет, решает сервер по признаку калибровки
+        /// (<c>CalibratedSpawnRegistry</c>): до калибровки игра не знает, где игрок
+        /// внутри арены, и вправе поставить его в зону команды.
+        /// </para>
+        /// </summary>
+        /// <param name="localPosition">Позиция относительно якорей.</param>
+        /// <param name="localRotation">Поворот относительно якорей.</param>
+        /// <param name="capturedOnMap">Имя карты, на которой снят замер. Только для лога.</param>
+        public bool TryGetSavedAvatarPlace(out Vector3 localPosition, out Quaternion localRotation,
+                                           out string capturedOnMap)
         {
-            if (_preserveAvatarPositionAcrossScenes && _lastSavedAvatarPosition.HasValue && _lastSavedAvatarRotation.HasValue)
+            if (_preserveAvatarPositionAcrossScenes && _savedPlacePosition.HasValue && _savedPlaceRotation.HasValue)
             {
-                position = _lastSavedAvatarPosition.Value;
-                rotation = _lastSavedAvatarRotation.Value;
+                localPosition = _savedPlacePosition.Value;
+                localRotation = _savedPlaceRotation.Value;
+                capturedOnMap = _savedPlaceMap;
                 return true;
             }
 
-            position = Vector3.zero;
-            rotation = Quaternion.identity;
+            localPosition = Vector3.zero;
+            localRotation = Quaternion.identity;
+            capturedOnMap = string.Empty;
             return false;
+        }
+
+        /// <summary>
+        /// Запоминает мировую позу аватара этой машины в координатах якорей активной сцены.
+        ///
+        /// <para>
+        /// Публичный, потому что это единственный вход в память о месте игрока и его
+        /// проверяет EditMode-тест: поднимать ради этого настоящий <c>UxrAvatar</c>
+        /// и гонять событие SDK дороже, чем польза. Игровой код зовёт метод из
+        /// <c>UxrAvatar.GlobalAvatarMoved</c> и <c>UxrAvatar.LocalAvatarStarted</c>.
+        /// </para>
+        ///
+        /// <para>
+        /// Без якорей на сцене замер не делается вовсе — и это правильнее, чем запомнить
+        /// мировую позицию «на всякий случай»: непереводимая поза хуже её отсутствия,
+        /// потому что молча означает не то место.
+        /// </para>
+        /// </summary>
+        public void RecordLocalAvatarPlace(Vector3 worldPosition, Quaternion worldRotation)
+        {
+            if (!_preserveAvatarPositionAcrossScenes) return;
+
+            PhysicalSpaceAnchorFrame frame;
+            if (!TryGetSceneFrame(out frame)) return;
+
+            _savedPlacePosition = frame.ToLocal(worldPosition);
+            _savedPlaceRotation = frame.ToLocal(worldRotation);
+            _savedPlaceMap = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        }
+
+        /// <summary>
+        /// Система координат якорей активной сцены, с кэшем на саму сцену.
+        ///
+        /// <para>
+        /// Кэш нужен из-за частоты вызова: <c>UxrAvatar.GlobalAvatarMoved</c> приходит
+        /// на каждое перемещение аватара, а построение системы координат — это
+        /// <c>FindObjectsByType</c> по всей сцене. Ключ кэша — дескриптор сцены,
+        /// то есть при смене карты кадр строится заново сам.
+        /// </para>
+        /// </summary>
+        private bool TryGetSceneFrame(out PhysicalSpaceAnchorFrame frame)
+        {
+            int activeHandle = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
+
+            if (_sceneFrameHandle == activeHandle && _sceneFrame.IsValid)
+            {
+                frame = _sceneFrame;
+                return true;
+            }
+
+            // Сцена сменилась — прошлая попытка ничего не говорит о новой.
+            if (_sceneFrameHandle != activeHandle)
+            {
+                _sceneFrameHandle = activeHandle;
+                _sceneFrame = default(PhysicalSpaceAnchorFrame);
+                _nextFrameAttempt = 0f;
+            }
+
+            if (Time.realtimeSinceStartup < _nextFrameAttempt)
+            {
+                frame = default(PhysicalSpaceAnchorFrame);
+                return false;
+            }
+
+            string diagnosis;
+            if (!PhysicalSpaceAnchorFrame.TryBuildFromScene(out _sceneFrame, out diagnosis))
+            {
+                _nextFrameAttempt = Time.realtimeSinceStartup + FrameRetryPeriod;
+                frame = default(PhysicalSpaceAnchorFrame);
+                return false;
+            }
+
+            frame = _sceneFrame;
+            return true;
         }
 
         /// <summary>
@@ -239,17 +364,26 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         private void UxrAvatar_GlobalAvatarMoved(object sender, UxrAvatarMoveEventArgs e)
         {
             UxrAvatar avatar = sender as UxrAvatar;
-            // Сохраняем корневые координаты (position and rotation) локального аватара
-            if (_preserveAvatarPositionAcrossScenes && UxrAvatar.LocalAvatar != null && avatar == UxrAvatar.LocalAvatar)
+            // Запоминаем корневые координаты локального аватара — в координатах якорей.
+            if (UxrAvatar.LocalAvatar != null && avatar == UxrAvatar.LocalAvatar)
             {
-                _lastSavedAvatarPosition = avatar.transform.position;
-                _lastSavedAvatarRotation = avatar.transform.rotation;
+                RecordLocalAvatarPlace(avatar.transform.position, avatar.transform.rotation);
             }
         }
 
         private void UxrAvatar_LocalAvatarStarted(object sender, UxrAvatarStartedEventArgs e)
         {
             ApplySyncToAvatar();
+
+            // Первый замер — сразу, не дожидаясь перемещения. Иначе игрок, который
+            // с момента спавна никуда не телепортировался, не имел бы своего места
+            // вовсе: UxrAvatar.GlobalAvatarMoved поднимает UxrManager, то есть
+            // телепорт и локомоция, а не шаги по комнате.
+            if (UxrAvatar.LocalAvatar != null)
+            {
+                RecordLocalAvatarPlace(UxrAvatar.LocalAvatar.transform.position,
+                                       UxrAvatar.LocalAvatar.transform.rotation);
+            }
         }
 
         /// <summary>

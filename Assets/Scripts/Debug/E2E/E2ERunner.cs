@@ -191,6 +191,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new WeaponHitDamageScenario();
             yield return new AvatarSpawnPointScenario();
             yield return new CalibratedPositionPersistsScenario();
+            yield return new ConnectPlaceAcrossMapScenario();
         }
 
         private static IE2EScenario Resolve(string name)

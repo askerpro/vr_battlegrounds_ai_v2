@@ -15,6 +15,14 @@ namespace VrBattlegrounds.Managers
         public int AvatarIndex;
 
         /// <summary>
+        /// Игрок объявлял калибровку физического пространства. Такая же характеристика
+        /// игрока, как команда и скин, и переживать отключение обязана так же: без неё
+        /// вернувшийся откалиброванный игрок выглядел бы для сервера новичком, чьё место
+        /// можно назначить (CAL-02).
+        /// </summary>
+        public bool IsCalibrated;
+
+        /// <summary>
         /// Момент сохранения, секунды от старта процесса. По нему считается возраст записи:
         /// ждать вернувшегося игрока имеет смысл в пределах матча, а не бесконечно.
         /// </summary>
@@ -30,6 +38,34 @@ namespace VrBattlegrounds.Managers
         public Vector3 Position;
         public Quaternion Rotation;
         public bool NeedsPhysicalRestore;
+
+        /// <summary>
+        /// Карта, на которой снят снимок. <see cref="Position" /> и <see cref="Rotation" />
+        /// — <b>мировые</b> координаты, а мировые координаты осмысленны только на своей
+        /// карте: обе карты проекта собраны из одного префаба арены, но в <c>TestMap1</c>
+        /// он повёрнут на 90° вокруг Y относительно <c>TestMap2</c> и <c>Lobby</c>.
+        /// </summary>
+        public string CapturedOnMap = string.Empty;
+
+        /// <summary>
+        /// Можно ли ставить вернувшегося игрока в <see cref="Position" />.
+        ///
+        /// <para>
+        /// Условий два, и второе появилось вместе с CAL-02: игрок был жив (иначе
+        /// возвращать его на место гибели незачем) <b>и</b> сервер всё ещё на той же
+        /// карте. Пока карта та же, «вернуть туда, где стоял» — точный ответ, и он
+        /// точнее любого пересчёта. Как только карта сменилась, мировая точка означает
+        /// другое место арены, и решать, куда ставить игрока, обязан тот, кто знает
+        /// про калибровку, — <c>CalibratedSpawnRegistry</c> или зона команды.
+        /// </para>
+        /// </summary>
+        /// <param name="currentMap">Имя активной сцены сервера сейчас.</param>
+        public bool CanRestorePlaceOn(string currentMap)
+        {
+            return NeedsPhysicalRestore
+                   && !string.IsNullOrEmpty(CapturedOnMap)
+                   && string.Equals(CapturedOnMap, currentMap, System.StringComparison.Ordinal);
+        }
     }
 
     /// <summary>
@@ -84,7 +120,9 @@ namespace VrBattlegrounds.Managers
                 Kills = session.Kills,
                 Deaths = session.Deaths,
                 Score = session.Score,
+                IsCalibrated = session.IsCalibrated,
                 NeedsPhysicalRestore = false,
+                CapturedOnMap = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
                 SavedAtSeconds = _timeSource()
             };
 

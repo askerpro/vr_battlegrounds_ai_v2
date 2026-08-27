@@ -168,12 +168,49 @@ namespace VrBattlegrounds.Player
         /// </summary>
         public bool ReadyState => _readyState;
 
+        /// <summary>Значение <see cref="SpawnZoneTeamIndex" />, означающее «игрок не в зоне спавна».</summary>
+        public const int NoSpawnZone = -1;
+
         /// <summary>
-        /// Игрок физически находится в своей зоне спавна. <b>Условие</b> готовности,
-        /// а не сама готовность: выход из зоны её снимает
-        /// (см. <see cref="ServerSetInSpawnZone" />).
+        /// В зоне спавна <b>какой команды</b> сейчас стоит игрок. <see cref="NoSpawnZone" /> —
+        /// ни в какой.
+        ///
+        /// <para>
+        /// Здесь стоял один булев флаг «в зоне», и это была находка <b>RDY-04</b>:
+        /// <c>TeamSpawnZone</c> писала его любому вошедшему, не спрашивая команду.
+        /// Игрок, забредший в базу противника, считался стоящим «в своей зоне» и
+        /// сохранял право на готовность оттуда. Обратная сторона того же флага: выход
+        /// из <b>чужой</b> зоны снимал признак игроку, который в этот момент уже стоял
+        /// в своей, — а с исправлением WPN-03 переход «база A → база B» стал штатным,
+        /// потому что смена команды переносит игрока в новую базу.
+        /// </para>
+        ///
+        /// <para>
+        /// Индекс команды вместо флага «свой/чужой» выбран потому, что отвечает и на
+        /// второй вопрос — «игрок в чужой базе» (<see cref="IsInEnemySpawnZone" />), —
+        /// который правилам матча ещё понадобится, и потому что позволяет зоне убирать
+        /// за собой только собственную запись: см. <see cref="ServerExitSpawnZone" />.
+        /// </para>
         /// </summary>
-        [SyncVar] public bool IsInSpawnZone = false;
+        [SyncVar] public int SpawnZoneTeamIndex = NoSpawnZone;
+
+        /// <summary>
+        /// Игрок физически находится в зоне спавна <b>своей</b> команды. <b>Условие</b>
+        /// готовности, а не сама готовность: выход из зоны её снимает
+        /// (см. <see cref="ServerExitSpawnZone" />).
+        ///
+        /// Значение выводится, а не хранится: обе его половины —
+        /// <see cref="SpawnZoneTeamIndex" /> и <see cref="TeamIndex" /> — реплицируются,
+        /// поэтому клиент получает тот же ответ, что и сервер, и лишнему <c>SyncVar</c>
+        /// не с чем разъезжаться.
+        /// </summary>
+        public bool IsInSpawnZone => SpawnZoneTeamIndex == TeamIndex;
+
+        /// <summary>
+        /// Игрок стоит в зоне спавна <b>чужой</b> команды. Правилам матча этот вопрос
+        /// ещё пригодится, а держать на него отдельный учёт больше не нужно.
+        /// </summary>
+        public bool IsInEnemySpawnZone => SpawnZoneTeamIndex != NoSpawnZone && SpawnZoneTeamIndex != TeamIndex;
 
         /// <summary>
         /// Жетон в арсенале взят. Жест, которым игрок объявляет готовность, — но не она
@@ -679,21 +716,67 @@ namespace VrBattlegrounds.Player
         }
 
         /// <summary>
-        /// Зона спавна: игрок вошёл в свою зону или вышел из неё. Зовёт
-        /// <see cref="Maps.TeamSpawnZone" /> на сервере.
+        /// Игрок целиком вошёл в зону спавна команды <paramref name="zoneTeamIndex" />.
+        /// Зовёт <see cref="Maps.TeamSpawnZone" /> на сервере.
         ///
-        /// Выход из зоны снимает готовность — в этом и состоит роль зоны как
+        /// <para>
+        /// Зона сообщает <b>чья она</b>, а не «свой это игрок или чужой»: решение
+        /// принимается здесь, потому что здесь же лежит команда игрока. Раньше зона
+        /// решала сама и решала неверно — писала «в зоне» любому вошедшему (RDY-04).
+        /// </para>
+        ///
+        /// <para>
+        /// Готовность вход не трогает: её объявляет игрок, а не место, где он стоит.
+        /// </para>
+        ///
+        /// <para>
+        /// Без атрибута <c>[Server]</c> — по той же причине, что и
+        /// <see cref="ServerSetReady" />: методы гоняются EditMode-тестами без поднятого
+        /// сервера Mirror, и заглушка съела бы вызов. Право записи и так серверное:
+        /// единственный игровой вызывающий — <see cref="Maps.TeamSpawnZone" /> под
+        /// проверкой <c>NetworkServer.active</c>.
+        /// </para>
+        /// </summary>
+        /// <param name="zoneTeamIndex">Индекс команды, которой принадлежит зона.</param>
+        public void ServerEnterSpawnZone(int zoneTeamIndex)
+        {
+            if (zoneTeamIndex == NoSpawnZone) return;
+            if (SpawnZoneTeamIndex == zoneTeamIndex) return;
+
+            bool wasInOwn = IsInSpawnZone;
+            SpawnZoneTeamIndex = zoneTeamIndex;
+
+            // Переход «своя зона → чужая» без промежуточного выхода: возможен, когда
+            // игрока переносит спавн (смена команды, респавн), а не собственные ноги.
+            if (wasInOwn && !IsInSpawnZone && _readyState)
+                ServerSetReady(false, "игрок оказался в зоне спавна чужой команды");
+        }
+
+        /// <summary>
+        /// Игрок покинул зону спавна команды <paramref name="zoneTeamIndex" />.
+        ///
+        /// <para>
+        /// Запись снимается <b>только своя</b>. Иначе выход из чужой зоны затирал бы
+        /// признак игроку, который в этот момент уже стоит в своей: при переносе между
+        /// базами «вошёл в новую» приходит раньше, чем «вышел из старой», и порядок
+        /// событий Unity не гарантирует (RDY-04).
+        /// </para>
+        ///
+        /// <para>
+        /// Выход из <b>своей</b> зоны снимает готовность — в этом и состоит роль зоны как
         /// <b>условия</b>: объявить «я готов» можно жестом, но стоять при этом
         /// полагается у себя на спавне (T-29).
+        /// </para>
         /// </summary>
-        [Server]
-        public void ServerSetInSpawnZone(bool state)
+        /// <param name="zoneTeamIndex">Индекс команды, которой принадлежит зона.</param>
+        public void ServerExitSpawnZone(int zoneTeamIndex)
         {
-            if (IsInSpawnZone == state) return;
+            if (SpawnZoneTeamIndex != zoneTeamIndex) return;
 
-            IsInSpawnZone = state;
+            bool wasInOwn = IsInSpawnZone;
+            SpawnZoneTeamIndex = NoSpawnZone;
 
-            if (!state && _readyState)
+            if (wasInOwn && _readyState)
                 ServerSetReady(false, "игрок вышел из зоны спавна");
         }
 
@@ -727,7 +810,7 @@ namespace VrBattlegrounds.Player
         /// уже нечего — фаза сменилась, и решение принято.
         ///
         /// Нахождения в зоне спавна команда не требует. Объявить готовность игрок может
-        /// откуда угодно, но <see cref="ServerSetInSpawnZone" /> тут же снимет её, если
+        /// откуда угодно, но <see cref="ServerExitSpawnZone" /> тут же снимет её, если
         /// он не у себя на спавне, — так зона остаётся условием, не превращаясь
         /// в ловушку: жетон висит на стене арсенала, и отказ принять жест «потому что
         /// ты стоишь на шаг в стороне» оставил бы игрока без второй попытки —

@@ -109,15 +109,56 @@ namespace VrBattlegrounds.Managers
 
             PlayerSession session = CreatePlayerSession(conn, GameRole.Player, msg.deviceToken, msg.deviceType, false, snapshot, msg.teamId, msg.avatarId);
 
+            ApplyPhysicalPlace(session, msg, snapshot);
+
             // Спавним физический аватар
             if (AvatarManager.Instance != null)
             {
-                AvatarManager.Instance.SpawnAvatar(conn, msg, snapshot, session);
+                AvatarManager.Instance.SpawnAvatar(conn, snapshot, session);
             }
             else
             {
                 GameLog.Error("[PlayersManager] AvatarManager is missing! Cannot spawn pawn.");
             }
+        }
+
+        /// <summary>
+        /// Раскладывает по местам то, что игрок принёс с собой о своём <b>физическом</b>
+        /// положении: признак калибровки и место в системе координат якорей.
+        ///
+        /// <para>
+        /// Зачем это здесь. Точку спавна сервер выбирает прямо сейчас, в обработке
+        /// сообщения подключения, — то есть до того, как у клиента появится сессия,
+        /// из которой можно было бы прислать <c>CmdSetCalibrated</c>. Признак поэтому
+        /// едет в самом сообщении. Снимок отключённой сессии, если он есть, знает то же
+        /// самое и заведомо не хуже: он снят сервером.
+        /// </para>
+        ///
+        /// <para>
+        /// Место кладётся в реестр <b>всегда</b>, а решает, применять его или нет,
+        /// <c>CalibratedSpawnRegistry.TryResolve</c> — по признаку калибровки. Гейт один
+        /// на весь проект, и это тот же гейт, что при смене карты (T-30): второй,
+        /// поставленный здесь, разъехался бы с первым при первой же правке. Находка,
+        /// ради которой всё это, — <b>CAL-02</b>: раньше позиция из сообщения
+        /// применялась дословно и всем подряд.
+        /// </para>
+        /// </summary>
+        private static void ApplyPhysicalPlace(PlayerSession session, GamePlayerConnectMessage msg,
+                                               SessionSnapshot snapshot)
+        {
+            if (session == null) return;
+
+            session.IsCalibrated = msg.isCalibrated || (snapshot != null && snapshot.IsCalibrated);
+
+            if (!msg.hasAnchorPlace) return;
+
+            CalibratedSpawnRegistry.Remember(session.netId, msg.anchorPlacePosition,
+                                            msg.anchorPlaceRotation, msg.anchorPlaceMap);
+
+            GameLog.PhysicalSpace.Info(
+                $"[PlayersManager] {session.PlayerName} принёс своё место с карты '{msg.anchorPlaceMap}': " +
+                $"относительно якорей {msg.anchorPlacePosition}, откалиброван={session.IsCalibrated} " +
+                $"(сообщение={msg.isCalibrated}, снимок={(snapshot != null ? snapshot.IsCalibrated.ToString() : "нет")}).");
         }
 
         public void RegisterSession(NetworkConnection conn, PlayerSession session)

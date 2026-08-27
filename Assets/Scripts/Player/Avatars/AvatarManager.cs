@@ -37,8 +37,37 @@ namespace VrBattlegrounds.Player.Avatars
             Instance = this;
         }
 
+        /// <summary>
+        /// Создаёт первый физический аватар только что подключившейся сессии.
+        ///
+        /// <para>
+        /// <b>Откуда берётся позиция.</b> Правильных ответов три, и порядок между ними
+        /// такой:
+        /// </para>
+        /// <list type="number">
+        /// <item><b>Снимок восстановления на той же карте.</b> Игрок переподключился,
+        ///       карта не менялась — вернуть его туда, где стоял, точнее любого пересчёта.
+        ///       Как только карта сменилась, мировая точка снимка означает другое место
+        ///       арены, и ветка не годится (см. <c>SessionSnapshot.CanRestorePlaceOn</c>).</item>
+        /// <item><b>Место, заданное калибровкой.</b> Игрок принёс его с собой
+        ///       в <c>GamePlayerConnectMessage</c> — в координатах якорей, — а разложил
+        ///       по местам <c>PlayersManager.HandlePlayerConnect</c>. Ветка достижима
+        ///       только для откалиброванного игрока: решает
+        ///       <see cref="CalibratedSpawnRegistry"/>, тем же правилом, что при смене
+        ///       карты (T-30).</item>
+        /// <item><b>Зона своей команды.</b> До калибровки игра не знает, где игрок внутри
+        ///       арены, и зона — разумное «где угодно».</item>
+        /// </list>
+        ///
+        /// <para>
+        /// Здесь стояла четвёртая ветка — <c>msg.hasSavedPosition</c>, — и она была
+        /// находкой <b>CAL-02</b>: мировая позиция с прошлой карты, применяемая всем
+        /// подряд. Ветка убрана целиком, а два законных случая остались за теми, кто
+        /// ими и владеет: <c>SessionRecoveryManager</c> и <see cref="CalibratedSpawnRegistry"/>.
+        /// </para>
+        /// </summary>
         [Server]
-        public void SpawnAvatar(NetworkConnectionToClient conn, GamePlayerConnectMessage msg, SessionSnapshot snapshot, PlayerSession session)
+        public void SpawnAvatar(NetworkConnectionToClient conn, SessionSnapshot snapshot, PlayerSession session)
         {
             GameObject prefabToSpawn = _playerPrefab;
 
@@ -58,27 +87,34 @@ namespace VrBattlegrounds.Player.Avatars
                 return;
             }
 
-            // Точка спавна: зона своей команды, запасной вариант — точка Mirror.
-            // Раньше здесь спрашивался только NetworkManager.GetStartPosition(), а на картах
-            // проекта нет ни одного NetworkStartPosition — то есть первичный спавн тоже
-            // приземлялся в начало координат (см. WPN-03).
+            // Точка спавна: место, заданное калибровкой, → зона своей команды →
+            // точка Mirror. Раньше здесь спрашивался только NetworkManager.GetStartPosition(),
+            // а на картах проекта нет ни одного NetworkStartPosition — то есть первичный
+            // спавн тоже приземлялся в начало координат (см. WPN-03).
             AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(session.Team, session);
             LogSpawnPoint("SpawnAvatar", session, spawnPoint);
 
             Vector3 spawnPos = spawnPoint.Position;
             Quaternion spawnRot = spawnPoint.Rotation;
 
-            // Снимок восстановления и сохранённая позиция бьют точку спавна: игрок
+            // Снимок восстановления бьёт точку спавна, но только на своей карте: игрок
             // переподключился и обязан вернуться туда, где был, а не на базу.
-            if (snapshot != null && snapshot.NeedsPhysicalRestore)
+            string currentMap = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (snapshot != null && snapshot.CanRestorePlaceOn(currentMap))
             {
                 spawnPos = snapshot.Position;
                 spawnRot = snapshot.Rotation;
+
+                GameLog.Player.Info(
+                    $"[AvatarManager] SpawnAvatar: {session.PlayerName} возвращён на своё место " +
+                    $"из снимка сессии — карта '{currentMap}' не менялась, {spawnPos}.");
             }
-            else if (msg.hasSavedPosition)
+            else if (snapshot != null && snapshot.NeedsPhysicalRestore)
             {
-                spawnPos = msg.savedPosition;
-                spawnRot = msg.savedRotation;
+                GameLog.Player.Info(
+                    $"[AvatarManager] SpawnAvatar: снимок {session.PlayerName} снят на карте " +
+                    $"'{snapshot.CapturedOnMap}', а сервер уже на '{currentMap}' — мировая позиция " +
+                    $"из снимка означала бы другое место арены (CAL-02). Точку выбрал резолвер: {spawnPoint}.");
             }
 
             GameObject avatarInstance = Instantiate(prefabToSpawn, spawnPos, spawnRot);
@@ -90,6 +126,8 @@ namespace VrBattlegrounds.Player.Avatars
                 avatarClass.SessionNetId = session.netId;
                 avatarClass.AvatarPlayerName = session.PlayerName;
 
+                // Здоровье возвращается независимо от карты: оно не про место.
+                // Условие то же — игрок был жив, — но не про то, где он стоял.
                 if (snapshot != null && snapshot.NeedsPhysicalRestore)
                 {
                     avatarClass.RestoreHealth(snapshot.Health);
@@ -126,10 +164,10 @@ namespace VrBattlegrounds.Player.Avatars
         ///       игрока точка спавна не назначается вовсе: его место задано физически,
         ///       и сервер возвращает его туда же (<see cref="CalibratedSpawnRegistry"/>, T-30).</item>
         /// <item><b>Смена команды.</b> Старый аватар жив, но игрок теперь на другой стороне.
-        ///       Оставить его на месте — значит поставить в чужую базу: зона спавна
-        ///       противника засчитала бы его как «в зоне» (<c>TeamSpawnZone</c> считает всех,
-        ///       кто внутри), а до своей базы пришлось бы идти через всю карту. Поэтому
-        ///       смена команды переносит на точку спавна <b>новой</b> команды.</item>
+        ///       Оставить его на месте — значит поставить в чужую базу: в своей зоне он там
+        ///       не числится (<c>PlayerSession.IsInSpawnZone</c>, RDY-04) и готовность
+        ///       объявить не сможет, а до своей базы пришлось бы идти через всю карту.
+        ///       Поэтому смена команды переносит на точку спавна <b>новой</b> команды.</item>
         /// </list>
         /// </summary>
         [Server]

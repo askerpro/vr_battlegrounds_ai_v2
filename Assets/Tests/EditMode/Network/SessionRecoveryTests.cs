@@ -116,6 +116,66 @@ namespace VrBattlegrounds.Tests.Network
                 "Мёртвый игрок не должен возрождаться на месте гибели — только в зоне спавна.");
         }
 
+        // ── Снимок и карта (CAL-02) ─────────────────────────────────────────
+
+        [Test]
+        public void Снимок_помнит_карту_и_признак_калибровки()
+        {
+            SilenceMirrorNoise();
+
+            _session.IsCalibrated = true;
+            AttachAvatar(new Vector3(5f, 1f, 7f), life: 88f);
+
+            NetworkConnection connection = NetworkServer.localConnection;
+            _players.RegisterSession(connection, _session);
+            _players.UnregisterSession(connection);
+
+            SessionSnapshot snapshot = SessionRecoveryManager.Instance.GetAndRemoveSavedSession(DeviceToken);
+            Assert.IsNotNull(snapshot, "Снимок сессии не сохранён.");
+
+            Assert.AreEqual(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, snapshot.CapturedOnMap,
+                "Снимок обязан помнить карту: Position в нём мировая, а мировая точка " +
+                "осмысленна только на своей карте (CAL-02).");
+
+            Assert.IsTrue(snapshot.IsCalibrated,
+                "Калибровка — характеристика игрока, как команда и скин, и переживать отключение " +
+                "обязана так же. Иначе вернувшийся откалиброванный игрок выглядит новичком, " +
+                "чьё место можно назначить.");
+        }
+
+        [Test]
+        public void Место_из_снимка_годится_только_на_своей_карте()
+        {
+            SessionSnapshot snapshot = new SessionSnapshot
+            {
+                NeedsPhysicalRestore = true,
+                CapturedOnMap = "TestMap1",
+                Position = new Vector3(5f, 1f, 7f)
+            };
+
+            Assert.IsTrue(snapshot.CanRestorePlaceOn("TestMap1"),
+                "Карта та же — вернуть игрока туда, где он стоял, точнее любого пересчёта.");
+
+            Assert.IsFalse(snapshot.CanRestorePlaceOn("TestMap2"),
+                "Карта сменилась, а мировая позиция из снимка применяется как есть. " +
+                "Арена в TestMap1 повёрнута на 90° относительно TestMap2: та же мировая точка " +
+                "означает там другое место арены — разворот относительно баз и геометрии (CAL-02).");
+        }
+
+        [Test]
+        public void Мёртвого_игрока_снимок_не_возвращает_на_место_даже_на_своей_карте()
+        {
+            SessionSnapshot snapshot = new SessionSnapshot
+            {
+                NeedsPhysicalRestore = false,
+                CapturedOnMap = "TestMap1"
+            };
+
+            Assert.IsFalse(snapshot.CanRestorePlaceOn("TestMap1"),
+                "Проверка карты не должна отменять прежнее условие: мёртвого игрока " +
+                "на место гибели не возвращают.");
+        }
+
         [Test]
         public void Снимок_выдаётся_только_один_раз()
         {

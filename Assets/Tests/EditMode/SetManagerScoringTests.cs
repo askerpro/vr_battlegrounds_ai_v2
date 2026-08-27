@@ -137,7 +137,9 @@ namespace VrBattlegrounds.Tests
             go.AddComponent<Mirror.NetworkIdentity>();
             PlayerSession session = go.AddComponent<PlayerSession>();
 
-            session.IsInSpawnZone = true;
+            // Игрок стоит в зоне спавна СВОЕЙ команды: с RDY-04 признак выводится из того,
+            // чья это зона, поэтому проставляем его тем же входом, что и TeamSpawnZone.
+            session.ServerEnterSpawnZone(session.TeamIndex);
             return session;
         }
 

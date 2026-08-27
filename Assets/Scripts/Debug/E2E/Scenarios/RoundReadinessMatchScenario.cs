@@ -10,7 +10,9 @@ using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
+using VrBattlegrounds.Maps;
 using VrBattlegrounds.Player;
+using VrBattlegrounds.Player.Avatars;
 
 namespace VrBattlegrounds.DevTools.E2E.Scenarios
 {
@@ -67,6 +69,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckDedicated  = "сервер поднят как выделенный (ServerOnly, не хост)";
         private const string CheckClients    = "клиенты подключились и сервер создал сессии";
         private const string CheckMap        = "карта загружена, стена арсенала и матч на месте";
+        private const string CheckRdy04      = "игрок в базе противника не считается стоящим в своей зоне (RDY-04)";
+        private const string CheckRdy04Back  = "контроль: вернувшись к себе на спавн, игрок снова считается в зоне";
         private const string CheckEquipment  = "матч дошёл до фазы Equipment и ждёт готовности";
         private const string CheckRdy01      = "готов один из двух — стена арсенала осталась открытой (RDY-01)";
         private const string CheckPending    = "сервер выложил состав неготовых и в нём ровно тот, кого ждут";
@@ -103,6 +107,23 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         /// <summary>Сколько ждём фазу, которая обязана наступить сразу после действия.</summary>
         private const float PhaseWait = 60f;
+
+        /// <summary>Сколько ждём аватары, перенос игрока и отклик зоны спавна (RDY-04).</summary>
+        private const float RdyZoneWait = 60f;
+
+        /// <summary>
+        /// Пауза после переноса игрока, секунды. Признак зоны едет через
+        /// <c>OnTriggerStay</c>, то есть через физический тик, а не через кадр
+        /// отрисовки: сразу после <c>Respawn</c> зона о переезде ещё не знает.
+        /// </summary>
+        private const float ZoneSettleHold = 3f;
+
+        /// <summary>
+        /// Допуск «аватар доехал до зоны», метры. Зоны на карте разведены на десятки
+        /// метров, поэтому полтора метра заведомо не путают одну базу с другой,
+        /// а аватар за это время успевает осесть на коллайдер пола.
+        /// </summary>
+        private const float ZoneReachTolerance = 1.5f;
 
         /// <summary>Сколько клиент ждёт события, которое сервер вот-вот вызовет.</summary>
         private const float ClientPhaseWait = 180f;
@@ -151,8 +172,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private IEnumerator RunServer(E2EContext context, E2EResult result)
         {
-            result.Declare(CheckDedicated, CheckClients, CheckMap, CheckEquipment,
-                           CheckRdy01, CheckPending, CheckCountdown, CheckCombat,
+            result.Declare(CheckDedicated, CheckClients, CheckMap, CheckRdy04, CheckRdy04Back,
+                           CheckEquipment, CheckRdy01, CheckPending, CheckCountdown, CheckCombat,
                            CheckDeath, CheckResolution, CheckScoreboard, CheckNextRound);
 
             // ── 1. Выделенный сервер ──────────────────────────────────────
@@ -242,6 +263,12 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 result.Summary = "карта не собралась, матч гонять негде";
                 yield break;
             }
+
+            // ── 3a. RDY-04: чужая база не засчитывается за свою зону ──────
+            // Проверка стоит до старта матча намеренно: в фазе Equipment идёт предел
+            // ожидания готовности (45 с, AutoReady), и прогулка игрока по чужой базе
+            // съедала бы его — фаза сменилась бы сама, а не по готовности.
+            yield return CheckForeignSpawnZone(result);
 
             // Фазы пишем в ленту с момента старта матча: замер длительностей ниже
             // опирается именно на неё.
@@ -898,6 +925,233 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             return sb.ToString();
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        //  RDY-04: кому зона засчитывает «в зоне»
+        // ══════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Уводит игрока в базу противника и спрашивает, продолжает ли сервер считать
+        /// его стоящим у себя на спавне.
+        ///
+        /// <para>
+        /// <b>Что доказывает.</b> <c>TeamSpawnZone</c> писала признак «в зоне» любому
+        /// вошедшему, не спрашивая команду, — хотя соседние методы того же класса команду
+        /// проверяли. Игрок, забежавший в базу противника, считался стоящим у себя и
+        /// сохранял право объявить готовность к раунду оттуда (T-29).
+        /// </para>
+        ///
+        /// <para>
+        /// <b>Почему проверок две.</b> «Флаг не взвёлся» само по себе ничего не значит:
+        /// так выглядело бы и полностью сломанное определение зоны. Поэтому игрока
+        /// возвращают к себе на спавн и требуют флаг обратно. А чтобы «в чужой базе»
+        /// не оказалось «нигде», физическое нахождение подтверждается самой зоной —
+        /// <c>TeamSpawnZone.IsPlayerFullyInZone</c>, тем же методом, которым она считает
+        /// своих.
+        /// </para>
+        ///
+        /// <para>
+        /// Замер читает только <c>PlayerSession.IsInSpawnZone</c> — то, что существует
+        /// и до правки, и после. Иначе прогон «до правки» было бы нечем собрать.
+        /// </para>
+        /// </summary>
+        private IEnumerator CheckForeignSpawnZone(E2EResult result)
+        {
+            E2EWaitOutcome avatarsUp = new E2EWaitOutcome();
+            yield return E2EWait.Until(avatarsUp,
+                "у обеих сессий появился аватар на карте",
+                RdyZoneWait,
+                AllSessionsHaveAvatar,
+                DescribeSpawnZones,
+                () => NetworkServer.connections.Count > 0 ? null : "подключений не осталось");
+
+            List<PlayerSession> all = AllSessions();
+            PlayerSession traveller = all.Count > 0 ? all[0] : null;
+
+            if (!avatarsUp.Succeeded || traveller == null || traveller.Team == null)
+            {
+                string why = avatarsUp.Diagnosis +
+                             $" Сессий: {all.Count}, команда первой: " +
+                             $"{(traveller == null || traveller.Team == null ? "не назначена" : traveller.Team.displayName)}.";
+                result.Set(CheckRdy04, false, why);
+                result.Set(CheckRdy04Back, false, why);
+                yield break;
+            }
+
+            TeamSpawnZone ownZone = AvatarSpawnPointResolver.FindZone(traveller.Team);
+            TeamSpawnZone enemyZone = FindForeignZone(traveller.Team);
+
+            if (ownZone == null || enemyZone == null)
+            {
+                string why = $"на карте '{SceneManager.GetActiveScene().name}' не нашлось пары зон: " +
+                             $"своя={(ownZone == null ? "нет" : ownZone.name)}, " +
+                             $"чужая={(enemyZone == null ? "нет" : enemyZone.name)}. {DescribeSpawnZones()}";
+                result.Set(CheckRdy04, false, why);
+                result.Set(CheckRdy04Back, false, why);
+                yield break;
+            }
+
+            // Контроль до опыта: если зона не срабатывает вовсе, красный ниже означал бы
+            // «триггеры молчат», а не находку.
+            E2EWaitOutcome atHome = new E2EWaitOutcome();
+            yield return E2EWait.Until(atHome,
+                $"{traveller.PlayerName} числится в зоне своей команды на спавне",
+                RdyZoneWait,
+                () => traveller.IsInSpawnZone,
+                () => DescribeTraveller(traveller, ownZone, enemyZone),
+                () => NetworkServer.connections.Count > 0 ? null : "подключений не осталось");
+
+            if (!atHome.Succeeded)
+            {
+                string why = atHome.Diagnosis +
+                             " Игрок появляется в зоне своей команды (AvatarSpawnPointResolver), " +
+                             "и зона обязана его засчитать. Раз не засчитала — триггеры зоны " +
+                             "в этом прогоне не срабатывают вовсе, и вердикт по RDY-04 недостоверен.";
+                result.Set(CheckRdy04, false, why);
+                result.Set(CheckRdy04Back, false, why);
+                yield break;
+            }
+
+            // ── В базу противника ─────────────────────────────────────────
+            yield return DisplaceAvatar(traveller, enemyZone.transform.position);
+
+            PlayerController avatar = traveller.ActiveAvatar;
+            bool physicallyInside = avatar != null && enemyZone.IsPlayerFullyInZone(avatar);
+            bool countedAsHome = traveller.IsInSpawnZone;
+
+            result.Set(CheckRdy04, physicallyInside && !countedAsHome,
+                physicallyInside && !countedAsHome
+                    ? $"{traveller.PlayerName} (команда '{traveller.Team.displayName}') стоит внутри зоны " +
+                      $"'{enemyZone.name}' и в своей зоне не числится. {DescribeTraveller(traveller, ownZone, enemyZone)}"
+                    : !physicallyInside
+                        ? "увести игрока в базу противника не удалось — измерять нечего. " +
+                          DescribeTraveller(traveller, ownZone, enemyZone)
+                        : $"{traveller.PlayerName} стоит в базе противника ('{enemyZone.name}'), а сервер " +
+                          "считает его стоящим в своей зоне. Это RDY-04: TeamSpawnZone пишет признак " +
+                          "любому вошедшему, без проверки команды, — и такой игрок вправе объявить " +
+                          "готовность к раунду из чужой базы (T-29). " +
+                          DescribeTraveller(traveller, ownZone, enemyZone));
+
+            // ── Обратно к себе ────────────────────────────────────────────
+            yield return DisplaceAvatar(traveller, ownZone.transform.position);
+
+            E2EWaitOutcome backHome = new E2EWaitOutcome();
+            yield return E2EWait.Until(backHome,
+                $"{traveller.PlayerName} снова числится в зоне своей команды",
+                RdyZoneWait,
+                () => traveller.IsInSpawnZone,
+                () => DescribeTraveller(traveller, ownZone, enemyZone),
+                () => NetworkServer.connections.Count > 0 ? null : "подключений не осталось");
+
+            result.Set(CheckRdy04Back, backHome.Succeeded,
+                backHome.Succeeded
+                    ? $"игрок вернулся на свой спавн и снова числится в зоне: {backHome.Diagnosis}"
+                    : backHome.Diagnosis +
+                      " Без этого контроля зелёная проверка выше ничего не значит: «в зоне не числится» " +
+                      "так же выглядело бы, если бы зона перестала засчитывать вообще кого-либо.");
+        }
+
+        /// <summary>Зона спавна любой команды, кроме заданной.</summary>
+        private static TeamSpawnZone FindForeignZone(TeamData ownTeam)
+        {
+            foreach (TeamSpawnZone zone in Object.FindObjectsByType<TeamSpawnZone>(FindObjectsSortMode.InstanceID))
+            {
+                if (zone != null && zone.Team != null && zone.Team != ownTeam)
+                    return zone;
+            }
+
+            return null;
+        }
+
+        private static bool AllSessionsHaveAvatar()
+        {
+            if (PlayersManager.Instance == null || PlayersManager.Instance.Sessions.Count == 0)
+                return false;
+
+            foreach (PlayerSession session in PlayersManager.Instance.Sessions)
+            {
+                if (session == null || session.ActiveAvatar == null) return false;
+            }
+
+            return true;
+        }
+
+        private static string DescribeSpawnZones()
+        {
+            List<string> parts = new List<string>();
+            foreach (TeamSpawnZone zone in Object.FindObjectsByType<TeamSpawnZone>(FindObjectsSortMode.InstanceID))
+            {
+                if (zone == null) continue;
+                parts.Add($"'{zone.name}' команды " +
+                          $"'{(zone.Team != null ? zone.Team.displayName : "не назначена")}' в {Fmt(zone.transform.position)}");
+            }
+
+            return parts.Count > 0 ? "Зоны: " + string.Join("; ", parts.ToArray()) : "Зон спавна на сцене нет.";
+        }
+
+        private static string DescribeTraveller(PlayerSession session, TeamSpawnZone ownZone, TeamSpawnZone enemyZone)
+        {
+            PlayerController avatar = session != null ? session.ActiveAvatar : null;
+            if (avatar == null) return $"{(session != null ? session.PlayerName : "?")}: аватара нет.";
+
+            Vector3 position = avatar.transform.position;
+
+            return $"{session.PlayerName} в {Fmt(position)}: IsInSpawnZone={session.IsInSpawnZone}, " +
+                   $"до своей зоны '{ownZone.name}' {Vector3.Distance(position, ownZone.transform.position):F2} м " +
+                   $"(целиком внутри={ownZone.IsPlayerFullyInZone(avatar)}), " +
+                   $"до чужой '{enemyZone.name}' {Vector3.Distance(position, enemyZone.transform.position):F2} м " +
+                   $"(целиком внутри={enemyZone.IsPlayerFullyInZone(avatar)}).";
+        }
+
+        /// <summary>
+        /// Уводит игрока в заданную точку игровым способом — <c>PlayerController.Respawn</c>.
+        ///
+        /// <para>
+        /// Прямая запись <c>transform.position</c> на сервере ненадёжна:
+        /// <c>NetworkTransform</c> на аватарах стоит с <c>syncDirection = ClientToServer</c>,
+        /// и владелец вернёт свою позицию поверх серверной ближайшим же пакетом. Поэтому
+        /// сначала <c>Respawn</c> — он рассылает <c>RpcOnRespawned</c>, и настоящий переезд
+        /// делает сам владелец, — а прямая запись остаётся запасным вариантом.
+        /// </para>
+        /// </summary>
+        private static IEnumerator DisplaceAvatar(PlayerSession session, Vector3 target)
+        {
+            PlayerController avatar = session.ActiveAvatar;
+            if (avatar == null) yield break;
+
+            GameObject marker = new GameObject("E2E_DisplaceTarget");
+            marker.transform.SetPositionAndRotation(target, avatar.transform.rotation);
+
+            avatar.Respawn(marker.transform);
+
+            E2EWaitOutcome moved = new E2EWaitOutcome();
+            yield return E2EWait.Until(moved,
+                $"серверная копия аватара доехала до {Fmt(target)}",
+                RdyZoneWait,
+                () => session.ActiveAvatar != null &&
+                      Vector3.Distance(session.ActiveAvatar.transform.position, target) <= ZoneReachTolerance,
+                () => session.ActiveAvatar == null
+                    ? "аватар исчез"
+                    : $"аватар в {Fmt(session.ActiveAvatar.transform.position)}, до цели " +
+                      $"{Vector3.Distance(session.ActiveAvatar.transform.position, target):F2} м",
+                () => NetworkServer.connections.Count > 0 ? null : "подключений не осталось");
+
+            GameLog.Debug.Info($"[E2E] Перенос игрока: {moved.Diagnosis}");
+
+            if (!moved.Succeeded && session.ActiveAvatar != null)
+            {
+                GameLog.Debug.Info("[E2E] Владелец не отчитался — ставлю аватар на место записью на сервере");
+                session.ActiveAvatar.transform.position = target;
+            }
+
+            // Триггерам нужен физический тик, а признак зоны едет через OnTriggerStay.
+            yield return E2EWait.Hold(ZoneSettleHold);
+        }
+
+        private static string Fmt(Vector3 v)
+        {
+            return $"({v.x:F2}, {v.y:F2}, {v.z:F2})";
         }
 
         // ══════════════════════════════════════════════════════════════════

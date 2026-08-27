@@ -302,10 +302,7 @@ namespace VrBattlegrounds.Maps
                 _playersInZone.Add(player);
                 _playersInZoneCount = _playersInZone.Count;
 
-                if (NetworkServer.active && player.Session != null)
-                {
-                    player.Session.ServerSetInSpawnZone(true);
-                }
+                ReportZoneState(player, true);
 
                 PlayerEntered?.Invoke(this, player);
 
@@ -318,10 +315,7 @@ namespace VrBattlegrounds.Maps
                 _playersInZone.Remove(player);
                 _playersInZoneCount = _playersInZone.Count;
 
-                if (NetworkServer.active && player.Session != null)
-                {
-                    player.Session.ServerSetInSpawnZone(false);
-                }
+                ReportZoneState(player, false);
 
                 PlayerExited?.Invoke(this, player);
 
@@ -342,10 +336,7 @@ namespace VrBattlegrounds.Maps
                 {
                     _playersInZoneCount = _playersInZone.Count;
 
-                    if (NetworkServer.active && player.Session != null)
-                    {
-                        player.Session.ServerSetInSpawnZone(false);
-                    }
+                    ReportZoneState(player, false);
 
                     PlayerExited?.Invoke(this, player);
 
@@ -355,6 +346,42 @@ namespace VrBattlegrounds.Maps
 
                 _cameraTransformCache.Remove(player);
             }
+        }
+
+        /// <summary>
+        /// Сообщает сессии игрока, что он вошёл в <b>эту</b> зону или вышел из неё.
+        ///
+        /// <para>
+        /// Зона сообщает только факт и <b>свою команду</b>. Что этот факт значит для
+        /// конкретного игрока — «я у себя на спавне» или «я в базе противника», —
+        /// решает <see cref="PlayerSession" />: там лежит команда игрока.
+        /// </para>
+        ///
+        /// <para>
+        /// Здесь была находка <b>RDY-04</b>: обе точки писали
+        /// <c>ServerSetInSpawnZone(true/false)</c> любому вошедшему, не спрашивая
+        /// команду, — хотя соседние методы того же класса
+        /// (<see cref="GetTeamPlayersInZone" />, <see cref="AreAllTeamPlayersFullyInZone" />)
+        /// команду проверяли. Игрок, забредший в базу противника, считался стоящим
+        /// «в своей зоне» и сохранял право на готовность к раунду.
+        /// </para>
+        /// </summary>
+        private void ReportZoneState(PlayerController player, bool inside)
+        {
+            // Учёт ведёт сервер: IsInSpawnZone — условие готовности, а её судит он.
+            if (!NetworkServer.active) return;
+
+            // Session — null в окне между спавном аватара и спавном его сессии.
+            if (player == null || player.Session == null) return;
+
+            // Зона без команды не знает, чья она, и сказать о себе ей нечего.
+            // О самом факте уже предупредил Awake.
+            if (_team == null) return;
+
+            if (inside)
+                player.Session.ServerEnterSpawnZone(_team.teamIndex);
+            else
+                player.Session.ServerExitSpawnZone(_team.teamIndex);
         }
 
         /// <summary>Возвращает копию списка всех игроков, физически находящихся в зоне.</summary>

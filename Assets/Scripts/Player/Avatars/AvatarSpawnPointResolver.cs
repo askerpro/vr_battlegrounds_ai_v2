@@ -11,6 +11,12 @@ namespace VrBattlegrounds.Player.Avatars
     /// </summary>
     public enum AvatarSpawnPointSource
     {
+        /// <summary>
+        /// Место, заданное калибровкой физического пространства: игрок стоит в комнате,
+        /// и игра его не двигает (<see cref="CalibratedSpawnRegistry"/>, T-30).
+        /// </summary>
+        CalibratedPlace,
+
         /// <summary>Зона спавна команды на карте (<see cref="TeamSpawnZone"/>).</summary>
         TeamSpawnZone,
 
@@ -44,6 +50,8 @@ namespace VrBattlegrounds.Player.Avatars
         {
             switch (Source)
             {
+                case AvatarSpawnPointSource.CalibratedPlace:
+                    return $"место, заданное калибровкой (снято на карте '{SourceName}'), в {Position}";
                 case AvatarSpawnPointSource.TeamSpawnZone:
                     return $"зона спавна '{SourceName}' в {Position}";
                 case AvatarSpawnPointSource.NetworkStartPosition:
@@ -63,6 +71,13 @@ namespace VrBattlegrounds.Player.Avatars
     /// Порядок поиска — от знающего про команды к не знающему:
     /// </para>
     /// <list type="number">
+    /// <item><b>Место, заданное калибровкой</b> (<see cref="CalibratedSpawnRegistry"/>, T-30).
+    ///       Бьёт всё остальное и по единственной причине: до калибровки игра не знает,
+    ///       где игрок находится внутри арены, и вправе поставить его куда угодно;
+    ///       после — его место задано физически, он стоит в комнате, и переносить его
+    ///       в базу значит расклеить картинку с телом. Ветка достижима только для
+    ///       игрока, объявившего <c>PlayerSession.IsCalibrated</c>, и только там,
+    ///       где сессия передана вызывающим.</item>
     /// <item><see cref="TeamSpawnZone"/> нужной команды. Единственная точка на карте,
     ///       которая знает, чья она: <c>TeamSpawnZone.Team</c>. Той же точкой
     ///       пользуются <c>EliminationMode.PrepareNextRound</c> и <c>DebugOrchestrator</c>,
@@ -88,8 +103,32 @@ namespace VrBattlegrounds.Player.Avatars
         /// Ищет точку спавна для команды. <paramref name="team"/> может быть <c>null</c> —
         /// это «команда ещё не выбрана», и тогда зоны не спрашиваются вовсе.
         /// </summary>
-        public static AvatarSpawnPoint Resolve(TeamData team)
+        /// <param name="team">Команда игрока или <c>null</c>.</param>
+        /// <param name="calibratedSession">
+        ///     Сессия, чьё <b>откалиброванное</b> место обязано победить зону, или <c>null</c>,
+        ///     если восстанавливать место не нужно. Разделение не косметическое: место
+        ///     восстанавливают только там, где аватара не осталось (смена карты). При смене
+        ///     команды аватар жив и физически ничего не произошло, а игрока всё равно нужно
+        ///     увести из чужой базы — там ветку калибровки спрашивать не о чем.
+        /// </param>
+        public static AvatarSpawnPoint Resolve(TeamData team, PlayerSession calibratedSession = null)
         {
+            if (calibratedSession != null)
+            {
+                AvatarSpawnPoint calibrated;
+                string diagnosis;
+
+                if (CalibratedSpawnRegistry.TryResolve(calibratedSession, out calibrated, out diagnosis))
+                    return calibrated;
+
+                if (calibratedSession.IsCalibrated)
+                {
+                    GameLog.PhysicalSpace.Warning(
+                        $"[AvatarSpawnPointResolver] {calibratedSession.PlayerName} откалиброван, но вернуть его " +
+                        $"на своё место нечем: {diagnosis}. Ставим в зону команды — игрок увидит, что его сдвинули.");
+                }
+            }
+
             TeamSpawnZone zone = FindZone(team);
             if (zone != null)
             {

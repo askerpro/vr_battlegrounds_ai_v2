@@ -190,6 +190,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new RoundReadinessMatchScenario();
             yield return new WeaponHitDamageScenario();
             yield return new AvatarSpawnPointScenario();
+            yield return new CalibratedPositionPersistsScenario();
         }
 
         private static IE2EScenario Resolve(string name)

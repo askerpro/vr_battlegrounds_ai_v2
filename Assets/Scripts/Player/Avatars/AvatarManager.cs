@@ -62,7 +62,7 @@ namespace VrBattlegrounds.Player.Avatars
             // Раньше здесь спрашивался только NetworkManager.GetStartPosition(), а на картах
             // проекта нет ни одного NetworkStartPosition — то есть первичный спавн тоже
             // приземлялся в начало координат (см. WPN-03).
-            AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(session.Team);
+            AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(session.Team, session);
             LogSpawnPoint("SpawnAvatar", session, spawnPoint);
 
             Vector3 spawnPos = spawnPoint.Position;
@@ -122,7 +122,9 @@ namespace VrBattlegrounds.Player.Avatars
         ///       уничтожил его вместе со сценой, а <c>GameNetworkManager.OnServerReady</c>
         ///       зовёт этот метод заново. Брать позицию не у кого — нужна точка спавна.
         ///       Раньше в этой ветке стоял <c>Vector3.zero</c>, и все игроки материализовались
-        ///       в начале координат карты, вплотную к реквизиту.</item>
+        ///       в начале координат карты, вплотную к реквизиту. У <b>откалиброванного</b>
+        ///       игрока точка спавна не назначается вовсе: его место задано физически,
+        ///       и сервер возвращает его туда же (<see cref="CalibratedSpawnRegistry"/>, T-30).</item>
         /// <item><b>Смена команды.</b> Старый аватар жив, но игрок теперь на другой стороне.
         ///       Оставить его на месте — значит поставить в чужую базу: зона спавна
         ///       противника засчитала бы его как «в зоне» (<c>TeamSpawnZone</c> считает всех,
@@ -159,7 +161,13 @@ namespace VrBattlegrounds.Player.Avatars
             }
             else
             {
-                AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(teamData);
+                // Откалиброванное место восстанавливаем ровно в одном случае — когда
+                // аватара не осталось, то есть после смены карты. Смена команды физическим
+                // событием не является: игрок как стоял в комнате, так и стоит, — но увести
+                // его из чужой базы всё равно нужно, и там ветка калибровки не спрашивается.
+                PlayerSession restorePlaceFor = oldAvatar == null ? session : null;
+
+                AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(teamData, restorePlaceFor);
                 LogSpawnPoint(oldAvatar == null ? "ChangeAvatar/после смены карты" : "ChangeAvatar/смена команды",
                               session, spawnPoint);
 

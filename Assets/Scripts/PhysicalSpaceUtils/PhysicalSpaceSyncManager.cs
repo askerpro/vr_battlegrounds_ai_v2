@@ -128,6 +128,28 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         public bool IsCalibrating { get; private set; } = false;
         public bool IsCalibratingHeight => CurrentHeightCalibrationPhase != HeightCalibrationPhase.None;
 
+        /// <summary>
+        /// Калибровка по якорям <b>состоялась</b>: обе точки зарегистрированы и
+        /// <see cref="CalculateTransform" /> отработал. В отличие от
+        /// <see cref="IsCalibrating" /> (идёт ли процесс прямо сейчас) это факт о прошлом,
+        /// и живёт он ровно столько же, сколько сам менеджер, — то есть всю сессию.
+        ///
+        /// <para>
+        /// Отдельный признак нужен потому, что по самим результатам калибровки её факт
+        /// не восстанавливается: <see cref="_realToVirtualRotation" /> по умолчанию
+        /// <c>identity</c>, <see cref="_realToVirtualScale" /> равен единице, и
+        /// «не калибровался» неотличимо от «калибровался и вышло единично».
+        /// </para>
+        ///
+        /// <para>
+        /// Кому нужно. Серверу — чтобы выбрать точку спавна: до калибровки игрока можно
+        /// ставить куда угодно (зона своей команды), после — его место задано физически,
+        /// и двигать его нельзя. Наружу признак отдаёт <c>PlayerSession.IsCalibrated</c>,
+        /// сюда сеть не заходит (T-30).
+        /// </para>
+        /// </summary>
+        public bool IsCalibrated { get; private set; }
+
         // Events
         public event Action OnCalibrationStarted;
         public event Action OnCalibrationCancelled;
@@ -230,18 +252,35 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             ApplySyncToAvatar();
         }
 
+        /// <summary>
+        /// Новый аватар локального игрока появился — вернуть ему то, что задано
+        /// калибровкой этой машины.
+        ///
+        /// <para>
+        /// <b>Здесь больше не вызывается <see cref="ApplyAvatarTransform" /></b>, и это
+        /// намеренно (T-30). Стояло условие <c>_realToVirtualScale &gt; 0</c>, то есть
+        /// «всегда»: масштаб по умолчанию равен единице. Пока игрок не калибровался,
+        /// преобразование единично и вызов ничего не делал — но у откалиброванного
+        /// это <b>сдвиг</b>, посчитанный один раз в мировых координатах той карты, где
+        /// калибровались. Наложить его повторно на каждый новый аватар значит увезти
+        /// игрока ещё раз на ту же дельту — при смене скина, при смене карты, при каждом
+        /// респавне.
+        /// </para>
+        ///
+        /// <para>
+        /// Место откалиброванного игрока после смены карты восстанавливает сервер
+        /// (<c>CalibratedSpawnRegistry</c>), причём в системе координат якорей новой
+        /// карты, — см. <see cref="PhysicalSpaceAnchorFrame" />. Единственный законный
+        /// вызов <see cref="ApplyAvatarTransform" /> остался там, где он и должен быть:
+        /// в момент самой калибровки (<see cref="RegisterCalibrationPoint" />).
+        /// </para>
+        /// </summary>
         private void ApplySyncToAvatar()
         {
             if (UxrAvatar.LocalAvatar == null) return;
 
-            // Если была проведена калибровка комнаты по физическим якорям - она в приоритете
-            if (_realToVirtualScale > 0)
-            {
-                ApplyAvatarTransform();
-            }
-
-            // Мировая позиция между сценами теперь восстанавливается сетью (GameNetworkManager) при спавне.
-            // Нам остается только восстановить локальное смещение высоты камеры (калибровку роста).
+            // Локальное смещение высоты камеры (калибровка пола) живёт в префабе аватара,
+            // а не в мире, поэтому новому экземпляру его нужно наложить заново.
             ApplyAvatarHeight();
         }
 
@@ -340,6 +379,10 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
                 CalculateTransform();
                 ApplyAvatarTransform();
+
+                // Признак ставится ровно здесь: калибровка состоялась тогда, когда
+                // обе точки зарегистрированы и преобразование посчитано.
+                IsCalibrated = true;
 
                 IsCalibrating = false;
                 ToggleRealVirtualSpaceRendering();

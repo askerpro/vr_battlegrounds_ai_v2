@@ -109,6 +109,29 @@ namespace VrBattlegrounds.Player
         public const float MaxCalibrationHeightOffset = 1.5f;
 
         /// <summary>
+        /// Игрок откалибровал своё физическое пространство по якорям карты
+        /// (<c>PhysicalSpaceSyncManager.IsCalibrated</c>). Признак самого факта, а не его
+        /// результата: результат — мировая поза аватара, и она у сервера уже есть.
+        ///
+        /// <para>
+        /// Живёт здесь по той же причине, что <see cref="CalibrationScale" /> и
+        /// <see cref="CalibrationHeightOffset" />: это характеристика игрока, а не
+        /// аватара, и она переживает смену скина, команды и карты.
+        /// </para>
+        ///
+        /// <para>
+        /// Ради чего заведён (T-30). Сервер обязан выбрать точку спавна, а правильных
+        /// ответов два. <b>До</b> калибровки позиция игрока внутри арены неизвестна,
+        /// и ставить его можно куда угодно — зона своей команды и есть разумное
+        /// «куда угодно». <b>После</b> калибровки его место задано физически: игрок
+        /// стоит в комнате, и двигать его нельзя. Отличить один случай от другого
+        /// было нечем — по <c>_realToVirtualRotation</c> и <c>_realToVirtualScale</c>
+        /// «не калибровался» неотличимо от «калибровался и вышло единично».
+        /// </para>
+        /// </summary>
+        [SyncVar] public bool IsCalibrated;
+
+        /// <summary>
         /// Сколько смещения уже наложено на <b>текущий</b> аватар. Нужен, потому что
         /// <see cref="PhysicalSpaceSyncManager.ShiftAvatarCameraPivot" /> сдвигает, а не
         /// ставит: базовая высота пивота у каждого префаба своя. Обнуляется при смене
@@ -295,6 +318,10 @@ namespace VrBattlegrounds.Player
             {
                 sync.OnHeightCalibrationCompleted += PublishLocalCalibration;
                 sync.OnFloorHeightCalibrated += PublishLocalCalibration;
+
+                // Калибровка по якорям — отдельная процедура со своим событием, и именно
+                // она отвечает на вопрос «известно ли, где игрок стоит в арене» (T-30).
+                sync.OnCalibrationCompleted += PublishLocalCalibration;
                 _subscribedToCalibration = true;
             }
 
@@ -310,15 +337,16 @@ namespace VrBattlegrounds.Player
             {
                 sync.OnHeightCalibrationCompleted -= PublishLocalCalibration;
                 sync.OnFloorHeightCalibrated -= PublishLocalCalibration;
+                sync.OnCalibrationCompleted -= PublishLocalCalibration;
             }
 
             _subscribedToCalibration = false;
         }
 
         /// <summary>
-        /// Отправляет серверу текущий результат калибровки физического пространства:
-        /// пропорции игрока и смещение пола. Оба значения снимаются одной процедурой
-        /// в два шага, поэтому и уезжают вместе.
+        /// Отправляет серверу текущее состояние калибровки физического пространства:
+        /// пропорции игрока, смещение пола и сам факт калибровки по якорям. Значения
+        /// снимаются одной процедурой в несколько шагов, поэтому и уезжают вместе.
         /// </summary>
         private void PublishLocalCalibration()
         {
@@ -327,6 +355,7 @@ namespace VrBattlegrounds.Player
 
             CmdSetCalibrationScale(sync.AccumulatedScaleMultiplier);
             CmdSetCalibrationHeightOffset(sync.AccumulatedHeightOffset);
+            CmdSetCalibrated(sync.IsCalibrated);
         }
 
         // ── SyncVar Hooks ─────────────────────────────────────────────────────
@@ -608,6 +637,27 @@ namespace VrBattlegrounds.Player
 
             GameLog.Player.Info(
                 $"[PlayerSession] {PlayerName}: смещение пола принято сервером — {normalized:F2} м");
+        }
+
+        /// <summary>
+        /// Клиент сообщает, откалибровал ли он своё физическое пространство по якорям.
+        ///
+        /// <para>
+        /// Проверять здесь нечего: это один бит, и врать им игроку невыгодно. Соврав
+        /// «я откалиброван», он получит после смены карты не преимущество, а своё же
+        /// прежнее место в арене вместо базы команды.
+        /// </para>
+        /// </summary>
+        [Command]
+        public void CmdSetCalibrated(bool calibrated)
+        {
+            if (IsCalibrated == calibrated) return;
+
+            IsCalibrated = calibrated;
+
+            GameLog.Player.Info(
+                $"[PlayerSession] {PlayerName}: калибровка физического пространства " +
+                $"{(calibrated ? "объявлена — место игрока задано физически" : "снята — место игрока назначает игра")}");
         }
 
         /// <summary>

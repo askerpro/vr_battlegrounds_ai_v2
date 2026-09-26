@@ -52,9 +52,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f5a30897a3c024c805c866226dd743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: de21b2a2-8c93-4512-9b7c-4f3d72206fa7
+  _uxrUniqueId: 3870ba86-04cc-49a9-9c64-444d68511024
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
   _isDummyGrabbableParent: 0
   _controlParentDirection: 1
   _ignoreGrabbableParentDependency: 0
@@ -83,7 +83,7 @@ MonoBehaviour:
   _previewGrabPosesMode: 2
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
-  _selectedAvatarForGrips: {fileID: 1331974273208594913, guid: 8bcd4fb381a62ec4eb13bfa740132899, type: 3}
+  _selectedAvatarForGrips: {fileID: 0}
   _firstGrabPointIsMain: 1
   _grabPoint:
     _editorFoldout: 1
@@ -156,7 +156,7 @@ MonoBehaviour:
     _defaultGripPoseInfo:
       _avatarPrefabGuid: 
       _handPose: {fileID: 0}
-      _poseBlendValue: 0
+      _poseBlendValue: -1
       _gripAlignTransformHandLeft: {fileID: 0}
       _gripAlignTransformHandRight: {fileID: 0}
     _snapMode: 3
@@ -225,9 +225,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b09fc2a58519c04382be9afd085eb88, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Mechanics.Weapons.UxrProjectileSource
-  _uxrUniqueId: 503625c5-f25f-4167-ae11-25e0eb2f3c5a
+  _uxrUniqueId: 763f2153-4dda-4aaa-ac84-cd441950993b
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
   _weaponAnimator: {fileID: 0}
   _shotTypes:
   - _shotSource: {fileID: 3858707600380184115}
@@ -267,9 +267,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1d9becc057b5a042859f71c7df57fdf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 94dc64de-e0c4-4fe3-a3c9-3e1406bcc6b8
+  _uxrUniqueId: 8bd3e2ae-b097-4028-b766-7452b451da31
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
   _recoilAxes: {fileID: 5924109489953213895}
   _triggers:
   - _projectileShotIndex: 0
@@ -357,9 +357,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58c1c1de3766f584691d4d80f90cf75e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.AutomaticWeaponSlideFeedback
-  _uxrUniqueId: 5b59d453-a3ad-475d-9913-1dea4bc121de
+  _uxrUniqueId: b37122da-6405-4c12-b179-f51aa8143673
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
   _triggerIndex: 0
   _slide: {fileID: 6298411919803120976}
   _localSlideDirection: {x: 0, y: 0, z: -1}
@@ -484,9 +484,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 721011d7-9bba-4cb0-a741-ff62120eb8ab
+  _uxrUniqueId: 7be5ab1b-4bfb-4a28-87f1-fd0624ed610e
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
 --- !u!1 &322422060001124517
 GameObject:
   m_ObjectHideFlags: 0
@@ -842,9 +842,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 354968b8-265d-4b02-975a-bf738b69fb9d
+  _uxrUniqueId: ab136d30-5323-4a5e-9ac2-996c209a3add
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
 --- !u!1 &1561647127477465984
 GameObject:
   m_ObjectHideFlags: 0
@@ -890,9 +890,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f5a30897a3c024c805c866226dd743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: d886faeb-5d1a-442a-b6e6-2b1c746a845c
+  _uxrUniqueId: 067929e5-2680-43eb-82aa-d89383c57d7b
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
   _isDummyGrabbableParent: 0
   _controlParentDirection: 0
   _ignoreGrabbableParentDependency: 1
@@ -1217,9 +1217,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: c496a337-2ffb-460c-a4db-22c38cf7d439
+  _uxrUniqueId: 0ecf3e18-7518-4a78-8052-b2a372aa2f95
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
 --- !u!1 &3218826765895964014
 GameObject:
   m_ObjectHideFlags: 0
@@ -1354,9 +1354,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 3a43ff2d-aead-45d8-a1c7-5acc6807f468
+  _uxrUniqueId: 2c250722-31e4-47b8-abd0-274f8e64b425
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
 --- !u!1 &3709938440076087185
 GameObject:
   m_ObjectHideFlags: 0
@@ -1457,6 +1457,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8462247669967279441}
   - component: {fileID: 4667631426267724316}
+  - component: {fileID: 519536855082750016}
   m_Layer: 0
   m_Name: MagAnchor
   m_TagString: Untagged
@@ -1495,9 +1496,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f7fc0250-3105-4c5d-aaa2-ce719765769e
+  _uxrUniqueId: 2257ea74-a690-4f8a-b005-a900c850e983
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
   _compatibleTags:
   - M16_Mag
   _maxPlaceDistance: 0.15
@@ -1512,6 +1513,20 @@ MonoBehaviour:
   _activateOnEmpty: {fileID: 0}
   _allowSwap: 0
   _grabProxy: {fileID: 0}
+--- !u!114 &519536855082750016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3996626818937678861}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08944f87a05597c4a8c351fdd591ed04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.AnchorPlaceSound
+  _source: {fileID: 4482957211518828672}
+  _onlyWhenPlacedByHand: 1
 --- !u!1 &4350004629735619632
 GameObject:
   m_ObjectHideFlags: 0
@@ -1621,9 +1636,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 7c5dbce3-472f-48f2-9108-70a0737c52f0
+  _uxrUniqueId: 356d1287-7897-4f8c-9455-2a21069d0c5e
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
 --- !u!1 &5363995566518642570
 GameObject:
   m_ObjectHideFlags: 0
@@ -1731,9 +1746,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: a9daff4b-8927-4530-b21a-a61113c6f43e
+  _uxrUniqueId: 75ce41f7-98df-4ecc-a446-f586a46b98dc
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
 --- !u!1 &5638112787481182516
 GameObject:
   m_ObjectHideFlags: 0
@@ -1906,9 +1921,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: aa39ddb4-8cb9-49d3-84db-78423a23f958
+  _uxrUniqueId: 6e9d61c9-6162-43ae-90c7-4ce4ecfd5a25
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
 --- !u!1 &6521098710701441208
 GameObject:
   m_ObjectHideFlags: 0
@@ -1953,7 +1968,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 3279f9a811e68ee419c458ad8034f351, type: 3}
-  m_PlayOnAwake: 1
+  m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
@@ -2203,9 +2218,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: f58a2764-fa93-4f5f-9bfe-0156cd4bb2c5
+  _uxrUniqueId: 3b4afca4-cde0-46c7-b1a4-907a196d6280
   __prefabGuid: cc00fcab78d7cee4faad59a02b2b7183
-  __isInPrefab: 0
+  __isInPrefab: 1
 --- !u!1 &8302834573775154062
 GameObject:
   m_ObjectHideFlags: 0
@@ -2289,7 +2304,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2573414978203022292, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2573414978203022292, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __prefabGuid
@@ -2297,7 +2312,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2573414978203022292, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: _uxrUniqueId
-      value: 340c6805-e203-4189-a892-ce83958910b5
+      value: 1447e1ba-c96e-4ceb-9631-50d6738d00da
       objectReference: {fileID: 0}
     - target: {fileID: 3030797029390350764, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __isInPrefab
@@ -2325,7 +2340,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3902047488361327859, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3902047488361327859, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __prefabGuid
@@ -2333,7 +2348,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3902047488361327859, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: _uxrUniqueId
-      value: 1ba063bb-2a68-4d78-a7a0-705e83796659
+      value: da249e58-c8d2-4aa7-83e8-4be73f34e698
       objectReference: {fileID: 0}
     - target: {fileID: 4633891706494357527, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2413,7 +2428,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5803974859286300682, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5803974859286300682, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __prefabGuid
@@ -2421,7 +2436,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5803974859286300682, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: _uxrUniqueId
-      value: 691efc8c-1301-4214-b367-42d80075b9a8
+      value: afc786d0-459d-4f44-93eb-1a22431f1d05
       objectReference: {fileID: 0}
     - target: {fileID: 5872617493334420764, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __isInPrefab
@@ -2449,7 +2464,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6115187647502898987, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6115187647502898987, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __prefabGuid
@@ -2461,7 +2476,7 @@ PrefabInstance:
       objectReference: {fileID: 4667631426267724316}
     - target: {fileID: 6115187647502898987, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: _uxrUniqueId
-      value: 81405873-a499-4eeb-8c57-1b527b7ca16d
+      value: 5626fc6e-4c7a-4d42-9861-819d133e7183
       objectReference: {fileID: 0}
     - target: {fileID: 6115187647502898987, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[3]._handPose
@@ -2485,7 +2500,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6811987295210847262, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6811987295210847262, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __prefabGuid
@@ -2493,11 +2508,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6811987295210847262, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: _uxrUniqueId
-      value: fd73c9c0-181b-445a-ac62-3f5deb372342
+      value: 832c6551-0049-4ec7-93ba-88bce9a50106
       objectReference: {fileID: 0}
     - target: {fileID: 7926922892465043667, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7926922892465043667, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __prefabGuid
@@ -2505,7 +2520,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7926922892465043667, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: _uxrUniqueId
-      value: bb67c906-bd4f-42b2-9f6d-5b54af1c813f
+      value: 0325ba3a-9cc1-4972-ac8e-20b7a165915f
       objectReference: {fileID: 0}
     - target: {fileID: 8080440376812217298, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: __isInPrefab

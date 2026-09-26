@@ -44,7 +44,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
-  m_PlayOnAwake: 1
+  m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
@@ -139,6 +139,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5543504865858357851}
   - component: {fileID: 4039922446074013793}
+  - component: {fileID: 4356510322699069880}
   m_Layer: 0
   m_Name: Anchor_Back
   m_TagString: Untagged
@@ -195,6 +196,20 @@ MonoBehaviour:
   _activateOnEmpty: {fileID: 0}
   _allowSwap: 1
   _grabProxy: {fileID: 399028928469750398}
+--- !u!114 &4356510322699069880
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3334379162688889462}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08944f87a05597c4a8c351fdd591ed04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.AnchorPlaceSound
+  _source: {fileID: 2247036679396971872}
+  _onlyWhenPlacedByHand: 1
 --- !u!1 &8306661356809312791
 GameObject:
   m_ObjectHideFlags: 0

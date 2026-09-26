@@ -248,6 +248,34 @@ namespace VrBattlegrounds.Tests.Prefabs
                 "Смещение высоты не реплицируется:\n  " + string.Join("\n  ", problems));
         }
 
+        /// <summary>
+        /// <c>NetworkBehaviour</c> без <c>NetworkIdentity</c> на себе или у родителя Mirror
+        /// не заспавнит и не синхронизирует; в редакторе это красная ошибка из
+        /// <c>OnValidate</c> при каждой загрузке префаба. Так было с заброшенной заготовкой
+        /// <c>Arsenal/ArsenalWall.prefab</c> (NET-25).
+        /// </summary>
+        [Test]
+        public void У_каждого_NetworkBehaviour_в_префабах_есть_NetworkIdentity()
+        {
+            List<string> problems = new List<string>();
+
+            foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.StartsWith("Assets/ThirdParty/")) continue;
+
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                foreach (NetworkBehaviour behaviour in prefab.GetComponentsInChildren<NetworkBehaviour>(true))
+                {
+                    if (behaviour.GetComponentInParent<NetworkIdentity>(true) == null)
+                        problems.Add($"{path} / {behaviour.name}: {behaviour.GetType().Name}");
+                }
+            }
+
+            Assert.IsEmpty(problems,
+                "NetworkBehaviour без NetworkIdentity на себе или у родителя:\n  " + string.Join("\n  ", problems));
+        }
+
         // ══════════════════════════════════════════════════════════════════
         //  Вспомогательное
         // ══════════════════════════════════════════════════════════════════

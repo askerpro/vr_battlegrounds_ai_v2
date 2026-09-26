@@ -427,3 +427,58 @@ GameObject spawned = UxrInstanceManager.Instance.InstantiatePrefab(
 Если VRMADA переведёт `PostProcess` на `LocalAvatarControllers` (такое свойство в классе
 есть и используется на других стадиях), чужие аватары застынут в T-позе или в позе
 префаба. Компиляция при этом не сломается.
+
+---
+
+## Issue 10: `Activate On Placed` включается и без вставки — звук `Play On Awake` играет при спавне
+
+> Установлено 2026-09-27 при разборе AUD-01. Подтверждено прогоном в Play Mode.
+
+### Симптом
+
+При загрузке карты раздаётся одновременный «щелчок затвора». Это 16 звуков
+`Magazine_attach` — по одному от каждого заряженного M16 на стенах арсенала.
+
+### Как на самом деле
+
+Объект `Activate On Placed` у `UxrGrabbableObjectAnchor` SDK включает в трёх местах,
+и только одно из них — действие игрока:
+
+| Где | Когда | Событие `Placed` |
+|---|---|---|
+| `UxrGrabbableObjectAnchor.Start` (`:427`) | в якоре с самого спавна что-то лежит | нет |
+| `UxrGrabManager` (`:969`), цикл по якорям | каждый кадр, пока якорь занят | нет |
+| `UxrGrabManager.PlaceObject` | вставка — рукой или программно | да; у вставки рукой `Grabber != null` |
+
+`AudioSource` с `Play On Awake` на таком объекте звучит при каждом спавне заряженного
+оружия и при каждой смене карты.
+
+Ещё одна странность `PlaceObject`: при переносе предмета из одного якоря в другой он
+включает `ActivateOnPlaced` **старого** якоря (`UxrGrabManager.Manipulation.cs:242`).
+
+### Что сделано в проекте
+
+Звук вставки играет `AnchorPlaceSound` по событию `Placed` и только при `Grabber != null`.
+На объектах, которые включает якорь, `Play On Awake` выключен — это держит
+`AnchorActivationAudioTests`.
+
+### На что смотреть при обновлении SDK
+
+Если VRMADA добавит в `UxrManipulationEventArgs` признак программной вставки или
+начнёт слать `Placed` от стартового состояния — пересмотреть фильтр в `AnchorPlaceSound`.
+
+---
+
+## Issue 11: префаб UltimateXR переписывает `_uxrUniqueId` при первом сохранении
+
+> Установлено 2026-09-27 при правке `M16_Rifle_prefab`.
+
+Если компоненты `UxrComponent` в префабе-ассете записаны с `__isInPrefab: 0` (префаб
+собирали в сцене), `UxrComponent.OnValidate` → `UniqueIdImplementer.NotifyOnValidate`
+выдаёт им **новые** `_uxrUniqueId` и ставит `__isInPrefab: 1`. Заодно сбрасываются
+редакторские поля превью (`_selectedAvatarForGrips`, `_poseBlendValue`).
+
+В диффе это выглядит как десятки изменённых ID при правке одного поля. Это нормально:
+ID префаба-ассета нигде не хранятся, сетевой `UniqueId` в рантайме выводится из `netId`
+(`NetworkUxrIdentityTests`). Откатывать такие изменения не нужно — вернутся при следующем
+сохранении.

@@ -2,6 +2,27 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - AUD-01: щелчок «затвора» при загрузке карты
+
+### Исправлено
+
+- **Звук вставки магазина при старте каждой карты (AUD-01).** Прогон в Play Mode показал
+  16 одновременных `Magazine_attach` в первые кадры — от каждого M16 на восьми стенах
+  арсенала, и повторно после смены карты. Источник — `AudioSource` с `Play On Awake`
+  на объекте `OnPlace`, который `UxrGrabbableObjectAnchor` включает и при спавне
+  заряженного оружия ([known-issues #10](UltimateXR/known-issues.md)). Тот же приём
+  был в карманах `MagazinePocket` и `Anchor_Back`.
+
+### Добавлено
+
+- `AnchorPlaceSound`: звук по событию `Placed` и только при вставке рукой. Проверено
+  прогоном: программная вставка — тишина, вставка грабером — `Magazine_attach`.
+  `Play On Awake` выключен на `M16_Rifle_prefab`, `Gun_real`, `MagazinePocket`, `Anchor_Back`.
+- `AnchorActivationAudioTests`: был красным на шести префабах до правки.
+
+При сохранении `M16_Rifle_prefab` UltimateXR выдал новые `_uxrUniqueId` компонентам
+с неверным `__isInPrefab: 0` — это штатное поведение SDK ([known-issues #11](UltimateXR/known-issues.md)).
+
 ## [2026-09-27] - UI-01: кириллица в меню, шрифт проекта Roboto Condensed
 
 ### Исправлено

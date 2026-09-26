@@ -93,6 +93,20 @@ int solid = 0; foreach (var c in go.GetComponentsInChildren<Collider>(true)) if 
 Если вернулось — проверь, что префаб предмета попадает под спавн-обработчик
 из `GameNetworkManager.OnStartClient`.
 
+### «Брошенное оружие проваливается сквозь пол» · «В логе клиента бесконечные `UpdateRigidbody(...)`»
+
+**PHY-01, исправлена.** В логе `ExecuteStateSyncEvent ... Method call UpdateRigidbody` с
+огромной отрицательной Y и скоростью — это не дрожание лежащего предмета, а вечное падение.
+После отпускания UltimateXR у отпустившего игрока шлёт позицию, пока rigidbody не заснёт
+(`UxrGrabbableObject.RegularPhysicsSyncCoroutine`); падающий в бездну не засыпает никогда.
+
+Найдено три причины: у `Gun_real` не было коллайдеров вовсе; выпуклый коллайдер корпуса
+`Machinegun`/`Shotgun` охватывал вставленный магазин, и тот выталкивал оружие под пол даже
+при падении с места; `Discrete` у магазинов и оружия пробивал плоский пол при броске.
+Исправлено коллайдером, `AnchoredItemCollisionIgnore`, `Continuous` и `FloorThickness`
+(BoxCollider 1 м под полом в `Environment.prefab`). Страховка — `OutOfWorldGuard`.
+Если вернулось — `WeaponDropPhysicsTests` назовёт префаб.
+
 ### «Оружие можно взять из закрытого арсенала»
 
 **NET-13, исправлена.** `Lock()`/`Unlock()` искали предмет в `CurrentPlacedObject`,

@@ -2,6 +2,21 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - NET-25: красная ошибка `ArsenalWallController requires a NetworkIdentity`
+
+### Удалено
+
+- **`Assets/Prefabs/Arsenal/ArsenalWall.prefab`.** Заготовка стены из первого коммита
+  арсенала (`0fec593`), с тех пор не менялась: без слотов, аниматора и `NetworkIdentity`.
+  Нигде не использовалась — все стены на картах экземпляры `StandardArsenalWall`.
+  Mirror при каждой загрузке префаба писал из `OnValidate` ошибку про отсутствующий
+  `NetworkIdentity`.
+
+### Добавлено
+
+- Тест `PrefabCompositionTests.У_каждого_NetworkBehaviour_в_префабах_есть_NetworkIdentity`:
+  был красным ровно на этом префабе.
+
 ## [2026-09-27] - AUD-01: щелчок «затвора» при загрузке карты
 
 ### Исправлено

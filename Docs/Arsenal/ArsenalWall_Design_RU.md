@@ -516,7 +516,8 @@ ArsenalWall [ArsenalWallController]
 **Prefab-структура файлов:**
 ```
 Assets/Prefabs/Arsenal/
-├── ArsenalWall.prefab           ← корневой, содержит контейнеры + шаттер + dog tag
+├── StandardArsenalWall.prefab   ← корневой, содержит контейнеры + шаттер + dog tag + NetworkIdentity
+│                                  (единственный префаб стены; заготовка ArsenalWall.prefab удалена, NET-25)
 ├── Slots/
 │   ├── WeaponSlotPrefab.prefab  ← один универсальный слот pegboard (настраивается через Inspector)
 │   └── EquipSlotPrefab.prefab   ← один универсальный слот полки

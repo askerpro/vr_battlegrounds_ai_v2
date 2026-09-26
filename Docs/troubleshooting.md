@@ -237,6 +237,17 @@ execute_code: VrBattlegrounds.EditorTools.AndroidCompileGate.Run()
 Так были найдены BUILD-01 (`using static Codice...` из Plastic SCM) и целая папка
 Editor-скриптов внутри `Assets/Scripts/`.
 
+### «Красная ошибка `X requires a NetworkIdentity` в консоли редактора»
+
+`NetworkBehaviour` без `NetworkIdentity` на себе или у родителя — Mirror пишет это
+из `OnValidate` при каждой загрузке объекта. Тест
+`PrefabCompositionTests.У_каждого_NetworkBehaviour_в_префабах_есть_NetworkIdentity`
+назовёт префаб. Так было с заброшенной `Arsenal/ArsenalWall.prefab` (NET-25, удалена).
+
+Не путать с `SpawnObject probe_weapon_instance ... has no NetworkIdentity` во время
+прогона тестов: это `NetworkSpawnableRegistrationTests` проверяет отказ намеренно
+(в обрамлении `IgnoreFailingMessages`).
+
 ### «Объект есть в сцене, но Mirror его не спавнит»
 
 Нет `sceneId`. Так было с четырьмя стенами арсенала на `TestMap2` (NET-14) —

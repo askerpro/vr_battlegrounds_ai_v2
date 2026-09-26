@@ -80,7 +80,7 @@ namespace UltimateXR.Mechanics.Weapons
 
             BeginSync();
             runtimeTrigger.HasReloaded = hasReloaded;
-            EndSyncMethod(new object[] { triggerIndex });
+            EndSyncMethod(new object[] { triggerIndex, hasReloaded });
         }
 
         /// <summary>

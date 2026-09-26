@@ -63,6 +63,12 @@ namespace VrBattlegrounds.Network
         /// <summary>Подписан ли релей на <see cref="UxrManager.ComponentStateChanged" />.</summary>
         private bool _subscribed;
 
+        /// <summary>
+        ///     События сетевых аватаров, порождённые до выравнивания их <c>UniqueId</c>.
+        ///     См. <see cref="AvatarStateEventGate" />.
+        /// </summary>
+        private AvatarStateEventGate _gate;
+
 
         // ── Жизненный цикл ────────────────────────────────────────────────
 
@@ -144,6 +150,7 @@ namespace VrBattlegrounds.Network
 
             UxrManager.ComponentStateChanged -= HandleComponentStateChanged;
             _subscribed = false;
+            _gate?.Clear();
         }
 
         /// <summary>
@@ -160,6 +167,21 @@ namespace VrBattlegrounds.Network
             if (!eventArgs.Options.HasFlag(UxrStateSyncOptions.Network))
                 return;
 
+            // Событие невыровненного сетевого аватара уйдёт само по AvatarSpawned (NET-26).
+            _gate ??= new AvatarStateEventGate(Send);
+            if (_gate.TryDefer(component, eventArgs, Time.realtimeSinceStartup))
+                return;
+
+            Send(component, eventArgs);
+        }
+
+        /// <summary>
+        ///     Сериализует событие и отправляет его по сети. Сериализация здесь, а не
+        ///     в момент события: у придержанного события ссылки на компоненты должны
+        ///     записаться уже выровненными id.
+        /// </summary>
+        private void Send(IUxrStateSync component, UxrSyncEventArgs eventArgs)
+        {
             byte[] serializedEvent = eventArgs.SerializeEventBinary(component);
             if (serializedEvent == null)
                 return;

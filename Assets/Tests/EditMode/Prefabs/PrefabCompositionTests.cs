@@ -249,6 +249,41 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         /// <summary>
+        /// <c>UxrDummyControllerInput</c> обязан лежать на корне аватара в самом префабе,
+        /// с сериализованным <c>UniqueId</c> (NET-24).
+        ///
+        /// <para>
+        /// Когда у аватара нет активного контроллера (редактор без шлема, удалённый аватар),
+        /// <c>UxrAvatar.ControllerInput</c> добавляет dummy через <c>GetOrAddComponent</c>.
+        /// Созданный в рантайме компонент получает id, свой на каждой машине, а
+        /// <c>SetAvatarRenderMode</c> передаёт по сети список включённых контроллеров
+        /// ссылками по id — принимающая сторона такой ссылки не находит и отвергает
+        /// событие целиком (<c>UxrComponentNotFoundException</c>). Dummy из префаба
+        /// получает общий id через <c>CombineUniqueId(netId)</c>, как и остальные компоненты.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void У_каждого_аватара_на_корне_лежит_dummy_ввод_с_id()
+        {
+            List<string> problems = new List<string>();
+
+            foreach (GameObject avatar in AvatarPrefabs())
+            {
+                UltimateXR.Devices.Integrations.UxrDummyControllerInput dummy =
+                    avatar.GetComponent<UltimateXR.Devices.Integrations.UxrDummyControllerInput>();
+
+                if (dummy == null)
+                    problems.Add($"{avatar.name}: нет UxrDummyControllerInput на корне");
+                else if (dummy.UniqueId == Guid.Empty)
+                    problems.Add($"{avatar.name}: у UxrDummyControllerInput пустой UniqueId");
+            }
+
+            Assert.IsEmpty(problems,
+                "SDK создаст dummy-ввод в рантайме с несовпадающим id, и SetAvatarRenderMode " +
+                "будет отвергаться другой стороной (NET-24):\n  " + string.Join("\n  ", problems));
+        }
+
+        /// <summary>
         /// <c>NetworkBehaviour</c> без <c>NetworkIdentity</c> на себе или у родителя Mirror
         /// не заспавнит и не синхронизирует; в редакторе это красная ошибка из
         /// <c>OnValidate</c> при каждой загрузке префаба. Так было с заброшенной заготовкой

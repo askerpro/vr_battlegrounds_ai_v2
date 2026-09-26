@@ -292,7 +292,12 @@ namespace UltimateXR.Core.Unique
                 return GetNewUniqueId();
             }
 
+            // VR Battlegrounds: виртуальный игрок Multiplayer Play Mode не может сохранить ассеты,
+            // поэтому перевыданный здесь id живёт только в его памяти и расходится с хостом —
+            // канал состояния отвергает события (UxrComponentNotFoundException). Id выдаёт и
+            // сохраняет только основной редактор. См. Docs/UltimateXR/sdk-patches.md.
             if (EditorPrefs.GetBool(UxrConstants.Editor.AutomaticIdGenerationPrefs, true) &&
+                Unity.Multiplayer.PlayMode.CurrentPlayer.IsMainEditor &&
                 !EditorApplication.isPlayingOrWillChangePlaymode &&
                 !EditorApplication.isCompiling &&
                 !BuildPipeline.isBuildingPlayer &&

@@ -8,6 +8,7 @@
         "Mirror.Transports",
         "kcp2k",
         "UltimateXR",
+        "Unity.TextMeshPro",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

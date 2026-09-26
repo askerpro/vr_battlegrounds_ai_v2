@@ -20,6 +20,7 @@
 | `session-architecture.md` | Сессия, роли устройств (VR/PC/Server), Host/Client |
 | `game-manager.md` | GameManager, система режимов: создание assets, настройка, поток действий |
 | `ui-menu-architecture.md` | Архитектура UI Меню (MVC), экраны, префабы, контроллеры |
+| `ui-fonts.md` | Шрифты UI: как TMP рисует текст, шрифт проекта, как применять, как добавить символ |
 | `magazine-pocket.md` | Механика "умного магазина" (Smart Magazine Pocket) |
 | `level-design.md` | Проектирование карт и арен |
 | `Arsenal/` | Стена арсенала: [дизайн](Arsenal/ArsenalWall_Design_RU.md), [код](Arsenal/Arsenal_Code_Architecture_RU.md) |
@@ -44,6 +45,7 @@
 - **Сессия, роли устройств, Host/Client** → [`session-architecture.md`](session-architecture.md)
 - **GameManager, режимы, assets, настройка** → [`game-manager.md`](game-manager.md)
 - **Архитектура UI Меню (MVC)** → [`ui-menu-architecture.md`](ui-menu-architecture.md)
+- **Шрифты, кириллица, «квадраты вместо букв»** → [`ui-fonts.md`](ui-fonts.md)
 - **Умный магазин (Magazine Pocket)** → [`magazine-pocket.md`](magazine-pocket.md)
 - **Стена арсенала** → [`Arsenal/Arsenal_Code_Architecture_RU.md`](Arsenal/Arsenal_Code_Architecture_RU.md)
 - **Проектирование карт** → [`level-design.md`](level-design.md)
@@ -334,6 +336,14 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 
 ---
 
+### Editor-утилиты UI — `Assets/Editor/VR_Battlegrounds/UI/`
+
+| Класс | Назначение |
+|---|---|
+| `ProjectFontTool` | Шрифт проекта (Roboto Condensed). `Tools/VR Battlegrounds/UI/Шрифт — пересобрать атласы`: статические SDF-ассеты из `.ttf` с набором `CharacterSet`, Bold в таблице начертаний, шрифт TMP по умолчанию и глобальный fallback. `…/Шрифт — применить к UI-префабам`: переназначает шрифт всем TMP-текстам в `Assets/Prefabs/UI`. Подробно — [`ui-fonts.md`](ui-fonts.md). |
+
+---
+
 ### Тесты — `Assets/Tests/EditMode/`
 
 Сборка `VrBattlegrounds.Tests.EditMode` (`includePlatforms: ["Editor"]`, поэтому в билд
@@ -366,6 +376,7 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `Player/PhysicalSpaceAnchorFrameTests` | Система координат карты по паре якорей (T-30, CAL-01): круговой перевод точки, начало в якоре `id=0`, второй якорь на оси `+Z`, **одна и та же точка арены даёт одни и те же координаты на повёрнутой на 90° карте** (иначе одна калибровка на сессию невозможна), перенос позиции и поворота между картами, отказ на слипшихся якорях, независимость направления от высоты якорей. Восемь тестов. |
 | `Player/CalibratedSpawnRegistryTests` | Две ветки выбора точки спавна (T-30, CAL-01): откалиброванный возвращается на своё место, а не в зону; место переносится на повёрнутую карту вместе с ареной; неоткалиброванный идёт в зону **даже при готовом снимке** (признак — единственное, что разводит ветки); без снимка и на карте без якорей откалиброванный тоже идёт в зону; без переданной сессии ветка не спрашивается вовсе. Шесть тестов. |
 | `Player/SavedAvatarPlaceTests` | Место, которое игрок приносит с собой при подключении (CAL-02): `PhysicalSpaceSyncManager` копит позу **в координатах якорей**, а не в мировых; без пары якорей не копит вовсе (непереводимая поза хуже её отсутствия); `GamePlayerConnectMessage` несёт именно её и честно сообщает признак калибровки. Три теста. |
+| `UI/UiFontCoverageTests` | Покрытие глифами (UI-01): каждый символ TMP-текстов в `Assets/Prefabs/UI` есть в запечённом атласе шрифта или его fallback; шрифт TMP по умолчанию содержит кириллицу. См. [`ui-fonts.md`](ui-fonts.md). |
 | `Maps/SpawnZoneOwnershipTests` | Кому зона спавна засчитывает «в зоне» (RDY-04): чужая зона не засчитывается за свою, выход из **чужой** зоны не снимает нахождение в своей (так выглядит перенос между базами — «вошёл в новую» приходит раньше «вышел из старой»), перенос в базу противника снимает готовность, возврат её не возвращает, зона сообщает сессии **свою** команду, а не команду вошедшего, своя зона по-прежнему засчитывается, зона без команды молчит. Семь тестов. |
 
 ---

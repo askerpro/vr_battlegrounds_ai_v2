@@ -79,6 +79,7 @@ Grep  pattern="ClassName"  path="Assets/Editor"     # редакторные у�
 | Матч, режимы, раунды | `Docs/gameplay.md`, `Docs/game-manager.md` |
 | Сессия, роли, устройства | `Docs/session-architecture.md` |
 | UI-меню | `Docs/ui-menu-architecture.md` |
+| Шрифты, текст UI, кириллица | `Docs/ui-fonts.md` |
 | Стена арсенала | `Docs/Arsenal/Arsenal_Code_Architecture_RU.md` |
 | Git / Plastic | `Docs/version-control.md` |
 | Unity MCP сломан | `Docs/unity-mcp.md`, `.agents/rules/unity_mcp.md` |

@@ -15,6 +15,8 @@ GameObject:
   - component: {fileID: 3244963856679855688}
   - component: {fileID: 7841617247810068713}
   - component: {fileID: 6263930388854702037}
+  - component: {fileID: 99382223358332526}
+  - component: {fileID: 8936303822846736428}
   m_Layer: 0
   m_Name: Gun_real
   m_TagString: Untagged
@@ -407,6 +409,31 @@ MonoBehaviour:
     _fallbackClipType: 10
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+--- !u!114 &99382223358332526
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1013363612589426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6477adac93d863b488be3a6499fc7fdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.AnchoredItemCollisionIgnore
+--- !u!114 &8936303822846736428
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1013363612589426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1589ad995597f1c4381d6202fcb7a831, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.OutOfWorldGuard
+  _killY: -50
 --- !u!1 &6878519130209480
 GameObject:
   m_ObjectHideFlags: 0
@@ -859,6 +886,7 @@ GameObject:
   - component: {fileID: 6446975805473246912}
   - component: {fileID: 5142184297666807264}
   - component: {fileID: 6045569895515134615}
+  - component: {fileID: 2775638222533626276}
   m_Layer: 0
   m_Name: Base
   m_TagString: Untagged
@@ -938,6 +966,28 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!64 &2775638222533626276
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3180694189066986431}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 4300008, guid: c63d52dd4295267458ed0097b06d8f1b, type: 3}
 --- !u!1 &3316798602238888805
 GameObject:
   m_ObjectHideFlags: 0

@@ -15,6 +15,8 @@ GameObject:
   - component: {fileID: 3244963856679855688}
   - component: {fileID: 7841617247810068713}
   - component: {fileID: 6263930388854702037}
+  - component: {fileID: 8934660616883435286}
+  - component: {fileID: 6968901189315598527}
   m_Layer: 0
   m_Name: M16_Rifle_prefab
   m_TagString: Untagged
@@ -409,6 +411,31 @@ MonoBehaviour:
     _fallbackClipType: 10
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+--- !u!114 &8934660616883435286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1013363612589426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6477adac93d863b488be3a6499fc7fdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.AnchoredItemCollisionIgnore
+--- !u!114 &6968901189315598527
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1013363612589426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1589ad995597f1c4381d6202fcb7a831, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.OutOfWorldGuard
+  _killY: -50
 --- !u!1 &120659856615955718
 GameObject:
   m_ObjectHideFlags: 0

@@ -331,6 +331,7 @@ GameObject:
   - component: {fileID: 6811987295210847262}
   - component: {fileID: 5803974859286300682}
   - component: {fileID: 2282153737295665227}
+  - component: {fileID: 8087691223207347577}
   m_Layer: 0
   m_Name: M16_Magazine
   m_TagString: Untagged
@@ -604,6 +605,19 @@ MonoBehaviour:
   serverOnly: 0
   visibility: 0
   hasSpawned: 0
+--- !u!114 &8087691223207347577
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6308617285841064264}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1589ad995597f1c4381d6202fcb7a831, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.OutOfWorldGuard
+  _killY: -50
 --- !u!1 &6325820398798162486
 GameObject:
   m_ObjectHideFlags: 0

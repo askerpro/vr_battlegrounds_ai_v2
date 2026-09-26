@@ -12,6 +12,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Grenade
       objectReference: {fileID: 0}
+    - target: {fileID: 6975684541867978568, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      propertyPath: m_CollisionDetection
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7671830345609467079, guid: c563684d5177f9347aa42336107d430f, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -55,5 +59,26 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2987762542248386242, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3198952254307382228}
   m_SourcePrefab: {fileID: 100100000, guid: c563684d5177f9347aa42336107d430f, type: 3}
+--- !u!1 &2414837135280946992 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2987762542248386242, guid: c563684d5177f9347aa42336107d430f, type: 3}
+  m_PrefabInstance: {fileID: 645584468361961970}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3198952254307382228
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2414837135280946992}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1589ad995597f1c4381d6202fcb7a831, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.OutOfWorldGuard
+  _killY: -50

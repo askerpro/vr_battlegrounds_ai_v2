@@ -16,6 +16,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 10947147-90f3-4c89-94f4-b8f59b812f5e
       objectReference: {fileID: 0}
+    - target: {fileID: 244220739104333787, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
+      propertyPath: m_CollisionDetection
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 364547791064754977, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: __prefabGuid
       value: 4a28fd7096bf0994eac0a22cbb3a922c
@@ -292,6 +296,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 2ce1c0b3-6b93-46f2-8834-8f655829aed9
       objectReference: {fileID: 0}
+    - target: {fileID: 8270386768742917192, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
+      propertyPath: m_CollisionDetection
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8297808043744211845, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: __prefabGuid
       value: 4a28fd7096bf0994eac0a22cbb3a922c
@@ -347,6 +355,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2221394708238033473, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2376449103222345378}
+    - targetCorrespondingSourceObject: {fileID: 2221394708238033473, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5631589071636786372}
+    - targetCorrespondingSourceObject: {fileID: 2221394708238033473, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2217784759252639614}
   m_SourcePrefab: {fileID: 100100000, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
 --- !u!1 &7352647028226897614 stripped
 GameObject:
@@ -370,3 +384,28 @@ MonoBehaviour:
   serverOnly: 0
   visibility: 0
   hasSpawned: 0
+--- !u!114 &5631589071636786372
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7352647028226897614}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6477adac93d863b488be3a6499fc7fdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.AnchoredItemCollisionIgnore
+--- !u!114 &2217784759252639614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7352647028226897614}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1589ad995597f1c4381d6202fcb7a831, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.OutOfWorldGuard
+  _killY: -50

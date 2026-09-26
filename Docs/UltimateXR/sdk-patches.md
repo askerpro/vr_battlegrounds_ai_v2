@@ -374,6 +374,46 @@ public void SetNetworkAnchor(UxrGrabbableObjectAnchor anchor)
 
 ---
 
+## Патч 7: NotifyOnValidate не выдаёт id в виртуальном игроке MPPM
+
+**Файл:** `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/Unique/UxrUniqueIdImplementer_1.cs`,
+метод `NotifyOnValidate`
+**Дата:** 2026-09-27
+
+### Проблема
+
+`NotifyOnValidate` при загрузке компонента в редакторе сверяет сохранённые `__isInPrefab` /
+`__prefabGuid` с фактическими и при расхождении выдаёт **новый случайный** `_uxrUniqueId`.
+В проекте расходятся 1389 из 1943 UXR-компонентов в префабах: аватары — варианты `PlayerBase`
+и наследуют его `__prefabGuid` ([known-issues #11](known-issues.md)).
+
+Виртуальный игрок Multiplayer Play Mode (клон) грузит ассеты сам и перевыдаёт им id у себя
+в памяти, а сохранить не может. У хоста id из файла, у клиента — случайные, и канал состояния
+отвергает события в обе стороны: `IsGrabbable` прокси карманов, `SetAvatarRenderMode`,
+пропуски в начальном снимке (`LoadStateChanges … Cannot deserialize`). Замер: id хоста
+в точности `Combine(id с диска, netId)`, id клиента не выводятся ни из одного префаба;
+с отключённым `NotifyOnValidate` ошибки пропадают, с включённым — возвращаются.
+
+### Применённое изменение
+
+В условие входа добавлено `Unity.Multiplayer.PlayMode.CurrentPlayer.IsMainEditor`
+(модуль `UnityEngine.MultiplayerModule`, дополнительных ссылок asmdef не нужно).
+Основной редактор выдаёт и сохраняет id как раньше.
+
+### Как повторить при обновлении SDK
+
+1. В `NotifyOnValidate` добавить `CurrentPlayer.IsMainEditor` к условию с `AutomaticIdGenerationPrefs`.
+2. Проверить хост + клиент MPPM: на хосте нет `UxrComponentNotFoundException`, на клиенте нет
+   `LoadStateChanges(): Cannot deserialize a component`.
+
+### Чего патч не чинит
+
+Несогласованные флаги в самих префабах остаются: основной редактор при сохранении такого
+префаба по-прежнему выдаёт компонентам новые id (known-issues #11). Это безопасно для сети —
+сохранённый id один на всех, — но даёт шумные диффы.
+
+---
+
 ## Зависимости от приватных членов SDK (рефлексия)
 
 **Дата:** 2026-08-19 (задача T-21, находка VR-03)

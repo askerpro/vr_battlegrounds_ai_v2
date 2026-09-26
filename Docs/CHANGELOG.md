@@ -2,6 +2,37 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - MPPM-01: виртуальный игрок MPPM перевыдавал UniqueId
+
+### Исправлено
+
+- **`UxrComponentNotFoundException` в связке хост + клиент Multiplayer Play Mode.**
+  `NotifyOnValidate` в клоне выдавал случайные id компонентам с несогласованными
+  `__isInPrefab`/`__prefabGuid` (1389 из 1943 в префабах), сохранить их клон не может.
+  Проверено контрольным прогоном: с отключённым `NotifyOnValidate` ошибки пропадают,
+  с включённым — возвращаются. Патч SDK 7: id выдаёт только основной редактор
+  (`CurrentPlayer.IsMainEditor`). Прогон хост + клиент MPPM после правки вместе с NET-24:
+  0 сетевых ошибок на обеих сторонах.
+
+## [2026-09-27] - NET-24: `SetAvatarRenderMode` отвергался из-за рантаймового dummy-ввода
+
+### Исправлено
+
+- **`UxrComponentNotFoundException` на `SetAvatarRenderMode()` (NET-24).** Замер в
+  Play Mode (хост + клиент MPPM): у обоих аватаров включён только `UxrDummyControllerInput`.
+  В пяти аватарных префабах из шести его не было, и `UxrAvatar.ControllerInput` добавлял
+  его через `GetOrAddComponent` в рантайме — с id, своим на каждой машине. Событие
+  передаёт список включённых контроллеров ссылками по id, другая сторона такой ссылки
+  не находит. У `Heavy_Soldier_Base_Avatar` dummy лежал в префабе, и его id совпадал.
+- Dummy добавлен в корень `PlayerControllersCyborgAvatar`, `Spy_Base_Avatar`,
+  `Military_Cap_Base_Avatar`, `Military_Soldier_Base_Avatar`, `PlayerBase`. Id других
+  компонентов при сохранении не поменялись; остальной дифф — новые поля рендереров Unity 6.
+
+### Добавлено
+
+- Тест `PrefabCompositionTests.У_каждого_аватара_на_корне_лежит_dummy_ввод_с_id`:
+  до правки был красным ровно на этих пяти префабах.
+
 ## [2026-09-27] - NET-25: красная ошибка `ArsenalWallController requires a NetworkIdentity`
 
 ### Удалено

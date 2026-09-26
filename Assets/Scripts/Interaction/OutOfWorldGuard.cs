@@ -21,6 +21,12 @@ namespace VrBattlegrounds.Interaction
     /// клиент, — позиция приходит ему теми же <c>UpdateRigidbody</c>. Чистый клиент ничего не
     /// делает и ждёт сервера. Вне сессии предмет удаляется локально.
     /// </para>
+    ///
+    /// <para>
+    /// Исключение — предмет без собственного <c>netId</c>: встроенный магазин
+    /// <c>Machinegun</c>/<c>Shotgun</c>/<c>M16</c> не спавнится отдельно, и сетевое удаление до
+    /// клиентов не дойдёт. Такой предмет каждая машина удаляет у себя сама.
+    /// </para>
     /// </summary>
     public sealed class OutOfWorldGuard : MonoBehaviour
     {
@@ -55,17 +61,16 @@ namespace VrBattlegrounds.Interaction
 
             if (_grabbable == null) Awake();
 
-            // Предмет в руке не трогаем: удаление ломает учёт UltimateXR у держащего игрока.
-            // Выпал вместе с игроком — это уже другая беда, не этого компонента.
-            if (_grabbable != null && UxrGrabManager.HasInstance && _grabbable.IsBeingGrabbed) return false;
+            bool grabbed     = _grabbable != null && UxrGrabManager.HasInstance && _grabbable.IsBeingGrabbed;
+            bool hasOwnNetId = _identity != null && _identity.netId != 0;
 
-            // Чистый клиент ждёт решения сервера.
-            if (NetworkClient.active && !NetworkServer.active) return false;
+            Removal removal = Decide(grabbed, NetworkServer.active, NetworkClient.active, hasOwnNetId);
+            if (removal == Removal.Keep || removal == Removal.WaitForServer) return false;
 
             _removed = true;
-            GameLog.WeaponSystem.Warning($"[OutOfWorldGuard] '{name}' выпал из мира (y={transform.position.y:F0} < {_killY:F0}) — удаляем.", this);
+            GameLog.WeaponSystem.Warning($"[OutOfWorldGuard] '{name}' выпал из мира (y={transform.position.y:F0} < {_killY:F0}) — {removal}.", this);
 
-            if (NetworkServer.active && _identity != null && _identity.netId != 0)
+            if (removal == Removal.ServerDestroy)
                 NetworkServer.Destroy(gameObject);
             else if (Application.isPlaying)
                 Destroy(gameObject);
@@ -73,6 +78,40 @@ namespace VrBattlegrounds.Interaction
                 DestroyImmediate(gameObject);
 
             return true;
+        }
+
+        /// <summary>Что делать с предметом, уже оказавшимся ниже порога.</summary>
+        public enum Removal
+        {
+            /// <summary>Не трогать.</summary>
+            Keep,
+            /// <summary>Ничего не делать: удалит сервер, удаление приедет сообщением Mirror.</summary>
+            WaitForServer,
+            /// <summary><see cref="NetworkServer.Destroy" /> — удаление расходится на клиенты.</summary>
+            ServerDestroy,
+            /// <summary>Удалить только у себя.</summary>
+            LocalDestroy
+        }
+
+        /// <summary>
+        /// Выбор способа удаления. Чистая функция — чтобы сетевые ветки проверялись
+        /// тестом без сессии Mirror.
+        /// </summary>
+        public static Removal Decide(bool grabbed, bool serverActive, bool clientActive, bool hasOwnNetId)
+        {
+            // Предмет в руке не трогаем: удаление ломает учёт UltimateXR у держащего игрока.
+            // Выпал вместе с игроком — это уже другая беда, не этого компонента.
+            if (grabbed) return Removal.Keep;
+
+            // Без своего netId (встроенный в префаб оружия магазин, извлечённый рукой)
+            // NetworkServer.Destroy до клиентов не дойдёт — каждая машина удаляет сама.
+            // Копии не разойдутся: позиция синхронизирована, падение видят все.
+            if (!hasOwnNetId) return Removal.LocalDestroy;
+
+            // Чистый клиент ждёт решения сервера.
+            if (clientActive && !serverActive) return Removal.WaitForServer;
+
+            return serverActive ? Removal.ServerDestroy : Removal.LocalDestroy;
         }
     }
 }

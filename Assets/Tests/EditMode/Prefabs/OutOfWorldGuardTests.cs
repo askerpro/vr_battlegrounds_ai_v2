@@ -63,6 +63,24 @@ namespace VrBattlegrounds.Tests.Prefabs
             }
         }
 
+        /// <summary>
+        /// Кто удаляет выпавший предмет. Свой <c>netId</c> есть только у заспавненного
+        /// отдельно: встроенный магазин <c>Machinegun</c>/<c>Shotgun</c>/<c>M16</c> его не имеет,
+        /// и <c>NetworkServer.Destroy</c> до клиентов не дойдёт — такой предмет каждая машина
+        /// удаляет сама (позиция синхронизирована, падение видят все).
+        /// </summary>
+        [TestCase(true,  true,  true,  true,  OutOfWorldGuard.Removal.Keep,          TestName = "В руке — не трогать")]
+        [TestCase(false, true,  true,  true,  OutOfWorldGuard.Removal.ServerDestroy, TestName = "Хост, свой netId — удаляет сервер")]
+        [TestCase(false, true,  false, true,  OutOfWorldGuard.Removal.ServerDestroy, TestName = "Выделенный сервер, свой netId — удаляет сервер")]
+        [TestCase(false, false, true,  true,  OutOfWorldGuard.Removal.WaitForServer, TestName = "Клиент, свой netId — ждёт сервер")]
+        [TestCase(false, false, true,  false, OutOfWorldGuard.Removal.LocalDestroy,  TestName = "Клиент, без netId — удаляет сам")]
+        [TestCase(false, true,  true,  false, OutOfWorldGuard.Removal.LocalDestroy,  TestName = "Хост, без netId — удаляет сам")]
+        [TestCase(false, false, false, false, OutOfWorldGuard.Removal.LocalDestroy,  TestName = "Вне сессии — удаляет сам")]
+        public void Decide_ChoosesRemovalByNetworkRole(bool grabbed, bool server, bool client, bool hasOwnNetId, OutOfWorldGuard.Removal expected)
+        {
+            Assert.AreEqual(expected, OutOfWorldGuard.Decide(grabbed, server, client, hasOwnNetId));
+        }
+
         private static IEnumerable<GameObject> DynamicPrefabs()
         {
             int found = 0;

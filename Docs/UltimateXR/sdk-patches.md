@@ -298,6 +298,9 @@ public bool UseHasReloadedForSemiAndFullAuto => _useHasReloadedForSemiAndFullAut
 
 2. В `UxrFirearmWeapon`:
     - Добавить `SetTriggerHasReloadedSynced(int triggerIndex, bool hasReloaded)` и использовать его из `Reload()`.
+      `EndSyncMethod` обязан получить **оба** аргумента: `new object[] { triggerIndex, hasReloaded }`.
+      До 2026-09-27 передавался только `triggerIndex`, и принимающая сторона падала с
+      `TargetParameterCountException` на каждом досыле/снятии магазина.
     - В `UxrManager_AvatarsUpdated()` для `SemiAutomatic`/`FullyAutomatic` использовать `HasReloaded` условно,
        по `trigger.UseHasReloadedForSemiAndFullAuto`.
     - В `MagTarget_Removed()` и `MagTarget_Placed()` сбрасывать `HasReloaded` для соответствующего trigger

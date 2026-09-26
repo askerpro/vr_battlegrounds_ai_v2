@@ -27,6 +27,28 @@
 - Тесты `WeaponDropPhysicsTests` (три) и `OutOfWorldGuardTests` (два) до правок были красными.
   Правило «у оружия обязателен коллайдер» — в `CLAUDE.md`.
 
+## [2026-09-27] - NET-26 и досыл M16: ошибки канала состояния со шлемом на клиенте
+
+### Исправлено
+
+- **NET-26: `OnControllerInputChanged` отвергался хостом.** Клиент прислал событие с id
+  `aee45772-…` — исходным id `UxrMetaTouchQuest3Input` из префаба Cyborg. При подключённом
+  контроллере `UxrAvatar` порождает событие при первом обращении к `ControllerInput`,
+  а это может случиться до `UxrMirrorAvatar.OnStartClient`, где id выравниваются.
+  `NetworkStateRelay` теперь придерживает события невыровненного сетевого аватара в новом
+  `AvatarStateEventGate` и сериализует их по сигналу `UxrMirrorAvatar.AvatarSpawned`,
+  который поднимается сразу после `CombineUniqueId`. Отложить, а не отбросить: SDK это
+  событие не повторяет, и хост навсегда остался бы без контроллера клиента. Без шлема событие
+  не порождается вовсе (SDK возвращает dummy раньше), поэтому раньше не проявлялось.
+- **`TargetParameterCountException` на `SetTriggerHasReloadedSynced`.** Патч SDK 5 передавал
+  в `EndSyncMethod` один аргумент из двух — на принимающей стороне падал каждый досыл
+  и снятие магазина.
+
+### Добавлено
+
+- `AvatarStateEventGateTests`: выравнивание настоящим путём `InitializeNetworkAvatar`;
+  без подписки на `AvatarSpawned` красная проверка «отдать после выравнивания».
+
 ## [2026-09-27] - MPPM-01: виртуальный игрок MPPM перевыдавал UniqueId
 
 ### Исправлено

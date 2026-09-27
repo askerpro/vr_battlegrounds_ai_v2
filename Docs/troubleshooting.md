@@ -116,6 +116,13 @@ int solid = 0; foreach (var c in go.GetComponentsInChildren<Collider>(true)) if 
 обновлении SDK. Иначе смотреть `Allow Multi Grab` у предмета и `Max Distance Grab` у
 дополнительной точки. Разбор — [known-issues, Issue 13](UltimateXR/known-issues.md).
 
+### «Кладу вторую руку на поддержку — пистолет поворачивается»
+
+**Исправлено 2026-09-27 (`Gun_real`).** UltimateXR при хвате двумя руками доворачивает предмет
+ко второй руке, настройки против этого нет. На оружии, где вторая рука только поддерживает,
+нужен `MainGripAimLock` — он держит позу по основной руке. Новый пистолет с дополнительной
+точкой без этого компонента будет крутиться так же. Разбор — [known-issues, Issue 14](UltimateXR/known-issues.md).
+
 ### «Оружие можно взять из закрытого арсенала»
 
 **NET-13, исправлена.** `Lock()`/`Unlock()` искали предмет в `CurrentPlacedObject`,

@@ -2,6 +2,50 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - Ошибки сети при смене аватара на ходу (MPPM-02, патч SDK 9)
+
+### Исправлено
+
+- **`UxrComponentNotFoundException` на хосте и клиенте MPPM после патча 7 (MPPM-02).**
+  `SetAvatarRenderMode`, `OnControllerInputChanged`, `UpdateTeleportState`, `IsGrabbable`
+  прокси карманов не находили компонент. Замер: у 14 префабов `Assets/Prefabs` (все аватары,
+  граната, магазины, якоря арсенала) id в памяти основного редактора не совпадали с файлом,
+  `ImportAsset(MagGun)` менял id без записи на диск. Причина — неверные `__isInPrefab` /
+  `__prefabGuid` на диске ([known-issues #11](UltimateXR/known-issues.md), уточнено).
+  Флаги приведены к фактическим у всех префабов; после реимпорта 59 префабов все 1753 id
+  совпадают с диском. Дифф префабов — только `_uxrUniqueId`/флаги, у двух — новые поля
+  рендереров Unity 6.
+- **`ArgumentException: same key … null` в `UxrHandTracking.BuildCalibrationCache`** при спавне
+  `MEF_Base_Avatar`: вариант обнулил все 38 ссылок калибровки на кости `PlayerBase`.
+  Калибровка очищена — своей у рига MEF нет.
+- **`MissingReferenceException` в `LegsAnimator` после смены скина.** `LegsAnimatorUxrBridge`
+  привязывал корень ног любого аватара к `UxrAvatar.LocalAvatar`; когда локальный аватар
+  уничтожался, ноги чужих Heavy смотрели в уничтоженные трансформы. Теперь — свой аватар.
+- **`DestroyGameObjectInternal` не находит аватар** при смене скина — [патч 9](UltimateXR/sdk-patches.md):
+  деспавн аватара больше не рассылает уничтожение, которое Mirror делает сам.
+- **`UpdateTeleportState(False, False, False)` при смене скина** — от своего аватара клиента и
+  от копии чужого. Mirror снимает объект сразу, а `Destroy` отложен до конца кадра, и
+  `UxrTeleportLocomotion.OnDisable` слал событие для объекта, которого у другой стороны уже
+  нет. `DespawnedObjectEventFilter` в `NetworkStateRelay` отсекает события объектов с `netId`,
+  которых нет в `spawned`; до спавна (`netId` = 0) события по-прежнему придерживает гейт NET-26.
+  Тесты — `DespawnedObjectEventFilterTests`.
+- Патч 7: в процессе-импортёре `CurrentPlayer.IsMainEditor` бросал `NullReferenceException`
+  на каждом `OnValidate` — импортёр отсекается раньше.
+
+### Добавлено
+
+- `UxrUniqueIdPersister` — постпроцессор импорта: чинит флаги сразу после сохранения префаба.
+  Нужен потому, что Apply to Prefab со сцены заносит в ассет флаги экземпляра: `Gun_real`
+  сломался так повторно через полчаса после ручного исправления. Проверено: флаги в файле
+  `Gun_real` сброшены в 0 и импортированы — постпроцессор вернул 1, id не изменились.
+- `UxrUniqueIdOnDiskTests` — сверяет флаги и id с диском; до правки красный на 7 префабах,
+  после Apply `Gun_real` — на нём (10 id не с диска).
+- `AvatarLoadoutTests.Калибровка_hand_tracking_без_пустых_костей` — до правки красный на MEF.
+- **Патч SDK 10**: `NotifyOnValidate` у префаба-ассета с неверными флагами исправляет флаги,
+  id не меняет — устраняет корень MPPM-02. `UxrUniqueIdStabilityTests`: без патча красный
+  на ассете; контроль — экземпляр в сцене по-прежнему получает свой id.
+
+
 ## [2026-09-27] - `Gun_real` не перезаряжался затвором
 
 ### Исправлено

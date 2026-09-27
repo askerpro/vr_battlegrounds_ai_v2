@@ -1,6 +1,7 @@
 using UnityEngine;
 using UltimateXR.Avatar;
 using FIMSpace.FProceduralAnimation;
+using VrBattlegrounds.Core;
 
 namespace VRBattlegrounds.Integration
 {
@@ -9,6 +10,7 @@ namespace VRBattlegrounds.Integration
     public class LegsAnimatorUxrBridge : MonoBehaviour
     {
         private LegsAnimator _legsAnimator;
+        private UxrAvatar _avatar;
         private Transform _dummyForward;
         private Transform _legsAnimatorRoot;
         private Vector3 _lastRootAnchorPosition;
@@ -42,20 +44,25 @@ namespace VRBattlegrounds.Integration
 
         private void InitializeBridge()
         {
-            if (UxrAvatar.LocalAvatar == null)
+            // Свой аватар, а не UxrAvatar.LocalAvatar: мост стоит на каждом экземпляре, в том
+            // числе на чужих игроках. С LocalAvatar корень ног всех аватаров вешался под
+            // локального, и после смены скина (локальный уничтожен) их LegsAnimator сыпал
+            // MissingReferenceException на уничтоженных трансформах.
+            _avatar = GetComponentInParent<UxrAvatar>();
+            if (_avatar == null)
             {
-                Debug.LogWarning("[LegsAnimatorUxrBridge] UxrAvatar.LocalAvatar not found.");
+                GameLog.Player.Warning("[LegsAnimatorUxrBridge] UxrAvatar в родителях не найден.", this);
                 return;
             }
 
             // Find the dynamically created anchor by UltimateXR
-            _dummyForward = UxrAvatar.LocalAvatar.transform.Find("Dummy Forward");
+            _dummyForward = _avatar.transform.Find("Dummy Forward");
 
             if (_dummyForward != null)
             {
                 // Create a custom root for LegsAnimator that follows Dummy Forward in XZ, but stays on the ground Y
                 GameObject rootObj = new GameObject("LegsAnimator_RootAnchor");
-                rootObj.transform.SetParent(UxrAvatar.LocalAvatar.transform);
+                rootObj.transform.SetParent(_avatar.transform);
                 _legsAnimatorRoot = rootObj.transform;
 
                 UpdateRootAnchor();
@@ -68,11 +75,11 @@ namespace VRBattlegrounds.Integration
                 // Enable the component so that its Start() and Initialize() run naturally with the correct Base Transform.
                 _legsAnimator.enabled = true;
 
-                Debug.Log("[LegsAnimatorUxrBridge] Successfully bound custom root to Legs Animator.");
+                GameLog.Player.Verbose($"[LegsAnimatorUxrBridge] Корень Legs Animator привязан к '{_avatar.name}'.", this);
             }
             else
             {
-                Debug.LogError("[LegsAnimatorUxrBridge] Dummy Forward not found on UxrAvatar!");
+                GameLog.Player.Error($"[LegsAnimatorUxrBridge] У аватара '{_avatar.name}' нет Dummy Forward.", this);
             }
         }
 
@@ -121,20 +128,22 @@ namespace VRBattlegrounds.Integration
 
         private void UpdateRootAnchor()
         {
-            if (_dummyForward != null && _legsAnimatorRoot != null && UxrAvatar.LocalAvatar != null)
+            if (_dummyForward != null && _legsAnimatorRoot != null && _avatar != null)
             {
                 // Maintain Dummy Forward's X and Z, but keep Y at the Avatar's root Y (floor level)
-                _legsAnimatorRoot.position = new Vector3(_dummyForward.position.x, UxrAvatar.LocalAvatar.transform.position.y, _dummyForward.position.z);
+                _legsAnimatorRoot.position = new Vector3(_dummyForward.position.x, _avatar.transform.position.y, _dummyForward.position.z);
                 _legsAnimatorRoot.rotation = _dummyForward.rotation;
             }
         }
 
         private void ApplyDynamicFloorOverrides()
         {
-            if (_legsAnimator.Legs == null) return;
-            
+            if (_legsAnimator.Legs == null || _legsAnimatorRoot == null) return;
+
             foreach(var leg in _legsAnimator.Legs)
             {
+                if (leg.BoneEnd == null) continue;
+
                 // Пускаем луч вертикально вниз с безопасной высоты (на 1м выше корня персонажа),
                 // но именно в тех XZ-координатах, где находится нога персонажа.
                 Vector3 footPosXZ = new Vector3(leg.BoneEnd.position.x, _legsAnimatorRoot.position.y + 1.0f, leg.BoneEnd.position.z);

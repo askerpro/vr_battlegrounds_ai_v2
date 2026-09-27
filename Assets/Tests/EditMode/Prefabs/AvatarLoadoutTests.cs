@@ -5,6 +5,7 @@ using UltimateXR.Avatar;
 using UltimateXR.Avatar.Controllers;
 using UltimateXR.Avatar.Rig;
 using UltimateXR.Core;
+using UltimateXR.Devices;
 using UltimateXR.Devices.Integrations;
 using UltimateXR.Locomotion;
 using UltimateXR.Manipulation;
@@ -579,6 +580,40 @@ namespace VrBattlegrounds.Tests.Prefabs
             int count = avatar.GetComponents<UxrDummyControllerInput>().Length;
 
             Assert.LessOrEqual(count, 1, $"{avatar.name}: UxrDummyControllerInput на корне {count} шт.");
+        }
+
+        /// <summary>
+        /// Калибровка hand tracking ссылается только на живые кости. Пустая ссылка —
+        /// <c>UxrHandTracking.BuildCalibrationCache</c> в <c>Awake</c> кладёт в словарь второй
+        /// ключ <c>null</c> и падает с <c>ArgumentException</c> на каждом спавне аватара.
+        /// Так было у варианта, заменившего риг <c>PlayerBase</c>: ссылки на кости базы
+        /// обнулились. Нет своей калибровки — списки должны быть пустыми.
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void Калибровка_hand_tracking_без_пустых_костей(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            var problems = new List<string>();
+
+            foreach (UxrHandTracking tracking in avatar.GetComponentsInChildren<UxrHandTracking>(true))
+            {
+                var so = new SerializedObject(tracking);
+                foreach (string list in new[] { "_leftCalibrationData", "_rightCalibrationData" })
+                {
+                    SerializedProperty data = so.FindProperty(list);
+                    int empty = 0;
+                    for (int i = 0; i < data.arraySize; i++)
+                    {
+                        if (data.GetArrayElementAtIndex(i).FindPropertyRelative("_transform").objectReferenceValue == null)
+                            empty++;
+                    }
+
+                    if (empty > 0)
+                        problems.Add($"{tracking.GetType().Name}.{list}: {empty} из {data.arraySize} без кости");
+                }
+            }
+
+            Assert.IsEmpty(problems, $"{avatar.name}:\n{string.Join("\n", problems)}");
         }
 
         // ══════════════════════════════════════════════════════════════════

@@ -9469,6 +9469,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.GameModes.LobbyFreePlay
   _replenishDelay: 2
+  _magazineRefillInterval: 0.5
 --- !u!4 &974685820
 Transform:
   m_ObjectHideFlags: 0

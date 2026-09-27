@@ -3,12 +3,14 @@ using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.GameModes
 {
     /// <summary>
     /// Правило сцены лобби: свободная игра. Арсенал всегда открыт и пополняется,
-    /// оружие стреляет, жетона готовности нет.
+    /// оружие стреляет, жетона готовности нет, карман магазинов не пустеет — в нём
+    /// всегда есть магазин к каждому оружию игрока.
     ///
     /// <para>
     /// <b>Почему не наследник <see cref="GameMode"/>.</b> Режим — это матч: его спавнит
@@ -40,6 +42,12 @@ namespace VrBattlegrounds.GameModes
         [Tooltip("Через сколько секунд после того, как слот опустел, на стене появляется новый предмет.")]
         [Min(0f)]
         [SerializeField] private float _replenishDelay = 2f;
+
+        [Tooltip("Как часто сервер досыпает магазины в карманы игроков, секунды.")]
+        [Min(0.05f)]
+        [SerializeField] private float _magazineRefillInterval = 0.5f;
+
+        private float _magazineTimer;
 
         private ArsenalWallController[] _walls = new ArsenalWallController[0];
         private float[] _emptyTime = new float[0];
@@ -85,6 +93,29 @@ namespace VrBattlegrounds.GameModes
 
                 KeepOpen(wall);
                 KeepStocked(wall, i, deltaTime);
+            }
+
+            KeepMagazinesStocked(deltaTime);
+        }
+
+        /// <summary>
+        /// Бесконечный карман: сервер держит в кармане каждого игрока по магазину
+        /// к каждому его оружию (в руках и в кобурах). Достал — через интервал лежит
+        /// новый. Выдачу и её сетевую сторону ведёт <see cref="PlayerLoadoutManager"/>;
+        /// правило решает только «сколько» и «когда».
+        /// </summary>
+        private void KeepMagazinesStocked(float deltaTime)
+        {
+            if (!NetworkServer.active) return;
+
+            _magazineTimer += deltaTime;
+            if (_magazineTimer < _magazineRefillInterval) return;
+            _magazineTimer = 0f;
+
+            foreach (PlayerLoadoutManager loadout in PlayerLoadoutManager.ServerInstances)
+            {
+                if (loadout != null)
+                    loadout.ServerEnsureMagazines(1);
             }
         }
 

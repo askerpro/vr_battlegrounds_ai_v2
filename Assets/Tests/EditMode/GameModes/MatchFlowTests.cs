@@ -401,6 +401,49 @@ namespace VrBattlegrounds.Tests.Modes
             Assert.AreEqual(0, series.GetMapWins(_a), "Новая серия началась со старым счётом.");
         }
 
+        // ── Снаряжение не переживает переходов ───────────────────────────────
+
+        /// <summary>
+        /// Любая смена режима на карте и переход на другую карту забирают снаряжение у всех
+        /// (<see cref="EquipmentStrip.ServerStripAll"/>). Само снятие проверяет
+        /// <c>EquipmentStripTests</c> на настоящем аватаре; здесь — что его зовут.
+        /// </summary>
+        [Test]
+        public void Смена_режима_и_переход_на_карту_забирают_снаряжение()
+        {
+            SilenceMirrorNoise();
+            var reasons = new List<string>();
+            System.Action<string> count = reasons.Add;
+            EquipmentStrip.ServerStripAllRequested += count;
+            try
+            {
+                CreateSession("elimination");
+                MatchSeries series = CreateSeries(nextMapDelay: 60f);
+                series.ServerBegin(new[] { _mapA.sceneName, _mapB.sceneName });
+                GameplayManager manager = CreateMapManager(_mapA.sceneName);
+
+                int before = reasons.Count;
+                Assert.IsTrue(manager.StartMatch());
+                Assert.Greater(reasons.Count, before, "Разминка → матч: снаряжение не забрано.");
+
+                before = reasons.Count;
+                EndMatch(manager.ActiveGameMode, _a);
+                Assert.Greater(reasons.Count, before, "Матч → разминка: снаряжение не забрано.");
+
+                before = reasons.Count;
+                series.ServerAdvance();
+                Assert.Greater(reasons.Count, before, "Переход на следующую карту: снаряжение не забрано.");
+
+                before = reasons.Count;
+                series.ServerEnd();
+                Assert.Greater(reasons.Count, before, "Возврат в лобби: снаряжение не забрано.");
+            }
+            finally
+            {
+                EquipmentStrip.ServerStripAllRequested -= count;
+            }
+        }
+
         // ── Один путь поиска данных режима ───────────────────────────────────
 
         [Test]

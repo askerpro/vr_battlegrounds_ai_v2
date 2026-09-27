@@ -69,6 +69,21 @@ namespace VrBattlegrounds.Managers
         /// <summary>Идёт ли серия.</summary>
         public bool IsRunning => _running;
 
+        /// <summary>
+        /// Статистика карты без серии: карту загрузили напрямую (отладка, E2E). Серия при этом
+        /// не идёт — ни следующей карты, ни лобби, кнопки «Стоп» нет, — но статистика
+        /// ведётся по этой карте: одна строка карты, TOTAL равен ей.
+        /// </summary>
+        public bool IsAdHoc => _adHoc;
+
+        /// <summary>Пишется ли сейчас статистика: идёт серия или карта без серии.</summary>
+        public bool IsRecording => _running || _adHoc;
+
+        [SyncVar] private bool _adHoc;
+
+        /// <summary>Оркестратор текущей карты — откуда брать сцену для статистики без серии.</summary>
+        private GameplayManager _currentManager;
+
         /// <summary>Карты серии по порядку.</summary>
         public IReadOnlyList<string> Maps => _maps;
 
@@ -129,8 +144,13 @@ namespace VrBattlegrounds.Managers
         private void HandleGameplayManagerReady(GameplayManager manager)
         {
             if (manager == null) return;
+            _currentManager = manager;
             manager.GameplayEnded -= HandleMapMatchEnded;
             manager.GameplayEnded += HandleMapMatchEnded;
+            manager.RoundWon -= HandleRoundWon;
+            manager.RoundWon += HandleRoundWon;
+            manager.PlayerKilled -= HandlePlayerKilled;
+            manager.PlayerKilled += HandlePlayerKilled;
         }
 
         private void HandleMapMatchEnded(TeamData winner)
@@ -188,7 +208,10 @@ namespace VrBattlegrounds.Managers
 
             _mapWins.Clear();
             _results.Clear();
+            _teamStats.Clear();
+            _playerStats.Clear();
             _currentIndex = 0;
+            _adHoc = false;
             _running = true;
 
             GameLog.Match.Info($"[MatchSeries] Серия началась: {string.Join(" → ", ToArray(_maps))}.");
@@ -200,7 +223,7 @@ namespace VrBattlegrounds.Managers
         [Server]
         public void ServerRecordMapResult(TeamData winner)
         {
-            if (!_running) return;
+            if (!EnsureRecording()) return;
 
             _results.Add(winner != null ? winner.teamIndex : -1);
 
@@ -291,6 +314,9 @@ namespace VrBattlegrounds.Managers
 
         private void Load(string scene)
         {
+            // Снаряжение не переживает перехода на другую карту (и в лобби).
+            EquipmentStrip.ServerStripAll($"переход на карту {scene}");
+
             if (MapLoader != null) { MapLoader(scene); return; }
 
             if (MapManager.Instance == null)
@@ -315,5 +341,185 @@ namespace VrBattlegrounds.Managers
             for (int i = 0; i < list.Count; i++) result[i] = list[i];
             return result;
         }
+
+        // ── Сквозная статистика серии ────────────────────────────────────────
+        //
+        // Строки «карта × команда» и «карта × игрок» в SyncList: состояние, а не сообщения,
+        // поэтому подключившийся позже клиент получает всю таблицу начальным значением спавна.
+        // Игрок — по сессии (PlayerKey), а не по аватару: аватар пересоздаётся при смене
+        // скина и команды, сессия живёт всю игру. TOTAL не хранится — это сумма строк.
+
+        /// <summary>Индекс «все карты серии» для геттеров статистики.</summary>
+        public const int Total = -1;
+
+        private readonly SyncList<TeamMapStat> _teamStats = new SyncList<TeamMapStat>();
+        private readonly SyncList<PlayerMapStat> _playerStats = new SyncList<PlayerMapStat>();
+
+        /// <summary>Раунды команд по картам.</summary>
+        public IReadOnlyList<TeamMapStat> TeamStats => _teamStats;
+
+        /// <summary>Убийства, смерти, ассисты игроков по картам.</summary>
+        public IReadOnlyList<PlayerMapStat> PlayerStats => _playerStats;
+
+        /// <summary>
+        /// Ключ игрока в статистике: токен устройства (переживает переподключение — тот же,
+        /// которым пользуется восстановление сессии), без него — <c>netId</c> сессии.
+        /// </summary>
+        public static string PlayerKey(PlayerSession session)
+        {
+            if (session == null) return null;
+            return !string.IsNullOrEmpty(session.DeviceToken) ? session.DeviceToken : "net:" + session.netId;
+        }
+
+        public int GetRoundsWon(TeamData team, int map)
+        {
+            if (team == null) return 0;
+            int sum = 0;
+            foreach (TeamMapStat row in _teamStats)
+                if (row.team == team.teamIndex && (map == Total || row.map == map)) sum += row.rounds;
+            return sum;
+        }
+
+        public int GetKills(PlayerSession session, int map) => SumPlayer(session, map, r => r.kills);
+        public int GetDeaths(PlayerSession session, int map) => SumPlayer(session, map, r => r.deaths);
+        public int GetAssists(PlayerSession session, int map) => SumPlayer(session, map, r => r.assists);
+
+        private int SumPlayer(PlayerSession session, int map, Func<PlayerMapStat, int> value)
+        {
+            string key = PlayerKey(session);
+            if (key == null) return 0;
+            int sum = 0;
+            foreach (PlayerMapStat row in _playerStats)
+                if (row.player == key && (map == Total || row.map == map)) sum += value(row);
+            return sum;
+        }
+
+        /// <summary>Раунд выиграла команда — в строку текущей карты. Только раунды, доигранные до конца.</summary>
+        [Server]
+        public void ServerRecordRoundWin(TeamData team)
+        {
+            if (team == null || !EnsureRecording()) return;
+
+            for (int i = 0; i < _teamStats.Count; i++)
+            {
+                TeamMapStat row = _teamStats[i];
+                if (row.map != _currentIndex || row.team != team.teamIndex) continue;
+                row.rounds++;
+                _teamStats[i] = row;
+                return;
+            }
+
+            _teamStats.Add(new TeamMapStat { map = _currentIndex, team = team.teamIndex, rounds = 1 });
+        }
+
+        /// <summary>
+        /// Гибель игрока: смерть — жертве, убийство — убийце, ассист — ранившим. Убийца null
+        /// (урон без источника) или сама жертва (самоубийство) — убийства нет, смерть есть.
+        /// </summary>
+        [Server]
+        public void ServerRecordKill(PlayerSession victim, PlayerSession killer, IReadOnlyList<PlayerSession> assists)
+        {
+            if (!EnsureRecording()) return;
+
+            if (killer == victim) killer = null;
+
+            if (victim != null) Bump(victim, deaths: 1);
+            if (killer != null) Bump(killer, kills: 1);
+
+            if (assists != null)
+            {
+                foreach (PlayerSession helper in assists)
+                {
+                    if (helper == null || helper == victim || helper == killer) continue;
+                    Bump(helper, assists: 1);
+                }
+            }
+        }
+
+        private void Bump(PlayerSession session, int kills = 0, int deaths = 0, int assists = 0)
+        {
+            string key = PlayerKey(session);
+            for (int i = 0; i < _playerStats.Count; i++)
+            {
+                PlayerMapStat row = _playerStats[i];
+                if (row.map != _currentIndex || row.player != key) continue;
+                row.kills += kills;
+                row.deaths += deaths;
+                row.assists += assists;
+                row.name = session.PlayerName;
+                row.team = session.TeamIndex;
+                _playerStats[i] = row;
+                return;
+            }
+
+            _playerStats.Add(new PlayerMapStat
+            {
+                map = _currentIndex, player = key, name = session.PlayerName, team = session.TeamIndex,
+                kills = kills, deaths = deaths, assists = assists
+            });
+        }
+
+        /// <summary>
+        /// Можно ли писать статистику, и куда. Идёт серия — в её текущую карту. Серии нет —
+        /// статистика карты без серии: неявная серия из одной текущей карты, без перехода
+        /// к следующей и без лобби (<see cref="IsAdHoc"/>). Начинается с первого события
+        /// на карте; другая карта без серии начинает её заново — прежняя статистика не
+        /// перетекает (отладочные загрузки карт между собой не связаны).
+        /// </summary>
+        private bool EnsureRecording()
+        {
+            if (_running) return true;
+
+            string scene = _currentManager != null ? _currentManager.SceneName : null;
+            if (string.IsNullOrEmpty(scene)) return false;
+
+            if (_adHoc && _maps.Count == 1 && _maps[0] == scene) return true;
+
+            _maps.Clear();
+            _maps.Add(scene);
+            _mapWins.Clear();
+            _results.Clear();
+            _teamStats.Clear();
+            _playerStats.Clear();
+            _currentIndex = 0;
+            _adHoc = true;
+
+            GameLog.Match.Info($"[MatchSeries] Карта '{scene}' без серии — статистика ведётся по ней.");
+            return true;
+        }
+
+        /// <summary>Раунд на карте доигран — в статистику серии.</summary>
+        private void HandleRoundWon(TeamData winner)
+        {
+            if (NetworkServer.active) ServerRecordRoundWin(winner);
+        }
+
+        /// <summary>Игрок погиб на карте — в статистику серии.</summary>
+        private void HandlePlayerKilled(PlayerSession victim, PlayerSession killer, IReadOnlyList<PlayerSession> assists)
+        {
+            if (NetworkServer.active) ServerRecordKill(victim, killer, assists);
+        }
+    }
+
+    /// <summary>Раунды, выигранные командой на карте серии.</summary>
+    [System.Serializable]
+    public struct TeamMapStat
+    {
+        public int map;
+        public int team;
+        public int rounds;
+    }
+
+    /// <summary>Убийства, смерти, ассисты игрока на карте серии.</summary>
+    [System.Serializable]
+    public struct PlayerMapStat
+    {
+        public int map;
+        public string player;
+        public string name;
+        public int team;
+        public int kills;
+        public int deaths;
+        public int assists;
     }
 }

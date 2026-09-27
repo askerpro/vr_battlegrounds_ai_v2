@@ -60,16 +60,30 @@
 режиме (`MatchTeams.ServerPlayerRequest`); скин в своей команде разрешён всегда. Контекст меню (`Offline/Lobby/InGame`)
 по-прежнему определяется именем сцены: появление `GameplayManager` в лобби его не меняет.
 
-**Выбор сессии (`MenuSessionSetup`) и управление матчем (`MenuMatchManager`).** Вкладки —
-только режимы матча (`MenuSessionSetup.TabModes`: разминка лежит в том же `GameModeRegistry`
-с флагом `isWarmup` и во вкладки не попадает). Карты под вкладкой — совместимые с режимом
-(`MenuSessionSetup.MapsForMode` по `MapData.supportedModes`): лобби есть в `MapRegistry`, но
-совместимо только с разминкой, поэтому в выборе карт матча не появляется. Клик по карте —
-серия из одной карты (`SessionManager.SetSession` + `StartSession`). **Развилка:** данные и
-сервер серии умеют список карт (`SessionManager.SetSeries`, `MatchSeries`), а UI выбора
-нескольких карт (переключатели + кнопка «Начать») требует правки префаба экрана — пока не сделан.
-`MenuMatchManager`: «Начать матч» → `GameplayManager.StartMatch` (разминка → режим на месте),
-«Стоп / Лобби» → `MatchSeries.ServerEnd` (досрочный конец серии, возврат в лобби).
+**Выбор сессии (`MenuSessionSetup`).** Вкладки — только режимы матча (`TabModes`: разминка
+в том же `GameModeRegistry` с `isWarmup` во вкладки не попадает). Карты под вкладкой — совместимые
+с режимом (`MapsForMode`), лобби среди них нет. Клик по плитке ставит карту в конец очереди
+серии, повторный — убирает (`MapQueue`, чистая логика); номер в очереди — текст `QueueNumber`
+в правом верхнем углу плитки (`MapEntry.prefab`), номера пересчитываются. «Начать»
+(`Btn_StartSeries`) шлёт `PlayerSession.CmdAdminStartSeries(режим, карты)`, «Очистить»
+(`Btn_ClearQueue`) опустошает очередь; смена вкладки тоже её очищает. Сервер отбрасывает
+несовместимые карты и проверяет право админа (`AdminMatchCommands.ServerStartSeries`).
+
+**Экран «Матч» (`MenuMatchManager`, `Screen_MatchManager.prefab`, `MenuScreenType.MatchManager`).**
+Четыре кнопки: «Начать матч», «Пауза», «Продолжить», «Стоп (конец серии)». Каждая видна только
+админу и только когда имеет смысл — правило `AdminMatchCommands.IsAvailable` по реплицированному
+состоянию (`GameplayManager.CurrentState`, `SupportsPause`, совместимость карты, `MatchSeries.IsRunning`);
+сервер проверяет его ещё раз. Нажатие — `PlayerSession.CmdAdminMatchCommand`. Кнопка перехода
+«Матч» на главном экране видна только админу (`AdminOnlyElements` на `Screen_Main`). Так же
+только админу видна «Играть» (`Btn_SessionSetup`) — единственный вход в выбор серии (экран по
+умолчанию — главный); сервер и так отклоняет не-админа. Проверяет `MatchMenuWiringTests`.
+
+**Экран «Статистика» (`MenuStatistics`, `Screen_Statistics.prefab`, `MenuScreenType.Statistics`).**
+У всех игроков, кнопка «Статистика» на главном экране. Таблица — TMP rich text, собирается
+`SeriesStatsTable.Build` + `Format` из реплицированных строк `MatchSeries`: секция на каждую
+карту серии и TOTAL, в секции — раунды и карты команд, игроки «убийства / смерти / ассисты».
+Перестраивается раз в 0,5 с и только при изменении. Карта без серии — та же таблица из одной
+карты с пометкой «Карта без серии».
 
 **На карте (этап Б)** игрок приходит без команды матча, и тот же экран предлагает команды
 режима и скин. Когда матч начался (`GameMode.TeamChoiceLocked`), экран предлагает только

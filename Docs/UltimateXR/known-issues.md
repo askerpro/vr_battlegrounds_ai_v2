@@ -638,3 +638,20 @@ Near` точки хвата (считается тем же вызовом), н�
 
 Проверка — `AvatarTeardownTests`. Правило на будущее: уничтожаешь или выключаешь объект с
 `UxrGrabber` — сначала отпусти его предмет сам.
+
+---
+
+## Issue 18: команда захвата о предмете, уничтоженном сервером, рвёт соединение
+
+**Симптом.** `Disconnecting connection: connection(N) because handling a message of type
+Mirror.CommandMessage caused an Exception … NullReferenceException` со стеком в
+`UxrMirrorAvatar.CmdRequestAuthority`; на хосте — `OnChangeOwner: Could not find object with netId`.
+
+**Причина.** Захват шлёт серверу `CmdRequestAuthority(NetworkIdentity)`. Если сервер уничтожил
+предмет раньше, чем команда дошла, Mirror отдаёт null, и SDK разыменовывает его без проверки.
+Исключение в обработчике команды Mirror считает атакой и разрывает соединение отправителя.
+
+**Когда.** Любое серверное уничтожение предмета в момент захвата: в проекте — снятие
+снаряжения при смене режима, паузе, смене карты (`EquipmentStrip`).
+
+**Решение.** Патч 13 в [`sdk-patches.md`](sdk-patches.md): проверка на null.

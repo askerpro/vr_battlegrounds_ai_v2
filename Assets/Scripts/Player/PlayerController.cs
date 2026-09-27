@@ -123,6 +123,9 @@ namespace VrBattlegrounds.Player
 
         public UxrActor _actor;
 
+        /// <summary>Кто ранил с последнего возрождения — для зачёта убийства (сервер).</summary>
+        private readonly DamageLedger _damageLedger = new DamageLedger();
+
         private void Awake()
         {
             _actor = GetComponent<UxrActor>();
@@ -221,7 +224,13 @@ namespace VrBattlegrounds.Player
         private void OnDamageReceiving(object sender, UxrDamageEventArgs e)
         {
             GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
-            if (mode == null || mode.PlayersTakeDamage) return;
+            if (mode == null || mode.PlayersTakeDamage)
+            {
+                // Урон проходит — запоминаем источник. Смертельный урон приходит сюда же
+                // и последним, поэтому к Die источник смертельного попадания уже записан.
+                if (NetworkServer.active) _damageLedger.Record(e.ActorSource);
+                return;
+            }
 
             e.Cancel();
             GameLog.Player.Verbose($"[PlayerController] {name}: урон {e.Damage:F1} отменён — режим {mode.GetType().Name} урона по игрокам не допускает.", this);
@@ -260,9 +269,12 @@ namespace VrBattlegrounds.Player
 
             RpcOnDied();
 
-            // Уведомляем активный режим о гибели игрока.
+            // Кто убил — по урону (DamageLedger): убийца, ассисты. Режиму и статистике серии.
+            _damageLedger.Resolve(Session, out PlayerSession killer, out System.Collections.Generic.List<PlayerSession> assists);
+            _damageLedger.Clear();
+
             if (GameplayManager.Instance != null)
-                GameplayManager.Instance.OnPlayerDied(this);
+                GameplayManager.Instance.OnPlayerDied(this, killer, assists);
         }
 
         /// <summary>
@@ -281,6 +293,7 @@ namespace VrBattlegrounds.Player
         {
             GameLog.Player.Info($"[PlayerController] {name}: респаун на месте ({transform.position}).", this);
             _actor.Life = 100f;
+            _damageLedger.Clear();
 
             var spectator = GetComponent<SpectatorController>();
             if (spectator != null)

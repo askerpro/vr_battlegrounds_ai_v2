@@ -32,8 +32,33 @@ namespace VrBattlegrounds.UI.Menu
         [Tooltip("Префаб плитки карты (MapEntry) с картинкой и названием.")]
         [SerializeField] private GameObject _mapEntryPrefab;
 
+        [Header("Очередь серии")]
+        [Tooltip("Кнопка «Начать»: запускает серию из карт очереди в порядке очереди.")]
+        [SerializeField] private Button _startButton;
+
+        [Tooltip("Кнопка «Очистить»: опустошает очередь.")]
+        [SerializeField] private Button _clearButton;
+
+        [Tooltip("Имя дочернего TMP-текста на плитке карты — номер карты в очереди.")]
+        [SerializeField] private string _queueNumberName = "QueueNumber";
+
         private GameModeData _selectedMode;
         private Dictionary<GameModeData, Button> _tabButtons = new Dictionary<GameModeData, Button>();
+
+        /// <summary>
+        /// Карты серии в порядке кликов (<see cref="MapQueue"/>): клик ставит карту в конец,
+        /// повторный — убирает, номер на плитке — место в очереди.
+        /// </summary>
+        private readonly MapQueue _queue = new MapQueue();
+        private readonly Dictionary<string, GameObject> _entries = new Dictionary<string, GameObject>();
+
+        public IReadOnlyList<string> Queue => _queue.Items;
+
+        private void Awake()
+        {
+            if (_startButton != null) _startButton.onClick.AddListener(OnStartPressed);
+            if (_clearButton != null) _clearButton.onClick.AddListener(OnClearPressed);
+        }
 
         private void Start()
         {
@@ -109,6 +134,8 @@ namespace VrBattlegrounds.UI.Menu
 
         private void SelectTab(GameModeData mode)
         {
+            // Очередь — карты одного режима: другая вкладка — другой набор совместимых карт.
+            if (_selectedMode != mode) _queue.Clear();
             _selectedMode = mode;
             
             foreach (var kvp in _tabButtons)
@@ -126,6 +153,7 @@ namespace VrBattlegrounds.UI.Menu
         private void PopulateMapList()
         {
             ClearContainer(_mapListContainer);
+            _entries.Clear();
 
             if (_mapRegistry == null || _mapRegistry.maps == null)
             {
@@ -150,7 +178,7 @@ namespace VrBattlegrounds.UI.Menu
                     if (img != null) img.sprite = mapDef.preview;
                 }
 
-                TextMeshProUGUI txtUGUI = mapBtnObj.GetComponentInChildren<TextMeshProUGUI>();
+                TextMeshProUGUI txtUGUI = NameLabel(mapBtnObj);
                 if (txtUGUI != null) txtUGUI.text = mapDef.displayName;
                 else
                 {
@@ -165,18 +193,80 @@ namespace VrBattlegrounds.UI.Menu
 
                 string capturedScene = mapDef.sceneName;
                 btn.onClick.AddListener(() => OnMapClicked(capturedScene));
+                _entries[capturedScene] = mapBtnObj;
             }
+
+            RefreshQueueView();
         }
 
+        /// <summary>Клик по плитке: карта в конец очереди или из очереди вон.</summary>
         private void OnMapClicked(string sceneName)
         {
-            // Серия из одной карты: UI выбора нескольких карт пока нет — данные и серверная
-            // логика серии (SessionManager.SetSeries, MatchSeries) уже умеют список.
-            SessionManager.Instance?.SetSession(sceneName, _selectedMode?.modeId);
-            GameLog.UI.Info($"[MenuSessionSetup] Режим: {_selectedMode?.displayName}, Выбрана карта: {sceneName}");
+            bool added = _queue.Toggle(sceneName);
+            GameLog.UI.Info($"[MenuSessionSetup] {(added ? "В очередь" : "Из очереди")}: {sceneName}. " +
+                            $"Серия: {string.Join(" → ", _queue.Items)}");
+            RefreshQueueView();
+        }
 
-            // Сразу начинаем серию: карта загрузится и стартует в разминке, матч — кнопкой «Начать матч».
-            SessionManager.Instance?.StartSession();
+        /// <summary>«Начать»: серия из очереди — режим вкладки, карты по порядку.</summary>
+        private void OnStartPressed()
+        {
+            if (_queue.Count == 0 || _selectedMode == null) return;
+
+            var maps = new string[_queue.Count];
+            for (int i = 0; i < maps.Length; i++) maps[i] = _queue.Items[i];
+
+            GameLog.UI.Info($"[MenuSessionSetup] Начать серию: {_selectedMode.displayName}, {string.Join(" → ", maps)}");
+
+            if (Player.PlayerSession.LocalSession != null)
+                Player.PlayerSession.LocalSession.CmdAdminStartSeries(_selectedMode.modeId, maps);
+
+            _queue.Clear();
+            RefreshQueueView();
+        }
+
+        private void OnClearPressed()
+        {
+            _queue.Clear();
+            RefreshQueueView();
+        }
+
+        /// <summary>Номера на плитках и доступность «Начать»/«Очистить».</summary>
+        private void RefreshQueueView()
+        {
+            foreach (KeyValuePair<string, GameObject> entry in _entries)
+            {
+                if (entry.Value == null) continue;
+                Transform numberTransform = FindDeep(entry.Value.transform, _queueNumberName);
+                if (numberTransform == null) continue;
+
+                int number = _queue.NumberOf(entry.Key);
+                numberTransform.gameObject.SetActive(number > 0);
+                TMP_Text label = numberTransform.GetComponent<TMP_Text>();
+                if (label != null) label.text = number > 0 ? number.ToString() : "";
+            }
+
+            if (_startButton != null) _startButton.interactable = _queue.Count > 0;
+            if (_clearButton != null) _clearButton.interactable = _queue.Count > 0;
+        }
+
+        /// <summary>Название карты на плитке — первый TMP-текст, кроме номера в очереди.</summary>
+        private TextMeshProUGUI NameLabel(GameObject entry)
+        {
+            foreach (TextMeshProUGUI text in entry.GetComponentsInChildren<TextMeshProUGUI>(true))
+                if (text.name != _queueNumberName) return text;
+            return null;
+        }
+
+        private static Transform FindDeep(Transform root, string name)
+        {
+            if (root.name == name) return root;
+            foreach (Transform child in root)
+            {
+                Transform found = FindDeep(child, name);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         private void ClearContainer(Transform container)

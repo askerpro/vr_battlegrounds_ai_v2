@@ -605,6 +605,26 @@ namespace VrBattlegrounds.Player
                 MatchTeams.ServerAdminAutoBalance(GameplayManager.Instance.ActiveGameMode, this);
         }
 
+        /// <summary>
+        /// Админ (эта сессия) жмёт кнопку управления матчем: «Начать матч», «Пауза»,
+        /// «Продолжить», «Стоп». Право и уместность проверяет сервер (<c>AdminMatchCommands</c>).
+        /// </summary>
+        [Command]
+        public void CmdAdminMatchCommand(MatchCommand command)
+        {
+            AdminMatchCommands.ServerExecute(this, command);
+        }
+
+        /// <summary>
+        /// Админ (эта сессия) запускает серию из очереди карт меню выбора сессии.
+        /// Право проверяет сервер (<c>AdminMatchCommands.ServerStartSeries</c>).
+        /// </summary>
+        [Command]
+        public void CmdAdminStartSeries(string modeId, string[] maps)
+        {
+            AdminMatchCommands.ServerStartSeries(this, modeId, maps);
+        }
+
         [Command]
         public void CmdSetDogTagGrabbed(bool state)
         {

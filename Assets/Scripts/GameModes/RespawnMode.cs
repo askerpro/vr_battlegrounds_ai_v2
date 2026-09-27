@@ -43,7 +43,8 @@ namespace VrBattlegrounds.GameModes
         [Server]
         protected override void StartGameplay()
         {
-            _timeRemaining = _matchDuration;
+            _timeRemaining = _resumeTime > 0f ? _resumeTime : _matchDuration;
+            _resumeTime = -1f;
             _matchActive = true;
 
             string teamsStr = string.Join(", ", Teams.Select(t => t != null ? t.displayName : "null"));
@@ -78,11 +79,11 @@ namespace VrBattlegrounds.GameModes
         }
 
         /// <summary>
-        /// Вызывается PlayerController при гибели игрока.
-        /// Начисляет фраг команде убийцы.
+        /// Игрок убит (убийцу по урону определяет <c>DamageLedger</c>, зовёт <c>GameplayManager</c>).
+        /// Начисляет фраг команде убийцы; убийство своего фрага не даёт.
         /// </summary>
         [Server]
-        public void OnPlayerKilled(PlayerController victim, PlayerController killer)
+        public override void OnPlayerKilled(PlayerController victim, PlayerSession killer)
         {
             if (!_matchActive || killer == null) return;
 
@@ -97,7 +98,29 @@ namespace VrBattlegrounds.GameModes
             }
 
             GameLog.Match.Verbose(
-                $"[RespawnMode] Фраг: {killer.name} ({killerTeam.displayName}).");
+                $"[RespawnMode] Фраг: {killer.PlayerName} ({killerTeam.displayName}).");
+        }
+
+        // ── Пауза ────────────────────────────────────────────────────────────
+
+        private float _resumeTime = -1f;
+
+        /// <summary>Respawn встаёт на паузу: фраги (базовый счёт) и остаток таймера сохраняются.</summary>
+        public override bool SupportsPause => true;
+
+        [Server]
+        public override MatchSnapshot CaptureSnapshot()
+        {
+            MatchSnapshot snapshot = base.CaptureSnapshot();
+            snapshot.TimeRemaining = _matchActive ? _timeRemaining : -1f;
+            return snapshot;
+        }
+
+        [Server]
+        public override void RestoreSnapshot(MatchSnapshot snapshot)
+        {
+            base.RestoreSnapshot(snapshot);
+            _resumeTime = snapshot != null ? snapshot.TimeRemaining : -1f;
         }
 
         [Server]

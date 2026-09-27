@@ -288,10 +288,16 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         public override bool TeamChoiceLocked => _matchState != EliminationMatchState.WaitingForPlayers;
 
+        /// <summary>
+        /// Зовёт корутина старта базового режима — кадром позже спавна. К этому моменту
+        /// <see cref="ServerTick"/> мог уже поднять матч (игроки на месте, или продолжение
+        /// после паузы), и сброс в <c>WaitingForPlayers</c> начал бы сет заново с раунда 1.
+        /// Ожидание игроков и так начальное состояние — здесь только лог.
+        /// </summary>
         [Server]
         protected override void StartGameplay()
         {
-            _matchState = EliminationMatchState.WaitingForPlayers;
+            if (_matchState != EliminationMatchState.WaitingForPlayers) return;
             GameLog.Match.Info("[EliminationMode] Матч инициализирован. Ждем игроков.");
         }
 
@@ -311,7 +317,69 @@ namespace VrBattlegrounds.GameModes
                 $"[EliminationMode] Активная игра начата: {teamsStr}, " +
                 $"сетов: {_maxSets}, раундов в сете: {_roundsPerSet}");
 
+            if (_resume != null && _resume.RoundToReplay > 0)
+            {
+                ResumeSetFromSnapshot(_resume);
+                _resume = null;
+                return;
+            }
+
+            _resume = null;
             StartNextSet(swapSides: false);
+        }
+
+        // ── Пауза: снимок и продолжение ─────────────────────────────────────
+
+        /// <summary>Снимок, с которого матч продолжится; null — обычный старт.</summary>
+        private MatchSnapshot _resume;
+
+        /// <summary>Elimination встаёт на паузу: сеты, счёт раундов и номер раунда сохраняются.</summary>
+        public override bool SupportsPause => true;
+
+        /// <summary>
+        /// Сеты (базовый счёт), счёт раундов сета <b>без</b> идущего раунда и его номер —
+        /// прерванный раунд сыграется заново и не засчитается.
+        /// </summary>
+        [Server]
+        public override MatchSnapshot CaptureSnapshot()
+        {
+            MatchSnapshot snapshot = base.CaptureSnapshot();
+            if (_setManager == null) return snapshot;
+
+            foreach (var kvp in _setManager.ScoresAtRoundStart) snapshot.RoundScores[kvp.Key] = kvp.Value;
+            snapshot.RoundToReplay = _setManager.CurrentRound;
+            return snapshot;
+        }
+
+        [Server]
+        public override void RestoreSnapshot(MatchSnapshot snapshot)
+        {
+            base.RestoreSnapshot(snapshot);
+            _resume = snapshot;
+        }
+
+        /// <summary>Продолжение: тот же сет, тот же номер раунда, сохранённый счёт раундов.</summary>
+        [Server]
+        private void ResumeSetFromSnapshot(MatchSnapshot snapshot)
+        {
+            int currentSet = 1 + _teamStates.Values.Sum(s => s.Score);
+            RpcOnSetStarted(currentSet);
+
+            _syncedRoundScores.Clear();
+            foreach (var kvp in snapshot.RoundScores) _syncedRoundScores[kvp.Key] = kvp.Value;
+
+            GameLog.Match.Info(
+                $"[EliminationMode] Матч продолжен после паузы: сет {currentSet}, раунд {snapshot.RoundToReplay}.");
+
+            _setManager.ResumeSet(Teams, this, _roundsPerSet, _countdownDuration, _roundDuration,
+                                  snapshot.RoundScores, snapshot.RoundToReplay);
+        }
+
+        /// <summary>Раунд доигран — в общий счёт серии. Зовёт <see cref="SetManager"/>.</summary>
+        [Server]
+        public void ServerReportRoundWon(TeamData winner)
+        {
+            RaiseRoundWon(winner);
         }
 
         [Server]
@@ -358,9 +426,6 @@ namespace VrBattlegrounds.GameModes
             }
 
             if (_matchState == EliminationMatchState.Finished) return;
-
-            if (GameplayManager.Instance != null && GameplayManager.Instance.CurrentState == GameplayState.Paused)
-                return;
 
             if (_setManager == null) return;
 

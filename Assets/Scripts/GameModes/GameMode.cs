@@ -334,6 +334,67 @@ namespace VrBattlegrounds.GameModes
         {
         }
 
+        /// <summary>
+        /// Погибшего убил <paramref name="killer"/> (сессия; null — урон без источника или
+        /// самоубийство). Определяет по урону <c>DamageLedger</c>. Зовётся после
+        /// <see cref="OnPlayerDied"/>. По умолчанию — ничего; Respawn считает фраги.
+        /// </summary>
+        [Server]
+        public virtual void OnPlayerKilled(PlayerController victim, PlayerSession killer)
+        {
+        }
+
+        // ── Раунды и пауза ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Сервер: раунд доигран до конца и у него есть победитель. Для общего счёта серии
+        /// (<c>MatchSeries</c> через <c>GameplayManager.RoundWon</c>). Прерванный паузой раунд
+        /// сюда не приходит — поэтому событие поднимается по окончании раунда, а не в момент,
+        /// когда победитель стал известен.
+        /// </summary>
+        public event Action<TeamData> RoundWonServer;
+
+        /// <summary>Объявить, что раунд доигран и выигран. Только сервер.</summary>
+        protected void RaiseRoundWon(TeamData winner)
+        {
+            if (winner != null) RoundWonServer?.Invoke(winner);
+        }
+
+        /// <summary>
+        /// Умеет ли режим встать на паузу и продолжиться: «Пауза» у админа сохраняет его
+        /// состояние (<see cref="CaptureSnapshot"/>), карта уходит в разминку, «Продолжить»
+        /// спавнит режим заново и возвращает состояние (<see cref="RestoreSnapshot"/>).
+        /// По умолчанию — нет (разминке ставить на паузу нечего).
+        /// </summary>
+        public virtual bool SupportsPause => false;
+
+        /// <summary>
+        /// Снимок состояния матча для паузы. База — счёт команд режима (сеты, фраги); режим
+        /// с раундами добавляет своё. Прерванный раунд в снимок не входит.
+        /// </summary>
+        [Server]
+        public virtual MatchSnapshot CaptureSnapshot()
+        {
+            var snapshot = new MatchSnapshot { ModeId = ModeData != null ? ModeData.modeId : "" };
+            foreach (KeyValuePair<int, int> pair in _teamScores) snapshot.TeamScores[pair.Key] = pair.Value;
+            return snapshot;
+        }
+
+        /// <summary>
+        /// Возвращает состояние из снимка. Зовётся после <see cref="Initialize(GameModeData)"/>
+        /// (она обнуляет счёт) и до старта режима.
+        /// </summary>
+        [Server]
+        public virtual void RestoreSnapshot(MatchSnapshot snapshot)
+        {
+            if (snapshot == null) return;
+
+            foreach (KeyValuePair<int, int> pair in snapshot.TeamScores)
+            {
+                if (_teamScores.ContainsKey(pair.Key)) _teamScores[pair.Key] = pair.Value;
+            }
+        }
+
         private TeamAssignmentKind? _teamAssignmentOverride;
 
         /// <summary>

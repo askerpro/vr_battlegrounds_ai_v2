@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using VrBattlegrounds.Core;
@@ -15,6 +16,7 @@ namespace VrBattlegrounds.Managers
         NotActive,
         /// <summary>Идёт матч — режим матча, выбранный администратором.</summary>
         Active,
+        /// <summary>Матч на паузе: на карте разминка, снимок матча ждёт «Продолжить».</summary>
         Paused
     }
 
@@ -72,7 +74,8 @@ namespace VrBattlegrounds.Managers
         public MapData CurrentMap =>
             SessionManager.Instance != null ? SessionManager.Instance.FindMap(SceneName) : null;
 
-        private string SceneName => !string.IsNullOrEmpty(SceneNameOverride) ? SceneNameOverride : gameObject.scene.name;
+        /// <summary>Сцена, на которой живёт менеджер (или подменённая тестом).</summary>
+        public string SceneName => !string.IsNullOrEmpty(SceneNameOverride) ? SceneNameOverride : gameObject.scene.name;
 
         private static GameModeRegistry Registry =>
             SessionManager.Instance != null ? SessionManager.Instance.ModeRegistry : null;
@@ -268,7 +271,7 @@ namespace VrBattlegrounds.Managers
 
         /// <summary>
         /// Принудительно останавливает матч без победителя — карта возвращается в разминку.
-        /// Серию это не двигает: следующую карту или лобби выбирает администратор.
+        /// Серию это не двигает. Снимок паузы, если был, отбрасывается.
         /// </summary>
         [Server]
         public void StopMatch()
@@ -280,28 +283,85 @@ namespace VrBattlegrounds.Managers
             }
 
             GameLog.Match.Info("[GameplayManager] Матч остановлен администратором — разминка.");
+            _pausedSnapshot = null;
+            _pausedMode = null;
             ServerStartWarmup();
             RpcOnMatchStopped();
         }
 
+        // ── Пауза ─────────────────────────────────────────────────────────────
+        //
+        // «Пауза» прерывает раунд без победителя и возвращает карту в разминку («лобби
+        // текущей карты»); «Продолжить» спавнит режим матча заново и возвращает ему снимок
+        // (MatchSnapshot): сеты, счёт раундов, номер прерванного раунда. Экземпляр режима
+        // на паузе не живёт — почему, см. MatchSnapshot. Снимок — состояние матча на этой
+        // карте, поэтому хранится здесь и уходит вместе со сценой.
+
+        private MatchSnapshot _pausedSnapshot;
+        private GameModeData _pausedMode;
+
+        /// <summary>Матч на паузе: на карте разминка, «Продолжить» вернёт матч.</summary>
+        public bool IsPaused => _currentState == GameplayState.Paused;
+
+        /// <summary>Идёт ли сейчас сам матч (не пауза и не разминка) — для кнопки «Пауза».</summary>
+        public bool IsMatchRunning => _currentState == GameplayState.Active;
+
+        /// <summary>
+        /// «Пауза»: снимок матча, идущий раунд прерывается без победителя (не засчитывается),
+        /// карта — в разминку, снаряжение забирается.
+        /// </summary>
+        /// <returns>false — матч не идёт или режим паузу не умеет.</returns>
         [Server]
-        public void PauseGameplay()
+        public bool PauseMatch()
         {
-            if (_currentState == GameplayState.Active)
+            if (_currentState != GameplayState.Active || _gameMode == null || !_gameMode.SupportsPause)
             {
-                _currentState = GameplayState.Paused;
-                GameLog.Match.Info("[GameplayManager] Матч поставлен на паузу");
+                GameLog.Match.Warning("[GameplayManager] Пауза: матч не идёт или режим не умеет паузу.");
+                return false;
             }
+
+            _pausedSnapshot = _gameMode.CaptureSnapshot();
+            _pausedMode = _gameMode.ModeData;
+
+            GameLog.Match.Info(
+                $"[GameplayManager] Пауза: режим '{_pausedSnapshot.ModeId}', раунд {_pausedSnapshot.RoundToReplay} " +
+                "прерван без победителя, карта — в разминку.");
+
+            if (!ServerStartWarmup())
+            {
+                _pausedSnapshot = null;
+                _pausedMode = null;
+                return false;
+            }
+
+            _currentState = GameplayState.Paused;
+            return true;
         }
 
+        /// <summary>
+        /// «Продолжить»: режим матча заново, со снимка — тот же номер раунда, сеты, счёт.
+        /// Снаряжение разминки забирается.
+        /// </summary>
         [Server]
-        public void ResumeGameplay()
+        public bool ResumeMatch()
         {
-            if (_currentState == GameplayState.Paused)
+            if (!IsPaused || _pausedMode == null)
             {
-                _currentState = GameplayState.Active;
-                GameLog.Match.Info("[GameplayManager] Матч снят с паузы");
+                GameLog.Match.Warning("[GameplayManager] «Продолжить»: матч не на паузе.");
+                return false;
             }
+
+            MatchSnapshot snapshot = _pausedSnapshot;
+            GameModeData mode = _pausedMode;
+
+            if (!ServerSwitchTo(mode, stopCurrent: true, restore: snapshot)) return false;
+
+            _pausedSnapshot = null;
+            _pausedMode = null;
+            _currentState = GameplayState.Active;
+
+            GameLog.Match.Info($"[GameplayManager] Матч продолжен: '{mode.modeId}', раунд {snapshot?.RoundToReplay}.");
+            return true;
         }
 
         /// <summary>
@@ -317,8 +377,9 @@ namespace VrBattlegrounds.Managers
         /// </summary>
         /// <param name="stopCurrent">false — текущий режим завершился сам (объявил победителя)
         /// и уже не идёт: <c>StopGameplay</c> ему не нужен.</param>
+        /// <param name="restore">Снимок паузы — вернуть режиму после инициализации («Продолжить»).</param>
         [Server]
-        private bool ServerSwitchTo(GameModeData data, bool stopCurrent)
+        private bool ServerSwitchTo(GameModeData data, bool stopCurrent, MatchSnapshot restore = null)
         {
             if (data == null) return false;
 
@@ -339,6 +400,11 @@ namespace VrBattlegrounds.Managers
             if (stopCurrent && _gameMode != null)
                 _gameMode.StopGameplay();
 
+            // Снаряжение не переживает смену режима: ни разминочное — матча, ни матчевое —
+            // разминки. Первый режим карты (старт сцены) снимать нечего.
+            if (_gameMode != null)
+                EquipmentStrip.ServerStripAll($"смена режима {previous} → {data.modeId}");
+
             CleanupGameMode();
 
             GameObject instance = ModeFactory != null ? ModeFactory(data) : Instantiate(data.modePrefab, transform);
@@ -353,6 +419,7 @@ namespace VrBattlegrounds.Managers
             // Данные — до спавна: modeId и команды уезжают клиенту начальным состоянием,
             // и HUD хоста в OnStartClient уже знает свой режим.
             mode.Initialize(data);
+            if (restore != null) mode.RestoreSnapshot(restore);
 
             _gameModeInstance = instance;
             NetworkServer.Spawn(instance);
@@ -360,6 +427,7 @@ namespace VrBattlegrounds.Managers
             _gameMode = null;
             RegisterActiveGameMode(mode);
             mode.GameplayEnded += OnGameplayEnded;
+            mode.RoundWonServer += OnModeRoundWon;
 
             GameLog.Match.Info(
                 $"[GameplayManager] Режим на карте '{SceneName}': {previous} → {data.modeId} ({data.displayName}).");
@@ -376,6 +444,8 @@ namespace VrBattlegrounds.Managers
         private void OnGameplayEnded(TeamData winner)
         {
             _currentState = GameplayState.NotActive;
+            _pausedSnapshot = null;
+            _pausedMode = null;
 
             string winnerName = winner != null ? winner.displayName : "ничья";
             GameLog.Match.Info($"[GameplayManager] Матч завершён, победитель: {winnerName}. Карта — в разминку.");
@@ -394,6 +464,7 @@ namespace VrBattlegrounds.Managers
             if (_gameMode != null)
             {
                 _gameMode.GameplayEnded -= OnGameplayEnded;
+                _gameMode.RoundWonServer -= OnModeRoundWon;
                 UnregisterActiveGameMode(_gameMode);
                 _gameMode = null;
             }
@@ -426,15 +497,30 @@ namespace VrBattlegrounds.Managers
             GameLog.Match.Info("[GameplayManager] Матч остановлен (клиент)");
         }
 
+        /// <summary>Сервер: раунд на карте доигран и выигран. Слушает серия (общий счёт).</summary>
+        public event Action<TeamData> RoundWon;
+
         /// <summary>
-        /// Вызывается PlayerController при гибели игрока.
-        /// Делегирует в активный GameMode — каждый режим обрабатывает гибель по-своему.
+        /// Сервер: игрок погиб (жертва, убийца или null, ассистенты). Слушает серия (статистика).
+        /// </summary>
+        public event Action<PlayerSession, PlayerSession, IReadOnlyList<PlayerSession>> PlayerKilled;
+
+        private void OnModeRoundWon(TeamData winner) => RoundWon?.Invoke(winner);
+
+        /// <summary>
+        /// Вызывается PlayerController при гибели игрока; убийцу и ассистентов он определил
+        /// по урону (<c>DamageLedger</c>). Режим решает, что значит гибель, серия пишет статистику.
         /// </summary>
         [Server]
-        public void OnPlayerDied(PlayerController player)
+        public void OnPlayerDied(PlayerController player, PlayerSession killer, IReadOnlyList<PlayerSession> assists)
         {
             if (_gameMode != null)
+            {
                 _gameMode.OnPlayerDied(player);
+                _gameMode.OnPlayerKilled(player, killer);
+            }
+
+            PlayerKilled?.Invoke(player != null ? player.Session : null, killer, assists);
         }
     }
 }

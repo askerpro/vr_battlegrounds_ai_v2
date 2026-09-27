@@ -637,6 +637,33 @@ Unique Ids`, сторож — `UxrUniqueIdOnDiskTests`.
 
 ---
 
+## Патч 13: запрос власти над уже уничтоженным предметом разрывает соединение
+
+**Файл:** `Runtime/Scripts/Networking/Integrations/Net/Mirror/UxrMirrorAvatar.cs` — `CmdRequestAuthority`
+**Дата:** 2026-09-27
+**Парный код проекта:** `Assets/Scripts/Player/EquipmentStrip.cs`
+
+### Проблема
+
+Захват предмета шлёт серверу `CmdRequestAuthority(NetworkIdentity)`. Если сервер уничтожил
+предмет раньше, чем команда дошла (снятие снаряжения при смене режима, паузе, смене карты —
+`EquipmentStrip`), Mirror десериализует ссылку как `null`. SDK разыменовывал её без проверки,
+`NullReferenceException` в обработчике команды Mirror считает недоверенными данными и
+**разрывает соединение отправителя**; на хосте это его собственный клиент — игра обрывается.
+Найдено в Play mode: пауза посреди раунда с оружием, только что взятым в руку.
+
+### Применённое изменение
+
+`if (networkIdentity == null) return;` первой строкой `CmdRequestAuthority`. Помечено
+`VR Battlegrounds patch 13`.
+
+### Как повторить при обновлении SDK
+
+1. Добавить проверку на null в начало `UxrMirrorAvatar.CmdRequestAuthority`.
+2. Прогнать `AuthorityRequestForDestroyedTests`: без патча — NRE, с патчем — зелёный.
+
+---
+
 ## Зависимости от приватных членов SDK (рефлексия)
 
 **Дата:** 2026-08-19 (задача T-21, находка VR-03)

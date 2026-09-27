@@ -227,6 +227,11 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
         [Command]
         private void CmdRequestAuthority(NetworkIdentity networkIdentity)
         {
+            // VR Battlegrounds patch 13: предмет мог быть уничтожен сервером раньше, чем
+            // дошла команда (снятие снаряжения при смене режима). Mirror отдаёт тогда null,
+            // и NRE здесь разрывал соединение игрока — на хосте его собственный клиент.
+            if (networkIdentity == null) return;
+
             networkIdentity.AssignClientAuthority(netIdentity.connectionToClient);
         }
 

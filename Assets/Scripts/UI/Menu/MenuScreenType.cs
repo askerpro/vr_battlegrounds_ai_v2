@@ -11,5 +11,6 @@ namespace VrBattlegrounds.UI.Menu
         MapManager = 6,
         MatchManager = 7,
         PlayersTeams = 8,
+        Statistics = 9,
     }
 }

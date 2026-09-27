@@ -39,12 +39,24 @@ namespace VrBattlegrounds.GameModes
 
         private readonly Dictionary<int, int> _teamRoundScores = new Dictionary<int, int>();
 
+        /// <summary>
+        /// Счёт раундов на момент старта идущего раунда — его и запоминает пауза: прерванный
+        /// раунд не засчитывается, даже если его победитель уже известен (фаза Resolution).
+        /// </summary>
+        private readonly Dictionary<int, int> _scoresAtRoundStart = new Dictionary<int, int>();
+
+        /// <summary>Победитель доигрываемого раунда — объявляется серии по окончании раунда.</summary>
+        private TeamData _lastRoundWinner;
+
         private EliminationMode _eliminationMode;
         private TeamData[] _teams = new TeamData[0];
         private float _countdownDuration;
         private float _roundDuration;
 
         public IReadOnlyDictionary<int, int> TeamRoundScores => _teamRoundScores;
+
+        /// <summary>Счёт раундов сета без идущего раунда — для снимка паузы.</summary>
+        public IReadOnlyDictionary<int, int> ScoresAtRoundStart => _scoresAtRoundStart;
 
         /// <summary>Номер идущего раунда в сете, начиная с 1. Растёт только здесь (MATCH-06).</summary>
         public int CurrentRound => _currentRound;
@@ -79,6 +91,35 @@ namespace VrBattlegrounds.GameModes
         }
 
         /// <summary>
+        /// Продолжение сета после паузы: счёт раундов из снимка, раунд
+        /// <paramref name="roundToReplay"/> играется заново (прерванный раунд не засчитан).
+        /// </summary>
+        public void ResumeSet(TeamData[] teams, EliminationMode mode, int roundsPerSet, float countdownDuration,
+                              float roundDuration, IReadOnlyDictionary<int, int> roundScores, int roundToReplay)
+        {
+            _eliminationMode = mode;
+            _teams = teams ?? new TeamData[0];
+            _roundsPerSet = roundsPerSet;
+            _countdownDuration = countdownDuration;
+            _roundDuration = roundDuration;
+            _setFinished = false;
+
+            _teamRoundScores.Clear();
+            foreach (var t in _teams)
+            {
+                if (t == null) continue;
+                _teamRoundScores[t.teamIndex] = roundScores != null && roundScores.TryGetValue(t.teamIndex, out int s) ? s : 0;
+            }
+
+            // StartNextRound прибавит единицу — повторится ровно прерванный раунд.
+            _currentRound = System.Math.Max(0, roundToReplay - 1);
+
+            GameLog.Match.Info($"[SetManager] Сет продолжен после паузы с раунда {_currentRound + 1}/{_roundsPerSet}");
+
+            StartNextRound();
+        }
+
+        /// <summary>
         /// Шаг сета. Единственное место, где раунд переходит в раунд, а сет — в конец.
         /// Зовётся из <c>EliminationMode.ServerTick</c>.
         /// </summary>
@@ -92,14 +133,20 @@ namespace VrBattlegrounds.GameModes
             if (tick.PhaseChanged && tick.To == RoundState.Resolution)
                 ScoreRound(_roundManager.RoundWinner);
 
-            // Итоги показаны. Решаем, что дальше: ещё раунд или конец сета.
+            // Итоги показаны: раунд доигран — только теперь он идёт в общий счёт серии
+            // (прерванный паузой раунд до этой точки не доходит). Дальше — ещё раунд или конец сета.
             if (tick.CycleCompleted)
+            {
+                _eliminationMode.ServerReportRoundWon(_lastRoundWinner);
                 DecideAfterScoreboard();
+            }
         }
 
         /// <summary>Начисляет очко за раунд и оповещает клиентов об исходе.</summary>
         private void ScoreRound(TeamData winner)
         {
+            _lastRoundWinner = winner;
+
             if (winner != null && _teamRoundScores.ContainsKey(winner.teamIndex))
             {
                 _teamRoundScores[winner.teamIndex]++;
@@ -180,6 +227,10 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         private void StartNextRound()
         {
+            _scoresAtRoundStart.Clear();
+            foreach (var kvp in _teamRoundScores) _scoresAtRoundStart[kvp.Key] = kvp.Value;
+            _lastRoundWinner = null;
+
             _currentRound++;
             GameLog.Match.Info(
                 $"[SetManager] Раунд {_currentRound}/{_roundsPerSet}");

@@ -32,6 +32,7 @@ namespace VrBattlegrounds.Tests.Prefabs
             { "Gun",              new Vector2(0.17f, 0.23f) }, // пистолет сэмпла UltimateXR
             { "M16_Rifle_prefab", new Vector2(0.95f, 1.05f) }, // M16A2: 100 см
             { "Shotgun",          new Vector2(0.80f, 1.10f) }, // Remington 870: 100–106 см
+            { "Shotgun_real",     new Vector2(0.66f, 0.78f) }, // Mossberg 500 Cruiser (пистолетная рукоять, ствол 18.5"): 71 см
             { "Machinegun",       new Vector2(0.85f, 1.20f) }, // ручной пулемёт / штурмовая винтовка
             { "Grenade",          new Vector2(0.08f, 0.12f) }  // M67: 9 см, с запалом 11
         };

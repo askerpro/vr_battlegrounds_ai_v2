@@ -878,6 +878,7 @@ MonoBehaviour:
   - {fileID: 6930238828490459782}
   _dogTagController: {fileID: 2183449382615808369}
   _animator: {fileID: 7921192570042127094}
+  _lostWeaponReplaceDelay: 2
 --- !u!95 &6813650175331169599
 Animator:
   serializedVersion: 7
@@ -1210,7 +1211,7 @@ PrefabInstance:
     - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _weaponInfo
       value: 
-      objectReference: {fileID: 11400000, guid: bf5b7399e87929c45ae98591db37ec71, type: 2}
+      objectReference: {fileID: 11400000, guid: 29c9d566aa4ac214ab127b4e633b4334, type: 2}
     - target: {fileID: 6398143880287876599, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: __isInPrefab
       value: 1

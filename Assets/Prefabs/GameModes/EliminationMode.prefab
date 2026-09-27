@@ -12,6 +12,8 @@ GameObject:
   - component: {fileID: 4467436815685694494}
   - component: {fileID: 2771647016474421150}
   - component: {fileID: 3246355124850484666}
+  - component: {fileID: 4168703770542051682}
+  - component: {fileID: 229250694452780723}
   m_Layer: 0
   m_Name: EliminationMode
   m_TagString: Untagged
@@ -85,3 +87,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f9e65d3071572849af978a10ce52b07, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.GameModes.RoundMagazineRefill
+--- !u!114 &4168703770542051682
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7322410552265810670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 912cd888c01b283429b2f3929f57e138, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.GameModes.RoundCleanup
+--- !u!114 &229250694452780723
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7322410552265810670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ed20a66daf5b864a950e2cf2a807bfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.LooseItemSweeper
+  _magazineLifetime: 30
+  _weaponLifetime: 0
+  _weaponAction: 0
+  _checkInterval: 0.5

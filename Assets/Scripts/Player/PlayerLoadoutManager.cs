@@ -59,6 +59,7 @@ namespace VrBattlegrounds.Player
 
         private UxrAvatar _avatar;
         private UxrMagazinePocket _pocket;
+        private PlayerController _player;
 
         /// <summary>Карман магазинов этого аватара или null, если его нет в префабе.</summary>
         public UxrMagazinePocket Pocket
@@ -79,6 +80,7 @@ namespace VrBattlegrounds.Player
         {
             if (_avatar == null) _avatar = GetComponent<UxrAvatar>();
             if (_pocket == null) _pocket = GetComponentInChildren<UxrMagazinePocket>(true);
+            if (_player == null) _player = GetComponent<PlayerController>();
         }
 
         // ── Сервер ─────────────────────────────────────────────
@@ -94,6 +96,12 @@ namespace VrBattlegrounds.Player
             {
                 Pocket.ItemReleased -= ServerHandleItemReleased;
                 Pocket.ItemReleased += ServerHandleItemReleased;
+            }
+
+            if (_player != null)
+            {
+                _player.PlayerDied -= ServerHandlePlayerDied;
+                _player.PlayerDied += ServerHandlePlayerDied;
             }
         }
 
@@ -115,6 +123,57 @@ namespace VrBattlegrounds.Player
 
             if (_pocket != null)
                 _pocket.ItemReleased -= ServerHandleItemReleased;
+
+            if (_player != null)
+                _player.PlayerDied -= ServerHandlePlayerDied;
+        }
+
+        /// <summary>
+        /// Погибший теряет снаряжение: оружие из кобур выпадает на месте смерти и становится
+        /// ничьим (его можно подобрать, в конце раунда его уберёт общая уборка), магазины
+        /// из кармана исчезают. Оружие из рук роняет <see cref="PlayerGrabManager"/>.
+        ///
+        /// <para>
+        /// Кобуры висят на скелете, а не внутри модели, которую прячет наблюдатель: без этого
+        /// призрак ходил с видимым оружием на спине и получал его обратно при респауне.
+        /// </para>
+        ///
+        /// <para>
+        /// Событие смерти поднимается на каждой машине; снятие с якоря делает только сервер —
+        /// оно синхронизируется каналом состояния UltimateXR, и на клиентах тело предмета
+        /// становится динамическим так же, как у сервера.
+        /// </para>
+        /// </summary>
+        private void ServerHandlePlayerDied(PlayerController player)
+        {
+            if (!isServer) return;
+
+            ServerDropEquipment();
+        }
+
+        /// <summary>Роняет оружие из кобур и убирает магазины из кармана.</summary>
+        [Server]
+        public void ServerDropEquipment()
+        {
+            if (!UxrGrabManager.HasInstance) return;
+
+            int dropped = 0;
+
+            foreach (UxrGrabbableObjectAnchor anchor in GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
+            {
+                // Только карманы аватара: гнездо магазина у оружия в кобуре тоже в иерархии.
+                if (!AnchorRole.IsAvatarPocket(anchor)) continue;
+
+                UxrGrabbableObject item = anchor.CurrentPlacedObject;
+                if (item == null || item.GetComponent<WeaponComponent>() == null) continue;
+
+                UxrGrabManager.Instance.RemoveObjectFromAnchor(item, true, true);
+                dropped++;
+            }
+
+            ServerClearMagazines();
+
+            GameLog.Player.Info($"[Loadout] {name}: погиб — выронено оружия из кобур: {dropped}, магазины убраны.", this);
         }
 
         /// <summary>

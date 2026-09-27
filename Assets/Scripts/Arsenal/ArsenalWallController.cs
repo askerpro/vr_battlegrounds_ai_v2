@@ -97,6 +97,13 @@ namespace VrBattlegrounds.Arsenal
         private readonly System.Collections.Generic.HashSet<int> _pendingSlotBindings =
             new System.Collections.Generic.HashSet<int>();
 
+        /// <summary>
+        /// Последнее оружие, выданное каждым слотом (сервер). По нему стена отличает
+        /// «ствол унесли» от «ствол пропал» — пополнять нужно только второе.
+        /// </summary>
+        private readonly System.Collections.Generic.Dictionary<int, NetworkIdentity> _homeItems =
+            new System.Collections.Generic.Dictionary<int, NetworkIdentity>();
+
         /// <summary>Буфер разобранных привязок: не хочется плодить мусор в <c>Update</c>.</summary>
         private readonly System.Collections.Generic.List<int> _resolvedSlotBindings =
             new System.Collections.Generic.List<int>();
@@ -320,27 +327,73 @@ namespace VrBattlegrounds.Arsenal
         }
 
         /// <summary>
-        /// Пополняет опустевшие слоты. Вне раунда пополнять стену некому — фазы
-        /// <c>Setup</c> нет, — поэтому это делает правило сцены (<see cref="LobbyFreePlay"/>).
+        /// Пополняет слоты, чьё оружие пропало совсем (уничтожено, выпало из мира).
+        /// Слот, чей ствол жив — в руке, в кобуре, на полу, — ждёт его возвращения
+        /// (<see cref="ServerReturnHome"/>), а не получает дубль. Так число стволов
+        /// вне раунда постоянно. Зовёт правило сцены (<see cref="LobbyFreePlay"/>).
         /// </summary>
         [Server]
-        public void ServerReplenishEmptySlots()
+        public void ServerReplenishLostSlots()
         {
-            ReplenishWeaponsNetwork(false);
+            ReplenishSlotsWhere(IsSlotLost);
         }
 
-        /// <summary>Есть ли на стене настроенный слот без предмета.</summary>
-        public bool HasEmptySlots()
+        /// <summary>Есть ли слот, чьё оружие пропало и которому нужна замена.</summary>
+        public bool HasLostSlots()
         {
             EnsureReferences();
 
-            foreach (ArsenalSlotController slot in _allSlots)
+            for (int i = 0; i < _allSlots.Length; i++)
             {
-                if (slot != null && slot.IsConfigured && slot.NeedsReplenishment())
-                    return true;
+                if (IsSlotLost(i)) return true;
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Слот пуст, и выданного им оружия больше нет. Учёт выданного ведёт только
+        /// сервер, поэтому у клиента ответ всегда «нет».
+        /// </summary>
+        private bool IsSlotLost(int index)
+        {
+            ArsenalSlotController slot = _allSlots[index];
+            if (slot == null || !slot.IsConfigured || !slot.NeedsReplenishment()) return false;
+
+            // Уничтоженный объект Unity сравнивается с null как null.
+            return !_homeItems.TryGetValue(index, out NetworkIdentity item) || item == null;
+        }
+
+        /// <summary>
+        /// Возвращает оружие в слот, который его выдал (<see cref="WeaponComponent.HomeSlot"/>).
+        /// Путь тот же, что у выдачи: привязка «предмет → слот» в <c>_slotItems</c>,
+        /// и каждая машина раскладывает предмет сама — поза на стене та же, что у свежего.
+        /// </summary>
+        /// <returns>false — дом не на этой стене, занят, или предмет в руке.</returns>
+        [Server]
+        public bool ServerReturnHome(WeaponComponent weapon)
+        {
+            if (weapon == null || weapon.HomeSlot == null) return false;
+
+            EnsureReferences();
+
+            int index = System.Array.IndexOf(_allSlots, weapon.HomeSlot);
+            if (index < 0 || weapon.HomeSlot.IsItemPresent) return false;
+
+            UltimateXR.Manipulation.UxrGrabbableObject grabbable =
+                weapon.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+            if (grabbable != null && grabbable.IsBeingGrabbed) return false;
+
+            NetworkIdentity identity = weapon.GetComponent<NetworkIdentity>();
+            if (identity == null || identity.netId == 0) return false;
+
+            weapon.HomeSlot.AssignNetworkItem(weapon.gameObject);
+
+            // OP_SET уходит и при том же значении — клиенты перепривяжут предмет.
+            _slotItems[index] = identity.netId;
+
+            GameLog.Arsenal.Info($"[Arsenal] '{weapon.name}' вернулся в свой слот '{weapon.HomeSlot.name}'.", this);
+            return true;
         }
 
         /// <summary>
@@ -367,6 +420,12 @@ namespace VrBattlegrounds.Arsenal
         {
             GameLog.Arsenal.Info($"[Arsenal DEBUG] ReplenishWeaponsNetwork. ForceAll: {forceAll}");
 
+            ReplenishSlotsWhere(i => forceAll || _allSlots[i].NeedsReplenishment());
+        }
+
+        [Server]
+        private void ReplenishSlotsWhere(System.Func<int, bool> needsWeapon)
+        {
             if (_allSlots == null || _allSlots.Length == 0)
                 _allSlots = GetComponentsInChildren<ArsenalSlotController>();
 
@@ -375,7 +434,7 @@ namespace VrBattlegrounds.Arsenal
                 var slot = _allSlots[i];
                 if (slot.WeaponData == null || slot.WeaponData.WeaponPrefab == null) continue;
 
-                if (forceAll || slot.NeedsReplenishment())
+                if (needsWeapon(i))
                 {
                     // Создание инстанса ведёт сетевой слой: он же гасит «Auto Anchor»
                     // до Awake и выравнивает UniqueId после спавна. Стена о идентичности
@@ -398,7 +457,10 @@ namespace VrBattlegrounds.Arsenal
                     NetworkIdentity identity = spawned.GetComponent<NetworkIdentity>();
 
                     if (identity != null && identity.netId != 0)
+                    {
                         _slotItems[i] = identity.netId;
+                        _homeItems[i] = identity;
+                    }
                 }
             }
         }
@@ -736,6 +798,17 @@ namespace VrBattlegrounds.Arsenal
 
         private void HandleItemReturned(ArsenalSlotController slot)
         {
+            // Ствол повесили руками — привязка «предмет → слот» обязана это знать:
+            // по ней слот занят у позднего клиента, и по ней стена не выдаёт дубль.
+            if (isServer && slot != null && slot.CurrentItem != null)
+            {
+                int index = System.Array.IndexOf(_allSlots, slot);
+                NetworkIdentity identity = slot.CurrentItem.GetComponent<NetworkIdentity>();
+
+                if (index >= 0 && identity != null && identity.netId != 0)
+                    _slotItems[index] = identity.netId;
+            }
+
             OnSlotChanged?.Invoke(slot, false);
         }
 

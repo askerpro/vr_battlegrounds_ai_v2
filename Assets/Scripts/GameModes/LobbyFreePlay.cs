@@ -39,7 +39,7 @@ namespace VrBattlegrounds.GameModes
     [DisallowMultipleComponent]
     public class LobbyFreePlay : MonoBehaviour
     {
-        [Tooltip("Через сколько секунд после того, как слот опустел, на стене появляется новый предмет.")]
+        [Tooltip("Через сколько секунд слот, чьё оружие пропало совсем (уничтожено, выпало из мира), получает новое. Унесённое оружие слот ждёт обратно.")]
         [Min(0f)]
         [SerializeField] private float _replenishDelay = 2f;
 
@@ -153,13 +153,14 @@ namespace VrBattlegrounds.GameModes
         }
 
         /// <summary>
-        /// Пополняет стену, когда слот пустует дольше <see cref="_replenishDelay"/>.
-        /// Задержка нужна, чтобы новый предмет не рождался в руке того, кто только что
-        /// снял предыдущий. Выдача сетевая, поэтому вне сервера её нет.
+        /// Выдаёт замену слоту, чьё оружие пропало совсем, спустя <see cref="_replenishDelay"/>.
+        /// Унесённое оружие слот не заменяет: оно вернётся само (уборщик предметов на полу
+        /// возвращает его домой), и число стволов в лобби остаётся постоянным.
+        /// Выдача сетевая, поэтому вне сервера её нет.
         /// </summary>
         private void KeepStocked(ArsenalWallController wall, int index, float deltaTime)
         {
-            if (!wall.isServer || !wall.HasEmptySlots())
+            if (!wall.isServer || !wall.HasLostSlots())
             {
                 _emptyTime[index] = 0f;
                 return;
@@ -169,7 +170,7 @@ namespace VrBattlegrounds.GameModes
             if (_emptyTime[index] < _replenishDelay) return;
 
             _emptyTime[index] = 0f;
-            wall.ServerReplenishEmptySlots();
+            wall.ServerReplenishLostSlots();
         }
     }
 }

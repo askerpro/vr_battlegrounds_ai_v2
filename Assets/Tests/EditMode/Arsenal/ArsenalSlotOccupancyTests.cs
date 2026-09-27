@@ -160,17 +160,17 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             slot.AssignNetworkItem(weapon);
 
             UxrGrabbableObject grabbable = weapon.GetComponent<UxrGrabbableObject>();
-            Assert.IsTrue(grabbable.enabled, "Контроль: до блокировки предмет обязан быть хватаемым.");
+            Assert.IsTrue(CanBeGrabbed(grabbable), "Контроль: до блокировки предмет обязан быть хватаемым.");
 
             slot.Lock();
 
-            Assert.IsFalse(grabbable.enabled,
+            Assert.IsFalse(CanBeGrabbed(grabbable),
                 "Слот заблокирован, а оружие со стены по-прежнему можно взять. " +
                 "Lock() ищет предмет в CurrentPlacedObject — том самом поле из NET-13.");
 
             slot.Unlock();
 
-            Assert.IsTrue(grabbable.enabled,
+            Assert.IsTrue(CanBeGrabbed(grabbable),
                 "Слот разблокирован, но предмет так и остался незахватываемым.");
         }
 
@@ -188,8 +188,63 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             GameObject weapon = CreateSpawnedWeapon("Weapon");
             slot.AssignNetworkItem(weapon);
 
-            Assert.IsFalse(weapon.GetComponent<UxrGrabbableObject>().enabled,
+            Assert.IsFalse(CanBeGrabbed(weapon.GetComponent<UxrGrabbableObject>()),
                 "Оружие выдано в закрытую стену и его можно взять до открытия арсенала.");
+        }
+
+        [Test]
+        public void Блокировка_слота_выключает_захват_затвора_оружия()
+        {
+            SilenceMirrorNoise();
+
+            ArsenalSlotController slot = CreateSlot("Slot", out _);
+            GameObject weapon = CreateSpawnedWeapon("Weapon");
+
+            // Затвор (цевьё, рукоять заряжания) — отдельный UxrGrabbableObject на дочернем
+            // объекте, как у M16 и Gun_real.
+            GameObject slideObject = new GameObject("Slide");
+            slideObject.transform.SetParent(weapon.transform);
+            UxrGrabbableObject slide = slideObject.AddComponent<UxrGrabbableObject>();
+
+            slot.AssignNetworkItem(weapon);
+            slot.Lock();
+
+            Assert.IsFalse(CanBeGrabbed(slide),
+                "Стена закрыта, само оружие не берётся, а затвор — берётся. " +
+                "Блокировка слота обязана касаться всех захватываемых частей предмета, а не только корня.");
+
+            slot.Unlock();
+
+            Assert.IsTrue(CanBeGrabbed(slide),
+                "Слот разблокирован, но затвор оружия так и остался незахватываемым.");
+        }
+
+        [Test]
+        public void Блокировка_слота_не_ломает_текущий_захват()
+        {
+            SilenceMirrorNoise();
+
+            ArsenalSlotController slot = CreateSlot("Slot", out _);
+            GameObject weapon = CreateSpawnedWeapon("Weapon");
+            slot.AssignNetworkItem(weapon);
+
+            slot.Lock();
+
+            // Выключенный компонент молча стирает из UxrGrabManager запись о текущем
+            // захвате (тот же отказ, что был у жетона): если игрок держит затвор оружия
+            // на стене в момент закрытия, отпускание падает. Запрет — только через IsGrabbable.
+            Assert.IsTrue(weapon.GetComponent<UxrGrabbableObject>().enabled,
+                "Блокировка слота выключила компонент UxrGrabbableObject. Запрещать захват нужно " +
+                "через IsGrabbable — иначе захват, начатый до закрытия стены, ломается при отпускании.");
+        }
+
+        /// <summary>
+        /// Можно ли начать новый захват: UltimateXR требует и включённый компонент,
+        /// и <c>IsGrabbable</c> (<c>UxrGrabbableObject.CanBeGrabbedByGrabber</c>).
+        /// </summary>
+        private static bool CanBeGrabbed(UxrGrabbableObject grabbable)
+        {
+            return grabbable.enabled && grabbable.IsGrabbable;
         }
     }
 }

@@ -234,14 +234,27 @@ namespace VrBattlegrounds.Arsenal
         /// Ищет предмет через <see cref="CurrentItem"/>, а не через
         /// <c>CurrentPlacedObject</c>: для выданного по сети оружия второе всегда пусто,
         /// и блокировка слота была пустым вызовом (NET-13).
+        ///
+        /// <para>
+        /// Касается всех <see cref="UxrGrabbableObject"/> в иерархии предмета: затвор,
+        /// цевьё и вставленный магазин — отдельные захватываемые объекты, и при блокировке
+        /// одного корня их можно было хватать на закрытой стене.
+        /// </para>
+        ///
+        /// <para>
+        /// Через <c>IsGrabbable</c>, а не выключением компонента — по той же причине, что
+        /// у жетона (<see cref="DogTagController.Disable"/>): выключенный компонент стирает
+        /// из <see cref="UxrGrabManager"/> запись о текущем захвате, и затвор, который игрок
+        /// держал в момент закрытия стены, ломал отпускание.
+        /// </para>
         /// </summary>
         private void SetItemGrabbable(bool grabbable)
         {
             GameObject item = CurrentItem;
             if (item == null) return;
 
-            UxrGrabbableObject grab = item.GetComponent<UxrGrabbableObject>();
-            if (grab != null) grab.enabled = grabbable;
+            foreach (UxrGrabbableObject grab in item.GetComponentsInChildren<UxrGrabbableObject>(true))
+                grab.IsGrabbable = grabbable;
         }
 
         /// <summary>

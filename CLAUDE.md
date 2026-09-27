@@ -192,7 +192,8 @@ Grep  pattern="ClassName"  path="Assets/Editor"     # редакторные у�
 
 `/commit` `/debug` `/feature` `/unity-check` `/docs-sync` — лежат в `.claude/commands/`.
 Многошаговые процедуры — скиллы в `.claude/skills/`: `/setup-avatar` — аватар игрока из
-модели (риг, игровой вариант `PlayerBase`, регистрация, проверка).
+модели (риг, игровой вариант `PlayerBase`, регистрация, проверка); `/add-weapon` — новое
+оружие (сборка из пака Hands вычислением, магазин, арсенал, сеть, тесты).
 
 ## Документация — что обновлять
 

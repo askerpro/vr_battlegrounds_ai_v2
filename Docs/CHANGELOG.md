@@ -2,6 +2,44 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - Помповый дробовик из пака Hands, сборщик оружия, M16 на стене
+
+### Добавлено
+
+- **`Shotgun_real` — помповый дробовик** (`Assets/Prefabs/Weapons/ShotgunReal/`), модель
+  `Hands_Shotgun` пака Hands Weapons Animations, размер Mossberg 500 Cruiser (72 см, корень ×1.19).
+  Помпа — граббабл с ходом 10.2 см и `UxrShotgunPump`, спуск 17°: обе величины взяты из клипа
+  `Shot` пака. Магазин `Shotgun_real_mag` — патрон из пака в окне заряжания, 6 выстрелов,
+  вариант `MagShotgun` (тег `MagShotgun` — карманы уже принимают). `ShotgunReal_Weapon`: в реестре,
+  в `spawnPrefabs`, на стене в слоте (3) вместо второго сэмплового `Shotgun`.
+- **`HandsPackWeapon` / `HandsPackWeaponBuilder`** (`Assets/Editor/VR_Battlegrounds/Gameplay/`) —
+  сборка оружия из пака вычислением: детали на `кость × bindpose`, ход и углы из клипов, точки
+  хвата из ладоней FPS-рук через калибровку по M16. Меню `Hands Pack Weapon Report` и
+  `Build Shotgun_real From Hands Pack`. Скилл `/add-weapon` — весь маршрут.
+- Тесты `HandsPackWeaponTests` (детали, ход помпы/затвора, угол спуска против пака — считает сам,
+  независимо от сборщика) и `WeaponHangFitsSlotTests` (оружие на стене внутри перфопанели).
+
+### Исправлено
+
+- **M16 на стене торчал дулом над панелью слота на 24 см.** `M16_Weapon.WeaponPositionOffset.z`
+  0.19 → −0.055: винтовка 99.7 см по центру метровой панели.
+
+### Найдено, не исправлено
+
+- У `Gun_real` механика расходится с паком при точной геометрии: ход затвора 1.89 см против
+  4.23, спуск 40° против 18°. Кейс в `HandsPackWeaponTests` на `Gun_real` красный именно по этим
+  двум пунктам. Отложено по решению пользователя.
+
+### Проверка
+
+- Красные до правки: `HandsPackWeaponTests(Shotgun_real)` (нет префаба), тот же тест на
+  `Gun_real` (ход, угол; геометрия зелёная — 0.00 мм), `WeaponHangFitsSlotTests` на M16
+  (0.885 при крае 0.642), `AnchorActivationAudioTests` на первой сборке (якорь без клипа).
+- Оружейные группы (76 тестов) — зелёные. Полный EditMode: падают те же 9 известных
+  `AvatarLoadoutTests`; `GunTwoHandAimTests`/`EquipmentStripTests` падали в полном наборе
+  нестабильно, по отдельности зелёные. `AndroidCompileGate` — Passed.
+- Не проверено: хват в шлеме и стена в Play Mode.
+
 ## [2026-09-27] - Статистика карты без серии, «Играть» только админу
 
 ### Добавлено

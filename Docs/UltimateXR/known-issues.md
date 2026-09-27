@@ -655,3 +655,18 @@ Mirror.CommandMessage caused an Exception … NullReferenceException` со ст�
 снаряжения при смене режима, паузе, смене карты (`EquipmentStrip`).
 
 **Решение.** Патч 13 в [`sdk-patches.md`](sdk-patches.md): проверка на null.
+
+## Issue 19: деталь из пака Hands Weapons Animations съезжает, если ставить её по трансформу рендерера
+
+> Установлено 2026-09-27 при сборке `Shotgun_real`. Это не UltimateXR, а сторонний пак — но
+> встречается ровно при интеграции оружия в UltimateXR.
+
+**Симптом.** Меш детали (затвор, спуск, помпа), перенесённый из `SkinnedMeshRenderer` пака в
+`MeshFilter` с тем же трансформом, стоит не на своём месте; приходится двигать на глаз.
+
+**Причина.** Каждая деталь пака жёстко привязана к одной кости, и вершины ставит
+`кость × bindpose`, а не трансформ рендерера. Они расходятся (до 1.5 в элементах матрицы).
+Клипы пака двигают те же кости, поэтому ход и углы деталей тоже надо брать из костей.
+
+**Решение.** `HandsPackWeapon.PartInBody` (`Assets/Editor/VR_Battlegrounds/Gameplay/`), сборщик —
+`HandsPackWeaponBuilder`, маршрут — скилл `/add-weapon`. Проверка — `HandsPackWeaponTests`.

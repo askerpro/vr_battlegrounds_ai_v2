@@ -116,11 +116,11 @@ namespace VrBattlegrounds.Tests.Player
         {
             string source = File.ReadAllText("Assets/Scripts/Player/PlayerLoadoutManager.cs");
 
-            foreach (string mode in new[] { "EliminationMode", "RoundState", "LobbyFreePlay" })
+            foreach (string mode in new[] { "EliminationMode", "RoundState", "LobbyMode", "LobbyMagazineSupply", "GameMode" })
             {
                 Assert.IsFalse(source.Contains(mode),
                     $"PlayerLoadoutManager упоминает {mode}. Когда и сколько выдавать, решают политики " +
-                    "режима и сцены; менеджер только исполняет.");
+                    "режима (RoundMagazineRefill, LobbyMagazineSupply); менеджер только исполняет.");
             }
         }
     }

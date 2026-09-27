@@ -10,7 +10,8 @@ namespace VrBattlegrounds.Player.UI
     /// Управляет локальным интерфейсом игрока в VR.
     /// Вешается на префаб игрока (там же где PlayerController).
     /// Срабатывает только для локального игрока.
-    /// Читает текущий GameModeData и инстанцирует его hudPrefab в заранее заготовленный контейнер.
+    /// Читает данные активного режима сцены (GameMode.ModeData) и инстанцирует его hudPrefab
+    /// в заранее заготовленный контейнер; пересоздаёт HUD при смене режима.
     /// </summary>
     [RequireComponent(typeof(PlayerController))]
     public class PlayerHUDManager : NetworkBehaviour
@@ -38,52 +39,64 @@ namespace VrBattlegrounds.Player.UI
                 return;
             }
 
-            // Подписываемся на события изменения сцены или старта сессии,
-            // чтобы пересоздавать HUD если режим сменился.
-            // Но в нашей архитектуре, так как игрок спавнится после загрузки карты,
-            // SessionManager уже знает режим.
-            SetupHUDForCurrentMode();
+            // HUD — у активного режима этой сцены, а не у выбора матча: в лобби выбор
+            // матча описывает следующий матч, и его HUD в лобби не нужен. Режим может
+            // доехать до клиента позже аватара — поэтому подписка, а не разовый запрос.
+            _subscribed = true;
+            GameplayManager.ActiveGameModeChangedLocal += SetupHUDForMode;
+            SetupHUDForMode(GameMode.Current);
         }
 
-        private void SetupHUDForCurrentMode()
+        public override void OnStopAuthority()
         {
-            // Сбой порядка инициализации: HUD спавнится после загрузки карты, к этому
-            // моменту менеджер сессии обязан существовать. Error.
-            if (SessionManager.Instance == null)
+            Unsubscribe();
+            base.OnStopAuthority();
+        }
+
+        private void OnDestroy()
+        {
+            Unsubscribe();
+        }
+
+        private bool _subscribed;
+
+        private void Unsubscribe()
+        {
+            if (!_subscribed) return;
+            _subscribed = false;
+            GameplayManager.ActiveGameModeChangedLocal -= SetupHUDForMode;
+        }
+
+        private void SetupHUDForMode(GameMode mode)
+        {
+            if (this == null || _hudContainer == null) return;
+
+            // Режима нет (карта до старта матча, смена сцены) — HUD нечего показывать.
+            if (mode == null)
             {
-                GameLog.UI.Error(
-                    $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: SessionManager.Instance равен null. " +
-                    "Возможно, сцена загрузилась неверно.", this);
+                ClearHUD();
+                GameLog.UI.Verbose($"[{nameof(PlayerHUDManager)}] Активного режима нет — HUD снят.", this);
                 return;
             }
 
-            // Единственная из пяти веток, которая лечится сама: режим доезжает до клиента
-            // по сети и на момент спавна аватара может быть ещё не получен. Warning.
-            if (string.IsNullOrEmpty(SessionManager.Instance.SelectedModeId))
-            {
-                GameLog.UI.Warning(
-                    $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: в SessionManager пустой SelectedModeId. " +
-                    "Это может быть из-за задержки сети при входе на сервер.", this);
-                return;
-            }
+            GameModeData modeData = mode.ModeData;
+            string modeId = modeData != null ? modeData.modeId : mode.GetType().Name;
 
-            string modeId = SessionManager.Instance.SelectedModeId;
-            GameModeData modeData = SessionManager.Instance.SelectedGameModeData;
-
-            // Режим выбран, но в реестре его нет — рассинхрон данных, сам не исправится. Error.
+            // Данные режима не нашлись по modeId — рассинхрон данных, сам не исправится. Error.
             if (modeData == null)
             {
+                ClearHUD();
                 GameLog.UI.Error(
-                    $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: GameMode '{modeId}' не найден в реестре.", this);
+                    $"[{nameof(PlayerHUDManager)}] Отмена спавна HUD: данные режима {mode.GetType().Name} не найдены по modeId.", this);
                 return;
             }
 
-            // Режим найден и исправен, у него просто нет своего HUD. Игра работает,
-            // но игрок остаётся без интерфейса — это проблема, а не сбой. Warning.
+            // У режима нет своего HUD (лобби) — это его решение, а не сбой. Info.
             if (modeData.hudPrefab == null)
             {
-                GameLog.UI.Warning(
-                    $"[{nameof(PlayerHUDManager)}] GameMode '{modeId}' не имеет hudPrefab. HUD не заспавнен.", this);
+                ClearHUD();
+                GameLog.UI.Info(
+                    $"[{nameof(PlayerHUDManager)}] У режима '{modeId}' нет HUD — интерфейс не показывается.", this);
                 return;
             }
 

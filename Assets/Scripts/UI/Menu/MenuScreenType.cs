@@ -10,5 +10,6 @@ namespace VrBattlegrounds.UI.Menu
         PhysicalSpaceSync = 5,
         MapManager = 6,
         MatchManager = 7,
+        PlayersTeams = 8,
     }
 }

@@ -242,6 +242,18 @@ namespace VrBattlegrounds.GameModes
 
         public override bool CanRespawn() => false;
 
+        /// <summary>Оружие стреляет только в бою. Фаза — SyncVar, поэтому ответ верен и у клиента.</summary>
+        public override bool WeaponsEnabled => _roundState == RoundState.Combat;
+
+        /// <summary>
+        /// Арсенал открыт только в закупке; жетон нужен, если закупка кончается готовностью.
+        /// Пустые слоты пополняются событием на входе в <c>Setup</c> (<see cref="ServerSetRoundState"/>).
+        /// </summary>
+        public override ArsenalRules ArsenalRules => new ArsenalRules(
+            isOpen: _roundState == RoundState.Equipment,
+            usesReadinessTag: _roundStartRule == RoundStartRule.Readiness,
+            replacesLostWeapons: false);
+
         protected override bool CanStartGameplay()
         {
             // Базовый класс больше не ждет. Наша локальная машина состояний ждет появления игроков.
@@ -259,18 +271,22 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         private bool IsPlayersReady()
         {
-            var sessionManager = VrBattlegrounds.Managers.SessionManager.Instance;
-            int minPlayers = 2;
-            if (sessionManager != null && sessionManager.SelectedGameModeData != null)
-            {
-                minPlayers = sessionManager.SelectedGameModeData.minPlayersToStart;
-            }
-
+            // Минимум — из данных этого режима, а не из выбора матча в SessionManager.
             int currentPlayers = PlayerRoster.GetAllPlayers().Count();
-            if (currentPlayers < minPlayers) return false;
+            if (currentPlayers < MinPlayersToStart) return false;
+
+            // Этап Б: команду матча игрок выбирает сам на карте (или её выдаёт админ).
+            // Пока хоть у кого-то её нет, матч стоит: иначе игрок остался бы вне игры.
+            if (!AllPlayersHaveModeTeam()) return false;
 
             return _teamStates.Values.All(t => t.HasPlayers());
         }
+
+        /// <summary>
+        /// Матч начался — сам игрок команду больше не меняет, только админ.
+        /// Фаза матча — SyncVar, поэтому ответ верен и у клиента (планшет).
+        /// </summary>
+        public override bool TeamChoiceLocked => _matchState != EliminationMatchState.WaitingForPlayers;
 
         [Server]
         protected override void StartGameplay()
@@ -467,7 +483,7 @@ namespace VrBattlegrounds.GameModes
         /// получает только заявку «бой пора заканчивать».
         /// </summary>
         [Server]
-        public void OnPlayerDied(PlayerController player)
+        public override void OnPlayerDied(PlayerController player)
         {
             if (_roundManager == null || _roundManager.State != RoundState.Combat) return;
 
@@ -514,12 +530,14 @@ namespace VrBattlegrounds.GameModes
                     var player = session.ActiveAvatar;
                     if (player == null || player.IsAlive) continue;
 
-                    // Если игрок уже в зоне - респавним сразу
+                    // Зона — условие респавна, а не его точка: игрок физически стоит
+                    // в зале и в зону приходит сам. Респавн восстанавливает только
+                    // состояние и никого не двигает.
                     if (zone.GetPlayersInZone().Contains(player))
                     {
                         GameLog.Match.Info(
                             $"[EliminationMode] Игрок {player.name} уже в зоне — респаун сразу.");
-                        player.Respawn(zone.transform);
+                        player.Respawn();
                     }
                     else
                     {
@@ -535,7 +553,7 @@ namespace VrBattlegrounds.GameModes
                             z.PlayerEntered -= pending.Handler;
                             _pendingRespawns.Remove(pending);
 
-                            p.Respawn(z.transform);
+                            p.Respawn();
                             GameLog.Match.Info(
                                 $"[EliminationMode] Игрок {player.name} вернулся в зону — отложенный респаун выполнен.");
                         };
@@ -604,6 +622,11 @@ namespace VrBattlegrounds.GameModes
 
             ApplyRoundStateLocal(newState);
             OnRoundStateChangedServer?.Invoke(newState);
+
+            // Новый раунд — стены пополняют пустые слоты. Раньше стена сама слушала
+            // фазы Elimination; теперь она знает только базовый GameMode.
+            if (newState == RoundState.Setup)
+                RaiseArsenalRefillRequestedServer();
         }
 
         // ── Состав неготовых: тоже состояние ─────────────────────────────────

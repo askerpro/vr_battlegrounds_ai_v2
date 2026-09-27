@@ -41,9 +41,24 @@ namespace VrBattlegrounds.GameModes
         [Tooltip("Префаб с компонентом GameMode. Инстанцируется MatchManager-ом при StartMatch, уничтожается при StopMatch.\nПрефаб должен содержать компонент-наследник GameMode (RespawnMode, EliminationMode).")]
         public GameObject modePrefab;
 
+        [Tooltip("Как режим раздаёт свои команды игрокам без команды режима.\n" +
+                 "PlayerChoice — никак: игрок выбирает сам в планшете или команду выдаёт админ; матч ждёт, пока команда будет у всех.\n" +
+                 "AutoBalance — сам, в самую малочисленную (лобби: команда одна — её получают все).")]
+        public TeamAssignmentKind teamAssignment = TeamAssignmentKind.PlayerChoice;
+
         [Tooltip("Префаб интерфейса игрока (VR HUD). Спавнится компонентом PlayerHUDManager локального игрока внутрь его UI-контейнера при старте матча/подключении.")]
         public GameObject hudPrefab;
 
         public override string ToString() => displayName;
+    }
+
+    /// <summary>Политика раздачи команд режима (<see cref="GameModeData.teamAssignment"/>).</summary>
+    public enum TeamAssignmentKind
+    {
+        /// <summary>Игрок выбирает сам (планшет) или команду выдаёт админ. Режим никого не назначает.</summary>
+        PlayerChoice = 0,
+
+        /// <summary>Режим раскладывает игроков сам, в самую малочисленную команду.</summary>
+        AutoBalance = 1
     }
 }

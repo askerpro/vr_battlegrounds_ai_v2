@@ -88,6 +88,101 @@ GameModeData.modePrefab
 |---|---|---|---|
 | `EliminationMode` | Матч → Сеты → Раунды | Больше сетов выиграно | ❌ нет |
 | `RespawnMode` | Один длинный матч (таймер) | Больше фрагов | ✅ всегда |
+| `LobbyMode` | Нет матча — свободная игра, одна команда «Лобби» | — | ✅ |
+
+### Режим сцены и выбор матча
+
+Режим, который запускает `GameplayManager`, берётся из двух **разных** источников, и они
+не смешиваются (`GameplayManager.ResolveGameModeData`):
+
+| Источник | Где задан | Что означает | Старт |
+|---|---|---|---|
+| **Режим сцены** | поле `_sceneGameMode` у `GameplayManager` в сцене | режим, который эта сцена **есть** (лобби — `LobbyMode`) | сам, в `GameplayManager.OnStartServer` |
+| **Выбор матча** | `SessionManager.SelectedGameModeData` (админ, `GameModeRegistry`) | режим **следующего** матча на карте | по команде администратора или автостарту `DebugOrchestrator` |
+
+Режим сцены задан — выбор матча не спрашивается вовсе. Поэтому выбор администратора в лобби
+не меняет режим лобби, а лобби-режима нет в `GameModeRegistry` и в меню выбора режима матча.
+На картах режим сцены пуст (проверяет `GameModeWiringTests`).
+
+Почему поле на `GameplayManager`, а не `MapData`: лобби не карта из `MapRegistry` (добавить
+его туда — показать в выборе карт), а в самой сцене поле видно там, где его и ищут, —
+у объекта, который режим спавнит. Альтернатива — отдельный компонент «режим сцены»; она
+дала бы ещё один объект в каждой сцене без выигрыша.
+
+`GameplayManager` теперь есть и в лобби (`MatchManager` в `Lobby.unity`), поэтому
+`GameplayManager.Instance` равен null только в Offline и в окне смены сцены.
+
+### Правила, которые объявляет режим
+
+Системы вне режима не знают его конкретного типа — спрашивают базовый `GameMode`:
+
+| Свойство / событие | Кто читает | `EliminationMode` | `LobbyMode` |
+|---|---|---|---|
+| `WeaponsEnabled` | `GameplayManager.Update` → `UxrWeaponManager` | только в `Combat` | всегда |
+| `ArsenalRules.IsOpen` | `ArsenalWallController.ApplyModeRules` (сервер) | только в `Equipment` | всегда |
+| `ArsenalRules.UsesReadinessTag` | стена, каждая машина | `RoundStartRule == Readiness` | нет |
+| `ArsenalRules.ReplacesLostWeapons` | стена, сервер | нет | да, через 2 с |
+| `ArsenalRefillRequestedServer` | стена, сервер | на входе в `Setup` | — |
+| `OnPlayerDied(player)` | `GameplayManager.OnPlayerDied` | условие победы раунда | — (смерти нет) |
+| `PlayersTakeDamage` | `PlayerController` на `UxrActor.DamageReceiving` (отмена урона) | да | нет |
+| `TeamChoiceLocked` | `TeamChangeRules`, планшет | после старта матча | нет |
+| `ModeData` (`modeId` SyncVar) | HUD (`PlayerHUDManager`), политика команд, минимум игроков | `Elimination_GameModeData` | `Lobby_GameModeData` (HUD нет) |
+
+Свойства — состояние, стена сверяется с ним каждый кадр; событие одно — разовое
+пополнение пустых слотов, потому что фаза `Setup` бывает короче кадра. Режима нет
+(карта до старта матча) — стена не трогается, оружие стреляет.
+
+### Раздача команд режимом
+
+Команда игрока — команда **активного режима сцены**. Лобби-режим раздаёт свою единственную
+команду сам; на карте команду матча выбирает игрок или выдаёт админ (этап Б).
+
+**Политика режима** (`GameMode.TeamAssignmentPolicy`) задаётся данными режима —
+полем `GameModeData.teamAssignment`, а не кодом:
+
+| `teamAssignment` | Политика | Где |
+|---|---|---|
+| `AutoBalance` | `AutoBalanceTeamPolicy` — расчёт `TeamAutoBalance.Plan`: в самую малочисленную, при равенстве в первую по списку, стоящие в командах режима не двигаются | `Lobby_GameModeData` (команда одна — её получают все) |
+| `PlayerChoice` | `PlayerChoiceTeamPolicy` — никого не назначает | `Elimination_GameModeData`, `Respawn_GameModeData` |
+
+Режим без данных (EditMode-тесты) — `PlayerChoice`: сам никого не двигает. Политика
+применяется в `GameMode.ServerAssignTeams` — при старте (`StartGameplayWhenReady`) и при
+каждом подключении (`PlayersManager.OnSessionConnected`, приходит до спавна аватара).
+Данные режима известны и клиенту: режим реплицирует `modeId`, а `GameModeCatalog.Find`
+ищет его сначала у режима сцены (лобби-режима в реестре матча нет), затем в `GameModeRegistry`.
+
+**Входы смены команды** — у `GameplayManager`, правила — `TeamChangeRules`, исполнение —
+`SessionTeamAssigner`:
+
+| Кто | Вход | Правило |
+|---|---|---|
+| Игрок (планшет) | `PlayerSession.CmdRequestTeamChange` → `ProcessTeamChangeRequest` | только команда активного режима и только пока `GameMode.TeamChoiceLocked == false` (до старта матча). Скин в своей команде — всегда |
+| Админ (экран «Игроки и команды») | `PlayerSession.CmdAdminAssignTeam` → `ServerAdminAssignTeam(admin, target, teamId)` | право админа (`TeamChangeRules.IsAdmin`: хост или `IsAdmin`), любая команда `TeamRegistry`, в любой момент |
+| Админ, разово | `PlayerSession.CmdAdminAutoBalance` → `ServerAdminAutoBalance(admin)` | автобаланс игроков без команды режима; политику режима не меняет |
+| Режим | `GameMode.ServerAssignTeams` | по политике режима |
+
+**Почему выбор закрывается стартом матча.** После старта смена стороны — это выход из
+раунда посреди боя: составы уже разыграны (сеты, смена сторон), а перебежчик ломает
+баланс. Опоздавшему команду выдаёт админ. `TeamChoiceLocked` у Elimination —
+`_matchState != WaitingForPlayers`, у Respawn — идёт ли матч; это SyncVar-состояние,
+поэтому планшет клиента знает его сам.
+
+**Матч ждёт команд.** `GameMode.AllPlayersHaveModeTeam()` — у каждого подключённого игрока
+(не зрителя) есть команда режима; состав берётся у `PlayerRoster`. Elimination проверяет его
+в `IsPlayersReady` вместе с минимумом игроков — теперь из **своих** данных
+(`GameMode.MinPlayersToStart` ← `ModeData.minPlayersToStart`), а не из выбора матча
+в `SessionManager`. Respawn — в `CanStartGameplay`.
+
+**Исполнение** (`SessionTeamAssigner`): поднимает `GameplayManager.OnPlayerTeamChangeRequested`
+(хуки режима); нет аватара — пишет команду в сессию (спавн сам возьмёт зону и скин);
+аватар жив — `AvatarManager.ChangeAvatar`, **на том же месте** (смена команды никого не
+двигает). Скин по выбору игрока либо сохраняется (`TeamData.IndexOfAvatar`) для админа
+и политики.
+
+Игрок без команды режима на карте появляется в нейтральной точке (откалиброванный — по
+калибровке), лог уровня `Info`: это ожидание выбора, а не сбой. Команды раньше раздавал
+`DebugOrchestrator` (`teamsForAutoAssign`) — удалено. Зрители (`GameRole.Spectator`) команд
+не получают. Тесты — `TeamChoiceTests`, `TeamAutoBalanceTests`, `GameModeRulesTests`.
 
 ---
 
@@ -179,13 +274,16 @@ Assets/Prefabs/GameModes/
   → GameplayManager.StartMatch()
   → читает GameManager.SelectedModeId
   → находит GameMode-компонент по modeId
+  → игроки выбирают команду в планшете (или её выдаёт админ: экран «Игроки и команды»)
+  → матч ждёт, пока команда режима будет у всех (GameMode.AllPlayersHaveModeTeam)
   → запускает матч (ожидая `CanStartGameplay()`)
 
 [Матч идёт]
 Администратор нажимает "Стоп / Лобби" → AdminMenuController.OnStopMatchPressed()
   → GameplayManager.StopMatch()
   → MapManager.LoadMap("Lobby")
-  → [Lobby загружается, GameplayManager уничтожен]
+  → [Lobby загружается: GameplayManager карты уничтожен, GameplayManager лобби
+     сам запускает LobbyMode, всем выдаётся команда «Лобби»]
   → GameManager.SelectedModeId и SelectedMapScene — сохранены
 ```
 

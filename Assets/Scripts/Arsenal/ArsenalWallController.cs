@@ -34,9 +34,18 @@ namespace VrBattlegrounds.Arsenal
     /// взявший жетон закрывал арсенал <b>всем</b>, и второй игрок оставался
     /// без снаряжения. Теперь жетон объявляет готовность своего игрока
     /// (<c>PlayerSession.CmdSetReady</c>), а закрывается стена там же, где и раньше, —
-    /// в <see cref="ApplyPhaseToState"/> при выходе из <c>Equipment</c>. Готовность всех
+    /// по правилу режима при выходе из <c>Equipment</c>. Готовность всех
     /// живых игроков и есть условие этого выхода, поэтому «закрылась по общей готовности»
     /// и «закрылась по началу отсчёта» — один и тот же момент, а правило остаётся одно.
+    /// </para>
+    /// <para>
+    /// <b>Стена не знает конкретных режимов.</b> Открыта ли она, нужен ли жетон, заменять
+    /// ли пропавшее оружие — объявляет активный режим через
+    /// <see cref="GameMode.ArsenalRules"/>, а стена сверяется с этим каждый кадр
+    /// (<see cref="ApplyModeRules"/>). Elimination отвечает по фазе раунда, лобби
+    /// (<see cref="LobbyMode"/>) — «открыт всегда, без жетона». Разовое пополнение пустых
+    /// слотов к новому раунду приходит событием <see cref="GameMode.ArsenalRefillRequestedServer"/>.
+    /// Режима нет — правил нет, стена стоит как стояла.
     /// </para>
     /// </summary>
     public class ArsenalWallController : NetworkBehaviour
@@ -114,12 +123,20 @@ namespace VrBattlegrounds.Arsenal
         /// <summary>Применялось ли состояние хоть раз (отличает «ещё ничего» от «применили Closed»).</summary>
         private bool _stateApplied;
 
+        [Header("Правила режима")]
+        [Tooltip("Через сколько секунд слот, чьё оружие пропало совсем (уничтожено, выпало из мира), " +
+                 "получает новое — если режим этого требует (ArsenalRules.ReplacesLostWeapons, лобби).")]
+        [Min(0f)]
+        [SerializeField] private float _lostWeaponReplaceDelay = 2f;
+
+        /// <summary>Сколько секунд у стены есть пропавший слот (сервер).</summary>
+        private float _lostSlotTime;
+
         /// <summary>
-        /// Жетон готовности на этой стене не нужен независимо от режима. Ставит правило
-        /// сцены (<see cref="LobbyFreePlay"/>): в лобби раунда нет, объявлять готовность
-        /// не к чему. Флаг локальный — правило сцены живёт на каждой машине само.
+        /// Какое «нужен ли жетон» уже применено к жетону на этой машине. null — ещё ничего:
+        /// режим может приехать к клиенту позже, чем стена показала своё состояние.
         /// </summary>
-        private bool _dogTagSuppressed;
+        private bool? _appliedDogTagInUse;
 
         public ArsenalState CurrentState => _currentState;
 
@@ -246,6 +263,108 @@ namespace VrBattlegrounds.Arsenal
         {
             if (_pendingSlotBindings.Count > 0)
                 ResolvePendingSlotBindings();
+
+            ApplyModeRules(Time.deltaTime);
+        }
+
+        /// <summary>
+        /// Один шаг сверки стены с правилами активного режима (<see cref="GameMode.ArsenalRules"/>).
+        /// Зовётся каждый кадр из <c>Update</c> и напрямую из EditMode-тестов.
+        ///
+        /// <list type="bullet">
+        /// <item>Жетон: нужен ли он — на каждой машине (это представление).</item>
+        /// <item>Открыта/закрыта — только там, где стена вправе писать состояние
+        ///       (<see cref="CanWriteState"/>: сервер или стена вне сети); клиенты
+        ///       получают его репликацией.</item>
+        /// <item>Замена пропавшего оружия — только сервер: выдача сетевая.</item>
+        /// </list>
+        /// Режима нет — стена не трогается: так ведёт себя карта до старта матча.
+        /// </summary>
+        public void ApplyModeRules(float deltaTime)
+        {
+            RefreshDogTagUse();
+
+            GameMode mode = ActiveMode;
+            if (mode == null)
+            {
+                _lostSlotTime = 0f;
+                return;
+            }
+
+            ArsenalRules rules = mode.ArsenalRules;
+
+            if (CanWriteState)
+                ApplyOpenRule(rules.IsOpen);
+
+            KeepLostSlotsReplaced(rules.ReplacesLostWeapons, deltaTime);
+        }
+
+        /// <summary>Активный режим этой машины или null (нет сцены с режимом, режим не стартовал).</summary>
+        private static GameMode ActiveMode
+        {
+            get
+            {
+                Managers.GameplayManager manager = Managers.GameplayManager.Instance;
+                if (manager == null) return null;
+
+                GameMode mode = manager.ActiveGameMode;
+                return mode != null ? mode : null;
+            }
+        }
+
+        /// <summary>Приводит состояние к «открыта»/«закрыта», не перебивая идущую анимацию того же знака.</summary>
+        private void ApplyOpenRule(bool shouldBeOpen)
+        {
+            if (shouldBeOpen)
+            {
+                if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing)
+                    SetState(ArsenalState.Opening);
+            }
+            else if (_currentState == ArsenalState.Open || _currentState == ArsenalState.Opening)
+            {
+                SetState(ArsenalState.Closing);
+            }
+        }
+
+        /// <summary>
+        /// Выдаёт замену слоту, чьё оружие пропало совсем, спустя <see cref="_lostWeaponReplaceDelay"/>.
+        /// Унесённое оружие слот не заменяет: оно вернётся само (уборщик предметов на полу
+        /// возвращает его домой), и число стволов остаётся постоянным.
+        /// </summary>
+        private void KeepLostSlotsReplaced(bool replaces, float deltaTime)
+        {
+            if (!replaces || !isServer || !HasLostSlots())
+            {
+                _lostSlotTime = 0f;
+                return;
+            }
+
+            _lostSlotTime += deltaTime;
+            if (_lostSlotTime < _lostWeaponReplaceDelay) return;
+
+            _lostSlotTime = 0f;
+            ServerReplenishLostSlots();
+        }
+
+        /// <summary>
+        /// Показывает или убирает жетон, когда меняется ответ «нужен ли он». Отдельно от
+        /// состояния стены: режим может приехать к клиенту позже, чем стена открылась,
+        /// и тогда жетон, показанный «по умолчанию», обязан исчезнуть.
+        /// </summary>
+        private void RefreshDogTagUse()
+        {
+            if (_dogTagController == null) return;
+
+            bool inUse = IsDogTagInUse();
+            if (_appliedDogTagInUse == inUse) return;
+            _appliedDogTagInUse = inUse;
+
+            _dogTagController.SetInUse(inUse);
+
+            if (!inUse || _currentState != ArsenalState.Open)
+                _dogTagController.Disable();
+            else
+                _dogTagController.ResetTag();
         }
 
         /// <summary>
@@ -297,40 +416,35 @@ namespace VrBattlegrounds.Arsenal
         {
             base.OnStartServer();
 
-            // Авторитетная реакция на фазу приходит по серверному каналу, а не через
-            // клиентский обработчик: раньше внутри HandleRoundStateChanged стояла ветка
-            // `if (isServer)`, и на выделенном сервере она не исполнялась никогда (NET-06).
-            EliminationMode.OnRoundStateChangedServer -= ServerHandleRoundStateChanged;
-            EliminationMode.OnRoundStateChangedServer += ServerHandleRoundStateChanged;
+            // Разовое пополнение пустых слотов объявляет режим (Elimination — к новому
+            // раунду) серверным событием базового GameMode. Серверный канал, а не
+            // клиентский обработчик: на выделенном сервере клиентская ветка не исполнялась
+            // никогда (NET-06).
+            GameMode.ArsenalRefillRequestedServer -= ServerRefillEmptySlots;
+            GameMode.ArsenalRefillRequestedServer += ServerRefillEmptySlots;
 
             ReplenishWeaponsNetwork(true);
         }
 
         public override void OnStopServer()
         {
-            EliminationMode.OnRoundStateChangedServer -= ServerHandleRoundStateChanged;
+            GameMode.ArsenalRefillRequestedServer -= ServerRefillEmptySlots;
             base.OnStopServer();
         }
 
-        /// <summary>
-        /// Серверная реакция на смену фазы: пополнение слотов и смена состояния стены.
-        /// Оба действия авторитетны — состояние стены общее (T-15), поэтому и открытие,
-        /// и закрытие по фазе объявляет сервер, а клиенты получают их репликацией.
-        /// </summary>
+        /// <summary>Режим попросил пополнить пустые слоты (новый раунд).</summary>
         [Server]
-        private void ServerHandleRoundStateChanged(RoundState newState)
+        private void ServerRefillEmptySlots()
         {
-            if (newState == RoundState.Setup)
-                ReplenishWeaponsNetwork(false);
-
-            ApplyPhaseToState(newState);
+            ReplenishWeaponsNetwork(false);
         }
 
         /// <summary>
         /// Пополняет слоты, чьё оружие пропало совсем (уничтожено, выпало из мира).
         /// Слот, чей ствол жив — в руке, в кобуре, на полу, — ждёт его возвращения
         /// (<see cref="ServerReturnHome"/>), а не получает дубль. Так число стволов
-        /// вне раунда постоянно. Зовёт правило сцены (<see cref="LobbyFreePlay"/>).
+        /// вне раунда постоянно. Зовёт сама стена, если режим этого требует
+        /// (<see cref="ArsenalRules.ReplacesLostWeapons"/>, лобби).
         /// </summary>
         [Server]
         public void ServerReplenishLostSlots()
@@ -396,25 +510,6 @@ namespace VrBattlegrounds.Arsenal
             return true;
         }
 
-        /// <summary>
-        /// Убирает жетон готовности со стены (или возвращает его). Применяется сразу:
-        /// правило сцены может включиться позже, чем стена показала своё состояние.
-        /// </summary>
-        public void SetDogTagSuppressed(bool suppressed)
-        {
-            _dogTagSuppressed = suppressed;
-
-            EnsureReferences();
-            if (_dogTagController == null) return;
-
-            _dogTagController.SetInUse(IsDogTagInUse());
-
-            if (suppressed || _currentState != ArsenalState.Open)
-                _dogTagController.Disable();
-            else
-                _dogTagController.ResetTag();
-        }
-
         [Server]
         private void ReplenishWeaponsNetwork(bool forceAll = false)
         {
@@ -467,8 +562,6 @@ namespace VrBattlegrounds.Arsenal
 
         private void OnEnable()
         {
-            EliminationMode.OnRoundStateChangedLocal += HandleRoundStateChanged;
-
             if (_dogTagController != null)
                 _dogTagController.OnTagGrabbed += HandleTagGrabbed;
 
@@ -481,12 +574,10 @@ namespace VrBattlegrounds.Arsenal
 
         private void OnDisable()
         {
-            EliminationMode.OnRoundStateChangedLocal -= HandleRoundStateChanged;
-
             // Подписка серверного канала снимается и здесь: статическое событие переживает
             // объект, а уничтоженная стена в списке подписчиков — это MissingReference на
-            // ближайшей смене фазы. Повторное отписывание безвредно.
-            EliminationMode.OnRoundStateChangedServer -= ServerHandleRoundStateChanged;
+            // ближайшем запросе пополнения. Повторное отписывание безвредно.
+            GameMode.ArsenalRefillRequestedServer -= ServerRefillEmptySlots;
 
             if (_dogTagController != null)
                 _dogTagController.OnTagGrabbed -= HandleTagGrabbed;
@@ -615,27 +706,6 @@ namespace VrBattlegrounds.Arsenal
             }
         }
 
-        /// <summary>
-        /// Реакция на фазу раунда: что стена должна показывать в этой фазе.
-        /// Общая точка для серверного канала и для стены вне сети.
-        /// </summary>
-        private void ApplyPhaseToState(RoundState phase)
-        {
-            switch (phase)
-            {
-                case RoundState.Equipment:
-                    if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing)
-                        SetState(ArsenalState.Opening);
-                    break;
-
-                case RoundState.Countdown:
-                case RoundState.Combat:
-                    if (_currentState == ArsenalState.Open || _currentState == ArsenalState.Opening)
-                        SetState(ArsenalState.Closing);
-                    break;
-            }
-        }
-
         // ── Private: Lifecycle ─────────────────────────────────
 
         private void PlayOpening()
@@ -742,16 +812,15 @@ namespace VrBattlegrounds.Arsenal
         // ── Private: Жетон ─────────────────────────────────────
 
         /// <summary>
-        /// Нужен ли жетон в этом матче. Правило — поле префаба режима, поэтому клиент
-        /// знает его так же, как сервер. Режима нет (стена вне матча) — жетон показываем,
-        /// как было до появления правила, если только правило сцены его не убрало.
+        /// Нужен ли жетон. Отвечает активный режим (<see cref="ArsenalRules.UsesReadinessTag"/>)
+        /// из своих полей и реплицируемого состояния, поэтому клиент знает ответ так же,
+        /// как сервер. Режима нет (карта до старта матча) — жетон показываем, как было
+        /// до появления правила.
         /// </summary>
         private bool IsDogTagInUse()
         {
-            if (_dogTagSuppressed) return false;
-
-            var mode = FindFirstObjectByType<EliminationMode>();
-            return mode == null || mode.RoundStartRule == RoundStartRule.Readiness;
+            GameMode mode = ActiveMode;
+            return mode == null || mode.ArsenalRules.UsesReadinessTag;
         }
 
         /// <summary>
@@ -810,23 +879,6 @@ namespace VrBattlegrounds.Arsenal
             }
 
             OnSlotChanged?.Invoke(slot, false);
-        }
-
-        /// <summary>
-        /// Локальная реакция на фазу. Исполняется на каждой машине, включая выделенный
-        /// сервер, но после T-15 состояние стены общее и задаёт его сервер — представление
-        /// приезжает хуком <see cref="OnStateSynced"/>, а не отсюда.
-        ///
-        /// Здесь остался только случай <see cref="IsStandalone"/>: стена не заспавнена,
-        /// реплицировать состояние некому, и вести его приходится самой.
-        /// </summary>
-        private void HandleRoundStateChanged(RoundState newState)
-        {
-            GameLog.Arsenal.Info($"[Arsenal DEBUG] HandleRoundStateChanged received: {newState}. Arsenal State: {_currentState}");
-
-            if (!IsStandalone) return;
-
-            ApplyPhaseToState(newState);
         }
     }
 }

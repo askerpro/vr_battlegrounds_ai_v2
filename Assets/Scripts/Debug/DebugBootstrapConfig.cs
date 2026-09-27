@@ -24,9 +24,8 @@ namespace VrBattlegrounds.DevTools
         [Tooltip("Если true, хост (игрок, запустивший сервер в редакторе) автоматически получает гибридную роль PlayerAdmin.")]
         public bool hostIsAdmin = true;
 
-        [Header("Игрок")]
-        [Tooltip("Команды для автоматического распределения игроков. Каждый новый игрок идёт в команду с наименьшим числом участников. Оставить пустым — команду не назначать.")]
-        public List<TeamData> teamsForAutoAssign = new List<TeamData>();
+        // Поле teamsForAutoAssign удалено: команды раздаёт активный режим
+        // (GameMode.ServerAssignTeams) — в лобби «Лобби», на карте автобалансом.
 
         [Header("Матч")]
         [Tooltip("Автоматически запустить матч как только подключится достаточно игроков.")]

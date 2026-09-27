@@ -163,11 +163,11 @@ namespace VrBattlegrounds.Player.Avatars
         ///       в начале координат карты, вплотную к реквизиту. У <b>откалиброванного</b>
         ///       игрока точка спавна не назначается вовсе: его место задано физически,
         ///       и сервер возвращает его туда же (<see cref="CalibratedSpawnRegistry"/>, T-30).</item>
-        /// <item><b>Смена команды.</b> Старый аватар жив, но игрок теперь на другой стороне.
-        ///       Оставить его на месте — значит поставить в чужую базу: в своей зоне он там
-        ///       не числится (<c>PlayerSession.IsInSpawnZone</c>, RDY-04) и готовность
-        ///       объявить не сможет, а до своей базы пришлось бы идти через всю карту.
-        ///       Поэтому смена команды переносит на точку спавна <b>новой</b> команды.</item>
+        /// <item><b>Смена команды.</b> Старый аватар жив — позиция берётся у него, как при
+        ///       смене скина. Игрок физически стоит в зале, его место задано калибровкой;
+        ///       выбор команды — действие в меню, а не перенос (этап Б). Раньше (WPN-03)
+        ///       смена команды переносила на точку спавна новой команды — это расклеивало
+        ///       картинку с телом. В свою зону игрок теперь приходит сам.</item>
         /// </list>
         /// </summary>
         [Server]
@@ -179,9 +179,6 @@ namespace VrBattlegrounds.Player.Avatars
             GameObject avatarPrefab = teamData.GetAvatarPrefab(avatarId);
             if (avatarPrefab == null) return;
 
-            // Команду сравниваем до записи в сессию: после неё разницы уже не видно.
-            bool teamChanged = session.TeamIndex != teamId;
-
             // Обновляем сессию (логически данные хранятся в сессии)
             session.TeamIndex = teamId;
             session.AvatarIndex = avatarId;
@@ -192,22 +189,17 @@ namespace VrBattlegrounds.Player.Avatars
             Vector3 spawnPos;
             Quaternion spawnRot;
 
-            if (oldAvatar != null && !teamChanged)
+            if (oldAvatar != null)
             {
+                // Смена скина или команды: игрок стоит там, куда пришёл сам.
                 spawnPos = oldAvatar.transform.position;
                 spawnRot = oldAvatar.transform.rotation;
             }
             else
             {
-                // Откалиброванное место восстанавливаем ровно в одном случае — когда
-                // аватара не осталось, то есть после смены карты. Смена команды физическим
-                // событием не является: игрок как стоял в комнате, так и стоит, — но увести
-                // его из чужой базы всё равно нужно, и там ветка калибровки не спрашивается.
-                PlayerSession restorePlaceFor = oldAvatar == null ? session : null;
-
-                AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(teamData, restorePlaceFor);
-                LogSpawnPoint(oldAvatar == null ? "ChangeAvatar/после смены карты" : "ChangeAvatar/смена команды",
-                              session, spawnPoint);
+                // Аватара не осталось — смена карты. Откалиброванное место восстанавливаем.
+                AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(teamData, session);
+                LogSpawnPoint("ChangeAvatar/после смены карты", session, spawnPoint);
 
                 spawnPos = spawnPoint.Position;
                 spawnRot = spawnPoint.Rotation;
@@ -263,6 +255,18 @@ namespace VrBattlegrounds.Player.Avatars
             {
                 GameLog.Player.Info(
                     $"[AvatarManager] {stage}: {who} — команда не назначена, точки спавна нет, ставим в начало координат.");
+                return;
+            }
+
+            // Команда не из режима этой сцены (пришёл из лобби с командой «Лобби», а команду
+            // матча ещё не выбрал) — штатное ожидание выбора, а не сбой карты: нейтральная
+            // точка, откалиброванного всё равно ставит калибровка (этап Б).
+            VrBattlegrounds.GameModes.GameMode mode = VrBattlegrounds.GameModes.GameMode.Current;
+            if (mode == null || System.Array.IndexOf(mode.Teams, team) < 0)
+            {
+                GameLog.Player.Info(
+                    $"[AvatarManager] {stage}: {who} — команда '{team.displayName}' не из режима этой сцены " +
+                    "(команда матча ещё не выбрана), ставим в нейтральную точку — начало координат.");
                 return;
             }
 

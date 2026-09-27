@@ -79,9 +79,9 @@ namespace VrBattlegrounds.Player.Avatars
     ///       игрока, объявившего <c>PlayerSession.IsCalibrated</c>, и только там,
     ///       где сессия передана вызывающим.</item>
     /// <item><see cref="TeamSpawnZone"/> нужной команды. Единственная точка на карте,
-    ///       которая знает, чья она: <c>TeamSpawnZone.Team</c>. Той же точкой
-    ///       пользуются <c>EliminationMode.PrepareNextRound</c> и <c>DebugOrchestrator</c>,
-    ///       то есть спавн, респавн и отладочная расстановка сходятся в одном месте.</item>
+    ///       которая знает, чья она: <c>TeamSpawnZone.Team</c>. Только точка создания
+    ///       аватара: респавн и смена команды никого не двигают (этап Б) — в зону
+    ///       игрок приходит сам.</item>
     /// <item><c>NetworkStartPosition</c> из Mirror. Про команды не знает и раздаёт точки
     ///       по кругу — годится как запасной вариант для карт без зон.</item>
     /// <item>Начало координат. Это отказ, а не решение: раньше сюда молча попадали все
@@ -92,9 +92,7 @@ namespace VrBattlegrounds.Player.Avatars
     /// <para>
     /// Точка зоны берётся как <c>transform.position</c> — это уровень пола: коробка
     /// триггера в префабе <c>TeamSpawnZone</c> центрирована на самом объекте и уходит
-    /// вниз ровно настолько же, насколько вверх. Той же трактовки держится
-    /// <c>PlayerController.Respawn</c>: он передаёт <c>zone.transform</c> в
-    /// <c>UxrManager.MoveAvatarTo</c>, а тот ждёт <i>floor position</i>.
+    /// вниз ровно настолько же, насколько вверх.
     /// </para>
     /// </summary>
     public static class AvatarSpawnPointResolver
@@ -108,8 +106,7 @@ namespace VrBattlegrounds.Player.Avatars
         ///     Сессия, чьё <b>откалиброванное</b> место обязано победить зону, или <c>null</c>,
         ///     если восстанавливать место не нужно. Разделение не косметическое: место
         ///     восстанавливают только там, где аватара не осталось (смена карты). При смене
-        ///     команды аватар жив и физически ничего не произошло, а игрока всё равно нужно
-        ///     увести из чужой базы — там ветку калибровки спрашивать не о чем.
+        ///     скина или команды аватар жив, и резолвер не спрашивается вовсе (этап Б).
         /// </param>
         public static AvatarSpawnPoint Resolve(TeamData team, PlayerSession calibratedSession = null)
         {

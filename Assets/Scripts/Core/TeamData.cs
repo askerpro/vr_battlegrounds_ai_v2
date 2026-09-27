@@ -50,6 +50,18 @@ namespace VrBattlegrounds
         }
 
         /// <summary>
+        /// Индекс скина в списке команды или 0 (первый скин), если его там нет.
+        /// Нужен при смене команды: игрок, перешедший из лобби в матч и обратно,
+        /// сохраняет свой скин, если он есть и в новой команде.
+        /// </summary>
+        public int IndexOfAvatar(Core.AvatarData avatar)
+        {
+            if (avatar == null) return 0;
+            int index = avatars.IndexOf(avatar);
+            return index >= 0 ? index : 0;
+        }
+
+        /// <summary>
         /// Возвращает префаб скина (для обратной совместимости).
         /// </summary>
         public GameObject GetAvatarPrefab(int listIndex)

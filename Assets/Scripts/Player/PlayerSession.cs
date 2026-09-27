@@ -579,6 +579,31 @@ namespace VrBattlegrounds.Player
             }
         }
 
+        /// <summary>
+        /// Админ (эта сессия) выдаёт команду игроку <paramref name="targetSessionNetId"/>.
+        /// Право проверяет сервер (<c>TeamChangeRules.IsAdmin</c>) — экран админа на клиенте
+        /// только прячет кнопки.
+        /// </summary>
+        [Command]
+        public void CmdAdminAssignTeam(uint targetSessionNetId, int teamId)
+        {
+            if (GameplayManager.Instance == null) return;
+
+            PlayerSession target = NetworkServer.spawned.TryGetValue(targetSessionNetId, out NetworkIdentity identity)
+                ? identity.GetComponent<PlayerSession>()
+                : null;
+
+            GameplayManager.Instance.ServerAdminAssignTeam(this, target, teamId);
+        }
+
+        /// <summary>Админ (эта сессия) разово раскладывает игроков без команды автобалансом.</summary>
+        [Command]
+        public void CmdAdminAutoBalance()
+        {
+            if (GameplayManager.Instance != null)
+                GameplayManager.Instance.ServerAdminAutoBalance(this);
+        }
+
         [Command]
         public void CmdSetDogTagGrabbed(bool state)
         {

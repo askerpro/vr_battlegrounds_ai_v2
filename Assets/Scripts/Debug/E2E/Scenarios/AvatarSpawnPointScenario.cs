@@ -71,7 +71,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckZones     = "на карте нашлись зоны спавна обеих команд и они разведены с началом координат";
         private const string CheckAfterMap  = "после смены карты аватар создан в зоне спавна своей команды, а не в начале координат (WPN-03)";
         private const string CheckSkinKeeps = "смена скина не сдвинула игрока с места";
-        private const string CheckTeamMoves = "смена команды перенесла игрока в зону спавна новой команды (WPN-03)";
+        private const string CheckTeamMoves = "смена команды не сдвинула игрока (этап Б: выбор команды не перемещает)";
 
         // ── Имена проверок клиента ────────────────────────────────────────
 
@@ -430,7 +430,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     }
                 }
 
-                // ── 7. Находка: смена команды переносит в новую базу ──────
+                // ── 7. Смена команды не двигает игрока (этап Б) ──────
                 if (session.ActiveAvatar == null)
                 {
                     result.Set(CheckTeamMoves, false,
@@ -457,16 +457,16 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 Vector3 afterTeam   = session.ActiveAvatar.transform.position;
                 float toOtherZone   = Vector3.Distance(afterTeam, otherZonePos);
                 float movedOnSwap   = Vector3.Distance(beforeTeam, afterTeam);
-                bool movedToNewBase = toOtherZone <= PositionTolerance;
+                bool stayedInPlace  = movedOnSwap <= PositionTolerance;
 
-                result.Set(CheckTeamMoves, movedToNewBase,
-                    (movedToNewBase
-                        ? $"игрок переехал в зону '{otherTeam.displayName}': {Fmt(beforeTeam)} -> {Fmt(afterTeam)}, " +
-                          $"до новой зоны {toOtherZone:F2} м, путь {movedOnSwap:F2} м."
-                        : $"игрок остался у прежней базы: {Fmt(beforeTeam)} -> {Fmt(afterTeam)}, сдвиг {movedOnSwap:F2} м, " +
-                          $"до зоны новой команды '{otherTeam.displayName}' {toOtherZone:F2} м при допуске " +
-                          $"{PositionTolerance:F1} м. Это WPN-03 со стороны смены команды: позиция берётся " +
-                          "у старого аватара, а он стоял на прежней стороне карты.") +
+                // Этап Б: смена команды игрока не двигает. Раньше (WPN-03) она переносила
+                // в зону новой команды; теперь игрок физически стоит в зале, и выбор
+                // команды на карте — действие в меню, а не перенос.
+                result.Set(CheckTeamMoves, stayedInPlace,
+                    (stayedInPlace
+                        ? $"игрок остался на месте: {Fmt(beforeTeam)} -> {Fmt(afterTeam)}, сдвиг {movedOnSwap:F2} м."
+                        : $"смена команды сдвинула игрока: {Fmt(beforeTeam)} -> {Fmt(afterTeam)}, сдвиг {movedOnSwap:F2} м " +
+                          $"при допуске {PositionTolerance:F1} м, до зоны новой команды {toOtherZone:F2} м.") +
                     $" Зона новой команды: {Fmt(otherZonePos)}, зона прежней: {Fmt(ownZonePos)}.");
 
                 result.Summary = result.AllChecksGreen
@@ -672,7 +672,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// Прямая запись <c>transform.position</c> на сервере тут ненадёжна:
         /// <c>NetworkTransform</c> на аватарах стоит с <c>syncDirection = ClientToServer</c>,
         /// и владелец вернёт свою позицию поверх серверной ближайшим же пакетом. Поэтому
-        /// сначала <c>Respawn</c> — он рассылает <c>RpcOnRespawned</c>, и настоящий переезд
+        /// сначала <c>ServerDevTeleport</c> — он рассылает <c>RpcDevTeleport</c>, и настоящий переезд
         /// делает сам владелец, — а прямая запись остаётся запасным вариантом на случай,
         /// если владелец за <see cref="DisplaceWait"/> так и не отчитался.
         /// </para>
@@ -686,7 +686,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             GameObject marker = new GameObject("E2E_DisplaceTarget");
             marker.transform.SetPositionAndRotation(target, avatar.transform.rotation);
 
-            avatar.Respawn(marker.transform);
+            avatar.ServerDevTeleport(marker.transform.position, marker.transform.rotation);
 
             E2EWaitOutcome moved = new E2EWaitOutcome();
             yield return E2EWait.Until(moved,

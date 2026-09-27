@@ -73,9 +73,28 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             return wall;
         }
 
+        private EliminationMode _mode;
+
+        [SetUp]
+        public void ResetMode() => _mode = null;
+
+        /// <summary>
+        /// Режим объявляет фазу, стена исполняет его правила. Раньше тест дёргал
+        /// серверный обработчик события фазы у самой стены; теперь стена не знает
+        /// Elimination и сверяется с <c>GameMode.ArsenalRules</c> активного режима.
+        /// </summary>
         private void SendPhaseToServer(ArsenalWallController wall, RoundState phase)
         {
-            InvokePrivateMethod(wall, "ServerHandleRoundStateChanged", phase);
+            if (_mode == null)
+            {
+                var manager = CreateNetworkComponent<VrBattlegrounds.Managers.GameplayManager>("GameplayManager");
+                InvokeLifecycleMethod(manager, "Awake");
+                _mode = CreateNetworkComponent<EliminationMode>("EliminationMode");
+                InvokePrivateMethod(manager, "RegisterActiveGameMode", _mode);
+            }
+
+            SetPrivateField(_mode, "_roundState", phase);
+            wall.ApplyModeRules(0.1f);
         }
 
         // ── Сервер ведёт состояние ──────────────────────────────────────────
@@ -190,21 +209,11 @@ namespace VrBattlegrounds.Tests.ArsenalWall
 
         // ── Кто вправе менять состояние ─────────────────────────────────────
 
-        [Test]
-        public void Локальный_обработчик_фазы_не_трогает_состояние_заспавненной_стены()
-        {
-            SilenceMirrorNoise();
-
-            ArsenalWallController wall = CreateServerWall("ServerWall");
-
-            // OnRoundStateChangedLocal приходит на каждую машину, включая сервер.
-            // Для общей стены это канал представления, а не источник состояния.
-            InvokePrivateMethod(wall, "HandleRoundStateChanged", RoundState.Equipment);
-
-            Assert.AreEqual(Closed, wall.CurrentState,
-                "Локальный обработчик фазы сам сменил состояние заспавненной стены. " +
-                "Тогда каждая машина снова ведёт стену независимо, и SyncVar ничего не решает.");
-        }
+        // Тест «Локальный_обработчик_фазы_не_трогает_состояние_заспавненной_стены» удалён
+        // вместе с самим локальным обработчиком: стена больше не подписана на фазы
+        // Elimination. Кто вправе писать состояние, решает CanWriteState внутри
+        // ApplyModeRules, а то, что клиент получает состояние только репликацией,
+        // доказывают тесты раздела «Репликация» выше.
 
         [Test]
         public void Стена_вне_сети_ведёт_состояние_сама()
@@ -214,10 +223,10 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             // Не спавним: так выглядит сцена, открытая без сети, и стена без sceneId (NET-14).
             ArsenalWallController wall = CreateWall("OfflineWall");
 
-            InvokePrivateMethod(wall, "HandleRoundStateChanged", RoundState.Equipment);
+            SendPhaseToServer(wall, RoundState.Equipment);
 
             Assert.AreEqual(Open, wall.CurrentState,
-                "Реплицировать состояние некому, а локальный путь отключён — " +
+                "Реплицировать состояние некому, а правила режима стена вне сети не исполнила — " +
                 "стена не откроется никогда.");
         }
     }

@@ -204,17 +204,27 @@ namespace VrBattlegrounds.Tests.Interaction
         private static string SweeperGuid =>
             AssetDatabase.AssetPathToGUID("Assets/Scripts/Interaction/LooseItemSweeper.cs");
 
+        /// <summary>
+        /// Уборщик лобби переехал со сцены на префаб лобби-режима (<c>LobbyMode.prefab</c>):
+        /// лобби стало режимом, и его правила живут там же, где правила Elimination, —
+        /// на префабе режима. Раньше тест искал компонент в <c>Lobby.unity</c>.
+        /// </summary>
         [Test]
         public void В_лобби_оружие_возвращается_домой()
         {
-            string lobby = File.ReadAllText("Assets/Scenes/Lobby.unity");
-            int at = lobby.IndexOf(SweeperGuid, System.StringComparison.Ordinal);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/GameModes/LobbyMode.prefab");
+            Assert.IsNotNull(prefab, "Нет префаба лобби-режима.");
 
-            Assert.GreaterOrEqual(at, 0, "В Lobby.unity нет LooseItemSweeper — мусор в лобби копится без предела.");
+            var sweeper = prefab.GetComponent<LooseItemSweeper>();
+            Assert.IsNotNull(sweeper, "На лобби-режиме нет LooseItemSweeper — мусор в лобби копится без предела.");
 
-            string block = lobby.Substring(at, System.Math.Min(600, lobby.Length - at));
-            StringAssert.Contains($"_weaponAction: {(int)LooseWeaponAction.ReturnHome}", block,
-                "В лобби оружие с пола обязано возвращаться в свой слот.");
+            var action = (LooseWeaponAction)typeof(LooseItemSweeper)
+                .GetField("_weaponAction", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .GetValue(sweeper);
+            Assert.AreEqual(LooseWeaponAction.ReturnHome, action, "В лобби оружие с пола обязано возвращаться в свой слот.");
+
+            Assert.IsFalse(File.ReadAllText("Assets/Scenes/Lobby.unity").Contains(SweeperGuid),
+                "Уборщик остался и в сцене лобби — два уборщика спорили бы за один пол.");
         }
 
         [Test]

@@ -5,6 +5,7 @@ using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Player
@@ -125,6 +126,7 @@ namespace VrBattlegrounds.Player
         private void Awake()
         {
             _actor = GetComponent<UxrActor>();
+            _actor.DamageReceiving += OnDamageReceiving;
             _actor.DamageReceived += OnDamageReceived;
             _actor.Died += OnActorDied;
         }
@@ -142,6 +144,7 @@ namespace VrBattlegrounds.Player
         {
             if (_actor != null)
             {
+                _actor.DamageReceiving -= OnDamageReceiving;
                 _actor.DamageReceived -= OnDamageReceived;
                 _actor.Died -= OnActorDied;
             }
@@ -209,6 +212,21 @@ namespace VrBattlegrounds.Player
 
         // ── Игровая логика ────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Урон ещё не применён — его можно отменить. Решает активный режим
+        /// (<see cref="GameMode.PlayersTakeDamage"/>): в лобби смерти нет, урон по игроку
+        /// отменяется на каждой машине, включая локальные эффекты у клиента. Игрок о режиме
+        /// ничего не знает — только спрашивает правило.
+        /// </summary>
+        private void OnDamageReceiving(object sender, UxrDamageEventArgs e)
+        {
+            GameMode mode = GameMode.Current;
+            if (mode == null || mode.PlayersTakeDamage) return;
+
+            e.Cancel();
+            GameLog.Player.Verbose($"[PlayerController] {name}: урон {e.Damage:F1} отменён — режим {mode.GetType().Name} урона по игрокам не допускает.", this);
+        }
+
         private void OnDamageReceived(object sender, UxrDamageEventArgs e)
         {
             GameLog.Player.Verbose($"[PlayerController] {name}: получен урон {e.Damage:F1} (тип: {e.DamageType}). Текущее здоровье: {_actor.Life:F1}", this);
@@ -247,11 +265,21 @@ namespace VrBattlegrounds.Player
                 GameplayManager.Instance.OnPlayerDied(this);
         }
 
-        /// <summary>Возрождает игрока на заданной точке спавна.</summary>
+        /// <summary>
+        /// Возрождает игрока: восстанавливает здоровье и выводит из режима наблюдателя.
+        ///
+        /// <para>
+        /// <b>Никого не двигает.</b> Игрок физически стоит в зале, его место в арене задано
+        /// калибровкой; перенос аватара расклеил бы картинку с телом. Раньше метод принимал
+        /// точку спавна и рассылал перемещение — теперь точки нет вовсе. Где возрождаться,
+        /// решает режим условием (Elimination — игрок сам пришёл в зону своей команды),
+        /// а бывает ли респавн вообще — тоже режим.
+        /// </para>
+        /// </summary>
         [Server]
-        public void Respawn(Transform spawnPoint)
+        public void Respawn()
         {
-            GameLog.Player.Info($"[PlayerController] {name}: респаун на точке {spawnPoint.name} ({spawnPoint.position})", this);
+            GameLog.Player.Info($"[PlayerController] {name}: респаун на месте ({transform.position}).", this);
             _actor.Life = 100f;
 
             var spectator = GetComponent<SpectatorController>();
@@ -259,8 +287,19 @@ namespace VrBattlegrounds.Player
             {
                 spectator.EndSpectating();
             }
+        }
 
-            RpcOnRespawned(spawnPoint.position, spawnPoint.rotation);
+        /// <summary>
+        /// <b>Только для разработки</b>: переносит аватар в точку. Игровая логика на него
+        /// не опирается (ни спавн, ни респавн, ни выбор команды): в арене игрок ходит сам.
+        /// Нужен сценариям яруса C, которые разыгрывают «игрок дошёл до места» вне арены.
+        /// Переезд делает владелец — <c>NetworkTransform</c> аватара едет от клиента.
+        /// </summary>
+        [Server]
+        public void ServerDevTeleport(Vector3 position, Quaternion rotation)
+        {
+            GameLog.Debug.Info($"[PlayerController] {name}: отладочный перенос в {position}.", this);
+            RpcDevTeleport(position, rotation);
         }
 
         /// <summary>
@@ -293,7 +332,7 @@ namespace VrBattlegrounds.Player
         }
 
         [ClientRpc]
-        private void RpcOnRespawned(Vector3 position, Quaternion rotation)
+        private void RpcDevTeleport(Vector3 position, Quaternion rotation)
         {
             UltimateXR.Avatar.UxrAvatar avatar = GetComponent<UltimateXR.Avatar.UxrAvatar>();
             if (avatar != null && UltimateXR.Core.UxrManager.Instance != null)

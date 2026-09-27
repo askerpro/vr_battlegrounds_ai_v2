@@ -31,9 +31,14 @@ namespace VrBattlegrounds.GameModes
 
         protected override bool CanStartGameplay()
         {
-            // Ожидаем, пока на сервере появится хотя бы 1 игрок, чтобы запустить таймер
-            return PlayersManager.Instance != null && PlayersManager.Instance.Sessions.Count > 0;
+            // Ожидаем, пока на сервере появится хотя бы 1 игрок, чтобы запустить таймер,
+            // и пока у каждого не будет команды режима (этап Б: выбор на карте).
+            return PlayersManager.Instance != null && PlayersManager.Instance.Sessions.Count > 0
+                   && AllPlayersHaveModeTeam();
         }
+
+        /// <summary>Матч идёт — сам игрок команду больше не меняет, только админ.</summary>
+        public override bool TeamChoiceLocked => _matchActive;
 
         [Server]
         protected override void StartGameplay()

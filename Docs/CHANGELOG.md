@@ -2,6 +2,95 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - Выбор команды матча на карте, респавн без перемещения, лобби без смерти (этап Б)
+
+### Изменено
+
+- **Команду матча выбирают на карте.** Политика раздачи команд задаётся данными режима —
+  `GameModeData.teamAssignment`: `Lobby_GameModeData` — `AutoBalance` (одна команда),
+  `Elimination`/`Respawn` — `PlayerChoice` (новая `PlayerChoiceTeamPolicy`, никого не назначает).
+  Игрок выбирает команду и скин в планшете до старта матча (`GameMode.TeamChoiceLocked`),
+  после старта — только скин своей команды. Матч ждёт, пока команда режима есть у всех
+  (`GameMode.AllPlayersHaveModeTeam`). Правила — `TeamChangeRules`, исполнение — один
+  `SessionTeamAssigner`.
+- **Админ выдаёт команды**: серверная точка `GameplayManager.ServerAdminAssignTeam`
+  (право — `TeamChangeRules.IsAdmin`: хост или `IsAdmin`; любая команда, в любой момент),
+  разовый автобаланс `ServerAdminAutoBalance`; команды клиента — `PlayerSession.CmdAdminAssignTeam`
+  / `CmdAdminAutoBalance`. На планшете новый экран «Игроки и команды» (`MenuPlayersTeams`,
+  `Screen_PlayersTeams.prefab`, кнопка на `Screen_Main`).
+- **Респавн никого не двигает.** `PlayerController.Respawn()` без точки: только здоровье и выход
+  из наблюдателя. Смена команды тоже оставляет аватар на месте (`AvatarManager.ChangeAvatar`) —
+  раньше (WPN-03) переносила в зону новой команды. `DebugOrchestrator` больше не переносит
+  аватар в зону при спавне. Перенос для сценариев яруса C — `PlayerController.ServerDevTeleport`
+  (только для разработки); сценарий `avatar-spawn-point` теперь проверяет, что смена команды
+  игрока **не** сдвигает.
+- **В лобби смерти нет**: `GameMode.PlayersTakeDamage` (лобби — `false`), `PlayerController`
+  отменяет урон на `UxrActor.DamageReceiving`. Стрельба по мишеням и предметам не затронута.
+  `LobbyMode.CanRespawn()` — `false`.
+- **Режим знает свои данные**: `GameMode.Initialize(GameModeData)`, `ModeData` (на клиенте — по
+  реплицируемому `modeId` через `GameModeCatalog`). Elimination берёт `minPlayersToStart`
+  из своих данных, а не из выбора матча. HUD (`PlayerHUDManager`) — у активного режима
+  (`GameplayManager.ActiveGameModeChangedLocal`): в лобби HUD нет, на карте — HUD режима.
+- Игрок без команды режима на карте появляется в нейтральной точке с логом `Info`, а не `Warning`.
+
+### Проверено
+
+- Новые `TeamChoiceTests`, `PlayerLifeRulesTests` и дополнения `GameModeWiringTests`: до правки
+  12 красных (респавн переносил аватар на (10;0;0), урон в лобби убивал, команды раздавались
+  автобалансом, матч стартовал без команд), после — зелёные. Полный EditMode (380): падают только
+  9 известных `AvatarLoadoutTests`. `AndroidCompileGate` — PASS.
+- Play mode на хосте: в лобби `LobbyMode`, урон 500 по своему аватару — жизнь 100. Переход на
+  `TestMap1`: игрок с командой «Лобби» в нейтральной точке, Elimination ждёт
+  (`AllPlayersHaveModeTeam = false`), планшет предлагает CT/T, HUD Elimination. Выбор команды
+  тем же `CmdRequestTeamChange`, что у планшета, — команда CT, позиция не изменилась.
+  Выдача админом (`ServerAdminAssignTeam` и кнопка экрана «Игроки и команды») работает;
+  после «старта» (`_matchState = Active`) самостоятельная смена отклонена. Возврат в лобби —
+  команда «Лобби», урон не проходит.
+
+## [2026-09-27] - Лобби — игровой режим (`LobbyMode`), этап А
+
+### Изменено
+
+- **Лобби стало режимом.** Вместо правила сцены `LobbyFreePlay` (удалено вместе с
+  `LobbyFreePlayTests`) — `LobbyMode : GameMode` с одной командой «Лобби»
+  (`Assets/Data/Teams/Lobby_Team.asset`, `teamIndex = 3`, все аватары) и данными
+  `Assets/Data/GameModes/Lobby_GameModeData.asset`. Правила лобби — компоненты на префабе
+  `Assets/Prefabs/GameModes/LobbyMode.prefab`: `LooseItemSweeper` (возврат оружия домой)
+  и новый `LobbyMagazineSupply` (бесконечный карман). Префаб зарегистрирован в `spawnPrefabs`.
+- **Режим сцены отделён от выбора матча.** У `GameplayManager` поле `_sceneGameMode`: задано —
+  режим стартует сам в `OnStartServer`, выбор администратора не спрашивается; пусто —
+  как раньше, `SessionManager.SelectedGameModeData`. В `Lobby.unity` добавлен `MatchManager`
+  с режимом сцены лобби; в `GameModeRegistry` лобби-режима нет. `StartGameplay` требует
+  не меньше одной команды (было — двух).
+- **Стена арсенала и блокировка оружия больше не знают конкретных режимов.** Базовый
+  `GameMode` объявляет `WeaponsEnabled`, `ArsenalRules` (открыта / жетон / замена пропавшего),
+  `OnPlayerDied` и серверное событие `ArsenalRefillRequestedServer`. `ArsenalWallController`
+  сверяется с `ArsenalRules` каждый кадр (`ApplyModeRules`) вместо подписки на фазы
+  Elimination и `FindFirstObjectByType<EliminationMode>`; `GameplayManager` — без `is EliminationMode`.
+  Поведение Elimination прежнее: стена открыта в `Equipment`, пополнение пустых слотов на `Setup`.
+- **Команды раздаёт режим** (`GameMode.ServerAssignTeams`: при старте и при каждом
+  подключении) по политике `TeamAssignmentPolicy`. Временно (до этапа Б) — автобаланс
+  `AutoBalanceTeamPolicy`: игроки, пришедшие из лобби на карту, раскладываются поровну;
+  скин сохраняется, если он есть в новой команде. `DebugOrchestrator` команды больше не
+  назначает (`teamsForAutoAssign` удалено из `DebugBootstrapConfig`) и не запускает режим
+  сцены — лобби стартует само.
+- **Планшет в лобби не предлагает команду**: `MenuTeamSelection` берёт команды активного
+  режима, при одной команде сразу открывает скины. Сервер отклоняет смену на команду,
+  которой нет в активном режиме.
+- **Одна зона спавна в лобби** — `SpawnZone_Lobby` команды «Лобби» у северного края;
+  вторая зона удалена как *removed GameObject* переопределения (ассет `Environment` не тронут).
+
+### Проверено
+
+- Новые `GameModeRulesTests`, `GameModeWiringTests`, `TeamAutoBalanceTests` и переписанные
+  на правила режима `ArsenalWallStateReplicationTests`: до правки красные (25+), после — зелёные.
+  Полный EditMode (366): падают только известные `AvatarLoadoutTests`. `AndroidCompileGate` — PASS.
+- Play mode на хосте: в лобби активен `LobbyMode`, 4 стены открыты, жетонов нет, оружие
+  включено, аватар в зоне «Лобби» (0; 0; 8,06), карман досыпает магазин к каждому оружию.
+  Переход на `TestMap1`: стартует `EliminationMode`, игрок получил CT автобалансом (скин
+  сохранён), стоит в зоне CT, стены закрыты, оружие выключено до боя. Возврат в лобби —
+  снова команда «Лобби» и прежний скин.
+
 ## [2026-09-27] - Лобби: столы по краю, тумба арсенала в центре, стрельбище с мишенями
 
 ### Изменено

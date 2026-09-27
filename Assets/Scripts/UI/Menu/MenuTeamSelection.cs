@@ -1,5 +1,7 @@
 using UnityEngine;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.GameModes;
+using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.UI.Menu
@@ -43,15 +45,87 @@ namespace VrBattlegrounds.UI.Menu
                 _selectedAvatarIndex = PlayerSession.LocalSession.AvatarIndex;
             }
 
+            TeamData[] teams = CurrentTeams();
+
+            // Команда одна (лобби, или матч начался и своя команда уже есть) — выбирать
+            // нечего: сразу скины этой команды. Ни одной (матч начался, а команды у игрока
+            // нет) — пустой этап 1: команду выдаёт админ.
+            if (teams.Length == 1)
+            {
+                OnTeamCardSelected(teams[0].teamIndex);
+                return;
+            }
+
             ShowTeamSelectionState();
         }
 
         /// <summary>
-        /// Кнопка «← Назад» — возврат на этап 1.
+        /// Кнопка «← Назад» — возврат на этап 1. Если выбирать команду не из чего
+        /// (лобби), этап 1 не показывается вовсе.
         /// </summary>
         public void BackToTeamSelection()
         {
+            if (!OffersTeamChoice(CurrentTeams())) return;
             ShowTeamSelectionState();
+        }
+
+        /// <summary>
+        /// Какие команды предлагать: команды активного режима этой сцены (в лобби —
+        /// одна «Лобби»), иначе команды режима, выбранного на матч, иначе все команды реестра.
+        ///
+        /// <para>
+        /// Активный режим — первым: выбор администратора описывает <i>следующий</i> матч,
+        /// и в лобби он предлагал бы команды матча, которых в лобби нет.
+        /// </para>
+        ///
+        /// <para>
+        /// Матч начался (<see cref="GameMode.TeamChoiceLocked"/>) — сам игрок команду не
+        /// меняет: предлагается только его команда (для смены скина), а игроку без команды
+        /// режима — ничего, её выдаёт админ.
+        /// </para>
+        /// </summary>
+        public static TeamData[] ResolveAvailableTeams(GameMode activeMode, GameModeData selectedMode, TeamData[] allTeams,
+                                                       int currentTeamIndex)
+        {
+            TeamData[] teams = ResolveAvailableTeams(activeMode, selectedMode, allTeams);
+
+            if (activeMode != null && activeMode.TeamChoiceLocked)
+                return System.Array.FindAll(teams, t => t.teamIndex == currentTeamIndex);
+
+            return teams;
+        }
+
+        /// <summary>Команды без учёта закрытого выбора — активный режим, выбор матча, реестр.</summary>
+        public static TeamData[] ResolveAvailableTeams(GameMode activeMode, GameModeData selectedMode, TeamData[] allTeams)
+        {
+            TeamData[] teams = null;
+
+            if (activeMode != null && activeMode.Teams != null && activeMode.Teams.Length > 0)
+                teams = activeMode.Teams;
+            else if (selectedMode != null && selectedMode.teams != null && selectedMode.teams.Length > 0)
+                teams = selectedMode.teams;
+            else
+                teams = allTeams;
+
+            return teams == null ? new TeamData[0] : System.Array.FindAll(teams, t => t != null);
+        }
+
+        /// <summary>Предлагать ли выбор команды: только если команд больше одной.</summary>
+        public static bool OffersTeamChoice(TeamData[] teams) => teams != null && teams.Length > 1;
+
+        private static TeamData[] CurrentTeams()
+        {
+            GameMode active = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+
+            // Выбор матча спрашиваем, только если режима сцены нет: геттер пишет
+            // предупреждение, когда администратор ещё ничего не выбрал.
+            GameModeData selected = active == null && SessionManager.Instance != null &&
+                                    !string.IsNullOrEmpty(SessionManager.Instance.SelectedModeId)
+                ? SessionManager.Instance.SelectedGameModeData
+                : null;
+
+            int current = PlayerSession.LocalSession != null ? PlayerSession.LocalSession.TeamIndex : 0;
+            return ResolveAvailableTeams(active, selected, TeamRegistry.Instance != null ? TeamRegistry.Instance.teams : null, current);
         }
 
         /// <summary>
@@ -73,24 +147,13 @@ namespace VrBattlegrounds.UI.Menu
             ClearContainer(_teamsContainer);
             _teamButtons.Clear();
 
-            // Пытаемся получить команды для текущего режима
-            TeamData[] availableTeams = null;
-            if (VrBattlegrounds.Managers.SessionManager.Instance != null &&
-                VrBattlegrounds.Managers.SessionManager.Instance.SelectedGameModeData != null)
-            {
-                availableTeams = VrBattlegrounds.Managers.SessionManager.Instance.SelectedGameModeData.teams;
-            }
+            TeamData[] availableTeams = CurrentTeams();
 
-            // Если режима нет или список пуст — берем все команды из реестра
-            if (availableTeams == null || availableTeams.Length == 0)
+            if (availableTeams.Length == 0)
             {
-                availableTeams = TeamRegistry.Instance.teams;
-            }
-
-            if (availableTeams == null || availableTeams.Length == 0)
-            {
-                GameLog.UI.Warning(
-                    "[MenuTeamSelection] Нет доступных команд для отображения!");
+                // Штатно: матч начался, а у игрока нет команды режима — её выдаёт админ.
+                GameLog.UI.Info(
+                    "[MenuTeamSelection] Выбирать нечего: матч уже идёт, команду выдаёт админ.");
                 return;
             }
 

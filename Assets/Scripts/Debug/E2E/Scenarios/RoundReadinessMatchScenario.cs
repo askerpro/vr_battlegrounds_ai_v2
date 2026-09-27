@@ -1111,7 +1111,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// Прямая запись <c>transform.position</c> на сервере ненадёжна:
         /// <c>NetworkTransform</c> на аватарах стоит с <c>syncDirection = ClientToServer</c>,
         /// и владелец вернёт свою позицию поверх серверной ближайшим же пакетом. Поэтому
-        /// сначала <c>Respawn</c> — он рассылает <c>RpcOnRespawned</c>, и настоящий переезд
+        /// сначала <c>ServerDevTeleport</c> — он рассылает <c>RpcDevTeleport</c>, и настоящий переезд
         /// делает сам владелец, — а прямая запись остаётся запасным вариантом.
         /// </para>
         /// </summary>
@@ -1123,7 +1123,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             GameObject marker = new GameObject("E2E_DisplaceTarget");
             marker.transform.SetPositionAndRotation(target, avatar.transform.rotation);
 
-            avatar.Respawn(marker.transform);
+            avatar.ServerDevTeleport(marker.transform.position, marker.transform.rotation);
 
             E2EWaitOutcome moved = new E2EWaitOutcome();
             yield return E2EWait.Until(moved,

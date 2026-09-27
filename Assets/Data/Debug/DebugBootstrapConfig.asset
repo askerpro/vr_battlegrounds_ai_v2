@@ -14,9 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enabled: 1
   hostIsAdmin: 1
-  teamsForAutoAssign:
-  - {fileID: 11400000, guid: 294548aeb7148344ea5bfd4c522cc7b7, type: 2}
-  - {fileID: 11400000, guid: 6a1b2f4f562e0d4468069d2c11f06576, type: 2}
   autoStartGameplay: 1
   minPlayersOverride: 1
   autoLoadMapScene: Lobby

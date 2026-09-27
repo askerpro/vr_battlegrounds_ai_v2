@@ -62,6 +62,15 @@ namespace VrBattlegrounds.Managers
             }
         }
 
+        /// <summary>
+        /// Данные режима матча по <c>modeId</c> без побочных логов; null — нет в реестре.
+        /// Режим сцены (лобби) сюда не попадает намеренно — его ищет <c>GameModeCatalog</c>.
+        /// </summary>
+        public GameModeData FindModeData(string modeId)
+        {
+            return _gameModeRegistry != null ? _gameModeRegistry.GetById(modeId) : null;
+        }
+
         /// <summary>Имя сцены выбранной карты.</summary>
         public string SelectedMapScene => _selectedMapScene;
 

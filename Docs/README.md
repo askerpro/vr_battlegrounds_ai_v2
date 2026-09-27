@@ -29,6 +29,7 @@
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
 | `version-control.md` | Git/Plastic workflow: автодублирование коммитов, хук, диагностика |
 | `unity-mcp.md` | Локальный фикс Unity MCP `execute_code` на Windows (MAX_PATH) |
+| `Mirror/mirror-patches.md` | Правки вендорного Mirror: что, зачем, как перенести при обновлении |
 
 ---
 

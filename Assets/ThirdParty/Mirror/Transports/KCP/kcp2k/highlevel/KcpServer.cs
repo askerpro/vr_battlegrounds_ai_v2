@@ -158,6 +158,11 @@ namespace kcp2k
             // listen
             socket = CreateServerSocket(config.DualMode, port);
 
+            // VR Battlegrounds patch: иначе дочерний процесс редактора, запущенный пока
+            // сервер слушает, унаследует сокет и не отдаст порт после Stop().
+            // Docs/Mirror/mirror-patches.md, патч 1.
+            Mirror.SocketInheritance.Disable(socket);
+
             // recv & send are called from main thread.
             // need to ensure this never blocks.
             // even a 1ms block per connection would stop us from scaling.

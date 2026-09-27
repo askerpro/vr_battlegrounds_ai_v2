@@ -170,6 +170,11 @@ namespace Mirror.Discovery
                 MulticastLoopback = false
             };
 
+            // VR Battlegrounds patch: иначе дочерний процесс редактора, запущенный пока
+            // сервер рекламирует себя, унаследует сокет и не отдаст порт после StopDiscovery().
+            // Docs/Mirror/mirror-patches.md, патч 1.
+            SocketInheritance.Disable(serverUdpClient.Client);
+
             //Debug.Log($"Discovery: Advertising Server {Dns.GetHostName()}");
 
             // listen for client pings

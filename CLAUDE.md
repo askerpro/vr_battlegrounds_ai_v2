@@ -64,6 +64,8 @@ VR-шутер для Oculus Quest 2/3. Unity **6000.4.1f1**, URP. Над про�
   теста не прогнаны.
 - **Правки UltimateXR SDK** — любое изменение в `Assets/ThirdParty/UltimateXR/` обязано попасть
   в `Docs/UltimateXR/sdk-patches.md`, иначе потеряется при обновлении SDK.
+- **Правки Mirror** — любое изменение в `Assets/ThirdParty/Mirror/` помечается в коде
+  `VR Battlegrounds patch` и описывается в `Docs/Mirror/mirror-patches.md`.
 - Комментарии и документация — на русском.
 
 ## Поиск: всегда ограничивай область
@@ -200,6 +202,7 @@ Grep  pattern="ClassName"  path="Assets/Editor"     # редакторные у�
 | Значимое изменение, фикс, рефакторинг | `Docs/CHANGELOG.md` |
 | Неочевидное поведение или баг SDK | `Docs/UltimateXR/known-issues.md` |
 | Правка исходников UltimateXR | `Docs/UltimateXR/sdk-patches.md` |
+| Правка исходников Mirror | `Docs/Mirror/mirror-patches.md` |
 | Архитектура, новые зависимости | `Docs/UltimateXR/architecture.md` |
 | Новое правило для агента | этот файл или `.agents/rules/<зона>.md` |
 

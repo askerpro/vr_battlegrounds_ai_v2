@@ -78,7 +78,7 @@ namespace VrBattlegrounds.Arsenal
         // ── Public API ─────────────────────────────────────────
 
         /// <summary>
-        /// Resets the dog tag for a new prep phase.
+        /// Готовит жетон к новой фазе закупки: снова можно взять со стойки.
         /// </summary>
         public void ResetTag()
         {
@@ -86,7 +86,7 @@ namespace VrBattlegrounds.Arsenal
             SetLight(_readyColor, true);
 
             if (_tagObject != null)
-                _tagObject.enabled = true;
+                _tagObject.IsGrabbable = true;
 
             GameLog.Arsenal.Info("[Arsenal] Dog tag reset — ready for new prep phase.");
         }
@@ -96,6 +96,9 @@ namespace VrBattlegrounds.Arsenal
         /// по готовности (<c>RoundStartRule.Readiness</c>); при старте по таймеру объявлять
         /// им нечего, и на его месте показывается табло <see cref="ArsenalPurchaseTimerDisplay" />.
         /// Сама панель остаётся активной — на ней живёт табло.
+        ///
+        /// Прячется жетон только в режиме таймера, а там он с самого начала не хватаем
+        /// (<see cref="Disable" /> на закрытой стене), поэтому в руке его в этот момент не бывает.
         /// </summary>
         public void SetInUse(bool inUse)
         {
@@ -121,12 +124,21 @@ namespace VrBattlegrounds.Arsenal
         }
 
         /// <summary>
-        /// Disables the dog tag interaction (e.g. during round active phase).
+        /// Запрещает брать жетон (стена закрывается).
+        ///
+        /// <para>
+        /// Через <c>IsGrabbable</c>, а не выключением компонента. UltimateXR читает
+        /// <c>IsGrabbable</c> только при поиске нового захвата, а выключенный компонент молча
+        /// стирает из <c>UxrGrabManager</c> запись о текущем захвате. Так и было: время закупки
+        /// истекало, пока игрок держал жетон, стена закрывалась, и отпускание на клиенте падало
+        /// с «RuntimeManipulationInfo not found for object DogTag». Теперь жетон в руке остаётся
+        /// в руке и отпускается штатно, а со стойки закрытой стены его не взять.
+        /// </para>
         /// </summary>
         public void Disable()
         {
             if (_tagObject != null)
-                _tagObject.enabled = false;
+                _tagObject.IsGrabbable = false;
 
             SetLight(_readyColor, false);
         }

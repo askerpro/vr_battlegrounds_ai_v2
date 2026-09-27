@@ -123,6 +123,15 @@ int solid = 0; foreach (var c in go.GetComponentsInChildren<Collider>(true)) if 
 любому предмету, который кладут в якорь в редакторе, а не через `PlaceObject`.
 Если вернулось — `DogTagSetupTests` назовёт префаб или сцену.
 
+### «RuntimeManipulationInfo not found for object …» при отпускании предмета
+
+**Исправлено для жетона 2026-09-27.** Предмет выключили (`enabled = false` или
+`SetActive(false)`), пока он был в руке: UltimateXR на выключение молча стирает запись о
+захвате (`UxrGrabManager.GrabbableObject_Disabled`), и отпускание её не находит. У жетона
+так было, когда время закупки истекало в руке и стена закрывалась (`DogTagController.Disable`).
+Запрещать захват нужно флагом `IsGrabbable = false` — SDK читает его только при поиске
+нового захвата и текущий не трогает. Сторож — `DogTagHeldDisableTests`.
+
 ---
 
 ## Матч и раунды
@@ -176,6 +185,11 @@ int solid = 0; foreach (var c in go.GetComponentsInChildren<Collider>(true)) if 
 `NotifyOnValidate` — у 1389 из 1943 UXR-компонентов флаги `__isInPrefab`/`__prefabGuid`
 не совпадают с фактическими. Симптомы: на хосте `IsGrabbable`, `SetAvatarRenderMode`
 не находят компонент, на клиенте `LoadStateChanges(): Cannot deserialize a component`.
+
+**Сначала прочитай хвост сообщения.** С патча 8 отправитель из редактора или development-
+сборки кладёт в ссылку путь и тип компонента: `… Id is ae118e67-…. Sender: ArsenalWall (2)/…
+[UxrGrabbableObject]`. Это сразу называет предмет, и перебор id по префабам не нужен.
+Хвоста нет — отправитель собран как release.
 
 Как отличить от других причин: id на хосте должны быть ровно `Combine(id с диска, netId)`.
 Если так, а клиентский id не выводится ни из одного префаба, — расходится клон.

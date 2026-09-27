@@ -187,7 +187,8 @@ Grep  pattern="ClassName"  path="Assets/Editor"     # редакторные у�
 ## Слэш-команды
 
 `/commit` `/debug` `/feature` `/unity-check` `/docs-sync` — лежат в `.claude/commands/`.
-Многошаговые процедуры (пайплайн кастомного аватара) — в `.agents/workflows/`.
+Многошаговые процедуры — скиллы в `.claude/skills/`: `/setup-avatar` — аватар игрока из
+модели (риг, игровой вариант `PlayerBase`, регистрация, проверка).
 
 ## Документация — что обновлять
 

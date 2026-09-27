@@ -4,5 +4,5 @@
 Прочитай его и следуй ему.
 
 Пошаговые процедуры лежат в `.claude/commands/` (`commit`, `debug`, `feature`,
-`unity-check`, `docs-sync`) и `.agents/workflows/` (многошаговые пайплайны).
+`unity-check`, `docs-sync`) и `.claude/skills/` (многошаговые процедуры, напр. `setup-avatar`).
 Пути `_agent/workflows/`, упоминавшегося здесь раньше, не существует.

@@ -4,4 +4,4 @@
 Прочитай его и следуй ему.
 
 Углублённые правила по зонам — `.agents/rules/`.
-Пошаговые процедуры — `.claude/commands/` и `.agents/workflows/`.
+Пошаговые процедуры — `.claude/commands/` и `.claude/skills/`.

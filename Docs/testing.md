@@ -20,6 +20,44 @@
 
 ---
 
+## Как запускать тесты
+
+Все тесты — одна сборка EditMode `VrBattlegrounds.Tests.EditMode` (`Assets/Tests/EditMode/`).
+
+**В редакторе.** Window → General → Test Runner → вкладка **EditMode**. Run All — всё;
+выделить класс (например `AvatarLoadoutTests`) → Run Selected — один класс; двойной клик
+по строке — один кейс. Текст отказа — внизу окна при выделении красного теста.
+
+**Агентом через MCP.**
+
+```
+run_tests(mode="EditMode",
+          assembly_names=["VrBattlegrounds.Tests.EditMode"],
+          group_names=["VrBattlegrounds.Tests.Prefabs.AvatarLoadoutTests"])
+get_test_job(job_id, wait_timeout=60, include_failed_tests=true)
+```
+
+- В `group_names` — **полное имя с namespace**. Короткое `AvatarLoadoutTests` даёт
+  задание с `total: 0`, которое висит вечно.
+- Перезагрузка домена во время прогона (кто-то поменял скрипт) теряет задание: оно
+  остаётся `running` с нулём тестов. Лечится `run_tests(clear_stuck=true)` и повторным запуском.
+
+**Из командной строки (CI).** Только при **закрытом** редакторе — Unity не пускает два
+экземпляра на один проект.
+
+```powershell
+& "C:\Program Files\Unity\Hub\Editor\6000.4.1f1\Editor\Unity.exe" `
+  -batchmode -projectPath "F:\UnityProjects\Vr_Battlegrounds_ai" `
+  -runTests -testPlatform EditMode `
+  -assemblyNames VrBattlegrounds.Tests.EditMode `
+  -testFilter "VrBattlegrounds.Tests.Prefabs.AvatarLoadoutTests" `
+  -testResults "$PWD\TestResults.xml" -logFile -
+```
+
+Без `-testFilter` — все тесты. Результат — NUnit XML в `-testResults`, код выхода 0 = всё зелёное.
+
+---
+
 ## Что уже есть
 
 | Что | Где | Готовность |

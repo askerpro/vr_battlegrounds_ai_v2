@@ -458,7 +458,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 826469912366992059, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 826469912366992059, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __prefabGuid
@@ -498,7 +498,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1558899190621270476, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1558899190621270476, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __prefabGuid
@@ -570,7 +570,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5797632599762313257, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5797632599762313257, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __prefabGuid
@@ -594,7 +594,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6564400677046479283, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6564400677046479283, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __prefabGuid
@@ -662,7 +662,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7188255016876851963, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7188255016876851963, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __prefabGuid
@@ -702,7 +702,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8172311496794457578, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8172311496794457578, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __prefabGuid

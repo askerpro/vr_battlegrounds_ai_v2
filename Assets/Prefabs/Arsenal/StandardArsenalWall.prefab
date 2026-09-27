@@ -1787,7 +1787,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1534273817779007750, guid: 0e100fbc135c47246871a238926e95ab, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1534273817779007750, guid: 0e100fbc135c47246871a238926e95ab, type: 3}
+      propertyPath: __prefabGuid
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 1534273817779007750, guid: 0e100fbc135c47246871a238926e95ab, type: 3}
       propertyPath: _uxrUniqueId
@@ -1795,7 +1799,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6288247267465535793, guid: 0e100fbc135c47246871a238926e95ab, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6288247267465535793, guid: 0e100fbc135c47246871a238926e95ab, type: 3}
+      propertyPath: __prefabGuid
+      value: 45f37c2170bc36d45ad0f10868c116f8
       objectReference: {fileID: 0}
     - target: {fileID: 6288247267465535793, guid: 0e100fbc135c47246871a238926e95ab, type: 3}
       propertyPath: _uxrUniqueId

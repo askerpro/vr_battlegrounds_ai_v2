@@ -77,9 +77,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f2754d89-687e-41b9-b883-d2e5d755cb67
+  _uxrUniqueId: ed3b49a1-ec46-4d9e-8f8c-35c6213a7b10
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 3167360988864714780}
@@ -580,9 +580,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a9dec1202eb387459d7c753899b8af6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 855f3e35-8a6f-442b-8e36-19d218a268c5
+  _uxrUniqueId: e50d6af5-5d85-475f-8475-e4fdee46710f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _handSide: 0
   _useControllerForward: 1
   _targetTypes: 7
@@ -1383,9 +1383,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 9f3c21e0-7dc3-4b16-b96f-fe616ec494ef
+  _uxrUniqueId: 0884fe94-c2a0-4c23-bf96-b1237a8edaab
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -1538,9 +1538,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 8f5fc42e-a19c-4c28-830a-53c9d45bc226
+  _uxrUniqueId: 5a81b4dc-336a-42c5-abc2-6a5897075c42
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -2491,9 +2491,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 82241e03-9fde-4db3-af74-1e8a02777adb
+  _uxrUniqueId: f82646af-637e-41a2-9dbe-91cee7a459a1
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 1
   _maxIterations: 10
@@ -2999,9 +2999,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 85e5b3a94d5599c4982fe887142e1201, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: eb655d46-5adc-4019-b1f5-4fc4a46cb27a
+  _uxrUniqueId: 5356b9b8-ad55-40de-8a35-e5e059f0ace6
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 2928334909889992466}
   _rightHandSensor: {fileID: 479950618581789115}
@@ -3021,9 +3021,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd7aa825077847641b535866ae4258b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c7061ece-2893-4c81-ba9c-95cd0bd30879
+  _uxrUniqueId: bb9db3f4-9f24-4b29-87fd-d0621c74f886
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 7044112976193964307}
   _rightController: {fileID: 388218792499745610}
   _controller: {fileID: 0}
@@ -3078,9 +3078,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 7ee849cd-fe7d-43cf-8103-9401df0b6fe7
+  _uxrUniqueId: a093b37f-5329-45be-84ae-e00c254813c8
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -3229,9 +3229,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a89958cfe8683aa4b910cbe234c93f11, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3cad9b57-7103-41a1-951f-07556a9cd40b
+  _uxrUniqueId: 2449b091-9a4c-4993-b49d-a9dd5ec2759f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _handRenderer: {fileID: 8708998973317575880}
   _objectsToDisableOnGrab: []
   _optionalProximityTransforms:
@@ -4127,9 +4127,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 8345a495-44f2-4dc4-810a-d5bf7ecc7921
+  _uxrUniqueId: 839b7467-6d2c-4be1-af45-28234008ebe7
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -4713,9 +4713,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: fb157664-14d0-46b1-86e9-75a6b70da034
+  _uxrUniqueId: 28bc6f4b-4845-4cd2-8ecc-5783f8b43b8d
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -4961,9 +4961,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c1d40494-cb1b-43b2-98f6-4eccb7497616
+  _uxrUniqueId: 61e4f708-a7b9-4933-8dea-a82f63cbf6a1
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -5149,9 +5149,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: b99f7aad-b372-48e3-8247-3d16fca56f39
+  _uxrUniqueId: 75262022-d74c-4aa0-a608-b58d137bac6c
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -5641,9 +5641,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c2cc5416-46db-4320-886c-a2b1a0124ca5
+  _uxrUniqueId: bb9b431e-72d1-4723-a959-45570e64db84
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -6455,9 +6455,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 5c4c226b-0824-45b0-b77d-36fd164617ed
+  _uxrUniqueId: 39b5da17-43b6-42c4-9f06-c632bce2b800
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -6575,9 +6575,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3150ff88-3800-4825-a739-57cf889e3644
+  _uxrUniqueId: 11439582-422c-4b4d-993a-fae073fd4283
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 1297780933676473062}
@@ -6724,9 +6724,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91427e7abc5228c44af202060dafa3af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: bb752008-8a98-4dcb-a2c7-9b10c2d2f6a4
+  _uxrUniqueId: c1c15ff1-4eb2-47ab-9ae9-6ca1bfefed22
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 583123043525352187}
   _rightHandSensor: {fileID: 7060106330452041363}
@@ -6746,9 +6746,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0343e6207db6ea84a9a8d40c5170d7f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 480209fe-4e25-4c27-a095-5c07fe6446c9
+  _uxrUniqueId: 99bf7b28-7c6b-48e5-9266-0cb58e7d0b09
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 7118448071584632160}
   _rightController: {fileID: 8735689183320216370}
   _controller: {fileID: 0}
@@ -6959,9 +6959,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 65148459-105c-491c-a1da-89874bdafa58
+  _uxrUniqueId: f4d6560f-2d28-43f6-9ce8-62a3ba7d32f3
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -7176,9 +7176,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 48af4de6-a3b6-4e91-8677-5acef85f4e72
+  _uxrUniqueId: 210fa60f-ff0f-4025-939b-7d7e37184836
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -7660,9 +7660,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 66c1c10a-1778-4956-ad0c-5ed5886b80a0
+  _uxrUniqueId: 23b7fcb1-c1f6-42ce-94f6-caa7b61d65b9
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -8505,9 +8505,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 53722f72346fa6848ae1386be516505b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 2de0843d-b5ce-462c-9c87-b1b9123ca7cb
+  _uxrUniqueId: 2b8d307c-202f-46cd-ba2e-cc2e4ed23e9e
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _prefabGuid: 0849dce527793b843a199594717dae67
   _parentPrefab: {fileID: 0}
   _avatarMode: 0
@@ -9071,9 +9071,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eed24b4dea1e5534ba091b2188144a9f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 7fb68cdf-fffe-48d3-8fa5-aeaac9aa2027
+  _uxrUniqueId: 43a64548-a96c-485a-9629-5d73868a1fd7
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _allowHandTracking: 1
   _useArmIK: 1
   _armIKElbowAperture: 0.5
@@ -9125,9 +9125,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69f904c3378e5b644ab8bb4cf3257be6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 5fd51303-35c3-42ae-9175-0e7b86d8cd56
+  _uxrUniqueId: d002989a-d0f0-402e-9b67-58cbb4ae5f2f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 0}
   _rightController: {fileID: 0}
   _controller: {fileID: 0}
@@ -9243,9 +9243,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 76a39e99-d5ba-484f-bcd4-b133fab9a68a
+  _uxrUniqueId: 29d0e990-ddf8-4650-be84-91b0fda3adb0
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -9592,9 +9592,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c997e1e44845a44599cad72e2f63768, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 92a83f9a-29cb-42fb-94e7-7d7d57a5e244
+  _uxrUniqueId: 1822bb59-e939-491a-a619-802892133949
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 9024690555252146111}
   _rightHandSensor: {fileID: 9024690555328441786}
@@ -9614,9 +9614,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e00e8773baf4604392a82350eee8671, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 2571c9f2-118d-4ecc-9ce4-7df5cc28d369
+  _uxrUniqueId: fb53ff64-4501-4815-b9bc-dbb78c31eee7
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 2270224977197690347}
   _rightController: {fileID: 3247882489961251178}
   _controller: {fileID: 0}
@@ -9635,9 +9635,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d9733f867143cc499549d95ef911b9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 0ce63d9a-83c3-4fe8-9830-a6b8f472ce41
+  _uxrUniqueId: 605daa76-daad-4c24-b252-f0675ebd81af
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 5362429173179480919}
   _rightHandSensor: {fileID: 4349792165857275635}
@@ -9657,9 +9657,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c97b7d15f1e96f445a4e33190f9a5020, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: a066777e-adb7-41a7-93a8-804d3b2e8ea4
+  _uxrUniqueId: 6a6340b8-5705-47f2-84ef-b0d586901f10
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 1118412746635549831}
   _rightController: {fileID: 7336353544375935187}
   _controller: {fileID: 0}
@@ -9678,9 +9678,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9f2ab5b48994c7b933178d3fea37f60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c9702d03-ca40-4782-ac68-793f8007d978
+  _uxrUniqueId: 751f8f78-d246-443f-8aeb-cbb9dda8d29b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 587632248948644964}
   _rightHandSensor: {fileID: 8655646953892958687}
@@ -9700,9 +9700,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e41f3824310273441b1a66dc33fc3bc6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: ddc9b9d9-54e3-4eb1-a7fd-9eef942a4acf
+  _uxrUniqueId: a62645ad-efac-4150-8050-70c697bbdd81
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 4982595846266346394}
   _rightController: {fileID: 5365312078879966549}
   _controller: {fileID: 0}
@@ -9728,9 +9728,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f6d431e33dfaa8a49b2c2572cdf2c202, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c647bf0d-b606-4c52-8e21-269575a9058b
+  _uxrUniqueId: 83cfed4f-3b64-436f-9aa1-5513bcead8e9
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 7207342001206996238}
   _rightHandSensor: {fileID: 8568509120387262404}
@@ -9750,9 +9750,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46ee2d04c77b0bd4383d6231da50d980, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 8a51e36d-3f79-47a9-8d70-da3a49634f55
+  _uxrUniqueId: 7554b37c-828c-41be-893a-eb9b13117746
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 4935019668814305576}
   _rightController: {fileID: 4318164008308588539}
   _controller: {fileID: 0}
@@ -9939,9 +9939,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f184123f-814c-4154-b985-1e545df907eb
+  _uxrUniqueId: dd69d87d-c753-4a54-adf5-60ecb244bd6d
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 6233883851984832736}
@@ -10122,9 +10122,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 42024d0a-088d-48e7-a5e9-246d0a8b68bf
+  _uxrUniqueId: 26b52057-cf1a-4302-ba42-a7bcfc98c3c2
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -10652,9 +10652,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 2c6f4f85-d93a-4fef-84d7-5d3c16b6ddd8
+  _uxrUniqueId: e3ca0383-796f-4264-b37a-f6f108681c57
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -10765,9 +10765,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c8e59a37-b429-491e-88e2-0417d06ef78b
+  _uxrUniqueId: 137a5301-0c1e-419b-88ff-00590269e062
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 832903957637009053}
@@ -10996,9 +10996,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: b288ec4e-9f29-44dd-9156-a289c46d132b
+  _uxrUniqueId: b53f78b5-44f9-4642-a65b-f32b18206c02
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -11121,9 +11121,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 21c2f118-5a72-4c27-b6e7-b6989d4745f5
+  _uxrUniqueId: 2628db01-0200-48a9-b303-002056f3d443
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 5451852321325406332}
@@ -11535,9 +11535,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 88fc6304-1b5d-4e15-9cc6-42512c80b37e
+  _uxrUniqueId: f689ca9f-40e3-476e-9c4f-e6bd375a2eb2
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 742105007491908852}
@@ -12176,9 +12176,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a9dec1202eb387459d7c753899b8af6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: dde5e8d1-6445-43b4-b207-b7ba3b47689c
+  _uxrUniqueId: f170ca6d-5468-4248-9403-918ade5ebc59
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _handSide: 1
   _useControllerForward: 1
   _targetTypes: 7
@@ -12468,9 +12468,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c6838b52-e0d0-4854-b952-805934844fd7
+  _uxrUniqueId: 80736d64-22eb-4bcf-8301-7b4ec7eb961a
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -12653,9 +12653,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 696596c3-55e5-480f-af64-852380bf4f2e
+  _uxrUniqueId: 1f707aed-d63a-4731-a12b-fc243596a7fa
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 1
   _maxIterations: 10
@@ -12797,9 +12797,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 06bd70ba-e67e-4d5d-8a30-a7030a0433c4
+  _uxrUniqueId: d25a1055-1423-4e52-8e1e-ddf4d88c0361
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -12918,9 +12918,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 57f856a9-da8f-4083-b615-1a10d924fc01
+  _uxrUniqueId: 9fc22217-cbd3-42a5-b286-2bc406ec2485
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -13453,9 +13453,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: cd8b1303-2f66-4769-9cfd-9600c56275db
+  _uxrUniqueId: 89859e72-6f4d-432a-8013-413fe62096ee
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -13765,9 +13765,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 79701455-a4ff-45dd-8ece-25a1d83d39fd
+  _uxrUniqueId: b7ec1aa0-384d-4073-aba5-82b1510be88b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -13952,9 +13952,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 984c308c-8c77-443e-a58a-d55e30900b0e
+  _uxrUniqueId: a3767136-637f-426a-9d54-d5a541601602
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -14251,9 +14251,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4cb02efb-f9a5-4fd2-b7a6-a1e18d2d25e1
+  _uxrUniqueId: 6542a84e-c0d2-45b8-8312-6181a1fe6c20
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -14857,9 +14857,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 411c331e-8c76-4d73-9c4f-45e448e0de44
+  _uxrUniqueId: 439ae011-0a6c-4ddb-86df-ecace2f02654
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 5660261405991501174}
@@ -14983,9 +14983,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 1eb6aa3d-c460-4303-97b7-e5ec3239ceb7
+  _uxrUniqueId: 9b9c7662-3413-4e9d-840a-8bfb1602a29a
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -15102,9 +15102,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 63cacf98-bf35-4c1e-935e-2524f29603e7
+  _uxrUniqueId: 657281e1-bcf2-4b6b-b386-2714e48a8d13
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -16132,9 +16132,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 2db4e4db-346a-4628-b944-abc0600231d6
+  _uxrUniqueId: cd437bc9-e49e-4e7f-8022-10d389efc165
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -16545,9 +16545,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: d7a88f04-4877-444b-b811-be8cbb8b11b7
+  _uxrUniqueId: 291ecc00-c35d-4beb-8a2f-16ca88483b01
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -17527,9 +17527,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: a4646034-2f9f-4b38-8dbc-16b36daa012f
+  _uxrUniqueId: 61935bf1-a0cc-43cd-9ae6-639029956a6f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -19502,9 +19502,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 770abdb5-abc7-4ef4-9e92-7b28f143536c
+  _uxrUniqueId: 386818a8-19a2-454c-9528-ada4755e8daf
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 8924111183058405022}
@@ -19619,9 +19619,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 08f3a6b7-8576-4ffe-9420-10513f13e93b
+  _uxrUniqueId: 4a095a7f-fa1e-4241-b241-2e853a47bc6d
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -19732,9 +19732,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3d5a6737-313f-4e4c-950f-8926bb1087dc
+  _uxrUniqueId: 5dc0f5ed-fe55-432b-8c0b-2be18a315011
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -19921,9 +19921,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: aa57ec38-c96d-4132-9bc3-effb83fa447f
+  _uxrUniqueId: 57a00179-f8e8-4892-bbd9-7f2c20403042
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 2511127252588632262}
@@ -20175,9 +20175,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: ccbf60bb-8b9d-48b8-a356-828ec6554012
+  _uxrUniqueId: 6659b6ce-edf8-4e8d-a596-024154e25057
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -20602,9 +20602,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: bfacc55d-5279-4d4f-b3ea-d7deb729926e
+  _uxrUniqueId: 6a1282eb-6a44-47d2-a166-a0f734c59a0c
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -20830,9 +20830,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3e7db7c8-930a-4ca9-bebd-40f52d158181
+  _uxrUniqueId: e2212380-1d7b-4362-884a-cbb8e517b8da
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -20985,9 +20985,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 6c13449e-3610-48a8-8b51-cf4486b958ff
+  _uxrUniqueId: 0dfb7a42-e349-4cea-9959-27e18efd02ce
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -21145,9 +21145,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 27716a4f-b640-4563-9e34-c4f0ff04cbab
+  _uxrUniqueId: 47acafba-4b6b-4e4f-95b9-64cf621f7ee8
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -21270,9 +21270,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: e2428266-8ca7-4bdc-ac05-3d7ded2c94e8
+  _uxrUniqueId: 9c40431b-5dd0-42f9-8755-1783a357afea
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -21547,9 +21547,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b7a14046e346a1a4a80bc53b1c296bb0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c7c048ef-8dec-45cb-b549-0a383d194980
+  _uxrUniqueId: 7dc47cc7-e868-4e68-aab7-3b4103edc9aa
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _reorientArrowRoot: {fileID: 2889093564356274829}
   _validColorStateIgnoreList:
   - {fileID: 2891206046785509529}
@@ -21659,9 +21659,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13667cb98c4098641b8742b16d227f54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: d9120d59-4200-40dc-bdb8-9b77ae702982
+  _uxrUniqueId: c491bec1-2870-4aa9-bba9-1933b95be791
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _materialID: 1
 --- !u!1 &2890890775760850011
 GameObject:
@@ -26693,9 +26693,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: d01a35fb-f83e-432d-969b-33380fbacdd0
+  _uxrUniqueId: e782dc6f-f963-4f8d-a23d-ab3133648bbd
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 8394466216610639974}
@@ -31754,9 +31754,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 613bd88d-f990-4a49-bf5a-528e9fc00b23
+  _uxrUniqueId: 14b9e405-9f5f-4984-b3c3-3a9d6cadbab1
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -32401,9 +32401,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 8bb01ded-8b0a-44db-90eb-d3f5d39ba31e
+  _uxrUniqueId: ae34f78b-0643-4fe4-9651-d3372739eb10
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -33006,9 +33006,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f5de807a-4808-4fd9-9428-d843d7c708a0
+  _uxrUniqueId: a588ebdc-e70f-4bed-a9d2-63026b0fabb1
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 2414412899805400416}
@@ -33063,9 +33063,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4f1773c9-cb89-45eb-9eec-3976dee5d6eb
+  _uxrUniqueId: 79eb8d0c-1f11-4049-abf2-06209cb62183
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -33549,9 +33549,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 2de44fc9-9c58-43eb-b81d-ac8d1cb959c1
+  _uxrUniqueId: 3d6cde36-6113-4769-85e4-4dd3bb08bbb8
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -35007,9 +35007,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 97383cf7-c518-41af-a9fa-b181d5d8c789
+  _uxrUniqueId: 538d78a8-8356-4ed0-9f74-d12ce80f5b16
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -35131,9 +35131,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: e0604b43-339f-4634-acd6-1272617da37b
+  _uxrUniqueId: de6512f9-8e26-4340-8a0e-d79c2e650f1f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -35242,9 +35242,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f666481d-c212-4efe-b3c3-0707f05b2e24
+  _uxrUniqueId: e296d342-f563-4efd-a35d-f8ee4f5c28a2
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -35724,9 +35724,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 48150448-9d30-4fbc-b796-e433c13abe68
+  _uxrUniqueId: 63f01c53-3f63-4aa5-8f7a-7f338349af2f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -35878,9 +35878,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 7218f31f-f720-4b7e-9aee-7a0efea4b5c6
+  _uxrUniqueId: 54406539-d4bf-4642-aa60-967f47b77a18
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -36033,9 +36033,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f0cbfabc-2448-4176-8794-bd70dc663ef2
+  _uxrUniqueId: 3a548fa3-ad6b-46fb-8763-044f24dff9af
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 1
   _handSide: 0
   _controllerHand: {fileID: 0}
@@ -36512,9 +36512,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13667cb98c4098641b8742b16d227f54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3053da10-63b3-4e4c-b00f-a01179760029
+  _uxrUniqueId: 74b5a0c2-3c77-4312-a908-0011ab03fadc
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _materialID: 1
 --- !u!1 &3488212543284073468
 GameObject:
@@ -46702,9 +46702,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b7a14046e346a1a4a80bc53b1c296bb0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 5587df92-a337-48fb-b0ab-95026552c977
+  _uxrUniqueId: a7dcc224-17af-41f7-8f3f-a276bb5f1e9e
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _reorientArrowRoot: {fileID: 3489727042587276586}
   _validColorStateIgnoreList:
   - {fileID: 3488530077693708094}
@@ -46964,9 +46964,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 9442bbbd-3e4d-4e9a-857b-0e20686a4841
+  _uxrUniqueId: 82a23e0e-5e70-45cd-8170-8d3a337f050e
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 6086205195965124924}
@@ -47370,9 +47370,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: afac5c55-880f-4e9a-abf1-ed4e6ec43e51
+  _uxrUniqueId: e3500b5a-0778-4e31-8be6-1099e12d862e
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -47841,9 +47841,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 97be7dd1-fa00-420b-8cb4-e19401ac3e39
+  _uxrUniqueId: 8140ce95-57bc-4ab3-b812-141a1824af66
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -48207,9 +48207,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: d7f325dc-c59c-4b15-801e-9211f425e9e8
+  _uxrUniqueId: db9d166e-7345-48e1-8af7-623d204e8204
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -48299,9 +48299,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3e60d3d2-14d1-4120-93c8-e3a8c1c00065
+  _uxrUniqueId: 4fc7792c-a50e-4856-a309-67060c78764a
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -48379,9 +48379,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 56946346-a557-47e1-85f5-fdd747145b66
+  _uxrUniqueId: a1493142-876c-431e-82e2-819dc70784ea
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -48459,9 +48459,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 207d5725f18c1eb4eaba95a17cdf1794, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: a7d5f527-2026-40c4-8e8a-d75bb2301269
+  _uxrUniqueId: e155e67f-9ee0-4bcc-ac23-c6ddcfc64143
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 1281281726239073066}
   _rightHandSensor: {fileID: 3804620725259841162}
@@ -48481,9 +48481,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3110ba3566d315a41af6c0e8535ee19b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: aac833ed-d90d-43b7-800d-3c0815ec955b
+  _uxrUniqueId: 4b45cb38-ff8b-47eb-9c5a-fd03c160f1cd
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 4819722086528304478}
   _rightController: {fileID: 3670058519710494774}
   _controller: {fileID: 0}
@@ -48758,9 +48758,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 81891b2d-66ef-4fe8-b661-c31cf8ad9e7a
+  _uxrUniqueId: 17fc4a74-e8b6-436e-8437-76b3abcb8a8f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -48882,9 +48882,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: a511fae2-f7e6-4626-adce-dcfb9b4251fa
+  _uxrUniqueId: 7f521a55-7e67-4796-8a82-beda5ef149f7
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -49244,9 +49244,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c20c57e3-dc86-40ef-85f4-62e3c8a7b8ba
+  _uxrUniqueId: 739739d0-66c2-4854-a939-02a92f24cbdb
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -49495,9 +49495,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 138e4b78-486c-484e-b5ee-894364434ad0
+  _uxrUniqueId: bca0f32d-6c8e-4c17-86cd-5e0abb9d9827
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -49608,9 +49608,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4a8fef7d-3785-4fcc-b1b5-0b70cc385c09
+  _uxrUniqueId: 3a933ab3-7ccc-4302-ad3d-260e6f38daa9
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -50355,9 +50355,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 85af67f5-9606-4386-9efc-b0c81ed0e719
+  _uxrUniqueId: 212ade19-8618-45b2-bf0e-307b65b4a1b5
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 1
   _maxIterations: 10
@@ -50707,9 +50707,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 238a27be-daed-424d-9c06-c102f4c99af7
+  _uxrUniqueId: 7e214c62-4836-4ac0-97d4-b56bf79ae94a
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 6773072440264324197}
@@ -51115,9 +51115,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56fd8cf6e42e4b745b83f45c486ff4d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3ef7ba18-0341-441b-a825-e2572e3b2a88
+  _uxrUniqueId: 709d0666-24ca-4a3c-ab4c-4477c4a437b1
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _gizmoHandSize: 0
   _handSide: 0
   _selectedRenderPipeline: 0
@@ -51565,9 +51565,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e44a53324016f44da8b9fb0183ace63, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4da1e7be-67f6-4b02-99b3-3696dbd969d7
+  _uxrUniqueId: 73894b6f-3fd7-48f1-ba4d-aacbf148ba30
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 9024690555090535723}
   _rightHandSensor: {fileID: 9024690554696099750}
@@ -51587,9 +51587,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e6fba2dada135740a5cc23e3c44ab6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c7c7d47c-6366-48f5-85dc-81bfddb68793
+  _uxrUniqueId: 3ddd40b0-e2d5-401b-8768-891dc6e4e633
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 4389183642136172008}
   _rightController: {fileID: 7732638748153210786}
   _controller: {fileID: 0}
@@ -51673,9 +51673,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f1b5503a-b632-493f-97a0-ae3ab2bee4c2
+  _uxrUniqueId: e3f29321-1688-4e33-884b-f8dcf1039b09
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -51796,9 +51796,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: ae302da3-3f1b-4295-a496-d903adc59dd7
+  _uxrUniqueId: aaf8f4e6-085b-47ae-ab3f-87e7b57e1104
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -51986,9 +51986,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 36089a55-1b3d-4bd4-a446-b004b66a207b
+  _uxrUniqueId: 1a4046f2-19e1-428a-a2a1-56010fb44054
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 7765914815406100290}
@@ -52948,9 +52948,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f49112646ffbe3943ad1a450d98ee87e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 6950a6e7-adf4-4475-ba51-9c1e3bc99664
+  _uxrUniqueId: 63f9d1ec-81a2-42e8-a24a-d1ee61f5ca2b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _controllerHand: 1
   _useControllerForward: 1
   _parentToDestination: 0
@@ -53164,9 +53164,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 737df879-6fee-4ed1-a500-025eda9d7500
+  _uxrUniqueId: 69edc9e4-6f7a-4aae-adfe-43d9ed45fcb1
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -53920,9 +53920,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 6f76b221-a543-4681-b571-b9c650481efe
+  _uxrUniqueId: 80c27f47-f653-4c74-af65-deca359b4ba6
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 8840981902957491266}
@@ -54718,9 +54718,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 8b1d3bb0-1104-4cd4-bcb4-09b5044ffea1
+  _uxrUniqueId: 291c8cfb-5cbb-485f-8b7e-073d2065680a
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -55739,9 +55739,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a89958cfe8683aa4b910cbe234c93f11, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: a1c11587-26f1-4584-992e-c940c888504b
+  _uxrUniqueId: e629bf09-5752-46d1-a955-d2043d8af277
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _handRenderer: {fileID: 2461373534463923662}
   _objectsToDisableOnGrab: []
   _optionalProximityTransforms:
@@ -56412,9 +56412,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: e7a95319-1780-48a0-9c5e-00b6ce69afe1
+  _uxrUniqueId: 4ca670ae-4d5a-41f4-b17e-db11aa569f0b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -56569,9 +56569,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 89b81aa3-418f-4dea-8ef9-b711aa1e53e1
+  _uxrUniqueId: 196e30f4-4edb-4500-a739-4026898ee8df
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 5079500839170576868}
@@ -57249,9 +57249,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: fc630443-2e21-45f9-a471-1359f68bc899
+  _uxrUniqueId: 67ffdb8c-2b8b-4af3-afa6-c10b641a136b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -57582,9 +57582,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 7828986a-55e7-4d6d-a51c-030c8c2d220e
+  _uxrUniqueId: 5ec399b4-a282-4496-bf9f-336e68083b26
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -58053,9 +58053,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 972ea6b2-82f6-4dfb-9545-2ea07d8baa31
+  _uxrUniqueId: 066cb747-eb63-43e5-9868-2016048d9cf7
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -58333,9 +58333,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 24831b34-12e4-45fc-ac84-cc1c75eb1c5b
+  _uxrUniqueId: 135469e7-1d04-4e80-8b82-53ba73927aad
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -58668,9 +58668,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 73c16eca-8d0e-4f99-b6fc-13f3f1b130f1
+  _uxrUniqueId: 0ea4e7ed-a97b-4c85-9b00-4121338b11bc
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 8198162119341034640}
@@ -58944,9 +58944,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 8138a4f3-8431-44f8-a96d-28626f60aa1a
+  _uxrUniqueId: 85e3f602-1377-4ac1-91ee-17d62a63c014
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 3933863406630511101}
@@ -59505,9 +59505,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1cf3f2ab4b560be4e90fce9b1ca24f10, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: de7d33f6-810a-429d-bd5d-bc77c5bc7cdb
+  _uxrUniqueId: 8691e44f-ee17-48a5-94f6-772f4f5cfc3c
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 0}
   _rightController: {fileID: 0}
   _controller: {fileID: 6797421947773924004}
@@ -59561,9 +59561,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 7fc473c1-3830-4f73-b93e-9d0cd638316f
+  _uxrUniqueId: 64218b62-02a1-44e5-bfc6-47830580136f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -59743,9 +59743,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 6afc367c-8e1f-4fc2-8062-a567358700da
+  _uxrUniqueId: e8c78107-b229-4dbc-9cd6-4a2e29a6caf3
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -59995,9 +59995,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 0ebb4f26-a6df-46e0-8b72-d03bb63c7c6b
+  _uxrUniqueId: 005c5baf-f66e-43cb-8bf4-51cf18cd134a
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 1
   _maxIterations: 10
@@ -60247,9 +60247,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: e57828b9-e75e-43a2-8cb0-c1f5011acb25
+  _uxrUniqueId: 99dc4b70-be5e-448e-80c8-1fb81cd7a961
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -60785,9 +60785,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 48d3b0b5-bad6-40a9-a72d-fbebed14ae18
+  _uxrUniqueId: 978d862e-1c98-488c-8a8b-ad224f6f89bc
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -60991,9 +60991,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 73379e6b-85a1-44db-ae44-086e13be9b9b
+  _uxrUniqueId: e6382194-9f87-4c7d-91b9-c1fa7c9c1429
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -61135,9 +61135,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3852a89a-801c-46c4-97fc-a40617998430
+  _uxrUniqueId: dcbc96ea-1b45-4aa1-b376-df70cf9511ab
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -61292,9 +61292,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: be93198a-4828-4d09-bcd2-6e56367a079e
+  _uxrUniqueId: a9dd3d3b-4da0-44bf-9124-93b909f167f2
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -61477,9 +61477,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 445734a3-1b10-4ea7-adf4-92e19122b51a
+  _uxrUniqueId: 7ddd3b88-03cc-4867-9a88-8896789865cd
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -61666,9 +61666,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 865bc5c9-aacc-4832-af75-b53ca63d1457
+  _uxrUniqueId: a045a1d7-8c2c-4102-aba9-f55f844e9b51
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 0}
@@ -62074,9 +62074,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 014945f0-ce21-4372-8b1d-a60ff10583cf
+  _uxrUniqueId: 6ae39f23-99e6-40ee-873d-a3913ef3f68f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -62373,9 +62373,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 2b47ad31-b151-45e5-89f1-5df498e0ae23
+  _uxrUniqueId: 2cff4911-0725-4b9e-89e8-b3aedcf2d434
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -62650,9 +62650,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 161fdc58-549a-4b86-a3bd-7629bd165156
+  _uxrUniqueId: 04002225-140c-42a2-bcb5-905a64f54e52
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -63251,9 +63251,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: eda6d2f5-c50e-4db2-a3b3-32cc2737c802
+  _uxrUniqueId: 2350d83a-1c1d-49a6-9137-1d8034e9afeb
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -63584,9 +63584,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 793d8fce02a8c7a42a9414fb6f5d3dc1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: df6a0859-9c5c-4c22-907f-2fcb0de9cc5f
+  _uxrUniqueId: 50c43789-ef49-4b8e-b4b9-925b8f7e4f4d
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 9131828959955724001}
   _rightHandSensor: {fileID: 5102102214520257396}
@@ -63606,9 +63606,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4ff66b86132a55f4a9f6efea46da64bb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f23e4736-9d11-4de7-be6f-4319da7f3a4b
+  _uxrUniqueId: 0745106b-78c9-4bd9-819f-9cd8e396bdfb
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 3107952551807985410}
   _rightController: {fileID: 7579878827709993971}
   _controller: {fileID: 0}
@@ -63627,9 +63627,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 813e0bb28152bed4ea5c634099e04934, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 0b219155-8f22-49fc-b41c-86db131c77a9
+  _uxrUniqueId: f84b74b5-379f-4363-8618-22741ff22b66
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 7202710228465818656}
   _rightHandSensor: {fileID: 3140109155490672903}
@@ -63649,9 +63649,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e34315eb5a4f11d41ade48a0c1a86715, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 96ac8446-c7d8-42ce-aa65-a8c2e30d8ac6
+  _uxrUniqueId: a994911f-b3e8-4e74-9121-2320bd7b9f0c
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 149720956682161654}
   _rightController: {fileID: 1430340470356918599}
   _controller: {fileID: 0}
@@ -63677,9 +63677,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6cc855f608e72a745b7a79e8ca93ba67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 98dcd757-2a9e-4bad-bb88-ab86b2b08b73
+  _uxrUniqueId: ab716c22-2db1-4b3b-802c-1d3604a61835
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 4818086370089617375}
   _rightHandSensor: {fileID: 885994708549970889}
@@ -63699,9 +63699,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd07cb58266720f478deb9264c45c614, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 2b741074-d4b6-4fde-9518-09cbb419e3b8
+  _uxrUniqueId: 07a1fc1a-c080-4996-b4ff-fa6ff67663b0
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 2518209326771347236}
   _rightController: {fileID: 1149059030294370703}
   _controller: {fileID: 0}
@@ -63720,9 +63720,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07ea441b9add1fd4fb72713dd14725cb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: dc6a5bec-ffec-4c47-ac02-1b983aebb638
+  _uxrUniqueId: e36146a4-f949-44f1-b8e1-e68d5e174ddc
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 7641562140318062591}
   _rightHandSensor: {fileID: 7041563942559753117}
@@ -63742,9 +63742,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0acc555071f36c4fb74251d9a25c5ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: e1f67dbf-2549-4658-a493-7b1ec213589e
+  _uxrUniqueId: 72b7d91e-2d7c-4f06-84ab-6ac8744a74f7
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 2282671844814799527}
   _rightController: {fileID: 603505687336103178}
   _controller: {fileID: 0}
@@ -64093,9 +64093,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 04cbbdd9-9c1d-4398-b1e3-d04b428d9025
+  _uxrUniqueId: afab3db9-4e8d-4046-8fc4-34bb271366ea
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -64457,9 +64457,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3129ce52-8851-443e-8d7f-a817b72d564f
+  _uxrUniqueId: 186c8e84-1bc5-41a6-ba76-6f2ddf6b5d70
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -64835,9 +64835,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 0aebc30f-ebeb-4460-bb07-47874caaa70e
+  _uxrUniqueId: e3586aad-0789-4173-9ef3-5b03d3c2f2d0
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -64929,9 +64929,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f3c4c660-ffef-4540-b7eb-7799dbb667ab
+  _uxrUniqueId: 175cc742-d659-479c-bf69-ac98d8b0757e
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -65120,9 +65120,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56fd8cf6e42e4b745b83f45c486ff4d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 97f084ca-4701-44b6-9057-ce7ef4c2b4a0
+  _uxrUniqueId: bd24bce8-dc2a-41a2-9884-12e1a18fe979
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _gizmoHandSize: 0
   _handSide: 1
   _selectedRenderPipeline: 0
@@ -65173,9 +65173,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 1443f107-90e0-4df6-b659-493baef6ef3b
+  _uxrUniqueId: f4edf5df-8143-4e08-b61d-78039ad4b59d
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -65936,9 +65936,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 9425ac08-de6f-4d58-b0b5-c38715326d26
+  _uxrUniqueId: 27ade57f-c7f1-4a8c-acb1-ff025db52cff
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -66852,9 +66852,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: ae4bd1b9-5f48-4e6a-84fd-de41a1573139
+  _uxrUniqueId: 0444cdf1-76f7-4878-9385-fe23c16ff614
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 8499902344056752461}
@@ -66907,9 +66907,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 8466ad20-0776-4197-b5b0-6c3f746e08b8
+  _uxrUniqueId: e4ec0666-323d-47f8-b8c6-084fa00d7fb9
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 1
   _maxIterations: 10
@@ -67253,9 +67253,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4574c8a5-8f3e-4ea9-9aee-bfd867c3d2da
+  _uxrUniqueId: f3de6679-c3f5-40bb-aaec-a27f773f0740
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -67536,9 +67536,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 59f03e47-732e-4001-a202-0e471d2bc5f5
+  _uxrUniqueId: fae7dd4c-5b5a-4f74-a054-bcc67d958ef5
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -67699,9 +67699,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3abc969d-1044-42d9-a799-40d45b54ccd1
+  _uxrUniqueId: e7a84f45-9ad6-4f6b-90cc-227c5122a989
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -67888,9 +67888,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 2eae7182-3804-4551-974b-eeb1dcb1ebb4
+  _uxrUniqueId: ea4d6cbe-e709-456e-abd4-bba69e4829db
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -68260,9 +68260,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 7015556d-8796-47c1-bc9b-6b767bee69c0
+  _uxrUniqueId: e00a593e-281f-4fb6-980e-f5aa72f3ff12
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -68592,9 +68592,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 1ab61bfc-0050-4ab5-9d5b-ea6235855ed0
+  _uxrUniqueId: b78af04f-3e9d-4371-8066-31f89264acad
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -68941,9 +68941,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3e61a969-cfa9-4c14-88f7-77c8109a4d85
+  _uxrUniqueId: b614b961-1577-4e18-9f11-cce4ee812e5f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -69333,9 +69333,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 84a750ea-9abb-4be3-8921-5691e241ad09
+  _uxrUniqueId: e59d4c37-ae00-42ed-b0b1-441f482de27a
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -69678,9 +69678,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 91a5b2b9-d090-483d-96c2-e3a2ffad3045
+  _uxrUniqueId: 9eb6a7b9-fe7c-43a5-bb6a-f1b626a86775
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 1
   _maxIterations: 10
@@ -69928,9 +69928,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 27e701c4-0652-446c-8f39-f65089481eb8
+  _uxrUniqueId: 8c64f577-5915-4a77-b375-4af34326467b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -70479,9 +70479,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: e4901f2c-5aea-4ae3-a889-f273f15d8323
+  _uxrUniqueId: 210593b5-2294-4209-93b2-5e991ae9d2c1
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -70633,9 +70633,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: ead0d55a-d91f-4511-b4fe-3bc4bb4a8711
+  _uxrUniqueId: c866015a-ae51-4e94-902e-e0e047df3371
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -70757,9 +70757,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f10ee1aa-40a4-4310-aeaf-6440fa7bba04
+  _uxrUniqueId: 5d311243-6b2a-4197-9d18-38c2b7429c16
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -70913,9 +70913,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 98675bcb-1d4e-4c21-9fa1-c318bb9fcaca
+  _uxrUniqueId: 1b5431f5-451c-4902-b996-05743eb4c385
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -72557,9 +72557,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: a147425e-1057-4337-9254-b3ae34832c71
+  _uxrUniqueId: 961d7da7-3efc-4f37-8446-a4e297b45a97
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -72777,9 +72777,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f2403e1e-0c2d-4331-ba73-b6c193dacd72
+  _uxrUniqueId: 8d3a896e-a3aa-44af-903a-c0118667d54b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 728937605751415876}
@@ -72902,9 +72902,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f12a33b5-d3c8-4f4c-8d1f-4086384f444b
+  _uxrUniqueId: dc316bd9-e5fa-4177-8bef-e4df9d64c221
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -73344,9 +73344,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 0c68dab8-d0ff-43a3-93bd-39d8378dc685
+  _uxrUniqueId: b60c65a3-3d37-4cff-be97-3c3177fcc1fd
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -73754,9 +73754,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 5dbb6284-1375-4c4f-b0aa-bc71f3e923ef
+  _uxrUniqueId: c674ded9-5617-40d5-a9e8-5fe9696bec14
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -74119,9 +74119,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4a29e65a-bd63-490a-93c8-f37cad9f8151
+  _uxrUniqueId: 961a051a-b409-4d0d-afec-71928af645ae
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -74211,9 +74211,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: ca2c24ef-83a7-493e-80ed-dbbe49890577
+  _uxrUniqueId: 29e4e48a-a4b8-46b1-9d0f-8c268d8752f5
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -74304,9 +74304,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4e13e640-4ca8-47e2-8f8f-d55d4a760ee0
+  _uxrUniqueId: d24e8b1c-63dd-406f-9d4c-c9575ac5922b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 6961299020982358208}
@@ -74615,9 +74615,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 68d8c34d-b7d0-451b-bd2c-ac81bb206463
+  _uxrUniqueId: 51a35b8a-5e3f-4510-80d1-b9c48294b61e
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -74870,9 +74870,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 233413c2-9534-4d90-93af-89c538b83bc3
+  _uxrUniqueId: 177852ce-4c0d-4861-863e-d08e7f4fd6e4
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 5535197282953390061}
@@ -74927,9 +74927,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4ab8206a-4e56-4545-95e5-918cb9092cc4
+  _uxrUniqueId: a6c84094-c8b8-4f0d-a929-aa96991dcfe6
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -76109,9 +76109,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 7c0ce47e-5723-4172-b1ee-646b705b1423
+  _uxrUniqueId: df6c87eb-5607-44d1-9497-8c05d53f1f60
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 0}
@@ -76440,9 +76440,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 42dfa397-a11a-4841-b962-8f52e69733bd
+  _uxrUniqueId: f3d1e4d8-f292-47ea-a954-c498d4d33f3b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -76624,9 +76624,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 85551f8d-8856-413b-861e-9fee434c92be
+  _uxrUniqueId: 0efa95c6-b995-4600-afc7-0b305e41bb6b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -77178,9 +77178,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 56bc65f1-d7db-4806-9e19-bc4efe362ca5
+  _uxrUniqueId: f33c479d-37d2-45af-9d83-7b325dae07bb
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -77361,9 +77361,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c210797670b3ccb4faa0d527c28face7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: b78d044b-4cd9-4380-8c4f-bdfbe70968f3
+  _uxrUniqueId: 97f58b43-3775-4c2b-91f2-92a39d06dd73
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 9024690555621626142}
   _rightHandSensor: {fileID: 9024690555271585910}
@@ -77383,9 +77383,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d38a842ac6135e64babe0def2b78c7f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3d68aec8-0789-43ac-bba3-aaff388e6204
+  _uxrUniqueId: 16c3d2d9-3755-4b9c-ac70-b6a030ee4368
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 3047821372399069685}
   _rightController: {fileID: 469563301307297980}
   _controller: {fileID: 0}
@@ -77509,9 +77509,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: a4e2053b-80e8-46f9-b84b-4e8dbe9401b5
+  _uxrUniqueId: 1d18cfd9-0852-4869-8417-479e32af3425
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 1582524988559113489}
@@ -77914,9 +77914,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 70a6e823-b548-43ad-9bb0-3b6ac1c00ed0
+  _uxrUniqueId: 19abf442-a09d-4636-ad89-1d58372c915a
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 635987779671022922}
@@ -77969,9 +77969,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 0ebac8c9-373d-4786-8b72-53bfcf5f4e48
+  _uxrUniqueId: 081c7ee3-6f0b-47bc-8ce8-d99b3073f6ec
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 0}
@@ -78614,9 +78614,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 1e24dfb0-da92-4e1a-a3c8-09bee5fe4f26
+  _uxrUniqueId: 8c80818e-d51d-4e54-ad89-d106831d2f04
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -78805,9 +78805,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 9964acb7-242f-4aba-91a0-46a4f0c36008
+  _uxrUniqueId: 9cba29d2-f7f9-42c2-8f0d-091648dc4f4d
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -78949,9 +78949,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: aae6edcc-6319-4b5b-be39-cd51f53f3239
+  _uxrUniqueId: efe48faf-b88e-4381-b0cf-1d16d6c0a997
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -79264,9 +79264,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 890b3b50-3069-407c-9d09-7980b240fd5e
+  _uxrUniqueId: dc305a88-e5ee-4f3a-86a0-7d3832a42854
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 6658165082260879662}
@@ -79420,9 +79420,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 8f47c403-0af5-4f79-96fb-f98685f829c4
+  _uxrUniqueId: 264e00fb-638b-477e-910b-fad1f231d81b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -79807,9 +79807,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f9f613010cce8f0408243773fe913d9f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 313cdbc2-d16d-4f9c-865d-ec0240b63262
+  _uxrUniqueId: 3bca0019-0e52-4559-87ed-7ba648471b4c
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 9024690554645594600}
   _rightHandSensor: {fileID: 9024690554315911188}
@@ -79829,9 +79829,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ab26074711a00449bb89e018281422d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f979906b-3648-4f5a-9ae7-44aafc37f957
+  _uxrUniqueId: fbef186c-e5de-4943-8d94-07cd4bbab708
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 1375317021769776731}
   _rightController: {fileID: 5120939286557064100}
   _controller: {fileID: 0}
@@ -79857,9 +79857,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7aaab42f00bf7ad4bb5388a08c575a4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: f2b74ee6-aeab-41e3-8ea6-9ab3cef5aef8
+  _uxrUniqueId: efd5f2f2-df1a-4c8f-80c8-9af054e237ab
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 5545183854140452162}
   _rightHandSensor: {fileID: 6062553450568540548}
@@ -79879,9 +79879,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aeb548548ec3cdb489de559527782aee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: b12f3a67-2c74-4715-93da-b2f058fc972e
+  _uxrUniqueId: 90c7868b-7b22-4497-b84a-32b760439f94
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 2187137818886636154}
   _rightController: {fileID: 3902872610923160997}
   _controller: {fileID: 0}
@@ -79907,9 +79907,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74d5790b838df3441b94784597d32e7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 08a90674-27ba-4b92-8d63-701f337293c8
+  _uxrUniqueId: b3b4bb80-80e9-4182-aca5-cb5c416a8c16
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hideAvatarInPassthrough: 1
   _leftHandSensor: {fileID: 3561565694258732753}
   _rightHandSensor: {fileID: 2016594607321816475}
@@ -79929,9 +79929,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99f34313b313be54fa63910a496c06a7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 38e7e6cd-549c-4dd1-b6a7-768e1232e299
+  _uxrUniqueId: 2d3a7946-1747-4628-97de-d77affa1bcdc
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _leftController: {fileID: 679336746633488026}
   _rightController: {fileID: 8510813265291928656}
   _controller: {fileID: 0}
@@ -80206,9 +80206,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c3e64231-cc86-4581-83bf-61dcd75a488b
+  _uxrUniqueId: bc3ef31c-8323-4f8d-9451-5c6e20b047da
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 7701401812911991361}
@@ -80469,9 +80469,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: e069de60-3767-4f1c-afd0-970f1b4fcb53
+  _uxrUniqueId: 9298c826-75cd-4255-978f-b473157d797f
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 0
   _controllerHand: {fileID: 3312544835718975807}
@@ -81726,9 +81726,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 311d498c-9c8f-4214-9bb6-6ca1a84fefbe
+  _uxrUniqueId: 20d9b0da-4344-4e95-8e8f-be9540f24ae4
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 0}
@@ -82069,9 +82069,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3477336b-9fe5-48c5-a532-ea804c91803b
+  _uxrUniqueId: e831e10a-222f-4821-bcd3-9ccb2ec8bda6
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -82188,9 +82188,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 99da7d83-e100-4869-b3ea-a01f1fe99745
+  _uxrUniqueId: a472ad51-8b2c-4140-b4ec-1cd8846c1a83
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -82437,9 +82437,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: c0fa7170-0e21-4afa-ae25-3685faf095e4
+  _uxrUniqueId: 884af3fe-c514-41d1-88bc-09508631bf95
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -82560,9 +82560,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 16956e11-5e26-4ba3-b376-5a72259aff3f
+  _uxrUniqueId: 343a04b4-cee3-4b67-b902-e472d9b1c641
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -83469,9 +83469,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 5176b14a-cb8f-4dea-ba2e-7ac2d82100ac
+  _uxrUniqueId: cab89772-cf53-48af-a8a8-7fc96583ff14
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -83561,9 +83561,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 6328c439-7f6d-4f23-8afe-14f664691498
+  _uxrUniqueId: 2a93c1a8-c5dc-40a0-90fd-4644b13ed855
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -83709,9 +83709,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 347046f4-be91-4162-8a84-108c294274f5
+  _uxrUniqueId: b586c35e-e6e6-4744-af3a-f3bc8f730062
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -83801,9 +83801,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fba00edd9cbdb6b43915c325836d87c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: bbd18f06-6e23-4a13-b2c8-ebfa5b06411e
+  _uxrUniqueId: e34e0d10-859e-4c81-9a48-95f90d85f45b
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _enabled: 1
   _manualUpdate: 0
   _maxIterations: 10
@@ -84190,9 +84190,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 0f42f931-ff79-4555-a187-20245481196d
+  _uxrUniqueId: 9e28c1eb-6a29-41b1-979d-3880754b5085
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 0
@@ -84582,9 +84582,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e3aec586ed72f74a8f71a9fc93449d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: d51e30d1-07de-4ce9-b082-a752f0e81c66
+  _uxrUniqueId: 24749cc5-d12e-4884-a17c-aaa4da7619e0
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _hasAvatarSource: 1
   _avatarPrefab: {fileID: 2827089708500371603, guid: 55a8090836bca384fa6c13a15986a579, type: 3}
   _avatarHandSide: 1
@@ -85749,9 +85749,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f49112646ffbe3943ad1a450d98ee87e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4939e3f7-99e6-4d3a-b9fc-d34b005b6b33
+  _uxrUniqueId: d1d42ee9-4ac8-4580-886c-6125e637490e
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _controllerHand: 0
   _useControllerForward: 1
   _parentToDestination: 0
@@ -86315,9 +86315,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2285bc0022316448ac5c40fd488b38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 49699358-1ed9-4113-9fc4-189e2779f623
+  _uxrUniqueId: 240fe1d8-dec5-47ef-a92c-43d80f0a9cf8
   __prefabGuid: 0849dce527793b843a199594717dae67
-  __isInPrefab: 0
+  __isInPrefab: 1
   _needsBothHands: 0
   _handSide: 1
   _controllerHand: {fileID: 2663694669803743474}

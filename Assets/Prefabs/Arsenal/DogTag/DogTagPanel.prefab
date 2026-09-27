@@ -44,8 +44,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
-  _uxrUniqueId: fa50481f-341f-4ea5-89e5-77c8b6b1de8e
-  __prefabGuid: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+  _uxrUniqueId: 6d2c6edb-44ba-4c48-9fc4-b84c916e3042
+  __prefabGuid: 0e100fbc135c47246871a238926e95ab
   __isInPrefab: 1
   _compatibleTags: []
   _maxPlaceDistance: 0.1
@@ -255,8 +255,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f5a30897a3c024c805c866226dd743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObject
-  _uxrUniqueId: 4706a3dc-2be1-4c94-af84-d2d560c07646
-  __prefabGuid: 8bfb94c7bbb592d4d86ac1d8f905ea9d
+  _uxrUniqueId: 991cca99-4846-4db1-a3dc-804fa76445fd
+  __prefabGuid: 0e100fbc135c47246871a238926e95ab
   __isInPrefab: 1
   _isDummyGrabbableParent: 0
   _controlParentDirection: 1

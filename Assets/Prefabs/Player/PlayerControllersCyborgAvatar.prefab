@@ -5823,9 +5823,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69f904c3378e5b644ab8bb4cf3257be6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Devices.Integrations.UxrDummyControllerInput
-  _uxrUniqueId: c6509584-2832-434f-aece-ba353ee96694
-  __prefabGuid: e7468ec6b7af89c4d94d451ec3c1807b
-  __isInPrefab: 0
+  _uxrUniqueId: 633d6647-eeed-4314-b373-01e8c33223d5
+  __prefabGuid: 8e0e06323e4754f479a9f19788554652
+  __isInPrefab: 1
   _leftController: {fileID: 0}
   _rightController: {fileID: 0}
   _controller: {fileID: 0}

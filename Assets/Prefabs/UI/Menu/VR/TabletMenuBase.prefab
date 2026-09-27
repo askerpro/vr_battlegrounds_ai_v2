@@ -126,6 +126,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -304,6 +305,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -325,9 +328,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!114 &8754745994109755441
 MonoBehaviour:
@@ -902,7 +907,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 861c4ca4-7ad4-42a9-9154-a015be2d04eb
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1
 --- !u!1 &3114441242201961181
 GameObject:
@@ -1046,7 +1051,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: c638a43f-9075-4c51-b534-3ca862999104
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1
 --- !u!1 &3869528021404835625
 GameObject:
@@ -1126,7 +1131,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 810c8ec8-204a-429c-a068-8b024bdc1550
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1
 --- !u!1 &4207794548828109249
 GameObject:
@@ -1173,7 +1178,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 2b6f27b2-453c-4844-8b05-ae608e88d4e8
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1
 --- !u!1 &4298562724667627612
 GameObject:
@@ -1220,7 +1225,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: c749af1f-c972-430c-aa17-77cf01b09f24
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1
 --- !u!1 &4651284283009982035
 GameObject:
@@ -1267,7 +1272,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 66e76767-6bf5-4a06-b26d-1b657ef925a8
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1
 --- !u!1 &4730126588280699218
 GameObject:
@@ -1314,7 +1319,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: f558c1a5-58e3-40c9-84b7-502d75bbd39b
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1
 --- !u!1 &5172030169813115331
 GameObject:
@@ -1378,6 +1383,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -1399,9 +1406,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!114 &7601016557912911918
 MonoBehaviour:
@@ -1416,7 +1425,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 7b95efe4-7da5-495c-bbeb-0cd4aa46f463
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1
   _animationMode: 2
   _valueSpeedDurationSeconds: 0
@@ -1493,7 +1502,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: fd41b5c2-2e60-4758-8c58-e6c8f27b70c1
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1
 --- !u!1 &5335575965059968482
 GameObject:
@@ -1573,7 +1582,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 3b4e61ff-b19f-41e1-86eb-83c605704819
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1
 --- !u!1 &6205893909907195846
 GameObject:
@@ -1756,6 +1765,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -1777,9 +1788,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!65 &324871570863224740
 BoxCollider:
@@ -1847,5 +1860,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: ece175f4-40cf-4980-84c0-23eebf453dd6
-  __prefabGuid: b54b7eb0fb10cd341983807b8e75a79b
+  __prefabGuid: d1ca4c0cf8767324ba12d5315fc6918f
   __isInPrefab: 1

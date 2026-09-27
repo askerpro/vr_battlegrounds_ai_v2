@@ -296,7 +296,9 @@ namespace UltimateXR.Core.Unique
             // поэтому перевыданный здесь id живёт только в его памяти и расходится с хостом —
             // канал состояния отвергает события (UxrComponentNotFoundException). Id выдаёт и
             // сохраняет только основной редактор. См. Docs/UltimateXR/sdk-patches.md.
+            // Процесс-импортёр отсекается до IsMainEditor: там он бросает NullReferenceException.
             if (EditorPrefs.GetBool(UxrConstants.Editor.AutomaticIdGenerationPrefs, true) &&
+                !AssetDatabase.IsAssetImportWorkerProcess() &&
                 Unity.Multiplayer.PlayMode.CurrentPlayer.IsMainEditor &&
                 !EditorApplication.isPlayingOrWillChangePlaymode &&
                 !EditorApplication.isCompiling &&
@@ -331,7 +333,20 @@ namespace UltimateXR.Core.Unique
                     {
                         if (_targetComponent.IsInPrefab() != refIsInPrefab || prefabGuid != refPrefabGuid)
                         {
-                            assignId(_targetComponent, InternalGetUniqueId());
+                            // VR Battlegrounds (патч 10): префабу-ассету — и его содержимому в
+                            // изолированной сцене LoadPrefabContents — только исправить флаги, id
+                            // оставить. Новый id здесь жил лишь в памяти редактора и расходился с
+                            // файлом, по которому работают клон MPPM и сборки (MPPM-02). Id
+                            // перевыдаётся, как раньше, экземплярам в сцене: им нужен свой.
+                            UnityEngine.SceneManagement.Scene scene = _targetComponent.gameObject.scene;
+                            bool isPrefabAsset = _targetComponent.IsInPrefab() ||
+                                                 (scene.IsValid() && UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(scene));
+
+                            if (!isPrefabAsset)
+                            {
+                                assignId(_targetComponent, InternalGetUniqueId());
+                            }
+
                             refIsInPrefab = _targetComponent.IsInPrefab();
                             refPrefabGuid = prefabGuid;
                             setDirty      = true;

@@ -237,6 +237,15 @@ grabbable на дочерних объектах. Теперь `SetItemGrabbable
 не совпадают с фактическими. Симптомы: на хосте `IsGrabbable`, `SetAvatarRenderMode`
 не находят компонент, на клиенте `LoadStateChanges(): Cannot deserialize a component`.
 
+**MPPM-02, исправлена 2026-09-27.** Та же картина после патча 7, особенно при смене скина
+на ходу, — у хоста id случайные, у клона файловые. Причина — неверные флаги
+`__isInPrefab`/`__prefabGuid` на диске: основной редактор перевыдаёт id при реимпорте
+префаба и не сохраняет ([known-issues #11](UltimateXR/known-issues.md)). Неверные флаги
+приносит **Apply to Prefab** со сцены. Их чинит постпроцессор `UxrUniqueIdPersister` сразу
+после сохранения префаба. Если `UxrUniqueIdOnDiskTests` всё же красный (правка шла в Play Mode
+или из клона) — `Tools/VR Battlegrounds/VersionControl/Persist UltimateXR Unique Ids`, затем
+перезапустить Play Mode, чтобы клон перечитал префабы.
+
 **Сначала прочитай хвост сообщения.** С патча 8 отправитель из редактора или development-
 сборки кладёт в ссылку путь и тип компонента: `… Id is ae118e67-…. Sender: ArsenalWall (2)/…
 [UxrGrabbableObject]`. Это сразу называет предмет, и перебор id по префабам не нужен.

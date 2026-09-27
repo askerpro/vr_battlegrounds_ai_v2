@@ -284,9 +284,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
-  _uxrUniqueId: daab23fa-84be-47dd-bc7b-89aa2c18df6b
+  _uxrUniqueId: 89c0d0ea-3fd5-4fc0-b1c5-423d2e2293bd
   __prefabGuid: a465f540d467e0e469042f73de34f97a
-  __isInPrefab: 0
+  __isInPrefab: 1
   _compatibleTags: []
   _maxPlaceDistance: 0.1
   _alignTransformUseSelf: 1
@@ -400,9 +400,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
-  _uxrUniqueId: 41573585-f060-462a-87b5-658eb26e4ebd
+  _uxrUniqueId: 97037b98-5d60-49d9-95a6-fdac2fcc4c5a
   __prefabGuid: a465f540d467e0e469042f73de34f97a
-  __isInPrefab: 0
+  __isInPrefab: 1
   _compatibleTags: []
   _maxPlaceDistance: 0.1
   _alignTransformUseSelf: 1

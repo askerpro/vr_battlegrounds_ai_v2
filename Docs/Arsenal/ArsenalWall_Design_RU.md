@@ -526,7 +526,7 @@ Assets/Prefabs/Arsenal/
 │   ├── Arsenal_Grenade.prefab
 │   └── ...
 └── DogTag/
-    └── DogTag.prefab
+    └── DogTagPanel.prefab       ← вложен в стену: DogTagController + DogTagAnchor + DogTag
 ```
 
 ### 9.7 Ключевые скрипты (дополнение к секции 8.2)

@@ -92,6 +92,35 @@ namespace VrBattlegrounds.Arsenal
         }
 
         /// <summary>
+        /// Показывает или прячет жетон с якорем. Жетон нужен только при старте раунда
+        /// по готовности (<c>RoundStartRule.Readiness</c>); при старте по таймеру объявлять
+        /// им нечего, и на его месте показывается табло <see cref="ArsenalPurchaseTimerDisplay" />.
+        /// Сама панель остаётся активной — на ней живёт табло.
+        /// </summary>
+        public void SetInUse(bool inUse)
+        {
+            bool changed = false;
+
+            if (_tagObject != null && _tagObject.gameObject.activeSelf != inUse)
+            {
+                _tagObject.gameObject.SetActive(inUse);
+                changed = true;
+            }
+
+            if (_tagAnchor != null && _tagAnchor.gameObject.activeSelf != inUse)
+            {
+                _tagAnchor.gameObject.SetActive(inUse);
+                changed = true;
+            }
+
+            if (!changed) return;
+
+            GameLog.Arsenal.Info(inUse
+                ? "[Arsenal] Жетон показан: раунд стартует по готовности."
+                : "[Arsenal] Жетон скрыт: раунд стартует по таймеру, на панели — табло.");
+        }
+
+        /// <summary>
         /// Disables the dog tag interaction (e.g. during round active phase).
         /// </summary>
         public void Disable()

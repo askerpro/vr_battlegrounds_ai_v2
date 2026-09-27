@@ -2,6 +2,49 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - Старт раунда по таймеру как настройка режима; металлический жетон
+
+### Добавлено
+
+- **`RoundStartRule`** (`Readiness` | `Timer`) — поле `_roundStartRule` на `EliminationMode.prefab`.
+  `Readiness` — как было: ждать готовности всех, предел — страховка. `Timer` — закупка длится
+  ровно `_readinessTimeLimit`, готовность не спрашивается, жетон на стене скрыт. Умолчание —
+  `Readiness`, поведение матча без правки префаба не меняется. Отдельная строка в таблице
+  переходов `RoundManager` — «время закупки вышло», чтобы причина старта читалась по логу.
+- **`ArsenalPurchaseTimerDisplay`** — при `Timer` на месте жетона (корень `DogTagPanel`)
+  табло «ЗАКУПКА 0:25» с обратным отсчётом. Только читает `EliminationMode`, по сети не
+  шлёт ничего. `DogTagController.SetInUse` прячет жетон и якорь, а не всю панель.
+- **HUD** в фазе закупки показывает её остаток (`EliminationMode.EquipmentTimeRemaining`)
+  вместо полного времени раунда.
+- **`DogTagMetal.mat`** (`Assets/Materials/Arsenal/`) — URP Lit, Metallic 1, Smoothness 0.75,
+  светлая сталь; назначен жетону в `DogTagPanel.prefab`.
+- **`RoundReadinessTests`** — 4 теста режима таймера.
+
+## [2026-09-27] - Жетон арсенала стоит в якоре, а не падает на пол
+
+### Исправлено
+
+- **`DogTag` падал на пол при старте сцены.** В `StandardArsenalWall.prefab` у жетона были
+  пустые `_startAnchor` и `_rigidBodySource`, а `Rigidbody` — не kinematic с гравитацией:
+  UltimateXR не ставил его в `DogTagAnchor` и не держал тело. Заодно событие `Removed`
+  якоря не приходило, и жест готовности не работал вовсе. Заданы оба поля, тело kinematic,
+  `Collision Detection` — `ContinuousSpeculative` (kinematic в якоре, динамический после
+  отпускания), добавлен `OutOfWorldGuard` (PHY-01). В Play Mode на `TestMap2` все 8 жетонов
+  стоят в якоре (`IsTagOnRack = true`).
+- **`DogTagSetupTests`** — жетон во всех префабах и сценах `Lobby`/`TestMap1`/`TestMap2`:
+  до правки красный, после — зелёный.
+
+### Изменено
+
+- **Панель жетона вынесена во вложенный префаб** `Assets/Prefabs/Arsenal/DogTag/DogTagPanel.prefab`
+  (контроллер + якорь + жетон). Unity сохранил fileID объектов, поэтому переопределения
+  `_uxrUniqueId` в `Environment.prefab` и сценах не осиротели. В `TestMap2`, открытой во время
+  правки, UltimateXR перевыдал id жетонов (сменился префаб-источник) — новые уникальны и
+  сохранены; `TestMap1`/`Lobby` при открытии id не меняют.
+- **`DogTagSetupTests.DogTagUniqueIds_AreDistinctInEachScene`** — у якоря и жетона каждой
+  стены свой `UniqueId`. Читает сохранённое значение с выключенной автогенерацией UltimateXR:
+  иначе `OnValidate` прячет дубли в памяти, а в сборку уходит файл.
+
 ## [2026-09-27] - Анимация стены арсенала: без прыжков в противоположную позу
 
 ### Исправлено

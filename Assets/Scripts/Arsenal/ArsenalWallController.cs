@@ -560,7 +560,11 @@ namespace VrBattlegrounds.Arsenal
                 slot.Unlock();
 
             if (_dogTagController != null)
-                _dogTagController.ResetTag();
+            {
+                bool tagInUse = IsDogTagInUse();
+                _dogTagController.SetInUse(tagInUse);
+                if (tagInUse) _dogTagController.ResetTag();
+            }
 
             GameLog.Arsenal.Info("[Arsenal] Arsenal OPENED — prep phase started.");
             OnArsenalOpened?.Invoke();
@@ -597,7 +601,10 @@ namespace VrBattlegrounds.Arsenal
                 slot.Lock();
 
             if (_dogTagController != null)
+            {
+                _dogTagController.SetInUse(IsDogTagInUse());
                 _dogTagController.Disable();
+            }
 
             if (_animator != null && !_animator.IsAnimating)
                 _animator.SetClosedImmediate();
@@ -621,6 +628,17 @@ namespace VrBattlegrounds.Arsenal
         }
 
         // ── Private: Жетон ─────────────────────────────────────
+
+        /// <summary>
+        /// Нужен ли жетон в этом матче. Правило — поле префаба режима, поэтому клиент
+        /// знает его так же, как сервер. Режима нет (стена вне матча) — жетон показываем,
+        /// как было до появления правила.
+        /// </summary>
+        private static bool IsDogTagInUse()
+        {
+            var mode = FindFirstObjectByType<EliminationMode>();
+            return mode == null || mode.RoundStartRule == RoundStartRule.Readiness;
+        }
 
         /// <summary>
         /// Жетон взят: игрок объявляет готовность к раунду. Стену это не закрывает —

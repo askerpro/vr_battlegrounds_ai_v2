@@ -360,6 +360,15 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 
 ---
 
+### Editor-утилиты арсенала — `Assets/Editor/VR_Battlegrounds/Arsenal/`
+
+| Класс | Назначение |
+|---|---|
+| `ArsenalSlotPreview` | Превью содержимого слотов в редакторе: `__ItemPreview__` на якоре предмета и `__MagPreview__` на якоре магазина. Объекты `DontSave` — в сцену и префаб не пишутся, поэтому сервис сам пересоздаёт превью у всех слотов загруженных сцен и открытого префаба после перекомпиляции, выхода из Play Mode, открытия сцены и префаба; перед входом в Play Mode удаляет. Повторный `Ensure` существующее превью не трогает. |
+| `ArsenalSlotEditorBase` / `FirearmSlotControllerEditor` | Инспекторы слотов: выбор `WeaponInfo` из `WeaponRegistry`, подгонка смещений по превью и сохранение в ассет. Превью при смене предмета пересоздают через `ArsenalSlotPreview`, своего кода создания не держат. |
+
+---
+
 ### Тесты — `Assets/Tests/EditMode/`
 
 Сборка `VrBattlegrounds.Tests.EditMode` (`includePlatforms: ["Editor"]`, поэтому в билд

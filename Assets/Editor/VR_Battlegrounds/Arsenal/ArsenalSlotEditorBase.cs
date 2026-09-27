@@ -1,22 +1,20 @@
 using UnityEditor;
 using UnityEngine;
-using UltimateXR.Manipulation;
 using VrBattlegrounds.Arsenal;
 
 namespace VrBattlegrounds.Editor.Arsenal
 {
     /// <summary>
     /// Base custom inspector for <see cref="ArsenalSlotController"/> subclasses.
-    /// Provides: WeaponRegistry dropdown, persistent editor preview,
-    /// offset editing with Save/Reset, and orphan cleanup on domain reload.
+    /// Provides: WeaponRegistry dropdown, offset editing with Save/Reset.
+    /// Превью содержимого слота создаёт и восстанавливает <see cref="ArsenalSlotPreview"/>,
+    /// инспектор лишь пересоздаёт его при смене предмета.
     ///
-    /// Subclasses override <see cref="DrawExtraFields"/>, <see cref="OnPreviewRefreshed"/>,
-    /// and <see cref="OnPreviewDestroyed"/> to add their own UI and preview elements.
+    /// Subclasses override <see cref="DrawExtraFields"/> to add their own UI.
     /// </summary>
     public abstract class ArsenalSlotEditorBase : UnityEditor.Editor
     {
         private const string RegistrySearchFilter = "t:WeaponRegistry";
-        protected const string ItemPreviewName = "__ItemPreview__";
 
         private SerializedProperty _weaponInfoProp;
         private SerializedProperty _itemAnchorProp;
@@ -28,7 +26,6 @@ namespace VrBattlegrounds.Editor.Arsenal
         private WeaponRegistry _cachedRegistry;
 
         private GameObject _previewItem;
-        private WeaponInfo _lastPreviewedItem;
 
         private bool _isEditingOffsets;
 
@@ -45,18 +42,7 @@ namespace VrBattlegrounds.Editor.Arsenal
 
             FindRegistry();
 
-            // Reclaim existing preview
-            var slot = target as ArsenalSlotController;
-            if (slot != null)
-            {
-                _previewItem = FindExistingPreview(slot, ItemPreviewName);
-
-                if (_previewItem != null)
-                    _lastPreviewedItem = _weaponInfoProp.objectReferenceValue as WeaponInfo;
-            }
-
-            if (_previewItem == null)
-                RefreshPreview();
+            _previewItem = ArsenalSlotPreview.Ensure(target as ArsenalSlotController);
         }
 
         protected virtual void OnDisable()
@@ -69,84 +55,15 @@ namespace VrBattlegrounds.Editor.Arsenal
         /// <summary>Override to draw extra inspector fields (e.g. mag anchor).</summary>
         protected virtual void DrawExtraFields() { }
 
-        /// <summary>Called after main preview is spawned. Override to spawn extras (e.g. magazine).</summary>
-        protected virtual void OnPreviewRefreshed() { }
-
-        /// <summary>Called before preview cleanup. Override to destroy extras (e.g. magazine).</summary>
-        protected virtual void OnPreviewDestroyed() { }
-
-        // ── Helpers for Subclasses ─────────────────────────────
-
-        protected WeaponInfo GetCurrentWeaponInfo()
-        {
-            return _weaponInfoProp?.objectReferenceValue as WeaponInfo;
-        }
-
-        protected static GameObject FindExistingPreview(Component slot, string previewName)
-        {
-            var allChildren = slot.GetComponentsInChildren<Transform>(true);
-            foreach (var t in allChildren)
-            {
-                if (t.gameObject.name == previewName &&
-                    (t.gameObject.hideFlags & HideFlags.DontSave) != 0)
-                {
-                    return t.gameObject;
-                }
-            }
-            return null;
-        }
-
-        protected static void CleanupByName(string previewName)
-        {
-            var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
-            foreach (var go in allObjects)
-            {
-                if (go == null) continue;
-                if (go.name == previewName && (go.hideFlags & HideFlags.DontSave) != 0)
-                    DestroyPreviewObjectSafe(go);
-            }
-        }
-
-        protected void SetupPreviewObject(GameObject preview, string label, Transform anchor,
-            Vector3 posOffset, Quaternion rotation)
-        {
-            preview.name = label;
-            preview.transform.SetParent(anchor, false);
-            preview.transform.localPosition = posOffset;
-            preview.transform.localRotation = rotation;
-
-            preview.hideFlags = HideFlags.DontSave;
-            SetHideFlagsRecursive(preview.transform, HideFlags.DontSave);
-
-            var netId = preview.GetComponent<Mirror.NetworkIdentity>();
-            if (netId != null) DestroyImmediate(netId, true);
-
-            DisableRuntimeComponents(preview);
-        }
-
-        protected static void DestroyPreviewByName(Component slot, string previewName)
-        {
-            var toDestroy = new System.Collections.Generic.List<GameObject>();
-            var allChildren = slot.GetComponentsInChildren<Transform>(true);
-            foreach (var t in allChildren)
-            {
-                if (t.gameObject.name == previewName &&
-                    (t.gameObject.hideFlags & HideFlags.DontSave) != 0)
-                {
-                    toDestroy.Add(t.gameObject);
-                }
-            }
-            foreach (var go in toDestroy)
-            {
-                DestroyPreviewObjectSafe(go);
-            }
-        }
-
         // ── Inspector GUI ──────────────────────────────────────
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
+
+            // Превью пересоздаётся извне (выход из Play Mode, открытие сцены) — подхватываем новое.
+            if (_previewItem == null)
+                _previewItem = ArsenalSlotPreview.Find((Component)target, ArsenalSlotPreview.ItemPreviewName);
 
             // ── Item Selection from Registry ──
             EditorGUILayout.LabelField("Item Selection", EditorStyles.boldLabel);
@@ -222,8 +139,7 @@ namespace VrBattlegrounds.Editor.Arsenal
 
             if (GUILayout.Button("↻ Preview", GUILayout.Width(90)))
             {
-                DestroyPreview();
-                RefreshPreview();
+                RebuildPreview();
                 SceneView.RepaintAll();
             }
 
@@ -259,9 +175,7 @@ namespace VrBattlegrounds.Editor.Arsenal
             var newItem = _weaponInfoProp.objectReferenceValue as WeaponInfo;
             if (newItem != previousItem)
             {
-                _isEditingOffsets = false;
-                DestroyPreview();
-                RefreshPreview();
+                RebuildPreview();
                 SceneView.RepaintAll();
             }
         }
@@ -393,52 +307,12 @@ namespace VrBattlegrounds.Editor.Arsenal
 
         // ── Preview System ─────────────────────────────────────
 
-        private void RefreshPreview()
+        private void RebuildPreview()
         {
             var slot = target as ArsenalSlotController;
-            if (slot == null) return;
-
-            var weaponInfo = _weaponInfoProp?.objectReferenceValue as WeaponInfo;
-            if (weaponInfo == null || weaponInfo.WeaponPrefab == null)
-            {
-                _lastPreviewedItem = null;
-                return;
-            }
-
-            if (_lastPreviewedItem == weaponInfo && _previewItem != null) return;
-            _lastPreviewedItem = weaponInfo;
-
-            // Find item anchor
-            var itemAnchor = _itemAnchorProp?.objectReferenceValue as UxrGrabbableObjectAnchor;
-            if (itemAnchor == null)
-            {
-                // Auto-find first non-Mag anchor
-                var anchors = slot.GetComponentsInChildren<UxrGrabbableObjectAnchor>();
-                foreach (var a in anchors)
-                {
-                    if (!a.gameObject.name.Contains("Mag"))
-                    {
-                        itemAnchor = a;
-                        break;
-                    }
-                }
-            }
-
-            if (itemAnchor != null)
-            {
-                // Use standard Instantiate to avoid creating a connected prefab instance.
-                // This allows us to safely destroy NetworkIdentity and other components without warnings.
-                _previewItem = (GameObject)GameObject.Instantiate(weaponInfo.WeaponPrefab);
-                if (_previewItem != null)
-                {
-                    SetupPreviewObject(_previewItem, ItemPreviewName, itemAnchor.transform,
-                        weaponInfo.WeaponPositionOffset,
-                        Quaternion.Euler(weaponInfo.WeaponRotationOffset));
-                }
-            }
-
-            // Let subclass spawn extras (magazine, etc.)
-            OnPreviewRefreshed();
+            ArsenalSlotPreview.Destroy(slot);
+            _previewItem = ArsenalSlotPreview.Ensure(slot);
+            _isEditingOffsets = false;
         }
 
         private void MakePreviewEditable(bool editable)
@@ -446,86 +320,9 @@ namespace VrBattlegrounds.Editor.Arsenal
             if (_previewItem != null)
             {
                 var flags = editable ? HideFlags.DontSave : (HideFlags.DontSave | HideFlags.NotEditable);
-                _previewItem.hideFlags = flags;
-                SetHideFlagsRecursive(_previewItem.transform, flags);
+                ArsenalSlotPreview.SetHideFlagsRecursive(_previewItem.transform, flags);
                 EditorUtility.SetDirty(_previewItem);
             }
-        }
-
-        private void DestroyPreview()
-        {
-            // Let subclass clean up extras first
-            OnPreviewDestroyed();
-
-            if (_previewItem != null)
-            {
-                DestroyPreviewObjectSafe(_previewItem);
-                _previewItem = null;
-            }
-
-            var slot = target as ArsenalSlotController;
-            if (slot != null)
-                DestroyPreviewByName(slot, ItemPreviewName);
-
-            _lastPreviewedItem = null;
-            _isEditingOffsets = false;
-        }
-
-        // ── Utility ────────────────────────────────────────────
-
-        private static void SetHideFlagsRecursive(Transform root, HideFlags flags)
-        {
-            foreach (Transform child in root)
-            {
-                child.gameObject.hideFlags = flags;
-                SetHideFlagsRecursive(child, flags);
-            }
-        }
-
-        private static void DestroyPreviewObjectSafe(GameObject previewObject)
-        {
-            if (previewObject == null)
-            {
-                return;
-            }
-
-            // Avoid stale inspector targets when a hidden preview object gets destroyed.
-            bool isSelectionAffected = Selection.activeObject == previewObject ||
-                                       IsSelectionChildOf(previewObject.transform);
-
-            if (isSelectionAffected)
-            {
-                Selection.activeObject = null;
-            }
-
-            DestroyImmediate(previewObject);
-        }
-
-        private static bool IsSelectionChildOf(Transform root)
-        {
-            if (root == null)
-            {
-                return false;
-            }
-
-            if (Selection.activeGameObject == null)
-            {
-                return false;
-            }
-
-            return Selection.activeGameObject.transform.IsChildOf(root);
-        }
-
-        private static void DisableRuntimeComponents(GameObject go)
-        {
-            foreach (var rb in go.GetComponentsInChildren<Rigidbody>(true))
-                rb.isKinematic = true;
-
-            foreach (var col in go.GetComponentsInChildren<Collider>(true))
-                col.enabled = false;
-
-            foreach (var grab in go.GetComponentsInChildren<UxrGrabbableObject>(true))
-                grab.enabled = false;
         }
 
         private void FindRegistry()

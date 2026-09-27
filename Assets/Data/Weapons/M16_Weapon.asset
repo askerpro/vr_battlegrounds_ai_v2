@@ -20,7 +20,7 @@ MonoBehaviour:
   _maxMagazineCount: 4
   _price: 2700
   _category: 0
-  _weaponPositionOffset: {x: 0.034, y: 0, z: 0.19}
+  _weaponPositionOffset: {x: 0.034, y: 0, z: -0.055}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
   _icon: {fileID: 0}

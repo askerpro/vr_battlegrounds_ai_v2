@@ -133,6 +133,25 @@ Limits` затвора (`TryGetSlideTravel`), ход настраивается 
 снова не срабатывает — у затвора не `Restrict Local Offset` или нулевые лимиты: об этом
 предупреждает инспектор, `GameLog.WeaponSystem` в `Awake` и `WeaponSlideTravelTests`.
 
+### «Затвор щёлкает, а оружие не стреляет» · «Магазин не вставляется»
+
+**Исправлено 2026-09-27 (`Gun_real`).** Выстрел берёт патрон из магазина, а якорь магазина
+`Gun_real` принимал только тег `M16_Mag` (скопирован с M16), тогда как арсенал выдаёт к нему
+`MagGun`. Магазин не вставлялся, патронов 0 — после затвора звучал щелчок «пусто». Якорь
+теперь принимает `MagGun`. Проверка — `WeaponSlideTravelTests.ArsenalMagazine_FitsWeaponMagAnchor`
+сверяет магазин из `WeaponInfo` с `Compatible Tags` якоря оружия.
+
+Второе: `Gun_real` лежал на стене **без магазина**, а взять его было негде — магазин у
+слота декоративный (`FirearmSlotController`), запасные выдаёт только `PlayerLoadoutManager`
+в начале раунда, а его нет на аватарах. Теперь в `MagAnchor` вложен родной магазин
+`Gun_real_mag` (`Assets/Prefabs/Weapons/GunReal/`), как `M16_Magazine` у M16: без
+`NetworkIdentity`, `Start Anchor` = `MagAnchor`. Его же выдаёт `Gun_Weapon`. Проверка —
+`WeaponSlideTravelTests.ArsenalFirearms_ComeLoaded`: вложенный магазин из того же префаба
+(или его базы), что выдаёт `WeaponInfo`.
+
+Порядок у UltimateXR при `Use Has Reloaded For Semi And Full Auto`: **сначала магазин, потом
+затвор.** Вставка и извлечение магазина сбрасывают «патрон дослан».
+
 ### «Оружие можно взять из закрытого арсенала»
 
 **NET-13, исправлена.** `Lock()`/`Unlock()` искали предмет в `CurrentPlacedObject`,

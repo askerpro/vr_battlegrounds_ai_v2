@@ -2,6 +2,36 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - `Gun_real` не перезаряжался затвором
+
+### Исправлено
+
+- **Затвор `Gun_real` не доходил до порога перезарядки.** `Local Slide Reference Offset`
+  у `AutomaticWeaponSlideFeedback` был 6 см (от M16), ход затвора — 1.89 см. Тест, сверявший
+  порог с ходом, был красным на `Gun_real`.
+- **В `Gun_real` не вставлялся свой магазин.** Якорь `MagAnchor` принимал только `M16_Mag`,
+  арсенал выдаёт `MagGun` — затвор щёлкал, выстрела не было. Тег якоря — `MagGun`. Новый
+  `ArsenalMagazine_FitsWeaponMagAnchor` сверяет магазин из `WeaponInfo` с якорем оружия:
+  до правки красный на `Gun_Weapon`, после — зелёный.
+- **`Gun_real` лежал на стене арсенала незаряженным.** В `MagAnchor` вложен магазин
+  (как `M16_Magazine` у M16, без `NetworkIdentity`). В Play Mode все 32 пистолета стены
+  с магазином, 40 патронов. Тест `ArsenalFirearms_ComeLoaded` до правки красный на `Gun_real`.
+
+### Добавлено
+
+- **`Gun_real_mag` — родной магазин пистолета** (`Assets/Prefabs/Weapons/GunReal/`). Сделан
+  из `MagGun` (хват, физика, сеть, звуки), геометрия — меш `Magazine` из `Gun_real`, коллайдер
+  по нему; декали и `MagAmmoIndicator` сэмпла убраны. Вложен в `Gun_real` вместо `MagGun`,
+  статичный меш `Magazine` корпуса удалён. `Gun_Weapon` выдаёт его, зарегистрирован в
+  `spawnPrefabs`. Тег хвата оставлен `MagGun` — карманы аватаров его уже принимают.
+
+### Изменено
+
+- **`AutomaticWeaponSlideFeedback` берёт ось и длину хода из `Translation Limits` затвора.**
+  Поля `Local Slide Direction` и `Local Slide Reference Offset` удалены — дублировать больше
+  нечего. Расчёт в `TryGetSlideTravel`/`GetSlideProgress`, им же пользуется инспектор.
+  `WeaponSlideTravelTests` требует у каждого затвора вычислимый ход.
+
 ## [2026-09-27] - Поддерживающая рука поворачивала пистолет
 
 ### Исправлено

@@ -591,16 +591,19 @@ namespace UltimateXR.Extensions.System.IO
         /// <exception cref="UxrComponentNotFoundException">The given component could not be found using the Id</exception>
         public static IUxrUniqueId ReadUniqueComponent(this BinaryReader reader, int serializationVersion)
         {
-            // Serialized as: null-check (bool), Guid
+            // Serialized as: tag (byte), Guid, [debug description (string) if tag == 2].
+            // VR Battlegrounds, патч 8: прежний формат (bool, Guid) читается как метки 0/1.
+            // Отладочное описание дочитывается всегда, даже если компонент найден, иначе поток съедет.
 
-            bool nullCheck = reader.ReadBoolean();
+            byte tag = reader.ReadByte();
 
-            if (!nullCheck)
+            if (tag == BinaryWriterExt.UniqueComponentNull)
             {
                 return null;
             }
 
-            Guid componentId = reader.ReadGuid(serializationVersion);
+            Guid   componentId = reader.ReadGuid(serializationVersion);
+            string debugInfo   = tag == BinaryWriterExt.UniqueComponentIdWithDebugInfo ? reader.ReadString() : null;
 
             if (componentId == default)
             {
@@ -612,7 +615,7 @@ namespace UltimateXR.Extensions.System.IO
                 return component;
             }
 
-            throw new UxrComponentNotFoundException(componentId);
+            throw new UxrComponentNotFoundException(componentId, string.IsNullOrEmpty(debugInfo) ? null : $"Sender: {debugInfo}");
         }
 
         /// <summary>

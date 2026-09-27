@@ -464,13 +464,33 @@ namespace UltimateXR.Extensions.System.IO
         /// <param name="component">Component with the <see cref="IUxrUniqueId" /> interface</param>
         public static void WriteUniqueComponent(this BinaryWriter writer, IUxrUniqueId component)
         {
-            writer.Write(component != null);
-
-            if (component != null)
+            // VR Battlegrounds, патч 8 (Docs/UltimateXR/sdk-patches.md): вместо bool — байт-метка.
+            // 0 — null, 1 — id (прежний формат, байт-в-байт как Write(true)), 2 — id и отладочное
+            // описание компонента, чтобы принимающая сторона могла назвать предмет, которого не нашла.
+            if (component == null)
             {
-                writer.Write(component.UniqueId);
+                writer.Write(UniqueComponentNull);
+                return;
+            }
+
+            bool withDebugInfo = UxrUniqueIdDebugInfo.IncludeInSerialization;
+            writer.Write(withDebugInfo ? UniqueComponentIdWithDebugInfo : UniqueComponentId);
+            writer.Write(component.UniqueId);
+
+            if (withDebugInfo)
+            {
+                writer.Write(UxrUniqueIdDebugInfo.Describe(component));
             }
         }
+
+        /// <summary>Метка ссылки на компонент: null. Совпадает с прежним <c>Write(false)</c>.</summary>
+        public const byte UniqueComponentNull = 0;
+
+        /// <summary>Метка ссылки на компонент: только id. Совпадает с прежним <c>Write(true)</c>.</summary>
+        public const byte UniqueComponentId = 1;
+
+        /// <summary>Метка ссылки на компонент: id и отладочное описание (патч 8).</summary>
+        public const byte UniqueComponentIdWithDebugInfo = 2;
 
         /// <summary>
         ///     Outputs an object that implements the <see cref="IUxrSerializable" /> interface. It has support for null

@@ -417,6 +417,51 @@ public void SetNetworkAnchor(UxrGrabbableObjectAnchor anchor)
 
 ---
 
+## Патч 8: ссылка на компонент в событии называет предмет
+
+**Файлы:**
+- `Runtime/Scripts/Extensions/System/IO/BinaryWriterExt.cs` — `WriteUniqueComponent`, константы меток;
+- `Runtime/Scripts/Extensions/System/IO/BinaryReaderExt.cs` — `ReadUniqueComponent`;
+- `Runtime/Scripts/Exceptions/UxrComponentNotFoundException.cs` — `FormatMessage`;
+- `Runtime/Scripts/Core/Unique/UxrUniqueIdDebugInfo.cs` — **новый файл проекта**, в SDK его нет.
+
+**Дата:** 2026-09-27
+
+### Проблема
+
+Ссылка на `IUxrUniqueId` в событии состояния — флаг и `Guid`. Если принимающая сторона id
+не находит, `UxrComponentNotFoundException` сообщает только «Id is ae118e67-…»: что это за
+предмет, она знать не может — компонента у неё нет. Опознание сводилось к перебору
+`Combine(id префаба, netId)` по всем префабам.
+
+Заодно в `FormatMessage` было перевёрнуто условие: переданный текст терялся, а без текста
+сообщение начиналось с «`: Could not find…`».
+
+### Применённое изменение
+
+Флаг `bool` заменён байт-меткой: `0` — null, `1` — id (байт-в-байт прежний `Write(true)`),
+`2` — id и строка `Путь/В/Иерархии [Тип]` (не длиннее 160 символов). Читатель понимает все
+три метки и дочитывает строку всегда, даже если компонент нашёлся. Не найден — строка
+уходит в исключение: «… Id is ae118e67-…. Sender: ArsenalWall (2)/…/Shotgun(Clone) [UxrGrabbableObject]».
+
+Метку `2` пишет машина с `UxrUniqueIdDebugInfo.IncludeInSerialization` — по умолчанию
+редактор и development-сборка; release пишет прежний формат и лишнего трафика не несёт.
+Флаг можно включать выборочно: читатель у всех один. Условие одно — у всех участников
+этот патч; сборка без него прочтёт метку `2` как `true` и съедет по потоку (но сборки
+разных версий проекта и так несовместимы по id).
+
+Проверка — `UniqueComponentDebugInfoTests` (до патча красный: сообщение без имени предмета).
+
+### Как повторить при обновлении SDK
+
+1. Вернуть `UxrUniqueIdDebugInfo.cs` в `Core/Unique/`.
+2. В `WriteUniqueComponent` писать байт-метку и, при метке `2`, `UxrUniqueIdDebugInfo.Describe(component)`.
+3. В `ReadUniqueComponent` читать байт-метку, строку при метке `2`, передавать её в исключение.
+4. В `UxrComponentNotFoundException.FormatMessage` дописывать переданный текст в конец.
+5. Прогнать `UniqueComponentDebugInfoTests` и сетевые тесты.
+
+---
+
 ## Зависимости от приватных членов SDK (рефлексия)
 
 **Дата:** 2026-08-19 (задача T-21, находка VR-03)

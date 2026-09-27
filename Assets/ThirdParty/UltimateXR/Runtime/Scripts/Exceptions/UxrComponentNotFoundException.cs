@@ -48,8 +48,10 @@ namespace UltimateXR.Exceptions
         /// <returns>Exception message</returns>
         private static string FormatMessage(Guid uniqueId, string message)
         {
-            string prefix = string.IsNullOrEmpty(message) ? $"{message}: " : string.Empty;
-            return $"{prefix}Could not find the given component using {nameof(UxrUniqueIdImplementer)}.{nameof(UxrUniqueIdImplementer.TryGetComponentById)}(). Id is {(uniqueId != null ? uniqueId == default ? "empty" : uniqueId : "null")}.";
+            // VR Battlegrounds, патч 8: условие было перевёрнуто — переданный текст терялся,
+            // а без текста сообщение начиналось с «: ». Текст (описание отправителя) идёт в конец.
+            string suffix = string.IsNullOrEmpty(message) ? string.Empty : $" {message}";
+            return $"Could not find the given component using {nameof(UxrUniqueIdImplementer)}.{nameof(UxrUniqueIdImplementer.TryGetComponentById)}(). Id is {(uniqueId == default ? "empty" : uniqueId.ToString())}.{suffix}";
         }
 
         #endregion

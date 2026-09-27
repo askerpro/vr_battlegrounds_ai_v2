@@ -2,6 +2,37 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - Чёрный экран после телепорта: аватар освобождается перед уничтожением
+
+### Исправлено
+
+- **Экран оставался чёрным после телепорта или поворота с затемнением**, если перед этим
+  сменили скин с предметами в руках. Рука UltimateXR, уничтоженная вместе с аватаром, не
+  отпускала предмет (Issue 17), захват мёртвой руки ронял `UxrAvatar_GlobalAvatarMoved`, и
+  корутина телепорта обрывалась после затемнения.
+- Новый `AvatarTeardown.ReleaseBeforeDestroy` (сервер): отпускает руки аватара через
+  `UxrGrabManager.ReleaseObject` (канал состояния, раньше сообщения Mirror об уничтожении) и
+  снимает снаряжение `PlayerLoadoutManager.ServerDropEquipment` — оружие из кобур выпадает,
+  магазины кармана убираются `NetworkServer.Destroy`, без висячих `netId` в `SyncList`.
+  Зовут `AvatarManager.ChangeAvatar` (смена скина/команды) и `GameNetworkManager.OnServerDisconnect`
+  (отключение — та же дыра). Смена карты не затронута: предметы гибнут со сценой.
+- `PlayerLoadoutManager.ServerDropEquipment(reason)` — причина в логе вместо жёсткого «погиб».
+- UltimateXR, патч 12: `UxrGrabManager` каждый кадр и перед обработкой перемещения аватара
+  вычищает захваты с уничтоженной рукой или предметом; в `OnDestroy` отписка
+  `GlobalDisabled` исправлена с `+=` на `-=`.
+
+### Проверено
+
+- Новые `AvatarTeardownTests` (харнесс `TwoHandGrabHarness` + `DestroyAvatarLikePlayMode`):
+  до правки оба красные (захват мёртвой руки остался; перемещение аватара бросило
+  `MissingReferenceException`), после — зелёные. Полный EditMode (382): падают только
+  известные 9 кейсов `AvatarLoadoutTests` и нестабильный `GunTwoHandAimTests` (MEF).
+- `AndroidCompileGate` — `Passed=True`.
+- Play Mode, хост в `Lobby`: M16 со стены в правой, магазин из кармана в левой → смена скина →
+  телепорт с `Fade`: через 3 с `IsFading=False`, оба предмета на полу динамические и снова
+  хватаются, в `_currentManipulations` пусто, `MissingReferenceException` нет. Страховка SDK
+  отдельно: рука уничтожена с M16 → телепорт → `IsFading=False`, запись вычищена.
+
 ## [2026-09-27] - Выбор команды матча на карте, респавн без перемещения, лобби без смерти (этап Б)
 
 ### Изменено

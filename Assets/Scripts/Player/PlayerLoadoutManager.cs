@@ -148,12 +148,16 @@ namespace VrBattlegrounds.Player
         {
             if (!isServer) return;
 
-            ServerDropEquipment();
+            ServerDropEquipment("погиб");
         }
 
-        /// <summary>Роняет оружие из кобур и убирает магазины из кармана.</summary>
+        /// <summary>
+        /// Роняет оружие из кобур и убирает магазины из кармана. Зовут смерть и
+        /// <see cref="VrBattlegrounds.Player.Avatars.AvatarTeardown"/> перед уничтожением аватара.
+        /// </summary>
+        /// <param name="reason">Почему снимается снаряжение — только для лога.</param>
         [Server]
-        public void ServerDropEquipment()
+        public void ServerDropEquipment(string reason)
         {
             if (!UxrGrabManager.HasInstance) return;
 
@@ -173,7 +177,7 @@ namespace VrBattlegrounds.Player
 
             ServerClearMagazines();
 
-            GameLog.Player.Info($"[Loadout] {name}: погиб — выронено оружия из кобур: {dropped}, магазины убраны.", this);
+            GameLog.Player.Info($"[Loadout] {name}: {reason} — выронено оружия из кобур: {dropped}, магазины убраны.", this);
         }
 
         /// <summary>

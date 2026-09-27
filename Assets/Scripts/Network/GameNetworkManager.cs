@@ -106,6 +106,16 @@ namespace VrBattlegrounds.Network
         {
             if (PlayersManager.Instance != null)
             {
+                // Аватар уничтожит Mirror в base-вызове ниже — освобождаем его заранее, как
+                // при смене скина: иначе у хоста и клиентов остаётся захват мёртвой руки.
+                // Снимок сессии (UnregisterSession) снимается уже после: здоровье и место
+                // от сброса снаряжения не зависят.
+                PlayerSession session = PlayersManager.Instance.GetSession(conn);
+                if (session != null)
+                {
+                    AvatarTeardown.ReleaseBeforeDestroy(session.ActiveAvatar, "отключение");
+                }
+
                 PlayersManager.Instance.UnregisterSession(conn);
             }
 

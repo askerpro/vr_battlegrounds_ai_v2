@@ -312,7 +312,8 @@ namespace UltimateXR.Manipulation
 
             UxrGrabbableObjectAnchor.GlobalEnabled  -= GrabbableObjectAnchor_Enabled;
             UxrGrabbableObjectAnchor.GlobalDisabled -= GrabbableObjectAnchor_Disabled;
-            UxrGrabbableObject.GlobalDisabled       += GrabbableObject_Disabled;
+            // VR Battlegrounds patch 12: в оригинале здесь стояло "+=" — отписка от события подписывала заново.
+            UxrGrabbableObject.GlobalDisabled       -= GrabbableObject_Disabled;
         }
 
         /// <summary>
@@ -383,6 +384,11 @@ namespace UltimateXR.Manipulation
             {
                 return;
             }
+
+            // VR Battlegrounds patch 12: захваты уничтоженных рук и предметов вычищаются до обхода.
+            // Иначе g.Avatar на уничтоженной руке бросает MissingReferenceException, и корутина
+            // телепорта/поворота с затемнением обрывается, оставляя экран чёрным.
+            RemoveOrphanedManipulations();
 
             // Create anonymous pairs of grabbable objects and their grabs that are affected by the avatar position change
             var dependencies = _currentManipulations.Where(pair => pair.Value.Grabbers.Any(g => g.Avatar == avatar)).Select(pair => new { GrabbableObject = pair.Key, Grabs = pair.Value.Grabs.Where(g => g.Grabber.Avatar == avatar) });
@@ -633,10 +639,59 @@ namespace UltimateXR.Manipulation
         #region Private Methods
 
         /// <summary>
+        ///     VR Battlegrounds patch 12. Вычищает из <see cref="_currentManipulations" /> захваты, которые уже
+        ///     никто не держит: уничтожен сам предмет или рука (Unity-null).
+        /// </summary>
+        /// <remarks>
+        ///     Рука, уничтоженная вместе с аватаром, ничего не отпускает: <see cref="UxrGrabber" /> зовёт
+        ///     <c>ReleaseObject</c> из <c>OnDisable</c>/<c>OnDestroy</c>, но к этому моменту его уже нет в
+        ///     <c>EnabledComponents</c>, и отпускание молча пропускается. Запись остаётся, а любое обращение
+        ///     к <c>Grabber.Avatar</c> бросает <c>MissingReferenceException</c>. Здесь такие захваты
+        ///     удаляются без событий: слать их от имени несуществующей руки некому. Предмет, у которого
+        ///     осталась живая рука, остаётся у неё.
+        /// </remarks>
+        private void RemoveOrphanedManipulations()
+        {
+            List<UxrGrabbableObject> orphaned = null;
+
+            foreach (KeyValuePair<UxrGrabbableObject, RuntimeManipulationInfo> pair in _currentManipulations)
+            {
+                if (pair.Key != null)
+                {
+                    pair.Value.Grabs.RemoveAll(grab => grab == null || grab.Grabber == null);
+                }
+
+                if (pair.Key == null || pair.Value.Grabs.Count == 0)
+                {
+                    orphaned ??= new List<UxrGrabbableObject>();
+                    orphaned.Add(pair.Key);
+                }
+            }
+
+            if (orphaned == null)
+            {
+                return;
+            }
+
+            foreach (UxrGrabbableObject grabbableObject in orphaned)
+            {
+                _currentManipulations.Remove(grabbableObject);
+            }
+
+            if (UxrGlobalSettings.Instance.LogLevelManipulation >= UxrLogLevel.Warnings)
+            {
+                Debug.LogWarning($"{UxrConstants.ManipulationModule} Removed {orphaned.Count} grab(s) whose object or grabber was destroyed without being released.");
+            }
+        }
+
+        /// <summary>
         ///     Initializes the variables for a manipulation frame update computation.
         /// </summary>
         private void InitializeManipulationFrame()
         {
+            // VR Battlegrounds patch 12: захваты уничтоженных рук не должны доживать до обхода кадра.
+            RemoveOrphanedManipulations();
+
             // Store the unprocessed grabber positions for this update.
 
             foreach (UxrGrabber grabber in UxrGrabber.AllComponents)

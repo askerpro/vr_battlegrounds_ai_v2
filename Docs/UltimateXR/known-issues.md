@@ -606,3 +606,35 @@ Near` точки хвата (считается тем же вызовом), н�
 добавляет якорю тег префаба, который слот выдаёт, и валидатор (`AddPlacingValidator`) — только
 оружие того же `WeaponInfo` и только на открытой стене. Одного тега мало: у `Gun_real` тег
 `M16_Rifle`. Проверка — `LooseItemTests.Слот_принимает_своё_оружие_обратно`.
+
+## Issue 17: менеджер захвата не знает об уничтоженной руке
+
+> Установлено 2026-09-27, прогоном в Play Mode (хост в `Lobby`, смена скина с оружием в руках).
+
+`UxrGrabber` в `OnDisable`/`OnDestroy` зовёт `UxrGrabManager.ReleaseObject`, но первой строкой
+там `base.OnDisable()`, после которой рука уже не `isActiveAndEnabled` и выпадает из
+`UxrGrabber.EnabledComponents`. `ReleaseObject` начинается с проверки
+`EnabledComponents.Any(grb => grb.GrabbedObject == obj && grb == grabber)` — и молча выходит.
+Итог: рука, уничтоженная или выключенная с предметом, **ничего не отпускает**, а в
+`_currentManipulations` остаётся запись с Unity-null рукой. `UxrGrabbableObject.OnDestroy`
+снимает захват только у самого предмета — о руке менеджер не узнаёт никак.
+
+Проявление: первый же `UxrAvatar_GlobalAvatarMoved` (телепорт, поворот, любое перемещение
+аватара) бросает `MissingReferenceException` на `g.Avatar` мёртвой руки. Телепорт и поворот
+с затемнением (`UxrTranslationType.Fade`, `RotateLocalAvatarCoroutine`) гасят экран до
+перемещения — корутина обрывается, `UxrCameraFade` остаётся с альфой 1: **чёрный экран**.
+Каждый кадр падают и запросы `IsBeingGrabbedBy` (у нас — `GrabOnlyWhenParentHeld.AllowsGrab`).
+
+В проекте так уничтожался аватар при смене скина/команды (`AvatarManager.ChangeAvatar`) и при
+отключении игрока. Смену карты это не задевает: предметы гибнут вместе со сценой, и их
+`GlobalDisabled` стирает запись.
+
+Решение — два слоя:
+- **игра:** сервер перед уничтожением аватара отпускает руки и снимает снаряжение —
+  `AvatarTeardown.ReleaseBeforeDestroy` (зовут `AvatarManager.ChangeAvatar` и
+  `GameNetworkManager.OnServerDisconnect`);
+- **SDK (патч 12 в [sdk-patches.md](sdk-patches.md)):** `UxrGrabManager` каждый кадр и перед
+  обработкой перемещения аватара вычищает записи с уничтоженным предметом или рукой.
+
+Проверка — `AvatarTeardownTests`. Правило на будущее: уничтожаешь или выключаешь объект с
+`UxrGrabber` — сначала отпусти его предмет сам.

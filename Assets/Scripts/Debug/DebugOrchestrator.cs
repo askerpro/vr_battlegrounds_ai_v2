@@ -226,10 +226,27 @@ namespace VrBattlegrounds.DevTools
             // Mirror зовёт уже после.
         }
 
+        /// <summary>Совпадает ли запрошенная карта с уже открытой сценой.</summary>
+        public static bool IsAlreadyLoaded(string requestedScene, string activeScene)
+        {
+            return !string.IsNullOrEmpty(requestedScene) &&
+                   string.Equals(requestedScene, activeScene, System.StringComparison.OrdinalIgnoreCase);
+        }
+
         private void TryAutoLoadMap()
         {
             if (string.IsNullOrEmpty(_config.autoLoadMapScene))
                 return;
+
+            // Сцена уже та, что просят: хост поднимается прямо в onlineScene (Lobby),
+            // и «загрузить Lobby» означало бы перезагрузить её второй раз.
+            if (IsAlreadyLoaded(_config.autoLoadMapScene, UnityEngine.SceneManagement.SceneManager.GetActiveScene().name))
+            {
+                _mapLoadRequested = true;
+                GameLog.Debug.Verbose(
+                    $"[DebugOrchestrator] Карта {_config.autoLoadMapScene} уже открыта — автозагрузка не нужна.");
+                return;
+            }
 
             // Загружаем карту только один раз за сессию.
             if (_mapLoadRequested)

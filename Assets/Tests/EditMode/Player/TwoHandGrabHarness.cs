@@ -154,6 +154,7 @@ namespace VrBattlegrounds.Tests.Player
         private readonly MonoBehaviour[] _weaponBehaviours;
         private readonly UxrManipulationFeatures _savedFeatures;
 
+        public GameObject Avatar => _avatar;
         public GameObject Weapon { get; }
         public UxrGrabbableObject Grabbable { get; }
         public UxrGrabber Right { get; }
@@ -240,6 +241,27 @@ namespace VrBattlegrounds.Tests.Player
                         $"Контроль харнесса: основная рука повернулась на 30°, а оружие — на {weaponMoved:F1}°. Цикл манипуляции " +
                         $"не двигает оружие, проверки поворота ничего не докажут. Features={Manager.Features}, " +
                         $"grabbed={Manager.IsBeingGrabbed(Grabbable)}, enabled={Grabbable.isActiveAndEnabled}.");
+        }
+
+        /// <summary>
+        /// Уничтожает аватар так, как это происходит в Play Mode. Там рука сначала выключается,
+        /// а потом её <c>OnDestroy</c> зовёт отпускание — и SDK его пропускает: выключенной руки
+        /// уже нет в <c>UxrGrabber.EnabledComponents</c>. В EditMode колбэки не зовутся сами,
+        /// а <c>isActiveAndEnabled</c> у руки истинно, поэтому рука выключается руками — иначе
+        /// отпускание сработало бы и скрыло дефект. <c>OnDestroy</c> заодно снимает руку с учёта
+        /// <c>UxrComponent</c>, иначе мёртвая запись ломала бы соседние тесты.
+        /// </summary>
+        public void DestroyAvatarLikePlayMode()
+        {
+            foreach (UxrGrabber grabber in _grabbers)
+            {
+                if (grabber == null) continue;
+
+                grabber.enabled = false;
+                Invoke(grabber, "OnDestroy");
+            }
+
+            Object.DestroyImmediate(_avatar);
         }
 
         public void Dispose()

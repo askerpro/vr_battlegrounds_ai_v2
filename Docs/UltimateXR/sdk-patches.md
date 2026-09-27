@@ -582,6 +582,61 @@ Unique Ids`, сторож — `UxrUniqueIdOnDiskTests`.
 
 ---
 
+## Патч 12: захват уничтоженной руки обрывает телепорт — чёрный экран
+
+**Файл:** `Runtime/Scripts/Manipulation/UxrGrabManager.cs` — методы `UxrAvatar_GlobalAvatarMoved`,
+`InitializeManipulationFrame`, `OnDestroy`, новый `RemoveOrphanedManipulations`
+**Дата:** 2026-09-27
+**Парный код проекта:** `Assets/Scripts/Player/Avatars/AvatarTeardown.cs`
+
+### Проблема
+
+Рука (`UxrGrabber`), уничтоженная с предметом, ничего не отпускает: её `OnDisable`/`OnDestroy`
+зовёт `ReleaseObject`, но рука к этому моменту уже не в `EnabledComponents`, и отпускание
+молча пропускается. В `_currentManipulations` остаётся запись с Unity-null рукой. Разбор —
+[known-issues, Issue 17](known-issues.md).
+
+Первое же перемещение любого аватара (`UxrAvatar_GlobalAvatarMoved`) бросает
+`MissingReferenceException` на `g.Avatar` мёртвой руки. Телепорт и поворот с затемнением
+к этому моменту уже погасили экран — корутина обрывается, и `UxrCameraFade` остаётся чёрным
+навсегда (`IsFading=True`, `_fadeTimer=-1`). В проекте так было после смены скина с оружием
+в руках.
+
+Попутно: в `OnDestroy` менеджера отписка `UxrGrabbableObject.GlobalDisabled` была написана
+как `+=` — повторная подписка вместо отписки.
+
+### Применённое изменение
+
+- Новый приватный `RemoveOrphanedManipulations()`: из записей с живым предметом удаляет
+  захваты (`RuntimeGrabInfo`) с Unity-null рукой; запись удаляется целиком, если уничтожен
+  предмет или рук не осталось. Событий не шлёт — отпускать от имени несуществующей руки некому.
+  Пишет `LogWarning` (уровень `LogLevelManipulation >= Warnings`) — в норме срабатывать не должен.
+- Вызов `RemoveOrphanedManipulations()` в начале `InitializeManipulationFrame` (каждый кадр,
+  до всех обходов) и в `UxrAvatar_GlobalAvatarMoved` после проверки аватара — перед обходом
+  `_currentManipulations`.
+- `OnDestroy`: `UxrGrabbableObject.GlobalDisabled -= GrabbableObject_Disabled` вместо `+=`.
+
+Все места помечены `VR Battlegrounds patch 12`. Живую руку патч не трогает: предмет, который
+держат две руки, одна из которых уничтожена, остаётся у второй.
+
+Основное исправление — в игре (`AvatarTeardown`): сервер отпускает руки до уничтожения аватара,
+и отпускание расходится по сети. Патч — страховка на любой другой путь.
+
+### Как повторить при обновлении SDK
+
+1. Добавить в `UxrGrabManager` метод `RemoveOrphanedManipulations` (см. текущую версию файла)
+   и вызвать его первой строкой `InitializeManipulationFrame` и в `UxrAvatar_GlobalAvatarMoved`
+   сразу после `if (avatar == null || avatar.AvatarMode == UxrAvatarMode.UpdateExternally) return;`.
+2. В `OnDestroy` исправить `UxrGrabbableObject.GlobalDisabled += ...` на `-=`, если SDK
+   ещё не исправил сам.
+3. Прогнать `AvatarTeardownTests`: без патча красный
+   `Перемещение_аватара_не_бросает_на_захвате_мёртвой_руки` (`MissingReferenceException`),
+   с патчем — зелёный.
+4. Если в новом SDK `UxrGrabber` отпускает предмет до `base.OnDisable()` — корень исправлен
+   у вендора, патч можно оставить как безвредную страховку.
+
+---
+
 ## Зависимости от приватных членов SDK (рефлексия)
 
 **Дата:** 2026-08-19 (задача T-21, находка VR-03)

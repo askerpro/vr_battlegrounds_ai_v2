@@ -224,6 +224,9 @@ namespace VrBattlegrounds.Player.Avatars
 
             if (oldAvatar != null)
             {
+                // Руки и снаряжение отпускаются до уничтожения: иначе UltimateXR остаётся
+                // с захватом мёртвой руки, а сетевые предметы кобур и кармана гибнут в обход сети.
+                AvatarTeardown.ReleaseBeforeDestroy(oldAvatar, "смена скина или команды");
                 NetworkServer.Destroy(oldAvatar.gameObject);
             }
 

@@ -2743,7 +2743,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2066927099296611930, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       propertyPath: _validTargetLayers.m_Bits
-      value: 1
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 2066927099296611930, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       propertyPath: _blockingTargetLayers.m_Bits
@@ -4547,7 +4547,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6853668274677662762, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       propertyPath: _validTargetLayers.m_Bits
-      value: 1
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 6853668274677662762, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       propertyPath: _blockingTargetLayers.m_Bits
@@ -5703,7 +5703,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sceneId: 0
-  _assetId: 189248883
+  _assetId: 525190276
   serverOnly: 0
   visibility: 0
   hasSpawned: 0

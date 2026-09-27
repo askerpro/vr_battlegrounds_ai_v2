@@ -107,6 +107,13 @@ namespace VrBattlegrounds.Arsenal
         /// <summary>Применялось ли состояние хоть раз (отличает «ещё ничего» от «применили Closed»).</summary>
         private bool _stateApplied;
 
+        /// <summary>
+        /// Жетон готовности на этой стене не нужен независимо от режима. Ставит правило
+        /// сцены (<see cref="LobbyFreePlay"/>): в лобби раунда нет, объявлять готовность
+        /// не к чему. Флаг локальный — правило сцены живёт на каждой машине само.
+        /// </summary>
+        private bool _dogTagSuppressed;
+
         public ArsenalState CurrentState => _currentState;
 
         /// <summary>
@@ -310,6 +317,49 @@ namespace VrBattlegrounds.Arsenal
                 ReplenishWeaponsNetwork(false);
 
             ApplyPhaseToState(newState);
+        }
+
+        /// <summary>
+        /// Пополняет опустевшие слоты. Вне раунда пополнять стену некому — фазы
+        /// <c>Setup</c> нет, — поэтому это делает правило сцены (<see cref="LobbyFreePlay"/>).
+        /// </summary>
+        [Server]
+        public void ServerReplenishEmptySlots()
+        {
+            ReplenishWeaponsNetwork(false);
+        }
+
+        /// <summary>Есть ли на стене настроенный слот без предмета.</summary>
+        public bool HasEmptySlots()
+        {
+            EnsureReferences();
+
+            foreach (ArsenalSlotController slot in _allSlots)
+            {
+                if (slot != null && slot.IsConfigured && slot.NeedsReplenishment())
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Убирает жетон готовности со стены (или возвращает его). Применяется сразу:
+        /// правило сцены может включиться позже, чем стена показала своё состояние.
+        /// </summary>
+        public void SetDogTagSuppressed(bool suppressed)
+        {
+            _dogTagSuppressed = suppressed;
+
+            EnsureReferences();
+            if (_dogTagController == null) return;
+
+            _dogTagController.SetInUse(IsDogTagInUse());
+
+            if (suppressed || _currentState != ArsenalState.Open)
+                _dogTagController.Disable();
+            else
+                _dogTagController.ResetTag();
         }
 
         [Server]
@@ -632,10 +682,12 @@ namespace VrBattlegrounds.Arsenal
         /// <summary>
         /// Нужен ли жетон в этом матче. Правило — поле префаба режима, поэтому клиент
         /// знает его так же, как сервер. Режима нет (стена вне матча) — жетон показываем,
-        /// как было до появления правила.
+        /// как было до появления правила, если только правило сцены его не убрало.
         /// </summary>
-        private static bool IsDogTagInUse()
+        private bool IsDogTagInUse()
         {
+            if (_dogTagSuppressed) return false;
+
             var mode = FindFirstObjectByType<EliminationMode>();
             return mode == null || mode.RoundStartRule == RoundStartRule.Readiness;
         }

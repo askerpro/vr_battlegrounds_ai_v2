@@ -199,6 +199,14 @@
 ### ИТОГ: Раунд начался!
 У игрока в разгрузке нужные обоймы для выбранного оружия, а стена арсенала закрыта стальными ставнями до следующего раунда — одинаково у всех игроков.
 
+### Вне раунда: лобби
+
+В `Lobby.unity` раунда нет, и стену ведёт правило сцены `LobbyFreePlay`: сервер держит её
+открытой (`OpenArsenal(immediate: true)` при любом `Closed`/`Closing`) и пополняет опустевшие
+слоты через `ServerReplenishEmptySlots` спустя `_replenishDelay`. Жетон убирается локально
+на каждой машине — `SetDogTagSuppressed(true)`. Разбор, почему это не режим, —
+[`gameplay.md`](../gameplay.md#лобби--свободная-игра-не-режим).
+
 ---
 
 ## 5. Чем проверяется
@@ -208,6 +216,7 @@
 | EditMode (ярус A) | Занятость слота и блокировка предмета — NET-13 | `Assets/Tests/EditMode/Arsenal/ArsenalSlotOccupancyTests.cs` |
 | EditMode (ярус A+) | Состояние стены: сервер ведёт, репликация доезжает, клиент локально не меняет — NET-07 | `Assets/Tests/EditMode/Arsenal/ArsenalWallStateReplicationTests.cs` |
 | EditMode (ярус A) | Жетон стоит в якоре с первого кадра: `Start Anchor` + `Rigid Body Source`, kinematic, правила PHY-01 — в префабах и сценах; у жетонов разных стен разные `UniqueId` | `Assets/Tests/EditMode/Arsenal/DogTagSetupTests.cs` |
+| EditMode (ярус A+) | Лобби: сервер открывает стену без раунда, клиентскую не трогает, жетон убран, оружие включено, правило есть в `Lobby.unity` и нет на картах | `Assets/Tests/EditMode/Arsenal/LobbyFreePlayTests.cs` |
 | EditMode | Анимация шторки и полки: позы покоя, повтор команды без движения, разворот без прыжка | `Assets/Tests/EditMode/Arsenal/ArsenalAnimatorTests.cs` |
 | Ярус C (два процесса) | Занятость слотов на живом сервере и закрытие общей стены жетоном другого клиента | сценарий `dedicated-server-arsenal` |
 

@@ -44,6 +44,13 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             GameObject source = new GameObject("ProbeWeapon");
             source.AddComponent<UxrGrabbableObject>();
 
+            // NetworkIdentity зонду намеренно не даём, и Error Mirror «has no NetworkIdentity»
+            // из NetworkServer.Spawn здесь ожидаем. С идентити спавн клона в EditMode падает
+            // NRE: Unity не зовёт Awake у инстанса, массив NetworkBehaviours пуст, и
+            // NetworkIdentity.OnStartServer валится — вместе с TearDown харнесса. Вклиниться
+            // между Instantiate и Spawn тест не может: оба внутри ReplenishWeaponsNetwork.
+            // Сам спавн проверяется только в PlayMode (см. SessionRecoveryTests, Docs/testing.md).
+
             _weaponAsset = PrefabUtility.SaveAsPrefabAsset(source, ProbePath);
             Object.DestroyImmediate(source);
 

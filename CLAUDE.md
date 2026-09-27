@@ -51,6 +51,12 @@ VR-шутер для Oculus Quest 2/3. Unity **6000.4.1f1**, URP. Над про�
   позицию по сети (PHY-01: `Gun_real` без коллайдеров). Там же обязательны `Collision Detection`
   не `Discrete`, `OutOfWorldGuard`, а у оружия с якорем магазина ещё `AnchoredItemCollisionIgnore`.
   Проверка: `WeaponDropPhysicsTests`, `OutOfWorldGuardTests`.
+- **Аватары и их тесты меняются вместе.** Любая правка аватара — добавил, убрал или
+  переименовал компонент, карман, якорь, позу, хват, слой телепорта, новый аватар в
+  `AvatarRegistry` — в той же задаче отражается в `AvatarLoadoutTests` (оснащение) и
+  `PrefabCompositionTests` (сетевой каркас). Добавил — тест требует это. Убрал намеренно —
+  убери требование из теста и напиши в комментарии почему. Задача не закрыта, пока оба
+  теста не прогнаны.
 - **Правки UltimateXR SDK** — любое изменение в `Assets/ThirdParty/UltimateXR/` обязано попасть
   в `Docs/UltimateXR/sdk-patches.md`, иначе потеряется при обновлении SDK.
 - Комментарии и документация — на русском.

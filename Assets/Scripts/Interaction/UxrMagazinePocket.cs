@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UltimateXR.Avatar;
@@ -21,6 +22,12 @@ namespace VrBattlegrounds.Interaction
         
         private List<UxrGrabbableObject> _storedItems = new List<UxrGrabbableObject>();
         private UxrGrabbableObjectAnchor _anchor;
+
+        /// <summary>
+        /// Рука достала магазин из кармана. Магазины хранятся вне якоря, поэтому событие якоря
+        /// <c>Removed</c> при этом не приходит — слушать нужно это (звук доставания, <see cref="AnchorSound" />).
+        /// </summary>
+        public event Action<UxrGrabber, UxrGrabbableObject> ItemExtracted;
 
         private void Awake()
         {
@@ -65,6 +72,7 @@ namespace VrBattlegrounds.Interaction
                 
                 // После извлечения обновляем статус: возможно магазин был последним
                 _anchor.UpdateGrabProxyState();
+                ItemExtracted?.Invoke(e.Grabber, mag);
             }
         }
 

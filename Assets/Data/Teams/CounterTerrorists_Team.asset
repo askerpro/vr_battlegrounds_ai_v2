@@ -19,5 +19,5 @@ MonoBehaviour:
   avatars:
   - {fileID: 11400000, guid: 765815f6f8d1186499b355cbd079ba4d, type: 2}
   - {fileID: 11400000, guid: e87626fd3cfe71a40ad04285711cd9e6, type: 2}
-  - {fileID: 11400000, guid: aa7239403227fbe4aa083d60d51f2e1f, type: 2}
+  - {fileID: 11400000, guid: dd5d408a8185231478c8de233450187a, type: 2}
   - {fileID: 11400000, guid: 1ddecfa30d061594a8ec136af687d7d6, type: 2}

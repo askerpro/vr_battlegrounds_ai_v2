@@ -4399,6 +4399,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Anchor_Hip_R
       objectReference: {fileID: 0}
+    - target: {fileID: 6213131264721921753, guid: e85179cfc4f8951489db4431c9a2787a, type: 3}
+      propertyPath: __prefabGuid
+      value: fefcf679beb2d0f42b6cce742988357e
+      objectReference: {fileID: 0}
     - target: {fileID: 6253055138344724079, guid: e85179cfc4f8951489db4431c9a2787a, type: 3}
       propertyPath: __prefabGuid
       value: fefcf679beb2d0f42b6cce742988357e

@@ -36,6 +36,11 @@
    Настройки Body IK копировать с `PlayerBase`, **исключая `_uxrUniqueId`, `__prefabGuid`,
    `__isInPrefab`** — иначе у двух компонентов окажется один id.
 6. `CreateRigInfo` у `UxrAvatar` (приватный, через reflection) — пересчёт осей рига.
+6а. **Кончики пальцев для UI** — `VrBattlegrounds.EditorTools.AvatarFingertipSetup.Setup(avatar)`
+   (или меню `Tools/VR Battlegrounds/Avatars/Setup Avatar UI Fingertips`). Ставит `UxrFingerTip`
+   на концевую кость указательного пальца из рига `UxrAvatar`, `forward` — вдоль пальца: по нему
+   идёт луч касания UI. Без этого шага планшет и меню пальцем не нажимаются. На риге кончики
+   наследуются игровым вариантом.
 7. **Префаб** — `SaveAsPrefabAssetAndConnect` в `Assets/Prefabs/Avatars/<Model>_Rig.prefab`.
    Визард `5. Save as Prefab` пишет в `Prefabs/Player` — там только игровые аватары
    (`PrefabCompositionTests` ищет их по `PlayerController`), поэтому не он.

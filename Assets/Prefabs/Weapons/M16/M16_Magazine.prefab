@@ -44,9 +44,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 6c6202da-6025-4301-b140-615d3a0903fd
-  __prefabGuid: 
-  __isInPrefab: 0
+  _uxrUniqueId: 2456c032-0466-45ce-8c41-0d9765d7695b
+  __prefabGuid: b36fa7fe2791fba44aa22d7da2dfd50b
+  __isInPrefab: 1
 --- !u!1 &1704869756457861614
 GameObject:
   m_ObjectHideFlags: 0
@@ -439,6 +439,11 @@ MonoBehaviour:
       _poseBlendValue: 0.206
       _gripAlignTransformHandLeft: {fileID: 7987737351846865998}
       _gripAlignTransformHandRight: {fileID: 1458279862322898810}
+    - _avatarPrefabGuid: b6fe59db941fa944696ece5e1aabc032
+      _handPose: {fileID: 11400000, guid: 9bd86a9348eec1d4d90331b16e993762, type: 2}
+      _poseBlendValue: 0.206
+      _gripAlignTransformHandLeft: {fileID: 7987737351846865998}
+      _gripAlignTransformHandRight: {fileID: 1458279862322898810}
     _alignToController: 0
     _alignToControllerAxes: {fileID: 0}
     _grabProximityMode: 0
@@ -662,9 +667,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: c74371d2-f1b1-4d23-8375-e602f44d2ac4
-  __prefabGuid: 
-  __isInPrefab: 0
+  _uxrUniqueId: 97752ba0-700f-49b5-965d-70be04a34d49
+  __prefabGuid: b36fa7fe2791fba44aa22d7da2dfd50b
+  __isInPrefab: 1
 --- !u!1 &6555508105259257257
 GameObject:
   m_ObjectHideFlags: 0

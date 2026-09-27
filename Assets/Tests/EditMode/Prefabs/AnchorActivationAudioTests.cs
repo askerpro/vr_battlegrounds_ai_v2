@@ -19,7 +19,7 @@ namespace VrBattlegrounds.Tests.Prefabs
     /// </para>
     ///
     /// <para>
-    /// Звук вставки играет <see cref="AnchorPlaceSound" /> по событию <c>Placed</c> —
+    /// Звук вставки играет <see cref="AnchorSound" /> по событию <c>Placed</c> —
     /// событие не приходит от стартового состояния.
     /// </para>
     /// </summary>
@@ -65,8 +65,45 @@ namespace VrBattlegrounds.Tests.Prefabs
                                      string.Join("\n", failures));
         }
 
+        /// <summary>
+        /// Гнездо магазина каждого оружия арсенала щёлкает при вставке и звучит, когда магазин
+        /// выпадает — и от руки, и от кнопки выброса (<c>MagazineEject</c> вынимает без руки,
+        /// поэтому <c>Take Out Only By Hand</c> снят). Источник — не на <c>Activate On Placed</c>:
+        /// при хвате магазина рукой SDK выключает тот объект, и звук оборвался бы.
+        /// </summary>
         [Test]
-        public void AnchorPlaceSound_ReferencesAudioSource()
+        public void Гнездо_магазина_оружия_звучит_при_вставке_и_выпадении()
+        {
+            var failures = new List<string>();
+            int checkedAnchors = 0;
+
+            foreach (var guid in AssetDatabase.FindAssets("t:WeaponInfo"))
+            {
+                var info = AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>(AssetDatabase.GUIDToAssetPath(guid));
+                if (info == null || info.WeaponPrefab == null) continue;
+
+                var path = AssetDatabase.GetAssetPath(info.WeaponPrefab);
+
+                foreach (var anchor in info.WeaponPrefab.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
+                {
+                    checkedAnchors++;
+                    var sound = anchor.GetComponent<AnchorSound>();
+
+                    if (sound == null) { failures.Add($"{path} / {anchor.name}: нет AnchorSound"); continue; }
+                    if (sound.Source == null || sound.Source.clip == null) failures.Add($"{path} / {anchor.name}: нет источника или звука вставки");
+                    if (sound.TakeOutClip == null) failures.Add($"{path} / {anchor.name}: нет звука выпадения (Take Out Clip)");
+                    if (sound.TakeOutOnlyByHand) failures.Add($"{path} / {anchor.name}: Take Out Only By Hand включён — выброс кнопкой A/X будет беззвучным");
+                    if (sound.Source != null && anchor.ActivateOnPlaced != null && sound.Source.transform.IsChildOf(anchor.ActivateOnPlaced.transform))
+                        failures.Add($"{path} / {anchor.name}: источник на Activate On Placed — звук выпадения при хвате рукой оборвётся");
+                }
+            }
+
+            Assert.Greater(checkedAnchors, 0, "Контроль: гнёзд магазина у оружия арсенала не найдено.");
+            Assert.IsEmpty(failures, string.Join("\n", failures));
+        }
+
+        [Test]
+        public void AnchorSound_ReferencesAudioSource()
         {
             var failures = new List<string>();
 
@@ -75,7 +112,7 @@ namespace VrBattlegrounds.Tests.Prefabs
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 var root = AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
-                foreach (var sound in root.GetComponentsInChildren<AnchorPlaceSound>(true))
+                foreach (var sound in root.GetComponentsInChildren<AnchorSound>(true))
                 {
                     if (sound.Source == null)
                         failures.Add($"{path} / {sound.name}: не назначен AudioSource");

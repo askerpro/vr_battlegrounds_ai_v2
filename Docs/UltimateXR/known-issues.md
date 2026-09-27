@@ -458,14 +458,14 @@ GameObject spawned = UxrInstanceManager.Instance.InstantiatePrefab(
 
 ### Что сделано в проекте
 
-Звук вставки играет `AnchorPlaceSound` по событию `Placed` и только при `Grabber != null`.
+Звук вставки играет `AnchorSound` по событию `Placed` и только при `Grabber != null`.
 На объектах, которые включает якорь, `Play On Awake` выключен — это держит
 `AnchorActivationAudioTests`.
 
 ### На что смотреть при обновлении SDK
 
 Если VRMADA добавит в `UxrManipulationEventArgs` признак программной вставки или
-начнёт слать `Placed` от стартового состояния — пересмотреть фильтр в `AnchorPlaceSound`.
+начнёт слать `Placed` от стартового состояния — пересмотреть фильтр в `AnchorSound`.
 
 ---
 
@@ -570,3 +570,23 @@ Mode). Ручной прогон по всем — `Tools/VR Battlegrounds/Versi
 `KeepGripsInPlace`. Компонент в `ConstraintsApplied` возвращает позу относительно основной руки,
 запомненную при хвате одной рукой, а `KeepGripsInPlace` затем прилепляет вторую руку к рукояти.
 Проверка — `GunTwoHandAimTests` (без компонента 66° на сдвиг руки в 3 см, с ним меньше 0.5°).
+
+## Issue 15: `Activate On Hand Near And Grabbable` и `PlacedObjectRangeEntered` не срабатывают
+
+> Установлено 2026-09-27, прогоном в Play Mode (`Gun_real` в `Anchor_Hip_R`, ладонь на рукояти).
+
+`UxrGrabManager.UpdateAffordances` находит руку, которая может взять предмет из якоря, но
+записывает в `GrabberNear` не её, а `null` (`UxrGrabManager.cs`, первый проход по пустым рукам:
+`_grabbableObjectAnchors[anchorCandidate].GrabberNear = null`). В прогоне: `GrabPointNear = 0`,
+`LastValidGrabberNear = null`, событие `PlacedObjectRangeEntered` — 0 раз. Поэтому не работают
+ни событие, ни поле якоря `Activate On Hand Near And Grabbable`.
+
+Даже исправленное, оно не годилось бы для карманов проекта: меряет до точек хвата самого
+лежащего предмета, а не до прокси, и не видит `UxrMagazinePocket` (магазины спрятаны, якорь
+для SDK пуст). Проект вместо этого спрашивает `GetClosestGrabbableObject` — тот же вызов, что
+у нажатия grip (`PocketReadiness`). Годный сигнал «рука возьмёт это» у SDK — `Enable When Hand
+Near` точки хвата (считается тем же вызовом), но он общий для всех аватаров и не знает руку.
+
+Парный сигнал «принять» (`AnchorRangeEntered/Left`, `Activate On Compatible Near`) работает,
+но не проверяет, что предмет держит одна рука, — при хвате двумя сигналит, хотя отпускание
+ничего не положит. `PocketReadiness` добавляет это условие сам.

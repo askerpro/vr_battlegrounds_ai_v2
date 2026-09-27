@@ -51,6 +51,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         // AvatarPocketSetup («Tools/VR Battlegrounds/Avatars/Add Weapon Pockets…»).
         private const string PrimaryPocketName   = "Anchor_Back";
         private const string SecondaryPocketName = "Anchor_Hip_R";
+        private const string MagazinePocketName  = "MagazinePocket";
 
         // ══════════════════════════════════════════════════════════════════
         //  Источники данных
@@ -566,6 +567,172 @@ namespace VrBattlegrounds.Tests.Prefabs
 
             Assert.IsNotNull(avatar.GetComponent<PlayerLoadoutManager>(),
                 $"{avatar.name}: нет PlayerLoadoutManager на корне — магазины в начале раунда не выдаются.");
+        }
+
+        /// <summary>
+        /// <see cref="PocketHaptics" /> — единственный способ найти карман в игре: зоны карманов
+        /// не видны, и игрок узнаёт «сейчас положу / сейчас достану» по вибрации контроллера.
+        /// Без компонента карманы работают, но вслепую — и ошибки в консоли нет.
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void На_корне_есть_хаптики_карманов(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+
+            Assert.IsNotNull(avatar.GetComponent<PocketHaptics>(),
+                $"{avatar.name}: нет PocketHaptics на корне — карманы не отзываются вибрацией.");
+        }
+
+        /// <summary>
+        /// <see cref="VrBattlegrounds.Weapons.MagazineEjectInput" /> — кнопка выброса магазина (A/X у
+        /// руки с оружием). Без компонента магазин вынимается только второй рукой, ошибки нет.
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void На_корне_есть_кнопка_выброса_магазина(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+
+            Assert.IsNotNull(avatar.GetComponent<VrBattlegrounds.Weapons.MagazineEjectInput>(),
+                $"{avatar.name}: нет MagazineEjectInput на корне — магазин не выбрасывается кнопкой A/X.");
+        }
+
+        /// <summary>
+        /// Каждый карман звучит, когда рука кладёт в него предмет и когда достаёт
+        /// (<see cref="AnchorSound" />) — подтверждение «принял / отдал», глазами карман не видно.
+        /// Источник — не на объекте <c>Activate On …</c> якоря: при хвате из якоря SDK выключает
+        /// <c>Activate On Placed</c>, и звук доставания обрывался бы на первом кадре.
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void Карманы_звучат_при_укладке_и_доставании(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            var problems = new List<string>();
+
+            foreach (string pocketName in new[] { PrimaryPocketName, SecondaryPocketName, MagazinePocketName })
+            {
+                UxrGrabbableObjectAnchor anchor = avatar.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true)
+                                                        .FirstOrDefault(a => a.name.Contains(pocketName));
+                if (anchor == null)
+                {
+                    problems.Add($"{pocketName}: нет кармана");
+                    continue;
+                }
+
+                AnchorSound sound = anchor.GetComponent<AnchorSound>();
+                if (sound == null)
+                {
+                    problems.Add($"{anchor.name}: нет AnchorSound");
+                    continue;
+                }
+
+                if (sound.Source == null || sound.Source.clip == null) problems.Add($"{anchor.name}: нет источника или звука вставки");
+                if (sound.TakeOutClip == null) problems.Add($"{anchor.name}: нет звука доставания (Take Out Clip)");
+                if (!sound.TakeOutOnlyByHand) problems.Add($"{anchor.name}: доставание звучит и без руки — карман магазинов сам программно вынимает вложенное, звук будет на каждую укладку");
+
+                GameObject[] activated = { anchor.ActivateOnPlaced, anchor.ActivateOnEmpty, anchor.ActivateOnCompatibleNear, anchor.ActivateOnCompatibleNotNear, anchor.ActivateOnHandNearAndGrabbable };
+                if (sound.Source != null && activated.Any(go => go != null && sound.Source.transform.IsChildOf(go.transform)))
+                {
+                    problems.Add($"{anchor.name}: источник '{sound.Source.name}' на объекте, который включает/выключает якорь — звук доставания оборвётся");
+                }
+            }
+
+            Assert.IsEmpty(problems, $"{avatar.name}: карманы без звука:\n  " + string.Join("\n  ", problems));
+        }
+
+        /// <summary>
+        /// Пистолет из кобуры достаётся хватом в области вокруг неё, а не точным попаданием в
+        /// рукоять: в динамике виртуальное бедро не совпадает с реальным, и игрок, тянущийся к
+        /// кобуре на ощупь, промахивается. Поэтому у <c>Anchor_Hip_R</c>, как у спины, есть
+        /// прокси-хват (перенаправление захвата на предмет в якоре — патч SDK №4).
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void У_кобуры_есть_прокси_хват(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            UxrGrabbableObjectAnchor hip = avatar.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true)
+                                                 .FirstOrDefault(a => a.name.Contains(SecondaryPocketName));
+
+            Assert.IsNotNull(hip, $"{avatar.name}: нет кармана '{SecondaryPocketName}'.");
+            Assert.IsNotNull(hip.GrabProxy,
+                $"{avatar.name}: у '{hip.name}' нет Grab Proxy — пистолет берётся только точным попаданием в рукоять.");
+        }
+
+        /// <summary>
+        /// Карман с прокси-хватом кладёт предмет там же, где его отдаёт: точка укладки якоря
+        /// (<c>DropProximityTransform</c>) — это прокси. Игрок подносит оружие туда, где прокси
+        /// подсвечивается; если SDK меряет укладку от другой точки, до неё может быть дальше
+        /// <c>MaxPlaceDistance</c> — и оружие падает на землю.
+        ///
+        /// <para>
+        /// Так было у MEF: к <c>Anchor_Back</c> привязали <c>BackGrabProxy</c> у плеча, а точка
+        /// укладки осталась в центре спины, в 35 см от прокси при радиусе 0.2 м.
+        /// </para>
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void Карман_с_прокси_кладёт_там_же_где_отдаёт(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            var problems = new List<string>();
+
+            foreach (UxrGrabbableObjectAnchor anchor in avatar.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
+            {
+                UxrGrabbableObject proxy = anchor.GrabProxy;
+                if (proxy == null) continue;
+
+                float gap = Vector3.Distance(anchor.DropProximityTransform.position, proxy.transform.position);
+                if (gap > 0.01f)
+                {
+                    problems.Add($"{anchor.name}: точка укладки '{anchor.DropProximityTransform.name}' в {gap:0.00} м " +
+                                 $"от прокси '{proxy.name}' (радиус укладки {anchor.MaxPlaceDistance:0.00} м)");
+                }
+            }
+
+            Assert.IsEmpty(problems,
+                $"{avatar.name}: предмет, поднесённый к прокси, в карман не встанет.\n  " + string.Join("\n  ", problems) +
+                "\nПочинка — у якоря снять Drop Proximity Transform Use Self и указать сам прокси.");
+        }
+
+        /// <summary>
+        /// Палец нажимает UI (планшет, меню) только если у обеих рук есть <see cref="UxrFingerTip" />
+        /// и его <c>forward</c> смотрит вдоль пальца: <c>UxrFingerTipRaycaster</c> пускает луч по
+        /// <see cref="UxrFingerTip.WorldDir" /> и отбрасывает касание под большим углом к канвасу.
+        ///
+        /// <para>
+        /// Так сломался MEF: утилита <c>AvatarFingertipSetup</c> пропускала фаланги короче 3.2 см
+        /// (порог по квадрату длины), кончик остался с нулевым поворотом и смотрел вбок. Граница
+        /// 60° — как в утилите: меньший наклон бывает намеренным (у киборга 30°).
+        /// </para>
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void Кончики_пальцев_для_UI_смотрят_вдоль_пальца(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            var problems = new List<string>();
+            var sides = new HashSet<UxrHandSide>();
+
+            foreach (UxrFingerTip tip in avatar.GetComponentsInChildren<UxrFingerTip>(true))
+            {
+                Transform bone = tip.transform.parent;
+                if (bone == null || bone.parent == null) continue;
+
+                if (UxrAvatarRig.GetHandSide(tip.transform, out UxrHandSide side)) sides.Add(side);
+
+                Vector3 fingerDir = (bone.position - bone.parent.position).normalized;
+                float   dot       = Vector3.Dot(tip.transform.forward, fingerDir);
+
+                if (dot < 0.5f)
+                {
+                    problems.Add($"{AnimationUtility.CalculateTransformPath(tip.transform, avatar.transform)}: " +
+                                 $"forward отклонён от пальца на {Mathf.Acos(Mathf.Clamp(dot, -1f, 1f)) * Mathf.Rad2Deg:0}°");
+                }
+            }
+
+            if (!sides.Contains(UxrHandSide.Left)) problems.Add("нет UxrFingerTip у левой руки");
+            if (!sides.Contains(UxrHandSide.Right)) problems.Add("нет UxrFingerTip у правой руки");
+
+            Assert.IsEmpty(problems,
+                $"{avatar.name}: палец не нажмёт UI.\n  " + string.Join("\n  ", problems) +
+                "\nПочинка — Tools/VR Battlegrounds/Avatars/Setup Avatar UI Fingertips (выравнивает испорченные кончики).");
         }
 
         /// <summary>

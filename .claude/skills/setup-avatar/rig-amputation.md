@@ -31,19 +31,26 @@
 5. `5. Run UXR Setup On Current Target` — визард `UXR Setup Wizard/1…6`:
    `Core Setup` (UxrAvatar + риг из Animator) → `Hands Integration` (`BigHandsIntegration` +
    `BigIKHand*`) → `Controller & Camera` → `Finalize Rig Mapping` (риг на кости IK-кистей) →
-   `Save as Prefab` → `Generate Default Poses`.
+   **кончики пальцев для UI** (`AvatarFingertipSetup.Setup`) → `Save as Prefab` →
+   `Generate Default Poses`. Кончики ставятся после разметки рига, поэтому попадают на кисти SDK,
+   которые двигает UltimateXR, а не на отрезанные родные кости (ошибка Heavy: левый кончик на
+   `index_03_l`, левая рука UI не нажимает).
 
 `Run Full Selected FBX Pipeline` делает всё подряд.
 
 ⚠️ `Save as Prefab` пишет в `Assets/Prefabs/Player/`. Префаб рига перенести в
 `Assets/Prefabs/Avatars/` — в `Prefabs/Player` лежат только игровые аватары.
 
-## Ручная подгонка пальцев
+## Перчатки и позы
 
-`Tools/VR Battlegrounds/Avatars/Avatar Finger Configurator` (`AvatarHandAligner`) — подгоняет
-пальцы рига под аватар-образец в системе координат ладони и зеркалит позы с руки на руку.
-`Tools/VR Battlegrounds/Avatars/UXR Setup Wizard/Modular Glove Bone Mapper` — перепривязать кости `SkinnedMeshRenderer`
-сторонних перчаток к скелету аватара по именам.
+`Tools/VR Battlegrounds/Avatars/UXR Setup Wizard/Modular Glove Bone Mapper` — перепривязать кости
+`SkinnedMeshRenderer` сторонних перчаток к скелету аватара по именам.
+
+Подгонять исходную позу пальцев под образец не нужно: дескрипторы поз UltimateXR задают фаланги
+относительно ладони в универсальных осях и не зависят от исходной позы. Правка поз и зеркалирование
+с руки на руку — штатный Hand Pose Editor SDK (`UltimateXR → Hand Pose Editor`). Прежний
+`Avatar Finger Configurator` (`AvatarHandAligner`) удалён: он переписывал повороты костей в префабе,
+а зеркалил через углы Эйлера — неверно, когда оси костей рук не зеркальны.
 
 ## Известные грабли Blender
 

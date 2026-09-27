@@ -247,8 +247,8 @@ namespace VrBattlegrounds.Editor.Avatars
                 proxyCol.size = new Vector3(0.12f, 0.12f, 0.08f);
                 
                 Undo.AddComponent<UxrGrabbableObject>(proxy);
-                ColliderVisualizer vis = Undo.AddComponent<ColliderVisualizer>(proxy);
-                vis.VolumeColor = new Color(0f, 1f, 0f, 0.3f);
+                // Границы кармана видно через GrabbableAnchorGizmos (редактор) и
+                // AnchorZonesDebugView (шлем) — отдельный визуализатор не нужен.
             }
 
             return go;

@@ -17,6 +17,11 @@ namespace VrBattlegrounds.Player
                 return false;
             }
 
+            if (!AnchoredItemGrabRule.AllowsGrab(grabber, grabbable))
+            {
+                return false;
+            }
+
             return TwoHandGrabPolicy.IsGrabAllowed(grabber, grabbable, grabPoint);
         }
     }

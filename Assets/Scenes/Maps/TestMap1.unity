@@ -2830,6 +2830,53 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4664385699614512542, guid: 4c324de87c7f53f42a95440d1a72b5a2, type: 3}
   m_PrefabInstance: {fileID: 788972067}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &804564321
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 804564323}
+  - component: {fileID: 804564322}
+  m_Layer: 0
+  m_Name: UxrGrabManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &804564322
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 804564321}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25d17f0adba76654ea7135bc31b42b79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabManager
+  _uxrUniqueId: 988c1a7c-adb0-249e-c31b-9cc5bca16276
+  __prefabGuid: 
+  __isInPrefab: 0
+--- !u!4 &804564323
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 804564321}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &820605858
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3655,6 +3702,57 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4664385699614512542, guid: 4c324de87c7f53f42a95440d1a72b5a2, type: 3}
   m_PrefabInstance: {fileID: 1048106216}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1055898662
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1055898664}
+  - component: {fileID: 1055898663}
+  m_Layer: 0
+  m_Name: UxrManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1055898663
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1055898662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 850d5221451e8db47a43eae77beea7ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Core.UxrManager
+  _uxrUniqueId: 90aba23d-c2ab-b9fc-1a6f-681d20b090f3
+  __prefabGuid: 
+  __isInPrefab: 0
+  _postUpdateMode: 2
+  _usePrecaching: 1
+  _precacheFrameCount: 50
+  prevIsEditorFocused: 1
+--- !u!4 &1055898664
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1055898662}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1058653069
 GameObject:
   m_ObjectHideFlags: 0
@@ -42417,3 +42515,5 @@ SceneRoots:
   - {fileID: 335873377}
   - {fileID: 432905656}
   - {fileID: 1524550016}
+  - {fileID: 1055898664}
+  - {fileID: 804564323}

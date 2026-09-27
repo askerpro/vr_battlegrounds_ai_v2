@@ -48,9 +48,9 @@ HUD, карманы, хитбоксы, регистрация. Эталон — 
 |---|---|---|
 | Хитбоксы | `MeshCollider` на `CyborgGeo/*` | Капсулы/сфера дочерними объектами на костях: голова (сфера ~0.13), грудь, живот, бёдра, голени. Не-trigger, слой `Default` (оружие бьёт `Default\|Ground`). Руки не закрывать — мешают хвату. `MeshCollider` скина застывает в bind-позе |
 | Трекинг кистей в сети | `NetworkTransformUnreliable` на `Hand_Left/Right` | Тот же компонент с теми же настройками на `animator.GetBoneTransform(LeftHand/RightHand)`, `target` = кость |
-| Нажатие UI пальцем | `UxrFingerTip` на кончиках указательных | `Tools/VR Battlegrounds/Avatars/Setup Avatar UI Fingertips` (`AvatarFingertipSetup`, берёт `IndexDistal` из Humanoid) |
-| Карманы | на `Pelvis` / `Spine02` | Префабы из `Assets/Prefabs/Player/Pockets/` на `Hips` / `UpperChest` модели. Позиция = кость + мировое смещение, снятое с киборга; поворот — мировой киборга. Локальные смещения `AvatarPocketSetup` не годятся: оси костей у моделей разные (у CC бедро повёрнуто на 75°). Если у модели есть кобура — `Anchor_Hip_R` на неё |
-| Прокси спины | `Anchor_Back._grabProxy` → отдельный `BackGrabProxy` у правого плеча | Так же: клон `BackGrabProxy` на `UpperChest`, `ChangeUniqueId(Guid.NewGuid())` для его UXR-компонентов; `GrabProxy`-ребёнка из префаба `Anchor_Back` удалить, `_grabProxy` → клон |
+| Нажатие UI пальцем | `UxrFingerTip` на кончиках указательных | `Tools/VR Battlegrounds/Avatars/Setup Avatar UI Fingertips` (`AvatarFingertipSetup`, палец — из рига `UxrAvatar`). Если кончики стоят на риге, вариант их наследует — повторять не нужно. Кончик обязан быть на кисти, в которую смотрит риг `UxrAvatar` (у пути А — на кисти SDK, не на родной кости), и его `forward` — вдоль пальца: луч касания идёт по нему. Проверяет `AvatarLoadoutTests.Кончики_пальцев_для_UI_смотрят_вдоль_пальца` |
+| Карманы | на `Pelvis` / `Spine02` | Префабы из `Assets/Prefabs/Player/Pockets/` на `Hips` / `UpperChest` модели. Позиция = кость + мировое смещение, снятое с киборга; поворот — мировой киборга. Локальные смещения `AvatarPocketSetup` не годятся: оси костей у моделей разные (у CC бедро повёрнуто на 75°). Если у модели есть кобура — `Anchor_Hip_R` на неё. У `Anchor_Hip_R` из префаба уже есть дочерний `GrabProxy` (хват вокруг кобуры, он же точка укладки) — переносить его отдельно не нужно; проверяет `AvatarLoadoutTests.У_кобуры_есть_прокси_хват` |
+| Прокси спины | `Anchor_Back._grabProxy` → отдельный `BackGrabProxy` у правого плеча, **и точка укладки** (`Drop Proximity Transform`) → он же | Так же: клон `BackGrabProxy` на `UpperChest`, `ChangeUniqueId(Guid.NewGuid())` для его UXR-компонентов; `GrabProxy`-ребёнка из префаба `Anchor_Back` удалить; у якоря `_grabProxy` → клон **и** `_dropProximityTransformUseSelf = false`, `_dropProximityTransform` → клон. Иначе игрок подносит оружие к подсвеченному прокси, а SDK меряет укладку от центра спины — оружие падает (так было у MEF). Сторож — `AvatarLoadoutTests.Карман_с_прокси_кладёт_там_же_где_отдаёт` |
 | Наблюдатель | `SpectatorController.Geo = Cyborg/CyborgGeo` | `Geo` рига. `Ghost` пуст — в режиме наблюдателя модель просто скрывается |
 
 ## 3а. Своя голова не должна попадать в камеру
@@ -77,6 +77,25 @@ isLocal: true/false, …)`: у локального выключены ровн�
 `UxrGlobalSettings.Instance.LogLevelNetworking = None` и вернуть. Скриншот с точки глаз
 симптом не воспроизводит (в bind-позе камера целиком внутри мешей, их грани отсечены) —
 визуальная проверка только на шлеме.
+
+Карманы видно в Scene View по цветным меткам `GrabbableAnchorGizmos` (оранжевый — спина,
+голубой — бедро, зелёный — магазины, пунктир — к прокси). Двигать их — выделив метку кликом;
+у выделенного видны зоны укладки (сплошной контур) и хвата (пунктир).
+
+Размеры зон подбирать в шлеме: `Tools/VR Battlegrounds/Debug/Anchor Zones In Headset`, Play Mode
+через Quest Link, менять `Max Place Distance` / `Max Distance Grab` в инспекторе живого аватара —
+зона вспыхивает, когда предмет или ладонь достаёт. Затем `Tools/VR Battlegrounds/Avatars/Save
+Pocket Zones To Prefab` — после выхода из Play Mode значения лягут в префаб этого аватара.
+
+Вибрацию карманов (`PocketHaptics` на корне) вариант наследует от `PlayerBase` — не удалять:
+без неё карманы в игре не найти на ощупь. Аватар не от `PlayerBase` — добавить компонент на
+корень (`AvatarLoadoutTests.На_корне_есть_хаптики_карманов`). То же с кнопкой выброса магазина
+`MagazineEjectInput` (`На_корне_есть_кнопка_выброса_магазина`).
+
+Звуки карманов (`AnchorSound` + `AudioSource` на самом якоре: укладка — clip источника,
+доставание — `Take Out Clip`) приходят с префабами карманов из `Pockets/`. Карман, собранный не
+из них, настроить так же; источник — не на объекте `Activate On Placed`
+(`AvatarLoadoutTests.Карманы_звучат_при_укладке_и_доставании`).
 
 HUD наследуется от `PlayerBase` (`Camera Controller/Camera/HUDContainer`). Если его нет —
 `Tools/VR Battlegrounds/Avatars/Inject HUD to Selected Avatar`.

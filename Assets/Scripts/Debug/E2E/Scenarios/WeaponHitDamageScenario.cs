@@ -271,10 +271,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return null;
             }
 
-            // Пара кадров форы: ColliderVisualizer создаёт в Start примитив
-            // «DebugVisualizer» и тут же зовёт Destroy на его коллайдере, а Destroy
-            // в Unity отложенный. Без выдержки коллайдер попадёт в обзор живым
-            // и умрёт до наводки.
+            // Пара кадров форы, чтобы аватар жертвы прошёл Start. Раньше выдержка
+            // защищала ещё и от отладочных кубов ColliderVisualizer (удалён).
             yield return E2EWait.Hold(0.5f);
 
             int solidCount = 0;
@@ -1132,7 +1130,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             foreach (Collider collider in prefabOrInstance.GetComponentsInChildren<Collider>(true))
             {
                 if (collider == null || collider.isTrigger) continue;
-                if (collider.gameObject.name == DebugVisualizerName) continue;
 
                 count++;
             }
@@ -1144,12 +1141,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// Объединённые границы поражаемых коллайдеров аватара — в их центр и целимся.
         ///
         /// <para>
-        /// Границы, а не ссылка на «самый крупный коллайдер»: держать ссылку опасно.
-        /// <c>ColliderVisualizer</c> в <c>Start</c> создаёт примитив <c>DebugVisualizer</c>
-        /// и тут же зовёт <c>Destroy</c> на его коллайдере, а <c>Destroy</c> в Unity
-        /// отложенный — выбранная ссылка успевает умереть между обзором и наводкой.
-        /// Отладочные примитивы отсеиваются по имени и здесь тоже: к геометрии аватара
-        /// они отношения не имеют.
+        /// Границы, а не ссылка на «самый крупный коллайдер»: ссылка на отдельный
+        /// коллайдер может умереть между обзором и наводкой, границы — нет.
         /// </para>
         /// </summary>
         private static Bounds SolidBounds(PlayerController avatar, out int count, out string list)
@@ -1167,7 +1160,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             foreach (Collider collider in avatar.GetComponentsInChildren<Collider>(true))
             {
                 if (collider == null || collider.isTrigger || !collider.enabled) continue;
-                if (collider.gameObject.name == DebugVisualizerName) continue;
 
                 if (count == 0) bounds = collider.bounds;
                 else bounds.Encapsulate(collider.bounds);
@@ -1181,9 +1173,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             list = builder.Length == 0 ? "ни одного" : builder.ToString();
             return bounds;
         }
-
-        /// <summary>Имя отладочного примитива из <c>ColliderVisualizer</c> — в обзоры он не идёт.</summary>
-        private const string DebugVisualizerName = "DebugVisualizer";
 
         /// <summary>
         /// Заспавненное в рантайме оружие с <see cref="UxrFirearmWeapon" />.

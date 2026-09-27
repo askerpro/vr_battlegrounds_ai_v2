@@ -78,10 +78,29 @@ namespace VRBattlegrounds.Editor
             HandsIntegrationSetup.Execute();
             ControllerAndCameraSetup.Execute();
             FinalizeRigMappingSetup.Execute();
+            SetupUiFingertips();
             CreatePrefabSetup.Execute();
             HandPosesSetup.Execute();
 
             Debug.Log("[Custom Avatar Pipeline] UXR setup wizard completed on current target.");
+        }
+
+        /// <summary>
+        ///     Кончики пальцев для нажатия UI — после разметки рига (кончик ставится на кисть, которую
+        ///     двигает UltimateXR) и до сохранения префаба, чтобы попасть в него.
+        /// </summary>
+        private static void SetupUiFingertips()
+        {
+            GameObject target = Selection.activeGameObject;
+            UltimateXR.Avatar.UxrAvatar avatar = target != null ? target.GetComponent<UltimateXR.Avatar.UxrAvatar>() : null;
+
+            if (avatar == null)
+            {
+                Debug.LogWarning("[Custom Avatar Pipeline] Кончики пальцев для UI: на выделенном объекте нет UxrAvatar — шаг пропущен.");
+                return;
+            }
+
+            VrBattlegrounds.EditorTools.AvatarFingertipSetup.Setup(avatar);
         }
 
         [MenuItem(MenuRoot + "Run Blender Preparation Only", false, 60)]

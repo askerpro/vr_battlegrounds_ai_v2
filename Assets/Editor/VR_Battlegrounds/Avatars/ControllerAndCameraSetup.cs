@@ -93,12 +93,13 @@ namespace VRBattlegrounds.Editor
                 soAvatar.ApplyModifiedProperties();
             }
 
-            // Teleportation standard layers
+            // Слои телепорта — как у рабочего Heavy_Soldier_Base_Avatar: пол карт лежит на слое Ground,
+            // без него в Valid Target Layers телепорт не находит цель (AvatarLoadoutTests.Телепорт_попадает_в_пол_карт).
             var teleports = uxrAvatar.GetComponentsInChildren<UltimateXR.Locomotion.UxrTeleportLocomotionBase>(true);
             foreach (var tp in teleports)
             {
-                tp.ValidTargetLayers = 1;
-                tp.BlockingTargetLayers = 55;
+                tp.ValidTargetLayers = LayerMask.GetMask("Ground");
+                tp.BlockingTargetLayers = 63;
                 EditorUtility.SetDirty(tp);
             }
 

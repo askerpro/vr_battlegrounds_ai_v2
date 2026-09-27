@@ -23,15 +23,10 @@ namespace VrBattlegrounds.Weapons
 
         [SerializeField] private int _triggerIndex;
 
-        [Tooltip("Граббабл цевья / рукояти затвора (дочерний объект с UxrGrabbableObject).")]
+        [Tooltip("Граббабл цевья / рукояти затвора (дочерний объект с UxrGrabbableObject). Ось и длина хода берутся из его Translation Limits (режим Restrict Local Offset).")]
         [SerializeField] private UxrGrabbableObject _slide;
 
-        [Tooltip("Локальное направление оси хода затвора (достаточно оси; будет нормализовано). Должно совпадать с осью Translation в UxrGrabbableObject.")]
-        [SerializeField] private Vector3 _localSlideDirection = Vector3.forward;
-
-        [Tooltip("Эталонная длина полного хода (используется только |вектор|). Задай ≈ модулю Translation Offset Min/Max по этой оси, иначе порог Slide Threshold будет промахиваться.")]
-        [SerializeField] private Vector3 _localSlideReferenceOffset = Vector3.forward * 0.2f;
-
+        [Tooltip("Доля полного хода затвора, после которой оттяжка засчитана.")]
         [SerializeField] [Range(0f, 1f)] private float _slideThreshold = 0.7f;
 
         [Tooltip("Автовозврат затвора в позицию покоя, когда его отпустили.")]
@@ -64,6 +59,52 @@ namespace VrBattlegrounds.Weapons
 
         #endregion
 
+        #region Public types & data
+
+        public float SlideThreshold => _slideThreshold;
+
+        /// <summary>
+        ///     Ось и длина полного хода затвора — из <c>Translation Limits</c> его граббабла, чтобы ход
+        ///     задавался в одном месте. Полный ход — более длинный из векторов Min/Max: затвор ходит
+        ///     от покоя в одну сторону. Ложь, если ход не ограничен локальным смещением или нулевой.
+        /// </summary>
+        public static bool TryGetSlideTravel(UxrGrabbableObject slide, out Vector3 direction, out float length)
+        {
+            direction = Vector3.zero;
+            length    = 0f;
+
+            if (slide == null || slide.TranslationConstraint != UxrTranslationConstraintMode.RestrictLocalOffset)
+            {
+                return false;
+            }
+
+            Vector3 min    = slide.TranslationLimitsMin;
+            Vector3 max    = slide.TranslationLimitsMax;
+            Vector3 travel = min.sqrMagnitude >= max.sqrMagnitude ? min : max;
+
+            length = travel.magnitude;
+            if (length < 1e-5f)
+            {
+                return false;
+            }
+
+            direction = travel / length;
+            return true;
+        }
+
+        /// <summary>Доля пройденного хода затвора относительно позиции покоя, 0…1.</summary>
+        public float GetSlideProgress()
+        {
+            if (!TryGetSlideTravel(_slide, out Vector3 direction, out float length))
+            {
+                return 0f;
+            }
+
+            return Mathf.Abs(Vector3.Dot(_slide.transform.localPosition - _localStart, direction)) / length;
+        }
+
+        #endregion
+
         #region Unity
 
         protected override void Awake()
@@ -73,6 +114,11 @@ namespace VrBattlegrounds.Weapons
             _state   = SlideState.WaitForward;
             _firearm = GetComponent<UxrFirearmWeapon>();
             CaptureSlideRestLocalPosition();
+
+            if (_slide != null && !TryGetSlideTravel(_slide, out _, out _))
+            {
+                GameLog.WeaponSystem.Warning($"[Bolt][{gameObject.name}] У затвора '{_slide.name}' нет хода: нужен Translation Constraint = Restrict Local Offset и ненулевые Translation Limits. Перезарядка затвором отключена.", this);
+            }
         }
 
         private void Start()
@@ -83,24 +129,10 @@ namespace VrBattlegrounds.Weapons
 
         private void LateUpdate()
         {
-            if (_slide == null)
+            if (!TryGetSlideTravel(_slide, out Vector3 dir, out float denom))
             {
                 return;
             }
-
-            float denom = _localSlideReferenceOffset.magnitude;
-            if (denom < 1e-5f)
-            {
-                return;
-            }
-
-            Vector3 dir = _localSlideDirection;
-            if (dir.sqrMagnitude < 1e-8f)
-            {
-                return;
-            }
-
-            dir.Normalize();
 
             bool isGrabbed = UxrGrabManager.Instance != null && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
 

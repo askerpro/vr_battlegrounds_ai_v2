@@ -123,6 +123,16 @@ int solid = 0; foreach (var c in go.GetComponentsInChildren<Collider>(true)) if 
 нужен `MainGripAimLock` — он держит позу по основной руке. Новый пистолет с дополнительной
 точкой без этого компонента будет крутиться так же. Разбор — [known-issues, Issue 14](UltimateXR/known-issues.md).
 
+### «Не перезаряжается: затвор тяну до упора, а перезарядка не засчитывается»
+
+**Исправлено 2026-09-27 (`Gun_real`).** Длина хода для порога задавалась в
+`AutomaticWeaponSlideFeedback` отдельно (`Local Slide Reference Offset`) от `Translation Limits`
+граббабла затвора. У `Gun_real` эталон 6 см был скопирован с M16 при реальном ходе 1.89 см:
+максимум 31% против порога 85.5%. Теперь ось и длина хода берутся только из `Translation
+Limits` затвора (`TryGetSlideTravel`), ход настраивается в одном месте. Если перезарядка
+снова не срабатывает — у затвора не `Restrict Local Offset` или нулевые лимиты: об этом
+предупреждает инспектор, `GameLog.WeaponSystem` в `Awake` и `WeaponSlideTravelTests`.
+
 ### «Оружие можно взять из закрытого арсенала»
 
 **NET-13, исправлена.** `Lock()`/`Unlock()` искали предмет в `CurrentPlacedObject`,

@@ -19,14 +19,8 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             AutomaticWeaponSlideFeedback script = (AutomaticWeaponSlideFeedback)target;
 
-            // Находим нужные свойства через SerializedObject
-            SerializedProperty slideProp      = serializedObject.FindProperty("_slide");
-            SerializedProperty dirProp        = serializedObject.FindProperty("_localSlideDirection");
-            SerializedProperty refOffsetProp  = serializedObject.FindProperty("_localSlideReferenceOffset");
-            SerializedProperty thresholdProp  = serializedObject.FindProperty("_slideThreshold");
-
             // Пытаемся достать объект затвора
-            UxrGrabbableObject grabbable = slideProp.objectReferenceValue as UxrGrabbableObject;
+            UxrGrabbableObject grabbable = serializedObject.FindProperty("_slide").objectReferenceValue as UxrGrabbableObject;
             if (grabbable == null)
             {
                 EditorGUILayout.Space(5);
@@ -36,33 +30,24 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             Transform slideTransform = grabbable.transform;
 
-            // Достаем приватное поле _localStart
-            var localStartField = typeof(AutomaticWeaponSlideFeedback).GetField("_localStart", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (localStartField == null) return;
-            
-            Vector3 localStart = (Vector3)localStartField.GetValue(script);
-
-            // Параметры для расчета
-            Vector3 dir       = dirProp.vector3Value;
-            float   denom     = refOffsetProp.vector3Value.magnitude;
-            float   threshold = thresholdProp.floatValue;
-
-            if (dir.sqrMagnitude < 1e-8f || denom < 1e-5f)
+            // Ось и длина хода — из Translation Limits затвора, как в рантайме
+            if (!AutomaticWeaponSlideFeedback.TryGetSlideTravel(grabbable, out Vector3 dir, out float length))
             {
                 EditorGUILayout.Space(5);
-                EditorGUILayout.HelpBox("Укажите направление (Direction) и эталонный ход (Reference Offset).", MessageType.None);
+                EditorGUILayout.HelpBox($"У '{grabbable.name}' нет хода: Translation Constraint = Restrict Local Offset и ненулевые Translation Limits.", MessageType.Warning);
                 return;
             }
 
-            dir.Normalize();
+            // Достаем приватное поле _localStart
+            var localStartField = typeof(AutomaticWeaponSlideFeedback).GetField("_localStart", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (localStartField == null) return;
 
-            // Рассчитываем текущее положение как в основном скрипте
-            Vector3 delta   = slideTransform.localPosition - localStart;
-            float   absDist = Mathf.Abs(Vector3.Dot(delta, dir));
-            float   current = absDist / denom;
+            float threshold = script.SlideThreshold;
+            float current   = script.GetSlideProgress();
 
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Editor Visualization", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField($"Ход из лимитов затвора: {length * 100f:F2} см по оси {dir:F2}, порог {threshold * length * 100f:F2} см", EditorStyles.miniLabel);
 
             // Рисуем шкалу прогресса
             Rect rect = EditorGUILayout.GetControlRect(false, 20);
@@ -70,7 +55,7 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             // Доп информация
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField($"Abs Dist: {absDist:F4}m / {denom:F4}m", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField($"Abs Dist: {current * length:F4}m / {length:F4}m", EditorStyles.miniLabel);
             EditorGUILayout.LabelField($"Threshold: {threshold:P0}", EditorStyles.miniLabel);
             EditorGUILayout.EndHorizontal();
 

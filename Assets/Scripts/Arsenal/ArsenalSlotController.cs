@@ -9,8 +9,8 @@ namespace VrBattlegrounds.Arsenal
     /// Handles: single interactive item anchor, WeaponInfo configuration,
     /// LED feedback, lock/unlock, spawn/despawn, affordability.
     ///
-    /// Subclasses (<see cref="FirearmSlotController"/>, <see cref="ShelfItemSlotController"/>)
-    /// can add decorative elements (e.g. magazine display).
+    /// Subclasses (<see cref="FirearmSlotController"/>) can add decorative elements
+    /// (e.g. magazine display).
     /// </summary>
     public class ArsenalSlotController : MonoBehaviour
     {

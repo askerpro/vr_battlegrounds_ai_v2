@@ -254,7 +254,7 @@ ArsenalWall (static, стена с нишей)
 | Скрипт | Ответственность |
 |---|---|
 | `ArsenalWallController.cs` | Управление стеной: инициализация слотов, размещение оружия |
-| `WeaponSlotController.cs` | Один слот: подсветка ON/OFF, цена, доступность |
+| `FirearmSlotController.cs` (база `ArsenalSlotController`; стоит и на слотах полки) | Один слот: подсветка ON/OFF, цена, доступность |
 | `ArsenalBudgetManager.cs` | Бюджет игрока, проверка доступности, обновление подсветки |
 
 ### 8.3 Интеграция с UltimateXR
@@ -267,7 +267,7 @@ ArsenalWall (static, стена с нишей)
 
 ```csharp
 // Псевдокод управления слотом
-public class WeaponSlotController : MonoBehaviour
+public class FirearmSlotController : MonoBehaviour
 {
     [SerializeField] private Light[] slotLights;    // 3-5 точечных LED
     [SerializeField] private int weaponPrice;
@@ -452,17 +452,17 @@ public class WeaponSlotController : MonoBehaviour
 
 ### 9.6 Архитектурное правило: Модульные слоты
 
-> **КЛЮЧЕВОЕ ПРАВИЛО:** Каждый слот оружия — **изолированный, самодостаточный prefab** (`WeaponSlotPrefab.prefab`).
+> **КЛЮЧЕВОЕ ПРАВИЛО:** Каждый слот оружия — **изолированный, самодостаточный prefab** (`Slots/FireArmSlotPrefab.prefab`).
 > Стена арсенала **составляется** из таких слотов как из строительных блоков.
 > Это позволяет легко менять набор оружия на стене, не трогая layout.
 
-**Один WeaponSlot содержит:**
+**Один слот оружия содержит:**
 - Свою секцию pegboard (geometry — прямоугольная металлическая панель)
 - Крепления / крючки для оружия
 - `UxrGrabbableObjectAnchor` — snap zone для возврата
 - LED-подсветку (Point Light + маленькие точки)
 - Ценник (TextMeshPro)
-- Отдельный `WeaponSlotController`
+- Отдельный `FirearmSlotController`
 
 **Для полки (EquipSlot)** — аналогичный принцип: каждый слот снаряжения = отдельный prefab.
 
@@ -471,21 +471,21 @@ public class WeaponSlotController : MonoBehaviour
 ```
 ArsenalWall [ArsenalWallController]
 │
-├── WeaponSlotsContainer (пустой GO — позиционирование ряда слотов)
-│   ├── WeaponSlot_AK47 (instance of WeaponSlotPrefab) [WeaponSlotController]
+├── RiflesSlotsContainer (пустой GO — позиционирование ряда слотов)
+│   ├── WeaponSlot_AK47 (instance of FireArmSlotPrefab) [FirearmSlotController]
 │   │   ├── PegboardSection (mesh — секция перфопанели)
 │   │   ├── WeaponAnchor (UxrGrabbableObjectAnchor)
 │   │   ├── MagAnchor (UxrGrabbableObjectAnchor — магазин рядом)
 │   │   ├── LEDs (Point Light ×3-5)
 │   │   └── PriceTag (TextMeshPro — "$2,700")
-│   ├── WeaponSlot_M4A1 (instance of WeaponSlotPrefab) — аналогично
+│   ├── WeaponSlot_M4A1 (instance of FireArmSlotPrefab) — аналогично
 │   ├── WeaponSlot_FAMAS — аналогично
 │   └── WeaponSlot_AWP — аналогично
 │
 ├── ShelfMechanism (Animator — slide in/out)
 │   ├── ShelfRail (направляющая, static)
 │   └── ShelfPlatform
-│       ├── EquipSlot_Glock (instance of EquipSlotPrefab) [WeaponSlotController]
+│       ├── EquipSlot_Glock (instance of ShelfSlotPrefab Variant) [FirearmSlotController]
 │       │   ├── SlotSurface (mesh — секция полки)
 │       │   ├── WeaponAnchor (UxrGrabbableObjectAnchor)
 │       │   ├── LEDs (Point Light)
@@ -519,8 +519,8 @@ Assets/Prefabs/Arsenal/
 ├── StandardArsenalWall.prefab   ← корневой, содержит контейнеры + шаттер + dog tag + NetworkIdentity
 │                                  (единственный префаб стены; заготовка ArsenalWall.prefab удалена, NET-25)
 ├── Slots/
-│   ├── WeaponSlotPrefab.prefab  ← один универсальный слот pegboard (настраивается через Inspector)
-│   └── EquipSlotPrefab.prefab   ← один универсальный слот полки
+│   ├── FireArmSlotPrefab.prefab ← один универсальный слот pegboard (настраивается через Inspector)
+│   └── ShelfSlotPrefab Variant.prefab ← слот полки (вариант FireArmSlotPrefab)
 ├── Weapons/                     ← Prefab Variant оружия из UXR samples
 │   ├── Arsenal_Shotgun.prefab
 │   ├── Arsenal_Grenade.prefab
@@ -580,7 +580,7 @@ Assets/Prefabs/Arsenal/
 
 ### Этап 4: Геймплей
 - [ ] `ArsenalBudgetManager` — система бюджета, refund при возврате
-- [ ] `WeaponSlotController` — LED ON/OFF по бюджету (доступно = светится, нет денег = темно)
+- [ ] `FirearmSlotController` — LED ON/OFF по бюджету (доступно = светится, нет денег = темно)
 - [ ] Ценники (TextMeshPro)
 - [ ] Интеграция с существующей системой оружия и кобурами
 

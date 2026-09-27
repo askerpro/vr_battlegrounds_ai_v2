@@ -289,54 +289,151 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         /// <summary>
-        /// Хват каждого оружия и магазина из арсенала настроен под этот аватар.
+        /// У каждого <see cref="UxrGrabbableObject" /> из <c>Assets/Prefabs</c> для каждой точки
+        /// хвата есть поза именно этого аватара — не дефолтная.
         ///
         /// <para>
         /// UltimateXR хранит позу хвата по GUID префаба аватара и ищет её вверх по цепочке
-        /// родительских префабов (<see cref="UxrGrabPointInfo.GetGripPoseInfo(UxrAvatar, bool)" />).
-        /// Если записи нет, берётся дефолтная — у оружия проекта она пустая, и рука
-        /// хватает оружие открытой ладонью, а само оружие встаёт в руку пивотом, а не рукоятью.
+        /// родительских префабов (<see cref="UxrGrabPointInfo.GetGripPoseInfo(UxrAvatar, bool)" />);
+        /// не нашёл — возвращает сам объект <see cref="UxrGrabPointInfo.DefaultGripPoseInfo" />.
+        /// Поэтому «не default» — сравнение ссылок. Дефолтная запись не знает руки аватара:
+        /// в ней нет точек выравнивания (<c>GripAlignTransformHandLeft/Right</c>), и предмет
+        /// встаёт в ладонь своим пивотом, а не рукоятью; поза пальцев — чужая или общая
+        /// <c>Grab</c>. Запись родительского префаба аватара засчитывается — это штатное
+        /// наследование SDK.
+        /// </para>
+        ///
+        /// <para>
+        /// Своя запись с пустой позой — не отказ: <c>UxrStandardAvatarController.UpdateGrabPoseInfo</c>
+        /// тогда берёт общую позу <c>Grab</c> аватара, а выравнивание остаётся своим. Так
+        /// настроены, например, затвор и отдача оружия.
+        /// </para>
+        ///
+        /// <para>
+        /// Не проверяются <c>GrabProxy</c> карманов (хват перенаправляется на вещь внутри,
+        /// поза прокси не видна) и вложенные префабы — их проверяет их собственный ассет.
         /// </para>
         /// </summary>
         [TestCaseSource(nameof(RegisteredAvatars))]
-        public void Хваты_оружия_арсенала_настроены(string path)
+        public void У_каждого_grabbable_префабов_своя_поза_хвата(string path)
         {
             UxrAvatar avatar = LoadAvatar(path);
             List<string> problems = new List<string>();
+            int checkedPoints = 0;
 
-            foreach (WeaponInfo weapon in Weapons())
+            foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs" }))
             {
-                foreach (GameObject item in new[] { weapon.WeaponPrefab, weapon.MagazinePrefab })
+                string     prefabPath = AssetDatabase.GUIDToAssetPath(guid);
+                GameObject prefab     = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                if (prefab == null || prefab.GetComponent<UxrAvatar>() != null) continue;
+
+                HashSet<UxrGrabbableObject> proxies = AnchorProxies(prefab);
+
+                foreach (UxrGrabbableObject grabbable in prefab.GetComponentsInChildren<UxrGrabbableObject>(true))
                 {
-                    if (item == null) continue;
+                    if (proxies.Contains(grabbable) || IsInsideNestedPrefab(grabbable.gameObject, prefab)) continue;
 
-                    UxrGrabbableObject grabbable = item.GetComponent<UxrGrabbableObject>();
-                    if (grabbable == null)
-                    {
-                        problems.Add($"{item.name}: нет UxrGrabbableObject — это не проблема аватара, но хватать нечего");
-                        continue;
-                    }
-
-                    for (int i = 0; i < grabbable.GrabPointCount; i++)
-                    {
-                        UxrGrabPointInfo point = grabbable.GetGrabPoint(i);
-                        UxrGripPoseInfo  grip  = point.GetGripPoseInfo(avatar);
-                        string           where = $"{item.name} / точка {i}{(string.IsNullOrEmpty(point.EditorName) ? "" : $" '{point.EditorName}'")}";
-
-                        if (grip == null || grip.HandPose == null)
-                        {
-                            problems.Add($"{where}: нет позы хвата для этого аватара и его родителей");
-                            continue;
-                        }
-
-                        if (avatar.GetHandPose(grip.HandPose.name) == null)
-                            problems.Add($"{where}: поза '{grip.HandPose.name}' не найдена у аватара");
-                    }
+                    string where = $"{prefabPath} :: {HierarchyPath(grabbable.transform, prefab.transform)}";
+                    checkedPoints += CheckGripPoses(avatar, grabbable, where, problems);
                 }
             }
 
-            Assert.IsEmpty(problems, $"{avatar.name}, хваты оружия:\n  " + string.Join("\n  ", problems) +
-                                     "\nПоза хвата задаётся на UxrGrabbableObject оружия, вкладка аватара в Grab Points.");
+            Assert.That(checkedPoints, Is.GreaterThan(0), "Не найдено ни одной точки хвата — тест ничего не проверил.");
+            Assert.IsEmpty(problems, $"{avatar.name}, нет своей позы хвата ({problems.Count}):\n  " + string.Join("\n  ", problems) +
+                                     "\nПоза задаётся на UxrGrabbableObject: Grab Points → вкладка аватара.");
+        }
+
+        /// <summary>
+        /// То же для предметов, лежащих в сценах Build Settings, чей источник — не
+        /// <c>Assets/Prefabs</c>: объекты только сцены и экземпляры сэмплов UltimateXR.
+        /// Проверяется экземпляр со всеми override'ами сцены; одинаковые отказы разных
+        /// экземпляров одного источника схлопываются в одну строку.
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void У_каждого_grabbable_в_сценах_своя_поза_хвата(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            SortedSet<string> problems = new SortedSet<string>();
+
+            foreach (EditorBuildSettingsScene buildScene in EditorBuildSettings.scenes.Where(s => s.enabled))
+            {
+                Scene scene = EditorSceneManager.OpenPreviewScene(buildScene.path);
+
+                try
+                {
+                    foreach (GameObject root in scene.GetRootGameObjects())
+                    {
+                        HashSet<UxrGrabbableObject> proxies = AnchorProxies(root);
+
+                        foreach (UxrGrabbableObject grabbable in root.GetComponentsInChildren<UxrGrabbableObject>(true))
+                        {
+                            if (proxies.Contains(grabbable)) continue;
+
+                            GameObject source     = PrefabUtility.GetCorrespondingObjectFromOriginalSource(grabbable.gameObject);
+                            string     sourcePath = source != null ? AssetDatabase.GetAssetPath(source) : null;
+                            if (sourcePath != null && sourcePath.StartsWith("Assets/Prefabs/")) continue; // проверено тестом префабов
+
+                            string where = sourcePath != null
+                                ? $"{sourcePath} :: {source.name}"
+                                : $"{buildScene.path} :: {HierarchyPath(grabbable.transform, null)}";
+
+                            List<string> local = new List<string>();
+                            CheckGripPoses(avatar, grabbable, where, local);
+                            problems.UnionWith(local);
+                        }
+                    }
+                }
+                finally
+                {
+                    EditorSceneManager.ClosePreviewScene(scene);
+                }
+            }
+
+            Assert.IsEmpty(problems, $"{avatar.name}, предметы сцен без своей позы хвата ({problems.Count}):\n  " +
+                                     string.Join("\n  ", problems) +
+                                     "\nСэмплы UltimateXR не знают аватаров проекта: либо убрать их из сцены, либо заменить префабами из Assets/Prefabs.");
+        }
+
+        /// <summary>Проверяет все точки хвата предмета; возвращает число проверенных точек.</summary>
+        private static int CheckGripPoses(UxrAvatar avatar, UxrGrabbableObject grabbable, string where, List<string> problems)
+        {
+            for (int i = 0; i < grabbable.GrabPointCount; i++)
+            {
+                UxrGrabPointInfo point = grabbable.GetGrabPoint(i);
+                UxrGripPoseInfo  grip  = point.GetGripPoseInfo(avatar);
+                string           at    = $"{where} / точка {i}{(string.IsNullOrEmpty(point.EditorName) ? "" : $" '{point.EditorName}'")}";
+
+                if (grip == null || ReferenceEquals(grip, point.DefaultGripPoseInfo))
+                    problems.Add($"{at}: нет записи для аватара — берётся default" +
+                                 (point.DefaultGripPoseInfo?.HandPose != null ? $" ('{point.DefaultGripPoseInfo.HandPose.name}')" : " (пустой)"));
+                else if (grip.HandPose != null && avatar.GetHandPose(grip.HandPose.name) == null)
+                    problems.Add($"{at}: поза '{grip.HandPose.name}' не найдена у аватара и его родителей");
+            }
+
+            return grabbable.GrabPointCount;
+        }
+
+        private static HashSet<UxrGrabbableObject> AnchorProxies(GameObject root)
+        {
+            return new HashSet<UxrGrabbableObject>(root.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true)
+                                                       .Select(a => a.GrabProxy)
+                                                       .Where(p => p != null));
+        }
+
+        private static bool IsInsideNestedPrefab(GameObject go, GameObject prefabRoot)
+        {
+            GameObject instanceRoot = PrefabUtility.GetNearestPrefabInstanceRoot(go);
+            return instanceRoot != null && instanceRoot != prefabRoot;
+        }
+
+        private static string HierarchyPath(Transform t, Transform root)
+        {
+            if (t == root) return t.name + " (корень)";
+
+            string result = t.name;
+            for (Transform p = t.parent; p != null && p != root; p = p.parent)
+                result = p.name + "/" + result;
+            return result;
         }
 
         // ══════════════════════════════════════════════════════════════════

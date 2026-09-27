@@ -974,10 +974,14 @@ namespace UltimateXR.Core.Instantiation
             {
                 BeginSync(UxrStateSyncOptions.Default ^ UxrStateSyncOptions.Network);
 
+                // VR Battlegrounds (патч 9): с учёта снимаем всегда, а не только при destroy.
+                // Иначе деспавненный сетью объект остаётся в _currentInstancedPrefabs и уходит
+                // в начальный снимок состояния следующему клиенту.
+                _currentInstancedPrefabs.Remove(component.CombineIdSource);
+                _currentInstances.Remove(component.CombineIdSource);
+
                 if (destroy)
                 {
-                    _currentInstancedPrefabs.Remove(component.CombineIdSource);
-                    _currentInstances.Remove(component.CombineIdSource);
                     Destroy(component.GameObject);
                 }
 

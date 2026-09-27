@@ -207,9 +207,12 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
                 Debug.Log($"{UxrConstants.NetworkingModule} {nameof(UxrMirrorAvatar)}.{nameof(OnDestroy)}: Is Local? {IsLocal}, Name: {AvatarName}, NetId: {(netIdentity ? netId.ToString() : "null")}");
             }
 
-            if (UxrInstanceManager.HasInstance)
+            // VR Battlegrounds (патч 9): только снять аватар с учёта, без рассылки. Объект
+            // уничтожает Mirror на каждой машине сам; DestroyGameObject слал DestroyGameObjectInternal
+            // другой стороне, где аватара уже нет, — UxrComponentNotFoundException на каждой смене скина.
+            if (UxrInstanceManager.HasInstance && Avatar != null)
             {
-                UxrInstanceManager.Instance.DestroyGameObject(Avatar.gameObject);
+                UxrInstanceManager.Instance.NotifyNetworkDespawn(Avatar.gameObject);
             }
         }
 

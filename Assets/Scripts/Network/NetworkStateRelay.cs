@@ -167,6 +167,11 @@ namespace VrBattlegrounds.Network
             if (!eventArgs.Options.HasFlag(UxrStateSyncOptions.Network))
                 return;
 
+            // Объект уже снят сетью и доживает до конца кадра — его OnDisable (телепорт)
+            // не событие для другой стороны: там объекта уже нет.
+            if (DespawnedObjectEventFilter.ShouldDrop(component))
+                return;
+
             // Событие невыровненного сетевого аватара уйдёт само по AvatarSpawned (NET-26).
             _gate ??= new AvatarStateEventGate(Send);
             if (_gate.TryDefer(component, eventArgs, Time.realtimeSinceStartup))

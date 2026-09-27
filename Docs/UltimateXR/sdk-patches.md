@@ -472,6 +472,41 @@ Unique Ids`, сторож — `UxrUniqueIdOnDiskTests`.
 
 ---
 
+## Патч 9: деспавн сетевого аватара не рассылает уничтожение
+
+**Файлы:**
+- `Runtime/Scripts/Networking/Integrations/Net/Mirror/UxrMirrorAvatar.cs` — `OnDestroy`;
+- `Runtime/Scripts/Core/Instantiation/UxrInstanceManager.cs` — `NotifyNetworkDespawnInternal`.
+
+**Дата:** 2026-09-27
+
+### Проблема
+
+`OnDestroy` (добавлен проектом в `d215b77`, в исходном SDK его нет) снимал аватар с учёта
+`UxrInstanceManager` через `DestroyGameObject`. Тот — синхронизируемый метод: вызов
+`DestroyGameObjectInternal` уходит по сети. Но аватар уничтожает Mirror на каждой машине
+сам, и на другой стороне его уже нет — при каждой смене скина и выходе игрока в логе
+`Error deserializing invoked method DestroyGameObjectInternal()` с
+`UxrComponentNotFoundException … Sender: Player_… (Local) [UxrAvatar]`.
+
+### Применённое изменение
+
+1. `OnDestroy` зовёт `NotifyNetworkDespawn` — локально, без сети (так же поступает
+   интеграция FishNet).
+2. `NotifyNetworkDespawnInternal` снимает объект с учёта (`_currentInstancedPrefabs`,
+   `_currentInstances`) всегда, а не только при `destroy`. Без этого деспавненный аватар
+   оставался бы в учёте и уходил в начальный снимок состояния следующему клиенту — ровно то,
+   ради чего в `d215b77` и звали `DestroyGameObject`.
+
+### Как повторить при обновлении SDK
+
+1. В `UxrMirrorAvatar.OnDestroy` заменить `DestroyGameObject(Avatar.gameObject)` на
+   `NotifyNetworkDespawn(Avatar.gameObject)` с проверкой `Avatar != null`.
+2. В `UxrInstanceManager.NotifyNetworkDespawnInternal` вынести два `Remove` из-под `if (destroy)`.
+3. Хост + клиент MPPM, сменить скин: в логах нет `DestroyGameObjectInternal`.
+
+---
+
 ## Патч 10: префаб-ассет не получает новый id при неверных флагах
 
 **Файл:** `Runtime/Scripts/Core/Unique/UxrUniqueIdImplementer_1.cs`, метод `NotifyOnValidate`

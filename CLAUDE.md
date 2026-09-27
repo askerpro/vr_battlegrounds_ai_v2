@@ -55,7 +55,9 @@ VR-шутер для Oculus Quest 2/3. Unity **6000.4.1f1**, URP. Над про�
   брошенный предмет проходит сквозь пол и падает вечно, а UltimateXR без конца рассылает его
   позицию по сети (PHY-01: `Gun_real` без коллайдеров). Там же обязательны `Collision Detection`
   не `Discrete`, `OutOfWorldGuard`, а у оружия с якорем магазина ещё `AnchoredItemCollisionIgnore`.
-  Проверка: `WeaponDropPhysicsTests`, `OutOfWorldGuardTests`.
+  Каждая деталь (вложенный `UxrGrabbableObject` — затвор, помпа, чека) несёт
+  `GrabOnlyWhenParentHeld`, иначе её берут у лежащего оружия.
+  Проверка: `WeaponDropPhysicsTests`, `OutOfWorldGuardTests`, `WeaponPartGrabTests`.
 - **Аватары и их тесты меняются вместе.** Любая правка аватара — добавил, убрал или
   переименовал компонент, карман, якорь, позу, хват, слой телепорта, новый аватар в
   `AvatarRegistry` — в той же задаче отражается в `AvatarLoadoutTests` (оснащение) и

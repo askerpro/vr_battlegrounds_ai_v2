@@ -84,7 +84,7 @@ namespace VrBattlegrounds.Player
                 }
             }
 
-            return TwoHandGrabPolicy.IsGrabAllowed(grabber, grabbable, grabPointIndex);
+            return GrabRules.IsGrabAllowed(grabber, grabbable, grabPointIndex);
         }
 
         private void OnPlayerDied(PlayerController controller)

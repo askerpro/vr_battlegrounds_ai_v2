@@ -219,6 +219,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2987762542248386242, guid: c563684d5177f9347aa42336107d430f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3198952254307382228}
+    - targetCorrespondingSourceObject: {fileID: 6489569987061388061, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1223590905525180660}
   m_SourcePrefab: {fileID: 100100000, guid: c563684d5177f9347aa42336107d430f, type: 3}
 --- !u!1 &2414837135280946992 stripped
 GameObject:
@@ -238,3 +241,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.OutOfWorldGuard
   _killY: -50
+--- !u!1 &5979098199777735407 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6489569987061388061, guid: c563684d5177f9347aa42336107d430f, type: 3}
+  m_PrefabInstance: {fileID: 645584468361961970}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1223590905525180660
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5979098199777735407}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 596cd6795ef24d34ba6e96e6e740ab31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.GrabOnlyWhenParentHeld
+  _requireParentHeld: 1

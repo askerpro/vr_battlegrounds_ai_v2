@@ -105,7 +105,7 @@ namespace VrBattlegrounds.Tests.Player
             return cases;
         }
 
-        private static Transform AlignTransform(UxrGrabbableObject grabbable, int point, UxrAvatar avatar, UxrHandSide side)
+        internal static Transform AlignTransform(UxrGrabbableObject grabbable, int point, UxrAvatar avatar, UxrHandSide side)
         {
             UxrGrabPointInfo info = grabbable.GetGrabPoint(point);
             UxrGripPoseInfo grip = info.GetGripPoseInfo(avatar);
@@ -125,7 +125,7 @@ namespace VrBattlegrounds.Tests.Player
             return new TestCaseData(c.WeaponPath, c.AvatarPath, c.SupportPoint).SetName($"{{m}}({weapon}, {avatar}, точка {c.SupportPoint})");
         }
 
-        private static List<T> LoadAll<T>() where T : Object
+        internal static List<T> LoadAll<T>() where T : Object
         {
             return AssetDatabase.FindAssets($"t:{typeof(T).Name}")
                                 .Select(AssetDatabase.GUIDToAssetPath)
@@ -162,7 +162,7 @@ namespace VrBattlegrounds.Tests.Player
 
         public static UxrGrabManager Manager => UxrGrabManager.Instance;
 
-        public TwoHandGrabHarness(string weaponPath, string avatarPath, int supportPoint)
+        public TwoHandGrabHarness(string weaponPath, string avatarPath, int supportPoint, bool grabMain = true)
         {
             _savedFeatures = Manager.Features;
             Manager.Features &= ~UxrManipulationFeatures.SmoothTransitions;
@@ -195,6 +195,11 @@ namespace VrBattlegrounds.Tests.Player
             {
                 InvokeIfExists(behaviour, "Awake");
                 InvokeIfExists(behaviour, "OnEnable");
+            }
+
+            if (!grabMain)
+            {
+                return;
             }
 
             Manager.GrabObject(Right, Grabbable, TwoHandGrabCases.MainPoint, false);

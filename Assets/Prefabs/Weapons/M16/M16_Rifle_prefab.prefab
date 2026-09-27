@@ -882,6 +882,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4678195180160311601}
   - component: {fileID: 6298411919803120976}
+  - component: {fileID: 4320362570589301370}
   m_Layer: 0
   m_Name: Recoil
   m_TagString: Untagged
@@ -1015,6 +1016,19 @@ MonoBehaviour:
   _dropSnapMode: 0
   _dropProximityTransformUseSelf: 1
   _dropProximityTransform: {fileID: 0}
+--- !u!114 &4320362570589301370
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1561647127477465984}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 596cd6795ef24d34ba6e96e6e740ab31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.GrabOnlyWhenParentHeld
+  _requireParentHeld: 1
 --- !u!1 &1618744780967228055
 GameObject:
   m_ObjectHideFlags: 0

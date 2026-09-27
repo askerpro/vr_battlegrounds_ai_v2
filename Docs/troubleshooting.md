@@ -116,6 +116,12 @@ int solid = 0; foreach (var c in go.GetComponentsInChildren<Collider>(true)) if 
 обновлении SDK. Иначе смотреть `Allow Multi Grab` у предмета и `Max Distance Grab` у
 дополнительной точки. Разбор — [known-issues, Issue 13](UltimateXR/known-issues.md).
 
+### «Подношу руку к лежащему пистолету — активен затвор» · «Взял оружие за затвор»
+
+**Исправлено 2026-09-27.** Деталь без `GrabOnlyWhenParentHeld` UltimateXR выбирает наравне с
+рукоятью. Новая деталь оружия без компонента — `WeaponPartGrabTests` назовёт её. Если компонент
+стоит, а деталь всё равно берётся — проверить, что галочка `Require Parent Held` включена.
+
 ### «Кладу вторую руку на поддержку — пистолет поворачивается»
 
 **Исправлено 2026-09-27 (`Gun_real`).** UltimateXR при хвате двумя руками доворачивает предмет

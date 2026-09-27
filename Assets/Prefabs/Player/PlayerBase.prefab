@@ -7117,6 +7117,7 @@ MonoBehaviour:
   _source: {fileID: 1192497148757100015}
   _takeOutClip: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
   _onlyByHand: 1
+  _takeOutOnlyByHand: 1
 --- !u!1 &1049627643306835512
 GameObject:
   m_ObjectHideFlags: 0
@@ -68124,6 +68125,7 @@ GameObject:
   - component: {fileID: 3660179452437783722}
   - component: {fileID: 2661479309573987799}
   - component: {fileID: 8369001338393055065}
+  - component: {fileID: 2287495973934865713}
   m_Layer: 0
   m_Name: PlayerBase
   m_TagString: Player
@@ -68863,6 +68865,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.MagazineEjectInput
   _button: 131072
+--- !u!114 &2287495973934865713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7006129303043550839}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a3744a3a48ec04593c2507e734c1f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.PlayerLoadoutManager
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
 --- !u!1 &7007802221916664477
 GameObject:
   m_ObjectHideFlags: 0
@@ -71379,6 +71396,7 @@ MonoBehaviour:
   _source: {fileID: 8243018894068968121}
   _takeOutClip: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
   _onlyByHand: 1
+  _takeOutOnlyByHand: 1
 --- !u!1 &7352261385015658798
 GameObject:
   m_ObjectHideFlags: 0
@@ -75315,6 +75333,7 @@ MonoBehaviour:
   _source: {fileID: 1802909764857265171}
   _takeOutClip: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
   _onlyByHand: 1
+  _takeOutOnlyByHand: 1
 --- !u!1 &7953938832315252334
 GameObject:
   m_ObjectHideFlags: 0

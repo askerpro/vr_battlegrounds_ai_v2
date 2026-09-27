@@ -1,184 +1,332 @@
 using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
 using Mirror;
 using UltimateXR.Avatar;
-using UltimateXR.Manipulation;
 using UltimateXR.Core;
-using VrBattlegrounds.GameModes;
+using UltimateXR.Manipulation;
+using UnityEngine;
 using VrBattlegrounds.Arsenal;
-using VrBattlegrounds.Interaction;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Interaction;
 using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Player
 {
     /// <summary>
-    /// Manages the player's equipment and ammo when round states change.
-    /// Fills the magazine pocket based on weapons currently in the primary/secondary pockets and hands.
+    /// Выдача магазинов в карман своего игрока (<see cref="UxrMagazinePocket"/>).
+    ///
+    /// <para>
+    /// <b>Решает сервер, и только он.</b> Что у игрока в руках и в кобурах, сервер видит
+    /// сам — захваты и установку в якоря реплицирует UltimateXR. Поэтому клиент ничего
+    /// не запрашивает: команду можно было бы подделать, а ответ на неё пришлось бы ждать.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Содержимое кармана — состояние, а не сообщение.</b> Список <c>netId</c> магазинов
+    /// в кармане живёт в <c>SyncList</c>, и каждая машина прячет их в карман этого аватара
+    /// сама, в том числе подключившаяся позже. Прежняя версия клала магазин в карман только
+    /// владельцу (<c>TargetRpc</c>): у остальных он висел там, где его заспавнил сервер,
+    /// а захват из кармана приходил им захватом именно этого объекта. Тот же вывод,
+    /// что у слотов арсенала (NET-23).
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Убирает магазины тоже сервер</b> — <c>NetworkServer.Destroy</c>. Прежний
+    /// <c>Clear()</c> уничтожал сетевые объекты локально на клиенте, и машины расходились.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Когда и сколько — решает не менеджер.</b> Он не знает ни режимов, ни фаз, ни
+    /// сцен: у него две серверные операции — «досыпь по N к каждому оружию»
+    /// (<see cref="ServerEnsureMagazines"/>) и «очисти» (<see cref="ServerClearMagazines"/>).
+    /// Зовут их политики режима или сцены, найдя менеджеры через <see cref="ServerInstances"/>.
+    /// Сколько чего выдать и что выкинуть, считает <see cref="MagazineRefillPlanner"/>.
+    /// </para>
     /// </summary>
     [RequireComponent(typeof(UxrAvatar))]
     public class PlayerLoadoutManager : NetworkBehaviour
     {
+        private static readonly List<PlayerLoadoutManager> ServerInstancesList = new List<PlayerLoadoutManager>();
+
+        /// <summary>Менеджеры всех игроков на этом сервере.</summary>
+        public static IReadOnlyList<PlayerLoadoutManager> ServerInstances => ServerInstancesList;
+
+        /// <summary><c>netId</c> магазинов, лежащих в кармане. Пишет только сервер.</summary>
+        private readonly SyncList<uint> _pocketMagazines = new SyncList<uint>();
+
+        /// <summary>Магазины из списка, которые у клиента ещё не заспавнились.</summary>
+        private readonly HashSet<uint> _pendingBindings = new HashSet<uint>();
+        private readonly List<uint> _resolvedBindings = new List<uint>();
+
         private UxrAvatar _avatar;
-        private UxrMagazinePocket _magazinePocket;
+        private UxrMagazinePocket _pocket;
 
-        private UxrGrabbableObjectAnchor _anchorHipR;
-        private UxrGrabbableObjectAnchor _anchorBack;
-
-        private void Awake()
+        /// <summary>Карман магазинов этого аватара или null, если его нет в префабе.</summary>
+        public UxrMagazinePocket Pocket
         {
-            _avatar = GetComponent<UxrAvatar>();
-        }
-
-        private void Start()
-        {
-            // Gather references
-            _magazinePocket = GetComponentInChildren<UxrMagazinePocket>(true);
-
-            UxrGrabbableObjectAnchor[] anchors = GetComponentsInChildren<UxrGrabbableObjectAnchor>(true);
-            foreach (var anchor in anchors)
+            get
             {
-                if (anchor.gameObject.name.Contains("Anchor_Hip_R")) _anchorHipR = anchor;
-                else if (anchor.gameObject.name.Contains("Anchor_Back")) _anchorBack = anchor;
+                EnsureReferences();
+                return _pocket;
             }
         }
 
-        private void OnEnable()
+        private void Awake()
         {
-            EliminationMode.OnRoundStateChangedLocal += HandleRoundStateChanged;
+            EnsureReferences();
+        }
+
+        private void EnsureReferences()
+        {
+            if (_avatar == null) _avatar = GetComponent<UxrAvatar>();
+            if (_pocket == null) _pocket = GetComponentInChildren<UxrMagazinePocket>(true);
+        }
+
+        // ── Сервер ─────────────────────────────────────────────
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+
+            if (!ServerInstancesList.Contains(this))
+                ServerInstancesList.Add(this);
+
+            if (Pocket != null)
+            {
+                Pocket.ItemReleased -= ServerHandleItemReleased;
+                Pocket.ItemReleased += ServerHandleItemReleased;
+            }
+        }
+
+        public override void OnStopServer()
+        {
+            UnsubscribeServer();
+            base.OnStopServer();
         }
 
         private void OnDisable()
         {
-            EliminationMode.OnRoundStateChangedLocal -= HandleRoundStateChanged;
+            // Статический список переживает объект — снимаемся и здесь.
+            UnsubscribeServer();
         }
 
-        private void HandleRoundStateChanged(RoundState newState)
+        private void UnsubscribeServer()
         {
-            // We only process logic for the local player's avatar
-            if (!isLocalPlayer && !isOwned) return;
+            ServerInstancesList.Remove(this);
 
-            if (newState == RoundState.Countdown)
-            {
-                RefillMagazinesLocally();
-            }
-        }
-
-        [ContextMenu("Refill Magazines")]
-        public void RefillMagazinesLocally()
-        {
-            if (_magazinePocket == null) return;
-
-            GameLog.Arsenal.Info($"[LoadoutManager] Scanning weapons to request magazines for '{gameObject.name}'...");
-
-            _magazinePocket.Clear();
-
-            HashSet<WeaponInfo> processedWeapons = new HashSet<WeaponInfo>();
-
-            // Check anchors (holsters)
-            if (_anchorHipR != null) ProcessAnchorForAmmo(_anchorHipR, processedWeapons);
-            if (_anchorBack != null) ProcessAnchorForAmmo(_anchorBack, processedWeapons);
-
-            // Check hands
-            if (_avatar != null)
-            {
-                ProcessGrabberForAmmo(_avatar.GetGrabber(UxrHandSide.Left), processedWeapons);
-                ProcessGrabberForAmmo(_avatar.GetGrabber(UxrHandSide.Right), processedWeapons);
-            }
-
-            // Only request if we found weapons
-            if (processedWeapons.Count > 0)
-            {
-                string[] weaponIds = processedWeapons.Select(w => w.WeaponId).ToArray();
-                CmdRequestMagazines(weaponIds);
-            }
-        }
-
-        private void ProcessGrabberForAmmo(UxrGrabber grabber, HashSet<WeaponInfo> processed)
-        {
-            if (grabber == null || grabber.GrabbedObject == null) return;
-            TryRegisterWeapon(grabber.GrabbedObject, processed);
-        }
-
-        private void ProcessAnchorForAmmo(UxrGrabbableObjectAnchor anchor, HashSet<WeaponInfo> processed)
-        {
-            if (anchor == null || anchor.CurrentPlacedObject == null) return;
-            TryRegisterWeapon(anchor.CurrentPlacedObject, processed);
-        }
-
-        private void TryRegisterWeapon(UxrGrabbableObject grabObj, HashSet<WeaponInfo> processed)
-        {
-            var weaponComp = grabObj.GetComponent<WeaponComponent>();
-            if (weaponComp == null || weaponComp.WeaponData == null) return;
-
-            // Only register each weapon type once
-            if (!processed.Contains(weaponComp.WeaponData))
-            {
-                processed.Add(weaponComp.WeaponData);
-            }
-        }
-
-        #region Networking
-
-        /// <summary>
-        /// Sent from the Client to the Server to request magazines for equipped weapons.
-        /// </summary>
-        [Command]
-        private void CmdRequestMagazines(string[] weaponIds)
-        {
-            List<NetworkIdentity> spawnedMags = new List<NetworkIdentity>();
-
-            foreach (string wId in weaponIds)
-            {
-                WeaponInfo info = WeaponRegistry.Instance.GetById(wId);
-                if (info == null || info.MagazinePrefab == null || info.MaxMagazineCount <= 0) continue;
-
-                for (int i = 0; i < info.MaxMagazineCount; i++)
-                {
-                    // Создание и спавн ведёт сетевой слой: он гасит «Auto Anchor» до Awake
-                    // и выравнивает UniqueId по netId. Без выравнивания вставка магазина
-                    // не применится на другой машине — это NET-16, см. NetworkUxrIdentity.
-                    GameObject magGo = NetworkUxrIdentity.CreateInstance(info.MagazinePrefab);
-                    if (magGo == null) continue;
-
-                    magGo.SetActive(true);
-
-                    // Network Server handles giving authority back to the requesting client
-                    NetworkUxrIdentity.SpawnServerObject(magGo, connectionToClient);
-
-                    var netId = magGo.GetComponent<NetworkIdentity>();
-                    if (netId != null) spawnedMags.Add(netId);
-                }
-            }
-
-            if (spawnedMags.Count > 0)
-            {
-                GameLog.Arsenal.Info($"[LoadoutManager] Server spawned {spawnedMags.Count} magazines for client.");
-                TargetReceiveMagazines(connectionToClient, spawnedMags.ToArray());
-            }
+            if (_pocket != null)
+                _pocket.ItemReleased -= ServerHandleItemReleased;
         }
 
         /// <summary>
-        /// Sent from the Server back to the Client that requested the magazines.
-        /// Puts the newly spawned network magazines into the player's pockets.
+        /// Досыпает в карман магазины к экипированному оружию и убирает лишние,
+        /// если не хватает места.
         /// </summary>
-        [TargetRpc]
-        private void TargetReceiveMagazines(NetworkConnection target, NetworkIdentity[] magazines)
+        /// <param name="perWeapon">
+        /// Сколько магазинов держать к каждому оружию; 0 — сколько задано в
+        /// <see cref="WeaponInfo.MaxMagazineCount"/>.
+        /// </param>
+        [Server]
+        public void ServerEnsureMagazines(int perWeapon)
         {
-            foreach (var netId in magazines)
+            if (Pocket == null) return;
+
+            List<WeaponComponent> weapons = CollectEquippedWeapons();
+            if (weapons.Count == 0) return;
+
+            IReadOnlyList<UxrGrabbableObject> stored = Pocket.StoredItems;
+
+            MagazineRefillPlanner.Plan plan = MagazineRefillPlanner.Compute(
+                weapons,
+                stored,
+                (magazine, weapon) => UxrMagazinePocket.Fits(magazine, weapon.GetComponent<UxrGrabbableObject>()),
+                weapon => weapon.WeaponData.MagazinePrefab == null ? 0
+                    : perWeapon > 0 ? perWeapon : weapon.WeaponData.MaxMagazineCount,
+                Pocket.Capacity);
+
+            // Выкидываем до выдачи: индексы плана указывают в текущий список кармана.
+            var discard = new List<UxrGrabbableObject>();
+            foreach (int index in plan.Discard) discard.Add(stored[index]);
+            foreach (UxrGrabbableObject magazine in discard) ServerDestroyMagazine(magazine);
+
+            foreach (int index in plan.SpawnFor)
+                ServerSpawnMagazine(weapons[index].WeaponData);
+
+            if (plan.SpawnFor.Count > 0 || discard.Count > 0)
             {
-                if (netId != null)
-                {
-                    var grabbable = netId.GetComponent<UxrGrabbableObject>();
-                    if (grabbable != null)
-                    {
-                        _magazinePocket.ForceStoreItem(grabbable);
-                    }
-                }
+                GameLog.Arsenal.Verbose(
+                    $"[Loadout] {name}: выдано магазинов {plan.SpawnFor.Count}, убрано {discard.Count}.", this);
             }
         }
 
-        #endregion
+        /// <summary>Убирает из кармана все магазины — на всех машинах.</summary>
+        [Server]
+        public void ServerClearMagazines()
+        {
+            if (Pocket == null) return;
+
+            foreach (UxrGrabbableObject magazine in new List<UxrGrabbableObject>(Pocket.StoredItems))
+                ServerDestroyMagazine(magazine);
+
+            _pocketMagazines.Clear();
+        }
+
+        [Server]
+        private void ServerSpawnMagazine(WeaponInfo info)
+        {
+            // Создание и спавн ведёт сетевой слой: он гасит «Auto Anchor» до Awake
+            // и выравнивает UniqueId по netId. Без выравнивания захват магазина
+            // не применится на другой машине — это NET-16, см. NetworkUxrIdentity.
+            GameObject magazine = NetworkUxrIdentity.CreateInstance(info.MagazinePrefab);
+            if (magazine == null) return;
+
+            // Клиенты увидят объект там, где он был при спавне, — до того, как спрячут
+            // его в карман. Пусть это будет сам карман.
+            magazine.transform.SetPositionAndRotation(Pocket.transform.position, Pocket.transform.rotation);
+            magazine.SetActive(true);
+
+            NetworkUxrIdentity.SpawnServerObject(magazine);
+
+            NetworkIdentity identity = magazine.GetComponent<NetworkIdentity>();
+            UxrGrabbableObject grabbable = magazine.GetComponent<UxrGrabbableObject>();
+
+            if (identity == null || identity.netId == 0 || grabbable == null)
+            {
+                GameLog.Arsenal.Warning($"[Loadout] Магазин '{info.MagazinePrefab.name}' не сетевой или не хватаемый — в карман не кладётся.", this);
+                return;
+            }
+
+            _pocketMagazines.Add(identity.netId);
+            Pocket.ForceStoreItem(grabbable);
+        }
+
+        [Server]
+        private void ServerDestroyMagazine(UxrGrabbableObject magazine)
+        {
+            if (magazine == null) return;
+
+            NetworkIdentity identity = magazine.GetComponent<NetworkIdentity>();
+            if (identity != null) _pocketMagazines.Remove(identity.netId);
+
+            if (identity != null && identity.netId != 0)
+                NetworkServer.Destroy(magazine.gameObject);
+            else
+                Destroy(magazine.gameObject);
+        }
+
+        /// <summary>Магазин покинул карман на сервере — снимаем его с учёта.</summary>
+        private void ServerHandleItemReleased(UxrGrabbableObject item)
+        {
+            if (!isServer || item == null) return;
+
+            NetworkIdentity identity = item.GetComponent<NetworkIdentity>();
+            if (identity != null) _pocketMagazines.Remove(identity.netId);
+        }
+
+        /// <summary>
+        /// Оружие в руках и в якорях аватара (кобуры), по одному на тип. Оружием считается
+        /// предмет с <see cref="WeaponComponent"/> — его ставит стена арсенала при выдаче.
+        /// </summary>
+        public List<WeaponComponent> CollectEquippedWeapons()
+        {
+            EnsureReferences();
+
+            var result = new List<WeaponComponent>();
+            if (_avatar == null) return result;
+
+            foreach (UxrHandSide side in new[] { UxrHandSide.Left, UxrHandSide.Right })
+            {
+                UxrGrabber grabber = _avatar.GetGrabber(side);
+                if (grabber != null) AddWeapon(grabber.GrabbedObject, result);
+            }
+
+            foreach (UxrGrabbableObjectAnchor anchor in GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
+                AddWeapon(anchor.CurrentPlacedObject, result);
+
+            return result;
+        }
+
+        private static void AddWeapon(UxrGrabbableObject grabbed, List<WeaponComponent> result)
+        {
+            if (grabbed == null) return;
+
+            // В руке может оказаться часть оружия — затвор или цевьё.
+            WeaponComponent weapon = grabbed.GetComponentInParent<WeaponComponent>();
+            if (weapon == null || weapon.WeaponData == null) return;
+
+            foreach (WeaponComponent known in result)
+            {
+                if (known.WeaponData == weapon.WeaponData) return;
+            }
+
+            result.Add(weapon);
+        }
+
+        // ── Клиент ─────────────────────────────────────────────
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            // На хосте магазины прячет сервер — второй раз не надо.
+            if (isServer) return;
+
+            _pocketMagazines.OnAdd += HandleMagazineAdded;
+
+            foreach (uint netId in _pocketMagazines)
+                _pendingBindings.Add(netId);
+        }
+
+        public override void OnStopClient()
+        {
+            if (!isServer)
+                _pocketMagazines.OnAdd -= HandleMagazineAdded;
+
+            base.OnStopClient();
+        }
+
+        private void HandleMagazineAdded(int index)
+        {
+            _pendingBindings.Add(_pocketMagazines[index]);
+        }
+
+        private void Update()
+        {
+            if (_pendingBindings.Count > 0)
+                ResolvePendingBindings();
+        }
+
+        /// <summary>
+        /// Прячет в карман магазины, которые уже приехали к клиенту. Порядок спавн-сообщений
+        /// и дельт <c>SyncList</c> Mirror не согласовывает — ждём явно, как стена арсенала.
+        /// </summary>
+        private void ResolvePendingBindings()
+        {
+            if (Pocket == null) return;
+
+            _resolvedBindings.Clear();
+
+            foreach (uint netId in _pendingBindings)
+            {
+                if (!_pocketMagazines.Contains(netId))
+                {
+                    // Магазин уже достали или убрали — прятать нечего.
+                    _resolvedBindings.Add(netId);
+                    continue;
+                }
+
+                if (!NetworkClient.spawned.TryGetValue(netId, out NetworkIdentity identity) || identity == null)
+                    continue;
+
+                UxrGrabbableObject grabbable = identity.GetComponent<UxrGrabbableObject>();
+                if (grabbable != null) Pocket.ForceStoreItem(grabbable);
+
+                _resolvedBindings.Add(netId);
+            }
+
+            foreach (uint netId in _resolvedBindings)
+                _pendingBindings.Remove(netId);
+
+            _resolvedBindings.Clear();
+        }
     }
 }

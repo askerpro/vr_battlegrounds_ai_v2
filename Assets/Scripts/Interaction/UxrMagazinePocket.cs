@@ -29,6 +29,12 @@ namespace VrBattlegrounds.Interaction
         /// </summary>
         public event Action<UxrGrabber, UxrGrabbableObject> ItemExtracted;
 
+        /// <summary>
+        /// Предмет покинул карман — всё равно как: достали своей рукой или захват пришёл
+        /// по сети. Сервер по нему снимает магазин с учёта кармана.
+        /// </summary>
+        public event Action<UxrGrabbableObject> ItemReleased;
+
         private void Awake()
         {
             _anchor = GetComponent<UxrGrabbableObjectAnchor>();
@@ -99,31 +105,81 @@ namespace VrBattlegrounds.Interaction
             }
         }
 
+        /// <summary>
+        /// Кладёт выданный магазин в карман. Повторный вызов с тем же предметом безвреден:
+        /// на хосте выдачу применяют и сервер, и клиент одного процесса.
+        /// </summary>
         public void ForceStoreItem(UxrGrabbableObject item)
         {
+            if (item == null || _storedItems.Contains(item)) return;
+
             StoreItem(item);
+
+            if (_anchor != null) _anchor.UpdateGrabProxyState();
         }
 
-        public void Clear()
+        /// <summary>Сколько магазинов сейчас в кармане.</summary>
+        public int Count
         {
-            foreach (var item in _storedItems)
+            get
             {
-                if (item != null) Destroy(item.gameObject);
+                _storedItems.RemoveAll(item => item == null);
+                return _storedItems.Count;
             }
-            _storedItems.Clear();
-            if (_anchor != null) _anchor.UpdateGrabProxyState();
+        }
+
+        public int Capacity => _capacity;
+
+        /// <summary>Спрятанные магазины, от старых к новым.</summary>
+        public IReadOnlyList<UxrGrabbableObject> StoredItems
+        {
+            get
+            {
+                _storedItems.RemoveAll(item => item == null);
+                return _storedItems;
+            }
+        }
+
+        /// <summary>
+        /// Встаёт ли магазин в это оружие. Совместимость решает якорь магазина оружия
+        /// (<c>IsCompatibleObject</c>) — тот же критерий, что при извлечении из кармана.
+        /// </summary>
+        public static bool Fits(UxrGrabbableObject magazine, UxrGrabbableObject weapon)
+        {
+            if (magazine == null || weapon == null) return false;
+
+            return IsCompatible(magazine, weapon.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true));
+        }
+
+        private static bool IsCompatible(UxrGrabbableObject item, UxrGrabbableObjectAnchor[] weaponAnchors)
+        {
+            foreach (UxrGrabbableObjectAnchor anchor in weaponAnchors)
+            {
+                if (anchor.IsCompatibleObject(item))
+                    return true;
+            }
+
+            return false;
         }
 
         private void StoreItem(UxrGrabbableObject item)
         {
             _storedItems.Add(item);
-            
+
+            // Достаёт магазин из кармана только машина владельца (прокси-захват решается
+            // локально), а остальным приходит уже захват конкретного магазина. У них он
+            // лежит здесь выключенным — его нужно достать, иначе в чужой руке окажется
+            // невидимый предмет.
+            item.Grabbing -= OnStoredItemGrabbing;
+            item.Grabbing += OnStoredItemGrabbing;
+
             // Скрываем и делаем дочерним объектом кармана
             item.transform.SetParent(this.transform);
             
             // Сбрасываем физику
             Rigidbody rb = item.GetComponent<Rigidbody>();
-            if (rb != null)
+            // У кинематического тела скорости нет — Unity на запись ругается предупреждением.
+            if (rb != null && !rb.isKinematic)
             {
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
@@ -161,17 +217,7 @@ namespace VrBattlegrounds.Interaction
 
                 foreach (UxrGrabbableObject storedItem in _storedItems)
                 {
-                    bool isCompatible = false;
-                    foreach (var anchor in weaponAnchors)
-                    {
-                        if (anchor.IsCompatibleObject(storedItem))
-                        {
-                            isCompatible = true;
-                            break;
-                        }
-                    }
-
-                    if (isCompatible)
+                    if (IsCompatible(storedItem, weaponAnchors))
                     {
                         itemToExtract = storedItem;
                         break;
@@ -185,16 +231,38 @@ namespace VrBattlegrounds.Interaction
                 itemToExtract = _storedItems.Last();
             }
 
-            // Достаем объект
-            _storedItems.Remove(itemToExtract);
-            itemToExtract.gameObject.SetActive(true);
-            itemToExtract.transform.SetParent(null); 
-            
+            Release(itemToExtract);
+
             // Телепортируем предмет прямо в хватающую руку
             itemToExtract.transform.position = grabber.transform.position;
             itemToExtract.transform.rotation = grabber.transform.rotation;
 
             return itemToExtract;
+        }
+
+        /// <summary>Возвращает спрятанный предмет в мир: список, видимость, родитель.</summary>
+        private void Release(UxrGrabbableObject item)
+        {
+            item.Grabbing -= OnStoredItemGrabbing;
+            _storedItems.Remove(item);
+            item.gameObject.SetActive(true);
+            item.transform.SetParent(null);
+
+            ItemReleased?.Invoke(item);
+        }
+
+        /// <summary>
+        /// Спрятанный магазин схватили в обход <see cref="ExtractMagazine"/> — захват
+        /// пришёл по сети с машины владельца кармана.
+        /// </summary>
+        private void OnStoredItemGrabbing(object sender, UxrManipulationEventArgs e)
+        {
+            UxrGrabbableObject item = e.GrabbableObject;
+            if (item == null || !_storedItems.Contains(item)) return;
+
+            Release(item);
+
+            if (_anchor != null) _anchor.UpdateGrabProxyState();
         }
     }
 }

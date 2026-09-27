@@ -177,6 +177,7 @@ MonoBehaviour:
   _source: {fileID: 6997273170827710907}
   _takeOutClip: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
   _onlyByHand: 1
+  _takeOutOnlyByHand: 1
 --- !u!1 &239341688976474358
 GameObject:
   m_ObjectHideFlags: 0
@@ -1676,6 +1677,7 @@ MonoBehaviour:
   _source: {fileID: 2347532448504234674}
   _takeOutClip: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
   _onlyByHand: 1
+  _takeOutOnlyByHand: 1
 --- !u!1 &7142175671559402934
 GameObject:
   m_ObjectHideFlags: 0
@@ -2104,6 +2106,7 @@ MonoBehaviour:
   _source: {fileID: 8811140910606223472}
   _takeOutClip: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
   _onlyByHand: 1
+  _takeOutOnlyByHand: 1
 --- !u!1 &7608998417904736639
 GameObject:
   m_ObjectHideFlags: 0
@@ -5686,6 +5689,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1983294309419792135}
+    - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5634233130142329166}
     - targetCorrespondingSourceObject: {fileID: 9042948311470002378, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4910911380865266189}
@@ -6311,6 +6317,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.MagazineEjectInput
   _button: 131072
+--- !u!114 &5634233130142329166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4613916165338528910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a3744a3a48ec04593c2507e734c1f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.PlayerLoadoutManager
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
 --- !u!1 &4661882589782325815 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 9042948311470002378, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}

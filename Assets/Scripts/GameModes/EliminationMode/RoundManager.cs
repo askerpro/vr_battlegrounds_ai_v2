@@ -95,6 +95,12 @@ namespace VrBattlegrounds.GameModes
                 m => m._readiness.AllReady,
                 "все живые игроки готовы"),
 
+            // Старт по таймеру (RoundStartRule.Timer): готовность не спрашивается,
+            // закупка длится ровно отведённое время. Отдельная строка — ради причины в логе.
+            new PhaseTransition(RoundState.Equipment, RoundState.Countdown,
+                m => m._readiness.StartRule == RoundStartRule.Timer && m._readiness.IsSatisfied,
+                "время закупки вышло"),
+
             // Предел ожидания. Строка отдельная и стоит ниже, чтобы в логе была видна
             // разница: раунд начался потому, что все готовы, или потому, что ждать
             // дальше некогда. Само правило матча применяет RoundReadiness — здесь
@@ -160,11 +166,13 @@ namespace VrBattlegrounds.GameModes
         ///     Предел ожидания готовности, секунды. Ноль и меньше — предела нет.
         /// </param>
         /// <param name="timeoutRule">Правило матча при истечении предела.</param>
+        /// <param name="startRule">Чем кончается фаза закупки: готовностью или только таймером.</param>
         public RoundManager(IPlayerRoster roster = null,
                             float timeLimit = RoundReadiness.DefaultTimeLimit,
-                            RoundReadinessTimeoutRule timeoutRule = RoundReadinessTimeoutRule.AutoReady)
+                            RoundReadinessTimeoutRule timeoutRule = RoundReadinessTimeoutRule.AutoReady,
+                            RoundStartRule startRule = RoundStartRule.Readiness)
         {
-            _readiness = new RoundReadiness(roster, timeLimit, timeoutRule);
+            _readiness = new RoundReadiness(roster, timeLimit, timeoutRule, startRule);
         }
 
         public RoundState State => _roundState;

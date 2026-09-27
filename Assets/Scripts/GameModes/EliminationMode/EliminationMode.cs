@@ -43,8 +43,12 @@ namespace VrBattlegrounds.GameModes
         [SerializeField] private float _roundDuration = 90f;
 
         [Header("Готовность к раунду (T-29)")]
-        [Tooltip("Сколько секунд фаза Equipment ждёт готовности всех живых игроков. " +
-                 "Ноль и меньше — ждать без предела.")]
+        [Tooltip("Чем кончается закупка. Readiness — ждать готовности всех (жетон), предел ниже " +
+                 "— страховка. Timer — закупка длится ровно предел ниже, жетон скрыт.")]
+        [SerializeField] private RoundStartRule _roundStartRule = RoundStartRule.Readiness;
+
+        [Tooltip("Readiness: сколько секунд фаза Equipment ждёт готовности всех живых игроков, " +
+                 "ноль и меньше — ждать без предела. Timer: длительность закупки, должна быть больше нуля.")]
         [SerializeField] private float _readinessTimeLimit = RoundReadiness.DefaultTimeLimit;
 
         [Tooltip("Что делать, когда предел ожидания истёк, а готовы не все.")]
@@ -165,6 +169,27 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>Правило матча при истечении предела ожидания.</summary>
         public RoundReadinessTimeoutRule ReadinessTimeoutRule => _readinessTimeoutRule;
+
+        /// <summary>
+        /// Чем кончается закупка. Поле префаба, поэтому одинаково известно серверу и
+        /// клиентам без синхронизации: стена по нему решает, показывать ли жетон.
+        /// </summary>
+        public RoundStartRule RoundStartRule => _roundStartRule;
+
+        /// <summary>
+        /// Сколько осталось закупки до обратного отсчёта: при старте по таймеру — до его
+        /// конца, при ожидании готовности — до предела. Вне фазы <c>Equipment</c> и без
+        /// предела — ноль. Считается локально, как и остальные таймеры фаз.
+        /// </summary>
+        public float EquipmentTimeRemaining
+        {
+            get
+            {
+                float limit = RoundReadiness.EffectiveTimeLimit(_roundStartRule, _readinessTimeLimit);
+                if (_roundState != RoundState.Equipment || limit <= 0f) return 0f;
+                return Mathf.Max(0f, limit - PhaseElapsed);
+            }
+        }
         /// <summary>Сколько секунд идёт текущая фаза. Считается локально, без обращения к сети.</summary>
         private float PhaseElapsed => (float)Math.Max(0d, NetworkTime.time - _phaseStartTime);
 
@@ -262,7 +287,7 @@ namespace VrBattlegrounds.GameModes
             // Создаём менеджеры как обычные C# объекты — без GameObject, без NetworkBehaviour.
             // Связывание с OnSetEnded живёт ровно здесь, в конструкторе: событий у SetManager
             // нет, поэтому подписаться дважды (MATCH-01) физически не на что.
-            _roundManager = new RoundManager(PlayerRoster, _readinessTimeLimit, _readinessTimeoutRule);
+            _roundManager = new RoundManager(PlayerRoster, _readinessTimeLimit, _readinessTimeoutRule, _roundStartRule);
             _setManager = new SetManager(_roundManager, OnSetEnded);
 
             string teamsStr = string.Join(" vs ", Teams.Select(t => t != null ? t.displayName : "null"));

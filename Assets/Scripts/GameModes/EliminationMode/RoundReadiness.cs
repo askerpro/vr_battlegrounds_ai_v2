@@ -6,6 +6,27 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.GameModes
 {
     /// <summary>
+    /// Чем кончается фаза закупки (<c>Equipment</c>). Правило матча — настройка режима:
+    /// механизм готовности сохранён, но его можно выключить, не трогая код.
+    /// См. <c>Docs/gameplay.md</c>, «Готовность к раунду».
+    /// </summary>
+    public enum RoundStartRule
+    {
+        /// <summary>
+        /// Раунд ждёт готовности всех живых игроков (жетон на стене арсенала).
+        /// Предел ожидания — страховка: по его истечении работает
+        /// <see cref="RoundReadinessTimeoutRule" />.
+        /// </summary>
+        Readiness,
+
+        /// <summary>
+        /// Закупка длится ровно предел ожидания, готовность не спрашивается.
+        /// Жетон на стене не показывается — объявлять им нечего.
+        /// </summary>
+        Timer
+    }
+
+    /// <summary>
     /// Что делать, когда предел ожидания готовности истёк, а готовы не все.
     /// Правило матча — настройка режима, а не жёстко зашитое решение: см.
     /// <c>Docs/gameplay.md</c>, «Готовность к раунду».
@@ -61,42 +82,86 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>
         /// Предел ожидания, секунды. Ноль и меньше означают «ждать сколько угодно» —
-        /// раунд не начнётся, пока не готовы все.
+        /// раунд не начнётся, пока не готовы все. В режиме <see cref="RoundStartRule.Timer" />
+        /// это длительность закупки, и она всегда положительна.
         /// </summary>
         public float TimeLimit { get; }
 
         /// <summary>Что делать по истечении предела.</summary>
         public RoundReadinessTimeoutRule TimeoutRule { get; }
 
+        /// <summary>Чем кончается фаза закупки: готовностью или только таймером.</summary>
+        public RoundStartRule StartRule { get; }
+
         /// <param name="roster">Источник данных об игроках. null — боевой PlayersManager.</param>
-        /// <param name="timeLimit">Предел ожидания в секундах; ноль и меньше — предела нет.</param>
+        /// <param name="timeLimit">
+        ///     Предел ожидания в секундах; ноль и меньше — предела нет. Для
+        ///     <see cref="RoundStartRule.Timer" /> — длительность закупки.
+        /// </param>
         /// <param name="timeoutRule">Правило матча при истечении предела.</param>
+        /// <param name="startRule">Чем кончается фаза закупки.</param>
         public RoundReadiness(IPlayerRoster roster = null,
                               float timeLimit = DefaultTimeLimit,
-                              RoundReadinessTimeoutRule timeoutRule = RoundReadinessTimeoutRule.AutoReady)
+                              RoundReadinessTimeoutRule timeoutRule = RoundReadinessTimeoutRule.AutoReady,
+                              RoundStartRule startRule = RoundStartRule.Readiness)
         {
             _roster = roster ?? new PlayersManagerRoster();
-            TimeLimit = timeLimit;
             TimeoutRule = timeoutRule;
+            StartRule = startRule;
+
+            TimeLimit = EffectiveTimeLimit(startRule, timeLimit);
+
+            if (TimeLimit != timeLimit)
+            {
+                GameLog.Match.Warning(
+                    $"[RoundReadiness] Старт по таймеру с пределом {timeLimit:F0} с — раунд не начался бы никогда. " +
+                    $"Взято умолчание {DefaultTimeLimit:F0} с.");
+            }
         }
 
-        /// <summary>Живые игроки, которых раунд ещё ждёт. Пусто до первого <see cref="Evaluate" />.</summary>
+        /// <summary>
+        /// Предел, который реально действует при данном правиле. «Ждать без предела» при
+        /// старте по таймеру значило бы «никогда не начинать» — такую настройку не исполняем
+        /// буквально, а подменяем умолчанием. Одна функция и для машины раунда, и для HUD,
+        /// чтобы показанный остаток не расходился с настоящим.
+        /// </summary>
+        public static float EffectiveTimeLimit(RoundStartRule startRule, float timeLimit) =>
+            startRule == RoundStartRule.Timer && timeLimit <= 0f ? DefaultTimeLimit : timeLimit;
+
+        /// <summary>
+        /// Живые игроки, которых раунд ещё ждёт. Пусто до первого <see cref="Evaluate" />
+        /// и всегда пусто при старте по таймеру — там не ждут никого.
+        /// </summary>
         public IReadOnlyList<PlayerSession> Pending => _pending;
 
         /// <summary>Сколько живых игроков участвует в раунде на момент последней проверки.</summary>
         public int AliveCount { get; private set; }
 
-        /// <summary>Все живые игроки объявили готовность (и живые вообще есть).</summary>
-        public bool AllReady => AliveCount > 0 && _pending.Count == 0;
+        /// <summary>
+        /// Все живые игроки объявили готовность (и живые вообще есть). При старте по
+        /// таймеру готовность не спрашивается, поэтому всегда false.
+        /// </summary>
+        public bool AllReady => StartRule == RoundStartRule.Readiness && AliveCount > 0 && _pending.Count == 0;
 
         /// <summary>Предел ожидания истёк и правило матча уже применено.</summary>
         public bool LimitExpired { get; private set; }
 
+        /// <summary>Время закупки вышло. Имеет смысл только при старте по таймеру.</summary>
+        public bool PurchaseTimeOver { get; private set; }
+
         /// <summary>
-        /// Можно начинать отсчёт: либо готовы все, либо истёк предел ожидания.
-        /// Без единого живого игрока — нельзя: начинать раунд не с кем.
+        /// Можно начинать отсчёт: готовы все, истёк предел ожидания либо вышло время
+        /// закупки. Без единого живого игрока — нельзя: начинать раунд не с кем.
         /// </summary>
-        public bool IsSatisfied => AliveCount > 0 && (_pending.Count == 0 || LimitExpired);
+        public bool IsSatisfied
+        {
+            get
+            {
+                if (AliveCount == 0) return false;
+                if (StartRule == RoundStartRule.Timer) return PurchaseTimeOver;
+                return _pending.Count == 0 || LimitExpired;
+            }
+        }
 
         /// <summary>
         /// Готовит объект к новому раунду: снимает готовность со всех игроков команд
@@ -115,6 +180,7 @@ namespace VrBattlegrounds.GameModes
             _pending.Clear();
             AliveCount = 0;
             LimitExpired = false;
+            PurchaseTimeOver = false;
 
             if (teams == null) return;
 
@@ -136,6 +202,16 @@ namespace VrBattlegrounds.GameModes
         public void Evaluate(IReadOnlyList<TeamData> teams, float elapsedInPhase)
         {
             Collect(teams);
+
+            if (StartRule == RoundStartRule.Timer)
+            {
+                if (!PurchaseTimeOver && elapsedInPhase >= TimeLimit)
+                {
+                    PurchaseTimeOver = true;
+                    GameLog.Match.Info($"[RoundReadiness] Время закупки {TimeLimit:F0} с вышло.");
+                }
+                return;
+            }
 
             if (LimitExpired) return;
             if (TimeLimit <= 0f) return;
@@ -162,7 +238,11 @@ namespace VrBattlegrounds.GameModes
                     if (session == null) continue;
 
                     AliveCount++;
-                    if (!session.ReadyState) _pending.Add(session);
+
+                    // При старте по таймеру не ждут никого: иначе HUD показывал бы
+                    // «ждём Петю» там, где Петю никто не ждёт.
+                    if (StartRule == RoundStartRule.Readiness && !session.ReadyState)
+                        _pending.Add(session);
                 }
             }
         }
@@ -213,6 +293,9 @@ namespace VrBattlegrounds.GameModes
         public string Describe()
         {
             if (AliveCount == 0) return "Живых игроков в раунде нет — ждать некого.";
+
+            if (StartRule == RoundStartRule.Timer)
+                return $"Старт по таймеру: закупка {TimeLimit:F0} с, готовность не спрашивается ({AliveCount} игроков).";
 
             if (_pending.Count == 0)
                 return $"Готовы все живые игроки ({AliveCount}).";

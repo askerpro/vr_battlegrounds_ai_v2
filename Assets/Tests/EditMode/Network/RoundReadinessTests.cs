@@ -78,10 +78,12 @@ namespace VrBattlegrounds.Tests.Network
 
         /// <summary>Запускает матч, минуя ожидание подключения живых игроков.</summary>
         private void StartMatch(float timeLimit = RoundReadiness.DefaultTimeLimit,
-                               RoundReadinessTimeoutRule rule = RoundReadinessTimeoutRule.AutoReady)
+                               RoundReadinessTimeoutRule rule = RoundReadinessTimeoutRule.AutoReady,
+                               RoundStartRule startRule = RoundStartRule.Readiness)
         {
             SetPrivateField(_mode, "_readinessTimeLimit", timeLimit);
             SetPrivateField(_mode, "_readinessTimeoutRule", rule);
+            SetPrivateField(_mode, "_roundStartRule", startRule);
 
             _mode.Initialize(new[] { _teamA, _teamB });
             InvokePrivateMethod(_mode, "InitializeActiveGame");
@@ -329,6 +331,78 @@ namespace VrBattlegrounds.Tests.Network
 
             Assert.AreEqual(0, _mode.PendingReadiness.Count,
                 "Готовы все, а список ожидаемых не опустел — HUD так и будет показывать «ждём Петю».");
+        }
+
+        // ── Старт по таймеру (RoundStartRule.Timer) ─────────────────────────
+
+        [Test]
+        public void Таймер_закупка_длится_отведённое_время_даже_если_все_готовы()
+        {
+            SilenceMirrorNoise();
+            StartMatch(timeLimit: 10f, startRule: RoundStartRule.Timer);
+
+            AdvanceToEquipment();
+            _playerA.ServerSetReady(true, "тест");
+            _playerB.ServerSetReady(true, "тест");
+
+            AdvanceSeconds(5f);
+
+            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+                "При старте по таймеру готовность не спрашивается, а раунд ушёл из закупки " +
+                "раньше срока, потому что все объявили готовность.\n" +
+                "Фактически наблюдалось: " + _driver.DumpSequence());
+        }
+
+        [Test]
+        public void Таймер_раунд_стартует_по_времени_без_единой_готовности()
+        {
+            SilenceMirrorNoise();
+            StartMatch(timeLimit: 10f, startRule: RoundStartRule.Timer);
+
+            AdvanceToEquipment();
+
+            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown,
+                "старта отсчёта по окончании времени закупки");
+
+            Assert.AreEqual(RoundState.Countdown, _mode.CurrentRoundState,
+                "Время закупки вышло, а отсчёт не начался.\nФактически наблюдалось: " + _driver.DumpSequence());
+            Assert.IsFalse(_playerA.ReadyState,
+                "Старт по таймеру не должен объявлять готовность за игроков: " +
+                "это не правило предела AutoReady, готовность здесь просто не участвует.");
+        }
+
+        [Test]
+        public void Таймер_никого_не_ждёт()
+        {
+            SilenceMirrorNoise();
+            StartMatch(timeLimit: 10f, startRule: RoundStartRule.Timer);
+
+            AdvanceToEquipment();
+            _driver.Advance();
+
+            Assert.AreEqual(0, _mode.PendingReadiness.Count,
+                "При старте по таймеру список ожидаемых обязан быть пуст — " +
+                "иначе HUD покажет «ждём Петю», хотя Петю никто не ждёт.");
+        }
+
+        [Test]
+        public void Таймер_без_предела_берёт_умолчание_а_не_ждёт_вечно()
+        {
+            SilenceMirrorNoise();
+            StartMatch(timeLimit: 0f, startRule: RoundStartRule.Timer);
+
+            AdvanceToEquipment();
+            AdvanceSeconds(RoundReadiness.DefaultTimeLimit - 5f);
+
+            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+                "Контроль: до умолчания закупка ещё идёт.\nФактически наблюдалось: " + _driver.DumpSequence());
+
+            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown,
+                "старта отсчёта по умолчанию времени закупки");
+
+            Assert.AreEqual(RoundState.Countdown, _mode.CurrentRoundState,
+                "Таймер с пределом 0 с понят буквально — раунд не начался бы никогда.\n" +
+                "Фактически наблюдалось: " + _driver.DumpSequence());
         }
 
         [Test]

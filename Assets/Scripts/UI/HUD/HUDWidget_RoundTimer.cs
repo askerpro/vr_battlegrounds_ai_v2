@@ -25,9 +25,15 @@ namespace VrBattlegrounds.UI.HUD
                 return;
             }
 
-            float time = mode.CurrentRoundState == RoundState.Countdown
-                ? mode.CountdownTimeRemaining
-                : mode.RoundTimeRemaining;
+            // В закупке показываем, сколько её осталось; без предела ожидания остатка нет —
+            // тогда, как и раньше, полное время раунда.
+            float time;
+            if (mode.CurrentRoundState == RoundState.Countdown)
+                time = mode.CountdownTimeRemaining;
+            else if (mode.CurrentRoundState == RoundState.Equipment && mode.EquipmentTimeRemaining > 0f)
+                time = mode.EquipmentTimeRemaining;
+            else
+                time = mode.RoundTimeRemaining;
 
             int minutes = Mathf.FloorToInt(time / 60f);
             int seconds = Mathf.FloorToInt(time % 60f);

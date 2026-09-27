@@ -11,8 +11,9 @@ using VrBattlegrounds.Interaction;
 namespace VrBattlegrounds.DevTools
 {
     /// <summary>
-    /// Зоны досягаемости карманов своего аватара — прямо в шлеме, чтобы подбирать размеры,
-    /// держа предмет в руке. Сплошная сфера — где предмет встанет в карман, вложенная
+    /// Зоны досягаемости карманов своего аватара и слотов стены арсенала — прямо в шлеме,
+    /// чтобы подбирать размеры, держа предмет в руке. Слоты стены — голубые сферы: где
+    /// ствол встанет обратно на стену. Сплошная сфера — где предмет встанет в карман, вложенная
     /// сфера/коробка светлее — где рука возьмёт из кармана через прокси. Зона вспыхивает,
     /// когда условие выполнено: предмет в руке достаёт до кармана, ладонь достаёт до прокси.
     ///
@@ -40,7 +41,10 @@ namespace VrBattlegrounds.DevTools
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
+        private static readonly Color SlotColor = new Color(0.2f, 0.85f, 1f);
+
         private readonly List<UxrGrabbableObjectAnchor> _anchors = new List<UxrGrabbableObjectAnchor>();
+        private readonly List<UxrGrabbableObjectAnchor> _slotAnchors = new List<UxrGrabbableObjectAnchor>();
         private readonly List<ReleasedItem> _released = new List<ReleasedItem>();
         private UxrAvatar _anchorsOwner;
         private float _nextRefresh;
@@ -142,6 +146,14 @@ namespace VrBattlegrounds.DevTools
                     Draw(zone, grabColor, IsAnyPalmInZone(avatar, zone));
                 }
             }
+
+            // Слоты стены: только свободные — в занятый вешать нечего.
+            foreach (UxrGrabbableObjectAnchor anchor in _slotAnchors)
+            {
+                if (anchor == null || !anchor.isActiveAndEnabled || anchor.CurrentPlacedObject != null) continue;
+
+                Draw(AnchorReachZones.GetPlaceZone(anchor), SlotColor, IsHeldItemInPlaceZone(avatar, anchor));
+            }
         }
 
         /// <summary>
@@ -163,7 +175,7 @@ namespace VrBattlegrounds.DevTools
                     continue;
                 }
 
-                foreach (UxrGrabbableObjectAnchor anchor in _anchors)
+                foreach (UxrGrabbableObjectAnchor anchor in AllAnchors())
                 {
                     if (anchor == null) continue;
 
@@ -172,7 +184,7 @@ namespace VrBattlegrounds.DevTools
 
                     string reason;
                     if (!anchor.IsCompatibleObject(released.Item))
-                        reason = $"тег '{released.Item.Tag}' не входит в Compatible Tags кармана";
+                        reason = $"не совместим: тег '{released.Item.Tag}' вне Compatible Tags или отказал валидатор (слот стены принимает только свой тип оружия и только открытым)";
                     else if (anchor.CurrentPlacedObject != null && !anchor.AllowSwap)
                         reason = $"карман занят ('{anchor.CurrentPlacedObject.name}')";
                     else if (distance > anchor.MaxPlaceDistance)
@@ -207,6 +219,19 @@ namespace VrBattlegrounds.DevTools
             // Только карманы: якоря предметов, лежащих в кармане (гнездо магазина оружия на
             // спине), тоже в иерархии аватара — без фильтра их зона уезжала с оружием в руке.
             _anchors.RemoveAll(anchor => !AnchorRole.IsAvatarPocket(anchor));
+
+            _slotAnchors.Clear();
+            foreach (VrBattlegrounds.Arsenal.ArsenalSlotController slot in
+                     FindObjectsByType<VrBattlegrounds.Arsenal.ArsenalSlotController>(FindObjectsSortMode.None))
+            {
+                if (slot.ItemAnchor != null) _slotAnchors.Add(slot.ItemAnchor);
+            }
+        }
+
+        private IEnumerable<UxrGrabbableObjectAnchor> AllAnchors()
+        {
+            foreach (UxrGrabbableObjectAnchor anchor in _anchors) yield return anchor;
+            foreach (UxrGrabbableObjectAnchor anchor in _slotAnchors) yield return anchor;
         }
 
         private static bool IsHeldItemInPlaceZone(UxrAvatar avatar, UxrGrabbableObjectAnchor anchor)

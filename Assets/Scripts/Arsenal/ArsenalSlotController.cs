@@ -94,6 +94,8 @@ namespace VrBattlegrounds.Arsenal
             if (_itemAnchor == null)
                 _itemAnchor = GetComponentInChildren<UxrGrabbableObjectAnchor>();
 
+            ConfigureAnchorCompatibility();
+
             // В Play mode удаляем превью-объекты, которые визуализировал кастомный эдитор (ArsenalSlotEditorBase)
             // Иначе они останутся на сцене как мусор и будут наслаиваться на реальные игровые объекты.
             if (UnityEngine.Application.isPlaying)
@@ -114,6 +116,7 @@ namespace VrBattlegrounds.Arsenal
             {
                 _itemAnchor.Placed  += OnObjectPlaced;
                 _itemAnchor.Removed += OnObjectRemoved;
+                _itemAnchor.SmoothPlaceTransitionEnded += OnSmoothPlaceTransitionEnded;
             }
         }
 
@@ -123,7 +126,75 @@ namespace VrBattlegrounds.Arsenal
             {
                 _itemAnchor.Placed  -= OnObjectPlaced;
                 _itemAnchor.Removed -= OnObjectRemoved;
+                _itemAnchor.SmoothPlaceTransitionEnded -= OnSmoothPlaceTransitionEnded;
             }
+        }
+
+        /// <summary>
+        /// Учит якорь слота принимать своё оружие обратно.
+        ///
+        /// <para>
+        /// У якорей стены пустой список <c>Compatible Tags</c>, а UltimateXR понимает пустой
+        /// список как «только предметы без тега». Всё оружие с тегом, поэтому слот не принимал
+        /// ничего: повесить ствол обратно руками было нельзя. На стене оружие держалось только
+        /// потому, что выдача кладёт его в якорь напрямую (<c>SetNetworkAnchor</c>), минуя проверку.
+        /// </para>
+        ///
+        /// <para>
+        /// Тег берётся у префаба, который слот выдаёт, — так он не разойдётся с префабом.
+        /// Одного тега мало: у <c>Gun_real</c> тег <c>M16_Rifle</c>, и пистолет встал бы на слот
+        /// винтовки. Поэтому ещё валидатор: только оружие того же <see cref="WeaponInfo"/>
+        /// и только на открытой стене.
+        /// </para>
+        /// </summary>
+        private void ConfigureAnchorCompatibility()
+        {
+            if (_itemAnchor == null || _weaponInfo == null || _weaponInfo.WeaponPrefab == null) return;
+
+            UxrGrabbableObject prefabGrabbable = _weaponInfo.WeaponPrefab.GetComponent<UxrGrabbableObject>();
+            if (prefabGrabbable == null) return;
+
+            if (!string.IsNullOrEmpty(prefabGrabbable.Tag))
+                _itemAnchor.AddCompatibleTags(prefabGrabbable.Tag);
+
+            _itemAnchor.AddPlacingValidator(AcceptsItem);
+        }
+
+        /// <summary>Радиус укладки вокруг точки, где предмет висит на стене.</summary>
+        private const float HangPlaceTolerance = 0.1f;
+
+        /// <summary>Поза предмета на стене: смещение из <see cref="WeaponInfo"/> относительно якоря.</summary>
+        private void ApplyHangPose(Transform item)
+        {
+            item.localPosition = _weaponInfo.WeaponPositionOffset;
+            item.localRotation = Quaternion.Euler(_weaponInfo.WeaponRotationOffset);
+        }
+
+        /// <summary>
+        /// Расширяет радиус укладки якоря так, чтобы ствол вставал, когда его подносят туда,
+        /// где он висел. UltimateXR меряет расстояние от точки близости предмета до точки
+        /// якоря, а на стене предмет висит со смещением: у M16 в висячей позе эти точки
+        /// в 19 см друг от друга при радиусе 10 см, и «повесить как висел» было невозможно.
+        /// Предмет должен уже стоять в висячей позе.
+        /// </summary>
+        private void WidenPlaceZoneFor(GameObject item)
+        {
+            UxrGrabbableObject grabbable = item.GetComponent<UxrGrabbableObject>();
+            if (grabbable == null || _itemAnchor == null) return;
+
+            float hangDistance = Vector3.Distance(grabbable.DropProximityTransform.position,
+                                                  _itemAnchor.DropProximityTransform.position);
+
+            _itemAnchor.MaxPlaceDistance = Mathf.Max(_itemAnchor.MaxPlaceDistance, hangDistance + HangPlaceTolerance);
+        }
+
+        /// <summary>Принимает ли слот этот предмет, если поднести его к якорю.</summary>
+        public bool AcceptsItem(UxrGrabbableObject item)
+        {
+            if (IsLocked || item == null) return false;
+
+            WeaponComponent weapon = item.GetComponent<WeaponComponent>();
+            return weapon != null && weapon.WeaponData == _weaponInfo;
         }
 
         // ── Public API ─────────────────────────────────────────
@@ -156,8 +227,8 @@ namespace VrBattlegrounds.Arsenal
             // Mirror supports runtime reparenting of spawned NetworkIdentity objects
             // (nested NI is only forbidden in prefabs, not at runtime).
             _spawnedItem.transform.SetParent(_itemAnchor.transform);
-            _spawnedItem.transform.localPosition = _weaponInfo.WeaponPositionOffset;
-            _spawnedItem.transform.localRotation = Quaternion.Euler(_weaponInfo.WeaponRotationOffset);
+            ApplyHangPose(_spawnedItem.transform);
+            WidenPlaceZoneFor(_spawnedItem);
 
             _spawnedItem.name = _weaponInfo.WeaponId + "_instance";
 
@@ -172,6 +243,18 @@ namespace VrBattlegrounds.Arsenal
             var weaponComp = _spawnedItem.GetComponent<WeaponComponent>();
             if (weaponComp == null) weaponComp = _spawnedItem.AddComponent<WeaponComponent>();
             weaponComp.Init(_weaponInfo);
+            weaponComp.SetHomeIfUnset(this);
+
+            // На стене предмет висит, а не лежит. Выдача свежего предмета сюда приходит
+            // уже кинематической, а возврат домой — с пола, с живой физикой: без этого
+            // ствол соскользнул бы со стены. SetNetworkAnchor физику не трогает.
+            Rigidbody body = _spawnedItem.GetComponent<Rigidbody>();
+            if (body != null && !body.isKinematic)
+            {
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+                body.isKinematic = true;
+            }
 
             GameLog.Arsenal.Info($"[Arsenal] Assigned network weapon '{_weaponInfo.DisplayName}' to slot '{name}'.");
 
@@ -276,9 +359,24 @@ namespace VrBattlegrounds.Arsenal
         {
             if (IsLocked) return;
 
+            // Игрок повесил ствол руками. UltimateXR ставит его по своей точке выравнивания,
+            // а не со смещением слота, — возвращаем позу свежего предмета. При плавной
+            // укладке переход ещё идёт; поза повторится в OnSmoothPlaceTransitionEnded.
+            if (e.GrabbableObject != null)
+            {
+                _spawnedItem = e.GrabbableObject.gameObject;
+                ApplyHangPose(_spawnedItem.transform);
+            }
+
             GameLog.Arsenal.Info($"[Arsenal] Item returned to slot '{DisplayName}'.");
             SetLightColor(_availableColor);
             OnItemReturned?.Invoke(this);
+        }
+
+        private void OnSmoothPlaceTransitionEnded(object sender, UxrManipulationEventArgs e)
+        {
+            if (e.GrabbableObject != null && e.GrabbableObject.CurrentAnchor == _itemAnchor)
+                ApplyHangPose(e.GrabbableObject.transform);
         }
 
         private void OnObjectRemoved(object sender, UxrManipulationEventArgs e)

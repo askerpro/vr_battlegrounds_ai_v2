@@ -547,6 +547,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Heavy_Soldier_Rig_Mask_Winter
       objectReference: {fileID: 0}
+    - target: {fileID: 1072354485082919014, guid: 0849dce527793b843a199594717dae67, type: 3}
+      propertyPath: m_TagString
+      value: Untagged
+      objectReference: {fileID: 0}
     - target: {fileID: 1118412746635549831, guid: 0849dce527793b843a199594717dae67, type: 3}
       propertyPath: __isInPrefab
       value: 0

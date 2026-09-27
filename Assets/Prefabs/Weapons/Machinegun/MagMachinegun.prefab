@@ -80,6 +80,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: MagMachinegun
       objectReference: {fileID: 0}
+    - target: {fileID: 6341843466046384214, guid: 6112527c66de1c34c9738c780e843457, type: 3}
+      propertyPath: m_TagString
+      value: Magazine
+      objectReference: {fileID: 0}
     - target: {fileID: 6636936118191055697, guid: 6112527c66de1c34c9738c780e843457, type: 3}
       propertyPath: __prefabGuid
       value: ff6c66ad770fc1f42854b90cb14b7ad0

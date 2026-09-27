@@ -2,6 +2,43 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - Теги главной категории объектов
+
+### Добавлено
+
+- **`GameTags` + `GameTagRules`** (`Assets/Scripts/Core/`) — теги `Player`, `Weapon`, `Magazine`,
+  `SpawnZone`, `Arsenal`, `Environment` и единственное правило, выводящее тег из компонентов.
+  Правда о категории — компоненты; тег — её копия ради `CompareTag`/`FindGameObjectsWithTag`
+  и маркер геометрии, у которой своих компонентов нет. Asset Labels и компонент-флаги
+  рассматривались и отвергнуты: дублировали бы компоненты без выигрыша.
+- **`GameTagsTool`** — `Tools/VR Battlegrounds/Gameplay/Apply Game Tags`. Размечено 918 объектов:
+  35 префабов и сцены `Lobby`, `TestMap1`, `TestMap2` (в `Lobby`/`TestMap1` — override'ы на
+  экземплярах комнат сэмпла UltimateXR; сами префабы SDK не тронуты). Множество прочих
+  override'ов сцен сверено до и после — совпадает, Unity лишь пересортировал записи.
+- **`GameTagsTests`** — до разметки красный (5 тегов не заведены, 262 расхождения в префабах,
+  1511 в сценах), после — зелёный (7/7).
+
+### Исправлено
+
+- **Столбы арены `nalchik_tolst` были без коллайдеров** — пули и брошенное оружие проходили
+  сквозь них, укрыться за столбом было нельзя, тег `Environment` они не получили. В
+  `Environment.prefab` четырём столбам добавлен `BoxCollider` по мешу (0.42 × 0.42 × 2.85 м),
+  модель `nalchik_tolst.fbx` не тронута. Проверка — новый `ArenaGeometryCollisionTests`: любой
+  меш из `Assets/Models/Arenas/**.fbx` в префабах арен обязан иметь твёрдый коллайдер; до правки
+  красный ровно на этих четырёх столбах.
+
+### Удалено и исправлено
+
+- **Удалён `Assets/Prefabs/Weapons/WeaponSlot.prefab`**: на корне Missing Script, Unity
+  отказывается сохранять префаб. Это черновик слота из того же коммита `0fec593`, что и
+  `Arsenal/Slots/FireArmSlotPrefab` (иерархия один в один); битый скрипт — задуманный
+  `WeaponSlotController`, его роль выполняет `FirearmSlotController`. Ссылок не было.
+- `ArsenalWall_Design_RU.md`: имена слотов приведены к реальным — `FireArmSlotPrefab`,
+  `ShelfSlotPrefab Variant` (вариант первого), `FirearmSlotController` на обоих.
+- **Удалён `ShelfItemSlotController`** (и его инспектор `ShelfItemSlotControllerEditor`): пустой
+  класс-метка без логики, не стоял ни в одном префабе и ни в одной сцене. Полка работает на
+  `FirearmSlotController`, который для предметов без `MagazinePrefab` декор-магазин не спавнит.
+
 ## [2026-09-27] - Тест оснащения аватаров `AvatarLoadoutTests`
 
 ### Добавлено

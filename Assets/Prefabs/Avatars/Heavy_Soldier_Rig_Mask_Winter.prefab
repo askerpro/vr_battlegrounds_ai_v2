@@ -8446,7 +8446,7 @@ GameObject:
   - component: {fileID: 2147432400684412230}
   m_Layer: 0
   m_Name: Heavy_Soldier_Rig_Mask_Winter
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

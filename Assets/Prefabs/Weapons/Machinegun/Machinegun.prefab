@@ -88,6 +88,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Machinegun
       objectReference: {fileID: 0}
+    - target: {fileID: 2221394708238033473, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
+      propertyPath: m_TagString
+      value: Weapon
+      objectReference: {fileID: 0}
     - target: {fileID: 2222018157670117155, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: __prefabGuid
       value: 4a28fd7096bf0994eac0a22cbb3a922c
@@ -323,6 +327,10 @@ PrefabInstance:
     - target: {fileID: 8485002943303406830, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: _uxrUniqueId
       value: bb2b9a82-f38f-49f1-8512-149617b10255
+      objectReference: {fileID: 0}
+    - target: {fileID: 8798984506951915813, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
+      propertyPath: m_TagString
+      value: Magazine
       objectReference: {fileID: 0}
     - target: {fileID: 8964994049950443957, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: __prefabGuid

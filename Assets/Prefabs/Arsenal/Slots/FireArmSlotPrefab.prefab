@@ -142,7 +142,7 @@ GameObject:
   - component: {fileID: 8808049539522545819}
   m_Layer: 0
   m_Name: PegboardSection
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -312,7 +312,7 @@ GameObject:
   - component: {fileID: 5617748707475017936}
   m_Layer: 0
   m_Name: FireArmSlotPrefab
-  m_TagString: Untagged
+  m_TagString: Arsenal
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

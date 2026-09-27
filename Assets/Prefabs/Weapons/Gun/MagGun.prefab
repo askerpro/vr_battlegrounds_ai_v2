@@ -12,6 +12,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: MagGun
       objectReference: {fileID: 0}
+    - target: {fileID: 142325198076723701, guid: d0a5e2e7972347e42a3c7ae966edf222, type: 3}
+      propertyPath: m_TagString
+      value: Magazine
+      objectReference: {fileID: 0}
     - target: {fileID: 658564840087403672, guid: d0a5e2e7972347e42a3c7ae966edf222, type: 3}
       propertyPath: m_CollisionDetection
       value: 1

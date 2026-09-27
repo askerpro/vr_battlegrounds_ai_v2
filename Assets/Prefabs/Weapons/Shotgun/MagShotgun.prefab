@@ -52,6 +52,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: MagShotgun
       objectReference: {fileID: 0}
+    - target: {fileID: 2469819177281156579, guid: 4b400d3160fb5de469c36589be9d5fe5, type: 3}
+      propertyPath: m_TagString
+      value: Magazine
+      objectReference: {fileID: 0}
     - target: {fileID: 3070498697742747790, guid: 4b400d3160fb5de469c36589be9d5fe5, type: 3}
       propertyPath: m_CollisionDetection
       value: 1

@@ -12,6 +12,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Grenade
       objectReference: {fileID: 0}
+    - target: {fileID: 2987762542248386242, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      propertyPath: m_TagString
+      value: Weapon
+      objectReference: {fileID: 0}
     - target: {fileID: 6975684541867978568, guid: c563684d5177f9347aa42336107d430f, type: 3}
       propertyPath: m_CollisionDetection
       value: 1

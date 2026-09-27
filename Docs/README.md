@@ -198,6 +198,7 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | `MapRegistry` | `Maps/MapRegistry.cs` | ScriptableObject-список всех карт. Назначить в `AdminMenuController._mapRegistry`. |
 | `TeamSpawnZone` | `Maps/TeamSpawnZone.cs` | Коллайдер зоны возрождения для команды. Проверяет присутствие игроков. Сессии сообщает только факт и **свою команду** (`ReportZoneState` → `PlayerSession.ServerEnterSpawnZone` / `ServerExitSpawnZone`); что это значит для конкретного игрока, решает сессия — там лежит его команда. Прежде зона решала сама и писала «в зоне» любому вошедшему, включая забежавшего в чужую базу (находка RDY-04). |
 | `SpawnZoneCreator` | `Editor/SpawnZoneCreator.cs` | Опция в меню GameObject для авто-создания префаба зоны спавна на сцене. |
+| `GameTagsTool` | `Editor/VR_Battlegrounds/Gameplay/GameTagsTool.cs` | `Tools/VR Battlegrounds/Gameplay/Apply Game Tags`: заводит теги в TagManager и расставляет их по `GameTagRules` во всех префабах `Assets/Prefabs` и сценах `Assets/Scenes`. Идемпотентен; вложенные префабы обрабатывает раньше внешних, чтобы не плодить override'ы; чужие теги (`MainCamera`, `EditorOnly`) не трогает; сцену с несохранёнными правками пропускает. Из кода — `GameTagsTool.Run()`. |
 
 **Поля `MapData`:**
 
@@ -224,6 +225,8 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | Класс | Файл | Описание |
 |---|---|---|
 | `GameLog` | `Core/GameLog.cs` | Единственная точка логирования. Категорию знает сам логгер: `GameLog.Match.Info("...")`, `GameLog.Player.Verbose("...", this)`. Каналы `Network`, `Player`, `Match`, `Debug`, `WeaponSystem`, `UI`, `PhysicalSpace`, `Arsenal` — один в один поля `GameSettings`. `GameLog.Error(...)` пишется всегда, независимо от уровня. Никогда не использовать `Debug.Log` напрямую. |
+| `GameTags` | `Core/GameTags.cs` | Константы тегов главной категории: `Player` (встроенный), `Weapon`, `Magazine`, `SpawnZone`, `Arsenal`, `Environment`. Один тег на объект — отвечает «что это в первую очередь»; признаки (метательное, берётся в руку) читаются по компонентам. Тег висит на корне сущности, `Environment` — прямо на коллайдерах геометрии. Строками теги в коде не писать. |
+| `GameTagRules` | `Core/GameTagRules.cs` | Единственное правило «компоненты → тег»: `UxrAvatar` → `Player`, `UxrFirearmWeapon`/`UxrGrenadeWeapon` → `Weapon`, `UxrFirearmMag` → `Magazine`, `TeamSpawnZone` → `SpawnZone`, `ArsenalWallController`/`ArsenalSlotController` → `Arsenal`; не-trigger коллайдер вне `Rigidbody`/аватара/грабаблов/якорей/спавн-зон/`Canvas` → `Environment`. По нему работают и инструмент разметки, и `GameTagsTests`. |
 | `GameLogChannel` | `Core/GameLog.cs` | Канал одной категории (`readonly struct`). Уровень тянет из `GameSettings` **в момент вызова**, поэтому правка `GameSettings.asset` в инспекторе действует без перезапуска. `IsEnabled(level)` — для случаев, где дорога сама сборка строки. |
 | `GameSettings` | `Core/GameSettings.cs` | ScriptableObject с уровнями логирования по категориям. Без ассета в `Resources/` отдаёт экземпляр со значениями по умолчанию, а не `null`. |
 | `LogLevel` | `Core/LogLevel.cs` | Enum: `None / Errors / Warnings / Info / Verbose`. |
@@ -363,6 +366,8 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 
 | Класс / файл | Назначение |
 |---|---|
+| `Maps/ArenaGeometryCollisionTests` | Каждый меш из моделей арен (`Assets/Models/Arenas/**.fbx`), стоящий в префабах `Assets/Prefabs/Arenas`, имеет не-trigger коллайдер. Иначе препятствие видно, но пули и брошенное оружие проходят сквозь него, а тег `Environment` на него не встаёт. |
+| `Prefabs/GameTagsTests` | Теги `GameTags` заведены в TagManager; у каждого объекта всех префабов `Assets/Prefabs` и сцен `Assets/Scenes` тег совпадает с `GameTagRules` (сцены читаются через `OpenPreviewScene`, открытое в редакторе не трогается); плюс само правило на синтетических объектах. Починка расхождений — `Apply Game Tags`. |
 | `SetManagerScoringTests` | Подсчёт победителя сета в `SetManager` — чистая логика, без сети. Раунды проигрываются прокруткой `SetManager.Tick`. Команды синтетические, с индексами, которых нет в `TeamRegistry`: так проверяется, что счёт идёт по переданному составу, а не по глобальному реестру (T-08). |
 | `RoundFlowSupport` | Общая оснастка тестов матча: `StubPlayerRoster` (подставной реестр игроков) и `RoundFlowDriver` (прокрутка фиксированным шагом 0.25 с с записью наблюдённых фаз). |
 | `Network/MirrorTestHarness` | Базовый класс сетевых тестов: поднимает Mirror сервером **без сокета** (ярус A) и, по требованию, локального клиента (ярус B). Сбрасывает синглтоны проекта между тестами. Рецепт и границы — [`testing.md`](testing.md#как-тестировать-сетевую-логику). |
@@ -441,8 +446,3 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `MenuTeamSelection` (Выбор команды) | 🔧 В процессе | Средний |
 | `VrCalibrationController` | 🔧 Заготовка | Средний |
 | `EliminationModeEditor` | ✅ Реализовано | — |
-| `GameTagsTool` | `Editor/VR_Battlegrounds/Gameplay/GameTagsTool.cs` | `Tools/VR Battlegrounds/Gameplay/Apply Game Tags`: заводит теги в TagManager и расставляет их по `GameTagRules` во всех префабах `Assets/Prefabs` и сценах `Assets/Scenes`. Идемпотентен; вложенные префабы обрабатывает раньше внешних, чтобы не плодить override'ы; чужие теги (`MainCamera`, `EditorOnly`) не трогает; сцену с несохранёнными правками пропускает. Из кода — `GameTagsTool.Run()`. |
-| `GameTags` | `Core/GameTags.cs` | Константы тегов главной категории: `Player` (встроенный), `Weapon`, `Magazine`, `SpawnZone`, `Arsenal`, `Environment`. Один тег на объект — отвечает «что это в первую очередь»; признаки (метательное, берётся в руку) читаются по компонентам. Тег висит на корне сущности, `Environment` — прямо на коллайдерах геометрии. Строками теги в коде не писать. |
-| `GameTagRules` | `Core/GameTagRules.cs` | Единственное правило «компоненты → тег»: `UxrAvatar` → `Player`, `UxrFirearmWeapon`/`UxrGrenadeWeapon` → `Weapon`, `UxrFirearmMag` → `Magazine`, `TeamSpawnZone` → `SpawnZone`, `ArsenalWallController`/`ArsenalSlotController` → `Arsenal`; не-trigger коллайдер вне `Rigidbody`/аватара/грабаблов/якорей/спавн-зон/`Canvas` → `Environment`. По нему работают и инструмент разметки, и `GameTagsTests`. |
-| `Maps/ArenaGeometryCollisionTests` | Каждый меш из моделей арен (`Assets/Models/Arenas/**.fbx`), стоящий в префабах `Assets/Prefabs/Arenas`, имеет не-trigger коллайдер. Иначе препятствие видно, но пули и брошенное оружие проходят сквозь него, а тег `Environment` на него не встаёт. |
-| `Prefabs/GameTagsTests` | Теги `GameTags` заведены в TagManager; у каждого объекта всех префабов `Assets/Prefabs` и сцен `Assets/Scenes` тег совпадает с `GameTagRules` (сцены читаются через `OpenPreviewScene`, открытое в редакторе не трогается); плюс само правило на синтетических объектах. Починка расхождений — `Apply Game Tags`. |

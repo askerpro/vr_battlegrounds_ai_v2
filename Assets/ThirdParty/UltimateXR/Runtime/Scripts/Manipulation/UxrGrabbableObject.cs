@@ -1087,12 +1087,10 @@ namespace UltimateXR.Manipulation
                                 distance += 100000.0f;
                             }
                         }
-                        else if (Vector3.Distance(GetGrabPointGrabAlignTransform(grabber.Avatar, grabPoint,         grabber.Side).position,
-                                                  GetGrabPointGrabAlignTransform(grabber.Avatar, otherGrabbedPoint, otherGrabber.Side).position) <= UxrConstants.MinHandGrabInterDistance)
-                        {
-                            // Grabbing other point whose snapping point is too close. Avoid this by increasing distance.
-                            distance += 100000.0f;
-                        }
+                        // VR Battlegrounds patch 11: штраф за близость к ДРУГОЙ занятой точке убран. Отдельные
+                        // точки автор ставит под две руки намеренно (поддержка пистолета — 2 см от основной),
+                        // а штраф делал такую точку недосягаемой, и вторая рука перехватывала предмет.
+                        // Для второй руки на той же фигуре (ветка выше) штраф остаётся. См. Docs/UltimateXR/sdk-patches.md.
                     }
                 }
             }

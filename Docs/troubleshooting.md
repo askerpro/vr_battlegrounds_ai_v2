@@ -107,6 +107,15 @@ int solid = 0; foreach (var c in go.GetComponentsInChildren<Collider>(true)) if 
 (BoxCollider 1 м под полом в `Environment.prefab`). Страховка — `OutOfWorldGuard`.
 Если вернулось — `WeaponDropPhysicsTests` назовёт префаб.
 
+### «Вторая рука перехватывает оружие вместо поддержки» · «Не взять двумя руками»
+
+**Исправлено 2026-09-27.** Две причины: UltimateXR делал дополнительную точку недосягаемой,
+если место ладони на ней ближе 5 см к занятой (снято [патчем SDK 11](UltimateXR/sdk-patches.md)),
+и выбирал ближайшую точку, даже занятую другой рукой (снято `TwoHandGrabPolicy`). Если симптом
+вернулся — сначала `GunTwoHandGrabTests`: красный первый тест значит, что патч 11 потерян при
+обновлении SDK. Иначе смотреть `Allow Multi Grab` у предмета и `Max Distance Grab` у
+дополнительной точки. Разбор — [known-issues, Issue 13](UltimateXR/known-issues.md).
+
 ### «Оружие можно взять из закрытого арсенала»
 
 **NET-13, исправлена.** `Lock()`/`Unlock()` искали предмет в `CurrentPlacedObject`,

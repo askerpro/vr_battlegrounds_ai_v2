@@ -1,6 +1,7 @@
 using UltimateXR.Avatar;
 using UltimateXR.Manipulation;
 using UnityEngine;
+using System;
 using System.Collections.Generic;
 
 namespace VrBattlegrounds.Player
@@ -12,6 +13,7 @@ namespace VrBattlegrounds.Player
     public class PlayerGrabManager : MonoBehaviour
     {
         private List<UxrGrabber> _grabbers = new List<UxrGrabber>();
+        private readonly Dictionary<UxrGrabber, Func<UxrGrabbableObject, int, bool>> _delegates = new Dictionary<UxrGrabber, Func<UxrGrabbableObject, int, bool>>();
         private PlayerController _playerController;
         private UxrAvatar _avatar;
 
@@ -31,9 +33,15 @@ namespace VrBattlegrounds.Player
 
         private void OnEnable()
         {
+            _delegates.Clear();
+
             foreach (var grabber in _grabbers)
             {
-                grabber.CanGrabDelegate = IsGrabAllowed;
+                // Делегат на каждый граббер: политике двух рук нужно знать, какая рука спрашивает.
+                UxrGrabber owner = grabber;
+                Func<UxrGrabbableObject, int, bool> canGrab = (grabbable, point) => IsGrabAllowed(owner, grabbable, point);
+                _delegates[grabber] = canGrab;
+                grabber.CanGrabDelegate = canGrab;
             }
         }
 
@@ -41,11 +49,13 @@ namespace VrBattlegrounds.Player
         {
             foreach (var grabber in _grabbers)
             {
-                if (grabber.CanGrabDelegate == IsGrabAllowed)
+                if (_delegates.TryGetValue(grabber, out var canGrab) && grabber.CanGrabDelegate == canGrab)
                 {
                     grabber.CanGrabDelegate = null;
                 }
             }
+
+            _delegates.Clear();
         }
 
         private void OnDestroy()
@@ -63,7 +73,7 @@ namespace VrBattlegrounds.Player
         /// <summary>
         /// Validation hook for UxrGrabber.
         /// </summary>
-        private bool IsGrabAllowed(UxrGrabbableObject grabbable, int grabPointIndex)
+        private bool IsGrabAllowed(UxrGrabber grabber, UxrGrabbableObject grabbable, int grabPointIndex)
         {
             if (_playerController != null)
             {
@@ -74,7 +84,7 @@ namespace VrBattlegrounds.Player
                 }
             }
 
-            return true;
+            return TwoHandGrabPolicy.IsGrabAllowed(grabber, grabbable, grabPointIndex);
         }
 
         private void OnPlayerDied(PlayerController controller)

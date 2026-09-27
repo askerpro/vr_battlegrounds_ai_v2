@@ -83,14 +83,6 @@ namespace VrBattlegrounds.Tests.Modes
             return mode;
         }
 
-        private GameplayManager CreateGameplayManager(GameMode active)
-        {
-            GameplayManager manager = CreateNetworkComponent<GameplayManager>("GameplayManager");
-            InvokeLifecycleMethod(manager, "Awake");
-            InvokePrivateMethod(manager, "RegisterActiveGameMode", active);
-            return manager;
-        }
-
         // ── Политика и ожидание ──────────────────────────────────────────────
 
         [Test]
@@ -111,22 +103,31 @@ namespace VrBattlegrounds.Tests.Modes
                 string.Join(", ", roster.Players.Select(p => p.PlayerName + "=" + p.TeamIndex)));
         }
 
+        /// <summary>
+        /// Политика разминки берётся из данных режима. Раньше лобби-режим был AutoBalance и
+        /// переводил в свою команду всех — теперь разминка идёт и посреди серии и команду
+        /// матча не трогает (KeepOrDefault): свою команду получает только игрок без команды.
+        /// </summary>
         [Test]
-        public void Автополитика_из_данных_режима_раздаёт_команды()
+        public void Политика_разминки_из_данных_режима()
         {
             SilenceMirrorNoise();
 
-            TeamData lobby = CreateTeam("Лобби", LobbyTeamIndex);
+            TeamData warmupTeam = CreateTeam("Разминка", LobbyTeamIndex);
             var roster = new ListRoster();
-            roster.Players.Add(CreateSession("p1", 1));
+            PlayerSession fresh = CreateSession("fresh", 0);
+            PlayerSession ct = CreateSession("ct", 1);
+            roster.Players.Add(fresh);
+            roster.Players.Add(ct);
 
-            LobbyMode mode = CreateNetworkComponent<LobbyMode>("LobbyMode");
+            WarmupMode mode = CreateNetworkComponent<WarmupMode>("WarmupMode");
             SpawnOnServer(mode);
             mode.PlayerRoster = roster;
-            mode.Initialize(CreateModeData("lobby", TeamAssignmentKind.AutoBalance, 1, lobby));
+            mode.Initialize(CreateModeData("warmup", TeamAssignmentKind.KeepOrDefault, 1, warmupTeam));
             mode.ServerAssignTeams();
 
-            Assert.AreEqual(LobbyTeamIndex, roster.Players[0].TeamIndex, "Лобби не выдало свою команду.");
+            Assert.AreEqual(LobbyTeamIndex, fresh.TeamIndex, "Разминка не выдала свою команду игроку без команды.");
+            Assert.AreEqual(1, ct.TeamIndex, "Разминка сменила игроку команду матча.");
         }
 
         [Test]
@@ -183,16 +184,15 @@ namespace VrBattlegrounds.Tests.Modes
             roster.Players.Add(player);
 
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
-            GameplayManager manager = CreateGameplayManager(mode);
 
             Assert.IsFalse(mode.TeamChoiceLocked, "Контроль: матч ещё не начался.");
-            manager.ProcessTeamChangeRequest(player, a.teamIndex, 0);
+            MatchTeams.ServerPlayerRequest(mode, player, a.teamIndex, 0);
             Assert.AreEqual(a.teamIndex, player.TeamIndex, "До старта матча игрок не смог выбрать команду сам.");
 
             SetPrivateField(mode, "_matchState", EliminationMatchState.Active);
             Assert.IsTrue(mode.TeamChoiceLocked, "Матч начался, а выбор команды открыт.");
 
-            manager.ProcessTeamChangeRequest(player, b.teamIndex, 0);
+            MatchTeams.ServerPlayerRequest(mode, player, b.teamIndex, 0);
             Assert.AreEqual(a.teamIndex, player.TeamIndex, "После старта матча игрок сменил команду сам.");
         }
 
@@ -209,13 +209,12 @@ namespace VrBattlegrounds.Tests.Modes
             roster.Players.Add(player);
 
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
-            GameplayManager manager = CreateGameplayManager(mode);
             SetPrivateField(mode, "_matchState", EliminationMatchState.Active);
 
-            Assert.IsFalse(manager.ServerAdminAssignTeam(stranger, player, b.teamIndex), "Не-админ выдал команду.");
+            Assert.IsFalse(MatchTeams.ServerAdminAssign(mode, stranger, player, b.teamIndex), "Не-админ выдал команду.");
             Assert.AreEqual(LobbyTeamIndex, player.TeamIndex);
 
-            Assert.IsTrue(manager.ServerAdminAssignTeam(admin, player, b.teamIndex), "Админ не смог выдать команду.");
+            Assert.IsTrue(MatchTeams.ServerAdminAssign(mode, admin, player, b.teamIndex), "Админ не смог выдать команду.");
             Assert.AreEqual(b.teamIndex, player.TeamIndex, "Команда, выданная админом после старта, не применилась.");
         }
 
@@ -230,12 +229,11 @@ namespace VrBattlegrounds.Tests.Modes
             PlayerSession admin = CreateSession("admin", 0, isAdmin: true);
 
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
-            GameplayManager manager = CreateGameplayManager(mode);
 
-            Assert.AreEqual(4, manager.ServerAdminAutoBalance(admin));
+            Assert.AreEqual(4, MatchTeams.ServerAdminAutoBalance(mode, admin));
             Assert.AreEqual(2, roster.Players.Count(p => p.TeamIndex == 1));
             Assert.AreEqual(2, roster.Players.Count(p => p.TeamIndex == 2));
-            Assert.IsInstanceOf<PlayerChoiceTeamPolicy>(mode.TeamAssignmentPolicy,
+            Assert.AreEqual(TeamAssignmentKind.PlayerChoice, mode.TeamAssignment,
                 "Разовый автобаланс админа не должен менять политику режима.");
         }
 
@@ -259,23 +257,34 @@ namespace VrBattlegrounds.Tests.Modes
                 "После старта игроку без команды выбирать нечего — команду выдаёт админ.");
         }
 
+        /// <summary>
+        /// По сети режим сообщает только <c>modeId</c>; данные клиент находит одним путём —
+        /// в <c>GameModeRegistry</c> через <c>SessionManager.FindModeData</c>. Раньше путей было
+        /// два: «режим сцены» у <c>GameplayManager</c> (лобби) и реестр (<c>GameModeCatalog</c>).
+        /// Теперь разминка лежит в реестре, и режим сцены не нужен.
+        /// </summary>
         [Test]
         public void Данные_режима_известны_клиенту_по_modeId()
         {
             SilenceMirrorNoise();
 
-            GameModeData lobby = AssetDatabase.LoadAssetAtPath<GameModeData>(GameModeWiringTests.LobbyModeDataPath);
-            GameplayManager manager = CreateNetworkComponent<GameplayManager>("GameplayManager");
-            InvokeLifecycleMethod(manager, "Awake");
-            SetPrivateField(manager, "_sceneGameMode", lobby);
+            var registry = AssetDatabase.LoadAssetAtPath<GameModeRegistry>(GameModeWiringTests.RegistryPath);
+            GameModeData warmup = AssetDatabase.LoadAssetAtPath<GameModeData>(GameModeWiringTests.WarmupModeDataPath);
+            Assert.IsNotNull(warmup, $"Нет {GameModeWiringTests.WarmupModeDataPath}.");
 
-            Assert.AreSame(lobby, GameModeCatalog.Find("lobby"),
-                "Лобби-режима нет в реестре матча — клиент обязан найти его у режима сцены.");
+            SessionManager session = CreateNetworkComponent<SessionManager>("SessionManager");
+            MatchFlowTests.InstallSessionManager(session, registry, null);
 
-            LobbyMode mode = CreateNetworkComponent<LobbyMode>("LobbyMode");
+            Assert.AreSame(warmup, session.FindModeData("warmup"), "Разминки нет в реестре режимов.");
+
+            WarmupMode mode = CreateNetworkComponent<WarmupMode>("WarmupMode");
             SpawnOnServer(mode);
-            mode.Initialize(lobby);
-            Assert.AreSame(lobby, mode.ModeData, "Режим не знает своих данных.");
+            mode.Initialize(warmup);
+
+            // Клиент: данных у него нет, есть только реплицированный modeId.
+            SetPrivateField(mode, "_modeData", null);
+            Assert.AreSame(warmup, mode.ModeData, "По modeId данные режима не нашлись в реестре.");
+            Assert.IsTrue(mode.IsWarmup, "Разминка не знает, что она разминка.");
         }
     }
 }

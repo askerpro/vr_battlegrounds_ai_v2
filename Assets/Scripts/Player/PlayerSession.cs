@@ -1,6 +1,7 @@
 ﻿using Mirror;
 using System;
 using VrBattlegrounds.Managers;
+using VrBattlegrounds.GameModes;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Network;
@@ -570,7 +571,7 @@ namespace VrBattlegrounds.Player
             if (GameplayManager.Instance != null)
             {
                 GameLog.Player.Info($"[PlayerSession] {PlayerName}: Клиент запросил смену команды на {newTeamId} и скина на {newAvatarId}");
-                GameplayManager.Instance.ProcessTeamChangeRequest(this, newTeamId, newAvatarId);
+                MatchTeams.ServerPlayerRequest(GameplayManager.Instance.ActiveGameMode, this, newTeamId, newAvatarId);
             }
             else if (AvatarManager.Instance != null)
             {
@@ -581,7 +582,7 @@ namespace VrBattlegrounds.Player
 
         /// <summary>
         /// Админ (эта сессия) выдаёт команду игроку <paramref name="targetSessionNetId"/>.
-        /// Право проверяет сервер (<c>TeamChangeRules.IsAdmin</c>) — экран админа на клиенте
+        /// Право проверяет сервер (<c>SessionPermissions.IsAdmin</c>) — экран админа на клиенте
         /// только прячет кнопки.
         /// </summary>
         [Command]
@@ -593,7 +594,7 @@ namespace VrBattlegrounds.Player
                 ? identity.GetComponent<PlayerSession>()
                 : null;
 
-            GameplayManager.Instance.ServerAdminAssignTeam(this, target, teamId);
+            MatchTeams.ServerAdminAssign(GameplayManager.Instance.ActiveGameMode, this, target, teamId);
         }
 
         /// <summary>Админ (эта сессия) разово раскладывает игроков без команды автобалансом.</summary>
@@ -601,7 +602,7 @@ namespace VrBattlegrounds.Player
         public void CmdAdminAutoBalance()
         {
             if (GameplayManager.Instance != null)
-                GameplayManager.Instance.ServerAdminAutoBalance(this);
+                MatchTeams.ServerAdminAutoBalance(GameplayManager.Instance.ActiveGameMode, this);
         }
 
         [Command]

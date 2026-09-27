@@ -5,19 +5,19 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.GameModes
 {
     /// <summary>
-    /// Правило лобби-режима: бесконечный карман. Сервер держит в кармане каждого игрока
+    /// Правило разминки: бесконечный карман. Сервер держит в кармане каждого игрока
     /// по магазину к каждому его оружию (в руках и в кобурах). Достал — через интервал
     /// лежит новый.
     ///
     /// <para>
-    /// Лежит на префабе <see cref="LobbyMode"/>, как <see cref="RoundMagazineRefill"/> —
+    /// Лежит на префабе <see cref="WarmupMode"/>, как <see cref="RoundMagazineRefill"/> —
     /// на префабе Elimination: <see cref="PlayerLoadoutManager"/> выдаёт магазины и не знает,
     /// когда это нужно (это проверяет <c>MagazineRefillPlannerTests</c>). Правило решает
     /// только «сколько» и «когда».
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
-    public class LobbyMagazineSupply : MonoBehaviour
+    public class WarmupMagazineSupply : MonoBehaviour
     {
         [Tooltip("Как часто сервер досыпает магазины в карманы игроков, секунды.")]
         [Min(0.05f)]

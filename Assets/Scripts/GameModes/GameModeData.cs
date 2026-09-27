@@ -11,7 +11,8 @@ namespace VrBattlegrounds.GameModes
     /// <see cref="modePrefab"/> — префаб с компонентом <see cref="GameMode"/>.
     /// MatchManager инстанцирует его при StartMatch() и уничтожает при StopMatch().
     /// Команды из <see cref="teams"/> передаются в режим через <see cref="GameMode.Initialize"/>.
-    /// По сети передаётся только строка <see cref="modeId"/> через SyncVar в SessionManager.
+    /// По сети передаётся только строка <see cref="modeId"/>; данные по ней ищет
+    /// <c>SessionManager.FindModeData</c> в <see cref="GameModeRegistry"/> — единственное место поиска.
     /// </summary>
     [CreateAssetMenu(
         fileName = "GameModeData_",
@@ -43,11 +44,17 @@ namespace VrBattlegrounds.GameModes
 
         [Tooltip("Как режим раздаёт свои команды игрокам без команды режима.\n" +
                  "PlayerChoice — никак: игрок выбирает сам в планшете или команду выдаёт админ; матч ждёт, пока команда будет у всех.\n" +
-                 "AutoBalance — сам, в самую малочисленную (лобби: команда одна — её получают все).")]
+                 "AutoBalance — сам, в самую малочисленную.\n" +
+                 "KeepOrDefault — команду матча не трогает, игроку без команды даёт первую команду режима (разминка).")]
         public TeamAssignmentKind teamAssignment = TeamAssignmentKind.PlayerChoice;
 
         [Tooltip("Префаб интерфейса игрока (VR HUD). Спавнится компонентом PlayerHUDManager локального игрока внутрь его UI-контейнера при старте матча/подключении.")]
         public GameObject hudPrefab;
+
+        [Tooltip("Разминка — режим между матчами, а не режим матча. С него стартует любая карта " +
+                 "(лобби тоже), в выбор режима матча у администратора он не попадает. " +
+                 "В GameModeRegistry такой режим ровно один.")]
+        public bool isWarmup;
 
         public override string ToString() => displayName;
     }
@@ -59,6 +66,13 @@ namespace VrBattlegrounds.GameModes
         PlayerChoice = 0,
 
         /// <summary>Режим раскладывает игроков сам, в самую малочисленную команду.</summary>
-        AutoBalance = 1
+        AutoBalance = 1,
+
+        /// <summary>
+        /// Разминка: пока идёт серия матча, команда матча (CT/T) у игрока сохраняется;
+        /// команду режима получает только тот, у кого команды нет (первый вход). Вне
+        /// серии (лобби после матча) матчевых команд нет — все получают команду режима.
+        /// </summary>
+        KeepOrDefault = 2
     }
 }

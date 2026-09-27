@@ -73,14 +73,14 @@ namespace VrBattlegrounds.GameModes
         public override void OnStartServer()
         {
             base.OnStartServer();
-            GameplayManager.OnPlayerTeamChangeRequested += OnPlayerTeamChange;
+            MatchTeams.TeamChangeRequested += OnPlayerTeamChange;
             PlayersManager.OnSessionConnected += HandleSessionConnected;
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
-            GameplayManager.OnPlayerTeamChangeRequested -= OnPlayerTeamChange;
+            MatchTeams.TeamChangeRequested -= OnPlayerTeamChange;
             PlayersManager.OnSessionConnected -= HandleSessionConnected;
         }
 
@@ -91,7 +91,7 @@ namespace VrBattlegrounds.GameModes
         private void OnDestroy()
         {
             PlayersManager.OnSessionConnected -= HandleSessionConnected;
-            GameplayManager.OnPlayerTeamChangeRequested -= OnPlayerTeamChange;
+            MatchTeams.TeamChangeRequested -= OnPlayerTeamChange;
         }
 
         /// <summary>
@@ -139,7 +139,10 @@ namespace VrBattlegrounds.GameModes
 
         private void OnTeamIndicesChanged(SyncList<int>.Operation op, int itemIndex, int oldItem, int newItem)
         {
-            if (isServer) return; // Сервер получает команды в Initialize()
+            // Сервер получает команды в Initialize(). Проверка — NetworkServer.active, а не
+            // isServer: режим инициализируется до спавна (данные уезжают клиенту начальным
+            // состоянием), и там isServer ещё false — колбэк стирал _teams посреди Initialize.
+            if (isServer || NetworkServer.active) return;
             RefreshTeamsFromSyncList();
         }
 
@@ -165,11 +168,17 @@ namespace VrBattlegrounds.GameModes
         {
             get
             {
-                if (_modeData == null && !string.IsNullOrEmpty(_modeId))
-                    _modeData = GameModeCatalog.Find(_modeId);
+                if (_modeData == null && !string.IsNullOrEmpty(_modeId) && SessionManager.Instance != null)
+                    _modeData = SessionManager.Instance.FindModeData(_modeId);
                 return _modeData;
             }
         }
+
+        /// <summary>
+        /// Режим — разминка (<see cref="GameModeData.isWarmup"/>): между матчами, с неё
+        /// стартует любая карта. Известно и клиенту — по данным режима.
+        /// </summary>
+        public bool IsWarmup => ModeData != null && ModeData.isWarmup;
 
         private GameModeData _modeData;
 
@@ -188,12 +197,14 @@ namespace VrBattlegrounds.GameModes
         [Server]
         public void Initialize(TeamData[] teams)
         {
-            _teams = teams ?? new TeamData[0];
+            TeamData[] assigned = teams ?? new TeamData[0];
             _syncedTeamIndices.Clear();
             _teamScores.Clear();
             _teamStates.Clear();
 
-            foreach (TeamData t in _teams)
+            _teams = assigned;
+
+            foreach (TeamData t in assigned)
             {
                 if (t != null)
                 {
@@ -215,9 +226,12 @@ namespace VrBattlegrounds.GameModes
         [Server]
         public virtual void StartGameplayWhenReady()
         {
-            // Игроки, пришедшие без команды этого режима (из лобби, где команда своя),
-            // получают её сразу: матчу нужны составы команд, спавну — их зоны.
+            // Команды по политике режима — сразу: матчу нужны составы, спавну — зоны.
             ServerAssignTeams();
+
+            // Новый режим начинает с полной стены: пустые слоты пополняются по его правилам
+            // (режим на карте теперь меняется на месте — разминка → матч → разминка).
+            RaiseArsenalRefillRequestedServer();
 
             StartCoroutine(WaitAndStartGameplayRoutine());
         }
@@ -269,14 +283,14 @@ namespace VrBattlegrounds.GameModes
         // ── Правила, которые режим объявляет остальной игре ─────────────────
         //
         // Системы вне режима (стена арсенала, блокировка оружия) спрашивают активный
-        // режим через эти свойства и не знают его конкретного типа. Новый режим
-        // объявляет свои правила здесь — и получает их везде, включая лобби, которое
-        // теперь тоже режим (LobbyMode). Все свойства читаются на любой машине: режим
-        // заспавнен и у клиента, а отвечают они из реплицируемого состояния.
+        // режим (GameplayManager.ActiveGameMode) через эти свойства и не знают его
+        // конкретного типа. Новый режим объявляет свои правила здесь — и получает их
+        // везде, включая разминку (WarmupMode). Все свойства читаются на любой машине:
+        // режим заспавнен и у клиента, а отвечают они из реплицируемого состояния.
 
         /// <summary>
-        /// Проходит ли урон по игрокам. По умолчанию — да. Лобби отвечает «нет»: смерти
-        /// в лобби не бывает. Отменяет урон <c>PlayerController</c> на
+        /// Проходит ли урон по игрокам. По умолчанию — да. Разминка отвечает «нет»: смерти
+        /// в разминке не бывает. Отменяет урон <c>PlayerController</c> на
         /// <c>UxrActor.DamageReceiving</c>; стрельба по мишеням и предметам не затронута.
         /// </summary>
         public virtual bool PlayersTakeDamage => true;
@@ -286,19 +300,6 @@ namespace VrBattlegrounds.GameModes
         /// этого может только админ. По умолчанию — открыт.
         /// </summary>
         public virtual bool TeamChoiceLocked => false;
-
-        /// <summary>Режим этой машины или null — единая точка для систем вне режима.</summary>
-        public static GameMode Current
-        {
-            get
-            {
-                GameplayManager manager = GameplayManager.Instance;
-                if (manager == null) return null;
-
-                GameMode mode = manager.ActiveGameMode;
-                return mode != null ? mode : null;
-            }
-        }
 
         /// <summary>
         /// Стреляет ли оружие прямо сейчас. Читает <c>GameplayManager</c> каждый кадр
@@ -312,11 +313,14 @@ namespace VrBattlegrounds.GameModes
         /// <summary>
         /// Сервер: пора пополнить пустые слоты стен арсенала (например, к новому раунду).
         /// Разовое действие, поэтому событие, а не свойство: см. <see cref="ArsenalRules"/>.
+        /// Событие экземпляра: режим на карте теперь меняется на месте, и статическое
+        /// событие пришлось бы разбирать, чей это запрос. Стена подписывается на активный
+        /// режим и переподписывается при его смене.
         /// </summary>
-        public static event Action ArsenalRefillRequestedServer;
+        public event Action ArsenalRefillRequestedServer;
 
         /// <summary>Объявить стенам, что пустые слоты пора пополнить. Только сервер.</summary>
-        protected static void RaiseArsenalRefillRequestedServer()
+        protected void RaiseArsenalRefillRequestedServer()
         {
             ArsenalRefillRequestedServer?.Invoke();
         }
@@ -330,47 +334,53 @@ namespace VrBattlegrounds.GameModes
         {
         }
 
-        private ITeamAssignmentPolicy _teamAssignmentPolicy;
+        private TeamAssignmentKind? _teamAssignmentOverride;
 
         /// <summary>
         /// Как режим раздаёт свои команды игрокам без команды режима. Задаётся данными
-        /// режима (<see cref="GameModeData.teamAssignment"/>): лобби — автобаланс (команда
-        /// одна), матч — выбор игроком (<see cref="PlayerChoiceTeamPolicy"/>). Без данных —
-        /// выбор игроком: режим никого не двигает сам. Подменяется целиком (тесты).
+        /// режима (<see cref="GameModeData.teamAssignment"/>): разминка — сохранить команду
+        /// матча или дать свою (<see cref="TeamAssignmentKind.KeepOrDefault"/>), матч —
+        /// выбор игроком. Без данных — выбор игроком: режим никого не двигает сам.
+        /// Присваивание подменяет значение данных (тесты).
         /// </summary>
-        public ITeamAssignmentPolicy TeamAssignmentPolicy
+        public TeamAssignmentKind TeamAssignment
         {
             get
             {
-                if (_teamAssignmentPolicy == null)
-                {
-                    GameModeData data = ModeData;
-                    _teamAssignmentPolicy = data != null && data.teamAssignment == TeamAssignmentKind.AutoBalance
-                        ? (ITeamAssignmentPolicy)new AutoBalanceTeamPolicy()
-                        : new PlayerChoiceTeamPolicy();
-                }
-                return _teamAssignmentPolicy;
+                if (_teamAssignmentOverride.HasValue) return _teamAssignmentOverride.Value;
+                GameModeData data = ModeData;
+                return data != null ? data.teamAssignment : TeamAssignmentKind.PlayerChoice;
             }
-            set => _teamAssignmentPolicy = value;
+            set => _teamAssignmentOverride = value;
         }
 
         /// <summary>
-        /// Раздаёт команды режима игрокам, у которых их нет, — по <see cref="TeamAssignmentPolicy"/>.
-        /// Зовётся при старте режима и при каждом подключении. Игрок с командой режима
-        /// не трогается; зрители (<see cref="GameRole.Spectator"/>) команд не получают.
+        /// Раздаёт команды режима по <see cref="TeamAssignment"/>. Зовётся при старте режима
+        /// и при каждом подключении. Зрители (<see cref="GameRole.Spectator"/>) команд не получают.
+        /// <list type="bullet">
+        /// <item><c>PlayerChoice</c> — никого: выбирает игрок или выдаёт админ.</item>
+        /// <item><c>AutoBalance</c> — всех без команды режима, в самую малочисленную.</item>
+        /// <item><c>KeepOrDefault</c> — только тех, у кого команды нет вовсе (0): команда
+        ///       матча (CT/T) в разминке сохраняется, а с ней общий состав серии.</item>
+        /// </list>
         /// </summary>
         [Server]
         public void ServerAssignTeams()
         {
             if (_teams.Length == 0) return;
 
+            TeamAssignmentKind kind = TeamAssignment;
+            if (kind == TeamAssignmentKind.PlayerChoice) return;
+
             List<PlayerSession> players = new List<PlayerSession>();
             foreach (PlayerSession session in PlayerRoster.GetAllPlayers())
             {
-                if (session != null && session.Role == GameRole.Player) players.Add(session);
+                if (session == null || session.Role != GameRole.Player) continue;
+                if (kind == TeamAssignmentKind.KeepOrDefault && session.TeamIndex != 0) continue;
+                players.Add(session);
             }
 
-            foreach (KeyValuePair<PlayerSession, TeamData> pair in TeamAssignmentPolicy.Plan(_teams, players))
+            foreach (KeyValuePair<PlayerSession, TeamData> pair in TeamAutoBalance.Plan(_teams, players, s => s.TeamIndex))
                 SessionTeamAssigner.Apply(pair.Key, pair.Value, GetType().Name);
         }
 

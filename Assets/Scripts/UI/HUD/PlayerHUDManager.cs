@@ -44,7 +44,7 @@ namespace VrBattlegrounds.Player.UI
             // доехать до клиента позже аватара — поэтому подписка, а не разовый запрос.
             _subscribed = true;
             GameplayManager.ActiveGameModeChangedLocal += SetupHUDForMode;
-            SetupHUDForMode(GameMode.Current);
+            SetupHUDForMode(GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null);
         }
 
         public override void OnStopAuthority()

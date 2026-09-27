@@ -23,7 +23,7 @@ namespace VrBattlegrounds.GameModes
     /// </list>
     ///
     /// <para>
-    /// Перед сменой поднимается <c>GameplayManager.OnPlayerTeamChangeRequested</c> — хуки
+    /// Перед сменой поднимается <see cref="MatchTeams.TeamChangeRequested"/> — хуки
     /// режима (сброс статистики и т.п.).
     /// </para>
     /// </summary>
@@ -37,7 +37,7 @@ namespace VrBattlegrounds.GameModes
             GameLog.Match.Info(
                 $"[{reason}] {session.PlayerName}: команда {session.TeamIndex} → {team.displayName}, скин {avatarIndex}.");
 
-            GameplayManager.NotifyTeamChangeRequested(session, team.teamIndex, avatarIndex);
+            MatchTeams.NotifyTeamChangeRequested(session, team.teamIndex, avatarIndex);
 
             if (session.ActiveAvatar != null && AvatarManager.Instance != null)
             {
@@ -63,6 +63,31 @@ namespace VrBattlegrounds.GameModes
             AvatarData currentSkin = oldTeam != null ? oldTeam.GetAvatar(session.AvatarIndex) : null;
 
             Apply(session, team, team.IndexOfAvatar(currentSkin), reason);
+        }
+
+        /// <summary>
+        /// Команда с сохранением скина <b>без пересоздания аватара</b> — когда сцена вот-вот
+        /// сменится и аватар всё равно будет создан заново уже в новой сцене (конец серии
+        /// матча: команды матча отпускаются перед возвратом в лобби). Пересоздавать аватар
+        /// за кадр до выгрузки сцены незачем и опасно — его тут же разберёт смена сцены.
+        /// </summary>
+        public static void ApplyBeforeSceneChange(PlayerSession session, TeamData team, string reason)
+        {
+            if (session == null || team == null) return;
+
+            TeamData oldTeam = session.TeamIndex != 0 && TeamRegistry.Instance != null
+                ? TeamRegistry.Instance.GetByIndex(session.TeamIndex)
+                : null;
+            AvatarData currentSkin = oldTeam != null ? oldTeam.GetAvatar(session.AvatarIndex) : null;
+            int skin = team.IndexOfAvatar(currentSkin);
+
+            GameLog.Match.Info(
+                $"[{reason}] {session.PlayerName}: команда {session.TeamIndex} → {team.displayName}, скин {skin} (до смены сцены).");
+
+            MatchTeams.NotifyTeamChangeRequested(session, team.teamIndex, skin);
+
+            session.TeamIndex = team.teamIndex;
+            session.AvatarIndex = skin;
         }
     }
 }

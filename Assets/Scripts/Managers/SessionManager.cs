@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using VrBattlegrounds.Core;
@@ -7,15 +8,21 @@ using VrBattlegrounds.GameModes;
 namespace VrBattlegrounds.Managers
 {
     /// <summary>
-    /// Хранит выбор текущей игровой сессии: карту и режим.
-    /// Переживает смену сцен (DontDestroyOnLoad вместе с NetworkManager).
-    /// Синхронизирует выбор на всех клиентах через SyncVar.
+    /// Хранит выбор администратора для следующей серии матча: режим и список карт.
+    /// Переживает смену сцен (объект <c>SessionContext</c>, DontDestroyOnLoad).
+    /// Синхронизирует выбор на всех клиентах через SyncVar/SyncList.
     ///
-    /// Singleton: живёт на том же GameObject, что и GameNetworkManager и MapManager.
+    /// <para>
+    /// Здесь же — единственное место поиска данных по идентификатору: режим по
+    /// <c>modeId</c> (<see cref="FindModeData"/>, включая разминку) и карта по сцене
+    /// (<see cref="FindMap"/>). Раньше режим искался ещё и у «режима сцены» лобби
+    /// (<c>GameModeCatalog</c>) — теперь разминка лежит в том же реестре.
+    /// </para>
     ///
-    /// Использование:
-    ///   — Администратор вызывает SetSession(mapScene, modeId) через AdminMenuController
-    ///   — MatchManager читает SelectedGameModeData и SelectedMap при StartMatch()
+    /// <para>
+    /// Ход серии (какая карта сейчас, общий счёт) — не здесь, а в <see cref="MatchSeries"/>:
+    /// выбор описывает следующую серию и может меняться, пока текущая идёт.
+    /// </para>
     /// </summary>
     [DefaultExecutionOrder(ManagerOrder.SessionManager)]
     public class SessionManager : NetworkBehaviour
@@ -23,21 +30,26 @@ namespace VrBattlegrounds.Managers
         public static SessionManager Instance { get; private set; }
 
         [Header("Реестры")]
-        [Tooltip("Реестр всех карт. Назначить MapRegistry asset.")]
+        [Tooltip("Реестр всех карт, включая лобби. Назначить MapRegistry asset.")]
         [SerializeField] private MapRegistry _mapRegistry;
 
-        [Tooltip("Реестр всех игровых режимов. Назначить GameModeRegistry asset.")]
+        [Tooltip("Реестр всех игровых режимов, включая разминку. Назначить GameModeRegistry asset.")]
         [SerializeField] private GameModeRegistry _gameModeRegistry;
 
         // Идентификаторы хранятся как строки — безопасно через смены сцен
-        [SyncVar] private string _selectedMapScene = "";
+        private readonly SyncList<string> _selectedMaps = new SyncList<string>();
         [SyncVar] private string _selectedModeId = "";
 
-        /// <summary>Данные выбранной карты. Null если карта не выбрана.</summary>
-        public MapData SelectedMap
-            => _mapRegistry != null ? _mapRegistry.GetBySceneName(_selectedMapScene) : null;
+        /// <summary>Реестр режимов (включая разминку).</summary>
+        public GameModeRegistry ModeRegistry => _gameModeRegistry;
 
-        /// <summary>Данные выбранного игрового режима. Null если режим не выбран.</summary>
+        /// <summary>Реестр карт (включая лобби).</summary>
+        public MapRegistry MapRegistry => _mapRegistry;
+
+        /// <summary>Данные первой выбранной карты. Null если карта не выбрана.</summary>
+        public MapData SelectedMap => FindMap(SelectedMapScene);
+
+        /// <summary>Данные выбранного режима матча. Null если режим не выбран.</summary>
         public GameModeData SelectedGameModeData
         {
             get
@@ -63,16 +75,25 @@ namespace VrBattlegrounds.Managers
         }
 
         /// <summary>
-        /// Данные режима матча по <c>modeId</c> без побочных логов; null — нет в реестре.
-        /// Режим сцены (лобби) сюда не попадает намеренно — его ищет <c>GameModeCatalog</c>.
+        /// Данные режима по <c>modeId</c> без побочных логов; null — нет в реестре.
+        /// Единственный путь от строки к данным режима, и для разминки тоже.
         /// </summary>
         public GameModeData FindModeData(string modeId)
         {
             return _gameModeRegistry != null ? _gameModeRegistry.GetById(modeId) : null;
         }
 
-        /// <summary>Имя сцены выбранной карты.</summary>
-        public string SelectedMapScene => _selectedMapScene;
+        /// <summary>Данные карты по имени сцены; null — сцены нет в реестре.</summary>
+        public MapData FindMap(string sceneName)
+        {
+            return _mapRegistry != null ? _mapRegistry.GetBySceneName(sceneName) : null;
+        }
+
+        /// <summary>Первая карта выбранной серии.</summary>
+        public string SelectedMapScene => _selectedMaps.Count > 0 ? _selectedMaps[0] : "";
+
+        /// <summary>Карты выбранной серии по порядку.</summary>
+        public IReadOnlyList<string> SelectedMaps => _selectedMaps;
 
         /// <summary>Идентификатор выбранного режима.</summary>
         public string SelectedModeId => _selectedModeId;
@@ -89,44 +110,48 @@ namespace VrBattlegrounds.Managers
             DontDestroyOnLoad(gameObject); // Survive scene transitions
         }
 
-        /// <summary>
-        /// Устанавливает карту и режим для следующей сессии.
-        /// Реплицируется на все клиенты через SyncVar.
-        /// Только сервер.
-        /// </summary>
+        /// <summary>Серия из одной карты — то, что сейчас выбирает меню.</summary>
         [Server]
         public void SetSession(string mapScene, string modeId)
         {
-            if (string.IsNullOrEmpty(mapScene))
+            SetSeries(modeId, new[] { mapScene });
+        }
+
+        /// <summary>
+        /// Устанавливает режим и карты следующей серии. Реплицируется клиентам. Только сервер.
+        /// </summary>
+        [Server]
+        public void SetSeries(string modeId, IReadOnlyList<string> mapScenes)
+        {
+            if (mapScenes == null || mapScenes.Count == 0 || string.IsNullOrEmpty(mapScenes[0]))
             {
-                GameLog.Match.Warning(
-                    "[SessionManager] SetSession: пустое имя карты — игнорируем.");
+                GameLog.Match.Warning("[SessionManager] SetSeries: пустой список карт — игнорируем.");
                 return;
             }
 
             if (string.IsNullOrEmpty(modeId))
             {
-                GameLog.Match.Warning(
-                    "[SessionManager] SetSession: пустой modeId — игнорируем.");
+                GameLog.Match.Warning("[SessionManager] SetSeries: пустой modeId — игнорируем.");
                 return;
             }
 
-            _selectedMapScene = mapScene;
             _selectedModeId = modeId;
+            _selectedMaps.Clear();
+            foreach (string scene in mapScenes)
+                if (!string.IsNullOrEmpty(scene)) _selectedMaps.Add(scene);
 
             GameLog.Match.Info(
-                $"[SessionManager] Сессия настроена: карта={mapScene}, режим={modeId}");
+                $"[SessionManager] Серия настроена: режим={modeId}, карты={string.Join(" → ", ToArray())}");
         }
 
         /// <summary>
-        /// Загружает выбранную карту через MapManager.
-        /// Вызывать после SetSession().
-        /// Только сервер.
+        /// Начинает выбранную серию (<see cref="MatchSeries.ServerBegin"/>): первая карта
+        /// грузится и стартует в разминке. Вызывать после <see cref="SetSeries"/>. Только сервер.
         /// </summary>
         [Server]
         public void StartSession()
         {
-            if (string.IsNullOrEmpty(_selectedMapScene))
+            if (_selectedMaps.Count == 0)
             {
                 GameLog.Error("[SessionManager] StartSession: карта не выбрана.");
                 return;
@@ -139,9 +164,24 @@ namespace VrBattlegrounds.Managers
             }
 
             GameLog.Match.Info(
-                $"[SessionManager] Запуск сессии: карта={_selectedMapScene}, режим={_selectedModeId}");
+                $"[SessionManager] Запуск серии: режим={_selectedModeId}, карты={string.Join(" → ", ToArray())}");
 
-            MapManager.Instance?.LoadMap(_selectedMapScene);
+            if (MatchSeries.Instance != null)
+            {
+                MatchSeries.Instance.ServerBegin(ToArray());
+                return;
+            }
+
+            // Без серии (объект не на SessionContext) — одна карта, как раньше.
+            GameLog.Match.Warning("[SessionManager] StartSession: MatchSeries нет — грузится только первая карта.");
+            MapManager.Instance?.LoadMap(_selectedMaps[0]);
+        }
+
+        private string[] ToArray()
+        {
+            var result = new string[_selectedMaps.Count];
+            for (int i = 0; i < result.Length; i++) result[i] = _selectedMaps[i];
+            return result;
         }
     }
 }

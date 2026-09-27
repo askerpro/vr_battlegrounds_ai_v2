@@ -261,15 +261,25 @@ namespace VrBattlegrounds.Player.Avatars
                 return;
             }
 
-            // Команда не из режима этой сцены (пришёл из лобби с командой «Лобби», а команду
+            // Команда не из режима этой сцены (команда разминки на карте, а команду
             // матча ещё не выбрал) — штатное ожидание выбора, а не сбой карты: нейтральная
             // точка, откалиброванного всё равно ставит калибровка (этап Б).
-            VrBattlegrounds.GameModes.GameMode mode = VrBattlegrounds.GameModes.GameMode.Current;
+            VrBattlegrounds.GameModes.GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
             if (mode == null || System.Array.IndexOf(mode.Teams, team) < 0)
             {
                 GameLog.Player.Info(
                     $"[AvatarManager] {stage}: {who} — команда '{team.displayName}' не из режима этой сцены " +
                     "(команда матча ещё не выбрана), ставим в нейтральную точку — начало координат.");
+                return;
+            }
+
+            // Разминка на боевой карте: зон у команды «Разминка» там нет по построению
+            // (зоны — у команд матча), это штатное состояние до «Начать матч».
+            if (mode.IsWarmup)
+            {
+                GameLog.Player.Info(
+                    $"[AvatarManager] {stage}: {who} — разминка, у команды '{team.displayName}' на этой карте " +
+                    "зоны нет — нейтральная точка, начало координат.");
                 return;
             }
 

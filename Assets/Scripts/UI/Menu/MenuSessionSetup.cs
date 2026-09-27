@@ -45,13 +45,14 @@ namespace VrBattlegrounds.UI.Menu
             ClearContainer(_tabsContainer);
             _tabButtons.Clear();
 
-            if (_gameModeRegistry == null || _gameModeRegistry.modes == null || _gameModeRegistry.modes.Length == 0)
+            List<GameModeData> tabs = TabModes(_gameModeRegistry);
+            if (tabs.Count == 0)
             {
-                GameLog.UI.Warning("[MenuSessionSetup] Реестр режимов пуст или не назначен!");
+                GameLog.UI.Warning("[MenuSessionSetup] В реестре нет режимов матча или он не назначен!");
                 return;
             }
 
-            foreach (var mode in _gameModeRegistry.modes)
+            foreach (var mode in tabs)
             {
                 GameObject tabBtnObj = Instantiate(_buttonPrefab, _tabsContainer);
                 tabBtnObj.name = $"Tab_{mode.modeId}";
@@ -79,7 +80,31 @@ namespace VrBattlegrounds.UI.Menu
             }
 
             // Выбираем первый по-умолчанию
-            SelectTab(_gameModeRegistry.modes[0]);
+            SelectTab(tabs[0]);
+        }
+
+        /// <summary>
+        /// Вкладки режимов: только режимы матча. Разминка лежит в том же реестре
+        /// (<see cref="GameModeData.isWarmup"/>), но её не выбирают — с неё стартует любая карта.
+        /// </summary>
+        public static List<GameModeData> TabModes(GameModeRegistry registry)
+        {
+            return registry != null ? new List<GameModeData>(registry.MatchModes) : new List<GameModeData>();
+        }
+
+        /// <summary>
+        /// Карты под режим матча: совместимые с ним по <c>MapData.supportedModes</c>. Лобби
+        /// совместимо только с разминкой, поэтому в выбор карт матча не попадает.
+        /// </summary>
+        public static List<MapData> MapsForMode(MapRegistry registry, GameModeData mode)
+        {
+            var result = new List<MapData>();
+            if (registry == null || registry.maps == null) return result;
+
+            foreach (MapData map in registry.maps)
+                if (map != null && (mode == null || MapModeRules.IsCompatible(map, mode))) result.Add(map);
+
+            return result;
         }
 
         private void SelectTab(GameModeData mode)
@@ -110,9 +135,8 @@ namespace VrBattlegrounds.UI.Menu
 
             GameObject mapPrefabToUse = _mapEntryPrefab != null ? _mapEntryPrefab : _buttonPrefab;
 
-            foreach (var mapDef in _mapRegistry.maps)
+            foreach (var mapDef in MapsForMode(_mapRegistry, _selectedMode))
             {
-                if (!IsMapSupportedByMode(mapDef, _selectedMode)) continue;
 
                 GameObject mapBtnObj = Instantiate(mapPrefabToUse, _mapListContainer);
                 mapBtnObj.name = $"BtnMap_{mapDef.sceneName}";
@@ -144,28 +168,14 @@ namespace VrBattlegrounds.UI.Menu
             }
         }
 
-        private bool IsMapSupportedByMode(MapData mapDef, GameModeData targetMode)
-        {
-            if (targetMode == null || mapDef.supportedModes == null || mapDef.supportedModes.Length == 0) 
-            {
-                return true; 
-            }
-
-            foreach (var mode in mapDef.supportedModes)
-            {
-                if (mode != null && mode.modeId == targetMode.modeId)
-                    return true;
-            }
-            return false;
-        }
-
         private void OnMapClicked(string sceneName)
         {
-            // Сохраняем логику, как было в Armada
+            // Серия из одной карты: UI выбора нескольких карт пока нет — данные и серверная
+            // логика серии (SessionManager.SetSeries, MatchSeries) уже умеют список.
             SessionManager.Instance?.SetSession(sceneName, _selectedMode?.modeId);
             GameLog.UI.Info($"[MenuSessionSetup] Режим: {_selectedMode?.displayName}, Выбрана карта: {sceneName}");
-            
-            // Сразу запускаем старт после выбора (или можно сделать отдельную кнопку 'Start')
+
+            // Сразу начинаем серию: карта загрузится и стартует в разминке, матч — кнопкой «Начать матч».
             SessionManager.Instance?.StartSession();
         }
 

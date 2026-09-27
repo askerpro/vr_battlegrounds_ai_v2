@@ -214,13 +214,13 @@ namespace VrBattlegrounds.Player
 
         /// <summary>
         /// Урон ещё не применён — его можно отменить. Решает активный режим
-        /// (<see cref="GameMode.PlayersTakeDamage"/>): в лобби смерти нет, урон по игроку
+        /// (<see cref="GameMode.PlayersTakeDamage"/>): в разминке смерти нет, урон по игроку
         /// отменяется на каждой машине, включая локальные эффекты у клиента. Игрок о режиме
         /// ничего не знает — только спрашивает правило.
         /// </summary>
         private void OnDamageReceiving(object sender, UxrDamageEventArgs e)
         {
-            GameMode mode = GameMode.Current;
+            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
             if (mode == null || mode.PlayersTakeDamage) return;
 
             e.Cancel();

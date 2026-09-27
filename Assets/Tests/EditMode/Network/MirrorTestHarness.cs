@@ -79,6 +79,7 @@ namespace VrBattlegrounds.Tests.Network
             typeof(AvatarManager),
             typeof(GameplayManager),
             typeof(SessionManager),
+            typeof(MatchSeries),
             typeof(MapManager)
         };
 

@@ -43,8 +43,9 @@ namespace VrBattlegrounds.Arsenal
     /// ли пропавшее оружие — объявляет активный режим через
     /// <see cref="GameMode.ArsenalRules"/>, а стена сверяется с этим каждый кадр
     /// (<see cref="ApplyModeRules"/>). Elimination отвечает по фазе раунда, лобби
-    /// (<see cref="LobbyMode"/>) — «открыт всегда, без жетона». Разовое пополнение пустых
-    /// слотов к новому раунду приходит событием <see cref="GameMode.ArsenalRefillRequestedServer"/>.
+    /// (<see cref="WarmupMode"/>) — «открыт всегда, без жетона». Разовое пополнение пустых
+    /// слотов (новый раунд, новый режим на карте) приходит событием экземпляра активного
+    /// режима <see cref="GameMode.ArsenalRefillRequestedServer"/>.
     /// Режима нет — правил нет, стена стоит как стояла.
     /// </para>
     /// </summary>
@@ -419,17 +420,34 @@ namespace VrBattlegrounds.Arsenal
             // Разовое пополнение пустых слотов объявляет режим (Elimination — к новому
             // раунду) серверным событием базового GameMode. Серверный канал, а не
             // клиентский обработчик: на выделенном сервере клиентская ветка не исполнялась
-            // никогда (NET-06).
-            GameMode.ArsenalRefillRequestedServer -= ServerRefillEmptySlots;
-            GameMode.ArsenalRefillRequestedServer += ServerRefillEmptySlots;
+            // никогда (NET-06). Событие — у экземпляра режима, а режим на карте меняется
+            // на месте (разминка → матч → разминка): стена следит за сменой активного
+            // режима и переподписывается.
+            Managers.GameplayManager.ActiveGameModeChangedLocal -= HandleActiveModeChanged;
+            Managers.GameplayManager.ActiveGameModeChangedLocal += HandleActiveModeChanged;
+            HandleActiveModeChanged(ActiveMode);
 
             ReplenishWeaponsNetwork(true);
         }
 
         public override void OnStopServer()
         {
-            GameMode.ArsenalRefillRequestedServer -= ServerRefillEmptySlots;
+            Managers.GameplayManager.ActiveGameModeChangedLocal -= HandleActiveModeChanged;
+            HandleActiveModeChanged(null);
             base.OnStopServer();
+        }
+
+        /// <summary>Режим, на чей запрос пополнения стена подписана сейчас.</summary>
+        private GameMode _refillSource;
+
+        /// <summary>Активный режим сменился — подписка на его запрос пополнения.</summary>
+        private void HandleActiveModeChanged(GameMode mode)
+        {
+            if (_refillSource == mode) return;
+
+            if (_refillSource != null) _refillSource.ArsenalRefillRequestedServer -= ServerRefillEmptySlots;
+            _refillSource = mode;
+            if (_refillSource != null) _refillSource.ArsenalRefillRequestedServer += ServerRefillEmptySlots;
         }
 
         /// <summary>Режим попросил пополнить пустые слоты (новый раунд).</summary>
@@ -577,7 +595,9 @@ namespace VrBattlegrounds.Arsenal
             // Подписка серверного канала снимается и здесь: статическое событие переживает
             // объект, а уничтоженная стена в списке подписчиков — это MissingReference на
             // ближайшем запросе пополнения. Повторное отписывание безвредно.
-            GameMode.ArsenalRefillRequestedServer -= ServerRefillEmptySlots;
+            Managers.GameplayManager.ActiveGameModeChangedLocal -= HandleActiveModeChanged;
+            if (_refillSource != null) _refillSource.ArsenalRefillRequestedServer -= ServerRefillEmptySlots;
+            _refillSource = null;
 
             if (_dogTagController != null)
                 _dogTagController.OnTagGrabbed -= HandleTagGrabbed;

@@ -112,9 +112,9 @@ namespace VrBattlegrounds.DevTools
                 $"[DebugOrchestrator] HandlePlayerConnected: сессия={session.PlayerName}");
 
             // Команду оркестратор больше не назначает: её раздаёт активный режим
-            // (GameMode.ServerAssignTeams) — в лобби команду «Лобби», на карте автобалансом
-            // по командам матча. Раньше здесь был свой автобаланс по teamsForAutoAssign,
-            // и в лобби он спорил бы с лобби-режимом.
+            // (GameMode.ServerAssignTeams): разминка даёт «Разминку» игроку без команды, режим матча
+            // ждёт выбора игрока. Раньше здесь был свой автобаланс по teamsForAutoAssign,
+            // и спорил бы с разминкой.
             TryStartGameplay();
         }
 
@@ -164,16 +164,17 @@ namespace VrBattlegrounds.DevTools
                 return;
             }
 
-            if (matchManager.HasSceneGameMode)
+            if (matchManager.CurrentMap != null &&
+                MapModeRules.ResolveMatchMode(matchManager.CurrentMap, null, null) == null)
             {
-                // Режим сцены (лобби) стартует сам в GameplayManager.OnStartServer —
-                // автостарт матча здесь не нужен и выбором матча его не перебить.
+                // Лобби: с картой совместима только разминка, и она стартует сама
+                // в GameplayManager.OnStartServer. Матча здесь не бывает.
                 GameLog.Debug.Verbose(
-                    "[DebugOrchestrator] TryStartGameplay: у сцены свой режим, он стартует сам.");
+                    "[DebugOrchestrator] TryStartGameplay: на этой карте нет режимов матча (лобби).");
                 return;
             }
 
-            if (matchManager.IsGameplayActive)
+            if (matchManager.IsMatchActive)
             {
                 GameLog.Debug.Verbose(
                     "[DebugOrchestrator] TryStartGameplay: матч уже активен.");
@@ -198,7 +199,7 @@ namespace VrBattlegrounds.DevTools
 
             GameLog.Debug.Info(
                 "[DebugOrchestrator] TryStartGameplay: попытка запустить матч (условия по игрокам выполнены).");
-            matchManager.StartGameplay();
+            matchManager.StartMatch();
 
         }
 
@@ -256,17 +257,19 @@ namespace VrBattlegrounds.DevTools
                 return;
             }
 
-            // Устанавливаем режим через SessionManager до загрузки карты — GameplayManager прочитает его при старте.
-            if (!string.IsNullOrEmpty(_config.autoGameModeId) && SessionManager.Instance != null)
-            {
-                SessionManager.Instance.SetSession(_config.autoLoadMapScene, _config.autoGameModeId);
-                GameLog.Debug.Info(
-                    $"[DebugOrchestrator] Сессия установлена: карта={_config.autoLoadMapScene}, режим={_config.autoGameModeId}");
-            }
-
             _mapLoadRequested = true;
             GameLog.Debug.Info(
                 $"[DebugOrchestrator] Автозагрузка карты: {_config.autoLoadMapScene}");
+
+            // Карта с режимом — серия из одной карты, как из меню админа: карта стартует
+            // в разминке, «Начать матч» делает автостарт (autoStartGameplay).
+            if (!string.IsNullOrEmpty(_config.autoGameModeId) && SessionManager.Instance != null)
+            {
+                SessionManager.Instance.SetSession(_config.autoLoadMapScene, _config.autoGameModeId);
+                SessionManager.Instance.StartSession();
+                return;
+            }
+
             MapManager.Instance?.LoadMap(_config.autoLoadMapScene);
         }
     }

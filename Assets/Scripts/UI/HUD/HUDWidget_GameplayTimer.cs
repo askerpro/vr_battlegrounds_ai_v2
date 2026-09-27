@@ -19,7 +19,7 @@ namespace VrBattlegrounds.UI.HUD
         {
             if (_timerText == null) return;
 
-            if (GameplayManager.Instance != null && GameplayManager.Instance.IsGameplayActive)
+            if (GameplayManager.Instance != null && GameplayManager.Instance.IsMatchActive)
             {
                 if (!_matchWasActive)
                 {

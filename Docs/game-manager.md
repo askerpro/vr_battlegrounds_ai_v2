@@ -1,52 +1,76 @@
-> Обновлять при изменении `GameManager`, `GameModeData`, `GameModeRegistry` или архитектуры выбора режима.
+> Обновлять при изменении `SessionManager`, `MatchSeries`, `GameplayManager`, `GameModeData`,
+> `GameModeRegistry`, `MapData.supportedModes` или архитектуры выбора режима.
 
 ---
 
-# GameManager — выбор сессии (карта + режим)
+# Сессия матча: выбор (режим + карты), серия карт, режим на карте
 
-## Что такое GameManager
+Три объекта, три ответственности:
 
-`GameManager` — синглтон `NetworkBehaviour`, который **переживает смену сцен** (живёт на том же GameObject что и `GameNetworkManager` и `MapManager`).
+| Объект | Где живёт | Что делает |
+|---|---|---|
+| `SessionManager` | `SessionContext` (спавнится в `GameNetworkManager.OnStartServer`, DontDestroyOnLoad) | Хранит **выбор** администратора: режим матча и список карт серии. Единственное место поиска данных по идентификатору: `FindModeData(modeId)`, `FindMap(sceneName)` |
+| `MatchSeries` | тот же `SessionContext` | Ведёт **серию**: какая карта сейчас, общий счёт (сколько карт выиграла команда), итоги карт. Переживает смену режима на карте и смену карт |
+| `GameplayManager` | объект `MatchManager` в каждой сцене (карты и лобби) | Ведёт **режим на карте**: разминка при старте, «Начать матч» — режим матча на месте, конец матча — снова разминка |
 
-**Единственная ответственность:** хранить выбор администратора — карту и режим — и синхронизировать их на всех клиентах через `SyncVar`.
+Команды (выбор игроком, выдача админом, автобаланс) — не у менеджеров, а в статическом
+сервисе `MatchTeams`; право админа — `SessionPermissions.IsAdmin`.
 
 ```
-DontDestroyOnLoad GO
-> Обновлять при изменении `GameManager`, `GameModeData`, `GameModeRegistry` или архитектуры выбора режима.
+DontDestroyOnLoad
+  └── SessionContext (NetworkIdentity)
+        ├── SessionManager   ← выбор: режим + карты следующей серии
+        ├── NetworkStateRelay
+        └── MatchSeries      ← ход серии: текущая карта, общий счёт
+Сцена карты / лобби
+  └── MatchManager
+        └── GameplayManager  ← режим на карте (разминка ⇄ матч)
+```
 
 ---
 
-# GameManager — выбор сессии (карта + режим)
+## API
 
-## Что такое GameManager
-
-`GameManager` — синглтон `NetworkBehaviour`, который **переживает смену сцен** (живёт на том же GameObject что и `GameNetworkManager` и `MapManager`).
-
-**Единственная ответственность:** хранить выбор администратора — карту и режим — и синхронизировать их на всех клиентах через `SyncVar`.
-
-```
-DontDestroyOnLoad GO
-  ├── GameNetworkManager
-  ├── MapManager
-  └── GameManager          ← карта + режим для следующей сессии
-```
-
-**Почему не MapManager и не MatchManager:**
-- `MapManager` — транспорт (грузит сцены), не хранит состояние
-- `GameplayManager` — живёт в сцене карты и уничтожается при её смене
-
----
-
-## API GameManager
+### `SessionManager`
 
 | Метод / Свойство | Сервер/Клиент | Описание |
 |---|---|---|
-| `SetSession(mapScene, modeId)` | Только сервер | Устанавливает карту и режим. Реплицируется клиентам через `SyncVar`. |
-| `StartSession()` | Только сервер | Загружает выбранную карту через `MapManager.LoadMap()`. |
-| `SelectedMap` | Оба | `MapData` выбранной карты (из `MapRegistry`). |
-| `SelectedGameModeData` | Оба | `GameModeData` выбранного режима (из `GameModeRegistry`). |
-| `SelectedMapScene` | Оба | Имя сцены выбранной карты (`string`). |
-| `SelectedModeId` | Оба | Идентификатор выбранного режима (`string`). |
+| `SetSeries(modeId, maps)` | Только сервер | Режим и карты следующей серии. Реплицируется (`SyncVar` + `SyncList`). |
+| `SetSession(mapScene, modeId)` | Только сервер | Серия из одной карты (то, что сейчас выбирает меню). |
+| `StartSession()` | Только сервер | `MatchSeries.ServerBegin(SelectedMaps)` — грузит первую карту. |
+| `SelectedGameModeData`, `SelectedModeId` | Оба | Выбранный режим матча. |
+| `SelectedMaps`, `SelectedMapScene`, `SelectedMap` | Оба | Карты серии; первая карта. |
+| `FindModeData(modeId)` | Оба | `GameModeData` по `modeId` из `GameModeRegistry` — **единственный путь**, и для разминки тоже. |
+| `FindMap(sceneName)`, `MapRegistry`, `ModeRegistry` | Оба | Реестры и поиск карты по сцене. |
+
+### `MatchSeries`
+
+| Метод / Свойство | Сервер/Клиент | Описание |
+|---|---|---|
+| `ServerBegin(maps)` | Сервер | Сбрасывает общий счёт, запоминает карты, грузит первую (`MapManager.LoadMap`). |
+| `ServerRecordMapResult(winner)` | Сервер | Итог карты в общий счёт; `null` — ничья. Зовётся сам по `GameplayManager.GameplayEnded`. |
+| `ServerAdvance()` | Сервер | Следующая карта; после последней — конец серии и лобби. Зовётся сам через `_nextMapDelay` (10 с) после конца матча на карте. |
+| `ServerEnd()` | Сервер | Досрочный конец (кнопка «Стоп / Лобби»). |
+| `IsRunning`, `Maps`, `CurrentIndex`, `CurrentMapScene` | Оба | Состояние серии. |
+| `GetMapWins(team)`, `Results` | Оба | Общий счёт: выиграно карт; итоги карт по порядку (`teamIndex`, −1 — ничья). |
+
+Конец серии (последняя карта или «Стоп / Лобби») **отпускает команды матча**: игрок с командой
+не из разминки получает команду «Разминка» со своим скином
+(`SessionTeamAssigner.ApplyBeforeSceneChange` — без пересоздания аватара, сцена всё равно
+сменится). Иначе в лобби он стоял бы в CT без зоны и выбирал бы скины только из CT. Счёт
+серии остаётся до начала следующей — его видно в лобби.
+
+### `GameplayManager`
+
+| Метод / Свойство | Описание |
+|---|---|
+| `OnStartServer` | Карта (любая, и лобби) стартует в разминке — `ServerStartWarmup()`. |
+| `StartMatch()` | «Начать матч»: разминка → режим матча на месте. Режим — `MapModeRules.ResolveMatchMode`: выбор админа, если совместим с картой, иначе первый совместимый; в лобби совместимых нет — отказ (`Warning`). Вызов до спавна менеджера (автостарт отладки из `Awake`) откладывается до `OnStartServer`. |
+| `StopMatch()` | Матч без победителя → разминка на этой карте. Серию не двигает. |
+| `GameplayEnded` (событие экземпляра) | Режим матча объявил победителя. Слушает `MatchSeries`. Карта сразу уходит в разминку. |
+| `ActiveGameMode`, `IsMatchActive`, `CurrentMap` | Режим этой машины; идёт ли матч (разминка — не матч); `MapData` своей сцены. |
+| `ActiveGameModeChangedLocal` (статическое) | Режим этой машины сменился. HUD и стена арсенала переподписываются. |
+
 
 ---
 
@@ -57,17 +81,17 @@ DontDestroyOnLoad GO
 | Слой | Тип | Где живёт | Что делает |
 |---|---|---|---|
 | `GameModeData` | ScriptableObject | В `Assets/Data/GameModes/` | Данные для UI: название, иконка, `modeId`, команды, префаб логики |
-| `GameMode` | NetworkBehaviour | Инстанцируется в сцену при StartMatch | Полная логика режима: управляет собственной структурой матча |
+| `GameMode` | NetworkBehaviour | Спавнится `GameplayManager` при старте карты (разминка) и по «Начать матч» | Полная логика режима: управляет собственной структурой матча |
 
 **Поток жизни режима:**
 ```
 GameModeData.modePrefab
-  → NetworkServer.Spawn  (GameplayManager.StartGameplay)
-  → GameMode.Initialize(teams)
-  → GameMode.StartGameplayWhenReady()  ← режим сам проверяет CanStartGameplay()
-  → GameMode.StartMatch()              ← режим сам управляет сетами/раундами/таймером
-  → GameMode.MatchEnded event          ← режим сигнализирует о завершении
-  → GameplayManager.OnMatchEnded
+  → Instantiate + GameMode.Initialize(data)   ← до спавна (GameplayManager.ServerSwitchTo)
+  → NetworkServer.Spawn
+  → GameMode.StartGameplayWhenReady()  ← команды по политике, пополнение стен, CanStartGameplay()
+  → GameMode.StartGameplay()           ← режим сам управляет сетами/раундами/таймером
+  → GameMode.GameplayEnded event       ← режим объявил победителя
+  → GameplayManager.OnGameplayEnded → GameplayEnded (серия) → ServerSwitchTo(разминка)
   → NetworkServer.UnSpawn + Destroy (GameplayManager.CleanupGameMode)
 ```
 
@@ -82,84 +106,102 @@ GameModeData.modePrefab
 > Именно поэтому их целиком покрывают EditMode-тесты. (Раньше здесь было написано, что они
 > спавнятся через `NetworkServer.Spawn` — это никогда не соответствовало коду.)
 
+
 **Что умеет каждый режим самостоятельно:**
 
 | Режим | Структура | Победа | Респавн |
 |---|---|---|---|
 | `EliminationMode` | Матч → Сеты → Раунды | Больше сетов выиграно | ❌ нет |
 | `RespawnMode` | Один длинный матч (таймер) | Больше фрагов | ✅ всегда |
-| `LobbyMode` | Нет матча — свободная игра, одна команда «Лобби» | — | ✅ |
+| `WarmupMode` («Разминка») | Нет матча — переходная стадия между матчами | — | — (смерти нет) |
 
-### Режим сцены и выбор матча
+### Разминка и совместимость режимов с картой
 
-Режим, который запускает `GameplayManager`, берётся из двух **разных** источников, и они
-не смешиваются (`GameplayManager.ResolveGameModeData`):
+Любая карта — и лобби, и боевая — стартует в **разминке** (`WarmupMode`, бывший `LobbyMode`),
+пока администратор не нажмёт «Начать матч». Разминка лежит в `GameModeRegistry` рядом
+с режимами матча, с флагом `GameModeData.isWarmup`: в выбор режима матча (`MenuSessionSetup.TabModes`)
+она не попадает, а данные по `modeId` ищутся одним путём — `SessionManager.FindModeData`.
 
-| Источник | Где задан | Что означает | Старт |
+**Почему флаг, а не отдельный реестр.** Режим по сети — только строка `modeId`, и клиенту
+нужен один путь от строки к данным. Раньше лобби-режима в реестре не было, и поиск шёл
+в два места (`GameModeCatalog`: «режим сцены» у `GameplayManager`, затем реестр). Флаг
+держит один реестр и одну выборку «режимы матча» для меню. Альтернатива — перечисление
+«роль режима» — даёт то же при единственном нематчевом значении.
+
+**Совместимость — у карты** (`MapData.supportedModes`), выбор из списка — чистые правила
+`MapModeRules`:
+
+| Карта | `supportedModes` | Старт | «Начать матч» |
 |---|---|---|---|
-| **Режим сцены** | поле `_sceneGameMode` у `GameplayManager` в сцене | режим, который эта сцена **есть** (лобби — `LobbyMode`) | сам, в `GameplayManager.OnStartServer` |
-| **Выбор матча** | `SessionManager.SelectedGameModeData` (админ, `GameModeRegistry`) | режим **следующего** матча на карте | по команде администратора или автостарту `DebugOrchestrator` |
+| Лобби (`MapData_Lobby`, `MapRegistry.lobby`) | `[warmup]` | разминка | отказ: режимов матча нет |
+| `TestMap1`, `TestMap2` | `[warmup, elimination, respawn]` | разминка | выбор админа, если совместим, иначе первый совместимый |
+| Сцена не из реестра / пустой список | — | разминка реестра | выбор админа или первый режим матча реестра |
 
-Режим сцены задан — выбор матча не спрашивается вовсе. Поэтому выбор администратора в лобби
-не меняет режим лобби, а лобби-режима нет в `GameModeRegistry` и в меню выбора режима матча.
-На картах режим сцены пуст (проверяет `GameModeWiringTests`).
+Поле «режим сцены» (`GameplayManager._sceneGameMode`) и `GameModeCatalog` удалены.
 
-Почему поле на `GameplayManager`, а не `MapData`: лобби не карта из `MapRegistry` (добавить
-его туда — показать в выборе карт), а в самой сцене поле видно там, где его и ищут, —
-у объекта, который режим спавнит. Альтернатива — отдельный компонент «режим сцены»; она
-дала бы ещё один объект в каждой сцене без выигрыша.
+### Смена режима на месте
 
-`GameplayManager` теперь есть и в лобби (`MatchManager` в `Lobby.unity`), поэтому
-`GameplayManager.Instance` равен null только в Offline и в окне смены сцены.
+`GameplayManager.ServerSwitchTo`: текущий режим останавливается (`StopGameplay`, если он
+не закончился сам), снимается с сети, новый инициализируется **до** спавна (modeId и команды
+уезжают клиенту начальным состоянием, HUD хоста сразу знает режим) и спавнится. Сцена
+не перезагружается, `GameplayManager` тот же.
+
+Что уходит вместе с режимом: его правила-компоненты (уборка пола, карман, раундовые магазины),
+счёт на карте (`_teamScores` — сеты Elimination), машина раундов. Что делает новый режим
+на старте: пол чистый (`ModeStartCleanup` на префабе каждого режима, на каждой машине),
+пустые слоты стен пополнены (режим поднимает `ArsenalRefillRequestedServer` в
+`StartGameplayWhenReady`), стена дальше сверяется с его `ArsenalRules`. Что **не** трогается:
+команды игроков, общий счёт серии (`MatchSeries`), статистика (`PlayerSession.Kills/Deaths/Score`).
+Снаряжение в руках, кобурах и карманах остаётся у игрока (см. развилку в CHANGELOG 2026-09-27).
 
 ### Правила, которые объявляет режим
 
-Системы вне режима не знают его конкретного типа — спрашивают базовый `GameMode`:
+Системы вне режима не знают его конкретного типа — спрашивают базовый `GameMode`
+у `GameplayManager.Instance.ActiveGameMode` (статический дубль `GameMode.Current` удалён):
 
-| Свойство / событие | Кто читает | `EliminationMode` | `LobbyMode` |
+| Свойство / событие | Кто читает | `EliminationMode` | `WarmupMode` |
 |---|---|---|---|
 | `WeaponsEnabled` | `GameplayManager.Update` → `UxrWeaponManager` | только в `Combat` | всегда |
 | `ArsenalRules.IsOpen` | `ArsenalWallController.ApplyModeRules` (сервер) | только в `Equipment` | всегда |
 | `ArsenalRules.UsesReadinessTag` | стена, каждая машина | `RoundStartRule == Readiness` | нет |
 | `ArsenalRules.ReplacesLostWeapons` | стена, сервер | нет | да, через 2 с |
-| `ArsenalRefillRequestedServer` | стена, сервер | на входе в `Setup` | — |
+| `ArsenalRefillRequestedServer` (событие **экземпляра**) | стена, сервер (переподписка по `ActiveGameModeChangedLocal`) | на старте режима и на входе в `Setup` | на старте режима |
 | `OnPlayerDied(player)` | `GameplayManager.OnPlayerDied` | условие победы раунда | — (смерти нет) |
 | `PlayersTakeDamage` | `PlayerController` на `UxrActor.DamageReceiving` (отмена урона) | да | нет |
 | `TeamChoiceLocked` | `TeamChangeRules`, планшет | после старта матча | нет |
-| `ModeData` (`modeId` SyncVar) | HUD (`PlayerHUDManager`), политика команд, минимум игроков | `Elimination_GameModeData` | `Lobby_GameModeData` (HUD нет) |
+| `IsWarmup`, `ModeData` (`modeId` SyncVar) | HUD, политика команд, минимум игроков, спавн | `Elimination_GameModeData` | `Warmup_GameModeData` (HUD нет) |
 
-Свойства — состояние, стена сверяется с ним каждый кадр; событие одно — разовое
-пополнение пустых слотов, потому что фаза `Setup` бывает короче кадра. Режима нет
-(карта до старта матча) — стена не трогается, оружие стреляет.
+Свойства — состояние, стена сверяется с ним каждый кадр; событие — разовое пополнение пустых
+слотов, потому что фаза `Setup` бывает короче кадра. Событие стало событием экземпляра:
+режим на карте меняется на месте, и статическое событие пришлось бы разбирать, чей это запрос.
 
 ### Раздача команд режимом
 
-Команда игрока — команда **активного режима сцены**. Лобби-режим раздаёт свою единственную
-команду сам; на карте команду матча выбирает игрок или выдаёт админ (этап Б).
+Политика — одно перечисление в данных режима (`GameModeData.teamAssignment`), ветка по нему —
+в `GameMode.ServerAssignTeams`. Интерфейс `ITeamAssignmentPolicy` и `PlayerChoiceTeamPolicy`
+удалены: точка расширения без второго потребителя. Чистый расчёт `TeamAutoBalance.Plan` остался.
 
-**Политика режима** (`GameMode.TeamAssignmentPolicy`) задаётся данными режима —
-полем `GameModeData.teamAssignment`, а не кодом:
-
-| `teamAssignment` | Политика | Где |
+| `teamAssignment` | Что делает | Где |
 |---|---|---|
-| `AutoBalance` | `AutoBalanceTeamPolicy` — расчёт `TeamAutoBalance.Plan`: в самую малочисленную, при равенстве в первую по списку, стоящие в командах режима не двигаются | `Lobby_GameModeData` (команда одна — её получают все) |
-| `PlayerChoice` | `PlayerChoiceTeamPolicy` — никого не назначает | `Elimination_GameModeData`, `Respawn_GameModeData` |
+| `KeepOrDefault` | команда матча (любая ненулевая) сохраняется; игрок без команды получает первую команду режима | `Warmup_GameModeData` |
+| `AutoBalance` | все без команды режима — в самую малочисленную (`TeamAutoBalance.Plan`) | сейчас нигде (и разово — кнопкой админа) |
+| `PlayerChoice` | никого: выбирает игрок в планшете или выдаёт админ; матч ждёт, пока команда будет у всех | `Elimination_GameModeData`, `Respawn_GameModeData` |
 
-Режим без данных (EditMode-тесты) — `PlayerChoice`: сам никого не двигает. Политика
-применяется в `GameMode.ServerAssignTeams` — при старте (`StartGameplayWhenReady`) и при
-каждом подключении (`PlayersManager.OnSessionConnected`, приходит до спавна аватара).
-Данные режима известны и клиенту: режим реплицирует `modeId`, а `GameModeCatalog.Find`
-ищет его сначала у режима сцены (лобби-режима в реестре матча нет), затем в `GameModeRegistry`.
+Режим без данных (EditMode-тесты) — `PlayerChoice`; в тестах значение подменяется
+присваиванием `GameMode.TeamAssignment`. Политика применяется при старте режима
+(`StartGameplayWhenReady`) и при каждом подключении (`PlayersManager.OnSessionConnected`).
 
-**Входы смены команды** — у `GameplayManager`, правила — `TeamChangeRules`, исполнение —
+**Входы смены команды** — статический сервис `MatchTeams` (раньше жили в `GameplayManager`),
+правила — `TeamChangeRules`, право админа — `SessionPermissions.IsAdmin` (Player), исполнение —
 `SessionTeamAssigner`:
 
 | Кто | Вход | Правило |
 |---|---|---|
-| Игрок (планшет) | `PlayerSession.CmdRequestTeamChange` → `ProcessTeamChangeRequest` | только команда активного режима и только пока `GameMode.TeamChoiceLocked == false` (до старта матча). Скин в своей команде — всегда |
-| Админ (экран «Игроки и команды») | `PlayerSession.CmdAdminAssignTeam` → `ServerAdminAssignTeam(admin, target, teamId)` | право админа (`TeamChangeRules.IsAdmin`: хост или `IsAdmin`), любая команда `TeamRegistry`, в любой момент |
-| Админ, разово | `PlayerSession.CmdAdminAutoBalance` → `ServerAdminAutoBalance(admin)` | автобаланс игроков без команды режима; политику режима не меняет |
-| Режим | `GameMode.ServerAssignTeams` | по политике режима |
+| Игрок (планшет) | `PlayerSession.CmdRequestTeamChange` → `MatchTeams.ServerPlayerRequest(mode, …)` | скин в своей команде — всегда (и в разминке с командой матча); команда — только из активного режима и пока `TeamChoiceLocked == false` |
+| Админ (экран «Игроки и команды») | `PlayerSession.CmdAdminAssignTeam` → `MatchTeams.ServerAdminAssign(mode, admin, target, teamId)` | право админа (хост или `IsAdmin`), любая команда `TeamRegistry`, в любой момент |
+| Админ, разово | `PlayerSession.CmdAdminAutoBalance` → `MatchTeams.ServerAdminAutoBalance(mode, admin)` | автобаланс игроков без команды режима; политику режима не меняет |
+| Режим | `GameMode.ServerAssignTeams` | по `teamAssignment` |
+| Конец серии | `MatchSeries` → `SessionTeamAssigner.ApplyBeforeSceneChange` | команда не из разминки → «Разминка», скин сохраняется |
 
 **Почему выбор закрывается стартом матча.** После старта смена стороны — это выход из
 раунда посреди боя: составы уже разыграны (сеты, смена сторон), а перебежчик ломает
@@ -167,22 +209,25 @@ GameModeData.modePrefab
 `_matchState != WaitingForPlayers`, у Respawn — идёт ли матч; это SyncVar-состояние,
 поэтому планшет клиента знает его сам.
 
+**Планшет в разминке.** Игроку с командой матча (CT/T) планшет предлагает только его команду —
+смену скина (`MenuTeamSelection.ResolveAvailableTeams`); иначе выбор скина «Разминки» молча
+перевёл бы его из команды матча. Игроку без команды — «Разминка» (все скины).
+
 **Матч ждёт команд.** `GameMode.AllPlayersHaveModeTeam()` — у каждого подключённого игрока
 (не зрителя) есть команда режима; состав берётся у `PlayerRoster`. Elimination проверяет его
-в `IsPlayersReady` вместе с минимумом игроков — теперь из **своих** данных
-(`GameMode.MinPlayersToStart` ← `ModeData.minPlayersToStart`), а не из выбора матча
-в `SessionManager`. Respawn — в `CanStartGameplay`.
+в `IsPlayersReady` вместе с минимумом игроков из своих данных (`MinPlayersToStart`).
+Respawn — в `CanStartGameplay`.
 
-**Исполнение** (`SessionTeamAssigner`): поднимает `GameplayManager.OnPlayerTeamChangeRequested`
+**Исполнение** (`SessionTeamAssigner`): поднимает `MatchTeams.TeamChangeRequested`
 (хуки режима); нет аватара — пишет команду в сессию (спавн сам возьмёт зону и скин);
-аватар жив — `AvatarManager.ChangeAvatar`, **на том же месте** (смена команды никого не
-двигает). Скин по выбору игрока либо сохраняется (`TeamData.IndexOfAvatar`) для админа
-и политики.
+аватар жив — `AvatarManager.ChangeAvatar`, **на том же месте**. Скин по выбору игрока либо
+сохраняется (`TeamData.IndexOfAvatar`) для админа, политики и конца серии.
 
 Игрок без команды режима на карте появляется в нейтральной точке (откалиброванный — по
-калибровке), лог уровня `Info`: это ожидание выбора, а не сбой. Команды раньше раздавал
-`DebugOrchestrator` (`teamsForAutoAssign`) — удалено. Зрители (`GameRole.Spectator`) команд
-не получают. Тесты — `TeamChoiceTests`, `TeamAutoBalanceTests`, `GameModeRulesTests`.
+калибровке), лог уровня `Info`: это ожидание выбора, а не сбой. То же для «Разминки» на
+боевой карте — зон у неё там нет по построению. Зрители (`GameRole.Spectator`) команд
+не получают. Тесты — `MatchFlowTests`, `MapModeRulesTests`, `TeamChoiceTests`,
+`TeamAutoBalanceTests`, `GameModeRulesTests`, `GameModeWiringTests`.
 
 ---
 
@@ -214,6 +259,7 @@ Assets/Prefabs/GameModes/
 |---|---|---|---|---|
 | `GameModeData_Respawn.asset` | `respawn` | Возрождение | `RespawnMode.prefab` | [Команда A, Команда B] |
 | `GameModeData_Elimination.asset` | `elimination` | Ликвидация | `EliminationMode.prefab` | [Команда A, Команда B] |
+| `Warmup_GameModeData.asset` | `warmup` | Разминка | `WarmupMode.prefab` | [«Разминка»] — `isWarmup`, `KeepOrDefault` |
 
 Сохранить в: `Assets/Data/GameModes/`
 
@@ -231,11 +277,10 @@ Assets/Prefabs/GameModes/
 
 ---
 
-## Шаг 4 — Настроить GameObject NetworkManager
+## Шаг 4 — Настроить SessionContext
 
-На GameObject с `GameNetworkManager` и `MapManager` добавить компонент `GameManager`.
-
-В Inspector `GameManager` назначить:
+Префаб `Assets/Prefabs/Managers/SessionContext.prefab` (спавнит `GameNetworkManager`): на нём
+`SessionManager` и `MatchSeries`. В Inspector `SessionManager` назначить:
 
 | Поле | Что назначить |
 |---|---|
@@ -244,9 +289,9 @@ Assets/Prefabs/GameModes/
 
 ---
 
-## Шаг 5 — Настроить AdminMenuController
+## Шаг 5 — Настроить меню выбора сессии
 
-На GameObject `AdminMenuController` в Lobby-сцене:
+На `MenuSessionSetup` (планшет админа в лобби):
 
 | Поле | Что назначить |
 |---|---|
@@ -258,33 +303,28 @@ Assets/Prefabs/GameModes/
 ## Поток действий администратора
 
 ```
-[Lobby]
-Администратор выбирает карту → AdminMenuController.OnMapSelected(index)
-  → GameManager.SetSession(mapScene, currentModeId)
+[Лобби — разминка]
+Админ выбирает режим (вкладка) и карту → MenuSessionSetup.OnMapClicked
+  → SessionManager.SetSession(map, modeId)      ← серия из одной карты (UI списка пока нет)
+  → SessionManager.StartSession()
+  → MatchSeries.ServerBegin(maps) → MapManager.LoadMap(maps[0])
 
-Администратор выбирает режим → AdminMenuController.OnModeSelected(index)
-  → GameManager.SetSession(currentMap, modeId)
+[Карта — разминка]  GameplayManager.OnStartServer → ServerStartWarmup
+  команды матча сохраняются, игрок без команды — «Разминка»; арсенал открыт, урона нет
 
-Администратор нажимает "Начать игру" → AdminMenuController.OnStartSessionPressed()
-  → GameManager.StartSession()
-  → MapManager.LoadMap(selectedMapScene)
-  → [Карта загружается]
-
-Администратор нажимает "Старт матча" → AdminMenuController.OnStartMatchPressed()
-  → GameplayManager.StartMatch()
-  → читает GameManager.SelectedModeId
-  → находит GameMode-компонент по modeId
-  → игроки выбирают команду в планшете (или её выдаёт админ: экран «Игроки и команды»)
+Админ «Начать матч» → MenuMatchManager.OnStartMatchPressed → GameplayManager.StartMatch
+  → MapModeRules.ResolveMatchMode(карта, выбор админа) → режим матча на месте
+  → игрок без команды матча выбирает её в планшете (или выдаёт админ)
   → матч ждёт, пока команда режима будет у всех (GameMode.AllPlayersHaveModeTeam)
-  → запускает матч (ожидая `CanStartGameplay()`)
 
-[Матч идёт]
-Администратор нажимает "Стоп / Лобби" → AdminMenuController.OnStopMatchPressed()
-  → GameplayManager.StopMatch()
-  → MapManager.LoadMap("Lobby")
-  → [Lobby загружается: GameplayManager карты уничтожен, GameplayManager лобби
-     сам запускает LobbyMode, всем выдаётся команда «Лобби»]
-  → GameManager.SelectedModeId и SelectedMapScene — сохранены
+[Матч кончился]  GameMode.RaiseGameplayEnded → GameplayManager.GameplayEnded
+  → MatchSeries.ServerRecordMapResult (общий счёт)
+  → карта — снова разминка
+  → через _nextMapDelay (10 с) MatchSeries.ServerAdvance
+       → следующая карта серии (стартует в разминке)
+       → или, после последней: команды матча → «Разминка», LoadMap(лобби)
+
+[Досрочно] «Стоп / Лобби» → MenuMatchManager.OnStopMatchPressed → MatchSeries.ServerEnd → лобби
 ```
 
 ---
@@ -317,9 +357,10 @@ Assets/Prefabs/GameModes/
 
 2.  Создать префаб: `Assets/Prefabs/GameModes/MyMode.prefab` с компонентом `MyMode`
 
-3.  Создать `GameModeData` asset: `modeId = "my_mode"`, назначить `modePrefab` и `teams[]`
+3.  Создать `GameModeData` asset: `modeId = "my_mode"`, назначить `modePrefab` и `teams[]`;
+    на префаб добавить `ModeStartCleanup` (проверяет `GameModeWiringTests`)
 
-4.  Добавить asset в `GameModeRegistry.modes[]`
+4.  Добавить asset в `GameModeRegistry.modes[]` и в `supportedModes` карт, где режим допустим
 
 > Менять `GameplayManager`, `SetManager`, `RoundManager` и сцены карт **не нужно**.
 
@@ -329,8 +370,9 @@ Assets/Prefabs/GameModes/
 
 | Ошибка в логе | Причина | Решение |
 |---|---|---|
-| `GameManager не содержит выбранного режима` | `StartMatch()` вызван до `SetSession()` | Убедиться что администратор выбрал режим перед стартом |
+| `Матч не начат: на карте '…' нет совместимого режима матча` | «Начать матч» в лобби или на карте без режимов матча в `supportedModes` | Штатно для лобби; для карты — добавить режим в `MapData.supportedModes` |
 | `GameModeData '...' не содержит modePrefab` | Поле `modePrefab` не заполнено в asset режима | Назначить префаб в Inspector `GameModeData` |
 | `Префаб режима '...' не содержит компонент GameMode` | В префабе отсутствует компонент-наследник `GameMode` | Добавить `RespawnMode` / `EliminationMode` на GO префаба |
 | `GameModeData '...' содержит менее 2 команд` | Поле `teams[]` не заполнено в `GameModeData` | Назначить два `TeamData` asset-а в поле `teams[]` |
-| `карта не выбрана` / `режим не выбран` | `StartSession()` вызван до `SetSession()` | Порядок: сначала `SetSession`, потом `StartSession` |
+| `карта не выбрана` / `режим не выбран` | `StartSession()` вызван до `SetSeries()`/`SetSession()` | Порядок: сначала `SetSeries`, потом `StartSession` |
+| `На карте '…' нет разминки` | В реестре нет режима с `isWarmup` | Вернуть `Warmup_GameModeData` в `GameModeRegistry` |

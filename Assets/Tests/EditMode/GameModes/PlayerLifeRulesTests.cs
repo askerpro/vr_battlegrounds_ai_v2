@@ -15,7 +15,7 @@ namespace VrBattlegrounds.Tests.Modes
     /// Урон по игроку — правило режима (<see cref="GameMode.PlayersTakeDamage"/>).
     ///
     /// <para>
-    /// Что доказывает. В лобби смерти нет: урон по игроку отменяется на
+    /// Что доказывает. В разминке (и в лобби) смерти нет: урон по игроку отменяется на
     /// <c>UxrActor.DamageReceiving</c>, и решает это режим, а не проверка «мы в лобби»
     /// в игроке. В Elimination урон проходит как раньше.
     /// </para>
@@ -41,17 +41,17 @@ namespace VrBattlegrounds.Tests.Modes
         }
 
         [Test]
-        public void В_лобби_урон_по_игроку_не_проходит()
+        public void В_разминке_урон_по_игроку_не_проходит()
         {
             SilenceMirrorNoise();
 
             UxrActor actor = CreateAvatar();
-            ActivateMode<LobbyMode>();
+            ActivateMode<WarmupMode>();
 
             actor.ReceiveDamage(30f);
             actor.ReceiveDamage(500f);
 
-            Assert.AreEqual(100f, actor.Life, 0.01f, "В лобби урон по игроку прошёл — а смерти в лобби нет.");
+            Assert.AreEqual(100f, actor.Life, 0.01f, "В разминке урон по игроку прошёл — а смерти в разминке нет.");
             Assert.IsFalse(actor.IsDead);
         }
 

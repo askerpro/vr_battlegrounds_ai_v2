@@ -12,7 +12,7 @@ namespace VrBattlegrounds.Managers.Editor
         {
             if (target == null) return false;
             GameplayManager manager = (GameplayManager)target;
-            return Application.isPlaying && manager.IsGameplayActive;
+            return Application.isPlaying && manager.IsMatchActive;
         }
 
         public override void OnInspectorGUI()
@@ -26,7 +26,7 @@ namespace VrBattlegrounds.Managers.Editor
 
             EditorGUI.BeginDisabledGroup(true);
 
-            EditorGUILayout.Toggle("Gameplay Active", manager.IsGameplayActive);
+            EditorGUILayout.Toggle("Match Active", manager.IsMatchActive);
 
             if (manager.ActiveGameMode != null)
             {

@@ -18,7 +18,7 @@ namespace VrBattlegrounds.UI.Menu
     /// <para>
     /// Экран только отправляет запросы (<c>PlayerSession.CmdAdminAssignTeam</c>,
     /// <c>CmdAdminAutoBalance</c>); право админа проверяет сервер
-    /// (<see cref="TeamChangeRules.IsAdmin"/>). Не-админу экран показывает только
+    /// (<see cref="SessionPermissions.IsAdmin"/>). Не-админу экран показывает только
     /// пояснение. Список игроков — сетевые <see cref="PlayerSession"/> этой машины:
     /// они есть и у клиента, <c>PlayersManager</c> для этого не нужен.
     /// </para>
@@ -79,7 +79,7 @@ namespace VrBattlegrounds.UI.Menu
         /// <summary>Команды, которые админ выдаёт: активного режима сцены.</summary>
         public static TeamData[] AssignableTeams()
         {
-            GameMode mode = GameMode.Current;
+            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
             return mode != null ? System.Array.FindAll(mode.Teams, t => t != null) : new TeamData[0];
         }
 

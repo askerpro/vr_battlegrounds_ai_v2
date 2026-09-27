@@ -205,18 +205,18 @@ namespace VrBattlegrounds.Tests.Interaction
             AssetDatabase.AssetPathToGUID("Assets/Scripts/Interaction/LooseItemSweeper.cs");
 
         /// <summary>
-        /// Уборщик лобби переехал со сцены на префаб лобби-режима (<c>LobbyMode.prefab</c>):
+        /// Уборщик лобби переехал со сцены на префаб разминки (<c>WarmupMode.prefab</c>, бывший LobbyMode):
         /// лобби стало режимом, и его правила живут там же, где правила Elimination, —
         /// на префабе режима. Раньше тест искал компонент в <c>Lobby.unity</c>.
         /// </summary>
         [Test]
         public void В_лобби_оружие_возвращается_домой()
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/GameModes/LobbyMode.prefab");
-            Assert.IsNotNull(prefab, "Нет префаба лобби-режима.");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/GameModes/WarmupMode.prefab");
+            Assert.IsNotNull(prefab, "Нет префаба разминки.");
 
             var sweeper = prefab.GetComponent<LooseItemSweeper>();
-            Assert.IsNotNull(sweeper, "На лобби-режиме нет LooseItemSweeper — мусор в лобби копится без предела.");
+            Assert.IsNotNull(sweeper, "На разминке нет LooseItemSweeper — мусор в лобби копится без предела.");
 
             var action = (LooseWeaponAction)typeof(LooseItemSweeper)
                 .GetField("_weaponAction", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)

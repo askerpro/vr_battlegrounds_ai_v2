@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7144737216436713564}
   - component: {fileID: 7084803014390581751}
   - component: {fileID: 548351888320764724}
+  - component: {fileID: 5348947716453885987}
   m_Layer: 0
   m_Name: SessionContext
   m_TagString: Untagged
@@ -83,3 +84,19 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+--- !u!114 &5348947716453885987
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7659987172694362790}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e88bee226d8f1ce47afc82ba66250dfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Managers.MatchSeries
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _nextMapDelay: 10

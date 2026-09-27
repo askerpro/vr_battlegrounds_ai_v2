@@ -36,7 +36,7 @@ namespace VrBattlegrounds.Editor
             EditorGUILayout.LabelField("Общий статус матча", EditorStyles.boldLabel);
             if (GameplayManager.Instance != null)
             {
-                EditorGUILayout.LabelField("Gameplay Active:", GameplayManager.Instance.IsGameplayActive.ToString());
+                EditorGUILayout.LabelField("Gameplay Active:", GameplayManager.Instance.IsMatchActive.ToString());
             }
             else
             {

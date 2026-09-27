@@ -276,7 +276,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             try
             {
-                GameplayManager.Instance.StartGameplay();
+                GameplayManager.Instance.StartMatch();
 
                 EliminationMode elimination = null;
                 deadline = Now + 60f;

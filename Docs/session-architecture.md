@@ -237,8 +237,9 @@ sequenceDiagram
 | `DebugOrchestrator` | префаб `--- MANAGERS ---` | до конца процесса | никогда после `Offline` |
 | `SessionManager` | спавн `SessionContext` в `GameNetworkManager.OnStartServer` | до остановки сервера | пока сервер не поднят |
 | `NetworkStateRelay` | тот же объект `SessionContext` | до остановки сервера | пока сервер не поднят |
-| `GameplayManager` | объект `MatchManager` **в сцене** — карты и лобби (в лобби с режимом сцены `LobbyMode`) | до выгрузки сцены | в Offline и в окне смены сцены |
-| `GameMode` (`EliminationMode`/`RespawnMode`/`LobbyMode`) | спавн из `GameplayManager.StartGameplay` (в лобби — сам, в `OnStartServer`) | до конца матча или выгрузки сцены | на карте до старта матча |
+| `MatchSeries` | тот же объект `SessionContext` — серия карт и общий счёт | до остановки сервера | пока сервер не поднят |
+| `GameplayManager` | объект `MatchManager` **в сцене** — карты и лобби | до выгрузки сцены | в Offline и в окне смены сцены |
+| `GameMode` (`WarmupMode`/`EliminationMode`/`RespawnMode`) | спавн из `GameplayManager`: разминка — сама в `OnStartServer` на любой карте, режим матча — по «Начать матч» на месте | до смены режима на карте или выгрузки сцены | в окне смены режима и смены сцены |
 
 Читать таблицу так: пустой `Instance` у первых восьми — это сбой, о нём пишет
 `ManagerBootstrap`. Пустой `Instance` у последних четырёх — норма, и код обязан её

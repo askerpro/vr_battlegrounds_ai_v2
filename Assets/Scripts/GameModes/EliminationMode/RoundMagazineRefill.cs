@@ -11,7 +11,7 @@ namespace VrBattlegrounds.GameModes
     /// <para>
     /// Лежит на префабе режима, а не в <see cref="PlayerLoadoutManager"/>: менеджер
     /// выдаёт магазины и не знает, когда это нужно. Режим решает это сам, так же как
-    /// лобби решает своё (<see cref="LobbyMagazineSupply"/> на префабе <see cref="LobbyMode"/>).
+    /// разминка решает своё (<see cref="WarmupMagazineSupply"/> на префабе <see cref="WarmupMode"/>).
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]

@@ -2,6 +2,74 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - Разминка вместо лобби-режима, режим на карте меняется на месте, матч — серия карт
+
+### Добавлено
+
+- **Разминка (`WarmupMode`, бывший `LobbyMode`).** Переименованы с сохранением GUID: класс и
+  префаб (`WarmupMode.prefab`), `Warmup_GameModeData` (`modeId = warmup`, «Разминка»),
+  `Warmup_Team` («Разминка», `teamIndex = 3`), `WarmupMagazineSupply`. Любая карта — лобби
+  и боевая — стартует в разминке (`GameplayManager.OnStartServer`). Разминка не сбрасывает
+  команды: новая политика `TeamAssignmentKind.KeepOrDefault` — команда матча сохраняется,
+  игрок без команды получает «Разминку».
+- **Совместимость режимов — у карты** (`MapData.supportedModes`, правила — `MapModeRules`).
+  Лобби — обычная карта реестра (`MapData_Lobby`, только разминка; `MapRegistry.lobby`).
+  У `TestMap1/2` — разминка и режимы матча. Разминка лежит в `GameModeRegistry` с флагом
+  `GameModeData.isWarmup` и не показывается во вкладках режима матча.
+- **«Начать матч» на месте** (`GameplayManager.StartMatch`): разминка → выбранный режим без
+  перезагрузки сцены; несовместимый с картой режим заменяется первым совместимым, в лобби
+  матч не начинается. Матч кончился — снова разминка. `StopMatch` — назад в разминку.
+- **Серия карт** — `MatchSeries` на `SessionContext`: `SessionManager.SetSeries(mode, maps)`,
+  карта сыграна → итог в общий счёт (`GetMapWins`, `Results`), через 10 с следующая карта,
+  после последней — лобби; конец серии отпускает команды матча в «Разминку» (скин сохраняется,
+  `SessionTeamAssigner.ApplyBeforeSceneChange`). «Стоп / Лобби» — `MatchSeries.ServerEnd`.
+- `ModeStartCleanup` на префабе каждого режима — новый режим начинается с чистого пола;
+  режим на старте поднимает пополнение стен.
+- `MatchTeams` — входы смены команды (вынесены из `GameplayManager`); `SessionPermissions.IsAdmin`
+  (из `TeamChangeRules`, пространство Player).
+
+### Изменено
+
+- `GameMode.ArsenalRefillRequestedServer` — событие экземпляра, стена переподписывается по
+  `GameplayManager.ActiveGameModeChangedLocal`.
+- Удалены: `GameModeCatalog`, поле «режим сцены» `GameplayManager._sceneGameMode` (и его
+  переопределение в `Lobby.unity`), `GameMode.Current`, `ITeamAssignmentPolicy`,
+  `AutoBalanceTeamPolicy`, `PlayerChoiceTeamPolicy` (`TeamAssignment.cs` → `TeamAutoBalance.cs`).
+  `GameModeData` ищется только `SessionManager.FindModeData`.
+- `GameplayManager`: `StartGameplay/StopGameplay/IsGameplayActive` → `StartMatch/StopMatch/IsMatchActive`.
+- `TeamChangeRules`: смена скина в своей команде разрешена всегда — в разминке команда матча
+  не входит в команды режима. Планшет в разминке игроку с командой матча предлагает только её.
+- `MenuSessionSetup`: вкладки — только режимы матча, карты — совместимые; клик по карте —
+  серия из одной карты. `DebugOrchestrator` автозагрузку карты ведёт через серию.
+
+### Исправлено (найдено Play mode)
+
+- Режим, инициализированный до спавна, терял команды: колбэк `SyncList` из `GameMode.Awake`
+  пересобирал `_teams` посреди `Initialize` (в EditMode `Awake` не зовётся — тесты молчали).
+- NRE в `StartMatch` при автостарте из `GameplayManager.Awake` (`isServer` без `netIdentity`) —
+  запрос теперь откладывается до `OnStartServer`.
+
+### Проверка
+
+- EditMode: новые `MatchFlowTests` (10), `MapModeRulesTests` (4); переписаны
+  `GameModeWiringTests`, `GameModeRulesTests`, `TeamChoiceTests`, `PlayerDamageRuleTests`,
+  `LooseItemTests`, `MagazineRefillPlannerTests`. Красные до правки: проводка данных — до
+  правки ассетов; поведение — возвратом старой логики (сброс команд в разминке, несовместимый
+  режим в лобби, серия без перехода, без отпуска команд, без старта в разминке, скин в чужой
+  команде, `isServer` в `Awake`) и фабрикой с `Awake`. Полный прогон: 401, падают только
+  9 известных `AvatarLoadoutTests`. `AndroidCompileGate` — Passed.
+- Play mode (хост): лобби — разминка, «Разминка», «Начать матч» отклонён; серия
+  TestMap1 → TestMap2: карта в разминке, команда не меняется; «Начать матч» — Elimination на
+  месте, выбор CT; конец карты (победа CT) — разминка, счёт серии 1; TestMap2 — CT сохранена,
+  смена скина в CT; ничья → разминка → лобби, команда «Разминка», скин Cyborg сохранён.
+  С автостартом отладки: карта → Elimination через отложенный запрос; «Стоп» — лобби.
+
+### Открытые развилки
+
+- UI выбора нескольких карт в `MenuSessionSetup` не сделан (правка префаба экрана) — серия из одной карты.
+- Снаряжение, взятое в разминке, остаётся у игрока в первом раунде матча.
+- Счёт на карте (сеты Elimination) остаётся в режиме — это его структура; общий счёт серии — карты.
+
 ## [2026-09-27] - Чёрный экран после телепорта: аватар освобождается перед уничтожением
 
 ### Исправлено

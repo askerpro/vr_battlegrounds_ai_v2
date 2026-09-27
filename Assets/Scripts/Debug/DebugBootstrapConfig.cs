@@ -25,7 +25,7 @@ namespace VrBattlegrounds.DevTools
         public bool hostIsAdmin = true;
 
         // Поле teamsForAutoAssign удалено: команды раздаёт активный режим
-        // (GameMode.ServerAssignTeams) — в лобби «Лобби», на карте автобалансом.
+        // (GameMode.ServerAssignTeams) — разминка даёт «Разминку» игроку без команды.
 
         [Header("Матч")]
         [Tooltip("Автоматически запустить матч как только подключится достаточно игроков.")]

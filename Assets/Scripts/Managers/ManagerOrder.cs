@@ -72,6 +72,12 @@ namespace VrBattlegrounds.Managers
         public const int NetworkStateRelay = -1590;
 
         /// <summary>
+        /// Серия карт матча: очередь карт, общий счёт. Тот же объект <c>SessionContext</c>, что и
+        /// <see cref="SessionManager" />, — переживает смену режима на карте и смену карт.
+        /// </summary>
+        public const int MatchSeries = -1580;
+
+        /// <summary>
         /// Оркестратор матча. Живёт в сценах карт, а не в <c>PersistentRoot</c>: режим
         /// существует только на карте. Значит <c>Instance</c> равен null всё время,
         /// пока игрок в лобби, — это норма, а не сбой.

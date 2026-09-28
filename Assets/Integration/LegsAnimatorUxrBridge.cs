@@ -1,165 +1,187 @@
-using UnityEngine;
-using UltimateXR.Avatar;
 using FIMSpace.FProceduralAnimation;
+using UltimateXR.Avatar;
+using UnityEngine;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Player.Avatars;
 
 namespace VRBattlegrounds.Integration
 {
+    /// <summary>
+    /// Связка Legs Animator (FImpossible) с аватаром UltimateXR, у рига которого нет анимации.
+    ///
+    /// <para>
+    /// <b>Корень ног.</b> Тело UltimateXR носит <c>Dummy Forward</c>, который висит под камерой
+    /// на произвольной высоте. Legs Animator ждёт корень на полу — мост заводит
+    /// <c>LegsAnimator_RootAnchor</c>: проекцию <c>Dummy Forward</c> на пол аватара
+    /// (<see cref="LegsGrounding.RootAnchor"/>) — и отдаёт его плагину базовым трансформом.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Таз.</b> Плагин в LateUpdate берёт текущую позу таза за «кадр анимации» и ставит таз в
+    /// неё плюс свою поправку. Анимации нет — без сброса поправка ложится поверх прошлой: в режиме
+    /// Calibrate копится каждый кадр, в FixedCalibrate запекается при каждом выключении/включении
+    /// плагина. Таз уезжает вверх, а UltimateXR, держа голову у камеры, вдавливает шею в плечи.
+    /// Мост каждый кадр возвращает таз в позу префаба — то, что делала бы анимация.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Пол.</b> Кость стопы — лодыжка, поэтому мост сам бросает луч под каждой ногой и отдаёт
+    /// плагину точку пола, поднятую на толщину подошвы.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Движение плагину не подаётся.</b> Анимации ходьбы у аватаров нет: с флагом «идёт»
+    /// Legs Animator отпускает ступни, и они скользят вместе с телом. Шаги получаются в режиме
+    /// «стоит» — ступня приклеена, пока тело не уйдёт далеко, потом переставляется.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Порядок.</b> У плагина DefaultExecutionOrder -7, у моста 9: Update моста идёт после
+    /// Update плагина, но до его LateUpdate, где плагин запоминает позу таза. Плагин и мост в
+    /// префабе включены: плагин должен проинициализироваться в позе модели, до первого решения
+    /// IK, — иначе запомнит опорную высоту таза из позы под камерой и будет держать таз выше.
+    /// Проверка — <c>AvatarLoadoutTests.Legs_Animator_настроен_на_своих_костях</c>.
+    /// </para>
+    /// </summary>
     [RequireComponent(typeof(LegsAnimator))]
-    [DefaultExecutionOrder(9)] // Выполняется перед основным апдейтом LegsAnimator (у которого мы задали 10)
+    [DefaultExecutionOrder(9)]
     public class LegsAnimatorUxrBridge : MonoBehaviour
     {
-        private LegsAnimator _legsAnimator;
-        private UxrAvatar _avatar;
-        private Transform _dummyForward;
-        private Transform _legsAnimatorRoot;
-        private Vector3 _lastRootAnchorPosition;
-        private bool _hasLastRootAnchorPosition;
+        private const string BodyPivotName = "Dummy Forward";
+        private const string RootAnchorName = "LegsAnimator_RootAnchor";
 
-        [Header("Floor Alignment Fix")]
-        [Tooltip("Включить программное смещение луча вместо использования физического фиктивного пола.")]
+        // Сколько ждать, пока UltimateXR создаст Dummy Forward, прежде чем признать ошибку.
+        private const float BodyPivotTimeout = 2f;
+
+        // Луч под ногой: с этой высоты над полом аватара и на эту длину вниз.
+        private const float RayStartHeight = 1f;
+        private const float RayLength = 2f;
+
+        [Tooltip("Бросать луч под ногами самому и поднимать точку пола на толщину подошвы.")]
         public bool useDynamicFloorOffset = true;
-        
-        [Tooltip("Отступ по вертикали от лодыжки до подошвы. 0.15 = 15см (полезно для Heavy Soldier обуви).")]
+
+        [Tooltip("Толщина подошвы: от кости стопы (лодыжки) до низа ботинка, метры.")]
         public float footHeightOffset = 0.15f;
 
-        [Header("Movement Feed")]
-        [Tooltip("Минимальная горизонтальная скорость (м/с), после которой Legs Animator считается в движении.")]
-        public float movementThreshold = 0.025f;
+        private LegsAnimator _legsAnimator;
+        private UxrAvatar _avatar;
+        private Transform _hips;
+        private BoneLocalPose _hipsPose;
+        private Transform _bodyPivot;
+        private Transform _rootAnchor;
+        private float _bindingStartTime;
+        private bool _reportedMissingPivot;
 
-        [Tooltip("Сглаживание подаваемого вектора движения (0 = без сглаживания, 1 = сильное сглаживание).")]
-        [Range(0f, 1f)]
-        public float movementSmoothing = 0.1f;
-
-        private Vector3 _smoothedVelocity;
+        private void Awake()
+        {
+            _legsAnimator = GetComponent<LegsAnimator>();
+            CaptureHipsPose();
+        }
 
         private void Start()
         {
-            _legsAnimator = GetComponent<LegsAnimator>();
-
-            // Wait shortly to ensure UltimateXR has completed UxrBodyIK initialization 
-            // and instantiated the "Dummy Forward" object.
-            Invoke(nameof(InitializeBridge), 0.1f);
-        }
-
-        private void InitializeBridge()
-        {
-            // Свой аватар, а не UxrAvatar.LocalAvatar: мост стоит на каждом экземпляре, в том
-            // числе на чужих игроках. С LocalAvatar корень ног всех аватаров вешался под
-            // локального, и после смены скина (локальный уничтожен) их LegsAnimator сыпал
-            // MissingReferenceException на уничтоженных трансформах.
-            _avatar = GetComponentInParent<UxrAvatar>();
-            if (_avatar == null)
-            {
-                GameLog.Player.Warning("[LegsAnimatorUxrBridge] UxrAvatar в родителях не найден.", this);
-                return;
-            }
-
-            // Find the dynamically created anchor by UltimateXR
-            _dummyForward = _avatar.transform.Find("Dummy Forward");
-
-            if (_dummyForward != null)
-            {
-                // Create a custom root for LegsAnimator that follows Dummy Forward in XZ, but stays on the ground Y
-                GameObject rootObj = new GameObject("LegsAnimator_RootAnchor");
-                rootObj.transform.SetParent(_avatar.transform);
-                _legsAnimatorRoot = rootObj.transform;
-
-                UpdateRootAnchor();
-                _lastRootAnchorPosition = _legsAnimatorRoot.position;
-                _hasLastRootAnchorPosition = true;
-
-                // Dynamically reassign the Base Transform!
-                _legsAnimator.Initialize_BaseTransform(_legsAnimatorRoot);
-
-                // Enable the component so that its Start() and Initialize() run naturally with the correct Base Transform.
-                _legsAnimator.enabled = true;
-
-                GameLog.Player.Verbose($"[LegsAnimatorUxrBridge] Корень Legs Animator привязан к '{_avatar.name}'.", this);
-            }
-            else
-            {
-                GameLog.Player.Error($"[LegsAnimatorUxrBridge] У аватара '{_avatar.name}' нет Dummy Forward.", this);
-            }
+            _bindingStartTime = Time.time;
         }
 
         private void Update()
         {
+            RestoreHipsPose();
+
+            if (_rootAnchor == null) TryBindRootAnchor();
             UpdateRootAnchor();
         }
 
         private void LateUpdate()
         {
+            // UltimateXR двигает Dummy Forward в своём LateUpdate — догоняем.
             UpdateRootAnchor();
-            FeedMovementState();
-            
-            if (useDynamicFloorOffset && _legsAnimator != null && _legsAnimator.enabled)
-            {
-                ApplyDynamicFloorOverrides();
-            }
+
+            if (useDynamicFloorOffset && _rootAnchor != null && _legsAnimator.enabled)
+                OverrideFloorHits();
         }
 
-        private void FeedMovementState()
+        /// <summary>
+        /// Запоминает позу таза из префаба. Зовётся из Awake — до того, как плагин или IK
+        /// сдвинули кость.
+        /// </summary>
+        public void CaptureHipsPose()
         {
-            if (_legsAnimatorRoot == null || _legsAnimator == null || !_legsAnimator.enabled)
+            _hips = _legsAnimator != null ? _legsAnimator.Hips : null;
+            if (_hips != null) _hipsPose = BoneLocalPose.Capture(_hips);
+        }
+
+        /// <summary>Возвращает таз в позу префаба. Нужен и при выключенном плагине.</summary>
+        public void RestoreHipsPose()
+        {
+            if (_hips != null) _hipsPose.ApplyTo(_hips);
+        }
+
+        private void TryBindRootAnchor()
+        {
+            // Свой аватар, а не UxrAvatar.LocalAvatar: мост стоит на каждом экземпляре, в том
+            // числе на чужих игроках; с LocalAvatar ноги всех аватаров висели на локальном.
+            if (_avatar == null) _avatar = GetComponentInParent<UxrAvatar>();
+            if (_avatar == null)
             {
+                ReportOnce("UxrAvatar в родителях не найден — ноги не привязаны.");
                 return;
             }
 
-            if (!_hasLastRootAnchorPosition)
+            // Dummy Forward создаёт UxrBodyIK при инициализации контроллера — ждём его, а не
+            // угадываем задержку.
+            _bodyPivot = _avatar.transform.Find(BodyPivotName);
+            if (_bodyPivot == null)
             {
-                _lastRootAnchorPosition = _legsAnimatorRoot.position;
-                _hasLastRootAnchorPosition = true;
+                if (Time.time - _bindingStartTime > BodyPivotTimeout)
+                    ReportOnce($"У аватара '{_avatar.name}' нет {BodyPivotName} — ноги не привязаны.");
                 return;
             }
 
-            float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
-            Vector3 rawVelocity = (_legsAnimatorRoot.position - _lastRootAnchorPosition) / deltaTime;
-            rawVelocity.y = 0f;
+            _rootAnchor = new GameObject(RootAnchorName).transform;
+            _rootAnchor.SetParent(_avatar.transform, false);
+            UpdateRootAnchor();
 
-            float lerpFactor = 1f - movementSmoothing;
-            _smoothedVelocity = Vector3.Lerp(_smoothedVelocity, rawVelocity, lerpFactor);
+            _legsAnimator.Initialize_BaseTransform(_rootAnchor);
+            _legsAnimator.enabled = true;
 
-            _legsAnimator.User_SetDesiredMovementDirection(_smoothedVelocity, true);
-            _legsAnimator.User_SetIsMoving(_smoothedVelocity.sqrMagnitude > movementThreshold * movementThreshold);
-
-            _lastRootAnchorPosition = _legsAnimatorRoot.position;
+            GameLog.Player.Verbose($"[LegsAnimatorUxrBridge] Корень Legs Animator привязан к '{_avatar.name}'.", this);
         }
 
         private void UpdateRootAnchor()
         {
-            if (_dummyForward != null && _legsAnimatorRoot != null && _avatar != null)
-            {
-                // Maintain Dummy Forward's X and Z, but keep Y at the Avatar's root Y (floor level)
-                _legsAnimatorRoot.position = new Vector3(_dummyForward.position.x, _avatar.transform.position.y, _dummyForward.position.z);
-                _legsAnimatorRoot.rotation = _dummyForward.rotation;
-            }
+            if (_rootAnchor == null || _bodyPivot == null) return;
+
+            Transform avatar = _avatar.transform;
+            Pose pose = LegsGrounding.RootAnchor(_bodyPivot.position, _bodyPivot.forward, avatar.position, avatar.up, avatar.forward);
+            _rootAnchor.SetPositionAndRotation(pose.position, pose.rotation);
         }
 
-        private void ApplyDynamicFloorOverrides()
+        private void OverrideFloorHits()
         {
-            if (_legsAnimator.Legs == null || _legsAnimatorRoot == null) return;
+            Vector3 up = _avatar.transform.up;
 
-            foreach(var leg in _legsAnimator.Legs)
+            foreach (LegsAnimator.Leg leg in _legsAnimator.Legs)
             {
                 if (leg.BoneEnd == null) continue;
 
-                // Пускаем луч вертикально вниз с безопасной высоты (на 1м выше корня персонажа),
-                // но именно в тех XZ-координатах, где находится нога персонажа.
-                Vector3 footPosXZ = new Vector3(leg.BoneEnd.position.x, _legsAnimatorRoot.position.y + 1.0f, leg.BoneEnd.position.z);
-                
-                if (Physics.Raycast(footPosXZ, Vector3.down, out RaycastHit hit, 2.0f, _legsAnimator.GroundMask, _legsAnimator.RaycastHitTrigger))
+                // Луч строго вниз под ногой, с высоты над полом аватара — не от самой ступни,
+                // которая может оказаться под полом.
+                Vector3 foot = leg.BoneEnd.position;
+                Vector3 origin = foot - up * Vector3.Dot(foot - _rootAnchor.position, up) + up * RayStartHeight;
+
+                if (Physics.Raycast(origin, -up, out RaycastHit hit, RayLength, _legsAnimator.GroundMask, _legsAnimator.RaycastHitTrigger))
                 {
-                    // Искусственно завышаем точку попадания, учитывая толщину подошвы
-                    hit.point += Vector3.up * footHeightOffset;
-                    
-                    // Передаем этот хит в Legs Animator и отключаем его внутренний рейкаст для этой ноги (disableSourceRaycast = true)
+                    hit.point = LegsGrounding.SoleContactPoint(hit.point, up, footHeightOffset);
                     leg.User_OverrideRaycastHit(hit, true);
                 }
             }
-            
-            // Синхронизируем флаг заземления для всего контроллера (если хотя бы 1 луч достал до земли)
-            // Но в целом LegsAnimator сам определит IsGrounded по нашему переданному hit.
+        }
+
+        private void ReportOnce(string message)
+        {
+            if (_reportedMissingPivot) return;
+            _reportedMissingPivot = true;
+            GameLog.Player.Error($"[LegsAnimatorUxrBridge] {message}", this);
         }
     }
 }

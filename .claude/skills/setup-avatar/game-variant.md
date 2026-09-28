@@ -37,7 +37,8 @@ HUD, карманы, хитбоксы, регистрация. Эталон — 
 2. Вложить риг (`InstantiatePrefab(<Model>_Rig, root)`, нулевая локальная поза, имя `<Model>_Rig`).
 3. Из вложенного рига удалить `UxrStandardAvatarController`, `UxrDummyControllerInput`,
    `UxrAvatar` (в этом порядке — контроллер требует аватар), объекты `Camera Controller` и
-   `BigHandsIntegration`. Остаются `Animator` и, если есть, `Legs Animator`.
+   `BigHandsIntegration`. Остаются `Animator` и, если есть, `Legs Animator` (нет —
+   ставится в разделе 5).
 4. Корневой `BigHandsIntegration` из `PlayerBase` **оставить** — на нём полный набор
    трекинга и ввода.
 
@@ -134,14 +135,44 @@ HUD наследуется от `PlayerBase` (`Camera Controller/Camera/HUDConta
 создать его (записать любое значение в `NetworkIdentity._assetId` через `SerializedObject` и
 сохранить), затем — после **последнего** сохранения — `Tools/VR Battlegrounds/VersionControl/Normalize Network Asset Ids`.
 
-## 5. Legs Animator (по желанию)
+## 5. Legs Animator (обязателен для humanoid-рига)
 
-Процедурные ноги против проваливания ботинок при приседании. Компоненты — на объекте
-рига с `Animator` (не на корне варианта):
-- `Legs Animator` (FImpossible Creations) — подхватит `Animator` и таз; модули
-  `Extra_Rotation Stability` и `UxrLamStepFurther`;
-- `LegsAnimatorUxrBridge` (`Assets/Integration/`): `Use Dynamic Floor Offset = true`,
-  `Foot Height Offset = 0.15`.
+Процедурные ноги против проваливания ботинок при приседании. Обязателен у каждого аватара
+с humanoid-`Animator`; исключение — Cyborg, у него нет ног. Проверка —
+`AvatarLoadoutTests.Legs_Animator_настроен_на_своих_костях`.
+
+Компоненты — на объекте рига с `Animator` (`<Model>_Rig`, не на корне варианта):
+- `LegsAnimator` (FImpossible Creations), **включён** в префабе. Плагин запоминает опорную
+  высоту таза при инициализации, и это должна быть поза модели. Включённый позже (как раньше
+  делал мост) он инициализировался в позе под камерой и держал таз на +14 см;
+- `LegsAnimatorUxrBridge` (`Assets/Integration/`), **включён**. Когда UltimateXR создаст
+  `Dummy Forward`, мост подставляет плагину свой корень на полу (`LegsAnimator_RootAnchor`),
+  каждый кадр возвращает таз в позу префаба (вместо отсутствующей анимации) и сам бросает
+  луч до пола под ногами. Устройство — XML-комментарий класса; тесты — `LegsGroundingTests`.
+
+**Настройки не выставлять руками, а копировать с Heavy** (эталон —
+`Heavy_Soldier_Base_Avatar` → `Heavy_Soldier_Rig_Mask_Winter`). Через `execute_code`, оба
+префаба в `LoadPrefabContents`:
+1. `AddComponent` обоих типов на риг нового аватара, `EditorUtility.CopySerialized(heavy, new)`.
+   Сборки плагина и моста — `Assembly-CSharp`, из `execute_code` тип брать по имени через
+   `GetComponents<Component>()`.
+2. Ссылки, указывающие в риг Heavy, переназначить на свои: `Mecanim`,
+   `CustomModules[i].Parent`, `Legs[i].Owner` → свой `Animator`/`LegsAnimator`; `Hips` →
+   humanoid `Hips`; `Legs[0]` = левая `UpperLeg/LowerLeg/Foot`, `Legs[1]` = правая
+   (`BoneStart/BoneMid/BoneEnd`). Модули (`ModuleReference`) — ассеты, остаются общими.
+   **Ловушка:** у Heavy в `LoadPrefabContents` `Animator.GetBoneTransform` возвращает `null`,
+   поэтому соответствие «кость Heavy → кость нового» через него не строится, а ссылки на
+   чужой префаб при сохранении молча обнуляются. Кости нового аватара брать его
+   `GetBoneTransform` (у MEF работает) или по `avatar.humanDescription.human` по имени.
+3. `Calibrate = FixedCalibrate` (2) — у игровых ригов нет контроллера анимации. В режиме
+   `Calibrate` (1) плагин в начале кадра сбрасывает только повороты костей, а позицию таза ждёт
+   от анимации. Сброс таза в мосте это страхует, но режим всё равно 2 — тест его требует.
+4. Сохранить, перечитать с диска и убедиться, что ни одна ссылка не пуста.
+5. После последнего сохранения — `Normalize Network Asset Ids` (см. раздел 4).
+
+`Foot Height Offset` (0.15) подобран под ботинки Heavy: лодыжка ~12 см над подошвой. У MEF
+она ~17 см, значение скопировано как есть — если ботинки висят над полом или тонут в нём,
+подстраивать на шлеме именно его.
 
 ## 6. Регистрация
 

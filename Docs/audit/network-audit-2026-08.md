@@ -1295,7 +1295,7 @@ GameLog.Info(GameSettings.Instance.LogLevelPlayer,
 > | `BoxCollider` + `Rigidbody` на объекте `Camera` | нет только у Heavy |
 > | `UxrCameraFade` на камере | только у Heavy |
 > | `UxrDummyControllerInput` на корне | только у Heavy |
-> | `LegsAnimator` + `LegsAnimatorUxrBridge` | только у Heavy (на корне рига) |
+> | `LegsAnimator` + `LegsAnimatorUxrBridge` | только у Heavy (на корне рига); с 2026-09-28 и у MEF |
 > | `Ghost`, `BackGrabProxy` | только у `PlayerBase` и `PlayerControllersCyborgAvatar` |
 > | `MagazinePocket`, `Anchor_Hip_R`, `Anchor_Back` | нет у Military_Cap / Military_Soldier / Spy |
 > | Висячая запись `m_RemovedGameObjects: 1333949650355697866` | у Military_Cap / Military_Soldier / Spy; в `CyborgAvatar_URP` такого объекта нет — след старого обновления SDK |

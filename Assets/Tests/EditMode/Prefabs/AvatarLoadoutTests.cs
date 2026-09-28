@@ -783,9 +783,90 @@ namespace VrBattlegrounds.Tests.Prefabs
             Assert.IsEmpty(problems, $"{avatar.name}:\n{string.Join("\n", problems)}");
         }
 
+        /// <summary>
+        /// У каждого аватара с humanoid-ногами есть Legs Animator (FImpossible) и мост
+        /// <c>LegsAnimatorUxrBridge</c> на объекте рига с <c>Animator</c>, а все ссылки
+        /// ведут в свой риг. Без него ботинки проваливаются в пол при приседании.
+        /// Настройки копируются с Heavy, и ссылки на кости при копировании не
+        /// переносятся (Heavy и MEF названы по-разному) — пустая кость ломает IK молча.
+        /// Сборки плагина и моста тестам недоступны — проверка по имени типа.
+        /// Cyborg без humanoid-рига — у него нет ног, требование не действует.
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void Legs_Animator_настроен_на_своих_костях(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            Animator animator = avatar.GetComponentsInChildren<Animator>(true)
+                                      .FirstOrDefault(a => a.avatar != null && a.avatar.isHuman);
+            if (animator == null)
+                Assert.Pass($"{avatar.name}: нет humanoid-рига — ног нет, Legs Animator не нужен");
+
+            Component legs   = FindByTypeName(animator.gameObject, "LegsAnimator");
+            Component bridge = FindByTypeName(animator.gameObject, "LegsAnimatorUxrBridge");
+            Assert.IsNotNull(legs,   $"{avatar.name}: нет LegsAnimator на '{animator.name}'");
+            Assert.IsNotNull(bridge, $"{avatar.name}: нет LegsAnimatorUxrBridge на '{animator.name}'");
+
+            var problems = new List<string>();
+            // Оба включены с самого старта: плагин запоминает опорную позу таза при инициализации,
+            // и она должна быть позой модели, а не позой, в которую UltimateXR уже поставил тело
+            // по камере. Включённый позже (мостом или галочкой) он держал таз на +14 см.
+            if (!((Behaviour)legs).enabled)
+                problems.Add("LegsAnimator выключен в префабе — инициализируется поздно, в позе IK, и поднимает таз");
+            if (!((Behaviour)bridge).enabled)
+                problems.Add("LegsAnimatorUxrBridge выключен — корень ног не привязан к аватару");
+
+            // Позицию таза Legs Animator возвращает в начале кадра только в режиме FixedCalibrate
+            // (LegsA.Hips.Reference.PreCalibrate); остальные режимы ждут, что её перезапишет
+            // анимация. Контроллера у рига нет — поправка высоты таза копится кадр за кадром,
+            // таз уезжает, а UltimateXR, держа голову у камеры, вдавливает шею в плечи.
+            const int fixedCalibrate = 2;
+            int calibrate = new SerializedObject(legs).FindProperty("Calibrate").intValue;
+            if (animator.runtimeAnimatorController == null && calibrate != fixedCalibrate)
+                problems.Add($"Calibrate = {calibrate}, а у рига нет контроллера анимации — нужен FixedCalibrate ({fixedCalibrate})");
+
+            var so = new SerializedObject(legs);
+            if (so.FindProperty("Mecanim").objectReferenceValue != animator)
+                problems.Add("Mecanim не свой Animator");
+
+            string hipsName = animator.avatar.humanDescription.human.FirstOrDefault(h => h.humanName == "Hips").boneName;
+            Object hips = so.FindProperty("Hips").objectReferenceValue;
+            if (hips == null || hips.name != hipsName)
+                problems.Add($"Hips = '{(hips != null ? hips.name : "null")}', ожидается '{hipsName}'");
+
+            SerializedProperty legList = so.FindProperty("Legs");
+            if (legList.arraySize != 2)
+                problems.Add($"ног {legList.arraySize}, ожидается 2");
+
+            for (int i = 0; i < legList.arraySize; i++)
+            {
+                foreach (string bone in new[] { "BoneStart", "BoneMid", "BoneEnd" })
+                {
+                    var t = legList.GetArrayElementAtIndex(i).FindPropertyRelative(bone).objectReferenceValue as Transform;
+                    if (t == null)
+                        problems.Add($"Legs[{i}].{bone} пуст");
+                    else if (!t.IsChildOf(animator.transform))
+                        problems.Add($"Legs[{i}].{bone} = '{t.name}' не из своего рига");
+                }
+            }
+
+            SerializedProperty modules = so.FindProperty("CustomModules");
+            for (int i = 0; i < modules.arraySize; i++)
+            {
+                if (modules.GetArrayElementAtIndex(i).FindPropertyRelative("ModuleReference").objectReferenceValue == null)
+                    problems.Add($"CustomModules[{i}] без модуля");
+            }
+
+            Assert.IsEmpty(problems, $"{avatar.name}:\n{string.Join("\n", problems)}");
+        }
+
         // ══════════════════════════════════════════════════════════════════
         //  Вспомогательное
         // ══════════════════════════════════════════════════════════════════
+
+        private static Component FindByTypeName(GameObject go, string typeName)
+        {
+            return go.GetComponents<Component>().FirstOrDefault(c => c != null && c.GetType().Name == typeName);
+        }
 
         private static UxrGrabbableObjectAnchor FindAnchor(UxrAvatar avatar, string name)
         {

@@ -49,6 +49,8 @@ namespace VrBattlegrounds.Editor.Gameplay
         public string GripDonorBodyPath; // путь его корпуса в префабе
         public string GripDonorPoseClip;
         public string FirearmDonor;    // префаб, у которого берутся снаряд, звук выстрела, отдача
+        public string ShotAudio;       // свой звук выстрела вместо донорского (необязательно)
+        public string LoadAudio;       // звук вставки магазина/патрона в якорь (необязательно)
     }
 
     /// <summary>
@@ -69,6 +71,11 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// </summary>
     public static class HandsPackWeaponBuilder
     {
+        private const string Tracer = "Assets/Prefabs/Weapons/Effects/Tracer_Default.prefab";
+        private const string ImpactEffect = "Assets/Prefabs/Weapons/Effects/Impact_Default.prefab";
+        private const string ImpactDecal = "Assets/Prefabs/Weapons/Effects/ImpactDecal_Default.prefab";
+        private const string MuzzleEffect = "Assets/Prefabs/Weapons/Effects/Muzzle_Default.prefab";
+
         // Позы хвата настроены под MEF — как у M16 и Gun_real, с которых снята калибровка.
         private static string MefAvatar => AssetDatabase.GUIDToAssetPath("b6fe59db941fa944696ece5e1aabc032");
 
@@ -96,7 +103,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             GripDonorBody     = "Rifle_Body_Mesh",
             GripDonorBodyPath = "MeshContainer/Rifle_Body_Mesh",
             GripDonorPoseClip = "Aim_Idle",
-            FirearmDonor      = "Assets/Prefabs/Weapons/Shotgun/Shotgun.prefab"
+            FirearmDonor      = "Assets/Prefabs/Weapons/Shotgun/Shotgun.prefab",
+            ShotAudio         = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/10Shotgun_Set/edit/shot.mp3",
+            LoadAudio         = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/10Shotgun_Set/Reload_1.mp3"
         };
 
         [MenuItem("Tools/VR Battlegrounds/Gameplay/Build Shotgun_real From Hands Pack")]
@@ -182,6 +191,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             ag.FindProperty("_translationLimitsMin").vector3Value = Vector3.Min(travel, Vector3.zero);
             ag.FindProperty("_translationLimitsMax").vector3Value = Vector3.Max(travel, Vector3.zero);
             ag.FindProperty("_rotationConstraintMode").enumValueIndex = (int)UxrRotationConstraintMode.RestrictLocalRotation;
+
+            // Донор — рукоятка затвора M16: она не наводит ствол и от винтовки не зависит. Помпу
+            // держит вторая рука, она наводит ствол, как цевьё (так у сэмплового дробовика SDK).
+            bool isPump = r.Action == HandsPackWeaponRecipe.ActionKind.Pump;
+            ag.FindProperty("_controlParentDirection").boolValue = isPump;
+            ag.FindProperty("_ignoreGrabbableParentDependency").boolValue = !isPump;
             ag.ApplyModifiedPropertiesWithoutUndo();
 
             if (r.Action == HandsPackWeaponRecipe.ActionKind.Pump)
@@ -192,6 +207,11 @@ namespace VrBattlegrounds.Editor.Gameplay
                 pump.FindProperty("_localPumpDirection").vector3Value = travel.normalized;
                 pump.FindProperty("_localPumpOffset").vector3Value = travel;
                 pump.ApplyModifiedPropertiesWithoutUndo();
+
+                // Помпа идёт за смещением руки с момента хвата, иначе запаздывает на промах хвата.
+                var follow = new SerializedObject(root.AddComponent<PumpGrabFollow>());
+                follow.FindProperty("_pump").objectReferenceValue = actionGrab;
+                follow.ApplyModifiedPropertiesWithoutUndo();
             }
             else
             {
@@ -207,8 +227,16 @@ namespace VrBattlegrounds.Editor.Gameplay
             // Ствол: дуло — передний край корпуса, ось — центр верхнего кольца вершин у дула.
             Bounds muzzle = MuzzleRing(pack.MeshOf(r.BodyPart), parts[r.BodyPart]);
             var tip = Empty("Tip", container, new Vector3(muzzle.center.x, muzzle.center.y, muzzle.max.z));
-            Transform gate = parts.TryGetValue(r.StaticParts.FirstOrDefault(p => p.Contains("Gate")) ?? "", out Transform g) ? g : parts[r.TriggerPart];
-            var shotSource = Empty("ShotSource", container, new Vector3(muzzle.center.x, muzzle.center.y, gate.localPosition.z));
+            // Снаряд рождается у дула, на 1 см позади Tip: из глубины коробки след трассера
+            // выходит сбоку от ствола при отдаче и движении руки (ShotOriginTests).
+            var shotSource = Empty("ShotSource", container, new Vector3(muzzle.center.x, muzzle.center.y, muzzle.max.z - 0.01f / scale));
+
+            // Ствол в стене не стреляет: проверка от казённой части (на уровне спуска, на оси
+            // ствола) до среза (BarrelObstructionTests).
+            var breech = Empty("BarrelCheck", container, new Vector3(muzzle.center.x, muzzle.center.y, parts[r.TriggerPart].localPosition.z));
+            var obstruction = new SerializedObject(root.AddComponent<BarrelObstruction>());
+            obstruction.FindProperty("_breech").objectReferenceValue = breech;
+            obstruction.ApplyModifiedPropertiesWithoutUndo();
 
             // Якорь магазина у детали заряжания, магазин вложен и вставляется в Awake.
             // Магазин (патрон) торчит из окна заряжания: центр детали, ниже на половину высоты магазина.
@@ -232,6 +260,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             var source = anchorGo.AddComponent<AudioSource>();
             EditorUtility.CopySerialized(gripDonor.GetComponentInChildren<UxrGrabbableObjectAnchor>(true).GetComponent<AudioSource>(), source);
             source.playOnAwake = false;
+            if (!string.IsNullOrEmpty(r.LoadAudio)) source.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(r.LoadAudio);
             var sound = new SerializedObject(anchorGo.AddComponent<AnchorSound>());
             CopyFields(gripDonor.GetComponentInChildren<AnchorSound>(true), sound.targetObject, sound);
             sound.FindProperty("_source").objectReferenceValue = source;
@@ -259,13 +288,44 @@ namespace VrBattlegrounds.Editor.Gameplay
             var ps = new SerializedObject(projectile);
             CopyFields(fireDonor.GetComponent<UxrProjectileSource>(), projectile, ps);
             ps.FindProperty("_weaponAnimator").objectReferenceValue = null;
-            for (int i = 0; i < ps.FindProperty("_shotTypes").arraySize; i++)
+
+            // Помповое — дробь: второй тип выстрела для дробинок, без вспышки у дула на каждую.
+            SerializedProperty shotTypes = ps.FindProperty("_shotTypes");
+            bool pellets = r.Action == HandsPackWeaponRecipe.ActionKind.Pump;
+            shotTypes.arraySize = pellets ? 2 : 1;
+
+            for (int i = 0; i < shotTypes.arraySize; i++)
             {
-                SerializedProperty shot = ps.FindProperty("_shotTypes").GetArrayElementAtIndex(i);
+                SerializedProperty shot = shotTypes.GetArrayElementAtIndex(i);
+                if (i > 0) shot.boxedValue = shotTypes.GetArrayElementAtIndex(0).boxedValue;
+
                 shot.FindPropertyRelative("_shotSource").objectReferenceValue = shotSource;
                 shot.FindPropertyRelative("_tip").objectReferenceValue = tip;
+
+                // Вид выстрела оружия проекта: белый трассер и попадание без сэмплов SDK
+                // (TracerVisibilityTests, ImpactEffectTests).
+                shot.FindPropertyRelative("_projectilePrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(Tracer);
+                shot.FindPropertyRelative("_prefabInstantiateOnImpact").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(ImpactEffect);
+                shot.FindPropertyRelative("_prefabInstantiateOnImpactLife").floatValue = 2f;
+                shot.FindPropertyRelative("_prefabScenarioImpactDecal").objectReferenceValue = AssetDatabase.LoadAssetAtPath<UxrImpactDecal>(ImpactDecal);
+
+                // Вспышка у дула — только частицы, привязана к оружию и масштабируется с ним
+                // (MuzzleEffectTests). Дробинкам своя вспышка не нужна — она обнуляется ниже.
+                shot.FindPropertyRelative("_prefabInstantiateOnTipWhenShot").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(MuzzleEffect);
+                shot.FindPropertyRelative("_prefabInstantiateOnTipParent").boolValue = true;
+                shot.FindPropertyRelative("_prefabInstantiateOnTipLife").floatValue = 1f;
+
+                if (pellets)
+                {
+                    // 8 дробинок × 14 — 112 в упор при здоровье 100 (ShotgunPelletsTests).
+                    shot.FindPropertyRelative("_projectileDamageNear").floatValue = 14f;
+                    shot.FindPropertyRelative("_projectileDamageFar").floatValue = 4f;
+                    shot.FindPropertyRelative("_projectileMaxDistance").floatValue = 60f;
+                    if (i > 0) shot.FindPropertyRelative("_prefabInstantiateOnTipWhenShot").objectReferenceValue = null;
+                }
             }
             ps.ApplyModifiedPropertiesWithoutUndo();
+            if (pellets) root.AddComponent<ShotgunPellets>();
 
             var fw = new SerializedObject(firearm);
             CopyFields(fireDonor.GetComponent<UxrFirearmWeapon>(), firearm, fw);
@@ -278,6 +338,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             trig.FindPropertyRelative("_triggerRotationAxis._axis").intValue = DominantAxis(triggerMotion.RotationAxis);
             trig.FindPropertyRelative("_triggerRotationDegrees").floatValue = Mathf.Round(triggerMotion.MaxAngle) * Mathf.Sign(AxisComponent(triggerMotion.RotationAxis));
             trig.FindPropertyRelative("_ammunitionMagAnchor").objectReferenceValue = anchor;
+            if (!string.IsNullOrEmpty(r.ShotAudio))
+                trig.FindPropertyRelative("_shotAudio._clip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(r.ShotAudio);
             fw.ApplyModifiedPropertiesWithoutUndo();
 
             // Точки хвата из ладоней пака: правая — рукоять, левая — помпа/цевьё.

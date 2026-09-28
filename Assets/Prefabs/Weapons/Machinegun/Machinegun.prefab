@@ -173,12 +173,20 @@ PrefabInstance:
       value: 04d23b61-1dcf-4a00-87bb-850a5bbd21a4
       objectReference: {fileID: 0}
     - target: {fileID: 2252369392840551947, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
+      propertyPath: __isInPrefab
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2252369392840551947, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: __prefabGuid
       value: 4a28fd7096bf0994eac0a22cbb3a922c
       objectReference: {fileID: 0}
     - target: {fileID: 2252369392840551947, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: _uxrUniqueId
       value: 459fd468-a5a4-46f6-ae8e-358b791cfc95
+      objectReference: {fileID: 0}
+    - target: {fileID: 2252369392840551947, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
+      propertyPath: _shotTypes.Array.data[0]._projectileSpeed
+      value: 400
       objectReference: {fileID: 0}
     - target: {fileID: 2252505135500819345, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: __prefabGuid

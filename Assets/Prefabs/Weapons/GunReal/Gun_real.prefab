@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 99382223358332526}
   - component: {fileID: 8936303822846736428}
   - component: {fileID: 1154412901507337447}
+  - component: {fileID: 7112469872410840075}
   m_Layer: 0
   m_Name: Gun_real
   m_TagString: Weapon
@@ -39,6 +40,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5980759309107042234}
+  - {fileID: 7176225542313004145}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2546449009786293003
@@ -195,11 +197,11 @@ MonoBehaviour:
     _tip: {fileID: 405242751634823368}
     _useAutomaticProjectileTrajectory: 1
     _shotAnimationVarName: 
-    _prefabInstantiateOnTipWhenShot: {fileID: 1569246640813692, guid: 43ab0ca5d42daf04a99c67697d0e9414, type: 3}
+    _prefabInstantiateOnTipWhenShot: {fileID: 8752425546440781828, guid: ef682bf7c73c43843b95f3077ad01792, type: 3}
     _prefabInstantiateOnTipLife: 1
     _prefabInstantiateOnTipParent: 1
-    _projectilePrefab: {fileID: 1764550164022644, guid: 202a7e2e1bd74f9488ee980a6afbe005, type: 3}
-    _projectileSpeed: 150
+    _projectilePrefab: {fileID: 5008179240508683070, guid: 1433291e7a6e18a448cf26f34b230896, type: 3}
+    _projectileSpeed: 300
     _projectileMaxDistance: 120
     _projectileLength: 0.03
     _projectileDamageNear: 25
@@ -208,9 +210,9 @@ MonoBehaviour:
     _collisionLayerMask:
       serializedVersion: 2
       m_Bits: 9
-    _prefabInstantiateOnImpact: {fileID: 1022521639413414, guid: 83d69800434987942892ec7dd9f8dc18, type: 3}
-    _prefabInstantiateOnImpactLife: 1
-    _prefabScenarioImpactDecal: {fileID: 114299524112685340, guid: 267e46138001231408dd8586e173f40a, type: 3}
+    _prefabInstantiateOnImpact: {fileID: 4735788433783637363, guid: 4b9bc20e1a8a8c14eafb9d639bd75d65, type: 3}
+    _prefabInstantiateOnImpactLife: 2
+    _prefabScenarioImpactDecal: {fileID: 7641533876423537148, guid: 71f7ec97e35c6eb409d1ba0560dd803b, type: 3}
     _prefabScenarioImpactDecalLife: 10
     _decalFadeoutDuration: 3
     _createDecalLayerMask:
@@ -238,7 +240,7 @@ MonoBehaviour:
     _useHasReloadedForSemiAndFullAuto: 1
     _maxShotFrequency: 10
     _shotAudio:
-      _clip: {fileID: 8300000, guid: 8f04b3ff514c3254898fc3754113a032, type: 3}
+      _clip: {fileID: 8300000, guid: 3684f4a2b6b8bf2478a026a4dd4ead1d, type: 3}
       _volume: 1
     _shotAudioNoAmmo:
       _clip: {fileID: 8300000, guid: fe726d3155153a34b8f4aca59c732479, type: 3}
@@ -406,6 +408,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.MainGripAimLock
   _mainGrabPoint: 0
+--- !u!114 &7112469872410840075
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1013363612589426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ddd902a25566046429d1af678a54d9a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.BarrelObstruction
+  _breech: {fileID: 7176225542313004145}
+  _radius: 0.01
+  _triggerIndex: 0
+  _hapticAmplitude: 0.8
+  _hapticSeconds: 0.2
 --- !u!1 &6878519130209480
 GameObject:
   m_ObjectHideFlags: 0
@@ -880,6 +899,37 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300008, guid: c63d52dd4295267458ed0097b06d8f1b, type: 3}
+--- !u!1 &3309831577812926410
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7176225542313004145}
+  m_Layer: 0
+  m_Name: BarrelCheck
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7176225542313004145
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3309831577812926410}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.087, z: -0.021}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4843286368403822}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3330609423905721354
 GameObject:
   m_ObjectHideFlags: 0
@@ -1565,7 +1615,7 @@ Transform:
   m_GameObject: {fileID: 5363995566518642570}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0, y: 0.0865, z: -0.0211}
+  m_LocalPosition: {x: -0.0001, y: 0.0864, z: 0.17849414}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

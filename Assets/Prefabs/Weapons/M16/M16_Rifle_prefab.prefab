@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 6263930388854702037}
   - component: {fileID: 8934660616883435286}
   - component: {fileID: 6968901189315598527}
+  - component: {fileID: 2266733936550130628}
   m_Layer: 0
   m_Name: M16_Rifle_prefab
   m_TagString: Weapon
@@ -39,6 +40,7 @@ Transform:
   m_Children:
   - {fileID: 5980759309107042234}
   - {fileID: 4678195180160311601}
+  - {fileID: 827809348227141647}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2546449009786293003
@@ -106,7 +108,7 @@ MonoBehaviour:
     _snapReference: 1
     _avatarGripPoseEntries:
     - _avatarPrefabGuid: 8bcd4fb381a62ec4eb13bfa740132899
-      _handPose: {fileID: 11400000, guid: bd75eb14caec3a34c84fe2956b169720, type: 2}
+      _handPose: {fileID: 0}
       _poseBlendValue: 0
       _gripAlignTransformHandLeft: {fileID: 8204728157297935862}
       _gripAlignTransformHandRight: {fileID: 1708066248215014802}
@@ -195,11 +197,11 @@ MonoBehaviour:
     _tip: {fileID: 405242751634823368}
     _useAutomaticProjectileTrajectory: 1
     _shotAnimationVarName: 
-    _prefabInstantiateOnTipWhenShot: {fileID: 1569246640813692, guid: 43ab0ca5d42daf04a99c67697d0e9414, type: 3}
+    _prefabInstantiateOnTipWhenShot: {fileID: 1658036913332844246, guid: 0266c995b89c3164096cbbb77ff53cfa, type: 3}
     _prefabInstantiateOnTipLife: 1
     _prefabInstantiateOnTipParent: 1
-    _projectilePrefab: {fileID: 1764550164022644, guid: 202a7e2e1bd74f9488ee980a6afbe005, type: 3}
-    _projectileSpeed: 150
+    _projectilePrefab: {fileID: 5008179240508683070, guid: 1433291e7a6e18a448cf26f34b230896, type: 3}
+    _projectileSpeed: 400
     _projectileMaxDistance: 120
     _projectileLength: 0.03
     _projectileDamageNear: 25
@@ -208,9 +210,9 @@ MonoBehaviour:
     _collisionLayerMask:
       serializedVersion: 2
       m_Bits: 9
-    _prefabInstantiateOnImpact: {fileID: 1022521639413414, guid: 83d69800434987942892ec7dd9f8dc18, type: 3}
-    _prefabInstantiateOnImpactLife: 1
-    _prefabScenarioImpactDecal: {fileID: 114299524112685340, guid: 267e46138001231408dd8586e173f40a, type: 3}
+    _prefabInstantiateOnImpact: {fileID: 4735788433783637363, guid: 4b9bc20e1a8a8c14eafb9d639bd75d65, type: 3}
+    _prefabInstantiateOnImpactLife: 2
+    _prefabScenarioImpactDecal: {fileID: 7641533876423537148, guid: 71f7ec97e35c6eb409d1ba0560dd803b, type: 3}
     _prefabScenarioImpactDecalLife: 10
     _decalFadeoutDuration: 3
     _createDecalLayerMask:
@@ -393,6 +395,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.OutOfWorldGuard
   _killY: -50
+--- !u!114 &2266733936550130628
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1013363612589426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ddd902a25566046429d1af678a54d9a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.BarrelObstruction
+  _breech: {fileID: 827809348227141647}
+  _radius: 0.01
+  _triggerIndex: 0
+  _hapticAmplitude: 0.8
+  _hapticSeconds: 0.2
 --- !u!1 &92804199318306725
 GameObject:
   m_ObjectHideFlags: 0
@@ -575,7 +594,7 @@ Transform:
   m_GameObject: {fileID: 380906088747905870}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: -0.0052, y: -0.5593, z: 0.0302}
+  m_LocalPosition: {x: -0.0048921746, y: -0.60059255, z: 0.031732857}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -673,6 +692,37 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &521588379990292537
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 827809348227141647}
+  m_Layer: 0
+  m_Name: BarrelCheck
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &827809348227141647
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 521588379990292537}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.005, y: 0.079, z: 0.197}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4843286368403822}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &579269140369969862
 GameObject:
   m_ObjectHideFlags: 0
@@ -2007,7 +2057,7 @@ Transform:
   m_GameObject: {fileID: 5363995566518642570}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: -0.0052, y: 0.0398, z: 0.0302}
+  m_LocalPosition: {x: -0.0048921746, y: -0.5885444, z: 0.031732857}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

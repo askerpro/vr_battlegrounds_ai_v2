@@ -755,3 +755,35 @@ API меняет поведение и требует проверки в шле
 
 Автотестом это не закрыто: рефлексия смотрит в чужую сборку, и «поле на месте» проверяется
 ровно тем же вызовом, который проверяют. Ближайший дешёвый сторож — сам `Error` в консоли.
+
+## Патч 15: запрет выстрела извне и сведения о спуске
+
+**Файл:** `Runtime/Scripts/Mechanics/Weapons/UxrWeapon.Custom.cs` — `UxrWeapon.IsUseBlocked`,
+проверка в `CanUse`; `UxrFirearmWeapon.TriggerCount`, `TryGetTriggerGrip`, `GetTriggerShotIndex`,
+`PlayTriggerNoAmmoSound`. Метка в коде — `VR Battlegrounds patch 15`.
+**Дата:** 2026-09-28
+
+### Проблема
+
+Снаряд рождается у дула (`ShotSource` на 1 см позади `Tip`), и ствол, просунутый сквозь стену,
+стрелял по ту сторону. Запретить выстрел снаружи SDK не даёт: `TryToShootRound` проверяет только
+`CanUse`, а он вычисляемый, без сеттера. Узнать, какой рукой жмут спуск и каким звуком щёлкает
+пустой спуск, тоже нельзя без рефлексии: `UxrFirearmTrigger` — `internal`, а рефлексия по
+приватным полям под IL2CPP ненадёжна.
+
+### Применённое изменение
+
+- `UxrWeapon.IsUseBlocked` (публичное свойство); `CanUse` возвращает `false`, пока оно истинно.
+  Его ставит `BarrelObstruction` (`Assets/Scripts/Weapons/`), пока ствол задевает геометрию.
+- В тот же файл — частичный `UxrFirearmWeapon` с четырьмя узкими методами о спуске. Тип
+  `UxrFirearmTrigger` наружу не выходит.
+
+### Как повторить при обновлении SDK
+
+1. В `UxrWeapon.CanUse` первой проверкой — `if (IsUseBlocked) return false;`, свойство рядом.
+2. Вернуть частичный `UxrFirearmWeapon` с `TriggerCount`, `TryGetTriggerGrip`,
+   `GetTriggerShotIndex`, `PlayTriggerNoAmmoSound`.
+3. `BarrelObstructionTests`: `Стена_на_стволе_запрещает_выстрел_а_свой_аватар_нет` проверяет и
+   `CanUse` при `IsUseBlocked`.
+
+---

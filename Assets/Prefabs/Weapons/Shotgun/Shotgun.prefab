@@ -37,12 +37,20 @@ PrefabInstance:
       value: 5a853d16-903d-4e78-ad72-b30690f20792
       objectReference: {fileID: 0}
     - target: {fileID: 29853965727083113, guid: 474579dc37907944095102affef733f1, type: 3}
+      propertyPath: __isInPrefab
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 29853965727083113, guid: 474579dc37907944095102affef733f1, type: 3}
       propertyPath: __prefabGuid
       value: 8b9da2dc5df93b94e96eb12b2ac13288
       objectReference: {fileID: 0}
     - target: {fileID: 29853965727083113, guid: 474579dc37907944095102affef733f1, type: 3}
       propertyPath: _uxrUniqueId
       value: b5ec069b-b239-4536-b554-f0e7dd2b3738
+      objectReference: {fileID: 0}
+    - target: {fileID: 29853965727083113, guid: 474579dc37907944095102affef733f1, type: 3}
+      propertyPath: _shotTypes.Array.data[0]._projectileSpeed
+      value: 300
       objectReference: {fileID: 0}
     - target: {fileID: 29857585728653211, guid: 474579dc37907944095102affef733f1, type: 3}
       propertyPath: __prefabGuid

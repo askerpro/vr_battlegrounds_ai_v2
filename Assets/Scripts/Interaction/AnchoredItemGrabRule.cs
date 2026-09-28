@@ -27,7 +27,8 @@ namespace VrBattlegrounds.Interaction
     {
         public static bool AllowsGrab(UxrGrabber grabber, UxrGrabbableObject grabbable)
         {
-            return GetHost(grabbable) == null;
+            // Зовётся на каждую точку каждого предмета каждый кадр — хозяин берётся из покадрового кэша.
+            return GrabbableHierarchyCache.GetAnchorHost(grabbable) == null;
         }
 
         /// <summary>Предмет, в якорь которого вставлен <paramref name="grabbable" />; null — не вставлен ни в какой.</summary>

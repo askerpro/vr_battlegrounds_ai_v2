@@ -72,7 +72,10 @@ PlayerLoop, и в логе останутся только кадр целико
 
 `persistentDataPath/perf/<yyyyMMdd_HHmmss>/`:
 
-- `perf.log` — главный файл, копия строк идёт в logcat (канал `GameLog.Perf`).
+- `perf.log` — главный файл. В logcat (канал `GameLog.Perf`) уходят только редкие строки:
+  начало фазы, заметки `•`, итог фазы, одна строка «фаза X: всплесков N» (Warning) и итог
+  прогона. Строки окон и `!ВСПЛЕСК` — **только в файл**: в Development-сборке `Debug.Log`
+  снимает стек на главном потоке и сам давал следующий всплеск.
 - `summary.json` — сводка по фазам, для сравнения скриптом.
 
 И `persistentDataPath/perf/history.log` — по строке-итогу на прогон, чтобы сравнивать до/после.
@@ -86,8 +89,8 @@ PlayerLoop, и в логе останутся только кадр целико
 - метрики усредняются окнами по **0,5 с**; строка пишется, только если хоть одна метрика
   значимо ушла от **последней записанной** строки (не от прошлого окна — иначе медленный дрейф
   по 5% за окно не попал бы никогда). Значимо = оба порога: для времени ≥ 1 мс **и** ≥ 15%;
-- в строке всегда кадр целиком (`dt cpu cpu_main cpu_render gpu`), остальное — только
-  изменившееся, с дельтой в скобках;
+- в строке всегда кадр целиком (`dt cpu cpu_main cpu_render gpu`, на шлеме ещё `ovr_cpu ovr_gpu`),
+  остальное — только изменившееся, с дельтой в скобках;
 - **нет строки — ничего значимо не менялось**;
 - `!ВСПЛЕСК` — одиночный кадр длиннее бюджета ×1,5 и текущего уровня ×2, пишется сразу, с
   подсистемами по убыванию: первая и есть ответ «что лагнуло». Устойчивая просадка — не всплеск,
@@ -99,9 +102,17 @@ PlayerLoop, и в логе останутся только кадр целико
 - в конце фазы — p50/p95/p99/max по каждой метрике.
 
 ```
-#4210 58.31s [куклы] dt 14.2 (+3.1) cpu 12.0 cpu_main 11.8 (+3.4) cpu_render 6.1 gpu 9.9 uxr 3.9 (+2.6) skinning 1.4 (+1.1) batches 412 (+180)
-!ВСПЛЕСК #4388 60.02s [куклы] dt 41.3 (уровень 14.2) cpu_main 38.0 cpu_render 6.2 gpu 10.1 | gc_collect 24.7, uxr 4.0, physics 2.1 | gc_alloc_kb 310.4
+#4210 58.31s [куклы] dt 14.2 (+3.1) cpu 12.0 cpu_main 11.8 (+3.4) cpu_render 6.1 gpu 9.9 ovr_cpu 11.5 ovr_gpu 8.7 uxr 3.9 (+2.6) uxr_manip 2.1 (+1.8) skinning 1.4 (+1.1) batches 412 (+180)
+!ВСПЛЕСК #4388 60.02s [куклы] dt 41.3 (уровень 14.2) cpu_main 38.0 cpu_render 6.2 gpu 10.1 ovr_cpu 37.2 ovr_gpu 9.0 | gc_collect 24.7, uxr_manip 2.4, physics 2.1 | gc_alloc_kb 310.4
 ```
+
+В заголовке `perf.log` — строка `FFR: <уровень 0..1>, флаги … OVRPlugin: <версия>`: уровень
+Fixed Foveated Rendering, как его видит `XRDisplaySubsystem.foveatedRenderingLevel` в момент
+старта записи (там же он в `summary.json`, поле `display`). Тест FFR **только записывает** — не
+меняет. На сервере и в редакторе без шлема — «нет активного XR-дисплея».
+
+Выборки фазы для перцентилей резервируются в `BeginPhase` по плановой длительности фазы
+(частота из бюджета ×1,25): список не удваивается посреди замера.
 
 ### Метрики
 
@@ -109,12 +120,23 @@ PlayerLoop, и в логе останутся только кадр целико
 |---|---|---|
 | `dt` | длительность кадра, мс — по ней бюджет и всплески | `Time.unscaledDeltaTime` |
 | `cpu`, `cpu_main`, `cpu_render`, `gpu` | время CPU / главного потока / потока рендера / GPU | `FrameTimingManager` (включён `enableFrameTimingStats`); GPU отстаёт на несколько кадров |
-| `uxr` | все стадии обновления UltimateXR (трекинг, хваты, позы, IK) | секундомер по `UxrManager.StageUpdating/StageUpdated`, работает и в release |
+| `ovr_cpu`, `ovr_gpu` | время приложения на CPU / GPU за последний кадр, мс — **настоящий GPU на Quest** | `Unity.XR.Oculus.Stats.PerfMetrics.AppCPUTime/AppGPUTime` (секунды → мс); только шлем |
+| `ovr_comp_gpu` | время компоновщика на GPU, мс | `Stats.PerfMetrics.CompositorGPUTime` |
+| `ovr_gpu_util`, `ovr_cpu_util` | загрузка GPU / средняя загрузка CPU, % | `Stats.PerfMetrics.GPUUtilization/CPUUtilizationAverage` (0..1 → %) |
+| `ovr_cpu_lvl`, `ovr_gpu_lvl` | уровни CPU/GPU 0..4 — просадка уровня = троттлинг | `Stats.AdaptivePerformance.CPULevel/GPULevel` |
+| `uxr` | сумма всех стадий обновления UltimateXR | секундомер по `UxrManager.StageUpdating/StageUpdated`, работает и в release |
+| `uxr_update`, `uxr_track`, `uxr_manip`, `uxr_anim`, `uxr_post` | стадии `UxrUpdateStage`: `Update` (ввод, локомоция), `AvatarUsingTracking` (кости по трекингу), `Manipulation` (хваты, подсветка), `Animation` (позы рук), `PostProcess` (IK) | тот же секундомер; в разбивку всплеска идут стадии, а не сумма `uxr` |
 | `physics`, `scripts`, `scripts_late`, `anim`, `anim_end`, `skinning`, `particles`, `render`, `gc_collect`, `present_wait` | подсистемы PlayerLoop, мс | маркеры профайлера — **только Development** |
 | `batches`, `draws`, `setpass`, `tris_k` | рендер | счётчики профайлера |
 | `gc_alloc_kb`, `gc_mb`, `mem_mb` | аллокации за кадр, куча, память процесса | счётчики профайлера |
 
 Метрика, которой нет в этой сборке, выпадает — список недоступных в заголовке лога.
+Колонки `ovr_*` включаются только на Android с активным XR-устройством (`OculusPerfStats.TryEnable`
+→ `Stats.PerfMetrics.EnablePerfMetrics(true)`); в редакторе, на ПК и на сервере — одна запись
+`ovr_* (<причина>)` в недоступных. Исключение нативной части выключает их до конца прогона, а не
+роняет его. Код под define `VRB_XR_OCULUS` (versionDefine сборки `VrBattlegrounds` по пакету
+`com.unity.xr.oculus`, ссылка на сборку `Unity.XR.Oculus`). Пропущенных кадров компоновщика
+в API пакета 4.5 нет (`Stats.AppMetrics` отсутствует) — их заменяет доля кадров вне бюджета.
 
 ## Классы
 
@@ -129,6 +151,7 @@ PlayerLoop, и в логе останутся только кадр целико
 | `StressPuppet` | Перенос позы локального аватара на куклу |
 | `PoseDelayBuffer` | Кольцевой буфер поз, задержка на куклу |
 | `PerfFrameRecorder` | Сбор метрик, окна, всплески, `perf.log` |
+| `OculusPerfStats` | Метрики рантайма Oculus (`ovr_*`), строка FFR/OVRPlugin для заголовка |
 | `PerfChangeFilter` | Решение «писать ли строку» (пороги) |
 | `PerfStats` | Перцентили, доля вне бюджета, критерий всплеска |
 | `PerfEvents` | Счётчики событий кадра и заметки для лога |
@@ -164,13 +187,13 @@ Lobby, RTX 3060 Ti, Development. Цифры редактора — не шлем
 ([`known-issues.md`](UltimateXR/known-issues.md), Issue 20). Повторный прогон на шлеме после патча: хост 52.7 → 19.3 мс (`uxr` 38.6 → 8.2), клиент
 с выделенным сервером — 20.6 мс.
 
-На Quest 3 `FrameTimingManager` отдаёт `gpu` и `cpu_render` нулями — нужны метрики
-`Unity.XR.Oculus.Stats` (см. «Дальше»).
+На Quest 3 `FrameTimingManager` отдаёт `gpu` и `cpu_render` нулями — поэтому добавлены
+`ovr_*` из `Unity.XR.Oculus.Stats` (прогон с ними на шлеме ещё не делался).
 
 ## Дальше
 
 - Куклы повторяют оружие: берут копию того же предмета, стреляют по выстрелу игрока, бросают
   гранаты с выдернутой чекой. Счётчики `Shot`, `Explosion`, `Grab`, `Release` в `PerfEvents`
   уже заведены.
-- Метрики Quest из `Unity.XR.Oculus.Stats` (время GPU приложения, пропущенные кадры
-  компоновщиком) — нужна ссылка сборки на `Unity.XR.Oculus`.
+- Прогон на шлеме с `ovr_*`: сверить, что `ovr_gpu` не нулевой и правдоподобен (единицы —
+  секунды по документации пакета).

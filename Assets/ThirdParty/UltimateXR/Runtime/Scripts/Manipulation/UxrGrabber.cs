@@ -334,29 +334,84 @@ namespace UltimateXR.Manipulation
         /// </summary>
         internal void UpdateThrowPhysicsInfo()
         {
-            Transform     sampledTransform     = GrabbedObject != null ? GrabbedObject.transform : transform;
-            Vector3       centerOfMassPosition = transform.TransformPoint(ThrowCenterOfMassLocalPosition);
-            Vector3       throwTipPosition     = transform.TransformPoint(ThrowTipLocalPosition);
-            PhysicsSample newSample            = new PhysicsSample(_physicsSampleWindow.LastOrDefault(), sampledTransform, centerOfMassPosition, throwTipPosition, Time.deltaTime);
+            // VR Battlegrounds patch 19: окно сэмплов — кольцевой буфер структур вместо List<class> с
+            // LINQ (new PhysicsSample + ForEach/RemoveAll/Select/Average/First/Last в каждом кадре для
+            // каждой руки всех аватаров). Математика та же, включая порядок операций. Выборку для
+            // remote-рук не отключаем: сервер отпускает их предметы сам (AvatarTeardown, EquipmentStrip,
+            // смерть) и берёт скорость броска отсюда. См. Docs/UltimateXR/sdk-patches.md.
+            Transform sampledTransform     = GrabbedObject != null ? GrabbedObject.transform : transform;
+            Vector3   centerOfMassPosition = transform.TransformPoint(ThrowCenterOfMassLocalPosition);
+            Vector3   throwTipPosition     = transform.TransformPoint(ThrowTipLocalPosition);
+            float     deltaTime            = Time.deltaTime;
+
+            PhysicsSample newSample = _physicsSampleCount > 0
+                                          ? new PhysicsSample(in _physicsSamples[PhysicsSampleIndex(_physicsSampleCount - 1)], true, sampledTransform, centerOfMassPosition, throwTipPosition, deltaTime)
+                                          : new PhysicsSample(default, false, sampledTransform, centerOfMassPosition, throwTipPosition, deltaTime);
 
             // Update timers
-            _physicsSampleWindow.ForEach(s => s.Age += Time.deltaTime);
+            for (int i = 0; i < _physicsSampleCount; ++i)
+            {
+                _physicsSamples[PhysicsSampleIndex(i)].Age += deltaTime;
+            }
 
-            // Remove samples out of the time window
-            _physicsSampleWindow.RemoveAll(s => s.Age > SampleWindowSeconds);
+            // Remove samples out of the time window. Ages grow from newest to oldest, so the samples to remove
+            // are always the oldest ones at the head of the ring buffer.
+            while (_physicsSampleCount > 0 && _physicsSamples[_physicsSampleHead].Age > SampleWindowSeconds)
+            {
+                _physicsSampleHead = (_physicsSampleHead + 1) % _physicsSamples.Length;
+                _physicsSampleCount--;
+            }
 
             // Add new sample
-            _physicsSampleWindow.Add(newSample);
+            if (_physicsSampleCount == _physicsSamples.Length)
+            {
+                PhysicsSample[] grown = new PhysicsSample[_physicsSamples.Length * 2];
+
+                for (int i = 0; i < _physicsSampleCount; ++i)
+                {
+                    grown[i] = _physicsSamples[PhysicsSampleIndex(i)];
+                }
+
+                _physicsSamples    = grown;
+                _physicsSampleHead = 0;
+            }
+
+            _physicsSamples[PhysicsSampleIndex(_physicsSampleCount)] = newSample;
+            _physicsSampleCount++;
 
             // Compute instant and smoothed values:
             Velocity        = newSample.Velocity;
             AngularVelocity = newSample.EulerSpeed;
-            SmoothVelocity  = Vector3Ext.Average(_physicsSampleWindow.Select(s => s.TotalVelocity));
 
-            Quaternion relative = Quaternion.Inverse(_physicsSampleWindow.First().Rotation) * _physicsSampleWindow.Last().Rotation;
+            // Same as Enumerable.Average over floats: accumulate in double, divide, cast to float.
+            double sumX = 0.0;
+            double sumY = 0.0;
+            double sumZ = 0.0;
+
+            for (int i = 0; i < _physicsSampleCount; ++i)
+            {
+                Vector3 totalVelocity = _physicsSamples[PhysicsSampleIndex(i)].TotalVelocity;
+                sumX += totalVelocity.x;
+                sumY += totalVelocity.y;
+                sumZ += totalVelocity.z;
+            }
+
+            SmoothVelocity = new Vector3((float)(sumX / _physicsSampleCount), (float)(sumY / _physicsSampleCount), (float)(sumZ / _physicsSampleCount));
+
+            PhysicsSample oldestSample = _physicsSamples[_physicsSampleHead];
+            Quaternion    relative     = Quaternion.Inverse(oldestSample.Rotation) * newSample.Rotation;
             relative.ToAngleAxis(out float angle, out Vector3 axis);
 
-            SmoothAngularVelocity = angle * sampledTransform.TransformDirection(axis) / _physicsSampleWindow.First().Age;
+            SmoothAngularVelocity = angle * sampledTransform.TransformDirection(axis) / oldestSample.Age;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 19: index in <see cref="_physicsSamples" /> of the n-th sample of the window, oldest
+        ///     first.
+        /// </summary>
+        private int PhysicsSampleIndex(int n)
+        {
+            return (_physicsSampleHead + n) % _physicsSamples.Length;
         }
 
         /// <summary>
@@ -518,7 +573,11 @@ namespace UltimateXR.Manipulation
         /// </summary>
         private const float SampleWindowSeconds = 0.15f;
 
-        private readonly List<PhysicsSample> _physicsSampleWindow = new List<PhysicsSample>();
+        // VR Battlegrounds patch 19: кольцевой буфер окна сэмплов (растёт вдвое, если при высоком FPS
+        // в 0.15 с не помещается). См. Docs/UltimateXR/sdk-patches.md.
+        private PhysicsSample[] _physicsSamples = new PhysicsSample[32];
+        private int             _physicsSampleHead;
+        private int             _physicsSampleCount;
 
         private bool               _sideInitialized;
         private UxrHandSide        _side;

@@ -780,6 +780,23 @@ namespace UltimateXR.Manipulation
         }
 
         /// <summary>
+        ///     VR Battlegrounds patch 18: держит ли предмет хотя бы одна рука локального аватара.
+        ///     См. Docs/UltimateXR/sdk-patches.md, патч 18.
+        /// </summary>
+        private static bool HasLocalAffordanceGrab(RuntimeManipulationInfo manipulationInfo)
+        {
+            foreach (RuntimeGrabInfo grabInfo in manipulationInfo.Grabs)
+            {
+                if (grabInfo.Grabber != null && IsLocalAffordanceGrabber(grabInfo.Grabber))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         ///     Updates visual feedback states (objects that can be grabbed, anchors where a grabbed object can be placed on,
         ///     etc.).
         /// </summary>
@@ -791,6 +808,15 @@ namespace UltimateXR.Manipulation
             {
                 UxrGrabbableObjectAnchor anchorTargetCandidate = null;
                 float                    minDistance           = float.MaxValue;
+
+                // VR Battlegrounds patch 18: «можно положить в якорь» (AnchorRangeEntered/Left,
+                // ActivateOnCompatibleNear) нужно только рукам игрока за этим шлемом — единственный
+                // подписчик, PocketReadiness, фильтрует по своему (Local) аватару. Предмет в руках только
+                // remote-аватаров перебор всех якорей не проходит. См. Docs/UltimateXR/sdk-patches.md.
+                if (!HasLocalAffordanceGrab(manipulationInfoPair.Value))
+                {
+                    continue;
+                }
 
                 if (manipulationInfoPair.Key.UsesGrabbableParentDependency == false && manipulationInfoPair.Key.IsPlaceable)
                 {

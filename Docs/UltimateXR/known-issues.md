@@ -694,3 +694,44 @@ Mirror.CommandMessage caused an Exception … NullReferenceException` со ст�
 
 Патч 16 (`sdk-patches.md`): руки не-локальных аватаров в эти проходы не входят.
 
+## Issue 21: руки remote-аватаров не двигаются — `NetworkTransform` кистей в локальных координатах
+
+**Компоненты:** `NetworkTransformUnreliable` на кистях аватаров, `UxrArmIKSolver`
+**Статус:** ✅ Исправлено
+**Дата:** 2026-09-28
+
+### Симптом
+
+В сетевой игре (выделенный сервер) руки чужих игроков стоят на месте: тело и голова двигаются,
+пальцы (позы, канал состояния) меняются, а кисть не уходит от тела. На хосте незаметно — там
+сети нет. Нашёл стресс-тест: у всех кукол на клиенте.
+
+### Причина
+
+У всех `NetworkTransform` аватаров `coordinateSpace = Local`. Для кисти это синхронизирует
+позу относительно предплечья. `UxrArmIKSolver` (конец решения, `Forearm.SetPositionAndRotation`,
+затем `Hand.SetPositionAndRotation`) ставит предплечье так, чтобы дотянуться до кисти, и
+возвращает кисти мировую позу — после IK локальная позиция кисти всегда равна длине кости.
+Владелец шлёт константу; у получателя кисть встаёт на его предплечье, IK видит цель достигнутой
+и руку не двигает. Меняется только поворот запястья.
+
+Сам UltimateXR (`UxrMirrorNetwork.SetupAvatar`) вешает эти компоненты с `worldSpace = true`.
+
+### Исправление
+
+На кистях всех аватаров `coordinateSpace = World`; у `Heavy_Soldier_Base_Avatar` добавлены
+недостающие компоненты на `Wrist_Left/Right` (настройки — с камеры). Камера оставлена в `Local`:
+её родитель неподвижен относительно корня, решение VR-08 в силе. Сторож —
+`PrefabCompositionTests.У_каждого_аватара_кисти_несут_NetworkTransform`.
+
+## Issue 22: гасить детали аватара — только `forceRenderingOff`
+
+**Компоненты:** `UxrAvatar`, `SkinnedMeshRenderer`
+**Статус:** ℹ️ Поведение SDK
+**Дата:** 2026-09-28
+
+`UxrAvatar.Awake` включает `updateWhenOffscreen` у всех скинов аватара, а `UxrAvatar.RenderMode`
+(в том числе в `Start`) переписывает `enabled` у всех рендереров. Выключенный через `enabled` рендерер
+аватара вернётся сам; гасить детали (как зубы и глаза Heavy под маской в `RemoteAvatarRenderOptimizer`)
+нужно через `forceRenderingOff`, а `updateWhenOffscreen` менять после `Awake`.
+

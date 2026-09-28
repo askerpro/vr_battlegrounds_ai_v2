@@ -191,9 +191,14 @@ namespace VrBattlegrounds.Network
             if (serializedEvent == null)
                 return;
 
-            GameLog.Network.Verbose(
-                $"[NetworkStateRelay] Отправка состояния: {component.Component.name} " +
-                $"({eventArgs.GetType().Name}), {serializedEvent.Length} Б, isServer={isServer}");
+            // Событие на каждый хват/отпускание/выстрел: строку не собираем, если Verbose
+            // выключен — иначе интерполяция и component.name аллоцируют на каждом событии.
+            if (GameLog.Network.IsEnabled(LogLevel.Verbose))
+            {
+                GameLog.Network.Verbose(
+                    $"[NetworkStateRelay] Отправка состояния: {component.Component.name} " +
+                    $"({eventArgs.GetType().Name}), {serializedEvent.Length} Б, isServer={isServer}");
+            }
 
             if (isServer)
             {

@@ -29,6 +29,9 @@ namespace VrBattlegrounds.Weapons
         [Tooltip("Кнопка выброса. Button1 — A на правом контроллере Quest, X на левом.")]
         [SerializeField] private UxrInputButtons _button = UxrInputButtons.Button1;
 
+        // Один массив на всё время жизни: Update идёт каждый кадр, new[] давал мусор.
+        private static readonly UxrHandSide[] HandSides = { UxrHandSide.Left, UxrHandSide.Right };
+
         private UxrAvatar _avatar;
 
         private void Awake()
@@ -40,7 +43,7 @@ namespace VrBattlegrounds.Weapons
         {
             if (_avatar.AvatarMode != UxrAvatarMode.Local || _avatar.ControllerInput == null) return;
 
-            foreach (UxrHandSide side in new[] { UxrHandSide.Left, UxrHandSide.Right })
+            foreach (UxrHandSide side in HandSides)
             {
                 if (_avatar.ControllerInput.GetButtonsPressDown(side, _button))
                 {

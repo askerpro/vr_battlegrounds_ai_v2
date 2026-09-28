@@ -825,3 +825,147 @@ API меняет поведение и требует проверки в шле
    не должна расти больше чем на ~1 мс против базы.
 
 ---
+
+## Патч 17: поиск держащей руки только у предметов, которые кто-то держит
+
+**Файл:** `Runtime/Scripts/Manipulation/UxrGrabbableObject.cs` — `GetDistanceFromGrabber`;
+`UxrGrabManager.Querying.cs` — `GetGrabbingHand(obj, point, out grabber)`. Метка — `VR Battlegrounds patch 17`.
+**Дата:** 2026-09-28
+
+### Проблема
+
+`GetClosestGrabbableObject` каждый кадр зовёт `GetDistanceFromGrabber` для каждого предмета и точки
+хвата, а тот для каждой другой точки — `GetGrabbingHand`, который перебирает все `UxrGrabber.EnabledComponents`
+и на каждом копирует список хватов (`GetGrabs`). Для предмета, который никто не держит, ответ всегда
+«нет», но стоил ~1 мс на руку при 126 предметах.
+
+### Применённое изменение
+
+1. В `GetDistanceFromGrabber` цикл «штраф рядом с другой рукой» идёт до
+   `UxrGrabManager.Instance.IsBeingGrabbed(this) ? GrabPointCount : 0`.
+2. В `GetGrabbingHand` ранний `return false`, если предмета нет в `_currentManipulations`; хваты
+   перебираются из `manipulationInfo.Grabs` без копии. Результат идентичен прежнему.
+
+### Как повторить при обновлении SDK
+
+Найти цикл `for (int otherGrabbedPoint ...)` в `GetDistanceFromGrabber` и `GetGrabbingHand(..., int point, out UxrGrabber)`,
+добавить проверки из п. 1–2.
+
+---
+
+## Патч 18: подсказка «положить в якорь» только для предметов в руках локального игрока
+
+**Файл:** `Runtime/Scripts/Manipulation/UxrGrabManager.cs` — `UpdateAffordances`, новый `HasLocalAffordanceGrab`.
+Метка — `VR Battlegrounds patch 18`.
+**Дата:** 2026-09-28
+
+### Проблема
+
+Первый цикл `UpdateAffordances` для каждого предмета в руках — в том числе у remote-аватаров —
+перебирает все якоря с `CanBePlacedOnAnchor`. Результат (`AnchorRangeEntered/Left`,
+`ActivateOnCompatibleNear/NotNear`) — локальные события без сетевой синхронизации; единственный
+подписчик `PocketReadiness` фильтрует по своему `Local`-аватару.
+
+### Применённое изменение
+
+Предмет, среди держащих рук которого нет ни одной руки `Local`-аватара (`IsLocalAffordanceGrabber`, патч 16),
+пропускается (`continue`). Побочный эффект: `ActivateOnCompatibleNear` не зажигается от предмета в руке
+чужого аватара.
+
+### Как повторить при обновлении SDK
+
+В начале тела `foreach (... manipulationInfoPair in _currentManipulations)` в `UpdateAffordances`:
+`if (!HasLocalAffordanceGrab(manipulationInfoPair.Value)) continue;`. Хелпер — перебор `Grabs` с
+`IsLocalAffordanceGrabber(grabInfo.Grabber)`.
+
+---
+
+## Патч 19: выборка скорости броска без аллокаций
+
+**Файл:** `Runtime/Scripts/Manipulation/UxrGrabber.cs` — `UpdateThrowPhysicsInfo`, поля окна;
+`UxrGrabber.PhysicsSample.cs`. Метка — `VR Battlegrounds patch 19`.
+**Дата:** 2026-09-28
+
+### Проблема
+
+`FinalizeManipulationFrame` каждый кадр зовёт `UpdateThrowPhysicsInfo` у каждой руки каждого аватара:
+`new PhysicsSample` (class) плюс `LastOrDefault/ForEach/RemoveAll/Select/Average/First/Last` — мусор на
+каждую руку в каждом кадре.
+
+### Применённое изменение
+
+`PhysicsSample` — struct (`Age` — поле, в конструкторе флаг `hasLastSample` вместо null).
+Окно — кольцевой буфер `PhysicsSample[32]` (удваивается при переполнении). Математика та же:
+старение каждого сэмпла, удаление старых с головы (возраст монотонен), среднее `TotalVelocity`
+в double как `Enumerable.Average`, угловая скорость по самому старому и новому сэмплу.
+Для remote-рук выборка **не** отключена: сервер отпускает их предметы сам (`AvatarTeardown`,
+`EquipmentStrip`, смерть в `PlayerGrabManager`) и `ReleaseObject` берёт скорость из `SmoothVelocity`.
+
+### Как повторить при обновлении SDK
+
+Перенести `UpdateThrowPhysicsInfo` и `PhysicsSample` из текущей версии целиком; если в SDK
+изменилась математика сэмпла — повторить её в struct-версии.
+
+---
+
+## Патч 20: кэш IK-решателей аватара в SolveBodyIK
+
+**Файл:** `Runtime/Scripts/Avatar/Controllers/UxrStandardAvatarController.cs` — `SolveBodyIK`, `RefreshCachedIKSolvers`, `IsAutoUpdateSolver`; `Runtime/Scripts/Animation/IK/UxrIKSolver.cs` — `RegistryVersion`, `Awake`, `OnDestroy`. Метка в коде — `VR Battlegrounds patch 20`.
+**Дата:** 2026-09-28
+
+### Проблема
+
+`SolveBodyIK` каждый кадр у каждого аватара трижды перебирал LINQ-выборкой `UxrIKSolver.GetComponents(Avatar)` — решатели ВСЕХ аватаров сцены: ленивая выборка рук считалась дважды, решатели не для рук — третьим запросом. С 10 аватарами цена растёт квадратично, плюс аллокации LINQ.
+
+### Применённое изменение
+
+`UxrIKSolver.RegistryVersion` растёт при регистрации (`Awake`) и снятии (`OnDestroy`) любого решателя. Контроллер хранит два списка решателей своего аватара (руки: `is UxrArmIKSolver`; остальные: `GetType() != typeof(UxrArmIKSolver)`) и собирает их заново только при смене версии или аватара. Проходы идут по спискам циклом `for`; `isActiveAndEnabled && NeedsAutoUpdate` проверяется на каждом проходе заново. Порядок, фильтры и число проходов (включая три прохода у руки с ключицей) не менялись.
+
+### Как повторить при обновлении SDK
+
+1. В `UxrIKSolver` — `internal static int RegistryVersion`, `++` после `base.Awake()` и после `base.OnDestroy()`.
+2. В `SolveBodyIK` — три LINQ-выборки заменить циклами по кэшу, фильтр `solver != null && isActiveAndEnabled && NeedsAutoUpdate`.
+3. Проверка: локальный аватар — IK рук и тела как раньше; стресс-тест — стадия `PostProcess` с 9 куклами.
+
+---
+
+## Патч 21: LeftGrabber/RightGrabber без LINQ по всем захватчикам сцены
+
+**Файл:** `Runtime/Scripts/Avatar/UxrAvatar.cs` — `LeftGrabber`, `RightGrabber`, `FindEnabledGrabber`, `HookGrabberRegistry`. Метка в коде — `VR Battlegrounds patch 21`.
+**Дата:** 2026-09-28
+
+### Проблема
+
+`UxrGrabber.GetComponents(this).FirstOrDefault(...)` перебирал захватчики всех аватаров сцены. Геттеры зовутся из `ProcessHandManipulation` и `IsHandGrabbing` каждого аватара каждый кадр — O(аватаров²) плюс аллокации.
+
+### Применённое изменение
+
+Захватчики аватара (включённые и нет, в порядке статического списка) кэшируются. Кэш собирается заново, когда меняется статическая версия; её увеличивают `UxrGrabber.GlobalRegistered/GlobalUnregistered`. Подписка — в `[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]` через `-=`/`+=`, поэтому переживает вход в Play Mode без перезагрузки домена. `isActiveAndEnabled` и `Side` проверяются при каждом вызове. Ветка для редактора вне Play Mode (`GetComponentsInChildren`) не тронута.
+
+### Как повторить при обновлении SDK
+
+1. В геттерах `return FindEnabledGrabber(UxrHandSide.Left/Right);` вместо LINQ.
+2. Перенести `FindEnabledGrabber`, `HookGrabberRegistry`, `OnGrabberRegistryChanged` и поля `s_grabberRegistryVersion`, `_cachedGrabbers`, `_cachedGrabbersVersion`.
+
+---
+
+## Патч 22: PostUpdate без yield-итераторов и new UxrAvatarUpdateEventArgs
+
+**Файл:** `Runtime/Scripts/Core/UxrManager.cs` — `PostUpdate`, `FillAvatarSnapshot`, `TryGetUpdatableController`, `GetAvatarUpdateArgs`. Метка в коде — `VR Battlegrounds patch 22`.
+**Дата:** 2026-09-28
+
+### Проблема
+
+`PostUpdate` пять раз за кадр перечислял `LocalAvatarControllers`/`EnabledAvatarControllers` (yield поверх LINQ) и на каждый аватар в каждой стадии дважды создавал `new UxrAvatarUpdateEventArgs` — около 60 объектов за кадр при 10 аватарах.
+
+### Применённое изменение
+
+Перед каждым циклом `UxrAvatar.AllComponents` копируется в переиспользуемый `List` (`AddRange` без аллокаций), а прежний фильтр проверяется на каждом элементе в момент обхода. Снимок раз за кадр отвергнут: между циклами `UxrGrabManager` и подписчики могут выключить аватар. Аргументы событий кэшируются по паре (аватар, стадия): класс неизменяемый, подписчиков в проекте нет; записи уничтоженных аватаров вычищаются при добавлении нового. `Update()` и сами свойства не тронуты.
+
+### Как повторить при обновлении SDK
+
+1. Циклы `PostUpdate` — через `FillAvatarSnapshot` + `TryGetUpdatableController(avatar, localOnly, out controller)`; стадия Animation — фильтр `avatar != null && isActiveAndEnabled`.
+2. `new UxrAvatarUpdateEventArgs(...)` в `PostUpdate` заменить на `GetAvatarUpdateArgs(avatar, stage)`.
+3. Если появится подписчик, который меняет или сравнивает аргументы по ссылке, — вернуть `new`.
+
+---

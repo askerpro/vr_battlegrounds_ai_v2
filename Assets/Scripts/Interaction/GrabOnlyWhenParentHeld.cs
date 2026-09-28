@@ -34,12 +34,19 @@ namespace VrBattlegrounds.Interaction
 
         public bool AllowsGrab(UxrGrabber grabber)
         {
+            return !_requireParentHeld || AllowsGrab(grabber, Parent);
+        }
+
+        /// <summary>
+        /// То же с уже найденным <paramref name="parent" /> (<see cref="Parent" />) — без подъёма по
+        /// иерархии. <c>GrabRules</c> берёт родителя из <see cref="GrabbableHierarchyCache" />.
+        /// </summary>
+        public bool AllowsGrab(UxrGrabber grabber, UxrGrabbableObject parent)
+        {
             if (!_requireParentHeld)
             {
                 return true;
             }
-
-            UxrGrabbableObject parent = Parent;
 
             if (parent == null)
             {

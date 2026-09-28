@@ -57,7 +57,8 @@ namespace VrBattlegrounds.Interaction
         {
             if (_avatar.AvatarMode != UxrAvatarMode.Local)
             {
-                ReleaseReadiness();
+                // Чужой аватар (их до 9 на сцене): освобождать нечего — выходим, не трогая состояние.
+                if (_readiness != null) ReleaseReadiness();
                 return;
             }
 

@@ -324,11 +324,23 @@ namespace UltimateXR.Avatar.Controllers
                 _bodyIK.PreSolveAvatarIK();
             }
 
+            // VR Battlegrounds patch 20: решатели аватара берутся из кэша, а не из LINQ по решателям ВСЕХ
+            // аватаров сцены (было O(аватаров²) и три прохода по AllComponents за кадр). Порядок — тот же,
+            // что в статическом списке, фильтры те же и проверяются на каждом проходе заново, как делала
+            // ленивая выборка (включённость, NeedsAutoUpdate). Число проходов решения не менялось.
+            RefreshCachedIKSolvers();
+
             // Update arms without clavicles to check how much tension is applied on the shoulders
 
-            IEnumerable<UxrArmIKSolver> autoUpdateArmSolvers = UxrIKSolver.GetComponents(Avatar).OfType<UxrArmIKSolver>().Where(s => s.NeedsAutoUpdate);
+            for (int i = 0; i < _cachedArmSolvers.Count; ++i)
+            {
+                UxrArmIKSolver s = _cachedArmSolvers[i];
 
-            autoUpdateArmSolvers.ForEach(s => s.SolveIKPass(UxrArmSolveOptions.None, UxrArmOverExtendMode.ExtendForearm));
+                if (IsAutoUpdateSolver(s))
+                {
+                    s.SolveIKPass(UxrArmSolveOptions.None, UxrArmOverExtendMode.ExtendForearm);
+                }
+            }
 
             // Update torso rotation
 
@@ -339,11 +351,27 @@ namespace UltimateXR.Avatar.Controllers
 
             // Update arms normally
 
-            autoUpdateArmSolvers.ForEach(s => s.SolveIK());
+            for (int i = 0; i < _cachedArmSolvers.Count; ++i)
+            {
+                UxrArmIKSolver s = _cachedArmSolvers[i];
+
+                if (IsAutoUpdateSolver(s))
+                {
+                    s.SolveIK();
+                }
+            }
 
             // Update non-arm IKs
 
-            UxrIKSolver.GetComponents(Avatar).Where(s => s.GetType() != typeof(UxrArmIKSolver) && s.NeedsAutoUpdate).ForEach(s => s.SolveIK());
+            for (int i = 0; i < _cachedNonArmSolvers.Count; ++i)
+            {
+                UxrIKSolver s = _cachedNonArmSolvers[i];
+
+                if (IsAutoUpdateSolver(s))
+                {
+                    s.SolveIK();
+                }
+            }
         }
 
         #endregion
@@ -590,6 +618,56 @@ namespace UltimateXR.Avatar.Controllers
         #endregion
 
         #region Private Methods
+
+        /// <summary>
+        ///     VR Battlegrounds patch 20: пересобирает кэш решателей этого аватара, если реестр решателей
+        ///     изменился (решатель создан или уничтожен) или сменился аватар. Состав и порядок — как у
+        ///     прежних выборок: <c>UxrIKSolver.GetComponents(Avatar).OfType&lt;UxrArmIKSolver&gt;()</c> для рук
+        ///     и <c>GetType() != typeof(UxrArmIKSolver)</c> для остальных (наследник UxrArmIKSolver, как и
+        ///     раньше, попадает в оба списка). Фильтр включённости не кэшируется — см.
+        ///     <see cref="IsAutoUpdateSolver" />.
+        /// </summary>
+        private void RefreshCachedIKSolvers()
+        {
+            UxrAvatar avatar = Avatar;
+
+            if (_cachedSolversVersion == UxrIKSolver.RegistryVersion && ReferenceEquals(_cachedSolversAvatar, avatar))
+            {
+                return;
+            }
+
+            _cachedSolversVersion = UxrIKSolver.RegistryVersion;
+            _cachedSolversAvatar  = avatar;
+            _cachedArmSolvers.Clear();
+            _cachedNonArmSolvers.Clear();
+
+            foreach (UxrIKSolver solver in UxrIKSolver.AllComponents)
+            {
+                if (solver == null || solver.Avatar != avatar)
+                {
+                    continue;
+                }
+
+                if (solver is UxrArmIKSolver armSolver)
+                {
+                    _cachedArmSolvers.Add(armSolver);
+                }
+
+                if (solver.GetType() != typeof(UxrArmIKSolver))
+                {
+                    _cachedNonArmSolvers.Add(solver);
+                }
+            }
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 20: тот же фильтр, что давали <c>UxrIKSolver.GetComponents(Avatar)</c>
+        ///     (isActiveAndEnabled) и <c>NeedsAutoUpdate</c>, проверяемый в момент прохода.
+        /// </summary>
+        private static bool IsAutoUpdateSolver(UxrIKSolver solver)
+        {
+            return solver != null && solver.isActiveAndEnabled && solver.NeedsAutoUpdate;
+        }
 
         /// <summary>
         ///     Gets the pose name that overrides the event with the given index.
@@ -1151,6 +1229,12 @@ namespace UltimateXR.Avatar.Controllers
         private UxrArmIKSolver _leftArmIK;
         private UxrArmIKSolver _rightArmIK;
         private UxrBodyIK      _bodyIK;
+
+        // VR Battlegrounds patch 20: кэш решателей аватара для SolveBodyIK.
+        private readonly List<UxrArmIKSolver> _cachedArmSolvers     = new List<UxrArmIKSolver>();
+        private readonly List<UxrIKSolver>    _cachedNonArmSolvers  = new List<UxrIKSolver>();
+        private          int                  _cachedSolversVersion = -1;
+        private          UxrAvatar            _cachedSolversAvatar;
 
         #endregion
     }

@@ -12,7 +12,16 @@ namespace VrBattlegrounds.Player
     {
         public static bool IsGrabAllowed(UxrGrabber grabber, UxrGrabbableObject grabbable, int grabPoint)
         {
-            if (grabbable != null && grabbable.TryGetComponent(out GrabOnlyWhenParentHeld parentRule) && !parentRule.AllowsGrab(grabber))
+            if (grabbable == null)
+            {
+                return true;
+            }
+
+            // Делегат SDK спрашивает каждую точку каждого предмета каждый кадр, до проверки
+            // расстояния, — производные от иерархии данные берутся из покадрового кэша.
+            GrabOnlyWhenParentHeld parentRule = GrabbableHierarchyCache.GetPartRule(grabbable, out UxrGrabbableObject partParent);
+
+            if (parentRule != null && !parentRule.AllowsGrab(grabber, partParent))
             {
                 return false;
             }

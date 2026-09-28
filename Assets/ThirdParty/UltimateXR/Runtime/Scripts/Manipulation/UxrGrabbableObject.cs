@@ -1057,7 +1057,13 @@ namespace UltimateXR.Manipulation
 
             // Do not allow to grab if there is a hand grabbing another grabPoint nearby
 
-            for (int otherGrabbedPoint = 0; otherGrabbedPoint < GrabPointCount; ++otherGrabbedPoint)
+            // VR Battlegrounds patch 17: цикл ниже только штрафует точку рядом с уже держащей рукой, а
+            // GetGrabbingHand для каждой точки перебирал все грабберы сцены. Для предмета, который никто
+            // не держит (почти все 100+ предметов в каждом кадре поиска ближайшего), результат заведомо
+            // пустой — пропускаем цикл одной проверкой словаря. См. Docs/UltimateXR/sdk-patches.md.
+            int otherGrabbedPointCount = UxrGrabManager.Instance.IsBeingGrabbed(this) ? GrabPointCount : 0;
+
+            for (int otherGrabbedPoint = 0; otherGrabbedPoint < otherGrabbedPointCount; ++otherGrabbedPoint)
             {
                 if (otherGrabbedPoint == grabPoint && grabPointShape == null)
                 {

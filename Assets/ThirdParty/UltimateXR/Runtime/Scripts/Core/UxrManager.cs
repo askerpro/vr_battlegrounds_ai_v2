@@ -1,4 +1,4 @@
-// --------------------------------------------------------------------------------------------------------------------
+﻿// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrManager.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -1831,15 +1831,28 @@ namespace UltimateXR.Core
         /// </summary>
         private void PostUpdate()
         {
+            // VR Battlegrounds patch 22: вместо ленивых LocalAvatarControllers/EnabledAvatarControllers
+            // (yield поверх LINQ, 5 перечислений за кадр) перед каждым циклом снимается копия списка
+            // аватаров в переиспользуемый List, а прежний фильтр проверяется на каждом элементе в момент
+            // обхода — как делал yield. Аргументы событий AvatarUpdating/AvatarUpdated неизменяемы и
+            // берутся из кэша по (аватар, стадия) — см. GetAvatarUpdateArgs.
+
             // Avatar bones that are tracked
 
             OnUpdatingStage(UxrUpdateStage.AvatarUsingTracking);
 
-            foreach (UxrAvatarController avatarController in LocalAvatarControllers)
+            FillAvatarSnapshot();
+
+            for (int i = 0; i < _avatarSnapshot.Count; ++i)
             {
-                OnAvatarUpdating(avatarController.Avatar, new UxrAvatarUpdateEventArgs(avatarController.Avatar, UxrUpdateStage.AvatarUsingTracking));
+                if (!TryGetUpdatableController(_avatarSnapshot[i], true, out UxrAvatarController avatarController))
+                {
+                    continue;
+                }
+
+                OnAvatarUpdating(avatarController.Avatar, GetAvatarUpdateArgs(avatarController.Avatar, UxrUpdateStage.AvatarUsingTracking));
                 ((IUxrAvatarControllerUpdater)avatarController).UpdateAvatarUsingTrackingDevices();
-                OnAvatarUpdated(avatarController.Avatar, new UxrAvatarUpdateEventArgs(avatarController.Avatar, UxrUpdateStage.AvatarUsingTracking));
+                OnAvatarUpdated(avatarController.Avatar, GetAvatarUpdateArgs(avatarController.Avatar, UxrUpdateStage.AvatarUsingTracking));
             }
 
             OnStageUpdated(UxrUpdateStage.AvatarUsingTracking);
@@ -1848,24 +1861,39 @@ namespace UltimateXR.Core
 
             OnUpdatingStage(UxrUpdateStage.Manipulation);
 
-            foreach (UxrAvatarController avatarController in EnabledAvatarControllers)
+            FillAvatarSnapshot();
+
+            for (int i = 0; i < _avatarSnapshot.Count; ++i)
             {
-                OnAvatarUpdating(avatarController.Avatar, new UxrAvatarUpdateEventArgs(avatarController.Avatar, UxrUpdateStage.Manipulation));
+                if (TryGetUpdatableController(_avatarSnapshot[i], false, out UxrAvatarController avatarController))
+                {
+                    OnAvatarUpdating(avatarController.Avatar, GetAvatarUpdateArgs(avatarController.Avatar, UxrUpdateStage.Manipulation));
+                }
             }
 
             UxrGrabManager.Instance.UpdateManager();
             UxrWeaponManager.Instance.UpdateManager();
-            
-            foreach (UxrAvatarController avatarController in EnabledAvatarControllers)
+
+            FillAvatarSnapshot();
+
+            for (int i = 0; i < _avatarSnapshot.Count; ++i)
             {
                 // We update the manipulation after the grab manager mainly to ensure that the
                 // hand transitions that result from releasing constrained objects work with the correct start.
-                ((IUxrAvatarControllerUpdater)avatarController).UpdateAvatarManipulation();
+                if (TryGetUpdatableController(_avatarSnapshot[i], false, out UxrAvatarController avatarController))
+                {
+                    ((IUxrAvatarControllerUpdater)avatarController).UpdateAvatarManipulation();
+                }
             }
-            
-            foreach (UxrAvatarController avatarController in EnabledAvatarControllers)
+
+            FillAvatarSnapshot();
+
+            for (int i = 0; i < _avatarSnapshot.Count; ++i)
             {
-                OnAvatarUpdated(avatarController.Avatar, new UxrAvatarUpdateEventArgs(avatarController.Avatar, UxrUpdateStage.Manipulation));
+                if (TryGetUpdatableController(_avatarSnapshot[i], false, out UxrAvatarController avatarController))
+                {
+                    OnAvatarUpdated(avatarController.Avatar, GetAvatarUpdateArgs(avatarController.Avatar, UxrUpdateStage.Manipulation));
+                }
             }
 
             OnStageUpdated(UxrUpdateStage.Manipulation);
@@ -1874,22 +1902,32 @@ namespace UltimateXR.Core
 
             OnUpdatingStage(UxrUpdateStage.Animation);
 
-            foreach (UxrAvatar avatar in UxrAvatar.EnabledComponents)
+            FillAvatarSnapshot();
+
+            for (int i = 0; i < _avatarSnapshot.Count; ++i)
             {
+                UxrAvatar avatar = _avatarSnapshot[i];
+
+                // Прежний фильтр UxrAvatar.EnabledComponents.
+                if (avatar == null || !avatar.isActiveAndEnabled)
+                {
+                    continue;
+                }
+
                 if (avatar.AvatarController && avatar.AvatarController.enabled && avatar.AvatarController.Initialized)
                 {
                     if (avatar.AvatarMode == UxrAvatarMode.Local)
                     {
-                        OnAvatarUpdating(avatar, new UxrAvatarUpdateEventArgs(avatar, UxrUpdateStage.Animation));
+                        OnAvatarUpdating(avatar, GetAvatarUpdateArgs(avatar, UxrUpdateStage.Animation));
                         ((IUxrAvatarControllerUpdater)avatar.AvatarController).UpdateAvatarAnimation();
-                        OnAvatarUpdated(avatar, new UxrAvatarUpdateEventArgs(avatar, UxrUpdateStage.Animation));
+                        OnAvatarUpdated(avatar, GetAvatarUpdateArgs(avatar, UxrUpdateStage.Animation));
                     }
                     else
                     {
-                        // This makes sure that hand poses are updated 
-                        OnAvatarUpdating(avatar, new UxrAvatarUpdateEventArgs(avatar, UxrUpdateStage.Animation));
+                        // This makes sure that hand poses are updated
+                        OnAvatarUpdating(avatar, GetAvatarUpdateArgs(avatar, UxrUpdateStage.Animation));
                         avatar.UpdateHandPoseTransforms();
-                        OnAvatarUpdated(avatar, new UxrAvatarUpdateEventArgs(avatar, UxrUpdateStage.Animation));
+                        OnAvatarUpdated(avatar, GetAvatarUpdateArgs(avatar, UxrUpdateStage.Animation));
                     }
                 }
             }
@@ -1900,12 +1938,19 @@ namespace UltimateXR.Core
 
             OnUpdatingStage(UxrUpdateStage.PostProcess);
 
-            foreach (UxrAvatarController avatarController in EnabledAvatarControllers)
+            FillAvatarSnapshot();
+
+            for (int i = 0; i < _avatarSnapshot.Count; ++i)
             {
-                OnAvatarUpdating(avatarController.Avatar, new UxrAvatarUpdateEventArgs(avatarController.Avatar, UxrUpdateStage.PostProcess));
+                if (!TryGetUpdatableController(_avatarSnapshot[i], false, out UxrAvatarController avatarController))
+                {
+                    continue;
+                }
+
+                OnAvatarUpdating(avatarController.Avatar, GetAvatarUpdateArgs(avatarController.Avatar, UxrUpdateStage.PostProcess));
                 ((IUxrAvatarControllerUpdater)avatarController).UpdateAvatarPostProcess();
                 avatarController.Avatar.AvatarRigInfo.UpdateInfo();
-                OnAvatarUpdated(avatarController.Avatar, new UxrAvatarUpdateEventArgs(avatarController.Avatar, UxrUpdateStage.PostProcess));
+                OnAvatarUpdated(avatarController.Avatar, GetAvatarUpdateArgs(avatarController.Avatar, UxrUpdateStage.PostProcess));
             }
 
             OnStageUpdated(UxrUpdateStage.PostProcess);
@@ -2087,6 +2132,100 @@ namespace UltimateXR.Core
 
         #endregion
 
+        #region Private Methods (VR Battlegrounds patch 22)
+
+        /// <summary>
+        ///     VR Battlegrounds patch 22: копирует текущий список зарегистрированных аватаров в
+        ///     переиспользуемый <see cref="_avatarSnapshot" />. Под AllComponents лежит List, и AddRange копирует
+        ///     его через ICollection.CopyTo без аллокаций. Копия, а не обход живого списка, — чтобы
+        ///     регистрация аватара из обработчика события не ломала перечисление.
+        /// </summary>
+        private void FillAvatarSnapshot()
+        {
+            _avatarSnapshot.Clear();
+            _avatarSnapshot.AddRange(UxrAvatar.AllComponents);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 22: тот же фильтр, что у <see cref="LocalAvatarControllers" />
+        ///     (<paramref name="localOnly" /> = true) и <see cref="EnabledAvatarControllers" />, для одного аватара.
+        /// </summary>
+        private static bool TryGetUpdatableController(UxrAvatar avatar, bool localOnly, out UxrAvatarController avatarController)
+        {
+            avatarController = null;
+
+            if (avatar == null || !avatar.isActiveAndEnabled)
+            {
+                return false;
+            }
+
+            if (localOnly && avatar.AvatarMode != UxrAvatarMode.Local)
+            {
+                return false;
+            }
+
+            if (avatar.AvatarController != null && avatar.AvatarController.enabled && avatar.AvatarController.Initialized)
+            {
+                avatarController = avatar.AvatarController;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 22: аргументы события для пары (аватар, стадия) без аллокации каждый кадр.
+        ///     <see cref="UxrAvatarUpdateEventArgs" /> неизменяем (Avatar и UpdateStage только для чтения), поэтому
+        ///     подписчик, сохранивший ссылку, видит те же значения, что видел бы в новом экземпляре. Записи
+        ///     уничтоженных аватаров вычищаются, когда в кэш добавляется новый аватар.
+        /// </summary>
+        private UxrAvatarUpdateEventArgs GetAvatarUpdateArgs(UxrAvatar avatar, UxrUpdateStage stage)
+        {
+            int index = (int)stage;
+
+            if (avatar == null || index < 0 || index >= AvatarUpdateStageCount)
+            {
+                return new UxrAvatarUpdateEventArgs(avatar, stage);
+            }
+
+            if (!_avatarUpdateArgs.TryGetValue(avatar, out UxrAvatarUpdateEventArgs[] args))
+            {
+                _avatarArgsPurge.Clear();
+
+                foreach (KeyValuePair<UxrAvatar, UxrAvatarUpdateEventArgs[]> pair in _avatarUpdateArgs)
+                {
+                    if (pair.Key == null)
+                    {
+                        _avatarArgsPurge.Add(pair.Key);
+                    }
+                }
+
+                for (int i = 0; i < _avatarArgsPurge.Count; ++i)
+                {
+                    _avatarUpdateArgs.Remove(_avatarArgsPurge[i]);
+                }
+
+                _avatarArgsPurge.Clear();
+
+                args = new UxrAvatarUpdateEventArgs[AvatarUpdateStageCount];
+                _avatarUpdateArgs.Add(avatar, args);
+            }
+
+            if (args[index] == null)
+            {
+                args[index] = new UxrAvatarUpdateEventArgs(avatar, stage);
+            }
+
+            return args[index];
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 22: число стадий <see cref="UxrUpdateStage" /> — размер кэша аргументов.
+        /// </summary>
+        private static readonly int AvatarUpdateStageCount = Enum.GetValues(typeof(UxrUpdateStage)).Length;
+
+        #endregion
+
         #region Private Types & Data
 
         /// <summary>
@@ -2125,6 +2264,11 @@ namespace UltimateXR.Core
                 }
             }
         }
+
+        // VR Battlegrounds patch 22: переиспользуемая копия списка аватаров и кэш аргументов событий.
+        private readonly List<UxrAvatar>                                   _avatarSnapshot   = new List<UxrAvatar>();
+        private readonly Dictionary<UxrAvatar, UxrAvatarUpdateEventArgs[]> _avatarUpdateArgs = new Dictionary<UxrAvatar, UxrAvatarUpdateEventArgs[]>();
+        private readonly List<UxrAvatar>                                   _avatarArgsPurge  = new List<UxrAvatar>();
 
         private Coroutine                   _precacheCoroutine;
         private Dictionary<int, GameObject> _dynamicInstances;

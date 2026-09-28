@@ -70,14 +70,14 @@ namespace VrBattlegrounds.DevTools.StressTest
             string role = NetworkServer.active ? "хост (сервер в этом же процессе)" : "клиент";
             _report = PerfRunReport.Create(role, 0, 0);
             _recorder = new PerfFrameRecorder(_report.Directory, _report.BudgetMs, _report.BuildHeader());
-            GameLog.Perf.Info($"[StressTest] Клиент: запись начата. Лог: {_recorder.LogPath}");
+            GameLog.Perf.Info($"[StressTest] Клиент: запись начата. Лог: {_recorder.LogPath}. {_report.display}");
         }
 
         private void BeginPhase(StressTestStatusMessage msg)
         {
             ClosePhase();
 
-            _recorder.BeginPhase(msg.phase, msg.measured);
+            _recorder.BeginPhase(msg.phase, msg.measured, msg.seconds);
             if (!string.IsNullOrEmpty(msg.text)) PerfEvents.Note(msg.text);
 
             _phaseOpen   = true;

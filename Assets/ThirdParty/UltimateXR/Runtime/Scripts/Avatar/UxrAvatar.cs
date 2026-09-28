@@ -445,7 +445,8 @@ namespace UltimateXR.Avatar
                 }
 
 #endif
-                return UxrGrabber.GetComponents(this).FirstOrDefault(g => g.Side == UxrHandSide.Left);
+                // VR Battlegrounds patch 21: без LINQ по всем захватчикам сцены — см. FindEnabledGrabber.
+                return FindEnabledGrabber(UxrHandSide.Left);
             }
         }
 
@@ -464,7 +465,8 @@ namespace UltimateXR.Avatar
                 }
 
 #endif
-                return UxrGrabber.GetComponents(this).FirstOrDefault(g => g.Side == UxrHandSide.Right);
+                // VR Battlegrounds patch 21: без LINQ по всем захватчикам сцены — см. FindEnabledGrabber.
+                return FindEnabledGrabber(UxrHandSide.Right);
             }
         }
 
@@ -1587,6 +1589,65 @@ namespace UltimateXR.Avatar
         #region Private Methods
 
         /// <summary>
+        ///     VR Battlegrounds patch 21: то же, что
+        ///     <c>UxrGrabber.GetComponents(this).FirstOrDefault(g =&gt; g.Side == handSide)</c>, но без LINQ по
+        ///     захватчикам ВСЕХ аватаров сцены. Захватчики этого аватара (включённые и нет, в порядке
+        ///     статического списка) кэшируются и пересобираются, когда захватчик регистрируется или
+        ///     снимается с регистрации. Включённость и сторона проверяются при каждом вызове, как раньше.
+        /// </summary>
+        private UxrGrabber FindEnabledGrabber(UxrHandSide handSide)
+        {
+            if (_cachedGrabbersVersion != s_grabberRegistryVersion)
+            {
+                _cachedGrabbersVersion = s_grabberRegistryVersion;
+                _cachedGrabbers.Clear();
+
+                foreach (UxrGrabber grabber in UxrGrabber.AllComponents)
+                {
+                    if (grabber != null && grabber.Avatar == this)
+                    {
+                        _cachedGrabbers.Add(grabber);
+                    }
+                }
+            }
+
+            for (int i = 0; i < _cachedGrabbers.Count; ++i)
+            {
+                UxrGrabber grabber = _cachedGrabbers[i];
+
+                if (grabber != null && grabber.isActiveAndEnabled && grabber.Side == handSide)
+                {
+                    return grabber;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 21: подписка на регистрацию захватчиков. Вызывается при старте
+        ///     приложения и при каждом входе в Play Mode (в том числе без перезагрузки домена), до Awake
+        ///     объектов сцены. Отписка перед подпиской исключает двойной обработчик.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void HookGrabberRegistry()
+        {
+            UxrGrabber.GlobalRegistered   -= OnGrabberRegistryChanged;
+            UxrGrabber.GlobalUnregistered -= OnGrabberRegistryChanged;
+            UxrGrabber.GlobalRegistered   += OnGrabberRegistryChanged;
+            UxrGrabber.GlobalUnregistered += OnGrabberRegistryChanged;
+            s_grabberRegistryVersion++;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 21: состав захватчиков сцены изменился — кэши всех аватаров устарели.
+        /// </summary>
+        private static void OnGrabberRegistryChanged(UxrGrabber grabber)
+        {
+            s_grabberRegistryVersion++;
+        }
+
+        /// <summary>
         ///     Gets the first non-null default hand pose in the prefab hierarchy.
         /// </summary>
         /// <returns>Default hand pose asset or null if not found</returns>
@@ -1708,6 +1769,11 @@ namespace UltimateXR.Avatar
 
         private static UxrAvatar s_localAvatar;
         private static bool      s_localAvatarReferenceInitialized;
+
+        // VR Battlegrounds patch 21: кэш захватчиков аватара для LeftGrabber/RightGrabber.
+        private static int                 s_grabberRegistryVersion;
+        private readonly List<UxrGrabber>  _cachedGrabbers        = new List<UxrGrabber>();
+        private          int               _cachedGrabbersVersion = -1;
 
         private readonly HandState _leftHandState  = new HandState();
         private readonly HandState _rightHandState = new HandState();

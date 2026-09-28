@@ -25,6 +25,7 @@ namespace VrBattlegrounds.DevTools.StressTest
         public bool   developmentBuild;
         public string scene;
         public float  refreshRate;
+        public string display;        // FFR и OVRPlugin — только запись, см. OculusPerfStats
         public int    puppetCount;
         public int    clutterCount;
         public bool   completed;
@@ -46,6 +47,7 @@ namespace VrBattlegrounds.DevTools.StressTest
                 developmentBuild = UnityEngine.Debug.isDebugBuild,
                 scene            = SceneManager.GetActiveScene().name,
                 refreshRate      = ReadRefreshRate(),
+                display          = OculusPerfStats.DescribeDisplay(),
                 puppetCount      = puppets,
                 clutterCount     = clutter,
             };
@@ -61,7 +63,8 @@ namespace VrBattlegrounds.DevTools.StressTest
                    $"Устройство: {device}, GPU: {gpu}, Unity {unityVersion}, {build}-сборка.\n" +
                    FormattableString.Invariant($"Частота дисплея: {refreshRate:F0} Гц.") +
                    // Клиент заводит лог до первой фазы и числа нагрузки ещё не знает — они придут с фазами.
-                   (puppetCount > 0 ? $" Кукол: {puppetCount}, предметов: {clutterCount}." : "");
+                   (puppetCount > 0 ? $" Кукол: {puppetCount}, предметов: {clutterCount}." : "") +
+                   "\n" + display;
         }
 
         /// <summary>Строки итога по измеряемым фазам — для лога, таблички и history.log.</summary>

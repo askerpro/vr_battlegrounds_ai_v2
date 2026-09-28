@@ -502,11 +502,20 @@ namespace UltimateXR.Manipulation
         {
             grabber = null;
 
+            // VR Battlegrounds patch 17: предмет, которого нет в _currentManipulations, никто не держит —
+            // прежний код в этом случае всё равно возвращал false, но сначала перебирал все грабберы сцены.
+            // Список хватов берём из того же словаря без копии (GetGrabs копировал его на каждый граббер);
+            // в цикле он не меняется. См. Docs/UltimateXR/sdk-patches.md.
+            if (_currentManipulations == null || grabbableObject == null || !_currentManipulations.TryGetValue(grabbableObject, out RuntimeManipulationInfo manipulationInfo))
+            {
+                return false;
+            }
+
             foreach (UxrGrabber grabberCandidate in UxrGrabber.EnabledComponents)
             {
                 if (grabberCandidate.GrabbedObject == grabbableObject)
                 {
-                    foreach (RuntimeGrabInfo grabInfo in GetGrabs(grabbableObject))
+                    foreach (RuntimeGrabInfo grabInfo in manipulationInfo.Grabs)
                     {
                         if (grabInfo.GrabbedPoint == point)
                         {

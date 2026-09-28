@@ -84,6 +84,16 @@ namespace VrBattlegrounds.Interaction
 
         private UxrGrabbableObjectAnchor GetPocketReadyToGive(UxrGrabber grabber)
         {
+            // Полный поиск SDK перебирает все хватаемые предметы сцены (с прокси карманов чужих
+            // аватаров), а рука почти всегда далеко от своих карманов. Цель поиска может быть
+            // «карманной», только если хоть один прокси или предмет своего кармана вообще берётся
+            // этой рукой, — нет таких, и результат заранее null. Есть — полный поиск, как раньше:
+            // что-то постороннее может оказаться ближе, и тогда grip возьмёт его, а не карман.
+            if (!AnyOwnPocketItemGrabbable(grabber))
+            {
+                return null;
+            }
+
             if (!UxrGrabManager.Instance.GetClosestGrabbableObject(grabber, out UxrGrabbableObject target, out int grabPoint) ||
                 UxrGrabManager.Instance.IsBeingGrabbed(target, grabPoint))
             {
@@ -95,14 +105,7 @@ namespace VrBattlegrounds.Interaction
                 return target.CurrentAnchor;
             }
 
-            // Карманы аватара за игру не меняются — собираются один раз, а не каждый кадр.
-            if (_pockets == null)
-            {
-                _pockets = new List<UxrGrabbableObjectAnchor>(_avatar.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true));
-                _pockets.RemoveAll(anchor => !IsOwnPocket(anchor));
-            }
-
-            foreach (UxrGrabbableObjectAnchor anchor in _pockets)
+            foreach (UxrGrabbableObjectAnchor anchor in GetPockets())
             {
                 if (anchor != null && anchor.GrabProxy == target)
                 {
@@ -111,6 +114,53 @@ namespace VrBattlegrounds.Interaction
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Берётся ли рукой хоть одна точка прокси или содержимого своих карманов. Та же проверка
+        /// (<see cref="UxrGrabbableObject.CanBeGrabbedByGrabber" />), которой SDK отбирает кандидатов
+        /// в <c>GetClosestGrabbableObject</c>, поэтому «нет» здесь точно значит «цель поиска не карманная».
+        /// </summary>
+        private bool AnyOwnPocketItemGrabbable(UxrGrabber grabber)
+        {
+            foreach (UxrGrabbableObjectAnchor anchor in GetPockets())
+            {
+                if (anchor == null) continue;
+
+                if (IsGrabbableByGrabber(anchor.GrabProxy, grabber) || IsGrabbableByGrabber(anchor.CurrentPlacedObject, grabber))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsGrabbableByGrabber(UxrGrabbableObject grabbable, UxrGrabber grabber)
+        {
+            if (grabbable == null) return false;
+
+            for (int point = 0; point < grabbable.GrabPointCount; ++point)
+            {
+                if (grabbable.CanBeGrabbedByGrabber(grabber, point))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private List<UxrGrabbableObjectAnchor> GetPockets()
+        {
+            // Карманы аватара за игру не меняются — собираются один раз, а не каждый кадр.
+            if (_pockets == null)
+            {
+                _pockets = new List<UxrGrabbableObjectAnchor>(_avatar.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true));
+                _pockets.RemoveAll(anchor => !IsOwnPocket(anchor));
+            }
+
+            return _pockets;
         }
 
         private bool IsOwnPocket(UxrGrabbableObjectAnchor anchor)

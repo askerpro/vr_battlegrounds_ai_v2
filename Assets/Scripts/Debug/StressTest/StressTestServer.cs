@@ -190,7 +190,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             if (_recorder != null)
             {
                 ClosePhase();
-                _recorder.BeginPhase(name, measured);
+                _recorder.BeginPhase(name, measured, seconds);
                 if (note != null) PerfEvents.Note(note);
             }
 

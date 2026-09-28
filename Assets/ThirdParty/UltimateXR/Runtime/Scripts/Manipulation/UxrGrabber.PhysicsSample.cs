@@ -13,8 +13,10 @@ namespace UltimateXR.Manipulation
 
         /// <summary>
         ///     Stores physics data of a frame to perform smooth throw computations.
+        ///     VR Battlegrounds patch 19: struct вместо class — сэмплы живут в кольцевом буфере
+        ///     граббера без аллокаций в каждом кадре. Математика прежняя. См. Docs/UltimateXR/sdk-patches.md.
         /// </summary>
-        private class PhysicsSample
+        private struct PhysicsSample
         {
             #region Public Types & Data
 
@@ -55,9 +57,10 @@ namespace UltimateXR.Manipulation
             public float DeltaTime { get; }
 
             /// <summary>
-            ///     Gets or sets the sample age in seconds.
+            ///     Sample age in seconds. VR Battlegrounds patch 19: поле, а не свойство — меняется прямо
+            ///     в элементе массива кольцевого буфера.
             /// </summary>
-            public float Age { get; set; }
+            public float Age;
 
             #endregion
 
@@ -67,11 +70,12 @@ namespace UltimateXR.Manipulation
             ///     Constructor.
             /// </summary>
             /// <param name="lastSample">Last frame data, to compute velocities</param>
+            /// <param name="hasLastSample">Whether <paramref name="lastSample" /> is valid (replaces the former null check)</param>
             /// <param name="sampledTransform">Transform, from the grabbed object if there is one currently being grabbed, otherwise from the grabber</param>
             /// <param name="centerOfMass">World position of the throwing center of mass</param>
             /// <param name="tip">World position of the finger tip approximation, to account for angular velocity in the throw</param>
             /// <param name="deltaTime">Time in seconds since last frame</param>
-            public PhysicsSample(PhysicsSample lastSample, Transform sampledTransform, Vector3 centerOfMass, Vector3 tip, float deltaTime)
+            public PhysicsSample(in PhysicsSample lastSample, bool hasLastSample, Transform sampledTransform, Vector3 centerOfMass, Vector3 tip, float deltaTime)
             {
                 Age             = 0.0f;
                 Rotation        = sampledTransform.rotation;
@@ -79,7 +83,7 @@ namespace UltimateXR.Manipulation
                 CenterOfMass    = centerOfMass;
                 Tip             = tip;
 
-                if (lastSample != null)
+                if (hasLastSample)
                 {
                     // Angular
 
@@ -93,14 +97,17 @@ namespace UltimateXR.Manipulation
 
                     // Linear. TODO: Improve using a mix of linear and angular components?
 
-                    Velocity      = ((tip - lastSample.Tip) / deltaTime);
-                    TotalVelocity = Velocity;
+                    // VR Battlegrounds patch 19: через локальную переменную — в конструкторе struct
+                    // нельзя читать свойство this до присвоения всех полей (CS0188).
+                    Vector3 velocity = ((tip - lastSample.Tip) / deltaTime);
+                    Velocity      = velocity;
+                    TotalVelocity = velocity;
                 }
                 else
                 {
                     EulerSpeed    = Vector3.zero;
                     Velocity      = Vector3.zero;
-                    TotalVelocity = Velocity;
+                    TotalVelocity = Vector3.zero;
                 }
             }
 

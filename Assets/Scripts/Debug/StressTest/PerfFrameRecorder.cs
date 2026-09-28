@@ -57,7 +57,8 @@ namespace VrBattlegrounds.DevTools.StressTest
     /// описывает кадр N−1: <c>unscaledDeltaTime</c> — его длительность,
     /// <c>ProfilerRecorder.LastValue</c> — его счётчики, время UltimateXR и события
     /// накоплены за него же. Только GPU из <c>FrameTimingManager</c> отстаёт ещё на
-    /// несколько кадров — у всплеска его значение не про тот кадр.
+    /// несколько кадров — у всплеска его значение не про тот кадр. Метрики <c>ovr_*</c>
+    /// рантайм Oculus отдаёт за последний завершённый им кадр — они тоже могут отставать.
     /// </para>
     ///
     /// <para>
@@ -75,21 +76,31 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         // ── Метрики ─────────────────────────────────────────────────────────
 
-        private enum Source { DeltaTime, CpuFrame, CpuMain, CpuRender, Gpu, Uxr, Profiler }
+        private enum Source { DeltaTime, CpuFrame, CpuMain, CpuRender, Gpu, Uxr, UxrStage, Ovr, Profiler }
+
+        /// <summary>Поля <see cref="OculusFrameStats"/> — индекс метрики с <see cref="Source.Ovr"/>.</summary>
+        private enum OvrField { AppCpu, AppGpu, CompositorGpu, GpuUtil, CpuUtil, CpuLevel, GpuLevel }
+
+        private const int UxrStageCount = (int)UxrUpdateStage.PostProcess + 1;
+
+        /// <summary>Ёмкость выборок фазы, когда длительность фазы неизвестна.</summary>
+        private const int DefaultPhaseCapacity = 4096;
 
         private sealed class Metric
         {
             public string          Key;
             public Source          Source;
+            public int             Index;             // стадия UltimateXR или поле OvrField
             public string          StatName;
             public double          Scale;
             public ChangeThreshold Threshold;
             public bool            IsSubsystemTime;   // идёт в разбивку всплеска
+            public bool            AlwaysShown;       // в строке окна всегда, а не только при изменении
             public ProfilerRecorder Recorder;
 
             public float       FrameValue;
             public double      WindowSum;
-            public List<float> PhaseSamples = new List<float>(4096);
+            public List<float> PhaseSamples = new List<float>();   // ёмкость — в BeginPhase
         }
 
         private static readonly ChangeThreshold TimeThreshold  = new ChangeThreshold(1.0f, 0.15f);
@@ -97,6 +108,8 @@ namespace VrBattlegrounds.DevTools.StressTest
         private static readonly ChangeThreshold CountThreshold = new ChangeThreshold(20f, 0.10f);
         private static readonly ChangeThreshold MemThreshold   = new ChangeThreshold(8f, 0.05f);
         private static readonly ChangeThreshold AllocThreshold = new ChangeThreshold(4f, 0.50f);
+        private static readonly ChangeThreshold UtilThreshold  = new ChangeThreshold(10f, 0.10f);  // проценты
+        private static readonly ChangeThreshold LevelThreshold = new ChangeThreshold(0.5f, 0f);    // уровни 0..4
 
         private const double NsToMs  = 1e-6;
         private const double BytesKb = 1.0 / 1024.0;
@@ -112,14 +125,29 @@ namespace VrBattlegrounds.DevTools.StressTest
             return new List<Metric>
             {
                 // Кадр целиком
-                new Metric { Key = "dt",         Source = Source.DeltaTime, Threshold = TimeThreshold },
-                new Metric { Key = "cpu",        Source = Source.CpuFrame,  Threshold = TimeThreshold },
-                new Metric { Key = "cpu_main",   Source = Source.CpuMain,   Threshold = TimeThreshold },
-                new Metric { Key = "cpu_render", Source = Source.CpuRender, Threshold = TimeThreshold },
-                new Metric { Key = "gpu",        Source = Source.Gpu,       Threshold = TimeThreshold },
+                new Metric { Key = "dt",         Source = Source.DeltaTime, Threshold = TimeThreshold, AlwaysShown = true },
+                new Metric { Key = "cpu",        Source = Source.CpuFrame,  Threshold = TimeThreshold, AlwaysShown = true },
+                new Metric { Key = "cpu_main",   Source = Source.CpuMain,   Threshold = TimeThreshold, AlwaysShown = true },
+                new Metric { Key = "cpu_render", Source = Source.CpuRender, Threshold = TimeThreshold, AlwaysShown = true },
+                new Metric { Key = "gpu",        Source = Source.Gpu,       Threshold = TimeThreshold, AlwaysShown = true },
 
-                // Подсистемы (только Development-сборка, кроме uxr — он меряется секундомером)
-                new Metric { Key = "uxr",       Source = Source.Uxr, Threshold = SmallTime, IsSubsystemTime = true },
+                // Рантайм Oculus (только шлем): настоящее время GPU, которого нет в FrameTimingManager
+                Ovr("ovr_cpu",      OvrField.AppCpu,        TimeThreshold, alwaysShown: true),
+                Ovr("ovr_gpu",      OvrField.AppGpu,        TimeThreshold, alwaysShown: true),
+                Ovr("ovr_comp_gpu", OvrField.CompositorGpu, SmallTime),
+                Ovr("ovr_gpu_util", OvrField.GpuUtil,       UtilThreshold),
+                Ovr("ovr_cpu_util", OvrField.CpuUtil,       UtilThreshold),
+                Ovr("ovr_cpu_lvl",  OvrField.CpuLevel,      LevelThreshold),
+                Ovr("ovr_gpu_lvl",  OvrField.GpuLevel,      LevelThreshold),
+
+                // Подсистемы (только Development-сборка, кроме uxr* — они меряются секундомером).
+                // uxr — сумма стадий; в разбивку всплеска идут стадии, чтобы не считать дважды.
+                new Metric { Key = "uxr",        Source = Source.Uxr, Threshold = SmallTime },
+                UxrStage("uxr_update", UxrUpdateStage.Update),
+                UxrStage("uxr_track",  UxrUpdateStage.AvatarUsingTracking),
+                UxrStage("uxr_manip",  UxrUpdateStage.Manipulation),
+                UxrStage("uxr_anim",   UxrUpdateStage.Animation),
+                UxrStage("uxr_post",   UxrUpdateStage.PostProcess),
                 Marker("physics",     "FixedUpdate.PhysicsFixedUpdate"),
                 Marker("scripts",     "Update.ScriptRunBehaviourUpdate"),
                 Marker("scripts_late","PreLateUpdate.ScriptRunBehaviourLateUpdate"),
@@ -153,6 +181,16 @@ namespace VrBattlegrounds.DevTools.StressTest
             Key = key, Source = Source.Profiler, StatName = stat, Scale = scale, Threshold = threshold,
         };
 
+        private static Metric UxrStage(string key, UxrUpdateStage stage) => new Metric
+        {
+            Key = key, Source = Source.UxrStage, Index = (int)stage, Threshold = SmallTime, IsSubsystemTime = true,
+        };
+
+        private static Metric Ovr(string key, OvrField field, ChangeThreshold threshold, bool alwaysShown = false) => new Metric
+        {
+            Key = key, Source = Source.Ovr, Index = (int)field, Threshold = threshold, AlwaysShown = alwaysShown,
+        };
+
         // ── Состояние ───────────────────────────────────────────────────────
 
         private readonly List<Metric> _metrics;
@@ -167,7 +205,16 @@ namespace VrBattlegrounds.DevTools.StressTest
         private readonly StreamWriter _writer;
         private readonly float _budgetMs;
         private readonly StringBuilder _sb = new StringBuilder(512);
+        private readonly List<Metric> _spikeTop = new List<Metric>();   // переиспользуется всплесками
+        private readonly double[] _uxrStageAccumMs = new double[UxrStageCount];
+        private readonly float[]  _uxrStageFrameMs = new float[UxrStageCount];
+        private readonly bool _ovrEnabled;
 
+        private static readonly Comparison<Metric> ByFrameValueDesc = (a, b) => b.FrameValue.CompareTo(a.FrameValue);
+
+        private OculusFrameStats _ovr;
+        private bool   _ovrValid;
+        private int    _phaseSpikeLines;   // все записанные всплески фазы, и в неизмеряемой тоже
         private double _uxrAccumMs;
         private string _phase = "-";
         private bool   _phaseMeasured;
@@ -196,6 +243,7 @@ namespace VrBattlegrounds.DevTools.StressTest
 
             _metrics = CreateMetrics();
             StartProfilerRecorders();
+            _ovrEnabled = EnableOculusMetrics();
 
             var thresholds = new ChangeThreshold[_metrics.Count];
             for (int i = 0; i < _metrics.Count; i++) thresholds[i] = _metrics[i].Threshold;
@@ -214,6 +262,7 @@ namespace VrBattlegrounds.DevTools.StressTest
                   (UnityEngine.Debug.isDebugBuild ? "" : " (release — маркеры подсистем только в Development)"));
             WriteRaw("Формат строки: #кадр время [фаза] метрика значение (дельта от прошлой строки). " +
                      "Показаны кадр целиком и изменившиеся метрики; нет строки — ничего значимо не менялось.");
+            WriteRaw("Строки окон и всплесков пишутся только в этот файл; в лог Unity (logcat) — начало и итог фаз.");
             WriteRaw("");
 
             FrameTimingManager.CaptureFrameTimings();
@@ -251,32 +300,76 @@ namespace VrBattlegrounds.DevTools.StressTest
             }
         }
 
+        /// <summary>
+        /// Колонки <c>ovr_*</c> — только если рантайм Oculus отдаёт метрики (шлем). Иначе
+        /// убираются целиком, одной записью в списке недоступных с причиной.
+        /// </summary>
+        private bool EnableOculusMetrics()
+        {
+            if (OculusPerfStats.TryEnable()) return true;
+
+            _metrics.RemoveAll(m => m.Source == Source.Ovr);
+            _unavailable.Add($"ovr_* ({OculusPerfStats.UnavailableReason})");
+            return false;
+        }
+
         // ── Фазы ────────────────────────────────────────────────────────────
 
         /// <summary>
         /// Начинает фазу. Неизмеряемая фаза (<paramref name="measured"/> = false) — это
         /// успокоение после спавна: её строки и всплески пишутся в лог, но в сводку
         /// не идут, иначе рывок самого спавна исказил бы p99 фазы.
+        ///
+        /// <para>
+        /// <paramref name="expectedSeconds"/> — плановая длительность: выборки фазы
+        /// резервируются сразу, чтобы список не удваивался посреди замера (копия
+        /// десятков тысяч float на кадре — сама по себе всплеск).
+        /// </para>
         /// </summary>
-        public void BeginPhase(string name, bool measured)
+        public void BeginPhase(string name, bool measured, float expectedSeconds = 0f)
         {
             FlushWindow(force: false);
 
-            _phase         = name;
-            _phaseMeasured = measured;
-            _phaseStart    = Time.realtimeSinceStartup;
-            _phaseFrames   = 0;
-            _phaseSpikes   = 0;
-            foreach (Metric m in _metrics) m.PhaseSamples.Clear();
+            _phase           = name;
+            _phaseMeasured   = measured;
+            _phaseStart      = Time.realtimeSinceStartup;
+            _phaseFrames     = 0;
+            _phaseSpikes     = 0;
+            _phaseSpikeLines = 0;
+
+            int capacity = measured ? ExpectedFrames(expectedSeconds) : 0;
+            foreach (Metric m in _metrics)
+            {
+                m.PhaseSamples.Clear();
+                if (m.PhaseSamples.Capacity < capacity) m.PhaseSamples.Capacity = capacity;
+            }
 
             _filter.Reset();
             WriteLine($"=== фаза «{name}»{(measured ? "" : " (успокоение, в сводку не идёт)")}");
+        }
+
+        /// <summary>
+        /// Кадров за фазу с запасом: частота из бюджета (1000 / бюджет) ×1,25 — сервер
+        /// или ПК могут идти чаще дисплея. Неизвестная длительность — ёмкость по умолчанию.
+        /// </summary>
+        private int ExpectedFrames(float seconds)
+        {
+            if (seconds <= 0f || _budgetMs <= 0f) return DefaultPhaseCapacity;
+            return (int)(seconds * (1000f / _budgetMs) * 1.25f) + 64;
         }
 
         /// <summary>Закрывает фазу и возвращает её сводку (null для неизмеряемой).</summary>
         public PerfPhaseReport EndPhase()
         {
             FlushWindow(force: true);
+
+            // Сами всплески — только в файле (Debug.Log в Development снимает стек и сам
+            // даёт рывок). В лог Unity — одна строка на фазу, чтобы logcat показал, куда смотреть.
+            if (_phaseSpikeLines > 0)
+            {
+                GameLog.Perf.Warning(Invariant(
+                    $"[Perf] фаза «{_phase}»: всплесков {_phaseSpikeLines}, разбивка по подсистемам — в {LogPath}"));
+            }
 
             if (!_phaseMeasured) return null;
 
@@ -321,6 +414,13 @@ namespace VrBattlegrounds.DevTools.StressTest
             PerfEvents.DrainCounters(_frameEvents);
             float uxrMs = (float)_uxrAccumMs;
             _uxrAccumMs = 0;
+            for (int i = 0; i < UxrStageCount; i++)
+            {
+                _uxrStageFrameMs[i] = (float)_uxrStageAccumMs[i];
+                _uxrStageAccumMs[i] = 0;
+            }
+
+            _ovrValid = _ovrEnabled && OculusPerfStats.TrySample(ref _ovr);
 
             foreach (Metric m in _metrics)
             {
@@ -343,7 +443,7 @@ namespace VrBattlegrounds.DevTools.StressTest
                 }
                 else if (_consecutiveSpikes == MaxConsecutiveSpikes + 1)
                 {
-                    WriteLine(FormattableString.Invariant(
+                    WriteRaw(Invariant(
                         $"#{frame} {Time.realtimeSinceStartup:F2}s [{_phase}] … кадры дольше уровня идут подряд — это смена уровня, её запишет следующая строка окна"));
                 }
             }
@@ -384,7 +484,23 @@ namespace VrBattlegrounds.DevTools.StressTest
                 case Source.CpuRender: return hasTiming ? (float)_timings[0].cpuRenderThreadFrameTime : 0f;
                 case Source.Gpu:       return hasTiming ? (float)_timings[0].gpuFrameTime : 0f;
                 case Source.Uxr:       return uxrMs;
+                case Source.UxrStage:  return _uxrStageFrameMs[m.Index];
+                case Source.Ovr:       return _ovrValid ? ReadOvr((OvrField)m.Index) : 0f;
                 default:               return (float)(m.Recorder.LastValue * m.Scale);
+            }
+        }
+
+        private float ReadOvr(OvrField field)
+        {
+            switch (field)
+            {
+                case OvrField.AppCpu:        return _ovr.AppCpuMs;
+                case OvrField.AppGpu:        return _ovr.AppGpuMs;
+                case OvrField.CompositorGpu: return _ovr.CompositorGpuMs;
+                case OvrField.GpuUtil:       return _ovr.GpuUtilPercent;
+                case OvrField.CpuUtil:       return _ovr.CpuUtilPercent;
+                case OvrField.CpuLevel:      return _ovr.CpuLevel;
+                default:                     return _ovr.GpuLevel;
             }
         }
 
@@ -432,9 +548,8 @@ namespace VrBattlegrounds.DevTools.StressTest
 
             for (int i = 0; i < _metrics.Count; i++)
             {
-                // Кадр целиком (первые пять) — всегда, остальное — только изменившееся.
-                bool core = _metrics[i].Source != Source.Profiler && _metrics[i].Source != Source.Uxr;
-                if (!first && !core && !_changed[i]) continue;
+                // Кадр целиком (dt, cpu*, gpu, ovr_cpu/ovr_gpu) — всегда, остальное — только изменившееся.
+                if (!first && !_metrics[i].AlwaysShown && !_changed[i]) continue;
 
                 _sb.Append(' ').Append(_metrics[i].Key).Append(' ').Append(Format(_windowValues[i]));
                 if (!first && _changed[i])
@@ -445,7 +560,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             }
 
             AppendEvents(_windowEvents);
-            WriteLine(_sb.ToString());
+            WriteRaw(_sb);
         }
 
         private void WriteSpike(int frame, float frameMs)
@@ -459,17 +574,20 @@ namespace VrBattlegrounds.DevTools.StressTest
             // Кадр целиком — как есть.
             foreach (Metric m in _metrics)
             {
-                if (m.Source == Source.CpuMain || m.Source == Source.CpuRender || m.Source == Source.Gpu)
+                bool frameLevel = m.Source == Source.CpuMain || m.Source == Source.CpuRender || m.Source == Source.Gpu
+                               || (m.Source == Source.Ovr && m.AlwaysShown);
+                if (frameLevel)
                     _sb.Append(' ').Append(m.Key).Append(' ').Append(Format(m.FrameValue));
             }
 
             // Подсистемы — самые дорогие вперёд: первая и есть ответ «что лагнуло».
-            var top = new List<Metric>();
+            List<Metric> top = _spikeTop;
+            top.Clear();
             foreach (Metric m in _metrics)
             {
                 if (m.IsSubsystemTime && m.FrameValue >= 0.5f) top.Add(m);
             }
-            top.Sort((a, b) => b.FrameValue.CompareTo(a.FrameValue));
+            top.Sort(ByFrameValueDesc);
 
             if (top.Count > 0)
             {
@@ -488,7 +606,8 @@ namespace VrBattlegrounds.DevTools.StressTest
             }
 
             AppendEvents(_frameEvents);
-            WriteLine(_sb.ToString(), warning: true);
+            WriteRaw(_sb);
+            _phaseSpikeLines++;
         }
 
         private void AppendEvents(int[] events)
@@ -516,12 +635,21 @@ namespace VrBattlegrounds.DevTools.StressTest
         private void OnUxrStageUpdated(UxrUpdateStage stage)
         {
             _uxrWatch.Stop();
-            _uxrAccumMs += _uxrWatch.Elapsed.TotalMilliseconds;
+            double ms = _uxrWatch.Elapsed.TotalMilliseconds;
+            _uxrAccumMs += ms;
+
+            int index = (int)stage;
+            if (index >= 0 && index < UxrStageCount) _uxrStageAccumMs[index] += ms;
         }
 
         // ── Вывод ───────────────────────────────────────────────────────────
 
-        /// <summary>Строка в файл и в канал Perf (logcat на шлеме).</summary>
+        /// <summary>
+        /// Строка в файл и в канал Perf (logcat на шлеме). Только для редких строк —
+        /// начало/итог фазы и прогона, заметки сценария: в Development-сборке Debug.Log
+        /// снимает стек на главном потоке и сам способен дать всплеск. Строки окон
+        /// и всплесков идут через <see cref="WriteRaw(StringBuilder)"/> — только в файл.
+        /// </summary>
         public void WriteLine(string line, bool warning = false)
         {
             WriteRaw(line);
@@ -538,12 +666,21 @@ namespace VrBattlegrounds.DevTools.StressTest
             _writer.Flush();
         }
 
+        /// <summary>Строка из буфера — без промежуточной строки там, где рантайм это умеет.</summary>
+        private void WriteRaw(StringBuilder line)
+        {
+            if (_disposed) return;
+            _writer.WriteLine(line);
+            _writer.Flush();
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
 
             UxrManager.StageUpdating -= OnUxrStageUpdating;
             UxrManager.StageUpdated  -= OnUxrStageUpdated;
+            if (_ovrEnabled) OculusPerfStats.Disable();
 
             foreach (Metric m in _metrics)
             {

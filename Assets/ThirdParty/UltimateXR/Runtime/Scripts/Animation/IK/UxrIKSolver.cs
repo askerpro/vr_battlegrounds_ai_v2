@@ -81,7 +81,30 @@ namespace UltimateXR.Animation.IK
 
         #endregion
 
+        // VR Battlegrounds patch 20: версия реестра решателей. Растёт при каждой регистрации (Awake) и
+        // снятии (OnDestroy) решателя — то есть при любом изменении статического списка AllComponents.
+        // По ней UxrStandardAvatarController понимает, что закэшированный список решателей аватара устарел.
+        internal static int RegistryVersion { get; private set; }
+
         #region Unity
+
+        /// <summary>
+        ///     VR Battlegrounds patch 20: помечает реестр решателей изменённым.
+        /// </summary>
+        protected override void Awake()
+        {
+            base.Awake();
+            RegistryVersion++;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 20: помечает реестр решателей изменённым.
+        /// </summary>
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            RegistryVersion++;
+        }
 
         /// <summary>
         ///     Subscribes to events

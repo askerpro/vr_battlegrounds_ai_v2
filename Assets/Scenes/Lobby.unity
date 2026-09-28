@@ -665,6 +665,57 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4725157455750678309, guid: f61633d1a47b0e5428a1140232fbb7cc, type: 3}
   m_PrefabInstance: {fileID: 181181357}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &240406913
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 240406915}
+  - component: {fileID: 240406914}
+  m_Layer: 0
+  m_Name: UxrManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &240406914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 240406913}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 850d5221451e8db47a43eae77beea7ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Core.UxrManager
+  _uxrUniqueId: 90aba23d-c2ab-b9fc-1a6f-681d20b090f3
+  __prefabGuid: 
+  __isInPrefab: 0
+  _postUpdateMode: 2
+  _usePrecaching: 1
+  _precacheFrameCount: 50
+  prevIsEditorFocused: 1
+--- !u!4 &240406915
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 240406913}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &258086906
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -48327,3 +48378,4 @@ SceneRoots:
   - {fileID: 869119756}
   - {fileID: 1681221241}
   - {fileID: 612961111}
+  - {fileID: 240406915}

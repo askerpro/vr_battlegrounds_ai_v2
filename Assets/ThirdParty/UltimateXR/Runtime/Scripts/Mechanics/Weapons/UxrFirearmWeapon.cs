@@ -242,7 +242,17 @@ namespace UltimateXR.Mechanics.Weapons
                 runtimeTrigger.LastShotTimer = trigger.MaxShotFrequency > 0 ? 1.0f / trigger.MaxShotFrequency : -1.0f;
 
                 // TODO: here we probably should add some randomization depending on recoil using the additional optional parameters
-                _weaponSource.Shoot(trigger.ProjectileShotIndex);
+                // VR Battlegrounds patch 23: свой выстрел — эффекты играются здесь, повтор по ShotFired пропускаем.
+                _shootingLocally = true;
+
+                try
+                {
+                    _weaponSource.Shoot(trigger.ProjectileShotIndex);
+                }
+                finally
+                {
+                    _shootingLocally = false;
+                }
 
                 runtimeTrigger.RecoilTimer = trigger.RecoilDurationSeconds;
 
@@ -291,6 +301,9 @@ namespace UltimateXR.Mechanics.Weapons
 
             UxrManager.AvatarsUpdated += UxrManager_AvatarsUpdated;
 
+            // VR Battlegrounds patch 23: эффекты чужого выстрела — по событию источника (UxrWeapon.Custom.cs).
+            SubscribeShotReplay(true);
+
             foreach (UxrFirearmTrigger trigger in _triggers)
             {
                 if (trigger.TriggerGrabbable != null)
@@ -313,6 +326,9 @@ namespace UltimateXR.Mechanics.Weapons
         protected override void OnDisable()
         {
             base.OnDisable();
+
+            // VR Battlegrounds patch 23
+            SubscribeShotReplay(false);
 
             if (RootGrabbable)
             {
@@ -447,6 +463,13 @@ namespace UltimateXR.Mechanics.Weapons
                         SetTriggerPressedAmount(i, grabber.Avatar.GetCurrentHandPoseBlendValue(grabber.Side));
                     }
 
+                    // VR Battlegrounds patch 23: решает «стрелять» только машина стрелка. Копия в руке чужого
+                    // аватара выстрел не пересчитывает: единственный источник — синхронизируемый Shoot стрелка,
+                    // а звук, отдачу и патрон копия проигрывает по нему (Source_ShotFired). Раньше копия
+                    // стреляла сама по синхронизированному спуску — вторая пуля и двойной урон на сервере.
+                    if (grabber.Avatar.AvatarMode == UxrAvatarMode.Local)
+                    {
+
                     bool shoot = false;
 
                     switch (trigger.CycleType)
@@ -534,6 +557,8 @@ namespace UltimateXR.Mechanics.Weapons
                             SyncAmmoLeft(i, GetAmmoLeft(i));
                         }
                     }
+
+                    } // VR Battlegrounds patch 23: конец блока «решает только стрелок»
                 }
 
                 runtimeTrigger.TriggerPressStarted = false;

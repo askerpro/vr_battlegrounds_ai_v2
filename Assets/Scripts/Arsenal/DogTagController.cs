@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UltimateXR.Manipulation;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Arsenal
@@ -85,7 +86,8 @@ namespace VrBattlegrounds.Arsenal
             _hasBeenGrabbed = false;
             SetLight(_readyColor, true);
 
-            if (_tagObject != null)
+            // Синхронизируемое свойство пишет только сервер — см. ArsenalSlotController.SetItemGrabbable.
+            if (_tagObject != null && StateEventAuthority.IsWorldAuthority)
                 _tagObject.IsGrabbable = true;
 
             GameLog.Arsenal.Info("[Arsenal] Dog tag reset — ready for new prep phase.");
@@ -137,7 +139,7 @@ namespace VrBattlegrounds.Arsenal
         /// </summary>
         public void Disable()
         {
-            if (_tagObject != null)
+            if (_tagObject != null && StateEventAuthority.IsWorldAuthority)
                 _tagObject.IsGrabbable = false;
 
             SetLight(_readyColor, false);

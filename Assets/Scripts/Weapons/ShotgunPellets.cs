@@ -14,11 +14,13 @@ namespace VrBattlegrounds.Weapons
     /// </para>
     ///
     /// <para>
-    /// <b>Сеть.</b> <c>ProjectileShot</c> поднимается только на машине стрелка (там идёт
-    /// <c>TryToShootRound</c>), остальные — и сервер, который считает урон, — получают выстрел
-    /// повтором синхронизированного <see cref="UxrProjectileSource.Shoot(int, Vector3, Quaternion)" />
+    /// <b>Сеть.</b> Снаряды и дробь стрелка доезжают до остальных — и до сервера, который считает
+    /// урон, — повтором синхронизированного <see cref="UxrProjectileSource.Shoot(int, Vector3, Quaternion)" />
     /// (замер T-24: сервер выстрелил 8 раз — у клиента 8 снарядов). Дробинки выпускаются тем же
     /// <c>Shoot</c> с уже посчитанным поворотом, поэтому случайный разброс у всех одинаков.
+    /// <c>ProjectileShot</c> поднимается только у стрелка (патч SDK 23: копия в чужих руках выстрел
+    /// не пересчитывает, эффекты у неё — <c>ProjectileShotReplayed</c>). До патча копия пересчитывала
+    /// выстрел по синхронизированному спуску, поднимала <c>ProjectileShot</c>, и дробь множилась.
     /// </para>
     /// </summary>
     [RequireComponent(typeof(UxrFirearmWeapon), typeof(UxrProjectileSource))]

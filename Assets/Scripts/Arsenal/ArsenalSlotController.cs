@@ -1,6 +1,7 @@
 using UnityEngine;
 using UltimateXR.Manipulation;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Arsenal
 {
@@ -335,6 +336,11 @@ namespace VrBattlegrounds.Arsenal
         {
             GameObject item = CurrentItem;
             if (item == null) return;
+
+            // IsGrabbable синхронизируемый, а переход фазы исполняется на каждой машине: пишет только
+            // сервер, клиенты получают значение событием. Иначе каждый клиент рассылал свою запись
+            // на каждый предмет (known-issues, Issue 23).
+            if (!StateEventAuthority.IsWorldAuthority) return;
 
             foreach (UxrGrabbableObject grab in item.GetComponentsInChildren<UxrGrabbableObject>(true))
                 grab.IsGrabbable = grabbable;

@@ -1,3 +1,4 @@
+using System;
 using UltimateXR.Manipulation;
 using UnityEngine;
 
@@ -50,6 +51,71 @@ namespace UltimateXR.Mechanics.Weapons
 
         /// <summary>Число спусков оружия.</summary>
         public int TriggerCount => _triggers != null ? _triggers.Count : 0;
+
+        // ── VR Battlegrounds patch 23: один источник выстрела ─────────────────────
+        //
+        // Выстрел решает только машина стрелка (TryToShootRound → синхронизируемый Shoot). Остальные
+        // получают Shoot событием и по нему же (UxrProjectileSource.ShotFired) играют звук, отдачу и
+        // тратят патрон копии — ProjectileShotReplayed. ProjectileShot поднимается только у стрелка:
+        // подписчик, который сам стреляет (дробь), по построению не выстрелит на копии.
+
+        /// <summary>
+        ///     Выстрел другой машины повторён на этой копии оружия: звук и отдача уже сыграны.
+        ///     Для косметики наблюдателя; <see cref="ProjectileShot" /> здесь не поднимается.
+        /// </summary>
+        public event Action<int> ProjectileShotReplayed;
+
+        /// <summary>Идёт свой выстрел (<see cref="TryToShootRound" />) — его эффекты играются там, повтор не нужен.</summary>
+        private bool _shootingLocally;
+
+        private UxrProjectileSource _replaySource;
+
+        private void SubscribeShotReplay(bool subscribe)
+        {
+            if (subscribe)
+            {
+                _replaySource = GetCachedComponent<UxrProjectileSource>();
+                if (_replaySource != null) _replaySource.ShotFired += Source_ShotFired;
+            }
+            else if (_replaySource != null)
+            {
+                _replaySource.ShotFired -= Source_ShotFired;
+                _replaySource = null;
+            }
+        }
+
+        /// <summary>
+        ///     Источник выстрелил. Свой выстрел пропускается; чужой (повтор события по сети) — эффекты
+        ///     спуска, чей это тип выстрела. Дробинки — другой тип выстрела, на них ничего не играется.
+        /// </summary>
+        private void Source_ShotFired(int shotTypeIndex)
+        {
+            if (_shootingLocally)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _triggers.Count; i++)
+            {
+                UxrFirearmTrigger trigger = _triggers[i];
+
+                if (trigger.ProjectileShotIndex != shotTypeIndex || !_runtimeTriggers.TryGetValue(i, out RuntimeTriggerInfo runtimeTrigger))
+                {
+                    continue;
+                }
+
+                // Патрон копии: Rounds магазина не синхронизируется, пусть копия хотя бы не расходится с выстрелами.
+                int ammo = GetAmmoLeft(i);
+                if (ammo > 0 && ammo != int.MaxValue)
+                {
+                    SetAmmoLeft(i, ammo - 1);
+                }
+
+                runtimeTrigger.RecoilTimer = trigger.RecoilDurationSeconds;
+                trigger.ShotAudio?.Play(_replaySource.GetShotOrigin(shotTypeIndex));
+                ProjectileShotReplayed?.Invoke(i);
+            }
+        }
 
         /// <summary>За какой граббабл и какую точку хвата держат спуск.</summary>
         public bool TryGetTriggerGrip(int triggerIndex, out UxrGrabbableObject grabbable, out int grabPoint)

@@ -969,3 +969,54 @@ API меняет поведение и требует проверки в шле
 3. Если появится подписчик, который меняет или сравнивает аргументы по ссылке, — вернуть `new`.
 
 ---
+
+## Патч 23: один источник выстрела — событие Shoot стрелка
+
+**Файл:** `Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs` — `UxrManager_AvatarsUpdated`,
+`TryToShootRound`, `OnEnable/OnDisable`; `UxrWeapon.Custom.cs` — `ProjectileShotReplayed`,
+`Source_ShotFired`, `SubscribeShotReplay`; `UxrProjectileSource.cs` — событие `ShotFired`, убран
+`Debug.Log` в `Shoot`. Метка — `VR Battlegrounds patch 23`.
+**Дата:** 2026-09-28
+
+### Проблема
+
+UltimateXR синхронизирует выстрел дважды: состоянием спуска (`SyncTriggerPressStates`), по которому
+**каждая** машина пересчитывает выстрел копией оружия (`TryToShootRound` → `UxrProjectileSource.Shoot`),
+и самим `Shoot` (синхронизируемый метод с точной позой ствола). В сетевой игре снаряд рождался и
+от события стрелка, и от пересчёта копии: у стрелка вторая пуля (серверный `Shoot` возвращался к
+нему через `NetworkStateRelay`), на выделенном сервере два снаряда и **двойной урон**, у других
+игроков до трёх. На хосте незаметно — стрелок и сервер один процесс. Звук и отдача копии шли от её
+пересчёта и расходились с настоящим выстрелом: `UxrFirearmMag.Rounds` не синхронизируется, ствол у
+стены копия считает по своей интерполированной позе. Дробь `ShotgunPellets` множилась:
+`ProjectileShot` поднимался и на копиях. Плюс в `Shoot` стоял `Debug.Log` на каждый снаряд.
+
+### Применённое изменение
+
+Одно сетевое событие, два локальных уведомления.
+
+- **Решает только стрелок.** Логика выстрела в цикле спусков (решение `shoot`, щелчок пустого
+  спуска, `TryToShootRound`, `SyncAmmoLeft`) выполняется только для руки `Local`-аватара. Копия в
+  чужих руках берёт из синхронизированного спуска лишь поворот спуска для анимации.
+- **`UxrProjectileSource.ShotFired`** — событие на каждый `Shoot` на любой машине, в том числе при
+  повторе по сети (внутри `ExecuteStateSyncEvent`).
+- **Эффекты у получателя** — `Source_ShotFired`: если идёт не свой `TryToShootRound`
+  (`_shootingLocally`), для спуска с этим типом выстрела — звук, отдача, патрон копии и событие
+  **`ProjectileShotReplayed`**. Дробинки — другой тип выстрела, на них ничего не играется.
+- **`ProjectileShot`** поднимается только у стрелка — подписчик, который сам стреляет (дробь),
+  по построению не выстрелит на копии.
+- `Debug.Log` в `UxrProjectileSource.Shoot` удалён.
+
+Щелчок пустого спуска у чужих копий больше не звучит (его решал пересчёт) — косметика.
+
+### Как повторить при обновлении SDK
+
+1. В `UxrManager_AvatarsUpdated` после установки `SetTriggerPressedAmount` обернуть логику выстрела
+   (от `bool shoot` до `SyncAmmoLeft`) в `if (grabber.Avatar.AvatarMode == UxrAvatarMode.Local)`.
+2. В `TryToShootRound` — `_shootingLocally = true` вокруг `_weaponSource.Shoot(...)` (`try/finally`).
+3. В `UxrProjectileSource.Shoot` перед `EndSyncMethod` — `ShotFired?.Invoke(shotTypeIndex)`; событие
+   объявить рядом с `ShotTypes`.
+4. В `OnEnable/OnDisable` оружия — `SubscribeShotReplay(true/false)`; остальное — в `UxrWeapon.Custom.cs`.
+5. Проверка: `RemoteShotReplayTests` (копия по спуску не стреляет; пришедший выстрел — один снаряд и
+   `ProjectileShotReplayed` без `ProjectileShot`; дробь только у стрелка).
+
+---

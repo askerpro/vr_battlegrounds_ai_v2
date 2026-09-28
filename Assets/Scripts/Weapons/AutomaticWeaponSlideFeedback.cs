@@ -7,6 +7,7 @@ using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Weapons
 {
@@ -168,7 +169,10 @@ namespace VrBattlegrounds.Weapons
                 bool loaded = _firearm != null && _firearm.IsLoaded(_triggerIndex);
                 PlayBackFeedback(loaded);
 
-                if (_chamberRoundOnSlideReturn && _firearm != null)
+                // Затвор двигается на каждой машине (у чужих — по руке владельца, после броска — сам),
+                // а Reload синхронизируемый: зовёт его только автор оружия, остальные получат событием.
+                // Иначе каждая копия рассылала свой Reload (known-issues, Issue 23). Звук — у всех.
+                if (_chamberRoundOnSlideReturn && _firearm != null && StateEventAuthority.IsAuthorOfItem(_firearm))
                 {
                     _firearm.Reload(_triggerIndex);
                     LogBoltCycle($"Затвор возвращён! Перезарядка (Reload) выполнена. (Норм={current:F2})");

@@ -30,6 +30,12 @@ namespace UltimateXR.Mechanics.Weapons
         /// </summary>
         public IReadOnlyList<UxrShotDescriptor> ShotTypes => _shotTypes;
 
+        /// <summary>
+        ///     VR Battlegrounds patch 23: выстрел произведён — на каждой машине, и у стрелка, и при повторе
+        ///     синхронизированного <see cref="Shoot(int, Vector3, Quaternion)" /> по сети. Параметр — индекс типа выстрела.
+        /// </summary>
+        public event System.Action<int> ShotFired;
+
         #endregion
 
         #region Implicit IUxrPrecacheable
@@ -107,7 +113,8 @@ namespace UltimateXR.Mechanics.Weapons
         {
             if (shotTypeIndex >= 0 && shotTypeIndex < _shotTypes.Count)
             {
-                Debug.Log($"[UxrProjectileSource] Shoot execution. Index: {shotTypeIndex}, Pos: {projectileSource}. IsServer: {UxrNetworkManager.IsServer}, IsClient: {UxrNetworkManager.IsClient}");
+                // VR Battlegrounds patch 23: здесь стоял Debug.Log на каждый выстрел — в Development-сборке
+                // захват стека на каждый снаряд (и на каждую дробинку).
                 BeginSync();
 
                 if (_shotTypes[shotTypeIndex].PrefabInstantiateOnTipWhenShot)
@@ -135,6 +142,11 @@ namespace UltimateXR.Mechanics.Weapons
                 {
                     _weaponAnimator.SetTrigger(_shotTypes[shotTypeIndex].ShotAnimationVarName);
                 }
+
+                // VR Battlegrounds patch 23: уведомление на каждой машине — и у стрелка, и при повторе
+                // события по сети (внутри ExecuteStateSyncEvent). По нему оружие у получателя играет
+                // звук и отдачу, не пересчитывая выстрел само.
+                ShotFired?.Invoke(shotTypeIndex);
 
                 EndSyncMethod(new object[] { shotTypeIndex, projectileSource, projectileOrientation });
             }

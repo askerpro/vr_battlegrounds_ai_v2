@@ -157,10 +157,13 @@ namespace VrBattlegrounds.Network
         ///     Локальное изменение состояния любого компонента UltimateXR.
         ///     Сервер рассылает его всем клиентам, клиент отправляет серверу.
         ///
-        ///     Фильтр по владению здесь не нужен: релей один на процесс, и он
-        ///     ретранслирует то, что породила именно эта машина. События, применённые
-        ///     из сети, сюда не приходят — <c>UxrManager</c> не поднимает
-        ///     <c>ComponentStateChanged</c> внутри <c>ExecuteStateSyncEvent</c>.
+        ///     События, применённые из сети, сюда не приходят — <c>UxrManager</c> не
+        ///     поднимает <c>ComponentStateChanged</c> внутри <c>ExecuteStateSyncEvent</c>.
+        ///     Но «родилось на этой машине» ещё не значит «эта машина автор»: UltimateXR
+        ///     пересчитывает действия чужого игрока на каждой машине, и пересчёт порождает
+        ///     те же события. Раньше здесь стояло «фильтр по владению не нужен» — из-за этого
+        ///     выстрел клиента в сетевой игре давал вторую пулю. Кто автор —
+        ///     <see cref="StateEventAuthority"/>.
         /// </summary>
         private void HandleComponentStateChanged(IUxrStateSync component, UxrSyncEventArgs eventArgs)
         {
@@ -170,6 +173,11 @@ namespace VrBattlegrounds.Network
             // Объект уже снят сетью и доживает до конца кадра — его OnDisable (телепорт)
             // не событие для другой стороны: там объекта уже нет.
             if (DespawnedObjectEventFilter.ShouldDrop(component))
+                return;
+
+            // Событие пересчитано на копии действия чужого игрока (выстрел, затвор его оружия):
+            // автор разошлёт его сам. Иначе оно размножалось — см. StateEventAuthority.
+            if (!StateEventAuthority.ShouldSend(component, eventArgs))
                 return;
 
             // Событие невыровненного сетевого аватара уйдёт само по AvatarSpawned (NET-26).

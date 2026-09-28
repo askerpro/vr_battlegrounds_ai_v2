@@ -328,6 +328,11 @@ namespace VrBattlegrounds.Player
         [ClientRpc]
         private void RpcOnDied()
         {
+            // Отпускание синхронизируемое, а RPC исполняется на каждом клиенте вне повтора события:
+            // каждый рассылал своё отпускание своей скоростью броска. Страхует только владелец —
+            // один раз; остальным отпускание придёт его событием (known-issues, Issue 23).
+            if (!isOwned) return;
+
             var grabManager = GetComponent<PlayerGrabManager>();
             if (grabManager != null)
             {

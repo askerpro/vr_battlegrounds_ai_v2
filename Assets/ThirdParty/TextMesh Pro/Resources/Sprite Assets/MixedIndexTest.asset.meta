@@ -1,9 +1,8 @@
 fileFormatVersion: 2
-guid: 48bb5f55d8670e349b6e614913f9d910
-ShaderImporter:
+guid: 8a731a09451cba54096a9002cd9b9be5
+NativeFormatImporter:
   externalObjects: {}
-  defaultTextures: []
-  nonModifiableTextures: []
+  mainObjectFileID: 11400000
   userData: 
   assetBundleName: 
   assetBundleVariant: 
@@ -12,5 +11,5 @@ AssetOrigin:
   productId: 127325
   packageName: Particle Pack
   packageVersion: 3.1
-  assetPath: Assets/ThirdParty/TextMesh Pro/Shaders/TMP_Bitmap-Custom-Atlas.shader
+  assetPath: Assets/ThirdParty/TextMesh Pro/Resources/Sprite Assets/MixedIndexTest.asset
   uploadId: 896138

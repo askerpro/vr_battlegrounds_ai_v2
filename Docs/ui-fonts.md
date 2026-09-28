@@ -12,6 +12,11 @@ fallback.
 | Шрифт по умолчанию, глобальный fallback | `Assets/ThirdParty/TextMesh Pro/Resources/TMP Settings.asset` |
 | Тест покрытия глифами | `Assets/Tests/EditMode/UI/UiFontCoverageTests.cs` |
 
+> **Обновление TMP Essential Resources затирает `TMP Settings.asset`:** шрифт по умолчанию
+> становится `LiberationSans SDF` (без кириллицы), глобальный fallback очищается. После
+> обновления вернуть файл из git (`git checkout -- "…/TMP Settings.asset"`) и прогнать
+> `UiFontCoverageTests` — `DefaultTmpFont_CoversCyrillic` ловит подмену. Так было 2026-09-28.
+
 ---
 
 ## Как TextMeshPro рисует текст

@@ -1,149 +1,60 @@
-using System.Collections.Generic;
 using Mirror;
-using UltimateXR.Avatar;
-using UltimateXR.Core;
-using UltimateXR.Devices;
-using UnityEngine;
-using UnityEngine.XR;
 using VrBattlegrounds.Core;
-using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.DevTools.StressTest
 {
     /// <summary>
-    /// Запуск стресс-теста из шлема без ПК: удерживать <b>оба стика нажатыми</b>
-    /// <see cref="HoldSeconds"/> секунд. Что произойдёт, зависит от состояния:
-    ///
-    /// <list type="bullet">
-    /// <item><b>Подключён к серверу</b> — запрос серверу, куклы пойдут за этим игроком.</item>
-    /// <item><b>Идёт прогон</b> — остановить.</item>
-    /// <item><b>Ждёт сервер</b> (шлем в билде всегда стартует клиентом) — шлем становится
-    ///       хостом, и прогон стартует сам, как только появится аватар.</item>
-    /// </list>
+    /// Запуск и остановка стресс-теста с этой машины — общий вход для планшета (экран «Перф-тесты»,
+    /// <c>MenuPerfTests</c>) и меню редактора (<c>StressTestMenu</c>). Конфиг и план фаз —
+    /// <see cref="StressTestPlan"/>.
     ///
     /// <para>
-    /// Стики читаются напрямую из XR-ввода: пока шлем ждёт сервер, аватара ещё нет, и
-    /// ввод UltimateXR взять не у кого. В редакторе (симулятор без XR-устройств) — через
-    /// ввод аватара. В игре оба стика одновременно не нажимаются, случайно не запустить.
+    /// Раньше здесь жил жест «оба стика 2 с» (+ грипы — по скинам). Его заменил планшет: жест
+    /// нельзя было ни настроить (скин, режим, число кукол), ни увидеть. Удержание обоих стиков
+    /// теперь включает режим отладки; шлем без ПК тем же жестом при включённом режиме становится
+    /// хостом (<see cref="DebugGestureInput"/>), дальше — планшет.
     /// </para>
     /// </summary>
-    public sealed class StressTestLauncher : MonoBehaviour
+    public static class StressTestLauncher
     {
-        public const float HoldSeconds = 2f;
+        /// <summary>Сколько фаз ждать в запущенном отсюда прогоне (по <see cref="StressTestPlan"/>); 0 — неизвестно.</summary>
+        public static int PlannedPhaseCount { get; private set; }
 
-        /// <summary>Пауза после появления аватара на свежем хосте: догрузка сцены, первые спавны.</summary>
-        private const float AutoStartDelay = 3f;
+        /// <summary>Описание прогона для таблички и лога.</summary>
+        public static string Describe(StressTestConfig config) =>
+            (config.perSkinPhases ? "по скинам" : config.mapOnly ? "только по карте" : "обычный") +
+            (config.phaseSeconds <= StressTestPlan.ShortPhaseSeconds ? ", короткий" : "");
 
-        private readonly List<InputDevice> _devices = new List<InputDevice>();
-        private float _heldSince = -1f;
-        private bool  _fired;
-        private bool  _autoStartPending;
-        private float _avatarSeenAt = -1f;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
+        /// <summary>
+        /// Просит сервер начать прогон. Ложь и причина — если просить некого (нет подключения,
+        /// выделенный сервер без клиента) или прогон уже идёт. Отказ самого сервера (не
+        /// разминка, нет аватара) придёт позже сообщением — <see cref="StressTestClientSession.LastServerText"/>.
+        /// </summary>
+        public static bool TryStart(StressTestConfig config, out string message)
         {
-            // Серверу без графики нажимать нечем.
-            if (Application.isBatchMode) return;
+            if (!NetworkClient.isConnected && NetworkServer.active)
+            {
+                message = "выделенный сервер без клиента — запускать с шлема";
+                return false;
+            }
 
-            var go = new GameObject(nameof(StressTestLauncher));
-            DontDestroyOnLoad(go);
-            go.AddComponent<StressTestLauncher>();
+            if (!StressTestNetwork.RequestStart(config, out string reason))
+            {
+                message = reason;
+                return false;
+            }
+
+            PlannedPhaseCount = StressTestPlan.Phases(config, StressTestServer.CollectAvatarPrefabs().Count).Count;
+            message = $"Стресс-тест ({Describe(config)}): запрос отправлен серверу.";
+            PerfOverlay.Show(message, 4f);
+            return true;
         }
 
-        private void Update()
+        public static void Stop()
         {
-            TryAutoStart();
-
-            if (!BothSticksPressed())
-            {
-                _heldSince = -1f;
-                _fired = false;
-                return;
-            }
-
-            if (_heldSince < 0f) _heldSince = Time.unscaledTime;
-            if (_fired || Time.unscaledTime - _heldSince < HoldSeconds) return;
-
-            _fired = true;
-            OnCombo();
-        }
-
-        private void OnCombo()
-        {
-            if (StressTestClientSession.IsRunning)
-            {
-                StressTestNetwork.RequestStop();
-                return;
-            }
-
-            if (NetworkClient.isConnected)
-            {
-                if (!StressTestNetwork.RequestStart(new StressTestConfig(), out string reason))
-                    PerfOverlay.Show("Стресс-тест не запущен:\n" + reason, 5f);
-                return;
-            }
-
-            if (NetworkServer.active)
-            {
-                PerfOverlay.Show("Стресс-тест: выделенный сервер без клиента — запускать с шлема.", 5f);
-                return;
-            }
-
-            // Шлем ждёт сервер, которого нет: становимся хостом сами.
-            GameNetworkDiscovery discovery = FindFirstObjectByType<GameNetworkDiscovery>();
-            if (discovery == null)
-            {
-                PerfOverlay.Show("Стресс-тест: не найден GameNetworkDiscovery — не могу стать хостом.", 5f);
-                return;
-            }
-
-            GameLog.Perf.Info("[StressTest] Сервера нет — шлем становится хостом, прогон стартует после загрузки.");
-            PerfOverlay.Show("Шлем становится хостом.\nСтресс-тест начнётся после загрузки лобби.", 8f);
-            _autoStartPending = true;
-            _avatarSeenAt = -1f;
-            discovery.RestartAsHost();
-        }
-
-        private void TryAutoStart()
-        {
-            if (!_autoStartPending) return;
-
-            if (!NetworkClient.isConnected || !NetworkClient.ready || UxrAvatar.LocalAvatar == null)
-            {
-                _avatarSeenAt = -1f;
-                return;
-            }
-
-            if (_avatarSeenAt < 0f) _avatarSeenAt = Time.unscaledTime;
-            if (Time.unscaledTime - _avatarSeenAt < AutoStartDelay) return;
-
-            _autoStartPending = false;
-            if (!StressTestNetwork.RequestStart(new StressTestConfig(), out string reason))
-                PerfOverlay.Show("Стресс-тест не запущен:\n" + reason, 5f);
-        }
-
-        private bool BothSticksPressed()
-        {
-            if (XrStickPressed(InputDeviceCharacteristics.Left) && XrStickPressed(InputDeviceCharacteristics.Right))
-                return true;
-
-            UxrAvatar avatar = UxrAvatar.LocalAvatar;
-            if (avatar == null) return false;
-
-            UxrControllerInput input = avatar.ControllerInput;
-            return input.GetButtonsPress(UxrHandSide.Left,  UxrInputButtons.Joystick)
-                && input.GetButtonsPress(UxrHandSide.Right, UxrInputButtons.Joystick);
-        }
-
-        private bool XrStickPressed(InputDeviceCharacteristics side)
-        {
-            InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.Controller | side, _devices);
-            foreach (InputDevice device in _devices)
-            {
-                if (device.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out bool pressed) && pressed) return true;
-            }
-            return false;
+            if (!StressTestClientSession.IsRunning) return;
+            GameLog.Perf.Info("[StressTest] Остановка по запросу с этой машины.");
+            StressTestNetwork.RequestStop();
         }
     }
 }

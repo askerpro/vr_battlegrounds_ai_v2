@@ -12,5 +12,7 @@ namespace VrBattlegrounds.UI.Menu
         MatchManager = 7,
         PlayersTeams = 8,
         Statistics = 9,
+        Debug = 10,
+        PerfTests = 11,
     }
 }

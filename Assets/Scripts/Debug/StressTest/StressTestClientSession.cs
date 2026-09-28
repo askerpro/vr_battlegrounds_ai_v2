@@ -21,6 +21,22 @@ namespace VrBattlegrounds.DevTools.StressTest
         public static StressTestClientSession Current { get; private set; }
         public static bool IsRunning => Current != null;
 
+        /// <summary>Текущая фаза и сколько секунд до её конца — для строки статуса на планшете.</summary>
+        public string PhaseName => _phaseName;
+        public float PhaseSecondsLeft => Mathf.Max(0f, _phaseEndsAt - Time.realtimeSinceStartup);
+
+        /// <summary>Номер текущей фазы с 1 (сколько фаз сервер уже открыл).</summary>
+        public int PhaseNumber => _phaseNumber;
+
+        /// <summary>
+        /// perf.log последнего прогона на этой машине — переживает конец прогона, чтобы экран
+        /// «Перф-тесты» показал путь для <c>adb pull</c>. Пусто — прогонов с запуска не было.
+        /// </summary>
+        public static string LastLogPath { get; private set; } = string.Empty;
+
+        /// <summary>Последнее слово сервера: отказ в старте или итог прогона.</summary>
+        public static string LastServerText { get; private set; } = string.Empty;
+
         private PerfFrameRecorder _recorder;
         private PerfRunReport _report;
         private bool   _phaseOpen;
@@ -28,8 +44,10 @@ namespace VrBattlegrounds.DevTools.StressTest
         private float  _phaseEndsAt;
         private int    _puppets;
         private int    _clutter;
+        private string _skins = "-";
         private float  _nextOverlayAt;
         private bool   _finished;
+        private int    _phaseNumber;
 
         // ── Сообщения сервера ───────────────────────────────────────────────
 
@@ -39,6 +57,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             {
                 case StressTestStatusKind.Rejected:
                     GameLog.Perf.Warning($"[StressTest] Сервер отказал: {msg.text}.");
+                    LastServerText = "отказ: " + msg.text;
                     PerfOverlay.Show("Стресс-тест не запущен:\n" + msg.text, 6f);
                     break;
 
@@ -71,6 +90,8 @@ namespace VrBattlegrounds.DevTools.StressTest
             _report = PerfRunReport.Create(role, 0, 0);
             _recorder = new PerfFrameRecorder(_report.Directory, _report.BudgetMs, _report.BuildHeader());
             GameLog.Perf.Info($"[StressTest] Клиент: запись начата. Лог: {_recorder.LogPath}. {_report.display}");
+            LastLogPath = _recorder.LogPath;
+            LastServerText = "прогон идёт";
         }
 
         private void BeginPhase(StressTestStatusMessage msg)
@@ -82,11 +103,14 @@ namespace VrBattlegrounds.DevTools.StressTest
 
             _phaseOpen   = true;
             _phaseName   = msg.phase;
+            _phaseNumber++;
             _phaseEndsAt = Time.realtimeSinceStartup + msg.seconds;
             _puppets     = msg.puppetCount;
             _clutter     = msg.clutterCount;
+            _skins       = string.IsNullOrEmpty(msg.skins) ? "-" : msg.skins;
             _report.puppetCount  = Mathf.Max(_report.puppetCount, msg.puppetCount);
             _report.clutterCount = Mathf.Max(_report.clutterCount, msg.clutterCount);
+            _report.AddSkins(msg.skins);
             _nextOverlayAt = 0f;
         }
 
@@ -124,7 +148,8 @@ namespace VrBattlegrounds.DevTools.StressTest
                     $"Стресс-тест · {_phaseName} · {left:F0} с\n" +
                     $"кадр {level:F1} мс ({fps:F0} FPS), бюджет {_recorder.BudgetMs:F1} мс\n" +
                     $"кукол {_puppets} · предметов {_clutter}\n" +
-                    "Двигайтесь — куклы повторяют. Оба стика 2 с — прервать.");
+                    $"скины: {_skins}\n" +
+                    "Двигайтесь — куклы повторяют. Прервать — планшет, «Перф-тесты» → «Стоп».");
             }
         }
 
@@ -140,6 +165,7 @@ namespace VrBattlegrounds.DevTools.StressTest
 
             string result = _report.BuildResultText();
             _recorder.WriteLine("=== итог прогона: " + reason + "\n" + result);
+            LastServerText = completed ? "прогон завершён: " + reason : "прогон прерван: " + reason;
             PerfOverlay.Show($"Стресс-тест {(completed ? "завершён" : "прерван: " + reason)}\n{result}\nЛог: perf/{_report.startedAt}", 30f);
 
             Destroy(gameObject);

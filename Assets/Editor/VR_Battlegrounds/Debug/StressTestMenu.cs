@@ -6,7 +6,7 @@ namespace VrBattlegrounds.Editor.DevTools
 {
     /// <summary>
     ///     Запуск стресс-теста из редактора (Play Mode, клиент подключён): тот же запрос
-    ///     серверу, что шлем шлёт удержанием обоих стиков, — см. <see cref="StressTestLauncher" />.
+    ///     серверу, что шлем шлёт с планшета (экран «Перф-тесты»), — см. <see cref="StressTestLauncher" />.
     /// </summary>
     internal static class StressTestMenu
     {
@@ -17,6 +17,12 @@ namespace VrBattlegrounds.Editor.DevTools
 
         [MenuItem(Root + "Start Short (10 s phases)")]
         private static void StartShort() => Start(new StressTestConfig { warmupSeconds = 2f, phaseSeconds = 10f, settleSeconds = 2f });
+
+        [MenuItem(Root + "Start Per-Skin (phase per avatar prefab)")]
+        private static void StartPerSkin() => Start(new StressTestConfig { perSkinPhases = true });
+
+        [MenuItem(Root + "Start Short Per-Skin (10 s phases)")]
+        private static void StartShortPerSkin() => Start(new StressTestConfig { perSkinPhases = true, warmupSeconds = 2f, phaseSeconds = 10f, settleSeconds = 2f });
 
         [MenuItem(Root + "Stop")]
         private static void Stop() => StressTestNetwork.RequestStop();
@@ -31,6 +37,8 @@ namespace VrBattlegrounds.Editor.DevTools
 
         [MenuItem(Root + "Start (9 puppets + clutter)", true)]
         [MenuItem(Root + "Start Short (10 s phases)", true)]
+        [MenuItem(Root + "Start Per-Skin (phase per avatar prefab)", true)]
+        [MenuItem(Root + "Start Short Per-Skin (10 s phases)", true)]
         private static bool CanStart() => EditorApplication.isPlaying && !StressTestClientSession.IsRunning;
 
         [MenuItem(Root + "Stop", true)]

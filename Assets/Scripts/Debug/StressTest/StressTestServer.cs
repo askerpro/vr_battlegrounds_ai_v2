@@ -34,7 +34,9 @@ namespace VrBattlegrounds.DevTools.StressTest
     /// </para>
     ///
     /// <para>
-    /// <b>Фазы.</b> Разгон → «база» → «куклы» → «куклы+хлам». Сервер шлёт инициатору
+    /// <b>Фазы.</b> Обычный прогон: разгон → «база» → «куклы» → «куклы+хлам» → «куклы: по карте».
+    /// Прогон по скинам (<see cref="StressTestConfig.perSkinPhases"/>): разгон → «база» →
+    /// «куклы: &lt;префаб&gt;» на каждый скин. Сервер шлёт инициатору
     /// начало каждой фазы (<see cref="StressTestStatusMessage"/>), клиент по ним открывает
     /// фазы в своём логе. Выделенный сервер пишет и свой лог (время тика); на хосте
     /// второй рекордер не заводится — процесс один, его меряет клиентская половина.
@@ -57,6 +59,8 @@ namespace VrBattlegrounds.DevTools.StressTest
         private readonly PoseDelayBuffer _poses = new PoseDelayBuffer(512);
         private readonly List<StressPuppet> _puppets = new List<StressPuppet>();
         private readonly List<GameObject> _clutter = new List<GameObject>();
+        private List<GameObject> _prefabs = new List<GameObject>();
+        private string _currentSkins = "";
 
         private Vector3 _startRootPosition;
         private Quaternion _startRootRotation;
@@ -122,15 +126,23 @@ namespace VrBattlegrounds.DevTools.StressTest
             Transform leaderRoot = _session.ActiveAvatar.transform;
             _startRootPosition = leaderRoot.position;
             _startRootRotation = Quaternion.Euler(0f, leaderRoot.eulerAngles.y, 0f);
+            _prefabs = CollectAvatarPrefabs();
+
+            if (_config.puppetSkin != StressTestLayout.MixedSkins && !StressTestLayout.IsSingleSkin(_prefabs.Count, _config.puppetSkin))
+            {
+                GameLog.Perf.Warning($"[StressTest] Скина {_config.puppetSkin} нет (скинов {_prefabs.Count}) — куклы вперемешку.");
+            }
 
             // Хост меряет себя клиентской половиной; свой лог — только у выделенного сервера.
             if (!NetworkClient.active)
             {
                 _report = PerfRunReport.Create("выделенный сервер", _config.puppetCount, _config.clutterCount);
+                _report.AddSkins(PlannedSkins());
                 _recorder = new PerfFrameRecorder(_report.Directory, _report.BudgetMs, _report.BuildHeader());
             }
 
-            GameLog.Perf.Info($"[StressTest] Сервер: старт для {_session.PlayerName}, кукол {_config.puppetCount}, предметов {_config.clutterCount}.");
+            GameLog.Perf.Info($"[StressTest] Сервер: старт для {_session.PlayerName}, кукол {_config.puppetCount}, предметов {_config.clutterCount}, " +
+                              $"{(_config.perSkinPhases ? "по скинам" : _config.mapOnly ? "только по карте" : "обычный")}, скины: {PlannedSkins()}.");
 
             UxrManager.StageUpdated += OnUxrStageUpdated;
             StartCoroutine(Run());
@@ -170,8 +182,28 @@ namespace VrBattlegrounds.DevTools.StressTest
             yield return Phase("разгон", _config.warmupSeconds, measured: false, note: null);
             yield return Phase("база", _config.phaseSeconds, measured: true, note: null);
 
-            SpawnPuppets();
-            yield return Phase("куклы~успокоение", _config.settleSeconds, measured: false, note: $"заспавнено кукол: {_puppets.Count}");
+            if (_config.perSkinPhases) yield return RunPerSkin();
+            else                       yield return RunStandard();
+
+            Finish(completed: true, "полный прогон");
+            Destroy(gameObject);
+        }
+
+        private IEnumerator RunStandard()
+        {
+            // Порядок фаз повторяет StressTestPlan.Phases (экран «Перф-тесты» показывает по нему
+            // «фаза i из N») — меняешь здесь, меняй и там.
+            if (_config.mapOnly)
+            {
+                if (_config.puppetCount <= 0) yield break;
+                SpawnPuppets(PuppetLayout.MapRing, _config.puppetSkin);
+                yield return Phase("куклы: по карте~успокоение", _config.settleSeconds, measured: false, note: SpawnNote());
+                yield return Phase("куклы: по карте", _config.phaseSeconds, measured: true, note: null);
+                yield break;
+            }
+
+            SpawnPuppets(PuppetLayout.Rows, _config.puppetSkin);
+            yield return Phase("куклы~успокоение", _config.settleSeconds, measured: false, note: SpawnNote());
             yield return Phase("куклы", _config.phaseSeconds, measured: true, note: null);
 
             if (_config.clutterCount > 0)
@@ -181,8 +213,65 @@ namespace VrBattlegrounds.DevTools.StressTest
                 yield return Phase("куклы+хлам", _config.phaseSeconds, measured: true, note: null);
             }
 
-            Finish(completed: true, "полный прогон");
-            Destroy(gameObject);
+            if (_config.mapSpreadPhase && _config.puppetCount > 0)
+            {
+                // Хлам и ряды убираются: фаза сравнивается с «куклы» — то же число кукол,
+                // другое расположение.
+                int removed = DespawnClutter() + DespawnPuppets();
+                SpawnPuppets(PuppetLayout.MapRing, _config.puppetSkin);
+                yield return Phase("куклы: по карте~успокоение", _config.settleSeconds, measured: false,
+                                   note: $"убрано объектов: {removed}; " + SpawnNote());
+                yield return Phase("куклы: по карте", _config.phaseSeconds, measured: true, note: null);
+            }
+        }
+
+        /// <summary>
+        /// Каждый скин — своя фаза с одинаковой расстановкой: цифры фаз напрямую сравнимы
+        /// между собой и с «базой». Куклы прошлого скина убираются в начале успокоения
+        /// следующего — рывок уборки попадает в неизмеряемую фазу.
+        /// </summary>
+        private IEnumerator RunPerSkin()
+        {
+            if (_prefabs.Count == 0)
+            {
+                GameLog.Perf.Warning("[StressTest] Прогон по скинам: в TeamRegistry нет ни одного префаба аватара.");
+                yield break;
+            }
+
+            for (int skin = 0; skin < _prefabs.Count; skin++)
+            {
+                int removed = DespawnPuppets();
+                SpawnPuppets(PuppetLayout.Rows, skin);
+
+                string name = "куклы: " + _prefabs[skin].name;
+                yield return Phase(name + "~успокоение", _config.settleSeconds, measured: false,
+                                   note: (removed > 0 ? $"убрано кукол: {removed}; " : "") + SpawnNote());
+                yield return Phase(name, _config.phaseSeconds, measured: true, note: null);
+            }
+        }
+
+        private string SpawnNote() => $"заспавнено кукол: {_puppets.Count}, скины: {(_currentSkins.Length > 0 ? _currentSkins : "-")}";
+
+        /// <summary>Скины, которые пойдут в прогон, — для заголовка лога сервера и строки старта.</summary>
+        private string PlannedSkins()
+        {
+            if (_prefabs.Count == 0) return "-";
+            if (_config.perSkinPhases) return JoinNames(_prefabs, -1, _prefabs.Count);
+            return JoinNames(_prefabs, _config.puppetSkin, Mathf.Max(0, _config.puppetCount));
+        }
+
+        /// <summary>Имена префабов, которые получат <paramref name="count"/> кукол, без повторов, по порядку.</summary>
+        private static string JoinNames(List<GameObject> prefabs, int puppetSkin, int count)
+        {
+            var names = new List<string>();
+            for (int i = 0; i < count; i++)
+            {
+                int index = StressTestLayout.SkinIndex(prefabs.Count, puppetSkin, i);
+                if (index < 0) break;
+                string name = prefabs[index].name;
+                if (!names.Contains(name)) names.Add(name);
+            }
+            return string.Join(", ", names);
         }
 
         private IEnumerator Phase(string name, float seconds, bool measured, string note)
@@ -202,6 +291,7 @@ namespace VrBattlegrounds.DevTools.StressTest
                 seconds      = seconds,
                 puppetCount  = _puppets.Count,
                 clutterCount = _clutter.Count,
+                skins        = _currentSkins,
                 text         = note,
             });
 
@@ -243,35 +333,58 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         // ── Куклы ───────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Куклы встают рядами перед игроком, лицом туда же, куда он: весь прогон в поле
-        /// зрения (худший случай для рендера), выстрелы уйдут от игрока. Скины чередуются
-        /// по реестру команд — как в живом матче.
-        /// </summary>
-        private void SpawnPuppets()
+        private enum PuppetLayout
         {
-            List<GameObject> prefabs = CollectAvatarPrefabs();
-            if (prefabs.Count == 0)
+            /// <summary>Рядами перед игроком, лицом туда же, куда он.</summary>
+            Rows,
+            /// <summary>Кольцом 8–15 м вокруг игрока, лицом в случайную сторону.</summary>
+            MapRing,
+        }
+
+        /// <summary>
+        /// <see cref="PuppetLayout.Rows"/> — куклы встают рядами перед игроком, лицом туда же,
+        /// куда он: весь прогон в поле зрения (худший случай для рендера), выстрелы уйдут от
+        /// игрока. <see cref="PuppetLayout.MapRing"/> — вокруг игрока по карте, как в живом
+        /// матче: большинство за укрытиями или вне поля зрения.
+        /// Скин — <paramref name="puppetSkin"/> (см. <see cref="StressTestConfig.puppetSkin"/>).
+        /// </summary>
+        private void SpawnPuppets(PuppetLayout layout, int puppetSkin)
+        {
+            _currentSkins = "";
+            if (_prefabs.Count == 0)
             {
                 GameLog.Perf.Warning("[StressTest] Куклы не созданы: в TeamRegistry нет ни одного префаба аватара.");
                 return;
             }
 
-            int count  = Mathf.Max(0, _config.puppetCount);
-            int perRow = Mathf.Max(1, _config.puppetsPerRow);
+            int count = Mathf.Max(0, _config.puppetCount);
+            _currentSkins = JoinNames(_prefabs, puppetSkin, count);
+
+            var rng = new System.Random(unchecked(System.Environment.TickCount * 31 + count));
+            float ringPhase = (float)rng.NextDouble() * 360f;
+            int offMap = 0;
 
             for (int i = 0; i < count; i++)
             {
-                int row   = i / perRow;
-                int col   = i % perRow;
-                int inRow = Mathf.Min(perRow, count - row * perRow);
+                Vector3 position;
+                Quaternion rotation;
 
-                var offset = new Vector3((col - (inRow - 1) * 0.5f) * _config.puppetSpacing, 0f,
-                                         _config.firstRowDistance + row * _config.puppetSpacing);
-                Vector3 position = _startRootPosition + _startRootRotation * offset;
+                if (layout == PuppetLayout.MapRing)
+                {
+                    StressTestLayout.RingPlacement(i, count, _config.mapMinRadius, _config.mapMaxRadius, ringPhase, rng,
+                                                   out Vector3 offset, out float yaw);
+                    if (!TryPlaceOnFloor(offset, out position)) offMap++;
+                    rotation = _startRootRotation * Quaternion.Euler(0f, yaw, 0f);
+                }
+                else
+                {
+                    Vector3 offset = StressTestLayout.RowOffset(i, count, _config.puppetsPerRow, _config.puppetSpacing, _config.firstRowDistance);
+                    position = _startRootPosition + _startRootRotation * offset;
+                    rotation = _startRootRotation;
+                }
 
-                GameObject prefab = prefabs[i % prefabs.Count];
-                GameObject go = Instantiate(prefab, position, _startRootRotation);
+                GameObject prefab = _prefabs[StressTestLayout.SkinIndex(_prefabs.Count, puppetSkin, i)];
+                GameObject go = Instantiate(prefab, position, rotation);
                 go.name = $"StressPuppet {i + 1} ({prefab.name})";
 
                 PlayerController pc = go.GetComponent<PlayerController>();
@@ -285,15 +398,95 @@ namespace VrBattlegrounds.DevTools.StressTest
 
                 float delay = count > 1 ? Mathf.Lerp(0.1f, _config.maxDelaySeconds, (float)i / (count - 1)) : 0.1f;
                 StressPuppet puppet = go.AddComponent<StressPuppet>();
-                puppet.Initialize(delay, position, _startRootRotation);
+                puppet.Initialize(delay, position, rotation);
 
                 NetworkServer.Spawn(go);
                 _puppets.Add(puppet);
                 PerfEvents.Count(PerfEventKind.Spawn);
             }
+
+            if (offMap > 0)
+            {
+                GameLog.Perf.Warning($"[StressTest] По карте: для {offMap} из {count} кукол не нашлось свободного пола — " +
+                                     "стоят на высоте игрока в исходной точке кольца.");
+            }
         }
 
-        private static List<GameObject> CollectAvatarPrefabs()
+        private const float FloorProbeUp   = 1.5f;  // луч — с высоты груди: ниже большинства потолков
+        private const float FloorProbeDown = 4f;
+        private const float MaxFloorStep   = 0.5f;  // выше — это крыша укрытия, а не пол
+        private static readonly float[] RadiusTry = new float[8];
+
+        /// <summary>
+        /// Точка кольца на полу карты. Луч вниз с высоты груди; попадания по динамике
+        /// (предметы, аватары) пропускаются. Пол должен быть не выше/ниже старта игрока больше
+        /// чем на <see cref="MaxFloorStep"/>, а капсула роста человека — свободной. Не вышло —
+        /// ближе к игроку (<see cref="StressTestLayout.FallbackRadii"/>); совсем не вышло —
+        /// исходная точка на высоте старта, false.
+        /// </summary>
+        private bool TryPlaceOnFloor(Vector3 offset, out Vector3 position)
+        {
+            Vector3 flat = new Vector3(offset.x, 0f, offset.z);
+            float radius = flat.magnitude;
+            Vector3 dir  = radius > 1e-3f ? flat / radius : Vector3.forward;
+            float refY   = _startRootPosition.y;
+
+            int tries = StressTestLayout.FallbackRadii(radius, 2f, RadiusTry);
+            for (int t = 0; t < tries; t++)
+            {
+                Vector3 xz = _startRootPosition + _startRootRotation * (dir * RadiusTry[t]);
+                if (TryFindFloor(xz, refY, out float floorY) && IsBodySpaceFree(new Vector3(xz.x, floorY, xz.z)))
+                {
+                    position = new Vector3(xz.x, floorY, xz.z);
+                    return true;
+                }
+            }
+
+            position = _startRootPosition + _startRootRotation * flat;
+            position.y = refY;
+            return false;
+        }
+
+        private static bool TryFindFloor(Vector3 xz, float refY, out float floorY)
+        {
+            floorY = refY;
+            var origin = new Vector3(xz.x, refY + FloorProbeUp, xz.z);
+            // Аллоцирующие версии сознательно: вызывается раз на куклу при спавне, в фазе успокоения.
+            RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, FloorProbeUp + FloorProbeDown,
+                                                   Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+
+            float best = float.MaxValue;
+            bool found = false;
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider == null || hit.collider.attachedRigidbody != null) continue;
+                if (hit.distance >= best) continue;
+                best   = hit.distance;
+                floorY = hit.point.y;
+                found  = true;
+            }
+
+            return found && Mathf.Abs(floorY - refY) <= MaxFloorStep;
+        }
+
+        private static bool IsBodySpaceFree(Vector3 feet)
+        {
+            const float radius = 0.25f;
+            Collider[] hits = Physics.OverlapCapsule(feet + Vector3.up * (0.3f + radius), feet + Vector3.up * (1.7f - radius), radius,
+                                                     Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            foreach (Collider hit in hits)
+            {
+                if (hit != null && hit.attachedRigidbody == null) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Скины кукол по порядку: префабы аватаров всех команд <c>TeamRegistry</c>, без повторов.
+        /// Публичный — тот же список показывает выбор скина на планшете (экран «Отладка»): индекс
+        /// в нём и есть <see cref="StressTestConfig.puppetSkin"/>.
+        /// </summary>
+        public static List<GameObject> CollectAvatarPrefabs()
         {
             var result = new List<GameObject>();
             TeamRegistry registry = TeamRegistry.Instance;
@@ -402,20 +595,45 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         private void DespawnAll()
         {
+            DespawnPuppets();
+            DespawnClutter();
+        }
+
+        /// <summary>Убирает кукол, возвращает, сколько убрано.</summary>
+        private int DespawnPuppets()
+        {
+            int removed = 0;
             if (NetworkServer.active)
             {
                 foreach (StressPuppet puppet in _puppets)
                 {
-                    if (puppet != null) NetworkServer.Destroy(puppet.gameObject);
-                }
-                foreach (GameObject item in _clutter)
-                {
-                    if (item != null) NetworkServer.Destroy(item);
+                    if (puppet == null) continue;
+                    NetworkServer.Destroy(puppet.gameObject);
+                    removed++;
                 }
             }
 
             _puppets.Clear();
+            _currentSkins = "";
+            return removed;
+        }
+
+        /// <summary>Убирает лежащие предметы, возвращает, сколько убрано.</summary>
+        private int DespawnClutter()
+        {
+            int removed = 0;
+            if (NetworkServer.active)
+            {
+                foreach (GameObject item in _clutter)
+                {
+                    if (item == null) continue;
+                    NetworkServer.Destroy(item);
+                    removed++;
+                }
+            }
+
             _clutter.Clear();
+            return removed;
         }
     }
 }

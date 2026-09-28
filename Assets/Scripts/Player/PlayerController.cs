@@ -352,6 +352,11 @@ namespace VrBattlegrounds.Player
         [ClientRpc]
         private void RpcDevTeleport(Vector3 position, Quaternion rotation)
         {
+            // MoveAvatarTo синхронизируемый (BeginSync): переносит только автор аватара — владелец,
+            // у куклы без владельца сервер. Остальные получат переезд его событием и NetworkTransform;
+            // перенос на каждой машине рассылал бы копии (known-issues, Issue 23).
+            if (!VrBattlegrounds.Network.StateEventAuthority.IsAuthor(isOwned, connectionToClient != null, isServer)) return;
+
             UltimateXR.Avatar.UxrAvatar avatar = GetComponent<UltimateXR.Avatar.UxrAvatar>();
             if (avatar != null && UltimateXR.Core.UxrManager.Instance != null)
             {

@@ -14,24 +14,36 @@ namespace VrBattlegrounds.DevTools.StressTest
         public float warmupSeconds;
         public float phaseSeconds;
         public float settleSeconds;
+        public int   puppetSkin;
+        public bool  perSkinPhases;
+        public bool  mapSpreadPhase;
+        public bool  mapOnly;
 
         public static StressTestRequestMessage Start(StressTestConfig config) => new StressTestRequestMessage
         {
-            start         = true,
-            puppetCount   = config.puppetCount,
-            clutterCount  = config.clutterCount,
-            warmupSeconds = config.warmupSeconds,
-            phaseSeconds  = config.phaseSeconds,
-            settleSeconds = config.settleSeconds,
+            start          = true,
+            puppetCount    = config.puppetCount,
+            clutterCount   = config.clutterCount,
+            warmupSeconds  = config.warmupSeconds,
+            phaseSeconds   = config.phaseSeconds,
+            settleSeconds  = config.settleSeconds,
+            puppetSkin     = config.puppetSkin,
+            perSkinPhases  = config.perSkinPhases,
+            mapSpreadPhase = config.mapSpreadPhase,
+            mapOnly        = config.mapOnly,
         };
 
         public StressTestConfig ToConfig() => new StressTestConfig
         {
-            puppetCount   = puppetCount,
-            clutterCount  = clutterCount,
-            warmupSeconds = warmupSeconds,
-            phaseSeconds  = phaseSeconds,
-            settleSeconds = settleSeconds,
+            puppetCount    = UnityEngine.Mathf.Clamp(puppetCount, 0, StressTestConfig.MaxPuppets),
+            clutterCount   = clutterCount,
+            warmupSeconds  = warmupSeconds,
+            phaseSeconds   = phaseSeconds,
+            settleSeconds  = settleSeconds,
+            puppetSkin     = puppetSkin,
+            perSkinPhases  = perSkinPhases,
+            mapSpreadPhase = mapSpreadPhase,
+            mapOnly        = mapOnly,
         };
     }
 
@@ -57,6 +69,8 @@ namespace VrBattlegrounds.DevTools.StressTest
         public float  seconds;
         public int    puppetCount;
         public int    clutterCount;
+        /// <summary>Имена префабов кукол, стоящих сейчас, через запятую; пусто — кукол нет.</summary>
+        public string skins;
         public bool   completed;
         public string text;
     }

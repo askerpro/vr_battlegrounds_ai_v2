@@ -310,7 +310,7 @@ HUD, `TeamSpawnZone`, `PlayerLoadoutManager`) узнают фазу из ста�
 
 **Телепорт** существует только у разработчика: разработка идёт не в арене. Игровая логика
 на него не опирается — ни спавн, ни респавн, ни выбор команды. Отладочный перенос для
-сценариев яруса C — `PlayerController.ServerDevTeleport`.
+сценариев яруса C и режима отладки — `PlayerController.ServerDevTeleport`.
 
 Разбор реализации — [`session-architecture.md`](session-architecture.md#где-создаётся-аватар-находка-wpn-03).
 

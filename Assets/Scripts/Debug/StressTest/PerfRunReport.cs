@@ -28,6 +28,7 @@ namespace VrBattlegrounds.DevTools.StressTest
         public string display;        // FFR и OVRPlugin — только запись, см. OculusPerfStats
         public int    puppetCount;
         public int    clutterCount;
+        public string puppetSkins = "";   // префабы кукол за весь прогон, через запятую
         public bool   completed;
         public string endReason;
         public List<PerfPhaseReport> phases = new List<PerfPhaseReport>();
@@ -64,7 +65,32 @@ namespace VrBattlegrounds.DevTools.StressTest
                    FormattableString.Invariant($"Частота дисплея: {refreshRate:F0} Гц.") +
                    // Клиент заводит лог до первой фазы и числа нагрузки ещё не знает — они придут с фазами.
                    (puppetCount > 0 ? $" Кукол: {puppetCount}, предметов: {clutterCount}." : "") +
+                   (!string.IsNullOrEmpty(puppetSkins) ? $" Скины кукол: {puppetSkins}." : "") +
                    "\n" + display;
+        }
+
+        /// <summary>
+        /// Дописывает в <see cref="puppetSkins"/> имена из списка через запятую, без повторов:
+        /// в прогоне по скинам каждая фаза приносит свой.
+        /// </summary>
+        public void AddSkins(string skins)
+        {
+            if (string.IsNullOrEmpty(skins)) return;
+
+            var known = new List<string>();
+            if (!string.IsNullOrEmpty(puppetSkins))
+            {
+                foreach (string raw in puppetSkins.Split(',')) known.Add(raw.Trim());
+            }
+
+            foreach (string raw in skins.Split(','))
+            {
+                string name = raw.Trim();
+                if (name.Length == 0 || known.Contains(name)) continue;
+                known.Add(name);
+            }
+
+            puppetSkins = string.Join(", ", known);
         }
 
         /// <summary>Строки итога по измеряемым фазам — для лога, таблички и history.log.</summary>
@@ -92,6 +118,7 @@ namespace VrBattlegrounds.DevTools.StressTest
                 string history = Path.Combine(Application.persistentDataPath, "perf", "history.log");
                 File.AppendAllText(history,
                     $"{startedAt} · {role} · {scene} · кукол {puppetCount} · предметов {clutterCount}" +
+                    (!string.IsNullOrEmpty(puppetSkins) ? $" · скины {puppetSkins}" : "") +
                     $" · {(completed ? "полный" : "прерван: " + endReason)}\n{BuildResultText()}\n\n",
                     new UTF8Encoding(false));
             }

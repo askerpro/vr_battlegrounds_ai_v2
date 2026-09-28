@@ -768,6 +768,18 @@ namespace UltimateXR.Manipulation
         }
 
         /// <summary>
+        ///     VR Battlegrounds patch 16: подсветка «рядом можно взять» и подсказки якорей — визуальная
+        ///     обратная связь для руки игрока за этим шлемом. Руки remote-аватаров (<see cref="UxrAvatarMode.UpdateExternally" />)
+        ///     хватают только по сетевому событию, а поиск ближайшего предмета и перебор всех якорей
+        ///     для каждой их руки стоил ~4 мс на аватар на Quest 3 (9 аватаров — 72 → 18 FPS).
+        ///     См. Docs/UltimateXR/sdk-patches.md, патч 16.
+        /// </summary>
+        private static bool IsLocalAffordanceGrabber(UxrGrabber grabber)
+        {
+            return grabber.Avatar != null && grabber.Avatar.AvatarMode == UxrAvatarMode.Local;
+        }
+
+        /// <summary>
         ///     Updates visual feedback states (objects that can be grabbed, anchors where a grabbed object can be placed on,
         ///     etc.).
         /// </summary>
@@ -809,7 +821,7 @@ namespace UltimateXR.Manipulation
 
             foreach (UxrGrabber grabber in UxrGrabber.EnabledComponents)
             {
-                if (grabber.GrabbedObject == null)
+                if (grabber.GrabbedObject == null && IsLocalAffordanceGrabber(grabber))
                 {
                     if (GetClosestGrabbableObject(grabber, out UxrGrabbableObject grabbableCandidate, out int grabPointCandidate) && !IsBeingGrabbed(grabbableCandidate, grabPointCandidate))
                     {
@@ -906,7 +918,7 @@ namespace UltimateXR.Manipulation
             // Look for empty hand being able to grab something from an anchor to update anchor visual feedback objects later and also raise events. First pass: gather info.
             foreach (UxrGrabber grabber in UxrGrabber.EnabledComponents)
             {
-                if (grabber.GrabbedObject == null)
+                if (grabber.GrabbedObject == null && IsLocalAffordanceGrabber(grabber))
                 {
                     UxrGrabbableObjectAnchor anchorCandidate            = null;
                     int                      grabPointCandidate         = 0;

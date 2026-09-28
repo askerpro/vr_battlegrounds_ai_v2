@@ -787,3 +787,41 @@ API меняет поведение и требует проверки в шле
    `CanUse` при `IsUseBlocked`.
 
 ---
+
+## Патч 16: подсветка хвата не считается для рук remote-аватаров
+
+**Файл:** `Runtime/Scripts/Manipulation/UxrGrabManager.cs` — `UpdateAffordances`, новый
+`IsLocalAffordanceGrabber`. Метка в коде — `VR Battlegrounds patch 16`.
+**Дата:** 2026-09-28
+
+### Проблема
+
+`UpdateAffordances` каждый кадр для **каждой пустой руки из `UxrGrabber.EnabledComponents`**
+ищет ближайший предмет (`GetClosestGrabbableObject` — перебор всех grabbable, ~1 мс на руку в
+лобби со 126 предметами) и перебирает все якоря с положенными предметами (слоты арсенала, карманы
+каждого аватара). Руки remote-аватаров туда тоже входят, и цена растёт квадратично: больше
+аватаров — больше и рук, и карманов. Стресс-тест на Quest 3: 9 remote-аватаров — +34 мс в
+`LateUpdate`, 72 → 18 FPS (стадия `Manipulation` 36,5 мс, из них `UpdateAffordances` 35 мс).
+
+Результат этих двух проходов — только локальная обратная связь: `EnableOnHandNear` у точек
+хвата и `ActivateOnHandNearAndGrabbable` у якорей. Remote-аватар хватает по сетевому событию,
+близость его руки ни на что не влияет.
+
+### Применённое изменение
+
+В обоих проходах по рукам (ближайший предмет; предмет в якоре) пропускаются руки аватаров не
+в режиме `Local`. Проход по предметам в руках (подсказка «можно положить в якорь», события
+`AnchorRangeEntered/Left`, на которых стоит `PocketReadiness`) не тронут.
+
+Итог в редакторе с 9 куклами: `Manipulation` 36,5 → 4,1 мс, аллокации ~810 → ~260 КБ/кадр.
+На выделенном сервере локального аватара нет — подсветка не считается вовсе.
+
+### Как повторить при обновлении SDK
+
+1. В `UpdateAffordances` оба цикла `foreach (UxrGrabber grabber in UxrGrabber.EnabledComponents)`
+   — условие `grabber.GrabbedObject == null && IsLocalAffordanceGrabber(grabber)`.
+2. `IsLocalAffordanceGrabber`: `grabber.Avatar != null && grabber.Avatar.AvatarMode == UxrAvatarMode.Local`.
+3. Проверка — стресс-тест (`Docs/perf-stress-test.md`): стадия `Manipulation` с 9 куклами
+   не должна расти больше чем на ~1 мс против базы.
+
+---

@@ -670,3 +670,27 @@ Mirror.CommandMessage caused an Exception … NullReferenceException` со ст�
 
 **Решение.** `HandsPackWeapon.PartInBody` (`Assets/Editor/VR_Battlegrounds/Gameplay/`), сборщик —
 `HandsPackWeaponBuilder`, маршрут — скилл `/add-weapon`. Проверка — `HandsPackWeaponTests`.
+
+## Issue 20: каждый remote-аватар стоит ~4 мс на шлеме — подсветка хвата для чужих рук
+
+**Компоненты:** `UxrGrabManager.UpdateAffordances`, `UxrGrabber`
+**Статус:** ✅ Исправлено (патч 16)
+**Дата:** 2026-09-28
+
+### Симптом
+
+Стресс-тест на Quest 3: 9 remote-аватаров (куклы) — 72 → 18 FPS. Рендер и скиннинг почти не
+растут; всё время — в `LateUpdate`, то есть в `UxrManager.PostUpdate`. Тот же рост в редакторе.
+
+### Причина
+
+Разбивка по стадиям `UxrManager` (`StageUpdating/StageUpdated`) показала стадию `Manipulation`
+(36,5 мс), IK (`PostProcess`) — 2 мс. Внутри — `UxrGrabManager.UpdateAffordances`: локальная
+подсветка «рядом можно взять» считается для рук **всех** аватаров, по ~1 мс на руку поиск
+ближайшего предмета плюс перебор всех якорей. Касается не только кукол: каждый живой игрок в
+матче на шлеме стоил бы столько же.
+
+### Исправление
+
+Патч 16 (`sdk-patches.md`): руки не-локальных аватаров в эти проходы не входят.
+

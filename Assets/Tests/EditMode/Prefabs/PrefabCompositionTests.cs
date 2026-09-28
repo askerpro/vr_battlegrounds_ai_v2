@@ -6,6 +6,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UltimateXR.Avatar;
+using UltimateXR.Core;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
 
@@ -276,6 +277,71 @@ namespace VrBattlegrounds.Tests.Prefabs
 
             Assert.IsEmpty(problems,
                 "Смещение высоты не реплицируется:\n  " + string.Join("\n  ", problems));
+        }
+
+        /// <summary>
+        /// Remote-аватар строит руки из поз кистей, которые приходят <c>NetworkTransform</c>-ом:
+        /// у каждой кости кисти (<c>UxrAvatar.GetHandBone</c>) должен быть свой, чьим
+        /// <c>target</c> она служит, и в <b>мировых</b> координатах.
+        ///
+        /// <para>
+        /// <b>Почему не Local.</b> IK руки (<c>UxrArmIKSolver</c>, конец <c>SolveIKPass</c>)
+        /// ставит предплечье так, чтобы дотянуться до кисти, и возвращает кисти её мировую позу —
+        /// после IK локальная позиция кисти относительно предплечья всегда равна длине кости.
+        /// <c>Local</c> передаёт по сети эту константу; на принимающей стороне кисть встаёт туда,
+        /// где уже стоит предплечье, IK считает цель достигнутой — рука замирает, шевелятся только
+        /// пальцы и поворот запястья. Так было у всех аватаров в сетевой игре (на хосте незаметно:
+        /// сети нет). Нашёл стресс-тест. Сам UltimateXR (<c>UxrMirrorNetwork.SetupAvatar</c>)
+        /// вешает эти компоненты с <c>worldSpace = true</c>.
+        /// </para>
+        ///
+        /// <para>
+        /// У <c>Heavy_Soldier_Base_Avatar</c> компонентов на кистях не было вовсе.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void У_каждого_аватара_кисти_несут_NetworkTransform()
+        {
+            List<string> problems = new List<string>();
+
+            foreach (GameObject avatar in AvatarPrefabs())
+            {
+                UxrAvatar uxrAvatar = avatar.GetComponent<UxrAvatar>();
+                if (uxrAvatar == null) continue; // отдельная проверка выше
+
+                NetworkTransformBase[] transforms = avatar.GetComponentsInChildren<NetworkTransformBase>(true);
+
+                foreach (UxrHandSide side in new[] { UxrHandSide.Left, UxrHandSide.Right })
+                {
+                    Transform hand = uxrAvatar.GetHandBone(side);
+                    if (hand == null)
+                    {
+                        problems.Add($"{avatar.name}: в риге нет кости кисти ({side})");
+                        continue;
+                    }
+
+                    NetworkTransformBase synced = null;
+                    foreach (NetworkTransformBase nt in transforms)
+                    {
+                        Transform target = nt.target != null ? nt.target : nt.transform;
+                        if (target == hand) synced = nt;
+                    }
+
+                    if (synced == null)
+                    {
+                        problems.Add($"{avatar.name}: у кисти '{hand.name}' ({side}) нет NetworkTransform. " +
+                                     $"Всего NetworkTransform в префабе: {transforms.Length}");
+                    }
+                    else if (synced.coordinateSpace != CoordinateSpace.World)
+                    {
+                        problems.Add($"{avatar.name}: NetworkTransform кисти '{hand.name}' ({side}) в пространстве " +
+                                     $"{synced.coordinateSpace} — после IK локальная поза кисти постоянна, рука замрёт");
+                    }
+                }
+            }
+
+            Assert.IsEmpty(problems,
+                "Руки аватара не реплицируются — на чужих шлемах они стоят на месте:\n  " + string.Join("\n  ", problems));
         }
 
         /// <summary>

@@ -2840,6 +2840,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1072354485082919014, guid: 0849dce527793b843a199594717dae67, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6911619442396314308}
+    - targetCorrespondingSourceObject: {fileID: 3250067332650841911, guid: 0849dce527793b843a199594717dae67, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4218304112791825489}
+    - targetCorrespondingSourceObject: {fileID: 4473070455614076500, guid: 0849dce527793b843a199594717dae67, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2871170573655443306}
   m_SourcePrefab: {fileID: 100100000, guid: 0849dce527793b843a199594717dae67, type: 3}
 --- !u!137 &41365227177191896 stripped
 SkinnedMeshRenderer:
@@ -3782,6 +3788,45 @@ SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 3336298965467637619, guid: 0849dce527793b843a199594717dae67, type: 3}
   m_PrefabInstance: {fileID: 845922412913090717}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2785440047459522474 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3250067332650841911, guid: 0849dce527793b843a199594717dae67, type: 3}
+  m_PrefabInstance: {fileID: 845922412913090717}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4218304112791825489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2785440047459522474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 2561576368047980402}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 1
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!137 &2814779345854852958 stripped
 SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 3219311863144714179, guid: 0849dce527793b843a199594717dae67, type: 3}
@@ -3882,6 +3927,45 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4478729272368262530, guid: 0849dce527793b843a199594717dae67, type: 3}
   m_PrefabInstance: {fileID: 845922412913090717}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &3868266704648935113 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4473070455614076500, guid: 0849dce527793b843a199594717dae67, type: 3}
+  m_PrefabInstance: {fileID: 845922412913090717}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2871170573655443306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3868266704648935113}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 1153486386712318425}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 1
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!4 &3903585803325650016 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4436330856440812797, guid: 0849dce527793b843a199594717dae67, type: 3}

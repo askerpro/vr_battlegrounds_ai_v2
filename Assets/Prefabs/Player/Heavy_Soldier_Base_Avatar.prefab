@@ -3137,8 +3137,8 @@ MonoBehaviour:
     BoneFeet: {fileID: 0}
     FeetSensitivity: 0.5
     InverseHint: 0
-    AnkleToHeel: {x: 0, y: 0, z: 0}
-    AnkleToFeetEnd: {x: 0, y: 0, z: 0}
+    AnkleToHeel: {x: 0.111353375, y: -0.00135024148, z: 0.00171455857}
+    AnkleToFeetEnd: {x: 0.109677739, y: -0.131982967, z: 0.00766578969}
     AnkleRight: {x: 1, y: 0, z: 0}
     AnkleUp: {x: 0, y: 1, z: 0}
     AnkleForward: {x: 0, y: 0, z: 1}
@@ -3168,8 +3168,8 @@ MonoBehaviour:
     BoneFeet: {fileID: 0}
     FeetSensitivity: 0.5
     InverseHint: 0
-    AnkleToHeel: {x: 0, y: 0, z: 0}
-    AnkleToFeetEnd: {x: 0, y: 0, z: 0}
+    AnkleToHeel: {x: -0.111354388, y: 0.00135031762, z: -0.00171411061}
+    AnkleToFeetEnd: {x: -0.109678708, y: 0.131983012, z: -0.00766558573}
     AnkleRight: {x: 1, y: 0, z: 0}
     AnkleUp: {x: 0, y: 1, z: 0}
     AnkleForward: {x: 0, y: 0, z: 1}
@@ -3460,7 +3460,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VRBattlegrounds.Integration.LegsAnimatorUxrBridge
   useDynamicFloorOffset: 1
-  footHeightOffset: 0.15
+  footHeightOffset: 0
   movementThreshold: 0.025
   movementSmoothing: 1
 --- !u!137 &399149647547126127 stripped

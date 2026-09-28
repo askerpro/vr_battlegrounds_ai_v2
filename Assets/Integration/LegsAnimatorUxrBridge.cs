@@ -57,11 +57,15 @@ namespace VRBattlegrounds.Integration
         private const float RayStartHeight = 1f;
         private const float RayLength = 2f;
 
-        [Tooltip("Бросать луч под ногами самому и поднимать точку пола на толщину подошвы.")]
+        [Tooltip("Бросать луч под ногами самому (от пола аватара, а не от ступни, которая может быть под полом).")]
         public bool useDynamicFloorOffset = true;
 
-        [Tooltip("Толщина подошвы: от кости стопы (лодыжки) до низа ботинка, метры.")]
-        public float footHeightOffset = 0.15f;
+        // Высоту лодыжки над подошвой задаёт сам плагин — Legs[i].AnkleToHeel (кнопка обновления в
+        // инспекторе Legs Animator или Leg.RefreshLegAnkleToHeelAndFeet). Подъём пола здесь плагин
+        // принимает за возвышение и поднимает под него всё тело: так было при 0.15 и нулевом
+        // AnkleToHeel — таз +15 см, голова в плечах.
+        [Tooltip("Дополнительный подъём точки пола, метры. Обычно 0: высота лодыжки — AnkleToHeel у ног Legs Animator.")]
+        public float footHeightOffset;
 
         private LegsAnimator _legsAnimator;
         private UxrAvatar _avatar;
@@ -113,7 +117,8 @@ namespace VRBattlegrounds.Integration
         /// <summary>Возвращает таз в позу префаба. Нужен и при выключенном плагине.</summary>
         public void RestoreHipsPose()
         {
-            if (_hips != null) _hipsPose.ApplyTo(_hips);
+            // Незахваченная поза — нулевой таз и тело на метр выше: лучше не трогать кость.
+            if (_hips != null && _hipsPose.IsValid) _hipsPose.ApplyTo(_hips);
         }
 
         private void TryBindRootAnchor()

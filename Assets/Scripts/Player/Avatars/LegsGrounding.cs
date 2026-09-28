@@ -5,16 +5,29 @@ namespace VrBattlegrounds.Player.Avatars
     /// <summary>
     /// Локальная поза кости: захват и возврат. Нужна там, где кость должна каждый кадр
     /// начинать с одной и той же позы, а анимации, которая бы её выставляла, нет.
+    ///
+    /// <para>
+    /// Сериализуемая намеренно: при перекомпиляции в Play Mode Unity сохраняет приватные поля
+    /// компонента, только если их тип сериализуем. Несериализуемая поза обнулялась, ссылка на
+    /// кость выживала — и мост ставил таз в (0, 0, 0), тело подскакивало на метр.
+    /// </para>
     /// </summary>
-    public readonly struct BoneLocalPose
+    [System.Serializable]
+    public struct BoneLocalPose
     {
-        public readonly Vector3 Position;
-        public readonly Quaternion Rotation;
+        [SerializeField] private Vector3 _position;
+        [SerializeField] private Quaternion _rotation;
+
+        public Vector3 Position => _position;
+        public Quaternion Rotation => _rotation;
+
+        /// <summary>Поза захвачена (у значения по умолчанию поворот нулевой, не единичный).</summary>
+        public bool IsValid => _rotation.x != 0f || _rotation.y != 0f || _rotation.z != 0f || _rotation.w != 0f;
 
         public BoneLocalPose(Vector3 position, Quaternion rotation)
         {
-            Position = position;
-            Rotation = rotation;
+            _position = position;
+            _rotation = rotation;
         }
 
         public static BoneLocalPose Capture(Transform bone)
@@ -24,7 +37,7 @@ namespace VrBattlegrounds.Player.Avatars
 
         public void ApplyTo(Transform bone)
         {
-            bone.SetLocalPositionAndRotation(Position, Rotation);
+            bone.SetLocalPositionAndRotation(_position, _rotation);
         }
     }
 
@@ -58,8 +71,9 @@ namespace VrBattlegrounds.Player.Avatars
         }
 
         /// <summary>
-        /// Точка опоры ступни: пол под ногой, поднятый на толщину подошвы. Кость стопы — это
-        /// лодыжка, а не подошва; без подъёма ботинок уходит в пол.
+        /// Точка опоры: пол под ногой, поднятый на <paramref name="soleThickness"/>. Обычно 0 —
+        /// высоту лодыжки над подошвой Legs Animator учитывает сам (<c>AnkleToHeel</c>), а поднятый
+        /// пол он принимает за возвышение и поднимает под него всё тело.
         /// </summary>
         public static Vector3 SoleContactPoint(Vector3 floorHit, Vector3 up, float soleThickness)
         {

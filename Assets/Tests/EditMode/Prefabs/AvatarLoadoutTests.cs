@@ -849,6 +849,20 @@ namespace VrBattlegrounds.Tests.Prefabs
                 }
             }
 
+            // Высота лодыжки над подошвой — AnkleToHeel у каждой ноги (плагин ставит на пол пятку,
+            // а не лодыжку). Нулевой — ботинки в полу, и прежде это лечили подъёмом пола в мосте,
+            // а плагин поднимал под «пол» всё тело: таз +15 см, голова в плечах.
+            for (int i = 0; i < legList.arraySize; i++)
+            {
+                Vector3 heel = legList.GetArrayElementAtIndex(i).FindPropertyRelative("AnkleToHeel").vector3Value;
+                if (heel.magnitude < 0.03f)
+                    problems.Add($"Legs[{i}].AnkleToHeel = {heel} — не вычислен (Leg.RefreshLegAnkleToHeelAndFeet в позе префаба)");
+            }
+
+            float floorLift = new SerializedObject(bridge).FindProperty("footHeightOffset").floatValue;
+            if (Mathf.Abs(floorLift) > 0.02f)
+                problems.Add($"LegsAnimatorUxrBridge.footHeightOffset = {floorLift} — плагин поднимет под «пол» всё тело; высоту лодыжки задаёт AnkleToHeel");
+
             SerializedProperty modules = so.FindProperty("CustomModules");
             for (int i = 0; i < modules.arraySize; i++)
             {

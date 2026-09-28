@@ -45,6 +45,34 @@ namespace VrBattlegrounds.Tests.Player
             }
         }
 
+        [Test]
+        public void Незахваченная_поза_помечена_невалидной()
+        {
+            Assert.IsFalse(default(BoneLocalPose).IsValid, "поза по умолчанию обнулила бы таз");
+            Assert.IsTrue(new BoneLocalPose(Vector3.zero, Quaternion.identity).IsValid);
+        }
+
+        /// <summary>
+        /// Регрессия: после перекомпиляции в Play Mode несериализуемая поза обнулялась, а ссылка
+        /// на кость выживала — мост ставил таз в (0, 0, 0). Unity сохраняет приватное поле при
+        /// перезагрузке домена, только если тип сериализуем; проверяем тем же сериализатором.
+        /// </summary>
+        [Test]
+        public void Поза_кости_переживает_сериализацию()
+        {
+            var pose = new BoneLocalPose(new Vector3(0f, 0.019f, 1.053f), Quaternion.Euler(75.7f, 180f, 180f));
+            var copy = JsonUtility.FromJson<PoseHolder>(JsonUtility.ToJson(new PoseHolder { pose = pose })).pose;
+
+            Assert.That(Vector3.Distance(copy.Position, pose.Position), Is.LessThan(1e-6f));
+            Assert.That(Quaternion.Angle(copy.Rotation, pose.Rotation), Is.LessThan(1e-3f));
+        }
+
+        [System.Serializable]
+        private class PoseHolder
+        {
+            public BoneLocalPose pose;
+        }
+
         // ── Корень ног ──────────────────────────────────────────────────────
 
         [Test]

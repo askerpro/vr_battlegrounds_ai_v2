@@ -15,6 +15,7 @@
 | `audit/` | Аудит 2026-08 (справочники, не меняются): [находки](audit/network-audit-2026-08.md), [оценка архитектуры](audit/architecture-review-2026-08.md) |
 | `troubleshooting.md` | **Симптом → причина.** Индекс багов по внешнему проявлению, читать первым при расследовании |
 | `testing.md` | Тестирование: шесть уровней от юнит-тестов до чек-листа в шлеме |
+| `perf-stress-test.md` | Стресс-тест производительности на шлеме: 9 кукол-аватаров, лог по изменениям, всплески |
 | `gameplay.md` | Геймдизайн: что делает игрок, правила, режимы, структура матча |
 | `combat-networking.md` | Бой по сети: решения T-23 (компенсация задержки) и T-24 (где симулировать пули), замеры и методики |
 | `session-architecture.md` | Сессия, роли устройств (VR/PC/Server), Host/Client |
@@ -307,6 +308,7 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | `LogLevelUI` | Интерфейс | `MenuController`, `LocalMenuManager`, Кнопки, HUD |
 | `LogLevelWeaponSystem` | Weapon System | Механики оружия (`UxrFirearmWeapon`, `AutomaticWeaponSlideFeedback`) |
 | `LogLevelDebug` | Отладка | `DebugOrchestrator` (по умолчанию `Verbose`) |
+| `LogLevelPerf` | Производительность | `PerfFrameRecorder`, `StressTestServer`, `StressTestClientSession` |
 
 ---
 
@@ -340,6 +342,7 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 |---|---|---|
 | `DebugOrchestrator` | `Debug/DebugOrchestrator.cs` | Автостарт при Play: грузит карту, стартует матч (сцену с режимом сцены — лобби — не трогает, она стартует сама). Команды не назначает — их раздаёт режим. Только вызовы публичных API. |
 | `DebugBootstrapConfig` | `Debug/DebugBootstrapConfig.cs` | ScriptableObject с параметрами `DebugOrchestrator`. |
+| `StressTestServer`, `StressTestClientSession` и др. | `Debug/StressTest/` | Стресс-тест производительности: сервер спавнит 9 кукол-аватаров, повторяющих за игроком, шлем принимает их по сети и пишет лог метрик по изменениям. Запуск — оба стика 2 с; из ожидания сервера шлем сам становится хостом. Подробно — [`perf-stress-test.md`](perf-stress-test.md). |
 | `PlayModeStartFromOffline` | `Editor/PlayModeStartFromOffline.cs` | Скрипт редактора. Автоматически перехватывает Play Mode, заставляя Unity стартовать с Offline-сцены и прокидывая текущую сцену в конфиг. |
 
 **Харнесс e2e на двух процессах (ярус C) — `Assets/Scripts/Debug/E2E/`**

@@ -24,7 +24,7 @@ VR-шутер для Oculus Quest 2/3. Unity **6000.4.1f1**, URP. Над про�
 
 - **Логи** — только через канал категории: `GameLog.Match.Info("...")`, `GameLog.Player.Verbose("...", this)`.
   Категорию знает сам логгер, `GameSettings` в вызове не упоминается. Каналы: `Network`,
-  `Player`, `Match`, `Debug`, `WeaponSystem`, `UI`, `PhysicalSpace`, `Arsenal`.
+  `Player`, `Match`, `Debug`, `WeaponSystem`, `UI`, `PhysicalSpace`, `Arsenal`, `Perf`.
   `Debug.Log` в игровых скриптах запрещён — единственное исключение сам `GameLog.cs`.
   Уровни: `Verbose` поток, `Info` события, `Warning` проблемы, `Error` сбои.
   Ошибка вне категории — `GameLog.Error("...")`, пишется всегда.
@@ -106,6 +106,7 @@ Grep  pattern="ClassName"  path="Assets/Editor"     # редакторные у�
 | Стена арсенала | `Docs/Arsenal/Arsenal_Code_Architecture_RU.md` |
 | Git / Plastic | `Docs/version-control.md` |
 | Сборка сервера, Quest, планшета | `Docs/release.md` |
+| Производительность, стресс-тест на шлеме | `Docs/perf-stress-test.md` |
 | Unity MCP сломан | `Docs/unity-mcp.md`, `.agents/rules/unity_mcp.md` |
 
 Полный индекс документации — `Docs/README.md`.

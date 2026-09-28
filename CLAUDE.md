@@ -37,7 +37,7 @@ VR-шутер для Oculus Quest 2/3. Unity **6000.4.1f1**, URP. Над про�
   на живом сервере, а не про то, как клиент попадает в меню после разрыва.
 - **Editor-скрипты** — только в `Assets/Editor/VR_Battlegrounds/<категория>/`. Папка `Editor`
   внутри `Assets/Scripts/` затянет `UnityEditor` в Android-билд Quest → фатальная ошибка
-  компиляции. Категории: `Avatars/`, `UI/`, `Gameplay/`, `Debug/`, `VersionControl/`.
+  компиляции. Категории: `Avatars/`, `UI/`, `Gameplay/`, `Debug/`, `VersionControl/`, `Release/`.
 - **Имя в меню** — `VR Battlegrounds` с пробелом: `[MenuItem("Tools/VR Battlegrounds/...")]`,
   `[MenuItem("GameObject/VR Battlegrounds/...")]`, `[CreateAssetMenu(menuName = "VR Battlegrounds/...")]`.
   Слитное `VrBattlegrounds` плодит дубли корневых пунктов.
@@ -105,6 +105,7 @@ Grep  pattern="ClassName"  path="Assets/Editor"     # редакторные у�
 | Шрифты, текст UI, кириллица | `Docs/ui-fonts.md` |
 | Стена арсенала | `Docs/Arsenal/Arsenal_Code_Architecture_RU.md` |
 | Git / Plastic | `Docs/version-control.md` |
+| Сборка сервера, Quest, планшета | `Docs/release.md` |
 | Unity MCP сломан | `Docs/unity-mcp.md`, `.agents/rules/unity_mcp.md` |
 
 Полный индекс документации — `Docs/README.md`.

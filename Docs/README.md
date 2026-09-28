@@ -29,6 +29,7 @@
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
 | `version-control.md` | Git/Plastic workflow: автодублирование коммитов, хук, диагностика |
 | `unity-mcp.md` | Локальный фикс Unity MCP `execute_code` на Windows (MAX_PATH) |
+| `release.md` | Сборка сервера, Quest и планшета; почему у них одинаковые UXR id |
 | `Mirror/mirror-patches.md` | Правки вендорного Mirror: что, зачем, как перенести при обновлении |
 
 ---
@@ -54,6 +55,7 @@
 - **История изменений (Changelog)** → [`CHANGELOG.md`](CHANGELOG.md)
 - **Git/Plastic workflow и post-commit hook** → [`version-control.md`](version-control.md)
 - **Unity MCP: фикс execute_code (Windows)** → [`unity-mcp.md`](unity-mcp.md)
+- **Собрать сервер, Quest, планшет** → [`release.md`](release.md)
 - **UltimateXR SDK** → [`UltimateXR/README.md`](UltimateXR/README.md)
 - **Архитектура UltimateXR** → [`UltimateXR/architecture.md`](UltimateXR/architecture.md)
 - **Известные проблемы SDK** → [`UltimateXR/known-issues.md`](UltimateXR/known-issues.md)
@@ -285,6 +287,7 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | `LogLevel` | `Core/LogLevel.cs` | Enum: `None / Errors / Warnings / Info / Verbose`. |
 | `TeamData` | `Core/TeamData.cs` | ScriptableObject с данными команды. По сети синхронизируется только `int teamIndex`. |
 | `TeamRegistry` | `Core/TeamRegistry.cs` | Реестр команд. |
+| `ServerConsoleEncoding` | `Core/ServerConsoleEncoding.cs` | Только Windows Dedicated Server: при старте переключает консоль на UTF-8 (`SetConsoleOutputCP(65001)`), иначе кириллица лога выводится кракозябрами. |
 | `AppRoleManager` | `Core/AppRoleManager.cs` | Хранит текущую `DeviceRole` (VR/PC/Server) и `NetworkRole` (Host/Client), используется для сборки UI и логики. |
 | `PersistentRoot` | `Managers/PersistentRoot.cs` | Глобальный DontDestroyOnLoad узел и точка входа инициализации: `Awake` объявляет состав менеджеров, `Start` его проверяет. Сам состав — в `ManagerBootstrap`. Он же отсеивает дубликат ветки, когда сцена `Offline` загружается второй раз, — и делает это **в `Start`**, чтобы компонент, уходящий из ветки своим ходом (`Mirror.NetworkManager`), успел уйти живым, а не выключенным (NET-20). |
 | `ManagerOrder` | `Managers/ManagerOrder.cs` | **Единственное место, где записан порядок инициализации менеджеров** (T-17). Константы отсюда подставляются в `[DefaultExecutionOrder]` на самих менеджерах. Добавляешь менеджер — сначала строка здесь, потом атрибут на классе. |
@@ -412,6 +415,18 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | Класс | Назначение |
 |---|---|
 | `ProjectFontTool` | Шрифт проекта (Roboto Condensed). `Tools/VR Battlegrounds/UI/Шрифт — пересобрать атласы`: статические SDF-ассеты из `.ttf` с набором `CharacterSet`, Bold в таблице начертаний, шрифт TMP по умолчанию и глобальный fallback. `…/Шрифт — применить к UI-префабам`: переназначает шрифт всем TMP-текстам в `Assets/Prefabs/UI`. Подробно — [`ui-fonts.md`](ui-fonts.md). |
+
+---
+
+### Сборка — `Assets/Editor/VR_Battlegrounds/Release/`
+
+| Класс | Назначение |
+|---|---|
+| `GameBuilder` | Сборка профилей `Server` / `Quest` / `Tablet` в `Build/<профиль>/`. Меню `Tools/VR Battlegrounds/Release/…`, CLI — `Tools/release/Build-Game.ps1` (`RunBatch`). Предполётная проверка UXR id, сверка отпечатка до и после каждой сборки. Подробно — [`release.md`](release.md). |
+| `UxrIdFingerprint` | Хэш `_uxrUniqueId` сцен сборки, их зависимостей и `Resources` с диска; `FindMemoryMismatches` — id префабов в памяти, которых нет на диске. Пишется рядом со сборкой в `uxr-ids.txt`. |
+| `BuildConfigScope` | Конфигурация `Test`/`Prod`: IL2CPP-настройки и флаг Development на время одной сборки, затем возврат. Таблица — [`release.md`](release.md). |
+| `XrBuildSettingsScope` | Лоадеры XR Management под профиль на время сборки (Quest — Oculus, планшет и сервер — без XR), только в памяти, без `SaveAssets`. |
+| `Build-Game.ps1` | `Tools/release/` — сборка в batch-режиме при закрытом редакторе, `-Targets all\|server,quest,tablet`, `-Config Test\|Prod`. |
 
 ---
 

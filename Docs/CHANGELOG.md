@@ -2,6 +2,36 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-27] - Сборка сервера, Quest и планшета
+
+### Добавлено
+
+- `GameBuilder` (`Assets/Editor/VR_Battlegrounds/Release/`): профили `Server` (Windows Dedicated
+  Server), `Quest`, `Tablet`. Меню `Tools/VR Battlegrounds/Release/…`, CLI `Tools/release/Build-Game.ps1`.
+  Разбор — [`release.md`](release.md).
+- Сверка UXR id между сборками: `UxrIdFingerprint` снимает хэш `_uxrUniqueId` сцен сборки и их
+  зависимостей до сборок и сверяет его после каждого переключения платформы и каждой сборки; id
+  префабов в памяти должны совпадать с диском. Отпечаток — `uxr-ids.txt` рядом со сборкой.
+
+### Найдено
+
+- У Dedicated Server свой набор define-символов, и в проекте он пуст: сервер собирался бы без
+  `MIRROR` / `ULTIMATEXR_USE_MIRROR_SDK`, то есть без выравнивания id аватаров по netId. Сборщик
+  добавляет символы Standalone и отказывает, если обязательных нет.
+- XR для Android не был настроен вовсе — Quest стартовал бы плоским окном. Лоадер Oculus ставится
+  на время сборки Quest, планшет собирается без XR.
+- Часть id в ассетах SDK записана 32 hex без дефисов (`UxrCompass`) — отпечаток учитывает оба формата.
+- Первые сборки Quest падали в Gradle: `Archive's size exceeds the limit of 4GByte`. Причина — в самом
+  сборщике: Android получал `subtarget = StandaloneBuildSubtarget.Player` (2), а для Android `subtarget`
+  — формат сжатия текстур, и 2 там значит PVRTC. Unity 6 PVRTC не поддерживает, текстуры уходили RGBA32
+  (5,5 ГБ). Теперь `MobileTextureSubtarget.ASTC`; итог сборки печатает самые тяжёлые ассеты (`release.md`).
+
+### Проверка
+
+- Подмена id в памяти у `UxrCompass.prefab` — проверка FAIL с именем компонента; после возврата PASS,
+  отпечаток тот же (15 158 id, 171 файл).
+- `Server` собран из редактора: PASS, 94 с, отпечаток до и после совпал, редактор вернулся на Standalone Player.
+
 ## [2026-09-27] - Помповый дробовик из пака Hands, сборщик оружия, M16 на стене
 
 ### Добавлено

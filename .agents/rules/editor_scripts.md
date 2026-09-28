@@ -12,6 +12,7 @@
 - `Assets/Editor/VR_Battlegrounds/Gameplay/` — настройка спавнов, контроллеров игрока, сцен.
 - `Assets/Editor/VR_Battlegrounds/Debug/` — отладочные утилиты (старт с оффлайн сцены, меню оркестрации и др.).
 - `Assets/Editor/VR_Battlegrounds/VersionControl/` — хуки и парсеры (например, GitHooksInitializer).
+- `Assets/Editor/VR_Battlegrounds/Release/` — сборка плееров (GameBuilder). Не `Build/`: такая папка закрыта для чтения агенту правилом `Read(./Build/**)`.
 
 ## 2. Организация меню (MenuItem)
 Главная цель: избежать беспорядка в верхнем меню Unity и собирать все наши утилиты в один аккуратный список.

@@ -148,6 +148,10 @@ namespace VrBattlegrounds.Core
         public static readonly GameLogChannel Arsenal =
             new GameLogChannel(() => GameSettings.Instance.LogLevelArsenal);
 
+        /// <summary>Производительность: стресс-тест, рекордер кадров.</summary>
+        public static readonly GameLogChannel Perf =
+            new GameLogChannel(() => GameSettings.Instance.LogLevelPerf);
+
         /// <summary>
         /// Сбой вне какой-либо категории. Пишется всегда — независимо от настроек.
         /// Если категория известна, лучше <c>GameLog.Match.Error(...)</c>: тот же

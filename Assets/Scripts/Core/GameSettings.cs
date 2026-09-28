@@ -76,6 +76,10 @@ namespace VrBattlegrounds.Core
         [Tooltip("ArsenalWallController, WeaponSlotController, DogTagController")]
         [SerializeField] private LogLevel _logLevelArsenal = LogLevel.Info;
 
+        [Header("Логи — Производительность")]
+        [Tooltip("Стресс-тест: изменения метрик, всплески кадров, итоги фаз")]
+        [SerializeField] private LogLevel _logLevelPerf = LogLevel.Info;
+
         #endregion
 
         #region Properties
@@ -103,6 +107,9 @@ namespace VrBattlegrounds.Core
 
         /// <summary>Уровень логов арсенала (ArsenalWallController, WeaponSlotController, DogTagController).</summary>
         public LogLevel LogLevelArsenal => _logLevelArsenal;
+
+        /// <summary>Уровень логов производительности (стресс-тест).</summary>
+        public LogLevel LogLevelPerf => _logLevelPerf;
 
         #endregion
     }

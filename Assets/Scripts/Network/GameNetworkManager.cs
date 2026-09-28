@@ -50,6 +50,7 @@ namespace VrBattlegrounds.Network
 
             NetworkServer.RegisterHandler<GamePlayerConnectMessage>(OnGamePlayerConnect);
             NetworkServer.RegisterHandler<SpectatorConnectMessage>(OnSpectatorConnect);
+            VrBattlegrounds.DevTools.StressTest.StressTestNetwork.RegisterServerHandlers();
         }
 
         public override void OnServerSceneChanged(string sceneName)
@@ -72,6 +73,7 @@ namespace VrBattlegrounds.Network
         {
             base.OnStartClient();
             NetworkUxrIdentity.InstallClientSpawnHandlers();
+            VrBattlegrounds.DevTools.StressTest.StressTestNetwork.RegisterClientHandlers();
         }
 
         public override void OnStopClient()

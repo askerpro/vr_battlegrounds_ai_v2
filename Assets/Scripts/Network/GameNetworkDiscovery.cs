@@ -113,6 +113,21 @@ namespace VrBattlegrounds.Network
 
         #endregion
 
+        #region Public Methods
+
+        /// <summary>
+        /// Бросает текущую роль и поднимает хост. Нужен шлему без ПК: в билде он всегда
+        /// стартует клиентом и ждёт сервер — стресс-тест (<c>StressTestLauncher</c>) делает
+        /// из него хост по жесту игрока.
+        /// </summary>
+        public void RestartAsHost()
+        {
+            StopCurrent();
+            ApplyRole(AppRole.Host);
+        }
+
+        #endregion
+
         #region Private Methods
 
         /// <summary>

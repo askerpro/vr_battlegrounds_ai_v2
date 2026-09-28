@@ -74,6 +74,9 @@ VR-шутер для Oculus Quest 2/3. Unity **6000.4.1f1**, URP. Над про�
   или хука, который зовёт синхронизируемый метод, обязан проверить автора. Иначе — вторая пуля и
   двойной урон (known-issues, Issue 23). Канал (`NetworkStateRelay`) отсекает и считает нарушителей —
   страховка, а не решение.
+- **Геометрия карты** — после любой правки перезапечь occlusion: `Tools/VR Battlegrounds/Gameplay/Bake Occlusion (all maps)`.
+  Подвижное на карте (двери, панели) — только с `Animator`/`Rigidbody`/`NetworkIdentity`, иначе оно станет
+  окклюдером и игроки за ним будут пропадать. Проверка — `OcclusionCullingBakedTests` (ловит отсутствие данных, не устаревшие).
 - **Правки UltimateXR SDK** — любое изменение в `Assets/ThirdParty/UltimateXR/` обязано попасть
   в `Docs/UltimateXR/sdk-patches.md`, иначе потеряется при обновлении SDK.
 - **Правки Mirror** — любое изменение в `Assets/ThirdParty/Mirror/` помечается в коде

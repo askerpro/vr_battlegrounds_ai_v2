@@ -859,12 +859,16 @@ PlayerSettings:
     Android: 1
   il2cppCompilerConfiguration:
     Android: 1
+    Server: 1
   il2cppCodeGeneration:
     Android: 0
+    Server: 0
   il2cppStacktraceInformation:
     Android: 0
+    Server: 0
   managedStrippingLevel:
     Android: 4
+    Server: 0
   incrementalIl2cppBuild: {}
   suppressCommonWarnings: 1
   allowUnsafeCode: 0

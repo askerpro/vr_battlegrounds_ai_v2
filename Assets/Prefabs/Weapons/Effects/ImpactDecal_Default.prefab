@@ -46,8 +46,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 30d936d8-f72e-4cd4-b2ba-ff51f05fc3d1
-  __prefabGuid: d783c455f7508644986f5c1e9c32614e
-  __isInPrefab: 0
+  __prefabGuid: 71f7ec97e35c6eb409d1ba0560dd803b
+  __isInPrefab: 1
   _ignoreDynamicObjects: 1
   _decalOffset: 0.005
   _decalRenderers:

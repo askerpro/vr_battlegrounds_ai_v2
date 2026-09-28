@@ -87,6 +87,17 @@ namespace VrBattlegrounds.Core
         [Range(0f, 1f)]
         [SerializeField] private float _foveatedRenderingLevel = 0.75f;
 
+        [Tooltip("Уровень производительности CPU шлема (подсказка Oculus, 0..4): выше — частота " +
+                 "процессора выше, батарея и нагрев сильнее. По умолчанию Quest держит 2. Мы упираемся " +
+                 "в главный поток, поэтому 4. Применяет PerformanceLevelInstaller.")]
+        [Range(0, 4)]
+        [SerializeField] private int _cpuPerformanceLevel = 4;
+
+        [Tooltip("Уровень производительности GPU шлема (0..4). По замерам GPU загружен на 50–75%, " +
+                 "поэтому оставлен системный 2 — лишний нагрев не нужен.")]
+        [Range(0, 4)]
+        [SerializeField] private int _gpuPerformanceLevel = 2;
+
         #endregion
 
         #region Properties
@@ -123,6 +134,12 @@ namespace VrBattlegrounds.Core
         /// Применяет <see cref="FoveatedRenderingInstaller"/>.
         /// </summary>
         public float FoveatedRenderingLevel => Mathf.Clamp01(_foveatedRenderingLevel);
+
+        /// <summary>Уровень CPU шлема (0..4). Применяет <see cref="PerformanceLevelInstaller"/>.</summary>
+        public int CpuPerformanceLevel => PerformanceLevelPolicy.Clamp(_cpuPerformanceLevel);
+
+        /// <summary>Уровень GPU шлема (0..4). Применяет <see cref="PerformanceLevelInstaller"/>.</summary>
+        public int GpuPerformanceLevel => PerformanceLevelPolicy.Clamp(_gpuPerformanceLevel);
 
         #endregion
     }

@@ -2,6 +2,15 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-29] - Уровень CPU шлема
+
+### Изменено
+
+- **Quest держал CPU на уровне 2** (`ovr_cpu_lvl = 2` во всех прогонах), а игра упирается в главный
+  поток: пустое лобби ≈13,8 мс при бюджете 13,9. `PerformanceLevelInstaller` при запуске XR-дисплея
+  просит CPU 4 / GPU 2 (`GameSettings.CpuPerformanceLevel/GpuPerformanceLevel`) и повторяет просьбу,
+  если система сбросила уровень. Логика — `PerformanceLevelPolicy`, тесты — `PerformanceLevelPolicyTests`.
+
 ## [2026-09-28] - Occlusion culling, экономия IK невидимых, стресс-тест по скинам
 
 ### Изменено

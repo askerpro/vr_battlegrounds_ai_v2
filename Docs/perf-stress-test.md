@@ -267,6 +267,21 @@ Lobby, RTX 3060 Ti, Development. Цифры редактора — не шлем
 На Quest 3 `FrameTimingManager` отдаёт `gpu` и `cpu_render` нулями — поэтому добавлены
 `ovr_*` из `Unity.XR.Oculus.Stats` (прогон с ними на шлеме ещё не делался).
 
+### 2026-09-29: упор сместился в CPU, уровень процессора поднят
+
+После occlusion culling, экономии IK и `Optimized_MEF_Player` GPU загружен на 50–75 % (`ovr_gpu`
+6–12 мс), а главный поток — у бюджета уже в пустом лобби (`cpu_main` ≈13,8 мс: UltimateXR ~3,5,
+`scripts` 2,2, `scripts_late` 2,2, рендер на CPU ~3,6). Хост, 4 куклы — p50 13,9 (72 Гц), p95 17,7;
+9 кукол — p50 15,5. Цена чужого аватара на CPU: `scripts_late` ≈0,25 мс, IK ≈0,17 мс (на хосте
+экономия IK выключена). 40 брошенных предметов — ≈1,2 мс в `uxr_update`/`uxr_manip`.
+
+Во всех прогонах `ovr_cpu_lvl = 2`: без подсказки Quest держит средние частоты.
+`PerformanceLevelInstaller` (`Core/`) при запуске XR-дисплея просит CPU 4 / GPU 2
+(`GameSettings.CpuPerformanceLevel/GpuPerformanceLevel`) и повторяет просьбу, если система
+сбросила уровень (не чаще раза в 10 с). Проверка на шлеме: в `Player.log`/logcat строка
+`[PerformanceLevelInstaller] Уровни шлема: CPU 4 (принят)…`, в стресс-тесте `ovr_cpu_lvl` = 4.
+Логика — `PerformanceLevelPolicyTests`.
+
 ## Дальше
 
 - Куклы повторяют оружие: берут копию того же предмета, стреляют по выстрелу игрока, бросают

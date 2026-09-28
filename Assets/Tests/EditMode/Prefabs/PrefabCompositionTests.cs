@@ -87,6 +87,36 @@ namespace VrBattlegrounds.Tests.Prefabs
                 "и покрываться юнит-тестами, которые создают его сами (ARCH-01).");
         }
 
+        /// <summary>
+        /// Менеджер, лежащий на префабе, объявлен в <c>ManagerBootstrap.PersistentRoster</c>
+        /// обязательным. Иначе объявление врёт: после ARCH-01 менеджер восстановления был размещён,
+        /// а слот остался «необязательный, нигде не размещён», и лог каждого запуска это повторял.
+        /// Состав приватный — читается рефлексией.
+        /// </summary>
+        [Test]
+        public void Менеджер_на_префабе_объявлен_обязательным()
+        {
+            GameObject prefab = LoadPrefab(ManagersPrefabPath);
+            var roster = (Array)typeof(ManagerBootstrap)
+                .GetField("PersistentRoster", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                .GetValue(null);
+            var wrong = new List<string>();
+
+            foreach (object slot in roster)
+            {
+                Type slotType = slot.GetType();
+                var type = (Type)slotType.GetField("Type").GetValue(slot);
+                var required = (bool)slotType.GetField("Required").GetValue(slot);
+
+                if (prefab.GetComponentInChildren(type, true) != null && !required)
+                    wrong.Add(type.Name);
+            }
+
+            Assert.IsEmpty(wrong,
+                $"Лежат на '{ManagersPrefabPath}', но объявлены необязательными: {string.Join(", ", wrong)}. " +
+                "Поправь слот в ManagerBootstrap.PersistentRoster: Required = true и место жизни.");
+        }
+
         // ══════════════════════════════════════════════════════════════════
         //  Аватарные префабы (VR-07)
         // ══════════════════════════════════════════════════════════════════

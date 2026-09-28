@@ -2,6 +2,39 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-28] - Первый запуск сборок на шлеме: исправления
+
+### Исправлено
+
+- **Quest запускался плоским окном (чёрный экран).** Лоадер Oculus ставился до переключения платформы,
+  а переключение реимпортирует `XRGeneralSettingsPerBuildTarget.asset` — настройка терялась, в манифесте
+  не было `com.oculus.intent.category.VR`. Теперь XR ставится прямо перед `BuildPlayer`, наличие лоадера
+  проверяется. Проверено на Quest 3: категория VR в манифесте, OpenXR-сессия, 90 Гц.
+- **`InvalidCastException` каждый кадр на Quest** в `ObjectExt.DeepCopy` (IL2CPP) — патч SDK 14.
+- **Define-символы Dedicated Server** записаны в Player Settings (копия Standalone). Раньше их не было,
+  и редактор, оставленный batch-сборкой на Dedicated Server, не компилировал код игры. Сборщик в
+  batch-режиме теперь возвращает подцель Standalone.
+- **`DebugOrchestrator` работает только в редакторе и development-сборках.** В release он сам переводил
+  сервер в матч и стартовал его, а на клиенте писал предупреждение `LocalClientProfile`.
+- **Объявление `SessionRecoveryManager` в `ManagerBootstrap`.** Менеджер размещён с `568815f`, но слот
+  оставался «необязательный, нигде не размещён», и лог каждого запуска это повторял. Сторож —
+  `PrefabCompositionTests.Менеджер_на_префабе_объявлен_обязательным` (красный до правки).
+- Имя приложения — **VR Battlegrounds** (`productName`).
+
+- **Графика на Quest хуже, чем в редакторе.** Единственный уровень качества `PC` исключён для Android, и
+  Android брал пайплайн по умолчанию — сэмпловый `URP-Balanced` (Render Scale 0.75, без теней). Добавлен
+  уровень `Quest` (по умолчанию для Android) с `Assets/URPDefaultResources/Quest.asset`: Render Scale 1.0,
+  MSAA 4×, тени от основного света 1024 / один каскад / 20 м, без HDR. На Quest 3 — стабильно 72/72 FPS.
+- `VRScreenshotCapture` работает только в редакторе: в сборке падал при старте (папка установки на
+  Android только для чтения) и занимал кнопку B.
+
+### Добавлено
+
+- Конфигурации сборки **тест** и **прод** (`BuildConfigScope`, меню `Release/Конфигурация: …`,
+  `-Config Test|Prod`) — таблица в `release.md`. Вместо галочки Development.
+- Консоль Dedicated Server в UTF-8 (`ServerConsoleEncoding`), лаунчер `Start-Server.cmd/.ps1` с логом в
+  `Logs\server-*.log` — кладётся рядом с сервером сборщиком.
+
 ## [2026-09-27] - Сборка сервера, Quest и планшета
 
 ### Добавлено

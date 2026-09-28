@@ -40,12 +40,24 @@ namespace VrBattlegrounds.DevTools
 
         private void Awake()
         {
+            // Только редактор и development-сборка (e2e-плеер собирается development). В release
+            // оркестратор сам переводил сервер в матч elimination и стартовал его по подключению
+            // игрока — отладочный сценарий в боевой сборке. Сервер и без него попадает в Lobby:
+            // это onlineScene у GameNetworkManager.
+            if (!Application.isEditor && !UnityEngine.Debug.isDebugBuild)
+            {
+                enabled = false;
+                return;
+            }
+
             if (_config == null || !_config.enabled)
             {
                 return;
             }
 
-            if (_config.hostIsAdmin)
+            // Переопределение профиля разрешено только в редакторе — вне его LocalClientProfile
+            // отказывает и пишет предупреждение на каждом запуске.
+            if (_config.hostIsAdmin && Application.isEditor)
             {
                 // Запуск в качестве хоста
                 LocalClientProfile.SetDebugOverride(ClientDeviceType.VR, true, GameRole.Player);

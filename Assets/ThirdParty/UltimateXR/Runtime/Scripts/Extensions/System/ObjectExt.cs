@@ -117,9 +117,18 @@ namespace UltimateXR.Extensions.System
         /// </remarks>
         public static T DeepCopy<T>(this T obj)
         {
+            // VR Battlegrounds patch 14: рекурсия вынесена в необобщённый DeepCopyObject. В сборке IL2CPP
+            // рекурсивный вызов DeepCopy<object> из DeepCopy<Dictionary<,>> разделял с ним обобщённый
+            // контекст, и копия элемента приводилась к типу словаря: InvalidCastException на каждом кадре
+            // (UxrFirearmWeapon._runtimeTriggers). См. Docs/UltimateXR/sdk-patches.md.
+            return (T)DeepCopyObject(obj);
+        }
+
+        private static object DeepCopyObject(object obj)
+        {
             if (obj == null)
             {
-                return default(T);
+                return null;
             }
 
             if (obj is Component)
@@ -137,9 +146,9 @@ namespace UltimateXR.Extensions.System
                 Array copiedArray   = Array.CreateInstance(elementType, originalArray.Length);
                 for (int i = 0; i < originalArray.Length; i++)
                 {
-                    copiedArray.SetValue(DeepCopy(originalArray.GetValue(i)), i);
+                    copiedArray.SetValue(DeepCopyObject(originalArray.GetValue(i)), i);
                 }
-                return (T)(object)copiedArray;
+                return copiedArray;
             }
 
             // Check if it's a List<T>
@@ -150,9 +159,9 @@ namespace UltimateXR.Extensions.System
                 IList copiedList   = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(genericType));
                 foreach (object item in originalList)
                 {
-                    copiedList.Add(DeepCopy(item));
+                    copiedList.Add(DeepCopyObject(item));
                 }
-                return (T)copiedList;
+                return copiedList;
             }
 
             // Check if it's a Dictionary<TKey, TValue>
@@ -165,9 +174,9 @@ namespace UltimateXR.Extensions.System
                 IDictionary copiedDict       = (IDictionary)Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(keyType, valueType));
                 foreach (DictionaryEntry kvp in originalDict)
                 {
-                    copiedDict.Add(DeepCopy(kvp.Key), DeepCopy(kvp.Value));
+                    copiedDict.Add(DeepCopyObject(kvp.Key), DeepCopyObject(kvp.Value));
                 }
-                return (T)copiedDict;
+                return copiedDict;
             }
 
             // Check if it's a HashSet<T>
@@ -180,10 +189,10 @@ namespace UltimateXR.Extensions.System
 
                 foreach (object item in originalSet)
                 {
-                    copiedSet.Add(DeepCopy(item));
+                    copiedSet.Add(DeepCopyObject(item));
                 }
 
-                return (T)(object)copiedSet;
+                return copiedSet;
             }
 
             // Check if the type implements ICloneable
@@ -192,7 +201,7 @@ namespace UltimateXR.Extensions.System
                 MethodInfo cloneMethod = type.GetMethod("Clone");
                 if (cloneMethod != null)
                 {
-                    return (T)cloneMethod.Invoke(obj, null);
+                    return cloneMethod.Invoke(obj, null);
                 }
             }
 
@@ -259,13 +268,13 @@ namespace UltimateXR.Extensions.System
         /// <param name="obj">Object to get a deep copy of</param>
         /// <typeparam name="T">The object type</typeparam>
         /// <returns>A deep copy of the object</returns>
-        private static T BinarySerializationCopy<T>(T obj)
+        private static object BinarySerializationCopy(object obj)
         {
             using MemoryStream memoryStream = new MemoryStream();
             BinaryFormatter    formatter    = new BinaryFormatter();
             formatter.Serialize(memoryStream, obj);
             memoryStream.Seek(0, SeekOrigin.Begin);
-            return (T)formatter.Deserialize(memoryStream);
+            return formatter.Deserialize(memoryStream);
         }
 
         #endregion

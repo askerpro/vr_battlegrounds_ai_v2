@@ -13,7 +13,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
-  productName: Vr_Battlegrounds_ai
+  productName: VR Battlegrounds
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -522,7 +522,13 @@ PlayerSettings:
       m_Height: 720
       m_Kind: 1
       m_SubKind: 
-  m_BuildTargetBatching: []
+  m_BuildTargetBatching:
+  - m_BuildTarget: Standalone
+    m_StaticBatching: 1
+    m_DynamicBatching: 0
+  - m_BuildTarget: Android
+    m_StaticBatching: 1
+    m_DynamicBatching: 0
   m_BuildTargetShaderSettings: []
   m_BuildTargetGraphicsJobs: []
   m_BuildTargetGraphicsJobMode: []
@@ -827,7 +833,7 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Android: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;MIRROR;MIRROR_89_OR_NEWER;MIRROR_90_OR_NEWER;MIRROR_93_OR_NEWER;MIRROR_96_OR_NEWER;UNITY_POST_PROCESSING_STACK_V2
+    Android: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;MIRROR;MIRROR_89_OR_NEWER;MIRROR_90_OR_NEWER;MIRROR_93_OR_NEWER;MIRROR_96_OR_NEWER;UNITY_POST_PROCESSING_STACK_V2;EDGEGAP_PLUGIN_SERVERS
     EmbeddedLinux: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;UNITY_POST_PROCESSING_STACK_V2
     GameCoreScarlett: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;UNITY_POST_PROCESSING_STACK_V2
     GameCoreXboxOne: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;UNITY_POST_PROCESSING_STACK_V2
@@ -839,6 +845,7 @@ PlayerSettings:
     PS5: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;UNITY_POST_PROCESSING_STACK_V2
     QNX: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;UNITY_POST_PROCESSING_STACK_V2
     ReservedCFE: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;UNITY_POST_PROCESSING_STACK_V2
+    Server: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;EDGEGAP_PLUGIN_SERVERS;MIRROR;MIRROR_89_OR_NEWER;MIRROR_90_OR_NEWER;MIRROR_93_OR_NEWER;MIRROR_96_OR_NEWER;UNITY_POST_PROCESSING_STACK_V2
     Standalone: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;EDGEGAP_PLUGIN_SERVERS;MIRROR;MIRROR_89_OR_NEWER;MIRROR_90_OR_NEWER;MIRROR_93_OR_NEWER;MIRROR_96_OR_NEWER;UNITY_POST_PROCESSING_STACK_V2
     VisionOS: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;UNITY_POST_PROCESSING_STACK_V2
     WebGL: ULTIMATEXR_USE_WINDOWSMIXEDREALITY_SDK;ULTIMATEXR_USE_MIRROR_SDK;UNITY_POST_PROCESSING_STACK_V2
@@ -850,10 +857,14 @@ PlayerSettings:
   platformArchitecture: {}
   scriptingBackend:
     Android: 1
-  il2cppCompilerConfiguration: {}
-  il2cppCodeGeneration: {}
-  il2cppStacktraceInformation: {}
-  managedStrippingLevel: {}
+  il2cppCompilerConfiguration:
+    Android: 1
+  il2cppCodeGeneration:
+    Android: 0
+  il2cppStacktraceInformation:
+    Android: 0
+  managedStrippingLevel:
+    Android: 4
   incrementalIl2cppBuild: {}
   suppressCommonWarnings: 1
   allowUnsafeCode: 0

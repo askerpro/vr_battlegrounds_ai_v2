@@ -34,6 +34,15 @@ namespace VrBattlegrounds.DevTools
 
         private void Start()
         {
+            // Только в редакторе: папка — корень проекта. В сборке Application.dataPath — папка
+            // установки, на Android она только для чтения (UnauthorizedAccessException при старте),
+            // а кнопку B утилита отнимала бы у игры.
+            if (!Application.isEditor)
+            {
+                enabled = false;
+                return;
+            }
+
             // Формируем абсолютный путь к папке скриншотов
             _absoluteOutputPath = Path.Combine(Application.dataPath, "..", _outputFolder);
             _absoluteOutputPath = Path.GetFullPath(_absoluteOutputPath);

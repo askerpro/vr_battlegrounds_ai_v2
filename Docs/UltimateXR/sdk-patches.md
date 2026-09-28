@@ -664,6 +664,38 @@ Unique Ids`, сторож — `UxrUniqueIdOnDiskTests`.
 
 ---
 
+## Патч 14: DeepCopy падает под IL2CPP на словарях — исключение каждый кадр
+
+**Файл:** `Runtime/Scripts/Extensions/System/ObjectExt.cs` — `DeepCopy<T>`, новый `DeepCopyObject`,
+`BinarySerializationCopy`
+**Дата:** 2026-09-28
+
+### Проблема
+
+В сборке Quest (IL2CPP) каждый кадр:
+`InvalidCastException: Unable to cast object of type 'RuntimeTriggerInfo' to type 'Dictionary`2'`
+в `ObjectExt.DeepCopy` ← `UxrStateSaveImplementer.SerializeStateValue`. Состояние оружия
+(`UxrFirearmWeapon._runtimeTriggers` — `Dictionary<int, RuntimeTriggerInfo>`) копируется для
+сравнения на каждом кадре. `DeepCopy<T>` копировал элементы рекурсивным вызовом `DeepCopy(kvp.Value)`
+— то есть `DeepCopy<object>` изнутри `DeepCopy<Dictionary<,>>`. Под IL2CPP вложенный вызов
+разделяет обобщённый контекст с внешним и приводит копию элемента к `T` внешнего вызова — к словарю.
+В редакторе (Mono) не воспроизводится.
+
+### Применённое изменение
+
+Вся логика перенесена в необобщённый `private static object DeepCopyObject(object)`, рекурсия идёт
+через него. `DeepCopy<T>` — одна строка `return (T)DeepCopyObject(obj)`: приведение к `T` одно и
+снаружи. `BinarySerializationCopy` тоже необобщённый. Поведение для всех ветвей прежнее.
+
+### Как повторить при обновлении SDK
+
+1. Переписать `DeepCopy<T>` так же: тело — в необобщённый метод, рекурсивные вызовы — к нему.
+2. Собрать Quest, запустить на шлеме, `adb logcat | findstr InvalidCastException` — пусто.
+
+Автотестом не закрыто: EditMode работает на Mono, где дефекта нет.
+
+---
+
 ## Зависимости от приватных членов SDK (рефлексия)
 
 **Дата:** 2026-08-19 (задача T-21, находка VR-03)

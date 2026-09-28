@@ -75,8 +75,13 @@ namespace VrBattlegrounds.Managers
             new ManagerSlot(ManagerOrder.PlayersManager, typeof(PlayersManager), true,
                 "префаб «--- MANAGERS ---», от Offline до конца процесса"),
 
-            new ManagerSlot(ManagerOrder.SessionRecoveryManager, typeof(SessionRecoveryManager), false,
-                "нигде не размещён — восстановление сессий при переподключении не работает"),
+            // Размещён на префабе с 568815f (ARCH-01). Строка здесь не обновилась, и лог каждого
+            // запуска продолжал сообщать «нигде не размещён» — хотя восстановление работало.
+            // Размещён на префабе с 568815f (ARCH-01). Строка здесь не обновилась, и лог каждого
+            // запуска продолжал сообщать «нигде не размещён» — хотя восстановление работало.
+            // Сторож — PrefabCompositionTests.Менеджер_на_префабе_объявлен_обязательным.
+            new ManagerSlot(ManagerOrder.SessionRecoveryManager, typeof(SessionRecoveryManager), true,
+                "префаб «--- MANAGERS ---», от Offline до конца процесса"),
 
             new ManagerSlot(ManagerOrder.AvatarManager, typeof(Player.Avatars.AvatarManager), true,
                 "префаб «--- MANAGERS ---», от Offline до конца процесса"),

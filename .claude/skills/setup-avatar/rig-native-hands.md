@@ -47,7 +47,10 @@
 8. **Позы** — `VRBattlegrounds.Editor.HandPosesSetup.Execute()`, строго **после** сохранения
    префаба: в конце он делает `ApplyPrefabInstance`, а экземпляр модели FBX применить нельзя.
    Позы ложатся в `Assets/Art/Avatars/<имя объекта>/HandPoses/` (15 шт. из пресетов SDK),
-   события контроллера `Grip → Grab`, `Button1 → Pointing` проставляются.
+   события контроллера `Grip → Grab`, `Button1 → Pointing` проставляются. Пресеты SDK сделаны на
+   кисти BigHands — на 3 фалангах большой палец и основание пальцев садятся неточно. Позы хвата
+   оружия для такой кисти — из пака (`HandsPackPoseImporter`), игровой вариант — от
+   `PlayerBase_NonSdkHands` ([game-variant.md](game-variant.md)).
 9. В префабе рига: все `SkinnedMeshRenderer` под объект `Geo` (его скрывает
    `SpectatorController`), тег корня `Player` (`GameTagsTests`).
 

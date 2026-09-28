@@ -68586,27 +68586,7 @@ MonoBehaviour:
         _distalLocalTip: {x: -0.02112832, y: -0, z: -0}
         _distalLocalFingerPrintCenter: {x: -0.013944691, y: -0.00519319, z: -0}
   _handPosesFoldout: 0
-  _handPoses:
-  - {fileID: 11400000, guid: af9020fa51bc38d40a3e0d33c1cae164, type: 2}
-  - {fileID: 11400000, guid: 88119e8ad84824043ab56447afeae899, type: 2}
-  - {fileID: 11400000, guid: 9a32e1e4a2e7d4643980e4376e997cfe, type: 2}
-  - {fileID: 11400000, guid: 7df198282162d2c4cbc725f3891980f5, type: 2}
-  - {fileID: 11400000, guid: d75408379f9c19f4f92dc01890bdd741, type: 2}
-  - {fileID: 11400000, guid: 6e8de32cd69153542afe17d8c9346b3d, type: 2}
-  - {fileID: 11400000, guid: ac1f5e617474a3a46af3ee10e094e016, type: 2}
-  - {fileID: 11400000, guid: 4328f3ca6a4aa4a4eb6330ce6bdf8a3d, type: 2}
-  - {fileID: 11400000, guid: c157dd6730f11534f8d9716db0f1acbc, type: 2}
-  - {fileID: 11400000, guid: c3eeace805620e647aa31cb8ce93fd23, type: 2}
-  - {fileID: 11400000, guid: 260fce01e924d374392f6b19acdcbee4, type: 2}
-  - {fileID: 11400000, guid: 35d1272eb78bded458c5bd2c1ab6de06, type: 2}
-  - {fileID: 11400000, guid: a97321595cc43c84eae7e44ace2372b6, type: 2}
-  - {fileID: 11400000, guid: 1bd4608dd84147e4fbe5926a9fd50944, type: 2}
-  - {fileID: 11400000, guid: bc075099a961fc948894bdb1070e9517, type: 2}
-  - {fileID: 11400000, guid: b37e3204d1e8c924d9e6a7be826df7e2, type: 2}
-  - {fileID: 11400000, guid: 813db6a8ed095564aac562471aac78d0, type: 2}
-  - {fileID: 11400000, guid: b8d441f919755034f8664d9370b7aff2, type: 2}
-  - {fileID: 11400000, guid: 4354f147728470247b7f8fcd0440cd95, type: 2}
-  - {fileID: 11400000, guid: 42d62e4997b50e24987ef68571977ce3, type: 2}
+  _handPoses: []
   _defaultHandPose: {fileID: 11400000, guid: 3f8364620cf31c447a54358fb66bfd35, type: 2}
 --- !u!114 &3708214269544703414
 MonoBehaviour:

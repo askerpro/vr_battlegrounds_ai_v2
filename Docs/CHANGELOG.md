@@ -6,6 +6,23 @@
 
 ### Изменено
 
+- **Игровые аватары разведены по типу кисти.** `PlayerBase` — сетевой каркас без поз кисти; от него
+  `PlayerBase_SdkHands` (скелет SDK, 4 кости на палец: позы `Controller*`/`Demo*`, наследник — Heavy) и
+  `PlayerBase_NonSdkHands` (3 фаланги: только позы из пака, наследник — MEF). MEF больше не наследует позы,
+  сделанные на скелете киборга. Перенос вариантов — `AvatarHandBases.Rebase`: Unity не меняет родителя
+  варианта через API, инструмент переписывает YAML, меняя id экземпляра базы так, что id всех объектов
+  варианта остаются прежними (ссылки из сцен, `AvatarData`, оружия целы). Сверено слепком всех
+  сериализованных полей до/после: у MEF изменился только `_parentPrefab`. Тест — `AvatarHandPoseChainTests`.
+- **Позы хвата Gun_real — из пака Hands Weapons Animations**, а не из пресетов SDK. `HandsPackPoseImporter`
+  снимает кадр клипа (`Hands_Gun@Aiming_Idle`, кадр 0) с рук пака, пишет `HandsPack_Gun_Grip` / `HandsPack_Gun_Support`
+  в `Assets/Art/HandPoses/HandsPack/` и регистрирует на `PlayerBase`. Поза UltimateXR хранит повороты фаланг
+  в универсальных осях ладони, поэтому одна поза годится любому аватару — привязки к скелету нет. Из того же
+  кадра `HandsPackGripAligner` берёт положение корпуса оружия относительно ладони (масштаб пак → префаб ×0.707)
+  и ставит трансформы выравнивания хвата `Grabs/HandsPack/<поза>/<аватар>/Left|Right`; вторая рука — зеркало.
+  Общие `Grabs/default` не тронуты — их использует запись по умолчанию. Назначено пока только `MEF_Base_Avatar`.
+  Тест — `HandsPackHandPoseTests`: сгибы пальцев против кадра пака (±5°, большой палец ±20°) и положение
+  корпуса в ладони (±5 мм, ±3°) для обеих рук.
+
 - **Запечён occlusion culling** для `Lobby`, `TestMap1`, `TestMap2` — аватары за укрытиями больше не
   рисуются. Инструмент `Tools/VR Battlegrounds/Gameplay/Bake Occlusion (all maps)` (`OcclusionBakeTool`)
   размечает статичную геометрию (`Occluder/OccludeeStatic`, подвижное исключено) и запекает

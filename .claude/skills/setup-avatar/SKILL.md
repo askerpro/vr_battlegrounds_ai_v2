@@ -13,7 +13,7 @@ description: Настроить новый аватар игрока из сто
 |---|---|
 | [rig-native-hands.md](rig-native-hands.md) | Риг, путь Б — родные кисти модели |
 | [rig-amputation.md](rig-amputation.md) | Риг, путь А — ампутация в Blender + кисти SDK; грабли Blender |
-| [game-variant.md](game-variant.md) | Игровой вариант `PlayerBase`, перенос с `Cyborg`, регистрация, позы хвата оружия |
+| [game-variant.md](game-variant.md) | Игровой вариант от базы по типу кисти (`PlayerBase_SdkHands` / `PlayerBase_NonSdkHands`), перенос с `Cyborg`, регистрация, позы хвата оружия |
 
 Эталон, собранный по этому маршруту: `Assets/Prefabs/Avatars/MEF_Rig.prefab` →
 `Assets/Prefabs/Player/MEF_Base_Avatar.prefab`. **Не бери за образец Heavy** — у него нет
@@ -70,13 +70,16 @@ description: Настроить новый аватар игрока из сто
 
 ## 3. Игровой вариант (`Assets/Prefabs/Player/<Model>_Base_Avatar.prefab`)
 
-Экземпляр `PlayerBase` во временной сцене → удалить `Cyborg` → вложить риг → удалить из
+База по типу кисти: скелет SDK (4 кости на палец) — `PlayerBase_SdkHands`, свои 3 фаланги —
+`PlayerBase_NonSdkHands` (таблица в [game-variant.md](game-variant.md)).
+
+Экземпляр базы во временной сцене → удалить `Cyborg` → вложить риг → удалить из
 вложенного рига `UxrStandardAvatarController`, `UxrDummyControllerInput`, `UxrAvatar`,
 `Camera Controller`, `BigHandsIntegration` → `SaveAsPrefabAssetAndConnect` (получится Variant).
 
 Перед удалением `Cyborg` сними с него данные (позы карманов, настройки NT кистей) — после
 удаления их не достать. Что переносить — таблица в [game-variant.md](game-variant.md): хитбоксы, NT кистей, `UxrFingerTip`, карманы, `SpectatorController.Geo`,
-корневой `UxrAvatar` (риг, позы, события контроллера, высота глаз/шеи), `_parentPrefab = PlayerBase`.
+корневой `UxrAvatar` (риг, позы, события контроллера, высота глаз/шеи), `_parentPrefab = <база>`.
 
 **Своя голова в камере** («вижу голову изнутри») — меши головы в
 `UxrMirrorAvatar._localDisabledGameObjects`, раздел 3а [game-variant.md](game-variant.md).

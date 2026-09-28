@@ -1,4 +1,19 @@
-# Игровой вариант: `<Model>_Base_Avatar` от `PlayerBase`
+# Игровой вариант: `<Model>_Base_Avatar` от базы по типу кисти
+
+**Сначала выбрать базу** (обе — варианты `PlayerBase`, сам `PlayerBase` без поз кисти):
+
+| Кисть модели | База | Позы, которые приходят по наследству |
+|---|---|---|
+| Скелет SDK — 4 кости на палец с пястной (BigHands/Cyborg, путь А с перчаткой SDK) | `PlayerBase_SdkHands` | `Controller*`, `Demo*` — сделаны на скелете киборга |
+| Свой скелет — 3 фаланги (путь Б, как MEF) | `PlayerBase_NonSdkHands` | только позы из пака (`HandsPackPoseImporter`) — нейтральны к скелету |
+
+Позы SDK на скелете из 3 фаланг выглядят плохо, поэтому ветки разведены. Проверка — `AvatarHandPoseChainTests`.
+Ниже везде, где написано «`PlayerBase`» как родитель варианта, — выбранная база.
+
+Уже созданный вариант переносится на другую базу `AvatarHandBases.Rebase(variant, base)` (меню
+`Tools/VR Battlegrounds/Avatars/Hand Bases/Rebase Selected Avatar → …`). Руками не делать: Unity не меняет
+родителя варианта через API, инструмент переписывает YAML так, что id всех объектов варианта остаются
+прежними — ссылки из сцен, `AvatarData`, оружия не рвутся.
 
 Превращает риг (`Assets/Prefabs/Avatars/<Model>_Rig.prefab`) в игрового персонажа: сеть,
 HUD, карманы, хитбоксы, регистрация. Эталон — `Assets/Prefabs/Player/MEF_Base_Avatar.prefab`.
@@ -9,7 +24,7 @@ HUD, карманы, хитбоксы, регистрация. Эталон — 
 
 ## 1. Создать вариант
 
-Во временной сцене: `PrefabUtility.InstantiatePrefab(PlayerBase)`, имя `<Model>_Base_Avatar`.
+Во временной сцене: `PrefabUtility.InstantiatePrefab(<база>)`, имя `<Model>_Base_Avatar`.
 
 **До удаления `Cyborg` снять с него данные** — потом их не достать:
 - позы карманов относительно их костей (`MagazinePocket`, `Anchor_Hip_R` — на `Pelvis`;
@@ -31,9 +46,10 @@ HUD, карманы, хитбоксы, регистрация. Эталон — 
 - `ClearRigElements()` → `SetupRigElementsFromAnimator()` (ищет Animator в детях) →
   `TryToInferMissingRigElements()`; `_rigType = HalfOrFullBody`.
 - `_avatarRenderers` — все рендереры, кроме тех, что под `UxrHandIntegration` и камерой.
-- `_handPoses` и `_defaultHandPose` — из рига. `_parentPrefab = PlayerBase`,
-  `_prefabGuid = GUID варианта` (после сохранения): через цепочку префабов аватар наследует
-  оружейные позы `Demo*` — проверка `avatar.GetAllHandPoses()`.
+- `_handPoses` и `_defaultHandPose` — из рига. `_parentPrefab = <база>`,
+  `_prefabGuid = GUID варианта` (после сохранения): через цепочку префабов аватар наследует позы
+  базы (`Demo*` у `PlayerBase_SdkHands`, позы пака у `PlayerBase_NonSdkHands`) — проверка
+  `avatar.GetAllHandPoses()`.
 - `UxrHandIntegration.TryToMatchHand()` на обеих корневых интеграциях;
   `UxrGrabber.HandRenderer` ← `UxrAvatarRig.TryToGetHandRenderer`.
 - `UxrStandardAvatarController._listControllerEvents` — позы рига вместо поз киборга;

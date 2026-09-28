@@ -76,6 +76,13 @@ int solid = 0; foreach (var c in go.GetComponentsInChildren<Collider>(true)) if 
 стрелка) + правило авторства канала
 `StateEventAuthority`. Разбор — [known-issues, Issue 23](UltimateXR/known-issues.md).
 
+---
+
+### «У аватара пропал префаб в AvatarData» · «В сцене сотни переопределений аватара без цели» · Сменили базу варианта
+
+Родителя варианта сменили переписыванием ссылок YAML — у унаследованных объектов сменились id.
+Переносить только `AvatarHandBases.Rebase` (сохраняет id). Разбор — [known-issues, Issue 24](UltimateXR/known-issues.md).
+
 ## Взаимодействие с предметами
 
 ### «Оружие в арсенале не видно» · «Стойки пустые у клиента»

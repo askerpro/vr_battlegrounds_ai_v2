@@ -422,6 +422,10 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `BlenderScripts/*.py` | Подготовка FBX вне Unity: ампутация родных кистей, добавление wrist torsion bones, добавление `LeftEye` / `RightEye`. |
 | `ApplyEyeMapping` | Прописывает `LeftEye` / `RightEye` в Humanoid mapping выбранного FBX после Blender-экспорта. |
 | `CoreAvatarSetup`, `HandsIntegrationSetup`, `ControllerAndCameraSetup`, `FinalizeRigMappingSetup`, `CreatePrefabSetup`, `HandPosesSetup` | Атомарные шаги `UXR Setup Wizard`, которые можно запускать вручную или через `CustomAvatarPipelineMenu`. |
+| `HandsPackPoseExtractor` | Снимает позу кисти UltimateXR с кадра клипа рук пака Hands Weapons Animations (риг CAT, 3 фаланги). Поза нейтральна к скелету: SDK пересчитывает её под каждого аватара в рантайме. |
+| `HandsPackPoseImporter` | `Tools/VR Battlegrounds/Avatars/Hand Poses/Import Hands Pack Poses`: по рецептам `HandsPackPoseRecipe` пишет позы в `Assets/Art/HandPoses/HandsPack/`, регистрирует их на `PlayerBase_NonSdkHands` (наследуют аватары с кистью не от SDK) и назначает точкам хвата оружия. Проверка — `HandsPackHandPoseTests`. |
+| `AvatarHandBases` | `Tools/VR Battlegrounds/Avatars/Hand Bases/*`: базы игровых аватаров по типу кисти — `PlayerBase_SdkHands` (скелет SDK, позы `Controller*`/`Demo*`) и `PlayerBase_NonSdkHands` (3 фаланги, позы из пака); `Rebase` переносит вариант на другую базу, сохраняя id объектов. Проверка — `AvatarHandPoseChainTests`. |
+| `HandsPackGripAligner` | Ставит трансформы выравнивания хвата (`Grabs/HandsPack/<поза>/<аватар>/Left|Right`) так, чтобы корпус оружия лёг в ладонь аватара как в кадре пака; вторая рука — зеркало. |
 
 Ручной быстрый путь: выделить FBX asset в Project window и запустить `Tools/VR Battlegrounds/Avatars/Custom Avatar Pipeline/Run Full Selected FBX Pipeline`.
 

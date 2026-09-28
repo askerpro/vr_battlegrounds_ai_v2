@@ -1020,3 +1020,32 @@ UltimateXR синхронизирует выстрел дважды: состо�
    `ProjectileShotReplayed` без `ProjectileShot`; дробь только у стрелка).
 
 ---
+
+## Патч 24: экономия IK невидимых чужих аватаров
+
+**Файл:** `Runtime/Scripts/Avatar/Controllers/UxrStandardAvatarController.cs` — `UpdateAvatarPostProcess`;
+новый `UxrStandardAvatarController.Custom.cs`. Метка — `VR Battlegrounds patch 24`.
+**Дата:** 2026-09-28
+
+### Проблема
+
+IK тела и рук считается каждый кадр у всех аватаров, в том числе у чужих за стеной или за спиной.
+На Quest 3 с 9 чужими это ~1,4 мс (`uxr_post`).
+
+### Применённое изменение
+
+Статический хук `ShouldSolveRemoteAvatarThisFrame` (`Func<UxrAvatar,bool>`, по умолчанию null) и
+`ShouldSolveIKThisFrame()` в partial. В `UpdateAvatarPostProcess` перед `SolveBodyIK()` — ранний
+`return`, если хук у `UpdateExternally`-аватара вернул false. Локальный аватар, отсутствие хука и
+исключение внутри хука — решение каждый кадр. SDK не ссылается на код игры, поэтому политику ставит
+игра: `RemoteAvatarIKThrottle` (видимость по рендерерам тела, раз в 4 кадра со сдвигом, на сервере и
+хосте — всегда).
+
+### Как повторить при обновлении SDK
+
+1. Скопировать `UxrStandardAvatarController.Custom.cs`.
+2. В `UpdateAvatarPostProcess` перед `SolveBodyIK();` вставить `if (!ShouldSolveIKThisFrame()) return;`
+   с меткой патча.
+3. Проверка: `RemoteAvatarIKPolicyTests`.
+
+---

@@ -612,6 +612,14 @@ namespace UltimateXR.Avatar.Controllers
 
             // Needs to be done after managers since the grab manager may force hands to be in certain positions
 
+            // VR Battlegrounds patch 24: невидимый чужой аватар решается не каждый кадр — решает
+            // хук ShouldSolveRemoteAvatarThisFrame (UxrStandardAvatarController.Custom.cs). Локальный
+            // аватар и отсутствие хука — каждый кадр, как в оригинале.
+            if (!ShouldSolveIKThisFrame())
+            {
+                return;
+            }
+
             SolveBodyIK();
         }
 

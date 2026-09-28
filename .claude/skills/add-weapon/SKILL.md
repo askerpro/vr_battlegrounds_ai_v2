@@ -74,7 +74,24 @@ UltimateXR калибровкой с донора — оружия того же
   `UxrFirearmWeapon`, угол и ось — из клипа), `Tip`/`ShotSource` по кольцу вершин у дула,
   `RecoilSourceAxes` у рукояти, `MagAnchor` у окна магазина со звуком донора;
 - помпа/затвор — отдельный граббабл у корня с `RestrictLocalOffset` на ход из клипа и
-  `GrabOnlyWhenParentHeld`;
+  `GrabOnlyWhenParentHeld`. Помпа наводит ствол (`Control Parent Direction` вкл.,
+  `Ignore Grabbable Parent Dependency` выкл. — как у сэмпла SDK, `PumpAimTests`), затвор —
+  нет (наоборот, как рукоятка M16);
+- снаряд — `Effects/Tracer_Default`: тонкий светлый след (`TrailRenderer`), не меш — меш пули
+  в шлеме выглядит стрелкой (`TracerVisibilityTests`); скорость: винтовка 400 м/с, пистолет и
+  дробовик 300;
+- `ShotSource` — на 1 см позади `Tip`, `Tip` — на срезе ствола по вершинам модели
+  (`ShotOriginTests`); `BarrelObstruction` с казённой точкой `BarrelCheck` в коробке — ствол в
+  стене не стреляет (`BarrelObstructionTests`);
+- вспышка у дула — `Effects/Muzzle_Default` (MuzzleFlash Particle Pack, ×0.12), привязана к дулу,
+  без своего звука и света (`MuzzleEffectTests`); у эффектов пака выключать мягкие частицы —
+  у стены они гаснут;
+- попадание — `Effects/Impact_Default` и `Effects/ImpactDecal_Default`, не сэмплы SDK
+  (`ImpactEffectTests`); эффекты под другие поверхности — из `Weapon Effects` Particle Pack,
+  тем же способом: одноразово, без демо-мишени, свой выброс вместо суб-эмиттеров;
+- помповое: второй тип выстрела для дробинок без вспышки у дула, `ShotgunPellets`
+  (`ShotgunPelletsTests`), `PumpGrabFollow` — помпа без запаздывания на промах хвата
+  (`PumpGrabFollowTests`);
 - магазин — **вариант** префаба-магазина донора (сеть, физика, звуки, хват сэмпловых
   аватаров), геометрия заменена мешем пака, масштаб корня = масштаб оружия; вложенный экземпляр
   в якоре без `NetworkIdentity`, со `Start Anchor` и `Rigid Body Source`.
@@ -121,6 +138,9 @@ VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.Build(recipe);
 2. Весь `VrBattlegrounds.Tests.EditMode`. Касаются оружия: `HandsPackWeaponTests`,
    `WeaponScaleTests`, `WeaponDropPhysicsTests`, `WeaponPartGrabTests`, `WeaponSlideTravelTests`,
    `OutOfWorldGuardTests`, `AnchorActivationAudioTests`, `WeaponHangFitsSlotTests`,
+   `PumpAimTests`, `PumpGrabFollowTests`, `ShotgunPelletsTests`, `TracerVisibilityTests`,
+   `ImpactEffectTests`, `NetworkAssetIdOnDiskTests` (после пересохранения префабов —
+   `Tools/VR Battlegrounds/VersionControl/Normalize Network Asset Ids`),
    `GameTagsTests`, `UxrUniqueIdOnDiskTests`, `AvatarLoadoutTests` (карманы).
    Падения, которые были до задачи, отличать от новых: ищи имя нового префаба в сообщении.
 3. `AndroidCompileGate.Run()` — сборщик лежит в `Assets/Editor`, в билд не попадает.

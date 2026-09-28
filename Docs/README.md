@@ -330,6 +330,8 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | `MenuPrefabRegistry` | `UI/Menu/MenuPrefabRegistry.cs` | Дерево префабов (Role -> Context -> GameMode), хранящее ссылки на GameObject'ы планшетов. |
 | `HUDWidget_GameNotification` | `UI/HUD/HUDWidget_GameNotification.cs` | Слушает семантические `GameMode` события и локализует уведомления. |
 | `PlayerHUDManager` | `UI/HUD/PlayerHUDManager.cs` | Спавнит HUD **активного режима сцены** (`GameMode.ModeData.hudPrefab`, подписка на `GameplayManager.ActiveGameModeChangedLocal`), а не выбора матча; у лобби HUD нет. |
+| `WristDisplay` | `UI/HUD/WristDisplay.cs` | Табло на часах аватара (префаб `Prefabs/UI/HUD/WristDisplay.prefab`, кладётся на часы руками): кольцо ХП по периметру зелёный → красный (пульсирует ниже 25%) и остаток времени в центре. Игрока ищет в родителях, у чужих аватаров скрыто. Овальный вариант `WristDisplay_Oval` (70×35 мм); часы MEF в сборе с табло на экране — `Prefabs/Player/WristWatch_HUD.prefab` (вариант `WristWatch`). Экран этих часов — на внутренней стороне запястья: табло повёрнуто «вправо — к пальцам, вверх — к большому пальцу». Математика — `WristDisplayFace`, тест — `WristDisplayTests` (в т.ч. посадка на экран ≤ 2 мм). |
+| `RoundClock` | `UI/HUD/RoundClock.cs` | Какое время показывать для активного режима (фазы Elimination, остаток матча Respawn). Общий для `HUDWidget_RoundTimer` и `WristDisplay`. |
 
 **Система Уведомлений (Event-Driven Notifications):**
 - Разовые уведомления (`OnRoundEndedLocal`, `OnSetStartedLocal`, `OnRoundStartedLocal`) игровые режимы шлют через `[ClientRpc]`: их не нужно знать задним числом.

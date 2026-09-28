@@ -35,7 +35,10 @@ namespace VrBattlegrounds.Tests.Prefabs
             { SdkHands, PlayerBase },
             { NonSdkHands, PlayerBase },
             { "Assets/Prefabs/Player/Heavy_Soldier_Base_Avatar.prefab", SdkHands },
-            { "Assets/Prefabs/Player/MEF_Base_Avatar.prefab", NonSdkHands }
+            { "Assets/Prefabs/Player/MEF_Base_Avatar.prefab", NonSdkHands },
+            // Вариант второго уровня: та же модель с оптимизированной геометрией. Позы кисти и
+            // записи хвата оружия приходят от MEF по цепочке _parentPrefab.
+            { "Assets/Prefabs/Player/Optimized_MEF_Player.prefab", "Assets/Prefabs/Player/MEF_Base_Avatar.prefab" }
         };
 
         public static IEnumerable<string> Variants() => Parents.Keys;

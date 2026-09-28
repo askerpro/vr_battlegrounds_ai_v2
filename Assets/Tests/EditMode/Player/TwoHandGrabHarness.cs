@@ -145,6 +145,10 @@ namespace VrBattlegrounds.Tests.Player
     /// <c>GetGrabbingHand</c> не видит держащую руку. Цикл манипуляции
     /// <c>UxrGrabManager.UpdateManipulation</c> приватный. Всё это зовётся рефлексией.
     /// Плавные переходы выключены: их таймеры идут от <c>Time.deltaTime</c>, которого в EditMode нет.
+    /// Сопротивление манипуляции (<c>Translation/Rotation Resistance</c>) — тоже: оно сглаживает
+    /// движение через тот же <c>deltaTime</c>, и в редакторе без фокуса оружие с сопротивлением
+    /// (M16, <c>Gun_real</c>, <c>Shotgun_real</c>) не двигалось вовсе — контроль
+    /// <see cref="AssertManipulationLive" /> падал нестабильно, в зависимости от фокуса окна.
     /// </para>
     /// </summary>
     public sealed class TwoHandGrabHarness : IDisposable
@@ -166,7 +170,7 @@ namespace VrBattlegrounds.Tests.Player
         public TwoHandGrabHarness(string weaponPath, string avatarPath, int supportPoint, bool grabMain = true)
         {
             _savedFeatures = Manager.Features;
-            Manager.Features &= ~UxrManipulationFeatures.SmoothTransitions;
+            Manager.Features &= ~(UxrManipulationFeatures.SmoothTransitions | UxrManipulationFeatures.ObjectResistance);
 
             _avatar = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(avatarPath));
             Weapon = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(weaponPath));
@@ -215,7 +219,17 @@ namespace VrBattlegrounds.Tests.Player
             Left.transform.SetPositionAndRotation(position, rotation);
         }
 
-        public void UpdateManipulation() => Invoke(Manager, "UpdateManipulation");
+        /// <summary>
+        /// Кадр манипуляции, как в <c>UxrGrabManager.UpdateManager</c>: сначала
+        /// <c>InitializeManipulationFrame</c> (положение рук с контроллера — <c>UnprocessedGrabberPosition</c>,
+        /// счёт деталей, наводящих родителя), потом <c>UpdateManipulation</c>. Без первого шага
+        /// деталь, зависящая от оружия (помпа), решалась неверно — уходила на метр от места.
+        /// </summary>
+        public void UpdateManipulation()
+        {
+            Invoke(Manager, "InitializeManipulationFrame");
+            Invoke(Manager, "UpdateManipulation");
+        }
 
         /// <summary>
         /// Контроль харнесса: цикл манипуляции действительно двигает оружие за рукой. Без него

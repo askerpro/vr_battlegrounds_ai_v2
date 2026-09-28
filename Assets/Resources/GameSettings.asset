@@ -19,3 +19,4 @@ MonoBehaviour:
   _logLevelUI: 4
   _logLevelPhysicalSpace: 4
   _logLevelArsenal: 4
+  _foveatedRenderingLevel: 0.75

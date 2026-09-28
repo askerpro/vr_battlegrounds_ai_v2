@@ -80,6 +80,13 @@ namespace VrBattlegrounds.Core
         [Tooltip("Стресс-тест: изменения метрик, всплески кадров, итоги фаз")]
         [SerializeField] private LogLevel _logLevelPerf = LogLevel.Info;
 
+        [Header("Рендер — Quest")]
+        [Tooltip("Fixed Foveated Rendering на шлеме: 0 — выкл, 1 — максимум. Плагин Oculus " +
+                 "квантует значение в 5 ступеней Off/Low/Medium/High/HighTop (0..4). 0.75 — High. " +
+                 "Применяет FoveatedRenderingInstaller только на Android-устройстве с активным XR.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _foveatedRenderingLevel = 0.75f;
+
         #endregion
 
         #region Properties
@@ -110,6 +117,12 @@ namespace VrBattlegrounds.Core
 
         /// <summary>Уровень логов производительности (стресс-тест).</summary>
         public LogLevel LogLevelPerf => _logLevelPerf;
+
+        /// <summary>
+        /// Уровень Fixed Foveated Rendering (0..1) для <c>XRDisplaySubsystem.foveatedRenderingLevel</c>.
+        /// Применяет <see cref="FoveatedRenderingInstaller"/>.
+        /// </summary>
+        public float FoveatedRenderingLevel => Mathf.Clamp01(_foveatedRenderingLevel);
 
         #endregion
     }

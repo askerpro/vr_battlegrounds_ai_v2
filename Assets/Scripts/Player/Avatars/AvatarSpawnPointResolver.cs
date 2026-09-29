@@ -13,9 +13,15 @@ namespace VrBattlegrounds.Player.Avatars
     {
         /// <summary>
         /// Место, заданное калибровкой физического пространства: игрок стоит в комнате,
-        /// и игра его не двигает (<see cref="CalibratedSpawnRegistry"/>, T-30).
+        /// и игра его не двигает (<see cref="SpawnPlaceRegistry"/>, T-30).
         /// </summary>
         CalibratedPlace,
+
+        /// <summary>
+        /// Неоткалиброванный игрок при смене карты: та же мировая точка, где он стоял на прошлой
+        /// карте (<see cref="SpawnPlaceRegistry"/>). Телепортов нет: игрок ходит по арене ногами.
+        /// </summary>
+        PreviousWorldPlace,
 
         /// <summary>Зона спавна команды на карте (<see cref="TeamSpawnZone"/>).</summary>
         TeamSpawnZone,
@@ -71,7 +77,7 @@ namespace VrBattlegrounds.Player.Avatars
     /// Порядок поиска — от знающего про команды к не знающему:
     /// </para>
     /// <list type="number">
-    /// <item><b>Место, заданное калибровкой</b> (<see cref="CalibratedSpawnRegistry"/>, T-30).
+    /// <item><b>Место, заданное калибровкой</b> (<see cref="SpawnPlaceRegistry"/>, T-30).
     ///       Бьёт всё остальное и по единственной причине: до калибровки игра не знает,
     ///       где игрок находится внутри арены, и вправе поставить его куда угодно;
     ///       после — его место задано физически, он стоит в комнате, и переносить его
@@ -102,33 +108,33 @@ namespace VrBattlegrounds.Player.Avatars
         /// это «команда ещё не выбрана», и тогда зоны не спрашиваются вовсе.
         /// </summary>
         /// <param name="team">Команда игрока или <c>null</c>.</param>
-        /// <param name="calibratedSession">
-        ///     Сессия, чьё <b>откалиброванное</b> место обязано победить зону, или <c>null</c>,
-        ///     если восстанавливать место не нужно. Разделение не косметическое: место
-        ///     восстанавливают только там, где аватара не осталось (смена карты). При смене
-        ///     скина или команды аватар жив, и резолвер не спрашивается вовсе (этап Б).
+        /// <param name="session">
+        ///     Сессия, чьё прежнее место (<see cref="SpawnPlaceRegistry"/>) обязано победить зону,
+        ///     или <c>null</c>, если восстанавливать место не нужно. Место восстанавливают только
+        ///     там, где аватара не осталось (смена карты); зона — только для первого спавна.
+        ///     При смене скина или команды аватар жив, и резолвер не спрашивается вовсе (этап Б).
         /// </param>
-        public static AvatarSpawnPoint Resolve(TeamData team, PlayerSession calibratedSession = null)
+        public static AvatarSpawnPoint Resolve(TeamData team, PlayerSession session = null)
         {
-            if (calibratedSession != null)
+            if (session != null)
             {
-                AvatarSpawnPoint calibrated;
+                AvatarSpawnPoint previous;
                 string diagnosis;
 
-                if (CalibratedSpawnRegistry.TryResolve(calibratedSession, out calibrated, out diagnosis))
-                    return calibrated;
+                if (SpawnPlaceRegistry.TryResolve(session, out previous, out diagnosis))
+                    return previous;
 
-                if (calibratedSession.IsCalibrated)
+                if (session.IsCalibrated)
                 {
                     GameLog.PhysicalSpace.Warning(
-                        $"[AvatarSpawnPointResolver] {calibratedSession.PlayerName} откалиброван, но вернуть его " +
+                        $"[AvatarSpawnPointResolver] {session.PlayerName} откалиброван, но вернуть его " +
                         $"на своё место нечем: {diagnosis}. Ставим в зону команды — игрок увидит, что его сдвинули.");
                 }
             }
 
-            // Своей зоны на сцене нет, но идёт разминка — общая зона разминки (лобби: зона одна,
-            // нейтральная, а игрок уже выбрал команду серии).
-            TeamSpawnZone zone = FindZone(team) ?? FindWarmupZone(team);
+            // Своей зоны на сцене нет (лобби, или у игрока нет команды) — нейтральная зона:
+            // зона без команды, общая для всех. В лобби она одна на всю арену.
+            TeamSpawnZone zone = FindZone(team) ?? FindNeutralZone();
             if (zone != null)
             {
                 Transform zoneTransform = zone.SpawnPoint;
@@ -160,19 +166,21 @@ namespace VrBattlegrounds.Player.Avatars
         /// </para>
         /// </summary>
         /// <summary>
-        /// Зона общей команды разминки (первая команда режима разминки), если идёт разминка и у
-        /// <paramref name="team"/> своей зоны на сцене нет. Команду серии игрок выбирает в лобби,
-        /// а зона лобби одна — нейтральная; без этого он появлялся бы в начале координат.
+        /// Нейтральная зона — зона спавна без команды (<see cref="TeamSpawnZone.HomeTeam"/> не задана),
+        /// или <c>null</c>. Туда встаёт игрок, у которого своей зоны на сцене нет: в лобби — все
+        /// (зона одна на всю арену), на боевой карте нейтральной зоны нет, и игрок без команды
+        /// появляется в точке старта карты.
         /// </summary>
-        private static TeamSpawnZone FindWarmupZone(TeamData team)
+        public static TeamSpawnZone FindNeutralZone()
         {
-            if (team == null) return null;
+            TeamSpawnZone[] zones = Object.FindObjectsByType<TeamSpawnZone>(FindObjectsSortMode.InstanceID);
+            for (int i = 0; i < zones.Length; i++)
+            {
+                if (zones[i] != null && zones[i].HomeTeam == null)
+                    return zones[i];
+            }
 
-            GameModes.GameMode mode = Managers.GameplayManager.Instance != null ? Managers.GameplayManager.Instance.ActiveGameMode : null;
-            if (mode == null || !mode.IsWarmup || mode.Teams == null || mode.Teams.Length == 0) return null;
-
-            TeamData neutral = mode.Teams[0];
-            return neutral != null && neutral != team ? FindZone(neutral) : null;
+            return null;
         }
 
         public static TeamSpawnZone FindZone(TeamData team)

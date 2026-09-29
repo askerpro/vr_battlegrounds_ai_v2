@@ -77,10 +77,10 @@ namespace VrBattlegrounds.Tests.Network
             typeof(PlayersManager),
             typeof(SessionRecoveryManager),
             typeof(AvatarManager),
-            typeof(GameplayManager),
+            typeof(MapReferee),
             typeof(SessionManager),
-            typeof(MatchSeries),
-            typeof(MapManager)
+            typeof(Series),
+            typeof(MapLoader)
         };
 
         private GameObject _transportObject;

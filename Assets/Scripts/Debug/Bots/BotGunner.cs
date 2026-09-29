@@ -143,7 +143,7 @@ namespace VrBattlegrounds.DevTools.Bots
         {
             if (!NetworkServer.active || _player == null || _avatar == null) return;
 
-            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             bool fight = mode != null && !mode.IsWarmup && _player.IsAlive;
 
             if (!fight)

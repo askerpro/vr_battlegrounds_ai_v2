@@ -15,10 +15,10 @@ namespace VrBattlegrounds.Managers
     ///
     /// Singleton: живёт на том же GameObject, что и NetworkManager (DontDestroyOnLoad).
     /// </summary>
-    [DefaultExecutionOrder(ManagerOrder.MapManager)]
-    public class MapManager : MonoBehaviour
+    [DefaultExecutionOrder(ManagerOrder.MapLoader)]
+    public class MapLoader : MonoBehaviour
     {
-        public static MapManager Instance { get; private set; }
+        public static MapLoader Instance { get; private set; }
 
         /// <summary>Вызывается перед началом загрузки карты. Параметр — имя сцены.</summary>
         public static event Action<string> MapLoadStarted;
@@ -64,19 +64,19 @@ namespace VrBattlegrounds.Managers
         {
             if (!NetworkServer.active)
             {
-                GameLog.Network.Warning("[MapManager] LoadMap вызван не на сервере — игнорируем.");
+                GameLog.Network.Warning("[MapLoader] LoadMap вызван не на сервере — игнорируем.");
                 return;
             }
 
             if (string.IsNullOrEmpty(sceneName))
             {
-                GameLog.Network.Warning("[MapManager] LoadMap: пустое имя сцены — игнорируем.");
+                GameLog.Network.Warning("[MapLoader] LoadMap: пустое имя сцены — игнорируем.");
                 return;
             }
 
             if (IsLoading)
             {
-                GameLog.Network.Warning($"[MapManager] LoadMap: уже идёт загрузка, запрос на '{sceneName}' игнорируется.");
+                GameLog.Network.Warning($"[MapLoader] LoadMap: уже идёт загрузка, запрос на '{sceneName}' игнорируется.");
                 return;
             }
 
@@ -105,7 +105,7 @@ namespace VrBattlegrounds.Managers
             if (!ConnectionsSettled())
             {
                 GameLog.Network.Verbose(
-                    $"[MapManager] Загрузка карты '{sceneName}': ждём, пока Mirror закончит AddPlayer " +
+                    $"[MapLoader] Загрузка карты '{sceneName}': ждём, пока Mirror закончит AddPlayer " +
                     $"({DescribeUnsettled()})...");
 
                 while (!ConnectionsSettled())
@@ -116,7 +116,7 @@ namespace VrBattlegrounds.Managers
             // (Ready, SpawnObjects) до того, как мы сменим сцену.
             yield return null;
 
-            GameLog.Network.Info($"[MapManager] ServerChangeScene: {sceneName}");
+            GameLog.Network.Info($"[MapLoader] ServerChangeScene: {sceneName}");
             CurrentMap = sceneName;
             NetworkManager.singleton.ServerChangeScene(sceneName);
 

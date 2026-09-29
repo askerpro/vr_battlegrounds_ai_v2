@@ -35,7 +35,7 @@ namespace VrBattlegrounds.Tests.Modes
 
         private void ActivateMode<T>() where T : GameMode
         {
-            GameplayManager manager = CreateNetworkComponent<GameplayManager>("GameplayManager");
+            MapReferee manager = CreateNetworkComponent<MapReferee>("MapReferee");
             InvokeLifecycleMethod(manager, "Awake");
             InvokePrivateMethod(manager, "RegisterActiveGameMode", CreateNetworkComponent<T>(typeof(T).Name));
         }

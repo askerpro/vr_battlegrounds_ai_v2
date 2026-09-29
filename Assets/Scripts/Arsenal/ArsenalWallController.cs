@@ -305,7 +305,7 @@ namespace VrBattlegrounds.Arsenal
         {
             get
             {
-                Managers.GameplayManager manager = Managers.GameplayManager.Instance;
+                Managers.MapReferee manager = Managers.MapReferee.Instance;
                 if (manager == null) return null;
 
                 GameMode mode = manager.ActiveGameMode;
@@ -423,8 +423,8 @@ namespace VrBattlegrounds.Arsenal
             // никогда (NET-06). Событие — у экземпляра режима, а режим на карте меняется
             // на месте (разминка → матч → разминка): стена следит за сменой активного
             // режима и переподписывается.
-            Managers.GameplayManager.ActiveGameModeChangedLocal -= HandleActiveModeChanged;
-            Managers.GameplayManager.ActiveGameModeChangedLocal += HandleActiveModeChanged;
+            Managers.MapReferee.ActiveGameModeChangedLocal -= HandleActiveModeChanged;
+            Managers.MapReferee.ActiveGameModeChangedLocal += HandleActiveModeChanged;
             HandleActiveModeChanged(ActiveMode);
 
             ReplenishWeaponsNetwork(true);
@@ -432,7 +432,7 @@ namespace VrBattlegrounds.Arsenal
 
         public override void OnStopServer()
         {
-            Managers.GameplayManager.ActiveGameModeChangedLocal -= HandleActiveModeChanged;
+            Managers.MapReferee.ActiveGameModeChangedLocal -= HandleActiveModeChanged;
             HandleActiveModeChanged(null);
             base.OnStopServer();
         }
@@ -595,7 +595,7 @@ namespace VrBattlegrounds.Arsenal
             // Подписка серверного канала снимается и здесь: статическое событие переживает
             // объект, а уничтоженная стена в списке подписчиков — это MissingReference на
             // ближайшем запросе пополнения. Повторное отписывание безвредно.
-            Managers.GameplayManager.ActiveGameModeChangedLocal -= HandleActiveModeChanged;
+            Managers.MapReferee.ActiveGameModeChangedLocal -= HandleActiveModeChanged;
             if (_refillSource != null) _refillSource.ArsenalRefillRequestedServer -= ServerRefillEmptySlots;
             _refillSource = null;
 

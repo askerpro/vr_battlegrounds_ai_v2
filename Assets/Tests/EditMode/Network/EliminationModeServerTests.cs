@@ -59,7 +59,7 @@ namespace VrBattlegrounds.Tests.Network
                     _roster.DeclareAllReady();
                     _mode.ServerTick(dt);
                 },
-                () => _mode.CurrentRoundState);
+                () => _mode.CurrentRoundPhase);
         }
 
         /// <summary>
@@ -85,10 +85,10 @@ namespace VrBattlegrounds.Tests.Network
         /// </summary>
         private void PlayRound(TeamData winner)
         {
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "фазы Combat");
 
             int roundBefore = _mode.CurrentRoundNumber;
-            _mode.RoundManager.RequestRoundEnd(winner);
+            _mode.RoundPhases.RequestRoundEnd(winner);
 
             _driver.AdvanceUntil(() => _mode.CurrentRoundNumber != roundBefore,
                 "конца цикла раунда " + roundBefore);
@@ -164,38 +164,35 @@ namespace VrBattlegrounds.Tests.Network
         }
 
         /// <summary>
-        /// Находка T-02: двойная подписка на SetEnded удваивала счёт сетов. После T-09
-        /// события SetEnded нет вовсе — наблюдатель передаётся конструктором SetManager,
-        /// поэтому подписаться дважды не на что. Тест остаётся сторожем этой развязки.
+        /// Находка T-02: двойная подписка на исход удваивала счёт. Счёт карты теперь ведёт
+        /// сам режим, без событий между классами, — подписаться дважды не на что.
+        /// Тест остаётся сторожем: одна победа в раунде — ровно одно очко.
         /// Недостижим без сервера — <c>InitializeActiveGame</c> помечен <c>[Server]</c>.
         /// </summary>
         [Test, Order(1)]
-        public void Победа_в_сете_даёт_одно_очко()
+        public void Победа_в_раунде_даёт_одно_очко()
         {
             SilenceMirrorNoise();
 
             _mode.Initialize(new[] { _teamA, _teamB });
 
             // Штатный вход — Update() → InitializeActiveGame(), но Update ждёт подключённых
-            // игроков, а StartGameplayWhenReady крутит корутину, которой в EditMode нет.
-            // Зовём напрямую: это тот же серверный путь, включая связывание с OnSetEnded.
+            // игроков, а BeginWhenReady крутит корутину, которой в EditMode нет.
+            // Зовём напрямую: это тот же серверный путь.
             InvokePrivateMethod(_mode, "InitializeActiveGame");
-            Assert.IsNotNull(_mode.RoundManager,
-                "InitializeActiveGame не создал RoundManager — значит [Server]-заглушка всё ещё срабатывает.");
+            Assert.IsNotNull(_mode.RoundPhases,
+                "InitializeActiveGame не создал RoundPhases — значит [Server]-заглушка всё ещё срабатывает.");
 
-            // roundsPerSet = 3 → порог 2 победы, сет заканчивается досрочно после двух раундов.
-            // Раунды проигрываются прокруткой ServerTick: очко за сет начисляется только
-            // после того, как экран итогов прожил свои пять секунд.
-            PlayRound(_teamA);
+            // Раунд проигрывается прокруткой ServerTick — боевым путём, с экраном итогов.
             PlayRound(_teamA);
 
             Assert.AreEqual(1, _mode.TeamStates[_teamA.teamIndex].Score,
-                "За один выигранный сет команда должна получить ровно одно очко. " +
-                "Двойка здесь = вернулось двойное оповещение об исходе сета (T-02). " +
+                "За один выигранный раунд команда должна получить ровно одно очко. " +
+                "Двойка здесь = вернулось двойное начисление (T-02). " +
                 "Пройденные фазы: " + _driver.DumpSequence());
 
             Assert.AreEqual(0, _mode.TeamStates[_teamB.teamIndex].Score,
-                "Проигравшая команда не должна получить очков за сет.");
+                "Проигравшая команда не должна получить очков.");
         }
     }
 }

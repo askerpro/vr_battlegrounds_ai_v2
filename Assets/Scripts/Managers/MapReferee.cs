@@ -10,12 +10,12 @@ using UltimateXR.Mechanics.Weapons;
 
 namespace VrBattlegrounds.Managers
 {
-    public enum GameplayState
+    public enum MapState
     {
         /// <summary>Матча нет — на карте разминка (или режима нет вовсе).</summary>
-        NotActive,
-        /// <summary>Идёт матч — режим матча, выбранный администратором.</summary>
-        Active,
+        Warmup,
+        /// <summary>Карта live: идёт режим матча, выбранный администратором.</summary>
+        Live,
         /// <summary>Матч на паузе: на карте разминка, снимок матча ждёт «Продолжить».</summary>
         Paused
     }
@@ -27,34 +27,34 @@ namespace VrBattlegrounds.Managers
     /// <b>Режим на карте меняется на месте, без перезагрузки сцены.</b> Любая карта
     /// (лобби тоже) стартует в разминке (<see cref="ServerStartWarmup"/>, из
     /// <c>OnStartServer</c>). «Начать матч» (<see cref="StartMatch"/>) останавливает
-    /// разминку и спавнит режим матча; матч кончился (<see cref="GameplayEnded"/>) —
-    /// снова разминка, а серия (<see cref="MatchSeries"/>) решает, какая карта следующая.
+    /// разминку и спавнит режим матча; матч кончился (<see cref="Finished"/>) —
+    /// снова разминка, а серия (<see cref="Series"/>) решает, какая карта следующая.
     /// Какой режим допустим на карте — <see cref="MapModeRules"/> по <c>MapData.supportedModes</c>.
     /// </para>
     ///
     /// <para>
-    /// Вся логика матча (сеты, раунды, таймеры, счёт на карте) живёт в конкретном
+    /// Вся логика матча (раунды, таймеры, счёт на карте) живёт в конкретном
     /// <see cref="GameMode"/>; правила (оружие, арсенал) менеджер читает через виртуальные
     /// свойства базового класса. Команды — не здесь, а в <see cref="MatchTeams"/>.
     /// </para>
     /// </summary>
-    [DefaultExecutionOrder(ManagerOrder.GameplayManager)]
-    public class GameplayManager : NetworkBehaviour
+    [DefaultExecutionOrder(ManagerOrder.MapReferee)]
+    public class MapReferee : NetworkBehaviour
     {
-        public static GameplayManager Instance { get; private set; }
+        public static MapReferee Instance { get; private set; }
 
         /// <summary>Матч на карте завершён (сервер). Null = ничья. Слушает серия карт.</summary>
-        public event Action<TeamData> GameplayEnded;
+        public event Action<TeamData> Finished;
 
-        [SyncVar] private GameplayState _currentState = GameplayState.NotActive;
+        [SyncVar] private MapState _currentState = MapState.Warmup;
 
         private GameMode _gameMode;
         private GameObject _gameModeInstance;
 
-        public GameplayState CurrentState => _currentState;
+        public MapState CurrentState => _currentState;
 
         /// <summary>Идёт матч (режим матча, а не разминка).</summary>
-        public bool IsMatchActive => _currentState != GameplayState.NotActive;
+        public bool IsMatchActive => _currentState != MapState.Warmup;
 
         /// <summary>Режим этой машины: разминка или матч. Null — в окне смены режима или сцены.</summary>
         public GameMode ActiveGameMode => _gameMode;
@@ -157,13 +157,13 @@ namespace VrBattlegrounds.Managers
         /// Опоздавший подписчик не теряет сигнал: <see cref="SubscribeToInstance" /> сразу
         /// отдаёт уже существующий экземпляр.
         /// </summary>
-        private static event Action<GameplayManager> InstanceReady;
+        private static event Action<MapReferee> InstanceReady;
 
         /// <summary>
         /// Подписка на появление оркестратора. Если он уже есть — обработчик вызывается
         /// немедленно, ещё до возврата из метода.
         /// </summary>
-        public static void SubscribeToInstance(Action<GameplayManager> handler)
+        public static void SubscribeToInstance(Action<MapReferee> handler)
         {
             if (handler == null) return;
 
@@ -173,7 +173,7 @@ namespace VrBattlegrounds.Managers
         }
 
         /// <summary>Отписка. Обязательна: событие статическое и переживает сцену.</summary>
-        public static void UnsubscribeFromInstance(Action<GameplayManager> handler)
+        public static void UnsubscribeFromInstance(Action<MapReferee> handler)
         {
             if (handler == null) return;
             InstanceReady -= handler;
@@ -199,22 +199,22 @@ namespace VrBattlegrounds.Managers
         // ── Смена режима на карте ─────────────────────────────────────────────
 
         /// <summary>
-        /// Разминка на этой карте (<see cref="MapModeRules.ResolveWarmup"/>). Идущий режим
+        /// Разминка (<see cref="GameModeRegistry.Warmup"/>) — состояние карты без запущенного
+        /// режима матча: на старте карты, на паузе, после конца матча. Идущий режим
         /// останавливается. Команды, общий счёт серии и статистика не трогаются.
         /// </summary>
-        /// <returns>false — разминки нет ни у карты, ни в реестре.</returns>
+        /// <returns>false — разминки нет в реестре.</returns>
         [Server]
         public bool ServerStartWarmup()
         {
-            GameModeData warmup = MapModeRules.ResolveWarmup(CurrentMap, Registry);
+            GameModeData warmup = Registry != null ? Registry.Warmup : null;
             if (warmup == null)
             {
-                GameLog.Error($"[GameplayManager] На карте '{SceneName}' нет разминки: нет ни в MapData.supportedModes, " +
-                              "ни в GameModeRegistry (режим с флагом isWarmup).");
+                GameLog.Error($"[MapReferee] На карте '{SceneName}' нет разминки: не задано поле warmup в GameModeRegistry.");
                 return false;
             }
 
-            _currentState = GameplayState.NotActive;
+            _currentState = MapState.Warmup;
             return ServerSwitchTo(warmup, stopCurrent: true);
         }
 
@@ -229,14 +229,14 @@ namespace VrBattlegrounds.Managers
         {
             if (IsMatchActive)
             {
-                GameLog.Match.Warning("[GameplayManager] Матч уже идёт или на паузе.");
+                GameLog.Match.Warning("[MapReferee] Матч уже идёт или на паузе.");
                 return false;
             }
 
             if (!_startedOnServer)
             {
                 _matchRequestedBeforeSpawn = true;
-                GameLog.Match.Verbose("[GameplayManager] «Начать матч» до спавна карты — после разминки.");
+                GameLog.Match.Verbose("[MapReferee] «Начать матч» до спавна карты — после разминки.");
                 return false;
             }
 
@@ -251,7 +251,7 @@ namespace VrBattlegrounds.Managers
             if (mode == null)
             {
                 GameLog.Match.Warning(
-                    $"[GameplayManager] Матч не начат: на карте '{SceneName}' нет совместимого режима матча " +
+                    $"[MapReferee] Матч не начат: на карте '{SceneName}' нет совместимого режима матча " +
                     $"(выбран '{(selected != null ? selected.modeId : "ничего")}').");
                 return false;
             }
@@ -259,13 +259,13 @@ namespace VrBattlegrounds.Managers
             if (selected != null && mode != selected)
             {
                 GameLog.Match.Info(
-                    $"[GameplayManager] Режим '{selected.modeId}' несовместим с картой '{SceneName}' — " +
+                    $"[MapReferee] Режим '{selected.modeId}' несовместим с картой '{SceneName}' — " +
                     $"берётся первый совместимый: '{mode.modeId}'.");
             }
 
             if (!ServerSwitchTo(mode, stopCurrent: true)) return false;
 
-            _currentState = GameplayState.Active;
+            _currentState = MapState.Live;
             return true;
         }
 
@@ -278,11 +278,11 @@ namespace VrBattlegrounds.Managers
         {
             if (!IsMatchActive)
             {
-                GameLog.Match.Warning("[GameplayManager] StopMatch: матч не идёт.");
+                GameLog.Match.Warning("[MapReferee] StopMatch: матч не идёт.");
                 return;
             }
 
-            GameLog.Match.Info("[GameplayManager] Матч остановлен администратором — разминка.");
+            GameLog.Match.Info("[MapReferee] Матч остановлен администратором — разминка.");
             _pausedSnapshot = null;
             _pausedMode = null;
             ServerStartWarmup();
@@ -293,7 +293,7 @@ namespace VrBattlegrounds.Managers
         //
         // «Пауза» прерывает раунд без победителя и возвращает карту в разминку («лобби
         // текущей карты»); «Продолжить» спавнит режим матча заново и возвращает ему снимок
-        // (MatchSnapshot): сеты, счёт раундов, номер прерванного раунда. Экземпляр режима
+        // (MatchSnapshot): счёт карты, номер прерванного раунда. Экземпляр режима
         // на паузе не живёт — почему, см. MatchSnapshot. Снимок — состояние матча на этой
         // карте, поэтому хранится здесь и уходит вместе со сценой.
 
@@ -301,10 +301,10 @@ namespace VrBattlegrounds.Managers
         private GameModeData _pausedMode;
 
         /// <summary>Матч на паузе: на карте разминка, «Продолжить» вернёт матч.</summary>
-        public bool IsPaused => _currentState == GameplayState.Paused;
+        public bool IsPaused => _currentState == MapState.Paused;
 
         /// <summary>Идёт ли сейчас сам матч (не пауза и не разминка) — для кнопки «Пауза».</summary>
-        public bool IsMatchRunning => _currentState == GameplayState.Active;
+        public bool IsMatchRunning => _currentState == MapState.Live;
 
         /// <summary>
         /// «Пауза»: снимок матча, идущий раунд прерывается без победителя (не засчитывается),
@@ -314,9 +314,9 @@ namespace VrBattlegrounds.Managers
         [Server]
         public bool PauseMatch()
         {
-            if (_currentState != GameplayState.Active || _gameMode == null || !_gameMode.SupportsPause)
+            if (_currentState != MapState.Live || _gameMode == null || !_gameMode.SupportsPause)
             {
-                GameLog.Match.Warning("[GameplayManager] Пауза: матч не идёт или режим не умеет паузу.");
+                GameLog.Match.Warning("[MapReferee] Пауза: матч не идёт или режим не умеет паузу.");
                 return false;
             }
 
@@ -324,7 +324,7 @@ namespace VrBattlegrounds.Managers
             _pausedMode = _gameMode.ModeData;
 
             GameLog.Match.Info(
-                $"[GameplayManager] Пауза: режим '{_pausedSnapshot.ModeId}', раунд {_pausedSnapshot.RoundToReplay} " +
+                $"[MapReferee] Пауза: режим '{_pausedSnapshot.ModeId}', раунд {_pausedSnapshot.RoundToReplay} " +
                 "прерван без победителя, карта — в разминку.");
 
             if (!ServerStartWarmup())
@@ -334,12 +334,12 @@ namespace VrBattlegrounds.Managers
                 return false;
             }
 
-            _currentState = GameplayState.Paused;
+            _currentState = MapState.Paused;
             return true;
         }
 
         /// <summary>
-        /// «Продолжить»: режим матча заново, со снимка — тот же номер раунда, сеты, счёт.
+        /// «Продолжить»: режим матча заново, со снимка — тот же номер раунда и счёт.
         /// Снаряжение разминки забирается.
         /// </summary>
         [Server]
@@ -347,7 +347,7 @@ namespace VrBattlegrounds.Managers
         {
             if (!IsPaused || _pausedMode == null)
             {
-                GameLog.Match.Warning("[GameplayManager] «Продолжить»: матч не на паузе.");
+                GameLog.Match.Warning("[MapReferee] «Продолжить»: матч не на паузе.");
                 return false;
             }
 
@@ -358,9 +358,9 @@ namespace VrBattlegrounds.Managers
 
             _pausedSnapshot = null;
             _pausedMode = null;
-            _currentState = GameplayState.Active;
+            _currentState = MapState.Live;
 
-            GameLog.Match.Info($"[GameplayManager] Матч продолжен: '{mode.modeId}', раунд {snapshot?.RoundToReplay}.");
+            GameLog.Match.Info($"[MapReferee] Матч продолжен: '{mode.modeId}', раунд {snapshot?.RoundToReplay}.");
             return true;
         }
 
@@ -371,12 +371,12 @@ namespace VrBattlegrounds.Managers
         /// Что принадлежит режиму, уходит вместе с ним: его правила-компоненты (уборка пола,
         /// карман, раундовые магазины), счёт на карте, машина раундов. Новый режим стартует
         /// с чистого пола (<c>ModeStartCleanup</c> на префабе) и полной стены (запрос
-        /// пополнения в <see cref="GameMode.StartGameplayWhenReady"/>). Команды, общий счёт
+        /// пополнения в <see cref="GameMode.BeginWhenReady"/>). Команды, общий счёт
         /// серии и статистика игроков живут вне режима и не трогаются.
         /// </para>
         /// </summary>
         /// <param name="stopCurrent">false — текущий режим завершился сам (объявил победителя)
-        /// и уже не идёт: <c>StopGameplay</c> ему не нужен.</param>
+        /// и уже не идёт: <c>ForceStop</c> ему не нужен.</param>
         /// <param name="restore">Снимок паузы — вернуть режиму после инициализации («Продолжить»).</param>
         [Server]
         private bool ServerSwitchTo(GameModeData data, bool stopCurrent, MatchSnapshot restore = null)
@@ -385,20 +385,22 @@ namespace VrBattlegrounds.Managers
 
             if (data.modePrefab == null && ModeFactory == null)
             {
-                GameLog.Error($"[GameplayManager] GameModeData '{data.modeId}' не содержит modePrefab");
+                GameLog.Error($"[MapReferee] GameModeData '{data.modeId}' не содержит modePrefab");
                 return false;
             }
 
-            if (data.teams == null || data.teams.Length < 1)
+            // У разминки команд нет — это не режим матча. Режиму матча без команд играть некем.
+            bool isWarmup = Registry != null && data == Registry.Warmup;
+            if (!isWarmup && (data.teams == null || data.teams.Length < 1))
             {
-                GameLog.Error($"[GameplayManager] GameModeData '{data.modeId}' не содержит команд");
+                GameLog.Error($"[MapReferee] GameModeData '{data.modeId}' не содержит команд");
                 return false;
             }
 
             string previous = _gameMode != null && _gameMode.ModeData != null ? _gameMode.ModeData.modeId : "нет";
 
             if (stopCurrent && _gameMode != null)
-                _gameMode.StopGameplay();
+                _gameMode.ForceStop();
 
             // Снаряжение не переживает смену режима: ни разминочное — матча, ни матчевое —
             // разминки. Первый режим карты (старт сцены) снимать нечего.
@@ -411,7 +413,7 @@ namespace VrBattlegrounds.Managers
             GameMode mode = instance != null ? instance.GetComponent<GameMode>() : null;
             if (mode == null)
             {
-                GameLog.Error($"[GameplayManager] Префаб '{data.modeId}' не содержит компонент GameMode");
+                GameLog.Error($"[MapReferee] Префаб '{data.modeId}' не содержит компонент GameMode");
                 DestroyObject(instance);
                 return false;
             }
@@ -426,13 +428,13 @@ namespace VrBattlegrounds.Managers
 
             _gameMode = null;
             RegisterActiveGameMode(mode);
-            mode.GameplayEnded += OnGameplayEnded;
+            mode.Finished += OnModeFinished;
             mode.RoundWonServer += OnModeRoundWon;
 
             GameLog.Match.Info(
-                $"[GameplayManager] Режим на карте '{SceneName}': {previous} → {data.modeId} ({data.displayName}).");
+                $"[MapReferee] Режим на карте '{SceneName}': {previous} → {data.modeId} ({data.displayName}).");
 
-            mode.StartGameplayWhenReady();
+            mode.BeginWhenReady();
             return true;
         }
 
@@ -441,19 +443,19 @@ namespace VrBattlegrounds.Managers
         /// Режим к этому моменту уже не идёт — останавливать его не нужно.
         /// </summary>
         [Server]
-        private void OnGameplayEnded(TeamData winner)
+        private void OnModeFinished(TeamData winner)
         {
-            _currentState = GameplayState.NotActive;
+            _currentState = MapState.Warmup;
             _pausedSnapshot = null;
             _pausedMode = null;
 
             string winnerName = winner != null ? winner.Name : "ничья";
-            GameLog.Match.Info($"[GameplayManager] Матч завершён, победитель: {winnerName}. Карта — в разминку.");
+            GameLog.Match.Info($"[MapReferee] Матч завершён, победитель: {winnerName}. Карта — в разминку.");
 
-            GameplayEnded?.Invoke(winner);
-            RpcOnGameplayEnded(winnerName);
+            Finished?.Invoke(winner);
+            RpcOnMapFinished(winnerName);
 
-            GameModeData warmup = MapModeRules.ResolveWarmup(CurrentMap, Registry);
+            GameModeData warmup = Registry != null ? Registry.Warmup : null;
             if (warmup != null) ServerSwitchTo(warmup, stopCurrent: false);
             else CleanupGameMode();
         }
@@ -463,7 +465,7 @@ namespace VrBattlegrounds.Managers
         {
             if (_gameMode != null)
             {
-                _gameMode.GameplayEnded -= OnGameplayEnded;
+                _gameMode.Finished -= OnModeFinished;
                 _gameMode.RoundWonServer -= OnModeRoundWon;
                 UnregisterActiveGameMode(_gameMode);
                 _gameMode = null;
@@ -485,16 +487,16 @@ namespace VrBattlegrounds.Managers
         }
 
         [ClientRpc]
-        private void RpcOnGameplayEnded(string winnerName)
+        private void RpcOnMapFinished(string winnerName)
         {
             GameLog.Match.Info(
-                $"[GameplayManager] Матч завершён (клиент), победитель: {winnerName}");
+                $"[MapReferee] Матч завершён (клиент), победитель: {winnerName}");
         }
 
         [ClientRpc]
         private void RpcOnMatchStopped()
         {
-            GameLog.Match.Info("[GameplayManager] Матч остановлен (клиент)");
+            GameLog.Match.Info("[MapReferee] Матч остановлен (клиент)");
         }
 
         /// <summary>Сервер: раунд на карте доигран и выигран. Слушает серия (общий счёт).</summary>

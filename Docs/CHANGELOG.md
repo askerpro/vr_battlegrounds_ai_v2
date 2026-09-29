@@ -2,6 +2,65 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-29] - Счёт карты как в CS; словарь матча
+
+### Изменено
+
+- **Смена карты никого не телепортирует.** Неоткалиброванный игрок при смене карты остаётся в тех же мировых
+  координатах; раньше его ставили в зону команды, и игрок, выбравший команду в лобби, на карте оказывался на базе —
+  картинка разъезжалась с телом (игроки ходят по арене ногами). Откалиброванный, как и раньше, возвращается
+  на своё место относительно якорей. Зона команды — только первый спавн. `CalibratedSpawnRegistry` переименован
+  в `SpawnPlaceRegistry` (хранит места всех игроков), новый источник точки — `AvatarSpawnPointSource.PreviousWorldPlace`.
+  Тесты — `SpawnPlaceRegistryTests`.
+- **Арены всех карт выровнены**: `TestMap1` повёрнута на −90° вокруг начала координат (арена в ней стояла
+  повёрнутой на 90° относительно `Lobby` и `TestMap2`), у `TestMap2` снят случайный наклон `Environment` 0,11°.
+  Якоря всех карт совпадают с лобби — `MapAlignmentTests`. Occlusion перезапечён. E2E-сценарии
+  `CalibratedPositionPersistsScenario` и `ConnectPlaceAcrossMapScenario` опирались на повёрнутую карту и теперь
+  отвечают «вердикт вынести нельзя».
+
+- **Разминка — не режим каталога, а состояние карты** «режим матча не запущен или на паузе». Её включает
+  `MapReferee` сам; она отдельное поле `GameModeRegistry.warmup`, не в `modes` и не в `MapData.supportedModes`,
+  без команд. Флаг `GameModeData.isWarmup` удалён — разминка ли режим, знает класс (`GameMode.IsWarmup`).
+  Объектом-режимом разминка осталась намеренно: правила (стрелять, арсенал, зоны, смена команды) спрашивают
+  у `ActiveGameMode`, не зная его типа. У лобби список режимов пуст: пустой список у карты реестра теперь
+  значит «режимов матча нет» (`MapModeRules.IsCompatible`).
+- **Команды «Разминка» больше нет**, политика `KeepOrDefault` удалена. Команд две — Военные и Повстанцы; в лобби
+  планшет предлагает их, а не три. Игрок без команды — киборг (`TeamAvatarStrategy.fallbackPrefab`, киборг внесён
+  в `AvatarsRegistry` и проверяется тестами аватаров); в лобби появляется в нейтральной зоне (зона без команды,
+  `AvatarSpawnPointResolver.FindNeutralZone`). Конец серии снимает команды у всех
+  (`SessionTeamAssigner.ClearBeforeSceneChange`) вместо перевода в «Разминку».
+
+- **Следующую карту серии запускает только админ** — кнопка «Следующая карта» на экране «Матч»
+  (`MatchCommand.NextMap`, на последней карте надпись «В лобби»). После конца матча карта уходит в разминку
+  и ждёт; прежний автопереход через `_nextMapDelay` (10 с) убран — в эти секунды игроки уже экипировались
+  в разминке, а следующая карта грузилась без спроса. Тесты — `MatchFlowTests`, `MatchCommandVisibilityTests`.
+- **Игрок без команды матча в матче просит выбрать команду**, а не «вернуться в свою зону»: своей зоны у
+  него нет (на TestMap1 игрок с «Разминкой» висел призраком с «вернитесь в зону»). `HudNotificationTexts.Reminder`,
+  тесты — `HudNotificationTextsTests`.
+
+- **Сетов больше нет — карта считается как в CS.** Раунды суммируются за обе половины, у половины своего
+  победителя нет; после `_roundsPerHalf` раундов (было `_roundsPerSet`, значение префаба сохранено
+  `FormerlySerializedAs`) команды меняются сторонами. Карта кончается, когда у команды больше половины всех
+  раундов, или когда сыграны все; равный счёт — ничья. Раньше карта решалась по выигранным сетам, и при общей
+  сумме раундов в пользу соперника могла уйти не той команде. Счёт карты — базовый счёт режима
+  (`GameMode.GetScore`); `GetRoundScore`, `GetMapRounds`, `OnSetStartedLocal`/`OnSetEndedLocal` и HUD «Сет N»
+  убраны. Тесты — `MapScoreTests` (красные на старом коде), пауза на итогах раунда — `MatchPauseTests`.
+- **`SetManager` удалён**: номер раунда, счёт и единственный владелец перехода «раунд → раунд» (MATCH-06) —
+  в `EliminationMode`. `SetManagerScoringTests` заменён на `MapScoreTests`.
+- **Переименования по словарю «серия → карта → половина → раунд → фаза»** (классы переименованы вместе
+  с `.meta`, GUID и ссылки в префабах сохранены):
+  - `GameplayManager` → `MapReferee` (префаб `MatchManager.prefab` → `MapReferee.prefab`),
+    `GameplayState { NotActive, Active, Paused }` → `MapState { Warmup, Live, Paused }`;
+  - `MapManager` → `MapLoader` (прежнее свойство-подмена `MatchSeries.MapLoader` → `Series.LoadMapOverride`);
+  - `MatchSeries` → `Series`;
+  - `RoundManager` → `RoundPhases`, `RoundState` → `RoundPhase` (и члены: `CurrentRoundPhase`,
+    `OnRoundPhaseChangedLocal` …; поле `TeamSpawnZone._currentRoundPhase` — с `FormerlySerializedAs`);
+  - `GameMode`: `StartGameplayWhenReady`/`StartGameplay`/`CanStartGameplay`/`StopGameplay` →
+    `BeginWhenReady`/`Begin`/`CanBegin`/`ForceStop`, событие `GameplayEnded` → `Finished`
+    (у `MapReferee` — тоже `Finished`), `SetScore` → `AssignScore`;
+  - `HUDWidget_GameplayTimer` → `HUDWidget_MapTimer`, `DebugBootstrapConfig.autoStartGameplay` → `autoGoLive`.
+  Старые имена остаются в исторических записях этого журнала, аудитах и `Docs/tasks/`.
+
 ## [2026-09-29] - Граница зоны спавна: лазеры и пол
 
 ### Изменено

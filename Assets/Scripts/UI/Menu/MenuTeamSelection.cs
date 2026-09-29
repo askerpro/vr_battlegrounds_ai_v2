@@ -70,18 +70,12 @@ namespace VrBattlegrounds.UI.Menu
         }
 
         /// <summary>
-        /// Какие команды предлагать: команды активного режима этой сцены (в разминке —
-        /// одна «Разминка»), иначе команды режима, выбранного на матч, иначе все команды реестра.
+        /// Какие команды предлагать: команды активного режима этой сцены, иначе (разминка —
+        /// своих команд у неё нет) команды режима, выбранного на матч, иначе все команды реестра.
         ///
         /// <para>
         /// Активный режим — первым: выбор администратора описывает <i>следующий</i> матч,
         /// и в лобби он предлагал бы команды матча, которых в лобби нет.
-        /// </para>
-        ///
-        /// <para>
-        /// Разминка команду матча не трогает (<see cref="TeamAssignmentKind.KeepOrDefault"/>):
-        /// игроку с командой матча (CT/T) предлагается только она — для смены скина. Иначе
-        /// выбор скина «Разминки» молча перевёл бы его из команды матча.
         /// </para>
         ///
         /// <para>
@@ -94,15 +88,6 @@ namespace VrBattlegrounds.UI.Menu
                                                        int currentTeamIndex)
         {
             TeamData[] teams = ResolveAvailableTeams(activeMode, selectedMode, allTeams);
-
-            if (activeMode != null && activeMode.TeamAssignment == TeamAssignmentKind.KeepOrDefault &&
-                currentTeamIndex != 0 && System.Array.FindIndex(teams, t => t.teamIndex == currentTeamIndex) < 0)
-            {
-                TeamData own = allTeams != null
-                    ? System.Array.Find(allTeams, t => t != null && t.teamIndex == currentTeamIndex)
-                    : null;
-                if (own != null) return new[] { own };
-            }
 
             if (activeMode != null && activeMode.TeamChoiceLocked)
                 return System.Array.FindAll(teams, t => t.teamIndex == currentTeamIndex);
@@ -130,7 +115,7 @@ namespace VrBattlegrounds.UI.Menu
 
         private static TeamData[] CurrentTeams()
         {
-            GameMode active = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            GameMode active = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
 
             // Выбор матча спрашиваем, только если режима сцены нет: геттер пишет
             // предупреждение, когда администратор ещё ничего не выбрал.

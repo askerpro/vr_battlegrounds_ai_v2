@@ -15,4 +15,3 @@ MonoBehaviour:
   teams:
   - {fileID: 11400000, guid: 294548aeb7148344ea5bfd4c522cc7b7, type: 2}
   - {fileID: 11400000, guid: 6a1b2f4f562e0d4468069d2c11f06576, type: 2}
-  - {fileID: 11400000, guid: 9ad2ae492871d4a44a9c16aff03fc143, type: 2}

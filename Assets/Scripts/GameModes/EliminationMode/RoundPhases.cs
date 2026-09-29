@@ -24,12 +24,12 @@ namespace VrBattlegrounds.GameModes
         public readonly bool CycleCompleted;
 
         /// <summary>Фаза, из которой шёл переход.</summary>
-        public readonly RoundState From;
+        public readonly RoundPhase From;
 
         /// <summary>Фаза, в которую шёл переход.</summary>
-        public readonly RoundState To;
+        public readonly RoundPhase To;
 
-        private RoundTickResult(bool phaseChanged, bool cycleCompleted, RoundState from, RoundState to)
+        private RoundTickResult(bool phaseChanged, bool cycleCompleted, RoundPhase from, RoundPhase to)
         {
             PhaseChanged = phaseChanged;
             CycleCompleted = cycleCompleted;
@@ -39,14 +39,14 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>Ничего не произошло: фаза продолжается.</summary>
         public static RoundTickResult Nothing =>
-            new RoundTickResult(false, false, RoundState.Setup, RoundState.Setup);
+            new RoundTickResult(false, false, RoundPhase.Setup, RoundPhase.Setup);
 
         /// <summary>Машина перешла в новую фазу.</summary>
-        public static RoundTickResult Moved(RoundState from, RoundState to) =>
+        public static RoundTickResult Moved(RoundPhase from, RoundPhase to) =>
             new RoundTickResult(true, false, from, to);
 
         /// <summary>Цикл раунда закончен, переход применяет владелец машины.</summary>
-        public static RoundTickResult Completed(RoundState from, RoundState to) =>
+        public static RoundTickResult Completed(RoundPhase from, RoundPhase to) =>
             new RoundTickResult(false, true, from, to);
     }
 
@@ -59,17 +59,17 @@ namespace VrBattlegrounds.GameModes
     /// <see cref="Transitions"/>. Всё, что приходит снаружи (гибель игрока), — это
     /// заявка <see cref="RequestRoundEnd"/>, а не смена фазы. Раньше фазу меняли из
     /// трёх мест, причём внутри обработчиков событий, и цепочка
-    /// «конец раунда → SetManager → старт следующего раунда» замыкалась в одном кадре:
+    /// «конец раунда → старт следующего раунда» замыкалась в одном кадре:
     /// фаза Resolution жила до следующей строки, а ветки Resolution и Scoreboard
     /// в Tick были недостижимы (MATCH-02, корень 4).
     ///
     /// **Чего машина не делает.** Она не начинает следующий раунд. Переход
     /// «итоги показаны → новый раунд» помечен в таблице как <c>appliedByOwner</c>:
-    /// его применяет <see cref="SetManager"/>, потому что только он знает, не пора ли
-    /// вместо нового раунда закончить сет. Второй владелец этого перехода обошёл бы
+    /// его применяет <see cref="EliminationMode"/>, потому что только режим знает, не пора ли
+    /// вместо нового раунда закончить карту. Второй владелец этого перехода обошёл бы
     /// счётчик раундов и <c>RpcOnRoundStarted</c> (MATCH-06).
     /// </summary>
-    public class RoundManager
+    public class RoundPhases
     {
         /// <summary>Техническая подготовка: очистка и телепортация.</summary>
         public const float SetupDuration = 1.0f;
@@ -95,22 +95,22 @@ namespace VrBattlegrounds.GameModes
             // Закупка открывается, когда все вернулись на свою базу (и погибшие — они возрождаются
             // в зоне). Раньше Setup длился ровно секунду: идущий на базу пропускал арсенал, а после
             // смены сторон вся команда оказывалась на закупке в чужой половине.
-            new PhaseTransition(RoundState.Setup, RoundState.Equipment,
+            new PhaseTransition(RoundPhase.Setup, RoundPhase.Equipment,
                 m => m._stateTimer >= SetupDuration && m._readiness.AllAtBase(m._teams),
                 "все на своей базе"),
 
             // Предел: один отошедший не останавливает матч навсегда.
-            new PhaseTransition(RoundState.Setup, RoundState.Equipment,
+            new PhaseTransition(RoundPhase.Setup, RoundPhase.Equipment,
                 m => m._stateTimer >= SetupDuration + ReturnToBaseLimit,
                 "предел возвращения на базу истёк"),
 
-            new PhaseTransition(RoundState.Equipment, RoundState.Countdown,
+            new PhaseTransition(RoundPhase.Equipment, RoundPhase.Countdown,
                 m => m._readiness.AllReady,
                 "все живые игроки готовы"),
 
             // Старт по таймеру (RoundStartRule.Timer): готовность не спрашивается,
             // закупка длится ровно отведённое время. Отдельная строка — ради причины в логе.
-            new PhaseTransition(RoundState.Equipment, RoundState.Countdown,
+            new PhaseTransition(RoundPhase.Equipment, RoundPhase.Countdown,
                 m => m._readiness.StartRule == RoundStartRule.Timer && m._readiness.IsSatisfied,
                 "время закупки вышло"),
 
@@ -118,29 +118,29 @@ namespace VrBattlegrounds.GameModes
             // разница: раунд начался потому, что все готовы, или потому, что ждать
             // дальше некогда. Само правило матча применяет RoundReadiness — здесь
             // условие остаётся чистым, как и все остальные в таблице.
-            new PhaseTransition(RoundState.Equipment, RoundState.Countdown,
+            new PhaseTransition(RoundPhase.Equipment, RoundPhase.Countdown,
                 m => m._readiness.IsSatisfied,
                 "предел ожидания готовности истёк"),
 
-            new PhaseTransition(RoundState.Countdown, RoundState.Combat,
+            new PhaseTransition(RoundPhase.Countdown, RoundPhase.Combat,
                 m => m._stateTimer >= m._countdownDuration,
                 "обратный отсчёт истёк"),
 
-            new PhaseTransition(RoundState.Combat, RoundState.Resolution,
+            new PhaseTransition(RoundPhase.Combat, RoundPhase.Resolution,
                 m => m._roundEndRequested,
                 "исход раунда определён"),
 
-            new PhaseTransition(RoundState.Combat, RoundState.Resolution,
+            new PhaseTransition(RoundPhase.Combat, RoundPhase.Resolution,
                 m => m._roundTimer >= m._roundDuration,
                 "время раунда истекло — ничья"),
 
-            new PhaseTransition(RoundState.Resolution, RoundState.Scoreboard,
+            new PhaseTransition(RoundPhase.Resolution, RoundPhase.Scoreboard,
                 m => m._stateTimer >= ResolutionDuration,
                 "пауза после победы истекла"),
 
             // Единственная строка, которую машина не применяет сама: следующий раунд
             // начинает владелец. См. комментарий к классу.
-            new PhaseTransition(RoundState.Scoreboard, RoundState.Setup,
+            new PhaseTransition(RoundPhase.Scoreboard, RoundPhase.Setup,
                 m => m._stateTimer >= ScoreboardDuration,
                 "итоги показаны", appliedByOwner: true)
         };
@@ -151,7 +151,7 @@ namespace VrBattlegrounds.GameModes
         private float _stateTimer;
         private float _roundTimer;
 
-        private RoundState _roundState = RoundState.Setup;
+        private RoundPhase _roundPhase = RoundPhase.Setup;
 
         /// <summary>Победитель текущего раунда. null — ничья либо раунд ещё идёт.</summary>
         private TeamData _roundWinner;
@@ -186,7 +186,7 @@ namespace VrBattlegrounds.GameModes
         /// </param>
         /// <param name="timeoutRule">Правило матча при истечении предела.</param>
         /// <param name="startRule">Чем кончается фаза закупки: готовностью или только таймером.</param>
-        public RoundManager(IPlayerRoster roster = null,
+        public RoundPhases(IPlayerRoster roster = null,
                             float timeLimit = RoundReadiness.DefaultTimeLimit,
                             RoundReadinessTimeoutRule timeoutRule = RoundReadinessTimeoutRule.AutoReady,
                             RoundStartRule startRule = RoundStartRule.Readiness)
@@ -194,13 +194,13 @@ namespace VrBattlegrounds.GameModes
             _readiness = new RoundReadiness(roster, timeLimit, timeoutRule, startRule);
         }
 
-        public RoundState State => _roundState;
+        public RoundPhase State => _roundPhase;
 
         /// <summary>
         /// Обратный отсчёт стоит: кто-то из живых вышел из своей зоны. Отсчёт начнётся
-        /// сначала, когда все вернутся. Вне фазы <see cref="RoundState.Countdown"/> — false.
+        /// сначала, когда все вернутся. Вне фазы <see cref="RoundPhase.Countdown"/> — false.
         /// </summary>
-        public bool CountdownHeld => _roundState == RoundState.Countdown && _countdownHeld;
+        public bool CountdownHeld => _roundPhase == RoundPhase.Countdown && _countdownHeld;
 
         /// <summary>
         /// Состав готовых и неготовых. Читают режим (чтобы отдать его клиентам)
@@ -217,9 +217,9 @@ namespace VrBattlegrounds.GameModes
         {
             get
             {
-                if (_roundState == RoundState.Countdown) return Math.Max(0f, _countdownDuration - _stateTimer);
-                if (_roundState == RoundState.Scoreboard) return Math.Max(0f, ScoreboardDuration - _stateTimer);
-                if (_roundState == RoundState.Resolution) return Math.Max(0f, ResolutionDuration - _stateTimer);
+                if (_roundPhase == RoundPhase.Countdown) return Math.Max(0f, _countdownDuration - _stateTimer);
+                if (_roundPhase == RoundPhase.Scoreboard) return Math.Max(0f, ScoreboardDuration - _stateTimer);
+                if (_roundPhase == RoundPhase.Resolution) return Math.Max(0f, ResolutionDuration - _stateTimer);
                 return 0f;
             }
         }
@@ -243,7 +243,7 @@ namespace VrBattlegrounds.GameModes
             _stopped = false;
             _countdownHeld = false;
 
-            _roundState = RoundState.Setup;
+            _roundPhase = RoundPhase.Setup;
 
             // Готовность объявляется заново каждый раунд: она значит «я закончил дела
             // в арсенале сейчас», а не «когда-то закончил». Без сброса фаза Equipment
@@ -251,7 +251,7 @@ namespace VrBattlegrounds.GameModes
             _readiness.Reset(_teams);
 
             GameLog.Match.Info(
-                "[RoundManager] Раунд начат: очистка и телепортация (Setup)");
+                "[RoundPhases] Раунд начат: очистка и телепортация (Setup)");
         }
 
         /// <summary>
@@ -261,14 +261,14 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         public void RequestRoundEnd(TeamData winner)
         {
-            if (_roundState != RoundState.Combat || _roundEndRequested) return;
+            if (_roundPhase != RoundPhase.Combat || _roundEndRequested) return;
 
             _roundWinner = winner;
             _roundEndRequested = true;
 
             string winnerName = winner != null ? winner.Name : "ничья";
             GameLog.Match.Info(
-                $"[RoundManager] Исход боя определён. Победитель: {winnerName}");
+                $"[RoundPhases] Исход боя определён. Победитель: {winnerName}");
         }
 
         /// <summary>
@@ -280,42 +280,42 @@ namespace VrBattlegrounds.GameModes
             if (_stopped || _awaitingOwner) return RoundTickResult.Nothing;
 
             _stateTimer += deltaTime;
-            if (_roundState == RoundState.Combat) _roundTimer += deltaTime;
+            if (_roundPhase == RoundPhase.Combat) _roundTimer += deltaTime;
 
             // Готовность пересчитывается до разбора таблицы, и только в той фазе, где
             // её ждут. Здесь же применяется предел ожидания — единственный побочный
             // эффект тика помимо смены фазы, и он вынесен из условий перехода
             // намеренно: условия в таблице обязаны оставаться чистыми.
-            if (_roundState == RoundState.Equipment) _readiness.Evaluate(_teams, _stateTimer);
+            if (_roundPhase == RoundPhase.Equipment) _readiness.Evaluate(_teams, _stateTimer);
 
             // Обратный отсчёт идёт, только пока все живые стоят в своих зонах: вышел — отсчёт
             // встаёт на полный и ждёт; вернулись все — идёт сначала. Та же природа, что у предела
             // ожидания выше: побочный эффект тика, условие перехода в таблице остаётся чистым.
-            if (_roundState == RoundState.Countdown) HoldCountdownWhileAway();
+            if (_roundPhase == RoundPhase.Countdown) HoldCountdownWhileAway();
 
             foreach (PhaseTransition transition in Transitions)
             {
-                if (transition.From != _roundState) continue;
+                if (transition.From != _roundPhase) continue;
                 if (!transition.When(this)) continue;
 
                 if (transition.AppliedByOwner)
                 {
                     // Машина доиграла раунд и останавливается. Что дальше — новый раунд
-                    // или конец сета — решает владелец, он же и применит переход.
+                    // или конец карты — решает владелец, он же и применит переход.
                     _awaitingOwner = true;
 
                     GameLog.Match.Info(
-                        $"[RoundManager] {transition.From}: {transition.Reason}. Цикл раунда завершён.");
+                        $"[RoundPhases] {transition.From}: {transition.Reason}. Цикл раунда завершён.");
 
                     return RoundTickResult.Completed(transition.From, transition.To);
                 }
 
-                _roundState = transition.To;
+                _roundPhase = transition.To;
                 _stateTimer = 0f;
                 _countdownHeld = false;
 
                 GameLog.Match.Info(
-                    $"[RoundManager] {transition.From} → {transition.To}: {transition.Reason}");
+                    $"[RoundPhases] {transition.From} → {transition.To}: {transition.Reason}");
 
                 return RoundTickResult.Moved(transition.From, transition.To);
             }
@@ -333,7 +333,7 @@ namespace VrBattlegrounds.GameModes
                 {
                     string names = string.Join(", ", _awayOnCountdown.Select(s => s.PlayerName));
                     GameLog.Match.Info(
-                        $"[RoundManager] Обратный отсчёт сброшен: вне своей зоны {names}. Ждём возвращения.");
+                        $"[RoundPhases] Обратный отсчёт сброшен: вне своей зоны {names}. Ждём возвращения.");
                 }
                 _countdownHeld = true;
                 _stateTimer = 0f;
@@ -344,7 +344,7 @@ namespace VrBattlegrounds.GameModes
             {
                 _countdownHeld = false;
                 _stateTimer = 0f;
-                GameLog.Match.Info("[RoundManager] Все в своих зонах — обратный отсчёт заново.");
+                GameLog.Match.Info("[RoundPhases] Все в своих зонах — обратный отсчёт заново.");
             }
         }
 
@@ -352,20 +352,20 @@ namespace VrBattlegrounds.GameModes
         public void ForceStop()
         {
             _stopped = true;
-            GameLog.Match.Info("[RoundManager] Раунд принудительно остановлен");
+            GameLog.Match.Info("[RoundPhases] Раунд принудительно остановлен");
         }
 
         /// <summary>Строка таблицы переходов.</summary>
         private readonly struct PhaseTransition
         {
             /// <summary>Фаза, из которой возможен переход.</summary>
-            public readonly RoundState From;
+            public readonly RoundPhase From;
 
             /// <summary>Фаза, в которую он ведёт.</summary>
-            public readonly RoundState To;
+            public readonly RoundPhase To;
 
             /// <summary>Условие перехода. Аргумент — сама машина, чтобы правило читало её таймеры.</summary>
-            public readonly Func<RoundManager, bool> When;
+            public readonly Func<RoundPhases, bool> When;
 
             /// <summary>Причина перехода. Уходит в лог, чтобы траектория раунда читалась по логам.</summary>
             public readonly string Reason;
@@ -373,7 +373,7 @@ namespace VrBattlegrounds.GameModes
             /// <summary>Переход применяет владелец машины, а не она сама.</summary>
             public readonly bool AppliedByOwner;
 
-            public PhaseTransition(RoundState from, RoundState to, Func<RoundManager, bool> when,
+            public PhaseTransition(RoundPhase from, RoundPhase to, Func<RoundPhases, bool> when,
                                    string reason, bool appliedByOwner = false)
             {
                 From = from;
@@ -396,7 +396,7 @@ namespace VrBattlegrounds.GameModes
         }
     }
 
-    public enum RoundState
+    public enum RoundPhase
     {
         /// <summary>Техническая микрофаза. Очистка, телепортация.</summary>
         Setup,

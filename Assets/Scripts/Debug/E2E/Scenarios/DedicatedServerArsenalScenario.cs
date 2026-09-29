@@ -17,8 +17,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// Сценарий <c>dedicated-server-arsenal</c> — находки <b>NET-06</b>, <b>NET-13</b>, <b>NET-07</b>.
     ///
     /// <b>NET-06.</b> Смена фазы раунда рассылалась через
-    /// <c>[ClientRpc] EliminationMode.RpcOnRoundStateChanged</c>, который поднимает
-    /// статическое событие <see cref="EliminationMode.OnRoundStateChangedLocal"/>.
+    /// <c>[ClientRpc] EliminationMode.RpcOnRoundPhaseChanged</c>, который поднимает
+    /// статическое событие <see cref="EliminationMode.OnRoundPhaseChangedLocal"/>.
     /// В режиме <c>ServerOnly</c> ClientRpc локально не исполняется, поэтому на
     /// выделенном сервере событие не срабатывало, и стена арсенала не открывалась
     /// и не пополнялась. На хосте баг не виден — там сервер сам является клиентом.
@@ -106,11 +106,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         // ── Наблюдение ────────────────────────────────────────────────────
 
-        /// <summary>Фазы, пришедшие через <c>OnRoundStateChangedLocal</c> (то, что ловит арсенал).</summary>
-        private readonly List<RoundState> _eventPhases = new List<RoundState>();
+        /// <summary>Фазы, пришедшие через <c>OnRoundPhaseChangedLocal</c> (то, что ловит арсенал).</summary>
+        private readonly List<RoundPhase> _eventPhases = new List<RoundPhase>();
 
         /// <summary>Фазы, увиденные опросом SyncVar (то, что реально происходит на сервере).</summary>
-        private readonly List<RoundState> _syncVarPhases = new List<RoundState>();
+        private readonly List<RoundPhase> _syncVarPhases = new List<RoundPhase>();
 
 
         public IEnumerator Run(E2EContext context, E2EResult result)
@@ -197,25 +197,25 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             string teamsReport = AssignTeams(sessionManager);
             GameLog.Debug.Info($"[E2E] Команды распределены: {teamsReport}");
 
-            if (MapManager.Instance == null)
+            if (MapLoader.Instance == null)
             {
-                result.Set(CheckMap, false, "MapManager.Instance == null — некому загрузить карту");
-                result.Summary = "MapManager отсутствует, прогон недействителен";
+                result.Set(CheckMap, false, "MapLoader.Instance == null — некому загрузить карту");
+                result.Summary = "MapLoader отсутствует, прогон недействителен";
                 yield break;
             }
 
-            MapManager.Instance.LoadMap(context.Map);
+            MapLoader.Instance.LoadMap(context.Map);
 
             deadline = Now + 90f;
-            while ((SceneManager.GetActiveScene().name != context.Map || GameplayManager.Instance == null)
+            while ((SceneManager.GetActiveScene().name != context.Map || MapReferee.Instance == null)
                    && Now < deadline)
                 yield return null;
 
-            if (SceneManager.GetActiveScene().name != context.Map || GameplayManager.Instance == null)
+            if (SceneManager.GetActiveScene().name != context.Map || MapReferee.Instance == null)
             {
                 result.Set(CheckMap, false,
                     $"за 90 с карта не собралась: активная сцена='{SceneManager.GetActiveScene().name}' " +
-                    $"(ждали '{context.Map}'), GameplayManager.Instance={(GameplayManager.Instance == null ? "null" : "есть")}");
+                    $"(ждали '{context.Map}'), MapReferee.Instance={(MapReferee.Instance == null ? "null" : "есть")}");
                 result.Summary = "карта не загрузилась, вердикт по NET-06 вынести нельзя";
                 yield break;
             }
@@ -294,17 +294,17 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             string arsenalStatesBefore = DescribeWallStates(walls);
 
             // ── 6. Матч и фазы раунда ─────────────────────────────────────
-            EliminationMode.OnRoundStateChangedLocal += OnRoundStateEvent;
+            EliminationMode.OnRoundPhaseChangedLocal += OnRoundPhaseEvent;
 
             try
             {
-                GameplayManager.Instance.StartMatch();
+                MapReferee.Instance.StartMatch();
 
                 EliminationMode elimination = null;
                 deadline = Now + 60f;
                 while (elimination == null && Now < deadline)
                 {
-                    elimination = GameplayManager.Instance.ActiveGameMode as EliminationMode;
+                    elimination = MapReferee.Instance.ActiveGameMode as EliminationMode;
                     if (elimination == null)
                         yield return null;
                 }
@@ -312,27 +312,27 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 if (elimination == null)
                 {
                     result.Set(CheckPhase, false,
-                        "за 60 с GameplayManager.ActiveGameMode не стал EliminationMode — матч не запустился. " +
+                        "за 60 с MapReferee.ActiveGameMode не стал EliminationMode — матч не запустился. " +
                         $"Режим из SessionManager: '{sessionManager.SelectedModeId}'.");
                     result.Summary = "матч не запустился, вердикт по NET-06 вынести нельзя";
                     yield break;
                 }
 
-                RoundState observed = elimination.CurrentRoundState;
+                RoundPhase observed = elimination.CurrentRoundPhase;
                 _syncVarPhases.Add(observed);
 
-                // Ждём первую смену фазы: Setup длится 1 с (RoundManager.SetupDuration),
+                // Ждём первую смену фазы: Setup длится 1 с (RoundPhases.SetupDuration),
                 // но до неё матч должен выйти из WaitingForPlayers — а это требует
                 // игрока в каждой команде.
                 deadline = Now + 90f;
-                while (elimination.CurrentRoundState == RoundState.Setup && Now < deadline)
+                while (elimination.CurrentRoundPhase == RoundPhase.Setup && Now < deadline)
                     yield return null;
 
-                observed = elimination.CurrentRoundState;
+                observed = elimination.CurrentRoundPhase;
                 if (_syncVarPhases.Count == 0 || _syncVarPhases[_syncVarPhases.Count - 1] != observed)
                     _syncVarPhases.Add(observed);
 
-                bool phaseOk = observed != RoundState.Setup;
+                bool phaseOk = observed != RoundPhase.Setup;
                 result.Set(CheckPhase, phaseOk,
                     phaseOk
                         ? $"фаза сменилась на {observed}; матч={elimination.CurrentMatchState}; " +
@@ -348,12 +348,12 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 }
 
                 // Даём серверу время отреагировать на смену фазы: анимация открытия
-                // стены запускается из HandleRoundStateChanged синхронно, но пусть
+                // стены запускается из HandleRoundPhaseChanged синхронно, но пусть
                 // пройдёт заведомо больше кадров, чем нужно.
                 float settle = Now + 5f;
                 while (Now < settle)
                 {
-                    RoundState current = elimination.CurrentRoundState;
+                    RoundPhase current = elimination.CurrentRoundPhase;
                     if (_syncVarPhases[_syncVarPhases.Count - 1] != current)
                         _syncVarPhases.Add(current);
 
@@ -364,10 +364,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 bool eventOk = _eventPhases.Count > 0;
                 result.Set(CheckEvent, eventOk,
                     eventOk
-                        ? $"EliminationMode.OnRoundStateChangedLocal сработало {_eventPhases.Count} раз(а): {Join(_eventPhases)}"
-                        : "EliminationMode.OnRoundStateChangedLocal не сработало ни разу, хотя SyncVar-фазы менялись: " +
+                        ? $"EliminationMode.OnRoundPhaseChangedLocal сработало {_eventPhases.Count} раз(а): {Join(_eventPhases)}"
+                        : "EliminationMode.OnRoundPhaseChangedLocal не сработало ни разу, хотя SyncVar-фазы менялись: " +
                           $"{Join(_syncVarPhases)}. Это NET-06: событие поднимается только внутри " +
-                          "[ClientRpc] RpcOnRoundStateChanged, а в режиме ServerOnly ClientRpc локально не исполняется.");
+                          "[ClientRpc] RpcOnRoundPhaseChanged, а в режиме ServerOnly ClientRpc локально не исполняется.");
 
                 // ── 8. Открылась ли хотя бы одна стена ───────────────────
                 int opened = 0;
@@ -384,7 +384,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                         ? $"открылось стен: {opened} из {walls.Length}. Состояния: {arsenalStatesBefore} -> {arsenalStatesAfter}"
                         : $"ни одна из {walls.Length} стен не вышла из Closed: {arsenalStatesBefore} -> {arsenalStatesAfter}, " +
                           $"хотя фаза раунда прошла {Join(_syncVarPhases)}. " +
-                          "ArsenalWallController.HandleRoundStateChanged на выделенном сервере не вызывается " +
+                          "ArsenalWallController.HandleRoundPhaseChanged на выделенном сервере не вызывается " +
                           "(следствие NET-06), поэтому ни OpenArsenal, ни ReplenishWeaponsNetwork(false) не выполняются.");
 
                 if (!arsenalOk)
@@ -430,10 +430,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return E2EWait.Hold(RdyHold);
 
                 bool stillOpen = shared.CurrentState == ArsenalWallController.ArsenalState.Open;
-                RoundState phaseAtHold = elimination.CurrentRoundState;
+                RoundPhase phaseAtHold = elimination.CurrentRoundPhase;
 
-                result.Set(CheckRdyOpen, stillOpen && phaseAtHold == RoundState.Equipment,
-                    stillOpen && phaseAtHold == RoundState.Equipment
+                result.Set(CheckRdyOpen, stillOpen && phaseAtHold == RoundPhase.Equipment,
+                    stillOpen && phaseAtHold == RoundPhase.Equipment
                         ? $"готов 1 игрок из {allSessions.Count}, и за {RdyHold:F0} с стена netId={shared.netId} " +
                           $"осталась Open, фаза осталась {phaseAtHold}. Арсенал закрывается по общей готовности, " +
                           "а не по первому игроку"
@@ -453,7 +453,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     $"стена netId={shared.netId} вышла из Open после готовности всех",
                     WallCloseWait,
                     () => shared.CurrentState != ArsenalWallController.ArsenalState.Open,
-                    () => $"состояние стены={shared.CurrentState}, фаза={elimination.CurrentRoundState}, " +
+                    () => $"состояние стены={shared.CurrentState}, фаза={elimination.CurrentRoundPhase}, " +
                           $"готовность: {DescribeReadiness(allSessions)}",
                     () => NetworkServer.connections.Count > 0
                         ? null
@@ -462,7 +462,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 bool rdyCloseOk = closed.Succeeded;
                 result.Set(CheckRdyClose, rdyCloseOk,
                     rdyCloseOk
-                        ? closed.Diagnosis + $" Фаза при этом {elimination.CurrentRoundState}: " +
+                        ? closed.Diagnosis + $" Фаза при этом {elimination.CurrentRoundPhase}: " +
                           "готовность всех живых игроков и есть условие выхода из закупки, " +
                           "поэтому закрытие по общей готовности и закрытие по началу отсчёта — один момент."
                         : closed.Diagnosis + " Готовность объявлена за всех, а арсенал так и не закрылся: " +
@@ -493,7 +493,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
             finally
             {
-                EliminationMode.OnRoundStateChangedLocal -= OnRoundStateEvent;
+                EliminationMode.OnRoundPhaseChangedLocal -= OnRoundPhaseEvent;
             }
         }
 
@@ -584,7 +584,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             // событие, что и стена арсенала на сервере. Если на клиенте оно
             // сработает, а на сервере нет, отличие изолировано до роли процесса:
             // код, событие и способ наблюдения одни и те же.
-            EliminationMode.OnRoundStateChangedLocal += OnRoundStateEvent;
+            EliminationMode.OnRoundPhaseChangedLocal += OnRoundPhaseEvent;
 
             // Штатный путь — Mirror NetworkDiscovery (UDP-броадкаст), его запускает
             // GameNetworkDiscovery. Если броадкаст не доехал (частая беда на одной
@@ -653,15 +653,15 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             while (_eventPhases.Count == 0 && Now < deadline)
                 yield return null;
 
-            EliminationMode.OnRoundStateChangedLocal -= OnRoundStateEvent;
+            EliminationMode.OnRoundPhaseChangedLocal -= OnRoundPhaseEvent;
 
             bool eventOk = _eventPhases.Count > 0;
             result.Set(CheckClientEvent, eventOk,
                 eventOk
-                    ? $"OnRoundStateChangedLocal сработало {_eventPhases.Count} раз(а): {Join(_eventPhases)}. " +
+                    ? $"OnRoundPhaseChangedLocal сработало {_eventPhases.Count} раз(а): {Join(_eventPhases)}. " +
                       "На клиенте ClientRpc исполняется, значит красная проверка на сервере — " +
                       "не дефект харнесса, а разница ролей (NET-06)"
-                    : "за 120 с OnRoundStateChangedLocal не сработало и на клиенте. " +
+                    : "за 120 с OnRoundPhaseChangedLocal не сработало и на клиенте. " +
                       "Тогда сигнал теряется раньше, чем в ClientRpc: смотри server.log на предмет " +
                       "смены фазы раунда вообще");
 
@@ -870,10 +870,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private static float Now => Time.realtimeSinceStartup;
 
-        private void OnRoundStateEvent(RoundState state)
+        private void OnRoundPhaseEvent(RoundPhase state)
         {
             _eventPhases.Add(state);
-            GameLog.Debug.Info($"[E2E] OnRoundStateChangedLocal -> {state}");
+            GameLog.Debug.Info($"[E2E] OnRoundPhaseChangedLocal -> {state}");
         }
 
         /// <summary>
@@ -1013,7 +1013,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 "[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
         }
 
-        private static string Join(List<RoundState> states)
+        private static string Join(List<RoundPhase> states)
         {
             if (states.Count == 0)
                 return "(пусто)";

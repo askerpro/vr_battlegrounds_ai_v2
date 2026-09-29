@@ -269,13 +269,13 @@ UltimateXR кладёт предмет в карман только в моме�
 
 ### «Режим без команд» · «В разминке игрок остался без команды» · `Teams.Length == 0` у режима на сервере
 
-`GameMode.Awake` подписывает колбэк `SyncList` команд, а `GameplayManager` инициализирует режим
+`GameMode.Awake` подписывает колбэк `SyncList` команд, а `MapReferee` инициализирует режим
 **до спавна** (`isServer` ещё `false`). Колбэк на `Clear` пересобирал `_teams` из пустого списка
 посреди `Initialize`, и команды режима пропадали — только в Play mode: в EditMode Unity `Awake`
 не зовёт. Исправлено: колбэк молчит при `NetworkServer.active`, `Initialize` перебирает свою копию.
 Проверка — `MatchFlowTests` (фабрика режимов зовёт `Awake`, как игра).
 
-### «NullReferenceException в `GameplayManager.StartMatch` / `get_isServer` при загрузке карты»
+### «NullReferenceException в `MapReferee.StartMatch` / `get_isServer` при загрузке карты»
 
 «Начать матч» пришёл из `Awake` оркестратора (автостарт `DebugOrchestrator` по
 `SubscribeToInstance`), когда `NetworkIdentity` ещё не связала компоненты. Исправлено: запрос
@@ -284,9 +284,9 @@ UltimateXR кладёт предмет в карман только в моме�
 
 ### «После «Продолжить» матч начался с первого раунда» · «Пауза потеряла счёт»
 
-`EliminationMode.StartGameplay` зовёт корутина старта базового режима кадром позже спавна, а
+`EliminationMode.Begin` зовёт корутина старта базового режима кадром позже спавна, а
 `ServerTick` к этому моменту уже поднял продолженный сет. Сброс в `WaitingForPlayers` начинал сет
-заново. Исправлено: `StartGameplay` ничего не меняет, если матч уже идёт. Тест —
+заново. Исправлено: `Begin` ничего не меняет, если матч уже идёт. Тест —
 `MatchPauseTests.Поздний_старт_режима_не_сбрасывает_продолженный_матч`.
 
 ### «При смене режима / паузе игрока выкинуло из игры» · `Disconnecting connection … CommandMessage … NullReferenceException` в `UxrMirrorAvatar.CmdRequestAuthority`

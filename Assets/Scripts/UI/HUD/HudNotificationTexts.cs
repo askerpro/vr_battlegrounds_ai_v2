@@ -34,22 +34,32 @@ namespace VrBattlegrounds.UI.HUD
     /// Тексты и звуки информационного HUD (<see cref="HUDWidget_GameNotification"/>). Чистый класс:
     /// режим строк не генерирует, виджет спрашивает здесь — и тест проверяет без префабов.
     /// </summary>
+    /// <summary>Повторяющееся напоминание игроку в матче (<see cref="HudNotificationTexts.Reminder"/>).</summary>
+    public enum HudReminder
+    {
+        None,
+        /// <summary>Нет команды матча — своей зоны нет, нужна команда.</summary>
+        ChooseTeam,
+        ReturnForCountdown,
+        ReturnToBase
+    }
+
     public static class HudNotificationTexts
     {
         /// <summary>
-        /// Смена фазы раунда. Итог боя (<see cref="RoundState.Resolution"/>) — только звук: победителя
+        /// Смена фазы раунда. Итог боя (<see cref="RoundPhase.Resolution"/>) — только звук: победителя
         /// тем же моментом сообщает <c>OnRoundEndedLocal</c>, и текст фазы затёр бы его.
         /// </summary>
-        public static HudMessage Phase(RoundState state, string score)
+        public static HudMessage Phase(RoundPhase state, string score)
         {
             switch (state)
             {
-                case RoundState.Setup:      return new HudMessage("Подготовка раунда", 2f, HudSound.Beep);
-                case RoundState.Equipment:  return new HudMessage("Закупка: возьмите оружие и жетон готовности", 3f, HudSound.Beep);
-                case RoundState.Countdown:  return new HudMessage("Приготовьтесь!", 3f, HudSound.Beep);
-                case RoundState.Combat:     return new HudMessage("В бой!", 2f, HudSound.Beep);
-                case RoundState.Resolution: return new HudMessage(null, 0f, HudSound.Beep);
-                case RoundState.Scoreboard: return new HudMessage(string.IsNullOrEmpty(score) ? "Итоги раунда" : "Счёт раундов: " + score, 4f, HudSound.None);
+                case RoundPhase.Setup:      return new HudMessage("Подготовка раунда", 2f, HudSound.Beep);
+                case RoundPhase.Equipment:  return new HudMessage("Закупка: возьмите оружие и жетон готовности", 3f, HudSound.Beep);
+                case RoundPhase.Countdown:  return new HudMessage("Приготовьтесь!", 3f, HudSound.Beep);
+                case RoundPhase.Combat:     return new HudMessage("В бой!", 2f, HudSound.Beep);
+                case RoundPhase.Resolution: return new HudMessage(null, 0f, HudSound.Beep);
+                case RoundPhase.Scoreboard: return new HudMessage(string.IsNullOrEmpty(score) ? "Итоги раунда" : "Счёт раундов: " + score, 4f, HudSound.None);
                 default:                    return new HudMessage(null, 0f, HudSound.None);
             }
         }
@@ -65,13 +75,28 @@ namespace VrBattlegrounds.UI.HUD
 
         /// <summary>
         /// Живой вышел из своей зоны на обратном отсчёте: отсчёт стоит, пока он не вернётся,
-        /// и начнётся сначала (<c>RoundManager.CountdownHeld</c>).
+        /// и начнётся сначала (<c>RoundPhases.CountdownHeld</c>).
         /// </summary>
-        public static bool AskReturnForCountdown(bool alive, bool inOwnZone, RoundState state) =>
-            alive && !inOwnZone && state == RoundState.Countdown;
+        public static bool AskReturnForCountdown(bool alive, bool inOwnZone, RoundPhase state) =>
+            alive && !inOwnZone && state == RoundPhase.Countdown;
 
         public static HudMessage ReturnForCountdown() =>
             new HudMessage("Вернитесь в свою зону — отсчёт начнётся заново", 2f, HudSound.Beep);
+
+        /// <summary>
+        /// Какое напоминание показать игроку в матче. Без команды матча у игрока нет своей зоны:
+        /// «вернитесь в свою зону» его никуда не ведёт — ему нужна команда.
+        /// </summary>
+        public static HudReminder Reminder(bool hasModeTeam, bool alive, bool inOwnZone, RoundPhase phase)
+        {
+            if (!hasModeTeam) return HudReminder.ChooseTeam;
+            if (AskReturnForCountdown(alive, inOwnZone, phase)) return HudReminder.ReturnForCountdown;
+            if (AskReturnToBase(alive, inOwnZone)) return HudReminder.ReturnToBase;
+            return HudReminder.None;
+        }
+
+        public static HudMessage ChooseTeam() =>
+            new HudMessage("Выберите команду в планшете, чтобы войти в матч", 3f, HudSound.Beep);
 
         /// <summary>Вторая половина карты: команды меняются сторонами — игрок идёт на другую базу.</summary>
         public static HudMessage SidesSwapped() =>

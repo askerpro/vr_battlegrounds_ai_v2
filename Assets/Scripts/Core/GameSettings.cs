@@ -45,7 +45,7 @@ namespace VrBattlegrounds.Core
         #region Inspector Fields
 
         [Header("Логи — Сеть")]
-        [Tooltip("GameNetworkManager, MapManager, GameNetworkDiscovery")]
+        [Tooltip("GameNetworkManager, MapLoader, GameNetworkDiscovery")]
         [SerializeField] private LogLevel _logLevelNetwork = LogLevel.Info;
 
         [Header("Логи — Игрок")]
@@ -53,7 +53,7 @@ namespace VrBattlegrounds.Core
         [SerializeField] private LogLevel _logLevelPlayer = LogLevel.Info;
 
         [Header("Логи — Матч")]
-        [Tooltip("GameplayManager, SetManager, RoundManager")]
+        [Tooltip("MapReferee, RoundPhases, режимы")]
         [SerializeField] private LogLevel _logLevelMatch = LogLevel.Info;
 
         [Header("Логи — Отладка")]
@@ -102,13 +102,13 @@ namespace VrBattlegrounds.Core
 
         #region Properties
 
-        /// <summary>Уровень логов сетевых систем (NetworkManager, MapManager, Discovery).</summary>
+        /// <summary>Уровень логов сетевых систем (NetworkManager, MapLoader, Discovery).</summary>
         public LogLevel LogLevelNetwork  => _logLevelNetwork;
 
         /// <summary>Уровень логов игрока (PlayerController).</summary>
         public LogLevel LogLevelPlayer   => _logLevelPlayer;
 
-        /// <summary>Уровень логов матча (GameplayManager, SetManager, RoundManager).</summary>
+        /// <summary>Уровень логов матча (MapReferee, RoundPhases, режимы).</summary>
         public LogLevel LogLevelMatch    => _logLevelMatch;
 
         /// <summary>Уровень логов инструментов отладки (DebugOrchestrator).</summary>

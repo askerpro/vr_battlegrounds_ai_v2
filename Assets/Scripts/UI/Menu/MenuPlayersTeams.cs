@@ -81,7 +81,7 @@ namespace VrBattlegrounds.UI.Menu
         /// <summary>Команды, которые админ выдаёт: активного режима сцены.</summary>
         public static TeamData[] AssignableTeams()
         {
-            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             return mode != null ? System.Array.FindAll(mode.Teams, t => t != null) : new TeamData[0];
         }
 

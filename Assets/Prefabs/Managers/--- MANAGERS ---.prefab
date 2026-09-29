@@ -406,7 +406,7 @@ GameObject:
   - component: {fileID: 6046821600884877306}
   - component: {fileID: 88955060684330093}
   m_Layer: 0
-  m_Name: MapManager
+  m_Name: MapLoader
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -61,7 +61,7 @@ namespace VrBattlegrounds.GameModes
     /// </para>
     ///
     /// <para>
-    /// <b>Обычный C#-класс</b>, как <see cref="RoundManager" /> и <see cref="SetManager" />:
+    /// <b>Обычный C#-класс</b>, как <see cref="RoundPhases" />:
     /// об игроках спрашивает <see cref="IPlayerRoster" />, поэтому весь разбор готовности,
     /// включая предел ожидания, гоняется EditMode-тестом без живых аватаров.
     /// </para>

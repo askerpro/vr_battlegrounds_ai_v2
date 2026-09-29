@@ -4,7 +4,7 @@ namespace VrBattlegrounds.Managers
 {
     /// <summary>
     /// Таблица статистики серии для экрана «Статистика»: секция на каждую карту серии
-    /// и секция TOTAL. Чистая сборка из реплицированных строк <see cref="MatchSeries"/> —
+    /// и секция TOTAL. Чистая сборка из реплицированных строк <see cref="Series"/> —
     /// без UI и сети, проверяется EditMode-тестом.
     /// </summary>
     public static class SeriesStatsTable
@@ -32,7 +32,7 @@ namespace VrBattlegrounds.Managers
         public sealed class Section
         {
             public string Title;
-            /// <summary>Индекс карты в серии; <see cref="MatchSeries.Total"/> — TOTAL.</summary>
+            /// <summary>Индекс карты в серии; <see cref="Series.Total"/> — TOTAL.</summary>
             public int Map;
             public List<TeamRow> Teams = new List<TeamRow>();
             public List<PlayerRow> Players = new List<PlayerRow>();
@@ -52,7 +52,7 @@ namespace VrBattlegrounds.Managers
             for (int m = 0; m < mapCount; m++)
                 result.Add(Fill(new Section { Title = maps[m], Map = m }, teams, players, results));
 
-            result.Add(Fill(new Section { Title = TotalTitle, Map = MatchSeries.Total }, teams, players, results));
+            result.Add(Fill(new Section { Title = TotalTitle, Map = Series.Total }, teams, players, results));
             return result;
         }
 
@@ -63,7 +63,7 @@ namespace VrBattlegrounds.Managers
             {
                 for (int m = 0; m < results.Count; m++)
                 {
-                    if (results[m] < 0 || section.Map != MatchSeries.Total && m != section.Map) continue;
+                    if (results[m] < 0 || section.Map != Series.Total && m != section.Map) continue;
                     TeamRow row = section.Teams.Find(r => r.Team == results[m]);
                     if (row == null) section.Teams.Add(row = new TeamRow { Team = results[m] });
                     row.MapsWon++;
@@ -74,7 +74,7 @@ namespace VrBattlegrounds.Managers
             {
                 foreach (TeamMapStat t in teams)
                 {
-                    if (section.Map != MatchSeries.Total && t.map != section.Map) continue;
+                    if (section.Map != Series.Total && t.map != section.Map) continue;
                     TeamRow row = section.Teams.Find(r => r.Team == t.team);
                     if (row == null) section.Teams.Add(row = new TeamRow { Team = t.team });
                     row.Rounds += t.rounds;
@@ -85,7 +85,7 @@ namespace VrBattlegrounds.Managers
             {
                 foreach (PlayerMapStat p in players)
                 {
-                    if (section.Map != MatchSeries.Total && p.map != section.Map) continue;
+                    if (section.Map != Series.Total && p.map != section.Map) continue;
                     PlayerRow row = section.Players.Find(r => r.Key == p.player);
                     if (row == null) section.Players.Add(row = new PlayerRow { Key = p.player });
                     row.Name = p.name;
@@ -110,7 +110,7 @@ namespace VrBattlegrounds.Managers
             var sb = new System.Text.StringBuilder();
             foreach (Section section in sections)
             {
-                bool total = section.Map == MatchSeries.Total;
+                bool total = section.Map == Series.Total;
                 sb.AppendLine(total
                     ? "<b><size=120%>" + TotalTitle + "</size></b>"
                     : "<b>Карта " + (section.Map + 1) + ": " + section.Title + "</b>");

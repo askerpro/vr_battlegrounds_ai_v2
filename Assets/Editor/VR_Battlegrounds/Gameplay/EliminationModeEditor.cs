@@ -31,16 +31,16 @@ namespace VrBattlegrounds.Editor
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("🚀 Realtime Debug Game State", EditorStyles.boldLabel);
             
-            // 1. Статус общей игры (GameplayManager)
+            // 1. Статус общей игры (MapReferee)
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.LabelField("Общий статус матча", EditorStyles.boldLabel);
-            if (GameplayManager.Instance != null)
+            if (MapReferee.Instance != null)
             {
-                EditorGUILayout.LabelField("Gameplay Active:", GameplayManager.Instance.IsMatchActive.ToString());
+                EditorGUILayout.LabelField("Gameplay Active:", MapReferee.Instance.IsMatchActive.ToString());
             }
             else
             {
-                EditorGUILayout.LabelField("GameplayManager не найден.");
+                EditorGUILayout.LabelField("MapReferee не найден.");
             }
             EditorGUILayout.EndVertical();
 
@@ -50,50 +50,38 @@ namespace VrBattlegrounds.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Phase Timers", EditorStyles.boldLabel);
             
-            if (mode.RoundManager != null)
+            if (mode.RoundPhases != null)
             {
-                string pendingConditions = mode.RoundManager.GetPendingReadinessStatus();
+                string pendingConditions = mode.RoundPhases.GetPendingReadinessStatus();
                 EditorGUILayout.HelpBox(pendingConditions, MessageType.Info);
                 
-                if (mode.CurrentRoundState == RoundState.Setup || mode.CurrentRoundState == RoundState.Equipment || 
-                    mode.CurrentRoundState == RoundState.Countdown || mode.CurrentRoundState == RoundState.Scoreboard || mode.CurrentRoundState == RoundState.Resolution)
+                if (mode.CurrentRoundPhase == RoundPhase.Setup || mode.CurrentRoundPhase == RoundPhase.Equipment || 
+                    mode.CurrentRoundPhase == RoundPhase.Countdown || mode.CurrentRoundPhase == RoundPhase.Scoreboard || mode.CurrentRoundPhase == RoundPhase.Resolution)
                 {
-                    EditorGUILayout.LabelField($"Time Left: {mode.RoundManager.CountdownTimeRemaining:F1}s", EditorStyles.label);
+                    EditorGUILayout.LabelField($"Time Left: {mode.RoundPhases.CountdownTimeRemaining:F1}s", EditorStyles.label);
                 }
-                else if (mode.CurrentRoundState == RoundState.Combat)
+                else if (mode.CurrentRoundPhase == RoundPhase.Combat)
                 {
-                    EditorGUILayout.LabelField($"Combat Time Remaining: {mode.RoundManager.RoundTimeRemaining:F1}s", EditorStyles.label);
+                    EditorGUILayout.LabelField($"Combat Time Remaining: {mode.RoundPhases.RoundTimeRemaining:F1}s", EditorStyles.label);
                 }
             }
             else
             {
-                EditorGUILayout.HelpBox("RoundManager is missing or not initialized yet.", MessageType.Warning);
+                EditorGUILayout.HelpBox("RoundPhases is missing or not initialized yet.", MessageType.Warning);
             }
             EditorGUILayout.EndVertical();
 
-            // 3. Статистика раундов в сете
+            // 3. Счёт карты: раунды за обе половины
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Счёт по раундам в текущем сете", EditorStyles.boldLabel);
-            foreach (var teamState in mode.TeamStates.Values)
-            {
-                int roundScore = mode.GetRoundScore(teamState.Team);
-                EditorGUILayout.LabelField($"{teamState.Team.displayName}:", $"{roundScore} побед");
-            }
-            EditorGUILayout.EndVertical();
+            EditorGUILayout.LabelField("Счёт карты", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Раунд:", $"{mode.CurrentRoundNumber} / {mode.TotalRounds} (до победы {mode.RoundsToWin})");
+            EditorGUILayout.LabelField("Половина:", mode.SidesSwapped ? "вторая (стороны поменялись)" : "первая");
 
-            // 4. Статистика сетов и команд
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Счёт по сетам в матче", EditorStyles.boldLabel);
-            
-            int totalSetsPlayed = 0;
             foreach (var teamState in mode.TeamStates.Values)
             {
-                totalSetsPlayed += teamState.Score;
-                EditorGUILayout.LabelField($"{teamState.Team.displayName} (Побед в сетах):", teamState.Score.ToString());
+                EditorGUILayout.LabelField($"{teamState.Team.displayName} (раундов):", teamState.Score.ToString());
                 EditorGUILayout.LabelField($"   - Живых игроков:", teamState.AliveSessions.Count().ToString());
             }
-
-            EditorGUILayout.LabelField("Текущий сет:", (totalSetsPlayed + 1).ToString());
             EditorGUILayout.EndVertical();
         }
     }

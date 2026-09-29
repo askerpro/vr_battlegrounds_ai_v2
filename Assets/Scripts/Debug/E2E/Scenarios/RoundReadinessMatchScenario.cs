@@ -49,7 +49,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// <b>Смерть настоящая.</b> Сервер бьёт аватары через <c>UxrActor.ReceiveDamage</c> —
     /// тот же вход, которым пользуется оружие (см. <c>player-death-signal</c>).
     /// Раунд заканчивается штатной цепочкой <c>UxrActor.Died → PlayerController →
-    /// GameplayManager → EliminationMode.OnPlayerDied → RoundManager.RequestRoundEnd</c>,
+    /// MapReferee → EliminationMode.OnPlayerDied → RoundPhases.RequestRoundEnd</c>,
     /// а не подсунутым «раунд окончен».
     /// </para>
     ///
@@ -147,10 +147,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private readonly struct PhaseMark
         {
-            public readonly RoundState Phase;
+            public readonly RoundPhase Phase;
             public readonly float At;
 
-            public PhaseMark(RoundState phase, float at)
+            public PhaseMark(RoundPhase phase, float at)
             {
                 Phase = phase;
                 At = at;
@@ -217,11 +217,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             // ── 3. Карта, команды, матч ───────────────────────────────────
             SessionManager sessionManager = SessionManager.Instance;
-            if (sessionManager == null || MapManager.Instance == null)
+            if (sessionManager == null || MapLoader.Instance == null)
             {
                 result.Set(CheckMap, false,
                     $"SessionManager.Instance={(sessionManager == null ? "null" : "есть")}, " +
-                    $"MapManager.Instance={(MapManager.Instance == null ? "null" : "есть")}");
+                    $"MapLoader.Instance={(MapLoader.Instance == null ? "null" : "есть")}");
                 result.Summary = "менеджеры не поднялись, прогон недействителен";
                 yield break;
             }
@@ -231,10 +231,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             GameLog.Debug.Info($"[E2E] Команды распределены: {AssignTeams(sessionManager)}");
 
-            MapManager.Instance.LoadMap(context.Map);
+            MapLoader.Instance.LoadMap(context.Map);
 
             deadline = Now + 120f;
-            while ((SceneManager.GetActiveScene().name != context.Map || GameplayManager.Instance == null)
+            while ((SceneManager.GetActiveScene().name != context.Map || MapReferee.Instance == null)
                    && Now < deadline)
                 yield return null;
 
@@ -248,14 +248,14 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             bool mapOk = SceneManager.GetActiveScene().name == context.Map
-                         && GameplayManager.Instance != null
+                         && MapReferee.Instance != null
                          && walls.Length > 0;
 
             result.Set(CheckMap, mapOk,
                 mapOk
-                    ? $"сцена='{SceneManager.GetActiveScene().name}', стен арсенала: {walls.Length}, GameplayManager на месте"
+                    ? $"сцена='{SceneManager.GetActiveScene().name}', стен арсенала: {walls.Length}, MapReferee на месте"
                     : $"сцена='{SceneManager.GetActiveScene().name}' (ждали '{context.Map}'), " +
-                      $"GameplayManager={(GameplayManager.Instance == null ? "null" : "есть")}, " +
+                      $"MapReferee={(MapReferee.Instance == null ? "null" : "есть")}, " +
                       $"стен арсенала: {walls.Length}");
 
             if (!mapOk)
@@ -272,17 +272,17 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             // Фазы пишем в ленту с момента старта матча: замер длительностей ниже
             // опирается именно на неё.
-            EliminationMode.OnRoundStateChangedLocal += MarkPhase;
+            EliminationMode.OnRoundPhaseChangedLocal += MarkPhase;
 
             try
             {
-                GameplayManager.Instance.StartMatch();
+                MapReferee.Instance.StartMatch();
 
                 EliminationMode elimination = null;
                 deadline = Now + 60f;
                 while (elimination == null && Now < deadline)
                 {
-                    elimination = GameplayManager.Instance.ActiveGameMode as EliminationMode;
+                    elimination = MapReferee.Instance.ActiveGameMode as EliminationMode;
                     if (elimination == null)
                         yield return null;
                 }
@@ -290,7 +290,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 if (elimination == null)
                 {
                     result.Set(CheckEquipment, false,
-                        "за 60 с GameplayManager.ActiveGameMode не стал EliminationMode — матч не запустился. " +
+                        "за 60 с MapReferee.ActiveGameMode не стал EliminationMode — матч не запустился. " +
                         $"Режим из SessionManager: '{sessionManager.SelectedModeId}'.");
                     result.Summary = "матч не запустился";
                     yield break;
@@ -301,7 +301,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return E2EWait.Until(equipment,
                     "матч дошёл до фазы Equipment",
                     EquipmentWait,
-                    () => elimination.CurrentRoundState == RoundState.Equipment,
+                    () => elimination.CurrentRoundPhase == RoundPhase.Equipment,
                     () => DescribeMatch(elimination, walls),
                     () => NetworkServer.connections.Count > 0
                         ? null
@@ -379,21 +379,21 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return E2EWait.Hold(Rdy01Hold);
 
                 bool wallStillOpen = shared.CurrentState == ArsenalWallController.ArsenalState.Open;
-                bool stillEquipment = elimination.CurrentRoundState == RoundState.Equipment;
+                bool stillEquipment = elimination.CurrentRoundPhase == RoundPhase.Equipment;
                 bool restStillNotReady = !rest.ReadyState;
 
                 result.Set(CheckRdy01, wallStillOpen && stillEquipment && restStillNotReady,
                     wallStillOpen && stillEquipment && restStillNotReady
                         ? $"{first.PlayerName} готов, {rest.PlayerName} нет — за {Rdy01Hold:F0} с стена " +
-                          $"netId={shared.netId} осталась Open, фаза осталась {elimination.CurrentRoundState}. " +
+                          $"netId={shared.netId} осталась Open, фаза осталась {elimination.CurrentRoundPhase}. " +
                           "Арсенал закрывается по общей готовности, а не по первому жетону"
                         : !wallStillOpen
                             ? $"стена netId={shared.netId} ушла в {shared.CurrentState}, хотя готов только " +
                               $"{first.PlayerName}. Это RDY-01: после T-15 стена одна на всех, и закрытие " +
                               $"по первому готовому оставляет {rest.PlayerName} без снаряжения. " +
-                              $"Фаза при этом: {elimination.CurrentRoundState}"
+                              $"Фаза при этом: {elimination.CurrentRoundPhase}"
                             : !stillEquipment
-                                ? $"фаза ушла в {elimination.CurrentRoundState}, хотя готов только {first.PlayerName}. " +
+                                ? $"фаза ушла в {elimination.CurrentRoundPhase}, хотя готов только {first.PlayerName}. " +
                                   "Раунд не вправе выходить из закупки, пока готовы не все живые игроки"
                                 : $"{rest.PlayerName} оказался готов сам собой (ReadyState=true) — " +
                                   "проверка недействительна: готовность обязан объявлять игрок, а не появляться из воздуха");
@@ -415,7 +415,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return E2EWait.Until(countdown,
                     "раунд ушёл в Countdown после готовности всех",
                     PhaseWait,
-                    () => elimination.CurrentRoundState != RoundState.Equipment,
+                    () => elimination.CurrentRoundPhase != RoundPhase.Equipment,
                     () => DescribeMatch(elimination, walls));
 
                 // Стена начинает закрываться в тот же кадр, что и смена фазы, но
@@ -430,7 +430,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 result.Set(CheckCountdown, countdown.Succeeded && wallShut.Succeeded,
                     countdown.Succeeded && wallShut.Succeeded
-                        ? $"готовы все — фаза стала {elimination.CurrentRoundState} за {countdown.Elapsed:F2} с, " +
+                        ? $"готовы все — фаза стала {elimination.CurrentRoundPhase} за {countdown.Elapsed:F2} с, " +
                           $"стена netId={shared.netId} перешла в {shared.CurrentState}"
                         : !countdown.Succeeded
                             ? countdown.Diagnosis + " Готовность объявлена за всех, а раунд остался в закупке."
@@ -442,7 +442,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return E2EWait.Until(combat,
                     "раунд дошёл до фазы Combat",
                     PhaseWait,
-                    () => elimination.CurrentRoundState == RoundState.Combat,
+                    () => elimination.CurrentRoundPhase == RoundPhase.Combat,
                     () => DescribeMatch(elimination, walls));
 
                 result.Set(CheckCombat, combat.Succeeded, combat.Diagnosis);
@@ -462,16 +462,16 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return E2EWait.Until(resolution,
                     "раунд перешёл в Resolution после гибели команды",
                     PhaseWait,
-                    () => elimination.CurrentRoundState == RoundState.Resolution,
+                    () => elimination.CurrentRoundPhase == RoundPhase.Resolution,
                     () => DescribeMatch(elimination, walls));
 
                 result.Set(CheckDeath, resolution.Succeeded,
                     resolution.Succeeded
                         ? $"{killed}; раунд перешёл в Resolution за {resolution.Elapsed:F2} с — " +
                           "цепочка UxrActor.Died → PlayerController → EliminationMode.OnPlayerDied → " +
-                          "RoundManager.RequestRoundEnd отработала целиком"
+                          "RoundPhases.RequestRoundEnd отработала целиком"
                         : resolution.Diagnosis + $" Убито: {killed}. Раунд не заканчивается по гибели команды: " +
-                          "смотри, доходит ли смерть до GameplayManager.OnPlayerDied.");
+                          "смотри, доходит ли смерть до MapReferee.OnPlayerDied.");
 
                 if (!resolution.Succeeded)
                 {
@@ -485,12 +485,12 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return E2EWait.Until(scoreboard,
                     "раунд перешёл в Scoreboard",
                     PhaseWait,
-                    () => elimination.CurrentRoundState == RoundState.Scoreboard,
+                    () => elimination.CurrentRoundPhase == RoundPhase.Scoreboard,
                     () => DescribeMatch(elimination, walls));
 
-                float resolutionSpan = MeasurePhase(RoundState.Resolution);
-                result.Set(CheckResolution, WithinTolerance(resolutionSpan, RoundManager.ResolutionDuration),
-                    DescribeSpan("Resolution", resolutionSpan, RoundManager.ResolutionDuration));
+                float resolutionSpan = MeasurePhase(RoundPhase.Resolution);
+                result.Set(CheckResolution, WithinTolerance(resolutionSpan, RoundPhases.ResolutionDuration),
+                    DescribeSpan("Resolution", resolutionSpan, RoundPhases.ResolutionDuration));
 
                 E2EWaitOutcome nextRound = new E2EWaitOutcome();
                 yield return E2EWait.Until(nextRound,
@@ -499,16 +499,16 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     () => elimination.CurrentRoundNumber >= 2,
                     () => DescribeMatch(elimination, walls));
 
-                float scoreboardSpan = MeasurePhase(RoundState.Scoreboard);
-                result.Set(CheckScoreboard, WithinTolerance(scoreboardSpan, RoundManager.ScoreboardDuration),
-                    DescribeSpan("Scoreboard", scoreboardSpan, RoundManager.ScoreboardDuration));
+                float scoreboardSpan = MeasurePhase(RoundPhase.Scoreboard);
+                result.Set(CheckScoreboard, WithinTolerance(scoreboardSpan, RoundPhases.ScoreboardDuration),
+                    DescribeSpan("Scoreboard", scoreboardSpan, RoundPhases.ScoreboardDuration));
 
                 // ── 11. Следующий раунд снова ждёт готовности ─────────────
                 E2EWaitOutcome equipmentAgain = new E2EWaitOutcome();
                 yield return E2EWait.Until(equipmentAgain,
                     "второй раунд дошёл до фазы Equipment",
                     PhaseWait,
-                    () => elimination.CurrentRoundState == RoundState.Equipment,
+                    () => elimination.CurrentRoundPhase == RoundPhase.Equipment,
                     () => DescribeMatch(elimination, walls));
 
                 // Держим фазу закупки: если бы готовность прошлого раунда дожила
@@ -522,7 +522,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 }
 
                 bool waitsAgain = equipmentAgain.Succeeded
-                                  && elimination.CurrentRoundState == RoundState.Equipment
+                                  && elimination.CurrentRoundPhase == RoundPhase.Equipment
                                   && readinessReset;
 
                 result.Set(CheckNextRound, waitsAgain,
@@ -536,7 +536,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                                 ? "готовность пережила конец раунда: " + DescribeReadiness(all) +
                                   ". Тогда фаза закупки второго раунда кончается, не начавшись, — " +
                                   "арсенал открывается и тут же закрывается."
-                                : $"второй раунд не удержался в закупке: фаза {elimination.CurrentRoundState}. " +
+                                : $"второй раунд не удержался в закупке: фаза {elimination.CurrentRoundPhase}. " +
                                   $"Лента фаз: {DescribeTimeline()}");
 
                 yield return WaitForClientVerdicts(context);
@@ -548,7 +548,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
             finally
             {
-                EliminationMode.OnRoundStateChangedLocal -= MarkPhase;
+                EliminationMode.OnRoundPhaseChangedLocal -= MarkPhase;
             }
         }
 
@@ -564,7 +564,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             DisableDebugOrchestrator();
 
-            EliminationMode.OnRoundStateChangedLocal += MarkPhase;
+            EliminationMode.OnRoundPhaseChangedLocal += MarkPhase;
 
             try
             {
@@ -771,8 +771,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield return E2EWait.Until(phases,
                     "клиент увидел Countdown, Combat, Resolution и Scoreboard",
                     ClientPhaseWait,
-                    () => SawPhase(RoundState.Countdown) && SawPhase(RoundState.Combat)
-                          && SawPhase(RoundState.Resolution) && SawPhase(RoundState.Scoreboard),
+                    () => SawPhase(RoundPhase.Countdown) && SawPhase(RoundPhase.Combat)
+                          && SawPhase(RoundPhase.Resolution) && SawPhase(RoundPhase.Scoreboard),
                     () => "лента фаз у клиента: " + DescribeTimeline(),
                     () => NetworkClient.isConnected ? null : "связь с сервером пропала");
 
@@ -790,7 +790,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
             finally
             {
-                EliminationMode.OnRoundStateChangedLocal -= MarkPhase;
+                EliminationMode.OnRoundPhaseChangedLocal -= MarkPhase;
             }
         }
 
@@ -859,13 +859,13 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         //  Лента фаз и замер длительностей
         // ══════════════════════════════════════════════════════════════════
 
-        private void MarkPhase(RoundState phase)
+        private void MarkPhase(RoundPhase phase)
         {
             _timeline.Add(new PhaseMark(phase, Now));
             GameLog.Debug.Info($"[E2E] Фаза {phase} в {Now:F2} с");
         }
 
-        private bool SawPhase(RoundState phase)
+        private bool SawPhase(RoundPhase phase)
         {
             foreach (PhaseMark mark in _timeline)
             {
@@ -880,7 +880,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// о следующей фазе. Отрицательное значение означает, что фазы в ленте нет
         /// или она ещё идёт.
         /// </summary>
-        private float MeasurePhase(RoundState phase)
+        private float MeasurePhase(RoundPhase phase)
         {
             for (int i = 0; i < _timeline.Count - 1; i++)
             {
@@ -1260,7 +1260,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         {
             StringBuilder sb = new StringBuilder();
 
-            sb.Append("фаза=").Append(mode != null ? mode.CurrentRoundState.ToString() : "нет режима")
+            sb.Append("фаза=").Append(mode != null ? mode.CurrentRoundPhase.ToString() : "нет режима")
               .Append(", матч=").Append(mode != null ? mode.CurrentMatchState.ToString() : "?")
               .Append(", раунд=").Append(mode != null ? mode.CurrentRoundNumber : -1)
               .Append(", неготовы=[").Append(DescribePending(mode)).Append("]");

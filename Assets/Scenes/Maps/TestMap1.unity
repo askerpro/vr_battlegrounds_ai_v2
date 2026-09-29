@@ -584,7 +584,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 5773889775595434469, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
       propertyPath: m_Name
-      value: GameplayManager
+      value: MapReferee
       objectReference: {fileID: 0}
     - target: {fileID: 6300597833603486795, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
       propertyPath: sceneId
@@ -1466,8 +1466,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 432905653}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -16.93, y: 0, z: -9.55}
+  m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 9.549998, y: 0, z: -16.93}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -14848,7 +14848,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1524550015}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0

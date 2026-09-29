@@ -8,7 +8,7 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Tests.Network
 {
     /// <summary>
-    /// T-17: <c>MapManager</c> ждёт готовности Mirror по явному условию, а не по таймеру.
+    /// T-17: <c>MapLoader</c> ждёт готовности Mirror по явному условию, а не по таймеру.
     ///
     /// <para>
     /// Что было. <c>DeferredLoadMap</c> ждал события <c>PlayerConnected</c> с таймаутом
@@ -33,11 +33,11 @@ namespace VrBattlegrounds.Tests.Network
         /// </summary>
         private static bool ConnectionsSettled()
         {
-            MethodInfo method = typeof(MapManager).GetMethod("ConnectionsSettled",
+            MethodInfo method = typeof(MapLoader).GetMethod("ConnectionsSettled",
                 BindingFlags.NonPublic | BindingFlags.Static);
 
             Assert.IsNotNull(method,
-                "MapManager.ConnectionsSettled не найден. Условие готовности переименовали — " +
+                "MapLoader.ConnectionsSettled не найден. Условие готовности переименовали — " +
                 "проверять, что загрузка карты не ждёт по таймеру, стало нечем.");
 
             return (bool)method.Invoke(null, null);

@@ -15,22 +15,22 @@ namespace VrBattlegrounds.Tests.UI
     {
         private const string HudPrefabPath = "Assets/Prefabs/UI/HUD/EliminationHUD.prefab";
 
-        [TestCase(RoundState.Setup)]
-        [TestCase(RoundState.Equipment)]
-        [TestCase(RoundState.Countdown)]
-        [TestCase(RoundState.Combat)]
-        [TestCase(RoundState.Resolution)]
-        public void Смена_фазы_звучит(RoundState state)
+        [TestCase(RoundPhase.Setup)]
+        [TestCase(RoundPhase.Equipment)]
+        [TestCase(RoundPhase.Countdown)]
+        [TestCase(RoundPhase.Combat)]
+        [TestCase(RoundPhase.Resolution)]
+        public void Смена_фазы_звучит(RoundPhase state)
         {
             Assert.AreEqual(HudSound.Beep, HudNotificationTexts.Phase(state, null).Sound, $"{state}: переход без звука");
         }
 
-        [TestCase(RoundState.Setup)]
-        [TestCase(RoundState.Equipment)]
-        [TestCase(RoundState.Countdown)]
-        [TestCase(RoundState.Combat)]
-        [TestCase(RoundState.Scoreboard)]
-        public void Смена_фазы_видна_на_HUD(RoundState state)
+        [TestCase(RoundPhase.Setup)]
+        [TestCase(RoundPhase.Equipment)]
+        [TestCase(RoundPhase.Countdown)]
+        [TestCase(RoundPhase.Combat)]
+        [TestCase(RoundPhase.Scoreboard)]
+        public void Смена_фазы_видна_на_HUD(RoundPhase state)
         {
             Assert.IsNotEmpty(HudNotificationTexts.Phase(state, null).Text, $"{state}: нет сообщения");
         }
@@ -38,13 +38,13 @@ namespace VrBattlegrounds.Tests.UI
         [Test]
         public void Итог_боя_без_текста_чтобы_не_затереть_победителя()
         {
-            Assert.IsNull(HudNotificationTexts.Phase(RoundState.Resolution, null).Text);
+            Assert.IsNull(HudNotificationTexts.Phase(RoundPhase.Resolution, null).Text);
         }
 
         [Test]
         public void Итоги_раунда_показывают_счёт()
         {
-            StringAssert.Contains("CT 1 — 0 T", HudNotificationTexts.Phase(RoundState.Scoreboard, "CT 1 — 0 T").Text);
+            StringAssert.Contains("CT 1 — 0 T", HudNotificationTexts.Phase(RoundPhase.Scoreboard, "CT 1 — 0 T").Text);
         }
 
         private static KillNotice Kill(uint victim, int victimTeam, uint killer, int killerTeam) =>
@@ -87,6 +87,27 @@ namespace VrBattlegrounds.Tests.UI
         public void Напоминание_вернуться_на_базу(bool alive, bool inOwnZone, bool expected)
         {
             Assert.AreEqual(expected, HudNotificationTexts.AskReturnToBase(alive, inOwnZone));
+        }
+
+        /// <summary>
+        /// Игрок без команды матча (ещё не выбрал или у него «Разминка») в матче выбывший, но
+        /// своей зоны у него нет: «вернитесь в свою зону» его никуда не ведёт — его просят выбрать
+        /// команду. Раньше на TestMap1 игрок с «Разминкой» висел призраком с «вернитесь в зону».
+        /// </summary>
+        [TestCase(false, false, RoundPhase.Setup, TestName = "Без команды, мёртвый вне зоны — выбрать команду")]
+        [TestCase(true, false, RoundPhase.Countdown, TestName = "Без команды, живой на отсчёте — выбрать команду")]
+        public void Без_команды_матча_просим_выбрать_команду(bool alive, bool inOwnZone, RoundPhase phase)
+        {
+            Assert.AreEqual(HudReminder.ChooseTeam,
+                HudNotificationTexts.Reminder(hasModeTeam: false, alive, inOwnZone, phase));
+        }
+
+        [Test]
+        public void С_командой_матча_напоминания_прежние()
+        {
+            Assert.AreEqual(HudReminder.ReturnToBase, HudNotificationTexts.Reminder(true, false, false, RoundPhase.Setup));
+            Assert.AreEqual(HudReminder.ReturnForCountdown, HudNotificationTexts.Reminder(true, true, false, RoundPhase.Countdown));
+            Assert.AreEqual(HudReminder.None, HudNotificationTexts.Reminder(true, false, true, RoundPhase.Setup));
         }
 
         [Test]

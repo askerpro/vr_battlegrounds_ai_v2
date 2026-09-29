@@ -41,11 +41,11 @@ namespace VrBattlegrounds.Tests.Network
             _mode.PlayerRoster = _roster;
 
             _driver = new RoundFlowDriver(dt => { _roster.DeclareAllReady(); _mode.ServerTick(dt); },
-                                          () => _mode.CurrentRoundState);
+                                          () => _mode.CurrentRoundPhase);
 
             _mode.Initialize(new[] { _teamA, _teamB });
             InvokePrivateMethod(_mode, "InitializeActiveGame");
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown, "обратного отсчёта");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Countdown, "обратного отсчёта");
         }
 
         [TearDown]
@@ -86,7 +86,7 @@ namespace VrBattlegrounds.Tests.Network
 
             Tick(Countdown * 3);
 
-            Assert.AreEqual(RoundState.Countdown, _mode.CurrentRoundState, "Бой начался, хотя игрок вне своей зоны.");
+            Assert.AreEqual(RoundPhase.Countdown, _mode.CurrentRoundPhase, "Бой начался, хотя игрок вне своей зоны.");
             Assert.IsTrue(_mode.CountdownHeld, "Отсчёт не помечен остановленным — клиенты покажут идущий отсчёт.");
         }
 
@@ -100,12 +100,12 @@ namespace VrBattlegrounds.Tests.Network
             _a.ServerEnterSpawnZone(_teamA.teamIndex);
 
             Tick(Countdown - 1f);
-            Assert.AreEqual(RoundState.Countdown, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Countdown, _mode.CurrentRoundPhase,
                 "Отсчёт продолжился с места остановки, а должен был начаться сначала.");
             Assert.IsFalse(_mode.CountdownHeld, "Все в зонах, а отсчёт всё ещё стоит.");
 
             Tick(1.5f);
-            Assert.AreEqual(RoundState.Combat, _mode.CurrentRoundState, "Полный отсчёт прошёл — бой не начался.");
+            Assert.AreEqual(RoundPhase.Combat, _mode.CurrentRoundPhase, "Полный отсчёт прошёл — бой не начался.");
         }
 
         [Test]
@@ -117,7 +117,7 @@ namespace VrBattlegrounds.Tests.Network
 
             Tick(Countdown + 0.5f);
 
-            Assert.AreEqual(RoundState.Combat, _mode.CurrentRoundState, "Выбывший вне зоны остановил отсчёт — бой не начнётся никогда.");
+            Assert.AreEqual(RoundPhase.Combat, _mode.CurrentRoundPhase, "Выбывший вне зоны остановил отсчёт — бой не начнётся никогда.");
         }
     }
 }

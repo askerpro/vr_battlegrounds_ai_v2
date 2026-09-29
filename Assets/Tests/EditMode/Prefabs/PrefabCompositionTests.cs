@@ -64,7 +64,7 @@ namespace VrBattlegrounds.Tests.Prefabs
             typeof(PlayersManager),
             typeof(SessionRecoveryManager),
             typeof(global::VrBattlegrounds.Player.Avatars.AvatarManager),
-            typeof(MapManager),
+            typeof(MapLoader),
             typeof(global::VrBattlegrounds.PhysicalSpaceUtils.PhysicalSpaceSyncManager),
             typeof(global::VrBattlegrounds.Network.GameNetworkManager)
         };

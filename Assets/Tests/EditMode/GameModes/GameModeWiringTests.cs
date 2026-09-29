@@ -20,13 +20,10 @@ namespace VrBattlegrounds.Tests.Modes
     /// Проводка разминки, режимов и карт в ассетах и сценах.
     ///
     /// <para>
-    /// Что доказывает. Разминка (<see cref="WarmupMode"/>, бывший лобби-режим) лежит
-    /// в <c>GameModeRegistry</c> рядом с режимами матча, с флагом <c>isWarmup</c>, и в выбор
-    /// режима матча не попадает. Совместимость режимов — у карты: лобби — обычная карта
-    /// реестра с одной разминкой, у боевых карт первой идёт разминка, дальше режимы матча.
-    /// Поля «режим сцены» у <c>GameplayManager</c> больше нет — прежние тесты
-    /// <c>В_сцене_лобби_режим_сцены_лобби</c> и <c>На_картах_режим_сцены_не_задан</c>
-    /// заменены проверками данных карт.
+    /// Что доказывает. Разминка (<see cref="WarmupMode"/>) — не режим каталога: отдельное поле
+    /// <c>GameModeRegistry.warmup</c>, без команд, не в списке режимов и не в списках карт.
+    /// Команд в игре две — Военные и Повстанцы; команды «Разминка» нет. Игрок без команды —
+    /// киборг. Лобби — карта реестра без режимов матча с одной нейтральной зоной спавна.
     /// </para>
     /// </summary>
     public class GameModeWiringTests
@@ -37,6 +34,8 @@ namespace VrBattlegrounds.Tests.Modes
         public const string MapRegistryPath = "Assets/Data/Maps/MapRegistry.asset";
         public const string LobbyMapPath = "Assets/Data/Maps/MapData_Lobby.asset";
         private const string WarmupTeamPath = "Assets/Data/Teams/Warmup_Team.asset";
+        private const string CyborgPrefabPath = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
+        private const string AvatarStrategyPath = "Assets/Data/Player/Avatars/TeamAvatarStrategy.asset";
         private const string WarmupModePrefabPath = "Assets/Prefabs/GameModes/WarmupMode.prefab";
         private const string AvatarsRegistryPath = "Assets/Data/Player/Avatars/AvatarsRegistry.asset";
         private const string ManagersPrefabPath = "Assets/Prefabs/Managers/--- MANAGERS ---.prefab";
@@ -65,18 +64,20 @@ namespace VrBattlegrounds.Tests.Modes
         // ── Данные режимов ───────────────────────────────────────────────────
 
         [Test]
-        public void Разминка_в_реестре_с_флагом_и_не_в_выборе_режима_матча()
+        public void Разминка_не_режим_каталога()
         {
             GameModeData warmup = WarmupData();
             GameModeRegistry registry = Registry();
 
             Assert.AreEqual("warmup", warmup.modeId);
             Assert.AreEqual("Разминка", warmup.displayName);
-            Assert.IsTrue(warmup.isWarmup, "У разминки не стоит флаг isWarmup.");
+            Assert.IsTrue(warmup.teams == null || warmup.teams.Length == 0, "У разминки есть команды — это состояние карты, а не режим матча.");
 
-            Assert.IsTrue(registry.modes.Contains(warmup), "Разминки нет в GameModeRegistry — клиент не найдёт её по modeId.");
-            Assert.AreEqual(1, registry.modes.Count(m => m != null && m.isWarmup), "В реестре разминка должна быть ровно одна.");
-            Assert.AreSame(warmup, registry.Warmup);
+            Assert.AreSame(warmup, registry.warmup, "Разминка не задана полем warmup в GameModeRegistry.");
+            Assert.AreSame(warmup, registry.GetById("warmup"), "Клиент не найдёт разминку по modeId.");
+            Assert.IsFalse(registry.modes.Contains(warmup), "Разминка лежит в каталоге режимов матча.");
+            Assert.IsFalse(registry.modes.Any(m => m != null && m.modePrefab != null && m.modePrefab.GetComponent<WarmupMode>() != null),
+                "В каталоге режимов матча лежит режим с WarmupMode.");
 
             List<GameModeData> tabs = MenuSessionSetup.TabModes(registry);
             Assert.IsFalse(tabs.Contains(warmup), "Разминка попала во вкладки выбора режима матча.");
@@ -84,35 +85,41 @@ namespace VrBattlegrounds.Tests.Modes
         }
 
         /// <summary>
-        /// Разминка (и лобби) — нейтральная «Разминка» первой (её получает новичок, KeepOrDefault) и все
-        /// команды матча: команду серии игрок выбирает ещё в лобби, и она живёт до конца серии —
-        /// сброс в конце серии не трогает команды разминки (<c>MatchSeries.ReleaseMatchTeams</c>).
+        /// Команд в игре две — Военные и Повстанцы, это и есть команды режимов матча. Команды
+        /// «Разминка» нет: игрок без команды — просто без команды (аватар — киборг). Раньше
+        /// в лобби планшет предлагал три команды.
         /// </summary>
         [Test]
-        public void У_разминки_нейтральная_команда_первой_и_все_команды_матча()
+        public void Команды_только_Военные_и_Повстанцы()
         {
-            GameModeData warmup = WarmupData();
-            TeamData team = AssetDatabase.LoadAssetAtPath<TeamData>(WarmupTeamPath);
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<TeamData>(WarmupTeamPath), $"Команда «Разминка» вернулась: {WarmupTeamPath}.");
 
-            Assert.AreSame(team, warmup.teams[0], $"Первая команда разминки не {WarmupTeamPath} — новичок получит команду матча.");
+            TeamData[] matchTeams = Registry().MatchModes.Where(m => m.teams != null)
+                                              .SelectMany(m => m.teams).Where(t => t != null).Distinct().ToArray();
+            CollectionAssert.AreEquivalent(new[] { "Военные", "Повстанцы" }, matchTeams.Select(t => t.displayName),
+                "Команды режимов матча не Военные и Повстанцы.");
+            CollectionAssert.AreEquivalent(matchTeams, TeamRegistry.Instance.teams.Where(t => t != null),
+                "В Resources/TeamRegistry не ровно команды матча — в лобби планшет предложит лишние.");
+            Assert.IsTrue(TeamRegistry.Instance.Validate(out string error), error);
+        }
 
-            TeamData[] matchTeams = AssetDatabase.FindAssets("t:GameModeData")
-                                                 .Select(AssetDatabase.GUIDToAssetPath)
-                                                 .Select(AssetDatabase.LoadAssetAtPath<GameModeData>)
-                                                 .Where(m => m != null && !m.isWarmup && m.teams != null)
-                                                 .SelectMany(m => m.teams).Where(t => t != null).Distinct().ToArray();
-            Assert.IsNotEmpty(matchTeams);
-            foreach (TeamData matchTeam in matchTeams)
-                Assert.Contains(matchTeam, warmup.teams, $"Команды '{matchTeam.displayName}' нет в разминке — в лобби её не выбрать.");
-            Assert.AreEqual("Разминка", team.displayName);
+        /// <summary>
+        /// Игрок без команды (ещё не выбрал или его сняли с команды) — киборг: запасной префаб
+        /// стратегии аватаров. Он же обязан быть в реестре аватаров, чтобы его проверяли тесты
+        /// аватаров (<c>AvatarLoadoutTests</c>, <c>PrefabCompositionTests</c>).
+        /// </summary>
+        [Test]
+        public void Игрок_без_команды_киборг()
+        {
+            GameObject cyborg = AssetDatabase.LoadAssetAtPath<GameObject>(CyborgPrefabPath);
+            Assert.IsNotNull(cyborg, $"Нет {CyborgPrefabPath}.");
+
+            var strategy = AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Player.Avatars.TeamAvatarStrategy>(AvatarStrategyPath);
+            var fallback = new SerializedObject(strategy).FindProperty("fallbackPrefab").objectReferenceValue as GameObject;
+            Assert.AreSame(cyborg, fallback, $"Игрок без команды получит '{(fallback ? fallback.name : "null")}', а не киборга.");
 
             var avatars = AssetDatabase.LoadAssetAtPath<AvatarRegistry>(AvatarsRegistryPath).avatars;
-            CollectionAssert.AreEquivalent(avatars, team.avatars,
-                "В лобби выбирается любой скин — в команде «Разминка» обязаны быть все аватары реестра.");
-
-            Assert.IsTrue(TeamRegistry.Instance.teams.Contains(team),
-                "Команды «Разминка» нет в Resources/TeamRegistry: клиент не восстановит её по индексу.");
-            Assert.IsTrue(TeamRegistry.Instance.Validate(out string error), error);
+            Assert.IsTrue(avatars.Any(a => a != null && a.prefab == cyborg), "Киборга нет в реестре аватаров — тесты аватаров его не проверяют.");
         }
 
         [Test]
@@ -143,7 +150,7 @@ namespace VrBattlegrounds.Tests.Modes
         [Test]
         public void Каждый_режим_начинается_с_чистого_пола()
         {
-            foreach (GameModeData mode in Registry().modes)
+            foreach (GameModeData mode in Registry().modes.Append(Registry().warmup))
             {
                 Assert.IsNotNull(mode.modePrefab, $"{mode.modeId}: нет префаба.");
                 Assert.IsNotNull(mode.modePrefab.GetComponent<ModeStartCleanup>(),
@@ -168,9 +175,6 @@ namespace VrBattlegrounds.Tests.Modes
         [Test]
         public void Политика_команд_задана_данными_режима()
         {
-            Assert.AreEqual(TeamAssignmentKind.KeepOrDefault, WarmupData().teamAssignment,
-                "Разминка не сбрасывает команду матча и даёт свою только игроку без команды.");
-
             foreach (GameModeData mode in Registry().MatchModes)
                 Assert.AreEqual(TeamAssignmentKind.PlayerChoice, mode.teamAssignment,
                     $"{mode.modeId}: команду матча выбирает игрок на карте (или выдаёт админ), автобаланс — только разовой кнопкой.");
@@ -182,8 +186,8 @@ namespace VrBattlegrounds.Tests.Modes
             var context = AssetDatabase.LoadAssetAtPath<GameObject>(SessionContextPath);
             Assert.IsNotNull(context, $"Нет {SessionContextPath}.");
             Assert.IsNotNull(context.GetComponent<SessionManager>(), "Контроль: SessionManager на SessionContext.");
-            Assert.IsNotNull(context.GetComponent<MatchSeries>(),
-                "На SessionContext нет MatchSeries — серия карт и общий счёт не переживут смену сцены.");
+            Assert.IsNotNull(context.GetComponent<Series>(),
+                "На SessionContext нет Series — серия карт и общий счёт не переживут смену сцены.");
         }
 
         [Test]
@@ -205,7 +209,7 @@ namespace VrBattlegrounds.Tests.Modes
         // ── Карты ────────────────────────────────────────────────────────────
 
         [Test]
-        public void Лобби_обычная_карта_реестра_только_с_разминкой()
+        public void Лобби_карта_реестра_без_режимов_матча()
         {
             MapRegistry maps = Maps();
             MapData lobby = AssetDatabase.LoadAssetAtPath<MapData>(LobbyMapPath);
@@ -214,7 +218,8 @@ namespace VrBattlegrounds.Tests.Modes
             Assert.AreEqual("Lobby", lobby.sceneName);
             Assert.IsTrue(maps.maps.Contains(lobby), "Лобби нет в списке карт реестра.");
             Assert.AreSame(lobby, maps.lobby, "MapRegistry.lobby не указывает на карту-лобби — серии некуда возвращаться.");
-            CollectionAssert.AreEqual(new[] { WarmupData() }, lobby.supportedModes, "У лобби должна быть только разминка.");
+            Assert.IsTrue(lobby.supportedModes == null || lobby.supportedModes.Length == 0,
+                "У лобби есть режимы — разминка в списки карт не входит, а режимов матча у лобби нет.");
 
             foreach (GameModeData mode in Registry().MatchModes)
                 Assert.IsFalse(MenuSessionSetup.MapsForMode(maps, mode).Contains(lobby),
@@ -222,7 +227,7 @@ namespace VrBattlegrounds.Tests.Modes
         }
 
         [Test]
-        public void Боевые_карты_начинаются_с_разминки_и_допускают_матч()
+        public void Боевые_карты_допускают_матч_и_не_держат_разминку_в_списке()
         {
             MapRegistry maps = Maps();
             GameModeData warmup = WarmupData();
@@ -230,9 +235,9 @@ namespace VrBattlegrounds.Tests.Modes
             foreach (MapData map in maps.maps.Where(m => m != null && m != maps.lobby))
             {
                 Assert.IsNotNull(map.supportedModes, $"{map.sceneName}: нет списка режимов.");
-                Assert.AreSame(warmup, MapModeRules.ResolveWarmup(map, Registry()),
-                    $"{map.sceneName}: карта стартует не с разминки.");
-                Assert.IsTrue(map.supportedModes.Any(m => m != null && !m.isWarmup),
+                Assert.IsFalse(map.supportedModes.Contains(warmup),
+                    $"{map.sceneName}: разминка в списке режимов карты — она не режим каталога.");
+                Assert.IsTrue(map.supportedModes.Any(m => m != null),
                     $"{map.sceneName}: на боевой карте нет ни одного режима матча.");
             }
         }
@@ -245,12 +250,12 @@ namespace VrBattlegrounds.Tests.Modes
             Scene scene = EditorSceneManager.OpenPreviewScene(LobbyScenePath);
             try
             {
-                List<GameplayManager> managers = InScene<GameplayManager>(scene);
-                Assert.AreEqual(1, managers.Count, "В лобби должен быть ровно один GameplayManager (MatchManager).");
+                List<MapReferee> managers = InScene<MapReferee>(scene);
+                Assert.AreEqual(1, managers.Count, "В лобби должен быть ровно один MapReferee.");
 
-                GameplayManager manager = managers[0];
-                Assert.IsTrue(manager.gameObject.activeSelf, "MatchManager выключен — Mirror включит его при спавне сам (сетевой объект).");
-                Assert.AreNotEqual(0UL, manager.GetComponent<NetworkIdentity>().sceneId, "У MatchManager в лобби нулевой sceneId.");
+                MapReferee manager = managers[0];
+                Assert.IsTrue(manager.gameObject.activeSelf, "MapReferee выключен — Mirror включит его при спавне сам (сетевой объект).");
+                Assert.AreNotEqual(0UL, manager.GetComponent<NetworkIdentity>().sceneId, "У MapReferee в лобби нулевой sceneId.");
 
                 Assert.IsFalse(scene.GetRootGameObjects().Any(r => r.name == "LobbyFreePlay"),
                     "В лобби остался объект LobbyFreePlay — правила лобби теперь на префабе разминки.");
@@ -262,18 +267,16 @@ namespace VrBattlegrounds.Tests.Modes
         }
 
         [Test]
-        public void В_лобби_одна_зона_спавна_и_она_не_в_тумбе_арсенала()
+        public void В_лобби_одна_нейтральная_зона_спавна_и_она_не_в_тумбе_арсенала()
         {
-            TeamData warmupTeam = AssetDatabase.LoadAssetAtPath<TeamData>(WarmupTeamPath);
-            Assert.IsNotNull(warmupTeam, $"Нет {WarmupTeamPath}.");
-
             Scene scene = EditorSceneManager.OpenPreviewScene(LobbyScenePath);
             try
             {
                 TeamSpawnZone[] zones = InScene<TeamSpawnZone>(scene).Where(z => z.gameObject.activeInHierarchy).ToArray();
                 Assert.AreEqual(1, zones.Length,
                     "В лобби должна быть одна зона спавна: " + string.Join(", ", zones.Select(z => z.name + "/" + (z.Team ? z.Team.name : "null"))));
-                Assert.AreSame(warmupTeam, zones[0].Team, "Зона спавна лобби не команды «Разминка».");
+                Assert.IsNull(zones[0].HomeTeam,
+                    "Зона спавна лобби чья-то — в лобби появляются все, и без команды тоже: зона обязана быть нейтральной.");
 
                 List<ArsenalWallController> walls = InScene<ArsenalWallController>(scene);
                 Assert.IsNotEmpty(walls, "Контроль: тумба арсенала в лобби есть.");

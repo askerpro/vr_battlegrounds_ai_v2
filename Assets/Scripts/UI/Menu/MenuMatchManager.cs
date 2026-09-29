@@ -8,12 +8,13 @@ namespace VrBattlegrounds.UI.Menu
 {
     /// <summary>
     /// Экран админа «Матч» (<see cref="MenuScreenType.MatchManager"/>): «Начать матч»,
-    /// «Пауза», «Продолжить», «Стоп».
+    /// «Пауза», «Продолжить», «Следующая карта», «Стоп».
     ///
     /// <para>
     /// Каждая кнопка видна только админу и только когда имеет смысл
     /// (<see cref="AdminMatchCommands.IsAvailable(MatchCommand)"/> по реплицированному
-    /// состоянию): «Пауза» — во время матча, «Продолжить» — на паузе. Нажатие уходит на
+    /// состоянию): «Пауза» — во время матча, «Продолжить» — на паузе, «Следующая карта» —
+    /// в разминке идущей серии (на последней карте надпись «В лобби»). Нажатие уходит на
     /// сервер командой сессии (<c>PlayerSession.CmdAdminMatchCommand</c>), право и
     /// уместность сервер проверяет ещё раз.
     /// </para>
@@ -25,6 +26,11 @@ namespace VrBattlegrounds.UI.Menu
         [SerializeField] private Button _resumeButton;
         [SerializeField] private Button _stopButton;
 
+        [Tooltip("«Следующая карта»: серия сама после конца карты дальше не идёт — переход только по этой кнопке.")]
+        [SerializeField] private Button _nextMapButton;
+
+        private TMPro.TMP_Text _nextMapLabel;
+
         [Tooltip("Надпись для не-админа или когда кнопок нет.")]
         [SerializeField] private TMPro.TMP_Text _hint;
 
@@ -34,6 +40,9 @@ namespace VrBattlegrounds.UI.Menu
             Wire(_pauseButton, MatchCommand.Pause);
             Wire(_resumeButton, MatchCommand.Resume);
             Wire(_stopButton, MatchCommand.Stop);
+            Wire(_nextMapButton, MatchCommand.NextMap);
+
+            if (_nextMapButton != null) _nextMapLabel = _nextMapButton.GetComponentInChildren<TMPro.TMP_Text>(true);
         }
 
         private void Wire(Button button, MatchCommand command)
@@ -50,6 +59,13 @@ namespace VrBattlegrounds.UI.Menu
             any |= Show(_pauseButton, admin && AdminMatchCommands.IsAvailable(MatchCommand.Pause));
             any |= Show(_resumeButton, admin && AdminMatchCommands.IsAvailable(MatchCommand.Resume));
             any |= Show(_stopButton, admin && AdminMatchCommands.IsAvailable(MatchCommand.Stop));
+            any |= Show(_nextMapButton, admin && AdminMatchCommands.IsAvailable(MatchCommand.NextMap));
+
+            if (_nextMapLabel != null)
+            {
+                string label = Series.Instance != null && Series.Instance.IsLastMap ? "В лобби" : "Следующая карта";
+                if (_nextMapLabel.text != label) _nextMapLabel.text = label;
+            }
 
             if (_hint != null)
             {

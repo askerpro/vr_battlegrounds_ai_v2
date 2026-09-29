@@ -133,8 +133,8 @@ namespace VrBattlegrounds.DevTools.Bots
 
             _bots.Add(session);
 
-            // Команда — до тела: спавн берёт зону команды. Разминка команду уже выдала
-            // сама (KeepOrDefault на OnSessionConnected), матч ждёт выбора — выбираем.
+            // Команда — до тела: спавн берёт зону команды. Сами режимы команду не выдают
+            // (у разминки команд нет, матч ждёт выбора) — выбираем.
             ChooseTeam(session, force: true);
             SpawnBody(session);
 
@@ -223,7 +223,7 @@ namespace VrBattlegrounds.DevTools.Bots
         /// </summary>
         private void ChooseTeam(PlayerSession bot, bool force)
         {
-            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             if (mode == null || mode.IsWarmup || mode.Teams == null || mode.Teams.Length == 0) return;
 
             bool inModeTeam = mode.Teams.Any(t => t != null && t.teamIndex == bot.TeamIndex);

@@ -41,7 +41,7 @@ namespace VrBattlegrounds.UI.HUD
         private PlayerController _player;
         private int _shownSeconds = int.MinValue;
         private int _shownHealth = int.MinValue;
-        private RoundState? _shownState;
+        private RoundPhase? _shownState;
         private bool _shownNoTimer;
 
         private void Awake()
@@ -88,8 +88,8 @@ namespace VrBattlegrounds.UI.HUD
         {
             if (_timeText == null) return;
 
-            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
-            if (!RoundClock.TryGetTimeRemaining(mode, out float seconds, out RoundState? state))
+            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
+            if (!RoundClock.TryGetTimeRemaining(mode, out float seconds, out RoundPhase? state))
             {
                 if (_shownNoTimer) return;
                 _shownNoTimer = true;
@@ -110,15 +110,15 @@ namespace VrBattlegrounds.UI.HUD
             _timeText.color = TimeColor(state);
         }
 
-        private Color TimeColor(RoundState? state)
+        private Color TimeColor(RoundPhase? state)
         {
             switch (state)
             {
                 case null:
-                case RoundState.Combat:
+                case RoundPhase.Combat:
                     return _combatTimeColor;
-                case RoundState.Equipment:
-                case RoundState.Countdown:
+                case RoundPhase.Equipment:
+                case RoundPhase.Countdown:
                     return _prepareTimeColor;
                 default:
                     return _pausedTimeColor;

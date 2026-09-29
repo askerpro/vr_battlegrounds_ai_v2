@@ -13,7 +13,7 @@ namespace VrBattlegrounds.UI.HUD
         /// Elimination: в обратном отсчёте и паузах — их остаток, в закупке с пределом — остаток
         /// закупки, иначе — время раунда. Respawn — остаток матча.
         /// </summary>
-        public static bool TryGetTimeRemaining(GameMode mode, out float seconds, out RoundState? state)
+        public static bool TryGetTimeRemaining(GameMode mode, out float seconds, out RoundPhase? state)
         {
             seconds = 0f;
             state = null;
@@ -21,8 +21,8 @@ namespace VrBattlegrounds.UI.HUD
             switch (mode)
             {
                 case EliminationMode elimination:
-                    state = elimination.CurrentRoundState;
-                    seconds = SelectEliminationTime(elimination.CurrentRoundState,
+                    state = elimination.CurrentRoundPhase;
+                    seconds = SelectEliminationTime(elimination.CurrentRoundPhase,
                         elimination.CountdownTimeRemaining,
                         elimination.EquipmentTimeRemaining,
                         elimination.RoundTimeRemaining);
@@ -41,10 +41,10 @@ namespace VrBattlegrounds.UI.HUD
         /// В закупке показываем, сколько её осталось; без предела ожидания остатка нет —
         /// тогда полное время раунда.
         /// </summary>
-        public static float SelectEliminationTime(RoundState state, float countdown, float equipment, float round)
+        public static float SelectEliminationTime(RoundPhase state, float countdown, float equipment, float round)
         {
-            if (state == RoundState.Countdown) return countdown;
-            if (state == RoundState.Equipment && equipment > 0f) return equipment;
+            if (state == RoundPhase.Countdown) return countdown;
+            if (state == RoundPhase.Equipment && equipment > 0f) return equipment;
             return round;
         }
     }

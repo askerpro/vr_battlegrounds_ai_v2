@@ -65,7 +65,7 @@ namespace VrBattlegrounds.Arsenal
 
             bool show = _mode != null
                         && _mode.RoundStartRule == RoundStartRule.Timer
-                        && _mode.CurrentRoundState == RoundState.Equipment;
+                        && _mode.CurrentRoundPhase == RoundPhase.Equipment;
 
             if (_text.enabled != show)
             {

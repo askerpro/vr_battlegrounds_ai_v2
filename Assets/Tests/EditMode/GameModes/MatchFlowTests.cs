@@ -17,7 +17,7 @@ namespace VrBattlegrounds.Tests.Modes
     /// <para>
     /// Что доказывает. Любая карта стартует в разминке, пока админ не нажал «Начать матч»;
     /// в лобби режим матча не запускается; режим меняется на месте (тот же
-    /// <see cref="GameplayManager"/>, без перезагрузки сцены) — разминка → Elimination →
+    /// <see cref="MapReferee"/>, без перезагрузки сцены) — разминка → Elimination →
     /// разминка — и при этом не сбрасываются ни команды, ни общий счёт серии; разминка
     /// оставляет игроку команду матча и даёт свою только игроку без команды. Матч на карте
     /// кончился — серия переходит к следующей карте, после последней — в лобби, и команды
@@ -27,12 +27,10 @@ namespace VrBattlegrounds.Tests.Modes
     /// </summary>
     public class MatchFlowTests : MirrorTestHarness
     {
-        private const int WarmupTeamIndex = 3;
-
         private readonly List<Object> _assets = new List<Object>();
         private readonly List<string> _loads = new List<string>();
 
-        private TeamData _a, _b, _warmupTeam;
+        private TeamData _a, _b;
         private GameModeData _warmup, _elimination, _respawn;
         private GameModeRegistry _registry;
         private MapData _mapA, _mapB, _lobby;
@@ -47,20 +45,20 @@ namespace VrBattlegrounds.Tests.Modes
 
             _a = Team("A", 1);
             _b = Team("B", 2);
-            _warmupTeam = Team("Разминка", WarmupTeamIndex);
 
-            _warmup = Mode("warmup", TeamAssignmentKind.KeepOrDefault, _warmupTeam);
-            _warmup.isWarmup = true;
+            // Разминка — не режим каталога: без команд, отдельным полем реестра, не в списках карт.
+            _warmup = Mode("warmup", TeamAssignmentKind.PlayerChoice);
             _elimination = Mode("elimination", TeamAssignmentKind.PlayerChoice, _a, _b);
             _respawn = Mode("respawn", TeamAssignmentKind.PlayerChoice, _a, _b);
 
             _registry = ScriptableObject.CreateInstance<GameModeRegistry>();
-            _registry.modes = new[] { _warmup, _elimination, _respawn };
+            _registry.warmup = _warmup;
+            _registry.modes = new[] { _elimination, _respawn };
             _assets.Add(_registry);
 
-            _lobby = Map("Lobby", _warmup);
-            _mapA = Map("MapA", _warmup, _elimination);
-            _mapB = Map("MapB", _warmup, _elimination, _respawn);
+            _lobby = Map("Lobby");
+            _mapA = Map("MapA", _elimination);
+            _mapB = Map("MapB", _elimination, _respawn);
 
             _maps = ScriptableObject.CreateInstance<MapRegistry>();
             _maps.maps = new[] { _lobby, _mapA, _mapB };
@@ -147,13 +145,12 @@ namespace VrBattlegrounds.Tests.Modes
             return session;
         }
 
-        private MatchSeries CreateSeries(float nextMapDelay = 0f)
+        private Series CreateSeries()
         {
-            MatchSeries series = CreateNetworkComponent<MatchSeries>("MatchSeries");
+            Series series = CreateNetworkComponent<Series>("Series");
             InvokeLifecycleMethod(series, "Awake");
-            SetPrivateField(series, "_nextMapDelay", nextMapDelay);
             series.PlayerRoster = _roster;
-            series.MapLoader = scene => _loads.Add(scene);
+            series.LoadMapOverride = scene => _loads.Add(scene);
             SpawnOnServer(series);
             return series;
         }
@@ -163,14 +160,14 @@ namespace VrBattlegrounds.Tests.Modes
         /// Unity не зовёт <c>Awake</c> у инстанцированных префабов, а харнесс умеет
         /// собирать сетевые объекты сам.
         /// </summary>
-        private GameplayManager CreateMapManager(string scene)
+        private MapReferee CreateMapReferee(string scene)
         {
-            GameplayManager manager = CreateNetworkComponent<GameplayManager>("GameplayManager");
+            MapReferee manager = CreateNetworkComponent<MapReferee>("MapReferee");
             InvokeLifecycleMethod(manager, "Awake");
             manager.SceneNameOverride = scene;
             manager.ModeFactory = data =>
             {
-                GameMode mode = data.isWarmup
+                GameMode mode = data == _warmup
                     ? (GameMode)CreateNetworkComponent<WarmupMode>("WarmupMode")
                     : data.modeId == "respawn"
                         ? CreateNetworkComponent<RespawnMode>("RespawnMode")
@@ -185,7 +182,7 @@ namespace VrBattlegrounds.Tests.Modes
 
         private static void EndMatch(GameMode mode, TeamData winner)
         {
-            InvokePrivateMethod(mode, "RaiseGameplayEnded", winner);
+            InvokePrivateMethod(mode, "RaiseFinished", winner);
         }
 
         // ── Старт карты ──────────────────────────────────────────────────────
@@ -196,7 +193,7 @@ namespace VrBattlegrounds.Tests.Modes
             SilenceMirrorNoise();
             CreateSession(selectedModeId: null);
 
-            GameplayManager manager = CreateMapManager(_mapA.sceneName);
+            MapReferee manager = CreateMapReferee(_mapA.sceneName);
 
             Assert.IsInstanceOf<WarmupMode>(manager.ActiveGameMode, "Карта стартовала не в разминке.");
             Assert.IsTrue(manager.ActiveGameMode.IsWarmup);
@@ -209,7 +206,7 @@ namespace VrBattlegrounds.Tests.Modes
             SilenceMirrorNoise();
             CreateSession("elimination");
 
-            GameplayManager manager = CreateMapManager(_mapA.sceneName);
+            MapReferee manager = CreateMapReferee(_mapA.sceneName);
 
             Assert.IsInstanceOf<WarmupMode>(manager.ActiveGameMode,
                 "Выбор администратора запустился сам — матч начинается только кнопкой «Начать матч».");
@@ -221,11 +218,11 @@ namespace VrBattlegrounds.Tests.Modes
             SilenceMirrorNoise();
             CreateSession("elimination");
 
-            GameplayManager manager = CreateMapManager(_lobby.sceneName);
+            MapReferee manager = CreateMapReferee(_lobby.sceneName);
             GameMode warmup = manager.ActiveGameMode;
 
             Assert.IsFalse(manager.StartMatch(), "В лобби «Начать матч» запустил режим матча.");
-            Assert.AreSame(warmup, manager.ActiveGameMode, "В лобби режим сменился — там совместима только разминка.");
+            Assert.AreSame(warmup, manager.ActiveGameMode, "В лобби режим сменился — режимов матча у лобби нет.");
             Assert.IsFalse(manager.IsMatchActive);
         }
 
@@ -233,9 +230,9 @@ namespace VrBattlegrounds.Tests.Modes
         public void Несовместимый_с_картой_выбор_заменяется_первым_совместимым()
         {
             SilenceMirrorNoise();
-            CreateSession("respawn"); // на MapA только разминка и Elimination
+            CreateSession("respawn"); // на MapA только Elimination
 
-            GameplayManager manager = CreateMapManager(_mapA.sceneName);
+            MapReferee manager = CreateMapReferee(_mapA.sceneName);
 
             Assert.IsTrue(manager.StartMatch());
             Assert.IsInstanceOf<EliminationMode>(manager.ActiveGameMode,
@@ -255,12 +252,12 @@ namespace VrBattlegrounds.Tests.Modes
 
             // Как в игре: сигнал приходит из Awake оркестратора, когда NetworkIdentity ещё
             // не связала компоненты — у менеджера нет netIdentity, и isServer там падает с NRE.
-            GameObject go = CreateNetworkObject("GameplayManager");
-            GameplayManager manager = go.AddComponent<GameplayManager>();
+            GameObject go = CreateNetworkObject("MapReferee");
+            MapReferee manager = go.AddComponent<MapReferee>();
             manager.SceneNameOverride = _mapA.sceneName;
             manager.ModeFactory = data =>
             {
-                GameMode mode = data.isWarmup
+                GameMode mode = data == _warmup
                     ? (GameMode)CreateNetworkComponent<WarmupMode>("WarmupMode")
                     : CreateNetworkComponent<EliminationMode>("EliminationMode");
                 InvokeLifecycleMethod(mode, "Awake"); // как в игре: Awake подписывает колбэк SyncList до Initialize
@@ -282,7 +279,7 @@ namespace VrBattlegrounds.Tests.Modes
         // ── Смена режима на месте ────────────────────────────────────────────
 
         /// <summary>
-        /// Разминка → Elimination → разминка на одном и том же <see cref="GameplayManager"/>.
+        /// Разминка → Elimination → разминка на одном и том же <see cref="MapReferee"/>.
         /// Команды матча и общий счёт серии живут вне режима и смену переживают;
         /// игрок без команды получает «Разминку», а в Elimination выбирает команду сам.
         /// </summary>
@@ -291,31 +288,31 @@ namespace VrBattlegrounds.Tests.Modes
         {
             SilenceMirrorNoise();
             SessionManager session = CreateSession("elimination");
-            MatchSeries series = CreateSeries(nextMapDelay: 60f);
+            Series series = CreateSeries();
             Assert.IsTrue(series.ServerBegin(new[] { _mapA.sceneName, _mapB.sceneName }));
 
             PlayerSession ct = Player("ct", _a.teamIndex);
             PlayerSession t = Player("t", _b.teamIndex);
             PlayerSession fresh = Player("fresh", 0);
 
-            GameplayManager manager = CreateMapManager(_mapA.sceneName);
+            MapReferee manager = CreateMapReferee(_mapA.sceneName);
 
-            // Разминка: команда матча не тронута, игрок без команды — в «Разминке».
+            // Разминка: команда матча не тронута, игрок без команды так и остаётся без неё.
             Assert.IsInstanceOf<WarmupMode>(manager.ActiveGameMode);
             Assert.AreEqual(_a.teamIndex, ct.TeamIndex, "Разминка сменила команду матча.");
             Assert.AreEqual(_b.teamIndex, t.TeamIndex, "Разминка сменила команду матча.");
-            Assert.AreEqual(WarmupTeamIndex, fresh.TeamIndex, "Игрок без команды не получил «Разминку».");
+            Assert.AreEqual(0, fresh.TeamIndex, "Разминка выдала команду — своих команд у неё нет.");
 
             // «Начать матч» — на месте.
             GameMode warmup = manager.ActiveGameMode;
             Assert.IsTrue(manager.StartMatch(), "«Начать матч» не запустил Elimination.");
             var elimination = manager.ActiveGameMode as EliminationMode;
             Assert.IsNotNull(elimination, "После «Начать матч» режим не Elimination.");
-            Assert.AreSame(manager, GameplayManager.Instance, "Смена режима пересоздала оркестратор — это уже не «на месте».");
+            Assert.AreSame(manager, MapReferee.Instance, "Смена режима пересоздала оркестратор — это уже не «на месте».");
             Assert.IsTrue(warmup == null, "Разминка осталась жить рядом с матчем.");
             Assert.IsTrue(manager.IsMatchActive);
             Assert.AreEqual(_a.teamIndex, ct.TeamIndex, "Старт матча сменил команду.");
-            Assert.AreEqual(WarmupTeamIndex, fresh.TeamIndex, "Elimination сам раздал команду — выбирать должен игрок.");
+            Assert.AreEqual(0, fresh.TeamIndex, "Elimination сам раздал команду — выбирать должен игрок.");
             Assert.IsFalse(elimination.TeamChoiceLocked, "Игрок без команды не может выбрать команду матча.");
 
             // Карта сыграна: победа A. Назад в разминку на той же карте.
@@ -342,7 +339,7 @@ namespace VrBattlegrounds.Tests.Modes
         {
             SilenceMirrorNoise();
             CreateSession("elimination");
-            MatchSeries series = CreateSeries();
+            Series series = CreateSeries();
 
             PlayerSession ct = Player("ct", _a.teamIndex);
 
@@ -357,31 +354,37 @@ namespace VrBattlegrounds.Tests.Modes
             Assert.AreEqual("Lobby", series.ServerAdvance(), "После последней карты серия не вернулась в лобби.");
             CollectionAssert.AreEqual(new[] { "MapA", "MapB", "Lobby" }, _loads);
             Assert.IsFalse(series.IsRunning, "Серия после лобби всё ещё идёт.");
-            Assert.AreEqual(WarmupTeamIndex, ct.TeamIndex,
-                "Конец серии не отпустил команду матча — в лобби игрок остался бы в CT без зоны и чужих скинов.");
+            Assert.AreEqual(0, ct.TeamIndex,
+                "Конец серии не распустил команды — в лобби игрок появляется без команды (киборгом) и выбирает заново.");
         }
 
         /// <summary>
-        /// Конец матча на карте сам ведёт серию дальше: <c>GameplayEnded</c> → итог в счёт →
-        /// разминка на этой карте → следующая карта. Задержка перед переходом обнулена.
+        /// Конец матча на карте: итог в счёт серии, карта — в разминку, и серия <b>ждёт</b>.
+        /// Следующую карту запускает только админ кнопкой «Следующая карта»
+        /// (<see cref="MatchCommand.NextMap"/>): сама серия дальше не идёт.
         /// </summary>
         [Test]
-        public void Конец_матча_на_карте_ведёт_серию_к_следующей_карте()
+        public void Конец_матча_оставляет_карту_в_разминке_до_кнопки_админа()
         {
             SilenceMirrorNoise();
             CreateSession("elimination");
-            MatchSeries series = CreateSeries(nextMapDelay: 0f);
+            Series series = CreateSeries();
             series.ServerBegin(new[] { _mapA.sceneName, _mapB.sceneName });
             Player("ct", _a.teamIndex);
 
-            GameplayManager manager = CreateMapManager(_mapA.sceneName);
+            MapReferee manager = CreateMapReferee(_mapA.sceneName);
             Assert.IsTrue(manager.StartMatch());
 
             EndMatch(manager.ActiveGameMode, _b);
 
             Assert.IsInstanceOf<WarmupMode>(manager.ActiveGameMode, "Карта не вернулась в разминку.");
             Assert.AreEqual(1, series.GetMapWins(_b));
-            CollectionAssert.AreEqual(new[] { "MapA", "MapB" }, _loads, "Серия не перешла к следующей карте.");
+            CollectionAssert.AreEqual(new[] { "MapA" }, _loads, "Серия сама ушла на следующую карту — решать должен админ.");
+            Assert.IsTrue(series.IsRunning, "Конец карты остановил серию.");
+            Assert.IsTrue(AdminMatchCommands.IsAvailable(MatchCommand.NextMap), "После конца карты нет кнопки «Следующая карта».");
+
+            Assert.AreEqual("MapB", series.ServerAdvance(), "«Следующая карта» загрузила не вторую карту.");
+            CollectionAssert.AreEqual(new[] { "MapA", "MapB" }, _loads);
         }
 
         [Test]
@@ -389,7 +392,7 @@ namespace VrBattlegrounds.Tests.Modes
         {
             SilenceMirrorNoise();
             CreateSession("elimination");
-            MatchSeries series = CreateSeries();
+            Series series = CreateSeries();
             series.ServerBegin(new[] { _mapA.sceneName, _mapB.sceneName });
             series.ServerRecordMapResult(_a);
 
@@ -418,9 +421,9 @@ namespace VrBattlegrounds.Tests.Modes
             try
             {
                 CreateSession("elimination");
-                MatchSeries series = CreateSeries(nextMapDelay: 60f);
+                Series series = CreateSeries();
                 series.ServerBegin(new[] { _mapA.sceneName, _mapB.sceneName });
-                GameplayManager manager = CreateMapManager(_mapA.sceneName);
+                MapReferee manager = CreateMapReferee(_mapA.sceneName);
 
                 int before = reasons.Count;
                 Assert.IsTrue(manager.StartMatch());
@@ -451,8 +454,8 @@ namespace VrBattlegrounds.Tests.Modes
         {
             Assert.IsNull(typeof(GameMode).Assembly.GetType("VrBattlegrounds.GameModes.GameModeCatalog"),
                 "GameModeCatalog вернулся — второй путь поиска данных режима по modeId.");
-            Assert.IsNull(typeof(GameplayManager).GetProperty("SceneGameMode"),
-                "У GameplayManager снова «режим сцены» — режим карты задаёт MapData.supportedModes.");
+            Assert.IsNull(typeof(MapReferee).GetProperty("SceneGameMode"),
+                "У MapReferee снова «режим сцены» — режим карты задаёт MapData.supportedModes.");
         }
     }
 }

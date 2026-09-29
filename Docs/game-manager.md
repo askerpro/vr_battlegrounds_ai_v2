@@ -1,4 +1,4 @@
-> Обновлять при изменении `SessionManager`, `MatchSeries`, `GameplayManager`, `GameModeData`,
+> Обновлять при изменении `SessionManager`, `Series`, `MapReferee`, `GameModeData`,
 > `GameModeRegistry`, `MapData.supportedModes` или архитектуры выбора режима.
 
 ---
@@ -10,8 +10,8 @@
 | Объект | Где живёт | Что делает |
 |---|---|---|
 | `SessionManager` | `SessionContext` (спавнится в `GameNetworkManager.OnStartServer`, DontDestroyOnLoad) | Хранит **выбор** администратора: режим матча и список карт серии. Единственное место поиска данных по идентификатору: `FindModeData(modeId)`, `FindMap(sceneName)` |
-| `MatchSeries` | тот же `SessionContext` | Ведёт **серию**: какая карта сейчас, общий счёт (сколько карт выиграла команда), итоги карт. Переживает смену режима на карте и смену карт |
-| `GameplayManager` | объект `MatchManager` в каждой сцене (карты и лобби) | Ведёт **режим на карте**: разминка при старте, «Начать матч» — режим матча на месте, конец матча — снова разминка |
+| `Series` | тот же `SessionContext` | Ведёт **серию**: какая карта сейчас, общий счёт (сколько карт выиграла команда), итоги карт. Переживает смену режима на карте и смену карт |
+| `MapReferee` | объект `MatchManager` в каждой сцене (карты и лобби) | Ведёт **режим на карте**: разминка при старте, «Начать матч» — режим матча на месте, конец матча — снова разминка |
 
 Команды (выбор игроком, выдача админом, автобаланс) — не у менеджеров, а в статическом
 сервисе `MatchTeams`; право админа — `SessionPermissions.IsAdmin`.
@@ -21,10 +21,10 @@ DontDestroyOnLoad
   └── SessionContext (NetworkIdentity)
         ├── SessionManager   ← выбор: режим + карты следующей серии
         ├── NetworkStateRelay
-        └── MatchSeries      ← ход серии: текущая карта, общий счёт
+        └── Series      ← ход серии: текущая карта, общий счёт
 Сцена карты / лобби
   └── MatchManager
-        └── GameplayManager  ← режим на карте (разминка ⇄ матч)
+        └── MapReferee  ← режим на карте (разминка ⇄ матч)
 ```
 
 ---
@@ -37,41 +37,40 @@ DontDestroyOnLoad
 |---|---|---|
 | `SetSeries(modeId, maps)` | Только сервер | Режим и карты следующей серии. Реплицируется (`SyncVar` + `SyncList`). |
 | `SetSession(mapScene, modeId)` | Только сервер | Серия из одной карты (то, что сейчас выбирает меню). |
-| `StartSession()` | Только сервер | `MatchSeries.ServerBegin(SelectedMaps)` — грузит первую карту. |
+| `StartSession()` | Только сервер | `Series.ServerBegin(SelectedMaps)` — грузит первую карту. |
 | `SelectedGameModeData`, `SelectedModeId` | Оба | Выбранный режим матча. |
 | `SelectedMaps`, `SelectedMapScene`, `SelectedMap` | Оба | Карты серии; первая карта. |
 | `FindModeData(modeId)` | Оба | `GameModeData` по `modeId` из `GameModeRegistry` — **единственный путь**, и для разминки тоже. |
 | `FindMap(sceneName)`, `MapRegistry`, `ModeRegistry` | Оба | Реестры и поиск карты по сцене. |
 
-### `MatchSeries`
+### `Series`
 
 | Метод / Свойство | Сервер/Клиент | Описание |
 |---|---|---|
-| `ServerBegin(maps)` | Сервер | Сбрасывает общий счёт, запоминает карты, грузит первую (`MapManager.LoadMap`). |
-| `ServerRecordMapResult(winner)` | Сервер | Итог карты в общий счёт; `null` — ничья. Зовётся сам по `GameplayManager.GameplayEnded`. |
-| `ServerAdvance()` | Сервер | Следующая карта; после последней — конец серии и лобби. Зовётся сам через `_nextMapDelay` (10 с) после конца матча на карте. |
+| `ServerBegin(maps)` | Сервер | Сбрасывает общий счёт, запоминает карты, грузит первую (`MapLoader.LoadMap`). |
+| `ServerRecordMapResult(winner)` | Сервер | Итог карты в общий счёт; `null` — ничья. Зовётся сам по `MapReferee.Finished`. |
+| `ServerAdvance()` | Сервер | Следующая карта; после последней — конец серии и лобби. Зовёт только кнопка админа «Следующая карта» (`MatchCommand.NextMap`): после конца матча карта стоит в разминке и ждёт. |
 | `ServerEnd()` | Сервер | Досрочный конец (кнопка «Стоп / Лобби»). |
 | `IsRunning`, `Maps`, `CurrentIndex`, `CurrentMapScene` | Оба | Состояние серии. |
 | `GetMapWins(team)`, `Results` | Оба | Общий счёт: выиграно карт; итоги карт по порядку (`teamIndex`, −1 — ничья). |
-| `GetRoundsWon(team, map)`, `GetKills/GetDeaths/GetAssists(session, map)` | Оба | Сквозная статистика: `map` — индекс карты серии или `MatchSeries.Total` (−1). Хранится строками `TeamStats`/`PlayerStats` (`SyncList`), TOTAL — сумма. |
-| `ServerRecordRoundWin`, `ServerRecordKill` | Сервер | Запись статистики (зовётся сама по событиям `GameplayManager`). |
+| `GetRoundsWon(team, map)`, `GetKills/GetDeaths/GetAssists(session, map)` | Оба | Сквозная статистика: `map` — индекс карты серии или `Series.Total` (−1). Хранится строками `TeamStats`/`PlayerStats` (`SyncList`), TOTAL — сумма. |
+| `ServerRecordRoundWin`, `ServerRecordKill` | Сервер | Запись статистики (зовётся сама по событиям `MapReferee`). |
 
-Конец серии (последняя карта или «Стоп / Лобби») **отпускает команды матча**: игрок с командой
-не из разминки получает команду «Разминка» со своим скином
-(`SessionTeamAssigner.ApplyBeforeSceneChange` — без пересоздания аватара, сцена всё равно
-сменится). Иначе в лобби он стоял бы в CT без зоны и выбирал бы скины только из CT. Счёт
-серии остаётся до начала следующей — его видно в лобби.
+Конец серии (последняя карта или «Стоп / Лобби») **распускает команды**: у всех игроков
+команда снимается (`SessionTeamAssigner.ClearBeforeSceneChange` — без пересоздания аватара,
+сцена всё равно сменится). В лобби игрок появляется без команды — киборгом — и выбирает
+команду на следующую серию. Счёт серии остаётся до начала следующей — его видно в лобби.
 
-### `GameplayManager`
+### `MapReferee`
 
 | Метод / Свойство | Описание |
 |---|---|
 | `OnStartServer` | Карта (любая, и лобби) стартует в разминке — `ServerStartWarmup()`. |
 | `StartMatch()` | «Начать матч»: разминка → режим матча на месте. Режим — `MapModeRules.ResolveMatchMode`: выбор админа, если совместим с картой, иначе первый совместимый; в лобби совместимых нет — отказ (`Warning`). Вызов до спавна менеджера (автостарт отладки из `Awake`) откладывается до `OnStartServer`. |
 | `StopMatch()` | Матч без победителя → разминка на этой карте. Серию не двигает, снимок паузы отбрасывает. |
-| `PauseMatch()` / `ResumeMatch()` / `IsPaused` | «Пауза»: снимок матча (`MatchSnapshot`), прерванный раунд без победителя, карта — в разминку (`GameplayState.Paused`). «Продолжить»: режим матча заново со снимка — тот же номер раунда, сеты, счёт. |
-| `RoundWon`, `PlayerKilled` (события экземпляра, сервер) | Раунд доигран и выигран; игрок погиб (жертва, убийца, ассистенты). Слушает `MatchSeries` — статистика. |
-| `GameplayEnded` (событие экземпляра) | Режим матча объявил победителя. Слушает `MatchSeries`. Карта сразу уходит в разминку. |
+| `PauseMatch()` / `ResumeMatch()` / `IsPaused` | «Пауза»: снимок матча (`MatchSnapshot`), прерванный раунд без победителя, карта — в разминку (`MapState.Paused`). «Продолжить»: режим матча заново со снимка — тот же номер раунда и счёт карты. |
+| `RoundWon`, `PlayerKilled` (события экземпляра, сервер) | Раунд доигран и выигран; игрок погиб (жертва, убийца, ассистенты). Слушает `Series` — статистика. |
+| `Finished` (событие экземпляра) | Режим матча объявил победителя. Слушает `Series`. Карта сразу уходит в разминку. |
 | `ActiveGameMode`, `IsMatchActive`, `CurrentMap` | Режим этой машины; идёт ли матч (разминка — не матч); `MapData` своей сцены. |
 | `ActiveGameModeChangedLocal` (статическое) | Режим этой машины сменился. HUD и стена арсенала переподписываются. |
 
@@ -85,18 +84,18 @@ DontDestroyOnLoad
 | Слой | Тип | Где живёт | Что делает |
 |---|---|---|---|
 | `GameModeData` | ScriptableObject | В `Assets/Data/GameModes/` | Данные для UI: название, иконка, `modeId`, команды, префаб логики |
-| `GameMode` | NetworkBehaviour | Спавнится `GameplayManager` при старте карты (разминка) и по «Начать матч» | Полная логика режима: управляет собственной структурой матча |
+| `GameMode` | NetworkBehaviour | Спавнится `MapReferee` при старте карты (разминка) и по «Начать матч» | Полная логика режима: управляет собственной структурой матча |
 
 **Поток жизни режима:**
 ```
 GameModeData.modePrefab
-  → Instantiate + GameMode.Initialize(data)   ← до спавна (GameplayManager.ServerSwitchTo)
+  → Instantiate + GameMode.Initialize(data)   ← до спавна (MapReferee.ServerSwitchTo)
   → NetworkServer.Spawn
-  → GameMode.StartGameplayWhenReady()  ← команды по политике, пополнение стен, CanStartGameplay()
-  → GameMode.StartGameplay()           ← режим сам управляет сетами/раундами/таймером
-  → GameMode.GameplayEnded event       ← режим объявил победителя
-  → GameplayManager.OnGameplayEnded → GameplayEnded (серия) → ServerSwitchTo(разминка)
-  → NetworkServer.UnSpawn + Destroy (GameplayManager.CleanupGameMode)
+  → GameMode.BeginWhenReady()  ← команды по политике, пополнение стен, CanBegin()
+  → GameMode.Begin()           ← режим сам управляет раундами/таймером
+  → GameMode.Finished event       ← режим объявил победителя
+  → MapReferee.OnModeFinished → Finished (серия) → ServerSwitchTo(разминка)
+  → NetworkServer.UnSpawn + Destroy (MapReferee.CleanupGameMode)
 ```
 
 **Почему `GameMode : NetworkBehaviour` а не `MonoBehaviour`:**
@@ -104,10 +103,10 @@ GameModeData.modePrefab
 (`SyncVar`, `SyncList`, `SyncDictionary`) — и сам шлёт `ClientRpc`. Без `NetworkBehaviour`
 клиентам не досталось бы ничего из этого.
 
-> `SetManager` и `RoundManager` при этом **не** сетевые и даже не `MonoBehaviour`: это
-> обычные C#-объекты, создаваемые через `new` в `EliminationMode.InitializeActiveGame`,
-> и тикает их `EliminationMode.ServerTick`. Вся сеть — в режиме, вся логика матча — в них.
-> Именно поэтому их целиком покрывают EditMode-тесты. (Раньше здесь было написано, что они
+> `RoundPhases` при этом **не** сетевой и даже не `MonoBehaviour`: это обычный C#-объект,
+> создаваемый через `new` в `EliminationMode.InitializeActiveGame`, и тикает его
+> `EliminationMode.ServerTick`. Счёт карты и переход «раунд → раунд» — в самом режиме, фазы
+> раунда — в `RoundPhases`. Всё это покрывают EditMode-тесты через `ServerTick`. (Раньше здесь было написано, что они
 > спавнятся через `NetworkServer.Spawn` — это никогда не соответствовало коду.)
 
 
@@ -115,53 +114,58 @@ GameModeData.modePrefab
 
 | Режим | Структура | Победа | Респавн |
 |---|---|---|---|
-| `EliminationMode` | Матч → Сеты → Раунды | Больше сетов выиграно | ❌ нет |
+| `EliminationMode` | Карта → две половины → раунды | Больше раундов за карту (досрочно — больше половины всех) | ❌ нет |
 | `RespawnMode` | Один длинный матч (таймер) | Больше фрагов | ✅ всегда |
-| `WarmupMode` («Разминка») | Нет матча — переходная стадия между матчами | — | — (смерти нет) |
+| `WarmupMode` («Разминка») | Не режим матча: карта без запущенного матча или с матчем на паузе | — | — (смерти нет) |
 
 ### Разминка и совместимость режимов с картой
 
-Любая карта — и лобби, и боевая — стартует в **разминке** (`WarmupMode`, бывший `LobbyMode`),
-пока администратор не нажмёт «Начать матч». Разминка лежит в `GameModeRegistry` рядом
-с режимами матча, с флагом `GameModeData.isWarmup`: в выбор режима матча (`MenuSessionSetup.TabModes`)
-она не попадает, а данные по `modeId` ищутся одним путём — `SessionManager.FindModeData`.
+Разминка (`WarmupMode`) — **не режим матча, а состояние карты**: «режим матча не запущен
+или на паузе». Её включает `MapReferee` сам — на старте карты (и лобби, и боевой), на паузе
+и после конца матча. Её не выбирают, у неё нет команд и победителя.
 
-**Почему флаг, а не отдельный реестр.** Режим по сети — только строка `modeId`, и клиенту
-нужен один путь от строки к данным. Раньше лобби-режима в реестре не было, и поиск шёл
-в два места (`GameModeCatalog`: «режим сцены» у `GameplayManager`, затем реестр). Флаг
-держит один реестр и одну выборку «режимы матча» для меню. Альтернатива — перечисление
-«роль режима» — даёт то же при единственном нематчевом значении.
+**Почему всё же объект-режим, а не «режима нет».** Правила разминки — ответы на те же вопросы,
+что задают любому режиму: стрелять ли, открыт ли арсенал, рисовать ли зоны, можно ли сменить
+команду. Стена, оружие, HUD и планшет спрашивают `ActiveGameMode` и не знают его типа. Если
+бы разминка была «отсутствием режима» (`null`), правила разминки пришлось бы знать каждому
+потребителю по отдельности. Отличается разминка жизненным циклом — его и ведёт `MapReferee`.
+
+**Где лежит.** Отдельное поле `GameModeRegistry.warmup`, а не элемент `modes`: в каталог режимов
+матча (вкладки `MenuSessionSetup.TabModes`, `MatchModes`) и в списки карт она не входит, а по
+`modeId` ищется тем же путём, что и режимы матча (`GameModeRegistry.GetById` →
+`SessionManager.FindModeData`). Разминка ли режим — `GameMode.IsWarmup`, свойство класса
+(`WarmupMode`), а не флаг данных.
 
 **Совместимость — у карты** (`MapData.supportedModes`), выбор из списка — чистые правила
 `MapModeRules`:
 
 | Карта | `supportedModes` | Старт | «Начать матч» |
 |---|---|---|---|
-| Лобби (`MapData_Lobby`, `MapRegistry.lobby`) | `[warmup]` | разминка | отказ: режимов матча нет |
-| `TestMap1`, `TestMap2` | `[warmup, elimination, respawn]` | разминка | выбор админа, если совместим, иначе первый совместимый |
-| Сцена не из реестра / пустой список | — | разминка реестра | выбор админа или первый режим матча реестра |
+| Лобби (`MapData_Lobby`, `MapRegistry.lobby`) | `[]` | разминка | отказ: режимов матча нет |
+| `TestMap1`, `TestMap2` | `[elimination, respawn]` | разминка | выбор админа, если совместим, иначе первый совместимый |
+| Сцена не из реестра | — | разминка | выбор админа или первый режим матча реестра |
 
-Поле «режим сцены» (`GameplayManager._sceneGameMode`) и `GameModeCatalog` удалены.
+Поле «режим сцены» (`MapReferee._sceneGameMode`) и `GameModeCatalog` удалены.
 
 ### Смена режима на месте
 
-`GameplayManager.ServerSwitchTo`: текущий режим останавливается (`StopGameplay`, если он
+`MapReferee.ServerSwitchTo`: текущий режим останавливается (`ForceStop`, если он
 не закончился сам), снимается с сети, новый инициализируется **до** спавна (modeId и команды
 уезжают клиенту начальным состоянием, HUD хоста сразу знает режим) и спавнится. Сцена
-не перезагружается, `GameplayManager` тот же.
+не перезагружается, `MapReferee` тот же.
 
 Что уходит вместе с режимом: его правила-компоненты (уборка пола, карман, раундовые магазины),
-счёт на карте (`_teamScores` — сеты Elimination), машина раундов. Что делает новый режим
+счёт на карте (`_teamScores` — раунды Elimination), машина раундов. Что делает новый режим
 на старте: пол чистый (`ModeStartCleanup` на префабе каждого режима, на каждой машине),
 пустые слоты стен пополнены (режим поднимает `ArsenalRefillRequestedServer` в
-`StartGameplayWhenReady`), стена дальше сверяется с его `ArsenalRules`. Что **не** трогается:
-команды игроков, общий счёт серии (`MatchSeries`), статистика (`PlayerSession.Kills/Deaths/Score`).
+`BeginWhenReady`), стена дальше сверяется с его `ArsenalRules`. Что **не** трогается:
+команды игроков, общий счёт серии (`Series`), статистика (`PlayerSession.Kills/Deaths/Score`).
 Снаряжение в руках, кобурах и карманах остаётся у игрока (см. развилку в CHANGELOG 2026-09-27).
 
 ### Снаряжение не переживает переходов
 
 При любой смене режима на карте (`ServerSwitchTo`: разминка → матч, матч → разминка, пауза,
-«Продолжить») и перед сменой карты (`MatchSeries.Load`) сервер зовёт
+«Продолжить») и перед сменой карты (`Series.Load`) сервер зовёт
 `EquipmentStrip.ServerStripAll`: у каждого игрока руки отпускают всё, оружие и магазины из рук
 и кобур **уничтожаются** через сеть (не роняются — упавшее стало бы ничьим), карман магазинов
 очищается, ничьё с пола убирается. Путь общий с `AvatarTeardown` (руки → снаряжение), но
@@ -174,31 +178,32 @@ GameModeData.modePrefab
 
 **Решение — снимок, а не приостановленный экземпляр.** На паузе карта в разминке, а режим на
 карте один: живой Elimination рядом с разминкой отвечал бы на те же вопросы (оружие, арсенал,
-урон) и держал бы подписки. Снимок (`MatchSnapshot`) — несколько чисел: счёт команд режима (сеты),
-счёт раундов сета **без** прерванного раунда (`SetManager.ScoresAtRoundStart`), номер
-прерванного раунда, остаток таймера (Respawn). Хранит его `GameplayManager` карты — пауза
+урон) и держал бы подписки. Снимок (`MatchSnapshot`) — несколько чисел: счёт команд режима (у Elimination — раунды
+за карту **без** прерванного раунда, `_scoresAtRoundStart`), номер прерванного раунда,
+остаток таймера (Respawn). Хранит его `MapReferee` карты — пауза
 это состояние матча на этой карте, со сменой карты она теряет смысл.
 
 - Режим объявляет `GameMode.SupportsPause`, `CaptureSnapshot`, `RestoreSnapshot` (зовётся после
   `Initialize`, до спавна). Elimination и Respawn умеют, разминка — нет.
 - Прерванный раунд не засчитывается ни в счёт карты, ни в общий счёт серии: серия получает раунд
-  только по окончании раунда (`SetManager` → `EliminationMode.ServerReportRoundWon` на
+  только по окончании раунда (`EliminationMode.TickRounds` → `RaiseRoundWon` на
   `CycleCompleted`), а не в момент, когда победитель стал известен.
-- «Продолжить» — `SetManager.ResumeSet`: тот же сет, раунд с тем же номером заново.
+- «Продолжить» — `EliminationMode.InitializeActiveGame` со снимка: раунд с тем же номером заново,
+  стороны по номеру раунда (вторая половина — поменяны).
 - **Решение пользователя:** убийства, смерти и ассисты, случившиеся в прерванном раунде,
   **остаются** в статистике — раунд не засчитывается, но то, что в нём произошло, не откатывается.
-- `EliminationMode.StartGameplay` больше не сбрасывает состояние: корутина старта зовёт его
+- `EliminationMode.Begin` больше не сбрасывает состояние: корутина старта зовёт его
   кадром позже, и сброс перезапускал продолженный сет с раунда 1 (найдено в Play mode).
 
 ### Сквозная статистика серии
 
-Живёт в `MatchSeries` (объект `SessionContext`) и переживает смену режима, паузу и смену карт.
-Ведётся по сессии (`MatchSeries.PlayerKey`: токен устройства, без него — `netId` сессии), а не по
+Живёт в `Series` (объект `SessionContext`) и переживает смену режима, паузу и смену карт.
+Ведётся по сессии (`Series.PlayerKey`: токен устройства, без него — `netId` сессии), а не по
 аватару. Команды — выигранные раунды по картам (и выигранные карты), игроки — убийства, смерти,
 ассисты по картам; TOTAL — сумма строк (`SeriesStatsTable`).
 
-**Карта без серии** (прямая `MapManager.LoadMap` — отладка, E2E). Статистика ведётся и тогда:
-неявная серия из одной текущей карты (`MatchSeries.IsAdHoc`, `IsRecording`), одна строка карты
+**Карта без серии** (прямая `MapLoader.LoadMap` — отладка, E2E). Статистика ведётся и тогда:
+неявная серия из одной текущей карты (`Series.IsAdHoc`, `IsRecording`), одна строка карты
 и TOTAL, равный ей; экран «Статистика» показывает её с пометкой «Карта без серии».
 
 - *Почему неявная серия, а не отдельный режим записи:* хранилище, репликация, геттеры и экран
@@ -206,7 +211,7 @@ GameModeData.modePrefab
   карте, нет лобби, нет кнопки «Стоп» и конец серии не отпускает команды. Отдельный режим записи
   дублировал бы строки, геттеры и экран ради того же результата.
 - Начинается с первого события статистики на карте (раунд, гибель) — сцена берётся у текущего
-  `GameplayManager`; в лобби событий нет, и строка там не появляется.
+  `MapReferee`; в лобби событий нет, и строка там не появляется.
 - **Другая карта без серии начинает статистику заново** (та же сцена — продолжает). Обоснование:
   прямые загрузки — отладка и E2E, между собой не связаны, и накопление смешало бы разные
   прогоны. Альтернатива — копить до явного сброса; развилка отмечена в CHANGELOG. Начало серии
@@ -217,23 +222,23 @@ GameModeData.modePrefab
 `UxrDamageEventArgs.ActorSource`. `PlayerController.OnDamageReceiving` (урон не отменён режимом)
 пишет источник в `DamageLedger`; смертельный урон тоже проходит через `DamageReceiving`
 (а `DamageReceived` — нет), поэтому к `Die` последний источник — убийца. `Die` передаёт
-убийцу и ассистентов (прочие ранившие) в `GameplayManager.OnPlayerDied` → режим
+убийцу и ассистентов (прочие ранившие) в `MapReferee.OnPlayerDied` → режим
 (`OnPlayerKilled` — фраги Respawn) и событие `PlayerKilled` → серия. Самоубийство и урон без
 источника (`ReceiveDamage(float)`) убийства не дают, смерть — дают.
 
 ### Правила, которые объявляет режим
 
 Системы вне режима не знают его конкретного типа — спрашивают базовый `GameMode`
-у `GameplayManager.Instance.ActiveGameMode` (статический дубль `GameMode.Current` удалён):
+у `MapReferee.Instance.ActiveGameMode` (статический дубль `GameMode.Current` удалён):
 
 | Свойство / событие | Кто читает | `EliminationMode` | `WarmupMode` |
 |---|---|---|---|
-| `WeaponsEnabled` | `GameplayManager.Update` → `UxrWeaponManager` | только в `Combat` | всегда |
+| `WeaponsEnabled` | `MapReferee.Update` → `UxrWeaponManager` | только в `Combat` | всегда |
 | `ArsenalRules.IsOpen` | `ArsenalWallController.ApplyModeRules` (сервер) | только в `Equipment` | всегда |
 | `ArsenalRules.UsesReadinessTag` | стена, каждая машина | `RoundStartRule == Readiness` | нет |
 | `ArsenalRules.ReplacesLostWeapons` | стена, сервер | нет | да, через 2 с |
 | `ArsenalRefillRequestedServer` (событие **экземпляра**) | стена, сервер (переподписка по `ActiveGameModeChangedLocal`) | на старте режима и на входе в `Setup` | на старте режима |
-| `OnPlayerDied(player)` | `GameplayManager.OnPlayerDied` | условие победы раунда | — (смерти нет) |
+| `OnPlayerDied(player)` | `MapReferee.OnPlayerDied` | условие победы раунда | — (смерти нет) |
 | `PlayersTakeDamage` | `PlayerController` на `UxrActor.DamageReceiving` (отмена урона) | да | нет |
 | `TeamChoiceLocked` | `TeamChangeRules`, планшет | после старта матча | нет |
 | `IsWarmup`, `ModeData` (`modeId` SyncVar) | HUD, политика команд, минимум игроков, спавн | `Elimination_GameModeData` | `Warmup_GameModeData` (HUD нет) |
@@ -250,15 +255,14 @@ GameModeData.modePrefab
 
 | `teamAssignment` | Что делает | Где |
 |---|---|---|
-| `KeepOrDefault` | команда матча (любая ненулевая) сохраняется; игрок без команды получает первую команду режима | `Warmup_GameModeData` |
 | `AutoBalance` | все без команды режима — в самую малочисленную (`TeamAutoBalance.Plan`) | сейчас нигде (и разово — кнопкой админа) |
 | `PlayerChoice` | никого: выбирает игрок в планшете или выдаёт админ; матч ждёт, пока команда будет у всех | `Elimination_GameModeData`, `Respawn_GameModeData` |
 
 Режим без данных (EditMode-тесты) — `PlayerChoice`; в тестах значение подменяется
 присваиванием `GameMode.TeamAssignment`. Политика применяется при старте режима
-(`StartGameplayWhenReady`) и при каждом подключении (`PlayersManager.OnSessionConnected`).
+(`BeginWhenReady`) и при каждом подключении (`PlayersManager.OnSessionConnected`).
 
-**Входы смены команды** — статический сервис `MatchTeams` (раньше жили в `GameplayManager`),
+**Входы смены команды** — статический сервис `MatchTeams` (раньше жили в `MapReferee`),
 правила — `TeamChangeRules`, право админа — `SessionPermissions.IsAdmin` (Player), исполнение —
 `SessionTeamAssigner`:
 
@@ -268,22 +272,23 @@ GameModeData.modePrefab
 | Админ (экран «Игроки и команды») | `PlayerSession.CmdAdminAssignTeam` → `MatchTeams.ServerAdminAssign(mode, admin, target, teamId)` | право админа (хост или `IsAdmin`), любая команда `TeamRegistry`, в любой момент |
 | Админ, разово | `PlayerSession.CmdAdminAutoBalance` → `MatchTeams.ServerAdminAutoBalance(mode, admin)` | автобаланс игроков без команды режима; политику режима не меняет |
 | Режим | `GameMode.ServerAssignTeams` | по `teamAssignment` |
-| Конец серии | `MatchSeries` → `SessionTeamAssigner.ApplyBeforeSceneChange` | команда не из разминки → «Разминка», скин сохраняется |
+| Конец серии | `Series` → `SessionTeamAssigner.ClearBeforeSceneChange` | команда снимается у всех, в лобби — киборгом |
 
 **Почему выбор закрывается стартом матча.** После старта смена стороны — это выход из
-раунда посреди боя: составы уже разыграны (сеты, смена сторон), а перебежчик ломает
+раунда посреди боя: составы уже разыграны (счёт раундов, смена сторон), а перебежчик ломает
 баланс. Опоздавшему команду выдаёт админ. `TeamChoiceLocked` у Elimination —
 `_matchState != WaitingForPlayers`, у Respawn — идёт ли матч; это SyncVar-состояние,
 поэтому планшет клиента знает его сам.
 
-**Планшет в разминке.** Игроку с командой матча (CT/T) планшет предлагает только его команду —
-смену скина (`MenuTeamSelection.ResolveAvailableTeams`); иначе выбор скина «Разминки» молча
-перевёл бы его из команды матча. Игроку без команды — «Разминка» (все скины).
+**Планшет в разминке.** Своих команд у разминки нет, поэтому планшет предлагает команды матча —
+выбранного на серию режима, иначе реестра: Военные и Повстанцы
+(`MenuTeamSelection.ResolveAvailableTeams`). Выбрать можно и игроку без команды, и сменить —
+игроку с командой, пока матч не начался.
 
 **Матч ждёт команд.** `GameMode.AllPlayersHaveModeTeam()` — у каждого подключённого игрока
 (не зрителя) есть команда режима; состав берётся у `PlayerRoster`. Elimination проверяет его
 в `IsPlayersReady` вместе с минимумом игроков из своих данных (`MinPlayersToStart`).
-Respawn — в `CanStartGameplay`.
+Respawn — в `CanBegin`.
 
 **Исполнение** (`SessionTeamAssigner`): поднимает `MatchTeams.TeamChangeRequested`
 (хуки режима); нет аватара — пишет команду в сессию (спавн сам возьмёт зону и скин);
@@ -294,7 +299,7 @@ Respawn — в `CanStartGameplay`.
 continuesPrevious)`. Замена (`ChangeAvatar` при живом прежнем) сначала переносит здоровье или выбывание
 (`AvatarManager.CarryLifeState`), и `continuesPrevious = true`; аватар без прошлого (смена карты, первый
 вход) — `false`. Elimination в матче делает такой аватар выбывшим и назначает возрождение в зоне
-(подготовка, закупка); аватары, созданные до старта режима, проходят то же правило в `StartGameplay`.
+(подготовка, закупка); аватары, созданные до старта режима, проходят то же правило в `Begin`.
 
 Игрок без команды режима на карте появляется в нейтральной точке (откалиброванный — по
 калибровке), лог уровня `Info`: это ожидание выбора, а не сбой. То же для «Разминки» на
@@ -332,7 +337,7 @@ Assets/Prefabs/GameModes/
 |---|---|---|---|---|
 | `GameModeData_Respawn.asset` | `respawn` | Возрождение | `RespawnMode.prefab` | [Команда A, Команда B] |
 | `GameModeData_Elimination.asset` | `elimination` | Ликвидация | `EliminationMode.prefab` | [Команда A, Команда B] |
-| `Warmup_GameModeData.asset` | `warmup` | Разминка | `WarmupMode.prefab` | [«Разминка»] — `isWarmup`, `KeepOrDefault` |
+| `Warmup_GameModeData.asset` | `warmup` | Разминка | `WarmupMode.prefab` | [] — поле `GameModeRegistry.warmup`, не в `modes` |
 
 Сохранить в: `Assets/Data/GameModes/`
 
@@ -353,7 +358,7 @@ Assets/Prefabs/GameModes/
 ## Шаг 4 — Настроить SessionContext
 
 Префаб `Assets/Prefabs/Managers/SessionContext.prefab` (спавнит `GameNetworkManager`): на нём
-`SessionManager` и `MatchSeries`. В Inspector `SessionManager` назначить:
+`SessionManager` и `Series`. В Inspector `SessionManager` назначить:
 
 | Поле | Что назначить |
 |---|---|
@@ -380,28 +385,28 @@ Assets/Prefabs/GameModes/
 Админ выбирает режим (вкладка), кликает карты по порядку — очередь с номерами (MapQueue),
 повторный клик убирает карту → «Начать» → PlayerSession.CmdAdminStartSeries
   → AdminMatchCommands.ServerStartSeries → SessionManager.SetSeries + StartSession
-  → MatchSeries.ServerBegin(maps) → MapManager.LoadMap(maps[0])
+  → Series.ServerBegin(maps) → MapLoader.LoadMap(maps[0])
 
-[Карта — разминка]  GameplayManager.OnStartServer → ServerStartWarmup
-  команды матча сохраняются, игрок без команды — «Разминка»; арсенал открыт, урона нет
+[Карта — разминка]  MapReferee.OnStartServer → ServerStartWarmup
+  команды сохраняются, игрок без команды остаётся без неё (киборг); арсенал открыт, урона нет
 
-Админ «Начать матч» → MenuMatchManager.OnStartMatchPressed → GameplayManager.StartMatch
+Админ «Начать матч» → MenuMatchManager.OnStartMatchPressed → MapReferee.StartMatch
   → MapModeRules.ResolveMatchMode(карта, выбор админа) → режим матча на месте
   → игрок без команды матча выбирает её в планшете (или выдаёт админ)
   → матч ждёт, пока команда режима будет у всех (GameMode.AllPlayersHaveModeTeam)
 
-[Матч кончился]  GameMode.RaiseGameplayEnded → GameplayManager.GameplayEnded
-  → MatchSeries.ServerRecordMapResult (общий счёт)
-  → карта — снова разминка
-  → через _nextMapDelay (10 с) MatchSeries.ServerAdvance
+[Матч кончился]  GameMode.RaiseFinished → MapReferee.Finished
+  → Series.ServerRecordMapResult (общий счёт)
+  → карта — снова разминка, серия ждёт
+  → админ: «Следующая карта» (MatchCommand.NextMap) → Series.ServerAdvance
        → следующая карта серии (стартует в разминке)
-       → или, после последней: команды матча → «Разминка», LoadMap(лобби)
+       → или, после последней: команды снимаются, LoadMap(лобби)
 
 [Экран «Матч» у админа] кнопки — PlayerSession.CmdAdminMatchCommand → AdminMatchCommands.ServerExecute
   «Начать матч» — разминка → матч        (видна: матча нет, карта допускает матч)
   «Пауза»       — PauseMatch             (видна: идёт матч)
   «Продолжить»  — ResumeMatch            (видна: пауза)
-  «Стоп»        — MatchSeries.ServerEnd → лобби (видна: идёт серия)
+  «Стоп»        — Series.ServerEnd → лобби (видна: идёт серия)
 ```
 
 ---
@@ -415,7 +420,7 @@ Assets/Prefabs/GameModes/
 3.  **Precaching**: `UxrManager` ловит активацию аватара и запускает `TryPrecaching()`.
     - Все объекты с `IUxrPrecacheable` создаются перед камерой на несколько кадров.
     - Экран в этот момент затемнен через `UxrCameraFade`.
-4.  **Gameplay Start**: Когда аватар готов и сервер разрешил, `GameplayManager` запускает логику режима.
+4.  **Gameplay Start**: Когда аватар готов и сервер разрешил, `MapReferee` запускает логику режима.
 
 ---
 
@@ -439,7 +444,7 @@ Assets/Prefabs/GameModes/
 
 4.  Добавить asset в `GameModeRegistry.modes[]` и в `supportedModes` карт, где режим допустим
 
-> Менять `GameplayManager`, `SetManager`, `RoundManager` и сцены карт **не нужно**.
+> Менять `MapReferee`, `RoundPhases` и сцены карт **не нужно**.
 
 ---
 
@@ -452,4 +457,4 @@ Assets/Prefabs/GameModes/
 | `Префаб режима '...' не содержит компонент GameMode` | В префабе отсутствует компонент-наследник `GameMode` | Добавить `RespawnMode` / `EliminationMode` на GO префаба |
 | `GameModeData '...' содержит менее 2 команд` | Поле `teams[]` не заполнено в `GameModeData` | Назначить два `TeamData` asset-а в поле `teams[]` |
 | `карта не выбрана` / `режим не выбран` | `StartSession()` вызван до `SetSeries()`/`SetSession()` | Порядок: сначала `SetSeries`, потом `StartSession` |
-| `На карте '…' нет разминки` | В реестре нет режима с `isWarmup` | Вернуть `Warmup_GameModeData` в `GameModeRegistry` |
+| `На карте '…' нет разминки` | Пустое поле `warmup` в `GameModeRegistry` | Назначить `Warmup_GameModeData` в поле `warmup` |

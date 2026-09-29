@@ -169,11 +169,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             // ── 3. Карта ──────────────────────────────────────────────────
             SessionManager sessionManager = SessionManager.Instance;
-            if (sessionManager == null || MapManager.Instance == null)
+            if (sessionManager == null || MapLoader.Instance == null)
             {
                 result.Set(CheckMap, false,
                     $"SessionManager.Instance={(sessionManager == null ? "null" : "есть")}, " +
-                    $"MapManager.Instance={(MapManager.Instance == null ? "null" : "есть")} — карту загрузить некому");
+                    $"MapLoader.Instance={(MapLoader.Instance == null ? "null" : "есть")} — карту загрузить некому");
                 result.Summary = "менеджеры не поднялись, прогон недействителен";
                 yield break;
             }
@@ -187,10 +187,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             GameLog.Debug.Info($"[E2E] Команды распределены: {AssignTeams(sessionManager)}");
 
-            MapManager.Instance.LoadMap(context.Map);
+            MapLoader.Instance.LoadMap(context.Map);
 
             deadline = Now + 120f;
-            while ((SceneManager.GetActiveScene().name != context.Map || GameplayManager.Instance == null)
+            while ((SceneManager.GetActiveScene().name != context.Map || MapReferee.Instance == null)
                    && Now < deadline)
                 yield return null;
 

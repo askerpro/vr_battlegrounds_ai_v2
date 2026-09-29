@@ -218,13 +218,13 @@ namespace VrBattlegrounds.Tests.DevTools
         {
             SilenceMirrorNoise();
             PlayersManager players = CreateManager<PlayersManager>("PlayersManager");
-            MatchSeries series = CreateNetworkComponent<MatchSeries>("MatchSeries");
+            Series series = CreateNetworkComponent<Series>("Series");
             InvokeLifecycleMethod(series, "Awake");
-            series.MapLoader = _ => { };
+            series.LoadMapOverride = _ => { };
             SpawnOnServer(series);
             series.ServerBegin(new[] { "MapA" });
 
-            GameplayManager manager = CreateNetworkComponent<GameplayManager>("GameplayManager");
+            MapReferee manager = CreateNetworkComponent<MapReferee>("MapReferee");
             InvokeLifecycleMethod(manager, "Awake");
             InvokePrivateMethod(manager, "RegisterActiveGameMode", CreateNetworkComponent<EliminationMode>("EliminationMode"));
 
@@ -240,8 +240,8 @@ namespace VrBattlegrounds.Tests.DevTools
             bot.GetComponent<UxrActor>().ReceiveImpact(human.GetComponent<UxrActor>(), default(RaycastHit), 500f);
 
             Assert.IsFalse(bot.IsAlive, "Бот не погиб от смертельного урона.");
-            Assert.AreEqual(1, series.GetKills(humanSession, MatchSeries.Total), "Убийство бота не засчитано игроку.");
-            Assert.AreEqual(1, series.GetDeaths(botSession, MatchSeries.Total), "Смерть не засчитана боту.");
+            Assert.AreEqual(1, series.GetKills(humanSession, Series.Total), "Убийство бота не засчитано игроку.");
+            Assert.AreEqual(1, series.GetDeaths(botSession, Series.Total), "Смерть не засчитана боту.");
             Assert.AreEqual(0, new List<PlayerSession>(players.GetAlivePlayers(botSession.Team)).Count,
                 "Мёртвый бот всё ещё среди живых — раунд не закончится.");
 

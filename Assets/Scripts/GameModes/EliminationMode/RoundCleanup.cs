@@ -23,17 +23,17 @@ namespace VrBattlegrounds.GameModes
     {
         private void OnEnable()
         {
-            EliminationMode.OnRoundStateChangedLocal += HandleRoundStateChanged;
+            EliminationMode.OnRoundPhaseChangedLocal += HandleRoundPhaseChanged;
         }
 
         private void OnDisable()
         {
-            EliminationMode.OnRoundStateChangedLocal -= HandleRoundStateChanged;
+            EliminationMode.OnRoundPhaseChangedLocal -= HandleRoundPhaseChanged;
         }
 
-        private static void HandleRoundStateChanged(RoundState newState)
+        private static void HandleRoundPhaseChanged(RoundPhase newState)
         {
-            if (newState == RoundState.Setup)
+            if (newState == RoundPhase.Setup)
                 LooseItems.RemoveAll();
         }
     }

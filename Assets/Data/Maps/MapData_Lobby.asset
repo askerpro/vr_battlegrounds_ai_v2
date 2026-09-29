@@ -22,5 +22,4 @@ MonoBehaviour:
     \u043A\u0430\u0440\u0442\u044B."
   arenaSizeMeters: {x: 10, y: 10}
   maxPlayers: 10
-  supportedModes:
-  - {fileID: 11400000, guid: c03a0259e7c441b4dadb349cfa5e97a7, type: 2}
+  supportedModes: []

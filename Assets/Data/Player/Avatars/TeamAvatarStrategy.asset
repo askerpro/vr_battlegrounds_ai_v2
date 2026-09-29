@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8c355f529575344ab09212dad64b098, type: 3}
   m_Name: TeamAvatarStrategy
   m_EditorClassIdentifier: 
-  fallbackPrefab: {fileID: 3977005126615661593, guid: b8146035f3f436a4799882b3a0d1dd45, type: 3}
+  fallbackPrefab: {fileID: 4613916165338528910, guid: 8e0e06323e4754f479a9f19788554652, type: 3}

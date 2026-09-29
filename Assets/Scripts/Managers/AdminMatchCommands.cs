@@ -13,7 +13,12 @@ namespace VrBattlegrounds.Managers
         /// <summary>«Продолжить»: матч с прерванного раунда.</summary>
         Resume = 2,
         /// <summary>«Стоп»: конец всей серии, возврат в лобби.</summary>
-        Stop = 3
+        Stop = 3,
+        /// <summary>
+        /// «Следующая карта»: серия переходит к следующей карте, после последней — в лобби.
+        /// Сама серия после конца карты дальше не идёт: карта стоит в разминке до этой кнопки.
+        /// </summary>
+        NextMap = 4
     }
 
     /// <summary>
@@ -31,17 +36,19 @@ namespace VrBattlegrounds.Managers
         /// <summary>
         /// Имеет ли кнопка смысл сейчас: «Начать матч» — на карте с режимом матча, когда матча
         /// нет; «Пауза» — во время матча, если режим её умеет; «Продолжить» — на паузе;
-        /// «Стоп» — пока идёт серия.
+        /// «Стоп» — пока идёт серия; «Следующая карта» — в разминке идущей серии (во время матча
+        /// и на паузе переход оборвал бы игру на карте).
         /// </summary>
-        public static bool IsAvailable(MatchCommand command, GameplayState state, bool modeSupportsPause,
+        public static bool IsAvailable(MatchCommand command, MapState state, bool modeSupportsPause,
                                        bool mapHasMatchModes, bool seriesRunning)
         {
             switch (command)
             {
-                case MatchCommand.StartMatch: return state == GameplayState.NotActive && mapHasMatchModes;
-                case MatchCommand.Pause: return state == GameplayState.Active && modeSupportsPause;
-                case MatchCommand.Resume: return state == GameplayState.Paused;
+                case MatchCommand.StartMatch: return state == MapState.Warmup && mapHasMatchModes;
+                case MatchCommand.Pause: return state == MapState.Live && modeSupportsPause;
+                case MatchCommand.Resume: return state == MapState.Paused;
                 case MatchCommand.Stop: return seriesRunning;
+                case MatchCommand.NextMap: return state == MapState.Warmup && seriesRunning;
                 default: return false;
             }
         }
@@ -49,8 +56,8 @@ namespace VrBattlegrounds.Managers
         /// <summary>То же правило по живым объектам этой машины.</summary>
         public static bool IsAvailable(MatchCommand command)
         {
-            GameplayManager manager = GameplayManager.Instance;
-            MatchSeries series = MatchSeries.Instance;
+            MapReferee manager = MapReferee.Instance;
+            Series series = Series.Instance;
 
             if (manager == null) return command == MatchCommand.Stop && series != null && series.IsRunning;
 
@@ -82,7 +89,8 @@ namespace VrBattlegrounds.Managers
             foreach (string scene in maps)
             {
                 Maps.MapData map = session.FindMap(scene);
-                if (map != null && mode != null && !mode.isWarmup && Maps.MapModeRules.IsCompatible(map, mode) && !valid.Contains(scene))
+                if (map != null && mode != null && mode != session.ModeRegistry?.Warmup &&
+                    Maps.MapModeRules.IsCompatible(map, mode) && !valid.Contains(scene))
                     valid.Add(scene);
             }
 
@@ -115,15 +123,17 @@ namespace VrBattlegrounds.Managers
 
             GameLog.Match.Info($"[AdminMatchCommands] {admin.PlayerName}: {command}.");
 
-            GameplayManager manager = GameplayManager.Instance;
+            MapReferee manager = MapReferee.Instance;
             switch (command)
             {
                 case MatchCommand.StartMatch: return manager != null && manager.StartMatch();
                 case MatchCommand.Pause: return manager != null && manager.PauseMatch();
                 case MatchCommand.Resume: return manager != null && manager.ResumeMatch();
                 case MatchCommand.Stop:
-                    MatchSeries.Instance.ServerEnd();
+                    Series.Instance.ServerEnd();
                     return true;
+                case MatchCommand.NextMap:
+                    return Series.Instance.ServerAdvance() != null;
                 default: return false;
             }
         }

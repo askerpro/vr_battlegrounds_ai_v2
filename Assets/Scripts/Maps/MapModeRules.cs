@@ -8,14 +8,15 @@ namespace VrBattlegrounds.Maps
     /// (<see cref="MapData.supportedModes"/>); здесь только выбор из него.
     ///
     /// <list type="bullet">
-    /// <item>Любая карта стартует в разминке (<see cref="ResolveWarmup"/>).</item>
+    /// <item>Любая карта стартует в разминке — её включает <c>MapReferee</c> сам
+    ///       (<see cref="GameModeRegistry.Warmup"/>); в списки карт она не входит.</item>
     /// <item>«Начать матч» берёт выбор администратора, если он совместим с картой, иначе
-    ///       первый совместимый режим матча, а если такого нет (лобби) — ничего
-    ///       (<see cref="ResolveMatchMode"/>).</item>
+    ///       первый совместимый режим матча, а если такого нет (лобби — пустой список) —
+    ///       ничего (<see cref="ResolveMatchMode"/>).</item>
     /// </list>
     ///
-    /// Карта не из реестра (тестовая сцена) или карта с пустым списком — совместим любой
-    /// режим реестра: так вёл себя выбор карт в меню и до этого.
+    /// Сцена не из реестра (<c>map == null</c>, тестовая сцена) — совместим любой режим
+    /// матча. У карты реестра пустой список значит «режимов матча нет».
     /// </summary>
     public static class MapModeRules
     {
@@ -23,24 +24,13 @@ namespace VrBattlegrounds.Maps
         public static bool IsCompatible(MapData map, GameModeData mode)
         {
             if (mode == null) return false;
-            if (map == null || map.supportedModes == null || map.supportedModes.Length == 0) return true;
+            if (map == null) return true;
+            if (map.supportedModes == null) return false;
 
             foreach (GameModeData supported in map.supportedModes)
                 if (supported != null && supported.modeId == mode.modeId) return true;
 
             return false;
-        }
-
-        /// <summary>Разминка карты: первая разминка из её списка, иначе разминка реестра.</summary>
-        public static GameModeData ResolveWarmup(MapData map, GameModeRegistry registry)
-        {
-            if (map != null && map.supportedModes != null)
-            {
-                foreach (GameModeData mode in map.supportedModes)
-                    if (mode != null && mode.isWarmup) return mode;
-            }
-
-            return registry != null ? registry.Warmup : null;
         }
 
         /// <summary>
@@ -49,13 +39,16 @@ namespace VrBattlegrounds.Maps
         /// </summary>
         public static GameModeData ResolveMatchMode(MapData map, GameModeData selected, GameModeRegistry registry)
         {
-            if (selected != null && !selected.isWarmup && IsCompatible(map, selected))
+            GameModeData warmup = registry != null ? registry.Warmup : null;
+
+            if (selected != null && selected != warmup && IsCompatible(map, selected))
                 return selected;
 
-            if (map != null && map.supportedModes != null && map.supportedModes.Length > 0)
+            if (map != null)
             {
+                if (map.supportedModes == null) return null;
                 foreach (GameModeData mode in map.supportedModes)
-                    if (mode != null && !mode.isWarmup) return mode;
+                    if (mode != null && mode != warmup) return mode;
                 return null;
             }
 

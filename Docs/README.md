@@ -11,7 +11,7 @@
 | Файл | Содержание |
 |---|---|
 | `README.md` | Этот файл — технический справочник: скрипты, классы, API, компоненты |
-| `tasks/` | **Очередь работ по аудиту:** [индекс со статусами и графом блокировок](tasks/README.md) + файлы задач `T-01`…`T-24` |
+| `tasks/` | **Очередь работ по аудиту:** [индекс со статусами и графом блокировок](tasks/README.md) + файлы задач `T-01`…`T-31` |
 | `audit/` | Аудит 2026-08 (справочники, не меняются): [находки](audit/network-audit-2026-08.md), [оценка архитектуры](audit/architecture-review-2026-08.md) |
 | `troubleshooting.md` | **Симптом → причина.** Индекс багов по внешнему проявлению, читать первым при расследовании |
 | `testing.md` | Тестирование: шесть уровней от юнит-тестов до чек-листа в шлеме |
@@ -74,8 +74,8 @@
 | `Assets/Prefabs/Player/` | Префаб игрока |
 | `Assets/Prefabs/GameModes/` | Префабы режимов (`RespawnMode.prefab`, `EliminationMode.prefab`, `WarmupMode.prefab` — разминка, правила `LooseItemSweeper`/`WarmupMagazineSupply`). На каждом — `ModeStartCleanup` (новый режим с чистого пола) |
 | `Assets/Data/Maps/` | `MapRegistry.asset` (`maps[]` + `lobby`) + `MapData` assets: `MapData_Lobby` (только разминка), `MapData_TestMap1/2` (разминка + режимы матча) |
-| `Assets/Data/GameModes/` | `GameModeRegistry.asset` + `GameModeData` assets. `Warmup_GameModeData.asset` — разминка (`isWarmup`, `KeepOrDefault`): в реестре, но не во вкладках выбора режима матча |
-| `Assets/Data/Teams/` | `TeamData` assets (`CounterTerrorists_Team.asset`, `Terrorists_Team.asset`, `Warmup_Team.asset` — команда «Разминка», `teamIndex = 3`, все аватары). Все три — в `Resources/TeamRegistry.asset` |
+| `Assets/Data/GameModes/` | `GameModeRegistry.asset` + `GameModeData` assets. `Warmup_GameModeData.asset` — разминка: отдельное поле `GameModeRegistry.warmup`, без команд, не в `modes` и не в списках карт |
+| `Assets/Data/Teams/` | `TeamData` assets (`CounterTerrorists_Team.asset` — Военные, `Terrorists_Team.asset` — Повстанцы). Обе — в `Resources/TeamRegistry.asset`. Команды «Разминка» нет: игрок без команды — киборг (`TeamAvatarStrategy.fallbackPrefab`) |
 | `Assets/Resources/` | `GameSettings.asset` (загружается через `Resources.Load`) |
 | `Assets/Tests/EditMode/` | EditMode-тесты (`VrBattlegrounds.Tests.EditMode.asmdef`, только редактор) |
 
@@ -105,7 +105,7 @@
 
 | Событие | Когда | Подписчики |
 |---|---|---|
-| `PlayerConnected` | Игрок заспавнился на сервере | `PlayersManager`, `MapManager`, `DebugOrchestrator` |
+| `PlayerConnected` | Игрок заспавнился на сервере | `PlayersManager`, `MapLoader`, `DebugOrchestrator` |
 | `PlayerDisconnected` | Игрок отключился | `PlayersManager` |
 | `ServerSceneChanged` | Сервер завершил загрузку сцены | `DebugOrchestrator` |
 | `ClientSceneChanged` | Клиент завершил загрузку сцены | `NetworkStateRelay` (перезапрашивает снимок состояния) |
@@ -122,27 +122,27 @@
 | Класс | Файл | Описание |
 |---|---|---|
 | `PlayersManager` | `Managers/PlayersManager.cs` | Список игроков, фильтрация: `Players`, `GetAlivePlayers(team)`, `GetPlayers(team)`. Синглтон на том же GO что и `NetworkManager`. |
-| `MapManager` | `Managers/MapManager.cs` | **Единственная точка входа для смены карты внутри живой сессии.** Откладывает `ServerChangeScene` на конец кадра через корутину. Ждёт не по таймеру, а по условию `ConnectionsSettled()` — ни одно соединение не в середине `AddPlayer` (T-17). **Не отвечает за вход в сессию и выход из неё:** это ведёт сам Mirror по полям `onlineScene`/`offlineScene` у `GameNetworkManager`, и они — законное исключение из правила (разбор — NET-21 в `audit/network-audit-2026-08.md`). `LoadMap` выходит первой строкой по `!NetworkServer.active`, то есть на клиенте после разрыва он неприменим в принципе. |
+| `MapLoader` | `Managers/MapLoader.cs` | **Единственная точка входа для смены карты внутри живой сессии.** Откладывает `ServerChangeScene` на конец кадра через корутину. Ждёт не по таймеру, а по условию `ConnectionsSettled()` — ни одно соединение не в середине `AddPlayer` (T-17). **Не отвечает за вход в сессию и выход из неё:** это ведёт сам Mirror по полям `onlineScene`/`offlineScene` у `GameNetworkManager`, и они — законное исключение из правила (разбор — NET-21 в `audit/network-audit-2026-08.md`). `LoadMap` выходит первой строкой по `!NetworkServer.active`, то есть на клиенте после разрыва он неприменим в принципе. |
 | `GameManager` | `Managers/GameManager.cs` | Хранит выбор сессии (карта + режим). DontDestroyOnLoad вместе с NetworkManager. SyncVar реплицирует выбор клиентам. Методы: `SetSession()`, `StartSession()`. |
-| `GameplayManager` | `Managers/GameplayManager.cs` | Режим на карте (объект `MatchManager` в каждой сцене, и в лобби): при старте — разминка (`ServerStartWarmup`), «Начать матч» — `StartMatch()` (режим по `MapModeRules`, на месте, без перезагрузки сцены), `StopMatch()` — назад в разминку; конец матча (`GameplayEnded`, событие экземпляра) — разминка и сигнал серии. `IsMatchActive`, `ActiveGameMode`, `CurrentMap`; статическое `ActiveGameModeChangedLocal`. Команд не знает — это `MatchTeams`. |
-| `MatchSeries` | `Managers/MatchSeries.cs` | Серия карт матча на `SessionContext` (переживает смену режима и карт): `ServerBegin(maps)`, `ServerRecordMapResult(winner)`, `ServerAdvance()` (следующая карта через `_nextMapDelay`, после последней — лобби), `ServerEnd()`. Общий счёт — `GetMapWins(team)`, `Results`. Конец серии отпускает команды матча в «Разминку». |
-| `SessionManager` | `Managers/SessionManager.cs` | Выбор админа на `SessionContext`: режим матча и карты серии (`SetSeries`, `SetSession` — серия из одной карты), `StartSession()` → `MatchSeries.ServerBegin`. Единственный поиск по идентификатору: `FindModeData(modeId)` (и разминка), `FindMap(sceneName)`. |
+| `MapReferee` | `Managers/MapReferee.cs` | Режим на карте (объект `MatchManager` в каждой сцене, и в лобби): при старте — разминка (`ServerStartWarmup`), «Начать матч» — `StartMatch()` (режим по `MapModeRules`, на месте, без перезагрузки сцены), `StopMatch()` — назад в разминку; конец матча (`Finished`, событие экземпляра) — разминка и сигнал серии. `IsMatchActive`, `ActiveGameMode`, `CurrentMap`; статическое `ActiveGameModeChangedLocal`. Команд не знает — это `MatchTeams`. |
+| `Series` | `Managers/Series.cs` | Серия карт матча на `SessionContext` (переживает смену режима и карт): `ServerBegin(maps)`, `ServerRecordMapResult(winner)`, `ServerAdvance()` (следующая карта — только по кнопке админа «Следующая карта», после последней — лобби), `ServerEnd()`. Общий счёт — `GetMapWins(team)`, `Results`. Конец серии отпускает команды матча в «Разминку». |
+| `SessionManager` | `Managers/SessionManager.cs` | Выбор админа на `SessionContext`: режим матча и карты серии (`SetSeries`, `SetSession` — серия из одной карты), `StartSession()` → `Series.ServerBegin`. Единственный поиск по идентификатору: `FindModeData(modeId)` (и разминка), `FindMap(sceneName)`. |
 | `UxrActor` | `UltimateXR/.../UxrActor.cs` | Базовая система урона UltimateXR. Игрок умирает, когда `UxrActor` вызывает событие смерти. |
-| `SetManager` | `GameModes/EliminationMode/SetManager.cs` | Сет: N раундов, счёт раундов, смена сторон, `ForceStop()`. Владелец машины раунда: тикает её и применяет единственный переход, который она не делает сама, — «итоги показаны → новый раунд». Исход сета отдаёт обязательным колбэком конструктора, а не событием. |
-| `RoundManager` | `GameModes/EliminationMode/RoundManager.cs` | Машина фаз раунда: таблица переходов `Setup → Equipment → Countdown → Combat → Resolution → Scoreboard`, таймеры, `RequestRoundEnd()`, `ForceStop()`. Про `EliminationMode` не знает; о готовности игроков спрашивает `RoundReadiness`. `Tick()` возвращает переход значением — см. [gameplay.md](gameplay.md#машина-состояний-раунда-кто-чем-владеет). Фазу наружу раздаёт `EliminationMode`. |
-| `RoundReadiness` | `GameModes/EliminationMode/RoundReadiness.cs` | **Готовность живых игроков к раунду (T-29):** кто готов, кого ждём, не пора ли начинать без опоздавших. Вынесен из `RoundManager` отдельным классом, потому что один и тот же ответ нужен в трёх местах — машине раунда (сдвинуть фазу), режиму (отдать состав неготовых клиентам) и инспектору (показать, почему раунд стоит). Обычный C#-класс поверх `IPlayerRoster`: предел ожидания и оба правила матча гоняются EditMode-тестом. Сбрасывает готовность в начале каждого раунда — `Reset(teams)`. |
+| `RoundPhases` | `GameModes/EliminationMode/RoundPhases.cs` | Машина фаз раунда: таблица переходов `Setup → Equipment → Countdown → Combat → Resolution → Scoreboard`, таймеры, `RequestRoundEnd()`, `ForceStop()`. Про `EliminationMode` не знает; о готовности игроков спрашивает `RoundReadiness`. `Tick()` возвращает переход значением — см. [gameplay.md](gameplay.md#машина-состояний-раунда-кто-чем-владеет). Фазу наружу раздаёт `EliminationMode`. |
+| `RoundReadiness` | `GameModes/EliminationMode/RoundReadiness.cs` | **Готовность живых игроков к раунду (T-29):** кто готов, кого ждём, не пора ли начинать без опоздавших. Вынесен из `RoundPhases` отдельным классом, потому что один и тот же ответ нужен в трёх местах — машине раунда (сдвинуть фазу), режиму (отдать состав неготовых клиентам) и инспектору (показать, почему раунд стоит). Обычный C#-класс поверх `IPlayerRoster`: предел ожидания и оба правила матча гоняются EditMode-тестом. Сбрасывает готовность в начале каждого раунда — `Reset(teams)`. |
 | `RoundReadinessTimeoutRule` | `GameModes/EliminationMode/RoundReadiness.cs` | Правило матча при истечении предела ожидания: `AutoReady` (умолчание — объявить готовность за неготовых) или `StartWithoutPending` (стартовать, оставив их в списке ожидаемых). Разбор выбора — [gameplay.md](gameplay.md#кого-ждём-и-сколько). |
 
 **Иерархия менеджеров матча:**
 
 ```
-GameplayManager      — матч (5 карт, счёт, победитель)
-└── EliminationMode  — сетевая оболочка: SyncVar, ClientRpc, ServerTick
-    └── SetManager   — сет: раунды, счёт раундов, владелец перехода «раунд → раунд»
-        └── RoundManager — фазы раунда: таблица переходов и таймеры
+Series               — все карты серии, общий победитель (SessionContext, переживает смену сцен)
+MapLoader            — смена сцены карты
+MapReferee           — ход карты: Warmup → Live → Paused, победитель карты
+└── EliminationMode  — сеть и правила; счёт карты, номер раунда, смена сторон, переход «раунд → раунд»
+    └── RoundPhases  — фазы одного раунда: таблица переходов и таймеры
 ```
 
-`SetManager` и `RoundManager` — обычные C#-классы, не `MonoBehaviour` и не сетевые:
+`RoundPhases` — обычный C#-класс, не `MonoBehaviour` и не сетевой:
 создаются через `new`, тикаются из `EliminationMode.ServerTick(deltaTime)`.
 
 Серверная логика выполняется только на сервере (`[Server]` Mirror). Клиенты получают обновления через `ClientRpc`.
@@ -158,31 +158,31 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | `RespawnMode` | `GameModes/RespawnMode.cs` | Возрождение при возврате на спавн. ModeId = `respawn`. |
 | `RoundCleanup` | `GameModes/EliminationMode/RoundCleanup.cs` | Правило режима на префабе `EliminationMode`: на `Setup` убирается всё ничьё (`LooseItems.RemoveAll`) на каждой машине. |
 | `RoundMagazineRefill` | `GameModes/EliminationMode/RoundMagazineRefill.cs` | Правило режима на префабе `EliminationMode`: к `Countdown` карман магазинов каждого игрока собирается заново (`PlayerLoadoutManager`). |
-| `WarmupMode` | `GameModes/WarmupMode.cs` | «Разминка» (бывший `LobbyMode`): режим, с которого стартует любая карта. Оружие стреляет, арсенал открыт, жетона нет, пропавшее оружие заменяется, урона по игрокам нет. Команды матча не трогает (`KeepOrDefault`), игроку без команды даёт «Разминку». |
+| `WarmupMode` | `GameModes/WarmupMode.cs` | «Разминка» — не режим матча, а состояние карты «режим матча не запущен или на паузе»; включает её `MapReferee` сам (`GameModeRegistry.warmup`). Оружие стреляет, арсенал открыт, жетона нет, пропавшее оружие заменяется, урона по игрокам нет. Своих команд нет, никого не переназначает. Режим-объект, а не «отсутствие режима»: правила спрашивают у `ActiveGameMode`, не зная его типа. |
 | `WarmupMagazineSupply` | `GameModes/WarmupMagazineSupply.cs` | Правило на префабе `WarmupMode`: бесконечный карман — раз в 0,5 с сервер зовёт `PlayerLoadoutManager.ServerEnsureMagazines(1)` у всех игроков. |
 | `ModeStartCleanup` | `GameModes/ModeStartCleanup.cs` | Правило на префабе каждого режима: при появлении режима на машине убирает ничьё с пола (`LooseItems.RemoveAll`) — смена режима на месте начинается с чистого пола. |
 | `ArsenalRules` | `GameModes/ArsenalRules.cs` | Что режим требует от стены арсенала сейчас: `IsOpen`, `UsesReadinessTag`, `ReplacesLostWeapons`. Отдаёт `GameMode.ArsenalRules`, исполняет `ArsenalWallController`, не зная типа режима. |
 | `TeamAutoBalance` | `GameModes/TeamAutoBalance.cs` | Чистый расчёт автобаланса (`Plan`: в самую малочисленную, при равенстве в первую). Политика режима — перечисление `GameModeData.teamAssignment` (`PlayerChoice`/`AutoBalance`/`KeepOrDefault`), ветка — `GameMode.ServerAssignTeams`; интерфейс политик удалён. |
 | `SessionTeamAssigner` | `GameModes/SessionTeamAssigner.cs` | Единственный исполнитель смены команды (выбор игрока, админ, политика режима): поднимает `MatchTeams.TeamChangeRequested`; без аватара — пишет команду в сессию, с аватаром — `AvatarManager.ChangeAvatar` на том же месте. Скин — выбранный игроком или сохранённый (`TeamData.IndexOfAvatar`). |
 | `TeamChangeRules` | `GameModes/TeamChangeRules.cs` | Кто и когда меняет команду сам: скин в своей команде — всегда (и в разминке с командой матча); команду — только из активного режима и только пока `GameMode.TeamChoiceLocked == false`. Чистые правила без побочных эффектов; право админа — `SessionPermissions`. |
-| `MatchSnapshot` | `GameModes/MatchSnapshot.cs` | Снимок матча на паузе: счёт команд, счёт раундов сета без прерванного раунда, номер раунда для повтора, остаток таймера. Хранит `GameplayManager` карты. |
+| `MatchSnapshot` | `GameModes/MatchSnapshot.cs` | Снимок матча на паузе: счёт команд (раунды за карту — на начало прерванного раунда), номер раунда для повтора, остаток таймера. Хранит `MapReferee` карты. |
 | `EquipmentStrip` | `Player/EquipmentStrip.cs` | Снаряжение не переживает переходов: при смене режима и карты у всех игроков руки отпускают всё, оружие и магазины (руки, кобуры, карман) уничтожаются через сеть, ничьё с пола убирается. `ServerStripAll`, `ServerStrip(avatar)`, `IsEquipment`. |
 | `DamageLedger` | `Player/DamageLedger.cs` | Кто ранил игрока с последнего возрождения (`UxrDamageEventArgs.ActorSource`): убийца (последний источник, не сама жертва) и ассистенты. Живёт в `PlayerController`, серверный. |
-| `SeriesStatsTable` | `Managers/SeriesStatsTable.cs` | Таблица статистики серии из строк `MatchSeries`: секции по картам и TOTAL (`Build`), текст для экрана (`Format`). Чистая. |
+| `SeriesStatsTable` | `Managers/SeriesStatsTable.cs` | Таблица статистики серии из строк `Series`: секции по картам и TOTAL (`Build`), текст для экрана (`Format`). Чистая. |
 | `AdminMatchCommands` | `Managers/AdminMatchCommands.cs` | Кнопки админа на карте (`MatchCommand`: Начать матч, Пауза, Продолжить, Стоп): правило видимости `IsAvailable`, исполнение `ServerExecute`, старт серии из очереди `ServerStartSeries`. Права — `SessionPermissions`. |
-| `MatchTeams` | `GameModes/MatchTeams.cs` | Статический серверный сервис команд (вынесен из `GameplayManager`): `ServerPlayerRequest`, `ServerAdminAssign`, `ServerAdminAutoBalance` (активный режим — параметром), событие `TeamChangeRequested`. |
+| `MatchTeams` | `GameModes/MatchTeams.cs` | Статический серверный сервис команд (вынесен из `MapReferee`): `ServerPlayerRequest`, `ServerAdminAssign`, `ServerAdminAutoBalance` (активный режим — параметром), событие `TeamChangeRequested`. |
 | `SessionPermissions` | `Player/SessionPermissions.cs` | Право сессии действовать как админ (`IsAdmin`: хост или флаг `PlayerSession.IsAdmin`). Раньше — `TeamChangeRules.IsAdmin`. |
-| `MapModeRules` | `Maps/MapModeRules.cs` | Совместимость режимов с картой (чистые правила): `ResolveWarmup`, `ResolveMatchMode` (выбор админа, если совместим, иначе первый совместимый, в лобби — null), `IsCompatible`. |
+| `MapModeRules` | `Maps/MapModeRules.cs` | Совместимость режимов с картой (чистые правила): `ResolveMatchMode` (выбор админа, если совместим, иначе первый совместимый, в лобби — null), `IsCompatible` (пустой список у карты реестра — режимов матча нет; «любой» — только для сцены вне реестра). |
 | `MenuPlayersTeams` | `UI/Menu/MenuPlayersTeams.cs` | Экран админа «Игроки и команды» (`Screen_PlayersTeams.prefab` на планшете): строка на каждую `PlayerSession`, кнопки команд активного режима (`CmdAdminAssignTeam`), «Распределить автоматически» (`CmdAdminAutoBalance`). |
 | `MenuSessionSetup`, `MapQueue` | `UI/Menu/MenuSessionSetup.cs`, `UI/Menu/MapQueue.cs` | Выбор режима и очереди карт серии: клик — карта в конец очереди (номер на плитке `QueueNumber`), повторный — убрать, «Начать» — `CmdAdminStartSeries`, «Очистить». Очередь — чистый `MapQueue`. |
-| `MenuMatchManager` | `UI/Menu/MenuMatchManager.cs` | Экран админа «Матч» (`Screen_MatchManager.prefab`): «Начать матч», «Пауза», «Продолжить», «Стоп»; видимость — `AdminMatchCommands.IsAvailable`, нажатие — `CmdAdminMatchCommand`. |
+| `MenuMatchManager` | `UI/Menu/MenuMatchManager.cs` | Экран админа «Матч» (`Screen_MatchManager.prefab`): «Начать матч», «Пауза», «Продолжить», «Следующая карта», «Стоп»; видимость — `AdminMatchCommands.IsAvailable`, нажатие — `CmdAdminMatchCommand`. |
 | `MenuStatistics` | `UI/Menu/MenuStatistics.cs` | Экран «Статистика» у всех (`Screen_Statistics.prefab`): карты серии и TOTAL — раунды, карты, убийства / смерти / ассисты. |
 | `AdminOnlyElements` | `UI/Menu/AdminOnlyElements.cs` | На экране: показывает перечисленные элементы только админу (кнопки «Матч» и «Играть» на `Screen_Main`). |
 | `GameModeData` | `GameModes/GameModeData.cs` | ScriptableObject: `modeId`, `displayName`, `icon`. Создать: `Create > VrBattlegrounds > Game Mode Data`. |
 | `GameModeRegistry` | `GameModes/GameModeRegistry.cs` | ScriptableObject-список режимов. `GetById(modeId)`. Назначить в `GameManager` и `AdminMenuController`. |
 | `IPlayerRoster` | `GameModes/IPlayerRoster.cs` | Узкий доступ логики матча к списку игроков: `GetPlayers(team)`, `GetAlivePlayers(team)`, `GetAllPlayers()`. Боевая реализация `PlayersManagerRoster` — обёртка над `PlayersManager.Instance`, отсутствие менеджера отдаёт пустым списком. **Единственный источник сведений об игроках для режима** (NET-12, NET-18): благодаря этому весь серверный путь матча гоняется EditMode-тестом без живых аватаров и без синглтонов. |
 
-> При добавлении нового режима — создать наследника `GameMode`, переопределить `OnRoundEnd`, `CanRespawn`, `CheckWinCondition`. Не менять базовую логику `RoundManager`.
+> При добавлении нового режима — создать наследника `GameMode`, переопределить `OnRoundEnd`, `CanRespawn`, `CheckWinCondition`. Не менять базовую логику `RoundPhases`.
 
 ---
 
@@ -207,7 +207,7 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | `ServerAuthoredAvatar` | `Player/Avatars/ServerAuthoredAvatar.cs` | Аватар без владельца (бот, кукла стресс-теста): все `NetworkTransform` в `ServerToClient` — в режиме `ClientToServer` Mirror позу объекта без владельца не рассылает, и у клиентов он стоит замороженным. |
 | `AvatarTeardown` | `Player/Avatars/AvatarTeardown.cs` | Серверное освобождение аватара перед `NetworkServer.Destroy`: отпускает всё, что держат его руки (`UxrGrabManager.ReleaseObject`), и снимает снаряжение (`PlayerLoadoutManager.ServerDropEquipment`). Зовут `AvatarManager.ChangeAvatar` и `GameNetworkManager.OnServerDisconnect`. Без него рука UltimateXR гибнет с предметом, и телепорт с затемнением оставляет экран чёрным (Issue 17). |
 | `AvatarSpawnPointResolver` | `Player/Avatars/AvatarSpawnPointResolver.cs` | Точка спавна аватара (WPN-03, CAL-01): **место, заданное калибровкой** → `TeamSpawnZone.SpawnPoint` своей команды → `NetworkStartPosition` из Mirror → начало координат с предупреждением. Возвращает `AvatarSpawnPoint` — позицию, поворот и источник, чтобы строка в логе отвечала на «почему игрок здесь». Первая ветка спрашивается, только когда вызывающий передал сессию, то есть после смены карты (T-30). Разбор трёх случаев `ChangeAvatar` — [session-architecture.md](session-architecture.md#где-создаётся-аватар-находка-wpn-03). |
-| `CalibratedSpawnRegistry` | `Player/Avatars/CalibratedSpawnRegistry.cs` | Серверная память о месте **откалиброванного** игрока (CAL-01, T-30). Подписан на `MapManager.MapLoadStarted` и снимает позы откалиброванных игроков, пока старая сцена ещё жива, в системе координат её якорей; на новой карте пересчитывает их через якоря новой сцены. Клиент присылает один бит `PlayerSession.IsCalibrated` — саму позу сервер и так видит через `NetworkTransform` аватара. Второй источник мест — путь подключения (CAL-02): `PlayersManager.HandlePlayerConnect` кладёт сюда позу из `GamePlayerConnectMessage`, потому что снять её самому серверу не по чему — клиент был на другой карте. Гейт «применять или нет» один на оба источника и живёт в `TryResolve`. |
+| `SpawnPlaceRegistry` | `Player/Avatars/SpawnPlaceRegistry.cs` | Серверная память о месте игрока — **смена карты никого не телепортирует** (игроки ходят по арене ногами). Подписан на `MapLoader.MapLoadStarted` и снимает позы всех игроков с аватаром, пока старая сцена ещё жива: откалиброванного — в системе координат её якорей (CAL-01, T-30), на новой карте пересчитывает через якоря новой сцены; неоткалиброванного — в мировых координатах, как есть (арены карт выровнены, `MapAlignmentTests`). Зона команды — только первый спавн без прежнего места. Клиент присылает один бит `PlayerSession.IsCalibrated` — саму позу сервер и так видит через `NetworkTransform` аватара. Второй источник мест — путь подключения (CAL-02): `PlayersManager.HandlePlayerConnect` кладёт сюда позу из `GamePlayerConnectMessage`, потому что снять её самому серверу не по чему — клиент был на другой карте. Гейт «применять или нет» один на оба источника и живёт в `TryResolve`. |
 | `RemoteAvatarRenderOptimizer` (+ `RemoteAvatarRenderPolicy`, `RemoteAvatarRenderSnapshot`) | `Player/Avatars/` | Облегчает отрисовку чужих аватаров (`UpdateExternally`): без отбрасывания теней, без скиннинга вне кадра (bounds с запасом 0.3 м), без motion vectors, гасит скрытые под маской Heavy зубы/глаза (`forceRenderingOff`). Ставится сам через `UxrAvatar.GlobalEnabled`, свой аватар возвращает к префабу. Тесты — `RemoteAvatarRenderOptimizerTests`. |
 | `LegsAnimatorUxrBridge` (+ `LegsGrounding`, `BoneLocalPose`) | `Integration/`, `Player/Avatars/` | Связка Legs Animator ↔ UltimateXR: корень ног на полу под `Dummy Forward`, сброс таза в позу префаба каждый кадр (у ригов нет анимации), луч до пола под ногами с толщиной подошвы. Движение плагину не подаётся — шаги дают приклейка и перестановка. Тесты — `LegsGroundingTests`. |
 | `LocalHeadMirrorVisibility` | `Player/Avatars/` | Голова своего аватара видна зеркалам, но не своей камере: объекты `UxrMirrorAvatar → Local Disabled Game Objects`, выключенные SDK, включаются обратно на слое `LocalHead`, который вычеркнут из маски своей камеры. Стал чужим — слои возвращаются. Ставится сам через `UxrAvatar.GlobalEnabled` на аватар с непустым списком. Тесты — `LocalHeadMirrorVisibilityTests`. |
@@ -319,9 +319,9 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 
 | Свойство | Категория | Затрагивает |
 |---|---|---|
-| `LogLevelNetwork` | Сеть | `GameNetworkManager`, `MapManager`, `GameNetworkDiscovery` |
+| `LogLevelNetwork` | Сеть | `GameNetworkManager`, `MapLoader`, `GameNetworkDiscovery` |
 | `LogLevelPlayer` | Игрок | `PlayerController` |
-| `LogLevelMatch` | Матч | `MatchManager`, `SetManager`, `RoundManager` |
+| `LogLevelMatch` | Матч | `MapReferee`, `RoundPhases`, режимы |
 | `LogLevelUI` | Интерфейс | `MenuController`, `LocalMenuManager`, Кнопки, HUD |
 | `LogLevelWeaponSystem` | Weapon System | Механики оружия (`UxrFirearmWeapon`, `AutomaticWeaponSlideFeedback`) |
 | `LogLevelDebug` | Отладка | `DebugOrchestrator` (по умолчанию `Verbose`) |
@@ -337,25 +337,25 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 | `LocalMenuManager` | `UI/Menu/LocalMenuManager.cs` | Запрашивает префаб меню в зависимости от контекста сцены и спавнит его. |
 | `MenuScreen` | `UI/Menu/MenuScreen.cs` | Базовый класс для экранов планшета (SessionSetup, Calibration и т.д.) |
 | `MenuPrefabRegistry` | `UI/Menu/MenuPrefabRegistry.cs` | Дерево префабов (Role -> Context -> GameMode), хранящее ссылки на GameObject'ы планшетов. |
-| `HUDWidget_GameNotification` | `UI/HUD/HUDWidget_GameNotification.cs` | Информационный HUD: сообщения со звуком очередью (последний выстрел раунда даёт «вы погибли» и итог раунда в одном кадре). Каждая смена фазы — «пик» и текст, итог раунда, лента убийств (`GameplayManager.PlayerKilledLocal`), своя смерть — тревожный звук. Первая узнанная фаза — без звука (поздний клиент). Живёт только на HUD своего игрока, поэтому звук ровно один раз на машине с игроком и никогда на сервере. Объект `GameNotifications` в `EliminationHUD.prefab` был выключен (коммит 4da5ef4) — HUD молчал обо всём; сторож — `HudNotificationTextsTests`. |
+| `HUDWidget_GameNotification` | `UI/HUD/HUDWidget_GameNotification.cs` | Информационный HUD: сообщения со звуком очередью (последний выстрел раунда даёт «вы погибли» и итог раунда в одном кадре). Каждая смена фазы — «пик» и текст, итог раунда, лента убийств (`MapReferee.PlayerKilledLocal`), своя смерть — тревожный звук. Первая узнанная фаза — без звука (поздний клиент). Живёт только на HUD своего игрока, поэтому звук ровно один раз на машине с игроком и никогда на сервере. Объект `GameNotifications` в `EliminationHUD.prefab` был выключен (коммит 4da5ef4) — HUD молчал обо всём; сторож — `HudNotificationTextsTests`. |
 | `HudNotificationTexts` | `UI/HUD/HudNotificationTexts.cs` | Тексты и звуки информационного HUD: фаза → сообщение (`Resolution` — только звук, чтобы не затереть победителя; `Scoreboard` — счёт раундов), убийство → «Вы погибли — вас убил X» / «Вы убили X» / «Союзник/Противник X убит (Y)». Звуки — `Assets/Audio/SFX/UI/Hud_Beep.wav` (1 кГц, 0,15 с) и `Hud_Alert.wav`, сгенерированы. |
 | `TeamNames`, `TeamData.Name` | `Core/TeamNames.cs`, `Core/TeamData.cs` | Название команды для показа: заданное админом на серию или имя ассета. Весь UI читает `TeamData.Name`, не `displayName` (запись в ассет во время игры в редакторе сохранилась бы на диск). `TeamNames.Sanitize` — чистка ввода (пробелы, теги `<>`, 24 символа). |
 | `TeamNameService` | `Managers/TeamNameService.cs` | Названия команд — `SyncDictionary` на `SessionContext` (живёт всю жизнь сервера, переживает карты серии); на каждой машине раздаёт в `TeamNames`. |
 | `AdminNaming` | `Managers/AdminNaming.cs` | Сервер: админ переименовывает команду и даёт ник игроку (`PlayerSession.CmdAdminRenameTeam/CmdAdminRenamePlayer`, экран «Игроки и команды»). Ник запоминается по `DeviceToken` до остановки сервера — новая сессия устройства получает его обратно. |
 | `SpawnSides` | `Maps/SpawnSides.cs` | Смена сторон: команда постоянна, меняется хозяин зон спавна. `TeamSpawnZone.Team` — текущий хозяин (`HomeTeam` — первой половины), состояние задаёт `EliminationMode` (`_sidesSwapped`, SyncVar) на сервере и клиентах. Тесты — `SideSwapTests`. |
-| `KillNotice`, `GameplayManager.PlayerKilledLocal` | `Managers/GameplayManager.cs` | Кто кого убил — клиентам: убийцу знает только сервер (`DamageLedger`), `GameplayManager.OnPlayerDied` рассылает `RpcPlayerKilled` с netId, именами и командами. |
-| `PlayerHUDManager` | `UI/HUD/PlayerHUDManager.cs` | Спавнит HUD **активного режима сцены** (`GameMode.ModeData.hudPrefab`, подписка на `GameplayManager.ActiveGameModeChangedLocal`), а не выбора матча; у лобби HUD нет. |
+| `KillNotice`, `MapReferee.PlayerKilledLocal` | `Managers/MapReferee.cs` | Кто кого убил — клиентам: убийцу знает только сервер (`DamageLedger`), `MapReferee.OnPlayerDied` рассылает `RpcPlayerKilled` с netId, именами и командами. |
+| `PlayerHUDManager` | `UI/HUD/PlayerHUDManager.cs` | Спавнит HUD **активного режима сцены** (`GameMode.ModeData.hudPrefab`, подписка на `MapReferee.ActiveGameModeChangedLocal`), а не выбора матча; у лобби HUD нет. |
 | `WristDisplay` | `UI/HUD/WristDisplay.cs` | Табло на часах аватара (префаб `Prefabs/UI/HUD/WristDisplay.prefab`, кладётся на часы руками): кольцо ХП по периметру зелёный → красный (пульсирует ниже 25%) и остаток времени в центре. Игрока ищет в родителях, у чужих аватаров скрыто. Овальный вариант `WristDisplay_Oval` (70×35 мм); часы MEF в сборе с табло на экране — `Prefabs/Player/WristWatch_HUD.prefab` (вариант `WristWatch`). Экран этих часов — на внутренней стороне запястья: табло повёрнуто «вправо — к пальцам, вверх — к большому пальцу». Математика — `WristDisplayFace`, тест — `WristDisplayTests` (в т.ч. посадка на экран ≤ 2 мм). |
 | `RoundClock` | `UI/HUD/RoundClock.cs` | Какое время показывать для активного режима (фазы Elimination, остаток матча Respawn). Общий для `HUDWidget_RoundTimer` и `WristDisplay`. |
 
 **Система Уведомлений (Event-Driven Notifications):**
-- Разовые уведомления (`OnRoundEndedLocal`, `OnSetStartedLocal`, `OnRoundStartedLocal`) игровые режимы шлют через `[ClientRpc]`: их не нужно знать задним числом.
+- Разовые уведомления (`OnRoundEndedLocal`, `OnSidesSwappedLocal`, `OnRoundStartedLocal`) игровые режимы шлют через `[ClientRpc]`: их не нужно знать задним числом.
 - Режимы не знают про UI и не генерируют текст ("Победили Синие").
 - Автономные UI-виджеты (как `HUDWidget_GameNotification`) подписываются на эти события, сами формируют финальную строку (с учетом имен команд) и отображают её.
 
 **Что нужно знать вновь подключившемуся — состояние, а не событие.** Фаза раунда
-(`EliminationMode.OnRoundStateChangedLocal`) раздаётся не из `ClientRpc`, а из хука
-`[SyncVar] _roundState` — см. [«Фаза раунда»](gameplay.md#фаза-раунда--состояние-а-не-событие).
+(`EliminationMode.OnRoundPhaseChangedLocal`) раздаётся не из `ClientRpc`, а из хука
+`[SyncVar] _roundPhase` — см. [«Фаза раунда»](gameplay.md#фаза-раунда--состояние-а-не-событие).
 Правило общее: `ClientRpc` годится для «раунд начался» со звуком, но не для того,
 что определяет текущее состояние мира.
 
@@ -430,12 +430,12 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 ```
 Play → OfflineScene → NetworkManager поднимает хост → Lobby
 → ServerSceneChanged → DebugOrchestrator.TryAutoLoadMap()
-  → SessionManager.SetSession + StartSession → MatchSeries → MapManager.LoadMap(autoLoadMapScene)
+  → SessionManager.SetSession + StartSession → Series → MapLoader.LoadMap(autoLoadMapScene)
   → Карта загружается
 → ClientConnected / LocalAvatarChanged → сигнал менеджеру о готовности аватара
 → Начинается процесс **Precaching** в `UxrManager` (инстанцирование объектов `IUxrPrecacheable`)
-→ карта стартует в разминке (`GameplayManager.OnStartServer`)
-→ autoStartGameplay: `GameplayManager.StartMatch()` (вызов до спавна менеджера откладывается до разминки)
+→ карта стартует в разминке (`MapReferee.OnStartServer`)
+→ autoGoLive: `MapReferee.StartMatch()` (вызов до спавна менеджера откладывается до разминки)
 ```
 
 ---
@@ -513,20 +513,20 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `Prefabs/UxrUniqueIdOnDiskTests` | У UXR-компонентов префабов `Assets/Prefabs` верные флаги `__isInPrefab`/`__prefabGuid` и id в памяти есть на диске (в файле префаба или его баз). Ловит MPPM-02 и отвалившийся `UxrUniqueIdPersister`. |
 | `Prefabs/UxrUniqueIdStabilityTests` | Патч SDK 10: префаб-ассет с неверными флагами сохраняет `_uxrUniqueId` после `OnValidate`, а экземпляр в сцене получает свой. |
 | `Prefabs/GameTagsTests` | Теги `GameTags` заведены в TagManager; у каждого объекта всех префабов `Assets/Prefabs` и сцен `Assets/Scenes` тег совпадает с `GameTagRules` (сцены читаются через `OpenPreviewScene`, открытое в редакторе не трогается); плюс само правило на синтетических объектах. Починка расхождений — `Apply Game Tags`. |
-| `SetManagerScoringTests` | Подсчёт победителя сета в `SetManager` — чистая логика, без сети. Раунды проигрываются прокруткой `SetManager.Tick`. Команды синтетические, с индексами, которых нет в `TeamRegistry`: так проверяется, что счёт идёт по переданному составу, а не по глобальному реестру (T-08). |
 | `RoundFlowSupport` | Общая оснастка тестов матча: `StubPlayerRoster` (подставной реестр игроков) и `RoundFlowDriver` (прокрутка фиксированным шагом 0.25 с с записью наблюдённых фаз). |
 | `Network/MirrorTestHarness` | Базовый класс сетевых тестов: поднимает Mirror сервером **без сокета** (ярус A) и, по требованию, локального клиента (ярус B). Сбрасывает синглтоны проекта между тестами. Рецепт и границы — [`testing.md`](testing.md#как-тестировать-сетевую-логику). |
 | `Network/EliminationModeServerTests` | Серверная логика режима: заполнение `TeamStates`, одно очко за выигранный сет (T-02), запуск матча без `PlayersManager` и остановка при пустом реестре (NET-18). Первый тест — проверка самого харнесса. |
 | `Network/RespawnSubscriptionTests` | Жизненный цикл отложенного респавна (T-10, MATCH-05): за три раунда обработчики на `TeamSpawnZone.PlayerEntered` не копятся, а подписка пропущенного раунда не срабатывает в бою следующего. Число подписчиков читается из поля события рефлексией — поднять field-like event снаружи нельзя. |
 | `Network/RoundTimerNetworkTimeTests` | Таймеры фаз через `NetworkTime` (T-19, NET-09): тик внутри фазы не помечает объект грязным (при этом смена фазы — помечает, это контрольный тест), остаток отсчёта и боя считается от момента старта фазы, до боя показывается полная длительность, после боя остаток замирает. |
-| `Network/RoundPhaseFlowTests` | Фазы раунда боевым путём `ServerTick → SetManager → RoundManager` (T-09, MATCH-02): все шесть фаз по порядку, длительность `Resolution` и `Scoreboard` в тиках, рост номера раунда после полного цикла (сторож MATCH-06), запрет заканчивать сет раньше экрана итогов. |
+| `Network/RoundPhaseFlowTests` | Фазы раунда боевым путём `ServerTick → RoundPhases` (T-09, MATCH-02): все шесть фаз по порядку, длительность `Resolution` и `Scoreboard` в тиках, рост номера раунда после полного цикла (сторож MATCH-06), запрет заканчивать карту раньше экрана итогов. |
+| `Network/MapScoreTests` | Счёт карты как в CS: раунды суммируются за обе половины, половина не кончается досрочно, стороны меняются после `_roundsPerHalf` раундов, большинство раундов кончает карту досрочно, равный счёт после всех раундов — ничья, ничейный раунд очков не даёт. |
 | `Network/HostClientHarnessTests` | Ярус B: локальный клиент поднялся, `SpawnMessage` доходит до `NetworkClient.spawned`. |
 | `Interaction/LooseItemTests` | Уборка пола: часы «сколько пролежал» (поднятый начинает заново, пропавший забывается); что считается ничьим (не карман, не магазин-витрина, не кинематика); слот стены принимает своё оружие обратно, не принимает чужой тип и закрытым не принимает ничего (Issue 16); `WarmupMode.prefab` возвращает оружие домой (и уборщика нет в самой сцене лобби), `EliminationMode.prefab` держит оружие и чистит пол к новому раунду. |
 | `GameModes/GameModeRulesTests` | Правила режима в исполнении систем, не знающих типа режима: стена под `WarmupMode` открыта (и снова открывается, закрытая извне), жетона нет; под `EliminationMode` открыта только в `Equipment`, жетон при `Readiness`; оружие; планшет в разминке (с командой матча — только её скины); разминка даёт свою команду только игроку без команды. |
 | `GameModes/TeamChoiceTests` | Этап Б через `MatchTeams`: ручная политика никого не назначает, политика разминки из данных; матч ждёт, пока команда режима есть у всех; минимум игроков — из данных режима; игрок выбирает команду до старта и не после; админ выдаёт всегда; разовый автобаланс; данные режима на клиенте — по `modeId` из реестра. |
 | `GameModes/PlayerLifeRulesTests` | `PlayerDamageRuleTests`: в лобби урон по игроку не проходит, в Elimination проходит. `RespawnKeepsPositionTests` (ярус B, хост — `ClientRpc` исполняется): респавн в зоне не меняет позицию аватара. |
-| `GameModes/GameModeWiringTests` | Проводка: разминка в `GameModeRegistry` с `isWarmup` и не во вкладках матча; команда «Разминка» со всеми аватарами в `TeamRegistry`; правила на `WarmupMode.prefab`; `ModeStartCleanup` на каждом префабе режима; префабы в `spawnPrefabs`; `MatchSeries` на `SessionContext`; лобби — карта реестра только с разминкой; боевые карты с разминкой и режимом матча; `GameplayManager` в `Lobby.unity`; одна зона спавна лобби. |
-| `GameModes/MatchPauseTests` | Пауза прерывает раунд без засчёта (и в общий счёт серии), карта в разминке, снаряжение забрано; «Продолжить» — тот же номер раунда, счёт, команды, статистика; сеты переживают паузу; поздний `StartGameplay` не сбрасывает продолженный матч. |
+| `GameModes/GameModeWiringTests` | Проводка: разминка — поле `GameModeRegistry.warmup`, без команд, не в каталоге и не во вкладках матча; команд две (Военные, Повстанцы), «Разминки» нет; игрок без команды — киборг, и он в реестре аватаров; правила на `WarmupMode.prefab`; `ModeStartCleanup` на каждом префабе режима; префабы в `spawnPrefabs`; `Series` на `SessionContext`; лобби — карта реестра без режимов; разминки нет в списках карт; `MapReferee` в `Lobby.unity`; одна нейтральная зона спавна лобби. |
+| `GameModes/MatchPauseTests` | Пауза прерывает раунд без засчёта (и в общий счёт серии), карта в разминке, снаряжение забрано; «Продолжить» — тот же номер раунда, счёт, команды, статистика; пауза на итогах раунда не засчитывает его; поздний `Begin` не сбрасывает продолженный матч. |
 | `GameModes/SeriesStatsTests` | Убийство по источнику урона — убийце, смерть — жертве, в строке карты и TOTAL; ассист; самоубийство и урон без источника убийства не дают; статистика переживает смену карты; карта без серии ведёт статистику по себе, другая такая карта начинает заново; таблица и текст экрана. |
 | `Player/EquipmentStripTests` | Оружие в руке настоящего аватара уничтожается, рука свободна; планшет не считается снаряжением. |
 | `Network/AuthorityRequestForDestroyedTests` | Патч SDK 13: запрос власти над уже уничтоженным предметом не бросает. |
@@ -540,7 +540,7 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `Network/SessionRecoveryTests` | Снимок сессии при отключении: позиция, здоровье, флаг `NeedsPhysicalRestore` (T-04). Плюс карта и калибровка (CAL-02): снимок помнит, **на какой карте** снят, и `CanRestorePlaceOn` разрешает мировую позу только там же — на соседней карте та же точка означает другое место арены; `IsCalibrated` переживает отключение так же, как команда и скин; мёртвого на место гибели по-прежнему не возвращают. |
 | `Network/NetworkStateRelayTests` | Канал состояния как объект сессии (T-12): подписка на хосте ровно одна (NET-03), отписка при остановке сервера, отсутствие статики в `UxrMirrorAvatar` и в релее, наличие релея и ненулевой `assetId` на `SessionContext.prefab`. Саму доставку блобов проверяет ярус C — в host-режиме она была бы ложно-зелёной. |
 | `Network/CalibrationScaleReplicationTests` | Пропорции игрока (T-14, VR-01): границы значения на сервере и отказ от NaN, репликация `CalibrationScale` настоящей сериализацией Mirror, применение масштаба к **чужому** аватару (а не только к `UxrAvatar.LocalAvatar`), идемпотентность, переезд масштаба на пересозданный аватар. Три из шести были красными до правки. |
-| `Network/MapLoadReadinessTests` | Условие готовности к смене карты (T-17): все четыре сочетания `isReady` × `identity` плюс проверка, что условие берётся по всем соединениям сразу. Заменяет собой пятисекундный таймаут в `MapManager`. |
+| `Network/MapLoadReadinessTests` | Условие готовности к смене карты (T-17): все четыре сочетания `isReady` × `identity` плюс проверка, что условие берётся по всем соединениям сразу. Заменяет собой пятисекундный таймаут в `MapLoader`. |
 | `Managers/ManagerInitOrderTests` | Порядок инициализации (T-17): у каждого менеджера есть `[DefaultExecutionOrder]` со значением из `ManagerOrder`, значения не совпадают, корень раньше всех, сеть позже тех, кого зовёт из колбэков, состав `ManagerBootstrap` состоит только из синглтонов. Стережёт пару «константа ↔ атрибут», которая расходится молча. |
 | `Arsenal/ArsenalSlotOccupancyTests` | Занятость слота арсенала (T-15, NET-13): после сетевой выдачи слот занят и пополнения не просит, а когда предмет унесли или уничтожили — снова пустеет. Плюс блокировка: заблокированный слот действительно выключает захват предмета. |
 | `Network/CalibrationHeightReplicationTests` | Смещение пола (VR-08): границы значения на сервере и отказ от NaN, репликация `CalibrationHeightOffset` настоящей сериализацией Mirror, сдвиг пивота камеры **чужого** аватара, неприкосновенность горизонтальных осей, переезд на пересозданный аватар без повторного накопления. Шесть тестов. |
@@ -556,7 +556,8 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `Arsenal/ArsenalAnimatorTests` | Анимация стены арсенала на настоящих `ArsenalWall.controller` и `Arsenal_Open.anim`: `Idle_Open`/`Idle_Closed` держат открытую и закрытую позы шторки и полки, повторная команда в ту же позу ничего не двигает и не оставляет залежавшегося триггера, разворот посреди анимации идёт с текущей позы. |
 | `Player/AvatarSpawnPointResolverTests` | Выбор точки спавна (WPN-03): берётся зона **своей** команды, чужая зона точкой спавна не становится (иначе игрок появится в базе противника), команда без назначения зоны не спрашивает вовсе, карта без единой зоны даёт определённый запасной вариант, поворот зоны наследуется. Пять тестов. |
 | `Player/PhysicalSpaceAnchorFrameTests` | Система координат карты по паре якорей (T-30, CAL-01): круговой перевод точки, начало в якоре `id=0`, второй якорь на оси `+Z`, **одна и та же точка арены даёт одни и те же координаты на повёрнутой на 90° карте** (иначе одна калибровка на сессию невозможна), перенос позиции и поворота между картами, отказ на слипшихся якорях, независимость направления от высоты якорей. Восемь тестов. |
-| `Player/CalibratedSpawnRegistryTests` | Две ветки выбора точки спавна (T-30, CAL-01): откалиброванный возвращается на своё место, а не в зону; место переносится на повёрнутую карту вместе с ареной; неоткалиброванный идёт в зону **даже при готовом снимке** (признак — единственное, что разводит ветки); без снимка и на карте без якорей откалиброванный тоже идёт в зону; без переданной сессии ветка не спрашивается вовсе. Шесть тестов. |
+| `Player/SpawnPlaceRegistryTests` | Выбор точки спавна после смены карты (T-30, CAL-01): откалиброванный возвращается на своё место, а не в зону, и снимается относительно якорей — на карте с иначе поставленной ареной место едет вместе с ней; **неоткалиброванный остаётся в тех же мировых координатах**; место относительно якорей к неоткалиброванному не применяется; без снимка (первый спавн) и на карте без якорей — зона; без переданной сессии ветка не спрашивается вовсе. |
+| `Maps/MapAlignmentTests` | Арены всех карт реестра стоят одинаково: якоря совпадают с лобби (допуск 2 см). Без этого мировая точка неоткалиброванного игрока на новой карте — не то же место в комнате. |
 | `Player/TwoHandGrabHarness` | Не тест — общая обвязка хвата двумя руками. `TwoHandGrabCases` перебирает пары «оружие из `WeaponInfo` × аватар из `AvatarRegistry`», у которых включены `Allow Multi Grab` и `First Grab Point Is Main` и есть свои позы для обеих точек; пути не называются. `TwoHandGrabHarness` поднимает настоящие префабы вне Play Mode (`Awake` рук и `UpdateManipulation` через рефлексию, аватар в `UpdateExternally` — иначе `Align To Controller` берёт поворот у чужой модели контроллера). `AssertManipulationLive` — сторож: оружие реально следует за рукой, иначе проверки поворота зеленеют ложно. |
 | `Player/GunTwoHandGrabTests` | Вторая рука берёт дополнительную точку, а не перехватывает оружие (патч SDK 11 + `TwoHandGrabPolicy`, [Issue 13](UltimateXR/known-issues.md)). На каждую пару из `TwoHandGrabCases`; плюс проверка, что пар больше нуля. |
 | `Player/GunTwoHandAimTests` | Поддерживающая рука не поворачивает оружие (`MainGripAimLock`, [Issue 14](UltimateXR/known-issues.md)). Только пары, где дополнительная точка ближе 10 см к основной (поддержка, а не цевьё). Без компонента — 66° на сдвиг руки в 3 см. |
@@ -580,7 +581,7 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | Префаб | Путь | Описание |
 |---|---|---|
 | Игрок | `Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab` | PrefabVariant на основе `CyborgAvatar_URP`. |
-| Контекст сессии | `Assets/Prefabs/Managers/SessionContext.prefab` | Сетевые сервисы уровня сессии: `SessionManager` (выбор режима и карт серии), `MatchSeries` (ход серии и общий счёт) и `NetworkStateRelay` (канал состояния UltimateXR). Спавнится один раз в `GameNetworkManager.OnStartServer`, живёт до остановки сервера. |
+| Контекст сессии | `Assets/Prefabs/Managers/SessionContext.prefab` | Сетевые сервисы уровня сессии: `SessionManager` (выбор режима и карт серии), `Series` (ход серии и общий счёт) и `NetworkStateRelay` (канал состояния UltimateXR). Спавнится один раз в `GameNetworkManager.OnStartServer`, живёт до остановки сервера. |
 
 **Компоненты префаба игрока:**
 
@@ -603,13 +604,12 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | Механика | Статус | Приоритет |
 |---|---|---|
 | `PlayersManager` | ✅ Реализовано | — |
-| `MapManager` | ✅ Реализовано | — |
+| `MapLoader` | ✅ Реализовано | — |
 | `DebugOrchestrator` | ✅ Реализовано | — |
 | `GameManager` | ✅ Реализовано | — |
 | `GameModeData` / `GameModeRegistry` | ✅ Реализовано | — |
-| `GameplayManager` | ✅ Реализовано | — |
-| `SetManager` | ✅ Реализовано | — |
-| `RoundManager` | ✅ Реализовано | — |
+| `MapReferee` | ✅ Реализовано | — |
+| `RoundPhases` | ✅ Реализовано | — |
 | `GameMode` — Respawn | ✅ Реализовано | — |
 | Команды | ✅ Реализовано | — |
 | `GameMode` — Elimination | ✅ Реализовано | — |

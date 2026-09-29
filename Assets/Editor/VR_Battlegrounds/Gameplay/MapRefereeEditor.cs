@@ -5,13 +5,13 @@ using VrBattlegrounds.GameModes;
 
 namespace VrBattlegrounds.Managers.Editor
 {
-    [CustomEditor(typeof(GameplayManager))]
-    public class GameplayManagerEditor : UnityEditor.Editor
+    [CustomEditor(typeof(MapReferee))]
+    public class MapRefereeEditor : UnityEditor.Editor
     {
         public override bool RequiresConstantRepaint()
         {
             if (target == null) return false;
-            GameplayManager manager = (GameplayManager)target;
+            MapReferee manager = (MapReferee)target;
             return Application.isPlaying && manager.IsMatchActive;
         }
 
@@ -19,7 +19,7 @@ namespace VrBattlegrounds.Managers.Editor
         {
             base.OnInspectorGUI();
 
-            GameplayManager manager = (GameplayManager)target;
+            MapReferee manager = (MapReferee)target;
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Состояние матча (только чтение)", EditorStyles.boldLabel);

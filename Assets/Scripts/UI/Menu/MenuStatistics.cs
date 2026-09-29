@@ -9,7 +9,7 @@ namespace VrBattlegrounds.UI.Menu
     /// счёт серии по картам и TOTAL — раунды и карты команд, убийства / смерти / ассисты игроков.
     ///
     /// <para>
-    /// Данные — реплицированные строки <see cref="MatchSeries"/> (есть и у клиента), таблицу
+    /// Данные — реплицированные строки <see cref="Series"/> (есть и у клиента), таблицу
     /// собирает <see cref="SeriesStatsTable"/>. Текст перестраивается раз в
     /// <see cref="_refreshInterval"/> и только когда что-то поменялось.
     /// </para>
@@ -44,7 +44,7 @@ namespace VrBattlegrounds.UI.Menu
         {
             if (_table == null) return;
 
-            string text = BuildText(MatchSeries.Instance);
+            string text = BuildText(Series.Instance);
             if (text == _last) return;
 
             _last = text;
@@ -52,7 +52,7 @@ namespace VrBattlegrounds.UI.Menu
         }
 
         /// <summary>Текст таблицы для серии; без серии — пояснение.</summary>
-        public static string BuildText(MatchSeries series)
+        public static string BuildText(Series series)
         {
             if (series == null || series.Maps.Count == 0)
                 return "Серия ещё не начиналась — статистики нет.";

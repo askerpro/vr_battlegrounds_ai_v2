@@ -100,7 +100,7 @@ namespace VrBattlegrounds.Tests
     /// накопление 30 раз даёт 2.9999998 и тест на длительность врал бы на один тик.
     ///
     /// Как тикать и где читать фазу — задаёт вызывающий тест: одни тесты гоняют
-    /// боевой путь <c>EliminationMode.ServerTick</c>, другие — голый <c>SetManager.Tick</c>.
+    /// боевой путь <c>EliminationMode.ServerTick</c>, другие — голую машину <c>RoundPhases.Tick</c>.
     /// </summary>
     public sealed class RoundFlowDriver
     {
@@ -111,17 +111,17 @@ namespace VrBattlegrounds.Tests
         private const int MaxSteps = 4000;
 
         private readonly Action<float> _tick;
-        private readonly Func<RoundState> _phase;
-        private readonly List<RoundState> _samples = new List<RoundState>();
+        private readonly Func<RoundPhase> _phase;
+        private readonly List<RoundPhase> _samples = new List<RoundPhase>();
 
-        public RoundFlowDriver(Action<float> tick, Func<RoundState> phase)
+        public RoundFlowDriver(Action<float> tick, Func<RoundPhase> phase)
         {
             _tick = tick;
             _phase = phase;
         }
 
         /// <summary>Фаза, наблюдённая после каждого шага, по порядку.</summary>
-        public IReadOnlyList<RoundState> Samples => _samples;
+        public IReadOnlyList<RoundPhase> Samples => _samples;
 
         /// <summary>Сколько шагов длится фаза при шаге <see cref="Step"/>.</summary>
         public static int StepsFor(float duration)
@@ -153,10 +153,10 @@ namespace VrBattlegrounds.Tests
         }
 
         /// <summary>Последовательность фаз без повторов подряд — то, как раунд выглядел снаружи.</summary>
-        public List<RoundState> PhaseSequence()
+        public List<RoundPhase> PhaseSequence()
         {
-            List<RoundState> sequence = new List<RoundState>();
-            foreach (RoundState sample in _samples)
+            List<RoundPhase> sequence = new List<RoundPhase>();
+            foreach (RoundPhase sample in _samples)
             {
                 if (sequence.Count == 0 || sequence[sequence.Count - 1] != sample)
                     sequence.Add(sample);
@@ -168,7 +168,7 @@ namespace VrBattlegrounds.Tests
         /// Длина первого непрерывного отрезка фазы в шагах.
         /// Ноль означает, что фазу не наблюдали ни разу.
         /// </summary>
-        public int FirstRunLength(RoundState state)
+        public int FirstRunLength(RoundPhase state)
         {
             int start = _samples.IndexOf(state);
             if (start < 0) return 0;
@@ -184,10 +184,10 @@ namespace VrBattlegrounds.Tests
             if (_samples.Count == 0) return "(ни одного шага)";
 
             StringBuilder sb = new StringBuilder();
-            RoundState current = _samples[0];
+            RoundPhase current = _samples[0];
             int count = 0;
 
-            foreach (RoundState sample in _samples)
+            foreach (RoundPhase sample in _samples)
             {
                 if (sample == current)
                 {

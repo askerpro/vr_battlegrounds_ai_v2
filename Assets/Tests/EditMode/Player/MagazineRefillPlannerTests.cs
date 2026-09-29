@@ -116,7 +116,7 @@ namespace VrBattlegrounds.Tests.Player
         {
             string source = File.ReadAllText("Assets/Scripts/Player/PlayerLoadoutManager.cs");
 
-            foreach (string mode in new[] { "EliminationMode", "RoundState", "WarmupMode", "WarmupMagazineSupply", "GameMode" })
+            foreach (string mode in new[] { "EliminationMode", "RoundPhase", "WarmupMode", "WarmupMagazineSupply", "GameMode" })
             {
                 Assert.IsFalse(source.Contains(mode),
                     $"PlayerLoadoutManager упоминает {mode}. Когда и сколько выдавать, решают политики " +

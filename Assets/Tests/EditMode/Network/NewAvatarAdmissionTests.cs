@@ -44,7 +44,7 @@ namespace VrBattlegrounds.Tests.Network
             _zones[_teamB] = CreateZone(_teamB);
 
             _driver = new RoundFlowDriver(dt => { _roster.DeclareAllReady(); _mode.ServerTick(dt); },
-                                          () => _mode.CurrentRoundState);
+                                          () => _mode.CurrentRoundPhase);
         }
 
         [TearDown]
@@ -104,7 +104,7 @@ namespace VrBattlegrounds.Tests.Network
         {
             _mode.Initialize(new[] { _teamA, _teamB });
             InvokePrivateMethod(_mode, "InitializeActiveGame");
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Equipment, "закупки");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Equipment, "закупки");
         }
 
         [Test]
@@ -171,7 +171,7 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
             PlayerController a = CreatePlayer("A", _teamA, inZone: false);
 
-            InvokePrivateMethod(_mode, "StartGameplay");
+            InvokePrivateMethod(_mode, "Begin");
 
             Assert.IsFalse(a.IsAlive, "Аватар, созданный до режима матча, остался живым вне зоны.");
         }

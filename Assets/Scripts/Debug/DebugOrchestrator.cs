@@ -72,7 +72,7 @@ namespace VrBattlegrounds.DevTools
 
             // Подписка вместо угадывания. Оркестратор матча живёт в сцене карты и
             // появляется позже нас; раньше это обходилось повторной попыткой «через кадр».
-            GameplayManager.SubscribeToInstance(HandleGameplayManagerReady);
+            MapReferee.SubscribeToInstance(HandleMapRefereeReady);
         }
 
         private void OnDisable()
@@ -81,22 +81,22 @@ namespace VrBattlegrounds.DevTools
             PlayersManager.OnSessionDisconnected -= HandlePlayerDisconnected;
             GameNetworkManager.ServerSceneChanged -= OnServerSceneChanged;
 
-            GameplayManager.UnsubscribeFromInstance(HandleGameplayManagerReady);
+            MapReferee.UnsubscribeFromInstance(HandleMapRefereeReady);
         }
 
         /// <summary>
         /// Оркестратор матча появился (загрузилась карта). Условия автостарта могли
         /// выполниться ещё в лобби — проверяем их сразу, не дожидаясь нового подключения.
         /// </summary>
-        private void HandleGameplayManagerReady(GameplayManager manager)
+        private void HandleMapRefereeReady(MapReferee manager)
         {
             if (_config == null || !_config.enabled) return;
             if (!NetworkServer.active) return;
 
             GameLog.Debug.Verbose(
-                "[DebugOrchestrator] GameplayManager готов — пробуем запустить матч.");
+                "[DebugOrchestrator] MapReferee готов — пробуем запустить матч.");
 
-            TryStartGameplay();
+            TryGoLive();
         }
 
         private void Start()
@@ -127,7 +127,7 @@ namespace VrBattlegrounds.DevTools
             // (GameMode.ServerAssignTeams): разминка даёт «Разминку» игроку без команды, режим матча
             // ждёт выбора игрока. Раньше здесь был свой автобаланс по teamsForAutoAssign,
             // и спорил бы с разминкой.
-            TryStartGameplay();
+            TryGoLive();
         }
 
         private void HandlePlayerDisconnected(PlayerSession session)
@@ -142,12 +142,12 @@ namespace VrBattlegrounds.DevTools
         /// Проверяет условия автостарта и запускает матч если они выполнены.
         /// Вызывается как при подключении игроков, так и после загрузки сцены карты.
         /// </summary>
-        private void TryStartGameplay()
+        private void TryGoLive()
         {
-            if (!_config.autoStartGameplay)
+            if (!_config.autoGoLive)
             {
                 GameLog.Debug.Verbose(
-                    "[DebugOrchestrator] TryStartGameplay: autoStartGameplay выключен.");
+                    "[DebugOrchestrator] TryGoLive: autoGoLive выключен.");
                 return;
             }
 
@@ -158,21 +158,21 @@ namespace VrBattlegrounds.DevTools
                 // через кадр ничего не изменит — состав проверяет ManagerBootstrap и он же
                 // об этом уже написал. Здесь просто выходим.
                 GameLog.Error(
-                    "[DebugOrchestrator] TryStartGameplay: PlayersManager.Instance пуст. " +
+                    "[DebugOrchestrator] TryGoLive: PlayersManager.Instance пуст. " +
                     "Состав постоянных менеджеров объявлен в ManagerBootstrap, " +
                     "времена жизни — Docs/session-architecture.md.");
                 return;
             }
 
-            GameplayManager matchManager = GameplayManager.Instance;
+            MapReferee matchManager = MapReferee.Instance;
             if (matchManager == null)
             {
-                // Норма, а не сбой: GameplayManager живёт в сцене карты, и пока игрок
+                // Норма, а не сбой: MapReferee живёт в сцене карты, и пока игрок
                 // в лобби его нет. Ждать не нужно — на его появление мы подписаны
-                // (HandleGameplayManagerReady), и попытка повторится сама.
+                // (HandleMapRefereeReady), и попытка повторится сама.
                 GameLog.Debug.Verbose(
-                    "[DebugOrchestrator] TryStartGameplay: карта ещё не загружена. " +
-                    "Матч запустится по сигналу GameplayManager.");
+                    "[DebugOrchestrator] TryGoLive: карта ещё не загружена. " +
+                    "Матч запустится по сигналу MapReferee.");
                 return;
             }
 
@@ -180,16 +180,16 @@ namespace VrBattlegrounds.DevTools
                 MapModeRules.ResolveMatchMode(matchManager.CurrentMap, null, null) == null)
             {
                 // Лобби: с картой совместима только разминка, и она стартует сама
-                // в GameplayManager.OnStartServer. Матча здесь не бывает.
+                // в MapReferee.OnStartServer. Матча здесь не бывает.
                 GameLog.Debug.Verbose(
-                    "[DebugOrchestrator] TryStartGameplay: на этой карте нет режимов матча (лобби).");
+                    "[DebugOrchestrator] TryGoLive: на этой карте нет режимов матча (лобби).");
                 return;
             }
 
             if (matchManager.IsMatchActive)
             {
                 GameLog.Debug.Verbose(
-                    "[DebugOrchestrator] TryStartGameplay: матч уже активен.");
+                    "[DebugOrchestrator] TryGoLive: матч уже активен.");
                 return;
             }
 
@@ -205,12 +205,12 @@ namespace VrBattlegrounds.DevTools
             if (playersManager.Sessions.Count < minPlayers)
             {
                 GameLog.Debug.Info(
-                    $"[DebugOrchestrator] TryStartGameplay: недостаточно игроков ({playersManager.Sessions.Count}/{minPlayers}). Ждем остальных.");
+                    $"[DebugOrchestrator] TryGoLive: недостаточно игроков ({playersManager.Sessions.Count}/{minPlayers}). Ждем остальных.");
                 return;
             }
 
             GameLog.Debug.Info(
-                "[DebugOrchestrator] TryStartGameplay: попытка запустить матч (условия по игрокам выполнены).");
+                "[DebugOrchestrator] TryGoLive: попытка запустить матч (условия по игрокам выполнены).");
             matchManager.StartMatch();
 
         }
@@ -240,8 +240,8 @@ namespace VrBattlegrounds.DevTools
             }
 
             // Матч отсюда не запускаем. Игроки могли подключиться ещё в лобби, когда
-            // GameplayManager не существовал, — но на его появление мы подписаны
-            // (HandleGameplayManagerReady), и сигнал приходит раньше этого колбэка:
+            // MapReferee не существовал, — но на его появление мы подписаны
+            // (HandleMapRefereeReady), и сигнал приходит раньше этого колбэка:
             // объекты сцены просыпаются в момент её загрузки, а OnServerSceneChanged
             // Mirror зовёт уже после.
         }
@@ -281,7 +281,7 @@ namespace VrBattlegrounds.DevTools
                 $"[DebugOrchestrator] Автозагрузка карты: {_config.autoLoadMapScene}");
 
             // Карта с режимом — серия из одной карты, как из меню админа: карта стартует
-            // в разминке, «Начать матч» делает автостарт (autoStartGameplay).
+            // в разминке, «Начать матч» делает автостарт (autoGoLive).
             if (!string.IsNullOrEmpty(_config.autoGameModeId) && SessionManager.Instance != null)
             {
                 SessionManager.Instance.SetSession(_config.autoLoadMapScene, _config.autoGameModeId);
@@ -289,7 +289,7 @@ namespace VrBattlegrounds.DevTools
                 return;
             }
 
-            MapManager.Instance?.LoadMap(_config.autoLoadMapScene);
+            MapLoader.Instance?.LoadMap(_config.autoLoadMapScene);
         }
     }
 }

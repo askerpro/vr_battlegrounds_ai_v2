@@ -18,7 +18,7 @@ namespace VrBattlegrounds.Tests.Modes
     /// блокировка оружия, раздача команд. Разминка (бывшее лобби) — такой же режим (<see cref="WarmupMode"/>).
     ///
     /// <para>
-    /// Что доказывает. Раньше стена и <c>GameplayManager</c> знали конкретный режим
+    /// Что доказывает. Раньше стена и <c>MapReferee</c> знали конкретный режим
     /// (<c>is EliminationMode</c>, подписка на его фазы), а лобби жило особым случаем —
     /// правилом сцены <c>LobbyFreePlay</c>. Теперь режим объявляет правила через базовый
     /// <see cref="GameMode"/>, а стена и оружие исполняют их, не зная типа режима.
@@ -58,23 +58,23 @@ namespace VrBattlegrounds.Tests.Modes
 
         // ── Заготовки ────────────────────────────────────────────────────────
 
-        private GameplayManager CreateGameplayManager()
+        private MapReferee CreateMapReferee()
         {
-            GameplayManager manager = CreateNetworkComponent<GameplayManager>("GameplayManager");
+            MapReferee manager = CreateNetworkComponent<MapReferee>("MapReferee");
             InvokeLifecycleMethod(manager, "Awake");
             return manager;
         }
 
-        private T CreateActiveMode<T>(GameplayManager manager) where T : GameMode
+        private T CreateActiveMode<T>(MapReferee manager) where T : GameMode
         {
             T mode = CreateNetworkComponent<T>(typeof(T).Name);
             InvokePrivateMethod(manager, "RegisterActiveGameMode", mode);
             return mode;
         }
 
-        private static void SetPhase(EliminationMode mode, RoundState phase)
+        private static void SetPhase(EliminationMode mode, RoundPhase phase)
         {
-            SetPrivateField(mode, "_roundState", phase);
+            SetPrivateField(mode, "_roundPhase", phase);
         }
 
         private ArsenalWallController CreateWall(string name, out DogTagController dogTag)
@@ -172,7 +172,7 @@ namespace VrBattlegrounds.Tests.Modes
             ArsenalWallController wall = CreateServerWall(out _);
             Assert.AreEqual(Closed, wall.CurrentState, "Контроль: без режима стена стоит закрытой.");
 
-            CreateActiveMode<WarmupMode>(CreateGameplayManager());
+            CreateActiveMode<WarmupMode>(CreateMapReferee());
             Tick(wall);
 
             Assert.AreEqual(Open, wall.CurrentState,
@@ -186,7 +186,7 @@ namespace VrBattlegrounds.Tests.Modes
             SilenceMirrorNoise();
 
             ArsenalWallController wall = CreateServerWall(out _);
-            CreateActiveMode<WarmupMode>(CreateGameplayManager());
+            CreateActiveMode<WarmupMode>(CreateMapReferee());
             Tick(wall);
 
             wall.SetClosedImmediate();
@@ -204,7 +204,7 @@ namespace VrBattlegrounds.Tests.Modes
             GameObject tagObject = dogTag.transform.Find("DogTag").gameObject;
             Assert.IsTrue(tagObject.activeSelf, "Контроль: без режима жетон на стене есть.");
 
-            CreateActiveMode<WarmupMode>(CreateGameplayManager());
+            CreateActiveMode<WarmupMode>(CreateMapReferee());
             Tick(wall);
 
             Assert.AreEqual(Open, wall.CurrentState, "Контроль: стена открыта.");
@@ -219,21 +219,21 @@ namespace VrBattlegrounds.Tests.Modes
             SilenceMirrorNoise();
 
             ArsenalWallController wall = CreateServerWall(out _);
-            EliminationMode mode = CreateActiveMode<EliminationMode>(CreateGameplayManager());
+            EliminationMode mode = CreateActiveMode<EliminationMode>(CreateMapReferee());
 
-            SetPhase(mode, RoundState.Setup);
+            SetPhase(mode, RoundPhase.Setup);
             Tick(wall);
             Assert.AreEqual(Closed, wall.CurrentState, "В Setup арсенал ещё закрыт.");
 
-            SetPhase(mode, RoundState.Equipment);
+            SetPhase(mode, RoundPhase.Equipment);
             Tick(wall);
             Assert.AreEqual(Open, wall.CurrentState, "Закупка началась, а стена не открылась.");
 
-            SetPhase(mode, RoundState.Countdown);
+            SetPhase(mode, RoundPhase.Countdown);
             Tick(wall);
             Assert.AreEqual(Closed, wall.CurrentState, "Обратный отсчёт начался, а арсенал остался открытым.");
 
-            SetPhase(mode, RoundState.Combat);
+            SetPhase(mode, RoundPhase.Combat);
             Tick(wall);
             Assert.AreEqual(Closed, wall.CurrentState, "В бою арсенал открылся.");
         }
@@ -244,9 +244,9 @@ namespace VrBattlegrounds.Tests.Modes
             SilenceMirrorNoise();
 
             ArsenalWallController wall = CreateServerWall(out DogTagController dogTag);
-            EliminationMode mode = CreateActiveMode<EliminationMode>(CreateGameplayManager());
+            EliminationMode mode = CreateActiveMode<EliminationMode>(CreateMapReferee());
 
-            SetPhase(mode, RoundState.Equipment);
+            SetPhase(mode, RoundPhase.Equipment);
             Tick(wall);
 
             Assert.IsTrue(mode.ArsenalRules.UsesReadinessTag, "RoundStartRule.Readiness — жетон нужен.");
@@ -265,7 +265,7 @@ namespace VrBattlegrounds.Tests.Modes
             // UxrWeaponManager переживает смену сцены.
             UxrWeaponManager weapons = CreateWeaponManager(enabled: false);
 
-            GameplayManager manager = CreateGameplayManager();
+            MapReferee manager = CreateMapReferee();
             CreateActiveMode<WarmupMode>(manager);
             InvokePrivateMethod(manager, "Update");
 
@@ -279,94 +279,96 @@ namespace VrBattlegrounds.Tests.Modes
 
             UxrWeaponManager weapons = CreateWeaponManager(enabled: true);
 
-            GameplayManager manager = CreateGameplayManager();
+            MapReferee manager = CreateMapReferee();
             EliminationMode mode = CreateActiveMode<EliminationMode>(manager);
 
-            SetPhase(mode, RoundState.Equipment);
+            SetPhase(mode, RoundPhase.Equipment);
             InvokePrivateMethod(manager, "Update");
             Assert.IsFalse(weapons.WeaponSystemEnabled, "В закупке оружие стреляет.");
 
-            SetPhase(mode, RoundState.Combat);
+            SetPhase(mode, RoundPhase.Combat);
             InvokePrivateMethod(manager, "Update");
             Assert.IsTrue(weapons.WeaponSystemEnabled, "В бою оружие не стреляет.");
         }
 
         // Тест «Режим_сцены_бьёт_выбор_администратора» удалён вместе с полем «режим сцены»
-        // у GameplayManager: какой режим запустить на карте, теперь решает совместимость
+        // у MapReferee: какой режим запустить на карте, теперь решает совместимость
         // режимов с картой (MapData.supportedModes) — см. MapModeRulesTests и MatchFlowTests.
 
         // ── Планшет ──────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// В разминке (в том числе в лобби) планшет предлагает команды выбранного на серию
+        /// матча — две, а не три: команды «Разминка» больше нет.
+        /// </summary>
         [Test]
-        public void В_разминке_планшет_не_предлагает_команду()
+        public void В_разминке_планшет_предлагает_команды_выбранного_матча()
         {
             SilenceMirrorNoise();
 
-            TeamData warmupTeam = CreateTeam("Разминка", 3);
             GameModeData elimination = AssetDatabase.LoadAssetAtPath<GameModeData>(GameModeWiringTests.EliminationDataPath);
 
             WarmupMode warmup = CreateNetworkComponent<WarmupMode>("WarmupMode");
             SpawnOnServer(warmup);
-            warmup.Initialize(new[] { warmupTeam });
+            warmup.Initialize(new TeamData[0]);
 
             TeamData[] teams = VrBattlegrounds.UI.Menu.MenuTeamSelection.ResolveAvailableTeams(warmup, elimination, TeamRegistry.Instance.teams);
 
-            CollectionAssert.AreEqual(new[] { warmupTeam }, teams,
-                "В разминке планшет предлагает команды выбранного матча, а не команду разминки.");
-            Assert.IsFalse(VrBattlegrounds.UI.Menu.MenuTeamSelection.OffersTeamChoice(teams),
-                "В разминке команда одна — выбирать её незачем, сразу скины.");
+            CollectionAssert.AreEqual(elimination.teams, teams,
+                "В разминке планшет предлагает не команды выбранного матча.");
+            Assert.IsTrue(VrBattlegrounds.UI.Menu.MenuTeamSelection.OffersTeamChoice(teams),
+                "В разминке команда выбирается — их две.");
 
             TeamData[] match = VrBattlegrounds.UI.Menu.MenuTeamSelection.ResolveAvailableTeams(null, elimination, TeamRegistry.Instance.teams);
             Assert.IsTrue(VrBattlegrounds.UI.Menu.MenuTeamSelection.OffersTeamChoice(match), "Контроль: у матча команд две.");
         }
 
         /// <summary>
-        /// Разминка на карте посреди серии: у игрока команда матча (CT). Планшет обязан
-        /// предложить только её скины — иначе выбор скина «Разминки» молча перевёл бы его
-        /// из команды матча. А сервер обязан принять смену скина в своей команде, хотя
-        /// команды матча среди команд разминки нет.
+        /// Разминка — без своих команд: планшет предлагает команды матча и игроку с командой
+        /// (смена скина или стороны до старта), и игроку без команды. Сервер принимает и то,
+        /// и другое. Прежде разминка предлагала свою единственную команду «Разминка».
         /// </summary>
         [Test]
-        public void В_разминке_с_командой_матча_планшет_меняет_только_скин()
+        public void В_разминке_планшет_предлагает_команды_матча()
         {
             SilenceMirrorNoise();
 
-            TeamData warmupTeam = CreateTeam("Разминка", 3);
             TeamData ct = TeamRegistry.Instance.GetByIndex(1);
+            TeamData t = TeamRegistry.Instance.GetByIndex(2);
             Assert.IsNotNull(ct, "Контроль: команда 1 есть в TeamRegistry.");
+            Assert.IsNotNull(t, "Контроль: команда 2 есть в TeamRegistry.");
 
             WarmupMode warmup = CreateNetworkComponent<WarmupMode>("WarmupMode");
             SpawnOnServer(warmup);
-            warmup.TeamAssignment = TeamAssignmentKind.KeepOrDefault;
-            warmup.Initialize(new[] { warmupTeam });
+            warmup.Initialize(new TeamData[0]);
 
-            TeamData[] teams = VrBattlegrounds.UI.Menu.MenuTeamSelection.ResolveAvailableTeams(
-                warmup, null, TeamRegistry.Instance.teams, ct.teamIndex);
-            CollectionAssert.AreEqual(new[] { ct }, teams,
-                "В разминке игроку с командой матча предложена не его команда — выбор скина сменит ему команду.");
-
-            TeamData[] fresh = VrBattlegrounds.UI.Menu.MenuTeamSelection.ResolveAvailableTeams(
-                warmup, null, TeamRegistry.Instance.teams, 0);
-            CollectionAssert.AreEqual(new[] { warmupTeam }, fresh, "Игроку без команды — команда разминки.");
+            // Своих команд у разминки нет — предлагаются команды матча (реестр: Военные и Повстанцы).
+            foreach (int current in new[] { 0, ct.teamIndex })
+            {
+                TeamData[] teams = VrBattlegrounds.UI.Menu.MenuTeamSelection.ResolveAvailableTeams(
+                    warmup, null, TeamRegistry.Instance.teams, current);
+                CollectionAssert.AreEquivalent(new[] { ct, t }, teams,
+                    $"В разминке (команда {current}) предложены не две команды матча: " +
+                    string.Join(", ", teams.Select(x => x.displayName)));
+            }
 
             Assert.IsTrue(TeamChangeRules.CanPlayerChoose(warmup, ct.teamIndex, ct.teamIndex, out string reason),
-                "Смена скина в своей команде матча в разминке отклонена: " + reason);
+                "Смена скина в своей команде в разминке отклонена: " + reason);
+            Assert.IsTrue(TeamChangeRules.CanPlayerChoose(warmup, 0, t.teamIndex, out reason),
+                "Игрок без команды не может выбрать команду в разминке: " + reason);
         }
 
         // ── Раздача команд ───────────────────────────────────────────────────
 
         /// <summary>
-        /// Разминка не сбрасывает команды: раньше лобби-режим раздавал свою команду всем
-        /// (автобаланс по одной команде). Теперь разминка идёт и на картах посреди серии,
-        /// и команда матча (CT/T) обязана пережить её; команду разминки получает только
-        /// игрок без команды.
+        /// Разминка не сбрасывает команды и не выдаёт своих: она идёт и на картах посреди серии,
+        /// и команда матча (CT/T) обязана пережить её, а игрок без команды остаётся без неё.
         /// </summary>
         [Test]
-        public void Разминка_даёт_свою_команду_только_игроку_без_команды()
+        public void Разминка_никого_не_переназначает()
         {
             SilenceMirrorNoise();
 
-            TeamData warmupTeam = CreateTeam("Разминка", 3);
             var roster = new ListRoster();
             PlayerSession fresh = CreateSession("fresh", 0);
             PlayerSession ct = CreateSession("ct", 1);
@@ -378,12 +380,11 @@ namespace VrBattlegrounds.Tests.Modes
             WarmupMode mode = CreateNetworkComponent<WarmupMode>("WarmupMode");
             SpawnOnServer(mode);
             mode.PlayerRoster = roster;
-            mode.TeamAssignment = TeamAssignmentKind.KeepOrDefault;
-            mode.Initialize(new[] { warmupTeam });
+            mode.Initialize(new TeamData[0]);
 
             mode.ServerAssignTeams();
 
-            Assert.AreEqual(3, fresh.TeamIndex, "Игрок без команды не получил команду разминки.");
+            Assert.AreEqual(0, fresh.TeamIndex, "Разминка выдала команду игроку без команды.");
             Assert.AreEqual(1, ct.TeamIndex, "Разминка сменила игроку команду матча (CT).");
             Assert.AreEqual(2, t.TeamIndex, "Разминка сменила игроку команду матча (T).");
         }

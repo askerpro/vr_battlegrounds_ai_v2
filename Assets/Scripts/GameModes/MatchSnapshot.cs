@@ -10,7 +10,7 @@ namespace VrBattlegrounds.GameModes
     /// а режим на карте один: живой Elimination рядом с разминкой отвечал бы на те же вопросы
     /// (оружие, арсенал, урон), держал бы подписки на смерти и подключения и слал бы свои
     /// <c>SyncVar</c>. Снимок — несколько чисел, режим спавнится заново тем же путём, что и
-    /// при «Начать матч». Хранит его <c>GameplayManager</c> карты: пауза — состояние матча
+    /// при «Начать матч». Хранит его <c>MapReferee</c> карты: пауза — состояние матча
     /// на этой карте, со сменой карты она теряет смысл.
     /// </para>
     /// </summary>
@@ -19,19 +19,13 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Режим, который продолжится.</summary>
         public string ModeId = "";
 
-        /// <summary>Счёт команд режима (<c>teamIndex</c> → сеты или фраги).</summary>
+        /// <summary>
+        /// Счёт команд режима (<c>teamIndex</c> → раунды за карту или фраги). У режима с раундами —
+        /// без прерванного раунда: он сыграется заново.
+        /// </summary>
         public readonly Dictionary<int, int> TeamScores = new Dictionary<int, int>();
 
-        /// <summary>Раунды, выигранные в текущем сете до прерванного раунда.</summary>
-        public readonly Dictionary<int, int> RoundScores = new Dictionary<int, int>();
-
-        /// <summary>
-        /// Раунды, выигранные за карту в уже доигранных сетах (половинах). Решают ничью по сетам:
-        /// карту берёт команда с большим числом раундов.
-        /// </summary>
-        public readonly Dictionary<int, int> MapRounds = new Dictionary<int, int>();
-
-        /// <summary>Номер раунда, который сыграется заново после «Продолжить»; 0 — сет не начинался.</summary>
+        /// <summary>Номер раунда, который сыграется заново после «Продолжить»; 0 — раунды не начинались.</summary>
         public int RoundToReplay;
 
         /// <summary>Сколько времени оставалось у матча с таймером (Respawn), секунды.</summary>

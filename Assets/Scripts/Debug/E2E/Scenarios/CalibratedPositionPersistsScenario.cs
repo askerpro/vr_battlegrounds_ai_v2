@@ -38,6 +38,15 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// </para>
     ///
     /// <para>
+    /// <b>После выравнивания карт (2026-09).</b> Арены всех карт теперь стоят одинаково
+    /// (<c>MapAlignmentTests</c>), повёрнутой карты в проекте нет. Сценарий больше не отличает
+    /// «место относительно якорей» от «старой мировой позиции» и честно отвечает «вердикт вынести
+    /// нельзя». Перенос по якорям проверяет EditMode-тест
+    /// <c>SpawnPlaceRegistryTests.Откалиброванный_снимается_относительно_якорей</c>; для живой
+    /// проверки нужна карта с иначе поставленной ареной.
+    /// </para>
+    ///
+    /// <para>
     /// <b>Почему две разные карты, а не перезагрузка одной.</b> Обе карты проекта собраны
     /// из одного префаба арены, но в <c>TestMap1</c> он повёрнут на 90° вокруг Y
     /// относительно <c>TestMap2</c>. Мировые координаты якорей у карт поэтому не совпадают,
@@ -232,11 +241,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 }
 
                 SessionManager sessionManager = SessionManager.Instance;
-                if (sessionManager == null || MapManager.Instance == null || AvatarManager.Instance == null)
+                if (sessionManager == null || MapLoader.Instance == null || AvatarManager.Instance == null)
                 {
                     result.Set(CheckFirstMap, false,
                         $"SessionManager={(sessionManager == null ? "null" : "есть")}, " +
-                        $"MapManager={(MapManager.Instance == null ? "null" : "есть")}, " +
+                        $"MapLoader={(MapLoader.Instance == null ? "null" : "есть")}, " +
                         $"AvatarManager={(AvatarManager.Instance == null ? "null" : "есть")}");
                     result.Summary = "менеджеры не поднялись, прогон недействителен";
                     yield break;
@@ -260,7 +269,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 GameLog.Debug.Info($"[E2E] Команды распределены: {AssignTeams(mode)}");
 
                 // ── 3. Первая карта ───────────────────────────────────────
-                MapManager.Instance.LoadMap(firstMap);
+                MapLoader.Instance.LoadMap(firstMap);
 
                 E2EWaitOutcome onFirstMap = new E2EWaitOutcome();
                 yield return E2EWait.Until(onFirstMap,
@@ -415,7 +424,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 // ── 8. Вторая карта ───────────────────────────────────────
                 GameLog.Debug.Info($"[E2E] Меняю карту '{firstMap}' -> '{secondMap}'");
-                MapManager.Instance.LoadMap(secondMap);
+                MapLoader.Instance.LoadMap(secondMap);
 
                 E2EWaitOutcome onSecondMap = new E2EWaitOutcome();
                 yield return E2EWait.Until(onSecondMap,

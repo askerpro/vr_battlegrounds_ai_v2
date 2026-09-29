@@ -20,7 +20,7 @@ namespace VrBattlegrounds.Managers
     /// </para>
     ///
     /// <para>
-    /// Ход серии (какая карта сейчас, общий счёт) — не здесь, а в <see cref="MatchSeries"/>:
+    /// Ход серии (какая карта сейчас, общий счёт) — не здесь, а в <see cref="Series"/>:
     /// выбор описывает следующую серию и может меняться, пока текущая идёт.
     /// </para>
     /// </summary>
@@ -145,7 +145,7 @@ namespace VrBattlegrounds.Managers
         }
 
         /// <summary>
-        /// Начинает выбранную серию (<see cref="MatchSeries.ServerBegin"/>): первая карта
+        /// Начинает выбранную серию (<see cref="Series.ServerBegin"/>): первая карта
         /// грузится и стартует в разминке. Вызывать после <see cref="SetSeries"/>. Только сервер.
         /// </summary>
         [Server]
@@ -166,15 +166,15 @@ namespace VrBattlegrounds.Managers
             GameLog.Match.Info(
                 $"[SessionManager] Запуск серии: режим={_selectedModeId}, карты={string.Join(" → ", ToArray())}");
 
-            if (MatchSeries.Instance != null)
+            if (Series.Instance != null)
             {
-                MatchSeries.Instance.ServerBegin(ToArray());
+                Series.Instance.ServerBegin(ToArray());
                 return;
             }
 
             // Без серии (объект не на SessionContext) — одна карта, как раньше.
-            GameLog.Match.Warning("[SessionManager] StartSession: MatchSeries нет — грузится только первая карта.");
-            MapManager.Instance?.LoadMap(_selectedMaps[0]);
+            GameLog.Match.Warning("[SessionManager] StartSession: Series нет — грузится только первая карта.");
+            MapLoader.Instance?.LoadMap(_selectedMaps[0]);
         }
 
         private string[] ToArray()

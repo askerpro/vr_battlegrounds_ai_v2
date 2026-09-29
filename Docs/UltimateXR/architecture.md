@@ -162,7 +162,7 @@ bool peeking = UxrCameraWallFade.IsAvatarPeekingThroughGeometry(UxrAvatar.LocalA
 | Синхронизация полей | `[SyncVar]` |
 | Топология | Host = администратор арены |
 
-> **Для Copilot:** серверная логика (`MatchManager`, `RoundManager`, `SetManager`) выполняется только на сервере (`[Server]`). Клиенты получают обновления через `[ClientRpc]`. Для синхронизации VR-состояния использовать `UxrNetworkImplementation` + Mirror.
+> **Для Copilot:** серверная логика (`MapReferee`, `EliminationMode`, `RoundPhases`) выполняется только на сервере (`[Server]`). Клиенты получают обновления через `[ClientRpc]`. Для синхронизации VR-состояния использовать `UxrNetworkImplementation` + Mirror.
 
 ---
 

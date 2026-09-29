@@ -12,7 +12,7 @@ namespace VrBattlegrounds.Managers
     /// <para>
     /// Задача — убрать угадывание. Раньше каждая система сама решала, готов ли сосед:
     /// <c>DebugOrchestrator</c> пробовал запустить матч «ещё раз через кадр», а
-    /// <c>MapManager</c> ждал игрока пять секунд по таймеру. Оба работали, оба тихо
+    /// <c>MapLoader</c> ждал игрока пять секунд по таймеру. Оба работали, оба тихо
     /// ломались при изменении порядка загрузки.
     /// </para>
     ///
@@ -86,7 +86,7 @@ namespace VrBattlegrounds.Managers
             new ManagerSlot(ManagerOrder.AvatarManager, typeof(Player.Avatars.AvatarManager), true,
                 "префаб «--- MANAGERS ---», от Offline до конца процесса"),
 
-            new ManagerSlot(ManagerOrder.MapManager, typeof(MapManager), true,
+            new ManagerSlot(ManagerOrder.MapLoader, typeof(MapLoader), true,
                 "префаб «--- MANAGERS ---», от Offline до конца процесса"),
 
             new ManagerSlot(ManagerOrder.PhysicalSpaceSyncManager, typeof(PhysicalSpaceUtils.PhysicalSpaceSyncManager), true,

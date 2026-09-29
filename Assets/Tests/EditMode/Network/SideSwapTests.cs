@@ -7,9 +7,9 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Tests.Network
 {
     /// <summary>
-    /// Смена сторон, как в CS: карта — две половины (сета). Команда (Военные, Повстанцы) постоянна,
+    /// Смена сторон, как в CS: карта — две половины. Команда (Военные, Повстанцы) постоянна,
     /// после первой половины меняется только то, чьи зоны спавна чьи (<see cref="SpawnSides"/>).
-    /// Ничья 1:1 по сетам решается общим числом раундов за карту.
+    /// Подсчёт карты — <see cref="MapScoreTests"/>.
     /// </summary>
     public class SideSwapTests : MirrorTestHarness
     {
@@ -19,7 +19,6 @@ namespace VrBattlegrounds.Tests.Network
         private RoundFlowDriver _driver;
         private StubPlayerRoster _roster;
         private bool _ended;
-        private TeamData _mapWinner;
 
         [SetUp]
         public void PrepareMode()
@@ -39,11 +38,10 @@ namespace VrBattlegrounds.Tests.Network
             _mode.PlayerRoster = _roster;
 
             _ended = false;
-            _mapWinner = null;
-            _mode.GameplayEnded += w => { _mapWinner = w; _ended = true; };
+            _mode.Finished += _ => _ended = true;
 
             _driver = new RoundFlowDriver(dt => { _roster.DeclareAllReady(); _mode.ServerTick(dt); },
-                                          () => _mode.CurrentRoundState);
+                                          () => _mode.CurrentRoundPhase);
         }
 
         [TearDown]
@@ -59,17 +57,16 @@ namespace VrBattlegrounds.Tests.Network
 
         private void StartMatch()
         {
-            SetPrivateField(_mode, "_maxSets", 2);
-            SetPrivateField(_mode, "_roundsPerSet", 3);
+            SetPrivateField(_mode, "_roundsPerHalf", 3);
             _mode.Initialize(new[] { _teamA, _teamB });
             InvokePrivateMethod(_mode, "InitializeActiveGame");
         }
 
         private void PlayRound(TeamData winner)
         {
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "фазы Combat");
             int roundBefore = _mode.CurrentRoundNumber;
-            _mode.RoundManager.RequestRoundEnd(winner);
+            _mode.RoundPhases.RequestRoundEnd(winner);
             _driver.AdvanceUntil(() => _mode.CurrentRoundNumber != roundBefore || _ended,
                                  "конца раунда " + roundBefore);
         }
@@ -101,29 +98,13 @@ namespace VrBattlegrounds.Tests.Network
             StartMatch();
 
             PlayRound(_teamA);
-            PlayRound(_teamA);   // сет 1 за A — началась вторая половина
+            PlayRound(_teamA);
+            PlayRound(_teamB);   // три раунда первой половины сыграны — началась вторая
 
             Assert.IsTrue(_mode.SidesSwapped, "Вторая половина началась, а стороны не поменялись. Фазы: " + _driver.DumpSequence());
             Assert.AreSame(_teamB, zoneOfA.Team, "Зона первой половины команды A во второй обязана принадлежать B.");
             Assert.AreSame(_teamA, zoneOfA.HomeTeam, "Домашняя команда зоны — настройка сцены, она не меняется.");
-            Assert.AreEqual(1, _mode.TeamStates[_teamA.teamIndex].Score, "Сет засчитан команде, а не стороне.");
-        }
-
-        [Test]
-        public void Ничья_по_половинам_решается_раундами()
-        {
-            SilenceMirrorNoise();
-            StartMatch();
-
-            // Половина 1: A 2 — B 1. Половина 2: B 2 — A 0. Сеты 1:1, раунды A 2 — B 3.
-            PlayRound(_teamA);
-            PlayRound(_teamB);
-            PlayRound(_teamA);
-            PlayRound(_teamB);
-            PlayRound(_teamB);
-
-            Assert.IsTrue(_ended, "Карта из двух половин не закончилась. Фазы: " + _driver.DumpSequence());
-            Assert.AreSame(_teamB, _mapWinner, "При 1:1 по сетам карту берёт команда с большим числом раундов.");
+            Assert.AreEqual(2, _mode.TeamStates[_teamA.teamIndex].Score, "Раунды засчитаны команде, а не стороне.");
         }
 
         [Test]
@@ -133,9 +114,10 @@ namespace VrBattlegrounds.Tests.Network
             StartMatch();
             PlayRound(_teamA);
             PlayRound(_teamA);
+            PlayRound(_teamA);
             Assert.IsTrue(SpawnSides.Swapped, "Контроль: стороны поменялись.");
 
-            _mode.StopGameplay();
+            _mode.ForceStop();
 
             Assert.IsFalse(SpawnSides.Swapped, "Разминка после матча обязана начинаться с первой половины.");
         }

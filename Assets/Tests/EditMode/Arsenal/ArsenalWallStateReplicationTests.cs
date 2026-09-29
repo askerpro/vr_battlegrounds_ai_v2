@@ -83,17 +83,17 @@ namespace VrBattlegrounds.Tests.ArsenalWall
         /// серверный обработчик события фазы у самой стены; теперь стена не знает
         /// Elimination и сверяется с <c>GameMode.ArsenalRules</c> активного режима.
         /// </summary>
-        private void SendPhaseToServer(ArsenalWallController wall, RoundState phase)
+        private void SendPhaseToServer(ArsenalWallController wall, RoundPhase phase)
         {
             if (_mode == null)
             {
-                var manager = CreateNetworkComponent<VrBattlegrounds.Managers.GameplayManager>("GameplayManager");
+                var manager = CreateNetworkComponent<VrBattlegrounds.Managers.MapReferee>("MapReferee");
                 InvokeLifecycleMethod(manager, "Awake");
                 _mode = CreateNetworkComponent<EliminationMode>("EliminationMode");
                 InvokePrivateMethod(manager, "RegisterActiveGameMode", _mode);
             }
 
-            SetPrivateField(_mode, "_roundState", phase);
+            SetPrivateField(_mode, "_roundPhase", phase);
             wall.ApplyModeRules(0.1f);
         }
 
@@ -107,7 +107,7 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             ArsenalWallController wall = CreateServerWall("ServerWall");
             Assert.AreEqual(Closed, wall.CurrentState, "Контроль: стена стартует закрытой.");
 
-            SendPhaseToServer(wall, RoundState.Equipment);
+            SendPhaseToServer(wall, RoundPhase.Equipment);
 
             Assert.AreEqual(Open, wall.CurrentState,
                 "Фаза Equipment пришла по серверному каналу, а стена осталась закрытой. " +
@@ -120,10 +120,10 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             SilenceMirrorNoise();
 
             ArsenalWallController wall = CreateServerWall("ServerWall");
-            SendPhaseToServer(wall, RoundState.Equipment);
+            SendPhaseToServer(wall, RoundPhase.Equipment);
             Assert.AreEqual(Open, wall.CurrentState, "Контроль: к бою стена должна подойти открытой.");
 
-            SendPhaseToServer(wall, RoundState.Countdown);
+            SendPhaseToServer(wall, RoundPhase.Countdown);
 
             Assert.AreEqual(Closed, wall.CurrentState,
                 "Обратный отсчёт начался, а арсенал остался открытым.");
@@ -142,7 +142,7 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             bool openedOnClient = false;
             client.OnArsenalOpened += () => openedOnClient = true;
 
-            SendPhaseToServer(server, RoundState.Equipment);
+            SendPhaseToServer(server, RoundPhase.Equipment);
 
             Assert.AreEqual(Open, server.CurrentState, "Контроль: на сервере стена открылась.");
             Assert.AreEqual(Closed, client.CurrentState,
@@ -167,14 +167,14 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             ArsenalWallController server = CreateServerWall("ServerWall");
             ArsenalWallController client = CreateWall("ClientWall");
 
-            SendPhaseToServer(server, RoundState.Equipment);
+            SendPhaseToServer(server, RoundPhase.Equipment);
             ReplicateToClient(server, client);
             Assert.AreEqual(Open, client.CurrentState, "Контроль: у клиента стена открыта.");
 
             // Единственная точка, из которой стена теперь закрывается: сервер объявил
             // выход из фазы закупки. До T-29 сюда же приходила команда клиента,
             // схватившего жетон, — и закрывала арсенал всем сразу (RDY-01).
-            SendPhaseToServer(server, RoundState.Countdown);
+            SendPhaseToServer(server, RoundPhase.Countdown);
 
             Assert.AreEqual(Closed, server.CurrentState,
                 "Отсчёт начался, а сервер стену не закрыл — закрывать её больше некому.");
@@ -193,7 +193,7 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             SilenceMirrorNoise();
 
             ArsenalWallController wall = CreateServerWall("ServerWall");
-            SendPhaseToServer(wall, RoundState.Equipment);
+            SendPhaseToServer(wall, RoundPhase.Equipment);
             Assert.AreEqual(Open, wall.CurrentState, "Контроль: стена открыта, жетон брать есть с чего.");
 
             // Ровно то, что поднимает DogTagController при настоящем захвате.
@@ -223,7 +223,7 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             // Не спавним: так выглядит сцена, открытая без сети, и стена без sceneId (NET-14).
             ArsenalWallController wall = CreateWall("OfflineWall");
 
-            SendPhaseToServer(wall, RoundState.Equipment);
+            SendPhaseToServer(wall, RoundPhase.Equipment);
 
             Assert.AreEqual(Open, wall.CurrentState,
                 "Реплицировать состояние некому, а правила режима стена вне сети не исполнила — " +

@@ -169,11 +169,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             // ── 3. Карта и аватар ─────────────────────────────────────────
             SessionManager sessionManager = SessionManager.Instance;
-            if (sessionManager == null || MapManager.Instance == null)
+            if (sessionManager == null || MapLoader.Instance == null)
             {
                 result.Set(CheckAvatar, false,
                     $"SessionManager={(sessionManager == null ? "null" : "есть")}, " +
-                    $"MapManager={(MapManager.Instance == null ? "null" : "есть")} — прогон вести нечем");
+                    $"MapLoader={(MapLoader.Instance == null ? "null" : "есть")} — прогон вести нечем");
                 result.Summary = "менеджеры сессии отсутствуют, прогон недействителен";
                 yield break;
             }
@@ -193,7 +193,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             GameLog.Debug.Info($"[E2E] Команды распределены: {teamsReport}");
 
             TeamData markedTeam = LastTeamOf(sessionManager);
-            MapManager.Instance.LoadMap(context.Map);
+            MapLoader.Instance.LoadMap(context.Map);
 
             deadline = Now + 120f;
             while (SceneManager.GetActiveScene().name != context.Map && Now < deadline)

@@ -8,10 +8,8 @@ using System.Text;
 namespace VrBattlegrounds.UI.HUD
 {
     /// <summary>
-    /// Виджет отображения счета.
-    /// Читает счетчики из GameplayManager.Instance.TeamScores (для Respawn) 
-    /// или использует SetManager / RoundManager если нужно.
-    /// В данном примере показывает глобальный счет команд в матче.
+    /// Счёт карты Elimination: выигранные раунды команд за обе половины
+    /// (<see cref="GameMode.GetScore"/> — базовый счёт режима, реплицируется).
     /// </summary>
     public class HUDWidget_EliminationMode_TeamRoundScore : MonoBehaviour
     {
@@ -33,7 +31,7 @@ namespace VrBattlegrounds.UI.HUD
             foreach (TeamData team in mode.Teams)
             {
                 if (team == null) continue;
-                int score = mode.GetRoundScore(team);
+                int score = mode.GetScore(team);
                 sb.Append($"{team.Name}: {score}  ");
             }
 

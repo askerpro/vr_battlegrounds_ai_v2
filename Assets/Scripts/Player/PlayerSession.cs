@@ -568,10 +568,10 @@ namespace VrBattlegrounds.Player
         [Command]
         public void CmdRequestTeamChange(int newTeamId, int newAvatarId)
         {
-            if (GameplayManager.Instance != null)
+            if (MapReferee.Instance != null)
             {
                 GameLog.Player.Info($"[PlayerSession] {PlayerName}: Клиент запросил смену команды на {newTeamId} и скина на {newAvatarId}");
-                MatchTeams.ServerPlayerRequest(GameplayManager.Instance.ActiveGameMode, this, newTeamId, newAvatarId);
+                MatchTeams.ServerPlayerRequest(MapReferee.Instance.ActiveGameMode, this, newTeamId, newAvatarId);
             }
             else if (AvatarManager.Instance != null)
             {
@@ -588,13 +588,13 @@ namespace VrBattlegrounds.Player
         [Command]
         public void CmdAdminAssignTeam(uint targetSessionNetId, int teamId)
         {
-            if (GameplayManager.Instance == null) return;
+            if (MapReferee.Instance == null) return;
 
             PlayerSession target = NetworkServer.spawned.TryGetValue(targetSessionNetId, out NetworkIdentity identity)
                 ? identity.GetComponent<PlayerSession>()
                 : null;
 
-            MatchTeams.ServerAdminAssign(GameplayManager.Instance.ActiveGameMode, this, target, teamId);
+            MatchTeams.ServerAdminAssign(MapReferee.Instance.ActiveGameMode, this, target, teamId);
         }
 
         /// <summary>
@@ -622,8 +622,8 @@ namespace VrBattlegrounds.Player
         [Command]
         public void CmdAdminAutoBalance()
         {
-            if (GameplayManager.Instance != null)
-                MatchTeams.ServerAdminAutoBalance(GameplayManager.Instance.ActiveGameMode, this);
+            if (MapReferee.Instance != null)
+                MatchTeams.ServerAdminAutoBalance(MapReferee.Instance.ActiveGameMode, this);
         }
 
         /// <summary>

@@ -36,13 +36,13 @@ namespace VrBattlegrounds.Tests.Managers
             { typeof(PlayersManager),                                  nameof(ManagerOrder.PlayersManager) },
             { typeof(SessionRecoveryManager),                          nameof(ManagerOrder.SessionRecoveryManager) },
             { typeof(global::VrBattlegrounds.Player.Avatars.AvatarManager), nameof(ManagerOrder.AvatarManager) },
-            { typeof(MapManager),                                      nameof(ManagerOrder.MapManager) },
+            { typeof(MapLoader),                                      nameof(ManagerOrder.MapLoader) },
             { typeof(global::VrBattlegrounds.PhysicalSpaceUtils.PhysicalSpaceSyncManager), nameof(ManagerOrder.PhysicalSpaceSyncManager) },
             { typeof(global::VrBattlegrounds.Network.GameNetworkManager), nameof(ManagerOrder.GameNetworkManager) },
             { typeof(global::VrBattlegrounds.DevTools.DebugOrchestrator), nameof(ManagerOrder.DebugOrchestrator) },
             { typeof(SessionManager),                                  nameof(ManagerOrder.SessionManager) },
             { typeof(global::VrBattlegrounds.Network.NetworkStateRelay), nameof(ManagerOrder.NetworkStateRelay) },
-            { typeof(GameplayManager),                                 nameof(ManagerOrder.GameplayManager) }
+            { typeof(MapReferee),                                 nameof(ManagerOrder.MapReferee) }
         };
 
         private static int ConstantValue(string name)

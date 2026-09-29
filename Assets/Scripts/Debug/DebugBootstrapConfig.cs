@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using VrBattlegrounds;
 
 namespace VrBattlegrounds.DevTools
@@ -29,7 +30,8 @@ namespace VrBattlegrounds.DevTools
 
         [Header("Матч")]
         [Tooltip("Автоматически запустить матч как только подключится достаточно игроков.")]
-        public bool autoStartGameplay = true;
+        [FormerlySerializedAs("autoStartGameplay")]
+        public bool autoGoLive = true;
 
         [Tooltip("Переопределить минимальное количество игроков для старта (0 = использовать значение из GameModeData). Удобно использовать 1 для соло отладки.")]
         [Min(0)]

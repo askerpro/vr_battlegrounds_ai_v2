@@ -15,7 +15,7 @@ namespace VrBattlegrounds.Tests.Modes
     /// <para>
     /// Что доказывает. Пауза прерывает идущий раунд без победителя (он не засчитывается ни
     /// в счёт карты, ни в общий счёт серии), карта уходит в разминку, снаряжение забирается.
-    /// «Продолжить» возвращает матч с того же номера раунда: сеты, счёт раундов и команды
+    /// «Продолжить» возвращает матч с того же номера раунда: счёт карты и команды
     /// сохранены. Матч прокручивается настоящим <c>EliminationMode.ServerTick</c>
     /// (<see cref="RoundFlowDriver"/>), игроки — заглушка реестра.
     /// </para>
@@ -23,11 +23,11 @@ namespace VrBattlegrounds.Tests.Modes
     public class MatchPauseTests : MirrorTestHarness
     {
         private readonly List<Object> _assets = new List<Object>();
-        private TeamData _a, _b, _warmupTeam;
+        private TeamData _a, _b;
         private GameModeData _warmup, _elimination;
         private StubPlayerRoster _roster;
-        private MatchSeries _series;
-        private GameplayManager _manager;
+        private Series _series;
+        private MapReferee _manager;
         private int _strips;
 
         private EliminationMode Match => _manager.ActiveGameMode as EliminationMode;
@@ -38,13 +38,9 @@ namespace VrBattlegrounds.Tests.Modes
             SilenceMirrorNoise();
             _a = TeamRegistry.Instance.GetByIndex(1);
             _b = TeamRegistry.Instance.GetByIndex(2);
-            _warmupTeam = TeamRegistry.Instance.GetByIndex(3);
 
             _warmup = Asset(ScriptableObject.CreateInstance<GameModeData>());
             _warmup.modeId = "warmup";
-            _warmup.isWarmup = true;
-            _warmup.teamAssignment = TeamAssignmentKind.KeepOrDefault;
-            _warmup.teams = new[] { _warmupTeam };
 
             _elimination = Asset(ScriptableObject.CreateInstance<GameModeData>());
             _elimination.modeId = "elimination";
@@ -52,11 +48,12 @@ namespace VrBattlegrounds.Tests.Modes
             _elimination.teams = new[] { _a, _b };
 
             var registry = Asset(ScriptableObject.CreateInstance<GameModeRegistry>());
-            registry.modes = new[] { _warmup, _elimination };
+            registry.warmup = _warmup;
+            registry.modes = new[] { _elimination };
 
             var map = Asset(ScriptableObject.CreateInstance<MapData>());
             map.sceneName = "MapA";
-            map.supportedModes = new[] { _warmup, _elimination };
+            map.supportedModes = new[] { _elimination };
             var maps = Asset(ScriptableObject.CreateInstance<MapRegistry>());
             maps.maps = new[] { map };
 
@@ -65,9 +62,9 @@ namespace VrBattlegrounds.Tests.Modes
             SpawnOnServer(session);
             session.SetSession("MapA", "elimination");
 
-            _series = CreateNetworkComponent<MatchSeries>("MatchSeries");
+            _series = CreateNetworkComponent<Series>("Series");
             InvokeLifecycleMethod(_series, "Awake");
-            _series.MapLoader = _ => { };
+            _series.LoadMapOverride = _ => { };
             SpawnOnServer(_series);
             _series.ServerBegin(new[] { "MapA" });
 
@@ -75,12 +72,12 @@ namespace VrBattlegrounds.Tests.Modes
             _roster.Add(_a, ReadySession("PA", _a));
             _roster.Add(_b, ReadySession("PB", _b));
 
-            _manager = CreateNetworkComponent<GameplayManager>("GameplayManager");
+            _manager = CreateNetworkComponent<MapReferee>("MapReferee");
             InvokeLifecycleMethod(_manager, "Awake");
             _manager.SceneNameOverride = "MapA";
             _manager.ModeFactory = data =>
             {
-                GameMode mode = data.isWarmup
+                GameMode mode = data == _warmup
                     ? (GameMode)CreateNetworkComponent<WarmupMode>("WarmupMode")
                     : CreateNetworkComponent<EliminationMode>("EliminationMode");
                 InvokeLifecycleMethod(mode, "Awake");
@@ -122,7 +119,7 @@ namespace VrBattlegrounds.Tests.Modes
                 _roster.DeclareAllReady();
                 Match.ServerTick(dt);
             },
-            () => Match.CurrentRoundState);
+            () => Match.CurrentRoundPhase);
 
         /// <summary>Раунд 1 выигрывает A, раунд 2 доходит до боя — его и прерывает пауза.</summary>
         private void PlayToSecondRoundCombat()
@@ -130,12 +127,12 @@ namespace VrBattlegrounds.Tests.Modes
             Assert.IsTrue(_manager.StartMatch(), "Контроль: матч начался.");
             RoundFlowDriver driver = Driver();
 
-            driver.AdvanceUntil(() => Match.CurrentRoundState == RoundState.Combat, "боя раунда 1");
-            Match.RoundManager.RequestRoundEnd(_a);
+            driver.AdvanceUntil(() => Match.CurrentRoundPhase == RoundPhase.Combat, "боя раунда 1");
+            Match.RoundPhases.RequestRoundEnd(_a);
             driver.AdvanceUntil(() => Match.CurrentRoundNumber == 2, "начала раунда 2");
-            driver.AdvanceUntil(() => Match.CurrentRoundState == RoundState.Combat, "боя раунда 2");
+            driver.AdvanceUntil(() => Match.CurrentRoundPhase == RoundPhase.Combat, "боя раунда 2");
 
-            Assert.AreEqual(1, Match.GetRoundScore(_a), "Контроль: раунд 1 за A.");
+            Assert.AreEqual(1, Match.GetScore(_a), "Контроль: раунд 1 за A.");
         }
 
         [Test]
@@ -145,14 +142,14 @@ namespace VrBattlegrounds.Tests.Modes
             int stripsBefore = _strips;
 
             // Раунд 2 вот-вот выиграет B, но пауза успевает раньше.
-            Match.RoundManager.RequestRoundEnd(_b);
+            Match.RoundPhases.RequestRoundEnd(_b);
             Assert.IsTrue(_manager.PauseMatch(), "Пауза во время матча не сработала.");
 
             Assert.IsInstanceOf<WarmupMode>(_manager.ActiveGameMode, "На паузе карта не в разминке.");
             Assert.IsTrue(_manager.IsPaused);
             Assert.Greater(_strips, stripsBefore, "Пауза не забрала снаряжение.");
-            Assert.AreEqual(1, _series.GetRoundsWon(_a, MatchSeries.Total), "Раунд 1 не попал в общий счёт.");
-            Assert.AreEqual(0, _series.GetRoundsWon(_b, MatchSeries.Total), "Прерванный паузой раунд засчитан в общий счёт.");
+            Assert.AreEqual(1, _series.GetRoundsWon(_a, Series.Total), "Раунд 1 не попал в общий счёт.");
+            Assert.AreEqual(0, _series.GetRoundsWon(_b, Series.Total), "Прерванный паузой раунд засчитан в общий счёт.");
             Assert.IsFalse(_manager.StartMatch(), "На паузе «Начать матч» начал бы матч заново — только «Продолжить».");
         }
 
@@ -176,17 +173,17 @@ namespace VrBattlegrounds.Tests.Modes
             Driver().AdvanceUntil(() => Match.CurrentRoundNumber > 0, "начала матча после паузы");
 
             Assert.AreEqual(2, Match.CurrentRoundNumber, "Матч продолжился не с прерванного раунда.");
-            Assert.AreEqual(1, Match.GetRoundScore(_a), "Счёт раундов сета потерян на паузе.");
-            Assert.AreEqual(0, Match.GetRoundScore(_b));
+            Assert.AreEqual(1, Match.GetScore(_a), "Счёт карты потерян на паузе.");
+            Assert.AreEqual(0, Match.GetScore(_b));
             Assert.AreEqual(_a.teamIndex, pa.TeamIndex, "Пауза сменила команду.");
-            Assert.AreEqual(1, _series.GetKills(pa, MatchSeries.Total), "Статистика не пережила паузу.");
+            Assert.AreEqual(1, _series.GetKills(pa, Series.Total), "Статистика не пережила паузу.");
         }
 
         /// <summary>
-        /// Play mode: корутина старта режима (<c>WaitAndStartGameplayRoutine</c>) зовёт
-        /// <c>StartGameplay</c> кадром позже, а <c>ServerTick</c> к этому моменту уже поднял
-        /// продолженный сет. Раньше <c>StartGameplay</c> сбрасывал состояние в
-        /// <c>WaitingForPlayers</c>, и следующий тик начинал сет заново с раунда 1 — в EditMode
+        /// Play mode: корутина старта режима (<c>WaitAndBeginRoutine</c>) зовёт
+        /// <c>Begin</c> кадром позже, а <c>ServerTick</c> к этому моменту уже поднял
+        /// продолженный матч. Раньше <c>Begin</c> сбрасывал состояние в
+        /// <c>WaitingForPlayers</c>, и следующий тик начинал матч заново с раунда 1 — в EditMode
         /// корутины не крутятся, поэтому поздний вызов подаётся явно.
         /// </summary>
         [Test]
@@ -197,26 +194,36 @@ namespace VrBattlegrounds.Tests.Modes
             Assert.IsTrue(_manager.ResumeMatch());
             Driver().AdvanceUntil(() => Match.CurrentRoundNumber > 0, "начала матча после паузы");
 
-            InvokePrivateMethod(Match, "StartGameplay"); // та самая поздняя корутина
+            InvokePrivateMethod(Match, "Begin"); // та самая поздняя корутина
             Driver().Advance();
 
-            Assert.AreEqual(EliminationMatchState.Active, Match.CurrentMatchState, "Поздний StartGameplay сбросил идущий матч.");
-            Assert.AreEqual(2, Match.CurrentRoundNumber, "После позднего StartGameplay матч начался с раунда 1.");
-            Assert.AreEqual(1, Match.GetRoundScore(_a));
+            Assert.AreEqual(EliminationMatchState.Active, Match.CurrentMatchState, "Поздний Begin сбросил идущий матч.");
+            Assert.AreEqual(2, Match.CurrentRoundNumber, "После позднего Begin матч начался с раунда 1.");
+            Assert.AreEqual(1, Match.GetScore(_a));
         }
 
+        /// <summary>
+        /// Очко за раунд начисляется на входе в Resolution, а раунд доигран только после
+        /// экрана итогов. Пауза между ними обязана вернуть счёт на начало раунда: иначе
+        /// прерванный раунд засчитался бы и сыгрался заново — очко дважды.
+        /// </summary>
         [Test]
-        public void Сеты_переживают_паузу()
+        public void Пауза_на_итогах_раунда_не_засчитывает_его()
         {
-            Assert.IsTrue(_manager.StartMatch());
-            Driver().AdvanceUntil(() => Match.CurrentRoundNumber == 1, "начала матча");
-            Match.SetScore(_a, 1); // сет уже выигран A
+            PlayToSecondRoundCombat();
+            RoundFlowDriver driver = Driver();
+
+            Match.RoundPhases.RequestRoundEnd(_b);
+            driver.AdvanceUntil(() => Match.CurrentRoundPhase == RoundPhase.Resolution, "итогов раунда 2");
+            Assert.AreEqual(1, Match.GetScore(_b), "Контроль: очко за раунд 2 уже на табло.");
 
             Assert.IsTrue(_manager.PauseMatch());
             Assert.IsTrue(_manager.ResumeMatch());
             Driver().AdvanceUntil(() => Match.CurrentRoundNumber > 0, "начала матча после паузы");
 
-            Assert.AreEqual(1, Match.GetScore(_a), "Выигранный сет потерян на паузе.");
+            Assert.AreEqual(2, Match.CurrentRoundNumber, "Прерванный раунд обязан сыграться заново.");
+            Assert.AreEqual(1, Match.GetScore(_a), "Счёт до прерванного раунда потерян.");
+            Assert.AreEqual(0, Match.GetScore(_b), "Прерванный паузой раунд засчитан.");
         }
     }
 }

@@ -6,9 +6,9 @@ namespace VrBattlegrounds.UI.HUD
 {
     /// <summary>
     /// Отображает общее прошедшее время матча (MatchTimer),
-    /// опираясь на состояние GameplayManager.
+    /// опираясь на состояние MapReferee.
     /// </summary>
-    public class HUDWidget_GameplayTimer : MonoBehaviour
+    public class HUDWidget_MapTimer : MonoBehaviour
     {
         [SerializeField] private Text _timerText;
         
@@ -19,7 +19,7 @@ namespace VrBattlegrounds.UI.HUD
         {
             if (_timerText == null) return;
 
-            if (GameplayManager.Instance != null && GameplayManager.Instance.IsMatchActive)
+            if (MapReferee.Instance != null && MapReferee.Instance.IsMatchActive)
             {
                 if (!_matchWasActive)
                 {

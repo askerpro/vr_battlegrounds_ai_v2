@@ -250,7 +250,7 @@ namespace VrBattlegrounds.Player
         /// </summary>
         private void OnDamageReceiving(object sender, UxrDamageEventArgs e)
         {
-            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             if (mode == null || mode.PlayersTakeDamage)
             {
                 // Урон проходит — запоминаем источник. Смертельный урон приходит сюда же
@@ -300,8 +300,8 @@ namespace VrBattlegrounds.Player
             _damageLedger.Resolve(Session, out PlayerSession killer, out System.Collections.Generic.List<PlayerSession> assists);
             _damageLedger.Clear();
 
-            if (GameplayManager.Instance != null)
-                GameplayManager.Instance.OnPlayerDied(this, killer, assists);
+            if (MapReferee.Instance != null)
+                MapReferee.Instance.OnPlayerDied(this, killer, assists);
         }
 
         /// <summary>

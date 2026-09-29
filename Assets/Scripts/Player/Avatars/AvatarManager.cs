@@ -58,7 +58,7 @@ namespace VrBattlegrounds.Player.Avatars
         ///       в <c>GamePlayerConnectMessage</c> — в координатах якорей, — а разложил
         ///       по местам <c>PlayersManager.HandlePlayerConnect</c>. Ветка достижима
         ///       только для откалиброванного игрока: решает
-        ///       <see cref="CalibratedSpawnRegistry"/>, тем же правилом, что при смене
+        ///       <see cref="SpawnPlaceRegistry"/>, тем же правилом, что при смене
         ///       карты (T-30).</item>
         /// <item><b>Зона своей команды.</b> До калибровки игра не знает, где игрок внутри
         ///       арены, и зона — разумное «где угодно».</item>
@@ -68,7 +68,7 @@ namespace VrBattlegrounds.Player.Avatars
         /// Здесь стояла четвёртая ветка — <c>msg.hasSavedPosition</c>, — и она была
         /// находкой <b>CAL-02</b>: мировая позиция с прошлой карты, применяемая всем
         /// подряд. Ветка убрана целиком, а два законных случая остались за теми, кто
-        /// ими и владеет: <c>SessionRecoveryManager</c> и <see cref="CalibratedSpawnRegistry"/>.
+        /// ими и владеет: <c>SessionRecoveryManager</c> и <see cref="SpawnPlaceRegistry"/>.
         /// </para>
         /// </summary>
         [Server]
@@ -173,7 +173,7 @@ namespace VrBattlegrounds.Player.Avatars
         ///       Раньше в этой ветке стоял <c>Vector3.zero</c>, и все игроки материализовались
         ///       в начале координат карты, вплотную к реквизиту. У <b>откалиброванного</b>
         ///       игрока точка спавна не назначается вовсе: его место задано физически,
-        ///       и сервер возвращает его туда же (<see cref="CalibratedSpawnRegistry"/>, T-30).</item>
+        ///       и сервер возвращает его туда же (<see cref="SpawnPlaceRegistry"/>, T-30).</item>
         /// <item><b>Смена команды.</b> Старый аватар жив — позиция берётся у него, как при
         ///       смене скина. Игрок физически стоит в зале, его место задано калибровкой;
         ///       выбор команды — действие в меню, а не перенос (этап Б). Раньше (WPN-03)
@@ -270,7 +270,7 @@ namespace VrBattlegrounds.Player.Avatars
         private static void Admit(PlayerController avatar, bool continuesPrevious)
         {
             if (avatar == null) return;
-            VrBattlegrounds.GameModes.GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            VrBattlegrounds.GameModes.GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             if (mode != null) mode.ServerAdmitAvatar(avatar, continuesPrevious);
         }
 
@@ -305,7 +305,7 @@ namespace VrBattlegrounds.Player.Avatars
             // Команда не из режима этой сцены (команда разминки на карте, а команду
             // матча ещё не выбрал) — штатное ожидание выбора, а не сбой карты: нейтральная
             // точка, откалиброванного всё равно ставит калибровка (этап Б).
-            VrBattlegrounds.GameModes.GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            VrBattlegrounds.GameModes.GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             if (mode == null || System.Array.IndexOf(mode.Teams, team) < 0)
             {
                 GameLog.Player.Info(

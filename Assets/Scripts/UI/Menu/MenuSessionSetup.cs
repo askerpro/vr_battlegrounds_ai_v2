@@ -109,8 +109,8 @@ namespace VrBattlegrounds.UI.Menu
         }
 
         /// <summary>
-        /// Вкладки режимов: только режимы матча. Разминка лежит в том же реестре
-        /// (<see cref="GameModeData.isWarmup"/>), но её не выбирают — с неё стартует любая карта.
+        /// Вкладки режимов: только режимы матча. Разминку не выбирают — её включает карта сама
+        /// (<see cref="GameModeRegistry.Warmup"/>).
         /// </summary>
         public static List<GameModeData> TabModes(GameModeRegistry registry)
         {
@@ -118,8 +118,8 @@ namespace VrBattlegrounds.UI.Menu
         }
 
         /// <summary>
-        /// Карты под режим матча: совместимые с ним по <c>MapData.supportedModes</c>. Лобби
-        /// совместимо только с разминкой, поэтому в выбор карт матча не попадает.
+        /// Карты под режим матча: совместимые с ним по <c>MapData.supportedModes</c>. У лобби
+        /// режимов матча нет, поэтому в выбор карт матча оно не попадает.
         /// </summary>
         public static List<MapData> MapsForMode(MapRegistry registry, GameModeData mode)
         {

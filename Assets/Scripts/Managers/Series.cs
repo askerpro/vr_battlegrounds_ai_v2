@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
@@ -20,37 +19,32 @@ namespace VrBattlegrounds.Managers
     /// меняется на месте (разминка → матч → разминка), и карта в серии не одна. Серия
     /// живёт на постоянном объекте сессии (<c>SessionContext</c>, рядом с
     /// <see cref="SessionManager"/>) и переживает и смену режима, и смену карт.
-    /// Счёт внутри карты (сеты Elimination) по-прежнему у режима: это его структура,
+    /// Счёт внутри карты (раунды Elimination) по-прежнему у режима: это его структура,
     /// и на следующей карте она начинается с нуля.
     /// </para>
     ///
     /// <para>
     /// <b>Поток.</b> <see cref="ServerBegin"/> (админ нажал «Начать» в лобби) → первая карта
     /// стартует в разминке → «Начать матч» переключает режим на месте → режим объявил
-    /// победителя (<c>GameplayManager.GameplayEnded</c>) → результат в счёт серии, карта
-    /// возвращается в разминку → через <see cref="_nextMapDelay"/> <see cref="ServerAdvance"/>
-    /// грузит следующую карту, после последней — лобби. Смена сцены — только
-    /// <c>MapManager.LoadMap</c>.
+    /// победителя (<c>MapReferee.Finished</c>) → результат в счёт серии, карта
+    /// возвращается в разминку и <b>ждёт</b> → админ нажимает «Следующая карта»
+    /// (<c>MatchCommand.NextMap</c>) → <see cref="ServerAdvance"/> грузит следующую карту,
+    /// после последней — лобби. Сама серия дальше не идёт: когда игроки готовы к следующей
+    /// карте, решает админ. Смена сцены — только <c>MapLoader.LoadMap</c>.
     /// </para>
     ///
     /// <para>
-    /// <b>Команды.</b> Внутри серии команды матча (CT/T) сохраняются — разминка их не
-    /// трогает (<see cref="TeamAssignmentKind.KeepOrDefault"/>). Конец серии отпускает их:
-    /// перед возвратом в лобби каждый игрок с командой не из разминки получает команду
-    /// разминки со своим скином (<see cref="SessionTeamAssigner.ApplyBeforeSceneChange"/>).
-    /// Иначе в лобби игрок стоял бы с командой матча без её зоны и выбирал бы скины только
-    /// из неё.
+    /// <b>Команды.</b> Внутри серии команды (Военные/Повстанцы) сохраняются — у разминки
+    /// своих команд нет, и она никого не переназначает. Конец серии распускает команды:
+    /// перед возвратом в лобби у всех игроков команда снимается
+    /// (<see cref="SessionTeamAssigner.ClearBeforeSceneChange"/>), аватар — киборг,
+    /// команду на следующую серию выбирают заново.
     /// </para>
     /// </summary>
-    [DefaultExecutionOrder(ManagerOrder.MatchSeries)]
-    public class MatchSeries : NetworkBehaviour
+    [DefaultExecutionOrder(ManagerOrder.Series)]
+    public class Series : NetworkBehaviour
     {
-        public static MatchSeries Instance { get; private set; }
-
-        [Tooltip("Сколько секунд карта стоит в разминке после конца матча, прежде чем серия " +
-                 "перейдёт к следующей карте (или в лобби). Время увидеть итог.")]
-        [Min(0f)]
-        [SerializeField] private float _nextMapDelay = 10f;
+        public static Series Instance { get; private set; }
 
         private readonly SyncList<string> _maps = new SyncList<string>();
 
@@ -64,7 +58,6 @@ namespace VrBattlegrounds.Managers
         [SyncVar] private bool _running;
 
         private IPlayerRoster _roster;
-        private Coroutine _advanceRoutine;
 
         /// <summary>Идёт ли серия.</summary>
         public bool IsRunning => _running;
@@ -82,7 +75,7 @@ namespace VrBattlegrounds.Managers
         [SyncVar] private bool _adHoc;
 
         /// <summary>Оркестратор текущей карты — откуда брать сцену для статистики без серии.</summary>
-        private GameplayManager _currentManager;
+        private MapReferee _currentManager;
 
         /// <summary>Карты серии по порядку.</summary>
         public IReadOnlyList<string> Maps => _maps;
@@ -111,8 +104,8 @@ namespace VrBattlegrounds.Managers
             set => _roster = value;
         }
 
-        /// <summary>Загрузчик карт. По умолчанию — <c>MapManager.LoadMap</c>; подмена — тесты.</summary>
-        public Action<string> MapLoader { get; set; }
+        /// <summary>Загрузчик карт. По умолчанию — <c>MapLoader.LoadMap</c>; подмена — тесты.</summary>
+        public Action<string> LoadMapOverride { get; set; }
 
         // ── Жизненный цикл ───────────────────────────────────────────────────
 
@@ -125,28 +118,28 @@ namespace VrBattlegrounds.Managers
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
-            GameplayManager.UnsubscribeFromInstance(HandleGameplayManagerReady);
+            MapReferee.UnsubscribeFromInstance(HandleMapRefereeReady);
         }
 
         public override void OnStartServer()
         {
             base.OnStartServer();
-            GameplayManager.SubscribeToInstance(HandleGameplayManagerReady);
+            MapReferee.SubscribeToInstance(HandleMapRefereeReady);
         }
 
         public override void OnStopServer()
         {
-            GameplayManager.UnsubscribeFromInstance(HandleGameplayManagerReady);
+            MapReferee.UnsubscribeFromInstance(HandleMapRefereeReady);
             base.OnStopServer();
         }
 
         /// <summary>Новая карта загрузилась — слушаем конец матча на ней.</summary>
-        private void HandleGameplayManagerReady(GameplayManager manager)
+        private void HandleMapRefereeReady(MapReferee manager)
         {
             if (manager == null) return;
             _currentManager = manager;
-            manager.GameplayEnded -= HandleMapMatchEnded;
-            manager.GameplayEnded += HandleMapMatchEnded;
+            manager.Finished -= HandleMapMatchEnded;
+            manager.Finished += HandleMapMatchEnded;
             manager.RoundWon -= HandleRoundWon;
             manager.RoundWon += HandleRoundWon;
             manager.PlayerKilled -= HandlePlayerKilled;
@@ -157,27 +150,14 @@ namespace VrBattlegrounds.Managers
         {
             if (!NetworkServer.active) return;
 
+            // Итог — в счёт. Дальше серия не идёт: карта в разминке ждёт «Следующая карта» админа.
             ServerRecordMapResult(winner);
-            if (!_running) return;
-
-            StopPendingAdvance();
-
-            if (_nextMapDelay <= 0f)
-            {
-                ServerAdvance();
-                return;
-            }
-
-            _advanceRoutine = StartCoroutine(AdvanceAfterDelay());
+            if (_running)
+                GameLog.Match.Info($"[Series] Карта {_currentIndex + 1}/{_maps.Count} сыграна — ждём «Следующая карта» от админа.");
         }
 
-        private IEnumerator AdvanceAfterDelay()
-        {
-            GameLog.Match.Info($"[MatchSeries] Карта сыграна — через {_nextMapDelay:0} с следующая.");
-            yield return new WaitForSeconds(_nextMapDelay);
-            _advanceRoutine = null;
-            ServerAdvance();
-        }
+        /// <summary>Идёт последняя карта серии: «Следующая карта» ведёт в лобби.</summary>
+        public bool IsLastMap => _running && _currentIndex >= _maps.Count - 1;
 
         // ── Серверное управление ─────────────────────────────────────────────
 
@@ -190,11 +170,9 @@ namespace VrBattlegrounds.Managers
         {
             if (maps == null || maps.Count == 0)
             {
-                GameLog.Match.Warning("[MatchSeries] ServerBegin: пустой список карт — серия не начата.");
+                GameLog.Match.Warning("[Series] ServerBegin: пустой список карт — серия не начата.");
                 return false;
             }
-
-            StopPendingAdvance();
 
             _maps.Clear();
             foreach (string map in maps)
@@ -202,7 +180,7 @@ namespace VrBattlegrounds.Managers
 
             if (_maps.Count == 0)
             {
-                GameLog.Match.Warning("[MatchSeries] ServerBegin: в списке нет ни одной сцены.");
+                GameLog.Match.Warning("[Series] ServerBegin: в списке нет ни одной сцены.");
                 return false;
             }
 
@@ -214,7 +192,7 @@ namespace VrBattlegrounds.Managers
             _adHoc = false;
             _running = true;
 
-            GameLog.Match.Info($"[MatchSeries] Серия началась: {string.Join(" → ", ToArray(_maps))}.");
+            GameLog.Match.Info($"[Series] Серия началась: {string.Join(" → ", ToArray(_maps))}.");
             Load(_maps[0]);
             return true;
         }
@@ -234,7 +212,7 @@ namespace VrBattlegrounds.Managers
             }
 
             GameLog.Match.Info(
-                $"[MatchSeries] Карта {_currentIndex + 1}/{_maps.Count}: победитель {(winner != null ? winner.Name : "ничья")}.");
+                $"[Series] Карта {_currentIndex + 1}/{_maps.Count}: победитель {(winner != null ? winner.Name : "ничья")}.");
         }
 
         /// <summary>
@@ -246,7 +224,7 @@ namespace VrBattlegrounds.Managers
         {
             if (!_running)
             {
-                GameLog.Match.Warning("[MatchSeries] ServerAdvance: серия не идёт.");
+                GameLog.Match.Warning("[Series] ServerAdvance: серия не идёт.");
                 return null;
             }
 
@@ -254,12 +232,12 @@ namespace VrBattlegrounds.Managers
             if (next < _maps.Count)
             {
                 _currentIndex = next;
-                GameLog.Match.Info($"[MatchSeries] Следующая карта {next + 1}/{_maps.Count}: {_maps[next]}.");
+                GameLog.Match.Info($"[Series] Следующая карта {next + 1}/{_maps.Count}: {_maps[next]}.");
                 Load(_maps[next]);
                 return _maps[next];
             }
 
-            GameLog.Match.Info("[MatchSeries] Серия сыграна — возврат в лобби.");
+            GameLog.Match.Info("[Series] Серия сыграна — возврат в лобби.");
             return FinishAndReturnToLobby();
         }
 
@@ -271,44 +249,34 @@ namespace VrBattlegrounds.Managers
         [Server]
         public string ServerEnd()
         {
-            GameLog.Match.Info("[MatchSeries] Серия остановлена администратором — возврат в лобби.");
+            GameLog.Match.Info("[Series] Серия остановлена администратором — возврат в лобби.");
             return FinishAndReturnToLobby();
         }
 
         [Server]
         private string FinishAndReturnToLobby()
         {
-            StopPendingAdvance();
-
             _running = false;
             _currentIndex = -1;
 
             MapRegistry maps = SessionManager.Instance != null ? SessionManager.Instance.MapRegistry : null;
             string lobby = maps != null ? maps.LobbyScene : "Lobby";
 
-            ReleaseMatchTeams(maps != null ? maps.lobby : null);
+            ReleaseMatchTeams();
             Load(lobby);
             return lobby;
         }
 
         /// <summary>
-        /// Конец серии: команды матча больше ничего не значат. Игрок с командой не из
-        /// разминки получает команду разминки (скин сохраняется) до смены сцены.
+        /// Конец серии: команды распускаются. У каждого игрока команда снимается до смены
+        /// сцены — в лобби он появится без команды (киборгом) и выберет её на новую серию.
         /// </summary>
-        private void ReleaseMatchTeams(MapData lobby)
+        private void ReleaseMatchTeams()
         {
-            GameModeRegistry registry = SessionManager.Instance != null ? SessionManager.Instance.ModeRegistry : null;
-            GameModeData warmup = MapModeRules.ResolveWarmup(lobby, registry);
-            if (warmup == null || warmup.teams == null || warmup.teams.Length == 0 || warmup.teams[0] == null) return;
-
-            TeamData lobbyTeam = warmup.teams[0];
-
             foreach (PlayerSession session in PlayerRoster.GetAllPlayers())
             {
-                if (session == null || session.Role != GameRole.Player) continue;
-                if (Array.Exists(warmup.teams, t => t != null && t.teamIndex == session.TeamIndex)) continue;
-
-                SessionTeamAssigner.ApplyBeforeSceneChange(session, lobbyTeam, "MatchSeries/конец серии");
+                if (session == null || session.Role != GameRole.Player || session.TeamIndex == 0) continue;
+                SessionTeamAssigner.ClearBeforeSceneChange(session, "Series/конец серии");
             }
         }
 
@@ -317,22 +285,15 @@ namespace VrBattlegrounds.Managers
             // Снаряжение не переживает перехода на другую карту (и в лобби).
             EquipmentStrip.ServerStripAll($"переход на карту {scene}");
 
-            if (MapLoader != null) { MapLoader(scene); return; }
+            if (LoadMapOverride != null) { LoadMapOverride(scene); return; }
 
-            if (MapManager.Instance == null)
+            if (MapLoader.Instance == null)
             {
-                GameLog.Error($"[MatchSeries] Нет MapManager — карта '{scene}' не загружена.");
+                GameLog.Error($"[Series] Нет MapLoader — карта '{scene}' не загружена.");
                 return;
             }
 
-            MapManager.Instance.LoadMap(scene);
-        }
-
-        private void StopPendingAdvance()
-        {
-            if (_advanceRoutine == null) return;
-            StopCoroutine(_advanceRoutine);
-            _advanceRoutine = null;
+            MapLoader.Instance.LoadMap(scene);
         }
 
         private static string[] ToArray(SyncList<string> list)
@@ -484,7 +445,7 @@ namespace VrBattlegrounds.Managers
             _currentIndex = 0;
             _adHoc = true;
 
-            GameLog.Match.Info($"[MatchSeries] Карта '{scene}' без серии — статистика ведётся по ней.");
+            GameLog.Match.Info($"[Series] Карта '{scene}' без серии — статистика ведётся по ней.");
             return true;
         }
 

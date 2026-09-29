@@ -25,7 +25,7 @@ namespace VrBattlegrounds.UI.HUD
                 return;
             }
 
-            float time = RoundClock.SelectEliminationTime(mode.CurrentRoundState,
+            float time = RoundClock.SelectEliminationTime(mode.CurrentRoundPhase,
                 mode.CountdownTimeRemaining, mode.EquipmentTimeRemaining, mode.RoundTimeRemaining);
 
             int minutes = Mathf.FloorToInt(time / 60f);
@@ -34,18 +34,18 @@ namespace VrBattlegrounds.UI.HUD
             _timerText.text = $"{minutes:00}:{seconds:00}";
 
             // Меняем цвет в зависимости от стейта раунда
-            switch (mode.CurrentRoundState)
+            switch (mode.CurrentRoundPhase)
             {
-                case RoundState.Equipment:
-                case RoundState.Countdown:
+                case RoundPhase.Equipment:
+                case RoundPhase.Countdown:
                     _timerText.color = _countdownColor;
                     break;
-                case RoundState.Combat:
+                case RoundPhase.Combat:
                     _timerText.color = _activeColor;
                     break;
-                case RoundState.Setup:
-                case RoundState.Resolution:
-                case RoundState.Scoreboard:
+                case RoundPhase.Setup:
+                case RoundPhase.Resolution:
+                case RoundPhase.Scoreboard:
                     _timerText.color = _endedColor;
                     break;
             }

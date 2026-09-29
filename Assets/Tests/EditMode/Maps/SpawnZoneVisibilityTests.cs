@@ -11,15 +11,15 @@ namespace VrBattlegrounds.Tests.Maps
     /// </summary>
     public class SpawnZoneVisibilityTests
     {
-        [TestCase(true, true, RoundState.Equipment, true, false, TestName = "Живой_на_закупке_видит_свою")]
-        [TestCase(true, true, RoundState.Countdown, true, false, TestName = "Живой_на_отсчёте_видит_свою")]
-        [TestCase(true, true, RoundState.Combat, false, false, TestName = "Живой_в_бою_не_видит_свою")]
-        [TestCase(true, false, RoundState.Equipment, false, false, TestName = "Живой_не_видит_чужую")]
-        [TestCase(false, true, RoundState.Combat, true, true, TestName = "Выбывший_в_бою_видит_свою_сквозь_стены")]
-        [TestCase(false, true, RoundState.Setup, true, true, TestName = "Выбывший_в_подготовке_видит_свою_сквозь_стены")]
-        [TestCase(false, false, RoundState.Combat, false, false, TestName = "Выбывший_не_видит_чужую")]
-        [TestCase(false, false, RoundState.Setup, false, false, TestName = "Выбывший_в_подготовке_не_видит_чужую")]
-        public void Игрок_видит_только_свою_зону(bool alive, bool ownTeam, RoundState state, bool visible, bool xray)
+        [TestCase(true, true, RoundPhase.Equipment, true, false, TestName = "Живой_на_закупке_видит_свою")]
+        [TestCase(true, true, RoundPhase.Countdown, true, false, TestName = "Живой_на_отсчёте_видит_свою")]
+        [TestCase(true, true, RoundPhase.Combat, false, false, TestName = "Живой_в_бою_не_видит_свою")]
+        [TestCase(true, false, RoundPhase.Equipment, false, false, TestName = "Живой_не_видит_чужую")]
+        [TestCase(false, true, RoundPhase.Combat, true, true, TestName = "Выбывший_в_бою_видит_свою_сквозь_стены")]
+        [TestCase(false, true, RoundPhase.Setup, true, true, TestName = "Выбывший_в_подготовке_видит_свою_сквозь_стены")]
+        [TestCase(false, false, RoundPhase.Combat, false, false, TestName = "Выбывший_не_видит_чужую")]
+        [TestCase(false, false, RoundPhase.Setup, false, false, TestName = "Выбывший_в_подготовке_не_видит_чужую")]
+        public void Игрок_видит_только_свою_зону(bool alive, bool ownTeam, RoundPhase state, bool visible, bool xray)
         {
             SpawnZoneVisibility.Decide(true, true, alive, ownTeam, state, out bool isVisible, out bool isXray);
 
@@ -30,7 +30,7 @@ namespace VrBattlegrounds.Tests.Maps
         [Test]
         public void Без_своего_аватара_зон_не_видно()
         {
-            SpawnZoneVisibility.Decide(true, false, false, false, RoundState.Equipment, out bool visible, out _);
+            SpawnZoneVisibility.Decide(true, false, false, false, RoundPhase.Equipment, out bool visible, out _);
             Assert.IsFalse(visible, "Своей зоны нет — видна чужая.");
         }
 
@@ -38,7 +38,7 @@ namespace VrBattlegrounds.Tests.Maps
         [TestCase(false, TestName = "Разминка_выбывшему_границ_не_рисует")]
         public void Режим_без_границ_не_рисует_даже_свою_зону(bool alive)
         {
-            SpawnZoneVisibility.Decide(false, true, alive, true, RoundState.Equipment, out bool visible, out _);
+            SpawnZoneVisibility.Decide(false, true, alive, true, RoundPhase.Equipment, out bool visible, out _);
             Assert.IsFalse(visible, "Режим без границ (разминка, лобби), а зона нарисована.");
         }
 

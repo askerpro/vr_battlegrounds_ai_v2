@@ -8,8 +8,21 @@ using VrBattlegrounds.PhysicalSpaceUtils;
 namespace VrBattlegrounds.Player.Avatars
 {
     /// <summary>
-    /// Серверная память о том, где стоял <b>откалиброванный</b> игрок, — чтобы смена
-    /// карты его не двигала (<b>CAL-01</b>, задача T-30).
+    /// Серверная память о том, где стоял игрок, — чтобы смена карты его не двигала.
+    ///
+    /// <para>
+    /// <b>Телепортов нет ни для кого.</b> Игроки ходят по физической арене ногами, и любой
+    /// перенос аватара рвёт связь картинки с телом. Поэтому при смене карты место сохраняет
+    /// каждый игрок с аватаром:
+    /// </para>
+    /// <list type="bullet">
+    /// <item><b>Откалиброванный</b> — в координатах якорей арены (<b>CAL-01</b>, задача T-30):
+    ///       место задано физически и переносится вместе с ареной.</item>
+    /// <item><b>Неоткалиброванный</b> — в мировых координатах, как есть. Связи с ареной у него
+    ///       ещё нет, и лучшее, что может игра, — не двигать его. Арены всех карт стоят
+    ///       одинаково (<c>MapAlignmentTests</c>), так что мировая точка на новой карте — то же
+    ///       место в комнате.</item>
+    /// </list>
     ///
     /// <para>
     /// <b>Кто вычисляет точку и почему так.</b> Физическое положение игрока в комнате
@@ -32,12 +45,11 @@ namespace VrBattlegrounds.Player.Avatars
     /// </para>
     ///
     /// <para>
-    /// <b>Почему поза хранится в системе координат якорей.</b> Мировых координат мало:
-    /// обе карты проекта собраны из одного префаба арены, но в <c>TestMap1</c> он повёрнут
-    /// на 90° вокруг Y относительно <c>TestMap2</c>. Сохранённая мировая позиция перенесла бы
-    /// игрока в арену, повёрнутую на 90°, — то есть в стену или в чужую базу. Якоря же
-    /// отмечают одни и те же физические метки в комнате, поэтому поза относительно них
-    /// у карт общая. Пересчёт — <see cref="PhysicalSpaceAnchorFrame" />.
+    /// <b>Почему поза откалиброванного — в системе координат якорей.</b> Якоря отмечают одни
+    /// и те же физические метки в комнате, поэтому поза относительно них у карт общая, даже
+    /// если арену на новой карте поставят иначе. Сейчас арены всех карт выровнены и мировая
+    /// поза дала бы то же, но якоря — страховка на карту, собранную по-другому. Пересчёт —
+    /// <see cref="PhysicalSpaceAnchorFrame" />.
     /// </para>
     ///
     /// <para>
@@ -45,7 +57,7 @@ namespace VrBattlegrounds.Player.Avatars
     /// в координатах якорей:
     /// </para>
     /// <list type="number">
-    /// <item><b>Смена карты.</b> <see cref="CaptureAll" /> по <c>MapManager.MapLoadStarted</c>,
+    /// <item><b>Смена карты.</b> <see cref="CaptureAll" /> по <c>MapLoader.MapLoadStarted</c>,
     ///       то есть пока старая сцена ещё жива и её якоря на месте. Расходуется при
     ///       пересоздании аватаров на новой карте (<c>GameNetworkManager.OnServerReady</c>
     ///       → <c>AvatarManager.ChangeAvatar</c>). Каждый новый снимок затирает предыдущий
@@ -57,21 +69,28 @@ namespace VrBattlegrounds.Player.Avatars
     ///       Расходуется при первом спавне (<c>AvatarManager.SpawnAvatar</c>).</item>
     /// </list>
     /// </summary>
-    public static class CalibratedSpawnRegistry
+    public static class SpawnPlaceRegistry
     {
-        /// <summary>Поза откалиброванного игрока в системе координат якорей той карты, где он стоял.</summary>
+        /// <summary>
+        /// Поза игрока: откалиброванного — в системе координат якорей той карты, где он стоял,
+        /// неоткалиброванного — в мировых координатах (<see cref="InWorld"/>).
+        /// </summary>
         private readonly struct Placement
         {
-            public readonly Vector3 LocalPosition;
-            public readonly Quaternion LocalRotation;
+            public readonly Vector3 Position;
+            public readonly Quaternion Rotation;
+
+            /// <summary>Поза в мировых координатах, а не относительно якорей.</summary>
+            public readonly bool InWorld;
 
             /// <summary>Имя карты, с которой снят снимок. Нужно только для строки в логе.</summary>
             public readonly string CapturedOnMap;
 
-            public Placement(Vector3 localPosition, Quaternion localRotation, string capturedOnMap)
+            public Placement(Vector3 position, Quaternion rotation, bool inWorld, string capturedOnMap)
             {
-                LocalPosition = localPosition;
-                LocalRotation = localRotation;
+                Position = position;
+                Rotation = rotation;
+                InWorld = inWorld;
                 CapturedOnMap = capturedOnMap;
             }
         }
@@ -84,7 +103,7 @@ namespace VrBattlegrounds.Player.Avatars
         // ── Подписка на смену карты ───────────────────────────────────────────
 
         /// <summary>
-        /// Реестр цепляется к <c>MapManager.MapLoadStarted</c> сам, а не компонентом
+        /// Реестр цепляется к <c>MapLoader.MapLoadStarted</c> сам, а не компонентом
         /// на сцене: сцены и префабы в проекте — общий ресурс, и заводить ради одного
         /// подписчика ещё один объект на <c>PersistentRoot</c> дороже, чем подписаться
         /// из кода. Тем же приёмом поднимается харнесс e2e.
@@ -97,8 +116,8 @@ namespace VrBattlegrounds.Player.Avatars
         {
             Placements.Clear();
 
-            MapManager.MapLoadStarted -= OnMapLoadStarted;
-            MapManager.MapLoadStarted += OnMapLoadStarted;
+            MapLoader.MapLoadStarted -= OnMapLoadStarted;
+            MapLoader.MapLoadStarted += OnMapLoadStarted;
         }
 
         private static void OnMapLoadStarted(string sceneName)
@@ -109,9 +128,8 @@ namespace VrBattlegrounds.Player.Avatars
         // ── Снимок ────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Запоминает позы всех откалиброванных игроков в системе координат якорей
-        /// <b>текущей</b> сцены. Зовётся до <c>ServerChangeScene</c>: после него ни якорей,
-        /// ни аватаров уже нет.
+        /// Запоминает позы всех игроков с аватаром на <b>текущей</b> сцене. Зовётся до
+        /// <c>ServerChangeScene</c>: после него ни якорей, ни аватаров уже нет.
         /// </summary>
         /// <param name="reason">Что вызвало снимок — уходит в лог как есть.</param>
         public static void CaptureAll(string reason)
@@ -121,54 +139,67 @@ namespace VrBattlegrounds.Player.Avatars
             if (!NetworkServer.active) return;
             if (PlayersManager.Instance == null) return;
 
-            int calibrated = 0;
             foreach (PlayerSession session in PlayersManager.Instance.Sessions)
             {
-                if (session == null || !session.IsCalibrated) continue;
-                calibrated++;
+                if (session == null) continue;
 
                 if (session.ActiveAvatar == null)
                 {
-                    GameLog.PhysicalSpace.Warning(
-                        $"[CalibratedSpawnRegistry] {session.PlayerName} откалиброван, но аватара у него сейчас нет — " +
-                        $"запоминать нечего ({reason}). После смены карты он окажется в зоне своей команды.");
+                    GameLog.PhysicalSpace.Verbose(
+                        $"[SpawnPlaceRegistry] {session.PlayerName}: аватара сейчас нет — запоминать нечего ({reason}).");
                     continue;
                 }
 
-                PhysicalSpaceAnchorFrame frame;
-                string diagnosis;
-                if (!PhysicalSpaceAnchorFrame.TryBuildFromScene(out frame, out diagnosis))
-                {
-                    GameLog.PhysicalSpace.Warning(
-                        $"[CalibratedSpawnRegistry] Место откалиброванных игроков не запомнено ({reason}): {diagnosis}. " +
-                        "Без якорей позу не к чему привязать — после смены карты все окажутся в зонах своих команд.");
-                    return;
-                }
+                Capture(session, session.ActiveAvatar.transform, reason);
+            }
+        }
 
-                Transform avatar = session.ActiveAvatar.transform;
-                string map = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        /// <summary>
+        /// Запоминает позу одного игрока: откалиброванного — относительно якорей текущей
+        /// сцены, неоткалиброванного — в мировых координатах. Отдельно от
+        /// <see cref="CaptureAll"/>, чтобы выбор ветки проверялся тестом без менеджера сессий.
+        /// </summary>
+        /// <returns>true — поза запомнена.</returns>
+        public static bool Capture(PlayerSession session, Transform avatar, string reason)
+        {
+            if (session == null || avatar == null) return false;
 
-                Placement placement = new Placement(
-                    frame.ToLocal(avatar.position),
-                    frame.ToLocal(avatar.rotation),
-                    map);
+            string map = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 
-                Placements[session.netId] = placement;
-
+            if (!session.IsCalibrated)
+            {
+                Placements[session.netId] = new Placement(avatar.position, avatar.rotation, inWorld: true, map);
                 GameLog.PhysicalSpace.Info(
-                    $"[CalibratedSpawnRegistry] {session.PlayerName}: место запомнено ({reason}). " +
-                    $"Мир {avatar.position} на карте '{map}', относительно якорей " +
-                    $"{placement.LocalPosition}. Якоря: {frame}");
+                    $"[SpawnPlaceRegistry] {session.PlayerName} не откалиброван: место запомнено в мировых координатах " +
+                    $"{avatar.position} на карте '{map}' ({reason}).");
+                return true;
             }
 
-            if (calibrated == 0)
-                GameLog.PhysicalSpace.Verbose($"[CalibratedSpawnRegistry] Откалиброванных игроков нет ({reason}).");
+            PhysicalSpaceAnchorFrame frame;
+            string diagnosis;
+            if (!PhysicalSpaceAnchorFrame.TryBuildFromScene(out frame, out diagnosis))
+            {
+                GameLog.PhysicalSpace.Warning(
+                    $"[SpawnPlaceRegistry] Место откалиброванного {session.PlayerName} не запомнено ({reason}): {diagnosis}. " +
+                    "Без якорей позу не к чему привязать — после смены карты он окажется в зоне своей команды.");
+                return false;
+            }
+
+            Placement placement = new Placement(frame.ToLocal(avatar.position), frame.ToLocal(avatar.rotation),
+                                                inWorld: false, map);
+            Placements[session.netId] = placement;
+
+            GameLog.PhysicalSpace.Info(
+                $"[SpawnPlaceRegistry] {session.PlayerName}: место запомнено ({reason}). " +
+                $"Мир {avatar.position} на карте '{map}', относительно якорей " +
+                $"{placement.Position}. Якоря: {frame}");
+            return true;
         }
 
         // ── Выдача ────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Отвечает, где обязан появиться откалиброванный игрок на <b>текущей</b> карте.
+        /// Отвечает, где обязан появиться игрок на <b>текущей</b> карте: там, где стоял.
         /// </summary>
         /// <param name="session">Сессия игрока. <c>null</c> и неоткалиброванные отсеиваются здесь же.</param>
         /// <param name="point">Готовая точка спавна. Осмысленна только при <c>true</c>.</param>
@@ -183,17 +214,28 @@ namespace VrBattlegrounds.Player.Avatars
                 return false;
             }
 
-            if (!session.IsCalibrated)
-            {
-                diagnosis = "игрок не калибровался — его место назначает игра";
-                return false;
-            }
-
             Placement placement;
             if (!Placements.TryGetValue(session.netId, out placement))
             {
-                diagnosis = $"игрок откалиброван, но снимка его места нет " +
-                            $"(запомнено мест: {Placements.Count})";
+                diagnosis = $"снимка места игрока нет — первый спавн (запомнено мест: {Placements.Count})";
+                return false;
+            }
+
+            // Неоткалиброванный остаётся в мировых координатах: связи с ареной у него нет,
+            // и игра его не двигает.
+            if (placement.InWorld)
+            {
+                point = new AvatarSpawnPoint(placement.Position, placement.Rotation,
+                                             AvatarSpawnPointSource.PreviousWorldPlace, placement.CapturedOnMap);
+                diagnosis = string.Empty;
+                return true;
+            }
+
+            // Место относительно якорей имеет смысл только у откалиброванного: у остальных
+            // (место, принесённое неоткалиброванным клиентом при подключении) связи с ареной нет.
+            if (!session.IsCalibrated)
+            {
+                diagnosis = "игрок не калибровался — место относительно якорей к нему не применимо";
                 return false;
             }
 
@@ -206,8 +248,8 @@ namespace VrBattlegrounds.Player.Avatars
             }
 
             point = new AvatarSpawnPoint(
-                frame.ToWorld(placement.LocalPosition),
-                frame.ToWorld(placement.LocalRotation),
+                frame.ToWorld(placement.Position),
+                frame.ToWorld(placement.Rotation),
                 AvatarSpawnPointSource.CalibratedPlace,
                 placement.CapturedOnMap);
 
@@ -250,7 +292,7 @@ namespace VrBattlegrounds.Player.Avatars
         public static void Remember(uint sessionNetId, Vector3 localPosition, Quaternion localRotation,
                                     string capturedOnMap)
         {
-            Placements[sessionNetId] = new Placement(localPosition, localRotation, capturedOnMap);
+            Placements[sessionNetId] = new Placement(localPosition, localRotation, inWorld: false, capturedOnMap);
         }
     }
 }

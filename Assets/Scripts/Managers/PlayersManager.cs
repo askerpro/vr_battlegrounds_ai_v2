@@ -137,7 +137,7 @@ namespace VrBattlegrounds.Managers
         ///
         /// <para>
         /// Место кладётся в реестр <b>всегда</b>, а решает, применять его или нет,
-        /// <c>CalibratedSpawnRegistry.TryResolve</c> — по признаку калибровки. Гейт один
+        /// <c>SpawnPlaceRegistry.TryResolve</c> — по признаку калибровки. Гейт один
         /// на весь проект, и это тот же гейт, что при смене карты (T-30): второй,
         /// поставленный здесь, разъехался бы с первым при первой же правке. Находка,
         /// ради которой всё это, — <b>CAL-02</b>: раньше позиция из сообщения
@@ -153,7 +153,7 @@ namespace VrBattlegrounds.Managers
 
             if (!msg.hasAnchorPlace) return;
 
-            CalibratedSpawnRegistry.Remember(session.netId, msg.anchorPlacePosition,
+            SpawnPlaceRegistry.Remember(session.netId, msg.anchorPlacePosition,
                                             msg.anchorPlaceRotation, msg.anchorPlaceMap);
 
             GameLog.PhysicalSpace.Info(

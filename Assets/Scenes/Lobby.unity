@@ -2563,7 +2563,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 5773889775595434469, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
       propertyPath: m_Name
-      value: MatchManager
+      value: MapReferee
       objectReference: {fileID: 0}
     - target: {fileID: 6300597833603486795, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
       propertyPath: sceneId
@@ -30943,7 +30943,7 @@ PrefabInstance:
     - target: {fileID: 4032661957665445210, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
       propertyPath: _team
       value: 
-      objectReference: {fileID: 11400000, guid: 9ad2ae492871d4a44a9c16aff03fc143, type: 2}
+      objectReference: {fileID: 0}
     - target: {fileID: 4032661957665445210, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
       propertyPath: _spawnPoint
       value: 

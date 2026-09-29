@@ -43,8 +43,8 @@ namespace VrBattlegrounds.Player.UI
             // матча описывает следующий матч, и его HUD в лобби не нужен. Режим может
             // доехать до клиента позже аватара — поэтому подписка, а не разовый запрос.
             _subscribed = true;
-            GameplayManager.ActiveGameModeChangedLocal += SetupHUDForMode;
-            SetupHUDForMode(GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null);
+            MapReferee.ActiveGameModeChangedLocal += SetupHUDForMode;
+            SetupHUDForMode(MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null);
         }
 
         public override void OnStopAuthority()
@@ -64,7 +64,7 @@ namespace VrBattlegrounds.Player.UI
         {
             if (!_subscribed) return;
             _subscribed = false;
-            GameplayManager.ActiveGameModeChangedLocal -= SetupHUDForMode;
+            MapReferee.ActiveGameModeChangedLocal -= SetupHUDForMode;
         }
 
         private void SetupHUDForMode(GameMode mode)

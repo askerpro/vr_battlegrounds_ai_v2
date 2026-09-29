@@ -12,12 +12,11 @@ namespace VrBattlegrounds.Tests.Player
     /// Две ветки выбора точки спавна — задача <b>T-30</b>, находка <b>CAL-01</b>.
     ///
     /// <para>
-    /// Что доказывают тесты. До калибровки игра не знает, где игрок находится внутри
-    /// арены, и вправе поставить его куда угодно — зона своей команды и есть разумное
-    /// «куда угодно». После калибровки его место задано физически, и смена карты
-    /// не имеет права его двигать. Проверяется, что ветки действительно разные
-    /// и что выбор зависит от признака <c>PlayerSession.IsCalibrated</c>, а не от чего
-    /// придётся.
+    /// Что доказывают тесты. Смена карты никого не двигает: игроки ходят по арене ногами.
+    /// Откалиброванный возвращается на своё место относительно якорей арены — и на карте,
+    /// где арену поставили иначе. Неоткалиброванный остаётся в тех же мировых координатах
+    /// (арены всех карт выровнены — <c>MapAlignmentTests</c>). Зона команды — только первый
+    /// спавн, когда прежнего места нет.
     /// </para>
     ///
     /// <para>
@@ -27,7 +26,7 @@ namespace VrBattlegrounds.Tests.Player
     /// найдёт чужие.
     /// </para>
     /// </summary>
-    public class CalibratedSpawnRegistryTests : MirrorTestHarness
+    public class SpawnPlaceRegistryTests : MirrorTestHarness
     {
         // ── Расстановка арены проекта ────────────────────────────────────────
 
@@ -40,13 +39,13 @@ namespace VrBattlegrounds.Tests.Player
         [SetUp]
         public void ForgetPlacements()
         {
-            CalibratedSpawnRegistry.Clear();
+            SpawnPlaceRegistry.Clear();
         }
 
         [TearDown]
         public void ForgetPlacementsAfter()
         {
-            CalibratedSpawnRegistry.Clear();
+            SpawnPlaceRegistry.Clear();
         }
 
         // ── Заготовки сцены ──────────────────────────────────────────────────
@@ -123,7 +122,7 @@ namespace VrBattlegrounds.Tests.Player
 
             // Место, снятое на прошлой карте: центр арены в координатах якорей.
             Vector3 place = SceneFrame().ToLocal(Vector3.zero);
-            CalibratedSpawnRegistry.Remember(session.netId, place, Quaternion.identity, "TestMap1");
+            SpawnPlaceRegistry.Remember(session.netId, place, Quaternion.identity, "TestMap1");
 
             AvatarSpawnPoint point = AvatarSpawnPointResolver.Resolve(red, session);
 
@@ -149,7 +148,7 @@ namespace VrBattlegrounds.Tests.Player
 
             Vector3 stood = new Vector3(1.5f, 0f, 4f);
             Vector3 place = SceneFrame().ToLocal(stood);
-            CalibratedSpawnRegistry.Remember(session.netId, place, Quaternion.identity, "TestMap2");
+            SpawnPlaceRegistry.Remember(session.netId, place, Quaternion.identity, "TestMap2");
 
             // Вторая карта: та же арена, повёрнутая на 90° (как TestMap1).
             DestroyAnchorsAndZones();
@@ -166,8 +165,65 @@ namespace VrBattlegrounds.Tests.Player
                 "Опыт бессмысленен, если повёрнутая карта дала ту же мировую точку.");
         }
 
+        /// <summary>
+        /// Неоткалиброванный игрок при смене карты остаётся в тех же мировых координатах —
+        /// без переноса в зону. Раньше его ставили в зону команды: игрок, выбравший команду
+        /// в лобби, на карте оказывался на базе, и картинка разъезжалась с телом.
+        /// </summary>
         [Test]
-        public void Неоткалиброванный_игрок_идёт_в_зону_даже_при_готовом_снимке()
+        public void Неоткалиброванный_игрок_остаётся_в_мировых_координатах()
+        {
+            SilenceMirrorNoise();
+            PlaceAnchors(Quaternion.identity);
+
+            TeamData red = CreateTeam("Красные", 1);
+            CreateZone("ЗонаКрасных", red, new Vector3(0f, 0f, 8.06f));
+
+            PlayerSession session = CreateSession("Обычный", false);
+            GameObject avatar = CreateObject("Аватар");
+            avatar.transform.SetPositionAndRotation(new Vector3(3f, 0f, 5f), Quaternion.Euler(0f, 30f, 0f));
+
+            Assert.IsTrue(SpawnPlaceRegistry.Capture(session, avatar.transform, "тест"), "Место не запомнено.");
+
+            // Новая карта: арена та же и стоит так же.
+            DestroyAnchorsAndZones();
+            PlaceAnchors(Quaternion.identity);
+            CreateZone("ЗонаКрасных", red, new Vector3(0f, 0f, 8.06f));
+
+            AvatarSpawnPoint point = AvatarSpawnPointResolver.Resolve(red, session);
+
+            Assert.AreEqual(AvatarSpawnPointSource.PreviousWorldPlace, point.Source,
+                "Неоткалиброванного игрока перенесли в зону — телепорт рвёт связь картинки с телом.");
+            Assert.AreEqual(0f, Vector3.Distance(new Vector3(3f, 0f, 5f), point.Position), 1e-4f);
+            Assert.AreEqual(0f, Quaternion.Angle(Quaternion.Euler(0f, 30f, 0f), point.Rotation), 1e-2f);
+        }
+
+        [Test]
+        public void Откалиброванный_снимается_относительно_якорей()
+        {
+            SilenceMirrorNoise();
+            PlaceAnchors(Quaternion.identity);
+
+            TeamData red = CreateTeam("Красные", 1);
+            PlayerSession session = CreateSession("Откалиброванный", true);
+            GameObject avatar = CreateObject("Аватар");
+            Vector3 stood = new Vector3(1.5f, 0f, 4f);
+            avatar.transform.position = stood;
+
+            Assert.IsTrue(SpawnPlaceRegistry.Capture(session, avatar.transform, "тест"), "Место не запомнено.");
+
+            // Карта с арены, поставленной иначе: место едет вместе с ареной, а не остаётся в мире.
+            DestroyAnchorsAndZones();
+            PlaceAnchors(Map1Rotation);
+
+            AvatarSpawnPoint point = AvatarSpawnPointResolver.Resolve(red, session);
+
+            Assert.AreEqual(AvatarSpawnPointSource.CalibratedPlace, point.Source);
+            Assert.AreEqual(0f, Vector3.Distance(Map1Rotation * stood, point.Position), 1e-3f);
+        }
+
+        [Test]
+        public void Без_снимка_неоткалиброванный_идёт_в_зону()
         {
             SilenceMirrorNoise();
             PlaceAnchors(Quaternion.identity);
@@ -177,9 +233,26 @@ namespace VrBattlegrounds.Tests.Player
 
             PlayerSession session = CreateSession("Обычный", false);
 
-            // Снимок есть, но игрок калибровку не объявлял: место у него не задано,
-            // и ставить его надо туда, куда решает игра.
-            CalibratedSpawnRegistry.Remember(session.netId, Vector3.zero, Quaternion.identity, "TestMap1");
+            AvatarSpawnPoint point = AvatarSpawnPointResolver.Resolve(red, session);
+
+            Assert.AreEqual(AvatarSpawnPointSource.TeamSpawnZone, point.Source,
+                "Первый спавн: прежнего места нет — зона команды.");
+        }
+
+        [Test]
+        public void Неоткалиброванный_не_берёт_место_относительно_якорей()
+        {
+            SilenceMirrorNoise();
+            PlaceAnchors(Quaternion.identity);
+
+            TeamData red = CreateTeam("Красные", 1);
+            CreateZone("ЗонаКрасных", red, new Vector3(0f, 0f, 8.06f));
+
+            PlayerSession session = CreateSession("Обычный", false);
+
+            // Место относительно якорей (так его приносит клиент при подключении), но игрок
+            // калибровку не объявлял: связи с ареной у него нет, и такое место к нему не применимо.
+            SpawnPlaceRegistry.Remember(session.netId, Vector3.zero, Quaternion.identity, "TestMap1");
 
             AvatarSpawnPoint point = AvatarSpawnPointResolver.Resolve(red, session);
 
@@ -217,7 +290,7 @@ namespace VrBattlegrounds.Tests.Player
             CreateZone("ЗонаКрасных", red, new Vector3(0f, 0f, 8.06f));
 
             PlayerSession session = CreateSession("Откалиброванный", true);
-            CalibratedSpawnRegistry.Remember(session.netId, new Vector3(2.74f, 0f, 3.6f),
+            SpawnPlaceRegistry.Remember(session.netId, new Vector3(2.74f, 0f, 3.6f),
                                              Quaternion.identity, "TestMap1");
 
             AvatarSpawnPoint point = AvatarSpawnPointResolver.Resolve(red, session);

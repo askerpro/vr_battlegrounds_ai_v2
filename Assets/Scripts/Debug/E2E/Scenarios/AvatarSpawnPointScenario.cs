@@ -212,11 +212,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 }
 
                 SessionManager sessionManager = SessionManager.Instance;
-                if (sessionManager == null || MapManager.Instance == null || AvatarManager.Instance == null)
+                if (sessionManager == null || MapLoader.Instance == null || AvatarManager.Instance == null)
                 {
                     result.Set(CheckZones, false,
                         $"SessionManager={(sessionManager == null ? "null" : "есть")}, " +
-                        $"MapManager={(MapManager.Instance == null ? "null" : "есть")}, " +
+                        $"MapLoader={(MapLoader.Instance == null ? "null" : "есть")}, " +
                         $"AvatarManager={(AvatarManager.Instance == null ? "null" : "есть")}");
                     result.Summary = "менеджеры не поднялись, прогон недействителен";
                     yield break;
@@ -254,7 +254,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     $"вторая команда — '{otherTeam.displayName}' ({otherTeam.teamIndex})");
 
                 // ── 3. Смена карты ────────────────────────────────────────
-                MapManager.Instance.LoadMap(context.Map);
+                MapLoader.Instance.LoadMap(context.Map);
 
                 E2EWaitOutcome onMap = new E2EWaitOutcome();
                 yield return E2EWait.Until(onMap,

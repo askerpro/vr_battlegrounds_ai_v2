@@ -60,7 +60,7 @@ namespace VrBattlegrounds.Tests.Network
 
             // Здесь готовность объявляют руками — она и есть предмет проверки,
             // поэтому автоматического DeclareAllReady в тике нет.
-            _driver = new RoundFlowDriver(dt => _mode.ServerTick(dt), () => _mode.CurrentRoundState);
+            _driver = new RoundFlowDriver(dt => _mode.ServerTick(dt), () => _mode.CurrentRoundPhase);
         }
 
         /// <summary>Сессия игрока в своей зоне спавна и без объявленной готовности.</summary>
@@ -88,14 +88,14 @@ namespace VrBattlegrounds.Tests.Network
             _mode.Initialize(new[] { _teamA, _teamB });
             InvokePrivateMethod(_mode, "InitializeActiveGame");
 
-            Assert.IsNotNull(_mode.RoundManager,
-                "InitializeActiveGame не создал RoundManager — значит [Server]-заглушка всё ещё срабатывает.");
+            Assert.IsNotNull(_mode.RoundPhases,
+                "InitializeActiveGame не создал RoundPhases — значит [Server]-заглушка всё ещё срабатывает.");
         }
 
         /// <summary>Доводит раунд до фазы закупки — той единственной, где ждут готовности.</summary>
         private void AdvanceToEquipment()
         {
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Equipment, "фазы Equipment");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Equipment, "фазы Equipment");
 
             // Один лишний тик: состав готовых пересчитывается уже внутри фазы,
             // а не в тот тик, которым в неё вошли.
@@ -118,7 +118,7 @@ namespace VrBattlegrounds.Tests.Network
             _playerB.ServerSetReady(true, "тест");
             AdvanceSeconds(5f);
 
-            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase,
                 "Закупка кончилась, пока погибший шёл на базу: ждали только живых.");
 
             // Дошёл, возродился, взял жетон — раунд идёт дальше.
@@ -126,7 +126,7 @@ namespace VrBattlegrounds.Tests.Network
             _playerA.ServerSetReady(true, "тест");
             AdvanceSeconds(1f);
 
-            Assert.AreNotEqual(RoundState.Equipment, _mode.CurrentRoundState, "Все готовы, а закупка не кончилась.");
+            Assert.AreNotEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase, "Все готовы, а закупка не кончилась.");
         }
 
         /// <summary>Даёт сессии живое тело — только таких подготовка ждёт на базе.</summary>
@@ -157,11 +157,11 @@ namespace VrBattlegrounds.Tests.Network
             StartMatch();
 
             AdvanceSeconds(10f);
-            Assert.AreEqual(RoundState.Setup, _mode.CurrentRoundState, "Закупка открылась, хотя игрок A не на базе.");
+            Assert.AreEqual(RoundPhase.Setup, _mode.CurrentRoundPhase, "Закупка открылась, хотя игрок A не на базе.");
 
             _playerA.ServerEnterSpawnZone(_playerA.TeamIndex);
             AdvanceSeconds(1f);
-            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState, "Все на базе, а закупка не открылась.");
+            Assert.AreEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase, "Все на базе, а закупка не открылась.");
         }
 
         [Test]
@@ -172,8 +172,8 @@ namespace VrBattlegrounds.Tests.Network
             _playerA.ServerExitSpawnZone(_playerA.TeamIndex);
             StartMatch();
 
-            AdvanceSeconds(RoundManager.SetupDuration + RoundManager.ReturnToBaseLimit + 1f);
-            Assert.AreNotEqual(RoundState.Setup, _mode.CurrentRoundState, "Предел возвращения на базу не сработал.");
+            AdvanceSeconds(RoundPhases.SetupDuration + RoundPhases.ReturnToBaseLimit + 1f);
+            Assert.AreNotEqual(RoundPhase.Setup, _mode.CurrentRoundPhase, "Предел возвращения на базу не сработал.");
         }
 
         /// <summary>Крутит матч заданное игровое время, не ожидая никакого условия.</summary>
@@ -196,7 +196,7 @@ namespace VrBattlegrounds.Tests.Network
 
             AdvanceSeconds(30f);
 
-            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase,
                 "Готовность объявил один игрок из двух, а раунд ушёл из закупки.\n" +
                 "Тогда второй игрок остаётся без снаряжения — это и есть суть RDY-01.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
@@ -212,10 +212,10 @@ namespace VrBattlegrounds.Tests.Network
             _playerA.ServerSetReady(true, "тест");
             _playerB.ServerSetReady(true, "тест");
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown,
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Countdown,
                 "обратного отсчёта после готовности обоих игроков");
 
-            Assert.AreEqual(RoundState.Countdown, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Countdown, _mode.CurrentRoundPhase,
                 "Готовы оба, а отсчёт не начался.\nФактически наблюдалось: " + _driver.DumpSequence());
         }
 
@@ -238,7 +238,7 @@ namespace VrBattlegrounds.Tests.Network
             AdvanceSeconds(30f);
 
             Assert.IsFalse(_playerA.ReadyState, "Отмена готовности не сохранилась.");
-            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase,
                 "Игрок отменил готовность, а раунд всё равно ушёл из закупки.\n" +
                 "Отмена — половина смысла явного состояния: без неё это по-прежнему жест.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
@@ -262,7 +262,7 @@ namespace VrBattlegrounds.Tests.Network
 
             AdvanceSeconds(30f);
 
-            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase,
                 "Готовность снялась, а раунд всё равно ушёл из закупки.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
         }
@@ -295,8 +295,8 @@ namespace VrBattlegrounds.Tests.Network
             _playerA.ServerSetReady(true, "тест");
             _playerB.ServerSetReady(true, "тест");
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat");
-            _mode.RoundManager.RequestRoundEnd(_teamA);
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "фазы Combat");
+            _mode.RoundPhases.RequestRoundEnd(_teamA);
 
             _driver.AdvanceUntil(() => _mode.CurrentRoundNumber == 2, "начала второго раунда");
 
@@ -308,7 +308,7 @@ namespace VrBattlegrounds.Tests.Network
 
             AdvanceSeconds(30f);
 
-            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase,
                 "Второй раунд проскочил закупку — готовность прошлого раунда всё ещё в силе.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
         }
@@ -326,7 +326,7 @@ namespace VrBattlegrounds.Tests.Network
 
             AdvanceSeconds(300f);
 
-            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase,
                 "Предел выключен (0 с), но раунд всё равно стартовал без второго игрока.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
         }
@@ -340,7 +340,7 @@ namespace VrBattlegrounds.Tests.Network
             AdvanceToEquipment();
             _playerA.ServerSetReady(true, "тест");
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown,
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Countdown,
                 "старта отсчёта по истечении предела ожидания");
 
             Assert.IsTrue(_playerB.ReadyState,
@@ -357,7 +357,7 @@ namespace VrBattlegrounds.Tests.Network
             AdvanceToEquipment();
             _playerA.ServerSetReady(true, "тест");
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown,
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Countdown,
                 "старта отсчёта по истечении предела ожидания");
 
             Assert.IsFalse(_playerB.ReadyState,
@@ -376,7 +376,7 @@ namespace VrBattlegrounds.Tests.Network
 
             AdvanceSeconds(20f);
 
-            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase,
                 "Предел — 30 с, а раунд стартовал через 20.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
             Assert.IsFalse(_playerB.ReadyState,
@@ -421,7 +421,7 @@ namespace VrBattlegrounds.Tests.Network
 
             AdvanceSeconds(5f);
 
-            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase,
                 "При старте по таймеру готовность не спрашивается, а раунд ушёл из закупки " +
                 "раньше срока, потому что все объявили готовность.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
@@ -435,10 +435,10 @@ namespace VrBattlegrounds.Tests.Network
 
             AdvanceToEquipment();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown,
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Countdown,
                 "старта отсчёта по окончании времени закупки");
 
-            Assert.AreEqual(RoundState.Countdown, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Countdown, _mode.CurrentRoundPhase,
                 "Время закупки вышло, а отсчёт не начался.\nФактически наблюдалось: " + _driver.DumpSequence());
             Assert.IsFalse(_playerA.ReadyState,
                 "Старт по таймеру не должен объявлять готовность за игроков: " +
@@ -468,13 +468,13 @@ namespace VrBattlegrounds.Tests.Network
             AdvanceToEquipment();
             AdvanceSeconds(RoundReadiness.DefaultTimeLimit - 5f);
 
-            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Equipment, _mode.CurrentRoundPhase,
                 "Контроль: до умолчания закупка ещё идёт.\nФактически наблюдалось: " + _driver.DumpSequence());
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown,
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Countdown,
                 "старта отсчёта по умолчанию времени закупки");
 
-            Assert.AreEqual(RoundState.Countdown, _mode.CurrentRoundState,
+            Assert.AreEqual(RoundPhase.Countdown, _mode.CurrentRoundPhase,
                 "Таймер с пределом 0 с понят буквально — раунд не начался бы никогда.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
         }
@@ -491,7 +491,7 @@ namespace VrBattlegrounds.Tests.Network
             Assert.AreEqual(1, _mode.PendingReadiness.Count, "Контроль: в закупке кого-то ждут.");
 
             _playerB.ServerSetReady(true, "тест");
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "фазы Combat");
             _driver.Advance();
 
             Assert.AreEqual(0, _mode.PendingReadiness.Count,

@@ -41,7 +41,7 @@ namespace VrBattlegrounds.Tests.Network
             _mode.PlayerRoster = _roster;
 
             _driver = new RoundFlowDriver(dt => { _roster.DeclareAllReady(); _mode.ServerTick(dt); },
-                                          () => _mode.CurrentRoundState);
+                                          () => _mode.CurrentRoundPhase);
         }
 
         [TearDown]
@@ -93,11 +93,11 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
             StartMatch();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "боя");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "боя");
             Assert.IsTrue(_a.IsAlive && _b.IsAlive, "Контроль: в бою оба живы.");
 
-            _mode.RoundManager.RequestRoundEnd(_teamA);
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Resolution, "итогов");
+            _mode.RoundPhases.RequestRoundEnd(_teamA);
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Resolution, "итогов");
 
             Assert.IsFalse(_a.IsAlive || _b.IsAlive, "Выжившие не выбыли в конце боя — живой вне закупки и боя.");
             Assert.IsTrue(_a.GetComponent<SpectatorController>().IsSpectating(), "Выбывший не в режиме наблюдателя.");
@@ -110,11 +110,11 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
             StartMatch();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "боя");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "боя");
             int round = _mode.CurrentRoundNumber;
-            _mode.RoundManager.RequestRoundEnd(_teamA);
+            _mode.RoundPhases.RequestRoundEnd(_teamA);
             _driver.AdvanceUntil(() => _mode.CurrentRoundNumber != round, "следующего раунда");
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Equipment, "закупки");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Equipment, "закупки");
 
             Assert.IsTrue(_a.IsAlive && _b.IsAlive, "Стоящие в своей зоне не ожили к закупке.");
         }
@@ -125,12 +125,12 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
             StartMatch();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "боя");
-            _mode.RoundManager.RequestRoundEnd(_teamA);
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Resolution, "итогов");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "боя");
+            _mode.RoundPhases.RequestRoundEnd(_teamA);
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Resolution, "итогов");
             Assert.IsFalse(_a.IsAlive, "Контроль: выбыл.");
 
-            _mode.StopGameplay();
+            _mode.ForceStop();
 
             Assert.IsTrue(_a.IsAlive && _b.IsAlive, "В разминке мёртвых нет — остановка матча обязана оживить всех.");
         }

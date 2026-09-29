@@ -10,7 +10,7 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.GameModes
 {
     /// <summary>
-    /// Режим "Возрождение": один длинный матч без раундов и сетов.
+    /// Режим "Возрождение": один длинный матч без раундов.
     /// Игроки возрождаются неограниченно. Побеждает команда с наибольшим числом фрагов.
     /// Матч завершается по истечении таймера.
     /// </summary>
@@ -29,7 +29,7 @@ namespace VrBattlegrounds.GameModes
 
         public override bool CanRespawn() => true;
 
-        protected override bool CanStartGameplay()
+        protected override bool CanBegin()
         {
             // Ожидаем, пока на сервере появится хотя бы 1 игрок, чтобы запустить таймер,
             // и пока у каждого не будет команды режима (этап Б: выбор на карте).
@@ -41,7 +41,7 @@ namespace VrBattlegrounds.GameModes
         public override bool TeamChoiceLocked => _matchActive;
 
         [Server]
-        protected override void StartGameplay()
+        protected override void Begin()
         {
             _timeRemaining = _resumeTime > 0f ? _resumeTime : _matchDuration;
             _resumeTime = -1f;
@@ -55,7 +55,7 @@ namespace VrBattlegrounds.GameModes
         }
 
         [Server]
-        public override void StopGameplay()
+        public override void ForceStop()
         {
             _matchActive = false;
             GameLog.Match.Info(
@@ -79,7 +79,7 @@ namespace VrBattlegrounds.GameModes
         }
 
         /// <summary>
-        /// Игрок убит (убийцу по урону определяет <c>DamageLedger</c>, зовёт <c>GameplayManager</c>).
+        /// Игрок убит (убийцу по урону определяет <c>DamageLedger</c>, зовёт <c>MapReferee</c>).
         /// Начисляет фраг команде убийцы; убийство своего фрага не даёт.
         /// </summary>
         [Server]
@@ -150,7 +150,7 @@ namespace VrBattlegrounds.GameModes
             GameLog.Match.Info(
                 $"[RespawnMode] Таймер истёк. Победитель: {winnerName}. Макс. фрагов: {maxFrags}");
 
-            RaiseGameplayEnded(winner);
+            RaiseFinished(winner);
         }
     }
 }

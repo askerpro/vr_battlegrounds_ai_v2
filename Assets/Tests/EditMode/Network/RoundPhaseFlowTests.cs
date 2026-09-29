@@ -9,10 +9,10 @@ namespace VrBattlegrounds.Tests.Network
 {
     /// <summary>
     /// Фазы раунда, прогнанные боевым путём: <c>EliminationMode.ServerTick</c> →
-    /// <c>SetManager</c> → <c>RoundManager</c>. Находка MATCH-02 и корень 4, задача T-09.
+    /// <c>RoundPhases</c>. Находка MATCH-02 и корень 4, задача T-09.
     ///
     /// Почему через <c>Tick</c>, а не через прямой вызов «раунд закончился». Раньше
-    /// цепочка «конец раунда → SetManager → старт следующего раунда» была синхронной,
+    /// цепочка «конец раунда → старт следующего раунда» была синхронной,
     /// поэтому фаза <c>Resolution</c> жила ровно до следующей строки, а ветки
     /// <c>Resolution</c> и <c>Scoreboard</c> в <c>Tick</c> были недостижимы. Тест, который
     /// дёргает конец раунда напрямую, этого не видит: он вообще не заходит в <c>Tick</c>.
@@ -63,7 +63,7 @@ namespace VrBattlegrounds.Tests.Network
                     _roster.DeclareAllReady();
                     _mode.ServerTick(dt);
                 },
-                () => _mode.CurrentRoundState);
+                () => _mode.CurrentRoundPhase);
         }
 
         /// <summary>
@@ -84,17 +84,17 @@ namespace VrBattlegrounds.Tests.Network
         }
 
         /// <summary>Запускает матч, минуя ожидание подключения живых игроков.</summary>
-        private void StartMatch(int roundsPerSet = 3)
+        private void StartMatch(int roundsPerHalf = 3)
         {
-            SetPrivateField(_mode, "_roundsPerSet", roundsPerSet);
+            SetPrivateField(_mode, "_roundsPerHalf", roundsPerHalf);
             _mode.Initialize(new[] { _teamA, _teamB });
 
             // Штатный вход — ServerTick() → InitializeActiveGame(), но он ждёт подключённых
             // игроков, которых в EditMode нет. Зовём напрямую: это тот же серверный путь.
             InvokePrivateMethod(_mode, "InitializeActiveGame");
 
-            Assert.IsNotNull(_mode.RoundManager,
-                "InitializeActiveGame не создал RoundManager — значит [Server]-заглушка всё ещё срабатывает.");
+            Assert.IsNotNull(_mode.RoundPhases,
+                "InitializeActiveGame не создал RoundPhases — значит [Server]-заглушка всё ещё срабатывает.");
         }
 
         /// <summary>
@@ -103,10 +103,10 @@ namespace VrBattlegrounds.Tests.Network
         /// </summary>
         private void PlayRound(TeamData winner)
         {
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "фазы Combat");
 
             int roundBefore = _mode.CurrentRoundNumber;
-            _mode.RoundManager.RequestRoundEnd(winner);
+            _mode.RoundPhases.RequestRoundEnd(winner);
 
             _driver.AdvanceUntil(() => _mode.CurrentRoundNumber != roundBefore,
                 "начала следующего раунда после раунда " + roundBefore);
@@ -122,15 +122,15 @@ namespace VrBattlegrounds.Tests.Network
 
             PlayRound(_teamA);
 
-            List<RoundState> expected = new List<RoundState>
+            List<RoundPhase> expected = new List<RoundPhase>
             {
-                RoundState.Setup,
-                RoundState.Equipment,
-                RoundState.Countdown,
-                RoundState.Combat,
-                RoundState.Resolution,
-                RoundState.Scoreboard,
-                RoundState.Setup      // начался следующий раунд
+                RoundPhase.Setup,
+                RoundPhase.Equipment,
+                RoundPhase.Countdown,
+                RoundPhase.Combat,
+                RoundPhase.Resolution,
+                RoundPhase.Scoreboard,
+                RoundPhase.Setup      // начался следующий раунд
             };
 
             CollectionAssert.AreEqual(expected, _driver.PhaseSequence(),
@@ -148,10 +148,10 @@ namespace VrBattlegrounds.Tests.Network
 
             PlayRound(_teamA);
 
-            int expected = RoundFlowDriver.StepsFor(RoundManager.ResolutionDuration);
+            int expected = RoundFlowDriver.StepsFor(RoundPhases.ResolutionDuration);
 
-            Assert.AreEqual(expected, _driver.FirstRunLength(RoundState.Resolution),
-                "Пауза после победы обязана длиться " + RoundManager.ResolutionDuration + " с, " +
+            Assert.AreEqual(expected, _driver.FirstRunLength(RoundPhase.Resolution),
+                "Пауза после победы обязана длиться " + RoundPhases.ResolutionDuration + " с, " +
                 "то есть " + expected + " шагов по " + RoundFlowDriver.Step + " с.\n" +
                 "Ноль означает, что фазы не было вовсе.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
@@ -165,10 +165,10 @@ namespace VrBattlegrounds.Tests.Network
 
             PlayRound(_teamA);
 
-            int expected = RoundFlowDriver.StepsFor(RoundManager.ScoreboardDuration);
+            int expected = RoundFlowDriver.StepsFor(RoundPhases.ScoreboardDuration);
 
-            Assert.AreEqual(expected, _driver.FirstRunLength(RoundState.Scoreboard),
-                "Экран итогов обязан длиться " + RoundManager.ScoreboardDuration + " с, " +
+            Assert.AreEqual(expected, _driver.FirstRunLength(RoundPhase.Scoreboard),
+                "Экран итогов обязан длиться " + RoundPhases.ScoreboardDuration + " с, " +
                 "то есть " + expected + " шагов по " + RoundFlowDriver.Step + " с.\n" +
                 "Ноль означает, что фазы не было вовсе.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
@@ -177,47 +177,49 @@ namespace VrBattlegrounds.Tests.Network
         // ── Владелец перехода «раунд → раунд» (MATCH-06) ─────────────────────
 
         [Test]
-        public void Следующий_раунд_начинает_только_SetManager()
+        public void Следующий_раунд_начинает_только_режим()
         {
             SilenceMirrorNoise();
             StartMatch();
 
-            // Первый раунд — ничья, чтобы сет не закончился досрочно по порогу побед.
             PlayRound(null);
 
             Assert.AreEqual(2, _mode.CurrentRoundNumber,
                 "После полного цикла раунда номер обязан вырасти до 2.\n" +
-                "Единица означает, что новый раунд запустил кто-то мимо SetManager — " +
+                "Единица означает, что новый раунд запустил кто-то мимо EliminationMode.StartNextRound — " +
                 "тогда счётчик раундов не растёт и RpcOnRoundStarted не уходит (MATCH-06).\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
         }
 
         [Test]
-        public void Сет_кончается_только_после_экрана_итогов()
+        public void Карта_кончается_только_после_экрана_итогов()
         {
             SilenceMirrorNoise();
-            StartMatch();
 
-            // Порог побед в сете из трёх раундов — две. Второй выигрыш подряд закрывает сет.
+            // Одна половина по раунду: всего 2, до победы 2. Второй выигрыш A решает карту.
+            StartMatch(roundsPerHalf: 1);
+            bool ended = false;
+            _mode.Finished += _ => ended = true;
+
             PlayRound(_teamA);
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat раунда 2");
-            _mode.RoundManager.RequestRoundEnd(_teamA);
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "фазы Combat раунда 2");
+            _mode.RoundPhases.RequestRoundEnd(_teamA);
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Scoreboard,
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Scoreboard,
                 "экрана итогов победного раунда");
 
-            Assert.AreEqual(0, _mode.TeamStates[_teamA.teamIndex].Score,
-                "Очко за сет начислено до того, как показали экран итогов.\n" +
-                "SetManager обязан реагировать на выход из Scoreboard, а не на конец раунда.\n" +
+            Assert.AreEqual(2, _mode.TeamStates[_teamA.teamIndex].Score,
+                "Очко за раунд начисляется на входе в Resolution — экран итогов показывает новый счёт.");
+            Assert.IsFalse(ended,
+                "Карта кончилась до того, как показали экран итогов.\n" +
+                "Исход карты решается на выходе из Scoreboard, а не на конце раунда.\n" +
                 "Фактически наблюдалось: " + _driver.DumpSequence());
 
-            _driver.AdvanceUntil(() => _mode.TeamStates[_teamA.teamIndex].Score > 0, "завершения сета");
+            _driver.AdvanceUntil(() => ended, "конца карты");
 
-            Assert.AreEqual(1, _mode.TeamStates[_teamA.teamIndex].Score,
-                "За один выигранный сет команда получает ровно одно очко.");
             Assert.AreEqual(0, _mode.TeamStates[_teamB.teamIndex].Score,
-                "Проигравшая команда очков за сет не получает.");
+                "Проигравшая команда очков не получает.");
         }
     }
 }

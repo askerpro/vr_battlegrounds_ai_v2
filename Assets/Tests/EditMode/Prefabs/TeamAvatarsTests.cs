@@ -24,12 +24,12 @@ namespace VrBattlegrounds.Tests.Prefabs
         private const string StrategyPath = "Assets/Data/Player/Avatars/TeamAvatarStrategy.asset";
         private const string ManagersPrefabPath = "Assets/Prefabs/Managers/--- MANAGERS ---.prefab";
 
-        /// <summary>Команды матча: команды всех режимов, кроме разминки.</summary>
+        /// <summary>Команды матча: команды всех режимов (у разминки команд нет).</summary>
         public static IEnumerable<TeamData> MatchTeams() =>
             AssetDatabase.FindAssets("t:GameModeData")
                          .Select(AssetDatabase.GUIDToAssetPath)
                          .Select(AssetDatabase.LoadAssetAtPath<GameModeData>)
-                         .Where(m => m != null && !m.isWarmup && m.teams != null)
+                         .Where(m => m != null && m.teams != null)
                          .SelectMany(m => m.teams)
                          .Where(t => t != null)
                          .Distinct()

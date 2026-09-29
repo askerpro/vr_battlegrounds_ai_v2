@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Managers;
@@ -12,14 +13,16 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.GameModes
 {
     /// <summary>
-    /// Режим "Ликвидация": матч → сеты → раунды.
-    /// Побеждает команда, выигравшая больше сетов.
+    /// Режим "Ликвидация": карта → раунды, как в CS.
     ///
-    /// SetManager и RoundManager — чистые C# классы (не NetworkBehaviour).
-    /// EliminationMode создаёт их через new и управляет тиком в Update().
-    /// Вся сетевая синхронизация (SyncVar, ClientRpc) — здесь.
+    /// Счёт карты — выигранные раунды за обе половины вместе (базовый счёт <see cref="GameMode"/>).
+    /// После <c>_roundsPerHalf</c> раундов команды меняются сторонами; своего победителя
+    /// у половины нет. Карта кончается, когда у команды больше половины всех раундов,
+    /// или когда сыграны все; равный счёт — ничья.
     ///
-    /// Не возрождает игроков между раундами.
+    /// Фазы одного раунда ведёт <see cref="RoundPhases"/> — чистый C#-класс, который режим
+    /// создаёт через new и тикает из <see cref="ServerTick"/>. Счёт, номер раунда и переход
+    /// к следующему раунду — здесь, как и вся сетевая синхронизация (SyncVar, ClientRpc).
     /// </summary>
     public enum EliminationMatchState
     {
@@ -31,12 +34,12 @@ namespace VrBattlegrounds.GameModes
     public class EliminationMode : GameMode
     {
         [Header("Настройки")]
-        [Tooltip("Сетов на карте. Два — две половины: между сетами команды меняются сторонами " +
-                 "(зонами спавна), как в CS. При ничьей по сетам карту берёт команда с большим числом раундов.")]
-        [SerializeField] private int _maxSets = 2;
-
-        [Tooltip("Раундов в одном сете (половине).")]
-        [SerializeField] private int _roundsPerSet = 3;
+        [Tooltip("Раундов в половине. Всего на карте вдвое больше: после половины команды меняются " +
+                 "сторонами (зонами спавна), счёт раундов общий, как в CS. Карту берёт тот, кто первым " +
+                 "выиграл больше половины всех раундов; равный счёт — ничья.")]
+        [FormerlySerializedAs("_roundsPerSet")]
+        [Min(1)]
+        [SerializeField] private int _roundsPerHalf = 3;
 
         [Tooltip("Длительность обратного отсчёта перед раундом (сек).")]
         [SerializeField] private float _countdownDuration = 3f;
@@ -65,10 +68,10 @@ namespace VrBattlegrounds.GameModes
         /// <summary>
         /// Фаза раунда. Единственный источник правды — эта переменная, а не сетевое сообщение:
         /// вновь подключившийся клиент получает её начальным значением спавна.
-        /// Раздачу подписчикам делает <see cref="ApplyRoundStateLocal"/>.
+        /// Раздачу подписчикам делает <see cref="ApplyRoundPhaseLocal"/>.
         /// </summary>
-        [SyncVar(hook = nameof(OnRoundStateSynced))]
-        private RoundState _roundState = RoundState.Setup;
+        [SyncVar(hook = nameof(OnRoundPhaseSynced))]
+        private RoundPhase _roundPhase = RoundPhase.Setup;
 
         /// <summary>
         /// Момент начала текущей фазы по <see cref="NetworkTime"/>. Пишется ровно один раз
@@ -83,13 +86,13 @@ namespace VrBattlegrounds.GameModes
         /// <summary>
         /// Сколько секунд боя израсходовал раунд. Во время боя не пишется — остаток
         /// считается от <see cref="_phaseStartTime"/>; значение фиксируется один раз,
-        /// на выходе из <see cref="RoundState.Combat"/>, чтобы экран итогов показывал
+        /// на выходе из <see cref="RoundPhase.Combat"/>, чтобы экран итогов показывал
         /// остаток на момент конца боя, как и до перевода таймеров на NetworkTime.
         /// </summary>
         [SyncVar] private float _combatElapsed;
 
         /// <summary>
-        /// Обратный отсчёт стоит: кто-то из живых вне своей зоны (<see cref="RoundManager.CountdownHeld"/>).
+        /// Обратный отсчёт стоит: кто-то из живых вне своей зоны (<see cref="RoundPhases.CountdownHeld"/>).
         /// Пока стоит, клиент показывает полный отсчёт; отпустили — фаза отсчитывается заново
         /// от нового <see cref="_phaseStartTime"/>.
         /// </summary>
@@ -98,7 +101,23 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Обратный отсчёт стоит — кто-то из живых вне своей зоны. Верно и у клиента.</summary>
         public bool CountdownHeld => _countdownHeld;
 
+        /// <summary>
+        /// Номер идущего раунда на карте, с 1; 0 — раунды не начинались. Растёт только
+        /// в <see cref="StartNextRound"/> (MATCH-06).
+        /// </summary>
         [SyncVar] private int _currentRound;
+
+        /// <summary>
+        /// Счёт на момент старта идущего раунда — его и запоминает пауза: прерванный раунд
+        /// не засчитывается, даже если его победитель уже известен (фаза Resolution).
+        /// </summary>
+        private readonly Dictionary<int, int> _scoresAtRoundStart = new Dictionary<int, int>();
+
+        /// <summary>Победитель доигрываемого раунда — объявляется серии по окончании раунда.</summary>
+        private TeamData _lastRoundWinner;
+
+        /// <summary>Карта решена: тик больше не двигает раунды до остановки режима.</summary>
+        private bool _mapDecided;
 
         /// <summary>
         /// Команды поменялись сторонами (вторая половина карты). Состояние, а не событие: поздний
@@ -107,9 +126,6 @@ namespace VrBattlegrounds.GameModes
         [SyncVar(hook = nameof(OnSidesSwappedSynced))]
         private bool _sidesSwapped;
 
-        /// <summary>Раунды, выигранные за карту в доигранных сетах, — решают ничью по сетам.</summary>
-        private readonly Dictionary<int, int> _mapRounds = new Dictionary<int, int>();
-
         /// <summary>Команды сейчас играют со сторон второй половины.</summary>
         public bool SidesSwapped => _sidesSwapped;
 
@@ -117,12 +133,10 @@ namespace VrBattlegrounds.GameModes
         public static event Action OnSidesSwappedLocal;
 
         /// <summary>Фаза, уже разданная локальным подписчикам на этой машине.</summary>
-        private RoundState _appliedRoundState = RoundState.Setup;
+        private RoundPhase _appliedRoundPhase = RoundPhase.Setup;
 
         /// <summary>Была ли фаза раздана хотя бы раз (отличает «ещё ничего» от «раздали Setup»).</summary>
-        private bool _roundStateApplied;
-
-        private readonly SyncDictionary<int, int> _syncedRoundScores = new SyncDictionary<int, int>();
+        private bool _roundPhaseApplied;
 
         /// <summary>
         /// Кого раунд ждёт: <c>netId</c> сессий живых игроков, не объявивших готовность.
@@ -154,36 +168,33 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         private readonly List<PendingRespawn> _pendingRespawns = new List<PendingRespawn>();
 
-        // Серверные машины состояний — создаются при StartGameplay, не требуют NetworkBehaviour
-        private SetManager _setManager;
-        private RoundManager _roundManager;
-        public RoundManager RoundManager => _roundManager;
+        // Серверная машина фаз раунда — создаётся при старте игры, не требует NetworkBehaviour
+        private RoundPhases _roundManager;
+        public RoundPhases RoundPhases => _roundManager;
 
         // ── Глобальные семантические события для UI (Клиент) ───────────────
 
-        public static event Action<int> OnSetStartedLocal;
-        public static event Action<TeamData> OnSetEndedLocal;
         public static event Action<int> OnRoundStartedLocal;
         public static event Action<TeamData> OnRoundEndedLocal;
 
         /// <summary>
         /// Фаза раунда изменилась на ЭТОЙ машине. Срабатывает одинаково на обычном клиенте,
-        /// на хосте и на выделенном сервере — раздача идёт от <see cref="_roundState"/>,
+        /// на хосте и на выделенном сервере — раздача идёт от <see cref="_roundPhase"/>,
         /// а не от сетевого сообщения. Для представления: арсенал, HUD, зоны спавна.
         /// </summary>
-        public static event Action<RoundState> OnRoundStateChangedLocal;
+        public static event Action<RoundPhase> OnRoundPhaseChangedLocal;
 
         /// <summary>
         /// Фаза раунда изменилась, и эта машина — сервер. Для авторитетных реакций,
         /// которые обязан выполнить именно сервер (пополнение слотов арсенала и т.п.).
         /// Подписываться только из <c>OnStartServer</c>: на клиенте не срабатывает никогда.
         /// </summary>
-        public static event Action<RoundState> OnRoundStateChangedServer;
+        public static event Action<RoundPhase> OnRoundPhaseChangedServer;
 
         // ── Публичные свойства для UI ────────────────────────────────────────
 
         public EliminationMatchState CurrentMatchState => _matchState;
-        public RoundState CurrentRoundState => _roundState;
+        public RoundPhase CurrentRoundPhase => _roundPhase;
 
         /// <summary>
         /// Кого раунд ждёт — <c>netId</c> сессий неготовых живых игроков. Доступно
@@ -214,7 +225,7 @@ namespace VrBattlegrounds.GameModes
             get
             {
                 float limit = RoundReadiness.EffectiveTimeLimit(_roundStartRule, _readinessTimeLimit);
-                if (_roundState != RoundState.Equipment || limit <= 0f) return 0f;
+                if (_roundPhase != RoundPhase.Equipment || limit <= 0f) return 0f;
                 return Mathf.Max(0f, limit - PhaseElapsed);
             }
         }
@@ -224,13 +235,13 @@ namespace VrBattlegrounds.GameModes
         /// <summary>
         /// Остаток времени раунда. Боевое время расходуется только в фазе Combat:
         /// до неё показывается полная длительность, после — то, что оставалось
-        /// в момент конца боя. Так же считал и <c>RoundManager</c> до T-19.
+        /// в момент конца боя. Так же считал и <c>RoundPhases</c> до T-19.
         /// </summary>
         public float RoundTimeRemaining
         {
             get
             {
-                float elapsed = _roundState == RoundState.Combat ? PhaseElapsed : _combatElapsed;
+                float elapsed = _roundPhase == RoundPhase.Combat ? PhaseElapsed : _combatElapsed;
                 return Mathf.Max(0f, _roundDuration - elapsed);
             }
         }
@@ -238,54 +249,54 @@ namespace VrBattlegrounds.GameModes
         /// <summary>
         /// Остаток текущей паузы: обратного отсчёта, паузы после победы или экрана итогов.
         /// Вне этих трёх фаз паузы нет, поэтому ноль. Набор фаз повторяет
-        /// <see cref="RoundManager.CountdownTimeRemaining"/> — свойство читает HUD.
+        /// <see cref="RoundPhases.CountdownTimeRemaining"/> — свойство читает HUD.
         /// </summary>
         public float CountdownTimeRemaining
         {
             get
             {
-                switch (_roundState)
+                switch (_roundPhase)
                 {
-                    case RoundState.Countdown:
+                    case RoundPhase.Countdown:
                         return _countdownHeld ? _countdownDuration : Mathf.Max(0f, _countdownDuration - PhaseElapsed);
-                    case RoundState.Resolution:
-                        return Mathf.Max(0f, RoundManager.ResolutionDuration - PhaseElapsed);
-                    case RoundState.Scoreboard:
-                        return Mathf.Max(0f, RoundManager.ScoreboardDuration - PhaseElapsed);
+                    case RoundPhase.Resolution:
+                        return Mathf.Max(0f, RoundPhases.ResolutionDuration - PhaseElapsed);
+                    case RoundPhase.Scoreboard:
+                        return Mathf.Max(0f, RoundPhases.ScoreboardDuration - PhaseElapsed);
                     default:
                         return 0f;
                 }
             }
         }
         public int CurrentRoundNumber => _currentRound;
-        public int RoundsPerSet => _roundsPerSet;
+        public int RoundsPerHalf => _roundsPerHalf;
 
-        public int GetRoundScore(TeamData team)
-        {
-            if (team == null) return 0;
-            return _syncedRoundScores.TryGetValue(team.teamIndex, out int score) ? score : 0;
-        }
+        /// <summary>Всего раундов на карте: две половины.</summary>
+        public int TotalRounds => _roundsPerHalf * 2;
+
+        /// <summary>Сколько раундов нужно, чтобы взять карту досрочно, — больше половины всех.</summary>
+        public int RoundsToWin => _roundsPerHalf + 1;
 
         // ── Реализация GameMode ──────────────────────────────────────────────
 
         public override bool CanRespawn() => false;
 
         /// <summary>Оружие стреляет только в бою. Фаза — SyncVar, поэтому ответ верен и у клиента.</summary>
-        public override bool WeaponsEnabled => _roundState == RoundState.Combat;
+        public override bool WeaponsEnabled => _roundPhase == RoundPhase.Combat;
 
         /// <summary>Матч: границы зон видны — кому и когда, решает <c>SpawnZoneVisibility</c>.</summary>
         public override bool ShowsSpawnZones => true;
 
         /// <summary>
         /// Арсенал открыт только в закупке; жетон нужен, если закупка кончается готовностью.
-        /// Пустые слоты пополняются событием на входе в <c>Setup</c> (<see cref="ServerSetRoundState"/>).
+        /// Пустые слоты пополняются событием на входе в <c>Setup</c> (<see cref="ServerSetRoundPhase"/>).
         /// </summary>
         public override ArsenalRules ArsenalRules => new ArsenalRules(
-            isOpen: _roundState == RoundState.Equipment,
+            isOpen: _roundPhase == RoundPhase.Equipment,
             usesReadinessTag: _roundStartRule == RoundStartRule.Readiness,
             replacesLostWeapons: false);
 
-        protected override bool CanStartGameplay()
+        protected override bool CanBegin()
         {
             // Базовый класс больше не ждет. Наша локальная машина состояний ждет появления игроков.
             return true;
@@ -326,7 +337,7 @@ namespace VrBattlegrounds.GameModes
         /// Ожидание игроков и так начальное состояние — здесь только лог.
         /// </summary>
         [Server]
-        protected override void StartGameplay()
+        protected override void Begin()
         {
             if (_matchState != EliminationMatchState.WaitingForPlayers) return;
             GameLog.Match.Info("[EliminationMode] Матч инициализирован. Ждем игроков.");
@@ -344,29 +355,28 @@ namespace VrBattlegrounds.GameModes
         {
             _matchState = EliminationMatchState.Active;
 
-            // Создаём менеджеры как обычные C# объекты — без GameObject, без NetworkBehaviour.
-            // Связывание с OnSetEnded живёт ровно здесь, в конструкторе: событий у SetManager
-            // нет, поэтому подписаться дважды (MATCH-01) физически не на что.
-            _mapRounds.Clear();
-            ServerSetSidesSwapped(false);
-
-            _roundManager = new RoundManager(PlayerRoster, _readinessTimeLimit, _readinessTimeoutRule, _roundStartRule);
-            _setManager = new SetManager(_roundManager, OnSetEnded);
+            // Машина фаз — обычный C#-объект, без GameObject и NetworkBehaviour. Событий у неё
+            // нет: исход тика она возвращает значением, поэтому подписаться дважды (MATCH-01)
+            // физически не на что.
+            _roundManager = new RoundPhases(PlayerRoster, _readinessTimeLimit, _readinessTimeoutRule, _roundStartRule);
+            _mapDecided = false;
 
             string teamsStr = string.Join(" vs ", Teams.Select(t => t != null ? t.Name : "null"));
             GameLog.Match.Info(
                 $"[EliminationMode] Активная игра начата: {teamsStr}, " +
-                $"сетов: {_maxSets}, раундов в сете: {_roundsPerSet}");
+                $"раундов на карте: {TotalRounds} ({_roundsPerHalf} в половине), до победы: {RoundsToWin}");
 
-            if (_resume != null && _resume.RoundToReplay > 0)
-            {
-                ResumeSetFromSnapshot(_resume);
-                _resume = null;
-                return;
-            }
-
+            // Счёт продолженного матча уже вернул RestoreSnapshot; прерванный раунд сыграется заново.
+            int roundToReplay = _resume != null ? _resume.RoundToReplay : 0;
             _resume = null;
-            StartNextSet(swapSides: false);
+
+            _currentRound = Math.Max(0, roundToReplay - 1);
+            ServerSetSidesSwapped(_currentRound >= _roundsPerHalf);
+
+            if (roundToReplay > 0)
+                GameLog.Match.Info($"[EliminationMode] Матч продолжен после паузы с раунда {roundToReplay}, счёт: {DescribeScore()}.");
+
+            StartNextRound();
         }
 
         // ── Пауза: снимок и продолжение ─────────────────────────────────────
@@ -374,22 +384,22 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Снимок, с которого матч продолжится; null — обычный старт.</summary>
         private MatchSnapshot _resume;
 
-        /// <summary>Elimination встаёт на паузу: сеты, счёт раундов и номер раунда сохраняются.</summary>
+        /// <summary>Elimination встаёт на паузу: счёт карты и номер раунда сохраняются.</summary>
         public override bool SupportsPause => true;
 
         /// <summary>
-        /// Сеты (базовый счёт), счёт раундов сета <b>без</b> идущего раунда и его номер —
-        /// прерванный раунд сыграется заново и не засчитается.
+        /// Счёт карты <b>без</b> идущего раунда и его номер — прерванный раунд сыграется
+        /// заново и не засчитается. Базовый снимок взял бы живой счёт, в котором раунд
+        /// уже засчитан с фазы Resolution.
         /// </summary>
         [Server]
         public override MatchSnapshot CaptureSnapshot()
         {
             MatchSnapshot snapshot = base.CaptureSnapshot();
-            if (_setManager == null) return snapshot;
+            if (_roundManager == null) return snapshot;
 
-            foreach (var kvp in _setManager.ScoresAtRoundStart) snapshot.RoundScores[kvp.Key] = kvp.Value;
-            foreach (var kvp in _mapRounds) snapshot.MapRounds[kvp.Key] = kvp.Value;
-            snapshot.RoundToReplay = _setManager.CurrentRound;
+            foreach (var kvp in _scoresAtRoundStart) snapshot.TeamScores[kvp.Key] = kvp.Value;
+            snapshot.RoundToReplay = _currentRound;
             return snapshot;
         }
 
@@ -400,44 +410,12 @@ namespace VrBattlegrounds.GameModes
             _resume = snapshot;
         }
 
-        /// <summary>Продолжение: тот же сет, тот же номер раунда, сохранённый счёт раундов.</summary>
         [Server]
-        private void ResumeSetFromSnapshot(MatchSnapshot snapshot)
+        public override void ForceStop()
         {
-            int currentSet = 1 + _teamStates.Values.Sum(s => s.Score);
-            RpcOnSetStarted(currentSet);
-
-            // Сеты чередуют стороны: чётный сет — вторая половина.
-            _mapRounds.Clear();
-            foreach (var kvp in snapshot.MapRounds) _mapRounds[kvp.Key] = kvp.Value;
-            ServerSetSidesSwapped(currentSet % 2 == 0);
-
-            _syncedRoundScores.Clear();
-            foreach (var kvp in snapshot.RoundScores) _syncedRoundScores[kvp.Key] = kvp.Value;
-
-            GameLog.Match.Info(
-                $"[EliminationMode] Матч продолжен после паузы: сет {currentSet}, раунд {snapshot.RoundToReplay}.");
-
-            _setManager.ResumeSet(Teams, this, _roundsPerSet, _countdownDuration, _roundDuration,
-                                  snapshot.RoundScores, snapshot.RoundToReplay);
-        }
-
-        /// <summary>Раунд доигран — в общий счёт серии. Зовёт <see cref="SetManager"/>.</summary>
-        [Server]
-        public void ServerReportRoundWon(TeamData winner)
-        {
-            RaiseRoundWon(winner);
-        }
-
-        [Server]
-        public override void StopGameplay()
-        {
-            if (_setManager != null)
-            {
-                _setManager.ForceStop();
-            }
+            _mapDecided = true;
+            if (_roundManager != null) _roundManager.ForceStop();
             _roundManager = null;
-            _setManager = null;
 
             // Раунда больше не будет — ждать возвращения в зону некому и незачем.
             ClearPendingRespawns();
@@ -456,7 +434,7 @@ namespace VrBattlegrounds.GameModes
                 $"[EliminationMode] Матч остановлен.");
         }
 
-        // ── Тик (делегирует в RoundManager) ─────────────────────────────────
+        // ── Тик ─────────────────────────────────────────────────────────────
 
         private void Update()
         {
@@ -480,139 +458,159 @@ namespace VrBattlegrounds.GameModes
 
             if (_matchState == EliminationMatchState.Finished) return;
 
-            if (_setManager == null) return;
+            if (_roundManager == null) return;
 
-            _setManager.Tick(deltaTime);
+            if (!_mapDecided) TickRounds(deltaTime);
 
             // Единственное, что может измениться за тик, — фаза. Таймеры в сеть больше
             // не пишутся: клиент считает остаток сам, от момента старта фазы (NET-09).
-            ServerSetRoundState(_roundManager.State);
+            ServerSetRoundPhase(_roundManager.State);
             ServerSyncCountdownHold();
 
             ServerPublishPendingReadiness();
+        }
 
-            // Синхронизируем счёт раундов из SetManager
-            if (_setManager != null)
+        // ── Раунды карты ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Шаг раундов. Единственное место, где раунд переходит в раунд, а карта — в конец.
+        ///
+        /// <para>
+        /// <b>Владелец машины раунда.</b> Режим тикает <see cref="RoundPhases"/> и применяет
+        /// единственный переход, который тот не делает сам, — «итоги показаны → новый раунд».
+        /// Больше этот переход не делает никто: второй владелец обошёл бы счётчик раундов
+        /// и <c>RpcOnRoundStarted</c> (MATCH-06).
+        /// </para>
+        ///
+        /// <para>
+        /// <b>Когда что происходит.</b> Очко за раунд начисляется при входе в фазу Resolution —
+        /// чтобы экран итогов показывал уже новый счёт. Исход карты решается позже, при выходе
+        /// из Scoreboard: карта не может закончиться раньше, чем показали итоги последнего раунда.
+        /// </para>
+        /// </summary>
+        [Server]
+        private void TickRounds(float deltaTime)
+        {
+            RoundTickResult tick = _roundManager.Tick(deltaTime);
+
+            // Исход раунда известен с момента входа в Resolution — с него и начинается пауза.
+            if (tick.PhaseChanged && tick.To == RoundPhase.Resolution)
+                ScoreRound(_roundManager.RoundWinner);
+
+            // Итоги показаны: раунд доигран — только теперь он идёт в общий счёт серии
+            // (прерванный паузой раунд до этой точки не доходит). Дальше — ещё раунд или конец карты.
+            if (tick.CycleCompleted)
             {
-                foreach (var kvp in _setManager.TeamRoundScores)
-                {
-                    if (!_syncedRoundScores.ContainsKey(kvp.Key) || _syncedRoundScores[kvp.Key] != kvp.Value)
-                    {
-                        _syncedRoundScores[kvp.Key] = kvp.Value;
-                    }
-                }
+                RaiseRoundWon(_lastRoundWinner);
+                DecideAfterScoreboard();
             }
         }
 
-        // ── Внутренняя логика ────────────────────────────────────────────────
-
+        /// <summary>Начисляет очко за раунд и оповещает клиентов об исходе.</summary>
         [Server]
-        private void StartNextSet(bool swapSides)
+        private void ScoreRound(TeamData winner)
         {
-            if (swapSides)
-            {
-                ServerSetSidesSwapped(!_sidesSwapped);
-                RpcOnSidesSwapped();
-                GameLog.Match.Info($"[EliminationMode] Смена сторон: команды играют со сторон {(_sidesSwapped ? "второй" : "первой")} половины.");
-            }
+            _lastRoundWinner = winner;
 
-            int currentSet = 1 + _teamStates.Values.Sum(s => s.Score);
-            RpcOnSetStarted(currentSet);
+            if (winner != null && _teamStates.TryGetValue(winner.teamIndex, out TeamRuntimeData winnerState))
+                winnerState.AddScore(1);
 
-            _syncedRoundScores.Clear();
-            _currentRound = 0;
+            string winnerName = winner != null ? winner.Name : "ничья";
+            GameLog.Match.Info(
+                $"[EliminationMode] Раунд {_currentRound}/{TotalRounds} завершён, победитель: {winnerName}, счёт: {DescribeScore()}");
 
-            _setManager.StartSet(Teams, this, _roundsPerSet, _countdownDuration, _roundDuration);
+            RpcOnRoundEnded(winner != null ? winner.teamIndex : -1);
         }
 
         /// <summary>
-        /// Сет доигран: начисляем очко и решаем, закончился ли матч.
+        /// Экран итогов показан целиком: карта решена или идёт следующий раунд, а после
+        /// последнего раунда половины — со сменой сторон.
         ///
-        /// Победитель матча берётся из <see cref="_teamStates"/> — состава, переданного
-        /// в <c>Initialize</c>, — а не из глобального <c>TeamRegistry</c>. Считается
-        /// в два прохода по той же причине, что и победитель сета: сравнение с текущим
-        /// максимумом внутри одного прохода взводит ничью на первой же итерации,
-        /// когда максимум ещё равен нулю (MATCH-04).
+        /// Лидер считается в два прохода: сначала максимум, потом — сколько команд его
+        /// набрали. Одним проходом это писать нельзя: сравнение с текущим максимумом на
+        /// первой же итерации даёт <c>0 == 0</c> и взводит ничью до того, как посчитан хоть
+        /// один результат, а дальше исход зависит от порядка обхода словаря (MATCH-04).
+        /// Команды берутся из <see cref="GameMode.TeamStates"/> — состава, переданного
+        /// в <c>Initialize</c>, — а не из глобального <c>TeamRegistry</c> (T-08).
         /// </summary>
         [Server]
-        private void OnSetEnded(TeamData winner)
+        private void DecideAfterScoreboard()
         {
-            if (winner != null && _teamStates.TryGetValue(winner.teamIndex, out TeamRuntimeData winnerState))
-            {
-                winnerState.AddScore(1);
-            }
-
-            // Раунды этой половины — в общий счёт карты (ничья по сетам решается по нему).
-            if (_setManager != null)
-            {
-                foreach (var kvp in _setManager.TeamRoundScores)
-                {
-                    _mapRounds[kvp.Key] = (_mapRounds.TryGetValue(kvp.Key, out int total) ? total : 0) + kvp.Value;
-                }
-            }
-
-            int setsToWin = _maxSets / 2 + 1;
-
-            // Проход 1 — сколько сетов сыграно всего и каков максимум.
-            int totalSetsPlayed = 0;
-            int highestSets = 0;
+            // Проход 1 — максимум раундов.
+            int highest = 0;
             foreach (TeamRuntimeData state in _teamStates.Values)
             {
-                totalSetsPlayed += state.Score;
-                if (state.Score > highestSets) highestSets = state.Score;
+                if (state.Score > highest) highest = state.Score;
             }
 
-            // Проход 2 — сколько команд набрали максимум и кто первая из них.
+            // Проход 2 — сколько команд набрали этот максимум и кто первая из них.
             int leadersCount = 0;
             TeamData leader = null;
             foreach (TeamRuntimeData state in _teamStates.Values)
             {
-                if (state.Score != highestSets) continue;
+                if (state.Score != highest) continue;
 
                 leadersCount++;
                 if (leader == null) leader = state.Team;
             }
 
-            // Ничья — несколько лидеров либо нулевой максимум: матч, в котором никто
-            // не выиграл ни одного сета, победителя не имеет.
-            TeamData matchWinner = highestSets > 0 && leadersCount == 1 ? leader : null;
-
-            // Сеты кончились вничью (1:1 по половинам) — карту берёт команда с большим числом раундов.
-            if (matchWinner == null && totalSetsPlayed >= _maxSets)
-                matchWinner = MapRoundsLeader();
-
-            if (highestSets >= setsToWin || totalSetsPlayed >= _maxSets)
+            if (highest >= RoundsToWin || _currentRound >= TotalRounds)
             {
-                // Карта уходит в разминку без StopGameplay — оживляем здесь.
-                ServerReviveAll();
-                RaiseGameplayEnded(matchWinner);
+                // Ничья — несколько лидеров либо нулевой максимум: карта, на которой никто
+                // не выиграл ни одного раунда, победителя не имеет.
+                FinishMap(highest > 0 && leadersCount == 1 ? leader : null);
+                return;
             }
-            else
-            {
-                StartNextSet(swapSides: true);
-            }
+
+            if (_currentRound == _roundsPerHalf) SwapSides();
+            StartNextRound();
         }
 
-        /// <summary>Единственный лидер по раундам за карту или null (ничья).</summary>
-        private TeamData MapRoundsLeader()
+        /// <summary>Вторая половина: команды меняются зонами спавна, счёт остаётся.</summary>
+        [Server]
+        private void SwapSides()
         {
-            TeamData leader = null;
-            int best = -1;
-            bool tie = false;
-
-            foreach (TeamRuntimeData state in _teamStates.Values)
-            {
-                int rounds = _mapRounds.TryGetValue(state.Team.teamIndex, out int r) ? r : 0;
-                if (rounds > best) { best = rounds; leader = state.Team; tie = false; }
-                else if (rounds == best) tie = true;
-            }
-
-            return tie || best <= 0 ? null : leader;
+            ServerSetSidesSwapped(!_sidesSwapped);
+            RpcOnSidesSwapped();
+            GameLog.Match.Info(
+                $"[EliminationMode] Смена сторон: команды играют со сторон {(_sidesSwapped ? "второй" : "первой")} половины.");
         }
 
-        /// <summary>Раунды команды за карту в доигранных сетах.</summary>
-        public int GetMapRounds(TeamData team) =>
-            team != null && _mapRounds.TryGetValue(team.teamIndex, out int r) ? r : 0;
+        /// <summary>
+        /// Запускает следующий раунд. Только отсюда растёт счётчик раундов и уходит
+        /// <c>RpcOnRoundStarted</c>, поэтому обходить этот метод нельзя (MATCH-06).
+        /// </summary>
+        [Server]
+        private void StartNextRound()
+        {
+            _scoresAtRoundStart.Clear();
+            foreach (TeamRuntimeData state in _teamStates.Values)
+                _scoresAtRoundStart[state.Team.teamIndex] = state.Score;
+            _lastRoundWinner = null;
+
+            ServerBeginRound(_currentRound + 1);
+            GameLog.Match.Info($"[EliminationMode] Раунд {_currentRound}/{TotalRounds}");
+
+            _roundManager.StartRound(Teams, _countdownDuration, _roundDuration);
+            PrepareNextRound();
+        }
+
+        /// <summary>Карта решена: победитель (null — ничья) уходит менеджеру карты.</summary>
+        [Server]
+        private void FinishMap(TeamData winner)
+        {
+            _mapDecided = true;
+
+            string winnerName = winner != null ? winner.Name : "ничья";
+            GameLog.Match.Info($"[EliminationMode] Карта завершена, победитель: {winnerName}, счёт: {DescribeScore()}");
+
+            // Карта уходит в разминку без ForceStop — оживляем здесь.
+            ServerReviveAll();
+            RaiseFinished(winner);
+        }
+
+        private string DescribeScore() =>
+            string.Join(" — ", _teamStates.Values.Select(s => $"{s.Team.Name} {s.Score}"));
 
         // ── Стороны ─────────────────────────────────────────────────────────
 
@@ -660,7 +658,7 @@ namespace VrBattlegrounds.GameModes
         }
 
         /// <summary>
-        /// Вызывается из RoundManager при гибели игрока.
+        /// Вызывается из RoundPhases при гибели игрока.
         /// Возвращает победителя раунда или null если раунд продолжается.
         /// </summary>
         public TeamData CheckRoundWinCondition()
@@ -689,7 +687,7 @@ namespace VrBattlegrounds.GameModes
         [Server]
         public override void OnPlayerDied(PlayerController player)
         {
-            if (_roundManager == null || _roundManager.State != RoundState.Combat) return;
+            if (_roundManager == null || _roundManager.State != RoundPhase.Combat) return;
 
             GameLog.Match.Verbose(
                 $"[EliminationMode] Игрок {player.name} погиб — проверяем условие победы");
@@ -770,10 +768,10 @@ namespace VrBattlegrounds.GameModes
                 // Оживают только до боя: опоздавший (предел возвращения на базу истёк)
                 // иначе ожил бы у себя на базе посреди боя. Подписка остаётся — её
                 // снимет следующий PrepareNextRound, и там решится заново.
-                if (!CanRespawnNow(_roundState))
+                if (!CanRespawnNow(_roundPhase))
                 {
                     GameLog.Match.Info(
-                        $"[EliminationMode] Игрок {player.name} вернулся в зону в фазе {_roundState} — оживёт в следующем раунде.");
+                        $"[EliminationMode] Игрок {player.name} вернулся в зону в фазе {_roundPhase} — оживёт в следующем раунде.");
                     return;
                 }
 
@@ -810,7 +808,7 @@ namespace VrBattlegrounds.GameModes
             if (player.IsAlive) return;
 
             // До старта матча и в бою возрождения нет: первое раздаст PrepareNextRound.
-            if (_matchState != EliminationMatchState.Active || !CanRespawnNow(_roundState)) return;
+            if (_matchState != EliminationMatchState.Active || !CanRespawnNow(_roundPhase)) return;
 
             Maps.TeamSpawnZone zone = UnityEngine.Object.FindObjectsByType<Maps.TeamSpawnZone>(FindObjectsSortMode.None)
                                                   .FirstOrDefault(z => z.Team != null && z.Team == player.Team);
@@ -821,8 +819,8 @@ namespace VrBattlegrounds.GameModes
         /// Возрождение — только на своей базе и только до боя: на подготовке и закупке.
         /// Тем, кто погиб в раунде, это уже следующий раунд.
         /// </summary>
-        public static bool CanRespawnNow(RoundState state) =>
-            state == RoundState.Setup || state == RoundState.Equipment;
+        public static bool CanRespawnNow(RoundPhase state) =>
+            state == RoundPhase.Setup || state == RoundPhase.Equipment;
 
         /// <summary>
         /// Снимает все отложенные подписки на вход в зону спавна. Зовётся в начале каждого
@@ -858,38 +856,38 @@ namespace VrBattlegrounds.GameModes
         // Раздача одинакова на всех машинах, но приходит с разных сторон:
         //   · обычный клиент — из хука SyncVar, который Mirror зовёт в OnDeserialize;
         //   · хост — из того же хука: в сеттере Mirror зовёт его при NetworkServer.activeHost;
-        //   · выделенный сервер — из ServerSetRoundState, потому что в сеттере хук
+        //   · выделенный сервер — из ServerSetRoundPhase, потому что в сеттере хук
         //     под ServerOnly не срабатывает (Mirror.NetworkBehaviour.GeneratedSyncVarSetter).
         //
-        // Поэтому ApplyRoundStateLocal идемпотентна по значению: под хостом её зовут дважды,
+        // Поэтому ApplyRoundPhaseLocal идемпотентна по значению: под хостом её зовут дважды,
         // и второй вызов обязан быть пустым. Подряд идущих одинаковых фаз в машине состояний
         // нет (Setup → Equipment → Countdown → Combat → Resolution → Scoreboard → Setup),
         // так что гашение по значению ничего не теряет.
 
         /// <summary>Меняет фазу на сервере: пишет состояние и поднимает обе раздачи.</summary>
         [Server]
-        private void ServerSetRoundState(RoundState newState)
+        private void ServerSetRoundPhase(RoundPhase newState)
         {
-            if (_roundState == newState) return;
+            if (_roundPhase == newState) return;
 
             // Выход из боя — единственный момент, когда боевое время перестаёт течь.
             // Дальше _phaseStartTime уже про другую фазу, поэтому остаток замораживаем.
-            if (_roundState == RoundState.Combat) _combatElapsed = PhaseElapsed;
+            if (_roundPhase == RoundPhase.Combat) _combatElapsed = PhaseElapsed;
 
-            _roundState = newState;
+            _roundPhase = newState;
             _phaseStartTime = NetworkTime.time;
 
-            ApplyRoundStateLocal(newState);
-            OnRoundStateChangedServer?.Invoke(newState);
+            ApplyRoundPhaseLocal(newState);
+            OnRoundPhaseChangedServer?.Invoke(newState);
 
             // Новый раунд — стены пополняют пустые слоты. Раньше стена сама слушала
             // фазы Elimination; теперь она знает только базовый GameMode.
-            if (newState == RoundState.Setup)
+            if (newState == RoundPhase.Setup)
                 RaiseArsenalRefillRequestedServer();
 
             // Бой кончился — выжившие выбывают (без записи в статистику). Живым игрок бывает
             // только в закупке и бою; оживают все на своей базе в подготовке следующего раунда.
-            if (newState == RoundState.Resolution)
+            if (newState == RoundPhase.Resolution)
             {
                 ServerEndRoundDeaths();
 
@@ -910,7 +908,7 @@ namespace VrBattlegrounds.GameModes
             if (held == _countdownHeld) return;
 
             _countdownHeld = held;
-            if (!held && _roundState == RoundState.Countdown) _phaseStartTime = NetworkTime.time;
+            if (!held && _roundPhase == RoundPhase.Countdown) _phaseStartTime = NetworkTime.time;
         }
 
         [Server]
@@ -956,7 +954,7 @@ namespace VrBattlegrounds.GameModes
 
             // Ждать готовности имеет смысл только в той фазе, где её ждут. В остальных
             // список обязан быть пуст, иначе HUD покажет «ждём Петю» посреди боя.
-            if (_roundManager != null && _roundState == RoundState.Equipment)
+            if (_roundManager != null && _roundPhase == RoundPhase.Equipment)
             {
                 foreach (PlayerSession session in _roundManager.Readiness.Pending)
                 {
@@ -985,22 +983,22 @@ namespace VrBattlegrounds.GameModes
         }
 
         /// <summary>Хук SyncVar: фаза приехала с сервера.</summary>
-        private void OnRoundStateSynced(RoundState oldState, RoundState newState)
+        private void OnRoundPhaseSynced(RoundPhase oldState, RoundPhase newState)
         {
-            ApplyRoundStateLocal(newState);
+            ApplyRoundPhaseLocal(newState);
         }
 
         /// <summary>Раздаёт фазу локальным подписчикам этой машины ровно один раз на значение.</summary>
-        private void ApplyRoundStateLocal(RoundState state)
+        private void ApplyRoundPhaseLocal(RoundPhase state)
         {
-            if (_roundStateApplied && _appliedRoundState == state) return;
+            if (_roundPhaseApplied && _appliedRoundPhase == state) return;
 
-            _roundStateApplied = true;
-            _appliedRoundState = state;
+            _roundPhaseApplied = true;
+            _appliedRoundPhase = state;
 
             GameLog.Match.Info(
                 $"[EliminationMode] Фаза раунда: {state}");
-            OnRoundStateChangedLocal?.Invoke(state);
+            OnRoundPhaseChangedLocal?.Invoke(state);
         }
 
         public override void OnStartClient()
@@ -1010,21 +1008,8 @@ namespace VrBattlegrounds.GameModes
             // Поздний клиент получает фазу начальным значением спавна. Хук на нём не сработает,
             // если пришедшее значение совпало с дефолтом поля (Setup), — раздаём явно,
             // иначе подписчики так и не узнают, в какой фазе идёт раунд.
-            ApplyRoundStateLocal(_roundState);
+            ApplyRoundPhaseLocal(_roundPhase);
             ApplySidesLocal();
-        }
-
-        [ClientRpc]
-        public void RpcOnSetStarted(int setNum)
-        {
-            OnSetStartedLocal?.Invoke(setNum);
-        }
-
-        [ClientRpc]
-        public void RpcOnSetEnded(int winnerIndex)
-        {
-            TeamData winner = winnerIndex >= 0 ? TeamRegistry.Instance.GetByIndex(winnerIndex) : null;
-            OnSetEndedLocal?.Invoke(winner);
         }
 
         /// <summary>
@@ -1034,12 +1019,12 @@ namespace VrBattlegrounds.GameModes
         /// и <see cref="CurrentRoundNumber"/> навсегда оставался нулём.
         /// </summary>
         [Server]
-        public void ServerBeginRound(int roundNum)
+        private void ServerBeginRound(int roundNum)
         {
             _currentRound = roundNum;
 
-            // Отметку старта фазы ставим и здесь, а не только в ServerSetRoundState:
-            // раунд начинается с Setup, а это же значение стоит в _roundState по умолчанию,
+            // Отметку старта фазы ставим и здесь, а не только в ServerSetRoundPhase:
+            // раунд начинается с Setup, а это же значение стоит в _roundPhase по умолчанию,
             // поэтому в первом раунде смены состояния — а значит и отметки — не случилось бы,
             // и весь раунд считался бы от нуля (T-19).
             _combatElapsed = 0f;
@@ -1055,7 +1040,7 @@ namespace VrBattlegrounds.GameModes
         }
 
         [ClientRpc]
-        public void RpcOnRoundEnded(int winnerIndex)
+        private void RpcOnRoundEnded(int winnerIndex)
         {
             TeamData winner = winnerIndex >= 0 ? TeamRegistry.Instance.GetByIndex(winnerIndex) : null;
             OnRoundEndedLocal?.Invoke(winner);

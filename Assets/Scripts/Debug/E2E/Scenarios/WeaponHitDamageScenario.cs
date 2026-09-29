@@ -44,7 +44,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// <para>
     /// <b>Один клиент, без матча.</b> Двух клиентов требует только старт матча
     /// (<c>EliminationMode.IsPlayersReady</c>), а матч здесь не нужен и вреден: вне матча
-    /// <c>GameplayManager</c> держит <c>WeaponSystemEnabled = true</c>, а в матче гасит
+    /// <c>MapReferee</c> держит <c>WeaponSystemEnabled = true</c>, а в матче гасит
     /// оружие всюду, кроме фазы <c>Combat</c>. Жертва — единственный клиент.
     /// </para>
     ///
@@ -226,11 +226,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             SessionManager sessionManager = SessionManager.Instance;
-            if (sessionManager == null || MapManager.Instance == null)
+            if (sessionManager == null || MapLoader.Instance == null)
             {
                 result.Set(CheckAvatar, false,
                     $"SessionManager.Instance={(sessionManager == null ? "null" : "есть")}, " +
-                    $"MapManager.Instance={(MapManager.Instance == null ? "null" : "есть")}");
+                    $"MapLoader.Instance={(MapLoader.Instance == null ? "null" : "есть")}");
                 result.Summary = "менеджеры не поднялись, прогон недействителен";
                 yield break;
             }
@@ -255,7 +255,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             string assignment = AssignVictim(victimTeam, victimAvatarIndex);
             GameLog.Debug.Info($"[E2E] Жертва снаряжена: {assignment}");
 
-            MapManager.Instance.LoadMap(context.Map);
+            MapLoader.Instance.LoadMap(context.Map);
 
             deadline = Now + 120f;
             while (SceneManager.GetActiveScene().name != context.Map && Now < deadline)

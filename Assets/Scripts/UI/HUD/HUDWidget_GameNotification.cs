@@ -71,14 +71,12 @@ namespace VrBattlegrounds.UI.HUD
             // Глобальные семантические события для всех режимов
             GameMode.OnMatchStartedLocal += HandleMatchStarted;
             GameMode.OnMatchEndedLocal += HandleMatchEnded;
-            GameplayManager.PlayerKilledLocal += HandlePlayerKilled;
+            MapReferee.PlayerKilledLocal += HandlePlayerKilled;
 
             // Семантические события специфичные для EliminationMode
-            EliminationMode.OnSetStartedLocal += HandleSetStarted;
-            EliminationMode.OnSetEndedLocal += HandleSetEnded;
             EliminationMode.OnRoundStartedLocal += HandleRoundStarted;
             EliminationMode.OnRoundEndedLocal += HandleRoundEnded;
-            EliminationMode.OnRoundStateChangedLocal += HandleRoundStateChanged;
+            EliminationMode.OnRoundPhaseChangedLocal += HandleRoundPhaseChanged;
             EliminationMode.OnSidesSwappedLocal += HandleSidesSwapped;
         }
 
@@ -89,13 +87,11 @@ namespace VrBattlegrounds.UI.HUD
 
             GameMode.OnMatchStartedLocal -= HandleMatchStarted;
             GameMode.OnMatchEndedLocal -= HandleMatchEnded;
-            GameplayManager.PlayerKilledLocal -= HandlePlayerKilled;
+            MapReferee.PlayerKilledLocal -= HandlePlayerKilled;
 
-            EliminationMode.OnSetStartedLocal -= HandleSetStarted;
-            EliminationMode.OnSetEndedLocal -= HandleSetEnded;
             EliminationMode.OnRoundStartedLocal -= HandleRoundStarted;
             EliminationMode.OnRoundEndedLocal -= HandleRoundEnded;
-            EliminationMode.OnRoundStateChangedLocal -= HandleRoundStateChanged;
+            EliminationMode.OnRoundPhaseChangedLocal -= HandleRoundPhaseChanged;
             EliminationMode.OnSidesSwappedLocal -= HandleSidesSwapped;
         }
 
@@ -105,7 +101,7 @@ namespace VrBattlegrounds.UI.HUD
         private float _nextReturnToBaseCheck;
 
         /// <summary>
-        /// Напоминание «вернитесь в свою зону» (<see cref="HudNotificationTexts.AskReturnToBase"/>):
+        /// Напоминание «вернитесь в свою зону» или «выберите команду» (<see cref="HudNotificationTexts.Reminder"/>):
         /// раз в <see cref="ReturnToBaseInterval"/> с, пока игрок не на базе и в очереди нет
         /// другого сообщения. Состояние — реплицированное (фаза, здоровье, зона сессии).
         /// </summary>
@@ -118,21 +114,29 @@ namespace VrBattlegrounds.UI.HUD
 
             PlayerSession local = PlayerSession.LocalSession;
             PlayerController avatar = local != null ? local.ActiveAvatar : null;
-            var mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode as EliminationMode : null;
+            var mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode as EliminationMode : null;
             if (avatar == null || mode == null) return;
 
-            // Вышел из зоны на отсчёте — отсчёт стоит, напоминание чаще.
-            if (HudNotificationTexts.AskReturnForCountdown(avatar.IsAlive, local.IsInSpawnZone, mode.CurrentRoundState))
+            bool hasModeTeam = mode.Teams != null &&
+                               System.Array.Exists(mode.Teams, t => t != null && t.teamIndex == local.TeamIndex);
+
+            switch (HudNotificationTexts.Reminder(hasModeTeam, avatar.IsAlive, local.IsInSpawnZone, mode.CurrentRoundPhase))
             {
-                Enqueue(HudNotificationTexts.ReturnForCountdown());
-                _nextReturnToBaseCheck = Time.time + 2f;
-                return;
+                case HudReminder.ChooseTeam:
+                    // Своей зоны нет — вести некуда, нужна команда матча.
+                    Enqueue(HudNotificationTexts.ChooseTeam());
+                    _nextReturnToBaseCheck = Time.time + ReturnToBaseInterval;
+                    break;
+                case HudReminder.ReturnForCountdown:
+                    // Вышел из зоны на отсчёте — отсчёт стоит, напоминание чаще.
+                    Enqueue(HudNotificationTexts.ReturnForCountdown());
+                    _nextReturnToBaseCheck = Time.time + 2f;
+                    break;
+                case HudReminder.ReturnToBase:
+                    Enqueue(HudNotificationTexts.ReturnToBase());
+                    _nextReturnToBaseCheck = Time.time + ReturnToBaseInterval;
+                    break;
             }
-
-            if (!HudNotificationTexts.AskReturnToBase(avatar.IsAlive, local.IsInSpawnZone)) return;
-
-            Enqueue(HudNotificationTexts.ReturnToBase());
-            _nextReturnToBaseCheck = Time.time + ReturnToBaseInterval;
         }
 
         // ── Обработчики семантических событий ────────────────────────────────
@@ -146,15 +150,6 @@ namespace VrBattlegrounds.UI.HUD
                                    5f, HudSound.Beep));
         }
 
-        private void HandleSetStarted(int setNum)
-            => Enqueue(new HudMessage($"Сет {setNum} начинается", 3f, HudSound.None));
-
-        private void HandleSetEnded(TeamData winner)
-        {
-            Enqueue(new HudMessage(winner != null ? $"Сет за командой {winner.Name}!" : "Сет завершился вничью!",
-                                   4f, HudSound.Beep));
-        }
-
         private void HandleRoundStarted(int roundNum)
             => Enqueue(new HudMessage($"Раунд {roundNum}", 2f, HudSound.None));
 
@@ -164,7 +159,7 @@ namespace VrBattlegrounds.UI.HUD
                                    3f, HudSound.Beep));
         }
 
-        private void HandleRoundStateChanged(RoundState state)
+        private void HandleRoundPhaseChanged(RoundPhase state)
         {
             HudMessage message = HudNotificationTexts.Phase(state, RoundScore());
 
@@ -187,11 +182,11 @@ namespace VrBattlegrounds.UI.HUD
         /// <summary>Счёт раундов «CT 1 — 0 T» из реплицированного состояния режима.</summary>
         private static string RoundScore()
         {
-            var mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode as EliminationMode : null;
+            var mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode as EliminationMode : null;
             if (mode == null || mode.Teams == null || mode.Teams.Length < 2 || mode.Teams[0] == null || mode.Teams[1] == null) return null;
 
             TeamData a = mode.Teams[0], b = mode.Teams[1];
-            return $"{a.Name} {mode.GetRoundScore(a)} — {mode.GetRoundScore(b)} {b.Name}";
+            return $"{a.Name} {mode.GetScore(a)} — {mode.GetScore(b)} {b.Name}";
         }
 
         // ── Очередь и показ ────────────────────────────────────────────────

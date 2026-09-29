@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Managers;
@@ -18,7 +19,7 @@ namespace VrBattlegrounds.Maps
     [RequireComponent(typeof(BoxCollider))]
     public class TeamSpawnZone : MonoBehaviour
     {
-        [Tooltip("Команда, которой принадлежит эта зона")]
+        [Tooltip("Команда, которой принадлежит зона. Пусто — нейтральная зона (лобби): в ней появляется любой, у кого своей зоны нет.")]
         [SerializeField] private TeamData _team;
 
         [Tooltip("Где появляется аватар. Пусто — центр зоны. Нужна, когда центр занят (зона лобби на всю " +
@@ -34,7 +35,8 @@ namespace VrBattlegrounds.Maps
 
         [Header("Debug View (ReadOnly)")]
         [SerializeField] private int _playersInZoneCount;
-        [SerializeField] private RoundState _currentRoundState;
+        [FormerlySerializedAs("_currentRoundState")]
+        [SerializeField] private RoundPhase _currentRoundPhase;
 
         /// <summary>Срабатывает когда игрок входит в зону. Передаётся сам контроллер игрока.</summary>
         public event Action<TeamSpawnZone, PlayerController> PlayerEntered;
@@ -148,12 +150,9 @@ namespace VrBattlegrounds.Maps
             rb.isKinematic = true;
             rb.useGravity = false;
 
-            if (_team == null)
-            {
-                GameLog.Match.Warning(
-                    $"[TeamSpawnZone] У SpawnZone на объекте {gameObject.name} не назначена команда (_team).");
-            }
-            else
+            // Зона без команды — нейтральная (лобби): в ней появляется любой, у кого своей зоны
+            // нет (AvatarSpawnPointResolver.FindNeutralZone). Сообщать о себе сессии ей нечего.
+            if (_team != null)
             {
                 UpdateColor();
             }
@@ -219,7 +218,7 @@ namespace VrBattlegrounds.Maps
         private void OnEnable()
         {
             SpawnSides.Changed += OnSidesChanged;
-            EliminationMode.OnRoundStateChangedLocal += OnRoundStateChanged;
+            EliminationMode.OnRoundPhaseChangedLocal += OnRoundPhaseChanged;
             PlayerSession.LocalAvatarChanged += OnLocalAvatarChanged;
 
             // Аватар мог заспавниться раньше, чем включилась зона: зоны живут в сцене карты,
@@ -234,7 +233,7 @@ namespace VrBattlegrounds.Maps
         private void OnDisable()
         {
             SpawnSides.Changed -= OnSidesChanged;
-            EliminationMode.OnRoundStateChangedLocal -= OnRoundStateChanged;
+            EliminationMode.OnRoundPhaseChangedLocal -= OnRoundPhaseChanged;
             PlayerSession.LocalAvatarChanged -= OnLocalAvatarChanged;
 
             if (_localPlayer != null)
@@ -273,10 +272,10 @@ namespace VrBattlegrounds.Maps
             UpdateVisibility();
         }
 
-        private void OnRoundStateChanged(RoundState newState)
+        private void OnRoundPhaseChanged(RoundPhase newState)
         {
-            GameLog.Match.Verbose($"[TeamSpawnZone] {name}: фаза раунда {_currentRoundState} → {newState}.", this);
-            _currentRoundState = newState;
+            GameLog.Match.Verbose($"[TeamSpawnZone] {name}: фаза раунда {_currentRoundPhase} → {newState}.", this);
+            _currentRoundPhase = newState;
             UpdateVisibility();
         }
 
@@ -296,7 +295,7 @@ namespace VrBattlegrounds.Maps
         private void Update()
         {
             bool alive = _localPlayer == null || _localPlayer.IsAlive;
-            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             if (alive == _lastLocalAlive && ReferenceEquals(mode, _lastMode)) return;
 
             _lastLocalAlive = alive;
@@ -313,10 +312,10 @@ namespace VrBattlegrounds.Maps
             // Session проверяется на null: на клиенте сессия может ещё не разрешиться.
             bool ownTeam = hasLocal && _localPlayer.Session != null && _localPlayer.Session.Team == Team;
 
-            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             bool modeShowsZones = mode != null && mode.ShowsSpawnZones;
 
-            SpawnZoneVisibility.Decide(modeShowsZones, hasLocal, alive, ownTeam, _currentRoundState, out bool isVisible, out bool xray);
+            SpawnZoneVisibility.Decide(modeShowsZones, hasLocal, alive, ownTeam, _currentRoundPhase, out bool isVisible, out bool xray);
 
             if (_meshRenderer.enabled != isVisible)
             {
@@ -325,7 +324,7 @@ namespace VrBattlegrounds.Maps
                     : "локального аватара нет";
                 GameLog.Match.Info(
                     $"[TeamSpawnZone] {name} ({(Team != null ? Team.Name : "без команды")}): {(isVisible ? "показана" : "скрыта")} — " +
-                    $"режим {(mode != null ? mode.GetType().Name : "нет")} (границы {(modeShowsZones ? "рисует" : "не рисует")}), фаза {_currentRoundState}, {who}.", this);
+                    $"режим {(mode != null ? mode.GetType().Name : "нет")} (границы {(modeShowsZones ? "рисует" : "не рисует")}), фаза {_currentRoundPhase}, {who}.", this);
             }
 
             _meshRenderer.enabled = isVisible;
@@ -575,7 +574,7 @@ namespace VrBattlegrounds.Maps
     /// </summary>
     public static class SpawnZoneVisibility
     {
-        public static void Decide(bool modeShowsZones, bool hasLocalAvatar, bool alive, bool ownTeam, RoundState state,
+        public static void Decide(bool modeShowsZones, bool hasLocalAvatar, bool alive, bool ownTeam, RoundPhase state,
                                   out bool visible, out bool xray)
         {
             xray = false;
@@ -589,7 +588,7 @@ namespace VrBattlegrounds.Maps
                 return;
             }
 
-            visible = state != RoundState.Combat;
+            visible = state != RoundPhase.Combat;
         }
     }
 }

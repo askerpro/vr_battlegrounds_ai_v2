@@ -19,17 +19,17 @@ namespace VrBattlegrounds.GameModes
     {
         private void OnEnable()
         {
-            EliminationMode.OnRoundStateChangedServer += HandleRoundStateChanged;
+            EliminationMode.OnRoundPhaseChangedServer += HandleRoundPhaseChanged;
         }
 
         private void OnDisable()
         {
-            EliminationMode.OnRoundStateChangedServer -= HandleRoundStateChanged;
+            EliminationMode.OnRoundPhaseChangedServer -= HandleRoundPhaseChanged;
         }
 
-        private static void HandleRoundStateChanged(RoundState newState)
+        private static void HandleRoundPhaseChanged(RoundPhase newState)
         {
-            if (newState != RoundState.Countdown) return;
+            if (newState != RoundPhase.Countdown) return;
 
             foreach (PlayerLoadoutManager loadout in PlayerLoadoutManager.ServerInstances)
             {

@@ -27,7 +27,7 @@ description: Добавить новую фичу по архитектуре п
 | Оружие | Наследник `UxrFirearmWeapon` / `UxrGrenadeWeapon` |
 | Сеть | `NetworkBehaviour`, `[SyncVar]`, `[Command]`, `[ClientRpc]` |
 | Здоровье и смерть | Подписка на `UxrActor.Death` / `UxrActor.DamageReceived` |
-| Смена сцены | Только `MapManager.Instance.LoadMap()` |
+| Смена сцены | Только `MapLoader.Instance.LoadMap()` |
 | Логирование | Только канал категории: `GameLog.Match.Info(...)`, `GameLog.UI.Warning(...)` |
 | Editor-утилита | Только `Assets/Editor/VR_Battlegrounds/<категория>/` |
 

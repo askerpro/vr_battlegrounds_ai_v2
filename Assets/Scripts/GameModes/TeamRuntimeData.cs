@@ -38,7 +38,7 @@ namespace VrBattlegrounds.GameModes
         public int Score
         {
             get => _gameMode.GetScore(Team);
-            set => _gameMode.SetScore(Team, value);
+            set => _gameMode.AssignScore(Team, value);
         }
 
         /// <summary>Все подключенные сессии игроков этой команды.</summary>

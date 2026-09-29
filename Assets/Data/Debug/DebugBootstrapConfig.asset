@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enabled: 1
   hostIsAdmin: 1
-  autoStartGameplay: 1
+  autoGoLive: 1
   minPlayersOverride: 1
   botCount: 3
   autoLoadMapScene: Lobby

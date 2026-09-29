@@ -13,19 +13,19 @@ namespace VrBattlegrounds.GameModes
     /// Абстрактный базовый класс игрового режима.
     ///
     /// Каждый режим самостоятельно управляет своей внутренней структурой —
-    /// сетами, раундами, таймерами или любой другой логикой.
+    /// раундами, таймерами или любой другой логикой.
     ///
-    /// GameplayManager инстанцирует префаб режима через NetworkServer.Spawn,
-    /// вызывает Initialize() → StartGameplay(), и ждёт события GameplayEnded.
-    /// При StopGameplay() вызывает StopGameplay() на режиме и уничтожает инстанс.
+    /// MapReferee инстанцирует префаб режима через NetworkServer.Spawn,
+    /// вызывает Initialize() → Begin(), и ждёт события Finished.
+    /// При ForceStop() вызывает ForceStop() на режиме и уничтожает инстанс.
     /// </summary>
     public abstract class GameMode : NetworkBehaviour
     {
         /// <summary>
         /// Срабатывает когда режим определил победителя матча.
-        /// Null = ничья. Подписывается GameplayManager.
+        /// Null = ничья. Подписывается MapReferee.
         /// </summary>
-        public event Action<TeamData> GameplayEnded;
+        public event Action<TeamData> Finished;
 
         // ── Глобальные семантические события для UI (Клиент) ───────────────
 
@@ -96,28 +96,28 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>
         /// Клиенту ссылка на активный режим нужна не меньше, чем серверу: через неё
-        /// <see cref="GameplayManager"/> читает фазу раунда и блокирует оружие вне боя.
-        /// Без этого поле <c>_gameMode</c> заполнялось только в серверном StartGameplay,
+        /// <see cref="MapReferee"/> читает фазу раунда и блокирует оружие вне боя.
+        /// Без этого поле <c>_gameMode</c> заполнялось только в серверном Begin,
         /// на клиенте оставалось null, и блокировка не работала (MATCH-03).
         /// </summary>
         public override void OnStartClient()
         {
             base.OnStartClient();
 
-            if (GameplayManager.Instance != null)
-                GameplayManager.Instance.RegisterActiveGameMode(this);
+            if (MapReferee.Instance != null)
+                MapReferee.Instance.RegisterActiveGameMode(this);
         }
 
         public override void OnStopClient()
         {
-            if (GameplayManager.Instance != null)
-                GameplayManager.Instance.UnregisterActiveGameMode(this);
+            if (MapReferee.Instance != null)
+                MapReferee.Instance.UnregisterActiveGameMode(this);
 
             base.OnStopClient();
         }
 
         /// <summary>
-        /// Вызывается сервером (через GameplayManager) когда игрок подтвердил смену команды.
+        /// Вызывается сервером (через MapReferee) когда игрок подтвердил смену команды.
         /// Здесь режим может сбросить статистику игрока, вычесть очки и т.д.
         /// </summary>
         [Server]
@@ -157,7 +157,7 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>
         /// Инициализирует режим командами перед стартом.
-        /// Вызывается GameplayManager-ом.
+        /// Вызывается MapReferee-ом.
         /// </summary>
         /// <summary>
         /// Данные режима (<see cref="GameModeData"/>): команды, минимум игроков, политика
@@ -175,17 +175,17 @@ namespace VrBattlegrounds.GameModes
         }
 
         /// <summary>
-        /// Режим — разминка (<see cref="GameModeData.isWarmup"/>): между матчами, с неё
-        /// стартует любая карта. Известно и клиенту — по данным режима.
+        /// Режим — разминка (<see cref="WarmupMode"/>): карта без запущенного режима матча или
+        /// с матчем на паузе. Определяется классом, а не данными — известно и клиенту.
         /// </summary>
-        public bool IsWarmup => ModeData != null && ModeData.isWarmup;
+        public virtual bool IsWarmup => false;
 
         private GameModeData _modeData;
 
         /// <summary>Идентификатор данных режима — по нему клиент находит <see cref="ModeData"/>.</summary>
         [SyncVar] private string _modeId = "";
 
-        /// <summary>Инициализация из данных режима — основной путь <c>GameplayManager</c>.</summary>
+        /// <summary>Инициализация из данных режима — основной путь <c>MapReferee</c>.</summary>
         [Server]
         public void Initialize(GameModeData data)
         {
@@ -221,10 +221,10 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         /// <summary>
         /// Вызывается менеджером для запуска матча.
-        /// Режим сам решает, когда он готов фактически начать игру (по умолчанию - ждет CanStartGameplay).
+        /// Режим сам решает, когда он готов фактически начать игру (по умолчанию - ждет CanBegin).
         /// </summary>
         [Server]
-        public virtual void StartGameplayWhenReady()
+        public virtual void BeginWhenReady()
         {
             // Команды по политике режима — сразу: матчу нужны составы, спавну — зоны.
             ServerAssignTeams();
@@ -233,34 +233,34 @@ namespace VrBattlegrounds.GameModes
             // (режим на карте теперь меняется на месте — разминка → матч → разминка).
             RaiseArsenalRefillRequestedServer();
 
-            StartCoroutine(WaitAndStartGameplayRoutine());
+            StartCoroutine(WaitAndBeginRoutine());
         }
 
         [Server]
-        private System.Collections.IEnumerator WaitAndStartGameplayRoutine()
+        private System.Collections.IEnumerator WaitAndBeginRoutine()
         {
             GameLog.Match.Info($"[{GetType().Name}] Ожидание выполнения условий старта матча...");
-            yield return new WaitUntil(CanStartGameplay);
+            yield return new WaitUntil(CanBegin);
 
-            StartGameplay();
+            Begin();
         }
 
         /// <summary>
         /// Условие готовности режима к фактическому старту (например, наличие игроков в командах).
         /// </summary>
-        protected abstract bool CanStartGameplay();
+        protected abstract bool CanBegin();
 
-        /// <summary>Секвенция фактического запуска матча. Запускается внутренне из StartGameplayWhenReady.</summary>
-        protected abstract void StartGameplay();
+        /// <summary>Секвенция фактического запуска матча. Запускается внутренне из BeginWhenReady.</summary>
+        protected abstract void Begin();
 
         /// <summary>
         /// Принудительно останавливает матч без определения победителя.
-        /// Вызывается GameplayManager-ом при StopGameplay() администратора.
+        /// Вызывается MapReferee-ом при ForceStop() администратора.
         /// </summary>
-        public abstract void StopGameplay();
+        public abstract void ForceStop();
 
         /// <summary>
-        /// Возвращает текущий счёт команды (фраги, раунды, сеты — зависит от режима).
+        /// Возвращает текущий счёт команды (фраги, раунды — зависит от режима).
         /// Используется UI для отображения счёта.
         /// </summary>
         public virtual int GetScore(TeamData team)
@@ -271,7 +271,7 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>Устанавливает счет команде (только на сервере).</summary>
         [Server]
-        public virtual void SetScore(TeamData team, int score)
+        public virtual void AssignScore(TeamData team, int score)
         {
             if (team == null) return;
             _teamScores[team.teamIndex] = score;
@@ -283,7 +283,7 @@ namespace VrBattlegrounds.GameModes
         // ── Правила, которые режим объявляет остальной игре ─────────────────
         //
         // Системы вне режима (стена арсенала, блокировка оружия) спрашивают активный
-        // режим (GameplayManager.ActiveGameMode) через эти свойства и не знают его
+        // режим (MapReferee.ActiveGameMode) через эти свойства и не знают его
         // конкретного типа. Новый режим объявляет свои правила здесь — и получает их
         // везде, включая разминку (WarmupMode). Все свойства читаются на любой машине:
         // режим заспавнен и у клиента, а отвечают они из реплицируемого состояния.
@@ -302,7 +302,7 @@ namespace VrBattlegrounds.GameModes
         public virtual bool TeamChoiceLocked => false;
 
         /// <summary>
-        /// Стреляет ли оружие прямо сейчас. Читает <c>GameplayManager</c> каждый кадр
+        /// Стреляет ли оружие прямо сейчас. Читает <c>MapReferee</c> каждый кадр
         /// и переключает <c>UxrWeaponManager</c>. По умолчанию — да.
         /// </summary>
         public virtual bool WeaponsEnabled => true;
@@ -334,7 +334,7 @@ namespace VrBattlegrounds.GameModes
         }
 
         /// <summary>
-        /// Игрок погиб. Зовёт <c>GameplayManager</c> на сервере; что это значит —
+        /// Игрок погиб. Зовёт <c>MapReferee</c> на сервере; что это значит —
         /// решает режим. По умолчанию — ничего.
         /// </summary>
         [Server]
@@ -371,7 +371,7 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>
         /// Сервер: раунд доигран до конца и у него есть победитель. Для общего счёта серии
-        /// (<c>MatchSeries</c> через <c>GameplayManager.RoundWon</c>). Прерванный паузой раунд
+        /// (<c>Series</c> через <c>MapReferee.RoundWon</c>). Прерванный паузой раунд
         /// сюда не приходит — поэтому событие поднимается по окончании раунда, а не в момент,
         /// когда победитель стал известен.
         /// </summary>
@@ -392,7 +392,7 @@ namespace VrBattlegrounds.GameModes
         public virtual bool SupportsPause => false;
 
         /// <summary>
-        /// Снимок состояния матча для паузы. База — счёт команд режима (сеты, фраги); режим
+        /// Снимок состояния матча для паузы. База — счёт команд режима (раунды за карту, фраги); режим
         /// с раундами добавляет своё. Прерванный раунд в снимок не входит.
         /// </summary>
         [Server]
@@ -422,9 +422,8 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>
         /// Как режим раздаёт свои команды игрокам без команды режима. Задаётся данными
-        /// режима (<see cref="GameModeData.teamAssignment"/>): разминка — сохранить команду
-        /// матча или дать свою (<see cref="TeamAssignmentKind.KeepOrDefault"/>), матч —
-        /// выбор игроком. Без данных — выбор игроком: режим никого не двигает сам.
+        /// режима (<see cref="GameModeData.teamAssignment"/>). Без данных — выбор игроком:
+        /// режим никого не двигает сам. У разминки команд нет — раздавать нечего.
         /// Присваивание подменяет значение данных (тесты).
         /// </summary>
         public TeamAssignmentKind TeamAssignment
@@ -444,8 +443,6 @@ namespace VrBattlegrounds.GameModes
         /// <list type="bullet">
         /// <item><c>PlayerChoice</c> — никого: выбирает игрок или выдаёт админ.</item>
         /// <item><c>AutoBalance</c> — всех без команды режима, в самую малочисленную.</item>
-        /// <item><c>KeepOrDefault</c> — только тех, у кого команды нет вовсе (0): команда
-        ///       матча (CT/T) в разминке сохраняется, а с ней общий состав серии.</item>
         /// </list>
         /// </summary>
         [Server]
@@ -460,7 +457,6 @@ namespace VrBattlegrounds.GameModes
             foreach (PlayerSession session in PlayerRoster.GetAllPlayers())
             {
                 if (session == null || session.Role != GameRole.Player) continue;
-                if (kind == TeamAssignmentKind.KeepOrDefault && session.TeamIndex != 0) continue;
                 players.Add(session);
             }
 
@@ -508,10 +504,10 @@ namespace VrBattlegrounds.GameModes
         /// <summary>
         /// Вызвать из конкретного режима когда определён победитель матча.
         /// </summary>
-        protected void RaiseGameplayEnded(TeamData winner)
+        protected void RaiseFinished(TeamData winner)
         {
             RpcOnMatchEnded(winner != null ? winner.teamIndex : -1);
-            GameplayEnded?.Invoke(winner);
+            Finished?.Invoke(winner);
         }
 
         // ── Сетевые вызовы для UI ──────────────────────────────────────────

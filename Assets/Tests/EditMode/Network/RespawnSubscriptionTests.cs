@@ -203,7 +203,7 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
 
             _mode.PrepareNextRound();
-            SetPrivateField(_mode, "_roundState", RoundState.Combat);
+            SetPrivateField(_mode, "_roundPhase", RoundPhase.Combat);
 
             EnterZone(_zoneA, _player);
 
@@ -216,7 +216,7 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
 
             _mode.PrepareNextRound();
-            SetPrivateField(_mode, "_roundState", RoundState.Setup);
+            SetPrivateField(_mode, "_roundPhase", RoundPhase.Setup);
 
             EnterZone(_zoneA, _player);
 

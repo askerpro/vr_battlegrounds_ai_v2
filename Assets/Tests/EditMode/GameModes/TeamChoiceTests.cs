@@ -15,16 +15,16 @@ namespace VrBattlegrounds.Tests.Modes
     /// Выбор команды матча на карте — этап Б.
     ///
     /// <para>
-    /// Что доказывает. Игрок приходит на карту из лобби с командой «Лобби», то есть без
-    /// команды режима. Режим с ручной политикой (<see cref="TeamAssignmentKind.PlayerChoice"/>)
-    /// никого не назначает; игрок выбирает сам до старта матча, после старта — только админ;
-    /// матч ждёт, пока команда режима будет у всех. Лобби-режим по-прежнему раздаёт свою
-    /// единственную команду сам.
+    /// Что доказывает. Игрок может прийти на карту без команды (не выбрал в лобби). Режим
+    /// с ручной политикой (<see cref="TeamAssignmentKind.PlayerChoice"/>) никого не назначает;
+    /// игрок выбирает сам до старта матча, после старта — только админ; матч ждёт, пока
+    /// команда режима будет у всех. Разминка команд не выдаёт вовсе.
     /// </para>
     /// </summary>
     public class TeamChoiceTests : MirrorTestHarness
     {
-        private const int LobbyTeamIndex = 3;
+        /// <summary>Игрок, пришедший из лобби: команды у него нет (команды «Разминка» больше нет).</summary>
+        private const int NoTeamIndex = 0;
 
         private readonly List<Object> _assets = new List<Object>();
 
@@ -92,28 +92,28 @@ namespace VrBattlegrounds.Tests.Modes
 
             TeamData a = CreateTeam("A", 1), b = CreateTeam("B", 2);
             var roster = new ListRoster();
-            roster.Players.Add(CreateSession("p1", LobbyTeamIndex));
-            roster.Players.Add(CreateSession("p2", LobbyTeamIndex));
+            roster.Players.Add(CreateSession("p1", NoTeamIndex));
+            roster.Players.Add(CreateSession("p2", NoTeamIndex));
 
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
             mode.ServerAssignTeams();
 
-            Assert.IsTrue(roster.Players.All(p => p.TeamIndex == LobbyTeamIndex),
+            Assert.IsTrue(roster.Players.All(p => p.TeamIndex == NoTeamIndex),
                 "Режим с выбором команды игроком сам раздал команды: " +
                 string.Join(", ", roster.Players.Select(p => p.PlayerName + "=" + p.TeamIndex)));
         }
 
         /// <summary>
-        /// Политика разминки берётся из данных режима. Раньше лобби-режим был AutoBalance и
-        /// переводил в свою команду всех — теперь разминка идёт и посреди серии и команду
-        /// матча не трогает (KeepOrDefault): свою команду получает только игрок без команды.
+        /// У разминки своих команд нет, и она никого не переназначает: игрок без команды так
+        /// и остаётся без неё (аватар — киборг), команда матча сохраняется. Раньше разминка
+        /// выдавала игроку без команды свою команду «Разминка», и на боевой карте он висел
+        /// призраком с «вернитесь в свою зону» — зоны «Разминки» там нет.
         /// </summary>
         [Test]
-        public void Политика_разминки_из_данных_режима()
+        public void Разминка_никому_не_выдаёт_команду()
         {
             SilenceMirrorNoise();
 
-            TeamData warmupTeam = CreateTeam("Разминка", LobbyTeamIndex);
             var roster = new ListRoster();
             PlayerSession fresh = CreateSession("fresh", 0);
             PlayerSession ct = CreateSession("ct", 1);
@@ -123,10 +123,11 @@ namespace VrBattlegrounds.Tests.Modes
             WarmupMode mode = CreateNetworkComponent<WarmupMode>("WarmupMode");
             SpawnOnServer(mode);
             mode.PlayerRoster = roster;
-            mode.Initialize(CreateModeData("warmup", TeamAssignmentKind.KeepOrDefault, 1, warmupTeam));
+            mode.Initialize(CreateModeData("warmup", TeamAssignmentKind.PlayerChoice, 1));
             mode.ServerAssignTeams();
 
-            Assert.AreEqual(LobbyTeamIndex, fresh.TeamIndex, "Разминка не выдала свою команду игроку без команды.");
+            Assert.IsEmpty(mode.Teams, "У разминки есть команды — она снова «режим с командой Разминка».");
+            Assert.AreEqual(0, fresh.TeamIndex, "Разминка выдала команду игроку без команды.");
             Assert.AreEqual(1, ct.TeamIndex, "Разминка сменила игроку команду матча.");
         }
 
@@ -139,7 +140,7 @@ namespace VrBattlegrounds.Tests.Modes
             var roster = new ListRoster();
             roster.Players.Add(CreateSession("pa", 1));
             roster.Players.Add(CreateSession("pb", 2));
-            PlayerSession late = CreateSession("pc", LobbyTeamIndex);
+            PlayerSession late = CreateSession("pc", NoTeamIndex);
             roster.Players.Add(late);
 
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
@@ -180,7 +181,7 @@ namespace VrBattlegrounds.Tests.Modes
 
             TeamData a = CreateTeam("A", 1), b = CreateTeam("B", 2);
             var roster = new ListRoster();
-            PlayerSession player = CreateSession("player", LobbyTeamIndex);
+            PlayerSession player = CreateSession("player", NoTeamIndex);
             roster.Players.Add(player);
 
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
@@ -203,7 +204,7 @@ namespace VrBattlegrounds.Tests.Modes
 
             TeamData a = CreateTeam("A", 1), b = CreateTeam("B", 2);
             var roster = new ListRoster();
-            PlayerSession player = CreateSession("player", LobbyTeamIndex);
+            PlayerSession player = CreateSession("player", NoTeamIndex);
             PlayerSession admin = CreateSession("admin", a.teamIndex, isAdmin: true);
             PlayerSession stranger = CreateSession("stranger", a.teamIndex);
             roster.Players.Add(player);
@@ -212,7 +213,7 @@ namespace VrBattlegrounds.Tests.Modes
             SetPrivateField(mode, "_matchState", EliminationMatchState.Active);
 
             Assert.IsFalse(MatchTeams.ServerAdminAssign(mode, stranger, player, b.teamIndex), "Не-админ выдал команду.");
-            Assert.AreEqual(LobbyTeamIndex, player.TeamIndex);
+            Assert.AreEqual(NoTeamIndex, player.TeamIndex);
 
             Assert.IsTrue(MatchTeams.ServerAdminAssign(mode, admin, player, b.teamIndex), "Админ не смог выдать команду.");
             Assert.AreEqual(b.teamIndex, player.TeamIndex, "Команда, выданная админом после старта, не применилась.");
@@ -225,7 +226,7 @@ namespace VrBattlegrounds.Tests.Modes
 
             TeamData a = CreateTeam("A", 1), b = CreateTeam("B", 2);
             var roster = new ListRoster();
-            for (int i = 0; i < 4; i++) roster.Players.Add(CreateSession("p" + i, LobbyTeamIndex));
+            for (int i = 0; i < 4; i++) roster.Players.Add(CreateSession("p" + i, NoTeamIndex));
             PlayerSession admin = CreateSession("admin", 0, isAdmin: true);
 
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
@@ -247,20 +248,20 @@ namespace VrBattlegrounds.Tests.Modes
             TeamData a = CreateTeam("A", 1), b = CreateTeam("B", 2);
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), new ListRoster());
 
-            CollectionAssert.AreEqual(new[] { a, b }, MenuTeamSelection.ResolveAvailableTeams(mode, null, null, LobbyTeamIndex),
+            CollectionAssert.AreEqual(new[] { a, b }, MenuTeamSelection.ResolveAvailableTeams(mode, null, null, NoTeamIndex),
                 "До старта игрок без команды выбирает из команд режима.");
 
             SetPrivateField(mode, "_matchState", EliminationMatchState.Active);
             CollectionAssert.AreEqual(new[] { a }, MenuTeamSelection.ResolveAvailableTeams(mode, null, null, a.teamIndex),
                 "После старта планшет предлагает сменить команду.");
-            CollectionAssert.IsEmpty(MenuTeamSelection.ResolveAvailableTeams(mode, null, null, LobbyTeamIndex),
+            CollectionAssert.IsEmpty(MenuTeamSelection.ResolveAvailableTeams(mode, null, null, NoTeamIndex),
                 "После старта игроку без команды выбирать нечего — команду выдаёт админ.");
         }
 
         /// <summary>
         /// По сети режим сообщает только <c>modeId</c>; данные клиент находит одним путём —
         /// в <c>GameModeRegistry</c> через <c>SessionManager.FindModeData</c>. Раньше путей было
-        /// два: «режим сцены» у <c>GameplayManager</c> (лобби) и реестр (<c>GameModeCatalog</c>).
+        /// два: «режим сцены» у <c>MapReferee</c> (лобби) и реестр (<c>GameModeCatalog</c>).
         /// Теперь разминка лежит в реестре, и режим сцены не нужен.
         /// </summary>
         [Test]

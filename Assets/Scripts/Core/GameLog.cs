@@ -10,7 +10,7 @@ namespace VrBattlegrounds.Core
     /// <para>
     /// Каналы не создаются на месте — готовые лежат в <see cref="GameLog" />:
     /// <code>
-    /// GameLog.Match.Info("[SetManager] Сет начат.");
+    /// GameLog.Match.Info("[EliminationMode] Раунд 1/6");
     /// GameLog.Player.Verbose("[PlayerController] Кадр обработан.", this);
     /// </code>
     /// </para>
@@ -100,7 +100,7 @@ namespace VrBattlegrounds.Core
     /// Точка входа в логи игры. Категория выбирается каналом, а не аргументом вызова:
     ///
     /// <code>
-    /// GameLog.Network.Info("[MapManager] Загрузка карты...");
+    /// GameLog.Network.Info("[MapLoader] Загрузка карты...");
     /// GameLog.Player.Warning("[PlayerController] Предупреждение");
     /// GameLog.Error("[GameNetworkManager] Критическая ошибка");
     /// </code>
@@ -116,7 +116,7 @@ namespace VrBattlegrounds.Core
     /// </summary>
     public static class GameLog
     {
-        /// <summary>Сетевые системы: GameNetworkManager, MapManager, Discovery, NetworkStateRelay.</summary>
+        /// <summary>Сетевые системы: GameNetworkManager, MapLoader, Discovery, NetworkStateRelay.</summary>
         public static readonly GameLogChannel Network =
             new GameLogChannel(() => GameSettings.Instance.LogLevelNetwork);
 
@@ -124,7 +124,7 @@ namespace VrBattlegrounds.Core
         public static readonly GameLogChannel Player =
             new GameLogChannel(() => GameSettings.Instance.LogLevelPlayer);
 
-        /// <summary>Матч: GameplayManager, SetManager, RoundManager, режимы.</summary>
+        /// <summary>Матч: MapReferee, RoundPhases, режимы.</summary>
         public static readonly GameLogChannel Match =
             new GameLogChannel(() => GameSettings.Instance.LogLevelMatch);
 

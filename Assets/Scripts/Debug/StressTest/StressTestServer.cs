@@ -100,7 +100,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             if (Current != null)                                     { reason = "стресс-тест уже идёт"; return false; }
             if (session == null || session.ActiveAvatar == null)    { reason = "у игрока нет аватара"; return false; }
 
-            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             if (mode == null || !mode.IsWarmup)                      { reason = "только в разминке — в матче куклы мешали бы игре"; return false; }
 
             reason = null;

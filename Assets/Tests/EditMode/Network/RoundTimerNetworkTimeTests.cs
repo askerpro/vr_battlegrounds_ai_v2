@@ -65,7 +65,7 @@ namespace VrBattlegrounds.Tests.Network
                     _roster.DeclareAllReady();
                     _mode.ServerTick(dt);
                 },
-                () => _mode.CurrentRoundState);
+                () => _mode.CurrentRoundPhase);
         }
 
         /// <summary>
@@ -90,8 +90,8 @@ namespace VrBattlegrounds.Tests.Network
             _mode.Initialize(new[] { _teamA, _teamB });
             InvokePrivateMethod(_mode, "InitializeActiveGame");
 
-            Assert.IsNotNull(_mode.RoundManager,
-                "InitializeActiveGame не создал RoundManager — значит [Server]-заглушка всё ещё срабатывает.");
+            Assert.IsNotNull(_mode.RoundPhases,
+                "InitializeActiveGame не создал RoundPhases — значит [Server]-заглушка всё ещё срабатывает.");
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
             StartMatch();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "фазы Combat");
 
             // Сброс после входа в бой: сама смена фазы обязана быть грязной — это
             // единственная отправка, ради которой всё и затевалось.
@@ -134,10 +134,10 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
             StartMatch();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown, "фазы Countdown");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Countdown, "фазы Countdown");
             _mode.ClearAllDirtyBits();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "фазы Combat");
 
             Assert.IsTrue(_mode.IsDirty(),
                 "Смена фазы обязана уехать клиентам. Чистый объект здесь означает,\n" +
@@ -152,7 +152,7 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
             StartMatch();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown, "фазы Countdown");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Countdown, "фазы Countdown");
 
             // Отсчёт идёт 3 секунды (_countdownDuration по умолчанию). Прошла одна.
             PretendPhaseRunsFor(1.0d);
@@ -169,7 +169,7 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
             StartMatch();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "фазы Combat");
 
             // Раунд идёт 90 секунд (_roundDuration по умолчанию). Прошло десять.
             PretendPhaseRunsFor(10.0d);
@@ -184,14 +184,14 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
             StartMatch();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Countdown, "фазы Countdown");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Countdown, "фазы Countdown");
 
             // Отсчёт идёт, но бой ещё не начался — боевое время не расходуется.
             PretendPhaseRunsFor(2.0d);
 
             Assert.AreEqual(90.0f, _mode.RoundTimeRemaining, Tolerance,
                 "До начала боя HUD обязан показывать полную длительность раунда: " +
-                "боевой таймер тикает только в фазе Combat, как и в RoundManager.");
+                "боевой таймер тикает только в фазе Combat, как и в RoundPhases.");
         }
 
         [Test]
@@ -200,12 +200,12 @@ namespace VrBattlegrounds.Tests.Network
             SilenceMirrorNoise();
             StartMatch();
 
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Combat, "фазы Combat");
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Combat, "фазы Combat");
 
             // Бой шёл 30 секунд и на этом закончился.
             PretendPhaseRunsFor(30.0d);
-            _mode.RoundManager.RequestRoundEnd(_teamA);
-            _driver.AdvanceUntil(() => _mode.CurrentRoundState == RoundState.Resolution, "фазы Resolution");
+            _mode.RoundPhases.RequestRoundEnd(_teamA);
+            _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Resolution, "фазы Resolution");
 
             // Экран итогов живёт своей жизнью, но боевого времени больше не расходует.
             PretendPhaseRunsFor(2.0d);

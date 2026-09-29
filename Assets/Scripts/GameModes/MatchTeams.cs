@@ -11,11 +11,11 @@ namespace VrBattlegrounds.GameModes
     /// <see cref="SessionPermissions"/>, исполнение — <see cref="SessionTeamAssigner"/>.
     ///
     /// <para>
-    /// Раньше всё это жило в <c>GameplayManager</c>, который и так отвечает за жизнь
+    /// Раньше всё это жило в <c>MapReferee</c>, который и так отвечает за жизнь
     /// режима на карте. Команды к жизни режима отношения не имеют — им нужен только
     /// активный режим, и он приходит параметром. Поэтому сервис статический, без
     /// объекта в сцене: входы из <c>PlayerSession</c> передают
-    /// <c>GameplayManager.Instance.ActiveGameMode</c>, тесты — свой режим.
+    /// <c>MapReferee.Instance.ActiveGameMode</c>, тесты — свой режим.
     /// </para>
     /// </summary>
     public static class MatchTeams

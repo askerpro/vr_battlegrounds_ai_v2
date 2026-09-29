@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 6300597833603486795}
   - component: {fileID: 8468141904930754360}
   m_Layer: 0
-  m_Name: MatchManager
+  m_Name: MapReferee
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

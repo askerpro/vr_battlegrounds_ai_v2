@@ -8,10 +8,8 @@ using System.Text;
 namespace VrBattlegrounds.UI.HUD
 {
     /// <summary>
-    /// Виджет отображения счета.
-    /// Читает счетчики из GameplayManager.Instance.TeamScores (для Respawn) 
-    /// или использует SetManager / RoundManager если нужно.
-    /// В данном примере показывает глобальный счет команд в матче.
+    /// Счёт команд активного режима (<see cref="GameMode.GetScore"/>): раунды за карту
+    /// в Elimination, фраги в Respawn.
     /// </summary>
     public class HUDWidget_TeamScore : MonoBehaviour
     {

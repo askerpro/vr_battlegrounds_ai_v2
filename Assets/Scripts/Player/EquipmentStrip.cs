@@ -46,7 +46,7 @@ namespace VrBattlegrounds.Player
 
         /// <summary>
         /// Забирает снаряжение у всех игроков сервера и убирает ничьё с пола.
-        /// Зовут <c>GameplayManager</c> при смене режима и <c>MatchSeries</c> перед сменой карты.
+        /// Зовут <c>MapReferee</c> при смене режима и <c>Series</c> перед сменой карты.
         /// </summary>
         public static void ServerStripAll(string reason)
         {

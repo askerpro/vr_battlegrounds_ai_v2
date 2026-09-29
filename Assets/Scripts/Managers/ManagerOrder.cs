@@ -44,7 +44,7 @@ namespace VrBattlegrounds.Managers
         public const int AvatarManager = -1880;
 
         /// <summary>Смена карт. Должен быть готов до первого <c>LoadMap</c> из меню или отладки.</summary>
-        public const int MapManager = -1870;
+        public const int MapLoader = -1870;
 
         /// <summary>Калибровка физического пространства. Ни от кого не зависит, но её результат читает сессия.</summary>
         public const int PhysicalSpaceSyncManager = -1860;
@@ -75,13 +75,13 @@ namespace VrBattlegrounds.Managers
         /// Серия карт матча: очередь карт, общий счёт. Тот же объект <c>SessionContext</c>, что и
         /// <see cref="SessionManager" />, — переживает смену режима на карте и смену карт.
         /// </summary>
-        public const int MatchSeries = -1580;
+        public const int Series = -1580;
 
         /// <summary>
         /// Оркестратор матча. Живёт в сценах карт, а не в <c>PersistentRoot</c>: режим
         /// существует только на карте. Значит <c>Instance</c> равен null всё время,
         /// пока игрок в лобби, — это норма, а не сбой.
         /// </summary>
-        public const int GameplayManager = -1500;
+        public const int MapReferee = -1500;
     }
 }

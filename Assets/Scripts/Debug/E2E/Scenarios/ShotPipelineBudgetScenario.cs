@@ -173,11 +173,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             SessionManager sessionManager = SessionManager.Instance;
-            if (sessionManager == null || MapManager.Instance == null)
+            if (sessionManager == null || MapLoader.Instance == null)
             {
                 result.Set(CheckMap, false,
                     $"SessionManager.Instance={(sessionManager == null ? "null" : "есть")}, " +
-                    $"MapManager.Instance={(MapManager.Instance == null ? "null" : "есть")}");
+                    $"MapLoader.Instance={(MapLoader.Instance == null ? "null" : "есть")}");
                 result.Summary = "менеджеры не поднялись, замер недействителен";
                 yield break;
             }
@@ -188,7 +188,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             yield return null;
             GameLog.Debug.Info($"[E2E] Команды распределены: {AssignTeams(sessionManager)}");
 
-            MapManager.Instance.LoadMap(context.Map);
+            MapLoader.Instance.LoadMap(context.Map);
 
             deadline = Now + 120f;
             while (SceneManager.GetActiveScene().name != context.Map && Now < deadline)

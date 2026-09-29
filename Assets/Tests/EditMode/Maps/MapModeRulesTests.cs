@@ -10,10 +10,12 @@ namespace VrBattlegrounds.Tests.Maps
     /// Совместимость режимов с картой (<see cref="MapModeRules"/>) — чистые правила.
     ///
     /// <para>
-    /// Что доказывает. Любая карта стартует в разминке; «Начать матч» берёт выбор
-    /// администратора, если он совместим с картой, иначе первый совместимый режим матча;
-    /// у лобби режимов матча нет — матч там не начинается. Заменяет прежний тест
-    /// «режим сцены бьёт выбор администратора»: поле «режим сцены» удалено.
+    /// Что доказывает. Разминка — не режим каталога: её нет ни в списке режимов реестра, ни
+    /// в списках карт, она отдельное поле реестра (<see cref="GameModeRegistry.warmup"/>),
+    /// и «Начать матч» её не выбирает. «Начать матч» берёт выбор администратора, если он
+    /// совместим с картой, иначе первый совместимый режим матча. Лобби — карта реестра
+    /// с пустым списком режимов: матч там не начинается. Пустой список «подходит любой режим»
+    /// значит только для сцены вне реестра (тестовая сцена).
     /// </para>
     /// </summary>
     public class MapModeRulesTests
@@ -27,11 +29,10 @@ namespace VrBattlegrounds.Tests.Maps
             _assets.Clear();
         }
 
-        private GameModeData Mode(string id, bool warmup = false)
+        private GameModeData Mode(string id)
         {
             var data = ScriptableObject.CreateInstance<GameModeData>();
             data.modeId = id;
-            data.isWarmup = warmup;
             _assets.Add(data);
             return data;
         }
@@ -45,31 +46,31 @@ namespace VrBattlegrounds.Tests.Maps
             return map;
         }
 
-        private GameModeRegistry Registry(params GameModeData[] modes)
+        private GameModeRegistry Registry(GameModeData warmup, params GameModeData[] modes)
         {
             var registry = ScriptableObject.CreateInstance<GameModeRegistry>();
+            registry.warmup = warmup;
             registry.modes = modes;
             _assets.Add(registry);
             return registry;
         }
 
         [Test]
-        public void Карта_стартует_с_разминки()
+        public void Разминка_не_режим_матча()
         {
-            GameModeData warmup = Mode("warmup", warmup: true), elim = Mode("elimination");
-            GameModeRegistry registry = Registry(elim, warmup);
+            GameModeData warmup = Mode("warmup"), elim = Mode("elimination");
+            GameModeRegistry registry = Registry(warmup, elim);
 
-            Assert.AreSame(warmup, MapModeRules.ResolveWarmup(Map("A", elim, warmup), registry), "Разминка из списка карты.");
-            Assert.AreSame(warmup, MapModeRules.ResolveWarmup(null, registry), "Карта не из реестра — разминка реестра.");
-            Assert.AreSame(warmup, MapModeRules.ResolveWarmup(Map("B", elim), registry),
-                "Карта без разминки в списке всё равно стартует с разминки реестра.");
+            Assert.AreSame(warmup, registry.Warmup);
+            CollectionAssert.AreEqual(new[] { elim }, registry.MatchModes, "Разминка попала в режимы матча.");
+            Assert.AreSame(warmup, registry.GetById("warmup"), "Клиент не найдёт разминку по modeId.");
         }
 
         [Test]
         public void Совместимый_выбор_администратора_запускается()
         {
-            GameModeData warmup = Mode("warmup", true), elim = Mode("elimination"), respawn = Mode("respawn");
-            MapData map = Map("A", warmup, elim, respawn);
+            GameModeData warmup = Mode("warmup"), elim = Mode("elimination"), respawn = Mode("respawn");
+            MapData map = Map("A", elim, respawn);
 
             Assert.AreSame(respawn, MapModeRules.ResolveMatchMode(map, respawn, Registry(warmup, elim, respawn)));
         }
@@ -77,26 +78,38 @@ namespace VrBattlegrounds.Tests.Maps
         [Test]
         public void Несовместимый_выбор_заменяется_первым_совместимым()
         {
-            GameModeData warmup = Mode("warmup", true), elim = Mode("elimination"), respawn = Mode("respawn");
-            MapData map = Map("A", warmup, elim);
+            GameModeData warmup = Mode("warmup"), elim = Mode("elimination"), respawn = Mode("respawn");
+            GameModeRegistry registry = Registry(warmup, elim, respawn);
+            MapData map = Map("A", elim);
 
-            Assert.AreSame(elim, MapModeRules.ResolveMatchMode(map, respawn, Registry(warmup, elim, respawn)),
+            Assert.AreSame(elim, MapModeRules.ResolveMatchMode(map, respawn, registry),
                 "Режим несовместим с картой — берётся первый совместимый режим матча.");
-            Assert.AreSame(elim, MapModeRules.ResolveMatchMode(map, null, Registry(warmup, elim, respawn)),
+            Assert.AreSame(elim, MapModeRules.ResolveMatchMode(map, null, registry),
                 "Ничего не выбрано — первый совместимый.");
-            Assert.AreSame(elim, MapModeRules.ResolveMatchMode(map, warmup, Registry(warmup, elim, respawn)),
+            Assert.AreSame(elim, MapModeRules.ResolveMatchMode(map, warmup, registry),
                 "Разминка — не режим матча: «Начать матч» с ней не остаётся в разминке.");
         }
 
         [Test]
         public void В_лобби_матч_не_запускается()
         {
-            GameModeData warmup = Mode("warmup", true), elim = Mode("elimination");
-            MapData lobby = Map("Lobby", warmup);
+            GameModeData warmup = Mode("warmup"), elim = Mode("elimination");
+            MapData lobby = Map("Lobby");
 
             Assert.IsFalse(MapModeRules.IsCompatible(lobby, elim), "Elimination совместим с лобби.");
             Assert.IsNull(MapModeRules.ResolveMatchMode(lobby, elim, Registry(warmup, elim)),
-                "В лобби запустился режим матча: у лобби совместима только разминка.");
+                "В лобби запустился режим матча: у лобби режимов матча нет.");
+        }
+
+        [Test]
+        public void Сцена_вне_реестра_допускает_любой_режим_матча()
+        {
+            GameModeData warmup = Mode("warmup"), elim = Mode("elimination");
+
+            Assert.IsTrue(MapModeRules.IsCompatible(null, elim));
+            Assert.AreSame(elim, MapModeRules.ResolveMatchMode(null, null, Registry(warmup, elim)));
+            Assert.AreSame(elim, MapModeRules.ResolveMatchMode(null, warmup, Registry(warmup, elim)),
+                "Разминка — не режим матча и на сцене вне реестра.");
         }
     }
 }

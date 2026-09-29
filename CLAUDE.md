@@ -13,7 +13,7 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
 - **Логи** — только `GameLog.<Канал>.<Уровень>(...)`, например `GameLog.Match.Info("...")`,
   `GameLog.Player.Verbose("...", this)`. Каналы: `Network`, `Player`, `Match`, `Debug`, `WeaponSystem`,
   `UI`, `PhysicalSpace`, `Arsenal`, `Perf`; вне категории — `GameLog.Error(...)`. `Debug.Log` запрещён.
-- **Смена карты на живом сервере** — только `MapManager.Instance.LoadMap(sceneName)`. Прямые
+- **Смена карты на живом сервере** — только `MapLoader.Instance.LoadMap(sceneName)`. Прямые
   `SceneManager.LoadScene` / `ServerChangeScene` рассинхронизируют клиентов. Исключение —
   `offlineScene`/`onlineScene` у `GameNetworkManager`: их ведёт сам Mirror, не трогать (NET-21).
 - **Editor-скрипты** — только в `Assets/Editor/VR_Battlegrounds/<категория>/`. Папка `Editor` внутри
@@ -92,7 +92,7 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
 2. **Найти все экземпляры** класса, а не только место падения.
 3. **Предложить архитектуру, при которой баг невозможен** — единая точка входа, инвариант в одном
    месте, генерация вместо ручной настройки. Образцы: `StateEventAuthority`, `GameTags`+`GameTagRules`,
-   `MapManager.LoadMap`.
+   `MapLoader.LoadMap`.
 4. **Закрепить тестом**, который ловит весь класс.
 
 Точечная правка — только как срочная мера, с записью класса ошибки и предложенного решения.

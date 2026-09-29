@@ -1110,3 +1110,35 @@ IK тела и рук считается каждый кадр у всех ав�
 6. Прогнать `GrabQueryPatchTests` и тесты хвата.
 
 ---
+
+## Патч 29: жизнь актора входит в снимок состояния
+
+**Дата:** 2026-09-29. **Задача:** [T-34](../tasks/T-34-late-join-state-snapshot.md), находка NET-27.
+**Файл:** `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrActor.StateSave.cs` (новый partial,
+метка `VR Battlegrounds patch`). **Проверка:** `StateSnapshotCoverageTests` (три теста, все красные до патча).
+
+### Проблема
+
+`UxrActor.Life` синхронизируется событием (`EndSyncProperty`), но `SerializeState` у актора не было. Начальный
+снимок для клиента, пришедшего позже (`NetworkStateRelay.CmdRequestInitialState` → `SaveStateChanges`),
+пишет только то, что компонент перечислил в `SerializeState`, — жизни там не было. Хуже: компонент, который
+не пишет в снимок ничего, UltimateXR не регистрирует вовсе (`UxrStateSaveImplementer.RegisterComponent`,
+пробная сериализация), так что актор выпадал из снимка целиком. Клиент, вошедший посреди матча,
+переподключившийся или перезагрузивший сцену при смене карты, видел раненых со 100 хп, а мёртвых живыми
+(`IsAlive = true` при включённом призраке).
+
+### Решение
+
+`SerializeState` с одной переменной `_life` для уровней выше `ChangesSincePreviousSave` — тот же приём, что
+у `UxrFirearmMag._rounds`: в инкрементальных снимках жизнь едет событием, в полном и «с начала» — отсюда.
+Чтение меняет только поле: `Died`, анимация смерти и звук у получателя не поднимаются — смерть случилась
+до него. Трафик на попадание не меняется; снимок растёт на одну запись на каждого актора, чья жизнь
+отличается от префабной.
+
+### Как повторить при обновлении SDK
+
+1. Перенести `UxrActor.StateSave.cs` (класс `partial` с Патча 2).
+2. Прогнать `StateSnapshotCoverageTests`. Он же сканирует **все** синхронизируемые свойства SDK: если
+   в новой версии появится свойство с `EndSyncProperty`, не записанное в `SerializeState`, тест назовёт его.
+   Сознательные исключения (`UxrGrabbableResizable.IsGrabbable/IsKinematic`, `UxrAvatar.ShowControllerHands`)
+   перечислены в тесте с причинами.

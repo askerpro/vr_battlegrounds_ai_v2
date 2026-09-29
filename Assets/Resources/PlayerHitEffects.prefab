@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2228153035810444863
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9006934323542072785}
+  - component: {fileID: 2611653454716149548}
+  m_Layer: 0
+  m_Name: PlayerHitEffects
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &9006934323542072785
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2228153035810444863}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2611653454716149548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2228153035810444863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11e2900669cb78d4d88bbac6b6763fcd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.PlayerHitEffects
+  _streakMaterial: {fileID: 2100000, guid: abc15cd93a737b14797a8e1d92e0ad74, type: 2}
+  _holeMaterial: {fileID: 2100000, guid: 02fc2690fa547264f86c6a4c87e41782, type: 2}
+  _clips:
+  - {fileID: 8300000, guid: 543b841935a3d484d8fc8a7961f3d913, type: 3}
+  - {fileID: 8300000, guid: e0b7c5978f93600478b85b1fe5e998a7, type: 3}
+  _headClips:
+  - {fileID: 8300000, guid: 76abcbfd57c580a4fb3671527a498b76, type: 3}
+  _stainSize: {x: 0.07, y: 0.12}
+  _holeSize: 0.025
+  _maxStainsPerBody: 6
+  _volume: 0.8
+  _selfVolume: 0.6
+  _maxVoices: 6

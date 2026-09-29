@@ -33,13 +33,6 @@
       "mcp__unityMCP__list_resources",
       "mcp__unityMCP__validate_script",
       "mcp__unityMCP__manage_editor"
-    ],
-    "deny": [
-      "Read(./Library/**)",
-      "Read(./Temp/**)",
-      "Read(./obj/**)",
-      "Read(./Build/**)",
-      "Read(./Builds/**)"
     ]
   },
   "hooks": {

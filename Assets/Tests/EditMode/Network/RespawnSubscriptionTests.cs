@@ -192,6 +192,37 @@ namespace VrBattlegrounds.Tests.Network
             }
         }
 
+        /// <summary>
+        /// Погибший оживает только на своей базе и только до начала боя. Раньше отложенный
+        /// респавн текущего раунда жил до следующего: не успевший к закупке (сработал предел
+        /// возвращения на базу) оживал, дойдя до зоны, посреди боя.
+        /// </summary>
+        [Test]
+        public void Опоздавший_на_базу_не_оживает_в_бою_этого_раунда()
+        {
+            SilenceMirrorNoise();
+
+            _mode.PrepareNextRound();
+            SetPrivateField(_mode, "_roundState", RoundState.Combat);
+
+            EnterZone(_zoneA, _player);
+
+            Assert.IsFalse(_player.IsAlive, "Погибший ожил в своей зоне посреди боя — возрождение только до боя.");
+        }
+
+        [Test]
+        public void Вернувшийся_на_базу_до_боя_оживает()
+        {
+            SilenceMirrorNoise();
+
+            _mode.PrepareNextRound();
+            SetPrivateField(_mode, "_roundState", RoundState.Setup);
+
+            EnterZone(_zoneA, _player);
+
+            Assert.IsTrue(_player.IsAlive, "Погибший дошёл до своей зоны на подготовке, а не ожил.");
+        }
+
         [Test]
         public void Пропущенный_респавн_не_срабатывает_в_бою_следующего_раунда()
         {

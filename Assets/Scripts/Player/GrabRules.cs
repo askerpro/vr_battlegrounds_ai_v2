@@ -26,6 +26,13 @@ namespace VrBattlegrounds.Player
                 return false;
             }
 
+            SupportGripRequiresMain supportRule = GrabbableHierarchyCache.GetSupportRule(grabbable);
+
+            if (supportRule != null && !supportRule.AllowsGrab(grabber, grabbable, grabPoint))
+            {
+                return false;
+            }
+
             if (!AnchoredItemGrabRule.AllowsGrab(grabber, grabbable))
             {
                 return false;

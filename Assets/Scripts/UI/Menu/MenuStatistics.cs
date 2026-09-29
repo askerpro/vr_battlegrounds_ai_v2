@@ -67,7 +67,7 @@ namespace VrBattlegrounds.UI.Menu
         private static string TeamName(int teamIndex)
         {
             TeamData team = TeamRegistry.Instance != null ? TeamRegistry.Instance.GetByIndex(teamIndex) : null;
-            return team != null ? team.displayName : "Команда " + teamIndex;
+            return team != null ? team.Name : "Команда " + teamIndex;
         }
     }
 }

@@ -30,37 +30,52 @@ namespace VrBattlegrounds.Tests.Prefabs
         private const string NonSdkHands    = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
         private const string HandsPackPoses = "Assets/Art/HandPoses/HandsPack/";
 
-        private static readonly Dictionary<string, string> Parents = new Dictionary<string, string>
-        {
-            { SdkHands, PlayerBase },
-            { NonSdkHands, PlayerBase },
-            { "Assets/Prefabs/Player/Heavy_Soldier_Base_Avatar.prefab", SdkHands },
-            { "Assets/Prefabs/Player/MEF_Base_Avatar.prefab", NonSdkHands },
-            // Вариант второго уровня: та же модель с оптимизированной геометрией. Позы кисти и
-            // записи хвата оружия приходят от MEF по цепочке _parentPrefab.
-            { "Assets/Prefabs/Player/Optimized_MEF_Player.prefab", "Assets/Prefabs/Player/MEF_Base_Avatar.prefab" }
-        };
-
-        public static IEnumerable<string> Variants() => Parents.Keys;
+        /// <summary>
+        /// Аватары — из реестра (<see cref="RegisteredAvatars"/>), без списка путей: новый аватар
+        /// попадает под проверку сам, незарегистрированный скин тест не валит.
+        /// </summary>
+        public static IEnumerable<string> Variants() =>
+            RegisteredAvatars.Prefabs().Select(AssetDatabase.GetAssetPath).OrderBy(p => p);
 
         [TestCaseSource(nameof(Variants))]
-        public void Вариант_наследует_свою_базу(string path)
+        public void Вариант_наследует_одну_из_баз_кисти(string path)
         {
-            GameObject prefab = Load(path);
-            GameObject parent = PrefabUtility.GetCorrespondingObjectFromSource(prefab);
+            List<string> chain = UnityChain(Load(path));
 
-            Assert.That(parent, Is.Not.Null, $"{path} не вариант");
-            Assert.That(AssetDatabase.GetAssetPath(parent), Is.EqualTo(Parents[path]));
+            Assert.That(chain.Last(), Is.EqualTo(PlayerBase), $"{path}: цепочка вариантов не доходит до PlayerBase — {Describe(chain)}");
+            Assert.That(chain.Contains(SdkHands) ^ chain.Contains(NonSdkHands), Is.True,
+                        $"{path}: цепочка обязана идти ровно через одну базу кисти — {Describe(chain)}");
         }
 
         [TestCaseSource(nameof(Variants))]
         public void Цепочка_UxrAvatar_совпадает_с_цепочкой_вариантов(string path)
         {
-            UxrAvatar avatar = Load(path).GetComponent<UxrAvatar>();
+            List<string> chain = UnityChain(Load(path));
 
-            Assert.That(avatar.ParentPrefab, Is.Not.Null, "UxrAvatar._parentPrefab пуст");
-            Assert.That(AssetDatabase.GetAssetPath(avatar.ParentPrefab), Is.EqualTo(Parents[path]));
+            // Каждый уровень, кроме PlayerBase: _parentPrefab = настоящий родитель в Unity.
+            for (int i = 0; i < chain.Count - 1; i++)
+            {
+                UxrAvatar avatar = Load(chain[i]).GetComponent<UxrAvatar>();
+                Assert.That(avatar, Is.Not.Null, $"{chain[i]}: нет UxrAvatar");
+                Assert.That(avatar.ParentPrefab, Is.Not.Null, $"{chain[i]}: UxrAvatar._parentPrefab пуст");
+                Assert.That(AssetDatabase.GetAssetPath(avatar.ParentPrefab), Is.EqualTo(chain[i + 1]),
+                            $"{chain[i]}: _parentPrefab не совпадает с вариантом Unity");
+            }
         }
+
+        /// <summary>Путь префаба и всех его родителей-вариантов вверх до корня.</summary>
+        private static List<string> UnityChain(GameObject prefab)
+        {
+            var chain = new List<string>();
+            for (GameObject current = prefab; current != null; current = PrefabUtility.GetCorrespondingObjectFromSource(current))
+            {
+                chain.Add(AssetDatabase.GetAssetPath(current));
+            }
+            return chain;
+        }
+
+        private static string Describe(List<string> chain) =>
+            string.Join(" → ", chain.Select(System.IO.Path.GetFileNameWithoutExtension));
 
         [Test]
         public void PlayerBase_без_поз_кисти()

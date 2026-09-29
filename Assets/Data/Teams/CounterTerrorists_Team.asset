@@ -13,12 +13,8 @@ MonoBehaviour:
   m_Name: CounterTerrorists_Team
   m_EditorClassIdentifier: 
   teamIndex: 1
-  displayName: CounterTerrorists
+  displayName: "\u0412\u043E\u0435\u043D\u043D\u044B\u0435"
   icon: {fileID: 21300000, guid: 0c6c01bbcff9d1f47bcaa70851ac626a, type: 3}
   color: {r: 0, g: 0.024693727, b: 1, a: 0.12941177}
   avatars:
-  - {fileID: 11400000, guid: 765815f6f8d1186499b355cbd079ba4d, type: 2}
-  - {fileID: 11400000, guid: e87626fd3cfe71a40ad04285711cd9e6, type: 2}
-  - {fileID: 11400000, guid: dd5d408a8185231478c8de233450187a, type: 2}
-  - {fileID: 11400000, guid: 1ddecfa30d061594a8ec136af687d7d6, type: 2}
-  - {fileID: 11400000, guid: 294e4428ec16fb84d9dd876e1cbb523a, type: 2}
+  - {fileID: 11400000, guid: 4d1f2ac2b7326a144a7aff3486e766fe, type: 2}

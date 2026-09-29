@@ -68796,6 +68796,8 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   Geo: {fileID: 3691202011922519686}
+  ExtraGeo: []
+  GhostPrefab: {fileID: 7431058665512197505, guid: 56346eab433146441ade70382cf51ab6, type: 3}
   Ghost: {fileID: 3417934765505412783}
 --- !u!114 &3660179452437783722
 MonoBehaviour:
@@ -68830,8 +68832,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e14c4d0d52ad32e499e71bb1dd2250c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.PocketHaptics
-  _amplitude: 0.15
-  _pulseInterval: 0.1
+  _tapAmplitude: 0.5
+  _tapSeconds: 0.3
 --- !u!114 &8369001338393055065
 MonoBehaviour:
   m_ObjectHideFlags: 0

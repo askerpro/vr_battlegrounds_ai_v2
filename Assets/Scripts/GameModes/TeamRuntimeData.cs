@@ -73,7 +73,7 @@ namespace VrBattlegrounds.GameModes
 
         public override string ToString()
         {
-            return $"Name: {Team?.displayName}, Index: {Team?.teamIndex}, Score: {Score}, Players: {PlayersCount}";
+            return $"Name: {Team?.Name}, Index: {Team?.teamIndex}, Score: {Score}, Players: {PlayersCount}";
         }
     }
 }

@@ -34,22 +34,34 @@ namespace VrBattlegrounds.Tests
             list.Add(session);
         }
 
+        private readonly HashSet<PlayerSession> _dead = new HashSet<PlayerSession>();
+
         /// <summary>
-        /// Все игроки команды. В заглушке совпадает с живыми: мёртвых сюда не кладут,
-        /// а вопрос «сколько всего в команде» задаёт <c>TeamRuntimeData</c>.
+        /// Игрок погиб (или возродился — <paramref name="dead"/> = false). Мёртвый остаётся
+        /// в команде (<see cref="GetPlayers"/>), но не среди живых — как в игре до респавна.
         /// </summary>
-        public IEnumerable<PlayerSession> GetPlayers(TeamData team)
+        public void MarkDead(PlayerSession session, bool dead = true)
         {
-            return GetAlivePlayers(team);
+            if (dead) _dead.Add(session);
+            else _dead.Remove(session);
         }
 
-        public IEnumerable<PlayerSession> GetAlivePlayers(TeamData team)
+        /// <summary>Все игроки команды, живые и мёртвые.</summary>
+        public IEnumerable<PlayerSession> GetPlayers(TeamData team)
         {
             if (team == null) return new PlayerSession[0];
 
             return _byTeam.TryGetValue(team.teamIndex, out List<PlayerSession> list)
                 ? (IEnumerable<PlayerSession>)list
                 : new PlayerSession[0];
+        }
+
+        public IEnumerable<PlayerSession> GetAlivePlayers(TeamData team)
+        {
+            foreach (PlayerSession session in GetPlayers(team))
+            {
+                if (!_dead.Contains(session)) yield return session;
+            }
         }
 
         /// <summary>Все положенные в заглушку сессии — тем же числом, что видит режим.</summary>

@@ -50,7 +50,7 @@ namespace VrBattlegrounds.DevTools
             for (int i = 0; i < zones.Count; i++)
             {
                 Transform t = zones[i].transform;
-                string team = zones[i].Team != null ? zones[i].Team.displayName : "без команды";
+                string team = zones[i].Team != null ? zones[i].Team.Name : "без команды";
                 result.Add(new DebugTeleportTarget(ZonePrefix + i, "Зона: " + team, t.position, t.rotation));
             }
 

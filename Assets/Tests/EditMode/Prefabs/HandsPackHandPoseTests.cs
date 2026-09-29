@@ -44,7 +44,24 @@ namespace VrBattlegrounds.Tests.Prefabs
         private const string BodyBone = "Bn_Base";
         private const string BodyPath = "MeshContainer/Base";
 
-        private static readonly string[] Avatars = { "Assets/Prefabs/Player/MEF_Base_Avatar.prefab" };
+        /// <summary>
+        /// Зарегистрированные аватары ветки без кисти SDK — те, кому позы пака и предназначены
+        /// (цепочка вариантов проходит через <see cref="PoseBase"/>). Конкретных аватаров тест не знает.
+        /// </summary>
+        private static IEnumerable<string> Avatars =>
+            RegisteredAvatars.Prefabs()
+                             .Where(p => InheritsFrom(p, PoseBase))
+                             .Select(AssetDatabase.GetAssetPath)
+                             .OrderBy(p => p);
+
+        private static bool InheritsFrom(GameObject prefab, string basePath)
+        {
+            for (GameObject current = prefab; current != null; current = PrefabUtility.GetCorrespondingObjectFromSource(current))
+            {
+                if (AssetDatabase.GetAssetPath(current) == basePath) return true;
+            }
+            return false;
+        }
 
         public sealed class Case
         {

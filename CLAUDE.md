@@ -1,231 +1,124 @@
 # VR Battlegrounds AI
 
-VR-шутер для Oculus Quest 2/3. Unity **6000.4.1f1**, URP. Над проектом работают только ИИ-агенты.
+VR-шутер для Quest 2/3 на Unity 6 (URP). Над проектом работают только ИИ-агенты. Этот файл —
+единственный источник правил агента (`.agentrules`, `.cursorrules` и т.п. — только указатели сюда).
 
-Этот файл — **единственный источник правды** для правил агента. `.agentrules`, `.cursorrules`,
-`.clinerules`, `.github/copilot-instructions.md` — указатели сюда, содержимого не несут.
-
-## Стек
-
-| | |
-|---|---|
-| Рендер | URP `17.4.0` |
-| XR | `com.unity.xr.oculus` `4.5.4`, `com.unity.xr.management` `4.5.4` |
-| Ввод | `com.unity.inputsystem` `1.19.0` |
-| VR-фреймворк | UltimateXR (VRMADA) — вендорится в `Assets/ThirdParty/UltimateXR/` |
-| Сеть | Mirror — вендорится в `Assets/ThirdParty/Mirror/` |
-| Сборка кода игры | `Assets/Scripts/VrBattlegrounds.asmdef` |
-
-Версии брать из `Packages/manifest.json` — он источник правды, не эта таблица.
+UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игры — сборка `Assets/Scripts/VrBattlegrounds.asmdef`.
+Версии пакетов — `Packages/manifest.json`. Комментарии и документация — на русском.
 
 ## Жёсткие правила
 
-Нарушение ломает билд или игру. Проверяй до того, как писать код.
+Нарушение ломает билд или игру.
 
-- **Логи** — только через канал категории: `GameLog.Match.Info("...")`, `GameLog.Player.Verbose("...", this)`.
-  Категорию знает сам логгер, `GameSettings` в вызове не упоминается. Каналы: `Network`,
-  `Player`, `Match`, `Debug`, `WeaponSystem`, `UI`, `PhysicalSpace`, `Arsenal`, `Perf`.
-  `Debug.Log` в игровых скриптах запрещён — единственное исключение сам `GameLog.cs`.
-  Уровни: `Verbose` поток, `Info` события, `Warning` проблемы, `Error` сбои.
-  Ошибка вне категории — `GameLog.Error("...")`, пишется всегда.
-- **Смена сцены внутри живой сессии** — только `MapManager.Instance.LoadMap(sceneName)`. Прямые
-  `SceneManager.LoadScene(...)` и `NetworkManager.singleton.ServerChangeScene(...)` из игрового
-  кода запрещены: Mirror не даёт звать смену сцены из своих колбэков, клиенты рассинхронизируются.
-  **Законное исключение — поля `offlineScene` и `onlineScene` у `GameNetworkManager`:** вход
-  в сессию и выход из неё ведёт сам Mirror, своим внутренним таймингом. Их не чистить, разбор —
-  NET-21 в `Docs/audit/network-audit-2026-08.md`. Правило про `MapManager` — про смену **карты**
-  на живом сервере, а не про то, как клиент попадает в меню после разрыва.
-- **Editor-скрипты** — только в `Assets/Editor/VR_Battlegrounds/<категория>/`. Папка `Editor`
-  внутри `Assets/Scripts/` затянет `UnityEditor` в Android-билд Quest → фатальная ошибка
-  компиляции. Категории: `Avatars/`, `UI/`, `Gameplay/`, `Debug/`, `VersionControl/`, `Release/`.
-- **Имя в меню** — `VR Battlegrounds` с пробелом: `[MenuItem("Tools/VR Battlegrounds/...")]`,
-  `[MenuItem("GameObject/VR Battlegrounds/...")]`, `[CreateAssetMenu(menuName = "VR Battlegrounds/...")]`.
-  Слитное `VrBattlegrounds` плодит дубли корневых пунктов.
-- **Single Responsibility** — не превращать синглтоны в God Object. Чужеродную логику выносить
-  в отдельный класс/стратегию/менеджер, а не дописывать в существующий.
-- **Коммит** — никогда сразу после написания кода. Сначала пользователь проверяет в Unity.
-  Исключение: правки только документации. Подробности — `/commit`.
+- **Логи** — только `GameLog.<Канал>.<Уровень>(...)`, например `GameLog.Match.Info("...")`,
+  `GameLog.Player.Verbose("...", this)`. Каналы: `Network`, `Player`, `Match`, `Debug`, `WeaponSystem`,
+  `UI`, `PhysicalSpace`, `Arsenal`, `Perf`; вне категории — `GameLog.Error(...)`. `Debug.Log` запрещён.
+- **Смена карты на живом сервере** — только `MapManager.Instance.LoadMap(sceneName)`. Прямые
+  `SceneManager.LoadScene` / `ServerChangeScene` рассинхронизируют клиентов. Исключение —
+  `offlineScene`/`onlineScene` у `GameNetworkManager`: их ведёт сам Mirror, не трогать (NET-21).
+- **Editor-скрипты** — только в `Assets/Editor/VR_Battlegrounds/<категория>/`. Папка `Editor` внутри
+  `Assets/Scripts/` ломает Android-билд. Меню — `VR Battlegrounds` с пробелом (`Tools/VR Battlegrounds/...`).
+- **Коммит** — никогда сразу после кода, сначала проверка пользователем в Unity. Исключение — только
+  документация. Подробности — `/commit`.
 - **Теги** — только из `GameTags`, руками не ставятся: правило в `GameTagRules`, расстановка —
-  `Tools/VR Battlegrounds/Gameplay/Apply Game Tags`, проверка — `GameTagsTests`. Новый префаб,
-  сцена или категория — прогнать инструмент. **Не удалять теги из TagManager в работающем
-  редакторе:** загруженные объекты хранят тег индексом, и все последующие теги сдвигаются
-  (`SpawnZone` становится `Arsenal`); после такого — переимпорт ассетов с диска.
-- **Префабы оружия и магазинов** (`Assets/Prefabs/Weapons/`, всё, что после отпускания становится
-  динамическим) обязаны иметь хотя бы один не-trigger коллайдер на своём `Rigidbody`. Без него
-  брошенный предмет проходит сквозь пол и падает вечно, а UltimateXR без конца рассылает его
-  позицию по сети (PHY-01: `Gun_real` без коллайдеров). Там же обязательны `Collision Detection`
-  не `Discrete`, `OutOfWorldGuard`, а у оружия с якорем магазина ещё `AnchoredItemCollisionIgnore`.
-  Каждая деталь (вложенный `UxrGrabbableObject` — затвор, помпа, чека) несёт
-  `GrabOnlyWhenParentHeld`, иначе её берут у лежащего оружия.
-  Проверка: `WeaponDropPhysicsTests`, `OutOfWorldGuardTests`, `WeaponPartGrabTests`.
-  Размер — как у настоящего прототипа, правится масштабом **корня** (магазин — тем же
-  коэффициентом, вложенный в оружие магазин остаётся ×1). Новое оружие — эталон в `WeaponScaleTests`.
-- **Аватары и их тесты меняются вместе.** Любая правка аватара — добавил, убрал или
-  переименовал компонент, карман, якорь, позу, хват, слой телепорта, новый аватар в
-  `AvatarRegistry` — в той же задаче отражается в `AvatarLoadoutTests` (оснащение) и
-  `PrefabCompositionTests` (сетевой каркас). Добавил — тест требует это. Убрал намеренно —
-  убери требование из теста и напиши в комментарии почему. Задача не закрыта, пока оба
-  теста не прогнаны.
-- **Сетевые действия — один автор.** UltimateXR пересчитывает действия чужого игрока на каждой машине
-  (выстрел по спуску, затвор по руке). Копия чужого действия **не вызывает синхронизируемых методов**
-  (`BeginSync`/`EndSync*`: `Shoot`, `Reload`, `ReleaseObject`, `IsGrabbable` …) — эффект у получателя даёт
-  только событие автора. Автор предмета в руке — машина держащего аватара, мира — сервер:
-  `StateEventAuthority.IsAuthorOfItem` / `IsWorldAuthority`. Код из Update, таймера, физики, Mirror RPC
-  или хука, который зовёт синхронизируемый метод, обязан проверить автора. Иначе — вторая пуля и
-  двойной урон (known-issues, Issue 23). Канал (`NetworkStateRelay`) отсекает и считает нарушителей —
-  страховка, а не решение.
-- **Геометрия карты** — после любой правки перезапечь occlusion: `Tools/VR Battlegrounds/Gameplay/Bake Occlusion (all maps)`.
-  Подвижное на карте (двери, панели) — только с `Animator`/`Rigidbody`/`NetworkIdentity`, иначе оно станет
-  окклюдером и игроки за ним будут пропадать. Проверка — `OcclusionCullingBakedTests` (ловит отсутствие данных, не устаревшие).
-- **Правки UltimateXR SDK** — любое изменение в `Assets/ThirdParty/UltimateXR/` обязано попасть
-  в `Docs/UltimateXR/sdk-patches.md`, иначе потеряется при обновлении SDK.
-- **Правки Mirror** — любое изменение в `Assets/ThirdParty/Mirror/` помечается в коде
-  `VR Battlegrounds patch` и описывается в `Docs/Mirror/mirror-patches.md`.
-- Комментарии и документация — на русском.
+  `Tools/VR Battlegrounds/Gameplay/Apply Game Tags`, проверка — `GameTagsTests`. Не удалять теги из
+  TagManager в открытом редакторе — индексы сдвигаются у всех загруженных объектов.
+- **Префабы оружия и магазинов** (`Assets/Prefabs/Weapons/`): не-trigger коллайдер на `Rigidbody`,
+  `Collision Detection` не `Discrete`, `OutOfWorldGuard`; у оружия с якорем магазина —
+  `AnchoredItemCollisionIgnore`; у каждой вложенной детали `UxrGrabbableObject` — `GrabOnlyWhenParentHeld`.
+  Размер — масштабом корня, эталон в `WeaponScaleTests`. Проверка: `WeaponDropPhysicsTests`,
+  `OutOfWorldGuardTests`, `WeaponPartGrabTests`. Новое оружие — `/add-weapon`.
+- **Аватары и их тесты меняются вместе.** Любая правка аватара (компонент, карман, якорь, поза, хват,
+  слой, запись в `AvatarRegistry`) в той же задаче отражается в `AvatarLoadoutTests` и
+  `PrefabCompositionTests`; убранное требование — с комментарием почему. Новый аватар — `/setup-avatar`.
+- **Сетевые действия — один автор.** UltimateXR пересчитывает действия чужого игрока на каждой машине.
+  Код из Update, таймера, физики, RPC или хука, вызывающий синхронизируемый метод (`Shoot`, `Reload`,
+  `ReleaseObject`, `IsGrabbable`…), обязан проверить `StateEventAuthority.IsAuthorOfItem` /
+  `IsWorldAuthority`. Иначе — двойной выстрел и урон (Issue 23).
+- **Геометрия карты** — после правки: `Tools/VR Battlegrounds/Gameplay/Bake Occlusion (all maps)`.
+  Подвижное на карте — только с `Animator`/`Rigidbody`/`NetworkIdentity`, иначе станет окклюдером.
+- **Правки SDK**: `Assets/ThirdParty/UltimateXR/` → запись в `Docs/UltimateXR/sdk-patches.md`;
+  `Assets/ThirdParty/Mirror/` → пометка `VR Battlegrounds patch` в коде и запись в `Docs/Mirror/mirror-patches.md`.
+- **Single Responsibility** — чужеродную логику в синглтоны не дописывать, выносить в отдельный класс.
 
-## Поиск: всегда ограничивай область
+## Поиск
 
-Своего кода 119 `.cs`, в `Assets/ThirdParty/` — 1383. Поиск без скоупа даёт ~10× мусора.
-
-```
-Grep  pattern="ClassName"  path="Assets/Scripts"    # код игры
-Grep  pattern="ClassName"  path="Assets/Editor"     # редакторные утилиты
-```
-
-В `Assets/ThirdParty/`, `Packages/`, `Library/` заходить только когда задача про сам SDK.
-Корневые `*.csproj` (128 шт., 11 МБ), `Library/`, `Temp/`, `obj/` отсекаются `.gitignore`,
-и Grep их не видит — но `Read` по ним всё равно возможен, не делай этого без нужды.
-
-Не читай `.unity` и `.prefab` целиком — это YAML на десятки тысяч строк. Нужен конкретный
-компонент — `Grep` по имени класса или GUID внутри файла.
+Своего кода ~10× меньше, чем в `Assets/ThirdParty/`. Grep — всегда с `path="Assets/Scripts"` или
+`"Assets/Editor"`; в `ThirdParty/`, `Packages/` — только если задача про SDK. Для API UltimateXR
+исходники `Assets/ThirdParty/UltimateXR/Runtime/Scripts/` точнее доков.
+`.unity` и `.prefab` целиком не читать — Grep по имени класса или GUID.
 
 ## Что читать под задачу
 
-Не читай документацию впрок — только по адресу задачи.
+Не читать документацию впрок. Индекс — `Docs/README.md`.
 
 | Задача | Читать |
 |---|---|
-| Архитектура, «где что лежит» | `Docs/README.md` |
-| **Расследование бага** | **`Docs/troubleshooting.md` — индекс по симптому, читать первым** → `Docs/UltimateXR/known-issues.md` → `sdk-patches.md`, затем `/debug` |
+| **Баг** | **`Docs/troubleshooting.md` (индекс по симптому) первым** → `Docs/UltimateXR/known-issues.md`, затем `/debug` |
 | Новая фича | `Docs/README.md` (нет ли дубля) → `Docs/gameplay.md`, затем `/feature` |
-| API UltimateXR | исходники `Assets/ThirdParty/UltimateXR/Runtime/Scripts/` — точнее, чем `.md` |
-| Модули UltimateXR обзорно | `Docs/UltimateXR/architecture.md` |
 | Матч, режимы, раунды | `Docs/gameplay.md`, `Docs/game-manager.md` |
 | Сессия, роли, устройства | `Docs/session-architecture.md` |
-| UI-меню | `Docs/ui-menu-architecture.md` |
-| Шрифты, текст UI, кириллица | `Docs/ui-fonts.md` |
+| UI-меню / шрифты | `Docs/ui-menu-architecture.md` / `Docs/ui-fonts.md` |
 | Стена арсенала | `Docs/Arsenal/Arsenal_Code_Architecture_RU.md` |
-| Git / Plastic | `Docs/version-control.md` |
-| Сборка сервера, Quest, планшета | `Docs/release.md` |
-| Производительность, стресс-тест на шлеме | `Docs/perf-stress-test.md` |
+| Сборка, Git/Plastic, перф | `Docs/release.md`, `Docs/version-control.md`, `Docs/perf-stress-test.md` |
 | Unity MCP сломан | `Docs/unity-mcp.md`, `.agents/rules/unity_mcp.md` |
-
-Полный индекс документации — `Docs/README.md`.
-
-Углублённые правила (то, что не влезло сюда) — `.agents/rules/`:
-
-| Файл | О чём |
-|---|---|
-| `editor_scripts.md` | Где размещать Editor-скрипты, соглашения по пунктам меню |
-| `unity_mcp.md` | Патч ошибки MAX_PATH в `execute_code` на Windows |
-| `ultimate_xr.md` | Ключевые классы UltimateXR, где искать API |
-| `terminal.md` | Различия PowerShell и Bash, подводные камни |
-| `documentation.md` | Что документировать, а что нет |
 
 ## Unity MCP
 
-`mcpforunityserver` подключён через stdio (`.mcp.json`). Это единственный способ увидеть
-консоль Unity, иерархию сцены и состояние объектов — когда инструменты `mcp__unityMCP__*`
-доступны, предпочитай их терминалу.
-
-Если инструментов в сессии нет — **не блокируйся и не жди**. Прежнее правило «обходные пути
-запрещены» отменено: оно оставляло агента без выхода.
-
-- Ошибки компиляции без MCP: `%LOCALAPPDATA%\Unity\Editor\Editor.log` — см. `/unity-check`.
-- Сцены и объекты без MCP менять нельзя. Сформулируй списком, что сделать руками в редакторе,
-  и передай пользователю.
-- `execute_code` падает с ошибкой MAX_PATH на Windows — готовый патч в
-  `.agents/rules/unity_mcp.md`.
+Инструменты `mcp__unityMCP__*` — предпочтительный способ видеть консоль и сцену. Если их нет —
+не блокироваться: ошибки компиляции — `%LOCALAPPDATA%\Unity\Editor\Editor.log` (`/unity-check`);
+правки сцен и объектов — списком для пользователя. `execute_code` падает с MAX_PATH — патч в
+`.agents/rules/unity_mcp.md`.
 
 ## Самопроверка
 
-Репозиторий ai-first: человек не является частью цикла проверки. **Задача не закрыта,
-пока агент сам не получил зелёный результат.** Формулировки вида «пользователю нужно
-проверить в Unity» — не результат, а незаконченная работа.
+**Задача не закрыта, пока агент сам не получил зелёный результат.** «Пользователю нужно проверить» —
+незаконченная работа.
 
-Инструменты, доступные агенту прямо сейчас:
+- Компиляция под Android: `execute_code` → `VrBattlegrounds.EditorTools.AndroidCompileGate.Run()`.
+- Тесты: `run_tests(mode="EditMode", assembly_names=["VrBattlegrounds.Tests.EditMode"])` → `get_test_job`.
 
-| Что проверить | Чем |
-|---|---|
-| Компиляция под Android (editor-only утечки) | `execute_code`: `VrBattlegrounds.EditorTools.AndroidCompileGate.Run()` |
-| Логика матча, чистые классы | `run_tests(mode="EditMode", assembly_names=["VrBattlegrounds.Tests.EditMode"])` → `get_test_job(..., wait_timeout=60)` |
-| Поведение любого кода в редакторе | `execute_code` — произвольный C# с доступом к игровым сборкам |
-| Ошибки и предупреждения | `read_console` |
-| Состояние сцены и объектов | `find_gameobjects`, `manage_scene`, `manage_gameobject` |
+1. **Сначала харнесс, потом правка.** Нечем проверить — проверялка входит в задачу.
+2. **Тест красный до правки.** Проверка, ни разу не показавшая отказ, ничего не доказывает.
+3. **Чтение кода — гипотеза, прогон — факт.** Включая собственные выводы и аудиты.
+4. **Шум харнесса ≠ отказ логики.** Mirror пишет `Error` на `[ClientRpc]` вне сервера, `[Server]`-методы
+   вне сервера молча глушатся — такое падение теста — дефект теста.
 
-Порядок работы:
+Два клиента и шлем автономно недоступны: такие задачи закрывать, вынося логику под юнит-тест.
 
-1. **Сначала харнесс, потом правка.** Если задачу нечем проверить — сделать проверялку
-   частью задачи. Правка без способа её проверить не считается сделанной.
-2. **Тест должен быть красным до правки.** Инструмент, который ни разу не показывал
-   отказ, ничего не доказывает. Ворота сборки проверены именно так: баг возвращали
-   специально и убеждались, что он ловится.
-3. **Не доверять выводам из чтения кода, включая свои.** Аудит — это гипотезы. Прогон —
-   факт. Находка MATCH-04 при проверке не воспроизвелась, а вместо неё нашлась MATCH-06,
-   которую чтение пропустило.
-4. **Отличать отказ логики от шума харнесса.** Mirror пишет `Error` на `[ClientRpc]` вне
-   сервера, `[Server]`-методы вне сервера молча заглушаются. Падение теста по этим
-   причинам — дефект теста, а не кода.
+## Баги: чинить класс, а не экземпляр
 
-Чего пока нельзя автономно: два клиента одновременно (уровень 3–4 из `Docs/testing.md`)
-и всё, что требует шлема (уровень 5). Такие задачи закрывать не «на глаз», а понижая
-уровень: выносить логику туда, где её достаѐт юнит-тест.
+1. **Назвать класс ошибки** — какое допущение нарушено и почему код позволил его нарушить.
+2. **Найти все экземпляры** класса, а не только место падения.
+3. **Предложить архитектуру, при которой баг невозможен** — единая точка входа, инвариант в одном
+   месте, генерация вместо ручной настройки. Образцы: `StateEventAuthority`, `GameTags`+`GameTagRules`,
+   `MapManager.LoadMap`.
+4. **Закрепить тестом**, который ловит весь класс.
+
+Точечная правка — только как срочная мера, с записью класса ошибки и предложенного решения.
+Большой рефакторинг — сначала предложить пользователю.
 
 ## Стиль работы
 
-- Ответ по существу задачи. Не пересказывай сделанное шаг за шагом.
-- На архитектурных развилках давай **зачем** (почему так), **риски** и одну-две **альтернативы** —
-  но рекомендуй что-то одно, а не выкладывай меню.
-- Уточняй, только если разные прочтения ведут к разной работе. Рутинные развилки решай сам
-  и скажи, что выбрал.
-- Не коммить без явного подтверждения пользователя — см. жёсткие правила выше.
+- На архитектурных развилках — зачем, риски, одна-две альтернативы, но рекомендовать одно.
+- Уточнять, только если разные прочтения ведут к разной работе; рутинное решать самому и говорить, что выбрал.
 
 ## Терминал
 
-Доступны оба: **PowerShell** (основной, Windows PowerShell 5.1) и **Bash** (Git Bash). Синтаксис
-у них разный — не смешивай в одном вызове.
+- Bash-инструмент **изолирован от сети** (`curl` к localhost падает) — сетевые проверки через PowerShell.
+- Git — всегда `--no-pager`.
 
-- В PowerShell нет `&&` и `||`. Последовательность — `;`, условие — `; if ($?) { ... }`.
-- Bash-инструмент **изолирован от сети** (`curl` к localhost падает с кодом 7). Сетевые
-  проверки — только через PowerShell.
-- Git всегда с `--no-pager`, иначе пейджер зависает в ожидании `q`.
-- Многострочные скрипты в PowerShell — через here-string `@'...'@` с `'@` в нулевой колонке.
+## Документация
 
-## Слэш-команды
+Новый код без документации не оставлять; тривиальное (геттеры, колбэки) не документировать.
 
-`/commit` `/debug` `/feature` `/unity-check` `/docs-sync` — лежат в `.claude/commands/`.
-Многошаговые процедуры — скиллы в `.claude/skills/`: `/setup-avatar` — аватар игрока из
-модели (риг, игровой вариант `PlayerBase`, регистрация, проверка); `/add-weapon` — новое
-оружие (сборка из пака Hands вычислением, магазин, арсенал, сеть, тесты).
-
-## Документация — что обновлять
-
-Новый код без документации не оставлять. Тривиальные методы, геттеры и обычные
-`MonoBehaviour`-колбэки **не документировать** — это раздувает доки без пользы.
-
-| Что сделал | Куда писать |
+| Что сделал | Куда |
 |---|---|
-| Новый класс, скрипт, компонент | `Docs/README.md` |
-| Игровая механика, режим | `Docs/gameplay.md` |
-| Менеджер, поток инициализации | `Docs/game-manager.md` |
-| Значимое изменение, фикс, рефакторинг | `Docs/CHANGELOG.md` |
-| Неочевидное поведение или баг SDK | `Docs/UltimateXR/known-issues.md` |
-| Правка исходников UltimateXR | `Docs/UltimateXR/sdk-patches.md` |
-| Правка исходников Mirror | `Docs/Mirror/mirror-patches.md` |
-| Архитектура, новые зависимости | `Docs/UltimateXR/architecture.md` |
+| Новый класс/компонент; новый `.md` | `Docs/README.md` |
+| Механика, режим | `Docs/gameplay.md` |
+| Менеджер, инициализация | `Docs/game-manager.md` |
+| Значимое изменение, фикс | `Docs/CHANGELOG.md` |
+| Неочевидное поведение, баг SDK | `Docs/UltimateXR/known-issues.md` |
 | Новое правило для агента | этот файл или `.agents/rules/<зона>.md` |
 
-Создал новый `.md` — добавь ссылку в `Docs/README.md` и, если по теме, в этот файл.
-
-Если пришлось лезть в код за тем, что должно было быть в доках, — допиши это в доки
-той же задачей. Это главный способ удешевить следующие сессии.
+Пришлось лезть в код за тем, что должно быть в доках, — дописать доки той же задачей.

@@ -307,6 +307,14 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         public virtual bool WeaponsEnabled => true;
 
+        /// <summary>
+        /// Рисуются ли границы зон спавна (<c>TeamSpawnZone</c>). Зоны нужны матчу — где стоять перед
+        /// боем, куда вернуться выбывшему; разминка (лобби и боевая карта до «Начать матч») —
+        /// свободная арена без границ. Логика зон (спавн, «в зоне») работает независимо от этого.
+        /// Свойство класса режима, без сети — ответ одинаков у сервера и клиента.
+        /// </summary>
+        public virtual bool ShowsSpawnZones => false;
+
         /// <summary>Что режим требует от стены арсенала сейчас. По умолчанию — закрыта.</summary>
         public virtual ArsenalRules ArsenalRules => ArsenalRules.Closed;
 
@@ -331,6 +339,21 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         [Server]
         public virtual void OnPlayerDied(PlayerController player)
+        {
+        }
+
+        /// <summary>
+        /// Сервер создал аватар сессии (<c>AvatarManager</c>): первый вход, пересоздание после
+        /// смены карты, смена скина или команды. В каком состоянии он входит в игру, решает
+        /// режим. По умолчанию — как создан: живым.
+        /// </summary>
+        /// <param name="player">Новый аватар, уже в сети.</param>
+        /// <param name="continuesPrevious">
+        /// Аватар продолжает прежний — смена скина или команды, возвращение после переподключения.
+        /// Жизнь и выбывание уже перенесены с прежнего, режиму решать нечего, кроме возрождения.
+        /// </param>
+        [Server]
+        public virtual void ServerAdmitAvatar(PlayerController player, bool continuesPrevious)
         {
         }
 

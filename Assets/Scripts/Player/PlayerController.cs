@@ -119,6 +119,33 @@ namespace VrBattlegrounds.Player
 
         public bool IsAlive => !_actor.IsDead;
 
+        /// <summary>
+        /// Выбывание без смерти: выживший в конце боя, новый аватар посреди матча (после смены
+        /// карты, первый вход), новый аватар взамен выбывшего. Живым игрок бывает только в закупке
+        /// и бою, оживают все одинаково — на своей базе в подготовке (<see cref="Respawn"/>).
+        ///
+        /// <para>
+        /// <b>Это не смерть для игры.</b> Жизнь обнуляется свойством, мимо урона: <c>UxrActor.Died</c>
+        /// не поднимается, значит нет <see cref="Die"/>, записи в статистику серии, ленты убийств
+        /// и «Вы погибли» на HUD. Режим наблюдателя включается здесь же. Оружие забирает режим
+        /// (<c>EquipmentStrip</c>) — его раунд не переживает ни у кого.
+        /// </para>
+        /// </summary>
+        /// <param name="reason">Для лога: «бой кончился», «новый аватар в матче».</param>
+        [Server]
+        public void ServerEliminateSilently(string reason)
+        {
+            if (!IsAlive) return;
+
+            _actor.Life = 0f;
+            _damageLedger.Clear();
+
+            var spectator = GetComponent<SpectatorController>();
+            if (spectator != null) spectator.StartSpectating();
+
+            GameLog.Player.Info($"[PlayerController] {name}: выбыл до возвращения на базу — {reason} (без записи в статистику).", this);
+        }
+
         // ── Unity lifecycle ───────────────────────────────────────────────────
 
         public UxrActor _actor;

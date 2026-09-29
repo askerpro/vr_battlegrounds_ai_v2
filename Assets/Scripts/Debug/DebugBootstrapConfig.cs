@@ -35,6 +35,12 @@ namespace VrBattlegrounds.DevTools
         [Min(0)]
         public int minPlayersOverride = 1;
 
+        [Tooltip("Сколько ботов-противников сервер добавит сам при старте (0 — ни одного). " +
+                 "Бот — настоящий игрок без шлема: его можно ранить и убить, он считается в раундах. " +
+                 "См. DevTools.Bots.BotDirector.")]
+        [Min(0)]
+        public int botCount = 0;
+
         [Header("Карта")]
         [Tooltip("Автоматически загрузить эту сцену при старте сервера. Оставить пустым — не грузить.")]
         public string autoLoadMapScene = "";

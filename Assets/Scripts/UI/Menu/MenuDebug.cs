@@ -4,6 +4,7 @@ using Mirror;
 using TMPro;
 using UnityEngine;
 using VrBattlegrounds.DevTools;
+using VrBattlegrounds.DevTools.Bots;
 using VrBattlegrounds.DevTools.StressTest;
 
 namespace VrBattlegrounds.UI.Menu
@@ -14,7 +15,7 @@ namespace VrBattlegrounds.UI.Menu
     ///
     /// <para>
     /// Строки собираются кодом (<see cref="MenuRowBuilder"/>): статус, оверлей кадра, переходы на
-    /// экраны админа, телепорт к точкам карты, выключение режима. Стресс-тест — отдельный экран
+    /// экраны админа, боты-противники (<see cref="BotNetwork"/>), телепорт к точкам карты, выключение режима. Стресс-тест — отдельный экран
     /// «Перф-тесты» (<see cref="MenuPerfTests"/>), переход — кнопка <c>Btn_PerfTests</c> в префабе.
     /// Экран только шлёт запросы: телепорт — <see cref="DebugModeNetwork.RequestTeleport"/>;
     /// права проверяет сервер.
@@ -112,6 +113,16 @@ namespace VrBattlegrounds.UI.Menu
                 MenuRowBuilder.Label(row, "Сервер прав не выдал — см. строку статуса.", 1300f);
             }
 
+            // ── Боты ───────────────────────────────────────────────────────
+            // Только админу: сервер всё равно проверит права (BotNetwork).
+            if (admin)
+            {
+                row = MenuRowBuilder.Row(_rowsContainer);
+                MenuRowBuilder.Label(row, "Боты", 300f);
+                MenuRowBuilder.Button(_buttonPrefab, row, "Добавить бота", () => RequestBots(add: true));
+                MenuRowBuilder.Button(_buttonPrefab, row, "Убрать всех", () => RequestBots(add: false));
+            }
+
             // ── Телепорт ───────────────────────────────────────────────────
             row = MenuRowBuilder.Row(_rowsContainer);
             MenuRowBuilder.Label(row, "Телепорт", 300f);
@@ -140,7 +151,13 @@ namespace VrBattlegrounds.UI.Menu
 
             string stress = StressTestClientSession.IsRunning ? "идёт" : "не идёт";
             string reply = string.IsNullOrEmpty(DebugModeNetwork.LastReply) ? "" : "\nСервер: " + DebugModeNetwork.LastReply;
-            return $"Сеть: {net} · права админа: {(admin ? "да" : "нет")} · стресс-тест: {stress}{reply}";
+            return $"Сеть: {net} · права админа: {(admin ? "да" : "нет")} · стресс-тест: {stress} · ботов: {BotNetwork.CountVisibleBots()}{reply}";
+        }
+
+        private static void RequestBots(bool add)
+        {
+            if (!BotNetwork.Request(add, out string reason))
+                PerfOverlay.Show("Боты: " + reason, 4f);
         }
 
         private static void SwitchTo(MenuScreenType screen)

@@ -18,7 +18,7 @@ namespace VrBattlegrounds.Player.Avatars
                 GameObject avatarPrefab = teamData.GetAvatarPrefab(session.AvatarIndex);
                 if (avatarPrefab != null)
                 {
-                    GameLog.Player.Info($"[AvatarManager/TeamAvatarStrategy] Выбран скин '{avatarPrefab.name}' для команды '{teamData.displayName}' (teamId: {session.TeamIndex}, avatarId: {session.AvatarIndex})");
+                    GameLog.Player.Info($"[AvatarManager/TeamAvatarStrategy] Выбран скин '{avatarPrefab.name}' для команды '{teamData.Name}' (teamId: {session.TeamIndex}, avatarId: {session.AvatarIndex})");
                     return avatarPrefab;
                 }
                 else

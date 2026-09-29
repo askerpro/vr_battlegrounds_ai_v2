@@ -42,6 +42,9 @@ namespace VrBattlegrounds.Network
         {
             base.OnStartServer();
 
+            // Ники живут, пока жив сервер: новый сервер — новая встреча.
+            AdminNaming.ClearNicknames();
+
             if (_sessionContextPrefab != null)
             {
                 GameObject sessionInstance = Instantiate(_sessionContextPrefab);
@@ -52,6 +55,7 @@ namespace VrBattlegrounds.Network
             NetworkServer.RegisterHandler<SpectatorConnectMessage>(OnSpectatorConnect);
             VrBattlegrounds.DevTools.StressTest.StressTestNetwork.RegisterServerHandlers();
             VrBattlegrounds.DevTools.DebugModeNetwork.RegisterServerHandlers();
+            VrBattlegrounds.DevTools.Bots.BotNetwork.RegisterServerHandlers();
         }
 
         public override void OnServerSceneChanged(string sceneName)

@@ -8,10 +8,12 @@ using VrBattlegrounds.Core;
 namespace VrBattlegrounds.Interaction
 {
     /// <summary>
-    /// Позитивный отклик карманов: пока карман готов к действию руки — принять предмет из неё
-    /// или отдать своё содержимое, — контроллер этой руки непрерывно слегка вибрирует. В игре
-    /// карманов не видно (тело виртуальное, на своё бедро не смотрят), и игрок находит карман
-    /// на ощупь. Когда готовность считается, решает <see cref="PocketReadiness" />.
+    /// Позитивный отклик карманов: когда карман становится готов к действию руки — принять предмет
+    /// из неё или отдать своё содержимое, — контроллер этой руки коротко вздрагивает один раз.
+    /// В игре карманов не видно (тело виртуальное, на своё бедро не смотрят), и игрок находит
+    /// карман на ощупь. Непрерывная вибрация, пока рука в кармане, раздражала и сливалась с
+    /// отдачей. Когда готовность считается, решает <see cref="PocketReadiness" />, когда вздрогнуть —
+    /// <see cref="PocketTap" />.
     ///
     /// <para>
     /// Работает только у своего аватара (<see cref="UxrAvatarMode.Local" />): у чужих аватаров
@@ -23,22 +25,17 @@ namespace VrBattlegrounds.Interaction
     [RequireComponent(typeof(UxrAvatar))]
     public sealed class PocketHaptics : MonoBehaviour
     {
-        [Tooltip("Сила вибрации, 0..1. Лёгкое дрожание — чтобы не путать с отдачей и щелчками затвора.")]
-        [SerializeField, Range(0f, 1f)] private float _amplitude = 0.15f;
+        [Tooltip("Сила импульса, 0..1. Средняя — заметна сквозь движение, но слабее отдачи.")]
+        [SerializeField, Range(0f, 1f)] private float _tapAmplitude = 0.5f;
 
-        [Tooltip("Как часто посылать импульс, с. Каждый импульс чуть длиннее интервала — вибрация без пауз.")]
-        [SerializeField, Range(0.02f, 0.5f)] private float _pulseInterval = 0.1f;
-
-        // Импульс длиннее интервала, чтобы между импульсами не было провала. После ухода из
-        // зоны вибрация сама гаснет за один импульс: Stop не зовём — он глушит и чужие
-        // хаптики руки (выстрел, затвор).
-        private const float PulseOverlap = 1.5f;
+        [Tooltip("Длительность импульса, с.")]
+        [SerializeField, Range(0.02f, 0.5f)] private float _tapSeconds = 0.3f;
 
         private UxrAvatar       _avatar;
         private PocketReadiness _readiness;
 
         private readonly UxrGrabbableObjectAnchor[] _readyPocket = new UxrGrabbableObjectAnchor[2];
-        private readonly float[]                    _nextPulse   = new float[2];
+        private readonly PocketTap[]                _tap         = { new PocketTap(), new PocketTap() };
 
         /// <summary>Карман, от которого сейчас вибрирует рука <paramref name="side" />, или null.</summary>
         public UxrGrabbableObjectAnchor GetVibratingPocket(UxrHandSide side) => _readyPocket[(int)side];
@@ -80,15 +77,12 @@ namespace VrBattlegrounds.Interaction
                                            : $"[PocketHaptics] {side}: карман не готов — вибрация гаснет", this);
 
                 _readyPocket[i] = pocket;
-                _nextPulse[i]   = 0f;
             }
 
-            if (pocket == null || Time.unscaledTime < _nextPulse[i]) return;
-
-            _nextPulse[i] = Time.unscaledTime + _pulseInterval;
+            if (!_tap[i].Update(pocket)) return;
 
             // Mix, а не Replace: Replace глушит остальные хаптики руки.
-            _avatar.ControllerInput.SendHapticFeedback(side, 0f, _amplitude, _pulseInterval * PulseOverlap, UxrHapticMode.Mix);
+            _avatar.ControllerInput.SendHapticFeedback(side, 0f, _tapAmplitude, _tapSeconds, UxrHapticMode.Mix);
         }
 
         private void ReleaseReadiness()
@@ -97,6 +91,25 @@ namespace VrBattlegrounds.Interaction
             _readiness      = null;
             _readyPocket[0] = null;
             _readyPocket[1] = null;
+            _tap[0].Update(null);
+            _tap[1].Update(null);
+        }
+    }
+
+    /// <summary>
+    /// Когда вздрогнуть: один раз, когда рука нашла готовый карман (или сразу перешла к другому
+    /// готовому). Пока рука остаётся у того же кармана — тишина. Ушла и вернулась — снова импульс.
+    /// </summary>
+    public sealed class PocketTap
+    {
+        private object _last;
+
+        /// <summary>Передать готовый карман этого кадра (или null). true — пора дать импульс.</summary>
+        public bool Update(object readyPocket)
+        {
+            bool tap = readyPocket != null && !ReferenceEquals(readyPocket, _last);
+            _last = readyPocket;
+            return tap;
         }
     }
 }

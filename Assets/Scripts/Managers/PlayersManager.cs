@@ -79,7 +79,8 @@ namespace VrBattlegrounds.Managers
             }
             else
             {
-                session.PlayerName = role + "_" + UnityEngine.Random.Range(1000, 9999);
+                // Ник, который админ дал этому устройству раньше (AdminNaming), — иначе случайный.
+                session.PlayerName = AdminNaming.NicknameFor(deviceToken) ?? role + "_" + UnityEngine.Random.Range(1000, 9999);
                 session.TeamIndex = initialTeamId;
                 session.AvatarIndex = initialAvatarId;
             }
@@ -191,6 +192,61 @@ namespace VrBattlegrounds.Managers
                 UpdateDebugNames();
                 OnSessionDisconnected?.Invoke(session);
             }
+        }
+
+        /// <summary>
+        /// Создаёт и регистрирует сессию бота: тот же префаб, что у игрока, но спавн без
+        /// владельца (<c>NetworkServer.Spawn</c> вместо <c>AddPlayerForConnection</c>).
+        /// Аватар создаёт вызывающий — <c>AvatarManager.SpawnAvatar(null, …)</c>.
+        /// </summary>
+        public PlayerSession CreateBotSession(string playerName, string deviceToken)
+        {
+            if (_playerSessionPrefab == null)
+            {
+                GameLog.Error("[PlayersManager] _playerSessionPrefab is missing! Cannot spawn bot session.");
+                return null;
+            }
+
+            GameObject sessionGO = Instantiate(_playerSessionPrefab);
+            sessionGO.name = $"PlayerSession [{playerName}]";
+            PlayerSession session = sessionGO.GetComponent<PlayerSession>();
+            session.DeviceToken = deviceToken;
+            session.DeviceType = ClientDeviceType.PC;
+            session.IsAdmin = false;
+            session.Role = GameRole.Player;
+            session.PlayerName = playerName;
+
+            NetworkServer.Spawn(sessionGO);
+            RegisterBot(session);
+            return session;
+        }
+
+        /// <summary>
+        /// Регистрирует сессию без соединения — бота (<c>DevTools.Bots.BotDirector</c>).
+        /// Для игровой логики бот неотличим от игрока: тот же список <see cref="Sessions"/>
+        /// и то же событие <see cref="OnSessionConnected"/> (режим раздаёт команды).
+        /// В словарь соединений не попадает: соединения нет, ключ был бы <c>null</c>.
+        /// </summary>
+        public void RegisterBot(PlayerSession session)
+        {
+            if (session == null || _sessions.Contains(session)) return;
+
+            _sessions.Add(session);
+            UpdateDebugNames();
+            OnSessionConnected?.Invoke(session);
+        }
+
+        /// <summary>
+        /// Убирает бота из списка. Снимок для переподключения не пишется: переподключаться
+        /// боту неоткуда. Аватар и сессию уничтожает вызывающий.
+        /// </summary>
+        public void UnregisterBot(PlayerSession session)
+        {
+            if (session == null || _sessionsByConn.ContainsValue(session)) return;
+            if (!_sessions.Remove(session)) return;
+
+            UpdateDebugNames();
+            OnSessionDisconnected?.Invoke(session);
         }
 
         public PlayerSession GetSession(NetworkConnection conn)

@@ -185,7 +185,7 @@ namespace VrBattlegrounds.UI.Menu
                 SetButtonIcon(cardObj, team.icon);
 
                 // Устанавливаем название команды
-                SetButtonText(cardObj, team.displayName);
+                SetButtonText(cardObj, team.Name);
 
                 int capturedTeamIndex = team.teamIndex;
                 btn.onClick.AddListener(() => OnTeamCardSelected(capturedTeamIndex));
@@ -216,7 +216,7 @@ namespace VrBattlegrounds.UI.Menu
             }
 
             GameLog.UI.Info(
-                $"[MenuTeamSelection] Выбрана команда: {team.displayName} (Index: {team.teamIndex}). Переход к скинам.");
+                $"[MenuTeamSelection] Выбрана команда: {team.Name} (Index: {team.teamIndex}). Переход к скинам.");
 
             if (_level1TeamSelection) _level1TeamSelection.SetActive(false);
             if (_level2AvatarSelection) _level2AvatarSelection.SetActive(true);
@@ -235,7 +235,7 @@ namespace VrBattlegrounds.UI.Menu
             if (team.avatars == null || team.avatars.Count == 0)
             {
                 GameLog.UI.Warning(
-                    $"[MenuTeamSelection] У команды {team.displayName} нет доступных скинов.");
+                    $"[MenuTeamSelection] У команды {team.Name} нет доступных скинов.");
                 _selectedAvatarIndex = 0;
                 return;
             }

@@ -83,14 +83,27 @@ namespace VrBattlegrounds.Tests.Modes
             Assert.IsTrue(tabs.Any(m => m.modeId == "elimination"), "Контроль: Elimination в выборе режима матча.");
         }
 
+        /// <summary>
+        /// Разминка (и лобби) — нейтральная «Разминка» первой (её получает новичок, KeepOrDefault) и все
+        /// команды матча: команду серии игрок выбирает ещё в лобби, и она живёт до конца серии —
+        /// сброс в конце серии не трогает команды разминки (<c>MatchSeries.ReleaseMatchTeams</c>).
+        /// </summary>
         [Test]
-        public void У_разминки_одна_команда_со_всеми_аватарами()
+        public void У_разминки_нейтральная_команда_первой_и_все_команды_матча()
         {
             GameModeData warmup = WarmupData();
             TeamData team = AssetDatabase.LoadAssetAtPath<TeamData>(WarmupTeamPath);
 
-            Assert.AreEqual(1, warmup.teams.Length, "У разминки одна общая команда «Разминка».");
-            Assert.AreSame(team, warmup.teams[0], $"Команда разминки не {WarmupTeamPath}.");
+            Assert.AreSame(team, warmup.teams[0], $"Первая команда разминки не {WarmupTeamPath} — новичок получит команду матча.");
+
+            TeamData[] matchTeams = AssetDatabase.FindAssets("t:GameModeData")
+                                                 .Select(AssetDatabase.GUIDToAssetPath)
+                                                 .Select(AssetDatabase.LoadAssetAtPath<GameModeData>)
+                                                 .Where(m => m != null && !m.isWarmup && m.teams != null)
+                                                 .SelectMany(m => m.teams).Where(t => t != null).Distinct().ToArray();
+            Assert.IsNotEmpty(matchTeams);
+            foreach (TeamData matchTeam in matchTeams)
+                Assert.Contains(matchTeam, warmup.teams, $"Команды '{matchTeam.displayName}' нет в разминке — в лобби её не выбрать.");
             Assert.AreEqual("Разминка", team.displayName);
 
             var avatars = AssetDatabase.LoadAssetAtPath<AvatarRegistry>(AvatarsRegistryPath).avatars;
@@ -271,8 +284,9 @@ namespace VrBattlegrounds.Tests.Modes
                         tumba.Encapsulate(r.bounds);
                 tumba.Expand(new Vector3(1f, 0f, 1f)); // метр на руки и корпус
 
-                // Точка спавна — сам transform зоны (AvatarSpawnPointResolver).
-                Vector3 spawn = zones[0].transform.position;
+                // Точка спавна зоны (AvatarSpawnPointResolver): своя или центр зоны. Зона лобби — на всю
+                // арену, её центр — в тумбе, поэтому точка задана отдельно.
+                Vector3 spawn = zones[0].SpawnPoint.position;
                 bool inside = Mathf.Abs(spawn.x - tumba.center.x) <= tumba.extents.x &&
                               Mathf.Abs(spawn.z - tumba.center.z) <= tumba.extents.z;
                 Assert.IsFalse(inside, $"Точка спавна {spawn} внутри тумбы арсенала {tumba}.");

@@ -122,7 +122,6 @@ namespace VrBattlegrounds.Tests.Prefabs
         //  Аватарные префабы (VR-07)
         // ══════════════════════════════════════════════════════════════════
 
-        private const string AvatarFolder = "Assets/Prefabs/Player";
 
         /// <summary>
         /// Компоненты, без которых аватар не работает в сети. Список намеренно короткий:
@@ -140,23 +139,13 @@ namespace VrBattlegrounds.Tests.Prefabs
         };
 
         /// <summary>
-        /// Аватарные префабы — всё, что лежит в <see cref="AvatarFolder" /> и несёт
-        /// <see cref="PlayerController" /> на корне. Поиск, а не список путей: новый
-        /// аватар должен попадать под проверку сам, иначе тест устареет на первой же
-        /// добавленной команде.
+        /// Аватарные префабы — зарегистрированные (<see cref="RegisteredAvatars"/>): то, что игра
+        /// может выдать игроку. Раньше здесь был поиск по папке <c>Assets/Prefabs/Player</c>, и заброшенный
+        /// незарегистрированный скин валил тест, хотя в игру не попадал.
         /// </summary>
         private static IEnumerable<GameObject> AvatarPrefabs()
         {
-            string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { AvatarFolder });
-
-            foreach (string guid in guids.OrderBy(g => g))
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-
-                if (prefab != null && prefab.GetComponent<PlayerController>() != null)
-                    yield return prefab;
-            }
+            return RegisteredAvatars.Prefabs().OrderBy(AssetDatabase.GetAssetPath);
         }
 
         [Test]
@@ -164,9 +153,11 @@ namespace VrBattlegrounds.Tests.Prefabs
         {
             List<GameObject> avatars = AvatarPrefabs().ToList();
 
-            Assert.GreaterOrEqual(avatars.Count, 2,
-                $"В '{AvatarFolder}' найдено аватарных префабов: {avatars.Count}. " +
-                "Сравнивать состав не с чем — проверьте путь и наличие PlayerController на корне.");
+            Assert.GreaterOrEqual(avatars.Count, 1,
+                $"В реестре '{RegisteredAvatars.RegistryPath}' нет ни одного аватара — проверять нечего.");
+            Assert.That(avatars.All(a => a.GetComponent<PlayerController>() != null),
+                "В реестре префаб без PlayerController на корне: " +
+                string.Join(", ", avatars.Where(a => a.GetComponent<PlayerController>() == null).Select(a => a.name)));
         }
 
         [Test]

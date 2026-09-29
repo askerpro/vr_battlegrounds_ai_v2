@@ -391,10 +391,7 @@ namespace VrBattlegrounds.DevTools.StressTest
                 if (pc != null) pc.AvatarPlayerName = $"Кукла {i + 1}";
 
                 // Без владельца ClientToServer не рассылается — см. описание класса.
-                foreach (NetworkTransformBase nt in go.GetComponentsInChildren<NetworkTransformBase>(true))
-                {
-                    nt.syncDirection = SyncDirection.ServerToClient;
-                }
+                VrBattlegrounds.Player.Avatars.ServerAuthoredAvatar.Prepare(go);
 
                 float delay = count > 1 ? Mathf.Lerp(0.1f, _config.maxDelaySeconds, (float)i / (count - 1)) : 0.1f;
                 StressPuppet puppet = go.AddComponent<StressPuppet>();

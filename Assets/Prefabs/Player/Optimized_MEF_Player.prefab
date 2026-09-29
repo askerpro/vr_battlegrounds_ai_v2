@@ -1624,6 +1624,14 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 5e018b45-e0a3-4912-a8ed-98ca871539da
       objectReference: {fileID: 0}
+    - target: {fileID: 374124795783217874, guid: b6fe59db941fa944696ece5e1aabc032, type: 3}
+      propertyPath: ExtraGeo.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 374124795783217874, guid: b6fe59db941fa944696ece5e1aabc032, type: 3}
+      propertyPath: 'ExtraGeo.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2405120512473357692}
     - target: {fileID: 483337774513505484, guid: b6fe59db941fa944696ece5e1aabc032, type: 3}
       propertyPath: __isInPrefab
       value: 1
@@ -4838,6 +4846,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a0f4423b771d0dd478596daa93a49b63, type: 3}
+--- !u!1 &2405120512473357692 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6784291045666945619, guid: a0f4423b771d0dd478596daa93a49b63, type: 3}
+  m_PrefabInstance: {fileID: 9171035962483779375}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6881527740896634114 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2361585616498344493, guid: a0f4423b771d0dd478596daa93a49b63, type: 3}

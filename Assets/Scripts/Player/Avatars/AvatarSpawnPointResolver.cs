@@ -126,10 +126,12 @@ namespace VrBattlegrounds.Player.Avatars
                 }
             }
 
-            TeamSpawnZone zone = FindZone(team);
+            // Своей зоны на сцене нет, но идёт разминка — общая зона разминки (лобби: зона одна,
+            // нейтральная, а игрок уже выбрал команду серии).
+            TeamSpawnZone zone = FindZone(team) ?? FindWarmupZone(team);
             if (zone != null)
             {
-                Transform zoneTransform = zone.transform;
+                Transform zoneTransform = zone.SpawnPoint;
                 return new AvatarSpawnPoint(zoneTransform.position, zoneTransform.rotation,
                                             AvatarSpawnPointSource.TeamSpawnZone, zone.name);
             }
@@ -157,6 +159,22 @@ namespace VrBattlegrounds.Player.Avatars
         /// одинаковым от прогона к прогону, иначе спавн станет случайным.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// Зона общей команды разминки (первая команда режима разминки), если идёт разминка и у
+        /// <paramref name="team"/> своей зоны на сцене нет. Команду серии игрок выбирает в лобби,
+        /// а зона лобби одна — нейтральная; без этого он появлялся бы в начале координат.
+        /// </summary>
+        private static TeamSpawnZone FindWarmupZone(TeamData team)
+        {
+            if (team == null) return null;
+
+            GameModes.GameMode mode = Managers.GameplayManager.Instance != null ? Managers.GameplayManager.Instance.ActiveGameMode : null;
+            if (mode == null || !mode.IsWarmup || mode.Teams == null || mode.Teams.Length == 0) return null;
+
+            TeamData neutral = mode.Teams[0];
+            return neutral != null && neutral != team ? FindZone(neutral) : null;
+        }
+
         public static TeamSpawnZone FindZone(TeamData team)
         {
             if (team == null) return null;

@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 8936303822846736428}
   - component: {fileID: 1154412901507337447}
   - component: {fileID: 7112469872410840075}
+  - component: {fileID: 8979786923091190782}
   m_Layer: 0
   m_Name: Gun_real
   m_TagString: Weapon
@@ -425,6 +426,19 @@ MonoBehaviour:
   _triggerIndex: 0
   _hapticAmplitude: 0.8
   _hapticSeconds: 0.2
+--- !u!114 &8979786923091190782
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1013363612589426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c2c7097450754743a6f9f19a7818b51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.SupportGripRequiresMain
+  _requireMainHeld: 1
 --- !u!1 &6878519130209480
 GameObject:
   m_ObjectHideFlags: 0
@@ -892,6 +906,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7705375065957889455}
+  - component: {fileID: 2387764468759678420}
   m_Layer: 0
   m_Name: Left
   m_TagString: Untagged
@@ -914,6 +929,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 872051973659119774}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2387764468759678420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3019670523955958431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
+  _uxrUniqueId: 6643ebf3-3d73-4c43-b405-0aaf58cc9e81
+  __prefabGuid: a89abddac5809dc47a6715d7ebeab24e
+  __isInPrefab: 1
 --- !u!1 &3180694189066986431
 GameObject:
   m_ObjectHideFlags: 0
@@ -2245,6 +2275,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1613734435117204101}
+  - component: {fileID: 5012229844242382907}
   m_Layer: 0
   m_Name: Right
   m_TagString: Untagged
@@ -2267,6 +2298,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 872051973659119774}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5012229844242382907
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6530526449109610197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
+  _uxrUniqueId: 3a5c0807-6d06-48ee-a047-34f56ad5ad8e
+  __prefabGuid: a89abddac5809dc47a6715d7ebeab24e
+  __isInPrefab: 1
 --- !u!1 &6723952576467354282
 GameObject:
   m_ObjectHideFlags: 0
@@ -2276,6 +2322,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7238315445731167052}
+  - component: {fileID: 4815951133285922573}
   m_Layer: 0
   m_Name: Left
   m_TagString: Untagged
@@ -2298,6 +2345,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 4660190569078523347}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4815951133285922573
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6723952576467354282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
+  _uxrUniqueId: a2ab7c3c-225f-4860-96fb-91ae2d97c750
+  __prefabGuid: a89abddac5809dc47a6715d7ebeab24e
+  __isInPrefab: 1
 --- !u!1 &7252554615848455050
 GameObject:
   m_ObjectHideFlags: 0
@@ -2428,6 +2490,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1516247183200382657}
+  - component: {fileID: 9210882440770987275}
   m_Layer: 0
   m_Name: Right
   m_TagString: Untagged
@@ -2450,6 +2513,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 4660190569078523347}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &9210882440770987275
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7832133199073124619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
+  _uxrUniqueId: 2780d7e3-4779-4aaf-89b1-bf50ac8e0d1e
+  __prefabGuid: a89abddac5809dc47a6715d7ebeab24e
+  __isInPrefab: 1
 --- !u!1 &7967426698683980968
 GameObject:
   m_ObjectHideFlags: 0

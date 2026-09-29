@@ -419,7 +419,7 @@ namespace VrBattlegrounds.Player
         {
             TeamData team = TeamRegistry.Instance?.GetByIndex(newIndex);
             GameLog.Debug.Info(
-                $"[PlayerSession] {PlayerName} команда изменена → {(team != null ? team.displayName : "нет")}");
+                $"[PlayerSession] {PlayerName} команда изменена → {(team != null ? team.Name : "нет")}");
         }
 
         /// <summary>
@@ -595,6 +595,27 @@ namespace VrBattlegrounds.Player
                 : null;
 
             MatchTeams.ServerAdminAssign(GameplayManager.Instance.ActiveGameMode, this, target, teamId);
+        }
+
+        /// <summary>
+        /// Админ (эта сессия) задаёт название команды на серию; пустое — вернуть имя по умолчанию.
+        /// Право и чистку ввода — сервер (<c>AdminNaming</c>).
+        /// </summary>
+        [Command]
+        public void CmdAdminRenameTeam(int teamIndex, string name)
+        {
+            AdminNaming.ServerRenameTeam(this, teamIndex, name);
+        }
+
+        /// <summary>Админ (эта сессия) даёт ник игроку <paramref name="targetSessionNetId"/>.</summary>
+        [Command]
+        public void CmdAdminRenamePlayer(uint targetSessionNetId, string name)
+        {
+            PlayerSession target = NetworkServer.spawned.TryGetValue(targetSessionNetId, out NetworkIdentity identity)
+                ? identity.GetComponent<PlayerSession>()
+                : null;
+
+            AdminNaming.ServerRenamePlayer(this, target, name);
         }
 
         /// <summary>Админ (эта сессия) разово раскладывает игроков без команды автобалансом.</summary>

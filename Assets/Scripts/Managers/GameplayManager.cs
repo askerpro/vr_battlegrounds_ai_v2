@@ -447,7 +447,7 @@ namespace VrBattlegrounds.Managers
             _pausedSnapshot = null;
             _pausedMode = null;
 
-            string winnerName = winner != null ? winner.displayName : "ничья";
+            string winnerName = winner != null ? winner.Name : "ничья";
             GameLog.Match.Info($"[GameplayManager] Матч завершён, победитель: {winnerName}. Карта — в разминку.");
 
             GameplayEnded?.Invoke(winner);
@@ -520,7 +520,54 @@ namespace VrBattlegrounds.Managers
                 _gameMode.OnPlayerKilled(player, killer);
             }
 
-            PlayerKilled?.Invoke(player != null ? player.Session : null, killer, assists);
+            PlayerSession victim = player != null ? player.Session : null;
+            PlayerKilled?.Invoke(victim, killer, assists);
+
+            // Клиентам — для HUD: убийцу знает только сервер (DamageLedger).
+            if (victim != null)
+            {
+                RpcPlayerKilled(victim.netId, victim.PlayerName, victim.TeamIndex,
+                                killer != null ? killer.netId : 0u,
+                                killer != null ? killer.PlayerName : string.Empty,
+                                killer != null ? killer.TeamIndex : 0);
+            }
         }
+
+        /// <summary>
+        /// Клиент: игрок погиб. Для HUD (лента убийств, «вы погибли», звук). Сессии — по netId,
+        /// имена и команды приходят сразу: сессия убитого могла уже уйти (бот убран, игрок отключился).
+        /// </summary>
+        public static event Action<KillNotice> PlayerKilledLocal;
+
+        [ClientRpc]
+        private void RpcPlayerKilled(uint victimNetId, string victimName, int victimTeam,
+                                     uint killerNetId, string killerName, int killerTeam)
+        {
+            PlayerKilledLocal?.Invoke(new KillNotice(victimNetId, victimName, victimTeam, killerNetId, killerName, killerTeam));
+        }
+    }
+
+    /// <summary>Кто кого убил — то, что сервер рассказывает клиентам. Убийца 0 — урон без источника.</summary>
+    public readonly struct KillNotice
+    {
+        public readonly uint VictimNetId;
+        public readonly string VictimName;
+        public readonly int VictimTeam;
+        public readonly uint KillerNetId;
+        public readonly string KillerName;
+        public readonly int KillerTeam;
+
+        public KillNotice(uint victimNetId, string victimName, int victimTeam,
+                          uint killerNetId, string killerName, int killerTeam)
+        {
+            VictimNetId = victimNetId;
+            VictimName = victimName;
+            VictimTeam = victimTeam;
+            KillerNetId = killerNetId;
+            KillerName = killerName;
+            KillerTeam = killerTeam;
+        }
+
+        public bool HasKiller => KillerNetId != 0 && KillerNetId != VictimNetId;
     }
 }

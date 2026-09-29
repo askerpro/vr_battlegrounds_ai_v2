@@ -35,7 +35,7 @@ namespace VrBattlegrounds.GameModes
             if (session == null || team == null) return;
 
             GameLog.Match.Info(
-                $"[{reason}] {session.PlayerName}: команда {session.TeamIndex} → {team.displayName}, скин {avatarIndex}.");
+                $"[{reason}] {session.PlayerName}: команда {session.TeamIndex} → {team.Name}, скин {avatarIndex}.");
 
             MatchTeams.NotifyTeamChangeRequested(session, team.teamIndex, avatarIndex);
 
@@ -82,7 +82,7 @@ namespace VrBattlegrounds.GameModes
             int skin = team.IndexOfAvatar(currentSkin);
 
             GameLog.Match.Info(
-                $"[{reason}] {session.PlayerName}: команда {session.TeamIndex} → {team.displayName}, скин {skin} (до смены сцены).");
+                $"[{reason}] {session.PlayerName}: команда {session.TeamIndex} → {team.Name}, скин {skin} (до смены сцены).");
 
             MatchTeams.NotifyTeamChangeRequested(session, team.teamIndex, skin);
 

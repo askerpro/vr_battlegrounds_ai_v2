@@ -102,6 +102,80 @@ namespace VrBattlegrounds.Tests.Network
             _driver.Advance();
         }
 
+        /// <summary>
+        /// Погибший в прошлом раунде возрождается, только дойдя до своей зоны. Пока он идёт,
+        /// закупка обязана его ждать: иначе готовые союзники (или бот, готовый сразу) начинают
+        /// раунд без него, и арсенал для него так и не открывается.
+        /// </summary>
+        [Test]
+        public void Закупка_ждёт_погибшего_пока_он_не_вернулся_на_базу()
+        {
+            SilenceMirrorNoise();
+            StartMatch();
+            _roster.MarkDead(_playerA);
+
+            AdvanceToEquipment();
+            _playerB.ServerSetReady(true, "тест");
+            AdvanceSeconds(5f);
+
+            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState,
+                "Закупка кончилась, пока погибший шёл на базу: ждали только живых.");
+
+            // Дошёл, возродился, взял жетон — раунд идёт дальше.
+            _roster.MarkDead(_playerA, false);
+            _playerA.ServerSetReady(true, "тест");
+            AdvanceSeconds(1f);
+
+            Assert.AreNotEqual(RoundState.Equipment, _mode.CurrentRoundState, "Все готовы, а закупка не кончилась.");
+        }
+
+        /// <summary>Даёт сессии живое тело — только таких подготовка ждёт на базе.</summary>
+        private void GiveAvatar(PlayerSession session)
+        {
+            GameObject go = CreateNetworkObject(session.PlayerName + "_Avatar");
+            go.AddComponent<UltimateXR.Mechanics.Weapons.UxrActor>();
+            PlayerController avatar = go.AddComponent<PlayerController>();
+            EnableNetworking(go);
+            InvokeLifecycleMethod(avatar, "Awake");
+            SpawnOnServer(avatar);
+            session.ActiveAvatar = avatar;
+            avatar.GetComponent<UltimateXR.Mechanics.Weapons.UxrActor>().Life = 100f;
+        }
+
+        /// <summary>
+        /// Закупка открывается, когда все вернулись на свою базу. Раньше подготовка длилась ровно
+        /// секунду: отошедший (или погибший и идущий на возрождение) пропускал арсенал, а после смены
+        /// сторон команда оказывалась на закупке в чужой половине.
+        /// </summary>
+        [Test]
+        public void Закупка_открывается_когда_все_на_своей_базе()
+        {
+            SilenceMirrorNoise();
+            GiveAvatar(_playerA);
+            GiveAvatar(_playerB);
+            _playerA.ServerExitSpawnZone(_playerA.TeamIndex);
+            StartMatch();
+
+            AdvanceSeconds(10f);
+            Assert.AreEqual(RoundState.Setup, _mode.CurrentRoundState, "Закупка открылась, хотя игрок A не на базе.");
+
+            _playerA.ServerEnterSpawnZone(_playerA.TeamIndex);
+            AdvanceSeconds(1f);
+            Assert.AreEqual(RoundState.Equipment, _mode.CurrentRoundState, "Все на базе, а закупка не открылась.");
+        }
+
+        [Test]
+        public void Не_вернувшийся_не_держит_матч_дольше_предела()
+        {
+            SilenceMirrorNoise();
+            GiveAvatar(_playerA);
+            _playerA.ServerExitSpawnZone(_playerA.TeamIndex);
+            StartMatch();
+
+            AdvanceSeconds(RoundManager.SetupDuration + RoundManager.ReturnToBaseLimit + 1f);
+            Assert.AreNotEqual(RoundState.Setup, _mode.CurrentRoundState, "Предел возвращения на базу не сработал.");
+        }
+
         /// <summary>Крутит матч заданное игровое время, не ожидая никакого условия.</summary>
         private void AdvanceSeconds(float seconds)
         {

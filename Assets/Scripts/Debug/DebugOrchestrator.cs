@@ -232,6 +232,13 @@ namespace VrBattlegrounds.DevTools
 
             TryAutoLoadMap();
 
+            // Боты — как игроки, подключившиеся к серверу сразу: первая загруженная сцена.
+            // EnsureCount только добавляет, повторная смена сцены лишних не создаст.
+            if (_config.botCount > 0)
+            {
+                Bots.BotDirector.EnsureInstance()?.EnsureCount(_config.botCount);
+            }
+
             // Матч отсюда не запускаем. Игроки могли подключиться ещё в лобби, когда
             // GameplayManager не существовал, — но на его появление мы подписаны
             // (HandleGameplayManagerReady), и сигнал приходит раньше этого колбэка:

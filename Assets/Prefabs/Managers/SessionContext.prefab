@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 7084803014390581751}
   - component: {fileID: 548351888320764724}
   - component: {fileID: 5348947716453885987}
+  - component: {fileID: 7353188972602160765}
   m_Layer: 0
   m_Name: SessionContext
   m_TagString: Untagged
@@ -100,3 +101,18 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   _nextMapDelay: 10
+--- !u!114 &7353188972602160765
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7659987172694362790}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f753419259f6494183c25b5a7b0f9b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Managers.TeamNameService
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0

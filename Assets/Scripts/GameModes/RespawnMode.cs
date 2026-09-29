@@ -47,7 +47,7 @@ namespace VrBattlegrounds.GameModes
             _resumeTime = -1f;
             _matchActive = true;
 
-            string teamsStr = string.Join(", ", Teams.Select(t => t != null ? t.displayName : "null"));
+            string teamsStr = string.Join(", ", Teams.Select(t => t != null ? t.Name : "null"));
             GameLog.Match.Info(
                 $"[RespawnMode] Матч начат: {teamsStr}, время: {_matchDuration}с");
             
@@ -98,7 +98,7 @@ namespace VrBattlegrounds.GameModes
             }
 
             GameLog.Match.Verbose(
-                $"[RespawnMode] Фраг: {killer.PlayerName} ({killerTeam.displayName}).");
+                $"[RespawnMode] Фраг: {killer.PlayerName} ({killerTeam.Name}).");
         }
 
         // ── Пауза ────────────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ namespace VrBattlegrounds.GameModes
 
             if (isTie) winner = null;
 
-            string winnerName = winner != null ? winner.displayName : "ничья";
+            string winnerName = winner != null ? winner.Name : "ничья";
             GameLog.Match.Info(
                 $"[RespawnMode] Таймер истёк. Победитель: {winnerName}. Макс. фрагов: {maxFrags}");
 

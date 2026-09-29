@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using VrBattlegrounds.Core;
@@ -20,6 +20,13 @@ namespace VrBattlegrounds.Maps
     {
         [Tooltip("Команда, которой принадлежит эта зона")]
         [SerializeField] private TeamData _team;
+
+        [Tooltip("Где появляется аватар. Пусто — центр зоны. Нужна, когда центр занят (зона лобби на всю " +
+                 "арену: в центре — тумба арсенала).")]
+        [SerializeField] private Transform _spawnPoint;
+
+        /// <summary>Точка спавна в этой зоне (<c>AvatarSpawnPointResolver</c>): своя или центр зоны.</summary>
+        public Transform SpawnPoint => _spawnPoint != null ? _spawnPoint : transform;
 
         [Header("Visibility Settings")]
         [Tooltip("Материал для эффекта X-ray (видимость сквозь стены)")]
@@ -59,7 +66,67 @@ namespace VrBattlegrounds.Maps
         private readonly Dictionary<PlayerController, Transform> _cameraTransformCache =
             new Dictionary<PlayerController, Transform>();
 
-        public TeamData Team => _team;
+        /// <summary>
+        /// Чья зона сейчас. Сериализованная <see cref="HomeTeam"/> — хозяин первой половины карты;
+        /// после смены сторон (<see cref="SpawnSides"/>) зона принадлежит другой команде. Все
+        /// потребители — спавн, возрождение, «в своей зоне», подсветка — читают это свойство.
+        /// </summary>
+        public TeamData Team => SpawnSides.Resolve(_team);
+
+        /// <summary>Хозяин зоны в первой половине карты — как настроено на сцене.</summary>
+        public TeamData HomeTeam => _team;
+
+        /// <summary>Высота пола под зоной (мир) — для шейдера границы. Нет пола — ниже всего.</summary>
+        private float _floorY = NoFloor;
+        private const float NoFloor = -100000f;
+
+        /// <summary>
+        /// Пол ищется в <c>Start</c>, а не в <c>Awake</c>: к нему коллайдеры карты уже включены.
+        /// Коробка зоны на картах уходит под землю, и пол границы рисуется на найденной высоте.
+        /// </summary>
+        private void Start()
+        {
+            _floorY = FindFloorHeight();
+            UpdateColor();
+        }
+
+        /// <summary>
+        /// Пол под зоной: лучи сверху вниз из центра и у углов, по каждому — первая поверхность,
+        /// смотрящая вверх (не игрок, не триггер); из них — самая низкая. Мебель и стены арсенала
+        /// внутри зоны выше пола, поэтому минимум по лучам — пол.
+        /// </summary>
+        private float FindFloorHeight()
+        {
+            float best = float.PositiveInfinity;
+            float height = Mathf.Abs(transform.lossyScale.y * _boxCollider.size.y);
+
+            foreach (Vector2 xz in FloorProbes)
+            {
+                Vector3 top = transform.TransformPoint(_boxCollider.center + Vector3.Scale(new Vector3(xz.x, 0.5f, xz.y), _boxCollider.size));
+                RaycastHit[] hits = Physics.RaycastAll(top, Vector3.down, height, ~0, QueryTriggerInteraction.Ignore);
+                System.Array.Sort(hits, (h1, h2) => h1.distance.CompareTo(h2.distance));
+
+                foreach (RaycastHit hit in hits)
+                {
+                    if (hit.normal.y < 0.7f || hit.collider.GetComponentInParent<PlayerController>() != null) continue;
+                    best = Mathf.Min(best, hit.point.y);
+                    break;
+                }
+            }
+
+            if (float.IsPositiveInfinity(best))
+            {
+                GameLog.Match.Info($"[TeamSpawnZone] {name}: пол под зоной не найден — граница рисуется по нижней грани.", this);
+                return NoFloor;
+            }
+            return best;
+        }
+
+        private static readonly Vector2[] FloorProbes =
+        {
+            new Vector2(0f, 0f), new Vector2(0.35f, 0.35f), new Vector2(-0.35f, 0.35f),
+            new Vector2(0.35f, -0.35f), new Vector2(-0.35f, -0.35f)
+        };
 
         private void Awake()
         {
@@ -134,8 +201,24 @@ namespace VrBattlegrounds.Maps
             return absScale > Mathf.Epsilon ? worldExtent / absScale : float.PositiveInfinity;
         }
 
+        /// <summary>
+        /// Стороны поменялись: зона сменила хозяина. Перекрашивается, а стоящим внутри сервер
+        /// заново сообщает, чья она теперь, — иначе «в своей зоне» осталось бы от прошлой половины.
+        /// </summary>
+        private void OnSidesChanged()
+        {
+            UpdateColor();
+            UpdateVisibility();
+
+            foreach (PlayerController player in _playersInZone)
+            {
+                ReportZoneState(player, true);
+            }
+        }
+
         private void OnEnable()
         {
+            SpawnSides.Changed += OnSidesChanged;
             EliminationMode.OnRoundStateChangedLocal += OnRoundStateChanged;
             PlayerSession.LocalAvatarChanged += OnLocalAvatarChanged;
 
@@ -150,6 +233,7 @@ namespace VrBattlegrounds.Maps
 
         private void OnDisable()
         {
+            SpawnSides.Changed -= OnSidesChanged;
             EliminationMode.OnRoundStateChangedLocal -= OnRoundStateChanged;
             PlayerSession.LocalAvatarChanged -= OnLocalAvatarChanged;
 
@@ -191,6 +275,7 @@ namespace VrBattlegrounds.Maps
 
         private void OnRoundStateChanged(RoundState newState)
         {
+            GameLog.Match.Verbose($"[TeamSpawnZone] {name}: фаза раунда {_currentRoundState} → {newState}.", this);
             _currentRoundState = newState;
             UpdateVisibility();
         }
@@ -200,48 +285,54 @@ namespace VrBattlegrounds.Maps
             UpdateVisibility();
         }
 
+        private bool _lastLocalAlive = true;
+        private GameMode _lastMode;
+
+        /// <summary>
+        /// Жив ли свой игрок и какой режим — сверяется каждый кадр: выбывание в конце боя, вход нового
+        /// аватара выбывшим и возрождение идут мимо <c>PlayerDied</c>, а смена режима на той же карте
+        /// («Начать матч» из разминки) — мимо фазы раунда. Граница зависит от обоих напрямую.
+        /// </summary>
+        private void Update()
+        {
+            bool alive = _localPlayer == null || _localPlayer.IsAlive;
+            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            if (alive == _lastLocalAlive && ReferenceEquals(mode, _lastMode)) return;
+
+            _lastLocalAlive = alive;
+            _lastMode = mode;
+            UpdateVisibility();
+        }
+
         private void UpdateVisibility()
         {
             if (_meshRenderer == null) return;
 
-            // Базовая логика: 
-            // - Вне активного раунда (ожидание, отсчёт, конец) — зона видна всем.
-            // - В активном раунде — зона видна ТОЛЬКО мёртвым игрокам СВОЕЙ команды.
+            bool hasLocal = _localPlayer != null;
+            bool alive = hasLocal && _localPlayer.IsAlive;
+            // Session проверяется на null: на клиенте сессия может ещё не разрешиться.
+            bool ownTeam = hasLocal && _localPlayer.Session != null && _localPlayer.Session.Team == Team;
 
-            bool isVisible = true;
+            GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            bool modeShowsZones = mode != null && mode.ShowsSpawnZones;
 
-            if (_currentRoundState == RoundState.Combat)
+            SpawnZoneVisibility.Decide(modeShowsZones, hasLocal, alive, ownTeam, _currentRoundState, out bool isVisible, out bool xray);
+
+            if (_meshRenderer.enabled != isVisible)
             {
-                // Если раунд активен, проверяем локального игрока
-                if (_localPlayer != null)
-                {
-                    bool isDead = !_localPlayer.IsAlive;
-                    // Session проверяется на null: до этой правки ветка не исполнялась никогда
-                    // (_localPlayer всегда оставался null), теперь она рабочая — и на клиенте
-                    // сессия может ещё не разрешиться.
-                    bool isSameTeam = _localPlayer.Session != null && _localPlayer.Session.Team == _team;
-
-                    // Видим только если мы мертвы и из этой же команды
-                    isVisible = isDead && isSameTeam;
-                }
-                else
-                {
-                    // Если локальный игрок ещё не заспавнился в активном раунде — скрываем
-                    isVisible = false;
-                }
+                string who = hasLocal
+                    ? $"локальный {_localPlayer.name}: жив={alive}, своя зона={ownTeam}"
+                    : "локального аватара нет";
+                GameLog.Match.Info(
+                    $"[TeamSpawnZone] {name} ({(Team != null ? Team.Name : "без команды")}): {(isVisible ? "показана" : "скрыта")} — " +
+                    $"режим {(mode != null ? mode.GetType().Name : "нет")} (границы {(modeShowsZones ? "рисует" : "не рисует")}), фаза {_currentRoundState}, {who}.", this);
             }
 
             _meshRenderer.enabled = isVisible;
+            if (!isVisible) return;
 
-            if (isVisible)
-            {
-                // Если мы мертвы и видим зону в активном раунде — используем X-ray материал
-                bool useXray = (_currentRoundState == RoundState.Combat && _localPlayer != null && !_localPlayer.IsAlive);
-                _meshRenderer.sharedMaterial = useXray && _xrayMaterial != null ? _xrayMaterial : _originalMaterial;
-
-                // Перекрашиваем, если сменили материал
-                UpdateColor();
-            }
+            _meshRenderer.sharedMaterial = xray && _xrayMaterial != null ? _xrayMaterial : _originalMaterial;
+            UpdateColor();
         }
 
         private void OnValidate()
@@ -251,7 +342,7 @@ namespace VrBattlegrounds.Maps
 
         private void UpdateColor()
         {
-            if (_team != null)
+            if (Team != null)
             {
                 MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
                 if (meshRenderer != null)
@@ -261,8 +352,9 @@ namespace VrBattlegrounds.Maps
                     // when editing prefabs in Play Mode.
                     MaterialPropertyBlock block = new MaterialPropertyBlock();
                     meshRenderer.GetPropertyBlock(block);
-                    block.SetColor("_BaseColor", _team.color);
-                    block.SetColor("_Color", _team.color); // support both URP and standard shaders
+                    block.SetColor("_BaseColor", Team.color);
+                    block.SetColor("_Color", Team.color); // support both URP and standard shaders
+                    block.SetFloat("_FloorY", _floorY);
                     meshRenderer.SetPropertyBlock(block);
                 }
             }
@@ -376,12 +468,12 @@ namespace VrBattlegrounds.Maps
 
             // Зона без команды не знает, чья она, и сказать о себе ей нечего.
             // О самом факте уже предупредил Awake.
-            if (_team == null) return;
+            if (Team == null) return;
 
             if (inside)
-                player.Session.ServerEnterSpawnZone(_team.teamIndex);
+                player.Session.ServerEnterSpawnZone(Team.teamIndex);
             else
-                player.Session.ServerExitSpawnZone(_team.teamIndex);
+                player.Session.ServerExitSpawnZone(Team.teamIndex);
         }
 
         /// <summary>Возвращает копию списка всех игроков, физически находящихся в зоне.</summary>
@@ -390,18 +482,18 @@ namespace VrBattlegrounds.Maps
             return new List<PlayerController>(_playersInZone);
         }
 
-        /// <summary>Возвращает игроков, которые находятся в зоне и чья команда совпадает с _team.</summary>
+        /// <summary>Возвращает игроков, которые находятся в зоне и чья команда совпадает с Team.</summary>
         public List<PlayerController> GetTeamPlayersInZone()
         {
             List<PlayerController> result = new List<PlayerController>();
-            if (_team == null) return result;
+            if (Team == null) return result;
 
             foreach (var p in _playersInZone)
             {
                 // Session — null в окне между спавном аватара и спавном его сессии
                 // (порядок доставки спавнов Mirror не гарантирует). Раньше здесь
                 // вылетал NullReferenceException и уносил с собой весь вызывающий код.
-                if (p != null && p.Session != null && p.Session.Team == _team)
+                if (p != null && p.Session != null && p.Session.Team == Team)
                 {
                     result.Add(p);
                 }
@@ -413,9 +505,9 @@ namespace VrBattlegrounds.Maps
         public List<PlayerController> GetTeamPlayersNotInZone()
         {
             List<PlayerController> result = new List<PlayerController>();
-            if (_team == null || PlayersManager.Instance == null) return result;
+            if (Team == null || PlayersManager.Instance == null) return result;
 
-            IEnumerable<PlayerSession> allAliveInTeam = PlayersManager.Instance.GetAlivePlayers(_team);
+            IEnumerable<PlayerSession> allAliveInTeam = PlayersManager.Instance.GetAlivePlayers(Team);
             foreach (var session in allAliveInTeam)
             {
                 var alivePlayer = session.ActiveAvatar;
@@ -431,7 +523,7 @@ namespace VrBattlegrounds.Maps
         /// <summary>Проверяет, все ли ЖИВЫЕ члены команды находятся в этом триггере (касание).</summary>
         public bool AreAllTeamPlayersInZone()
         {
-            if (_team == null || PlayersManager.Instance == null) return false;
+            if (Team == null || PlayersManager.Instance == null) return false;
 
             var notInZone = GetTeamPlayersNotInZone();
             return notInZone.Count == 0;
@@ -456,9 +548,9 @@ namespace VrBattlegrounds.Maps
         /// </summary>
         public bool AreAllTeamPlayersFullyInZone()
         {
-            if (_team == null || PlayersManager.Instance == null) return false;
+            if (Team == null || PlayersManager.Instance == null) return false;
 
-            foreach (PlayerSession session in PlayersManager.Instance.GetAlivePlayers(_team))
+            foreach (PlayerSession session in PlayersManager.Instance.GetAlivePlayers(Team))
             {
                 var alive = session.ActiveAvatar;
                 if (alive != null && !_playersInZone.Contains(alive))
@@ -471,6 +563,33 @@ namespace VrBattlegrounds.Maps
         public List<PlayerController> GetPlayersFullyInZone()
         {
             return new List<PlayerController>(_playersInZone);
+        }
+    }
+
+    /// <summary>
+    /// Кому видна граница зоны. Рисовать ли границы вообще, решает режим (<c>GameMode.ShowsSpawnZones</c>):
+    /// разминка — свободная арена без границ. Дальше общее правило: игрок видит только свою зону — чужие не видны никогда,
+    /// без своего аватара своей зоны нет. Выбывший видит свою ярко и сквозь стены: по цвету её пола он
+    /// находит базу. Живой (он бывает только в закупке, на отсчёте и в бою) видит свою до боя — где
+    /// стоять; в бою граница пропадает.
+    /// </summary>
+    public static class SpawnZoneVisibility
+    {
+        public static void Decide(bool modeShowsZones, bool hasLocalAvatar, bool alive, bool ownTeam, RoundState state,
+                                  out bool visible, out bool xray)
+        {
+            xray = false;
+            visible = false;
+            if (!modeShowsZones || !hasLocalAvatar || !ownTeam) return;
+
+            if (!alive)
+            {
+                visible = true;
+                xray = true;
+                return;
+            }
+
+            visible = state != RoundState.Combat;
         }
     }
 }

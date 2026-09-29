@@ -6302,8 +6302,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e14c4d0d52ad32e499e71bb1dd2250c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.PocketHaptics
-  _amplitude: 0.15
-  _pulseInterval: 0.1
 --- !u!114 &1983294309419792135
 MonoBehaviour:
   m_ObjectHideFlags: 0

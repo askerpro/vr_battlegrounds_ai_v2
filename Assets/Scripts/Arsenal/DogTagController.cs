@@ -88,7 +88,10 @@ namespace VrBattlegrounds.Arsenal
 
             // Синхронизируемое свойство пишет только сервер — см. ArsenalSlotController.SetItemGrabbable.
             if (_tagObject != null && StateEventAuthority.IsWorldAuthority)
+            {
                 _tagObject.IsGrabbable = true;
+                ReturnToRack();
+            }
 
             GameLog.Arsenal.Info("[Arsenal] Dog tag reset — ready for new prep phase.");
         }
@@ -146,6 +149,23 @@ namespace VrBattlegrounds.Arsenal
         }
 
         // ── Private ────────────────────────────────────────────
+
+        /// <summary>
+        /// Возвращает жетон на крючок. Раньше новая закупка только снова разрешала его брать:
+        /// сорванный и брошенный жетон оставался лежать, где бросили, и в следующих раундах
+        /// объявить готовность было нечем. Ставит автор мира — сервер: размещение синхронизируемое
+        /// (<c>PlaceObject</c>, канал состояния UltimateXR), клиенты получают его событием.
+        /// Жетон в чьей-то руке не отнимается — его отпустят, и он вернётся к следующей закупке.
+        /// </summary>
+        private void ReturnToRack()
+        {
+            if (_tagAnchor == null || IsTagOnRack || UxrGrabManager.Instance == null) return;
+            if (UxrGrabManager.Instance.IsBeingGrabbed(_tagObject)) return;
+            if (!_tagObject.gameObject.activeInHierarchy || !_tagAnchor.gameObject.activeInHierarchy) return;
+
+            UxrGrabManager.Instance.PlaceObject(_tagObject, _tagAnchor, UxrPlacementOptions.None, true);
+            GameLog.Arsenal.Info($"[Arsenal] Жетон возвращён на крючок (на крючке: {IsTagOnRack}).");
+        }
 
         private void OnTagRemoved(object sender, UxrManipulationEventArgs e)
         {

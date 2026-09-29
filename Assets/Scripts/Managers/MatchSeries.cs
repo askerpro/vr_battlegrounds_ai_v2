@@ -234,7 +234,7 @@ namespace VrBattlegrounds.Managers
             }
 
             GameLog.Match.Info(
-                $"[MatchSeries] Карта {_currentIndex + 1}/{_maps.Count}: победитель {(winner != null ? winner.displayName : "ничья")}.");
+                $"[MatchSeries] Карта {_currentIndex + 1}/{_maps.Count}: победитель {(winner != null ? winner.Name : "ничья")}.");
         }
 
         /// <summary>

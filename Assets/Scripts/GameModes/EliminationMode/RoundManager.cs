@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.GameModes
 {
@@ -72,6 +74,9 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Техническая подготовка: очистка и телепортация.</summary>
         public const float SetupDuration = 1.0f;
 
+        /// <summary>Сколько подготовка ждёт возвращения всех на свою базу сверх <see cref="SetupDuration"/>.</summary>
+        public const float ReturnToBaseLimit = 60.0f;
+
         /// <summary>Пауза после победы, до экрана итогов.</summary>
         public const float ResolutionDuration = 3.0f;
 
@@ -87,9 +92,17 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         private static readonly PhaseTransition[] Transitions =
         {
+            // Закупка открывается, когда все вернулись на свою базу (и погибшие — они возрождаются
+            // в зоне). Раньше Setup длился ровно секунду: идущий на базу пропускал арсенал, а после
+            // смены сторон вся команда оказывалась на закупке в чужой половине.
             new PhaseTransition(RoundState.Setup, RoundState.Equipment,
-                m => m._stateTimer >= SetupDuration,
-                "подготовка закончена"),
+                m => m._stateTimer >= SetupDuration && m._readiness.AllAtBase(m._teams),
+                "все на своей базе"),
+
+            // Предел: один отошедший не останавливает матч навсегда.
+            new PhaseTransition(RoundState.Setup, RoundState.Equipment,
+                m => m._stateTimer >= SetupDuration + ReturnToBaseLimit,
+                "предел возвращения на базу истёк"),
 
             new PhaseTransition(RoundState.Equipment, RoundState.Countdown,
                 m => m._readiness.AllReady,
@@ -152,6 +165,12 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Матч остановлен принудительно — тикать больше нечего.</summary>
         private bool _stopped;
 
+        /// <summary>Кто-то из живых вне своей зоны — обратный отсчёт стоит на полном.</summary>
+        private bool _countdownHeld;
+
+        /// <summary>Вне зоны на обратном отсчёте — для лога.</summary>
+        private readonly List<PlayerSession> _awayOnCountdown = new List<PlayerSession>();
+
         /// <summary>
         /// Готовность игроков к раунду: кто готов, кого ждём, не истёк ли предел ожидания.
         /// Машина сама этот вопрос не решает — она только читает ответ (T-29).
@@ -176,6 +195,12 @@ namespace VrBattlegrounds.GameModes
         }
 
         public RoundState State => _roundState;
+
+        /// <summary>
+        /// Обратный отсчёт стоит: кто-то из живых вышел из своей зоны. Отсчёт начнётся
+        /// сначала, когда все вернутся. Вне фазы <see cref="RoundState.Countdown"/> — false.
+        /// </summary>
+        public bool CountdownHeld => _roundState == RoundState.Countdown && _countdownHeld;
 
         /// <summary>
         /// Состав готовых и неготовых. Читают режим (чтобы отдать его клиентам)
@@ -216,6 +241,7 @@ namespace VrBattlegrounds.GameModes
             _roundEndRequested = false;
             _awaitingOwner = false;
             _stopped = false;
+            _countdownHeld = false;
 
             _roundState = RoundState.Setup;
 
@@ -240,7 +266,7 @@ namespace VrBattlegrounds.GameModes
             _roundWinner = winner;
             _roundEndRequested = true;
 
-            string winnerName = winner != null ? winner.displayName : "ничья";
+            string winnerName = winner != null ? winner.Name : "ничья";
             GameLog.Match.Info(
                 $"[RoundManager] Исход боя определён. Победитель: {winnerName}");
         }
@@ -262,6 +288,11 @@ namespace VrBattlegrounds.GameModes
             // намеренно: условия в таблице обязаны оставаться чистыми.
             if (_roundState == RoundState.Equipment) _readiness.Evaluate(_teams, _stateTimer);
 
+            // Обратный отсчёт идёт, только пока все живые стоят в своих зонах: вышел — отсчёт
+            // встаёт на полный и ждёт; вернулись все — идёт сначала. Та же природа, что у предела
+            // ожидания выше: побочный эффект тика, условие перехода в таблице остаётся чистым.
+            if (_roundState == RoundState.Countdown) HoldCountdownWhileAway();
+
             foreach (PhaseTransition transition in Transitions)
             {
                 if (transition.From != _roundState) continue;
@@ -281,6 +312,7 @@ namespace VrBattlegrounds.GameModes
 
                 _roundState = transition.To;
                 _stateTimer = 0f;
+                _countdownHeld = false;
 
                 GameLog.Match.Info(
                     $"[RoundManager] {transition.From} → {transition.To}: {transition.Reason}");
@@ -289,6 +321,31 @@ namespace VrBattlegrounds.GameModes
             }
 
             return RoundTickResult.Nothing;
+        }
+
+        private void HoldCountdownWhileAway()
+        {
+            bool away = !_readiness.AllAliveAtBase(_teams, _awayOnCountdown);
+
+            if (away)
+            {
+                if (!_countdownHeld)
+                {
+                    string names = string.Join(", ", _awayOnCountdown.Select(s => s.PlayerName));
+                    GameLog.Match.Info(
+                        $"[RoundManager] Обратный отсчёт сброшен: вне своей зоны {names}. Ждём возвращения.");
+                }
+                _countdownHeld = true;
+                _stateTimer = 0f;
+                return;
+            }
+
+            if (_countdownHeld)
+            {
+                _countdownHeld = false;
+                _stateTimer = 0f;
+                GameLog.Match.Info("[RoundManager] Все в своих зонах — обратный отсчёт заново.");
+            }
         }
 
         /// <summary>Останавливает машину: тики перестают что-либо делать до StartRound.</summary>

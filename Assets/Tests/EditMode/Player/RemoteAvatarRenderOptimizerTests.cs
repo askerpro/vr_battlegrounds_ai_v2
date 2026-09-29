@@ -18,8 +18,6 @@ namespace VrBattlegrounds.Tests.Player
     /// </summary>
     public class RemoteAvatarRenderOptimizerTests
     {
-        private const string HeavySoldierPrefab = "Assets/Prefabs/Player/Heavy_Soldier_Base_Avatar.prefab";
-
         private readonly List<Object> _created = new List<Object>();
 
         [TearDown]
@@ -114,25 +112,31 @@ namespace VrBattlegrounds.Tests.Player
             Assert.DoesNotThrow(snapshot.Restore);
         }
 
+        public static IEnumerable<string> RegisteredAvatarPaths() =>
+            VrBattlegrounds.Tests.Prefabs.RegisteredAvatars.Prefabs().Select(AssetDatabase.GetAssetPath).OrderBy(p => p);
+
         /// <summary>
-        /// Список скрытых деталей завязан на имена в модели. Переименовали или убрали
-        /// меш из рига Heavy_Soldier — список молча перестал бы работать; этот тест краснеет.
+        /// Скрытые детали узнаются по имени рендерера. Если у зарегистрированного аватара есть объект
+        /// с таким именем, он обязан быть среди рендереров тела — иначе список молча не сработает
+        /// (деталь переехала, сменила тип рендерера). Конкретных аватаров тест не знает.
         /// </summary>
-        [Test]
-        public void Скрытые_детали_Heavy_Soldier_есть_среди_рендереров_тела()
+        [TestCaseSource(nameof(RegisteredAvatarPaths))]
+        public void Скрытые_детали_аватара_есть_среди_рендереров_тела(string path)
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HeavySoldierPrefab);
-            Assert.IsNotNull(prefab, $"Не найден префаб {HeavySoldierPrefab}.");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            Assert.IsNotNull(prefab, $"Не найден префаб {path}.");
 
             HashSet<string> bodyNames = new HashSet<string>(
                 RemoteAvatarRenderPolicy.CollectBodyRenderers(prefab.transform).Select(r => r.name));
+            HashSet<string> allNames = new HashSet<string>(
+                prefab.GetComponentsInChildren<Transform>(true).Select(t => t.name));
 
             string[] missing = RemoteAvatarRenderPolicy.HiddenUnderGearRendererNames
-                                                       .Where(n => !bodyNames.Contains(n))
+                                                       .Where(n => allNames.Contains(n) && !bodyNames.Contains(n))
                                                        .ToArray();
 
             Assert.IsEmpty(missing,
-                           $"В {HeavySoldierPrefab} нет рендереров: {string.Join(", ", missing)}. " +
+                           $"В {path} детали есть, но не среди рендереров тела: {string.Join(", ", missing)}. " +
                            "Поправьте RemoteAvatarRenderPolicy.HiddenUnderGearRendererNames.");
         }
 

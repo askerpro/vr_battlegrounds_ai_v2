@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Player;
@@ -13,7 +13,7 @@ namespace VrBattlegrounds.GameModes
     public enum RoundStartRule
     {
         /// <summary>
-        /// Раунд ждёт готовности всех живых игроков (жетон на стене арсенала).
+        /// Раунд ждёт готовности всех игроков команд, включая идущих на возрождение (жетон на стене арсенала).
         /// Предел ожидания — страховка: по его истечении работает
         /// <see cref="RoundReadinessTimeoutRule" />.
         /// </summary>
@@ -49,7 +49,7 @@ namespace VrBattlegrounds.GameModes
     }
 
     /// <summary>
-    /// Готовность живых игроков к раунду: кто готов, кого ждём, не пора ли начинать
+    /// Готовность игроков к раунду: кто готов, кого ждём, не пора ли начинать
     /// без опоздавших.
     ///
     /// <para>
@@ -77,7 +77,7 @@ namespace VrBattlegrounds.GameModes
 
         private readonly IPlayerRoster _roster;
 
-        /// <summary>Живые игроки, не объявившие готовность. Пересобирается каждым <see cref="Evaluate" />.</summary>
+        /// <summary>Игроки раунда, не объявившие готовность. Пересобирается каждым <see cref="Evaluate" />.</summary>
         private readonly List<PlayerSession> _pending = new List<PlayerSession>();
 
         /// <summary>
@@ -129,19 +129,19 @@ namespace VrBattlegrounds.GameModes
             startRule == RoundStartRule.Timer && timeLimit <= 0f ? DefaultTimeLimit : timeLimit;
 
         /// <summary>
-        /// Живые игроки, которых раунд ещё ждёт. Пусто до первого <see cref="Evaluate" />
+        /// Игроки, которых раунд ещё ждёт (в том числе погибшие, идущие на базу). Пусто до первого <see cref="Evaluate" />
         /// и всегда пусто при старте по таймеру — там не ждут никого.
         /// </summary>
         public IReadOnlyList<PlayerSession> Pending => _pending;
 
-        /// <summary>Сколько живых игроков участвует в раунде на момент последней проверки.</summary>
-        public int AliveCount { get; private set; }
+        /// <summary>Сколько игроков участвует в раунде (живые и идущие на возрождение) на момент последней проверки.</summary>
+        public int ParticipantCount { get; private set; }
 
         /// <summary>
-        /// Все живые игроки объявили готовность (и живые вообще есть). При старте по
+        /// Все игроки раунда объявили готовность (и они вообще есть). При старте по
         /// таймеру готовность не спрашивается, поэтому всегда false.
         /// </summary>
-        public bool AllReady => StartRule == RoundStartRule.Readiness && AliveCount > 0 && _pending.Count == 0;
+        public bool AllReady => StartRule == RoundStartRule.Readiness && ParticipantCount > 0 && _pending.Count == 0;
 
         /// <summary>Предел ожидания истёк и правило матча уже применено.</summary>
         public bool LimitExpired { get; private set; }
@@ -151,13 +151,13 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>
         /// Можно начинать отсчёт: готовы все, истёк предел ожидания либо вышло время
-        /// закупки. Без единого живого игрока — нельзя: начинать раунд не с кем.
+        /// закупки. Без единого игрока — нельзя: начинать раунд не с кем.
         /// </summary>
         public bool IsSatisfied
         {
             get
             {
-                if (AliveCount == 0) return false;
+                if (ParticipantCount == 0) return false;
                 if (StartRule == RoundStartRule.Timer) return PurchaseTimeOver;
                 return _pending.Count == 0 || LimitExpired;
             }
@@ -178,7 +178,7 @@ namespace VrBattlegrounds.GameModes
         public void Reset(IReadOnlyList<TeamData> teams)
         {
             _pending.Clear();
-            AliveCount = 0;
+            ParticipantCount = 0;
             LimitExpired = false;
             PurchaseTimeOver = false;
 
@@ -215,29 +215,69 @@ namespace VrBattlegrounds.GameModes
 
             if (LimitExpired) return;
             if (TimeLimit <= 0f) return;
-            if (AliveCount == 0 || _pending.Count == 0) return;
+            if (ParticipantCount == 0 || _pending.Count == 0) return;
             if (elapsedInPhase < TimeLimit) return;
 
             LimitExpired = true;
             ApplyTimeoutRule(teams);
         }
 
-        /// <summary>Пересобирает <see cref="_pending" /> и <see cref="AliveCount" />.</summary>
+        /// <summary>
+        /// Все игроки раунда с телом стоят каждый в своей зоне спавна — можно открывать закупку.
+        /// Погибший в прошлом раунде возрождается, дойдя до зоны, поэтому «все на базе» значит и
+        /// «все живы». Сессия без аватара (подключается, заглушка теста) не ждётся: стоять ей нечем.
+        /// Вне базы — в <paramref name="away"/>, для лога.
+        /// </summary>
+        public bool AllAtBase(IReadOnlyList<TeamData> teams, List<PlayerSession> away = null) =>
+            AtBase(teams, away, aliveOnly: false);
+
+        /// <summary>
+        /// Все живые игроки раунда стоят каждый в своей зоне — обратный отсчёт может идти.
+        /// Выбывший (опоздал к закупке, оживёт в следующем раунде) отсчёт не держит.
+        /// </summary>
+        public bool AllAliveAtBase(IReadOnlyList<TeamData> teams, List<PlayerSession> away = null) =>
+            AtBase(teams, away, aliveOnly: true);
+
+        private bool AtBase(IReadOnlyList<TeamData> teams, List<PlayerSession> away, bool aliveOnly)
+        {
+            away?.Clear();
+            if (teams == null) return true;
+
+            bool all = true;
+            foreach (TeamData team in teams)
+            {
+                foreach (PlayerSession session in _roster.GetPlayers(team))
+                {
+                    if (session == null || session.ActiveAvatar == null || session.IsInSpawnZone) continue;
+                    if (aliveOnly && !session.ActiveAvatar.IsAlive) continue;
+
+                    all = false;
+                    away?.Add(session);
+                }
+            }
+            return all;
+        }
+
+        /// <summary>Пересобирает <see cref="_pending" /> и <see cref="ParticipantCount" />.</summary>
         private void Collect(IReadOnlyList<TeamData> teams)
         {
             _pending.Clear();
-            AliveCount = 0;
+            ParticipantCount = 0;
 
             if (teams == null) return;
 
             foreach (TeamData team in teams)
             {
-                // Ждём готовности только от живых: мёртвый в этом раунде не участвует.
-                foreach (PlayerSession session in _roster.GetAlivePlayers(team))
+                // Ждём всех игроков команды, в том числе погибших в прошлом раунде: они
+                // возрождаются, только дойдя до своей зоны, и закупка обязана их дождаться.
+                // Раньше ждали только живых — готовые союзники (или бот) начинали раунд
+                // без идущего на базу, и арсенал для него так и не открывался. Не дошёл —
+                // решает предел ожидания, как для любого неготового.
+                foreach (PlayerSession session in _roster.GetPlayers(team))
                 {
                     if (session == null) continue;
 
-                    AliveCount++;
+                    ParticipantCount++;
 
                     // При старте по таймеру не ждут никого: иначе HUD показывал бы
                     // «ждём Петю» там, где Петю никто не ждёт.
@@ -283,7 +323,8 @@ namespace VrBattlegrounds.GameModes
                 if (sb.Length > 0) sb.Append(", ");
                 sb.Append(session.PlayerName);
 
-                if (!session.IsInSpawnZone) sb.Append(" (вне зоны спавна)");
+                if (session.ActiveAvatar != null && !session.ActiveAvatar.IsAlive) sb.Append(" (выбыл, идёт на базу)");
+                else if (!session.IsInSpawnZone) sb.Append(" (вне зоны спавна)");
             }
 
             return sb.ToString();
@@ -292,19 +333,19 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Почему раунд стоит в фазе <c>Equipment</c> — строкой для инспектора.</summary>
         public string Describe()
         {
-            if (AliveCount == 0) return "Живых игроков в раунде нет — ждать некого.";
+            if (ParticipantCount == 0) return "Игроков в раунде нет — ждать некого.";
 
             if (StartRule == RoundStartRule.Timer)
-                return $"Старт по таймеру: закупка {TimeLimit:F0} с, готовность не спрашивается ({AliveCount} игроков).";
+                return $"Старт по таймеру: закупка {TimeLimit:F0} с, готовность не спрашивается ({ParticipantCount} игроков).";
 
             if (_pending.Count == 0)
-                return $"Готовы все живые игроки ({AliveCount}).";
+                return $"Готовы все игроки ({ParticipantCount}).";
 
             string limit = TimeLimit > 0f
                 ? $"Предел ожидания: {TimeLimit:F0} с, правило: {TimeoutRule}."
                 : "Предел ожидания выключен — раунд ждёт всех.";
 
-            return $"Ждём готовности ({_pending.Count} из {AliveCount}): {DescribePending()}\n{limit}";
+            return $"Ждём готовности ({_pending.Count} из {ParticipantCount}): {DescribePending()}\n{limit}";
         }
     }
 }

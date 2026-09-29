@@ -12,6 +12,11 @@ namespace VrBattlegrounds.Player.Avatars
     /// <summary>
     /// Отвечает за инстанцирование, горячую замену и позиционирование физических аватаров (PlayerController)
     /// для подключенных сессий (PlayerSession). Содержит всю логику префабов, скинов и точек спавна.
+    ///
+    /// <para>
+    /// Соединение <c>conn</c> может быть <c>null</c> — это сессия бота
+    /// (<c>DevTools.Bots.BotDirector</c>): аватар спавнится без владельца, позу рассылает сервер.
+    /// </para>
     /// </summary>
     [DefaultExecutionOrder(VrBattlegrounds.Managers.ManagerOrder.AvatarManager)]
     public class AvatarManager : MonoBehaviour
@@ -118,7 +123,10 @@ namespace VrBattlegrounds.Player.Avatars
             }
 
             GameObject avatarInstance = Instantiate(prefabToSpawn, spawnPos, spawnRot);
-            avatarInstance.name = $"{prefabToSpawn.name} [connId={conn.connectionId}]";
+            avatarInstance.name = $"{prefabToSpawn.name} [{ServerAuthoredAvatar.OwnerLabel(conn)}]";
+
+            // Без соединения — бот: тело двигает сервер (см. ServerAuthoredAvatar).
+            if (conn == null) ServerAuthoredAvatar.Prepare(avatarInstance);
 
             PlayerController avatarClass = avatarInstance.GetComponent<PlayerController>();
             if (avatarClass != null)
@@ -141,6 +149,9 @@ namespace VrBattlegrounds.Player.Avatars
             // Связь проставляется строго ПОСЛЕ спавна: до него netId равен нулю,
             // и клиенты получили бы пустую ссылку на аватар.
             session.ActiveAvatar = avatarClass;
+
+            // Вернувшийся живым после переподключения продолжает себя; остальные — новые в матче.
+            Admit(avatarClass, continuesPrevious: snapshot != null && snapshot.NeedsPhysicalRestore);
 
             OnAvatarSpawned?.Invoke(avatarClass);
         }
@@ -206,7 +217,9 @@ namespace VrBattlegrounds.Player.Avatars
             }
 
             GameObject newPlayerInstance = Instantiate(avatarPrefab, spawnPos, spawnRot);
-            newPlayerInstance.name = $"{avatarPrefab.name} [connId={conn.connectionId}]";
+            newPlayerInstance.name = $"{avatarPrefab.name} [{ServerAuthoredAvatar.OwnerLabel(conn)}]";
+
+            if (conn == null) ServerAuthoredAvatar.Prepare(newPlayerInstance);
 
             PlayerController newPc = newPlayerInstance.GetComponent<PlayerController>();
             if (newPc != null)
@@ -222,6 +235,10 @@ namespace VrBattlegrounds.Player.Avatars
             // на них останется указывать на уже уничтоженный старый аватар.
             session.ActiveAvatar = newPc;
 
+            // Без прежнего (смена карты) — в каком состоянии входит новый, решает режим.
+            CarryLifeState(oldAvatar, newPc);
+            Admit(newPc, continuesPrevious: oldAvatar != null);
+
             if (oldAvatar != null)
             {
                 // Руки и снаряжение отпускаются до уничтожения: иначе UltimateXR остаётся
@@ -231,6 +248,30 @@ namespace VrBattlegrounds.Player.Avatars
             }
 
             OnAvatarSpawned?.Invoke(newPc);
+        }
+
+        /// <summary>
+        /// Новый аватар продолжает прежнего: смена внешности или команды не оживляет выбывшего
+        /// и не лечит раненого. Оба уже в сети; прежний — ещё не уничтожен.
+        /// </summary>
+        public static void CarryLifeState(PlayerController previous, PlayerController next)
+        {
+            if (previous == null || next == null) return;
+
+            if (previous.IsAlive) next.RestoreHealth(previous.Health);
+            else next.ServerEliminateSilently("новый аватар взамен выбывшего");
+        }
+
+        /// <summary>
+        /// В каком состоянии новый аватар входит в игру, решает активный режим
+        /// (<see cref="VrBattlegrounds.GameModes.GameMode.ServerAdmitAvatar"/>): в матче Elimination
+        /// аватар без прошлого входит выбывшим. Аватар уже в сети — выбывание уходит клиентам.
+        /// </summary>
+        private static void Admit(PlayerController avatar, bool continuesPrevious)
+        {
+            if (avatar == null) return;
+            VrBattlegrounds.GameModes.GameMode mode = GameplayManager.Instance != null ? GameplayManager.Instance.ActiveGameMode : null;
+            if (mode != null) mode.ServerAdmitAvatar(avatar, continuesPrevious);
         }
 
         /// <summary>
@@ -268,7 +309,7 @@ namespace VrBattlegrounds.Player.Avatars
             if (mode == null || System.Array.IndexOf(mode.Teams, team) < 0)
             {
                 GameLog.Player.Info(
-                    $"[AvatarManager] {stage}: {who} — команда '{team.displayName}' не из режима этой сцены " +
+                    $"[AvatarManager] {stage}: {who} — команда '{team.Name}' не из режима этой сцены " +
                     "(команда матча ещё не выбрана), ставим в нейтральную точку — начало координат.");
                 return;
             }
@@ -278,13 +319,13 @@ namespace VrBattlegrounds.Player.Avatars
             if (mode.IsWarmup)
             {
                 GameLog.Player.Info(
-                    $"[AvatarManager] {stage}: {who} — разминка, у команды '{team.displayName}' на этой карте " +
+                    $"[AvatarManager] {stage}: {who} — разминка, у команды '{team.Name}' на этой карте " +
                     "зоны нет — нейтральная точка, начало координат.");
                 return;
             }
 
             GameLog.Player.Warning(
-                $"[AvatarManager] {stage}: {who} — у команды '{team.displayName}' нет зоны спавна на сцене " +
+                $"[AvatarManager] {stage}: {who} — у команды '{team.Name}' нет зоны спавна на сцене " +
                 $"'{UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}', а NetworkStartPosition на карте " +
                 "не нашлось. Аватар создан в начале координат — скорее всего внутри геометрии.");
         }

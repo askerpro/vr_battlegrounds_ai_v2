@@ -70,6 +70,12 @@ namespace VrBattlegrounds
             return avatar != null ? avatar.prefab : null;
         }
 
-        public override string ToString() => displayName;
+        /// <summary>
+        /// Название для показа: заданное админом на эту серию (<see cref="TeamNames"/>) или имя ассета.
+        /// Везде, где команду видит игрок, — это свойство, а не <see cref="displayName"/>.
+        /// </summary>
+        public string Name => TeamNames.Resolve(this);
+
+        public override string ToString() => Name;
     }
 }

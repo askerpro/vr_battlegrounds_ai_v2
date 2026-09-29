@@ -25,6 +25,12 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Раунды, выигранные в текущем сете до прерванного раунда.</summary>
         public readonly Dictionary<int, int> RoundScores = new Dictionary<int, int>();
 
+        /// <summary>
+        /// Раунды, выигранные за карту в уже доигранных сетах (половинах). Решают ничью по сетам:
+        /// карту берёт команда с большим числом раундов.
+        /// </summary>
+        public readonly Dictionary<int, int> MapRounds = new Dictionary<int, int>();
+
         /// <summary>Номер раунда, который сыграется заново после «Продолжить»; 0 — сет не начинался.</summary>
         public int RoundToReplay;
 

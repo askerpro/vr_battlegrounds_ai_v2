@@ -152,7 +152,7 @@ namespace VrBattlegrounds.GameModes
                 _teamRoundScores[winner.teamIndex]++;
             }
 
-            string winnerName = winner != null ? winner.displayName : "ничья";
+            string winnerName = winner != null ? winner.Name : "ничья";
             GameLog.Match.Info(
                 $"[SetManager] Раунд {_currentRound}/{_roundsPerSet} завершён, победитель: {winnerName}");
 
@@ -244,20 +244,13 @@ namespace VrBattlegrounds.GameModes
         {
             _setFinished = true;
 
-            string winnerName = winner != null ? winner.displayName : "ничья";
+            string winnerName = winner != null ? winner.Name : "ничья";
             GameLog.Match.Info(
                 $"[SetManager] Сет завершён, победитель: {winnerName}");
 
             _eliminationMode.RpcOnSetEnded(winner != null ? winner.teamIndex : -1);
 
             _onSetEnded?.Invoke(winner);
-        }
-
-        /// <summary>Смена сторон (опционально для будущих реализаций N-команд).</summary>
-        public void SwapTeams()
-        {
-            GameLog.Match.Info(
-                $"[SetManager] Смена сторон вызвана, но физическая логика смены спавнов пока не реализована.");
         }
 
         /// <summary>Принудительно останавливает сет. Вызывается EliminationMode.StopGameplay().</summary>

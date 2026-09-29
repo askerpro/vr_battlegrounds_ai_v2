@@ -14,6 +14,8 @@ namespace VrBattlegrounds.UI.Menu
     /// Экран админа «Игроки и команды»: список подключённых игроков и выдача команды
     /// каждому (этап Б). Кнопки команд — команды активного режима сцены; кнопка
     /// «Распределить автоматически» — разовый автобаланс игроков без команды режима.
+    /// Здесь же админ задаёт названия команд на серию и ники игрокам — полем ввода
+    /// (на планшете — системная клавиатура); сервер чистит ввод (<c>AdminNaming</c>).
     ///
     /// <para>
     /// Экран только отправляет запросы (<c>PlayerSession.CmdAdminAssignTeam</c>,
@@ -93,7 +95,10 @@ namespace VrBattlegrounds.UI.Menu
 
             // Перестраиваем, только если что-то поменялось: список живёт в VR-меню,
             // и пересоздание кнопок каждые полсекунды сбивало бы наведение луча.
-            string snapshot = admin + "|" + string.Join(",", System.Array.ConvertAll(teams, t => t.teamIndex.ToString()));
+            // Пока админ печатает, не перестраиваем: пересоздание стёрло бы ввод.
+            if (IsTyping()) return;
+
+            string snapshot = admin + "|" + string.Join(",", System.Array.ConvertAll(teams, t => t.teamIndex + ":" + t.Name));
             foreach (PlayerSession p in players) snapshot += "|" + p.netId + ":" + p.PlayerName + ":" + p.TeamIndex;
             if (snapshot == _lastSnapshot) return;
             _lastSnapshot = snapshot;
@@ -113,19 +118,33 @@ namespace VrBattlegrounds.UI.Menu
             if (teams.Length == 0)
                 CreateLabel(_rowsContainer, "Режим сцены не запущен — выдавать нечего.");
 
+            // ── Названия команд на серию ─────────────────────────────────────
+            foreach (TeamData team in teams)
+            {
+                GameObject row = CreateRow(_rowsContainer);
+                CreateLabel(row.transform, "Название команды:");
+                int renamedIndex = team.teamIndex;
+                TMP_InputField input = CreateInput(row.transform, team.Name, TeamNames.MaxLength);
+                CreateTeamButton(row.transform, "Сохранить", () => OnRenameTeamPressed(renamedIndex, input.text));
+            }
+
             foreach (PlayerSession player in players)
             {
                 GameObject row = CreateRow(_rowsContainer);
                 TeamData current = TeamRegistry.Instance != null && player.TeamIndex != 0
                     ? TeamRegistry.Instance.GetByIndex(player.TeamIndex)
                     : null;
-                CreateLabel(row.transform, $"{player.PlayerName}: {(current != null ? current.displayName : "без команды")}");
+
+                uint playerNetId = player.netId;
+                TMP_InputField nick = CreateInput(row.transform, player.PlayerName, TeamNames.MaxLength);
+                CreateTeamButton(row.transform, "Ник", () => OnRenamePlayerPressed(playerNetId, nick.text));
+                CreateLabel(row.transform, current != null ? current.Name : "без команды");
 
                 foreach (TeamData team in teams)
                 {
                     uint targetNetId = player.netId;
                     int teamIndex = team.teamIndex;
-                    CreateTeamButton(row.transform, team.displayName, () => OnAssignPressed(targetNetId, teamIndex));
+                    CreateTeamButton(row.transform, team.Name, () => OnAssignPressed(targetNetId, teamIndex));
                 }
             }
         }
@@ -148,6 +167,53 @@ namespace VrBattlegrounds.UI.Menu
             GameLog.UI.Info($"[MenuPlayersTeams] Админ выдаёт команду {teamIndex} игроку netId={targetNetId}.");
             PlayerSession.LocalSession.CmdAdminAssignTeam(targetNetId, teamIndex);
             _lastSnapshot = "";
+        }
+
+        private void OnRenameTeamPressed(int teamIndex, string name)
+        {
+            if (PlayerSession.LocalSession == null) return;
+
+            GameLog.UI.Info($"[MenuPlayersTeams] Админ переименовывает команду {teamIndex} в '{name}'.");
+            PlayerSession.LocalSession.CmdAdminRenameTeam(teamIndex, name);
+            _lastSnapshot = "";
+        }
+
+        private void OnRenamePlayerPressed(uint targetNetId, string name)
+        {
+            if (PlayerSession.LocalSession == null) return;
+
+            GameLog.UI.Info($"[MenuPlayersTeams] Админ даёт ник '{name}' игроку netId={targetNetId}.");
+            PlayerSession.LocalSession.CmdAdminRenamePlayer(targetNetId, name);
+            _lastSnapshot = "";
+        }
+
+        /// <summary>Какое-то поле ввода экрана в фокусе — админ печатает.</summary>
+        private bool IsTyping()
+        {
+            foreach (TMP_InputField field in _rowsContainer.GetComponentsInChildren<TMP_InputField>())
+            {
+                if (field.isFocused) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Поле ввода TextMeshPro, собранное кодом (как строки и подписи экрана).</summary>
+        private static TMP_InputField CreateInput(Transform parent, string text, int characterLimit)
+        {
+            GameObject go = TMP_DefaultControls.CreateInputField(new TMP_DefaultControls.Resources());
+            go.name = "Input";
+            go.transform.SetParent(parent, false);
+
+            TMP_InputField field = go.GetComponent<TMP_InputField>();
+            field.characterLimit = characterLimit;
+            field.lineType = TMP_InputField.LineType.SingleLine;
+            field.text = text;
+            field.pointSize = 32f;
+
+            var element = go.AddComponent<LayoutElement>();
+            element.preferredWidth = 420f;
+            element.preferredHeight = 70f;
+            return field;
         }
 
         private void OnAutoBalancePressed()

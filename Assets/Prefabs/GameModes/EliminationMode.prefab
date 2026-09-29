@@ -69,7 +69,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  _maxSets: 5
+  _maxSets: 2
   _roundsPerSet: 3
   _countdownDuration: 3
   _roundDuration: 90

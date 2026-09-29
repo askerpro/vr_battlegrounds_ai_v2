@@ -34,7 +34,7 @@ namespace VrBattlegrounds.UI.HUD
             {
                 if (team == null) continue;
                 int score = mode.GetRoundScore(team);
-                sb.Append($"{team.displayName}: {score}  ");
+                sb.Append($"{team.Name}: {score}  ");
             }
 
             _scoreText.text = sb.ToString();

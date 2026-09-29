@@ -17,7 +17,7 @@ MonoBehaviour:
   _description: 
   _weaponPrefab: {fileID: 1013363612589426, guid: a89abddac5809dc47a6715d7ebeab24e, type: 3}
   _magazinePrefab: {fileID: 7658064994636483981, guid: 7cc1b24032fe06543b2b7edf8c18c8b4, type: 3}
-  _maxMagazineCount: 4
+  _maxMagazineCount: 3
   _price: 1500
   _category: 1
   _weaponPositionOffset: {x: 0, y: 0, z: 0}

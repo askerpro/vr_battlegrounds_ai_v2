@@ -46,23 +46,37 @@ namespace VrBattlegrounds.Player
             var spawnFor = new List<int>();
             var discard = new List<int>();
             var assigned = new bool[stored.Count];
+            var need = new int[weapons.Count];
 
             // Уже лежащие магазины засчитываются оружию по порядку: один магазин —
             // одному оружию, даже если подходит к нескольким.
             for (int w = 0; w < weapons.Count; w++)
             {
-                int need = Math.Max(0, wanted(weapons[w]));
+                need[w] = Math.Max(0, wanted(weapons[w]));
 
-                for (int m = 0; m < stored.Count && need > 0; m++)
+                for (int m = 0; m < stored.Count && need[w] > 0; m++)
                 {
                     if (assigned[m] || !fits(stored[m], weapons[w])) continue;
 
                     assigned[m] = true;
-                    need--;
+                    need[w]--;
                 }
+            }
 
-                for (int i = 0; i < need; i++)
+            // Недостающее — по кругу, по одному на ствол за проход: если места на все нормы не
+            // хватит, срез хвоста ниже убирает поровну, а не всю норму последнего ствола. Раньше
+            // норма набиралась стволом подряд, и первый (в руке во время закупки) забирал весь
+            // карман — второй оставался без магазинов.
+            for (bool added = true; added;)
+            {
+                added = false;
+                for (int w = 0; w < weapons.Count; w++)
+                {
+                    if (need[w] <= 0) continue;
                     spawnFor.Add(w);
+                    need[w]--;
+                    added = true;
+                }
             }
 
             // Места не хватает — сначала уходят магазины, не нужные ни одному оружию

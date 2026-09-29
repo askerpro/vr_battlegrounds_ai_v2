@@ -24,6 +24,73 @@ namespace VrBattlegrounds.Tests.Player
             return MagazineRefillPlanner.Compute(weapons, stored, Fits, _ => perWeapon, capacity);
         }
 
+        /// <summary>
+        /// Места на все нормы не хватает — карман делится между стволами поровну, по кругу. Раньше норма
+        /// набиралась по порядку оружия и срезался хвост: ствол, стоявший первым (в руке во время
+        /// закупки), забирал весь карман, второй не получал ни одного магазина.
+        /// </summary>
+        [Test]
+        public void Места_не_хватает_делится_поровну()
+        {
+            var plan = Plan(new[] { "shotgun", "pistol" }, new string[0], 4, 4);
+
+            Assert.AreEqual(2, plan.SpawnFor.FindAll(i => i == 0).Count, "Дробовику досталось не поровну.");
+            Assert.AreEqual(2, plan.SpawnFor.FindAll(i => i == 1).Count, "Пистолет остался без магазинов — карман забрал первый ствол.");
+        }
+
+        /// <summary>
+        /// Карман отдаёт магазин к оружию в другой руке; если такого нет — не отдаёт ничего, а не чужой
+        /// (раньше — последний положенный: в руке пистолет, а в ладонь магазин дробовика). Руки без оружия —
+        /// любой, последний.
+        /// </summary>
+        [Test]
+        public void Карман_не_подменяет_магазин_оружия_в_руке()
+        {
+            string[] stored = { "shotgun", "shotgun", "pistol" };
+            Assert.AreEqual(2, UxrMagazinePocketChoose(stored, "pistol", true), "В руке пистолет — выдан не его магазин.");
+            Assert.AreEqual(-1, UxrMagazinePocketChoose(new[] { "shotgun" }, "pistol", true),
+                "В руке пистолет, магазина к нему нет — выдан чужой магазин вместо ничего.");
+            Assert.AreEqual(0, UxrMagazinePocketChoose(new[] { "shotgun" }, null, false), "Руки пусты — карман ничего не выдал.");
+        }
+
+        /// <summary>
+        /// Карман держит не больше трёх магазинов одного типа, а типов — сколько угодно (решение пользователя).
+        /// </summary>
+        [Test]
+        public void Карман_держит_по_три_каждого_типа()
+        {
+            var root = new GameObject("Pocket");
+            var created = new List<GameObject> { root };
+            try
+            {
+                root.AddComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+                var pocket = root.AddComponent<VrBattlegrounds.Interaction.UxrMagazinePocket>();
+
+                UltimateXR.Manipulation.UxrGrabbableObject Mag(string tag)
+                {
+                    var go = new GameObject(tag);
+                    created.Add(go);
+                    var grabbable = go.AddComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+                    grabbable.Tag = tag;
+                    go.AddComponent<UltimateXR.Mechanics.Weapons.UxrFirearmMag>();
+                    return grabbable;
+                }
+
+                for (int i = 0; i < 3; i++) pocket.ForceStoreItem(Mag("MagShotgun"));
+                Assert.IsFalse(pocket.CanStore(Mag("MagShotgun")), "Карман принял четвёртый магазин одного типа.");
+                Assert.IsTrue(pocket.CanStore(Mag("M16_Mag")), "Карман не принял магазин другого типа — места по типам нет.");
+                for (int i = 0; i < 3; i++) pocket.ForceStoreItem(Mag("M16_Mag"));
+                Assert.IsTrue(pocket.CanStore(Mag("Gun_real_mag")), "Третий тип не помещается — вместимость общая, а не по типу.");
+            }
+            finally
+            {
+                foreach (GameObject go in created) Object.DestroyImmediate(go);
+            }
+        }
+
+        private static int UxrMagazinePocketChoose(string[] stored, string held, bool holdingWeapon) =>
+            VrBattlegrounds.Interaction.UxrMagazinePocket.ChooseMagazine(stored.Length, i => stored[i] == held, holdingWeapon);
+
         [Test]
         public void Пустой_карман_получает_магазин_к_каждому_оружию()
         {

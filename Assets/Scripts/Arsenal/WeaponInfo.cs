@@ -30,7 +30,7 @@ namespace VrBattlegrounds.Arsenal
         [SerializeField] private GameObject _magazinePrefab;
 
         [Tooltip("Max number of magazines to auto-spawn into player inventory")]
-        [SerializeField] private int _maxMagazineCount = 4;
+        [SerializeField] private int _maxMagazineCount = 3;
 
         // ── Economy ────────────────────────────────────────────
         [Header("Economy")]

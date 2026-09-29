@@ -241,6 +241,22 @@ namespace VrBattlegrounds.Tests.Prefabs
                 $"{prefab.name}: нет трупа (CorpseSource) — погибший исчезнет без тела. Tools/VR Battlegrounds/Avatars/Build Corpses.");
         }
 
+        /// <summary>
+        /// Карман магазинов вмещает норму любого ствола арсенала (<c>WeaponInfo.MaxMagazineCount</c>) — предел на
+        /// тип магазина; типов — сколько угодно. Меньше — выдача режет норму.
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void Карман_вмещает_норму_каждого_ствола(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            var pocket = avatar.GetComponentInChildren<UxrMagazinePocket>(true);
+            Assert.IsNotNull(pocket, $"{avatar.name}: нет кармана магазинов.");
+
+            int need = Weapons().Select(w => w.MaxMagazineCount).DefaultIfEmpty(0).Max();
+            Assert.GreaterOrEqual(pocket.PerTypeLimit, need,
+                $"{avatar.name}: карман держит {pocket.PerTypeLimit} магазина одного типа, а норма ствола — {need}.");
+        }
+
         [TestCaseSource(nameof(RegisteredAvatars))]
         public void Скелет_UltimateXR_размечен(string path)
         {

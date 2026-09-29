@@ -13,12 +13,20 @@ namespace VrBattlegrounds.Interaction
     /// Скрытый карман для хранения множества магазинов.
     /// Работает в связке с UxrGrabbableObjectAnchor. Перехватывает положенные в Якорь предметы
     /// и прячет их в невидимый список, освобождая Якорь для новых предметов.
+    ///
+    /// <para>
+    /// <b>Вместимость — по типу</b> (решение пользователя): не больше <see cref="PerTypeLimit"/> магазинов одного
+    /// типа, а типов — сколько угодно. Тип — тег магазина (<c>UxrGrabbableObject.Tag</c>), тот же, по которому
+    /// гнездо оружия решает совместимость. Четвёртый магазин типа якорь не принимает (валидатор размещения).
+    /// Раньше общая вместимость 4 делилась жадно, и второй ствол оставался без магазинов.
+    /// </para>
     /// </summary>
     [RequireComponent(typeof(UxrGrabbableObjectAnchor))]
     public class UxrMagazinePocket : MonoBehaviour
     {
         [Header("Settings")]
-        [SerializeField] private int _capacity = 4;
+        [Tooltip("Сколько магазинов одного типа держит карман. Типов — сколько угодно.")]
+        [SerializeField] private int _perTypeLimit = 3;
         
         private List<UxrGrabbableObject> _storedItems = new List<UxrGrabbableObject>();
         private UxrGrabbableObjectAnchor _anchor;
@@ -45,6 +53,7 @@ namespace VrBattlegrounds.Interaction
             if (_anchor != null)
             {
                 _anchor.Placed += OnAnchorPlaced;
+                _anchor.AddPlacingValidator(CanStore);
                 _anchor.ProxyGrabResolving += OnProxyGrabResolving;
                 _anchor.ProxyGrabbableQuery += OnProxyGrabbableQuery;
                 _anchor.UpdateGrabProxyState();
@@ -56,6 +65,7 @@ namespace VrBattlegrounds.Interaction
             if (_anchor != null)
             {
                 _anchor.Placed -= OnAnchorPlaced;
+                _anchor.RemovePlacingValidator(CanStore);
                 _anchor.ProxyGrabResolving -= OnProxyGrabResolving;
                 _anchor.ProxyGrabbableQuery -= OnProxyGrabbableQuery;
                 _anchor.UpdateGrabProxyState();
@@ -88,8 +98,8 @@ namespace VrBattlegrounds.Interaction
             
             UxrFirearmMag mag = e.GrabbableObject.GetComponentInParent<UxrFirearmMag>();
             
-            // Если это магазин и есть место
-            if (mag != null && _storedItems.Count < _capacity)
+            // Если это магазин и для его типа есть место
+            if (mag != null && CanStore(e.GrabbableObject))
             {
                 StoreItem(e.GrabbableObject);
                 
@@ -128,7 +138,36 @@ namespace VrBattlegrounds.Interaction
             }
         }
 
-        public int Capacity => _capacity;
+        /// <summary>Сколько магазинов одного типа держит карман.</summary>
+        public int PerTypeLimit => _perTypeLimit;
+
+        /// <summary>Тип магазина — его тег; без тега — имя префаба.</summary>
+        public static string TypeOf(UxrGrabbableObject magazine)
+        {
+            if (magazine == null) return string.Empty;
+            if (!string.IsNullOrEmpty(magazine.Tag)) return magazine.Tag;
+            return magazine.name.Replace("(Clone)", string.Empty).Trim();
+        }
+
+        /// <summary>Сколько магазинов этого типа уже в кармане.</summary>
+        public int CountOfType(string type)
+        {
+            _storedItems.RemoveAll(item => item == null);
+            int count = 0;
+            foreach (UxrGrabbableObject item in _storedItems)
+                if (TypeOf(item) == type) count++;
+            return count;
+        }
+
+        /// <summary>
+        /// Примет ли карман предмет: магазин — пока его типа меньше <see cref="PerTypeLimit"/>; не магазин —
+        /// как обычный якорь. Валидатор размещения якоря.
+        /// </summary>
+        public bool CanStore(UxrGrabbableObject item)
+        {
+            if (item == null || item.GetComponentInParent<UxrFirearmMag>() == null) return true;
+            return CountOfType(TypeOf(item)) < _perTypeLimit;
+        }
 
         /// <summary>Спрятанные магазины, от старых к новым.</summary>
         public IReadOnlyList<UxrGrabbableObject> StoredItems
@@ -208,28 +247,12 @@ namespace VrBattlegrounds.Interaction
 
             UxrAvatar avatar = grabber.Avatar;
             UxrHandSide otherHand = grabber.Side == UxrHandSide.Left ? UxrHandSide.Right : UxrHandSide.Left;
-            UxrGrabbableObject itemToExtract = null;
-
             UxrGrabber otherGrabber = avatar.GetGrabber(otherHand);
-            if (otherGrabber != null && otherGrabber.GrabbedObject != null)
-            {
-                UxrGrabbableObjectAnchor[] weaponAnchors = otherGrabber.GrabbedObject.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true);
+            UxrGrabbableObjectAnchor[] weaponAnchors = MagazineSlotsOf(otherGrabber != null ? otherGrabber.GrabbedObject : null);
 
-                foreach (UxrGrabbableObject storedItem in _storedItems)
-                {
-                    if (IsCompatible(storedItem, weaponAnchors))
-                    {
-                        itemToExtract = storedItem;
-                        break;
-                    }
-                }
-            }
-
-            // Если ничего подходящего не нашли - достаем последний брошенный
-            if (itemToExtract == null)
-            {
-                itemToExtract = _storedItems.Last();
-            }
+            int index = ChooseMagazine(_storedItems.Count, i => IsCompatible(_storedItems[i], weaponAnchors), weaponAnchors.Length > 0);
+            if (index < 0) return null;
+            UxrGrabbableObject itemToExtract = _storedItems[index];
 
             Release(itemToExtract);
 
@@ -238,6 +261,32 @@ namespace VrBattlegrounds.Interaction
             itemToExtract.transform.rotation = grabber.transform.rotation;
 
             return itemToExtract;
+        }
+
+        /// <summary>
+        /// Какой магазин отдать руке (индекс в кармане, −1 — никакой). Другая рука держит оружие с гнездом
+        /// магазина — только подходящий к нему; такого нет — ничего: чужой магазин в ладони хуже пустой руки
+        /// (в руке пистолет — карман отдавал магазин дробовика из кобуры). Оружия в другой руке нет —
+        /// последний положенный.
+        /// </summary>
+        public static int ChooseMagazine(int count, Func<int, bool> fitsHeldWeapon, bool holdingWeapon)
+        {
+            for (int i = 0; i < count; i++)
+                if (fitsHeldWeapon(i)) return i;
+            if (holdingWeapon) return -1;
+            return count > 0 ? count - 1 : -1;
+        }
+
+        /// <summary>
+        /// Гнёзда магазина оружия, которое держит рука. Рука может держать деталь (помпу, затвор) — оружие
+        /// тогда находится через родителя.
+        /// </summary>
+        private static UxrGrabbableObjectAnchor[] MagazineSlotsOf(UxrGrabbableObject held)
+        {
+            if (held == null) return new UxrGrabbableObjectAnchor[0];
+            UxrFirearmWeapon weapon = held.GetComponentInParent<UxrFirearmWeapon>();
+            Component root = weapon != null ? (Component)weapon : held;
+            return root.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true);
         }
 
         /// <summary>Возвращает спрятанный предмет в мир: список, видимость, родитель.</summary>

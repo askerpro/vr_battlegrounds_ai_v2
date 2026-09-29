@@ -203,8 +203,9 @@ namespace VrBattlegrounds.Player
                 stored,
                 (magazine, weapon) => UxrMagazinePocket.Fits(magazine, weapon.GetComponent<UxrGrabbableObject>()),
                 weapon => weapon.WeaponData.MagazinePrefab == null ? 0
-                    : perWeapon > 0 ? perWeapon : weapon.WeaponData.MaxMagazineCount,
-                Pocket.Capacity);
+                    : System.Math.Min(Pocket.PerTypeLimit, perWeapon > 0 ? perWeapon : weapon.WeaponData.MaxMagazineCount),
+                // Общей вместимости нет — предел на тип магазина (UxrMagazinePocket.PerTypeLimit).
+                int.MaxValue);
 
             // Выкидываем до выдачи: индексы плана указывают в текущий список кармана.
             var discard = new List<UxrGrabbableObject>();

@@ -176,7 +176,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             // Помпа/затвор — отдельный граббабл у корня, как Recoil у M16.
             var action = new GameObject(r.Action == HandsPackWeaponRecipe.ActionKind.Pump ? "Pump" : "Slide");
             action.transform.SetParent(root.transform, false);
-            pack.BuildParts(action.transform, bodyLocal, new Dictionary<string, string> { { r.ActionPart, Clean(r.ActionPart) } });
+            Transform actionPart = pack.BuildParts(action.transform, bodyLocal, new Dictionary<string, string> { { r.ActionPart, Clean(r.ActionPart) } })[r.ActionPart];
 
             // Механика из клипа
             PartMotion actionMotion = pack.Measure(r.ActionPart, r.ActionClip, r.RestClip);
@@ -345,6 +345,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             // Точки хвата из ладоней пака: правая — рукоять, левая — помпа/цевьё.
             PlaceGrips(r, pack, root, parts[r.BodyPart], grabbable, actionGrab, gripDonor);
             recoil.position = grabbable.GetGrabPoint(0).GetGripPoseInfo(MefAvatarComponent()).GripAlignTransformHandRight.position;
+
+            // Подсветка при поднесённой руке — копия корпуса и помпы/затвора (WeaponFeedbackTests).
+            WeaponGrabHighlight.Assign(grabbable, 0, parts[r.BodyPart]);
+            WeaponGrabHighlight.Assign(actionGrab, 0, actionPart);
 
             return root;
         }

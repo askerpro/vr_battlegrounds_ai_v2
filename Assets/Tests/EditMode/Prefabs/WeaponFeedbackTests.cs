@@ -169,8 +169,10 @@ namespace VrBattlegrounds.Tests.Prefabs
                 Assert.Pass("Подсветок нет — их отсутствие ловит У_каждой_точки_хвата_есть_подсветка.");
             }
 
-            // Материалы корпуса: всё, что рисуется вне объектов подсветки.
-            var highlightRoots = highlights.Select(p => p.highlight.transform).Distinct().ToList();
+            // Материалы корпуса: всё, что рисуется вне объектов подсветки. Подсветка — это не только точки хвата
+            // оружия, но и подсветки вложенного магазина и гнезда (Activate On … у якоря): у сэмплов UltimateXR
+            // гнездо и рукоять делят один материал декали, и без исключения он засчитался бы корпусом.
+            var highlightRoots = HighlightObjects(weapon).Select(h => h.transform).Distinct().ToList();
             var bodyMaterials = new HashSet<Material>(weapon.GetComponentsInChildren<Renderer>(true)
                                                             .Where(r => !highlightRoots.Any(h => r.transform.IsChildOf(h)))
                                                             .SelectMany(r => r.sharedMaterials)
@@ -260,6 +262,37 @@ namespace VrBattlegrounds.Tests.Prefabs
                 for (int point = 0; point < grabbable.GrabPointCount; ++point)
                 {
                     yield return (grabbable, point, grabbable.GetGrabPoint(point).EnableOnHandNear);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Все объекты-подсветки внутри префаба: точки хвата любых предметов (включая вложенный магазин)
+        /// и объекты, которые включает гнездо <see cref="UxrGrabbableObjectAnchor" />.
+        /// </summary>
+        private static IEnumerable<GameObject> HighlightObjects(GameObject weapon)
+        {
+            foreach (UxrGrabbableObject grabbable in weapon.GetComponentsInChildren<UxrGrabbableObject>(true))
+            {
+                for (int point = 0; point < grabbable.GrabPointCount; ++point)
+                {
+                    GameObject highlight = grabbable.GetGrabPoint(point).EnableOnHandNear;
+
+                    if (highlight != null && highlight.transform.IsChildOf(weapon.transform))
+                    {
+                        yield return highlight;
+                    }
+                }
+            }
+
+            foreach (UxrGrabbableObjectAnchor anchor in weapon.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
+            {
+                foreach (GameObject highlight in new[] { anchor.ActivateOnCompatibleNear, anchor.ActivateOnCompatibleNotNear, anchor.ActivateOnHandNearAndGrabbable, anchor.ActivateOnEmpty })
+                {
+                    if (highlight != null && highlight.transform.IsChildOf(weapon.transform))
+                    {
+                        yield return highlight;
+                    }
                 }
             }
         }

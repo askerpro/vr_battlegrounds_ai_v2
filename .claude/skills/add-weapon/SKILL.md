@@ -93,6 +93,12 @@ UltimateXR калибровкой с донора — оружия того же
 - помповое: второй тип выстрела для дробинок без вспышки у дула, `ShotgunPellets`
   (`ShotgunPelletsTests`), `PumpGrabFollow` — помпа без запаздывания на промах хвата
   (`PumpGrabFollowTests`);
+- подсветка точек хвата — у **каждой** точки (основная, вторая рука, затвор/помпа) свой
+  `Enable When Hand Near`: `WeaponGrabHighlight.Assign(grabbable, point, деталь)` кладёт под деталь
+  неактивную копию её сетки с `MagGrabDecalMat` и ходит вместе с ней. Не блок-`Cube` и не
+  материал корпуса (`WeaponFeedbackTests`); сборщик делает это сам для корпуса и помпы/затвора;
+- звуки — выстрел и «нет патронов» у спуска, оттягивание и обратный ход затвора/помпы, вставка и
+  снятие магазина (`AnchorSound` на `MagAnchor`) — `WeaponFeedbackTests`;
 - магазин — **вариант** префаба-магазина донора (сеть, физика, звуки, хват сэмпловых
   аватаров), геометрия заменена мешем пака, масштаб корня = масштаб оружия; вложенный экземпляр
   в якоре без `NetworkIdentity`, со `Start Anchor` и `Rigid Body Source`.
@@ -110,7 +116,9 @@ VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.Build(recipe);
 магазин → `Magazine`; сборщик теги не ставит, правило CLAUDE.md).
 
 Модель не из пака Hands — шаги 2–3 делаются вручную, остальное то же; тест `HandsPackWeaponTests`
-к такому оружию не применим.
+к такому оружию не применим. Подсветку и тогда ставить через `WeaponGrabHighlight.Assign` — по
+вызову на каждую точку хвата, включая дополнительные (`execute_code`, префаб через
+`LoadPrefabContents`).
 
 ## 5. Регистрация
 
@@ -140,7 +148,7 @@ VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.Build(recipe);
    `WeaponScaleTests`, `WeaponDropPhysicsTests`, `WeaponPartGrabTests`, `WeaponSlideTravelTests`,
    `OutOfWorldGuardTests`, `AnchorActivationAudioTests`, `WeaponHangFitsSlotTests`,
    `PumpAimTests`, `PumpGrabFollowTests`, `ShotgunPelletsTests`, `TracerVisibilityTests`,
-   `ImpactEffectTests`, `NetworkAssetIdOnDiskTests` (после пересохранения префабов —
+   `ImpactEffectTests`, `WeaponFeedbackTests` (звуки и подсветка хвата), `NetworkAssetIdOnDiskTests` (после пересохранения префабов —
    `Tools/VR Battlegrounds/VersionControl/Normalize Network Asset Ids`),
    `GameTagsTests`, `UxrUniqueIdOnDiskTests`, `AvatarLoadoutTests` (карманы).
    Падения, которые были до задачи, отличать от новых: ищи имя нового префаба в сообщении.

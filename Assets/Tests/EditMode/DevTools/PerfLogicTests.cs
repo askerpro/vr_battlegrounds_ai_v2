@@ -191,5 +191,33 @@ namespace VrBattlegrounds.Tests.DevTools
         {
             Assert.IsFalse(new PoseDelayBuffer(4).TrySample(1f, out _));
         }
+
+        // ── Каталог прогона ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Сервер и клиент на одном ПК (или несколько клиентов Multiplayer Play Mode) начинают прогон
+        /// в одну секунду. Общий perf.log давал IOException, а исключение в обработчике Mirror рвало
+        /// соединение клиента. Каталог — время + роль + номер экземпляра, у каждого свой.
+        /// </summary>
+        [Test]
+        public void Каталоги_прогонов_в_одну_секунду_различаются_и_несут_роль()
+        {
+            PerfRunReport a = PerfRunReport.Create("клиент", 0, 0);
+            PerfRunReport b = PerfRunReport.Create("клиент", 0, 0);
+
+            try
+            {
+                Assert.AreNotEqual(a.Directory, b.Directory, "Два прогона получили один каталог — perf.log откроют оба");
+                StringAssert.Contains("_client_", a.startedAt, "В имени каталога нет роли приложения");
+                StringAssert.IsMatch(@"_\d+$", b.startedAt, "В имени каталога нет номера экземпляра");
+            }
+            finally
+            {
+                foreach (PerfRunReport r in new[] { a, b })
+                {
+                    if (System.IO.Directory.Exists(r.Directory)) System.IO.Directory.Delete(r.Directory, true);
+                }
+            }
+        }
     }
 }

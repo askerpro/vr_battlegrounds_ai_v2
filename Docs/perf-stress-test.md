@@ -144,7 +144,7 @@ PlayerLoop, и в логе останутся только кадр целико
 
 ## Что пишется
 
-`persistentDataPath/perf/<yyyyMMdd_HHmmss>/`:
+`persistentDataPath/perf/<yyyyMMdd_HHmmss>_<роль>_<номер>/` (роль — `client`, `host`, `server`; номер — первый свободный: сервер и несколько клиентов на одном ПК делят `persistentDataPath` и начинают прогон в одну секунду, общий `perf.log` давал IOException и разрыв соединения клиента):
 
 - `perf.log` — главный файл. В logcat (канал `GameLog.Perf`) уходят только редкие строки:
   начало фазы, заметки `•`, итог фазы, одна строка «фаза X: всплесков N» (Warning) и итог

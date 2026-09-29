@@ -291,6 +291,7 @@ GameplayManager      — матч (5 карт, счёт, победитель)
 
 | Класс | Файл | Описание |
 |---|---|---|
+| `HeadlessPrecacheGuard` | `Network/` | На машине без графики (выделенный сервер) выключает прогрев UltimateXR — он перезапускался на каждом спавне аватара и размножал копии с удвоением до зависания; сам регистрирует выключенные компоненты с `IUxrUniqueId`, как делал прогрев. Тесты — `HeadlessPrecacheGuardTests`. |
 | `FoveatedRenderingInstaller` | `Core/FoveatedRenderingInstaller.cs` | Включает FFR на шлеме (Android, не редактор/сервер) по уровню из `GameSettings`; переустанавливает после перезапуска XR-дисплея. FFR пропадёт, если кадр уйдёт в промежуточную текстуру (пост-обработка, HDR, render scale ≠ 1). |
 | `PerformanceLevelInstaller` (+ `PerformanceLevelPolicy`) | `Core/` | Поднимает уровень производительности шлема (подсказка Oculus): CPU 4 / GPU 2 из `GameSettings`; ставит при запуске XR-дисплея и повторяет, если система сбросила уровень (не чаще раза в 10 с). Только Android с XR. Тесты — `PerformanceLevelPolicyTests`. |
 | `GameLog` | `Core/GameLog.cs` | Единственная точка логирования. Категорию знает сам логгер: `GameLog.Match.Info("...")`, `GameLog.Player.Verbose("...", this)`. Каналы `Network`, `Player`, `Match`, `Debug`, `WeaponSystem`, `UI`, `PhysicalSpace`, `Arsenal` — один в один поля `GameSettings`. `GameLog.Error(...)` пишется всегда, независимо от уровня. Никогда не использовать `Debug.Log` напрямую. |

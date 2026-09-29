@@ -53,6 +53,22 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         internal static void HandleStatus(StressTestStatusMessage msg)
         {
+            // Обработчик сообщения Mirror: исключение отсюда Mirror считает «битыми данными» и рвёт
+            // соединение клиента — замер не должен ронять игру. Ошибку пишем, сессию закрываем.
+            try
+            {
+                HandleStatusUnsafe(msg);
+            }
+            catch (System.Exception e)
+            {
+                GameLog.Perf.Error($"[StressTest] Клиент: сбой обработки статуса «{msg.kind}» — запись прервана. {e}");
+                LastServerText = "сбой записи: " + e.GetType().Name;
+                if (Current != null) Destroy(Current.gameObject);
+            }
+        }
+
+        private static void HandleStatusUnsafe(StressTestStatusMessage msg)
+        {
             switch (msg.kind)
             {
                 case StressTestStatusKind.Rejected:
@@ -88,7 +104,22 @@ namespace VrBattlegrounds.DevTools.StressTest
 
             string role = NetworkServer.active ? "хост (сервер в этом же процессе)" : "клиент";
             _report = PerfRunReport.Create(role, 0, 0);
-            _recorder = new PerfFrameRecorder(_report.Directory, _report.BudgetMs, _report.BuildHeader());
+
+            try
+            {
+                _recorder = new PerfFrameRecorder(_report.Directory, _report.BudgetMs, _report.BuildHeader());
+            }
+            catch (System.Exception e)
+            {
+                // Без рекордера сессия бесполезна; «полуживая» роняла бы Update и следующий статус.
+                GameLog.Perf.Error($"[StressTest] Клиент: не открыть лог {_report.Directory}: {e.Message}");
+                LastServerText = "сбой записи: " + e.GetType().Name;
+                _finished = true;
+                Current = null;
+                Destroy(gameObject);
+                throw;
+            }
+
             GameLog.Perf.Info($"[StressTest] Клиент: запись начата. Лог: {_recorder.LogPath}. {_report.display}");
             LastLogPath = _recorder.LogPath;
             LastServerText = "прогон идёт";
@@ -125,7 +156,7 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         private void Update()
         {
-            if (_finished) return;
+            if (_finished || _recorder == null) return;
 
             _recorder.Tick();
 
@@ -173,7 +204,9 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         private void OnDestroy()
         {
-            if (!_finished) Finish(false, "сессия уничтожена");
+            // Рекордер мог не создаться (Awake упал) — тогда и дописывать нечего.
+            if (!_finished && _recorder != null && _report != null) Finish(false, "сессия уничтожена");
+            _finished = true;
 
             _recorder?.Dispose();
             _recorder = null;

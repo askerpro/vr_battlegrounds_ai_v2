@@ -40,7 +40,7 @@ namespace VrBattlegrounds.DevTools.StressTest
         {
             return new PerfRunReport
             {
-                startedAt        = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture),
+                startedAt        = UniqueStartedAt(DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture)),
                 role             = role,
                 device           = SystemInfo.deviceModel,
                 gpu              = SystemInfo.graphicsDeviceName,
@@ -52,6 +52,38 @@ namespace VrBattlegrounds.DevTools.StressTest
                 puppetCount      = puppets,
                 clutterCount     = clutter,
             };
+        }
+
+        /// <summary>
+        /// Имя каталога прогона, свободное на этой машине. Выделенный сервер и клиент на одном ПК
+        /// (редактор + <c>VrBattlegroundsServer.exe</c>) делят <c>persistentDataPath</c> и начинают
+        /// прогон в одну секунду — один <c>perf.log</c> на двоих давал IOException у второго, а
+        /// исключение в обработчике сообщения Mirror рвёт соединение клиента.
+        /// </summary>
+        private static string UniqueStartedAt(string stamp)
+        {
+            string root = Path.Combine(Application.persistentDataPath, "perf");
+            string prefix = stamp + "_" + RoleTag() + "_";
+            string name = prefix + "1";
+
+            // Номер экземпляра — первый свободный: несколько клиентов (Multiplayer Play Mode) на одной
+            // машине в ту же секунду получают _1, _2, …
+            for (int i = 2; System.IO.Directory.Exists(Path.Combine(root, name)); i++)
+            {
+                name = prefix + i.ToString(CultureInfo.InvariantCulture);
+            }
+
+            // Занять сразу: второй процесс, начавший в ту же секунду, увидит каталог и возьмёт суффикс.
+            System.IO.Directory.CreateDirectory(Path.Combine(root, name));
+            return name;
+        }
+
+        /// <summary>Роль приложения для имени каталога: server, host или client.</summary>
+        private static string RoleTag()
+        {
+            bool server = Mirror.NetworkServer.active;
+            bool client = Mirror.NetworkClient.active;
+            return server && client ? "host" : server ? "server" : "client";
         }
 
         public float BudgetMs => PerfStats.BudgetMs(refreshRate);

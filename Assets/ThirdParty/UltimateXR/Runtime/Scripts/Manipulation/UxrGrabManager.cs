@@ -941,6 +941,14 @@ namespace UltimateXR.Manipulation
                 }
             }
 
+            // VR Battlegrounds patch 26: первый проход ниже выключен — его результат не используется.
+            // Он ищет для каждой пустой руки ближайший предмет в якорях (полный CanBeGrabbedByGrabber +
+            // расстояние по всем заполненным якорям: слоты арсенала, карманы, магазины в оружии), но
+            // пишет GrabberNear = null (апстрим, строка ниже) — и GrabberNear, LastValidGrabberNear
+            // никогда не становятся ненулевыми, поэтому PlacedObjectRange* и ActivateOnHandNearAndGrabbable
+            // не срабатывают ни с проходом, ни без него. Если апстрим починит GrabberNear = grabber —
+            // определить VRB_UXR_ANCHOR_GRABBER_NEAR. См. Docs/UltimateXR/sdk-patches.md.
+#if VRB_UXR_ANCHOR_GRABBER_NEAR
             // Look for empty hand being able to grab something from an anchor to update anchor visual feedback objects later and also raise events. First pass: gather info.
             foreach (UxrGrabber grabber in UxrGrabber.EnabledComponents)
             {
@@ -996,6 +1004,7 @@ namespace UltimateXR.Manipulation
                     }
                 }
             }
+#endif
 
             // Second pass: update object states and raise events.
             foreach (KeyValuePair<UxrGrabbableObjectAnchor, GrabbableObjectAnchorInfo> anchorPair in _grabbableObjectAnchors)

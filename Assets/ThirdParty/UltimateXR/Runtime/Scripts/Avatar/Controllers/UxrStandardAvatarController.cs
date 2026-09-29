@@ -551,6 +551,19 @@ namespace UltimateXR.Avatar.Controllers
 
             UxrInputButtons GetRequiredGrabButtonsOverride(UxrHandSide handSide)
             {
+                // VR Battlegrounds patch 25: переопределить кнопки может только ближайшая точка с
+                // !UseDefaultGrabButtons. Если ни один такой предмет не включён или ни один не в досягаемости
+                // руки, ближайшая точка заведомо «по умолчанию» — полный перебор всех предметов сцены (два
+                // на кадр, профиль: 75% стадии Update UltimateXR) не нужен. Если такой предмет рядом —
+                // прежний полный поиск: ближе может оказаться обычный предмет, и тогда он побеждает.
+                List<UxrGrabbableObject> customButtons = UxrGrabbableObject.EnabledWithCustomGrabButtons;
+
+                if (customButtons.Count == 0 ||
+                    !UxrGrabManager.Instance.GetClosestGrabbableObject(Avatar, handSide, out UxrGrabbableObject _, out int _, customButtons))
+                {
+                    return UxrInputButtons.Everything;
+                }
+
                 if (UxrGrabManager.Instance.GetClosestGrabbableObject(Avatar, handSide, out UxrGrabbableObject grabbableObject, out int grabPoint) &&
                     !grabbableObject.GetGrabPoint(grabPoint).UseDefaultGrabButtons &&
                     (Avatar.ControllerInput.GetButtonsEvent(handSide, grabbableObject.GetGrabPoint(grabPoint).InputButtons,                      UxrButtonEventType.PressDown, ProcessIgnoredInput) ||

@@ -1049,3 +1049,64 @@ IK тела и рук считается каждый кадр у всех ав�
 3. Проверка: `RemoteAvatarIKPolicyTests`.
 
 ---
+
+## Патчи 25–28: поиск предмета для хвата без полного перебора сцены
+
+**Дата:** 2026-09-29. **Метки:** `VR Battlegrounds patch 25` … `28`. **Проверка:** `GrabQueryPatchTests`
+(каждый тест показан красным на откате) + тесты хвата (`GunTwoHandGrabTests`, `WeaponPartGrabTests`,
+`AnchoredItemGrabTests`, `TwoHandGrabPolicyTests`, `PumpGrabFollowTests`).
+
+### Проблема
+
+Профиль редактора (Deep Profile, свой аватар в лобби): почти всё время стадий UltimateXR —
+`UxrGrabManager.GetClosestGrabbableObject` → `CanBeGrabbedByGrabber` → `GetDistanceFromGrabber`: для каждой
+руки каждый кадр перебирались все предметы сцены (~100 в лобби: арсенал, карманы, магазины) с полным
+расчётом расстояния, позы хвата аватара и угла, а наши правила хвата (`CanGrabDelegate`) звались для
+каждого. В `Update` перебор шёл ради кнопок хвата (75 % стадии), в `LateUpdate` — ради подсветки (86 %).
+Там же ~50 из ~70 КБ аллокаций за кадр. На Quest 3: `uxr_update` + `uxr_manip` ≈ 3,4 мс в пустом лобби,
+≈ 5,8 мс с 40 брошенными предметами.
+
+### Патч 25 — кнопки хвата: `UxrStandardAvatarController.cs` (`GetRequiredGrabButtonsOverride`),
+`UxrGrabbableObject.Custom.cs` (`EnabledWithCustomGrabButtons`, `OnEnable`), `UxrGrabbableObject.cs` (`OnDisable`)
+
+Переопределить кнопки хвата может только ближайшая точка с `UseDefaultGrabButtons == false`. Такие предметы
+ведутся списком (добавляются в `OnEnable`, убираются в `OnDisable`). Список пуст или ни один из них не в
+досягаемости руки — ближайшая точка заведомо «по умолчанию», полный перебор не делается. Иначе — прежний
+полный поиск (ближе может быть обычный предмет, он и побеждает). В проекте такая деталь одна — чека гранаты
+(`Pin`), список известных — в тесте.
+
+### Патч 26 — мёртвый проход по якорям: `UxrGrabManager.cs` (`UpdateAffordances`)
+
+Первый проход «пустая рука рядом с предметом в якоре» выключен `#if VRB_UXR_ANCHOR_GRABBER_NEAR`: он искал
+ближайший предмет по всем заполненным якорям, но писал `GrabberNear = null` (апстрим), поэтому
+`PlacedObjectRange*` и `ActivateOnHandNearAndGrabbable` не срабатывали ни с ним, ни без него. Если апстрим
+починит строку на `= grabber` — определить символ.
+
+### Патч 27 — порядок проверок: `UxrGrabbableObject.cs` (`CanBeGrabbedByGrabber`)
+
+Сначала дешёвые проверки (выключенная точка, `IsGrabbable`, рука, dummy-родитель), затем досягаемость,
+**делегат правил последним**. Все условия — конъюнкция без побочных эффектов, результат тот же. Убраны
+неиспользуемые `isBeingGrabbedBy*` (шли в закомментированную ветку `AllowMultiGrab`); для `BoxConstrained`
+расстояние не считается — оно там не участвует.
+
+### Патч 28 — грубая отсечка по расстоянию: `UxrGrabbableObject.Custom.cs` (`IsOutsideCoarseGrabRange`),
+`UxrGrabber.Custom.cs` (`CoarseProximityReach`), вызовы в `CanBeGrabbedByGrabber` и `GetClosestGrabbableObject`
+
+По неравенству треугольника: если от захватчика до корня предмета дальше, чем
+`CoarseProximityReach` руки + max(смещение proximity-трансформа точки от корня + `MaxDistanceGrab`) + 0,15 м,
+ни одна точка не пройдёт проверку расстояния — предмет отбрасывается одним сравнением. Радиус предмета
+считается лениво на пару (аватар, рука) и кэшируется. Не применяется к предметам с `UxrGrabPointShape`,
+`BoxConstrained` или proximity-трансформом вне иерархии предмета. Запас 0,15 м — на ход подвижных деталей;
+тест обходит руку по сфере 0,6 м вокруг каждой точки и требует, чтобы отсечка не отрезала ничего досягаемого.
+
+### Как повторить при обновлении SDK
+
+1. Перенести partial-файлы `UxrGrabbableObject.Custom.cs`, `UxrGrabber.Custom.cs` (блоки patch 25/28).
+2. `UxrGrabbableObject.OnDisable`: вызов `UnregisterCustomGrabButtons()`.
+3. `CanBeGrabbedByGrabber`: порядок проверок и отсечка, как выше; `GetClosestGrabbableObject`: `continue`
+   по `IsOutsideCoarseGrabRange` перед перебором точек.
+4. `UxrStandardAvatarController.GetRequiredGrabButtonsOverride`: ранний выход по списку.
+5. `UxrGrabManager.UpdateAffordances`: `#if VRB_UXR_ANCHOR_GRABBER_NEAR` вокруг первого прохода по якорям.
+6. Прогнать `GrabQueryPatchTests` и тесты хвата.
+
+---

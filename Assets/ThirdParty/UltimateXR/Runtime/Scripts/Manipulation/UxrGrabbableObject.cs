@@ -1115,10 +1115,13 @@ namespace UltimateXR.Manipulation
         /// <returns>Whether the object can be grabbed by the grabber using the given grab point</returns>
         public bool CanBeGrabbedByGrabber(UxrGrabber grabber, int grabPoint)
         {
-            if (grabber != null && grabber.CanGrabDelegate != null && grabber.CanGrabDelegate(this, grabPoint) == false)
-            {
-                return false;
-            }
+            // VR Battlegrounds patch 27: проверки переставлены от дешёвых к дорогим — делегат правил
+            // (CanGrabDelegate, у нас GrabRules) теперь последним, после доступности и расстояния. Все
+            // условия — конъюнкция без побочных эффектов, результат тот же; но раньше делегат и расчёт
+            // расстояния платили все предметы сцены в каждом переборе (профиль: основная доля
+            // GetClosestGrabbableObject). Убраны неиспользуемые isBeingGrabbedBy* (результат шёл только
+            // в закомментированную ветку), расстояние для BoxConstrained не считается — оно там не
+            // участвует. См. Docs/UltimateXR/sdk-patches.md.
 
             if (_grabPointEnabledStates.ContainsKey(grabPoint))
             {
@@ -1139,39 +1142,41 @@ namespace UltimateXR.Manipulation
                 return false;
             }
 
-            if (AllChildrenLookAts.Any() && IsDummyGrabbableParent)
+            if (IsDummyGrabbableParent && AllChildrenLookAts.Count > 0)
             {
                 // Dummy grabbable parents cannot be grabbed
                 return false;
             }
 
-            bool isBeingGrabbedByOtherPoint = GrabPointCount > 1 && UxrGrabManager.Instance.IsBeingGrabbed(this) && !UxrGrabManager.Instance.IsBeingGrabbed(this, grabPoint);
-            bool isBeingGrabbedBySameShape  = _grabPointShapes.ContainsKey(grabPoint) && UxrGrabManager.Instance.IsBeingGrabbed(this, grabPoint);
+            // (Исходный блок AllowMultiGrab ничего не возвращал — проверка в SDK закомментирована.)
 
-            if (!AllowMultiGrab && (isBeingGrabbedByOtherPoint || isBeingGrabbedBySameShape))
+            // VR Battlegrounds patch 28: рука заведомо дальше любой точки хвата — полный расчёт не нужен.
+            if (IsOutsideCoarseGrabRange(grabber))
             {
-                // Object does not allow to be grabbed with more than one hand
-
-                // We skip this check because we want to be able to switch from one hand to the other.
-                // @TODO: Check if we really need this. Maybe add a flag to check for it or not.
-                //return false;
+                return false;
             }
 
-            GetDistanceFromGrabber(grabber, grabPoint, out float distance, out float distanceWithoutRotation);
+            bool inRange = false;
 
             if (grabPointInfo.GrabProximityMode == UxrGrabProximityMode.BoxConstrained)
             {
                 if (grabPointInfo.GrabProximityBox)
                 {
-                    return grabber.GetProximityTransform(grabPointInfo.GrabberProximityTransformIndex).position.IsInsideBox(grabPointInfo.GrabProximityBox);
+                    inRange = grabber.GetProximityTransform(grabPointInfo.GrabberProximityTransformIndex).position.IsInsideBox(grabPointInfo.GrabProximityBox);
                 }
             }
-            else if (distanceWithoutRotation <= Mathf.Max(0.0f, GetGrabPoint(grabPoint).MaxDistanceGrab))
+            else
             {
-                return true;
+                GetDistanceFromGrabber(grabber, grabPoint, out float distance, out float distanceWithoutRotation);
+                inRange = distanceWithoutRotation <= Mathf.Max(0.0f, grabPointInfo.MaxDistanceGrab);
             }
 
-            return false;
+            if (!inRange)
+            {
+                return false;
+            }
+
+            return grabber.CanGrabDelegate == null || grabber.CanGrabDelegate(this, grabPoint);
         }
 
         /// <summary>
@@ -1970,6 +1975,8 @@ namespace UltimateXR.Manipulation
         protected override void OnDisable()
         {
             base.OnDisable();
+
+            UnregisterCustomGrabButtons(); // VR Battlegrounds patch 25: см. UxrGrabbableObject.Custom.cs
 
             SmoothManipulationTimer = -1.0f;
             SmoothPlacementTimer    = -1.0f;

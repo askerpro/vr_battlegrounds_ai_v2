@@ -127,6 +127,12 @@ namespace UltimateXR.Manipulation
 
             foreach (UxrGrabbableObject candidate in candidates ?? UxrGrabbableObject.EnabledComponents)
             {
+                // VR Battlegrounds patch 28: предмет заведомо вне досягаемости — не перебирать его точки.
+                if (candidate.IsOutsideCoarseGrabRange(grabber))
+                {
+                    continue;
+                }
+
                 float minDistance = float.MaxValue; // For the same object we will not just consider the distance but also how close the grabber is to the grip orientation
 
                 // Iterate over grab points

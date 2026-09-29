@@ -553,17 +553,33 @@ namespace VrBattlegrounds.Player
             LinkAvatar(avatar);
         }
 
-        // ── Клиентские команды ────────────────────────────────────────────────
+        // ── Жизнь игрока ──────────────────────────────────────────────────────
 
-        [Command]
-        public void CmdRequestAvatarChange(int newAvatarId)
+        /// <summary>
+        /// Игрок выбыл (погиб или выбыл без смерти) и ждёт возрождения. Состояние игрока, а не тела:
+        /// аватар сменный (смена скина, призрак на смерти — T-35), и новый аватар выбывшего не
+        /// оживает. <c>SyncVar</c> — поздний клиент получает его в снимке спавна, а не событием
+        /// (класс ошибки T-34). Здоровье живого — по-прежнему у тела (<c>UxrActor.Life</c>).
+        /// Пишут только <see cref="PlayerController.Die"/>, <see cref="PlayerController.ServerEliminateSilently"/>,
+        /// <see cref="PlayerController.Respawn"/> и новый аватар без прошлого (<c>AvatarManager</c>).
+        /// </summary>
+        [SyncVar] private bool _isEliminated;
+
+        public bool IsEliminated => _isEliminated;
+
+        /// <summary>
+        /// Кто ранил игрока с последнего возрождения — для зачёта убийства и ассистов. Только
+        /// сервер. Живёт на сессии, чтобы пережить смену аватара.
+        /// </summary>
+        internal DamageLedger DamageLedger { get; } = new DamageLedger();
+
+        [Server]
+        internal void ServerSetEliminated(bool eliminated)
         {
-            if (AvatarManager.Instance != null)
-            {
-                GameLog.Player.Info($"[PlayerSession] {PlayerName}: Клиент запросил смену скина на ID {newAvatarId}");
-                AvatarManager.Instance.ChangeAvatar(connectionToClient, this, this.TeamIndex, newAvatarId);
-            }
+            _isEliminated = eliminated;
         }
+
+        // ── Клиентские команды ────────────────────────────────────────────────
 
         [Command]
         public void CmdRequestTeamChange(int newTeamId, int newAvatarId)

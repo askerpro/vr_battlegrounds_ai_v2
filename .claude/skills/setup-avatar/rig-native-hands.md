@@ -51,8 +51,7 @@
    кисти BigHands — на 3 фалангах большой палец и основание пальцев садятся неточно. Позы хвата
    оружия для такой кисти — из пака (`HandsPackPoseImporter`), игровой вариант — от
    `PlayerBase_NonSdkHands` ([game-variant.md](game-variant.md)).
-9. В префабе рига: все `SkinnedMeshRenderer` под объект `Geo` (его скрывает
-   `SpectatorController`), тег корня `Player` (`GameTagsTests`).
+9. В префабе рига: все `SkinnedMeshRenderer` под объект `Geo`, тег корня `Player` (`GameTagsTests`).
 
 Ассистент инспектора `UxrAvatar` (кнопки Fix, `UxrAvatarEditor.cs:209-410`) делает шаги 3–5
 теми же вызовами SDK; на готовом риге он показывает «Avatar is ready to rock!».

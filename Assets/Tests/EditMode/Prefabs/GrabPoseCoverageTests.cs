@@ -44,16 +44,13 @@ namespace VrBattlegrounds.Tests.Prefabs
     /// </para>
     ///
     /// <para>
-    /// <b>Призрак выбывшего</b> — не отдельный аватар: <see cref="GhostBody"/> рисует шлем и кисти
-    /// поверх того же <see cref="UxrAvatar"/>, хватают граберы этого аватара, а <see cref="GhostHand"/>
-    /// только повторяет позу его кисти. Значит, хват призрака = хват зарегистрированного аватара, и
-    /// отдельной строки у него нет. Это допущение сторожит <see cref="Призрак_хватает_руками_своего_аватара"/>;
-    /// если призрак станет <see cref="UxrAvatar"/>, он попадёт в <see cref="Avatars"/> сам.
+    /// <b>Призрак выбывшего</b> (T-35) — отдельный аватар, вариант киборга, в реестре в поле
+    /// <c>AvatarRegistry.ghost</c>, а не в списке скинов, поэтому в матрицу не входит: он берёт только
+    /// планшет (<c>GhostGrabRule</c>), а позы планшета наследует от киборга (цепочка префабов аватара).
     /// </para>
     ///
     /// <para>
-    /// Источники без списков путей: аватары — <see cref="RegisteredAvatars"/> (+ аватары внутри
-    /// префабов призрака), предметы — все префабы <c>Assets/Prefabs</c> с
+    /// Источники без списков путей: аватары — <see cref="RegisteredAvatars"/>, предметы — все префабы <c>Assets/Prefabs</c> с
     /// <see cref="UxrGrabbableObject"/> и префабы всех <see cref="WeaponInfo"/>, а также предметы сцен
     /// Build Settings. Новый предмет или аватар попадает под проверку сам.
     /// </para>
@@ -66,7 +63,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         //  Источники
         // ══════════════════════════════════════════════════════════════════
 
-        /// <summary>Играбельные аватары: реестр и — если призрак когда-нибудь станет аватаром — он.</summary>
+        /// <summary>Играбельные аватары — реестр скинов.</summary>
         public static IEnumerable<UxrAvatar> Avatars()
         {
             var avatars = new List<UxrAvatar>();
@@ -75,9 +72,6 @@ namespace VrBattlegrounds.Tests.Prefabs
             {
                 UxrAvatar avatar = prefab.GetComponent<UxrAvatar>();
                 if (avatar != null) avatars.Add(avatar);
-
-                GhostModel ghost = GhostPrefab(prefab);
-                if (ghost != null) avatars.AddRange(ghost.GetComponentsInChildren<UxrAvatar>(true));
             }
 
             return avatars.Distinct().OrderBy(a => a.name);
@@ -215,28 +209,6 @@ namespace VrBattlegrounds.Tests.Prefabs
             }
         }
 
-        /// <summary>
-        /// Допущение теста: призрак выбывшего хватает граберами своего аватара, значит, его хват
-        /// покрыт строками зарегистрированных аватаров. Если призраку дадут свои
-        /// <see cref="UxrGrabber"/> без своего <see cref="UxrAvatar"/>, хват пойдёт мимо проверки.
-        /// </summary>
-        [Test]
-        public void Призрак_хватает_руками_своего_аватара()
-        {
-            var ghosts = RegisteredAvatars.Prefabs().Select(GhostPrefab).Where(g => g != null).Distinct().ToList();
-            Assert.IsNotEmpty(ghosts, "Ни у одного аватара нет SpectatorController.GhostPrefab — проверять нечего.");
-
-            foreach (GhostModel ghost in ghosts)
-            {
-                bool ownAvatar = ghost.GetComponentInChildren<UxrAvatar>(true) != null;
-                UxrGrabber[] grabbers = ghost.GetComponentsInChildren<UxrGrabber>(true);
-
-                Assert.That(ownAvatar || grabbers.Length == 0, Is.True,
-                            $"{ghost.name}: у призрака свои UxrGrabber без UxrAvatar — его хват не покрыт позами аватаров. " +
-                            "Либо хватать граберами аватара (как сейчас), либо сделать призрак UxrAvatar — тогда Avatars() возьмёт его сам.");
-            }
-        }
-
         // ══════════════════════════════════════════════════════════════════
         //  Правило
         // ══════════════════════════════════════════════════════════════════
@@ -299,12 +271,6 @@ namespace VrBattlegrounds.Tests.Prefabs
             HashSet<UxrGrabbableObject> proxies = AnchorProxies(prefab);
             return prefab.GetComponentsInChildren<UxrGrabbableObject>(true)
                          .Where(g => !proxies.Contains(g) && !IsInsideNestedPrefab(g.gameObject, prefab));
-        }
-
-        private static GhostModel GhostPrefab(GameObject avatarPrefab)
-        {
-            SpectatorController spectator = avatarPrefab.GetComponent<SpectatorController>();
-            return spectator != null ? spectator.GhostPrefab : null;
         }
 
         private static HashSet<UxrGrabbableObject> AnchorProxies(GameObject root) =>

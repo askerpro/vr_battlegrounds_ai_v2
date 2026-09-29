@@ -61,7 +61,6 @@ namespace VrBattlegrounds.Tests.Network
             GameObject go = CreateNetworkObject(name);
             UxrActor actor = go.AddComponent<UxrActor>();
             PlayerController player = go.AddComponent<PlayerController>();
-            go.AddComponent<SpectatorController>();
             EnableNetworking(go);
             InvokeLifecycleMethod(player, "Awake");
             SpawnOnServer(player);

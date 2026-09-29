@@ -749,7 +749,9 @@ namespace VrBattlegrounds.GameModes
         [Server]
         private void ServerArrangeRespawn(Maps.TeamSpawnZone zone, PlayerController player)
         {
-            if (zone.GetPlayersInZone().Contains(player))
+            // Сравнение по сессии, а не по аватару: тело выбывшего — призрак, и к возрождению
+            // оно может смениться (T-35).
+            if (zone.GetPlayersInZone().Any(p => p != null && p.Session == player.Session))
             {
                 GameLog.Match.Info(
                     $"[EliminationMode] Игрок {player.name} уже в зоне — респаун сразу.");
@@ -763,7 +765,7 @@ namespace VrBattlegrounds.GameModes
             PendingRespawn pending = new PendingRespawn { Zone = zone };
             pending.Handler = (z, p) =>
             {
-                if (p != player) return;
+                if (p == null || p.Session != player.Session) return;
 
                 // Оживают только до боя: опоздавший (предел возвращения на базу истёк)
                 // иначе ожил бы у себя на базе посреди боя. Подписка остаётся — её

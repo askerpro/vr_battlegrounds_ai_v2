@@ -167,6 +167,18 @@ namespace VrBattlegrounds.UI.Menu
                 return;
             }
 
+            // То же правило, что проверит сервер (TeamChangeRules): скин своей команды —
+            // только в разминке. Плитки, которые сервер всё равно отклонит, не показываем.
+            GameMode active = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
+            int currentTeam = PlayerSession.LocalSession != null ? PlayerSession.LocalSession.TeamIndex : 0;
+            if (!TeamChangeRules.CanPlayerChoose(active, currentTeam, teamIndex, out string refusal))
+            {
+                GameLog.UI.Info($"[MenuTeamSelection] Скин не выбрать: {refusal}.");
+                MenuKit.EmptyState(Content, char.ToUpper(refusal[0]) + refusal.Substring(1) + ".");
+                RefreshNavigation();
+                return;
+            }
+
             int currentAvatar = PlayerSession.LocalSession != null && PlayerSession.LocalSession.TeamIndex == teamIndex
                 ? PlayerSession.LocalSession.AvatarIndex : -1;
 

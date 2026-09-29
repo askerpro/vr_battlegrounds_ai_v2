@@ -76,6 +76,11 @@ namespace VrBattlegrounds.Player.Avatars
         {
             GameObject prefabToSpawn = _playerPrefab;
 
+            // Новое тело без прошлого начинает жизнь заново: выбывание осталось бы с прошлой
+            // карты или сессии. Выбывшим (призраком) его сделает режим (Admit), если того
+            // требует матч. Сброс — до выбора префаба: префаб зависит от выбывания.
+            session.ServerSetEliminated(false);
+
             if (_combatAvatarStrategy != null)
             {
                 // Для боевых игроков всегда используем эту стратегию (TeamAvatarStrategy)
@@ -133,6 +138,7 @@ namespace VrBattlegrounds.Player.Avatars
             {
                 avatarClass.SessionNetId = session.netId;
                 avatarClass.AvatarPlayerName = session.PlayerName;
+                avatarClass.SourcePrefab = prefabToSpawn;
 
                 // Здоровье возвращается независимо от карты: оно не про место.
                 // Условие то же — игрок был жив, — но не про то, где он стоял.
@@ -153,7 +159,7 @@ namespace VrBattlegrounds.Player.Avatars
             // Вернувшийся живым после переподключения продолжает себя; остальные — новые в матче.
             Admit(avatarClass, continuesPrevious: snapshot != null && snapshot.NeedsPhysicalRestore);
 
-            AvatarSpawned?.Invoke(avatarClass);
+            AvatarSpawned?.Invoke(session.ActiveAvatar);
         }
 
         /// <summary>
@@ -184,7 +190,10 @@ namespace VrBattlegrounds.Player.Avatars
         [Server]
         public void ChangeAvatar(NetworkConnectionToClient conn, PlayerSession session, int teamId, int avatarId)
         {
-            TeamData teamData = TeamRegistry.Instance.GetByIndex(teamId);
+            // Аватара не осталось — смена карты: новое тело начинает жизнь заново. До выбора
+            // префаба: выбывшему он — призрак.
+            if (session.ActiveAvatar == null) session.ServerSetEliminated(false);
+
             GameObject avatarPrefab = PrefabFor(teamId, avatarId, session, _combatAvatarStrategy, _playerPrefab);
             if (avatarPrefab == null) return;
 
@@ -192,6 +201,45 @@ namespace VrBattlegrounds.Player.Avatars
             session.TeamIndex = teamId;
             session.AvatarIndex = avatarId;
 
+            ReplaceBody(conn, session, avatarPrefab, confiscate: true, "смена скина или команды");
+        }
+
+        /// <summary>
+        /// Приводит тело игрока к его состоянию (T-35): выбывший — призрак, живой — аватар своей
+        /// команды и скина (<see cref="TeamAvatarStrategy"/>). Тело уже то — ничего. Зовут смерть,
+        /// выбывание без смерти и возрождение (<see cref="PlayerController"/>).
+        ///
+        /// <para>
+        /// Снаряжение прежнего тела не изымается, а падает (<see cref="AvatarTeardown.ReleaseBeforeDestroy"/>):
+        /// у погибшего оружие остаётся на месте гибели, у призрака снаряжения нет.
+        /// </para>
+        /// </summary>
+        [Server]
+        public void ServerReconcileBody(PlayerSession session, string reason)
+        {
+            if (session == null) return;
+
+            // Тела нет (смена карты) — его создаст спавн уже по состоянию.
+            PlayerController current = session.ActiveAvatar;
+            if (current == null) return;
+
+            GameObject desired = PrefabFor(session.TeamIndex, session.AvatarIndex, session, _combatAvatarStrategy, _playerPrefab);
+            if (desired == null || current.SourcePrefab == desired) return;
+
+            GameLog.Player.Info($"[AvatarManager] {session.PlayerName}: тело → {desired.name} ({reason}).");
+            ReplaceBody(session.connectionToClient, session, desired, confiscate: false, reason);
+        }
+
+        /// <summary>
+        /// Замена тела сессии: новое — на месте прежнего (или на точке спавна, если прежнего нет),
+        /// в сеть, связь с сессией, перенос здоровья, режим решает, в каком состоянии оно входит,
+        /// прежнее освобождается и уничтожается. Единственный путь пересоздания тела.
+        /// </summary>
+        /// <param name="confiscate">Снаряжение прежнего тела изъять (смена скина), а не уронить.</param>
+        [Server]
+        private void ReplaceBody(NetworkConnectionToClient conn, PlayerSession session, GameObject avatarPrefab,
+                                 bool confiscate, string reason)
+        {
             // Находим текущий активный аватар, чтобы забрать его координаты и потом уничтожить
             PlayerController oldAvatar = session.ActiveAvatar;
 
@@ -200,14 +248,14 @@ namespace VrBattlegrounds.Player.Avatars
 
             if (oldAvatar != null)
             {
-                // Смена скина или команды: игрок стоит там, куда пришёл сам.
+                // Смена скина, команды или тела: игрок стоит там, куда пришёл сам.
                 spawnPos = oldAvatar.transform.position;
                 spawnRot = oldAvatar.transform.rotation;
             }
             else
             {
                 // Аватара не осталось — смена карты. Откалиброванное место восстанавливаем.
-                AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(teamData, session);
+                AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(session.Team, session);
                 LogSpawnPoint("ChangeAvatar/после смены карты", session, spawnPoint);
 
                 spawnPos = spawnPoint.Position;
@@ -224,6 +272,7 @@ namespace VrBattlegrounds.Player.Avatars
             {
                 newPc.SessionNetId = session.netId;
                 newPc.AvatarPlayerName = session.PlayerName;
+                newPc.SourcePrefab = avatarPrefab;
             }
 
             // Спавним новый физический аватар с авторитетом клиента
@@ -234,18 +283,21 @@ namespace VrBattlegrounds.Player.Avatars
             session.ActiveAvatar = newPc;
 
             // Без прежнего (смена карты) — в каком состоянии входит новый, решает режим.
+            // С прежним — выбывание уже на сессии, телу переносится здоровье. Режим может
+            // тут же сменить тело ещё раз (новый аватар в матче — призрак).
             CarryLifeState(oldAvatar, newPc);
             Admit(newPc, continuesPrevious: oldAvatar != null);
 
             if (oldAvatar != null)
             {
-                // Руки и снаряжение отпускаются до уничтожения: иначе UltimateXR остаётся
-                // с захватом мёртвой руки, а сетевые предметы кобур и кармана гибнут в обход сети.
-                AvatarTeardown.ReleaseBeforeDestroy(oldAvatar, "смена скина или команды");
+                // Руки отпускаются до уничтожения (иначе UltimateXR остаётся с захватом мёртвой
+                // руки). Смена скина изымает снаряжение (T-35), смена тела на смерти — роняет.
+                if (confiscate) AvatarTeardown.ConfiscateBeforeDestroy(oldAvatar, reason);
+                else AvatarTeardown.ReleaseBeforeDestroy(oldAvatar, reason);
                 NetworkServer.Destroy(oldAvatar.gameObject);
             }
 
-            AvatarSpawned?.Invoke(newPc);
+            AvatarSpawned?.Invoke(session.ActiveAvatar);
         }
 
         /// <summary>
@@ -286,15 +338,24 @@ namespace VrBattlegrounds.Player.Avatars
         }
 
         /// <summary>
-        /// Новый аватар продолжает прежнего: смена внешности или команды не оживляет выбывшего
-        /// и не лечит раненого. Оба уже в сети; прежний — ещё не уничтожен.
+        /// Новый аватар продолжает прежнего: смена внешности или команды не лечит раненого.
+        /// Выбывание живёт на сессии (<see cref="PlayerSession.IsEliminated"/>) и новым аватаром
+        /// не снимается; здесь тело выбывшего только приводится в согласие с ним. Оба уже в сети;
+        /// прежний — ещё не уничтожен.
         /// </summary>
         public static void CarryLifeState(PlayerController previous, PlayerController next)
         {
             if (previous == null || next == null) return;
 
+            // Выбывший: тело мертво (призрак — тоже), выбывание уже на сессии.
+            if (next.Session != null && next.Session.IsEliminated)
+            {
+                next.RestoreHealth(0f);
+                return;
+            }
+
+            // Живой после живого (смена скина) — с тем же здоровьем; после призрака — новое тело, полное.
             if (previous.IsAlive) next.RestoreHealth(previous.Health);
-            else next.ServerEliminateSilently("новый аватар взамен выбывшего");
         }
 
         /// <summary>

@@ -17,7 +17,7 @@ description: Настроить новый аватар игрока из сто
 
 Эталон, собранный по этому маршруту: `Assets/Prefabs/Avatars/MEF_Rig.prefab` →
 `Assets/Prefabs/Player/MEF_Base_Avatar.prefab`. **Не бери за образец Heavy** — у него нет
-хитбоксов, NT на кистях, `SpectatorController.Geo`, у HUD и телепорта неверные ссылки/маски.
+хитбоксов, NT на кистях, у HUD и телепорта неверные ссылки/маски.
 Образец игрового варианта — `PlayerBase`.
 
 ## 0. Окружение
@@ -78,7 +78,7 @@ description: Настроить новый аватар игрока из сто
 `Camera Controller`, `BigHandsIntegration` → `SaveAsPrefabAssetAndConnect` (получится Variant).
 
 Перед удалением `Cyborg` сними с него данные (позы карманов, настройки NT кистей) — после
-удаления их не достать. Что переносить — таблица в [game-variant.md](game-variant.md): хитбоксы, NT кистей, `UxrFingerTip`, карманы, `SpectatorController.Geo`,
+удаления их не достать. Что переносить — таблица в [game-variant.md](game-variant.md): хитбоксы, NT кистей, `UxrFingerTip`, карманы,
 корневой `UxrAvatar` (риг, позы, события контроллера, высота глаз/шеи), `_parentPrefab = <база>`.
 
 **Своя голова в камере** («вижу голову изнутри») — меши головы в
@@ -94,6 +94,11 @@ description: Настроить новый аватар игрока из сто
 `AvatarsIcons/cyborg.png`) → `AvatarsRegistry` → слот в `Data/Teams/*_Team.asset` →
 `spawnPrefabs` на `--- MANAGERS ---`. После правки `MANAGERS` посмотреть `git diff`: должна
 добавиться одна строка.
+
+**Труп** (T-35): после записи в команду — `Tools/VR Battlegrounds/Avatars/Build Corpses`. Сборщик
+генерирует рэгдолл из гуманоидной модели аватара и ставит `CorpseSource`; без гуманоидного `Animator`
+трупа не будет (`CorpseTests`, `AvatarLoadoutTests.Аватар_команды_оставляет_труп`). Призрак выбывшего
+общий для всех — у нового аватара под него ничего не настраивается.
 
 Позы хвата оружия: у `UxrGrabbableObject` записи по GUID аватара, наследования от `PlayerBase`
 нет. Дописать запись нового варианта во все точки хвата, где есть запись Heavy

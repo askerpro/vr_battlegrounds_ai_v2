@@ -57,6 +57,12 @@ namespace VrBattlegrounds.Editor.Avatars
                 }
             }
 
+            // Призрак — не скин, но спавнится по сети так же (T-35).
+            if (registry.ghost != null && registry.ghost.prefab != null)
+            {
+                prefabsToRegister.Add(registry.ghost.prefab);
+            }
+
             // Ищем NetworkManager в активной сцене
             var netManager = Object.FindAnyObjectByType<NetworkManager>(FindObjectsInactive.Include);
             

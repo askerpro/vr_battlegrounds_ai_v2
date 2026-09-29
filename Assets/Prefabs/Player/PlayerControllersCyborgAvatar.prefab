@@ -5679,9 +5679,6 @@ PrefabInstance:
       addedObject: {fileID: 1794884269576991796}
     - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1975885037985275753}
-    - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 3774624752932667480}
     - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
@@ -5692,6 +5689,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5634233130142329166}
+    - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -4523674111171130803}
     - targetCorrespondingSourceObject: {fileID: 9042948311470002378, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4910911380865266189}
@@ -5837,11 +5837,6 @@ Transform:
 --- !u!4 &1813598055372131744 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2658924528539101021, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-  m_PrefabInstance: {fileID: 4453308068191464189}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &1990166503439721430 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 2761597124969302315, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
   m_PrefabInstance: {fileID: 4453308068191464189}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &2040925976815291212 stripped
@@ -6252,23 +6247,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2eead1ad9d9ad6047aa716edad9b7fb8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &1975885037985275753
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4613916165338528910}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 620fcb868b4eac94a8f67aefe8c27ed2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
-  Geo: {fileID: 1990166503439721430}
-  Ghost: {fileID: 8391245486851893293}
 --- !u!114 &3774624752932667480
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6302,6 +6280,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e14c4d0d52ad32e499e71bb1dd2250c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.PocketHaptics
+  _tapAmplitude: 0.5
+  _tapSeconds: 0.3
 --- !u!114 &1983294309419792135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6330,6 +6310,18 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+--- !u!114 &-4523674111171130803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4613916165338528910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb84164c482cc24b899a6f9df8f2e1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.GhostViewEffect
 --- !u!1 &4661882589782325815 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 9042948311470002378, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}

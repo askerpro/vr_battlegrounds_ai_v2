@@ -75,13 +75,10 @@ namespace VrBattlegrounds.Player
         /// </summary>
         private bool IsGrabAllowed(UxrGrabber grabber, UxrGrabbableObject grabbable, int grabPointIndex)
         {
-            if (_playerController != null)
+            // Выбывший (призрак) берёт только свой планшет (T-35).
+            if (_playerController != null && !GhostGrabRule.IsAllowed(_playerController.IsAlive, grabbable))
             {
-                // Block grabbing if player is dead
-                if (!_playerController.IsAlive)
-                {
-                    return false;
-                }
+                return false;
             }
 
             return GrabRules.IsGrabAllowed(grabber, grabbable, grabPointIndex);
@@ -105,6 +102,25 @@ namespace VrBattlegrounds.Player
                 if (grabber.GrabbedObject != null)
                 {
                     grabManager.ReleaseObject(grabber, grabber.GrabbedObject, true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Отпускает то, что руки держат из не сетевого (планшет): такие предметы есть только
+        /// на этой машине, и событие отпускания никуда не рассылается.
+        /// </summary>
+        public void ReleaseLocalOnlyItems()
+        {
+            var grabManager = UxrGrabManager.Instance;
+            if (grabManager == null) return;
+
+            foreach (var grabber in _grabbers)
+            {
+                UxrGrabbableObject held = grabber != null ? grabber.GrabbedObject : null;
+                if (held != null && held.GetComponentInParent<Mirror.NetworkIdentity>() == null)
+                {
+                    grabManager.ReleaseObject(grabber, held, false);
                 }
             }
         }

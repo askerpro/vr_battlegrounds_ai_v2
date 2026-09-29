@@ -51,6 +51,26 @@ namespace VrBattlegrounds.Tests.Player
             Assert.AreSame(team.GetAvatarPrefab(0), AvatarManager.PrefabFor(1, 0, _session, _strategy, null));
         }
 
+        /// <summary>
+        /// Тело выбывшего — призрак (T-35): то же правило стратегии, что выбирает скин. Команда
+        /// и скин при этом не теряются — возрождённый получит свой скин обратно.
+        /// </summary>
+        [Test]
+        public void Выбывшему_тело_призрака_возрождённому_свой_скин()
+        {
+            var strategy = (TeamAvatarStrategy)_strategy;
+            Assert.IsNotNull(strategy.GhostPrefab, "В стратегии не задан призрак.");
+
+            TeamData team = TeamRegistry.Instance.GetByIndex(1);
+            SetPrivateField(_session, "_isEliminated", true);
+            Assert.AreSame(strategy.GhostPrefab, AvatarManager.PrefabFor(1, 0, _session, _strategy, null),
+                "Выбывший получил тело живого.");
+
+            SetPrivateField(_session, "_isEliminated", false);
+            Assert.AreSame(team.GetAvatarPrefab(0), AvatarManager.PrefabFor(1, 0, _session, _strategy, null),
+                "Возрождённый не получил свой скин обратно.");
+        }
+
         [Test]
         public void Неизвестная_команда_отказ_и_сессия_не_меняется()
         {

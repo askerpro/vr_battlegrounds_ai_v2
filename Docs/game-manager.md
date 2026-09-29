@@ -268,7 +268,7 @@ GameModeData.modePrefab
 
 | Кто | Вход | Правило |
 |---|---|---|
-| Игрок (планшет) | `PlayerSession.CmdRequestTeamChange` → `TeamChangeRequests.ServerPlayerRequest(mode, …)` | скин в своей команде — всегда (и в разминке с командой матча); команда — только из активного режима и пока `TeamChoiceLocked == false` |
+| Игрок (планшет) | `PlayerSession.CmdRequestTeamChange` → `TeamChangeRequests.ServerPlayerRequest(mode, …)` | скин в своей команде — только в разминке (смена аватара изымает снаряжение, T-35); команда — только из активного режима и пока `TeamChoiceLocked == false` |
 | Админ (экран «Игроки и команды») | `PlayerSession.CmdAdminAssignTeam` → `TeamChangeRequests.ServerAdminAssign(mode, admin, target, teamId)` | право админа (хост или `IsAdmin`), любая команда `TeamRegistry`, в любой момент |
 | Админ, разово | `PlayerSession.CmdAdminAutoBalance` → `TeamChangeRequests.ServerAdminAutoBalance(mode, admin)` | автобаланс игроков без команды режима; политику режима не меняет |
 | Режим | `GameMode.ServerAssignTeams` | по `teamAssignment` |
@@ -295,10 +295,13 @@ Respawn — в `CanBegin`.
 аватар жив — `AvatarManager.ChangeAvatar`, **на том же месте**. Скин по выбору игрока либо
 сохраняется (`TeamData.IndexOfAvatar`) для админа, политики и конца серии.
 
-**Состояние нового аватара.** `AvatarManager` после спавна зовёт `GameMode.ServerAdmitAvatar(avatar,
-continuesPrevious)`. Замена (`ChangeAvatar` при живом прежнем) сначала переносит здоровье или выбывание
-(`AvatarManager.CarryLifeState`), и `continuesPrevious = true`; аватар без прошлого (смена карты, первый
-вход) — `false`. Elimination в матче делает такой аватар выбывшим и назначает возрождение в зоне
+**Состояние нового аватара.** Выбывание — состояние сессии (`PlayerSession.IsEliminated`, T-35), тело —
+его представление: выбывшему стратегия выдаёт призрака, живому — скин команды. Пересоздание тела одно —
+`AvatarManager.ReplaceBody`: смена скина или команды (`ChangeAvatar`, снаряжение изымается) и смена тела по
+состоянию (`ServerReconcileBody` — смерть, выбывание, возрождение; снаряжение роняется). После спавна
+`AvatarManager` зовёт `GameMode.ServerAdmitAvatar(avatar, continuesPrevious)`; замена переносит здоровье
+живого (`CarryLifeState`), и `continuesPrevious = true`; аватар без прошлого (смена карты, первый
+вход) начинает жизнь заново — `false`. Elimination в матче делает такой аватар выбывшим и назначает возрождение в зоне
 (подготовка, закупка); аватары, созданные до старта режима, проходят то же правило в `Begin`.
 
 Игрок без команды режима на карте появляется в нейтральной точке (откалиброванный — по

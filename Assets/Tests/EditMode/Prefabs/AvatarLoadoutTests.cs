@@ -224,6 +224,23 @@ namespace VrBattlegrounds.Tests.Prefabs
         /// Скелет UltimateXR размечен полностью: голова, таз, обе руки до пальцев. Без
         /// разметки не работает IK рук и тела, а позы пальцев некуда применить.
         /// </summary>
+        /// <summary>
+        /// Аватар, которого можно выбрать в команде, оставляет на месте гибели труп (T-35):
+        /// <c>CorpseSource</c> ставит сборщик трупов. Киборг (запасной, в командах не бывает) и
+        /// призрак не умирают — им труп не нужен. Подробные проверки трупа — <c>CorpseTests</c>.
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void Аватар_команды_оставляет_труп(string path)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            bool inTeam = LoadAll<TeamData>().Any(t => t.avatars != null && t.avatars.Any(a => a != null && a.prefab == prefab));
+            if (!inTeam) Assert.Pass($"{prefab.name} не выбирается в команде — трупа не нужно.");
+
+            var source = prefab.GetComponent<CorpseSource>();
+            Assert.IsTrue(source != null && source.CorpsePrefab != null && source.ModelRoot != null,
+                $"{prefab.name}: нет трупа (CorpseSource) — погибший исчезнет без тела. Tools/VR Battlegrounds/Avatars/Build Corpses.");
+        }
+
         [TestCaseSource(nameof(RegisteredAvatars))]
         public void Скелет_UltimateXR_размечен(string path)
         {
@@ -438,38 +455,9 @@ namespace VrBattlegrounds.Tests.Prefabs
                 $"{avatar.name}: нет PocketHaptics на корне — карманы не отзываются вибрацией.");
         }
 
-        /// <summary>
-        /// Выбывший — призрак (<see cref="SpectatorController.GhostPrefab" />): тело (<see cref="SpectatorController.Geo" />) прячется. Всё, что
-        /// нарисовано на костях скелета вне <c>Geo</c> (часы на предплечье), обязано лежать в
-        /// <see cref="SpectatorController.ExtraGeo" /> — иначе оно висит в воздухе рядом с призраком.
-        /// Карманы и предметы в них не в счёт: снаряжение у выбывшего снимает своя логика.
-        /// </summary>
-        [TestCaseSource(nameof(RegisteredAvatars))]
-        public void У_выбывшего_прячется_всё_тело(string path)
-        {
-            UxrAvatar avatar = LoadAvatar(path);
-            var spectator = avatar.GetComponent<SpectatorController>();
-            Assert.IsNotNull(spectator, $"{avatar.name}: нет SpectatorController.");
-            Assert.IsNotNull(spectator.Geo, $"{avatar.name}: SpectatorController.Geo не назначен — тело выбывшего видно целиком.");
-            Assert.IsNotNull(spectator.GhostPrefab, $"{avatar.name}: SpectatorController.GhostPrefab не назначен — выбывший исчезнет без призрака.");
-
-            Transform hips = avatar.AvatarRig.Hips;
-            Assert.IsNotNull(hips, $"{avatar.name}: в скелете UltimateXR нет Hips.");
-            Transform skeleton = hips;
-            while (skeleton.parent != null && skeleton.parent != avatar.transform) skeleton = skeleton.parent;
-
-            var hidden = new List<Transform> { spectator.Geo.transform };
-            hidden.AddRange(spectator.ExtraGeo.Where(g => g != null).Select(g => g.transform));
-
-            List<string> visible = skeleton.GetComponentsInChildren<Renderer>(true)
-                .Where(r => IsActiveInPrefab(r.transform))
-                .Where(r => r.GetComponentInParent<UxrGrabbableObject>(true) == null && r.GetComponentInParent<UxrGrabbableObjectAnchor>(true) == null)
-                .Where(r => !hidden.Any(h => r.transform.IsChildOf(h)))
-                .Select(r => r.name)
-                .ToList();
-
-            Assert.IsEmpty(visible, $"{avatar.name}: у выбывшего остаются видны {string.Join(", ", visible)} — добавь в SpectatorController.ExtraGeo.");
-        }
+        // Требование «у выбывшего прячется всё тело» (SpectatorController.Geo/ExtraGeo/GhostPrefab) снято
+        // в T-35: выбывший — отдельный аватар-призрак (GhostAvatarTests), тело погибшего — труп
+        // (CorpseTests), а живое тело при выбывании уничтожается целиком — прятать в нём нечего.
 
         private static bool IsActiveInPrefab(Transform t)
         {

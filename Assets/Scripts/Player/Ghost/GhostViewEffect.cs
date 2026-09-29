@@ -22,7 +22,9 @@ namespace VrBattlegrounds.Player
     /// не стреляет. Переход плавный — резкая смена картинки в шлеме неприятна.
     /// </para>
     ///
-    /// Добавляет <see cref="SpectatorController"/> своему аватару.
+    /// Стоит на корне тел (<c>PlayerBase</c>, киборг) — вибрация в момент гибели — и на призраке,
+    /// аватаре выбывшего (T-35), — чёрно-белый мир вне своей зоны.
+    /// Выбывший — по жизни игрока (<see cref="PlayerController.IsAlive"/>, T-35), а не по режиму наблюдателя.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GhostViewEffect : MonoBehaviour
@@ -33,7 +35,6 @@ namespace VrBattlegrounds.Player
         private const float Saturation = -100f;
         private const float Exposure = 0.6f;
 
-        private SpectatorController _spectator;
         private PlayerController _player;
         private UxrAvatar _avatar;
 
@@ -44,7 +45,6 @@ namespace VrBattlegrounds.Player
 
         private void Awake()
         {
-            _spectator = GetComponent<SpectatorController>();
             _player = GetComponent<PlayerController>();
             _avatar = GetComponent<UxrAvatar>();
         }
@@ -90,7 +90,7 @@ namespace VrBattlegrounds.Player
                 return;
             }
 
-            bool wanted = GhostViewRule.Wanted(_spectator != null && _spectator.IsSpectating(),
+            bool wanted = GhostViewRule.Wanted(_player != null && !_player.IsAlive,
                                               _player != null && _player.Session != null && _player.Session.IsInSpawnZone);
 
             float current = _volume != null ? _volume.weight : 0f;

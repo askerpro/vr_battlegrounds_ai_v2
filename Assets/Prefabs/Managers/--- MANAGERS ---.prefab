@@ -241,6 +241,7 @@ MonoBehaviour:
   - {fileID: 1507515040717537900, guid: 4c0598d66f467ea4690a960b022f58da, type: 3}
   - {fileID: 3977005126615661593, guid: b8146035f3f436a4799882b3a0d1dd45, type: 3}
   - {fileID: 2884947990969988632, guid: 310c90ae0d962f344a1eddbe48a429c9, type: 3}
+  - {fileID: 3485271990733946735, guid: f3401ffe5a644d647a14eff0c476b4d2, type: 3}
   exceptionsDisconnect: 1
   snapshotSettings:
     bufferTimeMultiplier: 2
@@ -675,6 +676,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _dropDistance: 0.6
   _heightOffset: -0.2
+  _tabsRefreshInterval: 0.5
 --- !u!1 &6620092126355405434
 GameObject:
   m_ObjectHideFlags: 0

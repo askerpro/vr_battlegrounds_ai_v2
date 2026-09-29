@@ -32,7 +32,7 @@ namespace VrBattlegrounds.GameModes
         /// <summary>
         /// Игрок сам выбрал команду и скин в планшете (<c>PlayerSession.CmdRequestTeamChange</c>).
         /// Разрешено только в команду активного режима и только пока выбор открыт
-        /// (<see cref="GameMode.TeamChoiceLocked"/>); скин в своей команде — всегда.
+        /// (<see cref="GameMode.TeamChoiceLocked"/>); скин в своей команде — только в разминке.
         /// </summary>
         /// <returns>true — смена применена.</returns>
         public static bool ServerPlayerRequest(GameMode mode, PlayerSession session, int newTeamId, int newAvatarId)

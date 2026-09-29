@@ -6,7 +6,8 @@ namespace VrBattlegrounds.Player.Avatars
 {
     /// <summary>
     /// Освобождает аватар перед тем, как сервер его уничтожит: смена скина или команды
-    /// (<see cref="AvatarManager.ChangeAvatar"/>), отключение игрока
+    /// (<see cref="AvatarManager.ChangeAvatar"/> — с изъятием снаряжения,
+    /// <see cref="ConfiscateBeforeDestroy"/>), отключение игрока
     /// (<c>GameNetworkManager.OnServerDisconnect</c>).
     ///
     /// <para>
@@ -45,6 +46,9 @@ namespace VrBattlegrounds.Player.Avatars
         {
             if (avatar == null) return;
 
+            // Локальное (планшет) сервер не видит — его отпускает владелец, до уничтожения.
+            if (NetworkServer.active && avatar.isServer) avatar.ServerReleaseLocalItems();
+
             ReleaseHands(avatar);
 
             // Снаряжение — сетевые объекты, трогает их только сервер. Вне сервера
@@ -56,6 +60,20 @@ namespace VrBattlegrounds.Player.Avatars
             }
 
             GameLog.Player.Info($"[AvatarTeardown] {avatar.name}: освобождён перед уничтожением ({reason}).", avatar);
+        }
+
+        /// <summary>
+        /// То же освобождение, но снаряжение <b>изымается</b> (уничтожается), а не роняется —
+        /// смена скина или команды (<see cref="AvatarManager.ChangeAvatar"/>, T-35). Упавший
+        /// ствол пережил бы смену и остался ничьим; стена арсенала в разминке сама пополнит
+        /// слот, чьё оружие уничтожено. Остальное в руках (планшет, жетон) только отпускается.
+        /// </summary>
+        public static void ConfiscateBeforeDestroy(PlayerController avatar, string reason)
+        {
+            if (avatar == null) return;
+
+            EquipmentStrip.ServerStrip(avatar, reason);
+            ReleaseBeforeDestroy(avatar, reason);
         }
 
         /// <summary>

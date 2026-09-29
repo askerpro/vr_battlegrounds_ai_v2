@@ -10,8 +10,21 @@ namespace VrBattlegrounds.Player.Avatars
         [Tooltip("Префаб, который будет выдан, если у команды нет скина или команда не выбрана.")]
         [SerializeField] private GameObject fallbackPrefab;
 
+        [Tooltip("Аватар выбывшего — призрак (T-35). Тот же, что AvatarRegistry.ghost (GhostAvatarTests).")]
+        [SerializeField] private GameObject ghostPrefab;
+
+        /// <summary>Аватар выбывшего игрока — призрак (T-35).</summary>
+        public GameObject GhostPrefab => ghostPrefab;
+
+        /// <summary>
+        /// Префаб тела по состоянию игрока: выбывший — призрак (T-35), живой — скин своей команды,
+        /// без команды — запасной аватар. Одно правило для спавна, смены скина и смены тела
+        /// на смерти и возрождении (<c>AvatarManager.ServerReconcileBody</c>).
+        /// </summary>
         public override GameObject GetPrefab(PlayerSession session, GameObject globalFallback)
         {
+            if (session.IsEliminated && ghostPrefab != null) return ghostPrefab;
+
             TeamData teamData = TeamRegistry.Instance.GetByIndex(session.TeamIndex);
             if (teamData != null)
             {

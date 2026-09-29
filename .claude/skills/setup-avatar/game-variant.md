@@ -19,7 +19,7 @@
 HUD, карманы, хитбоксы, регистрация. Эталон — `Assets/Prefabs/Player/MEF_Base_Avatar.prefab`.
 
 **Образец — `PlayerBase`, не Heavy.** У `Heavy_Soldier_Base_Avatar` нет хитбоксов (WPN-02),
-`NetworkTransform` на кистях, `SpectatorController.Geo/Ghost` пусты, `_hudContainer` смотрит
+`NetworkTransform` на кистях, `_hudContainer` смотрит
 не в камеру, телепорт был на маске `Default`, два `UxrDummyControllerInput` на корне.
 
 ## 1. Создать вариант
@@ -68,7 +68,6 @@ HUD, карманы, хитбоксы, регистрация. Эталон — 
 | Нажатие UI пальцем | `UxrFingerTip` на кончиках указательных | `Tools/VR Battlegrounds/Avatars/Setup Avatar UI Fingertips` (`AvatarFingertipSetup`, палец — из рига `UxrAvatar`). Если кончики стоят на риге, вариант их наследует — повторять не нужно. Кончик обязан быть на кисти, в которую смотрит риг `UxrAvatar` (у пути А — на кисти SDK, не на родной кости), и его `forward` — вдоль пальца: луч касания идёт по нему. Проверяет `AvatarLoadoutTests.Кончики_пальцев_для_UI_смотрят_вдоль_пальца` |
 | Карманы | на `Pelvis` / `Spine02` | Префабы из `Assets/Prefabs/Player/Pockets/` на `Hips` / `UpperChest` модели. Позиция = кость + мировое смещение, снятое с киборга; поворот — мировой киборга. Локальные смещения `AvatarPocketSetup` не годятся: оси костей у моделей разные (у CC бедро повёрнуто на 75°). Если у модели есть кобура — `Anchor_Hip_R` на неё. У `Anchor_Hip_R` из префаба уже есть дочерний `GrabProxy` (хват вокруг кобуры, он же точка укладки) — переносить его отдельно не нужно; проверяет `AvatarLoadoutTests.У_кобуры_есть_прокси_хват` |
 | Прокси спины | `Anchor_Back._grabProxy` → отдельный `BackGrabProxy` у правого плеча, **и точка укладки** (`Drop Proximity Transform`) → он же | Так же: клон `BackGrabProxy` на `UpperChest`, `ChangeUniqueId(Guid.NewGuid())` для его UXR-компонентов; `GrabProxy`-ребёнка из префаба `Anchor_Back` удалить; у якоря `_grabProxy` → клон **и** `_dropProximityTransformUseSelf = false`, `_dropProximityTransform` → клон. Иначе игрок подносит оружие к подсвеченному прокси, а SDK меряет укладку от центра спины — оружие падает (так было у MEF). Сторож — `AvatarLoadoutTests.Карман_с_прокси_кладёт_там_же_где_отдаёт` |
-| Наблюдатель | `SpectatorController.Geo = Cyborg/CyborgGeo` | `Geo` рига. `Ghost` пуст — в режиме наблюдателя модель просто скрывается |
 
 ## 3а. Своя голова не должна попадать в камеру
 

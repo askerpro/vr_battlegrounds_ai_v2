@@ -58,7 +58,6 @@ namespace VrBattlegrounds.Tests.Network
             GameObject go = CreateNetworkObject(name);
             UxrActor actor = go.AddComponent<UxrActor>();
             PlayerController player = go.AddComponent<PlayerController>();
-            go.AddComponent<SpectatorController>();
             EnableNetworking(go);
             InvokeLifecycleMethod(player, "Awake");
             SpawnOnServer(player);
@@ -100,7 +99,7 @@ namespace VrBattlegrounds.Tests.Network
             _driver.AdvanceUntil(() => _mode.CurrentRoundPhase == RoundPhase.Resolution, "итогов");
 
             Assert.IsFalse(_a.IsAlive || _b.IsAlive, "Выжившие не выбыли в конце боя — живой вне закупки и боя.");
-            Assert.IsTrue(_a.GetComponent<SpectatorController>().IsSpectating(), "Выбывший не в режиме наблюдателя.");
+            Assert.IsTrue(_a.Session == null || _a.Session.IsEliminated, "Выбывание не записано в сессию — тело не станет призраком.");
             Assert.AreEqual(0, _deathEvents, "Выбывание в конце боя подняло UxrActor.Died — пойдёт в статистику и ленту убийств.");
         }
 

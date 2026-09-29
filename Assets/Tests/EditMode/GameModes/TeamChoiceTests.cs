@@ -197,6 +197,39 @@ namespace VrBattlegrounds.Tests.Modes
             Assert.AreEqual(a.teamIndex, player.TeamIndex, "После старта матча игрок сменил команду сам.");
         }
 
+        /// <summary>
+        /// Скин своей команды игрок меняет только в разминке (T-35). Смена скина забирает
+        /// у аватара всё снаряжение, и в матче — даже до старта, в ожидании игроков, — это
+        /// обезоруживало бы игрока посреди закупки или боя. Без режима (лобби без судьи)
+        /// правил нет.
+        /// </summary>
+        [Test]
+        public void Скин_меняется_только_в_разминке()
+        {
+            SilenceMirrorNoise();
+
+            TeamData a = CreateTeam("A", 1), b = CreateTeam("B", 2);
+            EliminationMode match = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), new ListRoster());
+
+            WarmupMode warmup = CreateNetworkComponent<WarmupMode>("WarmupMode");
+            SpawnOnServer(warmup);
+            warmup.PlayerRoster = new ListRoster();
+            warmup.Initialize(CreateModeData("warmup", TeamAssignmentKind.PlayerChoice, 1));
+
+            Assert.IsTrue(TeamChangeRules.CanPlayerChoose(null, a.teamIndex, a.teamIndex, out _),
+                "Без режима смена скина запрещена.");
+            Assert.IsTrue(TeamChangeRules.CanPlayerChoose(warmup, a.teamIndex, a.teamIndex, out string warmupReason),
+                $"В разминке смена скина запрещена: {warmupReason}");
+
+            Assert.IsFalse(TeamChangeRules.CanPlayerChoose(match, a.teamIndex, a.teamIndex, out _),
+                "Матч ждёт игроков, а скин сменить можно — это не разминка.");
+
+            SetPrivateField(match, "_state", EliminationState.Active);
+            Assert.IsFalse(TeamChangeRules.CanPlayerChoose(match, a.teamIndex, a.teamIndex, out string reason),
+                "Матч идёт, а скин сменить можно — игрок лишился бы оружия посреди раунда.");
+            Assert.IsFalse(string.IsNullOrEmpty(reason), "Отказ без причины — планшету нечего показать игроку.");
+        }
+
         [Test]
         public void Админ_выдаёт_команду_и_после_старта()
         {

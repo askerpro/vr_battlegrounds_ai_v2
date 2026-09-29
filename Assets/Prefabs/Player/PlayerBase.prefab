@@ -68121,11 +68121,11 @@ GameObject:
   - component: {fileID: 819370689037101168}
   - component: {fileID: 4116334394365604350}
   - component: {fileID: 8370583342903300142}
-  - component: {fileID: 4924480950531895712}
   - component: {fileID: 3660179452437783722}
   - component: {fileID: 2661479309573987799}
   - component: {fileID: 8369001338393055065}
   - component: {fileID: 2287495973934865713}
+  - component: {fileID: -5707408599596345928}
   m_Layer: 0
   m_Name: PlayerBase
   m_TagString: Player
@@ -68780,25 +68780,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2eead1ad9d9ad6047aa716edad9b7fb8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &4924480950531895712
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7006129303043550839}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 620fcb868b4eac94a8f67aefe8c27ed2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
-  Geo: {fileID: 3691202011922519686}
-  ExtraGeo: []
-  GhostPrefab: {fileID: 7431058665512197505, guid: 56346eab433146441ade70382cf51ab6, type: 3}
-  Ghost: {fileID: 3417934765505412783}
 --- !u!114 &3660179452437783722
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -68862,6 +68843,18 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+--- !u!114 &-5707408599596345928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7006129303043550839}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb84164c482cc24b899a6f9df8f2e1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.GhostViewEffect
 --- !u!1 &7007802221916664477
 GameObject:
   m_ObjectHideFlags: 0

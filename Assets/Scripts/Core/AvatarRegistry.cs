@@ -34,6 +34,10 @@ namespace VrBattlegrounds.Core
         [Tooltip("Все добавленные скины.")]
         public AvatarData[] avatars = new AvatarData[0];
 
+        [Tooltip("Аватар выбывшего — призрак (T-35). Не скин: выбрать нельзя, в командах его нет; " +
+                 "выдаёт стратегия аватара. Собирается: Tools/VR Battlegrounds/Avatars/Build Ghost Avatar.")]
+        public AvatarData ghost;
+
         /// <summary>Возвращает AvatarData по skinIndex. Null если не найдено.</summary>
         public AvatarData GetByIndex(int index)
         {

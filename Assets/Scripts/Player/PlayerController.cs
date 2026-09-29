@@ -7,6 +7,7 @@ using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Network;
+using VrBattlegrounds.Player.Avatars;
 
 namespace VrBattlegrounds.Player
 {
@@ -33,6 +34,12 @@ namespace VrBattlegrounds.Player
         /// </summary>
         [SyncVar(hook = nameof(OnSessionNetIdChanged))]
         public uint SessionNetId;
+
+        /// <summary>
+        /// Префаб, из которого сервер создал это тело (<c>AvatarManager</c>). Только сервер: по нему
+        /// видно, соответствует ли тело состоянию игрока (<see cref="AvatarManager.ServerReconcileBody"/>).
+        /// </summary>
+        [System.NonSerialized] public GameObject SourcePrefab;
 
         /// <summary>Разрешённая сессия. Кэш, источник правды — <see cref="SessionNetId"/>.</summary>
         private PlayerSession _session;
@@ -117,7 +124,14 @@ namespace VrBattlegrounds.Player
         /// <summary>Числовой индекс команды.</summary>
         public int TeamIndex => Session != null ? Session.TeamIndex : 0;
 
-        public bool IsAlive => !_actor.IsDead;
+        /// <summary>
+        /// Жив ли игрок этого аватара. Выбывание — на сессии (<see cref="PlayerSession.IsEliminated"/>,
+        /// переживает смену аватара); тело может погибнуть раньше, чем сессия об этом узнает: у клиента
+        /// <c>UxrActor.Died</c> приходит каналом состояния, а <c>SyncVar</c> сессии — позже, и
+        /// подписчики <see cref="PlayerDied"/> читают жизнь прямо в обработчике. Поэтому мёртв —
+        /// если так говорит любой из двух.
+        /// </summary>
+        public bool IsAlive => !_actor.IsDead && (Session == null || !Session.IsEliminated);
 
         /// <summary>
         /// Выбывание без смерти: выживший в конце боя, новый аватар посреди матча (после смены
@@ -135,23 +149,45 @@ namespace VrBattlegrounds.Player
         [Server]
         public void ServerEliminateSilently(string reason)
         {
-            if (!IsAlive) return;
+            // Тело уже мёртвое и выбывание записано — делать нечего. Новый аватар выбывшего
+            // (сессия уже выбыла, тело живое) доводится до согласованного состояния.
+            if (_actor.IsDead && (Session == null || Session.IsEliminated)) return;
 
             _actor.Life = 0f;
-            _damageLedger.Clear();
-
-            var spectator = GetComponent<SpectatorController>();
-            if (spectator != null) spectator.StartSpectating();
+            if (Session != null) Session.ServerSetEliminated(true);
+            Ledger.Clear();
 
             GameLog.Player.Info($"[PlayerController] {name}: выбыл до возвращения на базу — {reason} (без записи в статистику).", this);
+
+            ReconcileBody(reason);
+        }
+
+        /// <summary>
+        /// Тело — представление состояния игрока: выбывший становится призраком, возрождённый —
+        /// аватаром своей команды (T-35). Этот аватар после вызова может быть уже заменён — дальше
+        /// работать со <see cref="PlayerSession.ActiveAvatar"/>. Без <c>AvatarManager</c> (тест) —
+        /// ничего: тело остаётся тем же.
+        /// </summary>
+        private void ReconcileBody(string reason)
+        {
+            if (Session != null && AvatarManager.Instance != null)
+                AvatarManager.Instance.ServerReconcileBody(Session, reason);
         }
 
         // ── Unity lifecycle ───────────────────────────────────────────────────
 
         public UxrActor _actor;
 
-        /// <summary>Кто ранил с последнего возрождения — для зачёта убийства (сервер).</summary>
-        private readonly DamageLedger _damageLedger = new DamageLedger();
+        /// <summary>
+        /// Кто ранил с последнего возрождения — для зачёта убийства (сервер). Живёт на сессии
+        /// и переживает смену аватара; аватар без сессии (тест, кукла до связи) ведёт свой.
+        /// </summary>
+        private DamageLedger Ledger => Session != null ? Session.DamageLedger : _detachedLedger;
+
+        private readonly DamageLedger _detachedLedger = new DamageLedger();
+
+        /// <summary>Толчок последнего прошедшего урона (сервер) — с ним падает труп.</summary>
+        private DeathImpact _lastImpact = DeathImpact.None;
 
         private void Awake()
         {
@@ -255,7 +291,12 @@ namespace VrBattlegrounds.Player
             {
                 // Урон проходит — запоминаем источник. Смертельный урон приходит сюда же
                 // и последним, поэтому к Die источник смертельного попадания уже записан.
-                if (NetworkServer.active) _damageLedger.Record(e.ActorSource);
+                if (NetworkServer.active)
+                {
+                    Ledger.Record(e.ActorSource);
+                    // Последний прошедший урон перед Died — смертельный: его толчком падает труп.
+                    _lastImpact = DeathImpact.From(e, transform.position + Vector3.up);
+                }
                 return;
             }
 
@@ -287,21 +328,24 @@ namespace VrBattlegrounds.Player
         {
             GameLog.Player.Info($"[PlayerController] {name}: смерть подтверждена на сервере. Переход в режим наблюдателя.", this);
 
-            // Trigger spectator mode on server for synchronization
-            var spectator = GetComponent<SpectatorController>();
-            if (spectator != null)
-            {
-                spectator.StartSpectating();
-            }
+            if (Session != null) Session.ServerSetEliminated(true);
 
             RpcOnDied();
 
             // Кто убил — по урону (DamageLedger): убийца, ассисты. Режиму и статистике серии.
-            _damageLedger.Resolve(Session, out PlayerSession killer, out System.Collections.Generic.List<PlayerSession> assists);
-            _damageLedger.Clear();
+            Ledger.Resolve(Session, out PlayerSession killer, out System.Collections.Generic.List<PlayerSession> assists);
+            Ledger.Clear();
 
             if (MapReferee.Instance != null)
                 MapReferee.Instance.OnPlayerDied(this, killer, assists);
+
+            // Тело падает трупом у каждого клиента — до смены на призрака: RPC уходит раньше
+            // сообщения об уничтожении, и клиент снимает позу с живого ещё аватара.
+            ServerBecomeCorpse(_lastImpact);
+            _lastImpact = DeathImpact.None;
+
+            // Последним: режим и статистика смотрели на погибшее тело.
+            ReconcileBody("смерть");
         }
 
         /// <summary>
@@ -320,13 +364,10 @@ namespace VrBattlegrounds.Player
         {
             GameLog.Player.Info($"[PlayerController] {name}: респаун на месте ({transform.position}).", this);
             _actor.Life = 100f;
-            _damageLedger.Clear();
+            if (Session != null) Session.ServerSetEliminated(false);
+            Ledger.Clear();
 
-            var spectator = GetComponent<SpectatorController>();
-            if (spectator != null)
-            {
-                spectator.EndSpectating();
-            }
+            ReconcileBody("возрождение");
         }
 
         /// <summary>
@@ -365,6 +406,67 @@ namespace VrBattlegrounds.Player
             {
                 grabManager.ReleaseAllGrabbedObjects();
             }
+        }
+
+        /// <summary>
+        /// Тело погибшего падает трупом (T-35) — на каждом клиенте свой локальный рэгдолл от одного
+        /// толчка. Труп — эффект: на игру не влияет, поздний клиент его не видит.
+        /// <para>
+        /// <b>Хост — сам и сразу.</b> Тело уничтожается в этом же кадре. Удалённому клиенту RPC и
+        /// уничтожение приходят одним пакетом по порядку, а свой клиент хоста разбирает очередь
+        /// только на следующем кадре — тела уже нет, RPC теряется (<c>HostDeathEffectsTests</c>).
+        /// </para>
+        /// </summary>
+        [Server]
+        private void ServerBecomeCorpse(DeathImpact impact)
+        {
+            if (isClient) SpawnCorpse(impact);
+            RpcBecomeCorpse(impact.Point, impact.Impulse);
+        }
+
+        [ClientRpc]
+        private void RpcBecomeCorpse(Vector3 point, Vector3 impulse)
+        {
+            if (isServer) return; // хост уже уронил сам
+            SpawnCorpse(new DeathImpact(point, impulse));
+        }
+
+        private void SpawnCorpse(DeathImpact impact)
+        {
+            var source = GetComponent<CorpseSource>();
+            if (source != null) source.Spawn(impact);
+        }
+
+        /// <summary>
+        /// Владелец отпускает локальные предметы — не сетевые, о которых сервер не знает (планшет,
+        /// <c>LocalMenuManager</c>), — перед тем как сервер уничтожит этот аватар. Иначе рука
+        /// погибла бы с захватом (Issue 17), а сервер отпустить его не может. Зовёт
+        /// <see cref="AvatarTeardown"/>.
+        /// <para>
+        /// Хост отпускает своё сам и сразу — RPC своему клиенту пришёл бы после уничтожения
+        /// аватара (см. <see cref="ServerBecomeCorpse"/>).
+        /// </para>
+        /// </summary>
+        [Server]
+        internal void ServerReleaseLocalItems()
+        {
+            if (isClient) ReleaseLocalItemsIfOwned();
+            RpcReleaseLocalItems();
+        }
+
+        [ClientRpc]
+        private void RpcReleaseLocalItems()
+        {
+            if (isServer) return; // хост уже отпустил сам
+            ReleaseLocalItemsIfOwned();
+        }
+
+        private void ReleaseLocalItemsIfOwned()
+        {
+            if (!isOwned) return;
+
+            var grabManager = GetComponent<PlayerGrabManager>();
+            if (grabManager != null) grabManager.ReleaseLocalOnlyItems();
         }
 
         [Server]

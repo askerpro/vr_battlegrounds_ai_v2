@@ -82,6 +82,33 @@ namespace VrBattlegrounds.Tests.Player
             }
         }
 
+        /// <summary>
+        /// Смена скина забирает у прежнего аватара всё снаряжение (T-35): оружие из руки
+        /// уничтожается, а не падает на пол, — иначе ствол переживал бы смену и оставался
+        /// ничьим в мире. Руки при этом отпущены до уничтожения, как и при обычном освобождении.
+        /// </summary>
+        [Test]
+        public void Смена_аватара_изымает_оружие_из_руки()
+        {
+            TwoHandGrabCase c = AnyCase();
+
+            using (var harness = new TwoHandGrabHarness(c.WeaponPath, c.AvatarPath, c.SupportPoint))
+            {
+                PlayerController player = harness.Avatar.GetComponent<PlayerController>();
+                Assert.IsNotNull(player, $"У аватара {c.AvatarPath} нет PlayerController.");
+                Assert.IsTrue(Manager.IsBeingGrabbed(harness.Grabbable), "Контроль харнесса: оружие в руке.");
+
+                AvatarTeardown.ConfiscateBeforeDestroy(player, "тест");
+
+                Assert.IsTrue(harness.Weapon == null,
+                              "Оружие из руки пережило смену аватара — осталось в мире вместо изъятия.");
+                Assert.IsNull(harness.Right.GrabbedObject, "Рука прежнего аватара всё ещё что-то держит.");
+
+                harness.DestroyAvatarLikePlayMode();
+                Assert.AreEqual(0, CountDeadGrabs(), "После изъятия и уничтожения аватара остались захваты мёртвой руки.");
+            }
+        }
+
         [Test]
         public void Перемещение_аватара_не_бросает_на_захвате_мёртвой_руки()
         {

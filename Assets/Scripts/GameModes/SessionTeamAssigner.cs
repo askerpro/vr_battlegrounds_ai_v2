@@ -23,7 +23,7 @@ namespace VrBattlegrounds.GameModes
     /// </list>
     ///
     /// <para>
-    /// Перед сменой поднимается <see cref="MatchTeams.TeamChangeRequested"/> — хуки
+    /// Перед сменой поднимается <see cref="TeamChangeRequests.TeamChangeRequested"/> — хуки
     /// режима (сброс статистики и т.п.).
     /// </para>
     /// </summary>
@@ -37,7 +37,7 @@ namespace VrBattlegrounds.GameModes
             GameLog.Match.Info(
                 $"[{reason}] {session.PlayerName}: команда {session.TeamIndex} → {team.Name}, скин {avatarIndex}.");
 
-            MatchTeams.NotifyTeamChangeRequested(session, team.teamIndex, avatarIndex);
+            TeamChangeRequests.NotifyTeamChangeRequested(session, team.teamIndex, avatarIndex);
 
             if (session.ActiveAvatar != null && AvatarManager.Instance != null)
             {
@@ -75,7 +75,7 @@ namespace VrBattlegrounds.GameModes
 
             GameLog.Match.Info($"[{reason}] {session.PlayerName}: команда {session.TeamIndex} снята (до смены сцены).");
 
-            MatchTeams.NotifyTeamChangeRequested(session, 0, 0);
+            TeamChangeRequests.NotifyTeamChangeRequested(session, 0, 0);
 
             session.TeamIndex = 0;
             session.AvatarIndex = 0;

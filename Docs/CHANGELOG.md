@@ -6,6 +6,16 @@
 
 ### Изменено
 
+- **Словарь, второй проход: «Match» ушёл из имён, события — без префикса `On`.**
+  `MatchSnapshot` → `PauseSnapshot`, `MatchTeams` → `TeamChangeRequests`, `AdminMatchCommands`/`MatchCommand` →
+  `AdminMapCommands`/`MapCommand` (`StartMatch` → `GoLive`, `CmdAdminMatchCommand` → `CmdAdminMapCommand`),
+  `EliminationMatchState` → `EliminationState` (`CurrentMatchState` → `CurrentState`). `MapReferee`:
+  `StartMatch/StopMatch/PauseMatch/ResumeMatch` → `GoLive/Stop/Pause/Resume`, `IsMatchRunning` → `IsLive`,
+  `IsMatchActive` → `IsLiveOrPaused`. `GameMode.OnMatchStartedLocal/OnMatchEndedLocal` → `ModeStartedLocal/ModeFinishedLocal`.
+  Все 19 событий `On…` переименованы без префикса (`OnRoundStartedLocal` → `RoundStartedLocal`, `OnSessionConnected` →
+  `SessionConnected`, события калибровки и т. д.). Мёртвые `MenuMatchManager.OnStartMatchPressed/OnStopMatchPressed` удалены —
+  привязок в префабах не было. Правило стиля записано в `CLAUDE.md`.
+
 - **Смена карты никого не телепортирует.** Неоткалиброванный игрок при смене карты остаётся в тех же мировых
   координатах; раньше его ставили в зону команды, и игрок, выбравший команду в лобби, на карте оказывался на базе —
   картинка разъезжалась с телом (игроки ходят по арене ногами). Откалиброванный, как и раньше, возвращается

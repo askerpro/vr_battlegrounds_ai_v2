@@ -158,20 +158,20 @@ namespace VrBattlegrounds.Tests.DevTools
 
             var connected = new List<PlayerSession>();
             System.Action<PlayerSession> handler = s => connected.Add(s);
-            PlayersManager.OnSessionConnected += handler;
+            PlayersManager.SessionConnected += handler;
             try
             {
                 players.RegisterBot(bot);
             }
             finally
             {
-                PlayersManager.OnSessionConnected -= handler;
+                PlayersManager.SessionConnected -= handler;
             }
 
             CreateAvatar("BotAvatar", bot);
 
             CollectionAssert.Contains(players.Sessions, bot, "Бота нет в списке сессий.");
-            CollectionAssert.AreEqual(new[] { bot }, connected, "Режим не узнал о боте: нет OnSessionConnected.");
+            CollectionAssert.AreEqual(new[] { bot }, connected, "Режим не узнал о боте: нет SessionConnected.");
             CollectionAssert.Contains(new List<PlayerSession>(players.GetAlivePlayers(team)), bot,
                 "Живой бот не виден условиям раунда.");
         }
@@ -186,14 +186,14 @@ namespace VrBattlegrounds.Tests.DevTools
 
             var gone = new List<PlayerSession>();
             System.Action<PlayerSession> handler = s => gone.Add(s);
-            PlayersManager.OnSessionDisconnected += handler;
+            PlayersManager.SessionDisconnected += handler;
             try
             {
                 players.UnregisterBot(bot);
             }
             finally
             {
-                PlayersManager.OnSessionDisconnected -= handler;
+                PlayersManager.SessionDisconnected -= handler;
             }
 
             CollectionAssert.DoesNotContain(players.Sessions, bot);

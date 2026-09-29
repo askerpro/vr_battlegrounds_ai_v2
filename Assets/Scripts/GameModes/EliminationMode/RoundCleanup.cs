@@ -23,12 +23,12 @@ namespace VrBattlegrounds.GameModes
     {
         private void OnEnable()
         {
-            EliminationMode.OnRoundPhaseChangedLocal += HandleRoundPhaseChanged;
+            EliminationMode.RoundPhaseChangedLocal += HandleRoundPhaseChanged;
         }
 
         private void OnDisable()
         {
-            EliminationMode.OnRoundPhaseChangedLocal -= HandleRoundPhaseChanged;
+            EliminationMode.RoundPhaseChangedLocal -= HandleRoundPhaseChanged;
         }
 
         private static void HandleRoundPhaseChanged(RoundPhase newState)

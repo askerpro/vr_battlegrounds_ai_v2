@@ -33,8 +33,8 @@ namespace VrBattlegrounds.Managers
         private readonly List<PlayerSession> _sessions = new List<PlayerSession>();
         private readonly Dictionary<NetworkConnection, PlayerSession> _sessionsByConn = new Dictionary<NetworkConnection, PlayerSession>();
 
-        public static event Action<PlayerSession> OnSessionConnected;
-        public static event Action<PlayerSession> OnSessionDisconnected;
+        public static event Action<PlayerSession> SessionConnected;
+        public static event Action<PlayerSession> SessionDisconnected;
 
         /// <summary>
         /// Все подключённые сессии игроков (только для чтения).
@@ -170,7 +170,7 @@ namespace VrBattlegrounds.Managers
                 _sessions.Add(session);
             }
             UpdateDebugNames();
-            OnSessionConnected?.Invoke(session);
+            SessionConnected?.Invoke(session);
         }
 
         public void UnregisterSession(NetworkConnection conn)
@@ -190,7 +190,7 @@ namespace VrBattlegrounds.Managers
                 _sessions.Remove(session);
                 _sessionsByConn.Remove(conn);
                 UpdateDebugNames();
-                OnSessionDisconnected?.Invoke(session);
+                SessionDisconnected?.Invoke(session);
             }
         }
 
@@ -224,7 +224,7 @@ namespace VrBattlegrounds.Managers
         /// <summary>
         /// Регистрирует сессию без соединения — бота (<c>DevTools.Bots.BotDirector</c>).
         /// Для игровой логики бот неотличим от игрока: тот же список <see cref="Sessions"/>
-        /// и то же событие <see cref="OnSessionConnected"/> (режим раздаёт команды).
+        /// и то же событие <see cref="SessionConnected"/> (режим раздаёт команды).
         /// В словарь соединений не попадает: соединения нет, ключ был бы <c>null</c>.
         /// </summary>
         public void RegisterBot(PlayerSession session)
@@ -233,7 +233,7 @@ namespace VrBattlegrounds.Managers
 
             _sessions.Add(session);
             UpdateDebugNames();
-            OnSessionConnected?.Invoke(session);
+            SessionConnected?.Invoke(session);
         }
 
         /// <summary>
@@ -246,7 +246,7 @@ namespace VrBattlegrounds.Managers
             if (!_sessions.Remove(session)) return;
 
             UpdateDebugNames();
-            OnSessionDisconnected?.Invoke(session);
+            SessionDisconnected?.Invoke(session);
         }
 
         public PlayerSession GetSession(NetworkConnection conn)

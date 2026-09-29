@@ -138,7 +138,7 @@ namespace VrBattlegrounds.Tests.Network
                 "Режим ждёт игроков и разыменовывает PlayersManager.Instance напрямую (NET-18).\n" +
                 "Без менеджера это NRE на первом же кадре Update.");
 
-            Assert.AreEqual(EliminationMatchState.Active, _mode.CurrentMatchState,
+            Assert.AreEqual(EliminationState.Active, _mode.CurrentState,
                 "Игроки в реестре есть, значит матч обязан начаться и без PlayersManager:\n" +
                 "после NET-18 единственный источник сведений об игроках — IPlayerRoster,\n" +
                 "и режим целиком запускается в изоляции от синглтонов.");
@@ -158,7 +158,7 @@ namespace VrBattlegrounds.Tests.Network
 
             _mode.ServerTick(RoundFlowDriver.Step);
 
-            Assert.AreEqual(EliminationMatchState.WaitingForPlayers, _mode.CurrentMatchState,
+            Assert.AreEqual(EliminationState.WaitingForPlayers, _mode.CurrentState,
                 "Игроков нет — матч начинаться не должен. Переход в Active означает,\n" +
                 "что проверка готовности перестала что-либо проверять.");
         }

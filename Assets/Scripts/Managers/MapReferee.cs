@@ -26,7 +26,7 @@ namespace VrBattlegrounds.Managers
     /// <para>
     /// <b>Режим на карте меняется на месте, без перезагрузки сцены.</b> Любая карта
     /// (лобби тоже) стартует в разминке (<see cref="ServerStartWarmup"/>, из
-    /// <c>OnStartServer</c>). «Начать матч» (<see cref="StartMatch"/>) останавливает
+    /// <c>OnStartServer</c>). «Начать матч» (<see cref="GoLive"/>) останавливает
     /// разминку и спавнит режим матча; матч кончился (<see cref="Finished"/>) —
     /// снова разминка, а серия (<see cref="Series"/>) решает, какая карта следующая.
     /// Какой режим допустим на карте — <see cref="MapModeRules"/> по <c>MapData.supportedModes</c>.
@@ -35,7 +35,7 @@ namespace VrBattlegrounds.Managers
     /// <para>
     /// Вся логика матча (раунды, таймеры, счёт на карте) живёт в конкретном
     /// <see cref="GameMode"/>; правила (оружие, арсенал) менеджер читает через виртуальные
-    /// свойства базового класса. Команды — не здесь, а в <see cref="MatchTeams"/>.
+    /// свойства базового класса. Команды — не здесь, а в <see cref="TeamChangeRequests"/>.
     /// </para>
     /// </summary>
     [DefaultExecutionOrder(ManagerOrder.MapReferee)]
@@ -54,7 +54,7 @@ namespace VrBattlegrounds.Managers
         public MapState CurrentState => _currentState;
 
         /// <summary>Идёт матч (режим матча, а не разминка).</summary>
-        public bool IsMatchActive => _currentState != MapState.Warmup;
+        public bool IsLiveOrPaused => _currentState != MapState.Warmup;
 
         /// <summary>Режим этой машины: разминка или матч. Null — в окне смены режима или сцены.</summary>
         public GameMode ActiveGameMode => _gameMode;
@@ -91,10 +91,10 @@ namespace VrBattlegrounds.Managers
             if (_gameMode == null)
                 ServerStartWarmup();
 
-            if (_matchRequestedBeforeSpawn)
+            if (_goLiveRequestedBeforeSpawn)
             {
-                _matchRequestedBeforeSpawn = false;
-                StartMatch();
+                _goLiveRequestedBeforeSpawn = false;
+                GoLive();
             }
         }
 
@@ -103,7 +103,7 @@ namespace VrBattlegrounds.Managers
         /// <see cref="SubscribeToInstance"/>, а тот срабатывает в <c>Awake</c>). Спавнить режим
         /// дочерним объектом незаспавненного менеджера нельзя — запрос ждёт <c>OnStartServer</c>.
         /// </summary>
-        private bool _matchRequestedBeforeSpawn;
+        private bool _goLiveRequestedBeforeSpawn;
 
         /// <summary>
         /// <c>OnStartServer</c> уже прошёл. Своя отметка, а не <c>isServer</c>: в <c>Awake</c>
@@ -225,9 +225,9 @@ namespace VrBattlegrounds.Managers
         /// </summary>
         /// <returns>true — режим матча заспавнен.</returns>
         [Server]
-        public bool StartMatch()
+        public bool GoLive()
         {
-            if (IsMatchActive)
+            if (IsLiveOrPaused)
             {
                 GameLog.Match.Warning("[MapReferee] Матч уже идёт или на паузе.");
                 return false;
@@ -235,7 +235,7 @@ namespace VrBattlegrounds.Managers
 
             if (!_startedOnServer)
             {
-                _matchRequestedBeforeSpawn = true;
+                _goLiveRequestedBeforeSpawn = true;
                 GameLog.Match.Verbose("[MapReferee] «Начать матч» до спавна карты — после разминки.");
                 return false;
             }
@@ -274,11 +274,11 @@ namespace VrBattlegrounds.Managers
         /// Серию это не двигает. Снимок паузы, если был, отбрасывается.
         /// </summary>
         [Server]
-        public void StopMatch()
+        public void Stop()
         {
-            if (!IsMatchActive)
+            if (!IsLiveOrPaused)
             {
-                GameLog.Match.Warning("[MapReferee] StopMatch: матч не идёт.");
+                GameLog.Match.Warning("[MapReferee] Stop: матч не идёт.");
                 return;
             }
 
@@ -286,25 +286,25 @@ namespace VrBattlegrounds.Managers
             _pausedSnapshot = null;
             _pausedMode = null;
             ServerStartWarmup();
-            RpcOnMatchStopped();
+            RpcOnStopped();
         }
 
         // ── Пауза ─────────────────────────────────────────────────────────────
         //
         // «Пауза» прерывает раунд без победителя и возвращает карту в разминку («лобби
         // текущей карты»); «Продолжить» спавнит режим матча заново и возвращает ему снимок
-        // (MatchSnapshot): счёт карты, номер прерванного раунда. Экземпляр режима
-        // на паузе не живёт — почему, см. MatchSnapshot. Снимок — состояние матча на этой
+        // (PauseSnapshot): счёт карты, номер прерванного раунда. Экземпляр режима
+        // на паузе не живёт — почему, см. PauseSnapshot. Снимок — состояние матча на этой
         // карте, поэтому хранится здесь и уходит вместе со сценой.
 
-        private MatchSnapshot _pausedSnapshot;
+        private PauseSnapshot _pausedSnapshot;
         private GameModeData _pausedMode;
 
         /// <summary>Матч на паузе: на карте разминка, «Продолжить» вернёт матч.</summary>
         public bool IsPaused => _currentState == MapState.Paused;
 
         /// <summary>Идёт ли сейчас сам матч (не пауза и не разминка) — для кнопки «Пауза».</summary>
-        public bool IsMatchRunning => _currentState == MapState.Live;
+        public bool IsLive => _currentState == MapState.Live;
 
         /// <summary>
         /// «Пауза»: снимок матча, идущий раунд прерывается без победителя (не засчитывается),
@@ -312,7 +312,7 @@ namespace VrBattlegrounds.Managers
         /// </summary>
         /// <returns>false — матч не идёт или режим паузу не умеет.</returns>
         [Server]
-        public bool PauseMatch()
+        public bool Pause()
         {
             if (_currentState != MapState.Live || _gameMode == null || !_gameMode.SupportsPause)
             {
@@ -343,7 +343,7 @@ namespace VrBattlegrounds.Managers
         /// Снаряжение разминки забирается.
         /// </summary>
         [Server]
-        public bool ResumeMatch()
+        public bool Resume()
         {
             if (!IsPaused || _pausedMode == null)
             {
@@ -351,7 +351,7 @@ namespace VrBattlegrounds.Managers
                 return false;
             }
 
-            MatchSnapshot snapshot = _pausedSnapshot;
+            PauseSnapshot snapshot = _pausedSnapshot;
             GameModeData mode = _pausedMode;
 
             if (!ServerSwitchTo(mode, stopCurrent: true, restore: snapshot)) return false;
@@ -379,7 +379,7 @@ namespace VrBattlegrounds.Managers
         /// и уже не идёт: <c>ForceStop</c> ему не нужен.</param>
         /// <param name="restore">Снимок паузы — вернуть режиму после инициализации («Продолжить»).</param>
         [Server]
-        private bool ServerSwitchTo(GameModeData data, bool stopCurrent, MatchSnapshot restore = null)
+        private bool ServerSwitchTo(GameModeData data, bool stopCurrent, PauseSnapshot restore = null)
         {
             if (data == null) return false;
 
@@ -494,7 +494,7 @@ namespace VrBattlegrounds.Managers
         }
 
         [ClientRpc]
-        private void RpcOnMatchStopped()
+        private void RpcOnStopped()
         {
             GameLog.Match.Info("[MapReferee] Матч остановлен (клиент)");
         }

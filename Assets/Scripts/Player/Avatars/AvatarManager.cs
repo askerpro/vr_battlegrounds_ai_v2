@@ -30,7 +30,7 @@ namespace VrBattlegrounds.Player.Avatars
         [Tooltip("Стратегия спавна боевого VR-аватара")]
         [SerializeField] private AvatarSpawnStrategy _combatAvatarStrategy;
 
-        public static event Action<PlayerController> OnAvatarSpawned;
+        public static event Action<PlayerController> AvatarSpawned;
 
         private void Awake()
         {
@@ -153,7 +153,7 @@ namespace VrBattlegrounds.Player.Avatars
             // Вернувшийся живым после переподключения продолжает себя; остальные — новые в матче.
             Admit(avatarClass, continuesPrevious: snapshot != null && snapshot.NeedsPhysicalRestore);
 
-            OnAvatarSpawned?.Invoke(avatarClass);
+            AvatarSpawned?.Invoke(avatarClass);
         }
 
         /// <summary>
@@ -247,7 +247,7 @@ namespace VrBattlegrounds.Player.Avatars
                 NetworkServer.Destroy(oldAvatar.gameObject);
             }
 
-            OnAvatarSpawned?.Invoke(newPc);
+            AvatarSpawned?.Invoke(newPc);
         }
 
         /// <summary>

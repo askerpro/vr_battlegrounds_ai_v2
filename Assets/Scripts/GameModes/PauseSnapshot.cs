@@ -14,7 +14,7 @@ namespace VrBattlegrounds.GameModes
     /// на этой карте, со сменой карты она теряет смысл.
     /// </para>
     /// </summary>
-    public sealed class MatchSnapshot
+    public sealed class PauseSnapshot
     {
         /// <summary>Режим, который продолжится.</summary>
         public string ModeId = "";

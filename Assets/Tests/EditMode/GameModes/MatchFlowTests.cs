@@ -197,7 +197,7 @@ namespace VrBattlegrounds.Tests.Modes
 
             Assert.IsInstanceOf<WarmupMode>(manager.ActiveGameMode, "Карта стартовала не в разминке.");
             Assert.IsTrue(manager.ActiveGameMode.IsWarmup);
-            Assert.IsFalse(manager.IsMatchActive, "Разминка — не матч.");
+            Assert.IsFalse(manager.IsLiveOrPaused, "Разминка — не матч.");
         }
 
         [Test]
@@ -221,9 +221,9 @@ namespace VrBattlegrounds.Tests.Modes
             MapReferee manager = CreateMapReferee(_lobby.sceneName);
             GameMode warmup = manager.ActiveGameMode;
 
-            Assert.IsFalse(manager.StartMatch(), "В лобби «Начать матч» запустил режим матча.");
+            Assert.IsFalse(manager.GoLive(), "В лобби «Начать матч» запустил режим матча.");
             Assert.AreSame(warmup, manager.ActiveGameMode, "В лобби режим сменился — режимов матча у лобби нет.");
-            Assert.IsFalse(manager.IsMatchActive);
+            Assert.IsFalse(manager.IsLiveOrPaused);
         }
 
         [Test]
@@ -234,7 +234,7 @@ namespace VrBattlegrounds.Tests.Modes
 
             MapReferee manager = CreateMapReferee(_mapA.sceneName);
 
-            Assert.IsTrue(manager.StartMatch());
+            Assert.IsTrue(manager.GoLive());
             Assert.IsInstanceOf<EliminationMode>(manager.ActiveGameMode,
                 "Несовместимый с картой режим не заменён первым совместимым.");
         }
@@ -265,7 +265,7 @@ namespace VrBattlegrounds.Tests.Modes
                 return mode.gameObject;
             };
 
-            Assert.IsFalse(manager.StartMatch(), "Режим заспавнен дочерним объектом незаспавненного менеджера.");
+            Assert.IsFalse(manager.GoLive(), "Режим заспавнен дочерним объектом незаспавненного менеджера.");
             Assert.IsNull(manager.ActiveGameMode);
 
             EnableNetworking(go);
@@ -273,7 +273,7 @@ namespace VrBattlegrounds.Tests.Modes
             SpawnOnServer(manager);
 
             Assert.IsInstanceOf<EliminationMode>(manager.ActiveGameMode, "Отложенный «Начать матч» потерялся.");
-            Assert.IsTrue(manager.IsMatchActive);
+            Assert.IsTrue(manager.IsLiveOrPaused);
         }
 
         // ── Смена режима на месте ────────────────────────────────────────────
@@ -305,12 +305,12 @@ namespace VrBattlegrounds.Tests.Modes
 
             // «Начать матч» — на месте.
             GameMode warmup = manager.ActiveGameMode;
-            Assert.IsTrue(manager.StartMatch(), "«Начать матч» не запустил Elimination.");
+            Assert.IsTrue(manager.GoLive(), "«Начать матч» не запустил Elimination.");
             var elimination = manager.ActiveGameMode as EliminationMode;
             Assert.IsNotNull(elimination, "После «Начать матч» режим не Elimination.");
             Assert.AreSame(manager, MapReferee.Instance, "Смена режима пересоздала оркестратор — это уже не «на месте».");
             Assert.IsTrue(warmup == null, "Разминка осталась жить рядом с матчем.");
-            Assert.IsTrue(manager.IsMatchActive);
+            Assert.IsTrue(manager.IsLiveOrPaused);
             Assert.AreEqual(_a.teamIndex, ct.TeamIndex, "Старт матча сменил команду.");
             Assert.AreEqual(0, fresh.TeamIndex, "Elimination сам раздал команду — выбирать должен игрок.");
             Assert.IsFalse(elimination.TeamChoiceLocked, "Игрок без команды не может выбрать команду матча.");
@@ -319,14 +319,14 @@ namespace VrBattlegrounds.Tests.Modes
             EndMatch(elimination, _a);
 
             Assert.IsInstanceOf<WarmupMode>(manager.ActiveGameMode, "После конца матча карта не вернулась в разминку.");
-            Assert.IsFalse(manager.IsMatchActive);
+            Assert.IsFalse(manager.IsLiveOrPaused);
             Assert.AreEqual(1, series.GetMapWins(_a), "Итог карты не попал в общий счёт серии.");
             Assert.AreEqual(_a.teamIndex, ct.TeamIndex, "Возврат в разминку сменил команду матча.");
             Assert.AreEqual(_b.teamIndex, t.TeamIndex, "Возврат в разминку сменил команду матча.");
 
             // Ещё одна смена режима счёт серии не трогает.
-            Assert.IsTrue(manager.StartMatch());
-            manager.StopMatch();
+            Assert.IsTrue(manager.GoLive());
+            manager.Stop();
             Assert.IsInstanceOf<WarmupMode>(manager.ActiveGameMode, "Стоп матча не вернул разминку.");
             Assert.AreEqual(1, series.GetMapWins(_a), "Смена режима на карте сбросила общий счёт серии.");
             Assert.IsNotNull(session);
@@ -361,7 +361,7 @@ namespace VrBattlegrounds.Tests.Modes
         /// <summary>
         /// Конец матча на карте: итог в счёт серии, карта — в разминку, и серия <b>ждёт</b>.
         /// Следующую карту запускает только админ кнопкой «Следующая карта»
-        /// (<see cref="MatchCommand.NextMap"/>): сама серия дальше не идёт.
+        /// (<see cref="MapCommand.NextMap"/>): сама серия дальше не идёт.
         /// </summary>
         [Test]
         public void Конец_матча_оставляет_карту_в_разминке_до_кнопки_админа()
@@ -373,7 +373,7 @@ namespace VrBattlegrounds.Tests.Modes
             Player("ct", _a.teamIndex);
 
             MapReferee manager = CreateMapReferee(_mapA.sceneName);
-            Assert.IsTrue(manager.StartMatch());
+            Assert.IsTrue(manager.GoLive());
 
             EndMatch(manager.ActiveGameMode, _b);
 
@@ -381,7 +381,7 @@ namespace VrBattlegrounds.Tests.Modes
             Assert.AreEqual(1, series.GetMapWins(_b));
             CollectionAssert.AreEqual(new[] { "MapA" }, _loads, "Серия сама ушла на следующую карту — решать должен админ.");
             Assert.IsTrue(series.IsRunning, "Конец карты остановил серию.");
-            Assert.IsTrue(AdminMatchCommands.IsAvailable(MatchCommand.NextMap), "После конца карты нет кнопки «Следующая карта».");
+            Assert.IsTrue(AdminMapCommands.IsAvailable(MapCommand.NextMap), "После конца карты нет кнопки «Следующая карта».");
 
             Assert.AreEqual("MapB", series.ServerAdvance(), "«Следующая карта» загрузила не вторую карту.");
             CollectionAssert.AreEqual(new[] { "MapA", "MapB" }, _loads);
@@ -426,7 +426,7 @@ namespace VrBattlegrounds.Tests.Modes
                 MapReferee manager = CreateMapReferee(_mapA.sceneName);
 
                 int before = reasons.Count;
-                Assert.IsTrue(manager.StartMatch());
+                Assert.IsTrue(manager.GoLive());
                 Assert.Greater(reasons.Count, before, "Разминка → матч: снаряжение не забрано.");
 
                 before = reasons.Count;

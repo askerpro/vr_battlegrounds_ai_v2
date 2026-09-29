@@ -124,7 +124,7 @@ namespace VrBattlegrounds.Tests.Modes
         /// <summary>Раунд 1 выигрывает A, раунд 2 доходит до боя — его и прерывает пауза.</summary>
         private void PlayToSecondRoundCombat()
         {
-            Assert.IsTrue(_manager.StartMatch(), "Контроль: матч начался.");
+            Assert.IsTrue(_manager.GoLive(), "Контроль: матч начался.");
             RoundFlowDriver driver = Driver();
 
             driver.AdvanceUntil(() => Match.CurrentRoundPhase == RoundPhase.Combat, "боя раунда 1");
@@ -143,14 +143,14 @@ namespace VrBattlegrounds.Tests.Modes
 
             // Раунд 2 вот-вот выиграет B, но пауза успевает раньше.
             Match.RoundPhases.RequestRoundEnd(_b);
-            Assert.IsTrue(_manager.PauseMatch(), "Пауза во время матча не сработала.");
+            Assert.IsTrue(_manager.Pause(), "Пауза во время матча не сработала.");
 
             Assert.IsInstanceOf<WarmupMode>(_manager.ActiveGameMode, "На паузе карта не в разминке.");
             Assert.IsTrue(_manager.IsPaused);
             Assert.Greater(_strips, stripsBefore, "Пауза не забрала снаряжение.");
             Assert.AreEqual(1, _series.GetRoundsWon(_a, Series.Total), "Раунд 1 не попал в общий счёт.");
             Assert.AreEqual(0, _series.GetRoundsWon(_b, Series.Total), "Прерванный паузой раунд засчитан в общий счёт.");
-            Assert.IsFalse(_manager.StartMatch(), "На паузе «Начать матч» начал бы матч заново — только «Продолжить».");
+            Assert.IsFalse(_manager.GoLive(), "На паузе «Начать матч» начал бы матч заново — только «Продолжить».");
         }
 
         [Test]
@@ -161,13 +161,13 @@ namespace VrBattlegrounds.Tests.Modes
             foreach (PlayerSession s in _roster.GetAllPlayers()) if (s.TeamIndex == _a.teamIndex) pa = s;
             _series.ServerRecordKill(null, pa, null);
 
-            Assert.IsTrue(_manager.PauseMatch());
+            Assert.IsTrue(_manager.Pause());
             int stripsBefore = _strips;
 
-            Assert.IsTrue(_manager.ResumeMatch(), "«Продолжить» не сработал.");
+            Assert.IsTrue(_manager.Resume(), "«Продолжить» не сработал.");
             Assert.IsNotNull(Match, "После «Продолжить» режим не Elimination.");
             Assert.IsFalse(_manager.IsPaused);
-            Assert.IsTrue(_manager.IsMatchActive);
+            Assert.IsTrue(_manager.IsLiveOrPaused);
             Assert.Greater(_strips, stripsBefore, "«Продолжить» не забрал снаряжение разминки.");
 
             Driver().AdvanceUntil(() => Match.CurrentRoundNumber > 0, "начала матча после паузы");
@@ -190,14 +190,14 @@ namespace VrBattlegrounds.Tests.Modes
         public void Поздний_старт_режима_не_сбрасывает_продолженный_матч()
         {
             PlayToSecondRoundCombat();
-            Assert.IsTrue(_manager.PauseMatch());
-            Assert.IsTrue(_manager.ResumeMatch());
+            Assert.IsTrue(_manager.Pause());
+            Assert.IsTrue(_manager.Resume());
             Driver().AdvanceUntil(() => Match.CurrentRoundNumber > 0, "начала матча после паузы");
 
             InvokePrivateMethod(Match, "Begin"); // та самая поздняя корутина
             Driver().Advance();
 
-            Assert.AreEqual(EliminationMatchState.Active, Match.CurrentMatchState, "Поздний Begin сбросил идущий матч.");
+            Assert.AreEqual(EliminationState.Active, Match.CurrentState, "Поздний Begin сбросил идущий матч.");
             Assert.AreEqual(2, Match.CurrentRoundNumber, "После позднего Begin матч начался с раунда 1.");
             Assert.AreEqual(1, Match.GetScore(_a));
         }
@@ -217,8 +217,8 @@ namespace VrBattlegrounds.Tests.Modes
             driver.AdvanceUntil(() => Match.CurrentRoundPhase == RoundPhase.Resolution, "итогов раунда 2");
             Assert.AreEqual(1, Match.GetScore(_b), "Контроль: очко за раунд 2 уже на табло.");
 
-            Assert.IsTrue(_manager.PauseMatch());
-            Assert.IsTrue(_manager.ResumeMatch());
+            Assert.IsTrue(_manager.Pause());
+            Assert.IsTrue(_manager.Resume());
             Driver().AdvanceUntil(() => Match.CurrentRoundNumber > 0, "начала матча после паузы");
 
             Assert.AreEqual(2, Match.CurrentRoundNumber, "Прерванный раунд обязан сыграться заново.");

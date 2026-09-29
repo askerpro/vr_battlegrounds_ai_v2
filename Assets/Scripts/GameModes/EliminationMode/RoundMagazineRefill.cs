@@ -19,12 +19,12 @@ namespace VrBattlegrounds.GameModes
     {
         private void OnEnable()
         {
-            EliminationMode.OnRoundPhaseChangedServer += HandleRoundPhaseChanged;
+            EliminationMode.RoundPhaseChangedServer += HandleRoundPhaseChanged;
         }
 
         private void OnDisable()
         {
-            EliminationMode.OnRoundPhaseChangedServer -= HandleRoundPhaseChanged;
+            EliminationMode.RoundPhaseChangedServer -= HandleRoundPhaseChanged;
         }
 
         private static void HandleRoundPhaseChanged(RoundPhase newState)

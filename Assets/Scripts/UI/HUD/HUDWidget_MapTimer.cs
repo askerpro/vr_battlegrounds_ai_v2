@@ -19,7 +19,7 @@ namespace VrBattlegrounds.UI.HUD
         {
             if (_timerText == null) return;
 
-            if (MapReferee.Instance != null && MapReferee.Instance.IsMatchActive)
+            if (MapReferee.Instance != null && MapReferee.Instance.IsLiveOrPaused)
             {
                 if (!_matchWasActive)
                 {

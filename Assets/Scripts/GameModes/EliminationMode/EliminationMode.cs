@@ -24,7 +24,7 @@ namespace VrBattlegrounds.GameModes
     /// создаёт через new и тикает из <see cref="ServerTick"/>. Счёт, номер раунда и переход
     /// к следующему раунду — здесь, как и вся сетевая синхронизация (SyncVar, ClientRpc).
     /// </summary>
-    public enum EliminationMatchState
+    public enum EliminationState
     {
         WaitingForPlayers,
         Active,
@@ -63,7 +63,7 @@ namespace VrBattlegrounds.GameModes
         // Счёт матча теперь синхронизируется через базовый класс GameMode
 
         // Состояние раунда — синхронизируется для UI (таймер, countdown)
-        [SyncVar] private EliminationMatchState _matchState = EliminationMatchState.WaitingForPlayers;
+        [SyncVar] private EliminationState _state = EliminationState.WaitingForPlayers;
 
         /// <summary>
         /// Фаза раунда. Единственный источник правды — эта переменная, а не сетевое сообщение:
@@ -130,7 +130,7 @@ namespace VrBattlegrounds.GameModes
         public bool SidesSwapped => _sidesSwapped;
 
         /// <summary>Клиент: команды поменялись сторонами. Для HUD («Смена сторон»).</summary>
-        public static event Action OnSidesSwappedLocal;
+        public static event Action SidesSwappedLocal;
 
         /// <summary>Фаза, уже разданная локальным подписчикам на этой машине.</summary>
         private RoundPhase _appliedRoundPhase = RoundPhase.Setup;
@@ -174,26 +174,26 @@ namespace VrBattlegrounds.GameModes
 
         // ── Глобальные семантические события для UI (Клиент) ───────────────
 
-        public static event Action<int> OnRoundStartedLocal;
-        public static event Action<TeamData> OnRoundEndedLocal;
+        public static event Action<int> RoundStartedLocal;
+        public static event Action<TeamData> RoundEndedLocal;
 
         /// <summary>
         /// Фаза раунда изменилась на ЭТОЙ машине. Срабатывает одинаково на обычном клиенте,
         /// на хосте и на выделенном сервере — раздача идёт от <see cref="_roundPhase"/>,
         /// а не от сетевого сообщения. Для представления: арсенал, HUD, зоны спавна.
         /// </summary>
-        public static event Action<RoundPhase> OnRoundPhaseChangedLocal;
+        public static event Action<RoundPhase> RoundPhaseChangedLocal;
 
         /// <summary>
         /// Фаза раунда изменилась, и эта машина — сервер. Для авторитетных реакций,
         /// которые обязан выполнить именно сервер (пополнение слотов арсенала и т.п.).
         /// Подписываться только из <c>OnStartServer</c>: на клиенте не срабатывает никогда.
         /// </summary>
-        public static event Action<RoundPhase> OnRoundPhaseChangedServer;
+        public static event Action<RoundPhase> RoundPhaseChangedServer;
 
         // ── Публичные свойства для UI ────────────────────────────────────────
 
-        public EliminationMatchState CurrentMatchState => _matchState;
+        public EliminationState CurrentState => _state;
         public RoundPhase CurrentRoundPhase => _roundPhase;
 
         /// <summary>
@@ -328,7 +328,7 @@ namespace VrBattlegrounds.GameModes
         /// Матч начался — сам игрок команду больше не меняет, только админ.
         /// Фаза матча — SyncVar, поэтому ответ верен и у клиента (планшет).
         /// </summary>
-        public override bool TeamChoiceLocked => _matchState != EliminationMatchState.WaitingForPlayers;
+        public override bool TeamChoiceLocked => _state != EliminationState.WaitingForPlayers;
 
         /// <summary>
         /// Зовёт корутина старта базового режима — кадром позже спавна. К этому моменту
@@ -339,7 +339,7 @@ namespace VrBattlegrounds.GameModes
         [Server]
         protected override void Begin()
         {
-            if (_matchState != EliminationMatchState.WaitingForPlayers) return;
+            if (_state != EliminationState.WaitingForPlayers) return;
             GameLog.Match.Info("[EliminationMode] Матч инициализирован. Ждем игроков.");
 
             // Аватары, созданные до режима (смена карты, «Начать матч» из разминки), — такие же
@@ -353,7 +353,7 @@ namespace VrBattlegrounds.GameModes
         [Server]
         private void InitializeActiveGame()
         {
-            _matchState = EliminationMatchState.Active;
+            _state = EliminationState.Active;
 
             // Машина фаз — обычный C#-объект, без GameObject и NetworkBehaviour. Событий у неё
             // нет: исход тика она возвращает значением, поэтому подписаться дважды (MATCH-01)
@@ -382,7 +382,7 @@ namespace VrBattlegrounds.GameModes
         // ── Пауза: снимок и продолжение ─────────────────────────────────────
 
         /// <summary>Снимок, с которого матч продолжится; null — обычный старт.</summary>
-        private MatchSnapshot _resume;
+        private PauseSnapshot _resume;
 
         /// <summary>Elimination встаёт на паузу: счёт карты и номер раунда сохраняются.</summary>
         public override bool SupportsPause => true;
@@ -393,9 +393,9 @@ namespace VrBattlegrounds.GameModes
         /// уже засчитан с фазы Resolution.
         /// </summary>
         [Server]
-        public override MatchSnapshot CaptureSnapshot()
+        public override PauseSnapshot CaptureSnapshot()
         {
-            MatchSnapshot snapshot = base.CaptureSnapshot();
+            PauseSnapshot snapshot = base.CaptureSnapshot();
             if (_roundManager == null) return snapshot;
 
             foreach (var kvp in _scoresAtRoundStart) snapshot.TeamScores[kvp.Key] = kvp.Value;
@@ -404,7 +404,7 @@ namespace VrBattlegrounds.GameModes
         }
 
         [Server]
-        public override void RestoreSnapshot(MatchSnapshot snapshot)
+        public override void RestoreSnapshot(PauseSnapshot snapshot)
         {
             base.RestoreSnapshot(snapshot);
             _resume = snapshot;
@@ -450,13 +450,13 @@ namespace VrBattlegrounds.GameModes
         [Server]
         public void ServerTick(float deltaTime)
         {
-            if (_matchState == EliminationMatchState.WaitingForPlayers)
+            if (_state == EliminationState.WaitingForPlayers)
             {
                 if (IsPlayersReady()) InitializeActiveGame();
                 return;
             }
 
-            if (_matchState == EliminationMatchState.Finished) return;
+            if (_state == EliminationState.Finished) return;
 
             if (_roundManager == null) return;
 
@@ -654,7 +654,7 @@ namespace VrBattlegrounds.GameModes
         [ClientRpc]
         private void RpcOnSidesSwapped()
         {
-            OnSidesSwappedLocal?.Invoke();
+            SidesSwappedLocal?.Invoke();
         }
 
         /// <summary>
@@ -802,13 +802,13 @@ namespace VrBattlegrounds.GameModes
         [Server]
         public override void ServerAdmitAvatar(PlayerController player, bool continuesPrevious)
         {
-            if (player == null || IsWarmup || _matchState == EliminationMatchState.Finished) return;
+            if (player == null || IsWarmup || _state == EliminationState.Finished) return;
 
             if (!continuesPrevious) player.ServerEliminateSilently("новый аватар в матче");
             if (player.IsAlive) return;
 
             // До старта матча и в бою возрождения нет: первое раздаст PrepareNextRound.
-            if (_matchState != EliminationMatchState.Active || !CanRespawnNow(_roundPhase)) return;
+            if (_state != EliminationState.Active || !CanRespawnNow(_roundPhase)) return;
 
             Maps.TeamSpawnZone zone = UnityEngine.Object.FindObjectsByType<Maps.TeamSpawnZone>(FindObjectsSortMode.None)
                                                   .FirstOrDefault(z => z.Team != null && z.Team == player.Team);
@@ -878,7 +878,7 @@ namespace VrBattlegrounds.GameModes
             _phaseStartTime = NetworkTime.time;
 
             ApplyRoundPhaseLocal(newState);
-            OnRoundPhaseChangedServer?.Invoke(newState);
+            RoundPhaseChangedServer?.Invoke(newState);
 
             // Новый раунд — стены пополняют пустые слоты. Раньше стена сама слушала
             // фазы Elimination; теперь она знает только базовый GameMode.
@@ -998,7 +998,7 @@ namespace VrBattlegrounds.GameModes
 
             GameLog.Match.Info(
                 $"[EliminationMode] Фаза раунда: {state}");
-            OnRoundPhaseChangedLocal?.Invoke(state);
+            RoundPhaseChangedLocal?.Invoke(state);
         }
 
         public override void OnStartClient()
@@ -1036,14 +1036,14 @@ namespace VrBattlegrounds.GameModes
         [ClientRpc]
         private void RpcOnRoundStarted(int roundNum)
         {
-            OnRoundStartedLocal?.Invoke(roundNum);
+            RoundStartedLocal?.Invoke(roundNum);
         }
 
         [ClientRpc]
         private void RpcOnRoundEnded(int winnerIndex)
         {
             TeamData winner = winnerIndex >= 0 ? TeamRegistry.Instance.GetByIndex(winnerIndex) : null;
-            OnRoundEndedLocal?.Invoke(winner);
+            RoundEndedLocal?.Invoke(winner);
         }
     }
 }

@@ -66,8 +66,8 @@ namespace VrBattlegrounds.DevTools
 
         private void OnEnable()
         {
-            PlayersManager.OnSessionConnected += HandlePlayerConnected;
-            PlayersManager.OnSessionDisconnected += HandlePlayerDisconnected;
+            PlayersManager.SessionConnected += HandlePlayerConnected;
+            PlayersManager.SessionDisconnected += HandlePlayerDisconnected;
             GameNetworkManager.ServerSceneChanged += OnServerSceneChanged;
 
             // Подписка вместо угадывания. Оркестратор матча живёт в сцене карты и
@@ -77,8 +77,8 @@ namespace VrBattlegrounds.DevTools
 
         private void OnDisable()
         {
-            PlayersManager.OnSessionConnected -= HandlePlayerConnected;
-            PlayersManager.OnSessionDisconnected -= HandlePlayerDisconnected;
+            PlayersManager.SessionConnected -= HandlePlayerConnected;
+            PlayersManager.SessionDisconnected -= HandlePlayerDisconnected;
             GameNetworkManager.ServerSceneChanged -= OnServerSceneChanged;
 
             MapReferee.UnsubscribeFromInstance(HandleMapRefereeReady);
@@ -186,7 +186,7 @@ namespace VrBattlegrounds.DevTools
                 return;
             }
 
-            if (matchManager.IsMatchActive)
+            if (matchManager.IsLiveOrPaused)
             {
                 GameLog.Debug.Verbose(
                     "[DebugOrchestrator] TryGoLive: матч уже активен.");
@@ -211,7 +211,7 @@ namespace VrBattlegrounds.DevTools
 
             GameLog.Debug.Info(
                 "[DebugOrchestrator] TryGoLive: попытка запустить матч (условия по игрокам выполнены).");
-            matchManager.StartMatch();
+            matchManager.GoLive();
 
         }
 

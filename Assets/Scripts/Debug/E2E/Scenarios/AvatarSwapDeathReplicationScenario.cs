@@ -136,7 +136,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             result.Declare(CheckDedicated, CheckClients, CheckAvatars, CheckBackChannel,
                            CheckKillBefore, CheckAliveAgain, CheckSwap, CheckKillAfter);
 
-            AvatarManager.OnAvatarSpawned += OnAvatarSpawned;
+            AvatarManager.AvatarSpawned += HandleAvatarSpawned;
             UltimateXR.Core.UxrManager.ComponentStateChanged += OnComponentStateChanged;
 
             try
@@ -459,7 +459,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 // INCONCLUSIVE вместо честного красного.
                 SetPhase(PhaseDone);
                 UltimateXR.Core.UxrManager.ComponentStateChanged -= OnComponentStateChanged;
-                AvatarManager.OnAvatarSpawned -= OnAvatarSpawned;
+                AvatarManager.AvatarSpawned -= HandleAvatarSpawned;
             }
         }
 
@@ -660,7 +660,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             _stateEventsInPhase++;
         }
 
-        private void OnAvatarSpawned(PlayerController avatar)
+        private void HandleAvatarSpawned(PlayerController avatar)
         {
             if (avatar != null && !_spawnOrder.Contains(avatar))
                 _spawnOrder.Add(avatar);

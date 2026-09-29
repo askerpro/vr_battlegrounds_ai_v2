@@ -12,7 +12,7 @@ namespace VrBattlegrounds.Managers.Editor
         {
             if (target == null) return false;
             MapReferee manager = (MapReferee)target;
-            return Application.isPlaying && manager.IsMatchActive;
+            return Application.isPlaying && manager.IsLiveOrPaused;
         }
 
         public override void OnInspectorGUI()
@@ -26,7 +26,7 @@ namespace VrBattlegrounds.Managers.Editor
 
             EditorGUI.BeginDisabledGroup(true);
 
-            EditorGUILayout.Toggle("Match Active", manager.IsMatchActive);
+            EditorGUILayout.Toggle("Match Active", manager.IsLiveOrPaused);
 
             if (manager.ActiveGameMode != null)
             {

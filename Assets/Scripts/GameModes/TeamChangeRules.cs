@@ -2,7 +2,7 @@ namespace VrBattlegrounds.GameModes
 {
     /// <summary>
     /// Кто и когда вправе сменить команду. Чистые правила без побочных эффектов —
-    /// исполняет смену <see cref="SessionTeamAssigner"/>, входы — у <see cref="MatchTeams"/>.
+    /// исполняет смену <see cref="SessionTeamAssigner"/>, входы — у <see cref="TeamChangeRequests"/>.
     ///
     /// <para>
     /// <b>Игрок</b> выбирает сам только команду активного режима и только пока выбор

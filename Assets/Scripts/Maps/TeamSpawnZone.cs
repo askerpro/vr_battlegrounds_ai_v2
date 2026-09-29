@@ -218,7 +218,7 @@ namespace VrBattlegrounds.Maps
         private void OnEnable()
         {
             SpawnSides.Changed += OnSidesChanged;
-            EliminationMode.OnRoundPhaseChangedLocal += OnRoundPhaseChanged;
+            EliminationMode.RoundPhaseChangedLocal += OnRoundPhaseChanged;
             PlayerSession.LocalAvatarChanged += OnLocalAvatarChanged;
 
             // Аватар мог заспавниться раньше, чем включилась зона: зоны живут в сцене карты,
@@ -233,7 +233,7 @@ namespace VrBattlegrounds.Maps
         private void OnDisable()
         {
             SpawnSides.Changed -= OnSidesChanged;
-            EliminationMode.OnRoundPhaseChangedLocal -= OnRoundPhaseChanged;
+            EliminationMode.RoundPhaseChangedLocal -= OnRoundPhaseChanged;
             PlayerSession.LocalAvatarChanged -= OnLocalAvatarChanged;
 
             if (_localPlayer != null)

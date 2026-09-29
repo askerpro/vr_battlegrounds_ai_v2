@@ -184,25 +184,25 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         public bool IsCalibrated { get; private set; }
 
         // Events
-        public event Action OnCalibrationStarted;
-        public event Action OnCalibrationCancelled;
-        public event Action OnFirstAnchorRegistered;
-        public event Action OnSecondAnchorRegistered;
-        public event Action OnCalibrationCompleted;
+        public event Action CalibrationStarted;
+        public event Action CalibrationCancelled;
+        public event Action FirstAnchorRegistered;
+        public event Action SecondAnchorRegistered;
+        public event Action CalibrationCompleted;
 
-        public event Action OnHeightCalibrationStarted;
-        public event Action OnHeightCalibrationCompleted;
+        public event Action HeightCalibrationStarted;
+        public event Action HeightCalibrationCompleted;
 
         /// <summary>
         /// Отработал первый шаг калибровки высоты — синхронизация пола, — и
         /// <see cref="AccumulatedHeightOffset" /> изменился.
         ///
-        /// Отдельное событие, а не <see cref="OnHeightCalibrationCompleted" />, потому
+        /// Отдельное событие, а не <see cref="HeightCalibrationCompleted" />, потому
         /// что «завершено» поднимается только после второго шага (масштаб). Игрок,
         /// который откалибровал пол и до масштаба не дошёл, иначе не разослал бы
         /// свою высоту вообще.
         /// </summary>
-        public event Action OnFloorHeightCalibrated;
+        public event Action FloorHeightCalibrated;
 
         /// <summary>
         /// Где стоял аватар этой машины в последний раз — <b>в системе координат
@@ -466,7 +466,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             ToggleRealVirtualSpaceRendering();
             UpdateAnchorHighlights();
 
-            OnCalibrationStarted?.Invoke();
+            CalibrationStarted?.Invoke();
             GameLog.PhysicalSpace.Info("[PhysicalSpaceSyncManager] Calibration started. Please proceed to Point 1.");
         }
 
@@ -481,7 +481,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             ToggleRealVirtualSpaceRendering();
             ResetAnchorHighlights();
 
-            OnCalibrationCancelled?.Invoke();
+            CalibrationCancelled?.Invoke();
             GameLog.PhysicalSpace.Info("[PhysicalSpaceSyncManager] Calibration cancelled.");
         }
 
@@ -500,7 +500,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             if (_currentAnchorIndex == 0)
             {
-                OnFirstAnchorRegistered?.Invoke();
+                FirstAnchorRegistered?.Invoke();
 
                 _currentAnchorIndex++;
                 UpdateAnchorHighlights();
@@ -509,7 +509,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             }
             else if (_currentAnchorIndex == 1)
             {
-                OnSecondAnchorRegistered?.Invoke();
+                SecondAnchorRegistered?.Invoke();
 
                 CalculateTransform();
                 ApplyAvatarTransform();
@@ -522,7 +522,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 ToggleRealVirtualSpaceRendering();
                 ResetAnchorHighlights();
 
-                OnCalibrationCompleted?.Invoke();
+                CalibrationCompleted?.Invoke();
                 GameLog.PhysicalSpace.Info("[PhysicalSpaceSyncManager] Calibration completed. Virtual offset applied.");
             }
         }
@@ -535,7 +535,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             if (IsCalibrating || IsCalibratingHeight) return; // Don't mix calibrations
 
             CurrentHeightCalibrationPhase = HeightCalibrationPhase.Floor;
-            OnHeightCalibrationStarted?.Invoke();
+            HeightCalibrationStarted?.Invoke();
             GameLog.PhysicalSpace.Info("[PhysicalSpaceSyncManager] Phase 1: Height Calibration started. Please touch the physical floor with a controller and press Button 1.");
         }
 
@@ -555,7 +555,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 _accumulatedHeightOffset += deltaY;
 
                 ApplyHeightDelta(deltaY);
-                OnFloorHeightCalibrated?.Invoke();
+                FloorHeightCalibrated?.Invoke();
 
                 CurrentHeightCalibrationPhase = HeightCalibrationPhase.PlayerScale;
                 GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Phase 1 Floor Registered. Delta: {deltaY}. Phase 2: Stand upright and press Button 1 to calibrate scale.");
@@ -579,7 +579,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 ApplyScale();
 
                 CurrentHeightCalibrationPhase = HeightCalibrationPhase.None;
-                OnHeightCalibrationCompleted?.Invoke();
+                HeightCalibrationCompleted?.Invoke();
                 
                 GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Phase 2 Scale Registered. HMD Height: {playerRealHeight}m. Extents Scale: {_accumulatedScaleMultiplier:F2}");
             }

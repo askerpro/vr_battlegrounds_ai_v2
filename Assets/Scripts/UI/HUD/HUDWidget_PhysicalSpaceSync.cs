@@ -41,14 +41,14 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         private void SubscribeToEvents()
         {
             var manager = PhysicalSpaceSyncManager.Instance;
-            manager.OnCalibrationStarted += HandleSyncStarted;
-            manager.OnCalibrationCancelled += HandleSyncCancelled;
-            manager.OnFirstAnchorRegistered += HandleFirstAnchorRegistered;
-            // manager.OnSecondAnchorRegistered += HandleSecondAnchorRegistered; // Removed as per instruction
-            manager.OnCalibrationCompleted += HandleSyncCompleted;
+            manager.CalibrationStarted += HandleSyncStarted;
+            manager.CalibrationCancelled += HandleSyncCancelled;
+            manager.FirstAnchorRegistered += HandleFirstAnchorRegistered;
+            // manager.SecondAnchorRegistered += HandleSecondAnchorRegistered; // Removed as per instruction
+            manager.CalibrationCompleted += HandleSyncCompleted;
 
-            manager.OnHeightCalibrationStarted += HandleHeightSyncStarted;
-            manager.OnHeightCalibrationCompleted += HandleHeightSyncCompleted;
+            manager.HeightCalibrationStarted += HandleHeightSyncStarted;
+            manager.HeightCalibrationCompleted += HandleHeightSyncCompleted;
         }
 
         private void UnsubscribeFromEvents()
@@ -56,14 +56,14 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             var manager = PhysicalSpaceSyncManager.Instance;
             if (manager == null) return;
 
-            manager.OnCalibrationStarted -= HandleSyncStarted;
-            manager.OnCalibrationCancelled -= HandleSyncCancelled;
-            manager.OnFirstAnchorRegistered -= HandleFirstAnchorRegistered;
-            manager.OnSecondAnchorRegistered -= HandleSecondAnchorRegistered;
-            manager.OnCalibrationCompleted -= HandleSyncCompleted;
+            manager.CalibrationStarted -= HandleSyncStarted;
+            manager.CalibrationCancelled -= HandleSyncCancelled;
+            manager.FirstAnchorRegistered -= HandleFirstAnchorRegistered;
+            manager.SecondAnchorRegistered -= HandleSecondAnchorRegistered;
+            manager.CalibrationCompleted -= HandleSyncCompleted;
 
-            manager.OnHeightCalibrationStarted -= HandleHeightSyncStarted;
-            manager.OnHeightCalibrationCompleted -= HandleHeightSyncCompleted;
+            manager.HeightCalibrationStarted -= HandleHeightSyncStarted;
+            manager.HeightCalibrationCompleted -= HandleHeightSyncCompleted;
         }
 
         private void HandleSyncStarted()

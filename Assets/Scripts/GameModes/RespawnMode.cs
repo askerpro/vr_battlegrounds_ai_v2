@@ -51,7 +51,7 @@ namespace VrBattlegrounds.GameModes
             GameLog.Match.Info(
                 $"[RespawnMode] Матч начат: {teamsStr}, время: {_matchDuration}с");
             
-            RpcOnMatchStarted();
+            RpcOnModeStarted();
         }
 
         [Server]
@@ -109,15 +109,15 @@ namespace VrBattlegrounds.GameModes
         public override bool SupportsPause => true;
 
         [Server]
-        public override MatchSnapshot CaptureSnapshot()
+        public override PauseSnapshot CaptureSnapshot()
         {
-            MatchSnapshot snapshot = base.CaptureSnapshot();
+            PauseSnapshot snapshot = base.CaptureSnapshot();
             snapshot.TimeRemaining = _matchActive ? _timeRemaining : -1f;
             return snapshot;
         }
 
         [Server]
-        public override void RestoreSnapshot(MatchSnapshot snapshot)
+        public override void RestoreSnapshot(PauseSnapshot snapshot)
         {
             base.RestoreSnapshot(snapshot);
             _resumeTime = snapshot != null ? snapshot.TimeRemaining : -1f;

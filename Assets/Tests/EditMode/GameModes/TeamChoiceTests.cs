@@ -146,12 +146,12 @@ namespace VrBattlegrounds.Tests.Modes
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
 
             mode.ServerTick(0.1f);
-            Assert.AreEqual(EliminationMatchState.WaitingForPlayers, mode.CurrentMatchState,
+            Assert.AreEqual(EliminationState.WaitingForPlayers, mode.CurrentState,
                 "Один игрок ещё без команды режима, а матч начался — он остался бы вне игры.");
 
             late.TeamIndex = 1;
             mode.ServerTick(0.1f);
-            Assert.AreEqual(EliminationMatchState.Active, mode.CurrentMatchState,
+            Assert.AreEqual(EliminationState.Active, mode.CurrentState,
                 "Команда есть у всех — матч обязан начаться.");
         }
 
@@ -168,7 +168,7 @@ namespace VrBattlegrounds.Tests.Modes
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 3, a, b), roster);
             mode.ServerTick(0.1f);
 
-            Assert.AreEqual(EliminationMatchState.WaitingForPlayers, mode.CurrentMatchState,
+            Assert.AreEqual(EliminationState.WaitingForPlayers, mode.CurrentState,
                 "Режим требует трёх игроков, а начал с двумя: минимум взят не из данных режима.");
         }
 
@@ -187,13 +187,13 @@ namespace VrBattlegrounds.Tests.Modes
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
 
             Assert.IsFalse(mode.TeamChoiceLocked, "Контроль: матч ещё не начался.");
-            MatchTeams.ServerPlayerRequest(mode, player, a.teamIndex, 0);
+            TeamChangeRequests.ServerPlayerRequest(mode, player, a.teamIndex, 0);
             Assert.AreEqual(a.teamIndex, player.TeamIndex, "До старта матча игрок не смог выбрать команду сам.");
 
-            SetPrivateField(mode, "_matchState", EliminationMatchState.Active);
+            SetPrivateField(mode, "_state", EliminationState.Active);
             Assert.IsTrue(mode.TeamChoiceLocked, "Матч начался, а выбор команды открыт.");
 
-            MatchTeams.ServerPlayerRequest(mode, player, b.teamIndex, 0);
+            TeamChangeRequests.ServerPlayerRequest(mode, player, b.teamIndex, 0);
             Assert.AreEqual(a.teamIndex, player.TeamIndex, "После старта матча игрок сменил команду сам.");
         }
 
@@ -210,12 +210,12 @@ namespace VrBattlegrounds.Tests.Modes
             roster.Players.Add(player);
 
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
-            SetPrivateField(mode, "_matchState", EliminationMatchState.Active);
+            SetPrivateField(mode, "_state", EliminationState.Active);
 
-            Assert.IsFalse(MatchTeams.ServerAdminAssign(mode, stranger, player, b.teamIndex), "Не-админ выдал команду.");
+            Assert.IsFalse(TeamChangeRequests.ServerAdminAssign(mode, stranger, player, b.teamIndex), "Не-админ выдал команду.");
             Assert.AreEqual(NoTeamIndex, player.TeamIndex);
 
-            Assert.IsTrue(MatchTeams.ServerAdminAssign(mode, admin, player, b.teamIndex), "Админ не смог выдать команду.");
+            Assert.IsTrue(TeamChangeRequests.ServerAdminAssign(mode, admin, player, b.teamIndex), "Админ не смог выдать команду.");
             Assert.AreEqual(b.teamIndex, player.TeamIndex, "Команда, выданная админом после старта, не применилась.");
         }
 
@@ -231,7 +231,7 @@ namespace VrBattlegrounds.Tests.Modes
 
             EliminationMode mode = CreateElimination(CreateModeData("m", TeamAssignmentKind.PlayerChoice, 2, a, b), roster);
 
-            Assert.AreEqual(4, MatchTeams.ServerAdminAutoBalance(mode, admin));
+            Assert.AreEqual(4, TeamChangeRequests.ServerAdminAutoBalance(mode, admin));
             Assert.AreEqual(2, roster.Players.Count(p => p.TeamIndex == 1));
             Assert.AreEqual(2, roster.Players.Count(p => p.TeamIndex == 2));
             Assert.AreEqual(TeamAssignmentKind.PlayerChoice, mode.TeamAssignment,
@@ -251,7 +251,7 @@ namespace VrBattlegrounds.Tests.Modes
             CollectionAssert.AreEqual(new[] { a, b }, MenuTeamSelection.ResolveAvailableTeams(mode, null, null, NoTeamIndex),
                 "До старта игрок без команды выбирает из команд режима.");
 
-            SetPrivateField(mode, "_matchState", EliminationMatchState.Active);
+            SetPrivateField(mode, "_state", EliminationState.Active);
             CollectionAssert.AreEqual(new[] { a }, MenuTeamSelection.ResolveAvailableTeams(mode, null, null, a.teamIndex),
                 "После старта планшет предлагает сменить команду.");
             CollectionAssert.IsEmpty(MenuTeamSelection.ResolveAvailableTeams(mode, null, null, NoTeamIndex),

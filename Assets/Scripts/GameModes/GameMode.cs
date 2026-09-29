@@ -30,10 +30,10 @@ namespace VrBattlegrounds.GameModes
         // ── Глобальные семантические события для UI (Клиент) ───────────────
 
         /// <summary>Срабатывает на клиенте при старте матча.</summary>
-        public static event Action OnMatchStartedLocal;
+        public static event Action ModeStartedLocal;
 
         /// <summary>Срабатывает на клиенте при завершении матча. Null = ничья.</summary>
-        public static event Action<TeamData> OnMatchEndedLocal;
+        public static event Action<TeamData> ModeFinishedLocal;
 
         // Команды передаются через Initialize() на сервере.
         private TeamData[] _teams = new TeamData[0];
@@ -73,15 +73,15 @@ namespace VrBattlegrounds.GameModes
         public override void OnStartServer()
         {
             base.OnStartServer();
-            MatchTeams.TeamChangeRequested += OnPlayerTeamChange;
-            PlayersManager.OnSessionConnected += HandleSessionConnected;
+            TeamChangeRequests.TeamChangeRequested += OnPlayerTeamChange;
+            PlayersManager.SessionConnected += HandleSessionConnected;
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
-            MatchTeams.TeamChangeRequested -= OnPlayerTeamChange;
-            PlayersManager.OnSessionConnected -= HandleSessionConnected;
+            TeamChangeRequests.TeamChangeRequested -= OnPlayerTeamChange;
+            PlayersManager.SessionConnected -= HandleSessionConnected;
         }
 
         /// <summary>
@@ -90,8 +90,8 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         private void OnDestroy()
         {
-            PlayersManager.OnSessionConnected -= HandleSessionConnected;
-            MatchTeams.TeamChangeRequested -= OnPlayerTeamChange;
+            PlayersManager.SessionConnected -= HandleSessionConnected;
+            TeamChangeRequests.TeamChangeRequested -= OnPlayerTeamChange;
         }
 
         /// <summary>
@@ -396,9 +396,9 @@ namespace VrBattlegrounds.GameModes
         /// с раундами добавляет своё. Прерванный раунд в снимок не входит.
         /// </summary>
         [Server]
-        public virtual MatchSnapshot CaptureSnapshot()
+        public virtual PauseSnapshot CaptureSnapshot()
         {
-            var snapshot = new MatchSnapshot { ModeId = ModeData != null ? ModeData.modeId : "" };
+            var snapshot = new PauseSnapshot { ModeId = ModeData != null ? ModeData.modeId : "" };
             foreach (KeyValuePair<int, int> pair in _teamScores) snapshot.TeamScores[pair.Key] = pair.Value;
             return snapshot;
         }
@@ -408,7 +408,7 @@ namespace VrBattlegrounds.GameModes
         /// (она обнуляет счёт) и до старта режима.
         /// </summary>
         [Server]
-        public virtual void RestoreSnapshot(MatchSnapshot snapshot)
+        public virtual void RestoreSnapshot(PauseSnapshot snapshot)
         {
             if (snapshot == null) return;
 
@@ -506,23 +506,23 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         protected void RaiseFinished(TeamData winner)
         {
-            RpcOnMatchEnded(winner != null ? winner.teamIndex : -1);
+            RpcOnModeFinished(winner != null ? winner.teamIndex : -1);
             Finished?.Invoke(winner);
         }
 
         // ── Сетевые вызовы для UI ──────────────────────────────────────────
 
         [ClientRpc]
-        protected void RpcOnMatchStarted()
+        protected void RpcOnModeStarted()
         {
-            OnMatchStartedLocal?.Invoke();
+            ModeStartedLocal?.Invoke();
         }
 
         [ClientRpc]
-        protected void RpcOnMatchEnded(int winnerIndex)
+        protected void RpcOnModeFinished(int winnerIndex)
         {
             TeamData winner = winnerIndex >= 0 ? TeamRegistry.Instance.GetByIndex(winnerIndex) : null;
-            OnMatchEndedLocal?.Invoke(winner);
+            ModeFinishedLocal?.Invoke(winner);
         }
     }
 }

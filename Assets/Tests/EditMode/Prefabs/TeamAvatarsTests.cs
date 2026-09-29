@@ -25,7 +25,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         private const string ManagersPrefabPath = "Assets/Prefabs/Managers/--- MANAGERS ---.prefab";
 
         /// <summary>Команды матча: команды всех режимов (у разминки команд нет).</summary>
-        public static IEnumerable<TeamData> MatchTeams() =>
+        public static IEnumerable<TeamData> TeamChangeRequests() =>
             AssetDatabase.FindAssets("t:GameModeData")
                          .Select(AssetDatabase.GUIDToAssetPath)
                          .Select(AssetDatabase.LoadAssetAtPath<GameModeData>)
@@ -54,10 +54,10 @@ namespace VrBattlegrounds.Tests.Prefabs
         [Test]
         public void Команды_матча_найдены()
         {
-            Assert.That(MatchTeams().Count(), Is.GreaterThanOrEqualTo(2), "У режимов матча меньше двух команд — сравнивать нечего");
+            Assert.That(TeamChangeRequests().Count(), Is.GreaterThanOrEqualTo(2), "У режимов матча меньше двух команд — сравнивать нечего");
         }
 
-        [TestCaseSource(nameof(MatchTeams))]
+        [TestCaseSource(nameof(TeamChangeRequests))]
         public void У_команды_матча_один_зарегистрированный_аватар(TeamData team)
         {
             Assert.That(team.avatars.Count, Is.EqualTo(1), $"{team.displayName}: аватаров {team.avatars.Count}, нужен один.");
@@ -68,7 +68,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         [Test]
         public void У_команд_матча_разный_вид()
         {
-            var looks = MatchTeams().Select(t => (team: t.displayName, look: Look(t.GetAvatarPrefab(0)))).ToList();
+            var looks = TeamChangeRequests().Select(t => (team: t.displayName, look: Look(t.GetAvatarPrefab(0)))).ToList();
 
             for (int i = 0; i < looks.Count; i++)
             for (int j = i + 1; j < looks.Count; j++)

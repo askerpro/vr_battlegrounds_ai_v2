@@ -272,11 +272,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             // Фазы пишем в ленту с момента старта матча: замер длительностей ниже
             // опирается именно на неё.
-            EliminationMode.OnRoundPhaseChangedLocal += MarkPhase;
+            EliminationMode.RoundPhaseChangedLocal += MarkPhase;
 
             try
             {
-                MapReferee.Instance.StartMatch();
+                MapReferee.Instance.GoLive();
 
                 EliminationMode elimination = null;
                 deadline = Now + 60f;
@@ -548,7 +548,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
             finally
             {
-                EliminationMode.OnRoundPhaseChangedLocal -= MarkPhase;
+                EliminationMode.RoundPhaseChangedLocal -= MarkPhase;
             }
         }
 
@@ -564,7 +564,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             DisableDebugOrchestrator();
 
-            EliminationMode.OnRoundPhaseChangedLocal += MarkPhase;
+            EliminationMode.RoundPhaseChangedLocal += MarkPhase;
 
             try
             {
@@ -790,7 +790,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
             finally
             {
-                EliminationMode.OnRoundPhaseChangedLocal -= MarkPhase;
+                EliminationMode.RoundPhaseChangedLocal -= MarkPhase;
             }
         }
 
@@ -1261,7 +1261,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             StringBuilder sb = new StringBuilder();
 
             sb.Append("фаза=").Append(mode != null ? mode.CurrentRoundPhase.ToString() : "нет режима")
-              .Append(", матч=").Append(mode != null ? mode.CurrentMatchState.ToString() : "?")
+              .Append(", матч=").Append(mode != null ? mode.CurrentState.ToString() : "?")
               .Append(", раунд=").Append(mode != null ? mode.CurrentRoundNumber : -1)
               .Append(", неготовы=[").Append(DescribePending(mode)).Append("]");
 

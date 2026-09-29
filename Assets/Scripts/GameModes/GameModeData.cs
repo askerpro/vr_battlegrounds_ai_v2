@@ -9,7 +9,7 @@ namespace VrBattlegrounds.GameModes
     /// Создать: ПКМ в Project → Create → VrBattlegrounds → Game Mode Data
     ///
     /// <see cref="modePrefab"/> — префаб с компонентом <see cref="GameMode"/>.
-    /// MapReferee инстанцирует его при StartMatch() и уничтожает при StopMatch().
+    /// MapReferee инстанцирует его при GoLive() («Начать матч») и уничтожает при Stop().
     /// Команды из <see cref="teams"/> передаются в режим через <see cref="GameMode.Initialize"/>.
     /// По сети передаётся только строка <see cref="modeId"/>; данные по ней ищет
     /// <c>SessionManager.FindModeData</c> в <see cref="GameModeRegistry"/> — единственное место поиска.
@@ -39,7 +39,7 @@ namespace VrBattlegrounds.GameModes
         [Tooltip("Две команды, участвующие в режиме. Назначить TeamData assets из Assets/Data/Teams/.")]
         public TeamData[] teams = new TeamData[0];
 
-        [Tooltip("Префаб с компонентом GameMode. Инстанцируется MapReferee при StartMatch, уничтожается при StopMatch.\nПрефаб должен содержать компонент-наследник GameMode (RespawnMode, EliminationMode).")]
+        [Tooltip("Префаб с компонентом GameMode. Инстанцируется MapReferee при GoLive («Начать матч»), уничтожается при Stop.\nПрефаб должен содержать компонент-наследник GameMode (RespawnMode, EliminationMode).")]
         public GameObject modePrefab;
 
         [Tooltip("Как режим раздаёт свои команды игрокам без команды режима.\n" +

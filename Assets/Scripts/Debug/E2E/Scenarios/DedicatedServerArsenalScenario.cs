@@ -18,7 +18,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     ///
     /// <b>NET-06.</b> Смена фазы раунда рассылалась через
     /// <c>[ClientRpc] EliminationMode.RpcOnRoundPhaseChanged</c>, который поднимает
-    /// статическое событие <see cref="EliminationMode.OnRoundPhaseChangedLocal"/>.
+    /// статическое событие <see cref="EliminationMode.RoundPhaseChangedLocal"/>.
     /// В режиме <c>ServerOnly</c> ClientRpc локально не исполняется, поэтому на
     /// выделенном сервере событие не срабатывало, и стена арсенала не открывалась
     /// и не пополнялась. На хосте баг не виден — там сервер сам является клиентом.
@@ -106,7 +106,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         // ── Наблюдение ────────────────────────────────────────────────────
 
-        /// <summary>Фазы, пришедшие через <c>OnRoundPhaseChangedLocal</c> (то, что ловит арсенал).</summary>
+        /// <summary>Фазы, пришедшие через <c>RoundPhaseChangedLocal</c> (то, что ловит арсенал).</summary>
         private readonly List<RoundPhase> _eventPhases = new List<RoundPhase>();
 
         /// <summary>Фазы, увиденные опросом SyncVar (то, что реально происходит на сервере).</summary>
@@ -294,11 +294,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             string arsenalStatesBefore = DescribeWallStates(walls);
 
             // ── 6. Матч и фазы раунда ─────────────────────────────────────
-            EliminationMode.OnRoundPhaseChangedLocal += OnRoundPhaseEvent;
+            EliminationMode.RoundPhaseChangedLocal += OnRoundPhaseEvent;
 
             try
             {
-                MapReferee.Instance.StartMatch();
+                MapReferee.Instance.GoLive();
 
                 EliminationMode elimination = null;
                 deadline = Now + 60f;
@@ -335,9 +335,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 bool phaseOk = observed != RoundPhase.Setup;
                 result.Set(CheckPhase, phaseOk,
                     phaseOk
-                        ? $"фаза сменилась на {observed}; матч={elimination.CurrentMatchState}; " +
+                        ? $"фаза сменилась на {observed}; матч={elimination.CurrentState}; " +
                           $"наблюдённые фазы (SyncVar): {Join(_syncVarPhases)}"
-                        : $"за 90 с фаза осталась Setup; матч={elimination.CurrentMatchState}; " +
+                        : $"за 90 с фаза осталась Setup; матч={elimination.CurrentState}; " +
                           $"команды: {teamsReport}. Матч не вышел из WaitingForPlayers: " +
                           "EliminationMode.IsPlayersReady требует, чтобы игрок был в каждой команде.");
 
@@ -364,8 +364,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 bool eventOk = _eventPhases.Count > 0;
                 result.Set(CheckEvent, eventOk,
                     eventOk
-                        ? $"EliminationMode.OnRoundPhaseChangedLocal сработало {_eventPhases.Count} раз(а): {Join(_eventPhases)}"
-                        : "EliminationMode.OnRoundPhaseChangedLocal не сработало ни разу, хотя SyncVar-фазы менялись: " +
+                        ? $"EliminationMode.RoundPhaseChangedLocal сработало {_eventPhases.Count} раз(а): {Join(_eventPhases)}"
+                        : "EliminationMode.RoundPhaseChangedLocal не сработало ни разу, хотя SyncVar-фазы менялись: " +
                           $"{Join(_syncVarPhases)}. Это NET-06: событие поднимается только внутри " +
                           "[ClientRpc] RpcOnRoundPhaseChanged, а в режиме ServerOnly ClientRpc локально не исполняется.");
 
@@ -493,7 +493,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
             finally
             {
-                EliminationMode.OnRoundPhaseChangedLocal -= OnRoundPhaseEvent;
+                EliminationMode.RoundPhaseChangedLocal -= OnRoundPhaseEvent;
             }
         }
 
@@ -584,7 +584,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             // событие, что и стена арсенала на сервере. Если на клиенте оно
             // сработает, а на сервере нет, отличие изолировано до роли процесса:
             // код, событие и способ наблюдения одни и те же.
-            EliminationMode.OnRoundPhaseChangedLocal += OnRoundPhaseEvent;
+            EliminationMode.RoundPhaseChangedLocal += OnRoundPhaseEvent;
 
             // Штатный путь — Mirror NetworkDiscovery (UDP-броадкаст), его запускает
             // GameNetworkDiscovery. Если броадкаст не доехал (частая беда на одной
@@ -653,15 +653,15 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             while (_eventPhases.Count == 0 && Now < deadline)
                 yield return null;
 
-            EliminationMode.OnRoundPhaseChangedLocal -= OnRoundPhaseEvent;
+            EliminationMode.RoundPhaseChangedLocal -= OnRoundPhaseEvent;
 
             bool eventOk = _eventPhases.Count > 0;
             result.Set(CheckClientEvent, eventOk,
                 eventOk
-                    ? $"OnRoundPhaseChangedLocal сработало {_eventPhases.Count} раз(а): {Join(_eventPhases)}. " +
+                    ? $"RoundPhaseChangedLocal сработало {_eventPhases.Count} раз(а): {Join(_eventPhases)}. " +
                       "На клиенте ClientRpc исполняется, значит красная проверка на сервере — " +
                       "не дефект харнесса, а разница ролей (NET-06)"
-                    : "за 120 с OnRoundPhaseChangedLocal не сработало и на клиенте. " +
+                    : "за 120 с RoundPhaseChangedLocal не сработало и на клиенте. " +
                       "Тогда сигнал теряется раньше, чем в ClientRpc: смотри server.log на предмет " +
                       "смены фазы раунда вообще");
 
@@ -873,7 +873,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private void OnRoundPhaseEvent(RoundPhase state)
         {
             _eventPhases.Add(state);
-            GameLog.Debug.Info($"[E2E] OnRoundPhaseChangedLocal -> {state}");
+            GameLog.Debug.Info($"[E2E] RoundPhaseChangedLocal -> {state}");
         }
 
         /// <summary>

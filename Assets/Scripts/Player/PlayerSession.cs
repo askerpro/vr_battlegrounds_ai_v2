@@ -20,7 +20,7 @@ namespace VrBattlegrounds.Player
         public static PlayerSession LocalSession { get; private set; }
 
         // ── События сервера ───────────────────────────────────────────────────
-        public event Action<PlayerSession> OnSessionReady;
+        public event Action<PlayerSession> SessionReady;
 
         /// <summary>
         /// Аватар локального игрока появился, сменился (скин, карта) или исчез (null).
@@ -282,7 +282,7 @@ namespace VrBattlegrounds.Player
         {
             base.OnStartServer();
             GameLog.Player.Info($"[PlayerSession] {netId} started on server for {PlayerName}.");
-            OnSessionReady?.Invoke(this);
+            SessionReady?.Invoke(this);
         }
 
         public override void OnStartClient()
@@ -338,7 +338,7 @@ namespace VrBattlegrounds.Player
         ///
         /// Текущее значение отправляется сразу: игрок обычно калибруется в лобби,
         /// то есть до того, как сервер создаст ему сессию, и одного события
-        /// <c>OnHeightCalibrationCompleted</c> не хватило бы — оно уже прошло.
+        /// <c>HeightCalibrationCompleted</c> не хватило бы — оно уже прошло.
         /// </summary>
         private void SubscribeToLocalCalibration()
         {
@@ -354,12 +354,12 @@ namespace VrBattlegrounds.Player
 
             if (!_subscribedToCalibration)
             {
-                sync.OnHeightCalibrationCompleted += PublishLocalCalibration;
-                sync.OnFloorHeightCalibrated += PublishLocalCalibration;
+                sync.HeightCalibrationCompleted += PublishLocalCalibration;
+                sync.FloorHeightCalibrated += PublishLocalCalibration;
 
                 // Калибровка по якорям — отдельная процедура со своим событием, и именно
                 // она отвечает на вопрос «известно ли, где игрок стоит в арене» (T-30).
-                sync.OnCalibrationCompleted += PublishLocalCalibration;
+                sync.CalibrationCompleted += PublishLocalCalibration;
                 _subscribedToCalibration = true;
             }
 
@@ -373,9 +373,9 @@ namespace VrBattlegrounds.Player
             PhysicalSpaceSyncManager sync = PhysicalSpaceSyncManager.Instance;
             if (sync != null)
             {
-                sync.OnHeightCalibrationCompleted -= PublishLocalCalibration;
-                sync.OnFloorHeightCalibrated -= PublishLocalCalibration;
-                sync.OnCalibrationCompleted -= PublishLocalCalibration;
+                sync.HeightCalibrationCompleted -= PublishLocalCalibration;
+                sync.FloorHeightCalibrated -= PublishLocalCalibration;
+                sync.CalibrationCompleted -= PublishLocalCalibration;
             }
 
             _subscribedToCalibration = false;
@@ -571,7 +571,7 @@ namespace VrBattlegrounds.Player
             if (MapReferee.Instance != null)
             {
                 GameLog.Player.Info($"[PlayerSession] {PlayerName}: Клиент запросил смену команды на {newTeamId} и скина на {newAvatarId}");
-                MatchTeams.ServerPlayerRequest(MapReferee.Instance.ActiveGameMode, this, newTeamId, newAvatarId);
+                TeamChangeRequests.ServerPlayerRequest(MapReferee.Instance.ActiveGameMode, this, newTeamId, newAvatarId);
             }
             else if (AvatarManager.Instance != null)
             {
@@ -594,7 +594,7 @@ namespace VrBattlegrounds.Player
                 ? identity.GetComponent<PlayerSession>()
                 : null;
 
-            MatchTeams.ServerAdminAssign(MapReferee.Instance.ActiveGameMode, this, target, teamId);
+            TeamChangeRequests.ServerAdminAssign(MapReferee.Instance.ActiveGameMode, this, target, teamId);
         }
 
         /// <summary>
@@ -623,27 +623,27 @@ namespace VrBattlegrounds.Player
         public void CmdAdminAutoBalance()
         {
             if (MapReferee.Instance != null)
-                MatchTeams.ServerAdminAutoBalance(MapReferee.Instance.ActiveGameMode, this);
+                TeamChangeRequests.ServerAdminAutoBalance(MapReferee.Instance.ActiveGameMode, this);
         }
 
         /// <summary>
         /// Админ (эта сессия) жмёт кнопку управления матчем: «Начать матч», «Пауза»,
-        /// «Продолжить», «Стоп». Право и уместность проверяет сервер (<c>AdminMatchCommands</c>).
+        /// «Продолжить», «Стоп». Право и уместность проверяет сервер (<c>AdminMapCommands</c>).
         /// </summary>
         [Command]
-        public void CmdAdminMatchCommand(MatchCommand command)
+        public void CmdAdminMapCommand(MapCommand command)
         {
-            AdminMatchCommands.ServerExecute(this, command);
+            AdminMapCommands.ServerExecute(this, command);
         }
 
         /// <summary>
         /// Админ (эта сессия) запускает серию из очереди карт меню выбора сессии.
-        /// Право проверяет сервер (<c>AdminMatchCommands.ServerStartSeries</c>).
+        /// Право проверяет сервер (<c>AdminMapCommands.ServerStartSeries</c>).
         /// </summary>
         [Command]
         public void CmdAdminStartSeries(string modeId, string[] maps)
         {
-            AdminMatchCommands.ServerStartSeries(this, modeId, maps);
+            AdminMapCommands.ServerStartSeries(this, modeId, maps);
         }
 
         [Command]

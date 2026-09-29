@@ -275,7 +275,7 @@ UltimateXR кладёт предмет в карман только в моме�
 не зовёт. Исправлено: колбэк молчит при `NetworkServer.active`, `Initialize` перебирает свою копию.
 Проверка — `MatchFlowTests` (фабрика режимов зовёт `Awake`, как игра).
 
-### «NullReferenceException в `MapReferee.StartMatch` / `get_isServer` при загрузке карты»
+### «NullReferenceException в `MapReferee.GoLive` / `get_isServer` при загрузке карты»
 
 «Начать матч» пришёл из `Awake` оркестратора (автостарт `DebugOrchestrator` по
 `SubscribeToInstance`), когда `NetworkIdentity` ещё не связала компоненты. Исправлено: запрос

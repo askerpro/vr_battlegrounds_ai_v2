@@ -48,7 +48,7 @@ namespace VrBattlegrounds.UI.HUD
     {
         /// <summary>
         /// Смена фазы раунда. Итог боя (<see cref="RoundPhase.Resolution"/>) — только звук: победителя
-        /// тем же моментом сообщает <c>OnRoundEndedLocal</c>, и текст фазы затёр бы его.
+        /// тем же моментом сообщает <c>RoundEndedLocal</c>, и текст фазы затёр бы его.
         /// </summary>
         public static HudMessage Phase(RoundPhase state, string score)
         {

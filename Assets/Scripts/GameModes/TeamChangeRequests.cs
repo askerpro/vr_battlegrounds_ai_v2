@@ -18,7 +18,7 @@ namespace VrBattlegrounds.GameModes
     /// <c>MapReferee.Instance.ActiveGameMode</c>, тесты — свой режим.
     /// </para>
     /// </summary>
-    public static class MatchTeams
+    public static class TeamChangeRequests
     {
         /// <summary>Серверное событие: игроку меняют команду/скин (хуки режима — сброс статистики и т.п.).</summary>
         public static event Action<PlayerSession, int, int> TeamChangeRequested;
@@ -40,22 +40,22 @@ namespace VrBattlegrounds.GameModes
             if (session == null) return false;
 
             GameLog.Match.Info(
-                $"[MatchTeams] Игрок {session.PlayerName} запросил смену: Команда {newTeamId}, Скин {newAvatarId}");
+                $"[TeamChangeRequests] Игрок {session.PlayerName} запросил смену: Команда {newTeamId}, Скин {newAvatarId}");
 
             if (!TeamChangeRules.CanPlayerChoose(mode, session.TeamIndex, newTeamId, out string reason))
             {
-                GameLog.Match.Warning($"[MatchTeams] Смена отклонена ({session.PlayerName}): {reason}.");
+                GameLog.Match.Warning($"[TeamChangeRequests] Смена отклонена ({session.PlayerName}): {reason}.");
                 return false;
             }
 
             TeamData team = FindTeam(mode, newTeamId);
             if (team == null)
             {
-                GameLog.Match.Warning($"[MatchTeams] Смена отклонена ({session.PlayerName}): команды {newTeamId} нет в реестре.");
+                GameLog.Match.Warning($"[TeamChangeRequests] Смена отклонена ({session.PlayerName}): команды {newTeamId} нет в реестре.");
                 return false;
             }
 
-            SessionTeamAssigner.Apply(session, team, newAvatarId, "MatchTeams/выбор игрока");
+            SessionTeamAssigner.Apply(session, team, newAvatarId, "TeamChangeRequests/выбор игрока");
             return true;
         }
 
@@ -68,18 +68,18 @@ namespace VrBattlegrounds.GameModes
         {
             if (!SessionPermissions.IsAdmin(admin))
             {
-                GameLog.Match.Warning($"[MatchTeams] Выдача команды отклонена: {(admin != null ? admin.PlayerName : "null")} не админ.");
+                GameLog.Match.Warning($"[TeamChangeRequests] Выдача команды отклонена: {(admin != null ? admin.PlayerName : "null")} не админ.");
                 return false;
             }
 
             TeamData team = FindTeam(mode, teamId);
             if (target == null || team == null)
             {
-                GameLog.Match.Warning($"[MatchTeams] Выдача команды отклонена: нет игрока или команды {teamId}.");
+                GameLog.Match.Warning($"[TeamChangeRequests] Выдача команды отклонена: нет игрока или команды {teamId}.");
                 return false;
             }
 
-            SessionTeamAssigner.Apply(target, team, $"MatchTeams/админ {admin.PlayerName}");
+            SessionTeamAssigner.Apply(target, team, $"TeamChangeRequests/админ {admin.PlayerName}");
             return true;
         }
 
@@ -100,7 +100,7 @@ namespace VrBattlegrounds.GameModes
 
             var plan = TeamAutoBalance.Plan(mode.Teams, players, s => s.TeamIndex);
             foreach (var pair in plan)
-                SessionTeamAssigner.Apply(pair.Key, pair.Value, $"MatchTeams/автобаланс админа {admin.PlayerName}");
+                SessionTeamAssigner.Apply(pair.Key, pair.Value, $"TeamChangeRequests/автобаланс админа {admin.PlayerName}");
 
             return plan.Count;
         }

@@ -12,10 +12,10 @@ namespace VrBattlegrounds.UI.Menu
     ///
     /// <para>
     /// Каждая кнопка видна только админу и только когда имеет смысл
-    /// (<see cref="AdminMatchCommands.IsAvailable(MatchCommand)"/> по реплицированному
+    /// (<see cref="AdminMapCommands.IsAvailable(MapCommand)"/> по реплицированному
     /// состоянию): «Пауза» — во время матча, «Продолжить» — на паузе, «Следующая карта» —
     /// в разминке идущей серии (на последней карте надпись «В лобби»). Нажатие уходит на
-    /// сервер командой сессии (<c>PlayerSession.CmdAdminMatchCommand</c>), право и
+    /// сервер командой сессии (<c>PlayerSession.CmdAdminMapCommand</c>), право и
     /// уместность сервер проверяет ещё раз.
     /// </para>
     /// </summary>
@@ -36,16 +36,16 @@ namespace VrBattlegrounds.UI.Menu
 
         private void Awake()
         {
-            Wire(_startMatchButton, MatchCommand.StartMatch);
-            Wire(_pauseButton, MatchCommand.Pause);
-            Wire(_resumeButton, MatchCommand.Resume);
-            Wire(_stopButton, MatchCommand.Stop);
-            Wire(_nextMapButton, MatchCommand.NextMap);
+            Wire(_startMatchButton, MapCommand.GoLive);
+            Wire(_pauseButton, MapCommand.Pause);
+            Wire(_resumeButton, MapCommand.Resume);
+            Wire(_stopButton, MapCommand.Stop);
+            Wire(_nextMapButton, MapCommand.NextMap);
 
             if (_nextMapButton != null) _nextMapLabel = _nextMapButton.GetComponentInChildren<TMPro.TMP_Text>(true);
         }
 
-        private void Wire(Button button, MatchCommand command)
+        private void Wire(Button button, MapCommand command)
         {
             if (button != null) button.onClick.AddListener(() => Send(command));
         }
@@ -55,11 +55,11 @@ namespace VrBattlegrounds.UI.Menu
             bool admin = MenuPlayersTeams.IsLocalAdmin();
             bool any = false;
 
-            any |= Show(_startMatchButton, admin && AdminMatchCommands.IsAvailable(MatchCommand.StartMatch));
-            any |= Show(_pauseButton, admin && AdminMatchCommands.IsAvailable(MatchCommand.Pause));
-            any |= Show(_resumeButton, admin && AdminMatchCommands.IsAvailable(MatchCommand.Resume));
-            any |= Show(_stopButton, admin && AdminMatchCommands.IsAvailable(MatchCommand.Stop));
-            any |= Show(_nextMapButton, admin && AdminMatchCommands.IsAvailable(MatchCommand.NextMap));
+            any |= Show(_startMatchButton, admin && AdminMapCommands.IsAvailable(MapCommand.GoLive));
+            any |= Show(_pauseButton, admin && AdminMapCommands.IsAvailable(MapCommand.Pause));
+            any |= Show(_resumeButton, admin && AdminMapCommands.IsAvailable(MapCommand.Resume));
+            any |= Show(_stopButton, admin && AdminMapCommands.IsAvailable(MapCommand.Stop));
+            any |= Show(_nextMapButton, admin && AdminMapCommands.IsAvailable(MapCommand.NextMap));
 
             if (_nextMapLabel != null)
             {
@@ -80,7 +80,7 @@ namespace VrBattlegrounds.UI.Menu
             return visible;
         }
 
-        private static void Send(MatchCommand command)
+        private static void Send(MapCommand command)
         {
             if (PlayerSession.LocalSession == null)
             {
@@ -89,13 +89,7 @@ namespace VrBattlegrounds.UI.Menu
             }
 
             GameLog.UI.Info($"[MenuMatchManager] Админ: {command}.");
-            PlayerSession.LocalSession.CmdAdminMatchCommand(command);
+            PlayerSession.LocalSession.CmdAdminMapCommand(command);
         }
-
-        /// <summary>«Начать матч» — для старых привязок кнопок в инспекторе.</summary>
-        public void OnStartMatchPressed() => Send(MatchCommand.StartMatch);
-
-        /// <summary>«Стоп» — конец всей серии, возврат в лобби.</summary>
-        public void OnStopMatchPressed() => Send(MatchCommand.Stop);
     }
 }

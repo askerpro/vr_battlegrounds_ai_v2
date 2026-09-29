@@ -69,15 +69,15 @@ namespace VrBattlegrounds.UI.HUD
                 _hudManager.OnNotificationReceived += ShowNotification;
 
             // Глобальные семантические события для всех режимов
-            GameMode.OnMatchStartedLocal += HandleMatchStarted;
-            GameMode.OnMatchEndedLocal += HandleMatchEnded;
+            GameMode.ModeStartedLocal += HandleModeStarted;
+            GameMode.ModeFinishedLocal += HandleModeFinished;
             MapReferee.PlayerKilledLocal += HandlePlayerKilled;
 
             // Семантические события специфичные для EliminationMode
-            EliminationMode.OnRoundStartedLocal += HandleRoundStarted;
-            EliminationMode.OnRoundEndedLocal += HandleRoundEnded;
-            EliminationMode.OnRoundPhaseChangedLocal += HandleRoundPhaseChanged;
-            EliminationMode.OnSidesSwappedLocal += HandleSidesSwapped;
+            EliminationMode.RoundStartedLocal += HandleRoundStarted;
+            EliminationMode.RoundEndedLocal += HandleRoundEnded;
+            EliminationMode.RoundPhaseChangedLocal += HandleRoundPhaseChanged;
+            EliminationMode.SidesSwappedLocal += HandleSidesSwapped;
         }
 
         private void OnDestroy()
@@ -85,14 +85,14 @@ namespace VrBattlegrounds.UI.HUD
             if (_hudManager != null)
                 _hudManager.OnNotificationReceived -= ShowNotification;
 
-            GameMode.OnMatchStartedLocal -= HandleMatchStarted;
-            GameMode.OnMatchEndedLocal -= HandleMatchEnded;
+            GameMode.ModeStartedLocal -= HandleModeStarted;
+            GameMode.ModeFinishedLocal -= HandleModeFinished;
             MapReferee.PlayerKilledLocal -= HandlePlayerKilled;
 
-            EliminationMode.OnRoundStartedLocal -= HandleRoundStarted;
-            EliminationMode.OnRoundEndedLocal -= HandleRoundEnded;
-            EliminationMode.OnRoundPhaseChangedLocal -= HandleRoundPhaseChanged;
-            EliminationMode.OnSidesSwappedLocal -= HandleSidesSwapped;
+            EliminationMode.RoundStartedLocal -= HandleRoundStarted;
+            EliminationMode.RoundEndedLocal -= HandleRoundEnded;
+            EliminationMode.RoundPhaseChangedLocal -= HandleRoundPhaseChanged;
+            EliminationMode.SidesSwappedLocal -= HandleSidesSwapped;
         }
 
         private void HandleSidesSwapped() => Enqueue(HudNotificationTexts.SidesSwapped());
@@ -141,10 +141,10 @@ namespace VrBattlegrounds.UI.HUD
 
         // ── Обработчики семантических событий ────────────────────────────────
 
-        private void HandleMatchStarted()
+        private void HandleModeStarted()
             => Enqueue(new HudMessage("Матч начался! В бой!", 4f, HudSound.Beep));
 
-        private void HandleMatchEnded(TeamData winner)
+        private void HandleModeFinished(TeamData winner)
         {
             Enqueue(new HudMessage(winner != null ? $"Матч завершен!\nПобедили {winner.Name}!" : "Матч завершился вничью!",
                                    5f, HudSound.Beep));

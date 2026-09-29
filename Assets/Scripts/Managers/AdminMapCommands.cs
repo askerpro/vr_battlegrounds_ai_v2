@@ -4,10 +4,10 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Managers
 {
     /// <summary>Кнопки админа на карте.</summary>
-    public enum MatchCommand
+    public enum MapCommand
     {
         /// <summary>«Начать матч»: разминка → режим матча на месте.</summary>
-        StartMatch = 0,
+        GoLive = 0,
         /// <summary>«Пауза»: раунд прерывается без победителя, карта — в разминку.</summary>
         Pause = 1,
         /// <summary>«Продолжить»: матч с прерванного раунда.</summary>
@@ -31,7 +31,7 @@ namespace VrBattlegrounds.Managers
     /// исполняется. Право админа — <see cref="SessionPermissions.IsAdmin"/>.
     /// </para>
     /// </summary>
-    public static class AdminMatchCommands
+    public static class AdminMapCommands
     {
         /// <summary>
         /// Имеет ли кнопка смысл сейчас: «Начать матч» — на карте с режимом матча, когда матча
@@ -39,27 +39,27 @@ namespace VrBattlegrounds.Managers
         /// «Стоп» — пока идёт серия; «Следующая карта» — в разминке идущей серии (во время матча
         /// и на паузе переход оборвал бы игру на карте).
         /// </summary>
-        public static bool IsAvailable(MatchCommand command, MapState state, bool modeSupportsPause,
+        public static bool IsAvailable(MapCommand command, MapState state, bool modeSupportsPause,
                                        bool mapHasMatchModes, bool seriesRunning)
         {
             switch (command)
             {
-                case MatchCommand.StartMatch: return state == MapState.Warmup && mapHasMatchModes;
-                case MatchCommand.Pause: return state == MapState.Live && modeSupportsPause;
-                case MatchCommand.Resume: return state == MapState.Paused;
-                case MatchCommand.Stop: return seriesRunning;
-                case MatchCommand.NextMap: return state == MapState.Warmup && seriesRunning;
+                case MapCommand.GoLive: return state == MapState.Warmup && mapHasMatchModes;
+                case MapCommand.Pause: return state == MapState.Live && modeSupportsPause;
+                case MapCommand.Resume: return state == MapState.Paused;
+                case MapCommand.Stop: return seriesRunning;
+                case MapCommand.NextMap: return state == MapState.Warmup && seriesRunning;
                 default: return false;
             }
         }
 
         /// <summary>То же правило по живым объектам этой машины.</summary>
-        public static bool IsAvailable(MatchCommand command)
+        public static bool IsAvailable(MapCommand command)
         {
             MapReferee manager = MapReferee.Instance;
             Series series = Series.Instance;
 
-            if (manager == null) return command == MatchCommand.Stop && series != null && series.IsRunning;
+            if (manager == null) return command == MapCommand.Stop && series != null && series.IsRunning;
 
             bool supportsPause = manager.ActiveGameMode != null && manager.ActiveGameMode.SupportsPause;
             bool hasMatch = manager.CurrentMap == null ||
@@ -77,7 +77,7 @@ namespace VrBattlegrounds.Managers
         {
             if (!SessionPermissions.IsAdmin(admin))
             {
-                GameLog.Match.Warning($"[AdminMatchCommands] Старт серии отклонён: {(admin != null ? admin.PlayerName : "null")} не админ.");
+                GameLog.Match.Warning($"[AdminMapCommands] Старт серии отклонён: {(admin != null ? admin.PlayerName : "null")} не админ.");
                 return false;
             }
 
@@ -96,7 +96,7 @@ namespace VrBattlegrounds.Managers
 
             if (valid.Count == 0)
             {
-                GameLog.Match.Warning($"[AdminMatchCommands] Старт серии отклонён: нет совместимых карт для '{modeId}'.");
+                GameLog.Match.Warning($"[AdminMapCommands] Старт серии отклонён: нет совместимых карт для '{modeId}'.");
                 return false;
             }
 
@@ -105,34 +105,34 @@ namespace VrBattlegrounds.Managers
             return true;
         }
 
-        /// <summary>Исполнение на сервере. Зовёт <c>PlayerSession.CmdAdminMatchCommand</c>.</summary>
+        /// <summary>Исполнение на сервере. Зовёт <c>PlayerSession.CmdAdminMapCommand</c>.</summary>
         /// <returns>true — команда исполнена.</returns>
-        public static bool ServerExecute(PlayerSession admin, MatchCommand command)
+        public static bool ServerExecute(PlayerSession admin, MapCommand command)
         {
             if (!SessionPermissions.IsAdmin(admin))
             {
-                GameLog.Match.Warning($"[AdminMatchCommands] {command} отклонена: {(admin != null ? admin.PlayerName : "null")} не админ.");
+                GameLog.Match.Warning($"[AdminMapCommands] {command} отклонена: {(admin != null ? admin.PlayerName : "null")} не админ.");
                 return false;
             }
 
             if (!IsAvailable(command))
             {
-                GameLog.Match.Warning($"[AdminMatchCommands] {command} сейчас не имеет смысла — отклонена.");
+                GameLog.Match.Warning($"[AdminMapCommands] {command} сейчас не имеет смысла — отклонена.");
                 return false;
             }
 
-            GameLog.Match.Info($"[AdminMatchCommands] {admin.PlayerName}: {command}.");
+            GameLog.Match.Info($"[AdminMapCommands] {admin.PlayerName}: {command}.");
 
             MapReferee manager = MapReferee.Instance;
             switch (command)
             {
-                case MatchCommand.StartMatch: return manager != null && manager.StartMatch();
-                case MatchCommand.Pause: return manager != null && manager.PauseMatch();
-                case MatchCommand.Resume: return manager != null && manager.ResumeMatch();
-                case MatchCommand.Stop:
+                case MapCommand.GoLive: return manager != null && manager.GoLive();
+                case MapCommand.Pause: return manager != null && manager.Pause();
+                case MapCommand.Resume: return manager != null && manager.Resume();
+                case MapCommand.Stop:
                     Series.Instance.ServerEnd();
                     return true;
-                case MatchCommand.NextMap:
+                case MapCommand.NextMap:
                     return Series.Instance.ServerAdvance() != null;
                 default: return false;
             }

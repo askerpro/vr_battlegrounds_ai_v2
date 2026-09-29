@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: e2bc29ef865d4d0db372631566aa6d9d
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/Shared/KAnimationCore/Editor/Tools/AnimationClipSamplerTool.cs
+  uploadId: 980832

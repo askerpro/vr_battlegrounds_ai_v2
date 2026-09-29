@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a73c19d62303ed24f99971228e7cb8f3
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/Mk14EBR/Materials/M_Mk14EBR_02.mat
+  uploadId: 980832

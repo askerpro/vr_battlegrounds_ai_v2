@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 55a52a41cade47a44934aabc36d2bfc8
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/WK-11_Viper/Materials/M_WK-11_Viper_Body.mat
+  uploadId: 980832

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b95697f5329faeb41a1f2db7de1d92ff
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/TR15/Materials/M_TR15_Ironsights.mat
+  uploadId: 980832

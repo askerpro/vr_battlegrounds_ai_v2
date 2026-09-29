@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3acedeae9d9449441a9d8998f41a6e91
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/Procedural/IKMotion_FireMode.asset
+  uploadId: 980832

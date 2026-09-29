@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: bb5a98fec9dd3004fae77d80216f218e
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/TR15/Attachments/Holosight/Materials/Shader_Holograph_MultiPipeline.shader
+  uploadId: 980832

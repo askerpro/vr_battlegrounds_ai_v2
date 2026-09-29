@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 20cf41039c96f464daaa6a3d253c8935
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/Procedural/IKMotion_Aiming.asset
+  uploadId: 980832

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d375975b289f01247a7b0f78bc018eb9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/Mk14EBR/Weapon/A_W_Mk14EBR_Fire.anim
+  uploadId: 980832

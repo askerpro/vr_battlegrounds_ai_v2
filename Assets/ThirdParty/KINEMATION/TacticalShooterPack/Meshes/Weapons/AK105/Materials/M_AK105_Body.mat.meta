@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 254f69dc10d7d874d9499085396ad6ca
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/AK105/Materials/M_AK105_Body.mat
+  uploadId: 980832

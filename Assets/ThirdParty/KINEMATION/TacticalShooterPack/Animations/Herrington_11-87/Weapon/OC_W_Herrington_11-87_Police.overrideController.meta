@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7f10fff9e93264c4a8e248cbca0d1c76
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/Herrington_11-87/Weapon/OC_W_Herrington_11-87_Police.overrideController
+  uploadId: 980832

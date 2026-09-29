@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: ca9ff9d900444c4785ba2de65c0e0263
+timeCreated: 1707563078
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/Shared/KAnimationCore/Runtime/Input/IUserInputController.cs
+  uploadId: 980832

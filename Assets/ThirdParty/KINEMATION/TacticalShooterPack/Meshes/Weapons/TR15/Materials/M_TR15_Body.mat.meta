@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a7bf2ea52304425449cf84adf0d67b0a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/TR15/Materials/M_TR15_Body.mat
+  uploadId: 980832

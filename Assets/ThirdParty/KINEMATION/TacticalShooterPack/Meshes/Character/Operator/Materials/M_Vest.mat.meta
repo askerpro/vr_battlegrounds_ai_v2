@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c160d4d3280bc1d44aba3928189dc506
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Character/Operator/Materials/M_Vest.mat
+  uploadId: 980832

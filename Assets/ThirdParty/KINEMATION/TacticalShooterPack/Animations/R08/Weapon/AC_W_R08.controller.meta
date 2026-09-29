@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1601527f5c7ca4e4abe03942ca26a3c9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/R08/Weapon/AC_W_R08.controller
+  uploadId: 980832

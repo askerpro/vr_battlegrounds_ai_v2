@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c061e80a4b4c4164eae0f5fa7f2bd1b1
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/DemoScene/Demo_URP/Materials/grid.mat
+  uploadId: 980832

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6eee3fa7e82344f419027c5ebc5727d9
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/VFX/Particle Systems/Muzzle/Normal/P_AK105_MuzzleFlash.prefab
+  uploadId: 980832

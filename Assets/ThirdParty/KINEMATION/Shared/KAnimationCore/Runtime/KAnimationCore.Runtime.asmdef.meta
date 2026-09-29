@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: d8548a9d25a091541a1fcde53694c91a
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/Shared/KAnimationCore/Runtime/KAnimationCore.Runtime.asmdef
+  uploadId: 980832

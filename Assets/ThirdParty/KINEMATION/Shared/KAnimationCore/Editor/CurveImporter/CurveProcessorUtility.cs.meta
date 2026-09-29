@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: e87dfbc612cd40d7ad17a79a3f028405
+timeCreated: 1781082304
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/Shared/KAnimationCore/Editor/CurveImporter/CurveProcessorUtility.cs
+  uploadId: 980832

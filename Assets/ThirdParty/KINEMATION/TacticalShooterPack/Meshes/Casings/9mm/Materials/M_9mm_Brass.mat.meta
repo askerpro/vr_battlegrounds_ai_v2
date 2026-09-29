@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 9dd25fb4c0147ba488372af15d280c1d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Casings/9mm/Materials/M_9mm_Brass.mat
+  uploadId: 980832

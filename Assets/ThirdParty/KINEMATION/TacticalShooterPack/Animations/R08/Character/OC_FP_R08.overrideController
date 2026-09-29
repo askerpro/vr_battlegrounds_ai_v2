@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: OC_FP_R08
+  m_Controller: {fileID: 9100000, guid: 3aa47c8be645ac948aac3d790806b7ef, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: cda5703c2aa14eb4caa00ba835a778ae, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: 5043c71a7453ed04b89af17e3a7a49f7, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: 03bb6736f0190e646928a00da4d2176a, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: f6fd0947a4b9eb64b91973c0eceae530, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: fa9018bfdbdfab04b90c935e530baf6d, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: 044ef7e57736ad741902cc2c672ce053, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: 115533e0d1274704c847410b1fcac4e0, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: c2d90d63ac18b1d46bf591322c138318, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: edbc483e72064ed4296197f5d34132dd, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: 1a05d26dca421ce4895ef57bbab5d69f, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: 9cc1cc680f7da0344939211930e0dbdb, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: cac83bdf963c98d46bc75ca62f3b492f, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: a49b029d8e5aa50418723ef275979a00, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: 5b927a9da8cd9744280139d55c946d60, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: 561fe5300dd5b704aa95041a012c89d7, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: 5043c71a7453ed04b89af17e3a7a49f7, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: 4415358646ef15d4e8adeb597ec6a04f, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: f6fd0947a4b9eb64b91973c0eceae530, type: 3}

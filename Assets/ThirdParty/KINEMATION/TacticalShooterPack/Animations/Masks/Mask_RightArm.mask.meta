@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e30099d706ad3424093f5b44478b29ec
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 31900000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/Masks/Mask_RightArm.mask
+  uploadId: 980832

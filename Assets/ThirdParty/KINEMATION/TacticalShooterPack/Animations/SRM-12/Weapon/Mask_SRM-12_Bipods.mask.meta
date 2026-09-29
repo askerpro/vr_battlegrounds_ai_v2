@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f97695df0e813f647a84fe11168973eb
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 31900000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/SRM-12/Weapon/Mask_SRM-12_Bipods.mask
+  uploadId: 980832

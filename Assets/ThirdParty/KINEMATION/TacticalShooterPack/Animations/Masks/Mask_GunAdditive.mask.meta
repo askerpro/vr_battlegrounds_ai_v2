@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4aa7b581f6a432a47abb16311f0d7ef5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 31900000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/Masks/Mask_GunAdditive.mask
+  uploadId: 980832

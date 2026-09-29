@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a6169212ecb9eaf4bb93e066ef97ef65
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/MKR9/Materials/M_MKR9_Mag.mat
+  uploadId: 980832

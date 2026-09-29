@@ -1,0 +1,111 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be7d878ee0244043beb0701c4874b453, type: 3}
+  m_Name: TacAnimSettings_SRM-12
+  m_EditorClassIdentifier: 
+  weaponName: Oryx SRM-12
+  isOneHanded: 0
+  characterAnimatorController: {fileID: 22100000, guid: 93992e432da03164d990150c6cdc3c6c, type: 2}
+  weaponAnimatorController: {fileID: 22100000, guid: 2fb4b719a9b65f34d9324d689432159a, type: 2}
+  drawSpeed: 1
+  weaponRotationOffset: {x: 0.70710677, y: 0, z: 0, w: 0.70710677}
+  weaponOffset:
+    position: {x: -0.03, y: 0.05, z: 0.025}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  rightHandOffset:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  leftHandOffset:
+    position: {x: 0.003, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  quickDrawOffset:
+    position: {x: -0.04, y: -0.1, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  quickDrawRightHandOffset:
+    position: {x: -0.08, y: 0.1, z: -0.035}
+    rotation: {x: 0.036712494, y: 0.21587537, z: 0.0043672766, w: 0.9757207}
+    scale: {x: 1, y: 1, z: 1}
+  movementSway:
+    position:
+      damping: {x: 0.4, y: 0.4, z: 0.4}
+      stiffness: {x: 0.6, y: 0.6, z: 0.6}
+      speed: {x: 5, y: 5, z: 5}
+      scale: {x: 1, y: -0.5, z: -0.3}
+    rotation:
+      damping: {x: 0.4, y: 0.4, z: 0.4}
+      stiffness: {x: 0.6, y: 0.6, z: 0.7}
+      speed: {x: 8, y: 8, z: 8}
+      scale: {x: 2, y: 3, z: -3}
+    clampPosition: {x: 15, y: 15, z: 15}
+    clampRotation: {x: 25, y: 25, z: 25}
+    dampingFactor: 8
+    adsScale: 0.3
+  aimingSway:
+    position:
+      damping: {x: 0.4, y: 0.4, z: 0.4}
+      stiffness: {x: 0.7, y: 0.7, z: 0.7}
+      speed: {x: 4, y: 4, z: 4}
+      scale: {x: 6, y: -6, z: 5}
+    rotation:
+      damping: {x: 0.4, y: 0.4, z: 0.3}
+      stiffness: {x: 0.8, y: 0.8, z: 0.8}
+      speed: {x: 10, y: 10, z: 12}
+      scale: {x: 4, y: 4, z: -4}
+    clampPosition: {x: 5, y: 5, z: 5}
+    clampRotation: {x: 10, y: 5, z: 15}
+    dampingFactor: 8
+    adsScale: 0.3
+  idleIntensity:
+    standing: 0.8
+    aiming: 0.2
+    firing: 0
+  walkIntensity:
+    standing: 1
+    aiming: 0.4
+    firing: 0.5
+  sprintPoseOffset:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  aimingSpeed: 3
+  aimFov: 70
+  recoilData: {fileID: 11400000, guid: b69bfc0f91a345d47af46e97fc89bf27, type: 2}
+  recoilShake: {fileID: 11400000, guid: 8554b6c60840cc546b08c782d571218c, type: 2}
+  fireRate: 150
+  supportsFullAuto: 0
+  burstRounds: 0
+  ammoCapacity: 5
+  firePitchRange: {x: 0.97, y: 1.02}
+  fireVolumeRange: {x: 0.97, y: 1.03}
+  fireModeSwitchSound: {fileID: 8300000, guid: bf2e0fbb71c69bd4692ff40e8e4fc540, type: 3}
+  fireSounds:
+  - {fileID: 8300000, guid: b37d3f197ff4f4a4c80640ae599ab207, type: 3}
+  suppressedFireSounds:
+  - {fileID: 8300000, guid: b37d3f197ff4f4a4c80640ae599ab207, type: 3}
+  aimInSound: {fileID: 8300000, guid: f25c0ea710509bc43a17966a5234b5d0, type: 3}
+  aimOutSound: {fileID: 8300000, guid: d208ca4331c2a354c887c60ea3d46024, type: 3}
+  drawSound: {fileID: 8300000, guid: 2171fb6d9a3dc4546939fb1b5a0be32b, type: 3}
+  holsterSound: {fileID: 8300000, guid: 445877163083d3b4b8858b63c2e25470, type: 3}
+  quickDrawSound: {fileID: 8300000, guid: 2171fb6d9a3dc4546939fb1b5a0be32b, type: 3}
+  quickHolsterSound: {fileID: 8300000, guid: 445877163083d3b4b8858b63c2e25470, type: 3}
+  reloadEmptySound: {fileID: 8300000, guid: a66bf206d0c38cb4ba7666952e1eb4cd, type: 3}
+  reloadTacSound: {fileID: 8300000, guid: ba416a8a83ece67499db5ccda1ee523c, type: 3}
+  reloadLoopSound: {fileID: 0}
+  reloadEndSound: {fileID: 0}
+  magCheckSound: {fileID: 8300000, guid: 3f9a4400fd8f759409eebd24c3318309, type: 3}
+  inspectSound: {fileID: 8300000, guid: 30265ebc77d43b748b4b1d5a4a7dfa9c, type: 3}
+  deployAttachmentSound: {fileID: 8300000, guid: eea4cb6cb9bf4fe4c8a958203ccc4ade, type: 3}
+  stowAttachmentSound: {fileID: 8300000, guid: 5f95f00afd0c6c54f8ec7ac63477a6df, type: 3}

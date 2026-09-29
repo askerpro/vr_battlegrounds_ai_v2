@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2fb4b719a9b65f34d9324d689432159a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/SRM-12/Weapon/OC_W_Oryx_SRM-12.overrideController
+  uploadId: 980832

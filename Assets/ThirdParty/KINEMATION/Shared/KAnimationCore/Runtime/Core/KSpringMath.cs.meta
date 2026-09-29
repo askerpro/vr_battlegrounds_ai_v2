@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: b715a4ee42b646169c5ce859e6d34964
+timeCreated: 1698339846
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/Shared/KAnimationCore/Runtime/Core/KSpringMath.cs
+  uploadId: 980832

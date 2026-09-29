@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 03bb6736f0190e646928a00da4d2176a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/AnimatorControllers/StatePlaceholders/Holster.anim
+  uploadId: 980832

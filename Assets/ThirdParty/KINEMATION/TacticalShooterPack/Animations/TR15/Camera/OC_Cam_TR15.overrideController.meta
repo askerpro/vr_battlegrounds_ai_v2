@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 31c477d13c36b1749bf2a3362ed4c3fe
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/TR15/Camera/OC_Cam_TR15.overrideController
+  uploadId: 980832

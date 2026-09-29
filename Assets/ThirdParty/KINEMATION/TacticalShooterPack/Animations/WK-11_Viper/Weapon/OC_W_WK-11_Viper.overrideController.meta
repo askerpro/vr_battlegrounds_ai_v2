@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bee63987804676149ae69665e37bd350
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/WK-11_Viper/Weapon/OC_W_WK-11_Viper.overrideController
+  uploadId: 980832

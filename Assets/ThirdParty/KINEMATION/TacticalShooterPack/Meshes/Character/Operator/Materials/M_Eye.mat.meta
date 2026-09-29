@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f3a31fa34aa3c314a8e48cb826d8cd53
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Character/Operator/Materials/M_Eye.mat
+  uploadId: 980832

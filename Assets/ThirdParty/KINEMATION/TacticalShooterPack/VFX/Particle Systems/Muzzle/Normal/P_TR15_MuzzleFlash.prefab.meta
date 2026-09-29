@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ec67d92d99766d34a9375f90667025a5
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/VFX/Particle Systems/Muzzle/Normal/P_TR15_MuzzleFlash.prefab
+  uploadId: 980832

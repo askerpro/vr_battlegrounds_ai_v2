@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 897bf2b06f4160343b9952560c337f44
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/R08/Materials/M_R08_Ammo.mat
+  uploadId: 980832

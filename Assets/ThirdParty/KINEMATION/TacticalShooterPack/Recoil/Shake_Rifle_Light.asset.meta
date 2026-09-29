@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7b011bc736179ed499976d1b16fee0c6
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Recoil/Shake_Rifle_Light.asset
+  uploadId: 980832

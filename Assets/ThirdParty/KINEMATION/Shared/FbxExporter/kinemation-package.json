@@ -1,0 +1,6 @@
+{
+    "packageId": "fbx-exporter",
+    "displayName": "FBX Exporter",
+    "version": "1.2.0",
+    "manifestUrl": "https://kinemation-packages-unity.s3.us-east-005.backblazeb2.com/fbx-exporter/manifest.json"
+}

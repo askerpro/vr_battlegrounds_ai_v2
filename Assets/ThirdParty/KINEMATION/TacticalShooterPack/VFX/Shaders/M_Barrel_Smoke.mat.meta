@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 99100a44f303ffd47b0c04baed9653e5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/VFX/Shaders/M_Barrel_Smoke.mat
+  uploadId: 980832

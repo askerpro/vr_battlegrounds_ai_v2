@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e1f48841dd764de08a11d9e1cd3aa501
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/R08/Character/OC_FP_R08.overrideController
+  uploadId: 980832

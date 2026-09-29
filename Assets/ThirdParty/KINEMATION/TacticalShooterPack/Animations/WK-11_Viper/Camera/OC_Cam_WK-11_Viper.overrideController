@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: OC_Cam_WK-11_Viper
+  m_Controller: {fileID: 9100000, guid: 8505cd4419a92b34ea2111969fa07a6b, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: cda5703c2aa14eb4caa00ba835a778ae, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: 1a654b3ddca698e41b1582d76678d22c, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: 03bb6736f0190e646928a00da4d2176a, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: c7576017fe75d4e40a86faa0fdba5e02, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: 115533e0d1274704c847410b1fcac4e0, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: 5a2daac6ebbdf294b90f43185d1bfef3, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: edbc483e72064ed4296197f5d34132dd, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: 87af0e01e360c5049a9d91a96852bfab, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: 9cc1cc680f7da0344939211930e0dbdb, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: 91ba38135b79df847ad62adff03c89f4, type: 3}
+  - m_OriginalClip: {fileID: 7400000, guid: a49b029d8e5aa50418723ef275979a00, type: 2}
+    m_OverrideClip: {fileID: 8993902097722301239, guid: 7e283ff52696cea40ab8a39ddf32939e, type: 3}

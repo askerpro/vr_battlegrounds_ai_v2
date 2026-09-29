@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 241f6709250c6af4cae74cc5da405c87
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/Shared/FbxExporter/Editor/FbxExporter.Editor.asmdef
+  uploadId: 980832

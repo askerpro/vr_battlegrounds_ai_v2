@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a49b029d8e5aa50418723ef275979a00
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/AnimatorControllers/StatePlaceholders/Reload_Tac.anim
+  uploadId: 980832

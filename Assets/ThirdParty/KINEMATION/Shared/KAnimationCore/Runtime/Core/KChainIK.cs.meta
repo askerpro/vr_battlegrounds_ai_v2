@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 1308cae72dcf420ab9a43892668bf485
+timeCreated: 1716450134
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/Shared/KAnimationCore/Runtime/Core/KChainIK.cs
+  uploadId: 980832

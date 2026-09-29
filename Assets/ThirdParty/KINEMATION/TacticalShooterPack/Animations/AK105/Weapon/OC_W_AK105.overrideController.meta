@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8c1424b06f298564eb65c77c8a140b4d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/AK105/Weapon/OC_W_AK105.overrideController
+  uploadId: 980832

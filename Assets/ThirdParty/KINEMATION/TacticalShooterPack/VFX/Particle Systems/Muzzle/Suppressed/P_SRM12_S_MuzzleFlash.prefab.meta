@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8d83ae2a079e080448146f506dc0e05a
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/VFX/Particle Systems/Muzzle/Suppressed/P_SRM12_S_MuzzleFlash.prefab
+  uploadId: 980832

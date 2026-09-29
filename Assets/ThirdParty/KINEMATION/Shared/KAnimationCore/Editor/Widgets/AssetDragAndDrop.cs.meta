@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: dfc97017ea654dc9b3fe8cab522f0afc
+timeCreated: 1744450300
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/Shared/KAnimationCore/Editor/Widgets/AssetDragAndDrop.cs
+  uploadId: 980832

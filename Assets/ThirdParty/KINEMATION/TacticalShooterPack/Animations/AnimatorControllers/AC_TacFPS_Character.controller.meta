@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ebda377360727914ab2dbbac38dc6f9a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/AnimatorControllers/AC_TacFPS_Character.controller
+  uploadId: 980832

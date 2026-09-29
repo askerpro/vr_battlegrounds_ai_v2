@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: ede1dc4b71283904b8de6540ec369cd9
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 625f186215c104763be7675aa2d941aa, type: 3}
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Character/Operator/Materials/Shader_TacticalShooterCharacter.shadergraph
+  uploadId: 980832

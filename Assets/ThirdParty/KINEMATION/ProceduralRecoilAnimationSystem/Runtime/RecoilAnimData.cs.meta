@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 1051319fe6954c22a1b336f878b1805e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/ProceduralRecoilAnimationSystem/Runtime/RecoilAnimData.cs
+  uploadId: 980832

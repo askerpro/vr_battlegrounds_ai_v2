@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b6d4ea9ea9d91294caf1c1199a4a4fc0
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Prefabs/TacticalShooterCharacter.prefab
+  uploadId: 980832

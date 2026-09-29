@@ -1,0 +1,114 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be7d878ee0244043beb0701c4874b453, type: 3}
+  m_Name: TacAnimSettings_R08
+  m_EditorClassIdentifier: 
+  weaponName: R08
+  isOneHanded: 1
+  characterAnimatorController: {fileID: 22100000, guid: e1f48841dd764de08a11d9e1cd3aa501, type: 2}
+  weaponAnimatorController: {fileID: 22100000, guid: 04b8e09db59b4d6f82872e3fd92a57ad, type: 2}
+  drawSpeed: 1
+  weaponRotationOffset: {x: 0.70710677, y: 0, z: 0, w: 0.70710677}
+  weaponOffset:
+    position: {x: -0.03, y: 0.035, z: -0.03}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  rightHandOffset:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  leftHandOffset:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  quickDrawOffset:
+    position: {x: -0.04, y: -0.1, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  quickDrawRightHandOffset:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  pistolRightHandOffset: {x: 0, y: 0.025, z: 0.025}
+  movementSway:
+    position:
+      damping: {x: 0.4, y: 0.4, z: 0.4}
+      stiffness: {x: 0.6, y: 0.6, z: 0.6}
+      speed: {x: 5, y: 5, z: 5}
+      scale: {x: 1, y: -0.5, z: -0.3}
+    rotation:
+      damping: {x: 0.4, y: 0.4, z: 0.4}
+      stiffness: {x: 0.6, y: 0.6, z: 0.7}
+      speed: {x: 8, y: 8, z: 8}
+      scale: {x: 2, y: 3, z: -3}
+    clampPosition: {x: 15, y: 15, z: 15}
+    clampRotation: {x: 25, y: 25, z: 25}
+    dampingFactor: 8
+    adsScale: 0.3
+  aimingSway:
+    position:
+      damping: {x: 0.4, y: 0.4, z: 0.4}
+      stiffness: {x: 0.7, y: 0.7, z: 0.7}
+      speed: {x: 5, y: 5, z: 5}
+      scale: {x: 5, y: -5, z: 5}
+    rotation:
+      damping: {x: 0.4, y: 0.4, z: 0.3}
+      stiffness: {x: 0.8, y: 0.8, z: 0.8}
+      speed: {x: 12, y: 15, z: 15}
+      scale: {x: 4, y: 4, z: -4}
+    clampPosition: {x: 3, y: 3, z: 3}
+    clampRotation: {x: 15, y: 1, z: 20}
+    dampingFactor: 8
+    adsScale: 0.3
+  idleIntensity:
+    standing: 0.8
+    aiming: 0.1
+    firing: 0
+  walkIntensity:
+    standing: 1
+    aiming: 0.2
+    firing: 0.5
+  sprintPoseOffset:
+    position: {x: 0, y: -0.035, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+    scale: {x: 1, y: 1, z: 1}
+  aimingSpeed: 3
+  aimFov: 70
+  recoilData: {fileID: 11400000, guid: d3140a1395c8d7546954bb46dde2a961, type: 2}
+  recoilShake: {fileID: 11400000, guid: 72d95f828a98c064baebbc92fca29dd6, type: 2}
+  fireRate: 300
+  supportsFullAuto: 0
+  burstRounds: 0
+  ammoCapacity: 8
+  firePitchRange: {x: 0.95, y: 1.02}
+  fireVolumeRange: {x: 0.8, y: 0.85}
+  fireModeSwitchSound: {fileID: 8300000, guid: bf2e0fbb71c69bd4692ff40e8e4fc540, type: 3}
+  fireSounds:
+  - {fileID: 8300000, guid: 19280690230b8e4489cbe357d991f0f6, type: 3}
+  - {fileID: 8300000, guid: 70bb28cadcfaa5945954daff600e05f8, type: 3}
+  - {fileID: 8300000, guid: d4805362cb76a574b9e0ebc83a336b69, type: 3}
+  suppressedFireSounds:
+  - {fileID: 8300000, guid: b37d3f197ff4f4a4c80640ae599ab207, type: 3}
+  aimInSound: {fileID: 8300000, guid: f25c0ea710509bc43a17966a5234b5d0, type: 3}
+  aimOutSound: {fileID: 8300000, guid: d208ca4331c2a354c887c60ea3d46024, type: 3}
+  drawSound: {fileID: 8300000, guid: 6216934796f0e2b4ca6b56d3a363269b, type: 3}
+  holsterSound: {fileID: 8300000, guid: 87ec58390afae004bb757f40c13929c3, type: 3}
+  quickDrawSound: {fileID: 8300000, guid: 6216934796f0e2b4ca6b56d3a363269b, type: 3}
+  quickHolsterSound: {fileID: 8300000, guid: 87ec58390afae004bb757f40c13929c3, type: 3}
+  reloadEmptySound: {fileID: 0}
+  reloadTacSound: {fileID: 0}
+  reloadLoopSound: {fileID: 0}
+  reloadEndSound: {fileID: 0}
+  magCheckSound: {fileID: 8300000, guid: a94020b64f410f545af580a6e217493b, type: 3}
+  inspectSound: {fileID: 8300000, guid: c7c846471e82bfd428d80ef9ffc242ea, type: 3}
+  deployAttachmentSound: {fileID: 0}
+  stowAttachmentSound: {fileID: 0}

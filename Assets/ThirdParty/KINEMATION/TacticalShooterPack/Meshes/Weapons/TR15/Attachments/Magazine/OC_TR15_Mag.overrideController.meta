@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 83c9685f6c6de6e4e89be9a24556b444
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/TR15/Attachments/Magazine/OC_TR15_Mag.overrideController
+  uploadId: 980832

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7525eaaf8e87428439fce3039ec7283d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/Herrington_11-87/Camera/OC_Cam_Herrington_11-87.overrideController
+  uploadId: 980832

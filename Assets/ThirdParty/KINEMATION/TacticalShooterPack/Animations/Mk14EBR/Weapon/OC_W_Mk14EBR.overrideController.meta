@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: cb6d911b97895a444a7800c467b8bb19
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/Mk14EBR/Weapon/OC_W_Mk14EBR.overrideController
+  uploadId: 980832

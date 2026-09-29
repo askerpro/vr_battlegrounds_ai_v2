@@ -1,0 +1,195 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Mask_MX68_Cartridges
+  m_Mask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  m_Elements:
+  - m_Path: 
+    m_Weight: 1
+  - m_Path: MX68_Rig
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/AmmoCase
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/AmmoCase/Control_Root
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/AmmoCase/Control_Root/Control_1
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/AmmoCase/Control_Root/Control_2
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/AmmoCase/Control_Root/Control_3
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/AmmoCase/Control_Root/Control_4
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/AmmoCase/Control_Root/Control_5
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/AmmoCase/Control_Root/Control_6
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/AmmoCase/Control_Root/Control_7
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/Bolt
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/Case
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/Cartridge_25
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/Link_25
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/Cartridge_24
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/Link_24
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/Cartridge_23
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/Link_23
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/Cartridge_22
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/Link_22
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/Cartridge_21
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/Link_21
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/Cartridge_20
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/Link_20
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/Cartridge_19
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/Link_19
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/Cartridge_18
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/Link_18
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/Cartridge_17
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/Link_17
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/Cartridge_16
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/Link_16
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/Cartridge_15
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/Link_15
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/Cartridge_14
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/Link_14
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/Cartridge_13
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/Link_13
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/Cartridge_12
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/Link_12
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/Cartridge_11
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/Link_11
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/Cartridge_10
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/Link_10
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/Cartridge_09
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/Link_09
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/Cartridge_08
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/Link_08
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/Cartridge_07
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/Link_07
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/Cartridge_06
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/Link_06
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/Cartridge_05
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/Link_05
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/Cartridge_04
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/Link_04
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/LinkRoot_03
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/LinkRoot_03/Cartridge_03
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/LinkRoot_03/Link_03
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/LinkRoot_03/LinkRoot_02
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/LinkRoot_03/LinkRoot_02/Cartridge_02
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/LinkRoot_03/LinkRoot_02/Link_02
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/LinkRoot_03/LinkRoot_02/LinkRoot_01
+    m_Weight: 0
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/LinkRoot_03/LinkRoot_02/LinkRoot_01/Cartridge_01
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/LinkRoot_25/LinkRoot_24/LinkRoot_23/LinkRoot_22/LinkRoot_21/LinkRoot_20/LinkRoot_19/LinkRoot_18/LinkRoot_17/LinkRoot_16/LinkRoot_15/LinkRoot_14/LinkRoot_13/LinkRoot_12/LinkRoot_11/LinkRoot_10/LinkRoot_09/LinkRoot_08/LinkRoot_07/LinkRoot_06/LinkRoot_05/LinkRoot_04/LinkRoot_03/LinkRoot_02/LinkRoot_01/Link_01
+    m_Weight: 1
+  - m_Path: MX68_Rig/Body/Trigger
+    m_Weight: 0
+  - m_Path: MX68_Rig/Bolt Part Bone
+    m_Weight: 0
+  - m_Path: SKM_MX68
+    m_Weight: 0

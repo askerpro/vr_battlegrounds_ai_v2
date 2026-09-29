@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6c93bb78848c25d4c8e746201fa77e74
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/AK105/TacAnimSettings_AK105.asset
+  uploadId: 980832

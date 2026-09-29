@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 93992e432da03164d990150c6cdc3c6c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/SRM-12/Character/OC_FP_SRM-12.overrideController
+  uploadId: 980832

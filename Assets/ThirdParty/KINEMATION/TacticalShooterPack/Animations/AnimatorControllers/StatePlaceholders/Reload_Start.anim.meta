@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e810061f1ded84348bdf436faeea0c1d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/AnimatorControllers/StatePlaceholders/Reload_Start.anim
+  uploadId: 980832

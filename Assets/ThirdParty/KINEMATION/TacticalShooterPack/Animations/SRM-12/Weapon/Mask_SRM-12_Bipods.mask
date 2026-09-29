@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Mask_SRM-12_Bipods
+  m_Mask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  m_Elements:
+  - m_Path: 
+    m_Weight: 1
+  - m_Path: Body
+    m_Weight: 0
+  - m_Path: Body/Bipod
+    m_Weight: 1
+  - m_Path: Body/Bipod/BipodArm1
+    m_Weight: 1
+  - m_Path: Body/Bipod/BipodArm2
+    m_Weight: 1
+  - m_Path: Body/Bolt
+    m_Weight: 0
+  - m_Path: Body/Magazine
+    m_Weight: 0
+  - m_Path: Body/Magazine/Bullet
+    m_Weight: 0
+  - m_Path: Body/Magazine/Bullet_001
+    m_Weight: 0
+  - m_Path: Body/Magazine/Bullet_002
+    m_Weight: 0
+  - m_Path: Body/Magazine/Bullet_003
+    m_Weight: 0
+  - m_Path: Body/Magazine/Bullet_004
+    m_Weight: 0
+  - m_Path: Body/Magazine/Bullet_005
+    m_Weight: 0
+  - m_Path: Body/Safety
+    m_Weight: 0
+  - m_Path: Body/Scope
+    m_Weight: 0
+  - m_Path: Body/Trigger
+    m_Weight: 0
+  - m_Path: SKM_Oryx_SRM-12_Body
+    m_Weight: 0

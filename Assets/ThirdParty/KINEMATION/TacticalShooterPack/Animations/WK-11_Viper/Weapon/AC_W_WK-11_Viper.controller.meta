@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 17fe1861640e0db419493f9ad5d72d46
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/WK-11_Viper/Weapon/AC_W_WK-11_Viper.controller
+  uploadId: 980832

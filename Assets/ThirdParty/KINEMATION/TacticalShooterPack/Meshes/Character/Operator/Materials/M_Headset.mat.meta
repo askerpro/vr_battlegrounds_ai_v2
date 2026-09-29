@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 544aa49c6d6610742865551d2df0db02
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Character/Operator/Materials/M_Headset.mat
+  uploadId: 980832

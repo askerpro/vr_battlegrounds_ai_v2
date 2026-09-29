@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 11c4d1e3f0a34d2fb2a4d8f6c9e70152
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Animations/MKR9/Character/OC_FP_MKR9.overrideController
+  uploadId: 980832

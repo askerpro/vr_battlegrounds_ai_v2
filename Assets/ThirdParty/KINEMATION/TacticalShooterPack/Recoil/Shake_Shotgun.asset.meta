@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f1c4bc2e6f4128844872001c673f9aa9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Recoil/Shake_Shotgun.asset
+  uploadId: 980832

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8278dc0a4dfa42a49aed550af3fb2076
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/DemoScene/Demo_URP/Settings/URP-HighFidelity-Renderer.asset
+  uploadId: 980832

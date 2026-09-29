@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7d74dcc8f7df243498ea171c23bba717
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/R08/Materials/M_R08_Speedloader.mat
+  uploadId: 980832

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0117f4449102c4243ab5423a7487e1de
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/VFX/Particle Systems/Emitters/P_ExplosionBurst.prefab
+  uploadId: 980832

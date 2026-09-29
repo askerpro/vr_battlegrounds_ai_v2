@@ -17,7 +17,7 @@ MonoBehaviour:
   autoGoLive: 1
   minPlayersOverride: 1
   botCount: 3
-  autoLoadMapScene: Lobby
+  autoLoadMapScene: 
   autoGameModeId: elimination
   fallbackEditorRole: 1
   autoStartFallbackRole: 1

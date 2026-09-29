@@ -146,7 +146,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const float ShotInterval = 0.3f;
 
         /// <summary>
-        /// Эталонная маска слоёв: <c>Default</c> (0) и <c>Ground</c> (3), значение <b>9</b>.
+        /// Эталонная маска слоёв — общая маска пуль <c>HitLayers.ProjectileMask</c> (T-36): мир, пол, хитбоксы.
+        /// Ниже — история: до T-36 эталоном была <c>Default|Ground</c> (9).
         ///
         /// <para>
         /// Ею сценарий <b>не стреляет</b> — она нужна ровно для контрольного луча,
@@ -160,7 +161,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// метки выравнивания физического пространства.
         /// </para>
         /// </summary>
-        private const int ReferenceCollisionMask = (1 << 0) | (1 << 3);
+        private static int ReferenceCollisionMask => VrBattlegrounds.Core.HitLayers.ProjectileMask;
 
         // ── Наблюдение клиента ────────────────────────────────────────────
 
@@ -1063,7 +1064,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 return "WeaponRegistry не загрузился";
 
             StringBuilder builder = new StringBuilder();
-            builder.Append($"эталонная маска для сверки — 0x{referenceMask:X} (Default|Ground). ");
+            builder.Append($"эталонная маска для сверки — 0x{referenceMask:X} (HitLayers.ProjectileMask). ");
 
             if (used != null)
             {

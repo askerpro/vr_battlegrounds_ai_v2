@@ -101,7 +101,16 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="damage">Damage to be taken</param>
         public void ReceiveImpact(UxrActor actorSource, RaycastHit raycastHit, float damage)
         {
-            OnReceiveDamage(new UxrDamageEventArgs(actorSource, this, raycastHit, damage, damage >= Life));
+            ReceiveImpact(actorSource, raycastHit, damage, Vector3.zero);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch (Патч 30, Docs/UltimateXR/sdk-patches.md, T-35): projectile impact that also carries the
+        ///     projectile's force (<see cref="UxrDamageEventArgs.ImpactForce" />) — the game pushes the ragdoll of the dead with it.
+        /// </summary>
+        public void ReceiveImpact(UxrActor actorSource, RaycastHit raycastHit, float damage, Vector3 impactForce)
+        {
+            OnReceiveDamage(new UxrDamageEventArgs(actorSource, this, raycastHit, damage, damage >= Life, impactForce));
         }
 
         /// <summary>

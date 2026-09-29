@@ -188,6 +188,10 @@ PrefabInstance:
       propertyPath: _shotTypes.Array.data[0]._projectileSpeed
       value: 400
       objectReference: {fileID: 0}
+    - target: {fileID: 2252369392840551947, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
+      propertyPath: _shotTypes.Array.data[0]._collisionLayerMask.m_Bits
+      value: 4105
+      objectReference: {fileID: 0}
     - target: {fileID: 2252505135500819345, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: __prefabGuid
       value: 4a28fd7096bf0994eac0a22cbb3a922c

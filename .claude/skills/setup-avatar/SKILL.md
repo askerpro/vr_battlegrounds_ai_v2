@@ -78,7 +78,7 @@ description: Настроить новый аватар игрока из сто
 `Camera Controller`, `BigHandsIntegration` → `SaveAsPrefabAssetAndConnect` (получится Variant).
 
 Перед удалением `Cyborg` сними с него данные (позы карманов, настройки NT кистей) — после
-удаления их не достать. Что переносить — таблица в [game-variant.md](game-variant.md): хитбоксы, NT кистей, `UxrFingerTip`, карманы,
+удаления их не достать. Что переносить — таблица в [game-variant.md](game-variant.md): NT кистей, `UxrFingerTip`, карманы,
 корневой `UxrAvatar` (риг, позы, события контроллера, высота глаз/шеи), `_parentPrefab = <база>`.
 
 **Своя голова в камере** («вижу голову изнутри») — меши головы в
@@ -94,6 +94,9 @@ description: Настроить новый аватар игрока из сто
 `AvatarsIcons/cyborg.png`) → `AvatarsRegistry` → слот в `Data/Teams/*_Team.asset` →
 `spawnPrefabs` на `--- MANAGERS ---`. После правки `MANAGERS` посмотреть `git diff`: должна
 добавиться одна строка.
+
+**Хитбоксы** (T-36): после записи в реестр — `Tools/VR Battlegrounds/Avatars/Build Hitboxes` (он же пересобирает
+призрака и трупы). Руками хитбоксы не ставятся (`HitboxTests`).
 
 **Труп** (T-35): после записи в команду — `Tools/VR Battlegrounds/Avatars/Build Corpses`. Сборщик
 генерирует рэгдолл из гуманоидной модели аватара и ставит `CorpseSource`; без гуманоидного `Animator`

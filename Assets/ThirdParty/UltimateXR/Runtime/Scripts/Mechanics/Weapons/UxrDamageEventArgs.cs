@@ -53,6 +53,14 @@ namespace UltimateXR.Mechanics.Weapons
         public bool Dies { get; }
 
         /// <summary>
+        ///     VR Battlegrounds patch (Патч 30, Docs/UltimateXR/sdk-patches.md, T-35): force the projectile carries,
+        ///     world space — the same value <see cref="UxrWeaponManager" /> applies to non-actor rigidbodies
+        ///     (projectile speed * <see cref="UxrShotDescriptor.ProjectileImpactForceMultiplier" /> * direction).
+        ///     Zero for explosive, generic damage or when the caller doesn't provide it.
+        /// </summary>
+        public Vector3 ImpactForce { get; }
+
+        /// <summary>
         ///     Gets if the damage was canceled for damage pre-events. Damage post-events cannot be canceled since the damage was
         ///     already inflicted.
         /// </summary>
@@ -71,6 +79,14 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="damage">Damage amount</param>
         /// <param name="dies">Whether the damage results in death</param>
         public UxrDamageEventArgs(UxrActor source, UxrActor target, RaycastHit raycastHit, float damage, bool dies)
+            : this(source, target, raycastHit, damage, dies, Vector3.zero)
+        {
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch (Патч 30): constructor for projectile damage with the projectile's impact force.
+        /// </summary>
+        public UxrDamageEventArgs(UxrActor source, UxrActor target, RaycastHit raycastHit, float damage, bool dies, Vector3 impactForce)
         {
             DamageType  = UxrDamageType.ProjectileHit;
             ActorSource = source;
@@ -78,6 +94,7 @@ namespace UltimateXR.Mechanics.Weapons
             RaycastHit  = raycastHit;
             Damage      = damage;
             Dies        = dies;
+            ImpactForce = impactForce;
         }
 
         /// <summary>

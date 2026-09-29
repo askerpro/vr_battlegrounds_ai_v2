@@ -15,7 +15,8 @@ namespace VrBattlegrounds.UI.Menu
     /// (<see cref="DebugMode"/>; выключили режим — контроллер уводит на раздел по умолчанию).
     ///
     /// <para>
-    /// Строки собираются набором (<see cref="MenuKit"/>): статус, оверлей кадра, переходы на экраны
+    /// Строки собираются набором (<see cref="MenuKit"/>): статус, оверлей кадра и метки попаданий
+    /// (<see cref="DebugHitMarkers"/>), переходы на экраны
     /// админа и «Перф-тесты» (<see cref="Links"/>), боты-противники (<see cref="BotNetwork"/>),
     /// телепорт к точкам карты, выключение режима. Экран только шлёт запросы: телепорт —
     /// <see cref="DebugModeNetwork.RequestTeleport"/>; права проверяет сервер.
@@ -69,7 +70,7 @@ namespace VrBattlegrounds.UI.Menu
             List<DebugTeleportTarget> targets = DebugTeleportTargets.Collect();
 
             var snapshot = new StringBuilder();
-            snapshot.Append(admin).Append('|').Append(DebugPerfReadout.Visible);
+            snapshot.Append(admin).Append('|').Append(DebugPerfReadout.Visible).Append('|').Append(DebugHitMarkers.Visible);
             foreach (DebugTeleportTarget t in targets) snapshot.Append('|').Append(t.Id).Append(t.Label);
 
             if (snapshot.ToString() != _lastSnapshot)
@@ -89,8 +90,12 @@ namespace VrBattlegrounds.UI.Menu
 
             // ── Оверлей ────────────────────────────────────────────────────
             MenuKit.Section(Content, "Оверлей кадра");
-            MenuKit.Button(MenuKit.Row(Content), DebugPerfReadout.Visible ? "Скрыть кадр" : "Показать кадр",
+            RectTransform overlays = MenuKit.Row(Content);
+            MenuKit.Button(overlays, DebugPerfReadout.Visible ? "Скрыть кадр" : "Показать кадр",
                            () => { DebugPerfReadout.SetVisible(!DebugPerfReadout.Visible); _lastSnapshot = ""; });
+            // Метки попаданий по игрокам: урон, зона хитбокса, по кому (DebugHitMarkers).
+            MenuKit.Button(overlays, DebugHitMarkers.Visible ? "Скрыть попадания" : "Показать попадания",
+                           () => { DebugHitMarkers.SetVisible(!DebugHitMarkers.Visible); _lastSnapshot = ""; });
 
             // ── Разделы ────────────────────────────────────────────────────
             MenuKit.Section(Content, "Разделы");

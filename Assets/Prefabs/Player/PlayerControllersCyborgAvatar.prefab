@@ -364,6 +364,144 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.13873479, y: -0.0019643903, z: -0.014618732}
     m_Extent: {x: 0.18484423, y: 0.054499812, z: 0.063604794}
   m_DirtyAABB: 0
+--- !u!1 &1454448755135012900
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8987619555801139501}
+  - component: {fileID: 8847333543478231110}
+  - component: {fileID: 2557104599199642806}
+  m_Layer: 12
+  m_Name: Hitbox_UpperArm_R
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8987619555801139501
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1454448755135012900}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2645659197761292903}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8847333543478231110
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1454448755135012900}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 2
+--- !u!136 &2557104599199642806
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1454448755135012900}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.054999974
+  m_Height: 0.38935795
+  m_Direction: 0
+  m_Center: {x: -0.139679, y: 0.000008378178, z: -0.000000013969839}
+--- !u!1 &2249307159149521804
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7415370784264344397}
+  - component: {fileID: 564211286150161809}
+  - component: {fileID: 5401896190515652958}
+  m_Layer: 12
+  m_Name: Hitbox_Forearm_L
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7415370784264344397
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2249307159149521804}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 780758713185103788}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &564211286150161809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2249307159149521804}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 2
+--- !u!136 &5401896190515652958
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2249307159149521804}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.049999982
+  m_Height: 0.40653542
+  m_Direction: 0
+  m_Center: {x: -0.15326773, y: 0.00000002730323, z: 0.000000010244548}
 --- !u!1 &2592278145420976687
 GameObject:
   m_ObjectHideFlags: 0
@@ -459,6 +597,75 @@ SkinnedMeshRenderer:
     m_Center: {x: 0.024012692, y: 0.00037703663, z: 0.0055816397}
     m_Extent: {x: 0.07278011, y: 0.10512046, z: 0.109838046}
   m_DirtyAABB: 0
+--- !u!1 &2738990757647723944
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7119451244170976001}
+  - component: {fileID: 1475122898178116031}
+  - component: {fileID: 5859044068956686002}
+  m_Layer: 12
+  m_Name: Hitbox_Forearm_R
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7119451244170976001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2738990757647723944}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2238729877079046646}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1475122898178116031
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2738990757647723944}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 2
+--- !u!136 &5859044068956686002
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2738990757647723944}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.04999999
+  m_Height: 0.40653533
+  m_Direction: 0
+  m_Center: {x: -0.15326768, y: 0.000000102788505, z: -0.00000012340024}
 --- !u!1 &2910747367771233612
 GameObject:
   m_ObjectHideFlags: 0
@@ -691,6 +898,75 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.009785324, y: -0.09393786, z: 0.0000006631017}
     m_Extent: {x: 0.0871908, y: 0.039466664, z: 0.068787314}
   m_DirtyAABB: 0
+--- !u!1 &3171029927752202778
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3627090287819086162}
+  - component: {fileID: 8038182701119104725}
+  - component: {fileID: 1849743581189481170}
+  m_Layer: 12
+  m_Name: Hitbox_Torso_Upper
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3627090287819086162
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3171029927752202778}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 202275468615147571}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8038182701119104725
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3171029927752202778}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 1
+--- !u!136 &1849743581189481170
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3171029927752202778}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.15999994
+  m_Height: 0.3987428
+  m_Direction: 0
+  m_Center: {x: -0.039371453, y: -0.00000018822695, z: 0.007342789}
 --- !u!1 &3398858053321465030
 GameObject:
   m_ObjectHideFlags: 0
@@ -1188,6 +1464,73 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.22159961, y: 0.021786258, z: -0.00000011175871}
     m_Extent: {x: 0.45649973, y: 0.19535977, z: 0.21879601}
   m_DirtyAABB: 0
+--- !u!1 &5256341222808626377
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7750827860930673693}
+  - component: {fileID: 8062108993955224115}
+  - component: {fileID: 3247100594035739810}
+  m_Layer: 12
+  m_Name: Hitbox_Head
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7750827860930673693
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5256341222808626377}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6062878206884001444}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8062108993955224115
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5256341222808626377}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 0
+--- !u!135 &3247100594035739810
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5256341222808626377}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.11999997
+  m_Center: {x: -0.069972634, y: -0.0019570682, z: 0.000000027669921}
 --- !u!1 &5873217470598652819
 GameObject:
   m_ObjectHideFlags: 0
@@ -1398,6 +1741,144 @@ MonoBehaviour:
   _dropSnapMode: 3
   _dropProximityTransformUseSelf: 1
   _dropProximityTransform: {fileID: 0}
+--- !u!1 &6385335341851192522
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5613063620603364177}
+  - component: {fileID: 1527251351992902291}
+  - component: {fileID: 3395135395057475294}
+  m_Layer: 12
+  m_Name: Hitbox_Torso_Lower
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5613063620603364177
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6385335341851192522}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6435062725931169160}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1527251351992902291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6385335341851192522}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 1
+--- !u!136 &3395135395057475294
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6385335341851192522}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.14999998
+  m_Height: 0.5128374
+  m_Direction: 0
+  m_Center: {x: 0.106418744, y: 0.012251785, z: -0.000000074505806}
+--- !u!1 &6418087753976776144
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4038365295243496401}
+  - component: {fileID: 6053626004434812690}
+  - component: {fileID: 7796809534615602466}
+  m_Layer: 12
+  m_Name: Hitbox_UpperArm_L
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4038365295243496401
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6418087753976776144}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8817038657789296408}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6053626004434812690
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6418087753976776144}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 2
+--- !u!136 &7796809534615602466
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6418087753976776144}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.055000007
+  m_Height: 0.38935858
+  m_Direction: 0
+  m_Center: {x: -0.13967928, y: -0.000008475035, z: 0.000000015832484}
 --- !u!1 &6518648763131582236
 GameObject:
   m_ObjectHideFlags: 0
@@ -5649,12 +6130,33 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7241994236996165493, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8781222608181371522}
+    - targetCorrespondingSourceObject: {fileID: 7241994236996165493, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5613063620603364177}
     - targetCorrespondingSourceObject: {fileID: 2259840726603940022, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3879979666488203583}
     - targetCorrespondingSourceObject: {fileID: 2259840726603940022, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7695565288744341765}
+    - targetCorrespondingSourceObject: {fileID: 4540741544260012750, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3627090287819086162}
+    - targetCorrespondingSourceObject: {fileID: 7633319398054943833, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7750827860930673693}
+    - targetCorrespondingSourceObject: {fileID: 5156971107299104229, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4038365295243496401}
+    - targetCorrespondingSourceObject: {fileID: 3970094588317566289, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7415370784264344397}
+    - targetCorrespondingSourceObject: {fileID: 1835798567124492442, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8987619555801139501}
+    - targetCorrespondingSourceObject: {fileID: 2512099166448472843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7119451244170976001}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
@@ -5701,21 +6203,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 9042948311470002378, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6760122345692358659}
-    - targetCorrespondingSourceObject: {fileID: 840186693602408161, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 6185252637371528445}
-    - targetCorrespondingSourceObject: {fileID: 4813200727509268005, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 6040746975789111825}
-    - targetCorrespondingSourceObject: {fileID: 1956255518832592516, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1708254327251733805}
-    - targetCorrespondingSourceObject: {fileID: 1168515475038627506, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 6043939350007466390}
-    - targetCorrespondingSourceObject: {fileID: 3318970112927411917, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 7603597229688328583}
     - targetCorrespondingSourceObject: {fileID: 3369216706707980325, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7352292968672092032}
@@ -5731,6 +6218,11 @@ Transform:
 --- !u!4 &129746648632994152 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4323921785033573269, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
+  m_PrefabInstance: {fileID: 4453308068191464189}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &202275468615147571 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4540741544260012750, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
   m_PrefabInstance: {fileID: 4453308068191464189}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &423403972287618082 stripped
@@ -5802,33 +6294,6 @@ MonoBehaviour:
   positionSensitivity: 0.01
   rotationSensitivity: 0.01
   scaleSensitivity: 0.01
---- !u!1 &1423715465909486640 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3318970112927411917, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-  m_PrefabInstance: {fileID: 4453308068191464189}
-  m_PrefabAsset: {fileID: 0}
---- !u!64 &7603597229688328583
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1423715465909486640}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -4818692881193318907, guid: 8948537ed54bfaa43b07445dec8fd311, type: 3}
 --- !u!4 &1659196894410767972 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3083825410398885017, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
@@ -5904,33 +6369,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1949809312022425581, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
   m_PrefabInstance: {fileID: 4453308068191464189}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &2804423224732216441 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1956255518832592516, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-  m_PrefabInstance: {fileID: 4453308068191464189}
-  m_PrefabAsset: {fileID: 0}
---- !u!64 &1708254327251733805
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2804423224732216441}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 7273274694491756055, guid: 8948537ed54bfaa43b07445dec8fd311, type: 3}
 --- !u!4 &2907983834502226736 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1555553815266822605, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
@@ -5990,33 +6428,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1245007206019894481, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
   m_PrefabInstance: {fileID: 4453308068191464189}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &3313016232274791503 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1168515475038627506, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-  m_PrefabInstance: {fileID: 4453308068191464189}
-  m_PrefabAsset: {fileID: 0}
---- !u!64 &6043939350007466390
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3313016232274791503}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 8321497256967482007, guid: 8948537ed54bfaa43b07445dec8fd311, type: 3}
 --- !u!4 &3362497662252922345 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1397428534322159380, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
@@ -6032,33 +6443,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 620678205769689808, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
   m_PrefabInstance: {fileID: 4453308068191464189}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &3919720810738129948 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 840186693602408161, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-  m_PrefabInstance: {fileID: 4453308068191464189}
-  m_PrefabAsset: {fileID: 0}
---- !u!64 &6185252637371528445
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3919720810738129948}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 6682448949855357714, guid: 8948537ed54bfaa43b07445dec8fd311, type: 3}
 --- !u!4 &4130658976168003619 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 332800608004940510, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
@@ -6564,30 +6948,3 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5100999294045427826, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
   m_PrefabInstance: {fileID: 4453308068191464189}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &9153206258004237528 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4813200727509268005, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-  m_PrefabInstance: {fileID: 4453308068191464189}
-  m_PrefabAsset: {fileID: 0}
---- !u!64 &6040746975789111825
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9153206258004237528}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 3680930597917243561, guid: 8948537ed54bfaa43b07445dec8fd311, type: 3}

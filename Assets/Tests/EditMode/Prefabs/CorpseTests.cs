@@ -143,12 +143,98 @@ namespace VrBattlegrounds.Tests.Prefabs
             Assert.That(hitting.Distinct(), Is.Empty, "Пуля попадает в труп — он станет укрытием.");
         }
 
+        /// <summary>
+        /// Толчок учитывает силу оружия (скорость пули × множитель описания выстрела, Патч 30) и урон,
+        /// с пределом. Цифры — реальные параметры оружия проекта.
+        /// </summary>
         [Test]
-        public void Толчок_растёт_с_уроном_и_ограничен()
+        public void Толчок_от_силы_оружия_и_урона_с_пределом()
         {
-            Assert.Greater(DeathImpact.Magnitude(50f), DeathImpact.Magnitude(10f), "Сильный урон толкает не сильнее слабого.");
-            Assert.AreEqual(DeathImpact.MaxImpulse, DeathImpact.Magnitude(100000f), 1e-3f, "Толчок не ограничен — труп улетит.");
-            Assert.Greater(DeathImpact.Magnitude(0f), 0f, "Смертельный урон без толчка.");
+            float pistolWeak = DeathImpact.Magnitude(5f, 300f);     // Gun
+            float pistol = DeathImpact.Magnitude(25f, 300f);        // Gun_real
+            float rifle = DeathImpact.Magnitude(25f, 400f);         // M16
+            float pellet = DeathImpact.Magnitude(14f, 300f * 50f);  // дробина Shotgun_real
+
+            Assert.Greater(rifle, pistol, "Винтовка с тем же уроном толкает не сильнее пистолета — сила оружия не учтена.");
+            Assert.Greater(pistol, pistolWeak, "Больший урон при той же силе не толкает сильнее.");
+            Assert.AreEqual(DeathImpact.MaxImpulse, pellet, 1e-3f, "Дробина дробовика (множитель 50) не упирается в предел — тело улетит.");
+        }
+
+        /// <summary>
+        /// Толчок — по полёту пули (сила, которую SDK кладёт в событие урона, Патч 30); дробины одного
+        /// выстрела складываются, сумма ограничена.
+        /// </summary>
+        [Test]
+        public void Толчок_по_полёту_пули_и_дробины_складываются()
+        {
+            var target = new GameObject("HitProbe");
+            try
+            {
+                target.transform.position = new Vector3(0f, 1.5f, 300f);
+                target.AddComponent<BoxCollider>();
+                Physics.SyncTransforms();
+                Assert.IsTrue(Physics.Raycast(new Vector3(0f, 1.5f, 295f), Vector3.forward, out RaycastHit hit, 10f),
+                    "Контроль: луч не попал в пробный коллайдер.");
+
+                var args = new UxrDamageEventArgs(null, null, hit, 25f, true, Vector3.right * 400f);
+                Assert.AreEqual(Vector3.right * 400f, args.ImpactForce, "Сила пули не доехала до события урона (Патч 30).");
+
+                DeathImpact impact = DeathImpact.From(args, Vector3.up);
+                Assert.Greater(Vector3.Dot(impact.Impulse.normalized, Vector3.right), 0.99f, "Толчок не по направлению полёта пули.");
+
+                var weak = new DeathImpact(Vector3.zero, Vector3.right * 20f);
+                DeathImpact sum = DeathImpact.Combine(weak, weak);
+                Assert.AreEqual(40f, sum.Impulse.magnitude, 1e-3f, "Дробины одного выстрела не сложились.");
+                Assert.AreEqual(DeathImpact.MaxImpulse,
+                    DeathImpact.Combine(sum, new DeathImpact(Vector3.zero, Vector3.right * 500f)).Impulse.magnitude, 1e-3f,
+                    "Сумма дробин не ограничена.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+            }
+        }
+
+        [Test]
+        public void Снаряжение_погибшего_отлетает_от_тела()
+        {
+            Vector3 v = DeathDropEjection.VelocityFor(Vector3.up, new Vector3(0.3f, 1.2f, 0f), Vector3.forward);
+            Assert.Greater(v.x, 1f, "Ствол справа от тела не отлетает вправо — упадёт под труп.");
+            Assert.Greater(v.y, 0f, "Нет подброса вверх.");
+
+            Vector3 centered = DeathDropEjection.VelocityFor(Vector3.up, Vector3.up, Vector3.forward);
+            Assert.Greater(centered.z, 1f, "Ствол в центре тела не отлетает вперёд — упадёт под труп.");
+        }
+
+        [Test]
+        public void Силуэт_снаряжения_только_ничьего_и_у_трупа()
+        {
+            Assert.IsTrue(LootXray.Wanted(true, 0.1f), "Ничьё снаряжение у трупа не подсвечено.");
+            Assert.IsFalse(LootXray.Wanted(false, 0.1f), "Подсвечено снаряжение в руке или кобуре.");
+            Assert.IsFalse(LootXray.Wanted(true, LootXray.PingLifetime + 0.1f), "Силуэт остался без трупа рядом — видно сквозь стены по карте.");
+
+            var material = Resources.Load<Material>(LootXray.MaterialResource);
+            Assert.IsNotNull(material, $"Нет Resources/{LootXray.MaterialResource}.mat — силуэт не нарисуется.");
+            Assert.AreEqual("VrBattlegrounds/LootXray", material.shader.name, "Материал силуэта не на шейдере LootXray.");
+            string shader = System.IO.File.ReadAllText("Assets/Shaders/LootXray.shader");
+            StringAssert.Contains("UNITY_VERTEX_OUTPUT_STEREO", shader, "Шейдер силуэта без стерео-инстансинга — в шлеме будет виден одним глазом.");
+            StringAssert.Contains("ZTest Greater", shader, "Шейдер силуэта рисуется не только сквозь заслоняющее.");
+        }
+
+        [Test]
+        public void Труп_уходит_под_пол_и_исчезает()
+        {
+            var go = new GameObject("SinkProbe");
+            Corpse corpse = go.AddComponent<Corpse>();
+            Vector3 start = go.transform.position;
+
+            Assert.IsFalse(corpse.AdvanceSink(0.01f), "Труп исчез на первом шаге.");
+            Assert.Less(go.transform.position.y, start.y, "Труп не опускается.");
+
+            bool gone = false;
+            for (int i = 0; i < 1000 && !gone; i++) gone = corpse.AdvanceSink(0.05f);
+            Assert.IsTrue(gone, "Труп так и не ушёл под пол.");
+            Assert.IsTrue(go == null, "Ушедший под пол труп не уничтожен.");
         }
 
         [Test]

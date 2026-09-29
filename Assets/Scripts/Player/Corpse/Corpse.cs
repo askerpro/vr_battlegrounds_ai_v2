@@ -22,8 +22,10 @@ namespace VrBattlegrounds.Player
     /// <para>
     /// <b>Жизнь.</b> Падает <see cref="_settleSeconds"/> секунд (или пока все тела не уснут), затем
     /// замерзает: кости кинематические, коллайдеры выключены — дальше он ничего не стоит и ни с чем
-    /// не взаимодействует. Убирается к следующему раунду и при смене режима; сверх
-    /// <see cref="MaxCorpses"/> старейший исчезает. Смена карты уничтожает трупы вместе со сценой.
+    /// не взаимодействует. Лежит <see cref="_lingerSeconds"/> секунд, показывая силуэт ничьего
+    /// снаряжения под собой (<see cref="LootXray"/>), и уходит под пол. Раньше — к следующему раунду и
+    /// при смене режима; сверх <see cref="MaxCorpses"/> старейший исчезает. Смена карты уничтожает
+    /// трупы вместе со сценой. Снаряжение погибшего отлетает от тела (<see cref="DeathDropEjection"/>).
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -40,6 +42,22 @@ namespace VrBattlegrounds.Player
 
         [Tooltip("Сколько секунд труп падает, прежде чем замёрзнуть.")]
         [SerializeField] private float _settleSeconds = 3f;
+
+        [Tooltip("Сколько секунд замёрзший труп лежит, прежде чем уйти под пол.")]
+        [SerializeField] private float _lingerSeconds = 12f;
+
+        [Tooltip("За сколько секунд труп уходит под пол.")]
+        [SerializeField] private float _sinkSeconds = 2f;
+
+        /// <summary>На сколько метров труп опускается, уходя под пол.</summary>
+        public const float SinkDepth = 1.2f;
+
+        /// <summary>Радиус, в котором труп показывает силуэт ничьего снаряжения (<see cref="LootXray"/>).</summary>
+        public const float LootRadius = 1.3f;
+
+        private const float LootPingInterval = 0.25f;
+
+        private float _sunk;
 
         private static readonly List<Corpse> Alive = new List<Corpse>();
         private static bool _subscribed;
@@ -170,8 +188,56 @@ namespace VrBattlegrounds.Player
         private IEnumerator FreezeWhenSettled()
         {
             float until = Time.time + _settleSeconds;
-            while (Time.time < until && !AllSleeping()) yield return null;
+            float nextPing = 0f;
+            while (Time.time < until && !AllSleeping())
+            {
+                if (Time.time >= nextPing) { PingLootNearby(); nextPing = Time.time + LootPingInterval; }
+                yield return null;
+            }
             Freeze();
+
+            // Лежит — показывает силуэт снаряжения под собой, затем уходит под пол.
+            until = Time.time + _lingerSeconds;
+            while (Time.time < until)
+            {
+                PingLootNearby();
+                yield return new WaitForSeconds(LootPingInterval);
+            }
+            while (!AdvanceSink(Time.deltaTime)) yield return null;
+        }
+
+        /// <summary>
+        /// Силуэт ничьего снаряжения у трупа (<see cref="LootXray"/>): ствол под телом виден сквозь него.
+        /// Только рядом с трупом — не «воллхак» по карте.
+        /// </summary>
+        public void PingLootNearby()
+        {
+            Vector3 center = _bodies.Length > 0 && _bodies[0] != null ? _bodies[0].position : transform.position;
+            foreach (Collider c in Physics.OverlapSphere(center, LootRadius, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Rigidbody body = c != null ? c.attachedRigidbody : null;
+                UltimateXR.Manipulation.UxrGrabbableObject item = body != null
+                    ? body.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>()
+                    : null;
+                if (item != null) LootXray.Ping(item);
+            }
+        }
+
+        /// <summary>
+        /// Шаг ухода под пол: без прозрачности (дёшево на Quest) — труп опускается на <see cref="SinkDepth"/>
+        /// за <see cref="_sinkSeconds"/> и исчезает. true — ушёл и уничтожен.
+        /// </summary>
+        public bool AdvanceSink(float deltaTime)
+        {
+            float step = Mathf.Min(SinkDepth - _sunk, SinkDepth * deltaTime / Mathf.Max(0.01f, _sinkSeconds));
+            transform.position += Vector3.down * step;
+            _sunk += step;
+
+            if (_sunk < SinkDepth - 1e-4f) return false;
+
+            Alive.Remove(this);
+            DestroyCorpse(this);
+            return true;
         }
 
         private bool AllSleeping()

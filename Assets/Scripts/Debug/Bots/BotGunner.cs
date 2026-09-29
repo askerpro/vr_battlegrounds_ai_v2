@@ -129,15 +129,23 @@ namespace VrBattlegrounds.DevTools.Bots
 
         private void OnDestroy()
         {
-            // Тело убрали (смена команды, бот удалён). Перед уничтожением AvatarTeardown уже
-            // разжал руку, поэтому «держит» здесь всегда false — убираем своё оружие, если его
-            // не подобрал кто-то другой. Выпавшее при смерти (_weapon сброшен в Update) не трогаем.
+            // Тело убрали. Перед уничтожением AvatarTeardown уже разжал руку, поэтому «держит»
+            // здесь всегда false. Погибший — тело сменил призрак в кадре смерти, Update не успел
+            // сбросить _weapon — выпавший ствол остаётся в мире (ShouldRemoveWeaponWithBody).
+            bool heldByOther = UxrGrabManager.Instance != null && UxrGrabManager.Instance.IsBeingGrabbed(_grabbable);
             if (NetworkServer.active && _weapon != null && _grabbable != null &&
-                (UxrGrabManager.Instance == null || !UxrGrabManager.Instance.IsBeingGrabbed(_grabbable)))
+                ShouldRemoveWeaponWithBody(_player != null && _player.IsAlive, heldByOther))
             {
                 NetworkServer.Destroy(_weapon);
             }
         }
+
+        /// <summary>
+        /// Убирать ли своё оружие вместе с телом. Тело погибшего уничтожается сразу — его сменяет
+        /// призрак (T-35), — и выпавший ствол должен остаться в мире; своё оружие бот убирает, только
+        /// если тело убрали живым (бот удалён, сменил команду) и ствол никто не держит.
+        /// </summary>
+        public static bool ShouldRemoveWeaponWithBody(bool bodyAlive, bool heldByOther) => bodyAlive && !heldByOther;
 
         private void Update()
         {

@@ -80,7 +80,7 @@ namespace VrBattlegrounds.Editor.Avatars
         [MenuItem("Tools/VR Battlegrounds/Avatars/Build Corpses")]
         public static void Build()
         {
-            EnsureLayer();
+            HitboxBuilder.EnsureLayer(CorpsePhysics.LayerName);
             CorpsePhysics.ConfigureLayerCollisions();
             if (!AssetDatabase.IsValidFolder(OutFolder)) AssetDatabase.CreateFolder("Assets/Prefabs/Player", "Corpses");
 
@@ -100,24 +100,6 @@ namespace VrBattlegrounds.Editor.Avatars
             for (GameObject p = PrefabUtility.GetCorrespondingObjectFromSource(prefab); p != null; p = PrefabUtility.GetCorrespondingObjectFromSource(p))
                 depth++;
             return depth;
-        }
-
-        private static void EnsureLayer()
-        {
-            if (LayerMask.NameToLayer(CorpsePhysics.LayerName) >= 0) return;
-
-            var tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
-            SerializedProperty layers = tagManager.FindProperty("layers");
-            for (int i = 8; i < layers.arraySize; i++)
-            {
-                SerializedProperty layer = layers.GetArrayElementAtIndex(i);
-                if (!string.IsNullOrEmpty(layer.stringValue)) continue;
-                layer.stringValue = CorpsePhysics.LayerName;
-                tagManager.ApplyModifiedPropertiesWithoutUndo();
-                Debug.Log($"[CorpseBuilder] Добавлен слой '{CorpsePhysics.LayerName}' ({i}).");
-                return;
-            }
-            Debug.LogError("[CorpseBuilder] Нет свободного слоя для трупа.");
         }
 
         private static Corpse BuildCorpse(GameObject avatar)

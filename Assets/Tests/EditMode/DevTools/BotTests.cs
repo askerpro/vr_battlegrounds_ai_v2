@@ -148,6 +148,20 @@ namespace VrBattlegrounds.Tests.DevTools
             return player;
         }
 
+        /// <summary>
+        /// Тело погибшего бота уничтожается сразу — его сменяет призрак (T-35). Выпавший из руки ствол
+        /// остаётся в мире (его подберут, уберёт уборка раунда); уничтожать своё оружие бот вправе,
+        /// только если тело убрали живым (бот удалён, сменил команду). Раньше тело жило после смерти, и
+        /// бот успевал «отпустить» ствол в Update; с заменой тела ствол погибшего бота исчезал.
+        /// </summary>
+        [TestCase(true, false, true, TestName = "Живого_бота_убрали_ствол_убирается")]
+        [TestCase(false, false, false, TestName = "Погибший_бот_ствол_остаётся_в_мире")]
+        [TestCase(true, true, false, TestName = "Ствол_в_чужой_руке_не_трогаем")]
+        public void Ствол_бота_при_уборке_тела(bool bodyAlive, bool heldByOther, bool removed)
+        {
+            Assert.AreEqual(removed, VrBattlegrounds.DevTools.Bots.BotGunner.ShouldRemoveWeaponWithBody(bodyAlive, heldByOther));
+        }
+
         [Test]
         public void Бот_регистрируется_как_игрок_без_соединения()
         {

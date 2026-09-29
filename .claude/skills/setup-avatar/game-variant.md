@@ -63,7 +63,7 @@ HUD, карманы, хитбоксы, регистрация. Эталон — 
 
 | Что | У киборга | Для новой модели |
 |---|---|---|
-| Хитбоксы | `MeshCollider` на `CyborgGeo/*` | Капсулы/сфера дочерними объектами на костях: голова (сфера ~0.13), грудь, живот, бёдра, голени. Не-trigger, слой `Default` (оружие бьёт `Default\|Ground`). Руки не закрывать — мешают хвату. `MeshCollider` скина застывает в bind-позе |
+| Хитбоксы | `MeshCollider` на `CyborgGeo/*` | Руками не ставить: после регистрации — `Tools/VR Battlegrounds/Avatars/Build Hitboxes` (T-36) — голова, торс, руки, ноги по скелету UltimateXR, слой `Hitbox`, прежние сплошные коллайдеры снимаются (`HitboxTests`) |
 | Трекинг кистей в сети | `NetworkTransformUnreliable` на `Hand_Left/Right`, `coordinateSpace = World` | Тот же компонент с теми же настройками на кость кисти рига `UxrAvatar` (`GetHandBone`), `target` = кость. **Только `World`:** в `Local` после IK поза кисти постоянна и рука у чужих замирает (known-issues, Issue 21). Проверяет `PrefabCompositionTests.У_каждого_аватара_кисти_несут_NetworkTransform` |
 | Нажатие UI пальцем | `UxrFingerTip` на кончиках указательных | `Tools/VR Battlegrounds/Avatars/Setup Avatar UI Fingertips` (`AvatarFingertipSetup`, палец — из рига `UxrAvatar`). Если кончики стоят на риге, вариант их наследует — повторять не нужно. Кончик обязан быть на кисти, в которую смотрит риг `UxrAvatar` (у пути А — на кисти SDK, не на родной кости), и его `forward` — вдоль пальца: луч касания идёт по нему. Проверяет `AvatarLoadoutTests.Кончики_пальцев_для_UI_смотрят_вдоль_пальца` |
 | Карманы | на `Pelvis` / `Spine02` | Префабы из `Assets/Prefabs/Player/Pockets/` на `Hips` / `UpperChest` модели. Позиция = кость + мировое смещение, снятое с киборга; поворот — мировой киборга. Локальные смещения `AvatarPocketSetup` не годятся: оси костей у моделей разные (у CC бедро повёрнуто на 75°). Если у модели есть кобура — `Anchor_Hip_R` на неё. У `Anchor_Hip_R` из префаба уже есть дочерний `GrabProxy` (хват вокруг кобуры, он же точка укладки) — переносить его отдельно не нужно; проверяет `AvatarLoadoutTests.У_кобуры_есть_прокси_хват` |
@@ -120,8 +120,8 @@ Pocket Zones To Prefab` — после выхода из Play Mode значен�
 HUD наследуется от `PlayerBase` (`Camera Controller/Camera/HUDContainer`). Если его нет —
 `Tools/VR Battlegrounds/Avatars/Inject HUD to Selected Avatar`.
 
-Проверить: внутри аватара нет дублей `UniqueId` у UXR-компонентов; не-trigger коллайдеров
-столько, сколько поставлено хитбоксов (коробка камеры — trigger).
+Проверить: внутри аватара нет дублей `UniqueId` у UXR-компонентов. Хитбоксы — сборщиком после регистрации
+(`Build Hitboxes`), другие сплошные коллайдеры на аватаре не нужны (коробка камеры — trigger).
 
 ## 4. Сохранить
 

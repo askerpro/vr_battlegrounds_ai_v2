@@ -296,15 +296,18 @@ namespace UltimateXR.Mechanics.Weapons
                                 float normalizedDistance = _projectiles[i].ProjectileDistanceTravelled / _projectiles[i].ShotDescriptor.ProjectileMaxDistance;
                                 float damage             = Mathf.Lerp(_projectiles[i].ShotDescriptor.ProjectileDamageNear, _projectiles[i].ShotDescriptor.ProjectileDamageFar, normalizedDistance);
 
+                                // VR Battlegrounds patch (Патч 30, Docs/UltimateXR/sdk-patches.md): the same force the projectile applies to rigidbodies.
+                                Vector3 impactForce = _projectiles[i].ProjectileSpeed * _projectiles[i].ShotDescriptor.ProjectileImpactForceMultiplier * projectileForward;
+
                                 if (_projectiles[i].ProjectileDeflectSource != null)
                                 {
                                     // Came from a shot deflected by a UxrProjectileDeflect
-                                    targetActor.ReceiveImpact(_projectiles[i].ProjectileDeflectSource.Owner, raycastHit, damage);
+                                    targetActor.ReceiveImpact(_projectiles[i].ProjectileDeflectSource.Owner, raycastHit, damage, impactForce);
                                 }
                                 else
                                 {
                                     // Direct hit from a projectile
-                                    targetActor.ReceiveImpact(_projectiles[i].ProjectileSource.TryGetWeaponOwner(), raycastHit, damage);
+                                    targetActor.ReceiveImpact(_projectiles[i].ProjectileSource.TryGetWeaponOwner(), raycastHit, damage, impactForce);
                                 }
                             }
                             else

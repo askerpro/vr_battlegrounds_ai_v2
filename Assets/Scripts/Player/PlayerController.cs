@@ -25,6 +25,13 @@ namespace VrBattlegrounds.Player
         /// <summary>Событие смерти игрока.</summary>
         public event Action<PlayerController> PlayerDied;
 
+        /// <summary>
+        /// Попадание по игроку на этой машине — после решения режима, пропускать ли урон
+        /// (<c>UxrDamageEventArgs.IsCanceled</c>). Пули симулирует каждая машина, поэтому событие есть
+        /// и у клиента. Для отладки и эффектов, не для правил игры (урон считает сервер).
+        /// </summary>
+        public static event Action<PlayerController, UxrDamageEventArgs> HitReceivedLocal;
+
         // ── Сетевые данные ────────────────────────────────────────────────────
 
 
@@ -189,6 +196,8 @@ namespace VrBattlegrounds.Player
         /// <summary>Толчок последнего прошедшего урона (сервер) — с ним падает труп.</summary>
         private DeathImpact _lastImpact = DeathImpact.None;
 
+        private int _lastImpactFrame = -1;
+
         private void Awake()
         {
             _actor = GetComponent<UxrActor>();
@@ -257,6 +266,9 @@ namespace VrBattlegrounds.Player
         {
             GameLog.Player.Info($"[PlayerController] {name}: UxrActor сообщил о смерти.", this);
 
+            // До отпускания: снаряжение ещё в руках и кобурах — ему назначается отлёт от тела (T-35).
+            DeathDropEjection.ScheduleFor(this);
+
             PlayerDied?.Invoke(this);
 
             // NetworkServer.active, а не isServer: это ровно та проверка, которую
@@ -295,13 +307,18 @@ namespace VrBattlegrounds.Player
                 {
                     Ledger.Record(e.ActorSource);
                     // Последний прошедший урон перед Died — смертельный: его толчком падает труп.
-                    _lastImpact = DeathImpact.From(e, transform.position + Vector3.up);
+                    // Попадания одного кадра (дробины одного выстрела) складываются.
+                    DeathImpact impact = DeathImpact.From(e, transform.position + Vector3.up);
+                    _lastImpact = Time.frameCount == _lastImpactFrame ? DeathImpact.Combine(_lastImpact, impact) : impact;
+                    _lastImpactFrame = Time.frameCount;
                 }
+                HitReceivedLocal?.Invoke(this, e);
                 return;
             }
 
             e.Cancel();
             GameLog.Player.Verbose($"[PlayerController] {name}: урон {e.Damage:F1} отменён — режим {mode.GetType().Name} урона по игрокам не допускает.", this);
+            HitReceivedLocal?.Invoke(this, e);
         }
 
         private void OnDamageReceived(object sender, UxrDamageEventArgs e)

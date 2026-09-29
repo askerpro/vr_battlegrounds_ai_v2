@@ -1142,3 +1142,27 @@ IK тела и рук считается каждый кадр у всех ав�
    в новой версии появится свойство с `EndSyncProperty`, не записанное в `SerializeState`, тест назовёт его.
    Сознательные исключения (`UxrGrabbableResizable.IsGrabbable/IsKinematic`, `UxrAvatar.ShowControllerHands`)
    перечислены в тесте с причинами.
+
+## Патч 30: сила пули в событии урона
+
+**Дата:** 2026-09-29. **Задача:** [T-35](../tasks/T-35-avatar-swap-ghost-corpse.md) (толчок трупа от оружия).
+**Файлы:** `Mechanics/Weapons/UxrDamageEventArgs.cs` (свойство `ImpactForce`, конструктор с ним),
+`UxrActor.cs` (перегрузка `ReceiveImpact(…, Vector3 impactForce)`), `UxrWeaponManager.cs` (передаёт силу при
+попадании в актора). Метка `VR Battlegrounds patch (Патч 30)`. **Проверка:** `CorpseTests.Толчок_по_полёту_пули_и_дробины_складываются`.
+
+### Проблема
+
+Попадание пули в физический предмет SDK толкает силой `скорость пули × ProjectileImpactForceMultiplier × направление`,
+а в актора — нет, и в `UxrDamageEventArgs` нет ни описания выстрела, ни силы. Трупу (T-35) нечем учесть оружие:
+толчок зависел только от урона, дробовик толкал как одна дробина.
+
+### Решение
+
+Та же сила считается при попадании в актора и едет в событии урона (`ImpactForce`, мировые координаты). Старые
+сигнатуры сохранены и передают ноль — вызовы SDK и сторонний код не меняются.
+
+### Как повторить при обновлении SDK
+
+1. `UxrDamageEventArgs`: свойство `ImpactForce` и конструктор попадания с ним; старый конструктор — через новый с нулём.
+2. `UxrActor.ReceiveImpact`: перегрузка с силой; старая зовёт её с нулём.
+3. `UxrWeaponManager.UpdateProjectiles`: перед `targetActor.ReceiveImpact` посчитать силу так же, как для `rigidbody.AddForceAtPosition`, и передать в оба вызова (прямое попадание и отражённое).

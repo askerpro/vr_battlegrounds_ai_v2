@@ -102,7 +102,11 @@ namespace VrBattlegrounds.Editor.Avatars
                 if (grabbable != null) Object.DestroyImmediate(grabbable.gameObject);
             }
 
-            // Хитбоксы.
+            // Хитбоксы (T-36) — объектами целиком, затем прочие сплошные коллайдеры.
+            foreach (Hitbox hitbox in root.GetComponentsInChildren<Hitbox>(true))
+            {
+                if (hitbox != null) Object.DestroyImmediate(hitbox.gameObject);
+            }
             foreach (Collider collider in root.GetComponentsInChildren<Collider>(true).Where(c => !c.isTrigger).ToList())
             {
                 Object.DestroyImmediate(collider);

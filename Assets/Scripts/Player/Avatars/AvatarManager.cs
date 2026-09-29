@@ -185,9 +185,7 @@ namespace VrBattlegrounds.Player.Avatars
         public void ChangeAvatar(NetworkConnectionToClient conn, PlayerSession session, int teamId, int avatarId)
         {
             TeamData teamData = TeamRegistry.Instance.GetByIndex(teamId);
-            if (teamData == null) return;
-
-            GameObject avatarPrefab = teamData.GetAvatarPrefab(avatarId);
+            GameObject avatarPrefab = PrefabFor(teamId, avatarId, session, _combatAvatarStrategy, _playerPrefab);
             if (avatarPrefab == null) return;
 
             // Обновляем сессию (логически данные хранятся в сессии)
@@ -248,6 +246,43 @@ namespace VrBattlegrounds.Player.Avatars
             }
 
             AvatarSpawned?.Invoke(newPc);
+        }
+
+        /// <summary>
+        /// Префаб аватара для команды и скина при пересоздании (<see cref="ChangeAvatar"/>) — тем же
+        /// правилом, что при первичном спавне (<paramref name="strategy"/>, <see cref="TeamAvatarStrategy"/>):
+        /// у игрока без команды (0) — запасной аватар. Раньше пересоздание молча выходило для команды 0,
+        /// и после смены карты игрок без команды оставался без аватара. Несуществующая команда (не 0) —
+        /// отказ (<c>null</c>): это ошибочный запрос, подменять его запасным аватаром нельзя.
+        /// Сессию не меняет (<c>AvatarPrefabChoiceTests</c>).
+        /// </summary>
+        public static GameObject PrefabFor(int teamId, int avatarId, PlayerSession session,
+                                           AvatarSpawnStrategy strategy, GameObject globalFallback)
+        {
+            if (teamId != 0 && (TeamRegistry.Instance == null || TeamRegistry.Instance.GetByIndex(teamId) == null))
+            {
+                GameLog.Error($"[AvatarManager] Аватар не пересоздан: команды {teamId} нет в TeamRegistry (сессия {(session != null ? session.PlayerName : "?")}).");
+                return null;
+            }
+
+            if (strategy == null) return globalFallback;
+
+            // Стратегия читает команду и скин из сессии — подставляем запрошенные и возвращаем как было.
+            int oldTeam = session.TeamIndex, oldAvatar = session.AvatarIndex;
+            session.TeamIndex = teamId;
+            session.AvatarIndex = avatarId;
+            try
+            {
+                GameObject prefab = strategy.GetPrefab(session, globalFallback);
+                if (prefab == null)
+                    GameLog.Error($"[AvatarManager] Аватар не пересоздан: нет префаба для команды {teamId}, скина {avatarId} и запасного.");
+                return prefab;
+            }
+            finally
+            {
+                session.TeamIndex = oldTeam;
+                session.AvatarIndex = oldAvatar;
+            }
         }
 
         /// <summary>

@@ -193,7 +193,7 @@ namespace VrBattlegrounds.Tests.Modes
         [Test]
         public void У_админа_на_планшете_есть_экран_игроков_и_команд()
         {
-            var tablet = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Menu/VR/PlayerAdmin/Lobby/PlayerAdminLobbyTabletMenu.prefab");
+            var tablet = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Menu/Tablet/Tablet.prefab");
             Assert.IsNotNull(tablet);
 
             var screens = tablet.GetComponentsInChildren<MenuScreen>(true);
@@ -201,9 +201,8 @@ namespace VrBattlegrounds.Tests.Modes
             Assert.IsNotNull(playersScreen, "На планшете нет экрана «Игроки и команды».");
             Assert.IsInstanceOf<MenuPlayersTeams>(playersScreen);
 
-            Assert.IsTrue(tablet.GetComponentsInChildren<SwitchMenuButton>(true)
-                    .Any(b => b.TargetScreen == MenuScreenType.PlayersTeams),
-                "На планшете нет кнопки перехода к экрану «Игроки и команды».");
+            Assert.IsTrue(MenuMatchManager.Links.Any(l => l.screen == MenuScreenType.PlayersTeams),
+                "Из раздела «Админ» нет входа в экран «Игроки и команды».");
         }
 
         // ── Карты ────────────────────────────────────────────────────────────

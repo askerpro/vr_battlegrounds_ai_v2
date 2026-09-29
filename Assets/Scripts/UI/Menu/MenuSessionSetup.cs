@@ -1,15 +1,20 @@
+using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
-using VrBattlegrounds.Managers;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Maps;
-using System.Collections.Generic;
-using System;
+using VrBattlegrounds.UI.Menu.Kit;
 
 namespace VrBattlegrounds.UI.Menu
 {
+    /// <summary>
+    /// Экран админа «Новая серия» (<see cref="MenuScreenType.SessionSetup"/>, вложенный в раздел
+    /// «Админ»): режим матча — ряд кнопок, карты режима — плитки. Клик по плитке ставит карту в конец
+    /// очереди серии, повторный — убирает (<see cref="MapQueue"/>); номер в очереди — в подписи
+    /// плитки, плитка в очереди выделена. «Начать» — главное действие (справа внизу), «Очистить» —
+    /// рядом. Смена режима очищает очередь. Сервер отбрасывает несовместимые карты и проверяет
+    /// право админа (<c>AdminMapCommands.ServerStartSeries</c>).
+    /// </summary>
     public class MenuSessionSetup : MenuScreen
     {
         [Header("Data Registries")]
@@ -19,93 +24,28 @@ namespace VrBattlegrounds.UI.Menu
         [Tooltip("Реестр всех доступных карт.")]
         [SerializeField] private MapRegistry _mapRegistry;
 
-        [Header("UI References")]
-        [Tooltip("Контейнер куда будут спавниться кнопки вкладок (режимов игры).")]
-        [SerializeField] private Transform _tabsContainer;
-        
-        [Tooltip("Контейнер куда будет спавниться список карт (Vertical Layout Group).")]
-        [SerializeField] private Transform _mapListContainer;
-
-        [Tooltip("Префаб кнопки для создания вкладок.")]
-        [SerializeField] private GameObject _buttonPrefab;
-
-        [Tooltip("Префаб плитки карты (MapEntry) с картинкой и названием.")]
-        [SerializeField] private GameObject _mapEntryPrefab;
-
-        [Header("Очередь серии")]
-        [Tooltip("Кнопка «Начать»: запускает серию из карт очереди в порядке очереди.")]
-        [SerializeField] private Button _startButton;
-
-        [Tooltip("Кнопка «Очистить»: опустошает очередь.")]
-        [SerializeField] private Button _clearButton;
-
-        [Tooltip("Имя дочернего TMP-текста на плитке карты — номер карты в очереди.")]
-        [SerializeField] private string _queueNumberName = "QueueNumber";
+        [Tooltip("Колонок в сетке карт.")]
+        [SerializeField] private int _mapColumns = 3;
 
         private GameModeData _selectedMode;
-        private Dictionary<GameModeData, Button> _tabButtons = new Dictionary<GameModeData, Button>();
+        private readonly Dictionary<GameModeData, KitButton> _modeButtons = new Dictionary<GameModeData, KitButton>();
+        private readonly Dictionary<string, (KitButton tile, string name)> _tiles = new Dictionary<string, (KitButton, string)>();
+        private TMPro.TMP_Text _queueLabel;
 
         /// <summary>
         /// Карты серии в порядке кликов (<see cref="MapQueue"/>): клик ставит карту в конец,
         /// повторный — убирает, номер на плитке — место в очереди.
         /// </summary>
         private readonly MapQueue _queue = new MapQueue();
-        private readonly Dictionary<string, GameObject> _entries = new Dictionary<string, GameObject>();
 
         public IReadOnlyList<string> Queue => _queue.Items;
 
-        private void Awake()
+        public override void Show()
         {
-            if (_startButton != null) _startButton.onClick.AddListener(OnStartPressed);
-            if (_clearButton != null) _clearButton.onClick.AddListener(OnClearPressed);
-        }
-
-        private void Start()
-        {
-            PopulateTabs();
-        }
-
-        private void PopulateTabs()
-        {
-            ClearContainer(_tabsContainer);
-            _tabButtons.Clear();
-
-            List<GameModeData> tabs = TabModes(_gameModeRegistry);
-            if (tabs.Count == 0)
-            {
-                GameLog.UI.Warning("[MenuSessionSetup] В реестре нет режимов матча или он не назначен!");
-                return;
-            }
-
-            foreach (var mode in tabs)
-            {
-                GameObject tabBtnObj = Instantiate(_buttonPrefab, _tabsContainer);
-                tabBtnObj.name = $"Tab_{mode.modeId}";
-
-                Button btn = tabBtnObj.GetComponent<Button>();
-                
-                TextMeshProUGUI txtUGUI = tabBtnObj.GetComponentInChildren<TextMeshProUGUI>();
-                if (txtUGUI != null) txtUGUI.text = mode.displayName;
-                else
-                {
-                    TextMeshPro txtTMP = tabBtnObj.GetComponentInChildren<TextMeshPro>();
-                    if (txtTMP != null) txtTMP.text = mode.displayName;
-                    else
-                    {
-                        Text txtStd = tabBtnObj.GetComponentInChildren<Text>();
-                        if (txtStd != null) txtStd.text = mode.displayName;
-                    }
-                }
-                
-                // Captured variable for lambda
-                GameModeData capturedMode = mode;
-                btn.onClick.AddListener(() => SelectTab(capturedMode));
-                
-                _tabButtons[mode] = btn;
-            }
-
-            // Выбираем первый по-умолчанию
-            SelectTab(tabs[0]);
+            base.Show();
+            SetPrimary("Начать", OnStartPressed, _queue.Count > 0);
+            SetSecondary("Очистить", OnClearPressed, _queue.Count > 0);
+            Build();
         }
 
         /// <summary>
@@ -132,71 +72,60 @@ namespace VrBattlegrounds.UI.Menu
             return result;
         }
 
-        private void SelectTab(GameModeData mode)
+        /// <summary>Подпись плитки: номер в очереди перед названием.</summary>
+        public static string TileLabel(string displayName, int queueNumber) =>
+            queueNumber > 0 ? queueNumber + " · " + displayName : displayName;
+
+        private void Build()
         {
-            // Очередь — карты одного режима: другая вкладка — другой набор совместимых карт.
-            if (_selectedMode != mode) _queue.Clear();
-            _selectedMode = mode;
-            
-            foreach (var kvp in _tabButtons)
+            MenuKit.Clear(Content);
+            _modeButtons.Clear();
+            _tiles.Clear();
+
+            MenuKit.Title(Content, "Новая серия");
+
+            List<GameModeData> modes = TabModes(_gameModeRegistry);
+            if (modes.Count == 0)
             {
-                if (kvp.Value != null)
-                {
-                    // Кнопка активной вкладки становится некликабельной (выделенной визуально)
-                    kvp.Value.interactable = (kvp.Key != mode);
-                }
-            }
-
-            PopulateMapList();
-        }
-
-        private void PopulateMapList()
-        {
-            ClearContainer(_mapListContainer);
-            _entries.Clear();
-
-            if (_mapRegistry == null || _mapRegistry.maps == null)
-            {
-                GameLog.UI.Warning("[MenuSessionSetup] MapRegistry не назначен или пуст!");
+                GameLog.UI.Warning("[MenuSessionSetup] В реестре нет режимов матча или он не назначен!");
+                MenuKit.EmptyState(Content, "Нет режимов матча — реестр режимов не назначен.");
                 return;
             }
+            if (_selectedMode == null || !modes.Contains(_selectedMode)) _selectedMode = modes[0];
 
-            GameObject mapPrefabToUse = _mapEntryPrefab != null ? _mapEntryPrefab : _buttonPrefab;
-
-            foreach (var mapDef in MapsForMode(_mapRegistry, _selectedMode))
+            MenuKit.Section(Content, "Режим");
+            RectTransform modeRow = MenuKit.Row(Content);
+            foreach (GameModeData mode in modes)
             {
-
-                GameObject mapBtnObj = Instantiate(mapPrefabToUse, _mapListContainer);
-                mapBtnObj.name = $"BtnMap_{mapDef.sceneName}";
-
-                Button btn = mapBtnObj.GetComponent<Button>();
-                
-                // Если есть превью картинки, находим Image на корневом объекте (MapEntry)
-                if (mapDef.preview != null)
-                {
-                    Image img = mapBtnObj.GetComponent<Image>();
-                    if (img != null) img.sprite = mapDef.preview;
-                }
-
-                TextMeshProUGUI txtUGUI = NameLabel(mapBtnObj);
-                if (txtUGUI != null) txtUGUI.text = mapDef.displayName;
-                else
-                {
-                    TextMeshPro txtTMP = mapBtnObj.GetComponentInChildren<TextMeshPro>();
-                    if (txtTMP != null) txtTMP.text = mapDef.displayName;
-                    else
-                    {
-                        Text txtStd = mapBtnObj.GetComponentInChildren<Text>();
-                        if (txtStd != null) txtStd.text = mapDef.displayName;
-                    }
-                }
-
-                string capturedScene = mapDef.sceneName;
-                btn.onClick.AddListener(() => OnMapClicked(capturedScene));
-                _entries[capturedScene] = mapBtnObj;
+                GameModeData captured = mode;
+                KitButton button = MenuKit.Button(modeRow, mode.displayName, () => SelectMode(captured));
+                button.Selected = mode == _selectedMode;
+                _modeButtons[mode] = button;
             }
 
+            MenuKit.Section(Content, "Карты — в порядке кликов");
+            RectTransform grid = MenuKit.Grid(Content, _mapColumns, 0.62f);
+            List<MapData> maps = MapsForMode(_mapRegistry, _selectedMode);
+            if (maps.Count == 0) MenuKit.EmptyState(Content, "Нет карт, совместимых с режимом.");
+            foreach (MapData map in maps)
+            {
+                string scene = map.sceneName;
+                KitButton tile = MenuKit.Tile(grid, map.displayName, map.preview, () => OnMapClicked(scene));
+                tile.name = "Tile_" + scene;
+                _tiles[scene] = (tile, map.displayName);
+            }
+
+            _queueLabel = MenuKit.Label(Content, "", MenuTextRole.Body, MenuColorRole.TextSecondary);
             RefreshQueueView();
+        }
+
+        private void SelectMode(GameModeData mode)
+        {
+            if (_selectedMode == mode) return;
+            // Очередь — карты одного режима: другой режим — другой набор совместимых карт.
+            _queue.Clear();
+            _selectedMode = mode;
+            Build();
         }
 
         /// <summary>Клик по плитке: карта в конец очереди или из очереди вон.</summary>
@@ -208,7 +137,7 @@ namespace VrBattlegrounds.UI.Menu
             RefreshQueueView();
         }
 
-        /// <summary>«Начать»: серия из очереди — режим вкладки, карты по порядку.</summary>
+        /// <summary>«Начать»: серия из очереди — выбранный режим, карты по порядку.</summary>
         private void OnStartPressed()
         {
             if (_queue.Count == 0 || _selectedMode == null) return;
@@ -231,51 +160,25 @@ namespace VrBattlegrounds.UI.Menu
             RefreshQueueView();
         }
 
-        /// <summary>Номера на плитках и доступность «Начать»/«Очистить».</summary>
+        /// <summary>Номера и выделение плиток, строка серии, доступность «Начать»/«Очистить».</summary>
         private void RefreshQueueView()
         {
-            foreach (KeyValuePair<string, GameObject> entry in _entries)
-            {
-                if (entry.Value == null) continue;
-                Transform numberTransform = FindDeep(entry.Value.transform, _queueNumberName);
-                if (numberTransform == null) continue;
+            var names = new List<string>();
+            foreach (string scene in _queue.Items)
+                names.Add(_tiles.TryGetValue(scene, out var t) ? t.name : scene);
 
+            foreach (KeyValuePair<string, (KitButton tile, string name)> entry in _tiles)
+            {
                 int number = _queue.NumberOf(entry.Key);
-                numberTransform.gameObject.SetActive(number > 0);
-                TMP_Text label = numberTransform.GetComponent<TMP_Text>();
-                if (label != null) label.text = number > 0 ? number.ToString() : "";
+                entry.Value.tile.Text = TileLabel(entry.Value.name, number);
+                entry.Value.tile.Selected = number > 0;
             }
 
-            if (_startButton != null) _startButton.interactable = _queue.Count > 0;
-            if (_clearButton != null) _clearButton.interactable = _queue.Count > 0;
-        }
+            if (_queueLabel != null)
+                _queueLabel.text = _queue.Count > 0 ? "Серия: " + string.Join(" · ", names) : "Выберите карты — они сыграются по порядку.";
 
-        /// <summary>Название карты на плитке — первый TMP-текст, кроме номера в очереди.</summary>
-        private TextMeshProUGUI NameLabel(GameObject entry)
-        {
-            foreach (TextMeshProUGUI text in entry.GetComponentsInChildren<TextMeshProUGUI>(true))
-                if (text.name != _queueNumberName) return text;
-            return null;
-        }
-
-        private static Transform FindDeep(Transform root, string name)
-        {
-            if (root.name == name) return root;
-            foreach (Transform child in root)
-            {
-                Transform found = FindDeep(child, name);
-                if (found != null) return found;
-            }
-            return null;
-        }
-
-        private void ClearContainer(Transform container)
-        {
-            if (container == null) return;
-            for (int i = container.childCount - 1; i >= 0; i--)
-            {
-                Destroy(container.GetChild(i).gameObject);
-            }
+            SetPrimaryInteractable(_queue.Count > 0);
+            SetSecondaryInteractable(_queue.Count > 0);
         }
     }
 }

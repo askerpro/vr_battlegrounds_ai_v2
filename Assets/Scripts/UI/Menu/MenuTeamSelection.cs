@@ -3,70 +3,48 @@ using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
+using VrBattlegrounds.UI.Menu.Kit;
 
 namespace VrBattlegrounds.UI.Menu
 {
     /// <summary>
-    /// Двухэтапный экран выбора команды и скина.
-    /// Этап 1: выбор команды (большие карточки TeamCardButton).
-    /// Этап 2: выбор скина (грид аватаров выбранной команды).
+    /// Раздел «Команда» — два этапа на одном экране: выбор команды (плитки команд) и выбор скина
+    /// (плитки скинов выбранной команды). «Назад» со скинов возвращает к командам
+    /// (<see cref="HandleBack"/>), если команд больше одной. Выбор скина отправляет запрос серверу и
+    /// закрывает меню.
     /// </summary>
     public class MenuTeamSelection : MenuScreen
     {
-        [Header("UI Levels")]
-        [SerializeField] private GameObject _level1TeamSelection;
-        [SerializeField] private GameObject _level2AvatarSelection;
-
-        [Header("UI Containers")]
-        [SerializeField] private Transform _teamsContainer;
-        [SerializeField] private Transform _avatarsListContainer;
-
-        [Header("UI Prefabs")]
-        [SerializeField] private GameObject _teamCardPrefab;
-        [SerializeField] private GameObject _avatarButtonPrefab;
+        [Tooltip("Колонок в сетке плиток.")]
+        [SerializeField] private int _columns = 3;
 
         private int _selectedTeamIndex = 0;
-        private int _selectedAvatarIndex = 0;
-
-        // Кэшируем созданные кнопки для обновления их визуала
-        private System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button> _teamButtons
-            = new System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button>();
-        private System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button> _avatarButtons
-            = new System.Collections.Generic.Dictionary<int, UnityEngine.UI.Button>();
+        private bool _choosingSkin;
 
         public override void Show()
         {
             base.Show();
 
             // Берём текущие значения из сессии игрока, если есть
-            if (PlayerSession.LocalSession != null)
-            {
-                _selectedTeamIndex = PlayerSession.LocalSession.TeamIndex;
-                _selectedAvatarIndex = PlayerSession.LocalSession.AvatarIndex;
-            }
+            if (PlayerSession.LocalSession != null) _selectedTeamIndex = PlayerSession.LocalSession.TeamIndex;
 
             TeamData[] teams = CurrentTeams();
 
             // Команда одна (лобби, или матч начался и своя команда уже есть) — выбирать
             // нечего: сразу скины этой команды. Ни одной (матч начался, а команды у игрока
-            // нет) — пустой этап 1: команду выдаёт админ.
-            if (teams.Length == 1)
-            {
-                OnTeamCardSelected(teams[0].teamIndex);
-                return;
-            }
-
-            ShowTeamSelectionState();
+            // нет) — этап 1 с пояснением: команду выдаёт админ.
+            if (teams.Length == 1) ShowSkins(teams[0].teamIndex);
+            else ShowTeams();
         }
 
-        /// <summary>
-        /// Кнопка «← Назад» — возврат на этап 1. Если выбирать команду не из чего
-        /// (лобби), этап 1 не показывается вовсе.
-        /// </summary>
-        public void BackToTeamSelection()
+        public override bool HasInnerBack => _choosingSkin && OffersTeamChoice(CurrentTeams());
+
+        /// <summary>«Назад» со скинов — к командам (если выбирать есть из чего).</summary>
+        public override bool HandleBack()
         {
-            if (!OffersTeamChoice(CurrentTeams())) return;
-            ShowTeamSelectionState();
+            if (!HasInnerBack) return false;
+            ShowTeams();
+            return true;
         }
 
         /// <summary>
@@ -113,6 +91,14 @@ namespace VrBattlegrounds.UI.Menu
         /// <summary>Предлагать ли выбор команды: только если команд больше одной.</summary>
         public static bool OffersTeamChoice(TeamData[] teams) => teams != null && teams.Length > 1;
 
+        /// <summary>Подпись скина: имя для людей, без технического префикса ассета.</summary>
+        public static string SkinLabel(AvatarData avatar)
+        {
+            if (avatar == null) return "";
+            string name = !string.IsNullOrEmpty(avatar.displayName) ? avatar.displayName : avatar.name;
+            return name.StartsWith("Avatar_") ? name.Substring("Avatar_".Length) : name;
+        }
+
         private static TeamData[] CurrentTeams()
         {
             GameMode active = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
@@ -128,196 +114,89 @@ namespace VrBattlegrounds.UI.Menu
             return ResolveAvailableTeams(active, selected, TeamRegistry.Instance != null ? TeamRegistry.Instance.teams : null, current);
         }
 
-        /// <summary>
-        /// Показывает этап 1 — выбор команды.
-        /// </summary>
-        private void ShowTeamSelectionState()
+        /// <summary>Этап 1 — выбор команды.</summary>
+        private void ShowTeams()
         {
-            if (_level1TeamSelection) _level1TeamSelection.SetActive(true);
-            if (_level2AvatarSelection) _level2AvatarSelection.SetActive(false);
+            _choosingSkin = false;
+            MenuKit.Clear(Content);
+            MenuKit.Title(Content, "Выберите команду");
 
-            PopulateTeams();
-        }
-
-        /// <summary>
-        /// Заполняет контейнер карточками команд из TeamRegistry.
-        /// </summary>
-        private void PopulateTeams()
-        {
-            ClearContainer(_teamsContainer);
-            _teamButtons.Clear();
-
-            TeamData[] availableTeams = CurrentTeams();
-
-            if (availableTeams.Length == 0)
+            TeamData[] teams = CurrentTeams();
+            if (teams.Length == 0)
             {
                 // Штатно: матч начался, а у игрока нет команды режима — её выдаёт админ.
-                GameLog.UI.Info(
-                    "[MenuTeamSelection] Выбирать нечего: матч уже идёт, команду выдаёт админ.");
+                GameLog.UI.Info("[MenuTeamSelection] Выбирать нечего: матч уже идёт, команду выдаёт админ.");
+                MenuKit.EmptyState(Content, "Матч уже идёт — команду выдаёт администратор.");
+                RefreshNavigation();
                 return;
             }
 
-            foreach (var team in availableTeams)
+            RectTransform grid = MenuKit.Grid(Content, _columns, 0.75f);
+            foreach (TeamData team in teams)
             {
-                if (team == null) continue;
-
-                GameObject cardObj = Instantiate(_teamCardPrefab, _teamsContainer);
-                cardObj.name = $"Card_Team_{team.teamIndex}";
-
-                UnityEngine.UI.Button btn = cardObj.GetComponent<UnityEngine.UI.Button>();
-
-                // Устанавливаем иконку на дочерний Image (Thumbnail/Icon)
-                SetButtonIcon(cardObj, team.icon);
-
-                // Устанавливаем название команды
-                SetButtonText(cardObj, team.Name);
-
-                int capturedTeamIndex = team.teamIndex;
-                btn.onClick.AddListener(() => OnTeamCardSelected(capturedTeamIndex));
-
-                _teamButtons[team.teamIndex] = btn;
+                int index = team.teamIndex;
+                KitButton tile = MenuKit.Tile(grid, team.Name, team.icon, () => ShowSkins(index));
+                tile.name = $"Card_Team_{team.teamIndex}";
+                tile.Selected = team.teamIndex == _selectedTeamIndex;
             }
-
-            // Если ранее сохраненная команда не найдена — берем первую
-            if (!_teamButtons.ContainsKey(_selectedTeamIndex))
-            {
-                _selectedTeamIndex = availableTeams[0].teamIndex;
-            }
+            RefreshNavigation();
         }
 
-        /// <summary>
-        /// Вызывается при нажатии на карточку команды. Переход на этап 2 — выбор скина.
-        /// </summary>
-        public void OnTeamCardSelected(int teamIndex)
+        /// <summary>Этап 2 — скины выбранной команды.</summary>
+        private void ShowSkins(int teamIndex)
         {
             _selectedTeamIndex = teamIndex;
-
-            TeamData team = TeamRegistry.Instance?.GetByIndex(teamIndex);
+            TeamData team = TeamRegistry.Instance != null ? TeamRegistry.Instance.GetByIndex(teamIndex) : null;
             if (team == null)
             {
-                GameLog.UI.Warning(
-                    $"[MenuTeamSelection] Команда с teamIndex={teamIndex} не найдена в TeamRegistry");
+                GameLog.UI.Warning($"[MenuTeamSelection] Команда с teamIndex={teamIndex} не найдена в TeamRegistry");
                 return;
             }
 
-            GameLog.UI.Info(
-                $"[MenuTeamSelection] Выбрана команда: {team.Name} (Index: {team.teamIndex}). Переход к скинам.");
+            GameLog.UI.Info($"[MenuTeamSelection] Выбрана команда: {team.Name} (Index: {team.teamIndex}). Переход к скинам.");
 
-            if (_level1TeamSelection) _level1TeamSelection.SetActive(false);
-            if (_level2AvatarSelection) _level2AvatarSelection.SetActive(true);
-
-            PopulateAvatars(team);
-        }
-
-        /// <summary>
-        /// Заполняет грид аватаров для выбранной команды.
-        /// </summary>
-        private void PopulateAvatars(TeamData team)
-        {
-            ClearContainer(_avatarsListContainer);
-            _avatarButtons.Clear();
+            _choosingSkin = true;
+            MenuKit.Clear(Content);
+            MenuKit.Title(Content, team.Name + ": выберите скин");
 
             if (team.avatars == null || team.avatars.Count == 0)
             {
-                GameLog.UI.Warning(
-                    $"[MenuTeamSelection] У команды {team.Name} нет доступных скинов.");
-                _selectedAvatarIndex = 0;
+                GameLog.UI.Warning($"[MenuTeamSelection] У команды {team.Name} нет доступных скинов.");
+                MenuKit.EmptyState(Content, "У команды нет скинов.");
+                RefreshNavigation();
                 return;
             }
 
+            int currentAvatar = PlayerSession.LocalSession != null && PlayerSession.LocalSession.TeamIndex == teamIndex
+                ? PlayerSession.LocalSession.AvatarIndex : -1;
+
+            RectTransform grid = MenuKit.Grid(Content, _columns, 0.9f);
             for (int i = 0; i < team.avatars.Count; i++)
             {
-                AvatarData avatarData = team.avatars[i];
-                if (avatarData == null) continue;
+                AvatarData avatar = team.avatars[i];
+                if (avatar == null) continue;
 
-                GameObject btnObj = Instantiate(_avatarButtonPrefab, _avatarsListContainer);
-                btnObj.name = $"Btn_Avatar_{i}";
-
-                UnityEngine.UI.Button btn = btnObj.GetComponent<UnityEngine.UI.Button>();
-
-                SetButtonText(btnObj, !string.IsNullOrEmpty(avatarData.displayName)
-                    ? avatarData.displayName : avatarData.name);
-
-                // Иконка скина 
-                SetButtonIcon(btnObj, avatarData.icon);
-
-                int capturedAvatarIndex = i;
-                btn.onClick.AddListener(() => OnAvatarSelected(capturedAvatarIndex));
-
-                _avatarButtons[i] = btn;
+                int avatarIndex = i;
+                KitButton tile = MenuKit.Tile(grid, SkinLabel(avatar), avatar.icon, () => OnAvatarSelected(avatarIndex));
+                tile.name = $"Btn_Avatar_{i}";
+                tile.Selected = i == currentAvatar;
             }
+            RefreshNavigation();
         }
 
-        /// <summary>
-        /// Вызывается при нажатии на кнопку скина — применяет выбор и закрывает меню.
-        /// </summary>
+        /// <summary>Скин выбран — запрос серверу и меню закрывается (раньше скрывался только экран, планшет оставался пустым).</summary>
         public void OnAvatarSelected(int avatarIndex)
         {
-            _selectedAvatarIndex = avatarIndex;
-            GameLog.UI.Info(
-                $"[MenuTeamSelection] Выбран скин индекс: {avatarIndex}. Применяем и закрываем меню.");
+            GameLog.UI.Info($"[MenuTeamSelection] Выбран скин индекс: {avatarIndex}. Применяем и закрываем меню.");
 
             if (PlayerSession.LocalSession == null)
             {
-                GameLog.UI.Warning(
-                    "[MenuTeamSelection] Локальный PlayerSession не найден. Невозможно отправить запрос.");
+                GameLog.UI.Warning("[MenuTeamSelection] Локальный PlayerSession не найден. Невозможно отправить запрос.");
                 return;
             }
 
-            PlayerSession.LocalSession.CmdRequestTeamChange(_selectedTeamIndex, _selectedAvatarIndex);
-            Hide();
-        }
-
-        private void ClearContainer(Transform container)
-        {
-            if (container == null) return;
-            for (int i = container.childCount - 1; i >= 0; i--)
-            {
-                Destroy(container.GetChild(i).gameObject);
-            }
-        }
-
-        private void SetButtonText(GameObject btnObj, string textValue)
-        {
-            var txtUGUI = btnObj.GetComponentInChildren<TMPro.TextMeshProUGUI>();
-            if (txtUGUI != null) { txtUGUI.text = textValue; return; }
-
-            var txtTMP = btnObj.GetComponentInChildren<TMPro.TextMeshPro>();
-            if (txtTMP != null) { txtTMP.text = textValue; return; }
-
-            var txtStd = btnObj.GetComponentInChildren<UnityEngine.UI.Text>();
-            if (txtStd != null) { txtStd.text = textValue; }
-        }
-
-        private void SetButtonIcon(GameObject btnObj, Sprite iconSprite)
-        {
-            if (iconSprite == null) return;
-
-            // Сначала ищем по новому шаблону: Thumbnail_Container/Thumbnail или просто Thumbnail
-            Transform thumbObj = btnObj.transform.Find("Thumbnail_Container/Thumbnail") 
-                                 ?? btnObj.transform.Find("Thumbnail")
-                                 ?? btnObj.transform.Find("Icon");
-
-            if (thumbObj != null)
-            {
-                var img = thumbObj.GetComponent<UnityEngine.UI.Image>();
-                if (img != null)
-                {
-                    img.sprite = iconSprite;
-                    return;
-                }
-            }
-
-            // Если ничего не нашли, попробуем найти первый Image, у которого имя не совпадает с корнем и не Background
-            var images = btnObj.GetComponentsInChildren<UnityEngine.UI.Image>();
-            foreach (var img in images)
-            {
-                if (img.gameObject == btnObj) continue; // Пропускаем корень (рамку кнопки)
-                if (img.gameObject.name.Contains("BG") || img.gameObject.name.Contains("Background")) continue; // Пропускаем фоны
-                
-                img.sprite = iconSprite;
-                return;
-            }
+            PlayerSession.LocalSession.CmdRequestTeamChange(_selectedTeamIndex, avatarIndex);
+            CloseMenu();
         }
     }
 }

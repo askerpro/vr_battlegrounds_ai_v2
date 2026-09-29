@@ -39,6 +39,9 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
   Подвижное на карте — только с `Animator`/`Rigidbody`/`NetworkIdentity`, иначе станет окклюдером.
 - **Правки SDK**: `Assets/ThirdParty/UltimateXR/` → запись в `Docs/UltimateXR/sdk-patches.md`;
   `Assets/ThirdParty/Mirror/` → пометка `VR Battlegrounds patch` в коде и запись в `Docs/Mirror/mirror-patches.md`.
+- **Меню планшета** — экран только вариант `Screen_Base` в `Assets/Prefabs/UI/Menu/Screens/`, содержимое только
+  через `MenuKit`, цвета и размеры только из `MenuTheme`, «Назад» и разделы — только каркас. Проверка:
+  `MenuDesignRulesTests`, `MenuContainmentTests`. Новый экран — `/add-menu-screen`, дизайн — `Docs/ui-design-system.md`.
 - **Single Responsibility** — чужеродную логику в синглтоны не дописывать, выносить в отдельный класс.
 
 ## Поиск
@@ -58,7 +61,7 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
 | Новая фича | `Docs/README.md` (нет ли дубля) → `Docs/gameplay.md`, затем `/feature` |
 | Матч, режимы, раунды | `Docs/gameplay.md`, `Docs/game-manager.md` |
 | Сессия, роли, устройства | `Docs/session-architecture.md` |
-| UI-меню / шрифты | `Docs/ui-menu-architecture.md` / `Docs/ui-fonts.md` |
+| UI-меню / шрифты | `Docs/ui-design-system.md`, `Docs/ui-menu-architecture.md` / `Docs/ui-fonts.md` |
 | Стена арсенала | `Docs/Arsenal/Arsenal_Code_Architecture_RU.md` |
 | Сборка, Git/Plastic, перф | `Docs/release.md`, `Docs/version-control.md`, `Docs/perf-stress-test.md` |
 | Unity MCP сломан | `Docs/unity-mcp.md`, `.agents/rules/unity_mcp.md` |

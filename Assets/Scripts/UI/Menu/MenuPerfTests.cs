@@ -5,13 +5,14 @@ using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.DevTools;
 using VrBattlegrounds.DevTools.StressTest;
+using VrBattlegrounds.UI.Menu.Kit;
 
 namespace VrBattlegrounds.UI.Menu
 {
     /// <summary>
     /// Экран «Перф-тесты» (<see cref="MenuScreenType.PerfTests"/>) — стресс-тест с планшета, только
-    /// в режиме отладки. Вход — кнопка <c>Btn_PerfTests</c> на экране «Отладка» (под
-    /// <see cref="DebugOnlyElements"/>), «Назад» возвращает туда же.
+    /// в режиме отладки. Вход — с раздела «Отладка» (<see cref="MenuDebug.Links"/>),
+    /// «Назад» возвращает туда же (стек навигации).
     ///
     /// <para>
     /// <b>Режимы:</b> тип прогона (<see cref="PerfRunMode"/>: обычный, по скинам, короткий, только по
@@ -31,22 +32,12 @@ namespace VrBattlegrounds.UI.Menu
     {
         private static readonly PerfRunMode[] Modes = { PerfRunMode.Standard, PerfRunMode.PerSkin, PerfRunMode.Short, PerfRunMode.MapOnly };
 
-        [Tooltip("Контейнер строк (VerticalLayoutGroup).")]
-        [SerializeField] private Transform _rowsContainer;
-
-        [Tooltip("Префаб кнопки: Button + TMP-текст в детях (SlimButton_IconText).")]
-        [SerializeField] private GameObject _buttonPrefab;
-
-        [Min(0.1f)]
-        [SerializeField] private float _refreshInterval = 0.5f;
-
         // Выбор живёт дольше экрана: планшет пересоздаётся со сценой.
         private static PerfRunMode _mode = PerfRunMode.Standard;
         private static int _puppetSkin = StressTestLayout.MixedSkins;
         private static int _puppetCount = new StressTestConfig().puppetCount;
         private static string _localMessage = string.Empty;
 
-        private float _timer;
         private string _lastSnapshot = "";
         private TMP_Text _panel;
 
@@ -83,22 +74,11 @@ namespace VrBattlegrounds.UI.Menu
 
         private void Update()
         {
-            if (!DebugMode.Enabled)
-            {
-                if (MenuController.Instance != null) MenuController.Instance.SwitchTo(MenuScreenType.Main);
-                return;
-            }
-
-            _timer += Time.unscaledDeltaTime;
-            if (_timer < _refreshInterval) return;
-            _timer = 0f;
-            Refresh();
+            if (RefreshDue()) Refresh();
         }
 
         private void Refresh()
         {
-            if (_rowsContainer == null) return;
-
             List<GameObject> skins = StressTestServer.CollectAvatarPrefabs();
             bool running = StressTestClientSession.IsRunning;
 
@@ -114,50 +94,48 @@ namespace VrBattlegrounds.UI.Menu
 
         private void Rebuild(List<GameObject> skins, bool running)
         {
-            for (int i = _rowsContainer.childCount - 1; i >= 0; i--)
-                Destroy(_rowsContainer.GetChild(i).gameObject);
+            MenuKit.Clear(Content);
+            MenuKit.Title(Content, "Перф-тесты");
+
+            // «Старт» / «Стоп» — главное действие экрана.
+            if (running) SetPrimary("Стоп", StopRun, true, MenuButtonRole.Danger);
+            else SetPrimary("Старт", StartRun);
 
             // ── Режимы ─────────────────────────────────────────────────────
-            Transform row = MenuRowBuilder.Row(_rowsContainer);
-            MenuRowBuilder.Label(row, "Режим", 200f);
+            MenuKit.Section(Content, "Режим");
+            RectTransform row = MenuKit.Row(Content);
             foreach (PerfRunMode mode in Modes)
             {
                 PerfRunMode m = mode;
-                string name = ModeName(mode);
-                MenuRowBuilder.Button(_buttonPrefab, row, m == _mode ? "[" + name + "]" : name, () => Select(m));
+                MenuKit.Button(row, ModeName(mode), () => Select(m)).Selected = m == _mode;
             }
 
             StressTestConfig config = CurrentConfig();
-            MenuRowBuilder.Label(_rowsContainer, StressTestPlan.Describe(_mode, config, skins.Count), 1700f, 80f);
+            MenuKit.Label(Content, StressTestPlan.Describe(_mode, config, skins.Count), MenuTextRole.Body, MenuColorRole.TextSecondary);
 
-            row = MenuRowBuilder.Row(_rowsContainer);
+            // ── Куклы ──────────────────────────────────────────────────────
+            MenuKit.Section(Content, "Куклы");
+            row = MenuKit.Row(Content);
             if (_mode == PerfRunMode.PerSkin)
             {
-                MenuRowBuilder.Label(row, $"Скины кукол: все {skins.Count} по очереди", 900f);
+                MenuKit.Label(row, $"Скины кукол: все {skins.Count} по очереди");
             }
             else
             {
                 string skinName = StressTestLayout.IsSingleSkin(skins.Count, _puppetSkin) ? skins[_puppetSkin].name : "вперемешку";
-                MenuRowBuilder.Label(row, "Скин кукол: " + skinName, 900f);
-                MenuRowBuilder.Button(_buttonPrefab, row, "< Скин", () => ChangeSkin(skins.Count, -1));
-                MenuRowBuilder.Button(_buttonPrefab, row, "Скин >", () => ChangeSkin(skins.Count, +1));
+                MenuKit.Label(row, "Скин кукол: " + skinName);
+                MenuKit.Button(row, "< Скин", () => ChangeSkin(skins.Count, -1));
+                MenuKit.Button(row, "Скин >", () => ChangeSkin(skins.Count, +1));
             }
 
-            row = MenuRowBuilder.Row(_rowsContainer);
-            MenuRowBuilder.Label(row, $"Кукол: {_puppetCount} (до {StressTestConfig.MaxPuppets})", 900f);
-            MenuRowBuilder.Button(_buttonPrefab, row, "- кукла", () => ChangePuppets(-1));
-            MenuRowBuilder.Button(_buttonPrefab, row, "+ кукла", () => ChangePuppets(+1));
+            row = MenuKit.Row(Content);
+            MenuKit.Label(row, $"Кукол: {_puppetCount} (до {StressTestConfig.MaxPuppets})");
+            MenuKit.Button(row, "− кукла", () => ChangePuppets(-1));
+            MenuKit.Button(row, "+ кукла", () => ChangePuppets(+1));
 
-            // ── Панель управления ──────────────────────────────────────────
-            row = MenuRowBuilder.Row(_rowsContainer);
-            MenuRowBuilder.Label(row, "Управление", 300f);
-            if (running) MenuRowBuilder.Button(_buttonPrefab, row, "Стоп", StopRun);
-            else         MenuRowBuilder.Button(_buttonPrefab, row, "Старт", StartRun);
-
-            _panel = MenuRowBuilder.Label(_rowsContainer, "", 1700f, 230f);
-            _panel.fontSize = 28f;
-            _panel.alignment = TextAlignmentOptions.TopLeft;
-            _panel.text = BuildPanel();
+            // ── Панель ─────────────────────────────────────────────────────
+            MenuKit.Section(Content, "Прогон");
+            _panel = MenuKit.Label(Content, BuildPanel(), MenuTextRole.Caption, MenuColorRole.TextPrimary);
         }
 
         private static StressTestConfig CurrentConfig() => StressTestPlan.BuildConfig(_mode, _puppetSkin, _puppetCount);

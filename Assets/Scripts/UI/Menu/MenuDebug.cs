@@ -6,41 +6,40 @@ using UnityEngine;
 using VrBattlegrounds.DevTools;
 using VrBattlegrounds.DevTools.Bots;
 using VrBattlegrounds.DevTools.StressTest;
+using VrBattlegrounds.UI.Menu.Kit;
 
 namespace VrBattlegrounds.UI.Menu
 {
     /// <summary>
-    /// Экран «Отладка» (<see cref="MenuScreenType.Debug"/>) — только в режиме отладки
-    /// (<see cref="DebugMode"/>, кнопка на главном экране под <see cref="DebugOnlyElements"/>).
+    /// Раздел «Отладка» (<see cref="MenuScreenType.Debug"/>) — виден только в режиме отладки
+    /// (<see cref="DebugMode"/>; выключили режим — контроллер уводит на раздел по умолчанию).
     ///
     /// <para>
-    /// Строки собираются кодом (<see cref="MenuRowBuilder"/>): статус, оверлей кадра, переходы на
-    /// экраны админа, боты-противники (<see cref="BotNetwork"/>), телепорт к точкам карты, выключение режима. Стресс-тест — отдельный экран
-    /// «Перф-тесты» (<see cref="MenuPerfTests"/>), переход — кнопка <c>Btn_PerfTests</c> в префабе.
-    /// Экран только шлёт запросы: телепорт — <see cref="DebugModeNetwork.RequestTeleport"/>;
-    /// права проверяет сервер.
+    /// Строки собираются набором (<see cref="MenuKit"/>): статус, оверлей кадра, переходы на экраны
+    /// админа и «Перф-тесты» (<see cref="Links"/>), боты-противники (<see cref="BotNetwork"/>),
+    /// телепорт к точкам карты, выключение режима. Экран только шлёт запросы: телепорт —
+    /// <see cref="DebugModeNetwork.RequestTeleport"/>; права проверяет сервер.
     /// </para>
     ///
     /// <para>
-    /// Перестраивается раз в <see cref="_refreshInterval"/> и только при изменении состава —
-    /// пересоздание кнопок сбивало бы наведение луча в VR. Строка статуса обновляется на месте.
+    /// Перестраивается раз в 0,5 с и только при изменении состава — пересоздание кнопок сбивало бы
+    /// наведение луча в VR. Строка статуса обновляется на месте.
     /// </para>
     /// </summary>
     public class MenuDebug : MenuScreen
     {
-        /// <summary>Сколько кнопок телепорта в строке: шире экран не вмещает.</summary>
-        private const int TeleportPerRow = 4;
+        /// <summary>Колонок в сетке кнопок телепорта.</summary>
+        private const int TeleportColumns = 4;
 
-        [Tooltip("Контейнер строк (VerticalLayoutGroup).")]
-        [SerializeField] private Transform _rowsContainer;
+        /// <summary>Вложенные экраны: «Перф-тесты» — всем в режиме отладки, остальные — админу.</summary>
+        public static readonly (MenuScreenType screen, string label, bool adminOnly)[] Links =
+        {
+            (MenuScreenType.PerfTests, "Перф-тесты", false),
+            (MenuScreenType.MatchManager, "Матч", true),
+            (MenuScreenType.PlayersTeams, "Игроки и команды", true),
+            (MenuScreenType.SessionSetup, "Новая серия", true),
+        };
 
-        [Tooltip("Префаб кнопки: Button + TMP-текст в детях (SlimButton_IconText).")]
-        [SerializeField] private GameObject _buttonPrefab;
-
-        [Min(0.1f)]
-        [SerializeField] private float _refreshInterval = 0.5f;
-
-        private float _timer;
         private string _lastSnapshot = "";
         private TMP_Text _status;
 
@@ -53,24 +52,20 @@ namespace VrBattlegrounds.UI.Menu
 
         private void Update()
         {
-            if (!DebugMode.Enabled)
-            {
-                // Режим выключили, пока экран открыт: экрана больше нет.
-                if (MenuController.Instance != null) MenuController.Instance.SwitchTo(MenuScreenType.Main);
-                return;
-            }
+            if (RefreshDue()) Refresh();
+        }
 
-            _timer += Time.unscaledDeltaTime;
-            if (_timer < _refreshInterval) return;
-            _timer = 0f;
-            Refresh();
+        public override void BuildPreview()
+        {
+            base.Show();
+            string[] labels = { "База A", "База B", "Арсенал A", "Арсенал B", "Центр", "Крыша", "Подвал" };
+            Rebuild(true, labels, labels);
+            if (_status != null) _status.text = "Сеть: хост · права админа: да · стресс-тест: не идёт · ботов: 0";
         }
 
         private void Refresh()
         {
-            if (_rowsContainer == null) return;
-
-            bool admin = MenuPlayersTeams.IsLocalAdmin();
+            bool admin = MenuPermissions.ShowAdminUi();
             List<DebugTeleportTarget> targets = DebugTeleportTargets.Collect();
 
             var snapshot = new StringBuilder();
@@ -80,68 +75,57 @@ namespace VrBattlegrounds.UI.Menu
             if (snapshot.ToString() != _lastSnapshot)
             {
                 _lastSnapshot = snapshot.ToString();
-                Rebuild(admin, targets);
+                Rebuild(admin, targets.ConvertAll(t => t.Id), targets.ConvertAll(t => t.Label));
             }
 
             if (_status != null) _status.text = BuildStatus(admin);
         }
 
-        private void Rebuild(bool admin, List<DebugTeleportTarget> targets)
+        private void Rebuild(bool admin, IList<string> teleportIds, IList<string> teleportLabels)
         {
-            for (int i = _rowsContainer.childCount - 1; i >= 0; i--)
-                Destroy(_rowsContainer.GetChild(i).gameObject);
-
-            _status = MenuRowBuilder.Label(_rowsContainer, "", 1700f, 110f);
+            MenuKit.Clear(Content);
+            MenuKit.Title(Content, "Отладка");
+            _status = MenuKit.Label(Content, "", MenuTextRole.Caption, MenuColorRole.TextSecondary);
 
             // ── Оверлей ────────────────────────────────────────────────────
-            Transform row = MenuRowBuilder.Row(_rowsContainer);
-            MenuRowBuilder.Label(row, "Оверлей", 300f);
-            MenuRowBuilder.Button(_buttonPrefab, row, DebugPerfReadout.Visible ? "Скрыть кадр" : "Показать кадр",
-                                  () => { DebugPerfReadout.SetVisible(!DebugPerfReadout.Visible); _lastSnapshot = ""; });
+            MenuKit.Section(Content, "Оверлей кадра");
+            MenuKit.Button(MenuKit.Row(Content), DebugPerfReadout.Visible ? "Скрыть кадр" : "Показать кадр",
+                           () => { DebugPerfReadout.SetVisible(!DebugPerfReadout.Visible); _lastSnapshot = ""; });
 
-            // ── Админ ──────────────────────────────────────────────────────
-            row = MenuRowBuilder.Row(_rowsContainer);
-            MenuRowBuilder.Label(row, "Админ", 300f);
-            if (admin)
+            // ── Разделы ────────────────────────────────────────────────────
+            MenuKit.Section(Content, "Разделы");
+            RectTransform links = MenuKit.Row(Content);
+            foreach ((MenuScreenType screen, string label, bool adminOnly) in Links)
             {
-                MenuRowBuilder.Button(_buttonPrefab, row, "Матч", () => SwitchTo(MenuScreenType.MatchManager));
-                MenuRowBuilder.Button(_buttonPrefab, row, "Игроки и команды", () => SwitchTo(MenuScreenType.PlayersTeams));
-                MenuRowBuilder.Button(_buttonPrefab, row, "Выбор серии", () => SwitchTo(MenuScreenType.SessionSetup));
+                if (adminOnly && !admin) continue;
+                MenuScreenType target = screen;
+                MenuKit.Button(links, label, () => Push(target));
             }
-            else
-            {
-                MenuRowBuilder.Label(row, "Сервер прав не выдал — см. строку статуса.", 1300f);
-            }
+            if (!admin) MenuKit.Label(Content, "Сервер прав админа не выдал — см. строку статуса.", MenuTextRole.Caption, MenuColorRole.TextSecondary);
 
             // ── Боты ───────────────────────────────────────────────────────
             // Только админу: сервер всё равно проверит права (BotNetwork).
             if (admin)
             {
-                row = MenuRowBuilder.Row(_rowsContainer);
-                MenuRowBuilder.Label(row, "Боты", 300f);
-                MenuRowBuilder.Button(_buttonPrefab, row, "Добавить бота", () => RequestBots(add: true));
-                MenuRowBuilder.Button(_buttonPrefab, row, "Убрать всех", () => RequestBots(add: false));
+                MenuKit.Section(Content, "Боты");
+                RectTransform row = MenuKit.Row(Content);
+                MenuKit.Button(row, "Добавить бота", () => RequestBots(add: true));
+                MenuKit.Button(row, "Убрать всех", () => RequestBots(add: false), MenuButtonRole.Danger);
             }
 
             // ── Телепорт ───────────────────────────────────────────────────
-            row = MenuRowBuilder.Row(_rowsContainer);
-            MenuRowBuilder.Label(row, "Телепорт", 300f);
-            if (targets.Count == 0) MenuRowBuilder.Label(row, "На карте нет точек.", 1300f);
-            for (int i = 0; i < targets.Count; i++)
+            MenuKit.Section(Content, "Телепорт");
+            if (teleportIds.Count == 0) MenuKit.EmptyState(Content, "На карте нет точек.");
+            RectTransform grid = MenuKit.Grid(Content, TeleportColumns, 0.25f);
+            for (int i = 0; i < teleportIds.Count; i++)
             {
-                if (i > 0 && i % TeleportPerRow == 0)
-                {
-                    row = MenuRowBuilder.Row(_rowsContainer);
-                    MenuRowBuilder.Label(row, "", 300f);
-                }
-
-                string id = targets[i].Id;
-                MenuRowBuilder.Button(_buttonPrefab, row, targets[i].Label, () => Teleport(id));
+                string id = teleportIds[i];
+                MenuKit.Button(grid, teleportLabels[i], () => Teleport(id));
             }
 
             // ── Выход ──────────────────────────────────────────────────────
-            row = MenuRowBuilder.Row(_rowsContainer);
-            MenuRowBuilder.Button(_buttonPrefab, row, "Выключить режим отладки", () => DebugMode.Set(false, "кнопка планшета"));
+            MenuKit.Section(Content, "Режим");
+            MenuKit.Button(MenuKit.Row(Content), "Выключить режим отладки", () => DebugMode.Set(false, "кнопка планшета"), MenuButtonRole.Danger);
         }
 
         private static string BuildStatus(bool admin)
@@ -158,11 +142,6 @@ namespace VrBattlegrounds.UI.Menu
         {
             if (!BotNetwork.Request(add, out string reason))
                 PerfOverlay.Show("Боты: " + reason, 4f);
-        }
-
-        private static void SwitchTo(MenuScreenType screen)
-        {
-            if (MenuController.Instance != null) MenuController.Instance.SwitchTo(screen);
         }
 
         private static void Teleport(string id)

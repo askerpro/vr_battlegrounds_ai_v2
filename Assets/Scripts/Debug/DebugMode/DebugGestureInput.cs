@@ -70,7 +70,7 @@ namespace VrBattlegrounds.DevTools
                 Haptic(0.8f, 0.25f);
                 PerfOverlay.Show(offline
                     ? "Режим отладки включён.\nСервера нет: ещё раз оба стика 2 с — шлем станет хостом."
-                    : "Режим отладки включён.\nПланшет → «Отладка».", 5f);
+                    : "Режим отладки включён.\nПланшет, раздел «Отладка».", 5f);
             }
             else
             {
@@ -89,7 +89,7 @@ namespace VrBattlegrounds.DevTools
             }
 
             GameLog.Debug.Info("[DebugMode] Сервера нет — шлем становится хостом по жесту.");
-            PerfOverlay.Show("Шлем становится хостом.\nПосле загрузки лобби — планшет → «Отладка».", 6f);
+            PerfOverlay.Show("Шлем становится хостом.\nПосле загрузки лобби — планшет, раздел «Отладка».", 6f);
             discovery.RestartAsHost();
         }
 

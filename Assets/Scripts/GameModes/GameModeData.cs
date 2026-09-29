@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 using VrBattlegrounds;
+using VrBattlegrounds.UI.Menu.Kit;
 
 namespace VrBattlegrounds.GameModes
 {
@@ -49,6 +51,12 @@ namespace VrBattlegrounds.GameModes
 
         [Tooltip("Префаб интерфейса игрока (VR HUD). Спавнится компонентом PlayerHUDManager локального игрока внутрь его UI-контейнера при старте матча/подключении.")]
         public GameObject hudPrefab;
+
+        [Header("Меню планшета")]
+        [Tooltip("Игровые разделы левой колонки планшета, пока режим активен на карте (например, Обзор · Команда · Статистика). " +
+                 "Пусто — разделы по умолчанию. Системные (Калибровка, Админ, Отладка) добавляются всегда, объявлять их не нужно. " +
+                 "Всего разделов — не больше 6 (проверяет MenuTabsTests).")]
+        public List<MenuTab> menuTabs = new List<MenuTab>();
 
         public override string ToString() => displayName;
     }

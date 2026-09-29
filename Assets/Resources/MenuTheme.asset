@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a92500a5bbcd1d48b53fd788cf1e018, type: 3}
+  m_Name: MenuTheme
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.UI.Menu.Kit.MenuTheme
+  Surface: {r: 0.08235294, g: 0.08627451, b: 0.10980392, a: 1}
+  SurfaceRaised: {r: 0.16470589, g: 0.1764706, b: 0.21960784, a: 1}
+  SurfaceHover: {r: 0.22745098, g: 0.24313726, b: 0.29803923, a: 1}
+  Accent: {r: 1, g: 0.6862745, b: 0, a: 1}
+  AccentPressed: {r: 0.9411765, g: 0.64705884, b: 0, a: 1}
+  TextPrimary: {r: 1, g: 1, b: 1, a: 1}
+  TextSecondary: {r: 0.7882353, g: 0.8, b: 0.8392157, a: 1}
+  TextOnAccent: {r: 0.08235294, g: 0.08627451, b: 0.10980392, a: 1}
+  Danger: {r: 0.47843137, g: 0.14901961, b: 0.1254902, a: 1}
+  DangerHover: {r: 0.6039216, g: 0.1882353, b: 0.15686275, a: 1}
+  Success: {r: 0.30980393, g: 0.81960785, b: 0.47843137, a: 1}
+  DisabledFill: {r: 0.11764706, g: 0.1254902, b: 0.15294118, a: 1}
+  DisabledText: {r: 0.5411765, g: 0.5568628, b: 0.6039216, a: 1}
+  Divider: {r: 0.1882353, g: 0.2, b: 0.24705882, a: 1}
+  TitleSize: 60
+  BodySize: 46
+  CaptionSize: 40
+  ButtonSize: 44
+  ButtonMinSize: 32
+  TableHeaderSize: 38
+  BoldFont: {fileID: 11400000, guid: 394b51b32ddcd944db6a04d9073fd87c, type: 2}
+  RoundedSprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  SafeMargin: 24
+  RailWidth: 380
+  RailItemHeight: 88
+  ActionStripHeight: 104
+  PrimaryMinWidth: 360
+  ZoneGap: 12
+  RowHeight: 88
+  TableRowHeight: 64
+  ButtonMinWidth: 160
+  Spacing: 16
+  ScrollbarWidth: 20

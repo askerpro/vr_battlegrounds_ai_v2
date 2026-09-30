@@ -8,7 +8,9 @@ description: Добавить в игру новое огнестрельное 
 Задача: $ARGUMENTS
 
 Эталон, собранный по этому маршруту: `Assets/Prefabs/Weapons/ShotgunReal/` (`Shotgun_real` +
-`Shotgun_real_mag`), рецепт — `HandsPackWeaponBuilder.ShotgunReal`. Вручную на глаз собраны
+`Shotgun_real_mag`), рецепт — `HandsPackWeaponBuilder.ShotgunReal`. Им же собраны шесть стволов T-38
+(`Scar`, `Uzi`, `MP5K`, `PPK`, `Revolver`, `SniperRifle` — рецепты там же, меню
+`Tools/VR Battlegrounds/Gameplay/Build T-38 Weapons From Hands Pack`). Вручную на глаз собраны
 `Gun_real` и M16 — **геометрию** они повторяют точно, а **механику** (ход затвора, угол
 спуска) нет: у `Gun_real` затвор 1.89 см против 4.23 в паке, спуск 40° против 18°.
 
@@ -34,6 +36,19 @@ using (var pack = new VrBattlegrounds.Editor.Gameplay.HandsPackWeapon("Hands_Sho
 Или меню `Tools/VR Battlegrounds/Gameplay/Hands Pack Weapon Report` (лог в консоль).
 Нужно определить: корпус, подвижную деталь (помпа/затвор) и клип, где она ходит (`Shot`),
 спуск, деталь у окна магазина, клип с руками на оружии (`Aming_Idle`/`Aim_Idle`).
+
+Грабли пака (T-38):
+- имена клипов и файлов не единообразны: покой бывает `idle`/`Idel`, клип прицеливания —
+  `Aiming_Idle`/`Aim_Idle`/`Idle_Aim`/`Idle_Aiming`; файлы `Hands_Automatic_rifle@…` лежат в папке
+  `Hands_Automatic_Rifle01`. Клип ищется по имени, не по имени файла;
+- оси меша разные: ствол по −Y, +Y (MP5K) или +Z (Uzi) — сборщик берёт их из клипа прицеливания
+  (`HandsPackWeapon.AimAxes`), руками поворот корпуса не задаётся;
+- единицы меша от 0.07 (MP5K, кость ×6.4) до 1.7 (Uzi) — пороги считать долей длины;
+- клипы анимируют и масштаб костей (магазин AX-50: 1.048 в bind-pose, 1 в клипах) — сброс в
+  bind-pose обязан сбрасывать и масштаб;
+- риг рук у револьвера `Hands_Gun_03` — `CATRig…`, у остальных `Character001…`;
+- у части оружия в клипе выстрела не двигаются ни спуск (Uzi, MP5K), ни затвор (MP5K — ход рукоятки
+  взведения берётся из `Reload`). Тогда угол спуска 0 — так и есть в паке.
 Посмотреть модель глазами — рендер в preview-сцене в PNG (пример — в истории
 `HandsPackWeaponBuilder`, камера ортографическая сбоку).
 
@@ -57,11 +72,19 @@ UltimateXR калибровкой с донора — оружия того же
 (`GripCalibration`). Точность: калибровка с `Gun_real` предсказывает правую руку M16 с
 ошибкой 1.1 см / ~20°. Для длинноствольного донор — M16, для пистолета — `Gun_real`.
 
-Позы (`UxrHandPoseAsset`, blend) берутся у донора: рукоять — поза основной точки,
-цевьё/помпа — поза дополнительной. Записи делаются для `MEF_Base_Avatar` — как у M16 и
-`Gun_real`. У Heavy Soldier и Cyborg поз нет ни у одного оружия проекта
+Сборщик ставит калибровочный хват (позы донора); поверх него **позы пака** — рецепт в
+`HandsPackPoseImporter.Recipes` (`HandsPack_<оружие>_Grip` → точка 0, `_Support` → точка 1) и
+`HandsPackPoseImporter.ImportFor(префаб)`: поза кисти из кадра клипа прицеливания и место ладони
+(`HandsPackGripAligner`), калибровочные точки при этом удаляются; кейс — в
+`HandsPackHandPoseTests.Cases`. Затвор держится не так, как в клипе (рука пака на нём не лежит), — его
+хват переносится с затвора донора. Вторая рука — точка 1 корня (`SupportGrip`); ближе 10 см к
+основной — пистолетная поддержка, сборщик ставит `MainGripAimLock` и `SupportGripRequiresMain`.
+Записи делаются для `MEF_Base_Avatar` — как у M16 и `Gun_real`. У Heavy Soldier и Cyborg поз нет ни у одного оружия проекта
 (`GrabPoseCoverageTests` красный и до нового оружия) — это отдельная задача. Покрытие новой
 `WeaponInfo` × каждый аватар реестра показывает `GrabPoseCoverageTests` — по тест-кейсу на пару.
+
+**Материалы — из префабов пака, не из модели.** У FBX пака материалы — заглушки `NN - Default` без текстур;
+`HandsPackWeapon.MaterialsOf` берёт материал рендерера префаба пака с тем же мешем (`WeaponMaterialTests`).
 
 ## 4. Сборка
 
@@ -113,9 +136,33 @@ VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.Build(recipe);
 
 Повторная сборка перезаписывает префабы на месте — GUID и ссылки на них сохраняются.
 После сборки — `Tools/VR Battlegrounds/Gameplay/Apply Game Tags` (корень → `Weapon`,
-магазин → `Magazine`; сборщик теги не ставит, правило CLAUDE.md).
+магазин → `Magazine`; сборщик теги не ставит, правило CLAUDE.md), `Tools/VR Battlegrounds/VersionControl/Persist
+UltimateXR Unique Ids` (иначе красный `UxrUniqueIdOnDiskTests`) и `Normalize Network Asset Ids`.
 
-Модель не из пака Hands — шаги 2–3 делаются вручную, остальное то же; тест `HandsPackWeaponTests`
+Тег магазина — свой у каждого оружия (`MagScar`, `MagPPK`…): по тегу якорь оружия принимает магазин, а
+карман считает «тип» (по три каждого). Общий тег пустил бы магазин одного ствола в другой. Новый тег
+магазина — в `Assets/Prefabs/Player/Pockets/MagazinePocket.prefab` и `AvatarPocketSetup.Pockets`.
+Тег оружия берётся по кобуре: `BackWeapon` (спина) или `Gun` (бедро).
+
+Без затвора (`ActionKind.None`, револьвер): спуск стреляет прямо из «магазина» (`Use Has Reloaded…`
+выключен), перезарядка — сменой барабана целиком; патроны и гильзы, которые вынимаются вместе с
+барабаном, — `MagazineExtraParts`. Болтовка-заглушка: затвор как у автомата, но огонь `ManualReload` —
+затвор после каждого выстрела.
+
+**Пак KINEMATION Tactical Shooter** (T-39) — свой источник `KinemationWeapon`, тот же сборщик: рецепт
+`KinemationWeaponRecipe` в `KinemationWeaponBuilder` (префаб `W_*`, папка клипов, клип рук `A_FP_*_Idle`, клип покоя
+`A_W_*_Idle`, выброшенные детали, звуки пака), `KinemationWeaponBuilder.Build(recipe)`; кейсы — `KinemationWeaponTests`,
+`KinemationHandPoseTests`. Грабли:
+- деталь — **кость** внутри единого скина (не отдельный рендерер); имена костей и какой патрон верхний — меню
+  `Tools/VR Battlegrounds/Gameplay/Kinemation/Weapon Report`; у дублей имён — префикс рендерера (`SKM_MKR9_Mag.Mag`);
+- поза префаба пака — не поза покоя: магазин ставят клип `A_W_*_Idle` и кадр 0 аниматора магазина (`MagAnimator`), без
+  них магазин AK105 внутри коробки, у MKR9/Viper — висит;
+- модели пака без Read/Write после импорта других ассетов отдают пустые `vertices` — `KinemationWeapon` ставит Read/Write сам;
+- клипа прицеливания нет, оружие на кости `ik_hand_gun` с поворотом `weaponRotationOffset` (90, 0, 0);
+- у части стволов спуск в клипах неподвижен (угол 0), рукоятка взведения MKR9 тоже — затвор берётся за `Bolt`;
+- материалы пака (HDRP) при рендере и загрузке пересохраняются — откатывать `git checkout`.
+
+Модель не из пака Hands и не из KINEMATION — шаги 2–3 делаются вручную, остальное то же; тест `HandsPackWeaponTests`
 к такому оружию не применим. Подсветку и тогда ставить через `WeaponGrabHighlight.Assign` — по
 вызову на каждую точку хвата, включая дополнительные (`execute_code`, префаб через
 `LoadPrefabContents`).
@@ -128,6 +175,7 @@ VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.Build(recipe);
 | реестр | `Assets/Data/Weapons/Resources/WeaponRegistry.asset` → `_weapons` |
 | сеть | `Assets/Prefabs/Managers/--- MANAGERS ---.prefab` → `GameNetworkManager.spawnPrefabs`: оружие **и** магазин |
 | стена | `Assets/Prefabs/Arsenal/StandardArsenalWall.prefab` → `FirearmSlotController._weaponInfo` слота |
+| баланс | раздел «Balance» в `WeaponInfo` (урон, спад, темп, магазин, дробь, картина отдачи `Recoil`) → строка роли CS2 в `WeaponBalanceTests.Roster` → `Tools/VR Battlegrounds/Gameplay/Apply Weapon Balance` (кладёт числа и `RecoilAccumulator` в префабы; урон/темп/ёмкость в префабе руками не править) |
 | эталон размера | `WeaponScaleTests.RealLengths` — длина реального прототипа |
 | механика из пака | `HandsPackWeaponTests.Cases` — детали, помпа/затвор, спуск |
 

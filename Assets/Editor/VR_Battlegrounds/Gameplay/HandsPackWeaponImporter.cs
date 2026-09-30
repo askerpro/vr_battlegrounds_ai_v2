@@ -32,7 +32,7 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// масштаб корня префаба (правило CLAUDE.md, эталон в <c>WeaponScaleTests</c>).
     /// </para>
     /// </summary>
-    public sealed class HandsPackWeapon : IDisposable
+    public sealed class HandsPackWeapon : IDisposable, IWeaponModel
     {
         public const string PackModels = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/";
 
@@ -70,7 +70,50 @@ namespace VrBattlegrounds.Editor.Gameplay
         public string ModelPath { get; }
         public IEnumerable<string> Parts => _parts.Keys;
         public Mesh MeshOf(string part) => _parts[part].sharedMesh;
-        public Material[] MaterialsOf(string part) => _parts[part].sharedMaterials;
+        public Material[] MaterialsOf(string part) => PackMaterialsFor(_parts[part].sharedMesh, _parts[part].sharedMaterials);
+
+        public const string PackPrefabs = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Prefabs/";
+
+        /// <summary>
+        /// Материалы детали из префабов пака (<c>Prefabs/Hands_*.prefab</c>) — рендерер с тем же мешем. У модели
+        /// (<c>.fbx</c>) материалы — заглушки <c>NN - Default</c> без текстур: настоящие пак назначает только в своих
+        /// префабах. Не нашлось — <paramref name="fallback" />. Проверка — <c>WeaponMaterialTests</c>.
+        /// </summary>
+        public static Material[] PackMaterialsFor(Mesh mesh, Material[] fallback)
+        {
+            if (mesh == null) return fallback;
+            string model = AssetDatabase.GetAssetPath(mesh);
+            foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { PackPrefabs }))
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
+                var renderers = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+                foreach (var r in renderers)
+                {
+                    if (r.sharedMesh != mesh) continue;
+                    Material[] materials = r.sharedMaterials;
+                    if (materials.Length > 0 && materials.All(m => m != null && !IsModelMaterial(m))) return materials;
+                }
+
+                // Пак и сам оставил на части деталей заглушку (спуск дробовика, детали Uzi и револьвера) или
+                // держит деталь другим мешем (патрон дробовика). Текстура у оружия пака одна на весь ствол —
+                // берётся основной материал оружия из префаба той же модели: самый частый не-заглушка, кроме рук.
+                if (!renderers.Any(r => r.sharedMesh != null && AssetDatabase.GetAssetPath(r.sharedMesh) == model)) continue;
+                Material main = renderers.Where(o => !o.name.StartsWith("Arm") && !o.name.StartsWith("Glove"))
+                                         .SelectMany(o => o.sharedMaterials)
+                                         .Where(m => m != null && !IsModelMaterial(m))
+                                         .GroupBy(m => m).OrderByDescending(g => g.Count()).Select(g => g.Key)
+                                         .FirstOrDefault();
+                if (main != null) return Enumerable.Repeat(main, Math.Max(1, fallback.Length)).ToArray();
+            }
+            return fallback;
+        }
+
+        /// <summary>Материал встроен в модель (<c>.fbx</c>/<c>.obj</c>) — заглушка, а не материал пака.</summary>
+        public static bool IsModelMaterial(Material material)
+        {
+            string path = AssetDatabase.GetAssetPath(material).ToLowerInvariant();
+            return path.EndsWith(".fbx") || path.EndsWith(".obj");
+        }
 
         public void Dispose()
         {
@@ -87,13 +130,22 @@ namespace VrBattlegrounds.Editor.Gameplay
                 foreach (var src in fresh.GetComponentsInChildren<Transform>(true))
                 {
                     Transform dst = Find(_instance.transform, src.name);
-                    if (dst != null) dst.SetLocalPositionAndRotation(src.localPosition, src.localRotation);
+                    if (dst == null) continue;
+                    dst.SetLocalPositionAndRotation(src.localPosition, src.localRotation);
+                    // Масштаб тоже: клипы пака анимируют его (у магазина AX-50 в bind-pose 1.048, в
+                    // клипах 1) — без сброса деталь после клипа ставилась со сдвигом в 1.8 мм.
+                    dst.localScale = src.localScale;
                 }
                 return;
             }
 
             Clip(clipName).SampleAnimation(_instance, time);
         }
+
+        public bool HasClip(string clipName) =>
+            clipName != null && AssetDatabase.FindAssets("t:AnimationClip", new[] { _folder })
+                                             .SelectMany(g => AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath(g)))
+                                             .Any(o => o is AnimationClip c && c.name == clipName);
 
         public AnimationClip Clip(string clipName)
         {
@@ -123,7 +175,10 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// </summary>
         public PartMotion Measure(string part, string clipName, string restClip = "Idle")
         {
-            Sample(restClip);
+            // Сначала bind-pose: клип покоя двигает не все кости, и без сброса деталь осталась бы
+            // там, где её оставил предыдущий замер (ход получался с обратным знаком).
+            Sample(null);
+            if (HasClip(restClip)) Sample(restClip); // у части моделей клип покоя зовётся иначе (idle, Idel)
             Matrix4x4 rest = PartInBody(part);
             AnimationClip clip = Clip(clipName);
             var motion = new PartMotion { Part = part, Clip = clipName };
@@ -134,6 +189,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 Matrix4x4 m = PartInBody(part);
 
                 Vector3 d = (Vector3)m.GetColumn(3) - (Vector3)rest.GetColumn(3);
+                if (d.magnitude > motion.Far.magnitude) motion.Far = d;
                 if (motion.Axis == Vector3.zero && d.magnitude > 0.003f) motion.Axis = d.normalized;
                 float travel = motion.Axis == Vector3.zero ? 0f : Vector3.Dot(d, motion.Axis);
                 motion.MinTravel = Mathf.Min(motion.MinTravel, travel);
@@ -148,6 +204,27 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
 
             return motion;
+        }
+
+        /// <summary>
+        /// Оси прицеливания в осях корпуса (единицы меша): куда смотрит ствол и где верх, когда
+        /// руки пака держат оружие в клипе <paramref name="poseClip" /> (камера FPS смотрит по мировой +Z).
+        /// Округлены до осей меша — у разных моделей пака ствол идёт по разным осям (-Y, +Y, +Z).
+        /// </summary>
+        public (Vector3 forward, Vector3 up) AimAxes(string poseClip)
+        {
+            Sample(null);
+            Sample(poseClip);
+            Matrix4x4 toBody = Placement(_body).inverse;
+            return (ClosestAxis(toBody.MultiplyVector(Vector3.forward)), ClosestAxis(toBody.MultiplyVector(Vector3.up)));
+        }
+
+        private static Vector3 ClosestAxis(Vector3 v)
+        {
+            var a = new Vector3(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z));
+            if (a.x >= a.y && a.x >= a.z) return new Vector3(Mathf.Sign(v.x), 0f, 0f);
+            if (a.y >= a.z) return new Vector3(0f, Mathf.Sign(v.y), 0f);
+            return new Vector3(0f, 0f, Mathf.Sign(v.z));
         }
 
         /// <summary>
@@ -230,6 +307,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public string Part;
         public string Clip;
         public Vector3 Axis;
+        public Vector3 Far;         // наибольшее смещение от покоя — полный ход, если деталь идёт не по прямой
         public float MinTravel;
         public float MaxTravel;
         public Vector3 RotationAxis;
@@ -281,7 +359,13 @@ namespace VrBattlegrounds.Editor.Gameplay
             {
                 { "Hands_Shotgun", "Shogun_Base_mesh" },
                 { "Hands_Gun", "Base_mesh" },
-                { "Hands_Automatic_Rifle03", "Rifle_Body_Mesh" }
+                { "Hands_Automatic_Rifle03", "Rifle_Body_Mesh" },
+                { "Hands_Automatic_Rifle01", "Scar_Base_mesh" },
+                { "Hands_Tommy_gun", "body_Mesh" },
+                { "Hands_Automatic_Rifle04", "Rifle04_Body_Mesh" },
+                { "Hands_Gun02", "Gun02_Body_Mesh" },
+                { "Hands_Gun_03", "Gun_03_Body_Mesh" },
+                { "Hands_Sniper_Rifle", "Sniper_Rifle_Base_Mesh" }
             };
 
             foreach (var pair in bodies)

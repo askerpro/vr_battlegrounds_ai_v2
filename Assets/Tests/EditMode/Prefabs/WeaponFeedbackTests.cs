@@ -87,6 +87,12 @@ namespace VrBattlegrounds.Tests.Prefabs
                 RequireClip(so, "_audioSlide", $"{pump.name} (UxrShotgunPump): Audio Slide (обратный ход)", missing);
             }
 
+            // Без затвора (револьвер T-38): патрон не досылается — спуск стреляет прямо из барабана
+            // (Use Has Reloaded… выключен, огонь не ручной), перезарядка — сменой барабана, её звук у
+            // MagAnchor проверяет Звуки_вставки_и_снятия_магазина. Затвору звучать нечем и незачем.
+            if (mechanisms == 0 && !NeedsChambering(weapon))
+                Assert.Pass($"{weapon.name}: затвора нет и досылать патрон не нужно — звуки перезарядки у магазина.");
+
             Assert.Greater(mechanisms, 0,
                            $"{weapon.name}: нет механизма перезарядки (AutomaticWeaponSlideFeedback или UxrShotgunPump) — звукам затвора неоткуда играть.");
             Assert.IsEmpty(missing, $"{weapon.name}: не назначены звуки перезарядки:\n  " + string.Join("\n  ", missing));
@@ -237,6 +243,24 @@ namespace VrBattlegrounds.Tests.Prefabs
                                 .Where(w => w != null && w.WeaponPrefab != null)
                                 .Select(w => w.WeaponPrefab)
                                 .Distinct();
+        }
+
+        /// <summary>Нужен ли патрон в патроннике: ручной огонь или Use Has Reloaded For Semi And Full Auto хоть у одного спуска.</summary>
+        private static bool NeedsChambering(GameObject weapon)
+        {
+            UxrFirearmWeapon firearm = weapon.GetComponent<UxrFirearmWeapon>();
+            if (firearm == null) return true;
+
+            SerializedProperty triggers = new SerializedObject(firearm).FindProperty("_triggers");
+            for (int i = 0; i < triggers.arraySize; ++i)
+            {
+                SerializedProperty trigger = triggers.GetArrayElementAtIndex(i);
+                if (trigger.FindPropertyRelative("_cycleType").enumValueIndex == (int)UxrShotCycle.ManualReload ||
+                    trigger.FindPropertyRelative("_useHasReloadedForSemiAndFullAuto").boolValue)
+                    return true;
+            }
+
+            return false;
         }
 
         private static GameObject Load(string path)

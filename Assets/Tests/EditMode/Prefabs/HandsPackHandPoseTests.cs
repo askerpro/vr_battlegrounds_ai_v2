@@ -39,11 +39,6 @@ namespace VrBattlegrounds.Tests.Prefabs
         private const float GripPositionTolerance = 0.005f;
         private const float GripAngleTolerance    = 3f;
 
-        // Корпус оружия: меш пака, его кость, и тот же меш в префабе.
-        private const string BodyMesh = "Base_mesh";
-        private const string BodyBone = "Bn_Base";
-        private const string BodyPath = "MeshContainer/Base";
-
         /// <summary>
         /// Зарегистрированные аватары ветки без кисти SDK — те, кому позы пака и предназначены
         /// (цепочка вариантов проходит через <see cref="PoseBase"/>). Конкретных аватаров тест не знает.
@@ -74,7 +69,28 @@ namespace VrBattlegrounds.Tests.Prefabs
             public string      Weapon;
             public int         GrabPoint;
 
+            // Корпус оружия: меш пака, его кость, и тот же меш в префабе.
+            public string BodyMesh = "Base_mesh";
+            public string BodyBone = "Bn_Base";
+            public string BodyPath = "MeshContainer/Base";
+
             public override string ToString() => Pose;
+        }
+
+        /// <summary>Пара поз оружия T-38: основная рука — точка 0, вторая (если есть) — точка 1.</summary>
+        private static IEnumerable<Case> Pair(string name, string folder, string mesh, string clip, string bodyMesh, string bodyBone, string weapon, bool support = true)
+        {
+            yield return new Case
+            {
+                Pose = $"HandsPack_{name}_Grip", Folder = folder, Mesh = mesh, Clip = clip, Time = 0f, PackSide = UxrHandSide.Right,
+                Weapon = weapon, GrabPoint = 0, BodyMesh = bodyMesh, BodyBone = bodyBone
+            };
+            if (!support) yield break;
+            yield return new Case
+            {
+                Pose = $"HandsPack_{name}_Support", Folder = folder, Mesh = mesh, Clip = clip, Time = 0f, PackSide = UxrHandSide.Left,
+                Weapon = weapon, GrabPoint = 1, BodyMesh = bodyMesh, BodyBone = bodyBone
+            };
         }
 
         public static IEnumerable<Case> Cases()
@@ -89,6 +105,16 @@ namespace VrBattlegrounds.Tests.Prefabs
                 Pose = "HandsPack_Gun_Support", Folder = "Hands_Gun", Mesh = "Gun_Mesh", Clip = "Aiming_Idle", Time = 0f,
                 PackSide = UxrHandSide.Left, Weapon = "Assets/Prefabs/Weapons/GunReal/Gun_real.prefab", GrabPoint = 1
             };
+
+            // Оружие T-38 (HandsPackWeaponBuilder). У Uzi вторая рука пака не на оружии — одна точка.
+            const string W = "Assets/Prefabs/Weapons/";
+            IEnumerable<Case> t38 = Pair("Scar", "Hands_Automatic_Rifle01", "Hands_Automatic_Rifle01", "Aiming_Idle", "Scar_Base_mesh", "Bn_Scar_Base", W + "Scar/Scar.prefab")
+                .Concat(Pair("Uzi", "Hands_Tommy_gun", "Tommy-Gun_Mesh", "Aiming_Idle", "body_Mesh", "Bn_body", W + "Uzi/Uzi.prefab", support: false))
+                .Concat(Pair("MP5K", "Hands_Automatic_Rifle04", "Hands_Automatic_Rifle04_Mesh", "Idle_Aim", "Rifle04_Body_Mesh", "B_Rifle04_Body", W + "MP5K/MP5K.prefab"))
+                .Concat(Pair("PPK", "Hands_Gun02", "Hands_Gun_02_Mesh", "Aim_Idle", "Gun02_Body_Mesh", "B_Gun02_Body", W + "PPK/PPK.prefab"))
+                .Concat(Pair("Revolver", "Hands_Gun_03", "Hands_Gun_03", "Idle_Aiming", "Gun_03_Body_Mesh", "B_Gun_03_Body", W + "Revolver/Revolver.prefab"))
+                .Concat(Pair("SniperRifle", "Hands_Sniper_Rifle", "Sniper_Rifle_Mesh", "Aiming_Idle", "Sniper_Rifle_Base_Mesh", "Bn_Sniper_Rifle_Base_Mesh", W + "SniperRifle/SniperRifle.prefab"));
+            foreach (Case c in t38) yield return c;
         }
 
         public static IEnumerable<TestCaseData> PoseOnAvatarCases() =>
@@ -154,7 +180,7 @@ namespace VrBattlegrounds.Tests.Prefabs
             Matrix4x4 packBody = PackBodyInHand(c, out float packScale);
 
             GameObject weapon   = AssetDatabase.LoadAssetAtPath<GameObject>(c.Weapon);
-            Transform  body     = weapon.transform.Find(BodyPath);
+            Transform  body     = weapon.transform.Find(c.BodyPath);
             float      rootScale = weapon.transform.localScale.x;
             Quaternion bodyRot  = Quaternion.Inverse(weapon.transform.rotation) * body.rotation;
             Vector3    bodyPos  = weapon.transform.InverseTransformPoint(body.position);
@@ -231,8 +257,8 @@ namespace VrBattlegrounds.Tests.Prefabs
 
                 LoadClip(c).SampleAnimation(instance, c.Time);
 
-                SkinnedMeshRenderer bodyRenderer = instance.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(r => r.sharedMesh.name == BodyMesh);
-                int bone = System.Array.FindIndex(bodyRenderer.bones, b => b.name == BodyBone);
+                SkinnedMeshRenderer bodyRenderer = instance.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(r => r.sharedMesh != null && r.sharedMesh.name == c.BodyMesh);
+                int bone = System.Array.FindIndex(bodyRenderer.bones, b => b.name == c.BodyBone);
                 Matrix4x4 body = bodyRenderer.bones[bone].localToWorldMatrix * bodyRenderer.sharedMesh.bindposes[bone];
 
                 Matrix4x4 handFrame = Matrix4x4.TRS(hand.Wrist.position, hand.Wrist.rotation * wristToUniversal, Vector3.one);
@@ -246,21 +272,28 @@ namespace VrBattlegrounds.Tests.Prefabs
             }
         }
 
+        /// <summary>Клип по имени в папке пака: имена файлов у папок пака не единообразны (<c>Hands_Automatic_rifle@…</c>).</summary>
         private static AnimationClip LoadClip(Case c) =>
-            AssetDatabase.LoadAllAssetsAtPath($"{Pack}{c.Folder}/Animations/{c.Folder}@{c.Clip}.FBX")
-                         .OfType<AnimationClip>().First(a => !a.name.StartsWith("__"));
+            AssetDatabase.FindAssets("t:AnimationClip", new[] { $"{Pack}{c.Folder}/Animations" })
+                         .SelectMany(g => AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath(g)))
+                         .OfType<AnimationClip>().First(a => a.name == c.Clip);
+
+        /// <summary>Префикс костей рига рук пака: <c>Character001</c> или <c>CATRig</c> (револьвер).</summary>
+        private static string RigPrefix(Dictionary<string, Transform> bones, string side) =>
+            bones.Keys.First(n => n.EndsWith(side + "ArmPalm")).Replace(side + "ArmPalm", "");
 
         private static UxrAvatarHand PackHand(GameObject instance, UxrHandSide side)
         {
             Dictionary<string, Transform> bones = instance.GetComponentsInChildren<Transform>(true)
                                                           .GroupBy(t => t.name).ToDictionary(g => g.Key, g => g.First());
             string s = side == UxrHandSide.Left ? "L" : "R";
+            string rig = RigPrefix(bones, s);
 
-            var hand = new UxrAvatarHand { Wrist = bones[$"Character001{s}ArmPalm"] };
+            var hand = new UxrAvatarHand { Wrist = bones[$"{rig}{s}ArmPalm"] };
             UxrAvatarFinger[] fingers = Fingers(hand);
             for (int f = 0; f < fingers.Length; f++)
             {
-                fingers[f].SetupFingerBones(Enumerable.Range(1, 3).Select(n => bones[$"Character001{s}ArmDigit{f + 1}{n}"]).ToList());
+                fingers[f].SetupFingerBones(Enumerable.Range(1, 3).Select(n => bones[$"{rig}{s}ArmDigit{f + 1}{n}"]).ToList());
             }
 
             return hand;
@@ -303,8 +336,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         private static float[,] PackBends(Case c)
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>($"{Pack}{c.Folder}/Mesh/{c.Mesh}.FBX");
-            AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath($"{Pack}{c.Folder}/Animations/{c.Folder}@{c.Clip}.FBX")
-                                              .OfType<AnimationClip>().First(a => !a.name.StartsWith("__"));
+            AnimationClip clip = LoadClip(c);
 
             var instance = (GameObject)Object.Instantiate(model);
             instance.hideFlags = HideFlags.HideAndDontSave;
@@ -314,12 +346,13 @@ namespace VrBattlegrounds.Tests.Prefabs
                 Dictionary<string, Transform> bones = instance.GetComponentsInChildren<Transform>(true)
                                                               .GroupBy(t => t.name).ToDictionary(g => g.Key, g => g.First());
                 string s = c.PackSide == UxrHandSide.Left ? "L" : "R";
+                string rig = RigPrefix(bones, s);
 
-                var hand = new UxrAvatarHand { Wrist = bones[$"Character001{s}ArmPalm"] };
+                var hand = new UxrAvatarHand { Wrist = bones[$"{rig}{s}ArmPalm"] };
                 UxrAvatarFinger[] fingers = Fingers(hand);
                 for (int f = 0; f < fingers.Length; f++)
                 {
-                    fingers[f].SetupFingerBones(Enumerable.Range(1, 3).Select(n => bones[$"Character001{s}ArmDigit{f + 1}{n}"]).ToList());
+                    fingers[f].SetupFingerBones(Enumerable.Range(1, 3).Select(n => bones[$"{rig}{s}ArmDigit{f + 1}{n}"]).ToList());
                 }
 
                 return Bends(hand);

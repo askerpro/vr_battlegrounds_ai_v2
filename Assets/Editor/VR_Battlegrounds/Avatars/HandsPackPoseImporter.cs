@@ -17,7 +17,7 @@ namespace VrBattlegrounds.Editor.Avatars
         public string      Pose;      // имя ассета и позы — по нему SDK ищет позу у аватара
         public string      Folder;    // папка пака в Modelas/
         public string      Mesh;      // меш рук в Modelas/<Folder>/Mesh/
-        public string      Clip;      // клип: Modelas/<Folder>/Animations/<Folder>@<Clip>.FBX
+        public string      Clip;      // имя клипа в Modelas/<Folder>/Animations (файлы названы не единообразно)
         public float       Time;
         public UxrHandSide PackSide;  // рука пака; вторая рука позы — её зеркало
         public string      BodyMesh;  // корпус оружия в паке…
@@ -25,6 +25,7 @@ namespace VrBattlegrounds.Editor.Avatars
         public string      Weapon;
         public string      BodyPath;  // …и тот же меш в префабе оружия
         public int         GrabPoint;
+        public string      PoseFolder; // папка ассета позы; null — HandsPackPoseImporter.PoseFolder
     }
 
     /// <summary>
@@ -50,7 +51,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <summary>Аватары, чьим записям хвата на оружии назначаются позы пака.</summary>
         private static readonly string[] GripAvatars = { "Assets/Prefabs/Player/MEF_Base_Avatar.prefab" };
 
-        public static readonly HandsPackPoseRecipe[] Recipes =
+        public static readonly HandsPackPoseRecipe[] Recipes = new[]
         {
             new HandsPackPoseRecipe
             {
@@ -64,15 +65,53 @@ namespace VrBattlegrounds.Editor.Avatars
                 PackSide = UxrHandSide.Left, BodyMesh = "Base_mesh", BodyBone = "Bn_Base",
                 Weapon = "Assets/Prefabs/Weapons/GunReal/Gun_real.prefab", BodyPath = "MeshContainer/Base", GrabPoint = 1
             }
-        };
+        }.Concat(WeaponPair("Scar", "Hands_Automatic_Rifle01", "Hands_Automatic_Rifle01", "Aiming_Idle", "Scar_Base_mesh", "Bn_Scar_Base"))
+         // Uzi — одной рукой: левая рука пака не на оружии, позы поддержки нет.
+         .Concat(WeaponPair("Uzi", "Hands_Tommy_gun", "Tommy-Gun_Mesh", "Aiming_Idle", "body_Mesh", "Bn_body", support: false))
+         .Concat(WeaponPair("MP5K", "Hands_Automatic_Rifle04", "Hands_Automatic_Rifle04_Mesh", "Idle_Aim", "Rifle04_Body_Mesh", "B_Rifle04_Body"))
+         .Concat(WeaponPair("PPK", "Hands_Gun02", "Hands_Gun_02_Mesh", "Aim_Idle", "Gun02_Body_Mesh", "B_Gun02_Body"))
+         .Concat(WeaponPair("Revolver", "Hands_Gun_03", "Hands_Gun_03", "Idle_Aiming", "Gun_03_Body_Mesh", "B_Gun_03_Body"))
+         .Concat(WeaponPair("SniperRifle", "Hands_Sniper_Rifle", "Sniper_Rifle_Mesh", "Aiming_Idle", "Sniper_Rifle_Base_Mesh", "Bn_Sniper_Rifle_Base_Mesh"))
+         .ToArray();
+
+        /// <summary>
+        /// Позы оружия T-38 (<c>HandsPackWeaponBuilder</c>): рукоять — правая рука пака, точка 0; вторая рука
+        /// (цевьё или поддержка пистолета) — левая, точка 1. Префаб — <c>Assets/Prefabs/Weapons/&lt;name&gt;/&lt;name&gt;.prefab</c>.
+        /// </summary>
+        private static IEnumerable<HandsPackPoseRecipe> WeaponPair(string name, string folder, string mesh, string clip, string bodyMesh, string bodyBone, bool support = true)
+        {
+            string weapon = $"Assets/Prefabs/Weapons/{name}/{name}.prefab";
+            yield return new HandsPackPoseRecipe
+            {
+                Pose = $"HandsPack_{name}_Grip", Folder = folder, Mesh = mesh, Clip = clip, Time = 0f, PackSide = UxrHandSide.Right,
+                BodyMesh = bodyMesh, BodyBone = bodyBone, Weapon = weapon, BodyPath = "MeshContainer/Base", GrabPoint = 0
+            };
+            if (!support) yield break;
+            yield return new HandsPackPoseRecipe
+            {
+                Pose = $"HandsPack_{name}_Support", Folder = folder, Mesh = mesh, Clip = clip, Time = 0f, PackSide = UxrHandSide.Left,
+                BodyMesh = bodyMesh, BodyBone = bodyBone, Weapon = weapon, BodyPath = "MeshContainer/Base", GrabPoint = 1
+            };
+        }
 
         [MenuItem("Tools/VR Battlegrounds/Avatars/Hand Poses/Import Hands Pack Poses")]
-        public static void ImportAll()
+        public static void ImportAll() => Import(Recipes);
+
+        /// <summary>Позы одного оружия — после его пересборки <c>HandsPackWeaponBuilder</c> (сборщик кладёт калибровочный хват).</summary>
+        public static void ImportFor(string weaponPrefab) => Import(Recipes.Where(r => r.Weapon == weaponPrefab));
+
+        public static void Import(IEnumerable<HandsPackPoseRecipe> recipes) =>
+            Import(recipes.Select(r => (r, ExtractSample(r))));
+
+        /// <summary>
+        /// Позы из готовых кадров — для источников с другим ригом рук (KINEMATION, <see cref="KinemationPoseExtractor" />):
+        /// кадр в универсальных осях ладони, дальше всё как у пака Hands.
+        /// </summary>
+        public static void Import(IEnumerable<(HandsPackPoseRecipe Recipe, HandsPackPoseExtractor.Sample Sample)> samples)
         {
             var imported = new List<(HandsPackPoseRecipe Recipe, HandsPackPoseExtractor.Sample Sample, UxrHandPoseAsset Pose)>();
-            foreach (HandsPackPoseRecipe recipe in Recipes)
+            foreach (var (recipe, sample) in samples)
             {
-                HandsPackPoseExtractor.Sample sample = ExtractSample(recipe);
                 imported.Add((recipe, sample, CreatePoseAsset(recipe, sample.Hand)));
             }
 
@@ -85,14 +124,15 @@ namespace VrBattlegrounds.Editor.Avatars
             }
 
             AssetDatabase.SaveAssets();
-            GameLog.Debug.Info($"[HandsPackPoseImporter] Поз из пака: {imported.Count} → {PoseFolder}");
+            GameLog.Debug.Info($"[HandsPackPoseImporter] Поз: {imported.Count} → {string.Join(", ", imported.Select(i => i.Recipe.PoseFolder ?? PoseFolder).Distinct())}");
         }
 
         private static HandsPackPoseExtractor.Sample ExtractSample(HandsPackPoseRecipe recipe)
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>($"{Pack}{recipe.Folder}/Mesh/{recipe.Mesh}.FBX");
-            AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath($"{Pack}{recipe.Folder}/Animations/{recipe.Folder}@{recipe.Clip}.FBX")
-                                              .OfType<AnimationClip>().FirstOrDefault(c => !c.name.StartsWith("__"));
+            AnimationClip clip = AssetDatabase.FindAssets("t:AnimationClip", new[] { $"{Pack}{recipe.Folder}/Animations" })
+                                              .SelectMany(g => AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath(g)))
+                                              .OfType<AnimationClip>().FirstOrDefault(c => c.name == recipe.Clip);
             if (model == null || clip == null)
             {
                 throw new FileNotFoundException($"Пак: нет меша {recipe.Mesh} или клипа {recipe.Clip} в {recipe.Folder}");
@@ -109,8 +149,9 @@ namespace VrBattlegrounds.Editor.Avatars
             asset.HandDescriptorLeft  = recipe.PackSide == UxrHandSide.Left ? packHand : packHand.Mirrored();
             asset.HandDescriptorRight = recipe.PackSide == UxrHandSide.Right ? packHand : packHand.Mirrored();
 
-            Directory.CreateDirectory(PoseFolder);
-            string path     = $"{PoseFolder}/{recipe.Pose}.asset";
+            string folder = recipe.PoseFolder ?? PoseFolder;
+            Directory.CreateDirectory(folder);
+            string path     = $"{folder}/{recipe.Pose}.asset";
             var    existing = AssetDatabase.LoadAssetAtPath<UxrHandPoseAsset>(path);
             if (existing != null)
             {
@@ -168,10 +209,17 @@ namespace VrBattlegrounds.Editor.Avatars
                     grabPoint.CheckAddGripPoseInfo(guid);
 
                     UxrGripPoseInfo grip = grabPoint.GetGripPoseInfo(guid);
+                    Transform oldLeft  = grip.GripAlignTransformHandLeft;
+                    Transform oldRight = grip.GripAlignTransformHandRight;
                     grip.HandPose                    = pose;
                     grip.PoseBlendValue              = 0f;
                     grip.GripAlignTransformHandLeft  = left;
                     grip.GripAlignTransformHandRight = right;
+
+                    // Точки, которые сборщик оружия поставил калибровкой, после позы пака никем не
+                    // используются — убираются, чтобы в префабе не было двух мест одного хвата.
+                    RemoveUnused(root, oldLeft, left);
+                    RemoveUnused(root, oldRight, right);
                 }
 
                 PrefabUtility.SaveAsPrefabAsset(root, recipe.Weapon);
@@ -179,6 +227,31 @@ namespace VrBattlegrounds.Editor.Avatars
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        /// <summary>
+        /// Удаляет трансформ выравнивания, если на него больше не ссылается ни одна запись хвата префаба,
+        /// и опустевшие папки над ним (до корня префаба).
+        /// </summary>
+        private static void RemoveUnused(GameObject root, Transform old, Transform current)
+        {
+            if (old == null || old == current || !old.IsChildOf(root.transform) || old.name == "Grabs") return;
+
+            bool used = root.GetComponentsInChildren<UxrGrabbableObject>(true)
+                            .SelectMany(g => Enumerable.Range(0, g.GrabPointCount).Select(i => g.GetGrabPoint(i)))
+                            .SelectMany(p => p.AvatarGripPoseEntries)
+                            .Any(e => e.GripAlignTransformHandLeft == old || e.GripAlignTransformHandRight == old);
+            if (used || old.GetComponentsInChildren<Transform>(true).Length > 1) return;
+
+            Transform parent = old.parent;
+            Object.DestroyImmediate(old.gameObject);
+            while (parent != null && parent != root.transform && parent.childCount == 0 &&
+                   parent.GetComponents<Component>().Length == 1)
+            {
+                Transform next = parent.parent;
+                Object.DestroyImmediate(parent.gameObject);
+                parent = next;
             }
         }
 
@@ -198,6 +271,8 @@ namespace VrBattlegrounds.Editor.Avatars
                 parent = child;
             }
 
+            // Как у остальных точек хвата: превью руки в инспекторе ищет трансформы по этому компоненту.
+            if (parent.GetComponent<UxrGrabbableObjectSnapTransform>() == null) parent.gameObject.AddComponent<UxrGrabbableObjectSnapTransform>();
             return parent;
         }
     }

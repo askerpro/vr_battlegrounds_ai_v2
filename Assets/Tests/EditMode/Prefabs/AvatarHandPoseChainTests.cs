@@ -28,7 +28,8 @@ namespace VrBattlegrounds.Tests.Prefabs
         private const string PlayerBase     = "Assets/Prefabs/Player/PlayerBase.prefab";
         private const string SdkHands       = "Assets/Prefabs/Player/PlayerBase_SdkHands.prefab";
         private const string NonSdkHands    = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
-        private const string HandsPackPoses = "Assets/Art/HandPoses/HandsPack/";
+        // Позы, снятые с паков оружия (Hands — HandsPackPoseImporter, KINEMATION — KinemationWeaponBuilder): нейтральны к скелету.
+        private static readonly string[] PackPoses = { "Assets/Art/HandPoses/HandsPack/", "Assets/Art/HandPoses/Kinemation/" };
 
         /// <summary>
         /// Аватары — из реестра (<see cref="RegisteredAvatars"/>), без списка путей: новый аватар
@@ -87,7 +88,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         public void Ветка_без_SDK_не_наследует_позы_под_скелет_SDK()
         {
             string[] foreign = Load(NonSdkHands).GetComponent<UxrAvatar>().GetAllHandPoses()
-                                                .Where(p => !AssetDatabase.GetAssetPath(p).StartsWith(HandsPackPoses))
+                                                .Where(p => !PackPoses.Any(AssetDatabase.GetAssetPath(p).StartsWith))
                                                 .Select(p => $"{p.name} ({AssetDatabase.GetAssetPath(p)})").ToArray();
 
             Assert.That(foreign, Is.Empty, "У базы без SDK только позы из пака");

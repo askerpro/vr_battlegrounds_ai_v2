@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 8934660616883435286}
   - component: {fileID: 6968901189315598527}
   - component: {fileID: 2266733936550130628}
+  - component: {fileID: 7528941406521830442}
   m_Layer: 0
   m_Name: M16_Rifle_prefab
   m_TagString: Weapon
@@ -204,8 +205,8 @@ MonoBehaviour:
     _projectileSpeed: 400
     _projectileMaxDistance: 120
     _projectileLength: 0.03
-    _projectileDamageNear: 25
-    _projectileDamageFar: 25
+    _projectileDamageNear: 33
+    _projectileDamageFar: 24.747
     _projectileImpactForceMultiplier: 1
     _collisionLayerMask:
       serializedVersion: 2
@@ -238,7 +239,7 @@ MonoBehaviour:
   - _projectileShotIndex: 0
     _cycleType: 2
     _useHasReloadedForSemiAndFullAuto: 1
-    _maxShotFrequency: 10
+    _maxShotFrequency: 11
     _shotAudio:
       _clip: {fileID: 8300000, guid: 8f04b3ff514c3254898fc3754113a032, type: 3}
       _volume: 1
@@ -412,6 +413,25 @@ MonoBehaviour:
   _triggerIndex: 0
   _hapticAmplitude: 0.8
   _hapticSeconds: 0.2
+--- !u!114 &7528941406521830442
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1013363612589426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ca4861be76f25044984803548d10701, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.RecoilAccumulator
+  _pattern:
+    _kickDegrees: 0.9
+    _maxPitchDegrees: 6
+    _maxYawDegrees: 2
+    _recoveryTime: 0.45
+    _oneHandMultiplier: 2
+  _axes: {fileID: 5924109489953213895}
 --- !u!1 &92804199318306725
 GameObject:
   m_ObjectHideFlags: 0

@@ -61,6 +61,124 @@ namespace VrBattlegrounds.Tests.Prefabs
                 ActionPath  = "Pump",
                 TriggerPart = "Shogun_Triger_mesh"
             };
+
+            // T-38. Магазин проверяется так же, как деталь: вложенный в якорь, он должен стоять
+            // ровно на месте магазина пака (якорь — по месту магазина, а не на глаз).
+            yield return new Case
+            {
+                Prefab      = "Assets/Prefabs/Weapons/Scar/Scar.prefab",
+                Folder      = "Hands_Automatic_Rifle01",
+                Body        = "Scar_Base_mesh",
+                BodyPath    = "MeshContainer/Base",
+                Parts       = new Dictionary<string, string>
+                {
+                    { "Scar_Detail_01_mesh", "MeshContainer/Scar_Detail_01" },
+                    { "Scar_Detail_02_mesh", "MeshContainer/Scar_Detail_02" },
+                    { "Scar_Detail_03_mesh", "MeshContainer/Scar_Detail_03" },
+                    { "Scar_Planck_mesh", "MeshContainer/Scar_Planck" },
+                    { "Scar_Triger_mesh", "MeshContainer/Trigger" },
+                    { "Scar_Grip_mesh", "Slide/Scar_Grip" },
+                    { "Scar_Magazine_mesh", "MeshContainer/MagAnchor/Scar_mag/Mesh" }
+                },
+                ActionPart  = "Scar_Grip_mesh",
+                ActionPath  = "Slide",
+                TriggerPart = "Scar_Triger_mesh",
+                Clip        = "Singl_Shot",
+                RestClip    = "idle"
+            };
+
+            yield return new Case
+            {
+                Prefab      = "Assets/Prefabs/Weapons/Uzi/Uzi.prefab",
+                Folder      = "Hands_Tommy_gun",
+                Body        = "body_Mesh",
+                BodyPath    = "MeshContainer/Base",
+                Parts       = new Dictionary<string, string>
+                {
+                    { "Trigger_mesh", "MeshContainer/Trigger" },
+                    { "Reload_frame_mesh", "Slide/Reload_frame" },
+                    { "Magazine_Mesh", "MeshContainer/MagAnchor/Uzi_mag/Mesh" }
+                },
+                ActionPart  = "Reload_frame_mesh",
+                ActionPath  = "Slide",
+                TriggerPart = "Trigger_mesh"
+            };
+
+            yield return new Case
+            {
+                Prefab      = "Assets/Prefabs/Weapons/MP5K/MP5K.prefab",
+                Folder      = "Hands_Automatic_Rifle04",
+                Body        = "Rifle04_Body_Mesh",
+                BodyPath    = "MeshContainer/Base",
+                Parts       = new Dictionary<string, string>
+                {
+                    { "Rifle04_Trigger_Mesh", "MeshContainer/Trigger" },
+                    { "Rifle04_Detail_Mesh", "Slide/Rifle04_Detail" },
+                    { "Rifle04_Magazine_Mesh", "MeshContainer/MagAnchor/MP5K_mag/Mesh" }
+                },
+                // Рукоятка взведения ходит только в клипе перезарядки: в выстреле пака затвор неподвижен.
+                ActionPart  = "Rifle04_Detail_Mesh",
+                ActionPath  = "Slide",
+                TriggerPart = "Rifle04_Trigger_Mesh",
+                Clip        = "Reload"
+            };
+
+            yield return new Case
+            {
+                Prefab      = "Assets/Prefabs/Weapons/PPK/PPK.prefab",
+                Folder      = "Hands_Gun02",
+                Body        = "Gun02_Body_Mesh",
+                BodyPath    = "MeshContainer/Base",
+                Parts       = new Dictionary<string, string>
+                {
+                    { "Gun02_Detail_02_Mesh", "MeshContainer/Gun02_Detail_02" },
+                    { "Gun02_Trigger_Mesh", "MeshContainer/Trigger" },
+                    { "Gun02_Detail_01_Mesh", "Slide/Gun02_Detail_01" },
+                    { "Gun02_Magazine_Mesh", "MeshContainer/MagAnchor/PPK_mag/Mesh" },
+                    { "Gun02_Bulets_Mesh", "MeshContainer/MagAnchor/PPK_mag/Gun02_Bulets" }
+                },
+                ActionPart  = "Gun02_Detail_01_Mesh",
+                ActionPath  = "Slide",
+                TriggerPart = "Gun02_Trigger_Mesh"
+            };
+
+            // Револьвер: затвора нет, «магазин» — барабан с патронами, вставляется в гнездо барабана.
+            yield return new Case
+            {
+                Prefab      = "Assets/Prefabs/Weapons/Revolver/Revolver.prefab",
+                Folder      = "Hands_Gun_03",
+                Body        = "Gun_03_Body_Mesh",
+                BodyPath    = "MeshContainer/Base",
+                Parts       = new Dictionary<string, string>
+                {
+                    { "Gun_03_Drum_Detail_Mesh", "MeshContainer/Gun_03_Drum_Detail" },
+                    { "Gun_03_Striker_Mesh", "MeshContainer/Gun_03_Striker" },
+                    { "Gun_03_Trigger_Mesh", "MeshContainer/Trigger" },
+                    { "Gun_03_Drum_Mesh", "MeshContainer/MagAnchor/Revolver_mag/Mesh" },
+                    { "Gun_03_Sleeve_Mesh", "MeshContainer/MagAnchor/Revolver_mag/Gun_03_Sleeve" },
+                    { "Gun_03_Sleeve_Mesh007", "MeshContainer/MagAnchor/Revolver_mag/Gun_03_Sleeve007" }
+                },
+                TriggerPart = "Gun_03_Trigger_Mesh"
+            };
+
+            yield return new Case
+            {
+                Prefab      = "Assets/Prefabs/Weapons/SniperRifle/SniperRifle.prefab",
+                Folder      = "Hands_Sniper_Rifle",
+                Body        = "Sniper_Rifle_Base_Mesh",
+                BodyPath    = "MeshContainer/Base",
+                Parts       = new Dictionary<string, string>
+                {
+                    { "Sniper_Rifle_Triger_Mesh", "MeshContainer/Trigger" },
+                    { "Sniper _Rifle_Gate_End_Mesh", "Slide/Sniper_Rifle_Gate_End" },
+                    { "Sniper _Rifle_Gate_Mesh", "Slide/Sniper_Rifle_Gate" },
+                    { "Sniper_Rifle_Magazine_Mesh", "MeshContainer/MagAnchor/SniperRifle_mag/Mesh" }
+                },
+                ActionPart  = "Sniper _Rifle_Gate_End_Mesh",
+                ActionPath  = "Slide",
+                TriggerPart = "Sniper_Rifle_Triger_Mesh",
+                RestClip    = "Idel"
+            };
         }
 
         [TestCaseSource(nameof(Cases))]
@@ -95,6 +213,13 @@ namespace VrBattlegrounds.Tests.Prefabs
         public void Ход_помпы_или_затвора_как_в_клипе(Case c)
         {
             GameObject prefab = Load(c);
+            if (c.ActionPart == null)
+            {
+                // Без затвора (револьвер): отдельного граббабла у корня быть не должно.
+                Assert.IsNull(prefab.transform.Find("Slide") ?? prefab.transform.Find("Pump"), $"{prefab.name}: затвора в паке нет, а в префабе есть");
+                return;
+            }
+
             using var pack = new PackModel(c);
             (Vector3 axis, float travel, _) = pack.Motion(c.ActionPart);
 

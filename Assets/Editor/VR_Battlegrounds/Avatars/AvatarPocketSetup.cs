@@ -25,7 +25,7 @@ namespace VrBattlegrounds.Editor.Avatars
         private static readonly PocketConfig[] Pockets = new[]
         {
             new PocketConfig("MagazinePocket", BoneTarget.Pelvis, 
-                new[] { "MagMachinegun", "MagGun" }, 0.1f,
+                new[] { "MagMachinegun", "MagGun", "MagShotgun", "M16_Mag", "MagScar", "MagUzi", "MagMP5K", "MagPPK", "MagRevolver", "MagSniper", "MagSRM12" }, 0.1f,
                 new Vector3(0f, -0.05f, 0.15f)),
             
             new PocketConfig("Anchor_Hip_R", BoneTarget.Pelvis,

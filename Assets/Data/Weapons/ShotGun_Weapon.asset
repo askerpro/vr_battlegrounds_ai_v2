@@ -19,6 +19,11 @@ MonoBehaviour:
   _magazinePrefab: {fileID: 5837573240272137203, guid: d28f92e640efecc41b278625340bff0c, type: 3}
   _maxMagazineCount: 3
   _price: 2700
+  _damage: 0
+  _rangeModifier: 0.85
+  _fireRate: 400
+  _magazineSize: 20
+  _pellets: 1
   _category: 0
   _weaponPositionOffset: {x: 0, y: 0, z: 0}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}

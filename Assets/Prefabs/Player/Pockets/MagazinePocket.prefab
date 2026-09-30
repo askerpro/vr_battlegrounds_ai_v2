@@ -327,6 +327,13 @@ MonoBehaviour:
   - MagGun
   - MagShotgun
   - M16_Mag
+  - MagScar
+  - MagUzi
+  - MagMP5K
+  - MagPPK
+  - MagRevolver
+  - MagSniper
+  - MagSRM12
   _maxPlaceDistance: 0.1
   _alignTransformUseSelf: 1
   _alignTransform: {fileID: 0}
@@ -351,7 +358,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8bff4360497a1b6459448aff51a960e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.UxrMagazinePocket
-  _capacity: 4
+  _perTypeLimit: 3
 --- !u!65 &4801939102412523170
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -388,6 +395,7 @@ MonoBehaviour:
   _source: {fileID: 4440961655289710347}
   _takeOutClip: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
   _onlyByHand: 1
+  _takeOutOnlyByHand: 1
 --- !u!82 &4440961655289710347
 AudioSource:
   m_ObjectHideFlags: 0

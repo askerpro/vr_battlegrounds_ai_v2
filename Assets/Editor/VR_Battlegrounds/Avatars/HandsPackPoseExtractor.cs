@@ -11,7 +11,8 @@ namespace VrBattlegrounds.Editor.Avatars
 {
     /// <summary>
     /// Снимает позу кисти UltimateXR с рук пака Hands Weapons Animations (риг 3ds Max CAT:
-    /// <c>Character001{R,L}ArmPalm</c> → <c>…ArmDigit{палец}{фаланга}</c>, три фаланги, без пястных костей).
+    /// <c>Character001{R,L}ArmPalm</c> → <c>…ArmDigit{палец}{фаланга}</c>, три фаланги, без пястных костей;
+    /// у револьвера <c>Hands_Gun_03</c> тот же риг с префиксом <c>CATRig</c>).
     ///
     /// <para>
     /// Результат нейтрален к скелету: <see cref="UxrHandDescriptor" /> хранит повороты фаланг в
@@ -87,17 +88,30 @@ namespace VrBattlegrounds.Editor.Avatars
         private static UxrAvatarArm BuildArm(Dictionary<string, Transform> bones, UxrHandSide side)
         {
             string s   = side == UxrHandSide.Left ? "L" : "R";
+            string rig = RigPrefix(bones, s);
             var    arm = new UxrAvatarArm();
-            arm.Hand.Wrist = Bone(bones, $"Character001{s}ArmPalm");
+            arm.Hand.Wrist = Bone(bones, $"{rig}{s}ArmPalm");
 
             // Digit1x — большой палец … Digit5x — мизинец.
             UxrAvatarFinger[] fingers = { arm.Hand.Thumb, arm.Hand.Index, arm.Hand.Middle, arm.Hand.Ring, arm.Hand.Little };
             for (int f = 0; f < fingers.Length; f++)
             {
-                fingers[f].SetupFingerBones(Enumerable.Range(1, 3).Select(n => Bone(bones, $"Character001{s}ArmDigit{f + 1}{n}")).ToList());
+                fingers[f].SetupFingerBones(Enumerable.Range(1, 3).Select(n => Bone(bones, $"{rig}{s}ArmDigit{f + 1}{n}")).ToList());
             }
 
             return arm;
+        }
+
+        /// <summary>Префикс рига CAT: <c>Character001</c> у большинства моделей пака, <c>CATRig</c> у револьвера.</summary>
+        public static string RigPrefix(Dictionary<string, Transform> bones, string side)
+        {
+            string palm = bones.Keys.FirstOrDefault(n => n.EndsWith(side + "ArmPalm"));
+            if (palm == null)
+            {
+                throw new KeyNotFoundException($"В модели пака нет кости *{side}ArmPalm — это не риг CAT пака Hands Weapons Animations.");
+            }
+
+            return palm.Substring(0, palm.Length - (side + "ArmPalm").Length);
         }
 
         private static Transform Bone(Dictionary<string, Transform> bones, string name)
@@ -110,7 +124,8 @@ namespace VrBattlegrounds.Editor.Avatars
             return bone;
         }
 
-        private static void SolveAxes(UxrAvatarHand hand, UxrHandSide side, out UxrUniversalLocalAxes handAxes, out UxrUniversalLocalAxes fingerAxes)
+        /// <summary>Оси ладони и пальцев по текущей позе — общее с <see cref="KinemationPoseExtractor" />.</summary>
+        internal static void SolveAxes(UxrAvatarHand hand, UxrHandSide side, out UxrUniversalLocalAxes handAxes, out UxrUniversalLocalAxes fingerAxes)
         {
             Transform indexProximal  = hand.Index.Proximal;
             Transform indexDistal    = hand.Index.Distal;

@@ -34,7 +34,25 @@ namespace VrBattlegrounds.Tests.Prefabs
             { "Shotgun",          new Vector2(0.80f, 1.10f) }, // Remington 870: 100–106 см
             { "Shotgun_real",     new Vector2(0.66f, 0.78f) }, // Mossberg 500 Cruiser (пистолетная рукоять, ствол 18.5"): 71 см
             { "Machinegun",       new Vector2(0.85f, 1.20f) }, // ручной пулемёт / штурмовая винтовка
-            { "Grenade",          new Vector2(0.08f, 0.12f) }  // M67: 9 см, с запалом 11
+            { "Grenade",          new Vector2(0.08f, 0.12f) }, // M67: 9 см, с запалом 11
+
+            // T-38, пак Hands: размер — по руке пака (длина в паке × 0,707, как у Gun_real), чтобы хват из
+            // клипа пака ложился в ладонь; там, где модель пака крупнее прототипа, это отмечено.
+            { "Scar",             new Vector2(0.60f, 0.70f) }, // SCAR-L CQC: 63.5 см
+            { "Uzi",              new Vector2(0.30f, 0.40f) }, // Mini-Uzi со сложенным прикладом: 36 см (Micro-Uzi 25 — модель пака крупнее)
+            { "MP5K",             new Vector2(0.29f, 0.37f) }, // HK MP5K: 32.5 см
+            { "PPK",              new Vector2(0.17f, 0.23f) }, // Walther PPK: 15.5 см; модель пака крупнее — по руке пака 20 см
+            { "Revolver",         new Vector2(0.30f, 0.40f) }, // Taurus Raging Bull 6.5": ~31 см; по руке пака 35
+            { "SniperRifle",      new Vector2(1.05f, 1.25f) }, // AX-50: ~123 см; по руке пака 115
+
+            // T-39, пак KINEMATION: модели в реальном масштабе, корень ×1.
+            { "SRM12",            new Vector2(0.85f, 1.00f) }, // Desert Tech SRS A2 (булл-пап, ствол 26"): ~95 см; модель 91
+            { "Mk14",             new Vector2(0.90f, 1.12f) }, // Mk 14 EBR: 89–112 см по прикладу; модель 101
+            { "AK105",            new Vector2(0.75f, 0.87f) }, // АК-105: 82 см с разложенным прикладом; модель 80
+            { "R08",              new Vector2(0.24f, 0.33f) }, // S&W 686 6": ~30 см; модель 27
+            { "Viper",            new Vector2(0.19f, 0.26f) }, // 2011/1911 5": 22 см
+            { "MKR9",             new Vector2(0.48f, 0.62f) }, // ПП 9 мм с упором (SIG MPX): ~55–60 см; модель 54
+            { "Herrington",       new Vector2(0.95f, 1.15f) }  // Remington 11-87: ~100–115 см; модель 100
         };
 
         [Test]

@@ -13,8 +13,11 @@ MonoBehaviour:
   m_Name: WeaponRegistry
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponRegistry
   _weapons:
-  - {fileID: 11400000, guid: b2e37e600ab1893469a53e2d5940e98b, type: 2}
-  - {fileID: 11400000, guid: 16e9377ecb9b1bb41929e8aa3a7d3ae9, type: 2}
-  - {fileID: 11400000, guid: bf5b7399e87929c45ae98591db37ec71, type: 2}
-  - {fileID: 11400000, guid: 4f810565631ae0c40bce683a1d290f39, type: 2}
+  - {fileID: 11400000, guid: 404a3a34a0892dc409212566f388c37f, type: 2}
+  - {fileID: 11400000, guid: 43bf1b3029e7a1945b50f121df6b0a73, type: 2}
   - {fileID: 11400000, guid: 29c9d566aa4ac214ab127b4e633b4334, type: 2}
+  - {fileID: 11400000, guid: 06130e656acaee24da3fb3f2d54de872, type: 2}
+  - {fileID: 11400000, guid: e656ffaededf94447b00dfe8561f5caf, type: 2}
+  - {fileID: 11400000, guid: 71578ee82c8283640ab0a08d6396549b, type: 2}
+  - {fileID: 11400000, guid: e4fe34bd1f05bb245b5d1589a10a69d4, type: 2}
+  - {fileID: 11400000, guid: b2e37e600ab1893469a53e2d5940e98b, type: 2}

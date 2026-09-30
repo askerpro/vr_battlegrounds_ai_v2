@@ -300,6 +300,7 @@ MapReferee           — ход карты: Warmup → Live → Paused, побе
 | `WeaponGrabHighlight` | `Editor/VR_Battlegrounds/Gameplay/WeaponGrabHighlight.cs` | Подсветка точки хвата оружия (`Enable When Hand Near`): неактивная копия детали под ней с `MagGrabDecalMat`. Единая точка для сборщика и ручной сборки; проверка — `WeaponFeedbackTests`. |
 | `GameTagsTool` | `Editor/VR_Battlegrounds/Gameplay/GameTagsTool.cs` | `Tools/VR Battlegrounds/Gameplay/Apply Game Tags`: заводит теги в TagManager и расставляет их по `GameTagRules` во всех префабах `Assets/Prefabs` и сценах `Assets/Scenes`. Идемпотентен; вложенные префабы обрабатывает раньше внешних, чтобы не плодить override'ы; чужие теги (`MainCamera`, `EditorOnly`) не трогает; сцену с несохранёнными правками пропускает. Из кода — `GameTagsTool.Run()`. |
 | `OcclusionBakeTool` | `Editor/VR_Battlegrounds/Gameplay/OcclusionBakeTool.cs` | `Tools/VR Battlegrounds/Gameplay/Bake Occlusion (all maps)`: размечает static-флаги occlusion (подвижное, прозрачное и мелкое — по правилам) и запекает occlusion culling для лобби и карт из Build Settings. Из кода — `OcclusionBakeTool.Run()`. Подробно — `level-design.md`, «Occlusion culling». |
+| `LevelDesignBlockTexturer` | `Editor/VR_Battlegrounds/Gameplay/LevelDesignBlockTexturer.cs` | `Tools/VR Battlegrounds/Gameplay/Texture LD Blocks`: одевает блоки `LD_Alphabet` в сетку пака `UnityStarter_Robot/Environment` и строит им меши с UV в метрах (без растяжения). Подробно — `level-design.md`, «Геометрия на Сетке». |
 
 **Поля `MapData`:**
 
@@ -535,6 +536,7 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | Класс / файл | Назначение |
 |---|---|
 | `Maps/OcclusionCullingBakedTests` | У каждой карты и лобби из Build Settings есть запечённые данные occlusion (ссылка в сцене и ассет на диске). Устаревшие данные не ловит — после правки геометрии перезапечь `OcclusionBakeTool`. |
+| `Maps/LevelDesignBlockTextureTests` | Блоки `LD_Alphabet` носят материалы `UnityStarter_Robot/Environment`, плотность UV одинакова вдоль всех рёбер (сетка не растянута). |
 | `Player/GrabQueryPatchTests` | Патчи UltimateXR 25–28: правила хвата не зовутся для недосягаемого предмета и решают для досягаемого; список предметов с особыми кнопками хвата (и что в проекте только известные — `Pin`); грубая отсечка по расстоянию не отрезает ничего досягаемого (обход руки по сфере 0,6 м). |
 | `Player/RemoteAvatarIKPolicyTests` | Решение экономии IK: свой аватар, сервер, хост и видимый чужой — каждый кадр; невидимый — раз в N кадров в свой кадр, в каждом кадре ровно один из N; появившийся — сразу. |
 | `DevTools/StressTestLayoutTests` | Расстановка кукол стресс-теста: выбор скина, ряды, кольцо (радиус, сектор, в поле зрения 1–4 куклы), отступ, перенос полей через сообщение. |

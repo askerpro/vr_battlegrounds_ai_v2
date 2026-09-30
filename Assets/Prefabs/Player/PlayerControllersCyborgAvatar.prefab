@@ -178,6 +178,75 @@ MonoBehaviour:
   _takeOutClip: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
   _onlyByHand: 1
   _takeOutOnlyByHand: 1
+--- !u!1 &95611733071099756
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6572526858106441528}
+  - component: {fileID: 5952476571448793167}
+  - component: {fileID: 2172859735890861913}
+  m_Layer: 12
+  m_Name: Hitbox_UpperArm_L
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6572526858106441528
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 95611733071099756}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8817038657789296408}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5952476571448793167
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 95611733071099756}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 2
+--- !u!136 &2172859735890861913
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 95611733071099756}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.055000007
+  m_Height: 0.38935858
+  m_Direction: 0
+  m_Center: {x: -0.13967928, y: -0.000008475035, z: 0.000000015832484}
 --- !u!1 &239341688976474358
 GameObject:
   m_ObjectHideFlags: 0
@@ -271,6 +340,75 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.042233277, y: -0.015275124, z: 0.00000040978193}
     m_Extent: {x: 0.12888126, y: 0.11232966, z: 0.071938284}
   m_DirtyAABB: 0
+--- !u!1 &295676815659316859
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4889530640588535746}
+  - component: {fileID: 7044972201266787401}
+  - component: {fileID: 4473077688695153810}
+  m_Layer: 12
+  m_Name: Hitbox_Torso_Upper
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4889530640588535746
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 295676815659316859}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 202275468615147571}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7044972201266787401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 295676815659316859}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 1
+--- !u!136 &4473077688695153810
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 295676815659316859}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.15999994
+  m_Height: 0.3987428
+  m_Direction: 0
+  m_Center: {x: -0.039371453, y: -0.00000018822695, z: 0.007342789}
 --- !u!1 &366053264505208061
 GameObject:
   m_ObjectHideFlags: 0
@@ -389,81 +527,12 @@ Transform:
   m_GameObject: {fileID: 555523930622707634}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.0000000039869548, y: -0.07074866, z: 0.12945116}
+  m_LocalPosition: {x: 0.013193373, y: -0.079799205, z: 0.12974143}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 592260073587924855}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &684744467840989501
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 5357226461208632970}
-  - component: {fileID: 2719835265795359960}
-  - component: {fileID: 2166196229836705595}
-  m_Layer: 12
-  m_Name: Hitbox_Thigh_L
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &5357226461208632970
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 684744467840989501}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7320164498658038616}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2719835265795359960
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 684744467840989501}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 3
---- !u!136 &2166196229836705595
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 684744467840989501}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.080000006
-  m_Height: 0.54842585
-  m_Direction: 1
-  m_Center: {x: -0.000000045206384, y: -0.19421291, z: -0.029572982}
 --- !u!1 &783833943765887199
 GameObject:
   m_ObjectHideFlags: 0
@@ -521,7 +590,8 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a13309ca4dfb46040bbaff36cea0a9b5, type: 2}
+  - {fileID: 2100000, guid: dcc55b113003f07449484783afc8e5b2, type: 2}
+  - {fileID: 2100000, guid: f10c6c603d952cf4485171b2a7f62d69, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -548,7 +618,7 @@ SkinnedMeshRenderer:
   m_Quality: 0
   m_UpdateWhenOffscreen: 0
   m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: 4300000, guid: ab1dcc722e4e2b64c967cbb396b6bb47, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 226bf3e004efa6044b40d8a3edab5700, type: 2}
   m_Bones:
   - {fileID: 6435062725931169160}
   - {fileID: 7320164498658038616}
@@ -562,10 +632,10 @@ SkinnedMeshRenderer:
   m_BlendShapeWeights: []
   m_RootBone: {fileID: 6435062725931169160}
   m_AABB:
-    m_Center: {x: -0.6654376, y: -0.06393708, z: 0.0012173802}
-    m_Extent: {x: 0.5784983, y: 0.20690575, z: 0.23628953}
+    m_Center: {x: -0.6271163, y: -0.065600604, z: 0.000000059604645}
+    m_Extent: {x: 0.6005612, y: 0.21689308, z: 0.24834447}
   m_DirtyAABB: 0
---- !u!1 &861309965613881971
+--- !u!1 &1747095221666050178
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -573,51 +643,51 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 9102089666873111587}
-  - component: {fileID: 3438642048062156287}
-  - component: {fileID: 3360322095359521407}
+  - component: {fileID: 1343350302453597233}
+  - component: {fileID: 9049538773888417601}
+  - component: {fileID: 5216164786180556685}
   m_Layer: 12
-  m_Name: Hitbox_UpperArm_R
+  m_Name: Hitbox_Calf_L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &9102089666873111587
+--- !u!4 &1343350302453597233
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 861309965613881971}
+  m_GameObject: {fileID: 1747095221666050178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2645659197761292903}
+  m_Father: {fileID: 7163460271214435535}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3438642048062156287
+--- !u!114 &9049538773888417601
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 861309965613881971}
+  m_GameObject: {fileID: 1747095221666050178}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 2
---- !u!136 &3360322095359521407
+  _part: 3
+--- !u!136 &5216164786180556685
 CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 861309965613881971}
+  m_GameObject: {fileID: 1747095221666050178}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -630,10 +700,146 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.054999974
-  m_Height: 0.38935795
+  m_Radius: 0.065000005
+  m_Height: 0.58579797
+  m_Direction: 1
+  m_Center: {x: -0.008096068, y: -0.22789899, z: -0.016750336}
+--- !u!1 &1748074498648090435
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1073011835835952430}
+  - component: {fileID: 7584123971951752773}
+  - component: {fileID: 6821795090994792283}
+  m_Layer: 12
+  m_Name: Hitbox_Forearm_L
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1073011835835952430
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1748074498648090435}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 780758713185103788}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7584123971951752773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1748074498648090435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 2
+--- !u!136 &6821795090994792283
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1748074498648090435}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.049999982
+  m_Height: 0.40653542
   m_Direction: 0
-  m_Center: {x: -0.139679, y: 0.000008378178, z: -0.000000013969839}
+  m_Center: {x: -0.15326773, y: 0.00000002730323, z: 0.000000010244548}
+--- !u!1 &1752078660112084871
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7623264616067384620}
+  - component: {fileID: 5827583616311597095}
+  - component: {fileID: 7380574307980378622}
+  m_Layer: 12
+  m_Name: Hitbox_Head
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7623264616067384620
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1752078660112084871}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6062878206884001444}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5827583616311597095
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1752078660112084871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 0
+--- !u!135 &7380574307980378622
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1752078660112084871}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.11999997
+  m_Center: {x: -0.069972634, y: -0.0019570682, z: 0.000000027669921}
 --- !u!1 &1893536557463562631
 GameObject:
   m_ObjectHideFlags: 0
@@ -659,7 +865,7 @@ Transform:
   m_GameObject: {fileID: 1893536557463562631}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.0000000012555361, y: -0.48486474, z: -0.073830724}
+  m_LocalPosition: {x: 0.016191063, y: -0.45579812, z: -0.03350091}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -691,12 +897,12 @@ Transform:
   m_GameObject: {fileID: 2531124298915810055}
   serializedVersion: 2
   m_LocalRotation: {x: 0.4834613, y: 0.51600885, z: -0.48346138, w: 0.5160088}
-  m_LocalPosition: {x: -0.19806515, y: -0.034705814, z: 0.12545216}
+  m_LocalPosition: {x: -0.16140935, y: 0.002172796, z: 0.09510253}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7163460271214435535}
-  - {fileID: 5357226461208632970}
+  - {fileID: 511306305001710817}
   m_Father: {fileID: 6435062725931169160}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2592278145420976687
@@ -933,144 +1139,6 @@ MonoBehaviour:
   _dropSnapMode: 3
   _dropProximityTransformUseSelf: 1
   _dropProximityTransform: {fileID: 0}
---- !u!1 &2978738107282347086
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 4123884370695886112}
-  - component: {fileID: 9187960406944924501}
-  - component: {fileID: 310108432993814598}
-  m_Layer: 12
-  m_Name: Hitbox_Forearm_L
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &4123884370695886112
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2978738107282347086}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 780758713185103788}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &9187960406944924501
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2978738107282347086}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 2
---- !u!136 &310108432993814598
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2978738107282347086}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.049999982
-  m_Height: 0.40653542
-  m_Direction: 0
-  m_Center: {x: -0.15326773, y: 0.00000002730323, z: 0.000000010244548}
---- !u!1 &3028163933524563025
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6625178695695654014}
-  - component: {fileID: 1254560793909646597}
-  - component: {fileID: 8600462510790366895}
-  m_Layer: 12
-  m_Name: Hitbox_Calf_R
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6625178695695654014
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3028163933524563025}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 8458109938517346599}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1254560793909646597
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3028163933524563025}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 3
---- !u!136 &8600462510790366895
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3028163933524563025}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.065000005
-  m_Height: 0.61486495
-  m_Direction: 1
-  m_Center: {x: -0.000000060232395, y: -0.24243246, z: -0.036915362}
 --- !u!1 &3162777445748195663
 GameObject:
   m_ObjectHideFlags: 0
@@ -1259,75 +1327,6 @@ SkinnedMeshRenderer:
     m_Center: {x: 0.024010621, y: -0.00037708879, z: 0.0055820122}
     m_Extent: {x: 0.072780155, y: 0.105120495, z: 0.109838046}
   m_DirtyAABB: 0
---- !u!1 &4812887356475940652
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3068454548206543092}
-  - component: {fileID: 8028368611688239753}
-  - component: {fileID: 6466776485058911984}
-  m_Layer: 12
-  m_Name: Hitbox_Thigh_R
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3068454548206543092
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4812887356475940652}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 8832096650088906264}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8028368611688239753
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4812887356475940652}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 3
---- !u!136 &6466776485058911984
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4812887356475940652}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.080000006
-  m_Height: 0.5484258
-  m_Direction: 1
-  m_Center: {x: -0.000000067558126, y: -0.1942129, z: -0.029572964}
 --- !u!1 &4960731535952998035
 GameObject:
   m_ObjectHideFlags: 0
@@ -1451,7 +1450,7 @@ Transform:
   m_GameObject: {fileID: 5068924528215000833}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.000000031057855, y: -0.4848639, z: -0.07383073}
+  m_LocalPosition: {x: -0.016192017, y: -0.45579785, z: -0.03350079}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1787,83 +1786,14 @@ Transform:
   m_GameObject: {fileID: 5397581494086809177}
   serializedVersion: 2
   m_LocalRotation: {x: 0.4834613, y: 0.51600885, z: -0.48346138, w: 0.5160088}
-  m_LocalPosition: {x: -0.19806488, y: -0.034705754, z: -0.12545188}
+  m_LocalPosition: {x: -0.16140951, y: 0.0021727858, z: -0.09510253}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8458109938517346599}
-  - {fileID: 3068454548206543092}
+  - {fileID: 507114412810730883}
   m_Father: {fileID: 6435062725931169160}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &5540373346398616028
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 7617604260727135235}
-  - component: {fileID: 8534434333795147396}
-  - component: {fileID: 8715498519180604448}
-  m_Layer: 12
-  m_Name: Hitbox_Calf_L
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &7617604260727135235
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5540373346398616028}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7163460271214435535}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8534434333795147396
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5540373346398616028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 3
---- !u!136 &8715498519180604448
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5540373346398616028}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.065000005
-  m_Height: 0.6148642
-  m_Direction: 1
-  m_Center: {x: -0.000000075133556, y: -0.24243207, z: -0.036915366}
 --- !u!1 &5830988014273021454
 GameObject:
   m_ObjectHideFlags: 0
@@ -1889,12 +1819,12 @@ Transform:
   m_GameObject: {fileID: 5830988014273021454}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.000000075511615, y: -0.38842574, z: -0.059145987}
+  m_LocalPosition: {x: 0.016208483, y: -0.45625207, z: -0.00238128}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 592260073587924855}
-  - {fileID: 6625178695695654014}
+  - {fileID: 8075516330611658155}
   m_Father: {fileID: 8832096650088906264}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5873217470598652819
@@ -1990,7 +1920,7 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.044631183, y: -0.0066633187, z: -0.000000603497}
     m_Extent: {x: 0.13983114, y: 0.12618734, z: 0.09778435}
   m_DirtyAABB: 0
---- !u!1 &5960545195456940839
+--- !u!1 &6079899015722855216
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1998,51 +1928,51 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 9057946424414451089}
-  - component: {fileID: 4572919764533945590}
-  - component: {fileID: 8705823502573235311}
+  - component: {fileID: 7258278983116910943}
+  - component: {fileID: 2339386559061292411}
+  - component: {fileID: 9012646475449928643}
   m_Layer: 12
-  m_Name: Hitbox_Torso_Upper
+  m_Name: Hitbox_UpperArm_R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &9057946424414451089
+--- !u!4 &7258278983116910943
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5960545195456940839}
+  m_GameObject: {fileID: 6079899015722855216}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 202275468615147571}
+  m_Father: {fileID: 2645659197761292903}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4572919764533945590
+--- !u!114 &2339386559061292411
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5960545195456940839}
+  m_GameObject: {fileID: 6079899015722855216}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 1
---- !u!136 &8705823502573235311
+  _part: 2
+--- !u!136 &9012646475449928643
 CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5960545195456940839}
+  m_GameObject: {fileID: 6079899015722855216}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -2055,10 +1985,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.15999994
-  m_Height: 0.3987428
+  m_Radius: 0.054999974
+  m_Height: 0.38935795
   m_Direction: 0
-  m_Center: {x: -0.039371453, y: -0.00000018822695, z: 0.007342789}
+  m_Center: {x: -0.139679, y: 0.000008378178, z: -0.000000013969839}
 --- !u!1 &6202491618745530447
 GameObject:
   m_ObjectHideFlags: 0
@@ -2176,73 +2106,6 @@ MonoBehaviour:
   _dropSnapMode: 3
   _dropProximityTransformUseSelf: 1
   _dropProximityTransform: {fileID: 0}
---- !u!1 &6471248549200830090
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1795418213886248752}
-  - component: {fileID: 8602630189027355196}
-  - component: {fileID: 5438819812615394005}
-  m_Layer: 12
-  m_Name: Hitbox_Head
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1795418213886248752
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6471248549200830090}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 6062878206884001444}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8602630189027355196
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6471248549200830090}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 0
---- !u!135 &5438819812615394005
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6471248549200830090}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.11999997
-  m_Center: {x: -0.069972634, y: -0.0019570682, z: 0.000000027669921}
 --- !u!1 &6518648763131582236
 GameObject:
   m_ObjectHideFlags: 0
@@ -2345,7 +2208,7 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!1 &6767304644027993110
+--- !u!1 &6658498917408863845
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2353,51 +2216,51 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 4604831266040189489}
-  - component: {fileID: 1857801762241970319}
-  - component: {fileID: 1715718769822178419}
+  - component: {fileID: 507114412810730883}
+  - component: {fileID: 5007343218846738356}
+  - component: {fileID: 7610922052606028189}
   m_Layer: 12
-  m_Name: Hitbox_Torso_Lower
+  m_Name: Hitbox_Thigh_R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &4604831266040189489
+--- !u!4 &507114412810730883
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6767304644027993110}
+  m_GameObject: {fileID: 6658498917408863845}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 6435062725931169160}
+  m_Father: {fileID: 8832096650088906264}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1857801762241970319
+--- !u!114 &5007343218846738356
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6767304644027993110}
+  m_GameObject: {fileID: 6658498917408863845}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 1
---- !u!136 &1715718769822178419
+  _part: 3
+--- !u!136 &7610922052606028189
 CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6767304644027993110}
+  m_GameObject: {fileID: 6658498917408863845}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -2410,11 +2273,11 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.14999998
-  m_Height: 0.5128374
-  m_Direction: 0
-  m_Center: {x: 0.106418744, y: 0.012251785, z: -0.000000074505806}
---- !u!1 &6923519778893724466
+  m_Radius: 0.080000006
+  m_Height: 0.6162521
+  m_Direction: 1
+  m_Center: {x: 0.008104212, y: -0.22812606, z: -0.0011906102}
+--- !u!1 &6680453126429791321
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2422,51 +2285,51 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1239087662612415730}
-  - component: {fileID: 5552496021096472398}
-  - component: {fileID: 8932626995283114484}
+  - component: {fileID: 511306305001710817}
+  - component: {fileID: 7505885455524793933}
+  - component: {fileID: 1061505914434321243}
   m_Layer: 12
-  m_Name: Hitbox_UpperArm_L
+  m_Name: Hitbox_Thigh_L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1239087662612415730
+--- !u!4 &511306305001710817
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6923519778893724466}
+  m_GameObject: {fileID: 6680453126429791321}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 8817038657789296408}
+  m_Father: {fileID: 7320164498658038616}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5552496021096472398
+--- !u!114 &7505885455524793933
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6923519778893724466}
+  m_GameObject: {fileID: 6680453126429791321}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 2
---- !u!136 &8932626995283114484
+  _part: 3
+--- !u!136 &1061505914434321243
 CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6923519778893724466}
+  m_GameObject: {fileID: 6680453126429791321}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -2479,10 +2342,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.055000007
-  m_Height: 0.38935858
-  m_Direction: 0
-  m_Center: {x: -0.13967928, y: -0.000008475035, z: 0.000000015832484}
+  m_Radius: 0.080000006
+  m_Height: 0.61625236
+  m_Direction: 1
+  m_Center: {x: -0.008104092, y: -0.22812617, z: -0.0011906093}
 --- !u!1 &7098044686718711117
 GameObject:
   m_ObjectHideFlags: 0
@@ -3090,6 +2953,144 @@ MonoBehaviour:
   _takeOutClip: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
   _onlyByHand: 1
   _takeOutOnlyByHand: 1
+--- !u!1 &7408549812251725860
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5110110857884025729}
+  - component: {fileID: 5375095298117372406}
+  - component: {fileID: 7405229717699619107}
+  m_Layer: 12
+  m_Name: Hitbox_Torso_Lower
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5110110857884025729
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7408549812251725860}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6435062725931169160}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5375095298117372406
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7408549812251725860}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 1
+--- !u!136 &7405229717699619107
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7408549812251725860}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.14999998
+  m_Height: 0.5128374
+  m_Direction: 0
+  m_Center: {x: 0.106418744, y: 0.012251785, z: -0.000000074505806}
+--- !u!1 &7573751545875315627
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7966914486139129055}
+  - component: {fileID: 964634098120382589}
+  - component: {fileID: 1988955349643304322}
+  m_Layer: 12
+  m_Name: Hitbox_Forearm_R
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7966914486139129055
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7573751545875315627}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2238729877079046646}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &964634098120382589
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7573751545875315627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 2
+--- !u!136 &1988955349643304322
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7573751545875315627}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.04999999
+  m_Height: 0.40653533
+  m_Direction: 0
+  m_Center: {x: -0.15326768, y: 0.000000102788505, z: -0.00000012340024}
 --- !u!1 &7608998417904736639
 GameObject:
   m_ObjectHideFlags: 0
@@ -3183,75 +3184,6 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.13873225, y: 0.0019355752, z: -0.014639348}
     m_Extent: {x: 0.18484157, y: 0.05451432, z: 0.06361843}
   m_DirtyAABB: 0
---- !u!1 &7653758727350303973
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2301805540680996962}
-  - component: {fileID: 5501245520862273885}
-  - component: {fileID: 1686756549137533090}
-  m_Layer: 12
-  m_Name: Hitbox_Forearm_R
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2301805540680996962
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7653758727350303973}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2238729877079046646}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5501245520862273885
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7653758727350303973}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
-  _part: 2
---- !u!136 &1686756549137533090
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7653758727350303973}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.04999999
-  m_Height: 0.40653533
-  m_Direction: 0
-  m_Center: {x: -0.15326768, y: 0.000000102788505, z: -0.00000012340024}
 --- !u!1 &8182636941912910082
 GameObject:
   m_ObjectHideFlags: 0
@@ -3502,6 +3434,75 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.07212439, y: -0.004232824, z: 0.029410316}
     m_Extent: {x: 0.100770876, y: 0.05939831, z: 0.078665026}
   m_DirtyAABB: 0
+--- !u!1 &8565120706875859607
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8075516330611658155}
+  - component: {fileID: 785489873155206193}
+  - component: {fileID: 4576123506190204507}
+  m_Layer: 12
+  m_Name: Hitbox_Calf_R
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8075516330611658155
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8565120706875859607}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8458109938517346599}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &785489873155206193
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8565120706875859607}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 264e99d0b460d6242b827e7900fb0a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Player.Hitbox
+  _part: 3
+--- !u!136 &4576123506190204507
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8565120706875859607}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.065000005
+  m_Height: 0.58579826
+  m_Direction: 1
+  m_Center: {x: 0.008095472, y: -0.22789912, z: -0.016750399}
 --- !u!1 &9092832168256509798
 GameObject:
   m_ObjectHideFlags: 0
@@ -3527,7 +3528,7 @@ Transform:
   m_GameObject: {fileID: 9092832168256509798}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.000000063591585, y: -0.070749134, z: 0.12945116}
+  m_LocalPosition: {x: -0.013193008, y: -0.079799235, z: 0.12973642}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3558,12 +3559,12 @@ Transform:
   m_GameObject: {fileID: 9119945106395190695}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.000000030808135, y: -0.3884258, z: -0.059146024}
+  m_LocalPosition: {x: -0.016208125, y: -0.45625234, z: -0.0023812782}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2849450257365704115}
-  - {fileID: 7617604260727135235}
+  - {fileID: 1343350302453597233}
   m_Father: {fileID: 7320164498658038616}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &4453308068191464189
@@ -6816,7 +6817,7 @@ PrefabInstance:
       addedObject: {fileID: 8832096650088906264}
     - targetCorrespondingSourceObject: {fileID: 7241994236996165493, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 4604831266040189489}
+      addedObject: {fileID: 5110110857884025729}
     - targetCorrespondingSourceObject: {fileID: 2259840726603940022, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3879979666488203583}
@@ -6825,22 +6826,22 @@ PrefabInstance:
       addedObject: {fileID: 7695565288744341765}
     - targetCorrespondingSourceObject: {fileID: 4540741544260012750, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 9057946424414451089}
+      addedObject: {fileID: 4889530640588535746}
     - targetCorrespondingSourceObject: {fileID: 7633319398054943833, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1795418213886248752}
+      addedObject: {fileID: 7623264616067384620}
     - targetCorrespondingSourceObject: {fileID: 5156971107299104229, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1239087662612415730}
+      addedObject: {fileID: 6572526858106441528}
     - targetCorrespondingSourceObject: {fileID: 3970094588317566289, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 4123884370695886112}
+      addedObject: {fileID: 1073011835835952430}
     - targetCorrespondingSourceObject: {fileID: 1835798567124492442, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 9102089666873111587}
+      addedObject: {fileID: 7258278983116910943}
     - targetCorrespondingSourceObject: {fileID: 2512099166448472843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 2301805540680996962}
+      addedObject: {fileID: 7966914486139129055}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
@@ -7398,8 +7399,8 @@ MonoBehaviour:
     BoneFeet: {fileID: 0}
     FeetSensitivity: 0.5
     InverseHint: 0
-    AnkleToHeel: {x: -0.00000005938683, y: -0.1123285, z: 0}
-    AnkleToFeetEnd: {x: -0.0000001739816, y: -0.11232874, z: 0.15516588}
+    AnkleToHeel: {x: -0.00000011920929, y: -0.11254555, z: 0.00000011920929}
+    AnkleToFeetEnd: {x: -0.00000011175871, y: -0.11254555, z: 0.15745378}
     AnkleRight: {x: 0.9999999, y: 0.00000002957016, z: -0.00000011920929}
     AnkleUp: {x: 0.000000117270325, y: 1, z: 0.00000011920929}
     AnkleForward: {x: 0.00000003718975, y: -0.00000023841858, z: 1.0000001}
@@ -7429,8 +7430,8 @@ MonoBehaviour:
     BoneFeet: {fileID: 0}
     FeetSensitivity: 0.5
     InverseHint: 0
-    AnkleToHeel: {x: -0.00000011899146, y: -0.11232802, z: 0}
-    AnkleToFeetEnd: {x: -0.00000011437696, y: -0.11232826, z: 0.15516588}
+    AnkleToHeel: {x: -0.00000011920929, y: -0.1125454, z: 0.00000010430813}
+    AnkleToFeetEnd: {x: -0.00000011175871, y: -0.11254552, z: 0.15745376}
     AnkleRight: {x: 0.9999999, y: 0.00000002957016, z: -0.00000011920929}
     AnkleUp: {x: 0.000000117270325, y: 1, z: 0.00000011920929}
     AnkleForward: {x: 0.00000003718975, y: -0.00000023841858, z: 1.0000001}
@@ -7677,7 +7678,7 @@ MonoBehaviour:
   baseTransform: {fileID: 6696078570719007859}
   Hips: {fileID: 6435062725931169160}
   ScaleReferenceMode: 3
-  finalScaleReference: 1.034439
+  finalScaleReference: 1.0496911
   finalScaleReferenceSqrt: 0.1
   customScaleReferenceValue: 0.5
   DelayedInitialization: 1

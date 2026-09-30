@@ -12,24 +12,26 @@ using VrBattlegrounds.Core;
 namespace VrBattlegrounds.Editor.Avatars
 {
     /// <summary>
-    /// Ноги киборга (<c>PlayerControllersCyborgAvatar</c>) — ноги робота Kyle
-    /// (<c>ThirdParty/UnityStarter_Robot/KyleRobot</c>), пришитые к скелету киборга. Генерация, а не ручная
-    /// настройка: всё, чем киборг с ногами отличается от сэмпла UltimateXR, задано здесь, и повторная сборка
-    /// приводит префаб к этому виду (объекты ищутся по имени — id и ссылки на них сохраняются).
+    /// Ноги киборга (<c>PlayerControllersCyborgAvatar</c>) — ноги робота-донора из <c>ThirdParty/UnityStarter_Robot</c>
+    /// (<see cref="LegsDonor"/>: Kyle или Armature; в префабе — <see cref="Selected"/>), пришитые к скелету киборга.
+    /// Генерация, а не ручная настройка: всё, чем киборг с ногами отличается от сэмпла UltimateXR, задано здесь,
+    /// и повторная сборка приводит префаб к этому виду (объекты ищутся по имени — id и ссылки сохраняются).
+    /// Донор описан рецептом (<c>DonorRecipe</c>: модель, кости ног, срез таза, меш, материалы подсеток) —
+    /// код сборки общий.
     ///
     /// <list type="number">
     /// <item><b>Кости.</b> Под <c>Pelvis</c> — цепочки <c>UpperLeg → LowerLeg → Foot → Toes</c> (<c>_Left</c>/<c>_Right</c>)
-    ///       в позиции костей Kyle, пересчитанных на киборга: масштаб — отношение высоты головы киборга к
-    ///       высоте головы Kyle (пропорции робота сохраняются), по горизонтали таз Kyle совмещён с тазом
+    ///       в позиции костей донора, пересчитанных на киборга: масштаб — отношение высоты головы киборга к
+    ///       высоте головы донора (пропорции робота сохраняются), по горизонтали таз донора совмещён с тазом
     ///       киборга, по вертикали ступни остаются на полу. Повороты костей — осями корня аватара:
     ///       плагину ног и хитбоксам важны только позиции, а ровные оси стопы — это
     ///       <c>AnkleForward/Up</c> без поправок.</item>
-    /// <item><b>Меш</b> <see cref="MeshPath"/> — треугольники Kyle, все вершины которых принадлежат ногам
-    ///       (главная кость — <c>LeftLeg</c>… <c>RightToes</c>) или низу таза Kyle (<c>Hips</c>, не выше
-    ///       <see cref="PelvisCutAboveHipJoints"/> над тазобедренными суставами: выше красная пластина живота
-    ///       Kyle пробивает корпус киборга). Вершины запечены в пространство нового скина, веса таза и
-    ///       позвоночника Kyle — на <c>Pelvis</c> киборга. Низ таза Kyle уходит под пояс киборга и закрывает пах.</item>
-    /// <item><b>Скин</b> <c>CyborgGeo/LegsGeo</c> на материале <see cref="MaterialPath"/> (копия материала Kyle),
+    /// <item><b>Меш</b> (путь — в рецепте) — треугольники донора, все вершины которых принадлежат ногам
+    ///       (главная кость — кость ноги или её потомок) или низу таза донора (не выше среза рецепта над
+    ///       тазобедренными суставами: выше, например, красная пластина живота Kyle пробивает корпус киборга).
+    ///       Подсетки донора сохраняются. Вершины запечены в пространство нового скина, веса таза и
+    ///       позвоночника донора — на <c>Pelvis</c> киборга. Низ таза донора уходит под пояс киборга и закрывает пах.</item>
+    /// <item><b>Скин</b> <c>CyborgGeo/LegsGeo</c> на копиях материалов донора в <see cref="OutFolder"/>,
     ///       настройки рендерера — как у <c>BodyGeo</c>; добавлен в <c>UxrAvatar._avatarRenderers</c>.</item>
     /// <item><b>Скелет UltimateXR</b> — ноги в <c>UxrAvatarRig</c> (по ним <see cref="HitboxBuilder"/> строит
     ///       хитбоксы ног).</item>
@@ -50,13 +52,10 @@ namespace VrBattlegrounds.Editor.Avatars
     {
         public const string AvatarPath = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
         public const string OutFolder = "Assets/Art/Avatars/PlayerControllersCyborgAvatar/Legs";
-        public const string MeshPath = OutFolder + "/CyborgLegs_Mesh.asset";
-        public const string MaterialPath = OutFolder + "/CyborgLegs.mat";
         public const string HumanAvatarPath = OutFolder + "/CyborgHumanoid.asset";
 
-        private const string DonorPath = "Assets/ThirdParty/UnityStarter_Robot/KyleRobot/Models/KyleRobot.fbx";
-        private const string DonorMaterialPath = "Assets/ThirdParty/UnityStarter_Robot/KyleRobot/Materials/KyleRobot.mat";
         private const string TemplatePath = "Assets/Prefabs/Player/MEF_Base_Avatar.prefab";
+        private const string RobotPack = "Assets/ThirdParty/UnityStarter_Robot/";
 
         private const string ModelName = "Cyborg";
         private const string RigName = "CyborgRig";
@@ -64,30 +63,88 @@ namespace VrBattlegrounds.Editor.Avatars
         private const string GeoName = "CyborgGeo";
         private const string BodyGeoName = "BodyGeo";
         private const string LegsGeoName = "LegsGeo";
-        private const string DonorHips = "Hips";
-        private const string DonorHead = "Head";
 
-        /// <summary>Срез таза Kyle над его тазобедренными суставами, метры донора.</summary>
-        private const float PelvisCutAboveHipJoints = 0.04f;
+        /// <summary>Модель — донор ног.</summary>
+        public enum LegsDonor
+        {
+            /// <summary>Робот Kyle: тонкие ноги, 1,9 тыс. треугольников, один материал.</summary>
+            Kyle,
 
-        /// <summary>Кость ноги: имя у Kyle → имя у киборга, родитель у киборга.</summary>
+            /// <summary>Робот Armature: плотные ноги, ~11,9 тыс. треугольников, два материала (ноги и таз).</summary>
+            Armature,
+        }
+
+        /// <summary>
+        /// Донор ног в префабе киборга. Меню <c>Build Cyborg Legs</c> собирает его. Armature — с 2026-09-30:
+        /// ноги Kyle при корпусе киборга выглядели чужими и слишком худыми (сравнение — CHANGELOG).
+        /// </summary>
+        public const LegsDonor Selected = LegsDonor.Armature;
+
+        /// <summary>
+        /// Рецепт донора: модель, его кости (в порядке <see cref="Bones"/>), срез таза, куда писать меш и
+        /// какими материалами красить подсетки. Новый донор — новый рецепт, код сборки общий.
+        /// </summary>
+        private sealed class DonorRecipe
+        {
+            public string ModelPath;
+            public string Hips;
+            public string Head;
+            public string[] LegBones;
+            /// <summary>Срез таза донора над его тазобедренными суставами, метры донора: выше таз пробивает корпус.</summary>
+            public float PelvisCut;
+            public string MeshPath;
+            /// <summary>По подсетке донора: исходный материал и имя копии в <see cref="OutFolder"/>.</summary>
+            public string[] SourceMaterials;
+            public string[] MaterialNames;
+        }
+
+        private static readonly DonorRecipe KyleRecipe = new DonorRecipe
+        {
+            ModelPath = RobotPack + "KyleRobot/Models/KyleRobot.fbx",
+            Hips = "Hips",
+            Head = "Head",
+            LegBones = new[] { "LeftLeg", "LeftCalf", "LeftFoot", "LeftToes", "RightLeg", "RightCalf", "RightFoot", "RightToes" },
+            PelvisCut = 0.04f,
+            MeshPath = OutFolder + "/CyborgLegs_Mesh.asset",
+            SourceMaterials = new[] { RobotPack + "KyleRobot/Materials/KyleRobot.mat" },
+            MaterialNames = new[] { "CyborgLegs" },
+        };
+
+        /// <summary>
+        /// Armature: подсетка 0 — корпус (из неё берётся низ таза), 1 — руки и голова (в ноги не попадает),
+        /// 2 — ноги. Материалы в FBX не переназначены (встроенные «Lit») — берутся из папки пака.
+        /// </summary>
+        private static readonly DonorRecipe ArmatureRecipe = new DonorRecipe
+        {
+            ModelPath = RobotPack + "Armature/Models/Armature.fbx",
+            Hips = "Hips",
+            Head = "Head",
+            LegBones = new[] { "Left_UpperLeg", "Left_LowerLeg", "Left_Foot", "Left_Toes", "Right_UpperLeg", "Right_LowerLeg", "Right_Foot", "Right_Toes" },
+            PelvisCut = 0f,
+            MeshPath = OutFolder + "/CyborgLegs_Armature_Mesh.asset",
+            SourceMaterials = new[] { RobotPack + "Armature/Materials/M_Armature_Body.mat", RobotPack + "Armature/Materials/M_Armature_Arms.mat", RobotPack + "Armature/Materials/M_Armature_Legs.mat" },
+            MaterialNames = new[] { "CyborgLegs_ArmatureBody", "CyborgLegs_ArmatureArms", "CyborgLegs_ArmatureLegs" },
+        };
+
+        private static DonorRecipe RecipeOf(LegsDonor donor) => donor == LegsDonor.Armature ? ArmatureRecipe : KyleRecipe;
+
+        /// <summary>Кость ноги киборга и её родитель.</summary>
         private sealed class LegBone
         {
-            public string Donor;
             public string Name;
             public string Parent;
         }
 
         private static readonly LegBone[] Bones =
         {
-            new LegBone { Donor = "LeftLeg", Name = "UpperLeg_Left", Parent = PelvisName },
-            new LegBone { Donor = "LeftCalf", Name = "LowerLeg_Left", Parent = "UpperLeg_Left" },
-            new LegBone { Donor = "LeftFoot", Name = "Foot_Left", Parent = "LowerLeg_Left" },
-            new LegBone { Donor = "LeftToes", Name = "Toes_Left", Parent = "Foot_Left" },
-            new LegBone { Donor = "RightLeg", Name = "UpperLeg_Right", Parent = PelvisName },
-            new LegBone { Donor = "RightCalf", Name = "LowerLeg_Right", Parent = "UpperLeg_Right" },
-            new LegBone { Donor = "RightFoot", Name = "Foot_Right", Parent = "LowerLeg_Right" },
-            new LegBone { Donor = "RightToes", Name = "Toes_Right", Parent = "Foot_Right" },
+            new LegBone { Name = "UpperLeg_Left", Parent = PelvisName },
+            new LegBone { Name = "LowerLeg_Left", Parent = "UpperLeg_Left" },
+            new LegBone { Name = "Foot_Left", Parent = "LowerLeg_Left" },
+            new LegBone { Name = "Toes_Left", Parent = "Foot_Left" },
+            new LegBone { Name = "UpperLeg_Right", Parent = PelvisName },
+            new LegBone { Name = "LowerLeg_Right", Parent = "UpperLeg_Right" },
+            new LegBone { Name = "Foot_Right", Parent = "LowerLeg_Right" },
+            new LegBone { Name = "Toes_Right", Parent = "Foot_Right" },
         };
 
         /// <summary>Humanoid-разметка киборга (Mecanim → кость).</summary>
@@ -103,7 +160,7 @@ namespace VrBattlegrounds.Editor.Avatars
         [MenuItem("Tools/VR Battlegrounds/Avatars/Build Cyborg Legs")]
         private static void BuildMenu()
         {
-            string report = Build();
+            string report = Build(Selected);
             if (report.StartsWith("ОТКАЗ")) return;
 
             // Хитбоксы ног по новому скелету; сборщик хитбоксов пересобирает и призрака (вариант киборга), и трупы.
@@ -111,13 +168,10 @@ namespace VrBattlegrounds.Editor.Avatars
         }
 
         /// <summary>Собирает ноги киборга. Возвращает отчёт; при отказе префаб не меняется.</summary>
-        public static string Build()
+        public static string Build(LegsDonor donor)
         {
-            var donor = AssetDatabase.LoadAssetAtPath<GameObject>(DonorPath);
-            var donorMaterial = AssetDatabase.LoadAssetAtPath<Material>(DonorMaterialPath);
             var template = AssetDatabase.LoadAssetAtPath<GameObject>(TemplatePath);
-            if (donor == null || donorMaterial == null || template == null)
-                return Fail($"нет {DonorPath}, {DonorMaterialPath} или {TemplatePath}");
+            if (template == null) return Fail($"нет {TemplatePath}");
 
             EnsureFolder(OutFolder);
 
@@ -125,7 +179,7 @@ namespace VrBattlegrounds.Editor.Avatars
             try
             {
                 var report = new StringBuilder();
-                string error = Assemble(root, donor, donorMaterial, template, report);
+                string error = Assemble(root, RecipeOf(donor), template, report);
                 if (error != null) return Fail(error);
 
                 PrefabUtility.SaveAsPrefabAsset(root, AvatarPath);
@@ -145,19 +199,37 @@ namespace VrBattlegrounds.Editor.Avatars
             return "ОТКАЗ. " + message;
         }
 
-        private static string Assemble(GameObject root, GameObject donor, Material donorMaterial, GameObject template, StringBuilder report)
+        /// <summary>
+        /// Пробная сборка ног на экземпляре киборга (например, в превью-сцене) для сравнения доноров на рендерах:
+        /// кости и скин с мешем в памяти, меш ассетом не пишется, humanoid и Legs Animator не трогаются.
+        /// Копии материалов донора создаются (они нужны и превью, и будущей сборке).
+        /// </summary>
+        public static string Preview(GameObject instance, LegsDonor donor)
         {
-            Transform model = Find(root.transform, ModelName);
-            Transform rig = Find(root.transform, RigName);
+            EnsureFolder(OutFolder);
+            var report = new StringBuilder();
+            string error = BuildLegs(instance, RecipeOf(donor), false, report, out _, out _);
+            return error != null ? "ОТКАЗ. " + error : "OK. " + report;
+        }
+
+        /// <summary>Кости ног и скин <c>LegsGeo</c>. <paramref name="persist"/> — записать меш ассетом рецепта.</summary>
+        private static string BuildLegs(GameObject root, DonorRecipe recipe, bool persist, StringBuilder report,
+                                        out Dictionary<string, Transform> created, out SkinnedMeshRenderer skin)
+        {
+            created = null;
+            skin = null;
             Transform pelvis = Find(root.transform, PelvisName);
             Transform geo = Find(root.transform, GeoName);
             Transform bodyGeo = geo != null ? geo.Find(BodyGeoName) : null;
             var avatar = root.GetComponent<UxrAvatar>();
-            if (model == null || rig == null || pelvis == null || geo == null || bodyGeo == null || avatar == null)
-                return $"в {AvatarPath} нет {ModelName}/{RigName}/{PelvisName}/{GeoName}/{BodyGeoName} или UxrAvatar";
+            if (pelvis == null || geo == null || bodyGeo == null || avatar == null)
+                return $"в '{root.name}' нет {PelvisName}/{GeoName}/{BodyGeoName} или UxrAvatar";
 
-            SkinnedMeshRenderer donorSkin = donor.GetComponentInChildren<SkinnedMeshRenderer>(true);
-            if (donorSkin == null) return $"в {DonorPath} нет скина";
+            var donor = AssetDatabase.LoadAssetAtPath<GameObject>(recipe.ModelPath);
+            SkinnedMeshRenderer donorSkin = donor != null ? donor.GetComponentInChildren<SkinnedMeshRenderer>(true) : null;
+            if (donorSkin == null) return $"нет донора или его скина: {recipe.ModelPath}";
+            if (donorSkin.sharedMesh.subMeshCount != recipe.SourceMaterials.Length)
+                return $"у донора {donorSkin.sharedMesh.subMeshCount} подсеток, в рецепте материалов {recipe.SourceMaterials.Length}";
 
             // Мир донора в позе привязки: матрица кости = скин · bindpose⁻¹.
             Matrix4x4[] donorBind = donorSkin.sharedMesh.bindposes;
@@ -165,26 +237,27 @@ namespace VrBattlegrounds.Editor.Avatars
             for (int b = 0; b < donorSkin.bones.Length; b++)
                 donorBoneWorld[donorSkin.bones[b].name] = donorSkin.transform.localToWorldMatrix * donorBind[b].inverse;
 
-            if (!donorBoneWorld.ContainsKey(DonorHips) || !donorBoneWorld.ContainsKey(DonorHead) || Bones.Any(b => !donorBoneWorld.ContainsKey(b.Donor)))
-                return "у Kyle нет нужных костей (Hips, Head, ноги)";
+            if (!donorBoneWorld.ContainsKey(recipe.Hips) || !donorBoneWorld.ContainsKey(recipe.Head) || recipe.LegBones.Any(b => !donorBoneWorld.ContainsKey(b)))
+                return $"у донора {recipe.ModelPath} нет нужных костей (таз, голова, ноги)";
 
             Transform head = avatar.AvatarRig.Head.Head;
             if (head == null) return "у киборга не размечена голова в UxrAvatarRig";
 
-            // Перенос Kyle → киборг в пространстве корня аватара: масштаб по высоте головы, таз совмещён по горизонтали.
-            Vector3 donorHead = donorBoneWorld[DonorHead].GetColumn(3);
-            Vector3 donorHips = donorBoneWorld[DonorHips].GetColumn(3);
+            // Перенос донор → киборг в пространстве корня аватара: масштаб по высоте головы, таз совмещён по горизонтали.
+            Vector3 donorHead = donorBoneWorld[recipe.Head].GetColumn(3);
+            Vector3 donorHips = donorBoneWorld[recipe.Hips].GetColumn(3);
             Vector3 cyborgHead = root.transform.InverseTransformPoint(head.position);
             Vector3 cyborgPelvis = root.transform.InverseTransformPoint(pelvis.position);
             float scale = cyborgHead.y / donorHead.y;
             var offset = new Vector3(cyborgPelvis.x - donorHips.x * scale, 0f, cyborgPelvis.z - donorHips.z * scale);
             Matrix4x4 toAvatar = root.transform.localToWorldMatrix * Matrix4x4.TRS(offset, Quaternion.identity, Vector3.one * scale);
-            report.Append($"масштаб Kyle {scale:F3}, сдвиг {offset.ToString("F3")}. ");
+            report.Append($"донор {System.IO.Path.GetFileNameWithoutExtension(recipe.ModelPath)}, масштаб {scale:F3}, сдвиг {offset.ToString("F3")}. ");
 
             // 1. Кости.
-            var created = new Dictionary<string, Transform> { { PelvisName, pelvis } };
-            foreach (LegBone bone in Bones)
+            created = new Dictionary<string, Transform> { { PelvisName, pelvis } };
+            for (int i = 0; i < Bones.Length; i++)
             {
+                LegBone bone = Bones[i];
                 Transform parent = created[bone.Parent];
                 Transform t = parent.Find(bone.Name);
                 if (t == null)
@@ -194,7 +267,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 }
 
                 t.gameObject.layer = pelvis.gameObject.layer;
-                t.SetPositionAndRotation(toAvatar.MultiplyPoint3x4(donorBoneWorld[bone.Donor].GetColumn(3)), root.transform.rotation);
+                t.SetPositionAndRotation(toAvatar.MultiplyPoint3x4(donorBoneWorld[recipe.LegBones[i]].GetColumn(3)), root.transform.rotation);
                 t.localScale = Vector3.one;
                 created[bone.Name] = t;
             }
@@ -211,18 +284,21 @@ namespace VrBattlegrounds.Editor.Avatars
             legsGeo.localRotation = Quaternion.identity;
             legsGeo.localScale = Vector3.one;
 
-            Transform[] skinBones = new[] { pelvis }.Concat(Bones.Select(b => created[b.Name])).ToArray();
-            float donorHipJoint = donorBoneWorld[Bones[0].Donor].GetColumn(3).y;
-            Mesh mesh = BuildMesh(donorSkin, donorHipJoint, toAvatar, legsGeo, skinBones, report);
-            if (mesh == null) return "у Kyle не нашлось треугольников ног";
+            var skinBones = new Transform[Bones.Length + 1];
+            skinBones[0] = pelvis;
+            for (int i = 0; i < Bones.Length; i++) skinBones[i + 1] = created[Bones[i].Name];
 
-            var skin = legsGeo.GetComponent<SkinnedMeshRenderer>();
+            float donorHipJoint = donorBoneWorld[recipe.LegBones[0]].GetColumn(3).y;
+            Mesh mesh = BuildMesh(donorSkin, recipe, donorHipJoint, toAvatar, legsGeo, skinBones, persist, report, out int[] usedSubmeshes);
+            if (mesh == null) return $"у донора {recipe.ModelPath} не нашлось треугольников ног";
+
+            skin = legsGeo.GetComponent<SkinnedMeshRenderer>();
             if (skin == null) skin = legsGeo.gameObject.AddComponent<SkinnedMeshRenderer>();
             var body = bodyGeo.GetComponent<SkinnedMeshRenderer>();
             skin.sharedMesh = mesh;
             skin.bones = skinBones;
             skin.rootBone = pelvis;
-            skin.sharedMaterials = new[] { EnsureMaterial(donorMaterial) };
+            skin.sharedMaterials = usedSubmeshes.Select(s => EnsureMaterial(recipe.SourceMaterials[s], recipe.MaterialNames[s])).ToArray();
             skin.localBounds = LocalBounds(mesh, legsGeo, pelvis);
             skin.shadowCastingMode = body.shadowCastingMode;
             skin.receiveShadows = body.receiveShadows;
@@ -232,6 +308,20 @@ namespace VrBattlegrounds.Editor.Avatars
             skin.lightProbeUsage = body.lightProbeUsage;
             skin.reflectionProbeUsage = body.reflectionProbeUsage;
             skin.probeAnchor = body.probeAnchor;
+            return null;
+        }
+
+        private static string Assemble(GameObject root, DonorRecipe recipe, GameObject template, StringBuilder report)
+        {
+            Transform model = Find(root.transform, ModelName);
+            Transform rig = Find(root.transform, RigName);
+            Transform pelvis = Find(root.transform, PelvisName);
+            var avatar = root.GetComponent<UxrAvatar>();
+            if (model == null || rig == null || pelvis == null || avatar == null)
+                return $"в {AvatarPath} нет {ModelName}/{RigName}/{PelvisName} или UxrAvatar";
+
+            string legsBuildError = BuildLegs(root, recipe, true, report, out Dictionary<string, Transform> created, out SkinnedMeshRenderer skin);
+            if (legsBuildError != null) return legsBuildError;
 
             // 3. UxrAvatar: ноги скелета и список рендереров.
             var so = new SerializedObject(avatar);
@@ -269,45 +359,58 @@ namespace VrBattlegrounds.Editor.Avatars
             return null;
         }
 
-        private static Mesh BuildMesh(SkinnedMeshRenderer donor, float donorHipJointHeight, Matrix4x4 toAvatar, Transform legsGeo,
-                                      Transform[] skinBones, StringBuilder report)
+        private static Mesh BuildMesh(SkinnedMeshRenderer donor, DonorRecipe recipe, float donorHipJointHeight, Matrix4x4 toAvatar,
+                                     Transform legsGeo, Transform[] skinBones, bool persist, StringBuilder report, out int[] usedSubmeshes)
         {
+            usedSubmeshes = null;
             Mesh source = donor.sharedMesh;
             Vector3[] vertices = source.vertices;
             Vector3[] normals = source.normals;
             Vector4[] tangents = source.tangents;
             Vector2[] uv = source.uv;
             BoneWeight[] weights = source.boneWeights;
-            int[] triangles = source.triangles;
             string[] donorNames = donor.bones.Select(b => b.name).ToArray();
 
-            // Индекс кости донора → индекс кости скина; всё, что не нога, — на таз (индекс 0).
-            int[] remap = donorNames.Select(n => Array.FindIndex(Bones, b => b.Donor == n) + 1).ToArray();
-            // Ноги — целиком; таз Kyle — только ниже среза: выше он пробивает корпус киборга спереди
-            // (красная пластина на животе). Оставшийся низ таза закрывает пах под поясом киборга.
-            var legBones = new HashSet<string>(Bones.Select(b => b.Donor));
+            // Индекс кости донора → индекс кости скина: кость ноги рецепта или её потомок (ToesEnd) —
+            // своя кость, всё прочее — таз (индекс 0).
+            int[] remap = donor.bones.Select(LegIndexOf(recipe)).ToArray();
+            // Ноги — целиком; таз донора — только ниже среза: выше он пробивает корпус киборга спереди
+            // (у Kyle — красная пластина на животе). Оставшийся низ таза закрывает пах под поясом киборга.
             Matrix4x4 donorToWorld = donor.transform.localToWorldMatrix;
-            float cut = donorHipJointHeight + PelvisCutAboveHipJoints;
+            float cut = donorHipJointHeight + recipe.PelvisCut;
             bool[] keep = new bool[vertices.Length];
             for (int i = 0; i < vertices.Length; i++)
             {
-                string bone = donorNames[weights[i].boneIndex0];
-                keep[i] = legBones.Contains(bone) || (bone == DonorHips && donorToWorld.MultiplyPoint3x4(vertices[i]).y <= cut);
+                int bone = weights[i].boneIndex0;
+                keep[i] = remap[bone] > 0 || (donorNames[bone] == recipe.Hips && donorToWorld.MultiplyPoint3x4(vertices[i]).y <= cut);
             }
 
             var map = new Dictionary<int, int>();
-            var newTriangles = new List<int>();
-            for (int i = 0; i < triangles.Length; i += 3)
+            var submeshes = new List<List<int>>();
+            var used = new List<int>();
+            int triangleCount = 0;
+            for (int s = 0; s < source.subMeshCount; s++)
             {
-                if (!keep[triangles[i]] || !keep[triangles[i + 1]] || !keep[triangles[i + 2]]) continue;
-                for (int k = 0; k < 3; k++)
+                int[] triangles = source.GetTriangles(s);
+                triangleCount += triangles.Length / 3;
+                var kept = new List<int>();
+                for (int i = 0; i < triangles.Length; i += 3)
                 {
-                    int v = triangles[i + k];
-                    if (!map.TryGetValue(v, out int n)) map[v] = n = map.Count;
-                    newTriangles.Add(n);
+                    if (!keep[triangles[i]] || !keep[triangles[i + 1]] || !keep[triangles[i + 2]]) continue;
+                    for (int k = 0; k < 3; k++)
+                    {
+                        int v = triangles[i + k];
+                        if (!map.TryGetValue(v, out int n)) map[v] = n = map.Count;
+                        kept.Add(n);
+                    }
                 }
+
+                if (kept.Count == 0) continue;
+                submeshes.Add(kept);
+                used.Add(s);
             }
-            if (newTriangles.Count == 0) return null;
+            if (submeshes.Count == 0) return null;
+            usedSubmeshes = used.ToArray();
 
             // Вершины донора → мир аватара → пространство LegsGeo. Масштаб равномерный — нормали не искажаются.
             Matrix4x4 toGeo = legsGeo.worldToLocalMatrix * toAvatar * donor.transform.localToWorldMatrix;
@@ -331,11 +434,11 @@ namespace VrBattlegrounds.Editor.Avatars
                 newWeights[n] = Remap(weights[o], remap);
             }
 
-            var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(MeshPath);
+            Mesh mesh = persist ? AssetDatabase.LoadAssetAtPath<Mesh>(recipe.MeshPath) : null;
             bool isNew = mesh == null;
             if (isNew) mesh = new Mesh();
             mesh.Clear();
-            mesh.name = "CyborgLegs";
+            mesh.name = System.IO.Path.GetFileNameWithoutExtension(recipe.MeshPath).Replace("_Mesh", "");
             mesh.indexFormat = count > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
             mesh.vertices = newVertices;
             if (normals.Length > 0) mesh.normals = newNormals;
@@ -343,15 +446,31 @@ namespace VrBattlegrounds.Editor.Avatars
             if (uv.Length > 0) mesh.uv = newUv;
             mesh.boneWeights = newWeights;
             mesh.bindposes = skinBones.Select(b => b.worldToLocalMatrix * legsGeo.localToWorldMatrix).ToArray();
-            mesh.SetTriangles(newTriangles, 0);
+            mesh.subMeshCount = submeshes.Count;
+            for (int s = 0; s < submeshes.Count; s++) mesh.SetTriangles(submeshes[s], s);
             mesh.RecalculateBounds();
 
-            if (isNew) AssetDatabase.CreateAsset(mesh, MeshPath);
-            else EditorUtility.SetDirty(mesh);
+            if (persist)
+            {
+                if (isNew) AssetDatabase.CreateAsset(mesh, recipe.MeshPath);
+                else EditorUtility.SetDirty(mesh);
+            }
 
-            report.Append($"меш ног: вершин {count}, треугольников {newTriangles.Count / 3} (из {triangles.Length / 3} у Kyle). ");
+            int legTriangles = submeshes.Sum(s => s.Count) / 3;
+            report.Append($"меш ног: вершин {count}, треугольников {legTriangles} (из {triangleCount} у донора), подсеток {submeshes.Count}. ");
             return mesh;
         }
+
+        /// <summary>Кость донора → индекс кости скина (1…8) по ближайшей кости ноги рецепта вверх по иерархии; 0 — таз.</summary>
+        private static Func<Transform, int> LegIndexOf(DonorRecipe recipe) => bone =>
+        {
+            for (Transform t = bone; t != null; t = t.parent)
+            {
+                int index = Array.IndexOf(recipe.LegBones, t.name);
+                if (index >= 0) return index + 1;
+            }
+            return 0;
+        };
 
         /// <summary>Переносит веса на кости скина: одноимённые кости сливаются, остаются четыре сильнейшие.</summary>
         private static BoneWeight Remap(BoneWeight w, int[] remap)
@@ -389,13 +508,17 @@ namespace VrBattlegrounds.Editor.Avatars
             return bounds;
         }
 
-        private static Material EnsureMaterial(Material donorMaterial)
+        /// <summary>Копия материала донора в <see cref="OutFolder"/> (создаётся один раз, дальше правится как свой).</summary>
+        private static Material EnsureMaterial(string sourcePath, string name)
         {
-            var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
+            string path = $"{OutFolder}/{name}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material != null) return material;
 
-            material = new Material(donorMaterial) { name = "CyborgLegs" };
-            AssetDatabase.CreateAsset(material, MaterialPath);
+            var source = AssetDatabase.LoadAssetAtPath<Material>(sourcePath);
+            material = source != null ? new Material(source) : new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            material.name = name;
+            AssetDatabase.CreateAsset(material, path);
             return material;
         }
 

@@ -2,6 +2,23 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-30] - Ноги киборга — от робота Armature
+
+### Изменено
+
+- **Киборг теперь на ногах Armature** (`ThirdParty/UnityStarter_Robot/Armature`), а не Kyle: при корпусе киборга ноги Kyle
+  выглядели чужими и слишком худыми. Ноги Armature плотнее, белые с тёмными вставками — в тон корпусу; стык под поясом
+  закрыт тазовыми пластинами Armature. Сравнение в полный рост (Armature / Kyle / MEF / призрак) снималось в превью.
+  Бюджет: 11 718 треугольников (было 1 872), 7 042 вершины, две подсетки — ноги и низ таза (+1 draw call).
+- **`CyborgLegsBuilder` параметризован донором** (`LegsDonor`: Kyle / Armature) через рецепт (`DonorRecipe`: модель, кости
+  ног, срез таза, путь меша, материалы подсеток); в префабе — `CyborgLegsBuilder.Selected`. Подсетки донора сохраняются,
+  кость-потомок ноги (`Left_ToesEnd`) считается своей костью ноги. Меш Kyle (`CyborgLegs_Mesh.asset`) остаётся — вернуть
+  Kyle можно сменой `Selected` и `Build Cyborg Legs`. `Preview(instance, donor)` собирает ноги на экземпляре в
+  превью-сцене без записи меша — для сравнения доноров.
+- Новые ассеты: `Art/Avatars/PlayerControllersCyborgAvatar/Legs/CyborgLegs_Armature_Mesh.asset`,
+  `CyborgLegs_ArmatureBody.mat`, `CyborgLegs_ArmatureLegs.mat` (копии материалов пака). `AnkleToHeel` 0.113.
+  Хитбоксы, призрак — пересобраны.
+
 ## [2026-09-30] - T-39: оружие из пака KINEMATION, SRM-12 вместо снайперки
 
 ### Добавлено

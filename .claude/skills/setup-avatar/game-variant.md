@@ -137,8 +137,9 @@ HUD наследуется от `PlayerBase` (`Camera Controller/Camera/HUDConta
 ## 5. Legs Animator (обязателен для каждого аватара)
 
 Процедурные ноги против проваливания ботинок при приседании. Обязателен у каждого аватара
-реестра, исключений нет: у киборга ноги робота Kyle (`Tools/VR Battlegrounds/Avatars/Build Cyborg Legs`,
-`CyborgLegsBuilder` — образец пришивания чужих ног к модели без ног). Проверка —
+реестра, исключений нет: у киборга ноги робота Armature (`Tools/VR Battlegrounds/Avatars/Build Cyborg Legs`,
+`CyborgLegsBuilder` — образец пришивания чужих ног к модели без ног; донор — рецепт, новый донор
+добавляется рецептом, сравнивать доноров — `CyborgLegsBuilder.Preview` в превью-сцене). Проверка —
 `AvatarLoadoutTests.Legs_Animator_настроен_на_своих_костях` и
 `PrefabCompositionTests.У_каждого_аватара_один_Legs_Animator_на_humanoid_риге`.
 
@@ -179,7 +180,7 @@ HUD наследуется от `PlayerBase` (`Camera Controller/Camera/HUDConta
 4. **`Legs[i].AnkleToHeel`/`AnkleToFeetEnd` своего рига** — `leg.RefreshLegAnkleToHeelAndFeet(корень
    варианта)` в позе префаба (кнопка обновления в инспекторе Legs Animator делает то же). Это
    высота лодыжки над подошвой: плагин ставит на пол пятку, а не лодыжку. Не копировать с эталона —
-   у другого рига другие оси стопы. У Heavy |AnkleToHeel| = 0.111, у MEF 0.135, у киборга 0.112.
+   у другого рига другие оси стопы. У Heavy |AnkleToHeel| = 0.111, у MEF 0.135, у киборга 0.113.
    Если кости стопы не выровнены по корню — `RefreshLegAnkleToHeelAndFeetAndAxes` (и оси стопы).
 5. `LegsAnimatorUxrBridge.footHeightOffset = 0`. Прежние 0.15 при нулевом `AnkleToHeel` были
    костылём: плагин принимал поднятый пол за возвышение и поднимал под него всё тело — таз

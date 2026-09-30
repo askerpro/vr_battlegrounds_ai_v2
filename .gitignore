@@ -112,6 +112,14 @@ InitTestScene*.unity*
 /[Aa]ssets/ThirdParty/TextMesh Pro/Examples & Extras.meta
 /[Aa]ssets/ThirdParty/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset
 
+# Демо и общие ассеты FImpossible (Legs Animator) — в проекте не используются, держатся локально
+/[Aa]ssets/ThirdParty/FImpossible Creations/Plugins - Animating/Legs Animator/Demos - Legs Animator/
+/[Aa]ssets/ThirdParty/FImpossible Creations/Plugins - Animating/Legs Animator/Demos - Legs Animator.meta
+/[Aa]ssets/ThirdParty/FImpossible Creations/Plugins - Shared/FBasic Assets/
+/[Aa]ssets/ThirdParty/FImpossible Creations/Plugins - Shared/FBasic Assets.meta
+/[Aa]ssets/ThirdParty/FImpossible Creations/Plugins - Shared/Utils/
+/[Aa]ssets/ThirdParty/FImpossible Creations/Plugins - Shared/Utils.meta
+
 # Embedded MCP package — local patched fork (execute_code fix)
 /Packages/com.coplaydev.unity-mcp/
 

@@ -26,8 +26,8 @@
 | `ui-fonts.md` | Шрифты UI: как TMP рисует текст, шрифт проекта, как применять, как добавить символ |
 | `magazine-pocket.md` | Механика "умного магазина" (Smart Magazine Pocket) |
 | `kinemation-pack-review.md` | Разведка пака KINEMATION Tactical Shooter: состав, вес под Quest, применимость маршрута `/add-weapon`, какие стволы брать |
-| `level-design.md` | Проектирование карт и арен |
-| `level-design-principles.md` | Правила сбалансированной карты `LD-01…LD-36` (CS, VALORANT, пейнтбол → наша арена), прострел стен, чек-лист ревью |
+| `level-design.md` | Проектирование карт и арен; стенд блоков `TestMap3` |
+| `level-design-principles.md` | Правила сбалансированной карты `LD-01…LD-48` (CS, VALORANT, пейнтбол → наша арена): разнообразие контактов за обе стороны, окна и щели, перешагиваемые преграды, прострел стен, граница арены и открытый мир за ней, чек-лист ревью |
 | `Arsenal/` | Стена арсенала: [дизайн](Arsenal/ArsenalWall_Design_RU.md), [код](Arsenal/Arsenal_Code_Architecture_RU.md) |
 | `LegsAnimator_UI_Reference_RU.md` | Справочник по параметрам Legs Animator |
 | `Roadmap.md` | План развития проекта |
@@ -269,6 +269,7 @@ MapReferee           — ход карты: Warmup → Live → Paused, побе
 | `MapRegistry` | `Maps/MapRegistry.cs` | ScriptableObject-список всех карт, включая лобби (`lobby` — куда серия возвращает всех, `LobbyScene`). Назначить в `SessionManager` и `MenuSessionSetup`. |
 | `ShootingTarget` | `Maps/ShootingTarget.cs` | Мишень стрельбища лобби (префаб `Prefabs/Environment/Lobby/ShootingTarget.prefab`): пуля в щит — вспышка, щит заваливается назад и через 2,5 с поднимается. Слушает `UxrWeaponManager.NonActorImpacted`; не сетевой — снаряд симулирует каждая машина, событие приходит на каждой. Не хватается. [gameplay.md](gameplay.md#планировка-лобби). |
 | `TeamSpawnZone` | `Maps/TeamSpawnZone.cs` | Коллайдер зоны возрождения для команды. Проверяет присутствие игроков. Сессии сообщает только факт и **свою команду** (`ReportZoneState` → `PlayerSession.ServerEnterSpawnZone` / `ServerExitSpawnZone`); что это значит для конкретного игрока, решает сессия — там лежит его команда. Прежде зона решала сама и писала «в зоне» любому вошедшему, включая забежавшего в чужую базу (находка RDY-04). **Граница** — шейдер `Shaders/SpawnZoneLaser` (материалы `SpawnZone`, `SpawnZone_Xray`): стены — красная лазерная сетка, пол — цвет команды, объёма и потолка нет; пол рисуется на высоте настоящего пола (ищется лучами в `Start`) и виден только снаружи. Кому видна — `SpawnZoneVisibility`: только если режим рисует зоны (`GameMode.ShowsSpawnZones`: матч — да, разминка/лобби — нет), только своя; выбывшему — ярко, пол сквозь стены (лазеры перекрываются геометрией всегда: у шейдера два прохода — стены с `ZTest LEqual`, пол с `_ZTest` материала), живому — до боя. `SpawnPoint` — точка спавна в зоне (по умолчанию центр). Тесты — `SpawnZoneVisibilityTests`. |
+| `VaultableObstacle` | `Maps/VaultableObstacle.cs` | Метка перешагиваемой преграды (LD-48): заборчик до 1.0 м и толщиной до 0.3 м — через него ходить законно. Единственное исключение из «сквозь препятствие нельзя»: анализ карты считает помеченное проходимым, наказание T-40 его не видит. Ставится только на блок `LD_Fence_Vault`; размеры проверяет `MapPrinciplesTests.LD48`. |
 | `CoverClass`, `CoverSurface`, `CoverClassRules` | `Maps/Cover/` | Класс укрытия для пули (T-41, LD-27…31): Hard (по умолчанию, без разметки), Soft (пробивается с потерей), Visual (пролетает). `CoverSurface` действует на свои коллайдеры и дочерние; класс — по суффиксу имени `_Hard`/`_Soft`/`_Visual` (`CoverClassRules`), ставит `Apply Cover Classes`; руками — только `PenetrationModifier` у Soft (pm по CS: дерево 3). Проверка — `CoverClassTests`. |
 | `SpawnZoneCreator` | `Editor/SpawnZoneCreator.cs` | Опция в меню GameObject для авто-создания префаба зоны спавна на сцене. |
 | `NetworkAssetIdNormalizer` | `Editor/VR_Battlegrounds/VersionControl/NetworkAssetIdNormalizer.cs` | Держит на диске канонический `NetworkIdentity._assetId` (хеш GUID префаба), чтобы поле не скакало в диффах. Постпроцессор импорта: после импорта сетевого префаба с другим числом правит **одну строку в файле** — не сохраняет префаб через Unity, иначе на диск ушли бы и перевыданные UltimateXR id. Работает только с `Assets/Prefabs` (ThirdParty не трогает), только в основном редакторе вне Play Mode. Ручной прогон — `Tools/VR Battlegrounds/VersionControl/Normalize Network Asset Ids`. |
@@ -534,6 +535,22 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 
 ---
 
+### Левел-дизайн — `Assets/Editor/VR_Battlegrounds/LevelDesign/`
+
+Своя editor-сборка `VrBattlegrounds.LevelDesign.Editor` (только Editor): на неё ссылаются тесты,
+в билд не попадает. Правила — [`level-design-principles.md`](level-design-principles.md).
+
+| Класс | Назначение |
+|---|---|
+| `MapGrid` | Арена сверху, шаг 0.1 м: проходимость (твёрдое в полосе тела 0.3–1.9 м — дверь с перемычкой проходима, окно с подоконником — нет), верх препятствия, чьё оно, зона стороны A/B; функция видимости `LineOfSight`. |
+| `MapPrinciplesReport.BattleMaps` | Какие карты проверяются правилами боя: все карты реестра, кроме лобби и стендов с `MapData.debugOnly` (`TestMap3` — стенд блоков, грузится как обычная карта). |
+| `MapGridBuilder` | Сцена → `MapGrid`: верх — лучом сверху, проходимость — запросом объёма в полосе тела, **видимость — лучами по коллайдерам сцены** (окна и щели любой ширины точно; сцена должна быть открыта на время анализа), **прострел** (`ShotLine`) — по правилам пули `WallPenetration`: Soft пробивается, Visual пролетается, Hard и без разметки — стоп. Пол — слой `Ground`, препятствие — твёрдый коллайдер без `Rigidbody`; `VaultableObstacle` проходим. Собирает верх `LD_*` (LD-20) и размеры перешагиваемых (LD-48). |
+| `MapAnalyzer` | Проверки правил: LD-20 классы высот, LD-48 размеры перешагиваемого, LD-23 узкие проходы, LD-25 недостижимое, LD-15 прострел база—база (стоя или присев, в окна и щели, и вслепую сквозь Soft/Visual); контакт «через проём»; пары «простреливается, но не видно» (ось S); метрики LD-09/14/26 для отчёта. |
+| `LevelDesignRules` | Пороги правил в одном месте (меняются вместе с документом). |
+| `MapPrinciplesReport` / `MapReportImage` | `Tools/VR Battlegrounds/Level Design/Map Principles Report`: текст и картинки вида сверху (раскладка с нарушениями, тепловая карта видимости) в `Temp/LevelDesign/`. Из кода — `MapPrinciplesReport.Run(sceneName)`. |
+
+---
+
 ### Тесты — `Assets/Tests/EditMode/`
 
 Сборка `VrBattlegrounds.Tests.EditMode` (`includePlatforms: ["Editor"]`, поэтому в билд
@@ -607,6 +624,9 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `Player/SpawnPlaceRegistryTests` | Выбор точки спавна после смены карты (T-30, CAL-01): откалиброванный возвращается на своё место, а не в зону, и снимается относительно якорей — на карте с иначе поставленной ареной место едет вместе с ней; **неоткалиброванный остаётся в тех же мировых координатах**; место относительно якорей к неоткалиброванному не применяется; без снимка (первый спавн) и на карте без якорей — зона; без переданной сессии ветка не спрашивается вовсе. |
 | `Maps/WallPenetrationTests` | Прострел по формуле CS (T-41): потеря сверена с числами, посчитанными вручную (Deagle/Glock, дерево и pm 1, толщина квадратом), Hard/неразмеченное — стоп, Soft на Box и Mesh, лимиты (4 пробития, остаток 1, pm < 0.1, пробитие 0), Visual; настоящая пуля через `UxrWeaponManager.UpdateProjectiles` — урон цели за Soft (Deagle и Glock), за двумя Soft, за Hard (нет), за Visual; без хука — как SDK. |
 | `Maps/CoverClassTests` | Разметка укрытий (T-41): правило суффикса; `CoverSurface` во всех префабах и сценах совпадает с именем; Soft — со сплошным коллайдером не толще предела поиска выхода (2.29 м). Починка — `Apply Cover Classes`. |
+| `Maps/MapAnalyzerTests` | Проверки `MapAnalyzer` на искусственных картах 10×12 м: в каждой паре сценарий-нарушение ловится, нормальный — нет (щель 0.8 м — проход, 1.2 м и тупиковая ниша — нет; щель 0.4 м — стена, отрезающая половину; высокая стена закрывает прострел, средняя — нет). |
+| `Maps/MapGridBuilderTests` | `MapGridBuilder` на настоящих коллайдерах в собранной тестом сцене: щель 5 см видна, в 25 см от неё — стена; окно 1.0–1.6 м стоя закрыто, присев видно, пройти нельзя; дверь под перемычкой 2.0 м проходима; заборчик с `VaultableObstacle` проходим, такой же без метки — нет; панели Soft и Visual закрывают вид, но простреливаются, неразмеченная стена — нет. |
+| `Maps/MapPrinciplesTests` | Грубые нарушения правил левел-дизайна на всех боевых картах реестра (LD-15, 20, 23, 25, 48). Где именно — отчёт `Map Principles Report`. |
 | `Maps/MapAlignmentTests` | Арены всех карт реестра стоят одинаково: якоря совпадают с лобби (допуск 2 см). Без этого мировая точка неоткалиброванного игрока на новой карте — не то же место в комнате. |
 | `Player/TwoHandGrabHarness` | Не тест — общая обвязка хвата двумя руками. `TwoHandGrabCases` перебирает пары «оружие из `WeaponInfo` × аватар из `AvatarRegistry`», у которых включены `Allow Multi Grab` и `First Grab Point Is Main` и есть свои позы для обеих точек; пути не называются. `TwoHandGrabHarness` поднимает настоящие префабы вне Play Mode (`Awake` рук и `UpdateManipulation` через рефлексию, аватар в `UpdateExternally` — иначе `Align To Controller` берёт поворот у чужой модели контроллера). `AssertManipulationLive` — сторож: оружие реально следует за рукой, иначе проверки поворота зеленеют ложно. |
 | `Player/GunTwoHandGrabTests` | Вторая рука берёт дополнительную точку, а не перехватывает оружие (патч SDK 11 + `TwoHandGrabPolicy`, [Issue 13](UltimateXR/known-issues.md)). На каждую пару из `TwoHandGrabCases`; плюс проверка, что пар больше нуля. |

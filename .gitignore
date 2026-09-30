@@ -126,3 +126,6 @@ InitTestScene*.unity*
 # Плеер и артефакты e2e-прогонов (ярус C, Tools/e2e/Run-E2E.ps1)
 /Build/
 /Tools/e2e/results/
+
+# Временные файлы агентов и стендов (снимки LegsComparisonRig и т.п.)
+/tmp/

@@ -64,6 +64,7 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
 | UI-меню / шрифты | `Docs/ui-design-system.md`, `Docs/ui-menu-architecture.md` / `Docs/ui-fonts.md` |
 | Стена арсенала | `Docs/Arsenal/Arsenal_Code_Architecture_RU.md` |
 | Сборка, Git/Plastic, перф | `Docs/release.md`, `Docs/version-control.md`, `Docs/perf-stress-test.md` |
+| Звуки (новый звук события) | `Docs/sound-library.md` — пак вне проекта, брать по файлу |
 | Unity MCP сломан | `Docs/unity-mcp.md`, `.agents/rules/unity_mcp.md` |
 
 ## Unity MCP

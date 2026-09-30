@@ -131,3 +131,8 @@ Assets/Prefabs/UI/Menu/
   а `Screen_Base` правит на месте, не пересоздаёт.
 - **NUnit и `Transform`:** `Assert.AreEqual(transformA, transformB)` сравнивает их как коллекции
   детей. Сравнивать `Assert.IsTrue(a == b)`.
+
+## Звук
+
+Клик любой кнопки набора (`KitButton`) звучит — `MenuTheme.ClickSound` / `ClickVolume`, источник на канвасе планшета
+(`MenuClickSound`). Кнопок в обход набора в меню нет (`MenuSoundTests`): обычная `Button` молчала бы.

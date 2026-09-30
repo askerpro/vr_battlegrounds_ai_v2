@@ -187,3 +187,11 @@ refresh_unity → compile: request, mode: force, scope: all
 ```
 execute_code → action: execute, code: return "It works!";
 ```
+
+## Тесты краснеют после `execute_code` — перезагрузить скрипты
+
+После серии `execute_code` (загрузка префабов, `Apply …`, сборщики) в той же сессии редактора краснеют
+`StateEventAuthorityTests.Автор_предмета_в_руке_машина_держащего`, `AvatarTeardownTests.Смена_аватара_изымает_оружие_из_руки`,
+`EquipmentStripTests.Оружие_в_руке_уничтожается_и_рука_свободна`: синглтон `UxrGrabManager` остаётся в полусостоянии
+(`HasInstance` ложно при живом экземпляре). Это шум харнесса, не отказ логики (2026-09-29). Перед итоговым прогоном:
+`execute_code` → `EditorUtility.RequestScriptReload()`, затем `refresh_unity` и тесты — зелёные.

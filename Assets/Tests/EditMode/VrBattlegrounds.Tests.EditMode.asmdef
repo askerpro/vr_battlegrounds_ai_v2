@@ -3,6 +3,7 @@
     "rootNamespace": "VrBattlegrounds.Tests",
     "references": [
         "VrBattlegrounds",
+        "VrBattlegrounds.DebugBootstrap",
         "Mirror",
         "Mirror.Components",
         "Mirror.Transports",

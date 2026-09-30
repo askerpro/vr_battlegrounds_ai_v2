@@ -400,21 +400,24 @@ MapReferee           — ход карты: Warmup → Live → Paused, побе
 
 | Класс | Файл | Описание |
 |---|---|---|
-| `DebugOrchestrator` | `Debug/DebugOrchestrator.cs` | Автостарт при Play: грузит карту, стартует матч (сцену с режимом сцены — лобби — не трогает, она стартует сама). Команды не назначает — их раздаёт режим. Только вызовы публичных API. |
-| `DebugBootstrapConfig` | `Debug/DebugBootstrapConfig.cs` | ScriptableObject с параметрами `DebugOrchestrator`. |
+| `DebugOrchestrator` | `Debug/Bootstrap/DebugOrchestrator.cs` | **Только редактор** (сборка `VrBattlegrounds.DebugBootstrap`, `defineConstraints: UNITY_EDITOR`; в сцены не кладётся — создаётся сам в начале Play). Быстрые отладочные сценарии: роль без окна выбора, хост-админ, автозагрузка карты, боты, автостарт матча (сцену с режимом сцены — лобби — не трогает, она стартует сама). Команды не назначает — их раздаёт режим. Только вызовы публичных API. |
+| `DebugBootstrapSettings` | `Debug/Bootstrap/DebugBootstrapSettings.cs` | Личные настройки отладочных инструментов Play: EditorPrefs машины, карта автозапуска — SessionState сессии редактора. В git и сборку не попадают. Окно — `Tools/VR Battlegrounds/Debug/Bootstrap Settings…` (`DebugBootstrapWindow`). Прежний ассет `DebugBootstrapConfig` удалён 2026-09-30. Тесты — `DebugBootstrapEditorOnlyTests`. |
+| `DebugBootstrapGate` | `Debug/DebugBootstrapGate.cs` | Единственная связь кода игры с отладочными сценариями редактора: `Suppress` (E2E-прогон ведёт себя сам) и `EditorRoleOverride` (роль для `GameNetworkDiscovery`). В сборке их никто не выставляет. |
+| `VRScreenshotCapture` | `Debug/Bootstrap/VRScreenshotCapture.cs` | **Только редактор.** Скриншот по кнопке B правого контроллера в `Screenshots/`. Включается галочкой `Tools/VR Battlegrounds/Debug/Screenshot on B Button` (по умолчанию выключен), создаётся сам в начале Play. |
+| `EditorFocusPauseMenu` | `Editor/VR_Battlegrounds/Debug/EditorFocusPauseMenu.cs` | Галочка `Tools/VR Battlegrounds/Debug/Pause XR When Editor Unfocused` — пауза UltimateXR без фокуса редактора (патч 33 UltimateXR), EditorPrefs. Тесты — `EditorFocusPauseTests`. |
 | `StressTestServer`, `StressTestClientSession` и др. | `Debug/StressTest/` | Стресс-тест производительности: сервер спавнит 9 кукол-аватаров, повторяющих за игроком, шлем принимает их по сети и пишет лог метрик по изменениям. Запуск — планшет → «Отладка» → «Перф-тесты» (режим отладки: оба стика 2 с); на шлеме без сервера тот же жест при включённом режиме делает шлем хостом. Подробно — [`perf-stress-test.md`](perf-stress-test.md). |
 | `DebugMode`, `DebugGestureInput`, `DebugHoldGesture`, `DebugModeNetwork`, `DebugAdminPolicy`, `DebugTeleportTargets`, `DebugClientSync`, `DebugPerfReadout` | `Debug/DebugMode/` | Скрытый режим отладки: оба стика 2 с, права админа по разрешению сервера, телепорт, оверлей кадра. Подробно — [`ui-menu-architecture.md`](ui-menu-architecture.md#режим-отладки-и-экран-отладка). |
 | `MenuDebug` | `UI/Menu/` | Раздел «Отладка» планшета (виден только в режиме отладки). |
 | `MenuPerfTests` | `UI/Menu/` | Экран «Перф-тесты»: режим, скин, число кукол стресс-теста, старт/стоп, фаза i из N, живой кадр, путь perf.log. Только в режиме отладки, вход с экрана «Отладка». Подробно — [`ui-menu-architecture.md`](ui-menu-architecture.md#режим-отладки-и-экран-отладка). |
 | `StressTestPlan` | `Debug/StressTest/` | Чистый план прогона: режим → конфиг, фазы в порядке сервера, длительность, описание. Порядок фаз дублирует `StressTestServer.Run` — менять вместе. |
 | `StressTestLayout` | `Debug/StressTest/` | Чистая математика расстановки кукол стресс-теста: скин куклы, ряды, кольцо «по карте», отступ радиуса. Тесты — `StressTestLayoutTests`. |
-| `BotDirector` | `Debug/Bots/BotDirector.cs` | Боты-противники, чтобы проверить сетевой матч в одиночку. Бот — настоящий игрок без шлема: `PlayerSession` без соединения (`PlayersManager.CreateBotSession`) и аватар без владельца (`AvatarManager.SpawnAvatar(null, …)`). Урон, смерть, раунд, счёт, возрождение идут общим кодом, веток «если бот» в игре нет. Директор делает за бота то, что человек делает руками: выбирает команду, объявляет готовность, возвращает тело после смены карты. Запуск — `DebugBootstrapConfig.botCount` или меню `Tools/VR Battlegrounds/Debug/Bots/Add Bot` (редактор — сервер или хост). Только сервер. |
+| `BotDirector` | `Debug/Bots/BotDirector.cs` | Боты-противники, чтобы проверить сетевой матч в одиночку. Бот — настоящий игрок без шлема: `PlayerSession` без соединения (`PlayersManager.CreateBotSession`) и аватар без владельца (`AvatarManager.SpawnAvatar(null, …)`). Урон, смерть, раунд, счёт, возрождение идут общим кодом, веток «если бот» в игре нет. Директор делает за бота то, что человек делает руками: выбирает команду, объявляет готовность, возвращает тело после смены карты. Запуск — `Tools/VR Battlegrounds/Debug/Bootstrap Settings…` → «Ботов» или меню `Tools/VR Battlegrounds/Debug/Bots/Add Bot` (редактор — сервер или хост). Только сервер. |
 | `BotNetwork` | `Debug/Bots/BotNetwork.cs` | Запрос ботов с клиента: кнопки «Добавить бота» / «Убрать всех» на экране «Отладка» планшета и меню `Tools/VR Battlegrounds/Debug/Bots` у редактора-клиента. Сервер выполняет только для админа и только если разрешает отладку (Development или `-vrb-debug-admin`); ответ — `DebugReplyMessage`. |
 | `BotTeamChoice` | `Debug/Bots/BotTeamChoice.cs` | Команда бота: выравнивает команды по общему числу игроков (человек и три бота — два на два); текущую не бросает, если переход не выравнивает счёт. Тесты — `BotTeamChoiceTests`. |
 | `BotSkin` | `Debug/Bots/BotSkin.cs` | Скин бота с твёрдым коллайдером — в скины без них пуля не попадает (WPN-02). |
 | `BotBody` | `Debug/Bots/BotBody.cs` | Поза бота на сервере: голова на 1,65 м (иначе камера на полу и зона спавна бота не видит — нет возрождения), кисти, поворот к цели. Поза уходит клиентам `NetworkTransform` (`ServerToClient`). |
 | `BotGunner` | `Debug/Bots/BotGunner.cs` | Стрельба бота: берёт в правую руку оружие реестра (`UxrGrabManager.GrabObject`, убийство засчитывается боту), в фазе боя стреляет `TryToShootRound` по ближайшему видимому противнику очередями с разбросом; сквозь укрытия не стреляет. |
-| `PlayModeStartFromOffline` | `Editor/PlayModeStartFromOffline.cs` | Скрипт редактора. Автоматически перехватывает Play Mode, заставляя Unity стартовать с Offline-сцены и прокидывая текущую сцену в конфиг. |
+| `PlayModeStartFromOffline` | `Editor/PlayModeStartFromOffline.cs` | Скрипт редактора. Автоматически перехватывает Play Mode, заставляя Unity стартовать с Offline-сцены, и кладёт открытую карту в карту автозапуска (`DebugBootstrapSettings.AutoLoadMapScene`, SessionState — ассеты не правит). |
 
 **Харнесс e2e на двух процессах (ярус C) — `Assets/Scripts/Debug/E2E/`**
 
@@ -443,22 +446,22 @@ MapReferee           — ход карты: Warmup → Live → Paused, побе
 | `E2EPlayerBuilder` | `Editor/VR_Battlegrounds/Debug/E2EPlayerBuilder.cs` | Сборка плеера под Windows в `Build/e2e/`. Меню `Tools/VR Battlegrounds/Debug/Собрать e2e-плеер (Windows)`, для CI — `RunBatch`. |
 | `Run-E2E.ps1` | `Tools/e2e/Run-E2E.ps1` | Дирижёр: добивает осиротевшие процессы, проверяет свежесть билда, поднимает сервер и клиентов, ждёт вердикты, гасит процессы, сводит отчёт. Хранить **в UTF-8 с BOM**. |
 
-**Поля `DebugBootstrapConfig`:**
+**Настройки `DebugBootstrapSettings`** (окно `Tools/VR Battlegrounds/Debug/Bootstrap Settings…`, личные, не в git):
 
-| Поле | Тип | По умолчанию | Описание |
+| Настройка | Хранение | По умолчанию | Описание |
 |---|---|---|---|
-| `enabled` | `bool` | `true` | Включить быструю инициализацию |
-| `autoTeam` | `TeamData` | `null` | Команда локального игрока |
-| `autoStartMatch` | `bool` | `true` | Автостарт при достаточном числе игроков |
-| `minPlayersToAutoStart` | `int` | `1` | Минимум игроков для автостарта |
-| `autoLoadMapScene` | `string` | `""` | Имя сцены для автозагрузки (пусто = не грузить) |
-| `botCount` | `int` | `0` | Сколько ботов-противников сервер добавит сам на первой загруженной сцене (`BotDirector`) |
+| `Enabled` | EditorPrefs | `true` | Включить быструю инициализацию (выключено — обычный старт) |
+| `AutoStartFallbackRole`, `FallbackRole` | EditorPrefs | `true`, `Host` | Роль экземпляра без тега Multiplayer Play Mode, без окна выбора |
+| `HostIsAdmin` | EditorPrefs | `true` | Хост — VR-игрок с правами админа |
+| `AutoLoadMapScene` | SessionState | `""` | Карта для автозагрузки; Play на открытой карте подставляет её сам |
+| `AutoGameModeId` | EditorPrefs | `elimination` | Режим для автозагруженной карты |
+| `AutoGoLive`, `MinPlayersOverride` | EditorPrefs | `true`, `1` | Автостарт матча и минимум игроков (0 — из режима) |
+| `BotCount` | EditorPrefs | `0` | Сколько ботов сервер добавит на первой загруженной сцене (`BotDirector`) |
+| `ScreenshotOnButtonB` | EditorPrefs | `false` | Скриншот по кнопке B (`VRScreenshotCapture`) |
 
-**Как подключить `DebugOrchestrator` (один раз):**
-1. Создать пустой GameObject в OfflineScene, назвать `DebugOrchestrator`
-2. Добавить компонент `DebugOrchestrator`
-3. Создать asset: `Create → VrBattlegrounds → Debug Bootstrap Config`
-4. Назначить asset в поле `Config`
+Подключать ничего не нужно: оркестратор и скриншотилка создаются сами в начале Play (`RuntimeInitializeOnLoadMethod`), в
+сцены и префабы их класть нельзя — в сборке на их месте будет «missing script» (ловит
+`DebugBootstrapEditorOnlyTests.В_сценах_билда_нет_компонентов_из_сборок_только_для_редактора`).
 
 **Последовательность событий при старте:**
 ```

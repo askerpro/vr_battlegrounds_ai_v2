@@ -195,7 +195,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 }
 
                 // Первым делом: иначе он сам расставит игроков по зонам спавна.
-                DisableDebugOrchestrator();
+                DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
                 // ── 2. Клиент ─────────────────────────────────────────────
                 deadline = Now + ClientWait;
@@ -619,7 +619,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         {
             result.Declare(CheckClientConnected, CheckClientSession, CheckClientReturns);
 
-            DisableDebugOrchestrator();
+            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             // ── Первое подключение ────────────────────────────────────────
             float deadline = Now + 30f;
@@ -781,7 +781,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             // Сцена Offline подняла свою копию менеджеров — дирижёр отладки среди них.
-            DisableDebugOrchestrator();
+            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             deadline = Now + 90f;
             float nextAttempt = 0f;
@@ -1071,15 +1071,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             return $"({v.x:F2}, {v.y:F2}, {v.z:F2})";
         }
 
-        private static void DisableDebugOrchestrator()
-        {
-            DebugOrchestrator orchestrator = UnityEngine.Object.FindFirstObjectByType<DebugOrchestrator>();
-            if (orchestrator == null || !orchestrator.enabled)
-                return;
-
-            orchestrator.enabled = false;
-            GameLog.Debug.Info("[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
-        }
     }
 }
 #endif

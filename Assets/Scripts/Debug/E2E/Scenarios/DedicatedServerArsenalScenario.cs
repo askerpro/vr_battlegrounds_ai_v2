@@ -157,10 +157,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield break;
             }
 
-            // Дирижёром прогона должен быть сценарий, а не DebugOrchestrator:
-            // его настройки лежат в общем ассете DebugBootstrapConfig, который
-            // правится под текущую отладку, и результат прогона от них зависеть не должен.
-            DisableDebugOrchestrator();
+            // Дирижёром прогона должен быть сценарий, а не отладочный сценарий редактора
+            // (DebugOrchestrator): его настройки — личные настройки разработчика, и результат
+            // прогона от них зависеть не должен. В сборке оркестратора нет, флаг просто не читают.
+            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             // ── 2. Клиенты ────────────────────────────────────────────────
             deadline = Now + 90f;
@@ -578,7 +578,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             result.Declare(CheckClientConnected, CheckClientSession, CheckClientMap, CheckClientEvent,
                            CheckClientArsenal, CheckClientRdyOpen, CheckClientRdyClose);
 
-            DisableDebugOrchestrator();
+            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             // Контроль к NET-06. Клиент подписывается на то же самое статическое
             // событие, что и стена арсенала на сервере. Если на клиенте оно
@@ -1001,17 +1001,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             return string.Join(", ", report.ToArray());
         }
 
-        private static void DisableDebugOrchestrator()
-        {
-            DebugOrchestrator orchestrator = Object.FindFirstObjectByType<DebugOrchestrator>();
-            if (orchestrator == null || !orchestrator.enabled)
-                return;
-
-            // enabled=false вызывает OnDisable, а он снимает все подписки орchestrator-а.
-            orchestrator.enabled = false;
-            GameLog.Debug.Info(
-                "[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
-        }
 
         private static string Join(List<RoundPhase> states)
         {

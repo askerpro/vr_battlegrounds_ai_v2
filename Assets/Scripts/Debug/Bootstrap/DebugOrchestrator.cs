@@ -13,23 +13,39 @@ using VrBattlegrounds.Maps;
 namespace VrBattlegrounds.DevTools
 {
     /// <summary>
-    /// Оркестратор быстрой инициализации для отладки.
-    /// Подписывается на события GameNetworkManager и выполняет заскриптованный
-    /// сценарий из DebugBootstrapConfig: загружает карту, запускает матч. Команды раздаёт
-    /// активный режим (GameMode.ServerAssignTeams), а не оркестратор.
+    /// Быстрые отладочные сценарии редактора: подписывается на события GameNetworkManager и по личным настройкам
+    /// разработчика (<see cref="DebugBootstrapSettings"/>, <c>Tools/VR Battlegrounds/Debug/Bootstrap Settings…</c>)
+    /// выставляет роль, загружает карту, добавляет ботов, запускает матч. Команды раздаёт активный режим
+    /// (GameMode.ServerAssignTeams), а не оркестратор.
+    ///
+    /// <para>
+    /// Только редактор: сборка <c>VrBattlegrounds.DebugBootstrap</c> компилируется с <c>UNITY_EDITOR</c>, в сцены и
+    /// префабы компонент не кладётся — его создаёт <see cref="SpawnOnPlay"/> в начале Play. Код игры знает только
+    /// <see cref="DebugBootstrapGate"/>: E2E-прогон останавливает сценарий через <see cref="DebugBootstrapGate.Suppress"/>.
+    /// Проверка — <c>DebugBootstrapEditorOnlyTests</c>.
+    /// </para>
     ///
     /// Не меняет продакшн-код — использует те же публичные API, что и обычная игра.
-    ///
-    /// Как использовать:
-    ///   1. Добавить этот компонент на любой GameObject в сцене (например "DebugOrchestrator").
-    ///   2. Назначить DebugBootstrapConfig в поле Config.
-    ///   3. Чтобы отключить — деактивировать GameObject.
     /// </summary>
     [DefaultExecutionOrder(ManagerOrder.DebugOrchestrator)]
     public class DebugOrchestrator : MonoBehaviour
     {
-        [SerializeField] private DebugBootstrapConfig _config;
-        public DebugBootstrapConfig Config => _config;
+        /// <summary>
+        /// Создаётся до загрузки первой сцены: роль и профиль хоста должны быть выставлены раньше, чем сеть
+        /// стартует. Живёт до конца Play.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void SpawnOnPlay()
+        {
+            if (!DebugBootstrapSettings.Enabled) return;
+
+            var go = new GameObject(nameof(DebugOrchestrator));
+            DontDestroyOnLoad(go);
+            go.AddComponent<DebugOrchestrator>();
+        }
+
+        // Сценарий идёт, пока его не остановил E2E-прогон (DebugBootstrapGate).
+        private static bool Active => DebugBootstrapSettings.Enabled && !DebugBootstrapGate.IsSuppressed;
 
         // Флаг: карта уже была запрошена в этой сессии — не грузить повторно.
         private bool _mapLoadRequested;
@@ -40,24 +56,13 @@ namespace VrBattlegrounds.DevTools
 
         private void Awake()
         {
-            // Только редактор и development-сборка (e2e-плеер собирается development). В release
-            // оркестратор сам переводил сервер в матч elimination и стартовал его по подключению
-            // игрока — отладочный сценарий в боевой сборке. Сервер и без него попадает в Lobby:
-            // это onlineScene у GameNetworkManager.
-            if (!Application.isEditor && !UnityEngine.Debug.isDebugBuild)
+            if (DebugBootstrapSettings.AutoStartFallbackRole)
             {
-                enabled = false;
-                return;
+                GameNetworkDiscovery.AppRole role = DebugBootstrapSettings.FallbackRole;
+                DebugBootstrapGate.EditorRoleOverride = () => DebugBootstrapGate.IsSuppressed ? null : role;
             }
 
-            if (_config == null || !_config.enabled)
-            {
-                return;
-            }
-
-            // Переопределение профиля разрешено только в редакторе — вне его LocalClientProfile
-            // отказывает и пишет предупреждение на каждом запуске.
-            if (_config.hostIsAdmin && Application.isEditor)
+            if (DebugBootstrapSettings.HostIsAdmin)
             {
                 // Запуск в качестве хоста
                 LocalClientProfile.SetDebugOverride(ClientDeviceType.VR, true, GameRole.Player);
@@ -90,7 +95,7 @@ namespace VrBattlegrounds.DevTools
         /// </summary>
         private void HandleMapRefereeReady(MapReferee manager)
         {
-            if (_config == null || !_config.enabled) return;
+            if (!Active) return;
             if (!NetworkServer.active) return;
 
             GameLog.Debug.Verbose(
@@ -99,19 +104,13 @@ namespace VrBattlegrounds.DevTools
             TryGoLive();
         }
 
-        private void Start()
-        {
-            if (_config == null || !_config.enabled)
-                return;
-        }
-
         /// <summary>
         /// Вызывается при каждом подключении игрока (создании сессии).
         /// Назначает команду (равномерное распределение) и при необходимости стартует матч.
         /// </summary>
         private void HandlePlayerConnected(PlayerSession session)
         {
-            if (_config == null || !_config.enabled) return;
+            if (!Active) return;
 
             if (!NetworkServer.active)
             {
@@ -132,7 +131,7 @@ namespace VrBattlegrounds.DevTools
 
         private void HandlePlayerDisconnected(PlayerSession session)
         {
-            if (_config == null || !_config.enabled) return;
+            if (!Active) return;
 
             GameLog.Debug.Verbose(
                 $"[DebugOrchestrator] HandlePlayerDisconnected: сессия={(session != null ? session.PlayerName : "null")}");
@@ -144,7 +143,7 @@ namespace VrBattlegrounds.DevTools
         /// </summary>
         private void TryGoLive()
         {
-            if (!_config.autoGoLive)
+            if (!DebugBootstrapSettings.AutoGoLive)
             {
                 GameLog.Debug.Verbose(
                     "[DebugOrchestrator] TryGoLive: autoGoLive выключен.");
@@ -197,8 +196,9 @@ namespace VrBattlegrounds.DevTools
             var sessionManager = VrBattlegrounds.Managers.SessionManager.Instance;
             if (sessionManager != null && sessionManager.SelectedGameModeData != null)
             {
-                minPlayers = _config.minPlayersOverride > 0
-                    ? _config.minPlayersOverride
+                int minPlayersOverride = DebugBootstrapSettings.MinPlayersOverride;
+                minPlayers = minPlayersOverride > 0
+                    ? minPlayersOverride
                     : sessionManager.SelectedGameModeData.minPlayersToStart;
             }
 
@@ -217,12 +217,12 @@ namespace VrBattlegrounds.DevTools
 
         /// <summary>
         /// Вызывается когда сервер завершил загрузку сцены.
-        /// Если задан autoLoadMapScene — загружает карту.
+        /// Если задана карта автозапуска (AutoLoadMapScene) — загружает её.
         /// После загрузки сцены карты пытается запустить матч (игроки могли подключиться раньше).
         /// </summary>
         private void OnServerSceneChanged(string sceneName)
         {
-            if (_config == null || !_config.enabled) return;
+            if (!Active) return;
 
             if (!NetworkServer.active)
                 return;
@@ -234,9 +234,10 @@ namespace VrBattlegrounds.DevTools
 
             // Боты — как игроки, подключившиеся к серверу сразу: первая загруженная сцена.
             // EnsureCount только добавляет, повторная смена сцены лишних не создаст.
-            if (_config.botCount > 0)
+            int botCount = DebugBootstrapSettings.BotCount;
+            if (botCount > 0)
             {
-                Bots.BotDirector.EnsureInstance()?.EnsureCount(_config.botCount);
+                Bots.BotDirector.EnsureInstance()?.EnsureCount(botCount);
             }
 
             // Матч отсюда не запускаем. Игроки могли подключиться ещё в лобби, когда
@@ -255,16 +256,18 @@ namespace VrBattlegrounds.DevTools
 
         private void TryAutoLoadMap()
         {
-            if (string.IsNullOrEmpty(_config.autoLoadMapScene))
+            string mapScene = DebugBootstrapSettings.AutoLoadMapScene;
+            string gameModeId = DebugBootstrapSettings.AutoGameModeId;
+            if (string.IsNullOrEmpty(mapScene))
                 return;
 
             // Сцена уже та, что просят: хост поднимается прямо в onlineScene (Lobby),
             // и «загрузить Lobby» означало бы перезагрузить её второй раз.
-            if (IsAlreadyLoaded(_config.autoLoadMapScene, UnityEngine.SceneManagement.SceneManager.GetActiveScene().name))
+            if (IsAlreadyLoaded(mapScene, UnityEngine.SceneManagement.SceneManager.GetActiveScene().name))
             {
                 _mapLoadRequested = true;
                 GameLog.Debug.Verbose(
-                    $"[DebugOrchestrator] Карта {_config.autoLoadMapScene} уже открыта — автозагрузка не нужна.");
+                    $"[DebugOrchestrator] Карта {mapScene} уже открыта — автозагрузка не нужна.");
                 return;
             }
 
@@ -278,18 +281,18 @@ namespace VrBattlegrounds.DevTools
 
             _mapLoadRequested = true;
             GameLog.Debug.Info(
-                $"[DebugOrchestrator] Автозагрузка карты: {_config.autoLoadMapScene}");
+                $"[DebugOrchestrator] Автозагрузка карты: {mapScene}");
 
             // Карта с режимом — серия из одной карты, как из меню админа: карта стартует
-            // в разминке, «Начать матч» делает автостарт (autoGoLive).
-            if (!string.IsNullOrEmpty(_config.autoGameModeId) && SessionManager.Instance != null)
+            // в разминке, «Начать матч» делает автостарт (AutoGoLive).
+            if (!string.IsNullOrEmpty(gameModeId) && SessionManager.Instance != null)
             {
-                SessionManager.Instance.SetSession(_config.autoLoadMapScene, _config.autoGameModeId);
+                SessionManager.Instance.SetSession(mapScene, gameModeId);
                 SessionManager.Instance.StartSession();
                 return;
             }
 
-            MapLoader.Instance?.LoadMap(_config.autoLoadMapScene);
+            MapLoader.Instance?.LoadMap(mapScene);
         }
     }
 }

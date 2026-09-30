@@ -62,13 +62,13 @@ namespace VrBattlegrounds.Network
                 return;
             }
 
-            // В редакторе без тега — фоллбэк из BootstrapConfig или ручной выбор через UI
+            // В редакторе без тега — роль из отладочных настроек разработчика (Bootstrap Settings) или ручной выбор через UI
             if (Application.isEditor)
             {
-                var orchestrator = FindFirstObjectByType<VrBattlegrounds.DevTools.DebugOrchestrator>();
-                if (orchestrator != null && orchestrator.Config != null && orchestrator.Config.autoStartFallbackRole)
+                AppRole? editorRole = VrBattlegrounds.DevTools.DebugBootstrapGate.EditorRoleOverride?.Invoke();
+                if (editorRole.HasValue)
                 {
-                    ApplyRole(orchestrator.Config.fallbackEditorRole);
+                    ApplyRole(editorRole.Value);
                     return;
                 }
 

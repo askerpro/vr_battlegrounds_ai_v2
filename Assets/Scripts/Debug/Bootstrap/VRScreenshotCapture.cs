@@ -9,16 +9,28 @@ using VrBattlegrounds.Core;
 namespace VrBattlegrounds.DevTools
 {
     /// <summary>
-    /// Утилита для создания скриншотов во время игры по нажатию кнопки B (правый контроллер).
-    /// Снимает вид с камеры аватара и сохраняет PNG в указанную папку.
-    /// Используется для того, чтобы предоставить ИИ помощнику скриншоты для анализа сцены.
-    /// Использование:
-    ///   1. Добавить компонент на любой GameObject в сцене (или на тот же объект, что и DebugOrchestrator).
-    ///   2. Скриншоты сохраняются в папку Screenshots/ в корне проекта.
-    ///   3. Нажать B (правый контроллер) для захвата.
+    /// Скриншоты во время Play в редакторе по кнопке B (правый контроллер): вид с камеры аватара в PNG, папка
+    /// <c>Screenshots/</c> в корне проекта. Нужны, чтобы дать ИИ-помощнику скриншоты для анализа сцены.
+    ///
+    /// <para>
+    /// Только редактор: сборка <c>VrBattlegrounds.DebugBootstrap</c>, в сцены и префабы не кладётся. Включается
+    /// личной галочкой <see cref="DebugBootstrapSettings.ScreenshotOnButtonB"/> (меню
+    /// <c>Tools/VR Battlegrounds/Debug/Screenshot on B Button</c> или окно Bootstrap Settings), по умолчанию выключен —
+    /// иначе отнимает кнопку B у игры. Тогда <see cref="SpawnOnPlay"/> создаёт его в начале Play.
+    /// </para>
     /// </summary>
     public class VRScreenshotCapture : MonoBehaviour
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void SpawnOnPlay()
+        {
+            if (!DebugBootstrapSettings.ScreenshotOnButtonB) return;
+
+            var go = new GameObject(nameof(VRScreenshotCapture));
+            DontDestroyOnLoad(go);
+            go.AddComponent<VRScreenshotCapture>();
+        }
+
         [Header("Настройки")]
         [Tooltip("Множитель разрешения скриншота (1 = нативное, 2 = двойное)")]
         [SerializeField] private int _superSize = 2;
@@ -34,15 +46,6 @@ namespace VrBattlegrounds.DevTools
 
         private void Start()
         {
-            // Только в редакторе: папка — корень проекта. В сборке Application.dataPath — папка
-            // установки, на Android она только для чтения (UnauthorizedAccessException при старте),
-            // а кнопку B утилита отнимала бы у игры.
-            if (!Application.isEditor)
-            {
-                enabled = false;
-                return;
-            }
-
             // Формируем абсолютный путь к папке скриншотов
             _absoluteOutputPath = Path.Combine(Application.dataPath, "..", _outputFolder);
             _absoluteOutputPath = Path.GetFullPath(_absoluteOutputPath);
@@ -83,7 +86,7 @@ namespace VrBattlegrounds.DevTools
             ScreenCapture.CaptureScreenshot(fullPath, _superSize);
 
             GameLog.Debug.Info(
-                $"[VRScreenshotCapture] 📸 Скриншот сохранён: {fullPath}");
+                $"[VRScreenshotCapture] Скриншот сохранён: {fullPath}");
         }
     }
 }

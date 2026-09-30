@@ -153,7 +153,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield break;
             }
 
-            DisableDebugOrchestrator();
+            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             deadline = Now + 90f;
             while (SessionCount() < context.ExpectedClients && Now < deadline)
@@ -391,7 +391,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             result.Declare(CheckClientConnected, CheckClientSession, CheckClientMap,
                            CheckClientWeapon, CheckClientTiming, CheckClientProjectiles);
 
-            DisableDebugOrchestrator();
+            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             float deadline = Now + 30f;
             while (!NetworkClient.isConnected && Now < deadline)
@@ -779,15 +779,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             local.CmdSetDogTagGrabbed(raised);
         }
 
-        private static void DisableDebugOrchestrator()
-        {
-            DebugOrchestrator orchestrator = UnityEngine.Object.FindFirstObjectByType<DebugOrchestrator>();
-            if (orchestrator == null || !orchestrator.enabled)
-                return;
-
-            orchestrator.enabled = false;
-            GameLog.Debug.Info("[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
-        }
 
         /// <summary>
         /// Накопитель выборки. Отдельный класс, потому что в вердикт обязаны попасть

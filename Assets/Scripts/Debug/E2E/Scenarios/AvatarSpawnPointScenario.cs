@@ -49,7 +49,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// </para>
     ///
     /// <para>
-    /// <b>DebugOrchestrator гасится первым делом.</b> Именно он маскирует находку
+    /// <b>Отладочный сценарий редактора (DebugOrchestrator) гасится первым делом</b> (<see cref="DebugBootstrapGate.Suppress"/>). Именно он маскирует находку
     /// в отладочных запусках: увидев первый аватар сессии, он телепортирует игрока
     /// в зону его команды. С ним измерять нечего — точку спавна поставит он, а не
     /// проверяемый код.
@@ -190,7 +190,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 // Первым делом: иначе он сам расставит игроков по зонам спавна
                 // и измерять будет нечего.
-                DisableDebugOrchestrator();
+                DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
                 // ── 2. Клиент ─────────────────────────────────────────────
                 deadline = Now + 90f;
@@ -512,7 +512,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         {
             result.Declare(CheckClientConnected, CheckClientSession, CheckClientMap, CheckClientZone);
 
-            DisableDebugOrchestrator();
+            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             // ── Подключение ───────────────────────────────────────────────
             float deadline = Now + 30f;
@@ -842,15 +842,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             local.CmdSetDogTagGrabbed(raised);
         }
 
-        private static void DisableDebugOrchestrator()
-        {
-            DebugOrchestrator orchestrator = Object.FindFirstObjectByType<DebugOrchestrator>();
-            if (orchestrator == null || !orchestrator.enabled)
-                return;
-
-            orchestrator.enabled = false;
-            GameLog.Debug.Info("[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
-        }
     }
 }
 #endif

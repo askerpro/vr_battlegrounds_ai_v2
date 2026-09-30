@@ -58,7 +58,7 @@ namespace VrBattlegrounds.Core
         }
 
         /// <summary>
-        /// Позволяет переопределить настройки во время отладки (например, из DebugOrchestrator).
+        /// Позволяет переопределить настройки во время отладки (например, из DebugOrchestrator — отладочного сценария редактора).
         /// </summary>
         public static void SetDebugOverride(ClientDeviceType deviceType, bool isAdmin, GameRole role)
         {

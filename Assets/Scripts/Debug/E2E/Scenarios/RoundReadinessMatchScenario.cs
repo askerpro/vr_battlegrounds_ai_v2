@@ -194,7 +194,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield break;
             }
 
-            DisableDebugOrchestrator();
+            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             // ── 2. Клиенты ────────────────────────────────────────────────
             deadline = Now + 90f;
@@ -562,7 +562,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                            CheckClientWallOpen, CheckClientRdy01, CheckClientPending,
                            CheckClientWallShut, CheckClientPhases);
 
-            DisableDebugOrchestrator();
+            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             EliminationMode.RoundPhaseChangedLocal += MarkPhase;
 
@@ -1345,15 +1345,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             return string.Join(", ", report.ToArray());
         }
 
-        private static void DisableDebugOrchestrator()
-        {
-            DebugOrchestrator orchestrator = Object.FindFirstObjectByType<DebugOrchestrator>();
-            if (orchestrator == null || !orchestrator.enabled)
-                return;
-
-            orchestrator.enabled = false;
-            GameLog.Debug.Info("[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
-        }
     }
 }
 #endif

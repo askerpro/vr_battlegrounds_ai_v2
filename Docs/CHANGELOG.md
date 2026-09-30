@@ -2,6 +2,32 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-09-30] - Отладочные инструменты только в редакторе, личные настройки вне git
+
+### Изменено
+
+- **`DebugOrchestrator` и `VRScreenshotCapture` — только редактор**: сборка `VrBattlegrounds.DebugBootstrap`
+  (`defineConstraints: UNITY_EDITOR`), из `--- MANAGERS ---.prefab` убраны, создаются сами в начале Play. Раньше
+  оркестратор лежал в `Offline.unity` билда и работал в Development-сборках, включая e2e-плеер.
+- **Ассет `DebugBootstrapConfig` удалён.** Настройки — `DebugBootstrapSettings`: EditorPrefs машины, карта автозапуска —
+  SessionState сессии редактора. Окно `Tools/VR Battlegrounds/Debug/Bootstrap Settings…` вместо `Select Debug Config`.
+  `PlayModeStartFromOffline` больше не правит ассет при каждом Play из карты.
+- **Скриншот по кнопке B** включается галочкой `Tools/VR Battlegrounds/Debug/Screenshot on B Button`, по умолчанию выключен —
+  раньше в редакторе всегда отнимал кнопку B у игры.
+- Код игры связан с отладкой только через `DebugBootstrapGate`: 12 одинаковых `DisableDebugOrchestrator()` в E2E-сценариях
+  заменены на `DebugBootstrapGate.Suppress`, `GameNetworkDiscovery` берёт роль из `EditorRoleOverride`.
+- **Пауза UltimateXR без фокуса редактора** (патч 33) — личная галочка `Tools/VR Battlegrounds/Debug/Pause XR When Editor
+  Unfocused` (EditorPrefs); флаг `OptimizeEditorFocus` из общего `UxrGlobalSettings.asset` удалён. Исправлено: снятый во
+  время паузы флаг её не снимал; без XR Management пауза не снималась; проверка фокуса каждый кадр создавала объекты
+  `Process` и перебирала все окна редактора.
+- Правило в `CLAUDE.md`: личные дебаг-настройки — EditorPrefs/SessionState + меню, не ассеты под git.
+
+### Проверка
+
+`DebugBootstrapEditorOnlyTests` (в том числе класс ошибки «компонент из сборки только для редактора в сцене билда»),
+`EditorFocusPauseTests`, `ManagerInitOrderTests`, `DebugAutoLoadMapTests`; Android-компиляция; Play через Offline —
+роль Host без окна, лобби, три бота.
+
 ## [2026-09-30] - Сетка на блоках LD_Alphabet
 
 ### Изменено

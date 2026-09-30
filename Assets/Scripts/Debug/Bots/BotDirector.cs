@@ -12,8 +12,8 @@ namespace VrBattlegrounds.DevTools.Bots
 {
     /// <summary>
     /// Боты-противники для проверки сетевого матча в одиночку. Только сервер, только
-    /// редактор и development-сборка (создаёт его <see cref="DebugOrchestrator"/> по
-    /// <c>DebugBootstrapConfig.botCount</c> или пункт меню <c>Tools/VR Battlegrounds/Debug/Bots</c>).
+    /// редактор и development-сборка (создаёт его <c>DebugOrchestrator</c> в редакторе по
+    /// <c>Tools/VR Battlegrounds/Debug/Bootstrap Settings…</c> → «Ботов», или пункт меню <c>Tools/VR Battlegrounds/Debug/Bots</c>).
     ///
     /// <para>
     /// <b>Бот для игры — обычный игрок.</b> У него настоящая <see cref="PlayerSession"/>

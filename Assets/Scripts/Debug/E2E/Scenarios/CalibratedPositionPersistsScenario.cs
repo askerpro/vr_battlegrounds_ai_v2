@@ -219,7 +219,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 // Первым делом: иначе он сам расставит игроков по зонам спавна
                 // и измерять будет нечего.
-                DisableDebugOrchestrator();
+                DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
                 // ── 2. Клиенты ────────────────────────────────────────────
                 deadline = Now + ClientsWait;
@@ -645,7 +645,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             result.Declare(CheckClientConnected, CheckClientSession,
                            CheckClientFirstMap, CheckClientSecondMap, CheckClientPlace);
 
-            DisableDebugOrchestrator();
+            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             string firstMap  = context.Map;
             string secondMap = SecondMapFor(firstMap);
@@ -1192,15 +1192,6 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             return $"({v.x:F2}, {v.y:F2}, {v.z:F2})";
         }
 
-        private static void DisableDebugOrchestrator()
-        {
-            DebugOrchestrator orchestrator = UnityEngine.Object.FindFirstObjectByType<DebugOrchestrator>();
-            if (orchestrator == null || !orchestrator.enabled)
-                return;
-
-            orchestrator.enabled = false;
-            GameLog.Debug.Info("[E2E] DebugOrchestrator отключён: дирижёром прогона выступает сценарий");
-        }
     }
 }
 #endif

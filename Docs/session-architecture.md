@@ -236,7 +236,7 @@ sequenceDiagram
 | `MapLoader` | префаб `--- MANAGERS ---` | до конца процесса | никогда после `Offline` |
 | `PhysicalSpaceSyncManager` | корень префаба `--- MANAGERS ---` | до конца процесса | никогда после `Offline` |
 | `GameNetworkManager` | префаб `--- MANAGERS ---` | до конца процесса | никогда после `Offline` |
-| `DebugOrchestrator` | префаб `--- MANAGERS ---` | до конца процесса | никогда после `Offline` |
+| `DebugOrchestrator` (только редактор) | создаётся сам в начале Play (`RuntimeInitializeOnLoadMethod`), `DontDestroyOnLoad` | до конца Play | если выключен в Bootstrap Settings |
 | `SessionManager` | спавн `SessionContext` в `GameNetworkManager.OnStartServer` | до остановки сервера | пока сервер не поднят |
 | `NetworkStateRelay` | тот же объект `SessionContext` | до остановки сервера | пока сервер не поднят |
 | `Series` | тот же объект `SessionContext` — серия карт и общий счёт | до остановки сервера | пока сервер не поднят |

@@ -77,21 +77,12 @@ namespace VrBattlegrounds.Editor
                 // Если мы уже в оффлайн-сцене, ничего специально делать не нужно
                 if (activeScene.path == OfflineScenePath) return;
 
-                // Находим конфиг DebugBootstrapConfig для авто-проброса текущей карты
-                string[] guids = AssetDatabase.FindAssets("t:DebugBootstrapConfig");
-                if (guids.Length > 0)
+                // Карта автозапуска — в SessionState текущей сессии редактора (DebugBootstrapSettings), не в ассет:
+                // раньше каждый Play из карты правил ассет под git.
+                if (DebugBootstrapSettings.Enabled)
                 {
-                    string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                    DebugBootstrapConfig config = AssetDatabase.LoadAssetAtPath<DebugBootstrapConfig>(path);
-                    
-                    if (config != null && config.enabled)
-                    {
-                        // Прописываем активную сцену для авто-загрузки
-                        config.autoLoadMapScene = activeScene.name;
-                        EditorUtility.SetDirty(config);
-                        AssetDatabase.SaveAssets(); 
-                        Debug.Log($"[PlayModeStartFromOffline] Активная сцена '{activeScene.name}' добавлена в {config.name} для автозагрузки.");
-                    }
+                    DebugBootstrapSettings.AutoLoadMapScene = activeScene.name;
+                    GameLog.Debug.Info($"[PlayModeStartFromOffline] Карта '{activeScene.name}' загрузится после старта сервера (Bootstrap Settings).");
                 }
             }
         }

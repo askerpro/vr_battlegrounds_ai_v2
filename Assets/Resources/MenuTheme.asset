@@ -34,6 +34,8 @@ MonoBehaviour:
   TableHeaderSize: 38
   BoldFont: {fileID: 11400000, guid: 394b51b32ddcd944db6a04d9073fd87c, type: 2}
   RoundedSprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  ClickSound: {fileID: 8300000, guid: 1e7a587164fcbef45b40536469e6c432, type: 3}
+  ClickVolume: 0.6
   SafeMargin: 24
   RailWidth: 380
   RailItemHeight: 88

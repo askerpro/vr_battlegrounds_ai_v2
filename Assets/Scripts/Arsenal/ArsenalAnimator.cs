@@ -52,6 +52,15 @@ namespace VrBattlegrounds.Arsenal
         /// <summary>True while an animation sequence is playing.</summary>
         public bool IsAnimating => _isAnimating;
 
+        /// <summary>
+        /// Анимация стены действительно поехала (true — открытие). Не поднимается, если поза уже на месте или стена уже
+        /// едет туда же, — звук (<see cref="ArsenalWallSounds"/>) не дублируется. Разворот посреди анимации — поднимается.
+        /// </summary>
+        public event System.Action<bool> SequenceStarted;
+
+        /// <summary>Анимация доехала до позы покоя (true — открыта).</summary>
+        public event System.Action<bool> SequenceCompleted;
+
         /// <summary>Куда едет текущая анимация; смысл имеет только при <see cref="_isAnimating"/>.</summary>
         private bool _animatingToOpen;
 
@@ -172,6 +181,7 @@ namespace VrBattlegrounds.Arsenal
             }
 
             _animator.Play(moveTarget, 0, startTime);
+            SequenceStarted?.Invoke(open);
             GameLog.Arsenal.Info($"[Arsenal Anim] {label} sequence started (t={startTime:F2}).");
         }
 
@@ -224,6 +234,7 @@ namespace VrBattlegrounds.Arsenal
         {
             _isAnimating = false;
             GameLog.Arsenal.Info("[Arsenal Anim] Close sequence complete.");
+            SequenceCompleted?.Invoke(false);
             System.Action callback = _onCloseComplete;
             _onCloseComplete = null;
             callback?.Invoke();
@@ -236,6 +247,7 @@ namespace VrBattlegrounds.Arsenal
         {
             _isAnimating = false;
             GameLog.Arsenal.Info("[Arsenal Anim] Open sequence complete.");
+            SequenceCompleted?.Invoke(true);
             System.Action callback = _onOpenComplete;
             _onOpenComplete = null;
             callback?.Invoke();

@@ -1,0 +1,30 @@
+fileFormatVersion: 2
+guid: 5f198452fcd6c9d4fa84efc6398f0e8e
+AssetOrigin:
+  serializedVersion: 1
+  productId: 17256
+  packageName: Universal Sound FX
+  packageVersion: 1.6
+  assetPath: Assets/Universal Sound FX/IMPACTS/Metal/IMPACT_Metal_Tool_Drop_Hard_Surface_mono.wav
+  uploadId: 736765
+AudioImporter:
+  externalObjects: {}
+  serializedVersion: 8
+  defaultSettings:
+    serializedVersion: 2
+    loadType: 0
+    sampleRateSetting: 0
+    sampleRateOverride: 44100
+    compressionFormat: 1
+    quality: 0.7
+    conversionMode: 0
+    preloadAudioData: 1
+  platformSettingOverrides: {}
+  forceToMono: 1
+  normalize: 1
+  loadInBackground: 0
+  ambisonic: 0
+  3D: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -121,6 +121,11 @@ namespace VrBattlegrounds.UI.Menu.Kit
         [Tooltip("9-slice спрайт скруглённой заливки кнопок (встроенный UISprite). Пусто — прямоугольник.")]
         public Sprite RoundedSprite;
 
+        [Header("Звук")]
+        [Tooltip("Клик кнопки меню (KitButton) — подтверждение нажатия лазером. Пусто — без звука (MenuSoundTests красный).")]
+        public AudioClip ClickSound;
+        [Range(0f, 1f)] public float ClickVolume = 0.6f;
+
         [Header("Размеры, px канваса")]
         [Tooltip("Отступ каркаса от края канваса.")]
         public float SafeMargin = 24f;

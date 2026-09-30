@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace VrBattlegrounds.UI.Menu.Kit
@@ -72,6 +73,20 @@ namespace VrBattlegrounds.UI.Menu.Kit
         }
 
         protected override void DoStateTransition(SelectionState state, bool instant) => ApplyColors(state);
+
+        // Клик — звуком (MenuClickSound): нажатие лазером в VR иначе не подтверждено ничем, кроме цвета.
+        public override void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData.button == PointerEventData.InputButton.Left && IsActive() && IsInteractable())
+                MenuClickSound.Play(this);
+            base.OnPointerClick(eventData);
+        }
+
+        public override void OnSubmit(BaseEventData eventData)
+        {
+            if (IsActive() && IsInteractable()) MenuClickSound.Play(this);
+            base.OnSubmit(eventData);
+        }
 
         private void ApplyColors(SelectionState state)
         {

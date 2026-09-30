@@ -37,6 +37,31 @@ namespace VrBattlegrounds.Arsenal
         [Tooltip("Purchase price in in-game currency")]
         [SerializeField] private int _price = 2700;
 
+        // ── Balance (T-38) ─────────────────────────────────────
+        // Единая точка правды баланса: префабы получают эти значения командой
+        // Tools/VR Battlegrounds/Gameplay/Apply Weapon Balance, WeaponBalanceTests сверяют.
+        // Числа — по Counter-Strike 2 (урон, темп, магазин, цена; разброс — нет, его даёт отдача).
+        [Header("Balance (CS2)")]
+        [Tooltip("Урон одной пули (дробинки) вблизи, без множителя зоны. 0 — баланс не задан (сэмплы SDK), " +
+                 "Apply Weapon Balance префаб не трогает.")]
+        [SerializeField] private float _damage;
+
+        [Tooltip("Спад урона как в CS2: множитель на каждые 500 юнитов (12,7 м). 1 — без спада.")]
+        [SerializeField, Range(0.3f, 1f)] private float _rangeModifier = 0.85f;
+
+        [Tooltip("Темп, выстрелов в минуту.")]
+        [SerializeField] private int _fireRate = 400;
+
+        [Tooltip("Патронов в магазине.")]
+        [SerializeField] private int _magazineSize = 20;
+
+        [Tooltip("Дробинок на выстрел вместе с основным снарядом; 1 — пуля.")]
+        [SerializeField, Min(1)] private int _pellets = 1;
+
+        [Tooltip("Картина накопленной отдачи (RecoilAccumulator на префабе): подброс первого выстрела, потолок очереди, " +
+                 "рыскание, возврат в паузе, множитель одной руки.")]
+        [SerializeField] private VrBattlegrounds.Weapons.RecoilPattern _recoil = new VrBattlegrounds.Weapons.RecoilPattern();
+
         // ── Slot Placement ─────────────────────────────────────
         [Header("Slot Placement")]
         [Tooltip("Category determines which slot type this item fits into")]
@@ -69,6 +94,28 @@ namespace VrBattlegrounds.Arsenal
         public Vector3 WeaponRotationOffset => _weaponRotationOffset;
         public Vector3 MagazinePositionOffset => _magazinePositionOffset;
         public Sprite Icon => _icon;
+
+        /// <summary>Задан ли баланс: оружие без него (сэмплы SDK) команда баланса не трогает.</summary>
+        public bool HasBalance => _damage > 0f;
+        public float Damage => _damage;
+        public float RangeModifier => _rangeModifier;
+        public int FireRate => _fireRate;
+        public int MagazineSize => _magazineSize;
+        public int Pellets => _pellets;
+        public VrBattlegrounds.Weapons.RecoilPattern Recoil => _recoil;
+
+        /// <summary>Юнитов CS на метр: 500 юнитов = 12,7 м.</summary>
+        public const float CsUnitsPerMeter = 500f / 12.7f;
+
+        /// <summary>Урон на дистанции <paramref name="meters"/> по правилу спада CS2.</summary>
+        public static float DamageAt(float damage, float rangeModifier, float meters) =>
+            damage * Mathf.Pow(rangeModifier, meters * CsUnitsPerMeter / 500f);
+
+        /// <summary>
+        /// Выстрелов в секунду для <c>UxrFirearmTrigger._maxShotFrequency</c> (целое у SDK): темп в минуту / 60,
+        /// не меньше 1.
+        /// </summary>
+        public static int ShotFrequency(int fireRate) => Mathf.Max(1, Mathf.RoundToInt(fireRate / 60f));
     }
 
     /// <summary>

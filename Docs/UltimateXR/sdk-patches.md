@@ -1166,3 +1166,26 @@ IK тела и рук считается каждый кадр у всех ав�
 1. `UxrDamageEventArgs`: свойство `ImpactForce` и конструктор попадания с ним; старый конструктор — через новый с нулём.
 2. `UxrActor.ReceiveImpact`: перегрузка с силой; старая зовёт её с нулём.
 3. `UxrWeaponManager.UpdateProjectiles`: перед `targetActor.ReceiveImpact` посчитать силу так же, как для `rigidbody.AddForceAtPosition`, и передать в оба вызова (прямое попадание и отражённое).
+
+## Патч 31: поправка урона пули до события (зоны попадания)
+
+**Дата:** 2026-09-29. **Задача:** [T-38](../tasks/T-38-weapon-roster-and-balance.md) (урон по зонам).
+**Файлы:** `Mechanics/Weapons/UxrActor.cs` (статическое `ImpactDamageModifier`, применяется в `ReceiveImpact`).
+Метка `VR Battlegrounds patch (Патч 31)`. **Проверка:** `HitZoneDamageTests`.
+
+### Проблема
+
+Урон у `UxrDamageEventArgs` неизменяемый, а «смертельный ли» (`Dies`) SDK считает при создании события. Множитель
+зоны в обработчике `DamageReceiving` невозможен: пришлось бы отменять урон и бить заново, а `Dies`, журнал урона
+и метки попаданий видели бы исходное число.
+
+### Решение
+
+`UxrActor.ImpactDamageModifier` — `Func<UxrActor, RaycastHit, float, float>`, вызывается в `ReceiveImpact` до создания
+события. Ставит игра (`HitZoneDamage.Install`): урон × множитель зоны хитбокса. Нет поправки — поведение SDK.
+Взрывы и `ReceiveDamage(float)` не затронуты.
+
+### Как повторить при обновлении SDK
+
+1. `UxrActor`: статическое свойство `ImpactDamageModifier`.
+2. `UxrActor.ReceiveImpact(…, Vector3 impactForce)` (патч 30): первой строкой `damage = ImpactDamageModifier(this, raycastHit, damage)`, если задано.

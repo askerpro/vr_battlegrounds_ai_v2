@@ -94,6 +94,12 @@ namespace UltimateXR.Mechanics.Weapons
         #region Public Methods
 
         /// <summary>
+        ///     VR Battlegrounds patch (Патч 31, Docs/UltimateXR/sdk-patches.md, T-38): поправка урона пули до события
+        ///     (актор, попадание, урон → урон) — множитель зоны попадания. Ставит игра, одна на процесс.
+        /// </summary>
+        public static Func<UxrActor, RaycastHit, float, float> ImpactDamageModifier { get; set; }
+
+        /// <summary>
         ///     Makes the actor receive a damaging projectile impact.
         /// </summary>
         /// <param name="actorSource">Actor source of the projectile</param>
@@ -110,6 +116,12 @@ namespace UltimateXR.Mechanics.Weapons
         /// </summary>
         public void ReceiveImpact(UxrActor actorSource, RaycastHit raycastHit, float damage, Vector3 impactForce)
         {
+            // VR Battlegrounds patch (Патч 31, T-38): урон по зоне попадания — до события, чтобы Dies и Life видели его.
+            if (ImpactDamageModifier != null)
+            {
+                damage = ImpactDamageModifier(this, raycastHit, damage);
+            }
+
             OnReceiveDamage(new UxrDamageEventArgs(actorSource, this, raycastHit, damage, damage >= Life, impactForce));
         }
 

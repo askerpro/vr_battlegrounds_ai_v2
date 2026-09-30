@@ -188,8 +188,36 @@ namespace UltimateXR.Core
         // Properties
 
 #if UNITY_EDITOR
-        public bool prevIsEditorFocused = true;
+        // VR Battlegrounds patch 33: false — UltimateXR на паузе: пауза включена и окно редактора не в фокусе.
+        // Меняется только в HandleEditorFocusChange — там же переключаются PostUpdateMode и XR-подсистемы.
+        private bool _shouldUpdate = true;
         private UxrPostUpdateMode _savedPostUpdateMode = UxrPostUpdateMode.LateUpdate;
+
+        /// <summary>
+        ///     VR Battlegrounds patch 33: стоит ли UltimateXR на паузе, потому что окно редактора не в фокусе. Пока
+        ///     стоит — не идут стадии обновления и IK.
+        /// </summary>
+        public bool IsPausedByEditorFocus => !_shouldUpdate;
+
+        // VR Battlegrounds patch 33: личный переключатель машины — EditorPrefs, не ассет в git.
+        private const string EditorFocusPausePrefKey = "VrBattlegrounds.PauseXrWhenEditorUnfocused";
+        private static bool? s_editorFocusPauseEnabled;
+
+        /// <summary>
+        ///     VR Battlegrounds patch 33: ставить ли UltimateXR на паузу, пока окно редактора не в фокусе. Нужно, когда
+        ///     на машине открыто несколько редакторов (хост и клиенты). Хранится в EditorPrefs этой машины, в git не
+        ///     попадает; по умолчанию включено. Меню — <c>Tools/VR Battlegrounds/Debug/Pause XR When Editor Unfocused</c>;
+        ///     тесты и стенды выставляют его из кода и возвращают после себя.
+        /// </summary>
+        public static bool EditorFocusPauseEnabled
+        {
+            get => s_editorFocusPauseEnabled ??= UnityEditor.EditorPrefs.GetBool(EditorFocusPausePrefKey, true);
+            set
+            {
+                s_editorFocusPauseEnabled = value;
+                UnityEditor.EditorPrefs.SetBool(EditorFocusPausePrefKey, value);
+            }
+        }
 #endif
 
         // Properties
@@ -1215,7 +1243,7 @@ namespace UltimateXR.Core
 #if UNITY_EDITOR
             HandleEditorFocusChange();
 
-            if (!prevIsEditorFocused)
+            if (!_shouldUpdate)
             {
                 return;
             }
@@ -2087,20 +2115,26 @@ namespace UltimateXR.Core
         private void HandleEditorFocusChange()
         {
 #if UNITY_EDITOR
-            if (!UxrGlobalSettings.Instance.OptimizeEditorFocus)
+            // VR Battlegrounds patch 33: пауза выключена — обновляемся всегда. Если её сняли во время паузы, ветка
+            // «возобновить» ниже снимет и паузу (раньше тут был return, и Update стоял до перезапуска Play). Фокус
+            // проверяется, только когда пауза включена.
+            bool pauseEnabled = EditorFocusPauseEnabled;
+            bool shouldUpdate = !pauseEnabled || EditorWindowFocusHelper.IsThisEditorInstanceFocused();
+
+            if (_shouldUpdate == shouldUpdate)
             {
                 return;
             }
 
-            // Используем комбинированную проверку для точного определения фокуса именно этого инстанса
-            bool isEditorFocused = EditorWindowFocusHelper.IsInstanceActiveCombined();
+            _shouldUpdate = shouldUpdate;
 
-            if (prevIsEditorFocused == isEditorFocused ) { return; }
+            if (UxrGlobalSettings.Instance.LogLevelCore >= UxrLogLevel.Verbose)
+            {
+                Debug.Log($"{UxrConstants.CoreModule} {(shouldUpdate ? "Resuming" : "Pausing")} UltimateXR updates: editor focus pause {(pauseEnabled ? "enabled" : "disabled")}.");
+            }
 
-            // focus changed
-            Debug.Log($"Application focus changed: This Unity Editor instance focus changed from {prevIsEditorFocused} to {isEditorFocused}");
-
-            prevIsEditorFocused = isEditorFocused;
+            // Режим пост-обновления — независимо от XR Management; раньше без него пауза не снималась.
+            _postUpdateMode = shouldUpdate ? _savedPostUpdateMode : UxrPostUpdateMode.None;
 
             try
             {
@@ -2108,15 +2142,13 @@ namespace UltimateXR.Core
                 var xrGeneralSettings = UnityEngine.XR.Management.XRGeneralSettings.Instance;
                 if (xrGeneralSettings?.Manager != null)
                 {
-                    if (isEditorFocused)
+                    if (shouldUpdate)
                     {
                         // Restart subsystems
                         xrGeneralSettings.Manager.StartSubsystems();
-                        _postUpdateMode = _savedPostUpdateMode;
                     }
                     else
                     {
-                        _postUpdateMode = UxrPostUpdateMode.None;
                         // Stop subsystems
                         xrGeneralSettings.Manager.StopSubsystems();
                     }

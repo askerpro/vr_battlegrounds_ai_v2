@@ -34,7 +34,6 @@ namespace UltimateXR.Core.Settings
         [SerializeField] private UxrSerializationFormat _netFormatStateSync           = UxrSerializationFormat.BinaryUncompressed;
         [SerializeField] private bool                   _syncGrabbablePhysics         = true;
         [SerializeField] private float                  _grabbableSyncIntervalSeconds = UxrConstants.Networking.DefaultGrabbableSyncIntervalSeconds;
-        [SerializeField] private bool                   _optimizeEditorFocus          = true;
 
         #endregion
 
@@ -191,15 +190,6 @@ namespace UltimateXR.Core.Settings
         {
             get => _grabbableSyncIntervalSeconds;
             set => _grabbableSyncIntervalSeconds = value;
-        }
-
-        /// <summary>
-        ///     Gets or sets whether to optimize CPU/GPU usage when the Unity Editor instance loses focus.
-        /// </summary>
-        public bool OptimizeEditorFocus
-        {
-            get => _optimizeEditorFocus;
-            set => _optimizeEditorFocus = value;
         }
 
         #endregion

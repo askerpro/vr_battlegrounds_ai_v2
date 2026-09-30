@@ -1189,3 +1189,54 @@ IK тела и рук считается каждый кадр у всех ав�
 
 1. `UxrActor`: статическое свойство `ImpactDamageModifier`.
 2. `UxrActor.ReceiveImpact(…, Vector3 impactForce)` (патч 30): первой строкой `damage = ImpactDamageModifier(this, raycastHit, damage)`, если задано.
+
+## Патч 33: пауза UltimateXR, пока редактор не в фокусе
+
+**Дата:** 2026-09-30. **Файлы:** `Core/UxrManager.cs` (`HandleEditorFocusChange`, начало `Update`, поля
+`_shouldUpdate`, `_savedPostUpdateMode`, свойства `IsPausedByEditorFocus`, `EditorFocusPauseEnabled`),
+`Devices/Integrations/EditorWindowFocusHelper.cs` (новый файл). Метка `VR Battlegrounds patch 33`. Сама пауза старше этой
+записи и до 2026-09-30 не была описана. **Меню:** `Tools/VR Battlegrounds/Debug/Pause XR When Editor Unfocused`.
+**Проверка:** `EditorFocusPauseTests`.
+
+### Проблема
+
+Пауза нужна, когда на одной машине открыто несколько редакторов (хост и клиенты): тот, что не в фокусе, не должен
+забирать шлем и процессор. Пока окно не в фокусе, `HandleEditorFocusChange` ставит `PostUpdateMode = None` и
+останавливает XR-подсистемы, а `Update` возвращается сразу — не идут ни стадии, ни `StageUpdated`, ни IK.
+
+Из-за этого Play в фоне — тесты, стенды (`LegsComparisonRig`), боты при работе агента — показывает аватары в T-позе
+и не двигает их. Что было не так в исходной версии:
+
+- включалось только флагом `OptimizeEditorFocus` в общем ассете `Resources/UxrGlobalSettings.asset` — переключение
+  попадало в git;
+- флаг, снятый во время паузы, её не снимал: `HandleEditorFocusChange` выходил раньше проверки фокуса, и
+  `UxrManager` стоял до перезапуска Play;
+- `PostUpdateMode` менялся только внутри блока XR Management — без XR-менеджера пауза не снималась;
+- проверка фокуса каждый кадр создавала объекты `Process` (без `Dispose`) и перебирала все окна редактора через
+  `Resources.FindObjectsOfTypeAll` с LINQ — мусор для GC и системные вызовы на каждом кадре;
+- `Debug.Log` на каждую смену фокуса, публичное изменяемое поле `prevIsEditorFocused`.
+
+### Решение
+
+- Паузу включает один флаг — `UxrManager.EditorFocusPauseEnabled` в EditorPrefs этой машины (ключ
+  `VrBattlegrounds.PauseXrWhenEditorUnfocused`, по умолчанию `true`), в git не попадает. Меню переключает его,
+  тесты и стенды выставляют из кода и возвращают после себя. Прежний флаг `OptimizeEditorFocus` в
+  `UxrGlobalSettings` (поле `_optimizeEditorFocus`, раздел «General» инспектора) удалён — он дублировал этот и
+  лежал в общем ассете.
+- Выключенная пауза считается фокусом. Если снять её во время паузы, срабатывает ветка «фокус вернулся».
+- `PostUpdateMode` переключается при любой смене фокуса, XR-подсистемы — как раньше, при наличии XR Management.
+- `EditorWindowFocusHelper.IsThisEditorInstanceFocused()` работает без аллокаций: PID своего процесса запоминается
+  один раз, PID окна на переднем плане — `GetForegroundWindow` + `GetWindowThreadProcessId`; запасная проверка —
+  `Application.isFocused && EditorWindow.focusedWindow != null`. Неиспользуемые методы помощника удалены.
+- Состояние — закрытое `_shouldUpdate` (меняется только в `HandleEditorFocusChange`, там же — побочные действия смены), наружу — `IsPausedByEditorFocus`; лог смены фокуса — только при
+  `LogLevelCore >= Verbose`.
+
+### Как повторить при обновлении SDK
+
+1. Перенести `EditorWindowFocusHelper.cs`.
+2. В `UxrManager` под `#if UNITY_EDITOR`: поля `_shouldUpdate`, `_savedPostUpdateMode` (его пишет и сеттер
+   `PostUpdateMode`), свойства `IsPausedByEditorFocus` и `EditorFocusPauseEnabled` (EditorPrefs).
+3. `HandleEditorFocusChange`: `shouldUpdate = !EditorFocusPauseEnabled ||
+   EditorWindowFocusHelper.IsThisEditorInstanceFocused()`; при смене — `_postUpdateMode` и старт/стоп XR-подсистем.
+   В начале `Update` — вызов и `return`, пока `!_shouldUpdate`.
+4. Прогнать `EditorFocusPauseTests`.

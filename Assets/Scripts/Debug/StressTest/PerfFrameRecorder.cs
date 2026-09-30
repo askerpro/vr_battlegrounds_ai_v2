@@ -167,6 +167,10 @@ namespace VrBattlegrounds.DevTools.StressTest
                 Counter("gc_alloc_kb","GC Allocated In Frame", BytesKb, AllocThreshold),
                 Counter("gc_mb",     "GC Used Memory",      BytesMb, MemThreshold),
                 Counter("mem_mb",    "System Used Memory",  BytesMb, MemThreshold),
+                // Графика отдельно: на Quest память общая, и mem_mb её не отделяет.
+                Counter("gfx_mb",    "Gfx Used Memory",     BytesMb, MemThreshold),
+                Counter("tex_mb",    "Texture Memory",      BytesMb, MemThreshold), // только Development
+                Counter("mesh_mb",   "Mesh Memory",         BytesMb, MemThreshold), // только Development
             };
         }
 

@@ -203,6 +203,7 @@ Fixed Foveated Rendering, как его видит `XRDisplaySubsystem.foveatedR
 | `physics`, `scripts`, `scripts_late`, `anim`, `anim_end`, `skinning`, `particles`, `render`, `gc_collect`, `present_wait` | подсистемы PlayerLoop, мс | маркеры профайлера — **только Development** |
 | `batches`, `draws`, `setpass`, `tris_k` | рендер | счётчики профайлера |
 | `gc_alloc_kb`, `gc_mb`, `mem_mb` | аллокации за кадр, куча, память процесса | счётчики профайлера |
+| `gfx_mb`, `tex_mb`, `mesh_mb` | память графики Unity целиком, текстуры, меши — на Quest память общая, и `mem_mb` графику не отделяет | `Gfx Used Memory` (и в release), `Texture Memory`, `Mesh Memory` — **только Development** |
 
 Метрика, которой нет в этой сборке, выпадает — список недоступных в заголовке лога.
 Колонки `ovr_*` включаются только на Android с активным XR-устройством (`OculusPerfStats.TryEnable`

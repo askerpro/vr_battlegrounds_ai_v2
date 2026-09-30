@@ -371,6 +371,45 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         /// <summary>
+        /// Процедурные ноги: у каждого аватара ровно один <c>LegsAnimator</c> и рядом с ним один
+        /// <c>LegsAnimatorUxrBridge</c> — на объекте рига с humanoid-<c>Animator</c>, внутри аватара, но
+        /// не на его корне. Ноги считает каждая машина сама (сеть их не синхронизирует), поэтому
+        /// мост ищет свой <c>UxrAvatar</c> вверх по иерархии и его <c>Dummy Forward</c>; на корне
+        /// плагин взял бы корень аватара за риг, а два плагина тянули бы одни кости каждый к своему
+        /// полу. Подробные настройки — <c>AvatarLoadoutTests.Legs_Animator_настроен_на_своих_костях</c>.
+        /// Добавлено вместе с ногами киборга: до них у киборга не было ни рига, ни ног.
+        /// </summary>
+        [Test]
+        public void У_каждого_аватара_один_Legs_Animator_на_humanoid_риге()
+        {
+            var problems = new List<string>();
+
+            foreach (GameObject avatar in AvatarPrefabs())
+            {
+                // Сборки плагина и моста (Assembly-CSharp) тестам недоступны — по имени типа.
+                Component[] legs = avatar.GetComponentsInChildren<Component>(true).Where(c => c != null && c.GetType().Name == "LegsAnimator").ToArray();
+                Component[] bridges = avatar.GetComponentsInChildren<Component>(true).Where(c => c != null && c.GetType().Name == "LegsAnimatorUxrBridge").ToArray();
+
+                if (legs.Length != 1 || bridges.Length != 1)
+                {
+                    problems.Add($"{avatar.name}: LegsAnimator {legs.Length}, мостов {bridges.Length} — нужно по одному");
+                    continue;
+                }
+
+                GameObject host = legs[0].gameObject;
+                Animator animator = host.GetComponent<Animator>();
+                if (bridges[0].gameObject != host)
+                    problems.Add($"{avatar.name}: мост на '{bridges[0].name}', плагин на '{host.name}' — должны быть на одном объекте");
+                if (host == avatar)
+                    problems.Add($"{avatar.name}: Legs Animator на корне аватара, а не на риге");
+                if (animator == null || animator.avatar == null || !animator.avatar.isHuman)
+                    problems.Add($"{avatar.name}: на '{host.name}' нет humanoid-Animator — у плагина нет рига");
+            }
+
+            Assert.IsEmpty(problems, "Процедурные ноги аватаров собраны не там:\n  " + string.Join("\n  ", problems));
+        }
+
+        /// <summary>
         /// <c>NetworkBehaviour</c> без <c>NetworkIdentity</c> на себе или у родителя Mirror
         /// не заспавнит и не синхронизирует; в редакторе это красная ошибка из
         /// <c>OnValidate</c> при каждой загрузке префаба. Так было с заброшенной заготовкой

@@ -685,13 +685,17 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         /// <summary>
-        /// У каждого аватара с humanoid-ногами есть Legs Animator (FImpossible) и мост
+        /// У каждого аватара есть humanoid-риг с ногами, Legs Animator (FImpossible) и мост
         /// <c>LegsAnimatorUxrBridge</c> на объекте рига с <c>Animator</c>, а все ссылки
         /// ведут в свой риг. Без него ботинки проваливаются в пол при приседании.
-        /// Настройки копируются с Heavy, и ссылки на кости при копировании не
-        /// переносятся (Heavy и MEF названы по-разному) — пустая кость ломает IK молча.
+        /// Настройки копируются с MEF, и ссылки на кости при копировании не
+        /// переносятся (скелеты названы по-разному) — пустая кость ломает IK молча.
         /// Сборки плагина и моста тестам недоступны — проверка по имени типа.
-        /// Cyborg без humanoid-рига — у него нет ног, требование не действует.
+        /// <para>
+        /// Исключения для аватара без ног больше нет: у киборга ноги робота Kyle
+        /// (<c>Tools/VR Battlegrounds/Avatars/Build Cyborg Legs</c>). Аватар без ног — дефект,
+        /// а не вариант: хитбоксов ног нет, труп не собрать, в зеркале тело висит в воздухе.
+        /// </para>
         /// </summary>
         [TestCaseSource(nameof(RegisteredAvatars))]
         public void Legs_Animator_настроен_на_своих_костях(string path)
@@ -699,8 +703,7 @@ namespace VrBattlegrounds.Tests.Prefabs
             UxrAvatar avatar = LoadAvatar(path);
             Animator animator = avatar.GetComponentsInChildren<Animator>(true)
                                       .FirstOrDefault(a => a.avatar != null && a.avatar.isHuman);
-            if (animator == null)
-                Assert.Pass($"{avatar.name}: нет humanoid-рига — ног нет, Legs Animator не нужен");
+            Assert.IsNotNull(animator, $"{avatar.name}: нет humanoid-рига (Animator с человеческим Avatar) — ног нет");
 
             Component legs   = FindByTypeName(animator.gameObject, "LegsAnimator");
             Component bridge = FindByTypeName(animator.gameObject, "LegsAnimatorUxrBridge");
@@ -729,12 +732,22 @@ namespace VrBattlegrounds.Tests.Prefabs
             if (so.FindProperty("Mecanim").objectReferenceValue != animator)
                 problems.Add("Mecanim не свой Animator");
 
-            string hipsName = animator.avatar.humanDescription.human.FirstOrDefault(h => h.humanName == "Hips").boneName;
-            Object hips = so.FindProperty("Hips").objectReferenceValue;
-            if (hips == null || hips.name != hipsName)
-                problems.Add($"Hips = '{(hips != null ? hips.name : "null")}', ожидается '{hipsName}'");
+            // Таз плагина — таз скелета UltimateXR (у MEF он же humanoid-Hips). Не humanoid-Hips вообще:
+            // у киборга кости таза и позвоночника — соседи под CyborgRig, humanoid-Hips там — сам
+            // CyborgRig, а его UltimateXR при старте делает корнем тела и переносит под Dummy Forward;
+            // мост вернул бы ему локальную позу из-под старого родителя — тело улетело бы.
+            Transform rigHips = avatar.AvatarRig.Hips;
+            var hips = so.FindProperty("Hips").objectReferenceValue as Transform;
+            if (hips == null || hips != rigHips)
+                problems.Add($"Hips = '{(hips != null ? hips.name : "null")}', ожидается таз UxrAvatarRig '{(rigHips != null ? rigHips.name : "null")}'");
 
             SerializedProperty legList = so.FindProperty("Legs");
+            for (int i = 0; i < legList.arraySize; i++)
+            {
+                var start = legList.GetArrayElementAtIndex(i).FindPropertyRelative("BoneStart").objectReferenceValue as Transform;
+                if (hips != null && start != null && !start.IsChildOf(hips))
+                    problems.Add($"Legs[{i}].BoneStart = '{start.name}' не под тазом '{hips.name}' — сдвиг таза не двигает ногу");
+            }
             if (legList.arraySize != 2)
                 problems.Add($"ног {legList.arraySize}, ожидается 2");
 
@@ -748,6 +761,26 @@ namespace VrBattlegrounds.Tests.Prefabs
                     else if (!t.IsChildOf(animator.transform))
                         problems.Add($"Legs[{i}].{bone} = '{t.name}' не из своего рига");
                 }
+            }
+
+            // Ноги Legs Animator — те же кости, что ноги скелета UltimateXR: по UxrAvatarRig строятся
+            // хитбоксы ног (HitboxBuilder), по humanoid-разметке — труп. Разошлись — пуля бьёт в
+            // капсулу, которая стоит не там, где нарисована нога.
+            UxrAvatarRig rig = avatar.AvatarRig;
+            UxrAvatarLeg[] rigLegs = { rig.LeftLeg, rig.RightLeg };
+            for (int i = 0; i < Mathf.Min(2, legList.arraySize); i++)
+            {
+                SerializedProperty leg = legList.GetArrayElementAtIndex(i);
+                Transform[] plugin =
+                {
+                    leg.FindPropertyRelative("BoneStart").objectReferenceValue as Transform,
+                    leg.FindPropertyRelative("BoneMid").objectReferenceValue as Transform,
+                    leg.FindPropertyRelative("BoneEnd").objectReferenceValue as Transform,
+                };
+                Transform[] uxr = { rigLegs[i].UpperLeg, rigLegs[i].LowerLeg, rigLegs[i].Foot };
+                if (!plugin.SequenceEqual(uxr))
+                    problems.Add($"Legs[{i}] ({string.Join("/", plugin.Select(b => b != null ? b.name : "null"))}) ≠ " +
+                                 $"ноге UxrAvatarRig ({string.Join("/", uxr.Select(b => b != null ? b.name : "null"))})");
             }
 
             // Высота лодыжки над подошвой — AnkleToHeel у каждой ноги (плагин ставит на пол пятку,

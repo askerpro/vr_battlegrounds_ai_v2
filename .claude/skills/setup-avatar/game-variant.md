@@ -134,11 +134,21 @@ HUD наследуется от `PlayerBase` (`Camera Controller/Camera/HUDConta
 создать его (записать любое значение в `NetworkIdentity._assetId` через `SerializedObject` и
 сохранить), затем — после **последнего** сохранения — `Tools/VR Battlegrounds/VersionControl/Normalize Network Asset Ids`.
 
-## 5. Legs Animator (обязателен для humanoid-рига)
+## 5. Legs Animator (обязателен для каждого аватара)
 
 Процедурные ноги против проваливания ботинок при приседании. Обязателен у каждого аватара
-с humanoid-`Animator`; исключение — Cyborg, у него нет ног. Проверка —
-`AvatarLoadoutTests.Legs_Animator_настроен_на_своих_костях`.
+реестра, исключений нет: у киборга ноги робота Kyle (`Tools/VR Battlegrounds/Avatars/Build Cyborg Legs`,
+`CyborgLegsBuilder` — образец пришивания чужих ног к модели без ног). Проверка —
+`AvatarLoadoutTests.Legs_Animator_настроен_на_своих_костях` и
+`PrefabCompositionTests.У_каждого_аватара_один_Legs_Animator_на_humanoid_риге`.
+
+Таз плагина (`Hips`) — **таз `UxrAvatarRig`**, а ноги плагина — те же кости, что ноги `UxrAvatarRig`
+(по ним строятся хитбоксы). Обычно это и humanoid-Hips; у киборга нет: его таз и позвоночник —
+соседи под `CyborgRig`, humanoid-Hips — `CyborgRig`, а его UltimateXR при старте переносит под
+`Dummy Forward` (корень тела `UxrBodyIK`) — мост вернул бы ему локальную позу из-под старого
+родителя. Если объект с `Animator` не на полу (у киборга `Cyborg` висит на 1.55 м), поле
+`baseTransform` плагина — корень аватара: плагин инициализируется до привязки моста и мерил бы
+таз от висящего объекта.
 
 Компоненты — на объекте рига с `Animator` (`<Model>_Rig`, не на корне варианта):
 - `LegsAnimator` (FImpossible Creations), **включён** в префабе. Плагин запоминает опорную
@@ -149,15 +159,15 @@ HUD наследуется от `PlayerBase` (`Camera Controller/Camera/HUDConta
   каждый кадр возвращает таз в позу префаба (вместо отсутствующей анимации) и сам бросает
   луч до пола под ногами. Устройство — XML-комментарий класса; тесты — `LegsGroundingTests`.
 
-**Настройки не выставлять руками, а копировать с Heavy** (эталон —
-`Heavy_Soldier_Base_Avatar` → `Heavy_Soldier_Rig_Mask_Winter`). Через `execute_code`, оба
+**Настройки не выставлять руками, а копировать с MEF** (эталон — `MEF_Base_Avatar` → `MEF_Rig`;
+в коде так делает `CyborgLegsBuilder.SetupLegsAnimator`). Через `execute_code`, оба
 префаба в `LoadPrefabContents`:
-1. `AddComponent` обоих типов на риг нового аватара, `EditorUtility.CopySerialized(heavy, new)`.
+1. `AddComponent` обоих типов на риг нового аватара, `EditorUtility.CopySerialized(mef, new)`.
    Сборки плагина и моста — `Assembly-CSharp`, из `execute_code` тип брать по имени через
    `GetComponents<Component>()`.
-2. Ссылки, указывающие в риг Heavy, переназначить на свои: `Mecanim`,
+2. Ссылки, указывающие в риг эталона, переназначить на свои: `Mecanim`,
    `CustomModules[i].Parent`, `Legs[i].Owner` → свой `Animator`/`LegsAnimator`; `Hips` →
-   humanoid `Hips`; `Legs[0]` = левая `UpperLeg/LowerLeg/Foot`, `Legs[1]` = правая
+   таз `UxrAvatarRig` (см. выше); `Legs[0]` = левая `UpperLeg/LowerLeg/Foot`, `Legs[1]` = правая
    (`BoneStart/BoneMid/BoneEnd`). Модули (`ModuleReference`) — ассеты, остаются общими.
    **Ловушка:** у Heavy в `LoadPrefabContents` `Animator.GetBoneTransform` возвращает `null`,
    поэтому соответствие «кость Heavy → кость нового» через него не строится, а ссылки на
@@ -168,8 +178,9 @@ HUD наследуется от `PlayerBase` (`Camera Controller/Camera/HUDConta
    от анимации. Сброс таза в мосте это страхует, но режим всё равно 2 — тест его требует.
 4. **`Legs[i].AnkleToHeel`/`AnkleToFeetEnd` своего рига** — `leg.RefreshLegAnkleToHeelAndFeet(корень
    варианта)` в позе префаба (кнопка обновления в инспекторе Legs Animator делает то же). Это
-   высота лодыжки над подошвой: плагин ставит на пол пятку, а не лодыжку. Не копировать с Heavy —
-   у другого рига другие оси стопы. У Heavy |AnkleToHeel| = 0.111, у MEF 0.135.
+   высота лодыжки над подошвой: плагин ставит на пол пятку, а не лодыжку. Не копировать с эталона —
+   у другого рига другие оси стопы. У Heavy |AnkleToHeel| = 0.111, у MEF 0.135, у киборга 0.112.
+   Если кости стопы не выровнены по корню — `RefreshLegAnkleToHeelAndFeetAndAxes` (и оси стопы).
 5. `LegsAnimatorUxrBridge.footHeightOffset = 0`. Прежние 0.15 при нулевом `AnkleToHeel` были
    костылём: плагин принимал поднятый пол за возвышение и поднимал под него всё тело — таз
    +15 см, голова в плечах.

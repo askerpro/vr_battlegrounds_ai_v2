@@ -67,6 +67,12 @@ description: Настроить новый аватар игрока из сто
 (`UxrAvatarRig.UpdateHandUsingDescriptor`), снять скриншоты кистей крупно
 (`manage_camera screenshot` с `view_position`/`view_target`, свет — временный Directional).
 Пальцы должны сгибаться без разрывов меша. Не видно — не идти дальше.
+Снимок через `PreviewRenderUtility` (как `AvatarIconRenderer`): скин там **не пересчитывается** после
+поворота костей — позу проверять запечённой копией (`SkinnedMeshRenderer.BakeMesh` → `MeshFilter`).
+
+**Модель без ног** (как киборг) — ноги пришиваются сборщиком по образцу `CyborgLegsBuilder`
+(кости донора в масштабе модели, меш донора запекается в пространство нового скина, humanoid —
+`AvatarBuilder`); Legs Animator обязателен у каждого аватара.
 
 ## 3. Игровой вариант (`Assets/Prefabs/Player/<Model>_Base_Avatar.prefab`)
 

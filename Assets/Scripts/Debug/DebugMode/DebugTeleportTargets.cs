@@ -24,7 +24,8 @@ namespace VrBattlegrounds.DevTools
 
     /// <summary>
     /// Точки телепорта режима отладки на загруженной карте: зоны спавна команд
-    /// (<see cref="TeamSpawnZone"/>) и места перед стенами арсенала (<see cref="ArsenalWallController"/>).
+    /// (<see cref="TeamSpawnZone"/>), места перед стенами арсенала (<see cref="ArsenalWallController"/>) и
+    /// точки, поставленные на карту (<see cref="DebugTeleportPoint"/>, стенды <c>TestMap3</c>).
     ///
     /// <para>
     /// Список строят обе стороны по одной сцене и одному правилу: клиент — для кнопок, сервер —
@@ -40,6 +41,7 @@ namespace VrBattlegrounds.DevTools
 
         public const string ZonePrefix = "zone:";
         public const string ArsenalPrefix = "arsenal:";
+        public const string PointPrefix = "point:";
 
         public static List<DebugTeleportTarget> Collect()
         {
@@ -61,6 +63,14 @@ namespace VrBattlegrounds.DevTools
                 Transform t = walls[i].transform;
                 ArsenalStandPoint(t.position, t.forward, out Vector3 position, out Quaternion rotation);
                 result.Add(new DebugTeleportTarget(ArsenalPrefix + i, "Арсенал " + (i + 1), position, rotation));
+            }
+
+            var points = new List<DebugTeleportPoint>(Object.FindObjectsByType<DebugTeleportPoint>());
+            points.Sort((a, b) => ComparePlace(a.transform.position, b.transform.position));
+            for (int i = 0; i < points.Count; i++)
+            {
+                Transform t = points[i].transform;
+                result.Add(new DebugTeleportTarget(PointPrefix + i, points[i].Label, t.position, t.rotation));
             }
 
             return result;

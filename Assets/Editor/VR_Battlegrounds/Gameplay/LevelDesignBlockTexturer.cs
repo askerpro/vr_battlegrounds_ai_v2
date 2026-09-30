@@ -56,7 +56,22 @@ namespace VrBattlegrounds.Editor
             ("LD_Beam_Low",      Shape.Cylinder, Round),
             ("LD_Can_Mid",       Shape.Cylinder, Round),
             ("LD_Tree_Tall",     Shape.Cylinder, Round),
+            // Перешагиваемый заборчик (LD-48) — синий, чтобы не путать с оранжевым Low, который перешагивать нельзя.
+            ("LD_Fence_Vault",   Shape.Cube,     Round),
+            // Проёмы (LD-18): подоконник, перемычки окна и двери — белые, как стена, в которую встают.
+            ("LD_Window_Sill",   Shape.Cube,     Walls),
+            ("LD_Window_Lintel", Shape.Cube,     Walls),
+            ("LD_Door_Lintel",   Shape.Cube,     Walls),
+            // Прострел (T-41, LD-28): Soft — гладкий серо-синий (тонкое, пробивается), Visual — гладкий синий (сетка).
+            ("LD_Wall_Tall_Soft",  Shape.Cube,   SoftCover),
+            ("LD_Wall_Mid_Soft",   Shape.Cube,   SoftCover),
+            ("LD_Net_Tall_Visual", Shape.Cube,   VisualCover),
+            // Плитка пола 10×10 м на слое Ground — стенды вне арены (TestMap3), по ней телепорт.
+            ("LD_Floor_Tile",      Shape.Cube,   Walls),
         };
+
+        private const string SoftCover   = "GreyBlue_Mat.mat";
+        private const string VisualCover = "Blue_Mat.mat";
 
         [MenuItem(MenuPath)]
         public static void Run()

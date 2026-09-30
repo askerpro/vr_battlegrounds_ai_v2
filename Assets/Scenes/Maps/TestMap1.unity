@@ -3821,7 +3821,6 @@ MonoBehaviour:
   _postUpdateMode: 2
   _usePrecaching: 1
   _precacheFrameCount: 50
-  prevIsEditorFocused: 1
 --- !u!4 &1055898664
 Transform:
   m_ObjectHideFlags: 0

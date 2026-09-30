@@ -139,6 +139,33 @@ namespace VrBattlegrounds.Tests.DevTools
             Assert.AreEqual(0, DebugTeleportTargets.ComparePlace(new Vector3(1f, 0f, 2f), new Vector3(1.0001f, 0f, 2.0001f)));
         }
 
+        [Test]
+        public void TeleportPoints_OnMap_BecomeTargets_InPlaceOrder()
+        {
+            var east = new GameObject("Стенд восток").AddComponent<DebugTeleportPoint>();
+            var west = new GameObject("Стенд запад").AddComponent<DebugTeleportPoint>();
+            try
+            {
+                east.transform.SetPositionAndRotation(new Vector3(20f, 0f, 5f), Quaternion.Euler(0f, 90f, 0f));
+                west.transform.position = new Vector3(-20f, 0f, 5f);
+                west.Label = "Окно";
+
+                List<DebugTeleportTarget> points = DebugTeleportTargets.Collect()
+                    .FindAll(t => t.Id.StartsWith(DebugTeleportTargets.PointPrefix));
+
+                Assert.AreEqual(2, points.Count);
+                Assert.AreEqual(DebugTeleportTargets.PointPrefix + "0", points[0].Id);
+                Assert.AreEqual("Окно", points[0].Label, "Порядок — по месту (сначала запад), подпись — из поля.");
+                Assert.AreEqual("Стенд восток", points[1].Label, "Без подписи — имя объекта.");
+                Assert.AreEqual(90f, points[1].Rotation.eulerAngles.y, 0.1f, "Смотрит по forward точки.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(east.gameObject);
+                Object.DestroyImmediate(west.gameObject);
+            }
+        }
+
         // ── Скин кукол на планшете ──────────────────────────────────────────
 
         [Test]

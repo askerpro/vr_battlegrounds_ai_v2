@@ -45,6 +45,10 @@ namespace UltimateXR.Mechanics.Weapons
         [SerializeField] private float          _decalFadeoutDuration          = 7.0f;
         [SerializeField] private LayerMask      _createDecalLayerMask          = -1;
 
+        // VR Battlegrounds patch (Патч 32): пробитие стен по Counter-Strike (пистолеты 1, винтовки и Deagle 2,
+        // снайперские 2.5). 0 — не пробивает ничего. У оружия проекта пишется из WeaponInfo (Apply Weapon Balance).
+        [SerializeField] [Min(0.0f)] private float _penetrationPower = 1.0f;
+
         #endregion
 
         #region Public Types & Data
@@ -132,6 +136,11 @@ namespace UltimateXR.Mechanics.Weapons
         ///     The layer mask used to determine which objects can be hit.
         /// </summary>
         public LayerMask CollisionLayerMask => _collisionLayerMask;
+
+        /// <summary>
+        ///     VR Battlegrounds patch (Патч 32): пробитие стен по Counter-Strike (penetration оружия).
+        /// </summary>
+        public float PenetrationPower => _penetrationPower;
 
         /// <summary>
         ///     An optional prefab to instantiate at the point of impact.

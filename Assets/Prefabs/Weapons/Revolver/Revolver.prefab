@@ -390,6 +390,7 @@ MonoBehaviour:
     _createDecalLayerMask:
       serializedVersion: 2
       m_Bits: 9
+    _penetrationPower: 2
 --- !u!114 &8355819265679454057
 MonoBehaviour:
   m_ObjectHideFlags: 0

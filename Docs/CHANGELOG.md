@@ -28,6 +28,28 @@
 `EditorFocusPauseTests`, `ManagerInitOrderTests`, `DebugAutoLoadMapTests`; Android-компиляция; Play через Offline —
 роль Host без окна, лобби, три бота.
 
+## [2026-09-30] - Прострел стен по формуле CS (T-41)
+
+### Добавлено
+
+- **Патч SDK 32** — `UxrWeaponManager.ProjectilePenetration`: пуля может пробить не-актора (`Penetrate`) или пролететь
+  (`PassThrough`) вместо остановки; хук получает текущий урон пули; урон и толчок по актору умножаются на накопленный
+  множитель; у типа выстрела — `PenetrationPower`.
+- **`WallPenetration`** — формула Counter-Strike: `(1/pm)·t²/24 + урон·0.16 + (3.75/пробитие)·3·(1/pm)`, толщина в
+  юнитах CS обратным лучом (до 90 юнитов), до 4 пробитий, остаток ≥ 1; декаль на выходе.
+- **`CoverSurface` / `CoverClassRules` / `Apply Cover Classes`** — класс укрытия Hard/Soft/Visual по суффиксу имени
+  (LD-31), без разметки — Hard; материал Soft — `PenetrationModifier` по CS (дерево 3).
+- **Пробитие оружия по CS2** в `WeaponInfo` → префабы через `Apply Weapon Balance`: пистолеты, SMG, Nova — 1;
+  M4A4, AK-47, Desert Eagle — 2; SSG 08 — 2.5.
+- Тесты `WallPenetrationTests` (числа формулы и настоящая пуля через `UpdateProjectiles`), `CoverClassTests`,
+  пробитие в `WeaponBalanceTests`.
+- Задача [T-43](tasks/T-43-cs2-hits-to-kill-parity.md): число попаданий до убийства как в CS2 (зоны, броня).
+
+### Не сделано
+
+- Константы CS2 не сверены замером (порт для CS2 даёт 0.18 вместо 0.16); таблица pm материалов CS2 не получена;
+  Soft-укрытий на картах нет.
+
 ## [2026-09-30] - Сетка на блоках LD_Alphabet
 
 ### Изменено

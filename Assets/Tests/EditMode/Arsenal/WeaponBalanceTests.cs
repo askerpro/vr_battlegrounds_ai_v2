@@ -21,16 +21,17 @@ namespace VrBattlegrounds.Tests.Arsenal
     {
         private const string WeaponsFolder = "Assets/Data/Weapons";
 
-        // Роль ствола в CS2: урон пули, спад на 500 юнитов, выстрелов в минуту, патронов, цена, дробинок.
+        // Роль ствола в CS2: урон пули, спад на 500 юнитов, пробитие стен (T-41), выстрелов в минуту, патронов, цена,
+        // дробинок. Пробитие CS2: пистолеты, SMG и дробовики — 1, Desert Eagle и винтовки — 2, снайперские — 2.5.
         private struct Cs2
         {
             public string Role;
-            public float Damage, RangeModifier;
+            public float Damage, RangeModifier, Penetration;
             public int FireRate, Magazine, Price, Pellets;
 
-            public Cs2(string role, float damage, float rangeModifier, int fireRate, int magazine, int price, int pellets = 1)
+            public Cs2(string role, float damage, float rangeModifier, float penetration, int fireRate, int magazine, int price, int pellets = 1)
             {
-                Role = role; Damage = damage; RangeModifier = rangeModifier; FireRate = fireRate;
+                Role = role; Damage = damage; RangeModifier = rangeModifier; Penetration = penetration; FireRate = fireRate;
                 Magazine = magazine; Price = price; Pellets = pellets;
             }
         }
@@ -38,21 +39,21 @@ namespace VrBattlegrounds.Tests.Arsenal
         // Ключ — имя ассета WeaponInfo. Новый ствол арсенала — строка сюда.
         private static readonly Dictionary<string, Cs2> Roster = new Dictionary<string, Cs2>
         {
-            { "Gun_Weapon",         new Cs2("P250", 38f, 0.90f, 400, 13, 300) },
-            { "M16_Weapon",         new Cs2("M4A4", 33f, 0.97f, 666, 30, 3100) },
+            { "Gun_Weapon",         new Cs2("P250", 38f, 0.90f, 1f, 400, 13, 300) },
+            { "M16_Weapon",         new Cs2("M4A4", 33f, 0.97f, 2f, 666, 30, 3100) },
             // Nova в CS2 — 26 × 9. В VR вся дробь вблизи попадает (разброса мыши нет), 234 — впятеро больше
             // нужного; урон дробинки снижен до 16 (144 всей дробью), см. ShotgunPelletsTests.
-            { "ShotgunReal_Weapon", new Cs2("Nova", 16f, 0.70f, 68, 8, 1050, 9) },
-            { "Scar_Weapon",        new Cs2("AK-47", 36f, 0.98f, 600, 30, 2700) },
-            { "Uzi_Weapon",         new Cs2("MAC-10", 29f, 0.80f, 800, 30, 1050) },
-            { "MP5K_Weapon",        new Cs2("MP9", 26f, 0.87f, 857, 30, 1250) },
-            { "PPK_Weapon",         new Cs2("Glock-18", 30f, 0.85f, 400, 20, 200) },
+            { "ShotgunReal_Weapon", new Cs2("Nova", 16f, 0.70f, 1f, 68, 8, 1050, 9) },
+            { "Scar_Weapon",        new Cs2("AK-47", 36f, 0.98f, 2f, 600, 30, 2700) },
+            { "Uzi_Weapon",         new Cs2("MAC-10", 29f, 0.80f, 1f, 800, 30, 1050) },
+            { "MP5K_Weapon",        new Cs2("MP9", 26f, 0.87f, 1f, 857, 30, 1250) },
+            { "PPK_Weapon",         new Cs2("Glock-18", 30f, 0.85f, 1f, 400, 20, 200) },
             // Тяжёлый пистолет — револьвер пака в роли Deagle (решение пользователя); барабан на 6, а не 7.
-            { "Revolver_Weapon",    new Cs2("Desert Eagle", 53f, 0.81f, 267, 6, 700) },
-            { "SniperRifle_Weapon", new Cs2("SSG 08", 88f, 0.98f, 48, 10, 1700) },
+            { "Revolver_Weapon",    new Cs2("Desert Eagle", 53f, 0.81f, 2f, 267, 6, 700) },
+            { "SniperRifle_Weapon", new Cs2("SSG 08", 88f, 0.98f, 2.5f, 48, 10, 1700) },
             // T-39: скаут из пака KINEMATION (Desert Tech SRS). Магазин 5, а не 10 как у SSG 08: модель магазина пака
             // на 5 патронов .338, а в VR смена магазина — движение руки, не штраф; запасных магазинов больше.
-            { "SRM12_Weapon",       new Cs2("SSG 08", 88f, 0.98f, 48, 5, 1700) },
+            { "SRM12_Weapon",       new Cs2("SSG 08", 88f, 0.98f, 2.5f, 48, 5, 1700) },
         };
 
         private static IEnumerable<WeaponInfo> Weapons()
@@ -97,6 +98,7 @@ namespace VrBattlegrounds.Tests.Arsenal
                 Cs2 cs = pair.Value;
                 if (!Mathf.Approximately(info.Damage, cs.Damage)) failures.Add($"{pair.Key} ({cs.Role}): урон {info.Damage}, в CS2 {cs.Damage}.");
                 if (!Mathf.Approximately(info.RangeModifier, cs.RangeModifier)) failures.Add($"{pair.Key} ({cs.Role}): спад {info.RangeModifier}, в CS2 {cs.RangeModifier}.");
+                if (!Mathf.Approximately(info.Penetration, cs.Penetration)) failures.Add($"{pair.Key} ({cs.Role}): пробитие {info.Penetration}, в CS2 {cs.Penetration}.");
                 if (info.FireRate != cs.FireRate) failures.Add($"{pair.Key} ({cs.Role}): темп {info.FireRate}, в CS2 {cs.FireRate}.");
                 if (info.MagazineSize != cs.Magazine) failures.Add($"{pair.Key} ({cs.Role}): магазин {info.MagazineSize}, в CS2 {cs.Magazine}.");
                 if (info.Price != cs.Price) failures.Add($"{pair.Key} ({cs.Role}): цена {info.Price}, в CS2 {cs.Price}.");
@@ -148,6 +150,8 @@ namespace VrBattlegrounds.Tests.Arsenal
                         failures.Add($"{name}: выстрел {index} — урон вблизи {shot.ProjectileDamageNear}, по балансу {info.Damage}.");
                     if (Mathf.Abs(shot.ProjectileDamageFar - far) > 0.05f)
                         failures.Add($"{name}: выстрел {index} — урон на {shot.ProjectileMaxDistance} м {shot.ProjectileDamageFar}, по балансу {far:F2}.");
+                    if (!Mathf.Approximately(shot.PenetrationPower, info.Penetration))
+                        failures.Add($"{name}: выстрел {index} — пробитие {shot.PenetrationPower}, по балансу {info.Penetration}.");
                 }
 
                 var recoil = info.WeaponPrefab.GetComponent<RecoilAccumulator>();

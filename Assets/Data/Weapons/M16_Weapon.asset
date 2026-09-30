@@ -21,6 +21,7 @@ MonoBehaviour:
   _price: 3100
   _damage: 33
   _rangeModifier: 0.97
+  _penetration: 2
   _fireRate: 666
   _magazineSize: 30
   _pellets: 1

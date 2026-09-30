@@ -1257,6 +1257,7 @@ MonoBehaviour:
     _createDecalLayerMask:
       serializedVersion: 2
       m_Bits: 1
+    _penetrationPower: 1
   - _shotSource: {fileID: 3717034638119016247}
     _tip: {fileID: 4031874419457025548}
     _useAutomaticProjectileTrajectory: 1
@@ -1282,6 +1283,7 @@ MonoBehaviour:
     _createDecalLayerMask:
       serializedVersion: 2
       m_Bits: 1
+    _penetrationPower: 1
 --- !u!114 &4657614889459820451
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -289,7 +289,21 @@ namespace UltimateXR.Mechanics.Weapons
                         {
                             UxrActor targetActor = raycastHit.collider.GetComponentInParent<UxrActor>();
 
-                            if (targetActor != null)
+                            // VR Battlegrounds patch (Патч 32, Docs/UltimateXR/sdk-patches.md): прострел стен — пробивает ли пуля не-актора.
+                            UxrPenetrationResult penetration = UxrPenetrationResult.Stop;
+
+                            if (targetActor == null && ProjectilePenetration != null)
+                            {
+                                UxrShotDescriptor shot          = _projectiles[i].ShotDescriptor;
+                                float             currentDamage = Mathf.Lerp(shot.ProjectileDamageNear, shot.ProjectileDamageFar, _projectiles[i].ProjectileDistanceTravelled / shot.ProjectileMaxDistance) * _projectiles[i].DamageMultiplier;
+                                penetration = ProjectilePenetration(raycastHit, projectileForward, shot, _projectiles[i].Penetrations, currentDamage, _projectiles[i].DamageMultiplier);
+                            }
+
+                            if (penetration.Kind == UxrPenetrationKind.PassThrough)
+                            {
+                                // VR Battlegrounds patch (Патч 32): препятствие только для глаз (Visual) — без эффектов попадания.
+                            }
+                            else if (targetActor != null)
                             {
                                 // Impact with an actor.
 
@@ -298,6 +312,10 @@ namespace UltimateXR.Mechanics.Weapons
 
                                 // VR Battlegrounds patch (Патч 30, Docs/UltimateXR/sdk-patches.md): the same force the projectile applies to rigidbodies.
                                 Vector3 impactForce = _projectiles[i].ProjectileSpeed * _projectiles[i].ShotDescriptor.ProjectileImpactForceMultiplier * projectileForward;
+
+                                // VR Battlegrounds patch (Патч 32): урон и толчок после пробитых препятствий.
+                                damage      *= _projectiles[i].DamageMultiplier;
+                                impactForce *= _projectiles[i].DamageMultiplier;
 
                                 if (_projectiles[i].ProjectileDeflectSource != null)
                                 {
@@ -342,11 +360,36 @@ namespace UltimateXR.Mechanics.Weapons
                                                                 _projectiles[i].ShotDescriptor.DecalFadeoutDuration);
 
                                 NonActorImpacted?.Invoke(_projectiles[i].ProjectileSource, new UxrNonDamagingImpactEventArgs(_projectiles[i].ProjectileSource.TryGetWeaponOwner(), _projectiles[i].ProjectileSource, raycastHit));
+
+                                if (penetration.Kind == UxrPenetrationKind.Penetrate)
+                                {
+                                    // VR Battlegrounds patch (Патч 32): та же дырка на выходной грани.
+                                    UxrImpactDecal.CheckCreateDecal(penetration.ExitHit,
+                                                                    _projectiles[i].ShotDescriptor.CreateDecalLayerMask,
+                                                                    overrideDecal != null ? overrideDecal.DecalToUse : _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecal,
+                                                                    _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecalLife,
+                                                                    _projectiles[i].ShotDescriptor.DecalFadeoutDuration);
+                                }
                             }
 
-                            Destroy(_projectiles[i].Projectile);
-                            _projectiles.RemoveAt(i);
-                            i--;
+                            if (penetration.Kind != UxrPenetrationKind.Stop)
+                            {
+                                // VR Battlegrounds patch (Патч 32): пуля летит дальше из-за препятствия.
+                                if (penetration.Kind == UxrPenetrationKind.Penetrate)
+                                {
+                                    _projectiles[i].Penetrations++;
+                                }
+
+                                _projectiles[i].DamageMultiplier              = penetration.DamageMultiplier;
+                                _projectiles[i].Projectile.transform.position = penetration.ExitPoint;
+                                _projectiles[i].ProjectileLastPosition        = penetration.ExitPoint;
+                            }
+                            else
+                            {
+                                Destroy(_projectiles[i].Projectile);
+                                _projectiles.RemoveAt(i);
+                                i--;
+                            }
                         }
                     }
                 }

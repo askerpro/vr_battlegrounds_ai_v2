@@ -49,6 +49,10 @@ namespace VrBattlegrounds.Arsenal
         [Tooltip("Спад урона как в CS2: множитель на каждые 500 юнитов (12,7 м). 1 — без спада.")]
         [SerializeField, Range(0.3f, 1f)] private float _rangeModifier = 0.85f;
 
+        [Tooltip("Пробитие стен как в CS2 (T-41): пистолеты, SMG, дробовики — 1; Desert Eagle, винтовки — 2; " +
+                 "снайперские — 2.5. Уходит в PenetrationPower каждого выстрела.")]
+        [SerializeField, Min(0f)] private float _penetration = 1f;
+
         [Tooltip("Темп, выстрелов в минуту.")]
         [SerializeField] private int _fireRate = 400;
 
@@ -99,6 +103,7 @@ namespace VrBattlegrounds.Arsenal
         public bool HasBalance => _damage > 0f;
         public float Damage => _damage;
         public float RangeModifier => _rangeModifier;
+        public float Penetration => _penetration;
         public int FireRate => _fireRate;
         public int MagazineSize => _magazineSize;
         public int Pellets => _pellets;

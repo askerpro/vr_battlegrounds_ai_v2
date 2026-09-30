@@ -1190,6 +1190,46 @@ IK тела и рук считается каждый кадр у всех ав�
 1. `UxrActor`: статическое свойство `ImpactDamageModifier`.
 2. `UxrActor.ReceiveImpact(…, Vector3 impactForce)` (патч 30): первой строкой `damage = ImpactDamageModifier(this, raycastHit, damage)`, если задано.
 
+## Патч 32: прострел стен — хук пробития препятствия
+
+**Дата:** 2026-09-30. **Задача:** [T-41](../tasks/T-41-wall-penetration.md).
+**Файлы:** `Mechanics/Weapons/UxrProjectilePenetration.cs` (новый: `UxrPenetrationKind`, `UxrPenetrationResult`,
+делегат `UxrProjectilePenetrationHandler`), `UxrWeaponManager.Custom.cs` (статическое `ProjectilePenetration`),
+`UxrWeaponManager.ProjectileInfo.cs` (`DamageMultiplier`, `Penetrations`), `UxrShotDescriptor.cs` (поле
+`_penetrationPower` = 1 — пробитие по CS, свойство `PenetrationPower`), `UxrWeaponManager.cs` (`UpdateProjectiles`).
+Метка `VR Battlegrounds patch (Патч 32)`. **Проверка:** `WallPenetrationTests`.
+
+### Проблема
+
+`UpdateProjectiles` уничтожает пулю на первом же не-акторе. Пробить тонкое укрытие или пролететь сквозь листву
+нельзя, а решать это вне SDK нечем: пуля живёт в приватном списке менеджера.
+
+### Решение
+
+Одна точка решения — `UxrWeaponManager.ProjectilePenetration`, её ставит игра (`WallPenetration.Install`, формула CS).
+Для не-актора SDK считает текущий урон пули (спад по дистанции × `DamageMultiplier`), передаёт его хуку и получает
+одно из трёх:
+
+- `Stop` — как в оригинале (хук не задан — тоже `Stop`);
+- `Penetrate` — эффекты попадания на входе как обычно, та же декаль на выходной грани (`ExitHit`), пуля переносится
+  в `ExitPoint`, `Penetrations++`, множитель урона — из результата;
+- `PassThrough` — без эффектов попадания и без события `NonActorImpacted`, пуля переносится в `ExitPoint`.
+
+При попадании в актора урон и толчок (патч 30) умножаются на `DamageMultiplier` пули. Сила пробития — поле типа
+выстрела `PenetrationPower`: у оружия проекта его пишет `Apply Weapon Balance` из `WeaponInfo`; у сэмплов SDK — 1.
+
+### Как повторить при обновлении SDK
+
+1. Перенести `UxrProjectilePenetration.cs`; в `UxrWeaponManager.Custom.cs` — свойство `ProjectilePenetration`.
+2. `ProjectileInfo`: свойства `DamageMultiplier` (= 1) и `Penetrations`.
+3. `UxrShotDescriptor`: поле `_penetrationPower` последним в списке полей и свойство `PenetrationPower`.
+4. `UpdateProjectiles`, ветка «не отражатель»: после поиска `UxrActor` посчитать `penetration` (для не-актора — хук
+   с текущим уроном `Lerp(Near, Far, пройдено/макс) × DamageMultiplier`, иначе `Stop`); `PassThrough` — пропустить обе ветки; в ветке актора умножить `damage` и `impactForce` на
+   `DamageMultiplier`; в ветке не-актора после `NonActorImpacted` для `Penetrate` — декаль на `ExitHit`; вместо
+   безусловного `Destroy` — при не-`Stop` перенести пулю (`transform.position` и `ProjectileLastPosition`) в
+   `ExitPoint`, иначе уничтожить как раньше.
+5. Прогнать `WallPenetrationTests`.
+
 ## Патч 33: пауза UltimateXR, пока редактор не в фокусе
 
 **Дата:** 2026-09-30. **Файлы:** `Core/UxrManager.cs` (`HandleEditorFocusChange`, начало `Update`, поля

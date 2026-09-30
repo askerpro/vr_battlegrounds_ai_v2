@@ -10,7 +10,7 @@ namespace VrBattlegrounds.Editor.Gameplay
 {
     /// <summary>
     /// Переносит баланс из <see cref="WeaponInfo" /> в префабы оружия и магазинов (T-38): урон вблизи и на
-    /// предельной дистанции каждого выстрела (основного и дробинок), частоту спуска, число дробинок, ёмкость и
+    /// предельной дистанции и пробитие стен (T-41) каждого выстрела (основного и дробинок), частоту спуска, число дробинок, ёмкость и
     /// заряд магазина, картину накопленной отдачи (<see cref="RecoilAccumulator" />, ставится, если нет). Руками эти поля в префабах не правятся — расхождение ловит <c>WeaponBalanceTests</c>.
     /// Оружие без баланса (<see cref="WeaponInfo.HasBalance" /> — сэмплы SDK) не трогается.
     /// </summary>
@@ -89,6 +89,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 dirty |= SetFloat(shot.FindPropertyRelative("_projectileDamageNear"), info.Damage);
                 dirty |= SetFloat(shot.FindPropertyRelative("_projectileDamageFar"),
                                   WeaponInfo.DamageAt(info.Damage, info.RangeModifier, maxDistance));
+                dirty |= SetFloat(shot.FindPropertyRelative("_penetrationPower"), info.Penetration);
             }
             sourceSo.ApplyModifiedPropertiesWithoutUndo();
 

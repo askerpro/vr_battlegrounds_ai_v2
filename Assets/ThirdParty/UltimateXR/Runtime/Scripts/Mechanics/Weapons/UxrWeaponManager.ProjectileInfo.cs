@@ -74,6 +74,16 @@ namespace UltimateXR.Mechanics.Weapons
             /// </summary>
             public bool FirstFrame { get; set; }
 
+            /// <summary>
+            ///     VR Battlegrounds patch (Патч 32): множитель урона после пробитых препятствий (1 — ничего не пробито).
+            /// </summary>
+            public float DamageMultiplier { get; set; } = 1.0f;
+
+            /// <summary>
+            ///     VR Battlegrounds patch (Патч 32): сколько препятствий пуля уже пробила.
+            /// </summary>
+            public int Penetrations { get; set; }
+
             #endregion
 
             #region Constructors & Finalizer

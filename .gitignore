@@ -129,3 +129,7 @@ InitTestScene*.unity*
 
 # Временные файлы агентов и стендов (снимки LegsComparisonRig и т.п.)
 /tmp/
+
+# Чекпоинты конвейера аватара MEF (Blender) — большие бинарники, воспроизводятся скриптами Tools/mef-avatar
+/Tools/mef-avatar/checkpoints/
+/Tools/mef-avatar/out/

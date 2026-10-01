@@ -488,6 +488,7 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 |---|---|
 | `CustomAvatarPipelineMenu` | Меню `Tools/VR Battlegrounds/Avatars/Custom Avatar Pipeline/*`: запускает подготовку выбранного FBX через Blender CLI и существующий UXR setup wizard. |
 | `BlenderScripts/*.py` | Подготовка FBX вне Unity: ампутация родных кистей, добавление wrist torsion bones, добавление `LeftEye` / `RightEye`. |
+| `Tools/mef-avatar/` | Конвейер Blender «оригинальный `MEF.fbx` → `MEF_Optimized.fbx`» (скрипты `01…10`, README с параметрами и граблями, решения о составе снаряжения). Чекпоинты `.blend` — локально в `checkpoints/`, результат — в `out/`, оба не в git. Восстановлен 2026-10-01 по транскрипту оптимизации 2026-09-28. |
 | `ApplyEyeMapping` | Прописывает `LeftEye` / `RightEye` в Humanoid mapping выбранного FBX после Blender-экспорта. |
 | `CoreAvatarSetup`, `HandsIntegrationSetup`, `ControllerAndCameraSetup`, `FinalizeRigMappingSetup`, `CreatePrefabSetup`, `HandPosesSetup` | Атомарные шаги `UXR Setup Wizard`, которые можно запускать вручную или через `CustomAvatarPipelineMenu`. |
 | `HandsPackPoseExtractor` | Снимает позу кисти UltimateXR с кадра клипа рук пака Hands Weapons Animations (риг CAT, 3 фаланги; префикс костей `Character001` или `CATRig` у револьвера). Поза нейтральна к скелету: SDK пересчитывает её под каждого аватара в рантайме. |

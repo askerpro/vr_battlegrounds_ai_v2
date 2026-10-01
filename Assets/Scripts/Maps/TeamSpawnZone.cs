@@ -351,8 +351,8 @@ namespace VrBattlegrounds.Maps
                     // when editing prefabs in Play Mode.
                     MaterialPropertyBlock block = new MaterialPropertyBlock();
                     meshRenderer.GetPropertyBlock(block);
-                    block.SetColor("_BaseColor", Team.color);
-                    block.SetColor("_Color", Team.color); // support both URP and standard shaders
+                    block.SetColor("_BaseColor", Team.mainColor);
+                    block.SetColor("_Color", Team.mainColor); // support both URP and standard shaders
                     block.SetFloat("_FloorY", _floorY);
                     meshRenderer.SetPropertyBlock(block);
                 }

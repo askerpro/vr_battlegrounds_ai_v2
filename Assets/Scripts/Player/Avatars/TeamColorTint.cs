@@ -5,7 +5,7 @@ using VrBattlegrounds.Core;
 namespace VrBattlegrounds.Player
 {
     /// <summary>
-    /// Красит тело аватара в цвет команды его игрока (<see cref="TeamData.color"/>) —
+    /// Красит тело аватара в цвет команды его игрока (<see cref="TeamData.mainColor"/>) —
     /// <c>MaterialPropertyBlock</c>, свойство <c>_BaseColor</c>, альфа задаётся здесь. Команда
     /// берётся из сессии и перекрашивается, если стала известна позже спавна (порядок доставки
     /// сессии и аватара не гарантирован). Сейчас стоит на призраке — аватаре выбывшего (T-35):
@@ -46,7 +46,7 @@ namespace VrBattlegrounds.Player
 
         private void Tint(TeamData team)
         {
-            Color color = team != null ? team.color : Color.white;
+            Color color = team != null ? team.mainColor : Color.white;
             color.a = _alpha;
 
             _block ??= new MaterialPropertyBlock();

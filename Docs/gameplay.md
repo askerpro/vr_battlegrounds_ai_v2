@@ -18,8 +18,11 @@
 
 | Команда (по умолчанию) | Цвет | Ассет |
 |---|---|---|
-| Военные | синий (`Optimized_MEF_Player_Blue`) | `CounterTerrorists_Team` |
-| Повстанцы | песочный (`Optimized_MEF_Player`) | `Terrorists_Team` |
+| Военные | одежда чёрная, экипировка Wolf Grey, каска и очки чёрные (`Optimized_MEF_Player_Black`) | `CounterTerrorists_Team` |
+| Повстанцы | песочный, родной цвет модели (`Optimized_MEF_Player`) | `Terrorists_Team` |
+
+Цвета формы задаются в ассете команды (`mainColor` — одежда, `additionalColor` — экипировка, `helmetColor` — каска
+и очки, у каждого сила) и применяются шейдером на лету — [`avatar-team-colors.md`](avatar-team-colors.md).
 
 К команде привязаны цвет, аватар, счёт и статистика серии. **Карта — две половины**:
 карта несимметрична, и после первой половины команды **меняются сторонами** — зонами спавна.

@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: OptimizedMEF
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Core.AvatarData
   displayName: US Marine (Opt)
-  icon: {fileID: 21300000, guid: 926d3823f70e3c34ca32654884e6caec, type: 3}
+  icon: {fileID: 21300000, guid: 5b9304ba0156348448a6a05ed5c16278, type: 3}
   prefab: {fileID: 3977005126615661593, guid: b8146035f3f436a4799882b3a0d1dd45, type: 3}

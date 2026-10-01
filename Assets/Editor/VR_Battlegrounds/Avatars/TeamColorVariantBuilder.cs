@@ -3,18 +3,22 @@ using UltimateXR.Avatar;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Editor.Avatars
 {
     /// <summary>
-    ///     Цветной вариант аватара по маске команды: <c>Optimized_MEF_Player</c> → <c>Optimized_MEF_Player_Blue</c>.
+    ///     Цветной вариант аватара: <c>Optimized_MEF_Player</c> → <c>Optimized_MEF_Player_Black</c>, и настройка
+    ///     шейдера формы у исходного аватара.
     ///
     ///     <para>
-    ///         <b>Цвет запекается в текстуру, а не красится шейдером.</b> У модели есть маска формы
-    ///         (<c>MEF_Optimized_TeamMask.png</c>: белое — ткань формы, чёрное — кожа, снаряжение, железо).
-    ///         URP Lit маску не читает, а свой шейдер на Quest — лишняя стоимость и риск сборки. Поэтому
-    ///         инструмент считает новую albedo: в маске — яркость исходной ткани, умноженная на цвет,
-    ///         вне маски — исходный пиксель. Материал — копия исходного с новой текстурой, тот же URP Lit.
+    ///         <b>Цвет красит шейдер, а не запечённая текстура</b> (с 2026-10-01). Тело рисуется шейдером
+    ///         <c>VR Battlegrounds/Team Uniform Lit</c> — копия URP Lit, которая по маске
+    ///         <c>MEF_Optimized_TeamMask.png</c> (R — одежда, G — экипировка, B — каска и очки; генерирует конвейер
+    ///         <c>Tools/mef-avatar</c>) перекрашивает albedo: яркость исходного пикселя, нормированная на медиану канала, ×
+    ///         цвет канала, плюс доля исходного пикселя (износ). Альфа цвета — сила перекраски, 0 — родной цвет.
+    ///         В игре цвета задаёт команда игрока (<see cref="TeamUniformColors" />: <c>TeamData.mainColor</c> /
+    ///         <c>additionalColor</c>); значения материала — цвета варианта вне игры (меню, иконка, труп).
     ///     </para>
     ///
     ///     <para>
@@ -29,29 +33,53 @@ namespace VrBattlegrounds.Editor.Avatars
         private const string Folder = "Assets/Models/Avatars/MEF_Optimized/";
         private const string SourcePrefab = "Assets/Prefabs/Player/Optimized_MEF_Player.prefab";
         private const string SourceMaterial = Folder + "MEF_Optimized.mat";
-        private const string SourceAlbedo = Folder + "MEF_Optimized_Albedo.png";
         private const string Mask = Folder + "MEF_Optimized_TeamMask.png";
         private const string SourceData = "Assets/Data/Player/Avatars/OptimizedMEF.asset";
 
-        /// <summary>Тёмно-синяя форма. Цвет — множитель яркости ткани, нормированной на её медиану.</summary>
-        public static readonly Color Blue = new Color(0.16f, 0.22f, 0.40f);
+        /// <summary>
+        ///     Медианы яркости (sRGB) исходного albedo по каналам маски — нормировка формулы перекраски.
+        ///     Пересчитывать при пересборке модели (<c>Tools/mef-avatar</c>); значения 2026-10-01.
+        /// </summary>
+        public static readonly Vector4 Medians = new Vector4(0.4414f, 0.3030f, 0.5362f, 0f);
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Team Color Variant/Build Optimized MEF Blue")]
-        private static void BuildBlue()
+        /// <summary>
+        ///     Чёрная (угольная) тактическая форма. Синий вариант (<c>0.16, 0.22, 0.40</c>) читался как рабочая
+        ///     спецовка; чистый чёрный ниже ~0.1 съедает складки — в шлеме остаётся только силуэт.
+        /// </summary>
+        public static readonly Color Black = new Color(0.13f, 0.13f, 0.13f, 1f);
+
+        /// <summary>
+        ///     Экипировка к чёрной форме — холодный серый (Wolf Grey). Выбран из Ranger Green / Wolf Grey / OD Green /
+        ///     Coyote: песочная экипировка на чёрном сливалась с командой Повстанцев.
+        /// </summary>
+        public static readonly Color WolfGrey = new Color(0.30f, 0.31f, 0.32f, 1f);
+
+        /// <summary>
+        ///     Доля исходного пикселя (приведённого к яркости цвета) поверх заливки: сохраняет потёртости и разнотон
+        ///     ткани. Без неё форма — ровная заливка одного оттенка.
+        /// </summary>
+        public const float Wear = 0.25f;
+
+        [MenuItem("Tools/VR Battlegrounds/Avatars/Team Color Variant/Build Optimized MEF Black")]
+        private static void BuildBlack()
         {
-            Build("Blue", "US Marine (синий)", Blue);
+            // Одежда чёрная, экипировка Wolf Grey, каска и очки чёрные — голова сразу отличает от песочных (2026-10-01).
+            Build("Black", "US Marine (чёрный)", Black, WolfGrey, Black);
         }
 
-        /// <summary>Строит (или перестраивает) текстуру, материал, вариант и AvatarData. Возвращает путь варианта.</summary>
-        public static string Build(string suffix, string displayName, Color color)
+        /// <summary>
+        ///     Переводит исходный аватар на шейдер формы и строит (или перестраивает) материал, вариант и AvatarData.
+        ///     <paramref name="main" /> — одежда, <paramref name="additional" /> — экипировка, <paramref name="helmet" /> —
+        ///     каска и очки; альфа — сила.
+        /// </summary>
+        public static string Build(string suffix, string displayName, Color main, Color additional, Color helmet)
         {
-            string albedoPath = Folder + $"MEF_Optimized_Albedo_{suffix}.png";
             string materialPath = Folder + $"MEF_Optimized_{suffix}.mat";
             string prefabPath = $"Assets/Prefabs/Player/Optimized_MEF_Player_{suffix}.prefab";
             string dataPath = $"Assets/Data/Player/Avatars/OptimizedMEF_{suffix}.asset";
 
-            Texture2D albedo = BakeAlbedo(albedoPath, color);
-            Material material = CreateMaterial(materialPath, albedo);
+            SetupSource();
+            Material material = CreateMaterial(materialPath, main, additional, helmet);
             GameObject variant = CreateVariant(prefabPath, material);
             CreateData(dataPath, displayName, variant);
 
@@ -60,97 +88,48 @@ namespace VrBattlegrounds.Editor.Avatars
             return prefabPath;
         }
 
-        // ── Текстура ────────────────────────────────────────────────────────
+        // ── Шейдер формы ────────────────────────────────────────────────────
 
-        private static Texture2D BakeAlbedo(string path, Color color)
+        /// <summary>
+        ///     Исходный материал — на шейдере формы без перекраски (родной цвет); исходный аватар — с
+        ///     <see cref="TeamUniformColors" /> (варианты наследуют).
+        /// </summary>
+        private static void SetupSource()
         {
-            Texture2D source = ReadPixels(SourceAlbedo, linear: false);
-            Texture2D mask = ReadPixels(Mask, linear: true);
+            var source = AssetDatabase.LoadAssetAtPath<Material>(SourceMaterial);
+            SetupShader(source, Color.clear, Color.clear, Color.clear);
 
-            Color[] pixels = source.GetPixels();
-            int width = source.width, height = source.height;
-            float[] weights = new float[pixels.Length];
-
-            // Маска меньше albedo — берём билинейно.
-            for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++)
+            GameObject root = PrefabUtility.LoadPrefabContents(SourcePrefab);
+            try
             {
-                int i = y * width + x;
-                weights[i] = mask.GetPixelBilinear((x + 0.5f) / width, (y + 0.5f) / height).r;
+                if (root.GetComponent<TeamUniformColors>() != null) return;
+                root.AddComponent<TeamUniformColors>();
+                PrefabUtility.SaveAsPrefabAsset(root, SourcePrefab);
+                GameLog.Debug.Info($"[TeamColorVariant] {SourcePrefab}: добавлен TeamUniformColors.");
             }
-
-            float median = MedianLuminance(pixels, weights);
-
-            for (int i = 0; i < pixels.Length; i++)
+            finally
             {
-                float w = weights[i];
-                if (w <= 0.001f) continue;
-
-                Color p = pixels[i];
-                float luminance = p.r * 0.299f + p.g * 0.587f + p.b * 0.114f;
-                float k = luminance / Mathf.Max(0.01f, median);
-                var tinted = new Color(Mathf.Clamp01(color.r * k), Mathf.Clamp01(color.g * k), Mathf.Clamp01(color.b * k), p.a);
-                pixels[i] = Color.Lerp(p, tinted, w);
+                PrefabUtility.UnloadPrefabContents(root);
             }
-
-            var result = new Texture2D(width, height, TextureFormat.RGBA32, false);
-            result.SetPixels(pixels);
-            File.WriteAllBytes(path, result.EncodeToPNG());
-
-            Object.DestroyImmediate(source);
-            Object.DestroyImmediate(mask);
-            Object.DestroyImmediate(result);
-
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
-            CopyImportSettings(SourceAlbedo, path);
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
-        /// <summary>Пиксели файла как есть, мимо импорта: исходные текстуры не должны становиться Read/Write.</summary>
-        private static Texture2D ReadPixels(string path, bool linear)
+        /// <summary>Шейдер формы (свойства URP Lit сохраняются — имена те же), маска, медианы и цвета каналов.</summary>
+        private static void SetupShader(Material material, Color main, Color additional, Color helmet)
         {
-            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false, linear);
-            texture.LoadImage(File.ReadAllBytes(path));
-            return texture;
-        }
-
-        private static float MedianLuminance(Color[] pixels, float[] weights)
-        {
-            var values = new System.Collections.Generic.List<float>();
-            for (int i = 0; i < pixels.Length; i += 7)
-            {
-                if (weights[i] < 0.5f) continue;
-                Color p = pixels[i];
-                values.Add(p.r * 0.299f + p.g * 0.587f + p.b * 0.114f);
-            }
-
-            if (values.Count == 0) return 0.35f;
-            values.Sort();
-            return values[values.Count / 2];
-        }
-
-        private static void CopyImportSettings(string fromPath, string toPath)
-        {
-            var from = (TextureImporter)AssetImporter.GetAtPath(fromPath);
-            var to = (TextureImporter)AssetImporter.GetAtPath(toPath);
-
-            var settings = new TextureImporterSettings();
-            from.ReadTextureSettings(settings);
-            to.SetTextureSettings(settings);
-
-            foreach (string platform in new[] { "Standalone", "Android" })
-            {
-                TextureImporterPlatformSettings platformSettings = from.GetPlatformTextureSettings(platform);
-                platformSettings.name = platform;
-                to.SetPlatformTextureSettings(platformSettings);
-            }
-
-            to.SaveAndReimport();
+            Shader shader = Shader.Find(TeamUniformColors.ShaderName);
+            if (material.shader != shader) material.shader = shader;
+            material.SetTexture("_TeamMask", AssetDatabase.LoadAssetAtPath<Texture2D>(Mask));
+            material.SetVector("_TeamMedians", Medians);
+            material.SetFloat("_TeamWear", Wear);
+            material.SetColor("_TeamMainColor", main);
+            material.SetColor("_TeamAdditionalColor", additional);
+            material.SetColor("_TeamHelmetColor", helmet);
+            EditorUtility.SetDirty(material);
         }
 
         // ── Материал ────────────────────────────────────────────────────────
 
-        private static Material CreateMaterial(string path, Texture2D albedo)
+        private static Material CreateMaterial(string path, Color main, Color additional, Color helmet)
         {
             var source = AssetDatabase.LoadAssetAtPath<Material>(SourceMaterial);
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -162,12 +141,11 @@ namespace VrBattlegrounds.Editor.Avatars
             }
             else
             {
+                material.shader = source.shader;
                 material.CopyPropertiesFromMaterial(source);
             }
 
-            if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", albedo);
-            if (material.HasProperty("_MainTex")) material.SetTexture("_MainTex", albedo);
-            EditorUtility.SetDirty(material);
+            SetupShader(material, main, additional, helmet);
             return material;
         }
 
@@ -239,7 +217,8 @@ namespace VrBattlegrounds.Editor.Avatars
 
             var source = AssetDatabase.LoadAssetAtPath<AvatarData>(SourceData);
             data.displayName = displayName;
-            data.icon = source != null ? source.icon : null;
+            // Иконку исходника — только новому варианту: при перестройке своя иконка варианта не затирается.
+            if (data.icon == null) data.icon = source != null ? source.icon : null;
             data.prefab = prefab;
             EditorUtility.SetDirty(data);
         }

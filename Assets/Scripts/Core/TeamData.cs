@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace VrBattlegrounds
 {
@@ -25,8 +26,26 @@ namespace VrBattlegrounds
         [Tooltip("Иконка команды для UI.")]
         public Sprite icon;
 
-        [Tooltip("Цвет команды для выделения игроков и UI.")]
-        public Color color = Color.white;
+        [Tooltip("Основной цвет команды: подсветка зон спавна, призрак выбывшего (альфа — их прозрачность) и одежда " +
+                 "формы (сила — mainUniformStrength).")]
+        [FormerlySerializedAs("color")]
+        public Color mainColor = Color.white;
+
+        [Tooltip("Дополнительный цвет команды: экипировка формы — бронежилет, сумки, подсумки, ремни, наколенник.")]
+        public Color additionalColor = Color.gray;
+
+        [Tooltip("Сила перекраски одежды в mainColor: 0 — родной цвет модели, 1 — полный тон. " +
+                 "Шейдер Team Uniform Lit, меняется на лету (TeamUniformColors).")]
+        [Range(0f, 1f)] public float mainUniformStrength;
+
+        [Tooltip("Сила перекраски экипировки в additionalColor: 0 — родной цвет модели, 1 — полный тон.")]
+        [Range(0f, 1f)] public float additionalUniformStrength;
+
+        [Tooltip("Цвет головы: каска и очки. Голова — первый признак «свой/чужой», поэтому цвет отдельный.")]
+        public Color helmetColor = Color.gray;
+
+        [Tooltip("Сила перекраски каски и очков в helmetColor: 0 — родной цвет модели, 1 — полный тон.")]
+        [Range(0f, 1f)] public float helmetUniformStrength;
 
         [Tooltip("Список скинов (аватаров), доступных для этой команды")]
         public List<Core.AvatarData> avatars = new List<Core.AvatarData>();

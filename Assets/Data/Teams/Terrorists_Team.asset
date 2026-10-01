@@ -15,6 +15,11 @@ MonoBehaviour:
   teamIndex: 2
   displayName: "\u041F\u043E\u0432\u0441\u0442\u0430\u043D\u0446\u044B"
   icon: {fileID: 21300000, guid: 3081c0a74f4230c4db9f5a4c4c736ec4, type: 3}
-  color: {r: 0.78, g: 0.66, b: 0.42, a: 0.21176471}
+  mainColor: {r: 0.78, g: 0.66, b: 0.42, a: 0.21176471}
+  additionalColor: {r: 0.78, g: 0.66, b: 0.42, a: 1}
+  mainUniformStrength: 0
+  additionalUniformStrength: 0
+  helmetColor: {r: 0.78, g: 0.66, b: 0.42, a: 1}
+  helmetUniformStrength: 0
   avatars:
   - {fileID: 11400000, guid: 294e4428ec16fb84d9dd876e1cbb523a, type: 2}

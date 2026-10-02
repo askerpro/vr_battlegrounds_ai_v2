@@ -61,7 +61,7 @@ using (var pack = new VrBattlegrounds.Editor.Gameplay.HandsPackWeapon("Hands_Sho
 Место детали = `кость × bindpose` её основной кости (`HandsPackWeapon.PartInBody`). Трансформ
 самого рендерера **не** совпадает с местом меша (расхождение до 1.5 в матрице) — если ставить
 `MeshFilter` по нему, деталь съезжает. Детали ставятся с масштабом 1 (единицы меша), реальный
-размер задаёт **масштаб корня** (`WeaponScaleTests`, правило CLAUDE.md).
+размер задаёт **масштаб корня** (`WeaponScaleTests`, правило AGENTS.md).
 
 Проверено: `BuildParts` воспроизводит ручную расстановку `Gun_real` с точностью 0.00 мм.
 
@@ -136,7 +136,7 @@ VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.Build(recipe);
 
 Повторная сборка перезаписывает префабы на месте — GUID и ссылки на них сохраняются.
 После сборки — `Tools/VR Battlegrounds/Gameplay/Apply Game Tags` (корень → `Weapon`,
-магазин → `Magazine`; сборщик теги не ставит, правило CLAUDE.md), `Tools/VR Battlegrounds/VersionControl/Persist
+магазин → `Magazine`; сборщик теги не ставит, правило AGENTS.md), `Tools/VR Battlegrounds/VersionControl/Persist
 UltimateXR Unique Ids` (иначе красный `UxrUniqueIdOnDiskTests`) и `Normalize Network Asset Ids`.
 
 Тег магазина — свой у каждого оружия (`MagScar`, `MagPPK`…): по тегу якорь оружия принимает магазин, а
@@ -161,6 +161,12 @@ UltimateXR Unique Ids` (иначе красный `UxrUniqueIdOnDiskTests`) и `
 - клипа прицеливания нет, оружие на кости `ik_hand_gun` с поворотом `weaponRotationOffset` (90, 0, 0);
 - у части стволов спуск в клипах неподвижен (угол 0), рукоятка взведения MKR9 тоже — затвор берётся за `Bolt`;
 - материалы пака (HDRP) при рендере и загрузке пересохраняются — откатывать `git checkout`.
+- обвесы (глушитель, коллиматор, рукоять) — не кости, а отдельные `MeshRenderer` префаба пака: берутся по имени
+  (`KinemationWeaponRecipe.Attachments`), только нужные; с глушителем дуло — его срез (`HandsPackWeaponRecipe.MuzzlePart`),
+  иначе снаряд и `BarrelObstruction` начинаются внутри глушителя (образец — `TR15`, тест
+  `KinemationWeaponTests.Обвесы_на_месте_и_дуло_на_срезе_глушителя`);
+- звук выстрела без своего клипа уезжает от донора — у стволов реестра общего выстрела быть не должно
+  (`WeaponShotSoundTests`); новый ствол реестра — строка роли в `WeaponBalanceTests.Roster` (тест это требует).
 
 Модель не из пака Hands и не из KINEMATION — шаги 2–3 делаются вручную, остальное то же; тест `HandsPackWeaponTests`
 к такому оружию не применим. Подсветку и тогда ставить через `WeaponGrabHighlight.Assign` — по

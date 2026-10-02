@@ -31,7 +31,7 @@ description: Добавить новую фичу по архитектуре п
 | Логирование | Только канал категории: `GameLog.Match.Info(...)`, `GameLog.UI.Warning(...)` |
 | Editor-утилита | Только `Assets/Editor/VR_Battlegrounds/<категория>/` |
 
-Жёсткие правила и почему они жёсткие — в `CLAUDE.md`.
+Жёсткие правила и почему они жёсткие — в `AGENTS.md`.
 
 ## 4. Соблюдай Single Responsibility
 

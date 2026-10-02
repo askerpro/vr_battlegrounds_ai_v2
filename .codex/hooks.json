@@ -1,0 +1,20 @@
+{
+  "description": "Контекст безопасного редактирования файлов и работы терминала",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "^(startup|resume|clear|compact)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/session_context.py\"",
+            "commandWindows": "powershell.exe -NoProfile -NonInteractive -Command \"& python -X utf8 (Join-Path (git --no-pager rev-parse --show-toplevel) '.codex/hooks/session_context.py')\"",
+            "timeout": 10,
+            "statusMessage": "Загрузка правил редактирования и терминала",
+            "additionalContextLimit": 6000
+          }
+        ]
+      }
+    ]
+  }
+}

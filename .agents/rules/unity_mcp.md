@@ -79,7 +79,7 @@ Select-String "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Pattern 'MCP-FOR-UNIT
   `include_image=true` и `capture_source="scene_view"`, поллинг `run_tests` → `get_test_job`,
   восстановление после `stale_file` через `get_sha`.
 - Чего он не знает: правил проекта. `GameLog`, `MapLoader.LoadMap`, запрет `Editor/` внутри
-  `Assets/Scripts/` — всё это только в `CLAUDE.md`, скилл её не заменяет.
+  `Assets/Scripts/` — всё это только в `AGENTS.md`, скилл её не заменяет.
 - ⚠️ Не выполнять его совет про `manage_editor(action="deploy_package"/"restore_package")` —
   это перезапишет установленный пакет MCP вместе с любыми локальными патчами.
 - В поставке битые ссылки на `references/resources-reference.md` и

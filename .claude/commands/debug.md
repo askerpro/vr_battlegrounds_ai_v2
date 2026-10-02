@@ -30,7 +30,7 @@ description: Расследовать баг по протоколу проек�
 
 ## 5. Только теперь — код
 
-`Grep` по `Assets/Scripts` (не по всему репозиторию, см. `CLAUDE.md`). Смотри в порядке
+`Grep` по `Assets/Scripts` (не по всему репозиторию, см. `AGENTS.md`). Смотри в порядке
 вероятности: `Awake` / `Start` / `OnEnable`, подписки на события, порядок инициализации.
 
 Для UltimateXR читай исходники в `Assets/ThirdParty/UltimateXR/Runtime/Scripts/` — они

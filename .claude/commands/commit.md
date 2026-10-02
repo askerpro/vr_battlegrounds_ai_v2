@@ -42,7 +42,7 @@ git --no-pager diff
 | Баг или неочевидное поведение SDK | `Docs/UltimateXR/known-issues.md` |
 | Правки исходников UltimateXR | `Docs/UltimateXR/sdk-patches.md` |
 | Архитектура, зависимости | `Docs/UltimateXR/architecture.md` |
-| Новые правила агента | `CLAUDE.md` или `.agents/rules/` |
+| Новые правила агента | `AGENTS.md` или `.agents/rules/` |
 
 ## 5. Закоммить
 

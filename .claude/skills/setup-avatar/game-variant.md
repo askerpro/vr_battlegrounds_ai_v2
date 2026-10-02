@@ -118,8 +118,9 @@ Pocket Zones To Prefab` — после выхода из Play Mode значен�
 из них, настроить так же; источник — не на объекте `Activate On Placed`
 (`AvatarLoadoutTests.Карманы_звучат_при_укладке_и_доставании`).
 
-HUD наследуется от `PlayerBase` (`Camera Controller/Camera/HUDContainer`). Если его нет —
-`Tools/VR Battlegrounds/Avatars/Inject HUD to Selected Avatar`.
+HUD игрока — наручные часы `WristWatch_HUD` (T-46), HUD перед глазами больше нет. Нет часов —
+`Tools/VR Battlegrounds/Avatars/Install Wrist Watch (registered avatars)` (поза переносится с эталона, проверить в сцене);
+тесты — `RegisteredAvatarBodyTests.На_руке_часы_с_табло` / `На_часах_деньги_и_нотификации`.
 
 Проверить: внутри аватара нет дублей `UniqueId` у UXR-компонентов. Хитбоксы — сборщиком после регистрации
 (`Build Hitboxes`), другие сплошные коллайдеры на аватаре не нужны (коробка камеры — trigger).

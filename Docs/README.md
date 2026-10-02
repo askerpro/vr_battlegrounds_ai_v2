@@ -35,6 +35,7 @@
 | `magazine-pocket.md` | Механика "умного магазина" (Smart Magazine Pocket) |
 | `kinemation-pack-review.md` | Разведка пака KINEMATION Tactical Shooter: состав, вес под Quest, применимость маршрута `/add-weapon`, какие стволы брать |
 | `level-design.md` | Проектирование карт и арен; стенд блоков `TestMap3` |
+| `asset-pack-inventory.md` | Инвентаризация 13 скачанных паков окружения без импорта; `Tools/agents/inspect_asset_packages.py`, выбор стратегии подбора декоративных замен |
 | `level-design-principles.md` | Правила сбалансированной карты `LD-01…LD-48` (CS, VALORANT, пейнтбол → наша арена): разнообразие контактов за обе стороны, окна и щели, перешагиваемые преграды, прострел стен, граница арены и открытый мир за ней, чек-лист ревью |
 | `Arsenal/` | Стена арсенала: [дизайн](Arsenal/ArsenalWall_Design_RU.md), [код](Arsenal/Arsenal_Code_Architecture_RU.md) |
 | `LegsAnimator_UI_Reference_RU.md` | Справочник по параметрам Legs Animator |

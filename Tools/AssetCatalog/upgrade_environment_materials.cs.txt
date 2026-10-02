@@ -1,0 +1,39 @@
+// Тело метода для Unity MCP execute_code; запускать после импорта под замком.
+// Штатные конвертеры Unity применяются только к новым материалам манифеста.
+var plan = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("Temp/LevelDesign/EnvironmentImport/import-plan.json"));
+var policy = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("Tools/AssetCatalog/catalog-policy.json"));
+var upgraders = UnityEditor.Rendering.MaterialUpgrader.FetchAllUpgradersForPipeline(typeof(UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset));
+var converted = new System.Collections.Generic.List<string>();
+var unsupported = new System.Collections.Generic.List<string>();
+foreach (var item in plan["files"])
+{
+    string path = (string)item["path"];
+    bool excluded = false;
+    foreach (var root in policy["excludedAssetRoots"])
+        if (path.StartsWith((string)root, System.StringComparison.OrdinalIgnoreCase)) excluded = true;
+    if (excluded) continue;
+    if (!path.EndsWith(".mat", System.StringComparison.OrdinalIgnoreCase)) continue;
+    var material = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>(path);
+    if (material == null || material.shader == null)
+    {
+        unsupported.Add(path + " / <missing>");
+        continue;
+    }
+    string oldShader = material.shader.name;
+    UnityEditor.Rendering.MaterialUpgrader selected = null;
+    foreach (var upgrader in upgraders)
+        if (upgrader.OldShaderPath == oldShader && (selected == null || upgrader.priority > selected.priority)) selected = upgrader;
+    if (selected == null) continue;
+    if (UnityEngine.Shader.Find(selected.NewShaderPath) == null)
+    {
+        unsupported.Add(path + " / " + selected.NewShaderPath);
+        continue;
+    }
+    selected.Upgrade(material, UnityEditor.Rendering.MaterialUpgrader.UpgradeFlags.None);
+    UnityEditor.EditorUtility.SetDirty(material);
+    converted.Add(path + " / " + oldShader + " -> " + material.shader.name);
+}
+UnityEditor.AssetDatabase.SaveAssets();
+var report = new { count = converted.Count, converted, unsupported };
+System.IO.File.WriteAllText("Temp/LevelDesign/EnvironmentImport/material-upgrade.json", Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented));
+return new { count = converted.Count, unsupported };

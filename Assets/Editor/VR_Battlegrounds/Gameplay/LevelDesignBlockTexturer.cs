@@ -48,9 +48,14 @@ namespace VrBattlegrounds.Editor
         {
             ("LD_Wall_Tall",     Shape.Cube,     Walls),
             ("LD_Wall_Mid",      Shape.Cube,     Walls),
+            ("LD_Fence_Mid_Hard", Shape.Cube,     Walls),
+            ("LD_Fence_Mid_Soft", Shape.Cube,     SoftCover),
+            ("LD_PalletFence_Set_Soft", Shape.Cube, SoftCover),
+            ("LD_PalletFence_Single_Soft", Shape.Cube, SoftCover),
             ("LD_Block_Low",     Shape.Cube,     Covers),
             ("LD_Snake_Segment", Shape.Cube,     Covers),
             ("LD_Crate",         Shape.Cube,     Covers),
+            ("LD_Crate_Soft",    Shape.Cube,     SoftCover),
             ("LD_Dorito_Mid",    Shape.Dorito,   Covers),
             ("LD_PillarBox",     Shape.Cube,     Round),
             ("LD_Beam_Low",      Shape.Cylinder, Round),
@@ -76,11 +81,18 @@ namespace VrBattlegrounds.Editor
         [MenuItem(MenuPath)]
         public static void Run()
         {
+            Run(null);
+        }
+
+        /// <summary>Обновляет один выбранный блок или весь алфавит.</summary>
+        public static void Run(string onlyBlock)
+        {
             if (!AssetDatabase.IsValidFolder(MeshFolder.TrimEnd('/')))
                 AssetDatabase.CreateFolder("Assets/Art/Models", "LevelDesign");
 
             foreach (var (name, shape, materialFile) in Blocks)
             {
+                if (onlyBlock != null && name != onlyBlock) continue;
                 string prefabPath = BlocksFolder + name + ".prefab";
                 var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialFolder + materialFile);
                 if (material == null)

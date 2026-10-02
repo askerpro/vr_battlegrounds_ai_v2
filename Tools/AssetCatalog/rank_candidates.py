@@ -8,6 +8,16 @@ import math
 import pathlib
 import re
 
+POLICY = json.loads(pathlib.Path(__file__).with_name("catalog-policy.json").read_text(encoding="utf-8"))
+
+
+def required_cover_class(name):
+    normalized = re.sub(r"[\s-]+", "_", name.lower())
+    for rule in POLICY.get("materialMatchingRules", []):
+        if any(term in normalized for term in rule["nameContains"]):
+            return rule["requiredCoverClass"]
+    return None
+
 
 def size_of(entry):
     return [entry["size"][axis] for axis in "xyz"]
@@ -17,8 +27,11 @@ def mask_at(mask, x, y):
     return mask[max(0, min(15, y)) * 16 + max(0, min(15, x))]
 
 
-def recipe_masks(model, turn, repeats):
+def recipe_masks(model, turn, repeats, pitch=0):
     original = model["masks"]
+    if pitch == 90:
+        original = ["".join(mask_at(original[2], x, 15-y) for y in range(16) for x in range(16)),
+                    "".join(mask_at(original[1], 15-y, x) for y in range(16) for x in range(16)), original[0]]
     masks = original if not turn else [original[1], original[0],
         "".join(mask_at(original[2], y, 15 - x) for y in range(16) for x in range(16))]
     # Силуэт бесшовного повторения одинаковых деталей, без предположения о защите.
@@ -41,7 +54,12 @@ def rank(catalog):
             continue
         candidates = []
         for model in catalog["models"]:
+            if any(model["path"].startswith(root) for root in POLICY.get("excludedAssetRoots", [])):
+                continue
             if model.get("error") or model.get("skipped") or min(size_of(model)) <= 0:
+                continue
+            required = required_cover_class(model["name"] + " " + model["path"])
+            if required and not block["name"].endswith("_" + required):
                 continue
             if not suitable_category(block["name"], model["name"]):
                 continue
@@ -74,7 +92,9 @@ def rank(catalog):
                 flags = ["Не проверены материал защиты и соответствие коллайдеров"]
                 if scale > 1.2:
                     flags.append("Увеличение исходной модели более 20%; проверить правдоподобие масштаба")
-                if any(word in model["name"].lower() for word in ["wooden", "barrel", "bags", "door", "electric"]):
+                if required:
+                    flags.append("Обязательный класс защиты: " + required + "; проверка коллайдеров ещё требуется")
+                elif any(word in model["name"].lower() for word in ["wooden", "barrel", "bags", "door", "electric"]):
                     flags.append("Внешний материал может не соответствовать Hard; требуется решение по классу защиты")
                 flags.append("Маски учитывают треугольники, но не прозрачность текстур")
                 if count > 1:
@@ -109,12 +129,76 @@ def rank(catalog):
                 break
         results.append({"block": block["name"], "size": target, "preview": block["preview"],
                         "candidates": unique})
+    add_curated(catalog, results)
+    # Ручные метки хранятся отдельно: новый геометрический рейтинг их не стирает.
+    marked_path = pathlib.Path(__file__).resolve().parents[2] / "Assets/Editor/VR_Battlegrounds/LevelDesign/Data/MarkedCandidateRecipes.json"
+    if marked_path.exists():
+        for marked in json.loads(marked_path.read_text(encoding="utf-8"))["groups"]:
+            group = next((g for g in results if g["block"] == marked["block"]), None)
+            if group is None:
+                first = marked["candidates"][0] if marked["candidates"] else None
+                if first is None:
+                    continue
+                group = {"block": marked["block"], "size": first["target_size"], "preview": "", "candidates": []}
+                results.append(group)
+            group["candidates"].extend(marked["candidates"])
     return results
+
+
+def add_curated(catalog, groups):
+    """Выбор пользователя не теряется из-за ограничений автоматического рейтинга."""
+    for rule in POLICY.get("curatedCandidates", []):
+        group = next((g for g in groups if g["block"] == rule["block"]), None)
+        block = next((b for b in catalog["blocks"] if b["name"] == rule["block"]), None)
+        model = next((m for m in catalog["models"] if m["name"] == rule["model"]), None)
+        if not all([group, block, model]):
+            continue
+        required = required_cover_class(model["name"] + " " + model["path"])
+        if required and not block["name"].endswith("_" + required):
+            raise ValueError("Выбранный материал требует класса " + required)
+        target, source = size_of(block), size_of(model)
+        pitch = rule.get("rotationX", 0)
+        if pitch == 90:
+            source = [source[0], source[2], source[1]]
+        rotation = rule.get("rotationY", 0)
+        if rotation == 90:
+            source = [source[2], source[1], source[0]]
+        for fitted in ([False, True] if rule.get("showOriginal") else [rule.get("fitAxes", False)]):
+            scales = [t / s for t, s in zip(target, source)] if fitted else [1.0] * 3
+            if rule.get("uniformHeight"):
+                scales = [target[1] / source[1]] * 3
+            actual = [s * k for s, k in zip(source, scales)]
+            prepared = rule.get("preparedPrefab")
+            if prepared:
+                scales = [1.0] * 3
+                actual = rule.get("preparedSize", target)
+            warnings = ["Модель выбрана пользователем; коллайдеры и форма замены требуют визуальной проверки"]
+            warnings.extend(rule.get("warnings", []))
+            if fitted:
+                warnings.append("Неравномерная подгонка XYZ: " + str([round(k, 3) for k in scales]))
+                if min(scales) < 0.5:
+                    warnings.append("Сильное сжатие: проверить форму основания; предпочтительна правка меша")
+            elif rule["block"] == "LD_Fence_Vault":
+                warnings.append("Исходник не соответствует пределам перешагивания по высоте и толщине")
+            candidate = dict(block=rule["block"], model=model["name"], path=prepared or model["path"],
+                source_path=model["path"], base_height=rule.get("baseHeight", 0),
+                preview=model["preview"], rotation_x=0 if prepared else pitch, rotation_y=0 if prepared else rotation, repeat_xyz=[1, 1, 1], uniform_scale=scales[0] if rule.get("uniformHeight") else 1.0,
+                scale_xyz=[round(k, 6) for k in scales], actual_size=actual, target_size=target,
+                dimension_error=max(abs(a - t) / t for a, t in zip(actual, target)),
+                silhouette_error=sum(sum(a != b for a, b in zip(m, t)) / 256
+                    for m, t in zip(recipe_masks(model, rotation, [1, 1, 1], pitch), block["masks"])) / 3,
+                score=0, triangles=model["triangles"], material_slots=model["materialSlots"],
+                status="candidate", selection="user", warnings=warnings,
+                variant=rule.get("variant") or ("Равномерно до средней высоты" if rule.get("uniformHeight") else ("Подгонка XYZ" if fitted else "Исходная модель")),
+                id=rule["block"] + "_" + model["name"] + "_" + ("fitted" if fitted or rule.get("uniformHeight") else "original"))
+            group["candidates"].append(candidate)
 
 
 def suitable_category(block, name):
     """Консервативный фильтр назначения по именам; не заменяет визуальное ревью."""
     name = name.lower()
+    if block.startswith("LD_PalletFence_"):
+        return False  # Предварительно закреплённый рецепт; эталоны остаются простыми блоками.
     if block == "LD_Dorito_Mid":
         return any(word in name for word in ["road_block", "concrete", "bags"])
     if block == "LD_Net_Tall_Visual":
@@ -131,7 +215,7 @@ def suitable_category(block, name):
         return any(word in name for word in ["column", "pillar", "electric_box", "wooden_box"])
     if block in {"LD_Can_Mid", "LD_Tree_Tall", "LD_Beam_Low"}:
         return any(word in name for word in ["barrel", "pipe"])
-    if block == "LD_Crate":
+    if block in {"LD_Crate", "LD_Crate_Soft"}:
         return "wooden_box" in name
     return any(word in name for word in ["wooden_box", "barrel", "bags", "road_block", "electric_box"])
 
@@ -147,12 +231,12 @@ def main():
     (root / "recipes-for-unity.json").write_text(json.dumps({"groups": results}, ensure_ascii=False), encoding="utf-8")
     with (root / "candidates.csv").open("w", encoding="utf-8-sig", newline="") as destination:
         writer = csv.writer(destination)
-        writer.writerow(["Блок", "Рецепт", "Модель", "Повтор X/Y/Z", "Поворот Y", "Масштаб",
+        writer.writerow(["Блок", "Рецепт", "Модель", "Повтор X/Y/Z", "Поворот X/Y", "Масштаб XYZ",
                          "Размер X/Y/Z", "Ошибка габаритов", "Ошибка силуэта", "Треугольники", "Замечания"])
         for group in results:
             for c in group["candidates"]:
-                writer.writerow([c["block"], c["id"], c["model"], c["repeat_xyz"], c["rotation_y"],
-                                 c["uniform_scale"], c["actual_size"], c["dimension_error"],
+                writer.writerow([c["block"], c["id"], c["model"], c["repeat_xyz"], [c.get("rotation_x", 0), c["rotation_y"]],
+                                 c.get("scale_xyz", [c["uniform_scale"]] * 3), c["actual_size"], c["dimension_error"],
                                  c["silhouette_error"], c["triangles"], "; ".join(c["warnings"])])
     lines = ["# Предварительные соответствия Industrial Set", "",
              "Это геометрический фильтр. Все рецепты требуют визуальной проверки;",
@@ -162,18 +246,20 @@ def main():
              "позиции нормализуются к центру основания. Произвольных комбинаций нет.", ""]
     for group in results:
         lines += ["## " + group["block"], "", "Эталон: " + str([round(s, 3) for s in group["size"]]),
-                  "", "![Эталон](" + group["preview"] + ")", ""]
+                  "", ("![Эталон](" + group["preview"] + ")") if group["preview"] else "Эталон смотреть на стенде.", ""]
         if not group["candidates"]:
             lines += ["Подходящих кандидатов по текущим ограничениям нет.", ""]
-        for c in group["candidates"][:3]:
+        for c in group["candidates"]:
             lines += ["### " + c["id"] + " — " + c["model"], "",
-                      "Повтор XYZ: " + str(c["repeat_xyz"]) + "; поворот Y: " + str(c["rotation_y"]) +
-                      "°; масштаб: " + str(c["uniform_scale"]) + "; размер: " + str(c["actual_size"]) + ".", "",
+                      "Повтор XYZ: " + str(c["repeat_xyz"]) + "; поворот X/Y: " + str([c.get("rotation_x", 0), c["rotation_y"]]) +
+                      "°; масштаб: " + str(c.get("scale_xyz", c["uniform_scale"])) + "; размер: " + str(c["actual_size"]) + ".", "",
                       "Ошибка габаритов: " + str(round(c["dimension_error"] * 100, 1)) +
-                      "%; силуэта: " + str(round(c["silhouette_error"] * 100, 1)) +
-                      "%; треугольников: " + str(c["triangles"]) + ".", "",
-                      "![Сборка кандидата](previews/" + c["id"] + ".png)", "",
-                      "[Исходная модель](" + c["preview"] + ")", "",
+                      "%; силуэт: " + (str(round(c["silhouette_error"] * 100, 1)) + "%" if c["silhouette_error"] >= 0 else "не измерен") +
+                      "; треугольников: " + str(c["triangles"]) + ".", "",
+                      ("![Сборка кандидата](previews/" + c["id"] + ".png)"
+                       if (root / "previews" / (c["id"] + ".png")).exists()
+                       else "Сборку смотреть в основной сцене IndustrialCandidateReview."), "",
+                      ("[Исходная модель](" + c["preview"] + ")") if c["preview"] else "Ручная метка: " + c["model"], "",
                       "; ".join(c["warnings"]) + ".", ""]
     (root / "candidates.md").write_text("\n".join(lines), encoding="utf-8")
     print(json.dumps({"blocks": len(results), "blocks_with_candidates": sum(bool(r["candidates"]) for r in results),

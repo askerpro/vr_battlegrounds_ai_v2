@@ -57,8 +57,9 @@ def main():
         shutil.copytree(game / relative, project / relative)
     editor = project / "Assets/Editor/VR_Battlegrounds/LevelDesign"
     editor.mkdir(parents=True, exist_ok=True)
-    for source in (game / "Tools/AssetCatalog").glob("*.cs"):
-        shutil.copyfile(source, editor / source.name)
+    # Только компилируемый измеритель: рядом могут лежать тела execute_code.
+    source = game / "Tools/AssetCatalog/AssetCatalogBatch.cs"
+    shutil.copyfile(source, editor / source.name)
     packages = project / "Packages"
     packages.mkdir(parents=True, exist_ok=True)
     (packages / "manifest.json").write_text('{"dependencies":{}}\n', encoding="utf-8")

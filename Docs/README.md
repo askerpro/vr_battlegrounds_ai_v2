@@ -36,7 +36,7 @@
 | `kinemation-pack-review.md` | Разведка пака KINEMATION Tactical Shooter: состав, вес под Quest, применимость маршрута `/add-weapon`, какие стволы брать |
 | `level-design.md` | Проектирование карт и арен; стенд блоков `TestMap3` |
 | `asset-pack-inventory.md` | Инвентаризация 13 скачанных паков окружения без импорта; `Tools/agents/inspect_asset_packages.py`, выбор стратегии подбора декоративных замен |
-| `asset-catalog-industrial.md` | Первый измеренный каталог Industrial Set: размеры и виды префабов, предварительные рецепты к LD_Alphabet, отдельная сцена сравнения; инструменты `Tools/AssetCatalog/`, план `asset-catalog-plan.md` |
+| `asset-catalog-industrial.md` | Каталог Industrial Set: 23 эталона, 34 рецепта и 22 демо. Автоподбор для `Assets/env_packs/<пак>`: `FolderCandidateScanner`, `FolderCandidateWindow`, меню Auto Mark Pack → JSON/CSV/стенд. «Кандидаты LEGO»: `CatalogMarkings`, `CatalogMarkingService`, `CatalogMarkingWindow`, `CatalogMarkingGizmos`; ручные метки → копии/JSON/CSV/стенд. `ConcreteFenceLowBase`, `LevelDesignPalletFence`, Generator_v1 и Low Soft-ящик; `AssetPackDemoGallery`, `LevelDesignSoftCrate`, `AssetCandidateReviewScene` и общие Gizmo-карточки |
 | `environment-pack-import.md` | Импорт 12 паков: URP, разделение конфликтующих GUID, 2535 префабов с целыми ссылками, исключение Nature, дефекты поставки и инструменты |
 | `level-design-principles.md` | Правила сбалансированной карты `LD-01…LD-48` (CS, VALORANT, пейнтбол → наша арена): разнообразие контактов за обе стороны, окна и щели, перешагиваемые преграды, прострел стен, граница арены и открытый мир за ней, чек-лист ревью |
 | `Arsenal/` | Стена арсенала: [дизайн](Arsenal/ArsenalWall_Design_RU.md), [код](Arsenal/Arsenal_Code_Architecture_RU.md) |

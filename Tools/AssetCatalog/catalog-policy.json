@@ -1,4 +1,21 @@
 {
-  "excludedAssetRoots": ["Assets/InnerverseInteractive/"],
-  "reason": "Ultimate Nature Starter исключён пользователем 2026-10-02: стилистика не соответствует военной теме."
+  "excludedAssetRoots": ["Assets/InnerverseInteractive/", "Assets/LowPolyFPSLite/"],
+  "curatedCandidates": [
+    {"block": "LD_Wall_Mid", "model": "Generator_v1", "fitAxes": true, "showOriginal": false, "preparedPrefab": "Assets/Prefabs/LevelDesign/Decorated/Generator_Mid_Hard.prefab", "preparedSize": [2.0, 1.6, 0.15], "variant": "Mid Hard / подгонка 2 × 1,6 × 0,15 м", "warnings": ["Ширина около 55%, высота 92%, толщина 11% исходника; сильное сжатие подтверждено пользователем для эксперимента", "Проверить читаемость генератора, силуэт и прострел; эталон не изменяется"]},
+    {"block": "LD_Crate_Soft", "model": "Wooden_box_v1_LD1", "fitAxes": false, "uniformHeight": true, "rotationX": 90, "showOriginal": false, "preparedPrefab": "Assets/Prefabs/LevelDesign/Decorated/WoodenBox_Low_Soft.prefab", "preparedSize": [0.7331, 1.2, 0.45005], "variant": "Вертикальный Low Soft / высота 1,2 м", "warnings": ["Поворот X 90° и равномерное уменьшение; основание уже эталона LD_Crate_Soft, замена не закрывает весь его объём"]},
+    {"block": "LD_PillarBox", "model": "Oil_tank_v2", "fitAxes": true, "showOriginal": false, "warnings": ["Низ на опорах имеет просветы: требуется закрыть основание", "Круглый корпус не гарантирует закрытие углов физического столба; проверить полное укрытие"]},
+    {"block": "LD_Tree_Tall", "model": "Oil_tank_v2", "fitAxes": true, "showOriginal": false, "warnings": ["Низ на опорах имеет просветы: не сохранять невидимый сплошной коллайдер за ними", "Сильное изменение пропорций: высота уменьшается примерно вдвое, диаметр увеличивается"]},
+    {"block": "LD_PalletFence_Set_Soft", "model": "Palet_v1_single", "fitAxes": false, "uniformHeight": true, "showOriginal": false, "preparedPrefab": "Assets/Prefabs/LevelDesign/Decorated/PalletFence_TwoLevels_Soft.prefab", "preparedSize": [1.003, 1.6, 0.124], "variant": "Две вертикальные палеты одна над другой", "warnings": ["Один слой по толщине; проверить ширину относительно блока"]},
+    {"block": "LD_PalletFence_Single_Soft", "model": "Palet_v1_single", "fitAxes": false, "uniformHeight": true, "rotationX": 90, "showOriginal": false},
+    {"block": "LD_Fence_Mid_Soft", "model": "Concrete_fence_v2_S", "fitAxes": false, "uniformHeight": true, "rotationY": 90, "showOriginal": false, "preparedPrefab": "Assets/Prefabs/LevelDesign/Decorated/ConcreteFence_LowBase_Soft.prefab", "baseHeight": 1.2, "variant": "Низ Low 1,2 м / верх 1,6 м", "warnings": ["Подготовленный вариант: нижняя Soft-панель 1.2 м; верхняя сетка не имеет сплошного коллайдера"]},
+    {"block": "LD_Fence_Mid_Hard", "model": "Concrete_fence_v1_wall_set_v2", "fitAxes": false, "uniformHeight": true, "rotationY": 90, "showOriginal": false},
+    {"block": "LD_Fence_Vault", "model": "Road_block_v1", "fitAxes": true, "showOriginal": true},
+    {"block": "LD_Snake_Segment", "model": "Road_block_v1", "fitAxes": true, "showOriginal": false}
+  ],
+  "materialMatchingRules": [
+    {"nameContains": ["/palet_v1_set.prefab", "/palet_v1_single.prefab"], "requiredCoverClass": "Soft"},
+    {"nameContains": ["/concrete_fence_v2_s.prefab", "/concretefence_lowbase_soft.prefab"], "requiredCoverClass": "Soft"},
+    {"nameContains": ["wooden_box", "wooden_crate", "wood_box", "wood_crate"], "requiredCoverClass": "Soft"}
+  ],
+  "reason": "Ultimate Nature Starter и Low Poly FPS Lite исключены пользователем 2026-10-02. Road_block_v1 выбран пользователем для перешагиваемого блока и змейки; подгонка формы требует визуальной проверки."
 }

@@ -169,7 +169,11 @@ namespace VrBattlegrounds.Tests.Player
 
         public TwoHandGrabHarness(string weaponPath, string avatarPath, int supportPoint, bool grabMain = true)
         {
+            TestEnvironmentContract.ResetDestroyedSingleton<UxrGrabManager>();
             _savedFeatures = Manager.Features;
+            Assert.That(Manager, Is.SameAs(TestEnvironmentContract.ExactlyOneInScene<UxrGrabManager>()),
+                "[TestEnvironment] Singleton захватов не совпадает с менеджером сцены.");
+            TestEnvironmentContract.IsActive(Manager);
             Manager.Features &= ~(UxrManipulationFeatures.SmoothTransitions | UxrManipulationFeatures.ObjectResistance);
 
             _avatar = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(avatarPath));
@@ -178,6 +182,10 @@ namespace VrBattlegrounds.Tests.Player
             SupportPoint = supportPoint;
 
             _grabbers = _avatar.GetComponentsInChildren<UxrGrabber>(true);
+            Assert.That(_grabbers.Count(g => g.Side == UxrHandSide.Left), Is.EqualTo(1),
+                "[TestEnvironment] У аватара должна быть ровно одна левая рука.");
+            Assert.That(_grabbers.Count(g => g.Side == UxrHandSide.Right), Is.EqualTo(1),
+                "[TestEnvironment] У аватара должна быть ровно одна правая рука.");
             Right = _grabbers.First(g => g.Side == UxrHandSide.Right);
             Left = _grabbers.First(g => g.Side == UxrHandSide.Left);
 

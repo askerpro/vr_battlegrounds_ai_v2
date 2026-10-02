@@ -3,6 +3,20 @@
 Этот файл документирует **все изменения**, внесённые в код `Assets/ThirdParty/UltimateXR/`.  
 При обновлении SDK необходимо **повторно применить** эти патчи вручную.
 
+## Патч 2026-10-02: живые зависимости предметов и диагностика Fade
+
+`UxrGrabbableObject.cs`: пять списков зависимостей очищаются общей функцией `LiveDependencies`
+при чтении от Unity-null и `IsBeingDestroyed`. Исходный кэш обновляется при Awake/перестройке,
+но уничтожение вложенной детали не инвалидирует списки родителей. Падение в
+`UxrGrabManager.UxrAvatar_GlobalAvatarMoved` обрывало переход после затемнения.
+Единая очистка защищает также ограничения, направление родителей и запросы захватов.
+
+`UxrCameraFade.cs`: событие `FadeDiagnostic` сообщает запросы StartFade, EnableFadeColor,
+FadeAsync, StartFadeCoroutine и переход DrawFade в false. Идентичные покадровые установки
+постоянного цвета подавлены. SDK не ссылается на игровую сборку; `CameraFadeDiagnostics`
+подписывается при старте и пишет через `GameLog.Debug.Info` со стеком.
+Диагностика не выключает Fade автоматически и не меняет длительность переходов.
+
 ---
 
 ## Патч 1: UxrMirrorAvatar — канал состояния вынесен на объект уровня сессии
@@ -1280,3 +1294,39 @@ IK тела и рук считается каждый кадр у всех ав�
    EditorWindowFocusHelper.IsThisEditorInstanceFocused()`; при смене — `_postUpdateMode` и старт/стоп XR-подсистем.
    В начале `Update` — вызов и `return`, пока `!_shouldUpdate`.
 4. Прогнать `EditorFocusPauseTests`.
+
+## Патч 34: поправка направления выстрела (с 2026-10-02 — только дробь)
+
+**Дата:** 2026-10-01. **Задача:** [T-38](../tasks/T-38-weapon-roster-and-balance.md) (разброс по CS2).
+**Файлы:** `Mechanics/Weapons/UxrFirearmWeapon.cs` (свойство `ShotOrientationModifier`, вызов в `TryToShootRound`).
+Метка `VR Battlegrounds patch 34`. **Старая проверка:** `WeaponSpreadTests` — требует пересмотра после проверки
+пользователем новой логики в шлеме/Unity; сейчас тесты не изменяются и не запускаются.
+
+### Проблема
+
+`TryToShootRound` стреляет `_weaponSource.Shoot(index)` — строго по дулу. Разброс (конус CS2) вне SDK поставить
+некуда: `ProjectileShot` поднимается уже после того, как снаряд создан, а крутить трансформ дула — значит крутить
+вспышку, прицельные метки и всё, что к нему привязано.
+
+### Решение
+
+`UxrFirearmWeapon.ShotOrientationModifier` — `Func<int, Quaternion, Quaternion>` (индекс спуска, поворот дула →
+поворот снаряда). Задан — `TryToShootRound` зовёт `Shoot(index, позиция дула, поправленный поворот)`, иначе — как
+в оригинале. Ставит игра (`WeaponSpread`). `TryToShootRound` по патчу 23 исполняет только машина стрелка, а
+`Shoot(int, Vector3, Quaternion)` синхронизируется значениями — поворот снаряда у всех машин один, общего зерна
+случайности не нужно.
+
+**Решение пользователя 2026-10-02:** случайный конус пули отменён, но патч сохранён для первой дробины
+Nova / Herrington. Без него основной снаряд SDK остался бы всегда в центре, а остальные — в конусе.
+`WeaponSpread` регистрирует модификатор только при активном `ShotgunPellets` с несколькими дробинами;
+он применяет только spread каждой дробины, без inaccuracy. У пулевых префабов компонент удаляется через
+`Apply Weapon Balance`; даже у старого префаба без дроби модификатор не регистрируется.
+Патч 23 (единственный автор выстрела) и сетевой путь `Shoot` сохранены.
+
+### Как повторить при обновлении SDK
+
+1. `UxrFirearmWeapon`: свойство `ShotOrientationModifier`.
+2. `TryToShootRound`: вместо `_weaponSource.Shoot(trigger.ProjectileShotIndex)` — при заданном модификаторе и
+   допустимом индексе `Shoot(index, ShotSource.position, ShotOrientationModifier(triggerIndex, ShotSource.rotation))`.
+3. После подтверждения логики пользователем заменить старые ожидания `WeaponSpreadTests`:
+   пуля совпадает с осью дула, каждая дробина имеет собственный разлёт без общей неточности залпа.

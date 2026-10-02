@@ -136,6 +136,16 @@ namespace VrBattlegrounds.Tests.Network
                 NetworkClient.Ready();
                 PumpNetwork();
             }
+            Assert.That(NetworkServer.active, Is.True, "[TestEnvironment] Сервер Mirror не запущен.");
+            TestEnvironmentContract.IsActive(transport);
+            Assert.That(Transport.active, Is.SameAs(transport), "[TestEnvironment] Подменён активный транспорт.");
+            if (NeedsLocalClient)
+            {
+                Assert.That(NetworkClient.active && NetworkClient.isConnected && NetworkClient.ready,
+                    Is.True, "[TestEnvironment] Локальный клиент не подключён или не готов.");
+                Assert.That(NetworkServer.connections.Count, Is.EqualTo(1),
+                    "[TestEnvironment] Требуется одно локальное соединение.");
+            }
         }
 
         [TearDown]

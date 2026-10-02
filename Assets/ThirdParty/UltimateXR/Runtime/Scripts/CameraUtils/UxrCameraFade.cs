@@ -27,6 +27,9 @@ namespace UltimateXR.CameraUtils
     {
         #region Public Types & Data
 
+        /// <summary>VR Battlegrounds patch: диагностика запросов Fade без зависимости SDK от игры.</summary>
+        public static event Action<UxrCameraFade, string> FadeDiagnostic;
+
         /// <summary>
         ///     Gets whether the component is currently fading.
         /// </summary>
@@ -129,6 +132,7 @@ namespace UltimateXR.CameraUtils
                               Action fadeOutFinishedCallback = null,
                               Action fadeInFinishedCallback  = null)
         {
+            FadeDiagnostic?.Invoke(this, $"StartFade: out={fadeOutDurationSeconds}, in={fadeInDurationSeconds}, color={fadeColor}, active={DrawFade}");
             if (DrawFade)
             {
                 if (UxrGlobalSettings.Instance.LogLevelAvatar >= UxrLogLevel.Warnings)
@@ -162,6 +166,11 @@ namespace UltimateXR.CameraUtils
         /// <param name="quantity">The quantity [0.0, 1.0] of the fade</param>
         public void EnableFadeColor(Color color, float quantity)
         {
+            // Прогрев может вызывать это каждый кадр: одинаковые установки не засоряют лог.
+            Color requestedColor = color;
+            requestedColor.a *= quantity;
+            if (!DrawFade || _fadeTimer != -1.0f || _fadeCurrentColor != requestedColor)
+                FadeDiagnostic?.Invoke(this, $"EnableFadeColor: color={color}, quantity={quantity}, active={DrawFade}");
             DrawFade   = true;
             _fadeTimer = -1.0f;
 
@@ -189,6 +198,7 @@ namespace UltimateXR.CameraUtils
         /// <param name="endColor">The fade end color</param>
         public async Task FadeAsync(CancellationToken ct, float fadeSeconds, Color startColor, Color endColor)
         {
+            FadeDiagnostic?.Invoke(this, $"FadeAsync: seconds={fadeSeconds}, from={startColor}, to={endColor}, active={DrawFade}");
             await TaskExt.Loop(ct,
                                fadeSeconds,
                                t =>
@@ -255,6 +265,14 @@ namespace UltimateXR.CameraUtils
         /// <param name="endColor">End color value</param>
         /// <returns>Coroutine IEnumerator</returns>
         public IEnumerator StartFadeCoroutine(float fadeSeconds, Color startColor, Color endColor)
+        {
+            FadeDiagnostic?.Invoke(this, $"StartFadeCoroutine: seconds={fadeSeconds}, from={startColor}, to={endColor}, active={DrawFade}");
+            return RunFadeCoroutine(fadeSeconds, startColor, endColor);
+        }
+
+        // Запрос логируется до создания итератора: стек сохраняет вызывающий код,
+        // а не только Unity SetupCoroutine после первого MoveNext.
+        private IEnumerator RunFadeCoroutine(float fadeSeconds, Color startColor, Color endColor)
         {
             if (DrawFade)
             {
@@ -395,6 +413,8 @@ namespace UltimateXR.CameraUtils
             get => _drawFade;
             set
             {
+                if (_drawFade && !value)
+                    FadeDiagnostic?.Invoke(this, $"DrawFade=false: color={_fadeCurrentColor}");
                 _drawFade = value;
 
                 if (_quadObject != null)

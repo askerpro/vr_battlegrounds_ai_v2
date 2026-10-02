@@ -785,31 +785,45 @@ namespace UltimateXR.Manipulation
         /// <summary>
         ///     Gets all parent grabbable objects, grabbed or not.
         /// </summary>
-        internal List<UxrGrabbableObject> AllParents { get; private set; } = new List<UxrGrabbableObject>();
+        internal List<UxrGrabbableObject> AllParents { get => LiveDependencies(_allParents); private set => _allParents = value; }
 
         /// <summary>
         ///     Gets the parent grabbable objects, grabbed or not, whose direction is controlled indirectly by this object (
         ///     <see cref="UsesGrabbableParentDependency" />) and <see cref="ControlParentDirection" />).
         /// </summary>
-        internal List<UxrGrabbableObject> ParentLookAts { get; private set; } = new List<UxrGrabbableObject>();
+        internal List<UxrGrabbableObject> ParentLookAts { get => LiveDependencies(_parentLookAts); private set => _parentLookAts = value; }
 
         /// <summary>
         ///     Gets all child grabbable objects, grabbed or not.
         /// </summary>
-        internal List<UxrGrabbableObject> AllChildren { get; private set; } = new List<UxrGrabbableObject>();
+        internal List<UxrGrabbableObject> AllChildren { get => LiveDependencies(_allChildren); private set => _allChildren = value; }
 
         /// <summary>
         ///     Gets all child grabbable objects, grabbed or not, that have  <see cref="UsesGrabbableParentDependency" /> and
         ///     <see cref="ControlParentDirection" />.
         /// </summary>
-        internal List<UxrGrabbableObject> AllChildrenLookAts { get; private set; } = new List<UxrGrabbableObject>();
+        internal List<UxrGrabbableObject> AllChildrenLookAts { get => LiveDependencies(_allChildrenLookAts); private set => _allChildrenLookAts = value; }
 
         /// <summary>
         ///     Gets the child grabbable objects, grabbed or not, that have <see cref="UsesGrabbableParentDependency" /> and
         ///     <see cref="ControlParentDirection" />, where there is no other grabbable object between the child that controls
         ///     this grabbable.
         /// </summary>
-        internal List<UxrGrabbableObject> DirectChildrenLookAts { get; private set; } = new List<UxrGrabbableObject>();
+        internal List<UxrGrabbableObject> DirectChildrenLookAts { get => LiveDependencies(_directChildrenLookAts); private set => _directChildrenLookAts = value; }
+
+        // VR Battlegrounds patch: все потребители кэша получают только живые зависимости.
+        // Уничтожение вложенной детали не вызывает UpdateGrabbableDependencies у её родителей.
+        private List<UxrGrabbableObject> _allParents = new List<UxrGrabbableObject>();
+        private List<UxrGrabbableObject> _parentLookAts = new List<UxrGrabbableObject>();
+        private List<UxrGrabbableObject> _allChildren = new List<UxrGrabbableObject>();
+        private List<UxrGrabbableObject> _allChildrenLookAts = new List<UxrGrabbableObject>();
+        private List<UxrGrabbableObject> _directChildrenLookAts = new List<UxrGrabbableObject>();
+
+        private static List<UxrGrabbableObject> LiveDependencies(List<UxrGrabbableObject> dependencies)
+        {
+            dependencies.RemoveAll(dependency => dependency == null || dependency.IsBeingDestroyed);
+            return dependencies;
+        }
 
         /// <summary>
         ///     Gets or sets the number of direct children using <see cref="UsesGrabbableParentDependency" /> and (

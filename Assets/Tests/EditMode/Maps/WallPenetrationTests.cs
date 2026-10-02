@@ -45,11 +45,7 @@ namespace VrBattlegrounds.Tests.Maps
         [SetUp]
         public void SetUp()
         {
-            if (!UxrWeaponManager.HasInstance)
-            {
-                _createdManager = new GameObject("WeaponManager").AddComponent<UxrWeaponManager>();
-                Call(_createdManager, "Awake");
-            }
+            WeaponManagerTestLease.Acquire(out _createdManager);
 
             _projectiles = (IList)typeof(UxrWeaponManager).GetField("_projectiles", Any).GetValue(UxrWeaponManager.Instance);
             _start = _projectiles.Count;

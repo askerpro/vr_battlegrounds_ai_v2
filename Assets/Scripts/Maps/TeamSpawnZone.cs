@@ -89,8 +89,56 @@ namespace VrBattlegrounds.Maps
         private void Start()
         {
             _floorY = FindFloorHeight();
+            BorderFloorReady = true;
             UpdateColor();
         }
+
+        /// <summary>
+        /// Пол уже искали (<c>Start</c> прошёл). До этого <see cref="BorderFloorY"/> — нижняя грань коробки, а не пол:
+        /// граница включается ещё в <c>OnEnable</c>, и строить по ней табло рано.
+        /// </summary>
+        public bool BorderFloorReady { get; private set; }
+
+        /// <summary>Коллайдер зоны. В редакторе и тестах <c>Awake</c> не вызывается — берётся сам.</summary>
+        private BoxCollider Box => _boxCollider != null ? _boxCollider : (_boxCollider = GetComponent<BoxCollider>());
+
+        /// <summary>
+        /// Пол границы (мир, Y): найденный в <c>Start</c> настоящий пол, а до него и без него — нижняя
+        /// грань коробки. На нём стоят лазерная сетка и её табло (<c>LaserGridScreens</c>).
+        /// </summary>
+        public float BorderFloorY => _floorY > NoFloor ? _floorY : BorderBottomY;
+
+        /// <summary>Нижняя грань коробки зоны (мир, Y).</summary>
+        public float BorderBottomY => transform.TransformPoint(Box.center).y - BorderHalfHeight;
+
+        /// <summary>Верхняя грань коробки зоны (мир, Y) — до неё поднимается лазерная сетка.</summary>
+        public float BorderTopY => transform.TransformPoint(Box.center).y + BorderHalfHeight;
+
+        private float BorderHalfHeight => Mathf.Abs(transform.lossyScale.y * Box.size.y) * 0.5f;
+
+        /// <summary>
+        /// Точка в плане зоны (по горизонтали, высота не важна)? Так узнаётся, какой зоне принадлежит
+        /// объект, стоящий в ней, но не дочерний ей: зона отмасштабирована неравномерно, и стены арсенала
+        /// на картах — её соседи, а не дети (<see cref="SpawnZoneMembership"/>).
+        /// </summary>
+        public bool ContainsInPlan(Vector3 worldPoint)
+        {
+            Vector3 local = transform.InverseTransformPoint(worldPoint) - Box.center;
+            Vector3 half = Box.size * 0.5f;
+            return Mathf.Abs(local.x) <= half.x && Mathf.Abs(local.z) <= half.z;
+        }
+
+        /// <summary>Площадь зоны в плане, м². Из вложенных зон точке принадлежит меньшая.</summary>
+        public float PlanArea => Mathf.Abs(transform.lossyScale.x * Box.size.x * transform.lossyScale.z * Box.size.z);
+
+        /// <summary>
+        /// Видна ли сейчас граница (лазерная сетка) на этой машине. Решает <see cref="SpawnZoneVisibility"/>;
+        /// табло в сетке (<c>LaserGridScreens</c>) появляются и исчезают по этому же флагу, а не считают своё.
+        /// </summary>
+        public bool BorderVisible { get; private set; }
+
+        /// <summary>Граница появилась или исчезла (локально). Аргумент — видна ли теперь.</summary>
+        public event Action<bool> BorderVisibilityChanged;
 
         /// <summary>
         /// Пол под зоной: лучи сверху вниз из центра и у углов, по каждому — первая поверхность,
@@ -328,10 +376,18 @@ namespace VrBattlegrounds.Maps
             }
 
             _meshRenderer.enabled = isVisible;
+            SetBorderVisible(isVisible);
             if (!isVisible) return;
 
             _meshRenderer.sharedMaterial = xray && _xrayMaterial != null ? _xrayMaterial : _originalMaterial;
             UpdateColor();
+        }
+
+        private void SetBorderVisible(bool visible)
+        {
+            if (BorderVisible == visible) return;
+            BorderVisible = visible;
+            BorderVisibilityChanged?.Invoke(visible);
         }
 
         private void OnValidate()

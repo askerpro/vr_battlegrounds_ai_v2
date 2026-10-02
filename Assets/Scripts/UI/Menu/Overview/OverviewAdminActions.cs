@@ -17,6 +17,9 @@ namespace VrBattlegrounds.UI.Menu.Overview
 
         /// <summary>Разрушительное действие (конец серии) — роль кнопки Danger.</summary>
         public bool Danger;
+
+        /// <summary>«Матч с ботами» (T-48): запрос серверу, не команда админа и не переход.</summary>
+        public bool BotMatch;
     }
 
     /// <summary>Главное действие ситуации и остальные доступные кнопки.</summary>

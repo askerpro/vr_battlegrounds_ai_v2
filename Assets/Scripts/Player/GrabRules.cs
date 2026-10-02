@@ -38,6 +38,12 @@ namespace VrBattlegrounds.Player
                 return false;
             }
 
+            // Стена арсенала при экономике матча: только своя и по карману (T-45).
+            if (!Arsenal.ArsenalGrabRule.AllowsGrab(grabber, grabbable))
+            {
+                return false;
+            }
+
             return TwoHandGrabPolicy.IsGrabAllowed(grabber, grabbable, grabPoint);
         }
     }

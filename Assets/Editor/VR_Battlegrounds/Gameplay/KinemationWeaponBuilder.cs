@@ -22,6 +22,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public string PoseClip;       // клип персонажа с руками на оружии: A_FP_SRM-12_Idle_Pose
         public string RestClip;       // клип покоя оружия A_W_*_Idle: ставит магазин в гнездо (в позе префаба пака он не всегда там)
         public string[] Excluded;     // детали, которых в префабе нет: патроны магазина кроме верхнего, пружина; «X*» — по началу имени
+        public string[] Attachments;  // обвесы пака (статичные MeshRenderer: глушитель, корпус коллиматора) — в префаб статичными деталями
 
         public string ReloadClip;     // клип оружия перезарядки (A_W_*_Reload_Empty)
         public string ShotSound;      // SFX/…/*.wav — выстрел
@@ -136,7 +137,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             ShotSound = Sfx + "MKR9/S_MKR9_Shot_01.WAV", ReloadSound = Sfx + "MKR9/S_MKR9_Empty_Reload.WAV"
         };
 
-        /// <summary>Стартовый пистолет (роль Glock-18): WK-11 Viper (2011), затвор-кожух <c>Bolt</c>.</summary>
+        /// <summary>
+        /// Стартовый пистолет (роль Glock-18, <c>WeaponRegistry.DefaultSidearm</c>): WK-11 Viper (2011), затвор-кожух
+        /// <c>Bolt</c>.
+        /// </summary>
         public static KinemationWeaponRecipe Viper => new KinemationWeaponRecipe
         {
             Weapon = Pistol(new HandsPackWeaponRecipe
@@ -207,7 +211,74 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
         }
 
-        public static IEnumerable<KinemationWeaponRecipe> All => new[] { SRM12, R08, AK105, Viper, MKR9, Herrington, Mk14 };
+        /// <summary>
+        /// Винтовка с глушителем (роль M4A1-S): TR15 (AR-15/M4), магазин на 20 как у M4A1-S (модель магазина — на 30).
+        /// Глушитель AR и корпус коллиматора XPS2 — обвесы пака, статичными деталями; дуло — срез глушителя
+        /// (<see cref="HandsPackWeaponRecipe.MuzzlePart" />). Голограмма прицела (свой шейдер пака, не URP Lit) и вертикальная
+        /// рукоять не берутся — хват рук снят с клипа без рукояти (<c>Idle_Pose_Non_Grip</c>). Затвор — <c>Bolt</c>, рукоятка
+        /// взведения (<c>Charger</c>) ходит с ним (в клипах пака она неподвижна, как у MKR9). Выстрел — вариант пака
+        /// «с глушителем» (решение пользователя: громкая M16 не нравится, нужно «как в CS с глушителем»).
+        /// </summary>
+        public static KinemationWeaponRecipe TR15
+        {
+            get
+            {
+                HandsPackWeaponRecipe r = Rifle(new HandsPackWeaponRecipe
+                {
+                    Name = "TR15", PrefabFolder = "TR15", PoseClip = "A_FP_TR15_Idle_Pose_Non_Grip", ActionClip = "A_W_TR15_Fire",
+                    TriggerPart = "Trigger", ActionPart = "Bolt", ActionExtraParts = new[] { "Charger" }, SupportGrip = true,
+                    UxrTag = "BackWeapon", MagazinePart = "Magazine", MagazineExtraParts = new[] { "Cartridge_1", "Cartridge_2" },
+                    MagazineTag = "MagTR15", MagazineCapacity = 20
+                });
+                r.MuzzlePart = Silencer;
+                return new KinemationWeaponRecipe
+                {
+                    Weapon = r, PackPrefab = "W_TR15", AnimFolder = "TR15", RestClip = "A_W_TR15_Idle", PoseClip = "A_FP_TR15_Idle_Pose_Non_Grip",
+                    Attachments = new[] { Silencer, "SM_Attach_AR15_XPS2" },
+                    Excluded = new[] { "Cartridge_*", "Follower", "Spring" }, ReloadClip = "A_W_TR15_Reload_Empty",
+                    ShotSound = Sfx + "TR15/Fire/S_TR15_V1_Suppressed_With_Tail_0.WAV",
+                    ReloadSound = Sfx + "TR15/Actions/S_TR15_Reload_Empty.WAV"
+                };
+            }
+        }
+
+        public const string Silencer = "SM_Attach_AR15_Silencer";
+
+        /// <summary>Выстрел тяжёлого пистолета <c>Revolver</c> (пак Hands) — из выстрела R08: громкий, плотный, моно.</summary>
+        public const string RevolverShotPath = "Assets/Audio/SFX/Weapons/Revolver/Revolver_Shot.wav";
+        private const string RevolverShotSource = Sfx + "R08/S_R08_Fire_02.WAV";
+
+        /// <summary>
+        /// Делает <see cref="RevolverShotPath" /> из выстрела R08 и ставит его на спуск префаба <c>Revolver</c> (без
+        /// пересборки: правка одного поля). Сам R08 в реестр не входит — пак здесь только источник звука.
+        /// </summary>
+        [MenuItem("Tools/VR Battlegrounds/Gameplay/Kinemation/Revolver Shot From R08")]
+        public static void MakeRevolverShot()
+        {
+            string folder = RevolverShotPath.Substring(0, RevolverShotPath.LastIndexOf('/'));
+            KinemationWeapon.EnsureFolder(folder);
+            AudioClip clip = KinemationAudio.Shot(RevolverShotSource, 1.5f, folder, System.IO.Path.GetFileNameWithoutExtension(RevolverShotPath));
+
+            const string prefabPath = "Assets/Prefabs/Weapons/Revolver/Revolver.prefab";
+            GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                var so = new SerializedObject(root.GetComponent<UxrFirearmWeapon>());
+                so.FindProperty("_triggers").GetArrayElementAtIndex(0).FindPropertyRelative("_shotAudio._clip").objectReferenceValue = clip;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            GameLog.Debug.Info($"[KinemationWeaponBuilder] {prefabPath}: выстрел {RevolverShotPath} ({clip.length:F2} с)");
+        }
+
+        public static IEnumerable<KinemationWeaponRecipe> All => new[] { SRM12, R08, AK105, Viper, MKR9, Herrington, Mk14, TR15 };
+
+        [MenuItem("Tools/VR Battlegrounds/Gameplay/Kinemation/Build TR15")]
+        private static void BuildTr15() => Build(TR15);
 
         [MenuItem("Tools/VR Battlegrounds/Gameplay/Kinemation/Build SRM-12")]
         private static void BuildSrm12() => Build(SRM12);
@@ -226,9 +297,12 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         public static string Report(KinemationWeaponRecipe k)
         {
-            using var model = new KinemationWeapon(k.PackPrefab, k.AnimFolder, k.PoseClip, k.Weapon.Name, k.Weapon.BodyPart, k.RestClip);
+            using var model = Model(k);
             return model.Report();
         }
+
+        private static KinemationWeapon Model(KinemationWeaponRecipe k) =>
+            new KinemationWeapon(k.PackPrefab, k.AnimFolder, k.PoseClip, k.Weapon.Name, k.Weapon.BodyPart, k.RestClip, k.Attachments);
 
         public static string PrefabPath(KinemationWeaponRecipe k) => $"Assets/Prefabs/Weapons/{k.Weapon.PrefabFolder}/{k.Weapon.Name}.prefab";
 
@@ -238,10 +312,10 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             // Звуки — до геометрии и на своём экземпляре модели: импорт новых WAV обновляет базу ассетов, и у
             // экземпляра, созданного до него, меш пака однажды пришёл без треугольников детали (AK105, первая сборка).
-            using (var timing = new KinemationWeapon(k.PackPrefab, k.AnimFolder, k.PoseClip, r.Name, r.BodyPart, k.RestClip))
+            using (KinemationWeapon timing = Model(k))
                 MakeSounds(k, timing);
 
-            using var model = new KinemationWeapon(k.PackPrefab, k.AnimFolder, k.PoseClip, r.Name, r.BodyPart, k.RestClip);
+            using KinemationWeapon model = Model(k);
 
             // Статичные детали — все, что не названы иначе и не выброшены.
             var used = new HashSet<string> { r.BodyPart, r.TriggerPart, r.ActionPart, r.MagazinePart };

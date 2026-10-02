@@ -11,7 +11,9 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// <summary>
     /// Переносит баланс из <see cref="WeaponInfo" /> в префабы оружия и магазинов (T-38): урон вблизи и на
     /// предельной дистанции и пробитие стен (T-41) каждого выстрела (основного и дробинок), частоту спуска, число дробинок, ёмкость и
-    /// заряд магазина, картину накопленной отдачи (<see cref="RecoilAccumulator" />, ставится, если нет). Руками эти поля в префабах не правятся — расхождение ловит <c>WeaponBalanceTests</c>.
+    /// заряд магазина, картину накопленной отдачи (<see cref="RecoilAccumulator" />) и толчок отдачи SDK у каждого спуска
+    /// (из CS2 <c>recoil_magnitude</c>, <see cref="RecoilPattern.FromCs2" />), разлёт дробин (<see cref="WeaponSpread" />, конус дроби
+    /// <see cref="ShotgunPellets" />). Недостающие компоненты ставятся. Руками эти поля в префабах не правятся — расхождение ловит <c>WeaponBalanceTests</c>.
     /// Оружие без баланса (<see cref="WeaponInfo.HasBalance" /> — сэмплы SDK) не трогается.
     /// </summary>
     public static class WeaponBalanceApplier
@@ -49,7 +51,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
 
             // Компонент — первым: LoadPrefabContents читает префаб с диска, несохранённые правки ниже потерялись бы.
-            bool dirty = EnsureRecoilAccumulator(prefab);
+            bool dirty = EnsureComponent<RecoilAccumulator>(prefab);
+            dirty |= EnsureComponent<WeaponSpread>(prefab, info.Pellets > 1 && prefab.GetComponent<ShotgunPellets>() != null);
             prefab = info.WeaponPrefab;
             weapon = prefab.GetComponent<UxrFirearmWeapon>();
             source = prefab.GetComponent<UxrProjectileSource>();
@@ -58,11 +61,18 @@ namespace VrBattlegrounds.Editor.Gameplay
             var weaponSo = new SerializedObject(weapon);
             SerializedProperty triggers = weaponSo.FindProperty("_triggers");
             int frequency = WeaponInfo.ShotFrequency(info.FireRate);
+            RecoilPattern recoil = info.Recoil;
             for (int i = 0; i < triggers.arraySize; i++)
             {
                 SerializedProperty trigger = triggers.GetArrayElementAtIndex(i);
                 shotIndices.Add(trigger.FindPropertyRelative("_projectileShotIndex").intValue);
                 dirty |= SetInt(trigger.FindPropertyRelative("_maxShotFrequency"), frequency);
+                // Толчок SDK — видимый и короткий: гаснет до следующего выстрела (см. RecoilPattern.SdkDuration).
+                dirty |= SetFloat(trigger.FindPropertyRelative("_recoilAngleTwoHands"), recoil.SdkAngle(oneHand: false));
+                dirty |= SetFloat(trigger.FindPropertyRelative("_recoilAngleOneHand"), recoil.SdkAngle(oneHand: true));
+                dirty |= SetVector(trigger.FindPropertyRelative("_recoilOffsetTwoHands"), new Vector3(0f, 0f, -recoil.SdkOffset(oneHand: false)));
+                dirty |= SetVector(trigger.FindPropertyRelative("_recoilOffsetOneHand"), new Vector3(0f, 0f, -recoil.SdkOffset(oneHand: true)));
+                dirty |= SetFloat(trigger.FindPropertyRelative("_recoilDurationSeconds"), RecoilPattern.SdkDuration(1f / frequency));
             }
             weaponSo.ApplyModifiedPropertiesWithoutUndo();
 
@@ -71,6 +81,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             {
                 var pelletsSo = new SerializedObject(pellets);
                 dirty |= SetInt(pelletsSo.FindProperty("_pellets"), info.Pellets);
+                dirty |= SetFloat(pelletsSo.FindProperty("_spreadDegrees"), WeaponAccuracy.ToDegrees(info.Spread.Spread));
                 pelletsSo.ApplyModifiedPropertiesWithoutUndo();
                 shotIndices.Add(pellets.PelletShotIndex);
             }
@@ -94,20 +105,22 @@ namespace VrBattlegrounds.Editor.Gameplay
             sourceSo.ApplyModifiedPropertiesWithoutUndo();
 
             dirty |= ApplyRecoil(info, weaponSo.FindProperty("_recoilAxes").objectReferenceValue);
+            dirty |= ApplySpread(info);
 
             if (dirty) PrefabUtility.SavePrefabAsset(prefab);
             return dirty;
         }
 
-        private static bool EnsureRecoilAccumulator(GameObject prefab)
+        private static bool EnsureComponent<T>(GameObject prefab, bool required = true) where T : Component
         {
-            if (prefab.GetComponent<RecoilAccumulator>() != null) return false;
+            if ((prefab.GetComponent<T>() != null) == required) return false;
 
             string path = AssetDatabase.GetAssetPath(prefab);
             GameObject contents = PrefabUtility.LoadPrefabContents(path);
             try
             {
-                contents.AddComponent<RecoilAccumulator>();
+                if (required) contents.AddComponent<T>();
+                else Object.DestroyImmediate(contents.GetComponent<T>());
                 PrefabUtility.SaveAsPrefabAsset(contents, path);
             }
             finally
@@ -123,9 +136,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             bool dirty = false;
             var so = new SerializedObject(prefab.GetComponent<RecoilAccumulator>());
             SerializedProperty target = so.FindProperty("_pattern");
-            SerializedProperty source = new SerializedObject(info).FindProperty("_recoil");
-            foreach (string field in new[] { "_kickDegrees", "_maxPitchDegrees", "_maxYawDegrees", "_recoveryTime", "_oneHandMultiplier" })
-                dirty |= SetFloat(target.FindPropertyRelative(field), source.FindPropertyRelative(field).floatValue);
+            RecoilPattern recoil = info.Recoil;
+            dirty |= SetFloat(target.FindPropertyRelative("_kickDegrees"), recoil.KickDegrees);
+            dirty |= SetFloat(target.FindPropertyRelative("_maxPitchDegrees"), recoil.MaxPitchDegrees);
+            dirty |= SetFloat(target.FindPropertyRelative("_maxYawDegrees"), recoil.MaxYawDegrees);
+            dirty |= SetFloat(target.FindPropertyRelative("_recoveryTime"), recoil.RecoveryTime);
+            dirty |= SetFloat(target.FindPropertyRelative("_oneHandMultiplier"), recoil.OneHandMultiplier);
 
             SerializedProperty axesProperty = so.FindProperty("_axes");
             if (axesProperty.objectReferenceValue != axes)
@@ -133,6 +149,22 @@ namespace VrBattlegrounds.Editor.Gameplay
                 axesProperty.objectReferenceValue = axes;
                 dirty = true;
             }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return dirty;
+        }
+
+        private static bool ApplySpread(WeaponInfo info)
+        {
+            var spread = info.WeaponPrefab.GetComponent<WeaponSpread>();
+            if (spread == null) return false; // Пули летят по оси; компонент нужен только дробовикам.
+            var so = new SerializedObject(spread);
+            SerializedProperty target = so.FindProperty("_pattern");
+            SerializedProperty source = new SerializedObject(info).FindProperty("_spread");
+            bool dirty = false;
+            dirty |= SetFloat(target.FindPropertyRelative("_spread"), source.FindPropertyRelative("_spread").floatValue);
+            // Старые значения в WeaponInfo — справочные; у дроби ни базовой, ни накопленной неточности нет.
+            foreach (string field in new[] { "_inaccuracyStand", "_inaccuracyMove", "_inaccuracyFire" })
+                dirty |= SetFloat(target.FindPropertyRelative(field), 0f);
             so.ApplyModifiedPropertiesWithoutUndo();
             return dirty;
         }
@@ -156,6 +188,13 @@ namespace VrBattlegrounds.Editor.Gameplay
         {
             if (property == null || property.intValue == value) return false;
             property.intValue = value;
+            return true;
+        }
+
+        private static bool SetVector(SerializedProperty property, Vector3 value)
+        {
+            if (property == null || (property.vector3Value - value).sqrMagnitude < 1e-10f) return false;
+            property.vector3Value = value;
             return true;
         }
 

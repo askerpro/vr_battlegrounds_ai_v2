@@ -37,5 +37,11 @@ namespace VrBattlegrounds.UI.HUD
             int total = Mathf.Max(0, Mathf.CeilToInt(seconds));
             return $"{total / 60:00}:{total % 60:00}";
         }
+
+        /// <summary>Деньги экономики матча: «$800». Нет экономики (разминка, Respawn) — пусто.</summary>
+        public static string FormatMoney(int? money) => money.HasValue ? "$" + money.Value : string.Empty;
+
+        /// <summary>Счёт глазами игрока: «свои : чужие».</summary>
+        public static string FormatScore(int own, int enemy) => $"{own} : {enemy}";
     }
 }

@@ -64,6 +64,14 @@ namespace VrBattlegrounds.Network
         /// </summary>
         private static Transform _dormitory;
 
+        /// <summary>
+        ///     Инстанс сетевого префаба создан (префаб, инстанс) — ещё выключенным, и на сервере
+        ///     (<see cref="CreateInstance" />), и у клиента (обработчик спавна). Точка донастройки,
+        ///     которая должна совпасть на всех машинах: так оружие, выданное не стеной арсенала,
+        ///     получает свой <c>WeaponComponent</c> везде (<c>WeaponComponent.AttachByPrefab</c>).
+        /// </summary>
+        public static event Action<GameObject, GameObject> InstanceCreated;
+
         private static Transform Dormitory
         {
             get
@@ -108,6 +116,10 @@ namespace VrBattlegrounds.Network
             SuppressAutoAnchor(instance);
             instance.SetActive(false);
             instance.transform.SetParent(null, false);
+
+            // Донастройка по префабу до пробуждения — на сервере и у клиента одинаково
+            // (оружию — его WeaponInfo, T-45). Сам слой идентичности о подписчиках не знает.
+            InstanceCreated?.Invoke(prefab, instance);
 
             return instance;
         }

@@ -26,4 +26,3 @@ MonoBehaviour:
   teams: []
   modePrefab: {fileID: 5477909585992476314, guid: 816f8eac4e724214daab0a41412869ae, type: 3}
   teamAssignment: 0
-  hudPrefab: {fileID: 0}

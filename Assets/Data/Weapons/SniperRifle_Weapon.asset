@@ -24,15 +24,20 @@ MonoBehaviour:
   _damage: 88
   _rangeModifier: 0.98
   _penetration: 2.5
+  _armorRatio: 1.7
   _fireRate: 48
+  _fullAuto: 0
   _magazineSize: 10
+  _reserveAmmo: 20
   _pellets: 1
-  _recoil:
-    _kickDegrees: 4
-    _maxPitchDegrees: 8
-    _maxYawDegrees: 0.5
-    _recoveryTime: 0.8
-    _oneHandMultiplier: 2
+  _killAward: 300
+  _spread:
+    _spread: 0.23
+    _inaccuracyStand: 3
+    _inaccuracyMove: 123.45
+    _inaccuracyFire: 22.92
+    _recoveryTime: 0.142096
+  _recoilMagnitude: 25
   _category: 0
   _weaponPositionOffset: {x: 0, y: 0, z: 0}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}

@@ -15,6 +15,10 @@ GameObject:
   - component: {fileID: 4168703770542051682}
   - component: {fileID: 229250694452780723}
   - component: {fileID: 656611755940413709}
+  - component: {fileID: 4510000000000000001}
+  - component: {fileID: 4510000000000000002}
+  - component: {fileID: 4510000000000000003}
+  - component: {fileID: 4510000000000000004}
   m_Layer: 0
   m_Name: EliminationMode
   m_TagString: Untagged
@@ -128,3 +132,54 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2e7046a5abe3e54faabadde11708580, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.GameModes.ModeStartCleanup
+--- !u!114 &4510000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7322410552265810670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10f277737b334580b000e85876f99905, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+--- !u!114 &4510000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7322410552265810670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3777fcd91914b69a8795ddbf3e709bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &4510000000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7322410552265810670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1659bc50bc104c7294c94ebb6333d3fd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &4510000000000000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7322410552265810670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77aab271ff964bfe9b727f78248bd7a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

@@ -49,9 +49,6 @@ namespace VrBattlegrounds.GameModes
                  "AutoBalance — сам, в самую малочисленную.")]
         public TeamAssignmentKind teamAssignment = TeamAssignmentKind.PlayerChoice;
 
-        [Tooltip("Префаб интерфейса игрока (VR HUD). Спавнится компонентом PlayerHUDManager локального игрока внутрь его UI-контейнера при старте матча/подключении.")]
-        public GameObject hudPrefab;
-
         [Header("Меню планшета")]
         [Tooltip("Игровые разделы левой колонки планшета, пока режим активен на карте (например, Обзор · Команда · Статистика). " +
                  "Пусто — разделы по умолчанию. Системные (Калибровка, Админ, Отладка) добавляются всегда, объявлять их не нужно. " +

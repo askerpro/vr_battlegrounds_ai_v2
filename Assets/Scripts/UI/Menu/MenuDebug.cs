@@ -4,7 +4,7 @@ using Mirror;
 using TMPro;
 using UnityEngine;
 using VrBattlegrounds.DevTools;
-using VrBattlegrounds.DevTools.Bots;
+using VrBattlegrounds.Bots;
 using VrBattlegrounds.DevTools.StressTest;
 using VrBattlegrounds.UI.Menu.Kit;
 

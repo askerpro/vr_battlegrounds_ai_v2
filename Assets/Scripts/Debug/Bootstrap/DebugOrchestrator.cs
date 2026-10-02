@@ -237,7 +237,7 @@ namespace VrBattlegrounds.DevTools
             int botCount = DebugBootstrapSettings.BotCount;
             if (botCount > 0)
             {
-                Bots.BotDirector.EnsureInstance()?.EnsureCount(botCount);
+                VrBattlegrounds.Bots.BotDirector.EnsureInstance()?.EnsureCount(botCount);
             }
 
             // Матч отсюда не запускаем. Игроки могли подключиться ещё в лобби, когда

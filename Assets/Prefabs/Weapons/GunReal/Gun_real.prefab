@@ -264,11 +264,11 @@ MonoBehaviour:
       _axis: 0
     _triggerRotationDegrees: 40
     _ammunitionMagAnchor: {fileID: 4667631426267724316}
-    _recoilAngleOneHand: 6
-    _recoilAngleTwoHands: 2
-    _recoilOffsetOneHand: {x: -0, y: -0, z: -0.05}
-    _recoilOffsetTwoHands: {x: -0, y: -0, z: -0.025}
-    _recoilDurationSeconds: 0.3
+    _recoilAngleOneHand: 2.73
+    _recoilAngleTwoHands: 1.365
+    _recoilOffsetOneHand: {x: 0, y: 0, z: -0.0182}
+    _recoilOffsetTwoHands: {x: 0, y: 0, z: -0.0091}
+    _recoilDurationSeconds: 0.11428572
 --- !u!114 &3244963856679855688
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -456,10 +456,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.RecoilAccumulator
   _pattern:
-    _kickDegrees: 2
-    _maxPitchDegrees: 6
-    _maxYawDegrees: 1
-    _recoveryTime: 0.35
+    _kickDegrees: 0.91
+    _maxPitchDegrees: 5.46
+    _maxYawDegrees: 0.546
+    _recoveryTime: 0.45
     _oneHandMultiplier: 2
   _axes: {fileID: 5924109489953213895}
 --- !u!114 &8617080545512346777

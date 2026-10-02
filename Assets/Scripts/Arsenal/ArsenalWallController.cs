@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using Mirror;
+using UltimateXR.Manipulation;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Economy;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
@@ -47,6 +49,14 @@ namespace VrBattlegrounds.Arsenal
     /// слотов (новый раунд, новый режим на карте) приходит событием экземпляра активного
     /// режима <see cref="GameMode.ArsenalRefillRequestedServer"/>.
     /// Режима нет — правил нет, стена стоит как стояла.
+    /// </para>
+    /// <para>
+    /// <b>Владелец стены (T-45).</b> Стена общая как объект, но при экономике матча покупает с неё
+    /// один игрок — владелец (<see cref="OwnerSessionNetId"/>, <c>SyncVar</c>, пишет сервер). Кто чей,
+    /// решает <c>ArsenalOwnershipPolicy</c> на префабе режима по зоне спавна стены
+    /// (<see cref="ArsenalOwnership"/>). Стена по деньгам владельца раздаёт слотам предложение
+    /// (<see cref="RefreshOffers"/>): подсветка — каждая машина, запрет хвата — сервер.
+    /// Списывает деньги <c>ArsenalCheckout</c> по серверным событиям <see cref="ItemTakenServer"/>.
     /// </para>
     /// </summary>
     public class ArsenalWallController : NetworkBehaviour
@@ -142,6 +152,43 @@ namespace VrBattlegrounds.Arsenal
         public ArsenalState CurrentState => _currentState;
 
         /// <summary>
+        /// <c>netId</c> сессии игрока, за которым закреплена стена (T-45); 0 — ничья. Пишет только сервер
+        /// (<see cref="ServerSetOwner"/>), поздний клиент получает начальным значением спавна.
+        /// </summary>
+        [SyncVar] private uint _ownerSessionNetId;
+
+        public uint OwnerSessionNetId => _ownerSessionNetId;
+
+        /// <summary>Сессия владельца на этой машине или null (ничья, сессия ещё не приехала).</summary>
+        public PlayerSession OwnerSession
+        {
+            get
+            {
+                if (_ownerSessionNetId == 0) return null;
+                NetworkIdentity identity = Mirror.Utils.GetSpawnedInServerOrClient(_ownerSessionNetId);
+                return identity != null ? identity.GetComponent<PlayerSession>() : null;
+            }
+        }
+
+        /// <summary>Закрепляет стену за игроком (0 — снять). Только сервер.</summary>
+        [Server]
+        public void ServerSetOwner(uint sessionNetId)
+        {
+            if (_ownerSessionNetId == sessionNetId) return;
+            _ownerSessionNetId = sessionNetId;
+            GameLog.Arsenal.Info($"[Arsenal] Стена '{name}' закреплена за сессией {sessionNetId}.", this);
+        }
+
+        /// <summary>Сервер: со стены унесли предмет (стена, слот, предмет, рука или null). Слушает <c>ArsenalCheckout</c>.</summary>
+        public static event System.Action<ArsenalWallController, ArsenalSlotController, UxrGrabbableObject, UxrGrabber> ItemTakenServer;
+
+        /// <summary>Сервер: на стену руками повесили предмет. Слушает <c>ArsenalCheckout</c> (возврат денег).</summary>
+        public static event System.Action<ArsenalWallController, ArsenalSlotController, UxrGrabbableObject> ItemReturnedServer;
+
+        /// <summary>Последнее разданное слотам предложение — чтобы не раздавать каждый кадр.</summary>
+        private (bool economy, uint owner, bool known, int money) _appliedOffer = (false, 0u, false, -1);
+
+        /// <summary>
         /// Слоты стены в том порядке, в каком их адресует <see cref="_slotItems" />.
         /// Порядок одинаков во всех процессах — на этом держится вся сетевая выдача оружия,
         /// потому что по сети едет индекс слота, а не ссылка на него.
@@ -184,6 +231,9 @@ namespace VrBattlegrounds.Arsenal
         private void Awake()
         {
             EnsureReferences();
+
+            // Табло денег владельца — представление стены, создаётся само (префаб стены общий для карт).
+            if (GetComponent<ArsenalWalletDisplay>() == null) gameObject.AddComponent<ArsenalWalletDisplay>();
         }
 
         /// <summary>
@@ -266,6 +316,53 @@ namespace VrBattlegrounds.Arsenal
                 ResolvePendingSlotBindings();
 
             ApplyModeRules(Time.deltaTime);
+            RefreshOffers();
+        }
+
+        /// <summary>
+        /// Раздаёт слотам предложение по деньгам владельца (T-45): без экономики — бесплатно,
+        /// иначе по карману / дорого / ничья. Каждая машина считает сама по реплицированным
+        /// владельцу и деньгам; пустой, пока ничего не изменилось. Зовётся из <c>Update</c> и тестов.
+        /// </summary>
+        public void RefreshOffers()
+        {
+            MatchEconomy economy = MatchEconomy.Current;
+            int money = 0;
+            bool known = false;
+
+            if (economy != null)
+            {
+                PlayerSession owner = OwnerSession;
+                known = owner != null && economy.TryGetMoney(owner, out money);
+            }
+
+            var signature = (economy != null, _ownerSessionNetId, known, money);
+            if (signature == _appliedOffer) return;
+            _appliedOffer = signature;
+
+            EnsureReferences();
+            foreach (ArsenalSlotController slot in _allSlots)
+            {
+                if (slot != null)
+                    slot.ApplyOffer(ArsenalPurchaseRules.Evaluate(economy != null, known, money, slot.Price));
+            }
+        }
+
+        /// <summary>
+        /// Сервер отменяет захват: предмет взял не владелец или не хватило денег (клиенту не доверяем).
+        /// Рука отпускает (синхронно для всех), ствол возвращается в свой слот.
+        /// </summary>
+        [Server]
+        public void ServerRejectTake(UxrGrabbableObject item)
+        {
+            if (item == null) return;
+
+            if (UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(item))
+                UxrGrabManager.Instance.ReleaseGrabs(item, true);
+
+            WeaponComponent weapon = item.GetComponentInParent<WeaponComponent>();
+            if (weapon != null && !ServerReturnHome(weapon))
+                GameLog.Arsenal.Warning($"[Arsenal] Отменённую покупку '{weapon.name}' не удалось вернуть в слот.", this);
         }
 
         /// <summary>
@@ -587,6 +684,8 @@ namespace VrBattlegrounds.Arsenal
             {
                 slot.OnItemTaken    += HandleItemTaken;
                 slot.OnItemReturned += HandleItemReturned;
+                slot.ItemTakenBy    += HandleItemTakenBy;
+                slot.ItemReturnedBy += HandleItemReturnedBy;
             }
         }
 
@@ -606,6 +705,8 @@ namespace VrBattlegrounds.Arsenal
             {
                 slot.OnItemTaken    -= HandleItemTaken;
                 slot.OnItemReturned -= HandleItemReturned;
+                slot.ItemTakenBy    -= HandleItemTakenBy;
+                slot.ItemReturnedBy -= HandleItemReturnedBy;
             }
         }
 
@@ -883,6 +984,18 @@ namespace VrBattlegrounds.Arsenal
         private void HandleItemTaken(ArsenalSlotController slot)
         {
             OnSlotChanged?.Invoke(slot, true);
+        }
+
+        /// <summary>Предмет унесли — серверу на списание денег. Клиенты ничего не решают.</summary>
+        private void HandleItemTakenBy(ArsenalSlotController slot, UxrGrabbableObject item, UxrGrabber grabber)
+        {
+            if (isServer) ItemTakenServer?.Invoke(this, slot, item, grabber);
+        }
+
+        /// <summary>Предмет повесили обратно — серверу на возврат денег.</summary>
+        private void HandleItemReturnedBy(ArsenalSlotController slot, UxrGrabbableObject item)
+        {
+            if (isServer) ItemReturnedServer?.Invoke(this, slot, item);
         }
 
         private void HandleItemReturned(ArsenalSlotController slot)

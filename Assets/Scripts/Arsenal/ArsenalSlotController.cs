@@ -1,6 +1,7 @@
 using UnityEngine;
 using UltimateXR.Manipulation;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Economy;
 using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Arsenal
@@ -30,9 +31,19 @@ namespace VrBattlegrounds.Arsenal
         [SerializeField] private Color _unavailableColor = Color.black;
         [SerializeField] private Color _takenColor       = Color.green;
 
+        [Header("Экономика (T-45)")]
+        [Tooltip("Во сколько раз темнее ствол, на который у владельца стены не хватает денег.")]
+        [SerializeField, Range(0f, 1f)] private float _unaffordableBrightness = 0.3f;
+
         // ── Events ─────────────────────────────────────────────
         public System.Action<ArsenalSlotController> OnItemTaken;
         public System.Action<ArsenalSlotController> OnItemReturned;
+
+        /// <summary>Предмет унесли со слота: что именно и какой рукой (рука может быть null). Для серверного списания.</summary>
+        public event System.Action<ArsenalSlotController, UxrGrabbableObject, UxrGrabber> ItemTakenBy;
+
+        /// <summary>Предмет повесили на слот руками. Для возврата денег.</summary>
+        public event System.Action<ArsenalSlotController, UxrGrabbableObject> ItemReturnedBy;
 
         // ── Properties ─────────────────────────────────────────
 
@@ -84,9 +95,32 @@ namespace VrBattlegrounds.Arsenal
         public WeaponInfo WeaponData => _weaponInfo;
         public UxrGrabbableObjectAnchor ItemAnchor => _itemAnchor;
 
+        /// <summary>Стена, которой принадлежит слот (может быть null у слота вне стены).</summary>
+        public ArsenalWallController Wall
+        {
+            get
+            {
+                if (_wall == null) _wall = GetComponentInParent<ArsenalWallController>();
+                return _wall;
+            }
+        }
+
+        /// <summary>Что слот предлагает сейчас (T-45): бесплатно, по карману, дорого, нет владельца.</summary>
+        public SlotOffer Offer => _offer;
+
+        /// <summary>Можно ли взять предмет: стена открыта и предложение позволяет.</summary>
+        public bool AllowsGrabNow => !IsLocked && ArsenalPurchaseRules.AllowsGrab(_offer);
+
         // ── State ──────────────────────────────────────────────
         protected bool IsLocked { get; private set; }
         private GameObject _spawnedItem;
+        private ArsenalWallController _wall;
+        private SlotOffer _offer = SlotOffer.Free;
+
+        /// <summary>Предмет, который сейчас приглушён (ему выставлен блок свойств рендера).</summary>
+        private GameObject _dimmedItem;
+
+        private ArsenalPriceTag _priceTag;
 
         // ── Unity ──────────────────────────────────────────────
 
@@ -262,9 +296,10 @@ namespace VrBattlegrounds.Arsenal
             // Оружие приезжает позже, чем стена успевает заблокировать слоты: закрытая
             // стена блокирует их в Start(), а пополнение идёт из OnStartServer и из фазы
             // Setup. Без этой строки предмет появлялся хватаемым в закрытом арсенале.
-            SetItemGrabbable(!IsLocked);
+            // С T-45 — и в арсенале, где на него не хватает денег.
+            SetItemGrabbable(AllowsGrabNow);
 
-            SetLightColor(_availableColor);
+            ApplyOfferVisuals();
         }
 
         /// <summary>
@@ -307,9 +342,9 @@ namespace VrBattlegrounds.Arsenal
         {
             IsLocked = false;
 
-            SetItemGrabbable(true);
+            SetItemGrabbable(AllowsGrabNow);
 
-            SetLightColor(_availableColor);
+            ApplyOfferVisuals();
             GameLog.Arsenal.Info($"[Arsenal] Slot '{DisplayName}' unlocked.");
         }
 
@@ -347,17 +382,74 @@ namespace VrBattlegrounds.Arsenal
         }
 
         /// <summary>
-        /// Updates the slot light based on whether the player can afford this item.
+        /// Предложение слота по деньгам владельца стены (T-45). Зовёт стена на каждой машине при
+        /// изменении; повтор того же значения — пустой. Захват (<c>IsGrabbable</c>) пишет только
+        /// автор мира — сервер (Issue 23), представление (свет, приглушение, ценник) — каждая машина.
         /// </summary>
-        public void SetAffordable(bool canAfford)
+        public void ApplyOffer(SlotOffer offer)
         {
-            if (IsLocked) return;
+            if (_offer == offer) return;
 
-            if (canAfford)
-                SetLightColor(IsItemPresent ? _availableColor : _takenColor);
-            else
-                SetLightColor(_unavailableColor);
+            _offer = offer;
+            SetItemGrabbable(AllowsGrabNow);
+            ApplyOfferVisuals();
         }
+
+        /// <summary>
+        /// Подсветка по предложению: по карману (и бесплатно) — свет слота горит, ствол обычный;
+        /// дорого или стена ничья — свет погашен, ствол приглушён. Ценник — только при экономике.
+        /// </summary>
+        private void ApplyOfferVisuals()
+        {
+            bool grabbable = ArsenalPurchaseRules.AllowsGrab(_offer);
+
+            if (!IsLocked)
+            {
+                if (!IsItemPresent) SetLightColor(_takenColor);
+                else SetLightColor(grabbable ? _availableColor : _unavailableColor);
+            }
+
+            SetDimmed(IsItemPresent && !grabbable ? CurrentItem : null);
+
+            if (_offer == SlotOffer.Free)
+            {
+                if (_priceTag != null) _priceTag.Hide();
+            }
+            else if (_weaponInfo != null && _itemAnchor != null && Application.isPlaying)
+            {
+                if (_priceTag == null) _priceTag = ArsenalPriceTag.Create(this);
+                _priceTag.Show(_weaponInfo.DisplayName, _weaponInfo.Price, grabbable);
+            }
+        }
+
+        /// <summary>
+        /// Приглушает ствол на стене блоком свойств рендера (цвет основы темнее), прежний — возвращает.
+        /// Блок свойств, а не материал: материалы оружия общие, их нельзя менять на ассете.
+        /// </summary>
+        private void SetDimmed(GameObject item)
+        {
+            if (_dimmedItem == item) return;
+
+            if (_dimmedItem != null)
+            {
+                foreach (Renderer r in _dimmedItem.GetComponentsInChildren<Renderer>(true))
+                    r.SetPropertyBlock(null);
+            }
+
+            _dimmedItem = item;
+            if (item == null) return;
+
+            var block = new MaterialPropertyBlock();
+            Color dim = new Color(_unaffordableBrightness, _unaffordableBrightness, _unaffordableBrightness, 1f);
+            block.SetColor(BaseColorId, dim);
+            block.SetColor(ColorId, dim);
+
+            foreach (Renderer r in item.GetComponentsInChildren<Renderer>(true))
+                r.SetPropertyBlock(block);
+        }
+
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         // ── Private: Events ────────────────────────────────────
 
@@ -375,8 +467,9 @@ namespace VrBattlegrounds.Arsenal
             }
 
             GameLog.Arsenal.Info($"[Arsenal] Item returned to slot '{DisplayName}'.");
-            SetLightColor(_availableColor);
+            ApplyOfferVisuals();
             OnItemReturned?.Invoke(this);
+            ItemReturnedBy?.Invoke(this, e.GrabbableObject);
         }
 
         private void OnSmoothPlaceTransitionEnded(object sender, UxrManipulationEventArgs e)
@@ -390,8 +483,10 @@ namespace VrBattlegrounds.Arsenal
             if (IsLocked) return;
 
             GameLog.Arsenal.Info($"[Arsenal] Item taken from slot '{DisplayName}'.");
+            SetDimmed(null);
             SetLightColor(_takenColor);
             OnItemTaken?.Invoke(this);
+            ItemTakenBy?.Invoke(this, e.GrabbableObject, e.Grabber);
         }
 
         // ── Protected: Light Helpers ───────────────────────────

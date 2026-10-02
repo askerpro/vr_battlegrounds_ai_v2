@@ -40,10 +40,21 @@ namespace VrBattlegrounds.Arsenal
         [Tooltip("Master list of all weapons in the game. Order matters for UI display.")]
         [SerializeField] private List<WeaponInfo> _weapons = new List<WeaponInfo>();
 
+        [Header("Default Sidearm")]
+        [Tooltip("Стартовый пистолет: игрок получает его бесплатно при появлении и в начале раунда (роль Glock-18 / USP-S " +
+                 "в CS2). Должен быть в списке выше и в категории Pistol — WeaponRegistryTests.")]
+        [SerializeField] private WeaponInfo _defaultSidearm;
+
         // ── Public API ─────────────────────────────────────────
 
         /// <summary>All registered weapons.</summary>
         public IReadOnlyList<WeaponInfo> Weapons => _weapons;
+
+        /// <summary>
+        /// Стартовый пистолет (T-39: WK-11 Viper). Единая точка правды для выдачи «бесплатного» ствола — выдачу
+        /// делает экономика раунда, сам реестр ничего не спавнит.
+        /// </summary>
+        public WeaponInfo DefaultSidearm => _defaultSidearm;
 
         /// <summary>Number of registered weapons.</summary>
         public int Count => _weapons.Count;
@@ -56,6 +67,19 @@ namespace VrBattlegrounds.Arsenal
             foreach (var w in _weapons)
             {
                 if (w != null && w.WeaponId == weaponId)
+                    return w;
+            }
+            return null;
+        }
+
+        /// <summary>Оружие, чей префаб — <paramref name="prefab"/>; null — не из реестра.</summary>
+        public WeaponInfo GetByPrefab(GameObject prefab)
+        {
+            if (prefab == null) return null;
+
+            foreach (var w in _weapons)
+            {
+                if (w != null && w.WeaponPrefab == prefab)
                     return w;
             }
             return null;

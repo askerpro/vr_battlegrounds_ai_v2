@@ -112,7 +112,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 Animator animator = ModelOf(instance);
                 if (animator == null)
                 {
-                    Debug.LogError($"[CorpseBuilder] {avatar.name}: нет гуманоидной модели — труп не собрать.");
+                    GameLog.Error($"[CorpseBuilder] {avatar.name}: нет гуманоидной модели — труп не собрать.");
                     return null;
                 }
 
@@ -149,7 +149,10 @@ namespace VrBattlegrounds.Editor.Avatars
                 Corpse corpse = model.gameObject.AddComponent<Corpse>();
                 var so = new SerializedObject(corpse);
                 SetArray(so.FindProperty("_bodies"), Parts.Where(p => bodies.ContainsKey(p.Bone)).Select(p => (Object)bodies[p.Bone]).ToList());
-                List<Transform> nodes = model.GetComponentsInChildren<Transform>(true).Where(t => t != model).ToList();
+                // Только скелет: аксессуары (часы T-46 с узлами табло) едут за своей костью, а в списке позы
+                // ломали труп при каждой их правке — путь пропадал из модели аватара.
+                HashSet<Transform> skeleton = SkeletonOf(model);
+                List<Transform> nodes = model.GetComponentsInChildren<Transform>(true).Where(skeleton.Contains).ToList();
                 SetArray(so.FindProperty("_nodes"), nodes.Cast<Object>().ToList());
                 SerializedProperty paths = so.FindProperty("_nodePaths");
                 paths.arraySize = nodes.Count;
@@ -160,13 +163,26 @@ namespace VrBattlegrounds.Editor.Avatars
                 string path = $"{OutFolder}/{model.name}.prefab";
                 GameObject saved = PrefabUtility.SaveAsPrefabAsset(model.gameObject, path);
                 Object.DestroyImmediate(model.gameObject);
-                Debug.Log($"[CorpseBuilder] Труп собран: {path} ({bodies.Count} тел).");
+                GameLog.Player.Info($"[CorpseBuilder] Труп собран: {path} ({bodies.Count} тел).");
                 return saved.GetComponent<Corpse>();
             }
             finally
             {
                 if (instance != null) Object.DestroyImmediate(instance);
             }
+        }
+
+        /// <summary>Кости скин-мешей модели и их предки до корня (корень не входит) — то, что двигает тело.</summary>
+        private static HashSet<Transform> SkeletonOf(Transform model)
+        {
+            var set = new HashSet<Transform>();
+            foreach (SkinnedMeshRenderer skin in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                foreach (Transform bone in skin.bones.Append(skin.rootBone))
+                    for (Transform t = bone; t != null && t != model && t.IsChildOf(model); t = t.parent)
+                        set.Add(t);
+            }
+            return set;
         }
 
         /// <summary>Снимает всё, кроме костей и мешей. Несколько проходов — из-за RequireComponent.</summary>
@@ -177,7 +193,8 @@ namespace VrBattlegrounds.Editor.Avatars
                 bool removed = false;
                 foreach (Component c in root.GetComponentsInChildren<Component>(true))
                 {
-                    if (c == null || Kept.Contains(c.GetType())) continue;
+                    // RectTransform (табло часов) — тоже Transform: снять его нельзя, Unity ругается ошибкой.
+                    if (c == null || c is Transform || Kept.Contains(c.GetType())) continue;
                     if (!CanRemove(c)) continue;
                     Object.DestroyImmediate(c);
                     removed = true;

@@ -72,7 +72,7 @@ DontDestroyOnLoad
 | `RoundWon`, `PlayerKilled` (события экземпляра, сервер) | Раунд доигран и выигран; игрок погиб (жертва, убийца, ассистенты). Слушает `Series` — статистика. |
 | `Finished` (событие экземпляра) | Режим матча объявил победителя. Слушает `Series`. Карта сразу уходит в разминку. |
 | `ActiveGameMode`, `IsLiveOrPaused`, `CurrentMap` | Режим этой машины; идёт ли матч (разминка — не матч); `MapData` своей сцены. |
-| `ActiveGameModeChangedLocal` (статическое) | Режим этой машины сменился. HUD и стена арсенала переподписываются. |
+| `ActiveGameModeChangedLocal` (статическое) | Режим этой машины сменился. Нотификации часов (`WatchGameEvents`) и стена арсенала переподписываются. |
 
 
 ---
@@ -176,6 +176,9 @@ GameModeData.modePrefab
 
 ### Пауза и «Продолжить»
 
+> Экономика (T-45): компоненты префаба режима с интерфейсом `IPauseSnapshotPart` (`MatchEconomy`) кладут своё
+> в снимок — деньги и счётчики поражений **на начало прерванного раунда**; «Продолжить» их возвращает.
+
 **Решение — снимок, а не приостановленный экземпляр.** На паузе карта в разминке, а режим на
 карте один: живой Elimination рядом с разминкой отвечал бы на те же вопросы (оружие, арсенал,
 урон) и держал бы подписки. Снимок (`PauseSnapshot`) — несколько чисел: счёт команд режима (у Elimination — раунды
@@ -241,7 +244,9 @@ GameModeData.modePrefab
 | `OnPlayerDied(player)` | `MapReferee.OnPlayerDied` | условие победы раунда | — (смерти нет) |
 | `PlayersTakeDamage` | `PlayerController` на `UxrActor.DamageReceiving` (отмена урона) | да | нет |
 | `TeamChoiceLocked` | `TeamChangeRules`, планшет | после старта матча | нет |
-| `IsWarmup`, `ModeData` (`modeId` SyncVar) | HUD, политика команд, минимум игроков, спавн | `Elimination_GameModeData` | `Warmup_GameModeData` (HUD нет) |
+| `IsWarmup`, `ModeData` (`modeId` SyncVar) | планшет, политика команд, минимум игроков, спавн | `Elimination_GameModeData` | `Warmup_GameModeData` |
+| компонент `MatchEconomy` на префабе (`MatchEconomy.Current`) | стена арсенала, правило хвата, табло, часы | есть: деньги CS2, покупки, владельцы стен, стартовый пистолет (T-45) | нет — всё бесплатно |
+| `RoundBeganServer(round, firstOfHalf)`, `RoundScoredServer(winner)` (события **экземпляра** `EliminationMode`) | `MatchEconomy` (сервер) | начало раунда (сброс денег в начале половины), исход раунда (выплаты) | — |
 
 Свойства — состояние, стена сверяется с ним каждый кадр; событие — разовое пополнение пустых
 слотов, потому что фаза `Setup` бывает короче кадра. Событие стало событием экземпляра:

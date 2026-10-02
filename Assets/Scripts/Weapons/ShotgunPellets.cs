@@ -10,7 +10,8 @@ namespace VrBattlegrounds.Weapons
     /// UltimateXR выпускает на выстрел один снаряд; «дробь» сэмплового дробовика — только широкий
     /// трассер и искры. Здесь на событие <see cref="UxrFirearmWeapon.ProjectileShot" /> выпускаются
     /// ещё <c>Pellets − 1</c> снарядов типа <see cref="_pelletShotIndex" /> в конусе
-    /// <see cref="_spreadDegrees" /> от ствола.
+    /// <see cref="_spreadDegrees" /> от ствола, а при <see cref="WeaponSpread" /> на оружии — в конусе CS2 (T-38):
+    /// только собственный разброс каждой дробины, без общего смещения неточности залпа.
     /// </para>
     ///
     /// <para>
@@ -35,13 +36,16 @@ namespace VrBattlegrounds.Weapons
         [Tooltip("Дробинок на выстрел вместе с основным снарядом.")]
         [SerializeField] [Min(1)] private int _pellets = 8;
 
-        [Tooltip("Половина угла конуса разброса, градусы. 2.5° — около метра на 20 м.")]
+        [Tooltip("Половина угла конуса разброса, градусы, если на оружии нет WeaponSpread. С WeaponSpread — справочно: " +
+                 "Apply Weapon Balance пишет сюда spread CS2 в градусах, а дробь летит по конусу WeaponSpread.")]
         [SerializeField] [Range(0f, 15f)] private float _spreadDegrees = 2.5f;
 
         private UxrFirearmWeapon _firearm;
         private UxrProjectileSource _source;
+        private WeaponSpread _weaponSpread;
 
         public int Pellets => _pellets;
+        public int TriggerIndex => _triggerIndex;
         public int PelletShotIndex => _pelletShotIndex;
         public float SpreadDegrees => _spreadDegrees;
 
@@ -49,6 +53,7 @@ namespace VrBattlegrounds.Weapons
         {
             _firearm = GetComponent<UxrFirearmWeapon>();
             _source = GetComponent<UxrProjectileSource>();
+            _weaponSpread = GetComponent<WeaponSpread>();
         }
 
         private void OnEnable()
@@ -68,7 +73,9 @@ namespace VrBattlegrounds.Weapons
             Transform muzzle = _source.ShotTypes[_pelletShotIndex].ShotSource;
             for (int i = 1; i < _pellets; i++)
             {
-                _source.Shoot(_pelletShotIndex, muzzle.position, muzzle.rotation * RandomSpread(_spreadDegrees));
+                // Только разлёт дробины от оси ствола; неточности залпа и штрафа очереди нет.
+                Quaternion deviation = _weaponSpread != null ? _weaponSpread.PelletDeviation(i) : RandomSpread(_spreadDegrees);
+                _source.Shoot(_pelletShotIndex, muzzle.position, muzzle.rotation * deviation);
             }
         }
 

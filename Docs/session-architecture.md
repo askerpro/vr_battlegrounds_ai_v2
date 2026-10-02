@@ -54,7 +54,7 @@
 - **Ответственность:**
   - Физика гравитации, получение урона (`UxrActor`).
   - IK-анимации, захват предметов (VR Grab).
-  - Рендеринг локального HUD-интерфейса (`PlayerHUDManager.OnStartAuthority`).
+  - Наручные часы — весь HUD игрока (`WristDisplay`, видны только хозяину; T-46).
 
 ---
 
@@ -149,7 +149,7 @@ sequenceDiagram
     AM->>S: Instantiate(Prefab)
     S-->>C: NetworkServer.Spawn(Avatar, connection)
     Note over C,S: Клиент получает Authority над куклой
-    C->>C: PlayerHUDManager.OnStartAuthority() -> Инициализация UI
+    C->>C: WristDisplay (isOwned) -> часы показывают статус и нотификации
 ```
 
 ---

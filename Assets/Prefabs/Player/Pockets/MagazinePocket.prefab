@@ -334,6 +334,11 @@ MonoBehaviour:
   - MagRevolver
   - MagSniper
   - MagSRM12
+  - MagViper
+  - MagMKR9
+  - MagHerrington
+  - MagTR15
+  - MagMk14
   _maxPlaceDistance: 0.1
   _alignTransformUseSelf: 1
   _alignTransform: {fileID: 0}

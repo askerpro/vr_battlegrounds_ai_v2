@@ -57,9 +57,10 @@ namespace VrBattlegrounds.Editor.Gameplay
         {
             public string Name;
             public Transform Bone;
-            public SkinnedMeshRenderer Renderer;
+            public Renderer Renderer;
             public int BoneIndex;
             public int Vertices;
+            public bool Static;   // обвес пака: отдельный MeshRenderer (глушитель, коллиматор), а не кость скина
         }
 
         /// <param name="prefab">Префаб пака: <c>W_Oryx_SRM-12</c></param>
@@ -71,7 +72,13 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// Клип покоя оружия (<c>A_W_*_Idle</c>): в позе префаба пака у части стволов магазин не вставлен — гнездо
         /// ставит на место клип покоя (у AK105, MKR9, Viper магазин висел под стволом). <c>null</c> — поза префаба.
         /// </param>
-        public KinemationWeapon(string prefab, string animFolder, string poseClip, string assetName, string bodyBone = "Body", string restClip = null)
+        /// <param name="attachments">
+        /// Обвесы пака — статичные <see cref="MeshRenderer" /> внутри префаба (<c>SM_Attach_AR15_Silencer</c>): деталь с
+        /// таким именем — весь меш обвеса в осях его трансформа. Только названные: у префабов пака есть и обвесы, которые
+        /// не берутся (рукоять, голограмма прицела).
+        /// </param>
+        public KinemationWeapon(string prefab, string animFolder, string poseClip, string assetName, string bodyBone = "Body", string restClip = null,
+                                IEnumerable<string> attachments = null)
         {
             _restClip = restClip;
             _prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{Pack}Prefabs/Weapons/{prefab}.prefab")
@@ -102,6 +109,18 @@ namespace VrBattlegrounds.Editor.Gameplay
                 }
             }
 
+            foreach (string attachment in attachments ?? Enumerable.Empty<string>())
+            {
+                MeshFilter filter = _instance.GetComponentsInChildren<MeshFilter>(true)
+                                             .FirstOrDefault(f => f.name == attachment && f.sharedMesh != null && f.GetComponent<MeshRenderer>() != null)
+                                    ?? throw new ArgumentException($"{prefab}: нет обвеса '{attachment}' (MeshFilter + MeshRenderer)");
+                _parts[attachment] = new Part
+                {
+                    Name = attachment, Bone = filter.transform, Renderer = filter.GetComponent<MeshRenderer>(), BoneIndex = -1,
+                    Vertices = filter.sharedMesh.vertexCount, Static = true
+                };
+            }
+
             if (!_parts.ContainsKey(bodyBone)) throw new ArgumentException($"{prefab}: нет детали-корпуса '{bodyBone}'. Есть: {string.Join(", ", _parts.Keys)}");
             _body = bodyBone;
         }
@@ -129,9 +148,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             Part p = Get(part);
             Sample(null);
 
-            Mesh src = WithCpuData(p.Renderer.sharedMesh);
-            BoneWeight[] weights = src.boneWeights;
-            Matrix4x4 toPart = Rigid(p.Bone.localToWorldMatrix).inverse * p.Bone.localToWorldMatrix * src.bindposes[p.BoneIndex];
+            // Обвес — весь свой меш в осях своего трансформа (с его масштабом); деталь скина — вершины кости × bindpose.
+            Mesh src = WithCpuData(p.Static ? p.Bone.GetComponent<MeshFilter>().sharedMesh : ((SkinnedMeshRenderer)p.Renderer).sharedMesh);
+            BoneWeight[] weights = p.Static ? null : src.boneWeights;
+            Matrix4x4 toPart = Rigid(p.Bone.localToWorldMatrix).inverse * p.Bone.localToWorldMatrix * (p.Static ? Matrix4x4.identity : src.bindposes[p.BoneIndex]);
             Matrix4x4 toPartNormal = toPart.inverse.transpose;
 
             Vector3[] vertices = src.vertices;
@@ -153,8 +173,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 for (int i = 0; i < tris.Length; i += 3)
                 {
                     int a = tris[i], b = tris[i + 1], c = tris[i + 2];
-                    int owner = Majority(weights[a].boneIndex0, weights[b].boneIndex0, weights[c].boneIndex0);
-                    if (owner != p.BoneIndex) continue;
+                    if (!p.Static && Majority(weights[a].boneIndex0, weights[b].boneIndex0, weights[c].boneIndex0) != p.BoneIndex) continue;
 
                     foreach (int v in new[] { a, b, c })
                     {
@@ -177,7 +196,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 if (indices.Count > 0) subs.Add((s, indices));
             }
 
-            if (outV.Count == 0) throw new InvalidOperationException($"{_prefab.name}/{part}: у детали нет треугольников (меш {src.name}: вершин {vertices.Length}, весов {weights.Length}, подмешей {src.subMeshCount}, треугольников 0-го {src.GetIndexCount(0) / 3}, кость {p.BoneIndex}, isReadable {src.isReadable})");
+            if (outV.Count == 0) throw new InvalidOperationException($"{_prefab.name}/{part}: у детали нет треугольников (меш {src.name}: вершин {vertices.Length}, весов {weights?.Length ?? 0}, подмешей {src.subMeshCount}, треугольников 0-го {src.GetIndexCount(0) / 3}, кость {p.BoneIndex}, isReadable {src.isReadable})");
 
             var mesh = new Mesh { name = $"{Path.GetFileName(_assetFolder)}_{Clean(part)}" };
             mesh.indexFormat = outV.Count > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16;
@@ -428,10 +447,12 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <summary>Read/Write у моделей, на которые ссылаются рендереры префаба пака (правка только <c>.meta</c> пака).</summary>
         public static void EnsureReadable(GameObject prefab)
         {
-            foreach (SkinnedMeshRenderer r in prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            var meshes = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true).Select(r => r.sharedMesh)
+                               .Concat(prefab.GetComponentsInChildren<MeshFilter>(true).Select(f => f.sharedMesh));
+            foreach (Mesh mesh in meshes)
             {
-                if (r.sharedMesh == null) continue;
-                if (AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(r.sharedMesh)) is ModelImporter importer && !importer.isReadable)
+                if (mesh == null) continue;
+                if (AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(mesh)) is ModelImporter importer && !importer.isReadable)
                 {
                     importer.isReadable = true;
                     importer.SaveAndReimport();

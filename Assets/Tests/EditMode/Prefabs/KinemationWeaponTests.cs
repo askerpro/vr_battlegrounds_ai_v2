@@ -45,6 +45,8 @@ namespace VrBattlegrounds.Tests.Prefabs
             public string Clip;                     // клип оружия с ходом затвора и спуска
             public string[] Dropped;                // кости, которых в префабе быть не должно (лишние патроны)
             public int MaxTriangles;                // бюджет ствола с магазином
+            public Dictionary<string, string> Attachments; // обвес пака (MeshRenderer: глушитель, коллиматор) → путь в префабе
+            public string Muzzle;                   // обвес, на срезе которого дуло (глушитель); null — корпус
 
             public override string ToString() => System.IO.Path.GetFileNameWithoutExtension(Prefab);
         }
@@ -121,6 +123,23 @@ namespace VrBattlegrounds.Tests.Prefabs
                 ActionPart = "Bolt", Clip = "A_W_Herrington_11-87_Fire",
                 Dropped = new string[0], MaxTriangles = 10000
             };
+            yield return new Case
+            {
+                Prefab = W + "TR15/TR15.prefab", PackPrefab = "W_TR15", AnimFolder = "TR15", RestClip = "A_W_TR15_Idle",
+                Parts = new Dictionary<string, string>
+                {
+                    { "Trigger", "MeshContainer/Trigger" }, { "Bolt", "Slide/Bolt" }, { "Charger", "Slide/Charger" },
+                    { "Dustcover", "MeshContainer/Dustcover" }, { "Magazine", "MeshContainer/MagAnchor/TR15_mag/Mesh" },
+                    { "Cartridge_1", "MeshContainer/MagAnchor/TR15_mag/Cartridge_1" }
+                },
+                Attachments = new Dictionary<string, string>
+                {
+                    { "SM_Attach_AR15_Silencer", "MeshContainer/SM_Attach_AR15_Silencer" }, { "SM_Attach_AR15_XPS2", "MeshContainer/SM_Attach_AR15_XPS2" }
+                },
+                Muzzle = "SM_Attach_AR15_Silencer",
+                ActionPart = "Bolt", Clip = "A_W_TR15_Fire",
+                Dropped = new[] { "Cartridge_3", "Cartridge_30", "Follower", "Spring", "Reticle", "SM_Attach_AR15_Grip" }, MaxTriangles = 30000
+            };
         }
 
         /// <summary>Револьвер: затвора нет — отдельный набор проверок (детали и спуск), ход затвора не проверяется.</summary>
@@ -185,6 +204,49 @@ namespace VrBattlegrounds.Tests.Prefabs
 
             Assert.IsEmpty(failures, $"{prefab.name}: геометрия деталей не совпадает с паком:\n" + string.Join("\n", failures));
         }
+
+        /// <summary>
+        /// Обвесы пака (глушитель, корпус коллиматора) стоят там же, где в префабе пака, а дуло — на срезе глушителя:
+        /// иначе снаряд, вспышка и проверка ствола в стене (<c>BarrelObstruction</c>) начинались бы внутри глушителя.
+        /// </summary>
+        [TestCaseSource(nameof(WithAttachments))]
+        public void Обвесы_на_месте_и_дуло_на_срезе_глушителя(Case c)
+        {
+            GameObject prefab = Load(c);
+            using var pack = new PackModel(c);
+            Transform body = Find(prefab, c.BodyPath);
+            var failures = new List<string>();
+
+            foreach (var pair in c.Attachments)
+            {
+                Transform part = Find(prefab, pair.Value);
+                Matrix4x4 actual = Rigid(body.localToWorldMatrix).inverse * Rigid(part.localToWorldMatrix);
+                Matrix4x4 expected = pack.AttachmentInBody(pair.Key);
+                float dPos = Vector3.Distance(actual.GetColumn(3), expected.GetColumn(3));
+                float dRot = Quaternion.Angle(actual.rotation, expected.rotation);
+                if (dPos > 0.0005f || dRot > 0.5f) failures.Add($"{pair.Value}: смещён на {dPos * 1000f:F1} мм, повёрнут на {dRot:F1}° от обвеса пака");
+
+                // Меш обвеса с масштабом его трансформа в паке: габарит в осях корпуса совпадает.
+                Bounds got = BoundsOf(part.GetComponent<MeshFilter>().sharedMesh.vertices.Select(v => (Rigid(body.localToWorldMatrix).inverse * part.localToWorldMatrix).MultiplyPoint3x4(v)));
+                Bounds want = pack.AttachmentVerticesInBody(pair.Key);
+                float d = Vector3.Distance(got.min, want.min) + Vector3.Distance(got.max, want.max);
+                if (d > 0.001f) failures.Add($"{pair.Value}: габарит {got.size * 100f} см, в паке {want.size * 100f} см");
+            }
+
+            if (c.Muzzle != null)
+            {
+                Transform muzzle = Find(prefab, c.Attachments[c.Muzzle]);
+                Transform tip = Find(prefab, "MeshContainer/Tip");
+                Vector3 forward = prefab.transform.forward;
+                float front = muzzle.GetComponent<MeshFilter>().sharedMesh.vertices.Max(v => Vector3.Dot(muzzle.TransformPoint(v), forward));
+                float gap = front - Vector3.Dot(tip.position, forward);
+                if (Mathf.Abs(gap) > 0.002f) failures.Add($"Tip в {gap * 100f:F1} см от среза {c.Muzzle} (вдоль ствола)");
+            }
+
+            Assert.IsEmpty(failures, $"{prefab.name}:\n" + string.Join("\n", failures));
+        }
+
+        public static IEnumerable<Case> WithAttachments() => Cases().Where(c => c.Attachments != null);
 
         [TestCaseSource(nameof(Cases))]
         public void Ход_затвора_как_в_клипе(Case c)
@@ -371,6 +433,18 @@ namespace VrBattlegrounds.Tests.Prefabs
             private Transform Bone(string name) => _bones[name].renderer.bones[_bones[name].bone];
 
             public Matrix4x4 PartInBody(string part) => Rigid(Bone(_case.Body).localToWorldMatrix).inverse * Rigid(Bone(part).localToWorldMatrix);
+
+            private MeshFilter Attachment(string name) =>
+                _instance.GetComponentsInChildren<MeshFilter>(true).First(f => f.name == name && f.sharedMesh != null && f.GetComponent<MeshRenderer>() != null);
+
+            public Matrix4x4 AttachmentInBody(string name) => Rigid(Bone(_case.Body).localToWorldMatrix).inverse * Rigid(Attachment(name).transform.localToWorldMatrix);
+
+            public Bounds AttachmentVerticesInBody(string name)
+            {
+                MeshFilter f = Attachment(name);
+                Matrix4x4 m = Rigid(Bone(_case.Body).localToWorldMatrix).inverse * f.transform.localToWorldMatrix;
+                return BoundsOf(WithCpuData(f.sharedMesh).vertices.Select(v => m.MultiplyPoint3x4(v)));
+            }
 
             public Bounds BoneVerticesInBody(string part)
             {

@@ -15,7 +15,7 @@ namespace VrBattlegrounds.Player.Avatars
     ///
     /// <para>
     /// Соединение <c>conn</c> может быть <c>null</c> — это сессия бота
-    /// (<c>DevTools.Bots.BotDirector</c>): аватар спавнится без владельца, позу рассылает сервер.
+    /// (<c>Bots.BotDirector</c>): аватар спавнится без владельца, позу рассылает сервер.
     /// </para>
     /// </summary>
     [DefaultExecutionOrder(VrBattlegrounds.Managers.ManagerOrder.AvatarManager)]

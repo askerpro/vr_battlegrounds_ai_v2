@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 456398918869496865}
   - component: {fileID: 952510269781632304}
   - component: {fileID: 9210815879232927498}
+  - component: {fileID: 7340921508812345671}
   m_Layer: 8
   m_Name: TeamSpawnZone
   m_TagString: SpawnZone
@@ -129,3 +130,15 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &7340921508812345671
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4944276574430791300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06a3629b342b4145adb22d631207e9f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

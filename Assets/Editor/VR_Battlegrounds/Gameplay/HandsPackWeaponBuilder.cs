@@ -34,6 +34,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public float TargetLength;     // габарит в метрах, по реальному прототипу
 
         public string[] StaticParts;   // детали корпуса без движения
+        public string MuzzlePart;      // деталь, на срезе которой дуло (глушитель); null — корпус
         public string TriggerPart;
         public string ActionPart;      // помпа или затвор; по нему меряется ход
         public string[] ActionExtraParts; // детали, которые ходят вместе с затвором (рукоять затвора болтовки)
@@ -233,6 +234,9 @@ namespace VrBattlegrounds.Editor.Gameplay
                     MagazineTag = "MagRevolver", MagazineCapacity = 6
                 });
                 r.Action = HandsPackWeaponRecipe.ActionKind.None;
+                // Выстрел пака Hands (9Run_Set/Shot 4) — тот же, что у лёгких пистолетов, и звучал «как с глушителем»;
+                // свой громкий — выстрел револьвера R08 из пака KINEMATION (KinemationWeaponBuilder.MakeRevolverShot).
+                r.ShotAudio = KinemationWeaponBuilder.RevolverShotPath;
                 return r;
             }
         }
@@ -382,7 +386,9 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             // Ствол: дуло — передний край корпуса, ось — центр кольца вершин у дула (у помпового —
             // верхнего: ниже ствола подствольный магазин).
-            Bounds muzzle = MuzzleRing(pack.MeshOf(r.BodyPart), parts[r.BodyPart], r.Action == HandsPackWeaponRecipe.ActionKind.Pump || r.Pellets);
+            // С глушителем дуло — срез глушителя (MuzzlePart): снаряд, вспышка и проверка ствола в стене идут от него.
+            string muzzlePart = r.MuzzlePart ?? r.BodyPart;
+            Bounds muzzle = MuzzleRing(pack.MeshOf(muzzlePart), parts[muzzlePart], r.Action == HandsPackWeaponRecipe.ActionKind.Pump || r.Pellets);
             var tip = Empty("Tip", container, new Vector3(muzzle.center.x, muzzle.center.y, muzzle.max.z));
             // Снаряд рождается у дула, на 1 см позади Tip: из глубины коробки след трассера
             // выходит сбоку от ствола при отдаче и движении руки (ShotOriginTests).

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using VrBattlegrounds.Bots;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
@@ -15,6 +16,7 @@ namespace VrBattlegrounds.UI.Menu
     /// карта, раунд и фаза с часами, счёт, команды с хп / готовностью / У/С/А, серия; в лобби —
     /// блок «Вы» (команда, скин, калибровка) и зал. У админа — все кнопки ситуации: главное действие
     /// справа внизу (<see cref="MenuScreen.SetPrimary"/>), остальные — строкой кнопок под шапкой.
+    /// «Матч с ботами» (<see cref="OverviewBotMatch"/>, T-48) — и обычному игроку, если он один на сервере.
     ///
     /// <para>
     /// Экран только рисует. Данные: <see cref="OverviewStateReader"/> → <see cref="OverviewBuilder"/> →
@@ -93,9 +95,18 @@ namespace VrBattlegrounds.UI.Menu
 
         private static OverviewAdminPlan AdminPlan(OverviewContext context)
         {
-            if (!MenuPermissions.ShowAdminUi()) return new OverviewAdminPlan();
-            bool lastMap = Series.Instance != null && Series.Instance.IsLastMap;
-            return OverviewAdminActions.Plan(context, lastMap, AdminMapCommands.IsAvailable);
+            bool adminUi = MenuPermissions.ShowAdminUi();
+            OverviewAdminPlan plan;
+            if (!adminUi) plan = new OverviewAdminPlan();
+            else
+            {
+                bool lastMap = Series.Instance != null && Series.Instance.IsLastMap;
+                plan = OverviewAdminActions.Plan(context, lastMap, AdminMapCommands.IsAvailable);
+            }
+
+            // «Матч с ботами» (T-48) — и игроку без админки, если он один на сервере.
+            OverviewBotMatch.Apply(plan, context, BotMatchNetwork.LocalCanRequest(adminUi));
+            return plan;
         }
 
         private static string Signature(OverviewAdminPlan plan)
@@ -126,6 +137,14 @@ namespace VrBattlegrounds.UI.Menu
 
         private void Run(OverviewAction action)
         {
+            if (action.BotMatch)
+            {
+                GameLog.UI.Info("[MenuOverview] Матч с ботами.");
+                BotMatchNetwork.Request();
+                _last = null;
+                return;
+            }
+
             if (!action.Command.HasValue)
             {
                 Push(action.Screen);

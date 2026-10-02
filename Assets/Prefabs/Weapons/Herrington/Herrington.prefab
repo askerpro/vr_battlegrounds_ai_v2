@@ -1193,6 +1193,8 @@ GameObject:
   - component: {fileID: 1556853077131093558}
   - component: {fileID: 161422939906427083}
   - component: {fileID: 3603773129384722993}
+  - component: {fileID: 7880190326448832616}
+  - component: {fileID: 3157518496768062082}
   m_Layer: 0
   m_Name: Herrington
   m_TagString: Weapon
@@ -1397,8 +1399,8 @@ MonoBehaviour:
     _projectileSpeed: 400
     _projectileMaxDistance: 60
     _projectileLength: 0.03
-    _projectileDamageNear: 14
-    _projectileDamageFar: 4
+    _projectileDamageNear: 12
+    _projectileDamageFar: 2.2251582
     _projectileImpactForceMultiplier: 1
     _collisionLayerMask:
       serializedVersion: 2
@@ -1411,6 +1413,7 @@ MonoBehaviour:
     _createDecalLayerMask:
       serializedVersion: 2
       m_Bits: 9
+    _penetrationPower: 1
   - _shotSource: {fileID: 3800483394425460231}
     _tip: {fileID: 4474036149468714724}
     _useAutomaticProjectileTrajectory: 1
@@ -1422,8 +1425,8 @@ MonoBehaviour:
     _projectileSpeed: 400
     _projectileMaxDistance: 60
     _projectileLength: 0.03
-    _projectileDamageNear: 14
-    _projectileDamageFar: 4
+    _projectileDamageNear: 12
+    _projectileDamageFar: 2.2251582
     _projectileImpactForceMultiplier: 1
     _collisionLayerMask:
       serializedVersion: 2
@@ -1436,6 +1439,7 @@ MonoBehaviour:
     _createDecalLayerMask:
       serializedVersion: 2
       m_Bits: 9
+    _penetrationPower: 1
 --- !u!114 &7237077981730645025
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1456,7 +1460,7 @@ MonoBehaviour:
   - _projectileShotIndex: 0
     _cycleType: 2
     _useHasReloadedForSemiAndFullAuto: 1
-    _maxShotFrequency: 11
+    _maxShotFrequency: 3
     _shotAudio:
       _clip: {fileID: 8300000, guid: aeb56434eb3755b4c8215f8d83981450, type: 3}
       _volume: 1
@@ -1477,11 +1481,11 @@ MonoBehaviour:
       _axis: 0
     _triggerRotationDegrees: 0
     _ammunitionMagAnchor: {fileID: 4340066061424731168}
-    _recoilAngleOneHand: 6
-    _recoilAngleTwoHands: 2
-    _recoilOffsetOneHand: {x: -0, y: -0, z: -0.05}
-    _recoilOffsetTwoHands: {x: -0, y: -0, z: -0.025}
-    _recoilDurationSeconds: 0.3
+    _recoilAngleOneHand: 8.4
+    _recoilAngleTwoHands: 4.2
+    _recoilOffsetOneHand: {x: 0, y: 0, z: -0.055999998}
+    _recoilOffsetTwoHands: {x: 0, y: 0, z: -0.027999999}
+    _recoilDurationSeconds: 0.26666668
 --- !u!114 &5174579775999582739
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1617,8 +1621,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.ShotgunPellets
   _triggerIndex: 0
   _pelletShotIndex: 1
-  _pellets: 8
-  _spreadDegrees: 2.5
+  _pellets: 6
+  _spreadDegrees: 2.1761925
 --- !u!114 &3603773129384722993
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1640,6 +1644,43 @@ MonoBehaviour:
   _fullSpeed: 5
   _cooldown: 0.2
   _maxVolume: 0.9
+--- !u!114 &7880190326448832616
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5766990037059969871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ca4861be76f25044984803548d10701, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.RecoilAccumulator
+  _pattern:
+    _kickDegrees: 2.8
+    _maxPitchDegrees: 10
+    _maxYawDegrees: 2.5
+    _recoveryTime: 0.45
+    _oneHandMultiplier: 2
+  _axes: {fileID: 7770348165787161522}
+--- !u!114 &3157518496768062082
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5766990037059969871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a3784d5cacc41b4581333fc5ac38529, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponSpread
+  _pattern:
+    _spread: 38
+    _inaccuracyStand: 0
+    _inaccuracyMove: 0
+    _inaccuracyFire: 0
+    _recoveryTime: 0.506569
 --- !u!1 &6003817143015502247
 GameObject:
   m_ObjectHideFlags: 0

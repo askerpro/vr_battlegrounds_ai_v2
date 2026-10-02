@@ -377,7 +377,7 @@ MonoBehaviour:
     _projectileMaxDistance: 120
     _projectileLength: 0.03
     _projectileDamageNear: 53
-    _projectileDamageFar: 7.2371464
+    _projectileDamageFar: 11.4121685
     _projectileImpactForceMultiplier: 1
     _collisionLayerMask:
       serializedVersion: 2
@@ -413,7 +413,7 @@ MonoBehaviour:
     _useHasReloadedForSemiAndFullAuto: 0
     _maxShotFrequency: 4
     _shotAudio:
-      _clip: {fileID: 8300000, guid: 3684f4a2b6b8bf2478a026a4dd4ead1d, type: 3}
+      _clip: {fileID: 8300000, guid: 1757de17fbdc3914c98b81141ec9c387, type: 3}
       _volume: 1
     _shotAudioNoAmmo:
       _clip: {fileID: 8300000, guid: fe726d3155153a34b8f4aca59c732479, type: 3}
@@ -432,11 +432,11 @@ MonoBehaviour:
       _axis: 0
     _triggerRotationDegrees: 29
     _ammunitionMagAnchor: {fileID: 451710448056766281}
-    _recoilAngleOneHand: 6
-    _recoilAngleTwoHands: 2
-    _recoilOffsetOneHand: {x: -0, y: -0, z: -0.05}
-    _recoilOffsetTwoHands: {x: -0, y: -0, z: -0.025}
-    _recoilDurationSeconds: 0.3
+    _recoilAngleOneHand: 5.061
+    _recoilAngleTwoHands: 2.5305
+    _recoilOffsetOneHand: {x: 0, y: 0, z: -0.03374}
+    _recoilOffsetTwoHands: {x: 0, y: 0, z: -0.01687}
+    _recoilDurationSeconds: 0.2
 --- !u!114 &4462623291201037141
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -535,10 +535,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.RecoilAccumulator
   _pattern:
-    _kickDegrees: 5
+    _kickDegrees: 1.687
     _maxPitchDegrees: 10
     _maxYawDegrees: 1
-    _recoveryTime: 0.6
+    _recoveryTime: 0.45
     _oneHandMultiplier: 2
   _axes: {fileID: 708993860913797595}
 --- !u!114 &6334005562954209410

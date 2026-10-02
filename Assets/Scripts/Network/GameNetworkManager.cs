@@ -55,7 +55,8 @@ namespace VrBattlegrounds.Network
             NetworkServer.RegisterHandler<SpectatorConnectMessage>(OnSpectatorConnect);
             VrBattlegrounds.DevTools.StressTest.StressTestNetwork.RegisterServerHandlers();
             VrBattlegrounds.DevTools.DebugModeNetwork.RegisterServerHandlers();
-            VrBattlegrounds.DevTools.Bots.BotNetwork.RegisterServerHandlers();
+            VrBattlegrounds.Bots.BotNetwork.RegisterServerHandlers();
+            VrBattlegrounds.Bots.BotMatchNetwork.RegisterServerHandlers();
         }
 
         public override void OnServerSceneChanged(string sceneName)

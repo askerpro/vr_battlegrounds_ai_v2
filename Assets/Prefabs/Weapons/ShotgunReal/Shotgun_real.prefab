@@ -1071,6 +1071,7 @@ GameObject:
   - component: {fileID: 2372715179803342122}
   - component: {fileID: 6589604928042687260}
   - component: {fileID: 616277065324562186}
+  - component: {fileID: 8836556861283499873}
   m_Layer: 0
   m_Name: Shotgun_real
   m_TagString: Weapon
@@ -1325,10 +1326,10 @@ MonoBehaviour:
       _axis: 0
     _triggerRotationDegrees: 17
     _ammunitionMagAnchor: {fileID: 5029277415383040352}
-    _recoilAngleOneHand: 6
-    _recoilAngleTwoHands: 2
-    _recoilOffsetOneHand: {x: -0, y: -0, z: -0.05}
-    _recoilOffsetTwoHands: {x: -0, y: -0, z: -0.025}
+    _recoilAngleOneHand: 12
+    _recoilAngleTwoHands: 6
+    _recoilOffsetOneHand: {x: 0, y: 0, z: -0.08}
+    _recoilOffsetTwoHands: {x: 0, y: 0, z: -0.04}
     _recoilDurationSeconds: 0.3
 --- !u!114 &3615018364194328062
 MonoBehaviour:
@@ -1460,7 +1461,7 @@ MonoBehaviour:
   _triggerIndex: 0
   _pelletShotIndex: 1
   _pellets: 9
-  _spreadDegrees: 2.5
+  _spreadDegrees: 2.2906103
 --- !u!114 &2372715179803342122
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1491,10 +1492,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.RecoilAccumulator
   _pattern:
-    _kickDegrees: 5
-    _maxPitchDegrees: 8
-    _maxYawDegrees: 0
-    _recoveryTime: 0.6
+    _kickDegrees: 5.005
+    _maxPitchDegrees: 10
+    _maxYawDegrees: 1
+    _recoveryTime: 0.45
     _oneHandMultiplier: 2
   _axes: {fileID: 1044288845443984790}
 --- !u!114 &616277065324562186
@@ -1518,6 +1519,24 @@ MonoBehaviour:
   _fullSpeed: 5
   _cooldown: 0.2
   _maxVolume: 0.9
+--- !u!114 &8836556861283499873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6455569017325164971}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a3784d5cacc41b4581333fc5ac38529, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponSpread
+  _pattern:
+    _spread: 40
+    _inaccuracyStand: 0
+    _inaccuracyMove: 0
+    _inaccuracyFire: 0
+    _recoveryTime: 0.460517
 --- !u!1 &6638660182367233525
 GameObject:
   m_ObjectHideFlags: 0

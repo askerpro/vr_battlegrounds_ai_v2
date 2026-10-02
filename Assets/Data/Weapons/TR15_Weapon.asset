@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 086e9e8eb4d89c54ab6a6f0b06011b0e, type: 3}
+  m_Name: TR15_Weapon
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
+  _displayName: TR-15 SD
+  _weaponId: TR15
+  _description: "\u0412\u0438\u043D\u0442\u043E\u0432\u043A\u0430 AR-15 \u0441 \u0433\u043B\u0443\u0448\u0438\u0442\u0435\u043B\u0435\u043C
+    (\u0440\u043E\u043B\u044C M4A1-S), \u043C\u0430\u0433\u0430\u0437\u0438\u043D
+    \u043D\u0430 20."
+  _weaponPrefab: {fileID: 3664258485270452095, guid: 3935229bb05b32b45b3af04c07bfbfbe, type: 3}
+  _magazinePrefab: {fileID: 3254853512004640353, guid: c1288aacdfca72346b6966bf7d6b906e, type: 3}
+  _maxMagazineCount: 3
+  _price: 2900
+  _damage: 38
+  _rangeModifier: 0.94
+  _penetration: 2
+  _armorRatio: 1.4
+  _fireRate: 600
+  _fullAuto: 1
+  _magazineSize: 20
+  _reserveAmmo: 60
+  _pellets: 1
+  _killAward: 300
+  _spread:
+    _spread: 0.5
+    _inaccuracyStand: 4.9
+    _inaccuracyMove: 122
+    _inaccuracyFire: 7
+    _recoveryTime: 0.338941
+  _recoilMagnitude: 21
+  _category: 0
+  _weaponPositionOffset: {x: 0, y: 0, z: 0}
+  _weaponRotationOffset: {x: 0, y: 0, z: 0}
+  _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _icon: {fileID: 0}

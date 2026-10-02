@@ -46,6 +46,45 @@ namespace VrBattlegrounds.Tests.Prefabs
             return source.CorpsePrefab;
         }
 
+        /// <summary>
+        /// Скелет модели: кости скин-мешей и их предки до корня модели. Только они двигают тело трупа.
+        /// </summary>
+        private static HashSet<Transform> Skeleton(Transform model)
+        {
+            var set = new HashSet<Transform>();
+            foreach (SkinnedMeshRenderer skin in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                foreach (Transform bone in skin.bones.Append(skin.rootBone))
+                    for (Transform t = bone; t != null && t != model && t.IsChildOf(model); t = t.parent)
+                        set.Add(t);
+            }
+            return set;
+        }
+
+        /// <summary>
+        /// Поза трупа копируется только по костям скелета. Класс ошибки (2026-10-02): сборщик записывал все узлы
+        /// модели, включая аксессуары — часы T-46 с узлами табло (<c>Content/Time</c>), и правка часов
+        /// ломала трупы MEF до пересборки. Аксессуар едет за своей костью и в списке не нужен.
+        /// </summary>
+        [TestCaseSource(nameof(TeamAvatarCases))]
+        public void Поза_трупа_только_по_костям_скелета(string path)
+        {
+            var avatar = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            Corpse corpse = CorpseOf(avatar);
+            Transform model = avatar.GetComponent<CorpseSource>().ModelRoot;
+            HashSet<Transform> skeleton = Skeleton(model);
+
+            SerializedProperty paths = new SerializedObject(corpse).FindProperty("_nodePaths");
+            var foreign = new List<string>();
+            for (int i = 0; i < paths.arraySize; i++)
+            {
+                string p = paths.GetArrayElementAtIndex(i).stringValue;
+                Transform node = model.Find(p);
+                if (node != null && !skeleton.Contains(node)) foreign.Add(p);
+            }
+            Assert.That(foreign, Is.Empty, $"{avatar.name}: в позе трупа узлы не скелета (аксессуары) — их правка ломает труп.");
+        }
+
         [Test]
         public void Аватары_команд_найдены()
         {

@@ -625,6 +625,7 @@ GameObject:
   - component: {fileID: 3250228783782888529}
   - component: {fileID: 8212579813124643360}
   - component: {fileID: 447941418585745219}
+  - component: {fileID: 439753317566800367}
   m_Layer: 0
   m_Name: Viper
   m_TagString: Weapon
@@ -829,8 +830,8 @@ MonoBehaviour:
     _projectileSpeed: 300
     _projectileMaxDistance: 120
     _projectileLength: 0.03
-    _projectileDamageNear: 38
-    _projectileDamageFar: 14.042008
+    _projectileDamageNear: 30
+    _projectileDamageFar: 6.459718
     _projectileImpactForceMultiplier: 1
     _collisionLayerMask:
       serializedVersion: 2
@@ -843,6 +844,7 @@ MonoBehaviour:
     _createDecalLayerMask:
       serializedVersion: 2
       m_Bits: 9
+    _penetrationPower: 1
 --- !u!114 &1826912253387121690
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -884,11 +886,11 @@ MonoBehaviour:
       _axis: 0
     _triggerRotationDegrees: 0
     _ammunitionMagAnchor: {fileID: 5528709623618246775}
-    _recoilAngleOneHand: 6
-    _recoilAngleTwoHands: 2
-    _recoilOffsetOneHand: {x: -0, y: -0, z: -0.05}
-    _recoilOffsetTwoHands: {x: -0, y: -0, z: -0.025}
-    _recoilDurationSeconds: 0.3
+    _recoilAngleOneHand: 1.89
+    _recoilAngleTwoHands: 0.945
+    _recoilOffsetOneHand: {x: 0, y: 0, z: -0.0126}
+    _recoilOffsetTwoHands: {x: 0, y: 0, z: -0.0063}
+    _recoilDurationSeconds: 0.11428572
 --- !u!114 &8590807256956010914
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1057,6 +1059,25 @@ MonoBehaviour:
   _fullSpeed: 5
   _cooldown: 0.2
   _maxVolume: 0.9
+--- !u!114 &439753317566800367
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4014381441530705613}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ca4861be76f25044984803548d10701, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.RecoilAccumulator
+  _pattern:
+    _kickDegrees: 0.63
+    _maxPitchDegrees: 3.78
+    _maxYawDegrees: 0.378
+    _recoveryTime: 0.45
+    _oneHandMultiplier: 2
+  _axes: {fileID: 5567924347754637239}
 --- !u!1 &4440201586151294949
 GameObject:
   m_ObjectHideFlags: 0

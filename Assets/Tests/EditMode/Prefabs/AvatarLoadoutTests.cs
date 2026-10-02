@@ -130,6 +130,17 @@ namespace VrBattlegrounds.Tests.Prefabs
         //  Карманы
         // ══════════════════════════════════════════════════════════════════
 
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void Часы_HUD_едут_вместе_с_предплечьем(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            var watches = avatar.GetComponentsInChildren<VrBattlegrounds.UI.HUD.WristDisplay>(true);
+            Assert.That(watches.Length, Is.EqualTo(1), "T-46: весь HUD расположен на одних часах.");
+            Assert.That(new[] { avatar.AvatarRig.LeftArm.Forearm, avatar.AvatarRig.RightArm.Forearm }
+                .Any(arm => arm != null && watches[0].transform.IsChildOf(arm)), Is.True,
+                "Часы должны наследовать движение предплечья, а не корня аватара.");
+        }
+
         /// <summary>
         /// Три кармана на своих местах: основное оружие за спиной, дополнительное на бедре,
         /// магазины на поясе. Карман обязан лежать внутри скелета — иначе он не едет

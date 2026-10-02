@@ -4,7 +4,7 @@ namespace VrBattlegrounds.UI.HUD
 {
     /// <summary>
     /// Какое время показывать игроку для активного режима. Общий источник для
-    /// <see cref="HUDWidget_RoundTimer"/> и <see cref="WristDisplay"/>, чтобы табло не расходились.
+    /// часов (<see cref="WristDisplay"/>) и обзора планшета, чтобы табло не расходились.
     /// </summary>
     public static class RoundClock
     {

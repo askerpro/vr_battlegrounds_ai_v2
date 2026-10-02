@@ -54,8 +54,8 @@ namespace VrBattlegrounds.Tests.Network
                 "только лог; состояние — SyncVar _currentState",
             ["MapReferee.RpcPlayerKilled"] =
                 "лента убийств и звук; K/D — SyncVar сессии",
-            ["PlayerHUDManager.TargetShowNotification"] =
-                "всплывающее уведомление одному игроку, по смыслу мгновенное",
+            ["MatchEconomy.RpcTransaction"] =
+                "уведомление «+3250 / −2900 TR15» (T-45); сами деньги — SyncDictionary MatchEconomy._money, доход раунда — _roundIncome",
         };
 
         [Test]

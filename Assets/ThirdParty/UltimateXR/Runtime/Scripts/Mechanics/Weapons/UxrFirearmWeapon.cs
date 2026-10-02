@@ -40,6 +40,14 @@ namespace UltimateXR.Mechanics.Weapons
         /// </summary>
         public event Action<int> ProjectileShot;
 
+        /// <summary>
+        ///     VR Battlegrounds patch 34: поправка направления первой дробины. Пули не регистрируют модификатор. Вызывается в <see cref="TryToShootRound" />
+        ///     только у стрелка: (индекс спуска, поворот дула) → поворот, с которым вылетит снаряд. Поворот уезжает
+        ///     по сети значением в синхронизированном <see cref="UxrProjectileSource.Shoot(int, Vector3, Quaternion)" />,
+        ///     поэтому у всех машин снаряд летит одинаково. Не задано — выстрел по дулу, как в оригинале.
+        /// </summary>
+        public Func<int, Quaternion, Quaternion> ShotOrientationModifier { get; set; }
+
         #endregion
 
         #region Public Methods
@@ -247,7 +255,18 @@ namespace UltimateXR.Mechanics.Weapons
 
                 try
                 {
-                    _weaponSource.Shoot(trigger.ProjectileShotIndex);
+                    // VR Battlegrounds patch 34: разброс — направление считает стрелок, по сети едет готовый поворот.
+                    int shotIndex = trigger.ProjectileShotIndex;
+
+                    if (ShotOrientationModifier != null && shotIndex >= 0 && shotIndex < _weaponSource.ShotTypes.Count)
+                    {
+                        Transform shotSource = _weaponSource.ShotTypes[shotIndex].ShotSource;
+                        _weaponSource.Shoot(shotIndex, shotSource.position, ShotOrientationModifier(triggerIndex, shotSource.rotation));
+                    }
+                    else
+                    {
+                        _weaponSource.Shoot(shotIndex);
+                    }
                 }
                 finally
                 {

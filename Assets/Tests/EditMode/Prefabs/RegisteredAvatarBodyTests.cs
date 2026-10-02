@@ -110,6 +110,48 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         /// <summary>
+        /// Часы в натуральную величину и у запястья. Ловит перенос позы часов не от того узла: установщик
+        /// <c>WristWatchInstaller</c> 2026-10-02 взял за эталон вложенное табло вместо корня часов (у вложенного
+        /// экземпляра <c>GetCorrespondingObjectFromSource</c> тоже ведёт в <c>WristWatch_HUD.prefab</c>) — киборг
+        /// получил часы в 5000 раз меньше. Мерило масштаба — табло в самом префабе часов (корень с масштабом 1).
+        /// </summary>
+        [TestCaseSource(nameof(Avatars))]
+        public void Часы_в_натуральную_величину_и_у_запястья(string path)
+        {
+            GameObject avatarGo = Load(path);
+            WristDisplay display = avatarGo.GetComponentInChildren<WristDisplay>(true);
+            Assume.That(display, Is.Not.Null, "Часов нет — это ловит На_руке_часы_с_табло");
+
+            WristDisplay etalon = Load("Assets/Prefabs/Player/WristWatch_HUD.prefab").GetComponentInChildren<WristDisplay>(true);
+            float ratio = display.transform.lossyScale.x / etalon.transform.lossyScale.x;
+            Assert.That(ratio, Is.InRange(0.5f, 2f), $"Табло часов в {ratio:G3} раза от эталона — часы не того размера");
+
+            UxrAvatar avatar = avatarGo.GetComponent<UxrAvatar>();
+            float toHand = new[] { UltimateXR.Core.UxrHandSide.Left, UltimateXR.Core.UxrHandSide.Right }
+                           .Select(avatar.GetHandBone)
+                           .Where(h => h != null)
+                           .Select(h => Vector3.Distance(h.position, display.transform.position))
+                           .DefaultIfEmpty(float.MaxValue)
+                           .Min();
+            Assert.That(toHand, Is.LessThan(0.15f), $"Табло в {toHand:F2} м от кисти — часы не на запястье");
+        }
+
+        /// <summary>
+        /// Часы — весь HUD игрока (T-46): на часах аватара проведены деньги экономики и нотификации.
+        /// Старого HUD перед глазами больше нет — без этого игрок не видит ни денег, ни сообщений игры.
+        /// </summary>
+        [TestCaseSource(nameof(Avatars))]
+        public void На_часах_деньги_и_нотификации(string path)
+        {
+            WristDisplay display = Load(path).GetComponentInChildren<WristDisplay>(true);
+            Assume.That(display, Is.Not.Null, "Часов нет — это ловит На_руке_часы_с_табло");
+
+            var so = new SerializedObject(display);
+            Assert.That(so.FindProperty("_moneyText").objectReferenceValue, Is.Not.Null, "На часах нет денег (_moneyText)");
+            Assert.That(so.FindProperty("_notificationText").objectReferenceValue, Is.Not.Null, "На часах нет нотификаций (_notificationText)");
+        }
+
+        /// <summary>
         /// Позы хвата оружия: если у кого-то в цепочке <c>UxrAvatar._parentPrefab</c> есть своя запись точки,
         /// аватар обязан её найти (<c>GetGripPoseInfo</c> идёт по <c>GetPrefabGuidChain</c>). Иначе рука
         /// держит оружие раскрытой ладонью. Оружие — из <see cref="WeaponRegistry"/>.

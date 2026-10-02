@@ -222,6 +222,63 @@ namespace VrBattlegrounds.Player
             }
         }
 
+        /// <summary>
+        /// Кладёт новый ствол в свободную кобуру второго оружия (<c>Anchor_Hip_R</c>) — так выдаётся
+        /// стартовый пистолет (T-45). Спавн — через <see cref="NetworkUxrIdentity"/>, укладка —
+        /// <c>UxrGrabManager.PlaceObject</c> автором мира (сервером): канал состояния UltimateXR
+        /// повторяет её на клиентах, как возврат жетона на крючок.
+        /// </summary>
+        /// <returns>false — нет свободной кобуры, префаба или менеджера захвата.</returns>
+        [Server]
+        public bool ServerGiveWeapon(WeaponInfo info)
+        {
+            if (info == null || info.WeaponPrefab == null || !UxrGrabManager.HasInstance) return false;
+
+            UxrGrabbableObjectAnchor holster = FindFreePocket(AnchorRoleKind.Secondary);
+            if (holster == null) return false;
+
+            GameObject weapon = NetworkUxrIdentity.CreateInstance(info.WeaponPrefab);
+            if (weapon == null) return false;
+
+            weapon.transform.SetPositionAndRotation(holster.transform.position, holster.transform.rotation);
+            WeaponComponent component = weapon.GetComponent<WeaponComponent>();
+            if (component == null) component = weapon.AddComponent<WeaponComponent>();
+            component.Init(info);
+
+            weapon.SetActive(true);
+            NetworkUxrIdentity.SpawnServerObject(weapon);
+
+            UxrGrabbableObject grabbable = weapon.GetComponent<UxrGrabbableObject>();
+            if (grabbable == null || !UxrGrabManager.Instance.PlaceObject(grabbable, holster, UxrPlacementOptions.None, true))
+            {
+                GameLog.Player.Warning($"[Loadout] {name}: '{info.DisplayName}' не лёг в кобуру '{holster.name}'.", this);
+                NetworkServer.Destroy(weapon);
+                return false;
+            }
+
+            GameLog.Player.Info($"[Loadout] {name}: выдан '{info.DisplayName}' в '{holster.name}'.", this);
+            return true;
+        }
+
+        /// <summary>Есть ли у игрока (руки, кобуры) оружие этой категории.</summary>
+        public bool HasWeaponOfCategory(WeaponCategory category)
+        {
+            foreach (WeaponComponent weapon in CollectEquippedWeapons())
+                if (weapon.WeaponData != null && weapon.WeaponData.Category == category) return true;
+            return false;
+        }
+
+        /// <summary>Свободный карман аватара заданной роли или null.</summary>
+        private UxrGrabbableObjectAnchor FindFreePocket(AnchorRoleKind role)
+        {
+            foreach (UxrGrabbableObjectAnchor anchor in GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
+            {
+                if (anchor.CurrentPlacedObject == null && AnchorRole.Get(anchor) == role) return anchor;
+            }
+
+            return null;
+        }
+
         /// <summary>Убирает из кармана все магазины — на всех машинах.</summary>
         [Server]
         public void ServerClearMagazines()

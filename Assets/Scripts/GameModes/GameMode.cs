@@ -400,6 +400,7 @@ namespace VrBattlegrounds.GameModes
         {
             var snapshot = new PauseSnapshot { ModeId = ModeData != null ? ModeData.modeId : "" };
             foreach (KeyValuePair<int, int> pair in _teamScores) snapshot.TeamScores[pair.Key] = pair.Value;
+            foreach (IPauseSnapshotPart part in GetComponents<IPauseSnapshotPart>()) part.CaptureInto(snapshot);
             return snapshot;
         }
 
@@ -416,6 +417,8 @@ namespace VrBattlegrounds.GameModes
             {
                 if (_teamScores.ContainsKey(pair.Key)) _teamScores[pair.Key] = pair.Value;
             }
+
+            foreach (IPauseSnapshotPart part in GetComponents<IPauseSnapshotPart>()) part.RestoreFrom(snapshot);
         }
 
         private TeamAssignmentKind? _teamAssignmentOverride;

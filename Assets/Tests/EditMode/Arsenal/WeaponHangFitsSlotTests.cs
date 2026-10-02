@@ -37,7 +37,7 @@ namespace VrBattlegrounds.Tests.Arsenal
                 if (info == null || info.WeaponPrefab == null || anchor == null || panel == null) continue;
 
                 checks++;
-                Bounds room = BoundsIn(anchor, panel.GetComponentsInChildren<Renderer>(true), Matrix4x4.identity);
+                Bounds room = BoundsIn(anchor, panel.GetComponentsInChildren<Renderer>(true), null);
                 Matrix4x4 hang = Matrix4x4.TRS(info.WeaponPositionOffset, Quaternion.Euler(info.WeaponRotationOffset), Vector3.one);
                 Bounds weapon = BoundsIn(info.WeaponPrefab.transform, info.WeaponPrefab.GetComponentsInChildren<Renderer>(true), hang);
 
@@ -59,9 +59,14 @@ namespace VrBattlegrounds.Tests.Arsenal
 
         /// <summary>
         /// Габарит мешей в осях <paramref name="space" />. <paramref name="root" /> — поза корня
-        /// оружия в этих осях (для панели — единичная, она уже в иерархии слота).
+        /// оружия в этих осях; для панели — null, она уже в иерархии слота.
+        ///
+        /// <para>
+        /// Раньше панель узнавалась по единичной позе — и оружие с нулевым смещением на стене (тоже единичная поза)
+        /// считалось без масштаба корня: у <c>Revolver</c> (×0,71) и <c>Uzi</c> (×0,21) габарит выходил в 1,4 и 4,8 раза больше.
+        /// </para>
         /// </summary>
-        private static Bounds BoundsIn(Transform space, Renderer[] renderers, Matrix4x4 root)
+        private static Bounds BoundsIn(Transform space, Renderer[] renderers, Matrix4x4? root)
         {
             var bounds = new Bounds();
             bool any = false;
@@ -72,9 +77,9 @@ namespace VrBattlegrounds.Tests.Arsenal
                 if (mesh == null) continue;
 
                 // Панель: мир → оси якоря. Оружие: меш → корень префаба → висячая поза.
-                Matrix4x4 m = root == Matrix4x4.identity
+                Matrix4x4 m = root == null
                     ? space.worldToLocalMatrix * r.transform.localToWorldMatrix
-                    : root * Matrix4x4.Scale(space.localScale) * space.worldToLocalMatrix * r.transform.localToWorldMatrix;
+                    : root.Value * Matrix4x4.Scale(space.localScale) * space.worldToLocalMatrix * r.transform.localToWorldMatrix;
 
                 Bounds b = mesh.bounds;
                 for (int i = 0; i < 8; i++)

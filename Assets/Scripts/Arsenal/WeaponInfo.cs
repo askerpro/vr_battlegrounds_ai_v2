@@ -40,7 +40,7 @@ namespace VrBattlegrounds.Arsenal
         // ── Balance (T-38) ─────────────────────────────────────
         // Единая точка правды баланса: префабы получают эти значения командой
         // Tools/VR Battlegrounds/Gameplay/Apply Weapon Balance, WeaponBalanceTests сверяют.
-        // Числа — по Counter-Strike 2 (урон, темп, магазин, цена; разброс — нет, его даёт отдача).
+        // Числа — по Counter-Strike 2 (items_game.txt), источник и дата сверки — Docs/tasks/T-38-weapon-roster-and-balance.md.
         [Header("Balance (CS2)")]
         [Tooltip("Урон одной пули (дробинки) вблизи, без множителя зоны. 0 — баланс не задан (сэмплы SDK), " +
                  "Apply Weapon Balance префаб не трогает.")]
@@ -53,18 +53,34 @@ namespace VrBattlegrounds.Arsenal
                  "снайперские — 2.5. Уходит в PenetrationPower каждого выстрела.")]
         [SerializeField, Min(0f)] private float _penetration = 1f;
 
+        [Tooltip("CS2 armor_ratio: доля урона, проходящая сквозь броню (×0,5 в CS — у нас брони пока нет, T-43). Справочно.")]
+        [SerializeField, Range(0f, 2f)] private float _armorRatio = 1f;
+
         [Tooltip("Темп, выстрелов в минуту.")]
         [SerializeField] private int _fireRate = 400;
+
+        [Tooltip("CS2 is_full_auto: автоматический огонь. Влияет на картину отдачи (рыскание очереди).")]
+        [SerializeField] private bool _fullAuto;
 
         [Tooltip("Патронов в магазине.")]
         [SerializeField] private int _magazineSize = 20;
 
+        [Tooltip("CS2 primary_reserve_ammo_max: запас патронов. Справочно — у нас запас даёт число магазинов.")]
+        [SerializeField, Min(0)] private int _reserveAmmo;
+
         [Tooltip("Дробинок на выстрел вместе с основным снарядом; 1 — пуля.")]
         [SerializeField, Min(1)] private int _pellets = 1;
 
-        [Tooltip("Картина накопленной отдачи (RecoilAccumulator на префабе): подброс первого выстрела, потолок очереди, " +
-                 "рыскание, возврат в паузе, множитель одной руки.")]
-        [SerializeField] private VrBattlegrounds.Weapons.RecoilPattern _recoil = new VrBattlegrounds.Weapons.RecoilPattern();
+        [Tooltip("CS2 kill_award: награда за убийство из этого оружия (для экономики раунда).")]
+        [SerializeField, Min(0)] private int _killAward = 300;
+
+        [Tooltip("Из точности CS2 применяется только spread дробовика (мрад). Пули летят по оси ствола; " +
+                 "неточность стоя/движения/очереди и её восстановление сохранены справочно, в игре не применяются.")]
+        [SerializeField] private VrBattlegrounds.Weapons.SpreadPattern _spread = new VrBattlegrounds.Weapons.SpreadPattern();
+
+        [Tooltip("CS2 recoil_magnitude: сила отдачи за выстрел. Картину накопленной отдачи (RecoilAccumulator) и толчок " +
+                 "SDK выводит из неё RecoilPattern.FromCs2 — одна формула на весь арсенал.")]
+        [SerializeField, Min(0f)] private float _recoilMagnitude;
 
         // ── Slot Placement ─────────────────────────────────────
         [Header("Slot Placement")]
@@ -104,10 +120,18 @@ namespace VrBattlegrounds.Arsenal
         public float Damage => _damage;
         public float RangeModifier => _rangeModifier;
         public float Penetration => _penetration;
+        public float ArmorRatio => _armorRatio;
         public int FireRate => _fireRate;
+        public bool FullAuto => _fullAuto;
         public int MagazineSize => _magazineSize;
+        public int ReserveAmmo => _reserveAmmo;
         public int Pellets => _pellets;
-        public VrBattlegrounds.Weapons.RecoilPattern Recoil => _recoil;
+        public int KillAward => _killAward;
+        public VrBattlegrounds.Weapons.SpreadPattern Spread => _spread;
+        public float RecoilMagnitude => _recoilMagnitude;
+
+        /// <summary>Картина накопленной отдачи — выводится из CS2 <c>recoil_magnitude</c> (<see cref="VrBattlegrounds.Weapons.RecoilPattern.FromCs2"/>).</summary>
+        public VrBattlegrounds.Weapons.RecoilPattern Recoil => VrBattlegrounds.Weapons.RecoilPattern.FromCs2(_recoilMagnitude, _fullAuto);
 
         /// <summary>Юнитов CS на метр: 500 юнитов = 12,7 м.</summary>
         public const float CsUnitsPerMeter = 500f / 12.7f;

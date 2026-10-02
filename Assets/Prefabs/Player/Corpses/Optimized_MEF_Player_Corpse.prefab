@@ -226,37 +226,6 @@ CharacterJoint:
   m_EnablePreprocessing: 1
   m_MassScale: 1
   m_ConnectedMassScale: 1
---- !u!1 &69187461532517401
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6662825818761278659}
-  m_Layer: 11
-  m_Name: GrabProxy
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6662825818761278659
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 69187461532517401}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1213012019693589728}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &134019135083604373
 GameObject:
   m_ObjectHideFlags: 0
@@ -1068,6 +1037,42 @@ Transform:
   - {fileID: 2071936523548474532}
   m_Father: {fileID: 7660221754177626419}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &935925624195963582
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 105268278362478472}
+  m_Layer: 11
+  m_Name: Notification
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &105268278362478472
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 935925624195963582}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2560504064568736463}
+  m_Father: {fileID: 7749097759773655883}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &949460891370351793
 GameObject:
   m_ObjectHideFlags: 0
@@ -1828,6 +1833,37 @@ Transform:
   - {fileID: 7249047572536501340}
   m_Father: {fileID: 5078781489687250476}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2043559878007634126
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1519570420959394193}
+  m_Layer: 11
+  m_Name: UxrFingerTip
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1519570420959394193
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2043559878007634126}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.56717086, y: -0.42227614, z: -0.4222778, w: -0.5671697}
+  m_LocalPosition: {x: -0.000000029802322, y: 0.0000000949949, z: -0.000000027226633}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7861837747826663371}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2061145352329641175
 GameObject:
   m_ObjectHideFlags: 0
@@ -2208,6 +2244,41 @@ Transform:
   - {fileID: 7936290060871307926}
   m_Father: {fileID: 7744813206159628724}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2473652091780910028
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7817354886186699380}
+  m_Layer: 11
+  m_Name: Money
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &7817354886186699380
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2473652091780910028}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3926535444534914423}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 75, y: -50}
+  m_SizeDelta: {x: 140, y: 40}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2488873767463676555
 GameObject:
   m_ObjectHideFlags: 0
@@ -2400,6 +2471,45 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8425068688886312054}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2768781456187609182
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3926535444534914423}
+  m_Layer: 11
+  m_Name: Status
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &3926535444534914423
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2768781456187609182}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5353298942030904311}
+  - {fileID: 2428165336579908096}
+  - {fileID: 7817354886186699380}
+  - {fileID: 7593862006036621104}
+  m_Father: {fileID: 7749097759773655883}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2795890917954129229
 GameObject:
   m_ObjectHideFlags: 0
@@ -3204,12 +3314,12 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 7749097759773655883}
+  m_Father: {fileID: 3926535444534914423}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -50}
-  m_SizeDelta: {x: 200, y: 40}
+  m_AnchoredPosition: {x: -75, y: -50}
+  m_SizeDelta: {x: 140, y: 40}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &3487881218128761308
 GameObject:
@@ -4688,6 +4798,37 @@ Transform:
   - {fileID: 7521910399440379569}
   m_Father: {fileID: 519777209462020412}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5597888958863460330
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4926363017439177019}
+  m_Layer: 11
+  m_Name: GrabProxy
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4926363017439177019
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5597888958863460330}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1213012019693589728}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5634271602378037903
 GameObject:
   m_ObjectHideFlags: 0
@@ -4945,11 +5086,11 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 7749097759773655883}
+  m_Father: {fileID: 3926535444534914423}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 16}
+  m_AnchoredPosition: {x: 0, y: 6}
   m_SizeDelta: {x: 300, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &5854262206264719578
@@ -4983,6 +5124,41 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8123755646258468241}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5903729467553103345
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7593862006036621104}
+  m_Layer: 11
+  m_Name: Score
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &7593862006036621104
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5903729467553103345}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3926535444534914423}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 62}
+  m_SizeDelta: {x: 200, y: 34}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &6196845430302565319
 GameObject:
   m_ObjectHideFlags: 0
@@ -5804,57 +5980,32 @@ MonoBehaviour:
   - {fileID: 182344612960312532}
   - {fileID: 8629462247376685678}
   - {fileID: 7957534636752796494}
-  - {fileID: 4562656135344262459}
   - {fileID: 6332776454570889008}
   - {fileID: 3384352056190904034}
   - {fileID: 5362882353341783695}
-  - {fileID: 5821497422167044159}
   - {fileID: 1170023983689881389}
-  - {fileID: 3717366013716736337}
   - {fileID: 7303061569512663702}
-  - {fileID: 2231660068296189201}
   - {fileID: 1112588625009100519}
-  - {fileID: 3882834826814003222}
   - {fileID: 8123755646258468241}
-  - {fileID: 127283378651930106}
   - {fileID: 6673900855096709331}
-  - {fileID: 6343547910932135277}
   - {fileID: 8218433125424302811}
-  - {fileID: 7975758953498421086}
-  - {fileID: 6793468696682800008}
   - {fileID: 4286936052577745572}
   - {fileID: 8425068688886312054}
-  - {fileID: 4418020667647970208}
-  - {fileID: 6098574402542472420}
   - {fileID: 7744813206159628724}
   - {fileID: 108334992821333593}
   - {fileID: 7660221754177626419}
   - {fileID: 6319179361205288026}
-  - {fileID: 2071936523548474532}
   - {fileID: 5078781489687250476}
   - {fileID: 982915844291207550}
   - {fileID: 3380883601879860299}
-  - {fileID: 3463975266460239155}
   - {fileID: 3096233538282830862}
-  - {fileID: 1219803759481277649}
   - {fileID: 3813203343302790580}
-  - {fileID: 3723763898654934245}
   - {fileID: 5127908707977035425}
-  - {fileID: 4177849134068641102}
   - {fileID: 7249047572536501340}
-  - {fileID: 3260731968667611971}
   - {fileID: 4273895506706639376}
-  - {fileID: 6530249167962802666}
   - {fileID: 3721031460355929122}
-  - {fileID: 5841208696978500152}
-  - {fileID: 3063261978252888392}
   - {fileID: 4214839086417244383}
   - {fileID: 5819680299882473641}
-  - {fileID: 7129408832603624280}
-  - {fileID: 516229342708794804}
-  - {fileID: 7936290060871307926}
-  - {fileID: 6767376628738724409}
-  - {fileID: 8717324969882598563}
   - {fileID: 321472713761044019}
   - {fileID: 807924758275946674}
   - {fileID: 444239216330531710}
@@ -5862,129 +6013,69 @@ MonoBehaviour:
   - {fileID: 564331519345818053}
   - {fileID: 206215688343836511}
   - {fileID: 704680885829735888}
-  - {fileID: 7855039964128800863}
   - {fileID: 6444777571681273463}
   - {fileID: 5149432789211678577}
-  - {fileID: 3188538356564877764}
-  - {fileID: 50876833174638118}
-  - {fileID: 1342734778531616790}
-  - {fileID: 4971802862053389565}
-  - {fileID: 7749097759773655883}
-  - {fileID: 441671087393600983}
-  - {fileID: 8422138499441375313}
-  - {fileID: 4254392116086939286}
-  - {fileID: 5353298942030904311}
-  - {fileID: 2428165336579908096}
   - {fileID: 940951486017445607}
   - {fileID: 1016474489882156075}
   - {fileID: 6571773341418566400}
   - {fileID: 8493593881680005546}
-  - {fileID: 4520841184764913150}
-  - {fileID: 380784780798659006}
   - {fileID: 8461555534849405131}
   - {fileID: 5346628303173930424}
   - {fileID: 6271737196218281492}
-  - {fileID: 7180912871240415515}
   - {fileID: 1070627306421307773}
   - {fileID: 9020878417300320090}
   - {fileID: 1841821136745368644}
-  - {fileID: 7072169012626142611}
   - {fileID: 6378188763869274573}
   - {fileID: 519777209462020412}
   - {fileID: 1196325061970264664}
-  - {fileID: 7521910399440379569}
   - {fileID: 1292068330106920342}
   - {fileID: 639998479996970269}
   - {fileID: 4081220238980663467}
-  - {fileID: 6027218831310501848}
   - {fileID: 8269542701471979698}
-  - {fileID: 6625213731611558861}
-  - {fileID: 5292791327272162158}
   - {fileID: 5842701486680175311}
   - {fileID: 3521899883947388945}
-  - {fileID: 504906486440496591}
-  - {fileID: 4228787544366073797}
   - {fileID: 1937838147790180065}
   - {fileID: 5108428314820775239}
-  - {fileID: 900300429869005829}
   - {fileID: 5239829991527942554}
   - {fileID: 546563906526456651}
   - {fileID: 4498138139992734011}
   - {fileID: 3504480881752031797}
   - {fileID: 8078666993604640527}
   - {fileID: 6605442455192269015}
-  - {fileID: 1348610699758465664}
   - {fileID: 849403241478073524}
   - {fileID: 5223047832998626275}
   - {fileID: 4008447622296296979}
-  - {fileID: 7267051734272758210}
   - {fileID: 8751761486708962969}
-  - {fileID: 1658372522189097666}
   - {fileID: 7175303019441050942}
-  - {fileID: 163980427537816967}
   - {fileID: 2617803044399026903}
   - {fileID: 4302461914241635931}
-  - {fileID: 5075450342774865514}
-  - {fileID: 1847207902563597628}
   - {fileID: 3568753620970813587}
   - {fileID: 123587753884527853}
   - {fileID: 350961905847032681}
   - {fileID: 1951927510837364301}
-  - {fileID: 7173388782454864197}
   - {fileID: 4411398465647156539}
   - {fileID: 611093027619061295}
-  - {fileID: 4200691008623024535}
   - {fileID: 263106719857632360}
   - {fileID: 3856265340520924313}
   - {fileID: 3423653078037977456}
   - {fileID: 6038748235876157782}
-  - {fileID: 7861837747826663371}
-  - {fileID: 5951419114276161132}
   - {fileID: 4136413220250502152}
   - {fileID: 47199551348431141}
   - {fileID: 7661454443701665575}
-  - {fileID: 6098201443639013779}
   - {fileID: 7066859822795968105}
   - {fileID: 4095026046798507403}
   - {fileID: 2571808860357860992}
-  - {fileID: 5389185579202911612}
   - {fileID: 6226367585718534168}
   - {fileID: 527294801513333094}
   - {fileID: 6066650551503355545}
-  - {fileID: 6752884920784654359}
   - {fileID: 9104239863648915615}
   - {fileID: 6846000847472670824}
   - {fileID: 5507455025657739831}
-  - {fileID: 1372339317866615362}
   - {fileID: 7933957417286169727}
-  - {fileID: 2063662093358161754}
-  - {fileID: 1326625139027532163}
   - {fileID: 624657499186615151}
   - {fileID: 5743345352876069529}
-  - {fileID: 5569113314052288871}
-  - {fileID: 5441023709784548366}
   - {fileID: 474861265546405234}
   - {fileID: 1518733749456277609}
-  - {fileID: 3086900364154027245}
-  - {fileID: 2776762340140994890}
-  - {fileID: 7007663560392468098}
-  - {fileID: 1733891880194007180}
-  - {fileID: 604983458475511702}
-  - {fileID: 8015845384898431669}
-  - {fileID: 759648821062088085}
-  - {fileID: 276852666056103546}
-  - {fileID: 2677532702058894359}
-  - {fileID: 1213012019693589728}
-  - {fileID: 6662825818761278659}
-  - {fileID: 8429768992102180876}
-  - {fileID: 2619229287558107595}
-  - {fileID: 4011685268899621960}
-  - {fileID: 3832293920008875589}
-  - {fileID: 1881966604916439609}
-  - {fileID: 3605584217560977157}
-  - {fileID: 4955157603651921938}
-  - {fileID: 1185126408266073197}
-  - {fileID: 664331198422226432}
   _nodePaths:
   - Armature
   - Armature/RL_BoneRoot
@@ -5994,57 +6085,32 @@ MonoBehaviour:
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_CalfTwist01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_CalfTwist01/CC_Base_L_CalfTwist02
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_CalfTwist01/CC_Base_L_CalfTwist02/CC_Base_L_CalfTwist02_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase/CC_Base_L_BigToe1
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase/CC_Base_L_BigToe1/CC_Base_L_BigToe1_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase/CC_Base_L_IndexToe1
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase/CC_Base_L_IndexToe1/CC_Base_L_IndexToe1_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase/CC_Base_L_MidToe1
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase/CC_Base_L_MidToe1/CC_Base_L_MidToe1_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase/CC_Base_L_PinkyToe1
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase/CC_Base_L_PinkyToe1/CC_Base_L_PinkyToe1_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase/CC_Base_L_RingToe1
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBase/CC_Base_L_RingToe1/CC_Base_L_RingToe1_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBaseShareBone
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_Foot/CC_Base_L_ToeBaseShareBone/CC_Base_L_ToeBaseShareBone_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_KneeShareBone
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/CC_Base_L_KneeShareBone/CC_Base_L_KneeShareBone_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_Calf/Hitbox_Calf_L
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_ThighTwist01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_ThighTwist01/CC_Base_L_ThighTwist02
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/CC_Base_L_ThighTwist01/CC_Base_L_ThighTwist02/CC_Base_L_ThighTwist02_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_L_Thigh/Hitbox_Thigh_L
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_CalfTwist01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_CalfTwist01/CC_Base_R_CalfTwist02
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_CalfTwist01/CC_Base_R_CalfTwist02/CC_Base_R_CalfTwist02_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase/CC_Base_R_BigToe1
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase/CC_Base_R_BigToe1/CC_Base_R_BigToe1_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase/CC_Base_R_IndexToe1
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase/CC_Base_R_IndexToe1/CC_Base_R_IndexToe1_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase/CC_Base_R_MidToe1
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase/CC_Base_R_MidToe1/CC_Base_R_MidToe1_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase/CC_Base_R_PinkyToe1
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase/CC_Base_R_PinkyToe1/CC_Base_R_PinkyToe1_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase/CC_Base_R_RingToe1
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBase/CC_Base_R_RingToe1/CC_Base_R_RingToe1_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBaseShareBone
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_Foot/CC_Base_R_ToeBaseShareBone/CC_Base_R_ToeBaseShareBone_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_KneeShareBone
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/CC_Base_R_KneeShareBone/CC_Base_R_KneeShareBone_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_Calf/Hitbox_Calf_R
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_ThighTwist01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_ThighTwist01/CC_Base_R_ThighTwist02
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/CC_Base_R_ThighTwist01/CC_Base_R_ThighTwist02/CC_Base_R_ThighTwist02_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/SideRt
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/SideRt/prop_handGunHolster
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/SideRt/prop_handGunHolster/ItemReciever
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Pelvis/CC_Base_R_Thigh/Hitbox_Thigh_R
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02
@@ -6052,129 +6118,69 @@ MonoBehaviour:
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ElbowShareBone
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ElbowShareBone/CC_Base_L_ElbowShareBone_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02/CC_Base_L_ForearmTwist02_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02/WristWatch
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02/WristWatch/HudAnchor
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02/WristWatch/HudAnchor/WristDisplay_Oval
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02/WristWatch/HudAnchor/WristDisplay_Oval/Content
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02/WristWatch/HudAnchor/WristDisplay_Oval/Content/Face
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02/WristWatch/HudAnchor/WristDisplay_Oval/Content/RingTrack
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02/WristWatch/HudAnchor/WristDisplay_Oval/Content/HealthRing
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02/WristWatch/HudAnchor/WristDisplay_Oval/Content/Time
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_ForearmTwist01/CC_Base_L_ForearmTwist02/WristWatch/HudAnchor/WristDisplay_Oval/Content/Health
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Index1
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Index1/CC_Base_L_Index2
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Index1/CC_Base_L_Index2/CC_Base_L_Index3
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Index1/CC_Base_L_Index2/CC_Base_L_Index3/CC_Base_L_Index3_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Index1/CC_Base_L_Index2/CC_Base_L_Index3/CC_Base_L_Index3_end/UxrFingerTip
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Mid1
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Mid1/CC_Base_L_Mid2
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Mid1/CC_Base_L_Mid2/CC_Base_L_Mid3
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Mid1/CC_Base_L_Mid2/CC_Base_L_Mid3/CC_Base_L_Mid3_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Pinky1
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Pinky1/CC_Base_L_Pinky2
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Pinky1/CC_Base_L_Pinky2/CC_Base_L_Pinky3
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Pinky1/CC_Base_L_Pinky2/CC_Base_L_Pinky3/CC_Base_L_Pinky3_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Ring1
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Ring1/CC_Base_L_Ring2
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Ring1/CC_Base_L_Ring2/CC_Base_L_Ring3
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Ring1/CC_Base_L_Ring2/CC_Base_L_Ring3/CC_Base_L_Ring3_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Thumb1
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Thumb1/CC_Base_L_Thumb2
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Thumb1/CC_Base_L_Thumb2/CC_Base_L_Thumb3
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand/CC_Base_L_Thumb1/CC_Base_L_Thumb2/CC_Base_L_Thumb3/CC_Base_L_Thumb3_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand_001
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/CC_Base_L_Hand_001/CC_Base_L_Hand_001_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_Forearm/Hitbox_Forearm_L
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_UpperarmTwist01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_UpperarmTwist01/CC_Base_L_UpperarmTwist02
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/CC_Base_L_UpperarmTwist01/CC_Base_L_UpperarmTwist02/CC_Base_L_UpperarmTwist02_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_Clavicle/CC_Base_L_Upperarm/Hitbox_UpperArm_L
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_RibsTwist
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_RibsTwist/CC_Base_L_Breast
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_L_RibsTwist/CC_Base_L_Breast/CC_Base_L_Breast_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_JawRoot
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_JawRoot/CC_Base_Teeth02
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_JawRoot/CC_Base_Teeth02/CC_Base_Teeth02_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_JawRoot/CC_Base_Tongue01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_JawRoot/CC_Base_Tongue01/CC_Base_Tongue02
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_JawRoot/CC_Base_Tongue01/CC_Base_Tongue02/CC_Base_Tongue03
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_JawRoot/CC_Base_Tongue01/CC_Base_Tongue02/CC_Base_Tongue03/CC_Base_Tongue03_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_L_Eye
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_L_Eye/CC_Base_L_Eye_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_R_Eye
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_R_Eye/CC_Base_R_Eye_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_UpperJaw
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_UpperJaw/CC_Base_Teeth01
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/CC_Base_FacialBone/CC_Base_UpperJaw/CC_Base_Teeth01/CC_Base_Teeth01_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_NeckTwist01/CC_Base_NeckTwist02/CC_Base_Head/Hitbox_Head
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_ElbowShareBone
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_ElbowShareBone/CC_Base_R_ElbowShareBone_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_ForearmTwist01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_ForearmTwist01/CC_Base_R_ForearmTwist02
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_ForearmTwist01/CC_Base_R_ForearmTwist02/CC_Base_R_ForearmTwist02_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Index1
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Index1/CC_Base_R_Index2
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Index1/CC_Base_R_Index2/CC_Base_R_Index3
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Index1/CC_Base_R_Index2/CC_Base_R_Index3/CC_Base_R_Index3_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Index1/CC_Base_R_Index2/CC_Base_R_Index3/CC_Base_R_Index3_end/UxrFingerTip
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Mid1
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Mid1/CC_Base_R_Mid2
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Mid1/CC_Base_R_Mid2/CC_Base_R_Mid3
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Mid1/CC_Base_R_Mid2/CC_Base_R_Mid3/CC_Base_R_Mid3_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Pinky1
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Pinky1/CC_Base_R_Pinky2
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Pinky1/CC_Base_R_Pinky2/CC_Base_R_Pinky3
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Pinky1/CC_Base_R_Pinky2/CC_Base_R_Pinky3/CC_Base_R_Pinky3_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Ring1
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Ring1/CC_Base_R_Ring2
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Ring1/CC_Base_R_Ring2/CC_Base_R_Ring3
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Ring1/CC_Base_R_Ring2/CC_Base_R_Ring3/CC_Base_R_Ring3_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Thumb1
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Thumb1/CC_Base_R_Thumb2
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Thumb1/CC_Base_R_Thumb2/CC_Base_R_Thumb3
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand/CC_Base_R_Thumb1/CC_Base_R_Thumb2/CC_Base_R_Thumb3/CC_Base_R_Thumb3_end
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand_001
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/CC_Base_R_Hand_001/CC_Base_R_Hand_001_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_Forearm/Hitbox_Forearm_R
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_UpperarmTwist01
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_UpperarmTwist01/CC_Base_R_UpperarmTwist02
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/CC_Base_R_UpperarmTwist01/CC_Base_R_UpperarmTwist02/CC_Base_R_UpperarmTwist02_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_Clavicle/CC_Base_R_Upperarm/Hitbox_UpperArm_R
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_RibsTwist
   - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_RibsTwist/CC_Base_R_Breast
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/CC_Base_R_RibsTwist/CC_Base_R_Breast/CC_Base_R_Breast_end
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/Anchor_Back
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/Anchor_Back/PlacedDecal
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/BackGrabProxy
-  - Armature/RL_BoneRoot/CC_Base_Hip/CC_Base_Waist/CC_Base_Spine01/CC_Base_Spine02/Hitbox_Torso_Upper
-  - Armature/RL_BoneRoot/CC_Base_Hip/MagazinePocket
-  - Armature/RL_BoneRoot/CC_Base_Hip/MagazinePocket/GrabProxy
-  - Armature/RL_BoneRoot/CC_Base_Hip/MagazinePocket/OnPlace
-  - Armature/RL_BoneRoot/CC_Base_Hip/MagazinePocket/OnGrab
-  - Armature/RL_BoneRoot/CC_Base_Hip/Anchor_Hip_R
-  - Armature/RL_BoneRoot/CC_Base_Hip/Anchor_Hip_R/GrabProxy
-  - Armature/RL_BoneRoot/CC_Base_Hip/Hitbox_Torso_Lower
-  - GameObject
-  - Geo
-  - Geo/MEF_Optimized_Body_LOD0
-  - Geo/MEF_Optimized_Body_LOD1
-  - Geo/MEF_Optimized_Body_LOD2
-  - Geo/MEF_Optimized_Head_LOD0
-  - Geo/MEF_Optimized_Head_LOD1
-  - Geo/MEF_Optimized_Head_LOD2
   _settleSeconds: 3
   _lingerSeconds: 12
   _sinkSeconds: 2
@@ -6812,6 +6818,41 @@ Transform:
   m_Children: []
   m_Father: {fileID: 5743345352876069529}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7344186728245386178
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2560504064568736463}
+  m_Layer: 11
+  m_Name: NotificationText
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &2560504064568736463
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7344186728245386178}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 105268278362478472}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 320, y: 130}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &7391000766145502914
 GameObject:
   m_ObjectHideFlags: 0
@@ -7228,7 +7269,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 6662825818761278659}
+  - {fileID: 4926363017439177019}
   m_Father: {fileID: 301161695074024547}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7756457735052752207
@@ -7679,8 +7720,8 @@ RectTransform:
   - {fileID: 441671087393600983}
   - {fileID: 8422138499441375313}
   - {fileID: 4254392116086939286}
-  - {fileID: 5353298942030904311}
-  - {fileID: 2428165336579908096}
+  - {fileID: 3926535444534914423}
+  - {fileID: 105268278362478472}
   m_Father: {fileID: 4971802862053389565}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -8134,7 +8175,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 5951419114276161132}
+  - {fileID: 1519570420959394193}
   m_Father: {fileID: 6038748235876157782}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8921314344569477909
@@ -8530,37 +8571,6 @@ Transform:
   m_Children:
   - {fileID: 3717366013716736337}
   m_Father: {fileID: 3384352056190904034}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &9110552721131649447
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 5951419114276161132}
-  m_Layer: 11
-  m_Name: UxrFingerTip
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &5951419114276161132
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9110552721131649447}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.56717086, y: -0.42227614, z: -0.4222778, w: -0.5671697}
-  m_LocalPosition: {x: -0.000000029802322, y: 0.0000000949949, z: -0.000000027226633}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7861837747826663371}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &9120723653794305764
 GameObject:

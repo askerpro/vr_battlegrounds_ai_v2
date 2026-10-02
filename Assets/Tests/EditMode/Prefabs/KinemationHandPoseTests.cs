@@ -63,7 +63,8 @@ namespace VrBattlegrounds.Tests.Prefabs
                 .Concat(Pair("MKR9", "MKR9", "A_FP_MKR9_Idle", "W_MKR9", "A_W_MKR9_Idle"))
                 .Concat(Pair("Viper", "WK-11_Viper", "A_FP_WK-11_Viper_Idle_Pose", "W_WK-11_Viper", "A_W_WK-11_Viper_Idle"))
                 .Concat(Pair("R08", "R08", "A_FP_R08_Idle", "W_R08", "A_W_R08_Idle"))
-                .Concat(Pair("Herrington", "Herrington_11-87", "A_FP_Herrington_11-87_Idle", "W_Herrington_11-87_Police", "A_W_Herrington_11-87_Idle"));
+                .Concat(Pair("Herrington", "Herrington_11-87", "A_FP_Herrington_11-87_Idle", "W_Herrington_11-87_Police", "A_W_Herrington_11-87_Idle"))
+                .Concat(Pair("TR15", "TR15", "A_FP_TR15_Idle_Pose_Non_Grip", "W_TR15", "A_W_TR15_Idle"));
 
         private static IEnumerable<string> Avatars =>
             RegisteredAvatars.Prefabs()

@@ -222,7 +222,7 @@ namespace VrBattlegrounds.Managers
         }
 
         /// <summary>
-        /// Регистрирует сессию без соединения — бота (<c>DevTools.Bots.BotDirector</c>).
+        /// Регистрирует сессию без соединения — бота (<c>Bots.BotDirector</c>).
         /// Для игровой логики бот неотличим от игрока: тот же список <see cref="Sessions"/>
         /// и то же событие <see cref="SessionConnected"/> (режим раздаёт команды).
         /// В словарь соединений не попадает: соединения нет, ключ был бы <c>null</c>.

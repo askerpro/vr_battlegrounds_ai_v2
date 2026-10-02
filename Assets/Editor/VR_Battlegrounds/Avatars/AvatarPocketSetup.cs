@@ -25,7 +25,8 @@ namespace VrBattlegrounds.Editor.Avatars
         private static readonly PocketConfig[] Pockets = new[]
         {
             new PocketConfig("MagazinePocket", BoneTarget.Pelvis, 
-                new[] { "MagMachinegun", "MagGun", "MagShotgun", "M16_Mag", "MagScar", "MagUzi", "MagMP5K", "MagPPK", "MagRevolver", "MagSniper", "MagSRM12" }, 0.1f,
+                new[] { "MagMachinegun", "MagGun", "MagShotgun", "M16_Mag", "MagScar", "MagUzi", "MagMP5K", "MagPPK", "MagRevolver", "MagSniper", "MagSRM12",
+                      "MagViper", "MagMKR9", "MagHerrington", "MagTR15", "MagMk14" }, 0.1f,
                 new Vector3(0f, -0.05f, 0.15f)),
             
             new PocketConfig("Anchor_Hip_R", BoneTarget.Pelvis,
@@ -33,7 +34,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 new Vector3(0.2f, -0.1f, 0.05f)),
             
             new PocketConfig("Anchor_Back", BoneTarget.Spine,
-                new[] { "BackWeapon", "Shotgun", "Machinegun" }, 0.2f,
+                new[] { "BackWeapon", "Shotgun", "Machinegun", "M16_Rifle" }, 0.2f,
                 new Vector3(0f, 0f, -0.25f)),
             
             new PocketConfig("BackGrabProxy", BoneTarget.Spine,

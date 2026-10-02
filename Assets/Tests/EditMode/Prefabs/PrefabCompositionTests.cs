@@ -180,6 +180,27 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         /// <summary>
+        /// Старого HUD перед глазами на аватаре нет (T-46): ни контейнера <c>HUDContainer</c>, ни
+        /// пропавших скриптов на корне (там жил <c>PlayerHUDManager</c>, NetworkBehaviour — пропавший
+        /// компонент сдвинул бы индексы сетевых компонентов). Весь HUD — на часах (<c>WristDisplay</c>).
+        /// </summary>
+        [Test]
+        public void На_аватарах_нет_старого_HUD()
+        {
+            var problems = new List<string>();
+
+            foreach (GameObject avatar in AvatarPrefabs())
+            {
+                if (avatar.GetComponentsInChildren<Transform>(true).Any(t => t.name == "HUDContainer"))
+                    problems.Add($"{avatar.name}: остался HUDContainer");
+                if (GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(avatar) > 0)
+                    problems.Add($"{avatar.name}: на корне пропавший скрипт");
+            }
+
+            Assert.IsEmpty(problems, string.Join("\n", problems));
+        }
+
+        /// <summary>
         /// Контракт UltimateXR: пивот камеры («Camera Controller») обязан быть
         /// <b>прямым</b> потомком корня аватара, а камера — его потомком.
         ///

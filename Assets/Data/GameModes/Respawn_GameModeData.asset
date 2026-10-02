@@ -22,4 +22,3 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 6a1b2f4f562e0d4468069d2c11f06576, type: 2}
   modePrefab: {fileID: 338657906523908372, guid: f1b60699e720e0a4783daac156f0262b, type: 3}
   teamAssignment: 0
-  hudPrefab: {fileID: 0}

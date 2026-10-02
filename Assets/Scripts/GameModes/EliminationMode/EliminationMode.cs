@@ -191,6 +191,18 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         public static event Action<RoundPhase> RoundPhaseChangedServer;
 
+        /// <summary>
+        /// Сервер: исход раунда известен (вход в <c>Resolution</c>); null — ничья. Событие экземпляра:
+        /// режим на карте меняется на месте. Слушает экономика матча (<c>MatchEconomy</c>, T-45).
+        /// </summary>
+        public event Action<TeamData> RoundScoredServer;
+
+        /// <summary>
+        /// Сервер: начался раунд (номер; первый ли это раунд половины — тогда деньги сбрасываются,
+        /// как в CS2 после смены сторон). Слушает экономика матча (T-45).
+        /// </summary>
+        public event Action<int, bool> RoundBeganServer;
+
         // ── Публичные свойства для UI ────────────────────────────────────────
 
         public EliminationState CurrentState => _state;
@@ -520,6 +532,7 @@ namespace VrBattlegrounds.GameModes
                 $"[EliminationMode] Раунд {_currentRound}/{TotalRounds} завершён, победитель: {winnerName}, счёт: {DescribeScore()}");
 
             RpcOnRoundEnded(winner != null ? winner.teamIndex : -1);
+            RoundScoredServer?.Invoke(winner);
         }
 
         /// <summary>
@@ -593,7 +606,13 @@ namespace VrBattlegrounds.GameModes
 
             _roundManager.StartRound(Teams, _countdownDuration, _roundDuration);
             PrepareNextRound();
+
+            RoundBeganServer?.Invoke(_currentRound, IsFirstRoundOfHalf(_currentRound, _roundsPerHalf));
         }
+
+        /// <summary>Первый раунд половины: 1-й и (<paramref name="roundsPerHalf"/> + 1)-й.</summary>
+        public static bool IsFirstRoundOfHalf(int round, int roundsPerHalf) =>
+            round == 1 || round == roundsPerHalf + 1;
 
         /// <summary>Карта решена: победитель (null — ничья) уходит менеджеру карты.</summary>
         [Server]

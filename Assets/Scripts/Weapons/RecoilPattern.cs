@@ -52,6 +52,68 @@ namespace VrBattlegrounds.Weapons
             _oneHandMultiplier = oneHandMultiplier;
         }
 
+        // ── Перевод из CS2 (T-38): одна формула на весь арсенал ──────────────────────
+        // recoil_magnitude CS2 → подброс первого выстрела. Калибровка: AK-47 (30) ≈ 1°, ПП (18–21) ≈ 0,6–0,75°.
+
+        /// <summary>Градусов подброса на единицу <c>recoil_magnitude</c> CS2.</summary>
+        public const float KickPerCs2Magnitude = 0.035f;
+
+        /// <summary>Потолок очереди — подброс стольких первых выстрелов, но не выше <see cref="MaxPitchCap"/>.</summary>
+        public const float CeilingShots = 6f;
+
+        /// <summary>Наибольший потолок подброса, градусы: дробовик и Deagle упираются в него с первого выстрела.</summary>
+        public const float MaxPitchCap = 10f;
+
+        /// <summary>Рыскание очереди — доля потолка: у автоматов (CS2 <c>is_full_auto</c>) ствол гуляет вбок, у остальных почти нет.</summary>
+        public const float YawShareFullAuto = 0.35f, YawShareSemi = 0.1f;
+
+        /// <summary>Наибольшее рыскание, градусы.</summary>
+        public const float MaxYawCap = 2.5f;
+
+        /// <summary>Возврат ствола в паузе, с: в CS2 спад отдачи общий для всего оружия (<c>weapon_recoil_decay*</c>).</summary>
+        public const float Cs2RecoveryTime = 0.45f;
+
+        /// <summary>Множитель одной руки: как у отдачи UltimateXR (6° одной против 2° двумя — втрое, здесь мягче).</summary>
+        public const float DefaultOneHandMultiplier = 2f;
+
+        /// <summary>Картина накопленной отдачи по CS2 <c>recoil_magnitude</c> и <c>is_full_auto</c>.</summary>
+        public static RecoilPattern FromCs2(float recoilMagnitude, bool fullAuto)
+        {
+            float kick = recoilMagnitude * KickPerCs2Magnitude;
+            float maxPitch = Mathf.Min(MaxPitchCap, kick * CeilingShots);
+            float maxYaw = Mathf.Min(MaxYawCap, maxPitch * (fullAuto ? YawShareFullAuto : YawShareSemi));
+            return new RecoilPattern(kick, maxPitch, maxYaw, Cs2RecoveryTime, DefaultOneHandMultiplier);
+        }
+
+        // ── Толчок UltimateXR (UxrFirearmTrigger) — только видимый ──────────────────
+        // SDK заново запускает один и тот же толчок на каждый выстрел. Если он длиннее интервала очереди, то не успевает
+        // погаснуть: у скорострельного оружия ствол постоянно задран и дрожит (класс ошибки «разброс MP5K», T-38).
+        // Поэтому длительность — доля интервала спуска: к следующему выстрелу толчок погас и прицел не сбивает.
+
+        /// <summary>Толчок SDK двумя руками — во столько раз больше подброса первого выстрела, но не больше <see cref="SdkKickCapDegrees"/>.</summary>
+        public const float SdkKickScale = 1.5f;
+        public const float SdkKickCapDegrees = 6f;
+
+        /// <summary>Отдача назад, м на градус толчка, не больше <see cref="SdkOffsetCap"/>.</summary>
+        public const float SdkOffsetPerDegree = 0.01f, SdkOffsetCap = 0.04f;
+
+        /// <summary>Длительность толчка — доля интервала спуска, не дольше <see cref="SdkDurationMax"/>.</summary>
+        public const float SdkDurationShare = 0.8f, SdkDurationMax = 0.3f;
+
+        /// <summary>Угол толчка SDK, градусы (<c>RecoilAngleOneHand/TwoHands</c>).</summary>
+        public float SdkAngle(bool oneHand) => Mathf.Min(SdkKickCapDegrees, _kickDegrees * SdkKickScale) * Hands(oneHand);
+
+        /// <summary>Отдача назад SDK, м (<c>RecoilOffsetOneHand/TwoHands</c>, по −z осей отдачи).</summary>
+        public float SdkOffset(bool oneHand) => Mathf.Min(SdkOffsetCap, _kickDegrees * SdkOffsetPerDegree) * Hands(oneHand);
+
+        /// <summary>Длительность толчка SDK, с, при интервале спуска <paramref name="shotInterval"/> с.</summary>
+        public static float SdkDuration(float shotInterval) => Mathf.Min(SdkDurationMax, SdkDurationShare * shotInterval);
+
+        public bool SameAs(RecoilPattern other) =>
+            other != null && Mathf.Approximately(_kickDegrees, other._kickDegrees) && Mathf.Approximately(_maxPitchDegrees, other._maxPitchDegrees) &&
+            Mathf.Approximately(_maxYawDegrees, other._maxYawDegrees) && Mathf.Approximately(_recoveryTime, other._recoveryTime) &&
+            Mathf.Approximately(_oneHandMultiplier, other._oneHandMultiplier);
+
         public float KickDegrees => _kickDegrees;
         public float MaxPitchDegrees => _maxPitchDegrees;
         public float MaxYawDegrees => _maxYawDegrees;

@@ -1,5 +1,12 @@
 fileFormatVersion: 2
 guid: f4e94005e626cd14395917d2ab183e8c
+AssetOrigin:
+  serializedVersion: 1
+  productId: 311410
+  packageName: Tactical FPS Animations
+  packageVersion: 4.0.1
+  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/TR15/Attachments/Magazine/Textures/T_Mag_TR15_Normal.TGA
+  uploadId: 980832
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -93,6 +100,19 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 1024
+    resizeAlgorithm: 0
+    textureFormat: 50
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites: []
@@ -115,10 +135,3 @@ TextureImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 311410
-  packageName: Tactical FPS Animations
-  packageVersion: 4.0.1
-  assetPath: Assets/KINEMATION/TacticalShooterPack/Meshes/Weapons/TR15/Attachments/Magazine/Textures/T_Mag_TR15_Normal.TGA
-  uploadId: 980832

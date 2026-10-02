@@ -84,6 +84,20 @@ namespace VrBattlegrounds.Tests.UI
             Assert.AreEqual("--:--", WristDisplayFace.FormatTime(float.NaN));
         }
 
+        [Test]
+        public void FormatMoney_DollarsOrEmpty()
+        {
+            Assert.AreEqual("$800", WristDisplayFace.FormatMoney(800));
+            Assert.AreEqual("$0", WristDisplayFace.FormatMoney(0));
+            Assert.AreEqual(string.Empty, WristDisplayFace.FormatMoney(null), "экономики нет — денег не показываем");
+        }
+
+        [Test]
+        public void FormatScore_OwnFirst()
+        {
+            Assert.AreEqual("2 : 1", WristDisplayFace.FormatScore(2, 1));
+        }
+
         [TestCase(PrefabPath)]
         [TestCase(OvalPrefabPath)]
         public void Prefab_IsWiredAndWorldSpace(string path)
@@ -107,6 +121,26 @@ namespace VrBattlegrounds.Tests.UI
 
             Assert.IsNotNull(so.FindProperty("_timeText").objectReferenceValue as TMP_Text, "_timeText не назначен");
             Assert.IsNotNull(so.FindProperty("_content").objectReferenceValue, "_content не назначен");
+
+            // T-46: часы — весь HUD игрока. Деньги, счёт и нотификации обязаны быть проведены.
+            Assert.IsNotNull(so.FindProperty("_moneyText").objectReferenceValue as TMP_Text, "_moneyText не назначен — денег на часах нет");
+            Assert.IsNotNull(so.FindProperty("_scoreText").objectReferenceValue as TMP_Text, "_scoreText не назначен");
+            var status = so.FindProperty("_statusGroup").objectReferenceValue as GameObject;
+            var notification = so.FindProperty("_notificationGroup").objectReferenceValue as GameObject;
+            var notificationText = so.FindProperty("_notificationText").objectReferenceValue as TMP_Text;
+            Assert.IsNotNull(status, "_statusGroup не назначен");
+            Assert.IsNotNull(notification, "_notificationGroup не назначен");
+            Assert.IsNotNull(notificationText, "_notificationText не назначен");
+            Assert.IsTrue(notificationText.transform.IsChildOf(notification.transform), "текст нотификации вне её группы");
+            Assert.AreNotSame(status, notification, "статус и нотификация — разные группы: одна прячет другую");
+            foreach (string field in new[] { "_timeText", "_moneyText", "_scoreText" })
+            {
+                var text = (TMP_Text)so.FindProperty(field).objectReferenceValue;
+                Assert.IsTrue(text.transform.IsChildOf(status.transform), $"{field} вне группы статуса — не спрячется под нотификацией");
+            }
+
+            foreach (string clip in new[] { "_beepClip", "_alertClip", "_moneyClip" })
+                Assert.IsNotNull(so.FindProperty(clip).objectReferenceValue as AudioClip, $"{clip} не назначен — нотификация без звука");
 
             foreach (var g in prefab.GetComponentsInChildren<Graphic>(true))
                 Assert.IsFalse(g.raycastTarget, $"{g.name}: табло не должно ловить лучи указателя UltimateXR");

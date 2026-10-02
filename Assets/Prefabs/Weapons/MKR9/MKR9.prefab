@@ -1887,6 +1887,7 @@ GameObject:
   - component: {fileID: 5706913271121996485}
   - component: {fileID: 6064315620012921635}
   - component: {fileID: 8639602013731168826}
+  - component: {fileID: 5561498725047335560}
   m_Layer: 0
   m_Name: MKR9
   m_TagString: Weapon
@@ -2091,8 +2092,8 @@ MonoBehaviour:
     _projectileSpeed: 400
     _projectileMaxDistance: 120
     _projectileLength: 0.03
-    _projectileDamageNear: 33
-    _projectileDamageFar: 24.747
+    _projectileDamageNear: 26
+    _projectileDamageFar: 6.9743176
     _projectileImpactForceMultiplier: 1
     _collisionLayerMask:
       serializedVersion: 2
@@ -2105,6 +2106,7 @@ MonoBehaviour:
     _createDecalLayerMask:
       serializedVersion: 2
       m_Bits: 9
+    _penetrationPower: 1
 --- !u!114 &3583500935841534598
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2125,7 +2127,7 @@ MonoBehaviour:
   - _projectileShotIndex: 0
     _cycleType: 2
     _useHasReloadedForSemiAndFullAuto: 1
-    _maxShotFrequency: 11
+    _maxShotFrequency: 14
     _shotAudio:
       _clip: {fileID: 8300000, guid: 0febebeb74f722f47aa6648036407d35, type: 3}
       _volume: 1
@@ -2146,11 +2148,11 @@ MonoBehaviour:
       _axis: 0
     _triggerRotationDegrees: 0
     _ammunitionMagAnchor: {fileID: 4175290852217764337}
-    _recoilAngleOneHand: 6
-    _recoilAngleTwoHands: 2
-    _recoilOffsetOneHand: {x: -0, y: -0, z: -0.05}
-    _recoilOffsetTwoHands: {x: -0, y: -0, z: -0.025}
-    _recoilDurationSeconds: 0.3
+    _recoilAngleOneHand: 2.205
+    _recoilAngleTwoHands: 1.1025
+    _recoilOffsetOneHand: {x: 0, y: 0, z: -0.0147}
+    _recoilOffsetTwoHands: {x: 0, y: 0, z: -0.00735}
+    _recoilDurationSeconds: 0.05714286
 --- !u!114 &1050033536072315891
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2293,6 +2295,25 @@ MonoBehaviour:
   _fullSpeed: 5
   _cooldown: 0.2
   _maxVolume: 0.9
+--- !u!114 &5561498725047335560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8777186694099186684}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ca4861be76f25044984803548d10701, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.RecoilAccumulator
+  _pattern:
+    _kickDegrees: 0.735
+    _maxPitchDegrees: 4.41
+    _maxYawDegrees: 1.5435
+    _recoveryTime: 0.45
+    _oneHandMultiplier: 2
+  _axes: {fileID: 5155925853278759893}
 --- !u!1 &8810100748534663079
 GameObject:
   m_ObjectHideFlags: 0

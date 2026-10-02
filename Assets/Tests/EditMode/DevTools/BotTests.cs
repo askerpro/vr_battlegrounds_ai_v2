@@ -3,7 +3,7 @@ using Mirror;
 using NUnit.Framework;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
-using VrBattlegrounds.DevTools.Bots;
+using VrBattlegrounds.Bots;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
@@ -159,7 +159,7 @@ namespace VrBattlegrounds.Tests.DevTools
         [TestCase(true, true, false, TestName = "Ствол_в_чужой_руке_не_трогаем")]
         public void Ствол_бота_при_уборке_тела(bool bodyAlive, bool heldByOther, bool removed)
         {
-            Assert.AreEqual(removed, VrBattlegrounds.DevTools.Bots.BotGunner.ShouldRemoveWeaponWithBody(bodyAlive, heldByOther));
+            Assert.AreEqual(removed, VrBattlegrounds.Bots.BotGunner.ShouldRemoveWeaponWithBody(bodyAlive, heldByOther));
         }
 
         [Test]

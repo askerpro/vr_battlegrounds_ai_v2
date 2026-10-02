@@ -30,5 +30,26 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>Сколько времени оставалось у матча с таймером (Respawn), секунды.</summary>
         public float TimeRemaining;
+
+        /// <summary>
+        /// Деньги игроков на начало прерванного раунда (ключ — <c>Series.PlayerKey</c>, T-45).
+        /// Пусто — у режима нет экономики.
+        /// </summary>
+        public readonly Dictionary<string, int> Money = new Dictionary<string, int>();
+
+        /// <summary>Счётчики поражений команд на начало прерванного раунда (T-45).</summary>
+        public readonly Dictionary<int, int> LossCounters = new Dictionary<int, int>();
+    }
+
+    /// <summary>
+    /// Компонент на префабе режима, чьё состояние тоже должно пережить паузу (экономика матча).
+    /// Базовый <see cref="GameMode"/> опрашивает все такие компоненты своего объекта в
+    /// <see cref="GameMode.CaptureSnapshot"/> и <see cref="GameMode.RestoreSnapshot"/> —
+    /// режиму не нужно знать о них по имени.
+    /// </summary>
+    public interface IPauseSnapshotPart
+    {
+        void CaptureInto(PauseSnapshot snapshot);
+        void RestoreFrom(PauseSnapshot snapshot);
     }
 }

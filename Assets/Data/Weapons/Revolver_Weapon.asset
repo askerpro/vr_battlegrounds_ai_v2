@@ -23,19 +23,24 @@ MonoBehaviour:
   _maxMagazineCount: 3
   _price: 700
   _damage: 53
-  _rangeModifier: 0.81
+  _rangeModifier: 0.85
   _penetration: 2
+  _armorRatio: 1.864
   _fireRate: 267
+  _fullAuto: 0
   _magazineSize: 6
+  _reserveAmmo: 21
   _pellets: 1
-  _recoil:
-    _kickDegrees: 5
-    _maxPitchDegrees: 10
-    _maxYawDegrees: 1
-    _recoveryTime: 0.6
-    _oneHandMultiplier: 2
+  _killAward: 300
+  _spread:
+    _spread: 2
+    _inaccuracyStand: 4.2
+    _inaccuracyMove: 48.1
+    _inaccuracyFire: 72.23
+    _recoveryTime: 0.8112
+  _recoilMagnitude: 48.2
   _category: 1
-  _weaponPositionOffset: {x: 0, y: 0, z: 0}
+  _weaponPositionOffset: {x: 0, y: -0.03, z: 0.1}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
   _icon: {fileID: 0}

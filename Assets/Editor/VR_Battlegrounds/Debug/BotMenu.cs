@@ -1,7 +1,7 @@
 using Mirror;
 using UnityEditor;
 using VrBattlegrounds.Core;
-using VrBattlegrounds.DevTools.Bots;
+using VrBattlegrounds.Bots;
 
 namespace VrBattlegrounds.Editor.DevTools
 {

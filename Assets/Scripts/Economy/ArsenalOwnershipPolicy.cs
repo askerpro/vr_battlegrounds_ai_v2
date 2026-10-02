@@ -87,15 +87,24 @@ namespace VrBattlegrounds.Economy
         /// </summary>
         public static int TeamOf(ArsenalWallController wall)
         {
-            TeamSpawnZone zone = wall != null ? SpawnZoneMembership.ZoneOf(wall.transform) : null;
+            TeamSpawnZone zone = ExplicitZoneOf(wall);
+            if (zone == null && wall != null) zone = SpawnZoneMembership.ZoneOf(wall.transform);
             return TeamOfZone(zone);
         }
 
         /// <summary>То же среди уже найденных зон — раздача зовёт это дважды в секунду на каждую стену.</summary>
         public static int TeamOf(ArsenalWallController wall, IEnumerable<TeamSpawnZone> zones)
         {
-            TeamSpawnZone zone = wall != null ? SpawnZoneMembership.ZoneOf(wall.transform, zones) : null;
+            TeamSpawnZone zone = ExplicitZoneOf(wall);
+            if (zone == null && wall != null) zone = SpawnZoneMembership.ZoneOf(wall.transform, zones);
             return TeamOfZone(zone);
+        }
+
+        // Новая станция стоит снаружи зоны; её команда задаётся разметкой, а не текущими bounds.
+        private static TeamSpawnZone ExplicitZoneOf(ArsenalWallController wall)
+        {
+            ArsenalStationAnchor anchor = wall != null ? wall.GetComponent<ArsenalStationAnchor>() : null;
+            return anchor != null ? anchor.Zone : null;
         }
 
         private static int TeamOfZone(TeamSpawnZone zone)

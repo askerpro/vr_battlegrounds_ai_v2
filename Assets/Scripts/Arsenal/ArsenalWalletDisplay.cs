@@ -6,59 +6,50 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Arsenal
 {
     /// <summary>
-    /// Табло стены арсенала (T-45): чья стена и сколько у владельца денег, плюс доход за прошлый
-    /// раунд («+3250»). Видно только при экономике матча; в разминке всё бесплатно — табло пустое.
-    ///
-    /// <para>
-    /// Только читает: владельца — у стены (<see cref="ArsenalWallController.OwnerSession"/>, SyncVar),
-    /// деньги — у <see cref="MatchEconomy.Current"/> (SyncDictionary). Поэтому одинаково работает
-    /// на сервере, хосте и клиенте и ничего не шлёт по сети.
-    /// </para>
-    ///
-    /// <para>
-    /// Ставит его сама стена в <c>Awake</c>, текст создаётся при первой нужде — над панелью жетона
-    /// (там же табло обратного отсчёта закупки), лицом к игроку в −Z стены. Шрифт — TMP по умолчанию
-    /// (Roboto Condensed, <c>Docs/ui-fonts.md</c>).
-    /// </para>
+    /// Цифровой экран баланса: владелец, деньги и доход за прошлый раунд из существующей экономики.
+    /// Configure связывает экран префаба; без него создаётся небольшой корпус с экранной поверхностью.
+    /// Компонент только читает сетевые данные. Compose сохраняет прежний контракт содержимого.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ArsenalWalletDisplay : MonoBehaviour
     {
-        /// <summary>Над центром панели жетона, чуть к игроку.</summary>
         private static readonly Vector3 OffsetFromTagPanel = new Vector3(0f, 0.24f, -0.02f);
-
-        /// <summary>Где панель жетона на стандартной стене — если панели нет.</summary>
         private static readonly Vector3 DefaultLocalPosition = new Vector3(1.147f, 1.66f, -0.16f);
-
-        private const float FontSize = 0.55f;
-
         private static readonly Color MoneyColor = new Color(0.45f, 1f, 0.45f);
 
+        [SerializeField] private TextMeshPro _display;
         private ArsenalWallController _wall;
-        private TextMeshPro _text;
+        private GameObject _fallback;
+        private Material _housingMaterial;
+        private Material _screenMaterial;
         private string _shown;
         private bool _composed;
         private (bool, bool, PlayerSession, int, int, string) _signature;
 
-        private void Awake()
-        {
-            _wall = GetComponent<ArsenalWallController>();
-        }
+        public string ShownText => _shown;
 
-        private void Update()
+        /// <summary>Назначает экран префаба. Корпус остаётся активным даже без экономики; текст гаснет.</summary>
+        public void Configure(TextMeshPro display)
         {
+            if (_display != null) _display.enabled = false;
+            if (_fallback != null)
+            {
+                _fallback.SetActive(false);
+                if (Application.isPlaying) Destroy(_fallback);
+                else DestroyImmediate(_fallback);
+                _fallback = null;
+            }
+            _display = display;
+            _composed = false;
             Refresh();
         }
 
-        /// <summary>Текст табло сейчас; null — табло скрыто. Для тестов.</summary>
-        public string ShownText => _shown;
+        private void Awake() => _wall = GetComponent<ArsenalWallController>();
+        private void Update() => Refresh();
 
-        /// <summary>Сверяет табло с владельцем и деньгами. Пустой, если ничего не изменилось.</summary>
         public void Refresh()
         {
             if (_wall == null) _wall = GetComponent<ArsenalWallController>();
-
-            // Строка собирается только при изменении: Update зовётся каждый кадр на каждой стене.
             MatchEconomy economy = MatchEconomy.Current;
             PlayerSession owner = _wall != null ? _wall.OwnerSession : null;
             bool hasOwner = _wall != null && _wall.OwnerSessionNetId != 0;
@@ -69,23 +60,17 @@ namespace VrBattlegrounds.Arsenal
             if (_composed && signature.Equals(_signature)) return;
             _composed = true;
             _signature = signature;
-
-            string text = Compose(economy, owner, hasOwner);
-            if (text == _shown) return;
-            _shown = text;
-
-            if (text == null)
+            _shown = Compose(economy, owner, hasOwner);
+            if (_shown == null)
             {
-                if (_text != null) _text.gameObject.SetActive(false);
+                if (_display != null) _display.enabled = false;
                 return;
             }
-
-            if (_text == null) _text = CreateText();
-            _text.gameObject.SetActive(true);
-            _text.text = text;
+            if (_display == null) _display = CreateDisplay();
+            _display.enabled = true;
+            _display.text = _shown;
         }
 
-        /// <summary>Что написать на табло; null — экономики нет, табло скрыто.</summary>
         public static string Compose(MatchEconomy economy, PlayerSession owner, bool hasOwner)
         {
             if (economy == null) return null;
@@ -96,28 +81,70 @@ namespace VrBattlegrounds.Arsenal
             int money = economy.GetMoney(owner);
             int income = economy.GetRoundIncome(owner);
             string incomeLine = income > 0 ? $"  <size=60%><color=#B8FFB8>+{income}</color></size>" : "";
-
             return $"<size=55%>{name}</size>\n${money}{incomeLine}";
         }
 
-        private TextMeshPro CreateText()
+        private TextMeshPro CreateDisplay()
         {
-            var go = new GameObject("WalletText");
-            go.transform.SetParent(transform, false);
-
+            _fallback = new GameObject("WalletDisplay");
+            _fallback.transform.SetParent(transform, false);
             DogTagController tagPanel = GetComponentInChildren<DogTagController>(true);
-            go.transform.localPosition = tagPanel != null
+            _fallback.transform.localPosition = tagPanel != null
                 ? transform.InverseTransformPoint(tagPanel.transform.position) + OffsetFromTagPanel
                 : DefaultLocalPosition;
-            go.transform.localRotation = Quaternion.identity;
 
-            var text = go.AddComponent<TextMeshPro>();
+            CreatePlate("Housing", Vector3.zero, new Vector3(0.55f, 0.24f, 0.035f),
+                        new Color(0.095f, 0.11f, 0.095f), ref _housingMaterial);
+            CreatePlate("ScreenSurface", new Vector3(0f, 0f, -0.02f), new Vector3(0.51f, 0.20f, 0.005f),
+                        new Color(0.005f, 0.015f, 0.01f), ref _screenMaterial);
+            var textObject = new GameObject("WalletText");
+            textObject.transform.SetParent(_fallback.transform, false);
+            textObject.transform.localPosition = new Vector3(0f, 0f, -0.026f);
+            var text = textObject.AddComponent<TextMeshPro>();
             text.alignment = TextAlignmentOptions.Center;
-            text.fontSize = FontSize;
+            text.fontSize = 0.55f;
             text.color = MoneyColor;
-            text.rectTransform.sizeDelta = new Vector2(0.5f, 0.2f);
+            text.rectTransform.sizeDelta = new Vector2(0.49f, 0.18f);
             text.textWrappingMode = TextWrappingModes.NoWrap;
             return text;
+        }
+
+        private void CreatePlate(string name, Vector3 position, Vector3 size, Color color, ref Material material)
+        {
+            var plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            plate.name = name;
+            plate.transform.SetParent(_fallback.transform, false);
+            plate.transform.localPosition = position;
+            plate.transform.localScale = size;
+            Collider collider = plate.GetComponent<Collider>();
+            collider.enabled = false;
+            if (Application.isPlaying) Destroy(collider);
+            else DestroyImmediate(collider);
+            var renderer = plate.GetComponent<Renderer>();
+            ReleaseMaterial(material);
+            material = new Material(renderer.sharedMaterial) { name = "ArsenalWallet" + name + "_Runtime" };
+            material.color = color;
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        private static void ReleaseMaterial(Material material)
+        {
+            if (material == null) return;
+            if (Application.isPlaying) Destroy(material);
+            else DestroyImmediate(material);
+        }
+
+        private void OnDestroy()
+        {
+            ReleaseMaterial(_housingMaterial);
+            ReleaseMaterial(_screenMaterial);
+            if (_fallback != null)
+            {
+                if (Application.isPlaying) Destroy(_fallback);
+                else DestroyImmediate(_fallback);
+            }
         }
     }
 }

@@ -51,6 +51,9 @@ namespace VrBattlegrounds.Maps
 
         // Игроки, которые физически касаются триггера (кандидаты на проверку полного входа)
         private readonly HashSet<PlayerController> _playersTouching = new HashSet<PlayerController>();
+        // Контакт принадлежит коллайдеру: выход руки не отменяет оставшееся касание телом.
+        private readonly Dictionary<PlayerController, HashSet<Collider>> _playerContacts =
+            new Dictionary<PlayerController, HashSet<Collider>>();
 
         // Игроки, чья голова ПОЛНОСТЬЮ внутри зоны. 
         // Именно этот список видят внешние скрипты через GetPlayersInZone() и события.
@@ -289,6 +292,12 @@ namespace VrBattlegrounds.Maps
                 _localPlayer.PlayerDied -= OnLocalPlayerDied;
             }
             _localPlayer = null;
+            foreach (PlayerController player in _playersInZone) ReportZoneState(player, false);
+            _playersInZone.Clear();
+            _playersTouching.Clear();
+            _playerContacts.Clear();
+            _cameraTransformCache.Clear();
+            _playersInZoneCount = 0;
         }
 
         /// <summary>
@@ -365,7 +374,8 @@ namespace VrBattlegrounds.Maps
 
             SpawnZoneVisibility.Decide(modeShowsZones, hasLocal, alive, ownTeam, _currentRoundPhase, out bool isVisible, out bool xray);
 
-            if (_meshRenderer.enabled != isVisible)
+            bool legacyVisible = isVisible && GetComponent<SpawnZoneBoundaryVisual>() == null;
+            if (BorderVisible != isVisible)
             {
                 string who = hasLocal
                     ? $"локальный {_localPlayer.name}: жив={alive}, своя зона={ownTeam}"
@@ -375,7 +385,7 @@ namespace VrBattlegrounds.Maps
                     $"режим {(mode != null ? mode.GetType().Name : "нет")} (границы {(modeShowsZones ? "рисует" : "не рисует")}), фаза {_currentRoundPhase}, {who}.", this);
             }
 
-            _meshRenderer.enabled = isVisible;
+            _meshRenderer.enabled = legacyVisible;
             SetBorderVisible(isVisible);
             if (!isVisible) return;
 
@@ -418,17 +428,22 @@ namespace VrBattlegrounds.Maps
         private void OnTriggerEnter(Collider other)
         {
             PlayerController player = other.GetComponentInParent<PlayerController>();
+            if (player != null) RegisterPlayerContact(player, other);
+        }
 
-            // Если коллайдер не принадлежит игроку или игрок УЖЕ касается — игнорируем
-            if (player != null && _playersTouching.Add(player))
+        private void RegisterPlayerContact(PlayerController player, Collider collider)
+        {
+            if (!_playerContacts.TryGetValue(player, out HashSet<Collider> contacts))
             {
-                // Кешируем Transform камеры один раз при первом контакте игрока с зоной
-                if (!_cameraTransformCache.ContainsKey(player))
-                {
-                    Camera cam = player.GetComponentInChildren<Camera>(true);
-                    if (cam != null)
-                        _cameraTransformCache[player] = cam.transform;
-                }
+                contacts = new HashSet<Collider>();
+                _playerContacts.Add(player, contacts);
+            }
+            contacts.Add(collider);
+            _playersTouching.Add(player);
+            if (!_cameraTransformCache.TryGetValue(player, out Transform camera) || camera == null)
+            {
+                Camera cam = player.GetComponentInChildren<Camera>(true);
+                if (cam != null) _cameraTransformCache[player] = cam.transform;
             }
         }
 
@@ -436,7 +451,9 @@ namespace VrBattlegrounds.Maps
         {
             // Быстрая проверка полного нахождения: O(1) на игрока
             PlayerController player = other.GetComponentInParent<PlayerController>();
-            if (player == null || !_playersTouching.Contains(player)) return;
+            if (player == null) return;
+            // Stay восстанавливает контакт после повторного включения зоны, даже если Enter не пришёл.
+            RegisterPlayerContact(player, other);
 
             if (!_cameraTransformCache.TryGetValue(player, out Transform camT) || camT == null) return;
 
@@ -474,6 +491,12 @@ namespace VrBattlegrounds.Maps
         private void OnTriggerExit(Collider other)
         {
             PlayerController player = other.GetComponentInParent<PlayerController>();
+            if (player == null || !_playerContacts.TryGetValue(player, out HashSet<Collider> contacts)) return;
+            if (!contacts.Remove(other)) return;
+            // Выход руки при оставшемся теле не меняет логическое нахождение головы в зоне.
+            contacts.RemoveWhere(c => c == null || !c.enabled || !c.gameObject.activeInHierarchy);
+            if (contacts.Count != 0) return;
+            _playerContacts.Remove(player);
 
             // Если игрок совсем перестал касаться триггера
             if (player != null && _playersTouching.Remove(player))

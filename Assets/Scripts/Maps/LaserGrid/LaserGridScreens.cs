@@ -40,6 +40,8 @@ namespace VrBattlegrounds.Maps
     [RequireComponent(typeof(TeamSpawnZone))]
     public sealed class LaserGridScreens : MonoBehaviour
     {
+        [SerializeField] private GameObject _boardHousingPrefab;
+        public void ConfigureHousing(GameObject prefab) => _boardHousingPrefab = prefab;
         private sealed class PersonalBoard
         {
             public LaserGridBoardView View;
@@ -145,23 +147,25 @@ namespace VrBattlegrounds.Maps
 
             // Корень — в корне сцены зоны, а не под ней: коробка зоны отмасштабирована неравномерно, а группа
             // зоны может нести свой масштаб. Табло стоят в мировых координатах раскладки.
-            _root = new GameObject("LaserGridScreens_" + zone.name);
+            _root = new GameObject("ZoneBoundaryScreens_" + zone.name);
             if (_root.scene != zone.gameObject.scene && zone.gameObject.scene.IsValid())
                 UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(_root, zone.gameObject.scene);
 
             int commonIndex = 0;
+            var visual = zone.GetComponent<SpawnZoneBoundaryVisual>();
             foreach (LaserGridScreenPose pose in poses)
             {
+                if (visual != null && visual.FrontFaceOnly && pose.Face != LaserGridFace.Front) continue;
                 if (pose.Kind == LaserGridScreenKind.Common)
                 {
-                    _common.Add(LaserGridBoardView.Create(_root.transform, pose, $"Common_{pose.Face}_{commonIndex++}"));
+                    _common.Add(LaserGridBoardView.Create(_root.transform, pose, $"Common_{pose.Face}_{commonIndex++}", _boardHousingPrefab));
                     continue;
                 }
 
                 ArsenalWallController wall = walls[pose.WallId];
                 _personal.Add(new PersonalBoard
                 {
-                    View = LaserGridBoardView.Create(_root.transform, pose, "Personal_" + wall.name),
+                    View = LaserGridBoardView.Create(_root.transform, pose, "Personal_" + wall.name, _boardHousingPrefab),
                     Wall = wall
                 });
             }
@@ -189,9 +193,15 @@ namespace VrBattlegrounds.Maps
         {
             var result = new List<ArsenalWallController>();
             foreach (ArsenalWallController wall in all)
-                if (wall != null && SpawnZoneMembership.ZoneOf(wall.transform, zones) == zone) result.Add(wall);
+                if (wall != null && ZoneOfWall(wall, zones) == zone) result.Add(wall);
             result.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
             return result;
+        }
+
+        private static TeamSpawnZone ZoneOfWall(ArsenalWallController wall, IEnumerable<TeamSpawnZone> zones)
+        {
+            ArsenalStationAnchor station = wall.GetComponent<ArsenalStationAnchor>();
+            return station != null && station.Zone != null ? station.Zone : SpawnZoneMembership.ZoneOf(wall.transform, zones);
         }
 
         /// <summary>Раскладка табло зоны; <c>WallId</c> персонального — индекс стены в <paramref name="walls"/>.</summary>
@@ -227,6 +237,17 @@ namespace VrBattlegrounds.Maps
         /// </summary>
         public static LaserGridWall DescribeWall(ArsenalWallController wall, int id)
         {
+            ArsenalStationAnchor station = wall.GetComponent<ArsenalStationAnchor>();
+            if (station != null && station.HasBoardDirection)
+            {
+                Bounds raised = station.RaisedBoundsWorld;
+                Vector3 axis = wall.transform.right;
+                float half = Mathf.Abs(axis.x) * raised.extents.x + Mathf.Abs(axis.y) * raised.extents.y +
+                             Mathf.Abs(axis.z) * raised.extents.z;
+                return new LaserGridWall(id, raised.center, half, raised.max.y,
+                                         station.StandingPosition, station.BoardFacing);
+            }
+
             bool any = false;
             Bounds bounds = new Bounds(wall.transform.position, Vector3.zero);
 

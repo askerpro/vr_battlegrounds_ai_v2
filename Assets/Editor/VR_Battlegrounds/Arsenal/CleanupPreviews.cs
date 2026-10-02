@@ -2,19 +2,20 @@
 using UnityEditor;
 using UnityEngine;
 using Mirror;
+using VrBattlegrounds.Core;
 
 public class CleanupPreviews : EditorWindow
 {
-    [MenuItem("Tools/Cleanup Arsenal Previews")]
+    [MenuItem("Tools/VR Battlegrounds/Arsenal/Cleanup Previews")]
     public static void Clean()
     {
         int removedCount = 0;
         
         string[] prefabs = new[] {
-            "Assets/Prefabs/Arsenal/StandardArsenalWall.prefab",
+            "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab",
             "Assets/Prefabs/Arsenal/Slots/ShelfSlotPrefab Variant.prefab",
             "Assets/Prefabs/Arsenal/Slots/ShelfSlotPrefab.prefab",
-            "Assets/Prefabs/Arsenal/Slots/FirearmSlotPrefab.prefab"
+            "Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab"
         };
         
         foreach (var path in prefabs)
@@ -35,12 +36,12 @@ public class CleanupPreviews : EditorWindow
                             DestroyImmediate(identity, true);
                             modified = true;
                             removedCount++;
-                            Debug.Log($"Removed NetworkIdentity from {t.name} in {path}");
+                            GameLog.Arsenal.Info($"Removed NetworkIdentity from {t.name} in {path}");
                         }
                         
                         DestroyImmediate(t.gameObject, true);
                         modified = true;
-                        Debug.Log($"Removed {t.name} in {path}");
+                        GameLog.Arsenal.Info($"Removed {t.name} in {path}");
                     }
                 }
             }
@@ -66,10 +67,10 @@ public class CleanupPreviews : EditorWindow
         if (sceneRemovedCount > 0)
         {
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(activeScene);
-            Debug.Log($"Removed {sceneRemovedCount} preview objects from active scene.");
+            GameLog.Arsenal.Info($"Removed {sceneRemovedCount} preview objects from active scene.");
         }
         
-        Debug.Log($"Cleanup complete. Removed {removedCount} preview network identities / objects.");
+        GameLog.Arsenal.Info($"Cleanup complete. Removed {removedCount} preview network identities / objects.");
     }
 }
 #endif

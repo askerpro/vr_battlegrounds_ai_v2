@@ -77,6 +77,41 @@ namespace VrBattlegrounds.Tests.Modes
             SetPrivateField(mode, "_roundPhase", phase);
         }
 
+        [TestCase(RoundPhase.Resolution, true, false)]
+        [TestCase(RoundPhase.Scoreboard, true, false)]
+        [TestCase(RoundPhase.Setup, true, false)]
+        [TestCase(RoundPhase.Equipment, true, true)]
+        [TestCase(RoundPhase.Countdown, false, false)]
+        [TestCase(RoundPhase.Combat, false, false)]
+        public void EquipmentPresentationIsIndependentOfPurchasePhase(RoundPhase phase, bool presented, bool canBuy)
+        {
+            var mode = CreateNetworkComponent<EliminationMode>("ArsenalPhaseFixture");
+            SetPhase(mode, phase);
+            Assert.That(mode.ArsenalRules.IsDeployed, Is.EqualTo(presented),
+                "После конца раунда содержимое выдвигается до возвращения игроков.");
+            Assert.That(mode.ArsenalRules.IsOpen, Is.EqualTo(canBuy),
+                "Выдвинутое содержимое не разрешает торговлю вне Equipment.");
+        }
+
+        [Test]
+        public void CashierRejectsPurchaseUntilEquipmentMotionHasFinished()
+        {
+            CreateActiveMode<WarmupMode>(CreateMapReferee());
+            var wall = CreateServerWall(out _);
+            var deployment = wall.gameObject.AddComponent<ArsenalDeploymentAnimator>();
+            SetPrivateField(wall, "_deployment", deployment);
+            SetPrivateField(wall, "_currentState", Open);
+            SetPrivateField(deployment, "_motion", new ArsenalDeploymentAnimator.DeploymentMotion
+                { From = 0, To = 0, Duration = 0 });
+            Assert.That(wall.CanTrade, Is.False, "Слоты убраны, несмотря на разрешение режима.");
+            SetPrivateField(deployment, "_motion", new ArsenalDeploymentAnimator.DeploymentMotion
+                { From = 0, To = 1, StartedAt = 1e10, Duration = 1 });
+            Assert.That(wall.CanTrade, Is.False, "Выдвижение ещё не закончилось.");
+            SetPrivateField(deployment, "_motion", new ArsenalDeploymentAnimator.DeploymentMotion
+                { From = 1, To = 1, Duration = 0 });
+            Assert.That(wall.CanTrade, Is.True);
+        }
+
         private ArsenalWallController CreateWall(string name, out DogTagController dogTag)
         {
             GameObject wallObject = CreateNetworkObject(name);

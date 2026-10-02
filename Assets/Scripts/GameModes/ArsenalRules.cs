@@ -19,6 +19,9 @@ namespace VrBattlegrounds.GameModes
         /// <summary>Стена открыта: слоты отдают и принимают оружие.</summary>
         public readonly bool IsOpen;
 
+        /// <summary>Содержимое предоставлено игроку; доступ к покупке отдельно задаёт IsOpen.</summary>
+        public readonly bool IsDeployed;
+
         /// <summary>На стене нужен жетон готовности к раунду.</summary>
         public readonly bool UsesReadinessTag;
 
@@ -28,15 +31,16 @@ namespace VrBattlegrounds.GameModes
         /// </summary>
         public readonly bool ReplacesLostWeapons;
 
-        public ArsenalRules(bool isOpen, bool usesReadinessTag, bool replacesLostWeapons)
+        public ArsenalRules(bool isOpen, bool usesReadinessTag, bool replacesLostWeapons, bool isDeployed = true)
         {
             IsOpen = isOpen;
+            IsDeployed = isDeployed;
             UsesReadinessTag = usesReadinessTag;
             ReplacesLostWeapons = replacesLostWeapons;
         }
 
         /// <summary>Закрыта, без жетона, без замены — правило по умолчанию.</summary>
-        public static ArsenalRules Closed => new ArsenalRules(false, false, false);
+        public static ArsenalRules Closed => new ArsenalRules(false, false, false, isDeployed: false);
 
         public override string ToString() =>
             $"открыт={IsOpen}, жетон={UsesReadinessTag}, замена пропавшего={ReplacesLostWeapons}";

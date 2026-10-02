@@ -69,6 +69,11 @@ namespace VrBattlegrounds.Arsenal
         [Header("Components")]
         [SerializeField] private DogTagController _dogTagController;
         [SerializeField] private ArsenalAnimator _animator;
+        [SerializeField] private bool _alwaysOpenPresentation;
+        private ArsenalDeploymentAnimator _deployment;
+
+        /// <summary>Открытая экспозиция: доступ меняется без движения полки и ставни.</summary>
+        public void ConfigureAlwaysOpenPresentation(bool enabled) => _alwaysOpenPresentation = enabled;
 
         // ── State ──────────────────────────────────────────────
         public enum ArsenalState
@@ -150,6 +155,19 @@ namespace VrBattlegrounds.Arsenal
         private bool? _appliedDogTagInUse;
 
         public ArsenalState CurrentState => _currentState;
+
+        /// <summary>Единый допуск кассы: открытая закупка и выдвинутое оборудование. Без режима сохраняется автономное поведение.</summary>
+        public bool CanTrade
+        {
+            get
+            {
+                EnsureReferences();
+                GameMode mode = ActiveMode;
+                return _currentState == ArsenalState.Open &&
+                       (mode == null || mode.ArsenalRules.IsOpen) &&
+                       (_deployment == null || _deployment.ReadyForAccess);
+            }
+        }
 
         /// <summary>
         /// <c>netId</c> сессии игрока, за которым закреплена стена (T-45); 0 — ничья. Пишет только сервер
@@ -251,6 +269,8 @@ namespace VrBattlegrounds.Arsenal
 
             if (_animator == null)
                 _animator = GetComponent<ArsenalAnimator>();
+            if (_deployment == null)
+                _deployment = GetComponent<ArsenalDeploymentAnimator>();
         }
 
         private void Start()
@@ -392,7 +412,7 @@ namespace VrBattlegrounds.Arsenal
             ArsenalRules rules = mode.ArsenalRules;
 
             if (CanWriteState)
-                ApplyOpenRule(rules.IsOpen);
+                ApplyOpenRule(rules.IsOpen && (_deployment == null || _deployment.ReadyForAccess));
 
             KeepLostSlotsReplaced(rules.ReplacesLostWeapons, deltaTime);
         }
@@ -413,6 +433,11 @@ namespace VrBattlegrounds.Arsenal
         /// <summary>Приводит состояние к «открыта»/«закрыта», не перебивая идущую анимацию того же знака.</summary>
         private void ApplyOpenRule(bool shouldBeOpen)
         {
+            if (_alwaysOpenPresentation)
+            {
+                SetState(shouldBeOpen ? ArsenalState.Open : ArsenalState.Closed);
+                return;
+            }
             if (shouldBeOpen)
             {
                 if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing)
@@ -551,6 +576,8 @@ namespace VrBattlegrounds.Arsenal
         [Server]
         private void ServerRefillEmptySlots()
         {
+            EnsureReferences();
+            if (_deployment != null) _deployment.PrepareForEquipment();
             ReplenishWeaponsNetwork(false);
         }
 
@@ -856,7 +883,7 @@ namespace VrBattlegrounds.Arsenal
         {
             // Догоняем позу, если анимацию не проигрывали: поздний клиент, immediate,
             // либо состояние приехало раньше, чем доиграла своя анимация.
-            if (_animator != null && !_animator.IsAnimating)
+            if (!_alwaysOpenPresentation && _animator != null && !_animator.IsAnimating)
                 _animator.SetOpenImmediate();
 
             foreach (var slot in _allSlots)
@@ -909,7 +936,7 @@ namespace VrBattlegrounds.Arsenal
                 _dogTagController.Disable();
             }
 
-            if (_animator != null && !_animator.IsAnimating)
+            if (!_alwaysOpenPresentation && _animator != null && !_animator.IsAnimating)
                 _animator.SetClosedImmediate();
 
             GameLog.Arsenal.Info("[Arsenal] Arsenal CLOSED.");

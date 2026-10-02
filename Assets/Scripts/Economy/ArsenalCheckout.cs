@@ -80,6 +80,13 @@ namespace VrBattlegrounds.Economy
             if (_economy == null) _economy = GetComponent<MatchEconomy>();
             if (!NetworkServer.active || _economy == null || wall == null || slot == null || slot.WeaponData == null) return;
 
+            if (!wall.CanTrade)
+            {
+                UxrGrabbableObject rejected = RootOf(item);
+                if (rejected != null) _rejected.Add((wall, rejected));
+                return;
+            }
+
             PlayerSession owner = wall.OwnerSession;
             PlayerSession taker = SessionOf(grabber);
             int ownerMoney = owner != null ? _economy.GetMoney(owner) : 0;
@@ -108,7 +115,7 @@ namespace VrBattlegrounds.Economy
         public void HandleItemReturned(ArsenalWallController wall, ArsenalSlotController slot, UxrGrabbableObject item)
         {
             if (_economy == null) _economy = GetComponent<MatchEconomy>();
-            if (!NetworkServer.active || _economy == null) return;
+            if (!NetworkServer.active || _economy == null || wall == null || !wall.CanTrade) return;
 
             uint netId = NetIdOf(item);
             if (netId != 0) _economy.ServerTryRefund(netId, slot != null ? slot.DisplayName : item != null ? item.name : "");

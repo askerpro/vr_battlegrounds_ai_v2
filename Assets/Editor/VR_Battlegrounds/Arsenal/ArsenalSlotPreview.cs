@@ -70,6 +70,9 @@ namespace VrBattlegrounds.Editor.Arsenal
             if (slot == null || EditorApplication.isPlayingOrWillChangePlaymode) return null;
 
             WeaponInfo info = slot.WeaponData;
+            // Сама карточка сохранена в префабе; здесь только обновляются данные экземпляра.
+            var card = slot.GetComponentInChildren<ArsenalPriceTag>(true);
+            if (card != null) ArsenalPriceTag.Create(slot).Show(info, true);
             if (info == null || info.WeaponPrefab == null) return null;
 
             GameObject item = Find(slot, ItemPreviewName);

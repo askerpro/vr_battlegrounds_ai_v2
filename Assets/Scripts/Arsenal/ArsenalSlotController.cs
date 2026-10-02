@@ -25,6 +25,28 @@ namespace VrBattlegrounds.Arsenal
         [Tooltip("Snap zone for the item (auto-found if empty)")]
         [SerializeField] private UxrGrabbableObjectAnchor _itemAnchor;
 
+        [Header("Карточка на панели")]
+        [SerializeField] private bool _customCardPresentation;
+        [SerializeField] private Vector3 _cardLocalPosition;
+        [SerializeField] private Vector3 _cardLocalEulerAngles;
+        [SerializeField] private Vector2 _cardSize = new Vector2(0.15f, 0.16f);
+        [SerializeField] private float _cardFontSize = 0.16f;
+        public bool HasCustomCardPresentation => _customCardPresentation;
+        public Vector3 CardLocalPosition => _cardLocalPosition;
+        public Quaternion CardLocalRotation => Quaternion.Euler(_cardLocalEulerAngles);
+        public Vector2 CardSize => _cardSize;
+        public float CardFontSize => _cardFontSize;
+
+        /// <summary>Карточка крепится к своему слоту независимо от позы оружейного якоря.</summary>
+        public void ConfigureCardPresentation(Vector3 slotLocalPosition, Vector2 size, float fontSize, Quaternion? slotLocalRotation = null)
+        {
+            _customCardPresentation = true;
+            _cardLocalPosition = slotLocalPosition;
+            _cardLocalEulerAngles = (slotLocalRotation ?? Quaternion.identity).eulerAngles;
+            _cardSize = new Vector2(Mathf.Max(0.05f, size.x), Mathf.Max(0.05f, size.y));
+            _cardFontSize = Mathf.Max(0.05f, fontSize);
+        }
+
         [Header("Visual Feedback")]
         [SerializeField] private Light _slotLight;
         [SerializeField] private Color _availableColor  = new Color(1f, 0.85f, 0.6f); // warm white
@@ -397,7 +419,7 @@ namespace VrBattlegrounds.Arsenal
 
         /// <summary>
         /// Подсветка по предложению: по карману (и бесплатно) — свет слота горит, ствол обычный;
-        /// дорого или стена ничья — свет погашен, ствол приглушён. Ценник — только при экономике.
+        /// дорого или стена ничья — свет погашен, ствол приглушён. Карточка сохраняет характеристики и в разминке.
         /// </summary>
         private void ApplyOfferVisuals()
         {
@@ -411,14 +433,10 @@ namespace VrBattlegrounds.Arsenal
 
             SetDimmed(IsItemPresent && !grabbable ? CurrentItem : null);
 
-            if (_offer == SlotOffer.Free)
-            {
-                if (_priceTag != null) _priceTag.Hide();
-            }
-            else if (_weaponInfo != null && _itemAnchor != null && Application.isPlaying)
+            if (_weaponInfo != null && _itemAnchor != null && Application.isPlaying)
             {
                 if (_priceTag == null) _priceTag = ArsenalPriceTag.Create(this);
-                _priceTag.Show(_weaponInfo.DisplayName, _weaponInfo.Price, grabbable);
+                _priceTag.Show(_weaponInfo, grabbable, _offer == SlotOffer.Free);
             }
         }
 

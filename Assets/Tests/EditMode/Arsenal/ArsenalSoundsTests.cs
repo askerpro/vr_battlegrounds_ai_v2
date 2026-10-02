@@ -12,7 +12,7 @@ namespace VrBattlegrounds.Tests.Arsenal
     /// </summary>
     public class ArsenalSoundsTests
     {
-        private const string Wall = "Assets/Prefabs/Arsenal/StandardArsenalWall.prefab";
+        private const string Wall = "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab";
 
         [Test]
         public void Стена_настроена_на_звук()

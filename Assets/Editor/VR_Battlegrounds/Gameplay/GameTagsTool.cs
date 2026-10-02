@@ -163,7 +163,7 @@ namespace VrBattlegrounds.Editor
 
         // ── Общее ───────────────────────────────────────────────────────────
 
-        private static int ApplyToHierarchy(GameObject root, string assetPath, Result result)
+        public static int ApplyToHierarchy(GameObject root, string assetPath, Result result)
         {
             int changed = 0;
 

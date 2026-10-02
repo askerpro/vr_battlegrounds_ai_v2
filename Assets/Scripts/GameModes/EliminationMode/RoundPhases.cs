@@ -123,7 +123,7 @@ namespace VrBattlegrounds.GameModes
                 "предел ожидания готовности истёк"),
 
             new PhaseTransition(RoundPhase.Countdown, RoundPhase.Combat,
-                m => m._stateTimer >= m._countdownDuration,
+                m => m._stateTimer >= m._countdownDuration && (m._combatAllowed == null || m._combatAllowed()),
                 "обратный отсчёт истёк"),
 
             new PhaseTransition(RoundPhase.Combat, RoundPhase.Resolution,
@@ -146,6 +146,9 @@ namespace VrBattlegrounds.GameModes
         };
 
         private float _countdownDuration;
+
+        // Допуск владельца машины: завершение серверного перехода корпуса, без сброса отсчёта.
+        private Func<bool> _combatAllowed;
         private float _roundDuration;
 
         private float _stateTimer;
@@ -228,10 +231,11 @@ namespace VrBattlegrounds.GameModes
         /// Начинает раунд с фазы Setup. Единственный способ вернуть машину в работу
         /// после того, как она доиграла цикл. Зовётся только владельцем.
         /// </summary>
-        public void StartRound(IReadOnlyList<TeamData> teams, float countdownDuration, float roundDuration)
+        public void StartRound(IReadOnlyList<TeamData> teams, float countdownDuration, float roundDuration, Func<bool> combatAllowed = null)
         {
             _teams = teams ?? new TeamData[0];
             _countdownDuration = countdownDuration;
+            _combatAllowed = combatAllowed;
             _roundDuration = roundDuration;
 
             _stateTimer = 0f;

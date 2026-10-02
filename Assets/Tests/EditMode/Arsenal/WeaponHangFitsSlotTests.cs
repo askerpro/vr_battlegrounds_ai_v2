@@ -18,7 +18,7 @@ namespace VrBattlegrounds.Tests.Arsenal
     /// </summary>
     public class WeaponHangFitsSlotTests
     {
-        private const string Wall = "Assets/Prefabs/Arsenal/StandardArsenalWall.prefab";
+        private const string Wall = "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab";
         private const float Tolerance = 0.01f;
 
         [Test]

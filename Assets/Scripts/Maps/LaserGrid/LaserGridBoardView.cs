@@ -51,20 +51,30 @@ namespace VrBattlegrounds.Maps
             return true;
         }
 
-        public static LaserGridBoardView Create(Transform parent, LaserGridScreenPose pose, string name)
+        public static LaserGridBoardView Create(Transform parent, LaserGridScreenPose pose, string name, GameObject housingPrefab = null)
         {
             var root = new GameObject(name);
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(pose.Position, pose.Rotation);
 
             // Вперёд (+Z) смотрит наружу из зоны, зритель — внутри: всё, что ближе к нему, — по −Z.
-            Quad(root.transform, "Frame", pose.Width, pose.Height, 0f, FrameColor, 0);
-            Quad(root.transform, "Background", pose.Width - 2f * FrameThickness, pose.Height - 2f * FrameThickness,
-                 -0.003f, BackgroundColor, 1);
+            if (housingPrefab != null)
+            {
+                var housing = Object.Instantiate(housingPrefab, root.transform, false);
+                housing.transform.localPosition = Vector3.zero;
+                housing.transform.localRotation = Quaternion.identity;
+                housing.transform.localScale = new Vector3(pose.Width / .43f, pose.Height / .30f, 1f);
+            }
+            else
+            {
+                Quad(root.transform, "Frame", pose.Width, pose.Height, 0f, FrameColor, 0);
+                Quad(root.transform, "Background", pose.Width - 2f * FrameThickness, pose.Height - 2f * FrameThickness,
+                     -0.003f, BackgroundColor, 1);
+            }
 
             var textGo = new GameObject("Text");
             textGo.transform.SetParent(root.transform, false);
-            textGo.transform.localPosition = new Vector3(0f, 0f, -0.006f);
+            textGo.transform.localPosition = new Vector3(0f, 0f, housingPrefab != null ? -.04f : -0.006f);
 
             var text = textGo.AddComponent<TextMeshPro>();
             text.rectTransform.sizeDelta = new Vector2(pose.Width - 2f * TextPadding, pose.Height - 2f * TextPadding);

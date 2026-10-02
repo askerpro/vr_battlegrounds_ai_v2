@@ -20,7 +20,7 @@ namespace VrBattlegrounds.Tests.Arsenal
     /// </summary>
     public class ArsenalWallCoversRegistryTests
     {
-        private const string Wall = "Assets/Prefabs/Arsenal/StandardArsenalWall.prefab";
+        private const string Wall = "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab";
         private static readonly string[] MapRoots = { "Assets/Prefabs", "Assets/Scenes" };
 
         [Test]
@@ -61,7 +61,7 @@ namespace VrBattlegrounds.Tests.Arsenal
                 if (text.Contains("propertyPath: _weaponInfo")) offenders.Add(path);
             }
 
-            Assert.IsEmpty(offenders, "Слоты стены переопределены вне StandardArsenalWall — стены покажут разное:\n" + string.Join("\n", offenders));
+            Assert.IsEmpty(offenders, "Слоты стены переопределены вне CommonOpenArsenalStation — стены покажут разное:\n" + string.Join("\n", offenders));
         }
     }
 }

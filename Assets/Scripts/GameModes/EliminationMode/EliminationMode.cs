@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Maps;
 using VrBattlegrounds.Player;
@@ -301,12 +302,25 @@ namespace VrBattlegrounds.GameModes
 
         /// <summary>
         /// Арсенал открыт только в закупке; жетон нужен, если закупка кончается готовностью.
-        /// Пустые слоты пополняются событием на входе в <c>Setup</c> (<see cref="ServerSetRoundPhase"/>).
+        /// Представление раскрывается сразу после боя; пустые слоты пополняются после очистки экипировки
+        /// и на входе в Setup для первого раунда и смены сторон.
         /// </summary>
         public override ArsenalRules ArsenalRules => new ArsenalRules(
             isOpen: _roundPhase == RoundPhase.Equipment,
             usesReadinessTag: _roundStartRule == RoundStartRule.Readiness,
-            replacesLostWeapons: false);
+            replacesLostWeapons: false,
+            isDeployed: _roundPhase == RoundPhase.Resolution || _roundPhase == RoundPhase.Scoreboard ||
+                        _roundPhase == RoundPhase.Setup || _roundPhase == RoundPhase.Equipment);
+
+        /// <summary>Боевой старт ждёт полного убирания оборудования всех станций этой сцены.</summary>
+        private bool CanStartCombat()
+        {
+            foreach (ArsenalBoundaryWall boundary in FindObjectsByType<ArsenalBoundaryWall>(FindObjectsSortMode.None))
+                if (boundary.gameObject.scene == gameObject.scene && !boundary.IsRetracted) return false;
+            foreach (ArsenalDeploymentAnimator deployment in FindObjectsByType<ArsenalDeploymentAnimator>(FindObjectsSortMode.None))
+                if (deployment.gameObject.scene == gameObject.scene && !deployment.IsRetracted) return false;
+            return true;
+        }
 
         protected override bool CanBegin()
         {
@@ -604,7 +618,7 @@ namespace VrBattlegrounds.GameModes
             ServerBeginRound(_currentRound + 1);
             GameLog.Match.Info($"[EliminationMode] Раунд {_currentRound}/{TotalRounds}");
 
-            _roundManager.StartRound(Teams, _countdownDuration, _roundDuration);
+            _roundManager.StartRound(Teams, _countdownDuration, _roundDuration, CanStartCombat);
             PrepareNextRound();
 
             RoundBeganServer?.Invoke(_currentRound, IsFirstRoundOfHalf(_currentRound, _roundsPerHalf));
@@ -913,8 +927,9 @@ namespace VrBattlegrounds.GameModes
                 ServerEndRoundDeaths();
 
                 // Оружие раунд не переживает: у всех забирается и с пола убирается, каждый
-                // раунд экипировка заново (стены пополняются на входе в Setup, выше).
+                // раунд экипировка заново. Сначала очистка, затем пополнение: арсеналы доступны визуально сразу.
                 EquipmentStrip.ServerStripAll("конец раунда");
+                RaiseArsenalRefillRequestedServer();
             }
         }
 
@@ -1068,4 +1083,3 @@ namespace VrBattlegrounds.GameModes
         }
     }
 }
-

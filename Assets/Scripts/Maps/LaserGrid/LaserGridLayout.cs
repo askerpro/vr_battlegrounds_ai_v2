@@ -63,6 +63,9 @@ namespace VrBattlegrounds.Maps
         public readonly Vector3 Center;
         public readonly float HalfWidth;
         public readonly float TopY;
+        public readonly bool HasStation;
+        public readonly Vector3 StandingPoint;
+        public readonly Vector3 BoardDirection;
 
         public LaserGridWall(int id, Vector3 center, float halfWidth, float topY)
         {
@@ -70,6 +73,17 @@ namespace VrBattlegrounds.Maps
             Center = center;
             HalfWidth = Mathf.Abs(halfWidth);
             TopY = topY;
+            HasStation = false;
+            StandingPoint = center;
+            BoardDirection = Vector3.zero;
+        }
+
+        public LaserGridWall(int id, Vector3 center, float halfWidth, float topY,
+                             Vector3 standingPoint, Vector3 boardDirection) : this(id, center, halfWidth, topY)
+        {
+            HasStation = boardDirection.x * boardDirection.x + boardDirection.z * boardDirection.z > 0.0001f;
+            StandingPoint = standingPoint;
+            BoardDirection = boardDirection;
         }
     }
 
@@ -219,7 +233,38 @@ namespace VrBattlegrounds.Maps
         }
 
         /// <summary>Грань персонального куска стены — напротив грани, которую стена заслоняет.</summary>
-        public static LaserGridFace PersonalFace(LaserGridBox box, LaserGridWall wall) => Opposite(NearestFace(box, wall.Center));
+        public static LaserGridFace PersonalFace(LaserGridBox box, LaserGridWall wall)
+        {
+            if (!wall.HasStation) return Opposite(NearestFace(box, wall.Center));
+            StationProjection(box, wall, out LaserGridFace face, out _);
+            return face;
+        }
+
+        /// <summary>Личное табло на луче от места экипировки к арене, независимо от позы корпуса.</summary>
+        private static float PersonalAlong(LaserGridBox box, LaserGridFace face, LaserGridWall wall)
+        {
+            if (!wall.HasStation) return AlongFace(box, face, wall.Center);
+            StationProjection(box, wall, out _, out Vector3 hit);
+            return AlongFace(box, face, hit);
+        }
+
+        private static void StationProjection(LaserGridBox box, LaserGridWall wall,
+                                              out LaserGridFace face, out Vector3 hit)
+        {
+            Vector2 p = box.ToPlan(wall.StandingPoint);
+            Vector3 direction = wall.BoardDirection;
+            Vector2 d = new Vector2(Vector3.Dot(direction, box.Right), Vector3.Dot(direction, box.Forward));
+            float tx = Mathf.Abs(d.x) > 0.0001f
+                ? ((d.x > 0f ? box.HalfWidth : -box.HalfWidth) - p.x) / d.x : float.PositiveInfinity;
+            float tz = Mathf.Abs(d.y) > 0.0001f
+                ? ((d.y > 0f ? box.HalfDepth : -box.HalfDepth) - p.y) / d.y : float.PositiveInfinity;
+            tx = tx >= 0f ? tx : float.PositiveInfinity;
+            tz = tz >= 0f ? tz : float.PositiveInfinity;
+            face = tx < tz ? (d.x > 0f ? LaserGridFace.Right : LaserGridFace.Left)
+                           : (d.y > 0f ? LaserGridFace.Back : LaserGridFace.Front);
+            float distance = Mathf.Min(tx, tz);
+            hit = float.IsInfinity(distance) ? wall.StandingPoint : wall.StandingPoint + direction * distance;
+        }
 
         /// <summary>Поза табло в мире по грани, положению вдоль неё и высоте центра.</summary>
         public static Vector3 PositionOn(LaserGridBox box, LaserGridFace face, float along, float centerY)
@@ -260,8 +305,10 @@ namespace VrBattlegrounds.Maps
                 {
                     LaserGridFace near = NearestFace(box, wall.Center);
                     float u = AlongFace(box, near, wall.Center);
-                    obstacles[near].Add(new Span(u - wall.HalfWidth, u + wall.HalfWidth, wall.TopY));
-                    personalWalls[Opposite(near)].Add(wall);
+                    // Убираемый корпус закрывает доску на закупке, но не меняет её высоту.
+                    if (!wall.HasStation)
+                        obstacles[near].Add(new Span(u - wall.HalfWidth, u + wall.HalfWidth, wall.TopY));
+                    personalWalls[PersonalFace(box, wall)].Add(wall);
                 }
 
                 // Персональные: ряд напротив своих стен, на уровне глаз, над препятствиями своей грани.
@@ -271,7 +318,7 @@ namespace VrBattlegrounds.Maps
                     float halfLength = HalfLength(box, face);
                     float width = Mathf.Min(PersonalWidth, MinSpacing(box, face, personalWalls[face]) - Margin,
                                             2f * (halfLength - Margin));
-                    float along = ClampAlong(AlongFace(box, face, wall.Center), width, halfLength);
+                    float along = ClampAlong(PersonalAlong(box, face, wall), width, halfLength);
                     float centerY = ClampHeight(box, box.FloorY + PersonalCenterAboveFloor, PersonalHeight);
                     centerY = LiftAbove(box, obstacles[face], along - width * 0.5f, along + width * 0.5f, centerY, PersonalHeight);
 
@@ -350,7 +397,7 @@ namespace VrBattlegrounds.Maps
         private static float MinSpacing(LaserGridBox box, LaserGridFace face, List<LaserGridWall> walls)
         {
             var positions = new List<float>(walls.Count);
-            foreach (LaserGridWall wall in walls) positions.Add(AlongFace(box, face, wall.Center));
+            foreach (LaserGridWall wall in walls) positions.Add(PersonalAlong(box, face, wall));
             positions.Sort();
 
             float min = float.PositiveInfinity;

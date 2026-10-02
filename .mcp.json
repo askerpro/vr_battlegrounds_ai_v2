@@ -1,8 +1,15 @@
 {
-  "mcpServers": {
-    "unityMCP": {
-      "type": "http",
-      "url": "http://127.0.0.1:8080/mcp"
-    }
-  }
+    "mcpServers":  {
+                       "unityMCP":  {
+                                        "type":  "http",
+                                        "url":  "http://127.0.0.1:8080/mcp"
+                                    },
+                       "blender":  {
+                                       "type":  "stdio",
+                                       "command":  "uvx",
+                                       "args":  [
+                                                    "blender-mcp"
+                                                ]
+                                   }
+                   }
 }

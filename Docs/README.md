@@ -12,6 +12,20 @@
 
 ## Структура папки `Docs/`
 
+### Левел-дизайн: от замысла к проверке
+
+Вся актуальная документация карт находится в [level-design/README.md](level-design/README.md):
+цели и состояние, требования LD-01…55, единый реестр метрик, процесс сборки,
+сетка и Scene painter, выращиватель, подбор окружения и паспорта карт.
+
+Идея новой карты: [мрачный автоматизированный цех-кузница](level-design/maps/automated-assembly-hall.md)
+в духе «Матрицы»/«Терминатора»: точечный свет, жар, подвесные линии деталей,
+манипуляторы и сварка; концепция и внешние референсы.
+Подготовлен [план реализации декораций и подбор ассетов](level-design/maps/automated-assembly-hall-decoration-plan.md):
+существующий каркас, кандидаты оборудования, анимации и проверка Quest; реализация впереди.
+
+### Остальная документация и справочники
+
 | Файл | Содержание |
 |---|---|
 | `README.md` | Этот файл — технический справочник: скрипты, классы, API, компоненты |
@@ -34,17 +48,26 @@
 | `ui-fonts.md` | Шрифты UI: как TMP рисует текст, шрифт проекта, как применять, как добавить символ |
 | `magazine-pocket.md` | Механика "умного магазина" (Smart Magazine Pocket) |
 | `kinemation-pack-review.md` | Разведка пака KINEMATION Tactical Shooter: состав, вес под Quest, применимость маршрута `/add-weapon`, какие стволы брать |
-| `level-design.md` | Проектирование карт и арен; стенд блоков `TestMap3` |
-| `asset-pack-inventory.md` | Инвентаризация 13 скачанных паков окружения без импорта; `Tools/agents/inspect_asset_packages.py`, выбор стратегии подбора декоративных замен |
-| `asset-catalog-industrial.md` | Каталог Industrial Set: 23 эталона, 34 рецепта и 22 демо. Автоподбор для `Assets/env_packs/<пак>`: `FolderCandidateScanner`, `FolderCandidateWindow`, меню Auto Mark Pack → JSON/CSV/стенд. «Кандидаты LEGO»: `CatalogMarkings`, `CatalogMarkingService`, `CatalogMarkingWindow`, `CatalogMarkingGizmos`; ручные метки → копии/JSON/CSV/стенд. `ConcreteFenceLowBase`, `LevelDesignPalletFence`, Generator_v1 и Low Soft-ящик; `AssetPackDemoGallery`, `LevelDesignSoftCrate`, `AssetCandidateReviewScene` и общие Gizmo-карточки |
-| `environment-pack-import.md` | Импорт 12 паков: URP, разделение конфликтующих GUID, 2535 префабов с целыми ссылками, исключение Nature, дефекты поставки и инструменты |
-| `level-design-principles.md` | Правила сбалансированной карты `LD-01…LD-48` (CS, VALORANT, пейнтбол → наша арена): разнообразие контактов за обе стороны, окна и щели, перешагиваемые преграды, прострел стен, граница арены и открытый мир за ней, чек-лист ревью |
+| `level-design/level-design.md` | Геометрия и физическая арена: LD_Alphabet, TestMap3, сборки, декорации и occlusion |
+| `level-design/asset-pack-inventory.md` | Инвентаризация 13 скачанных паков окружения без импорта; `Tools/agents/inspect_asset_packages.py`, выбор стратегии подбора декоративных замен |
+| `level-design/asset-catalog-industrial.md` | Каталог Industrial Set: 23 эталона, 34 рецепта и 22 демо. Автоподбор для `Assets/env_packs/<пак>`: `FolderCandidateScanner`, `FolderCandidateWindow`, меню Auto Mark Pack → JSON/CSV/стенд. «Кандидаты LEGO»: `CatalogMarkings`, `CatalogMarkingService`, `CatalogMarkingWindow`, `CatalogMarkingGizmos`; ручные метки → копии/JSON/CSV/стенд. `ConcreteFenceLowBase`, `LevelDesignPalletFence`, Generator_v1 и Low Soft-ящик; `AssetPackDemoGallery`, `LevelDesignSoftCrate`, `AssetCandidateReviewScene` и общие Gizmo-карточки |
+| `level-design/environment-pack-import.md` | Импорт 12 паков: URP, разделение конфликтующих GUID, 2535 префабов с целыми ссылками, исключение Nature, дефекты поставки и инструменты |
+| `level-design/level-design-principles.md` | Действующие LD-01…55: обязательные требования, измеримые свойства и ручные критерии |
+| `level-design/level-design-workflow.md` | Паспорт → позиции/контакты → маршруты → блокаут → оценка → плейтест → выпуск; чек-лист |
+| `level-design/map-evaluation.md` | Общий оценщик, методы/ограничения проверок, формулы D/C, команды и формат результата |
+| `level-design/maps/service-yard.md` | Паспорт «Сервисного двора» 4×4: цель, состояние и оставшиеся проверки |
+| `level-design/maps/testmap1-review.md` | Ручной композиционный ориентир TestMap1 и задачи актуального измерения |
+| `level-design/position-impact-mvp.md` | Справочник JSON разметки/поз/маршрутов и значений PositionImpact; не отдельная политика приёмки |
+| `level-design/map-growth.md` | Проект выращивания вариантов из ручной разметки; этапы реализации и интеграция общей оценки |
+| `level-design/map-rule-development.md` | Как формализовать обратную связь: параметры, комбинации метрик, новые измерения и сопутствующие тесты |
+| `level-design/blockout-grid.md`, `level-design/blockout-editor.md` | Настраиваемые размеры и сетка; строительство префабами, достройка и смысловые слои |
+| `level-design/contact-catalog.md` | ContactCatalogReviews/Measurement/ReviewWindow: необязательная локальная оценка композиций |
 | `Arsenal/` | Стена арсенала: [дизайн](Arsenal/ArsenalWall_Design_RU.md), [код](Arsenal/Arsenal_Code_Architecture_RU.md), [план и кандидаты ассетов](Arsenal/refactor-plan-2026-10-02.md), [задний арсенал, ниши SpawnZoneBoundaryOpening/SpawnZoneBoundaryBlock, ArsenalVisibilityGeometryAudit / ArsenalMotionGeometryAudit / ArsenalMapGeometryTests](Arsenal/common-boundary-wall-2026-10-02.md), [перенос ArsenalMapMigration/ArsenalWallOpenings](Arsenal/map-migration-2026-10-02.md), [исторический прототип](Arsenal/deployable-station-prototype-2026-10-02.md) |
 | `LegsAnimator_UI_Reference_RU.md` | Справочник по параметрам Legs Animator |
 | `Roadmap.md` | План развития проекта |
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
 | `version-control.md` | Git/Plastic workflow: автодублирование коммитов, хук, диагностика |
-| `unity-mcp.md` | Локальный фикс Unity MCP `execute_code` на Windows (MAX_PATH) |
+| `unity-mcp.md` | Фикс `execute_code` на Windows (MAX_PATH); автосохранение изменённых сцен перед `run_tests` |
 | `release.md` | Сборка сервера, Quest и планшета; почему у них одинаковые UXR id |
 | `Mirror/mirror-patches.md` | Правки вендорного Mirror: что, зачем, как перенести при обновлении |
 
@@ -67,7 +90,7 @@
 - **Шрифты, кириллица, «квадраты вместо букв»** → [`ui-fonts.md`](ui-fonts.md)
 - **Умный магазин (Magazine Pocket)** → [`magazine-pocket.md`](magazine-pocket.md)
 - **Стена арсенала** → [`Arsenal/Arsenal_Code_Architecture_RU.md`](Arsenal/Arsenal_Code_Architecture_RU.md)
-- **Проектирование карт** → [`level-design.md`](level-design.md), правила баланса и чек-лист → [`level-design-principles.md`](level-design-principles.md)
+- **Проектирование карт** → [порядок чтения](#левел-дизайн-от-замысла-к-проверке), затем принципы → процесс → геометрия → проверки
 - **План развития** → [`Roadmap.md`](Roadmap.md)
 - **История изменений (Changelog)** → [`CHANGELOG.md`](CHANGELOG.md)
 - **Git/Plastic workflow и post-commit hook** → [`version-control.md`](version-control.md)
@@ -341,8 +364,8 @@ MapReferee           — ход карты: Warmup → Live → Paused, побе
 | `WeaponGrabHighlight` | `Editor/VR_Battlegrounds/Gameplay/WeaponGrabHighlight.cs` | Подсветка точки хвата оружия (`Enable When Hand Near`): неактивная копия детали под ней с `MagGrabDecalMat`. Единая точка для сборщика и ручной сборки; проверка — `WeaponFeedbackTests`. |
 | `CoverClassTool` | `Editor/VR_Battlegrounds/Gameplay/CoverClassTool.cs` | `Tools/VR Battlegrounds/Gameplay/Apply Cover Classes`: ставит, правит и снимает `CoverSurface` по суффиксу имени во всех префабах `Assets/Prefabs` и сценах `Assets/Scenes` (T-41). `PenetrationModifier` не трогает; идемпотентен; сцену с несохранёнными правками пропускает. |
 | `GameTagsTool` | `Editor/VR_Battlegrounds/Gameplay/GameTagsTool.cs` | `Tools/VR Battlegrounds/Gameplay/Apply Game Tags`: заводит теги в TagManager и расставляет их по `GameTagRules` во всех префабах `Assets/Prefabs` и сценах `Assets/Scenes`. Идемпотентен; вложенные префабы обрабатывает раньше внешних, чтобы не плодить override'ы; чужие теги (`MainCamera`, `EditorOnly`) не трогает; сцену с несохранёнными правками пропускает. Из кода — `GameTagsTool.Run()`. |
-| `OcclusionBakeTool` | `Editor/VR_Battlegrounds/Gameplay/OcclusionBakeTool.cs` | `Tools/VR Battlegrounds/Gameplay/Bake Occlusion (all maps)`: размечает static-флаги occlusion (подвижное, прозрачное и мелкое — по правилам) и запекает occlusion culling для лобби и карт из Build Settings. Из кода — `OcclusionBakeTool.Run()`. Подробно — `level-design.md`, «Occlusion culling». |
-| `LevelDesignBlockTexturer` | `Editor/VR_Battlegrounds/Gameplay/LevelDesignBlockTexturer.cs` | `Tools/VR Battlegrounds/Gameplay/Texture LD Blocks`: одевает блоки `LD_Alphabet` в сетку пака `UnityStarter_Robot/Environment` и строит им меши с UV в метрах (без растяжения). Подробно — `level-design.md`, «Геометрия на Сетке». |
+| `OcclusionBakeTool` | `Editor/VR_Battlegrounds/Gameplay/OcclusionBakeTool.cs` | `Tools/VR Battlegrounds/Gameplay/Bake Occlusion (all maps)`: размечает static-флаги occlusion (подвижное, прозрачное и мелкое — по правилам) и запекает occlusion culling для лобби и карт из Build Settings. Из кода — `OcclusionBakeTool.Run()`. Подробно — `level-design/level-design.md`, «Occlusion culling». |
+| `LevelDesignBlockTexturer` | `Editor/VR_Battlegrounds/Gameplay/LevelDesignBlockTexturer.cs` | `Tools/VR Battlegrounds/Gameplay/Texture LD Blocks`: одевает блоки `LD_Alphabet` в сетку пака `UnityStarter_Robot/Environment` и строит им меши с UV в метрах (без растяжения). Подробно — `level-design/level-design.md`, «Геометрия на Сетке». |
 
 **Поля `MapData`:**
 
@@ -596,14 +619,51 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 
 ### Левел-дизайн — `Assets/Editor/VR_Battlegrounds/LevelDesign/`
 
+Общий вход — `MapEvaluation.Evaluate`, адаптер — `MapEvaluationScene`:
+нарушения / непроверенное / измерения / диагностика. Оба отчёта и MapPrinciplesTests
+пользуются этим ядром. `MapSpatialMetrics` считает D и C стоя/присев, `MapFeedbackRules`
+даёт ограниченные эвристики LD-49…51. Методы и статусы — [map-evaluation.md](level-design/map-evaluation.md).
+`PositionImpactModel`, `PositionImpactAnalysis`, `PositionImpactAnalyzer`, `PositionRouteAnalyzer`
+хранят разметку, пары и маршруты; формат — [position-impact-mvp.md](level-design/position-impact-mvp.md).
+
 Своя editor-сборка `VrBattlegrounds.LevelDesign.Editor` (только Editor): на неё ссылаются тесты,
-в билд не попадает. Правила — [`level-design-principles.md`](level-design-principles.md).
+в билд не попадает. Правила — [`level-design/level-design-principles.md`](level-design/level-design-principles.md).
+
+`BlockoutPainter` объединяет строительство и редактирование;
+`BlockoutSceneContainer` обозначает общий контейнер новых объектов кисти без
+зависимости от его имени. `BlockoutRegistryFactory`
+создаёт формы только из активного реестра. `BlockoutCanonicalRegistry` публикует шесть
+форм; `CylinderSourceReplacement` и `SteppedCoverSourceReplacement` точечно обновляют
+источники с резервной копией. `HalfCylinderSourceBuilder` явно создаёт закрытый
+полуцилиндр с нижним якорем и публикует его в том же реестре, сохраняя GUID при
+повторном применении. `BlockoutHeightGeometry` сохраняет исходную форму при
+изменении высоты и хранит снимок геометрии для Undo после изменения общего источника.
+`BlockoutSectionSettings` хранит независимые свойства трёх высотных секций;
+`BlockoutSectionGeometry` восстанавливает три дочерних mesh/collider по одному
+сериализованному профилю, `BlockoutSectionPart` связывает их с игровым корнем.
+`BlockoutSectionFactory` применяет весь рецепт под Undo, а
+`BlockoutSectionPropertiesPanel` показывает карточки в контексте выделения.
+`CoverIntervalResolver` проверяет последовательность настоящих объёмов для пули
+и ShotLine, объединяет касающиеся Soft и обнаруживает переход в Hard.
+`BlockoutAlphabetGridMigration` публикует размеры активных форм, а
+`BlockoutPublishedSceneSync` обновляет их экземпляры только в активной сцене
+через общую фабрику с предварительной проверкой и Undo сцены и предоставляет
+общую диагностику фактической геометрии. `BlockoutEditDiagnostics`
+обновляет предупреждения выбранного блока после правок и Undo, пишет конфликт в
+GameLog без отмены поворота или перемещения и без сканирования на каждом Repaint.
+Контракты — [редактор](level-design/blockout-editor.md) и
+[алфавит и сетка](level-design/blockout-grid.md).
+
+`PhysicalArenaSources` отделяет источники PhysicalObstacleMarker от игровых коллайдеров:
+резервы не попадают в MapGrid/LOS/ShotLine и WallPassGeometry, а в Play Mode
+слой Ignore Raycast исключает их из маски пули. Роль задаётся компонентом/ссылкой;
+пол и игровая замена сохраняются. Контракт — [физическая арена](level-design/physical-arena.md).
 
 | Класс | Назначение |
 |---|---|
 | `MapGrid` | Арена сверху, шаг 0.1 м: проходимость (твёрдое в полосе тела 0.3–1.9 м — дверь с перемычкой проходима, окно с подоконником — нет), верх препятствия, чьё оно, зона стороны A/B; функция видимости `LineOfSight`. |
 | `MapPrinciplesReport.BattleMaps` | Какие карты проверяются правилами боя: все карты реестра, кроме лобби и стендов с `MapData.debugOnly` (`TestMap3` — стенд блоков, грузится как обычная карта). |
-| `MapGridBuilder` | Сцена → `MapGrid`: верх — лучом сверху, проходимость — запросом объёма в полосе тела, **видимость — лучами по коллайдерам сцены** (окна и щели любой ширины точно; сцена должна быть открыта на время анализа), **прострел** (`ShotLine`) — по правилам пули `WallPenetration`: Soft пробивается, Visual пролетается, Hard и без разметки — стоп. Пол — слой `Ground`, препятствие — твёрдый коллайдер без `Rigidbody`; `VaultableObstacle` проходим. Собирает верх `LD_*` (LD-20) и размеры перешагиваемых (LD-48). |
+| `MapGridBuilder`, `MapCellFootprint` | Сцена → `MapGrid`: верх — лучом сверху, затронутые клетки и владельцы — по реальным коллайдерам; проходимость отдельно в полосе тела. **Видимость — лучами по коллайдерам**, **прострел** (`ShotLine`) — по `WallPenetration`, а не числу клеток. `VaultableObstacle` проходим. Регистрируемые блоки распознаются по компонентам; старые `LD_*` остаются совместимыми. |
 | `MapAnalyzer` | Проверки правил: LD-20 классы высот, LD-48 размеры перешагиваемого, LD-23 узкие проходы, LD-25 недостижимое, LD-15 прострел база—база (стоя или присев, в окна и щели, и вслепую сквозь Soft/Visual); контакт «через проём»; пары «простреливается, но не видно» (ось S); метрики LD-09/14/26 для отчёта. |
 | `LevelDesignRules` | Пороги правил в одном месте (меняются вместе с документом). |
 | `MapPrinciplesReport` / `MapReportImage` | `Tools/VR Battlegrounds/Level Design/Map Principles Report`: текст и картинки вида сверху (раскладка с нарушениями, тепловая карта видимости) в `Temp/LevelDesign/`. Из кода — `MapPrinciplesReport.Run(sceneName)`. |
@@ -692,6 +752,9 @@ Play → OfflineScene → NetworkManager поднимает хост → Lobby
 | `Maps/MapAnalyzerTests` | Проверки `MapAnalyzer` на искусственных картах 10×12 м: в каждой паре сценарий-нарушение ловится, нормальный — нет (щель 0.8 м — проход, 1.2 м и тупиковая ниша — нет; щель 0.4 м — стена, отрезающая половину; высокая стена закрывает прострел, средняя — нет). |
 | `Maps/MapGridBuilderTests` | `MapGridBuilder` на настоящих коллайдерах в собранной тестом сцене: щель 5 см видна, в 25 см от неё — стена; окно 1.0–1.6 м стоя закрыто, присев видно, пройти нельзя; дверь под перемычкой 2.0 м проходима; заборчик с `VaultableObstacle` проходим, такой же без метки — нет; панели Soft и Visual закрывают вид, но простреливаются, неразмеченная стена — нет. |
 | `Maps/MapPrinciplesTests` | Грубые нарушения правил левел-дизайна на всех боевых картах реестра (LD-15, 20, 23, 25, 48). Где именно — отчёт `Map Principles Report`. |
+| `Maps/MapEvaluationTests` | Общая классификация нарушений/непроверенного, бюджет, маршруты и пространственные D/C; отсутствие данных не выдаётся за готовность. |
+| `Maps/PositionImpactTests` | Направленные пары, разные глаза/ствол, цена открывания, пути и воздействие фиксированной позы стрелка. |
+| `Maps/MapFeedbackRulesTests` | Примеры ограниченных LD-49…52; эвристики не заменяют обязательный ручной обход сцены. |
 | `Maps/MapAlignmentTests` | Арены всех карт реестра стоят одинаково: якоря совпадают с лобби (допуск 2 см). Без этого мировая точка неоткалиброванного игрока на новой карте — не то же место в комнате. |
 | `Player/TwoHandGrabHarness` | Не тест — общая обвязка хвата двумя руками. `TwoHandGrabCases` перебирает пары «оружие из `WeaponInfo` × аватар из `AvatarRegistry`», у которых включены `Allow Multi Grab` и `First Grab Point Is Main` и есть свои позы для обеих точек; пути не называются. `TwoHandGrabHarness` поднимает настоящие префабы вне Play Mode (`Awake` рук и `UpdateManipulation` через рефлексию, аватар в `UpdateExternally` — иначе `Align To Controller` берёт поворот у чужой модели контроллера). `AssertManipulationLive` — сторож: оружие реально следует за рукой, иначе проверки поворота зеленеют ложно. |
 | `Player/GunTwoHandGrabTests` | Вторая рука берёт дополнительную точку, а не перехватывает оружие (патч SDK 11 + `TwoHandGrabPolicy`, [Issue 13](UltimateXR/known-issues.md)). На каждую пару из `TwoHandGrabCases`; плюс проверка, что пар больше нуля. |

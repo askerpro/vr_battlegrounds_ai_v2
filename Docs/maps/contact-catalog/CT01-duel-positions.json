@@ -1,0 +1,254 @@
+{
+  "version": 1,
+  "map": "ContactCatalogLab",
+  "radius": 0.5,
+  "speed": 1,
+  "positions": [
+    {
+      "id": "CT01-duel-A",
+      "min": {
+        "x": 29.45,
+        "y": -3.55
+      },
+      "max": {
+        "x": 30.55,
+        "y": -2.45
+      },
+      "protectedState": "crouching",
+      "states": [
+        {
+          "id": "aimed-standing",
+          "center": {
+            "x": 30,
+            "y": -3
+          },
+          "yaw": 0,
+          "eyeOffset": {
+            "x": 0,
+            "y": 1.7,
+            "z": 0
+          },
+          "muzzleOffset": {
+            "x": 0,
+            "y": 1.65,
+            "z": 0.15
+          },
+          "body": [
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.7,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 2
+            },
+            {
+              "offset": {
+                "x": -0.3,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0.3,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "id": "crouching",
+          "center": {
+            "x": 30,
+            "y": -3
+          },
+          "yaw": 0,
+          "eyeOffset": {
+            "x": 0,
+            "y": 1.1,
+            "z": 0
+          },
+          "muzzleOffset": {
+            "x": 0,
+            "y": 0.9,
+            "z": 0.15
+          },
+          "body": [
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.1,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 2
+            },
+            {
+              "offset": {
+                "x": -0.3,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0.3,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CT01-duel-B",
+      "min": {
+        "x": 29.45,
+        "y": 2.45
+      },
+      "max": {
+        "x": 30.55,
+        "y": 3.55
+      },
+      "protectedState": "crouching",
+      "states": [
+        {
+          "id": "aimed-standing",
+          "center": {
+            "x": 30,
+            "y": 3
+          },
+          "yaw": 180,
+          "eyeOffset": {
+            "x": 0,
+            "y": 1.7,
+            "z": 0
+          },
+          "muzzleOffset": {
+            "x": 0,
+            "y": 1.65,
+            "z": 0.15
+          },
+          "body": [
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.7,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 2
+            },
+            {
+              "offset": {
+                "x": -0.3,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0.3,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "id": "crouching",
+          "center": {
+            "x": 30,
+            "y": 3
+          },
+          "yaw": 180,
+          "eyeOffset": {
+            "x": 0,
+            "y": 1.1,
+            "z": 0
+          },
+          "muzzleOffset": {
+            "x": 0,
+            "y": 0.9,
+            "z": 0.15
+          },
+          "body": [
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.1,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 2
+            },
+            {
+              "offset": {
+                "x": -0.3,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0.3,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "id": "CT01-duel-A-to-B",
+      "from": "CT01-duel-A",
+      "to": "CT01-duel-B",
+      "fromState": "aimed-standing",
+      "toState": "aimed-standing",
+      "via": []
+    }
+  ]
+}

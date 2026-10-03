@@ -1,0 +1,380 @@
+{
+  "version": 1,
+  "map": "ContactCatalogLab",
+  "radius": 0.5,
+  "speed": 1,
+  "positions": [
+    {
+      "id": "CT03-one-v-two-A",
+      "min": {
+        "x": 49.45,
+        "y": -3.55
+      },
+      "max": {
+        "x": 50.55,
+        "y": -2.45
+      },
+      "protectedState": "crouching",
+      "states": [
+        {
+          "id": "aimed-standing",
+          "center": {
+            "x": 50,
+            "y": -3
+          },
+          "yaw": 0,
+          "eyeOffset": {
+            "x": 0,
+            "y": 1.7,
+            "z": 0
+          },
+          "muzzleOffset": {
+            "x": 0,
+            "y": 1.65,
+            "z": 0.15
+          },
+          "body": [
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.7,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 2
+            },
+            {
+              "offset": {
+                "x": -0.3,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0.3,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "id": "crouching",
+          "center": {
+            "x": 50,
+            "y": -3
+          },
+          "yaw": 0,
+          "eyeOffset": {
+            "x": 0,
+            "y": 1.1,
+            "z": 0
+          },
+          "muzzleOffset": {
+            "x": 0,
+            "y": 0.9,
+            "z": 0.15
+          },
+          "body": [
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.1,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 2
+            },
+            {
+              "offset": {
+                "x": -0.3,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0.3,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CT03-one-v-two-B",
+      "min": {
+        "x": 47.45,
+        "y": 2.45
+      },
+      "max": {
+        "x": 48.55,
+        "y": 3.55
+      },
+      "protectedState": "crouching",
+      "states": [
+        {
+          "id": "aimed-standing",
+          "center": {
+            "x": 48,
+            "y": 3
+          },
+          "yaw": 180,
+          "eyeOffset": {
+            "x": 0,
+            "y": 1.7,
+            "z": 0
+          },
+          "muzzleOffset": {
+            "x": 0,
+            "y": 1.65,
+            "z": 0.15
+          },
+          "body": [
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.7,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 2
+            },
+            {
+              "offset": {
+                "x": -0.3,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0.3,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "id": "crouching",
+          "center": {
+            "x": 48,
+            "y": 3
+          },
+          "yaw": 180,
+          "eyeOffset": {
+            "x": 0,
+            "y": 1.1,
+            "z": 0
+          },
+          "muzzleOffset": {
+            "x": 0,
+            "y": 0.9,
+            "z": 0.15
+          },
+          "body": [
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.1,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 2
+            },
+            {
+              "offset": {
+                "x": -0.3,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0.3,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CT03-one-v-two-C",
+      "min": {
+        "x": 51.45,
+        "y": 2.45
+      },
+      "max": {
+        "x": 52.55,
+        "y": 3.55
+      },
+      "protectedState": "crouching",
+      "states": [
+        {
+          "id": "aimed-standing",
+          "center": {
+            "x": 52,
+            "y": 3
+          },
+          "yaw": 180,
+          "eyeOffset": {
+            "x": 0,
+            "y": 1.7,
+            "z": 0
+          },
+          "muzzleOffset": {
+            "x": 0,
+            "y": 1.65,
+            "z": 0.15
+          },
+          "body": [
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.7,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 2
+            },
+            {
+              "offset": {
+                "x": -0.3,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0.3,
+                "y": 1.2,
+                "z": 0
+              },
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "id": "crouching",
+          "center": {
+            "x": 52,
+            "y": 3
+          },
+          "yaw": 180,
+          "eyeOffset": {
+            "x": 0,
+            "y": 1.1,
+            "z": 0
+          },
+          "muzzleOffset": {
+            "x": 0,
+            "y": 0.9,
+            "z": 0.15
+          },
+          "body": [
+            {
+              "offset": {
+                "x": 0,
+                "y": 1.1,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 2
+            },
+            {
+              "offset": {
+                "x": -0.3,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 1
+            },
+            {
+              "offset": {
+                "x": 0.3,
+                "y": 0.75,
+                "z": 0
+              },
+              "weight": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "id": "CT03-one-v-two-A-to-B",
+      "from": "CT03-one-v-two-A",
+      "to": "CT03-one-v-two-B",
+      "fromState": "aimed-standing",
+      "toState": "aimed-standing",
+      "via": []
+    },
+    {
+      "id": "CT03-one-v-two-A-to-C",
+      "from": "CT03-one-v-two-A",
+      "to": "CT03-one-v-two-C",
+      "fromState": "aimed-standing",
+      "toState": "aimed-standing",
+      "via": []
+    }
+  ]
+}

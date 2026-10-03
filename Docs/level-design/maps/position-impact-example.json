@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "map": "ServiceYard",
+  "profile": 1,
+  "radius": 0.5,
+  "speed": 1.0,
+  "positions": [
+    {
+      "id": "base-south",
+      "min": { "x": -0.5, "y": -7.5 },
+      "max": { "x": 0.5, "y": -6.5 },
+      "states": [
+        {
+          "id": "standing", "center": { "x": 0.0, "y": -7.0 }, "yaw": 0.0,
+          "eyeOffset": { "x": 0.0, "y": 1.7, "z": 0.0 },
+          "muzzleOffset": { "x": 0.0, "y": 1.4, "z": 0.15 },
+          "body": [
+            { "offset": { "x": 0.0, "y": 1.7, "z": 0.0 }, "weight": 1.0 },
+            { "offset": { "x": 0.0, "y": 1.2, "z": 0.0 }, "weight": 2.0 },
+            { "offset": { "x": -0.3, "y": 1.2, "z": 0.0 }, "weight": 1.0 },
+            { "offset": { "x": 0.3, "y": 1.2, "z": 0.0 }, "weight": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "base-north",
+      "min": { "x": -0.5, "y": 6.5 },
+      "max": { "x": 0.5, "y": 7.5 },
+      "states": [
+        {
+          "id": "standing", "center": { "x": 0.0, "y": 7.0 }, "yaw": 180.0,
+          "eyeOffset": { "x": 0.0, "y": 1.7, "z": 0.0 },
+          "muzzleOffset": { "x": 0.0, "y": 1.4, "z": 0.15 },
+          "body": [
+            { "offset": { "x": 0.0, "y": 1.7, "z": 0.0 }, "weight": 1.0 },
+            { "offset": { "x": 0.0, "y": 1.2, "z": 0.0 }, "weight": 2.0 },
+            { "offset": { "x": -0.3, "y": 1.2, "z": 0.0 }, "weight": 1.0 },
+            { "offset": { "x": 0.3, "y": 1.2, "z": 0.0 }, "weight": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "west-side",
+      "min": { "x": -7.0, "y": -0.5 },
+      "max": { "x": -6.0, "y": 0.5 },
+      "states": [
+        {
+          "id": "standing", "center": { "x": -6.5, "y": 0.0 }, "yaw": 90.0,
+          "eyeOffset": { "x": 0.0, "y": 1.7, "z": 0.0 },
+          "muzzleOffset": { "x": 0.0, "y": 1.4, "z": 0.15 },
+          "body": [
+            { "offset": { "x": 0.0, "y": 1.7, "z": 0.0 }, "weight": 1.0 },
+            { "offset": { "x": 0.0, "y": 1.2, "z": 0.0 }, "weight": 2.0 },
+            { "offset": { "x": -0.3, "y": 1.2, "z": 0.0 }, "weight": 1.0 },
+            { "offset": { "x": 0.3, "y": 1.2, "z": 0.0 }, "weight": 1.0 }
+          ]
+        }
+      ]
+    }
+  ],
+  "routes": [
+    { "id": "south-west", "from": "base-south", "to": "west-side", "fromState": "standing", "toState": "standing",
+      "via": [ { "x": -4.0, "y": -7.0 }, { "x": -6.5, "y": -3.0 } ] },
+    { "id": "north-west", "from": "base-north", "to": "west-side", "fromState": "standing", "toState": "standing",
+      "via": [ { "x": -4.0, "y": 7.0 }, { "x": -6.5, "y": 3.0 } ] }
+  ]
+}

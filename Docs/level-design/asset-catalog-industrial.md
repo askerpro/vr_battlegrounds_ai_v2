@@ -214,13 +214,13 @@ LOD0, деревянные ящики только Soft, стабильные GU
 
 ## Смотреть
 
-- [Таблица с изображениями](../Temp/LevelDesign/IndustrialAnalysis/candidates.md)
-- [CSV для просмотра в таблице](../Temp/LevelDesign/IndustrialAnalysis/candidates.csv)
-- [Рецепты для агента](../Temp/LevelDesign/IndustrialAnalysis/candidates.json)
-- [Все измерения](../Temp/LevelDesign/IndustrialAnalysis/measurements.json)
-- [Первый лист сравнения](../Temp/LevelDesign/IndustrialAnalysis/review-sheet-1.png)
-- [Второй лист сравнения](../Temp/LevelDesign/IndustrialAnalysis/review-sheet-2.png)
-- [Результат технической проверки](../Temp/LevelDesign/IndustrialAnalysis/verification.json)
+- [Таблица с изображениями](../../Temp/LevelDesign/IndustrialAnalysis/candidates.md)
+- [CSV для просмотра в таблице](../../Temp/LevelDesign/IndustrialAnalysis/candidates.csv)
+- [Рецепты для агента](../../Temp/LevelDesign/IndustrialAnalysis/candidates.json)
+- [Все измерения](../../Temp/LevelDesign/IndustrialAnalysis/measurements.json)
+- [Первый лист сравнения](../../Temp/LevelDesign/IndustrialAnalysis/review-sheet-1.png)
+- [Второй лист сравнения](../../Temp/LevelDesign/IndustrialAnalysis/review-sheet-2.png)
+- [Результат технической проверки](../../Temp/LevelDesign/IndustrialAnalysis/verification.json)
 
 Сцена в основном проекте:
 `Assets/Scenes/Tools/IndustrialCandidateReview.unity`.

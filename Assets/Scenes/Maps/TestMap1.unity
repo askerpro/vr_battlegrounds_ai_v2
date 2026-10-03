@@ -45605,6 +45605,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Arena_Core
       objectReference: {fileID: 0}
+    - target: {fileID: 8186738890033574889, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8197780264741788171, guid: 8bfb94c7bbb592d4d86ac1d8f905ea9d, type: 3}
       propertyPath: __isInPrefab
       value: 0

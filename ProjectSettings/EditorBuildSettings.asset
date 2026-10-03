@@ -23,6 +23,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Maps/TestMap3.unity
     guid: e0e2b2232fea2bc4db4ff98389b6e00d
+  - enabled: 1
+    path: Assets/Scenes/Maps/ReferenceMap04.unity
+    guid: 399c9e633b2e5334097da9cb98b96294
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: 9f9c2f9685095974c94c16cd4c07194e, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 5b9ffd8cb9cf4a14392d6ef2b7b5dc9c, type: 2}

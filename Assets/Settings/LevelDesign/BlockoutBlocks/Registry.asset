@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0403e875f3434d4c9f6c86c444ebd1c, type: 3}
+  m_Name: Registry
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.LevelDesign.BlockoutBlockRegistry
+  definitions:
+  - {fileID: 11400000, guid: dd31cfca7b21c394ebc4a8f327da85ab, type: 2}
+  - {fileID: 11400000, guid: a39e8774d8aec5f4b8ce1e6549a21dc0, type: 2}
+  - {fileID: 11400000, guid: 43ead2ea653ec1744a9c4dc01e7dc808, type: 2}
+  - {fileID: 11400000, guid: 1e31a6a8e4dce734e89de0d4735a93aa, type: 2}
+  - {fileID: 11400000, guid: 103be8ee7c35106429b2b730cbdfd98b, type: 2}
+  - {fileID: 11400000, guid: c659d0b1ee9d82e4a9bd2deda0ef0ee4, type: 2}

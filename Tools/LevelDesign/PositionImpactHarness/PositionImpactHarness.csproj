@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems><Nullable>disable</Nullable>
+    <UnityManaged Condition="'$(UnityManaged)' == ''">C:/Program Files/Unity/Hub/Editor/6000.4.1f1/Editor/Data/Managed</UnityManaged>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/MapEvaluation.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/MapSpatialMetrics.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/MapEvaluationScene.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/MapFeedbackRules.cs" />
+    <Compile Include="../../../Assets/Tests/EditMode/Maps/MapEvaluationTests.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/MapGrid.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/MapAnalyzer.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/LevelDesignRules.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/PositionImpactModel.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/PositionImpactAnalyzer.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/PositionRouteAnalyzer.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/PositionImpactAnalysis.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/PositionImpactReport.cs" />
+    <Compile Include="../../../Assets/Editor/VR_Battlegrounds/LevelDesign/MapGridBuilder.cs" />
+    <Compile Include="../../../Assets/Tests/EditMode/Maps/PositionImpactTests.cs" />
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(UnityManaged)/UnityEngine/UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(UnityManaged)/UnityEngine/UnityEngine.PhysicsModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule"><HintPath>$(UnityManaged)/UnityEngine/UnityEngine.JSONSerializeModule.dll</HintPath></Reference>
+    <Reference Include="UnityEditor"><HintPath>$(UnityManaged)/UnityEditor.dll</HintPath></Reference>
+    <Reference Include="VrBattlegrounds"><HintPath>../../../Library/ScriptAssemblies/VrBattlegrounds.dll</HintPath></Reference>
+    <Reference Include="nunit.framework"><HintPath>../../../Library/PackageCache/com.unity.ext.nunit@d8c07649098d/net40/unity-custom/nunit.framework.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

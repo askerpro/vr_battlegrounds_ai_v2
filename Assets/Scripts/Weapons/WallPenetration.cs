@@ -100,17 +100,23 @@ namespace VrBattlegrounds.Weapons
             }
 
             if (coverClass != CoverClass.Soft || penetrations >= MaxPenetrations || currentDamage <= 0f) return UxrPenetrationResult.Stop;
-            if (!TryFindExit(hit.collider, hit.point, direction, out RaycastHit exit)) return UxrPenetrationResult.Stop;
-
-            float thickness = Vector3.Distance(hit.point, exit.point);
-            float loss = Loss(currentDamage, thickness, surface.PenetrationModifier, power);
+            bool sectional = CoverIntervalResolver.TryResolve(hit.collider, hit.point, direction, ExitOffset, out var traversal);
+            RaycastHit exit;
+            if (sectional)
+            {
+                if (traversal.blocked || traversal.thickness > MaxThickness || !SectionExit(traversal, direction, out exit)) return UxrPenetrationResult.Stop;
+            }
+            else if (!TryFindExit(hit.collider, hit.point, direction, out exit)) return UxrPenetrationResult.Stop;
+            float thickness = sectional ? traversal.thickness : Vector3.Distance(hit.point, exit.point);
+            float modifier = sectional ? traversal.penetrationModifier : surface.PenetrationModifier;
+            float loss = Loss(currentDamage, thickness, modifier, power);
             float remaining = currentDamage - loss;
             if (loss > currentDamage || remaining < MinDamage) return UxrPenetrationResult.Stop;
 
             return new UxrPenetrationResult
             {
                 Kind = UxrPenetrationKind.Penetrate,
-                ExitPoint = exit.point + direction * ExitOffset,
+                ExitPoint = sectional ? traversal.resumePoint : exit.point + direction * ExitOffset,
                 ExitHit = exit,
                 DamageMultiplier = damageMultiplier * remaining / currentDamage
             };
@@ -135,9 +141,16 @@ namespace VrBattlegrounds.Weapons
         {
             exit = default;
             if (collider == null) return false;
+            if (CoverIntervalResolver.TryResolve(collider, entry, direction, ExitOffset, out var traversal))
+                return !traversal.blocked && traversal.thickness <= MaxThickness && SectionExit(traversal, direction.normalized, out exit);
             float reach = MaxThickness;
             var back = new Ray(entry + direction * reach, -direction);
             return collider.Raycast(back, out exit, reach);
+        }
+        private static bool SectionExit(CoverIntervalResolver.Result traversal, Vector3 direction, out RaycastHit exit)
+        {
+            exit = default;
+            return traversal.exitCollider != null && traversal.exitCollider.Raycast(new Ray(traversal.exitPoint + direction * .02f, -direction), out exit, .04f);
         }
     }
 }

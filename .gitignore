@@ -137,3 +137,12 @@ InitTestScene*.unity*
 # Воспроизводимый байткод Python-инструментов
 __pycache__/
 *.py[cod]
+
+# Измеритель позиций: отчёты/картинки/снимки входа уже исключены общим /Temp/ выше.
+# Автоматические снимки Unity MCP для визуального ревью сцен.
+/Assets/Screenshots/screenshot-*.png
+/Assets/Screenshots/screenshot-*.png.meta
+# Только результаты независимого .NET-харнесса; исходники и конфигурация сохраняются.
+/Tools/LevelDesign/PositionImpactHarness/bin/
+/Tools/LevelDesign/PositionImpactHarness/obj/
+!/Tools/LevelDesign/PositionImpactHarness/PositionImpactHarness.csproj

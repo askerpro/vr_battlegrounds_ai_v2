@@ -5,12 +5,11 @@ using VrBattlegrounds.Maps;
 
 namespace VrBattlegrounds.Editor
 {
-    /// <summary>Добавляет в алфавит полый Soft-ящик: 1,2 м снаружи, стенки 5 см.</summary>
+    /// <summary>Добавляет модульный полый Soft-ящик высотой 1.2 м, стенки 5 см.</summary>
     public static class LevelDesignSoftCrate
     {
         public const string Path = "Assets/Prefabs/LevelDesign/LD_Alphabet/LD_Crate_Soft.prefab";
 
-        [MenuItem("Tools/VR Battlegrounds/Gameplay/Ensure Soft Crate Block")]
         public static void Ensure()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -20,19 +19,21 @@ namespace VrBattlegrounds.Editor
             try
             {
                 root.name = "LD_Crate_Soft";
-                root.transform.localScale = Vector3.one * 1.2f;
+                LevelDesignBlockTexturer.PrepareDimensions(root,root.name,1.2f);
                 foreach (var collider in root.GetComponents<Collider>()) UnityEngine.Object.DestroyImmediate(collider);
-                const float t = 0.05f / 1.2f;
+                Bounds bounds = root.GetComponent<MeshFilter>().sharedMesh.bounds;
+                Vector3 thickness = new Vector3(.05f/root.transform.localScale.x,
+                    .05f/root.transform.localScale.y,.05f/root.transform.localScale.z);
                 // Шесть стенок без перекрытия углов; полный куб не имитирует толстую деревянную стену.
                 for (int axis = 0; axis < 3; axis++)
                 for (int sign = -1; sign <= 1; sign += 2)
                 {
                     var collider = root.AddComponent<BoxCollider>();
-                    var size = Vector3.one;
-                    for (int previous = 0; previous < axis; previous++) size[previous] = 1 - 2 * t;
-                    size[axis] = t;
-                    var center = Vector3.zero;
-                    center[axis] = sign * (0.5f - t * 0.5f);
+                    var size = bounds.size;
+                    for (int previous = 0; previous < axis; previous++) size[previous] -= 2 * thickness[previous];
+                    size[axis] = thickness[axis];
+                    var center = bounds.center;
+                    center[axis] += sign * (bounds.extents[axis] - thickness[axis] * .5f);
                     collider.size = size;
                     collider.center = center;
                 }

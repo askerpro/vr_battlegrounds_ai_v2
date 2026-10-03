@@ -51,7 +51,7 @@ namespace VrBattlegrounds.Editor
         public const string MapsFolder     = "Assets/Scenes/Maps/";
 
         // ── Параметры запекания ─────────────────────────────────────────────
-        // Арена ~15×18 м, укрытия 1.0–2.5 м (Docs/level-design.md). Запекание при таких
+        // Арена ~15×18 м, укрытия 1.0–2.5 м (Docs/level-design/level-design.md). Запекание при таких
         // размерах стоит секунды, поэтому точность не экономим.
 
         /// <summary>

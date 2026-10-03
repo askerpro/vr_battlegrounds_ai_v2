@@ -8,13 +8,12 @@ namespace VrBattlegrounds.Editor
     /// <summary>Простые эталоны и отдельная декоративная сборка из двух вертикальных палет.</summary>
     public static class LevelDesignPalletFence
     {
-        [MenuItem("Tools/VR Battlegrounds/Gameplay/Ensure Soft Pallet Fence Blocks")]
         public static void Ensure()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Создавать блоки можно только вне Play Mode.");
             Create("LD_PalletFence_Set_Soft", 2f);
-            Create("LD_PalletFence_Single_Soft", 2.01f);
+            Create("LD_PalletFence_Single_Soft", 2f);
         }
 
         private static void Create(string block, float width)
@@ -27,7 +26,7 @@ namespace VrBattlegrounds.Editor
             try
             {
                 root.name = block;
-                root.transform.localScale = new Vector3(width, 1.6f, 0.1f);
+                LevelDesignBlockTexturer.PrepareDimensions(root,block,1.6f);
                 CoverClass expected;
                 if (!CoverClassRules.TryExpectedClass(root, out expected)) throw new InvalidOperationException("Неверное имя Soft-палеты.");
                 var surface = root.GetComponent<CoverSurface>() ?? root.AddComponent<CoverSurface>();
@@ -41,7 +40,6 @@ namespace VrBattlegrounds.Editor
 
         public const string DecoratedPath = "Assets/Prefabs/LevelDesign/Decorated/PalletFence_TwoLevels_Soft.prefab";
 
-        [MenuItem("Tools/VR Battlegrounds/Level Design/Build Two Level Pallet Fence")]
         public static void BuildDecorated()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)

@@ -1,7 +1,7 @@
 namespace VrBattlegrounds.Editor.LevelDesign
 {
     /// <summary>
-    /// Пороги правил левел-дизайна в одном месте. Номера — из <c>Docs/level-design-principles.md</c>;
+    /// Пороги правил левел-дизайна в одном месте. Номера — из <c>Docs/level-design/level-design-principles.md</c>;
     /// значения с пометкой «[адаптация]» в документе ещё не проверены плейтестом — менять
     /// здесь и там одновременно.
     /// </summary>

@@ -40,6 +40,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
 
         /// <summary>В полосе тела есть твёрдое — стоять и идти нельзя.</summary>
         public readonly bool[] Blocked;
+        /// <summary>След настоящих препятствий: частично задетая клетка занята целиком для резервирования.</summary>
+        public MapCellFootprint Footprint { get; internal set; }
         /// <summary>Верх самого высокого препятствия над полом, м; 0 — пусто.</summary>
         public readonly float[] Height;
         /// <summary>Индекс препятствия в <see cref="Obstacles"/> или −1.</summary>
@@ -50,6 +52,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
         public readonly List<string> Obstacles = new List<string>();
         /// <summary>Класс укрытия каждого препятствия (по индексу <see cref="Obstacles"/>).</summary>
         public readonly List<CoverClass> ObstacleCover = new List<CoverClass>();
+        /// <summary>Смешанные секции владельца — сводка отчёта, а не класс пули.</summary>
+        public readonly List<bool> ObstacleMixedCover = new List<bool>();
 
         /// <summary>
         /// Видно ли из точки в точку: XZ — мир, Y — над полом. По умолчанию — по пролётам клеток.
@@ -119,6 +123,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
             int owner = Obstacles.Count;
             Obstacles.Add(name);
             ObstacleCover.Add(cover);
+            ObstacleMixedCover.Add(false);
             bool blocks = bottom < LevelDesignRules.BodyTop && top > LevelDesignRules.StepHeight;
             for (int i = 0; i < Count; i++)
             {
@@ -143,6 +148,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
 
         /// <summary>Класс укрытия препятствия в клетке (Hard, если препятствия нет).</summary>
         public CoverClass CoverAt(int index) => Owner[index] >= 0 ? ObstacleCover[Owner[index]] : CoverClass.Hard;
+        public bool MixedCoverAt(int index) => Owner[index] >= 0 && Owner[index] < ObstacleMixedCover.Count && ObstacleMixedCover[Owner[index]];
 
         /// <summary>Луч по пролётам: перекрыт, если на его высоте в клетке пролёт, который <paramref name="stops"/>.</summary>
         private bool SpanClear(Vector3 a, Vector3 b, Func<CoverClass, bool> stops)

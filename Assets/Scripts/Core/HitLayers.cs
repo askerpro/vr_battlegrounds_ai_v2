@@ -13,6 +13,8 @@ namespace VrBattlegrounds.Core
     /// столкновения с телами попарно, а маски оружия подбирались по факту (у кого <c>Default</c>, у кого
     /// <c>Default|Ground</c>). Вне маски осознанно: <c>Corpse</c> (труп не укрытие), <c>Player</c>,
     /// <c>SpawnZone</c>, <c>LocalHead</c>, <c>UI</c>, <c>Ignore Raycast</c>.
+    /// Источники PhysicalObstacleMarker при включении в Play Mode переходят на Ignore Raycast:
+    /// попадание определяет заменяющий их игровой блок, а не физический резерв.
     /// </para>
     /// </summary>
     public static class HitLayers

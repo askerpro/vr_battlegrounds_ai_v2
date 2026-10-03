@@ -16,7 +16,6 @@ namespace VrBattlegrounds.Editor.LevelDesign
         public const float LowHeight = 1.2f;
         public const float TotalHeight = 1.6f;
 
-        [MenuItem("Tools/VR Battlegrounds/Level Design/Build Fence With Low Base")]
         public static void Build()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)

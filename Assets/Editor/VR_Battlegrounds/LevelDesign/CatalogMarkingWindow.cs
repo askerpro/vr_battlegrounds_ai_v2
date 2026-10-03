@@ -16,7 +16,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
         private string feedback, selectionInfo;
         private bool error;
 
-        [MenuItem("Tools/VR Battlegrounds/Level Design/Candidates/LEGO Marking")]
+        [MenuItem("Tools/VR Battlegrounds/Level Design/Art Pass/Decorate/Candidates/LEGO Marking", false, 200)]
         public static void Open()
         {
             var window = GetWindow<CatalogMarkingWindow>("Кандидаты LEGO");

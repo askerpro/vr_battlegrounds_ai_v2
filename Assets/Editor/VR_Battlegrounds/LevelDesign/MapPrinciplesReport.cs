@@ -12,7 +12,7 @@ using static VrBattlegrounds.Editor.LevelDesign.LevelDesignRules;
 namespace VrBattlegrounds.Editor.LevelDesign
 {
     /// <summary>
-    /// <c>Tools/VR Battlegrounds/Level Design/Map Principles Report</c>: по каждой боевой карте
+    /// Раздел проверок редактора блокаута и <c>Art Pass/Check</c>: по каждой боевой карте
     /// реестра — текст с нарушениями и метриками и две картинки вида сверху
     /// (<see cref="MapReportImage"/>) в <c>Temp/LevelDesign/</c>.
     ///
@@ -34,7 +34,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
         public static IEnumerable<MapData> BattleMaps(MapRegistry registry) =>
             registry.maps.Where(m => m != null && m != registry.lobby && !m.debugOnly);
 
-        [MenuItem("Tools/VR Battlegrounds/Level Design/Map Principles Report")]
+        [MenuItem("Tools/VR Battlegrounds/Level Design/Art Pass/Check/Map Principles Report", false, 200)]
         private static void RunFromMenu()
         {
             string summary = Run();
@@ -43,7 +43,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
         }
 
         /// <summary>Отчёт по всем боевым картам или по одной (<paramref name="sceneName"/>). Возвращает текст отчёта.</summary>
-        public static string Run(string sceneName = null)
+        public static string Run(string sceneName = null, string layoutPath = null,
+            MapEvaluationProfile profile = MapEvaluationProfile.Unspecified)
         {
             Directory.CreateDirectory(OutputFolder);
             var registry = AssetDatabase.LoadAssetAtPath<MapRegistry>(
@@ -63,7 +64,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 Scene scene = EditorSceneManager.OpenPreviewScene(path);
                 try
                 {
-                    all.AppendLine(Report(map.sceneName, MapGridBuilder.Build(scene)));
+                    all.AppendLine(Report(map.sceneName, MapEvaluationScene.Evaluate(scene, layoutPath, profile)));
                 }
                 finally
                 {
@@ -73,67 +74,17 @@ namespace VrBattlegrounds.Editor.LevelDesign
             return all.ToString();
         }
 
-        private static string Report(string name, MapGridBuilder.Result built)
+        private static string Report(string name, MapEvaluationResult result)
         {
-            var text = new StringBuilder();
-            text.AppendLine($"══ {name} ══");
-            if (built.Problems.Count > 0)
-            {
-                foreach (string p in built.Problems) text.AppendLine("  ! " + p);
-                return text.ToString();
-            }
-
-            MapGrid g = built.Grid;
-            float[] clear = MapAnalyzer.Clearance(g);
-            List<string> heights = MapAnalyzer.CheckCoverHeights(built.BlockoutTops);
-            List<MapAnalyzer.NarrowPassage> passages = MapAnalyzer.FindNarrowPassages(g, clear);
-            List<MapAnalyzer.Pocket> pockets = MapAnalyzer.FindUnreachable(g, clear);
-            List<MapAnalyzer.Sightline> sightlines = MapAnalyzer.FindBaseToBaseSightlines(g, clear);
-            MapAnalyzer.VisibilityStats vis = MapAnalyzer.Visibility(g, clear);
-
-            Section(text, "LD-20 высоты укрытий", heights);
-            Section(text, "LD-48 перешагиваемое перешагивается", MapAnalyzer.CheckVaultables(built.Vaultables));
-            Section(text, "LD-23 проходы уже 1 м", passages.Select(p => p.ToString()));
-            Section(text, "LD-25 недостижимые участки", pockets.Select(p => p.ToString()));
-            List<MapAnalyzer.Sightline> shotlines = MapAnalyzer.FindBaseToBaseShotlines(g, clear);
-            Section(text, "LD-15 прострел база—база сквозь Soft/Visual (не видя)",
-                    shotlines.OrderBy(l => l.Length).Take(5).Select(l => l.ToString()));
-            Section(text, "LD-15 прострел база—база",
-                    sightlines.Count == 0 ? new string[0] : new[]
-                    {
-                        $"{sightlines.Count} пар точек видят друг друга; кратчайшие:",
-                    }.Concat(sightlines.OrderBy(s => s.Length).Take(5).Select(s => "  " + s)));
-
-            int pairs = vis.Close + vis.Medium + vis.Long;
-            text.AppendLine("  Метрики (порогов нет — для глаза):");
-            text.AppendLine($"    LD-09 самая «всевидящая» точка ({vis.MaxEnemyShareAt.x:F1}; {vis.MaxEnemyShareAt.y:F1}) видит {vis.MaxEnemyShare:P0} чужой половины");
-            text.AppendLine(pairs == 0
-                ? "    LD-14 контактов между половинами нет"
-                : $"    LD-14 видимые пары между половинами: ближний {Pct(vis.Close, pairs)}, средний {Pct(vis.Medium, pairs)}, дальний {Pct(vis.Long, pairs)}");
-            text.AppendLine($"    LD-26 из чужой половины видно зоны A {vis.ZoneAExposure:P0}, зоны B {vis.ZoneBExposure:P0}");
-            if (pairs > 0)
-                text.AppendLine($"    Контакты через проёмы (окна, щели, бойницы, двери): {Pct(vis.ThroughOpenings, pairs)}");
-            text.AppendLine(vis.BlindShots == 0
-                ? "    Прострел вслепую (сквозь Soft/Visual, не видя): нет — оси S в каталоге контактов нет (LD-39)"
-                : $"    Прострел вслепую (сквозь Soft/Visual, не видя): {vis.BlindShots} пар — ось S (LD-39)");
-            text.AppendLine("    Видят друг друга — хоть в одной паре поз: стоя (1.7 м) или присев (1.1 м)");
-
+            var text = new StringBuilder(MapEvaluationScene.Write(result, $"{OutputFolder}/{name}"));
+            if (result.grid == null) return text.ToString();
             string layout = $"{OutputFolder}/{name}_layout.png";
             string visibility = $"{OutputFolder}/{name}_visibility.png";
-            File.WriteAllBytes(layout, MapReportImage.Layout(g, clear, passages, sightlines, pockets));
-            File.WriteAllBytes(visibility, MapReportImage.Visibility(g, clear, vis));
-            File.WriteAllText($"{OutputFolder}/{name}.txt", text.ToString());
+            File.WriteAllBytes(layout, MapReportImage.Layout(result.grid, result.clearance, result.passages, result.sightlines, result.pockets));
+            File.WriteAllBytes(visibility, MapReportImage.Visibility(result.grid, result.clearance, result.visibility));
             text.AppendLine($"  Картинки: {layout}, {visibility}");
             return text.ToString();
         }
 
-        private static void Section(StringBuilder text, string title, IEnumerable<string> lines)
-        {
-            List<string> list = lines.ToList();
-            text.AppendLine(list.Count == 0 ? $"  ✔ {title}" : $"  ✘ {title}:");
-            foreach (string l in list) text.AppendLine("    " + l);
-        }
-
-        private static string Pct(int part, int total) => $"{100f * part / total:F0} %";
     }
 }

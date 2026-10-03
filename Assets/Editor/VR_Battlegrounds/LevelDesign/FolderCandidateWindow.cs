@@ -15,7 +15,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
         private FolderCandidateScanner.Session session;
         private FolderCandidateScanner.Report report;
 
-        [MenuItem("Tools/VR Battlegrounds/Level Design/Candidates/Auto Mark Pack")]
+        [MenuItem("Tools/VR Battlegrounds/Level Design/Art Pass/Decorate/Candidates/Auto Mark Pack", false, 200)]
         public static void Open()
         {
             var window = GetWindow<FolderCandidateWindow>("Автоподбор LEGO");

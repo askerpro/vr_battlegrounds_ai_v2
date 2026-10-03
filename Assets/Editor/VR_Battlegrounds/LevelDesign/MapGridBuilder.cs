@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using VrBattlegrounds.LevelDesign;
 using VrBattlegrounds.Maps;
 using VrBattlegrounds.Weapons;
 
@@ -58,10 +59,13 @@ namespace VrBattlegrounds.Editor.LevelDesign
 
         public static Result Build(Scene scene, float cell = DefaultCell)
         {
+            if (!scene.IsValid() || !scene.isLoaded || cell <= 0 || float.IsNaN(cell) || float.IsInfinity(cell))
+                throw new System.ArgumentException("Нужны загруженная сцена и положительный конечный шаг сетки.");
+            Physics.SyncTransforms();
             var result = new Result();
             Collider[] colliders = scene.GetRootGameObjects()
                                         .SelectMany(r => r.GetComponentsInChildren<Collider>(false))
-                                        .Where(c => c.enabled && !c.isTrigger)
+                                        .Where(BlockoutSupportSurfaces.IsActiveSolid)
                                         .ToArray();
 
             int ground = LayerMask.NameToLayer("Ground");
@@ -76,7 +80,9 @@ namespace VrBattlegrounds.Editor.LevelDesign
             foreach (Collider c in floors) floor.Encapsulate(c.bounds);
             float floorY = floor.max.y;
 
+            var physicalSources = PhysicalArenaSources.Collect(scene);
             var obstacles = new Dictionary<Collider, int>();
+            var owners = new Dictionary<Transform, int>();
             var vaultable = new HashSet<Collider>();
             var grid = new MapGrid(
                 Mathf.RoundToInt(floor.size.x / cell),
@@ -84,41 +90,61 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 cell,
                 new Vector2(floor.min.x, floor.min.z));
 
+            var registeredTops = new Dictionary<Transform,float>();
+            var registeredVaultables = new Dictionary<Transform,MapAnalyzer.Vaultable>();
             foreach (Collider c in colliders)
             {
-                if (c.gameObject.layer == ground || c.attachedRigidbody != null) continue;
+                if (physicalSources.Contains(c) || c.gameObject.layer == ground || c.attachedRigidbody != null) continue;
                 Bounds b = c.bounds;
-                if (b.min.y >= floorY + ObstacleCeiling || b.max.y <= floorY + LevelDesignRules.StepHeight) continue;
+                if (b.min.y >= floorY + ObstacleCeiling || b.max.y <= floorY + .00001f) continue;
                 if (b.max.x < floor.min.x || b.min.x > floor.max.x || b.max.z < floor.min.z || b.min.z > floor.max.z) continue;
 
-                obstacles[c] = grid.Obstacles.Count;
-                grid.Obstacles.Add(ShortPath(c.transform));
                 CoverSurface surface = CoverSurface.Of(c);
-                grid.ObstacleCover.Add(surface != null ? surface.Class : CoverClass.Hard);
+                var block = c.GetComponentInParent<BlockoutBlockInstance>();
+                Transform root = block != null ? block.transform : surface != null ? surface.transform : c.transform;
+                if (!owners.TryGetValue(root, out int owner))
+                {
+                    owner = grid.Obstacles.Count;
+                    owners.Add(root, owner);
+                    grid.Obstacles.Add(ShortPath(root));
+                    var summary=block!=null?block.MaterialSummary:BlockoutCoverSummary.Hard;
+                    grid.ObstacleCover.Add(block!=null&&block.HasSections
+                        ?summary==BlockoutCoverSummary.Soft?CoverClass.Soft:summary==BlockoutCoverSummary.Visual?CoverClass.Visual:CoverClass.Hard
+                        :surface!=null?surface.Class:CoverClass.Hard);
+                    grid.ObstacleMixedCover.Add(block!=null&&block.HasSections&&summary==BlockoutCoverSummary.Mixed);
+                }
+                obstacles[c] = owner;
 
-                if (c.GetComponentInParent<VaultableObstacle>() != null)
+                var vaultMarker=c.GetComponentInParent<VaultableObstacle>();
+                if (vaultMarker != null)
                 {
                     vaultable.Add(c);
-                    result.Vaultables.Add(new MapAnalyzer.Vaultable
+                    if(!registeredVaultables.TryGetValue(vaultMarker.transform,out var vaultEntry))
                     {
-                        Name = $"{ShortPath(c.transform)} у ({b.center.x:F1}; {b.center.z:F1})",
-                        Height = b.max.y - floorY,
-                        Thickness = Thickness(c),
-                    });
+                        vaultEntry=new MapAnalyzer.Vaultable {Name=ShortPath(vaultMarker.transform)};
+                        registeredVaultables.Add(vaultMarker.transform,vaultEntry);
+                    }
+                    vaultEntry.Height=Mathf.Max(vaultEntry.Height,b.max.y-floorY);
+                    vaultEntry.Thickness=Mathf.Max(vaultEntry.Thickness,Thickness(c));
                     continue;
                 }
 
-                if (c.gameObject.name.StartsWith(BlockoutPrefix))
+                if(block!=null)
+                {
+                    registeredTops.TryGetValue(block.transform,out float previousTop);
+                    registeredTops[block.transform]=Mathf.Max(previousTop,b.max.y-floorY);
+                }
+                else if (c.gameObject.name.StartsWith(BlockoutPrefix))
                     result.BlockoutTops.Add(new KeyValuePair<string, float>(
                         $"{ShortPath(c.transform)} у ({b.center.x:F1}; {b.center.z:F1})", b.max.y - floorY));
             }
+            foreach(var pair in registeredTops)result.BlockoutTops.Add(new KeyValuePair<string,float>(ShortPath(pair.Key),pair.Value));
+            result.Vaultables.AddRange(registeredVaultables.Values);
 
             PhysicsScene physics = scene.GetPhysicsScene();
             var hits = new RaycastHit[64];
-            var overlaps = new Collider[32];
             float top = floorY + 10f;
-            float bandBottom = floorY + LevelDesignRules.StepHeight, bandTop = floorY + LevelDesignRules.BodyTop;
-            var bandHalf = new Vector3(cell * 0.49f, (bandTop - bandBottom) * 0.5f, cell * 0.49f);
+            grid.Footprint = MapCellFootprint.Capture(scene, grid, floorY, obstacles, vaultable);
 
             for (int i = 0; i < grid.Count; i++)
             {
@@ -135,15 +161,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
                     grid.Owner[i] = owner;
                 }
 
-                int inBand = physics.OverlapBox(new Vector3(p.x, (bandBottom + bandTop) * 0.5f, p.y), bandHalf, overlaps,
-                                                Quaternion.identity, AllLayers, QueryTriggerInteraction.Ignore);
-                for (int o = 0; o < inBand; o++)
-                {
-                    if (vaultable.Contains(overlaps[o]) || !obstacles.TryGetValue(overlaps[o], out int owner)) continue;
-                    grid.Blocked[i] = true;
-                    grid.Owner[i] = owner;
-                    break;
-                }
+                grid.Blocked[i] = grid.Footprint.BodyBlocked[i];
+                if (grid.Blocked[i]) grid.Owner[i] = grid.Footprint.BlockingOwner[i];
             }
 
             grid.LineOfSight = (a, b) =>
@@ -161,16 +180,30 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 Vector3 from = new Vector3(a.x, floorY + a.y, a.z), to = new Vector3(b.x, floorY + b.y, b.z);
                 Vector3 dir = to - from;
                 int n = physics.Raycast(from, dir.normalized, hits, dir.magnitude, AllLayers, QueryTriggerInteraction.Ignore);
+                System.Array.Sort(hits, 0, n, HitDistanceComparer.Instance);
                 int penetrations = 0;
+                float resumeDistance = 0f;
                 for (int h = 0; h < n; h++)
                 {
+                    // Пуля продолжает луч за выходом: вложенные объёмы внутри пройденной преграды не дают новых входов.
+                    if (hits[h].distance < resumeDistance) continue;
                     if (!obstacles.ContainsKey(hits[h].collider)) continue;
                     CoverSurface surface = CoverSurface.Of(hits[h].collider);
                     CoverClass cover = surface != null ? surface.Class : CoverClass.Hard;
-                    if (cover == CoverClass.Visual) continue;
+                    if (cover == CoverClass.Visual)
+                    {
+                        resumeDistance = hits[h].distance + WallPenetration.ExitOffset;
+                        continue;
+                    }
                     if (cover == CoverClass.Hard || surface.PenetrationModifier < WallPenetration.MinPenetrationModifier) return false;
                     if (++penetrations > WallPenetration.MaxPenetrations) return false;
-                    if (!WallPenetration.TryFindExit(hits[h].collider, hits[h].point, dir.normalized, out _)) return false;
+                    if(CoverIntervalResolver.TryResolve(hits[h].collider,hits[h].point,dir.normalized,WallPenetration.ExitOffset,out var traversal))
+                    {
+                        if(traversal.blocked||traversal.thickness>WallPenetration.MaxThickness||traversal.penetrationModifier<WallPenetration.MinPenetrationModifier)return false;
+                        resumeDistance=Vector3.Dot(traversal.resumePoint-from,dir.normalized);continue;
+                    }
+                    if (!WallPenetration.TryFindExit(hits[h].collider, hits[h].point, dir.normalized, out RaycastHit exit)) return false;
+                    resumeDistance = Vector3.Dot(exit.point - from, dir.normalized) + WallPenetration.ExitOffset;
                 }
                 return true;
             };
@@ -181,6 +214,12 @@ namespace VrBattlegrounds.Editor.LevelDesign
         }
 
         private const int AllLayers = ~0;
+
+        private sealed class HitDistanceComparer : IComparer<RaycastHit>
+        {
+            public static readonly HitDistanceComparer Instance = new HitDistanceComparer();
+            public int Compare(RaycastHit a, RaycastHit b) => a.distance.CompareTo(b.distance);
+        }
 
         /// <summary>Толщина — меньший горизонтальный размер: у коробки — по её осям (поворот не раздувает), иначе — по AABB.</summary>
         private static float Thickness(Collider c)

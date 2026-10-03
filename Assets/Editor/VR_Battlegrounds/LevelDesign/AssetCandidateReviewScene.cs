@@ -34,7 +34,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
         [Serializable] private class Policy { public MaterialRule[] materialMatchingRules; }
         [Serializable] public class Result { public int blocks, recipes, parts; public float maxSizeError; public string scene; }
 
-        [MenuItem("Tools/VR Battlegrounds/Level Design/Build Industrial Candidate Review")]
+        [MenuItem("Tools/VR Battlegrounds/Level Design/Art Pass/Decorate/Build Industrial Candidate Review", false, 200)]
         public static void BuildFromMenu()
         {
             Result result = Build();
@@ -265,7 +265,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 {
                     scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
                     firstReview = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Transform>())
-                        .First(t => t.name == "LD_Crate_Soft").gameObject;
+                        .First(t => t.name == "LD_Crate_Soft" || t.name.StartsWith("LD_Crate_Soft [", StringComparison.Ordinal)).gameObject;
                     Selection.activeGameObject = firstReview;
                     if (SceneView.lastActiveSceneView != null) SceneView.lastActiveSceneView.FrameSelected();
                 }

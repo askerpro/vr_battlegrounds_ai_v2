@@ -30,6 +30,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
         private static readonly Color32 Tall = new Color32(200, 75, 65, 255);
         private static readonly Color32 Unclassed = new Color32(130, 70, 170, 255);
         private static readonly Color32 VisualCover = new Color32(90, 200, 190, 255);
+        private static readonly Color32 MixedCover = new Color32(80, 130, 205, 255);
         private static readonly Color32 PocketColor = new Color32(40, 40, 40, 255);
         private static readonly Color32 Passage = new Color32(230, 40, 200, 255);
         private static readonly Color32 Sight = new Color32(220, 30, 30, 255);
@@ -93,6 +94,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
         {
             if (!MapAnalyzer.IsFree(g, i))
             {
+                if (g.MixedCoverAt(i)) return MixedCover;
                 if (g.CoverAt(i) == VrBattlegrounds.Maps.CoverClass.Visual) return VisualCover;
                 switch (MapAnalyzer.ClassOf(g.Owner[i] >= 0 ? ownerTop[g.Owner[i]] : g.Height[i]))
                 {

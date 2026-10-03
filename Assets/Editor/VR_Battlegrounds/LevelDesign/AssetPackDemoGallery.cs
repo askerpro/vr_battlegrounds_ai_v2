@@ -151,7 +151,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
             GameLog.Debug.Info("Демо пака: Assets/" + group + ".unity");
         }
 
-        [MenuItem("Tools/VR Battlegrounds/Level Design/Demos/Show Selected Demo")]
+        [MenuItem("Tools/VR Battlegrounds/Level Design/Art Pass/Decorate/Demos/Show Selected Demo", false, 200)]
         public static void ShowSelected()
         {
             var selected = Selection.activeTransform;
@@ -160,7 +160,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
             Show(selected.name);
         }
 
-        [MenuItem("Tools/VR Battlegrounds/Level Design/Demos/Next Demo")]
+        [MenuItem("Tools/VR Battlegrounds/Level Design/Art Pass/Decorate/Demos/Next Demo", false, 200)]
         public static void Next()
         {
             var children = Gallery(Review()).transform.Cast<Transform>().ToArray();

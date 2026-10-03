@@ -1,0 +1,133 @@
+{
+    "step": 0.30000001192092898,
+    "module": 0.30000001192092898,
+    "stepTopWidth": 0.6000000238418579,
+    "stepTopDepth": 0.6000000238418579,
+    "blocks": [
+        {
+            "name": "LD_Beam_Low",
+            "width": 3.0,
+            "depth": 1.5
+        },
+        {
+            "name": "LD_Block_Low",
+            "width": 2.1000001430511476,
+            "depth": 0.6000000238418579
+        },
+        {
+            "name": "LD_Can_Mid",
+            "width": 1.2000000476837159,
+            "depth": 1.2000000476837159
+        },
+        {
+            "name": "LD_Tree_Tall",
+            "width": 2.4000000953674318,
+            "depth": 2.4000000953674318
+        },
+        {
+            "name": "LD_Crate",
+            "width": 0.8999999761581421,
+            "depth": 0.8999999761581421
+        },
+        {
+            "name": "LD_Crate_Mid",
+            "width": 1.2000000476837159,
+            "depth": 1.2000000476837159
+        },
+        {
+            "name": "LD_Crate_Soft",
+            "width": 1.2000000476837159,
+            "depth": 1.2000000476837159
+        },
+        {
+            "name": "LD_Dorito_Mid",
+            "width": 1.2000000476837159,
+            "depth": 1.2000000476837159
+        },
+        {
+            "name": "LD_Door_Lintel",
+            "width": 1.5,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_PillarBox",
+            "width": 1.2000000476837159,
+            "depth": 1.2000000476837159
+        },
+        {
+            "name": "LD_Snake_Segment",
+            "width": 3.0,
+            "depth": 0.6000000238418579
+        },
+        {
+            "name": "LD_Floor_Tile",
+            "width": 9.90000057220459,
+            "depth": 9.90000057220459
+        },
+        {
+            "name": "LD_Fence_Mid_Hard",
+            "width": 9.0,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_Fence_Mid_Soft",
+            "width": 3.6000001430511476,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_Fence_Vault",
+            "width": 2.1000001430511476,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_Net_Tall_Visual",
+            "width": 2.1000001430511476,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_PalletFence_Set_Soft",
+            "width": 2.1000001430511476,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_PalletFence_Single_Soft",
+            "width": 2.1000001430511476,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_Wall_Mid",
+            "width": 2.1000001430511476,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_Wall_Tall",
+            "width": 2.1000001430511476,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_Wall_Mid_Soft",
+            "width": 2.1000001430511476,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_Wall_Tall_Soft",
+            "width": 2.1000001430511476,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_Window_Sill",
+            "width": 1.2000000476837159,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_Window_Lintel",
+            "width": 1.2000000476837159,
+            "depth": 0.30000001192092898
+        },
+        {
+            "name": "LD_HalfCylinder_Mid",
+            "width": 1.2000000476837159,
+            "depth": 0.6000000238418579
+        }
+    ]
+}

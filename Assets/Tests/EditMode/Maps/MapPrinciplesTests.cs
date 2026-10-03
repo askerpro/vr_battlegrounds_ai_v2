@@ -21,7 +21,7 @@ namespace VrBattlegrounds.Tests.Maps
     /// </summary>
     public class MapPrinciplesTests
     {
-        private readonly Dictionary<string, MapGridBuilder.Result> _maps = new Dictionary<string, MapGridBuilder.Result>();
+        private readonly Dictionary<string, MapEvaluationResult> _maps = new Dictionary<string, MapEvaluationResult>();
 
         /// <summary>Сцены открыты весь прогон: видимость сетки — лучи по коллайдерам сцены.</summary>
         private readonly List<Scene> _scenes = new List<Scene>();
@@ -38,7 +38,8 @@ namespace VrBattlegrounds.Tests.Maps
 
                 Scene scene = EditorSceneManager.OpenPreviewScene(path);
                 _scenes.Add(scene);
-                _maps[map.sceneName] = MapGridBuilder.Build(scene);
+                _maps[map.sceneName] = MapEvaluation.Evaluate(map.sceneName, MapGridBuilder.Build(scene), null,
+                    MapEvaluationProfile.Unspecified, false);
             }
         }
 
@@ -49,18 +50,17 @@ namespace VrBattlegrounds.Tests.Maps
         }
 
         /// <summary>Собрать нарушения по всем картам: «карта: нарушение».</summary>
-        private List<string> Violations(Func<MapGridBuilder.Result, float[], IEnumerable<string>> check)
+        private List<string> Violations(string rule)
         {
             var all = new List<string>();
-            foreach (KeyValuePair<string, MapGridBuilder.Result> map in _maps)
+            foreach (KeyValuePair<string, MapEvaluationResult> map in _maps)
             {
-                if (map.Value.Problems.Count > 0)
+                if (map.Value.grid == null)
                 {
-                    all.AddRange(map.Value.Problems.Select(p => $"{map.Key}: {p}"));
+                    all.AddRange(map.Value.uncheckedRequirements.Where(p => p.rule == "GEOMETRY").Select(p => $"{map.Key}: {p.message}"));
                     continue;
                 }
-                float[] clear = MapAnalyzer.Clearance(map.Value.Grid);
-                all.AddRange(check(map.Value, clear).Select(v => $"{map.Key}: {v}"));
+                all.AddRange(map.Value.violations.Where(v => v.rule == rule).Select(v => $"{map.Key}: {v.message}"));
             }
             return all;
         }
@@ -74,14 +74,14 @@ namespace VrBattlegrounds.Tests.Maps
         [Test]
         public void LD20_Укрытия_блокаута_только_трёх_высот()
         {
-            List<string> v = Violations((m, _) => MapAnalyzer.CheckCoverHeights(m.BlockoutTops));
+            List<string> v = Violations("LD-20");
             Assert.IsEmpty(v, "Высота укрытия вне классов Low/Mid/Tall — игрок не угадает, спрячет ли:\n" + string.Join("\n", v));
         }
 
         [Test]
         public void LD48_Перешагиваемое_действительно_перешагивается()
         {
-            List<string> v = Violations((m, _) => MapAnalyzer.CheckVaultables(m.Vaultables));
+            List<string> v = Violations("LD-48");
             Assert.IsEmpty(v, "Метка VaultableObstacle на препятствии, которое не перешагнуть, — законный проход сквозь стену:\n" +
                               string.Join("\n", v));
         }
@@ -89,32 +89,18 @@ namespace VrBattlegrounds.Tests.Maps
         [Test]
         public void LD23_Нет_проходов_уже_метра()
         {
-            List<string> v = Violations((m, c) => MapAnalyzer.FindNarrowPassages(m.Grid, c).Select(p => p.ToString()));
+            List<string> v = Violations("LD-23");
             Assert.IsEmpty(v, "Проход уже 1 м — игрок с оружием задевает стены и начинает ходить сквозь них:\n" + string.Join("\n", v));
         }
 
         [Test]
         public void LD25_Вся_карта_достижима_из_своей_зоны_в_обход_чужой()
         {
-            List<string> v = Violations((m, c) => MapAnalyzer.FindUnreachable(m.Grid, c).Select(p => p.ToString()));
+            List<string> v = Violations("LD-25");
             Assert.IsEmpty(v, "Участок недостижим — туда не дойти, не нарушив правила (сквозь стену или через чужую базу):\n" + string.Join("\n", v));
         }
 
-        [Test]
-        public void LD15_Нет_прострела_от_базы_до_базы()
-        {
-            List<string> v = Violations((m, c) =>
-            {
-                var found = new List<string>();
-                List<MapAnalyzer.Sightline> lines = MapAnalyzer.FindBaseToBaseSightlines(m.Grid, c);
-                if (lines.Count > 0)
-                    found.Add($"{lines.Count} пар точек видят друг друга, самая короткая {lines.OrderBy(l => l.Length).First()}");
-                List<MapAnalyzer.Sightline> shots = MapAnalyzer.FindBaseToBaseShotlines(m.Grid, c);
-                if (shots.Count > 0)
-                    found.Add($"{shots.Count} пар простреливаются вслепую сквозь Soft/Visual, самая короткая {shots.OrderBy(l => l.Length).First()}");
-                return found;
-            });
-            Assert.IsEmpty(v, "Из зоны видно зону противника — раунд решается дуэлью на старте:\n" + string.Join("\n", v));
-        }
+        // LD-15 больше не запрет: решение пользователя 2026-10-02 разрешает стартовые дуэли.
+        // Классификацию и сохранение измеренных линий проверяет MapEvaluationTests.
     }
 }

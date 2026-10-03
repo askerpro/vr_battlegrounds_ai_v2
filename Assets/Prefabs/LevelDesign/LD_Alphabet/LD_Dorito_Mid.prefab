@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6866485173698393647}
   - component: {fileID: 5990209292035366256}
   - component: {fileID: 2052759508048979531}
+  - component: {fileID: 2622986881255332675}
   m_Layer: 0
   m_Name: LD_Dorito_Mid
   m_TagString: Environment
@@ -67,7 +68,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 7ab977a21c92388468ee65ad1c0e5a78, type: 2}
+  - {fileID: 2100000, guid: ff188f58422043f489060e28a5e4e0c0, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -112,4 +113,21 @@ MeshCollider:
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
-  m_Mesh: {fileID: 4300000, guid: 27266002cc3269d4fbc24a3c645dc8dc, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 433eafb0cafe02648abf8bac319a706a, type: 2}
+--- !u!114 &2622986881255332675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 889999060046430605}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 077cf6cf780a078408fd67c57fb0914d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.LevelDesign.BlockoutSteppedGeometry
+  totalHeight: 1.6
+  lowerHeightLimit: 1.2
+  baseSize: {x: 1.2, y: 1.2}
+  topSize: {x: 0.6, y: 0.6}
+  localBottomCenter: {x: 0, y: 0, z: 0}

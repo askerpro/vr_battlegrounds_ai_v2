@@ -633,6 +633,28 @@ Water») — рисует. Симптом вернулся — проверит�
 
 ## Сборка и инструменты
 
+### Тысячи `[WorkerN] MaterialLocation.External is obsolete` при импорте FBX
+
+Старые `.meta` паков содержат `ModelImporter.materialLocation: 0` — External.
+Unity 6.4 сообщает об устаревшем режиме при каждом реимпорте; это отдельный
+класс ошибок настроек импорта, а не сбой игровой логики или потоков Worker.
+Прямая смена на Embedded без remap может изменить материалы голого FBX.
+
+`Tools/VR Battlegrounds/Assets/Migrate Legacy Model Materials` сначала сохраняет
+результат прежнего поиска `.mat` в явные remap-ссылки, сохраняя разрешённые
+пользовательские remap, затем переключает на Embedded/InPrefab. Битый GUID
+в legacy-remap не перекрывает найденный материал пустой ссылкой: External
+подбирал материал по имени даже при такой записи, Embedded использует сам remap.
+Этот случай воспроизведён на `ParticlePack/Shared/Environment/Models/CornerWall.fbx`.
+Каждая модель
+проходит сравнение GUID/local file ID материалов во всех Renderer; несовпадение
+восстанавливает настройки и останавливает проход. Запускать под замком Unity,
+вне Play Mode. Отчёт: `Temp/ModelMaterialMigration/result.txt`.
+1979 моделей мигрированы; live-аудит находит 0 External, повторный реимпорт
+17 образцов даёт 0 новых предупреждений и сохраняет материалы.
+Новый импорт старого пака тоже проверять этой командой; фильтрация консоли
+не устраняет причину. Статус поставки — [импорт окружения](level-design/environment-pack-import.md).
+
 ### `XR Plug-in Management Warning: Timeout trying to get package list after 30s`
 
 В установленном XR Management 4.5.4 `XRPackageMetadataStore.RebuildPackageCache` проверяет

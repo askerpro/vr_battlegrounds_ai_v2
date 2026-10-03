@@ -63,7 +63,9 @@ namespace VrBattlegrounds.EditorTools
             var originalRemaps = importer.GetExternalObjectMap();
             // Legacy искал .mat неявно. Сначала превращаем этот поиск в явные remap-ссылки.
             importer.SearchAndRemapMaterials(importer.materialName, importer.materialSearch);
-            foreach (var entry in originalRemaps) importer.AddRemap(entry.Key, entry.Value);
+            // Битый GUID в legacy-remap давал поиск по имени. Не перекрываем найденный .mat пустой ссылкой.
+            foreach (var entry in originalRemaps)
+                if (entry.Value != null) importer.AddRemap(entry.Key, entry.Value);
             importer.materialLocation = ModelImporterMaterialLocation.InPrefab;
             importer.SaveAndReimport();
 

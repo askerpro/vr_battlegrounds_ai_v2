@@ -33,6 +33,7 @@
 | `sound-library.md` | Библиотека звуков Universal Sound FX **вне проекта** (`F:/UnityProjects/_SoundLibrary`): как брать звук в проект, формат, каталог, кандидаты под события |
 | `audit/` | Аудит 2026-08 (справочники, не меняются): [находки](audit/network-audit-2026-08.md), [оценка архитектуры](audit/architecture-review-2026-08.md); [UI-меню планшета 2026-09](audit/ui-menu-audit-2026-09.md) → план [T-32](tasks/T-32-menu-design-system.md) |
 | `troubleshooting.md` | **Симптом → причина.** Индекс багов по внешнему проявлению, читать первым при расследовании |
+| `ModelMaterialLocationMigration` (`Assets/Editor/VR_Battlegrounds/ThirdParty/`) | Миграция External → Embedded с сохранением GUID материалов: 1979 моделей исправлены, live External = 0, повторный реимпорт 17 образцов проходит. Статус 12 паков в `Assets/env_packs` — [импорт окружения](level-design/environment-pack-import.md) |
 | `audit/editor-reload-audit-2026-10-03.md` | Ожидание компиляции: измеренный рост Domain Reload, несколько циклов внутри Refresh, кандидаты MCP/Git/восстановления объектов и оставшийся индивидуальный профиль |
 | `audit/bots-audit-2026-10-03.md` | Цель — тактика стрелка и оружейная поза; подтверждены ограничения Hunt/Engage, движения и хвата, проверены клипы `wip/uxrlegs-final` и готовые AI-пакеты; осталось проверить пилот Blaze с Mirror/UltimateXR и Quest |
 | `CameraFadeDiagnostics` (`Assets/Scripts/Debug/`) | Источник запросов Fade и выключение оверлея: `GameLog.Debug.Info`, параметры и полный стек; подробнее в `troubleshooting.md` |

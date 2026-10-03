@@ -7,7 +7,7 @@ namespace VrBattlegrounds.EditorTools
     public static class ArsenalSurfaceMaterials
     {
         private const string Folder = "Assets/Art/ArsenalBoundary/";
-        private const string Textures = "Assets/HIVEMIND/PostApocalypticTown/URP/Art/Textures/Metal/";
+        private const string Textures = "Assets/env_packs/PostApocalypticTown/URP/Art/Textures/Metal/";
 
         public static Material Metal(string name, Color tint, float metallic, float smoothness, bool normal = true)
         {

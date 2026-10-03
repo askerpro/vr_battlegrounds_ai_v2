@@ -216,7 +216,7 @@ public static class AssetCatalogBatch
         {
             Initialize();
             var catalog = new Catalog { unityVersion = Application.unityVersion };
-            var paths = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/RPG_FPS_game_assets_industrial" })
+            var paths = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/env_packs/RPG_FPS_game_assets_industrial" })
                 .Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p).ToArray();
             for (int i = 0; i < paths.Length; i++)
             {

@@ -44,7 +44,7 @@ namespace VrBattlegrounds.Editor
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Менять декорации можно только вне Play Mode.");
-            var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/RPG_FPS_game_assets_industrial/Other_props/Palets/Palet_v1/Palet_v1_single.prefab");
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/env_packs/RPG_FPS_game_assets_industrial/Other_props/Palets/Palet_v1/Palet_v1_single.prefab");
             var root = new GameObject("PalletFence_TwoLevels_Soft");
             try
             {

@@ -7,14 +7,15 @@ var shaders = new System.Collections.Generic.Dictionary<string, int>();
 int checkedAssets = 0, prefabs = 0, materials = 0, models = 0;
 foreach (var item in plan["files"])
 {
-    string path = (string)item["path"];
+    string originalPath = (string)item["path"];
+    string resolved = UnityEditor.AssetDatabase.GUIDToAssetPath((string)item["guid"]);
+    // Манифест хранит пути первоначального импорта; после переноса источник истины — GUID.
+    string path = string.IsNullOrEmpty(resolved) ? originalPath : resolved;
     bool excluded = false;
     foreach (var root in policy["excludedAssetRoots"])
         if (path.StartsWith((string)root, System.StringComparison.OrdinalIgnoreCase)) excluded = true;
     if (excluded) continue;
-    string resolved = UnityEditor.AssetDatabase.GUIDToAssetPath((string)item["guid"]);
-    if (!string.Equals(path, resolved, System.StringComparison.OrdinalIgnoreCase))
-        issues.Add("GUID: " + path + " -> " + resolved);
+    if (string.IsNullOrEmpty(resolved)) issues.Add("GUID не разрешается: " + originalPath);
     var asset = UnityEditor.AssetDatabase.LoadMainAssetAtPath(path);
     if (asset == null)
         issues.Add("Не загружен: " + path);

@@ -55,7 +55,7 @@ namespace VrBattlegrounds.EditorTools
             renderer.sharedMaterial = material;
             // Чистый участок картонного атласа без рваных краёв и чужих надписей.
             material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(
-                "Assets/HIVEMIND/TheSewers/URP/Art/Textures/T_Cardboard_01a_ALB.png"));
+                "Assets/env_packs/TheSewers/URP/Art/Textures/T_Cardboard_01a_ALB.png"));
             material.SetTextureScale("_BaseMap", new Vector2(.24f,.22f));
             material.SetTextureOffset("_BaseMap", new Vector2(.72f,.74f));
             material.SetColor("_BaseColor", new Color(.94f,.93f,.85f));

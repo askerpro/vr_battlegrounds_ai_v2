@@ -1,8 +1,8 @@
 // Тело execute_code (Unity MCP, C# 6), запускать под unity-lock.
 // Сохраняет только декоративные копии; LD_Alphabet не изменяет.
 var sources = new [] {
-    "Assets/RPG_FPS_game_assets_industrial/Other_props/Generators/Generator_v1/Generator_v1.prefab",
-    "Assets/RPG_FPS_game_assets_industrial/Boxes/Wooden_box_v1/Wooden_box_v1_LD1.prefab"
+    "Assets/env_packs/RPG_FPS_game_assets_industrial/Other_props/Generators/Generator_v1/Generator_v1.prefab",
+    "Assets/env_packs/RPG_FPS_game_assets_industrial/Boxes/Wooden_box_v1/Wooden_box_v1_LD1.prefab"
 };
 var names = new [] {"Generator_Mid_Hard", "WoodenBox_Low_Soft"};
 var report = new System.Text.StringBuilder();

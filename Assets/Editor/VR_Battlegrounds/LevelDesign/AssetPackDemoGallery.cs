@@ -15,7 +15,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
     {
         public const string RootName = "Демо-сцены паков";
         private static readonly string[] Roots = {
-            "Assets/RPG_FPS_game_assets_industrial", "Assets/HIVEMIND"
+            FolderCandidateScanner.PackRoot
         };
 
         [Serializable] public class Entry
@@ -27,7 +27,9 @@ namespace VrBattlegrounds.Editor.LevelDesign
         [Serializable] public class Report { public Entry[] demos; }
 
         public static string[] Sources() => AssetDatabase.FindAssets("t:Scene", Roots)
-            .Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p).ToArray();
+            .Select(AssetDatabase.GUIDToAssetPath)
+            .Where(p => !p.StartsWith(FolderCandidateScanner.PackRoot + "/LowPolyFPSLite/", StringComparison.Ordinal))
+            .OrderBy(p => p).ToArray();
 
         private static Scene Review()
         {
@@ -137,7 +139,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
             if (!EditorSceneManager.SaveScene(scene)) throw new IOException("Галерея не сохранена.");
             Directory.CreateDirectory("Temp/LevelDesign/CandidateReview");
             File.WriteAllText("Temp/LevelDesign/CandidateReview/demo-gallery.json", JsonUtility.ToJson(new Report { demos = entries }, true));
-            Show("RPG_FPS_game_assets_industrial/Map_v1");
+            Show("env_packs/RPG_FPS_game_assets_industrial/Map_v1");
             EditorSceneManager.SaveScene(scene);
         }
 

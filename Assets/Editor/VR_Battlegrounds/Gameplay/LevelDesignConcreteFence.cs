@@ -9,7 +9,7 @@ namespace VrBattlegrounds.Editor
     public static class LevelDesignConcreteFence
     {
         public const string Path = "Assets/Prefabs/LevelDesign/LD_Alphabet/LD_Fence_Mid_Hard.prefab";
-        private const string Source = "Assets/RPG_FPS_game_assets_industrial/Fences/Concrete_fences/Concrete_fence_v1/Concrete_fence_v1_wall_set_v2.prefab";
+        private const string Source = "Assets/env_packs/RPG_FPS_game_assets_industrial/Fences/Concrete_fences/Concrete_fence_v1/Concrete_fence_v1_wall_set_v2.prefab";
 
         public static void Ensure()
         {
@@ -20,7 +20,7 @@ namespace VrBattlegrounds.Editor
 
         public static void EnsureSoft()
         {
-            Create(SoftPath, "Assets/RPG_FPS_game_assets_industrial/Fences/Concrete_fences/Concrete_fence_v2/Concrete_fence_v2_S.prefab", "LD_Wall_Mid_Soft", true);
+            Create(SoftPath, "Assets/env_packs/RPG_FPS_game_assets_industrial/Fences/Concrete_fences/Concrete_fence_v2/Concrete_fence_v2_S.prefab", "LD_Wall_Mid_Soft", true);
         }
 
         private static void Create(string path, string sourcePath, string template, bool thinPanel)

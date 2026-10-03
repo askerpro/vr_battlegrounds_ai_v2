@@ -22,7 +22,7 @@
 
 ## Ассеты из имеющихся паков
 
-Основной набор: `Assets/HIVEMIND/PostApocalypticTown/URP/Art/Prefabs/`.
+Основной набор: `Assets/env_packs/PostApocalypticTown/URP/Art/Prefabs/`.
 
 | Назначение | Подтверждённые файлы | Решение для отбора |
 |---|---|---|
@@ -32,9 +32,9 @@
 | Дисплей | SM_Monitor.prefab, SM_Monitor2.prefab, SM_MonitorArm.prefab | Использовать корпус и заменить содержимое экрана динамическим балансом |
 | Карточки | SM_Sign1.prefab, SM_Sign2.prefab, SM_Sign3.prefab | Проверить пригодность для небольшого держателя |
 
-Альтернативы корпуса: `Assets/HIVEMIND/HorrorHospital/URP/Art/Prefabs/SM_Steel_Cabinet_01a.prefab`, `SM_Tool_Cabinet_01a.prefab`; электрические шкафы `Assets/HIVEMIND/TheSewers/URP/Art/Prefabs/SM_Electrical_Cabinet_01a.prefab`, 02a, 02b, 03a.
+Альтернативы корпуса: `Assets/env_packs/HorrorHospital/URP/Art/Prefabs/SM_Steel_Cabinet_01a.prefab`, `SM_Tool_Cabinet_01a.prefab`; электрические шкафы `Assets/env_packs/TheSewers/URP/Art/Prefabs/SM_Electrical_Cabinet_01a.prefab`, 02a, 02b, 03a.
 
-Бумажная основа: `Assets/HIVEMIND/RuralTown/URP/Art/Prefabs/SM_Paper_01.prefab`, 02, 03.
+Бумажная основа: `Assets/env_packs/RuralTown/URP/Art/Prefabs/SM_Paper_01.prefab`, 02, 03.
 
 Специализированный оружейный шкаф и dog tag по именам файлов не найдены; это не доказывает отсутствия подходящей геометрии. Текущий жетон — встроенный кубический mesh в `Assets/Prefabs/Arsenal/DogTag/DogTagPanel.prefab`. Его назначение — объявление готовности, поэтому предпочтительна армейская идентификационная бирка без физической цепочки.
 
@@ -66,12 +66,12 @@
 
 | Деталь | Файл | Вывод |
 |---|---|---|
-| Полка | `Assets/HIVEMIND/PostApocalypticTown/URP/Art/Prefabs/SM_ShelfTray.prefab` | Отдельная металлическая деталь, примерно 0,604 × 0,038 × 0,600 м. Лучший кандидат для адаптации под полку; не растягивать текстуру на всю ширину без проверки |
-| Плоская облицовка | `Assets/HIVEMIND/PostApocalypticTown/URP/Art/Prefabs/SM_MetalBoard.prefab` | Самостоятельный рифлёный лист, около 0,060 × 3,003 × 2,000 м; подходит для выбранных участков корпуса, не является перфопанелью |
+| Полка | `Assets/env_packs/PostApocalypticTown/URP/Art/Prefabs/SM_ShelfTray.prefab` | Отдельная металлическая деталь, примерно 0,604 × 0,038 × 0,600 м. Лучший кандидат для адаптации под полку; не растягивать текстуру на всю ширину без проверки |
+| Плоская облицовка | `Assets/env_packs/PostApocalypticTown/URP/Art/Prefabs/SM_MetalBoard.prefab` | Самостоятельный рифлёный лист, около 0,060 × 3,003 × 2,000 м; подходит для выбранных участков корпуса, не является перфопанелью |
 | Гофрированные листы | `SM_MetalPlate.prefab`, `SM_MetalPlate2.prefab` того же пака | Вертикальный кровельный профиль. Не выдавать за готовую рольставню |
-| Гофрированный лист | `Assets/HIVEMIND/AbandonedFactory/Art/Prefabs/SM_CorrugatedMetalSheet_01.prefab` | Ржавый кровельный лист; исключить из окончательного набора створки |
-| Металлическая дверь | `Assets/HIVEMIND/HouseForge_01/URP/Art/Prefabs/Metal/SM_Metal_Door.prefab` | Хороший ориентир металлической рамки и крепежа, но тяжёлая распашная дверь, не рольставня |
-| Контейнер | `Assets/RPG_FPS_game_assets_industrial/Containers/Cargo_container_v1/Cargo_container_v1_LD1through.prefab` | Корпус 8 × 3 × 3 м; не использовать уменьшенным целиком как шкаф |
+| Гофрированный лист | `Assets/env_packs/AbandonedFactory/Art/Prefabs/SM_CorrugatedMetalSheet_01.prefab` | Ржавый кровельный лист; исключить из окончательного набора створки |
+| Металлическая дверь | `Assets/env_packs/HouseForge_01/URP/Art/Prefabs/Metal/SM_Metal_Door.prefab` | Хороший ориентир металлической рамки и крепежа, но тяжёлая распашная дверь, не рольставня |
+| Контейнер | `Assets/env_packs/RPG_FPS_game_assets_industrial/Containers/Cargo_container_v1/Cargo_container_v1_LD1through.prefab` | Корпус 8 × 3 × 3 м; не использовать уменьшенным целиком как шкаф |
 | Створка контейнера | `Cargo_container_v1_LD1doorL.prefab` рядом | Самостоятельный mesh, но распашная грузовая дверь с маркировкой, не подходящая рольставня |
 
 Детали контейнера действительно разделены в FBX на subassets, однако техническая разделимость не делает их подходящими художественно. Проверенная гофрированная геометрия не заменяет ламели, которые должны скрываться в коробе.

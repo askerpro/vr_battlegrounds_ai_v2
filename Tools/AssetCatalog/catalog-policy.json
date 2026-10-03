@@ -1,5 +1,5 @@
 {
-  "excludedAssetRoots": ["Assets/InnerverseInteractive/", "Assets/LowPolyFPSLite/"],
+  "excludedAssetRoots": ["Assets/InnerverseInteractive/", "Assets/env_packs/LowPolyFPSLite/"],
   "curatedCandidates": [
     {"block": "LD_Wall_Mid", "model": "Generator_v1", "fitAxes": true, "showOriginal": false, "preparedPrefab": "Assets/Prefabs/LevelDesign/Decorated/Generator_Mid_Hard.prefab", "preparedSize": [2.0, 1.6, 0.15], "variant": "Mid Hard / подгонка 2 × 1,6 × 0,15 м", "warnings": ["Ширина около 55%, высота 92%, толщина 11% исходника; сильное сжатие подтверждено пользователем для эксперимента", "Проверить читаемость генератора, силуэт и прострел; эталон не изменяется"]},
     {"block": "LD_Crate_Soft", "model": "Wooden_box_v1_LD1", "fitAxes": false, "uniformHeight": true, "rotationX": 90, "showOriginal": false, "preparedPrefab": "Assets/Prefabs/LevelDesign/Decorated/WoodenBox_Low_Soft.prefab", "preparedSize": [0.7331, 1.2, 0.45005], "variant": "Вертикальный Low Soft / высота 1,2 м", "warnings": ["Поворот X 90° и равномерное уменьшение; основание уже эталона LD_Crate_Soft, замена не закрывает весь его объём"]},

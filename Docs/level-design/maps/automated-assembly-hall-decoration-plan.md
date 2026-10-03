@@ -51,13 +51,13 @@
 
 | Роль | Проверенные пути/кандидаты | Что проверить на стенде |
 |---|---|---|
-| Колонны и верхние фермы | `Assets/HIVEMIND/AbandonedFactory/Art/Prefabs/SM_Pillar_01a.prefab`, `SM_RoofBars_01a.prefab`, `SM_RoofPillars_01a.prefab` в той же папке | Масштаб, силуэт, меш/материал, URP; подходят ли для работающего тяжёлого комплекса |
+| Колонны и верхние фермы | `Assets/env_packs/AbandonedFactory/Art/Prefabs/SM_Pillar_01a.prefab`, `SM_RoofBars_01a.prefab`, `SM_RoofPillars_01a.prefab` в той же папке | Масштаб, силуэт, меш/материал, URP; подходят ли для работающего тяжёлого комплекса |
 | Кабели и крупные ёмкости | Там же: `SM_Cable_01a.prefab`, `SM_Cable_02a.prefab`, `SM_Cistern_01a.prefab` | Кабельный фон и резервуары; цистерна не подтверждена как готовый тигель |
 | Лампы и обшивка | Там же: `SM_CoverLight_01.prefab`, `SM_CorrugatedMetalSheet_01.prefab` | Световое пятно, материалы, отсутствие лишних realtime lights |
-| Трубы | `Assets/RPG_FPS_game_assets_industrial/Other_props/Pipes/Industrial_pipes/Industrial_pipe_v1/Industrial_pipe_v1.prefab` | Повороты/стыки, число материалов и повторяемость |
-| Опоры и технические платформы | `Assets/RPG_FPS_game_assets_industrial/Other_props/Support_set/Support_set_v1/` | Нужные support/railing-модули, масштаб и полигоны |
-| Тяжёлое оборудование | `Assets/RPG_FPS_game_assets_industrial/Other_props/Generators/Generator_v1/Generator_v1.prefab` | Фоновый агрегат; не выдавать за печь |
-| Дым/пыль | `Assets/RPG_FPS_game_assets_industrial/Particles/Smoke/Smoke_v1/Smoke_v1.prefab` | URP, прозрачный overdraw; уменьшить или заменить при высокой стоимости |
+| Трубы | `Assets/env_packs/RPG_FPS_game_assets_industrial/Other_props/Pipes/Industrial_pipes/Industrial_pipe_v1/Industrial_pipe_v1.prefab` | Повороты/стыки, число материалов и повторяемость |
+| Опоры и технические платформы | `Assets/env_packs/RPG_FPS_game_assets_industrial/Other_props/Support_set/Support_set_v1/` | Нужные support/railing-модули, масштаб и полигоны |
+| Тяжёлое оборудование | `Assets/env_packs/RPG_FPS_game_assets_industrial/Other_props/Generators/Generator_v1/Generator_v1.prefab` | Фоновый агрегат; не выдавать за печь |
+| Дым/пыль | `Assets/env_packs/RPG_FPS_game_assets_industrial/Particles/Smoke/Smoke_v1/Smoke_v1.prefab` | URP, прозрачный overdraw; уменьшить или заменить при высокой стоимости |
 
 ## Внешние кандидаты
 

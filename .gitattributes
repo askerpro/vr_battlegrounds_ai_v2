@@ -16,9 +16,8 @@
 *.anim text merge=unityyamlmerge eol=crlf
 # Бинарные TerrainData и LightingData импортированных паков не являются YAML.
 # Иначе общее правило *.asset меняет CRLF-байты внутри сериализованных данных.
-Assets/RPG_FPS_game_assets_industrial/**/LightingData.asset binary
-Assets/[Hh][Ii][Vv][Ee][Mm][Ii][Nn][Dd]/**/LightingData.asset binary
-Assets/[Hh][Ii][Vv][Ee][Mm][Ii][Nn][Dd]/**/Terrain/*.asset binary
+Assets/env_packs/**/LightingData.asset binary
+Assets/env_packs/**/Terrain/*.asset binary
 # Source and docs - UTF-8
 *.cs text eol=crlf
 *.md text eol=crlf

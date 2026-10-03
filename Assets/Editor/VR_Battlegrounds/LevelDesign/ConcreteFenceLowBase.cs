@@ -11,7 +11,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
     public static class ConcreteFenceLowBase
     {
         public const string PrefabPath = "Assets/Prefabs/LevelDesign/Decorated/ConcreteFence_LowBase_Soft.prefab";
-        private const string SourcePath = "Assets/RPG_FPS_game_assets_industrial/Fences/Concrete_fences/Concrete_fence_v2/Concrete_fence_v2_S.prefab";
+        private const string SourcePath = "Assets/env_packs/RPG_FPS_game_assets_industrial/Fences/Concrete_fences/Concrete_fence_v2/Concrete_fence_v2_S.prefab";
         private const string MeshFolder = "Assets/Art/Models/CatalogVariants";
         public const float LowHeight = 1.2f;
         public const float TotalHeight = 1.6f;

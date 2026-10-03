@@ -1,0 +1,28 @@
+using System.Threading.Tasks;
+using MCPForUnity.Editor.Tools;
+using MCPForUnity.Editor.Resources;
+using Newtonsoft.Json.Linq;
+
+namespace VrBattlegrounds.EditorTools.McpAudit
+{
+    // Временная проверка настоящего Unity TypeCache и пользовательской editor assembly.
+    [McpForUnityTool("mcp_audit_sync", Description="Проверка синхронного обработчика", AutoRegister=false)]
+    public class McpAuditSync
+    {
+        public class Parameters
+        {
+            [ToolParameter("Число для проверки", Required=true)] public int number { get; set; }
+        }
+        public static object HandleCommand(JObject payload) => payload.Value<int>("number") + 1;
+    }
+    [McpForUnityTool("mcp_audit_async", AutoRegister=false)]
+    public class McpAuditAsync
+    {
+        public static Task<object> HandleCommand(JObject payload) => Task.FromResult<object>(payload.Value<int>("number") + 2);
+    }
+    [McpForUnityResource("mcp_audit_resource", Description="Проверка пользовательского ресурса")]
+    public class McpAuditResource
+    {
+        public static object HandleCommand(JObject payload) => "resource-ok";
+    }
+}

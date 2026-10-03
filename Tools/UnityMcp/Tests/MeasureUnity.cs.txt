@@ -1,0 +1,13 @@
+var timer = System.Diagnostics.Stopwatch.StartNew();
+var tools = new MCPForUnity.Editor.Services.ToolDiscoveryService().DiscoverAllTools();
+timer.Stop();
+double toolsMs = timer.Elapsed.TotalMilliseconds;
+timer.Restart();
+var resources = new MCPForUnity.Editor.Services.ResourceDiscoveryService().DiscoverAllResources();
+timer.Stop();
+double resourcesMs = timer.Elapsed.TotalMilliseconds;
+timer.Restart();
+var indexedTools = UnityEditor.TypeCache.GetTypesWithAttribute<MCPForUnity.Editor.Tools.McpForUnityToolAttribute>();
+var indexedResources = UnityEditor.TypeCache.GetTypesWithAttribute<MCPForUnity.Editor.Resources.McpForUnityResourceAttribute>();
+timer.Stop();
+return Newtonsoft.Json.JsonConvert.SerializeObject(new { tools, resources, toolsMs, resourcesMs, typeCacheMs = timer.Elapsed.TotalMilliseconds, indexedTools = indexedTools.Count, indexedResources = indexedResources.Count, package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(MCPForUnity.Editor.Tools.CommandRegistry).Assembly).version });

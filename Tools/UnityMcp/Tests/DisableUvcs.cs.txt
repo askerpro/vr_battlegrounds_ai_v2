@@ -1,0 +1,15 @@
+// Метод body для execute_code под Unity lock. Штатный переключатель collab-proxy 2.11.4.
+// Настройка локальна: EditorPrefs с productGUID проекта. Внешний cm/Git не изменяются.
+var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance;
+var assembly = AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetType("Unity.PlasticSCM.Editor.UVCSPlugin") != null);
+var plugin = assembly.GetType("Unity.PlasticSCM.Editor.UVCSPlugin");
+var instance = plugin.GetProperty("Instance", flags).GetValue(null, null);
+var wait = assembly.GetType("Unity.PlasticSCM.Editor.WaitForPendingOperations");
+if ((bool)wait.GetMethod("HasLongRunningOperations", flags).Invoke(null, null))
+    return "Есть активная операция UVCS: настройка не изменена";
+assembly.GetType("Unity.PlasticSCM.Editor.SwitchUVCSPlugin").GetMethod("Off", flags).Invoke(null, new object[] { instance });
+return new {
+    enabled = plugin.GetMethod("IsEnabled", flags).Invoke(instance, null),
+    preference = assembly.GetType("Unity.PlasticSCM.Editor.UVCSPluginIsEnabledPreference").GetMethod("IsEnabled", flags).Invoke(null, null)
+};

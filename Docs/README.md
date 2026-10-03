@@ -34,7 +34,7 @@
 | `audit/` | Аудит 2026-08 (справочники, не меняются): [находки](audit/network-audit-2026-08.md), [оценка архитектуры](audit/architecture-review-2026-08.md); [UI-меню планшета 2026-09](audit/ui-menu-audit-2026-09.md) → план [T-32](tasks/T-32-menu-design-system.md) |
 | `troubleshooting.md` | **Симптом → причина.** Индекс багов по внешнему проявлению, читать первым при расследовании |
 | `ModelMaterialLocationMigration` (`Assets/Editor/VR_Battlegrounds/ThirdParty/`) | Миграция External → Embedded с сохранением GUID материалов: 1979 моделей исправлены, live External = 0, повторный реимпорт 17 образцов проходит. Статус 12 паков в `Assets/env_packs` — [импорт окружения](level-design/environment-pack-import.md) |
-| `audit/editor-reload-audit-2026-10-03.md` | Ожидание компиляции: измеренный рост Domain Reload, несколько циклов внутри Refresh, кандидаты MCP/Git/восстановления объектов и оставшийся индивидуальный профиль |
+| `audit/editor-reload-audit-2026-10-03.md` | Ожидание компиляции: MCP 10.2.0 + upstream discovery-фикс проверены, 10-секундный UVCS timeout устранён локальным переключателем, обычный reload 4,749/4,819 с; осталось объяснить прежний рост JIT и повторные циклы |
 | `audit/bots-audit-2026-10-03.md` | Цель — тактика стрелка и оружейная поза; подтверждены ограничения Hunt/Engage, движения и хвата, проверены клипы `wip/uxrlegs-final` и готовые AI-пакеты; осталось проверить пилот Blaze с Mirror/UltimateXR и Quest |
 | `CameraFadeDiagnostics` (`Assets/Scripts/Debug/`) | Источник запросов Fade и выключение оверлея: `GameLog.Debug.Info`, параметры и полный стек; подробнее в `troubleshooting.md` |
 | `testing.md` | Тестирование: шесть уровней от юнит-тестов до чек-листа в шлеме |
@@ -71,7 +71,8 @@
 | `Roadmap.md` | План развития проекта |
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
 | `version-control.md` | Git/Plastic workflow: автодублирование коммитов, хук, диагностика |
-| `unity-mcp.md` | Фикс `execute_code` на Windows (MAX_PATH); автосохранение изменённых сцен перед `run_tests` |
+| `unity-mcp.md`, `Tools/UnityMcp/` | Закреплённый MCP 10.2.0, upstream discovery-патч, воспроизводимая установка и проверка 35 tools/19 resources; CodeDom/MAX_PATH, локальный UVCS-переключатель и автосохранение перед `run_tests` |
+| `tasks/unity-mcp-discovery-optimization.md` | Принятый контракт MCP-оптимизации и выполненные проверки; результаты и пределы — в аудите, дальнейшая игровая работа не входит |
 | `release.md` | Сборка сервера, Quest и планшета; почему у них одинаковые UXR id |
 | `Mirror/mirror-patches.md` | Правки вендорного Mirror: что, зачем, как перенести при обновлении |
 

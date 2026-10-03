@@ -1,0 +1,12 @@
+// Метод body для execute_code. Читает уже собранные Unity таймеры, callbacks не меняет.
+var tracker = typeof(UnityEditor.EditorApplication).Assembly.GetType("UnityEditor.Profiling.EditorPerformanceTracker");
+if (tracker == null) return "EditorPerformanceTracker недоступен в этой версии Unity";
+var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+var names = (string[])tracker.GetMethod("GetAvailableTrackers", flags).Invoke(null, null);
+return names.Where(n => n.StartsWith("AssemblyReloadEvents.beforeAssemblyReload:") || n == "Application.Reload" || n == "DomainReload")
+    .Select(n => new {
+        name = n,
+        count = tracker.GetMethod("GetSampleCount", flags).Invoke(null, new object[] { n }),
+        lastSeconds = tracker.GetMethod("GetLastTime", flags).Invoke(null, new object[] { n }),
+        peakSeconds = tracker.GetMethod("GetPeakTime", flags).Invoke(null, new object[] { n })
+    }).ToArray();

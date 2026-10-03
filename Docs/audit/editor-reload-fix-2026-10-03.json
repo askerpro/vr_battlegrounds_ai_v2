@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-03",
+  "unity": "6000.4.1f1",
+  "mcp": {
+    "beforeVersion": "10.1.2",
+    "beforeCommit": "4ce7dd3cc54e37e2ed6dc59cb5a047f3dccb3f50",
+    "afterVersion": "10.2.0",
+    "afterCommit": "30d22075093d1d35dfb0091c1c7550e9ad948577",
+    "discoveryBackportSource": "3bb0acea8a23d6592f60272cc1fd179c095032d1",
+    "toolCount": 35,
+    "resourceCount": 19,
+    "fullCatalogMetadataDifferences": 0,
+    "beforeFullScan": {"assemblies": 339, "types": 69529, "elapsedMs": 653.6178},
+    "afterFullCatalogMs": {"tools": 2.4323, "resources": 1.1489},
+    "externalSourceHarness": {"passed": 8, "total": 8},
+    "liveCustomProbe": {"passed": true, "syncValue": 41, "asyncValue": 42, "resourceValue": "resource-ok", "assembly": "Assembly-CSharp-Editor", "isBuiltIn": false},
+    "androidCompileGate": {"passed": true, "errors": []}
+  },
+  "ordinaryReloadsMs": {
+    "before": [{"total":6694,"initializeOnLoad":1890},{"total":6210,"initializeOnLoad":1757,"beginReloadAssembly":1260}],
+    "upgradedWithUvcs": [{"total":15045,"initializeOnLoad":830,"beginReloadAssembly":11086},{"total":14913,"initializeOnLoad":812,"beginReloadAssembly":11060}],
+    "upgradedUvcsOff": [{"total":4749,"initializeOnLoad":810,"beginReloadAssembly":888,"refresh":5142,"refreshId":"0062a07124dc9c143bca6abdee61c950"},{"total":4819,"initializeOnLoad":813,"beginReloadAssembly":900,"refresh":5226,"refreshId":"6ff1980d4a27ce5488bd97ecba796947"}]
+  },
+  "beforeReloadCallbackSeconds": {
+    "measurement": "UnityEditor.Profiling.EditorPerformanceTracker.GetLastTime",
+    "plastic": 10.04761039999994,
+    "mcpHttp": 0.002373799999986659,
+    "mcpStdio": 0.0015637000005881418
+  },
+  "plasticLog": {"timeoutMs":10020,"threadWaiters":1,"inUseConnections":0,"uvcsOperations":false,"package":"com.unity.collab-proxy@2.11.4"},
+  "localSetting": "UVCS integration disabled through SwitchUVCSPlugin.Off; per-project productGUID EditorPrefs",
+  "limits": ["Two ordinary cycles per comparison group, same editor session, no profiling capture", "No game or headset regression validation", "Old JIT degradation and repeated reload request sources remain unresolved", "Exact unfinished Plastic ThreadWaiter origin not established"]
+}

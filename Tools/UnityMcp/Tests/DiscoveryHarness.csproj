@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup>
+  <OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework>
+  <ImplicitUsings>disable</ImplicitUsings><Nullable>disable</Nullable>
+  <McpPackageRoot Condition="'$(McpPackageRoot)' == ''">$(MSBuildThisFileDirectory)../../../Packages/com.coplaydev.unity-mcp</McpPackageRoot>
+  <CommandRegistrySource Condition="'$(CommandRegistrySource)' == ''">$(McpPackageRoot)/Editor/Tools/CommandRegistry.cs</CommandRegistrySource>
+  <ToolDiscoverySource Condition="'$(ToolDiscoverySource)' == ''">$(McpPackageRoot)/Editor/Services/ToolDiscoveryService.cs</ToolDiscoverySource>
+  <BaseOutputPath>../../../tmp/editor-reload-audit/upstream-harness-bin/</BaseOutputPath>
+ </PropertyGroup>
+ <ItemGroup>
+  <Compile Include="$(CommandRegistrySource)" Link="Production/CommandRegistry.cs" />
+  <Compile Include="$(McpPackageRoot)/Editor/Tools/McpForUnityToolAttribute.cs" Link="Production/ToolAttribute.cs" />
+  <Compile Include="$(McpPackageRoot)/Editor/Resources/McpForUnityResourceAttribute.cs" Link="Production/ResourceAttribute.cs" />
+  <Compile Include="$(ToolDiscoverySource)" Link="Production/ToolDiscoveryService.cs" />
+  <Compile Include="$(McpPackageRoot)/Editor/Services/ResourceDiscoveryService.cs" Link="Production/ResourceDiscoveryService.cs" />
+  <Compile Include="$(McpPackageRoot)/Editor/Services/IToolDiscoveryService.cs" Link="Production/ToolMetadata.cs" />
+  <Compile Include="$(McpPackageRoot)/Editor/Services/IResourceDiscoveryService.cs" Link="Production/ResourceMetadata.cs" />
+  <Compile Include="$(McpPackageRoot)/Editor/Helpers/StringCaseUtility.cs" Link="Production/StringCaseUtility.cs" />
+ </ItemGroup>
+</Project>

@@ -12,6 +12,23 @@
 
 ## Где это настроено
 
+### Локальная встроенная интеграция Unity Version Control
+
+На машине asker 2026-10-03 встроенный UVCS-плагин collab-proxy 2.11.4 выключен
+штатным переключателем. Причина подтверждена таймером Unity и логом Plastic:
+BeforeAssemblyReload ждёт 10 секунд один ThreadWaiter при отсутствии UVCSOperations
+и занятых соединений. После выключения два обычных reload заняли 4,749/4,819 с
+вместо примерно 15 с. Полный [аудит](audit/editor-reload-audit-2026-10-03.md).
+
+Это EditorPrefs-предпочтение с productGUID проекта, не файл под Git и не удаление
+пакета/workspace. Git-хуки и внешний Plastic CLI продолжают работать независимо.
+Включить обратно можно штатным переключателем Unity Version Control в Unity;
+это возвращает встроенные статусы, overlays и обработчики ассетов и может вернуть
+ожидание. При повторении сначала проверить реальные pending operations. Для
+повторного выключения под Unity lock — `Tools/UnityMcp/Tests/DisableUvcs.cs.txt`.
+
+### Git -> Plastic через внешний CLI
+
 Система состоит из двух частей:
 
 1. Автоконфиг git hooks path

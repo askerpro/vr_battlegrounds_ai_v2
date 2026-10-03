@@ -2,6 +2,19 @@
 
 Все важные изменения проекта будут фиксироваться в этом файле.
 
+## [2026-10-03] - Обнаружение Unity MCP и ожидание перезагрузки домена
+
+- MCP закреплён на stable 10.2.0; перенесён upstream beta-фикс ToolDiscoveryService
+  без полного AppDomain fallback. Порядок дубликатов согласован, повреждённый
+  пользовательский атрибут изолирован. Патч/установка/стенд — `Tools/UnityMcp/`.
+- Проверки: 35 tools/19 resources с неизменными метаданными, настоящий custom
+  sync/async/resource probe, внешний стенд 8/8, AndroidCompileGate PASS.
+- Дополнительные 10 секунд диагностированы как Plastic WaitForPendingOperations,
+  а не MCP teardown. Встроенный UVCS выключен штатно в локальных EditorPrefs проекта;
+  пакет, workspace и Git/внешний cm сохранены. Итоговые обычные reload: 4,749/4,819 с.
+- Данные, границы и оставшийся вопрос прежней стоимости JIT —
+  `Docs/audit/editor-reload-audit-2026-10-03.md`; установка — `Docs/unity-mcp.md`.
+
 ## [2026-10-03] - Пути паков окружения и старый импорт материалов
 
 - 12 паков перенесены в `Assets/env_packs/<имя>` штатным `AssetDatabase.MoveAsset`;

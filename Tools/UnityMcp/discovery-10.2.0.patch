@@ -1,0 +1,135 @@
+diff --git a/Editor/MCPForUnity.Editor.asmdef b/Editor/MCPForUnity.Editor.asmdef
+index 8639b17c..12a9202a 100644
+--- a/Editor/MCPForUnity.Editor.asmdef
++++ b/Editor/MCPForUnity.Editor.asmdef
+@@ -10,12 +10,7 @@
+     "excludePlatforms": [],
+     "overrideReferences": true,
+     "precompiledReferences": [
+-        "Newtonsoft.Json.dll",
+-        "Microsoft.CodeAnalysis.dll",
+-        "Microsoft.CodeAnalysis.CSharp.dll",
+-        "System.Collections.Immutable.dll",
+-        "System.Reflection.Metadata.dll",
+-        "System.Runtime.CompilerServices.Unsafe.dll"
++        "Newtonsoft.Json.dll"
+     ],
+     "autoReferenced": true,
+     "defineConstraints": [],
+@@ -27,4 +22,4 @@
+         }
+     ],
+     "noEngineReferences": false
+-}
+\ No newline at end of file
++}
+diff --git a/Editor/Services/ToolDiscoveryService.cs b/Editor/Services/ToolDiscoveryService.cs
+index e2ff5125..959dc5f9 100644
+--- a/Editor/Services/ToolDiscoveryService.cs
++++ b/Editor/Services/ToolDiscoveryService.cs
+@@ -23,30 +23,9 @@ namespace MCPForUnity.Editor.Services
+ 
+             _cachedTools = new Dictionary<string, ToolMetadata>();
+ 
+-            // Primary scan via TypeCache (fast, but can miss project assemblies in some domain-reload states)
+-            var toolTypes = TypeCache.GetTypesWithAttribute<McpForUnityToolAttribute>();
+-
+-            // Fallback scan via AppDomain (slower but exhaustive; mirrors CommandRegistry behaviour)
+-            var appDomainTypes = AppDomain.CurrentDomain.GetAssemblies()
+-                .Where(a => !a.IsDynamic)
+-                .SelectMany(a =>
+-                {
+-                    try { return a.GetTypes(); }
+-                    catch (Exception ex)
+-                    {
+-                        McpLog.Warn($"Failed to reflect types from assembly {a.FullName}: {ex.Message}");
+-                        return new Type[0];
+-                    }
+-                })
+-                .Where(t => t.GetCustomAttribute<McpForUnityToolAttribute>() != null);
+-
+-            // Merge both scans, deduplicating by type
+-            var allToolTypes = toolTypes
+-                .Concat(appDomainTypes)
+-                .Distinct()
+-                .ToList();
+-
+-            foreach (var type in allToolTypes)
++            // VR Battlegrounds patch: upstream beta, perf(discovery), issue #1336.
++            // TypeCache уже содержит индекс; повторный обход AppDomain не нужен.
++            foreach (var type in InRegistrationOrder(TypeCache.GetTypesWithAttribute<McpForUnityToolAttribute>()))
+             {
+                 McpForUnityToolAttribute toolAttr;
+                 try
+@@ -80,6 +59,13 @@ namespace MCPForUnity.Editor.Services
+             return _cachedTools.Values.ToList();
+         }
+ 
++        // Совпадение имён разрешается одинаково при каждом reload.
++        internal static IEnumerable<Type> InRegistrationOrder(IEnumerable<Type> types)
++        {
++            return types.OrderBy(type => type.FullName, StringComparer.Ordinal)
++                .ThenBy(type => type.Assembly.FullName, StringComparer.Ordinal);
++        }
++
+         public ToolMetadata GetToolMetadata(string toolName)
+         {
+             if (_cachedTools == null)
+diff --git a/Editor/Tools/CommandRegistry.cs b/Editor/Tools/CommandRegistry.cs
+index a1d91d40..442182f2 100644
+--- a/Editor/Tools/CommandRegistry.cs
++++ b/Editor/Tools/CommandRegistry.cs
+@@ -87,7 +87,8 @@ namespace MCPForUnity.Editor.Tools
+                 // could resolve differently between domain reloads.
+                 int toolCount = 0;
+                 foreach (var type in TypeCache.GetTypesWithAttribute<McpForUnityToolAttribute>()
+-                             .OrderBy(t => t.FullName, StringComparer.Ordinal))
++                             .OrderBy(t => t.FullName, StringComparer.Ordinal)
++                             .ThenBy(t => t.Assembly.FullName, StringComparer.Ordinal))
+                 {
+                     if (RegisterCommandType(type, isResource: false))
+                         toolCount++;
+@@ -95,7 +96,8 @@ namespace MCPForUnity.Editor.Tools
+ 
+                 int resourceCount = 0;
+                 foreach (var type in TypeCache.GetTypesWithAttribute<McpForUnityResourceAttribute>()
+-                             .OrderBy(t => t.FullName, StringComparer.Ordinal))
++                             .OrderBy(t => t.FullName, StringComparer.Ordinal)
++                             .ThenBy(t => t.Assembly.FullName, StringComparer.Ordinal))
+                 {
+                     if (RegisterCommandType(type, isResource: true))
+                         resourceCount++;
+@@ -162,16 +164,26 @@ namespace MCPForUnity.Editor.Tools
+             string commandName;
+             string typeLabel = isResource ? "resource" : "tool";
+ 
+-            // Get command name from appropriate attribute
+-            if (isResource)
++            // VR Battlegrounds patch: повреждённый атрибут не прерывает весь каталог.
++            try
+             {
+-                var resourceAttr = type.GetCustomAttribute<McpForUnityResourceAttribute>();
+-                commandName = resourceAttr.ResourceName;
++                if (isResource)
++                {
++                    var resourceAttr = type.GetCustomAttribute<McpForUnityResourceAttribute>();
++                    if (resourceAttr == null) return false;
++                    commandName = resourceAttr.ResourceName;
++                }
++                else
++                {
++                    var toolAttr = type.GetCustomAttribute<McpForUnityToolAttribute>();
++                    if (toolAttr == null) return false;
++                    commandName = toolAttr.CommandName;
++                }
+             }
+-            else
++            catch (Exception ex)
+             {
+-                var toolAttr = type.GetCustomAttribute<McpForUnityToolAttribute>();
+-                commandName = toolAttr.CommandName;
++                McpLog.Warn($"Failed to read MCP {typeLabel} attribute for {type.FullName}: {ex.Message}");
++                return false;
+             }
+ 
+             // Auto-generate command name if not explicitly provided

@@ -397,6 +397,8 @@ namespace VrBattlegrounds.Player
         public void ServerDevTeleport(Vector3 position, Quaternion rotation)
         {
             GameLog.Debug.Info($"[PlayerController] {name}: отладочный перенос в {position}.", this);
+            if (Session != null)
+                Session.GetComponent<WallPass.WallPassMonitor>()?.ResetForServerTeleport(position);
             RpcDevTeleport(position, rotation);
         }
 

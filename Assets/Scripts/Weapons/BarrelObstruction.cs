@@ -45,6 +45,7 @@ namespace VrBattlegrounds.Weapons
         private readonly Collider[] _overlaps = new Collider[16];
         private UxrFirearmWeapon _firearm;
         private UxrProjectileSource _source;
+        private WeaponUseBlocker _blocking;
 
         public bool IsObstructed { get; private set; }
         public Transform Breech => _breech;
@@ -53,12 +54,14 @@ namespace VrBattlegrounds.Weapons
         {
             _firearm = GetComponent<UxrFirearmWeapon>();
             _source = GetComponent<UxrProjectileSource>();
+            _blocking = GetComponent<WeaponUseBlocker>();
+            if (_blocking == null) _blocking = gameObject.AddComponent<WeaponUseBlocker>();
         }
 
         private void OnDisable()
         {
             IsObstructed = false;
-            if (_firearm != null) _firearm.IsUseBlocked = false;
+            if (_blocking != null) _blocking.SetBarrelObstructed(false);
         }
 
         private void Update()
@@ -71,12 +74,12 @@ namespace VrBattlegrounds.Weapons
             if (!held)
             {
                 IsObstructed = false;
-                _firearm.IsUseBlocked = false;
+                _blocking.SetBarrelObstructed(false);
                 return;
             }
 
             IsObstructed = IsBarrelObstructed(grabber.Avatar != null ? grabber.Avatar.transform : null);
-            _firearm.IsUseBlocked = IsObstructed;
+            _blocking.SetBarrelObstructed(IsObstructed);
 
             if (IsObstructed && grabber.Avatar != null && grabber.Avatar.AvatarMode == UxrAvatarMode.Local &&
                 UxrAvatar.LocalAvatarInput.GetButtonsPressDown(grabber.Side, UxrInputButtons.Trigger))

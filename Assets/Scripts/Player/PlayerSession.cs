@@ -8,6 +8,7 @@ using VrBattlegrounds.Network;
 using VrBattlegrounds.PhysicalSpaceUtils;
 
 using VrBattlegrounds.Player.Avatars;
+using VrBattlegrounds.Player.WallPass;
 namespace VrBattlegrounds.Player
 {
     /// <summary>
@@ -49,6 +50,18 @@ namespace VrBattlegrounds.Player
         [SyncVar] public int Kills = 0;
         [SyncVar] public int Deaths = 0;
         [SyncVar] public int Score = 0;
+
+        // Состояние стены переживает замену скина: замена тела не отменяет нарушение.
+        [SyncVar] private WallPassStatus _wallPassStatus;
+
+        public WallPassStatus WallPassStatus => _wallPassStatus;
+
+        /// <summary>Публикует единый серверный снимок T-40 для оружия и локальных эффектов.</summary>
+        [Server]
+        internal void ServerSetWallPassStatus(WallPassStatus status)
+        {
+            if (StateEventAuthority.IsWorldAuthority) _wallPassStatus = status;
+        }
 
         /// <summary>
         /// Пропорции игрока, снятые калибровкой роста: отношение его роста к базовому
@@ -139,6 +152,18 @@ namespace VrBattlegrounds.Player
         /// аватара — новый приходит из префаба, то есть со сдвигом ноль.
         /// </summary>
         private float _appliedHeightOffset;
+
+        private const double InitialCalibrationWindow = 5.0;
+        private double _initialCalibrationDeadline;
+        private bool _initialCalibrationReceived;
+        private bool _initialCalibrationSent;
+
+        /// <summary>
+        /// Первичная калибровка приходит до выбора опоры T-40. Бот не ждёт клиента;
+        /// после ограниченного окна сервер использует исходные пропорции.
+        /// </summary>
+        internal bool InitialCalibrationReady => connectionToClient == null ||
+            _initialCalibrationReceived || NetworkTime.time >= _initialCalibrationDeadline;
 
         // ── Готовность к раунду ───────────────────────────────────────────────
         //
@@ -276,11 +301,16 @@ namespace VrBattlegrounds.Player
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
+            // Компоненты сессии, а не аватара: все скины и боты получают одну механику.
+            if (GetComponent<WallPassMonitor>() == null) gameObject.AddComponent<WallPassMonitor>();
+            if (GetComponent<WallPassFeedback>() == null) gameObject.AddComponent<WallPassFeedback>();
         }
 
         public override void OnStartServer()
         {
             base.OnStartServer();
+            _initialCalibrationReceived = false;
+            _initialCalibrationDeadline = NetworkTime.time + InitialCalibrationWindow;
             GameLog.Player.Info($"[PlayerSession] {netId} started on server for {PlayerName}.");
             SessionReady?.Invoke(this);
         }
@@ -291,6 +321,7 @@ namespace VrBattlegrounds.Player
             if (isLocalPlayer)
             {
                 LocalSession = this;
+                _initialCalibrationSent = false;
 
                 // Хук ActiveAvatarNetId мог отработать раньше: Mirror применяет SyncVar
                 // до вызова OnStartClient, и тогда LocalSession ещё не был назначен,
@@ -391,9 +422,46 @@ namespace VrBattlegrounds.Player
             PhysicalSpaceSyncManager sync = PhysicalSpaceSyncManager.Instance;
             if (sync == null) return;
 
+            if (!_initialCalibrationSent)
+            {
+                _initialCalibrationSent = true;
+                CmdPublishInitialCalibration(sync.AccumulatedScaleMultiplier,
+                    sync.AccumulatedHeightOffset, sync.IsCalibrated);
+                return;
+            }
+
             CmdSetCalibrationScale(sync.AccumulatedScaleMultiplier);
             CmdSetCalibrationHeightOffset(sync.AccumulatedHeightOffset);
             CmdSetCalibrated(sync.IsCalibrated);
+        }
+
+        /// <summary>
+        /// Однократный снимок при подключении, в том числе к уже идущему бою.
+        /// Поздний первый запрос не даёт сбросить принятую сервером опору.
+        /// </summary>
+        [Command]
+        private void CmdPublishInitialCalibration(float scale, float heightOffset, bool calibrated)
+        {
+            if (_initialCalibrationReceived) return;
+            if (!TryNormalizeCalibrationScale(scale, out float normalizedScale) ||
+                !TryNormalizeCalibrationHeightOffset(heightOffset, out float normalizedOffset))
+            {
+                GameLog.PhysicalSpace.Warning($"[PlayerSession] {PlayerName}: первичная калибровка нечисловая — запрос отброшен.");
+                return;
+            }
+
+            bool changesCalibration = !Mathf.Approximately(CalibrationScale, normalizedScale) ||
+                !Mathf.Approximately(CalibrationHeightOffset, normalizedOffset) || IsCalibrated != calibrated;
+            if (NetworkTime.time >= _initialCalibrationDeadline && changesCalibration && RejectCombatCalibration()) return;
+
+            CalibrationScale = normalizedScale;
+            CalibrationHeightOffset = normalizedOffset;
+            IsCalibrated = calibrated;
+            ApplyCalibrationScale();
+            ApplyCalibrationHeightOffset();
+            _initialCalibrationReceived = true;
+            GameLog.PhysicalSpace.Info($"[PlayerSession] {PlayerName}: первичная калибровка принята, " +
+                $"scale={normalizedScale:F2}, floor={normalizedOffset:F2}, calibrated={calibrated}.");
         }
 
         // ── SyncVar Hooks ─────────────────────────────────────────────────────
@@ -687,6 +755,8 @@ namespace VrBattlegrounds.Player
                 return;
             }
 
+            if (!Mathf.Approximately(CalibrationScale, normalized) && RejectCombatCalibration()) return;
+
             if (!Mathf.Approximately(normalized, scale))
             {
                 GameLog.Player.Warning(
@@ -741,6 +811,8 @@ namespace VrBattlegrounds.Player
                 return;
             }
 
+            if (!Mathf.Approximately(CalibrationHeightOffset, normalized) && RejectCombatCalibration()) return;
+
             if (!Mathf.Approximately(normalized, offset))
             {
                 GameLog.Player.Warning(
@@ -772,12 +844,21 @@ namespace VrBattlegrounds.Player
         public void CmdSetCalibrated(bool calibrated)
         {
             if (IsCalibrated == calibrated) return;
+            if (RejectCombatCalibration()) return;
 
             IsCalibrated = calibrated;
 
             GameLog.Player.Info(
                 $"[PlayerSession] {PlayerName}: калибровка физического пространства " +
                 $"{(calibrated ? "объявлена — место игрока задано физически" : "снята — место игрока назначает игра")}");
+        }
+
+        private bool RejectCombatCalibration()
+        {
+            var mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
+            if (mode == null || mode.PhysicalCalibrationEnabled || IsEliminated || Role != GameRole.Player) return false;
+            GameLog.PhysicalSpace.Warning($"[PlayerSession] {PlayerName}: изменение калибровки отклонено — идёт бой.");
+            return true;
         }
 
         /// <summary>

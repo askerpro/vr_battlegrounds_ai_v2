@@ -6,6 +6,7 @@ using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Managers;
+using VrBattlegrounds.Player.WallPass;
 
 namespace VrBattlegrounds.GameModes
 {
@@ -294,6 +295,18 @@ namespace VrBattlegrounds.GameModes
         /// <c>UxrActor.DamageReceiving</c>; стрельба по мишеням и предметам не затронута.
         /// </summary>
         public virtual bool PlayersTakeDamage => true;
+
+        [Header("Проход сквозь препятствия (T-40)")]
+        [SerializeField] private WallPassSettings _wallPassSettings = new WallPassSettings();
+
+        /// <summary>Штрафы режима; геометрические пороги едины для всей игры.</summary>
+        public WallPassSettings WallPassSettings => _wallPassSettings ?? (_wallPassSettings = new WallPassSettings());
+
+        /// <summary>Вне боя свободное перемещение; в разминке — обучение без урона и смерти.</summary>
+        public virtual bool WallPassDetectionEnabled => IsWarmup || WeaponsEnabled;
+
+        /// <summary>Изменение системы координат допустимо до боя, когда оно не отменяет штраф стены.</summary>
+        public virtual bool PhysicalCalibrationEnabled => !WallPassDetectionEnabled || !PlayersTakeDamage || IsWarmup;
 
         /// <summary>
         /// Выбор команды закрыт для самого игрока (матч начался). Сменить команду после

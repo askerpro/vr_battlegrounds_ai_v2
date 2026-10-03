@@ -9,6 +9,9 @@ using UltimateXR.Extensions.Unity;
 using UltimateXR.Extensions.Unity.Math;
 using UnityEngine;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Managers;
+using VrBattlegrounds.Player;
+using VrBattlegrounds.UI.HUD;
 
 namespace VrBattlegrounds.PhysicalSpaceUtils
 {
@@ -192,6 +195,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
         public event Action HeightCalibrationStarted;
         public event Action HeightCalibrationCompleted;
+        public event Action HeightCalibrationCancelled;
 
         /// <summary>
         /// Отработал первый шаг калибровки высоты — синхронизация пола, — и
@@ -452,6 +456,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         /// </summary>
         public void BeginCalibration()
         {
+            if (!CanChangeCalibrationNow()) return;
             CollectAnchors();
 
             if (_virtualAnchors.Count < 2)
@@ -494,6 +499,11 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         private void RegisterCalibrationPoint(Vector3 realControllerPosition)
         {
             if (!IsCalibrating || _currentAnchorIndex > 1) return;
+            if (!CanChangeCalibrationNow())
+            {
+                CancelCalibration();
+                return;
+            }
 
             _realAnchorPositions[_currentAnchorIndex] = realControllerPosition;
             GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Point {_currentAnchorIndex} registered at real space pos: {realControllerPosition}");
@@ -533,6 +543,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         public void BeginHeightCalibration()
         {
             if (IsCalibrating || IsCalibratingHeight) return; // Don't mix calibrations
+            if (!CanChangeCalibrationNow()) return;
 
             CurrentHeightCalibrationPhase = HeightCalibrationPhase.Floor;
             HeightCalibrationStarted?.Invoke();
@@ -541,6 +552,12 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
         private void ProcessHeightCalibrationStep(UxrHandSide hand)
         {
+            if (!CanChangeCalibrationNow())
+            {
+                CurrentHeightCalibrationPhase = HeightCalibrationPhase.None;
+                HeightCalibrationCancelled?.Invoke();
+                return;
+            }
             if (UxrAvatar.LocalAvatar == null) return;
 
             if (CurrentHeightCalibrationPhase == HeightCalibrationPhase.Floor)
@@ -772,10 +789,25 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         }
 
         /// <summary>
-        /// Applies the currently calculated offset and rotation to the local UXR Avatar.
+        /// Разрешает менять физическую калибровку вне боя или для выбывшего игрока.
         /// </summary>
+        private static bool CanChangeCalibrationNow()
+        {
+            var mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
+            PlayerSession session = PlayerSession.LocalSession;
+            if (mode == null || mode.PhysicalCalibrationEnabled || session == null ||
+                session.IsEliminated || session.Role != GameRole.Player) return true;
+
+            // Изменение координат посреди боя невозможно отличить от прохода через стену.
+            GameLog.PhysicalSpace.Warning("[PhysicalSpaceSyncManager] Калибровка отклонена: идёт бой.");
+            WatchNotifications.Post("Калибровка доступна вне боя", key: "calibration-combat");
+            return false;
+        }
+
+        /// <summary>Применяет рассчитанное смещение и поворот к локальному аватару.</summary>
         public void ApplyAvatarTransform()
         {
+            if (!CanChangeCalibrationNow()) return;
             if (UxrAvatar.LocalAvatar == null) return;
 
             Vector3 newPosition = TransformRealToVirtual(UxrAvatar.LocalAvatar.transform.position);

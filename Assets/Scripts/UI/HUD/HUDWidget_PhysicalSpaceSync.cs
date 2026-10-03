@@ -49,6 +49,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             manager.HeightCalibrationStarted += HandleHeightSyncStarted;
             manager.HeightCalibrationCompleted += HandleHeightSyncCompleted;
+            manager.HeightCalibrationCancelled += HandleSyncCancelled;
         }
 
         private void UnsubscribeFromEvents()
@@ -64,6 +65,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             manager.HeightCalibrationStarted -= HandleHeightSyncStarted;
             manager.HeightCalibrationCompleted -= HandleHeightSyncCompleted;
+            manager.HeightCalibrationCancelled -= HandleSyncCancelled;
         }
 
         private void HandleSyncStarted()

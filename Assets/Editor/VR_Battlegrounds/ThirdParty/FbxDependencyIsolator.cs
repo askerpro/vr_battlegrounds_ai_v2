@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using VrBattlegrounds.Core;
 
 namespace VRBattlegrounds.Editor
 {
@@ -17,7 +18,7 @@ namespace VRBattlegrounds.Editor
 
             if (string.IsNullOrEmpty(fbxPath) || !fbxPath.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase))
             {
-                Debug.LogWarning("[FBX Isolator] Please select an FBX file first.");
+                GameLog.Debug.Warning("[FBX Isolator] Сначала выберите FBX-файл.");
                 return;
             }
 
@@ -49,7 +50,7 @@ namespace VRBattlegrounds.Editor
 
             if (materialsToMove.Count == 0 && texturesToMove.Count == 0)
             {
-                Debug.LogWarning("[FBX Isolator] No external dependencies found. Did you click 'Extract Materials' in FBX import settings?");
+                GameLog.Debug.Warning("[FBX Isolator] Внешние зависимости не найдены. Извлеките материалы в настройках импорта FBX.");
                 return;
             }
 
@@ -75,13 +76,14 @@ namespace VRBattlegrounds.Editor
             ModelImporter fbxImporter = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
             if (fbxImporter != null)
             {
-                fbxImporter.materialLocation = ModelImporterMaterialLocation.External;
+                // Внешние .mat подключаются через remap; устаревший режим External для этого не нужен.
+                fbxImporter.materialLocation = ModelImporterMaterialLocation.InPrefab;
                 fbxImporter.SearchAndRemapMaterials(ModelImporterMaterialName.BasedOnMaterialName, ModelImporterMaterialSearch.RecursiveUp);
                 fbxImporter.SaveAndReimport();
                 report.AppendLine("\n[Auto-Remap] Successfully remapped and linked materials to the FBX!");
             }
 
-            Debug.Log($"[FBX Isolator] Moved {movedMatCount} materials and {movedTexCount} textures.\n" +
+            GameLog.Debug.Info($"[FBX Isolator] Moved {movedMatCount} materials and {movedTexCount} textures.\n" +
                       $"All USED assets are now in: {gatherDir}.\n" +
                       $"You can now SAFELY DELETE the old source folders! \n\n" + report.ToString());
         }

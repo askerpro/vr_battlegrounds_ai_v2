@@ -77,7 +77,7 @@
 | `Roadmap.md` | План развития проекта |
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
 | `version-control.md` | Git/Plastic workflow: автодублирование коммитов, хук, диагностика |
-| `unity-mcp.md`, `Tools/UnityMcp/` | Закреплённый MCP 10.2.0, upstream discovery-патч, воспроизводимая установка и проверка 35 tools/19 resources; CodeDom/MAX_PATH, локальный UVCS-переключатель и автосохранение перед `run_tests` |
+| `unity-mcp.md`, `Tools/UnityMcp/` | MCP 10.2.0: discovery и автоматический output-guard патчи, воспроизводимая установка, полные отчёты и чтение по частям; сводка и резервный лимит Codex; CodeDom/MAX_PATH, UVCS и автосохранение перед `run_tests` |
 | `tasks/unity-mcp-discovery-optimization.md` | Принятый контракт MCP-оптимизации и выполненные проверки; результаты и пределы — в аудите, дальнейшая игровая работа не входит |
 | `release.md` | Сборка сервера, Quest и планшета; почему у них одинаковые UXR id |
 | `Mirror/mirror-patches.md` | Правки вендорного Mirror: что, зачем, как перенести при обновлении |

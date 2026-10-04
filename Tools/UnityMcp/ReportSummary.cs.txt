@@ -1,0 +1,42 @@
+// Хвост execute_code. До этого блока создать объект report с массивом failures.
+// Пример: var report = new { components = count, assets = 5, failures = failures };
+// Файл уникален для вызова: конкурентный агент не перезапишет полный результат.
+var payload = Newtonsoft.Json.Linq.JObject.FromObject(report);
+var reportFailures = payload["failures"] as Newtonsoft.Json.Linq.JArray;
+if (reportFailures == null)
+    throw new System.InvalidOperationException("Отчёт проверки должен содержать массив failures");
+var reportDirectory = System.IO.Path.GetFullPath("tmp/mcp-reports");
+System.IO.Directory.CreateDirectory(reportDirectory);
+var reportPath = System.IO.Path.Combine(reportDirectory, System.Guid.NewGuid().ToString("N") + ".json");
+System.IO.File.WriteAllText(reportPath, payload.ToString(Newtonsoft.Json.Formatting.Indented));
+var summary = new Newtonsoft.Json.Linq.JObject();
+// Скалярные метрики сохраняем, массивы и снимки объектов остаются в файле.
+foreach (var field in payload.Properties().Take(20))
+    if (field.Value is Newtonsoft.Json.Linq.JValue)
+        summary[field.Name] = field.Value.Type == Newtonsoft.Json.Linq.JTokenType.String
+            ? new Newtonsoft.Json.Linq.JValue(((string)field.Value).Substring(0, System.Math.Min(240, ((string)field.Value).Length)))
+            : field.Value.DeepClone();
+long totalFailureCount = reportFailures.Count;
+long declaredFailureCount;
+var declaredCountToken = payload["failureCount"];
+if (declaredCountToken != null && declaredCountToken.Type == Newtonsoft.Json.Linq.JTokenType.Integer
+    && long.TryParse(declaredCountToken.ToString(), out declaredFailureCount) && declaredFailureCount >= 0)
+    totalFailureCount = System.Math.Max(totalFailureCount, declaredFailureCount);
+summary["passed"] = (payload["passed"] == null || (bool)payload["passed"]) && totalFailureCount == 0;
+summary["failureCount"] = totalFailureCount;
+summary["failureEntries"] = reportFailures.Count;
+summary["failureGroupsScope"] = totalFailureCount > reportFailures.Count ? "sample" : "complete";
+summary["failureSample"] = new Newtonsoft.Json.Linq.JArray(reportFailures.Take(10).Select(f => {
+    var text = f.ToString(Newtonsoft.Json.Formatting.None);
+    return text.Substring(0, System.Math.Min(240, text.Length));
+}));
+var failureGroups = reportFailures.GroupBy(f => {
+    var text = f.Type == Newtonsoft.Json.Linq.JTokenType.String ? (string)f : "[structured failure]";
+    var reason = System.Text.RegularExpressions.Regex.Replace(text, @"\s+-?\d+$", "");
+    return reason.Substring(0, System.Math.Min(120, reason.Length));
+}).OrderByDescending(g => g.Count()).ToList();
+summary["failureGroupCount"] = failureGroups.Count;
+summary["failureGroups"] = Newtonsoft.Json.Linq.JArray.FromObject(failureGroups.Take(10).Select(g => new { reason = g.Key, count = g.Count() }));
+summary["reportPath"] = reportPath;
+summary["detailsOmitted"] = reportFailures.Count > 10 || payload.Properties().Any(p => p.Value is Newtonsoft.Json.Linq.JContainer);
+return summary;

@@ -1,3 +1,5 @@
+# Резервный лимит истории. Основная защита — сводка ДО text(), см. unity_mcp.md.
+tool_output_token_limit = 4000
 
 [mcp_servers.blender]
 command = "uvx"

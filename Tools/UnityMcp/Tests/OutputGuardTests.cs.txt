@@ -1,0 +1,91 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using MCPForUnity.Editor.Helpers;
+using MCPForUnity.Editor.Tools;
+namespace UnityEngine { public static class Application { public static string dataPath = Path.GetFullPath("Assets"); } }
+class Program
+{
+    static int checks;
+    static void Check(bool condition, string message) { if (!condition) throw new Exception(message); checks++; }
+    static JObject Large()
+    {
+        return new JObject { ["components"] = 17416, ["assets"] = 5, ["ready"] = true,
+            ["failures"] = new JArray(Enumerable.Range(0, 8880).Select(i => "native component delta " + (-24536354 - i))) };
+    }
+    static void Main()
+    {
+        var original = Large();
+        var originalJson = original.ToString(Formatting.None);
+        var result = JObject.FromObject(ExecuteCodeOutputGuard.Limit(original));
+        Check(result["__mcp_output"] != null, "large output was not intercepted");
+        var metadata = (JObject)result["__mcp_output"];
+        Check((bool)metadata["truncated"], "missing truncation marker");
+        Check(result.ToString(Formatting.None).Length <= 2400, "summary exceeds budget");
+        Check((int)result["summary"]["failureCount"] == 8880, "failure count changed");
+        Check(!(bool)result["summary"]["passed"], "failures became success");
+        Check(((JArray)result["summary"]["failureSample"]).Count <= 10, "sample exceeds limit");
+        Check(JToken.DeepEquals(JToken.Parse(File.ReadAllText((string)metadata["reportPath"])), original), "saved report is incomplete");
+        Check(original.ToString(Formatting.None) == originalJson, "source mutated");
+        var sampled = new JObject { ["passed"] = true, ["failureCount"] = 8880,
+            ["failures"] = new JArray("sample failure"), ["padding"] = new string('x', 20000) };
+        var sampledView = JObject.FromObject(ExecuteCodeOutputGuard.Limit(sampled))["summary"];
+        Check((int)sampledView["failureCount"] == 8880, "explicit total replaced by sample length");
+        Check(!(bool)sampledView["passed"], "explicit total ignored in status");
+        sampled["failures"] = new JArray();
+        sampledView = JObject.FromObject(ExecuteCodeOutputGuard.Limit(sampled))["summary"];
+        Check((int)sampledView["failureCount"] == 8880, "empty sample erased explicit total");
+        var small = new JObject { ["passed"] = true, ["value"] = 42 };
+        Check(ReferenceEquals(small, ExecuteCodeOutputGuard.Limit(small)), "small object contract changed");
+        Check((int)ExecuteCodeOutputGuard.Limit(42) == 42, "scalar changed");
+        Check(ExecuteCodeOutputGuard.Limit(null) == null, "null changed");
+        var page = ExecuteCodeOutputGuard.ReadReport((string)metadata["reportId"], "failures", 10, 100000);
+        Check(((JArray)page["items"]).Count <= 10 && (int)page["total"] == 8880, "paging unbounded");
+        Check((string)page["items"][0] == (string)original["failures"][10], "wrong page offset");
+        Check((int)page["nextOffset"] == 10 + ((JArray)page["items"]).Count, "wrong page cursor");
+        Check(page.ToString(Formatting.None).Length <= 2400, "read exceeds budget");
+        var textResult = JObject.FromObject(ExecuteCodeOutputGuard.Limit(new string('я', 20000)));
+        var textPage = ExecuteCodeOutputGuard.ReadReport((string)textResult["__mcp_output"]["reportId"], "", 100, 100000);
+        Check(((string)textPage["text"]).Length <= 1200 && (int)textPage["total"] == 20000, "text paging unbounded");
+        bool rejected = false;
+        try { ExecuteCodeOutputGuard.ReadReport("../../outside", "", 0, 10); } catch (ArgumentException) { rejected = true; }
+        Check(rejected, "path traversal accepted");
+        bool missing = false;
+        try { ExecuteCodeOutputGuard.ReadReport(new string('0', 32), "", 0, 10); } catch (FileNotFoundException) { missing = true; }
+        Check(missing, "missing file accepted");
+        var wide = new JObject(Enumerable.Range(0, 500).Select(i => new JProperty("field" + i, new string('x', 2000))));
+        var wideResult = JObject.FromObject(ExecuteCodeOutputGuard.Limit(wide));
+        Check(wideResult.ToString(Formatting.None).Length <= 2400, "wide summary unbounded");
+        var directory = ExecuteCodeOutputGuard.ReportDirectory;
+        var expectedDirectory = directory;
+        var blocked = Path.GetFullPath("tmp/mcp-native-output-tests/blocked");
+        File.WriteAllText(blocked, "file blocks directory creation");
+        ExecuteCodeOutputGuard.ReportDirectoryOverride = blocked;
+        bool writeFailed = false;
+        try { ExecuteCodeOutputGuard.Limit(original); } catch (IOException) { writeFailed = true; }
+        finally { ExecuteCodeOutputGuard.ReportDirectoryOverride = null; }
+        Check(writeFailed, "failed persistence was hidden");
+        Check(ExecuteCodeOutputGuard.ReportDirectory == expectedDirectory, "override leaked");
+        var invoke = typeof(ExecuteCode).GetMethod("InvokeCompiled", BindingFlags.NonPublic | BindingFlags.Static);
+        MCPDynamicCode.Result = original;
+        var response = invoke.Invoke(null, new object[] { typeof(MCPDynamicCode).Assembly, "probe" });
+        var responseJson = JObject.FromObject(response);
+        Check((bool)responseJson["success"] && responseJson["data"]["result"]["__mcp_output"] != null, "ExecuteCode bypasses guard");
+        ExecuteCodeOutputGuard.ReportDirectoryOverride = blocked;
+        try
+        {
+            responseJson = JObject.FromObject(invoke.Invoke(null, new object[] { typeof(MCPDynamicCode).Assembly, "probe" }));
+            Check(!(bool)responseJson["success"], "write failure became success");
+            Check((bool)responseJson["data"]["executionCompleted"], "already executed operation could be retried");
+        }
+        finally { ExecuteCodeOutputGuard.ReportDirectoryOverride = null; }
+        MCPDynamicCode.Result = 42;
+        responseJson = JObject.FromObject(invoke.Invoke(null, new object[] { typeof(MCPDynamicCode).Assembly, "probe" }));
+        Check((int)responseJson["data"]["result"] == 42, "small ExecuteCode contract changed");
+        Console.WriteLine("PASS native output guard: " + checks + " assertions");
+        Console.WriteLine("rawChars=" + originalJson.Length + "; summaryChars=" + result.ToString(Formatting.None).Length);
+    }
+}

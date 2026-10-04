@@ -6,6 +6,77 @@
 Версии на 2026-08-16: пакет `com.coplaydev.unity-mcp` **10.1.2** (источник — Git, ветка `main`,
 живёт в `Library/PackageCache/`), python-сервер `mcpforunityserver` **10.1.2**.
 
+## Защита контекста от массовых результатов
+
+В установленном MCP 10.2.0 execute_code автоматически сохраняет результаты >6000
+символов JSON и возвращает `data.result.__mcp_output` + `data.result.summary` (до 2400).
+`__mcp_output.truncated=true` означает изменение представления, не успешность проверки.
+Полный файл и его ID указаны в метаданных. Детали читать новым коротким execute_code:
+`return MCPForUnity.Editor.Helpers.ExecuteCodeOutputGuard.ReadReport("<reportId>", "failures", 10, 5);`
+Без повторения исходного кода! При `data.executionCompleted=true` и ошибке сохранения
+операция уже выполнилась: не запускать её повторно ради получения вывода.
+`failureCount` — общий счётчик, `failureEntries` — размер массива, который мог быть выборкой;
+не вычислять общий счётчик по длине sample. `nextOffset` — продолжение страницы,
+`itemsTruncated` — нужно сузить selector для деталей. Правила и проверки — Docs/unity-mcp.md.
+Патч не ограничивает Console, ошибки компиляции и результаты других MCP-инструментов.
+
+Полный диагностический отчёт и вывод для агента имеют разный объём. Проверка записывает
+полный JSON в собственный файл `tmp/` **до** `return`, затем возвращает только сводку:
+`passed`, счётчики, группировку причин, до 10 примеров и `reportPath`.
+Не возвращать тысячи `failures`, компонентов, ассетов или полные снимки объектов.
+Готовый хвост `execute_code` — `Tools/UnityMcp/ReportSummary.cs.txt`; исходный объект `report`
+должен содержать массив `failures` (даже пустой) и, при необходимости, явный `passed`.
+
+В Codex сырые MCP-ответы не передавать в `text()`/`notify()`. Обёртка
+`Tools/UnityMcp/compact-result.js` выбирает `structuredContent` либо один текстовый ответ,
+ограничивает массивы/строки/глубину и общий размер сводки до 6000 символов.
+Она не записывает полный отчёт сама: это обязанность проверялки до возврата ответа.
+Для других MCP-инструментов заранее ограничивать запрос (`count`, пагинация, выбор полей);
+если полноценный отчёт не сохранён, не считать усечённый результат полным аудитом.
+
+Загрузить чистую функцию один раз за сессию; служебный исходник и сырой ответ команды
+остаются внутри `functions.exec`, в модель их не печатать:
+
+```javascript
+// @exec: {"max_output_tokens": 2000}
+const source = await tools.exec_command({
+  cmd: "Get-Content -Raw Tools/UnityMcp/compact-result.js",
+  workdir: "F:\\UnityProjects\\Vr_Battlegrounds_ai",
+  max_output_tokens: 6000
+});
+if (source.exit_code !== 0 || source.output.includes("truncated output")) {
+  throw new Error("Не удалось загрузить ограничитель MCP; сырой ответ не печатать");
+}
+store("unityMcpOutputGuardSource", source.output);
+text({ guardLoaded: true });
+```
+
+После compaction проверить наличие `load(...)`; при отсутствии повторить загрузку.
+Вызовы выполнять через обёртку (переменная `code` — заранее подготовленный код проверки):
+
+```javascript
+// @exec: {"max_output_tokens": 2000}
+const source = load("unityMcpOutputGuardSource");
+if (!source) throw new Error("Сначала загрузить ограничитель MCP");
+const compact = new Function(source + "\nreturn compactUnityResult;")();
+const response = await tools.mcp__unityMCP__execute_code({ action: "execute", code });
+text(compact(response));
+```
+
+`success`/`isError` описывают выполнение инструмента; `result.passed` — исход проверки.
+`ready` описывает готовность редактора, не отсутствие ошибок. Не превращать отсутствие
+данных или обрезанный список в зелёный результат. Детали читать из отчёта адресно:
+по причине/объекту, с ограничением количества; полный файл не выводить обратно в контекст.
+
+В `.codex/config.toml` задан резервный `tool_output_token_limit = 4000` для истории.
+Этот лимит не заменяет фильтрацию и явный бюджет `functions.exec`: разные обёртки могут
+иметь собственные лимиты. Новую конфигурацию проверять в новой сессии; уже выполняющийся
+агент не обязан перечитать её. Существующий большой вывод из истории настройка не удаляет.
+
+Проверка без Unity: `node Tools/UnityMcp/Tests/compact-result.test.cjs`.
+Тесты охватывают 8880 ошибок, дублированный MCP-envelope, транспортную ошибку,
+большие вложенные структуры, явный `passed=false` и циклы.
+
 ## Транспорт: клиент и Unity должны сходиться в одной точке
 
 ### Симптом

@@ -1,0 +1,29 @@
+diff --git a/Editor/Tools/ExecuteCode.cs b/Editor/Tools/ExecuteCode.cs
+index bef08d49..8b635db0 100644
+--- a/Editor/Tools/ExecuteCode.cs
++++ b/Editor/Tools/ExecuteCode.cs
+@@ -288,8 +288,22 @@ namespace MCPForUnity.Editor.Tools
+                     new { exceptionType = executionError.GetType().Name, stackTrace = executionError.StackTrace, compiler = compilerUsed });
+ 
+             if (result != null)
+-                return new SuccessResponse("Code executed successfully.",
+-                    new { result = SerializeResult(result), compiler = compilerUsed });
++            {
++                // VR Battlegrounds patch: сохраняем большой результат до отправки клиенту.
++                // Код уже выполнен: ошибка записи отчёта не должна провоцировать его повтор.
++                try
++                {
++                    var boundedResult = ExecuteCodeOutputGuard.Limit(SerializeResult(result));
++                    return new SuccessResponse("Code executed successfully.",
++                        new { result = boundedResult, compiler = compilerUsed });
++                }
++                catch (Exception outputError)
++                {
++                    var message = outputError.Message ?? outputError.GetType().Name;
++                    return new ErrorResponse("Code already executed, but its output report could not be prepared. Do not rerun the code; inspect the output error.",
++                        new { executionCompleted = true, outputError = message.Substring(0, Math.Min(message.Length, 240)), compiler = compilerUsed });
++                }
++            }
+ 
+             return new SuccessResponse("Code executed successfully.", new { compiler = compilerUsed });
+         }

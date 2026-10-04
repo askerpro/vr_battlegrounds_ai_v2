@@ -1,0 +1,21 @@
+using System;
+using System.Reflection;
+using Newtonsoft.Json.Linq;
+namespace UnityEditor { public class InitializeOnLoadMethodAttribute : Attribute { } }
+namespace MCPForUnity.Runtime.Helpers { public static class UnityAssembliesCompat { public static Assembly[] GetLoadedAssemblies() { return AppDomain.CurrentDomain.GetAssemblies(); } } }
+namespace MCPForUnity.Editor.Helpers
+{
+    public static class McpLog { public static void Error(string message) { } public static void Warn(string message) { } }
+    public sealed class ToolParams
+    {
+        readonly JObject parameters;
+        public ToolParams(JObject parameters) { this.parameters = parameters; }
+        public Result GetRequired(string name) { return new Result { Value = (string)parameters[name], IsSuccess = parameters[name] != null }; }
+        public sealed class Result { public string Value; public bool IsSuccess; public string ErrorMessage = "Missing parameter"; }
+    }
+}
+public static class MCPDynamicCode
+{
+    public static object Result;
+    public static object Execute() { return Result; }
+}

@@ -1,0 +1,90 @@
+[
+  {
+    "name": "SRM12",
+    "samples": 1060,
+    "maxPositionMm": 0.5432687,
+    "maxRotationDegrees": 0.316517562,
+    "handoffErrorMm": null,
+    "cancelPreserved": null,
+    "regrabPreserved": null,
+    "renderedTriangles": 18299,
+    "handoffChecked": false
+  },
+  {
+    "name": "R08",
+    "samples": 2450,
+    "maxPositionMm": 0.0769384354,
+    "maxRotationDegrees": 0.279764622,
+    "handoffErrorMm": null,
+    "cancelPreserved": null,
+    "regrabPreserved": null,
+    "renderedTriangles": 20877,
+    "handoffChecked": false
+  },
+  {
+    "name": "AK105",
+    "samples": 44,
+    "maxPositionMm": 0.00000746511841,
+    "maxRotationDegrees": 0,
+    "handoffErrorMm": null,
+    "cancelPreserved": null,
+    "regrabPreserved": null,
+    "renderedTriangles": 34499,
+    "handoffChecked": false
+  },
+  {
+    "name": "Viper",
+    "samples": 1680,
+    "maxPositionMm": 0.542667,
+    "maxRotationDegrees": 0.243893117,
+    "handoffErrorMm": 0,
+    "cancelPreserved": true,
+    "regrabPreserved": true,
+    "renderedTriangles": 12068,
+    "handoffChecked": true
+  },
+  {
+    "name": "MKR9",
+    "samples": 84,
+    "maxPositionMm": 0.0000075085627,
+    "maxRotationDegrees": 0,
+    "handoffErrorMm": null,
+    "cancelPreserved": null,
+    "regrabPreserved": null,
+    "renderedTriangles": 28523,
+    "handoffChecked": false
+  },
+  {
+    "name": "Herrington",
+    "samples": 592,
+    "maxPositionMm": 0.3770944,
+    "maxRotationDegrees": 0,
+    "handoffErrorMm": null,
+    "cancelPreserved": null,
+    "regrabPreserved": null,
+    "renderedTriangles": 9415,
+    "handoffChecked": false
+  },
+  {
+    "name": "Mk14",
+    "samples": 332,
+    "maxPositionMm": 0.757146537,
+    "maxRotationDegrees": 0.2502291,
+    "handoffErrorMm": null,
+    "cancelPreserved": null,
+    "regrabPreserved": null,
+    "renderedTriangles": 32575,
+    "handoffChecked": false
+  },
+  {
+    "name": "TR15",
+    "samples": 500,
+    "maxPositionMm": 0.6920621,
+    "maxRotationDegrees": 0,
+    "handoffErrorMm": 0,
+    "cancelPreserved": true,
+    "regrabPreserved": true,
+    "renderedTriangles": 26225,
+    "handoffChecked": true
+  }
+]

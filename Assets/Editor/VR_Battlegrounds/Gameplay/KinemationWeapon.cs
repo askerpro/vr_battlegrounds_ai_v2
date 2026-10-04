@@ -87,7 +87,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             _poseClip = poseClip;
             _assetFolder = $"{ArtRoot}/{assetName}";
 
-            EnsureReadable(_prefab);
+            EnsureReadable(_prefab, attachments);
             _instance = Object.Instantiate(_prefab);
             _instance.hideFlags = HideFlags.HideAndDontSave;
             _animator = _instance.GetComponentInChildren<Animator>(true);
@@ -289,9 +289,24 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         public bool HasClip(string clipName) => clipName != null && WeaponClips().Any(c => c.name == clipName);
 
-        public AnimationClip Clip(string clipName) =>
-            WeaponClips().FirstOrDefault(c => c.name == clipName)
-            ?? throw new ArgumentException($"В {Pack}Animations/{_animFolder}/Weapon нет клипа '{clipName}'");
+        public AnimationClip Clip(string clipName)
+        {
+            AnimationClip[] candidates = WeaponClips().Where(c => c.name == clipName).Distinct().ToArray();
+            if (candidates.Length == 1) return candidates[0];
+            // OverrideController пакета использует короткий .anim, а FBX содержит одноимённый take.
+            if (clipName == "A_W_Mk14EBR_Fire")
+                return candidates.Single(c => AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(c)) == "d375975b289f01247a7b0f78bc018eb9");
+            AnimationClip[] referenced = _animator.runtimeAnimatorController == null ? Array.Empty<AnimationClip>() :
+                _animator.runtimeAnimatorController.animationClips.Where(c => c.name == clipName && candidates.Contains(c)).Distinct().ToArray();
+            if (referenced.Length == 1) return referenced[0];
+            throw new ArgumentException($"{_animFolder}: клип '{clipName}' не найден или неоднозначен ({candidates.Length} источников)");
+        }
+
+        public (string path, int boneIndex) PartIdentity(string part)
+        {
+            Part value = Get(part);
+            return (AnimationUtility.CalculateTransformPath(value.Bone, _instance.transform), value.BoneIndex);
+        }
 
         private IEnumerable<AnimationClip> WeaponClips() =>
             AssetDatabase.FindAssets("t:AnimationClip", new[] { $"{Pack}Animations/{_animFolder}/Weapon" })
@@ -445,10 +460,11 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>Read/Write у моделей, на которые ссылаются рендереры префаба пака (правка только <c>.meta</c> пака).</summary>
-        public static void EnsureReadable(GameObject prefab)
+        public static void EnsureReadable(GameObject prefab, IEnumerable<string> attachments = null)
         {
+            var selected = new HashSet<string>(attachments ?? Enumerable.Empty<string>());
             var meshes = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true).Select(r => r.sharedMesh)
-                               .Concat(prefab.GetComponentsInChildren<MeshFilter>(true).Select(f => f.sharedMesh));
+                               .Concat(prefab.GetComponentsInChildren<MeshFilter>(true).Where(f => selected.Contains(f.name)).Select(f => f.sharedMesh));
             foreach (Mesh mesh in meshes)
             {
                 if (mesh == null) continue;

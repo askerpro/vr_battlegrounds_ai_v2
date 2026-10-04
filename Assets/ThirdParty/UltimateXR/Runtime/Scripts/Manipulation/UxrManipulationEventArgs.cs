@@ -216,6 +216,14 @@ namespace UltimateXR.Manipulation
 
         #region Internal Types & Data
 
+        /// <summary>VR Battlegrounds patch: снимок объекта после передачи мировой позы в Grabbing; snap руки сохраняется.</summary>
+        public void CaptureObjectPose()
+        {
+            if (Grabber == null || GrabbableObject == null) return;
+            GrabberLocalObjectPosition = Grabber.transform.InverseTransformPoint(GrabbableObject.transform.position);
+            GrabberLocalObjectRotation = UnityEngine.Quaternion.Inverse(Grabber.transform.rotation) * GrabbableObject.transform.rotation;
+        }
+
         /// <summary>
         ///     Gets the UxrGrabbableObject position in local UxrGrabber space at the moment of grabbing.
         ///     This is used in multi-player environments to make sure to reproduce the same grab action.

@@ -1,0 +1,19 @@
+{
+  "androidCompileGate": { "passed": true },
+  "baseline": { "job": "ddedf0b115a345afa1bd299ddf46ad32", "completed": 321, "passed": 321 },
+  "eightGroups": { "job": "1804b4382aa04095afc48bd6ea66954f", "completed": 321, "passed": 317, "failed": 4 },
+  "sevenGroups": { "job": "147ca5a634fc4a35a05f80b0db91fff9", "completed": 257, "passed": 257, "failed": 0 },
+  "finalSevenGroupsAfterMeshApiFix": { "job": "84b050a47ffd4e26b6326e6344daa23f", "completed": 257, "passed": 257, "failed": 0 },
+  "kinemationGroup": { "job": "c8770a338b9f4fbca2bb0081c37213f8", "completed": 64, "passed": 60, "failed": 4 },
+  "unchangedLegacyExpectations": [
+    { "weapon": "R08", "assertion": "triangle budget", "oldCountIncludesDisabledMesh": 24605, "renderedCount": 20877, "budget": 22000 },
+    { "weapon": "Viper", "assertion": "manual range equals Fire", "newRangeIncludesEmptyAndFreshPull": true },
+    { "weapon": "Herrington", "assertion": "manual range equals Fire", "newRangeIncludesEmptyAndFreshPull": true },
+    { "weapon": "TR15", "assertion": "manual range equals Fire", "newRangeIncludesEmptyAndFreshPull": true }
+  ],
+  "sourceProbe": { "checkedWeapons": 8, "samples": 6742, "positionToleranceMm": 1, "rotationToleranceDegrees": 0.5, "maxPositionMm": 0.757146537, "maxRotationDegrees": 0.316517562 },
+  "handoffProbe": { "checkedWeapons": ["Viper", "TR15"], "worldPositionErrorMm": 0, "TR15CancelledCatchPreservesBolt": true, "zeroResidualRegrabPreservesWaitBack": true },
+  "regionMeshProbe": { "copySerializedCpuGpuMismatchReproduced": true, "meshApiUpdateConfirmedInRender": true, "checkedWeapon": "Viper" },
+  "notVerified": ["SDK Compute during controller motion", "VR interaction", "actual anchor release", "two network clients", "Quest performance"],
+  "newMechanicTestsWritten": false
+}

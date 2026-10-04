@@ -1,0 +1,58 @@
+[
+  {
+    "name": "SRM12",
+    "parts": 14,
+    "gameplayUnchanged": true,
+    "maxPositionMm": 0.0005929446,
+    "maxRotationDegrees": 0.0
+  },
+  {
+    "name": "R08",
+    "parts": 15,
+    "gameplayUnchanged": true,
+    "maxPositionMm": 0.00069664995,
+    "maxRotationDegrees": 0.0
+  },
+  {
+    "name": "AK105",
+    "parts": 10,
+    "gameplayUnchanged": true,
+    "maxPositionMm": 0.000536397856,
+    "maxRotationDegrees": 0.0
+  },
+  {
+    "name": "Viper",
+    "parts": 9,
+    "gameplayUnchanged": true,
+    "maxPositionMm": 0.000630325871,
+    "maxRotationDegrees": 0.0
+  },
+  {
+    "name": "MKR9",
+    "parts": 10,
+    "gameplayUnchanged": true,
+    "maxPositionMm": 0.0006075195,
+    "maxRotationDegrees": 0.0
+  },
+  {
+    "name": "Herrington",
+    "parts": 6,
+    "gameplayUnchanged": true,
+    "maxPositionMm": 0.000498884241,
+    "maxRotationDegrees": 0.0
+  },
+  {
+    "name": "Mk14",
+    "parts": 8,
+    "gameplayUnchanged": true,
+    "maxPositionMm": 0.000670216454,
+    "maxRotationDegrees": 0.0
+  },
+  {
+    "name": "TR15",
+    "parts": 12,
+    "gameplayUnchanged": true,
+    "maxPositionMm": 0.0006148507,
+    "maxRotationDegrees": 0.0
+  }
+]

@@ -8,6 +8,7 @@ using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Network;
+using System;
 
 namespace VrBattlegrounds.Weapons
 {
@@ -63,6 +64,44 @@ namespace VrBattlegrounds.Weapons
         #region Public types & data
 
         public float SlideThreshold => _slideThreshold;
+        public UxrGrabbableObject Slide => _slide;
+        public event Action ManualCycleCompleted;
+
+        /// <summary>Передаёт законченную открытую визуальную позу физическому механизму без зачёта тяги.</summary>
+        public void HoldVisualPose(Vector3 localOffset)
+        {
+            if (_slide == null) return;
+            _slide.transform.localPosition = _localStart + localOffset;
+            _cosmeticHold = true;
+            _state = SlideState.WaitForward;
+        }
+
+        /// <summary>Ручка должна догнать открытый внутренний затвор, прежде чем тяга может быть зачтена.</summary>
+        public void RequireManualCatch(float progress)
+        {
+            _minimumManualPull = Mathf.Max(_minimumManualPull, Mathf.Max(_slideThreshold, progress));
+            _state = SlideState.WaitForward;
+        }
+
+        public void BeginVisualHandoff(Vector3 localOffset)
+        {
+            // Перехват существующей ручной тяги не сбрасывает зачтённый обратный ход.
+            if (_slide == null || (!_cosmeticHold && localOffset.sqrMagnitude < 1e-10f)) return;
+            _slide.transform.localPosition += localOffset;
+            _cosmeticHold = false;
+            _state = SlideState.WaitForward;
+            if (TryGetSlideTravel(_slide, out _, out float length))
+                _minimumManualPull = GetSlideProgress() + 0.002f / length;
+        }
+
+        public void CancelVisualHold()
+        {
+            if (!_cosmeticHold || _slide == null) return;
+            _slide.transform.localPosition = _localStart;
+            _cosmeticHold = false;
+            _minimumManualPull = 0f;
+            _state = SlideState.WaitForward;
+        }
 
         /// <summary>
         ///     Ось и длина полного хода затвора — из <c>Translation Limits</c> его граббабла, чтобы ход
@@ -115,6 +154,7 @@ namespace VrBattlegrounds.Weapons
             _state   = SlideState.WaitForward;
             _firearm = GetComponent<UxrFirearmWeapon>();
             CaptureSlideRestLocalPosition();
+            if (_slide != null) _slide.Grabbing += HandleSlideGrabbing;
 
             if (_slide != null && !TryGetSlideTravel(_slide, out _, out _))
             {
@@ -136,6 +176,7 @@ namespace VrBattlegrounds.Weapons
             }
 
             bool isGrabbed = UxrGrabManager.Instance != null && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
+            if (_cosmeticHold && !isGrabbed) return;
 
             if (_autoReturnOnRelease && !isGrabbed)
             {
@@ -156,8 +197,9 @@ namespace VrBattlegrounds.Weapons
                 }
             }
 
-            if (_state == SlideState.WaitForward && current > _slideThreshold)
+            if (_state == SlideState.WaitForward && current > Mathf.Max(_slideThreshold, _minimumManualPull))
             {
+                _minimumManualPull = 0f;
                 _state = SlideState.WaitBack;
 
                 bool loaded = _firearm != null && _firearm.IsLoaded(_triggerIndex);
@@ -183,7 +225,24 @@ namespace VrBattlegrounds.Weapons
                 }
 
                 _state = SlideState.WaitForward;
+                ManualCycleCompleted?.Invoke();
             }
+        }
+
+        private void HandleSlideGrabbing(object sender, UxrManipulationEventArgs e)
+        {
+            if (!_cosmeticHold) return;
+            _cosmeticHold = false;
+            // Перенос Empty не является ручной тягою: нужен ещё реальный ход руки.
+            if (TryGetSlideTravel(_slide, out _, out float length))
+                _minimumManualPull = GetSlideProgress() + 0.002f / length;
+            _state = SlideState.WaitForward;
+        }
+
+        protected override void OnDestroy()
+        {
+            if (_slide != null) _slide.Grabbing -= HandleSlideGrabbing;
+            base.OnDestroy();
         }
 
         #endregion
@@ -287,6 +346,8 @@ namespace VrBattlegrounds.Weapons
         private Vector3          _localStart;
         private SlideState       _state;
         private float            _nextLogTime;
+        private bool             _cosmeticHold;
+        private float            _minimumManualPull;
 
         #endregion
     }

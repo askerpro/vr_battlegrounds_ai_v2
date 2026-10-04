@@ -13,11 +13,9 @@ namespace VrBattlegrounds.Interaction
     /// совпадал с тем, что игра реально сделает.
     ///
     /// <para>
-    /// <b>Принять</b> — события <see cref="UxrGrabManager.AnchorRangeEntered" /> /
-    /// <see cref="UxrGrabManager.AnchorRangeLeft" /> (тот же флаг, что включает
-    /// <c>Activate On Compatible Near</c> якоря): SDK выбирает ближайший совместимый якорь так
-    /// же, как при отпускании. Не проверяет SDK одно — что предмет держит одна рука; при хвате
-    /// двумя отпускание ничего не кладёт, поэтому это условие добавлено здесь.
+    /// <b>Принять</b> — текущая выбранная SDK пара якорь/рука через общий
+    /// <see cref="AnchorPlacementReadiness" />. При чтении повторно проверяется актуальная
+    /// локальная рука, совместимость, свободное гнездо и единственная удерживающая рука.
     /// </para>
     ///
     /// <para>
@@ -33,32 +31,33 @@ namespace VrBattlegrounds.Interaction
     {
         private readonly UxrAvatar _avatar;
 
-        // Карман → рука, чей предмет в него встанет. Ведётся событиями SDK.
-        private readonly Dictionary<UxrGrabbableObjectAnchor, UxrGrabber> _accepting = new Dictionary<UxrGrabbableObjectAnchor, UxrGrabber>();
+        // Захваченный экземпляр SDK и общий контракт принимающей готовности.
+        private UxrGrabManager _manager;
+        private AnchorPlacementReadiness _placement;
 
         private List<UxrGrabbableObjectAnchor> _pockets;
+        private bool _disposed;
 
         public PocketReadiness(UxrAvatar avatar)
         {
             _avatar = avatar;
-            UxrGrabManager.Instance.AnchorRangeEntered += GrabManager_AnchorRangeEntered;
-            UxrGrabManager.Instance.AnchorRangeLeft    += GrabManager_AnchorRangeLeft;
+            EnsureManager();
         }
 
         public void Dispose()
         {
-            if (UxrGrabManager.HasInstance)
-            {
-                UxrGrabManager.Instance.AnchorRangeEntered -= GrabManager_AnchorRangeEntered;
-                UxrGrabManager.Instance.AnchorRangeLeft    -= GrabManager_AnchorRangeLeft;
-            }
-
-            _accepting.Clear();
+            _disposed = true;
+            _placement?.Dispose();
+            _placement = null;
+            _manager = null;
         }
 
         /// <summary>Карман, готовый к действию руки <paramref name="side" />, или null.</summary>
         public UxrGrabbableObjectAnchor GetReadyPocket(UxrHandSide side)
         {
+            if (_disposed) return null;
+            EnsureManager();
+            if (_manager == null || _avatar == null) return null;
             UxrGrabber grabber = _avatar.GetGrabber(side);
             if (grabber == null) return null;
 
@@ -68,15 +67,9 @@ namespace VrBattlegrounds.Interaction
         private UxrGrabbableObjectAnchor GetPocketReadyToAccept(UxrGrabber grabber)
         {
             // SDK кладёт предмет, только если отпускает последняя держащая рука.
-            if (UxrGrabManager.Instance.GetHandsGrabbingCount(grabber.GrabbedObject, false) != 1) return null;
-
-            foreach (KeyValuePair<UxrGrabbableObjectAnchor, UxrGrabber> pair in _accepting)
+            foreach (UxrGrabbableObjectAnchor anchor in GetPockets())
             {
-                // Занятый карман SDK из списка не убирает: событие «ушёл» для него не шлётся.
-                if (pair.Value == grabber && pair.Key != null && pair.Key.CurrentPlacedObject == null)
-                {
-                    return pair.Key;
-                }
+                if (_placement.TryGetReadyGrabber(anchor, out UxrGrabber ready) && ready == grabber) return anchor;
             }
 
             return null;
@@ -94,8 +87,8 @@ namespace VrBattlegrounds.Interaction
                 return null;
             }
 
-            if (!UxrGrabManager.Instance.GetClosestGrabbableObject(grabber, out UxrGrabbableObject target, out int grabPoint) ||
-                UxrGrabManager.Instance.IsBeingGrabbed(target, grabPoint))
+            if (!_manager.GetClosestGrabbableObject(grabber, out UxrGrabbableObject target, out int grabPoint) ||
+                _manager.IsBeingGrabbed(target, grabPoint))
             {
                 return null;
             }
@@ -168,20 +161,13 @@ namespace VrBattlegrounds.Interaction
             return AnchorRole.IsAvatarPocket(anchor) && anchor.GetComponentInParent<UxrAvatar>(true) == _avatar;
         }
 
-        private void GrabManager_AnchorRangeEntered(object sender, UxrManipulationEventArgs e)
+        private void EnsureManager()
         {
-            if (e.GrabbableAnchor != null && e.Grabber != null && e.Grabber.Avatar == _avatar && IsOwnPocket(e.GrabbableAnchor))
-            {
-                _accepting[e.GrabbableAnchor] = e.Grabber;
-            }
-        }
-
-        private void GrabManager_AnchorRangeLeft(object sender, UxrManipulationEventArgs e)
-        {
-            if (e.GrabbableAnchor != null)
-            {
-                _accepting.Remove(e.GrabbableAnchor);
-            }
+            UxrGrabManager current = UxrGrabManager.HasInstance ? UxrGrabManager.Instance : null;
+            if (_manager == current) return;
+            _placement?.Dispose();
+            _manager = current;
+            _placement = current == null ? null : new AnchorPlacementReadiness(current, IsOwnPocket);
         }
     }
 }

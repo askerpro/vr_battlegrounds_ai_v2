@@ -113,7 +113,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             Weapon = Rifle(new HandsPackWeaponRecipe
             {
                 Name = "AK105", PrefabFolder = "AK105", PoseClip = "A_FP_AK105_Idle", ActionClip = "A_W_AK105_Fire",
-                TriggerPart = "Trigger", ActionPart = "Charger", SupportGrip = true,
+                TriggerPart = "Trigger", ActionPart = "Charger", ActionGripPart = "Charger", ActionGripContact = new Vector3(0.042f, 0.105f, 0.005f), SupportGrip = true,
                 UxrTag = "BackWeapon", MagazinePart = "Magazine", MagazineExtraParts = new[] { "Ammo_001", "Ammo_002" },
                 MagazineTag = "MagAK105", MagazineCapacity = 30
             }),
@@ -128,7 +128,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             Weapon = Rifle(new HandsPackWeaponRecipe
             {
                 Name = "MKR9", PrefabFolder = "MKR9", PoseClip = "A_FP_MKR9_Idle", ActionClip = "A_W_MKR9_Fire",
-                TriggerPart = "Trigger", ActionPart = "Bolt", ActionExtraParts = new[] { "ChargingHandle" }, SupportGrip = true,
+                TriggerPart = "Trigger", ActionPart = "Bolt", ActionGripPart = "ChargingHandle", ActionGripContact = new Vector3(0f, 0.012f, 0.022f), ActionExtraParts = new[] { "ChargingHandle" }, SupportGrip = true,
                 UxrTag = "BackWeapon", MagazinePart = "Mag", MagazineExtraParts = new[] { "Ammo_01", "Ammo_02" },
                 MagazineTag = "MagMKR9", MagazineCapacity = 30
             }),
@@ -146,7 +146,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             Weapon = Pistol(new HandsPackWeaponRecipe
             {
                 Name = "Viper", PrefabFolder = "Viper", PoseClip = "A_FP_WK-11_Viper_Idle_Pose", ActionClip = "A_W_WK-11_Viper_Fire",
-                TriggerPart = "Trigger", ActionPart = "Bolt", SupportGrip = true,
+                TriggerPart = "Trigger", ActionPart = "Bolt", ActionGripContact = new Vector3(0f, -0.025f, 0f), SupportGrip = true,
                 UxrTag = "Gun", MagazinePart = "Magazine", MagazineExtraParts = new[] { "Cartridge_026", "Cartridge_025" },
                 MagazineTag = "MagViper", MagazineCapacity = 20
             }),
@@ -226,7 +226,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 HandsPackWeaponRecipe r = Rifle(new HandsPackWeaponRecipe
                 {
                     Name = "TR15", PrefabFolder = "TR15", PoseClip = "A_FP_TR15_Idle_Pose_Non_Grip", ActionClip = "A_W_TR15_Fire",
-                    TriggerPart = "Trigger", ActionPart = "Bolt", ActionExtraParts = new[] { "Charger" }, SupportGrip = true,
+                    TriggerPart = "Trigger", ActionPart = "Bolt", ActionGripPart = "Charger", ActionGripContact = new Vector3(-0.004f, 0f, -0.006f), ActionExtraParts = new[] { "Charger" }, SupportGrip = true,
                     UxrTag = "BackWeapon", MagazinePart = "Magazine", MagazineExtraParts = new[] { "Cartridge_1", "Cartridge_2" },
                     MagazineTag = "MagTR15", MagazineCapacity = 20
                 });
@@ -328,6 +328,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             string path = PrefabPath(k);
             ImportPoses(k, model);
             HandsPackWeaponBuilder.AlignRecoilToMainGrip(path);
+            // Тот же узкий установщик восьми KINEMATION: штатная сборка сохраняет исправленные bindings.
+            KinemationFixReview.Apply(r.Name);
             AssetDatabase.SaveAssets();
             GameLog.Debug.Info($"[KinemationWeaponBuilder] {path}: статичные детали {string.Join(", ", r.StaticParts)}");
             return AssetDatabase.LoadAssetAtPath<GameObject>(path);

@@ -1330,3 +1330,20 @@ Nova / Herrington. Без него основной снаряд SDK остал�
    допустимом индексе `Shoot(index, ShotSource.position, ShotOrientationModifier(triggerIndex, ShotSource.rotation))`.
 3. После подтверждения логики пользователем заменить старые ожидания `WeaponSpreadTests`:
    пуля совпадает с осью дула, каждая дробина имеет собственный разлёт без общей неточности залпа.
+
+## T-39. Чтение выбранного якоря и снимок ручного хвата оружия
+
+`Manipulation/UxrGrabManager.PlacementReadiness.cs` добавляет read-only
+`GetAnchorPlacementCandidate(anchor)` из уже рассчитанной SDK пары. Игровой
+`AnchorPlacementReadiness` повторно проверяет актуальную локальную руку, предмет,
+совместимость, свободное гнездо и единственную удерживающую руку. Это исключает
+устаревший event-cache и повторный полный поиск якорей на каждом оружии.
+
+`Manipulation/UxrGrabManager.WeaponHandoff.cs` и
+`UxrManipulationEventArgs.CaptureObjectPose()` обновляют положение объекта относительно
+grabber в существующем событии Grabbing после переноса визуального residual в physical Slide.
+Snap руки и сериализация события не меняются; Compute и синхронизация получают актуальную
+позу из того же события. Новый сетевой вызов не создаётся. При обновлении SDK сохранить
+оба partial-файла и метод event args. Полный сетевой replay ещё требует двух клиентов.
+
+Реализация, проверки и ограничения — [T-39](../tasks/T-39-kinemation-fixes-plan.md).

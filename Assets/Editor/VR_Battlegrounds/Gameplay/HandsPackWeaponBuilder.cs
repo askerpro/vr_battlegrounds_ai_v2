@@ -37,6 +37,8 @@ namespace VrBattlegrounds.Editor.Gameplay
         public string MuzzlePart;      // деталь, на срезе которой дуло (глушитель); null — корпус
         public string TriggerPart;
         public string ActionPart;      // помпа или затвор; по нему меряется ход
+        public string ActionGripPart;  // видимая ручка: независима от детали, по которой меряется ход
+        public Vector3? ActionGripContact; // явный контакт в локальных осях меша ручки
         public string[] ActionExtraParts; // детали, которые ходят вместе с затвором (рукоять затвора болтовки)
         public ActionKind Action;
         public string LoadingPart;     // деталь, у которой встаёт магазин (якорь); null — якорь на месте магазина пака
@@ -544,10 +546,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 }
             }
 
-            // Подсветка при поднесённой руке — копия корпуса и помпы/затвора (WeaponFeedbackTests).
-            WeaponGrabHighlight.Assign(grabbable, 0, parts[r.BodyPart]);
-            if (r.SupportGrip) WeaponGrabHighlight.Assign(grabbable, 1, parts[r.BodyPart]);
-            if (actionGrab != null) WeaponGrabHighlight.Assign(actionGrab, 0, actionPart);
+            WeaponInteractionInstaller.Apply(root, WeaponInteractionRecipes.For(root, r));
 
             return root;
         }
@@ -683,7 +682,13 @@ namespace VrBattlegrounds.Editor.Gameplay
             (Vector3 donorForward, Vector3 donorUp) = donorPack.AimAxes(r.GripDonorPoseClip);
             (Vector3 forward, Vector3 up) = pack.AimAxes(r.PoseClip);
             Matrix4x4 donorFrame = PartFrame(donorSlideMesh, donorBody, donorForward, donorUp);
-            Matrix4x4 frame = PartFrame(actionPart, bodyMesh, forward, up);
+            Transform contactPart = r.ActionGripPart == null ? actionPart :
+                action.transform.GetComponentsInChildren<MeshFilter>(true).Single(f => f.name == Clean(r.ActionGripPart)).transform;
+            Matrix4x4 frame = PartFrame(contactPart, bodyMesh, forward, up);
+            if (r.ActionGripContact.HasValue) frame.SetColumn(3, new Vector4(
+                contactPart.TransformPoint(r.ActionGripContact.Value).x,
+                contactPart.TransformPoint(r.ActionGripContact.Value).y,
+                contactPart.TransformPoint(r.ActionGripContact.Value).z, 1f));
             Matrix4x4 moveL = frame * donorFrame.inverse * GripCalibration.Rigid(donorSlidePose.GripAlignTransformHandLeft.localToWorldMatrix);
             Matrix4x4 moveR = frame * donorFrame.inverse * GripCalibration.Rigid(donorSlidePose.GripAlignTransformHandRight.localToWorldMatrix);
             AddGrip(action, 0, action.transform, "Main Grab Point", moveL, moveR, donorSlidePose);

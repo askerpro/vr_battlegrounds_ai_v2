@@ -27,14 +27,32 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// </summary>
         public static GameObject Create(Transform part)
         {
-            Transform existing = part.Find(ObjectName);
-            if (existing != null) return existing.gameObject;
+            return Create(part, part.GetComponent<MeshFilter>().sharedMesh, ObjectName);
+        }
 
-            var highlight = new GameObject(ObjectName) { layer = part.gameObject.layer };
+        public static GameObject Create(Transform part, Mesh mesh, string name)
+        {
+            Transform existing = part.Find(name);
+            var highlight = existing != null ? existing.gameObject : new GameObject(name) { layer = part.gameObject.layer };
             highlight.transform.SetParent(part, false);
-            highlight.AddComponent<MeshFilter>().sharedMesh = part.GetComponent<MeshFilter>().sharedMesh;
+            highlight.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            highlight.transform.localScale = Vector3.one;
+            GameObject geometry = highlight;
+            if (name != ObjectName)
+            {
+                // Семантический holder отдельно, дочерняя геометрия сохраняет контракт имени GrabHighlight.
+                if (highlight.TryGetComponent(out MeshFilter oldFilter)) Object.DestroyImmediate(oldFilter);
+                if (highlight.TryGetComponent(out MeshRenderer oldRenderer)) Object.DestroyImmediate(oldRenderer);
+                Transform child = highlight.transform.Find(ObjectName);
+                geometry = child != null ? child.gameObject : new GameObject(ObjectName) { layer = part.gameObject.layer };
+                geometry.transform.SetParent(highlight.transform, false);
+                geometry.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                geometry.transform.localScale = Vector3.one;
+            }
+            if (!geometry.TryGetComponent(out MeshFilter filter)) filter = geometry.AddComponent<MeshFilter>();
+            filter.sharedMesh = mesh;
 
-            var renderer = highlight.AddComponent<MeshRenderer>();
+            if (!geometry.TryGetComponent(out MeshRenderer renderer)) renderer = geometry.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;

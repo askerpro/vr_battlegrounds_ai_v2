@@ -1,0 +1,492 @@
+[
+  {
+    "name": "SRM12",
+    "path": "Assets/Prefabs/Weapons/SRM12/SRM12.prefab",
+    "guid": "2472d08be23174c4b9863d83cddf68f8",
+    "motion": "Assets/Art/Weapons/Kinemation/SRM12/MechanismMotion.asset",
+    "primarySupportSeparate": true,
+    "regions": [
+      {
+        "name": "GrabHighlightPrimary",
+        "mesh": "Assets/Art/Weapons/Kinemation/SRM12/Interaction/PrimaryRegion.asset",
+        "vertices": 3651,
+        "size": "(0.0341, 0.0655, 0.0944)"
+      },
+      {
+        "name": "GrabHighlightSupport",
+        "mesh": "Assets/Art/Weapons/Kinemation/SRM12/Interaction/SupportRegion.asset",
+        "vertices": 4875,
+        "size": "(0.0468, 0.1300, 0.0416)"
+      },
+      {
+        "name": "GrabHighlightInsertion",
+        "mesh": "Assets/Art/Weapons/Kinemation/SRM12/Interaction/InsertionRegion.asset",
+        "vertices": 759,
+        "size": "(0.0374, 0.0850, 0.0322)"
+      },
+      {
+        "name": "GrabHighlight",
+        "mesh": "Assets/Art/Weapons/Kinemation/SRM12/Meshes/SRM12_SRS_Magazine.asset",
+        "vertices": 377,
+        "size": "(0.0183, 0.0962, 0.0818)"
+      },
+      {
+        "name": "GrabHighlightAction",
+        "mesh": "Assets/Art/Weapons/Kinemation/SRM12/Interaction/ActionRegion.asset",
+        "vertices": 789,
+        "size": "(0.0601, 0.0603, 0.0550)"
+      }
+    ],
+    "missing": 0,
+    "bindings": [
+      {
+        "part": "Bolt",
+        "target": "Slide/Bolt",
+        "magazine": false
+      },
+      {
+        "part": "Trigger",
+        "target": "MeshContainer/Trigger",
+        "magazine": false
+      }
+    ]
+  },
+  {
+    "name": "R08",
+    "path": "Assets/Prefabs/Weapons/R08/R08.prefab",
+    "guid": "fac3a1d89b21c3c42b8292f09026d44b",
+    "motion": "Assets/Art/Weapons/Kinemation/R08/MechanismMotion.asset",
+    "primarySupportSeparate": true,
+    "regions": [
+      {
+        "name": "GrabHighlightPrimary",
+        "mesh": "Assets/Art/Weapons/Kinemation/R08/Interaction/PrimaryRegion.asset",
+        "vertices": 2718,
+        "size": "(0.0344, 0.0654, 0.0987)"
+      },
+      {
+        "name": "GrabHighlightSupport",
+        "mesh": "Assets/Art/Weapons/Kinemation/R08/Interaction/SupportRegion.asset",
+        "vertices": 1974,
+        "size": "(0.0344, 0.0652, 0.0687)"
+      },
+      {
+        "name": "GrabHighlightInsertion",
+        "mesh": "Assets/Art/Weapons/Kinemation/R08/Interaction/InsertionRegion.asset",
+        "vertices": 5418,
+        "size": "(0.0416, 0.0850, 0.0550)"
+      },
+      {
+        "name": "GrabHighlight",
+        "mesh": "Assets/Art/Weapons/Kinemation/R08/Meshes/R08_Cylinder.asset",
+        "vertices": 2989,
+        "size": "(0.0452, 0.0437, 0.0452)"
+      }
+    ],
+    "missing": 0,
+    "bindings": [
+      {
+        "part": "Hammer",
+        "target": "MeshContainer/Hammer",
+        "magazine": false
+      },
+      {
+        "part": "Trigger",
+        "target": "MeshContainer/Trigger",
+        "magazine": false
+      },
+      {
+        "part": "Cylinder",
+        "target": "MeshContainer/MagAnchor/R08_mag/Mesh/MechanismVisual",
+        "magazine": true
+      },
+      {
+        "part": "Ammo_01",
+        "target": "MeshContainer/MagAnchor/R08_mag/Ammo_01",
+        "magazine": true
+      },
+      {
+        "part": "Ammo_02",
+        "target": "MeshContainer/MagAnchor/R08_mag/Ammo_02",
+        "magazine": true
+      },
+      {
+        "part": "Ammo_03",
+        "target": "MeshContainer/MagAnchor/R08_mag/Ammo_03",
+        "magazine": true
+      },
+      {
+        "part": "Ammo_04",
+        "target": "MeshContainer/MagAnchor/R08_mag/Ammo_04",
+        "magazine": true
+      },
+      {
+        "part": "Ammo_05",
+        "target": "MeshContainer/MagAnchor/R08_mag/Ammo_05",
+        "magazine": true
+      },
+      {
+        "part": "Ammo_06",
+        "target": "MeshContainer/MagAnchor/R08_mag/Ammo_06",
+        "magazine": true
+      },
+      {
+        "part": "Ammo_07",
+        "target": "MeshContainer/MagAnchor/R08_mag/Ammo_07",
+        "magazine": true
+      },
+      {
+        "part": "Ammo_08",
+        "target": "MeshContainer/MagAnchor/R08_mag/Ammo_08",
+        "magazine": true
+      },
+      {
+        "part": "Ejector",
+        "target": "MeshContainer/MagAnchor/R08_mag/Ejector",
+        "magazine": true
+      }
+    ]
+  },
+  {
+    "name": "AK105",
+    "path": "Assets/Prefabs/Weapons/AK105/AK105.prefab",
+    "guid": "732e5b48d3557594583580ed383cc981",
+    "motion": "Assets/Art/Weapons/Kinemation/AK105/MechanismMotion.asset",
+    "primarySupportSeparate": true,
+    "regions": [
+      {
+        "name": "GrabHighlightPrimary",
+        "mesh": "Assets/Art/Weapons/Kinemation/AK105/Interaction/PrimaryRegion.asset",
+        "vertices": 3258,
+        "size": "(0.0285, 0.0654, 0.1021)"
+      },
+      {
+        "name": "GrabHighlightSupport",
+        "mesh": "Assets/Art/Weapons/Kinemation/AK105/Interaction/SupportRegion.asset",
+        "vertices": 13689,
+        "size": "(0.0473, 0.1300, 0.0378)"
+      },
+      {
+        "name": "GrabHighlightInsertion",
+        "mesh": "Assets/Art/Weapons/Kinemation/AK105/Interaction/InsertionRegion.asset",
+        "vertices": 3024,
+        "size": "(0.0393, 0.0850, 0.0297)"
+      },
+      {
+        "name": "GrabHighlight",
+        "mesh": "Assets/Art/Weapons/Kinemation/AK105/Meshes/AK105_Magazine.asset",
+        "vertices": 2444,
+        "size": "(0.0233, 0.1883, 0.1069)"
+      },
+      {
+        "name": "GrabHighlightAction",
+        "mesh": "Assets/Art/Weapons/Kinemation/AK105/Interaction/ActionRegion.asset",
+        "vertices": 1863,
+        "size": "(0.0551, 0.0600, 0.0434)"
+      }
+    ],
+    "missing": 0,
+    "bindings": [
+      {
+        "part": "Charger",
+        "target": "Slide/Charger",
+        "magazine": false
+      },
+      {
+        "part": "Trigger",
+        "target": "MeshContainer/Trigger",
+        "magazine": false
+      }
+    ]
+  },
+  {
+    "name": "Viper",
+    "path": "Assets/Prefabs/Weapons/Viper/Viper.prefab",
+    "guid": "188e4570e48eabf418fa869094785d53",
+    "motion": "Assets/Art/Weapons/Kinemation/Viper/MechanismMotion.asset",
+    "primarySupportSeparate": true,
+    "regions": [
+      {
+        "name": "GrabHighlightPrimary",
+        "mesh": "Assets/Art/Weapons/Kinemation/Viper/Interaction/PrimaryRegion.asset",
+        "vertices": 5511,
+        "size": "(0.1082, 0.0655, 0.0347)"
+      },
+      {
+        "name": "GrabHighlightSupport",
+        "mesh": "Assets/Art/Weapons/Kinemation/Viper/Interaction/SupportRegion.asset",
+        "vertices": 2295,
+        "size": "(0.0783, 0.0621, 0.0347)"
+      },
+      {
+        "name": "GrabHighlightInsertion",
+        "mesh": "Assets/Art/Weapons/Kinemation/Viper/Interaction/InsertionRegion.asset",
+        "vertices": 3915,
+        "size": "(0.0552, 0.0737, 0.0271)"
+      },
+      {
+        "name": "GrabHighlight",
+        "mesh": "Assets/Art/Weapons/Kinemation/Viper/Meshes/Viper_Magazine.asset",
+        "vertices": 1181,
+        "size": "(0.0417, 0.1452, 0.0280)"
+      },
+      {
+        "name": "GrabHighlightAction",
+        "mesh": "Assets/Art/Weapons/Kinemation/Viper/Interaction/ActionRegion.asset",
+        "vertices": 4173,
+        "size": "(0.0302, 0.0432, 0.0222)"
+      }
+    ],
+    "missing": 0,
+    "bindings": [
+      {
+        "part": "Bolt",
+        "target": "Slide/Bolt",
+        "magazine": false
+      },
+      {
+        "part": "Hammer",
+        "target": "MeshContainer/Hammer",
+        "magazine": false
+      },
+      {
+        "part": "Trigger",
+        "target": "MeshContainer/Trigger",
+        "magazine": false
+      },
+      {
+        "part": "Charging_Handle",
+        "target": "MeshContainer/Charging_Handle",
+        "magazine": false
+      }
+    ]
+  },
+  {
+    "name": "MKR9",
+    "path": "Assets/Prefabs/Weapons/MKR9/MKR9.prefab",
+    "guid": "47ad3a62d3b700b439a7e493e7f06902",
+    "motion": "Assets/Art/Weapons/Kinemation/MKR9/MechanismMotion.asset",
+    "primarySupportSeparate": true,
+    "regions": [
+      {
+        "name": "GrabHighlightPrimary",
+        "mesh": "Assets/Art/Weapons/Kinemation/MKR9/Interaction/PrimaryRegion.asset",
+        "vertices": 3486,
+        "size": "(0.0987, 0.0655, 0.0410)"
+      },
+      {
+        "name": "GrabHighlightSupport",
+        "mesh": "Assets/Art/Weapons/Kinemation/MKR9/Interaction/SupportRegion.asset",
+        "vertices": 7110,
+        "size": "(0.0379, 0.1300, 0.0520)"
+      },
+      {
+        "name": "GrabHighlightInsertion",
+        "mesh": "Assets/Art/Weapons/Kinemation/MKR9/Interaction/InsertionRegion.asset",
+        "vertices": 1140,
+        "size": "(0.0300, 0.0654, 0.0327)"
+      },
+      {
+        "name": "GrabHighlight",
+        "mesh": "Assets/Art/Weapons/Kinemation/MKR9/Meshes/MKR9_Mag.asset",
+        "vertices": 3615,
+        "size": "(0.0726, 0.2203, 0.0271)"
+      },
+      {
+        "name": "GrabHighlightAction",
+        "mesh": "Assets/Art/Weapons/Kinemation/MKR9/Interaction/ActionRegion.asset",
+        "vertices": 2454,
+        "size": "(0.0107, 0.0411, 0.0586)"
+      }
+    ],
+    "missing": 0,
+    "bindings": [
+      {
+        "part": "Bolt",
+        "target": "Slide/Bolt",
+        "magazine": false
+      },
+      {
+        "part": "ChargingHandle",
+        "target": "Slide/ChargingHandle",
+        "magazine": false
+      },
+      {
+        "part": "Trigger",
+        "target": "MeshContainer/Trigger",
+        "magazine": false
+      }
+    ]
+  },
+  {
+    "name": "Herrington",
+    "path": "Assets/Prefabs/Weapons/Herrington/Herrington.prefab",
+    "guid": "69f24b275bfb4e34a93e038d9cacf6a9",
+    "motion": "Assets/Art/Weapons/Kinemation/Herrington/MechanismMotion.asset",
+    "primarySupportSeparate": true,
+    "regions": [
+      {
+        "name": "GrabHighlightPrimary",
+        "mesh": "Assets/Art/Weapons/Kinemation/Herrington/Interaction/PrimaryRegion.asset",
+        "vertices": 3066,
+        "size": "(0.0311, 0.0652, 0.0955)"
+      },
+      {
+        "name": "GrabHighlightSupport",
+        "mesh": "Assets/Art/Weapons/Kinemation/Herrington/Interaction/SupportRegion.asset",
+        "vertices": 2604,
+        "size": "(0.0427, 0.1300, 0.0693)"
+      },
+      {
+        "name": "GrabHighlightInsertion",
+        "mesh": "Assets/Art/Weapons/Kinemation/Herrington/Interaction/InsertionRegion.asset",
+        "vertices": 1245,
+        "size": "(0.0299, 0.0850, 0.0386)"
+      },
+      {
+        "name": "GrabHighlight",
+        "mesh": "Assets/Art/Weapons/Kinemation/Herrington/Meshes/Herrington_Cartridge.asset",
+        "vertices": 264,
+        "size": "(0.0201, 0.0616, 0.0201)"
+      },
+      {
+        "name": "GrabHighlightAction",
+        "mesh": "Assets/Art/Weapons/Kinemation/Herrington/Interaction/ActionRegion.asset",
+        "vertices": 1878,
+        "size": "(0.0466, 0.0601, 0.0269)"
+      }
+    ],
+    "missing": 0,
+    "bindings": [
+      {
+        "part": "Bolt",
+        "target": "Slide/Bolt",
+        "magazine": false
+      },
+      {
+        "part": "Trigger",
+        "target": "MeshContainer/Trigger",
+        "magazine": false
+      }
+    ]
+  },
+  {
+    "name": "Mk14",
+    "path": "Assets/Prefabs/Weapons/Mk14/Mk14.prefab",
+    "guid": "26b1fd63ab9a4274cb17304b23cb6318",
+    "motion": "Assets/Art/Weapons/Kinemation/Mk14/MechanismMotion.asset",
+    "primarySupportSeparate": true,
+    "regions": [
+      {
+        "name": "GrabHighlightPrimary",
+        "mesh": "Assets/Art/Weapons/Kinemation/Mk14/Interaction/PrimaryRegion.asset",
+        "vertices": 4083,
+        "size": "(0.0330, 0.0581, 0.0940)"
+      },
+      {
+        "name": "GrabHighlightSupport",
+        "mesh": "Assets/Art/Weapons/Kinemation/Mk14/Interaction/SupportRegion.asset",
+        "vertices": 4914,
+        "size": "(0.0461, 0.1300, 0.0424)"
+      },
+      {
+        "name": "GrabHighlightInsertion",
+        "mesh": "Assets/Art/Weapons/Kinemation/Mk14/Interaction/InsertionRegion.asset",
+        "vertices": 6465,
+        "size": "(0.0404, 0.0851, 0.0338)"
+      },
+      {
+        "name": "GrabHighlight",
+        "mesh": "Assets/Art/Weapons/Kinemation/Mk14/Meshes/Mk14_Mk14_Magazine.asset",
+        "vertices": 486,
+        "size": "(0.0245, 0.1314, 0.0714)"
+      },
+      {
+        "name": "GrabHighlightAction",
+        "mesh": "Assets/Art/Weapons/Kinemation/Mk14/Interaction/ActionRegion.asset",
+        "vertices": 993,
+        "size": "(0.0286, 0.0600, 0.0196)"
+      }
+    ],
+    "missing": 0,
+    "bindings": [
+      {
+        "part": "Bolt",
+        "target": "Slide/Bolt",
+        "magazine": false
+      },
+      {
+        "part": "BoltCharger",
+        "target": "Slide/BoltCharger",
+        "magazine": false
+      },
+      {
+        "part": "Trigger",
+        "target": "MeshContainer/Trigger",
+        "magazine": false
+      }
+    ]
+  },
+  {
+    "name": "TR15",
+    "path": "Assets/Prefabs/Weapons/TR15/TR15.prefab",
+    "guid": "3935229bb05b32b45b3af04c07bfbfbe",
+    "motion": "Assets/Art/Weapons/Kinemation/TR15/MechanismMotion.asset",
+    "primarySupportSeparate": true,
+    "regions": [
+      {
+        "name": "GrabHighlightPrimary",
+        "mesh": "Assets/Art/Weapons/Kinemation/TR15/Interaction/PrimaryRegion.asset",
+        "vertices": 2019,
+        "size": "(0.0299, 0.0653, 0.0920)"
+      },
+      {
+        "name": "GrabHighlightSupport",
+        "mesh": "Assets/Art/Weapons/Kinemation/TR15/Interaction/SupportRegion.asset",
+        "vertices": 14205,
+        "size": "(0.0323, 0.1300, 0.0381)"
+      },
+      {
+        "name": "GrabHighlightInsertion",
+        "mesh": "Assets/Art/Weapons/Kinemation/TR15/Interaction/InsertionRegion.asset",
+        "vertices": 1095,
+        "size": "(0.0334, 0.0658, 0.0375)"
+      },
+      {
+        "name": "GrabHighlight",
+        "mesh": "Assets/Art/Weapons/Kinemation/TR15/Meshes/TR15_Magazine.asset",
+        "vertices": 1169,
+        "size": "(0.0255, 0.1909, 0.0881)"
+      },
+      {
+        "name": "GrabHighlightAction",
+        "mesh": "Assets/Art/Weapons/Kinemation/TR15/Interaction/ActionRegion.asset",
+        "vertices": 1626,
+        "size": "(0.0473, 0.0349, 0.0115)"
+      }
+    ],
+    "missing": 0,
+    "bindings": [
+      {
+        "part": "Bolt",
+        "target": "Slide/Bolt",
+        "magazine": false
+      },
+      {
+        "part": "Charger",
+        "target": "Slide/Charger",
+        "magazine": false
+      },
+      {
+        "part": "MagRelease",
+        "target": "MeshContainer/MagRelease",
+        "magazine": false
+      },
+      {
+        "part": "Trigger",
+        "target": "MeshContainer/Trigger",
+        "magazine": false
+      }
+    ]
+  }
+]

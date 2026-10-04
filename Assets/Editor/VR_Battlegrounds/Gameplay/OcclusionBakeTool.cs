@@ -87,6 +87,7 @@ namespace VrBattlegrounds.Editor
         /// </summary>
         private static readonly Type[] DynamicMarkers =
         {
+            typeof(VrBattlegrounds.LevelDesign.PhysicalArenaLayout),
             typeof(Rigidbody),
             typeof(NetworkIdentity),
             typeof(UxrGrabbableObject),
@@ -124,7 +125,7 @@ namespace VrBattlegrounds.Editor
         private static void BakeFromMenu()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-            Debug.Log("[OcclusionBakeTool]\n" + Run());
+            VrBattlegrounds.Core.GameLog.Debug.Info("[OcclusionBakeTool]\n" + Run());
         }
 
         /// <summary>

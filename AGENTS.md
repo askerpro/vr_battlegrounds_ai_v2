@@ -44,6 +44,18 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
   через `MenuKit`, цвета и размеры только из `MenuTheme`, «Назад» и разделы — только каркас. Проверка:
   `MenuDesignRulesTests`, `MenuContainmentTests`. Новый экран — `/add-menu-screen`, дизайн — `Docs/ui-design-system.md`.
 - **Single Responsibility** — чужеродную логику в синглтоны не дописывать, выносить в отдельный класс.
+- **Иерархия карты** — `Environment` содержит только неинтерактивное окружение.
+  Спавны, арсеналы и реагирующие мишени принадлежат `Gameplay` карты. Контент конкретной
+  карты не применять в общий префаб физической арены. Арсеналы не вкладывать в масштабируемый
+  `TeamSpawnZone`; связь — `ArsenalStationAnchor.Zone`. Перед изменением иерархии читать
+  `Docs/scene-hierarchy.md`; проверять `MapGameplayHierarchy.ValidateAll()` и
+  `PhysicalArenaLayoutMigration.ValidateAll()`.
+  Метки принадлежат активной ветке CalibrationAnchors в PhysicalArenaLayout.
+  Разделение: `PhysicalArenaLayout` — диагностический чертёж площадки без Collider,
+  `Environment` — собственная игровая геометрия карты, `Gameplay` — игровые сущности.
+  Геометрия чертежа яркая и скрыта по умолчанию; якоря остаются активными.
+  Совмещение пола/стен карты с площадкой — ответственность разработчика карты, без автоматического переноса.
+
 
 ## Поиск
 

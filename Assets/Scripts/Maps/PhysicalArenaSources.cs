@@ -12,8 +12,12 @@ namespace VrBattlegrounds.LevelDesign
             var result = new HashSet<Collider>();
             if (!scene.IsValid() || !scene.isLoaded) return result;
             foreach (var root in scene.GetRootGameObjects())
+            {
+                foreach (var layout in root.GetComponentsInChildren<PhysicalArenaLayout>(true))
+                    foreach (var collider in layout.GetComponentsInChildren<Collider>(true)) result.Add(collider);
                 foreach (var marker in root.GetComponentsInChildren<PhysicalObstacleMarker>(true))
                     foreach (var collider in Of(marker)) result.Add(collider);
+            }
             return result;
         }
 
@@ -21,7 +25,7 @@ namespace VrBattlegrounds.LevelDesign
         public static IEnumerable<Collider> Of(PhysicalObstacleMarker marker)
         {
             if (marker == null) yield break;
-            var arena = marker.GetComponentInParent<PhysicalArenaDefinition>();
+            var arena = marker.GetComponentInParent<PhysicalArenaDefinition>(true);
             if (arena == null) yield break;
             foreach (var collider in marker.GetComponentsInChildren<Collider>(true))
                 if (IsSource(collider, arena)) yield return collider;

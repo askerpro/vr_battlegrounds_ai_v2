@@ -114,7 +114,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
             if(arena!=null)
             {
                 if(!arena.Valid(out _))return false;
-                floor=arena.floor.bounds;return true;
+                return BlockoutSupportSurfaces.TryMapFloor(scene, out floor);
             }
             return false;
         }
@@ -256,9 +256,10 @@ namespace VrBattlegrounds.Editor.LevelDesign
                     float z=origin.y+i*cell;
                     Handles.DrawLine(new Vector3(arena.min.x,y,z), new Vector3(arena.max.x,y,z));
                 }
-                foreach (var pillar in pillars)
+                var definition = PhysicalArenaPanel.Find(scene);
+                foreach (var marker in definition.GetComponentsInChildren<VrBattlegrounds.LevelDesign.PhysicalObstacleMarker>(true))
                 {
-                    Bounds b=pillar.bounds;
+                    if (!marker.TryBounds(definition, out Bounds b, out _)) continue;
                     int a=Mathf.FloorToInt((b.min.x-origin.x+.0001f)/cell), c=Mathf.CeilToInt((b.max.x-origin.x-.0001f)/cell);
                     int d=Mathf.FloorToInt((b.min.z-origin.y+.0001f)/cell), e=Mathf.CeilToInt((b.max.z-origin.y-.0001f)/cell);
                     for (int ix=a;ix<c;ix++) for (int iz=d;iz<e;iz++)

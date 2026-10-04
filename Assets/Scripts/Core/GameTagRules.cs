@@ -68,6 +68,7 @@ namespace VrBattlegrounds.Core
         }
 
         private static bool IsNonEnvironmentOwner(Transform t) =>
+            t.GetComponent<VrBattlegrounds.LevelDesign.PhysicalArenaLayout>() != null ||
             t.GetComponent<Rigidbody>()                != null ||
             t.GetComponent<UxrAvatar>()                != null ||
             t.GetComponent<UxrGrabbableObject>()       != null ||

@@ -13,6 +13,7 @@ namespace VrBattlegrounds.LevelDesign
         public Vector3 size= new Vector3(.4f,2.5f,.4f);
         public float yaw;
         public Collider[] sourceColliders=Array.Empty<Collider>();
+        public PhysicalArenaShape[] sourceShapes=Array.Empty<PhysicalArenaShape>();
         private void Reset() => markerId=Guid.NewGuid().ToString("N");
         private void OnEnable()
         {
@@ -22,15 +23,25 @@ namespace VrBattlegrounds.LevelDesign
         {
             bounds=default; reason="";
             if(arena==null||!transform.IsChildOf(arena.transform)||string.IsNullOrWhiteSpace(markerId)) {reason="Маркер должен принадлежать арене и иметь ID.";return false;}
-            if(useColliders)
+            if(sourceShapes!=null && sourceShapes.Length>0)
+            {
+                bool first=true;
+                foreach(var shape in sourceShapes)
+                {
+                    if(shape==null||!shape.transform.IsChildOf(arena.transform)||shape==arena.floorShape||!shape.TryBounds(out var shapeBounds))
+                    {reason="Неверная форма разметки или пол вместо препятствия.";return false;}
+                    if(first){bounds=shapeBounds;first=false;}else bounds.Encapsulate(shapeBounds);
+                }
+            }
+            else if(useColliders)
             {
                 if(sourceColliders==null||sourceColliders.Length==0){reason="Список Collider пуст.";return false;}
                 bool first=true;
                 foreach(var c in sourceColliders)
                 {
-                    if(c==null||!c.enabled||c.isTrigger||!c.gameObject.activeInHierarchy||!c.transform.IsChildOf(arena.transform)||c==arena.floor
-                       ||(!(c is BoxCollider)&&!(c is SphereCollider)&&!(c is CapsuleCollider)&&!(c is MeshCollider))) {reason="Неверный/неподдерживаемый Collider или пол вместо препятствия.";return false;}
-                    if(first){bounds=c.bounds;first=false;}else bounds.Encapsulate(c.bounds);
+                    if(c==null||c.isTrigger||!c.transform.IsChildOf(arena.transform)||c==arena.floor
+                       ||!PhysicalArenaGeometry.TryBounds(c,out var sourceBounds)) {reason="Неверный/неподдерживаемый Collider или пол вместо препятствия.";return false;}
+                    if(first){bounds=sourceBounds;first=false;}else bounds.Encapsulate(sourceBounds);
                 }
             }
             else

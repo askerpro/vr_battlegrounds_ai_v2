@@ -12,6 +12,10 @@
 
 ## Структура папки `Docs/`
 
+| Цель | Мы здесь | Осталось выполнить | Технический документ |
+|---|---|---|---|
+| Единая принадлежность и иерархия объектов карт | Спавны/арсеналы в Gameplay; PhysicalArenaLayout без Collider отделён от собственного Environment шести сцен | Проверка пользователем; разделение LobbyRange | [Иерархия сцен](scene-hierarchy.md) |
+
 ### Левел-дизайн: от замысла к проверке
 
 Вся актуальная документация карт находится в [level-design/README.md](level-design/README.md):
@@ -670,10 +674,18 @@ GameLog без отмены поворота или перемещения и б
 Контракты — [редактор](level-design/blockout-editor.md) и
 [алфавит и сетка](level-design/blockout-grid.md).
 
-`PhysicalArenaSources` отделяет источники PhysicalObstacleMarker от игровых коллайдеров:
-резервы не попадают в MapGrid/LOS/ShotLine и WallPassGeometry, а в Play Mode
-слой Ignore Raycast исключает их из маски пули. Роль задаётся компонентом/ссылкой;
-пол и игровая замена сохраняются. Контракт — [физическая арена](level-design/physical-arena.md).
+`PhysicalArenaLayout` хранит общий чертёж площадки с активными CalibrationAnchors
+и скрытой яркой Geometry, без Collider. Паспорт — PhysicalArenaDefinition,
+объёмы — PhysicalArenaShape, препятствия — PhysicalObstacleMarker.sourceShapes.
+PhysicalArenaGeometry вычисляет габариты из данных формы независимо от активности.
+Игровые пол и стены принадлежат каждой карте. PhysicalArenaSources поддерживает
+исключение legacy-источников из MapGrid/LOS/ShotLine и WallPassGeometry.
+Контракт — [физическая арена](level-design/physical-arena.md).
+
+`PhysicalArenaLayoutMigration` (Assets/Editor/VR_Battlegrounds/Gameplay) отделяет
+чертёж в Lobby и пяти картах с резервными копиями и проверкой исходных объектов,
+мировых трансформов, игровой физики и sceneId. ValidateAll проверяет сохранённые
+сцены в preview-сценах; меню — Tools/VR Battlegrounds/Gameplay/Validate Physical Arena Layout.
 
 | Класс | Назначение |
 |---|---|

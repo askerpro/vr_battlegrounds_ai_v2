@@ -126,8 +126,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
                     {
                         var root=Selection.activeGameObject;
                         var definition=Undo.AddComponent<PhysicalArenaDefinition>(root);
-                        definition.floor=root.GetComponentsInChildren<Collider>(true).Where(c=>BlockoutSupportSurfaces.IsActiveSolid(c)&&c.gameObject.layer==LayerMask.NameToLayer("Ground")).OrderByDescending(c=>c.bounds.size.x*c.bounds.size.z).FirstOrDefault();
-                        EditorUtility.SetDirty(definition);Invalidate(scene); status="Источник создан. Проверьте предложенную ссылку floor и задайте gridOrigin явно; затем подтвердите защиту. Для общей арены сохраните настройки в её prefab вручную.";
+                        definition.floorShape=root.GetComponentsInChildren<PhysicalArenaShape>(true).OrderByDescending(s=>s.size.x*s.size.z).FirstOrDefault();
+                        EditorUtility.SetDirty(definition);Invalidate(scene); status="Источник создан. Укажите floorShape и gridOrigin явно; затем подтвердите защиту. В разметку не добавлять Collider.";
                     }
                 return;
             }
@@ -142,13 +142,17 @@ namespace VrBattlegrounds.Editor.LevelDesign
                     var marker=Undo.AddComponent<PhysicalObstacleMarker>(go); marker.center=new Vector3(0,1.25f,0); Selection.activeGameObject=go;Invalidate(scene);
                 }
                 using(new EditorGUI.DisabledScope(Selection.activeGameObject==null||!Selection.activeGameObject.transform.IsChildOf(arena.transform)||Selection.activeGameObject==arena.gameObject))
-                    if(GUILayout.Button("Отметить выбранный объект / его Collider"))
+                    if(GUILayout.Button("Отметить выбранные формы разметки"))
                     {
                         var go=Selection.activeGameObject;
+                        var shapes=go.GetComponentsInChildren<PhysicalArenaShape>(true).Where(s=>s!=arena.floorShape).ToArray();
                         var sources=go.GetComponentsInChildren<Collider>(true).Where(c=>!BlockoutSupportSurfaces.IsSupportSurface(scene,c)&&!c.isTrigger).ToArray();
+                        if(shapes.Length==0 && (go.GetComponentInParent<PhysicalArenaLayout>(true)!=null || sources.Length==0))
+                        {status="Добавьте PhysicalArenaShape с размерами препятствия; Collider разметке не нужен.";return;}
                         var marker=go.GetComponent<PhysicalObstacleMarker>()??Undo.AddComponent<PhysicalObstacleMarker>(go);
-                        Undo.RecordObject(marker,"Источник физического препятствия"); marker.useColliders=true;
-                        marker.sourceColliders=sources; EditorUtility.SetDirty(marker);Invalidate(scene);
+                        Undo.RecordObject(marker,"Источник физического препятствия"); marker.useColliders=shapes.Length==0;
+                        marker.sourceShapes=shapes;marker.sourceColliders=shapes.Length>0?Array.Empty<Collider>():sources;
+                        EditorUtility.SetDirty(marker);Invalidate(scene);
                     }
                 foreach(var marker in arena.GetComponentsInChildren<PhysicalObstacleMarker>(true))
                 {
@@ -264,13 +268,14 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 if(p.previous!=null){required.Encapsulate(p.previous.protectedVolume);required.Encapsulate(ActualBounds(p.previous.gameObject));}
                 // Tall — стандартное игровое препятствие на месте столба, а не проверка его высоты.
                 // Размеры и положение основания прежнего guard сохраняем независимо от исходной высоты.
-                var min=required.min;var max=required.max;min.y=arena.floor.bounds.max.y;max.y=min.y+ProtectionHeight;required.SetMinMax(min,max);
+                if (!BlockoutGrid.TryFloor(arena.gameObject.scene, out var mapFloor)) { p.reason="Нет игрового пола карты."; continue; }
+                var min=required.min;var max=required.max;min.y=mapFloor.max.y;max.y=min.y+ProtectionHeight;required.SetMinMax(min,max);
                 p.required=Outward(required,arena.WorldOrigin,arena.gridStep);
                 if(p.required.size.x/arena.gridStep*p.required.size.z/arena.gridStep>10000){p.reason="Оболочка превышает бюджет 10000 клеток.";continue;}
                 p.fingerprint=Fingerprint(p,physical);
                 p.replacement=choices.TryGetValue(Key(arena,marker),out var choice)?choice:p.previous!=null?p.previous.chosenReplacement:null;
                 p.definitionId=p.previous!=null?p.previous.chosenDefinitionId:"";
-                if(!WithinFloor(p.required,arena.floor.bounds))p.reason="Требуемая защита выходит за пол.";
+                if(!WithinFloor(p.required,arena.FloorBounds))p.reason="Требуемая защита выходит за физическую площадку.";
             }
             return result;
         }
@@ -315,7 +320,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
                     +"|"+JsonUtility.ToJson(go.GetComponent<BlockoutBlockInstance>());
             }
             return Hash128.Compute(arena.arenaId+"|"+marker.markerId+"|"+arena.WorldOrigin.ToString("R")+"|"+arena.gridStep.ToString("R",System.Globalization.CultureInfo.InvariantCulture)
-                +"|"+arena.safetyMargin.ToString("R",System.Globalization.CultureInfo.InvariantCulture)+"|"+arena.floor.bounds.ToString("R")+"|"+marker.useColliders
+                +"|"+arena.safetyMargin.ToString("R",System.Globalization.CultureInfo.InvariantCulture)+"|"+arena.FloorBounds.ToString("R")+"|"+marker.useColliders
                 +"|"+marker.center.ToString("R")+"|"+marker.size.ToString("R")+"|"+marker.yaw.ToString("R",System.Globalization.CultureInfo.InvariantCulture)+"|"+sources+"|"+physical.ToString("R")+"|"+p.required.ToString("R")+"|"+guardGeometry+"|"+RegistrySignature()).ToString();
         }
         private static bool Current(Proposal p)
@@ -545,7 +550,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
         }
         private static string GeometryReasonUncached(Proposal p,Bounds volume,IEnumerable<Proposal> reserves,GameObject generated=null)
         {
-            if(!WithinFloor(volume,p.arena.floor.bounds))return "Замена выходит за пол.";
+            if(!WithinFloor(volume,p.arena.FloorBounds))return "Замена выходит за физическую площадку.";
             foreach(var other in reserves)
             {
                 if(other.marker==p.marker)continue;

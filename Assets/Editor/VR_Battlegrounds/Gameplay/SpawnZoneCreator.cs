@@ -1,6 +1,9 @@
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Maps;
+using VrBattlegrounds.Core;
+using VrBattlegrounds.EditorTools;
+using UnityEngine.SceneManagement;
 
 namespace VrBattlegrounds.Editor
 {
@@ -11,18 +14,25 @@ namespace VrBattlegrounds.Editor
         [MenuItem("GameObject/VR Battlegrounds/Team Spawn Zone", false, 10)]
         public static void CreateTeamSpawnZone(MenuCommand menuCommand)
         {
+            if (UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null)
+            {
+                GameLog.Error("Зона спавна создаётся в сцене карты. Закройте режим редактирования префаба.");
+                return;
+            }
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
             if (prefab == null)
             {
-                Debug.LogError($"[SpawnZoneCreator] Не найден префаб по пути: {PrefabPath}");
+                GameLog.Error($"[SpawnZoneCreator] Не найден префаб по пути: {PrefabPath}");
                 return;
             }
 
-            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            var context = menuCommand.context as GameObject;
+            var scene = context != null ? context.scene : SceneManager.GetActiveScene();
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
             if (instance == null) return;
 
-            // Ensure it gets parented to the selected object, or the active context
-            GameObjectUtility.SetParentAndAlign(instance, menuCommand.context as GameObject);
+            // Спавн принадлежит карте, даже если в меню выбрано общее окружение.
+            instance.transform.SetParent(MapGameplayHierarchy.SpawnParent(scene, context), false);
 
             // Register the creation in the undo system
             Undo.RegisterCreatedObjectUndo(instance, "Create " + instance.name);

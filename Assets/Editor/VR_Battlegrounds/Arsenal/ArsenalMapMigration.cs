@@ -62,6 +62,7 @@ namespace VrBattlegrounds.EditorTools
             if (zones.Length == 0) throw new InvalidOperationException("Нет зоны: " + scene.name);
             var coordinatorGO = new GameObject("ArsenalEquipmentCoordinator");
             SceneManager.MoveGameObjectToScene(coordinatorGO, scene);
+            coordinatorGO.transform.SetParent(MapGameplayHierarchy.GameplayRoot(scene), false);
             coordinatorGO.AddComponent<NetworkIdentity>();
             var coordinator = coordinatorGO.AddComponent<ArsenalBoundaryWall>();
             var stations = new List<ArsenalDeploymentAnimator>();
@@ -82,7 +83,7 @@ namespace VrBattlegrounds.EditorTools
                 Vector3 plane = center + outward * support;
                 var station = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
                 station.name = old.name;
-                station.transform.SetParent(old.transform.parent, true);
+                station.transform.SetParent(MapGameplayHierarchy.ArsenalParent(scene, zone), true);
                 station.transform.rotation = Quaternion.LookRotation(outward, Vector3.up);
                 Vector3 position = old.transform.position;
                 // Корень переднего края касается границы; значение соответствует образцу пользователя в Lobby.
@@ -169,7 +170,8 @@ namespace VrBattlegrounds.EditorTools
                     go.AddComponent<SpawnZoneBoundaryOpening>();
                 }
             }
-            var coordinator = scene.GetRootGameObjects().First(r => r.GetComponent<ArsenalBoundaryWall>() != null);
+            var coordinator = scene.GetRootGameObjects()
+                .SelectMany(r => r.GetComponentsInChildren<ArsenalBoundaryWall>(true)).Single();
             foreach (var transform in coordinator.GetComponentsInChildren<Transform>(true)
                 .Where(t => t != coordinator.transform && t.name.StartsWith("ZoneBoundary_", StringComparison.Ordinal)).ToArray())
                 UnityEngine.Object.DestroyImmediate(transform.gameObject);

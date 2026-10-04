@@ -19,7 +19,8 @@ namespace UltimateXR.UI
     ///     It is normally added only to the index fingers so that other fingers don't generate unwanted interactions, but it
     ///     can be added to any finger.
     /// </summary>
-    public class UxrFingerTip : UxrAvatarComponent<UxrFingerTip>
+    // VR Battlegrounds patch: необязательная визуализация в UxrFingerTip.RayVisualization.cs.
+    public partial class UxrFingerTip : UxrAvatarComponent<UxrFingerTip>
     {
         #region Public Types & Data
 
@@ -112,6 +113,7 @@ namespace UltimateXR.UI
         {
             base.OnEnable();
             _updateCount = 0;
+            EnableRayVisualization();
         }
 
         /// <summary>

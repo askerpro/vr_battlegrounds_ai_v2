@@ -44,8 +44,30 @@ namespace UltimateXR.UI.UnityInputModule
         /// </summary>
         public float FingerTipMinHoverDistance
         {
-            get => _fingerTipMinHoverDistance;
-            set => _fingerTipMinHoverDistance = value;
+            // VR Battlegrounds patch: UxrCanvas — единый источник порога ввода и визуализации.
+            // Сериализованное значение raycaster остаётся для канвасов без UxrCanvas.
+            get
+            {
+                if (_uxrCanvas == null)
+                {
+                    _uxrCanvas = GetComponent<UxrCanvas>();
+                }
+
+                return _uxrCanvas != null ? _uxrCanvas.FingerTipMinHoverDistance : _fingerTipMinHoverDistance;
+            }
+            set
+            {
+                _fingerTipMinHoverDistance = value;
+                if (_uxrCanvas == null)
+                {
+                    _uxrCanvas = GetComponent<UxrCanvas>();
+                }
+
+                if (_uxrCanvas != null)
+                {
+                    _uxrCanvas.FingerTipMinHoverDistance = value;
+                }
+            }
         }
 
         #endregion
@@ -147,6 +169,7 @@ namespace UltimateXR.UI.UnityInputModule
             // Iterate over all canvas graphics
 
             IList<Graphic> listGraphics = GraphicRegistry.GetGraphicsForCanvas(canvas);
+            float hoverDistance = FingerTipMinHoverDistance;
 
             for (int i = 0; i < listGraphics.Count; ++i)
             {
@@ -159,7 +182,7 @@ namespace UltimateXR.UI.UnityInputModule
                 Vector3 position        = ray.GetPoint(distance);
                 Vector2 pointerPosition = cam.WorldToScreenPoint(position);
 
-                if (distance > _fingerTipMinHoverDistance)
+                if (distance > hoverDistance)
                 {
                     continue;
                 }
@@ -196,6 +219,7 @@ namespace UltimateXR.UI.UnityInputModule
         #region Private Types & Data
 
         private Canvas              _canvas;
+        private UxrCanvas           _uxrCanvas;
         private CanvasGroup         _canvasGroup;
         private List<RaycastResult> _raycastResults = new List<RaycastResult>();
         private Vector2             _lastPosition;

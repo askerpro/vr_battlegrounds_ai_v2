@@ -121,10 +121,15 @@ namespace UltimateXR.UI.UnityInputModule
                 }
             }
 
-            if (UxrManager.Instance == null)
+            UxrManager manager = UxrManager.Instance;
+            if (manager == null)
             {
                 return;
             }
+
+            // VR Battlegrounds patch: ownership мог определиться после OnEnable аватара.
+            // До UI-raycast камера канваса должна соответствовать тому же LocalAvatar, что и ввод.
+            manager.UpdateCanvasEventCameras();
 
             // Update this input module
 

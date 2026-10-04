@@ -70,7 +70,8 @@ namespace VrBattlegrounds.UI.Menu
             List<DebugTeleportTarget> targets = DebugTeleportTargets.Collect();
 
             var snapshot = new StringBuilder();
-            snapshot.Append(admin).Append('|').Append(DebugPerfReadout.Visible).Append('|').Append(DebugHitMarkers.Visible);
+            snapshot.Append(admin).Append('|').Append(DebugPerfReadout.Visible).Append('|').Append(DebugHitMarkers.Visible)
+                    .Append('|').Append(DebugFingerTipRays.Visible);
             foreach (DebugTeleportTarget t in targets) snapshot.Append('|').Append(t.Id).Append(t.Label);
 
             if (snapshot.ToString() != _lastSnapshot)
@@ -96,6 +97,12 @@ namespace VrBattlegrounds.UI.Menu
             // Метки попаданий по игрокам: урон, зона хитбокса, по кому (DebugHitMarkers).
             MenuKit.Button(overlays, DebugHitMarkers.Visible ? "Скрыть попадания" : "Показать попадания",
                            () => { DebugHitMarkers.SetVisible(!DebugHitMarkers.Visible); _lastSnapshot = ""; });
+
+            MenuKit.Section(Content, "Касание меню");
+            MenuKit.Button(MenuKit.Row(Content), DebugFingerTipRays.Visible ? "Скрыть лучи пальцев UI" : "Показать лучи пальцев UI",
+                           () => { DebugFingerTipRays.SetVisible(!DebugFingerTipRays.Visible); _lastSnapshot = ""; });
+            MenuKit.Label(Content, "Включает лучи и интерактивный фон для диагностики. Жёлтый — нет попадания; зелёный — UI найден; голубой — нажатие; красный — рука блокирует UI.",
+                          MenuTextRole.Caption, MenuColorRole.TextSecondary);
 
             // ── Разделы ────────────────────────────────────────────────────
             MenuKit.Section(Content, "Разделы");

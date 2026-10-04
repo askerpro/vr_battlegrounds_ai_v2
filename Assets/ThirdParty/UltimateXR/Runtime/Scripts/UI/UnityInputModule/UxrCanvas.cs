@@ -106,9 +106,10 @@ namespace UltimateXR.UI.UnityInputModule
         {
             CanvasInteractionType = inputModule.InteractionTypeOnAutoEnable;
 
-            if (_newRaycasterFingerTips != null)
+            // VR Battlegrounds patch: порог хранится в канвасе, в том числе до создания raycaster.
+            if (CanvasInteractionType == UxrInteractionType.FingerTips)
             {
-                _newRaycasterFingerTips.FingerTipMinHoverDistance = inputModule.FingerTipMinHoverDistance;
+                FingerTipMinHoverDistance = inputModule.FingerTipMinHoverDistance;
             }
         }
 

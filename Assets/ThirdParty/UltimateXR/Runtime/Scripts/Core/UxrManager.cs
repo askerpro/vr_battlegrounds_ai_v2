@@ -1189,6 +1189,44 @@ namespace UltimateXR.Core
             StateSync_Unregistered(component as IUxrStateSync);
         }
 
+        /// <summary>
+        ///     VR Battlegrounds patch: камера UI принадлежит текущему локальному аватару,
+        ///     а не аватару с временным Local до определения сетевого владельца.
+        ///     Модуль ввода обновляет привязку до raycast; обход канвасов нужен только при смене камеры.
+        /// </summary>
+        internal void UpdateCanvasEventCameras(bool force = false)
+        {
+            UxrPointerInputModule inputModule = UxrPointerInputModule.Instance;
+            if (inputModule == null || !inputModule.AutoAssignEventCamera)
+            {
+                _canvasEventCameraInitialized = false;
+                return;
+            }
+
+            Camera eventCamera = UxrAvatar.LocalAvatarCamera;
+            // Пока локального аватара ещё не было, сохраняем явно заданную камеру канваса.
+            // После ухода уже привязанного аватара null ниже очищает прежнюю автопривязку.
+            if (!_canvasEventCameraInitialized && eventCamera == null)
+            {
+                return;
+            }
+
+            if (!force && _canvasEventCameraInitialized && ReferenceEquals(_canvasEventCamera, eventCamera))
+            {
+                return;
+            }
+
+            _canvasEventCamera            = eventCamera;
+            _canvasEventCameraInitialized = true;
+            foreach (UxrCanvas canvas in UxrCanvas.AllComponents)
+            {
+                if (canvas.UnityCanvas)
+                {
+                    canvas.UnityCanvas.worldCamera = eventCamera;
+                }
+            }
+        }
+
         #endregion
 
         #region Unity
@@ -1671,16 +1709,7 @@ namespace UltimateXR.Core
         {
             if (avatar.AvatarMode == UxrAvatarMode.Local)
             {
-                if (UxrPointerInputModule.Instance != null && UxrPointerInputModule.Instance.AutoAssignEventCamera)
-                {
-                    foreach (UxrCanvas canvas in UxrCanvas.AllComponents)
-                    {
-                        if (canvas.UnityCanvas)
-                        {
-                            canvas.UnityCanvas.worldCamera = avatar.CameraComponent;
-                        }
-                    }
-                }
+                UpdateCanvasEventCameras(true);
 
                 // In multiplayer environments the avatar might be instantiated in Local mode but switched
                 // later to UpdateExternally. Don't precache when there is more than 1.
@@ -2305,6 +2334,8 @@ namespace UltimateXR.Core
         private Coroutine                   _precacheCoroutine;
         private Dictionary<int, GameObject> _dynamicInstances;
         private Coroutine                   _teleportCoroutine;
+        private Camera                      _canvasEventCamera;
+        private bool                        _canvasEventCameraInitialized;
 
         #endregion
     }

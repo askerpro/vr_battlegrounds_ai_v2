@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e1e6c61fbde379f4b99d3d050ed49980
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 23800000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 194525
+  packageName: Blaze AI Engine
+  packageVersion: 3.4.22
+  assetPath: Assets/Blaze AI/Demos/Standard RP/demo 5/Cover Shooter/NavMesh-Plane.asset
+  uploadId: 938976

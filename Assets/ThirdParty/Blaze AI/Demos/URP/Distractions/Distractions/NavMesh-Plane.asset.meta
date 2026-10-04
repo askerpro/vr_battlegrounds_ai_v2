@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 50387ed8698da7a48b6655d6a5d07b4d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 23800000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 194525
+  packageName: Blaze AI Engine
+  packageVersion: 3.4.22
+  assetPath: Assets/Blaze AI/Demos/URP/Distractions/Distractions/NavMesh-Plane.asset
+  uploadId: 938976

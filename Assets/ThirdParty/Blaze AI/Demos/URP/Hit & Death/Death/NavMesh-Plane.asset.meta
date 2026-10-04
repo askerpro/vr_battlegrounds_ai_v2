@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ff8bd508a84e3424ca618a54369f636f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 23800000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 194525
+  packageName: Blaze AI Engine
+  packageVersion: 3.4.22
+  assetPath: Assets/Blaze AI/Demos/URP/Hit & Death/Death/NavMesh-Plane.asset
+  uploadId: 938976

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8726e25ec4fede248b85084852f14480
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 23800000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 194525
+  packageName: Blaze AI Engine
+  packageVersion: 3.4.22
+  assetPath: Assets/Blaze AI/Demos/Standard RP/demo/demo/NavMesh-Plane.asset
+  uploadId: 938976

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c19f9b87686d06841b25da68db3d5d8b
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 194525
+  packageName: Blaze AI Engine
+  packageVersion: 3.4.22
+  assetPath: Assets/Blaze AI/Scripts/Additive Scripts/Editor/BlazeAISpareStateInspector.cs
+  uploadId: 938976

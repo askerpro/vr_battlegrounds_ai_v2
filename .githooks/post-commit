@@ -1,22 +1,61 @@
 #!/bin/bash
 #
-# post-commit — зеркалим состояние рабочей копии в Unity Version Control (Plastic SCM).
-#
-# Зачем: история проекта ведётся в git. Plastic нужен только для того, чтобы Unity
-# показывала в инспекторе, какие значения полей изменились с прошлого чекина.
-# Поэтому хук не переносит пофайловый дифф коммита — он фиксирует всё текущее
-# состояние воркспейса одним чекином, чтобы Plastic не отставал от git.
-#
-# Почему не как раньше: прошлая версия делала
-#     git diff-tree ... | cm ci -a -c "$MSG" -
-# в расчёте, что `cm ci` прочитает пути из stdin. Такого режима у Plastic CLI нет:
-# `cm checkin` принимает только список путей аргументами, и `-` уходил ему как
-# ещё один путь. Плюс ошибки `cm add`/`cm rm` глушились в /dev/null, поэтому
-# поломка была не видна.
+# post-commit — переносим только файлы зафиксированного HEAD в Plastic SCM.
+# Рабочее содержимое этих файлов обязано совпадать с коммитом: частичный
+# commit с оставшимися правками безопасно пропускается, без подмены файлов Unity.
 
 set -o pipefail
 
-COMMIT_MSG=$(git log -1 --format=%B)
+ROOT=$(git rev-parse --show-toplevel) || exit 0
+cd "$ROOT" || exit 0
+COMMIT=$(git rev-parse HEAD) || exit 0
+COMMIT_MSG=$(git log -1 --format=%B "$COMMIT") || exit 0
+
+# NUL сохраняет пробелы/Unicode; --no-renames превращает rename в D+A,
+# чтобы Plastic получил оба пути. Merge сравнивается с первым родителем.
+MANIFEST=$(mktemp) || exit 0
+trap 'rm -f "$MANIFEST"' EXIT
+PARENT=$(git rev-parse --verify "$COMMIT^1" 2>/dev/null) || PARENT=""
+if [ -n "$PARENT" ]; then
+    git diff --name-only --no-renames -z "$PARENT" "$COMMIT" -- > "$MANIFEST" || exit 0
+else
+    git diff-tree --root --no-commit-id --name-only --no-renames -r -z "$COMMIT" > "$MANIFEST" || exit 0
+fi
+PATHS=()
+while IFS= read -r -d '' path; do
+    # Plastic применяет checkin рекурсивно и понимает wildcards. Такие пути
+    # нельзя отправлять как обычные файлы; gitlink/каталоги тоже запрещены.
+    if [[ "$path" == *$'\n'* || "$path" == *$'\r'* || "$path" == *'*'* || "$path" == *'?'* || -d "$path" ]]; then
+        echo "⚠️  Plastic: небезопасный путь $path — перенос пропущен. Git-коммит успешен."
+        exit 0
+    fi
+    # --literal-pathspecs исключает интерпретацию имени как Git pathspec.
+    if ! git --literal-pathspecs diff --quiet "$COMMIT" -- "$path"; then
+        echo "⚠️  Plastic: $path отличается от Git-коммита — перенос пропущен. Git-коммит успешен."
+        exit 0
+    fi
+    # diff может доверять assume-unchanged/skip-worktree. Сверяем сам blob,
+    # применяя Git clean-фильтры (в том числе LFS и нормализацию CRLF).
+    EXPECTED=$(git rev-parse --verify "$COMMIT:$path" 2>/dev/null) || EXPECTED=""
+    if [ -n "$EXPECTED" ]; then
+        if [ -L "$path" ]; then
+            ACTUAL=$(readlink -n "$path" | git hash-object --stdin) || exit 0
+        else
+            ACTUAL=$(git hash-object --path="$path" -- "$path") || exit 0
+        fi
+        if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "⚠️  Plastic: содержимое $path отличается от Git-коммита — перенос пропущен. Git-коммит успешен."
+            exit 0
+        fi
+    fi
+    # Git diff не видит private-файл, созданный снова после удаления в HEAD.
+    if [ -z "$EXPECTED" ] && { [ -e "$path" ] || [ -L "$path" ]; }; then
+        echo "⚠️  Plastic: удалённый путь $path снова существует — перенос пропущен. Git-коммит успешен."
+        exit 0
+    fi
+    PATHS+=("./$path")
+done < "$MANIFEST"
+[ ${#PATHS[@]} -gt 0 ] || exit 0
 
 # cm может отсутствовать в PATH, если git вызван не из обычной оболочки.
 CM_BIN="cm"
@@ -33,20 +72,18 @@ fi
 
 echo ""
 echo "========================================="
-echo "🔄 Зеркалим состояние в Unity Version Control (Plastic SCM)..."
+echo "🔄 Переносим Git-коммит ${COMMIT:0:12} в Plastic SCM (${#PATHS[@]} путей)..."
 
-# Один чекин на весь воркспейс:
-#   -a             — учесть изменённые, перемещённые и удалённые локально
-#   --applychanged — взять изменённые файлы без явного checkout
-#   --private      — добавить новые файлы (фильтруются через ignore.conf)
-# Так снимаются и лимит на длину командной строки, и возня с add/rm.
-CM_OUTPUT=$("$CM_BIN" ci . -a --applychanged --private -c "$COMMIT_MSG" --noshowchangeset 2>&1)
+# Только явные файлы. Не разбивать на несколько check-in: один Git-коммит
+# должен оставаться одной операцией. При лимите argv показываем ошибку.
+# EOF запрещает интерактивное согласие на дополнительные зависимости Plastic.
+CM_OUTPUT=$("$CM_BIN" ci "${PATHS[@]}" -a --applychanged --private --symlink -c "$COMMIT_MSG" --noshowchangeset </dev/null 2>&1)
 CM_STATUS=$?
 
 if [ $CM_STATUS -eq 0 ]; then
-    echo "✅ Состояние перенесено в Plastic SCM."
+    echo "✅ Файлы Git-коммита перенесены в Plastic SCM."
 elif echo "$CM_OUTPUT" | grep -qi "no changes\|nothing to check\|no items"; then
-    echo "✅ Plastic уже синхронизирован — переносить нечего."
+    echo "✅ По файлам Git-коммита в Plastic нет изменений."
 else
     # Ошибку показываем, а не прячем: молчаливый сбой здесь уже стоил месяцев расхождения.
     echo "⚠️  Не удалось перенести в Plastic (код $CM_STATUS). Git-коммит прошёл успешно."

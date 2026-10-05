@@ -133,6 +133,9 @@ InitTestScene*.unity*
 # Генерируемые локальные отчёты агентов; правило в AGENTS.md.
 /Docs/tasks/report/
 
+# Локальные выгрузки диагностики хвата; не импортировать и не коммитить.
+/UserReports/HandPoseFit/
+
 # Чекпоинты конвейера аватара MEF (Blender) — большие бинарники, воспроизводятся скриптами Tools/mef-avatar
 /Tools/mef-avatar/checkpoints/
 /Tools/mef-avatar/out/

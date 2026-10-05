@@ -23,7 +23,6 @@ namespace VrBattlegrounds.Editor.Avatars
         private const float FrameHeight = 0.85f;   // метров кадра по вертикали: грудь и голова
         private static readonly Color Background = new Color(0.13f, 0.16f, 0.20f);
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Render Icon For Selected AvatarData")]
         private static void RenderSelected()
         {
             foreach (AvatarData data in Selection.objects.OfType<AvatarData>())
@@ -32,7 +31,6 @@ namespace VrBattlegrounds.Editor.Avatars
             }
         }
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Render Icon For Selected AvatarData", true)]
         private static bool CanRenderSelected() => Selection.objects.OfType<AvatarData>().Any();
 
         /// <summary>Снимает иконку префаба <paramref name="data" />, сохраняет PNG-спрайт и назначает его.</summary>

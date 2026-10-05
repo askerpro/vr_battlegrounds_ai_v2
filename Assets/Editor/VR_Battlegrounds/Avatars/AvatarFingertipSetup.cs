@@ -1,3 +1,4 @@
+using VrBattlegrounds.Core;
 using UnityEditor;
 using UnityEngine;
 using UltimateXR.Avatar;
@@ -10,7 +11,6 @@ namespace VrBattlegrounds.EditorTools
 {
     public class AvatarFingertipSetup : EditorWindow
     {
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Setup Avatar UI Fingertips")]
         private static void ShowWindow()
         {
             SetupFingertips();
@@ -25,13 +25,13 @@ namespace VrBattlegrounds.EditorTools
             
             if (selectedObjects.Length == 0)
             {
-                Debug.Log("No objects selected, searching in preset folders for avatars...");
+                GameLog.Player.Info("No objects selected, searching in preset folders for avatars...");
                 string[] guids = AssetDatabase.FindAssets("t:GameObject", new[] { "Assets/Prefabs/Player" });
                 selectedObjects = guids.Select(g => AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(g))).ToArray();
                 
                 if (selectedObjects.Length == 0)
                 {
-                    Debug.LogWarning("Please select one or more Avatar prefabs/objects in the Project or Hierarchy.");
+                    GameLog.Player.Warning("Please select one or more Avatar prefabs/objects in the Project or Hierarchy.");
                     return;
                 }
             }
@@ -46,7 +46,7 @@ namespace VrBattlegrounds.EditorTools
 
                 if (avatar == null)
                 {
-                    Debug.Log($"Skipping {go.name}: No UxrAvatar component found.");
+                    GameLog.Player.Info($"Skipping {go.name}: No UxrAvatar component found.");
                     continue;
                 }
 
@@ -57,7 +57,7 @@ namespace VrBattlegrounds.EditorTools
                 }
             }
 
-            Debug.Log($"UI Fingertips setup complete. Updated {updatedCount} avatars.");
+            GameLog.Player.Info($"UI Fingertips setup complete. Updated {updatedCount} avatars.");
         }
 
         /// <summary>
@@ -72,6 +72,13 @@ namespace VrBattlegrounds.EditorTools
         ///     Heavy: левый кончик на <c>index_03_l</c>, а не на <c>BigIKHandLeft</c>).
         ///     </para>
         /// </summary>
+        public static bool CanSetup(UxrAvatar avatar)
+        {
+            if (!avatar) return false;
+            return HasDirection(FindIndexTipBone(avatar, UxrHandSide.Left)) && HasDirection(FindIndexTipBone(avatar, UxrHandSide.Right));
+        }
+        private static bool HasDirection(Transform bone) => bone && bone.parent && (bone.position - bone.parent.position).sqrMagnitude >= 1e-6f;
+
         public static bool Setup(UxrAvatar avatar)
         {
             bool modified = false;
@@ -82,7 +89,7 @@ namespace VrBattlegrounds.EditorTools
 
                 if (tipBone == null)
                 {
-                    Debug.LogWarning($"[AvatarFingertipSetup] {avatar.name}: не найден указательный палец ({side}).");
+                    GameLog.Player.Warning($"[AvatarFingertipSetup] {avatar.name}: не найден указательный палец ({side}).");
                     continue;
                 }
 
@@ -91,7 +98,7 @@ namespace VrBattlegrounds.EditorTools
 
             if (modified)
             {
-                Debug.Log($"[AvatarFingertipSetup] {avatar.name}: кончики пальцев для UI настроены.");
+                GameLog.Player.Info($"[AvatarFingertipSetup] {avatar.name}: кончики пальцев для UI настроены.");
             }
 
             return modified;
@@ -155,7 +162,7 @@ namespace VrBattlegrounds.EditorTools
             // (у CC-скелета MEF — 2.5 см) молча оставались с нулевым поворотом, и палец не нажимал UI.
             if (direction.sqrMagnitude < 1e-6f)
             {
-                Debug.LogWarning($"[AvatarFingertipSetup] '{fingerBone.name}': кость совпадает с родителем, направление пальца не определить.");
+                GameLog.Player.Warning($"[AvatarFingertipSetup] '{fingerBone.name}': кость совпадает с родителем, направление пальца не определить.");
                 return false;
             }
 
@@ -172,7 +179,7 @@ namespace VrBattlegrounds.EditorTools
 
                 Undo.RecordObject(existing.transform, "Realign UxrFingerTip");
                 existing.transform.SetPositionAndRotation(position, rotation);
-                Debug.Log($"[AvatarFingertipSetup] '{fingerBone.name}': кончик смотрел не вдоль пальца — выровнен.");
+                GameLog.Player.Info($"[AvatarFingertipSetup] '{fingerBone.name}': кончик смотрел не вдоль пальца — выровнен.");
                 return true;
             }
 

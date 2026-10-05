@@ -2,11 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using UltimateXR.Avatar;
 using UltimateXR.Manipulation;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.EditorTools.VersionControl;
+using VrBattlegrounds.Core;
+using VrBattlegrounds.Editor.Arsenal;
 
 namespace VrBattlegrounds.Editor.Avatars
 {
@@ -18,8 +23,8 @@ namespace VrBattlegrounds.Editor.Avatars
     ///     <para>
     ///     Как работает. Пункт меню в Play Mode снимает значения со своего аватара
     ///     (<see cref="UxrAvatar.LocalAvatar" />) в <see cref="SessionState" />; после выхода из Play
-    ///     Mode они записываются в префаб, найденный по <see cref="UxrAvatar.PrefabGuid" />. Запись
-    ///     откладывается намеренно: сохранять ассеты посреди игры — лишний риск.
+    ///     Mode они остаются ожидающим снимком. Применение — явное действие в редакторе аватара,
+    ///     с проверкой SHA исходного prefab, его зависимостей и метаданных.
     ///     </para>
     ///
     ///     <para>
@@ -46,7 +51,43 @@ namespace VrBattlegrounds.Editor.Avatars
         private class Snapshot
         {
             public string        prefabPath;
+            public string prefabGuid;
+            public List<FileStamp> origin = new List<FileStamp>();
             public List<Pocket> pockets = new List<Pocket>();
+        }
+
+        [Serializable] private class FileStamp { public string path, sha; }
+        private static Task<System.Collections.Generic.Dictionary<string, string>> captureTask;
+        private static Snapshot capturing;
+        public static bool IsCapturing => captureTask != null;
+        public static bool HasPending => !string.IsNullOrEmpty(SessionState.GetString(PendingKey, ""));
+        public static string PendingPath => ReadPending()?.prefabPath;
+        public static string[] PendingPaths
+        {
+            get
+            {
+                string prefix = Directory.GetParent(Application.dataPath).FullName + Path.DirectorySeparatorChar;
+                return ReadPending()?.origin?.Select(s => s.path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                    ? s.path.Substring(prefix.Length).Replace('\\', '/') : s.path).ToArray() ?? Array.Empty<string>();
+            }
+        }
+        private static Snapshot ReadPending()
+        {
+            string json = SessionState.GetString(PendingKey, "");
+            try { return string.IsNullOrEmpty(json) ? null : JsonUtility.FromJson<Snapshot>(json); }
+            catch { return null; }
+        }
+        public static void Discard()
+        {
+            if (IsCapturing) throw new InvalidOperationException("Дождитесь завершения capture перед отбрасыванием снимка.");
+            SessionState.EraseString(PendingKey);
+        }
+        public static string ValidateOrigin(Dictionary<string, string> current)
+        {
+            var snapshot = ReadPending();
+            if (snapshot == null || snapshot.origin == null || snapshot.origin.Count == 0) return "Снимок не содержит SHA. Снимите зоны заново в Play Mode.";
+            if (AssetDatabase.GUIDToAssetPath(snapshot.prefabGuid) != snapshot.prefabPath) return "Исходный prefab перемещён или заменён.";
+            return snapshot.origin.All(s => current.TryGetValue(s.path, out var sha) && sha == s.sha) ? null : "Исходный prefab или его зависимости изменились после capture. Снимите зоны заново.";
         }
 
         [Serializable]
@@ -72,27 +113,32 @@ namespace VrBattlegrounds.Editor.Avatars
             {
                 if (state == PlayModeStateChange.EnteredEditMode)
                 {
-                    ApplyPending();
+                    if (HasPending) GameLog.Player.Info("[PocketZones] Снимок ожидает явного применения в редакторе аватара: " + PendingPath);
                 }
             };
         }
 
-        [MenuItem(MenuPath, true)]
         private static bool CaptureValidate() => EditorApplication.isPlaying && UxrAvatar.LocalAvatar != null;
 
-        [MenuItem(MenuPath)]
         private static void Capture()
         {
-            UxrAvatar avatar     = UxrAvatar.LocalAvatar;
+            Capture(UxrAvatar.LocalAvatar);
+        }
+
+        public static void Capture(UxrAvatar avatar)
+        {
+            if (!EditorApplication.isPlaying || avatar == null || avatar != UxrAvatar.LocalAvatar)
+                throw new InvalidOperationException("Capture разрешён только для локального живого аватара в Play Mode.");
+            if (IsCapturing || HasPending) throw new InvalidOperationException("Сначала примените или отбросьте предыдущий снимок.");
             string    prefabPath = AssetDatabase.GUIDToAssetPath(avatar.PrefabGuid);
 
             if (string.IsNullOrEmpty(prefabPath))
             {
-                EditorUtility.DisplayDialog("Зоны карманов", $"У аватара '{avatar.name}' не найден префаб (PrefabGuid '{avatar.PrefabGuid}').", "OK");
-                return;
+                throw new InvalidOperationException("У живого аватара не найден исходный prefab.");
             }
+            Workbench.AvatarScopedActions.RequireOwnPrefab(prefabPath);
 
-            var snapshot = new Snapshot { prefabPath = prefabPath };
+            var snapshot = new Snapshot { prefabPath = prefabPath, prefabGuid = avatar.PrefabGuid };
 
             foreach (UxrGrabbableObjectAnchor anchor in avatar.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
             {
@@ -122,16 +168,36 @@ namespace VrBattlegrounds.Editor.Avatars
                 snapshot.pockets.Add(pocket);
             }
 
+            if (snapshot.pockets.Count == 0 || snapshot.pockets.Select(p => p.anchorName).Distinct().Count() != snapshot.pockets.Count)
+                throw new InvalidOperationException("Нет карманов либо их имена неоднозначны.");
+            string workspace = Directory.GetParent(Application.dataPath).FullName;
+            string[] paths = AssetDatabase.GetDependencies(prefabPath, true).Select(Workbench.AvatarScopedActions.SnapshotPath)
+                .Concat(new[] { "Packages/manifest.json", "Packages/packages-lock.json" }).ToArray();
+            capturing = snapshot;
+            // Значения переживают reload даже до SHA. Неполный origin явно блокирует Apply вместо потери данных.
             SessionState.SetString(PendingKey, JsonUtility.ToJson(snapshot));
-            Debug.Log($"[PocketZonesPrefabWriter] Сняты зоны {snapshot.pockets.Count} карманов с '{avatar.name}'. " +
-                      $"Запишутся в '{prefabPath}' после выхода из Play Mode.");
+            captureTask = Task.Run(() => ArsenalFileSnapshot.Read(workspace, paths, CancellationToken.None));
+            EditorApplication.update += FinishCapture;
         }
 
-        private static void ApplyPending()
+        private static void FinishCapture()
+        {
+            if (captureTask == null || !captureTask.IsCompleted) return;
+            EditorApplication.update -= FinishCapture;
+            try
+            {
+                capturing.origin = captureTask.GetAwaiter().GetResult().Select(p => new FileStamp { path = p.Key, sha = p.Value }).ToList();
+                SessionState.SetString(PendingKey, JsonUtility.ToJson(capturing));
+                GameLog.Player.Info($"[PocketZones] Снято карманов: {capturing.pockets.Count}. Ожидается явное применение к {capturing.prefabPath}.");
+            }
+            catch (Exception e) { GameLog.Player.Error("[PocketZones] Capture не сохранён: " + e.Message); }
+            finally { captureTask = null; capturing = null; }
+        }
+
+        public static string ApplyPending()
         {
             string json = SessionState.GetString(PendingKey, string.Empty);
-            if (string.IsNullOrEmpty(json)) return;
-            SessionState.EraseString(PendingKey);
+            if (EditorApplication.isPlayingOrWillChangePlaymode || string.IsNullOrEmpty(json)) throw new InvalidOperationException("Нет доступного edit-mode снимка.");
 
             Snapshot   snapshot = JsonUtility.FromJson<Snapshot>(json);
             GameObject contents = PrefabUtility.LoadPrefabContents(snapshot.prefabPath);
@@ -141,6 +207,17 @@ namespace VrBattlegrounds.Editor.Avatars
             try
             {
                 UxrGrabbableObjectAnchor[] anchors = contents.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true);
+
+                // Все адреса проверяются до первого изменения: частичное сопоставление запрещено.
+                foreach (Pocket pocket in snapshot.pockets)
+                {
+                    var matches = anchors.Where(a => a.name == pocket.anchorName && VrBattlegrounds.Interaction.AnchorRole.IsAvatarPocket(a)).ToArray();
+                    if (matches.Length != 1 || (matches[0].GrabProxy?.GrabPointCount ?? 0) != pocket.grabPoints.Count)
+                        throw new InvalidOperationException("Структура кармана изменилась: " + pocket.anchorName);
+                    for (int i = 0; i < pocket.grabPoints.Count; i++)
+                        if (pocket.grabPoints[i].hasBox && matches[0].GrabProxy.GetGrabPoint(i).GrabProximityBox == null)
+                            throw new InvalidOperationException("Коробка хвата потеряна: " + pocket.anchorName);
+                }
 
                 foreach (Pocket pocket in snapshot.pockets)
                 {
@@ -156,7 +233,8 @@ namespace VrBattlegrounds.Editor.Avatars
 
                 if (changed > 0)
                 {
-                    PrefabUtility.SaveAsPrefabAsset(contents, snapshot.prefabPath);
+                    Workbench.AvatarScopedActions.SetCanonicalAssetId(contents, snapshot.prefabPath);
+                    if (!PrefabUtility.SaveAsPrefabAsset(contents, snapshot.prefabPath)) throw new InvalidOperationException("Prefab не сохранён; снимок оставлен ожидающим.");
                 }
             }
             finally
@@ -167,10 +245,11 @@ namespace VrBattlegrounds.Editor.Avatars
             // SaveAsPrefabAsset затирает _assetId значением Mirror — вернуть канон.
             if (changed > 0)
             {
-                NetworkAssetIdNormalizer.Normalize(new[] { snapshot.prefabPath }, false);
+                Workbench.AvatarScopedActions.NormalizeAndVerify(snapshot.prefabPath);
             }
 
-            Debug.Log($"[PocketZonesPrefabWriter] '{snapshot.prefabPath}': изменено значений — {changed}.\n{report}");
+            SessionState.EraseString(PendingKey);
+            return $"{snapshot.prefabPath}: изменено значений — {changed}.\n{report}";
         }
 
         private static int ApplyPocket(UxrGrabbableObjectAnchor anchor, Pocket pocket, StringBuilder report)

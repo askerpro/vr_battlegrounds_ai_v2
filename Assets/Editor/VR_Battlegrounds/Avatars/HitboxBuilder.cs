@@ -36,7 +36,6 @@ namespace VrBattlegrounds.Editor.Avatars
         private const string WeaponsFolder = "Assets/Prefabs/Weapons";
         private const string RegistryPath = "Assets/Data/Player/Avatars/AvatarsRegistry.asset";
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Build Hitboxes")]
         public static void Build()
         {
             EnsureLayer(HitLayers.HitboxLayerName);
@@ -66,10 +65,10 @@ namespace VrBattlegrounds.Editor.Avatars
                 if (!string.IsNullOrEmpty(layer.stringValue)) continue;
                 layer.stringValue = name;
                 tagManager.ApplyModifiedPropertiesWithoutUndo();
-                Debug.Log($"[HitboxBuilder] Добавлен слой '{name}' ({i}).");
+                VrBattlegrounds.Core.GameLog.Player.Info($"[HitboxBuilder] Добавлен слой '{name}' ({i}).");
                 return;
             }
-            Debug.LogError($"[HitboxBuilder] Нет свободного слоя для '{name}'.");
+            VrBattlegrounds.Core.GameLog.Player.Error($"[HitboxBuilder] Нет свободного слоя для '{name}'.");
         }
 
         /// <summary>Базы вариантов аватаров реестра внутри Prefabs/Player (не PlayerBase*).</summary>
@@ -93,13 +92,16 @@ namespace VrBattlegrounds.Editor.Avatars
             return owners;
         }
 
-        private static void BuildFor(string path)
+        /// <summary>Только хитбоксы переданного аватара, без projectile masks, ghost и corpses.</summary>
+        public static void BuildFor(string path)
         {
+            if (LayerMask.NameToLayer("Hitbox") < 0) throw new System.InvalidOperationException("Слой Hitbox отсутствует; сначала выполните явную системную настройку слоёв.");
             GameObject root = PrefabUtility.LoadPrefabContents(path);
             try
             {
                 UxrAvatar avatar = root.GetComponent<UxrAvatar>();
-                if (avatar == null) return;
+                if (avatar == null || avatar.AvatarRig?.Head?.Head == null)
+                    throw new System.InvalidOperationException("Не найден UxrAvatar с головной костью.");
 
                 RemoveOld(root);
 
@@ -123,8 +125,9 @@ namespace VrBattlegrounds.Editor.Avatars
                 Capsule(rig.LeftLeg.LowerLeg, rig.LeftLeg.Foot, HitZone.Leg, "Calf_L", 0.065f);
                 Capsule(rig.RightLeg.LowerLeg, rig.RightLeg.Foot, HitZone.Leg, "Calf_R", 0.065f);
 
-                PrefabUtility.SaveAsPrefabAsset(root, path);
-                Debug.Log($"[HitboxBuilder] {path}: хитбоксов {root.GetComponentsInChildren<Hitbox>(true).Length}.");
+                Workbench.AvatarScopedActions.SetCanonicalAssetId(root, path);
+                if (!PrefabUtility.SaveAsPrefabAsset(root, path)) throw new System.InvalidOperationException("Хитбоксы не сохранены: " + path);
+                VrBattlegrounds.Core.GameLog.Player.Info($"[HitboxBuilder] {path}: хитбоксов {root.GetComponentsInChildren<Hitbox>(true).Length}.");
             }
             finally
             {
@@ -211,7 +214,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 if (changed)
                 {
                     PrefabUtility.SavePrefabAsset(root);
-                    Debug.Log($"[HitboxBuilder] {path}: маска пуль → 0x{mask:X}.");
+                    VrBattlegrounds.Core.GameLog.Player.Info($"[HitboxBuilder] {path}: маска пуль → 0x{mask:X}.");
                 }
             }
         }

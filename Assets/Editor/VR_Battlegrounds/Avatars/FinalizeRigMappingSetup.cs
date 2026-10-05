@@ -1,3 +1,4 @@
+using VrBattlegrounds.Core;
 using UnityEditor;
 using UnityEngine;
 using UltimateXR.Avatar;
@@ -9,7 +10,18 @@ namespace VRBattlegrounds.Editor
     {
         private const string LogPrefix = "[UXR Finalize Rig Mapping]";
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/UXR Setup Wizard/4. Finalize Rig Mapping")]
+        /// <summary>Явная SDK-цель. Родные кисти этим шагом переназначать нельзя.</summary>
+        public static void Setup(UxrAvatar avatar)
+        {
+            if (!avatar || !avatar.transform.Find("BigIKHandLeft") || !FindBigIkHandRightRoot(avatar.transform))
+                throw new System.InvalidOperationException("Для SDK mapping нужны обе явно установленные IK-кисти.");
+            var integration = FindBigHandsIntegrationRoot(avatar.transform);
+            if (!integration) throw new System.InvalidOperationException("Отсутствует BigHandsIntegration.");
+            ForceMapBigHandsRig(avatar, integration);
+            if (!avatar.AvatarRig.LeftArm.Hand.HasFullHandData() || !avatar.AvatarRig.RightArm.Hand.HasFullHandData())
+                throw new System.InvalidOperationException("SDK mapping неполон; следующий шаг не выполняется.");
+        }
+
         public static void Execute()
         {
             GameObject avatarObj = null;
@@ -22,7 +34,7 @@ namespace VRBattlegrounds.Editor
             }
             else
             {
-                Debug.Log($"{LogPrefix} Этап 1: в иерархии ничего не выбрано — ищем AutoSetupAvatarTarget.");
+                VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} Этап 1: в иерархии ничего не выбрано — ищем AutoSetupAvatarTarget.");
                 avatarObj = GameObject.Find("AutoSetupAvatarTarget");
                 if (avatarObj != null)
                     avatarSource = "GameObject.Find(\"AutoSetupAvatarTarget\")";
@@ -30,48 +42,48 @@ namespace VRBattlegrounds.Editor
 
             if (avatarObj == null)
             {
-                Debug.Log($"{LogPrefix} Этап 2: AutoSetupAvatarTarget не найден — ищем первый UxrAvatar в сцене.");
-                var foundUxrAvatar = Object.FindObjectOfType<UltimateXR.Avatar.UxrAvatar>();
+                VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} Этап 2: AutoSetupAvatarTarget не найден — ищем первый UxrAvatar в сцене.");
+                var foundUxrAvatar = Object.FindAnyObjectByType<UltimateXR.Avatar.UxrAvatar>();
                 if (foundUxrAvatar != null)
                 {
                     avatarObj = foundUxrAvatar.gameObject;
-                    avatarSource = "Object.FindObjectOfType<UxrAvatar>()";
+                    avatarSource = "Object.FindAnyObjectByType<UxrAvatar>()";
                 }
             }
 
             if (avatarObj == null)
             {
-                Debug.LogWarning($"{LogPrefix} Аватар не найден: нет выделения, нет AutoSetupAvatarTarget, нет UxrAvatar на сцене. Шаг прерван.");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix} Аватар не найден: нет выделения, нет AutoSetupAvatarTarget, нет UxrAvatar на сцене. Шаг прерван.");
                 return;
             }
 
-            Debug.Log($"{LogPrefix} Этап «выбор аватара»: объект '{avatarObj.name}', источник: {avatarSource}, путь: {GetHierarchyPath(avatarObj.transform)}");
+            VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} Этап «выбор аватара»: объект '{avatarObj.name}', источник: {avatarSource}, путь: {GetHierarchyPath(avatarObj.transform)}");
 
             Undo.RegisterFullObjectHierarchyUndo(avatarObj, "Setup UXR Avatar: 4. Finalize");
 
             UxrAvatar uxrAvatar = avatarObj.GetComponent<UxrAvatar>();
             if (uxrAvatar == null)
             {
-                Debug.LogError($"{LogPrefix} На '{avatarObj.name}' нет компонента UxrAvatar. Запускали шаг 1 визарда?");
+                VrBattlegrounds.Core.GameLog.Player.Error($"{LogPrefix} На '{avatarObj.name}' нет компонента UxrAvatar. Запускали шаг 1 визарда?");
                 return;
             }
 
-            Debug.Log($"{LogPrefix} Этап «UxrAvatar»: компонент найден на '{avatarObj.name}'.");
+            VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} Этап «UxrAvatar»: компонент найден на '{avatarObj.name}'.");
 
             Transform bigHandsObj = FindBigHandsIntegrationRoot(avatarObj.transform);
             if (bigHandsObj == null)
             {
-                Debug.LogWarning($"{LogPrefix} Корень BigHandsIntegration / BigHandRightGeo не найден среди прямых детей аватара — привязка костей рук не выполнялась.");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix} Корень BigHandsIntegration / BigHandRightGeo не найден среди прямых детей аватара — привязка костей рук не выполнялась.");
             }
             else
             {
-                Debug.Log($"{LogPrefix} Этап «корень интеграции»: '{bigHandsObj.name}', путь: {GetHierarchyPath(bigHandsObj)}");
+                VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} Этап «корень интеграции»: '{bigHandsObj.name}', путь: {GetHierarchyPath(bigHandsObj)}");
                 ForceMapBigHandsRig(uxrAvatar, bigHandsObj);
             }
 
             EditorUtility.SetDirty(uxrAvatar);
             EditorUtility.SetDirty(avatarObj);
-            Debug.Log($"{LogPrefix} Финиш: SetDirty(UxrAvatar), SetDirty(корень аватара). Проверьте Inspector и сохраните сцену/префаб при необходимости.");
+            VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} Финиш: SetDirty(UxrAvatar), SetDirty(корень аватара). Проверьте Inspector и сохраните сцену/префаб при необходимости.");
         }
 
         /// <summary>
@@ -86,11 +98,11 @@ namespace VRBattlegrounds.Editor
                 "BigHandsIntegration",
             };
 
-            Debug.Log($"{LogPrefix} Поиск корня среди прямых детей '{avatarRoot.name}' ({avatarRoot.childCount} дочерних):");
+            VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} Поиск корня среди прямых детей '{avatarRoot.name}' ({avatarRoot.childCount} дочерних):");
             foreach (string name in candidates)
             {
                 Transform t = avatarRoot.Find(name);
-                Debug.Log($"{LogPrefix}   • '{name}': {(t != null ? $"найден → {GetHierarchyPath(t)}" : "нет")}");
+                VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix}   • '{name}': {(t != null ? $"найден → {GetHierarchyPath(t)}" : "нет")}");
                 if (t != null)
                     return t;
             }
@@ -100,7 +112,7 @@ namespace VRBattlegrounds.Editor
                 var lines = new System.Text.StringBuilder();
                 for (int i = 0; i < avatarRoot.childCount; i++)
                     lines.AppendLine($"      - {avatarRoot.GetChild(i).name}");
-                Debug.LogWarning($"{LogPrefix} Ни один из ожидаемых имён не совпал. Текущие прямые дочерние объекты:\n{lines}");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix} Ни один из ожидаемых имён не совпал. Текущие прямые дочерние объекты:\n{lines}");
             }
 
             return null;
@@ -122,17 +134,17 @@ namespace VRBattlegrounds.Editor
             var rig = uxrAvatar.AvatarRig;
             if (rig == null)
             {
-                Debug.LogError($"{LogPrefix} UxrAvatar.AvatarRig == null — привязка невозможна.");
+                VrBattlegrounds.Core.GameLog.Player.Error($"{LogPrefix} UxrAvatar.AvatarRig == null — привязка невозможна.");
                 return;
             }
 
-            Debug.Log($"{LogPrefix} Этап «AvatarRig»: ссылка есть.");
+            VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} Этап «AvatarRig»: ссылка есть.");
 
             Transform leftHandT = uxrAvatar.transform.Find("BigIKHandLeft") ?? uxrAvatar.transform.Find("BigIKHandLeft(Clone)");
             Transform rightHandT = FindBigIkHandRightRoot(uxrAvatar.transform);
 
-            Debug.Log($"{LogPrefix} IK-кости (прямые дети аватара): BigIKHandLeft → {(leftHandT != null ? GetHierarchyPath(leftHandT) : "НЕ НАЙДЕН")}");
-            Debug.Log($"{LogPrefix} IK-кости (прямые дети аватара): правая (BigIKHandRight* / BigHandRightGeo*) → {(rightHandT != null ? GetHierarchyPath(rightHandT) : "НЕ НАЙДЕН")}");
+            VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} IK-кости (прямые дети аватара): BigIKHandLeft → {(leftHandT != null ? GetHierarchyPath(leftHandT) : "НЕ НАЙДЕН")}");
+            VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} IK-кости (прямые дети аватара): правая (BigIKHandRight* / BigHandRightGeo*) → {(rightHandT != null ? GetHierarchyPath(rightHandT) : "НЕ НАЙДЕН")}");
 
             Transform leftHandChild = bigHandsIntegration.Find("LeftHand");
             Transform rightHandChild = bigHandsIntegration.Find("RightHand");
@@ -140,39 +152,39 @@ namespace VRBattlegrounds.Editor
             UxrHandIntegration rightIntegration = rightHandChild != null ? rightHandChild.GetComponent<UxrHandIntegration>() : null;
 
             if (leftHandChild == null)
-                Debug.LogWarning($"{LogPrefix} Под '{bigHandsIntegration.name}' нет дочернего Transform 'LeftHand' — левая UxrHandIntegration недоступна.");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix} Под '{bigHandsIntegration.name}' нет дочернего Transform 'LeftHand' — левая UxrHandIntegration недоступна.");
             else if (leftIntegration == null)
-                Debug.LogWarning($"{LogPrefix} На '{leftHandChild.name}' нет компонента UxrHandIntegration.");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix} На '{leftHandChild.name}' нет компонента UxrHandIntegration.");
 
             if (rightHandChild == null)
-                Debug.LogWarning($"{LogPrefix} Под '{bigHandsIntegration.name}' нет дочернего Transform 'RightHand' — правая UxrHandIntegration недоступна.");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix} Под '{bigHandsIntegration.name}' нет дочернего Transform 'RightHand' — правая UxrHandIntegration недоступна.");
             else if (rightIntegration == null)
-                Debug.LogWarning($"{LogPrefix} На '{rightHandChild.name}' нет компонента UxrHandIntegration.");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix} На '{rightHandChild.name}' нет компонента UxrHandIntegration.");
 
             if (leftHandT != null)
                 MapHandRig(rig.LeftArm.Hand, leftHandT, "_Left", leftIntegration, "левая");
             else
-                Debug.LogWarning($"{LogPrefix} Левая рука пропущена: нет BigIKHandLeft / BigIKHandLeft(Clone).");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix} Левая рука пропущена: нет BigIKHandLeft / BigIKHandLeft(Clone).");
 
             if (rightHandT != null)
                 MapHandRig(rig.RightArm.Hand, rightHandT, "_Right", rightIntegration, "правая");
             else
-                Debug.LogWarning($"{LogPrefix} Правая рука пропущена: нет BigIKHandRight / BigIKHandRight(Clone) / BigHandRightGeo / BigHandRightGeo(Clone) среди прямых детей аватара.");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix} Правая рука пропущена: нет BigIKHandRight / BigIKHandRight(Clone) / BigHandRightGeo / BigHandRightGeo(Clone) среди прямых детей аватара.");
         }
 
         private static void MapHandRig(UltimateXR.Avatar.Rig.UxrAvatarHand handRig, Transform handRoot, string suffix, UxrHandIntegration integration, string sideLabel)
         {
-            Debug.Log($"{LogPrefix} Карта руки ({sideLabel}): корень IK '{handRoot.name}', интеграция {(integration != null ? $"'{integration.name}'" : "отсутствует")}");
+            VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix} Карта руки ({sideLabel}): корень IK '{handRoot.name}', интеграция {(integration != null ? $"'{integration.name}'" : "отсутствует")}");
 
             if (integration != null)
             {
                 integration.TryToMatchHand();
                 handRoot.position = integration.transform.position;
                 handRoot.rotation = integration.transform.rotation;
-                Debug.Log($"{LogPrefix}   TryToMatchHand + синхронизация позиции/поворота IK с интеграцией.");
+                VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix}   TryToMatchHand + синхронизация позиции/поворота IK с интеграцией.");
             }
             else
-                Debug.LogWarning($"{LogPrefix}   ({sideLabel}) UxrHandIntegration нет — позиция IK не выровнена по интеграции.");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix}   ({sideLabel}) UxrHandIntegration нет — позиция IK не выровнена по интеграции.");
 
             Transform wrist = handRoot.Find("Wrist" + suffix);
             // У BigHandRightGeo кость запястья часто называется BigHandRight, а не Wrist_Right.
@@ -184,19 +196,19 @@ namespace VRBattlegrounds.Editor
                 string expected = suffix == "_Right"
                     ? $"'Wrist{suffix}', 'BigHandRight' или 'BigHandRight(Clone)'"
                     : $"'Wrist{suffix}'";
-                Debug.LogWarning($"{LogPrefix}   ({sideLabel}) Нет подходящего запястья ({expected}) под '{handRoot.name}' — ссылки на пальцы в Rig не выставлены.");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix}   ({sideLabel}) Нет подходящего запястья ({expected}) под '{handRoot.name}' — ссылки на пальцы в Rig не выставлены.");
                 return;
             }
 
             handRig.Wrist = wrist;
-            Debug.Log($"{LogPrefix}   ({sideLabel}) handRig.Wrist ← '{wrist.name}'");
+            VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix}   ({sideLabel}) handRig.Wrist ← '{wrist.name}'");
 
             MapFinger(handRig.Thumb, wrist, "Thumb", suffix, 3, true);
             MapFinger(handRig.Index, wrist, "Index", suffix, 3, false);
             MapFinger(handRig.Middle, wrist, "Middle", suffix, 3, false);
             MapFinger(handRig.Ring, wrist, "Ring", suffix, 3, false);
             MapFinger(handRig.Little, wrist, "Little", suffix, 3, false);
-            Debug.Log($"{LogPrefix}   ({sideLabel}) Пальцы: попытка назначения костей завершена (см. предупреждения по отсутствующим Palm).");
+            VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix}   ({sideLabel}) Пальцы: попытка назначения костей завершена (см. предупреждения по отсутствующим Palm).");
         }
 
         private static void MapFinger(UltimateXR.Avatar.Rig.UxrAvatarFinger fingerRig, Transform wrist, string fingerPrefix, string suffix, int numBones, bool isThumb)
@@ -205,7 +217,7 @@ namespace VRBattlegrounds.Editor
             Transform palm = wrist.Find(palmName);
             if (palm == null)
             {
-                Debug.LogWarning($"{LogPrefix}     Палец {fingerPrefix}: нет '{palmName}' под '{wrist.name}'.");
+                VrBattlegrounds.Core.GameLog.Player.Warning($"{LogPrefix}     Палец {fingerPrefix}: нет '{palmName}' под '{wrist.name}'.");
                 return;
             }
 
@@ -229,9 +241,9 @@ namespace VRBattlegrounds.Editor
             }
 
             if (isThumb)
-                Debug.Log($"{LogPrefix}     Палец {fingerPrefix} (большой): palm ✓, промежуточные кости _0={(b0 != null)}, _1={(b1 != null)}.");
+                VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix}     Палец {fingerPrefix} (большой): palm ✓, промежуточные кости _0={(b0 != null)}, _1={(b1 != null)}.");
             else
-                Debug.Log($"{LogPrefix}     Палец {fingerPrefix}: palm ✓, звенья _0={(b0 != null)}, _1={(b1 != null)}, _2={(b2 != null)}.");
+                VrBattlegrounds.Core.GameLog.Player.Info($"{LogPrefix}     Палец {fingerPrefix}: palm ✓, звенья _0={(b0 != null)}, _1={(b1 != null)}, _2={(b2 != null)}.");
 
         }
 

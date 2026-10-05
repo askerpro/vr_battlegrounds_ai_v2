@@ -1,5 +1,7 @@
+using VrBattlegrounds.Core;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UltimateXR.Avatar;
 using UltimateXR.Avatar.Rig;
 using UltimateXR.Core;
@@ -12,27 +14,32 @@ namespace VRBattlegrounds.Editor
 {
     public class HandPosesSetup
     {
-        [MenuItem("Tools/VR Battlegrounds/Avatars/UXR Setup Wizard/6. Generate Default Poses")]
         public static void Execute()
         {
             GameObject avatarObj = Selection.activeGameObject;
             if (avatarObj == null) avatarObj = GameObject.Find("AutoSetupAvatarTarget");
             if (avatarObj == null)
             {
-                var foundUxrAvatar = Object.FindObjectOfType<UxrAvatar>();
+                var foundUxrAvatar = Object.FindAnyObjectByType<UxrAvatar>();
                 if (foundUxrAvatar != null) avatarObj = foundUxrAvatar.gameObject;
             }
             if (avatarObj == null)
             {
-                Debug.LogError("UXR Setup: Missing VR_Avatar_Ready in scene.");
+                VrBattlegrounds.Core.GameLog.Player.Error("UXR Setup: Missing VR_Avatar_Ready in scene.");
                 return;
             }
+
+            Setup(avatarObj, null, true);
+        }
+
+        public static string Setup(GameObject avatarObj, string explicitFolder = null, bool overwrite = false)
+        {
+            if (!avatarObj) throw new System.ArgumentNullException(nameof(avatarObj));
 
             UxrAvatar avatar = avatarObj.GetComponent<UxrAvatar>();
             if (avatar == null)
             {
-                Debug.LogError("UXR Setup: Selected object is not a UxrAvatar.");
-                return;
+                throw new System.InvalidOperationException("Явная цель не является UxrAvatar.");
             }
 
             string avatarName = avatarObj.name.Replace("(Clone)", "").Replace("_Ready", "").Replace("VR_Avatar", "").Trim();
@@ -43,7 +50,10 @@ namespace VRBattlegrounds.Editor
             }
             if (string.IsNullOrEmpty(avatarName) || avatarName == "_Ready") avatarName = "CustomAvatar";
 
-            string saveFolder = $"Assets/Art/Avatars/{avatarName}/HandPoses";
+            string saveFolder = explicitFolder ?? $"Assets/Art/Avatars/{avatarName}/HandPoses";
+            if (!saveFolder.StartsWith("Assets/Art/Avatars/") || saveFolder.Contains("..")) throw new System.InvalidOperationException("Недопустимый путь поз.");
+            if (!overwrite && Directory.Exists(saveFolder) && Directory.EnumerateFiles(saveFolder, "*.asset").Any())
+                throw new System.InvalidOperationException("В папке уже есть позы. Выберите новое имя рига.");
 
             if (!Directory.Exists(saveFolder))
             {
@@ -98,14 +108,14 @@ namespace VRBattlegrounds.Editor
                         dstAsset.HandDescriptorClosedRight = new UxrHandDescriptor(avatar, UxrHandSide.Right);
                     }
 
-                    // Delete existing if any
-                    if (File.Exists(dstPath))
+                    var existing = AssetDatabase.LoadAssetAtPath<UxrHandPoseAsset>(dstPath);
+                    if (existing)
                     {
-                        AssetDatabase.DeleteAsset(dstPath);
+                        EditorUtility.CopySerialized(dstAsset, existing);
+                        Object.DestroyImmediate(dstAsset);
+                        newPoses.Add(existing);
                     }
-
-                    AssetDatabase.CreateAsset(dstAsset, dstPath);
-                    newPoses.Add(dstAsset);
+                    else { AssetDatabase.CreateAsset(dstAsset, dstPath); newPoses.Add(dstAsset); }
                 }
 
                 AssetDatabase.SaveAssets();
@@ -204,17 +214,14 @@ namespace VRBattlegrounds.Editor
 
                 EditorUtility.SetDirty(avatarObj);
                 
-                // If it is a prefab instance, apply changes to prefab
-                if (PrefabUtility.IsPartOfPrefabInstance(avatarObj))
-                {
-                    PrefabUtility.ApplyPrefabInstance(avatarObj, InteractionMode.AutomatedAction);
-                }
+                // Сохранение конкретного prefab принадлежит внешнему writer; рабочий экземпляр остаётся локальным.
 
-                Debug.Log($"✅ [6/6] Hand Poses successfully configured! Generated {newPoses.Count} poses into {saveFolder} and applied them to {avatarObj.name}");
+                VrBattlegrounds.Core.GameLog.Player.Info($"Позы: {newPoses.Count}, {saveFolder}, аватар {avatarObj.name}.");
+                return $"Позы: {newPoses.Count}, {saveFolder}";
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"Error assigning hand poses: {ex.Message}\n{ex.StackTrace}");
+                throw new System.InvalidOperationException("Настройка поз остановлена: " + ex.Message, ex);
             }
             finally
             {

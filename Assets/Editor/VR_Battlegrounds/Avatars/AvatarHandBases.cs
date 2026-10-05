@@ -31,7 +31,6 @@ namespace VrBattlegrounds.Editor.Avatars
         /// Повторный запуск ничего не ломает: скопированное уже лежит на базе SDK.
         /// Порядок: базы → <see cref="Rebase" /> аватаров → <see cref="ClearPlayerBasePoses" />.
         /// </summary>
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Hand Bases/Create Hand Bases")]
         public static void CreateBases()
         {
             GameObject playerBase = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerBase);
@@ -56,7 +55,6 @@ namespace VrBattlegrounds.Editor.Avatars
         /// Убирает позы кисти с <c>PlayerBase</c>. Запускать после переноса аватаров на базы: вариант, всё ещё
         /// наследующий <c>PlayerBase</c> напрямую, потерял бы унаследованные элементы списка поз.
         /// </summary>
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Hand Bases/Clear PlayerBase Hand Poses")]
         public static void ClearPlayerBasePoses()
         {
             // Элемент списка варианта, равный элементу родителя, Unity не хранит как переопределение — он пропал бы
@@ -72,10 +70,8 @@ namespace VrBattlegrounds.Editor.Avatars
             AssetDatabase.SaveAssets();
         }
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Hand Bases/Rebase Selected Avatar → SDK Hands")]
         private static void RebaseSelectedToSdk() => RebaseSelected(SdkHands);
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Hand Bases/Rebase Selected Avatar → Non-SDK Hands")]
         private static void RebaseSelectedToNonSdk() => RebaseSelected(NonSdkHands);
 
         private static void RebaseSelected(string basePath)
@@ -119,7 +115,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 avatar.FindProperty("_parentPrefab").objectReferenceValue = newBase;
                 WritePoses(avatar.FindProperty(HandPoses), ownPoses.Where(p => !inherited.Contains(p)));
                 avatar.ApplyModifiedPropertiesWithoutUndo();
-                PrefabUtility.SaveAsPrefabAsset(root, variantPath);
+                VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(root, variantPath);
             }
             finally
             {
@@ -207,18 +203,20 @@ namespace VrBattlegrounds.Editor.Avatars
                 return;
             }
 
-            var instance = (GameObject)PrefabUtility.InstantiatePrefab(parent);
+            var previewScene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(parent, previewScene);
             try
             {
                 instance.name = System.IO.Path.GetFileNameWithoutExtension(path);
                 var avatar = new SerializedObject(instance.GetComponent<UxrAvatar>());
                 avatar.FindProperty("_parentPrefab").objectReferenceValue = parent;
                 avatar.ApplyModifiedPropertiesWithoutUndo();
-                PrefabUtility.SaveAsPrefabAsset(instance, path);
+                VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(instance, path);
             }
             finally
             {
                 Object.DestroyImmediate(instance);
+                UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(previewScene);
             }
         }
 
@@ -237,7 +235,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 var avatar = new SerializedObject(root.GetComponent<UxrAvatar>());
                 WritePoses(avatar.FindProperty(HandPoses), poses);
                 avatar.ApplyModifiedPropertiesWithoutUndo();
-                PrefabUtility.SaveAsPrefabAsset(root, path);
+                VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(root, path);
             }
             finally
             {

@@ -60,7 +60,6 @@ namespace VrBattlegrounds.Editor.Avatars
         /// </summary>
         public const float Wear = 0.25f;
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Team Color Variant/Build Optimized MEF Black")]
         private static void BuildBlack()
         {
             // Одежда чёрная, экипировка Wolf Grey, каска и очки чёрные — голова сразу отличает от песочных (2026-10-01).
@@ -104,7 +103,7 @@ namespace VrBattlegrounds.Editor.Avatars
             {
                 if (root.GetComponent<TeamUniformColors>() != null) return;
                 root.AddComponent<TeamUniformColors>();
-                PrefabUtility.SaveAsPrefabAsset(root, SourcePrefab);
+                VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(root, SourcePrefab);
                 GameLog.Debug.Info($"[TeamColorVariant] {SourcePrefab}: добавлен TeamUniformColors.");
             }
             finally
@@ -158,15 +157,17 @@ namespace VrBattlegrounds.Editor.Avatars
 
             if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
             {
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(sourcePrefab);
+                var previewScene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(sourcePrefab, previewScene);
                 try
                 {
                     instance.name = Path.GetFileNameWithoutExtension(path);
-                    PrefabUtility.SaveAsPrefabAsset(instance, path);
+                    VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(instance, path);
                 }
                 finally
                 {
                     Object.DestroyImmediate(instance);
+                    UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(previewScene);
                 }
             }
 
@@ -195,7 +196,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 avatar.FindProperty("_prefabGuid").stringValue = AssetDatabase.AssetPathToGUID(path);
                 avatar.ApplyModifiedPropertiesWithoutUndo();
 
-                PrefabUtility.SaveAsPrefabAsset(root, path);
+                VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(root, path);
                 GameLog.Debug.Info($"[TeamColorVariant] {path}: заменено материалов {replaced}.");
             }
             finally

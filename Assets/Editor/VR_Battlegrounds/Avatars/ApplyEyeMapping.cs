@@ -1,3 +1,4 @@
+using VrBattlegrounds.Core;
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
@@ -7,7 +8,6 @@ namespace VRBattlegrounds.Editor
 {
     public class ApplyEyeMapping : UnityEditor.Editor
     {
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Map Eyes To FBX")]
         public static void MapEyes()
         {
             if (!CustomAvatarPipelineMenu.TryGetSelectedFbxAssetPath(out string fbxPath, true))
@@ -22,10 +22,14 @@ namespace VRBattlegrounds.Editor
 
             if (importer == null)
             {
-                Debug.LogError("FBX not found at: " + fbxPath);
-                return;
+                throw new System.InvalidOperationException("FBX не найден: " + fbxPath);
             }
 
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
+            if (!model || importer.animationType != ModelImporterAnimationType.Human) throw new System.InvalidOperationException("Нужен Humanoid FBX.");
+            var transforms = model.GetComponentsInChildren<Transform>(true);
+            if (transforms.Count(t => t.name == "LeftEye") != 1 || transforms.Count(t => t.name == "RightEye") != 1)
+                throw new System.InvalidOperationException("Нужны единственные кости LeftEye и RightEye. Сначала добавьте их в копию FBX.");
             HumanDescription desc = importer.humanDescription;
             List<HumanBone> bones = desc.human != null ? new List<HumanBone>(desc.human) : new List<HumanBone>();
             
@@ -36,7 +40,7 @@ namespace VRBattlegrounds.Editor
             {
                 importer.optimizeBones = false;
                 changed = true;
-                Debug.Log("Disabled 'Optimize Bones' (Strip Bones) so eye bones won't be deleted.");
+                GameLog.Player.Info("Disabled 'Optimize Bones' (Strip Bones) so eye bones won't be deleted.");
             }
 
             // Если не привязан левый глаз
@@ -50,7 +54,7 @@ namespace VRBattlegrounds.Editor
                 lb.limit.useDefaultValues = true;
                 bones.Add(lb);
                 changed = true;
-                Debug.Log("Mapped LeftEye.");
+                GameLog.Player.Info("Mapped LeftEye.");
             }
 
             // Если не привязан правый глаз
@@ -63,7 +67,7 @@ namespace VRBattlegrounds.Editor
                 rb.limit.useDefaultValues = true;
                 bones.Add(rb);
                 changed = true;
-                Debug.Log("Mapped RightEye.");
+                GameLog.Player.Info("Mapped RightEye.");
             }
 
             if (changed)
@@ -92,13 +96,13 @@ namespace VRBattlegrounds.Editor
                 desc.human = bones.ToArray();
                 importer.humanDescription = desc;
                 importer.SaveAndReimport();
-                Debug.Log("Successfully reimported FBX with eye mappings!");
+                GameLog.Player.Info("Successfully reimported FBX with eye mappings!");
             }
 
 
             else
             {
-                Debug.Log("Eyes are already mapped!");
+                GameLog.Player.Info("Eyes are already mapped!");
             }
         }
     }

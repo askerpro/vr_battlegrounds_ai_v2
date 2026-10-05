@@ -3,6 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UltimateXR.Manipulation;
 using VrBattlegrounds.Interaction;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.Editor.Avatars
 {
@@ -44,7 +45,6 @@ namespace VrBattlegrounds.Editor.Avatars
 
         #region === Save Pocket Prefabs ===
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Save Pocket Prefabs from Selected")]
         private static void SavePocketPrefabs()
         {
             GameObject selected = Selection.activeGameObject;
@@ -69,7 +69,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 Transform found = FindRecursive(selected.transform, config.Name);
                 if (found == null)
                 {
-                    Debug.LogWarning($"[AvatarPocketSetup] {config.Name} не найден в {selected.name}, пропускаю.");
+                    GameLog.Player.Warning($"[AvatarPocketSetup] {config.Name} не найден в {selected.name}, пропускаю.");
                     continue;
                 }
 
@@ -92,12 +92,12 @@ namespace VrBattlegrounds.Editor.Avatars
 
                 if (success)
                 {
-                    Debug.Log($"[AvatarPocketSetup] ✅ Сохранён: {prefabPath}");
+                    GameLog.Player.Info($"[AvatarPocketSetup] Сохранён: {prefabPath}");
                     saved++;
                 }
                 else
                 {
-                    Debug.LogError($"[AvatarPocketSetup] ❌ Не удалось сохранить: {prefabPath}");
+                    GameLog.Player.Error($"[AvatarPocketSetup] Не удалось сохранить: {prefabPath}");
                 }
             }
 
@@ -107,7 +107,6 @@ namespace VrBattlegrounds.Editor.Avatars
                 $"Сохранено {saved} карманов как префабы в:\n{PocketPrefabFolder}/", "OK");
         }
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Save Pocket Prefabs from Selected", true)]
         private static bool SavePocketPrefabsValidation()
         {
             return Selection.activeGameObject != null;
@@ -117,7 +116,6 @@ namespace VrBattlegrounds.Editor.Avatars
 
         #region === Add Pockets to Avatar ===
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Add Weapon Pockets to Selected Avatar")]
         private static void AddPockets()
         {
             GameObject selected = Selection.activeGameObject;
@@ -128,18 +126,28 @@ namespace VrBattlegrounds.Editor.Avatars
                 return;
             }
 
+            string result = Setup(selected);
+            EditorUtility.DisplayDialog("Карманы", result + "\nПроверьте расположение в Scene View.", "OK");
+        }
+
+        /// <summary>Явная цель без выбора первого аватара и без сохранения общих шаблонов.</summary>
+        public static string Setup(GameObject selected)
+        {
+            if (selected == null) throw new System.ArgumentNullException(nameof(selected));
+
             // --- Находим кости ---
             Transform pelvis, spine;
-            if (!FindBones(selected, out pelvis, out spine))
-                return;
+            if (!FindBones(selected, out pelvis, out spine, false))
+                throw new System.InvalidOperationException("Не найдены pelvis/spine. Настройка карманов остановлена.");
 
-            Debug.Log($"[AvatarPocketSetup] Найдены кости: pelvis={pelvis.name}, spine={spine.name}");
+            GameLog.Player.Info($"[AvatarPocketSetup] Найдены кости: pelvis={pelvis.name}, spine={spine.name}");
 
             Undo.SetCurrentGroupName("Setup Weapon Pockets");
             int undoGroup = Undo.GetCurrentGroup();
             
             int created = 0;
             int updated = 0;
+            var createdNames = new HashSet<string>();
 
             foreach (var config in Pockets)
             {
@@ -150,7 +158,10 @@ namespace VrBattlegrounds.Editor.Avatars
                 {
                     // Upsert — обновляем только теги
                     if (config.Tags != null)
-                        EnsureAnchorTags(existing.gameObject, config.Tags, config.MaxPlaceDistance);
+                    {
+                        var anchor = existing.GetComponent<UxrGrabbableObjectAnchor>();
+                        EnsureAnchorTags(existing.gameObject, config.Tags, anchor != null ? anchor.MaxPlaceDistance : config.MaxPlaceDistance);
+                    }
                     updated++;
                     continue;
                 }
@@ -163,42 +174,37 @@ namespace VrBattlegrounds.Editor.Avatars
                 if (prefab != null)
                 {
                     // Инстанцируем префаб (сохраняет связь с оригиналом!)
-                    instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                    instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, selected.scene);
                     Undo.RegisterCreatedObjectUndo(instance, $"Instantiate {config.Name}");
                     instance.transform.SetParent(targetBone, false);
                     instance.transform.localPosition = config.DefaultPosition;
                     instance.transform.localRotation = Quaternion.identity;
                     
-                    Debug.Log($"[AvatarPocketSetup] 📦 {config.Name} — инстанцирован из префаба");
+                    GameLog.Player.Info($"[AvatarPocketSetup] {config.Name} — инстанцирован из префаба");
                 }
                 else
                 {
                     // Фоллбэк — создаём вручную
                     instance = CreatePocketManually(config, targetBone);
-                    Debug.Log($"[AvatarPocketSetup] 🔧 {config.Name} — создан вручную (префаб не найден)");
+                    GameLog.Player.Info($"[AvatarPocketSetup] {config.Name} — создан вручную (префаб не найден)");
                 }
                 
                 created++;
+                createdNames.Add(config.Name);
             }
 
+            Workbench.AvatarPocketTemplateBindings.Apply(selected, createdNames);
             Undo.CollapseUndoOperations(undoGroup);
 
             string summary = $"Создано: {created}, Обновлено: {updated}";
             
-            Debug.Log($"[AvatarPocketSetup] ✅ {summary}\n" +
+            GameLog.Player.Info($"[AvatarPocketSetup] {summary}\n" +
                       $"  pelvis: {pelvis.name} (MagazinePocket, Anchor_Hip_R)\n" +
                       $"  spine:  {spine.name} (Anchor_Back, BackGrabProxy)");
 
-            EditorUtility.DisplayDialog("Готово!", 
-                $"{summary}\n\n" +
-                $"• MagazinePocket → {pelvis.name}\n" +
-                $"• Anchor_Hip_R → {pelvis.name}\n" +
-                $"• Anchor_Back → {spine.name}\n" +
-                $"• BackGrabProxy → {spine.name}\n\n" +
-                (created > 0 ? "⚠️ Подвиньте позиции в Scene View!" : "Все теги обновлены."), "OK");
+            return summary + $"\nТаз: {pelvis.name}; спина: {spine.name}.";
         }
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Add Weapon Pockets to Selected Avatar", true)]
         private static bool AddPocketsValidation()
         {
             return Selection.activeGameObject != null;
@@ -258,7 +264,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <summary>
         /// Находит кости pelvis и spine через Animator + fallback по именам.
         /// </summary>
-        private static bool FindBones(GameObject root, out Transform pelvis, out Transform spine)
+        private static bool FindBones(GameObject root, out Transform pelvis, out Transform spine, bool showDialog = true)
         {
             pelvis = null;
             spine = null;
@@ -266,7 +272,7 @@ namespace VrBattlegrounds.Editor.Avatars
             Animator animator = root.GetComponentInChildren<Animator>();
             if (animator == null || !animator.isHuman)
             {
-                EditorUtility.DisplayDialog("Ошибка",
+                if (showDialog) EditorUtility.DisplayDialog("Ошибка",
                     "Не найден Humanoid Animator в иерархии выбранного объекта.", "OK");
                 return false;
             }

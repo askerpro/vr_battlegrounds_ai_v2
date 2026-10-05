@@ -1,3 +1,4 @@
+using VrBattlegrounds.Core;
 using System;
 using System.IO;
 using System.Text;
@@ -13,7 +14,6 @@ namespace VRBattlegrounds.Editor
         private const string LastFbxPrefsKey = "VRBattlegrounds.CustomAvatarPipeline.LastFbxAssetPath";
         private const string BlenderScriptsAssetFolder = "Assets/Editor/VR_Battlegrounds/Avatars/BlenderScripts";
 
-        [MenuItem(MenuRoot + "Configure Blender Executable...", false, 1)]
         public static void ConfigureBlenderExecutable()
         {
             string current = EditorPrefs.GetString(BlenderPathPrefsKey, string.Empty);
@@ -29,27 +29,24 @@ namespace VRBattlegrounds.Editor
                     "Unsupported Blender Path",
                     "This Blender executable is inside C:\\Program Files\\WindowsApps, which Windows often blocks for direct process launches.\n\nInstall Blender from blender.org or Steam, then select its real blender.exe path.",
                     "OK");
-                Debug.LogError($"[Custom Avatar Pipeline] Refusing WindowsApps Blender path: {selected}");
+                GameLog.Player.Error($"[Custom Avatar Pipeline] Refusing WindowsApps Blender path: {selected}");
                 return;
             }
 
             EditorPrefs.SetString(BlenderPathPrefsKey, selected);
-            Debug.Log($"[Custom Avatar Pipeline] Blender executable set to: {selected}");
+            GameLog.Player.Info($"[Custom Avatar Pipeline] Blender executable set to: {selected}");
         }
 
-        [MenuItem(MenuRoot + "1. Amputate Selected FBX Hands", false, 20)]
         public static void AmputateSelectedFbxHands()
         {
             RunSelectedFbxScript("amputate_avatar_hands.py", "amputate hands");
         }
 
-        [MenuItem(MenuRoot + "2. Add Wrist Torsion Bones", false, 21)]
         public static void AddWristTorsionBones()
         {
             RunSelectedFbxScript("add_wrist_torsion_bones.py", "add wrist torsion bones");
         }
 
-        [MenuItem(MenuRoot + "3. Add Eye Bones And Map Humanoid", false, 22)]
         public static void AddEyeBonesAndMapHumanoid()
         {
             if (!TryGetSelectedFbxAssetPath(out string assetPath, true))
@@ -59,7 +56,6 @@ namespace VRBattlegrounds.Editor
                 ApplyEyeMapping.MapEyes(assetPath);
         }
 
-        [MenuItem(MenuRoot + "4. Create Scene Target From Selected FBX", false, 40)]
         public static void CreateSceneTargetFromSelectedFbx()
         {
             if (!TryGetSelectedFbxAssetPath(out string assetPath, true))
@@ -68,7 +64,6 @@ namespace VRBattlegrounds.Editor
             CreateSceneTarget(assetPath);
         }
 
-        [MenuItem(MenuRoot + "5. Run UXR Setup On Current Target", false, 41)]
         public static void RunUxrSetupOnCurrentTarget()
         {
             if (!EnsureAvatarTargetSelected())
@@ -82,7 +77,7 @@ namespace VRBattlegrounds.Editor
             CreatePrefabSetup.Execute();
             HandPosesSetup.Execute();
 
-            Debug.Log("[Custom Avatar Pipeline] UXR setup wizard completed on current target.");
+            GameLog.Player.Info("[Custom Avatar Pipeline] UXR setup wizard completed on current target.");
         }
 
         /// <summary>
@@ -96,14 +91,13 @@ namespace VRBattlegrounds.Editor
 
             if (avatar == null)
             {
-                Debug.LogWarning("[Custom Avatar Pipeline] Кончики пальцев для UI: на выделенном объекте нет UxrAvatar — шаг пропущен.");
+                GameLog.Player.Warning("[Custom Avatar Pipeline] Кончики пальцев для UI: на выделенном объекте нет UxrAvatar — шаг пропущен.");
                 return;
             }
 
             VrBattlegrounds.EditorTools.AvatarFingertipSetup.Setup(avatar);
         }
 
-        [MenuItem(MenuRoot + "Run Blender Preparation Only", false, 60)]
         public static void RunBlenderPreparationOnly()
         {
             if (!TryGetSelectedFbxAssetPath(out string assetPath, true))
@@ -112,7 +106,6 @@ namespace VRBattlegrounds.Editor
             RunBlenderPreparation(assetPath);
         }
 
-        [MenuItem(MenuRoot + "Run Full Selected FBX Pipeline", false, 61)]
         public static void RunFullSelectedFbxPipeline()
         {
             if (!TryGetSelectedFbxAssetPath(out string assetPath, true))
@@ -130,7 +123,7 @@ namespace VRBattlegrounds.Editor
                 EditorUtility.DisplayProgressBar("Custom Avatar Pipeline", "Running UXR setup wizard...", 0.75f);
                 RunUxrSetupOnCurrentTarget();
 
-                Debug.Log($"[Custom Avatar Pipeline] Full pipeline completed for {assetPath}");
+                GameLog.Player.Info($"[Custom Avatar Pipeline] Full pipeline completed for {assetPath}");
             }
             finally
             {
@@ -171,7 +164,7 @@ namespace VRBattlegrounds.Editor
             {
                 string lastPath = EditorPrefs.GetString(LastFbxPrefsKey, string.Empty);
                 string hint = string.IsNullOrEmpty(lastPath) ? string.Empty : $"\nLast prepared FBX was: {lastPath}";
-                Debug.LogError("[Custom Avatar Pipeline] Select an FBX asset in the Project window, or select a scene instance created from an FBX." + hint);
+                GameLog.Player.Error("[Custom Avatar Pipeline] Select an FBX asset in the Project window, or select a scene instance created from an FBX." + hint);
             }
 
             return false;
@@ -205,12 +198,12 @@ namespace VRBattlegrounds.Editor
 
             if (!File.Exists(scriptAbsolutePath))
             {
-                Debug.LogError($"[Custom Avatar Pipeline] Blender script not found: {scriptAbsolutePath}");
+                GameLog.Player.Error($"[Custom Avatar Pipeline] Blender script not found: {scriptAbsolutePath}");
                 return false;
             }
 
             string blenderPath = ResolveBlenderExecutable();
-            Debug.Log($"[Custom Avatar Pipeline] Running Blender step '{actionName}' on {assetPath}");
+            GameLog.Player.Info($"[Custom Avatar Pipeline] Running Blender step '{actionName}' on {assetPath}");
 
             int exitCode = RunProcess(
                 blenderPath,
@@ -218,17 +211,17 @@ namespace VRBattlegrounds.Editor
                 out string output);
 
             if (!string.IsNullOrWhiteSpace(output))
-                Debug.Log($"[Custom Avatar Pipeline] Blender output ({actionName}):\n{output}");
+                GameLog.Player.Info($"[Custom Avatar Pipeline] Blender output ({actionName}):\n{output}");
 
             if (exitCode != 0)
             {
-                Debug.LogError($"[Custom Avatar Pipeline] Blender step '{actionName}' failed with exit code {exitCode}.");
+                GameLog.Player.Error($"[Custom Avatar Pipeline] Blender step '{actionName}' failed with exit code {exitCode}.");
                 return false;
             }
 
             AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
             AssetDatabase.Refresh();
-            Debug.Log($"[Custom Avatar Pipeline] Blender step '{actionName}' completed and Unity reimported {assetPath}");
+            GameLog.Player.Info($"[Custom Avatar Pipeline] Blender step '{actionName}' completed and Unity reimported {assetPath}");
             return true;
         }
 
@@ -238,14 +231,14 @@ namespace VRBattlegrounds.Editor
             if (existing != null)
             {
                 Selection.activeGameObject = existing;
-                Debug.LogWarning("[Custom Avatar Pipeline] AutoSetupAvatarTarget already exists. Selected existing target instead of creating a duplicate.");
+                GameLog.Player.Warning("[Custom Avatar Pipeline] AutoSetupAvatarTarget already exists. Selected existing target instead of creating a duplicate.");
                 return existing;
             }
 
             GameObject fbxPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
             if (fbxPrefab == null)
             {
-                Debug.LogError($"[Custom Avatar Pipeline] Could not load FBX prefab at {assetPath}");
+                GameLog.Player.Error($"[Custom Avatar Pipeline] Could not load FBX prefab at {assetPath}");
                 return null;
             }
 
@@ -256,7 +249,7 @@ namespace VRBattlegrounds.Editor
             instance.name = "AutoSetupAvatarTarget";
             Undo.RegisterCreatedObjectUndo(instance, "Create AutoSetupAvatarTarget");
             Selection.activeGameObject = instance;
-            Debug.Log($"[Custom Avatar Pipeline] Created scene target from {assetPath}: {instance.name}");
+            GameLog.Player.Info($"[Custom Avatar Pipeline] Created scene target from {assetPath}: {instance.name}");
             return instance;
         }
 
@@ -272,7 +265,7 @@ namespace VRBattlegrounds.Editor
                 return true;
             }
 
-            Debug.LogError("[Custom Avatar Pipeline] Select the avatar root in the scene, or create AutoSetupAvatarTarget first.");
+            GameLog.Player.Error("[Custom Avatar Pipeline] Select the avatar root in the scene, or create AutoSetupAvatarTarget first.");
             return false;
         }
 
@@ -284,7 +277,7 @@ namespace VRBattlegrounds.Editor
                 if (IsWindowsAppsPath(configured))
                 {
                     EditorPrefs.DeleteKey(BlenderPathPrefsKey);
-                    Debug.LogWarning($"[Custom Avatar Pipeline] Ignoring WindowsApps Blender path because direct launch is blocked by Windows: {configured}");
+                    GameLog.Player.Warning($"[Custom Avatar Pipeline] Ignoring WindowsApps Blender path because direct launch is blocked by Windows: {configured}");
                 }
                 else
                 {

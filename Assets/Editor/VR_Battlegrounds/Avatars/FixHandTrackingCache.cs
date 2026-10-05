@@ -1,3 +1,4 @@
+using VrBattlegrounds.Core;
 using UnityEngine;
 using UnityEditor;
 using UltimateXR.Devices;
@@ -5,7 +6,6 @@ using UltimateXR.Avatar;
 
 public static class FixHandTrackingCache
 {
-    [MenuItem("Tools/VR Battlegrounds/Avatars/Fix Hand Tracking")]
     public static void Execute()
     {
         string[] prefabs = new[] {
@@ -41,7 +41,7 @@ public static class FixHandTrackingCache
 
                 if (count > 0)
                 {
-                    Debug.Log($"Cleared calibration data on {count} UxrHandTracking components in {path}");
+                    GameLog.Player.Info($"Cleared calibration data on {count} UxrHandTracking components in {path}");
                 }
             }
         }

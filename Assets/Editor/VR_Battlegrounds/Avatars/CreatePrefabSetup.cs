@@ -1,3 +1,4 @@
+using VrBattlegrounds.Core;
 using UnityEditor;
 using UnityEngine;
 using System.IO;
@@ -6,7 +7,6 @@ namespace VRBattlegrounds.Editor
 {
     public class CreatePrefabSetup
     {
-        [MenuItem("Tools/VR Battlegrounds/Avatars/UXR Setup Wizard/5. Save as Prefab")]
         public static void Execute()
         {
             GameObject avatarObj = Selection.activeGameObject;
@@ -18,7 +18,7 @@ namespace VRBattlegrounds.Editor
             }
             if (avatarObj == null)
             {
-                Debug.LogError("UXR Setup: Missing AutoSetupAvatarTarget in scene.");
+                GameLog.Player.Error("UXR Setup: Missing AutoSetupAvatarTarget in scene.");
                 return;
             }
 
@@ -44,12 +44,12 @@ namespace VRBattlegrounds.Editor
 
             if (success)
             {
-                Debug.Log($"✅ [5/5] Avatar Prefab successfully created at: {prefabPath}");
+                GameLog.Player.Info($"✅ [5/5] Avatar Prefab successfully created at: {prefabPath}");
                 // Cleanup the unlinked object after prefab hook
             }
             else
             {
-                Debug.LogError($"UXR Setup: Failed to save Prefab at {prefabPath}");
+                GameLog.Player.Error($"UXR Setup: Failed to save Prefab at {prefabPath}");
             }
         }
     }

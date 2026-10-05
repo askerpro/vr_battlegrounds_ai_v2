@@ -1,10 +1,10 @@
+using VrBattlegrounds.Core;
 using UnityEngine;
 using UnityEditor;
 using UltimateXR.Avatar;
 
 public static class CreateBaseAvatars
 {
-    [MenuItem("Tools/VR Battlegrounds/Avatars/Create Base Avatars")]
     public static void Execute()
     {
         string[] meshPaths = new string[] {
@@ -25,7 +25,7 @@ public static class CreateBaseAvatars
 
         if (playerBaseAsset == null)
         {
-            Debug.LogError("PlayerBase not found. Generate it first.");
+            GameLog.Player.Error("PlayerBase not found. Generate it first.");
             return;
         }
 
@@ -34,7 +34,7 @@ public static class CreateBaseAvatars
             GameObject meshAsset = AssetDatabase.LoadAssetAtPath<GameObject>(meshPaths[i]);
             if (meshAsset == null)
             {
-                Debug.LogError($"Could not find mesh prefab at {meshPaths[i]}");
+                GameLog.Player.Error($"Could not find mesh prefab at {meshPaths[i]}");
                 continue;
             }
 
@@ -56,19 +56,19 @@ public static class CreateBaseAvatars
                 if (avatar != null)
                 {
                     bool success = avatar.SetupRigElementsFromAnimator();
-                    Debug.Log($"SetupRigElementsFromAnimator for {names[i]}: {success}");
+                    GameLog.Player.Info($"SetupRigElementsFromAnimator for {names[i]}: {success}");
                 }
             }
             else
             {
-                Debug.LogWarning($"No Humanoid Animator found for {names[i]}");
+                GameLog.Player.Warning($"No Humanoid Animator found for {names[i]}");
             }
 
             // Save
             string outPath = $"Assets/Prefabs/Player/{names[i]}.prefab";
             PrefabUtility.SaveAsPrefabAsset(baseInstance, outPath);
             GameObject.DestroyImmediate(baseInstance);
-            Debug.Log($"Created {outPath}");
+            GameLog.Player.Info($"Created {outPath}");
         }
     }
 }

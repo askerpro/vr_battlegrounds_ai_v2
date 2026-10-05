@@ -1,3 +1,4 @@
+using VrBattlegrounds.Core;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,14 +14,13 @@ namespace VrBattlegrounds.Editor.Avatars
         private const string SourcePrefabPath = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
         private const string OutputPrefabPath = "Assets/Prefabs/Player/PlayerBase.prefab";
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Create PlayerBase from CyborgAvatar")]
         public static void CreatePlayerBase()
         {
             // 1. Загружаем исходный prefab
             var sourcePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SourcePrefabPath);
             if (sourcePrefab == null)
             {
-                Debug.LogError($"[PlayerBasePrefabBuilder] Не найден исходный prefab: {SourcePrefabPath}");
+                GameLog.Player.Error($"[PlayerBasePrefabBuilder] Не найден исходный prefab: {SourcePrefabPath}");
                 return;
             }
 
@@ -42,7 +42,7 @@ namespace VrBattlegrounds.Editor.Avatars
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(sourcePrefab);
             if (instance == null)
             {
-                Debug.LogError("[PlayerBasePrefabBuilder] Не удалось инстанцировать prefab.");
+                GameLog.Player.Error("[PlayerBasePrefabBuilder] Не удалось инстанцировать prefab.");
                 return;
             }
 
@@ -61,9 +61,9 @@ namespace VrBattlegrounds.Editor.Avatars
 
             if (success && savedPrefab != null)
             {
-                Debug.Log($"[PlayerBasePrefabBuilder] ✅ PlayerBase.prefab создан: {OutputPrefabPath}");
-                Debug.Log("[PlayerBasePrefabBuilder] Все связи с CyborgAvatar_URP.prefab разорваны.");
-                Debug.Log("[PlayerBasePrefabBuilder] Теперь можно создавать Prefab Variants с разными скинами.");
+                GameLog.Player.Info($"[PlayerBasePrefabBuilder] ✅ PlayerBase.prefab создан: {OutputPrefabPath}");
+                GameLog.Player.Info("[PlayerBasePrefabBuilder] Все связи с CyborgAvatar_URP.prefab разорваны.");
+                GameLog.Player.Info("[PlayerBasePrefabBuilder] Теперь можно создавать Prefab Variants с разными скинами.");
 
                 // Выделяем созданный prefab в Project
                 Selection.activeObject = savedPrefab;
@@ -71,11 +71,10 @@ namespace VrBattlegrounds.Editor.Avatars
             }
             else
             {
-                Debug.LogError("[PlayerBasePrefabBuilder] ❌ Ошибка при сохранении PlayerBase.prefab");
+                GameLog.Player.Error("[PlayerBasePrefabBuilder] ❌ Ошибка при сохранении PlayerBase.prefab");
             }
         }
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Create PlayerBase from CyborgAvatar", true)]
         private static bool ValidateCreatePlayerBase()
         {
             // Меню доступно только если исходный prefab существует

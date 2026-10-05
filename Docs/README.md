@@ -54,6 +54,7 @@
 | `ui-menu-architecture.md` | Архитектура меню: контроллер и стек навигации, реестр, каркас, разделы и экраны |
 | `ui-fonts.md` | Шрифты UI: как TMP рисует текст, шрифт проекта, как применять, как добавить символ |
 | `magazine-pocket.md` | Механика "умного магазина" (Smart Magazine Pocket) |
+| [Редактор аватара](avatar-editor-workbench.md), [аудит меню](audit/avatar-editor-tools-audit-2026-10-04.md) | Единое окно выбранного аватара: шесть разделов, 42 прежние команды внутри, явные планы записи и read-only диагностика. Задержки отрисовки устранены: native RED → GREEN, 11–20 мс; UI/scoped/plan probes и Editor/Android PASS. Остались пользовательская приёмка, реальный Blender/SDK-маршрут и восемь отказов текущих prefab тестов. |
 | `kinemation-pack-review.md` | Разведка пака KINEMATION Tactical Shooter: состав, вес под Quest, применимость маршрута `/add-weapon`, какие стволы брать |
 | [План исправлений KINEMATION](tasks/T-39-kinemation-fixes-plan.md) | Восемь рецептов обновлены; Android compile и независимая сверка прошли. Осталось принятие в Unity/шлеме, сетевой replay и закрепление принятой логики тестами. Остальной реестр и новый поворотный SRM12 отложены. [Состав](tasks/artifacts/T-39-fixes-2026-10-03.json), [измерения](tasks/artifacts/T-39-validation-2026-10-03.json). |
 | [Оценка посадки позы руки](hand-pose-fit-analysis.md) | Цель — проверять контакт, зазоры и проникновения после переноса поз; здесь: дизайн с эталонами киборга SDK и подтверждённое расхождение предпросмотра/целевой руки; осталось реализовать анализатор, PNG/JSON и калибровку на временных ухудшениях. [Измерения](audit/artifacts/hand-pose-fit-research-2026-10-04.json). |
@@ -100,6 +101,7 @@
 - **Архитектура UI Меню** → [`ui-menu-architecture.md`](ui-menu-architecture.md)
 - **Шрифты, кириллица, «квадраты вместо букв»** → [`ui-fonts.md`](ui-fonts.md)
 - **Умный магазин (Magazine Pocket)** → [`magazine-pocket.md`](magazine-pocket.md)
+- **Редактор аватара и ревизия Editor-меню** → [текущее устройство, команды и проверки](avatar-editor-workbench.md), [проект и этапы](plans/2026-10-04-avatar-editor-workbench.md), [полный каталог и находки](audit/avatar-editor-tools-audit-2026-10-04.md)
 - **Стена арсенала** → [`Arsenal/Arsenal_Code_Architecture_RU.md`](Arsenal/Arsenal_Code_Architecture_RU.md)
 - **Проектирование карт** → [порядок чтения](#левел-дизайн-от-замысла-к-проверке), затем принципы → процесс → геометрия → проверки
 - **План развития** → [`Roadmap.md`](Roadmap.md)

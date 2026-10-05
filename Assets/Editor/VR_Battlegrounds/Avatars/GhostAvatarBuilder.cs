@@ -51,18 +51,18 @@ namespace VrBattlegrounds.Editor.Avatars
             "MagazineEjectInput", "PocketHaptics", "PlayerLoadoutManager",
         };
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Build Ghost Avatar")]
         public static void Build()
         {
             var source = AssetDatabase.LoadAssetAtPath<GameObject>(SourcePath);
             var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
             if (source == null || material == null)
             {
-                Debug.LogError($"[GhostAvatarBuilder] Нет {SourcePath} или {MaterialPath}.");
+                GameLog.Player.Error($"[GhostAvatarBuilder] Нет {SourcePath} или {MaterialPath}.");
                 return;
             }
 
-            var instance = (GameObject)PrefabUtility.InstantiatePrefab(source);
+            var previewScene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(source, previewScene);
             GameObject prefab;
             try
             {
@@ -72,16 +72,17 @@ namespace VrBattlegrounds.Editor.Avatars
                 if (instance.GetComponent<TeamColorTint>() == null) instance.AddComponent<TeamColorTint>();
                 if (instance.GetComponent<GhostViewEffect>() == null) instance.AddComponent<GhostViewEffect>();
 
-                prefab = PrefabUtility.SaveAsPrefabAsset(instance, GhostPath);
+                prefab = VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(instance, GhostPath);
             }
             finally
             {
                 Object.DestroyImmediate(instance);
+                UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(previewScene);
             }
 
             Register(prefab);
             AssetDatabase.SaveAssets();
-            Debug.Log($"[GhostAvatarBuilder] Призрак собран: {GhostPath}.");
+            GameLog.Player.Info($"[GhostAvatarBuilder] Призрак собран: {GhostPath}.");
         }
 
         private static void Strip(GameObject root)
@@ -156,7 +157,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 if (manager != null && !manager.spawnPrefabs.Contains(prefab))
                 {
                     manager.spawnPrefabs.Add(prefab);
-                    PrefabUtility.SaveAsPrefabAsset(managers, ManagersPath);
+                    VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(managers, ManagersPath);
                 }
             }
             finally

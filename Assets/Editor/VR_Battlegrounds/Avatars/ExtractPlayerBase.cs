@@ -1,9 +1,9 @@
+using VrBattlegrounds.Core;
 using UnityEngine;
 using UnityEditor;
 
 public static class ExtractPlayerBase
 {
-    [MenuItem("Tools/VR Battlegrounds/Avatars/Extract Player Base")]
     public static void Execute()
     {
         string sourcePath = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
@@ -11,7 +11,7 @@ public static class ExtractPlayerBase
 
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath);
         if (prefab == null) {
-            Debug.LogError("Cyborg prefab not found.");
+            GameLog.Player.Error("Cyborg prefab not found.");
             return;
         }
 
@@ -22,12 +22,12 @@ public static class ExtractPlayerBase
         Transform cyborg = go.transform.Find("Cyborg");
         if (cyborg != null) {
             Object.DestroyImmediate(cyborg.gameObject);
-            Debug.Log("Deleted Cyborg mesh child.");
+            GameLog.Player.Info("Deleted Cyborg mesh child.");
         }
 
         PrefabUtility.SaveAsPrefabAsset(go, targetPath);
         Object.DestroyImmediate(go);
         
-        Debug.Log($"PlayerBase created successfully at {targetPath}");
+        GameLog.Player.Info($"PlayerBase created successfully at {targetPath}");
     }
 }

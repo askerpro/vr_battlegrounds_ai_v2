@@ -77,7 +77,6 @@ namespace VrBattlegrounds.Editor.Avatars
             avatar.GetComponentsInChildren<Animator>(true)
                   .FirstOrDefault(a => a.avatar != null && a.avatar.isHuman && a.GetComponentInParent<UxrHandIntegration>(true) == null);
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Build Corpses")]
         public static void Build()
         {
             HitboxBuilder.EnsureLayer(CorpsePhysics.LayerName);
@@ -104,7 +103,8 @@ namespace VrBattlegrounds.Editor.Avatars
 
         private static Corpse BuildCorpse(GameObject avatar)
         {
-            var instance = (GameObject)PrefabUtility.InstantiatePrefab(avatar);
+            var previewScene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(avatar, previewScene);
             PrefabUtility.UnpackPrefabInstance(instance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
 
             try
@@ -161,7 +161,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 so.ApplyModifiedPropertiesWithoutUndo();
 
                 string path = $"{OutFolder}/{model.name}.prefab";
-                GameObject saved = PrefabUtility.SaveAsPrefabAsset(model.gameObject, path);
+                GameObject saved = VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(model.gameObject, path);
                 Object.DestroyImmediate(model.gameObject);
                 GameLog.Player.Info($"[CorpseBuilder] Труп собран: {path} ({bodies.Count} тел).");
                 return saved.GetComponent<Corpse>();
@@ -169,6 +169,7 @@ namespace VrBattlegrounds.Editor.Avatars
             finally
             {
                 if (instance != null) Object.DestroyImmediate(instance);
+                UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(previewScene);
             }
         }
 

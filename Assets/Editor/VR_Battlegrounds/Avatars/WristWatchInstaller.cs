@@ -30,7 +30,6 @@ namespace VrBattlegrounds.Editor.Avatars
     {
         private const string WatchPrefabPath = "Assets/Prefabs/Player/WristWatch_HUD.prefab";
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Install Wrist Watch (registered avatars)")]
         public static void InstallOnRegisteredAvatars()
         {
             var watchPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(WatchPrefabPath);
@@ -78,6 +77,19 @@ namespace VrBattlegrounds.Editor.Avatars
             public Vector3 Offset;
             public Quaternion Rotation;
             public Vector3 Scale;
+        }
+
+        /// <summary>Один выбранный prefab; источник нормализованной позы часов задаётся явно.</summary>
+        public static string InstallFor(string path, GameObject referencePrefab)
+        {
+            var target = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (!target || !referencePrefab || !TryGetReferencePose(referencePrefab, out var pose))
+                throw new System.InvalidOperationException("Выберите prefab аватара и эталон с настроенными часами.");
+            if (target.GetComponentsInChildren<WristDisplay>(true).Length > 0)
+                return "Часы уже присутствуют; установка не выполнялась.";
+            var watch = AssetDatabase.LoadAssetAtPath<GameObject>(WatchPrefabPath);
+            if (!watch || !Install(path, watch, pose)) throw new System.InvalidOperationException("Часы не установлены.");
+            return "Часы установлены: " + path;
         }
 
         private static bool TryGetReferencePose(GameObject referencePrefab, out WatchPose pose)
@@ -155,7 +167,8 @@ namespace VrBattlegrounds.Editor.Avatars
                 Vector3 world = pose.Scale * length;
                 watch.transform.localScale = new Vector3(world.x / parentScale.x, world.y / parentScale.y, world.z / parentScale.z);
 
-                PrefabUtility.SaveAsPrefabAsset(root, path);
+                Workbench.AvatarScopedActions.SetCanonicalAssetId(root, path);
+                if (!PrefabUtility.SaveAsPrefabAsset(root, path)) throw new System.InvalidOperationException("Часы не сохранены: " + path);
                 GameLog.UI.Info($"[{nameof(WristWatchInstaller)}] {path}: часы на {(pose.OnHand ? "кисти" : "предплечье")} ({pose.Side}). Проверить позу в сцене.");
                 return true;
             }

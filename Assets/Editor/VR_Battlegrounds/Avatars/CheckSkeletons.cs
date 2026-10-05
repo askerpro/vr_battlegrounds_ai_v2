@@ -1,12 +1,12 @@
+using VrBattlegrounds.Core;
 using UnityEngine;
 using UnityEditor;
 
 public static class CheckSkeletons
 {
-    [MenuItem("Tools/VR Battlegrounds/Avatars/Check Skeletons")]
     public static void Check()
     {
-        Debug.Log("--- SKELETON CHECK START ---");
+        GameLog.Player.Info("--- SKELETON CHECK START ---");
         
         string folder = "Assets/ThirdParty/Military Soldier Mega Bundle/Heavy Soldier/Prefabs";
         string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { folder });
@@ -28,11 +28,11 @@ public static class CheckSkeletons
                     Vector3 lPos = go.transform.InverseTransformPoint(lHand.position);
                     Vector3 rPos = go.transform.InverseTransformPoint(rHand.position);
                     Vector3 hPos = go.transform.InverseTransformPoint(head.position);
-                    Debug.Log($"[MATCH_DATA] {prefab.name} => Head: {hPos:F4} | LHand: {lPos:F4} | RHand: {rPos:F4}");
+                    GameLog.Player.Info($"[MATCH_DATA] {prefab.name} => Head: {hPos:F4} | LHand: {lPos:F4} | RHand: {rPos:F4}");
                 }
             }
             GameObject.DestroyImmediate(go);
         }
-        Debug.Log("--- SKELETON CHECK END ---");
+        GameLog.Player.Info("--- SKELETON CHECK END ---");
     }
 }

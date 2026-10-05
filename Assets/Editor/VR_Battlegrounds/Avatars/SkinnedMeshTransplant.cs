@@ -73,7 +73,6 @@ namespace VrBattlegrounds.Editor.Avatars
         private Material _material;
         private string _extra = "handgunHolster_geo, strap_geo";
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Transplant Skinned Meshes...")]
         private static void Open()
         {
             GetWindow<SkinnedMeshTransplant>("Пересадка скинов");
@@ -113,7 +112,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 string report = Transplant(root, settings, out bool ok);
                 if (ok)
                 {
-                    PrefabUtility.SaveAsPrefabAsset(root, settings.TargetPrefabPath);
+                    VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(root, settings.TargetPrefabPath);
                     GameLog.Player.Info($"[SkinnedMeshTransplant] {settings.TargetPrefabPath}: {report}");
                 }
                 else

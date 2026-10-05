@@ -1,16 +1,18 @@
 using UnityEngine;
 using UnityEditor;
 using UltimateXR.Avatar;
+using System;
+using System.Linq;
+using VrBattlegrounds.Core;
 
 public static class FixAvatarRenderers
 {
-    [MenuItem("Tools/VR Battlegrounds/Avatars/Fix Avatar Renderers")]
     public static void Execute()
     {
         var selectedObjects = Selection.gameObjects;
         if (selectedObjects.Length == 0)
         {
-            Debug.LogWarning("Please select at least one Avatar in the scene to fix renderers.");
+            GameLog.Player.Warning("Выберите аватар для обновления renderers.");
             return;
         }
 
@@ -20,36 +22,28 @@ public static class FixAvatarRenderers
             UxrAvatar avatar = obj.GetComponent<UxrAvatar>();
             if (avatar != null)
             {
-                Undo.RecordObject(avatar, "Fix Avatar Renderers");
-
-                Renderer[] renderers = avatar.GetComponentsInChildren<Renderer>(true);
-                var so = new SerializedObject(avatar);
-                var prop = so.FindProperty("_avatarRenderers");
-                
-                if (prop != null)
-                {
-                    prop.ClearArray();
-                    prop.arraySize = renderers.Length;
-                    for (int i = 0; i < renderers.Length; i++)
-                    {
-                        prop.GetArrayElementAtIndex(i).objectReferenceValue = renderers[i];
-                    }
-                    so.ApplyModifiedProperties();
-                    
-                    EditorUtility.SetDirty(avatar);
-                    Debug.Log($"✅ Fixed Avatar Renderers for {obj.name}: automatically assigned {renderers.Length} renderers.");
-                    successCount++;
-                }
-                else
-                {
-                    Debug.LogWarning($"Could not find _avatarRenderers property on {obj.name}. Is it an older version of UltimateXR?");
-                }
+                GameLog.Player.Info(Setup(avatar));
+                successCount++;
             }
         }
         
         if (successCount == 0)
         {
-            Debug.LogWarning("None of the selected objects have a UxrAvatar component attached.");
+            GameLog.Player.Warning("В выбранных объектах отсутствует UxrAvatar.");
         }
+    }
+
+    public static string Setup(UxrAvatar avatar)
+    {
+        if (!avatar) throw new ArgumentNullException(nameof(avatar));
+        var renderers = avatar.GetComponentsInChildren<Renderer>(true)
+            .Where(r => r.GetComponentInParent<UxrHandIntegration>() == null).ToArray();
+        var so = new SerializedObject(avatar);
+        var prop = so.FindProperty("_avatarRenderers");
+        if (prop == null) throw new InvalidOperationException("В SDK отсутствует _avatarRenderers.");
+        prop.arraySize = renderers.Length;
+        for (int i = 0; i < renderers.Length; i++) prop.GetArrayElementAtIndex(i).objectReferenceValue = renderers[i];
+        so.ApplyModifiedProperties();
+        return $"{avatar.name}: назначено renderers {renderers.Length}.";
     }
 }

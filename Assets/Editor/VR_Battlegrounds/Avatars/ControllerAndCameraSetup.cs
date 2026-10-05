@@ -1,30 +1,37 @@
+using VrBattlegrounds.Core;
 using UnityEditor;
 using UnityEngine;
 using UltimateXR.Avatar;
+using System.Linq;
 
 namespace VRBattlegrounds.Editor
 {
     public class ControllerAndCameraSetup
     {
-        [MenuItem("Tools/VR Battlegrounds/Avatars/UXR Setup Wizard/3. Controller & Camera")]
         public static void Execute()
         {
             GameObject avatarObj = Selection.activeGameObject;
             if (avatarObj == null) avatarObj = GameObject.Find("AutoSetupAvatarTarget");
             if (avatarObj == null)
             {
-                var foundUxrAvatar = Object.FindObjectOfType<UltimateXR.Avatar.UxrAvatar>();
+                var foundUxrAvatar = Object.FindAnyObjectByType<UltimateXR.Avatar.UxrAvatar>();
                 if (foundUxrAvatar != null) avatarObj = foundUxrAvatar.gameObject;
             }
             if (avatarObj == null) return;
+
+            Setup(avatarObj);
+        }
+
+        public static void Setup(GameObject avatarObj)
+        {
+            if (!avatarObj) throw new System.ArgumentNullException(nameof(avatarObj));
 
             Undo.RegisterFullObjectHierarchyUndo(avatarObj, "Setup UXR Avatar: 3. Controller & Camera");
 
             UxrAvatar uxrAvatar = avatarObj.GetComponent<UxrAvatar>();
             if (uxrAvatar == null)
             {
-                Debug.LogError("UXR Setup: Missing UxrAvatar on AutoSetupAvatarTarget. Did you run Step 1?");
-                return;
+                throw new System.InvalidOperationException("На явной цели отсутствует UxrAvatar.");
             }
 
             // 1. Controller
@@ -42,7 +49,7 @@ namespace VRBattlegrounds.Editor
             if (propOverExtend != null) propOverExtend.intValue = (int)UltimateXR.Animation.IK.UxrArmOverExtendMode.ExtendArm;
 
             // Auto-calculate "Use Avatar Eyes"
-            Animator rigAnimator = avatarObj.GetComponent<Animator>();
+            Animator rigAnimator = avatarObj.GetComponentsInChildren<Animator>(true).FirstOrDefault(a => a.avatar != null && a.isHuman);
             if (rigAnimator != null && rigAnimator.isHuman)
             {
                 Transform leftEye = rigAnimator.GetBoneTransform(HumanBodyBones.LeftEye);
@@ -61,12 +68,12 @@ namespace VRBattlegrounds.Editor
                         propBodyIK.FindPropertyRelative("_eyesBaseHeight").floatValue = eyesBaseHeight;
                         propBodyIK.FindPropertyRelative("_eyesForwardOffset").floatValue = eyesForwardOffset;
                         
-                        Debug.Log($"👀 [3/4] Controller Setup: Auto-calculated eyes height ({eyesBaseHeight:F2}) and offset ({eyesForwardOffset:F2}).");
+                        VrBattlegrounds.Core.GameLog.Player.Info($"👀 [3/4] Controller Setup: Auto-calculated eyes height ({eyesBaseHeight:F2}) and offset ({eyesForwardOffset:F2}).");
                     }
                 }
                 else
                 {
-                    Debug.LogWarning("👀 [3/4] Humanoid rig is missing LeftEye or RightEye. Skipped auto-calculating eye offsets.");
+                    VrBattlegrounds.Core.GameLog.Player.Warning("👀 [3/4] Humanoid rig is missing LeftEye or RightEye. Skipped auto-calculating eye offsets.");
                 }
             }
 
@@ -76,21 +83,13 @@ namespace VRBattlegrounds.Editor
             Transform headTransform = rigAnimator != null ? rigAnimator.GetBoneTransform(HumanBodyBones.Head) : null;
             if (headTransform != null)
             {
-                Transform leftEye = headTransform.Find("LeftEye");
-                Transform rightEye = headTransform.Find("RightEye");
-                
-                SerializedObject soAvatar = new SerializedObject(uxrAvatar);
-                SerializedProperty uxrRigProp = soAvatar.FindProperty("_avatarRig");
-                if (uxrRigProp != null)
+                Transform leftEye = rigAnimator.GetBoneTransform(HumanBodyBones.LeftEye);
+                Transform rightEye = rigAnimator.GetBoneTransform(HumanBodyBones.RightEye);
+                if (leftEye != null && rightEye != null)
                 {
-                    SerializedProperty headGroup = uxrRigProp.FindPropertyRelative("_head");
-                    if (headGroup != null && leftEye != null && rightEye != null)
-                    {
-                        headGroup.FindPropertyRelative("leftEye").objectReferenceValue = leftEye;
-                        headGroup.FindPropertyRelative("rightEye").objectReferenceValue = rightEye;
-                    }
+                    uxrAvatar.AvatarRig.Head.LeftEye = leftEye;
+                    uxrAvatar.AvatarRig.Head.RightEye = rightEye;
                 }
-                soAvatar.ApplyModifiedProperties();
             }
 
             // Слои телепорта — как у рабочего Heavy_Soldier_Base_Avatar: пол карт лежит на слое Ground,
@@ -116,17 +115,16 @@ namespace VRBattlegrounds.Editor
                 GameObject cameraObject = new GameObject("Camera");
                 cameraObject.transform.SetPositionAndRotation(cameraController.transform.position, cameraController.transform.rotation);
                 cameraObject.transform.parent = cameraController.transform;
-                cameraObject.tag = "MainCamera";
                 Undo.RegisterCreatedObjectUndo(cameraObject, "Create Camera");
 
                 Camera newCamera = cameraObject.AddComponent<Camera>();
                 newCamera.nearClipPlane = 0.01f;
                 cameraObject.AddComponent<AudioListener>();
-                Debug.Log("✅ [3/4] Camera Controller hierarchy successfully created.");
+                VrBattlegrounds.Core.GameLog.Player.Info("✅ [3/4] Camera Controller hierarchy successfully created.");
             }
             else
             {
-                Debug.Log("✅ [3/4] Camera already exists, skipped camera creation.");
+                VrBattlegrounds.Core.GameLog.Player.Info("✅ [3/4] Camera already exists, skipped camera creation.");
             }
 
             EditorUtility.SetDirty(standardController);

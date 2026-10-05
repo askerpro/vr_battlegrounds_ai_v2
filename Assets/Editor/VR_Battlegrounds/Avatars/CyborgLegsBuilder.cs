@@ -157,7 +157,6 @@ namespace VrBattlegrounds.Editor.Avatars
             { "RightUpperLeg", "UpperLeg_Right" }, { "RightLowerLeg", "LowerLeg_Right" }, { "RightFoot", "Foot_Right" }, { "RightToes", "Toes_Right" },
         };
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Build Cyborg Legs")]
         private static void BuildMenu()
         {
             string report = Build(Selected);
@@ -182,7 +181,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 string error = Assemble(root, RecipeOf(donor), template, report);
                 if (error != null) return Fail(error);
 
-                PrefabUtility.SaveAsPrefabAsset(root, AvatarPath);
+                VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(root, AvatarPath);
                 AssetDatabase.SaveAssets();
                 GameLog.Player.Info($"[CyborgLegsBuilder] {AvatarPath}: {report}");
                 return "OK. " + report;

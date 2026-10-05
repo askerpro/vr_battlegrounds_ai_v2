@@ -1,3 +1,4 @@
+using VrBattlegrounds.Core;
 using UnityEditor;
 using UnityEngine;
 using UltimateXR.Avatar;
@@ -8,25 +9,30 @@ namespace VRBattlegrounds.Editor
 {
     public class HandsIntegrationSetup
     {
-        [MenuItem("Tools/VR Battlegrounds/Avatars/UXR Setup Wizard/2. Hands Integration")]
         public static void Execute()
         {
             GameObject avatarObj = Selection.activeGameObject;
             if (avatarObj == null) avatarObj = GameObject.Find("AutoSetupAvatarTarget");
             if (avatarObj == null)
             {
-                var foundUxrAvatar = Object.FindObjectOfType<UltimateXR.Avatar.UxrAvatar>();
+                var foundUxrAvatar = Object.FindAnyObjectByType<UltimateXR.Avatar.UxrAvatar>();
                 if (foundUxrAvatar != null) avatarObj = foundUxrAvatar.gameObject;
             }
             if (avatarObj == null) return;
+
+            Setup(avatarObj);
+        }
+
+        public static void Setup(GameObject avatarObj)
+        {
+            if (!avatarObj) throw new System.ArgumentNullException(nameof(avatarObj));
 
             Undo.RegisterFullObjectHierarchyUndo(avatarObj, "Setup UXR Avatar: 2. Hands Integration");
 
             UxrAvatar uxrAvatar = avatarObj.GetComponent<UxrAvatar>();
             if (uxrAvatar == null)
             {
-                Debug.LogError("UXR Setup: Missing UxrAvatar on AutoSetupAvatarTarget. Did you run Step 1?");
-                return;
+                throw new System.InvalidOperationException("На явной цели отсутствует UxrAvatar.");
             }
 
             // 1. BigHandsIntegration
@@ -53,8 +59,7 @@ namespace VRBattlegrounds.Editor
                 }
                 else
                 {
-                    Debug.LogError($"UXR Setup: Could not find BigHandsIntegration prefab at {bigHandsPath}");
-                    return;
+                    throw new System.InvalidOperationException("Не найден BigHandsIntegration: " + bigHandsPath);
                 }
             }
 
@@ -67,8 +72,7 @@ namespace VRBattlegrounds.Editor
 
             if (leftHandT == null || rightHandT == null)
             {
-                Debug.LogError("UXR Setup: LeftHand or RightHand not found in BigHandsIntegration.");
-                return;
+                throw new System.InvalidOperationException("В BigHandsIntegration отсутствуют LeftHand/RightHand.");
             }
 
             var duplicateLefts = avatarObj.transform.Cast<Transform>().Where(t => t.name.Contains("BigIKHandLeft")).ToList();
@@ -79,6 +83,7 @@ namespace VRBattlegrounds.Editor
 
             GameObject leftModelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(leftHandPath);
             GameObject rightModelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(rightHandPath);
+            if (!leftModelPrefab || !rightModelPrefab) throw new System.InvalidOperationException("Не найдены SDK IK hand prefabs.");
 
             GameObject leftModel = duplicateLefts.Count > 0 ? duplicateLefts[0].gameObject : null;
             if (leftModel == null && leftModelPrefab != null) leftModel = (GameObject)PrefabUtility.InstantiatePrefab(leftModelPrefab, avatarObj.transform);
@@ -116,7 +121,7 @@ namespace VRBattlegrounds.Editor
 
             EditorUtility.SetDirty(avatarObj);
             EditorUtility.SetDirty(uxrAvatar);
-            Debug.Log($"✅ [2/4] Hands Integration Setup successful: IK Models and Logic Prefabs injected.");
+            VrBattlegrounds.Core.GameLog.Player.Info($"✅ [2/4] Hands Integration Setup successful: IK Models and Logic Prefabs injected.");
         }
     }
 }

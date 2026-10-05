@@ -1,3 +1,4 @@
+using VrBattlegrounds.Core;
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
@@ -14,7 +15,6 @@ namespace VRBattlegrounds.Editor
         private SerializedObject so;
         private SerializedProperty meshesProp;
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/UXR Setup Wizard/Modular Glove Bone Mapper")]
         public static void ShowWindow()
         {
             GetWindow<ModularGloveBoneMapper>("Glove Bone Mapper");
@@ -58,7 +58,7 @@ namespace VRBattlegrounds.Editor
                     }
                 }
                 
-                Debug.Log($"✅ Rebinding complete for all assigned meshes! Total matched bones: {totalMatched}");
+                GameLog.Player.Info($"✅ Rebinding complete for all assigned meshes! Total matched bones: {totalMatched}");
             }
         }
 
@@ -93,7 +93,7 @@ namespace VRBattlegrounds.Editor
                     }
                     else
                     {
-                        Debug.LogWarning($"[ModularGloveBoneMapper] Could not find matching bone for '{boneName}' in the target skeleton!");
+                        GameLog.Player.Warning($"[ModularGloveBoneMapper] Could not find matching bone for '{boneName}' in the target skeleton!");
                         missingBones++;
                         newBones[i] = smr.bones[i]; // Keep original bone if no match found
                     }
@@ -109,7 +109,7 @@ namespace VRBattlegrounds.Editor
                 smr.rootBone = matchedRoot;
             }
 
-            Debug.Log($"Matched: {matchedBones}, Missing: {missingBones} for mesh {smr.name}");
+            GameLog.Player.Info($"Matched: {matchedBones}, Missing: {missingBones} for mesh {smr.name}");
             return matchedBones;
         }
     }

@@ -1,0 +1,59 @@
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)throw new Exception("Editor busy");
+const string folder="Assets/Data/Arsenal",path=folder+"/ArsenalCompositionCatalog.asset";
+var failures=new System.Collections.Generic.List<string>();var checks=new System.Collections.Generic.List<object>();
+System.Action<bool,string> check=(ok,name)=>{checks.Add(new{name,passed=ok});if(!ok)failures.Add(name);};
+string error=null,ownedGuid=null,ownedFolderGuid=null;bool allocated=false,keep=false;
+VrBattlegrounds.Arsenal.ArsenalCompositionCatalog catalog=null;VrBattlegrounds.Arsenal.ArsenalPreset clone=null;
+System.Func<string,bool> absent=p=>!System.IO.File.Exists(p)&&!System.IO.File.Exists(p+".meta")&&!System.IO.Directory.Exists(p)&&UnityEditor.AssetDatabase.LoadMainAssetAtPath(p)==null&&string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(p,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets));
+try{
+ if(!absent(path))throw new Exception("Existing asset/meta/live GUID output refusal: "+path);
+ if(!UnityEditor.AssetDatabase.IsValidFolder(folder)){
+  if(!absent(folder))throw new Exception("Existing orphan/native folder refusal: "+folder);
+  ownedFolderGuid=UnityEditor.AssetDatabase.CreateFolder("Assets/Data","Arsenal");
+  if(string.IsNullOrEmpty(ownedFolderGuid)||!UnityEditor.AssetDatabase.IsValidFolder(folder))throw new Exception("Owned folder creation failed");
+ }
+ var profile=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab");
+ var preset=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>("Assets/Data/Weapons/FullDemoArsenal.asset");
+ var style=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>("Assets/Data/Weapons/IndustrialPegboardPresentation.asset");
+ catalog=VrBattlegrounds.Editor.Arsenal.ArsenalCompositionMetadataCompiler.Compile("arsenal-composition/v1",UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab"),UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Arsenal/Slots/ShelfSlotPrefab Variant.prefab"),profile,preset.Entries.Select(e=>e.Weapon).ToArray(),new[]{style});
+ catalog.name="ArsenalCompositionCatalog";
+ string before=UnityEditor.EditorJsonUtility.ToJson(catalog);
+ var reviewed=Newtonsoft.Json.Linq.JToken.Parse(System.IO.File.ReadAllText("tmp/arsenal-generator-proofs/stage1-catalog-transient-v2.json"));reviewed["MonoBehaviour"]["m_Name"]=catalog.name;
+ if(!Newtonsoft.Json.Linq.JToken.DeepEquals(reviewed,Newtonsoft.Json.Linq.JToken.Parse(before)))throw new Exception("Current resource metadata differs from root-reviewed transient manifest");
+ clone=UnityEngine.Object.Instantiate(preset);var so=new UnityEditor.SerializedObject(clone);so.FindProperty("_presentationStyle").objectReferenceValue=style;so.ApplyModifiedPropertiesWithoutUndo();
+ System.Func<VrBattlegrounds.Arsenal.ArsenalCompositionCatalog,VrBattlegrounds.Arsenal.ArsenalStationDescription> resolve=c=>VrBattlegrounds.Arsenal.ArsenalStationResolver.ResolveDescription(VrBattlegrounds.Arsenal.ArsenalStationBuildInput.Capture("probe/persistent",clone,c,new VrBattlegrounds.Arsenal.ArsenalVisualRequest("default"),new VrBattlegrounds.Arsenal.ArsenalPlacementInput(default(VrBattlegrounds.Arsenal.ArsenalPresentationPose),Vector3.one,new Bounds(Vector3.zero,Vector3.one*100))));
+ var descriptionBefore=resolve(catalog);
+ if(!descriptionBefore.Success)throw new Exception("Transient description failed before write");
+ if(!absent(path))throw new Exception("Output changed before native allocation");
+ UnityEditor.AssetDatabase.CreateAsset(catalog,path);allocated=true;
+ ownedGuid=UnityEditor.AssetDatabase.AssetPathToGUID(path,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets);
+ if(string.IsNullOrEmpty(ownedGuid)||UnityEditor.AssetDatabase.LoadMainAssetAtPath(path)!=catalog)throw new Exception("Created asset ownership not proven");
+ UnityEditor.AssetDatabase.SaveAssetIfDirty(catalog);
+ check(System.IO.File.Exists(path)&&System.IO.File.Exists(path+".meta"),"NativeAssetAndMetaExist");
+ UnityEngine.Resources.UnloadAsset(catalog);catalog=null;
+ catalog=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalCompositionCatalog>(path);
+ check(catalog!=null&&UnityEditor.EditorUtility.IsPersistent(catalog)&&UnityEditor.AssetDatabase.AssetPathToGUID(path,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets)==ownedGuid,"PersistentReloadGuid");
+ check(UnityEditor.EditorJsonUtility.ToJson(catalog)==before,"PersistentAllSerializedResourcesRoleSurfaceParity");
+ var descriptionAfter=resolve(catalog);
+ check(descriptionAfter.Success&&descriptionAfter.LayoutFingerprint==descriptionBefore.LayoutFingerprint&&descriptionAfter.LogicalRoleFingerprint==descriptionBefore.LogicalRoleFingerprint,"PersistentDescriptionHashParity");
+ check(descriptionAfter.Slots.Select(s=>s.Entry.NetworkIndex).SequenceEqual(Enumerable.Range(0,20)),"PersistentOrderedEntries20");
+ check(catalog.Weapons.All(g=>g.Item.Resource==g.Weapon.WeaponPrefab&&g.Magazine.Resource==g.Weapon.MagazinePrefab),"PersistentItemMagazineRefs");
+ check(catalog.Templates.All(t=>t.Roles.Select(r=>r.RoleKey).SequenceEqual(new[]{"item-anchor","magazine-anchor"})),"PersistentSemanticRoles");
+ check(catalog.Templates.Count==2&&catalog.Weapons.Count==20&&catalog.Supports.Count==1&&catalog.Materials.Count==1&&catalog.Decorations.Count==0,"PersistentResourceCounts");
+ check(preset.PresentationStyle==null&&!UnityEditor.EditorUtility.IsDirty(catalog),"UnlinkedAndSavedOnlyOwnedCatalog");
+ keep=failures.Count==0;
+}catch(Exception ex){error=ex.ToString();failures.Add("Native catalog packet failed");}
+finally{
+ if(clone!=null)UnityEngine.Object.DestroyImmediate(clone);
+ if(!allocated&&catalog!=null&&UnityEditor.EditorUtility.IsPersistent(catalog)&&UnityEditor.AssetDatabase.GetAssetPath(catalog)==path){allocated=true;ownedGuid=UnityEditor.AssetDatabase.AssetPathToGUID(path,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets);}
+ if(!keep&&allocated){
+  var current=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalCompositionCatalog>(path);
+  if(!string.IsNullOrEmpty(ownedGuid)&&UnityEditor.AssetDatabase.AssetPathToGUID(path,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets)==ownedGuid&&current!=null){catalog=null;UnityEditor.AssetDatabase.DeleteAsset(path);}
+  else failures.Add("Pending cleanup: exact newly-owned output identity not proven");
+ }
+ if(catalog!=null&&!UnityEditor.EditorUtility.IsPersistent(catalog))UnityEngine.Object.DestroyImmediate(catalog);
+ if(!keep&&!string.IsNullOrEmpty(ownedFolderGuid)&&UnityEditor.AssetDatabase.AssetPathToGUID(folder,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets)==ownedFolderGuid&&System.IO.Directory.Exists(folder)&&System.IO.Directory.GetFileSystemEntries(folder).Length==0)UnityEditor.AssetDatabase.DeleteAsset(folder);
+}
+var report=new{passed=failures.Count==0,executionCompleted=true,failures,error,checks,allocated,persistentOutputKept=keep,ownedGuid,ownedFolderGuid,path};
+System.IO.File.WriteAllText("tmp/arsenal-generator-proofs/stage1-catalog-native.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));
+return new{passed=failures.Count==0,executionCompleted=true,failureCount=failures.Count,failures=failures.Take(10).ToArray(),error,persistentOutputKept=keep,ownedGuid,ownedFolderGuid,reportPath="tmp/arsenal-generator-proofs/stage1-catalog-native.json"};

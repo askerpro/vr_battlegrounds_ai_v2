@@ -32,6 +32,12 @@ namespace VrBattlegrounds.Arsenal
         [Tooltip("Max number of magazines to auto-spawn into player inventory")]
         [SerializeField] private int _maxMagazineCount = 3;
 
+        // Только ссылки: readiness/feedback состояния принадлежат runtime владельцам.
+        [Header("Weapon Readiness")]
+        [SerializeField] private VrBattlegrounds.Weapons.WeaponReadinessProfile _readinessProfile;
+        [SerializeField] private VrBattlegrounds.Weapons.WeaponFeedbackProfile _commonFeedbackProfile;
+        [SerializeField] private VrBattlegrounds.Weapons.WeaponFeedbackProfile _feedbackOverride;
+
         // ── Economy ────────────────────────────────────────────
         [Header("Economy")]
         [Tooltip("Purchase price in in-game currency")]
@@ -102,6 +108,9 @@ namespace VrBattlegrounds.Arsenal
         [SerializeField] private Sprite _icon;
 
         // ── Public API ─────────────────────────────────────────
+        public VrBattlegrounds.Weapons.WeaponReadinessProfile ReadinessProfile => _readinessProfile;
+        public VrBattlegrounds.Weapons.WeaponFeedbackProfile CommonFeedbackProfile => _commonFeedbackProfile;
+        public VrBattlegrounds.Weapons.WeaponFeedbackProfile FeedbackOverride => _feedbackOverride;
         public string DisplayName => _displayName;
         public string WeaponId => _weaponId;
         public string Description => _description;

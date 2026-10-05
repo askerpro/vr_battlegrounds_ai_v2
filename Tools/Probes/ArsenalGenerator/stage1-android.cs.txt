@@ -1,0 +1,5 @@
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)throw new Exception("Editor busy");
+var result=VrBattlegrounds.EditorTools.AndroidCompileGate.Run();
+string path="tmp/arsenal-generator-proofs/stage1-android.json";
+System.IO.File.WriteAllText(path,Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+return new{executionCompleted=true,passed=result.Passed,errorCount=result.Errors.Count,errors=result.Errors.Take(10).ToArray(),reportPath=path};

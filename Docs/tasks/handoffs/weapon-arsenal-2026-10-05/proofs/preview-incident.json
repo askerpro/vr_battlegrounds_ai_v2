@@ -1,0 +1,80 @@
+{
+  "status": "STOP dependent work; own probe-fix proceeded after false guard",
+  "guard": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"message\":\"Code executed successfully.\",\"data\":{\"result\":{\"passed\":false,\"executionCompleted\":true,\"play\":true,\"compile\":true,\"import\":false},\"compiler\":\"codedom\"}}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "message": "Code executed successfully.",
+      "data": {
+        "result": {
+          "passed": false,
+          "executionCompleted": true,
+          "play": true,
+          "compile": true,
+          "import": false
+        },
+        "compiler": "codedom"
+      }
+    },
+    "isError": false
+  },
+  "importRequest": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"message\":\"Code executed successfully.\",\"data\":{\"result\":{\"passed\":true,\"executionCompleted\":true,\"phase\":\"own probe fix imported\",\"compile\":true},\"compiler\":\"codedom\"}}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "message": "Code executed successfully.",
+      "data": {
+        "result": {
+          "passed": true,
+          "executionCompleted": true,
+          "phase": "own probe fix imported",
+          "compile": true
+        },
+        "compiler": "codedom"
+      }
+    },
+    "isError": false
+  },
+  "resourceCompletion1": {
+    "success": false,
+    "message": null,
+    "error": "Unity session not available; please retry",
+    "data": {
+      "reason": "no_unity_session",
+      "retry_after_ms": 250
+    },
+    "hint": "retry"
+  },
+  "resourceCompletion2": {
+    "success": false,
+    "message": null,
+    "error": "Unity session not available; please retry",
+    "data": {
+      "reason": "no_unity_session",
+      "retry_after_ms": 250
+    },
+    "hint": "retry"
+  },
+  "instances": {
+    "success": true,
+    "transport": "http",
+    "instance_count": 0,
+    "instances": []
+  },
+  "filesystem": "2026-10-05 14:37:43 renew manual-chambering-stage4-preview (8 мин)\r\n2026-10-05 14:40:40 release manual-chambering-stage4-preview\r\n2026-10-05 14:42:58 acquire manual-chambering-stage4-preview: Own valid task4 fixture preparation only; result cleanup release (8 мин)\r\n2026-10-05 14:43:24 release manual-chambering-stage4-preview\r\n2026-10-05 14:44:54 acquire manual-chambering-stage4-preview: One probe unloaded-scene fix import compile readback release (8 мин)\r\n2026-10-05 14:53:24 steal codex-bot-stand у manual-chambering-stage4-preview: аренда истекла\r\n2026-10-05 14:53:24 acquire codex-bot-stand: Final stand compile controls and 20-second Capability capture; cleanup release (15 мин)\r\n2026-10-05 14:58:17 release codex-bot-stand\r\n2026-10-05 14:58:17 acquire hand-fit-binding-red-20261005: Read-only baseline: GrabPoint binding and duplicate hand LOD; own snapshots only (3 мин)\r\n2026-10-05 14:58:33 release hand-fit-binding-red-20261005\r\nGet-Content: \r\nLine |\r\n   2 |  …  tmp/unity-lock.log -Tail 10; Get-Content tmp/unity-lock/info; Get-It …\r\n     |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Cannot find path 'F:\\UnityProjects\\Vr_Battlegrounds_ai\\tmp\\unity-lock\\info' because it does not exist.\r\n[\r\n  {\r\n    \"FullName\": \"C:\\\\Users\\\\asker\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log\",\r\n    \"LastWriteTimeUtc\": \"2026-10-05T11:58:51.9455529Z\",\r\n    \"Length\": 251964935\r\n  },\r\n  {\r\n    \"FullName\": \"F:\\\\UnityProjects\\\\Vr_Battlegrounds_ai\\\\Library\\\\ScriptAssemblies\\\\Assembly-CSharp-Editor.dll\",\r\n    \"LastWriteTimeUtc\": \"2026-10-05T11:52:11.0465426Z\",\r\n    \"Length\": 1319424\r\n  }\r\n]\r\n{\r\n  \"Algorithm\": \"SHA256\",\r\n  \"Hash\": \"88326E8B2A4473412E5943E95B3A4A356B671A4BD3F3EDC374BD2867D351AD5A\",\r\n  \"Path\": \"F:\\\\UnityProjects\\\\Vr_Battlegrounds_ai\\\\Assets\\\\Editor\\\\VR_Battlegrounds\\\\Arsenal\\\\Diagnostics\\\\Task4PreviewIntegration20261005\\\\ArtistDirtyBaselineProbe.cs\"\r\n}\r\n",
+  "affectedPath": "Assets/Editor/VR_Battlegrounds/Arsenal/Diagnostics/Task4PreviewIntegration20261005/ArtistDirtyBaselineProbe.cs",
+  "productFourApplied": false,
+  "playStopped": false,
+  "foreignLeaseChanged": false,
+  "releaseAttempt": "exit1 foreign owner codex-bot-stand preserved"
+}

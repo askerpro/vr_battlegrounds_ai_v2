@@ -1,0 +1,630 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f8f87d8d2f891d43962873574c853ec, type: 3}
+  m_Name: ArsenalCompositionCatalog
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalCompositionCatalog
+  _catalogId: arsenal-composition/v1
+  _compilerVersion: 1
+  _templates:
+  - _templateId: functional/pegboard
+    _sourceGuid: a465f540d467e0e469042f73de34f97a
+    _sourceFingerprint: 994e526110d6be2b3c054cccdc89b5d9
+    _zone: 0
+    _prefab: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+    _panelWidth: 0.4
+    _gap: 0.024999946
+    _openRow:
+      Position: {x: 0, y: 1.104, z: -0.029}
+      EulerAngles: {x: -0, y: 0, z: 0}
+    _closedRow:
+      Position: {x: 0, y: 1.018, z: 0.22}
+      EulerAngles: {x: 349.99997, y: 0, z: 0}
+    _surface:
+      RoleKey: surface/panel
+      SourceComponentId: 2192637495936197219
+      SourcePath: PegboardSection
+      ProjectionProfileGuid: 88273a27f53bfdd4697ec9e56448a068
+      ProjectionProfileFingerprint: 93189a987529c24b85c999f762b9fe1e
+      ProjectionSurfaceComponentId: 8194835665232150814
+      SourcePose:
+        Position: {x: 0, y: 0.5, z: 0}
+        EulerAngles: {x: 9.999999, y: 0, z: 0}
+      ProjectedPose:
+        Position: {x: 0, y: 0.5, z: 0}
+        EulerAngles: {x: 9.999999, y: 0, z: 0}
+      SourceScale: {x: 0.45, y: 1, z: 0.025}
+      ProjectedScale: {x: 0.4, y: 1, z: 0.025}
+      SourceMeshBounds:
+        m_Center: {x: 0, y: 0, z: 0}
+        m_Extent: {x: 0.5, y: 0.5, z: 0.5}
+      SourceColliderBounds:
+        m_Center: {x: 0, y: 0, z: 0}
+        m_Extent: {x: 0.5, y: 0.5, z: 0.5}
+      ProjectedMeshBounds:
+        m_Center: {x: 0, y: 0.5, z: 0}
+        m_Extent: {x: 0.2, y: 0.49457446, z: 0.09913417}
+      ProjectedColliderBounds:
+        m_Center: {x: 0, y: 0.5, z: 0}
+        m_Extent: {x: 0.2, y: 0.49457446, z: 0.09913417}
+    _roles:
+    - RoleKey: item-anchor
+      SourceUniqueId: 89c0d0ea-3fd5-4fc0-b1c5-423d2e2293bd
+      SourceComponentId: 6398143880287876599
+      ComponentType: UltimateXR.Manipulation.UxrGrabbableObjectAnchor
+    - RoleKey: magazine-anchor
+      SourceUniqueId: 97037b98-5d60-49d9-95a6-fdac2fcc4c5a
+      SourceComponentId: 6546268724562869851
+      ComponentType: UltimateXR.Manipulation.UxrGrabbableObjectAnchor
+    _structure: []
+  - _templateId: functional/shelf
+    _sourceGuid: 65ac852a98aeaf64b8a669a6afa56387
+    _sourceFingerprint: 8ba3d29bd3c34255a3535d0f62ea8349
+    _zone: 1
+    _prefab: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+    _panelWidth: 0.4
+    _gap: 0.029999942
+    _openRow:
+      Position: {x: 0, y: 0.86300004, z: -0.41}
+      EulerAngles: {x: -0, y: 0, z: 0}
+    _closedRow:
+      Position: {x: 0, y: 0.638, z: 0.22}
+      EulerAngles: {x: 90, y: 0, z: 0}
+    _surface:
+      RoleKey: surface/panel
+      SourceComponentId: 1938682311411052969
+      SourcePath: PegboardSection
+      ProjectionProfileGuid: 88273a27f53bfdd4697ec9e56448a068
+      ProjectionProfileFingerprint: 93189a987529c24b85c999f762b9fe1e
+      ProjectionSurfaceComponentId: 9053557004326949521
+      SourcePose:
+        Position: {x: -0.0099, y: 0, z: 0.07109}
+        EulerAngles: {x: 270, y: 0, z: 0}
+      ProjectedPose:
+        Position: {x: -0, y: 0, z: 0.07}
+        EulerAngles: {x: 270, y: 0, z: 0}
+      SourceScale: {x: 0.42979276, y: 0.46439588, z: 0.025}
+      ProjectedScale: {x: 0.4, y: 0.66, z: 0.03}
+      SourceMeshBounds:
+        m_Center: {x: 0, y: 0, z: 0}
+        m_Extent: {x: 0.5, y: 0.5, z: 0.5}
+      SourceColliderBounds:
+        m_Center: {x: 0, y: 0, z: 0}
+        m_Extent: {x: 0.5, y: 0.5, z: 0.5}
+      ProjectedMeshBounds:
+        m_Center: {x: 0, y: 0, z: 0.07}
+        m_Extent: {x: 0.2, y: 0.015000018, z: 0.32999998}
+      ProjectedColliderBounds:
+        m_Center: {x: 0, y: 0, z: 0.07}
+        m_Extent: {x: 0.2, y: 0.015000018, z: 0.32999998}
+    _roles:
+    - RoleKey: item-anchor
+      SourceUniqueId: b0b7719f-c8bf-4b35-8328-488e3e6f5580
+      SourceComponentId: 6647454409383110205
+      ComponentType: UltimateXR.Manipulation.UxrGrabbableObjectAnchor
+    - RoleKey: magazine-anchor
+      SourceUniqueId: 58b94516-d22a-4f54-a20b-940a68dfbcb0
+      SourceComponentId: 6796848683134889361
+      ComponentType: UltimateXR.Manipulation.UxrGrabbableObjectAnchor
+    _structure: []
+  _decorations: []
+  _weapons:
+  - Weapon: {fileID: 11400000, guid: 7d9a79e589f45c74e9585bdbed93ce76, type: 2}
+    WeaponId: AK105
+    SourceGuid: 7d9a79e589f45c74e9585bdbed93ce76
+    Item:
+      Present: 1
+      Resource: {fileID: 3900771781936566667, guid: 732e5b48d3557594583580ed383cc981, type: 3}
+      SourceGuid: 732e5b48d3557594583580ed383cc981
+      SourceFingerprint: 2d12a1e8b0fe7d512167c984c225dd7d
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.009244002, y: -0.046031788, z: 0.09159103}
+        m_Extent: {x: 0.03598225, y: 0.1200356, z: 0.39887697}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 1786085660339194700, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
+      SourceGuid: 63981a783100f704195a8e10cb89fc47
+      SourceFingerprint: e3bc6e1365a286b12a499df848e96175
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 9.313226e-10, y: 0, z: 0}
+        m_Extent: {x: 0.011644358, y: 0.09416816, z: 0.053461418}
+  - Weapon: {fileID: 11400000, guid: b2e37e600ab1893469a53e2d5940e98b, type: 2}
+    WeaponId: Gun
+    SourceGuid: b2e37e600ab1893469a53e2d5940e98b
+    Item:
+      Present: 1
+      Resource: {fileID: 1013363612589426, guid: a89abddac5809dc47a6715d7ebeab24e, type: 3}
+      SourceGuid: a89abddac5809dc47a6715d7ebeab24e
+      SourceFingerprint: 569edb48f42e4c15bee4aa1cc9cc2409
+      PhysicalScale: {x: 0.68, y: 0.68, z: 0.68}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: -0.000000007450581, y: -0.02389314, z: 0.01591961}
+        m_Extent: {x: 0.01652303, y: 0.072752416, z: 0.10048564}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 7658064994636483981, guid: 7cc1b24032fe06543b2b7edf8c18c8b4, type: 3}
+      SourceGuid: 7cc1b24032fe06543b2b7edf8c18c8b4
+      SourceFingerprint: 8e085ae69f2bc5b827342eff833ac228
+      PhysicalScale: {x: 0.68, y: 0.68, z: 0.68}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: -0.00047599524, y: -0.0068653338, z: -0.00092819333}
+        m_Extent: {x: 0.012395032, y: 0.05977713, z: 0.025143526}
+  - Weapon: {fileID: 11400000, guid: f140291be0d87d9409f937afc390abf0, type: 2}
+    WeaponId: Herrington
+    SourceGuid: f140291be0d87d9409f937afc390abf0
+    Item:
+      Present: 1
+      Resource: {fileID: 5766990037059969871, guid: 69f24b275bfb4e34a93e038d9cacf6a9, type: 3}
+      SourceGuid: 69f24b275bfb4e34a93e038d9cacf6a9
+      SourceFingerprint: 8d634b001b9c66d11705620acccd7f63
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.006051697, y: -0.04123625, z: 0.13713738}
+        m_Extent: {x: 0.027097024, y: 0.10078536, z: 0.50146675}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 5706746622394682049, guid: eb4946d84a27da8488cd9a1dd7bd005c, type: 3}
+      SourceGuid: eb4946d84a27da8488cd9a1dd7bd005c
+      SourceFingerprint: 5ddababc521695770d27b518751c383d
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 9.313226e-10, y: 0.000000006519258, z: 0.0000000037252903}
+        m_Extent: {x: 0.010065975, y: 0.0100659765, z: 0.03078388}
+  - Weapon: {fileID: 11400000, guid: 4f810565631ae0c40bce683a1d290f39, type: 2}
+    WeaponId: M16
+    SourceGuid: 4f810565631ae0c40bce683a1d290f39
+    Item:
+      Present: 1
+      Resource: {fileID: 1013363612589426, guid: cc00fcab78d7cee4faad59a02b2b7183, type: 3}
+      SourceGuid: cc00fcab78d7cee4faad59a02b2b7183
+      SourceFingerprint: e3b6b289dd610d5457cb93fc919124d5
+      PhysicalScale: {x: 0.7, y: 0.7, z: 0.7}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0, y: -0.01656299, z: 0.123910695}
+        m_Extent: {x: 0.03355573, y: 0.11546353, z: 0.4204147}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 6308617285841064264, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
+      SourceGuid: b36fa7fe2791fba44aa22d7da2dfd50b
+      SourceFingerprint: 0ba14e61e49a1e02e7f0195f9e56ef4d
+      PhysicalScale: {x: 0.7, y: 0.7, z: 0.7}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0, y: -0.000000007450581, z: 0}
+        m_Extent: {x: 0.0134736365, y: 0.087959595, z: 0.03676425}
+  - Weapon: {fileID: 11400000, guid: 7fdcb3f0b05028044a0ba801f61bf4cc, type: 2}
+    WeaponId: MKR9
+    SourceGuid: 7fdcb3f0b05028044a0ba801f61bf4cc
+    Item:
+      Present: 1
+      Resource: {fileID: 8777186694099186684, guid: 47ad3a62d3b700b439a7e493e7f06902, type: 3}
+      SourceGuid: 47ad3a62d3b700b439a7e493e7f06902
+      SourceFingerprint: d5a95b18bde7bdec5f53bda9fa9b516b
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.0028015207, y: -0.060697287, z: -0.024020195}
+        m_Extent: {x: 0.030954953, y: 0.13577405, z: 0.30171126}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 4230906836973670970, guid: 4d3a79244e8df3f498b26da0ff300b22, type: 3}
+      SourceGuid: 4d3a79244e8df3f498b26da0ff300b22
+      SourceFingerprint: 2196e04e11a4f048e25bcd25f5a3ea3c
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.0000000037252903, y: 0, z: -0.0000000037252903}
+        m_Extent: {x: 0.013568897, y: 0.11500415, z: 0.05636997}
+  - Weapon: {fileID: 11400000, guid: 43bf1b3029e7a1945b50f121df6b0a73, type: 2}
+    WeaponId: MP5K
+    SourceGuid: 43bf1b3029e7a1945b50f121df6b0a73
+    Item:
+      Present: 1
+      Resource: {fileID: 165259757907161205, guid: fb9ee97dde176d3439ae7de27efa2e3b, type: 3}
+      SourceGuid: fb9ee97dde176d3439ae7de27efa2e3b
+      SourceFingerprint: 297aecb8d862a4444e81bf54f0f82471
+      PhysicalScale: {x: 4.5333433, y: 4.5333433, z: 4.5333433}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: -0.006732352, y: -0.0016299784, z: 0.057989813}
+        m_Extent: {x: 0.030624915, y: 0.14325726, z: 0.16500004}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 8531509035156370268, guid: 0e8830f395e24fa4999164bbeb582eb5, type: 3}
+      SourceGuid: 0e8830f395e24fa4999164bbeb582eb5
+      SourceFingerprint: 0eb244a1dc751ca4a7dbba2acf6774fb
+      PhysicalScale: {x: 4.5333433, y: 4.5333433, z: 4.5333433}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0, y: 0, z: 0}
+        m_Extent: {x: 0.012030228, y: 0.09548226, z: 0.03645982}
+  - Weapon: {fileID: 11400000, guid: 16e9377ecb9b1bb41929e8aa3a7d3ae9, type: 2}
+    WeaponId: Machinegun
+    SourceGuid: 16e9377ecb9b1bb41929e8aa3a7d3ae9
+    Item:
+      Present: 1
+      Resource: {fileID: 7352647028226897614, guid: 4a28fd7096bf0994eac0a22cbb3a922c, type: 3}
+      SourceGuid: 4a28fd7096bf0994eac0a22cbb3a922c
+      SourceFingerprint: c11a4ac06612d88466dcbda4fc9663e3
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.0000000037252903, y: 0.02398251, z: 0.16095719}
+        m_Extent: {x: 0.02674273, y: 0.1386342, z: 0.4945067}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 4349744495954637256, guid: ff6c66ad770fc1f42854b90cb14b7ad0, type: 3}
+      SourceGuid: ff6c66ad770fc1f42854b90cb14b7ad0
+      SourceFingerprint: e6d45e0fb458761c21d9b460479d705d
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.00010849815, y: -0.054847, z: 0.0000000037252903}
+        m_Extent: {x: 0.012775348, y: 0.055529226, z: 0.034626473}
+  - Weapon: {fileID: 11400000, guid: e0b50a7a3495ac74eb153cd542432c4e, type: 2}
+    WeaponId: Mk14
+    SourceGuid: e0b50a7a3495ac74eb153cd542432c4e
+    Item:
+      Present: 1
+      Resource: {fileID: 2847518032690409953, guid: 26b1fd63ab9a4274cb17304b23cb6318, type: 3}
+      SourceGuid: 26b1fd63ab9a4274cb17304b23cb6318
+      SourceFingerprint: 24cfce0865ae60c3001f4a55a648fe0c
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.0036620423, y: -0.0051183626, z: 0.21780208}
+        m_Extent: {x: 0.035724156, y: 0.08827679, z: 0.50441074}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 3521067315164190836, guid: bb9de8cc9dc96064695457eb90647c70, type: 3}
+      SourceGuid: bb9de8cc9dc96064695457eb90647c70
+      SourceFingerprint: 704367ad3899a32953f9af8afa2c9849
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0, y: 0, z: 0}
+        m_Extent: {x: 0.012270212, y: 0.069109425, z: 0.042436592}
+  - Weapon: {fileID: 11400000, guid: e656ffaededf94447b00dfe8561f5caf, type: 2}
+    WeaponId: PPK
+    SourceGuid: e656ffaededf94447b00dfe8561f5caf
+    Item:
+      Present: 1
+      Resource: {fileID: 7674922350059574561, guid: 53b2af502e94d13489397cef90c86925, type: 3}
+      SourceGuid: 53b2af502e94d13489397cef90c86925
+      SourceFingerprint: a960b6c608b2da156ec25504d8445e9f
+      PhysicalScale: {x: 0.65456605, y: 0.65456605, z: 0.65456605}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.00006369408, y: -0.0029068813, z: 0.011441052}
+        m_Extent: {x: 0.014432247, y: 0.06972425, z: 0.10000004}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 3850768520735387343, guid: 68884ec49d8d8df4bb08344406635740, type: 3}
+      SourceGuid: 68884ec49d8d8df4bb08344406635740
+      SourceFingerprint: 4a9d75d09133db190056f14f26c121f2
+      PhysicalScale: {x: 0.65456605, y: 0.65456605, z: 0.65456605}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: -0.0000000018626451, y: -0.000000014901161, z: 0.0000000018626451}
+        m_Extent: {x: 0.008254133, y: 0.057071775, z: 0.029052388}
+  - Weapon: {fileID: 11400000, guid: aee060eddb6e37d47a40b21ba4b87468, type: 2}
+    WeaponId: R08
+    SourceGuid: aee060eddb6e37d47a40b21ba4b87468
+    Item:
+      Present: 1
+      Resource: {fileID: 8504929066865201802, guid: fac3a1d89b21c3c42b8292f09026d44b, type: 3}
+      SourceGuid: fac3a1d89b21c3c42b8292f09026d44b
+      SourceFingerprint: 87195f23b40cfb37a465fa34909863da
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.000000014901161, y: -0.008957528, z: 0.030228049}
+        m_Extent: {x: 0.022608193, y: 0.08041005, z: 0.13386855}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 4089589820379981812, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}
+      SourceGuid: a2ee1d507e0d63140a4d137bd3077eec
+      SourceFingerprint: 361138105da045af4c85c8d03825168b
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0, y: -0.0000000037252903, z: 0.02866349}
+        m_Extent: {x: 0.022608193, y: 0.02260822, z: 0.053049598}
+  - Weapon: {fileID: 11400000, guid: 71578ee82c8283640ab0a08d6396549b, type: 2}
+    WeaponId: Revolver
+    SourceGuid: 71578ee82c8283640ab0a08d6396549b
+    Item:
+      Present: 1
+      Resource: {fileID: 1347677723873503563, guid: 3eee9bb131ea6a64ca4fc336d3eea0b9, type: 3}
+      SourceGuid: 3eee9bb131ea6a64ca4fc336d3eea0b9
+      SourceFingerprint: 14bec5eed68d0c5fa042f32a745ef0c0
+      PhysicalScale: {x: 0.7058332, y: 0.7058332, z: 0.7058332}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.000073518604, y: 0.07641242, z: 0.0005835593}
+        m_Extent: {x: 0.02209707, y: 0.07916402, z: 0.17500003}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 6196372738328328043, guid: 24bb8e6e4c7897848802a0c534714580, type: 3}
+      SourceGuid: 24bb8e6e4c7897848802a0c534714580
+      SourceFingerprint: 968199d8827740be792c2008ac050f72
+      PhysicalScale: {x: 0.7058332, y: 0.7058332, z: 0.7058332}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0, y: -0.000000007450581, z: -0.00014821999}
+        m_Extent: {x: 0.02209707, y: 0.02213056, z: 0.024438035}
+  - Weapon: {fileID: 11400000, guid: 2d5744f916e787646bda8847c74f84fc, type: 2}
+    WeaponId: SDKGun
+    SourceGuid: 2d5744f916e787646bda8847c74f84fc
+    Item:
+      Present: 1
+      Resource: {fileID: 1322554604466671563, guid: a9d715d8903fb4640b9d200d10aa876d, type: 3}
+      SourceGuid: a9d715d8903fb4640b9d200d10aa876d
+      SourceFingerprint: 99d305f3210d3b4e08028f92a2411797
+      PhysicalScale: {x: 0.55, y: 0.55, z: 0.55}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: -0.0000000018626451, y: -0.012669869, z: 0.076371476}
+        m_Extent: {x: 0.013127778, y: 0.069200695, z: 0.1041034}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 7658064994636483981, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      SourceGuid: 425cdab6ae3143146873c90b4a0f0d76
+      SourceFingerprint: c51fd3caa41258c0553f0ce9d11f62aa
+      PhysicalScale: {x: 0.55, y: 0.55, z: 0.55}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.00017300528, y: -0.029773066, z: 0}
+        m_Extent: {x: 0.0072220964, y: 0.030901967, z: 0.0192696}
+  - Weapon: {fileID: 11400000, guid: 06130e656acaee24da3fb3f2d54de872, type: 2}
+    WeaponId: SRM12
+    SourceGuid: 06130e656acaee24da3fb3f2d54de872
+    Item:
+      Present: 1
+      Resource: {fileID: 2269598592341582059, guid: 2472d08be23174c4b9863d83cddf68f8, type: 3}
+      SourceGuid: 2472d08be23174c4b9863d83cddf68f8
+      SourceFingerprint: b53377aa6dbb55381a1c9fcd0c7a7faf
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.014957577, y: 0.0073678717, z: 0.07567653}
+        m_Extent: {x: 0.060187146, y: 0.10630079, z: 0.45688665}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 2754127896509867834, guid: 32bac82101ae21544b671d744fd34d82, type: 3}
+      SourceGuid: 32bac82101ae21544b671d744fd34d82
+      SourceFingerprint: 6c5a02e7d7562f5773e2572686d1ea52
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.0000000027939677, y: 0.0014920495, z: 0.000000014901161}
+        m_Extent: {x: 0.009156261, y: 0.042529035, z: 0.04823398}
+  - Weapon: {fileID: 11400000, guid: 404a3a34a0892dc409212566f388c37f, type: 2}
+    WeaponId: Scar
+    SourceGuid: 404a3a34a0892dc409212566f388c37f
+    Item:
+      Present: 1
+      Resource: {fileID: 99182336922691436, guid: 29b19734d45bd464c8faff6700ec8624, type: 3}
+      SourceGuid: 29b19734d45bd464c8faff6700ec8624
+      SourceFingerprint: 24301347fda5f8aa520eca0621499ce1
+      PhysicalScale: {x: 0.71620476, y: 0.71620476, z: 0.71620476}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: -0.003330335, y: -0.00387536, z: 0.056074858}
+        m_Extent: {x: 0.031761155, y: 0.1166352, z: 0.31750003}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 3324518201893827815, guid: ea4c4f7c1f3bec74bbfa0160ec3fb922, type: 3}
+      SourceGuid: ea4c4f7c1f3bec74bbfa0160ec3fb922
+      SourceFingerprint: 7ef7bb88b7e165b1e2f255651104b31f
+      PhysicalScale: {x: 0.71620476, y: 0.71620476, z: 0.71620476}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 9.313226e-10, y: 0, z: 0}
+        m_Extent: {x: 0.012036583, y: 0.08727333, z: 0.035714462}
+  - Weapon: {fileID: 11400000, guid: bf5b7399e87929c45ae98591db37ec71, type: 2}
+    WeaponId: Shotgun
+    SourceGuid: bf5b7399e87929c45ae98591db37ec71
+    Item:
+      Present: 1
+      Resource: {fileID: 5857197354937311182, guid: 8b9da2dc5df93b94e96eb12b2ac13288, type: 3}
+      SourceGuid: 8b9da2dc5df93b94e96eb12b2ac13288
+      SourceFingerprint: 933dfa9f2a39558095e04aabf37239dd
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.000000014901161, y: 0.0010869801, z: 0.15007061}
+        m_Extent: {x: 0.033204377, y: 0.13615108, z: 0.4228536}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 5837573240272137203, guid: d28f92e640efecc41b278625340bff0c, type: 3}
+      SourceGuid: d28f92e640efecc41b278625340bff0c
+      SourceFingerprint: a0f10a622c0750a80a546ce0a7acedb8
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.00008583628, y: -0.05413285, z: 0}
+        m_Extent: {x: 0.015970854, y: 0.056185417, z: 0.035035647}
+  - Weapon: {fileID: 11400000, guid: 29c9d566aa4ac214ab127b4e633b4334, type: 2}
+    WeaponId: ShotgunReal
+    SourceGuid: 29c9d566aa4ac214ab127b4e633b4334
+    Item:
+      Present: 1
+      Resource: {fileID: 6455569017325164971, guid: d586c5e550bf0ee4a9619d4bd368ca54, type: 3}
+      SourceGuid: d586c5e550bf0ee4a9619d4bd368ca54
+      SourceFingerprint: 409d645ec8cbadc078c8aa3df654c7bd
+      PhysicalScale: {x: 1.1892964, y: 1.1892964, z: 1.1892964}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.000000048428774, y: -0.0075034723, z: 0.22588487}
+        m_Extent: {x: 0.030574426, y: 0.093933135, z: 0.36000007}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 1507515040717537900, guid: 4c0598d66f467ea4690a960b022f58da, type: 3}
+      SourceGuid: 4c0598d66f467ea4690a960b022f58da
+      SourceFingerprint: 2ce7591f1c16e82c293d1da168912aff
+      PhysicalScale: {x: 1.1892964, y: 1.1892964, z: 1.1892964}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0, y: 9.313226e-10, z: 0.0000000037252903}
+        m_Extent: {x: 0.011245999, y: 0.011308425, z: 0.032323293}
+  - Weapon: {fileID: 11400000, guid: 60bc69af3cd41db4bb971e35f2a44346, type: 2}
+    WeaponId: SniperRifle
+    SourceGuid: 60bc69af3cd41db4bb971e35f2a44346
+    Item:
+      Present: 1
+      Resource: {fileID: 4144354778344050857, guid: ae620c2caa0384243bbe976dc7e1199d, type: 3}
+      SourceGuid: ae620c2caa0384243bbe976dc7e1199d
+      SourceFingerprint: f8f852a4163035a91238d7e1c6727eb5
+      PhysicalScale: {x: 1.0959959, y: 1.0959959, z: 1.0959959}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.008897949, y: 0.0017610341, z: 0.25447327}
+        m_Extent: {x: 0.056349088, y: 0.08476563, z: 0.57500005}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 8141809575723388705, guid: 07afbe3c7f538ec4399eca18cb85cb4e, type: 3}
+      SourceGuid: 07afbe3c7f538ec4399eca18cb85cb4e
+      SourceFingerprint: 84d18be323fcca48f916ebe25f9e07e2
+      PhysicalScale: {x: 1.0959959, y: 1.0959959, z: 1.0959959}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0, y: 0, z: 0.0000000037252903}
+        m_Extent: {x: 0.013785878, y: 0.047951832, z: 0.048536107}
+  - Weapon: {fileID: 11400000, guid: 802986f4d017e7d4882c1c6022341af4, type: 2}
+    WeaponId: TR15
+    SourceGuid: 802986f4d017e7d4882c1c6022341af4
+    Item:
+      Present: 1
+      Resource: {fileID: 3664258485270452095, guid: 3935229bb05b32b45b3af04c07bfbfbe, type: 3}
+      SourceGuid: 3935229bb05b32b45b3af04c07bfbfbe
+      SourceFingerprint: 469e0d94b1863bba1aac04036032a63d
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.0021569263, y: -0.013794512, z: 0.14902529}
+        m_Extent: {x: 0.029850047, y: 0.13910505, z: 0.42779917}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 3254853512004640353, guid: c1288aacdfca72346b6966bf7d6b906e, type: 3}
+      SourceGuid: c1288aacdfca72346b6966bf7d6b906e
+      SourceFingerprint: e6efa9533f55bb9bbc80d1d7cc4e5c55
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0, y: 0.000000007450581, z: 0.0000000037252903}
+        m_Extent: {x: 0.012737758, y: 0.095459476, z: 0.044044673}
+  - Weapon: {fileID: 11400000, guid: e4fe34bd1f05bb245b5d1589a10a69d4, type: 2}
+    WeaponId: Uzi
+    SourceGuid: e4fe34bd1f05bb245b5d1589a10a69d4
+    Item:
+      Present: 1
+      Resource: {fileID: 1151490975763823724, guid: 997df2bcc8be41c41980b1edb216fd5d, type: 3}
+      SourceGuid: 997df2bcc8be41c41980b1edb216fd5d
+      SourceFingerprint: a23df0c524e81075c3091b3e50843e21
+      PhysicalScale: {x: 0.20867454, y: 0.20867454, z: 0.20867454}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: -0.0072351284, y: -0.013486482, z: 0.021349862}
+        m_Extent: {x: 0.027870305, y: 0.10003038, z: 0.175}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 7182258339646233927, guid: 6064c964013ccf24ca87fb5aee2b829b, type: 3}
+      SourceGuid: 6064c964013ccf24ca87fb5aee2b829b
+      SourceFingerprint: 2e0235344ba725089ebd69d0f2cb2f4e
+      PhysicalScale: {x: 0.20867454, y: 0.20867454, z: 0.20867454}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 9.313226e-10, y: 0, z: 0.0000000037252903}
+        m_Extent: {x: 0.01322554, y: 0.0691427, z: 0.01829354}
+  - Weapon: {fileID: 11400000, guid: 805abd57d56b11d4cbb9548e3c9ade04, type: 2}
+    WeaponId: Viper
+    SourceGuid: 805abd57d56b11d4cbb9548e3c9ade04
+    Item:
+      Present: 1
+      Resource: {fileID: 4014381441530705613, guid: 188e4570e48eabf418fa869094785d53, type: 3}
+      SourceGuid: 188e4570e48eabf418fa869094785d53
+      SourceFingerprint: 20e73048f7e97bd93f8d5cad481eaddb
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.000000055879354, y: -0.02289477, z: 0.035824083}
+        m_Extent: {x: 0.017066585, y: 0.08201769, z: 0.113746434}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 6924759405784432587, guid: e2881f975378c1d4c865fc5f94053e45, type: 3}
+      SourceGuid: e2881f975378c1d4c865fc5f94053e45
+      SourceFingerprint: ee79537314ac7637e5a5b46a2049bdd0
+      PhysicalScale: {x: 1, y: 1, z: 1}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: -0.0000000018626451, y: 0, z: -0.0000000037252903}
+        m_Extent: {x: 0.013994282, y: 0.07551232, z: 0.04222075}
+  _supports:
+  - Module: {fileID: 7357499501584176699, guid: e5ae2e5aedacdbc43bc80a58c76b8817, type: 3}
+    SourceGuid: e5ae2e5aedacdbc43bc80a58c76b8817
+    SourceFingerprint: eba6cfded22d33c20d902ac5bdab4b92
+    LocalBounds:
+      m_Center: {x: 0, y: 0, z: -0.058500003}
+      m_Extent: {x: 0.02, y: 0.025, z: 0.0615}
+  _materials:
+  - Material: {fileID: 2100000, guid: 29e8e64cc0b8b51428fafd3536b937b0, type: 2}
+    SourceGuid: 29e8e64cc0b8b51428fafd3536b937b0
+    SourceFingerprint: f95de57b07c2ccbb7c56219bf3c76e19

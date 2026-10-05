@@ -1,0 +1,265 @@
+[
+  {
+    "path": "Assets/Scripts/Arsenal/ArsenalMagazineSupply.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "611f0de39ac6c1553b96750f4020b42eeeda006a985f4dbd6f08e3497329cceb",
+    "preparedSha256": "4E8638FB984A2F8B4BFBF3A9ED70EE5620255A47D766A29638A4796306DDE9B3"
+  },
+  {
+    "path": "Assets/Editor/VR_Battlegrounds/Gameplay/HandsPackLegacyRebuild.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "915c0271ccaaf98124d94d564e1d53c3601f1942473a5c62e9faeea7da325cdf",
+    "preparedSha256": "D8AC4E4816879AA96C4197E37870F6F8059EB37CFCAE0A9AFDA91F3A7191D96F"
+  },
+  {
+    "path": "Assets/Editor/VR_Battlegrounds/Gameplay/HandsPackWeaponBuilder.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "47f27fbfae2a3192084f38bd106583a86e7cf1293d3180ae4b8f75eb03546dfd",
+    "preparedSha256": "50B2DE982D69F0605CA45FA61911045609F933356754CF444A765EB778287C15"
+  },
+  {
+    "path": "Assets/Editor/VR_Battlegrounds/Gameplay/KinemationWeaponBuilder.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "b189c1bf5af111f11fb945284c0f4447e35fb481288c3a462291745f766bc677",
+    "preparedSha256": "A53AACD206FC1B58C9E4D022D69317CECAFB7B176C0A4F1154C918870A9BD67F"
+  },
+  {
+    "path": "Assets/Scripts/Interaction/LooseItems.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "879ed89646d15c5095ccf65cec9ea200e447b5a582abe9a94d243d64b8292465",
+    "preparedSha256": "ADB90B4F479F48ADEB137927BBA246A94D05F2874FE314332D870771A70811C3"
+  },
+  {
+    "path": "Assets/Scripts/Weapons/MagazineEject.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "8a12cfca2e19994bf0458bf4fd989828a4d699151af7f72089a46d6eaf2d22a5",
+    "preparedSha256": "24DDDF36233FD3BE6FB93C9CF934C788A242092FCA73C4163F1E9FCF05C4FF7F"
+  },
+  {
+    "path": "Assets/Scripts/Network/NetworkStateRelay.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "33048264d765f288ec6e54b57bbe445e112b4515660c0d4421e8898ca1914fc4",
+    "preparedSha256": "1A56DEE647F7E2DA88DC4B50AF51776E00B1EF4137D2469D548021A9264F0361"
+  },
+  {
+    "path": "Assets/Scripts/Player/PlayerLoadoutManager.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "5270c493bd002793bff21438ec2ecbcd8a5fade28dd5b58f1337a69c48783b6b",
+    "preparedSha256": "9994517C37B62A08868E840D8DAA6688619B82CB6B28F241C355BF710EE1D115"
+  },
+  {
+    "path": "Assets/Scripts/Weapons/PumpGrabFollow.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "f98c09bf7da1dcbd2f0ca288f29c5e494229739d1a9ea45ff4189824414e6c2f",
+    "preparedSha256": "D00B791799BC0515388432D8D76816D2F9D1E100513155FD9670288C50951FAD"
+  },
+  {
+    "path": "Assets/Scripts/Weapons/ShotgunPellets.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "a23abfb85aed8f7fc5be7818cf09c4c4cc713b8d9705127574cb6b61758297e0",
+    "preparedSha256": "FB7FD77014C749DFE92C9746B61E766C402D8538264FBE3D1E0509C95D00219A"
+  },
+  {
+    "path": "Assets/Editor/VR_Battlegrounds/Gameplay/ShotgunPerShellAuthoring.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": null,
+    "preparedSha256": "86E33C666F46595E346EA9FF3285A08FD521D4B8A229E255BCA565FD36150C96"
+  },
+  {
+    "path": "Assets/Editor/VR_Battlegrounds/Gameplay/ShotgunPerShellMigration.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": null,
+    "preparedSha256": "08D1260CB2B8C614B793D942364716C69AC9C0A25F30F44B8EF58E29AC0BEF55"
+  },
+  {
+    "path": "Assets/Scripts/Weapons/ShotgunShell.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": null,
+    "preparedSha256": "6871F5BF0A73BCA55EE3482A44DDB1AB642BFC8474D4619278C5499AD132A970"
+  },
+  {
+    "path": "Assets/Scripts/Weapons/ShotgunShellReceiver.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": null,
+    "preparedSha256": "86AF6421D49BFCEC8FBB865AD01BA90FC558F15574FDEAE578C1404A12C3478D"
+  },
+  {
+    "path": "Assets/Scripts/Network/StateEventAuthority.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "2eb31b361d385376f7a996f3ee15c2547b1d4f019c1f8402dea84059c3a1ac20",
+    "preparedSha256": "46F3F466F30E7A0154CB6247523B0D866550A2EE8451F1B758D3933A1E5C24D5"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmAmmoUnit.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": null,
+    "preparedSha256": "7A7A68FE6F76EDFCA96EFBA01E96C3580E1E34B9D8363433003EC12F4C25895C"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmMag.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "d42dbbd32f4870370bddde6996001d07f1bc0e58e5e7563b23847fcc0fde6efb",
+    "preparedSha256": "38C4D6CD34BEC4D5F5C733CE0AB35C220347F1B12DCAB34580E8FCD2CA8F124E"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmMag.StateSave.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "30aa96a07a815345120119e61edd540bf43cdb9d6c43244c146dea10ad124244",
+    "preparedSha256": "80D901D8ACB980E826DBBBBA7E47514B5C111533AB94CE26ED3603BB7D000849"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmReadinessTypes.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "5503bddbe30b3eda06dbc793570f04c7797370c956b5359ce00581b571d7d17d",
+    "preparedSha256": "F85CACC67EFE3355202EDFA78C3A107A451F90126562755D3EF7F91FE188F97A"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.AmmoAdmission.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": null,
+    "preparedSha256": "69C9FCADF25C8260E8E417D8E43D87E48DA07BBC3499A78E78FBE8C972909656"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.Readiness.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "eb1710292670df3a6613a93c746de3e2ca41d515e70e990c5d179f6451b49c39",
+    "preparedSha256": "3C921B2EB1B5D41467148F9356DD907455490A23CB4E15EE276F8854CE1CCD1A"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.StateSave.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "1735b0d6110487ca876f226dfad02ac44b21ac232161812813582e45c6fb8edb",
+    "preparedSha256": "EC467445DCA5F92225DC1C64E9D3C3E67750B8DAE4EA82BFEC5B54987514600D"
+  },
+  {
+    "path": "Assets/Scripts/Interaction/UxrMagazinePocket.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "57da7d6fdfe480a7fcd50f19edf7fb680fb183c019808d23729079da2ffa5df2",
+    "preparedSha256": "A0707B272544BEAADE92104B3040356CE076F8A93E15B697D2B3DC7ABF087C9E"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrShotgunPump.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "28348e37eaeb0586f6de7bd894db611a9092ddc6c7e8c4c81996bba40f6ce6b2",
+    "preparedSha256": "2D9D82BFC716B22F441196EC52446D322D70518F14C4DF74A7FC006D841CD5A2"
+  },
+  {
+    "path": "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponBalanceApplier.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "8647b2d7bf186d20546c74f7d621418366990cd0ac2c15599232ef5cbab41cff",
+    "preparedSha256": "89A335227F29F58F2BDA01BB586E055B22D28A92B76EBEE1D2B77187758EFF85"
+  },
+  {
+    "path": "Assets/Scripts/Arsenal/WeaponInfo.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "937f88897c485723609fb301b14733ec380bfb2152075107122710b63dabecaa",
+    "preparedSha256": "3610A9941D6BA9E2EBE9109F15EA547605344C34EE172E2D771F2B3B813738E7"
+  },
+  {
+    "path": "Assets/Scripts/Weapons/WeaponMechanismVisuals.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "79d7970618224811eb9c9387e0a3de7843eb97ff889ec28026586af8b13b64ac",
+    "preparedSha256": "9F2BA18CF134F3C48E0DDBF4D6097694945000E9C92A1C3345BD619FD229DAEB"
+  },
+  {
+    "path": "Assets/Scripts/Weapons/WeaponReadinessController.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "da45f44495b58bf90bdeab731f4bfa8368ecb0354f51ad8e2de8ee4505484e2d",
+    "preparedSha256": "CB785258267432DD002AE4F77B3460E30B922D7B466DFAA23B4E9502D0298747"
+  },
+  {
+    "path": "Assets/Scripts/Weapons/WeaponReadinessProfile.cs",
+    "package": "shotgun",
+    "reason": "Prepared bytes not applied",
+    "currentSha256": "7f2b9aa77a8b8f88e5513ef11c9e0eed76478d884f0ef1416b24ae347a1006f5",
+    "preparedSha256": "01F65F3B5EFCACF6496F38B9A9EE670B411340CA17F4BC16BB69EE5FA087F3BF"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/Unique/UxrUniqueIdImplementer_1.cs",
+    "package": "generator SDK/network",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/Unique/UxrUniqueIdImplementer.cs",
+    "package": "generator SDK/network",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/StateSave/UxrStateSaveImplementer.cs",
+    "package": "generator SDK/network",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/StateSync/UxrStateSyncImplementer_1.cs",
+    "package": "generator SDK/network",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/Components/UxrComponent.cs",
+    "package": "generator SDK/network",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/Components/UxrComponent_1.cs",
+    "package": "generator SDK/network",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/Scripts/Network/NetworkUxrIdentity.cs",
+    "package": "generator SDK/network",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/StateSave/UxrStateSaveImplementer_1.cs",
+    "package": "generator SDK/network",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalPrefabStagePreview.cs",
+    "package": "preview",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalDecorationDescriptorEditor.cs",
+    "package": "preview",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalEditorActions.cs",
+    "package": "preview",
+    "reason": "Prepared bytes not applied"
+  },
+  {
+    "path": "Assets/Scripts/Arsenal/ArsenalPriceTag.cs",
+    "package": "preview",
+    "reason": "Prepared bytes not applied"
+  }
+]

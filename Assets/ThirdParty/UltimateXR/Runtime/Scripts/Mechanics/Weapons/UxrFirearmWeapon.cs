@@ -59,6 +59,7 @@ namespace UltimateXR.Mechanics.Weapons
         /// <returns>Whether it is ready to shoot</returns>
         public bool IsLoaded(int triggerIndex)
         {
+            if (UsesReadinessLedger(triggerIndex)) return IsReadyToFire(triggerIndex);
             if (_runtimeTriggers.TryGetValue(triggerIndex, out RuntimeTriggerInfo runtimeTrigger))
             {
                 return runtimeTrigger.HasReloaded;
@@ -73,6 +74,8 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="triggerIndex">Index in <see cref="_triggers" /></param>
         public void Reload(int triggerIndex)
         {
+            // Opt-in: bool-only Reload не является физическим evidence или вторым ammo writer.
+            if (UsesReadinessLedger(triggerIndex)) return;
             SetTriggerHasReloadedSynced(triggerIndex, true);
         }
 
@@ -81,6 +84,7 @@ namespace UltimateXR.Mechanics.Weapons
         /// </summary>
         private void SetTriggerHasReloadedSynced(int triggerIndex, bool hasReloaded)
         {
+            if (UsesReadinessLedger(triggerIndex)) return;
             if (!_runtimeTriggers.TryGetValue(triggerIndex, out RuntimeTriggerInfo runtimeTrigger))
             {
                 return;
@@ -168,6 +172,7 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="ammo">New ammo</param>
         public void SetAmmoLeft(int triggerIndex, int ammo)
         {
+            if (UsesReadinessLedger(triggerIndex)) return; // Opt-in пишет только ledger command.
             if (triggerIndex < 0 || triggerIndex >= _triggers.Count)
             {
                 return;
@@ -226,6 +231,7 @@ namespace UltimateXR.Mechanics.Weapons
         /// </returns>
         public bool TryToShootRound(int triggerIndex)
         {
+            if (UsesReadinessLedger(triggerIndex)) return TryShootReadinessRound(triggerIndex);
             if (!CanUse)
             {
                 return false;
@@ -312,6 +318,7 @@ namespace UltimateXR.Mechanics.Weapons
         protected override void OnEnable()
         {
             base.OnEnable();
+            ResetLocalTriggerEpisodes();
 
             if (RootGrabbable)
             {
@@ -345,6 +352,7 @@ namespace UltimateXR.Mechanics.Weapons
         protected override void OnDisable()
         {
             base.OnDisable();
+            ResetLocalTriggerEpisodes();
 
             // VR Battlegrounds patch 23
             SubscribeShotReplay(false);
@@ -388,7 +396,7 @@ namespace UltimateXR.Mechanics.Weapons
                 if (_runtimeTriggers.TryGetValue(i, out RuntimeTriggerInfo info))
                 {
                     info.LastShotTimer = -1.0f;
-                    info.HasReloaded   = true;
+                    if (info.Readiness?.ReadinessInitialized != true) info.HasReloaded = true;
 
                     if (trigger.TriggerTransform)
                     {
@@ -489,7 +497,17 @@ namespace UltimateXR.Mechanics.Weapons
                     if (grabber.Avatar.AvatarMode == UxrAvatarMode.Local)
                     {
 
-                    bool shoot = false;
+                    bool ledgerTrigger = UsesReadinessLedger(i);
+                    bool shoot = ledgerTrigger && ProcessReadinessLocalTrigger(i, grabber, runtimeTrigger);
+                    if (!ledgerTrigger)
+                    {
+
+                    // VR Battlegrounds: подсказка считывает состояние ДО сброса HasReloaded у ручного оружия.
+                    // Событие локальное, не создаёт Reload/Shoot или синхронизируемое действие.
+                    if (runtimeTrigger.TriggerPressStarted && CanUse && runtimeTrigger.LastShotTimer <= 0f && NeedsManualChambering(i))
+                    {
+                        ChamberingRequired?.Invoke(i, grabber);
+                    }
 
                     switch (trigger.CycleType)
                     {
@@ -497,7 +515,7 @@ namespace UltimateXR.Mechanics.Weapons
                         {
                             shoot = runtimeTrigger.TriggerPressStarted && runtimeTrigger.HasReloaded;
 
-                            if (shoot)
+                            if (shoot && !UsesReadinessLedger(i))
                             {
                                 runtimeTrigger.HasReloaded = false;
                             }
@@ -541,9 +559,11 @@ namespace UltimateXR.Mechanics.Weapons
                         shouldPlayNoAmmoSound = !runtimeTrigger.HasReloaded;
                     }
 
-                    if (runtimeTrigger.TriggerPressStarted && shouldPlayNoAmmoSound)
+                    if (runtimeTrigger.TriggerPressStarted && CanUse && runtimeTrigger.LastShotTimer <= 0f && shouldPlayNoAmmoSound)
                     {
                         trigger.ShotAudioNoAmmo?.Play(trigger.TriggerTransform != null ? trigger.TriggerTransform.position : trigger.TriggerGrabbable.GetGrabPointGrabProximityTransform(grabber, trigger.GrabbableGrabPointIndex).position);
+                    }
+
                     }
 
                     if (shoot)
@@ -579,6 +599,11 @@ namespace UltimateXR.Mechanics.Weapons
 
                     } // VR Battlegrounds patch 23: конец блока «решает только стрелок»
                 }
+
+                if (UsesReadinessLedger(i) && (!trigger.TriggerGrabbable ||
+                    !UxrGrabManager.Instance.GetGrabbingHand(trigger.TriggerGrabbable, trigger.GrabbableGrabPointIndex, out UxrGrabber localHand) ||
+                    localHand.Avatar == null || localHand.Avatar.AvatarMode != UxrAvatarMode.Local))
+                    ResetLocalTriggerEpisode(i);
 
                 runtimeTrigger.TriggerPressStarted = false;
                 runtimeTrigger.TriggerPressEnded   = false;
@@ -618,7 +643,8 @@ namespace UltimateXR.Mechanics.Weapons
                     magCollider.enabled = true;
                 }
 
-                if (trigger.UseHasReloadedForSemiAndFullAuto)
+                if (UsesReadinessLedger(i)) ReadinessMagazineChanged(i);
+                else if (trigger.UseHasReloadedForSemiAndFullAuto)
                 {
                     SetTriggerHasReloadedSynced(i, false);
                 }
@@ -648,7 +674,8 @@ namespace UltimateXR.Mechanics.Weapons
                     magCollider.enabled = false;
                 }
 
-                if (trigger.UseHasReloadedForSemiAndFullAuto)
+                if (UsesReadinessLedger(i)) ReadinessMagazineChanged(i);
+                else if (trigger.UseHasReloadedForSemiAndFullAuto)
                 {
                     SetTriggerHasReloadedSynced(i, false);
                 }
@@ -758,6 +785,13 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="ammo">The ammo left</param>
         private void SyncAmmoLeft(int triggerIndex, int ammo)
         {
+            // Legacy mag-only reconciliation не может писать в новый магазин opt-in.
+            if (UsesReadinessLedger(triggerIndex))
+            {
+                var state = GetReadinessState(triggerIndex);
+                if (state != null) TryReconcileReadiness(triggerIndex, state.Revision);
+                return;
+            }
             BeginSync();
 
             SetAmmoLeft(triggerIndex, ammo);

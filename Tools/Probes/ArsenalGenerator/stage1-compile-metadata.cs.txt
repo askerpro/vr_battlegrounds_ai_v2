@@ -1,0 +1,18 @@
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)throw new Exception("Editor busy");
+var failures=new System.Collections.Generic.List<string>();VrBattlegrounds.Arsenal.ArsenalCompositionCatalog catalog=null;string error=null;
+var profile=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab");
+var source=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>("Assets/Data/Weapons/FullDemoArsenal.asset");
+var style=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>("Assets/Data/Weapons/IndustrialPegboardPresentation.asset");
+string before=UnityEditor.EditorJsonUtility.ToJson(profile)+UnityEditor.EditorJsonUtility.ToJson(source)+UnityEditor.EditorJsonUtility.ToJson(style);
+try{
+ catalog=VrBattlegrounds.Editor.Arsenal.ArsenalCompositionMetadataCompiler.Compile("arsenal-composition/v1",
+  UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab"),
+  UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Arsenal/Slots/ShelfSlotPrefab Variant.prefab"),profile,
+  source.Entries.Select(e=>e.Weapon).ToArray(),new[]{style});
+ System.IO.File.WriteAllText("tmp/arsenal-generator-proofs/stage1-catalog-transient.json",UnityEditor.EditorJsonUtility.ToJson(catalog,true));
+ if(catalog.Templates.Count!=2||catalog.Weapons.Count!=20)failures.Add("Compiled resource count");
+ foreach(var t in catalog.Templates){if(Mathf.Abs(t.PanelWidth-.4f)>.0001f)failures.Add("Projected width");if(t.Roles.Any(r=>string.IsNullOrEmpty(r.SourceComponentId)||string.IsNullOrEmpty(r.SourceUniqueId)))failures.Add("Role provenance");}
+}catch(Exception ex){error=ex.ToString();failures.Add("Compiler failed closed");}
+finally{if(catalog!=null)UnityEngine.Object.DestroyImmediate(catalog);}
+if(before!=UnityEditor.EditorJsonUtility.ToJson(profile)+UnityEditor.EditorJsonUtility.ToJson(source)+UnityEditor.EditorJsonUtility.ToJson(style))failures.Add("Native source mutated");
+var report=new{passed=failures.Count==0,failures,error,catalogNativeWritten=false,reportPath="tmp/arsenal-generator-proofs/stage1-catalog-transient.json"};System.IO.File.WriteAllText("tmp/arsenal-generator-proofs/stage1-compile-metadata.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));return report;

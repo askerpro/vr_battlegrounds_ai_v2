@@ -10,11 +10,13 @@
 
 ---
 
-Подготовлено [отделение полного каталога окружения](level-design/environment-pack-policy.md):
-цель — демо и измерения в отдельном Unity-проекте, поиск по файловому экспорту, выбранные зависимости в игре.
-Мы здесь — [файловый аудит](audit/environment-pack-usage-2026-10-05.md): 7933 файла / 10,80 ГиБ;
-16 файлов / 13,21 МиБ удерживаются собственными ассетами в выбранном охвате. Осталось выполнить
-Unity-сверку бинарных зависимостей, проверенную копию каталога и миграцию по [плану](plans/2026-10-05-environment-pack-separation.md).
+Выполнено [отделение полного каталога окружения](level-design/environment-pack-policy.md):
+паки и авторские демо — `F:/UnityProjects/EnvironmentPackCatalog`; в игре 16 ассетов / около 13,2 МиБ.
+GUID/зависимости и Android PASS; каталог: 7933 GUID, 24 SceneAsset, Industrial preview PASS.
+Из игры убрано около 10,96 ГиБ. Unity-сканер, галерея, разметка и сборщики **ещё не адаптированы**;
+дальнейшая работа — [план](plans/2026-10-05-environment-pack-separation.md).
+Манифесты/логи: [локальный отчёт](tasks/report/environment-pack-separation-2026-10-05/), не под Git.
+Инструменты переноса/проверки: `Tools/AssetCatalog/separate_installed_packs.py`, `CatalogImportValidation.cs`.
 
 ## Структура папки `Docs/`
 

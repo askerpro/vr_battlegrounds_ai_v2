@@ -37,6 +37,11 @@ namespace VrBattlegrounds.Editor.LevelDesign
 
         private void OnGUI()
         {
+            if (FolderCandidateScanner.ExternalCatalogPending)
+            {
+                EditorGUILayout.HelpBox(FolderCandidateScanner.ExternalCatalogNotice, MessageType.Warning);
+                return;
+            }
             GUILayout.Label("Пак → кандидаты для LD_Alphabet", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox("Папка: Assets/env_packs/<имя пака>. Вложенные папки включаются. Подбор по габаритам, поворотам и простым сборкам; предложения требуют визуальной проверки.", MessageType.Info);
             using (new EditorGUI.DisabledScope(session != null))

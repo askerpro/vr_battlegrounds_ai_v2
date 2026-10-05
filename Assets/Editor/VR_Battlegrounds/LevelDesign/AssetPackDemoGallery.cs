@@ -26,10 +26,15 @@ namespace VrBattlegrounds.Editor.LevelDesign
         }
         [Serializable] public class Report { public Entry[] demos; }
 
-        public static string[] Sources() => AssetDatabase.FindAssets("t:Scene", Roots)
-            .Select(AssetDatabase.GUIDToAssetPath)
-            .Where(p => !p.StartsWith(FolderCandidateScanner.PackRoot + "/LowPolyFPSLite/", StringComparison.Ordinal))
-            .OrderBy(p => p).ToArray();
+        // Unity-галерея ещё не адаптирована к отдельному проекту полного каталога.
+        public static string[] Sources()
+        {
+            FolderCandidateScanner.RequireInstalledCatalog();
+            return AssetDatabase.FindAssets("t:Scene", Roots)
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(p => !p.StartsWith(FolderCandidateScanner.PackRoot + "/LowPolyFPSLite/", StringComparison.Ordinal))
+                .OrderBy(p => p).ToArray();
+        }
 
         private static Scene Review()
         {

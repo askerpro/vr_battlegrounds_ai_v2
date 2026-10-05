@@ -74,6 +74,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
 
         private static Result RefreshOwnedCandidates(Catalog catalog, string prefix)
         {
+            FolderCandidateScanner.RequireInstalledCatalog();
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Обновление стенда доступно вне Play Mode.");
             foreach (var group in catalog.groups)
@@ -141,6 +142,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
 
         public static Result Build()
         {
+            FolderCandidateScanner.RequireInstalledCatalog();
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Создавать стенд можно только вне Play Mode.");
             var catalog = LoadCatalog();

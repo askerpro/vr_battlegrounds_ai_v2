@@ -13,6 +13,13 @@ namespace VrBattlegrounds.Editor.LevelDesign
     public static class FolderCandidateScanner
     {
         public const string PackRoot = "Assets/env_packs";
+        // Полные паки перенесены; этот Unity-сканер ещё не адаптирован к внешнему каталогу.
+        public const string ExternalCatalogNotice = "Полные паки: F:/UnityProjects/EnvironmentPackCatalog. Unity-инструменты каталога ещё не адаптированы; в игре остались только используемые зависимости.";
+        public static bool ExternalCatalogPending => File.Exists("Tools/AssetCatalog/external-catalog.json");
+        public static void RequireInstalledCatalog()
+        {
+            if (ExternalCatalogPending) throw new InvalidOperationException(ExternalCatalogNotice);
+        }
         public const string DataFolder = "Assets/Editor/VR_Battlegrounds/LevelDesign/Data/Automatic";
         public const string ReportFolder = "Temp/LevelDesign/FolderCandidates";
 
@@ -45,6 +52,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
 
         public static string ValidateFolder(string folder)
         {
+            RequireInstalledCatalog();
             folder = (folder ?? "").Replace('\\', '/').TrimEnd('/');
             if (!folder.StartsWith(PackRoot + "/", StringComparison.Ordinal) ||
                 folder.Split('/').Any(p => p == "." || p == "..") || !AssetDatabase.IsValidFolder(folder))

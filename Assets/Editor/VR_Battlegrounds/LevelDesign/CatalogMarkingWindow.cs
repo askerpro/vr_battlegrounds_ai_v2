@@ -67,6 +67,11 @@ namespace VrBattlegrounds.Editor.LevelDesign
 
         private void OnGUI()
         {
+            if (FolderCandidateScanner.ExternalCatalogPending)
+            {
+                EditorGUILayout.HelpBox(FolderCandidateScanner.ExternalCatalogNotice, MessageType.Warning);
+                return;
+            }
             EditorGUILayout.LabelField("Разметка объектов из обзорных сцен", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox("Выберите объект или несколько частей одного укрытия. Метка связывает их с эталоном; повторное назначение обновит её. Разные эталоны создают разные соответствия.", MessageType.Info);
             if (paths.Length == 0) { EditorGUILayout.HelpBox("Не найдены блоки LD_Alphabet.", MessageType.Error); return; }

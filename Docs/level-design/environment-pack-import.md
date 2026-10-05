@@ -1,10 +1,11 @@
 # Импорт паков окружения
 
-Текущий полный импорт сохраняется. Для перехода к выборочному набору подготовлены
-[целевой контракт внешнего каталога](environment-pack-policy.md),
-[файловый аудит использования](../audit/environment-pack-usage-2026-10-05.md) и
-[план миграции](../plans/2026-10-05-environment-pack-separation.md).
-Unity-сверка и перенос пока не выполнены; результаты аудита не разрешают удаление ассетов.
+Полные паки находятся в отдельном проекте `F:/UnityProjects/EnvironmentPackCatalog`.
+В игре сохранены 16 используемых ассетов с зависимостями и GUID (около 13,2 МиБ).
+Перенос, Unity-сверка и AndroidCompileGate прошли; старые Unity-инструменты ещё не адаптированы.
+Действующее устройство — [контракт каталога](environment-pack-policy.md),
+манифесты и логи — [локальный отчёт](../tasks/report/environment-pack-separation-2026-10-05/).
+Ниже приведены технические сведения о первоначальном полном импорте, теперь находящемся в каталоге.
 
 Пользователь 2026-10-02 поручил импортировать все 13 найденных архивов окружения
 из кеша Asset Store в игровой проект, вместо дальнейшей работы только в
@@ -76,10 +77,10 @@ little-endian словами). При обнаружении такой ссыл
 
 ## Статус
 
-### Текущий набор
+### Полный набор внешнего каталога
 
-12 установленных паков перенесены 2026-10-03 через `AssetDatabase.MoveAsset`
-в `Assets/env_packs/`: `AbandonedFactory`, `HauntedFarmHouse`, `HorrorHospital`,
+12 установленных паков сохранены под `Assets/env_packs/` внешнего каталога:
+`AbandonedFactory`, `HauntedFarmHouse`, `HorrorHospital`,
 `HouseForge_01`, `ModularWoodenBuildings`, `PostApocalypticTown`,
 `PostApocalypticUltimateBundle`, `RuralTown`, `TheSewers`, `DestructedBuildings`,
 `RPG_FPS_game_assets_industrial`, `LowPolyFPSLite`.

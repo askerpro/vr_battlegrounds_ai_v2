@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "projectPath": "F:/UnityProjects/EnvironmentPackCatalog",
+  "unityVersion": "6000.4.1f1",
+  "urpVersion": "17.4.0",
+  "unityToolsStatus": "not_adapted",
+  "reviewArchivePath": "Archive/Assets/Scenes/ExcludedFromIndex/IndustrialCandidateReview.unity",
+  "reportPath": "Docs/tasks/report/environment-pack-separation-2026-10-05",
+  "note": "Полные паки находятся в отдельном проекте. Сканер, галерея и сборщик стенда ещё не адаптированы."
+}

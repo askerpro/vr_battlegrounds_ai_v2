@@ -1,5 +1,11 @@
 # Changelog (Журнал изменений)
 
+## 2026-10-05 — Полные паки окружения вынесены из игры
+
+- Создан отдельный Unity/URP-проект `F:/UnityProjects/EnvironmentPackCatalog`; сохранены полные паки, GUID, настройки импорта и авторские демо. Собственный IndustrialCandidateReview и зависимости помещены в `Archive`.
+- В игре оставлены 16 используемых файлов поставок; удалено около 10,96 ГиБ с метаданными и стендом. Сверка ссылок и Android PASS; в каталоге 7933 GUID, 24 SceneAsset и Industrial preview PASS.
+- Unity-инструменты полного каталога ещё не адаптированы; окна показывают предупреждение, сканирование и пересборка стенда в игре ограничены. [Текущее устройство](level-design/environment-pack-policy.md), [локальные манифесты/логи](tasks/report/environment-pack-separation-2026-10-05/).
+
 ## 2026-10-05 — Plastic только для Unity-папок, быстрый post-commit
 
 - Коммиты шли минутами: `cm ci` каждый раз обходил весь workspace, включая `tmp` (15 ГБ, 26 тыс. файлов), — в `ignore.conf` был только шаблон Unity. Теперь Plastic ищет новые файлы лишь в `Assets`/`Packages`/`ProjectSettings` с теми же исключениями, что в `.gitignore`.

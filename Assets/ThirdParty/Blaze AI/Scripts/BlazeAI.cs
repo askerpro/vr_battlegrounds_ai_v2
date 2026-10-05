@@ -18,6 +18,20 @@ using UnityEditor;
 
 public class BlazeAI : MonoBehaviour
 {
+    // VR Battlegrounds patch: игра фильтрует команды/живость по компонентам, без собственных тегов.
+    // Без адаптера сохраняется штатная фильтрация Blaze по тегам.
+    public System.Func<GameObject, bool> TargetFilter { get; set; }
+    public System.Func<Collider, bool> CoverFilter { get; set; }
+    public System.Func<Collider, bool> ColliderIgnoreFilter { get; set; }
+    public bool RequireCompletePaths { get; set; }
+    private readonly RaycastHit[] integrationVisionHits = new RaycastHit[32];
+
+    public bool IsSelfCollider(Collider collider) => collider != null &&
+        (collider.transform.IsChildOf(transform) || ColliderIgnoreFilter != null && ColliderIgnoreFilter(collider));
+
+    public bool IsHostileTarget(GameObject target) => target != null && target.activeInHierarchy &&
+        (TargetFilter != null ? TargetFilter(target) : System.Array.IndexOf(vision.hostileTags, target.tag) >= 0);
+
     #region PROPERTIES
 
     [Tooltip("Enabling this will make the agent use root motion, this gives more accurate and realistic movement but any move speed property will not be considered as the speed will be that of the animation.")]
@@ -700,7 +714,8 @@ public class BlazeAI : MonoBehaviour
         {
             lastMoveProperties = new LastMoveProps(location, moveSpeed, turnSpeed);
             
-            if ((!isAttacking || enemyToAttack == null) && (lastCalculatedPath == location) && cornersQueue.Count == 0)
+            if ((!RequireCompletePaths || isPathReachable) && (!isAttacking || enemyToAttack == null) &&
+                (lastCalculatedPath == location) && cornersQueue.Count == 0)
             {
                 // check if AI is already at the min possible distance from location
                 float dist = (new Vector3(pathCorner.x, transform.position.y, pathCorner.z) - transform.position).sqrMagnitude;
@@ -723,7 +738,15 @@ public class BlazeAI : MonoBehaviour
         // calculates path corners and returns if reachable or not
         if (!IsPathReachable(location, true))
         {
-            if (dir != "front")  
+            // VR Battlegrounds patch: прежний front fallback не должен вести к старому углу пути.
+            if (RequireCompletePaths)
+            {
+                cornersQueue.Clear();
+                pathCorner = Vector3.zero;
+                navmeshAgent.ResetPath();
+                return false;
+            }
+            if (dir != "front")
             {
                 return false;
             }
@@ -1290,7 +1313,7 @@ public class BlazeAI : MonoBehaviour
         // check if previous target changed tag to non-hostile or is disabled
         if (enemyToAttack != null)
         {
-            if (System.Array.IndexOf(vision.hostileTags, enemyToAttack.tag) < 0 || !enemyToAttack.activeSelf) 
+            if (!IsHostileTarget(enemyToAttack))
             {
                 isTargetTagChanged = true;
                 VisionReset();
@@ -1438,7 +1461,7 @@ public class BlazeAI : MonoBehaviour
             if (friendly) return;
             
             // check for hostile tags
-            if (System.Array.IndexOf(vision.hostileTags, visionHitArr[i].tag) < 0) 
+            if (!IsHostileTarget(visionHitArr[i].gameObject))
             {
                 enemiesTargetedByAmount.Remove(hostile);
                 continue;
@@ -1461,7 +1484,7 @@ public class BlazeAI : MonoBehaviour
             layersToHit &= ~ignoreRaycastLayer;
             
             // check target hasn't been disabled
-            if (!hostile.transform.gameObject.activeSelf || System.Array.IndexOf(vision.hostileTags, hostile.transform.gameObject.tag) < 0)
+            if (!IsHostileTarget(hostile.gameObject))
             {
                 enemiesTargetedByAmount.Remove(hostile);
                 continue;
@@ -1775,7 +1798,24 @@ public class BlazeAI : MonoBehaviour
 
     public bool CheckTargetVisibleWithRay(Transform target, Vector3 startDir, Vector3 targetDir, float rayDistance, int layers)
     {
-        if (Physics.Raycast(startDir, targetDir, out RaycastHit hit, rayDistance, layers)) 
+        // VR Battlegrounds patch: видимое VR-тело находится вне отдельного корня Blaze.
+        if (ColliderIgnoreFilter != null)
+        {
+            int count = Physics.RaycastNonAlloc(startDir, targetDir, integrationVisionHits, rayDistance,
+                                               layers, QueryTriggerInteraction.Collide);
+            int closest = -1;
+            float distance = Mathf.Infinity;
+            for (int i = 0; i < count; i++)
+            {
+                if (IsSelfCollider(integrationVisionHits[i].collider) || integrationVisionHits[i].distance >= distance) continue;
+                closest = i;
+                distance = integrationVisionHits[i].distance;
+            }
+            if (closest < 0) return false;
+            Transform seen = integrationVisionHits[closest].transform;
+            return seen.IsChildOf(target) || target.IsChildOf(seen);
+        }
+        if (Physics.Raycast(startDir, targetDir, out RaycastHit hit, rayDistance, layers))
         {
             if (hit.transform.IsChildOf(target) || target.IsChildOf(hit.transform)) {
                 return true;
@@ -1810,7 +1850,7 @@ public class BlazeAI : MonoBehaviour
         // filter the results
         for (int i=0; i<sphereCastHits; i++) 
         {
-            if (transform.IsChildOf(checkTargetSeenHitArr[i].transform) || checkTargetSeenHitArr[i].transform.IsChildOf(transform))
+            if (IsSelfCollider(checkTargetSeenHitArr[i].collider) || checkTargetSeenHitArr[i].distance <= 0f)
             {
                 continue;
             }
@@ -1969,7 +2009,7 @@ public class BlazeAI : MonoBehaviour
         {
             if (skinHitArr[i].transform.root == transform.root) continue;
 
-            if (System.Array.IndexOf(vision.hostileTags, skinHitArr[i].transform.tag) >= 0)
+            if (IsHostileTarget(skinHitArr[i].gameObject))
             {
                 enemyPosOnSurprised = skinHitArr[i].transform.position;
                 if (RayCastObjectColliders(skinHitArr[i].transform.gameObject, vision.layersToDetect | vision.hostileAndAlertLayers, 1, skinHitArr))
@@ -2064,7 +2104,7 @@ public class BlazeAI : MonoBehaviour
             {
                 RaycastHit hit = checkObjVisibleRayHitArr[i];
                 if (hit.collider == null) continue;
-                if (hit.collider.transform.root == transform.root) continue; // ignore self
+                if (IsSelfCollider(hit.collider)) continue;
                 if (hit.distance <= 0f) continue;
 
                 if (hit.distance < closestDist)

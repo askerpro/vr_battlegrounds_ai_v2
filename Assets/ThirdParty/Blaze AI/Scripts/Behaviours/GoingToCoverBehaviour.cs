@@ -222,8 +222,15 @@ namespace BlazeAISpace
             bool shouldChangeCover = CalculateChangeCoverFrequency();
 
             // eliminate bad cover options
-            for (int i=0; i<hits; i++) 
+            for (int i=0; i<hits; i++)
             {
+                // VR Battlegrounds patch: игровые Soft/Visual не являются защитным укрытием.
+                if (blaze.CoverFilter != null && !blaze.CoverFilter(findCoverColls[i]))
+                {
+                    findCoverColls[i] = null;
+                    hitReduction++;
+                    continue;
+                }
                 Vector3 coverBottomPos = findCoverColls[i].ClosestPoint(blaze.ValidateYPoint(findCoverColls[i].transform.position));
                 float distance = Vector3.Distance(coverBottomPos, blaze.enemyColPoint);
 

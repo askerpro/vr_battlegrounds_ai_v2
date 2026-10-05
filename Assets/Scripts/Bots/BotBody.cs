@@ -15,10 +15,11 @@ namespace VrBattlegrounds.Bots
     /// <para>
     /// <b>Бот ходит, как человек в арене (T-48): корень стоит, движется голова.</b> Игроки
     /// перемещаются только физически — корень аватара остаётся на месте калибровки, а по залу идёт
-    /// камера, и тело (ноги — Legs Animator) догоняет её. Бот повторяет это: <see cref="Feet"/> —
-    /// точка пола под головой, её ведёт <see cref="BotNavigator"/>, голова стоит над ней на росте
-    /// человека, кисти — в позе префаба относительно «корпуса» (<see cref="Feet"/> и
-    /// <see cref="Yaw"/>). Корень бота не двигается и не поворачивается. Так клиенты видят бота
+    /// камера, и тело с IK догоняет её. У бота <see cref="Feet"/> — точка пола под головой:
+    /// в бою её ведёт Blaze-риг, вне боя — <see cref="BotNavigator"/>. Голова стоит над ней
+    /// на росте человека, кисти берутся из вооружённой humanoid-анимации, а без неё — из позы
+    /// префаба относительно <see cref="Feet"/> и <see cref="Yaw"/>. Корень бота не двигается.
+    /// Так клиенты видят бота
     /// тем же путём, что удалённого игрока, а зона спавна (<c>TeamSpawnZone</c> проверяет центр
     /// головы) — там, где он стоит.
     /// </para>
@@ -61,6 +62,44 @@ namespace VrBattlegrounds.Bots
         private bool _hasRightHandPose;
         private Vector3 _rightHandPosition;
         private Quaternion _rightHandRotation;
+        private Animator _combatPoseSource;
+        private bool _combatMovesBody;
+        private bool _hasLeftHandPose;
+        private Pose _leftHandPose;
+
+        /// <summary>Вооружённая анимация на отдельном риге; корень самого аватара не двигается.</summary>
+        public void SetCombatPoseSource(Animator source, bool movesBody = false)
+        {
+            if (_combatPoseSource == source && _combatMovesBody == movesBody) return;
+            _combatPoseSource = source;
+            _combatMovesBody = movesBody;
+            ClearRightHandPose();
+            LookAt(null);
+        }
+
+        public bool TryGetWeaponPose(out Pose left, out Pose right)
+        {
+            left = right = default;
+            if (_combatPoseSource == null || !_combatPoseSource.isActiveAndEnabled) return false;
+            Transform l = _combatPoseSource.GetBoneTransform(HumanBodyBones.LeftHand);
+            Transform r = _combatPoseSource.GetBoneTransform(HumanBodyBones.RightHand);
+            if (l == null || r == null) return false;
+            left = new Pose(l.position, l.rotation);
+            right = new Pose(r.position, r.rotation);
+            return true;
+        }
+
+        /// <summary>Коррекция обеих кистей при наведении оружия; базовая поза остаётся клиповой.</summary>
+        public void SetWeaponHands(Pose left, Pose right)
+        {
+            _hasLeftHandPose = true;
+            _leftHandPose = left;
+            SetRightHandPose(right.position, right.rotation);
+            // Update стрелка может идти после стадии Update UXR; BotBody остаётся автором
+            // кистей, применяет их сразу, а Manipulation подтянет оружие до проверки выстрела.
+            if (_leftHand != null) _leftHand.SetPositionAndRotation(left.position, left.rotation);
+            if (_rightHand != null) _rightHand.SetPositionAndRotation(right.position, right.rotation);
+        }
 
         /// <summary>Кость правой кисти — нужна стрелку, чтобы пересчитать хват оружия.</summary>
         public Transform RightHand => _rightHand;
@@ -113,6 +152,7 @@ namespace VrBattlegrounds.Bots
         public void ClearRightHandPose()
         {
             _hasRightHandPose = false;
+            _hasLeftHandPose = false;
         }
 
         private void Awake()
@@ -152,7 +192,14 @@ namespace VrBattlegrounds.Bots
 
             EnsurePlaced();
             CaptureHands();
-            Turn();
+            if (_combatMovesBody && _combatPoseSource != null && _combatPoseSource.isActiveAndEnabled)
+            {
+                Vector3 from = _feet;
+                _feet = _combatPoseSource.transform.position;
+                _yaw = _combatPoseSource.transform.eulerAngles.y;
+                _walking = (_feet - from).sqrMagnitude > 1e-6f;
+            }
+            else Turn();
 
             Quaternion body = BodyRotation;
 
@@ -178,10 +225,17 @@ namespace VrBattlegrounds.Bots
                 _head.SetPositionAndRotation(eye, headRotation);
             }
 
-            Place(body, _leftHand, _leftHandLocalPosition, _leftHandLocalRotation);
+            bool animated = TryGetWeaponPose(out Pose left, out Pose right);
+            if (_hasLeftHandPose && _leftHand != null)
+                _leftHand.SetPositionAndRotation(_leftHandPose.position, _leftHandPose.rotation);
+            else if (animated && _leftHand != null)
+                _leftHand.SetPositionAndRotation(left.position, left.rotation);
+            else Place(body, _leftHand, _leftHandLocalPosition, _leftHandLocalRotation);
 
             if (_hasRightHandPose && _rightHand != null)
                 _rightHand.SetPositionAndRotation(_rightHandPosition, _rightHandRotation);
+            else if (animated && _rightHand != null)
+                _rightHand.SetPositionAndRotation(right.position, right.rotation);
             else
                 Place(body, _rightHand, _rightHandLocalPosition, _rightHandLocalRotation);
         }

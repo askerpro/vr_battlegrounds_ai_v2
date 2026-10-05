@@ -138,6 +138,14 @@ namespace VrBattlegrounds.Bots
             }
         }
 
+        /// <summary>Снять конкретного серверного бота, сохраняя остальных акторов.</summary>
+        public bool RemoveBot(PlayerSession session)
+        {
+            if (!NetworkServer.active || !VrBattlegrounds.Network.StateEventAuthority.IsWorldAuthority || session == null || !_bots.Contains(session)) return false;
+            Remove(session);
+            return true;
+        }
+
         private void Remove(PlayerSession session)
         {
             _bots.Remove(session);
@@ -210,30 +218,31 @@ namespace VrBattlegrounds.Bots
             var legs = avatar.GetComponent<BotNavigator>();
             var gunner = avatar.GetComponent<BotGunner>();
             if (body == null || legs == null || gunner == null) return;
+            var combat = avatar.GetComponent<BotCombatDriver>();
 
             mind.Remember(body, SceneManager.GetActiveScene().handle);
 
             bool alive = avatar.IsAlive;
             int token = BotSenses.ShopToken(avatar);
-            PlayerController enemy = stage == BotStage.Combat && alive ? BotSenses.NearestEnemy(bot, body.Feet) : null;
+            // В бою восприятие и маршруты принадлежат Blaze, а не всеведущему NearestEnemy.
+            bool fighting = stage == BotStage.Combat && alive;
+            combat?.SetCombatEnabled(fighting);
 
             BotOrder order = BotOrders.Decide(new BotSituation
             {
                 Stage = stage,
                 Alive = alive,
                 InOwnZone = bot.IsInSpawnZone,
-                EnemyKnown = enemy != null,
+                EnemyKnown = combat != null && combat.Target != null,
                 EnemyVisible = gunner.SeesTarget
             });
 
-            switch (order)
+            if (fighting) legs.Stop();
+            else switch (order)
             {
                 case BotOrder.GoHome:
                     if (TryHomePoint(bot, mind, out Vector3 home)) legs.GoTo(home);
                     else legs.Stop();
-                    break;
-                case BotOrder.Hunt:
-                    legs.GoTo(BotSenses.FeetOf(enemy));
                     break;
                 default:
                     legs.Stop();
@@ -365,6 +374,7 @@ namespace VrBattlegrounds.Bots
 
             if (avatar.GetComponent<BotNavigator>() == null) avatar.gameObject.AddComponent<BotNavigator>();
             if (avatar.GetComponent<BotGunner>() == null) avatar.gameObject.AddComponent<BotGunner>();
+            if (avatar.GetComponent<BotCombatDriver>() == null) avatar.gameObject.AddComponent<BotCombatDriver>();
 
             mind.LastBody = avatar;
         }

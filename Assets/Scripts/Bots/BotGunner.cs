@@ -35,7 +35,7 @@ namespace VrBattlegrounds.Bots
     /// </para>
     ///
     /// <para>
-    /// Бот не аимбот: реагирует с задержкой, стреляет очередями с паузой, каждая пуля —
+    /// Моменты атаки и паузы выбирает Blaze Cover Shooter. Каждая пуля направлена
     /// в случайную точку тела цели, часть уходит мимо края. Стреляет, только пока цель видна
     /// из ствола (луч в центр её тела первым упирается в неё) — сквозь укрытия не палит.
     /// Проверка видимости идёт по центру, а не по точке разброса: иначе разброс, ушедший
@@ -46,18 +46,13 @@ namespace VrBattlegrounds.Bots
     [RequireComponent(typeof(BotBody))]
     public sealed class BotGunner : MonoBehaviour
     {
-        private const float ReactionSeconds = 0.8f;
-        private const float BurstPauseMin = 0.6f;
-        private const float BurstPauseMax = 1.4f;
-        private const int BurstShots = 3;
         /// <summary>
         /// Разброс в долях габаритов тела цели (общий бокс тела, шлема, рук — шире силуэта).
         /// 0.5 — попадает примерно половина пуль.
         /// </summary>
         private const float AimSpread = 0.5f;
-        /// <summary>Дальность стрельбы, метры. Дальше бот подходит (<see cref="BotOrder.Hunt"/>).</summary>
+        /// <summary>Дальность стрельбы и восприятия Blaze, метры.</summary>
         public const float MaxRange = 40f;
-        private const float MuzzleFromChest = 0.55f;
         /// <summary>Не удалось взять оружие — следующая попытка не раньше, чем через столько секунд.</summary>
         private const float ArmRetrySeconds = 2f;
 
@@ -81,17 +76,26 @@ namespace VrBattlegrounds.Bots
         private Quaternion _gripRotation;
 
         private PlayerController _target;
-        private float _nextBurstAt;
-        private int _shotsLeftInBurst;
+        private bool _shotRequested;
         private Vector3 _aimOffset;
 
         /// <summary>Оружие в руке бота; null — нет.</summary>
         public UxrFirearmWeapon Firearm => IsHolding ? _firearm : null;
 
+        public WeaponCategory? WeaponCategory => Firearm != null &&
+            Firearm.TryGetComponent(out WeaponComponent weapon) && weapon.WeaponData != null
+            ? weapon.WeaponData.Category : (WeaponCategory?)null;
+
+        /// <summary>Blaze выбирает момент атаки; настоящий выстрел исполняет только автор оружия.</summary>
+        public void RequestShot()
+        {
+            if (NetworkServer.active && StateEventAuthority.IsWorldAuthority) _shotRequested = true;
+        }
+
         /// <summary>Цель; null — нет.</summary>
         public PlayerController Target => _target;
 
-        /// <summary>Цель видна из ствола в этот кадр — директор останавливает бота стрелять.</summary>
+        /// <summary>Цель видна из фактического ствола после стадии Manipulation.</summary>
         public bool SeesTarget { get; private set; }
 
         /// <summary>Директор уже велел взять оружие этому телу.</summary>
@@ -159,6 +163,7 @@ namespace VrBattlegrounds.Bots
             _gripPosition = Quaternion.Inverse(hand.rotation) * offset;
             _gripRotation = Quaternion.Inverse(hand.rotation) * muzzle.rotation;
             _gripKnown = true;
+            FireRequestedShot();
         }
 
         private void OnDestroy()
@@ -212,7 +217,7 @@ namespace VrBattlegrounds.Bots
                 return;
             }
 
-            AimAndShoot();
+            AimAtTarget();
         }
 
         private bool IsHolding =>
@@ -221,6 +226,7 @@ namespace VrBattlegrounds.Bots
 
         private void Idle()
         {
+            _shotRequested = false;
             _target = null;
             SeesTarget = false;
             _body.LookAt(null);
@@ -311,15 +317,10 @@ namespace VrBattlegrounds.Bots
 
         // ── Прицел и стрельба ───────────────────────────────────────────────
 
-        private void AimAndShoot()
+        private void AimAtTarget()
         {
-            PlayerController target = BotSenses.NearestEnemy(_player.Session, _body.Feet, MaxRange);
-            if (target != _target)
-            {
-                _target = target;
-                _shotsLeftInBurst = 0;
-                _nextBurstAt = Time.time + ReactionSeconds;
-            }
+            var combat = GetComponent<BotCombatDriver>();
+            _target = combat != null && combat.CombatActive ? combat.Target : null;
 
             if (_target == null)
             {
@@ -331,15 +332,23 @@ namespace VrBattlegrounds.Bots
             Vector3 aimPoint = body.center + Vector3.Scale(_aimOffset, body.extents);
             _body.LookAt(body.center);
             PoseRightHand(aimPoint);
+        }
 
-            // Сквозь укрытия не стреляем: цель должна быть видна из ствола.
-            SeesTarget = Sees(_target, body.center);
-            if (!SeesTarget || Time.time < _nextBurstAt) return;
-
-            if (_shotsLeftInBurst <= 0)
+        /// <summary>После Manipulation ствол уже следует кисти: LOS и выстрел используют одну позу.</summary>
+        private void FireRequestedShot()
+        {
+            bool shoot = _shotRequested;
+            _shotRequested = false;
+            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
+            if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority || _player == null || !_player.IsAlive ||
+                !IsHolding || mode == null || !mode.WeaponsEnabled || _target == null || !_target.IsAlive ||
+                BotSenses.Stage() != BotStage.Combat)
             {
-                _shotsLeftInBurst = BurstShots;
+                SeesTarget = false;
+                return;
             }
+            SeesTarget = Sees(_target, BodyOf(_target).center);
+            if (!SeesTarget || !shoot) return;
 
             // Выстрел шлёт только автор предмета в руке (Issue 23); у бота — сервер.
             if (!StateEventAuthority.IsAuthorOfItem(_firearm)) return;
@@ -353,15 +362,10 @@ namespace VrBattlegrounds.Bots
             if (_firearm.TryToShootRound(0))
             {
                 ShotsFired++;
-                _shotsLeftInBurst--;
 
                 // Следующая пуля — в другую точку тела; больше единицы — мимо края.
                 _aimOffset = Random.insideUnitSphere * AimSpread;
 
-                if (_shotsLeftInBurst <= 0)
-                {
-                    _nextBurstAt = Time.time + Random.Range(BurstPauseMin, BurstPauseMax);
-                }
             }
         }
 
@@ -390,20 +394,16 @@ namespace VrBattlegrounds.Bots
         /// <summary>
         /// Ставит правую кисть так, чтобы ствол (<c>ShotSource</c>) смотрел в точку.
         /// Хват «кисть → ствол» постоянен: оружие жёстко следует за грабером.
-        /// Грудь — над ногами бота (<see cref="BotBody.Feet"/>), а не над корнем: бот ходит головой.
+        /// База обеих кистей — текущий humanoid-клип; прицел корректирует их вместе.
         /// </summary>
         private void PoseRightHand(Vector3 aimPoint)
         {
-            if (!_gripKnown) return;
+            if (!_gripKnown || !_body.TryGetWeaponPose(out Pose left, out Pose right)) return;
 
             Vector3 relPosition = _gripPosition;
             Quaternion relRotation = _gripRotation;
 
-            Quaternion bodyRotation = _body.BodyRotation;
-            Vector3 chest = _body.Feet + Vector3.up * 1.4f + bodyRotation * Vector3.right * 0.15f;
-            Vector3 flat = aimPoint - chest;
-            flat.y = 0f;
-            Vector3 muzzleAt = chest + (flat.sqrMagnitude > 0.01f ? flat.normalized : bodyRotation * Vector3.forward) * MuzzleFromChest;
+            Vector3 muzzleAt = right.position + right.rotation * relPosition;
 
             Vector3 direction = aimPoint - muzzleAt;
             if (direction.sqrMagnitude < 0.01f) return;
@@ -412,7 +412,9 @@ namespace VrBattlegrounds.Bots
             Quaternion handRotation = muzzleRotation * Quaternion.Inverse(relRotation);
             Vector3 handPosition = muzzleAt - handRotation * relPosition;
 
-            _body.SetRightHandPose(handPosition, handRotation);
+            Quaternion correction = handRotation * Quaternion.Inverse(right.rotation);
+            Pose aimedLeft = new Pose(handPosition + correction * (left.position - right.position), correction * left.rotation);
+            _body.SetWeaponHands(aimedLeft, new Pose(handPosition, handRotation));
         }
 
         /// <summary>Луч из ствола в центр тела цели маской выстрела первым упирается в цель.</summary>

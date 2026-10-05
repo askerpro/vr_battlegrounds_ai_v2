@@ -475,3 +475,8 @@ Assets/Prefabs/GameModes/
 | `GameModeData '...' содержит менее 2 команд` | Поле `teams[]` не заполнено в `GameModeData` | Назначить два `TeamData` asset-а в поле `teams[]` |
 | `карта не выбрана` / `режим не выбран` | `StartSession()` вызван до `SetSeries()`/`SetSession()` | Порядок: сначала `SetSeries`, потом `StartSession` |
 | `На карте '…' нет разминки` | Пустое поле `warmup` в `GameModeRegistry` | Назначить `Warmup_GameModeData` в поле `warmup` |
+
+
+## Пилот Blaze и диагностический стенд
+
+BotDirector ведёт сессии/фазы/закупку; BotCombatDriver — готовую боевую тактику Blaze; BotGunner — реальное оружие после SDK Manipulation. BotCombatStand создаёт только свои акторы и удаляет их через server-authority RemoveBot(session); запуск/реестр временные, восстановление после Stop. [Пилот](tasks/bots-blaze-integration.md), [стенд](tasks/bot-combat-stand.md).

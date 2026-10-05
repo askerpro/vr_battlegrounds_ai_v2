@@ -17,6 +17,34 @@ namespace VrBattlegrounds.Editor
     {
         private const string OfflineScenePath = "Assets/Scenes/Offline.unity";
         private const string PrefKey = "VrBattlegrounds.StartFromOffline";
+        private const string TemporarySceneKey = "VrBattlegrounds.TemporaryPlayScene";
+        private const string TemporaryOwnerKey = "VrBattlegrounds.TemporaryPlaySceneOwner";
+        private const string PreviousSceneKey = "VrBattlegrounds.PreviousPlayScene";
+
+        /// <summary>Единственный writer стартовой сцены принимает временный запрос диагностического стенда.</summary>
+        public static bool TrySetTemporaryStartScene(SceneAsset scene, string owner)
+        {
+            if (scene == null || string.IsNullOrWhiteSpace(owner) || EditorApplication.isPlayingOrWillChangePlaymode
+                || !string.IsNullOrEmpty(SessionState.GetString(TemporaryOwnerKey, ""))) return false;
+            SessionState.SetString(PreviousSceneKey, AssetDatabase.GetAssetPath(EditorSceneManager.playModeStartScene));
+            SessionState.SetString(TemporaryOwnerKey, owner);
+            SessionState.SetString(TemporarySceneKey, AssetDatabase.GetAssetPath(scene));
+            UpdateState();
+            return true;
+        }
+
+        /// <summary>Снимает только запрос своего владельца, возвращая прежнюю стартовую сцену.</summary>
+        public static bool ClearTemporaryStartScene(string owner)
+        {
+            if (SessionState.GetString(TemporaryOwnerKey, "") != owner) return false;
+            string previous = SessionState.GetString(PreviousSceneKey, "");
+            SessionState.EraseString(TemporaryOwnerKey); SessionState.EraseString(TemporarySceneKey);
+            SessionState.EraseString(PreviousSceneKey);
+            EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(previous);
+            return true;
+        }
+
+        private static SceneAsset TemporaryStartScene => AssetDatabase.LoadAssetAtPath<SceneAsset>(SessionState.GetString(TemporarySceneKey, ""));
 
         // Добавляем пункт в менюшку для возможности выключения этого поведения
         [MenuItem("Tools/VR Battlegrounds/Debug/Start from Offline Scene")]
@@ -42,6 +70,12 @@ namespace VrBattlegrounds.Editor
 
         private static void UpdateState()
         {
+            SceneAsset temporary = TemporaryStartScene;
+            if (temporary != null)
+            {
+                EditorSceneManager.playModeStartScene = temporary;
+                return;
+            }
             bool enabled = EditorPrefs.GetBool(PrefKey, true);
             if (enabled)
             {
@@ -70,7 +104,7 @@ namespace VrBattlegrounds.Editor
                 
                 GameLog.Debug.Info($"[PlayModeStartFromOffline] Exiting Edit Mode. playModeStartScene is {(EditorSceneManager.playModeStartScene != null ? EditorSceneManager.playModeStartScene.name : "null")}");
 
-                if (!EditorPrefs.GetBool(PrefKey, true)) return;
+                if (TemporaryStartScene != null || !EditorPrefs.GetBool(PrefKey, true)) return;
 
                 Scene activeScene = EditorSceneManager.GetActiveScene();
                 

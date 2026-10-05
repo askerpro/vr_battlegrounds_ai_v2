@@ -1,0 +1,1 @@
+{"name":"BlazeAI.Additive.Editor","references":["BlazeAI.Runtime","BlazeAI.Editor"],"includePlatforms":["Editor"],"autoReferenced":true}

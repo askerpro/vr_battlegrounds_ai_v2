@@ -20,9 +20,8 @@ namespace VrBattlegrounds.Bots
     /// </para>
     ///
     /// <para>
-    /// Нет сетки (на карте нет коллайдеров пола) или точки вне неё — путь из одной точки назначения: бот идёт
-    /// по прямой. На текущих картах (арена — прямоугольный зал с укрытиями) сетка строится; запасной путь
-    /// нужен, чтобы бот не стоял столбом на карте, где что-то пошло не так.
+    /// Нет сетки, точек на ней или полного пути — бот останавливается. Прямая до назначения
+    /// не подставляется: она обходила бы ограничения стен и разрывов сетки.
     /// </para>
     /// </summary>
     public static class BotNavMesh
@@ -46,9 +45,19 @@ namespace VrBattlegrounds.Bots
         /// <summary>Сетка этой карты построена.</summary>
         public static bool Ready => _built && _sceneHandle == SceneManager.GetActiveScene().handle;
 
+        /// <summary>Старт Blaze — только на сетке этой карты; без неё бот стоит, а не проходит стену.</summary>
+        public static bool TryGetPoint(Vector3 point, out Vector3 sampled)
+        {
+            EnsureBuilt();
+            sampled = point;
+            if (!_built || !NavMesh.SamplePosition(point, out NavMeshHit hit, SampleRadius, NavMesh.AllAreas)) return false;
+            sampled = hit.position;
+            return true;
+        }
+
         /// <summary>
         /// Путь от <paramref name="from"/> до <paramref name="to"/> — углы в <paramref name="corners"/> (первый —
-        /// старт). Сетки или пути нет — прямая. Возвращает true, если путь по сетке.
+        /// старт). Возвращает true только для полного пути; при отказе список углов пуст.
         /// </summary>
         public static bool TryPath(Vector3 from, Vector3 to, List<Vector3> corners)
         {
@@ -61,7 +70,7 @@ namespace VrBattlegrounds.Bots
             {
                 _path ??= new NavMeshPath();
                 if (NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, _path) &&
-                    _path.status != NavMeshPathStatus.PathInvalid && _path.corners.Length > 0)
+                    _path.status == NavMeshPathStatus.PathComplete && _path.corners.Length > 0)
                 {
                     corners.Add(from);
                     corners.AddRange(_path.corners);
@@ -69,8 +78,6 @@ namespace VrBattlegrounds.Bots
                 }
             }
 
-            corners.Add(from);
-            corners.Add(to);
             return false;
         }
 
@@ -110,7 +117,7 @@ namespace VrBattlegrounds.Bots
 
             if (!any)
             {
-                GameLog.Player.Warning("[BotNavMesh] На карте нет коллайдеров окружения — боты ходят по прямой.");
+                GameLog.Player.Warning("[BotNavMesh] На карте нет коллайдеров окружения — движение ботов остановлено.");
                 return;
             }
 
@@ -134,7 +141,7 @@ namespace VrBattlegrounds.Bots
             NavMeshData data = NavMeshBuilder.BuildNavMeshData(settings, sources, bounds, Vector3.zero, Quaternion.identity);
             if (data == null)
             {
-                GameLog.Player.Warning("[BotNavMesh] Сетка не построилась — боты ходят по прямой.");
+                GameLog.Player.Warning("[BotNavMesh] Сетка не построилась — движение ботов остановлено.");
                 return;
             }
 

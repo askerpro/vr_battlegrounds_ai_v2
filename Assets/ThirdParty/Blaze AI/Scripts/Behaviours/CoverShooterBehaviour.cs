@@ -1197,7 +1197,7 @@ namespace BlazeAISpace
 
                 // if sphere cast hits the same AI collider -> ignore
                 if (hit.collider == null) continue;
-                if (hit.collider.transform.root == transform.root) continue;
+                if (blaze.IsSelfCollider(hit.collider)) continue;
                 if (hit.distance <= 0f || hit.point == Vector3.zero) continue;
                 if (hit.distance <= smallestDist)
                 {
@@ -1443,7 +1443,7 @@ namespace BlazeAISpace
             for (int i=0; i<hits; i++) 
             {
                 // if sphere cast hits the same AI collider -> ignore
-                if (strafingHitArr[i].transform.root == transform.root) continue;
+                if (blaze.IsSelfCollider(strafingHitArr[i].collider)) continue;
                 if (strafingHitArr[i].distance == 0 || strafingHitArr[i].point == Vector3.zero) continue;
 
                 ChangeStrafeDirection();

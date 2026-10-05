@@ -53,7 +53,7 @@ namespace VrBattlegrounds.Bots
             // Та же цель (сдвинулась меньше RepathDistance): пришли — стоим; идём — путь прежний, раз в
             // StaleInterval пересчитываем (вдруг упёрлись).
             bool same = _hasDestination && (destination - _destination).sqrMagnitude < RepathDistance * RepathDistance;
-            if (same && (_arrived || Time.time - _pathAt < StaleInterval)) return;
+            if (same && ((OnNavMesh && _arrived) || Time.time - _pathAt < StaleInterval)) return;
             if (!same && _hasDestination && !_arrived && Time.time - _pathAt < RepathInterval) return;
 
             _hasDestination = true;
@@ -71,7 +71,8 @@ namespace VrBattlegrounds.Bots
 
             OnNavMesh = BotNavMesh.TryPath(feet, destination, _corners);
             _next = 1;
-            _arrived = false;
+            _arrived = !OnNavMesh;
+            if (!OnNavMesh) _body.StopWalking();
         }
 
         /// <summary>Остановиться на месте.</summary>

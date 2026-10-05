@@ -36,11 +36,15 @@ namespace VrBattlegrounds.Player.WallPass
         private UxrAvatar _avatar;
         private Camera _camera;
         private GameObject _overlay;
-        private WallPassEdgeGraphic _edge;
         private TextMeshProUGUI _warning;
         private TextMeshProUGUI _countdown;
-        private RectTransform _arrow;
-        private Material _graphicMaterial;
+        private Canvas _canvas;
+        private WallPassParticleFlow _flow;
+        private WallPassCameraEffect _cameraEffect;
+        private Renderer[] _ownRenderers = System.Array.Empty<Renderer>();
+        private float _nextOwnScan;
+        private float _severity;
+        private bool _preview;
         private Material _fontMaterial;
         private WallPassStage _shownStage;
         private float _nextHaptic;
@@ -105,40 +109,70 @@ namespace VrBattlegrounds.Player.WallPass
             }
 
             WallPassStatus status = _session.WallPassStatus;
-            if (status.Stage == WallPassStage.Clear)
+            // Реальное нарушение/предупреждение всегда имеет приоритет над косметическим стендом.
+            _preview = WallPassVisualRuntime.PreviewEnabled && status.Stage == WallPassStage.Clear;
+            if (status.Stage == WallPassStage.Clear && !_preview)
             {
                 ClearVisuals();
                 return;
             }
 
-            bool violating = status.Stage == WallPassStage.Violating;
+            WallPassVisualSettings settings = WallPassVisualRuntime.Settings;
+            bool violating = status.Stage == WallPassStage.Violating || _preview;
+            float timeRisk = status.DeathAt > status.EnteredAt
+                ? Mathf.Clamp01((float)((NetworkTime.time - status.EnteredAt) / (status.DeathAt - status.EnteredAt)))
+                : violating ? Mathf.Clamp01((float)(NetworkTime.time - status.EnteredAt) / 3f) : 0f;
+            float risk = _preview ? WallPassVisualRuntime.PreviewRisk : Mathf.Max(timeRisk, status.BarrierProgress);
+            float target = violating ? settings.Evaluate(risk) : settings.Intensity * 0.12f;
+            // Нарушение заметно сразу; последующие сетевые шаги сглаживаются локально.
+            if (_shownStage == WallPassStage.Clear && violating) _severity = settings.Evaluate(0f);
+            _severity = Mathf.MoveTowards(_severity, target, Time.unscaledDeltaTime * 4f);
+            Vector3 direction = status.ReturnPoint - _camera.transform.position;
+            if (_preview)
+            {
+                Vector3 forward = Vector3.ProjectOnPlane(_camera.transform.forward, Vector3.up);
+                if (forward.sqrMagnitude < 0.001f) forward = Vector3.ProjectOnPlane(_camera.transform.up, Vector3.up);
+                direction = Quaternion.AngleAxis(WallPassVisualRuntime.PreviewYaw, Vector3.up) * forward;
+            }
+            direction.y = 0f;
+            _flow ??= new WallPassParticleFlow();
+            _cameraEffect ??= new WallPassCameraEffect();
+            _flow.UpdateVisual(_camera, status.HasReturnPoint || _preview ? direction : Vector3.zero,
+                              _severity, settings, Time.unscaledTime);
+            if (Time.unscaledTime >= _nextOwnScan)
+            {
+                var own = new HashSet<Renderer>(_avatar.GetComponentsInChildren<Renderer>(true));
+                foreach (UxrProjectileSource source in UxrProjectileSource.AllComponents)
+                {
+                    if (source == null || !source.isActiveAndEnabled) continue;
+                    UxrActor actor = source.TryGetWeaponOwner();
+                    if (actor == null || actor.GetComponent<PlayerController>() != _player) continue;
+                    RegisterSource(source);
+                    foreach (Renderer renderer in _weaponRenderers[source]) own.Add(renderer);
+                }
+                _ownRenderers = new Renderer[own.Count];
+                own.CopyTo(_ownRenderers);
+                _nextOwnScan = Time.unscaledTime + 0.5f;
+            }
+            _cameraEffect.SetVisual(_camera, _severity, settings, _ownRenderers, _flow, violating);
             if (EnsureOverlay())
             {
                 _overlay.SetActive(true);
-                _edge.color = violating ? new Color(1f, 0.08f, 0.03f, 0.62f) : new Color(1f, 0.68f, 0.15f, 0.18f);
                 _warning.gameObject.SetActive(violating);
-                _countdown.gameObject.SetActive(violating && status.Punitive && status.DeathAt > 0);
+                _countdown.gameObject.SetActive(violating && !_preview && status.Punitive && status.DeathAt > 0);
                 if (_countdown.gameObject.activeSelf)
                 {
                     int seconds = Mathf.CeilToInt((float)System.Math.Max(0, status.DeathAt - NetworkTime.time));
                     _countdown.text = $"Вернитесь за {seconds} с";
                 }
-                _arrow.gameObject.SetActive(violating);
-                if (violating)
-                {
-                    Vector3 direction = status.ReturnPoint - _camera.transform.position;
-                    direction.y = 0f;
-                    Vector3 local = _camera.transform.InverseTransformDirection(direction);
-                    _arrow.localRotation = Quaternion.Euler(0f, 0f, -Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg);
-                }
             }
 
-            if (status.Stage != _shownStage || Time.unscaledTime >= _nextHaptic)
+            if (!_preview && (status.Stage != _shownStage || Time.unscaledTime >= _nextHaptic))
             {
                 Pulse(violating ? 0.35f : 0.08f, violating ? 0.15f : 0.06f);
                 _nextHaptic = Time.unscaledTime + (violating ? 0.75f : 1.5f);
             }
-            _shownStage = status.Stage;
+            _shownStage = _preview ? WallPassStage.Violating : status.Stage;
         }
 
         private void Pulse(float amplitude, float seconds)
@@ -152,12 +186,10 @@ namespace VrBattlegrounds.Player.WallPass
         {
             if (_overlay != null) return true;
             if (_overlayFailed) return false;
-            Material edgeMaterial = Resources.Load<Material>("WallPassEdgeOverlay");
             Material textMaterial = Resources.Load<Material>("WallPassTextOverlay");
             TMP_FontAsset font = MenuTheme.Instance.BoldFont != null ? MenuTheme.Instance.BoldFont : TMP_Settings.defaultFontAsset;
             int layer = VisibleLayer(_camera.cullingMask);
-            if (edgeMaterial == null || edgeMaterial.shader == null || !edgeMaterial.shader.isSupported ||
-                textMaterial == null || textMaterial.shader == null || !textMaterial.shader.isSupported ||
+            if (textMaterial == null || textMaterial.shader == null || !textMaterial.shader.isSupported ||
                 font == null || font.material == null || layer < 0)
             {
                 _overlayFailed = true;
@@ -173,6 +205,8 @@ namespace VrBattlegrounds.Player.WallPass
             _overlay.transform.localPosition = new Vector3(0f, 0f, 0.75f);
             _overlay.transform.localScale = Vector3.one * 0.001f;
             Canvas canvas = _overlay.GetComponent<Canvas>();
+            _canvas = canvas;
+            canvas.enabled = false;
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.worldCamera = _camera;
             canvas.sortingOrder = 32000;
@@ -180,30 +214,11 @@ namespace VrBattlegrounds.Player.WallPass
             _overlay.layer = layer;
             // Resources-ссылки сохраняют overlay-шейдеры при stripping Android-сборки.
             // В обоих шейдерах ZTest Always и поддержка single-pass stereo.
-            _graphicMaterial = new Material(edgeMaterial);
             _fontMaterial = new Material(font.material);
             _fontMaterial.shader = textMaterial.shader;
-            var edgeObject = new GameObject("WallPassEdge", typeof(RectTransform), typeof(CanvasRenderer), typeof(WallPassEdgeGraphic));
-            edgeObject.transform.SetParent(_overlay.transform, false);
-            edgeObject.layer = _overlay.layer;
-            _edge = edgeObject.GetComponent<WallPassEdgeGraphic>();
-            _edge.rectTransform.sizeDelta = new Vector2(1800f, 1800f);
-            _edge.material = _graphicMaterial;
-            _edge.raycastTarget = false;
-
             _warning = AddText("Warning", new Vector2(0f, -170f), new Vector2(820f, 110f), 36f);
             _warning.text = "Вы задели стену — вернитесь в игровое поле";
             _countdown = AddText("Countdown", new Vector2(0f, -250f), new Vector2(700f, 60f), 32f);
-            var arrowObject = new GameObject("ReturnDirection", typeof(RectTransform), typeof(CanvasRenderer), typeof(WallPassArrowGraphic));
-            arrowObject.transform.SetParent(_overlay.transform, false);
-            arrowObject.layer = _overlay.layer;
-            _arrow = arrowObject.GetComponent<RectTransform>();
-            _arrow.anchoredPosition = new Vector2(0f, -340f);
-            _arrow.sizeDelta = new Vector2(60f, 70f);
-            Graphic arrowGraphic = arrowObject.GetComponent<Graphic>();
-            arrowGraphic.material = _graphicMaterial;
-            arrowGraphic.color = MenuTheme.Instance.TextPrimary;
-            arrowGraphic.raycastTarget = false;
             return true;
         }
 
@@ -234,10 +249,12 @@ namespace VrBattlegrounds.Player.WallPass
 
         private void BeginCamera(ScriptableRenderContext context, Camera camera)
         {
+            // Canvas.worldCamera не ограничивает другие камеры: включаем только на свой рендер.
+            if (_canvas != null) _canvas.enabled = camera == _camera && _overlay.activeSelf;
             if (camera != _camera) return;
             RestoreRenderers();
             if (_session == null || PlayerSession.LocalSession != _session || _player == null || !_player.IsAlive ||
-                _session.WallPassStatus.Stage != WallPassStage.Violating) return;
+                _session.WallPassStatus.Stage != WallPassStage.Violating || _preview) return;
 
             // До culling, каждый кадр: эффект, созданный после LateUpdate, не успевает засветиться.
             // Имена берутся из реальных дескрипторов, а не из соглашений об именах оружия.
@@ -338,6 +355,7 @@ namespace VrBattlegrounds.Player.WallPass
         private void EndCamera(ScriptableRenderContext context, Camera camera)
         {
             if (camera == _camera) RestoreRenderers();
+            if (_canvas != null) _canvas.enabled = false;
         }
 
         private void RestoreRenderers()
@@ -354,6 +372,11 @@ namespace VrBattlegrounds.Player.WallPass
         {
             RestoreRenderers();
             if (_overlay != null) _overlay.SetActive(false);
+            if (_canvas != null) _canvas.enabled = false;
+            _flow?.Clear();
+            _cameraEffect?.Clear();
+            _severity = 0f;
+            _preview = false;
             _shownStage = WallPassStage.Clear;
             _nextHaptic = 0f;
         }
@@ -362,10 +385,15 @@ namespace VrBattlegrounds.Player.WallPass
         {
             ClearVisuals();
             if (_overlay != null) Destroy(_overlay);
-            if (_graphicMaterial != null) Destroy(_graphicMaterial);
             if (_fontMaterial != null) Destroy(_fontMaterial);
+            _cameraEffect?.Dispose();
+            _flow?.Dispose();
+            _cameraEffect = null;
+            _flow = null;
+            _ownRenderers = System.Array.Empty<Renderer>();
+            _nextOwnScan = 0f;
+            _canvas = null;
             _overlay = null;
-            _graphicMaterial = null;
             _fontMaterial = null;
             _camera = null;
             _avatar = null;
@@ -379,43 +407,4 @@ namespace VrBattlegrounds.Player.WallPass
         }
     }
 
-    /// <summary>Градиентное свечение края в общем для двух глаз world-space Canvas.</summary>
-    internal sealed class WallPassEdgeGraphic : MaskableGraphic
-    {
-        protected override void OnPopulateMesh(VertexHelper vh)
-        {
-            vh.Clear();
-            Vector2 half = rectTransform.rect.size * 0.5f;
-            const int segments = 64;
-            Color innerColor = color;
-            innerColor.a = 0f;
-            for (int i = 0; i <= segments; i++)
-            {
-                float angle = i * Mathf.PI * 2f / segments;
-                Vector2 direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-                // Внешний контур — квадрат: свечение закрывает также углы поля зрения.
-                Vector2 outer = direction / Mathf.Max(Mathf.Abs(direction.x), Mathf.Abs(direction.y));
-                vh.AddVert(Vector2.Scale(direction * 0.42f, half), innerColor, Vector2.zero);
-                vh.AddVert(Vector2.Scale(outer, half), color, Vector2.zero);
-                if (i == segments) continue;
-                int index = i * 2;
-                vh.AddTriangle(index, index + 1, index + 2);
-                vh.AddTriangle(index + 1, index + 3, index + 2);
-            }
-        }
-    }
-
-    /// <summary>Стрелка на плоскости HUD: вверх — вперёд, вниз — назад.</summary>
-    internal sealed class WallPassArrowGraphic : MaskableGraphic
-    {
-        protected override void OnPopulateMesh(VertexHelper vh)
-        {
-            vh.Clear();
-            Vector2 half = rectTransform.rect.size * 0.5f;
-            vh.AddVert(new Vector3(0f, half.y, 0f), color, Vector2.zero);
-            vh.AddVert(new Vector3(-half.x, -half.y, 0f), color, Vector2.zero);
-            vh.AddVert(new Vector3(half.x, -half.y, 0f), color, Vector2.zero);
-            vh.AddTriangle(0, 1, 2);
-        }
-    }
 }

@@ -13,8 +13,13 @@ namespace VrBattlegrounds.Player.WallPass
         public double EnteredAt;
         public double DeathAt;
         public Vector3 ReturnPoint;
+        // Начальный Hint без законной опоры не задаёт направления возврата.
+        public bool HasReturnPoint;
         public bool Punitive;
         public WallPassCause Cause;
+        // Косметическая доля прохода между реальными поверхностями исходной преграды.
+        // Не участвует в решениях об опоре, уроне, пересечении или смерти.
+        public float BarrierProgress;
     }
 
     [Serializable]
@@ -41,6 +46,7 @@ namespace VrBattlegrounds.Player.WallPass
         public float HeadDepth;
         public float HeadClearance;
         public float LeanDistance;
+        public float BarrierProgress;
         // Не просто другая опора: путь ног/таза к ней пересёк преграду, голова уже снаружи.
         public bool CrossedBarrier;
     }

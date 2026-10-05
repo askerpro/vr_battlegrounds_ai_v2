@@ -135,6 +135,12 @@ namespace VrBattlegrounds.Player.WallPass
                     Punitive = punitive
                 } : default;
             }
+            // Метрика поступает из геометрии, но не влияет ни на одну ветку машины состояний.
+            _status.HasReturnPoint = _status.Stage != WallPassStage.Clear && HasSupport;
+            float progress = observation.BarrierProgress;
+            _status.BarrierProgress = _status.Stage == WallPassStage.Clear ||
+                                      float.IsNaN(progress) || float.IsInfinity(progress)
+                ? 0 : Mathf.Clamp01(progress);
             return new WallPassDecision { Status = _status, DealContactDamage = damage, Kill = kill };
         }
     }

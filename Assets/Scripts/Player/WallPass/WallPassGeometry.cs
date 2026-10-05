@@ -23,6 +23,7 @@ namespace VrBattlegrounds.Player.WallPass
         private Collider[] _overlaps = new Collider[32];
         private RaycastHit[] _hits = new RaycastHit[32];
         private readonly HashSet<Collider> _warnedShapes = new HashSet<Collider>();
+        private readonly WallPassBarrierProgress _barrierProgress = new WallPassBarrierProgress();
         private static readonly Vector3[] DepthDirections =
         {
             Vector3.right, Vector3.up, Vector3.forward,
@@ -51,7 +52,11 @@ namespace VrBattlegrounds.Player.WallPass
         public WallPassObservation Observe(Vector3 head, Vector3? previousSupport)
         {
             var result = new WallPassObservation { HeadClearance = float.PositiveInfinity };
-            if (!_scene.IsValid() || !Finite(head)) return result;
+            if (!_scene.IsValid() || !Finite(head))
+            {
+                _barrierProgress.Reset();
+                return result;
+            }
             CollectNearby(head, previousSupport);
             MeasureHead(head, ref result);
             float pelvisHeight = Mathf.Clamp(head.y - _floorY - 0.5f, 0.08f, 0.9f);
@@ -81,6 +86,7 @@ namespace VrBattlegrounds.Player.WallPass
                 previousSupport.HasValue ? HorizontalDistance(head, previousSupport.Value) : float.PositiveInfinity;
             result.CrossedBarrier = previousSupport.HasValue && !result.HasOriginalSupport &&
                                     result.HasAnySupport && blockedIndependent && result.HeadDepth <= 0.001f;
+            result.BarrierProgress = _barrierProgress.Measure(head, previousSupport, _nearby);
             return result;
 
             void Consider(Vector3 candidate)

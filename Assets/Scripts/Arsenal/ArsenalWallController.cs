@@ -286,6 +286,7 @@ namespace VrBattlegrounds.Arsenal
         public override void OnStartClient()
         {
             base.OnStartClient();
+            EnsurePresetPrepared();
 
             // Поздний клиент получает состояние начальным значением спавна. Хук на нём
             // не сработает, если пришедшее значение совпало с дефолтом поля (Closed), —
@@ -333,8 +334,22 @@ namespace VrBattlegrounds.Arsenal
             _pendingSlotBindings.Add(slotIndex);
         }
 
+        private bool _presetInitialRefillDone;
+        private bool EnsurePresetPrepared()
+        {
+            EnsureReferences();
+            var binding = GetComponent<ArsenalStationPresetBinding>();
+            return binding == null || binding.TryPrepareFromScene();
+        }
+
         private void Update()
         {
+            if (!EnsurePresetPrepared()) return;
+            if (isServer && !_presetInitialRefillDone)
+            {
+                _presetInitialRefillDone = true;
+                ReplenishWeaponsNetwork(true);
+            }
             if (_pendingSlotBindings.Count > 0)
                 ResolvePendingSlotBindings();
 
@@ -499,6 +514,7 @@ namespace VrBattlegrounds.Arsenal
         /// </summary>
         private void ResolvePendingSlotBindings()
         {
+            if (!EnsurePresetPrepared()) return;
             if (_pendingSlotBindings.Count == 0) return;
 
             _resolvedSlotBindings.Clear();
@@ -552,7 +568,11 @@ namespace VrBattlegrounds.Arsenal
             Managers.MapReferee.ActiveGameModeChangedLocal += HandleActiveModeChanged;
             HandleActiveModeChanged(ActiveMode);
 
-            ReplenishWeaponsNetwork(true);
+            if (EnsurePresetPrepared())
+            {
+                _presetInitialRefillDone = true;
+                ReplenishWeaponsNetwork(true);
+            }
         }
 
         public override void OnStopServer()
@@ -666,13 +686,14 @@ namespace VrBattlegrounds.Arsenal
         [Server]
         private void ReplenishSlotsWhere(System.Func<int, bool> needsWeapon)
         {
+            if (!EnsurePresetPrepared()) return;
             if (_allSlots == null || _allSlots.Length == 0)
                 _allSlots = GetComponentsInChildren<ArsenalSlotController>();
 
             for (int i = 0; i < _allSlots.Length; i++)
             {
                 var slot = _allSlots[i];
-                if (slot.WeaponData == null || slot.WeaponData.WeaponPrefab == null) continue;
+                if (slot == null || !slot.gameObject.activeInHierarchy || slot.WeaponData == null || slot.WeaponData.WeaponPrefab == null) continue;
 
                 if (needsWeapon(i))
                 {

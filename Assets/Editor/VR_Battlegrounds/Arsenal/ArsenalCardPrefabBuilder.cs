@@ -10,7 +10,6 @@ namespace VrBattlegrounds.EditorTools
     {
         private const string MaterialPath = "Assets/Art/ArsenalBoundary/WeaponCardBacking.mat";
 
-        [MenuItem("Tools/VR Battlegrounds/Arsenal/Add Cards To Slot Prefabs")]
         public static void Build()
         {
             foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs/Arsenal/Slots" }))
@@ -24,25 +23,16 @@ namespace VrBattlegrounds.EditorTools
                 }
                 finally { PrefabUtility.UnloadPrefabContents(root); }
             }
-            AssetDatabase.SaveAssets();
+            // Prefab уже сохранён адресно; native backing — единственный дополнительный output.
+            var backing = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
+            if (backing != null) AssetDatabase.SaveAssetIfDirty(backing);
         }
 
         public static ArsenalPriceTag Ensure(ArsenalSlotController slot, bool configureDefault = false)
         {
-            if (configureDefault || !slot.HasCustomCardPresentation)
-            {
-                foreach (var board in slot.GetComponentsInChildren<Transform>(true))
-                {
-                    if (board.name != "PegboardSection") continue;
-                    bool underside = Vector3.Dot(board.TransformDirection(Vector3.back), Vector3.up) < -.5f;
-                    Vector3 point = board.TransformPoint(new Vector3(.3f, .25f, underside ? .54f : -.54f));
-                    slot.ConfigureCardPresentation(slot.transform.InverseTransformPoint(point),new Vector2(.15f,.16f),.16f,
-                        Quaternion.Inverse(slot.transform.rotation) * board.rotation *
-                        (underside ? Quaternion.Euler(180f,0f,0f) : Quaternion.identity));
-                    break;
-                }
-            }
-            var card = ArsenalPriceTag.Create(slot);
+            if (!ArsenalPresentationApplicator.Resolve(slot).IsStyled)
+                ArsenalLegacyPresentationAdapter.SeedCard(slot, configureDefault);
+            var card = ArsenalPresentationApplicator.MaterializeCard(slot);
             var renderer = card.transform.Find("CardBacking").GetComponent<Renderer>();
             var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
             if (material == null)

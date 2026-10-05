@@ -1989,6 +1989,8 @@ GameObject:
   - component: {fileID: 8160274655387577214}
   - component: {fileID: 391788710816088404}
   - component: {fileID: 6211290718117633228}
+  - component: {fileID: 8445666254583532389}
+  - component: {fileID: 9194108489979642041}
   m_Layer: 0
   m_Name: CommonOpenArsenalStation
   m_TagString: Arsenal
@@ -2219,6 +2221,34 @@ MonoBehaviour:
   _foldedBoundsLocal:
     m_Center: {x: 0.23250008, y: 1.1475, z: 0.24322501}
     m_Extent: {x: 1.4000001, y: 1.1475, z: 0.38677502}
+--- !u!114 &8445666254583532389
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4754480705105271568}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be9886bcb27fe9b47a76aaa61ccf69ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationPresetBinding
+  _mapRegistry: {fileID: 11400000, guid: 71b7b06f6e5c4e246a1df765ec535257, type: 2}
+--- !u!114 &9194108489979642041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4754480705105271568}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee7b3fd02da42fd4b83f706251bfff9a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineSupply
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
 --- !u!1 &5172843331770344377
 GameObject:
   m_ObjectHideFlags: 0
@@ -3950,11 +3980,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.115
+      value: 0.11500001
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.03
+      value: 0.029994272
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.z
@@ -3973,16 +4003,20 @@ PrefabInstance:
       value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: _presentationZone
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.x
       value: 0.13
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.y
-      value: 0.016200028
+      value: 0.016500078
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.z
-      value: 0.07
+      value: 0.06999999
       objectReference: {fileID: 0}
     - target: {fileID: 6374123329992747696, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_SizeDelta.x
@@ -4039,11 +4073,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.016200028
+      value: 0.016500078
       objectReference: {fileID: 0}
     - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.07
+      value: 0.06999999
+      objectReference: {fileID: 0}
+    - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 9130554591737240401, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -4052,7 +4094,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7372370662692822548}
   m_SourcePrefab: {fileID: 100100000, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
 --- !u!4 &327655846994852814 stripped
 Transform:
@@ -4064,12 +4109,49 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
   m_PrefabInstance: {fileID: 504931841241227370}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 7827461859687774841}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
+--- !u!114 &6436383873980009979 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 504931841241227370}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
+--- !u!1 &7827461859687774841 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 504931841241227370}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7372370662692822548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7827461859687774841}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1678048fcb8d5648bd871bf1a42f53f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineOffer
+  _slot: {fileID: 5655928632498283376}
+  _anchor: {fileID: 6436383873980009979}
+  _surface: {fileID: 8297889029907908403}
+  _surfaceNormalLocal: {x: 0, y: -0.00000011920929, z: 1.0000001}
+--- !u!33 &8297889029907908403 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 8370475156320167769, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 504931841241227370}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &527211036372536528
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4128,15 +4210,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.115
+      value: 0.11499995
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.22
+      value: 0.22000003
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.16
+      value: -0.12242505
       objectReference: {fileID: 0}
     - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _weaponInfo
@@ -4206,7 +4288,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1022348803041930422}
   m_SourcePrefab: {fileID: 100100000, guid: a465f540d467e0e469042f73de34f97a, type: 3}
 --- !u!4 &24404028693906622 stripped
 Transform:
@@ -4218,12 +4303,49 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
   m_PrefabInstance: {fileID: 527211036372536528}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 7528357225669920009}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
+--- !u!114 &6739640262688453259 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 527211036372536528}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
+--- !u!1 &7528357225669920009 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 527211036372536528}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1022348803041930422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7528357225669920009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1678048fcb8d5648bd871bf1a42f53f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineOffer
+  _slot: {fileID: 5379346394682481664}
+  _anchor: {fileID: 6739640262688453259}
+  _surface: {fileID: 8643151022305523779}
+  _surfaceNormalLocal: {x: 0, y: -0.17364816, z: -0.9848077}
+--- !u!33 &8643151022305523779 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 8116510909497980051, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 527211036372536528}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &634610887753760946
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4298,11 +4420,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.115
+      value: 0.11500001
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.03
+      value: 0.027919076
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4321,16 +4443,20 @@ PrefabInstance:
       value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: _presentationZone
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.x
       value: 0.13
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.y
-      value: 0.016200028
+      value: 0.016500078
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.z
-      value: 0.07
+      value: 0.06999999
       objectReference: {fileID: 0}
     - target: {fileID: 6374123329992747696, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_SizeDelta.x
@@ -4382,11 +4508,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.016200028
+      value: 0.016500078
       objectReference: {fileID: 0}
     - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.07
+      value: 0.06999999
+      objectReference: {fileID: 0}
+    - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 9130554591737240401, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -4395,7 +4529,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2884916867142019248}
   m_SourcePrefab: {fileID: 100100000, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
 --- !u!4 &811605234687810326 stripped
 Transform:
@@ -4407,12 +4544,49 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
   m_PrefabInstance: {fileID: 634610887753760946}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 7165170923870657185}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
+--- !u!114 &6241380919412698403 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 634610887753760946}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
+--- !u!1 &7165170923870657185 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 634610887753760946}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2884916867142019248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7165170923870657185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1678048fcb8d5648bd871bf1a42f53f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineOffer
+  _slot: {fileID: 4734007748291347368}
+  _anchor: {fileID: 6241380919412698403}
+  _surface: {fileID: 9000287669394778091}
+  _surfaceNormalLocal: {x: 0, y: -0.00000011920929, z: 1.0000001}
+--- !u!33 &9000287669394778091 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 8370475156320167769, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 634610887753760946}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1791404122279597961
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4611,11 +4785,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.115
+      value: 0.11500001
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.03
+      value: 0.02922561
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4634,16 +4808,20 @@ PrefabInstance:
       value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: _presentationZone
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.x
       value: 0.13
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.y
-      value: 0.016200028
+      value: 0.016500078
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.z
-      value: 0.07
+      value: 0.06999999
       objectReference: {fileID: 0}
     - target: {fileID: 6374123329992747696, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_SizeDelta.x
@@ -4700,11 +4878,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.016200028
+      value: 0.016500078
       objectReference: {fileID: 0}
     - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.07
+      value: 0.06999999
+      objectReference: {fileID: 0}
+    - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 9130554591737240401, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -4713,24 +4899,64 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5016480310565544872}
   m_SourcePrefab: {fileID: 100100000, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
 --- !u!4 &2018889872396639687 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 256126373268200356, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
   m_PrefabInstance: {fileID: 2272479635287000675}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &6266052970381935993 stripped
+--- !u!114 &4745168850054638578 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_CorrespondingSourceObject: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
   m_PrefabInstance: {fileID: 2272479635287000675}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
+--- !u!114 &6266052970381935993 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 2272479635287000675}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8369979435192638576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
+--- !u!33 &7755373374123368762 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 8370475156320167769, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 2272479635287000675}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8369979435192638576 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 2272479635287000675}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5016480310565544872
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8369979435192638576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1678048fcb8d5648bd871bf1a42f53f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineOffer
+  _slot: {fileID: 6266052970381935993}
+  _anchor: {fileID: 4745168850054638578}
+  _surface: {fileID: 7755373374123368762}
+  _surfaceNormalLocal: {x: 0, y: -0.00000011920929, z: 1.0000001}
 --- !u!1001 &4259953792440990413
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4845,11 +5071,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.115
+      value: 0.11499995
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.03
+      value: 0.029568873
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4884,16 +5110,20 @@ PrefabInstance:
       value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      propertyPath: _presentationZone
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _cardLocalPosition.x
       value: 0.13000005
       objectReference: {fileID: 0}
     - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _cardLocalPosition.y
-      value: 0.016200028
+      value: 0.016500078
       objectReference: {fileID: 0}
     - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _cardLocalPosition.z
-      value: 0.07
+      value: 0.06999999
       objectReference: {fileID: 0}
     - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _cardLocalEulerAngles.x
@@ -4946,11 +5176,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7505136834080918183, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.016200028
+      value: 0.016500078
       objectReference: {fileID: 0}
     - target: {fileID: 7505136834080918183, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.07
+      value: 0.06999999
       objectReference: {fileID: 0}
     - target: {fileID: 7505136834080918183, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalRotation.w
@@ -4959,6 +5189,14 @@ PrefabInstance:
     - target: {fileID: 7505136834080918183, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalRotation.x
       value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 7505136834080918183, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7505136834080918183, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 7916389798647193099, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_Enabled
@@ -4975,19 +5213,59 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7604476519786590642}
   m_SourcePrefab: {fileID: 100100000, guid: a465f540d467e0e469042f73de34f97a, type: 3}
 --- !u!4 &4330722959602807459 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 506572431453128814, guid: a465f540d467e0e469042f73de34f97a, type: 3}
   m_PrefabInstance: {fileID: 4259953792440990413}
   m_PrefabAsset: {fileID: 0}
+--- !u!33 &5457736903559237214 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 8116510909497980051, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 4259953792440990413}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6067892142295905044 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 4259953792440990413}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7604476519786590642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6067892142295905044}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1678048fcb8d5648bd871bf1a42f53f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineOffer
+  _slot: {fileID: 8568139832473201181}
+  _anchor: {fileID: 7045707755769054358}
+  _surface: {fileID: 5457736903559237214}
+  _surfaceNormalLocal: {x: 0, y: -0.00000011920929, z: 1.0000001}
+--- !u!114 &7045707755769054358 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 4259953792440990413}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
 --- !u!114 &8568139832473201181 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
   m_PrefabInstance: {fileID: 4259953792440990413}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 6067892142295905044}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
@@ -5051,15 +5329,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.115
+      value: 0.11500001
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.22
+      value: 0.22000003
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.16
+      value: -0.1270854
       objectReference: {fileID: 0}
     - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _weaponInfo
@@ -5129,19 +5407,59 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8818582425561944020}
   m_SourcePrefab: {fileID: 100100000, guid: a465f540d467e0e469042f73de34f97a, type: 3}
 --- !u!114 &613208816204937907 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
   m_PrefabInstance: {fileID: 5004852153009646179}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 3053387918431658938}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
+--- !u!114 &2282702947453015096 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 5004852153009646179}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
+--- !u!1 &3053387918431658938 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 5004852153009646179}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8818582425561944020
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3053387918431658938}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1678048fcb8d5648bd871bf1a42f53f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineOffer
+  _slot: {fileID: 613208816204937907}
+  _anchor: {fileID: 2282702947453015096}
+  _surface: {fileID: 3879689654333120240}
+  _surfaceNormalLocal: {x: 0, y: -0.17364816, z: -0.9848077}
+--- !u!33 &3879689654333120240 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 8116510909497980051, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 5004852153009646179}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &4788305473511629325 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 506572431453128814, guid: a465f540d467e0e469042f73de34f97a, type: 3}
@@ -5205,15 +5523,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.115
+      value: 0.11500001
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.22
+      value: 0.22000003
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.16
+      value: -0.11120942
       objectReference: {fileID: 0}
     - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _weaponInfo
@@ -5287,19 +5605,59 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 9043008984407902684}
   m_SourcePrefab: {fileID: 100100000, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+--- !u!1 &868803025963413114 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 7144262729748899747}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &9043008984407902684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 868803025963413114}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1678048fcb8d5648bd871bf1a42f53f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineOffer
+  _slot: {fileID: 3374257934506375027}
+  _anchor: {fileID: 4178357084518046200}
+  _surface: {fileID: 1406854481769616176}
+  _surfaceNormalLocal: {x: 0, y: -0.17364816, z: -0.9848077}
+--- !u!33 &1406854481769616176 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 8116510909497980051, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 7144262729748899747}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &3374257934506375027 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
   m_PrefabInstance: {fileID: 7144262729748899747}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 868803025963413114}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
+--- !u!114 &4178357084518046200 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 7144262729748899747}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
 --- !u!4 &7215384427809730509 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 506572431453128814, guid: a465f540d467e0e469042f73de34f97a, type: 3}
@@ -5383,7 +5741,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.03
+      value: 0.038097106
       objectReference: {fileID: 0}
     - target: {fileID: 3304236307691423061, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.z
@@ -5402,16 +5760,20 @@ PrefabInstance:
       value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: _presentationZone
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.x
       value: 0.13
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.y
-      value: 0.016200028
+      value: 0.016500078
       objectReference: {fileID: 0}
     - target: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: _cardLocalPosition.z
-      value: 0.07
+      value: 0.06999999
       objectReference: {fileID: 0}
     - target: {fileID: 6374123329992747696, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_SizeDelta.x
@@ -5468,11 +5830,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.016200028
+      value: 0.016500078
       objectReference: {fileID: 0}
     - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.07
+      value: 0.06999999
+      objectReference: {fileID: 0}
+    - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7831160839604296045, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 9130554591737240401, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -5481,14 +5851,54 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 666208610777421758}
   m_SourcePrefab: {fileID: 100100000, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+--- !u!33 &26651980238703435 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 8370475156320167769, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 8392256814749740050}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &2294041781470131713 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7755580928254810643, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 8392256814749740050}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &666208610777421758
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2294041781470131713}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1678048fcb8d5648bd871bf1a42f53f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineOffer
+  _slot: {fileID: 4398693923953880840}
+  _anchor: {fileID: 3036561696682688899}
+  _surface: {fileID: 26651980238703435}
+  _surfaceNormalLocal: {x: 0, y: -0.00000011920929, z: 1.0000001}
+--- !u!114 &3036561696682688899 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6796848683134889361, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
+  m_PrefabInstance: {fileID: 8392256814749740050}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
 --- !u!114 &4398693923953880840 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
   m_PrefabInstance: {fileID: 8392256814749740050}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 2294041781470131713}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
@@ -5557,15 +5967,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.115
+      value: 0.11500001
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.22
+      value: 0.22000003
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.16
+      value: -0.11545983
       objectReference: {fileID: 0}
     - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _weaponInfo
@@ -5635,14 +6045,54 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2383486073685518435}
   m_SourcePrefab: {fileID: 100100000, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+--- !u!33 &750491495852944439 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 8116510909497980051, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 8847862020766275748}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1577092230812406141 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 8847862020766275748}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2383486073685518435
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1577092230812406141}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1678048fcb8d5648bd871bf1a42f53f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineOffer
+  _slot: {fileID: 3981088673092651124}
+  _anchor: {fileID: 2310609503430649599}
+  _surface: {fileID: 750491495852944439}
+  _surfaceNormalLocal: {x: 0, y: -0.17364816, z: -0.9848077}
+--- !u!114 &2310609503430649599 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 8847862020766275748}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
 --- !u!114 &3981088673092651124 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
   m_PrefabInstance: {fileID: 8847862020766275748}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1577092230812406141}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}
@@ -5715,11 +6165,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.22
+      value: 0.22000003
       objectReference: {fileID: 0}
     - target: {fileID: 2977235661232461471, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.16
+      value: -0.11010221
       objectReference: {fileID: 0}
     - target: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
       propertyPath: _weaponInfo
@@ -5793,14 +6243,54 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2123411209489109675}
   m_SourcePrefab: {fileID: 100100000, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+--- !u!33 &1052985221969742279 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 8116510909497980051, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 9097086330508918100}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1230689376982283405 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8010530062450002393, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 9097086330508918100}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2123411209489109675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1230689376982283405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1678048fcb8d5648bd871bf1a42f53f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalMagazineOffer
+  _slot: {fileID: 3731539599533469060}
+  _anchor: {fileID: 2658904340963132175}
+  _surface: {fileID: 1052985221969742279}
+  _surfaceNormalLocal: {x: 0, y: -0.17364816, z: -0.9848077}
+--- !u!114 &2658904340963132175 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6546268724562869851, guid: a465f540d467e0e469042f73de34f97a, type: 3}
+  m_PrefabInstance: {fileID: 9097086330508918100}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
 --- !u!114 &3731539599533469060 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
   m_PrefabInstance: {fileID: 9097086330508918100}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1230689376982283405}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5de697cd4c4d5f14c8021c74e37b5da9, type: 3}

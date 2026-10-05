@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -9,232 +10,385 @@ using VrBattlegrounds.Arsenal;
 namespace VrBattlegrounds.Editor.Arsenal
 {
     /// <summary>
-    /// Превью содержимого слотов арсенала в режиме редактора: оружие на якоре предмета
-    /// и декоративный магазин на якоре магазина.
-    ///
-    /// <para>
-    /// Превью — объекты с <c>HideFlags.DontSave</c>: в сцену и префаб они не пишутся,
-    /// а значит, не переживают выход из Play Mode, открытие сцены и сохранение-перезагрузку.
-    /// Раньше их создавал только инспектор слота в <c>OnEnable</c>, и превью появлялось
-    /// лишь после выделения слота. Теперь этот класс сам восстанавливает превью всех
-    /// слотов в загруженных сценах и в открытом префабе после каждого такого события.
-    /// </para>
-    ///
-    /// <para>
-    /// Перед входом в Play Mode превью удаляются: при выключенной перезагрузке сцены
-    /// (Enter Play Mode Options) они бы остались в игре поверх настоящего оружия.
-    /// </para>
+    /// Редакторские копии только геометрии оружия и магазина. Игровые компоненты не создаются.
+    /// Собственные transient roots обновляются при изменении источника; в ассеты не сохраняются.
     /// </summary>
     [InitializeOnLoad]
     public static class ArsenalSlotPreview
     {
         public const string ItemPreviewName = "__ItemPreview__";
-        public const string MagPreviewName  = "__MagPreview__";
+        public const string MagPreviewName = "__MagPreview__";
+        private const HideFlags PreviewFlags = HideFlags.DontSave | HideFlags.NotEditable;
+
+        private sealed class PreviewRecord
+        {
+            public ArsenalSlotController Owner;
+            public GameObject Source;
+            public Hash128 DependencyHash;
+            public Vector3 Offset;
+            public Quaternion Rotation;
+            public int AnchorId;
+            public string PresentationRevision;
+        }
+
+        private static readonly Dictionary<GameObject, PreviewRecord> Records = new Dictionary<GameObject, PreviewRecord>();
+        private static readonly Dictionary<ArsenalSlotController, string> PresentationErrors = new Dictionary<ArsenalSlotController, string>();
+        public static string PresentationError(ArsenalSlotController slot) => slot != null && PresentationErrors.TryGetValue(slot, out var message) ? message : null;
+        private static bool _refreshQueued;
 
         static ArsenalSlotPreview()
         {
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            EditorSceneManager.sceneOpened         += (_, _) => EnsureAll();
-            PrefabStage.prefabStageOpened          += _ => EnsureAll();
-
-            // После перезагрузки домена сцена уже загружена, но API редактора ещё не готово.
-            EditorApplication.delayCall += EnsureAll;
+            EditorSceneManager.sceneOpened += (_, _) => QueueRefresh();
+            EditorSceneManager.sceneClosed += _ => PruneRecords();
+            PrefabStage.prefabStageOpened += _ => QueueRefresh();
+            EditorApplication.projectChanged += QueueRefresh;
+            AssemblyReloadEvents.beforeAssemblyReload += DestroyAll;
+            QueueRefresh();
         }
 
-        // ── Массовые операции ──────────────────────────────────
+        private static void QueueRefresh()
+        {
+            if (_refreshQueued) return;
+            _refreshQueued = true;
+            EditorApplication.delayCall += FlushRefresh;
+        }
 
-        /// <summary>Создаёт недостающие превью у всех слотов в загруженных сценах и открытом префабе.</summary>
+        private static void FlushRefresh()
+        {
+            _refreshQueued = false;
+            if (EditorApplication.isPlayingOrWillChangePlaymode || AnimationMode.InAnimationMode()) return;
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating) { QueueRefresh(); return; }
+            EnsureAll();
+        }
+
+        /// <summary>Обновляет только открытые обычные сцены и текущий Prefab Stage; helper preview scenes пропускает.</summary>
         public static void EnsureAll()
         {
-            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-
-            foreach (ArsenalSlotController slot in FindEditableSlots())
-                Ensure(slot);
+            if (EditorApplication.isPlayingOrWillChangePlaymode || AnimationMode.InAnimationMode()) return;
+            foreach (Scene scene in EditableScenes()) EnsureAll(scene);
         }
 
-        /// <summary>Удаляет превью у всех слотов в загруженных сценах и открытом префабе.</summary>
+        /// <summary>Тот же маршрут для одной сцены: позволяет изолировать временную проверялку.</summary>
+        public static void EnsureAll(Scene scene)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode || AnimationMode.InAnimationMode() || !IsEditableScene(scene)) return;
+            RemoveOrphans(scene);
+            foreach (GameObject root in scene.GetRootGameObjects())
+                foreach (ArsenalSlotController slot in root.GetComponentsInChildren<ArsenalSlotController>(true))
+                    Ensure(slot);
+        }
+
+        /// <summary>Очищает собственные transient roots, включая оторванные от слота.</summary>
         public static void DestroyAll()
         {
-            foreach (ArsenalSlotController slot in FindEditableSlots())
-                Destroy(slot);
+            foreach (Scene scene in EditableScenes()) DestroyAll(scene);
         }
 
-        // ── Один слот ──────────────────────────────────────────
+        public static void DestroyAll(Scene scene)
+        {
+            if (!IsEditableScene(scene)) return;
+            PruneRecords();
+            var roots = new List<GameObject>();
+            foreach (GameObject root in scene.GetRootGameObjects())
+                foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+                    if (IsPreview(child.gameObject)) roots.Add(child.gameObject);
+            foreach (GameObject root in roots) DestroyPreview(root);
+        }
 
-        /// <summary>
-        /// Создаёт превью слота, если его нет. Уже существующее превью не трогает —
-        /// повторный вызов безопасен. Возвращает превью предмета или null.
-        /// </summary>
+        /// <summary>Возвращает актуальное превью. Неизменное editable превью сохраняет редактируемые local TRS.</summary>
         public static GameObject Ensure(ArsenalSlotController slot)
         {
-            if (slot == null || EditorApplication.isPlayingOrWillChangePlaymode) return null;
-
+            // Guard предшествует даже обновлению карточки: persistent asset не должен изменяться инспектором.
+            if (!IsEditableSlot(slot) || EditorApplication.isPlayingOrWillChangePlaymode || AnimationMode.InAnimationMode()) return null;
+            PruneRecords();
             WeaponInfo info = slot.WeaponData;
-            // Сама карточка сохранена в префабе; здесь только обновляются данные экземпляра.
+            if (info == null || info.WeaponPrefab == null) { Destroy(slot); return null; }
+
+            if (!TryResolveAnchor(slot, slot.ItemAnchor, false, out UxrGrabbableObjectAnchor itemAnchor))
+            { Destroy(slot); return null; }
+            UxrGrabbableObjectAnchor magAnchor = null;
+            bool needsMagazine = slot is FirearmSlotController && info.MagazinePrefab != null;
+            if (needsMagazine && !TryResolveAnchor(slot, ((FirearmSlotController)slot).MagAnchor, true, out magAnchor))
+            { Destroy(slot); return null; }
+            ArsenalPresentationSnapshot presentation;
+            try { presentation = ArsenalPresentationApplicator.Resolve(slot); }
+            catch (InvalidOperationException exception) { PresentationErrors[slot] = exception.Message; Destroy(slot); return null; }
+            PresentationErrors.Remove(slot);
+            string revision = PresentationRevision(slot, presentation);
+            var itemPose = ArsenalPresentationApplicator.ItemLocalPose(slot, false, presentation);
+            var magPose = needsMagazine ? ArsenalPresentationApplicator.ItemLocalPose(slot, true, presentation) : default;
+
+            // Оба якоря разрешены ДО создания геометрии; вложенный магазин оружия не участвует в поиске.
+            // Persistent карточка — explicit generator projection, не writer инспекторского Ensure.
             var card = slot.GetComponentInChildren<ArsenalPriceTag>(true);
-            if (card != null) ArsenalPriceTag.Create(slot).Show(info, true);
-            if (info == null || info.WeaponPrefab == null) return null;
-
-            GameObject item = Find(slot, ItemPreviewName);
-            if (item == null)
-            {
-                UxrGrabbableObjectAnchor itemAnchor = ResolveItemAnchor(slot);
-                if (itemAnchor != null)
-                {
-                    item = Spawn(info.WeaponPrefab, ItemPreviewName, itemAnchor.transform,
-                        info.WeaponPositionOffset, Quaternion.Euler(info.WeaponRotationOffset));
-                }
-            }
-
-            if (slot is FirearmSlotController firearm && info.MagazinePrefab != null &&
-                Find(slot, MagPreviewName) == null)
-            {
-                UxrGrabbableObjectAnchor magAnchor = ResolveMagAnchor(firearm);
-                if (magAnchor != null)
-                    Spawn(info.MagazinePrefab, MagPreviewName, magAnchor.transform, Vector3.zero, Quaternion.identity);
-            }
-
+            if (presentation.IsStyled && (card == null ||
+                (slot.transform.InverseTransformPoint(card.transform.position) - presentation.CardTarget.Position).sqrMagnitude > 1e-10f ||
+                Quaternion.Angle(Quaternion.Inverse(slot.transform.rotation) * card.transform.rotation, presentation.CardTarget.Rotation) > .001f))
+                PresentationErrors[slot] = "Карточка не соответствует Style; явно пересоберите производную станцию. Preview не меняет persistent card.";
+            GameObject item = EnsureKind(slot, info.WeaponPrefab, ItemPreviewName, itemAnchor.transform,
+                itemPose.Position, itemPose.Rotation, null, revision);
+            if (needsMagazine)
+                EnsureKind(slot, info.MagazinePrefab, MagPreviewName, magAnchor.transform,
+                    magPose.Position, magPose.Rotation, slot.GetComponent<ArsenalMagazineOffer>(), revision);
+            else DestroyKind(slot, MagPreviewName);
             return item;
         }
 
-        /// <summary>Удаляет все превью слота.</summary>
+        private static GameObject EnsureKind(ArsenalSlotController slot, GameObject source, string name,
+            Transform anchor, Vector3 offset, Quaternion rotation, ArsenalMagazineOffer offer, string revision)
+        {
+            var existing = FindPreviews(slot, name);
+            string path = AssetDatabase.GetAssetPath(source);
+            Hash128 hash = string.IsNullOrEmpty(path) ? default : AssetDatabase.GetAssetDependencyHash(path);
+            GameObject item = existing.Count == 1 ? existing[0] : null;
+            // Handle draft сохраняется до явного Save/Reset/Rebuild, даже при новом source revision.
+            if (item != null && item.transform.parent == anchor && (item.hideFlags & HideFlags.NotEditable) == 0 &&
+                Records.TryGetValue(item, out PreviewRecord draft) && draft.Owner == slot && draft.Source == source)
+                return item;
+            bool current = item != null && item.transform.parent == anchor &&
+                Records.TryGetValue(item, out PreviewRecord record) && record.Owner == slot &&
+                record.Source == source && record.DependencyHash == hash && record.Offset == offset &&
+                record.Rotation == rotation && record.AnchorId == anchor.GetInstanceID() && record.PresentationRevision == revision;
+            if (!current)
+            {
+                foreach (GameObject old in existing) DestroyPreview(old);
+                item = SpawnGeometry(source, name, anchor, offset, rotation, offer,
+                    ArsenalPresentationApplicator.ProjectionLocalScale(source, anchor, ArsenalPresentationApplicator.Resolve(slot)));
+                Records[item] = new PreviewRecord { Owner = slot, Source = source, DependencyHash = hash,
+                    Offset = offset, Rotation = rotation, AnchorId = anchor.GetInstanceID(), PresentationRevision = revision };
+            }
+            else if ((item.hideFlags & HideFlags.NotEditable) != 0)
+            {
+                // Только блокированное превью следует данным; ручной offset editing не сбрасывается.
+                ApplyPlacement(item.transform, ArsenalPresentationApplicator.ProjectionLocalScale(source, anchor, ArsenalPresentationApplicator.Resolve(slot)), offset, rotation);
+                if (offer != null && !ArsenalPresentationApplicator.Resolve(slot).IsStyled) offer.FitToSurface(item.transform);
+            }
+            return item;
+        }
+
+        private static string PresentationRevision(ArsenalSlotController slot, ArsenalPresentationSnapshot presentation)
+        {
+            string Dependency(UnityEngine.Object value)
+            {
+                string path = value != null ? AssetDatabase.GetAssetPath(value) : null;
+                return string.IsNullOrEmpty(path) ? "none" : AssetDatabase.GetAssetDependencyHash(path).ToString();
+            }
+            var offer = slot.GetComponent<ArsenalMagazineOffer>();
+            return Dependency(presentation.Style) + "|" + Dependency(slot.WeaponData) + "|" +
+                slot.ItemAnchor.transform.position.ToString("R") + "|" + slot.ItemAnchor.transform.rotation.ToString("R") + "|" + slot.ItemAnchor.transform.lossyScale.ToString("R") + "|" +
+                ((slot as FirearmSlotController)?.MagAnchor != null ? ((FirearmSlotController)slot).MagAnchor.transform.localScale.ToString("R") : "no mag scale") + "|" +
+                slot.transform.position.ToString("R") + "|" + slot.transform.rotation.ToString("R") + "|" + slot.transform.lossyScale.ToString("R") + "|" +
+                (offer != null && offer.Surface != null ? Dependency(offer.Surface.sharedMesh) + "|" + offer.Surface.transform.position.ToString("R") + "|" +
+                    offer.Surface.transform.rotation.ToString("R") + "|" + offer.Surface.transform.lossyScale.ToString("R") + "|" + offer.SurfaceNormal.ToString("R") : "no surface");
+        }
+
         public static void Destroy(ArsenalSlotController slot)
         {
-            if (slot == null) return;
+            if (!IsEditableSlot(slot)) return;
+            var roots = FindPreviews(slot, null);
+            // Запись владельца позволяет убрать оторванное превью без обхода чужой сцены.
+            foreach (var pair in Records)
+                if (pair.Key != null && pair.Value.Owner == slot && IsEditableScene(pair.Key.scene) && !roots.Contains(pair.Key))
+                    roots.Add(pair.Key);
+            foreach (GameObject root in roots) DestroyPreview(root);
+        }
 
-            var toDestroy = new List<GameObject>();
-            foreach (Transform t in slot.GetComponentsInChildren<Transform>(true))
+        private static void DestroyKind(ArsenalSlotController slot, string name)
+        {
+            foreach (GameObject root in FindPreviews(slot, name)) DestroyPreview(root);
+        }
+
+        public static GameObject Find(Component slot, string name)
+        {
+            if (!(slot is ArsenalSlotController owner) || !IsEditableSlot(owner)) return null;
+            var found = FindPreviews(owner, name);
+            return found.Count == 0 ? null : found[0];
+        }
+
+        private static List<GameObject> FindPreviews(ArsenalSlotController slot, string name)
+        {
+            var result = new List<GameObject>();
+            foreach (Transform child in slot.GetComponentsInChildren<Transform>(true))
+                if (IsPreview(child.gameObject) && (name == null || child.name == name) &&
+                    child.GetComponentInParent<ArsenalSlotController>(true) == slot)
+                    result.Add(child.gameObject);
+            // Оторванный root остаётся owned. Ensure должен убрать его сразу, без общего refresh.
+            foreach (var pair in Records)
+                if (pair.Key != null && pair.Value.Owner == slot && IsPreview(pair.Key) &&
+                    (name == null || pair.Key.name == name) && IsEditableScene(pair.Key.scene) && !result.Contains(pair.Key))
+                    result.Add(pair.Key);
+            return result;
+        }
+
+        private static void PruneRecords()
+        {
+            var dead = new List<GameObject>();
+            foreach (var pair in Records)
+                if (pair.Key == null || pair.Value.Owner == null || !pair.Key.scene.IsValid() || !pair.Key.scene.isLoaded)
+                    dead.Add(pair.Key);
+            foreach (GameObject key in dead) Records.Remove(key);
+        }
+
+        private static bool IsPreview(GameObject go) => go != null &&
+            (go.name == ItemPreviewName || go.name == MagPreviewName) &&
+            (go.hideFlags & HideFlags.DontSave) != 0;
+
+        private static void DestroyPreview(GameObject root)
+        {
+            if (ReferenceEquals(root, null)) return;
+            Records.Remove(root);
+            if (root == null) return;
+            if (!IsPreview(root) || EditorUtility.IsPersistent(root) || !IsEditableScene(root.scene)) return;
+            if (Selection.activeGameObject != null && Selection.activeGameObject.transform.IsChildOf(root.transform))
+                Selection.activeObject = null;
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+
+        private static void RemoveOrphans(Scene scene)
+        {
+            var roots = new List<GameObject>();
+            foreach (GameObject root in scene.GetRootGameObjects())
+                foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+                    if (IsPreview(child.gameObject) && child.GetComponentInParent<ArsenalSlotController>(true) == null)
+                        roots.Add(child.gameObject);
+            foreach (GameObject root in roots) DestroyPreview(root);
+        }
+
+        private static bool TryResolveAnchor(ArsenalSlotController slot, UxrGrabbableObjectAnchor configured,
+            bool magazine, out UxrGrabbableObjectAnchor result)
+        {
+            result = null;
+            if (configured != null)
             {
-                if (IsPreview(t.gameObject))
-                    toDestroy.Add(t.gameObject);
+                if (!OwnsAnchor(slot, configured)) return false;
+                result = configured;
+                return true;
             }
-
-            foreach (GameObject go in toDestroy)
+            foreach (var candidate in slot.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
             {
-                if (go == null) continue; // вложенное превью уже ушло вместе с родителем
+                if (!OwnsAnchor(slot, candidate) || candidate.name.Contains("Mag") != magazine) continue;
+                if (result != null) { result = null; return false; }
+                result = candidate;
+            }
+            return result != null;
+        }
 
-                // Иначе инспектор остаётся с целью на удалённом объекте.
-                if (Selection.activeGameObject != null &&
-                    Selection.activeGameObject.transform.IsChildOf(go.transform))
+        private static bool OwnsAnchor(ArsenalSlotController slot, UxrGrabbableObjectAnchor anchor)
+        {
+            if (anchor == null || EditorUtility.IsPersistent(anchor) || anchor.gameObject.scene != slot.gameObject.scene ||
+                anchor.GetComponentInParent<ArsenalSlotController>(true) != slot) return false;
+            for (Transform parent = anchor.transform; parent != null && parent != slot.transform; parent = parent.parent)
+                if (IsPreview(parent.gameObject)) return false;
+            return true;
+        }
+
+        private static GameObject SpawnGeometry(GameObject source, string name, Transform anchor,
+            Vector3 offset, Quaternion rotation, ArsenalMagazineOffer offer, Vector3 scale)
+        {
+            // Текущий каталог — static meshes. Будущий skinned source требует отдельного BakeMesh route.
+            if (source.GetComponentInChildren<SkinnedMeshRenderer>(true) != null)
+                throw new InvalidOperationException("Превью арсенала поддерживает только MeshFilter/MeshRenderer: " + source.name);
+            GameObject root = null;
+            try
+            {
+                root = new GameObject(name) { hideFlags = PreviewFlags, layer = source.layer };
+                root.SetActive(false);
+                SceneManager.MoveGameObjectToScene(root, anchor.gameObject.scene);
+                root.transform.SetParent(anchor, false);
+                if (root.transform.parent != anchor) throw new InvalidOperationException("Не установлен родитель превью арсенала.");
+                ApplyPlacement(root.transform, scale, offset, rotation);
+                CopyGeometry(source.transform, root.transform);
+                // Render-only копия не содержит Behaviour/physics/SDK callbacks даже при активации.
+                root.SetActive(source.activeSelf);
+                if (offer != null && !ArsenalPresentationApplicator.Resolve(offer.Slot).IsStyled) offer.FitToSurface(root.transform);
+                return root;
+            }
+            catch
+            {
+                if (root != null) UnityEngine.Object.DestroyImmediate(root);
+                throw;
+            }
+        }
+
+        private static void ApplyPlacement(Transform root, Vector3 scale, Vector3 offset, Quaternion rotation)
+        {
+            root.localScale = scale;
+            root.SetLocalPositionAndRotation(offset, rotation);
+        }
+
+        private static void CopyGeometry(Transform source, Transform target)
+        {
+            var filter = source.GetComponent<MeshFilter>();
+            if (filter != null) target.gameObject.AddComponent<MeshFilter>().sharedMesh = filter.sharedMesh;
+            var renderer = source.GetComponent<MeshRenderer>();
+            if (renderer != null)
+            {
+                var copy = target.gameObject.AddComponent<MeshRenderer>();
+                copy.sharedMaterials = renderer.sharedMaterials;
+                copy.enabled = renderer.enabled;
+                copy.shadowCastingMode = renderer.shadowCastingMode;
+                copy.receiveShadows = renderer.receiveShadows;
+                copy.lightProbeUsage = renderer.lightProbeUsage;
+                copy.reflectionProbeUsage = renderer.reflectionProbeUsage;
+                copy.additionalVertexStreams = renderer.additionalVertexStreams;
+            }
+            foreach (Transform child in source)
+            {
+                if (IsPreview(child.gameObject)) continue;
+                var clone = new GameObject(child.name) { hideFlags = PreviewFlags, layer = child.gameObject.layer };
+                try
                 {
-                    Selection.activeObject = null;
+                    clone.SetActive(false);
+                    clone.transform.SetParent(target, false);
+                    if (clone.transform.parent != target) throw new InvalidOperationException("Не установлен родитель части превью.");
+                    clone.transform.localPosition = child.localPosition;
+                    clone.transform.localRotation = child.localRotation;
+                    clone.transform.localScale = child.localScale;
+                    CopyGeometry(child, clone.transform);
+                    clone.SetActive(child.gameObject.activeSelf);
                 }
-
-                Object.DestroyImmediate(go);
+                catch
+                {
+                    if (clone != null) UnityEngine.Object.DestroyImmediate(clone);
+                    throw;
+                }
             }
         }
 
-        /// <summary>Превью с заданным именем внутри слота или null.</summary>
-        public static GameObject Find(Component slot, string previewName)
+        private static bool IsEditableSlot(ArsenalSlotController slot) => slot != null &&
+            !EditorUtility.IsPersistent(slot) && IsEditableScene(slot.gameObject.scene);
+
+        private static bool IsEditableScene(Scene scene)
         {
-            foreach (Transform t in slot.GetComponentsInChildren<Transform>(true))
+            if (!scene.IsValid() || !scene.isLoaded) return false;
+            PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (stage != null && stage.prefabContentsRoot != null && stage.scene == scene) return true;
+            return !EditorSceneManager.IsPreviewScene(scene);
+        }
+
+        private static IEnumerable<Scene> EditableScenes()
+        {
+            var seen = new HashSet<int>();
+            PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (stage != null && IsEditableScene(stage.scene) && seen.Add(stage.scene.handle)) yield return stage.scene;
+            for (int i = 0; i < SceneManager.sceneCount; i++)
             {
-                if (t.gameObject.name == previewName && IsPreview(t.gameObject))
-                    return t.gameObject;
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (IsEditableScene(scene) && seen.Add(scene.handle)) yield return scene;
             }
-            return null;
-        }
-
-        // ── Внутреннее ─────────────────────────────────────────
-
-        private static bool IsPreview(GameObject go)
-        {
-            return (go.name == ItemPreviewName || go.name == MagPreviewName) &&
-                   (go.hideFlags & HideFlags.DontSave) != 0;
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange change)
         {
-            switch (change)
-            {
-                case PlayModeStateChange.ExitingEditMode:
-                    DestroyAll();
-                    break;
-                case PlayModeStateChange.EnteredEditMode:
-                    EnsureAll();
-                    break;
-            }
-        }
-
-        private static IEnumerable<ArsenalSlotController> FindEditableSlots()
-        {
-            PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
-            if (stage != null && stage.prefabContentsRoot != null)
-            {
-                foreach (var slot in stage.prefabContentsRoot.GetComponentsInChildren<ArsenalSlotController>(true))
-                    yield return slot;
-            }
-
-            for (int i = 0; i < SceneManager.sceneCount; i++)
-            {
-                Scene scene = SceneManager.GetSceneAt(i);
-                if (!scene.isLoaded) continue;
-
-                foreach (GameObject root in scene.GetRootGameObjects())
-                {
-                    foreach (var slot in root.GetComponentsInChildren<ArsenalSlotController>(true))
-                        yield return slot;
-                }
-            }
-        }
-
-        // Тот же автопоиск, что у слотов в Awake: в редакторе Awake не вызывается,
-        // и незаполненное поле якоря здесь пустое.
-        private static UxrGrabbableObjectAnchor ResolveItemAnchor(ArsenalSlotController slot)
-        {
-            if (slot.ItemAnchor != null) return slot.ItemAnchor;
-
-            foreach (var a in slot.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
-            {
-                if (!a.gameObject.name.Contains("Mag"))
-                    return a;
-            }
-            return null;
-        }
-
-        private static UxrGrabbableObjectAnchor ResolveMagAnchor(FirearmSlotController slot)
-        {
-            if (slot.MagAnchor != null) return slot.MagAnchor;
-
-            foreach (var a in slot.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
-            {
-                if (a.gameObject.name.Contains("Mag"))
-                    return a;
-            }
-            return null;
-        }
-
-        private static GameObject Spawn(GameObject prefab, string previewName, Transform anchor,
-            Vector3 localPosition, Quaternion localRotation)
-        {
-            // Обычный Instantiate, а не InstantiatePrefab: связанный экземпляр префаба
-            // не дал бы удалить NetworkIdentity без предупреждений.
-            var preview = Object.Instantiate(prefab);
-            preview.name = previewName;
-            preview.transform.SetParent(anchor, false);
-            preview.transform.localPosition = localPosition;
-            preview.transform.localRotation = localRotation;
-
-            SetHideFlagsRecursive(preview.transform, HideFlags.DontSave);
-
-            var netId = preview.GetComponent<Mirror.NetworkIdentity>();
-            if (netId != null) Object.DestroyImmediate(netId, true);
-
-            foreach (var rb in preview.GetComponentsInChildren<Rigidbody>(true))
-                rb.isKinematic = true;
-            foreach (var col in preview.GetComponentsInChildren<Collider>(true))
-                col.enabled = false;
-            foreach (var grab in preview.GetComponentsInChildren<UxrGrabbableObject>(true))
-                grab.enabled = false;
-
-            return preview;
+            if (change == PlayModeStateChange.ExitingEditMode) DestroyAll();
+            else if (change == PlayModeStateChange.EnteredEditMode) QueueRefresh();
         }
 
         public static void SetHideFlagsRecursive(Transform root, HideFlags flags)
         {
             root.gameObject.hideFlags = flags;
-            foreach (Transform child in root)
-                SetHideFlagsRecursive(child, flags);
+            foreach (Transform child in root) SetHideFlagsRecursive(child, flags);
         }
     }
 }

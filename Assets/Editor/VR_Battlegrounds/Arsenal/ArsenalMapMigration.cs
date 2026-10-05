@@ -19,8 +19,7 @@ namespace VrBattlegrounds.EditorTools
         private const string StationPath = "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab";
         private const string HousingPath = "Assets/Prefabs/Maps/ZoneBoundaryDisplayHousing.prefab";
 
-        [MenuItem("Tools/VR Battlegrounds/Arsenal/Migrate Game Maps")]
-        public static void RunMenu() => VrBattlegrounds.Core.GameLog.Arsenal.Info(Run());
+        public static void RunMenu() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenMaintenance(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Stations);
 
         public static string Run()
         {
@@ -42,13 +41,16 @@ namespace VrBattlegrounds.EditorTools
                 {
                     string backup = System.IO.Path.GetFullPath("tmp/arsenal-migration-" + scene.name + ".unity");
                     if (!EditorSceneManager.SaveScene(scene, backup, true)) throw new InvalidOperationException("Не создана копия " + path);
-                    report.AppendLine(Migrate(scene, prefab, housing));
+                    var stationPrefab = scene.name == "Lobby"
+                        ? AssetDatabase.LoadAssetAtPath<GameObject>(ArsenalPresetAssetBuilder.DemoPath)
+                        : prefab;
+                    if (stationPrefab == null) throw new InvalidOperationException("Нет префаба станции для " + scene.name);
+                    report.AppendLine(Migrate(scene, stationPrefab, housing));
                     EditorSceneManager.SaveScene(scene);
                 }
                 finally { if (!loaded) EditorSceneManager.CloseScene(scene, true); }
             }
             if (previous.IsValid() && previous.isLoaded) SceneManager.SetActiveScene(previous);
-            AssetDatabase.SaveAssets();
             return report.ToString();
         }
 
@@ -144,7 +146,6 @@ namespace VrBattlegrounds.EditorTools
             return scene.name + ": заменено " + oldWalls.Length + " станций, " + zones.Length + " визуальных границ.";
         }
 
-        [MenuItem("Tools/VR Battlegrounds/Arsenal/Rebuild Boundary Openings (current scene)")]
         public static void RebuildCurrent()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) return;

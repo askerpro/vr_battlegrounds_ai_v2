@@ -28,6 +28,7 @@ namespace VrBattlegrounds.Editor.Arsenal
         private GameObject _previewItem;
 
         private bool _isEditingOffsets;
+        private string _offsetWriteError;
 
         // ── Lifecycle ──────────────────────────────────────────
 
@@ -60,6 +61,8 @@ namespace VrBattlegrounds.Editor.Arsenal
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
+            string presentationError = ArsenalSlotPreview.PresentationError(target as ArsenalSlotController);
+            if (!string.IsNullOrEmpty(presentationError)) EditorGUILayout.HelpBox(presentationError, MessageType.Error);
 
             // Превью пересоздаётся извне (выход из Play Mode, открытие сцены) — подхватываем новое.
             if (_previewItem == null)
@@ -184,6 +187,9 @@ namespace VrBattlegrounds.Editor.Arsenal
 
         private void DrawOffsetEditor(WeaponInfo weaponInfo)
         {
+            var slot = target as ArsenalSlotController;
+            var presentation = ArsenalPresentationApplicator.Resolve(slot);
+            var stored = ArsenalPresentationApplicator.ItemLocalPose(slot, false, presentation);
             var bgColor = _isEditingOffsets ? new Color(0.2f, 0.35f, 0.2f, 1f) : GUI.backgroundColor;
             GUI.backgroundColor = bgColor;
 
@@ -195,8 +201,9 @@ namespace VrBattlegrounds.Editor.Arsenal
             if (!_isEditingOffsets)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.LabelField("Position", weaponInfo.WeaponPositionOffset.ToString("F3"));
-                EditorGUILayout.LabelField("Rotation", weaponInfo.WeaponRotationOffset.ToString("F1"));
+                EditorGUILayout.LabelField("Position", stored.Position.ToString("F3"));
+                EditorGUILayout.LabelField("Rotation", stored.EulerAngles.ToString("F1"));
+                if (presentation.IsStyled) EditorGUILayout.LabelField("Источник", presentation.Style.name + " / " + slot.PresentationZone);
                 EditorGUI.indentLevel--;
 
                 EditorGUILayout.Space(2);
@@ -215,8 +222,8 @@ namespace VrBattlegrounds.Editor.Arsenal
                     var livePos = _previewItem.transform.localPosition;
                     var liveRot = _previewItem.transform.localEulerAngles;
 
-                    EditorGUILayout.LabelField("Stored Position", weaponInfo.WeaponPositionOffset.ToString("F3"));
-                    EditorGUILayout.LabelField("Stored Rotation", weaponInfo.WeaponRotationOffset.ToString("F1"));
+                    EditorGUILayout.LabelField("Stored Position", stored.Position.ToString("F3"));
+                    EditorGUILayout.LabelField("Stored Rotation", stored.EulerAngles.ToString("F1"));
 
                     EditorGUILayout.Space(2);
 
@@ -230,16 +237,15 @@ namespace VrBattlegrounds.Editor.Arsenal
                         SceneView.RepaintAll();
                     }
 
-                    bool hasChanges = livePos != weaponInfo.WeaponPositionOffset ||
-                                      liveRot != weaponInfo.WeaponRotationOffset;
+                    bool hasChanges = livePos != stored.Position || Quaternion.Angle(_previewItem.transform.localRotation, stored.Rotation) > .0001f;
 
                     EditorGUILayout.Space(4);
 
                     if (hasChanges)
                     {
                         EditorGUILayout.HelpBox(
-                            "Preview has been moved. Click 'Save' to write offsets back to " +
-                            weaponInfo.name + " asset.",
+                            presentation.IsStyled ? "Превью перемещено. Сохранение запишет target якоря в Style для этого оружия и зоны." :
+                            "Превью перемещено. Сохранение запишет legacy offsets в " + weaponInfo.name + ".",
                             MessageType.Info);
                     }
 
@@ -247,21 +253,23 @@ namespace VrBattlegrounds.Editor.Arsenal
 
                     GUI.enabled = hasChanges;
                     GUI.backgroundColor = new Color(0.3f, 0.8f, 0.3f);
-                    if (GUILayout.Button("💾 Save Offsets → " + weaponInfo.name, GUILayout.Height(28)))
+                    if (GUILayout.Button("Сохранить → " + (presentation.IsStyled ? presentation.Style.name : weaponInfo.name), GUILayout.Height(28)))
                     {
-                        SaveOffsetsToWeaponInfo(weaponInfo);
+                        RunOffsetWrite(presentation, weaponInfo, () => SaveOffsetsToWeaponInfo(weaponInfo));
                     }
                     GUI.backgroundColor = Color.white;
                     GUI.enabled = true;
 
                     if (GUILayout.Button("↩ Reset", GUILayout.Width(60), GUILayout.Height(28)))
                     {
-                        _previewItem.transform.localPosition = weaponInfo.WeaponPositionOffset;
-                        _previewItem.transform.localEulerAngles = weaponInfo.WeaponRotationOffset;
+                        if (presentation.IsStyled) RunOffsetWrite(presentation, weaponInfo, () => ResetStyleItemException(presentation.Style, weaponInfo, slot.PresentationZone));
+                        stored = ArsenalPresentationApplicator.ItemLocalPose(slot, false, ArsenalPresentationApplicator.Resolve(slot));
+                        _previewItem.transform.SetLocalPositionAndRotation(stored.Position, stored.Rotation);
                         SceneView.RepaintAll();
                     }
 
                     EditorGUILayout.EndHorizontal();
+                    if (!string.IsNullOrEmpty(_offsetWriteError)) EditorGUILayout.HelpBox(_offsetWriteError, MessageType.Error);
                 }
 
                 EditorGUILayout.Space(2);
@@ -282,6 +290,13 @@ namespace VrBattlegrounds.Editor.Arsenal
         private void SaveOffsetsToWeaponInfo(WeaponInfo weaponInfo)
         {
             if (_previewItem == null) return;
+            var slot = target as ArsenalSlotController;
+            var presentation = ArsenalPresentationApplicator.Resolve(slot);
+            if (presentation.IsStyled)
+            {
+                SaveStyleItemTarget(presentation.Style, slot, weaponInfo, _previewItem.transform);
+                return;
+            }
 
             Undo.RecordObject(weaponInfo, "Save Item Offsets");
 
@@ -298,14 +313,91 @@ namespace VrBattlegrounds.Editor.Arsenal
 
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(weaponInfo);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(weaponInfo);
 
-            Debug.Log($"[Arsenal Editor] Saved offsets to {weaponInfo.name}: " +
+            VrBattlegrounds.Core.GameLog.Arsenal.Info($"[Arsenal Editor] Saved offsets to {weaponInfo.name}: " +
                       $"pos={_previewItem.transform.localPosition:F3}, " +
                       $"rot={_previewItem.transform.localEulerAngles:F1}");
         }
 
+        private void RunOffsetWrite(ArsenalPresentationSnapshot presentation, WeaponInfo weapon, System.Action write)
+        {
+            var output = presentation.IsStyled ? (Object)presentation.Style : weapon;
+            try
+            {
+                // UI writer имеет собственную краткую аренду; moved transient preview не сохраняется.
+                ArsenalEditorActions.Run("Сохранить каноническую композицию слота", new[] {
+                    AssetDatabase.GetAssetPath(output), AssetDatabase.GetAssetPath(weapon), AssetDatabase.GetAssetPath(weapon.WeaponPrefab)
+                }, () => { write(); return "Сохранён только адресный layout asset."; }, savesAllAssets: false);
+                _offsetWriteError = null;
+            }
+            catch (System.InvalidOperationException exception) { _offsetWriteError = exception.Message; }
+        }
+
         // ── Preview System ─────────────────────────────────────
+
+        private static void SaveStyleItemTarget(ArsenalPresentationStyle style, ArsenalSlotController slot, WeaponInfo weapon, Transform preview)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new System.InvalidOperationException("Layout Save только в EditMode.");
+            var source = weapon.WeaponPrefab.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+            var drop = source.DropAlignTransform;
+            Vector3 point = preview.TransformPoint(source.transform.InverseTransformPoint(drop.position));
+            Quaternion rotation = preview.rotation * Quaternion.Inverse(source.transform.rotation) * drop.rotation;
+            var target = new ArsenalPresentationPose(slot.transform.InverseTransformPoint(point), Quaternion.Inverse(slot.transform.rotation) * rotation);
+            ArsenalPresentationResolver.ValidatePose(target);
+            ArsenalPresentationResolver.Validate(style);
+            Undo.RecordObject(style, "Save Canonical Arsenal Item Target");
+            var serialized = new SerializedObject(style);
+            var list = serialized.FindProperty("_exceptions");
+            SerializedProperty entry = FindStyleException(list, weapon, slot.PresentationZone);
+            if (entry == null)
+            {
+                list.InsertArrayElementAtIndex(list.arraySize);
+                entry = list.GetArrayElementAtIndex(list.arraySize - 1);
+                // Insert может дублировать предыдущую запись: все override flags задаются явно.
+                entry.FindPropertyRelative("Weapon").objectReferenceValue = weapon;
+                entry.FindPropertyRelative("Zone").enumValueIndex = (int)slot.PresentationZone;
+                entry.FindPropertyRelative("OverrideMagazine").boolValue = false;
+                entry.FindPropertyRelative("OverrideCard").boolValue = false;
+                entry.FindPropertyRelative("OverrideSupports").boolValue = false;
+                entry.FindPropertyRelative("Supports").ClearArray();
+                entry.FindPropertyRelative("CardSize").vector2Value = new Vector2(.15f, .16f);
+                entry.FindPropertyRelative("CardFontSize").floatValue = .16f;
+            }
+            entry.FindPropertyRelative("OverrideItem").boolValue = true;
+            entry.FindPropertyRelative("ItemTarget").FindPropertyRelative("Position").vector3Value = target.Position;
+            entry.FindPropertyRelative("ItemTarget").FindPropertyRelative("EulerAngles").vector3Value = target.EulerAngles;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(style); AssetDatabase.SaveAssetIfDirty(style);
+        }
+
+        private static void ResetStyleItemException(ArsenalPresentationStyle style, WeaponInfo weapon, ArsenalPresentationZone zone)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new System.InvalidOperationException("Layout Reset только в EditMode.");
+            ArsenalPresentationResolver.Validate(style);
+            var serialized = new SerializedObject(style);
+            var list = serialized.FindProperty("_exceptions");
+            var entry = FindStyleException(list, weapon, zone);
+            if (entry == null || !entry.FindPropertyRelative("OverrideItem").boolValue) return;
+            Undo.RecordObject(style, "Reset Canonical Arsenal Item Target");
+            entry.FindPropertyRelative("OverrideItem").boolValue = false;
+            if (!entry.FindPropertyRelative("OverrideMagazine").boolValue && !entry.FindPropertyRelative("OverrideCard").boolValue &&
+                !entry.FindPropertyRelative("OverrideSupports").boolValue)
+                for (int i = 0; i < list.arraySize; i++)
+                    if (SerializedProperty.EqualContents(list.GetArrayElementAtIndex(i), entry)) { list.DeleteArrayElementAtIndex(i); break; }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(style); AssetDatabase.SaveAssetIfDirty(style);
+        }
+
+        private static SerializedProperty FindStyleException(SerializedProperty list, WeaponInfo weapon, ArsenalPresentationZone zone)
+        {
+            for (int i = 0; i < list.arraySize; i++)
+            {
+                var entry = list.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative("Weapon").objectReferenceValue == weapon && entry.FindPropertyRelative("Zone").enumValueIndex == (int)zone) return entry;
+            }
+            return null;
+        }
 
         private void RebuildPreview()
         {

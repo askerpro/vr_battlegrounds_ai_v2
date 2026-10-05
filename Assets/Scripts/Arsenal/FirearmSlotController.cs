@@ -1,22 +1,18 @@
 using UnityEngine;
 using UltimateXR.Manipulation;
-using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.Arsenal
 {
     /// <summary>
-    /// Firearm slot on the Arsenal Wall (rifles, SMGs, shotguns, pistols — any weapon with a magazine).
-    /// Extends <see cref="ArsenalSlotController"/> with a decorative magazine display.
-    /// The magazine is non-interactive — when the player purchases the weapon,
-    /// magazines spawn directly in the player's pockets.
+    /// Слот огнестрельного оружия с отдельным якорем запасного магазина.
+    /// Якорь отдельного интерактивного магазина; выдачу ведёт ArsenalMagazineSupply.
     /// </summary>
     public class FirearmSlotController : ArsenalSlotController
     {
-        [Header("Decorative Magazine")]
-        [Tooltip("Anchor for the decorative magazine display (auto-found by name 'MagAnchor' if empty)")]
+        [Header("Отдельный магазин")]
+        [Tooltip("Якорь настоящего сетевого магазина (автопоиск по имени MagAnchor)")]
         [SerializeField] private UxrGrabbableObjectAnchor _magAnchor;
 
-        private GameObject _spawnedMagazine;
 
         protected override void Awake()
         {
@@ -36,44 +32,8 @@ namespace VrBattlegrounds.Arsenal
             }
         }
 
-        public override void AssignNetworkItem(GameObject spawnedItem)
-        {
-            base.AssignNetworkItem(spawnedItem);
 
-            // Spawn decorative magazine
-            if (_magAnchor != null && WeaponData != null &&
-                WeaponData.MagazinePrefab != null && _spawnedMagazine == null)
-            {
-                _spawnedMagazine = Instantiate(
-                    WeaponData.MagazinePrefab,
-                    _magAnchor.transform.position,
-                    _magAnchor.transform.rotation,
-                    _magAnchor.transform
-                );
-                _spawnedMagazine.name = WeaponData.WeaponId + "_mag_decor";
-
-                // Disable interaction — magazine is decorative only
-                foreach (var grab in _spawnedMagazine.GetComponentsInChildren<UxrGrabbableObject>(true))
-                    grab.enabled = false;
-                foreach (var rb in _spawnedMagazine.GetComponentsInChildren<Rigidbody>(true))
-                    rb.isKinematic = true;
-
-                GameLog.Arsenal.Info($"[Arsenal] Spawned decorative magazine for '{WeaponData.DisplayName}'.");
-            }
-        }
-
-        public override void DespawnItem()
-        {
-            base.DespawnItem();
-
-            if (_spawnedMagazine != null)
-            {
-                Destroy(_spawnedMagazine);
-                _spawnedMagazine = null;
-            }
-        }
-
-        /// <summary>Exposed for editor preview.</summary>
+        /// <summary>Якорь серверного предложения и размещения в редакторе.</summary>
         public UxrGrabbableObjectAnchor MagAnchor => _magAnchor;
     }
 }

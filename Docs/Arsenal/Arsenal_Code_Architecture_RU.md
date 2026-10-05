@@ -12,6 +12,18 @@ ArsenalDeploymentAnimator хранит серверный снимок движ�
 
 ## 1. Базовые данные и структуры
 
+### Canonical target poses: source checkpoint
+
+`ArsenalPresentationStyle` хранит defaults `Pegboard`/`Shelf` и абсолютные исключения по exact `(WeaponInfo, Zone)` в одном ассете. Поля ItemTarget/MagazineTarget обозначают effective SDK `AlignTransform` в slot frame, CardTarget — обычную slot-local позу карточки. Отдельных editable item offsets в styled конфигурации нет; старые поля WeaponInfo относятся только к legacy adapter. `ArsenalPreset.PresentationStyle` выбирает стиль; скрытый `ArsenalStationPresetBinding.PresentationPresetCache` — производная ссылка исходного пресета для prefab, runtime источник остаётся MapData.
+
+`ArsenalPresentationResolver` проверяет зоны, ключи исключений, конечность значений, scale и собственный DropAlign. `ArsenalPresentationApplicator` переносит whole anchor root, компенсируя относительный authored AlignTransform, и выводит root pose предмета из prefab DropAlign без изменения scale. Styled contact не сдвигается повторно в runtime: editor Fit/Bake должен сохранять предложенную позу в тот же canonical target. `ArsenalLegacyPresentationAdapter` централизует прежние offsets/custom-card/fallback; ordinary Ensure/installer custom card pose не сбрасывает.
+
+Каждая опора Style имеет явный `ArsenalSupportAnchorKind` (`Weapon`/`Magazine`). `ArsenalSupportModuleBuilder` сохраняет существующие role objects и создаёт производные `PresentationSupports` и `PresentationReturnHints` в тех же `SupportPose`. Один `ReturnReadyMaterial` принадлежит Style. Сигнал привязан к существующему `ActivateOnCompatibleNear`: его видимостью, совместимостью и занятостью управляет SDK, нового поиска или политики возврата нет. `ArsenalMagazineOffer.RejectManualPlacement` продолжает запрещать возврат в склад; декоративный держатель не обещает приём магазина. Runtime preflight проверяет topology/TRS/material/SDK references; чужую near-подсказку генератор не заменяет. Null-style legacy не меняется.
+
+Текущая проверка source hint-среза: изолированный native стенд RED4 → GREEN14, повтор сохраняет instance IDs и serialized JSON, чужие сцены/материал неизменны, Android gate PASS. Отдельный RED подтвердил порядок записи карточки: `MaterializePresentation(slot, snapshot)` сначала применяет frames, затем карточку, затем опоры и полную валидацию; builder и installer используют один endpoint. Старые public overloads сохранены. Это проверка генерации/связей и существующего запрета stock-return, а не проверка поднесения контроллером в шлеме.
+
+Текущий статус: schema и consumers скомпилированы, Android source gate PASS и console0; nested fixture — 31/31, включая uniform parent scale, authored Drop/Align и actual SDK smooth-return endpoint. `IndustrialPegboardPresentation.asset` адресно сохранён с двумя defaults и двадцатью exact exceptions после ручного просмотра render-only предложений. MIT DDD Quickhook использует собственный общий untextured metal; Style содержит общий ready material. Native batch — 11/11: retained module IDs, scene/material/disk invariants. FullDemo пока не ссылается на Style: Demo/Lobby сохраняют legacy вид. Materialized outputs, actual after/regen фотографии, локальная SDK near eligibility и итоговый Bake остаются незавершёнными.
+
 Ядром системы служат ScriptableObjects, которые отвязывают данные снаряжения от конкретной физической реализации слотов стены или инвентаря игрока.
 
 *   `WeaponInfo` (**ScriptableObject**) — Описание конкретного снаряжения (оружия, гранаты, аптечки).
@@ -25,14 +37,47 @@ ArsenalDeploymentAnimator хранит серверный снимок движ�
 ---
 
 
-> **Состав стены — весь реестр** (T-38, решение пользователя). Каждая стена арсенала вмещает весь доступный арсенал
-> игры — `WeaponRegistry`; не хватает места — из реестра убирается слабейший ствол, а не прячется на другой стене.
-> Набор задаёт только базовый префаб `StandardArsenalWall`; переопределять `_weaponInfo` слотов в картах и сценах
-> нельзя. Проверка — `ArsenalWallCoversRegistryTests`. Сейчас (T-39): перфопанель — 6 слотов по 0,315 м (панель 0,30 м):
-> TR15, MKR9, `Shotgun_real`, Herrington, SRM12, Mk14; полка — Viper (стартовый, `WeaponRegistry.DefaultSidearm`),
-> `Gun_real`, револьвер, Uzi. Стволы вне реестра — ассеты и сетевые префабы остались. Новый слот перфопанели —
-> экземпляр `FireArmSlotPrefab` в `RiflesSlotsContainer` и запись в `ArsenalWallController._allSlots`; оружие
-> центрируется на панели `WeaponPositionOffset` (`WeaponHangFitsSlotTests`).
+**Состав станции задаёт карта:** `MapData.arsenalPreset` выбирает упорядоченный ассортимент из общего каталога.
+`ArsenalStationPresetBinding` проверяет и назначает его до выдачи предметов, сохраняя индексы сетевых слотов.
+Начальные игровые карты сохраняют прежние 10 позиций (5 перфопанель / 5 полка, MKR9 на полке).
+Lobby использует полный каталог 20 и отдельный `LobbyDemoArsenalStation`; вместимость каждой зоны
+соответствует явным записям FullDemo: 11 Pegboard и 9 Shelf. MP5K и MKR9 фактически находятся на Shelf
+в исходном Demo и всех четырёх сохранённых станциях Lobby; положение не
+выводится из общей категории SMG. MKR9 и MP5K остаются разными предметами с прежними ID.
+`WeaponRegistry.DefaultSidearm` остаётся Viper. Категория оружия и физическая зона слота независимы.
+Контракт, Inspector и маршрут сборки — [ассортименты карт](arsenal-presets.md).
+
+Нижняя панель имеет ту же ширину 0,4 м, что верхняя, глубину 0,66 м и зазор 0,03 м.
+Девять панелей образуют центрированный ряд шириной 3,84 м; свободные края рамы допустимы.
+Карточки сохраняют размер и лежат внутри панели с запасом 1 см, магазины помещаются по ширине.
+Common и пользовательские пресеты этой коррекцией не перестраиваются. Генератор изменяет существующие
+слоты на месте: повтор сохраняет source localFileID, scene SDK UID и корневые позы станций.
+Editor API `UxrComponent.SetEditorUniqueId` согласует строку, кеш и final prefab provenance;
+временное подавление SDK OnValidate всегда возвращает исходное наличие/значение EditorPrefs.
+
+### Редактор данных и безопасное превью
+
+Единый вход — [окно «Арсенал»](editor-workbench-plan.md): каталог, станции, сборка, взаимодействие и проверки.
+`ArsenalEditorStatus` читает состояние, `ArsenalEditorActions` применяет объявленный план под собственной
+арендой, `ArsenalBuildPreflight` проверяет весь выбранный набор до writer. Публичные маршруты builders
+сохранены; старые Arsenal menu writers не являются отдельной точкой применения. Чтение/выбор не создаёт
+превью и не сохраняет данные. Пресет сохраняет порядок, зоны и сетевые индексы; MapData меняет только ссылку.
+
+`ArsenalSlotPreview` строит временную геометрию только из MeshFilter/MeshRenderer: исходные TRS, материалы
+и цепочка activeSelf сохраняются, SDK/physics/runtime-компоненты оружия не клонируются. Превью принадлежит
+проверенному якорю своего слота; orphan и reload cleanup не затрагивают persistent assets и helper scenes.
+`Ensure` сохраняет неизменное превью, но пересобирает его при изменении fingerprint исходника. Подгонка
+смещений WeaponInfo через существующий Inspector сохраняется и действует на все станции предмета.
+Исходные три «призрака на полу» на скриншоте не были захвачены диагностикой: подтверждён класс нарушения
+владения/жизненного цикла превью, а не точный источник каждого объекта того кадра.
+
+`HandsPackWeapon` и `KinemationWeapon` создают модель в собственной изолированной PreviewScene и очищают
+её при исключении/Dispose. Readiness KIN читается без reimport через `ReadableSourcePaths/RequireReadable`;
+Read/Write включается только явным импортным writer. Конструкторы отвергают Play Mode до поиска ассетов.
+
+Карточка `ArsenalPriceTag` остаётся в прежнем rect/pose: Normal wrap, auto-size 0,6–1 от базового размера
+и Overflow сохраняют длинный заголовок и все строки статистики. Темп карточки показывает фактическую
+целочисленную частоту SDK: metadata 400/мин округляется до 7/с, то есть 420/мин.
 
 ## 2. Иерархия контроллеров стены арсенала
 
@@ -41,7 +86,7 @@ ArsenalDeploymentAnimator хранит серверный снимок движ�
 *   `ArsenalWallController` (**NetworkBehaviour**) — Корень и оркестратор. Владеет состоянием стены (`Closed`, `Opening`, `Open`, `Closing`) — **общим, серверным**, см. [раздел 2.1](#21-стена-общая-состояние-серверное-t-15-находка-net-07). Управляет дочерними слотами. **Конкретных режимов не знает** — исполняет правила активного режима (`MapReferee.Instance.ActiveGameMode`):
     *   `GameMode.ArsenalRules` — состояние, стена сверяется с ним каждый кадр (`ApplyModeRules`): открыта ли (пишет только тот, кто вправе — сервер или стена вне сети, `CanWriteState`; так сохраняется NET-14: незаспавненная стена ведёт состояние сама), нужен ли жетон (каждая машина), заменять ли пропавшее оружие через `_lostWeaponReplaceDelay` (сервер). Elimination отвечает по фазе раунда (открыта только в `Equipment`), лобби (`WarmupMode`) — «открыта всегда, жетона нет, пропавшее заменяется». Режима нет — стена не трогается.
     *   `GameMode.ArsenalRefillRequestedServer` (событие экземпляра режима; стена подписывается в `OnStartServer` и переподписывается по `MapReferee.ActiveGameModeChangedLocal` — режим на карте меняется на месте) — разовое пополнение пустых слотов `ReplenishWeaponsNetwork(false)`; Elimination поднимает его на входе в `Setup`. Событие, а не свойство: `Setup` бывает короче кадра. Серверный канал, а не клиентский обработчик с `if (isServer)` — тот на выделенном сервере не исполнялся никогда (находка NET-06).
-*   `ArsenalSlotController` (и наследник `FirearmSlotController` — он стоит на всех слотах, и стены, и полки; для предметов без `MagazinePrefab` декоративный магазин просто не спавнится) — Управляют одной конкретной ячейкой на стене или полке. Отвечают за:
+*   `ArsenalSlotController` (и наследник `FirearmSlotController` с отдельным MagAnchor) — управляют одной конкретной ячейкой на стене или полке. Запасными настоящими магазинами отдельно владеют `ArsenalMagazineSupply` и `ArsenalMagazineOffer`; сетевой контракт и защита поздней привязки описаны в [магазинах арсенала](arsenal-magazines.md). Слоты отвечают за:
     *   Спавн/Деспавн конкретного `WeaponInfo`.
     *   Блокировку (`Lock`/`Unlock`) возможности взять предмет.
     *   Ответ на вопрос «занят ли слот» — `CurrentItem` / `IsItemPresent`, см. [раздел 2.2](#22-занятость-слота-два-источника-t-15-находка-net-13).

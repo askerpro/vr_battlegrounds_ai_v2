@@ -6,9 +6,12 @@ using VrBattlegrounds.Core;
 
 public class CleanupPreviews : EditorWindow
 {
-    [MenuItem("Tools/VR Battlegrounds/Arsenal/Cleanup Previews")]
-    public static void Clean()
+    public static void Clean() => Clean(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+
+    public static void Clean(UnityEngine.SceneManagement.Scene activeScene)
     {
+        if (EditorApplication.isPlayingOrWillChangePlaymode || !activeScene.IsValid() || !activeScene.isLoaded)
+            throw new System.InvalidOperationException("Очистка требует загруженную сцену вне Play Mode.");
         int removedCount = 0;
         
         string[] prefabs = new[] {
@@ -47,7 +50,6 @@ public class CleanupPreviews : EditorWindow
             }
         }
 
-        var activeScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
         var rootObjects = activeScene.GetRootGameObjects();
         int sceneRemovedCount = 0;
         foreach (var root in rootObjects)

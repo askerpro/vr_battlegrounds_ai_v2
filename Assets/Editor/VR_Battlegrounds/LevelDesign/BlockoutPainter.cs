@@ -54,6 +54,10 @@ namespace VrBattlegrounds.Editor.LevelDesign
         [SerializeField] private int selected, quarterTurns;
         [SerializeField] private float height;
         [SerializeField] private BlockoutMarkup markup;
+        [SerializeField] private MapGrowthSettings growthSettings;
+        private readonly MapGrowthCandidatePanel growthPanel = new MapGrowthCandidatePanel();
+        [SerializeField] private MapGrowthMarkupPanel intentPanel = new MapGrowthMarkupPanel();
+        [SerializeField] private bool placePositionOnce;
         [SerializeField] private BlockoutMarkup.Layer layer;
         [SerializeField] private string activeId = "position-1";
         [SerializeField] private int brushCells = 5;
@@ -65,7 +69,19 @@ namespace VrBattlegrounds.Editor.LevelDesign
         [SerializeField] private bool suggestPosition;
         [SerializeField] private float mainThreatYaw;
         [SerializeField] private string coverId = "cover-1";
-        [SerializeField] private int candidateIndex;
+        private readonly BlockoutPositionHandles positionHandles = new BlockoutPositionHandles();
+        private readonly MapGrowthMeasurementPanel measurements = new MapGrowthMeasurementPanel();
+        private int candidateIndex
+        {
+            get => markup == null ? 0 : Mathf.Max(0, markup.positions.FindIndex(p => p.id == BlockoutPositionHandles.SelectedPosition(markup)));
+            set
+            {
+                if (markup == null || value < 0 || value >= markup.positions.Count) return;
+                var p = markup.positions[value];
+                if (p.id != BlockoutPositionHandles.SelectedPosition(markup)) BlockoutPositionHandles.SelectState(markup, p.protectedStateId);
+                BlockoutPositionHandles.SelectPosition(markup, p.id);
+            }
+        }
         private BlockoutBlockDefinition[] palette = Array.Empty<BlockoutBlockDefinition>();
         [SerializeField] private VrBattlegrounds.Maps.CoverClass placementMaterial;
         [SerializeField] private BlockoutOpeningSettings placementOpenings=BlockoutOpeningSettings.Default;
@@ -101,6 +117,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
         }
         private void OnDisable()
         {
+            positionHandles.Finish();
+            growthPanel.Dispose();
             FinishGesture();
             openPainters.Remove(this);
             if(handlesPainter==this)handlesPainter=openPainters.FirstOrDefault();
@@ -126,13 +144,15 @@ namespace VrBattlegrounds.Editor.LevelDesign
         private bool TryEscape(Event e)
         {
             if(e==null||e.type!=EventType.KeyDown||e.keyCode!=KeyCode.Escape||e.alt||e.control||e.command||EditorGUIUtility.editingTextField)return false;
+            if (mode == Mode.Markup && positionHandles.Escape())
+            { FinishGesture(); active = false; placePositionOnce = false; e.Use(); RepaintViews(); return true; }
             var go=BlockoutSectionFactory.Root(Selection.activeGameObject);
             bool editable=mainTab==0&&go!=null&&!IsProtection(go)
                 &&(BlockoutRegistryFactory.TryDefinition(go,out _)||go.GetComponent<BlockoutCellWall>()!=null);
             bool arenaSelection=IsArenaSelection(go);
             editable=editable||arenaSelection;
             if(!editable&&!active)return false;
-            FinishGesture();active=false;editCells=false;RestoreNativeTools();
+            FinishGesture();active=false;placePositionOnce=false;editCells=false;RestoreNativeTools();
             if(editable){Selection.activeGameObject=null;mainTab=0;mode=Mode.Build;ResetPlacementDefaults();}
             e.Use();RepaintViews();return true;
         }
@@ -164,7 +184,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
         {if(Definition!=null)placementMaterial=detailMode?VrBattlegrounds.Maps.CoverClass.Hard:Definition.defaultMaterial;placementOpenings=BlockoutOpeningSettings.Default;}
         private void DrawSections()
         {
-            string[] names={"Блоки","Позиции","Арена","Общие настройки","Проверки","Обслуживание"};
+            string[] names={"Блоки","Позиции","Арена","Общие настройки","Проверки","Обслуживание","Выращивание"};
             int columns=position.width<700?3:6;
             for(int row=0;row<names.Length;row+=columns)
                 using(new EditorGUILayout.HorizontalScope())
@@ -204,6 +224,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
             {
                 bool wasActive=active;
                 active=GUILayout.Toggle(active,active?"Кисть включена · Esc для выхода":"Включить кисть Scene View","Button");
+                if (active != wasActive) placePositionOnce = false;
                 if(active&&!wasActive) foreach(var painter in openPainters)if(painter!=this)painter.active=false;
             }
             if(mode==Mode.Arena)
@@ -246,10 +267,35 @@ namespace VrBattlegrounds.Editor.LevelDesign
             if(mainTab==3)BlockoutWorkspacePanel.DrawSettings();
             if(mainTab==4)BlockoutWorkspacePanel.DrawChecks();
             if(mainTab==5)BlockoutWorkspacePanel.DrawMaintenance();
+            if(mainTab==6)
+            {
+                bool hasContext=Context(out var growthScene,out var growthOrigin,out _);
+                growthSettings=growthPanel.Draw(markup,growthScene,hasContext&&Matches(growthScene,growthOrigin),growthSettings,Repaint);
+            }
+            if (mode == Mode.Markup)
+            {
+                markup = (BlockoutMarkup)EditorGUILayout.ObjectField("Артефакт", markup, typeof(BlockoutMarkup), false);
+                if (GUILayout.Button("Создать разметку этой карты…")) CreateMarkup();
+                if (intentPanel == null) intentPanel = new MapGrowthMarkupPanel();
+                markup = intentPanel.DrawHeader(markup);
+                positionHandles.DrawControls(markup);
+                if (positionHandles.Linking) { active = false; placePositionOnce = false; FinishGesture(); }
+                using (new EditorGUI.DisabledScope(markup == null || markup.schemaVersion != BlockoutMarkup.CurrentSchemaVersion))
+                    if (GUILayout.Button("Добавить позицию: клик на полу"))
+                    {
+                        FinishGesture(); activeId = "position-" + Guid.NewGuid().ToString("N");
+                        positionHandles.Escape();
+                        layer = BlockoutMarkup.Layer.Position; brushCells = 5; erase = false; active = true; placePositionOnce = true;
+                        foreach (var painter in openPainters) if (painter != this) painter.active = false;
+                        status = "Кликните на полу: будет создана отдельная область позиции 5×5 клеток. Esc отменяет размещение.";
+                    }
+            }
             if (mode==Mode.Markup && markup != null && markup.positions.Count > 0)
             {
-                candidateIndex = EditorGUILayout.Popup("Позиция возле укрытия", Mathf.Clamp(candidateIndex, 0, markup.positions.Count - 1), markup.positions.Select(p => p.id).ToArray());
+                candidateIndex = EditorGUILayout.Popup("Позиция", Mathf.Clamp(candidateIndex, 0, markup.positions.Count - 1), markup.positions.Select(p => string.IsNullOrWhiteSpace(p.displayName) ? p.id : p.displayName).ToArray());
                 var position = markup.positions[candidateIndex];
+                if (string.IsNullOrEmpty(BlockoutPositionHandles.SelectedState(markup))) BlockoutPositionHandles.SelectState(markup, position.protectedStateId);
+                intentPanel.DrawPosition(markup, position, positionHandles);
                 EditorGUILayout.LabelField(position.confirmed ? "Подтверждена человеком (без оценки защиты)" : "Кандидат: требуется ручное решение");
                 EditorGUI.BeginChangeCheck();
                 Vector2Int center = EditorGUILayout.Vector2IntField("Центр, клетка", position.centerCell);
@@ -265,23 +311,18 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 if (EditorGUI.EndChangeCheck())
                 {
                     Undo.RegisterCompleteObjectUndo(markup, "Переместить позицию");
-                    var area = markup.cells.Where(c => c.positionIds.Contains(position.id)).Select(c => new Vector2Int(c.x, c.z)).ToArray();
-                    Vector2Int offset = center - position.centerCell;
-                    PaintPosition(position, true); position.centerCell = center; position.mainThreatYaw = threat;
+                    MapGrowthMarkupEditing.MovePosition(markup, position, center); position.mainThreatYaw = threat;
                     position.supportingCoverIds = chosenSupports;
-                    foreach (var coordinate in area) markup.Paint(coordinate + offset, BlockoutMarkup.Layer.Position, position.id, false);
                     markup.needsReevaluation = true; EditorUtility.SetDirty(markup);
                 }
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("Подтвердить")) { Undo.RecordObject(markup, "Подтвердить позицию"); position.confirmed = true; EditorUtility.SetDirty(markup); }
-                    if (GUILayout.Button("Удалить позицию")) { Undo.RegisterCompleteObjectUndo(markup, "Удалить позицию"); PaintPosition(position, true); markup.positions.Remove(position); EditorUtility.SetDirty(markup); }
+                    if (GUILayout.Button("Удалить позицию и её связи")) { Undo.RegisterCompleteObjectUndo(markup, "Удалить позицию"); MapGrowthMarkupEditing.DeletePosition(markup, position.id); EditorUtility.SetDirty(markup); }
                 }
             }
             if (mode == Mode.Markup)
             {
-                markup = (BlockoutMarkup)EditorGUILayout.ObjectField("Артефакт", markup, typeof(BlockoutMarkup), false);
-                if (GUILayout.Button("Создать разметку этой карты…")) CreateMarkup();
                 if(GUILayout.Button("Объединить выделенные объекты в укрытие")) GroupSelectedCover();
                 layer = (BlockoutMarkup.Layer)EditorGUILayout.EnumPopup("Слой", layer);
                 activeId = EditorGUILayout.TextField("Активный ID", activeId);
@@ -290,20 +331,9 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 if (markup != null)
                 {
                     EditorGUILayout.LabelField($"Клеток {markup.cells.Count}; противоречий {markup.cells.Count(c => c.Conflicting)}");
-                    var route = markup.routes.FirstOrDefault(r => r.id == activeId);
-                    if (layer == BlockoutMarkup.Layer.Route && route != null)
-                    {
-                        EditorGUI.BeginChangeCheck();
-                        string from = EditorGUILayout.TextField("Сценарий: из позиции", route.scenarioFromPositionId);
-                        string to = EditorGUILayout.TextField("Сценарий: в позицию", route.scenarioToPositionId);
-                        if (EditorGUI.EndChangeCheck())
-                        {
-                            Undo.RecordObject(markup, "Сценарий маршрута");
-                            route.scenarioFromPositionId = from; route.scenarioToPositionId = to;
-                            EditorUtility.SetDirty(markup);
-                        }
-                        EditorGUILayout.LabelField("Физический маршрут двунаправленный");
-                    }
+                    intentPanel.DrawRelationships(markup, positionHandles);
+                    bool canMeasure = Context(out var measureScene, out var measureOrigin, out _) && Matches(measureScene, measureOrigin);
+                    measurements.Draw(markup, measureScene, canMeasure);
                     if (GUILayout.Button("Сохранить артефакт и экспортировать JSON…")) Export();
                 }
             }
@@ -351,6 +381,13 @@ namespace VrBattlegrounds.Editor.LevelDesign
         {
             if(handlesPainter==this&&focusedWindow==view&&TryEscape(Event.current))return;
             if(mode==Mode.Arena||mode==Mode.Passive) return;
+            if (mode == Mode.Markup && handlesPainter == this && Context(out var markupScene, out var markupOrigin, out var markupFloor) && Matches(markupScene, markupOrigin))
+            {
+                if (Event.current.type == EventType.Repaint) DrawMarkup(markupScene, markupOrigin, markupFloor.max.y + .025f);
+                positionHandles.Draw(markup, markupFloor.max.y + .025f, !active, (id, contact) => measurements.LinkLabel(markup, markupScene, true, id, contact));
+                if (GUI.changed) Repaint();
+                if (Event.current.type == EventType.Used) return;
+            }
             if(mode==Mode.Selected&&!editCells)
             {
                 if(handlesPainter!=this)return;
@@ -363,7 +400,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
             if (mode == Mode.Markup && !Matches(scene, origin)) { status = "Разметка не соответствует карте/арене/сетке. Создайте или выберите подходящий артефакт."; return; }
             if(TryRotationInput(e)) return;
             if(mode==Mode.Selected && (!editCells || IsProtection(Selection.activeGameObject))) return;
-            if(e.type==EventType.Repaint) DrawMarkup(scene, origin, floor.max.y + .025f);
+            if(e.type==EventType.Repaint && mode != Mode.Markup) DrawMarkup(scene, origin, floor.max.y + .025f);
             if (e.alt || e.button > 0 || e.control || e.command) { if (e.type == EventType.MouseUp) FinishGesture(); return; }
             control = GUIUtility.GetControlID("VrBattlegrounds.BlockoutPainter".GetHashCode(), FocusType.Passive);
             if (e.type == EventType.Layout) HandleUtility.AddDefaultControl(control);
@@ -374,6 +411,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
             if (e.type == EventType.Repaint) DrawGhost(cell, scene, origin, floor);
             if (e.type == EventType.MouseDown && e.button == 0)
             {
+                if (placePositionOnce && mode == Mode.Markup && !floor.Contains(new Vector3(hit.x, floor.center.y, hit.z)))
+                { status = "Позиция вне пола арены. Выберите точку на полу."; e.Use(); RepaintViews(); return; }
                 if(mode==Mode.Build)
                 {
                     var picked=HandleUtility.PickGameObject(e.mousePosition,false);
@@ -385,6 +424,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 drawing = true; gestureScene = scene; previous = cell; GUIUtility.hotControl = control;
                 if (mode == Mode.Markup) Undo.RegisterCompleteObjectUndo(markup, "Смысловая кисть");
                 Apply(cell, scene, origin, floor); e.Use();
+                if (placePositionOnce && mode == Mode.Markup) { placePositionOnce = false; active = false; FinishGesture(); }
             }
             else if (e.type == EventType.MouseDrag && drawing && e.button == 0)
             {
@@ -719,11 +759,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 try { placed=BlockoutRegistryFactory.Create(Definition,scene,wallOrigin,placementYaw,PlacementDimensions,placementMaterial,placementOpenings); }
                 catch(ArgumentException error) {status=error.Message;return;}
                 catch(InvalidOperationException error) {status=error.Message;return;}
-                if(container==null)
-                {
-                    var parent=new GameObject("Блокаут");SceneManager.MoveGameObjectToScene(parent,scene);
-                    Undo.RegisterCreatedObjectUndo(parent,"Создать контейнер блокаута");container=parent.AddComponent<BlockoutSceneContainer>();
-                }
+                if(container==null)container=BlockoutContainerHierarchy.GetOrCreate(scene);
                 Undo.SetTransformParent(placed.transform,container.transform,"Поместить блок в контейнер");
                 target=WorldBounds(placed);
                 coverId="cover-"+Guid.NewGuid().ToString("N"); suggestPosition=false;
@@ -765,7 +801,15 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 if (string.IsNullOrWhiteSpace(activeId)) { status = "Укажите непустой ID."; return; }
                 int half = brushCells / 2;
                 if (!erase && layer == BlockoutMarkup.Layer.Position && !markup.positions.Any(p => p.id == activeId.Trim()))
-                    markup.positions.Add(new BlockoutMarkup.Position { id = activeId.Trim(), centerCell = cell, sizeCells = brushCells });
+                {
+                    var state = new BlockoutPositionState { id = "state-" + Guid.NewGuid().ToString("N"), stance = BlockoutStance.Standing };
+                    markup.positions.Add(new BlockoutMarkup.Position { id = activeId.Trim(), displayName = "Позиция " + (markup.positions.Count + 1),
+                        centerCell = cell, sizeCells = brushCells,
+                        states = markup.schemaVersion == BlockoutMarkup.CurrentSchemaVersion ? new[] { state } : Array.Empty<BlockoutPositionState>(),
+                        protectedStateId = markup.schemaVersion == BlockoutMarkup.CurrentSchemaVersion ? state.id : null });
+                    candidateIndex = markup.positions.Count - 1;
+                    BlockoutPositionHandles.SelectState(markup, state.id);
+                }
                 for (int x = 0; x < brushCells; x++) for (int z = 0; z < brushCells; z++)
                 {
                     var c = cell + new Vector2Int(x - half, z - half);
@@ -778,16 +822,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
             status = null;
         }
         private static BlockoutSceneContainer FindBrushContainer(Scene scene,out string reason)
-        {
-            reason=null;
-            var containers=scene.GetRootGameObjects().SelectMany(g=>g.GetComponentsInChildren<BlockoutSceneContainer>(true)).ToArray();
-            if(containers.Length>1){reason="В сцене несколько контейнеров блокаута. Оставьте один перед новым размещением.";return null;}
-            var container=containers.FirstOrDefault();
-            if(container!=null&&(container.transform.parent!=null||container.transform.position.sqrMagnitude>.00000001f
-                ||Quaternion.Angle(container.transform.rotation,Quaternion.identity)>.001f||(container.transform.localScale-Vector3.one).sqrMagnitude>.00000001f))
-            {reason="Контейнер блокаута должен быть корневым, с позицией 0, поворотом 0 и масштабом 1. Существующие объекты не перемещены.";return null;}
-            return container;
-        }
+            => BlockoutContainerHierarchy.Find(scene,out reason);
         private void PaintPosition(BlockoutMarkup.Position position, bool remove)
         {
             if (remove)
@@ -862,23 +897,19 @@ namespace VrBattlegrounds.Editor.LevelDesign
                     Handles.Label(new Vector3(origin.x + (c.x + .5f) * BlockoutGrid.Cell, y, origin.y + (c.z + .5f) * BlockoutGrid.Cell),
                         c.Conflicting ? "!" : c.routeIds.Count.ToString());
             }
-            foreach (var position in markup.positions)
-            {
-                Vector3 center = new Vector3(origin.x + (position.centerCell.x + .5f) * BlockoutGrid.Cell, y, origin.y + (position.centerCell.y + .5f) * BlockoutGrid.Cell);
-                Handles.Label(center, position.id + (position.confirmed ? " ✓" : " ?"));
-                Handles.ArrowHandleCap(0, center, Quaternion.Euler(0, position.mainThreatYaw, 0), BlockoutGrid.PositionSize, EventType.Repaint);
-            }
         }
         private void CreateMarkup()
         {
             if (!Context(out Scene scene, out Vector2 origin, out _)) { status = "Откройте карту с физической ареной."; return; }
             string path = EditorUtility.SaveFilePanelInProject("Разметка карты", scene.name + "-markup", "asset", "Editor-only артефакт ручной гипотезы", "Assets/Editor/VR_Battlegrounds/LevelDesign");
             if (string.IsNullOrEmpty(path)) return;
+            if (AssetDatabase.LoadMainAssetAtPath(path) != null)
+            { status = "Ассет уже существует: выберите другое имя разметки."; return; }
             var data = CreateInstance<BlockoutMarkup>();
             data.sceneGuid = AssetDatabase.AssetPathToGUID(scene.path); data.scenePath = scene.path;
             data.arenaId=ArenaId(scene);
             data.origin = origin; data.step = BlockoutGrid.Cell; data.module = BlockoutGrid.Module;
-            AssetDatabase.CreateAsset(data, path); AssetDatabase.SaveAssets(); markup = data;
+            AssetDatabase.CreateAsset(data, path); AssetDatabase.SaveAssetIfDirty(data); markup = data;
         }
         private void Export()
         {

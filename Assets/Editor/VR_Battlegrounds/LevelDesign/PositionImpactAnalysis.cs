@@ -8,6 +8,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
     [Serializable] public sealed class PositionImpactResult
     {
         public int version = 1; public string map; public bool complete;
+        public string inputFingerprint;
         public string[] problems = Array.Empty<string>();
         public string[] assumptions;
         public ImpactPairState[] pairs = Array.Empty<ImpactPairState>();
@@ -21,12 +22,17 @@ namespace VrBattlegrounds.Editor.LevelDesign
         public const int MaximumInfluenceIntervals = 50000;
 
         public static PositionImpactResult Analyze(MapGrid grid, PositionImpactLayout layout,
-            int intervalBudget = MaximumInfluenceIntervals)
+            int intervalBudget = MaximumInfluenceIntervals, float[] clearance = null)
         {
-            var result = new PositionImpactResult
-            {
-                map = layout?.map,
-                assumptions = new[]
+            var result = new PositionImpactResult();
+            foreach (var work in AnalyzeSteps(grid, layout, result, intervalBudget, clearance)) work.Execute();
+            return result;
+        }
+        internal static IEnumerable<MapEvaluationWork> AnalyzeSteps(MapGrid grid, PositionImpactLayout layout,
+            PositionImpactResult result, int intervalBudget = MaximumInfluenceIntervals, float[] clearance = null, MapRouteBuilder routeBuilder = null)
+        {
+                result.map = layout?.map;
+                result.assumptions = new[]
                 {
                     "Геометрические доли взвешенных образцов тела, не вероятность попадания или победы.",
                     "Явные состояния дизайнера. Проверяется горизонтальный диск, не полный 3D объём тела/оружия.",
@@ -36,17 +42,23 @@ namespace VrBattlegrounds.Editor.LevelDesign
                     "Точки маршрута привязаны к центрам клеток; интервалы измерены в серединах рёбер. Скорость постоянна.",
                     "complete означает расчёт всех запрошенных данных, не доказанный баланс или полноту тактической разметки.",
                     "Клетки вне областей позиций считаются неразмеченными; автоматического поиска удержаний и независимых подходов ещё нет."
-                }
-            };
-            List<string> problems = PositionImpactValidation.Validate(grid, layout);
-            if (problems.Count > 0) { result.problems = problems.ToArray(); return result; }
+                };
+            float[] clear = grid == null ? null : clearance ?? MapAnalyzer.Clearance(grid);
+            List<string> problems = PositionImpactValidation.Validate(grid, layout, clear);
+            if (problems.Count > 0) { result.problems = problems.ToArray(); yield break; }
+            result.inputFingerprint = PositionImpactFingerprint.Compute(grid, layout);
             var pairs = new List<ImpactPairState>();
             foreach (ImpactPosition from in layout.positions)
             foreach (ImpactPosition to in layout.positions)
-                if (from.id != to.id) pairs.AddRange(PositionImpactAnalyzer.EvaluatePair(grid, from, to));
+            {
+                if (from.id == to.id) continue;
+                var baseline = string.IsNullOrEmpty(from.protectedState) ? null : from.states.Single(s => s.id == from.protectedState);
+                foreach (var a in from.states) foreach (var b in to.states)
+                    yield return new MapEvaluationWork(3 * (a.body.Length + b.body.Length + (baseline?.body.Length ?? 0)),
+                        () => pairs.Add(PositionImpactAnalyzer.EvaluatePairState(grid, from, to, a, b, baseline)), "contacts");
+            }
             result.pairs = pairs.ToArray();
 
-            float[] clear = MapAnalyzer.Clearance(grid);
             for (int i = 0; i < grid.Count; i++)
             {
                 if (grid.Blocked[i] || clear[i] < layout.radius) continue;
@@ -68,7 +80,15 @@ namespace VrBattlegrounds.Editor.LevelDesign
             {
                 ImpactState start = layout.positions.Single(p => p.id == spec.from).states.Single(s => s.id == spec.fromState);
                 ImpactState end = layout.positions.Single(p => p.id == spec.to).states.Single(s => s.id == spec.toState);
-                ImpactRoute route = PositionRouteAnalyzer.Build(grid, start.center, end.center, spec.via, layout.radius, layout.speed);
+                bool[] mask = null;
+                if (spec.allowedCellIndices != null)
+                { mask = new bool[grid.Count]; foreach (int cell in spec.allowedCellIndices) mask[cell] = true; }
+                ImpactRoute route = null;
+                var task = routeBuilder?.Invoke(grid, start.center, end.center, spec.via, layout.radius, layout.speed, mask, clear, spec.requireDirect);
+                if (task == null)
+                    yield return new MapEvaluationWork(0, () => route = PositionRouteAnalyzer.Build(grid, start.center, end.center, spec.via, layout.radius, layout.speed, mask, clear, spec.requireDirect), "routes");
+                else
+                    yield return new MapEvaluationWork(0, () => route = task.GetAwaiter().GetResult(), "routes", () => task.IsCompleted);
                 route.id = spec.id; route.from = spec.from; route.to = spec.to;
                 routes.Add(route);
                 if (!route.reachable) { problems.Add(spec.id + ": " + route.problem); continue; }
@@ -79,7 +99,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
                     if (evaluatedIntervals + count > intervalBudget)
                     { budgetExceeded = true; continue; }
                     evaluatedIntervals += count;
-                    ImpactRouteInfluence row = PositionRouteAnalyzer.Evaluate(grid, s, route, start, layout.speed);
+                    var row = new ImpactRouteInfluence();
+                    foreach (var work in PositionRouteAnalyzer.EvaluateSteps(grid, s, route, start, layout.speed, row)) yield return work.InCategory("contacts");
                     row.position = p.id; row.route = spec.id; row.targetTemplate = spec.from + "/" + start.id;
                     influences.Add(row);
                 }
@@ -87,7 +108,6 @@ namespace VrBattlegrounds.Editor.LevelDesign
             if (budgetExceeded) problems.Add("Превышен лимит интервалов влияния. Часть сочетаний отсутствует, а не равна нулю.");
             result.routes = routes.ToArray(); result.influences = influences.ToArray();
             result.problems = problems.ToArray(); result.complete = !budgetExceeded;
-            return result;
         }
     }
 }

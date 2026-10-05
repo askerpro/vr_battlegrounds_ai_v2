@@ -23,14 +23,21 @@ namespace VrBattlegrounds.Editor.LevelDesign
             public string id;
             public bool physicallyBidirectional = true;
             public string scenarioFromPositionId, scenarioToPositionId;
+            public string fromPositionId, toPositionId, fromStateId, toStateId;
+            public bool requireDirect;
+            public int widthCells = 5;
+            public List<Vector2Int> viaCells = new List<Vector2Int>();
         }
         [Serializable] public sealed class Position
         {
             public string id;
+            public string displayName;
             public Vector2Int centerCell;
             public int sizeCells = 5;
             public float mainThreatYaw;
             public bool confirmed;
+            public BlockoutPositionState[] states = Array.Empty<BlockoutPositionState>();
+            public string protectedStateId;
             public List<string> supportingCoverIds = new List<string>();
         }
         [Serializable] public sealed class Cover
@@ -39,7 +46,9 @@ namespace VrBattlegrounds.Editor.LevelDesign
             public List<string> blockGlobalObjectIds = new List<string>();
             public Bounds footprintSnapshot;
         }
-        public int schemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
+        // Сохранённый schemaVersion=1 остаётся прежним; новые артефакты используют текущую схему.
+        public int schemaVersion = CurrentSchemaVersion;
         public bool needsReevaluation = true;
         public string sceneGuid, scenePath, arenaId = "Environment";
         public Vector2 origin;
@@ -48,6 +57,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
         public List<Route> routes = new List<Route>();
         public List<Position> positions = new List<Position>();
         public List<Cover> covers = new List<Cover>();
+        public MapBodyProfile bodyProfile;
+        public List<BlockoutContactSpec> contacts = new List<BlockoutContactSpec>();
         public enum Layer { Position, Route, HighCover, Constraint }
 
         public void Paint(Vector2Int coordinate, Layer layer, string id, bool erase)

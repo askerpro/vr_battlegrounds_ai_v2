@@ -18,17 +18,22 @@ namespace VrBattlegrounds.Editor.LevelDesign
             foreach (ImpactState a in from.states)
             foreach (ImpactState b in to.states)
             {
-                ImpactPairState row = Evaluate(grid, a, b);
-                row.from = from.id; row.to = to.id;
-                if (baseline != null)
-                {
-                    row.hasProtectedBaseline = true;
-                    row.sourceBaselineExposure = Probe(grid, b, baseline).shotShare;
-                    row.openingExposureDelta = row.sourceExposure - row.sourceBaselineExposure;
-                }
-                rows.Add(row);
+                rows.Add(EvaluatePairState(grid, from, to, a, b, baseline));
             }
             return rows;
+        }
+        internal static ImpactPairState EvaluatePairState(MapGrid grid, ImpactPosition from, ImpactPosition to,
+            ImpactState a, ImpactState b, ImpactState baseline)
+        {
+            ImpactPairState row = Evaluate(grid, a, b);
+            row.from = from.id; row.to = to.id;
+            if (baseline != null)
+            {
+                row.hasProtectedBaseline = true;
+                row.sourceBaselineExposure = Probe(grid, b, baseline).shotShare;
+                row.openingExposureDelta = row.sourceExposure - row.sourceBaselineExposure;
+            }
+            return row;
         }
 
         /// <summary>Одна явная пара поз. Обратная открытость относится к тому же состоянию источника.</summary>

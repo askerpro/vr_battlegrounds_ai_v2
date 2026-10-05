@@ -85,13 +85,38 @@ namespace VrBattlegrounds.Tests.Maps
                     "Визуальная метка калибровки не должна становиться физическим препятствием.");
         }
 
-        [Test]
-        public void SpawnZones_RemainTriggers()
+        [TestCase("Assets/Scenes/Lobby.unity", 1)]
+        [TestCase("Assets/Scenes/Maps/TestMap1.unity", 2)]
+        [TestCase("Assets/Scenes/Maps/TestMap2.unity", 2)]
+        [TestCase("Assets/Scenes/Maps/TestMap3.unity", 2)]
+        [TestCase("Assets/Scenes/Maps/ReferenceMap04.unity", 2)]
+        [TestCase("Assets/Scenes/Maps/ServiceYard.unity", 2)]
+        public void SpawnZones_RemainTriggers(string scenePath, int expectedZones)
         {
-            var zones = arena.GetComponentsInChildren<TeamSpawnZone>(true)
-                .SelectMany(zone => zone.GetComponentsInChildren<Collider>(true)).ToArray();
-            Assert.That(zones.Length, Is.EqualTo(2));
-            Assert.That(zones.All(c => c.enabled && c.isTrigger), Is.True);
+            // Общий Environment больше не владеет спавнами: они принадлежат Gameplay каждой карты.
+            Assert.That(arena.GetComponentsInChildren<TeamSpawnZone>(true), Is.Empty,
+                "Спавны карты не должны возвращаться в общий префаб окружения.");
+            var mapScene = EditorSceneManager.OpenPreviewScene(scenePath);
+            try
+            {
+                var roots = mapScene.GetRootGameObjects();
+                var gameplayRoots = roots.Where(root => root.name == "Gameplay").ToArray();
+                Assert.That(gameplayRoots.Length, Is.EqualTo(1), scenePath + ": нужен один корень Gameplay.");
+                var zones = roots.SelectMany(root => root.GetComponentsInChildren<TeamSpawnZone>(true)).ToArray();
+                Assert.That(zones.Length, Is.EqualTo(expectedZones), scenePath);
+                foreach (var zone in zones)
+                {
+                    Assert.That(zone.transform.IsChildOf(gameplayRoots[0].transform), Is.True,
+                        scenePath + ": зона должна принадлежать Gameplay, а не Environment или PhysicalArenaLayout.");
+                    var colliders = zone.GetComponentsInChildren<Collider>(true);
+                    Assert.That(colliders.Length, Is.EqualTo(1), scenePath + ": у каждой зоны должен быть один коллайдер.");
+                    Assert.That(colliders.All(c => c.enabled && c.isTrigger), Is.True, scenePath + ": " + zone.name);
+                }
+            }
+            finally
+            {
+                EditorSceneManager.ClosePreviewScene(mapScene);
+            }
         }
 
         [TestCase("support", true)]

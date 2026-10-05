@@ -76,12 +76,12 @@ namespace VrBattlegrounds.Editor.LevelDesign
             return reason == null;
         }
 
-        public static BlockoutHeightGeometry Initialize(GameObject instance, float baseHeight, float targetHeight)
+        public static BlockoutHeightGeometry Initialize(GameObject instance, float baseHeight, float targetHeight, bool recordUndo = true)
         {
             if (!CanResize(instance, out string reason)) throw new ArgumentException(reason);
             var geometry = instance.GetComponent<BlockoutHeightGeometry>();
-            if (geometry == null) geometry = Undo.AddComponent<BlockoutHeightGeometry>(instance);
-            Undo.RegisterFullObjectHierarchyUndo(instance, "Изменить высоту блока");
+            if (geometry == null) geometry = recordUndo ? Undo.AddComponent<BlockoutHeightGeometry>(instance) : instance.AddComponent<BlockoutHeightGeometry>();
+            if (recordUndo) Undo.RegisterFullObjectHierarchyUndo(instance, "Изменить высоту блока");
             if (geometry.Initialized) geometry.ApplyHeight(targetHeight); else geometry.Initialize(baseHeight, targetHeight);
             Record(instance);
             return geometry;

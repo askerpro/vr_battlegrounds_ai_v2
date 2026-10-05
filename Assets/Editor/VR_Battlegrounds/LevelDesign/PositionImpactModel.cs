@@ -20,12 +20,16 @@ namespace VrBattlegrounds.Editor.LevelDesign
     {
         public string id; public string from; public string to;
         public string fromState; public string toState; public Vector2[] via;
+        // null — прежний путь по всей сетке; пустой массив — явно пустой допустимый коридор.
+        public int[] allowedCellIndices; public bool requireDirect;
     }
     [Serializable] public sealed class PositionImpactLayout
     {
         // Паспорт явно выбирает Open/Closed; отсутствие значения не подтверждает тип карты.
         public MapEvaluationProfile profile;
         public int version = 1; public string map; public float radius = 0.5f; public float speed = 1;
+        public string sceneGuid, bodyProfileId;
+        public int bodyProfileVersion; public bool bodyProfileCalibrated;
         public ImpactPosition[] positions; public ImpactRouteSpec[] routes = Array.Empty<ImpactRouteSpec>();
     }
     [Serializable] public sealed class ImpactPairState
@@ -60,7 +64,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
     public static class PositionImpactValidation
     {
         /// <summary>Проверка явной разметки; диск на полу не доказывает допустимость полного 3D тела.</summary>
-        public static List<string> Validate(MapGrid grid, PositionImpactLayout layout)
+        public static List<string> Validate(MapGrid grid, PositionImpactLayout layout, float[] clearance = null)
         {
             var errors = new List<string>();
             if (grid == null || layout == null) { errors.Add("Нет сетки или разметки."); return errors; }
@@ -69,7 +73,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 errors.Add("Радиус и скорость должны быть конечными положительными числами.");
             if (layout.positions == null || layout.positions.Length == 0 || layout.positions.Length > 32)
             { errors.Add("Требуется от 1 до 32 позиционных областей."); return errors; }
-            float[] clear = MapAnalyzer.Clearance(grid);
+            float[] clear = clearance ?? MapAnalyzer.Clearance(grid);
+            if (clear.Length != grid.Count) { errors.Add("Clearance принадлежит другой сетке."); return errors; }
             var positions = new Dictionary<string, ImpactPosition>(StringComparer.Ordinal);
             int stateCount = 0;
             foreach (ImpactPosition p in layout.positions)
@@ -121,6 +126,13 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 { errors.Add("Пустой или повторяющийся ID маршрута."); continue; }
                 if (!HasState(positions, r.from, r.fromState) || !HasState(positions, r.to, r.toState))
                     errors.Add(r.id + ": неизвестная позиция/состояние конца маршрута.");
+                if (r.allowedCellIndices != null)
+                {
+                    var cells = new HashSet<int>();
+                    foreach (int cell in r.allowedCellIndices)
+                        if (cell < 0 || cell >= grid.Count || !cells.Add(cell))
+                            errors.Add(r.id + ": индекс коридора вне сетки или повторяется.");
+                }
                 if (r.via != null)
                 {
                     if (r.via.Length > 16) errors.Add(r.id + ": не более 16 промежуточных порталов.");

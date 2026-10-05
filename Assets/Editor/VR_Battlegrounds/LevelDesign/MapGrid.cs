@@ -59,6 +59,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
         /// Видно ли из точки в точку: XZ — мир, Y — над полом. По умолчанию — по пролётам клеток.
         /// </summary>
         public Func<Vector3, Vector3, bool> LineOfSight;
+        // Только native grid. Числовой снимок и законченный результат этот delegate не удерживают.
+        internal Func<MapGrowthRayRequest[], MapGrowthRayBatchHandle> BeginLineBatch;
 
         /// <summary>
         /// Долетит ли пуля из точки в точку (координаты как у <see cref="LineOfSight"/>): сквозь Soft и Visual — да,

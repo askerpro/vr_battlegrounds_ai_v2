@@ -17,8 +17,16 @@ namespace VrBattlegrounds.Editor.LevelDesign
             layoutPath = layoutPath ?? DefaultLayoutPath(scene.name);
             PositionImpactLayout layout = File.Exists(layoutPath)
                 ? JsonUtility.FromJson<PositionImpactLayout>(File.ReadAllText(layoutPath, Encoding.UTF8)) : null;
+            return EvaluateLayout(scene, layout, profile);
+        }
+
+        /// <summary>Явный layout из BlockoutMarkup использует тот же backend, без второго JSON-источника позиций.</summary>
+        public static MapEvaluationResult EvaluateLayout(Scene scene, PositionImpactLayout layout,
+            MapEvaluationProfile profile = MapEvaluationProfile.Unspecified, MapGridBuilder.Result built = null)
+        {
+            if (!scene.IsValid() || !scene.isLoaded) throw new ArgumentException("Нужна загруженная сцена.");
             if (profile == MapEvaluationProfile.Unspecified && layout != null) profile = layout.profile;
-            var built = MapGridBuilder.Build(scene);
+            built = built ?? MapGridBuilder.Build(scene);
             int ground = LayerMask.NameToLayer("Ground");
             var colliders = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Collider>(false))
                 .Where(BlockoutSupportSurfaces.IsActiveSolid).ToArray();

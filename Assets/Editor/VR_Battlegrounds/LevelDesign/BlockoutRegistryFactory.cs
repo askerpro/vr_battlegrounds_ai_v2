@@ -118,18 +118,45 @@ namespace VrBattlegrounds.Editor.LevelDesign
         }
         public static GameObject Create(BlockoutBlockDefinition definition,Scene scene,Vector3 origin,float yaw,Vector3 dimensions,CoverClass material,BlockoutOpeningSettings openings,
             Func<GameObject,IEnumerable<Bounds>,bool> placementConflict = null,float? cellStep = null)
+            => CreateCore(definition,scene,origin,yaw,dimensions,material,openings,placementConflict,cellStep,true);
+
+        /// <summary>Штатная геометрия рецепта в отдельной PhysicsScene, без пользовательского Undo.</summary>
+        public static GameObject CreatePreview(BlockoutBlockDefinition definition,Scene scene,MapGrowthBlockRecipe recipe,float cellStep=.3f)
+        {
+            if(recipe==null||definition==null||recipe.ShapeId!=definition.shapeId||!scene.IsValid()||!scene.isLoaded
+                ||scene.GetPhysicsScene()==Physics.defaultPhysicsScene)
+                throw new ArgumentException("Preview требует рецепт этой формы и отдельную загруженную PhysicsScene.");
+            if(!BlockoutSectionFactory.Validate(definition,recipe.Dimensions,recipe.CopySections(),out string reason))throw new ArgumentException(reason);
+            // InstantiatePrefab создаёт корень в scene; SetParent секций переносит их туда до добавления геометрии.
+            // Active scene не меняется, рабочая сцена не получает Undo/dirty-записей.
+            return CreateCore(definition,scene,recipe.BottomCenter,recipe.Yaw,recipe.Dimensions,recipe.CopySections()[0].material,
+                BlockoutOpeningSettings.Default,null,cellStep,false,recipe);
+        }
+
+        /// <summary>Тот же рецепт/нижний центр/секции в рабочей карте, с пользовательским Undo.</summary>
+        public static GameObject CreateRecipe(BlockoutBlockDefinition definition,Scene scene,MapGrowthBlockRecipe recipe,float cellStep=.3f)
+        {
+            if(recipe==null||definition==null||recipe.ShapeId!=definition.shapeId||!scene.IsValid()||!scene.isLoaded)
+                throw new ArgumentException("Нужны рецепт этой формы и загруженная сцена.");
+            if(!BlockoutSectionFactory.Validate(definition,recipe.Dimensions,recipe.CopySections(),out string reason))throw new ArgumentException(reason);
+            return CreateCore(definition,scene,recipe.BottomCenter,recipe.Yaw,recipe.Dimensions,recipe.CopySections()[0].material,
+                BlockoutOpeningSettings.Default,null,cellStep,true,recipe);
+        }
+
+        private static GameObject CreateCore(BlockoutBlockDefinition definition,Scene scene,Vector3 origin,float yaw,Vector3 dimensions,CoverClass material,BlockoutOpeningSettings openings,
+            Func<GameObject,IEnumerable<Bounds>,bool> placementConflict,float? cellStep,bool recordUndo,MapGrowthBlockRecipe preview=null)
         {
             if(Current==null||!Current.Definitions.Contains(definition))throw new ArgumentException("Новые блоки создаются только из активного канонического реестра. Старые определения доступны для редактирования существующих объектов.");
             if(!ValidatePlacement(definition,dimensions,material,openings,yaw,out string reason,cellStep)) throw new ArgumentException(reason);
             float step=cellStep??BlockoutGrid.Cell;
             // Клетки прямой формы не являются физической геометрией или источником её толщины.
             var wallCells=new List<Vector2Int>();
-            Undo.IncrementCurrentGroup();int group=Undo.GetCurrentGroup();GameObject go=null;
+            if(recordUndo)Undo.IncrementCurrentGroup();int group=recordUndo?Undo.GetCurrentGroup():-1;GameObject go=null;
             try
             {
                 go=(GameObject)PrefabUtility.InstantiatePrefab(definition.geometryPrefab,scene);
-                // Создание регистрируется до первого Undo.AddComponent; иначе его запись подавляет уничтожение корня при Undo.
-                Undo.RegisterCreatedObjectUndo(go,"Поставить блок по реестру");
+                // Вся новая иерархия готовится без промежуточных Undo.AddComponent/создания секций.
+                // Единственная запись создания ниже сохраняет окончательные якорь, рецепт и ссылки дочерних объектов.
                 // Экземпляр хранит связь с definition, чтобы свойства не зависели от старого варианта префаба.
                 if(definition.supportsCellWall) PrefabUtility.UnpackPrefabInstance(go,PrefabUnpackMode.Completely,InteractionMode.AutomatedAction);
                 go.transform.localScale=Vector3.one;
@@ -146,12 +173,23 @@ namespace VrBattlegrounds.Editor.LevelDesign
                     var stepped=go.GetComponent<BlockoutSteppedGeometry>();
                     if(stepped!=null)stepped.ApplyHeight(dimensions.y);
                     else if(definition.heightEditable)
-                        BlockoutHeightGeometryEditor.Initialize(go,GeometryBounds(definition.geometryPrefab).size.y,dimensions.y);
+                        BlockoutHeightGeometryEditor.Initialize(go,GeometryBounds(definition.geometryPrefab).size.y,dimensions.y,false);
                     go.transform.SetPositionAndRotation(Vector3.zero,Quaternion.Euler(0,yaw,0));
                     go.transform.position+=origin-WorldBounds(go).min;
                 }
                 var instance=go.AddComponent<BlockoutBlockInstance>();instance.definition=definition;
-                WriteProperties(instance,dimensions,material,openings);
+                WriteProperties(instance,dimensions,material,openings,false);
+                if(preview!=null)
+                {
+                    if(go.TryGetComponent<BlockoutSteppedGeometry>(out var steppedRecipe))
+                    {steppedRecipe.baseSize=new Vector2(dimensions.x,dimensions.z);steppedRecipe.topSize=preview.TopSize;}
+                    BlockoutSectionFactory.PrepareGeometry(go,dimensions,preview.CopySections(),false);
+                    go.transform.rotation=Quaternion.Euler(0,yaw,0);
+                    var local=GeometryBounds(go);
+                    go.transform.position=origin-go.transform.TransformVector(new Vector3(local.center.x,local.min.y,local.center.z));
+                    Physics.SyncTransforms();
+                    if(recordUndo){BlockoutSectionFactory.Record(go);Undo.RegisterCreatedObjectUndo(go,"Поставить блок по реестру");Undo.CollapseUndoOperations(group);}return go;
+                }
                 Physics.SyncTransforms();
                 var volumes=go.TryGetComponent<BlockoutCellWall>(out var cellwall)?cellwall.SolidVolumes():new[]{WorldBounds(go)};
                 var stepGeometry=go.GetComponent<BlockoutSteppedGeometry>();
@@ -159,9 +197,9 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 bool conflict=placementConflict!=null?placementConflict(go,volumes):Conflicts(go,parts);
                 if(conflict) throw new InvalidOperationException(BlockoutPublishedSceneSync.InspectWarning(go)
                     ??"Проверка размещения отклонила новую геометрию.");
-                Undo.CollapseUndoOperations(group);return go;
+                if(recordUndo){BlockoutSectionFactory.Record(go);Undo.RegisterCreatedObjectUndo(go,"Поставить блок по реестру");Undo.CollapseUndoOperations(group);}return go;
             }
-            catch {Undo.RevertAllDownToGroup(group);if(go!=null) Object.DestroyImmediate(go);throw;}
+            catch {if(recordUndo)Undo.RevertAllDownToGroup(group);if(go!=null) Object.DestroyImmediate(go);throw;}
         }
         public static bool ApplyProperties(GameObject selected,Vector3 dimensions,CoverClass material,BlockoutOpeningSettings openings,out string reason,float? yaw=null,bool allowContainedPublishedResize=false,bool forcePublishedResize=false)
         {
@@ -512,11 +550,11 @@ namespace VrBattlegrounds.Editor.LevelDesign
             Vector3 pivot=envelopeMin-rotation*bounds.center+size/2;
             return stepped.WorldPartsAtHeight(height,pivot,rotation);
         }
-        private static void WriteProperties(BlockoutBlockInstance instance,Vector3 dimensions,CoverClass material,BlockoutOpeningSettings openings)
+        private static void WriteProperties(BlockoutBlockInstance instance,Vector3 dimensions,CoverClass material,BlockoutOpeningSettings openings,bool recordUndo=true)
         {
             instance.dimensions=dimensions;instance.material=material;instance.openings=openings;
             if(instance.definition.heightEditable && instance.definition.gameplayGeometry)
-            {BlockoutSectionFactory.Ensure(instance);return;}
+            {BlockoutSectionFactory.Ensure(instance,recordUndo);return;}
             var root=instance.gameObject;
             root.name=instance.definition.title+"_"+material;
             var source=instance.definition.materialVariants.FirstOrDefault(v=>v.material==material)?.sourcePrefab??instance.definition.geometryPrefab;
@@ -529,7 +567,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 if(surface.gameObject!=root&&!CoverClassRules.TryParse(surface.gameObject.name,out _)) surface.gameObject.name+="_"+material;
                 CoverClassRules.TryExpectedClass(surface.gameObject,out var expected);surface.Class=expected;
             }
-            var rootSurface=root.GetComponent<CoverSurface>()??Undo.AddComponent<CoverSurface>(root);
+            var rootSurface=root.GetComponent<CoverSurface>()??(recordUndo?Undo.AddComponent<CoverSurface>(root):root.AddComponent<CoverSurface>());
             CoverClassRules.TryExpectedClass(root,out var rootClass);rootSurface.Class=rootClass;
             var sourceSurface=source.GetComponent<CoverSurface>();if(sourceSurface!=null) rootSurface.PenetrationModifier=sourceSurface.PenetrationModifier;
             foreach(var component in root.GetComponentsInChildren<Component>(true))

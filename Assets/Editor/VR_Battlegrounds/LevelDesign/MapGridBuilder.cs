@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -57,12 +58,21 @@ namespace VrBattlegrounds.Editor.LevelDesign
             public readonly List<string> Problems = new List<string>();
         }
 
-        public static Result Build(Scene scene, float cell = DefaultCell)
+        public static Result Build(Scene scene, float cell = DefaultCell, byte[] capturedZones = null)
+        {
+            using (var operation = Begin(scene, cell, capturedZones))
+            { while (!operation.Step()) { } return operation.Result; }
+        }
+
+        public static MapGridBuildOperation Begin(Scene scene, float cell = DefaultCell, byte[] capturedZones = null,
+            CancellationToken token = default)
+        { MapGrowthSnapshotBuilder.RequireMainThread(); return new MapGridBuildOperation(scene, cell, capturedZones, token); }
+
+        internal static IEnumerable<int> BuildSteps(Scene scene, float cell, byte[] capturedZones, Result result)
         {
             if (!scene.IsValid() || !scene.isLoaded || cell <= 0 || float.IsNaN(cell) || float.IsInfinity(cell))
                 throw new System.ArgumentException("Нужны загруженная сцена и положительный конечный шаг сетки.");
             Physics.SyncTransforms();
-            var result = new Result();
             Collider[] colliders = scene.GetRootGameObjects()
                                         .SelectMany(r => r.GetComponentsInChildren<Collider>(false))
                                         .Where(BlockoutSupportSurfaces.IsActiveSolid)
@@ -73,7 +83,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
             if (floors.Length == 0)
             {
                 result.Problems.Add("нет пола на слое Ground");
-                return result;
+                yield break;
             }
 
             Bounds floor = floors[0].bounds;
@@ -142,16 +152,18 @@ namespace VrBattlegrounds.Editor.LevelDesign
             result.Vaultables.AddRange(registeredVaultables.Values);
 
             PhysicsScene physics = scene.GetPhysicsScene();
-            var hits = new RaycastHit[64];
+            var rays = new CompleteRayQuery(physics);
             float top = floorY + 10f;
-            grid.Footprint = MapCellFootprint.Capture(scene, grid, floorY, obstacles, vaultable);
+            foreach (int count in MapCellFootprint.CaptureSteps(scene, grid, floorY, obstacles, vaultable, value => grid.Footprint = value))
+                yield return count;
 
             for (int i = 0; i < grid.Count; i++)
             {
                 Vector2 p = grid.Center(i);
 
-                int count = physics.Raycast(new Vector3(p.x, top, p.y), Vector3.down, hits, top - floorY - 0.01f,
-                                            AllLayers, QueryTriggerInteraction.Ignore);
+                int count = rays.Cast(new Vector3(p.x, top, p.y), Vector3.down, top - floorY - 0.01f);
+                var hits = rays.Hits;
+                yield return 1;
                 for (int h = 0; h < count; h++)
                 {
                     if (!obstacles.TryGetValue(hits[h].collider, out int owner)) continue;
@@ -169,17 +181,22 @@ namespace VrBattlegrounds.Editor.LevelDesign
             {
                 Vector3 from = new Vector3(a.x, floorY + a.y, a.z), to = new Vector3(b.x, floorY + b.y, b.z);
                 Vector3 dir = to - from;
-                int n = physics.Raycast(from, dir.normalized, hits, dir.magnitude, AllLayers, QueryTriggerInteraction.Ignore);
+                int n = rays.Cast(from, dir.normalized, dir.magnitude);
+                var hits = rays.Hits;
                 for (int h = 0; h < n; h++)
                     if (obstacles.ContainsKey(hits[h].collider)) return false;
                 return true;
             };
 
+            grid.BeginLineBatch = requests => MapGrowthRayBatch.Schedule(physics,
+                requests.Select(r => new MapGrowthRayRequest(r.Id, r.From + Vector3.up * floorY, r.To + Vector3.up * floorY)).ToArray(), obstacles.Keys);
+
             grid.ShotLine = (a, b) =>
             {
                 Vector3 from = new Vector3(a.x, floorY + a.y, a.z), to = new Vector3(b.x, floorY + b.y, b.z);
                 Vector3 dir = to - from;
-                int n = physics.Raycast(from, dir.normalized, hits, dir.magnitude, AllLayers, QueryTriggerInteraction.Ignore);
+                int n = rays.Cast(from, dir.normalized, dir.magnitude);
+                var hits = rays.Hits;
                 System.Array.Sort(hits, 0, n, HitDistanceComparer.Instance);
                 int penetrations = 0;
                 float resumeDistance = 0f;
@@ -208,12 +225,37 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 return true;
             };
 
-            MarkZones(scene, grid, floorY, result.Problems);
+            if (capturedZones == null) MarkZones(scene, grid, floorY, result.Problems);
+            else
+            {
+                if (capturedZones.Length != grid.Count || capturedZones.Any(z => z != 0 && z != MapGrid.ZoneA && z != MapGrid.ZoneB))
+                    throw new System.ArgumentException("Маска спавнов не соответствует сетке замороженной карты.");
+                System.Array.Copy(capturedZones, grid.Zone, grid.Count);
+            }
             result.Grid = grid;
-            return result;
         }
 
         private const int AllLayers = ~0;
+
+        // Raycast не гарантирует ближайшие попадания при заполнении массива. Используется всеми видами лучей.
+        private sealed class CompleteRayQuery
+        {
+            private const int MaximumHits = 4096;
+            private readonly PhysicsScene physics;
+            public RaycastHit[] Hits { get; private set; } = new RaycastHit[64];
+            public CompleteRayQuery(PhysicsScene physics) => this.physics = physics;
+            public int Cast(Vector3 from, Vector3 direction, float distance)
+            {
+                for (;;)
+                {
+                    int count = physics.Raycast(from, direction, Hits, distance, AllLayers, QueryTriggerInteraction.Ignore);
+                    if (count < Hits.Length) return count;
+                    if (Hits.Length >= MaximumHits)
+                        throw new System.InvalidOperationException("Измерение луча неполно: не менее " + MaximumHits + " попаданий. Упростите пересекаемую геометрию карты.");
+                    Hits = new RaycastHit[System.Math.Min(MaximumHits, Hits.Length * 2)];
+                }
+            }
+        }
 
         private sealed class HitDistanceComparer : IComparer<RaycastHit>
         {

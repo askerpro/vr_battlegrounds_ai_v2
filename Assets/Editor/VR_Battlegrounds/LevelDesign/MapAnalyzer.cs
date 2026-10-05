@@ -251,16 +251,23 @@ namespace VrBattlegrounds.Editor.LevelDesign
         /// <summary>LD-15: линии видимости между спавн-зонами сторон (стоя или присев, в том числе через окна).</summary>
         public static List<Sightline> FindBaseToBaseSightlines(MapGrid g, float[] clear)
         {
+            var result = new List<Sightline>();
+            foreach (var work in BaseSightlineSteps(g, clear, result, false)) work.Execute();
+            return result;
+        }
+        internal static IEnumerable<MapEvaluationWork> BaseSightlineSteps(MapGrid g, float[] clear, List<Sightline> result, bool blindShot)
+        {
             List<int> a = Samples(g, clear, i => g.Zone[i] == MapGrid.ZoneA);
             List<int> b = Samples(g, clear, i => g.Zone[i] == MapGrid.ZoneB);
-            var result = new List<Sightline>();
             foreach (int i in a)
             foreach (int j in b)
             {
-                if (SeeEachOther(g, g.Center(i), g.Center(j)))
-                    result.Add(new Sightline { From = g.Center(i), To = g.Center(j) });
+                yield return new MapEvaluationWork(blindShot ? 8 : 4, () => {
+                    bool seen = SeeEachOther(g, g.Center(i), g.Center(j));
+                    if (blindShot ? !seen && CanShoot(g, g.Center(i), g.Center(j)) : seen)
+                        result.Add(new Sightline { From = g.Center(i), To = g.Center(j) });
+                });
             }
-            return result;
         }
 
         /// <summary>
@@ -269,15 +276,8 @@ namespace VrBattlegrounds.Editor.LevelDesign
         /// </summary>
         public static List<Sightline> FindBaseToBaseShotlines(MapGrid g, float[] clear)
         {
-            List<int> a = Samples(g, clear, i => g.Zone[i] == MapGrid.ZoneA);
-            List<int> b = Samples(g, clear, i => g.Zone[i] == MapGrid.ZoneB);
             var result = new List<Sightline>();
-            foreach (int i in a)
-            foreach (int j in b)
-            {
-                if (!SeeEachOther(g, g.Center(i), g.Center(j)) && CanShoot(g, g.Center(i), g.Center(j)))
-                    result.Add(new Sightline { From = g.Center(i), To = g.Center(j) });
-            }
+            foreach (var work in BaseSightlineSteps(g, clear, result, true)) work.Execute();
             return result;
         }
 
@@ -358,8 +358,13 @@ namespace VrBattlegrounds.Editor.LevelDesign
         public static VisibilityStats Visibility(MapGrid g, float[] clear)
         {
             var stats = new VisibilityStats();
+            foreach (var work in VisibilitySteps(g, clear, stats)) work.Execute();
+            return stats;
+        }
+        internal static IEnumerable<MapEvaluationWork> VisibilitySteps(MapGrid g, float[] clear, VisibilityStats stats)
+        {
             List<int> samples = Samples(g, clear, _ => true);
-            if (!TryHalves(g, out Vector2 mid, out Vector2 axis)) return stats;
+            if (!TryHalves(g, out Vector2 mid, out Vector2 axis)) yield break;
 
             List<int> halfA = samples.Where(i => Vector2.Dot(g.Center(i) - mid, axis) < 0f).ToList();
             List<int> halfB = samples.Where(i => Vector2.Dot(g.Center(i) - mid, axis) >= 0f).ToList();
@@ -368,10 +373,11 @@ namespace VrBattlegrounds.Editor.LevelDesign
             foreach (int a in halfA)
             foreach (int b in halfB)
             {
+                yield return new MapEvaluationWork(8, () => {
                 if (!SeeEachOther(g, g.Center(a), g.Center(b), out float ha, out float hb))
                 {
                     if (CanShoot(g, g.Center(a), g.Center(b))) stats.BlindShots++;
-                    continue;
+                    return;
                 }
                 if (ThroughOpening(g, g.Center(a), ha, g.Center(b), hb)) stats.ThroughOpenings++;
                 seen[a]++;
@@ -380,6 +386,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 if (d < CloseRange) stats.Close++;
                 else if (d < LongRange) stats.Medium++;
                 else stats.Long++;
+                });
             }
 
             foreach (int i in samples)
@@ -402,7 +409,6 @@ namespace VrBattlegrounds.Editor.LevelDesign
 
             stats.ZoneAExposure = Exposure(MapGrid.ZoneA);
             stats.ZoneBExposure = Exposure(MapGrid.ZoneB);
-            return stats;
         }
 
         // ── Вспомогательное ──────────────────────────────────────────────────

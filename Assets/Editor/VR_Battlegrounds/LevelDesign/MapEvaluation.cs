@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using UnityEngine;
 namespace VrBattlegrounds.Editor.LevelDesign
 {
@@ -33,8 +34,20 @@ namespace VrBattlegrounds.Editor.LevelDesign
             MapEvaluationProfile profile, bool includeVisibility = true,
             int intervalBudget = PositionImpactAnalysis.MaximumInfluenceIntervals, IEnumerable<Bounds> footprints = null)
         {
+            using (var runner = Begin(map, built, layout, profile, includeVisibility, intervalBudget, footprints))
+            { while (!runner.Step()) { } return runner.Result; }
+        }
+        public static MapEvaluationRunner Begin(string map, MapGridBuilder.Result built, PositionImpactLayout layout,
+            MapEvaluationProfile profile, bool includeVisibility = true,
+            int intervalBudget = PositionImpactAnalysis.MaximumInfluenceIntervals, IEnumerable<Bounds> footprints = null,
+            CancellationToken token = default)
+            => new MapEvaluationRunner(map, built, layout, profile, includeVisibility, intervalBudget, footprints, token);
+
+        internal static IEnumerable<MapEvaluationWork> EvaluateSteps(string map, MapGridBuilder.Result built, PositionImpactLayout layout,
+            MapEvaluationProfile profile, bool includeVisibility, int intervalBudget, IEnumerable<Bounds> footprints, MapEvaluationResult r, MapRouteBuilder routeBuilder = null, bool batchLines = false)
+        {
             if (profile == MapEvaluationProfile.Unspecified && layout != null) profile = layout.profile;
-            var r = new MapEvaluationResult { map = map, profile = profile };
+            r.map = map; r.profile = profile;
             Add(r.uncheckedRequirements, "ARENA", "Сверить пол, столбы, якоря и отсутствие смещения физической арены.");
             Add(r.uncheckedRequirements, "BOUNDARY", "Проверить защиту столбов и границ, запрет выхода за арену.");
             Add(r.uncheckedRequirements, "POSE", "Проверить полный объём тела/оружия и комфорт в шлеме.");
@@ -47,22 +60,26 @@ namespace VrBattlegrounds.Editor.LevelDesign
             if (built == null || built.Problems.Count > 0 || built.Grid == null)
             {
                 Add(r.uncheckedRequirements, "GEOMETRY", built == null ? "Нет геометрии." : string.Join("; ", built.Problems));
-                return r;
+                yield break;
             }
             r.grid = built.Grid;
             r.clearance = MapAnalyzer.Clearance(r.grid);
-            r.space = MapSpatialMetrics.Measure(r.grid, r.clearance);
+            r.space = new MapSpatialMetricsResult();
+            foreach (var work in MapSpatialMetrics.MeasureSteps(r.grid, r.space, r.clearance, batchLines: batchLines)) yield return work;
             if (!r.space.complete) Add(r.uncheckedRequirements, "SPACE", r.space.problem);
             AddMany(r.violations, "LD-20", MapAnalyzer.CheckCoverHeights(built.BlockoutTops));
             AddMany(r.violations, "LD-48", MapAnalyzer.CheckVaultables(built.Vaultables));
             r.passages = MapAnalyzer.FindNarrowPassages(r.grid, r.clearance);
             r.pockets = MapAnalyzer.FindUnreachable(r.grid, r.clearance);
-            r.sightlines = MapAnalyzer.FindBaseToBaseSightlines(r.grid, r.clearance);
+            r.sightlines = new List<MapAnalyzer.Sightline>();
+            foreach (var work in MapAnalyzer.BaseSightlineSteps(r.grid, r.clearance, r.sightlines, false)) yield return work;
             AddMany(r.violations, "LD-23", r.passages.Select(p => p.ToString()));
             AddMany(r.violations, "LD-25", r.pockets.Select(p => p.ToString()));
             // Стартовые дуэли допустимы по паспорту; лучи остаются измерением, не запретом.
             AddMany(r.diagnostics, "LD-15", r.sightlines.Select(p => "Стартовая видимость база—база: " + p));
-            AddMany(r.diagnostics, "LD-15", MapAnalyzer.FindBaseToBaseShotlines(r.grid, r.clearance).Select(p => "Стартовый прострел вслепую база—база: " + p));
+            var shotlines = new List<MapAnalyzer.Sightline>();
+            foreach (var work in MapAnalyzer.BaseSightlineSteps(r.grid, r.clearance, shotlines, true)) yield return work;
+            AddMany(r.diagnostics, "LD-15", shotlines.Select(p => "Стартовый прострел вслепую база—база: " + p));
             if (!MapAnalyzer.TryHalves(r.grid, out _, out _))
                 Add(r.uncheckedRequirements, "BASES", "Нет двух размеченных баз; пустые результаты не подтверждают защиту баз.");
             AddMany(r.diagnostics, "LD-49", MapFeedbackRules.CheckApproaches(r.grid, r.clearance));
@@ -72,17 +89,20 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 AddMany(r.diagnostics, "LD-51", MapFeedbackRules.CheckOpenCover(r.grid));
             if (includeVisibility)
             {
-                r.visibility = MapAnalyzer.Visibility(r.grid, r.clearance); r.visibilityMeasured = true;
+                r.visibility = new MapAnalyzer.VisibilityStats();
+                foreach (var work in MapAnalyzer.VisibilitySteps(r.grid, r.clearance, r.visibility)) yield return work;
+                r.visibilityMeasured = true;
                 r.closePairs = r.visibility.Close; r.mediumPairs = r.visibility.Medium; r.longPairs = r.visibility.Long;
                 r.throughOpeningPairs = r.visibility.ThroughOpenings; r.blindShotPairs = r.visibility.BlindShots;
                 r.maxEnemyShare = r.visibility.MaxEnemyShare; r.zoneAExposure = r.visibility.ZoneAExposure; r.zoneBExposure = r.visibility.ZoneBExposure;
             }
             else Add(r.diagnostics, "VISIBILITY", "Общая тепловая карта не запрошена; метрики видимости отсутствуют.");
             if (layout == null)
-            { Add(r.uncheckedRequirements, "CONTACTS", "Нет JSON разметки; контакты и маршруты не измерены."); return r; }
+            { Add(r.uncheckedRequirements, "CONTACTS", "Нет JSON разметки; контакты и маршруты не измерены."); yield break; }
             if (layout.map != map)
-            { Add(r.violations, "LAYOUT", "Имя map в разметке не совпадает с картой."); return r; }
-            r.contacts = PositionImpactAnalysis.Analyze(r.grid, layout, intervalBudget);
+            { Add(r.violations, "LAYOUT", "Имя map в разметке не совпадает с картой."); yield break; }
+            r.contacts = new PositionImpactResult();
+            foreach (var work in PositionImpactAnalysis.AnalyzeSteps(r.grid, layout, r.contacts, intervalBudget, r.clearance, routeBuilder)) yield return work;
             if (!r.contacts.complete)
                 Add(r.uncheckedRequirements, "CONTACTS", "Расчёт отказал или неполон; отсутствующие строки не равны нулю.");
             AddMany(r.diagnostics, "CONTACTS", r.contacts.problems);
@@ -104,7 +124,6 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 !r.uncheckedRequirements.Any(p => p.rule == "CONTACTS") && r.space.complete;
             // Ручные обязательные пункты не снимаются автоматически или устаревшим подтверждением.
             r.readyForPlaytest = r.measurementsComplete && r.violations.Count == 0 && r.uncheckedRequirements.Count == 0;
-            return r;
         }
 
         private static void Add(List<MapEvaluationIssue> list, string rule, string message)

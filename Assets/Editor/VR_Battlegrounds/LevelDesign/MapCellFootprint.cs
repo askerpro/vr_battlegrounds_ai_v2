@@ -34,6 +34,15 @@ namespace VrBattlegrounds.Editor.LevelDesign
         public static MapCellFootprint Capture(Scene scene, MapGrid grid, float floorY,
             IReadOnlyDictionary<Collider, int> obstacles, ISet<Collider> walkThrough = null)
         {
+            MapCellFootprint result = null;
+            foreach (int queryCount in CaptureSteps(scene, grid, floorY, obstacles, walkThrough, value => result = value)) { }
+            return result;
+        }
+
+        /// <summary>Тот же захват, с безопасной точкой после каждого пространственного запроса.</summary>
+        internal static IEnumerable<int> CaptureSteps(Scene scene, MapGrid grid, float floorY,
+            IReadOnlyDictionary<Collider, int> obstacles, ISet<Collider> walkThrough, Action<MapCellFootprint> completed)
+        {
             if (!scene.IsValid() || !scene.isLoaded || grid == null || obstacles == null ||
                 grid.Cell <= 0 || float.IsNaN(grid.Cell) || float.IsInfinity(grid.Cell) ||
                 float.IsNaN(floorY) || float.IsInfinity(floorY))
@@ -53,6 +62,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 Vector2 p = grid.Center(i);
                 owners.Clear();
                 int count = Query(physics, new Vector3(p.x, floorY + (ceiling + epsilon) / 2, p.y), footprintHalf, ref buffer);
+                yield return 1;
                 for (int h = 0; h < count; h++)
                     if (obstacles.TryGetValue(buffer[h], out int owner)) owners.Add(owner);
                 var ids = owners.Count == 0 ? Array.Empty<int>() : new int[owners.Count];
@@ -62,6 +72,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
                 result.Touched[i] = ids.Length != 0;
 
                 count = Query(physics, new Vector3(p.x, floorY + (bodyBottom + bodyTop) / 2, p.y), bodyHalf, ref buffer);
+                yield return 1;
                 for (int h = 0; h < count; h++)
                 {
                     Collider c = buffer[h];
@@ -71,7 +82,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
                     if (result.BlockingOwner[i] < 0 || owner < result.BlockingOwner[i]) result.BlockingOwner[i] = owner;
                 }
             }
-            return result;
+            completed(result);
         }
 
         private static int Query(PhysicsScene physics, Vector3 center, Vector3 half, ref Collider[] buffer)

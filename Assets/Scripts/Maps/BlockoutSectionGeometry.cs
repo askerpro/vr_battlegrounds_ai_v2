@@ -29,12 +29,26 @@ namespace VrBattlegrounds.LevelDesign
         private readonly Mesh[] generated = new Mesh[3];
         private readonly List<BlockoutSolidPart>[] solidParts = new List<BlockoutSolidPart>[3];
         private string builtRecipe;
+        private bool frozen;
         public bool Initialized => initialized;
         public Vector3 AnchorOffset => anchorOffset;
         public bool AnchorInitialized => anchorInitialized;
         /// <summary>Редактор уже перенёс старый прямоугольный корень в центр; новая параметрическая форма сохраняет этот центр.</summary>
         public void AdoptCenteredAnchor() { anchorInitialized = true; builtRecipe = null; }
         public static bool Owns(GameObject root) => root != null && root.GetComponent<BlockoutSectionGeometry>() is BlockoutSectionGeometry geometry && geometry.initialized;
+
+        /// <summary>Неизменяемая копия для оценки: мешами владеет захват, группа сохраняет общую семантику прострела.</summary>
+        public void AdoptFrozenParts(BlockoutSectionPart[] capturedParts, BlockoutSolidPart[][] capturedSolids = null)
+        {
+            if (initialized || capturedParts == null || capturedParts.Length != 3)
+                throw new InvalidOperationException("Замороженная группа создаётся один раз до инициализации геометрии.");
+            for (int i = 0; i < capturedParts.Length; i++)
+                if (capturedParts[i] != null && (capturedParts[i].owner != this || capturedParts[i].sectionIndex != i))
+                    throw new ArgumentException("Секция должна принадлежать этой группе и иметь свой индекс.");
+            if (capturedSolids != null && capturedSolids.Length != 3) throw new ArgumentException("Нужны три списка объёмов секций.");
+            parts = (BlockoutSectionPart[])capturedParts.Clone(); frozen = true; initialized = true;
+            for (int i = 0; i < 3; i++) solidParts[i] = capturedSolids?[i] == null ? null : new List<BlockoutSolidPart>(capturedSolids[i]);
+        }
 
         /// <summary>Снимок исходной формы до выключения прежних Renderer/Collider.</summary>
         public void CaptureSource(GameObject source = null)
@@ -86,6 +100,7 @@ namespace VrBattlegrounds.LevelDesign
 
         public void Rebuild()
         {
+            if (frozen) return;
             var instance = GetComponent<BlockoutBlockInstance>();
             if (!initialized || instance == null || !instance.HasSections || parts.Length != 3 || parts.Any(p => p == null)) return;
             // Поза принадлежит корню даже при прямой правке Transform дочернего объекта.
@@ -94,8 +109,7 @@ namespace VrBattlegrounds.LevelDesign
             { part.transform.localPosition = Vector3.zero; part.transform.localRotation = Quaternion.identity; part.transform.localScale = Vector3.one; }
             var wall = GetComponent<BlockoutCellWall>(); var stepped = GetComponent<BlockoutSteppedGeometry>();
             UpdateAnchor(instance, wall, stepped);
-            string recipe = JsonUtility.ToJson(instance) + JsonUtility.ToJson(this)
-                + (wall != null ? JsonUtility.ToJson(wall) : "") + (stepped != null ? JsonUtility.ToJson(stepped) : "");
+            string recipe = CurrentRecipe(instance, wall, stepped);
             bool intact = builtRecipe == recipe;
             for (int i = 0; i < 3 && intact; i++)
                 intact = generated[i] != null && parts[i].GetComponent<MeshFilter>().sharedMesh == generated[i]
@@ -153,8 +167,29 @@ namespace VrBattlegrounds.LevelDesign
                 renderer.enabled = present; collider.enabled = present;
                 var cover = part.GetComponent<CoverSurface>(); cover.Class = settings.material; cover.PenetrationModifier = penetrationModifier;
             }
-            builtRecipe = JsonUtility.ToJson(instance) + JsonUtility.ToJson(this)
+            builtRecipe = CurrentRecipe(instance, wall, stepped);
+        }
+
+        private string CurrentRecipe(BlockoutBlockInstance instance, BlockoutCellWall wall, BlockoutSteppedGeometry stepped)
+            => JsonUtility.ToJson(instance) + JsonUtility.ToJson(this)
                 + (wall != null ? JsonUtility.ToJson(wall) : "") + (stepped != null ? JsonUtility.ToJson(stepped) : "");
+
+        /// <summary>Только чтение уже построенного точного разбиения; не перестраивает рабочую сцену.</summary>
+        public bool TryCopyBuiltSolidParts(int index, out BlockoutSolidPart[] result)
+        {
+            result = null;
+            if (index < 0 || index > 2 || !initialized || parts == null || parts.Length != 3 || parts[index] == null
+                || solidParts[index] == null || solidParts[index].Count == 0) return false;
+            if (!frozen)
+            {
+                var instance = GetComponent<BlockoutBlockInstance>();
+                if (instance == null || builtRecipe != CurrentRecipe(instance, GetComponent<BlockoutCellWall>(), GetComponent<BlockoutSteppedGeometry>())
+                    || generated[index] == null || parts[index].GetComponent<MeshFilter>().sharedMesh != generated[index]
+                    || parts[index].GetComponent<MeshCollider>().sharedMesh != generated[index]
+                    || parts[index].transform.localPosition != Vector3.zero || parts[index].transform.localRotation != Quaternion.identity
+                    || parts[index].transform.localScale != Vector3.one) return false;
+            }
+            result = solidParts[index].ToArray(); return true;
         }
 
         public IEnumerable<BlockoutSolidPart> LocalSolidParts()

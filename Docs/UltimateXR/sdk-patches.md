@@ -1501,3 +1501,27 @@ cleanup. Полный Test Runner не запускался, чтобы не с�
 [Новый срез](../plans/2026-10-05-sdk-preview-diagnostics-binding.md) прошёл native проверки;
 его UI orbit/zoom/drag и game IK/Quest остаются открытыми.
 
+## Патч 42: атомарная editor identity для генераторов префабов
+
+`UxrComponent.SetEditorUniqueId(Guid, bool, string)` существует только под `UNITY_EDITOR`.
+Он запрещён в Play и для пустого GUID; private setter одновременно обновляет сериализованный
+`_uxrUniqueId` и кеш `UniqueId`, затем задаёт `__isInPrefab`/`__prefabGuid` и помечает только
+сам компонент dirty. Метод не регистрирует runtime-компонент, не поднимает сетевые события
+и не меняет правила `OnValidate`. Вызывающий проверяет источник, владельца и уникальность ID.
+
+Причина: в `LoadPrefabContents` SDK видит nested slot GUID и `IsInPrefab=false`, а у
+сохранённой Demo — outer GUID и `true`. Сериализация временного контекста в источник может
+изменить унаследованный флаг сцены и перевыдать её ID. Кроме того, запись только строки через
+`SerializedObject` оставляет старый кеш. `ChangeUniqueId` в EditMode выдаёт случайный ID,
+поэтому для восстановления сохранённой идентичности не подходит.
+
+Генератор Demo временно отключает автоматическую выдачу ID через EditorPrefs, задаёт final
+asset provenance и сохраняет существующие component identities. В `finally` восстанавливает
+как значение настройки, так и исходное наличие ключа. Обновление Lobby задаёт scene provenance
+и сохраняет независимые ID экземпляров. При обновлении SDK перенести только этот editor API;
+runtime `ChangeUniqueId` и `OnValidate` сохраняют штатную семантику.
+
+Проверено: повтор Create даёт идентичные байты Demo; 668 исходных localFileID и 168 scene UID
+сохранены. Явный `OnValidate` для 42 source и 168 scene компонентов с включённой автоматикой
+не меняет ID. Проверка всей интеграции и финальный Bake выполняются отдельно.
+

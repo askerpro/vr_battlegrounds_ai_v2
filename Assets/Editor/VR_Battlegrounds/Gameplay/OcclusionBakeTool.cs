@@ -99,6 +99,7 @@ namespace VrBattlegrounds.Editor
             typeof(DogTagController),
             typeof(TeamSpawnZone),
             typeof(ShootingTarget),
+            typeof(ShootingRangeDisplay),
             typeof(Canvas),
             typeof(ParticleSystem),
         };

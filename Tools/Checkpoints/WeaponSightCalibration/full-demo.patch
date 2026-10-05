@@ -1,0 +1,34 @@
+--- a/Assets/Data/Weapons/FullDemoArsenal.asset
++++ b/Assets/Data/Weapons/FullDemoArsenal.asset
+@@ -16,7 +16,11 @@
+   _entries:
+   - Weapon: {fileID: 11400000, guid: 802986f4d017e7d4882c1c6022341af4, type: 2}
+     Zone: 0
++  - Weapon: {fileID: 11400000, guid: a339dfd080c0b0c4e987cb9c542d7f30, type: 2}
++    Zone: 0
+   - Weapon: {fileID: 11400000, guid: 7fdcb3f0b05028044a0ba801f61bf4cc, type: 2}
++    Zone: 1
++  - Weapon: {fileID: 11400000, guid: 3fbe178773b125349a542477dff5ecf1, type: 2}
+     Zone: 1
+   - Weapon: {fileID: 11400000, guid: 29c9d566aa4ac214ab127b4e633b4334, type: 2}
+     Zone: 0
+@@ -24,9 +28,13 @@
+     Zone: 0
+   - Weapon: {fileID: 11400000, guid: 06130e656acaee24da3fb3f2d54de872, type: 2}
+     Zone: 0
++  - Weapon: {fileID: 11400000, guid: 42b2a777643acd04d9d3f1e614027fb9, type: 2}
++    Zone: 0
+   - Weapon: {fileID: 11400000, guid: e0b50a7a3495ac74eb153cd542432c4e, type: 2}
+     Zone: 0
+   - Weapon: {fileID: 11400000, guid: 805abd57d56b11d4cbb9548e3c9ade04, type: 2}
++    Zone: 1
++  - Weapon: {fileID: 11400000, guid: 08fc28b1ac0bb8f4db5976bec5566f52, type: 2}
+     Zone: 1
+   - Weapon: {fileID: 11400000, guid: b2e37e600ab1893469a53e2d5940e98b, type: 2}
+     Zone: 1
+@@ -54,3 +62,5 @@
+     Zone: 0
+   - Weapon: {fileID: 11400000, guid: 60bc69af3cd41db4bb971e35f2a44346, type: 2}
+     Zone: 0
++  - Weapon: {fileID: 11400000, guid: 4d8b9e1d7c825be4288a4158db4b0760, type: 2}
++    Zone: 0

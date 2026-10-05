@@ -1,0 +1,26 @@
+--- a/Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalPresetAssetBuilder.cs
++++ b/Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalPresetAssetBuilder.cs
+@@ -223,12 +223,12 @@
+             {
+                 var walls = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ArsenalWallController>(true)).ToArray();
+                 var oldWalls = walls.Where(w => PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(w.gameObject) != DemoPath).ToArray();
+-                if (walls.Length != 4) throw new InvalidOperationException("В Lobby ожидалось 4 станции.");
++                if (walls.Length == 0) throw new InvalidOperationException("В Lobby нет станций для обновления.");
+                 if (oldWalls.Length == 0)
+                 {
+                     return RefreshDemoLobby(scene, walls);
+                 }
+-                if (oldWalls.Length != 4) throw new InvalidOperationException("В Lobby смешаны старые и демонстрационные станции.");
++                if (oldWalls.Length != walls.Length) throw new InvalidOperationException("В Lobby смешаны старые и демонстрационные станции.");
+                 string backup = System.IO.Path.GetFullPath("tmp/arsenal-presets/Lobby-before-demo.unity");
+                 if (!EditorSceneManager.SaveScene(scene, backup, true)) throw new InvalidOperationException("Не сохранена резервная копия Lobby.");
+                 var replacements = new Dictionary<UnityEngine.Object, UnityEngine.Object>();
+@@ -301,7 +301,7 @@
+             var desired = Required<GameObject>(DemoPath);
+             var full = Required<ArsenalPreset>(FullPath);
+             var sourceSlots = desired.GetComponent<ArsenalWallController>().Slots;
+-            if (sourceSlots.Count != 20 || full.Entries.Count != 20 ||
++            if (full.Entries.Count == 0 || sourceSlots.Count != full.Entries.Count ||
+                 full.Entries.Any(e => sourceSlots.Count(s => s.WeaponData == e.Weapon && s.PresentationZone == e.Zone) != 1))
+                 throw new InvalidOperationException("Demo не соответствует сохранённому FullDemoArsenal: сначала пересоберите демонстрационную станцию.");
+             var sourceBinding = desired.GetComponent<ArsenalStationPresetBinding>();

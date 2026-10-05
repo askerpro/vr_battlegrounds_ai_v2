@@ -1,0 +1,35 @@
+{
+  "Assets/Scenes/Lobby.unity": {
+    "base": "tmp/weapon-sight-calibration/gameplay-review/before/Assets/Scenes/Lobby.unity",
+    "baseSha256": "3b0634e00ec400907b3afabaa746ef6fca12826db84075d723ddba1c51380d3a",
+    "scopedSha256": "fe844989440818db0d521bdff43db311d8cbd50fda3c9cd56c29cf019500ee9f",
+    "selection": {
+      "beforeOwned": 40,
+      "currentOwned": 125,
+      "parentChanges": [
+        "918920782",
+        "324783435",
+        "1311810799"
+      ],
+      "changedOutsideOwned": [
+        "918920782",
+        "324783435",
+        "1311810799",
+        "344322606",
+        "666750521"
+      ],
+      "added": 99,
+      "removed": 14,
+      "missingLocalReferences": [],
+      "missingCurrentReferences": []
+    }
+  },
+  "Assets/Data/Weapons/FullDemoArsenal.asset": {
+    "base": "tmp/weapon-sight-calibration/gameplay-review/before/Assets/Data/Weapons/FullDemoArsenal.asset",
+    "baseSha256": "7e8c822b83a6b5f91cd894865885ad95eda523c3f4eee6b5ac55f3c88080f549"
+  },
+  "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalPresetAssetBuilder.cs": {
+    "candidateBase": "tmp\\arsenal-visual-stage\\hint-drafts\\ArsenalPresetAssetBuilder.cs",
+    "baseSha256": "092e7b94db58497e429256172d335a4c552213910d2987721b5078b13a3a4005"
+  }
+}

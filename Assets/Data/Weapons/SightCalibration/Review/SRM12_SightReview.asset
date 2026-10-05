@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 086e9e8eb4d89c54ab6a6f0b06011b0e, type: 3}
+  m_Name: SRM12_SightReview
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
+  _displayName: "Desert Tech SRS \xB7 \u0440\u0430\u0441\u0447\u0451\u0442, \u0431\u0435\u0437
+    \u043F\u043E\u043F\u0440\u0430\u0432\u043A\u0438"
+  _weaponId: SRM12_SightReview
+  _description: "\u041F\u0440\u043E\u0432\u0435\u0440\u043E\u0447\u043D\u0430\u044F
+    \u043A\u043E\u043F\u0438\u044F \u0438\u0441\u0445\u043E\u0434\u043D\u043E\u0439
+    \u0433\u0435\u043E\u043C\u0435\u0442\u0440\u0438\u0438. \u041F\u043E\u043F\u0440\u0430\u0432\u043A\u0430
+    \u043C\u0443\u0448\u043A\u0438 \u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u043D\u0430
+    \u0438 \u043D\u0435 \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D\u0430: \u22125.32
+    \u043C\u043C."
+  _weaponPrefab: {fileID: 7216203593504186662, guid: ccc6dfdf9762a7c4899e851730650ff3, type: 3}
+  _magazinePrefab: {fileID: 2754127896509867834, guid: 32bac82101ae21544b671d744fd34d82, type: 3}
+  _maxMagazineCount: 3
+  _readinessProfile: {fileID: 0}
+  _commonFeedbackProfile: {fileID: 0}
+  _feedbackOverride: {fileID: 0}
+  _price: 1700
+  _damage: 88
+  _rangeModifier: 0.98
+  _penetration: 2.5
+  _armorRatio: 1.7
+  _fireRate: 48
+  _fullAuto: 0
+  _magazineSize: 5
+  _reserveAmmo: 20
+  _pellets: 1
+  _killAward: 300
+  _spread:
+    _spread: 0.23
+    _inaccuracyStand: 3
+    _inaccuracyMove: 123.45
+    _inaccuracyFire: 22.92
+    _recoveryTime: 0.142096
+  _recoilMagnitude: 25
+  _category: 0
+  _weaponPositionOffset: {x: 0, y: 0, z: 0.05}
+  _weaponRotationOffset: {x: 0, y: 0, z: 0}
+  _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _icon: {fileID: 0}

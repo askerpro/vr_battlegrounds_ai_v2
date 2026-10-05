@@ -249,6 +249,23 @@ namespace UltimateXR.Core.Components
             }
         }
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// VR Battlegrounds: атомарная editor-запись сохранённой идентичности и prefab provenance.
+        /// Вызывающий проверяет владельца, GUID источника и уникальность ID. Runtime-регистрация не выполняется.
+        /// </summary>
+        public void SetEditorUniqueId(Guid uniqueId, bool isInPrefab, string prefabGuid)
+        {
+            if (Application.isPlaying || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("Editor identity нельзя менять в Play Mode.");
+            if (uniqueId == Guid.Empty) throw new ArgumentException("Editor identity не может быть пустой.", nameof(uniqueId));
+            UniqueId = uniqueId;
+            __isInPrefab = isInPrefab;
+            __prefabGuid = prefabGuid;
+            UnityEditor.EditorUtility.SetDirty(this);
+        }
+#endif
+
         /// <summary>
         ///     <para>
         ///         Registers the <see cref="UxrComponent" /> making sure that its Unique ID is available enabling it

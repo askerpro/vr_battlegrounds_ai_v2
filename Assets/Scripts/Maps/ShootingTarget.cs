@@ -34,6 +34,8 @@ namespace VrBattlegrounds.Maps
     [DisallowMultipleComponent]
     public class ShootingTarget : MonoBehaviour
     {
+        /// <summary>Фактический контакт SDK со щитом до вспышки/падения; визуальные наблюдатели не управляют выстрелом.</summary>
+        public static event System.Action<ShootingTarget,UxrProjectileSource,RaycastHit> ProjectileContact;
         private enum State
         {
             Up,
@@ -52,6 +54,12 @@ namespace VrBattlegrounds.Maps
 
         [Min(0f)]
         [SerializeField] private float _flashDuration = 0.2f;
+        [Tooltip("Выключено на стрельбище: щит остаётся неподвижным и принимает каждый выстрел.")]
+        [SerializeField] private bool _fallOnHit = true;
+        [SerializeField] private AudioSource _impactAudio;
+        [SerializeField] private AudioClip[] _metalImpacts;
+        private int _nextImpact;
+        private float _lastImpactSound = float.NegativeInfinity;
 
         [Tooltip("На сколько градусов щит заваливается назад, от стрелка.")]
         [Range(0f, 90f)]
@@ -152,6 +160,12 @@ namespace VrBattlegrounds.Maps
 
         private void OnNonActorImpacted(object sender, UxrNonDamagingImpactEventArgs e)
         {
+            if(_pivot!=null&&e.RaycastHit.collider!=null&&e.RaycastHit.collider.transform.IsChildOf(_pivot))
+            {
+                var handlers=ProjectileContact;
+                if(handlers!=null)foreach(System.Action<ShootingTarget,UxrProjectileSource,RaycastHit> handler in handlers.GetInvocationList())
+                    try{handler(this,e.ProjectileSource,e.RaycastHit);}catch(System.Exception exception){GameLog.WeaponSystem.Error("[ShootingTarget] Photo observer: "+exception,this);}
+            }
             TryRegisterHit(e.RaycastHit.collider);
         }
 
@@ -168,10 +182,16 @@ namespace VrBattlegrounds.Maps
             EnsureInitialized();
 
             HitCount++;
-            _state = State.Falling;
+            _state = _fallOnHit ? State.Falling : State.Up;
             _stateTime = 0f;
             _flashLeft = _flashDuration;
             SetFlash(true);
+
+            if(_impactAudio!=null&&_metalImpacts!=null&&_metalImpacts.Length>0&&Time.unscaledTime-_lastImpactSound>=.03f)
+            {
+                AudioClip clip=_metalImpacts[_nextImpact++%_metalImpacts.Length];
+                if(clip!=null){_impactAudio.PlayOneShot(clip);_lastImpactSound=Time.unscaledTime;}
+            }
 
             GameLog.WeaponSystem.Verbose($"[ShootingTarget] Попадание в '{name}', всего {HitCount}.", this);
             return true;

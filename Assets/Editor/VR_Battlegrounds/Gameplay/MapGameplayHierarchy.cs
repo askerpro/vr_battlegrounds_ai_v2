@@ -106,7 +106,7 @@ namespace VrBattlegrounds.EditorTools
             var zones = roots.SelectMany(g => g.GetComponentsInChildren<TeamSpawnZone>(true)).ToArray();
             var walls = roots.SelectMany(g => g.GetComponentsInChildren<ArsenalWallController>(true)).ToArray();
             int expectedZones = scene.path == ScenePaths[0] ? 1 : 2;
-            int expectedWalls = scene.path == ScenePaths[0] ? 4 : 8;
+            int expectedWalls = scene.path == ScenePaths[0] ? 2 : 8;
             if (zones.Length != expectedZones || walls.Length != expectedWalls)
                 errors.Add(scene.path + ": неверное количество зон/станций: " + zones.Length + "/" + walls.Length);
             foreach (var zone in zones)

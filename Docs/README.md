@@ -10,6 +10,16 @@
 
 ---
 
+## Работа по прицелам — WIP
+
+| Документ | Состояние |
+|---|---|
+| [Калибровка средств прицеливания](tasks/weapon-sight-calibration-design.md) | Цель — сведение на выбранной дистанции (default 15 м, override оружия/прицела), оба глаза и движение головы в eyebox; физическая кривая ближнего смещения. Здесь: [план](tasks/weapon-sight-calibration-plan.md), Settings/Profile, Audit/Report, SightVisualReview, SightGeometrySolver, WeaponOpticView + FiniteFocusReticle и SightPrototypeReview; 20/20 моделей, 13 доноров, 18+12 native-проб, TR15 render/Android PASS. [Визуальный пакет](tasks/weapon-sight-calibration-review.md): родные прицелы MKR9; для SniperRifle пользователь выбрал только модульные прицелы SRS/SRM12, отдельный материал SniperRifle_SRS_Iron под корпус; черновики Viper/SRM12. Осталось: принятие References/DOF/креплений, полный fingerprint и адресный Apply, actual SDK/Quest-проверки. |
+| [Игровая проверка прицелов в Lobby](tasks/weapon-sight-playmode-review.md) | Цель — обычный аватар, оружие в руках и сравнение на постоянном стрельбище Lobby. Здесь: SightGameplayReviewBuilder, пять временных дублей (AR-15/TR15, MKR9, SniperRifle/SRS, Viper и SRM12 — расчёт без поправки), WeaponRegistry/FullDemo 25, две боковые станции; исходные 20 префабов неизменны. LobbyRangeLayoutBuilder: 10 крупных неподвижных щитов за краями North/South на 10/15/20/25/30 м, два монитора впереди. ShootingRangePhotoCapture/Display: крупный план фактического контакта с точкой; native layout/SDK photo/Android PASS. Осталось: выбор звука и пользовательская приёмка; после неё заменить принятые основные записи и удалить дубли. SightCalibrationBench/Builder — отдельная машинная диагностика. |
+| [Ручное сведение в Edit Mode](tasks/weapon-sight-manual-calibration.md) | Цель — визуально двигать детали прицела без Play/SDK Shoot. Подготовлены SightAlignmentMarker, пассивная ManualSightCalibrationSession, Editor ManualSightCalibrationWindow/Authoring/Geometry: выбор оружия, default 15 м и индивидуальная дистанция, два луча, X/Y в мм, перспективный вид за целиком и сохранение проверочной копии. Исходники компилируются отдельно; импорт/нативная проверка и пользовательская приёмка выполняются. |
+| [План сохранения работы по прицелам](tasks/weapon-sight-calibration-commit-plan.md) | Цель — передать текущий WIP другому агенту без истории чата. Здесь: состав, SDK-зависимость, отделение чужих изменений и локальных отчётов. Пользователь поручил сохранить как есть; фактический статус и продолжение — в handoff. |
+| [Передача WIP прицелов](tasks/weapon-sight-calibration-handoff.md) | Цель — продолжить с текущего checkpoint без истории чата. Здесь: принятые решения, состояние оружия/Lobby/ручного стенда, диагностические остатки, границы проверок и дельты общих файлов. Осталось: Save/rollback, Undo/Redo, актуальный Android, Bake Occlusion и пользовательская приёмка. |
+
 ## Структура папки `Docs/`
 
 | Цель | Мы здесь | Осталось выполнить | Технический документ |

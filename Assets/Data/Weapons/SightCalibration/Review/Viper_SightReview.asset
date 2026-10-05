@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 086e9e8eb4d89c54ab6a6f0b06011b0e, type: 3}
+  m_Name: Viper_SightReview
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
+  _displayName: "WK-11 Viper \xB7 \u0440\u0430\u0441\u0447\u0451\u0442, \u0431\u0435\u0437
+    \u043F\u043E\u043F\u0440\u0430\u0432\u043A\u0438"
+  _weaponId: Viper_SightReview
+  _description: "\u041F\u0440\u043E\u0432\u0435\u0440\u043E\u0447\u043D\u0430\u044F
+    \u043A\u043E\u043F\u0438\u044F \u0438\u0441\u0445\u043E\u0434\u043D\u043E\u0439
+    \u0433\u0435\u043E\u043C\u0435\u0442\u0440\u0438\u0438. \u041F\u043E\u043F\u0440\u0430\u0432\u043A\u0430
+    \u043C\u0443\u0448\u043A\u0438 \u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u043D\u0430
+    \u0438 \u043D\u0435 \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D\u0430: +3.04
+    \u043C\u043C."
+  _weaponPrefab: {fileID: 6785962869348119002, guid: 5ee47b0123f863844a48bb32ceca9047, type: 3}
+  _magazinePrefab: {fileID: 6924759405784432587, guid: e2881f975378c1d4c865fc5f94053e45, type: 3}
+  _maxMagazineCount: 3
+  _readinessProfile: {fileID: 0}
+  _commonFeedbackProfile: {fileID: 0}
+  _feedbackOverride: {fileID: 0}
+  _price: 200
+  _damage: 30
+  _rangeModifier: 0.85
+  _penetration: 1
+  _armorRatio: 0.94
+  _fireRate: 400
+  _fullAuto: 0
+  _magazineSize: 20
+  _reserveAmmo: 60
+  _pellets: 1
+  _killAward: 300
+  _spread:
+    _spread: 2
+    _inaccuracyStand: 5.6
+    _inaccuracyMove: 10
+    _inaccuracyFire: 56
+    _recoveryTime: 0.2
+  _recoilMagnitude: 18
+  _category: 1
+  _weaponPositionOffset: {x: 0, y: 0, z: 0}
+  _weaponRotationOffset: {x: 0, y: 0, z: 0}
+  _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _icon: {fileID: 0}

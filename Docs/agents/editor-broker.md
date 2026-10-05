@@ -2,6 +2,27 @@
 
 ## Назначение и пределы
 
+Внедрено 2026-10-05. Worker: F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai,
+MCP instance: Vr_Battlegrounds_ai@72e96145498eb8a0. Состояние — .agent-state/editor-broker
+основного checkout. B брать из config.json, не из HEAD основного checkout.
+Основная реализация — commit dc4d2515.
+
+Полный цикл на игровом проекте прошёл: билет 1, input c8a79d4b, result 0a237a3c,
+возврат B 5cc5550b и receive с байтами 00 7f 80 ff и сохранённым GUID
+51ef217a71e8e7c4c8249d82bbbfe5e3. Билет DONE/IMPORTED, редактор освобождён.
+98 infrastructure tests (один OS symlink skip), 11 asset-pairs и 23 client checks прошли;
+оба PowerShell installer-стенда прошли.
+
+Первый импорт может пометить встроенные Shader/Font Texture как dirty и создать несохранённую
+стартовую сцену. Bootstrap проверяет это до открытия очереди; SDK автоматически не сохранять.
+В этом внедрении пользователь разрешил отбросить стартовое состояние. Неожиданные дисковые
+правки сохранены отдельно: snapshot 1d9cc71d, bootstrap/closed-worker-changes.json в состоянии.
+Эти правки оружия не являются принятым результатом протокола.
+
+Измерение одного пакета: begin около 7 секунд, finish с Git/LFS capture/возвратом около
+6 минут, receive около 5 секунд. Это не нагрузочный бенчмарк; полный обход Git/LFS остаётся
+заметным ограничением и требует оптимизации.
+
 Контроллер `Tools/agents/editor-broker.py` передаёт технические Git checkpoint между
 worktree агента и постоянным отдельным worktree Unity. SQLite FIFO резервирует право
 захвата, файловый мост паркует сцены и подтверждает завершение refresh, внешний Python

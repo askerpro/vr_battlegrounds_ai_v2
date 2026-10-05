@@ -79,6 +79,57 @@ Assets/Scenes/Tools/IndustrialCandidateReview.unity filter=lfs diff=lfs merge=lf
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+# BEGIN GAME VENDOR LFS
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text
+Assets/ThirdParty/KINEMATION/**/*.[tT][gG][aA] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[pP][nN][gG] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[bB][mM][pP] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[eE][xX][rR] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[fF][bB][xX] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[pP][sS][dD] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[wW][aA][vV] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[mM][pP]3 vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[oO][gG][gG] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[jJ][pP][gG] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[jJ][pP][eE][gG] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[tT][iI][fF] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[tT][iI][fF][fF] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[dD][dD][sS] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[gG][lL][bB] vendor-lfs
+Assets/ThirdParty/KINEMATION/**/*.[bB][lL][eE][nN][dD] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[tT][gG][aA] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[pP][nN][gG] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[bB][mM][pP] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[eE][xX][rR] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[fF][bB][xX] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[pP][sS][dD] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[wW][aA][vV] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[mM][pP]3 vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[oO][gG][gG] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[jJ][pP][gG] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[jJ][pP][eE][gG] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[tT][iI][fF] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[tT][iI][fF][fF] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[dD][dD][sS] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[gG][lL][bB] vendor-lfs
+Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[bB][lL][eE][nN][dD] vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[tT][gG][aA]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[pP][nN][gG]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[bB][mM][pP]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[eE][xX][rR]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[fF][bB][xX]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[pP][sS][dD]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[wW][aA][vV]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[mM][pP]3" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[oO][gG][gG]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[jJ][pP][gG]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[jJ][pP][eE][gG]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[tT][iI][fF]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[tT][iI][fF][fF]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[dD][dD][sS]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[gG][lL][bB]" vendor-lfs
+"Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[bB][lL][eE][nN][dD]" vendor-lfs
+# END GAME VENDOR LFS
 Assets/ThirdParty/KINEMATION/**/*.[tT][gG][aA] filter=lfs diff=lfs merge=lfs -text
 Assets/ThirdParty/KINEMATION/**/*.[pP][nN][gG] filter=lfs diff=lfs merge=lfs -text
 Assets/ThirdParty/KINEMATION/**/*.[bB][mM][pP] filter=lfs diff=lfs merge=lfs -text

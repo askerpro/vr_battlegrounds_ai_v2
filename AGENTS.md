@@ -197,6 +197,15 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
 
 ## Терминал
 
+### Git LFS и лёгкие ворктри
+
+- Бинарники полных KINEMATION, Hands/Weapons и Military Soldier хранятся в LFS; пакеты не урезать. `.meta`, код и текстовые Unity-ассеты остаются в обычном Git.
+- Конфиг роли — `Tools/agents/lfs-worktree-policy.json`. Новый агентский worktree оставляет LFS-указатели; после создания выполнить `python Tools/agents/configure_lfs_worktree.py apply`. Не запускать полный `git lfs pull` по умолчанию.
+- Для просмотра/изменения конкретного бинарника извлечь только нужный путь: `git lfs pull --include="Assets/..."`. Работу Unity выполнять на полном worker через принятый протокол; не открывать агентский проект с указателями в Unity.
+- Общие фильтры Git пропускают smudge, чтобы создание worktree из main не копировало гигабайты. Основной checkout после переключения извлекает локальный кеш через `.githooks/post-checkout`; Unity worker имеет worktree-переопределение полного smudge. Не задавать `GIT_LFS_SKIP_SMUDGE` глобально или для worker.
+- На новой машине интегратор устанавливает defaults: `python Tools/agents/configure_lfs_worktree.py apply --install-defaults`. Для зарегистрированного worker проверить `status`, извлечь недостающие LFS-объекты до открытия Unity. Историю Git ради LFS автоматически не переписывать.
+- Не удалять общий LFS-кеш и не использовать `git lfs prune` без отдельной оценки всех worktree. Полный маршрут и пределы — `Docs/agents/lfs-worktrees.md`.
+
 - **Редактирование файлов:** сначала нативный `apply_patch`. Одна операция на файл в одном патче;
   для замены содержимого — `Update File`, не `Delete File` + `Add File` того же пути. Ошибку патча исправлять
   в патче, а не переходить к массовой перезаписи через терминал. Подробности — `.agents/rules/terminal.md`.

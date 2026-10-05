@@ -10,6 +10,10 @@
 
 ---
 
+Политика быстрых worktree: [Git LFS](agents/lfs-worktrees.md). Полные оружейные/солдатские
+паки сохраняются; агент получает указатели, main/Unity worker — реальные байты по профилю.
+Настройка — `Tools/agents/configure_lfs_worktree.py`, конфиг — `Tools/agents/lfs-worktree-policy.json`.
+
 Выполнено [отделение полного каталога окружения](level-design/environment-pack-policy.md):
 паки и авторские демо — `F:/UnityProjects/EnvironmentPackCatalog`; в игре 16 ассетов / около 13,2 МиБ.
 GUID/зависимости и Android PASS; каталог: 7933 GUID, 24 SceneAsset, Industrial preview PASS.

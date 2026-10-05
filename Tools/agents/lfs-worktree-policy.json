@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "defaultRole": "agent",
+  "agentHydration": "skip",
+  "mainHydration": "full_after_checkout",
+  "workerHydration": "full",
+  "workerRegistry": ".agent-state/editor-broker/config.json",
+  "binaryRoots": [
+    "Assets/ThirdParty/KINEMATION",
+    "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update",
+    "Assets/ThirdParty/Military Soldier Mega Bundle"
+  ],
+  "binaryExtensions": [".tga", ".png", ".bmp", ".exr", ".fbx", ".psd", ".wav", ".mp3", ".ogg", ".jpg", ".jpeg", ".tif", ".tiff", ".dds", ".glb", ".blend"]
+}

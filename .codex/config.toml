@@ -1,6 +1,11 @@
 # Резервный лимит истории. Основная защита — сводка ДО text(), см. unity_mcp.md.
 tool_output_token_limit = 4000
 
+# Быстрые worktree: реальные настройки фильтров находятся в Git local/worktree config.
+# Политика: Tools/agents/lfs-worktree-policy.json; настройка нового checkout:
+# python Tools/agents/configure_lfs_worktree.py apply
+# GIT_LFS_SKIP_SMUDGE глобально не задавать: worker должен извлекать полные ассеты.
+
 [mcp_servers.blender]
 command = "uvx"
 args = ["blender-mcp"]

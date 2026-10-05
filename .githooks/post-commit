@@ -1,8 +1,11 @@
 #!/bin/bash
 #
-# post-commit — переносим только файлы зафиксированного HEAD в Plastic SCM.
+# post-commit — переносим файлы зафиксированного HEAD в Plastic SCM.
+# Plastic нужен только подсветке изменений в инспекторе Unity, поэтому
+# переносятся лишь Assets, Packages и ProjectSettings (см. ignore.conf).
 # Рабочее содержимое этих файлов обязано совпадать с коммитом: частичный
 # commit с оставшимися правками безопасно пропускается, без подмены файлов Unity.
+# Проверки пакетные: по процессу git на шаг, а не на каждый файл.
 
 set -o pipefail
 
@@ -21,40 +24,76 @@ if [ -n "$PARENT" ]; then
 else
     git diff-tree --root --no-commit-id --name-only --no-renames -r -z "$COMMIT" > "$MANIFEST" || exit 0
 fi
-PATHS=()
+
+FILES=()
 while IFS= read -r -d '' path; do
+    case "$path" in
+        Assets/*|Packages/*|ProjectSettings/*) ;;
+        *) continue ;;
+    esac
     # Plastic применяет checkin рекурсивно и понимает wildcards. Такие пути
     # нельзя отправлять как обычные файлы; gitlink/каталоги тоже запрещены.
+    # Перевод строки запрещён ещё и потому, что пакетные проверки ниже построчные.
     if [[ "$path" == *$'\n'* || "$path" == *$'\r'* || "$path" == *'*'* || "$path" == *'?'* || -d "$path" ]]; then
         echo "⚠️  Plastic: небезопасный путь $path — перенос пропущен. Git-коммит успешен."
         exit 0
     fi
-    # --literal-pathspecs исключает интерпретацию имени как Git pathspec.
-    if ! git --literal-pathspecs diff --quiet "$COMMIT" -- "$path"; then
+    FILES+=("$path")
+done < "$MANIFEST"
+[ ${#FILES[@]} -gt 0 ] || exit 0
+
+# Рабочее дерево против коммита — одним вызовом по всему репозиторию.
+declare -A DIRTY=()
+while IFS= read -r -d '' path; do
+    DIRTY["$path"]=1
+done < <(git diff --name-only --no-renames -z "$COMMIT" --)
+
+# Ожидаемые blob'ы коммита одним cat-file; удалённые пути дают "missing".
+EXPECTED=()
+mapfile -t EXPECTED < <(printf '%s\n' "${FILES[@]/#/$COMMIT:}" | git cat-file --batch-check='%(objectname)' | sed 's/ missing$//; s/^.*:.*$/missing/')
+[ ${#EXPECTED[@]} -eq ${#FILES[@]} ] || { echo "⚠️  Plastic: сбой проверки blob'ов — перенос пропущен. Git-коммит успешен."; exit 0; }
+
+# diff может доверять assume-unchanged/skip-worktree. Сверяем сам blob,
+# применяя Git clean-фильтры (в том числе LFS и нормализацию CRLF):
+# hash-object --stdin-paths фильтрует каждый файл по его атрибутам.
+HASH_IDX=()
+HASH_PATHS=()
+PATHS=()
+for i in "${!FILES[@]}"; do
+    path=${FILES[$i]}
+    if [ -n "${DIRTY[$path]}" ]; then
         echo "⚠️  Plastic: $path отличается от Git-коммита — перенос пропущен. Git-коммит успешен."
         exit 0
     fi
-    # diff может доверять assume-unchanged/skip-worktree. Сверяем сам blob,
-    # применяя Git clean-фильтры (в том числе LFS и нормализацию CRLF).
-    EXPECTED=$(git rev-parse --verify "$COMMIT:$path" 2>/dev/null) || EXPECTED=""
-    if [ -n "$EXPECTED" ]; then
-        if [ -L "$path" ]; then
-            ACTUAL=$(readlink -n "$path" | git hash-object --stdin) || exit 0
-        else
-            ACTUAL=$(git hash-object --path="$path" -- "$path") || exit 0
+    if [ "${EXPECTED[$i]}" = "missing" ]; then
+        # Git diff не видит private-файл, созданный снова после удаления в HEAD.
+        if [ -e "$path" ] || [ -L "$path" ]; then
+            echo "⚠️  Plastic: удалённый путь $path снова существует — перенос пропущен. Git-коммит успешен."
+            exit 0
         fi
-        if [ "$ACTUAL" != "$EXPECTED" ]; then
+    elif [ -L "$path" ]; then
+        ACTUAL=$(readlink -n "$path" | git hash-object --stdin) || exit 0
+        if [ "$ACTUAL" != "${EXPECTED[$i]}" ]; then
             echo "⚠️  Plastic: содержимое $path отличается от Git-коммита — перенос пропущен. Git-коммит успешен."
             exit 0
         fi
-    fi
-    # Git diff не видит private-файл, созданный снова после удаления в HEAD.
-    if [ -z "$EXPECTED" ] && { [ -e "$path" ] || [ -L "$path" ]; }; then
-        echo "⚠️  Plastic: удалённый путь $path снова существует — перенос пропущен. Git-коммит успешен."
-        exit 0
+    else
+        HASH_IDX+=("$i")
+        HASH_PATHS+=("$path")
     fi
     PATHS+=("./$path")
-done < "$MANIFEST"
+done
+if [ ${#HASH_PATHS[@]} -gt 0 ]; then
+    ACTUAL=()
+    mapfile -t ACTUAL < <(printf '%s\n' "${HASH_PATHS[@]}" | git hash-object --stdin-paths) || exit 0
+    [ ${#ACTUAL[@]} -eq ${#HASH_PATHS[@]} ] || { echo "⚠️  Plastic: сбой хеширования — перенос пропущен. Git-коммит успешен."; exit 0; }
+    for k in "${!HASH_IDX[@]}"; do
+        if [ "${ACTUAL[$k]}" != "${EXPECTED[${HASH_IDX[$k]}]}" ]; then
+            echo "⚠️  Plastic: содержимое ${HASH_PATHS[$k]} отличается от Git-коммита — перенос пропущен. Git-коммит успешен."
+            exit 0
+        fi
+    done
+fi
 [ ${#PATHS[@]} -gt 0 ] || exit 0
 
 # cm может отсутствовать в PATH, если git вызван не из обычной оболочки.

@@ -202,7 +202,8 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
   в патче, а не переходить к массовой перезаписи через терминал. Подробности — `.agents/rules/terminal.md`.
 - Bash-инструмент **изолирован от сети** (`curl` к localhost падает) — сетевые проверки через PowerShell.
 - Git — всегда `--no-pager`.
-- **Git → Plastic хук:** `.githooks/post-commit` переносит только файлы текущего HEAD,
+- **Git → Plastic хук:** `.githooks/post-commit` переносит только файлы текущего HEAD
+  из `Assets`/`Packages`/`ProjectSettings` (Plastic нужен лишь подсветке в инспекторе Unity),
   с проверкой их содержимого против Git-коммита. Если в выбранном файле остались
   незакоммиченные правки, весь перенос пропускается с предупреждением; остальные
   pending-файлы не включаются. Не заменять это на check-in всего workspace.

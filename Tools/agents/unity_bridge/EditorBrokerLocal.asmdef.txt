@@ -1,0 +1,7 @@
+{
+  "name": "EditorBrokerLocal",
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "references": []
+}

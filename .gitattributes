@@ -7,6 +7,11 @@
 # с "bad interpreter" при свежем clone на Windows.
 .githooks/** text eol=lf
 *.sh text eol=lf
+# Новый внешний контроллер и его переносимые шаблоны используют LF.
+Tools/agents/editor-broker.py text eol=lf
+Tools/agents/editor_broker/** text eol=lf
+Tools/agents/unity_bridge/** text eol=lf
+Tools/agents/tests/test_editor_broker*.py text eol=lf
 # Unity YAML merge driver
 *.unity text merge=unityyamlmerge eol=crlf
 *.prefab text merge=unityyamlmerge eol=crlf

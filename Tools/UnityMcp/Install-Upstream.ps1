@@ -1,4 +1,6 @@
-﻿param([Parameter(Mandatory=$true)][string]$LockOwner, [string]$ArchivePath)
+﻿[CmdletBinding()]
+param([string]$Ticket, [string]$Token, [string]$StateDir, [switch]$OfflineEditor,
+      [string]$PythonExecutable = 'python', [string]$ArchivePath)
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $commit = '30d22075093d1d35dfb0091c1c7550e9ad948577'
@@ -11,17 +13,16 @@ $expected = @{
  'Editor/Tools/CommandRegistry.cs' = 'D2CBAEDE1D68E5C54877E1E1976284EE86829AAF669E77F3333DA93E4AB61B86'
  'Editor/Tools/ExecuteCode.cs' = '53552BB02B3568F0B91E7289AD269469990E368F0238A115F7C968F7CF885726'
 }
-function Assert-OwnLock {
- $info = @{}
- Get-Content -LiteralPath (Join-Path $projectRoot 'tmp/unity-lock/info') | ForEach-Object {
-  $pair = $_ -split '=', 2
-  if ($pair.Count -eq 2) { $info[$pair[0]] = $pair[1] }
- }
- if ($info.owner -ne $LockOwner -or [long]$info.until -le [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()) {
-  throw 'Нужен действующий Unity lock указанного владельца.'
- }
+function Assert-EditorAccess {
+ $guardArgs = @((Join-Path $projectRoot 'Tools/agents/editor_broker/client_guard.py'), '--project', $projectRoot)
+ if ($Ticket) { $guardArgs += @('--ticket', $Ticket) }
+ if ($Token) { $guardArgs += @('--token', $Token) }
+ if ($StateDir) { $guardArgs += @('--state-dir', $StateDir) }
+ if ($OfflineEditor) { $guardArgs += '--offline-editor' }
+ $reply = & $PythonExecutable @guardArgs
+ if ($LASTEXITCODE -ne 0) { throw "Editor broker отказал в записи: $reply" }
 }
-Assert-OwnLock
+Assert-EditorAccess
 if (Test-Path -LiteralPath $target) { throw 'Embedded-пакет уже существует. Не перезаписываю локальные правки.' }
 $stage = Join-Path $projectRoot ('tmp/UnityMcpInstall/' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
@@ -75,9 +76,9 @@ try {
  if ($LASTEXITCODE -ne 0) { throw 'Патч ограничения вывода не применён.' }
  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'OutputGuard/ExecuteCodeOutputGuard.cs') -Destination (Join-Path $packageRoot 'Editor/Helpers/ExecuteCodeOutputGuard.cs')
  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'OutputGuard/ExecuteCodeOutputGuard.cs.meta.txt') -Destination (Join-Path $packageRoot 'Editor/Helpers/ExecuteCodeOutputGuard.cs.meta')
- Assert-OwnLock
+ Assert-EditorAccess
  # Копируется готовый пакет, а не редактируются активные исходники по одному.
  Copy-Item -LiteralPath $packageRoot -Destination $target -Recurse
 }
 finally { Pop-Location }
-Write-Output "Установлен embedded MCP 10.2.0 из $commit. Теперь выполните Unity Refresh и проверки."
+Write-Output "Установлен embedded MCP 10.2.0 из $commit. Unity Refresh и проверки выполняйте через editor-broker в своей аренде."

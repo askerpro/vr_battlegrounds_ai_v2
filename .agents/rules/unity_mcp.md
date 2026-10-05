@@ -1,7 +1,8 @@
 # Unity MCP — Правила и Известные Проблемы
 
-> Редактор общий для нескольких агентов и человека: эксклюзивные операции — под замком
-> `Tools/agents/unity-lock.sh`, правила — [`unity_sharing.md`](unity_sharing.md).
+> Агенты используют постоянный worker через `Tools/agents/editor-broker.py`:
+> request/watch-ticket/claim/begin, guard перед MCP, finish после пакета.
+> Правила — [`unity_sharing.md`](unity_sharing.md). Редактор человека не прерывать.
 
 Версии на 2026-08-16: пакет `com.coplaydev.unity-mcp` **10.1.2** (источник — Git, ветка `main`,
 живёт в `Library/PackageCache/`), python-сервер `mcpforunityserver` **10.1.2**.

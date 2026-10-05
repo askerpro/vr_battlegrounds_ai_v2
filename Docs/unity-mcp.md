@@ -100,19 +100,21 @@ Embedded-папка `Packages/com.coplaydev.unity-mcp/` игнорируется
 установщик и проверки сохраняются в `Tools/UnityMcp/`. Перед открытием Unity на новой
 машине восстановить embedded-папку: packages-lock содержит source=embedded.
 
-Для существующего MCP 10.2.0 автоматический ограничитель устанавливается под Unity lock:
-`./Tools/UnityMcp/Apply-OutputGuard.ps1 -LockOwner <владелец>`, затем Refresh и live probe.
+Для существующего MCP 10.2.0 автоматический ограничитель устанавливается в своей аренде:
+`./Tools/UnityMcp/Apply-OutputGuard.ps1 -Ticket <ticket> -Token <token>`, затем Refresh и live probe.
+Перед запуском worker bootstrap допускает `-OfflineEditor`, если process inventory доказал,
+что этот linked worktree закрыт. Основной checkout всегда запрещён для этих установщиков.
 Установщик допускает проверяемое продолжение частичной установки и повтор готовой;
 неизвестные изменения ExecuteCode/helper/meta не перезаписывает. Сравнение исходников
 нормализует LF/CRLF, чтобы форма патча после Git checkout не ломала проверку.
 
-1. Получить Unity lock по правилам общего редактора.
+1. Выбрать закрытый linked worktree для bootstrap либо получить свою RUNNING аренду editor-broker.
 2. Если embedded-папка уже существует, сохранить её локальные изменения отдельно;
    установщик намеренно отказывается её перезаписывать.
 3. Выполнить PowerShell:
 
    ```powershell
-   ./Tools/UnityMcp/Install-Upstream.ps1 -LockOwner <владелец>
+   ./Tools/UnityMcp/Install-Upstream.ps1 -OfflineEditor
    ```
 
    Для установки без сети передать `-ArchivePath <zip>` с архивом закреплённого upstream.

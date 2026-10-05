@@ -1,4 +1,4 @@
-"""Копирует подготовленные ассеты под замком Unity, без перезаписи существующих файлов."""
+"""Копирует ассеты в изолированный worktree или editor worker своей аренды."""
 
 import argparse
 import hashlib
@@ -6,25 +6,21 @@ import json
 import pathlib
 import re
 import shutil
-import time
+import sys
 
 from plan_environment_import import digest
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "agents"))
+from editor_broker.client_guard import ClientGuard, add_arguments
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("plan", type=pathlib.Path)
-    parser.add_argument("--owner", required=True)
+    add_arguments(parser)
     args = parser.parse_args()
     game = pathlib.Path.cwd().resolve()
-    lock = game / "tmp/unity-lock/info"
-
-    def check_lock():
-        values = dict(line.split("=", 1) for line in lock.read_text(encoding="utf-8").splitlines() if "=" in line)
-        if values.get("owner") != args.owner or int(values.get("until", "0")) <= time.time():
-            raise ValueError("Нет действующего замка Unity у " + args.owner)
-
-    check_lock()
+    guard = ClientGuard(game, ticket=args.ticket, token=args.token, state_dir=args.state_dir)
+    guard.check()
     plan = json.loads(args.plan.read_text(encoding="utf-8"))
     if plan["conflicts"] or len(plan["packages"]) != 13:
         raise ValueError("План импорта неполон или содержит конфликты")
@@ -34,7 +30,7 @@ def main():
     copied = []
     for index, item in enumerate(plan["files"]):
         if index % 100 == 0:
-            check_lock()
+            guard.check()
         target = (game / item["path"]).resolve()
         if assets_root not in target.parents:
             raise ValueError("Путь вне Assets: " + str(target))

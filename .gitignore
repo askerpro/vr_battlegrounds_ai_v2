@@ -110,7 +110,6 @@ InitTestScene*.unity*
 # Ignore TextMesh Pro examples as they often auto-modify
 /[Aa]ssets/ThirdParty/TextMesh Pro/Examples & Extras/
 /[Aa]ssets/ThirdParty/TextMesh Pro/Examples & Extras.meta
-/[Aa]ssets/ThirdParty/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset
 
 # Демо и общие ассеты FImpossible (Legs Animator) — в проекте не используются, держатся локально
 /[Aa]ssets/ThirdParty/FImpossible Creations/Plugins - Animating/Legs Animator/Demos - Legs Animator/
@@ -129,6 +128,13 @@ InitTestScene*.unity*
 
 # Временные файлы агентов и стендов (снимки LegsComparisonRig и т.п.)
 /tmp/
+
+# Постоянное локальное состояние агентов; не временные отчёты и не исходники.
+/.agent-state/
+
+# Локальный стабильный мост контроллера, установленный только в worktree редактора.
+/Assets/Editor/VR_Battlegrounds/Debug/EditorBrokerLocal/
+/Assets/Editor/VR_Battlegrounds/Debug/EditorBrokerLocal.meta
 
 # Генерируемые локальные отчёты агентов; правило в AGENTS.md.
 /Docs/tasks/report/

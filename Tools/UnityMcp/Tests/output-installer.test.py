@@ -6,26 +6,34 @@ import stat
 import subprocess
 import sys
 import tempfile
-import time
 
 root = Path(__file__).resolve().parents[3]
 shell = sys.argv[1] if len(sys.argv) > 1 else "powershell.exe"
 with tempfile.TemporaryDirectory(prefix="mcp-installer-", dir=root / "tmp") as temporary:
-    project = Path(temporary).resolve()
-    assert project.parent == (root / "tmp").resolve()
+    repository = Path(temporary).resolve()
+    assert repository.parent == (root / "tmp").resolve()
+    subprocess.run(["git", "--no-pager", "init", "--quiet"], cwd=repository, check=True, capture_output=True)
+    subprocess.run(["git", "--no-pager", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+                    "-c", "core.hooksPath=", "commit", "--allow-empty", "-qm", "fixture"],
+                   cwd=repository, check=True, capture_output=True)
+    project = repository / "worker"
+    subprocess.run(["git", "--no-pager", "worktree", "add", "--detach", str(project), "HEAD"],
+                   cwd=repository, check=True, capture_output=True)
     tooling = project / "Tools/UnityMcp"
     tooling.mkdir(parents=True)
     source = root / "Tools/UnityMcp"
     for name in ("Apply-OutputGuard.ps1", "output-guard-10.2.0.patch"):
         shutil.copy2(source / name, tooling / name)
     shutil.copytree(source / "OutputGuard", tooling / "OutputGuard")
+    shutil.copytree(root / "Tools/agents/editor_broker", project / "Tools/agents/editor_broker",
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copy2(root / "Tools/agents/editor-broker.py", project / "Tools/agents/editor-broker.py")
     package = project / "Packages/com.coplaydev.unity-mcp"
     (package / "Editor/Tools").mkdir(parents=True)
     (package / "Editor/Helpers").mkdir(parents=True)
     (package / "package.json").write_text('{"version":"10.2.0"}', encoding="utf-8")
     execute = package / "Editor/Tools/ExecuteCode.cs"
     shutil.copy2(root / "Packages/com.coplaydev.unity-mcp/Editor/Tools/ExecuteCode.cs", execute)
-    subprocess.run(["git", "--no-pager", "init", "--quiet"], cwd=project, check=True, capture_output=True)
     # Стенд работает и после установки патча: восстанавливает только собственную копию.
     if "ExecuteCodeOutputGuard.Limit" in execute.read_text(encoding="utf-8-sig"):
         reverse = subprocess.run(["git", "--no-pager", "-c", "core.autocrlf=false", "apply", "--reverse", "--ignore-whitespace",
@@ -35,11 +43,19 @@ with tempfile.TemporaryDirectory(prefix="mcp-installer-", dir=root / "tmp") as t
             raise AssertionError(reverse.stderr.decode("utf-8", errors="replace")[:2000])
         # Reverse добавляет старые строки с EOL патча; восстановить байты LF upstream.
         execute.write_bytes(execute.read_bytes().replace(b"\r\n", b"\n"))
-    lock = project / "tmp/unity-lock"
-    lock.mkdir(parents=True)
-    (lock / "info").write_text(f"owner=fixture\nuntil={int(time.time()) + 300}\n", encoding="utf-8")
     # Разрешение только этому дочернему процессу выполнить наш fixture; политика машины не меняется.
-    command = [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(tooling / "Apply-OutputGuard.ps1"), "-LockOwner", "fixture"]
+    command = [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(tooling / "Apply-OutputGuard.ps1"),
+               "-OfflineEditor", "-PythonExecutable", sys.executable]
+    for extra in (["-LockOwner", "fixture"], ["-Ticket", "1"]):
+        denied = subprocess.run(command + extra, cwd=project, capture_output=True, timeout=30)
+        assert denied.returncode != 0, "legacy/incomplete capability accepted"
+        assert not (package / "Editor/Helpers/ExecuteCodeOutputGuard.cs").exists()
+    shutil.copytree(project / "Tools", repository / "Tools")
+    main_command = [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+                    str(repository / "Tools/UnityMcp/Apply-OutputGuard.ps1"),
+                    "-OfflineEditor", "-PythonExecutable", sys.executable]
+    denied_main = subprocess.run(main_command, cwd=repository, capture_output=True, timeout=30)
+    assert denied_main.returncode != 0 and b"main checkout" in denied_main.stderr
     def install():
         return subprocess.run(command, cwd=project, capture_output=True, timeout=30)
     execute.chmod(stat.S_IREAD)

@@ -1,4 +1,6 @@
-﻿param([Parameter(Mandatory=$true)][string]$LockOwner)
+﻿[CmdletBinding()]
+param([string]$Ticket, [string]$Token, [string]$StateDir, [switch]$OfflineEditor,
+      [string]$PythonExecutable = 'python')
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $target = Join-Path $projectRoot 'Packages/com.coplaydev.unity-mcp'
@@ -14,17 +16,16 @@ function Get-SourceHash([string]$Path) {
     try { return [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($text))).Replace('-', '') }
     finally { $sha.Dispose() }
 }
-function Assert-OwnLock {
-    $info = @{}
-    Get-Content -LiteralPath (Join-Path $projectRoot 'tmp/unity-lock/info') | ForEach-Object {
-        $pair = $_ -split '=', 2
-        if ($pair.Count -eq 2) { $info[$pair[0]] = $pair[1] }
-    }
-    if ($info.owner -ne $LockOwner -or [long]$info.until -le [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()) {
-        throw 'Нужен действующий Unity lock указанного владельца.'
-    }
+function Assert-EditorAccess {
+    $guardArgs = @((Join-Path $projectRoot 'Tools/agents/editor_broker/client_guard.py'), '--project', $projectRoot)
+    if ($Ticket) { $guardArgs += @('--ticket', $Ticket) }
+    if ($Token) { $guardArgs += @('--token', $Token) }
+    if ($StateDir) { $guardArgs += @('--state-dir', $StateDir) }
+    if ($OfflineEditor) { $guardArgs += '--offline-editor' }
+    $reply = & $PythonExecutable @guardArgs
+    if ($LASTEXITCODE -ne 0) { throw "Editor broker отказал в записи: $reply" }
 }
-Assert-OwnLock
+Assert-EditorAccess
 if ((Get-Content -LiteralPath (Join-Path $target 'package.json') -Raw | ConvertFrom-Json).version -ne '10.2.0') { throw 'Ожидался MCP 10.2.0.' }
 $installedHash = Get-SourceHash $executePath
 if ($installedHash -ne $baselineHash -and $installedHash -ne $patchedHash) { throw 'ExecuteCode отличается от проверенной базы; чужие изменения не перезаписываю.' }
@@ -47,12 +48,12 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Патч не применён к staging-копии.' }
         if ((Get-SourceHash (Join-Path $stage 'Editor/Tools/ExecuteCode.cs')) -ne $patchedHash) { throw 'Результат патча не совпадает с проверенным hash.' }
     }
-    Assert-OwnLock
+    Assert-EditorAccess
     if ((Get-SourceHash $executePath) -ne $installedHash) { throw 'ExecuteCode изменён во время подготовки; установка отменена.' }
     # Сначала зависимость, затем подготовленный вызывающий код. Перекомпиляция — отдельный шаг.
     if (!(Test-Path -LiteralPath $helperPath)) { Copy-Item -LiteralPath $helperSource -Destination $helperPath }
     if (!(Test-Path -LiteralPath ($helperPath + '.meta'))) { Copy-Item -LiteralPath ($helperSource + '.meta.txt') -Destination ($helperPath + '.meta') }
     if ($installedHash -eq $baselineHash) { Copy-Item -LiteralPath (Join-Path $stage 'Editor/Tools/ExecuteCode.cs') -Destination $executePath }
-    Write-Output 'Установлен OutputGuard. Под этим же Unity lock дождитесь Refresh/компиляции и выполните live probe.'
+    Write-Output 'Установлен OutputGuard. Refresh/компиляцию и live probe выполняйте через editor-broker в своей аренде.'
 }
 finally { Pop-Location }

@@ -40,10 +40,11 @@ Existing EditMode группы: 20/21. Единственный отказ — L
 Unity общий. До acquire подготовить конкретный пакет, при nonzero acquire завершить команду без Unity action. После completion/cleanup немедленно release, затем анализировать.
 
 ```text
-bash Tools/agents/unity-lock.sh acquire map-runtime-bootstrap "checkpoint compile/probes"
+После checkpoint/request/watch-ticket/claim/begin своей заявки:
+python Tools/agents/editor-broker.py guard --ticket <ticket> --token <token>
 execute_code: return VrBattlegrounds.EditorTools.MapRunContractProbe.Run();
 execute_code: return VrBattlegrounds.EditorTools.AndroidCompileGate.Run();
-bash Tools/agents/unity-lock.sh release map-runtime-bootstrap
+python Tools/agents/editor-broker.py finish --ticket <ticket> --token <token>
 ```
 
 Остальные temporary method-body probes лежат в `Tools/Probes/MapRuntimeBootstrap/`: root-preflight, catalog-adversarial, teardown, baseline, lifecycle-baseline и native-inventory. `index-compile.cs` экспортирует references/defines для source closure check штатным csc Unity; локальный `prepare-checkpoint.py` сохраняет manifest/index sources и запускает этот compiler. MCP запускать с `compiler:auto`: отдельный backend Roslyn сейчас недоступен, CodeDom выполняет эти snippets. Чтение результата MCP — только через `Tools/UnityMcp/compact-result.js`. `catalog-adversarial` удаляет собственную временную папку с проверкой GUID, поэтому требует осознанного `safety_checks:false`; не использовать это для runtime-патча.

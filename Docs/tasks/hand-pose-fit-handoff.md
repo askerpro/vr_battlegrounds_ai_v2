@@ -44,7 +44,7 @@ Task ID: `hand-pose-fit-2026-10-05`. Дата: 2026-10-05. Пользовате�
 
 ## Ограничения и дисциплина
 
-Editor общий: prepared Unity operations только под `Tools/agents/unity-lock.sh`, release сразу после terminal result/cleanup, до анализа/документации. Не останавливать человеческий Play. Перед source import проверить Play/compile и SDK window: reload окна может вызвать штатный autosave.
+Prepared Unity operations выполнять в своей аренде `Tools/agents/editor-broker.py`: request/claim/begin, guard перед MCP, finish сразу после terminal result/cleanup, до анализа/документации. Не останавливать человеческий Play. Перед source import проверить Play/compile и SDK window: reload окна может вызвать штатный autosave.
 
 Fixtures — собственные plain transforms/SMR/meshes; не создавать/активировать SDK Avatar/GrabManager/UID manager, не подменять singleton/private registry и не менять source prefab bones ради проверки. Read-only prefab native fixtures проверяют pipeline, не runtime game truth. Reports — локальные ignored packages; Source/meta/актуальные планы/контракты и этот handoff — в Git.
 

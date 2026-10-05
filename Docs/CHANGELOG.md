@@ -1,5 +1,41 @@
 # Changelog (Журнал изменений)
 
+## 2026-10-05 — Рентген SDK preview на GrabPoint и общий frozen export
+
+- После человеческой приёмки MEF preview подключены выбранные Grabbable/точка/сторона. Snapshot читает unsaved bones через SDK preview core, использует один HandRenderer и ставит его на snap. Основной хват и поддержка анализируются отдельно. JSON/25 PNG и live overlay используют один fingerprint; pose assets не сохраняются.
+- Постоянный CPU BakeMesh/hash/topology заменён geometry input key и session cache. Object geometry/GPU field переиспользуются при правке пальцев; камера и служебная renderer revision от forceRenderingOff не меняют key. Старый async readback отвергается после A→B→A; удаление объекта очищает cache и без рентгена.
+- Binding11/11, state11/11, cleanup5/5, GPU30/30, math37/37, camera ownership14/14 и Android PASS.100 idle checks:1capture, median1,628мс/P951,686мс; initial189мс. Export25PNG,203 пары0–2мм в read-only prefab bind-pose fixture, fingerprints equal, изображения просмотрены. Это проверка pipeline, не качество авторского хвата/полный UI FPS; новая UI-приёмка открыта. [Контракт](plans/2026-10-05-sdk-preview-diagnostics-binding.md), [инструкция](hand-pose-fit-tool.md).
+
+## 2026-10-05 — SDK grip preview соответствует игровому skinning
+
+- Исправлена причина переплетённых пальцев MEF/AK105: preview больше не использует абсолютные матрицы исходных рук оружейного пака. Применяется общий runtime метод позы и штатный Unity skinning на целевом риге в собственной preview-сцене. Сохранены SDK API, snap/proxy frame и mesh identity; исходные аватары и pose assets не меняются.
+- Старое восьмипоточное вычисление с активным ожиданием убрано. Native MEF основной/поддерживающий хват обеих рук и Cyborg Fixed/Blend: RED RMS85,6–144,3 мм → GREEN12/12, max0,000323 мм. Постоянные Editor NUnit методы15/15 напрямую в Unity, свежий AndroidCompileGate PASS. Штатный UI/Quest и оптимизация/preview binding рентген-анализатора ещё не приняты. [Патч45](UltimateXR/sdk-patches.md#патч-45-grip-preview-использует-игровое-применение-позы-и-скиннинг-unity), [план](plans/2026-10-05-sdk-preview-runtime-skinning.md).
+
+## 2026-10-05 — Диагностика текущей позы в SDK Hand Pose Editor
+
+- В правой колонке SDK окна добавлены рентген SceneView и анализ/выгрузка текущей видимой позы, включая несохранённые изменения. SDK callbacks передают уже обновлённые кости; повторного применения pose/snap нет.
+- GPU distance field использует существующий BVH, порционное построение и явную погрешность/unknown. Полные CPU метрики, JSON, 24 стандартных изображения и текущий ракурс работают по одному frozen snapshot; изменение геометрии помечает результат устаревшим.
+- Исходные Renderer подавляются только на время SceneView camera, с восстановлением значения и сохранением Game camera/Hierarchy. Shared materials/PropertyBlock/transforms и SDK lifecycle сохраняются; свои GPU resources очищаются при выключении/закрытии/Play/reload. Выгрузки `UserReports/HandPoseFit` исключены из Git. После review исправлены stale fingerprint/контактные пары и предметный конец пары на medial axis; GPU BVH находит настоящую ближайшую точку. Native GPU/render/export 30/30, lifecycle state 7/7, camera scope/preservation 14/14, реальный URP render 5/5, существующая математика 37/37 через прямой native вызов; Android PASS. [План и проверка](plans/2026-10-05-sdk-hand-pose-diagnostics.md), [инструкция](hand-pose-fit-tool.md).
+- Пользовательская UI/Quest-приёмка, real grip accuracy и same-object two-held proof остаются открытыми; код не коммитится до пользовательской проверки.
+
+## 2026-10-05 — Проверяемая привязка локального объёма хвата
+
+- `mesh-fit-0.4-local-volume`: локальные distance/near и знак теперь измеряются до одного фактического AnalysisVolume. Ручная запись с SHA треугольников/контекста, единицами и назначением обязательна; checkbox Reviewed без записи, stale/nonfinite/open входы дают unknown. Черновик не получает Accepted автоматически.
+- Native RED 16 PASS/21 FAIL → GREEN 37/37; внешний 0/21 → 21/21, Python 11/11 и Android PASS. [Калибровочный отчёт](tasks/report/hand-pose-fit-2026-10-05/history/hand-pose-fit-quality-2026-10-05.json): 195 записей, provenance errors 0, геометрический holdout TP3/TN4/FP0/FN0; 16 неизвестных fixtures и 165 real — abstain. Рост unsigned-контакта 31,25% → 100% при вложении подтверждает его неоднозначность.
+- Свежие SDK-копии дали 48 PNG, thumb contact=0 и корректный отказ при отсутствии объёма. Preview 1/1, исходные сцены/dirty сохранены, очередь пуста. Игровые ассеты/SDK/исторические JSON и коммиты не менялись; ручное принятие объёмов, реальная пара двух удерживающих рук и Quest остаются открытыми.
+
+## 2026-10-04 — Сравнение посадки оружейных хватов MEF
+
+- Сняты 123 статических отчёта и 2952 PNG: основные/поддерживающие MEF, оригинальные кадры Hands/KINEMATION и Cyborg/BigHands на SDK-оружии проекта. [Сравнение](hand-pose-fit-mef-comparison.md) содержит 33 пары, приоритеты просмотра, контакт с другой кистью и пределы достоверности; общий балл не назначен, игровые позы/ассеты не менялись.
+- Исследовательская съёмка исходных оружейных скинов учитывает все веса × bindpose в мировых координатах, исключая повторный масштаб Renderer. Python-сводчик проверил полный набор и сохранил числовой артефакт/галерею; Lobby чистая, preview-сцены 1/1.
+
+## 2026-10-04 — Анализ посадки кисти и контактные пары
+
+- Добавлен [Hand Pose Review](hand-pose-fit-tool.md): целевой BakeMesh после Fixed/Blend, площадная выборка дистанций, пересечения, проверка пригодности знака, JSON и 24 PNG в Temp.
+- Точки кисти и ближайшие точки оружия подсвечены в диапазоне **0–2 мм включительно**. Цвет отделяет внешнюю близость, вложение и неизвестный знак; рентген показывает скрытые пары, обычный вид учитывает глубину.
+- Добавлены живой захват после SDK update и серия, фаланги/суставы, нормали и связные участки, регионы, локальный аналитический объём, сравнение/сходимость и достоверность каждого показателя. Unreadable-меши в Play Mode читаются через Editor MeshData без изменения импорта. Геометрия 16/16 и Android PASS; два SDK-кадра с обеими кистями/48 PNG проверены и стенд убран.
+- [SDK-калибровка](hand-pose-fit-sdk-calibration.md): 24 неоружейных хвата Cyborg/BigHands, 576 PNG и 16 контролей; общий процент близости не стал оценкой качества. Snap SDK создаёт только transform и ошибочно выбирает левую руку для правой кнопки (Issue 30). Маски, нормы качества и полезность в Unity/Quest остаются открыты; игровые позы и SDK не изменены.
+
 ## 2026-10-05 — Первый серверный стенд ботов
 
 - Создан BotCombatStand с отдельной сценой, временным запуском сервера и собственными данными карты/станций; cleanup удаляет только принадлежащих стенду акторов через BotDirector.RemoveBot.

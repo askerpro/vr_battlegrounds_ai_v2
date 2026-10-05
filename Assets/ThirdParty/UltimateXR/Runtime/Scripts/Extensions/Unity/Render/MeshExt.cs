@@ -111,6 +111,12 @@ namespace UltimateXR.Extensions.Unity.Render
         /// <returns>New mesh</returns>
         public static Mesh ExtractSubMesh(SkinnedMeshRenderer skin, Transform bone, ExtractSubMeshOperation extractOperation, float weightThreshold = UxrConstants.Geometry.SignificantBoneWeight)
         {
+            return ExtractSubMesh(skin,bone,extractOperation,out _,weightThreshold);
+        }
+
+        // VR Battlegrounds patch: editor native skinning использует те же source indices, что extraction.
+        public static Mesh ExtractSubMesh(SkinnedMeshRenderer skin, Transform bone, ExtractSubMeshOperation extractOperation, out int[] sourceVertexIndices, float weightThreshold = UxrConstants.Geometry.SignificantBoneWeight)
+        {
             Mesh newMesh = new Mesh();
 
             // Create dictionary to check which bones belong to the hierarchy
@@ -136,6 +142,7 @@ namespace UltimateXR.Extensions.Unity.Render
             List<Vector3>        newNormals     = new List<Vector3>();
             List<Vector2>        newUV          = new List<Vector2>();
             List<BoneWeight>     newBoneWeights = new List<BoneWeight>();
+            List<int>            sourceIndices = new List<int>();
 
             bool VertexMeetsRequirement(bool isFromHierarchy)
             {
@@ -191,6 +198,7 @@ namespace UltimateXR.Extensions.Unity.Render
                             if (!old2New.ContainsKey(oldIndex))
                             {
                                 old2New.Add(oldIndex, old2New.Count);
+                                sourceIndices.Add(oldIndex);
 
                                 newVertices.Add(vertices[oldIndex]);
                                 newNormals.Add(normals[oldIndex]);
@@ -222,6 +230,7 @@ namespace UltimateXR.Extensions.Unity.Render
                 newMesh.SetTriangles(newTriangles[submesh].ToArray(), submesh);
             }
 
+            sourceVertexIndices=sourceIndices.ToArray();
             return newMesh;
         }
 

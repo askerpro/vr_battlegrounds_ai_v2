@@ -1454,3 +1454,50 @@ raycaster. Это устраняет класс рассинхронизации
 и исходная сцена восстановлены; игровой Play Mode не запускался.
 Свежий `AndroidCompileGate` после исправления: PASS. Вместе с проверками общего
 fingertip-порога, отображения и подложки — 84/84 preview-сценария PASS.
+
+## Патч 44: подключение диагностики к Hand Pose Editor
+
+`Editor/Manipulation/HandPoses/UxrHandPoseEditorWindow.cs` предоставляет три callbacks: `DiagnosticsGUI`, `DiagnosticsContextUpdated`, `DiagnosticsClosed`. Панель рисуется в колонке пресетов, а текущие avatar/pose/Blend передаются после штатного обновления костей. SDK не ссылается на сборку проекта; подписчик находится в Editor-модуле HandPoseReview.
+
+MouseDown/MouseUp внутри diagnostics rect исключены из штатного авто-сохранения/сброса Blend этого окна: нажатие «Анализировать» не должно менять анализируемую позу. У обычных SDK controls семантика сохранения не менялась. Перед reset рук при закрытии вызывается callback очистки временного отображения. Нет правок SDK runtime, grab/UID/Singleton lifecycle.
+
+Проектный модуль читает видимые bones/meshes, рисует SceneView xray и GPU distance field, а полные CPU метрики/JSON/25 изображений сохраняет вне Assets/Git. При обновлении SDK перенести callbacks, diagnostics rect и точку вызова после обновления обеих кистей. Не переносить геометрические вычисления или проектные зависимости внутрь SDK.
+
+План/ограничения и результаты проверок: [SDK diagnostics](../plans/2026-10-05-sdk-hand-pose-diagnostics.md), [инструмент](../hand-pose-fit-tool.md). Runtime/Quest совпадение и фактический захват двух рук остаются отдельной приёмкой.
+
+## Патч 45: grip preview использует игровое применение позы и скиннинг Unity
+
+`Editor/Manipulation/HandPoses/UxrPreviewHandGripMesh.cs` больше не деформирует кисть по
+сохранённым `TransformRelativeToHand` исходного рига. Эти матрицы расходились с целевым
+скелетом MEF после импорта/зеркалирования поз оружейных паков. Игра использует ориентации
+дескриптора через `UxrAvatarRig.UpdateHandUsingDescriptor`, сохраняя длины/положения костей
+целевого аватара; preview теперь вызывает тот же метод на собственных Transform и
+`SkinnedMeshRenderer`, затем `BakeMesh(false)`. Новых игровых формул нет.
+
+Временная preview-сцена не содержит Avatar/GrabManager/SDK components. В `finally` удаляются
+baked mesh и собственная сцена. Копируются bones, renderer quality и текущие blend shape
+weights. Vertices и нормали переводятся в rigid grabber frame: avatar scale сохраняется,
+масштаб grabbable hierarchy к руке не добавляется. Штатный unit-scale proxy и API Build/Refresh/
+SetBlendPoseValue сохранены; `BuildForAvatar` позволяет читать явную текущую позу без grab.
+При remap mesh reference сохраняется, поскольку её разделяют proxy и `UxrGripPoseInfo`.
+Mapping инвалидируется при смене renderer/mesh/side/Wrist/bones.
+
+В `Runtime/Scripts/Extensions/Unity/Render/MeshExt.cs` добавлен overload `ExtractSubMesh`
+с `out int[] sourceVertexIndices`. Старый overload и правило выделения граней сохранены;
+mapping создаётся тем же проходом, что и subset mesh. При обновлении SDK перенести оба файла.
+`UxrPreviewHandBoneInfo` оставлен для совместимости, но новый preview его матрицы не читает.
+
+Проверка: native RED старого preview против игрового метода + Unity BakeMesh, mapping errors0:
+MEF AK105 Grip/Support обеих рук RMS85,6–144,3 мм, maxдо297,4 мм; Cyborg почти совпадал.
+GREEN12/12, max0,000323 мм. Постоянные NUnit методы15/15 напрямую вызваны в Editor:
+Fixed/Blend, обе руки, основной/поддерживающий хват, нормали, uniform/nonuniform scale,
+blend shape, mesh identity, сохранность исходных bones/assets/Undo/selection/dirty scene и
+cleanup. Полный Test Runner не запускался, чтобы не сохранять чужую dirty сцену.
+Свежий AndroidCompileGate — PASS. Рабочие JSON находятся в
+`tmp/hand-fit-sdk-preview-research-20261005/`; [план и границы](../plans/2026-10-05-sdk-preview-runtime-skinning.md).
+
+Пользователь принял исправленное MEF SDK preview. Проектный binding/cache анализатора теперь
+использует этот core на конкретном snap, frozen snapshot для overlay/export и дешёвый input key.
+[Новый срез](../plans/2026-10-05-sdk-preview-diagnostics-binding.md) прошёл native проверки;
+его UI orbit/zoom/drag и game IK/Quest остаются открытыми.
+

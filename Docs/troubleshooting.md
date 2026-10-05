@@ -14,6 +14,25 @@
 
 ## Editor-инструменты
 
+**Рентген SDK Hand Pose Editor тормозит orbit/zoom, контактных меток нет.**
+Первый срез постоянно запекал несколько LOD и измерял сценовую руку за1,81 м от оружия.
+Исправлено: единственный SDK HandRenderer на выбранном GrabPoint; frozen cache для overlay/export,
+камера и forceRenderingOff исключены из key, старый GPU readback отвергается по generation.
+Native binding11/11, state11/11, cleanup5/5, Android PASS;100 input checks дали1 capture,
+median1,628 мс. Это не UI FPS: новая пользовательская проверка навигации ещё открыта.
+Выбрать Grabbable/точку/сторону в панели; при внешней mesh mutation без SetDirty нажать
+«Обновить геометрию». Неоценённые точки вне GPU-области требуют центрирования/увеличения области.
+[Инструкция и границы](hand-pose-fit-tool.md#встроенная-диагностика-sdk-hand-pose-editor).
+
+
+**MEF grip preview показывает переплетённые пальцы, а в игре хват нормальный.**
+SDK preview читал матрицы костей исходного пака, а runtime применял универсальные ориентации
+к MEF ригу. Исправлено общим игровым методом позы и штатным Unity skinning в preview;
+15/15 Editor-проверок, Android PASS. Уже открытое preview пересоздать переключением
+`Preview Grip Pose Meshes`: `None` → нужная рука.
+[Причина и пределы совпадения](UltimateXR/known-issues.md#mef-переплетённые-пальцы-в-grip-preview-при-хорошем-хвате-в-игре-2026-10-05).
+
+
 **Открытый редактор аватара тормозит весь Unity UI при переключении вкладок и прокрутке.**
 Причина подтверждена native-профилем и контрольным прогоном: кнопки синхронно вызывали
 `AssetDatabase.GetDependencies` и сбор области папок на каждом Layout/Repaint, даже когда действие

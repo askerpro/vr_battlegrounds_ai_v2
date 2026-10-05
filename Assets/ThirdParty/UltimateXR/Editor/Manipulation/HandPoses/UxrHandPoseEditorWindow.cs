@@ -83,6 +83,12 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         /// </summary>
         public static bool IsVisible => s_openWindowCount > 0;
 
+        // VR Battlegrounds patch: внешний Editor-модуль читает текущий контекст; SDK не зависит от анализатора.
+        public static event Action<UxrHandPoseEditorWindow> DiagnosticsGUI;
+        public static event Action<UxrHandPoseEditorWindow,UxrAvatar,UxrHandPoseAsset,float> DiagnosticsContextUpdated;
+        public static event Action<UxrHandPoseEditorWindow> DiagnosticsClosed;
+        private Rect _diagnosticsRect;
+
         #endregion
 
         #region Public Methods
@@ -204,6 +210,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         /// </summary>
         private void OnDisable()
         {
+            DiagnosticsClosed?.Invoke(this);
             EditorApplication.playModeStateChanged -= EditorApplication_PlaymodeStateChanged;
             SceneView.duringSceneGui               -= SceneView_DuringSceneGUI;
             Undo.undoRedoPerformed                 -= Undo_OnUndoRedo;
@@ -242,7 +249,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
             // This is mainly to handle the preview blend slider appropriately
 
-            if (_avatar != null && _currentHandPose != null)
+            if (_avatar != null && _currentHandPose != null && !_diagnosticsRect.Contains(Event.current.mousePosition))
             {
                 if (Event.current.type == EventType.MouseDown)
                 {
@@ -1233,6 +1240,18 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
             GUILayout.BeginArea(areaPresetsRect);
             EditorGUILayout.BeginVertical("box", GUILayout.Width(areaPresetsRect.width));
 
+            if (DiagnosticsGUI != null)
+            {
+                EditorGUILayout.BeginVertical();
+                DiagnosticsGUI.Invoke(this);
+                EditorGUILayout.EndVertical();
+                if (Event.current.type == EventType.Repaint)
+                {
+                    _diagnosticsRect = GUILayoutUtility.GetLastRect();
+                    _diagnosticsRect.position += areaPresetsRect.position;
+                }
+            }
+
             _foldoutPresets = UxrEditorUtils.FoldoutStylish("Hand pose presets:", _foldoutPresets);
 
             if (_foldoutPresets)
@@ -1363,6 +1382,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     UxrGrabbableObjectSnapTransformEditor.RefreshGrabPoseMeshes(_avatar, _currentHandPose);
                 }
             }
+            DiagnosticsContextUpdated?.Invoke(this,_avatar,_currentHandPose,_blendValue);
         }
 
         #endregion

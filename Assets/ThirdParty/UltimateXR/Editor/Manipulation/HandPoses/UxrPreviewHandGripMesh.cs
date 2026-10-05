@@ -5,444 +5,151 @@
 // --------------------------------------------------------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using UltimateXR.Avatar;
+using UltimateXR.Avatar.Rig;
 using UltimateXR.Core;
-using UltimateXR.Extensions.Unity.Math;
 using UltimateXR.Extensions.Unity.Render;
 using UltimateXR.Manipulation;
 using UltimateXR.Manipulation.HandPoses;
+using UnityEditor;
 using UnityEngine;
 
 namespace UltimateXR.Editor.Manipulation.HandPoses
 {
     /// <summary>
-    ///     Class that computes and stores a hand mesh used to preview a grab hand pose in the editor.
-    ///     Grab preview meshes are generated so that vertices are in grabber space. By creating a helper object
-    ///     and assigning it the preview mesh, it is easy to preview how an avatar would grab an object by placing
-    ///     the helper on the grabbable object snap position.
+    /// VR Battlegrounds patch: preview использует runtime-применение pose и native Unity skinning.
+    /// Исходный avatar не изменяется; vertices остаются в rigid grabber space для SDK proxy.
     /// </summary>
     public class UxrPreviewHandGripMesh
     {
-        #region Public Types & Data
-
-        /// <summary>
-        ///     Gets if the object contains mesh data.
-        /// </summary>
-        public bool IsValid => _initialVertices != null && _vertices != null && _normals != null && UnityMesh != null && _bones != null && _bonesClosed != null;
-
-        /// <summary>
-        ///     Gets the mesh.
-        /// </summary>
+        public bool IsValid => UnityMesh && _skin && _pose && _hand != null && _sourceIndices != null;
         public Mesh UnityMesh { get; private set; }
+        private UxrPreviewHandGripMesh() { }
 
-        #endregion
-
-        #region Constructors & Finalizer
-
-        /// <summary>
-        ///     Constructor is private. Use <see cref="Build" /> instead.
-        /// </summary>
-        private UxrPreviewHandGripMesh()
-        {
-        }
-
-        #endregion
-
-        #region Public Methods
-
-        /// <summary>
-        ///     Creates a preview mesh for the given grabbable object.
-        /// </summary>
-        /// <param name="grabbableObject">Grabbable object to create the preview mesh for</param>
-        /// <param name="avatar">The avatar to create the preview mesh for</param>
-        /// <param name="grabPoint">The grab point to create the preview mesh for</param>
-        /// <param name="handSide">Which hand to create the preview mesh for</param>
-        /// <returns>Preview mesh</returns>
         public static UxrPreviewHandGripMesh Build(UxrGrabbableObject grabbableObject, UxrAvatar avatar, int grabPoint, UxrHandSide handSide)
         {
-            // Find pose
-
-            UxrHandPoseAsset handPoseAsset = grabbableObject.GetGrabPoint(grabPoint).GetGripPoseInfo(avatar).HandPose;
-
-            if (handPoseAsset == null)
-            {
-                return null;
-            }
-
-            UxrHandPoseAsset avatarHandPose = avatar.GetHandPose(handPoseAsset.name);
-
-            if (avatarHandPose == null)
-            {
-                Debug.LogWarning($"Avatar {avatar.name}: Could not find {nameof(UxrHandPoseAsset)} file for pose {handPoseAsset.name}.");
-                return null;
-            }
-
-            // Find grabbers
-
-            UxrGrabber[] grabbers = avatar.GetComponentsInChildren<UxrGrabber>();
-
-            if (grabbers.Length == 0)
-            {
-                Debug.LogWarning($"Avatar {avatar.name}: No {nameof(UxrGrabber)} components found in hierarchy.");
-                return null;
-            }
-
-            // Iterate over meshes from grabbers
-
-            UxrPreviewHandGripMesh previewMesh = new UxrPreviewHandGripMesh();
-
-            foreach (UxrGrabber grabber in grabbers)
-            {
-                // Get mesh snapshot
-
-                Renderer renderer = grabber.HandRenderer;
-
-                if (renderer is SkinnedMeshRenderer skinnedMeshRenderer && grabber.Side == handSide)
-                {
-                    Transform handTransform = avatar.GetHandBone(handSide);
-                    previewMesh.UnityMesh = new Mesh();
-                    skinnedMeshRenderer.BakeMesh(previewMesh.UnityMesh);
-                    previewMesh.CreateMesh(avatar, skinnedMeshRenderer, handSide);
-                    previewMesh.CreateBoneList(avatar, skinnedMeshRenderer, avatarHandPose, handSide);
-                    previewMesh.UnityMesh.name = UxrGrabPointIndex.GetIndexDisplayName(grabbableObject, grabPoint) + (handSide == UxrHandSide.Left ? UxrConstants.LeftGrabPoseMeshSuffix : UxrConstants.RightGrabPoseMeshSuffix);
-
-                    if (avatarHandPose.PoseType == UxrHandPoseType.Fixed)
-                    {
-                        previewMesh.SetBlendPoseValue(grabber, handTransform, false);
-                    }
-                    else if (avatarHandPose.PoseType == UxrHandPoseType.Blend)
-                    {
-                        previewMesh.SetBlendPoseValue(grabber, handTransform, true, grabbableObject.GetGrabPoint(grabPoint).GetGripPoseInfo(grabber.Avatar).PoseBlendValue);
-                    }
-
-                    return previewMesh;
-                }
-            }
-
-            Debug.LogWarning($"Avatar {avatar.name}: No {(handSide == UxrHandSide.Left ? "left" : "right")} {nameof(UxrGrabber)} component found in avatar hierarchy or component has no renderer defined to get the mesh from.");
-            return null;
+            if(!grabbableObject || !avatar) return null;
+            var selected=grabbableObject.GetGrabPoint(grabPoint).GetGripPoseInfo(avatar)?.HandPose;
+            var pose=selected?avatar.GetHandPose(selected.name):null;
+            if(!pose) return null;
+            var preview=BuildForAvatar(avatar,pose,handSide,grabbableObject.GetGrabPoint(grabPoint).GetGripPoseInfo(avatar).PoseBlendValue);
+            if(preview!=null)preview.UnityMesh.name=UxrGrabPointIndex.GetIndexDisplayName(grabbableObject,grabPoint)+(handSide==UxrHandSide.Left?UxrConstants.LeftGrabPoseMeshSuffix:UxrConstants.RightGrabPoseMeshSuffix);
+            return preview;
         }
 
-        /// <summary>
-        ///     Refreshes the preview mesh.
-        /// </summary>
-        /// <param name="grabbableObject">Grabbable object to refresh the preview mesh for</param>
-        /// <param name="avatar">The avatar to refresh the preview mesh for</param>
-        /// <param name="grabPoint">The grab point to refresh the preview mesh for</param>
-        /// <param name="handSide">Which hand to refresh the preview mesh for</param>
-        public bool Refresh(UxrGrabbableObject grabbableObject, UxrAvatar avatar, int grabPoint, UxrHandSide handSide, bool reloadBoneData = false)
+        /// <summary>Read-only deformation текущего pose asset (включая несохранённый), без grab/scene SDK clone.</summary>
+        public static UxrPreviewHandGripMesh BuildForAvatar(UxrAvatar avatar,UxrHandPoseAsset pose,UxrHandSide handSide,float blendValue=0)
         {
-            if (grabbableObject == null || avatar == null)
-            {
-                return false;
+            if(!avatar || !pose)return null;
+            var grabber=avatar.GetComponentsInChildren<UxrGrabber>().FirstOrDefault(g=>g.Side==handSide&&g.HandRenderer is SkinnedMeshRenderer);
+            if(!grabber) return null;
+            var preview=new UxrPreviewHandGripMesh();
+            try {
+                var skin=(SkinnedMeshRenderer)grabber.HandRenderer;
+                preview.CreateMesh(avatar,skin,handSide);
+                preview.CreateBoneList(avatar,skin,pose,handSide);
+                preview.UnityMesh.name=pose.name+" "+handSide+" preview";
+                preview.SetBlendPoseValue(grabber,avatar.GetHandBone(handSide),pose.PoseType==UxrHandPoseType.Blend,blendValue);
+                return preview;
+            } catch {
+                if(preview.UnityMesh) Object.DestroyImmediate(preview.UnityMesh);
+                throw;
             }
+        }
 
-            UxrGrabber[] grabbers = avatar.GetComponentsInChildren<UxrGrabber>();
-            UxrGrabber   grabber  = grabbers.FirstOrDefault(g => g.Side == handSide);
-
-            if (grabber == null)
-            {
-                return false;
+        public bool Refresh(UxrGrabbableObject grabbableObject,UxrAvatar avatar,int grabPoint,UxrHandSide handSide,bool reloadBoneData=false)
+        {
+            if(!grabbableObject || !avatar) return false;
+            var grabber=avatar.GetComponentsInChildren<UxrGrabber>().FirstOrDefault(g=>g.Side==handSide);
+            var selected=grabbableObject.GetGrabPoint(grabPoint).GetGripPoseInfo(avatar)?.HandPose;
+            var pose=selected?avatar.GetHandPose(selected.name):null;
+            if(!grabber || !pose || !(grabber.HandRenderer is SkinnedMeshRenderer skin)) return false;
+            // Geometry mapping принадлежит конкретному mesh/rig; при смене renderer источник перевычисляется.
+            if(_skin!=skin || _sourceMesh!=skin.sharedMesh || _side!=handSide || _mappingWrist!=avatar.GetHand(handSide).Wrist || !_mappingBones.SequenceEqual(skin.bones)) {
+                CreateMesh(avatar,skin,handSide);
             }
-
-            // Find pose
-
-            UxrHandPoseAsset handPoseAsset = grabbableObject.GetGrabPoint(grabPoint).GetGripPoseInfo(avatar).HandPose;
-
-            if (handPoseAsset == null)
-            {
-                return false;
-            }
-
-            UxrHandPoseAsset avatarHandPose = avatar.GetHandPose(handPoseAsset.name);
-
-            if (avatarHandPose == null)
-            {
-                Debug.LogWarning($"Avatar {avatar.name}: Could not find {nameof(UxrHandPoseAsset)} file for pose {handPoseAsset.name}.");
-                return false;
-            }
-
-            if (reloadBoneData && grabber.HandRenderer is SkinnedMeshRenderer skinnedMeshRenderer)
-            {
-                CreateBoneList(avatar, skinnedMeshRenderer, avatarHandPose, handSide);
-            }
-
-            // Refresh
-
-            if (avatarHandPose.PoseType == UxrHandPoseType.Fixed)
-            {
-                SetBlendPoseValue(grabber, avatar.GetHandBone(handSide), false);
-            }
-            else if (avatarHandPose.PoseType == UxrHandPoseType.Blend)
-            {
-                SetBlendPoseValue(grabber, avatar.GetHandBone(handSide), true, grabbableObject.GetGrabPoint(grabPoint).GetGripPoseInfo(grabber.Avatar).PoseBlendValue);
-            }
-
+            CreateBoneList(avatar,skin,pose,handSide);
+            SetBlendPoseValue(grabber,avatar.GetHandBone(handSide),pose.PoseType==UxrHandPoseType.Blend,grabbableObject.GetGrabPoint(grabPoint).GetGripPoseInfo(avatar).PoseBlendValue);
             return true;
         }
 
-        /// <summary>
-        ///     Changes the blend value for a pose that supports blending.
-        /// </summary>
-        /// <param name="grabber">Grabber component</param>
-        /// <param name="handTransform">Hand bone transform</param>
-        /// <param name="blend">Blend value</param>
-        /// <param name="blendValue">New blend value</param>
-        public void SetBlendPoseValue(UxrGrabber grabber, Transform handTransform, bool blend, float blendValue = 0.0f)
+        public void SetBlendPoseValue(UxrGrabber grabber,Transform handTransform,bool blend,float blendValue=0)
         {
-            if (!IsValid)
-            {
-                Debug.LogWarning("Preview mesh is not valid");
-                return;
-            }
+            if(!IsValid || !grabber || !handTransform) return;
+            ComputePose(grabber.transform,blend,blendValue);
+        }
 
-            // Compute hand to grabber transform matrix and remove scaling because grabbable objects may be scaled but we don't want the preview vertices to scale
-
-            Matrix4x4 handToGrabberMatrix = grabber.transform.worldToLocalMatrix * handTransform.localToWorldMatrix;
-
-            // Precompute matrices
-
-            if (blend == false)
-            {
-                ComputeBoneTransformsFixed(handToGrabberMatrix, _bones);
-            }
-            else
-            {
-                ComputeBoneTransformsBlend(handToGrabberMatrix, _bones, _bonesClosed, blendValue);
-            }
-
-            // Launch threads
-
-            int threadCount = 8;
-
-            if (_vertices.Length < threadCount)
-            {
-                ComputeMesh(0, _vertices.Length);
-            }
-            else
-            {
-                List<Thread> threads = new List<Thread>();
-
-                int threadVertexCount     = _vertices.Length / threadCount;
-                int lastThreadVertexCount = _vertices.Length - threadVertexCount * (threadCount - 1);
-
-                for (int i = 0; i < threadCount; ++i)
-                {
-                    int    indexStart = i * threadVertexCount;
-                    int    indexCount = i < threadCount - 1 ? threadVertexCount : lastThreadVertexCount;
-                    Thread thread     = new Thread(() => ComputeMesh(indexStart, indexCount));
-                    thread.Start();
-                    threads.Add(thread);
+        private void ComputePose(Transform grabberTransform,bool blend,float blendValue)
+        {
+            // Временные Transform/SMR не содержат SDK components и не запускают Avatar/UID lifecycle.
+            var preview=new PreviewRenderUtility();Mesh baked=null;
+            try {
+                var map=new Dictionary<Transform,Transform>();
+                Transform Copy(Transform source) {
+                    if(!source) return null;
+                    if(map.TryGetValue(source,out var existing)) return existing;
+                    var parent=Copy(source.parent);
+                    var go=new GameObject("Grip skinning bone"){hideFlags=HideFlags.HideAndDontSave};
+                    if(!parent) preview.AddSingleGO(go);
+                    var node=go.transform;node.SetParent(parent,false);node.localPosition=source.localPosition;node.localRotation=source.localRotation;node.localScale=source.localScale;
+                    map.Add(source,node);return node;
                 }
-
-                // Wait for threads to finish
-
-                foreach (Thread thread in threads)
-                {
-                    while (thread.IsAlive)
-                    {
-                    }
+                UxrAvatarFinger Finger(UxrAvatarFinger finger) => new UxrAvatarFinger {
+                    Metacarpal=Copy(finger.Metacarpal),Proximal=Copy(finger.Proximal),Intermediate=Copy(finger.Intermediate),Distal=Copy(finger.Distal)
+                };
+                var hand=new UxrAvatarHand{Wrist=Copy(_hand.Wrist),Thumb=Finger(_hand.Thumb),Index=Finger(_hand.Index),Middle=Finger(_hand.Middle),Ring=Finger(_hand.Ring),Little=Finger(_hand.Little)};
+                var skin=Copy(_skin.transform).gameObject.AddComponent<SkinnedMeshRenderer>();
+                skin.enabled=false;skin.sharedMesh=_sourceMesh;skin.bones=_skin.bones.Select(Copy).ToArray();skin.rootBone=Copy(_skin.rootBone);skin.quality=_skin.quality;
+                for(int i=0;i<_sourceMesh.blendShapeCount;i++)skin.SetBlendShapeWeight(i,_skin.GetBlendShapeWeight(i));
+                if(_pose.PoseType==UxrHandPoseType.Fixed) UxrAvatarRig.UpdateHandUsingDescriptor(hand,_side==UxrHandSide.Left?_pose.HandDescriptorLeft:_pose.HandDescriptorRight,_handAxes,_fingerAxes);
+                else UxrAvatarRig.UpdateHandUsingDescriptor(hand,_side==UxrHandSide.Left?_pose.HandDescriptorOpenLeft:_pose.HandDescriptorOpenRight,_side==UxrHandSide.Left?_pose.HandDescriptorClosedLeft:_pose.HandDescriptorClosedRight,blend?blendValue:0,_handAxes,_fingerAxes);
+                baked=new Mesh{hideFlags=HideFlags.HideAndDontSave};skin.BakeMesh(baked,false);
+                var grabberCopy=Copy(grabberTransform);
+                // Proxy имеет unit scale: сохраняем avatar scale, исключая только масштаб grabbable hierarchy.
+                var toGrabber=Matrix4x4.TRS(grabberCopy.position,grabberCopy.rotation,Vector3.one).inverse*skin.localToWorldMatrix;
+                var normalMatrix=toGrabber.inverse.transpose;
+                var sourceVertices=baked.vertices;var sourceNormals=baked.normals;
+                for(int i=0;i<_sourceIndices.Length;i++) {
+                    _vertices[i]=toGrabber.MultiplyPoint3x4(sourceVertices[_sourceIndices[i]]);
+                    _normals[i]=normalMatrix.MultiplyVector(sourceNormals[_sourceIndices[i]]).normalized;
                 }
+                UnityMesh.vertices=_vertices;UnityMesh.normals=_normals;UnityMesh.RecalculateBounds();
+            } finally {
+                if(baked) Object.DestroyImmediate(baked);
+                preview.Cleanup();
             }
-
-            UnityMesh.vertices = _vertices;
-            UnityMesh.normals  = _normals;
-            UnityMesh.RecalculateBounds();
         }
 
-        #endregion
-
-        #region Private Methods
-
-        /// <summary>
-        ///     Computes the bone transforms for a fixed pose. The transforms move vertices from local space to grabber space.
-        /// </summary>
-        /// <param name="handToGrabberMatrix">Matrix that transforms from local hand space to grabber space</param>
-        /// <param name="boneList">List of bones</param>
-        private static void ComputeBoneTransformsFixed(Matrix4x4 handToGrabberMatrix, List<UxrPreviewHandBoneInfo> boneList)
+        private void CreateMesh(UxrAvatar avatar,SkinnedMeshRenderer skin,UxrHandSide side)
         {
-            foreach (UxrPreviewHandBoneInfo bone in boneList)
-            {
-                bone.CurrentTransform = handToGrabberMatrix * bone.TransformRelativeToHand * bone.BindPose;
-            }
+            _sourceMesh=skin.sharedMesh;
+            _mappingBones=skin.bones.ToArray();_mappingWrist=avatar.GetHand(side).Wrist;
+            var extracted=MeshExt.ExtractSubMesh(skin,avatar.GetHand(side).Wrist,MeshExt.ExtractSubMeshOperation.BoneAndChildren,out _sourceIndices);
+            if(UnityMesh) {
+                // Mesh reference разделяют proxy и cached GripPoseInfo; её нельзя заменять при remap.
+                try {var oldName=UnityMesh.name;EditorUtility.CopySerialized(extracted,UnityMesh);UnityMesh.name=oldName;}
+                finally {Object.DestroyImmediate(extracted);}
+            } else UnityMesh=extracted;
+            _initialVertices=UnityMesh.vertices;
+            _vertices=new Vector3[_sourceIndices.Length];_normals=new Vector3[_sourceIndices.Length];
         }
 
-        /// <summary>
-        ///     Computes the bone transforms for a blend pose. The transforms move vertices from local space to grabber space.
-        /// </summary>
-        /// <param name="handToGrabberMatrix">Matrix that transforms from local hand space to grabber space</param>
-        /// <param name="boneListOpen">Bones for the open pose (blend 0)</param>
-        /// <param name="boneListClosed">Bones for the closed pose blend (1)</param>
-        /// <param name="blendValue">Blend value to compute the transforms of</param>
-        private static void ComputeBoneTransformsBlend(Matrix4x4 handToGrabberMatrix, List<UxrPreviewHandBoneInfo> boneListOpen, List<UxrPreviewHandBoneInfo> boneListClosed, float blendValue)
+        // Сохранена точка подготовки данных preview; абсолютные source-rig matrices не участвуют.
+        private void CreateBoneList(UxrAvatar avatar,SkinnedMeshRenderer skin,UxrHandPoseAsset pose,UxrHandSide side)
         {
-            // Compute first pass of interpolated relative matrices. We interpolate relative matrices instead of absolute to have correct blending.
-
-            for (int i = 0; i < boneListOpen.Count; ++i)
-            {
-                boneListOpen[i].CurrentRelativeTransform = Matrix4x4Ext.Interpolate(boneListOpen[i].TransformRelativeToParent, boneListClosed[i].TransformRelativeToParent, blendValue);
-            }
-
-            // Now compute the absolute matrices.
-
-            for (int i = 0; i < boneListOpen.Count; ++i)
-            {
-                int       currentBoneIndex = i;
-                Matrix4x4 matrix           = boneListOpen[i].CurrentRelativeTransform;
-
-                while (boneListOpen[currentBoneIndex].ParentBoneIndex != -1)
-                {
-                    currentBoneIndex = boneListOpen[currentBoneIndex].ParentBoneIndex;
-                    matrix           = boneListOpen[currentBoneIndex].CurrentRelativeTransform * matrix;
-                }
-
-                boneListOpen[i].CurrentTransform = matrix;
-            }
-
-            // Now pre-compute the composite transform to have vertices from local to the grabber transform. We compute it in the open bone list to use the same multiplication routine as fixed poses later.
-
-            foreach (UxrPreviewHandBoneInfo bone in boneListOpen)
-            {
-                bone.CurrentTransform = handToGrabberMatrix * bone.CurrentTransform * bone.BindPose;
-            }
+            _skin=skin;_hand=avatar.GetHand(side);_pose=pose;_side=side;
+            var arm=avatar.AvatarRigInfo.GetArmInfo(side);_handAxes=arm.HandUniversalLocalAxes;_fingerAxes=arm.FingerUniversalLocalAxes;
         }
 
-        /// <summary>
-        ///     Gets the bind pose of a given hand.
-        /// </summary>
-        /// <param name="skinnedMeshRenderer">Skin component</param>
-        /// <param name="handTransform">Hand transform</param>
-        /// <returns>Bind pose</returns>
-        private static Matrix4x4 GetHandBindPose(SkinnedMeshRenderer skinnedMeshRenderer, Transform handTransform)
-        {
-            for (int i = 0; i < skinnedMeshRenderer.bones.Length; ++i)
-            {
-                if (skinnedMeshRenderer.bones[i] == handTransform)
-                {
-                    return skinnedMeshRenderer.sharedMesh.bindposes[i];
-                }
-            }
-
-            return Matrix4x4.identity;
-        }
-
-        /// <summary>
-        ///     Creates preview mesh data for a given skinned mesh renderer.
-        /// </summary>
-        /// <param name="avatar">Avatar to generate the data for</param>
-        /// <param name="skinnedMeshRenderer">Skin component</param>
-        /// <param name="handSide">Which hand to generate the bone list for</param>
-        private void CreateMesh(UxrAvatar avatar, SkinnedMeshRenderer skinnedMeshRenderer, UxrHandSide handSide)
-        {
-            // Extract only hand portion of the mesh
-            
-            UnityMesh = MeshExt.ExtractSubMesh(skinnedMeshRenderer, avatar.GetHand(handSide).Wrist, MeshExt.ExtractSubMeshOperation.BoneAndChildren);
-            
-            // Create dynamic mesh data arrays
-
-            _initialVertices = UnityMesh.vertices;
-            _initialNormals  = UnityMesh.normals;
-            _boneWeights     = UnityMesh.boneWeights;
-            _vertices        = new Vector3[_initialVertices.Length];
-            _normals         = new Vector3[_initialVertices.Length];
-        }
-
-        /// <summary>
-        ///     Creates the internal bone list required for a given hand pose.
-        /// </summary>
-        /// <param name="avatar">Avatar to generate the bone list for</param>
-        /// <param name="skinnedMeshRenderer">Skinned mesh renderer component</param>
-        /// <param name="handPoseAsset">Hand pose asset to generate the bone list for</param>
-        /// <param name="handSide">Which hand to generate the bone list for</param>
-        private void CreateBoneList(UxrAvatar avatar, SkinnedMeshRenderer skinnedMeshRenderer, UxrHandPoseAsset handPoseAsset, UxrHandSide handSide)
-        {
-            // Create bone information
-
-            Matrix4x4 handBindPose = GetHandBindPose(skinnedMeshRenderer, avatar.GetHandBone(handSide));
-
-            if (handPoseAsset.PoseType == UxrHandPoseType.Fixed)
-            {
-                _bones = UxrPreviewHandBoneInfo.CreateHandBoneData(skinnedMeshRenderer,
-                                                                   skinnedMeshRenderer.sharedMesh.bindposes,
-                                                                   handBindPose,
-                                                                   handSide == UxrHandSide.Left ? handPoseAsset.HandDescriptorLeft : handPoseAsset.HandDescriptorRight,
-                                                                   avatar.GetHand(handSide));
-
-                _bonesClosed = new List<UxrPreviewHandBoneInfo>();
-            }
-            else if (handPoseAsset.PoseType == UxrHandPoseType.Blend)
-            {
-                _bones = UxrPreviewHandBoneInfo.CreateHandBoneData(skinnedMeshRenderer,
-                                                                   skinnedMeshRenderer.sharedMesh.bindposes,
-                                                                   handBindPose,
-                                                                   handSide == UxrHandSide.Left ? handPoseAsset.HandDescriptorOpenLeft : handPoseAsset.HandDescriptorOpenRight,
-                                                                   avatar.GetHand(handSide));
-
-                _bonesClosed = UxrPreviewHandBoneInfo.CreateHandBoneData(skinnedMeshRenderer,
-                                                                         skinnedMeshRenderer.sharedMesh.bindposes,
-                                                                         handBindPose,
-                                                                         handSide == UxrHandSide.Left ? handPoseAsset.HandDescriptorClosedLeft : handPoseAsset.HandDescriptorClosedRight,
-                                                                         avatar.GetHand(handSide));
-            }
-        }
-
-        /// <summary>
-        ///     Called on different threads to compute the mesh.
-        /// </summary>
-        /// <param name="startIndex">Start vertex index to process</param>
-        /// <param name="count">Number of vertices to process</param>
-        private void ComputeMesh(int startIndex, int count)
-        {
-            void AddVertexWeight(ref Vector3 vertex, int vertexIndex, int boneIndex, float boneWeight)
-            {
-                if (boneWeight > 0.0f)
-                {
-                    vertex += _bones[boneIndex].CurrentTransform.MultiplyPoint(_initialVertices[vertexIndex]) * boneWeight;
-                }
-            }
-
-            void AddNormalWeight(ref Vector3 normal, int vertexIndex, int boneIndex, float boneWeight)
-            {
-                if (boneWeight > 0.0f)
-                {
-                    normal += _bones[boneIndex].CurrentTransform.MultiplyVector(_initialNormals[vertexIndex]) * boneWeight;
-                }
-            }
-
-            for (int i = startIndex; i < startIndex + count; ++i)
-            {
-                Vector3 vertex = Vector3.zero;
-                Vector3 normal = Vector3.zero;
-
-                AddVertexWeight(ref vertex, i, _boneWeights[i].boneIndex0, _boneWeights[i].weight0);
-                AddVertexWeight(ref vertex, i, _boneWeights[i].boneIndex1, _boneWeights[i].weight1);
-                AddVertexWeight(ref vertex, i, _boneWeights[i].boneIndex2, _boneWeights[i].weight2);
-                AddVertexWeight(ref vertex, i, _boneWeights[i].boneIndex3, _boneWeights[i].weight3);
-
-                AddNormalWeight(ref normal, i, _boneWeights[i].boneIndex0, _boneWeights[i].weight0);
-                AddNormalWeight(ref normal, i, _boneWeights[i].boneIndex1, _boneWeights[i].weight1);
-                AddNormalWeight(ref normal, i, _boneWeights[i].boneIndex2, _boneWeights[i].weight2);
-                AddNormalWeight(ref normal, i, _boneWeights[i].boneIndex3, _boneWeights[i].weight3);
-
-                _vertices[i] = vertex;
-                _normals[i]  = normal;
-            }
-        }
-
-        #endregion
-
-        #region Private Types & Data
-
-        private Vector3[]                    _initialVertices;
-        private Vector3[]                    _initialNormals;
-        private Vector3[]                    _vertices;
-        private Vector3[]                    _normals;
-        private List<UxrPreviewHandBoneInfo> _bones;
-        private List<UxrPreviewHandBoneInfo> _bonesClosed;
-        private BoneWeight[]                 _boneWeights;
-        private Dictionary<int, bool>        _arehandBones;
-
-        #endregion
+        private SkinnedMeshRenderer _skin;
+        private UxrAvatarHand _hand;
+        private UxrHandPoseAsset _pose;
+        private UxrHandSide _side;
+        private UltimateXR.Core.Math.UxrUniversalLocalAxes _handAxes,_fingerAxes;
+        private Mesh _sourceMesh;
+        private Transform[] _mappingBones;
+        private Transform _mappingWrist;
+        private int[] _sourceIndices;
+        private Vector3[] _initialVertices,_vertices,_normals;
     }
 }

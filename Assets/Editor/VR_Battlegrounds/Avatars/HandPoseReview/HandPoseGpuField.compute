@@ -1,0 +1,97 @@
+#pragma kernel Bake
+#pragma kernel Query
+
+struct Node { float4 minimum; float4 maximum; float4 range; };
+struct Triangle { float4 a; float4 b; float4 c; };
+struct Contact { float4 pointDistance; float4 targetState; };
+StructuredBuffer<Node> _Nodes;
+StructuredBuffer<Triangle> _Triangles;
+RWTexture3D<float2> _WriteField;
+Texture3D<float2> _ReadField;
+SamplerState sampler_linear_clamp;
+StructuredBuffer<float4> _Points;
+RWStructuredBuffer<Contact> _Contacts;
+int3 _Dimensions;
+int _OffsetZ, _SliceCount, _CanSign, _PointCount;
+float3 _Minimum, _Size;
+float _Voxel, _Error;
+
+float3 Segment(float3 p, float3 a, float3 b) { float3 d=b-a; return a+d*saturate(dot(p-a,d)/max(dot(d,d),1e-25)); }
+float3 Closest(float3 p, Triangle t)
+{
+    float3 a=t.a.xyz,b=t.b.xyz,c=t.c.xyz,ab=b-a,ac=c-a;
+    if(dot(cross(ab,ac),cross(ab,ac))<1e-24) {
+        float3 x=Segment(p,a,b),y=Segment(p,b,c),z=Segment(p,c,a);
+        return dot(p-x,p-x)<dot(p-y,p-y) ? (dot(p-x,p-x)<dot(p-z,p-z)?x:z) : (dot(p-y,p-y)<dot(p-z,p-z)?y:z);
+    }
+    float3 ap=p-a;float d1=dot(ab,ap),d2=dot(ac,ap);if(d1<=0&&d2<=0)return a;
+    float3 bp=p-b;float d3=dot(ab,bp),d4=dot(ac,bp);if(d3>=0&&d4<=d3)return b;
+    float vc=d1*d4-d3*d2;if(vc<=0&&d1>=0&&d3<=0)return a+ab*(d1/(d1-d3));
+    float3 cp=p-c;float d5=dot(ab,cp),d6=dot(ac,cp);if(d6>=0&&d5<=d6)return c;
+    float vb=d5*d2-d1*d6;if(vb<=0&&d2>=0&&d6<=0)return a+ac*(d2/(d2-d6));
+    float va=d3*d6-d5*d4;if(va<=0&&d4-d3>=0&&d5-d6>=0)return b+(c-b)*((d4-d3)/(d4-d3+d5-d6));
+    float den=va+vb+vc;return a+ab*(vb/den)+ac*(vc/den);
+}
+float DistanceSquaredBounds(float3 p, Node n) {float3 d=max(max(n.minimum.xyz-p,p-n.maximum.xyz),0);return dot(d,d);}
+float3 Nearest(float3 p)
+{
+    int stack[64];int count=1;stack[0]=0;float best=1e30;float3 nearest=p;
+    while(count>0) {
+        Node n=_Nodes[stack[--count]];if(DistanceSquaredBounds(p,n)>best)continue;
+        if(n.minimum.w<0) {
+            for(int i=0;i<(int)n.range.y;i++){float3 q=Closest(p,_Triangles[(int)n.range.x+i]);float distance=dot(q-p,q-p);if(distance<best){best=distance;nearest=q;}}
+        } else {stack[count++]=(int)n.minimum.w;stack[count++]=(int)n.maximum.w;}
+    }
+    return nearest;
+}
+bool RayBounds(float3 p,float3 inverse,Node n)
+{float3 a=(n.minimum.xyz-p)*inverse,b=(n.maximum.xyz-p)*inverse;float3 lo=min(a,b),hi=max(a,b);return min(min(hi.x,hi.y),hi.z)>=max(max(max(lo.x,lo.y),lo.z),0);}
+int Parity(float3 p,float3 direction)
+{
+    int stack[64];int count=1,hits=0;stack[0]=0;float3 inv=1/direction;bool ambiguous=false;
+    while(count>0){
+        Node n=_Nodes[stack[--count]];if(!RayBounds(p,inv,n))continue;
+        if(n.minimum.w>=0){stack[count++]=(int)n.minimum.w;stack[count++]=(int)n.maximum.w;continue;}
+        for(int i=0;i<(int)n.range.y;i++){
+            Triangle t=_Triangles[(int)n.range.x+i];float3 e1=t.b.xyz-t.a.xyz,e2=t.c.xyz-t.a.xyz,h=cross(direction,e2);
+            float determinant=dot(e1,h);if(abs(determinant)<1e-12)continue;
+            float inverse=1/determinant;float3 s=p-t.a.xyz;float u=dot(s,h)*inverse;if(u<0||u>1)continue;
+            float3 q=cross(s,e1);float v=dot(direction,q)*inverse;if(v<0||u+v>1)continue;
+            float distance=dot(e2,q)*inverse;if(distance<=1e-6)continue;
+            if(u<1e-5||v<1e-5||1-u-v<1e-5)ambiguous=true;
+            hits++;
+        }
+    }
+    return ambiguous?-1:(hits&1);
+}
+[numthreads(4,4,4)]
+void Bake(uint3 id:SV_DispatchThreadID)
+{
+    if(id.x>=_Dimensions.x||id.y>=_Dimensions.y||id.z>=_SliceCount)return;
+    id.z+=_OffsetZ;if(id.z>=_Dimensions.z)return;
+    float3 p=_Minimum+id*_Voxel;float d=length(Nearest(p)-p);float known=0;
+    if(_CanSign!=0&&d>1e-6){
+        int a=Parity(p,normalize(float3(.37139,.55709,.74278)));
+        int b=Parity(p,normalize(float3(.81243,.23117,.53591)));
+        int c=Parity(p,normalize(float3(.29317,.90173,.31729)));
+        if(a>=0&&a==b&&a==c){known=1;if(a==1)d=-d;}
+    }
+    _WriteField[id]=float2(d,known);
+}
+float2 Sample(float3 p)
+{
+    float3 cell=(p-_Minimum)/_Voxel;
+    return _ReadField.SampleLevel(sampler_linear_clamp,(cell+.5)/_Dimensions,0);
+}
+[numthreads(64,1,1)]
+void Query(uint3 id:SV_DispatchThreadID)
+{
+    if(id.x>=_PointCount)return;float3 p=_Points[id.x].xyz;
+    float2 sample=Sample(p);float d=sample.x;float state=-1;
+    if(any(p<_Minimum)||any(p>_Minimum+_Size))state=-2;
+    else if(sample.y>.9999&&d+_Error<0)state=2;
+    else if(abs(d)-_Error<=.0020000001)state=(sample.y>.9999&&d-_Error>=0&&d+_Error<=.0020000001)?1:0;
+    // Поле классифицирует приблизительно; конец пары лежит на настоящей грани BVH.
+    float3 target=state==-2?p:Nearest(p);
+    Contact result;result.pointDistance=float4(p,d);result.targetState=float4(target,state);_Contacts[id.x]=result;
+}

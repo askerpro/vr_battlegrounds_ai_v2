@@ -1,6 +1,7 @@
 using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
+using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Weapons
 {
@@ -31,6 +32,8 @@ namespace VrBattlegrounds.Weapons
         /// </summary>
         public static bool TryEject(UxrGrabbableObject held, out UxrGrabbableObject magazine)
         {
+            magazine = null;
+            if (!StateEventAuthority.IsAuthorOfItem(held)) return false;
             magazine = FindMagazine(held);
             if (magazine == null) return false;
 

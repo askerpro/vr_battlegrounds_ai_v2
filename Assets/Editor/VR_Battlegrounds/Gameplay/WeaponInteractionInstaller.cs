@@ -20,7 +20,17 @@ namespace VrBattlegrounds.Editor.Gameplay
             {
                 UxrGrabbableObject action = recipe.ActionGripPart.GetComponentInParent<UxrGrabbableObject>();
                 var point = action.GetGrabPoint(0);
-                point.EnableOnHandNear = Visual(recipe.Action);
+                GameObject actionVisual = Visual(recipe.Action);
+                Transform signalTransform = action.transform.Find("GrabHighlightActionProximity");
+                GameObject signal = signalTransform != null ? signalTransform.gameObject : new GameObject("GrabHighlightActionProximity");
+                signal.transform.SetParent(action.transform, false);
+                signal.SetActive(false);
+                point.EnableOnHandNear = signal;
+                if (!root.TryGetComponent(out WeaponChamberingReminder reminder)) reminder = root.AddComponent<WeaponChamberingReminder>();
+                var reminderSettings = new SerializedObject(reminder);
+                reminderSettings.FindProperty("_proximitySignal").objectReferenceValue = signal;
+                reminderSettings.FindProperty("_visual").objectReferenceValue = actionVisual;
+                reminderSettings.ApplyModifiedPropertiesWithoutUndo();
                 Vector3 contact = recipe.ActionGripPart.TransformPoint(recipe.ActionContact ?? recipe.ActionGripPart.GetComponent<MeshFilter>().sharedMesh.bounds.center);
                 // Позиция переносится, поза пальцев и ориентация каждого аватара сохраняются.
                 var so = new SerializedObject(action);
@@ -70,9 +80,23 @@ namespace VrBattlegrounds.Editor.Gameplay
                 bool used = root.GetComponentsInChildren<UxrGrabbableObject>(true).Any(g => Enumerable.Range(0, g.GrabPointCount).Any(i =>
                     g.GetGrabPoint(i).EnableOnHandNear != null && old.IsChildOf(g.GetGrabPoint(i).EnableOnHandNear.transform))) ||
                     root.GetComponentsInChildren<WeaponMagazineAnchorHighlight>(true).Any(owner => owner.Visual != null && old.IsChildOf(owner.Visual.transform));
+                used |= root.GetComponentsInChildren<WeaponChamberingReminder>(true).Any(owner =>
+                    owner.Visual != null && old.IsChildOf(owner.Visual.transform));
                 if (!used) Object.DestroyImmediate(old.gameObject);
             }
             EditorUtility.SetDirty(main);
+        }
+
+        /// <summary>Выдаваемый отдельно магазин использует тот же visual, что вложенный в оружие.</summary>
+        public static void ApplyMagazine(GameObject root)
+        {
+            var grab = root.GetComponent<UxrGrabbableObject>();
+            MeshFilter mesh = root.GetComponentsInChildren<MeshFilter>(true)
+                .Where(f => f.sharedMesh != null && !f.name.StartsWith("GrabHighlight"))
+                .OrderByDescending(f => f.sharedMesh.vertexCount).First();
+            GameObject visual = WeaponGrabHighlight.Create(mesh.transform);
+            for (int i = 0; i < grab.GrabPointCount; i++) grab.GetGrabPoint(i).EnableOnHandNear = visual;
+            EditorUtility.SetDirty(grab);
         }
     }
 }

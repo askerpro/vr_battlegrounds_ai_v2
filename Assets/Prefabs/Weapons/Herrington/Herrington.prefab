@@ -295,6 +295,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 3973999677920048633}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &877272014012506295
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5271881290365830416}
+  m_Layer: 0
+  m_Name: EjectionPose
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5271881290365830416
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 877272014012506295}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.0000000054145133, y: -0.11967097, z: -0.06827495}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7382996512168787767}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1609441357592778849
 GameObject:
   m_ObjectHideFlags: 0
@@ -308,6 +339,7 @@ GameObject:
   - component: {fileID: 6893953939263266641}
   - component: {fileID: 2014956224078509432}
   - component: {fileID: 6948707210165293831}
+  - component: {fileID: 7039351217467800189}
   m_Layer: 0
   m_Name: MagAnchor
   m_TagString: Untagged
@@ -324,11 +356,13 @@ Transform:
   m_GameObject: {fileID: 1609441357592778849}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.000000018952193, y: -0.018229859, z: 0.11536259}
+  m_LocalPosition: {x: 0.000000018952193, y: 0.011441123, z: 0.18363754}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 110688740191107916}
+  - {fileID: 7183579099374233515}
+  - {fileID: 5271881290365830416}
   m_Father: {fileID: 3973999677920048633}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4340066061424731168
@@ -351,8 +385,8 @@ MonoBehaviour:
   _maxPlaceDistance: 0.15
   _alignTransformUseSelf: 1
   _alignTransform: {fileID: 0}
-  _dropProximityTransformUseSelf: 1
-  _dropProximityTransform: {fileID: 0}
+  _dropProximityTransformUseSelf: 0
+  _dropProximityTransform: {fileID: 7183579099374233515}
   _activateOnCompatibleNear: {fileID: 0}
   _activateOnCompatibleNotNear: {fileID: 0}
   _activateOnHandNearAndGrabbable: {fileID: 0}
@@ -487,6 +521,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponMagazineAnchorHighlight
   _anchor: {fileID: 4340066061424731168}
   _visual: {fileID: 5745446352733702374}
+--- !u!114 &7039351217467800189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1609441357592778849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 84c82b603c864cb5a2b848b428898927, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponInternalAmmoEjection
+  _ejectionPose: {fileID: 5271881290365830416}
 --- !u!1 &1712332701156261074
 GameObject:
   m_ObjectHideFlags: 0
@@ -699,6 +746,37 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &2231077669970878432
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 571044826717955475}
+  m_Layer: 0
+  m_Name: GrabHighlightActionProximity
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &571044826717955475
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2231077669970878432}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6178541773106923911}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2325180976189076153
 GameObject:
   m_ObjectHideFlags: 0
@@ -1326,6 +1404,37 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &4461941267906005228
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7183579099374233515}
+  m_Layer: 0
+  m_Name: LoadingProximity
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7183579099374233515
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4461941267906005228}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.029670982, z: -0.06827495}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7382996512168787767}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4601491391997321148
 GameObject:
   m_ObjectHideFlags: 0
@@ -1491,6 +1600,7 @@ GameObject:
   - component: {fileID: 7880190326448832616}
   - component: {fileID: 3157518496768062082}
   - component: {fileID: 7502724445667886177}
+  - component: {fileID: 3344823707677330058}
   m_Layer: 0
   m_Name: Herrington
   m_TagString: Weapon
@@ -2008,6 +2118,24 @@ MonoBehaviour:
     Rotate: 0
     InMagazine: 0
   _originalSlideLength: 0.07601011
+--- !u!114 &3344823707677330058
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5766990037059969871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0830e8833ac4458aad36c0f5295f90ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponChamberingReminder
+  _triggerIndex: 0
+  _proximitySignal: {fileID: 2231077669970878432}
+  _visual: {fileID: 398802899341113163}
+  _hapticAmplitude: 0.15
+  _hapticSeconds: 0.08
+  _hapticCooldown: 0.6
 --- !u!1 &5962023017612810612
 GameObject:
   m_ObjectHideFlags: 0
@@ -2196,6 +2324,7 @@ Transform:
   m_Children:
   - {fileID: 4442204602625349425}
   - {fileID: 764775303555058723}
+  - {fileID: 571044826717955475}
   m_Father: {fileID: 5960801199473309199}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7532112442639219493
@@ -2276,7 +2405,7 @@ MonoBehaviour:
     _grabProximityTransform: {fileID: 0}
     _grabberProximityUseDefault: 1
     _grabberProximityIndex: 0
-    _enableOnHandNear: {fileID: 398802899341113163}
+    _enableOnHandNear: {fileID: 2231077669970878432}
   _additionalGrabPoints: []
   _useParenting: 0
   _autoCreateStartAnchor: 0
@@ -2784,15 +2913,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7493389901237849241, guid: eb4946d84a27da8488cd9a1dd7bd005c, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 7493389901237849241, guid: eb4946d84a27da8488cd9a1dd7bd005c, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 7493389901237849241, guid: eb4946d84a27da8488cd9a1dd7bd005c, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 7493389901237849241, guid: eb4946d84a27da8488cd9a1dd7bd005c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -2824,7 +2953,8 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 2576929024682236308, guid: eb4946d84a27da8488cd9a1dd7bd005c, type: 3}
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 8400496745448024922, guid: eb4946d84a27da8488cd9a1dd7bd005c, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: eb4946d84a27da8488cd9a1dd7bd005c, type: 3}

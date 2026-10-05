@@ -2,6 +2,90 @@
 
 > Отчёты в `Docs/tasks/report/` — локальные, игнорируются Git и не входят в коммит.
 
+## 2026-10-05 — Префабы попадания по бетону, дереву и металлу
+
+- Прежняя пара `Impact_Default` / `ImpactDecal_Default` переименована в `Impact_Concrete` / `ImpactDecal_Concrete` с сохранением GUID, бетонного визуала, звука и настроек. Пути сборщика оружия и его preflight обновлены.
+- Добавлены варианты `Impact_Wood/Metal` и `ImpactDecal_Wood/Metal`: щепки/искры и разные текстуры следов из Particle Pack, отдельные короткие моно-звуки. Сохранены исправления импорта: отсутствие демо-мишени и коллайдеров, разовые самостоятельные burst вместо циклов и субэмиттеров, URP без Soft Particles, масштаб частиц ×0,6. У искр включён самостоятельный Stretch-renderer вместо исходного `None` со шлейфами.
+- Native-проверка 6/6 (ассеты, GUID/SDK ID, материалы, импорт звука и симуляция рождения/исчезновения частиц), AndroidCompileGate PASS, существующие ImpactEffectTests 2/2. Превью URP проверено; звучание и вид в шлеме остаются пользовательской приёмкой, коммита нет.
+- Штатный `UxrOverrideImpactDecal` выбирает по объекту только декаль и звук; выбор частиц остаётся в типе выстрела. Расширение SDK для выбора частиц по поверхности не выполнялось. [Настройка](sound-library.md#попадания-пуль-по-поверхностям).
+
+## 2026-10-04 — Готовность оружия: opt-in fresh press и typed feedback, этап 3 в проверке
+
+- SDK владеет одним локальным trigger episode; первая TriggerAssist подготовка потребляет нажатие до callback и требует release/new press перед выстрелом. Router отделяет policy command от immutable attempt context.
+- Общий WeaponFeedbackProfile и полный weapon override дают независимые NoMagazine/EmptyMagazine/ChamberingRequired реакции. Один audio dispatcher, additive receivers; Action-подсказка и chamber haptic остаются у Reminder.
+- Actual baseline RED9/9 → GREEN18/0; typed NoAction/config/receiver/replay/context44/0, startup/Ready-ROF48/0 и native Action63/0. Финальные ledger67/manual55/B159/B242 и native retained-Fire124/0 прошли; Android PASS. Exact-owned cleanup/native fingerprints совпали. Независимое APPROVE и root bounded acceptance получены; пользовательская приёмка остаётся gate. Production profile linking реализуется этапом4; permanent gameplay tests и code commit не выполнялись.
+
+## 2026-10-04 — Физический контроллер готовности оружия (этап 2)
+
+- `WeaponReadinessController` и data-only `WeaponReadinessProfile` связывают три политики досылания и два Empty-профиля с существующими Action travel/rest bindings. Единственный writer C/M остаётся SDK; physical evidence и return driver не меняют боезапас самостоятельно. Production prefab opt-in пока выключен.
+- Ручной rear/front, already-open front-only, retained C, cancel/CloseOnly, all-required position/rotation, held-return pause и чистая snapshot projection проверяются временными native/synthetic probes. Rear evidence привязано к живому SDK Empty-origin и его ShotSequence: потребление или смена эпизода не позволяет старому контакту дослать патрон.
+- [План и границы](tasks/weapon-readiness-feedback-design.md): финальные temporary physical/regression проверки и fresh Android PASS; whole этап 2 ещё ждёт независимого spec/code review. Этап 3 владеет feedback и свежим trigger press; production migration, постоянные gameplay tests и коммит кода ждут своих gates и пользовательской приёмки.
+
+## 2026-10-04 — Полезные оружейные инструменты в редакторе арсенала
+
+- Сняты 14 дублирующих оружейных MenuItem; операционные README/gameplay/T-38 и `/add-weapon`
+  переведены на один вход с пятью вкладками. Public API и общий invocation contract сохранены.
+- Source rebuild, Hands bundle 3+3, shared pose base и восстановление 20/10 подписаны
+  с точной областью; генератор/runtime owners и post-build policy не изменены.
+- ArsenalWeaponDiagnostics показывает отсутствующие prefab/components/meshes строками,
+  без source reimport/Apply/SaveAssets. Report() сохранён без исторического tracked export;
+  экспорт снимка — явная команда в own tmp. Проверки и пределы — в editor-workbench-plan.
+
+## [2026-10-04] - Физический endpoint ручного досылания
+
+- AutomaticWeaponSlideFeedback засчитывает один авторский Reload только в физическом переднем
+  упоре при текущем совместимом непустом магазине. Уже открытый ручной механизм возвращается
+  без дополнительной оттяжки; no/empty closure потребляет цикл без отложенного Reload.
+- Общий Empty-профиль сопрягает доступную руке деталь с внутренним механизмом, включая
+  AR-15 с глушителем; обычные независимые Fire-каналы сохранены. Собственный поворот контактной
+  детали возвращается вместе с ручным ходом до точной rest-позы.
+- Временная диагностика: baseline 18 PASS / 9 FAIL → 53/53 GREEN, включая настоящий SDK Reload,
+  первый SDK trigger/ProjectileShot/расход одного патрона и четыре imported HoldEnd профиля.
+  AndroidCompileGate PASS, console без ошибок. Ввод и владение синтетические; trajectory/FX,
+  второй сетевой клиент и шлем не проверены. Постоянные gameplay tests ждут принятия человеком.
+- Добавлена карта состояний и исследование 20 записей реестра; SDK-помпы вне этого endpoint-среза.
+
+## [2026-10-04] - T-39: взаимодействие всего оружия и ассортименты карт
+
+- Регионы хвата, действия и готовности приёма применены к 20 игровым оружиям и их магазинам.
+- Добавлена локальная подсказка ручного досылания после отклонённого спуска со слабым haptic.
+- У FABARM SDASS и Remington 11-87 конечный якорь патрона внутри корпуса; наружная SDK-точка приёма
+  сохраняет доступную вставку. Отдельного выключения меша патрона нет.
+- Каталог расширен до 20 отдельных оружий. MapData выбирает ArsenalPreset: игровые карты
+  сохраняют текущие 10, Lobby получает FullDemo и четыре отдельные станции на 20 слотов.
+- Три ручных Hands-импорта автоматически пересобраны из FBX с immutable шаблонами; сохранены GUID,
+  root fileID и сетевые ID. Названия и пути обновлены на Browning Hi-Power, AR-15 и FABARM SDASS.
+- Декоративные магазины заменены настоящим серверным запасом с допуском владельца и защитой от
+  поздней привязки после броска. Магазины прилегают к поверхности; карточки Shelf лежат на полке.
+- Реализовано единое окно «Арсенал» с пятью вкладками, typed owner API, явными plan → Apply,
+  чистым preflight выбранного набора, объявленными shared dependencies и собственной арендой Unity.
+  Свежие Editor compile и AndroidCompileGate прошли; пять вкладок перерисованы без изменения
+  88 AssetDependencyHash, SHA 834 файлов/.meta и рабочей сцены. Контрактный прогон 33/33 включает
+  preflight 14/14 рецептов; native dirty Material защищён, 617 builtin/imported объектов не создают ложный блокер.
+  Аудит 136 MenuItem: один Arsenal launcher, прежние owner API сохранены. Эти счётчики не суммируются.
+- Превью слотов заменено geometry-only копиями с точными TRS/materials/activeSelf и владельцем-якорем,
+  fingerprint и orphan/reload cleanup (9/9). Модели Hands/KIN изолированы в PreviewScene (24/24),
+  readiness KIN читается без скрытого source reimport. Точный источник трёх объектов floor screenshot не захвачен.
+- Все 20 WeaponInfo заполнены; применены AK105 33, R08 38, SDKGun 5, Machinegun 4, SDK Shotgun 40 урона,
+  без изменений цены/темпа metadata/ID. У Machinegun согласован installed magazine override со standalone;
+  перенос баланса не сохраняет чужие dirty native materials глобальным SaveAssets.
+- Длинное название TR15 больше не скрывает статистику: Normal wrap, auto-size и Overflow сохраняют
+  прежний rect/pose; 42/42 случаев, включая длинный Unicode, отображают семь строк.
+- AR-15 и отдельный магазин уменьшены 0,83 → 0,70 при сохранении идентичности и дочерних TRS (26 проверок).
+  Оптика TR15 получила отдельные housing/lens submeshes, URP Unlit материал и alpha PNG исходной сетки:
+  цель видна с обеих сторон, shared material/SDK/collider не менялись. Настоящая коллимация не заявляется.
+- Дополнительный серверный прогон магазинов 19/19 подтвердил настоящий Mirror Spawn/isServer,
+  SDK Grab/Release, refill/fold/rejected-return и cleanup. Два живых клиента и шлем остаются пределом.
+- Размещение MP5K на Shelf требует отдельного применения/readback FullDemo, Demo и четырёх Lobby-станций;
+  прежний зелёный MKR9 этого не доказывал. Новая Editor-сборка компилируется без ошибок; materialized readback,
+  итоговые tests/Bake и приёмка открыты. Dirty Lobby не сохранена на исходный путь; сравнение копии с baseline
+  должно подтвердить только изменения задачи. Широкий ConfigureAssets отклонён автоматической проверкой.
+- Закрывание открытого затвора, assisted chambering и поштучное заряжание дробовиков остаются исследованиями;
+  изменение игровой механики для них не внесено.
+- У AK105 исправлен выбор отдельного пламегасителя для расчёта дула: точка выстрела раньше была
+  глубже среза на 4,64 см. Общий расчёт сохраняется в сборщике и узком KINEMATION Apply.
+- Контракты и пределы проверки — расширение T-39 и Docs/Arsenal/arsenal-presets.md.
+
 ## 2026-10-05 — Общий объём T-40 для обоих глаз
 
 - Удалены отдельные экранные маски частиц/рамки и экранный узор окружения. Частицы имеют одну альфу относительно центра головы; свечение рисуется общей сферической оболочкой.

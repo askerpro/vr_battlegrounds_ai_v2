@@ -5,7 +5,6 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Core;
-using Object = UnityEngine.Object;
 
 namespace VrBattlegrounds.Editor.Gameplay
 {
@@ -37,6 +36,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public const string PackModels = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/";
 
         private readonly GameObject _instance;
+        private readonly WeaponModelPreviewScope _preview;
         private readonly string _folder;
         private readonly Dictionary<string, SkinnedMeshRenderer> _parts = new Dictionary<string, SkinnedMeshRenderer>();
         private readonly Dictionary<string, int> _mainBone = new Dictionary<string, int>();
@@ -46,29 +46,40 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <param name="bodyPart">Имя рендерера корпуса, например <c>Shogun_Base_mesh</c>.</param>
         public HandsPackWeapon(string folder, string bodyPart)
         {
+            WeaponModelPreviewScope.CheckEditor();
             _folder = PackModels + folder;
             string modelPath = AssetDatabase.FindAssets("t:Model", new[] { _folder })
                                             .Select(AssetDatabase.GUIDToAssetPath)
                                             .FirstOrDefault(p => !p.Contains("@"));
             if (modelPath == null) throw new ArgumentException($"В {_folder} нет модели без '@'");
 
-            _instance = (GameObject)Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(modelPath));
-            _instance.hideFlags = HideFlags.HideAndDontSave;
-            ModelPath = modelPath;
-
-            foreach (var r in _instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            try
             {
-                if (r.sharedMesh == null || r.name.StartsWith("Arm") || r.name.StartsWith("Glove")) continue;
-                _parts[r.name] = r;
-                _mainBone[r.name] = MainBone(r);
-            }
+                _preview = new WeaponModelPreviewScope(AssetDatabase.LoadAssetAtPath<GameObject>(modelPath));
+                _instance = _preview.Instance;
+                ModelPath = modelPath;
 
-            if (!_parts.ContainsKey(bodyPart)) throw new ArgumentException($"Нет детали '{bodyPart}'. Есть: {string.Join(", ", _parts.Keys)}");
-            _body = bodyPart;
+                foreach (var r in _instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    if (r.sharedMesh == null || r.name.StartsWith("Arm") || r.name.StartsWith("Glove")) continue;
+                    _parts[r.name] = r;
+                    _mainBone[r.name] = MainBone(r);
+                }
+
+                if (!_parts.ContainsKey(bodyPart)) throw new ArgumentException($"Нет детали '{bodyPart}'. Есть: {string.Join(", ", _parts.Keys)}");
+                _body = bodyPart;
+            }
+            catch
+            {
+                _preview?.Dispose();
+                throw;
+            }
         }
 
         public string ModelPath { get; }
         public IEnumerable<string> Parts => _parts.Keys;
+        public (string path, int boneIndex) PartIdentity(string part) =>
+            (AnimationUtility.CalculateTransformPath(_parts[part].transform, _instance.transform), _mainBone[part]);
         public Mesh MeshOf(string part) => _parts[part].sharedMesh;
         public Material[] MaterialsOf(string part) => PackMaterialsFor(_parts[part].sharedMesh, _parts[part].sharedMaterials);
 
@@ -115,10 +126,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             return path.EndsWith(".fbx") || path.EndsWith(".obj");
         }
 
-        public void Dispose()
-        {
-            if (_instance != null) Object.DestroyImmediate(_instance);
-        }
+        public void Dispose() => _preview?.Dispose();
 
         /// <summary>Поза клипа в момент <paramref name="time" />; <c>null</c> — bind-pose модели.</summary>
         public void Sample(string clipName, float time = 0f)
@@ -352,7 +360,8 @@ namespace VrBattlegrounds.Editor.Gameplay
 
     public static class HandsPackWeaponMenu
     {
-        [MenuItem("Tools/VR Battlegrounds/Gameplay/Hands Pack Weapon Report")]
+        private static void OpenWorkbench() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenTab(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Checks);
+
         private static void ReportAll()
         {
             var bodies = new Dictionary<string, string>

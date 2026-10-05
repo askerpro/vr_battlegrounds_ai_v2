@@ -46,6 +46,31 @@ git/Plastic. В сборку всё равно ушло бы только то, 
 `Ambience/` — `AMBIENCE_City_Street_Calm_Day_loop`. Выбор — по названию и длительности, не на слух: не понравится —
 заменить клип в `StandardArsenalWall` (`ArsenalWallSounds`), `DogTagPanel`, `ImpactSoundInstaller`, `Environment.prefab/Ambience`.
 
+## Попадания пуль по поверхностям
+
+Пары префабов находятся в `Assets/Prefabs/Weapons/Effects/`:
+
+| Поверхность | Частицы | Декаль и звук |
+|---|---|---|
+| Бетон | `Impact_Concrete` — прежний `Impact_Default`, пыль и каменная крошка | `ImpactDecal_Concrete` — прежний `ImpactDecal_Default`, прежний след и звук SDK `ShotImpact` |
+| Дерево | `Impact_Wood` — щепки Particle Pack и коричневая пыль | `ImpactDecal_Wood` — текстуры `BulletDecalWood`, `IMPACT_Wood_Stick_On_Wood_Post_01_mono` |
+| Металл | `Impact_Metal` — искры Particle Pack и небольшой выброс пыли | `ImpactDecal_Metal` — текстуры `BulletDecalMetal`, `IMPACT_Bullet_Metal_01_mono` |
+
+GUID бетонной пары сохранены: существующие ссылки оружия продолжают указывать на неё. Дерево и металл — варианты
+бетонных префабов. Частицы одноразовые, с самостоятельным burst, без демо-мишени, коллайдеров и субэмиттеров;
+материалы URP без Soft Particles. Размер корня частиц — прежние ×0,6. Материалы новых декалей локальные, текстуры
+из Particle Pack; затухание использует `_BaseColor`. Бетонный визуал и звук сохранены.
+
+На объект с коллайдером или его родителя добавить `UxrOverrideImpactDecal` и назначить нужный `ImpactDecal_*`
+в `Decal To Use`. SDK выберет след и звук по свойству объекта. Громкость всех трёх — 0,5; новые клипы импортированы
+моно, Vorbis 70 %, Decompress On Load. Подбор новых звуков — по названию и длительности; качество требует
+прослушивания в Unity/шлеме.
+
+**Предел штатного SDK:** `UxrOverrideImpactDecal` меняет только декаль и её звук. Частицы `Impact_*` назначаются
+отдельно в `UxrProjectileSource` → тип выстрела → `Prefab Instantiate On Impact`. Автоматического выбора
+частиц по поверхности пока нет; готовые варианты частиц не меняют это поведение. Для разных частиц на разных
+объектах нужен отдельный согласованный маршрут выбора эффекта в SDK.
+
 ## Кандидаты под известные дыры (пользователь, 2026-09-29)
 
 | Событие | Кандидаты |

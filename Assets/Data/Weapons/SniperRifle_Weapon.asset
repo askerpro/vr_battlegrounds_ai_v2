@@ -14,9 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
   _displayName: AX-50
   _weaponId: SniperRifle
-  _description: "\u0411\u043E\u043B\u0442\u043E\u0432\u0430\u044F \u0432\u0438\u043D\u0442\u043E\u0432\u043A\u0430,
-    10 \u043F\u0430\u0442\u0440\u043E\u043D\u043E\u0432 (\u0440\u043E\u043B\u044C
-    SSG 08), \u0437\u0430\u0433\u043B\u0443\u0448\u043A\u0430"
+  _description: "Болтовая винтовка AX-50. Магазин на 10 патронов, мощный выстрел и низкий темп огня."
   _weaponPrefab: {fileID: 4144354778344050857, guid: ae620c2caa0384243bbe976dc7e1199d, type: 3}
   _magazinePrefab: {fileID: 8141809575723388705, guid: 07afbe3c7f538ec4399eca18cb85cb4e, type: 3}
   _maxMagazineCount: 3

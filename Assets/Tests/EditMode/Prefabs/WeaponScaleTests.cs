@@ -28,11 +28,11 @@ namespace VrBattlegrounds.Tests.Prefabs
         // Наибольший габарит с вложенным магазином, метры. Эталон — реальный прототип.
         private static readonly Dictionary<string, Vector2> RealLengths = new Dictionary<string, Vector2>
         {
-            { "Gun_real",         new Vector2(0.17f, 0.23f) }, // Glock 17: 20.2 см
+            { "BrowningHiPower",         new Vector2(0.17f, 0.23f) }, // Browning Hi-Power: принятый игровой диапазон сохраняется
             { "Gun",              new Vector2(0.17f, 0.23f) }, // пистолет сэмпла UltimateXR
-            { "M16_Rifle_prefab", new Vector2(0.95f, 1.05f) }, // M16A2: 100 см
+            { "AR15", new Vector2(0.95f, 1.05f) }, // AR-15: принятый игровой диапазон сохраняется
             { "Shotgun",          new Vector2(0.80f, 1.10f) }, // Remington 870: 100–106 см
-            { "Shotgun_real",     new Vector2(0.66f, 0.78f) }, // Mossberg 500 Cruiser (пистолетная рукоять, ствол 18.5"): 71 см
+            { "FabarmSDASS",     new Vector2(0.66f, 0.78f) }, // FABARM SDASS: принятый игровой диапазон сохраняется
             { "Machinegun",       new Vector2(0.85f, 1.20f) }, // ручной пулемёт / штурмовая винтовка
             { "Grenade",          new Vector2(0.08f, 0.12f) }, // M67: 9 см, с запалом 11
 

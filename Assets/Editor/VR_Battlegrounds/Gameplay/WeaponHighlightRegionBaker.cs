@@ -8,7 +8,8 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// <summary>Обрезает треугольники шестью плоскостями объёма. Длинная грань не подсвечивает весь корпус.</summary>
     public static class WeaponHighlightRegionBaker
     {
-        public static Mesh Bake(Transform root, WeaponVisualRegion region, string folder)
+        /// <summary>Предварительная геометрия без записи Assets; используется перед пакетным применением.</summary>
+        public static Mesh Build(Transform root, WeaponVisualRegion region)
         {
             Mesh source = region.Source.GetComponent<MeshFilter>().sharedMesh;
             Matrix4x4 toRoot = root.worldToLocalMatrix * region.Source.localToWorldMatrix;
@@ -40,6 +41,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             var mesh = new Mesh { name = $"{root.name}_{region.Name}Region", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
             mesh.SetVertices(vertices); mesh.SetTriangles(triangles, 0);
             mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        public static Mesh Bake(Transform root, WeaponVisualRegion region, string folder)
+        {
+            Mesh mesh = Build(root, region);
             KinemationWeapon.EnsureFolder(folder);
             string path = $"{folder}/{region.Name}Region.asset";
             Mesh saved = AssetDatabase.LoadAssetAtPath<Mesh>(path);

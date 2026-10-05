@@ -22,6 +22,7 @@ MonoBehaviour:
     \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u043E\u043C."
   arenaSizeMeters: {x: 15.5, y: 18.96}
   maxPlayers: 8
+  arsenalPreset: {fileID: 11400000, guid: e6521305c7a5eb142a42593e31dc4e8c, type: 2}
   supportedModes:
   - {fileID: 11400000, guid: afb25111c4746e745a3afa391f5fd8a0, type: 2}
   - {fileID: 11400000, guid: e8ad037e06055544e847c6a94f5682b0, type: 2}

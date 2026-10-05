@@ -440,6 +440,7 @@ Transform:
   - {fileID: 2950385323815746003}
   - {fileID: 3600678815435037514}
   - {fileID: 7002867021162997931}
+  - {fileID: 3917782089573177286}
   m_Father: {fileID: 413500789623158975}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5537350643814958255
@@ -520,7 +521,7 @@ MonoBehaviour:
     _grabProximityTransform: {fileID: 0}
     _grabberProximityUseDefault: 1
     _grabberProximityIndex: 0
-    _enableOnHandNear: {fileID: 1122521707587346296}
+    _enableOnHandNear: {fileID: 5929094536224293031}
   _additionalGrabPoints: []
   _useParenting: 0
   _autoCreateStartAnchor: 0
@@ -1115,6 +1116,7 @@ GameObject:
   - component: {fileID: 3206790637072808166}
   - component: {fileID: 2262372391689707380}
   - component: {fileID: 8191823504309926233}
+  - component: {fileID: 126675641746834002}
   m_Layer: 0
   m_Name: TR15
   m_TagString: Weapon
@@ -1393,7 +1395,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Mirror::Mirror.NetworkIdentity
   sceneId: 0
-  _assetId: 4191033244
+  _assetId: 0
   serverOnly: 0
   visibility: 0
   hasSpawned: 0
@@ -1584,6 +1586,24 @@ MonoBehaviour:
     Rotate: 0
     InMagazine: 0
   _originalSlideLength: 0.08411714
+--- !u!114 &126675641746834002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3664258485270452095}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0830e8833ac4458aad36c0f5295f90ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponChamberingReminder
+  _triggerIndex: 0
+  _proximitySignal: {fileID: 5929094536224293031}
+  _visual: {fileID: 1122521707587346296}
+  _hapticAmplitude: 0.15
+  _hapticSeconds: 0.08
+  _hapticCooldown: 0.6
 --- !u!1 &4225334984843987829
 GameObject:
   m_ObjectHideFlags: 0
@@ -1958,6 +1978,37 @@ MonoBehaviour:
   _uxrUniqueId: 51e36dde-9e4d-4c0d-956b-227fa17731ff
   __prefabGuid: 3935229bb05b32b45b3af04c07bfbfbe
   __isInPrefab: 1
+--- !u!1 &5929094536224293031
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3917782089573177286}
+  m_Layer: 0
+  m_Name: GrabHighlightActionProximity
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &3917782089573177286
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5929094536224293031}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8881869356913843861}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6449730676487167389
 GameObject:
   m_ObjectHideFlags: 0
@@ -2405,7 +2456,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7545281204900987995}
-  m_Mesh: {fileID: 4300000, guid: 23818fcc2acdfc44dbe096b92de72175, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 8025c0bd02d6c47469bc898f397f1dea, type: 2}
 --- !u!23 &5795847316641424362
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -2432,6 +2483,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 593b4d8bc0fd86943ba06ef1f016f258, type: 2}
+  - {fileID: 2100000, guid: 8f217c2a8a5aa674b9c2934459827764, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3139,7 +3191,8 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 289858392163124668, guid: c1288aacdfca72346b6966bf7d6b906e, type: 3}
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 6280749883974325685, guid: c1288aacdfca72346b6966bf7d6b906e, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c1288aacdfca72346b6966bf7d6b906e, type: 3}

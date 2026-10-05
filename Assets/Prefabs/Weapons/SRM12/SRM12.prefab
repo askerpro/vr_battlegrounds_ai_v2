@@ -591,6 +591,7 @@ GameObject:
   - component: {fileID: 3959375316040438132}
   - component: {fileID: 1689068356386896110}
   - component: {fileID: 7142059033828985811}
+  - component: {fileID: 2813691588120281237}
   m_Layer: 0
   m_Name: SRM12
   m_TagString: Weapon
@@ -1048,6 +1049,24 @@ MonoBehaviour:
     Rotate: 0
     InMagazine: 0
   _originalSlideLength: 0.11188823
+--- !u!114 &2813691588120281237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2269598592341582059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0830e8833ac4458aad36c0f5295f90ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponChamberingReminder
+  _triggerIndex: 0
+  _proximitySignal: {fileID: 2750097119165373453}
+  _visual: {fileID: 2460215269634473187}
+  _hapticAmplitude: 0.15
+  _hapticSeconds: 0.08
+  _hapticCooldown: 0.6
 --- !u!1 &2361650752748537298
 GameObject:
   m_ObjectHideFlags: 0
@@ -1325,6 +1344,37 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: 4139b6487f1ced2459d0e8a9f40205b6, type: 2}
+--- !u!1 &2750097119165373453
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1948706972894558198}
+  m_Layer: 0
+  m_Name: GrabHighlightActionProximity
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &1948706972894558198
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2750097119165373453}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6417380044687080709}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2858626720297164166
 GameObject:
   m_ObjectHideFlags: 0
@@ -1805,6 +1855,7 @@ Transform:
   m_Children:
   - {fileID: 4018861442699893451}
   - {fileID: 6808842764495140934}
+  - {fileID: 1948706972894558198}
   m_Father: {fileID: 2578288391728033389}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7612384524751362050
@@ -1885,7 +1936,7 @@ MonoBehaviour:
     _grabProximityTransform: {fileID: 0}
     _grabberProximityUseDefault: 1
     _grabberProximityIndex: 0
-    _enableOnHandNear: {fileID: 2460215269634473187}
+    _enableOnHandNear: {fileID: 2750097119165373453}
   _additionalGrabPoints: []
   _useParenting: 0
   _autoCreateStartAnchor: 0
@@ -3351,7 +3402,8 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 1087329111678024935, guid: 32bac82101ae21544b671d744fd34d82, type: 3}
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 6645769348404440302, guid: 32bac82101ae21544b671d744fd34d82, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 32bac82101ae21544b671d744fd34d82, type: 3}

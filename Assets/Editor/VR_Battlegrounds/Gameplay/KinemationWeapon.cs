@@ -43,6 +43,7 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         private readonly GameObject _prefab;
         private readonly GameObject _instance;
+        private readonly WeaponModelPreviewScope _preview;
         private readonly Animator _animator;
         private readonly string _animFolder;
         private readonly string _poseClip;
@@ -80,6 +81,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public KinemationWeapon(string prefab, string animFolder, string poseClip, string assetName, string bodyBone = "Body", string restClip = null,
                                 IEnumerable<string> attachments = null)
         {
+            WeaponModelPreviewScope.CheckEditor();
             _restClip = restClip;
             _prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{Pack}Prefabs/Weapons/{prefab}.prefab")
                       ?? throw new ArgumentException($"Нет префаба пака {prefab}");
@@ -88,41 +90,49 @@ namespace VrBattlegrounds.Editor.Gameplay
             _assetFolder = $"{ArtRoot}/{assetName}";
 
             EnsureReadable(_prefab, attachments);
-            _instance = Object.Instantiate(_prefab);
-            _instance.hideFlags = HideFlags.HideAndDontSave;
-            _animator = _instance.GetComponentInChildren<Animator>(true);
-            foreach (Transform t in _instance.GetComponentsInChildren<Transform>(true))
-                _rest[t] = (t.localPosition, t.localRotation, t.localScale);
-
-            foreach (SkinnedMeshRenderer r in _instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            try
             {
-                if (r.sharedMesh == null) continue;
-                BoneWeight[] weights = r.sharedMesh.boneWeights;
-                var count = new int[r.bones.Length];
-                foreach (BoneWeight w in weights) count[w.boneIndex0]++;
-                for (int b = 0; b < count.Length; b++)
+                _preview = new WeaponModelPreviewScope(_prefab);
+                _instance = _preview.Instance;
+                _animator = _instance.GetComponentInChildren<Animator>(true);
+                foreach (Transform t in _instance.GetComponentsInChildren<Transform>(true))
+                    _rest[t] = (t.localPosition, t.localRotation, t.localScale);
+
+                foreach (SkinnedMeshRenderer r in _instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 {
-                    if (count[b] == 0 || r.bones[b] == null) continue;
-                    string name = r.bones[b].name;
-                    if (_parts.TryGetValue(name, out Part other) && other.Bone != r.bones[b]) name = $"{r.name}.{name}";
-                    _parts[name] = new Part { Name = name, Bone = r.bones[b], Renderer = r, BoneIndex = b, Vertices = count[b] };
+                    if (r.sharedMesh == null) continue;
+                    BoneWeight[] weights = r.sharedMesh.boneWeights;
+                    var count = new int[r.bones.Length];
+                    foreach (BoneWeight w in weights) count[w.boneIndex0]++;
+                    for (int b = 0; b < count.Length; b++)
+                    {
+                        if (count[b] == 0 || r.bones[b] == null) continue;
+                        string name = r.bones[b].name;
+                        if (_parts.TryGetValue(name, out Part other) && other.Bone != r.bones[b]) name = $"{r.name}.{name}";
+                        _parts[name] = new Part { Name = name, Bone = r.bones[b], Renderer = r, BoneIndex = b, Vertices = count[b] };
+                    }
                 }
-            }
 
-            foreach (string attachment in attachments ?? Enumerable.Empty<string>())
-            {
-                MeshFilter filter = _instance.GetComponentsInChildren<MeshFilter>(true)
-                                             .FirstOrDefault(f => f.name == attachment && f.sharedMesh != null && f.GetComponent<MeshRenderer>() != null)
-                                    ?? throw new ArgumentException($"{prefab}: нет обвеса '{attachment}' (MeshFilter + MeshRenderer)");
-                _parts[attachment] = new Part
+                foreach (string attachment in attachments ?? Enumerable.Empty<string>())
                 {
-                    Name = attachment, Bone = filter.transform, Renderer = filter.GetComponent<MeshRenderer>(), BoneIndex = -1,
-                    Vertices = filter.sharedMesh.vertexCount, Static = true
-                };
-            }
+                    MeshFilter filter = _instance.GetComponentsInChildren<MeshFilter>(true)
+                                                 .FirstOrDefault(f => f.name == attachment && f.sharedMesh != null && f.GetComponent<MeshRenderer>() != null)
+                                        ?? throw new ArgumentException($"{prefab}: нет обвеса '{attachment}' (MeshFilter + MeshRenderer)");
+                    _parts[attachment] = new Part
+                    {
+                        Name = attachment, Bone = filter.transform, Renderer = filter.GetComponent<MeshRenderer>(), BoneIndex = -1,
+                        Vertices = filter.sharedMesh.vertexCount, Static = true
+                    };
+                }
 
-            if (!_parts.ContainsKey(bodyBone)) throw new ArgumentException($"{prefab}: нет детали-корпуса '{bodyBone}'. Есть: {string.Join(", ", _parts.Keys)}");
-            _body = bodyBone;
+                if (!_parts.ContainsKey(bodyBone)) throw new ArgumentException($"{prefab}: нет детали-корпуса '{bodyBone}'. Есть: {string.Join(", ", _parts.Keys)}");
+                _body = bodyBone;
+            }
+            catch
+            {
+                _preview?.Dispose();
+                throw;
+            }
         }
 
         public GameObject PackPrefab => _prefab;
@@ -131,10 +141,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <summary>Детали: кости, у которых есть свои вершины.</summary>
         public IEnumerable<string> Parts => _parts.Keys;
 
-        public void Dispose()
-        {
-            if (_instance != null) Object.DestroyImmediate(_instance);
-        }
+        public void Dispose() => _preview?.Dispose();
 
         // ── Геометрия ───────────────────────────────────────────────────────────
 
@@ -459,22 +466,42 @@ namespace VrBattlegrounds.Editor.Gameplay
             throw new InvalidOperationException($"{AssetDatabase.GetAssetPath(mesh)}/{mesh.name}: вершины меша недоступны на CPU — модель без Read/Write");
         }
 
-        /// <summary>Read/Write у моделей, на которые ссылаются рендереры префаба пака (правка только <c>.meta</c> пака).</summary>
-        public static void EnsureReadable(GameObject prefab, IEnumerable<string> attachments = null)
+        /// <summary>Точный общий набор моделей для проверки CPU data и явного Read/Write import.</summary>
+        public static string[] ReadableSourcePaths(GameObject prefab, IEnumerable<string> attachments = null)
         {
+            if (prefab == null) throw new ArgumentNullException(nameof(prefab));
             var selected = new HashSet<string>(attachments ?? Enumerable.Empty<string>());
             var meshes = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true).Select(r => r.sharedMesh)
                                .Concat(prefab.GetComponentsInChildren<MeshFilter>(true).Where(f => selected.Contains(f.name)).Select(f => f.sharedMesh));
-            foreach (Mesh mesh in meshes)
+            return meshes.Where(mesh => mesh != null).Select(AssetDatabase.GetAssetPath)
+                         .Where(path => !string.IsNullOrEmpty(path) && AssetImporter.GetAtPath(path) is ModelImporter)
+                         .Distinct(StringComparer.Ordinal).OrderBy(path => path, StringComparer.Ordinal).ToArray();
+        }
+
+        /// <summary>Read-only preflight: неподготовленные модели требуют отдельного явного import, без скрытых записей.</summary>
+        public static void RequireReadable(GameObject prefab, IEnumerable<string> attachments = null)
+        {
+            string[] unavailable = ReadableSourcePaths(prefab, attachments)
+                .Where(path => AssetImporter.GetAtPath(path) is ModelImporter importer && !importer.isReadable).ToArray();
+            if (unavailable.Length > 0)
+                throw new InvalidOperationException("Read-only отчёт требует подготовленные Read/Write модели. " +
+                    "Сначала выполните явный импорт источников: " + string.Join(", ", unavailable));
+        }
+
+        /// <summary>Явный Read/Write import только моделей из <see cref="ReadableSourcePaths" /> (запись .meta источника).</summary>
+        public static void EnsureReadable(GameObject prefab, IEnumerable<string> attachments = null)
+        {
+            WeaponModelPreviewScope.CheckEditor();
+            foreach (string path in ReadableSourcePaths(prefab, attachments))
             {
-                if (mesh == null) continue;
-                if (AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(mesh)) is ModelImporter importer && !importer.isReadable)
+                if (AssetImporter.GetAtPath(path) is ModelImporter importer && !importer.isReadable)
                 {
                     importer.isReadable = true;
                     importer.SaveAndReimport();
                 }
             }
         }
+
 
         private static int Majority(int a, int b, int c) => a == b || a == c ? a : b == c ? b : a;
 

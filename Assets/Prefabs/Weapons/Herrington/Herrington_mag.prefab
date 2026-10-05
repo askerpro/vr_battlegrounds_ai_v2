@@ -689,6 +689,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5837573240272137203, guid: d28f92e640efecc41b278625340bff0c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1129093804381369840}
+    - targetCorrespondingSourceObject: {fileID: 5837573240272137203, guid: d28f92e640efecc41b278625340bff0c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7838037759078328675}
   m_SourcePrefab: {fileID: 100100000, guid: d28f92e640efecc41b278625340bff0c, type: 3}
 --- !u!1 &5706746622394682049 stripped
 GameObject:
@@ -715,6 +718,18 @@ MonoBehaviour:
   _fullSpeed: 5
   _cooldown: 0.2
   _maxVolume: 0.6
+--- !u!114 &7838037759078328675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5706746622394682049}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 614d7cd64a2879f4685cfd18a6b25fb7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.MagazineManipulationHistory
 --- !u!4 &7493389901237849241 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8776539678674906539, guid: d28f92e640efecc41b278625340bff0c, type: 3}

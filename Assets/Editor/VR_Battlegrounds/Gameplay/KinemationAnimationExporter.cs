@@ -40,8 +40,13 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         private static WeaponMechanismMotion.Cycle Sample(KinemationWeapon source, string clipName, string[] parts, bool hold)
+            => Sample(source, source.Clip(clipName), parts, source.PartIdentity, hold);
+
+        /// <summary>Общий экспорт rigid-механики из IWeaponModel; оба пака используют одну временную сетку и проверки.</summary>
+        internal static WeaponMechanismMotion.Cycle Sample(IWeaponModel source, AnimationClip clip, string[] parts,
+            Func<string, (string path, int boneIndex)> partIdentity, bool hold, bool requireRigidScale = false)
         {
-            AnimationClip clip = source.Clip(clipName);
+            string clipName = clip.name;
             var times = new SortedSet<float> { 0f, clip.length };
             foreach (EditorCurveBinding binding in AnimationUtility.GetCurveBindings(clip))
                 foreach (Keyframe key in AnimationUtility.GetEditorCurve(clip, binding).keys) times.Add(Mathf.Clamp(key.time, 0f, clip.length));
@@ -50,13 +55,18 @@ namespace VrBattlegrounds.Editor.Gameplay
             var tracks = new List<WeaponMechanismMotion.Track>();
             foreach (string part in parts)
             {
-                if (!source.Parts.Contains(part)) throw new InvalidOperationException($"{clipName}: нет механической детали {part}");
-                var identity = source.PartIdentity(part);
-                var track = new WeaponMechanismMotion.Track { Part = part, SourcePath = identity.path, SourceBoneIndex = identity.boneIndex, AnimateRotation = part != "Trigger" };
+                source.MeshOf(part); // отсутствие обязательной детали — отказ до сохранения motion asset
+                var identity = partIdentity(part);
+                var track = new WeaponMechanismMotion.Track { Part = part, SourcePath = identity.path, SourceBoneIndex = identity.boneIndex,
+                    AnimateRotation = !part.Contains("Triger") && !part.Contains("Trigger") };
+                source.Sample(null);
+                Vector3 restScale = source.PartInBody(part).lossyScale;
                 WeaponMechanismMotion.Key Read(float time)
                 {
                     source.Sample(null); source.Sample(clipName, time);
                     Matrix4x4 pose = source.PartInBody(part);
+                    if (requireRigidScale && (pose.lossyScale - restScale).sqrMagnitude > 0.000001f)
+                        throw new InvalidOperationException($"{clipName}/{part}: animated scale нельзя сохранить rigid-механизмом");
                     Quaternion rotation = pose.rotation.normalized;
                     return new WeaponMechanismMotion.Key { Time = time, Position = pose.GetColumn(3), Rotation = rotation };
                 }

@@ -619,7 +619,7 @@ Transform:
   m_GameObject: {fileID: 2692805548283677178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.0014420645, y: 0.024627581, z: 0.4341019}
+  m_LocalPosition: {x: 0.0014420524, y: 0.024627713, z: 0.48046798}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -780,6 +780,37 @@ Transform:
   - {fileID: 401665602195148067}
   m_Father: {fileID: 5619171531879991764}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3183629355385080189
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2588793281388586019}
+  m_Layer: 0
+  m_Name: GrabHighlightActionProximity
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &2588793281388586019
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3183629355385080189}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2092085878308941964}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3900771781936566667
 GameObject:
   m_ObjectHideFlags: 0
@@ -800,6 +831,8 @@ GameObject:
   - component: {fileID: 6291262252052494025}
   - component: {fileID: 1615918946304245674}
   - component: {fileID: 2625671485872799579}
+  - component: {fileID: 503188031891615923}
+  - component: {fileID: 6585882548489614804}
   m_Layer: 0
   m_Name: AK105
   m_TagString: Weapon
@@ -1005,7 +1038,7 @@ MonoBehaviour:
     _projectileMaxDistance: 120
     _projectileLength: 0.03
     _projectileDamageNear: 33
-    _projectileDamageFar: 24.747
+    _projectileDamageFar: 27.265331
     _projectileImpactForceMultiplier: 1
     _collisionLayerMask:
       serializedVersion: 2
@@ -1018,7 +1051,7 @@ MonoBehaviour:
     _createDecalLayerMask:
       serializedVersion: 2
       m_Bits: 9
-    _penetrationPower: 1
+    _penetrationPower: 2
 --- !u!114 &2698574330644754471
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1060,11 +1093,11 @@ MonoBehaviour:
       _axis: 0
     _triggerRotationDegrees: 0
     _ammunitionMagAnchor: {fileID: 8417986468469762310}
-    _recoilAngleOneHand: 6
-    _recoilAngleTwoHands: 2
-    _recoilOffsetOneHand: {x: -0, y: -0, z: -0.05}
-    _recoilOffsetTwoHands: {x: -0, y: -0, z: -0.025}
-    _recoilDurationSeconds: 0.3
+    _recoilAngleOneHand: 3.1499999
+    _recoilAngleTwoHands: 1.5749999
+    _recoilOffsetOneHand: {x: 0, y: 0, z: -0.020999998}
+    _recoilOffsetTwoHands: {x: 0, y: 0, z: -0.010499999}
+    _recoilDurationSeconds: 0.07272728
 --- !u!114 &3649671978405556834
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1238,6 +1271,43 @@ MonoBehaviour:
     Rotate: 0
     InMagazine: 0
   _originalSlideLength: 0.12193377
+--- !u!114 &503188031891615923
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3900771781936566667}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0830e8833ac4458aad36c0f5295f90ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponChamberingReminder
+  _triggerIndex: 0
+  _proximitySignal: {fileID: 3183629355385080189}
+  _visual: {fileID: 2245827110958899509}
+  _hapticAmplitude: 0.15
+  _hapticSeconds: 0.08
+  _hapticCooldown: 0.6
+--- !u!114 &6585882548489614804
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3900771781936566667}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ca4861be76f25044984803548d10701, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.RecoilAccumulator
+  _pattern:
+    _kickDegrees: 1.05
+    _maxPitchDegrees: 6.2999997
+    _maxYawDegrees: 2.205
+    _recoveryTime: 0.45
+    _oneHandMultiplier: 2
+  _axes: {fileID: 7172663425454462108}
 --- !u!1 &4053690855538267502
 GameObject:
   m_ObjectHideFlags: 0
@@ -1463,6 +1533,7 @@ Transform:
   m_Children:
   - {fileID: 6720543474051838886}
   - {fileID: 6596029604763508681}
+  - {fileID: 2588793281388586019}
   m_Father: {fileID: 4041254851066497980}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1057528835353188233
@@ -1543,7 +1614,7 @@ MonoBehaviour:
     _grabProximityTransform: {fileID: 0}
     _grabberProximityUseDefault: 1
     _grabberProximityIndex: 0
-    _enableOnHandNear: {fileID: 2245827110958899509}
+    _enableOnHandNear: {fileID: 3183629355385080189}
   _additionalGrabPoints: []
   _useParenting: 0
   _autoCreateStartAnchor: 0
@@ -2533,7 +2604,7 @@ Transform:
   m_GameObject: {fileID: 6879442885044460374}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.0014420645, y: 0.024627581, z: -0.0000000035410803}
+  m_LocalPosition: {x: 0.0014420524, y: 0.024627713, z: -0.0000000035410803}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2564,7 +2635,7 @@ Transform:
   m_GameObject: {fileID: 7211756569953054318}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.0014420645, y: 0.024627581, z: 0.4441019}
+  m_LocalPosition: {x: 0.0014420524, y: 0.024627713, z: 0.49046797}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2877,7 +2948,8 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 3595891050769240209, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 7118880160099221656, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 63981a783100f704195a8e10cb89fc47, type: 3}

@@ -24,15 +24,16 @@ Material:
   m_Shader: {fileID: -6465566751694194690, guid: a6f34d6989f2b344f96d155060962ca6, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords:
+  m_ValidKeywords: []
+  m_InvalidKeywords:
   - _DISABLE_SSR_TRANSPARENT
-  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 2225
+  m_CustomRenderQueue: 2000
   stringTagMap:
     MotionVector: User
+    RenderType: Opaque
   disabledShaderPasses:
   - MOTIONVECTORS
   - TransparentDepthPrepass
@@ -225,6 +226,7 @@ Material:
     - _MetallicRemapping: {r: 0, g: 0.8, b: 0, a: 0}
     - _RoughnessRemapping: {r: 0, g: 0.6, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+    - _TintColor: {r: 1, g: 1, b: 1, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &8025243328087796625

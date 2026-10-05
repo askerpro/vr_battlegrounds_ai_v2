@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 086e9e8eb4d89c54ab6a6f0b06011b0e, type: 3}
   m_Name: M16_Weapon
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
-  _displayName: M16
+  _displayName: AR-15
   _weaponId: M16
-  _description: 
+  _description: "Автоматическая винтовка AR-15. Основное оружие с высоким темпом огня для контролируемых очередей."
   _weaponPrefab: {fileID: 1013363612589426, guid: cc00fcab78d7cee4faad59a02b2b7183, type: 3}
   _magazinePrefab: {fileID: 6308617285841064264, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
   _maxMagazineCount: 3

@@ -14,16 +14,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
   _displayName: Shotgun
   _weaponId: Shotgun
-  _description: 
+  _description: "Футуристическое оружие с ручным циклом перезаряжания. Выпускает один мощный снаряд; дробового залпа нет."
   _weaponPrefab: {fileID: 5857197354937311182, guid: 8b9da2dc5df93b94e96eb12b2ac13288, type: 3}
   _magazinePrefab: {fileID: 5837573240272137203, guid: d28f92e640efecc41b278625340bff0c, type: 3}
   _maxMagazineCount: 3
   _price: 2700
-  _damage: 0
+  _damage: 40
   _rangeModifier: 0.85
+  _penetration: 1
+  _armorRatio: 1
   _fireRate: 400
+  _fullAuto: 0
   _magazineSize: 20
+  _reserveAmmo: 60
   _pellets: 1
+  _killAward: 300
+  _spread:
+    _spread: 0
+    _inaccuracyStand: 0
+    _inaccuracyMove: 0
+    _inaccuracyFire: 0
+    _recoveryTime: 0.35
+  _recoilMagnitude: 80
   _category: 0
   _weaponPositionOffset: {x: 0, y: 0, z: 0}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}

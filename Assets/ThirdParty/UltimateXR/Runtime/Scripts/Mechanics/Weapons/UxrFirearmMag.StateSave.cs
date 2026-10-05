@@ -18,7 +18,9 @@ namespace UltimateXR.Mechanics.Weapons
 
             if (level > UxrStateSaveLevel.ChangesSincePreviousSave)
             {
-                SerializeStateValue(level, options, nameof(_rounds), ref _rounds);
+                // VR Battlegrounds patch: late join получает реальный единственный store,
+                // даже если исходный cache захвачен после переноса патрона в патронник.
+                SerializeStateValue(level, options | UxrStateSaveOptions.DontCheckCache, nameof(_rounds), ref _rounds);
             }
         }
 

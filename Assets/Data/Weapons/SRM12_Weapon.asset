@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 086e9e8eb4d89c54ab6a6f0b06011b0e, type: 3}
   m_Name: SRM12_Weapon
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
-  _displayName: SRS A2
+  _displayName: Desert Tech SRS
   _weaponId: SRM12
   _description: "\u0411\u043E\u043B\u0442\u043E\u0432\u0430\u044F \u0431\u0443\u043B\u043B-\u043F\u0430\u043F
     .338, \u043C\u0430\u0433\u0430\u0437\u0438\u043D \u043D\u0430 5 (\u0440\u043E\u043B\u044C

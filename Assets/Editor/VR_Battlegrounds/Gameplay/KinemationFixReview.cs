@@ -22,6 +22,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             GameObject root = PrefabUtility.LoadPrefabContents(path);
             try
             {
+                HandsPackWeaponBuilder.AlignMuzzle(root, recipe.Weapon);
                 var interaction = WeaponInteractionRecipes.For(root, recipe.Weapon);
                 interaction.AssetFolder = $"{KinemationWeapon.ArtRoot}/{name}/Interaction";
                 WeaponInteractionInstaller.Apply(root, interaction);
@@ -139,26 +140,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             finally { PrefabUtility.UnloadPrefabContents(root); }
         }
 
-        [MenuItem("Tools/VR Battlegrounds/Gameplay/Kinemation/Review Fixes")]
+        /// <summary>Совместимый read-only API: результат в логе, без исторического export и без source reimport.</summary>
         public static void Report()
         {
-            var rows = KinemationWeaponBuilder.All.Select(k =>
-            {
-                string path = KinemationWeaponBuilder.PrefabPath(k);
-                GameObject root = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                var mechanism = root.GetComponent<WeaponMechanismVisuals>();
-                var grab = root.GetComponent<UxrGrabbableObject>();
-                return new
-                {
-                    name = k.Weapon.Name, path, guid = AssetDatabase.AssetPathToGUID(path),
-                    motion = mechanism == null ? null : AssetDatabase.GetAssetPath(mechanism.Motion),
-                    primarySupportSeparate = grab.GrabPointCount < 2 || grab.GetGrabPoint(0).EnableOnHandNear != grab.GetGrabPoint(1).EnableOnHandNear,
-                    regions = root.GetComponentsInChildren<MeshFilter>(true).Where(f => f.name.StartsWith("GrabHighlight")).Select(f => new { name = f.transform.parent.name.StartsWith("GrabHighlight") ? f.transform.parent.name : f.name, mesh = AssetDatabase.GetAssetPath(f.sharedMesh), vertices = f.sharedMesh.vertexCount, size = f.sharedMesh.bounds.size.ToString("F4") }).ToArray(),
-                    missing = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(root),
-                    bindings = mechanism == null ? null : mechanism.Bindings.Select(b => new { part = b.Part, target = b.Target == null ? null : AnimationUtility.CalculateTransformPath(b.Target, root.transform), magazine = b.InMagazine }).ToArray()
-                };
-            }).ToArray();
-            File.WriteAllText("Docs/tasks/artifacts/T-39-fixes-2026-10-03.json", Newtonsoft.Json.JsonConvert.SerializeObject(rows, Newtonsoft.Json.Formatting.Indented));
+            VrBattlegrounds.Core.GameLog.Arsenal.Info(VrBattlegrounds.Editor.Arsenal.ArsenalWeaponDiagnostics.Capture(KinemationWeaponBuilder.All).Summary);
         }
     }
 }

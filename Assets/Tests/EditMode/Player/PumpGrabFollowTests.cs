@@ -24,7 +24,7 @@ namespace VrBattlegrounds.Tests.Player
     /// </summary>
     public class PumpGrabFollowTests
     {
-        private const string Weapon = "Assets/Prefabs/Weapons/ShotgunReal/Shotgun_real.prefab";
+        private const string Weapon = "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab";
         private const string MefAvatarGuid = "b6fe59db941fa944696ece5e1aabc032";
         private const float MissedBy = 0.08f;
 

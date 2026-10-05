@@ -19,7 +19,7 @@ namespace VrBattlegrounds.Tests.Interaction
     public class WeaponSpreadTests
     {
         private const string Smg = "Assets/Prefabs/Weapons/MKR9/MKR9.prefab";
-        private const string Shotgun = "Assets/Prefabs/Weapons/ShotgunReal/Shotgun_real.prefab";
+        private const string Shotgun = "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab";
         private const BindingFlags Any = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 
         private UxrWeaponManager _createdManager;

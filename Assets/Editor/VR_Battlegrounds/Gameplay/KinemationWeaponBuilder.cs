@@ -113,6 +113,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             Weapon = Rifle(new HandsPackWeaponRecipe
             {
                 Name = "AK105", PrefabFolder = "AK105", PoseClip = "A_FP_AK105_Idle", ActionClip = "A_W_AK105_Fire",
+                MuzzlePart = "Muzzle",
                 TriggerPart = "Trigger", ActionPart = "Charger", ActionGripPart = "Charger", ActionGripContact = new Vector3(0.042f, 0.105f, 0.005f), SupportGrip = true,
                 UxrTag = "BackWeapon", MagazinePart = "Magazine", MagazineExtraParts = new[] { "Ammo_001", "Ammo_002" },
                 MagazineTag = "MagAK105", MagazineCapacity = 30
@@ -195,7 +196,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                 {
                     Name = "Herrington", PrefabFolder = "Herrington", PoseClip = "A_FP_Herrington_11-87_Idle",
                     ActionClip = "A_W_Herrington_11-87_Fire", TriggerPart = "Trigger", ActionPart = "Bolt", SupportGrip = true,
-                    UxrTag = "Shotgun", MagazinePart = "Cartridge", LoadingPart = "Feed", MagazineTag = "MagHerrington", MagazineCapacity = 7
+                    UxrTag = "Shotgun", MagazinePart = "Cartridge", LoadingPart = "Feed", MagazineTag = "MagHerrington", MagazineCapacity = 7,
+                    MagazineIsInternal = true
                 });
                 r.MagazineBase = "Assets/Prefabs/Weapons/Shotgun/MagShotgun.prefab";
                 r.Pellets = true;
@@ -250,9 +252,10 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         /// <summary>
         /// Делает <see cref="RevolverShotPath" /> из выстрела R08 и ставит его на спуск префаба <c>Revolver</c> (без
-        /// пересборки: правка одного поля). Сам R08 в реестр не входит — пак здесь только источник звука.
+        /// пересборки: правка одного поля). R08 здесь служит источником звука независимо от регистрации каталога.
         /// </summary>
-        [MenuItem("Tools/VR Battlegrounds/Gameplay/Kinemation/Revolver Shot From R08")]
+        private static void OpenRevolverAudio() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenMaintenance(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Build);
+
         public static void MakeRevolverShot()
         {
             string folder = RevolverShotPath.Substring(0, RevolverShotPath.LastIndexOf('/'));
@@ -277,23 +280,13 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         public static IEnumerable<KinemationWeaponRecipe> All => new[] { SRM12, R08, AK105, Viper, MKR9, Herrington, Mk14, TR15 };
 
-        [MenuItem("Tools/VR Battlegrounds/Gameplay/Kinemation/Build TR15")]
-        private static void BuildTr15() => Build(TR15);
+        private static void BuildTr15() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenWeapon(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Build, PrefabPath(TR15));
 
-        [MenuItem("Tools/VR Battlegrounds/Gameplay/Kinemation/Build SRM-12")]
-        private static void BuildSrm12() => Build(SRM12);
+        private static void BuildSrm12() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenWeapon(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Build, PrefabPath(SRM12));
 
-        [MenuItem("Tools/VR Battlegrounds/Gameplay/Kinemation/Build All")]
-        private static void BuildAll()
-        {
-            foreach (KinemationWeaponRecipe k in All) Build(k);
-        }
+        private static void BuildAll() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenBuildSet(All.Select(PrefabPath));
 
-        [MenuItem("Tools/VR Battlegrounds/Gameplay/Kinemation/Weapon Report")]
-        private static void ReportAll()
-        {
-            foreach (KinemationWeaponRecipe k in All) GameLog.Debug.Info(Report(k));
-        }
+        private static void ReportAll() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenTab(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Checks);
 
         public static string Report(KinemationWeaponRecipe k)
         {
@@ -330,6 +323,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             HandsPackWeaponBuilder.AlignRecoilToMainGrip(path);
             // Тот же узкий установщик восьми KINEMATION: штатная сборка сохраняет исправленные bindings.
             KinemationFixReview.Apply(r.Name);
+            if (r.Name == "TR15") Tr15OpticBuilder.Apply();
             AssetDatabase.SaveAssets();
             GameLog.Debug.Info($"[KinemationWeaponBuilder] {path}: статичные детали {string.Join(", ", r.StaticParts)}");
             return AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -389,6 +383,13 @@ namespace VrBattlegrounds.Editor.Gameplay
                 Pose = $"Kinemation_{k.Weapon.Name}_Support", PackSide = UxrHandSide.Left, Weapon = weapon,
                 BodyPath = "MeshContainer/Base", GrabPoint = 1, PoseFolder = PoseFolder
             };
+        }
+
+        /// <summary>Узкий импорт существующих поз: без пересборки геометрии, звуков и motion.</summary>
+        public static void ImportPoses(KinemationWeaponRecipe k)
+        {
+            using var model = Model(k);
+            ImportPoses(k, model);
         }
 
         private static void ImportPoses(KinemationWeaponRecipe k, KinemationWeapon model) =>

@@ -20,7 +20,11 @@ namespace UltimateXR.Mechanics.Weapons
 
             if (level > UxrStateSaveLevel.ChangesSincePreviousSave)
             {
-                SerializeStateValue(level, options, nameof(_runtimeTriggers), ref _runtimeTriggers);
+                // Opt-in initialized state нужен late join даже если initial cache уже снят после
+                // стартового M→C. Другая копия не повторяет initialization из собственного prefab.
+                bool hasLedger = false;
+                foreach (var runtime in _runtimeTriggers.Values) if (runtime.Readiness?.ReadinessInitialized == true) { hasLedger = true; break; }
+                SerializeStateValue(level, hasLedger ? options | UxrStateSaveOptions.DontCheckCache : options, nameof(_runtimeTriggers), ref _runtimeTriggers);
             }
         }
 

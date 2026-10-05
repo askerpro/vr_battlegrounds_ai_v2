@@ -57,13 +57,13 @@ namespace VrBattlegrounds.Editor.Avatars
             {
                 Pose = "HandsPack_Gun_Grip", Folder = "Hands_Gun", Mesh = "Gun_Mesh", Clip = "Aiming_Idle", Time = 0f,
                 PackSide = UxrHandSide.Right, BodyMesh = "Base_mesh", BodyBone = "Bn_Base",
-                Weapon = "Assets/Prefabs/Weapons/GunReal/Gun_real.prefab", BodyPath = "MeshContainer/Base", GrabPoint = 0
+                Weapon = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab", BodyPath = "MeshContainer/Base", GrabPoint = 0
             },
             new HandsPackPoseRecipe
             {
                 Pose = "HandsPack_Gun_Support", Folder = "Hands_Gun", Mesh = "Gun_Mesh", Clip = "Aiming_Idle", Time = 0f,
                 PackSide = UxrHandSide.Left, BodyMesh = "Base_mesh", BodyBone = "Bn_Base",
-                Weapon = "Assets/Prefabs/Weapons/GunReal/Gun_real.prefab", BodyPath = "MeshContainer/Base", GrabPoint = 1
+                Weapon = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab", BodyPath = "MeshContainer/Base", GrabPoint = 1
             }
         }.Concat(WeaponPair("Scar", "Hands_Automatic_Rifle01", "Hands_Automatic_Rifle01", "Aiming_Idle", "Scar_Base_mesh", "Bn_Scar_Base"))
          // Uzi — одной рукой: левая рука пака не на оружии, позы поддержки нет.
@@ -94,7 +94,6 @@ namespace VrBattlegrounds.Editor.Avatars
             };
         }
 
-        [MenuItem("Tools/VR Battlegrounds/Avatars/Hand Poses/Import Hands Pack Poses")]
         public static void ImportAll() => Import(Recipes);
 
         /// <summary>Позы одного оружия — после его пересборки <c>HandsPackWeaponBuilder</c> (сборщик кладёт калибровочный хват).</summary>

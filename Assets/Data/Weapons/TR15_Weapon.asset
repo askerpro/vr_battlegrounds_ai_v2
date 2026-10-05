@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 086e9e8eb4d89c54ab6a6f0b06011b0e, type: 3}
   m_Name: TR15_Weapon
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
-  _displayName: TR-15 SD
+  _displayName: "AR-15 \u0441 \u0433\u043B\u0443\u0448\u0438\u0442\u0435\u043B\u0435\u043C"
   _weaponId: TR15
   _description: "\u0412\u0438\u043D\u0442\u043E\u0432\u043A\u0430 AR-15 \u0441 \u0433\u043B\u0443\u0448\u0438\u0442\u0435\u043B\u0435\u043C
     (\u0440\u043E\u043B\u044C M4A1-S), \u043C\u0430\u0433\u0430\u0437\u0438\u043D

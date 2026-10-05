@@ -10,7 +10,7 @@ description: Добавить в игру новое огнестрельное 
 Эталон, собранный по этому маршруту: `Assets/Prefabs/Weapons/ShotgunReal/` (`Shotgun_real` +
 `Shotgun_real_mag`), рецепт — `HandsPackWeaponBuilder.ShotgunReal`. Им же собраны шесть стволов T-38
 (`Scar`, `Uzi`, `MP5K`, `PPK`, `Revolver`, `SniperRifle` — рецепты там же, меню
-`Tools/VR Battlegrounds/Gameplay/Build T-38 Weapons From Hands Pack`). Вручную на глаз собраны
+`Tools/VR Battlegrounds/Arsenal/Редактор арсенала` → «Сборка» → явный выбранный набор T-38). Вручную на глаз собраны
 `Gun_real` и M16 — **геометрию** они повторяют точно, а **механику** (ход затвора, угол
 спуска) нет: у `Gun_real` затвор 1.89 см против 4.23 в паке, спуск 40° против 18°.
 
@@ -33,7 +33,7 @@ using (var pack = new VrBattlegrounds.Editor.Gameplay.HandsPackWeapon("Hands_Sho
     return pack.Report();   // все детали × все клипы: ход в см, угол в °
 ```
 
-Или меню `Tools/VR Battlegrounds/Gameplay/Hands Pack Weapon Report` (лог в консоль).
+Или меню `Tools/VR Battlegrounds/Arsenal/Редактор арсенала` → «Сборка» → «Проверить источник Hands» (результат в окне).
 Нужно определить: корпус, подвижную деталь (помпа/затвор) и клип, где она ходит (`Shot`),
 спуск, деталь у окна магазина, клип с руками на оружии (`Aming_Idle`/`Aim_Idle`).
 
@@ -181,7 +181,7 @@ UltimateXR Unique Ids` (иначе красный `UxrUniqueIdOnDiskTests`) и `
 | реестр | `Assets/Data/Weapons/Resources/WeaponRegistry.asset` → `_weapons` |
 | сеть | `Assets/Prefabs/Managers/--- MANAGERS ---.prefab` → `GameNetworkManager.spawnPrefabs`: оружие **и** магазин |
 | стена | `Assets/Prefabs/Arsenal/StandardArsenalWall.prefab` → `FirearmSlotController._weaponInfo` слота |
-| баланс | раздел «Balance» в `WeaponInfo` (урон, спад, темп, магазин, дробь, картина отдачи `Recoil`) → строка роли CS2 в `WeaponBalanceTests.Roster` → `Tools/VR Battlegrounds/Gameplay/Apply Weapon Balance` (кладёт числа и `RecoilAccumulator` в префабы; урон/темп/ёмкость в префабе руками не править) |
+| баланс | раздел «Balance» в `WeaponInfo` (урон, спад, темп, магазин, дробь, картина отдачи `Recoil`) → строка роли CS2 в `WeaponBalanceTests.Roster` → `Tools/VR Battlegrounds/Arsenal/Редактор арсенала` → «Каталог» → «Применить баланс выбранного оружия» (кладёт числа и `RecoilAccumulator` в префабы; урон/темп/ёмкость в префабе руками не править) |
 | эталон размера | `WeaponScaleTests.RealLengths` — длина реального прототипа |
 | механика из пака | `HandsPackWeaponTests.Cases` — детали, помпа/затвор, спуск |
 

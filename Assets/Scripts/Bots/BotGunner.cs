@@ -353,10 +353,25 @@ namespace VrBattlegrounds.Bots
             // Выстрел шлёт только автор предмета в руке (Issue 23); у бота — сервер.
             if (!StateEventAuthority.IsAuthorOfItem(_firearm)) return;
 
-            if (_firearm.GetAmmoLeft(0) <= 0)
+            // Capability берётся у фактически выбранного оружия, а не из заявки на закупку.
+            // Missing opt-in не разрешает молча вернуться к старому ammo setter.
+            if (!_firearm.TryGetComponent(out WeaponComponent selected) || selected.WeaponData == null ||
+                selected.WeaponData.ReadinessProfile == null ||
+                !selected.WeaponData.ReadinessProfile.TryValidate(out _)) return;
+            var profile = selected.WeaponData.ReadinessProfile;
+            bool ledger = _firearm.UsesReadinessLedger(0);
+            if (profile.AmmoCapability == VrBattlegrounds.Weapons.WeaponAmmoCapability.LegacyAmmo)
             {
-                // Перезарядки у бота нет — магазин просто снова полный.
-                _firearm.SetAmmoLeft(0, _firearm.GetAmmoCapacity(0));
+                if (ledger) return;
+                // Явная legacy capability сохраняет штатный SDK magazine writer.
+                if (_firearm.GetAmmoLeft(0) <= 0)
+                    _firearm.SetAmmoLeft(0, _firearm.GetAmmoCapacity(0));
+            }
+            else
+            {
+                if (!ledger || !_firearm.TryGetComponent(out VrBattlegrounds.Weapons.WeaponReadinessController readiness) ||
+                    readiness.Profile != profile) return;
+                if (!_firearm.IsReadyToFire(0) && !readiness.RequestAutomationPreparation()) return;
             }
 
             if (_firearm.TryToShootRound(0))

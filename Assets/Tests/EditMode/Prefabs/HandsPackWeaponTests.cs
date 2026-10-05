@@ -46,7 +46,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         {
             yield return new Case
             {
-                Prefab      = "Assets/Prefabs/Weapons/ShotgunReal/Shotgun_real.prefab",
+                Prefab      = "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab",
                 Folder      = "Hands_Shotgun",
                 Body        = "Shogun_Base_mesh",
                 BodyPath    = "MeshContainer/Base",

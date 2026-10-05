@@ -98,12 +98,12 @@ namespace VrBattlegrounds.Tests.Prefabs
             yield return new Case
             {
                 Pose = "HandsPack_Gun_Grip", Folder = "Hands_Gun", Mesh = "Gun_Mesh", Clip = "Aiming_Idle", Time = 0f,
-                PackSide = UxrHandSide.Right, Weapon = "Assets/Prefabs/Weapons/GunReal/Gun_real.prefab", GrabPoint = 0
+                PackSide = UxrHandSide.Right, Weapon = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab", GrabPoint = 0
             };
             yield return new Case
             {
                 Pose = "HandsPack_Gun_Support", Folder = "Hands_Gun", Mesh = "Gun_Mesh", Clip = "Aiming_Idle", Time = 0f,
-                PackSide = UxrHandSide.Left, Weapon = "Assets/Prefabs/Weapons/GunReal/Gun_real.prefab", GrabPoint = 1
+                PackSide = UxrHandSide.Left, Weapon = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab", GrabPoint = 1
             };
 
             // Оружие T-38 (HandsPackWeaponBuilder). У Uzi вторая рука пака не на оружии — одна точка.

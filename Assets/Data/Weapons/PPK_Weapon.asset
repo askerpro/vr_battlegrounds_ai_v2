@@ -14,9 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
   _displayName: Walther PPK
   _weaponId: PPK
-  _description: "\u0421\u0442\u0430\u0440\u0442\u043E\u0432\u044B\u0439 \u043F\u0438\u0441\u0442\u043E\u043B\u0435\u0442,
-    20 \u043F\u0430\u0442\u0440\u043E\u043D\u043E\u0432 (\u0440\u043E\u043B\u044C
-    Glock-18)"
+  _description: "Компактный самозарядный Walther PPK. Недорогой пистолет с магазином на 20 патронов для ближнего боя."
   _weaponPrefab: {fileID: 7674922350059574561, guid: 53b2af502e94d13489397cef90c86925, type: 3}
   _magazinePrefab: {fileID: 3850768520735387343, guid: 68884ec49d8d8df4bb08344406635740, type: 3}
   _maxMagazineCount: 3

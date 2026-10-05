@@ -3,6 +3,7 @@
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
 // --------------------------------------------------------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using UltimateXR.Core.Caching;
 using UltimateXR.Core.Components;
@@ -111,45 +112,49 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="projectileOrientation">Shot source orientation. The shot will be fired in the z (forward) direction</param>
         public void Shoot(int shotTypeIndex, Vector3 projectileSource, Quaternion projectileOrientation)
         {
-            if (shotTypeIndex >= 0 && shotTypeIndex < _shotTypes.Count)
+            UxrFirearmShotEmissionOutcome outcome;
+            Exception failure;
+            TryShootWithOutcome(shotTypeIndex, projectileSource, projectileOrientation, out outcome, out failure);
+            if (failure != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+        }
+
+        /// <summary>VR Battlegrounds: известный emission outcome и balanced scope, включая отказ FX/подписчика.</summary>
+        public bool TryShootWithOutcome(int shotTypeIndex, Vector3 projectileSource, Quaternion projectileOrientation,
+            out UxrFirearmShotEmissionOutcome outcome, out Exception failure)
+        {
+            outcome = UxrFirearmShotEmissionOutcome.NotEmitted; failure = null;
+            if (shotTypeIndex < 0 || shotTypeIndex >= _shotTypes.Count) return false;
+            bool endAttempted = false;
+            BeginSync();
+            try
             {
-                // VR Battlegrounds patch 23: здесь стоял Debug.Log на каждый выстрел — в Development-сборке
-                // захват стека на каждый снаряд (и на каждую дробинку).
-                BeginSync();
-
-                if (_shotTypes[shotTypeIndex].PrefabInstantiateOnTipWhenShot)
+                var shot = _shotTypes[shotTypeIndex];
+                if (shot.PrefabInstantiateOnTipWhenShot)
                 {
-                    GameObject newInstance = Instantiate(_shotTypes[shotTypeIndex].PrefabInstantiateOnTipWhenShot, _shotTypes[shotTypeIndex].Tip.position, _shotTypes[shotTypeIndex].Tip.rotation);
-
-                    if (_shotTypes[shotTypeIndex].PrefabInstantiateOnTipParent)
-                    {
-                        newInstance.transform.parent = transform;
-                    }
-                    else
-                    {
-                        newInstance.transform.parent = null;
-                    }
-
-                    if (_shotTypes[shotTypeIndex].PrefabInstantiateOnTipLife >= 0.0f)
-                    {
-                        Destroy(newInstance, _shotTypes[shotTypeIndex].PrefabInstantiateOnTipLife);
-                    }
+                    GameObject newInstance = Instantiate(shot.PrefabInstantiateOnTipWhenShot, shot.Tip.position, shot.Tip.rotation);
+                    newInstance.transform.parent = shot.PrefabInstantiateOnTipParent ? transform : null;
+                    if (shot.PrefabInstantiateOnTipLife >= 0f) Destroy(newInstance, shot.PrefabInstantiateOnTipLife);
                 }
-
-                UxrWeaponManager.Instance.RegisterNewProjectileShot(this, _shotTypes[shotTypeIndex], projectileSource, projectileOrientation);
-
-                if (_weaponAnimator != null && string.IsNullOrEmpty(_shotTypes[shotTypeIndex].ShotAnimationVarName) == false)
-                {
-                    _weaponAnimator.SetTrigger(_shotTypes[shotTypeIndex].ShotAnimationVarName);
-                }
-
-                // VR Battlegrounds patch 23: уведомление на каждой машине — и у стрелка, и при повторе
-                // события по сети (внутри ExecuteStateSyncEvent). По нему оружие у получателя играет
-                // звук и отдачу, не пересчитывая выстрел само.
+                // Register может начать создание projectile и затем упасть: такой частичный результат нельзя retry.
+                outcome = UxrFirearmShotEmissionOutcome.Indeterminate;
+                UxrWeaponManager.Instance.RegisterNewProjectileShot(this, shot, projectileSource, projectileOrientation);
+                outcome = UxrFirearmShotEmissionOutcome.Emitted;
+                if (_weaponAnimator != null && !string.IsNullOrEmpty(shot.ShotAnimationVarName)) _weaponAnimator.SetTrigger(shot.ShotAnimationVarName);
                 ShotFired?.Invoke(shotTypeIndex);
-
-                EndSyncMethod(new object[] { shotTypeIndex, projectileSource, projectileOrientation });
             }
+            catch (Exception exception) { failure = exception; }
+            finally
+            {
+                if (outcome == UxrFirearmShotEmissionOutcome.Emitted)
+                {
+                    // Порядок и имя legacy event сохранены; End уже потребил scope даже если подписчик бросил.
+                    endAttempted = true;
+                    try { EndSyncMethod(new object[] { shotTypeIndex, projectileSource, projectileOrientation }, nameof(Shoot)); }
+                    catch (Exception exception) { if (failure == null) failure = exception; }
+                }
+                if (!endAttempted) CancelSync();
+            }
+            return outcome == UxrFirearmShotEmissionOutcome.Emitted && failure == null;
         }
 
         /// <summary>

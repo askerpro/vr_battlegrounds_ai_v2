@@ -16,7 +16,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             var avatar = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath("b6fe59db941fa944696ece5e1aabc032")).GetComponent<UxrAvatar>();
             Transform body = root.GetComponentsInChildren<MeshFilter>(true)
                 .Where(f => f.sharedMesh != null && !f.name.StartsWith("GrabHighlight") &&
-                            f.GetComponentInParent<UxrGrabbableObject>() == grab)
+                            f.GetComponentInParent<UxrGrabbableObject>(true) == grab)
                 .OrderByDescending(f => f.sharedMesh.vertexCount).First().transform;
             bool pistol = grab.Tag == "Gun";
             WeaponVisualRegion Region(string name, Transform part, Vector3 point, Vector3 size) => new()
@@ -24,8 +24,20 @@ namespace VrBattlegrounds.Editor.Gameplay
                 Name = name, Source = part,
                 Bounds = new Bounds(NearestSurface(root.transform, part, point), size)
             };
-            Vector3 Grip(int index) => root.transform.InverseTransformPoint(grab.GetGrabPoint(index)
-                .GetGripPoseInfo(avatar).GripAlignTransformHandRight.position);
+            Vector3 Grip(int index)
+            {
+                UxrGrabPointInfo point = grab.GetGrabPoint(index);
+                var info = point.GetGripPoseInfo(avatar);
+                Transform align = info?.GripAlignTransformHandRight ?? info?.GripAlignTransformHandLeft;
+                for (int i = 0; align == null; i++)
+                {
+                    info = point.GetGripPoseInfo(i);
+                    if (info == null) break;
+                    align = info.GripAlignTransformHandRight ?? info.GripAlignTransformHandLeft;
+                }
+                // SDK variants могут иметь только default entry; позы не создаются и не заменяются.
+                return root.transform.InverseTransformPoint((align ?? point.GrabProximityTransform ?? grab.transform).position);
+            }
             var recipe = new WeaponInteractionRecipe
             {
                 Name = root.name.Replace("(Clone)", ""),
@@ -43,7 +55,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                 string partName = source?.ActionGripPart ?? source?.ActionPart;
                 Transform part = action.GetComponentsInChildren<MeshFilter>(true)
                     .Where(f => f.sharedMesh != null && !f.name.StartsWith("GrabHighlight"))
-                    .First(f => partName == null || f.name == partName.Replace('.', '_')).transform;
+                    .First(f => partName == null || f.name == partName.Replace('.', '_') ||
+                                NormalizePartName(f.name) == NormalizePartName(partName)).transform;
                 recipe.ActionGripPart = part;
                 recipe.ActionContact = source?.ActionGripContact;
                 Vector3 point = root.transform.InverseTransformPoint(part.TransformPoint(
@@ -53,9 +66,13 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
             var anchor = root.GetComponentInChildren<UxrGrabbableObjectAnchor>(true);
             if (anchor != null)
-                recipe.Insertion = Region("Insertion", body, root.transform.InverseTransformPoint(anchor.transform.position), new Vector3(0.085f, 0.055f, 0.085f));
+                recipe.Insertion = Region("Insertion", body, root.transform.InverseTransformPoint(
+                    (anchor.DropProximityTransform ?? anchor.transform).position), new Vector3(0.085f, 0.055f, 0.085f));
             return recipe;
         }
+
+        private static string NormalizePartName(string name) => name.Replace("Shogun_", "").Replace("_mesh", "")
+            .Replace("_Mesh", "").Replace("-", "").Replace(" ", "").Replace('.', '_');
 
         private static Vector3 NearestSurface(Transform root, Transform part, Vector3 point)
         {

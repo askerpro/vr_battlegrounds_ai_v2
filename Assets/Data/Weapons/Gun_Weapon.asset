@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 086e9e8eb4d89c54ab6a6f0b06011b0e, type: 3}
   m_Name: Gun_Weapon
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
-  _displayName: Gun
+  _displayName: Browning Hi-Power
   _weaponId: Gun
-  _description: 
+  _description: "Самозарядный Browning Hi-Power. Недорогой пистолет с умеренной отдачей для ближнего боя и запасного вооружения."
   _weaponPrefab: {fileID: 1013363612589426, guid: a89abddac5809dc47a6715d7ebeab24e, type: 3}
   _magazinePrefab: {fileID: 7658064994636483981, guid: 7cc1b24032fe06543b2b7edf8c18c8b4, type: 3}
   _maxMagazineCount: 3

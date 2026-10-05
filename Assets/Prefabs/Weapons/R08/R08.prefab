@@ -1577,6 +1577,7 @@ GameObject:
   - component: {fileID: 2859184925180781300}
   - component: {fileID: 6350633624337379518}
   - component: {fileID: 240294596241006954}
+  - component: {fileID: 3511589907400484980}
   m_Layer: 0
   m_Name: R08
   m_TagString: Weapon
@@ -1781,7 +1782,7 @@ MonoBehaviour:
     _projectileMaxDistance: 120
     _projectileLength: 0.03
     _projectileDamageNear: 38
-    _projectileDamageFar: 14.042008
+    _projectileDamageFar: 8.18231
     _projectileImpactForceMultiplier: 1
     _collisionLayerMask:
       serializedVersion: 2
@@ -1794,7 +1795,7 @@ MonoBehaviour:
     _createDecalLayerMask:
       serializedVersion: 2
       m_Bits: 9
-    _penetrationPower: 1
+    _penetrationPower: 2
 --- !u!114 &5558402501952389163
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1836,11 +1837,11 @@ MonoBehaviour:
       _axis: 0
     _triggerRotationDegrees: -25
     _ammunitionMagAnchor: {fileID: 8492275733050182012}
-    _recoilAngleOneHand: 6
-    _recoilAngleTwoHands: 2
-    _recoilOffsetOneHand: {x: -0, y: -0, z: -0.05}
-    _recoilOffsetTwoHands: {x: -0, y: -0, z: -0.025}
-    _recoilDurationSeconds: 0.3
+    _recoilAngleOneHand: 5.061
+    _recoilAngleTwoHands: 2.5305
+    _recoilOffsetOneHand: {x: 0, y: 0, z: -0.03374}
+    _recoilOffsetTwoHands: {x: 0, y: 0, z: -0.01687}
+    _recoilDurationSeconds: 0.11428572
 --- !u!114 &6277222204558914275
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2038,6 +2039,25 @@ MonoBehaviour:
     Rotate: 1
     InMagazine: 1
   _originalSlideLength: 0
+--- !u!114 &3511589907400484980
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8504929066865201802}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ca4861be76f25044984803548d10701, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.RecoilAccumulator
+  _pattern:
+    _kickDegrees: 1.687
+    _maxPitchDegrees: 10
+    _maxYawDegrees: 1
+    _recoveryTime: 0.45
+    _oneHandMultiplier: 2
+  _axes: {fileID: 422592067524660210}
 --- !u!1 &9042559328222679667
 GameObject:
   m_ObjectHideFlags: 0
@@ -2267,7 +2287,9 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 3736086437535482092, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 2493832520007704093, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}
+    - {fileID: 9136567546318263977, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}

@@ -23,6 +23,14 @@ namespace UltimateXR.Mechanics.Weapons
 
         #endregion
 
+        #region Protected Overrides
+
+        // VR Battlegrounds patch: карман выключает тот же магазин; единственный Rounds store
+        // обязан оставаться в roots=null SaveRequiredComponents для late join.
+        protected override bool SaveStateWhenDisabled => true;
+
+        #endregion
+
         #region Public Types & Data
 
         /// <summary>

@@ -24,7 +24,7 @@ namespace VrBattlegrounds.Tests.Prefabs
     /// </summary>
     public class ShotgunPelletsTests
     {
-        private const string Weapon = "Assets/Prefabs/Weapons/ShotgunReal/Shotgun_real.prefab";
+        private const string Weapon = "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab";
         private const int MinPellets = 6;
         private const float PlayerLife = 100f;
 

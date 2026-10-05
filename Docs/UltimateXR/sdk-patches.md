@@ -3,6 +3,138 @@
 Этот файл документирует **все изменения**, внесённые в код `Assets/ThirdParty/UltimateXR/`.  
 При обновлении SDK необходимо **повторно применить** эти патчи вручную.
 
+## Этап 3: opt-in маршрутизатор попытки спуска (2026-10-05)
+
+Реализация следующего среза одобренного плана
+`Docs/tasks/weapon-readiness-feedback-design.md` импортирована и проверена временными
+fixtures; независимое ревью и пользовательская приёмка ещё впереди. SDK seam принадлежит
+`UxrFirearmWeapon.cs` и `UxrWeapon.Custom.cs`: один владелец trigger episode,
+readonly классификация после authority/usable guards, отдельная prepare-only команда
+и immutable локальный контекст для feedback. Первая попытка TriggerAssist должна
+потреблять нажатие до внешних callbacks; после подготовки нужен отпуск и новый press.
+Три причины NoMagazine/EmptyMagazine/ChamberingRequired получают независимые реакции.
+SDK ledger/physical алгоритмы остаются принятыми зависимостями, production linking
+профилей относится к этапу 4. Дробовики и постоянные gameplay tests в этот срез не входят.
+
+Actual baseline `tmp/weapon-readiness-stage3-input-baseline-red-attempt4.json`:
+9 PASS / 9 FAIL, включая same-press shot после inline подготовки, held Auto без
+нового press и лишний dry click при C1 без магазина. Число FAIL не равно числу
+независимых классов дефектов. Exact-owned cleanup и scene/assets fingerprints прошли;
+это исходный RED. На текущих исходниках: baseline GREEN18/0, typed filters44/0,
+startup/Ready-ROF48/0, native Action63/0 (Browning/Viper/TR15). Router запускается после
+Controller (220 после 210). Ready Auto нажатие во время штатного ROF принимает episode,
+но таймер SDK продолжает запрещать сам выстрел; NotReady ROF refusal не вызывает feedback.
+Регрессии ledger67/manual55/B159/B242 — 67/55/59/42 без отказов, native retained-Fire124/0,
+свежий AndroidCompileGate PASS. Отчёты и хеши —
+`tmp/weapon-readiness-stage3-final-package.md`. Binary replay проверен в одном процессе;
+два клиента, физическое движение руки, звук в шлеме и trajectory не проверены.
+
+## Патч 2026-10-04: opt-in ledger патронника и атомарный shot commit
+
+Подэтап post-shot origin этапа 2 (`UxrFirearmReadinessTypes.cs`,
+`UxrFirearmWeapon.Readiness.cs`): nested state version2 содержит `PostShotEmptyAction` —
+атомарный marker committed last-total consumption, не доказательство Source Emitted/FX.
+Внешние RuntimeTriggerInfo/Commit остаются version1; чтение старого nested state даёт
+origin=false. Begin/Extract/Complete/Automation потребляют marker; Cancel сохраняет
+before marker (после Begin он уже false), magazine reconciliation и CloseOnly сохраняют.
+Optional readonly `ValidatePostShotEmptyActionRest` и appended `EmptyRestAcknowledged`
+снимают marker только после actual rest, без цикла/feed/изменения C/M/sequences.
+Команда имеет прежнюю capture/post-callback защиту и exact replay delta.
+Generic receiving sink запрещает Shot/unknown enum; только CommitShotSynced проверяет
+next ShotSequence, единственный native M debit и exact after-state/origin predicate.
+Actual routing binary RED 6/2 → GREEN 8/0; неправильные маршруты больше не меняют
+ammo/revision, правильный Emitted/duplicate controls проходят. Actual SDK origin
+transitions/nested old encoded bytes/roots=null snapshots/ACK: 42/0; last-total
+faults/malformed receiving: 36/0. На этих frozen source повторены ledger 67/0,
+legacy manual 55/0, B1 59/0, B2 42/0; Android PASS 2026-10-04 15:16 UTC.
+Exact-owned cleanup сохраняет полные scene/assets fingerprints. Package:
+`tmp/weapon-readiness-stage2-origin-final-package.md`; independent final review pending.
+Game reconstruction/physical presentation/production opt-in этим подэтапом не подтверждены.
+
+Подэтап physical ports этапа 2: optional `ValidatePhysicalActionClosed` и
+`TryConfirmPhysicalActionClosed` закрывают отменённый ActionOpen при отсутствии pending
+cycle. Команда `CloseOnly` добавлена в конец enum: меняет только ActionOpen и revision,
+сохраняет C/M, identity, cycle/extracted/shot sequences. Без отдельного close-only
+валидатора команда отклоняется; pending chamber cycle закрывается прежним Complete.
+Replay проверяет operation-specific инварианты и не запускает локальный physical callback.
+Смешанные версии клиентов с неизвестной операцией не поддерживаются.
+
+Initialize/Complete/Automation/CloseOnly снимают локальный readonly capture перед внешним
+physical callback и после него проверяют runtime reference, semantic ledger, revision,
+магазин/anchor/backlink/Rounds и authority. Если callback совершил внутреннюю допустимую
+команду, внешняя stale команда отклоняется без отката внутренней. Mutating refresh port
+сохраняет отдельный контракт latest-read; второго live ammo/guard store не добавлено.
+Actual temporary proofs: cancel RED 6/1 → GREEN 8/0; callbacks RED 7/3 → GREEN 10/0;
+malformed CloseOnly binary RED 3/6 → GREEN 9/0; separate-port/API/replay controls 12/0.
+После SDK patch: ledger 67/0, legacy/manual 55/0, B1 59/0, B2 42/0, Android PASS.
+Пакет: `tmp/weapon-readiness-stage2-sdk-seam-checkpoint.md`. Это SDK подэтап;
+game physical bindings/controller и whole trigger episode этапов 2–3 этим не доказаны.
+
+`UxrFirearmWeapon.Readiness.cs` — единственный writer включённого профиля: отдельно C,
+а магазин хранит только собственный `UxrFirearmMag.Rounds`. API включается явно после
+передачи SDK-neutral authority/physical delegates; production-профили на этом этапе
+не включены. Начальная готовая миграция переносит один из N патронов в C, сохраняя
+total=N. Замена/снятие магазина сохраняет C; ручное открытие блокирует shot, extraction
+одного cycleSequence извлекает C один раз, закрытие с физическим evidence переносит
+один M→C. Отмена не возвращает извлечённый патрон и не объявляет Action закрытым.
+`GetAmmoLeft` сохраняет mag-only смысл; отдельные chamber/total/decision queries дают
+`NoMagazine`, `EmptyMagazine`, `ChamberingRequired` только при пустом C.
+
+Private `[Preserve]` `CommitShotSynced`/`ApplyReadinessCommit` принимают versioned
+`IUxrSerializable` DTO с identity магазина, expected/next revision и after-state.
+Replay применяет их только через SDK state-sync scope; duplicate/старые revisions
+не расходуют ammo и не запускают projectile повторно. Nested `Source.Shoot` не становится
+вторым top-level событием и `Source_ShotFired` не дебитует opt-in ammo. `SyncAmmoLeft`
+использует полный reconciliation, а не запись Rounds текущего произвольного магазина.
+Restricted automation delegate отдельно разрешает refill только при total=0; C=1 не
+добавляет capacity сверху. Game-layer policy/feedback/prefab migration — следующие этапы.
+
+`RuntimeTriggerInfo` version 1 сериализует/клонирует/сравнивает ledger; версия 0 оставляет
+C неинициализированным для одноразовой авторской миграции. `UxrFirearmWeapon.StateSave`
+принудительно сохраняет initialized ledger, `UxrFirearmMag.StateSave` — единственный
+`_rounds` через штатный `DontCheckCache` при уровне выше `ChangesSincePreviousSave`.
+Это требуется для реального roots=null/SaveRequiredComponents late join, если initial
+cache был снят после M→C. Схема магазина bool+int сохранена; incremental previous-save
+ветка не меняется. `UxrFirearmMag.SaveStateWhenDisabled=true` сохраняет тот же единственный
+Rounds store после реального `UxrMagazinePocket.StoreItem`, выключающего GameObject.
+Проверены существующие registered disabled магазины с 0/3/10 патронами через roots=null
+snapshot, fresh non-author receiver, enable и повторный load. Транспорт принадлежности
+карману/иерархии/видимости и создание произвольных pooled объектов этим не доказаны.
+
+`UxrProjectileSource.TryShootWithOutcome` различает Emitted/NotEmitted/Indeterminate;
+каждый Begin закрывается один раз, после committed debit нет refund/автоматического retry.
+Отказ subscriber/FX сообщает failure и процедурно останавливает opt-in профиль.
+Receiving Emitted replay сохраняет ошибку ledger notification отдельно от source outcome:
+успешный Source не стирает RoundsChanged failure; обе ошибки объединяются при необходимости.
+Committed revision/debit/projectile не повторяются, профиль получает ReadinessFaulted и stop.
+`UxrStateSyncImplementer_1.EndSyncState` держит прежний nesting depth во время callback,
+а decrement выполняет в finally. Caller помечает End-attempt до End и не вызывает Cancel
+второй раз после уже потреблённого scope.
+
+Временные actual proofs: исходный SDK RED 56/8; cache-filter baseline RED 56/7;
+ledger GREEN 67/67, неизменённый legacy/manual fixture 55/55, AndroidCompileGate PASS.
+Artifacts: `tmp/weapon-readiness-ledger-*-red.txt`, `*-final-green.txt`, `*-legacy55.txt`,
+`*-android.txt`. SerializeEventBinary→ExecuteStateSyncEvent, registered roots=null snapshot
+на отдельной свежей no-author копии, fault outcomes/depth и cleanup fingerprints пройдены
+в одном Editor процессе. Это не две живые сетевые машины/траектория/шлем/IL2CPP runtime.
+Код не коммитится до human acceptance; отдельное code review ещё является gate.
+
+## Патч 2026-10-04: отклонённый спуск при необходимости досылания
+
+`UxrWeapon.Custom.cs`: read-only `TryGetTriggerMagazineAnchor` возвращает
+`UxrFirearmTrigger.AmmunitionMagAnchor` для проверок текущего совместимого магазина
+в ручном авторе. Accessor не меняет SDK FSM, HasReloaded, боезапас или положение деталей.
+
+`UxrWeapon.Custom.cs`: read-only `NeedsManualChambering(triggerIndex)` проверяет присоединённый
+магазин с патронами, отсутствие HasReloaded и режим с ручным циклом. Событие
+`ChamberingRequired(int, UxrGrabber)` сообщает новую локальную попытку спуска.
+
+`UxrFirearmWeapon.cs`: hook стоит перед switch режима огня и сбросом HasReloaded в ManualReload.
+Он проверяет TriggerPressStarted, CanUse и необходимость досылания. Поэтому обычный выстрел
+ручного цикла не вызывает ложную подсказку. Hook не досылает, не стреляет и не меняет боезапас.
+Игровой `WeaponChamberingReminder` проверяет основную локальную руку и StateEventAuthority,
+владеет Action visual и haptic; SDK сохраняет единоличное владение отдельным proximity GO.
+
 ## Патч 2026-10-02: живые зависимости предметов и диагностика Fade
 
 `UxrGrabbableObject.cs`: пять списков зависимостей очищаются общей функцией `LiveDependencies`

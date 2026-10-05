@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36eb4d6fed1fb144eb69e9f2c22fba5d, type: 3}
+  m_Name: CurrentGameplayArsenal
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalPreset
+  _presetId: CurrentGameplay
+  _entries:
+  - Weapon: {fileID: 11400000, guid: 802986f4d017e7d4882c1c6022341af4, type: 2}
+    Zone: 0
+  - Weapon: {fileID: 11400000, guid: 7fdcb3f0b05028044a0ba801f61bf4cc, type: 2}
+    Zone: 1
+  - Weapon: {fileID: 11400000, guid: 29c9d566aa4ac214ab127b4e633b4334, type: 2}
+    Zone: 0
+  - Weapon: {fileID: 11400000, guid: f140291be0d87d9409f937afc390abf0, type: 2}
+    Zone: 0
+  - Weapon: {fileID: 11400000, guid: 06130e656acaee24da3fb3f2d54de872, type: 2}
+    Zone: 0
+  - Weapon: {fileID: 11400000, guid: e0b50a7a3495ac74eb153cd542432c4e, type: 2}
+    Zone: 0
+  - Weapon: {fileID: 11400000, guid: 805abd57d56b11d4cbb9548e3c9ade04, type: 2}
+    Zone: 1
+  - Weapon: {fileID: 11400000, guid: b2e37e600ab1893469a53e2d5940e98b, type: 2}
+    Zone: 1
+  - Weapon: {fileID: 11400000, guid: 71578ee82c8283640ab0a08d6396549b, type: 2}
+    Zone: 1
+  - Weapon: {fileID: 11400000, guid: e4fe34bd1f05bb245b5d1589a10a69d4, type: 2}
+    Zone: 1

@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 086e9e8eb4d89c54ab6a6f0b06011b0e, type: 3}
+  m_Name: AK105_Weapon
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
+  _displayName: AK-105
+  _weaponId: AK105
+  _description: "Автоматический карабин AK-105. Универсальное основное оружие для коротких очередей и огня на средней дистанции."
+  _weaponPrefab: {fileID: 3900771781936566667, guid: 732e5b48d3557594583580ed383cc981, type: 3}
+  _magazinePrefab: {fileID: 1786085660339194700, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
+  _maxMagazineCount: 3
+  _price: 2700
+  _damage: 33
+  _rangeModifier: 0.98
+  _penetration: 2
+  _armorRatio: 1.55
+  _fireRate: 660
+  _fullAuto: 1
+  _magazineSize: 30
+  _reserveAmmo: 90
+  _pellets: 1
+  _killAward: 300
+  _spread:
+    _spread: 0.6
+    _inaccuracyStand: 6.41
+    _inaccuracyMove: 175.06
+    _inaccuracyFire: 7.8
+    _recoveryTime: 0.368
+  _recoilMagnitude: 30
+  _category: 0
+  _weaponPositionOffset: {x: 0, y: 0, z: 0}
+  _weaponRotationOffset: {x: 0, y: 0, z: 0}
+  _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _icon: {fileID: 0}

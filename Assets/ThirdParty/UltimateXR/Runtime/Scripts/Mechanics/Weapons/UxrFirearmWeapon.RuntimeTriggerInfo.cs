@@ -16,6 +16,7 @@ namespace UltimateXR.Mechanics.Weapons
 
         private class RuntimeTriggerInfo : IUxrSerializable, ICloneable
         {
+            public UxrFirearmReadinessState Readiness;
             #region Public Types & Data
 
             /// <summary>
@@ -100,6 +101,7 @@ namespace UltimateXR.Mechanics.Weapons
                 copy._hasReloaded                 = _hasReloaded;
                 copy._triggerInitialLocalRotation = _triggerInitialLocalRotation;
                 copy._recoilTimer                 = _recoilTimer;
+                copy.Readiness = Readiness != null ? (UxrFirearmReadinessState)Readiness.Clone() : null;
 
                 return copy;
             }
@@ -109,7 +111,7 @@ namespace UltimateXR.Mechanics.Weapons
             #region Implicit IUxrSerializable
 
             /// <inheritdoc />
-            public int SerializationVersion => 0;
+            public int SerializationVersion => 1;
 
             /// <inheritdoc />
             public void Serialize(IUxrSerializer serializer, int serializationVersion)
@@ -121,6 +123,8 @@ namespace UltimateXR.Mechanics.Weapons
                 serializer.Serialize(ref _hasReloaded);
                 serializer.Serialize(ref _triggerInitialLocalRotation);
                 serializer.Serialize(ref _recoilTimer);
+                if (serializationVersion >= 1) serializer.SerializeAnyVar(ref Readiness);
+                else if (serializer.IsReading) Readiness = null; // Version-0: одноразовая author initialization, не free +1.
             }
 
             #endregion
@@ -142,7 +146,7 @@ namespace UltimateXR.Mechanics.Weapons
             public override int GetHashCode()
             {
                 // Use XOR (^) to combine hash codes for booleans that are used in Equals().
-                return _triggerPressed.GetHashCode() ^ _triggerPressStarted.GetHashCode() ^ _triggerPressEnded.GetHashCode() ^ _hasReloaded.GetHashCode();
+                return _triggerPressed.GetHashCode() ^ _triggerPressStarted.GetHashCode() ^ _triggerPressEnded.GetHashCode() ^ _hasReloaded.GetHashCode() ^ (Readiness?.GetHashCode() ?? 0);
             }
 
             #endregion
@@ -172,7 +176,7 @@ namespace UltimateXR.Mechanics.Weapons
                 return _triggerPressed == other._triggerPressed &&
                        _triggerPressStarted == other._triggerPressStarted &&
                        _triggerPressEnded == other._triggerPressEnded &&
-                       _hasReloaded == other._hasReloaded;
+                       _hasReloaded == other._hasReloaded && Equals(Readiness, other.Readiness);
             }
 
             #endregion

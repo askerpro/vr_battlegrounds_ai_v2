@@ -554,6 +554,7 @@ GameObject:
   - component: {fileID: 1315913099852774291}
   - component: {fileID: 4346582971159589885}
   - component: {fileID: 6474069267391682829}
+  - component: {fileID: 5923020983112525853}
   m_Layer: 0
   m_Name: Mk14
   m_TagString: Weapon
@@ -1017,6 +1018,24 @@ MonoBehaviour:
     Rotate: 0
     InMagazine: 0
   _originalSlideLength: 0.08836351
+--- !u!114 &5923020983112525853
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2847518032690409953}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0830e8833ac4458aad36c0f5295f90ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponChamberingReminder
+  _triggerIndex: 0
+  _proximitySignal: {fileID: 3508412481299142794}
+  _visual: {fileID: 3011603805019248938}
+  _hapticAmplitude: 0.15
+  _hapticSeconds: 0.08
+  _hapticCooldown: 0.6
 --- !u!1 &3011603805019248938
 GameObject:
   m_ObjectHideFlags: 0
@@ -1350,6 +1369,37 @@ MonoBehaviour:
   _uxrUniqueId: 6e97ac11-5955-4746-bec7-2a7e8d68d886
   __prefabGuid: 26b1fd63ab9a4274cb17304b23cb6318
   __isInPrefab: 1
+--- !u!1 &3508412481299142794
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9076680426632355042}
+  m_Layer: 0
+  m_Name: GrabHighlightActionProximity
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &9076680426632355042
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3508412481299142794}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3959815619846799743}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3597378833063110537
 GameObject:
   m_ObjectHideFlags: 0
@@ -2415,6 +2465,7 @@ Transform:
   - {fileID: 5790539808468889035}
   - {fileID: 1873310327847729404}
   - {fileID: 2744863202017800966}
+  - {fileID: 9076680426632355042}
   m_Father: {fileID: 6009688148416016926}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5788184244666254963
@@ -2495,7 +2546,7 @@ MonoBehaviour:
     _grabProximityTransform: {fileID: 0}
     _grabberProximityUseDefault: 1
     _grabberProximityIndex: 0
-    _enableOnHandNear: {fileID: 3011603805019248938}
+    _enableOnHandNear: {fileID: 3508412481299142794}
   _additionalGrabPoints: []
   _useParenting: 0
   _autoCreateStartAnchor: 0
@@ -2722,7 +2773,8 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 1869839075065529257, guid: bb9de8cc9dc96064695457eb90647c70, type: 3}
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 5395167945938441120, guid: bb9de8cc9dc96064695457eb90647c70, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: bb9de8cc9dc96064695457eb90647c70, type: 3}

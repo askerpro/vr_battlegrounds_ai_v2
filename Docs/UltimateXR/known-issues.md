@@ -37,6 +37,106 @@ Cyborg Fixed/Blend — контроль. Постоянные Editor NUnit ме�
 
 ## Как пользоваться этим файлом
 
+### Fresh press, inline подготовка и legacy dry audio (этап 3, 2026-10-04)
+
+Исходный input path мог вызвать legacy ChamberingRequired callback, получить Ready
+после inline подготовки и выстрелить тем же нажатием. Удержанный Auto мог начать
+стрельбу после отклонённой попытки без release/new press; mag-only dry predicate давал
+щелчок даже при готовом C1 без магазина, а также при blocked/ROF refusal.
+Actual baseline RED9/9 → GREEN18/0; SDK local episode теперь потребляется до внешних
+callbacks, prepare command отделён от readonly classifier/feedback. Typed контекст
+фиксирует revision/M/C/anchor/main hand/policy до inline подготовки.
+
+Game Controller/Router/Feedback/Reminder44/0 проверены на own NoAction fixture,
+включая настоящий binary reflection replay, receiver throw/reentry и main context loss.
+После узкой коррекции Ready-ROF и порядка Start: startup48/0; native Action63/0 на
+Browning/Viper/TR15. Первый assist press не испускает projectile, удержание после
+physical completion не стреляет, release+новый press стреляет один раз. Регрессии
+67/55/59/42 и native retained-Fire124/0, Android PASS на текущих хешах.
+Это не пользовательская/headset/двухклиентская приёмка; production opt-in отсутствует.
+Dry audio не является источником причины: BarrelObstruction сохраняет собственный
+отклик OtherDenied; NoMagazine/EmptyMagazine/ChamberingRequired взаимоисключающи.
+Артефакты: `tmp/weapon-readiness-stage3-input-baseline-green.json`,
+`tmp/weapon-readiness-stage3-typed-game-filters.json`; итоговый пакет —
+`tmp/weapon-readiness-stage3-final-package.md`; патч — `sdk-patches.md`.
+
+### Post-shot Empty pose и receiving routing (2026-10-04)
+
+Actual Browning last Emitted shot даёт C0/M0/ShotSequence1 и rear HoldOpen.
+StoreInitialState после rear → roots=null ChangesSinceBeginning → свежий receiver
+восстанавливает ledger, но теряет 42.3122458 мм local Slide displacement (RED15/3).
+Обычный initial cache до shot сохраняет pose. Локальная `_emptyHeld` история не является
+сетевой семантикой и не должна разрешать новое досылание canceled C0 из одной rear-позы.
+Узкий versioned `PostShotEmptyAction` хранится одним SDK ledger writer как atomic
+committed last-total consumption; marker не доказывает projectile/FX, fault guards
+остаются отдельными. Game pure validated projection и полный GREEN ещё проверяются.
+
+Generic binary receiving sink раньше принимал Shot и неизвестный enum99: первый
+расходовал M без Source, второй менял revision (actual RED6/2). Designated sink/enum
+guards исправлены: same GREEN8/0 с реальным projectile и duplicate controls, balanced
+depth и равными cleanup fingerprints. Отдельные actual origin ACK/snapshot/nested
+legacy bytes 42/0 и last-total fault/receiving 36/0 дополняются ledger67/manual55/
+B159/B242 и Android PASS; independent final review pending. Production opt-in выключен.
+
+Game EmptyRest validator должен проверять обслуженную физическую презентацию, а не
+только координату rest: native last-shot oracle RED7/1 показал начальный front при
+уже активной Source Empty. Намеренный rest-only callback преждевременно ACK marker,
+после чего Source ещё достигает rear. Это граница game adapter, не дефект SDK:
+optional physical port не знает фаз анимации. Новый Controller ещё не imported;
+положительное source/driver completion evidence и held/release/projection lifecycle
+проверяются отдельно, без второго semantic origin store.
+
+### Отменённый physical cycle и reentrant physical validators (2026-10-04)
+
+Cancel намеренно сохраняет ActionOpen. При partial pull до extraction C остаётся в
+патроннике; возвращение в actual rest после отмены не должно требовать нового полного
+цикла или подачи M→C. Optional отдельный close-only port и команда CloseOnly закрывают
+только ActionOpen без изменения боезапаса/sequence. Pending cycle таким способом
+завершить нельзя. Actual cancel RED 6/1 → GREEN 8/0.
+
+Внешний physical validator может выполнить внутреннюю SDK-команду. Старые Initialize,
+Complete и Automation затем записывали stale state поверх нового: actual RED 7/3.
+Локальный capture и post-callback revalidation теперь отклоняют внешнюю команду,
+сохраняя inner commit (GREEN 10/0). CloseOnly имеет ту же защиту и отдельную typed port
+границу; malformed binary mutations отклоняются (RED 3/6 → GREEN 9/0).
+Дополнительные API/valid binary/duplicate/precommit fault controls — 12/0. Это временные
+SDK fixtures; полный physical adapter, все Action bindings и trigger-release episode
+остаются проверками следующих подэтапов. Production opt-in не включён.
+
+### Opt-in патронник: snapshot cache и отказы synced subscribers (2026-10-04)
+
+Старый SDK хранит ammo только в магазине и HasReloaded bool: retained chamber/tactical
+смена и один выстрел без магазина этим состоянием не представляются. Новый opt-in
+ledger сохраняет C отдельно, `Rounds` остаётся единственным M store. До migration
+производственные профили продолжают legacy механику.
+
+Initial cache после переноса M→C нельзя считать достаточным для late join: свежий
+prefab имеет исходные M=N. Actual roots=null snapshot с прежним cache-filtered Rounds
+показал RED 56/7; штатный DontCheckCache для `_rounds` и initialized ledger устраняет
+потерю after-values без второго live ammo store. Это не доказательство исторического
+«бесплатного +1» legacy SDK: его bool не был реальным отдельным патроном.
+Снятый активный и существующий выключенный карманом магазин сохраняются через registry:
+override `UxrFirearmMag.SaveStateWhenDisabled=true` устраняет исключение единственного
+Rounds store. Actual Pocket StoreItem RED 35/7 → GREEN 42/0 покрывает 0/3/10 rounds,
+fresh non-author load, enable/repeated load и Release. SDK lifecycle callbacks в EditMode
+вызывались явно; сетевой транспорт Pocket membership/parent/visibility и произвольного
+создания pooled объектов остаётся отдельной границей.
+
+Throwing StateChanged subscriber раньше оставлял SyncCallDepth после Pop несогласованным.
+Узкий finally исправляет decrement, сохраняя depth во время callback. Opt-in commit
+guard блокирует reentrant writers; RoundsChanged видит уже согласованные C/M after-values.
+Отказ после записи означает committed failure: нельзя refund/retry или считать его
+полностью успешным выстрелом. Emission outcome и ledger/FX оцениваются раздельно.
+Actual receiving Emitted binary replay выявил потерю RoundsChanged exception через out
+параметр Source: RED 55/4 → GREEN 59/0. Отдельный sourceFailure теперь сохраняет ledger
+failure; committed shot испускается ровно один раз, fault уведомляется один раз, профиль
+останавливается, duplicate не debit/FX/retry. Depth/guard остаются сбалансированы.
+
+Actual временные GREEN: ledger 67/67 (DTO/replay/snapshot/faults), legacy/manual 55/55,
+Android compile PASS, native scenes/prefab/material fingerprints до/после равны.
+Два клиента, шлем, trajectory и IL2CPP runtime не проверены; профиль ещё opt-in и ждёт
+отдельного code review/следующих policy и feedback этапов. См. [SDK patch](sdk-patches.md#патч-2026-10-04-opt-in-ledger-патронника-и-атомарный-shot-commit).
+
 ### Визуализация касания пальцем и лазер из руки (2026-10-04)
 
 Исходный `UxrFingerTip` содержит ввод и сведения о кончике, но не runtime-визуализатор.

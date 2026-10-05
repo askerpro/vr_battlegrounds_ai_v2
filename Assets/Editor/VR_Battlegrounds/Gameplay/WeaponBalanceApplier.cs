@@ -20,23 +20,31 @@ namespace VrBattlegrounds.Editor.Gameplay
     {
         private const string WeaponsFolder = "Assets/Data/Weapons";
 
-        [MenuItem("Tools/VR Battlegrounds/Gameplay/Apply Weapon Balance")]
-        public static void ApplyAll()
+        private static void OpenWorkbench() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenTab(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Catalog);
+
+        public static void ApplyAll() => Apply(System.Linq.Enumerable.Select(AssetDatabase.FindAssets("t:WeaponInfo", new[] { WeaponsFolder }), guid => AssetDatabase.LoadAssetAtPath<WeaponInfo>(AssetDatabase.GUIDToAssetPath(guid))));
+
+        /// <summary>Применяет существующие формулы только к объявленному набору WeaponInfo.</summary>
+        public static string Apply(IEnumerable<WeaponInfo> weapons)
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new System.InvalidOperationException("Баланс нельзя менять в Play Mode.");
             var changed = new List<string>();
-            foreach (string guid in AssetDatabase.FindAssets("t:WeaponInfo", new[] { WeaponsFolder }))
+            foreach (var info in weapons)
             {
-                var info = AssetDatabase.LoadAssetAtPath<WeaponInfo>(AssetDatabase.GUIDToAssetPath(guid));
                 if (info == null || !info.HasBalance || info.WeaponPrefab == null) continue;
 
                 if (ApplyWeapon(info)) changed.Add(info.WeaponPrefab.name);
+                if (ApplyInstalledMagazines(info) && !changed.Contains(info.WeaponPrefab.name)) changed.Add(info.WeaponPrefab.name);
                 if (ApplyMagazine(info)) changed.Add(info.MagazinePrefab.name);
             }
 
-            AssetDatabase.SaveAssets();
-            GameLog.WeaponSystem.Info(changed.Count == 0
+            // ApplyWeapon/ApplyMagazine адресно сохраняют только объявленные префабы.
+            // Общий SaveAssets здесь мог записать несохранённые изменения чужих материалов/данных.
+            string report = changed.Count == 0
                 ? "Баланс оружия: префабы уже совпадают с WeaponInfo."
-                : $"Баланс оружия применён: {string.Join(", ", changed)}.");
+                : $"Баланс оружия применён: {string.Join(", ", changed)}.";
+            GameLog.WeaponSystem.Info(report);
+            return report;
         }
 
         private static bool ApplyWeapon(WeaponInfo info)
@@ -182,6 +190,44 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             if (dirty) PrefabUtility.SavePrefabAsset(info.MagazinePrefab);
             return dirty;
+        }
+
+        // Стартовый магазин — вложенный экземпляр и может хранить старый override ёмкости.
+        // Обновление внешнего префаба само по себе такой override не исправляет.
+        private static bool ApplyInstalledMagazines(WeaponInfo info)
+        {
+            var installed = InstalledMagazines(info.WeaponPrefab);
+            if (!System.Linq.Enumerable.Any(installed, mag => mag.Capacity != info.MagazineSize || mag.Rounds != info.MagazineSize)) return false;
+            string path = AssetDatabase.GetAssetPath(info.WeaponPrefab);
+            GameObject contents = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                foreach (var mag in InstalledMagazines(contents))
+                {
+                    var so = new SerializedObject(mag);
+                    SetInt(so.FindProperty("_capacity"), info.MagazineSize);
+                    SetInt(so.FindProperty("_rounds"), info.MagazineSize);
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(mag);
+                }
+                if (PrefabUtility.SaveAsPrefabAsset(contents, path) == null)
+                    throw new System.InvalidOperationException("Не удалось сохранить стартовый магазин: " + path);
+                return true;
+            }
+            finally { PrefabUtility.UnloadPrefabContents(contents); }
+        }
+
+        private static IEnumerable<UxrFirearmMag> InstalledMagazines(GameObject root)
+        {
+            var triggers = new SerializedObject(root.GetComponent<UxrFirearmWeapon>()).FindProperty("_triggers");
+            var anchors = new HashSet<Object>();
+            for (int index = 0; index < triggers.arraySize; index++)
+                anchors.Add(triggers.GetArrayElementAtIndex(index).FindPropertyRelative("_ammunitionMagAnchor").objectReferenceValue);
+            foreach (var mag in root.GetComponentsInChildren<UxrFirearmMag>(true))
+            {
+                var grab = mag.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+                if (grab != null && grab.StartAnchor != null && anchors.Contains(grab.StartAnchor)) yield return mag;
+            }
         }
 
         private static bool SetInt(SerializedProperty property, int value)

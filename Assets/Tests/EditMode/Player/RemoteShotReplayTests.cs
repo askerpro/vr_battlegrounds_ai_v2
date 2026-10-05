@@ -26,8 +26,8 @@ namespace VrBattlegrounds.Tests.Player
     /// </summary>
     public class RemoteShotReplayTests
     {
-        private const string Pistol  = "Assets/Prefabs/Weapons/GunReal/Gun_real.prefab";
-        private const string Shotgun = "Assets/Prefabs/Weapons/ShotgunReal/Shotgun_real.prefab";
+        private const string Pistol  = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab";
+        private const string Shotgun = "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab";
 
         private const BindingFlags Any = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 

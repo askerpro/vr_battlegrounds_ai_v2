@@ -65,6 +65,46 @@ namespace VrBattlegrounds.Weapons
 
         public float SlideThreshold => _slideThreshold;
         public UxrGrabbableObject Slide => _slide;
+        public Vector3 RestLocalPosition => _localStart;
+        public float PhysicalPositionEpsilon => FrontPositionEpsilon();
+        public float AutoReturnSpeed => _autoReturnSpeed;
+        public float SlideTravelLength => TryGetSlideTravel(_slide, out _, out float length) ? length : 0f;
+        public bool IsActionHeld => _slide != null && UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
+        public float SignedSlideProgress => TryGetSlideTravel(_slide, out Vector3 axis, out float length)
+            ? Vector3.Dot(_slide.transform.localPosition - _localStart, axis) / length : 0f;
+        private WeaponReadinessController ReadinessAdapter => GetComponent<WeaponReadinessController>();
+        private bool HasLedgerAdapter => ReadinessAdapter != null && ReadinessAdapter.IsConfigured && _firearm.UsesReadinessLedger(_triggerIndex);
+
+        public void NotifyLedgerManualCompletion()
+        {
+            if (!HasLedgerAdapter || !_firearm.HasChamberRound(_triggerIndex)) return;
+            ClearLedgerVisualHold();
+            PlayBackFeedback(true);
+            ManualCycleCompleted?.Invoke();
+        }
+
+        public void ClearLedgerVisualHold()
+        {
+            if (!HasLedgerAdapter) return;
+            _cosmeticHold = false;
+            CancelManualCycle(); // Только legacy gesture fields, не pose/SDK ledger.
+        }
+
+        public bool TryGetNumericalEndpointDiagnostics(out float coordinate, out float length, out float epsilon)
+        {
+            coordinate = 0f; epsilon = 0f;
+            if (!TryGetSlideTravel(_slide, out _, out length) || !IsFinite(length) || length <= 0f ||
+                !IsFinite(_localStart.x) || !IsFinite(_localStart.y) || !IsFinite(_localStart.z)) return false;
+            coordinate = Mathf.Max(Mathf.Abs(_localStart.x), Mathf.Abs(_localStart.y), Mathf.Abs(_localStart.z), length);
+            epsilon = EndpointRoundingAllowanceUnits * SinglePrecisionRelativeSpacing * coordinate;
+            // Invalid/extreme диапазон не превращаем в широкий физический endpoint.
+            // Ratio/coordinate выводит temporary preflight; это не Transform error bound.
+            return IsFinite(coordinate) && IsFinite(epsilon) && epsilon > 0f && epsilon < length && epsilon * epsilon > 0f;
+        }
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private const float SinglePrecisionRelativeSpacing = 1.192092896e-7f; // 2^-23, не System.Single.Epsilon.
+        private const float EndpointRoundingAllowanceUnits = 8f; // Эвристика, не доказанный operation-count bound.
         public event Action ManualCycleCompleted;
 
         /// <summary>Передаёт законченную открытую визуальную позу физическому механизму без зачёта тяги.</summary>
@@ -72,15 +112,15 @@ namespace VrBattlegrounds.Weapons
         {
             if (_slide == null) return;
             _slide.transform.localPosition = _localStart + localOffset;
+            CancelManualCycle();
             _cosmeticHold = true;
-            _state = SlideState.WaitForward;
         }
 
-        /// <summary>Ручка должна догнать открытый внутренний затвор, прежде чем тяга может быть зачтена.</summary>
+        /// <summary>Визуальное сопряжение деталей не отменяет уже начатый ручной возврат.</summary>
         public void RequireManualCatch(float progress)
         {
-            _minimumManualPull = Mathf.Max(_minimumManualPull, Mathf.Max(_slideThreshold, progress));
-            _state = SlideState.WaitForward;
+            // Положение отдельной детали проверяется физическим endpoint визуальной системы.
+            // Передача открытого затвора руке не вводит новую оттяжку или процентный порог.
         }
 
         public void BeginVisualHandoff(Vector3 localOffset)
@@ -89,18 +129,15 @@ namespace VrBattlegrounds.Weapons
             if (_slide == null || (!_cosmeticHold && localOffset.sqrMagnitude < 1e-10f)) return;
             _slide.transform.localPosition += localOffset;
             _cosmeticHold = false;
-            _state = SlideState.WaitForward;
-            if (TryGetSlideTravel(_slide, out _, out float length))
-                _minimumManualPull = GetSlideProgress() + 0.002f / length;
+            // Зачтённый ручной возврат сохраняется при передаче визуальной позы.
+            // Отдельные Action-детали должны самостоятельно достичь штатного положения.
         }
 
         public void CancelVisualHold()
         {
-            if (!_cosmeticHold || _slide == null) return;
-            _slide.transform.localPosition = _localStart;
+            if (!HasLedgerAdapter && _cosmeticHold && _slide != null) _slide.transform.localPosition = _localStart;
             _cosmeticHold = false;
-            _minimumManualPull = 0f;
-            _state = SlideState.WaitForward;
+            CancelManualCycle();
         }
 
         /// <summary>
@@ -176,6 +213,14 @@ namespace VrBattlegrounds.Weapons
             }
 
             bool isGrabbed = UxrGrabManager.Instance != null && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
+            if (HasLedgerAdapter)
+            {
+                // Spring только physical; никакой второй Reload/ready writer.
+                if (_autoReturnOnRelease && !isGrabbed && !_cosmeticHold && !ReadinessAdapter.OwnsActionPose)
+                    ApplyAutoReturn(dir);
+                ReadinessAdapter.RefreshPhysicalActionState(_triggerIndex);
+                return;
+            }
             if (_cosmeticHold && !isGrabbed) return;
 
             if (_autoReturnOnRelease && !isGrabbed)
@@ -197,46 +242,61 @@ namespace VrBattlegrounds.Weapons
                 }
             }
 
-            if (_state == SlideState.WaitForward && current > Mathf.Max(_slideThreshold, _minimumManualPull))
+            // Право дослать принадлежит ручному циклу основного держателя оружия.
+            // Потерянный хват/блокировка не оставляют отложенный Reload после восстановления.
+            if (!HasManualContext())
             {
-                _minimumManualPull = 0f;
-                _state = SlideState.WaitBack;
-
-                bool loaded = _firearm != null && _firearm.IsLoaded(_triggerIndex);
-                PlayForwardFeedback(loaded);
-                LogBoltCycle($"Затвор оттянут! Переход в WaitBack. (Норм={current:F2})");
+                CancelManualCycle();
+                return;
             }
-            else if (_state == SlideState.WaitBack && current < _slideThreshold * 0.9f)
+
+            if (_pendingClose)
             {
-                bool loaded = _firearm != null && _firearm.IsLoaded(_triggerIndex);
-                PlayBackFeedback(loaded);
+                CompletePhysicalClose();
+                return;
+            }
 
-                // Затвор двигается на каждой машине (у чужих — по руке владельца, после броска — сам),
-                // а Reload синхронизируемый: зовёт его только автор оружия, остальные получат событием.
-                // Иначе каждая копия рассылала свой Reload (known-issues, Issue 23). Звук — у всех.
-                if (_chamberRoundOnSlideReturn && _firearm != null && StateEventAuthority.IsAuthorOfItem(_firearm))
-                {
-                    _firearm.Reload(_triggerIndex);
-                    LogBoltCycle($"Затвор возвращён! Перезарядка (Reload) выполнена. (Норм={current:F2})");
-                }
-                else
-                {
-                    LogBoltCycle($"Затвор возвращён! (Норм={current:F2})");
-                }
-
+            float epsilon = FrontPositionEpsilon();
+            float requiredPull = _slideThreshold;
+            if (_state == SlideState.WaitForward && _manualInteraction && isGrabbed && absDist > epsilon &&
+                current + epsilon / denom >= requiredPull)
+            {
+                _state = SlideState.WaitBack;
+                PlayForwardFeedback(_firearm.IsLoaded(_triggerIndex));
+                LogBoltCycle($"Ручная оттяжка/зацепление достигнуты. (Норм={current:F2})");
+            }
+            else if (_state == SlideState.WaitBack && delta.sqrMagnitude <= epsilon * epsilon)
+            {
+                // Сначала потребляем цикл и фиксируем магазин именно в момент закрытия ручки.
+                // Пустое закрытие не сможет дослать из магазина, вставленного позже, пока
+                // остальные визуальные каналы возвращаются к физическому переднему упору.
                 _state = SlideState.WaitForward;
-                ManualCycleCompleted?.Invoke();
+                _manualInteraction = false;
+                _pendingClose = true;
+                _closingMagazine = GetValidInstalledMagazine(out _closingAnchor);
+                CompletePhysicalClose();
             }
         }
 
         private void HandleSlideGrabbing(object sender, UxrManipulationEventArgs e)
         {
-            if (!_cosmeticHold) return;
-            _cosmeticHold = false;
-            // Перенос Empty не является ручной тягою: нужен ещё реальный ход руки.
-            if (TryGetSlideTravel(_slide, out _, out float length))
-                _minimumManualPull = GetSlideProgress() + 0.002f / length;
-            _state = SlideState.WaitForward;
+            if (HasLedgerAdapter || !isActiveAndEnabled || !HasManualContext() || _pendingClose) return;
+            _manualInteraction = true;
+            if (_cosmeticHold)
+            {
+                _cosmeticHold = false;
+                // Empty уже открыл контактный затвор. Новый задний ход не требуется;
+                // физическое закрытие должно начаться от ручного захвата этой позы.
+                if ((_slide.transform.localPosition - _localStart).sqrMagnitude >
+                    FrontPositionEpsilon() * FrontPositionEpsilon())
+                    _state = SlideState.WaitBack;
+            }
+        }
+
+        protected override void OnDisable()
+        {
+            CancelManualCycle();
+            base.OnDisable();
         }
 
         protected override void OnDestroy()
@@ -312,6 +372,70 @@ namespace VrBattlegrounds.Weapons
             _slide.transform.localPosition = localPosition + direction * Mathf.Sign(axisDelta) * step;
         }
 
+        // Восемь операций float над локальной координатой/ходом: численный запас,
+        // а не процент физического хода. Передний упор проверяется по всему offset.
+        private float FrontPositionEpsilon()
+        {
+            TryGetSlideTravel(_slide, out _, out float length);
+            float coordinate = Mathf.Max(Mathf.Abs(_localStart.x), Mathf.Abs(_localStart.y), Mathf.Abs(_localStart.z), length);
+            return EndpointRoundingAllowanceUnits * SinglePrecisionRelativeSpacing * coordinate;
+        }
+
+        private bool HasManualContext()
+        {
+            return _firearm != null && _firearm.isActiveAndEnabled && _firearm.CanUse &&
+                   (!UxrManager.HasInstance || !UxrManager.Instance.IsInsideStateSync) && UxrGrabManager.HasInstance &&
+                   UxrGrabManager.Instance.isActiveAndEnabled &&
+                   _firearm.TryGetTriggerGrip(_triggerIndex, out UxrGrabbableObject grip, out int point) &&
+                   UxrGrabManager.Instance.GetGrabbingHand(grip, point, out UxrGrabber mainHand) &&
+                   mainHand != null && mainHand.Avatar != null && StateEventAuthority.IsAuthoredHere(mainHand.Avatar) &&
+                   StateEventAuthority.IsAuthorOfItem(_firearm);
+        }
+
+        private UxrGrabbableObject GetValidInstalledMagazine(out UxrGrabbableObjectAnchor anchor)
+        {
+            anchor = null;
+            if (!_firearm.TryGetTriggerMagazineAnchor(_triggerIndex, out anchor) ||
+                !anchor.isActiveAndEnabled || !anchor.gameObject.activeInHierarchy) return null;
+            UxrGrabbableObject placed = anchor.CurrentPlacedObject;
+            if (placed == null || placed.CurrentAnchor != anchor || !anchor.IsCompatibleObject(placed) ||
+                placed.GetComponent<UxrFirearmMag>() == null || _firearm.GetAmmoLeft(_triggerIndex) <= 0) return null;
+            return placed;
+        }
+
+        private void CompletePhysicalClose()
+        {
+            float epsilon = FrontPositionEpsilon();
+            if ((_slide.transform.localPosition - _localStart).sqrMagnitude > epsilon * epsilon) return;
+            var visuals = GetComponent<WeaponMechanismVisuals>();
+            if (visuals != null && visuals.isActiveAndEnabled && !visuals.IsManualActionPhysicallyClosed(FrontPositionEpsilon())) return;
+            UxrGrabbableObject expectedMagazine = _closingMagazine;
+            UxrGrabbableObjectAnchor expectedAnchor = _closingAnchor;
+            CancelManualCycle(); // До синхронизируемого вызова/события: reentrant Update не дублирует цикл.
+            bool loaded = _firearm.IsLoaded(_triggerIndex);
+            bool reloaded = false;
+            if (_chamberRoundOnSlideReturn && HasManualContext() && expectedMagazine != null &&
+                GetValidInstalledMagazine(out UxrGrabbableObjectAnchor currentAnchor) == expectedMagazine &&
+                currentAnchor == expectedAnchor)
+            {
+                _firearm.Reload(_triggerIndex);
+                loaded = _firearm.IsLoaded(_triggerIndex);
+                reloaded = loaded;
+                LogBoltCycle("Передний упор достигнут; ручное досылание (Reload) выполнено.");
+            }
+            PlayBackFeedback(loaded);
+            if (reloaded) ManualCycleCompleted?.Invoke();
+        }
+
+        private void CancelManualCycle()
+        {
+            _state = SlideState.WaitForward;
+            _manualInteraction = false;
+            _pendingClose = false;
+            _closingMagazine = null;
+            _closingAnchor = null;
+        }
+
         private static bool HasClip(UxrAudioSample sample)
         {
             return sample != null && sample.Clip != null;
@@ -347,7 +471,10 @@ namespace VrBattlegrounds.Weapons
         private SlideState       _state;
         private float            _nextLogTime;
         private bool             _cosmeticHold;
-        private float            _minimumManualPull;
+        private bool             _manualInteraction;
+        private bool             _pendingClose;
+        private UxrGrabbableObject _closingMagazine;
+        private UxrGrabbableObjectAnchor _closingAnchor;
 
         #endregion
     }

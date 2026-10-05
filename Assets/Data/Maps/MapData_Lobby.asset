@@ -22,4 +22,6 @@ MonoBehaviour:
     \u043A\u0430\u0440\u0442\u044B."
   arenaSizeMeters: {x: 10, y: 10}
   maxPlayers: 10
+  arsenalPreset: {fileID: 11400000, guid: ae88732265aed0943bc359a92ccb6010, type: 2}
   supportedModes: []
+  debugOnly: 0

@@ -1,0 +1,269 @@
+{
+  "assets": [
+    {
+      "path": "Assets/env_packs/PostApocalypticTown/URP/Art/Prefabs/SM_Tent3_Merged.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_Tent3_Merged.png",
+      "boundsMeters": [
+        6.365986,
+        6.70832872,
+        7.7721014
+      ],
+      "lod0Triangles": 53768,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_Triplanar",
+        "Shader Graphs/S_BasicTextured"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/PostApocalypticTown/URP/Art/Prefabs/SM_Tent9_Merged.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_Tent9_Merged.png",
+      "boundsMeters": [
+        3.22522449,
+        3.02005959,
+        4.01188231
+      ],
+      "lod0Triangles": 17396,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_Triplanar",
+        "Shader Graphs/S_BasicTextured"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/ModularWoodenBuildings/URP/Art/Prefabs/SM_Tarp_01.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_Tarp_01.png",
+      "boundsMeters": [
+        4.2204237,
+        2.639093,
+        4.398799
+      ],
+      "lod0Triangles": 2016,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_BasicTextured"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/ModularWoodenBuildings/URP/Art/Prefabs/SM_LookoutTower_01.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_LookoutTower_01.png",
+      "boundsMeters": [
+        5.43637371,
+        15.09125,
+        5.78275728
+      ],
+      "lod0Triangles": 46488,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_BasicTextured"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/RuralTown/URP/Art/Scanned_Foliage/Foliage/SilverFir/Meshes/SM_SilverFir_M_01.fbx",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_SilverFir_M_01.png",
+      "boundsMeters": [
+        3.425634,
+        7.85427475,
+        3.81326151
+      ],
+      "lod0Triangles": 11809,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_BasicTextured",
+        "Shader Graphs/S_Foliage"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": true
+    },
+    {
+      "path": "Assets/env_packs/RuralTown/URP/Art/Prefabs/SM_Rock_01.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_Rock_01.png",
+      "boundsMeters": [
+        4.125528,
+        3.855309,
+        4.566555
+      ],
+      "lod0Triangles": 8070,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_BasicTextured"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/RPG_FPS_game_assets_industrial/Containers/Cargo_container_v1/Cargo_container_v1_LD1close.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-Cargo_container_v1_LD1close.png",
+      "boundsMeters": [
+        8.0,
+        3.0,
+        3.0
+      ],
+      "lod0Triangles": 12,
+      "renderers": 1,
+      "shaders": [
+        "Universal Render Pipeline/Simple Lit"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/RPG_FPS_game_assets_industrial/Other_props/Generators/Generator_v1/Generator_v1.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-Generator_v1.png",
+      "boundsMeters": [
+        3.64836216,
+        1.74708652,
+        1.30513239
+      ],
+      "lod0Triangles": 30,
+      "renderers": 1,
+      "shaders": [
+        "Universal Render Pipeline/Simple Lit"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/RPG_FPS_game_assets_industrial/Boxes/Wooden_box_v1/Wooden_box_v1_LD1.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-Wooden_box_v1_LD1.png",
+      "boundsMeters": [
+        1.09366333,
+        0.6713812,
+        1.79016542
+      ],
+      "lod0Triangles": 12,
+      "renderers": 1,
+      "shaders": [
+        "Universal Render Pipeline/Simple Lit"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/RPG_FPS_game_assets_industrial/Barrels/Barrel_v3/Barrel_v3_single.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-Barrel_v3_single.png",
+      "boundsMeters": [
+        0.5569339,
+        0.9547463,
+        0.5296756
+      ],
+      "lod0Triangles": 36,
+      "renderers": 1,
+      "shaders": [
+        "Universal Render Pipeline/Simple Lit"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/RuralTown/URP/Art/Prefabs/SM_TopLight.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_TopLight.png",
+      "boundsMeters": [
+        0.2124047,
+        0.555115342,
+        0.207228243
+      ],
+      "lod0Triangles": 4056,
+      "renderers": 1,
+      "shaders": [
+        "Universal Render Pipeline/Lit",
+        "Shader Graphs/S_BasicTextured"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/HauntedFarmHouse/URP/Art/Prefabs/SM_Truck_01.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_Truck_01.png",
+      "boundsMeters": [
+        5.06501961,
+        1.77150011,
+        2.132887
+      ],
+      "lod0Triangles": 55969,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_BasicTextured"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/AbandonedFactory/Art/Prefabs/SM_Fence_01a.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_Fence_01a.png",
+      "boundsMeters": [
+        0.0778393447,
+        1.10836613,
+        2.219371
+      ],
+      "lod0Triangles": 889,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_GeneralRMAO"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/RuralTown/URP/Art/Prefabs/SM_Table.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_Table.png",
+      "boundsMeters": [
+        0.69165957,
+        0.7021851,
+        1.43594551
+      ],
+      "lod0Triangles": 1732,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_BasicTextured"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/RuralTown/URP/Art/Prefabs/SM_Lantern.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_Lantern.png",
+      "boundsMeters": [
+        0.176622257,
+        0.31045565,
+        0.176622272
+      ],
+      "lod0Triangles": 7710,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_BasicTextured",
+        "Universal Render Pipeline/Lit"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/Prefabs/Environment/Lobby/ShootingTarget.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-ShootingTarget.png",
+      "boundsMeters": [
+        0.6,
+        1.71,
+        0.35
+      ],
+      "lod0Triangles": 276,
+      "renderers": 6,
+      "shaders": [
+        "Universal Render Pipeline/Lit"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    }
+  ],
+  "activeSceneBefore": "Assets/Scenes/Lobby.unity",
+  "activeSceneAfter": "Assets/Scenes/Lobby.unity",
+  "dirtyBefore": false,
+  "dirtyAfter": false
+}

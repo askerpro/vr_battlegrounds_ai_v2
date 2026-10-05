@@ -1,0 +1,72 @@
+{
+  "assets": [
+    {
+      "path": "Assets/env_packs/RPG_FPS_game_assets_industrial/Other_props/Palets/Bags_on_pallet_v1/Bags_on_pallet_v1_1.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-Bags_on_pallet_v1_1.png",
+      "boundsMeters": [
+        2.49771786,
+        2.53469467,
+        1.60310376
+      ],
+      "lod0Triangles": 10,
+      "renderers": 1,
+      "shaders": [
+        "Universal Render Pipeline/Simple Lit"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/RPG_FPS_game_assets_industrial/Other_props/Palets/Bags_on_pallet_v1/Bags_on_pallet_v1_2.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-Bags_on_pallet_v1_2.png",
+      "boundsMeters": [
+        2.497716,
+        2.53469515,
+        1.6031152
+      ],
+      "lod0Triangles": 10,
+      "renderers": 1,
+      "shaders": [
+        "Universal Render Pipeline/Simple Lit"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/ModularWoodenBuildings/URP/Art/Prefabs/SM_Crate_01.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_Crate_01.png",
+      "boundsMeters": [
+        1.21673942,
+        1.10219276,
+        1.19886816
+      ],
+      "lod0Triangles": 8480,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_BasicTextured"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    },
+    {
+      "path": "Assets/env_packs/HauntedFarmHouse/URP/Art/Prefabs/SM_Crate_A_01.prefab",
+      "preview": "Temp/LobbyFieldRangeAudit/render-SM_Crate_A_01.png",
+      "boundsMeters": [
+        0.9109644,
+        0.3583216,
+        0.5946579
+      ],
+      "lod0Triangles": 4134,
+      "renderers": 1,
+      "shaders": [
+        "Shader Graphs/S_Blend"
+      ],
+      "invalidMaterialSlots": 0,
+      "previewOnlyMaterialAssignment": false
+    }
+  ],
+  "activeSceneBefore": "Assets/Scenes/Lobby.unity",
+  "activeSceneAfter": "Assets/Scenes/Lobby.unity",
+  "dirtyBefore": false,
+  "dirtyAfter": false
+}

@@ -5,7 +5,11 @@ import json
 import pathlib
 import re
 import shutil
+import sys
 import time
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "agents"))
+from editor_broker.client_guard import ClientGuard, add_arguments
 
 PACK = "Assets/env_packs"
 REVIEW = "Assets/Scenes/ExcludedFromIndex/IndustrialCandidateReview"
@@ -131,7 +135,9 @@ def stage(game, destination, report):
                       "retainedAssets": len(keep), "seconds": manifest["seconds"], "destination": str(destination)}), flush=True)
 
 
-def prune(game, destination, report, owner):
+def prune(game, destination, report, *, ticket=None, token=None, state_dir=None):
+    guard = ClientGuard(game, ticket=ticket, token=token, state_dir=state_dir)
+    guard.check()
     manifest = json.loads((report / "copy-manifest.json").read_text(encoding="utf-8"))
     if manifest["game"] != str(game) or manifest["destination"] != str(destination) or not manifest["copyVerified"]:
         raise ValueError("Манифест не соответствует источнику/назначению")
@@ -142,12 +148,6 @@ def prune(game, destination, report, owner):
         while str(parent).startswith(PACK):
             keep_metas.add(str(parent) + ".meta")
             parent = parent.parent
-    def locked():
-        lines = (game / "tmp/unity-lock/info").read_text().splitlines()
-        values = dict(line.split("=", 1) for line in lines if "=" in line)
-        if values.get("owner") != owner or int(values.get("until", "0")) <= time.time():
-            raise ValueError("Нет действующей аренды Unity")
-    locked()
     remove = []
     for record in manifest["records"]:
         path = record["source"]
@@ -163,10 +163,11 @@ def prune(game, destination, report, owner):
     removed_bytes = 0
     for index, record in enumerate(remove):
         if index % 500 == 0:
-            locked()
+            guard.check()
         source = checked_path(game, record["source"])
         source.unlink()
         removed_bytes += record["bytes"]
+    guard.check()
     for root_relative in [PACK, REVIEW]:
         root = checked_path(game, root_relative)
         if root.is_dir():
@@ -187,10 +188,10 @@ if __name__ == "__main__":
     parser.add_argument("--project", type=pathlib.Path, required=True)
     parser.add_argument("--destination", type=pathlib.Path, required=True)
     parser.add_argument("--report", type=pathlib.Path, required=True)
-    parser.add_argument("--owner")
+    add_arguments(parser)
     args = parser.parse_args()
     game, destination, report = args.project.resolve(), args.destination.resolve(), args.report.resolve()
     if args.action == "stage":
         stage(game, destination, report)
     else:
-        prune(game, destination, report, args.owner)
+        prune(game, destination, report, ticket=args.ticket, token=args.token, state_dir=args.state_dir)

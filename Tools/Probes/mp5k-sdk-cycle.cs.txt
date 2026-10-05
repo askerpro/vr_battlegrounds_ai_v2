@@ -1,0 +1,430 @@
+// Одноразовая диагностика, не acceptance-тест механики. execute_code под Unity lock, только EditMode.
+// Временная PreviewScene, собственные менеджеры/руки/Dummy input; actual Reload/SDK trigger/Shoot только synthetic объекта.
+// Не acceptance шлема: ввод, позиции и владение поставляет временный диагностический fixture.
+if (UnityEngine.Application.isPlaying) return "NOT RUN: требуется EditMode; чужой Play Mode не прерывать.";
+var output = new System.Text.StringBuilder();
+// Полный сериализованный fingerprint загруженных обычных сцен: не только имена/root count.
+// Если редактор изменится параллельно, это отказ проверки, а не разрешение удалить чужой объект.
+System.Func<string> loadedSceneFingerprint = () => {
+    var snapshot = new System.Text.StringBuilder();
+    for (int sceneIndex=0; sceneIndex<UnityEngine.SceneManagement.SceneManager.sceneCount; sceneIndex++) {
+        var loadedScene=UnityEngine.SceneManagement.SceneManager.GetSceneAt(sceneIndex);
+        if (!loadedScene.isLoaded || UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(loadedScene)) continue;
+        snapshot.AppendLine(loadedScene.path+"|dirty="+loadedScene.isDirty);
+        foreach (var sceneRoot in loadedScene.GetRootGameObjects()) {
+            snapshot.AppendLine("ROOT|"+sceneRoot.GetInstanceID());
+            foreach (var node in sceneRoot.GetComponentsInChildren<UnityEngine.Transform>(true)) {
+                snapshot.AppendLine("GO|"+node.gameObject.GetInstanceID()+"|"+UnityEditor.EditorJsonUtility.ToJson(node.gameObject));
+                foreach (var component in node.GetComponents<UnityEngine.Component>())
+                    if (component!=null) snapshot.AppendLine("COMP|"+component.GetInstanceID()+"|"+UnityEditor.EditorJsonUtility.ToJson(component));
+            }
+        }
+    }
+    using(var sha=System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(snapshot.ToString())));
+};
+string beforeSceneFingerprint=loadedSceneFingerprint();
+System.Func<string> importedAssetFingerprint = () => {
+    var snapshot=new System.Text.StringBuilder();
+    var capturedMaterials=new System.Collections.Generic.HashSet<int>();
+    foreach(string id in new[]{"BrowningHiPower","Viper","Herrington","TR15"}) {
+        string assetPath="Assets/Prefabs/Weapons/"+id+"/"+id+".prefab";
+        var prefabAsset=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(assetPath);
+        snapshot.AppendLine(assetPath+"|"+UnityEditor.AssetDatabase.GetAssetDependencyHash(assetPath));
+        foreach(var renderer in prefabAsset.GetComponentsInChildren<UnityEngine.Renderer>(true))
+            foreach(var material in renderer.sharedMaterials)
+                if(material!=null && capturedMaterials.Add(material.GetInstanceID()))
+                    snapshot.AppendLine(material.GetInstanceID()+"|dirty="+UnityEditor.EditorUtility.IsDirty(material)+"|"+UnityEditor.EditorJsonUtility.ToJson(material));
+    }
+    using(var sha=System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(snapshot.ToString())));
+};
+string beforeImportedAssetFingerprint=importedAssetFingerprint();
+int passed = 0, failed = 0;
+System.Action<string, bool> check = (name, ok) => { output.AppendLine((ok ? "PASS " : "FAIL ") + name); if (ok) passed++; else failed++; };
+var instanceFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+var staticFlags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+System.Func<System.Type, string, System.Reflection.FieldInfo> field = (type, name) =>
+{
+    for (var current = type; current != null; current = current.BaseType)
+    {
+        var found = current.GetField(name, instanceFlags | staticFlags | System.Reflection.BindingFlags.DeclaredOnly);
+        if (found != null) return found;
+    }
+    throw new System.MissingFieldException(type.FullName, name);
+};
+System.Action<object, string, object> set = (target, name, value) => field(target.GetType(), name).SetValue(target, value);
+var grabSingleton = field(typeof(UltimateXR.Manipulation.UxrGrabManager), "s_instance");
+var avatarUpdateSingleton = field(typeof(UltimateXR.Core.UxrManager), "s_instance");
+var weaponSingleton = field(typeof(UltimateXR.Mechanics.Weapons.UxrWeaponManager), "s_instance");
+var oldGrabManager = grabSingleton.GetValue(null);
+var oldAvatarManager = avatarUpdateSingleton.GetValue(null);
+var oldWeaponManager = weaponSingleton.GetValue(null);
+var globalHaptic = field(typeof(UltimateXR.Devices.UxrControllerInput), "GlobalHapticRequesting");
+var oldGlobalHaptic = globalHaptic.GetValue(null);
+var oldAuthority = VrBattlegrounds.Network.StateEventAuthority.IsAuthoredHere;
+var componentChanged = field(typeof(UltimateXR.Core.UxrManager), "ComponentStateChanged");
+var oldComponentChanged = componentChanged.GetValue(null);
+var avatarRegistry = (System.Collections.IList)field(typeof(UltimateXR.Core.Components.UxrComponent<UltimateXR.Avatar.UxrAvatar>), "s_typeComponents").GetValue(null);
+UltimateXR.Avatar.UxrAvatar diagnosticAvatar = null;
+VrBattlegrounds.Weapons.WeaponMechanismMotion diagnosticMotion = null;
+var handRegistry = (System.Collections.IList)field(typeof(UltimateXR.Core.Components.UxrComponent<UltimateXR.Manipulation.UxrGrabber>), "s_typeComponents").GetValue(null);
+var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+UnityEngine.GameObject root = null;
+UltimateXR.Manipulation.UxrGrabber mainHand = null, supportHand = null;
+VrBattlegrounds.Weapons.WeaponChamberingReminder reminder = null;
+bool subscribed = false;
+try
+{
+    root = new UnityEngine.GameObject("ChamberingReminderDiagnostic");
+    root.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
+    System.Func<string, UnityEngine.GameObject> child = name =>
+    {
+        var go = new UnityEngine.GameObject(name); go.transform.SetParent(root.transform, false); return go;
+    };
+    var grabManager = child("GrabManager").AddComponent<UltimateXR.Manipulation.UxrGrabManager>();
+    var avatarManager = child("AvatarManager").AddComponent<UltimateXR.Core.UxrManager>();
+    var weaponManager = child("WeaponManager").AddComponent<UltimateXR.Mechanics.Weapons.UxrWeaponManager>();
+    grabSingleton.SetValue(null, grabManager);
+    avatarUpdateSingleton.SetValue(null, avatarManager);
+    weaponSingleton.SetValue(null, weaponManager);
+    componentChanged.SetValue(null, null); // Synthetic sync не выходит в global network/replay подписчики.
+    globalHaptic.SetValue(null, null); // Dummy requests не попадают в чужих global подписчиков.
+
+    var avatarGo = child("SyntheticAvatar");
+    var avatar = avatarGo.AddComponent<UltimateXR.Avatar.UxrAvatar>();
+    diagnosticAvatar = avatar;
+    avatarRegistry.Remove(avatar); avatarRegistry.Insert(0, avatar); // Только synthetic input выбран LocalAvatar, чужие аватары не меняются.
+    var dummy = avatarGo.AddComponent<UltimateXR.Devices.Integrations.UxrDummyControllerInput>();
+    var mainGo = child("SyntheticMainHand"); mainGo.transform.SetParent(avatarGo.transform, false);
+    var supportGo = child("SyntheticSupportHand"); supportGo.transform.SetParent(avatarGo.transform, false);
+    mainHand = mainGo.AddComponent<UltimateXR.Manipulation.UxrGrabber>();
+    supportHand = supportGo.AddComponent<UltimateXR.Manipulation.UxrGrabber>();
+    set(mainHand, "_avatar", avatar); set(supportHand, "_avatar", avatar);
+    set(mainHand, "_side", UltimateXR.Core.UxrHandSide.Right); set(mainHand, "_sideInitialized", true);
+    set(supportHand, "_side", UltimateXR.Core.UxrHandSide.Left); set(supportHand, "_sideInitialized", true);
+    handRegistry.Add(mainHand); handRegistry.Add(supportHand);
+    VrBattlegrounds.Network.StateEventAuthority.IsAuthoredHere = candidate => candidate == avatar || oldAuthority(candidate);
+
+    var weaponGo = child("SyntheticWeapon");
+    var grip = weaponGo.AddComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    var firearm = weaponGo.AddComponent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>();
+    reminder = weaponGo.AddComponent<VrBattlegrounds.Weapons.WeaponChamberingReminder>();
+    var signal = child("SyntheticProximitySignal"); signal.SetActive(false);
+    var visual = child("SyntheticActionVisual"); visual.SetActive(false);
+    var anchor = child("SyntheticMagazineAnchor").AddComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+    var magazineGo = child("SyntheticMagazine");
+    var magazineGrip = magazineGo.AddComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    var magazine = magazineGo.AddComponent<UltimateXR.Mechanics.Weapons.UxrFirearmMag>();
+    set(magazine, "_capacity", 10); set(magazine, "_rounds", 5);
+    set(anchor, "_currentPlacedObject", magazineGrip);
+    var triggerType = typeof(UltimateXR.Mechanics.Weapons.UxrFirearmWeapon).Assembly.GetType("UltimateXR.Mechanics.Weapons.UxrFirearmTrigger", true);
+    var trigger = System.Activator.CreateInstance(triggerType, true);
+    set(trigger, "_triggerGrabbable", grip); set(trigger, "_grabbableGrabPointIndex", 0);
+    set(trigger, "_ammunitionMagAnchor", anchor);
+    set(trigger, "_cycleType", UltimateXR.Mechanics.Weapons.UxrShotCycle.SemiAutomatic);
+    set(trigger, "_useHasReloadedForSemiAndFullAuto", true);
+    var triggers = (System.Collections.IList)System.Activator.CreateInstance(typeof(System.Collections.Generic.List<>).MakeGenericType(triggerType));
+    triggers.Add(trigger); set(firearm, "_triggers", triggers);
+    var runtimeType = typeof(UltimateXR.Mechanics.Weapons.UxrFirearmWeapon).GetNestedType("RuntimeTriggerInfo", System.Reflection.BindingFlags.NonPublic);
+    var runtime = System.Activator.CreateInstance(runtimeType, true);
+    var loaded = runtimeType.GetProperty("HasReloaded"); loaded.SetValue(runtime, false);
+    ((System.Collections.IDictionary)field(firearm.GetType(), "_runtimeTriggers").GetValue(firearm))[0] = runtime;
+    mainHand.GrabbedObject = grip; supportHand.GrabbedObject = grip;
+    var manipulationType = typeof(UltimateXR.Manipulation.UxrGrabManager).GetNestedType("RuntimeManipulationInfo", System.Reflection.BindingFlags.NonPublic);
+    var manipulation = System.Activator.CreateInstance(manipulationType, new object[] { mainHand, 0, null });
+    var grabs = (System.Collections.IList)manipulationType.GetProperty("Grabs").GetValue(manipulation);
+    var grabType = typeof(UltimateXR.Manipulation.UxrGrabManager).GetNestedType("RuntimeGrabInfo", System.Reflection.BindingFlags.NonPublic);
+    grabs.Add(System.Activator.CreateInstance(grabType, new object[] { supportHand, 1 }));
+    var holds = (System.Collections.IDictionary)field(grabManager.GetType(), "_currentManipulations").GetValue(grabManager);
+    holds.Add(grip, manipulation);
+    set(reminder, "_firearm", firearm); set(reminder, "_proximitySignal", signal); set(reminder, "_visual", visual);
+    var reminderType = reminder.GetType();
+    System.Action<string> invoke = name => reminderType.GetMethod(name, instanceFlags).Invoke(reminder, null);
+    System.Action<UltimateXR.Manipulation.UxrGrabber> raiseDry = hand =>
+    {
+        var handler = (System.Action<int, UltimateXR.Manipulation.UxrGrabber>)field(firearm.GetType(), "ChamberingRequired").GetValue(firearm);
+        handler?.Invoke(0, hand);
+    };
+    System.Action<int> raiseRelease = point =>
+    {
+        var args = UltimateXR.Manipulation.UxrManipulationEventArgs.FromRelease(grip, null, point == 0 ? mainHand : supportHand, point, point != 0, false);
+        var handler = (System.EventHandler<UltimateXR.Manipulation.UxrManipulationEventArgs>)field(grip.GetType(), "Released").GetValue(grip);
+        handler?.Invoke(grip, args);
+    };
+    int hapticCount = 0;
+    UltimateXR.Devices.UxrControllerHapticEventArgs lastHaptic = null;
+    dummy.HapticRequesting += (sender, args) => { hapticCount++; lastHaptic = args; };
+    invoke("OnEnable"); subscribed = true;
+    set(magazineGrip, "_currentAnchor", anchor);
+    var slideGo = child("SyntheticSlide"); slideGo.transform.SetParent(weaponGo.transform, false);
+    var slide = slideGo.AddComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    slide.TranslationConstraint = UltimateXR.Manipulation.UxrTranslationConstraintMode.RestrictLocalOffset;
+    slide.TranslationLimitsMin = UnityEngine.Vector3.zero;
+    slide.TranslationLimitsMax = new UnityEngine.Vector3(0f, 0f, 0.06f);
+    var feedback = weaponGo.AddComponent<VrBattlegrounds.Weapons.AutomaticWeaponSlideFeedback>();
+    set(feedback, "_firearm", firearm); set(feedback, "_slide", slide); set(feedback, "_localStart", UnityEngine.Vector3.zero);
+    set(feedback, "_autoReturnOnRelease", false);
+    var feedbackType = feedback.GetType();
+    System.Action tick = () => feedbackType.GetMethod("LateUpdate", instanceFlags).Invoke(feedback, null);
+    int reloads = 0, completions = 0;
+    firearm.StateChanged += (sender, args) => {
+        var methodArgs = args as UltimateXR.Core.StateSync.UxrMethodInvokedSyncEventArgs;
+        if (methodArgs != null && methodArgs.MethodName == "SetTriggerHasReloadedSynced") reloads++;
+    };
+    feedback.ManualCycleCompleted += () => completions++;
+    System.Action grabSlide = () => {
+        holds.Remove(slide);
+        holds.Add(slide, System.Activator.CreateInstance(manipulationType, new object[] { supportHand, 0, null }));
+        supportHand.GrabbedObject = slide;
+        var args = UltimateXR.Manipulation.UxrManipulationEventArgs.FromGrab(slide, null, supportHand, 0, false, false, UnityEngine.Vector3.zero, UnityEngine.Quaternion.identity);
+        feedbackType.GetMethod("HandleSlideGrabbing", instanceFlags).Invoke(feedback, new object[] { slide, args });
+    };
+    System.Action<float> position = progress => { slide.transform.localPosition = new UnityEngine.Vector3(0f, 0f, 0.06f * progress); tick(); };
+    System.Action reset = () => {
+        feedback.CancelVisualHold();
+        set(feedback, "_state", System.Enum.Parse(field(feedbackType, "_state").FieldType, "WaitForward"));
+        set(feedback, "_cosmeticHold", false);
+        var cancel = feedbackType.GetMethod("CancelManualCycle", instanceFlags); cancel?.Invoke(feedback, null);
+        slide.transform.localPosition = UnityEngine.Vector3.zero;
+        loaded.SetValue(runtime, false);
+        set(magazine, "_rounds", 5); set(anchor, "_currentPlacedObject", magazineGrip); set(magazineGrip, "_currentAnchor", anchor);
+        firearm.IsUseBlocked = false;
+        holds.Remove(slide); supportHand.GrabbedObject = null;
+        if (!holds.Contains(grip)) holds.Add(grip, manipulation);
+        mainHand.GrabbedObject = grip;
+        VrBattlegrounds.Network.StateEventAuthority.IsAuthoredHere = candidate => candidate == avatar || oldAuthority(candidate);
+    };
+    System.Action openGrab = () => { feedback.HoldVisualPose(new UnityEngine.Vector3(0f, 0f, 0.05f)); grabSlide(); };
+    check("fixture: own main hand, SDK unchambered, current nonempty magazine", firearm.NeedsManualChambering(0) && !firearm.IsLoaded(0) && VrBattlegrounds.Network.StateEventAuthority.IsAuthorOfItem(firearm));
+
+    reset(); int before = reloads; openGrab(); position(0f);
+    check("already-open->manual physical front Reload without extra 2mm/rear", firearm.IsLoaded(0) && reloads == before + 1);
+    position(0f); grabSlide(); position(0f);
+    check("repeat front and release/regrab cannot duplicate Reload", reloads == before + 1);
+    reset(); before = reloads; grabSlide(); position(1f); position(0.5f);
+    check("partial forward stroke is not physical front", !firearm.IsLoaded(0) && reloads == before);
+    position(0f); check("closed->rear->front Reload exactly once", firearm.IsLoaded(0) && reloads == before + 1);
+    reset(); before = reloads; grabSlide(); position(0f);
+    check("initial front grab cannot Reload", !firearm.IsLoaded(0) && reloads == before);
+    reset(); before = reloads; set(feedback, "_slideThreshold", 0f); grabSlide(); position(0f); position(0f);
+    check("zero rear threshold still cannot invent movement at initial front", !firearm.IsLoaded(0) && reloads == before);
+    set(feedback, "_slideThreshold", 0.7f);
+    reset(); before = reloads; grabSlide(); position(1f); set(magazine, "_rounds", 0); int emptyFullCompletions = completions; position(0f);
+    check("full rear/front with empty magazine consumes without Reload/completion", !firearm.IsLoaded(0) && reloads == before && completions == emptyFullCompletions);
+    set(magazine, "_rounds", 5); position(0f);
+    check("late magazine after empty full cycle stays unchambered", !firearm.IsLoaded(0) && reloads == before);
+    reset(); before = reloads; feedback.HoldVisualPose(new UnityEngine.Vector3(0f, 0f, 0.05f)); position(0f);
+    check("cosmetic open/close without manual interaction cannot Reload", !firearm.IsLoaded(0) && reloads == before);
+
+    reset(); before = reloads; openGrab(); set(magazine, "_rounds", 0); int completedBefore = completions; position(0f);
+    check("empty closure consumes without successful completion", !firearm.IsLoaded(0) && reloads == before && completions == completedBefore);
+    set(magazine, "_rounds", 5); position(0f);
+    check("late filled/inserted magazine cannot resurrect empty closure", !firearm.IsLoaded(0) && reloads == before);
+    reset(); before = reloads; openGrab(); set(anchor, "_currentPlacedObject", null); position(0f);
+    set(anchor, "_currentPlacedObject", magazineGrip); position(0f);
+    check("no-mag closure then late insert cannot defer Reload", !firearm.IsLoaded(0) && reloads == before);
+    reset(); before = reloads; openGrab(); set(magazineGrip, "_currentAnchor", null); position(0f);
+    check("anchor backlink mismatch cannot Reload", !firearm.IsLoaded(0) && reloads == before);
+    reset(); before = reloads; openGrab(); firearm.IsUseBlocked = true; position(0f); firearm.IsUseBlocked = false; position(0f);
+    check("blocked closure and later unblock cannot Reload", !firearm.IsLoaded(0) && reloads == before);
+    reset(); before = reloads; openGrab(); holds.Remove(grip); mainHand.GrabbedObject = null; position(0f);
+    holds.Add(grip, manipulation); mainHand.GrabbedObject = grip; position(0f);
+    check("main release cancels cycle and regrab cannot defer Reload", !firearm.IsLoaded(0) && reloads == before);
+    reset(); before = reloads; openGrab(); VrBattlegrounds.Network.StateEventAuthority.IsAuthoredHere = candidate => candidate != avatar && oldAuthority(candidate); position(0f);
+    check("non-author closure cannot Reload", !firearm.IsLoaded(0) && reloads == before);
+    reset(); before = reloads; set(avatarManager, "<IsInsideStateSync>k__BackingField", true); openGrab(); set(avatarManager, "<IsInsideStateSync>k__BackingField", false); position(0f);
+    check("replayed grab cannot arm future local Reload", !firearm.IsLoaded(0) && reloads == before);
+
+    reset(); set(reminder, "_nextHapticTime", 0f); raiseDry(mainHand); openGrab(); position(0.5f); invoke("UpdateFeedback");
+    check("reminder survives incomplete physical return", reminder.IsReminding);
+    position(0f); invoke("UpdateFeedback");
+    check("successful actual SDK Reload clears reminder", firearm.IsLoaded(0) && !reminder.IsReminding);
+    // Реальное решение SDK по первому нажатию: projectile descriptors пусты намеренно.
+    // Проверяются ProjectileShot + расход патрона; projectile/FX/trajectory не создаются и не заявляются.
+    var projectileSource = weaponGo.GetComponent<UltimateXR.Mechanics.Weapons.UxrProjectileSource>();
+    if (projectileSource == null) projectileSource = weaponGo.AddComponent<UltimateXR.Mechanics.Weapons.UxrProjectileSource>();
+    set(projectileSource, "_shotTypes", new System.Collections.Generic.List<UltimateXR.Mechanics.Weapons.UxrShotDescriptor>());
+    set(firearm, "_weaponSource", projectileSource);
+    int shots = 0; firearm.ProjectileShot += triggerIndex => { shots++; };
+    var sdkUpdate = firearm.GetType().GetMethod("UxrManager_AvatarsUpdated", instanceFlags);
+    System.Action<bool> triggerPress = pressed => {
+        set(dummy, "_buttonPressFlagsLastFrameRight", (uint)0);
+        set(dummy, "_buttonPressFlagsRight", pressed ? (uint)UltimateXR.Devices.UxrInputButtons.Trigger : (uint)0);
+        sdkUpdate.Invoke(firearm, null);
+    };
+    check("SDK trigger fixture uses synthetic local avatar input", UltimateXR.Avatar.UxrAvatar.LocalAvatar == avatar && UltimateXR.Avatar.UxrAvatar.LocalAvatarInput == dummy);
+    reset(); int ammoBefore = magazine.Rounds; triggerPress(true);
+    check("unchambered SDK first trigger requests reminder, no shot/ammo loss", shots == 0 && magazine.Rounds == ammoBefore);
+    triggerPress(false); openGrab(); position(0f);
+    ammoBefore = magazine.Rounds; triggerPress(true);
+    check("first SDK trigger after true manual Reload shoots without extra empty press", shots == 1 && magazine.Rounds == ammoBefore - 1);
+    // Независимые source каналы: Charger остаётся front в клипе, Bolt открыт.
+    // Проверяем общий игровой Empty профиль без ID конкретного оружия.
+    reset();
+    var contactGo = child("IndependentContact"); contactGo.transform.SetParent(slideGo.transform, false);
+    var boltGo = child("IndependentBolt"); boltGo.transform.SetParent(slideGo.transform, false);
+    contactGo.transform.localPosition = new UnityEngine.Vector3(0f, 0f, 0.01f);
+    boltGo.transform.localPosition = new UnityEngine.Vector3(0f, 0f, 0.03f);
+    var visuals = weaponGo.AddComponent<VrBattlegrounds.Weapons.WeaponMechanismVisuals>();
+    var contactBinding = new VrBattlegrounds.Weapons.WeaponMechanismVisuals.Binding {
+        Part = "Contact", Target = contactGo.transform, RestPosition = contactGo.transform.localPosition, RestRotation = UnityEngine.Quaternion.identity };
+    var boltBinding = new VrBattlegrounds.Weapons.WeaponMechanismVisuals.Binding {
+        Part = "Internal", Target = boltGo.transform, RestPosition = boltGo.transform.localPosition, RestRotation = UnityEngine.Quaternion.identity };
+    var motion = UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Weapons.WeaponMechanismMotion>();
+    diagnosticMotion = motion;
+    motion.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    var contactTrack = new VrBattlegrounds.Weapons.WeaponMechanismMotion.Track { Part = "Contact", Keys = new[] {
+        new VrBattlegrounds.Weapons.WeaponMechanismMotion.Key { Time=0f, Position=contactBinding.RestPosition, Rotation=UnityEngine.Quaternion.identity },
+        new VrBattlegrounds.Weapons.WeaponMechanismMotion.Key { Time=0.2f, Position=contactBinding.RestPosition, Rotation=UnityEngine.Quaternion.identity } } };
+    var boltTrack = new VrBattlegrounds.Weapons.WeaponMechanismMotion.Track { Part = "Internal", Keys = new[] {
+        new VrBattlegrounds.Weapons.WeaponMechanismMotion.Key { Time=0f, Position=boltBinding.RestPosition, Rotation=UnityEngine.Quaternion.identity },
+        new VrBattlegrounds.Weapons.WeaponMechanismMotion.Key { Time=0.2f, Position=boltBinding.RestPosition+new UnityEngine.Vector3(0f,0f,0.05f), Rotation=UnityEngine.Quaternion.identity } } };
+    motion.Empty = new VrBattlegrounds.Weapons.WeaponMechanismMotion.Cycle { Duration=0.2f, HoldEnd=true, Tracks=new[] { contactTrack, boltTrack } };
+    motion.Fire = new VrBattlegrounds.Weapons.WeaponMechanismMotion.Cycle { Duration=0.2f, HoldEnd=false, Tracks=new[] { contactTrack, boltTrack } };
+    set(visuals, "_motion", motion); set(visuals, "_body", weaponGo.transform); set(visuals, "_slide", slide);
+    set(visuals, "_contactPart", contactGo.transform); set(visuals, "_bindings", new[] { contactBinding, boltBinding });
+    var visualsType = visuals.GetType();
+    visualsType.GetMethod("OnEnable", instanceFlags).Invoke(visuals, null);
+    System.Action visualTick = () => visualsType.GetMethod("LateUpdate", instanceFlags).Invoke(visuals, null);
+    visuals.PlayShot(0, true); set(visuals, "_started", UnityEngine.Time.time - 0.3f); visualTick();
+    float actualRear = feedback.GetSlideProgress() * 0.06f;
+    bool profileRear = UnityEngine.Mathf.Abs(actualRear - 0.05f) < 1e-6f;
+    check("independent source contact/internal Empty becomes actual grabbable rear", profileRear);
+    check("coupled contact and internal part occupy shared rear world pose", profileRear &&
+        UnityEngine.Mathf.Abs(contactGo.transform.position.z - 0.06f) < 1e-6f &&
+        UnityEngine.Mathf.Abs(boltGo.transform.position.z - 0.08f) < 1e-6f);
+    check("Empty rear stays inside declared physical slide travel", actualRear >= 0f && actualRear <= 0.06f);
+    if (profileRear) {
+        before = reloads; grabSlide();
+        var args = UltimateXR.Manipulation.UxrManipulationEventArgs.FromGrab(slide, null, supportHand, 0, false, false, UnityEngine.Vector3.zero, UnityEngine.Quaternion.identity);
+        visualsType.GetMethod("HandleGrabbing", instanceFlags).Invoke(visuals, new object[] { slide, args });
+        position(0f); visualTick(); position(0f);
+        check("coupled already-open profile chambers at shared front without fresh pull", firearm.IsLoaded(0) && reloads == before + 1 &&
+            (contactGo.transform.localPosition-contactBinding.RestPosition).sqrMagnitude < 1e-12f &&
+            (boltGo.transform.localPosition-boltBinding.RestPosition).sqrMagnitude < 1e-12f);
+        position(0f); visualTick(); check("coupled repeated front cannot duplicate Reload", reloads == before + 1);
+    } else output.AppendLine("SKIP coupled manual return: RED baseline has no rear contact profile.");
+    visuals.ResetVisuals(); reset(); visuals.PlayShot(0, false); set(visuals, "_started", UnityEngine.Time.time - 0.1f); visualTick();
+    check("Fire source channels remain independent and contact remains original", UnityEngine.Mathf.Abs(contactGo.transform.localPosition.z - 0.01f) < 1e-6f &&
+        UnityEngine.Mathf.Abs(boltGo.transform.localPosition.z - 0.055f) < 1e-5f && slide.transform.localPosition == UnityEngine.Vector3.zero);
+    visualsType.GetMethod("OnDisable", instanceFlags).Invoke(visuals, null);
+    // Actual imported HoldEnd profiles, using the same synthetic owner/current magazine.
+    foreach (string id in new [] { "BrowningHiPower", "Viper", "Herrington", "TR15" })
+    {
+        reset();
+        var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Weapons/"+id+"/"+id+".prefab");
+        var imported = UnityEngine.Object.Instantiate(prefab, root.transform);
+        var importedFeedback = imported.GetComponent<VrBattlegrounds.Weapons.AutomaticWeaponSlideFeedback>();
+        var importedVisuals = imported.GetComponent<VrBattlegrounds.Weapons.WeaponMechanismVisuals>();
+        var importedSlide = importedFeedback.Slide;
+        var importedRest = importedSlide.transform.localPosition;
+        try {
+            set(importedFeedback, "_firearm", firearm); set(importedFeedback, "_localStart", importedRest);
+            set(importedFeedback, "_autoReturnOnRelease", false);
+            // Аудио не является целью этого probe. Заменяем wrapper только у собственной
+            // временной копии, не меняя общий AudioClip или serialized prefab/asset.
+            // PlayClipAtPoint иначе создаёт active-scene GO с delayed Destroy в EditMode.
+            foreach(string sampleField in new[]{"_audioSlideForward","_audioSlideBack","_audioSlideForwardWhenLoaded","_audioSlideBackWhenLoaded"})
+                set(importedFeedback,sampleField,new UltimateXR.Audio.UxrAudioSample());
+            importedVisuals.GetType().GetMethod("OnEnable", instanceFlags).Invoke(importedVisuals, null);
+            importedVisuals.PlayShot(0, true); set(importedVisuals, "_started", UnityEngine.Time.time-importedVisuals.Motion.Empty.Duration-0.01f);
+            System.Action importedVisualTick = () => importedVisuals.GetType().GetMethod("LateUpdate", instanceFlags).Invoke(importedVisuals, null);
+            System.Action importedFeedbackTick = () => feedbackType.GetMethod("LateUpdate", instanceFlags).Invoke(importedFeedback, null);
+            importedVisualTick();
+            UnityEngine.Vector3 importedDir; float importedLength;
+            VrBattlegrounds.Weapons.AutomaticWeaponSlideFeedback.TryGetSlideTravel(importedSlide, out importedDir, out importedLength);
+            var rearPose = importedSlide.transform.localPosition;
+            float importedRear = UnityEngine.Vector3.Dot(rearPose-importedRest,importedDir);
+            check(id+" imported Empty: actual grabbable held rear within travel", importedRear>0.0001f && importedRear<=importedLength);
+            var importedContact = (UnityEngine.Transform)field(importedVisuals.GetType(), "_contactPart").GetValue(importedVisuals);
+            var contactRotation = importedContact.localRotation;
+            holds.Add(importedSlide, System.Activator.CreateInstance(manipulationType,new object[]{supportHand,0,null}));
+            supportHand.GrabbedObject=importedSlide;
+            var importedArgs=UltimateXR.Manipulation.UxrManipulationEventArgs.FromGrab(importedSlide,null,supportHand,0,false,false,UnityEngine.Vector3.zero,UnityEngine.Quaternion.identity);
+            feedbackType.GetMethod("HandleSlideGrabbing",instanceFlags).Invoke(importedFeedback,new object[]{importedSlide,importedArgs});
+            importedVisuals.GetType().GetMethod("HandleGrabbing",instanceFlags).Invoke(importedVisuals,new object[]{importedSlide,importedArgs});
+            importedVisualTick();
+            check(id+" imported rotation handoff continuity", UnityEngine.Quaternion.Angle(contactRotation,importedContact.localRotation)<0.001f);
+            before=reloads;
+            importedSlide.transform.localPosition=UnityEngine.Vector3.Lerp(importedRest,rearPose,0.5f); importedFeedbackTick(); importedVisualTick();
+            check(id+" imported partial return cannot Reload",reloads==before && !firearm.IsLoaded(0));
+            importedSlide.transform.localPosition=rearPose; importedVisualTick();
+            check(id+" imported reverse restores captured rotation",UnityEngine.Quaternion.Angle(contactRotation,importedContact.localRotation)<0.001f);
+            importedSlide.transform.localPosition=importedRest; importedFeedbackTick(); importedVisualTick(); importedFeedbackTick();
+            float numericEpsilon=8f*1.192092896e-7f*UnityEngine.Mathf.Max(importedLength,UnityEngine.Mathf.Abs(importedRest.x),UnityEngine.Mathf.Abs(importedRest.y),UnityEngine.Mathf.Abs(importedRest.z));
+            check(id+" imported open/front: actual SDK Reload once and all parts physical rest",reloads==before+1 && firearm.IsLoaded(0) && importedVisuals.IsManualActionPhysicallyClosed(numericEpsilon));
+            importedFeedbackTick(); importedVisualTick(); importedFeedbackTick();
+            check(id+" imported repeated front no duplicate",reloads==before+1);
+        } finally {
+            holds.Remove(importedSlide); supportHand.GrabbedObject=null;
+            importedVisuals.GetType().GetMethod("OnDisable",instanceFlags).Invoke(importedVisuals,null);
+            UnityEngine.Object.DestroyImmediate(imported);
+        }
+    }
+
+    // Настоящая импортированная MP5K ручка, synthetic SDK owner/magazine.
+    reset();
+    var mp5kPrefab=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Weapons/MP5K/MP5K.prefab");
+    var mp5k=UnityEngine.Object.Instantiate(mp5kPrefab,root.transform);
+    var mpFeedback=mp5k.GetComponent<VrBattlegrounds.Weapons.AutomaticWeaponSlideFeedback>();
+    var mpSlide=mpFeedback.Slide;var mpRest=mpSlide.transform.localPosition;
+    try {
+        set(mpFeedback,"_firearm",firearm);set(mpFeedback,"_localStart",mpRest);set(mpFeedback,"_autoReturnOnRelease",false);
+        foreach(string sampleField in new[]{"_audioSlideForward","_audioSlideBack","_audioSlideForwardWhenLoaded","_audioSlideBackWhenLoaded"})set(mpFeedback,sampleField,new UltimateXR.Audio.UxrAudioSample());
+        UnityEngine.Vector3 mpAxis;float mpLength;VrBattlegrounds.Weapons.AutomaticWeaponSlideFeedback.TryGetSlideTravel(mpSlide,out mpAxis,out mpLength);
+        check("MP5K canonical oneaxis preserves 43mm world",mpAxis==UnityEngine.Vector3.back && UnityEngine.Mathf.Abs(mpLength*mpSlide.transform.parent.lossyScale.z-.043f)<.001f);
+        check("MP5K SDK allowed XYZ box has zero lateral span",mpSlide.TranslationLimitsMin.x==0f&&mpSlide.TranslationLimitsMax.x==0f&&mpSlide.TranslationLimitsMin.y==0f&&mpSlide.TranslationLimitsMax.y==0f);
+        holds.Add(mpSlide,System.Activator.CreateInstance(manipulationType,new object[]{supportHand,0,null}));supportHand.GrabbedObject=mpSlide;
+        var mpArgs=UltimateXR.Manipulation.UxrManipulationEventArgs.FromGrab(mpSlide,null,supportHand,0,false,false,UnityEngine.Vector3.zero,UnityEngine.Quaternion.identity);
+        feedbackType.GetMethod("HandleSlideGrabbing",instanceFlags).Invoke(mpFeedback,new object[]{mpSlide,mpArgs});
+        System.Action mpTick=()=>feedbackType.GetMethod("LateUpdate",instanceFlags).Invoke(mpFeedback,null);
+        int mpReloads=reloads;mpTick();check("MP5K initial rest cannot author Reload",reloads==mpReloads&&!firearm.IsLoaded(0));
+        mpSlide.transform.localPosition=mpRest+mpAxis*mpLength;mpTick();check("MP5K rear does not Reload early",reloads==mpReloads&&!firearm.IsLoaded(0));
+        mpSlide.transform.localPosition=mpRest+mpAxis*mpLength*.5f;mpTick();check("MP5K partial return cannot Reload",reloads==mpReloads&&!firearm.IsLoaded(0));
+        mpSlide.transform.localPosition=mpRest;mpTick();check("MP5K real feedback straight pull/front SDK Reload once",reloads==mpReloads+1&&firearm.IsLoaded(0));
+        mpTick();check("MP5K repeated rest does not duplicate Reload",reloads==mpReloads+1);
+        holds.Remove(mpSlide);supportHand.GrabbedObject=null;set(mpFeedback,"_autoReturnOnRelease",true);
+        mpSlide.transform.localPosition=mpRest+mpAxis*mpLength*.5f;feedbackType.GetMethod("ApplyAutoReturn",instanceFlags).Invoke(mpFeedback,new object[]{mpAxis});
+        check("MP5K release autoreturn has no lateral residual",UnityEngine.Mathf.Abs(mpSlide.transform.localPosition.x-mpRest.x)<1e-7f&&UnityEngine.Mathf.Abs(mpSlide.transform.localPosition.y-mpRest.y)<1e-7f);
+    }finally{holds.Remove(mpSlide);supportHand.GrabbedObject=null;UnityEngine.Object.DestroyImmediate(mp5k);}
+
+    output.AppendLine("BOUNDARY: synthetic hand/input/ownership, actual feedback/SDK Reload + first trigger decision/ammo/ProjectileShot and independent-contact Empty/Fire profiles; four imported HoldEnd prefab profiles. Imported-copy slide audio deliberately suppressed; playback/audio quality not exercised. Projectile descriptors deliberately empty: trajectory/FX not exercised. Headset/real tracking/network peer still pending.");
+
+}
+catch (System.Exception exception)
+{
+    failed++;
+    output.AppendLine("HARNESS ERROR " + exception.ToString());
+}
+finally
+{
+    // До Destroy восстановить singleton references: чужие менеджеры и аватар никогда не изменялись.
+    VrBattlegrounds.Network.StateEventAuthority.IsAuthoredHere = oldAuthority;
+    componentChanged.SetValue(null, oldComponentChanged);
+    globalHaptic.SetValue(null, oldGlobalHaptic);
+    if (diagnosticAvatar != null) avatarRegistry.Remove(diagnosticAvatar);
+    grabSingleton.SetValue(null, oldGrabManager);
+    avatarUpdateSingleton.SetValue(null, oldAvatarManager);
+    weaponSingleton.SetValue(null, oldWeaponManager);
+    try
+    {
+        if (subscribed && reminder != null) reminder.GetType().GetMethod("OnDisable", instanceFlags).Invoke(reminder, null);
+    }
+    finally
+    {
+        if (mainHand != null) { mainHand.GrabbedObject = null; handRegistry.Remove(mainHand); }
+        if (supportHand != null) { supportHand.GrabbedObject = null; handRegistry.Remove(supportHand); }
+        try { if (root != null) UnityEngine.Object.DestroyImmediate(root); if (diagnosticMotion != null) UnityEngine.Object.DestroyImmediate(diagnosticMotion); }
+        finally { UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene); }
+    }
+}
+string afterSceneFingerprint=loadedSceneFingerprint();
+check("all loaded native scene roots/components and original dirty flags unchanged after fixture cleanup", beforeSceneFingerprint==afterSceneFingerprint);
+output.AppendLine("SCENE_FINGERPRINT before="+beforeSceneFingerprint+" after="+afterSceneFingerprint);
+string afterImportedAssetFingerprint=importedAssetFingerprint();
+check("imported prefab dependency hashes and shared material serialized state/dirty flags unchanged",beforeImportedAssetFingerprint==afterImportedAssetFingerprint);
+output.AppendLine("ASSET_FINGERPRINT before="+beforeImportedAssetFingerprint+" after="+afterImportedAssetFingerprint);
+output.AppendLine("DIAGNOSTIC: " + passed + " passed, " + failed + " failed.");
+return output.ToString();

@@ -1,0 +1,75 @@
+// Начинается только с уже загруженного CLEAN постоянного workspace. Token берётся до создания clone/dirty edits; один Dispose после cleanup.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)throw new System.InvalidOperationException("Editor busy");
+const string scenePath="Assets/Scenes/Debug/ArsenalLayoutAuthoring.unity",clonePath="Assets/Editor/VR_Battlegrounds/Arsenal/ProbeFixtures/AuthoringRoundtripStyle.asset";
+var own=UnityEngine.SceneManagement.SceneManager.GetSceneByPath(scenePath);if(!own.isLoaded||own.isDirty)throw new System.InvalidOperationException("Load clean persistent Stand workspace first");
+if(System.IO.File.Exists(clonePath)||System.IO.File.Exists(clonePath+".meta")||!string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(clonePath,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets))||UnityEditor.AssetDatabase.LoadMainAssetAtPath(clonePath)!=null)throw new System.InvalidOperationException("Clone path/meta/GUID already exists");
+const string fixtureFolder="Assets/Editor/VR_Battlegrounds/Arsenal/ProbeFixtures";
+bool createFolder=!UnityEditor.AssetDatabase.IsValidFolder(fixtureFolder);
+if(createFolder&&(System.IO.Directory.Exists(fixtureFolder)||System.IO.File.Exists(fixtureFolder+".meta")||!string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(fixtureFolder,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets))||UnityEditor.AssetDatabase.LoadMainAssetAtPath(fixtureFolder)!=null))throw new Exception("Orphan/foreign fixture folder; no overwrite");
+var stand=own.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoringStand>(true)).Single();
+VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.ValidateStand(stand);var canonical=stand.Style;
+var actions=typeof(VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring).Assembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalEditorActions");var flags=System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance;
+var acquire=actions.GetMethod("AcquireAuthoringLease",System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.Static);
+var lease=(IDisposable)acquire.Invoke(null,new object[]{"Actual Inspector dirty Stand/bake/context guards",stand});
+var checks=new System.Collections.Generic.List<object>();var failures=new System.Collections.Generic.List<string>();string createdGuid=null,error=null,createdFolderGuid=null;
+var clone=default(VrBattlegrounds.Arsenal.ArsenalPresentationStyle);UnityEngine.GameObject duplicate=null,wrongMarker=null;
+var preview=default(UnityEngine.SceneManagement.Scene);var extra=default(UnityEngine.SceneManagement.Scene);
+System.Action<bool,string> check=(pass,name)=>{checks.Add(new{name,pass});if(!pass)failures.Add(name);};
+System.Action<Action,string,string> refusal=(action,name,expected)=>{try{action();check(false,name);}catch(Exception ex){var message=ex.GetBaseException().Message;checks.Add(new{name=name+" diagnostic",pass=message.Contains(expected),message});check(message.Contains(expected),name);}};
+System.Action require=()=>lease.GetType().GetMethod("RequireActive").Invoke(lease,null);
+var paths=new[]{"Assets/Data/Weapons/IndustrialPegboardPresentation.asset","Assets/Data/Weapons/FullDemoArsenal.asset","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Scenes/Lobby.unity","Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat","Assets/Materials/Arsenal/IndustrialSupportMetal.mat"};
+System.Func<string,string> assetState=p=>{var a=UnityEditor.AssetDatabase.LoadMainAssetAtPath(p);return UnityEditor.EditorJsonUtility.ToJson(a)+"|"+UnityEditor.EditorUtility.IsDirty(a)+"|"+Convert.ToBase64String(System.IO.File.ReadAllBytes(p))+"|"+System.IO.File.ReadAllText(p+".meta");};
+System.Collections.Generic.Dictionary<string,string> beforeAssets=null;
+System.Func<string> foreignSceneState=()=>{var text=new System.Text.StringBuilder();for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!s.isLoaded||s.path==scenePath||UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(s))continue;text.Append(s.path).Append(s.isDirty);foreach(var r in s.GetRootGameObjects())foreach(var c in r.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null)text.Append(c.GetInstanceID()).Append(UnityEditor.EditorJsonUtility.ToJson(c));}return text.ToString();};
+string beforeScenes=null;var active=UnityEngine.SceneManagement.SceneManager.GetActiveScene();var selection=UnityEditor.Selection.objects;bool staged=false;
+try {
+ beforeAssets=paths.ToDictionary(p=>p,p=>assetState(p));beforeScenes=foreignSceneState();
+ require();check(!own.isDirty,"Token acquired before any staging/dirty mutation");
+ if(createFolder){createdFolderGuid=UnityEditor.AssetDatabase.CreateFolder("Assets/Editor/VR_Battlegrounds/Arsenal","ProbeFixtures");if(string.IsNullOrEmpty(createdFolderGuid))throw new Exception("Own fixture folder creation refused");}
+ clone=UnityEngine.Object.Instantiate(canonical);clone.name="AuthoringRoundtripStyle";UnityEditor.AssetDatabase.CreateAsset(clone,clonePath);createdGuid=UnityEditor.AssetDatabase.AssetPathToGUID(clonePath);UnityEditor.AssetDatabase.SaveAssetIfDirty(clone);
+ var input=new UnityEditor.SerializedObject(stand);input.FindProperty("_style").objectReferenceValue=clone;input.ApplyModifiedPropertiesWithoutUndo();staged=true;VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.RestorePrepared(stand,true);
+ stand.Slots[0].Item.localPosition+=new UnityEngine.Vector3(0,.004f,0);UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(own);require();check(own.isDirty,"Actual Inspector authoring token accepts only own dirty Stand");
+ string beforeUndo=UnityEditor.EditorJsonUtility.ToJson(clone);UnityEditor.Undo.IncrementCurrentGroup();int ownUndoGroup=UnityEditor.Undo.GetCurrentGroup();UnityEditor.Undo.SetCurrentGroupName("Own authoring clone Undo oracle");
+ VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.BakePrepared(stand,0);check(!UnityEditor.EditorUtility.IsDirty(clone),"Actual dirty Stand bake saved persistent clone through addressed writer");
+ UnityEditor.Undo.FlushUndoRecordObjects();UnityEditor.Undo.CollapseUndoOperations(ownUndoGroup);UnityEditor.Undo.RevertAllDownToGroup(ownUndoGroup);
+ check(UnityEditor.EditorJsonUtility.ToJson(clone)==beforeUndo,"Scoped own clone Undo restores canonical poses without another writer");UnityEditor.AssetDatabase.SaveAssetIfDirty(clone);UnityEditor.Undo.ClearUndo(clone);VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.RestorePrepared(stand,true);require();
+ var standard=actions.GetMethod("AcquireLease",System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.Static);refusal(()=>{var refused=(IDisposable)standard.Invoke(null,new object[]{"Default must refuse dirty scene"});refused.Dispose();},"Default Window acquire unchanged","несохранённая сцена");
+ var marker=new UnityEditor.SerializedObject(stand);marker.FindProperty("_owner").stringValue="own-invalid-marker";marker.ApplyModifiedPropertiesWithoutUndo();refusal(require,"Wrong owner marker refused","marker утрачен");marker.Update();marker.FindProperty("_owner").stringValue="arsenal-layout-authoring-v1";marker.ApplyModifiedPropertiesWithoutUndo();require();
+ duplicate=new UnityEngine.GameObject("Own duplicate marker oracle");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(duplicate,own);duplicate.AddComponent<VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoringStand>();refusal(require,"Duplicate root/marker refused","дубли marker");UnityEngine.Object.DestroyImmediate(duplicate);duplicate=null;require();
+ preview=UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();wrongMarker=new UnityEngine.GameObject("Own wrong-path oracle");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(wrongMarker,preview);var wrong=wrongMarker.AddComponent<VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoringStand>();refusal(()=>{var refused=(IDisposable)acquire.Invoke(null,new object[]{"Wrong scene must refuse",wrong});refused.Dispose();},"Wrong path/context refused","scene context");UnityEngine.Object.DestroyImmediate(wrongMarker);wrongMarker=null;UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(preview);preview=default(UnityEngine.SceneManagement.Scene);
+ extra=UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene,UnityEditor.SceneManagement.NewSceneMode.Additive);UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(extra);refusal(require,"Another dirty scene refused","несохранённая чужая сцена");UnityEditor.SceneManagement.EditorSceneManager.CloseScene(extra,true);extra=default(UnityEngine.SceneManagement.Scene);require();
+ var leaseType=lease.GetType();var contextType=actions.GetNestedType("AuthoringContext",System.Reflection.BindingFlags.NonPublic);var ctor=leaseType.GetConstructor(flags,null,new[]{typeof(string),contextType},null);
+ var invalid=(IDisposable)ctor.Invoke(new object[]{"own-invalid-token-oracle",null});refusal(()=>invalid.GetType().GetMethod("RequireActive").Invoke(invalid,null),"Invalid/lost token refused without releasing real token","аренда потеряна");invalid.Dispose();require();check(true,"Real authoring token remained held through all oracles");
+} catch(Exception ex) {error=ex.ToString();failures.Add("Unhandled actual-token fixture error");}
+finally {
+ bool ownsToken=(bool)lease.GetType().GetProperty("IsOwned",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(lease,null);
+ if(!ownsToken)failures.Add("Cleanup pending: real token ownership lost; no native save/reload/delete performed");
+ else {
+ try {
+  if(duplicate!=null)UnityEngine.Object.DestroyImmediate(duplicate);if(wrongMarker!=null)UnityEngine.Object.DestroyImmediate(wrongMarker);
+  if(preview.IsValid()&&preview.isLoaded)UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(preview);if(extra.IsValid()&&extra.isLoaded)UnityEditor.SceneManagement.EditorSceneManager.CloseScene(extra,true);
+  if(staged) {
+  var input=new UnityEditor.SerializedObject(stand);input.FindProperty("_owner").stringValue="arsenal-layout-authoring-v1";input.FindProperty("_style").objectReferenceValue=canonical;input.ApplyModifiedPropertiesWithoutUndo();
+  VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.RestorePrepared(stand,true);UnityEditor.SceneManagement.EditorSceneManager.SaveScene(own,scenePath);
+  if(createdGuid!=null&&UnityEditor.AssetDatabase.AssetPathToGUID(clonePath)==createdGuid&&!System.IO.File.ReadAllText(scenePath).Contains(createdGuid))UnityEditor.AssetDatabase.DeleteAsset(clonePath);
+  if(clone!=null&&!UnityEditor.EditorUtility.IsPersistent(clone))UnityEngine.Object.DestroyImmediate(clone);
+  if(createdFolderGuid!=null&&UnityEditor.AssetDatabase.AssetPathToGUID(fixtureFolder)==createdFolderGuid&&System.IO.Directory.GetFileSystemEntries(fixtureFolder).Length==0)UnityEditor.AssetDatabase.DeleteAsset(fixtureFolder);
+  // Последний отрицательный oracle: реальные marker/scene утрачены. Token ещё наш; после этого только own workspace reload/cleanup, без bake/save.
+  UnityEditor.SceneManagement.EditorSceneManager.CloseScene(own,true);refusal(require,"Closed scene/stale marker refused","marker утрачен");
+  own=UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath,UnityEditor.SceneManagement.OpenSceneMode.Additive);
+  }
+  if(createdGuid!=null&&UnityEditor.AssetDatabase.AssetPathToGUID(clonePath)==createdGuid&&!System.IO.File.ReadAllText(scenePath).Contains(createdGuid))UnityEditor.AssetDatabase.DeleteAsset(clonePath);
+  if(clone!=null&&!UnityEditor.EditorUtility.IsPersistent(clone))UnityEngine.Object.DestroyImmediate(clone);
+  if(active.IsValid()&&active.isLoaded)UnityEngine.SceneManagement.SceneManager.SetActiveScene(active);UnityEditor.Selection.objects=selection.Where(o=>o!=null).ToArray();
+ }catch(Exception cleanup){failures.Add("Cleanup: "+cleanup.Message);}
+ }
+ try {
+check(beforeAssets!=null&&paths.All(p=>beforeAssets[p]==assetState(p)),"Foreign native/assets/disk/meta unchanged");check(beforeScenes!=null&&beforeScenes==foreignSceneState(),"Foreign scene components/dirty unchanged");
+check(!System.IO.File.Exists(clonePath)&&!System.IO.File.Exists(clonePath+".meta")&&string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(clonePath,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets)),"Exact own clone cleanup");
+check(own.isLoaded&&!own.isDirty,"Permanent artist workspace remains loaded clean");
+var finalStand=own.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoringStand>(true)).Single();check(finalStand.Style==canonical,"Workspace references canonical artist Style after probe");
+var report=new{passed=failures.Count==0,checks,failures,error,tokenOwnedThroughCleanup=ownsToken};System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-inspector-token.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));
+ }catch(Exception readbackError){failures.Add("Readback: "+readbackError.Message);System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-inspector-token.json",Newtonsoft.Json.JsonConvert.SerializeObject(new{passed=false,checks,failures,error,tokenOwnedThroughCleanup=ownsToken},Newtonsoft.Json.Formatting.Indented));}
+ finally {lease.Dispose();}
+}
+return new{passed=failures.Count==0,checks=checks.Count,failures=failures.Count,error,failed=failures.Take(4).ToArray(),reportPath="tmp/arsenal-visual-stage/authoring-inspector-token.json"};

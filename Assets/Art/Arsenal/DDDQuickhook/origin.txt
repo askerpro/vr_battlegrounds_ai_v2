@@ -1,0 +1,8 @@
+DDD Printable Wall Control System / Allen Derusha
+MIT License: LICENSE.txt
+Source: https://github.com/aderusha/DDD-Printable-Wall-Control-System/blob/6110e0a9c6f44c8553ffb0f4689cf03c78bf6aa8/Quickhooks/Quickhook%202in%20Medium.stl
+Source-file commit: 6110e0a9c6f44c8553ffb0f4689cf03c78bf6aa8
+Downloaded SHA256: B298798FB66D677E5D8088A136D9BA516CF6A572332FB7274A5FCF828D3B6DE0
+Conversion: STL unitless; author2in shaft supports assumed mm. Vertices multiplied by .001 to meters. Shape/topology unchanged; normals recalculated.
+1114 triangles; no UV source. Existing shared URP WeaponRackMaterial; no texture duplication.
+Derived pivot: subtract source (600.4,143.95,4.55)mm then multiply by .001. Mounting broad base at X600.4; stem extends approx50.8mm in -X. Whole geometry rigid translation, original STL unchanged.

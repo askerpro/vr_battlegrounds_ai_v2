@@ -1,0 +1,59 @@
+// Только собственная preview-сцена и копии мешей, игровой мир не меняется.
+var path = "Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab";
+var source = UnityEditor.PrefabUtility.LoadPrefabContents(path);
+var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var rt = new RenderTexture(1600, 800, 24);
+var previous = RenderTexture.active;
+try
+{
+    foreach (var slot in source.GetComponent<VrBattlegrounds.Arsenal.ArsenalWallController>().Slots)
+    {
+        var item = UnityEngine.Object.Instantiate(slot.WeaponData.WeaponPrefab, slot.ItemAnchor.transform);
+        item.transform.localPosition = slot.WeaponData.WeaponPositionOffset;
+        item.transform.localRotation = Quaternion.Euler(slot.WeaponData.WeaponRotationOffset);
+    }
+    var magazineSamples = new System.Collections.Generic.List<GameObject>();
+    VrBattlegrounds.Editor.Arsenal.ArsenalMagazineOfferInstaller.AddRestingMagazineSamples(source, magazineSamples);
+    var bounds = source.GetComponent<VrBattlegrounds.Arsenal.ArsenalStationAnchor>().RaisedBoundsWorld;
+    foreach (var filter in source.GetComponentsInChildren<MeshFilter>(true))
+    {
+        var original = filter.GetComponent<MeshRenderer>();
+        if (filter.sharedMesh == null || original == null || !original.enabled || !original.gameObject.activeInHierarchy) continue;
+        if (filter.name == "GrabHighlight") continue;
+        var go = new GameObject(filter.name);
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, scene);
+        go.transform.SetPositionAndRotation(filter.transform.position, filter.transform.rotation);
+        go.transform.localScale = filter.transform.lossyScale;
+        go.AddComponent<MeshFilter>().sharedMesh = filter.sharedMesh;
+        go.AddComponent<MeshRenderer>().sharedMaterials = original.sharedMaterials;
+    }
+    var cameraGo = new GameObject("PreviewCamera");
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(cameraGo, scene);
+    var camera = cameraGo.AddComponent<Camera>();
+    camera.scene = scene; camera.useOcclusionCulling = false;
+    camera.transform.position = bounds.center + new Vector3(0f, .4f, -10f);
+    camera.transform.LookAt(bounds.center);
+    camera.orthographic = true; camera.orthographicSize = 1.6f;
+    camera.backgroundColor = new Color(.08f, .09f, .11f); camera.clearFlags = CameraClearFlags.SolidColor;
+    camera.nearClipPlane = .01f; camera.farClipPlane = 30f; camera.targetTexture = rt;
+    var lightGo = new GameObject("PreviewLight");
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(lightGo, scene);
+    var light = lightGo.AddComponent<Light>(); light.type = LightType.Directional; light.intensity = 2f;
+    light.transform.rotation = Quaternion.Euler(35f, -35f, 0f);
+    camera.Render(); RenderTexture.active = rt;
+    var texture = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+    try
+    {
+        texture.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0); texture.Apply();
+        System.IO.File.WriteAllBytes("tmp/arsenal-presets/demo-front.png", texture.EncodeToPNG());
+    }
+    finally { UnityEngine.Object.DestroyImmediate(texture); }
+    return "tmp/arsenal-presets/demo-front.png";
+}
+finally
+{
+    RenderTexture.active = previous;
+    UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+    UnityEngine.Object.DestroyImmediate(rt);
+    UnityEditor.PrefabUtility.UnloadPrefabContents(source);
+}

@@ -1,0 +1,51 @@
+// Только чтение: полный compiled worker, heartbeat/Repaint и отмена до какого-либо writer.
+// Запускать под собственной согласованной Unity lease после завершения чужих writers.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)return "NOT RUN: editor busy";
+string directory=System.IO.Path.GetFullPath("tmp/arsenal-ui-contract/responsive-worker");System.IO.Directory.CreateDirectory(directory);
+string workspace=System.IO.Directory.GetParent(UnityEngine.Application.dataPath).FullName;
+var assembly=typeof(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow).Assembly;
+var type=assembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalFileSnapshot",true);
+var method=type.GetMethod("Read");
+var progressType=type.GetNestedType("Progress",System.Reflection.BindingFlags.NonPublic);
+var progressParameter=System.Linq.Expressions.Expression.Parameter(progressType,"progress");
+object latestProgress=null;
+System.Action<object> publish=value=>System.Threading.Interlocked.Exchange(ref latestProgress,value);
+var progressDelegate=System.Linq.Expressions.Expression.Lambda(typeof(System.Action<>).MakeGenericType(progressType),System.Linq.Expressions.Expression.Invoke(System.Linq.Expressions.Expression.Constant(publish),System.Linq.Expressions.Expression.Convert(progressParameter,typeof(object))),progressParameter).Compile();
+string[] paths=System.IO.File.ReadAllLines("tmp/arsenal-ui-contract/demo-prepare-profile/dependency-paths.txt");
+var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();int sceneHandle=scene.handle;string scenePath=scene.path;bool sceneDirty=scene.isDirty;
+var roots=scene.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(i=>i).ToArray();
+var window=UnityEditor.EditorWindow.GetWindow<VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow>();
+var cancellation=new System.Threading.CancellationTokenSource();
+var watch=System.Diagnostics.Stopwatch.StartNew();
+int phase=0,beats=0;double maximumHeartbeatGap=0,previousBeat=0;bool cancelRequested=false,cancelObserved=false;
+System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string,string>> task=null;
+System.Func<System.Threading.CancellationToken,System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string,string>>> start=token=>System.Threading.Tasks.Task.Run(()=>{
+ try{return (System.Collections.Generic.Dictionary<string,string>)method.Invoke(null,new object[]{workspace,paths,token,progressDelegate});}
+ catch(System.Reflection.TargetInvocationException exception){throw exception.InnerException;}
+});
+task=start(cancellation.Token);
+UnityEditor.EditorApplication.CallbackFunction update=null;
+update=()=>{
+ try{
+  beats++;window.Repaint();double elapsed=watch.Elapsed.TotalSeconds;maximumHeartbeatGap=System.Math.Max(maximumHeartbeatGap,elapsed-previousBeat);previousBeat=elapsed;
+  if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode){cancellation.Cancel();System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"error.txt"),"Human Play started; stopped before any writer");UnityEditor.EditorApplication.update-=update;return;}
+  if(phase==0 && elapsed>.5 && !task.IsCompleted){cancelRequested=true;cancellation.Cancel();}
+  object progress=System.Threading.Volatile.Read(ref latestProgress);
+  if(progress!=null && beats%10==0)System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"progress.json"),Newtonsoft.Json.JsonConvert.SerializeObject(new {phase=phase,heartbeats=beats,elapsed=elapsed,progress=progress},Newtonsoft.Json.Formatting.Indented));
+  if(!task.IsCompleted)return;
+  if(phase==0){
+   try{task.GetAwaiter().GetResult();}catch(System.OperationCanceledException){cancelObserved=true;}
+   phase=1;watch.Restart();previousBeat=0;beats=0;maximumHeartbeatGap=0;latestProgress=null;
+   task=start(System.Threading.CancellationToken.None);return;
+  }
+  var hashes=task.GetAwaiter().GetResult();
+  long bytes=hashes.Keys.Where(System.IO.File.Exists).Sum(p=>new System.IO.FileInfo(p).Length);
+  bool unchanged=UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle==sceneHandle && scene.path==scenePath && scene.isDirty==sceneDirty && roots.SequenceEqual(scene.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(i=>i));
+  var result=new {compiledAssembly=assembly.Location,phase="COMPLETE",paths=paths.Length,files=hashes.Count,bytes=bytes,fullWorkerMs=watch.ElapsedMilliseconds,heartbeats=beats,maximumHeartbeatGapSeconds=maximumHeartbeatGap,cancelRequested=cancelRequested,cancelObserved=cancelObserved,sceneUnchanged=unchanged,sceneDirty=sceneDirty,writersCalled=0,progress=System.Threading.Volatile.Read(ref latestProgress)};
+  System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"result.json"),Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+  System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"hashes.json"),Newtonsoft.Json.JsonConvert.SerializeObject(hashes));
+  UnityEditor.EditorApplication.update-=update;cancellation.Dispose();
+ }catch(System.Exception exception){System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"error.txt"),exception.ToString());cancellation.Cancel();UnityEditor.EditorApplication.update-=update;}
+};
+UnityEditor.EditorApplication.update+=update;
+return new {scheduled=true,output=directory,scope=paths.Length,writers=0};

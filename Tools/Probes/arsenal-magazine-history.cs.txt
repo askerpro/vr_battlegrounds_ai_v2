@@ -1,0 +1,140 @@
+// Одноразовая диагностика SDK edge. Только EditMode без сети/активного режима. Не acceptance-тест.
+// Настоящие GrabObject+ReleaseObject и SyncState на синтетических предметах в PreviewScene.
+if (UnityEngine.Application.isPlaying || Mirror.NetworkServer.active || Mirror.NetworkClient.active)
+    return "NOT RUN: нужен EditMode без сети.";
+if (VrBattlegrounds.Managers.MapReferee.Instance != null && VrBattlegrounds.Managers.MapReferee.Instance.ActiveGameMode != null)
+    return "NOT RUN: активный режим не подменяем.";
+var output = new System.Text.StringBuilder(); int passed = 0, failed = 0;
+System.Action<string,bool> check = (name, ok) => { output.AppendLine((ok ? "PASS " : "FAIL ") + name); if (ok) passed++; else failed++; };
+var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+System.Func<System.Type,string,System.Reflection.FieldInfo> field = (type,name) =>
+{
+    for (var current = type; current != null; current = current.BaseType)
+    {
+        var found = current.GetField(name, flags | System.Reflection.BindingFlags.DeclaredOnly); if (found != null) return found;
+    }
+    throw new System.MissingFieldException(type.FullName,name);
+};
+System.Action<object,string,object> set = (target,name,value) => field(target.GetType(),name).SetValue(target,value);
+var managerField = field(typeof(UltimateXR.Manipulation.UxrGrabManager), "s_instance");
+var oldManager = managerField.GetValue(null);
+var avatarManagerField = field(typeof(UltimateXR.Core.UxrManager), "s_instance");
+var oldAvatarManager = avatarManagerField.GetValue(null);
+var depthProperty = typeof(UltimateXR.Core.StateSync.UxrStateSyncImplementer).GetProperty("SyncCallDepth",flags);
+var oldDepth = depthProperty.GetValue(null);
+var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+UnityEngine.GameObject root = null;
+UltimateXR.Manipulation.UxrGrabber hand = null;
+var handRegistry = (System.Collections.IList)field(typeof(UltimateXR.Core.Components.UxrComponent<UltimateXR.Manipulation.UxrGrabber>), "s_typeComponents").GetValue(null);
+var fakeIds = new System.Collections.Generic.List<uint>();
+try
+{
+    root = new UnityEngine.GameObject("MagazineHistoryDiagnostic");
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root,scene);
+    System.Func<string,UnityEngine.GameObject> child = name => { var go = new UnityEngine.GameObject(name); go.transform.SetParent(root.transform,false); return go; };
+    var manager = child("OwnGrabManager").AddComponent<UltimateXR.Manipulation.UxrGrabManager>();
+    manager.Features = (UltimateXR.Manipulation.UxrManipulationFeatures)0;
+    managerField.SetValue(null,manager);
+    var avatarManager = child("OwnAvatarManager").AddComponent<UltimateXR.Core.UxrManager>();
+    avatarManagerField.SetValue(null,avatarManager);
+    var avatar = child("OwnAvatar").AddComponent<UltimateXR.Avatar.UxrAvatar>();
+    var wrist = child("OwnRightWrist").transform;
+    wrist.SetParent(avatar.transform,false);
+    avatar.AvatarRig.RightArm.Hand.Wrist = wrist; // SDK RuntimeGrabInfo.Compute:489 требует настоящую Transform кисти.
+    hand = child("OwnHand").AddComponent<UltimateXR.Manipulation.UxrGrabber>();
+    set(hand,"_avatar",avatar); set(hand,"_side",UltimateXR.Core.UxrHandSide.Right); set(hand,"_sideInitialized",true);
+    check("HARNESS synthetic hand has wrist",hand.HandBone == wrist);
+    handRegistry.Add(hand);
+    var wall = root.AddComponent<VrBattlegrounds.Arsenal.ArsenalWallController>();
+    set(wall,"_currentState",VrBattlegrounds.Arsenal.ArsenalWallController.ArsenalState.Open);
+    var slot = child("OwnSlot").AddComponent<VrBattlegrounds.Arsenal.FirearmSlotController>();
+    var anchor = child("OwnStockAnchor").AddComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+    anchor.transform.SetParent(slot.transform,false);
+    set(wall,"_allSlots",new VrBattlegrounds.Arsenal.ArsenalSlotController[] {slot});
+    var offer = slot.gameObject.AddComponent<VrBattlegrounds.Arsenal.ArsenalMagazineOffer>();
+    offer.Configure(slot,anchor,null,UnityEngine.Vector3.back);
+    var supply = root.AddComponent<VrBattlegrounds.Arsenal.ArsenalMagazineSupply>();
+    set(supply,"_wall",wall);
+    var stock = (Mirror.SyncDictionary<int,VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding>)field(supply.GetType(),"_items").GetValue(supply);
+    stock.IsWritable = () => true; stock.IsRecording = () => false; // Только собственный SyncObject.
+    var pending = (System.Collections.Generic.HashSet<int>)field(supply.GetType(),"_pending").GetValue(supply);
+    var resolve = supply.GetType().GetMethod("ResolvePending",flags);
+    System.Func<string,(UltimateXR.Manipulation.UxrGrabbableObject item,VrBattlegrounds.Arsenal.MagazineManipulationHistory history,UnityEngine.Rigidbody body,uint id)> make = name =>
+    {
+        var go = child(name);
+        var identity = go.AddComponent<Mirror.NetworkIdentity>();
+        uint id = 0xfe000001u; while (Mirror.NetworkClient.spawned.ContainsKey(id)) id++;
+        identity.GetType().GetProperty("netId",flags).SetValue(identity,id);
+        Mirror.NetworkClient.spawned.Add(id,identity); fakeIds.Add(id);
+        var body = go.AddComponent<UnityEngine.Rigidbody>(); body.useGravity = false;
+        var item = go.AddComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+        set(item,"_rigidBodySource",body); set(item,"_rigidBodyDynamicOnRelease",true); set(item,"_useParenting",false);
+        var history = go.AddComponent<VrBattlegrounds.Arsenal.MagazineManipulationHistory>();
+        history.GetType().GetMethod("Subscribe",flags).Invoke(history,null);
+        return (item,history,body,id);
+    };
+    var current = make("MagazineWithBaseline");
+    stock[0] = new VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding(current.id); pending.Add(0); resolve.Invoke(supply,null);
+    check("untouched binding establishes comparable baseline",current.history.HasStockBaseline && current.history.Sequence == 0 && offer.CurrentItem == current.item);
+    manager.GrabObject(hand,current.item,0,true); manager.ReleaseObject(hand,current.item,true);
+    check("actual true grab+release counted exactly twice",current.history.Touched && current.history.Sequence == 2 && !manager.IsBeingGrabbed(current.item));
+    var carriedPose = current.item.transform.position + UnityEngine.Vector3.one;
+    current.item.transform.position = carriedPose;
+    // Красный свидетель прежнего алгоритма: IsBeingGrabbed=false позволяет Assign и превращает отпущенное тело в kinematic.
+    offer.Assign(current.item);
+    check("RED witness legacy assign coerces released magazine",current.body.isKinematic && current.item.CurrentAnchor == anchor);
+    current.item.SetNetworkAnchor(null); current.item.transform.SetParent(root.transform,true);
+    current.item.transform.position = carriedPose; current.body.isKinematic = false;
+    pending.Add(0); resolve.Invoke(supply,null);
+    check("GREEN initial stale binding preserves released magazine",current.item.CurrentAnchor == null && !current.body.isKinematic && UnityEngine.Vector3.Distance(current.item.transform.position,carriedPose) < .00001f);
+    stock[0] = new VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding(current.id,1,current.history.Sequence); pending.Add(0); resolve.Invoke(supply,null);
+    check("explicit new revision permits server rejection return",offer.CurrentItem == current.item && current.history.LastReturnRevision == 1 && current.history.Touched);
+    manager.GrabObject(hand,current.item,0,false); manager.ReleaseObject(hand,current.item,false);
+    check("silent false grab+release also counted exactly twice",current.history.Sequence == 4 && !manager.IsBeingGrabbed(current.item));
+    current.item.transform.position = carriedPose; current.item.transform.SetParent(root.transform,true); current.body.isKinematic = false;
+    pending.Add(0); resolve.Invoke(supply,null);
+    check("stale return revision cannot cancel future take+drop",current.item.CurrentAnchor == null && !current.body.isKinematic && UnityEngine.Vector3.Distance(current.item.transform.position,carriedPose) < .00001f);
+    manager.SyncState(new UltimateXR.Core.StateSync.UxrMethodInvokedSyncEventArgs("GrabObject",hand,current.item,0,null,false));
+    manager.SyncState(new UltimateXR.Core.StateSync.UxrMethodInvokedSyncEventArgs("ReleaseObject",hand,current.item,null,null,null,null,false));
+    check("incoming SyncState counter equals local path",current.history.Sequence == 6 && !manager.IsBeingGrabbed(current.item));
+    current.history.GetType().GetMethod("Unsubscribe",flags).Invoke(current.history,null);
+    current.history.GetType().GetMethod("Subscribe",flags).Invoke(current.history,null);
+    current.history.GetType().GetMethod("Subscribe",flags).Invoke(current.history,null);
+    manager.GrabObject(hand,current.item,0,false); manager.ReleaseObject(hand,current.item,false);
+    check("resubscribe preserves latch and never duplicates counter",current.history.Touched && current.history.Sequence == 8);
+    var externalAnchor = child("OwnOtherAnchor").AddComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+    bool placed = manager.PlaceObject(current.item,externalAnchor,(UltimateXR.Manipulation.UxrPlacementOptions)0,false);
+    manager.RemoveObjectFromAnchor(current.item,false,true);
+    check("silent place and removal each count once",placed && current.history.Sequence == 10 && current.item.CurrentAnchor == null);
+    var late = make("LateJoinTouchedBeforeBaseline");
+    manager.GrabObject(hand,late.item,0,false); manager.ReleaseObject(hand,late.item,false);
+    stock[0] = new VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding(late.id,20,100); pending.Add(0);
+    var latePose = late.item.transform.position; resolve.Invoke(supply,null);
+    check("unknown late join baseline never coerces touched initial item",!late.history.HasStockBaseline && late.item.CurrentAnchor == null && !late.body.isKinematic && UnityEngine.Vector3.Distance(latePose,late.item.transform.position) < .00001f);
+}
+catch (System.Exception error) { failed++; output.AppendLine("PROBE FAILURE " + error); }
+finally
+{
+    foreach (uint id in fakeIds) Mirror.NetworkClient.spawned.Remove(id);
+    if (hand != null) handRegistry.Remove(hand);
+    if (root != null)
+    {
+        // SDK-предметы удаляются, пока собственные менеджеры ещё живы: cleanup не создаёт singleton в человеческой сцене.
+        var children = new System.Collections.Generic.List<UnityEngine.GameObject>();
+        foreach (UnityEngine.Transform child in root.transform)
+            if (child.name != "OwnGrabManager" && child.name != "OwnAvatarManager") children.Add(child.gameObject);
+        foreach (var child in children) if (child != null) UnityEngine.Object.DestroyImmediate(child);
+        UnityEngine.Object.DestroyImmediate(root);
+    }
+    UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+    managerField.SetValue(null,oldManager);
+    avatarManagerField.SetValue(null,oldAvatarManager);
+    depthProperty.SetValue(null,oldDepth);
+}
+check("cleanup GrabManager singleton restored",System.Object.ReferenceEquals(managerField.GetValue(null),oldManager));
+check("cleanup UxrManager singleton restored",System.Object.ReferenceEquals(avatarManagerField.GetValue(null),oldAvatarManager));
+check("cleanup SDK sync depth restored",System.Object.Equals(depthProperty.GetValue(null),oldDepth));
+check("cleanup own hand registry entry removed",!handRegistry.Contains(hand));
+bool noFakeIds = true; foreach (uint id in fakeIds) if (Mirror.NetworkClient.spawned.ContainsKey(id)) noFakeIds = false;
+check("cleanup fake spawned identities removed",noFakeIds);
+return output.ToString() + "\nPassed=" + passed + ", Failed=" + failed;

@@ -1,0 +1,110 @@
+// Под внешней own lease: загрузить только собственный стенд, создать один заведомо отсутствующий Style fixture, не сохранять scene с временной ссылкой.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)throw new System.InvalidOperationException("Editor busy");
+const string clonePath="Assets/Editor/VR_Battlegrounds/Arsenal/ProbeFixtures/AuthoringRoundtripStyle.asset";
+const string scenePath="Assets/Scenes/Debug/ArsenalLayoutAuthoring.unity";
+if(System.IO.File.Exists(clonePath)||System.IO.File.Exists(clonePath+".meta")||!string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(clonePath,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets))||UnityEditor.AssetDatabase.LoadMainAssetAtPath(clonePath)!=null)throw new System.InvalidOperationException("Fixture path/meta/GUID already exists; no overwrite");
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++)if(UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty)throw new System.InvalidOperationException("Foreign dirty scene");
+if(UnityEngine.SceneManagement.SceneManager.GetSceneByPath(scenePath).isLoaded)throw new System.InvalidOperationException("Own stand already loaded");
+var style=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>("Assets/Data/Weapons/IndustrialPegboardPresentation.asset");
+if(style==null||UnityEditor.EditorUtility.IsDirty(style))throw new System.InvalidOperationException("Clean canonical source missing");
+const string fixtureFolder="Assets/Editor/VR_Battlegrounds/Arsenal/ProbeFixtures";
+bool createFolder=!UnityEditor.AssetDatabase.IsValidFolder(fixtureFolder);
+if(createFolder&&(System.IO.Directory.Exists(fixtureFolder)||System.IO.File.Exists(fixtureFolder+".meta")||!string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(fixtureFolder,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets))||UnityEditor.AssetDatabase.LoadMainAssetAtPath(fixtureFolder)!=null))throw new Exception("Orphan/foreign fixture folder; no overwrite");
+var paths=new[]{"Assets/Data/Weapons/IndustrialPegboardPresentation.asset","Assets/Data/Weapons/FullDemoArsenal.asset","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Scenes/Lobby.unity","Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat","Assets/Materials/Arsenal/IndustrialSupportMetal.mat"};
+var assets=paths.Select(p=>new{path=p,json=UnityEditor.EditorJsonUtility.ToJson(UnityEditor.AssetDatabase.LoadMainAssetAtPath(p)),dirty=UnityEditor.EditorUtility.IsDirty(UnityEditor.AssetDatabase.LoadMainAssetAtPath(p)),disk=Convert.ToBase64String(System.IO.File.ReadAllBytes(p)),meta=System.IO.File.ReadAllText(p+".meta")}).ToArray();
+var scenes=new System.Collections.Generic.List<object>();
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!s.isLoaded||UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(s))continue;scenes.Add(new{path=s.path,handle=s.handle,dirty=s.isDirty,rows=s.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<UnityEngine.Component>(true)).Where(c=>c!=null).Select(c=>new{id=c.GetInstanceID(),json=UnityEditor.EditorJsonUtility.ToJson(c)}).ToArray()});}
+var originalActive=UnityEngine.SceneManagement.SceneManager.GetActiveScene().path;var originalSelection=UnityEditor.Selection.instanceIDs;
+
+var own=default(UnityEngine.SceneManagement.Scene);VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoringStand stand=null;
+VrBattlegrounds.Arsenal.ArsenalPresentationStyle clone=null;string createdGuid=null,error=null,createdFolderGuid=null;
+var checks=new System.Collections.Generic.List<object>();var failures=new System.Collections.Generic.List<string>();var readback=new System.Collections.Generic.List<object>();
+System.Action<bool,string> check=(pass,name)=>{checks.Add(new{name,pass});if(!pass)failures.Add(name);};
+System.Action<Action,string> refusal=(action,name)=>{try{action();check(false,name);}catch(Exception ex){check(ex.GetBaseException().Message.Contains("несохранённые ассеты"),name);}};
+System.Func<string,string> disk=p=>Convert.ToBase64String(System.IO.File.ReadAllBytes(p));
+System.Func<UnityEngine.Vector3,float[]> vector=v=>new[]{v.x,v.y,v.z};
+try {
+ if(createFolder){createdFolderGuid=UnityEditor.AssetDatabase.CreateFolder("Assets/Editor/VR_Battlegrounds/Arsenal","ProbeFixtures");if(string.IsNullOrEmpty(createdFolderGuid))throw new Exception("Own fixture folder creation refused");}
+ own=UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath,UnityEditor.SceneManagement.OpenSceneMode.Additive);
+ stand=own.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoringStand>(true)).Single();
+ VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.ValidateStand(stand);
+ clone=UnityEngine.Object.Instantiate(style);clone.name="AuthoringRoundtripStyle";UnityEditor.AssetDatabase.CreateAsset(clone,clonePath);createdGuid=UnityEditor.AssetDatabase.AssetPathToGUID(clonePath);UnityEditor.AssetDatabase.SaveAssetIfDirty(clone);
+ var input=new UnityEditor.SerializedObject(stand);input.FindProperty("_style").objectReferenceValue=clone;input.ApplyModifiedPropertiesWithoutUndo();
+ VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.RestorePrepared(stand,true);UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(own);
+ var originalStyle=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>("Assets/Data/Weapons/IndustrialPegboardPresentation.asset");
+ check(originalStyle!=clone,"Only own persistent clone is writer target");
+ var first=stand.Slots.First(s=>s.Zone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Pegboard);int firstIndex=stand.Slots.ToList().IndexOf(first);
+ first.Item.localPosition+=new UnityEngine.Vector3(.004f,.005f,.006f);first.Item.localRotation=first.Item.localRotation*UnityEngine.Quaternion.Euler(0,7,0);
+ first.Magazine.localPosition+=new UnityEngine.Vector3(-.003f,.002f,.002f);first.Card.localPosition+=new UnityEngine.Vector3(.006f,.002f,0);
+ first.Supports[0].Handle.localPosition+=new UnityEngine.Vector3(.002f,.003f,.004f);first.Supports[0].Handle.localRotation=first.Supports[0].Handle.localRotation*UnityEngine.Quaternion.Euler(0,0,5);
+ var second=stand.Slots.First(s=>s!=first);second.Item.localPosition+=new UnityEngine.Vector3(.01f,0,0);var stagedOther=second.Item.localPosition;
+ var expectedItem=first.Item.localPosition;var expectedRotation=first.Item.localRotation;var expectedMag=first.Magazine.localPosition;var expectedCard=first.Card.localPosition;var expectedSupport=first.Supports[0].Handle.localPosition;
+ VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.BakePrepared(stand,firstIndex);
+ check(second.Item.localPosition==stagedOther&&VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.HasStagedChanges(stand),"Selected bake preserves another unsaved slot");
+ var resolved=VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Resolve(first.Weapon,first.Zone,clone);
+ check((resolved.ItemTarget.Position-expectedItem).sqrMagnitude<1e-12f&&UnityEngine.Quaternion.Angle(resolved.ItemTarget.Rotation,expectedRotation)<.001f,"Item transform baked into exact canonical target");
+ check((resolved.MagazineTarget.Position-expectedMag).sqrMagnitude<1e-12f,"Magazine transform baked into exact canonical target");
+ check((resolved.CardTarget.Position-expectedCard).sqrMagnitude<1e-12f,"Card transform baked into exact canonical target");
+ check((resolved.Supports[0].SlotPose.Position-expectedSupport).sqrMagnitude<1e-12f,"Peg support transform baked into exact canonical target");
+ string saved=disk(clonePath);VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.BakePrepared(stand,firstIndex);check(saved==disk(clonePath),"Second selected Save has byte-identical Style and no drift");
+ VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.BakePrepared(stand);check(!VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.HasStagedChanges(stand),"Bake all commits remaining staged slot");
+ saved=disk(clonePath);VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.BakePrepared(stand);check(saved==disk(clonePath),"Second all-slots Save has byte-identical Style");
+ VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.RestorePrepared(stand,true);
+ foreach(var slot in stand.Slots) {
+  var target=VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Resolve(slot.Weapon,slot.Zone,clone);
+  check((slot.Item.localPosition-target.ItemTarget.Position).sqrMagnitude<1e-12f&&UnityEngine.Quaternion.Angle(slot.Item.localRotation,target.ItemTarget.Rotation)<.001f,"Regenerated Item "+slot.Weapon.WeaponId);
+  check((slot.Magazine.localPosition-target.MagazineTarget.Position).sqrMagnitude<1e-12f&&UnityEngine.Quaternion.Angle(slot.Magazine.localRotation,target.MagazineTarget.Rotation)<.001f,"Regenerated Magazine "+slot.Weapon.WeaponId);
+  check((slot.Card.localPosition-target.CardTarget.Position).sqrMagnitude<1e-12f&&slot.Supports.Count==target.Supports.Count,"Regenerated Card/support roles "+slot.Weapon.WeaponId);
+  var visual=slot.Item.Find("Visual (derived DropAlign)");var rootPose=VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.RootPose(slot.Weapon.WeaponPrefab,slot.Item.position,slot.Item.rotation);
+  check((visual.position-rootPose.Position).sqrMagnitude<1e-10f&&UnityEngine.Quaternion.Angle(visual.rotation,rootPose.Rotation)<.001f&&(visual.lossyScale-slot.Weapon.WeaponPrefab.transform.lossyScale).sqrMagnitude<1e-10f,"Derived DropAlign/world scale "+slot.Weapon.WeaponId);
+  readback.Add(new{weapon=slot.Weapon.WeaponId,zone=slot.Zone.ToString(),item=vector(slot.Item.localPosition),mag=vector(slot.Magazine.localPosition),card=vector(slot.Card.localPosition),supports=slot.Supports.Count});
+ }
+ check(clone.Exceptions.Count(e=>e.OverrideCard)==1,"Only one changed card is exact exception; no20 default copies");
+ check(stand.Slots.Where(s=>s.Zone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf).All(s=>s.Supports.Count==0),"Shelf has no hooks");
+ // Источник dirty запрещён даже в допустимой dirty Stand сцене; возвращаем только свой clone из сохранённых bytes.
+ UnityEditor.EditorUtility.SetDirty(clone);refusal(()=>VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.BakePrepared(stand),"Dirty Style input refused");UnityEditor.AssetDatabase.SaveAssetIfDirty(clone);check(saved==disk(clonePath),"Own dirty-flag fixture restore writes identical bytes only to clone");UnityEditor.AssetDatabase.ImportAsset(clonePath,UnityEditor.ImportAssetOptions.ForceUpdate);
+ check(!UnityEditor.EditorUtility.IsDirty(clone),"Own clone restored clean by its importer");
+
+ first=stand.Slots[firstIndex]; // Restore replaced only owned projection handles; use the current cache row.
+ var defaultPose=first.Card.localPosition;
+ VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.BakeCardDefaultPrepared(stand,firstIndex);
+ check(clone.Exceptions.Count(e=>e.OverrideCard)==0,"Explicit card zone default avoids20 exact copies");
+ check(stand.Slots.Where(s=>s.Zone==first.Zone).All(s=>(s.Card.localPosition-defaultPose).sqrMagnitude<1e-12f),"All cards of actual zone use new canonical default");
+ check(UnityEditor.SceneManagement.EditorSceneManager.SaveScene(own,scenePath),"Own projection saved for reload proof");
+ UnityEditor.SceneManagement.EditorSceneManager.CloseScene(own,true);
+ own=UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath,UnityEditor.SceneManagement.OpenSceneMode.Additive);
+ stand=own.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoringStand>(true)).Single();
+ VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.ValidateStand(stand);
+ check(stand.Style==clone&&stand.Slots.Count==20,"Reload preserves source Style/20 keys and handles");
+ var loaded=stand.Slots[firstIndex];
+ check((loaded.Item.localPosition-expectedItem).sqrMagnitude<1e-12f&&(loaded.Magazine.localPosition-expectedMag).sqrMagnitude<1e-12f&&(loaded.Card.localPosition-expectedCard).sqrMagnitude<1e-12f&&(loaded.Supports[0].Handle.localPosition-expectedSupport).sqrMagnitude<1e-12f,"Reload preserves all four saved target types");
+ saved=disk(clonePath);VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.BakePrepared(stand);check(saved==disk(clonePath),"Bake after scene load has byte-identical Style");
+
+} catch(Exception ex) {error=ex.ToString();failures.Add("Unhandled backend fixture error");}
+finally {
+ try {
+  if(own.IsValid()&&own.isLoaded&&stand!=null) {
+   var input=new UnityEditor.SerializedObject(stand);input.FindProperty("_style").objectReferenceValue=style;input.ApplyModifiedPropertiesWithoutUndo();
+   try { VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.RestorePrepared(stand,true); }
+   finally { if(!UnityEditor.SceneManagement.EditorSceneManager.SaveScene(own,scenePath)) throw new Exception("Canonical scene restore save refused; clone retained"); }
+  }
+  if(createdGuid!=null&&UnityEditor.AssetDatabase.AssetPathToGUID(clonePath)==createdGuid&&!System.IO.File.ReadAllText(scenePath).Contains(createdGuid))UnityEditor.AssetDatabase.DeleteAsset(clonePath);
+  if(clone!=null&&!UnityEditor.EditorUtility.IsPersistent(clone))UnityEngine.Object.DestroyImmediate(clone);
+  if(createdFolderGuid!=null&&UnityEditor.AssetDatabase.AssetPathToGUID(fixtureFolder)==createdFolderGuid&&System.IO.Directory.GetFileSystemEntries(fixtureFolder).Length==0)UnityEditor.AssetDatabase.DeleteAsset(fixtureFolder);
+  var original=UnityEngine.SceneManagement.SceneManager.GetSceneByPath(originalActive);if(original.isLoaded)UnityEngine.SceneManagement.SceneManager.SetActiveScene(original);UnityEditor.Selection.instanceIDs=originalSelection;
+ }catch(Exception cleanupError){failures.Add("Cleanup: "+cleanupError.Message);}
+ finally { if(own.IsValid()&&own.isLoaded)UnityEditor.SceneManagement.EditorSceneManager.CloseScene(own,true); var original=UnityEngine.SceneManagement.SceneManager.GetSceneByPath(originalActive);if(original.isLoaded)UnityEngine.SceneManagement.SceneManager.SetActiveScene(original);UnityEditor.Selection.instanceIDs=originalSelection; }
+}
+foreach(var row in assets) {
+ var p=row.path;var a=UnityEditor.AssetDatabase.LoadMainAssetAtPath(p);
+ check(UnityEditor.EditorJsonUtility.ToJson(a)==row.json&&UnityEditor.EditorUtility.IsDirty(a)==row.dirty&&disk(p)==row.disk&&System.IO.File.ReadAllText(p+".meta")==row.meta,"Foreign native/disk preserved "+p);
+}
+var originalSnapshots=Newtonsoft.Json.Linq.JArray.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(scenes));
+foreach(var before in originalSnapshots) {
+ var s=UnityEngine.SceneManagement.SceneManager.GetSceneByPath((string)before["path"]);var current=s.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<UnityEngine.Component>(true)).Where(c=>c!=null).ToDictionary(c=>c.GetInstanceID(),c=>UnityEditor.EditorJsonUtility.ToJson(c));
+ check(s.isLoaded&&s.isDirty==(bool)before["dirty"]&&current.Count==before["rows"].Count()&&before["rows"].All(r=>current.ContainsKey((int)r["id"])&&current[(int)r["id"]]==(string)r["json"]),"Foreign scene preserved "+s.path);
+}
+check(!System.IO.File.Exists(clonePath)&&!System.IO.File.Exists(clonePath+".meta")&&string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(clonePath,UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets)),"Exact-owned clone asset/meta cleanup");
+check(!UnityEngine.SceneManagement.SceneManager.GetSceneByPath(scenePath).isLoaded,"Own scene closed and original setup restored");
+var report=new{checks,failures,error,readback};System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-backend-roundtrip.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));
+return new{checks=checks.Count,failures=failures.Count,error,failed=failures.Take(5).ToArray()};

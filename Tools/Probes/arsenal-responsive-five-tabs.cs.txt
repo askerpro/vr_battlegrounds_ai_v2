@@ -1,0 +1,35 @@
+// Read-only GUI регрессия: SHA до/после берётся только через async очередь окна, не блокирует main thread.
+// Выполнять под quiet own lease; production writer отсутствует, состояние сцен и dependency hashes сверяется.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)return "NOT RUN: busy";
+string directory=System.IO.Path.GetFullPath("tmp/arsenal-ui-contract/responsive-five-tabs");System.IO.Directory.CreateDirectory(directory);
+var window=UnityEditor.EditorWindow.GetWindow<VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow>();
+var type=window.GetType();var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+var begin=type.GetMethod("BeginCheckSnapshot",flags);var pending=type.GetField("pending",flags);var snapshot=type.GetField("checkSnapshot",flags);var resultField=type.GetField("result",flags);
+if(pending.GetValue(window)!=null)return "NOT RUN: window busy";
+int originalTab=(int)window.SelectedTab;
+string[] folders={"Assets/Data/Weapons","Assets/Data/Maps","Assets/Prefabs/Weapons","Assets/Prefabs/Arsenal","Assets/Art/Weapons","Assets/Art/HandPoses","Assets/Audio/SFX/Weapons/Kinemation"};
+var dependencyPaths=UnityEditor.AssetDatabase.FindAssets("",new[]{"Assets/Data/Weapons","Assets/Data/Maps","Assets/Prefabs/Weapons","Assets/Prefabs/Arsenal"}).Select(UnityEditor.AssetDatabase.GUIDToAssetPath).Where(p=>!UnityEditor.AssetDatabase.IsValidFolder(p)).OrderBy(p=>p).ToArray();
+var dependencyBefore=dependencyPaths.ToDictionary(p=>p,p=>UnityEditor.AssetDatabase.GetAssetDependencyHash(p).ToString());
+System.Func<string> sceneState=()=>Newtonsoft.Json.JsonConvert.SerializeObject(new {active=UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle,preview=UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount,scenes=Enumerable.Range(0,UnityEngine.SceneManagement.SceneManager.sceneCount).Select(i=>{var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);return new {handle=s.handle,path=s.path,dirty=s.isDirty,roots=s.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(id=>id).ToArray()};}).ToArray()});
+string sceneBefore=sceneState();var watch=System.Diagnostics.Stopwatch.StartNew();double tabStart=0;int phase=0,tab=0,beats=0;var visited=new System.Collections.Generic.List<int>();
+System.Collections.Generic.Dictionary<string,string> before=null;
+begin.Invoke(window,new object[]{folders,false});
+UnityEditor.EditorApplication.CallbackFunction update=null;
+update=()=>{
+ try{
+  beats++;window.Repaint();
+  if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)throw new System.InvalidOperationException("Quiet window interrupted");
+  if(phase==0){if(pending.GetValue(window)!=null)return;if(!((string)resultField.GetValue(window)).Contains("Снимок SHA256"))throw new System.InvalidOperationException("Before snapshot failed");before=(System.Collections.Generic.Dictionary<string,string>)snapshot.GetValue(window);VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenTab(0);tabStart=watch.Elapsed.TotalSeconds;phase=1;return;}
+  if(phase==1){if(watch.Elapsed.TotalSeconds-tabStart<.3)return;visited.Add((int)window.SelectedTab);tab++;if(tab<5){VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenTab(tab);tabStart=watch.Elapsed.TotalSeconds;return;}begin.Invoke(window,new object[]{folders,false});phase=2;return;}
+  if(pending.GetValue(window)!=null)return;
+  var after=(System.Collections.Generic.Dictionary<string,string>)snapshot.GetValue(window);
+  bool sha=before.Count==after.Count && before.All(pair=>after.ContainsKey(pair.Key) && after[pair.Key]==pair.Value);
+  bool dependencies=dependencyBefore.All(pair=>UnityEditor.AssetDatabase.GetAssetDependencyHash(pair.Key).ToString()==pair.Value);
+  bool scenes=sceneBefore==sceneState();
+  var result=new {passed=sha&&dependencies&&scenes&&visited.SequenceEqual(new[]{0,1,2,3,4}),tabs=visited,physicalFiles=before.Count,dependencyAssets=dependencyBefore.Count,shaUnchanged=sha,dependenciesUnchanged=dependencies,scenesUnchanged=scenes,heartbeats=beats,elapsedMs=watch.ElapsedMilliseconds,productionWriters=0};
+  System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"result.json"),Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+  VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenTab(originalTab);UnityEditor.EditorApplication.update-=update;
+ }catch(System.Exception exception){type.GetMethod("CancelPlan",flags).Invoke(window,null);System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"error.txt"),exception.ToString());UnityEditor.EditorApplication.update-=update;}
+};
+UnityEditor.EditorApplication.update+=update;
+return new {scheduled=true,output=directory,route="async before → five actual GUI tabs → async after",productionWriters=0};

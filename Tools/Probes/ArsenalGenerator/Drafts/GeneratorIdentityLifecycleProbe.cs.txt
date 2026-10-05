@@ -1,0 +1,20 @@
+using System;
+using System.Collections;
+using UnityEngine;
+
+namespace VrBattlegrounds.Arsenal.ProbeFixtures
+{
+    /// <summary>Временный счётчик собственного fixture root; не подменяет trace Awake компонентов SDK.</summary>
+    public sealed class GeneratorIdentityLifecycleProbe : MonoBehaviour
+    {
+        public static Action<GeneratorIdentityLifecycleProbe, string> Observed;
+        public string ReceiptKey;
+        public int AwakeCount, EnableCount, StartCount, DestroyCount;
+        public static void RemoveObserved(Action<GeneratorIdentityLifecycleProbe,string> exact) { Observed-=exact; }
+        public void Drive(IEnumerator routine) { StartCoroutine(routine); }
+        private void Awake() { AwakeCount++; Observed?.Invoke(this,"Awake"); }
+        private void OnEnable() { EnableCount++; Observed?.Invoke(this,"OnEnable"); }
+        private void Start() { StartCount++; Observed?.Invoke(this,"Start"); }
+        private void OnDestroy() { DestroyCount++; Observed?.Invoke(this,"OnDestroy"); }
+    }
+}

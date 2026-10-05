@@ -1,0 +1,90 @@
+// Own isolated allocations; no persistent saves and no human Play.
+if (UnityEngine.Application.isPlaying || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "NOT RUN: human Play";
+var checks = new System.Collections.Generic.List<object>(); var failures = new System.Collections.Generic.List<string>();
+System.Action<string,bool> check = (name,pass) => { checks.Add(new {name=name,pass=pass}); if(!pass) failures.Add(name); };
+System.Func<string> sceneState = () => { var text = new System.Text.StringBuilder(); for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++) {
+    var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i); if(!s.isLoaded || UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(s)) continue;
+    text.Append(s.path).Append('|').Append(s.isDirty); foreach(var r in s.GetRootGameObjects()) foreach(var c in r.GetComponentsInChildren<UnityEngine.Component>(true))
+        if(c!=null)text.Append(c.GetInstanceID()).Append(UnityEditor.EditorJsonUtility.ToJson(c)); } return text.ToString(); };
+var before=sceneState(); var foreign=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>("Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat");
+var foreignBefore=UnityEditor.EditorJsonUtility.ToJson(foreign)+"|"+UnityEditor.EditorUtility.IsDirty(foreign);
+var active=UnityEngine.SceneManagement.SceneManager.GetActiveScene(); var fixture=UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var allocations=new System.Collections.Generic.List<UnityEngine.Object>(); UnityEngine.GameObject owner=null;
+try {
+    owner=new UnityEngine.GameObject("SupportHintFixture");owner.SetActive(false);UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(owner,fixture);
+    var demo=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab");
+    if(demo==null) throw new System.InvalidOperationException("Canonical Demo path missing.");
+    var source=demo.GetComponentsInChildren<VrBattlegrounds.Arsenal.FirearmSlotController>(true).First(s=>s.WeaponData!=null);
+    var clone=UnityEngine.Object.Instantiate(source.gameObject,owner.transform,false); var slot=clone.GetComponent<VrBattlegrounds.Arsenal.FirearmSlotController>();
+    // Only cloned fixture bindings may be cleared to test the new derived owner.
+    slot.ItemAnchor.ActivateOnCompatibleNear=null;slot.MagAnchor.ActivateOnCompatibleNear=null;
+    var module=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Art/Arsenal/DDDQuickhook/DDDQuickhook.prefab");
+    var style=UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>();allocations.Add(style);
+    var material=new UnityEngine.Material(UnityEngine.Shader.Find("Universal Render Pipeline/Unlit"));allocations.Add(material);
+    var so=new UnityEditor.SerializedObject(style);so.FindProperty("_supportModule").objectReferenceValue=module;
+    var ready=so.FindProperty("_returnReadyMaterial");check("Style has one ready-material input",ready!=null);if(ready!=null)ready.objectReferenceValue=material;
+    var zones=so.FindProperty("_zones");zones.arraySize=2;
+    for(int i=0;i<2;i++) {
+        var z=zones.GetArrayElementAtIndex(i);z.FindPropertyRelative("Zone").enumValueIndex=i;
+        z.FindPropertyRelative("ItemTarget").FindPropertyRelative("Position").vector3Value=slot.transform.InverseTransformPoint(slot.ItemAnchor.AlignTransform.position);
+        z.FindPropertyRelative("ItemTarget").FindPropertyRelative("EulerAngles").vector3Value=(UnityEngine.Quaternion.Inverse(slot.transform.rotation)*slot.ItemAnchor.AlignTransform.rotation).eulerAngles;
+        z.FindPropertyRelative("MagazineTarget").FindPropertyRelative("Position").vector3Value=slot.transform.InverseTransformPoint(slot.MagAnchor.AlignTransform.position);
+        z.FindPropertyRelative("MagazineTarget").FindPropertyRelative("EulerAngles").vector3Value=(UnityEngine.Quaternion.Inverse(slot.transform.rotation)*slot.MagAnchor.AlignTransform.rotation).eulerAngles;
+        var card=slot.GetComponentInChildren<VrBattlegrounds.Arsenal.ArsenalPriceTag>(true).transform;
+        z.FindPropertyRelative("CardTarget").FindPropertyRelative("Position").vector3Value=slot.transform.InverseTransformPoint(card.position);
+        z.FindPropertyRelative("CardTarget").FindPropertyRelative("EulerAngles").vector3Value=(UnityEngine.Quaternion.Inverse(slot.transform.rotation)*card.rotation).eulerAngles;
+        z.FindPropertyRelative("CardSize").vector2Value=slot.CardSize;z.FindPropertyRelative("CardFontSize").floatValue=slot.CardFontSize;
+        var supports=z.FindPropertyRelative("Supports");supports.arraySize=2;
+        for(int j=0;j<2;j++) {var p=supports.GetArrayElementAtIndex(j);p.FindPropertyRelative("Role").stringValue=j==0?"Forearm":"Spare";
+            p.FindPropertyRelative("SlotPose").FindPropertyRelative("Position").vector3Value=new UnityEngine.Vector3(j==0?-.08f:.12f,.4f,-.1f);
+            var kind=p.FindPropertyRelative("AnchorKind"); if(i==0 && j==0)check("Support purpose is explicit",kind!=null);if(kind!=null)kind.enumValueIndex=j; }
+    }
+    so.ApplyModifiedPropertiesWithoutUndo();
+    var snapshot=VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Resolve(slot.WeaponData,slot.PresentationZone,style);
+    VrBattlegrounds.Editor.Arsenal.ArsenalSupportModuleBuilder.Materialize(slot,snapshot);
+    var hints=slot.transform.Find("PresentationReturnHints");
+    check("Derived Weapon group bound to SDK near hint",hints!=null && hints.Find("Weapon")!=null && slot.ItemAnchor.ActivateOnCompatibleNear==hints.Find("Weapon").gameObject);
+    check("Derived Magazine group bound to existing SDK anchor",hints!=null && hints.Find("Magazine")!=null && slot.MagAnchor.ActivateOnCompatibleNear==hints.Find("Magazine").gameObject);
+    if(hints!=null) {
+        check("New near groups hidden until SDK readiness",!hints.Find("Weapon").gameObject.activeSelf && !hints.Find("Magazine").gameObject.activeSelf);
+        check("Ready projection uses only Style shared material",hints.GetComponentsInChildren<UnityEngine.MeshRenderer>(true).All(r=>r.sharedMaterials.All(m=>m==material)));
+        check("Visual projection adds no SDK physics/network components",hints.GetComponentsInChildren<UnityEngine.MonoBehaviour>(true).Length==0 && hints.GetComponentsInChildren<UnityEngine.Collider>(true).Length==0);
+        var json=string.Join("\n",clone.GetComponentsInChildren<UnityEngine.Component>(true).Select(c=>c.GetInstanceID()+"|"+UnityEditor.EditorJsonUtility.ToJson(c)));
+        VrBattlegrounds.Editor.Arsenal.ArsenalSupportModuleBuilder.Materialize(slot,snapshot);
+        check("Repeat preserves every fixture instance and serialized value",json==string.Join("\n",clone.GetComponentsInChildren<UnityEngine.Component>(true).Select(c=>c.GetInstanceID()+"|"+UnityEditor.EditorJsonUtility.ToJson(c))));
+        VrBattlegrounds.Arsenal.ArsenalPresentationResolver.ValidateMaterialized(slot,snapshot);
+        check("Runtime stale validator accepts canonical hints",true);
+        var input=new UnityEditor.SerializedObject(style);input.FindProperty("_returnReadyMaterial").objectReferenceValue=null;input.ApplyModifiedPropertiesWithoutUndo();
+        bool invalid=false;try{VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Validate(style);}catch(System.InvalidOperationException){invalid=true;}
+        check("Missing ready material fails preflight before writes",invalid);
+        input.FindProperty("_returnReadyMaterial").objectReferenceValue=material;input.ApplyModifiedPropertiesWithoutUndo();
+        var changed=input.FindProperty("_zones").GetArrayElementAtIndex((int)slot.PresentationZone).FindPropertyRelative("CardTarget").FindPropertyRelative("Position");
+        changed.vector3Value+=new UnityEngine.Vector3(.01f,0,0);input.ApplyModifiedPropertiesWithoutUndo();
+        var changedSnapshot=VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Resolve(slot.WeaponData,slot.PresentationZone,style);
+        var endpoint=typeof(VrBattlegrounds.Editor.Arsenal.ArsenalSupportModuleBuilder).GetMethod("MaterializePresentation");
+        bool updated=false;
+        try {
+            if(endpoint!=null)endpoint.Invoke(null,new object[]{slot,changedSnapshot});
+            else {VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.MaterializeFrames(slot,changedSnapshot);VrBattlegrounds.Editor.Arsenal.ArsenalSupportModuleBuilder.Materialize(slot,changedSnapshot);}
+            VrBattlegrounds.Arsenal.ArsenalPresentationResolver.ValidateMaterialized(slot,changedSnapshot);updated=true;
+        }catch(System.Exception){}
+        check("Changed-card inputs materialize before complete stale validation",updated);
+        // RejectManualPlacement is the existing supply rule, not a new return policy.
+        var reject=typeof(VrBattlegrounds.Arsenal.ArsenalMagazineOffer).GetMethod("RejectManualPlacement",System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic);
+        check("Magazine stock-return rule remains rejection",reject!=null && !(bool)reject.Invoke(null,new object[]{null}));
+    }
+    var actual=new System.Collections.Generic.List<object>();
+    foreach(var s in demo.GetComponentsInChildren<VrBattlegrounds.Arsenal.FirearmSlotController>(true))actual.Add(new {slot=s.name,weaponNear=s.ItemAnchor.ActivateOnCompatibleNear!=null?s.ItemAnchor.ActivateOnCompatibleNear.name:null,magazineNear=s.MagAnchor.ActivateOnCompatibleNear!=null?s.MagAnchor.ActivateOnCompatibleNear.name:null});
+    UnityEngine.Object.DestroyImmediate(owner);owner=null;
+    foreach(var a in allocations)if(a!=null)UnityEngine.Object.DestroyImmediate(a);allocations.Clear();
+    UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(fixture);
+    check("All native scenes and dirty flags unchanged",before==sceneState());
+    check("Foreign material full JSON and dirty unchanged",foreignBefore==UnityEditor.EditorJsonUtility.ToJson(foreign)+"|"+UnityEditor.EditorUtility.IsDirty(foreign));
+    var report=new{checks=checks,failures=failures,canonicalNearBindings=actual,headset=false};
+    System.IO.File.WriteAllText("tmp/arsenal-visual-stage/support-hint-probe.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));return report;
+} finally {
+    if(owner!=null)UnityEngine.Object.DestroyImmediate(owner);
+    foreach(var a in allocations)if(a!=null)UnityEngine.Object.DestroyImmediate(a);
+    if(fixture.IsValid())UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(fixture);
+    if(active.IsValid() && active.isLoaded)UnityEngine.SceneManagement.SceneManager.SetActiveScene(active);
+}

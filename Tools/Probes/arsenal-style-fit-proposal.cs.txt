@@ -1,0 +1,97 @@
+// Editor-only предложение канонических targets: сохраняется в tmp, не в native Style.
+var fitSource=style;style=UnityEngine.Object.Instantiate(fitSource);
+style.hideFlags=UnityEngine.HideFlags.HideAndDontSave;
+var fitMaterial=new UnityEngine.Material(UnityEngine.Shader.Find("Universal Render Pipeline/Unlit"));
+fitMaterial.hideFlags=UnityEngine.HideFlags.HideAndDontSave;
+var fitSO=new UnityEditor.SerializedObject(style);
+fitSO.FindProperty("_supportModule").objectReferenceValue=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Art/Arsenal/DDDQuickhook/DDDQuickhook.prefab");
+fitSO.FindProperty("_returnReadyMaterial").objectReferenceValue=fitMaterial;
+var fitZones=fitSO.FindProperty("_zones");
+for(int zi=0;zi<fitZones.arraySize;zi++) {
+    var z=fitZones.GetArrayElementAtIndex(zi);bool shelf=z.FindPropertyRelative("Zone").enumValueIndex==1;
+    var mag=z.FindPropertyRelative("MagazineTarget").FindPropertyRelative("Position").vector3Value;
+    if(shelf)mag.z=.255f;else mag.y=.71f;
+    z.FindPropertyRelative("MagazineTarget").FindPropertyRelative("Position").vector3Value=mag;
+    if(!shelf) {
+        var card=z.FindPropertyRelative("CardTarget").FindPropertyRelative("Position").vector3Value;card.y=.905f;
+        z.FindPropertyRelative("CardTarget").FindPropertyRelative("Position").vector3Value=card;
+    }
+    var defaultSupports=z.FindPropertyRelative("Supports");defaultSupports.arraySize=3;
+    for(int j=0;j<3;j++) {
+        var support=defaultSupports.GetArrayElementAtIndex(j);support.FindPropertyRelative("Role").stringValue=j==0?"Stock":j==1?"Forearm":"Spare";
+        support.FindPropertyRelative("AnchorKind").enumValueIndex=j==2?1:0;
+        support.FindPropertyRelative("SlotPose").FindPropertyRelative("Position").vector3Value=shelf?
+            new UnityEngine.Vector3(j==2?.11f:-.06f,.016f,j==0?.08f:j==1?.20f:.26f):
+            new UnityEngine.Vector3(j==2?.11f:-.07f,j==0?.20f:j==1?.60f:.60f,-.10013445f);
+        support.FindPropertyRelative("SlotPose").FindPropertyRelative("EulerAngles").vector3Value=new UnityEngine.Vector3(0,-90,0);
+    }
+}
+fitSO.ApplyModifiedPropertiesWithoutUndo();
+// Не учитывать выключенных предков и subtree подсветки: тот же visibility contract, что у render-only копии.
+System.Func<UnityEngine.GameObject,UnityEngine.Matrix4x4,UnityEngine.Bounds> fitBounds=(prefab,matrix)=>{
+    bool found=false;var result=new UnityEngine.Bounds();
+    foreach(var mesh in prefab.GetComponentsInChildren<UnityEngine.MeshFilter>(true)) {
+        var renderer=mesh.GetComponent<UnityEngine.MeshRenderer>();if(mesh.sharedMesh==null || renderer==null || !renderer.enabled)continue;
+        bool visible=true;for(var t=mesh.transform;t!=null;t=t.parent) {
+            if(!t.gameObject.activeSelf || t.name=="GrabHighlight" || t.name=="__ItemPreview__" || t.name=="__MagPreview__")visible=false;
+            if(t==prefab.transform)break;
+        }
+        if(!visible)continue;
+        var projection=matrix*prefab.transform.worldToLocalMatrix*mesh.transform.localToWorldMatrix;
+        foreach(var vertex in mesh.sharedMesh.vertices) {var p=projection.MultiplyPoint3x4(vertex);if(!found){result=new UnityEngine.Bounds(p,UnityEngine.Vector3.zero);found=true;}else result.Encapsulate(p);}
+    }
+    if(!found)throw new System.InvalidOperationException("Нет видимой mesh geometry: "+prefab.name);
+    return result;
+};
+var fitRows=new System.Collections.Generic.List<object>();
+foreach(var fitSlot in source.Slots) {
+    var info=fitSlot.WeaponData;var zone=fitSlot.PresentationZone;
+    var resolved=VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Resolve(info,zone,style);
+    var item=resolved.ItemTarget;var magazine=resolved.MagazineTarget;
+    if(info.WeaponId=="Machinegun" || info.WeaponId=="Revolver")item.Position.x=-.025f;
+    if(info.WeaponId=="MP5K")item.Position.x=-.035f;
+    if(info.WeaponId=="Shotgun")item.Position.x+=.012f;
+    if(info.WeaponId=="SRM12")item.Position.y+=.015f;
+    if(info.WeaponId=="R08")magazine.Position.x=.09f;
+    if(info.WeaponId=="Machinegun")magazine.Position.y=.76f;
+    if(info.WeaponId=="Shotgun")magazine.Position.y=.78f;
+    if(info.WeaponId=="MKR9") {item.Position.x=-.11f;item.Position.z+=.015f;magazine.Position.x=.14f;}
+    if(info.WeaponId=="MP5K")magazine.Position.x=.155f;
+    var root=VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.RootPose(info.WeaponPrefab,item.Position,item.Rotation);
+    var itemBounds=fitBounds(info.WeaponPrefab,UnityEngine.Matrix4x4.TRS(root.Position,root.Rotation,info.WeaponPrefab.transform.localScale));
+    var magRoot=VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.RootPose(info.MagazinePrefab,magazine.Position,magazine.Rotation);
+    var magBounds=fitBounds(info.MagazinePrefab,UnityEngine.Matrix4x4.TRS(magRoot.Position,magRoot.Rotation,info.MagazinePrefab.transform.localScale));
+    bool shelf=zone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf;
+    // Один editor proposal, после bake runtime не выполняет эту коррекцию.
+    if(shelf) {item.Position.y+=.037f-itemBounds.min.y;magazine.Position.y+=.037f-magBounds.min.y;}
+    else {item.Position.z+=-.10413445f-itemBounds.max.z;magazine.Position.z+=-.10413445f-magBounds.max.z;}
+    root=VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.RootPose(info.WeaponPrefab,item.Position,item.Rotation);
+    itemBounds=fitBounds(info.WeaponPrefab,UnityEngine.Matrix4x4.TRS(root.Position,root.Rotation,info.WeaponPrefab.transform.localScale));
+    magRoot=VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.RootPose(info.MagazinePrefab,magazine.Position,magazine.Rotation);
+    magBounds=fitBounds(info.MagazinePrefab,UnityEngine.Matrix4x4.TRS(magRoot.Position,magRoot.Rotation,info.MagazinePrefab.transform.localScale));
+    fitSO.Update();var exceptions=fitSO.FindProperty("_exceptions");int n=exceptions.arraySize;exceptions.arraySize=n+1;var e=exceptions.GetArrayElementAtIndex(n);
+    e.FindPropertyRelative("Weapon").objectReferenceValue=info;e.FindPropertyRelative("Zone").enumValueIndex=(int)zone;
+    e.FindPropertyRelative("OverrideItem").boolValue=true;e.FindPropertyRelative("OverrideMagazine").boolValue=true;e.FindPropertyRelative("OverrideCard").boolValue=false;
+    e.FindPropertyRelative("ItemTarget").FindPropertyRelative("Position").vector3Value=item.Position;e.FindPropertyRelative("ItemTarget").FindPropertyRelative("EulerAngles").vector3Value=item.EulerAngles;
+    e.FindPropertyRelative("MagazineTarget").FindPropertyRelative("Position").vector3Value=magazine.Position;e.FindPropertyRelative("MagazineTarget").FindPropertyRelative("EulerAngles").vector3Value=magazine.EulerAngles;
+    e.FindPropertyRelative("CardSize").vector2Value=resolved.CardSize;e.FindPropertyRelative("CardFontSize").floatValue=resolved.CardFontSize;
+    e.FindPropertyRelative("OverrideSupports").boolValue=true;var supports=e.FindPropertyRelative("Supports");supports.arraySize=3;
+    float weaponX=UnityEngine.Mathf.Clamp(itemBounds.center.x,-.14f,.14f);
+    for(int j=0;j<3;j++) {
+        var p=supports.GetArrayElementAtIndex(j);p.FindPropertyRelative("Role").stringValue=j==0?"Stock":j==1?"Forearm":"Spare";
+        p.FindPropertyRelative("AnchorKind").enumValueIndex=j==2?1:0;
+        UnityEngine.Vector3 position;
+        if(shelf) position=new UnityEngine.Vector3(j==2?magBounds.center.x:weaponX,.016f,j==2?magBounds.center.z:UnityEngine.Mathf.Lerp(itemBounds.min.z,itemBounds.max.z,j==0?.3f:.72f));
+        else position=new UnityEngine.Vector3(j==2?magBounds.center.x:weaponX,j==2?magBounds.min.y-.013f:UnityEngine.Mathf.Lerp(itemBounds.min.y,UnityEngine.Mathf.Min(.90f,itemBounds.max.y),j==0?.10f:.62f),-.10013445f);
+        p.FindPropertyRelative("SlotPose").FindPropertyRelative("Position").vector3Value=position;
+        p.FindPropertyRelative("SlotPose").FindPropertyRelative("EulerAngles").vector3Value=new UnityEngine.Vector3(0,-90,0);
+    }
+    fitSO.ApplyModifiedPropertiesWithoutUndo();
+    System.Func<UnityEngine.Vector3,float[]> v=b=>new[]{b.x,b.y,b.z};
+    fitRows.Add(new {weapon=info.WeaponId,zone=zone.ToString(),itemTarget=v(item.Position),magazineTarget=v(magazine.Position),itemMin=v(itemBounds.min),itemMax=v(itemBounds.max),magMin=v(magBounds.min),magMax=v(magBounds.max),
+        horizontalInside=itemBounds.min.x>=-.2f && itemBounds.max.x<=.2f && magBounds.min.x>=-.2f && magBounds.max.x<=.2f,
+        verticalInside=shelf?(itemBounds.min.z>=-.26f && itemBounds.max.z<=.40f && magBounds.min.z>=-.26f && magBounds.max.z<=.4f):(itemBounds.min.y>=.0054f && magBounds.min.y>=.0054f && magBounds.max.y<=.9946f)});
+}
+VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Validate(style);
+System.IO.File.WriteAllText("tmp/arsenal-visual-stage/fit-proposal-style.json",UnityEditor.EditorJsonUtility.ToJson(style,true));
+System.IO.File.WriteAllText("tmp/arsenal-visual-stage/fit-proposal-bounds.json",Newtonsoft.Json.JsonConvert.SerializeObject(fitRows,Newtonsoft.Json.Formatting.Indented));

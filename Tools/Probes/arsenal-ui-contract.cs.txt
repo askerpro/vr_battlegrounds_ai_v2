@@ -1,0 +1,91 @@
+// Только под собственной Unity lease вне Play Mode. Не вызывает writer сборки или SDK sync.
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "NOT RUN: human Play Mode";
+var editorAssembly = typeof(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow).Assembly;
+var status = editorAssembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalEditorStatus", true);
+var actions = editorAssembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalEditorActions", true);
+var preflight = editorAssembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalBuildPreflight", true);
+var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static;
+System.Func<string,object[],object> read = (name,args) => status.GetMethod(name,flags).Invoke(null,args);
+var rows = new System.Collections.Generic.List<object>(); int passed=0, failed=0;
+System.Action<string,bool,string> check = (name,ok,detail) => { rows.Add(new { name=name, pass=ok, detail=detail }); if(ok)passed++;else failed++; };
+System.Func<System.Action,bool> rejected = action => { try { action(); return false; } catch(System.Reflection.TargetInvocationException e) { return e.InnerException is System.InvalidOperationException; } catch(System.InvalidOperationException) { return true; } };
+var folders = new[] { "Assets/Data/Weapons", "Assets/Data/Maps", "Assets/Prefabs/Weapons", "Assets/Prefabs/Arsenal", "Assets/Art/Weapons", "Assets/Art/HandPoses", "Assets/Audio/SFX/Weapons/Kinemation" };
+var before = (System.Collections.Generic.Dictionary<string,string>)read("Snapshot", new object[] { folders });
+var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+int handle=scene.handle; bool dirty=scene.isDirty; var roots=scene.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(id=>id).ToArray();
+int previewCount=UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount;
+var all = UnityEditor.AssetDatabase.FindAssets("t:WeaponInfo",new[] {"Assets/Data/Weapons"}).Select(UnityEditor.AssetDatabase.GUIDToAssetPath)
+    .Select(p=>UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>(p)).ToArray();
+var kinMethod=actions.GetMethod("Kinemation",flags); var handsMethod=actions.GetMethod("Hands",flags);
+var supported=all.Where(w=>kinMethod.Invoke(null,new object[]{w})!=null || handsMethod.Invoke(null,new object[]{w})!=null).ToArray();
+var validate=preflight.GetMethod("Validate",flags);
+foreach(var weapon in supported)
+{
+    try { string report=(string)validate.Invoke(null,new object[]{new[]{weapon}}); check("pure recipe "+weapon.WeaponId,true,report); }
+    catch(System.Reflection.TargetInvocationException e) { check("pure recipe "+weapon.WeaponId,false,e.InnerException.ToString()); }
+}
+// Изменяется только transient recipe; источники и каталожные ассеты не переименовываются.
+var validKin=VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.SRM12;
+var brokenKin=VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.R08;
+brokenKin.ShotSound="tmp/arsenal-ui-contract/__missing-second-recipe-shot.wav";
+var validateKin=preflight.GetMethod("Validate",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static,null,new[]{typeof(VrBattlegrounds.Editor.Gameplay.KinemationWeaponRecipe)},null);
+int writerCalls=0; bool missingShot=rejected(()=>{validateKin.Invoke(null,new object[]{validKin});validateKin.Invoke(null,new object[]{brokenKin});writerCalls++;});
+check("second missing ShotSound rejected before writer",missingShot && writerCalls==0,"writerCalls="+writerCalls);
+var clones=new System.Collections.Generic.List<UnityEngine.Object>();
+System.Func<string,UnityEngine.GameObject,UnityEngine.GameObject,VrBattlegrounds.Arsenal.WeaponInfo> info=(id,weapon,mag)=>
+{
+    var obj=UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Arsenal.WeaponInfo>();clones.Add(obj);
+    var so=new UnityEditor.SerializedObject(obj);so.FindProperty("_weaponId").stringValue=id;
+    so.FindProperty("_weaponPrefab").objectReferenceValue=weapon;so.FindProperty("_magazinePrefab").objectReferenceValue=mag;so.ApplyModifiedPropertiesWithoutUndo();return obj;
+};
+try
+{
+    var one=info("probe1",all[0].WeaponPrefab,all[0].MagazinePrefab);
+    var two=info("probe2",all[1].WeaponPrefab,all[1].MagazinePrefab);
+    var entries=new System.Collections.Generic.List<VrBattlegrounds.Arsenal.ArsenalPreset.Entry>{new VrBattlegrounds.Arsenal.ArsenalPreset.Entry{Weapon=one,Zone=VrBattlegrounds.Arsenal.ArsenalPresentationZone.Pegboard}};
+    check("valid transient entries",read("ValidateEntries",new object[]{entries})==null,"");
+    var noMag=info("noMag",one.WeaponPrefab,null);entries[0]=new VrBattlegrounds.Arsenal.ArsenalPreset.Entry{Weapon=noMag};
+    check("missing magazine",read("ValidateEntries",new object[]{entries})!=null,"");
+    entries[0]=new VrBattlegrounds.Arsenal.ArsenalPreset.Entry{Weapon=one,Zone=(VrBattlegrounds.Arsenal.ArsenalPresentationZone)99};
+    check("unknown zone",read("ValidateEntries",new object[]{entries})!=null,"");
+    entries[0]=new VrBattlegrounds.Arsenal.ArsenalPreset.Entry{Weapon=one};
+    var duplicatePrefab=info("otherID",one.WeaponPrefab,one.MagazinePrefab);entries.Add(new VrBattlegrounds.Arsenal.ArsenalPreset.Entry{Weapon=duplicatePrefab});
+    check("duplicate weapon prefab",read("ValidateEntries",new object[]{entries})!=null,"");
+    entries[1]=new VrBattlegrounds.Arsenal.ArsenalPreset.Entry{Weapon=info("probe1",two.WeaponPrefab,two.MagazinePrefab)};
+    check("duplicate weapon ID",read("ValidateEntries",new object[]{entries})!=null,"");
+    entries.RemoveAt(1);var preset=UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Arsenal.ArsenalPreset>();clones.Add(preset);
+    check("empty preset ID",read("ValidatePreset",new object[]{preset,entries})!=null,"");
+    var tracer=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Weapons/Effects/Tracer_Default.prefab");
+    check("registry missing NI before write",rejected(()=>VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.RegisterNetworkPrefabs(new[]{info("noNI",tracer,one.MagazinePrefab)})),"");
+}
+finally { foreach(var obj in clones) UnityEngine.Object.DestroyImmediate(obj); }
+check("current scene accepted",!rejected(()=>read("RequireScene",new object[]{scene,scene.path})),"");
+check("stale scene path rejected",rejected(()=>read("RequireScene",new object[]{scene,scene.path+".stale"})),"");
+check("invalid scene rejected",rejected(()=>read("RequireScene",new object[]{default(UnityEngine.SceneManagement.Scene),scene.path})),"");
+var dirtyMethod=actions.GetMethod("DirtySavedAssets",flags);
+var allDirty=UnityEngine.Resources.FindObjectsOfTypeAll<UnityEngine.Object>().Where(o=>o!=null && UnityEditor.EditorUtility.IsPersistent(o) && UnityEditor.EditorUtility.IsDirty(o)).ToArray();
+var ignored=allDirty.Where(o=>!UnityEditor.AssetDatabase.GetAssetPath(o).StartsWith("Assets/") || !UnityEditor.AssetDatabase.IsNativeAsset(o)).ToArray();
+var dirtyPaths=(string[])dirtyMethod.Invoke(null,null);
+check("dirty Library/imported resources excluded",ignored.All(o=>!dirtyPaths.Contains(UnityEditor.AssetDatabase.GetAssetPath(o))),"ignored="+ignored.Length+"; nativeDirty="+dirtyPaths.Length);
+var fixture=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>("Assets/Art/Weapons/Interaction/InsertionHighlight.mat");bool wasDirty=UnityEditor.EditorUtility.IsDirty(fixture);
+try
+{
+    UnityEditor.EditorUtility.SetDirty(fixture);
+    check("true native dirty material detected",((string[])dirtyMethod.Invoke(null,null)).Contains(UnityEditor.AssetDatabase.GetAssetPath(fixture)),"");
+    check("dirty writer guard rejects without save",rejected(()=>actions.GetMethod("RequireSavedAssets",System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic).Invoke(null,new object[]{true})),"");
+    check("dirty input guard rejects",rejected(()=>actions.GetMethod("RequireCleanAssets",flags).Invoke(null,new object[]{new[]{UnityEditor.AssetDatabase.GetAssetPath(fixture)}})),"");
+}
+finally { if(!wasDirty) UnityEditor.EditorUtility.ClearDirty(fixture); }
+System.IO.Directory.CreateDirectory("tmp/arsenal-ui-contract");string hashFile="tmp/arsenal-ui-contract/hash-input.txt";
+System.IO.File.WriteAllText(hashFile,"before");System.IO.File.WriteAllText(hashFile+".meta","before-meta");
+var fileBefore=(System.Collections.Generic.Dictionary<string,string>)read("Snapshot",new object[]{new[]{hashFile}});
+System.IO.File.WriteAllText(hashFile+".meta","after-meta");
+check("metadata change invalidates snapshot",!string.IsNullOrEmpty((string)read("Diff",new object[]{fileBefore,read("Snapshot",new object[]{new[]{hashFile}})})),"");
+System.IO.File.WriteAllText(hashFile,"after");
+check("input file change invalidates snapshot",!string.IsNullOrEmpty((string)read("Diff",new object[]{fileBefore,read("Snapshot",new object[]{new[]{hashFile}})})),"");
+var after=(System.Collections.Generic.Dictionary<string,string>)read("Snapshot",new object[]{folders});
+check("all tracked asset files and metadata unchanged",string.IsNullOrEmpty((string)read("Diff",new object[]{before,after})),"files="+before.Count);
+check("scene context roots dirty and preview count unchanged",UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle==handle && scene.isDirty==dirty && roots.SequenceEqual(scene.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(id=>id)) && UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount==previewCount,"");
+var result=new { passed=passed,failed=failed,supported=supported.Length,rows=rows };
+System.IO.File.WriteAllText("tmp/arsenal-ui-contract/results.json",Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+return result;

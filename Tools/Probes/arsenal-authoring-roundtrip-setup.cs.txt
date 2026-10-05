@@ -1,0 +1,32 @@
+// Под внешней own lease: загрузить только собственный стенд, создать один заведомо отсутствующий Style fixture, не сохранять scene с временной ссылкой.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)throw new System.InvalidOperationException("Editor busy");
+const string clonePath="Assets/Editor/VR_Battlegrounds/Arsenal/ProbeFixtures/AuthoringRoundtripStyle.asset";
+const string scenePath="Assets/Scenes/Debug/ArsenalLayoutAuthoring.unity";
+if(System.IO.File.Exists(clonePath)||System.IO.File.Exists(clonePath+".meta")||!string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(clonePath))||UnityEditor.AssetDatabase.LoadMainAssetAtPath(clonePath)!=null)throw new System.InvalidOperationException("Fixture path/meta/GUID already exists; no overwrite");
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++)if(UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty)throw new System.InvalidOperationException("Foreign dirty scene");
+if(UnityEngine.SceneManagement.SceneManager.GetSceneByPath(scenePath).isLoaded)throw new System.InvalidOperationException("Own stand already loaded");
+var style=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>("Assets/Data/Weapons/IndustrialPegboardPresentation.asset");
+if(style==null||UnityEditor.EditorUtility.IsDirty(style)||!UnityEditor.AssetDatabase.IsValidFolder("Assets/Editor/VR_Battlegrounds/Arsenal/ProbeFixtures"))throw new System.InvalidOperationException("Clean canonical source/folder missing");
+var paths=new[]{"Assets/Data/Weapons/IndustrialPegboardPresentation.asset","Assets/Data/Weapons/FullDemoArsenal.asset","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Scenes/Lobby.unity","Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat","Assets/Materials/Arsenal/IndustrialSupportMetal.mat"};
+var assets=paths.Select(p=>new{path=p,json=UnityEditor.EditorJsonUtility.ToJson(UnityEditor.AssetDatabase.LoadMainAssetAtPath(p)),dirty=UnityEditor.EditorUtility.IsDirty(UnityEditor.AssetDatabase.LoadMainAssetAtPath(p)),disk=Convert.ToBase64String(System.IO.File.ReadAllBytes(p)),meta=System.IO.File.ReadAllText(p+".meta")}).ToArray();
+var scenes=new System.Collections.Generic.List<object>();
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!s.isLoaded||UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(s))continue;scenes.Add(new{path=s.path,handle=s.handle,dirty=s.isDirty,rows=s.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<UnityEngine.Component>(true)).Where(c=>c!=null).Select(c=>new{id=c.GetInstanceID(),json=UnityEditor.EditorJsonUtility.ToJson(c)}).ToArray()});}
+var active=UnityEngine.SceneManagement.SceneManager.GetActiveScene().path;var selection=UnityEditor.Selection.instanceIDs;
+var own=default(UnityEngine.SceneManagement.Scene);VrBattlegrounds.Arsenal.ArsenalPresentationStyle clone=null;string createdGuid=null;
+try {
+own=UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath,UnityEditor.SceneManagement.OpenSceneMode.Additive);
+var stand=own.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoringStand>(true)).Single();
+VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.ValidateStand(stand);
+clone=UnityEngine.Object.Instantiate(style);clone.name="AuthoringRoundtripStyle";UnityEditor.AssetDatabase.CreateAsset(clone,clonePath);createdGuid=UnityEditor.AssetDatabase.AssetPathToGUID(clonePath);UnityEditor.AssetDatabase.SaveAssetIfDirty(clone);
+var so=new UnityEditor.SerializedObject(stand);so.FindProperty("_style").objectReferenceValue=clone;so.ApplyModifiedPropertiesWithoutUndo();
+VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.RestorePrepared(stand,true);UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(own);
+var state=new{clonePath,cloneGuid=UnityEditor.AssetDatabase.AssetPathToGUID(clonePath),scenePath,sceneGuid=UnityEditor.AssetDatabase.AssetPathToGUID(scenePath),active,selection,assets,scenes};
+System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-roundtrip-state.json",Newtonsoft.Json.JsonConvert.SerializeObject(state,Newtonsoft.Json.Formatting.Indented));
+return new{staged=true,slots=stand.Slots.Count,dirty=own.isDirty,cloneGuid=UnityEditor.AssetDatabase.AssetPathToGUID(clonePath)};
+} catch {
+ if(own.IsValid()&&own.isLoaded)UnityEditor.SceneManagement.EditorSceneManager.CloseScene(own,true);
+ if(createdGuid!=null&&UnityEditor.AssetDatabase.AssetPathToGUID(clonePath)==createdGuid)UnityEditor.AssetDatabase.DeleteAsset(clonePath);
+ if(clone!=null&&!UnityEditor.EditorUtility.IsPersistent(clone))UnityEngine.Object.DestroyImmediate(clone);
+ var original=UnityEngine.SceneManagement.SceneManager.GetSceneByPath(active);if(original.isLoaded)UnityEngine.SceneManagement.SceneManager.SetActiveScene(original);UnityEditor.Selection.instanceIDs=selection;
+ throw;
+}

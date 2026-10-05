@@ -1,0 +1,268 @@
+// Одноразовый диагностический probe. Под замком Unity, вне Play Mode.
+// Physics.ComputePenetration сравнивает геометрию своих временных клонов; симуляция мира не запускается.
+// Собственный SDK manager: прежние singleton-ссылки восстанавливаются, shared manager не используется.
+if (UnityEngine.Application.isPlaying) return "HARNESS REFUSED: выполнять только вне Play Mode.";
+if (Mirror.NetworkClient.active || Mirror.NetworkServer.active) return "HARNESS REFUSED: сеть должна быть выключена.";
+var output = new System.Text.StringBuilder();
+var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+System.Func<System.Type, System.Reflection.FieldInfo> singletonField = type =>
+{
+    while (type != null)
+    {
+        var field = type.GetField("s_instance", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly);
+        if (field != null) return field;
+        type = type.BaseType;
+    }
+    throw new System.Exception("Не найден singleton backing field SDK.");
+};
+var grabField = singletonField(typeof(UltimateXR.Manipulation.UxrGrabManager));
+var coreField = singletonField(typeof(UltimateXR.Core.UxrManager));
+object savedGrab = grabField.GetValue(null), savedCore = coreField.GetValue(null);
+int savedSyncDepth = UltimateXR.Core.StateSync.UxrStateSyncImplementer.SyncCallDepth;
+if (savedSyncDepth != 0) return "HARNESS REFUSED: SDK sync depth уже не нулевой.";
+// Снимок SDK unique-id реестров: AddComponent/OnValidate у временных объектов
+// создаёт implementer даже вне Play. Их удаление не должно затронуть прежние записи.
+var registrySnapshots = new System.Collections.Generic.List<System.Tuple<System.Collections.IDictionary, System.Collections.Generic.List<System.Collections.DictionaryEntry>>>();
+var uniqueBase = typeof(UltimateXR.Core.Unique.UxrUniqueIdImplementer);
+var uniqueTyped = typeof(UltimateXR.Core.Unique.UxrUniqueIdImplementer<>).MakeGenericType(typeof(UltimateXR.Core.Components.UxrComponent));
+foreach (var item in new[] { System.Tuple.Create(uniqueBase, "s_allImplementers"), System.Tuple.Create(uniqueBase, "s_implementerTypes"), System.Tuple.Create(uniqueBase, "s_idCollisions"), System.Tuple.Create(uniqueTyped, "s_componentsById") })
+{
+    var field = item.Item1.GetField(item.Item2, System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+    if (field == null) throw new System.Exception("Изменился unique-id реестр SDK: " + item.Item2);
+    var dictionary = (System.Collections.IDictionary)field.GetValue(null);
+    var snapshot = new System.Collections.Generic.List<System.Collections.DictionaryEntry>();
+    foreach (System.Collections.DictionaryEntry entry in dictionary) snapshot.Add(entry);
+    registrySnapshots.Add(System.Tuple.Create(dictionary, snapshot));
+}
+var preview = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+UnityEngine.GameObject managers = null;
+UltimateXR.Manipulation.UxrGrabManager manager = null;
+bool managerAwake = false;
+// EditMode Awake не регистрирует компоненты. Помечаем только свои clones как уже
+// unregistered перед Destroy, иначе базовый SDK Unregister может создать глобальный UxrManager.
+System.Action<UnityEngine.GameObject> prepareDestroy = target =>
+{
+    var property = typeof(UltimateXR.Core.Components.UxrComponent).GetProperty("UniqueIdImplementer", flags);
+    foreach (var component in target.GetComponentsInChildren<UltimateXR.Core.Components.UxrComponent>(true))
+    {
+        var implementer = property.GetValue(component);
+        implementer.GetType().GetProperty("IsUnregistered").GetSetMethod(true).Invoke(implementer, new object[] { true });
+    }
+};
+try
+{
+managers = new UnityEngine.GameObject("shotgun_physics_probe_managers");
+managers.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(managers, preview);
+// Core manager — локальный получатель cleanup, без Awake/Start/global scene subscriptions.
+var core = managers.AddComponent<UltimateXR.Core.UxrManager>();
+coreField.SetValue(null, core);
+manager = managers.AddComponent<UltimateXR.Manipulation.UxrGrabManager>();
+grabField.SetValue(null, manager);
+typeof(UltimateXR.Manipulation.UxrGrabManager).GetMethod("Awake", flags).Invoke(manager, null);
+managerAwake = true;
+if (!object.ReferenceEquals(UltimateXR.Manipulation.UxrGrabManager.Instance, manager)) throw new System.Exception("SDK выбрал не наш manager.");
+output.AppendLine("HARNESS: isolated preview scene, own SDK singleton pointers, no Play/network/global asset saves.");
+foreach (var path in new[] { "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab", "Assets/Prefabs/Weapons/Herrington/Herrington.prefab" })
+{
+    var instance = UnityEngine.Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path), managers.transform, false);
+    instance.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    UltimateXR.Mechanics.Weapons.UxrFirearmWeapon firearm = null;
+    UltimateXR.Manipulation.UxrGrabbableObject detachedShell = null;
+    UltimateXR.Manipulation.UxrGrabbableObject replacementShell = null;
+    VrBattlegrounds.Weapons.WeaponInternalAmmoEjection ejectionPolicy = null;
+    bool subscribed = false;
+    try
+    {
+        var frame = instance.transform.Find("MeshContainer");
+        var anchor = frame.Find("MagAnchor").GetComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+        var magazine = anchor.GetComponentInChildren<UltimateXR.Mechanics.Weapons.UxrFirearmMag>(true);
+        var shell = magazine.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+        detachedShell = shell;
+        var box = shell.transform.Find("Mesh").GetComponent<UnityEngine.BoxCollider>();
+        if (box == null || box.isTrigger) throw new System.Exception("Нет nontrigger BoxCollider патрона: " + path);
+        var weaponBody = instance.GetComponent<UnityEngine.Rigidbody>();
+        var shellBody = shell.GetComponent<UnityEngine.Rigidbody>();
+        var bodyColliders = new System.Collections.Generic.List<UnityEngine.Collider>();
+        foreach (var c in instance.GetComponentsInChildren<UnityEngine.Collider>(true))
+            if (!c.isTrigger && c.enabled && c.gameObject.activeInHierarchy && c.attachedRigidbody == weaponBody) bodyColliders.Add(c);
+        if (bodyColliders.Count == 0) throw new System.Exception("Нет активных body colliders: " + path);
+        var externalPosition = anchor.DropProximityTransform.position;
+        var externalRotation = anchor.DropProximityTransform.rotation;
+        var initialPosition = shell.transform.position;
+        var initialRotation = shell.transform.rotation;
+        var initialEnabled = box.enabled;
+        int rounds = magazine.Rounds, capacity = magazine.Capacity;
+        System.Func<string, float> reportPenetration = label =>
+        {
+            int overlaps = 0;
+            float maximum = 0f;
+            foreach (var body in bodyColliders)
+            {
+                UnityEngine.Vector3 direction;
+                float depth;
+                bool overlapsBody = UnityEngine.Physics.ComputePenetration(box, box.transform.position, box.transform.rotation,
+                    body, body.transform.position, body.transform.rotation, out direction, out depth);
+                if (overlapsBody && depth > 1e-6f)
+                {
+                    overlaps++; maximum = UnityEngine.Mathf.Max(maximum, depth);
+                    output.AppendLine("  " + label + " overlap=" + body.name + "/" + body.GetType().Name + " depth_m=" + depth.ToString("F6") + " MTD=" + direction.ToString("F6"));
+                }
+            }
+            output.AppendLine("  " + label + " overlaps=" + overlaps + " maxDepth_m=" + maximum.ToString("F6") + " colliderEnabled=" + box.enabled + " dynamic=" + !shellBody.isKinematic + " shellPos=" + frame.InverseTransformPoint(shell.transform.position).ToString("F6"));
+            return maximum;
+        };
+        output.AppendLine(path + " bodyColliders=" + bodyColliders.Count + " mass=" + shellBody.mass + " collisionDetection=" + shellBody.collisionDetectionMode);
+        // Геометрическая проверка потенциально включённого collider — только на своих clone shapes.
+        box.enabled = true;
+        float innerDepth = reportPenetration("inner_enabled_geometry");
+        shell.transform.position += externalPosition - shell.DropAlignTransform.position;
+        float outerDepth = reportPenetration("external_proxy_geometry");
+
+        // Диагностическая оценка clearance: без изменения production-конфига и без physics simulate.
+        // Если proxy тоже пересекается с convex body, сам возврат в proxy недостаточен.
+        for (int iteration = 0; iteration < 16; iteration++)
+        {
+            bool corrected = false;
+            foreach (var body in bodyColliders)
+            {
+                UnityEngine.Vector3 direction;
+                float depth;
+                if (UnityEngine.Physics.ComputePenetration(box, box.transform.position, box.transform.rotation,
+                    body, body.transform.position, body.transform.rotation, out direction, out depth) && depth > 1e-6f)
+                {
+                    float contactMargin = UnityEngine.Mathf.Max(box.contactOffset, body.contactOffset);
+                    shell.transform.position += direction * (depth + contactMargin);
+                    corrected = true;
+                }
+            }
+            if (!corrected) break;
+        }
+        reportPenetration("external_proxy_after_MTD_clearance");
+        output.AppendLine("  clearanceDeltaWorld=" + (shell.transform.position - externalPosition).ToString("F6") + " proxyRotationSame=" + (UnityEngine.Quaternion.Angle(initialRotation, externalRotation) < 0.001f));
+        shell.transform.SetPositionAndRotation(initialPosition, initialRotation);
+        box.enabled = initialEnabled;
+
+        if (manager != null)
+        {
+            typeof(UltimateXR.Manipulation.UxrGrabbableObject).GetMethod("Awake", flags).Invoke(shell, null);
+            ejectionPolicy = anchor.GetComponent<VrBattlegrounds.Weapons.WeaponInternalAmmoEjection>();
+            if (ejectionPolicy == null || ejectionPolicy.EjectionPose == null) throw new System.Exception("FAIL: internal anchor не имеет безопасной EjectionPose: " + path);
+            typeof(VrBattlegrounds.Weapons.WeaponInternalAmmoEjection).GetMethod("OnEnable", flags).Invoke(ejectionPolicy, null);
+            firearm = instance.GetComponent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>();
+            typeof(UltimateXR.Mechanics.Weapons.UxrFirearmWeapon).GetMethod("Awake", flags).Invoke(firearm, null);
+            typeof(UltimateXR.Mechanics.Weapons.UxrFirearmWeapon).GetMethod("OnEnable", flags).Invoke(firearm, null);
+            subscribed = true;
+            typeof(UltimateXR.Mechanics.Weapons.UxrFirearmWeapon).GetMethod("Start", flags).Invoke(firearm, null);
+            var collisionPolicy = instance.GetComponent<VrBattlegrounds.Interaction.AnchoredItemCollisionIgnore>();
+            collisionPolicy.SyncIgnoredCollisions();
+            output.AppendLine("  SDK_START currentAnchor=" + (shell.CurrentAnchor == anchor) + " colliderDisabled=" + !box.enabled + " kinematic=" + shellBody.isKinematic + " firstBodyIgnored=" + UnityEngine.Physics.GetIgnoreCollision(box, bodyColliders[0]));
+            int removeEvents = 0;
+            System.EventHandler<UltimateXR.Core.StateSync.UxrSyncEventArgs> capture = (sender, evt) =>
+            {
+                var method = evt as UltimateXR.Core.StateSync.UxrMethodInvokedSyncEventArgs;
+                if (method != null && method.MethodName == "RemoveObjectFromAnchor") removeEvents++;
+            };
+            manager.StateChanged += capture;
+            bool ejected;
+            UltimateXR.Manipulation.UxrGrabbableObject ejectedShell;
+            try { ejected = VrBattlegrounds.Weapons.MagazineEject.TryEject(instance.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>(), out ejectedShell); }
+            finally { manager.StateChanged -= capture; }
+            collisionPolicy.SyncIgnoredCollisions();
+            float afterRemoveDepth = reportPenetration("SDK_REMOVE_after_collision_restore");
+            bool atEjectionPose = (shell.DropAlignTransform.position - ejectionPolicy.EjectionPose.position).sqrMagnitude < 1e-10f;
+            output.AppendLine("  SDK_REMOVE ejected=" + ejected + " correctShell=" + (ejectedShell == shell) + " syncRemoveEvents=" + removeEvents + " detached=" + (shell.CurrentAnchor == null && shell.transform.parent == null) + " colliderEnabled=" + box.enabled + " dynamic=" + !shellBody.isKinematic + " firstBodyIgnored=" + UnityEngine.Physics.GetIgnoreCollision(box, bodyColliders[0]) + " penetrationRisk=" + (afterRemoveDepth > 1e-6f));
+            output.AppendLine("  safeEjectionPose=" + atEjectionPose + " savedPose=" + frame.InverseTransformPoint(ejectionPolicy.EjectionPose.position).ToString("F6"));
+            if (!ejected || ejectedShell != shell || removeEvents != 1 || !atEjectionPose || afterRemoveDepth > 1e-6f || shell.CurrentAnchor != null || !box.enabled || shellBody.isKinematic || UnityEngine.Physics.GetIgnoreCollision(box, bodyColliders[0]))
+                throw new System.Exception("FAIL: actual author Remove нарушил ejection invariant: " + path);
+            shell.transform.position += externalPosition - shell.DropAlignTransform.position;
+            reportPenetration("SDK_REMOVED_at_external_proxy");
+
+            // Другой патрон из отдельного ammo prefab: silent Place и Remove.
+            string ammoPath = path.Contains("/FabarmSDASS/") ? "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS_Ammo.prefab" : path.Substring(0, path.Length - ".prefab".Length) + "_mag.prefab";
+            var replacement = UnityEngine.Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(ammoPath), managers.transform, false);
+            replacement.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+            replacementShell = replacement.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+            typeof(UltimateXR.Manipulation.UxrGrabbableObject).GetMethod("Awake", flags).Invoke(replacementShell, null);
+            if (!manager.PlaceObject(replacementShell, anchor, UltimateXR.Manipulation.UxrPlacementOptions.None, false)) throw new System.Exception("FAIL: silent Place replacement.");
+            // Вне Play явно доставляем Mono lifecycle notification, как SDK parenting в игре.
+            typeof(VrBattlegrounds.Weapons.WeaponInternalAmmoEjection).GetMethod("OnTransformChildrenChanged", flags).Invoke(ejectionPolicy, null);
+            var subscribedShell = typeof(VrBattlegrounds.Weapons.WeaponInternalAmmoEjection).GetField("_magazine", flags).GetValue(ejectionPolicy);
+            if (!object.ReferenceEquals(subscribedShell, replacementShell)) throw new System.Exception("FAIL: replacement shell не подписан.");
+            collisionPolicy.SyncIgnoredCollisions();
+            // SDK фиксирует CurrentPlacedObject до завершения SmoothPlacement.
+            // Восстанавливаем возможную промежуточную ориентацию немедленного eject.
+            replacementShell.transform.rotation = replacementShell.transform.rotation * UnityEngine.Quaternion.Euler(90f, 0f, 0f);
+            output.AppendLine("  replacement_inflight_rotation=" + UnityEngine.Quaternion.Angle(replacementShell.DropAlignTransform.rotation, anchor.AlignTransform.rotation));
+            removeEvents = 0; manager.StateChanged += capture;
+            try { manager.RemoveObjectFromAnchor(replacementShell, false, true); }
+            finally { manager.StateChanged -= capture; }
+            collisionPolicy.SyncIgnoredCollisions();
+            bool replacementAtPose = (replacementShell.DropAlignTransform.position - ejectionPolicy.EjectionPose.position).sqrMagnitude < 1e-10f;
+            int replacementOverlaps = 0;
+            var replacementBox = replacementShell.transform.Find("Mesh").GetComponent<UnityEngine.BoxCollider>();
+            foreach (var body in bodyColliders)
+                if (UnityEngine.Physics.ComputePenetration(replacementBox, replacementBox.transform.position, replacementBox.transform.rotation, body, body.transform.position, body.transform.rotation, out _, out float depth) && depth > 1e-6f) replacementOverlaps++;
+            output.AppendLine("  SILENT_REPLACEMENT_REMOVE atPose=" + replacementAtPose + " overlaps=" + replacementOverlaps + " syncRemoveEvents=" + removeEvents + " dynamic=" + !replacementShell.GetComponent<UnityEngine.Rigidbody>().isKinematic);
+            if (!replacementAtPose || replacementOverlaps != 0 || removeEvents != 1 || replacementShell.CurrentAnchor != null || replacementShell.GetComponent<UnityEngine.Rigidbody>().isKinematic)
+                throw new System.Exception("FAIL: replacement/silent Remove ejection invariant.");
+        }
+        else output.AppendLine("  SDK_REMOVE SKIPPED: отсутствует живой UxrGrabManager; выше только shape geometry.");
+        output.AppendLine("  ammoUnchanged=" + (rounds == magazine.Rounds && capacity == magazine.Capacity) + " rounds=" + magazine.Rounds + " capacity=" + magazine.Capacity + " innerVsExternalDepth=" + innerDepth.ToString("F6") + "/" + outerDepth.ToString("F6"));
+    }
+    finally
+    {
+        try
+        {
+            if (ejectionPolicy != null) typeof(VrBattlegrounds.Weapons.WeaponInternalAmmoEjection).GetMethod("OnDisable", flags).Invoke(ejectionPolicy, null);
+            if (subscribed) typeof(UltimateXR.Mechanics.Weapons.UxrFirearmWeapon).GetMethod("OnDisable", flags).Invoke(firearm, null);
+            prepareDestroy(instance);
+            if (firearm != null) typeof(UltimateXR.Mechanics.Weapons.UxrFirearmWeapon).GetMethod("OnDestroy", flags).Invoke(firearm, null);
+        }
+        finally
+        {
+            if (replacementShell != null)
+            {
+                prepareDestroy(replacementShell.gameObject);
+                UnityEngine.Object.DestroyImmediate(replacementShell.gameObject);
+            }
+            // Remove unparents shell: очистка одного weapon root уже его не охватывает.
+            if (detachedShell != null && !detachedShell.transform.IsChildOf(instance.transform))
+            {
+                prepareDestroy(detachedShell.gameObject);
+                UnityEngine.Object.DestroyImmediate(detachedShell.gameObject);
+            }
+            UnityEngine.Object.DestroyImmediate(instance);
+        }
+    }
+}
+}
+finally
+{
+    try
+    {
+        try
+        {
+            if (managers != null)
+            {
+                prepareDestroy(managers);
+                if (managerAwake) typeof(UltimateXR.Manipulation.UxrGrabManager).GetMethod("OnDestroy", flags).Invoke(manager, null);
+                UnityEngine.Object.DestroyImmediate(managers);
+            }
+        }
+        finally { UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(preview); }
+    }
+    finally
+    {
+        grabField.SetValue(null, savedGrab);
+        coreField.SetValue(null, savedCore);
+        typeof(UltimateXR.Core.StateSync.UxrStateSyncImplementer).GetProperty("SyncCallDepth").GetSetMethod(true).Invoke(null, new object[] { savedSyncDepth });
+        foreach (var snapshot in registrySnapshots)
+        {
+            snapshot.Item1.Clear();
+            foreach (var entry in snapshot.Item2) snapshot.Item1.Add(entry.Key, entry.Value);
+        }
+    }
+}
+output.AppendLine("HARNESS restoredPointers=" + (object.ReferenceEquals(grabField.GetValue(null), savedGrab) && object.ReferenceEquals(coreField.GetValue(null), savedCore)) + " syncDepth=" + UltimateXR.Core.StateSync.UxrStateSyncImplementer.SyncCallDepth);
+return output.ToString();

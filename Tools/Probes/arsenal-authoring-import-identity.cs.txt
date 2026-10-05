@@ -1,0 +1,47 @@
+// Только read-only классификация domain reload: native компоненты отдельно от DontSave renderer previews.
+var before=Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tmp/arsenal-visual-stage/authoring-source-native-before.json"));
+var prior=before["rows"].ToDictionary(r=>(int)r["id"],r=>(string)r["json"]);
+var native=new System.Collections.Generic.Dictionary<int,string>();var transient=new System.Collections.Generic.List<string>();
+var failures=new System.Collections.Generic.List<string>();int sdk=0;int stationSdk=0;int network=0;
+var creator=typeof(VrBattlegrounds.Editor.Arsenal.ArsenalSlotPreview);
+var records=(System.Collections.IDictionary)creator.GetField("Records",System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic).GetValue(null);
+var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+int ownedRoots=0;var seenRoots=new System.Collections.Generic.HashSet<int>();
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++) {
+    var scene=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!scene.isLoaded || UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(scene))continue;
+    if(scene.isDirty)failures.Add("dirty native scene "+scene.path);
+    foreach(var root in scene.GetRootGameObjects())foreach(var c in root.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null) {
+        bool preview=false;UnityEngine.GameObject previewRoot=null;
+        for(var t=c.transform;t!=null;t=t.parent)if((t.name=="__ItemPreview__" || t.name=="__MagPreview__") && (t.gameObject.hideFlags&UnityEngine.HideFlags.DontSave)!=0)previewRoot=t.gameObject;
+        if(previewRoot!=null && records.Contains(previewRoot)) {
+            var record=records[previewRoot];var type=record.GetType();
+            var owner=(VrBattlegrounds.Arsenal.ArsenalSlotController)type.GetField("Owner",flags).GetValue(record);
+            var source=(UnityEngine.GameObject)type.GetField("Source",flags).GetValue(record);
+            var anchorId=(int)type.GetField("AnchorId",flags).GetValue(record);
+            var expected=previewRoot.name=="__ItemPreview__"?owner.WeaponData.WeaponPrefab:owner.WeaponData.MagazinePrefab;
+            var anchor=previewRoot.name=="__ItemPreview__"?owner.ItemAnchor:((VrBattlegrounds.Arsenal.FirearmSlotController)owner).MagAnchor;
+            preview=source==expected && UnityEditor.EditorUtility.IsPersistent(source) && previewRoot.transform.parent==anchor.transform && anchor.GetInstanceID()==anchorId;
+            if(preview && seenRoots.Add(previewRoot.GetInstanceID()))ownedRoots++;
+        }
+        if(previewRoot!=null && !preview)failures.Add("unproven preview creator/source/anchor "+previewRoot.GetInstanceID());
+        var json=UnityEditor.EditorJsonUtility.ToJson(c);
+        if(preview)transient.Add(json);else {native[c.GetInstanceID()]=json;if(c is UltimateXR.Core.Components.UxrComponent){sdk++;if(c.GetComponentInParent<VrBattlegrounds.Arsenal.ArsenalWallController>(true)!=null)stationSdk++;}if(c is Mirror.NetworkIdentity)network++;}
+    }
+}
+foreach(var row in native)if(!prior.ContainsKey(row.Key) || prior[row.Key]!=row.Value)failures.Add("native retained component delta "+row.Key);
+var priorTransient=prior.Where(r=>!native.ContainsKey(r.Key)).Select(r=>r.Value).ToArray();
+System.Func<System.Collections.Generic.IEnumerable<string>,System.Collections.Generic.Dictionary<string,int>> bag=values=>values.GroupBy(x=>x).ToDictionary(g=>g.Key,g=>g.Count());
+var oldBag=bag(priorTransient);var newBag=bag(transient);bool visualSame=oldBag.Count==newBag.Count && oldBag.All(x=>newBag.ContainsKey(x.Key)&&newBag[x.Key]==x.Value);
+if(!visualSame)failures.Add("unmatched prior rows not equivalent to current proven previews");
+foreach(var row in before["assets"]){var a=UnityEditor.AssetDatabase.LoadMainAssetAtPath((string)row["path"]);if(UnityEditor.EditorJsonUtility.ToJson(a)!=(string)row["json"] || UnityEditor.EditorUtility.IsDirty(a)!=(bool)row["dirty"])failures.Add("native asset delta "+row["path"]);}
+var prefabBefore=Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tmp/arsenal-visual-stage/hint-native-before.json"));int prefabComponents=0;
+foreach(var asset in prefabBefore["assets"].Where(a=>((string)a["path"]).Contains("OpenArsenalStation.prefab") || ((string)a["path"]).Contains("LobbyDemoArsenalStation.prefab"))) {
+    var prefab=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>((string)asset["path"]);
+    var actual=new System.Collections.Generic.Dictionary<long,string>();foreach(var c in prefab.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null){string guid;long id;UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(c,out guid,out id);actual[id]=UnityEditor.EditorJsonUtility.ToJson(c);}
+    foreach(var row in asset["components"]){long id=(long)row["id"];prefabComponents++;if(!actual.ContainsKey(id)||actual[id]!=(string)row["json"])failures.Add("prefab retained localID/serialized delta "+asset["path"]+":"+id);}
+    if(actual.Count!=asset["components"].Count())failures.Add("prefab component count delta "+asset["path"]);
+}
+var report=new{nativeRetained=native.Count,sdkRetained=sdk,networkRetained=network,transientBefore=priorTransient.Length,transientAfter=transient.Count,
+    creatorOwnedRoots=ownedRoots,prefabComponentsRetained=prefabComponents,stationSdkRetained=stationSdk,transientSerializedMultisetUnchanged=visualSame,failures=failures,previewChangedSignatures=oldBag.Where(x=>!newBag.ContainsKey(x.Key)||newBag[x.Key]!=x.Value).Take(3).Select(x=>new{json=x.Key,oldCount=x.Value,newCount=newBag.ContainsKey(x.Key)?newBag[x.Key]:0}).ToArray()};
+System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-import-identity.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));
+return new{nativeRetained=native.Count,sdkRetained=sdk,networkRetained=network,creatorOwnedRoots=ownedRoots,prefabComponentsRetained=prefabComponents,stationSdkRetained=stationSdk,transientBefore=priorTransient.Length,transientAfter=transient.Count,transientSerializedMultisetUnchanged=visualSame,failuresCount=failures.Count,failures=failures.Take(5).ToArray()};

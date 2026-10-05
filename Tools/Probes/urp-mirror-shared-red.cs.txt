@@ -1,0 +1,42 @@
+// RED старого SDK callback на безопасном непостоянном shared Material. Настоящий .mat только читается.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)return "NOT RUN: editor busy";
+var reflectionType=typeof(UltimateXR.Rendering.FX.UxrPlanarReflectionUrp);var avatarType=typeof(UltimateXR.Avatar.UxrAvatar);
+var privateInstance=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+var privateStatic=System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic;
+var avatarList=(System.Collections.Generic.List<UltimateXR.Avatar.UxrAvatar>)typeof(UltimateXR.Core.Components.UxrComponent<UltimateXR.Avatar.UxrAvatar>).GetField("s_typeComponents",privateStatic).GetValue(null);
+System.Action<object,string,object> set=(o,n,v)=>o.GetType().GetField(n,privateInstance).SetValue(o,v);
+var localField=avatarType.GetField("s_localAvatar",privateStatic);var initializedField=avatarType.GetField("s_localAvatarReferenceInitialized",privateStatic);
+object oldLocal=localField.GetValue(null),oldInitialized=initializedField.GetValue(null);
+var recursionField=reflectionType.GetField("s_insideRendering",privateStatic);object oldRecursion=recursionField.GetValue(null);
+bool oldCulling=UnityEngine.GL.invertCulling;int oldLights=UnityEngine.QualitySettings.pixelLightCount;var oldRt=UnityEngine.RenderTexture.active;
+var active=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirtyBefore=active.isDirty;
+var preview=UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var holder=UnityEditor.EditorUtility.CreateGameObjectWithHideFlags("OwnUrpMirrorRed",UnityEngine.HideFlags.HideAndDontSave);UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(holder,preview);
+var source=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>("Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat");string originalJson=UnityEditor.EditorJsonUtility.ToJson(source);bool originalDirty=UnityEditor.EditorUtility.IsDirty(source);
+var shared=new UnityEngine.Material(source){name="OwnSafeSharedMirrorFixture",hideFlags=UnityEngine.HideFlags.HideAndDontSave};
+var cameraGo=UnityEditor.EditorUtility.CreateGameObjectWithHideFlags("OwnMirrorInputCamera",UnityEngine.HideFlags.HideAndDontSave);UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(cameraGo,preview);cameraGo.transform.SetParent(holder.transform,false);
+var input=cameraGo.AddComponent<UnityEngine.Camera>();input.scene=preview;input.transform.position=new UnityEngine.Vector3(0,0,-3);input.transform.LookAt(UnityEngine.Vector3.zero);input.clearFlags=UnityEngine.CameraClearFlags.SolidColor;input.nearClipPlane=.05f;input.farClipPlane=20;
+var reflectionGo=UnityEditor.EditorUtility.CreateGameObjectWithHideFlags("OwnMirrorCachedCamera",UnityEngine.HideFlags.HideAndDontSave);UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(reflectionGo,preview);reflectionGo.transform.SetParent(holder.transform,false);reflectionGo.AddComponent<UnityEngine.Skybox>();var reflectionCamera=reflectionGo.AddComponent<UnityEngine.Camera>();reflectionCamera.scene=preview;reflectionCamera.enabled=false;
+var avatarGo=UnityEditor.EditorUtility.CreateGameObjectWithHideFlags("OwnMirrorCameraOwner",UnityEngine.HideFlags.HideAndDontSave);UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(avatarGo,preview);avatarGo.transform.SetParent(holder.transform,false);var avatar=avatarGo.AddComponent<UltimateXR.Avatar.UxrAvatar>();avatarType.GetField("_camera",privateInstance).SetValue(avatar,input);
+var mirrorGo=UnityEditor.EditorUtility.CreateGameObjectWithHideFlags("OwnMirrorSameRenderer",UnityEngine.HideFlags.HideAndDontSave);UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(mirrorGo,preview);mirrorGo.transform.SetParent(holder.transform,false);var renderer=mirrorGo.AddComponent<UnityEngine.MeshRenderer>();renderer.sharedMaterial=shared;var component=mirrorGo.AddComponent<UltimateXR.Rendering.FX.UxrPlanarReflectionUrp>();
+set(component,"_mirrorRenderer",renderer);set(component,"_mirrorTransform",mirrorGo.transform);set(component,"_textureSize",32);set(component,"_oldReflectionTextureSize",32);set(component,"_renderCameraObject",reflectionGo);
+var left=new UnityEngine.RenderTexture(32,32,16){hideFlags=UnityEngine.HideFlags.HideAndDontSave};var right=new UnityEngine.RenderTexture(32,32,16){hideFlags=UnityEngine.HideFlags.HideAndDontSave};set(component,"_reflectionTextureLeft",left);set(component,"_reflectionTextureRight",right);
+((System.Collections.Generic.Dictionary<UnityEngine.Camera,UnityEngine.Camera>)reflectionType.GetField("_reflectionCameras",privateInstance).GetValue(component)).Add(input,reflectionCamera);
+string exception=null;object result=null;
+try{
+ avatarList.Insert(0,avatar);
+ localField.SetValue(null,avatar);initializedField.SetValue(null,true);recursionField.SetValue(null,false);
+ if(UltimateXR.Avatar.UxrAvatar.LocalAvatarCamera!=input)throw new System.InvalidOperationException("Fixture local camera guard not established.");
+ string before=UnityEditor.EditorJsonUtility.ToJson(shared);
+ try{reflectionType.GetMethod("RenderPipelineManager_BeginCameraRendering",privateInstance).Invoke(component,new object[]{default(UnityEngine.Rendering.ScriptableRenderContext),input});}catch(System.Exception e){exception=e.InnerException!=null?e.InnerException.ToString():e.ToString();}
+ bool leftChanged=shared.GetTexture("_ReflectionTexLeft")==left,rightChanged=shared.GetTexture("_ReflectionTexRight")==right;
+ result=new{oldCallbackSharedLeftChanged=leftChanged,oldCallbackSharedRightChanged=rightChanged,sharedSerializedChanged=before!=UnityEditor.EditorJsonUtility.ToJson(shared),red=leftChanged&&rightChanged,reflectionException=exception,realMaterialSerializedUnchanged=originalJson==UnityEditor.EditorJsonUtility.ToJson(source),realMaterialDirtyUnchanged=originalDirty==UnityEditor.EditorUtility.IsDirty(source)};
+ System.IO.Directory.CreateDirectory("tmp/urp-mirror-audit");System.IO.File.WriteAllText("tmp/urp-mirror-audit/shared-red.json",Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+}
+finally{
+ avatarList.Remove(avatar);
+ localField.SetValue(null,oldLocal);initializedField.SetValue(null,oldInitialized);recursionField.SetValue(null,oldRecursion);UnityEngine.GL.invertCulling=oldCulling;UnityEngine.QualitySettings.pixelLightCount=oldLights;UnityEngine.RenderTexture.active=oldRt;
+ UnityEngine.Object.DestroyImmediate(holder);UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(preview);if(shared!=null)UnityEngine.Object.DestroyImmediate(shared);if(left!=null)UnityEngine.Object.DestroyImmediate(left);if(right!=null)UnityEngine.Object.DestroyImmediate(right);
+ localField.SetValue(null,oldLocal);initializedField.SetValue(null,oldInitialized);recursionField.SetValue(null,oldRecursion);UnityEngine.GL.invertCulling=oldCulling;
+}
+return Newtonsoft.Json.JsonConvert.SerializeObject(new{result=result,activeSceneUnchanged=UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle==active.handle,dirtyUnchanged=active.isDirty==dirtyBefore});

@@ -1,0 +1,332 @@
+// ВРЕМЕННЫЙ EDITOR PROBE. Не помещать в Assets и не сохранять сцены/ассеты.
+// Root компилирует этот текст своим Editor helper под Unity lock после выхода человека из Play.
+// До патча: Run(false) требует 4 ожидаемых RED; после патча: Run(true) требует GREEN.
+// Возвращённый отчёт печатает вызывающий код. Этот файл не использует Debug.Log.
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UltimateXR.Manipulation;
+using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Editor.Arsenal;
+using Object = UnityEngine.Object;
+
+namespace VrBattlegrounds.Editor.Probes
+{
+    public static class ArsenalPreviewLifecycleProbe
+    {
+        private sealed class SceneState
+        {
+            public Scene Scene;
+            public bool Dirty;
+            public int[] RootIds;
+        }
+
+        private sealed class Fixture : IDisposable
+        {
+            public GameObject Root, SourceA, SourceB, Magazine;
+            public FirearmSlotController Slot;
+            public UxrGrabbableObjectAnchor ItemAnchor, MagAnchor;
+            public WeaponInfo Info;
+            public Mesh Mesh;
+            public readonly List<GameObject> Escaped = new List<GameObject>();
+
+            public Fixture(Scene scene, string name, bool magazine = false, bool internalAnchor = false)
+            {
+                Root = NewRoot(scene, name);
+                Slot = Child(Root.transform, "Slot").AddComponent<FirearmSlotController>();
+                ItemAnchor = Child(Slot.transform, "ItemAnchor").AddComponent<UxrGrabbableObjectAnchor>();
+                MagAnchor = Child(Slot.transform, "MagAnchor").AddComponent<UxrGrabbableObjectAnchor>();
+                Mesh = new Mesh { name = name + "_OwnMesh", hideFlags = HideFlags.DontSave };
+                Mesh.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+                Mesh.triangles = new[] { 0, 1, 2 };
+                Mesh.RecalculateBounds();
+                SourceA = Source("SourceA", internalAnchor);
+                SourceB = Source("SourceB", false);
+                Magazine = magazine ? Source("MagazineSource", false) : null;
+                Info = ScriptableObject.CreateInstance<WeaponInfo>();
+                Info.hideFlags = HideFlags.DontSave;
+                SetObject(Info, "_weaponPrefab", SourceA);
+                SetObject(Info, "_magazinePrefab", Magazine);
+                SetVector(Info, "_weaponPositionOffset", new Vector3(.13f, .21f, -.17f));
+                SetVector(Info, "_weaponRotationOffset", new Vector3(9f, 24f, -6f));
+                SetObject(Slot, "_weaponInfo", Info);
+                SetObject(Slot, "_itemAnchor", ItemAnchor);
+                SetObject(Slot, "_magAnchor", MagAnchor);
+            }
+
+            private GameObject Source(string name, bool internalAnchor)
+            {
+                GameObject source = Child(Root.transform, name);
+                source.transform.localScale = new Vector3(.83f, .91f, 1.07f);
+                var filter = source.AddComponent<MeshFilter>();
+                filter.sharedMesh = Mesh;
+                var renderer = source.AddComponent<MeshRenderer>();
+                renderer.sharedMaterials = new Material[] { null };
+                renderer.enabled = false;
+                source.AddComponent<Rigidbody>().isKinematic = true;
+                source.AddComponent<BoxCollider>().enabled = false;
+                source.AddComponent<Animator>().enabled = false;
+                GameObject detail = Child(source.transform, "Detail");
+                detail.transform.localPosition = new Vector3(.07f, .12f, -.04f);
+                detail.transform.localRotation = Quaternion.Euler(15f, -20f, 7f);
+                detail.transform.localScale = new Vector3(.7f, 1.2f, .9f);
+                detail.AddComponent<MeshFilter>().sharedMesh = Mesh;
+                detail.AddComponent<MeshRenderer>().sharedMaterials = new Material[] { null };
+                GameObject inactive = Child(source.transform, "InactiveHighlight");
+                inactive.AddComponent<MeshFilter>().sharedMesh = Mesh;
+                inactive.AddComponent<MeshRenderer>().enabled = false;
+                inactive.SetActive(false);
+                if (internalAnchor)
+                    Child(source.transform, "NestedMagAnchor").AddComponent<UxrGrabbableObjectAnchor>();
+                return source;
+            }
+
+            public void Dispose()
+            {
+                if (Slot != null) ArsenalSlotPreview.Destroy(Slot);
+                foreach (GameObject go in Escaped) if (go != null) Object.DestroyImmediate(go);
+                if (Root != null) Object.DestroyImmediate(Root);
+                if (Info != null) Object.DestroyImmediate(Info);
+                if (Mesh != null) Object.DestroyImmediate(Mesh);
+            }
+        }
+
+        public static string Run(bool expectFixed)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode || AnimationMode.InAnimationMode() ||
+                EditorApplication.isCompiling || EditorApplication.isUpdating)
+                throw new InvalidOperationException("Probe требует стабильного Edit Mode и Unity lock вызывающего root.");
+            Scene previousActive = SceneManager.GetActiveScene();
+            SceneState[] previous = Enumerable.Range(0, SceneManager.sceneCount)
+                .Select(i => Capture(SceneManager.GetSceneAt(i))).ToArray();
+            Object previousSelection = Selection.activeObject;
+            var report = new StringBuilder();
+            var failed = new List<string>();
+            int expectedRed = 0;
+            Scene own = default(Scene);
+            Action<string, bool, Action> Check = (name, expectedOldFailure, body) =>
+            {
+                try { body(); report.AppendLine("PASS " + name); }
+                catch (Exception ex)
+                {
+                    report.AppendLine("FAIL " + name + ": " + ex.GetType().Name + " " + ex.Message);
+                    if (!expectFixed && expectedOldFailure) expectedRed++;
+                    else if (!expectFixed && name == "mag-fallback-excludes-source-anchor")
+                        report.AppendLine("ADDITIONAL OLD RED: source nested-anchor fallback.");
+                    else failed.Add(name);
+                }
+            };
+            try
+            {
+                // События SceneOpened существующего lifecycle остаются включены.
+                // Их побочные изменения чужих сцен выявляет инвариант в finally.
+                own = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+                SceneManager.SetActiveScene(own);
+                Check("same-info-new-source", true, () =>
+                {
+                    using (var f = new Fixture(own, "SameInfoNewSource"))
+                    {
+                        GameObject old = ArsenalSlotPreview.Ensure(f.Slot);
+                        Require(old != null, "первое превью отсутствует");
+                        SetObject(f.Info, "_weaponPrefab", f.SourceB);
+                        GameObject updated = ArsenalSlotPreview.Ensure(f.Slot);
+                        Require(updated != null && updated != old, "старый root принят после смены source в том же WeaponInfo");
+                        Require(updated.transform.Find("Detail") != null, "геометрия нового источника отсутствует");
+                    }
+                });
+                Check("external-serialized-anchor", true, () =>
+                {
+                    using (var f = new Fixture(own, "ExternalAnchor"))
+                    {
+                        GameObject external = NewRoot(own, "ProbeExternalAnchor");
+                        f.Escaped.Add(external);
+                        var anchor = external.AddComponent<UxrGrabbableObjectAnchor>();
+                        SetObject(f.Slot, "_itemAnchor", anchor);
+                        GameObject result = ArsenalSlotPreview.Ensure(f.Slot);
+                        if (result != null) f.Escaped.Add(result);
+                        Require(result == null && external.transform.childCount == 0,
+                            "Ensure разрешил внешний serialized anchor");
+                    }
+                });
+                Check("geometry-has-no-gameplay-components", true, () =>
+                {
+                    using (var f = new Fixture(own, "RenderOnly"))
+                    {
+                        GameObject item = ArsenalSlotPreview.Ensure(f.Slot);
+                        Require(item != null, "превью отсутствует");
+                        Component[] bad = item.GetComponentsInChildren<Component>(true)
+                            .Where(c => c != null && !(c is Transform) && !(c is MeshFilter) && !(c is MeshRenderer)).ToArray();
+                        Require(bad.Length == 0, "лишние компоненты: " + string.Join(",", bad.Select(c => c.GetType().Name)));
+                    }
+                });
+                Check("detached-owned-root-cleanup", true, () =>
+                {
+                    using (var f = new Fixture(own, "DetachedRoot"))
+                    {
+                        GameObject item = ArsenalSlotPreview.Ensure(f.Slot);
+                        Require(item != null, "превью отсутствует");
+                        f.Escaped.Add(item);
+                        item.transform.SetParent(null, true);
+                        ArsenalSlotPreview.Destroy(f.Slot);
+                        Require(item == null, "Destroy(slot) потерял detached owned root");
+                    }
+                });
+                Check("mag-fallback-excludes-source-anchor", false, () =>
+                {
+                    using (var f = new Fixture(own, "OwnMagFallback", true, true))
+                    {
+                        SetObject(f.Slot, "_magAnchor", null);
+                        GameObject item = ArsenalSlotPreview.Ensure(f.Slot);
+                        GameObject mag = ArsenalSlotPreview.Find(f.Slot, ArsenalSlotPreview.MagPreviewName);
+                        Require(item != null && mag != null && mag.transform.parent == f.MagAnchor.transform,
+                            "магазин попал в nested source anchor вместо якоря слота");
+                    }
+                });
+                Check("editable-offset-retained-and-geometry-exact", false, () =>
+                {
+                    using (var f = new Fixture(own, "EditableOffsets"))
+                    {
+                        GameObject item = ArsenalSlotPreview.Ensure(f.Slot);
+                        Require(item != null, "превью отсутствует");
+                        Require(item.transform.localScale == f.SourceA.transform.localScale, "потерян исходный root scale");
+                        Transform actual = item.transform.Find("Detail");
+                        Transform expected = f.SourceA.transform.Find("Detail");
+                        Require(actual != null && actual.localPosition == expected.localPosition &&
+                            actual.localScale == expected.localScale && Quaternion.Angle(actual.localRotation, expected.localRotation) < .001f,
+                            "потеряны local TRS дочерней детали");
+                        Require(item.GetComponent<MeshFilter>().sharedMesh == f.Mesh &&
+                            !item.GetComponent<MeshRenderer>().enabled &&
+                            !item.transform.Find("InactiveHighlight").gameObject.activeSelf,
+                            "потеряны mesh/renderer enabled/active состояния");
+                        ArsenalSlotPreview.SetHideFlagsRecursive(item.transform, HideFlags.DontSave);
+                        Vector3 pos = new Vector3(.31f, -.11f, .22f);
+                        Quaternion rot = Quaternion.Euler(-9f, 77f, 22f);
+                        Vector3 scale = new Vector3(.4f, .5f, .6f);
+                        item.transform.SetLocalPositionAndRotation(pos, rot);
+                        item.transform.localScale = scale;
+                        Require(ArsenalSlotPreview.Ensure(f.Slot) == item && item.transform.localPosition == pos &&
+                            item.transform.localScale == scale && Quaternion.Angle(item.transform.localRotation, rot) < .001f,
+                            "Ensure сбросил human offset editing");
+                    }
+                });
+                if (expectFixed)
+                {
+                    Check("unsupported-skinned-fails-without-leak", false, () =>
+                    {
+                        using (var f = new Fixture(own, "UnsupportedSkinned"))
+                        {
+                            Child(f.SourceA.transform, "SkinnedOnly").AddComponent<SkinnedMeshRenderer>();
+                            int before = CountReserved(own);
+                            bool refused = false;
+                            try { ArsenalSlotPreview.Ensure(f.Slot); }
+                            catch (InvalidOperationException) { refused = true; }
+                            Require(refused && CountReserved(own) == before, "skinned source не отклонён либо оставил preview");
+                        }
+                    });
+                    Check("helper-preview-scene-early-guard", false, () =>
+                    {
+                        Scene helper = EditorSceneManager.NewPreviewScene();
+                        try
+                        {
+                            using (var f = new Fixture(helper, "HelperScene"))
+                                Require(ArsenalSlotPreview.Ensure(f.Slot) == null && CountReserved(helper) == 0,
+                                    "Ensure создал preview в helper scene");
+                        }
+                        finally { EditorSceneManager.ClosePreviewScene(helper); }
+                    });
+                    Check("persistent-asset-early-guard", false, () =>
+                    {
+                        // Только AFTER: исходный Ensure может обновить карточку persistent asset.
+                        const string path = "Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab";
+                        GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                        Require(asset != null, "persistent fixture не найден: " + path);
+                        var slot = asset.GetComponentInChildren<FirearmSlotController>(true);
+                        Require(slot != null && EditorUtility.IsPersistent(slot), "persistent slot не найден");
+                        Dictionary<int, string> before = Snapshot(asset);
+                        int[] ownRoots = RootIds(own);
+                        GameObject item = ArsenalSlotPreview.Ensure(slot);
+                        Require(item == null && SameSnapshot(before, Snapshot(asset)) && ownRoots.SequenceEqual(RootIds(own)),
+                            "persistent Ensure изменил asset/card или создал scene root");
+                    });
+                }
+                else report.AppendLine("SKIP persistent-asset-early-guard: old source writes card before guard; unsafe before-red.");
+            }
+            finally
+            {
+                if (previousActive.IsValid() && previousActive.isLoaded) SceneManager.SetActiveScene(previousActive);
+                if (own.IsValid() && own.isLoaded) EditorSceneManager.CloseScene(own, true);
+                Selection.activeObject = previousSelection;
+                foreach (SceneState state in previous)
+                {
+                    if (!state.Scene.IsValid() || !state.Scene.isLoaded || state.Scene.isDirty != state.Dirty ||
+                        !state.RootIds.SequenceEqual(RootIds(state.Scene)))
+                        failed.Add("foreign-scene-invariant:" + state.Scene.path);
+                }
+                if (SceneManager.GetActiveScene() != previousActive || SceneManager.sceneCount != previous.Length)
+                    failed.Add("scene-setup-not-restored");
+            }
+            report.AppendLine(expectFixed ? "AFTER: " + (failed.Count == 0 ? "GREEN" : "FAIL") :
+                "BEFORE: expected RED classes=" + expectedRed + "/4");
+            if (!expectFixed && expectedRed != 4) failed.Add("expected-four-red-classes");
+            if (failed.Count > 0)
+                throw new InvalidOperationException(report + "\nUnexpected failures: " + string.Join("; ", failed));
+            return report.ToString();
+        }
+
+        private static SceneState Capture(Scene scene) => new SceneState
+            { Scene = scene, Dirty = scene.isDirty, RootIds = RootIds(scene) };
+        private static int[] RootIds(Scene scene) => scene.GetRootGameObjects()
+            .Select(go => go.GetInstanceID()).OrderBy(id => id).ToArray();
+        private static GameObject NewRoot(Scene scene, string name)
+        {
+            var go = new GameObject(name) { hideFlags = HideFlags.DontSave };
+            SceneManager.MoveGameObjectToScene(go, scene);
+            return go;
+        }
+        private static GameObject Child(Transform parent, string name)
+        {
+            var go = new GameObject(name) { hideFlags = HideFlags.DontSave };
+            go.transform.SetParent(parent, false);
+            return go;
+        }
+        private static void SetObject(Object target, string field, Object value)
+        {
+            var so = new SerializedObject(target);
+            SerializedProperty property = so.FindProperty(field);
+            Require(property != null, "нет поля " + field);
+            property.objectReferenceValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+        private static void SetVector(Object target, string field, Vector3 value)
+        {
+            var so = new SerializedObject(target);
+            SerializedProperty property = so.FindProperty(field);
+            Require(property != null, "нет поля " + field);
+            property.vector3Value = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+        private static int CountReserved(Scene scene) => scene.GetRootGameObjects()
+            .SelectMany(go => go.GetComponentsInChildren<Transform>(true))
+            .Count(t => t.name == ArsenalSlotPreview.ItemPreviewName || t.name == ArsenalSlotPreview.MagPreviewName);
+        private static Dictionary<int, string> Snapshot(GameObject root)
+        {
+            var result = new Dictionary<int, string>();
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+            {
+                result.Add(t.gameObject.GetInstanceID(), EditorJsonUtility.ToJson(t.gameObject) + "|dirty=" + EditorUtility.IsDirty(t.gameObject));
+                foreach (Component component in t.GetComponents<Component>())
+                    if (component != null) result.Add(component.GetInstanceID(), EditorJsonUtility.ToJson(component) + "|dirty=" + EditorUtility.IsDirty(component));
+            }
+            return result;
+        }
+        private static bool SameSnapshot(Dictionary<int, string> a, Dictionary<int, string> b) =>
+            a.Count == b.Count && a.All(pair => b.TryGetValue(pair.Key, out string value) && value == pair.Value);
+        private static void Require(bool condition, string message)
+        { if (!condition) throw new InvalidOperationException(message); }
+    }
+}

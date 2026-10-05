@@ -1,0 +1,45 @@
+// Узкий перенос пяти заполненных WeaponInfo и проверка неизменности идентичности/физики/ручного цикла.
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "NOT RUN: Play Mode";
+if (Enumerable.Range(0,UnityEngine.SceneManagement.SceneManager.sceneCount).Any(i=>UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty)) return "NOT RUN: dirty scene";
+var infos=new[]{"AK105","R08","SDKGun","Machinegun","ShotGun"}.Select(id=>UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>("Assets/Data/Weapons/"+id+"_Weapon.asset")).ToArray();
+if(infos.Any(info=>info==null||!info.HasBalance||info.WeaponPrefab==null||info.MagazinePrefab==null)) return "NOT RUN: missing input";
+System.Func<UnityEngine.Object,string> identity=candidate=>{string guid;long fileId;return UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(candidate,out guid,out fileId)?guid+":"+fileId:"null";};
+System.Func<UnityEngine.GameObject,string> invariant=asset=>{
+ var rows=new System.Collections.Generic.List<string>{identity(asset)};
+ foreach(var transform in asset.GetComponentsInChildren<UnityEngine.Transform>(true)){
+  string path=UnityEditor.AnimationUtility.CalculateTransformPath(transform,asset.transform);
+  rows.Add(path+"|"+string.Join(",",new[]{transform.localPosition.x,transform.localPosition.y,transform.localPosition.z,transform.localRotation.x,transform.localRotation.y,transform.localRotation.z,transform.localRotation.w,transform.localScale.x,transform.localScale.y,transform.localScale.z}.Select(v=>v.ToString("R",System.Globalization.CultureInfo.InvariantCulture))));
+ }
+ foreach(var component in asset.GetComponentsInChildren<UnityEngine.Component>(true)){
+  if(component is UnityEngine.Rigidbody||component is UnityEngine.Collider||component is UltimateXR.Manipulation.UxrGrabbableObject||component is UltimateXR.Manipulation.UxrGrabbableObjectAnchor||component is Mirror.NetworkIdentity)
+   rows.Add(component.GetType().FullName+"|"+identity(component)+"|"+UnityEditor.EditorJsonUtility.ToJson(component));
+ }
+ var weapon=asset.GetComponent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>();
+ if(weapon!=null){var triggers=new UnityEditor.SerializedObject(weapon).FindProperty("_triggers");for(int index=0;index<triggers.arraySize;index++){var t=triggers.GetArrayElementAtIndex(index);rows.Add("cycle="+t.FindPropertyRelative("_cycleType").intValue+";manual="+t.FindPropertyRelative("_useHasReloadedForSemiAndFullAuto").boolValue+";anchor="+identity(t.FindPropertyRelative("_ammunitionMagAnchor").objectReferenceValue));}}
+ return string.Join("\n",rows);
+};
+var paths=infos.SelectMany(info=>new[]{UnityEditor.AssetDatabase.GetAssetPath(info.WeaponPrefab),UnityEditor.AssetDatabase.GetAssetPath(info.MagazinePrefab)}).Distinct().ToArray();
+var before=paths.ToDictionary(path=>path,path=>invariant(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path)));
+var infoBefore=infos.ToDictionary(info=>UnityEditor.AssetDatabase.GetAssetPath(info),info=>UnityEditor.EditorJsonUtility.ToJson(info));
+var foreignDirty=UnityEngine.Resources.FindObjectsOfTypeAll<UnityEngine.Material>().Where(material=>UnityEditor.EditorUtility.IsPersistent(material)&&UnityEditor.EditorUtility.IsDirty(material)&&!paths.Contains(UnityEditor.AssetDatabase.GetAssetPath(material))).ToDictionary(material=>UnityEditor.AssetDatabase.GetAssetPath(material),material=>UnityEditor.EditorJsonUtility.ToJson(material));
+var mismatches=new System.Collections.Generic.List<string>();
+foreach(var info in infos){
+ var trigger=new UnityEditor.SerializedObject(info.WeaponPrefab.GetComponent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>()).FindProperty("_triggers").GetArrayElementAtIndex(0);
+ var shot=new UnityEditor.SerializedObject(info.WeaponPrefab.GetComponent<UltimateXR.Mechanics.Weapons.UxrProjectileSource>()).FindProperty("_shotTypes").GetArrayElementAtIndex(trigger.FindPropertyRelative("_projectileShotIndex").intValue);
+ float want=VrBattlegrounds.Arsenal.WeaponInfo.DamageAt(info.Damage,info.RangeModifier,shot.FindPropertyRelative("_projectileMaxDistance").floatValue);
+ if(Math.Abs(shot.FindPropertyRelative("_projectileDamageFar").floatValue-want)>.0001f||trigger.FindPropertyRelative("_maxShotFrequency").intValue!=VrBattlegrounds.Arsenal.WeaponInfo.ShotFrequency(info.FireRate)||info.MagazinePrefab.GetComponentInChildren<UltimateXR.Mechanics.Weapons.UxrFirearmMag>(true).Capacity!=info.MagazineSize||info.WeaponPrefab.GetComponentsInChildren<UltimateXR.Mechanics.Weapons.UxrFirearmMag>(true).Any(mag=>mag.Capacity!=info.MagazineSize||mag.Rounds!=info.MagazineSize))mismatches.Add(info.WeaponId);
+}
+string report=VrBattlegrounds.Editor.Gameplay.WeaponBalanceApplier.Apply(infos);
+var failures=new System.Collections.Generic.List<string>();
+foreach(var path in paths)if(before[path]!=invariant(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path)))failures.Add("invariant "+path);
+foreach(var pair in infoBefore)if(pair.Value!=UnityEditor.EditorJsonUtility.ToJson(UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>(pair.Key)))failures.Add("metadata changed "+pair.Key);
+foreach(var pair in foreignDirty){var material=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>(pair.Key);if(material==null||!UnityEditor.EditorUtility.IsDirty(material)||UnityEditor.EditorJsonUtility.ToJson(material)!=pair.Value)failures.Add("foreign dirty material changed/saved "+pair.Key);}
+foreach(var info in infos){
+ var trigger=new UnityEditor.SerializedObject(info.WeaponPrefab.GetComponent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>()).FindProperty("_triggers").GetArrayElementAtIndex(0);
+ var shot=new UnityEditor.SerializedObject(info.WeaponPrefab.GetComponent<UltimateXR.Mechanics.Weapons.UxrProjectileSource>()).FindProperty("_shotTypes").GetArrayElementAtIndex(trigger.FindPropertyRelative("_projectileShotIndex").intValue);
+ float want=VrBattlegrounds.Arsenal.WeaponInfo.DamageAt(info.Damage,info.RangeModifier,shot.FindPropertyRelative("_projectileMaxDistance").floatValue);
+ var mag=info.MagazinePrefab.GetComponentInChildren<UltimateXR.Mechanics.Weapons.UxrFirearmMag>(true);
+ if(Math.Abs(shot.FindPropertyRelative("_projectileDamageNear").floatValue-info.Damage)>.0001f||Math.Abs(shot.FindPropertyRelative("_projectileDamageFar").floatValue-want)>.0001f||Math.Abs(shot.FindPropertyRelative("_penetrationPower").floatValue-info.Penetration)>.0001f||trigger.FindPropertyRelative("_maxShotFrequency").intValue!=VrBattlegrounds.Arsenal.WeaponInfo.ShotFrequency(info.FireRate)||mag.Capacity!=info.MagazineSize||mag.Rounds!=info.MagazineSize)failures.Add("balance "+info.WeaponId);
+ if(info.WeaponPrefab.GetComponentsInChildren<UltimateXR.Mechanics.Weapons.UxrFirearmMag>(true).Any(installed=>installed.Capacity!=info.MagazineSize||installed.Rounds!=info.MagazineSize))failures.Add("installed magazine "+info.WeaponId);
+}
+return new{report=report,beforeMismatches=mismatches.ToArray(),failures=failures.ToArray(),checkedPrefabs=paths.Length,foreignDirtyPreserved=foreignDirty.Count};

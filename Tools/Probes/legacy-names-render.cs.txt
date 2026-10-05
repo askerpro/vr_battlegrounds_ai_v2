@@ -1,0 +1,75 @@
+var output = new System.Collections.Generic.List<string>();
+var names = new[] { "Gun", "Rifle", "Pump" };
+var paths = new[] {
+    "Assets/Prefabs/Weapons/GunReal/Gun_real.prefab",
+    "Assets/Prefabs/Weapons/M16/M16_Rifle_prefab.prefab",
+    "Assets/Prefabs/Weapons/ShotgunReal/Shotgun_real.prefab"
+};
+System.IO.Directory.CreateDirectory("tmp/weapon-identification");
+for (int index = 0; index < names.Length; index++)
+{
+    var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(paths[index]);
+    if (asset == null) throw new System.InvalidOperationException(paths[index]);
+    var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+    var rt = new RenderTexture(1600, 900, 24);
+    var previous = RenderTexture.active;
+    try
+    {
+        bool first = true;
+        var bounds = new Bounds();
+        foreach (var filter in asset.GetComponentsInChildren<MeshFilter>(true))
+        {
+            var sourceRenderer = filter.GetComponent<MeshRenderer>();
+            if (filter.sharedMesh == null || sourceRenderer == null || !sourceRenderer.enabled) continue;
+            var sourcePath = UnityEditor.AnimationUtility.CalculateTransformPath(filter.transform, asset.transform);
+            if (sourcePath.Contains("GrabHighlight")) continue;
+            var go = new GameObject(filter.name);
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, scene);
+            go.transform.SetPositionAndRotation(filter.transform.position, filter.transform.rotation);
+            go.transform.localScale = filter.transform.lossyScale;
+            go.AddComponent<MeshFilter>().sharedMesh = filter.sharedMesh;
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials = sourceRenderer.sharedMaterials;
+            if (first) { bounds = renderer.bounds; first = false; }
+            else bounds.Encapsulate(renderer.bounds);
+        }
+        if (first) throw new System.InvalidOperationException("Нет обычных MeshFilter: " + paths[index]);
+        var cameraGo = new GameObject("IdentificationCamera");
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(cameraGo, scene);
+        var camera = cameraGo.AddComponent<Camera>();
+        camera.scene = scene; camera.useOcclusionCulling = false;
+        camera.orthographic = true; camera.aspect = (float)rt.width / rt.height;
+        camera.orthographicSize = Mathf.Max(bounds.size.y * .62f, Mathf.Max(bounds.size.x, bounds.size.z) * .62f / camera.aspect);
+        camera.backgroundColor = new Color(.16f, .17f, .19f);
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.nearClipPlane = .01f; camera.farClipPlane = 20f; camera.targetTexture = rt;
+        var lightGo = new GameObject("IdentificationLight");
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(lightGo, scene);
+        var light = lightGo.AddComponent<Light>(); light.type = LightType.Directional; light.intensity = 2f;
+        bool longX = bounds.size.x > bounds.size.z;
+        for (int side = 0; side < 2; side++)
+        {
+            float sign = side == 0 ? 1f : -1f;
+            var direction = longX ? new Vector3(0, 0, sign) : new Vector3(sign, 0, 0);
+            camera.transform.position = bounds.center + direction * 3f;
+            camera.transform.LookAt(bounds.center, Vector3.up);
+            light.transform.rotation = Quaternion.LookRotation(-direction + new Vector3(.15f, -.7f, .15f));
+            camera.Render(); RenderTexture.active = rt;
+            var texture = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+            try
+            {
+                texture.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0); texture.Apply();
+                string path = "tmp/weapon-identification/" + names[index] + "-" + (side == 0 ? "L" : "R") + ".png";
+                System.IO.File.WriteAllBytes(path, texture.EncodeToPNG()); output.Add(path);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(texture); }
+        }
+    }
+    finally
+    {
+        RenderTexture.active = previous;
+        UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+        UnityEngine.Object.DestroyImmediate(rt);
+    }
+}
+return output;

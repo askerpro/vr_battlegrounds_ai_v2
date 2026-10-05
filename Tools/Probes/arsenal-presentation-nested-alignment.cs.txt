@@ -1,0 +1,201 @@
+// Только own lease/EditMode. Изолированный PreviewScene: native assets/обычные сцены не сохраняются.
+if (UnityEngine.Application.isPlaying || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
+    return "NOT RUN: человеческий Play не прерывать.";
+var checks = new System.Collections.Generic.List<object>();
+var failures = new System.Collections.Generic.List<string>();
+System.Action<string, bool> check = (name, pass) => { checks.Add(new { name = name, pass = pass }); if (!pass) failures.Add(name); };
+System.Func<UnityEngine.Vector3, float[]> vec = v => new[] { v.x, v.y, v.z };
+System.Func<string> sceneState = () => {
+    var text = new System.Text.StringBuilder();
+    for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++) {
+        var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+        if (!scene.isLoaded || UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(scene)) continue;
+        text.Append(scene.path).Append('|').Append(scene.isDirty).Append('\n');
+        foreach (var root in scene.GetRootGameObjects()) foreach (var component in root.GetComponentsInChildren<UnityEngine.Component>(true))
+            if (component != null) text.Append(component.GetInstanceID()).Append('|').Append(UnityEditor.EditorJsonUtility.ToJson(component)).Append('\n');
+    }
+    return text.ToString();
+};
+string before = sceneState();
+var foreign = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>("Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat");
+string foreignBefore = UnityEditor.EditorJsonUtility.ToJson(foreign) + "|" + UnityEditor.EditorUtility.IsDirty(foreign);
+var previousActive = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+var sceneFixture = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Additive);
+var allocations = new System.Collections.Generic.List<UnityEngine.Object>();
+UnityEngine.GameObject owner = null;
+try {
+    owner = new UnityEngine.GameObject("ArsenalPresentationNestedFixture") { hideFlags = UnityEngine.HideFlags.HideAndDontSave };
+    owner.SetActive(false);
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(owner, sceneFixture);
+    System.Func<string, UnityEngine.Transform, UnityEngine.Transform> node = (name, parent) => {
+        var go = new UnityEngine.GameObject(name) { hideFlags = UnityEngine.HideFlags.HideAndDontSave };
+        go.SetActive(false); UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, sceneFixture);
+        go.transform.SetParent(parent, false); return go.transform;
+    };
+    var slotRoot = node("Slot", owner.transform);
+    slotRoot.position = new UnityEngine.Vector3(2f, -.5f, 7f);
+    slotRoot.rotation = UnityEngine.Quaternion.Euler(11f, 37f, -9f);
+    slotRoot.localScale = UnityEngine.Vector3.one * 2f;
+    var slot = slotRoot.gameObject.AddComponent<VrBattlegrounds.Arsenal.FirearmSlotController>();
+    var binding = slotRoot.gameObject.AddComponent<VrBattlegrounds.Arsenal.ArsenalStationPresetBinding>();
+    var anchorRoot = node("ItemAnchor", slotRoot);
+    anchorRoot.localScale = UnityEngine.Vector3.one * .9f;
+    var anchor = anchorRoot.gameObject.AddComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+    var alignment = node("Align", anchorRoot);
+    alignment.localPosition = new UnityEngine.Vector3(.13f, .07f, -.11f);
+    alignment.localRotation = UnityEngine.Quaternion.Euler(17f, 33f, 11f);
+    alignment.localScale = UnityEngine.Vector3.one * .8f;
+    var anchorSO = new UnityEditor.SerializedObject(anchor);
+    anchorSO.FindProperty("_alignTransformUseSelf").boolValue = false;
+    anchorSO.FindProperty("_alignTransform").objectReferenceValue = alignment;
+    anchorSO.ApplyModifiedPropertiesWithoutUndo();
+    string alignmentLocalBefore = UnityEditor.EditorJsonUtility.ToJson(alignment);
+    var magRoot = node("MagAnchor", slotRoot);
+    var magAnchor = magRoot.gameObject.AddComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+    var sourceRoot = node("Source", owner.transform);
+    sourceRoot.localScale = UnityEngine.Vector3.one * .7f;
+    sourceRoot.localRotation = UnityEngine.Quaternion.Euler(13f, 24f, 17f);
+    var source = sourceRoot.gameObject.AddComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    var middle = node("DropParent", sourceRoot);
+    middle.localPosition = new UnityEngine.Vector3(.03f, -.04f, .02f);
+    middle.localRotation = UnityEngine.Quaternion.Euler(9f, -21f, 14f);
+    middle.localScale = UnityEngine.Vector3.one * .8f;
+    var drop = node("Drop", middle);
+    drop.localPosition = new UnityEngine.Vector3(.11f, -.07f, .05f);
+    drop.localRotation = UnityEngine.Quaternion.Euler(-7f, 26f, 12f);
+    var sourceSO = new UnityEditor.SerializedObject(source);
+    sourceSO.FindProperty("_dropAlignTransformUseSelf").boolValue = false;
+    sourceSO.FindProperty("_dropAlignTransform").objectReferenceValue = drop;
+    sourceSO.FindProperty("_dropSnapMode").enumValueIndex = 3;
+    sourceSO.ApplyModifiedPropertiesWithoutUndo();
+    var info = UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Arsenal.WeaponInfo>(); allocations.Add(info);
+    info.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    var infoSO = new UnityEditor.SerializedObject(info);
+    infoSO.FindProperty("_weaponPrefab").objectReferenceValue = sourceRoot.gameObject;
+    infoSO.FindProperty("_magazinePrefab").objectReferenceValue = sourceRoot.gameObject;
+    infoSO.ApplyModifiedPropertiesWithoutUndo();
+    var style = UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>(); allocations.Add(style);
+    style.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    var styleSO = new UnityEditor.SerializedObject(style); var zones = styleSO.FindProperty("_zones"); zones.arraySize = 2;
+    for (int i = 0; i < 2; i++) {
+        var zone = zones.GetArrayElementAtIndex(i); zone.FindPropertyRelative("Zone").enumValueIndex = i;
+        zone.FindPropertyRelative("CardSize").vector2Value = new UnityEngine.Vector2(.15f, .16f);
+        zone.FindPropertyRelative("CardFontSize").floatValue = .16f;
+        zone.FindPropertyRelative("Supports").ClearArray();
+        foreach (string key in new[] { "ItemTarget", "MagazineTarget", "CardTarget" }) {
+            var pose = zone.FindPropertyRelative(key);
+            pose.FindPropertyRelative("Position").vector3Value = new UnityEngine.Vector3(.13f, .45f, -.08f);
+            pose.FindPropertyRelative("EulerAngles").vector3Value = new UnityEngine.Vector3(-19f, 42f, 8f);
+        }
+    }
+    styleSO.ApplyModifiedPropertiesWithoutUndo();
+    var preset = UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Arsenal.ArsenalPreset>(); allocations.Add(preset);
+    preset.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    var presetSO = new UnityEditor.SerializedObject(preset);
+    presetSO.FindProperty("_presetId").stringValue = "nested-fixture";
+    presetSO.FindProperty("_presentationStyle").objectReferenceValue = style;
+    var entries = presetSO.FindProperty("_entries"); entries.arraySize = 1;
+    entries.GetArrayElementAtIndex(0).FindPropertyRelative("Weapon").objectReferenceValue = info;
+    entries.GetArrayElementAtIndex(0).FindPropertyRelative("Zone").enumValueIndex = 0;
+    presetSO.ApplyModifiedPropertiesWithoutUndo(); binding.ConfigureEditorPresentationPreset(preset);
+    var slotSO = new UnityEditor.SerializedObject(slot);
+    slotSO.FindProperty("_weaponInfo").objectReferenceValue = info;
+    slotSO.FindProperty("_itemAnchor").objectReferenceValue = anchor;
+    slotSO.FindProperty("_magAnchor").objectReferenceValue = magAnchor;
+    slotSO.FindProperty("_presentationZone").enumValueIndex = 0; slotSO.ApplyModifiedPropertiesWithoutUndo();
+    var resolved = VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.Resolve(slot);
+    VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.MaterializeFrames(slot, resolved);
+    check("whole-anchor-compensation-target", (alignment.position - slotRoot.TransformPoint(resolved.ItemTarget.Position)).sqrMagnitude < 1e-10f && UnityEngine.Quaternion.Angle(alignment.rotation, slotRoot.rotation * resolved.ItemTarget.Rotation) < .001f);
+    check("authored-align-relative-TRS-preserved", alignmentLocalBefore == UnityEditor.EditorJsonUtility.ToJson(alignment));
+    var reference = UnityEngine.Object.Instantiate(sourceRoot.gameObject); reference.transform.SetParent(anchor.AlignTransform, true);
+    reference.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    var referenceGrab = reference.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    UltimateXR.Extensions.Unity.TransformExt.ApplyAlignment(reference.transform, referenceGrab.DropAlignTransform, alignment);
+    var expectedPosition = reference.transform.position; var expectedRotation = reference.transform.rotation; var expectedScale = reference.transform.lossyScale;
+    var projected = VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.RootPose(sourceRoot.gameObject, alignment.position, alignment.rotation);
+    check("pure-nested-SDK-position", (projected.Position - expectedPosition).sqrMagnitude < 1e-10f);
+    check("pure-nested-SDK-rotation", UnityEngine.Quaternion.Angle(projected.Rotation, expectedRotation) < .001f);
+    // Batch1 RED: old ApplyAligned ошибочно умножает drop offset на AlignTransform.lossyScale.
+    var candidate = UnityEngine.Object.Instantiate(sourceRoot.gameObject); candidate.transform.SetParent(anchor.AlignTransform, true);
+    candidate.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.ApplyWeapon(slot, candidate.transform);
+    check("common-return-nested-SDK-position", (candidate.transform.position - expectedPosition).sqrMagnitude < 1e-10f);
+    check("common-return-nested-SDK-rotation", UnityEngine.Quaternion.Angle(candidate.transform.rotation, expectedRotation) < .001f);
+    check("common-return-worldScale-preserved", (candidate.transform.lossyScale - expectedScale).sqrMagnitude < 1e-10f);
+    var renderPreview = node("RenderOnlyPreview", anchorRoot);
+    renderPreview.localScale = VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.ProjectionLocalScale(sourceRoot.gameObject, anchorRoot, resolved);
+    var previewPose = VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.ItemLocalPose(slot, false, resolved);
+    renderPreview.SetLocalPositionAndRotation(previewPose.Position, previewPose.Rotation);
+    check("preview-nested-SDK-position", (renderPreview.position - expectedPosition).sqrMagnitude < 1e-10f);
+    check("preview-nested-SDK-rotation", UnityEngine.Quaternion.Angle(renderPreview.rotation, expectedRotation) < .001f);
+    check("preview-physical-source-worldScale", (renderPreview.lossyScale - sourceRoot.localScale).sqrMagnitude < 1e-10f);
+    var sample = VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.CreateDisplaySample(slot, false);
+    VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.ApplyWeapon(slot, sample.transform);
+    check("editor-sample-nested-SDK-position", (sample.transform.position - expectedPosition).sqrMagnitude < 1e-10f);
+    check("editor-sample-nested-SDK-rotation", UnityEngine.Quaternion.Angle(sample.transform.rotation, expectedRotation) < .001f);
+    check("editor-sample-physical-source-worldScale", (sample.transform.lossyScale - sourceRoot.localScale).sqrMagnitude < 1e-10f);
+    // Actual SDK interpolation + end event; no transport/controller/headset claim.
+    var grab = candidate.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    typeof(UltimateXR.Manipulation.UxrGrabbableObject).GetProperty("CurrentAnchor").SetValue(grab, anchor, null);
+    int ended = 0; anchor.SmoothPlaceTransitionEnded += (sender, args) => ended++;
+    candidate.transform.position += new UnityEngine.Vector3(.2f, -.1f, .15f);
+    candidate.transform.rotation = UnityEngine.Quaternion.Euler(32f, -16f, 7f);
+    var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+    typeof(UltimateXR.Manipulation.UxrGrabbableObject).GetMethod("StartSmoothAnchorPlacement", flags).Invoke(grab, null);
+    typeof(UltimateXR.Manipulation.UxrGrabbableObject).GetMethod("UpdateSmoothAnchorPlacement", flags).Invoke(grab, new object[] { 1f });
+    check("actual-SDK-smooth-end-position", (candidate.transform.position - expectedPosition).sqrMagnitude < 1e-10f);
+    check("actual-SDK-smooth-end-rotation", UnityEngine.Quaternion.Angle(candidate.transform.rotation, expectedRotation) < .001f);
+    check("actual-SDK-smooth-end-worldScale", (candidate.transform.lossyScale - expectedScale).sqrMagnitude < 1e-10f);
+    check("actual-SDK-smooth-end-event", ended == 1);
+    VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.ApplyWeapon(slot, candidate.transform);
+    check("common-after-smooth-no-snap-position", (candidate.transform.position - expectedPosition).sqrMagnitude < 1e-10f);
+    check("common-after-smooth-no-scale-change", (candidate.transform.lossyScale - expectedScale).sqrMagnitude < 1e-10f);
+    check("source-prefab-root-scale-preserved", sourceRoot.localScale == UnityEngine.Vector3.one * .7f);
+    var cardRoot = node("WeaponCard", slotRoot);
+    var card = cardRoot.gameObject.AddComponent<VrBattlegrounds.Arsenal.ArsenalPriceTag>();
+    VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.ApplyCard(slot, cardRoot, resolved);
+    string cardBefore = UnityEditor.EditorJsonUtility.ToJson(cardRoot) + UnityEditor.EditorJsonUtility.ToJson(card);
+    string slotBefore = UnityEditor.EditorJsonUtility.ToJson(slot);
+    styleSO.Update();
+    styleSO.FindProperty("_zones").GetArrayElementAtIndex(0).FindPropertyRelative("CardTarget").FindPropertyRelative("Position").vector3Value += new UnityEngine.Vector3(.03f, 0f, 0f);
+    styleSO.ApplyModifiedPropertiesWithoutUndo();
+    var ensured = VrBattlegrounds.Editor.Arsenal.ArsenalSlotPreview.Ensure(slot);
+    check("changed-style-Ensure-produces-transient-item", ensured != null && (ensured.hideFlags & UnityEngine.HideFlags.DontSave) != 0);
+    check("changed-style-Ensure-real-card-json-unchanged", cardBefore == UnityEditor.EditorJsonUtility.ToJson(cardRoot) + UnityEditor.EditorJsonUtility.ToJson(card));
+    check("changed-style-Ensure-slot-json-unchanged", slotBefore == UnityEditor.EditorJsonUtility.ToJson(slot));
+    check("changed-style-Ensure-reports-stale-card", !string.IsNullOrEmpty(VrBattlegrounds.Editor.Arsenal.ArsenalSlotPreview.PresentationError(slot)));
+    var changed = VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.Resolve(slot);
+    VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.ApplyCard(slot, cardRoot, changed);
+    check("explicit-card-projection-updates-target", (slotRoot.InverseTransformPoint(cardRoot.position) - changed.CardTarget.Position).sqrMagnitude < 1e-10f);
+    string cardProjected = UnityEditor.EditorJsonUtility.ToJson(cardRoot);
+    VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.ApplyCard(slot, cardRoot, changed);
+    check("explicit-card-projection-repeat-no-diff", cardProjected == UnityEditor.EditorJsonUtility.ToJson(cardRoot));
+    string anchorBeforeRefusal = UnityEditor.EditorJsonUtility.ToJson(anchorRoot);
+    slotRoot.localScale = new UnityEngine.Vector3(2f, 1f, 2f);
+    bool nonuniformRejected = false;
+    try { VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.MaterializeAnchor(slotRoot, anchor, changed.ItemTarget); } catch (System.InvalidOperationException) { nonuniformRejected = true; }
+    check("nonuniform-frame-refused-before-anchor-write", nonuniformRejected && anchorBeforeRefusal == UnityEditor.EditorJsonUtility.ToJson(anchorRoot));
+    slotRoot.localScale = UnityEngine.Vector3.one * -2f;
+    bool negativeRejected = false;
+    try { VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.MaterializeAnchor(slotRoot, anchor, changed.ItemTarget); } catch (System.InvalidOperationException) { negativeRejected = true; }
+    check("negative-frame-refused-before-anchor-write", negativeRejected && anchorBeforeRefusal == UnityEditor.EditorJsonUtility.ToJson(anchorRoot));
+    slotRoot.localScale = UnityEngine.Vector3.one * 2f;
+    styleSO.Update(); styleSO.FindProperty("_zones").GetArrayElementAtIndex(1).FindPropertyRelative("Zone").enumValueIndex = 0; styleSO.ApplyModifiedPropertiesWithoutUndo();
+    bool duplicateRejected = false;
+    try { VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Resolve(info, VrBattlegrounds.Arsenal.ArsenalPresentationZone.Pegboard, style); } catch (System.InvalidOperationException) { duplicateRejected = true; }
+    check("duplicate-default-zone-refused", duplicateRejected);
+    VrBattlegrounds.Editor.Arsenal.ArsenalSlotPreview.Destroy(slot);
+    reference.transform.SetParent(owner.transform, true); candidate.transform.SetParent(owner.transform, true);
+}
+catch (System.Exception exception) { failures.Add(exception.ToString()); }
+finally {
+    if (owner != null) UnityEngine.Object.DestroyImmediate(owner);
+    foreach (var allocation in allocations) if (allocation != null) UnityEngine.Object.DestroyImmediate(allocation);
+    if (previousActive.IsValid() && previousActive.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(previousActive);
+    UnityEditor.SceneManagement.EditorSceneManager.CloseScene(sceneFixture, true);
+}
+check("loaded-native-scenes-unchanged", before == sceneState());
+check("foreign-native-material-json-dirty-unchanged", foreignBefore == UnityEditor.EditorJsonUtility.ToJson(foreign) + "|" + UnityEditor.EditorUtility.IsDirty(foreign));
+string path = "tmp/arsenal-visual-stage/nested-alignment.json";
+System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(new { checks = checks, failures = failures }, Newtonsoft.Json.Formatting.Indented));
+return new { checks = checks.Count, failures = failures, path = path };

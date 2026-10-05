@@ -1,0 +1,116 @@
+// Read-only asset probe. Первый вызов сохраняет baseline в tmp; следующие сравнивают baseline и текущее состояние.
+// Не Save/import/refresh/Instantiate. Baseline удалить только явно перед новой серией диагностики.
+var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+bool play = UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode;
+var sceneState = new System.Collections.Generic.List<string>();
+for (int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++)
+{
+    var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i); sceneState.Add(s.handle+"|"+s.isDirty+"|"+s.rootCount);
+}
+System.Func<UnityEngine.Vector3,float[]> vector=v=>new[]{v.x,v.y,v.z};
+System.Func<UnityEngine.Quaternion,float[]> rotation=q=>new[]{q.x,q.y,q.z,q.w};
+System.Func<UnityEngine.Object,string> identity=o=>
+{
+    if(o==null)return "null";
+    if(!UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(o,out string guid,out long id))throw new System.Exception("Нет persistent identity "+o.name);
+    return guid+":"+id;
+};
+System.Func<byte[],string> hash=bytes=>
+{
+    using(var sha=System.Security.Cryptography.SHA256.Create())return System.Convert.ToBase64String(sha.ComputeHash(bytes));
+};
+System.Func<UnityEngine.Mesh,Newtonsoft.Json.Linq.JObject> meshData=mesh=>
+{
+    var streams=new System.Collections.Generic.List<string>();
+    var triangles=new System.Collections.Generic.List<string>();
+    var counts=new System.Collections.Generic.List<int>();
+    using(var data=UnityEditor.MeshUtility.AcquireReadOnlyMeshData(mesh))
+    {
+        for(int stream=0;stream<mesh.vertexBufferCount;stream++)streams.Add(hash(data[0].GetVertexData<byte>(stream).ToArray()));
+        for(int sub=0;sub<mesh.subMeshCount;sub++)
+        {
+            int count=data[0].GetSubMesh(sub).indexCount; counts.Add(count/3);
+            using(var indices=new Unity.Collections.NativeArray<int>(count,Unity.Collections.Allocator.Temp))
+            {
+                data[0].GetIndices(indices,sub,true);
+                for(int ti=0;ti<count;ti+=3)triangles.Add(indices[ti]+","+indices[ti+1]+","+indices[ti+2]);
+            }
+        }
+    }
+    triangles.Sort(System.StringComparer.Ordinal);
+    return Newtonsoft.Json.Linq.JObject.FromObject(new{identity=identity(mesh),path=UnityEditor.AssetDatabase.GetAssetPath(mesh),vertexCount=mesh.vertexCount,
+        channels=mesh.GetVertexAttributes().Select(a=>a.attribute+"/"+a.format+"/"+a.dimension+"/"+a.stream).ToArray(),streams=streams,
+        union=hash(System.Text.Encoding.UTF8.GetBytes(string.Join(";",triangles))),submeshTriangles=counts});
+};
+var prefabs=new System.Collections.Generic.Dictionary<string,object>();
+foreach(var path in new[]{"Assets/Prefabs/Weapons/AR15/AR15.prefab","Assets/Prefabs/Weapons/AR15/AR15_Magazine.prefab","Assets/Prefabs/Weapons/TR15/TR15.prefab"})
+{
+    var root=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    if(root==null)throw new System.Exception("Нет prefab "+path);
+    var ni=root.GetComponent<Mirror.NetworkIdentity>();
+    if(ni==null)throw new System.Exception("Нет NI "+path);
+    uint assetId=(uint)new UnityEditor.SerializedObject(ni).FindProperty("_assetId").longValue;
+    var children=root.GetComponentsInChildren<UnityEngine.Transform>(true).Where(t=>t!=root.transform).Select(t=>new{
+        path=UnityEditor.AnimationUtility.CalculateTransformPath(t,root.transform),position=vector(t.localPosition),rotation=rotation(t.localRotation),scale=vector(t.localScale)}).OrderBy(x=>x.path).ToArray();
+    var colliders=root.GetComponentsInChildren<UnityEngine.Collider>(true).Select(c=>
+    {
+        var settings=new System.Collections.Generic.Dictionary<string,object>();
+        if(c is UnityEngine.BoxCollider box){settings["center"]=vector(box.center);settings["size"]=vector(box.size);}
+        else if(c is UnityEngine.SphereCollider sphere){settings["center"]=vector(sphere.center);settings["radius"]=sphere.radius;}
+        else if(c is UnityEngine.CapsuleCollider capsule){settings["center"]=vector(capsule.center);settings["radius"]=capsule.radius;settings["height"]=capsule.height;settings["direction"]=capsule.direction;}
+        else if(c is UnityEngine.MeshCollider mesh){settings["mesh"]=identity(mesh.sharedMesh);settings["convex"]=mesh.convex;settings["cooking"]=mesh.cookingOptions.ToString();}
+        else throw new System.Exception("Непроверенный тип collider: "+c.GetType().FullName);
+        return new{path=UnityEditor.AnimationUtility.CalculateTransformPath(c.transform,root.transform),type=c.GetType().FullName,
+            enabled=c.enabled,trigger=c.isTrigger,contact=c.contactOffset,material=identity(c.sharedMaterial),settings=settings};
+    }).OrderBy(x=>x.path).ToArray();
+    var nested=root.GetComponentsInChildren<UltimateXR.Mechanics.Weapons.UxrFirearmMag>(true).Select(m=>new{
+        path=UnityEditor.AnimationUtility.CalculateTransformPath(m.transform,root.transform),local=vector(m.transform.localScale),world=vector(m.transform.lossyScale)}).ToArray();
+    prefabs[path]=new{identity=identity(root),assetId=assetId,rootScale=vector(root.transform.localScale),children=children,colliders=colliders,nested=nested};
+}
+var links=new System.Collections.Generic.Dictionary<string,object>();
+foreach(string guid in UnityEditor.AssetDatabase.FindAssets("t:WeaponInfo",new[]{"Assets/Data/Weapons"}))
+{
+    string path=UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+    var info=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>(path);
+    links[path]=new{weaponId=info.WeaponId,weapon=identity(info.WeaponPrefab),magazine=identity(info.MagazinePrefab)};
+}
+var tr15=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Weapons/TR15/TR15.prefab");
+var optic=tr15.GetComponentsInChildren<UnityEngine.MeshFilter>(true).Single(f=>f.name=="SM_Attach_AR15_XPS2");
+var materials=optic.GetComponent<UnityEngine.MeshRenderer>().sharedMaterials.Select(m=>new{
+    identity=identity(m),path=UnityEditor.AssetDatabase.GetAssetPath(m),shader=m.shader.name,queue=m.renderQueue,
+    surface=m.HasProperty("_Surface")?m.GetFloat("_Surface"):-1,zwrite=m.HasProperty("_ZWrite")?m.GetFloat("_ZWrite"):-1,
+    transparent=m.IsKeywordEnabled("_SURFACE_TYPE_TRANSPARENT"),baseMap=m.HasProperty("_BaseMap")?UnityEditor.AssetDatabase.GetAssetPath(m.GetTexture("_BaseMap")):""}).ToArray();
+var snapshot=Newtonsoft.Json.Linq.JObject.FromObject(new{prefabs=prefabs,links=links,optic=meshData(optic.sharedMesh),materials=materials});
+// Baseline читается как JSON double; нормализуем текущие float к тому же представлению перед DeepEquals.
+snapshot=Newtonsoft.Json.Linq.JObject.Parse(snapshot.ToString());
+string folder=System.IO.Path.GetFullPath("tmp/ar15-audit"); System.IO.Directory.CreateDirectory(folder);
+string beforePath=System.IO.Path.Combine(folder,"invariants-before.json");
+var output=new System.Text.StringBuilder(); int failed=0;
+System.Action<string,bool> check=(name,ok)=>{output.AppendLine((ok?"PASS ":"FAIL ")+name);if(!ok)failed++;};
+if(!System.IO.File.Exists(beforePath))
+{
+    System.IO.File.WriteAllText(beforePath,snapshot.ToString(),new System.Text.UTF8Encoding(false)); output.AppendLine("BASELINE "+beforePath);
+}
+else
+{
+    var before=Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(beforePath));
+    foreach(var property in ((Newtonsoft.Json.Linq.JObject)snapshot["prefabs"]).Properties())
+    {
+        var old=before["prefabs"][property.Name]; var now=property.Value;
+        foreach(string field in new[]{"identity","assetId","children","colliders"})check(property.Name+" "+field,Newtonsoft.Json.Linq.JToken.DeepEquals(old[field],now[field]));
+        float expected=property.Name.Contains("/AR15/")?.70f:1f;
+        check(property.Name+" canonical rootScale",now["rootScale"].All(v=>UnityEngine.Mathf.Abs((float)v-expected)<1e-6f));
+        if(property.Name.EndsWith("/AR15.prefab",System.StringComparison.Ordinal))
+            check("AR15 starting magazine reciprocal1/world .70",now["nested"].Count()==1 && now["nested"][0]["local"].All(v=>UnityEngine.Mathf.Abs((float)v-1)<1e-6f) && now["nested"][0]["world"].All(v=>UnityEngine.Mathf.Abs((float)v-.70f)<1e-6f));
+    }
+    check("all WeaponInfo ID and prefab links",Newtonsoft.Json.Linq.JToken.DeepEquals(before["links"],snapshot["links"]));
+    foreach(string field in new[]{"vertexCount","channels","streams","union"})check("optic preserves "+field,Newtonsoft.Json.Linq.JToken.DeepEquals(before["optic"][field],snapshot["optic"][field]));
+    check("optic two exact submeshes1648/52",Newtonsoft.Json.Linq.JToken.DeepEquals(snapshot["optic"]["submeshTriangles"],Newtonsoft.Json.Linq.JArray.FromObject(new[]{1648,52})));
+    check("housing original opaque material",snapshot["materials"].Count()==2 && (string)snapshot["materials"][0]["identity"]==(string)before["materials"][0]["identity"] && (float)snapshot["materials"][0]["surface"]==0);
+    check("lens dedicated transparent material",snapshot["materials"].Count()==2 && (string)snapshot["materials"][1]["path"]=="Assets/Art/Weapons/Kinemation/TR15/Materials/TR15_XPS2_Lens.mat" && (float)snapshot["materials"][1]["surface"]==1 && (float)snapshot["materials"][1]["zwrite"]==0 && (bool)snapshot["materials"][1]["transparent"]);
+    System.IO.File.WriteAllText(System.IO.Path.Combine(folder,"invariants-after.json"),snapshot.ToString(),new System.Text.UTF8Encoding(false));
+}
+var afterScenes=new System.Collections.Generic.List<string>();
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);afterScenes.Add(s.handle+"|"+s.isDirty+"|"+s.rootCount);}
+check("ordinary scene/active/Play untouched",sceneState.SequenceEqual(afterScenes) && active.handle==UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle && play==UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode);
+return output+"Failed="+failed;

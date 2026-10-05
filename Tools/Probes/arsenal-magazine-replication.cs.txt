@@ -1,0 +1,111 @@
+// Одноразовый probe, не acceptance-тест. Только EditMode, сеть должна быть остановлена.
+// Реальная сериализация Mirror full/delta + фактический ResolvePending на изолированной копии префаба.
+// Не запускает NetworkServer/Client, не меняет active flags, не создаёт/не использует аватаров.
+if (UnityEngine.Application.isPlaying || Mirror.NetworkServer.active || Mirror.NetworkClient.active)
+    return "NOT RUN: нужен EditMode без активной сети; человеческое окружение не трогаем.";
+if (VrBattlegrounds.Managers.MapReferee.Instance != null && VrBattlegrounds.Managers.MapReferee.Instance.ActiveGameMode != null)
+    return "NOT RUN: активный режим не подменяется диагностикой.";
+var output = new System.Text.StringBuilder();
+int passed = 0, failed = 0;
+System.Action<string, bool> check = (name, ok) => { output.AppendLine((ok ? "PASS " : "FAIL ") + name); if (ok) passed++; else failed++; };
+var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+System.Func<System.Type, string, System.Reflection.FieldInfo> findField = (type, name) =>
+{
+    for (var current = type; current != null; current = current.BaseType)
+    {
+        var found = current.GetField(name, flags | System.Reflection.BindingFlags.DeclaredOnly);
+        if (found != null) return found;
+    }
+    throw new System.MissingFieldException(type.FullName, name);
+};
+var roots = new System.Collections.Generic.List<UnityEngine.GameObject>();
+var samples = new System.Collections.Generic.List<UnityEngine.GameObject>();
+var inserted = new System.Collections.Generic.List<uint>();
+System.Action<Mirror.SyncDictionary<int,VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding>, Mirror.SyncDictionary<int,VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding>, bool> transfer = (sender, receiver, full) =>
+{
+    var writer = new Mirror.NetworkWriter();
+    if (full) sender.OnSerializeAll(writer); else sender.OnSerializeDelta(writer);
+    var reader = new Mirror.NetworkReader(writer.ToArraySegment());
+    if (full) receiver.OnDeserializeAll(reader); else receiver.OnDeserializeDelta(reader);
+    sender.ClearChanges();
+};
+try
+{
+    foreach (string path in new[] { "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab", "Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab" })
+    {
+        var root = UnityEditor.PrefabUtility.LoadPrefabContents(path); roots.Add(root);
+        var wall = root.GetComponent<VrBattlegrounds.Arsenal.ArsenalWallController>();
+        var supply = root.GetComponent<VrBattlegrounds.Arsenal.ArsenalMagazineSupply>();
+        if (supply == null) throw new System.InvalidOperationException("Нет сохранённого supply: " + path);
+        var deployment = root.GetComponent<VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator>();
+        if (deployment != null) UnityEngine.Object.DestroyImmediate(deployment); // Только закрытая probe-копия.
+        findField(wall.GetType(), "_currentState").SetValue(wall, VrBattlegrounds.Arsenal.ArsenalWallController.ArsenalState.Open);
+        findField(supply.GetType(), "_wall").SetValue(supply, wall);
+        var client = (Mirror.SyncDictionary<int,VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding>)findField(supply.GetType(), "_items").GetValue(supply);
+        client.IsWritable = () => true; client.IsRecording = () => false; // Собственный SyncObject: NI.Awake не вызывается в EditMode.
+        var server = new Mirror.SyncDictionary<int,VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding>();
+        var pending = (System.Collections.Generic.HashSet<int>)findField(supply.GetType(), "_pending").GetValue(supply);
+        var resolve = supply.GetType().GetMethod("ResolvePending", flags);
+        int index = -1;
+        for (int i = 0; i < wall.Slots.Count; i++) if (wall.Slots[i].GetComponent<VrBattlegrounds.Arsenal.ArsenalMagazineOffer>() != null) { index = i; break; }
+        if (index < 0) throw new System.InvalidOperationException("Нет magazine offers: " + path);
+        var slot = wall.Slots[index];
+        var offer = slot.GetComponent<VrBattlegrounds.Arsenal.ArsenalMagazineOffer>();
+        uint firstId = 0xff000001u; while (Mirror.NetworkClient.spawned.ContainsKey(firstId)) firstId++;
+        uint secondId = firstId + 1u; while (Mirror.NetworkClient.spawned.ContainsKey(secondId)) secondId++;
+        server[index] = new VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding(firstId); server.ClearChanges();
+        transfer(server, client, true);
+        supply.GetType().GetMethod("SubscribeClient", flags).Invoke(supply, null);
+        check(path + " full snapshot queues stable slot index", client.TryGetValue(index, out VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding actual) && actual.NetId == firstId && pending.Contains(index));
+        resolve.Invoke(supply, null);
+        check("binding before spawn waits", pending.Contains(index) && offer.CurrentItem == null);
+        var sample = UnityEngine.Object.Instantiate(slot.WeaponData.MagazinePrefab, root.transform, false); samples.Add(sample);
+        sample.SetActive(false);
+        var identity = sample.GetComponent<Mirror.NetworkIdentity>();
+        identity.GetType().GetProperty("netId", flags).SetValue(identity, firstId);
+        Mirror.NetworkClient.spawned.Add(firstId, identity); inserted.Add(firstId);
+        resolve.Invoke(supply, null);
+        check("spawned but inactive waits for Awake", pending.Contains(index) && offer.CurrentItem == null);
+        var grab = sample.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+        findField(grab.GetType(), "_isGrabbable").SetValue(grab, true); // Не вызываем синхронизируемый setter/глобальный SDK relay.
+        sample.SetActive(true);
+        resolve.Invoke(supply, null);
+        check("active magazine binds once to correct holder", !pending.Contains(index) && offer.CurrentItem == grab && grab.CurrentAnchor == offer.Anchor);
+        UnityEngine.Vector3 resting = sample.transform.position;
+        resolve.Invoke(supply, null);
+        check("repeated resolve keeps resting pose", UnityEngine.Vector3.Distance(resting, sample.transform.position) < .00001f);
+        if (VrBattlegrounds.Economy.MatchEconomy.Current == null)
+        {
+            check("free open wall allows magazine without wallet", offer.AllowsGrab(null));
+            findField(wall.GetType(), "_currentState").SetValue(wall, VrBattlegrounds.Arsenal.ArsenalWallController.ArsenalState.Closed);
+            check("closed wall denies magazine", !offer.AllowsGrab(null));
+            findField(wall.GetType(), "_currentState").SetValue(wall, VrBattlegrounds.Arsenal.ArsenalWallController.ArsenalState.Open);
+        }
+        else output.AppendLine("SOURCEONLY owner/wallet rule: live economy not replaced by probe.");
+        // Эмулируем завершённое авторское снятие; сам GrabObject не вызывается.
+        grab.SetNetworkAnchor(null); sample.transform.SetParent(null, true);
+        sample.transform.position += UnityEngine.Vector3.one * 2f;
+        UnityEngine.Vector3 carriedPose = sample.transform.position;
+        server.Remove(index); transfer(server, client, false); resolve.Invoke(supply, null);
+        check("take delta removes stock without resnapping detached magazine", !client.ContainsKey(index) && !pending.Contains(index) && UnityEngine.Vector3.Distance(carriedPose, sample.transform.position) < .00001f);
+        server[index] = new VrBattlegrounds.Arsenal.ArsenalMagazineStockBinding(secondId); transfer(server, client, false); resolve.Invoke(supply, null);
+        check("next refill delta waits for new netId", pending.Contains(index) && UnityEngine.Vector3.Distance(carriedPose, sample.transform.position) < .00001f);
+        var replacement = UnityEngine.Object.Instantiate(slot.WeaponData.MagazinePrefab, root.transform, false); samples.Add(replacement);
+        var replacementIdentity = replacement.GetComponent<Mirror.NetworkIdentity>();
+        replacementIdentity.GetType().GetProperty("netId", flags).SetValue(replacementIdentity, secondId);
+        var replacementGrab = replacement.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+        findField(replacementGrab.GetType(), "_isGrabbable").SetValue(replacementGrab, true);
+        Mirror.NetworkClient.spawned.Add(secondId, replacementIdentity); inserted.Add(secondId);
+        resolve.Invoke(supply, null);
+        check("refill binds replacement and preserves prior detached object", offer.CurrentItem == replacementGrab && grab.CurrentAnchor == null && UnityEngine.Vector3.Distance(carriedPose, sample.transform.position) < .00001f);
+        output.AppendLine("SOURCEONLY server Spawn/refill timing, real owner grab/rejection, fold during a live grab: require isolated running Mirror/headset validation.");
+    }
+}
+catch (System.Exception error) { failed++; output.AppendLine("PROBE FAILURE " + error); }
+finally
+{
+    foreach (uint id in inserted) Mirror.NetworkClient.spawned.Remove(id);
+    foreach (var sample in samples) if (sample != null) UnityEngine.Object.DestroyImmediate(sample);
+    foreach (var root in roots) if (root != null) UnityEditor.PrefabUtility.UnloadPrefabContents(root);
+}
+return output.ToString() + "\nPassed=" + passed + ", Failed=" + failed;

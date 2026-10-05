@@ -1,0 +1,28 @@
+// Только собственная preview: фактические исходные предметы/карточки без изменения сцены или ассетов.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)return "NOT RUN: Play";
+var preview=UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var source=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.DemoPath);
+var root=UnityEngine.Object.Instantiate(source);UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root,preview);root.hideFlags=UnityEngine.HideFlags.HideAndDontSave;
+var reports=new System.Collections.Generic.List<object>();var failures=new System.Collections.Generic.List<string>();
+System.Func<UnityEngine.Transform,UnityEngine.Transform,float[]> extent=(frame,item)=>{
+ float xmin=float.PositiveInfinity,xmax=float.NegativeInfinity,zmin=float.PositiveInfinity,zmax=float.NegativeInfinity;
+ foreach(var r in item.GetComponentsInChildren<UnityEngine.Renderer>(true).Where(r=>r.enabled&&r.gameObject.activeInHierarchy)){
+ var b=r.localBounds;for(int i=0;i<8;i++){var p=frame.InverseTransformPoint(r.transform.TransformPoint(b.center+UnityEngine.Vector3.Scale(b.extents,new UnityEngine.Vector3((i&1)==0?-1:1,(i&2)==0?-1:1,(i&4)==0?-1:1))));xmin=System.Math.Min(xmin,p.x);xmax=System.Math.Max(xmax,p.x);zmin=System.Math.Min(zmin,p.z);zmax=System.Math.Max(zmax,p.z);}}
+ return new[]{xmin,xmax,zmin,zmax};
+};
+try{
+ foreach(var slot in root.GetComponent<VrBattlegrounds.Arsenal.ArsenalWallController>().Slots.Where(s=>s.PresentationZone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf)){
+ var offer=slot.GetComponent<VrBattlegrounds.Arsenal.ArsenalMagazineOffer>();
+ var mag=UnityEngine.Object.Instantiate(slot.WeaponData.MagazinePrefab,offer.Anchor.transform,false);mag.transform.localPosition=UnityEngine.Vector3.zero;mag.transform.localRotation=UnityEngine.Quaternion.identity;
+ var weapon=UnityEngine.Object.Instantiate(slot.WeaponData.WeaponPrefab,slot.ItemAnchor.transform,false);weapon.transform.localPosition=UnityEngine.Vector3.zero;weapon.transform.localRotation=UnityEngine.Quaternion.identity;
+ var card=slot.GetComponentInChildren<VrBattlegrounds.Arsenal.ArsenalPriceTag>(true);
+ var cardSpan=extent(slot.transform,card.transform.Find("CardBacking"));var magSpan=extent(slot.transform,mag.transform);var weaponSpan=extent(slot.transform,weapon.transform);
+ // Slot X совпадает с осью ряда. Глубина панели вращается вместе с authored Shelf frame.
+ var panel=slot.transform.Find("PegboardSection");var panelSpan=extent(slot.transform,panel);
+ if(cardSpan[0]<panelSpan[0]-.001f||cardSpan[1]>panelSpan[1]+.001f)failures.Add(slot.WeaponData.WeaponId+" card overhang");
+ if(magSpan[0]<panelSpan[0]-.001f||magSpan[1]>panelSpan[1]+.001f)failures.Add(slot.WeaponData.WeaponId+" magazine overhang");
+ reports.Add(new{id=slot.WeaponData.WeaponId,panel=panelSpan,card=cardSpan,magazine=magSpan,weapon=weaponSpan});
+ }
+}finally{UnityEngine.Object.DestroyImmediate(root);UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(preview);}
+var result=new{failures=failures,reports=reports};System.IO.File.WriteAllText("tmp/mp5k-audit/shelf-item-extents.json",Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+return Newtonsoft.Json.JsonConvert.SerializeObject(new{failures=failures,path="tmp/mp5k-audit/shelf-item-extents.json"});

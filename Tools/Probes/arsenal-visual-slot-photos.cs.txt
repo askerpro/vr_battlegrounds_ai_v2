@@ -1,0 +1,119 @@
+// Только actual renderer geometry в собственной PreviewScene. Ни SDK, ни physics копии не создаются.
+// До первого native batch phase=before. Camera slot-relative сохраняется для after/regen сравнения.
+const string phase = "before";
+if (UnityEngine.Application.isPlaying || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "NOT RUN: EditMode only.";
+var liveScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+var walls = new System.Collections.Generic.List<VrBattlegrounds.Arsenal.ArsenalWallController>();
+foreach (var root in liveScene.GetRootGameObjects())
+    foreach (var wall in root.GetComponentsInChildren<VrBattlegrounds.Arsenal.ArsenalWallController>(true))
+        if (wall.Slots.Count == 20) walls.Add(wall);
+if (walls.Count != 4) return "NOT RUN: нужен actual Lobby с4 canonical20 stations.";
+var source = walls[0];
+var sceneJsonBefore = new System.Text.StringBuilder();
+foreach (var root in liveScene.GetRootGameObjects())
+    foreach (var component in root.GetComponentsInChildren<UnityEngine.Component>(true))
+        if (component != null) sceneJsonBefore.Append(component.GetInstanceID()).Append('|').AppendLine(UnityEditor.EditorJsonUtility.ToJson(component));
+bool dirtyBefore = liveScene.isDirty;
+var previousSelection = UnityEditor.Selection.objects;
+var previousRenderTexture = UnityEngine.RenderTexture.active;
+var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var allocatedMeshes = new System.Collections.Generic.List<UnityEngine.Mesh>();
+var rt = new UnityEngine.RenderTexture(800, 1000, 24);
+var rows = new System.Collections.Generic.List<object>();
+var errors = new System.Collections.Generic.List<string>();
+var output = "tmp/arsenal-visual-photos/" + phase;
+System.IO.Directory.CreateDirectory(output);
+System.Func<UnityEngine.Vector3, float[]> vector = value => new[] { value.x, value.y, value.z };
+System.Func<UnityEngine.Quaternion, float[]> quaternion = value => new[] { value.x, value.y, value.z, value.w };
+System.Action<UnityEngine.Transform, UnityEngine.Transform> copyGeometry = null;
+copyGeometry = (original, copy) => {
+    var filter = original.GetComponent<UnityEngine.MeshFilter>();
+    var renderer = original.GetComponent<UnityEngine.MeshRenderer>();
+    if (filter != null && filter.sharedMesh != null && renderer != null) {
+        copy.gameObject.AddComponent<UnityEngine.MeshFilter>().sharedMesh = filter.sharedMesh;
+        var copiedRenderer = copy.gameObject.AddComponent<UnityEngine.MeshRenderer>();
+        copiedRenderer.sharedMaterials = renderer.sharedMaterials;
+        copiedRenderer.enabled = renderer.enabled;
+        copiedRenderer.shadowCastingMode = renderer.shadowCastingMode;
+        copiedRenderer.receiveShadows = renderer.receiveShadows;
+    }
+    foreach (UnityEngine.Transform child in original) {
+        if (child.name == "GrabHighlight" || child.name == "__ItemPreview__" || child.name == "__MagPreview__") continue;
+        var childCopy = new UnityEngine.GameObject(child.name);
+        childCopy.transform.SetParent(copy, false);
+        childCopy.transform.localPosition = child.localPosition;
+        childCopy.transform.localRotation = child.localRotation;
+        childCopy.transform.localScale = child.localScale;
+        copyGeometry(child, childCopy.transform);
+        childCopy.SetActive(child.gameObject.activeSelf);
+    }
+};
+System.Func<UnityEngine.GameObject, UnityEngine.Vector3, UnityEngine.Quaternion, UnityEngine.Vector3, UnityEngine.GameObject> spawnGeometry = (prefab, position, rotation, scale) => {
+    var clone = new UnityEngine.GameObject(prefab.name + "_RenderOnly");
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(clone, scene);
+    clone.transform.SetPositionAndRotation(position, rotation);
+    clone.transform.localScale = scale;
+    copyGeometry(prefab.transform, clone.transform);
+    return clone;
+};
+try {
+    var cameraObject = new UnityEngine.GameObject("SlotPhotoCamera");
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(cameraObject, scene);
+    var camera = cameraObject.AddComponent<UnityEngine.Camera>();
+    camera.scene = scene; camera.useOcclusionCulling = false; camera.orthographic = true;
+    camera.backgroundColor = new UnityEngine.Color(.055f, .065f, .08f); camera.clearFlags = UnityEngine.CameraClearFlags.SolidColor;
+    camera.nearClipPlane = .01f; camera.farClipPlane = 20f; camera.targetTexture = rt;
+    var lightObject = new UnityEngine.GameObject("SlotPhotoLight");
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(lightObject, scene);
+    var light = lightObject.AddComponent<UnityEngine.Light>(); light.type = UnityEngine.LightType.Directional; light.intensity = 2.2f;
+    foreach (var slot in source.Slots) {
+        var copies = new System.Collections.Generic.List<UnityEngine.GameObject>();
+        var info = slot.WeaponData;
+        try {
+            var panel = spawnGeometry(slot.gameObject, slot.transform.position, slot.transform.rotation, slot.transform.lossyScale);
+            copies.Add(panel);
+            var anchor = slot.ItemAnchor.transform;
+            copies.Add(spawnGeometry(info.WeaponPrefab, anchor.TransformPoint(info.WeaponPositionOffset),
+                anchor.rotation * UnityEngine.Quaternion.Euler(info.WeaponRotationOffset), UnityEngine.Vector3.Scale(anchor.lossyScale, info.WeaponPrefab.transform.localScale)));
+            var offer = slot.GetComponent<VrBattlegrounds.Arsenal.ArsenalMagazineOffer>();
+            var magazine = spawnGeometry(info.MagazinePrefab, offer.Anchor.transform.position, offer.Anchor.transform.rotation,
+                UnityEngine.Vector3.Scale(offer.Anchor.transform.lossyScale, info.MagazinePrefab.transform.localScale));
+            copies.Add(magazine); offer.FitToSurface(magazine.transform);
+            bool shelf = slot.PresentationZone == VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf;
+            UnityEngine.Vector3 targetLocal = shelf ? new UnityEngine.Vector3(0f, .15f, .12f) : new UnityEngine.Vector3(0f, .54f, 0f);
+            UnityEngine.Vector3 cameraLocal = targetLocal + (shelf ? new UnityEngine.Vector3(0f, 2.3f, -2.3f) : new UnityEngine.Vector3(0f, .12f, -3f));
+            camera.transform.position = slot.transform.TransformPoint(cameraLocal);
+            camera.transform.LookAt(slot.transform.TransformPoint(targetLocal), slot.transform.up);
+            camera.orthographicSize = shelf ? .47f : .72f;
+            light.transform.rotation = camera.transform.rotation * UnityEngine.Quaternion.Euler(20f, -25f, 0f);
+            camera.Render(); UnityEngine.RenderTexture.active = rt;
+            var texture = new UnityEngine.Texture2D(rt.width, rt.height, UnityEngine.TextureFormat.RGB24, false);
+            string file = output + "/" + info.WeaponId + "-" + slot.PresentationZone + ".png";
+            try { texture.ReadPixels(new UnityEngine.Rect(0, 0, rt.width, rt.height), 0, 0); texture.Apply(); System.IO.File.WriteAllBytes(file, texture.EncodeToPNG()); }
+            finally { UnityEngine.Object.DestroyImmediate(texture); }
+            int visibleMeshes = 0;
+            foreach (var copy in copies) foreach (var renderer in copy.GetComponentsInChildren<UnityEngine.MeshRenderer>(true))
+                if (renderer.enabled && renderer.gameObject.activeInHierarchy) visibleMeshes++;
+            rows.Add(new { weaponId = info.WeaponId, zone = slot.PresentationZone.ToString(), file = file,
+                slotPath = UnityEditor.AnimationUtility.CalculateTransformPath(slot.transform, source.transform),
+                cameraPositionSlot = vector(cameraLocal), cameraTargetSlot = vector(targetLocal),
+                cameraRotationSlot = quaternion(UnityEngine.Quaternion.Inverse(slot.transform.rotation) * camera.transform.rotation),
+                orthographicSize = camera.orthographicSize, visibleMeshes = visibleMeshes });
+        }
+        finally { foreach (var copy in copies) if (copy != null) UnityEngine.Object.DestroyImmediate(copy); }
+    }
+}
+finally {
+    UnityEngine.RenderTexture.active = previousRenderTexture;
+    UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+    UnityEngine.Object.DestroyImmediate(rt);
+    foreach (var mesh in allocatedMeshes) UnityEngine.Object.DestroyImmediate(mesh);
+}
+var sceneJsonAfter = new System.Text.StringBuilder();
+foreach (var root in liveScene.GetRootGameObjects())
+    foreach (var component in root.GetComponentsInChildren<UnityEngine.Component>(true))
+        if (component != null) sceneJsonAfter.Append(component.GetInstanceID()).Append('|').AppendLine(UnityEditor.EditorJsonUtility.ToJson(component));
+if (sceneJsonAfter.ToString() != sceneJsonBefore.ToString() || liveScene.isDirty != dirtyBefore) errors.Add("native live scene serialized/dirty changed");
+if (UnityEditor.Selection.objects.Length != previousSelection.Length) errors.Add("selection changed");
+System.IO.File.WriteAllText(output + "/manifest.json", Newtonsoft.Json.JsonConvert.SerializeObject(new { phase = phase, rows = rows, errors = errors }, Newtonsoft.Json.Formatting.Indented));
+return new { phase = phase, images = rows.Count, errors = errors, output = output };

@@ -1,0 +1,290 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using Newtonsoft.Json;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UltimateXR.Core.Components;
+using UltimateXR.Core.Unique;
+using UltimateXR.Core.StateSave;
+using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Arsenal.ProbeFixtures;
+using VrBattlegrounds.Network;
+
+namespace VrBattlegrounds.Editor.Arsenal
+{
+    /// <summary>Временный raw Play probe. Вход/выход Play и native scene cleanup принадлежат отдельному coordinator.</summary>
+    public static class GeneratorIdentityBaselineRunner
+    {
+        sealed class Receipt
+        {
+            public GameObject Root;
+            public GeneratorIdentityLifecycleProbe Observer;
+            public ArsenalFunctionalSlotTemplate Source;
+            public string Key;
+            public bool Change, Registered, Activated, DestroyQueued;
+            public Dictionary<UxrComponent,ArsenalTemplateRole> Roles=new Dictionary<UxrComponent,ArsenalTemplateRole>();
+        }
+        static readonly List<Receipt> Own=new List<Receipt>();
+        static readonly List<object> Trace=new List<object>();
+        static readonly List<string> Failures=new List<string>(),CleanupFailures=new List<string>();
+        static readonly FieldInfo SerializedUid=typeof(UxrComponent).GetField("_uxrUniqueId",BindingFlags.Instance|BindingFlags.NonPublic);
+        static readonly FieldInfo Implementer=typeof(UxrComponent).GetField("_uniqueIdImplementer",BindingFlags.Instance|BindingFlags.NonPublic);
+        static readonly Type[] Removal={typeof(VrBattlegrounds.Interaction.AnchorSound),typeof(FirearmSlotController),typeof(ArsenalPriceTag)};
+        static Dictionary<Guid,UxrComponent> Baseline;
+        static Action<GameObject,GameObject> Created;
+        static Action<UxrComponent> Registering,Registered,Unregistering,Unregistered,Enabled;
+        static Action<Guid,Guid> Changing,Changed;
+        static VrBattlegrounds.Maps.Runtime.MapRunScope Scope;
+        static EventHandler<UxrStateSaveEventArgs> Serializing,Serialized,VarSerializing,VarSerialized;
+        static Action<GeneratorIdentityLifecycleProbe,string> Lifecycle;
+        static int Step,Index,LastFrame;
+        static double Deadline;
+        static string Phase;
+        static bool Running;
+        static bool TraceFault;
+        static Receipt PendingReceipt;
+        static Transform OwnDormitory;
+        static List<Tuple<ArsenalFunctionalSlotTemplate,bool,string>> Cases;
+        public static bool Completed {get;private set;}
+        public static bool UnsafeCleanup {get;private set;}
+
+        // Не запускает Play/создание scene и не является product API. Called только из own isolated Play coordinator.
+        public static void Run(bool hundred)
+        {
+            GeneratorIdentityPlayCoordinator.RequirePreparedGate(); // Offline NO_GO до независимого ruling.
+            if(hundred)throw new InvalidOperationException("Only original finite A8 is in scope");
+            if(!Application.isPlaying||Running)throw new InvalidOperationException("Own Play prerequisite");
+            if(UnityEngine.SceneManagement.SceneManager.sceneCount!=1||UnityEngine.SceneManagement.SceneManager.GetActiveScene().path!="Assets/Scenes/Debug/GeneratorIdentityBaseline-20261005.unity")throw new InvalidOperationException("Fixture-only scene prerequisite");
+            RequireLock();RequireNoExternalIdentityCallbacks();
+            if(SerializedUid==null||Implementer==null)throw new InvalidOperationException("Trace fields missing");
+            var catalog=AssetDatabase.LoadAssetAtPath<ArsenalCompositionCatalog>("Assets/Data/Arsenal/ArsenalCompositionCatalog.asset");
+            if(catalog==null||catalog.Templates.Count!=2)throw new InvalidOperationException("Catalog baseline mismatch");
+            // Собственные managers должны быть настроены coordinator ДО этой baseline. Никакого creation через getter здесь.
+            Baseline=UxrUniqueIdImplementer<UxrComponent>.ComponentsById.ToDictionary(p=>p.Key,p=>p.Value);
+            foreach(var template in catalog.Templates)foreach(var role in template.Roles)
+            {
+                IUxrUniqueId owner;if(UxrUniqueIdImplementer.TryGetComponentById(new Guid(role.SourceUniqueId),out owner))throw new InvalidOperationException("Unknown pre-existing source owner: "+role.RoleKey);
+            }
+            Own.Clear();Trace.Clear();Failures.Clear();CleanupFailures.Clear();Completed=false;UnsafeCleanup=false;TraceFault=false;
+            Cases=new List<Tuple<ArsenalFunctionalSlotTemplate,bool,string>>();
+            foreach(bool reversed in new[]{false,true})foreach(bool exact in new[]{false,true})
+                foreach(var t in reversed?catalog.Templates.Reverse():catalog.Templates)
+                    Cases.Add(Tuple.Create(t,exact,"order-"+reversed+"/route-"+exact+"/"+t.TemplateId));
+            if(hundred)for(int i=0;i<100;i++)Cases.Add(Tuple.Create(catalog.Templates[0],true,"hundred-"+i));
+            Scope=new VrBattlegrounds.Maps.Runtime.MapRunScope(new VrBattlegrounds.Maps.Runtime.MapRunKey(new Guid("00112233-4455-6677-8899-aabbccddeeff"),1));
+            PreflightExpected(catalog);
+            Subscribe();Phase="before-first-getter";Step=0;Index=0;LastFrame=Time.frameCount;Deadline=EditorApplication.timeSinceStartup+60;Running=true;EditorApplication.update+=Tick;
+        }
+        static void Tick()
+        {
+            if(!Running||Time.frameCount==LastFrame)return;LastFrame=Time.frameCount;
+            try
+            {
+                RequireLock();if(!Application.isPlaying)throw new InvalidOperationException("Play lost");
+                if(TraceFault)throw new InvalidOperationException("Non-throwing trace callback refused; ending finite packet");
+                if(EditorApplication.timeSinceStartup>Deadline)throw new TimeoutException("Finite packet deadline");
+                if(Step==0)
+                {
+                    if(Index==Cases.Count){Step=3;return;}
+                    var c=Cases[Index++];Create(c.Item1,c.Item2,c.Item3);Step=1;
+                }
+                else if(Step==1){var r=Own.Last();Phase="before-register-final-pose";Configure(r);foreach(var component in r.Roles.Keys)Assign(r,component);r.Registered=true;Step=2;}
+                else if(Step==2){var r=Own.Last();Phase="end-frame-before-Awake";foreach(var component in r.Roles.Keys)Record(component,Phase);r.Root.SetActive(true);r.Activated=true;Step=0;}
+                else if(Step==3){Phase="after-Awake-end-frame";foreach(var r in Own)foreach(var component in r.Roles.Keys){Record(component,Phase);if(Vector3.Distance(component.InitialPosition,component.transform.position)>.00001f)Failures.Add("Initial transform mismatch "+r.Key);}Cleanup();Step=4;}
+                else if(Step==4){Finish();}
+            }
+            catch(Exception e){Failures.Add(e.ToString());Cleanup();Step=4;Deadline=EditorApplication.timeSinceStartup+10;}
+        }
+        static void Create(ArsenalFunctionalSlotTemplate template,bool change,string key)
+        {
+            Phase="before-CreateInstance";
+            RequireSourceClosure(template);
+            var existingDormitory=(Transform)typeof(NetworkUxrIdentity).GetField("_dormitory",BindingFlags.Static|BindingFlags.NonPublic).GetValue(null);
+            if(existingDormitory!=null&&!ReferenceEquals(existingDormitory,OwnDormitory))throw new InvalidOperationException("Foreign Dormitory before allocation; no service-root ownership");
+            foreach(var role in template.Roles){IUxrUniqueId owner;if(UxrUniqueIdImplementer.TryGetComponentById(new Guid(role.SourceUniqueId),out owner))throw new InvalidOperationException("Unknown source lookup before allocation");}
+            var r=new Receipt{Source=template,Key=key,Change=change};PendingReceipt=r;
+            GameObject root;
+            try { root=NetworkUxrIdentity.CreateInstance(template.Prefab); }
+            finally { PendingReceipt=null; }
+            if(!ReferenceEquals(r.Root,root)||!Own.Contains(r))throw new InvalidOperationException("Early InstanceCreated receipt missing; NO_GO");
+            if(root.activeSelf||root.activeInHierarchy)throw new InvalidOperationException("Dormant creation failed");
+            var before=root.GetComponentsInChildren<UxrComponent>(true);var transforms=before.ToDictionary(c=>c,c=>EditorJsonUtility.ToJson(c.transform));
+            foreach(var component in before){string source=(string)SerializedUid.GetValue(component);var matches=template.Roles.Where(role=>role.SourceUniqueId==source).ToArray();if(matches.Length!=1)throw new InvalidOperationException("Unmapped source role");r.Roles.Add(component,matches[0]);}
+            foreach(var type in Removal)foreach(var b in root.GetComponentsInChildren(type,true))UnityEngine.Object.DestroyImmediate(b);
+            if(root.GetComponentsInChildren<MonoBehaviour>(true).Any(b=>b!=null&&b.GetType().Assembly==typeof(ArsenalCompositionCatalog).Assembly))throw new InvalidOperationException("Unknown game component closure");
+            if(!before.SequenceEqual(root.GetComponentsInChildren<UxrComponent>(true))||before.Any(c=>transforms[c]!=EditorJsonUtility.ToJson(c.transform)))throw new InvalidOperationException("SDK census/relative transforms changed by isolation");
+            if(root.GetComponentsInChildren<Mirror.NetworkIdentity>(true).Length!=0)throw new InvalidOperationException("Unexpected slot NI");
+            r.Observer=root.AddComponent<GeneratorIdentityLifecycleProbe>();r.Observer.ReceiptKey=key;
+            if(r.Observer.AwakeCount!=0)throw new InvalidOperationException("Awake before configuration");
+            foreach(var component in before)Record(component,"after-Create-before-first-getter");
+        }
+        static void Configure(Receipt r){r.Root.transform.SetPositionAndRotation(new Vector3(Index*.1f,2,3),Quaternion.Euler(0,23,0));r.Root.transform.localScale=Vector3.one;}
+        static Guid RawUid(UxrComponent c)
+        {
+            var cached=typeof(UxrComponent).GetField("_cachedGuid",BindingFlags.Instance|BindingFlags.NonPublic);
+            Guid value=cached==null?Guid.Empty:(Guid)cached.GetValue(c);
+            if(value!=Guid.Empty)return value;
+            string raw=(string)SerializedUid.GetValue(c);
+            return string.IsNullOrEmpty(raw)?Guid.Empty:new Guid(raw);
+        }
+        static void PreflightExpected(ArsenalCompositionCatalog catalog)
+        {
+            var expectedBatch=new HashSet<Guid>();
+            for(int n=0;n<Cases.Count;n++)foreach(var role in Cases[n].Item1.Roles)
+            {
+                var key=Scope.Key;
+                var seed=Derive(new[]{"semantic-seed","vr-battlegrounds/arsenal-generated","1",key.SessionEpoch.ToString("N"),key.LoadSequence.ToString(System.Globalization.CultureInfo.InvariantCulture),"native-fixture-station","logical-"+n.ToString(System.Globalization.CultureInfo.InvariantCulture),role.RoleKey});
+                var uid=UltimateXR.Extensions.System.GuidExt.Combine(Cases[n].Item2?Derive(new[]{"role-base","vr-battlegrounds/arsenal-generated","1",role.RoleKey}):new Guid(role.SourceUniqueId),seed);
+                if(!expectedBatch.Add(uid)||UxrUniqueIdImplementer<UxrComponent>.ComponentsById.ContainsKey(uid))throw new InvalidOperationException("Expected UID conflict before clone allocation");
+                RequireSourceClosure(Cases[n].Item1);
+            }
+        }
+        static void Assign(Receipt r,UxrComponent c)
+        {
+            var role=r.Roles[c];var key=Scope.Key;var seed=Derive(new[]{"semantic-seed","vr-battlegrounds/arsenal-generated","1",key.SessionEpoch.ToString("N"),key.LoadSequence.ToString(System.Globalization.CultureInfo.InvariantCulture),"native-fixture-station","logical-"+Own.IndexOf(r).ToString(System.Globalization.CultureInfo.InvariantCulture),role.RoleKey});
+            var expected=UltimateXR.Extensions.System.GuidExt.Combine(r.Change?Derive(new[]{"role-base","vr-battlegrounds/arsenal-generated","1",role.RoleKey}):new Guid(role.SourceUniqueId),seed);
+            IUxrUniqueId existing;if(UxrUniqueIdImplementer.TryGetComponentById(expected,out existing))throw new InvalidOperationException("Unknown expected lookup before writer");
+            Phase=r.Change?"raw-Change":"raw-Combine";Record(c,"before-assignment");
+            if(r.Change)c.ChangeUniqueId(expected);else c.CombineUniqueId(seed,false);
+            if(c.UniqueId!=expected)Failures.Add("Raw requested UID not exact "+r.Key+"/"+role.RoleKey);
+            c.RegisterIfNecessary();Record(c,"after-explicit-register");
+        }
+        static void Record(UxrComponent c,string kind)
+        {
+            // Диагностика не бросает исключения в середине SDK register/serialize/destroy.
+            try { RecordCore(c,kind); }
+            catch(Exception e) { MarkTraceFault(kind+": "+e.GetType().FullName+"/"+e.Message); }
+        }
+        static void MarkTraceFault(string reason)
+        {
+            if(!TraceFault)Failures.Add("Trace callback: "+reason);
+            TraceFault=true;
+        }
+        static void Append(object row)
+        {
+            if(Trace.Count>=30000){MarkTraceFault("Finite ledger cap");return;}
+            Trace.Add(row);
+        }
+        static void Observe(Action action)
+        {
+            try { action(); }
+            catch(Exception e) { MarkTraceFault(e.GetType().FullName+"/"+e.Message); }
+        }
+        static void RecordCore(UxrComponent c,string kind)
+        {
+            if(c==null){MarkTraceFault("Missing callback component "+kind);return;}
+            var r=Own.FirstOrDefault(x=>x.Roles.ContainsKey(c));var impl=Implementer.GetValue(c) as UxrUniqueIdImplementer;
+            string uid=(string)SerializedUid.GetValue(c);Guid parsed;Guid.TryParse(uid,out parsed);IUxrUniqueId lookup;bool found=UxrUniqueIdImplementer.TryGetComponentById(parsed,out lookup);
+            var t=c.transform;
+            Append(new{seq=Trace.Count+1,frame=Time.frameCount,phase=Phase,kind,target=c.GetInstanceID(),role=r==null?null:r.Roles[c].RoleKey,key=r?.Key,serializedUID=uid,original=impl?.OriginalUniqueId.ToString(),combineSource=impl?.CombineIdSource.ToString(),initialized=impl!=null&&ReferenceEquals(impl.InitializedComponent,c),lookup=found?lookup.Component.GetInstanceID():0,initialPosition=JsonUtility.ToJson(c.InitialPosition),localPosition=t.localPosition,localRotation=t.localRotation,localScale=t.localScale,worldPosition=t.position,worldRotation=t.rotation,lossyScale=t.lossyScale,parentId=t.parent==null?0:t.parent.GetInstanceID(),localToWorldMatrix=t.localToWorldMatrix,worldToLocalMatrix=t.worldToLocalMatrix});
+            if(kind=="GlobalRegistering"&&r!=null&&Phase=="raw-Change"&&uid==r.Roles[c].SourceUniqueId)Failures.Add("Observable source registration before final expected UID "+r.Key);
+        }
+        static void Subscribe()
+        {
+            Registering=c=>Record(c,"GlobalRegistering");Registered=c=>Record(c,"GlobalRegistered");Unregistering=c=>Record(c,"GlobalUnregistering");Unregistered=c=>Record(c,"GlobalUnregistered");Enabled=c=>Record(c,"GlobalEnabled");
+            Changing=(a,b)=>Observe(()=>Append(new{seq=Trace.Count+1,frame=Time.frameCount,phase=Phase,kind="IdChanging",from=a.ToString(),to=b.ToString()}));Changed=(a,b)=>Observe(()=>Append(new{seq=Trace.Count+1,frame=Time.frameCount,phase=Phase,kind="IdChanged",from=a.ToString(),to=b.ToString()}));
+            Serializing=(s,e)=>Observe(()=>Append(new{seq=Trace.Count+1,frame=Time.frameCount,phase=Phase,kind="StateSerializing",target=(s as Component)?.GetInstanceID()}));Serialized=(s,e)=>Observe(()=>Append(new{seq=Trace.Count+1,frame=Time.frameCount,phase=Phase,kind="StateSerialized",target=(s as Component)?.GetInstanceID()}));VarSerializing=(s,e)=>Observe(()=>Append(new{seq=Trace.Count+1,frame=Time.frameCount,phase=Phase,kind="VarSerializing",target=(s as Component)?.GetInstanceID()}));VarSerialized=(s,e)=>Observe(()=>Append(new{seq=Trace.Count+1,frame=Time.frameCount,phase=Phase,kind="VarSerialized",target=(s as Component)?.GetInstanceID()}));
+            Created=(p,i)=>{
+                // Exact root receipt до trace и последующих InstanceCreated listeners, не после return.
+                if(PendingReceipt!=null&&ReferenceEquals(p,PendingReceipt.Source.Prefab)&&i!=null){PendingReceipt.Root=i;Own.Add(PendingReceipt);}
+                else MarkTraceFault("Unexpected InstanceCreated; unknown root is never claimed");
+                Observe(()=>{
+                    var dormant=(Transform)typeof(NetworkUxrIdentity).GetField("_dormitory",BindingFlags.Static|BindingFlags.NonPublic).GetValue(null);
+                    if(OwnDormitory==null)OwnDormitory=dormant;
+                    if(!ReferenceEquals(OwnDormitory,dormant))throw new InvalidOperationException("Dormitory replacement is not owned");
+                    Append(new{seq=Trace.Count+1,frame=Time.frameCount,phase=Phase,kind="InstanceCreated",prefab=AssetDatabase.GetAssetPath(p),target=i.GetInstanceID(),dormitory=OwnDormitory==null?0:OwnDormitory.GetInstanceID(),activeSelf=i.activeSelf,activeInHierarchy=i.activeInHierarchy});
+                });};Lifecycle=(p,k)=>Observe(()=>Append(new{seq=Trace.Count+1,frame=Time.frameCount,phase=Phase,kind="root-"+k,key=p.ReceiptKey}));
+            UxrComponent.GlobalRegistering+=Registering;UxrComponent.GlobalRegistered+=Registered;UxrComponent.GlobalUnregistering+=Unregistering;UxrComponent.GlobalUnregistered+=Unregistered;UxrComponent.GlobalEnabled+=Enabled;UxrComponent.GlobalIdChanging+=Changing;UxrComponent.GlobalIdChanged+=Changed;
+            UxrStateSaveImplementer.StateSerializing+=Serializing;UxrStateSaveImplementer.StateSerialized+=Serialized;UxrStateSaveImplementer.VarSerializing+=VarSerializing;UxrStateSaveImplementer.VarSerialized+=VarSerialized;NetworkUxrIdentity.InstanceCreated+=Created;GeneratorIdentityLifecycleProbe.Observed+=Lifecycle;
+        }
+        static void Cleanup()
+        {
+            Phase="owned-cleanup";
+            foreach(var r in Own.Where(x=>!x.DestroyQueued))
+            {
+                if(r.Root==null)continue;
+                var current=UxrUniqueIdImplementer<UxrComponent>.ComponentsById;
+                if(Baseline.Any(p=>!current.ContainsKey(p.Key)||!ReferenceEquals(current[p.Key],p.Value))){UnsafeCleanup=true;CleanupFailures.Add("Foreign UID lookup changed; NO_GO destruction and Play exit");continue;}
+                bool safe=true;
+                foreach(var c in r.Root.GetComponentsInChildren<UxrComponent>(true)){
+                    Guid uid=RawUid(c);UxrComponent lookup;
+                    if(Baseline.ContainsKey(uid)||(current.TryGetValue(uid,out lookup)&&!ReferenceEquals(lookup,c)))safe=false;
+                    var impl=Implementer.GetValue(c) as UxrUniqueIdImplementer;
+                    if(impl!=null){
+                        FieldInfo target=null;
+                        for(var type=impl.GetType();type!=null&&target==null;type=type.BaseType)target=type.GetField("_targetComponent",BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.DeclaredOnly);
+                        if(target==null||!ReferenceEquals(target.GetValue(impl),c))safe=false;
+                        if(impl.InitializedComponent!=null&&!ReferenceEquals(impl.InitializedComponent,c))safe=false;
+                    }
+                }
+                if(!safe){UnsafeCleanup=true;CleanupFailures.Add("Borrowed/source UID or replacement; retained active root; NO_GO");continue;}
+                // Без unconditional Unregister: OnDestroy касается только guard-attested UID либо отсутствующего lookup.
+                r.DestroyQueued=true;UnityEngine.Object.Destroy(r.Root);
+            }
+        }
+        static void Finish()
+        {
+            EditorApplication.update-=Tick;Running=false;
+            SafeUnsubscribeAll();
+            if(Own.Any(r=>r.Root!=null))CleanupFailures.Add("Own root residue");var now=UxrUniqueIdImplementer<UxrComponent>.ComponentsById;if(now.Count!=Baseline.Count||Baseline.Any(p=>!now.ContainsKey(p.Key)||!ReferenceEquals(now[p.Key],p.Value)))CleanupFailures.Add("Live registry differs");
+            Scope.Dispose();Scope.Dispose();
+            File.WriteAllText("tmp/arsenal-generator-proofs/task2-raw-play.json",JsonConvert.SerializeObject(new{executed=true,passed=Failures.Count==0&&CleanupFailures.Count==0,failures=Failures,cleanupFailures=CleanupFailures,trace=Trace,caseCount=Index,unsafeCleanup=UnsafeCleanup,scope="Raw SDK baseline only; no composer/admission proof"},Formatting.Indented));Completed=true;
+        }
+        static void SafeUnsubscribeAll()
+        {
+            Action<Type,string,Delegate> remove=(type,name,own)=>{
+                try {
+                    if(own==null)return;
+                    var field=type.GetField(name,BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+                    var snapshot=field.GetValue(null) as Delegate;
+                    if(snapshot==null)return;
+                    var eventInfo=type.GetEvent(name,BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+                    foreach(var entry in snapshot.GetInvocationList().Where(d=>d.Equals(own))){
+                        try {
+                            if(eventInfo!=null)eventInfo.RemoveEventHandler(null,entry);
+                            else if(type==typeof(GeneratorIdentityLifecycleProbe))GeneratorIdentityLifecycleProbe.RemoveObserved((Action<GeneratorIdentityLifecycleProbe,string>)entry);
+                            else throw new InvalidOperationException("No exact event remove accessor");
+                        }catch(Exception e){CleanupFailures.Add("Unsubscribe occurrence "+name+": "+e);}
+                    }
+                    var after=field.GetValue(null) as Delegate;
+                    var expected=snapshot.GetInvocationList().Where(d=>!d.Equals(own));
+                    if(!expected.SequenceEqual(after==null?new Delegate[0]:after.GetInvocationList()))CleanupFailures.Add("Own unsubscribe incomplete/foreign changed: "+name);
+                }catch(Exception e){CleanupFailures.Add("Unsubscribe "+name+": "+e);}
+            };
+            foreach(var entry in new[]{Tuple.Create("GlobalRegistering",(Delegate)Registering),Tuple.Create("GlobalRegistered",(Delegate)Registered),Tuple.Create("GlobalUnregistering",(Delegate)Unregistering),Tuple.Create("GlobalUnregistered",(Delegate)Unregistered),Tuple.Create("GlobalEnabled",(Delegate)Enabled),Tuple.Create("GlobalIdChanging",(Delegate)Changing),Tuple.Create("GlobalIdChanged",(Delegate)Changed)})remove(typeof(UxrComponent),entry.Item1,entry.Item2);
+            foreach(var entry in new[]{Tuple.Create("StateSerializing",(Delegate)Serializing),Tuple.Create("StateSerialized",(Delegate)Serialized),Tuple.Create("VarSerializing",(Delegate)VarSerializing),Tuple.Create("VarSerialized",(Delegate)VarSerialized)})remove(typeof(UxrStateSaveImplementer),entry.Item1,entry.Item2);
+            remove(typeof(NetworkUxrIdentity),"InstanceCreated",Created);remove(typeof(GeneratorIdentityLifecycleProbe),"Observed",Lifecycle);
+        }
+        static Guid Derive(string[] fields){using(var stream=new MemoryStream()){var utf8=new System.Text.UTF8Encoding(false,true);foreach(var f in fields){var b=utf8.GetBytes(f);uint n=(uint)b.Length;stream.WriteByte((byte)(n>>24));stream.WriteByte((byte)(n>>16));stream.WriteByte((byte)(n>>8));stream.WriteByte((byte)n);stream.Write(b,0,b.Length);}using(var sha=System.Security.Cryptography.SHA256.Create()){var b=sha.ComputeHash(stream.ToArray()).Take(16).ToArray();b[7]=(byte)((b[7]&15)|128);b[8]=(byte)((b[8]&63)|128);return new Guid(b);}}}
+        static void RequireLock(){var lines=File.ReadAllLines("tmp/unity-lock/info");if(!lines.Contains("owner=weapons-validation-integration")||!lines.Any(x=>x.StartsWith("until=")&&long.Parse(x.Substring(6))>DateTimeOffset.UtcNow.ToUnixTimeSeconds()))throw new InvalidOperationException("Own lock lost");}
+        static void RequireNoExternalIdentityCallbacks()
+        {
+            foreach(var name in new[]{"GlobalRegistering","GlobalRegistered","GlobalIdChanging","GlobalIdChanged"}){var f=typeof(UxrComponent).GetField(name,BindingFlags.Static|BindingFlags.NonPublic);if(f==null||f.GetValue(null)!=null)throw new InvalidOperationException("Unknown identity callback closure: "+name);}
+            foreach(var type in new[]{typeof(UxrComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>),typeof(UxrStateSaveImplementer),typeof(UltimateXR.Core.UxrManager)})foreach(var name in type==typeof(UxrStateSaveImplementer)?new[]{"StateSerializing","StateSerialized","VarSerializing","VarSerialized"}:type==typeof(UltimateXR.Core.UxrManager)?new[]{"ComponentStateChanged"}:new[]{"GlobalRegistering","GlobalRegistered","GlobalUnregistering","GlobalUnregistered"}){var f=type.GetField(name,BindingFlags.Static|BindingFlags.NonPublic);if(f==null||f.GetValue(null)!=null)throw new InvalidOperationException("Unknown nested identity/state callback closure: "+type.FullName+"/"+name);}
+            var field=typeof(NetworkUxrIdentity).GetField("InstanceCreated",BindingFlags.Static|BindingFlags.NonPublic);if(field==null)throw new InvalidOperationException("Creation callback field unavailable");var listeners=field.GetValue(null) as Delegate;if(listeners!=null&&listeners.GetInvocationList().Any(d=>d.Method.DeclaringType!=typeof(WeaponComponent)||d.Method.Name!="AttachByPrefab"))throw new InvalidOperationException("Unknown InstanceCreated writer");
+        }
+        static void RequireSourceClosure(ArsenalFunctionalSlotTemplate template)
+        {
+            if(template==null||template.Prefab==null)throw new InvalidOperationException("Source resource missing before allocation");
+            var registry=WeaponRegistry.Instance;
+            if(registry==null||registry.GetByPrefab(template.Prefab)!=null)throw new InvalidOperationException("InstanceCreated AttachByPrefab is not a proven no-op for source");
+            var allowed=new HashSet<Type>(Removal.Concat(new[]{typeof(TMPro.TextMeshPro),typeof(UltimateXR.Manipulation.UxrGrabbableObjectAnchor),typeof(UnityEngine.Rendering.Universal.UniversalAdditionalLightData)}));
+            foreach(var tr in template.Prefab.GetComponentsInChildren<Transform>(true))
+                if(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(tr.gameObject)!=0)throw new InvalidOperationException("Source missing script before allocation");
+            if(template.Prefab.GetComponentsInChildren<MonoBehaviour>(true).Any(c=>c==null||!allowed.Contains(c.GetType())))throw new InvalidOperationException("Source MonoBehaviour closure changed before allocation");
+            var roles=template.Prefab.GetComponentsInChildren<UxrComponent>(true);
+            if(roles.Length!=template.Roles.Count||roles.Any(c=>template.Roles.Count(r=>r.SourceUniqueId==(string)SerializedUid.GetValue(c))!=1))throw new InvalidOperationException("Source role closure changed before allocation");
+            if(template.Prefab.GetComponentsInChildren<Mirror.NetworkIdentity>(true).Length!=0)throw new InvalidOperationException("Source NI before allocation");
+        }
+    }
+
+    /// <summary>Совместимый отказ старого entry point. Единственный будущий owner — PlayCoordinator.</summary>
+    public static class GeneratorIdentityBaselineCoordinator
+    {
+        public static void Begin() { GeneratorIdentityPlayCoordinator.RequirePreparedGate(); }
+    }
+}

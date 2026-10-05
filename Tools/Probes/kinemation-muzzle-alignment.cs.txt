@@ -1,0 +1,48 @@
+// Предварительно рассчитываем все восемь; сохраняем только AK105 без полной пересборки.
+var rows = new System.Collections.Generic.List<object>();
+foreach (var recipe in VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.All)
+{
+    string path = VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.PrefabPath(recipe);
+    var root = UnityEditor.PrefabUtility.LoadPrefabContents(path);
+    try
+    {
+        var source = root.GetComponent<UltimateXR.Mechanics.Weapons.UxrProjectileSource>();
+        var firearm = root.GetComponent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>();
+        string configBefore = UnityEngine.JsonUtility.ToJson(source) + UnityEngine.JsonUtility.ToJson(firearm);
+        var tip = source.ShotTypes[0].Tip;
+        var shot = source.ShotTypes[0].ShotSource;
+        var breech = root.transform.Find("MeshContainer/BarrelCheck");
+        var geometryBefore = root.GetComponentsInChildren<UnityEngine.Transform>(true)
+            .Where(t => t != tip && t != shot && t != breech)
+            .Select(t => t.localPosition.ToString("F8") + t.localRotation.ToString("F8") + t.localScale.ToString("F8")).ToArray();
+        var before = tip.position;
+        VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.AlignMuzzle(root, recipe.Weapon);
+        string configAfter = UnityEngine.JsonUtility.ToJson(source) + UnityEngine.JsonUtility.ToJson(firearm);
+        var geometryAfter = root.GetComponentsInChildren<UnityEngine.Transform>(true)
+            .Where(t => t != tip && t != shot && t != breech)
+            .Select(t => t.localPosition.ToString("F8") + t.localRotation.ToString("F8") + t.localScale.ToString("F8")).ToArray();
+        bool preserved = configBefore == configAfter && geometryBefore.SequenceEqual(geometryAfter);
+        if (!preserved || Mathf.Abs(Vector3.Distance(tip.position, shot.position) - .01f) > 1e-5f)
+            throw new System.InvalidOperationException(recipe.Weapon.Name + ": изменены посторонние настройки либо отступ выстрела");
+        rows.Add(new { name = recipe.Weapon.Name, part = recipe.Weapon.MuzzlePart ?? recipe.Weapon.BodyPart,
+            movement = Vector3.Distance(before, tip.position), preserved, setback = Vector3.Distance(tip.position, shot.position) });
+    }
+    finally { UnityEditor.PrefabUtility.UnloadPrefabContents(root); }
+}
+var ak = VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.AK105;
+var akPath = VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.PrefabPath(ak);
+var original = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(akPath);
+UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(original, out string guidBefore, out long idBefore);
+uint networkBefore = original.GetComponent<Mirror.NetworkIdentity>().assetId;
+var updated = UnityEditor.PrefabUtility.LoadPrefabContents(akPath);
+try
+{
+    VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.AlignMuzzle(updated, ak.Weapon);
+    UnityEditor.PrefabUtility.SaveAsPrefabAsset(updated, akPath);
+}
+finally { UnityEditor.PrefabUtility.UnloadPrefabContents(updated); }
+var saved = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(akPath);
+UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(saved, out string guidAfter, out long idAfter);
+if (guidBefore != guidAfter || idBefore != idAfter || networkBefore != saved.GetComponent<Mirror.NetworkIdentity>().assetId)
+    throw new System.InvalidOperationException("AK105: нарушена идентичность ассета");
+return Newtonsoft.Json.JsonConvert.SerializeObject(new { preflight = rows, akIdentityPreserved = true });

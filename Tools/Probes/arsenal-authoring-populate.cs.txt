@@ -1,0 +1,40 @@
+// Только заполнение собственной initial blank fixture; Canonical Style/FullDemo/Demo/Lobby не сохраняются.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)throw new System.InvalidOperationException("Editor busy");
+const string scenePath="Assets/Scenes/Debug/ArsenalLayoutAuthoring.unity";
+if(!System.IO.File.Exists(scenePath)||!System.IO.File.Exists(scenePath+".meta")||string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(scenePath)))throw new System.InvalidOperationException("Own initial scene missing");
+var prepared=Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tmp/arsenal-visual-stage/authoring-populate-before.json"));
+foreach(var row in prepared["files"]) {
+ var p=(string)row["path"];var a=UnityEditor.AssetDatabase.LoadMainAssetAtPath(p);string sha;using(var hash=System.Security.Cryptography.SHA256.Create())sha=Convert.ToBase64String(hash.ComputeHash(System.IO.File.ReadAllBytes(p)));
+ if(sha!=(string)row["diskSha"]||System.IO.File.ReadAllText(p+".meta")!=(string)row["meta"]||(a!=null&&UnityEditor.EditorUtility.IsDirty(a))!=(bool)row["dirty"]||(a==null?null:UnityEditor.EditorJsonUtility.ToJson(a))!=(string)row["json"])throw new System.InvalidOperationException("Prepared populate input changed: "+p);
+}
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++)if(UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty)throw new System.InvalidOperationException("Dirty scene before populate");
+if(UnityEngine.SceneManagement.SceneManager.GetSceneByPath(scenePath).isLoaded)throw new System.InvalidOperationException("Own scene already loaded; no replacement");
+var style=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>("Assets/Data/Weapons/IndustrialPegboardPresentation.asset");
+var preset=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>("Assets/Data/Weapons/FullDemoArsenal.asset");
+if(style==null||preset==null||UnityEditor.EditorUtility.IsDirty(style)||UnityEditor.EditorUtility.IsDirty(preset)||preset.PresentationStyle!=null)throw new System.InvalidOperationException("Canonical input dirty/missing or production linked");
+var paths=new[]{"Assets/Data/Weapons/IndustrialPegboardPresentation.asset","Assets/Data/Weapons/FullDemoArsenal.asset","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Scenes/Lobby.unity","Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat","Assets/Materials/Arsenal/IndustrialSupportMetal.mat"};
+System.Func<string,string> assetState=p=>{var a=UnityEditor.AssetDatabase.LoadMainAssetAtPath(p);return UnityEditor.EditorJsonUtility.ToJson(a)+"|"+UnityEditor.EditorUtility.IsDirty(a)+"|"+Convert.ToBase64String(System.IO.File.ReadAllBytes(p))+"|"+System.IO.File.ReadAllText(p+".meta");};
+var beforeAssets=paths.ToDictionary(p=>p,p=>assetState(p));
+System.Func<string> nativeState=()=>{var text=new System.Text.StringBuilder();for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!s.isLoaded||s.path==scenePath||UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(s))continue;text.Append(s.path).Append(s.isDirty);foreach(var r in s.GetRootGameObjects())foreach(var c in r.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null)text.Append(c.GetInstanceID()).Append(UnityEditor.EditorJsonUtility.ToJson(c));}return text.ToString();};
+var beforeScene=nativeState();var selection=UnityEditor.Selection.instanceIDs;var active=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+var scene=default(UnityEngine.SceneManagement.Scene);bool saved=false;
+try {
+ scene=UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath,UnityEditor.SceneManagement.OpenSceneMode.Additive);
+ var stand=VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.PopulatePrepared(scene,preset,style);
+ var cameraRoot=new UnityEngine.GameObject("Authoring camera (owned)");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(cameraRoot,scene);cameraRoot.transform.SetParent(stand.transform,false);
+ cameraRoot.transform.position=new UnityEngine.Vector3(0,1.05f,-5f);cameraRoot.transform.rotation=UnityEngine.Quaternion.identity;
+ var camera=cameraRoot.AddComponent<UnityEngine.Camera>();camera.orthographic=true;camera.orthographicSize=1.7f;camera.clearFlags=UnityEngine.CameraClearFlags.SolidColor;camera.backgroundColor=new UnityEngine.Color(.035f,.04f,.045f);
+ VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.ValidateStand(stand);
+ if(stand.Slots.Count!=20||stand.Slots.Where(s=>s.Zone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf).Any(s=>s.Supports.Count!=0))throw new System.InvalidOperationException("Unexpected projection");
+ saved=UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene,scenePath);
+ if(!saved)throw new System.InvalidOperationException("Own scene Save refused");
+ var counts=new{slots=stand.Slots.Count,peg=stand.Slots.Count(s=>s.Zone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Pegboard),shelf=stand.Slots.Count(s=>s.Zone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf),shelfSupports=stand.Slots.Where(s=>s.Zone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf).Sum(s=>s.Supports.Count),pegSupports=stand.Slots.Where(s=>s.Zone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Pegboard).Sum(s=>s.Supports.Count),sdk=stand.GetComponentsInChildren<UltimateXR.Core.Components.UxrComponent>(true).Length,network=stand.GetComponentsInChildren<Mirror.NetworkIdentity>(true).Length,colliders=stand.GetComponentsInChildren<UnityEngine.Collider>(true).Length,body=stand.GetComponentsInChildren<UnityEngine.Rigidbody>(true).Length,texts=stand.GetComponentsInChildren<TMPro.TextMeshPro>(true).Length};
+ UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene,true);scene=default(UnityEngine.SceneManagement.Scene);
+ UnityEngine.SceneManagement.SceneManager.SetActiveScene(active);UnityEditor.Selection.instanceIDs=selection;
+ var report=new{saved,counts,foreignAssetsUnchanged=paths.All(p=>beforeAssets[p]==assetState(p)),nativeScenesUnchanged=beforeScene==nativeState(),fullDemoStillLegacy=preset.PresentationStyle==null};
+ System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-populate.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));return report;
+} finally {
+ if(scene.IsValid()&&scene.isLoaded)UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene,true);
+ if(active.IsValid()&&active.isLoaded)UnityEngine.SceneManagement.SceneManager.SetActiveScene(active);
+ UnityEditor.Selection.instanceIDs=selection;
+}

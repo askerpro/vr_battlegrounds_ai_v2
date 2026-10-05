@@ -1,0 +1,37 @@
+// Контролируемая проверка async orchestration: область записи только tmp, production writers отсутствуют.
+// Сначала план отвергает внешнюю coordinator lease. Затем callback ждёт штатного release;
+// каждый BeginPrepare/BeginApply сам атомарно получает собственную lease окна.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)return "NOT RUN: busy";
+string directory=System.IO.Path.GetFullPath("tmp/arsenal-ui-contract/responsive-window");System.IO.Directory.CreateDirectory(directory);
+string input=System.IO.Path.Combine(directory,"input.txt"),output=System.IO.Path.Combine(directory,"output.txt");
+System.IO.File.WriteAllText(input,"initial fixture input");
+System.IO.File.WriteAllText(output,"fixture baseline output");
+string lockPath=System.IO.Path.GetFullPath("tmp/unity-lock");
+var window=UnityEditor.EditorWindow.GetWindow<VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow>();
+var type=window.GetType();var flags=System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance;
+var begin=type.GetMethod("BeginPrepare",flags);var beginApply=type.GetMethod("BeginApply",flags);var cancel=type.GetMethod("CancelPlan",flags);var reload=type.GetMethod("OnBeforeReload",flags);
+var pendingField=type.GetField("pending",flags);var applyField=type.GetField("apply",flags);var resultField=type.GetField("result",flags);
+int writerCalls=0,step=0,beats=0;var checks=new System.Collections.Generic.List<object>();var started=System.DateTime.UtcNow;
+System.Func<string> forbidden=()=>{writerCalls++;return "fixture writer must not run";};
+System.Action<string,System.Func<string>,UnityEngine.SceneManagement.Scene?> prepare=(title,action,scene)=>begin.Invoke(window,new object[]{title,new[]{output},"tmp-only fixture",action,new[]{input},scene,false});
+bool foreignBlocked=false;string lockInfo=System.IO.File.ReadAllText(System.IO.Path.Combine(lockPath,"info"));
+try{prepare("foreign lease fixture",forbidden,null);}catch(System.Reflection.TargetInvocationException exception){foreignBlocked=exception.InnerException is System.InvalidOperationException;}
+checks.Add(new{name="foreign lease before heavy work",pass=foreignBlocked && pendingField.GetValue(window)==null && writerCalls==0 && lockInfo==System.IO.File.ReadAllText(System.IO.Path.Combine(lockPath,"info"))});
+UnityEditor.EditorApplication.CallbackFunction update=null;
+update=()=>{
+ try{
+  beats++;window.Repaint();
+  if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode){cancel.Invoke(window,null);throw new System.InvalidOperationException("Human Play: fixture stopped");}
+  if((System.DateTime.UtcNow-started).TotalSeconds>120){cancel.Invoke(window,null);throw new System.TimeoutException("fixture timeout");}
+  bool idle=pendingField.GetValue(window)==null,ready=applyField.GetValue(window)!=null;
+  if(step==0){if(System.IO.Directory.Exists(lockPath))return;prepare("stale fixture",forbidden,null);step=1;return;}
+  if(step==1 && ready){System.IO.File.AppendAllText(input," changed after ready");beginApply.Invoke(window,null);step=2;return;}
+  if(step==2 && idle){checks.Add(new{name="full SHA stale input rejects writer",pass=writerCalls==0 && ((string)resultField.GetValue(window)).Contains("изменились") && !System.IO.Directory.Exists(lockPath)});prepare("cancel fixture",forbidden,null);cancel.Invoke(window,null);step=3;return;}
+  if(step==3 && idle){checks.Add(new{name="cancel before writer releases own lease",pass=writerCalls==0 && applyField.GetValue(window)==null && !System.IO.Directory.Exists(lockPath)});bool staleScene=false;try{prepare("stale scene fixture",forbidden,default(UnityEngine.SceneManagement.Scene));}catch(System.Reflection.TargetInvocationException exception){staleScene=exception.InnerException.Message.Contains("Контекст сцены");}checks.Add(new{name="stale scene rejects before snapshot",pass=staleScene && pendingField.GetValue(window)==null && !System.IO.Directory.Exists(lockPath)});prepare("partial fixture",()=>{writerCalls++;System.IO.File.WriteAllText(output,"fixture partial output");throw new System.InvalidOperationException("fixture-partial-marker");},null);step=4;return;}
+  if(step==4 && ready){beginApply.Invoke(window,null);step=5;return;}
+  if(step==5 && idle){string report=(string)resultField.GetValue(window);checks.Add(new{name="writer error and changed output preserved",pass=writerCalls==1 && report.Contains("fixture-partial-marker") && report.Contains(output) && !System.IO.Directory.Exists(lockPath)});prepare("reload fixture",forbidden,null);reload.Invoke(window,null);step=6;return;}
+  if(step==6){checks.Add(new{name="reload invalidates continuation and own lease",pass=writerCalls==1 && pendingField.GetValue(window)==null && applyField.GetValue(window)==null && !System.IO.Directory.Exists(lockPath)});System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"result.json"),Newtonsoft.Json.JsonConvert.SerializeObject(new {checks=checks,writerCalls=writerCalls,productionWriters=0,heartbeats=beats,elapsedMs=(System.DateTime.UtcNow-started).TotalMilliseconds},Newtonsoft.Json.Formatting.Indented));UnityEditor.EditorApplication.update-=update;return;}
+ }catch(System.Exception exception){System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"error.txt"),exception.ToString());cancel.Invoke(window,null);UnityEditor.EditorApplication.update-=update;}
+};
+UnityEditor.EditorApplication.update+=update;
+return new {scheduled=true,requiresCoordinatorRelease=true,scope="tmp only",output=directory};

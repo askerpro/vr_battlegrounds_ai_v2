@@ -1,0 +1,42 @@
+// Только чтение persistent Demo и четырёх уже открытых станций; никаких scene save/import.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)return "NOT RUN: Play";
+var source=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.DemoPath);
+var scene=UnityEngine.SceneManagement.SceneManager.GetSceneByPath("Assets/Scenes/Lobby.unity");
+var roots=new[]{source}.Concat(scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<VrBattlegrounds.Arsenal.ArsenalWallController>(true)).Select(w=>w.gameObject)).ToArray();
+var failures=new System.Collections.Generic.List<string>();var reports=new System.Collections.Generic.List<object>();
+System.Func<UnityEngine.Transform,UnityEngine.Transform,UnityEngine.Bounds,UnityEngine.Vector2> span=(root,part,bounds)=>{
+ float min=float.PositiveInfinity,max=float.NegativeInfinity;
+ for(int i=0;i<8;i++){var corner=bounds.center+UnityEngine.Vector3.Scale(bounds.extents,new UnityEngine.Vector3((i&1)==0?-1:1,(i&2)==0?-1:1,(i&4)==0?-1:1));float x=root.InverseTransformPoint(part.TransformPoint(corner)).x;min=System.Math.Min(min,x);max=System.Math.Max(max,x);}
+ return new UnityEngine.Vector2(min,max);
+};
+foreach(var root in roots){
+ var wall=root.GetComponent<VrBattlegrounds.Arsenal.ArsenalWallController>();
+ var pegSpans=wall.Slots.Where(s=>s.PresentationZone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Pegboard).Select(s=>{var panel=s.transform.Find("PegboardSection");return span(root.transform,panel,panel.GetComponent<UnityEngine.MeshFilter>().sharedMesh.bounds);}).ToArray();
+ float pegWidth=pegSpans[0].y-pegSpans[0].x;
+ if(pegSpans.Length!=11||pegSpans.Any(s=>System.Math.Abs(s.y-s.x-pegWidth)>.00002f))failures.Add(root.name+" Peg width inconsistent");
+ var slots=wall.Slots.Where(s=>s.PresentationZone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf).OrderBy(s=>root.transform.InverseTransformPoint(s.transform.position).x).ToArray();
+ var spans=new System.Collections.Generic.List<UnityEngine.Vector2>();
+ var rows=new System.Collections.Generic.List<object>();
+ if(wall.Slots.Count!=20||slots.Length!=9||wall.Slots.Select(s=>s.WeaponData.WeaponId).Distinct().Count()!=20)failures.Add(root.name+" composition");
+ foreach(var slot in slots){
+  var panel=slot.transform.Find("PegboardSection");var mesh=panel.GetComponent<UnityEngine.MeshFilter>();var collider=panel.GetComponent<UnityEngine.BoxCollider>();
+  var meshSpan=span(root.transform,panel,mesh.sharedMesh.bounds);var colliderSpan=span(root.transform,panel,new UnityEngine.Bounds(collider.center,collider.size));spans.Add(meshSpan);
+  if(System.Math.Abs(meshSpan.y-meshSpan.x-pegWidth)>.00002f)failures.Add(root.name+" Shelf/Peg width mismatch "+slot.WeaponData.WeaponId);
+  if(System.Math.Abs(mesh.sharedMesh.bounds.size.y*System.Math.Abs(panel.localScale.y)-.66f)>.00002f)failures.Add(root.name+" Shelf depth changed "+slot.WeaponData.WeaponId);
+  var offer=slot.GetComponent<VrBattlegrounds.Arsenal.ArsenalMagazineOffer>();
+  bool links=offer!=null&&offer.Slot==slot&&offer.Anchor!=null&&offer.Surface==mesh&&slot.ItemAnchor!=null&&slot.WeaponData.MagazinePrefab!=null;
+  bool normal=offer!=null&&UnityEngine.Vector3.Dot(offer.SurfaceNormal,root.transform.up)>.9999f;
+  if(!links||!normal||UnityEngine.Vector2.Distance(meshSpan,colliderSpan)>.00002f)failures.Add(root.name+" links/normal/collider "+slot.WeaponData.WeaponId);
+  if((slot.WeaponData.WeaponId=="MP5K"||slot.WeaponData.WeaponId=="MKR9")&&slot.transform.parent.name!="ShelfSlotsContainer")failures.Add(root.name+" physical Shelf "+slot.WeaponData.WeaponId);
+  var card=slot.GetComponentInChildren<VrBattlegrounds.Arsenal.ArsenalPriceTag>(true);
+  if(card==null||UnityEngine.Vector3.Dot(slot.transform.TransformDirection(slot.CardLocalRotation*UnityEngine.Vector3.back),root.transform.up)<.9999f)failures.Add(root.name+" card "+slot.WeaponData.WeaponId);
+  rows.Add(new{id=slot.WeaponData.WeaponId,parent=slot.transform.parent.name,span=new[]{meshSpan.x,meshSpan.y},panelScale=panel.localScale.ToString("R"),slotScale=slot.transform.localScale.ToString("R"),links=links,normal=normal,card=card!=null});
+ }
+ var gaps=Enumerable.Range(1,spans.Count-1).Select(i=>spans[i].x-spans[i-1].y).ToArray();
+ if(gaps.Any(g=>System.Math.Abs(g-.03f)>.00002f))failures.Add(root.name+" seam outside 30mm");
+ float rowCenter=(spans.Last().y+spans.First().x)*.5f;float pegCenter=(pegSpans.Min(s=>s.x)+pegSpans.Max(s=>s.y))*.5f;
+ if(System.Math.Abs(rowCenter-pegCenter)>.00002f)failures.Add(root.name+" compact row not centered");
+ reports.Add(new{root=root.name,sceneId=root.GetComponent<Mirror.NetworkIdentity>().sceneId,pegWidth=pegWidth,gaps=gaps,rowWidth=spans.Last().y-spans.First().x,rowCenter=rowCenter,pegCenter=pegCenter,rows=rows});
+}
+string json=Newtonsoft.Json.JsonConvert.SerializeObject(new{stations=roots.Length,failures=failures,reports=reports},Newtonsoft.Json.Formatting.Indented);System.IO.File.WriteAllText("tmp/mp5k-audit/shelf-row.json",json);
+return Newtonsoft.Json.JsonConvert.SerializeObject(new{stations=roots.Length,failures=failures,path="tmp/mp5k-audit/shelf-row.json"});

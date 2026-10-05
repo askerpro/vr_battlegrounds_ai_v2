@@ -1,0 +1,25 @@
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)throw new System.InvalidOperationException("Editor busy");
+var baseline=Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tmp/arsenal-visual-stage/native-before-batch2.json"));
+var failures=new System.Collections.Generic.List<string>();var rows=new System.Collections.Generic.List<object>();int sdkChecked=0;
+foreach(var station in UnityEngine.Object.FindObjectsByType<VrBattlegrounds.Arsenal.ArsenalWallController>(UnityEngine.FindObjectsInactive.Include,UnityEngine.FindObjectsSortMode.None)) {
+ System.Func<UnityEngine.Transform,string> fullPath=t=>{var p=t.name;while(t.parent!=null){t=t.parent;p=t.name+"/"+p;}return p;};
+ var prior=baseline["stations"].SingleOrDefault(x=>(string)x["path"]==fullPath(station.transform));if(prior==null){failures.Add("station path absent baseline "+fullPath(station.transform));continue;}
+ foreach(var c in station.GetComponentsInChildren<UltimateXR.Core.Components.UxrComponent>(true)) {
+  var p=fullPath(c.transform).Substring(fullPath(station.transform).Length+1);var old=prior["uid"].SingleOrDefault(x=>(string)x["path"]==p);
+  var json=UnityEditor.EditorJsonUtility.ToJson(c);sdkChecked++;if(old==null || (string)old["uid"]!=c.UniqueId.ToString() || (string)old["json"]!=json)failures.Add("SDK path/UID/serialized mismatch "+fullPath(station.transform)+"/"+p);
+ }
+}
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++) {
+ var scene=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!scene.isLoaded||UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(scene))continue;
+ foreach(var root in scene.GetRootGameObjects())foreach(var c in root.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null) {
+  var id=UnityEditor.GlobalObjectId.GetGlobalObjectIdSlow(c).ToString();
+  var refs=new System.Collections.Generic.List<object>();var so=new UnityEditor.SerializedObject(c);var it=so.GetIterator();
+  while(it.Next(true))if(it.propertyType==UnityEditor.SerializedPropertyType.ObjectReference)refs.Add(new{property=it.propertyPath,target=it.objectReferenceValue==null?null:UnityEditor.GlobalObjectId.GetGlobalObjectIdSlow(it.objectReferenceValue).ToString(),persistent=it.objectReferenceValue!=null&&UnityEditor.EditorUtility.IsPersistent(it.objectReferenceValue)});
+  rows.Add(new{scene=scene.path,dirty=scene.isDirty,globalId=id,type=c.GetType().FullName,json=UnityEditor.EditorJsonUtility.ToJson(c),references=refs});
+ }
+}
+var files=new System.Collections.Generic.List<object>();foreach(var p in new[]{"Assets/Scenes/Lobby.unity","Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat"}) {
+ using(var sha=System.Security.Cryptography.SHA256.Create())files.Add(new{path=p,sha=Convert.ToBase64String(sha.ComputeHash(System.IO.File.ReadAllBytes(p))),lastWriteUtc=System.IO.File.GetLastWriteTimeUtc(p)});
+}
+var report=new{sdkChecked,failures,rows,files};System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-persisted-readonly.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));
+return new{sdkChecked,failures=failures.Take(5).ToArray(),failureCount=failures.Count,persistedRows=rows.Count,diskFiles=files.Count};

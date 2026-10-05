@@ -1,0 +1,3 @@
+// Временная диагностическая команда execute_code. Ничего не сохраняет и не запускает сеть/симуляцию.
+// Запускать после compile и ApplyCurrentPrefabs основным агентом под Unity lock.
+return VrBattlegrounds.Editor.Arsenal.ArsenalMagazineOfferInstaller.DiagnoseCurrentPrefabs();

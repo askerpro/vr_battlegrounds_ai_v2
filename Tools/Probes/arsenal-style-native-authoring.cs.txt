@@ -1,0 +1,74 @@
+// Prepared addressed native batch: two OWN materials, OWN module material, existing canonical Style.
+// FullPreset/Demo/Lobby are not written in this package.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    return "REFUSED Editor busy/Play";
+var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();if(scene.isDirty)return "REFUSED dirty scene";
+const string stylePath="Assets/Data/Weapons/IndustrialPegboardPresentation.asset";
+const string modulePath="Assets/Art/Arsenal/DDDQuickhook/DDDQuickhook.prefab";
+const string metalPath="Assets/Materials/Arsenal/IndustrialSupportMetal.mat";
+const string readyPath="Assets/Materials/Arsenal/IndustrialSupportReady.mat";
+if(System.IO.File.Exists(metalPath) || System.IO.File.Exists(readyPath) || UnityEditor.AssetDatabase.LoadMainAssetAtPath(metalPath)!=null || UnityEditor.AssetDatabase.LoadMainAssetAtPath(readyPath)!=null)
+    return "REFUSED material paths already exist; never overwrite unknown owner";
+if(UnityEditor.AssetDatabase.AssetPathToGUID(stylePath)!="4bae57367dca4a3428e5aff9be952446" || UnityEditor.AssetDatabase.AssetPathToGUID(modulePath)!="7882d27a64943724b83e8f2dee095f1f")
+    return "REFUSED canonical source GUID changed";
+var original=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>(stylePath);
+var module=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(modulePath);
+if(original==null || module==null || UnityEditor.EditorUtility.IsDirty(original) || UnityEditor.EditorUtility.IsDirty(module) || original.Exceptions.Count!=0 || original.SupportModule!=null)
+    return "REFUSED source Style no longer untouched seed";
+var proposal=System.IO.File.ReadAllText("tmp/arsenal-visual-stage/fit-proposal-style.json");
+var style=UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>();
+UnityEngine.Material metal=null,ready=null;UnityEngine.GameObject contents=null;
+var checks=new System.Collections.Generic.List<object>();var failures=new System.Collections.Generic.List<string>();
+System.Action<string,bool> check=(name,pass)=>{checks.Add(new{name=name,pass=pass});if(!pass)failures.Add(name);};
+System.Func<string> sceneJson=()=>{var b=new System.Text.StringBuilder();for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){
+    var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!s.isLoaded || UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(s))continue;
+    b.Append(s.path).Append(s.isDirty);foreach(var r in s.GetRootGameObjects())foreach(var c in r.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null)b.Append(c.GetInstanceID()).Append(UnityEditor.EditorJsonUtility.ToJson(c));}return b.ToString();};
+var before=sceneJson();var untouched=new[]{"Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat","Assets/Materials/Arsenal/WeaponRackMaterial.mat","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Data/Weapons/FullDemoArsenal.asset"};
+var snapshots=new System.Collections.Generic.Dictionary<string,string>();
+System.Func<string,string> nativeState=p=>{var a=UnityEditor.AssetDatabase.LoadMainAssetAtPath(p);return UnityEditor.EditorJsonUtility.ToJson(a)+"|"+UnityEditor.EditorUtility.IsDirty(a)+"|"+Convert.ToBase64String(System.IO.File.ReadAllBytes(p));};
+foreach(var p in untouched)snapshots[p]=nativeState(p);
+var moduleIds=new System.Collections.Generic.Dictionary<long,string>();foreach(var c in module.GetComponentsInChildren<UnityEngine.Component>(true)){string guid;long id;UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(c,out guid,out id);moduleIds[id]=c.GetType().FullName;}
+try {
+    UnityEditor.EditorJsonUtility.FromJsonOverwrite(proposal,style);
+    style.name=original.name;style.hideFlags=UnityEngine.HideFlags.HideAndDontSave;
+    if(style.Exceptions.Count!=20 || style.Zones.Count!=2 || style.SupportModule!=module)throw new System.InvalidOperationException("Proposal references/defaults incomplete");
+    var full=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>("Assets/Data/Weapons/FullDemoArsenal.asset");
+    foreach(var e in style.Exceptions)if(!full.Entries.Any(x=>x.Weapon==e.Weapon && x.Zone==e.Zone))throw new System.InvalidOperationException("Proposal key not canonical assortment");
+    var lit=UnityEngine.Shader.Find("Universal Render Pipeline/Lit");var unlit=UnityEngine.Shader.Find("Universal Render Pipeline/Unlit");
+    if(lit==null || unlit==null)throw new System.InvalidOperationException("URP shader missing");
+    metal=new UnityEngine.Material(lit){name="IndustrialSupportMetal"};metal.SetColor("_BaseColor",new UnityEngine.Color(.085f,.10f,.12f,1f));
+    metal.SetFloat("_Metallic",.8f);metal.SetFloat("_Smoothness",.35f);metal.SetTexture("_BaseMap",null);metal.enableInstancing=true;
+    ready=new UnityEngine.Material(unlit){name="IndustrialSupportReady"};ready.SetColor("_BaseColor",new UnityEngine.Color(.12f,.9f,.42f,.50f));
+    ready.SetFloat("_Surface",1f);ready.SetFloat("_Blend",0f);ready.SetFloat("_SrcBlend",5f);ready.SetFloat("_DstBlend",10f);ready.SetFloat("_ZWrite",0f);
+    ready.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");ready.SetOverrideTag("RenderType","Transparent");ready.renderQueue=3000;ready.enableInstancing=true;
+    var proposed=new UnityEditor.SerializedObject(style);proposed.FindProperty("_returnReadyMaterial").objectReferenceValue=ready;proposed.ApplyModifiedPropertiesWithoutUndo();
+    VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Validate(style);
+    foreach(var entry in full.Entries)VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Resolve(entry.Weapon,entry.Zone,style);
+    System.IO.File.WriteAllText("tmp/arsenal-visual-stage/native-style-source-before.json",UnityEditor.EditorJsonUtility.ToJson(original,true));
+    System.IO.File.WriteAllText("tmp/arsenal-visual-stage/native-style-module-before.json",UnityEditor.EditorJsonUtility.ToJson(module,true));
+    System.IO.File.WriteAllText("tmp/arsenal-visual-stage/native-style-write-set.json",Newtonsoft.Json.JsonConvert.SerializeObject(new{outputs=new[]{stylePath,modulePath,metalPath,readyPath},sourceStyleGUID=UnityEditor.AssetDatabase.AssetPathToGUID(stylePath),moduleGUID=UnityEditor.AssetDatabase.AssetPathToGUID(modulePath),moduleComponents=moduleIds,proposalSHA=Convert.ToBase64String(System.Security.Cryptography.SHA256.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(proposal)))},Newtonsoft.Json.Formatting.Indented));
+    // All references and source eligibility checked before the first persistent write.
+    UnityEditor.AssetDatabase.CreateAsset(metal,metalPath);UnityEditor.AssetDatabase.CreateAsset(ready,readyPath);
+    contents=UnityEditor.PrefabUtility.LoadPrefabContents(modulePath);
+    foreach(var renderer in contents.GetComponentsInChildren<UnityEngine.MeshRenderer>(true))renderer.sharedMaterial=metal;
+    UnityEditor.PrefabUtility.SaveAsPrefabAsset(contents,modulePath);UnityEditor.PrefabUtility.UnloadPrefabContents(contents);contents=null;
+    style.hideFlags=UnityEngine.HideFlags.None;
+    UnityEditor.EditorJsonUtility.FromJsonOverwrite(UnityEditor.EditorJsonUtility.ToJson(style),original);
+    original.name=System.IO.Path.GetFileNameWithoutExtension(stylePath);UnityEditor.EditorUtility.SetDirty(original);UnityEditor.AssetDatabase.SaveAssetIfDirty(original);
+    check("Canonical Style contains two defaults and twenty exact exceptions",original.Zones.Count==2 && original.Exceptions.Count==20);
+    check("Source Style/module/material refs persistent",UnityEditor.EditorUtility.IsPersistent(original.ReturnReadyMaterial) && original.SupportModule==UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(modulePath));
+    var retained=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(modulePath);var afterIds=new System.Collections.Generic.Dictionary<long,string>();
+    foreach(var c in retained.GetComponentsInChildren<UnityEngine.Component>(true)){string guid;long id;UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(c,out guid,out id);afterIds[id]=c.GetType().FullName;}
+    check("Module retained three component localFileIDs",afterIds.Count==moduleIds.Count && moduleIds.All(x=>afterIds.ContainsKey(x.Key) && afterIds[x.Key]==x.Value));
+    check("Module still pure visual",retained.GetComponentsInChildren<UnityEngine.Component>(true).Length==3 && retained.GetComponentsInChildren<UnityEngine.Collider>(true).Length==0 && retained.GetComponentsInChildren<UnityEngine.MonoBehaviour>(true).Length==0);
+    check("Native scene serialized state and dirty unchanged",before==sceneJson());
+    foreach(var p in untouched)check("Untouched native/disk: "+p,snapshots[p]==nativeState(p));
+    check("FullDemo style remains unassigned before explicit generation",full.PresentationStyle==null);
+    var report=new{checks=checks,failures=failures,zoneDefaults=original.Zones.Count,exceptions=original.Exceptions.Count,materials=new[]{UnityEditor.AssetDatabase.AssetPathToGUID(metalPath),UnityEditor.AssetDatabase.AssetPathToGUID(readyPath)},assigned=false};
+    System.IO.File.WriteAllText("tmp/arsenal-visual-stage/native-style-authored.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));return report;
+}finally {
+    if(contents!=null)UnityEditor.PrefabUtility.UnloadPrefabContents(contents);
+    if(style!=null)UnityEngine.Object.DestroyImmediate(style);
+    if(metal!=null && !UnityEditor.EditorUtility.IsPersistent(metal))UnityEngine.Object.DestroyImmediate(metal);
+    if(ready!=null && !UnityEditor.EditorUtility.IsPersistent(ready))UnityEngine.Object.DestroyImmediate(ready);
+}

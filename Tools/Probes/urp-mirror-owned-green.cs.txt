@@ -1,0 +1,79 @@
+// Actual SDK callback/lifecycle, собственная PreviewScene, real source Material только читается.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)return "NOT RUN: editor busy";
+var type=typeof(UltimateXR.Rendering.FX.UxrPlanarReflectionUrp);var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+var staticFlags=System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic;
+var avatarList=(System.Collections.Generic.List<UltimateXR.Avatar.UxrAvatar>)typeof(UltimateXR.Core.Components.UxrComponent<UltimateXR.Avatar.UxrAvatar>).GetField("s_typeComponents",staticFlags).GetValue(null);
+var recursion=type.GetField("s_insideRendering",staticFlags);object oldRecursion=recursion.GetValue(null);bool oldCulling=UnityEngine.GL.invertCulling;int oldLights=UnityEngine.QualitySettings.pixelLightCount;var oldRt=UnityEngine.RenderTexture.active;
+var active=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=active.isDirty;var rootIds=active.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(x=>x).ToArray();
+var source=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>("Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat");string sourceJson=UnityEditor.EditorJsonUtility.ToJson(source);bool sourceDirty=UnityEditor.EditorUtility.IsDirty(source);
+var sourceLeft=source.GetTexture("_ReflectionTexLeft");var sourceRight=source.GetTexture("_ReflectionTexRight");byte[] sourceDisk=System.IO.File.ReadAllBytes(UnityEditor.AssetDatabase.GetAssetPath(source));
+var preview=UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();var allCopies=new System.Collections.Generic.List<UnityEngine.Material>();var allTextures=new System.Collections.Generic.List<UnityEngine.RenderTexture>();var checks=new System.Collections.Generic.List<object>();var failures=new System.Collections.Generic.List<string>();
+System.Action<string,bool> check=(name,pass)=>{checks.Add(new{name=name,pass=pass});if(!pass)failures.Add(name);};
+System.Action<object,string,object> set=(o,n,v)=>type.GetField(n,flags).SetValue(o,v);
+System.Action<object,string> invoke=(o,n)=>type.GetMethod(n,flags).Invoke(o,null);
+System.Func<string,UnityEngine.GameObject> create=name=>{var go=UnityEditor.EditorUtility.CreateGameObjectWithHideFlags(name,UnityEngine.HideFlags.HideAndDontSave);UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go,preview);return go;};
+var holder=create("OwnMirrorGreen");
+var other=new UnityEngine.Material(UnityEngine.Shader.Find("Universal Render Pipeline/Unlit")){name="OwnMirrorOther",hideFlags=UnityEngine.HideFlags.HideAndDontSave};var foreign=new UnityEngine.Material(other){name="OwnForeignReplacement",hideFlags=UnityEngine.HideFlags.HideAndDontSave};
+var inputGo=create("OwnInput");inputGo.transform.SetParent(holder.transform,false);var input=inputGo.AddComponent<UnityEngine.Camera>();input.scene=preview;input.enabled=true;input.transform.position=new UnityEngine.Vector3(0,0,-3);input.transform.LookAt(UnityEngine.Vector3.zero);
+var avatarGo=create("OwnAvatar");avatarGo.transform.SetParent(holder.transform,false);var avatar=avatarGo.AddComponent<UltimateXR.Avatar.UxrAvatar>();typeof(UltimateXR.Avatar.UxrAvatar).GetField("_camera",flags).SetValue(avatar,input);
+System.Func<string,UnityEngine.Renderer> renderer=name=>{var go=create(name);go.transform.SetParent(holder.transform,false);return go.AddComponent<UnityEngine.MeshRenderer>();};
+var componentRenderer=renderer("OwnComponentRenderer");componentRenderer.sharedMaterial=other;var a=componentRenderer.gameObject.AddComponent<UltimateXR.Rendering.FX.UxrPlanarReflectionUrp>();
+var child=renderer("OwnAssignedChild");child.transform.SetParent(componentRenderer.transform,false);child.sharedMaterials=new[]{source,other,(UnityEngine.Material)null};set(a,"_mirrorRenderer",child);set(a,"_mirrorTransform",child.transform);set(a,"_materialWhenDisabled",other);
+var rb=renderer("OwnRendererB");rb.sharedMaterial=source;var b=rb.gameObject.AddComponent<UltimateXR.Rendering.FX.UxrPlanarReflectionUrp>();set(b,"_mirrorRenderer",rb);set(b,"_mirrorTransform",rb.transform);set(b,"_materialWhenDisabled",other);
+var rc=renderer("OwnRendererC");rc.sharedMaterial=source;
+var panelMesh=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.DemoPath).GetComponentsInChildren<UnityEngine.MeshFilter>(true).First(m=>m.name=="PegboardSection").sharedMesh;
+child.gameObject.AddComponent<UnityEngine.MeshFilter>().sharedMesh=panelMesh;child.transform.localScale=new UnityEngine.Vector3(2,2,.02f);
+var reflected=renderer("OwnReflectedCube");reflected.gameObject.AddComponent<UnityEngine.MeshFilter>().sharedMesh=panelMesh;reflected.sharedMaterial=other;reflected.transform.position=new UnityEngine.Vector3(.5f,0,-1);reflected.transform.localScale=UnityEngine.Vector3.one*.4f;other.SetColor("_BaseColor",UnityEngine.Color.red);
+var imageTarget=new UnityEngine.RenderTexture(512,256,24){hideFlags=UnityEngine.HideFlags.HideAndDontSave};allTextures.Add(imageTarget);
+System.Action<UltimateXR.Rendering.FX.UxrPlanarReflectionUrp> prepare=c=>{
+ var go=create("OwnCachedCamera");go.transform.SetParent(holder.transform,false);go.AddComponent<UnityEngine.Skybox>();var camera=go.AddComponent<UnityEngine.Camera>();camera.scene=preview;camera.enabled=false;
+ set(c,"_textureSize",32);set(c,"_oldReflectionTextureSize",32);set(c,"_renderCameraObject",go);
+ var left=new UnityEngine.RenderTexture(32,32,16){hideFlags=UnityEngine.HideFlags.HideAndDontSave};var right=new UnityEngine.RenderTexture(32,32,16){hideFlags=UnityEngine.HideFlags.HideAndDontSave};allTextures.Add(left);allTextures.Add(right);set(c,"_reflectionTextureLeft",left);set(c,"_reflectionTextureRight",right);
+ ((System.Collections.Generic.Dictionary<UnityEngine.Camera,UnityEngine.Camera>)type.GetField("_reflectionCameras",flags).GetValue(c)).Add(input,camera);
+};
+System.Action<UltimateXR.Rendering.FX.UxrPlanarReflectionUrp> callback=c=>{
+ try{type.GetMethod("RenderPipelineManager_BeginCameraRendering",flags).Invoke(c,new object[]{default(UnityEngine.Rendering.ScriptableRenderContext),input});}
+ catch(System.Reflection.TargetInvocationException e){if(!(e.InnerException is System.InvalidOperationException)||!e.InnerException.Message.Contains("ScriptableRenderContext"))throw;}
+};
+System.Func<UnityEngine.Renderer,int,float> pb=(r,index)=>{var block=new UnityEngine.MaterialPropertyBlock();if(index<0)r.GetPropertyBlock(block);else r.GetPropertyBlock(block,index);return block.GetFloat("_OwnForeignSentinel");};
+try{
+ avatarList.Insert(0,avatar);check("fixture local camera",UltimateXR.Avatar.UxrAvatar.LocalAvatarCamera==input);recursion.SetValue(null,false);
+ var block=new UnityEngine.MaterialPropertyBlock();block.SetFloat("_OwnForeignSentinel",7);child.SetPropertyBlock(block);block.SetFloat("_OwnForeignSentinel",13);child.SetPropertyBlock(block,0);
+ prepare(a);prepare(b);invoke(a,"OnEnable");invoke(b,"OnEnable");var ca=child.sharedMaterials[0];var cb=rb.sharedMaterial;allCopies.Add(ca);allCopies.Add(cb);
+ check("independent owned copies",ca!=source&&cb!=source&&ca!=cb);check("copies HideAndDontSave",ca.hideFlags==UnityEngine.HideFlags.HideAndDontSave&&cb.hideFlags==UnityEngine.HideFlags.HideAndDontSave);
+ check("assigned child and unrelated slots",componentRenderer.sharedMaterial==other&&child.sharedMaterials[1]==other&&child.sharedMaterials[2]==null);
+ check("copy authored shader/renderqueue/keywords",ca.shader==source.shader&&ca.renderQueue==source.renderQueue&&ca.enableInstancing==source.enableInstancing&&ca.shaderKeywords.SequenceEqual(source.shaderKeywords));
+ invoke(a,"OnEnable");check("repeat enable same copy",child.sharedMaterials[0]==ca);
+ callback(a);callback(b);
+ check("A textures both eyes",ca.GetTexture("_ReflectionTexLeft")==allTextures[1]&&ca.GetTexture("_ReflectionTexRight")==allTextures[2]);
+ check("B textures isolated",cb.GetTexture("_ReflectionTexLeft")==allTextures[3]&&cb.GetTexture("_ReflectionTexRight")==allTextures[4]);
+ input.targetTexture=imageTarget;input.Render();input.targetTexture=null;
+ System.Func<UnityEngine.RenderTexture,string,bool> saveImage=(rt,path)=>{UnityEngine.RenderTexture.active=rt;var pixels=new UnityEngine.Texture2D(rt.width,rt.height,UnityEngine.TextureFormat.RGB24,false);try{pixels.ReadPixels(new UnityEngine.Rect(0,0,rt.width,rt.height),0,0);pixels.Apply();System.IO.File.WriteAllBytes(path,pixels.EncodeToPNG());var colors=pixels.GetPixels();return colors.Max(c=>c.r)-colors.Min(c=>c.r)>.02f;}finally{UnityEngine.Object.DestroyImmediate(pixels);UnityEngine.RenderTexture.active=oldRt;}};
+ System.IO.Directory.CreateDirectory("tmp/urp-mirror-audit");
+ check("actual URP left reflection image",saveImage(allTextures[1],"tmp/urp-mirror-audit/reflection-left.png"));
+ check("actual URP right reflection image",saveImage(allTextures[2],"tmp/urp-mirror-audit/reflection-right.png"));
+ check("actual mirror camera image",saveImage(imageTarget,"tmp/urp-mirror-audit/mirror-camera.png"));
+ check("real shared textures unchanged",source.GetTexture("_ReflectionTexLeft")==sourceLeft&&source.GetTexture("_ReflectionTexRight")==sourceRight);
+ check("PB initial values preserved",pb(child,-1)==7&&pb(child,0)==13);
+ block.SetFloat("_OwnForeignSentinel",19);child.SetPropertyBlock(block);callback(a);check("PB foreign update preserved",pb(child,-1)==19&&pb(child,0)==13);
+ child.sharedMaterials=new[]{other,ca,(UnityEngine.Material)null};invoke(a,"OnDisable");var cheap=child.sharedMaterials[1];allCopies.Add(cheap);
+ check("disabled owned cheap after reorder",cheap!=other&&cheap!=source&&cheap.shader==other.shader&&cheap.hideFlags==UnityEngine.HideFlags.HideAndDontSave&&child.sharedMaterials[0]==other);
+ check("active copy released",ca==null);invoke(a,"OnDisable");check("repeat disable same cheap",child.sharedMaterials[1]==cheap);
+ invoke(a,"OnEnable");ca=child.sharedMaterials[1];allCopies.Add(ca);check("reenable original source and preserved order",ca!=source&&ca.shader==source.shader&&child.sharedMaterials[0]==other&&cheap==null);callback(a);
+ child.sharedMaterials=new[]{other,foreign,(UnityEngine.Material)null};invoke(a,"OnDisable");check("foreign replacement preserved",child.sharedMaterials[1]==foreign&&ca==null);
+ invoke(a,"OnEnable");check("foreign nonmirror not cloned",child.sharedMaterials[1]==foreign);invoke(a,"OnDestroy");check("foreign replacement after destroy",child.sharedMaterials[1]==foreign&&child.sharedMaterials[0]==other&&child.sharedMaterials[2]==null);
+ set(b,"_mirrorRenderer",rc);type.GetMethod("EnsureOwnedMaterials",flags).Invoke(b,null);var cc=rc.sharedMaterial;allCopies.Add(cc);check("renderer reassignment conditional restore",rb.sharedMaterial==source&&cb==null&&cc!=source);callback(b);
+ invoke(b,"OnDisable");cheap=rc.sharedMaterial;allCopies.Add(cheap);rc.sharedMaterial=foreign;invoke(b,"OnEnable");check("foreign replacement while disabled",rc.sharedMaterial==foreign&&cheap==null);invoke(b,"OnDestroy");check("disabled foreign remains after destroy",rc.sharedMaterial==foreign);
+ check("PB after complete lifecycle",pb(child,-1)==19&&pb(child,0)==13);
+ check("owned copies destroyed",allCopies.All(m=>m==null));
+ check("real source serialized unchanged",UnityEditor.EditorJsonUtility.ToJson(source)==sourceJson);check("real source dirty unchanged",UnityEditor.EditorUtility.IsDirty(source)==sourceDirty);check("real source disk unchanged",System.IO.File.ReadAllBytes(UnityEditor.AssetDatabase.GetAssetPath(source)).SequenceEqual(sourceDisk));
+}
+finally{
+ avatarList.Remove(avatar);UnityEngine.Object.DestroyImmediate(holder);UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(preview);
+ if(other!=null)UnityEngine.Object.DestroyImmediate(other);if(foreign!=null)UnityEngine.Object.DestroyImmediate(foreign);foreach(var t in allTextures)if(t!=null)UnityEngine.Object.DestroyImmediate(t);
+ recursion.SetValue(null,oldRecursion);UnityEngine.GL.invertCulling=oldCulling;UnityEngine.QualitySettings.pixelLightCount=oldLights;UnityEngine.RenderTexture.active=oldRt;
+}
+check("native scene root identities unchanged",rootIds.SequenceEqual(active.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(x=>x)));
+check("native scene dirty unchanged",active.isDirty==dirty);check("active scene unchanged",UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle==active.handle);check("owned copies final cleanup",allCopies.All(m=>m==null));check("owned textures final cleanup",allTextures.All(t=>t==null));
+var result=new{count=checks.Count,failures=failures,checks=checks};System.IO.Directory.CreateDirectory("tmp/urp-mirror-audit");System.IO.File.WriteAllText("tmp/urp-mirror-audit/owned-green.json",Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+return Newtonsoft.Json.JsonConvert.SerializeObject(new{count=checks.Count,failures=failures,path="tmp/urp-mirror-audit/owned-green.json"});

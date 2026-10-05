@@ -1,0 +1,26 @@
+// Сохранённые prefab localFileID; переезд MP5K меняет только path prefix.
+var root=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.DemoPath);
+var before=Newtonsoft.Json.Linq.JArray.Parse(System.IO.File.ReadAllText("tmp/mp5k-audit/source-before-inplace.json"));
+var current=new System.Collections.Generic.Dictionary<long,object>();
+var paths=new System.Collections.Generic.Dictionary<long,string>();
+var types=new System.Collections.Generic.Dictionary<long,string>();
+var errors=new System.Collections.Generic.List<string>();
+foreach(var component in root.GetComponentsInChildren<UnityEngine.Component>(true)){
+ if(component==null){errors.Add("missing component");continue;}
+ string guid;long id;if(!UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(component,out guid,out id)){errors.Add("no identity "+component.name);continue;}
+ if(current.ContainsKey(id)){errors.Add("duplicate localFileID "+id);continue;}
+ string path=UnityEditor.AnimationUtility.CalculateTransformPath(component.transform,root.transform);
+ current.Add(id,component);paths.Add(id,path);types.Add(id,component.GetType().FullName);
+ if(guid!="88273a27f53bfdd4697ec9e56448a068")errors.Add("source GUID "+id);
+}
+foreach(var row in before){
+ long id=(long)row["id"];string path=(string)row["path"];
+ const string oldPrefix="PresentationRoot/RiflesSlotsContainer/PegboardSlot_MP5K";
+ if(path==oldPrefix||path.StartsWith(oldPrefix+"/"))path="PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_MP5K"+path.Substring(oldPrefix.Length);
+ if(!current.ContainsKey(id))errors.Add("lost "+id);
+ else if(types[id]!=(string)row["type"]||paths[id]!=path)errors.Add("changed type/path "+id+" "+paths[id]);
+}
+if(current.Count!=before.Count)errors.Add("component count changed");
+var result=new{before=before.Count,after=current.Count,errors=errors};
+System.IO.File.WriteAllText("tmp/mp5k-audit/source-final-identities.json",Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+return Newtonsoft.Json.JsonConvert.SerializeObject(result);

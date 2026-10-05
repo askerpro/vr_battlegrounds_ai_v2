@@ -1,0 +1,213 @@
+// Одноразовая диагностика, не acceptance-тест механики. execute_code под Unity lock, только EditMode.
+// Временная PreviewScene, собственные менеджеры/руки/Dummy input; нет Shoot/Reload/Sync и обращений к рукам человека.
+// Порядок dry hook проверяется по source; полный SDK avatar update здесь намеренно не вызывается.
+if (UnityEngine.Application.isPlaying) return "NOT RUN: требуется EditMode; чужой Play Mode не прерывать.";
+var output = new System.Text.StringBuilder();
+int passed = 0, failed = 0;
+System.Action<string, bool> check = (name, ok) => { output.AppendLine((ok ? "PASS " : "FAIL ") + name); if (ok) passed++; else failed++; };
+var instanceFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+var staticFlags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+System.Func<System.Type, string, System.Reflection.FieldInfo> field = (type, name) =>
+{
+    for (var current = type; current != null; current = current.BaseType)
+    {
+        var found = current.GetField(name, instanceFlags | staticFlags | System.Reflection.BindingFlags.DeclaredOnly);
+        if (found != null) return found;
+    }
+    throw new System.MissingFieldException(type.FullName, name);
+};
+System.Action<object, string, object> set = (target, name, value) => field(target.GetType(), name).SetValue(target, value);
+var grabSingleton = field(typeof(UltimateXR.Manipulation.UxrGrabManager), "s_instance");
+var avatarUpdateSingleton = field(typeof(UltimateXR.Core.UxrManager), "s_instance");
+var weaponSingleton = field(typeof(UltimateXR.Mechanics.Weapons.UxrWeaponManager), "s_instance");
+var oldGrabManager = grabSingleton.GetValue(null);
+var oldAvatarManager = avatarUpdateSingleton.GetValue(null);
+var oldWeaponManager = weaponSingleton.GetValue(null);
+var globalHaptic = field(typeof(UltimateXR.Devices.UxrControllerInput), "GlobalHapticRequesting");
+var oldGlobalHaptic = globalHaptic.GetValue(null);
+var oldAuthority = VrBattlegrounds.Network.StateEventAuthority.IsAuthoredHere;
+var handRegistry = (System.Collections.IList)field(typeof(UltimateXR.Core.Components.UxrComponent<UltimateXR.Manipulation.UxrGrabber>), "s_typeComponents").GetValue(null);
+var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+UnityEngine.GameObject root = null;
+UltimateXR.Manipulation.UxrGrabber mainHand = null, supportHand = null;
+VrBattlegrounds.Weapons.WeaponChamberingReminder reminder = null;
+bool subscribed = false;
+try
+{
+    root = new UnityEngine.GameObject("ChamberingReminderDiagnostic");
+    root.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
+    System.Func<string, UnityEngine.GameObject> child = name =>
+    {
+        var go = new UnityEngine.GameObject(name); go.transform.SetParent(root.transform, false); return go;
+    };
+    var grabManager = child("GrabManager").AddComponent<UltimateXR.Manipulation.UxrGrabManager>();
+    var avatarManager = child("AvatarManager").AddComponent<UltimateXR.Core.UxrManager>();
+    var weaponManager = child("WeaponManager").AddComponent<UltimateXR.Mechanics.Weapons.UxrWeaponManager>();
+    grabSingleton.SetValue(null, grabManager);
+    avatarUpdateSingleton.SetValue(null, avatarManager);
+    weaponSingleton.SetValue(null, weaponManager);
+    globalHaptic.SetValue(null, null); // Dummy requests не попадают в чужих global подписчиков.
+
+    var avatarGo = child("SyntheticAvatar");
+    var avatar = avatarGo.AddComponent<UltimateXR.Avatar.UxrAvatar>();
+    var dummy = avatarGo.AddComponent<UltimateXR.Devices.Integrations.UxrDummyControllerInput>();
+    var mainGo = child("SyntheticMainHand"); mainGo.transform.SetParent(avatarGo.transform, false);
+    var supportGo = child("SyntheticSupportHand"); supportGo.transform.SetParent(avatarGo.transform, false);
+    mainHand = mainGo.AddComponent<UltimateXR.Manipulation.UxrGrabber>();
+    supportHand = supportGo.AddComponent<UltimateXR.Manipulation.UxrGrabber>();
+    set(mainHand, "_avatar", avatar); set(supportHand, "_avatar", avatar);
+    set(mainHand, "_side", UltimateXR.Core.UxrHandSide.Right); set(mainHand, "_sideInitialized", true);
+    set(supportHand, "_side", UltimateXR.Core.UxrHandSide.Left); set(supportHand, "_sideInitialized", true);
+    handRegistry.Add(mainHand); handRegistry.Add(supportHand);
+    VrBattlegrounds.Network.StateEventAuthority.IsAuthoredHere = candidate => candidate == avatar || oldAuthority(candidate);
+
+    var weaponGo = child("SyntheticWeapon");
+    var grip = weaponGo.AddComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    var firearm = weaponGo.AddComponent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>();
+    reminder = weaponGo.AddComponent<VrBattlegrounds.Weapons.WeaponChamberingReminder>();
+    var signal = child("SyntheticProximitySignal"); signal.SetActive(false);
+    var visual = child("SyntheticActionVisual"); visual.SetActive(false);
+    var anchor = child("SyntheticMagazineAnchor").AddComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+    var magazineGo = child("SyntheticMagazine");
+    var magazineGrip = magazineGo.AddComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    var magazine = magazineGo.AddComponent<UltimateXR.Mechanics.Weapons.UxrFirearmMag>();
+    set(magazine, "_capacity", 10); set(magazine, "_rounds", 5);
+    set(anchor, "_currentPlacedObject", magazineGrip);
+    var triggerType = typeof(UltimateXR.Mechanics.Weapons.UxrFirearmWeapon).Assembly.GetType("UltimateXR.Mechanics.Weapons.UxrFirearmTrigger", true);
+    var trigger = System.Activator.CreateInstance(triggerType, true);
+    set(trigger, "_triggerGrabbable", grip); set(trigger, "_grabbableGrabPointIndex", 0);
+    set(trigger, "_ammunitionMagAnchor", anchor);
+    set(trigger, "_cycleType", UltimateXR.Mechanics.Weapons.UxrShotCycle.SemiAutomatic);
+    set(trigger, "_useHasReloadedForSemiAndFullAuto", true);
+    var triggers = (System.Collections.IList)System.Activator.CreateInstance(typeof(System.Collections.Generic.List<>).MakeGenericType(triggerType));
+    triggers.Add(trigger); set(firearm, "_triggers", triggers);
+    var runtimeType = typeof(UltimateXR.Mechanics.Weapons.UxrFirearmWeapon).GetNestedType("RuntimeTriggerInfo", System.Reflection.BindingFlags.NonPublic);
+    var runtime = System.Activator.CreateInstance(runtimeType, true);
+    var loaded = runtimeType.GetProperty("HasReloaded"); loaded.SetValue(runtime, false);
+    ((System.Collections.IDictionary)field(firearm.GetType(), "_runtimeTriggers").GetValue(firearm))[0] = runtime;
+    mainHand.GrabbedObject = grip; supportHand.GrabbedObject = grip;
+    var manipulationType = typeof(UltimateXR.Manipulation.UxrGrabManager).GetNestedType("RuntimeManipulationInfo", System.Reflection.BindingFlags.NonPublic);
+    var manipulation = System.Activator.CreateInstance(manipulationType, new object[] { mainHand, 0, null });
+    var grabs = (System.Collections.IList)manipulationType.GetProperty("Grabs").GetValue(manipulation);
+    var grabType = typeof(UltimateXR.Manipulation.UxrGrabManager).GetNestedType("RuntimeGrabInfo", System.Reflection.BindingFlags.NonPublic);
+    grabs.Add(System.Activator.CreateInstance(grabType, new object[] { supportHand, 1 }));
+    var holds = (System.Collections.IDictionary)field(grabManager.GetType(), "_currentManipulations").GetValue(grabManager);
+    holds.Add(grip, manipulation);
+    set(reminder, "_firearm", firearm); set(reminder, "_proximitySignal", signal); set(reminder, "_visual", visual);
+    var reminderType = reminder.GetType();
+    System.Action<string> invoke = name => reminderType.GetMethod(name, instanceFlags).Invoke(reminder, null);
+    System.Action<UltimateXR.Manipulation.UxrGrabber> raiseDry = hand =>
+    {
+        var handler = (System.Action<int, UltimateXR.Manipulation.UxrGrabber>)field(firearm.GetType(), "ChamberingRequired").GetValue(firearm);
+        handler?.Invoke(0, hand);
+    };
+    System.Action<int> raiseRelease = point =>
+    {
+        var args = UltimateXR.Manipulation.UxrManipulationEventArgs.FromRelease(grip, null, point == 0 ? mainHand : supportHand, point, point != 0, false);
+        var handler = (System.EventHandler<UltimateXR.Manipulation.UxrManipulationEventArgs>)field(grip.GetType(), "Released").GetValue(grip);
+        handler?.Invoke(grip, args);
+    };
+    int hapticCount = 0;
+    UltimateXR.Devices.UxrControllerHapticEventArgs lastHaptic = null;
+    dummy.HapticRequesting += (sender, args) => { hapticCount++; lastHaptic = args; };
+    invoke("OnEnable"); subscribed = true;
+    check("fixture: local trigger hand + authority + nonempty magazine", firearm.NeedsManualChambering(0) && VrBattlegrounds.Network.StateEventAuthority.IsAuthorOfItem(firearm));
+
+    raiseDry(supportHand);
+    check("support hand cannot activate reminder", !reminder.IsReminding && hapticCount == 0);
+    int roundsBefore = magazine.Rounds;
+    raiseDry(mainHand);
+    check("local dry trigger latches independent of proximity", reminder.IsReminding && visual.activeSelf && !signal.activeSelf);
+    check("feedback leaves ammo/chamber state unchanged", magazine.Rounds == roundsBefore && !firearm.IsLoaded(0));
+    check("weak short haptic targets only main hand with Mix", hapticCount == 1 && lastHaptic != null && lastHaptic.HandSide == mainHand.Side && UnityEngine.Mathf.Abs(lastHaptic.Amplitude - 0.15f) < 0.0001f && UnityEngine.Mathf.Abs(lastHaptic.DurationSeconds - 0.08f) < 0.0001f && lastHaptic.HapticMode == UltimateXR.Haptics.UxrHapticMode.Mix);
+    float deadline = (float)field(reminderType, "_nextHapticTime").GetValue(reminder);
+    raiseDry(mainHand);
+    check("repeated immediate dry trigger respects cooldown", hapticCount == 1 && (float)field(reminderType, "_nextHapticTime").GetValue(reminder) == deadline);
+    set(reminder, "_nextHapticTime", UnityEngine.Time.unscaledTime - 1f); raiseDry(mainHand);
+    check("expired cooldown allows exactly one additional haptic", hapticCount == 2);
+
+    firearm.IsUseBlocked = true; invoke("UpdateFeedback");
+    check("blocked hides existing reminder but preserves latch", !reminder.IsReminding && !visual.activeSelf && (bool)field(reminderType, "_latched").GetValue(reminder));
+    raiseDry(mainHand); check("blocked produces no haptic", hapticCount == 2);
+    firearm.IsUseBlocked = false; invoke("UpdateFeedback");
+    check("unblocked restores pending reminder", reminder.IsReminding && visual.activeSelf);
+    raiseRelease(1); check("support release preserves reminder", reminder.IsReminding);
+    raiseRelease(0); check("main release clears even when queried hand still matches", !reminder.IsReminding && !visual.activeSelf);
+
+    set(reminder, "_nextHapticTime", 0f); raiseDry(mainHand);
+    loaded.SetValue(runtime, true); invoke("UpdateFeedback");
+    check("actual loaded state clears reminder", !reminder.IsReminding && !visual.activeSelf);
+    loaded.SetValue(runtime, false); raiseDry(mainHand);
+    set(magazine, "_rounds", 0); invoke("UpdateFeedback");
+    check("empty magazine clears reminder", !reminder.IsReminding && !visual.activeSelf);
+    int emptyHaptics = hapticCount; raiseDry(mainHand);
+    check("ordinary empty magazine cannot activate reminder/haptic", !reminder.IsReminding && hapticCount == emptyHaptics);
+    set(magazine, "_rounds", 5); raiseDry(mainHand);
+    set(anchor, "_currentPlacedObject", null); invoke("UpdateFeedback");
+    check("removed magazine clears reminder", !reminder.IsReminding && !visual.activeSelf);
+    set(anchor, "_currentPlacedObject", magazineGrip);
+    set(avatar, "_avatarMode", UltimateXR.Avatar.UxrAvatarMode.UpdateExternally);
+    int remoteHaptics = hapticCount; raiseDry(mainHand);
+    check("remote hand cannot activate reminder/haptic", !reminder.IsReminding && hapticCount == remoteHaptics);
+    set(avatar, "_avatarMode", UltimateXR.Avatar.UxrAvatarMode.Local);
+    VrBattlegrounds.Network.StateEventAuthority.IsAuthoredHere = candidate => candidate != avatar && oldAuthority(candidate);
+    raiseDry(mainHand); check("non-author cannot activate reminder/haptic", !reminder.IsReminding && hapticCount == remoteHaptics);
+    VrBattlegrounds.Network.StateEventAuthority.IsAuthoredHere = candidate => candidate == avatar || oldAuthority(candidate);
+
+    signal.SetActive(true); invoke("UpdateFeedback"); check("SDK proximity signal still activates same visual", visual.activeSelf);
+    grabManager.Features &= ~UltimateXR.Manipulation.UxrManipulationFeatures.Affordances;
+    invoke("UpdateFeedback"); check("stale proximity ignored when affordances stop", !visual.activeSelf);
+    grabManager.Features = UltimateXR.Manipulation.UxrManipulationFeatures.All;
+    avatarManager.enabled = false; invoke("UpdateFeedback"); check("stale proximity ignored when avatar manager stops", !visual.activeSelf);
+    avatarManager.enabled = true; signal.SetActive(false);
+    raiseDry(mainHand); invoke("OnDisable"); subscribed = false;
+    check("disable clears latch/visual", !reminder.IsReminding && !visual.activeSelf);
+    int disabledHaptics = hapticCount; raiseDry(mainHand);
+    check("disable removes dry hook subscription", hapticCount == disabledHaptics && !reminder.IsReminding);
+    invoke("OnEnable"); subscribed = true; raiseDry(mainHand);
+    check("reenable has one dry hook subscription", reminder.IsReminding && hapticCount == disabledHaptics + 1);
+    var releaseSubscribers = (System.Delegate)field(grip.GetType(), "Released").GetValue(grip);
+    check("reenable has one release subscription", releaseSubscribers != null && releaseSubscribers.GetInvocationList().Length == 1);
+
+    set(trigger, "_cycleType", UltimateXR.Mechanics.Weapons.UxrShotCycle.ManualReload);
+    set(trigger, "_useHasReloadedForSemiAndFullAuto", false);
+    check("manual cycle needs chambering independently of semi/full flag", firearm.NeedsManualChambering(0));
+    loaded.SetValue(runtime, true); check("loaded manual cycle does not need chambering before trigger", !firearm.NeedsManualChambering(0));
+    set(trigger, "_cycleType", UltimateXR.Mechanics.Weapons.UxrShotCycle.SemiAutomatic);
+    loaded.SetValue(runtime, false); check("revolver-style semi without flag never requests chambering", !firearm.NeedsManualChambering(0));
+    var source = System.IO.File.ReadAllText(System.IO.Path.Combine(UnityEngine.Application.dataPath, "ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs"));
+    int method = source.IndexOf("private void UxrManager_AvatarsUpdated()", System.StringComparison.Ordinal);
+    int hook = source.IndexOf("ChamberingRequired?.Invoke(i, grabber)", method, System.StringComparison.Ordinal);
+    int cycle = source.IndexOf("switch (trigger.CycleType)", method, System.StringComparison.Ordinal);
+    int reset = source.IndexOf("runtimeTrigger.HasReloaded = false", cycle, System.StringComparison.Ordinal);
+    check("SOURCE ONLY: dry hook precedes shot-cycle/manual state mutation", method >= 0 && hook > method && cycle > hook && reset > cycle);
+    output.AppendLine("BOUNDARY: SDK full trigger/update/sync and headset sensation not exercised; supplied event/signal + real handlers/predicate/lifecycle/Dummy haptic requests only.");
+}
+catch (System.Exception exception)
+{
+    failed++;
+    output.AppendLine("HARNESS ERROR " + exception.ToString());
+}
+finally
+{
+    // До Destroy восстановить singleton references: чужие менеджеры и аватар никогда не изменялись.
+    VrBattlegrounds.Network.StateEventAuthority.IsAuthoredHere = oldAuthority;
+    globalHaptic.SetValue(null, oldGlobalHaptic);
+    grabSingleton.SetValue(null, oldGrabManager);
+    avatarUpdateSingleton.SetValue(null, oldAvatarManager);
+    weaponSingleton.SetValue(null, oldWeaponManager);
+    try
+    {
+        if (subscribed && reminder != null) reminder.GetType().GetMethod("OnDisable", instanceFlags).Invoke(reminder, null);
+    }
+    finally
+    {
+        if (mainHand != null) { mainHand.GrabbedObject = null; handRegistry.Remove(mainHand); }
+        if (supportHand != null) { supportHand.GrabbedObject = null; handRegistry.Remove(supportHand); }
+        try { if (root != null) UnityEngine.Object.DestroyImmediate(root); }
+        finally { UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene); }
+    }
+}
+output.AppendLine("DIAGNOSTIC: " + passed + " passed, " + failed + " failed.");
+return output.ToString();

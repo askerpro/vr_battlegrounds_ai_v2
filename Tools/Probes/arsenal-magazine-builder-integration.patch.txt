@@ -1,0 +1,14 @@
+*** Begin Patch
+*** Update File: F:/UnityProjects/Vr_Battlegrounds_ai/Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalPresetAssetBuilder.cs
+@@
+                 binding.ConfigureRegistry(registry);
++                ArsenalMagazineOfferInstaller.Configure(common);
+                 PrefabUtility.SaveAsPrefabAsset(common, CommonPath);
+@@
+                 StretchHousing(root);
++                ArsenalMagazineOfferInstaller.Configure(root);
+@@
+                 var equipment = root.GetComponent<ArsenalEquipmentPoses>();
++                ArsenalMagazineOfferInstaller.AddRestingMagazineSamples(root, previews);
+                 equipment.Apply(1f);
+*** End Patch

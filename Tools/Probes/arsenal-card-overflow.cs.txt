@@ -1,0 +1,88 @@
+// Временная проверка настоящих TMP-мешей; запускать под замком вне Play Mode.
+// Активную сцену и ассеты не меняет. Для RED запустить до правки ArsenalPriceTag.
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "NOT RUN: Play Mode";
+var failures = new System.Collections.Generic.List<string>();
+var reports = new System.Collections.Generic.List<object>();
+var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var originalScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+var sourceSlots = UnityEngine.Object.FindObjectsByType<VrBattlegrounds.Arsenal.ArsenalSlotController>(UnityEngine.FindObjectsInactive.Include, UnityEngine.FindObjectsSortMode.None);
+var holder = UnityEditor.EditorUtility.CreateGameObjectWithHideFlags("OwnCardOverflowProbe", HideFlags.HideAndDontSave);
+UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(holder, scene);
+var poses = new System.Collections.Generic.Dictionary<int, (Vector3, Quaternion)>();
+foreach (var source in sourceSlots) poses[source.GetInstanceID()] = (source.transform.position, source.transform.rotation);
+var infos = new System.Collections.Generic.List<VrBattlegrounds.Arsenal.WeaponInfo>();
+foreach (string guid in UnityEditor.AssetDatabase.FindAssets("t:WeaponInfo", new[] { "Assets/Data/Weapons" }))
+    infos.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>(UnityEditor.AssetDatabase.GUIDToAssetPath(guid)));
+var longTitleInfo = UnityEngine.Object.Instantiate(infos.Find(info => info.WeaponId == "TR15"));
+var longTitleSerialized = new UnityEditor.SerializedObject(longTitleInfo);
+longTitleSerialized.FindProperty("_displayName").stringValue = "Футуристическая автоматическая винтовка с интегрированным глушителем и длинным именем";
+longTitleSerialized.FindProperty("_weaponId").stringValue = "PROBE_LONG_UNICODE_TITLE";
+longTitleSerialized.ApplyModifiedPropertiesWithoutUndo();
+infos.Add(longTitleInfo);
+try
+{
+    foreach (var info in infos)
+    {
+        var sourceSlot = System.Array.Find(sourceSlots, candidate => candidate.WeaponData == info);
+        var fixture = sourceSlot != null ? UnityEngine.Object.Instantiate(sourceSlot.gameObject, holder.transform, false) : UnityEditor.EditorUtility.CreateGameObjectWithHideFlags("CardProbe_" + info.WeaponId, HideFlags.HideAndDontSave);
+        if (sourceSlot == null) { UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(fixture, scene); fixture.transform.SetParent(holder.transform, false); }
+        var slot = fixture.GetComponent<VrBattlegrounds.Arsenal.ArsenalSlotController>();
+        if (slot == null) slot = fixture.AddComponent<VrBattlegrounds.Arsenal.ArsenalSlotController>();
+        slot.ConfigureWeapon(info);
+        if (!slot.HasCustomCardPresentation) slot.ConfigureCardPresentation(Vector3.zero, new Vector2(.15f, .16f), .16f);
+        var tag = VrBattlegrounds.Arsenal.ArsenalPriceTag.Create(slot);
+        Vector3 initialPosition = tag.transform.localPosition;
+        Quaternion initialRotation = tag.transform.localRotation;
+        Vector2 initialRect = tag.GetComponentInChildren<TMPro.TextMeshPro>(true).rectTransform.sizeDelta;
+        foreach (bool free in new[] { false, true })
+        {
+            tag.Show(info, true, free);
+            var text = tag.GetComponentInChildren<TMPro.TextMeshPro>(true);
+            text.ForceMeshUpdate(true, true);
+            var plain = System.Text.RegularExpressions.Regex.Replace(text.text, "<[^>]*>", "");
+            var hidden = new System.Collections.Generic.List<int>();
+            int visible = 0;
+            int outside = 0;
+            int lastVisible = -1;
+            var rect = text.rectTransform.rect;
+            for (int i = 0; i < text.textInfo.characterCount; i++)
+            {
+                var character = text.textInfo.characterInfo[i];
+                if (char.IsWhiteSpace(character.character)) continue;
+                if (!character.isVisible) { hidden.Add(i); continue; }
+                visible++;
+                lastVisible = i;
+                var mesh = text.textInfo.meshInfo[character.materialReferenceIndex];
+                bool hasArea = false;
+                for (int vertex = 0; vertex < 4; vertex++)
+                {
+                    var point = mesh.vertices[character.vertexIndex + vertex];
+                    if (point.sqrMagnitude > .00000001f) hasArea = true;
+                    if (point.x < rect.xMin - .001f || point.x > rect.xMax + .001f || point.y < rect.yMin - .001f || point.y > rect.yMax + .001f) outside++;
+                }
+                if (!hasArea) hidden.Add(i);
+            }
+            int expectedVisible = 0;
+            foreach (char character in plain) if (!char.IsWhiteSpace(character)) expectedVisible++;
+            bool complete = hidden.Count == 0 && outside == 0 && visible == expectedVisible && !text.isTextOverflowing;
+            bool priceShown = plain.Contains(free ? "БЕСПЛАТНО" : "$" + info.Price);
+            bool sixRows = plain.Split('\n').Length == 6 && text.textInfo.lineCount >= 6;
+            bool poseStable = tag.transform.localPosition == initialPosition && Quaternion.Angle(tag.transform.localRotation, initialRotation) < .001f && text.rectTransform.sizeDelta == initialRect;
+            bool pass = complete && priceShown && sixRows && poseStable;
+            if (!pass) failures.Add(info.WeaponId + (free ? ":free" : ":paid"));
+            reports.Add(new { id = info.WeaponId, free, pass, lines = text.textInfo.lineCount, characters = text.textInfo.characterCount, expectedVisible, visible, lastVisible, hidden = hidden.ToArray(), outside, overflow = text.isTextOverflowing, fontSize = text.fontSize, rect = text.rectTransform.sizeDelta.ToString(), text = plain, poseStable });
+        }
+        UnityEngine.Object.DestroyImmediate(fixture);
+    }
+    foreach (var source in sourceSlots)
+    {
+        var pose = poses[source.GetInstanceID()];
+        if (source.transform.position != pose.Item1 || Quaternion.Angle(source.transform.rotation, pose.Item2) > .001f) failures.Add("SOURCE_POSE_CHANGED:" + source.name);
+    }
+}
+finally
+{
+    UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+    UnityEngine.Object.DestroyImmediate(longTitleInfo);
+}
+return new { pass = failures.Count == 0, sourceSceneUnchanged = UnityEngine.SceneManagement.SceneManager.GetActiveScene() == originalScene, cases = reports.Count, failures = failures.ToArray(), reports };

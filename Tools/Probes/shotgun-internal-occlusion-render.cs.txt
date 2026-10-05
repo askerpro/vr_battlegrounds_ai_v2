@@ -1,0 +1,116 @@
+// Диагностический render без SDK scripts: только MeshFilter/MeshRenderer/Camera в preview scene.
+// По шесть ортографических направлений. Серый непрозрачный корпус, красный патрон.
+// Старое положение = сохранённый штатный DropProximity; flags исходных Renderer не меняются.
+if (UnityEngine.Application.isPlaying) return "HARNESS REFUSED: выполнять вне Play Mode под замком.";
+var output = new System.Text.StringBuilder();
+var shader = UnityEngine.Shader.Find("Universal Render Pipeline/Unlit");
+if (shader == null) throw new System.Exception("Не найден URP/Unlit для opaque geometry render.");
+string directory = System.IO.Path.GetFullPath("tmp/shotgun-internal-occlusion");
+System.IO.Directory.CreateDirectory(directory);
+var gray = new UnityEngine.Material(shader);
+var red = new UnityEngine.Material(shader);
+gray.SetColor("_BaseColor", new UnityEngine.Color(.48f, .52f, .57f, 1));
+red.SetColor("_BaseColor", new UnityEngine.Color(1f, .02f, .01f, 1));
+foreach (var material in new[] { gray, red })
+{
+    material.SetFloat("_Surface", 0); material.SetFloat("_ZWrite", 1);
+    material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
+    material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+}
+var previous = UnityEngine.RenderTexture.active;
+const int size = 512;
+var rt = new UnityEngine.RenderTexture(size, size, 24);
+rt.antiAliasing = 1;
+try
+{
+foreach (var path in new[] { "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab", "Assets/Prefabs/Weapons/Herrington/Herrington.prefab" })
+{
+    var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    if (asset == null) throw new System.Exception("Нет prefab " + path);
+    var frame = asset.transform.Find("MeshContainer");
+    var anchor = frame.Find("MagAnchor").GetComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+    var shell = anchor.GetComponentInChildren<UltimateXR.Mechanics.Weapons.UxrFirearmMag>(true).GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    var delta = anchor.DropProximityTransform.position - shell.DropAlignTransform.position;
+    var focus = (anchor.DropProximityTransform.position + shell.DropAlignTransform.position) * .5f;
+    // Обе позы и ближайший корпус в одном неизменном кадре: окно приёма + начало tube.
+    float radius = UnityEngine.Mathf.Max(.08f * UnityEngine.Mathf.Abs(frame.lossyScale.y), delta.magnitude * .9f);
+    var directions = new[] { frame.right, -frame.right, frame.up, -frame.up, frame.forward, -frame.forward };
+    var viewNames = new[] { "right", "left", "top", "bottom", "front", "back" };
+    foreach (var pose in new[] { "external_proxy", "current_internal" })
+    {
+        var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+        UnityEngine.Texture2D atlas = null;
+        try
+        {
+            int bodyMeshes = 0, shellMeshes = 0, excluded = 0;
+            foreach (var filter in asset.GetComponentsInChildren<UnityEngine.MeshFilter>(true))
+            {
+                if (filter.sharedMesh == null || filter.GetComponent<UnityEngine.MeshRenderer>() == null) continue;
+                bool highlight = false;
+                for (var t = filter.transform; t != null; t = t.parent)
+                    if (t.name.StartsWith("GrabHighlight", System.StringComparison.Ordinal)) { highlight = true; break; }
+                if (highlight) { excluded++; continue; }
+                bool isShell = filter.transform.IsChildOf(shell.transform);
+                var go = new UnityEngine.GameObject(isShell ? "RedShell" : filter.name);
+                UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, scene);
+                go.transform.SetPositionAndRotation(filter.transform.position + (isShell && pose == "external_proxy" ? delta : UnityEngine.Vector3.zero), filter.transform.rotation);
+                go.transform.localScale = filter.transform.lossyScale;
+                go.AddComponent<UnityEngine.MeshFilter>().sharedMesh = filter.sharedMesh;
+                var materials = new UnityEngine.Material[filter.sharedMesh.subMeshCount];
+                for (int i = 0; i < materials.Length; i++) materials[i] = isShell ? red : gray;
+                go.AddComponent<UnityEngine.MeshRenderer>().sharedMaterials = materials;
+                if (isShell) shellMeshes++; else bodyMeshes++;
+            }
+            if (bodyMeshes == 0 || shellMeshes == 0) throw new System.Exception("Пустая geometry выборка " + path);
+            var cameraGo = new UnityEngine.GameObject("OcclusionCamera");
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(cameraGo, scene);
+            var camera = cameraGo.AddComponent<UnityEngine.Camera>();
+            camera.scene = scene; camera.useOcclusionCulling = false; camera.orthographic = true;
+            camera.orthographicSize = radius; camera.aspect = 1;
+            camera.backgroundColor = new UnityEngine.Color(.065f, .075f, .09f, 1);
+            camera.clearFlags = UnityEngine.CameraClearFlags.SolidColor;
+            camera.nearClipPlane = .001f; camera.farClipPlane = 10;
+            camera.targetTexture = rt; camera.allowMSAA = false; camera.allowHDR = false;
+            atlas = new UnityEngine.Texture2D(size * 3, size * 2, UnityEngine.TextureFormat.RGB24, false);
+            output.AppendLine(asset.name + " " + pose + " bodyMeshes=" + bodyMeshes + " shellMeshes=" + shellMeshes + " excludedHighlights=" + excluded + " focus=" + frame.InverseTransformPoint(focus).ToString("F6") + " orthoRadius=" + radius.ToString("F6"));
+            for (int view = 0; view < directions.Length; view++)
+            {
+                var image = new UnityEngine.Texture2D(size, size, UnityEngine.TextureFormat.RGB24, false);
+                try
+                {
+                    camera.transform.position = focus + directions[view] * 2f;
+                    camera.transform.LookAt(focus, view == 2 || view == 3 ? frame.forward : frame.up);
+                    camera.Render(); UnityEngine.RenderTexture.active = rt;
+                    image.ReadPixels(new UnityEngine.Rect(0, 0, size, size), 0, 0); image.Apply();
+                    var pixels = image.GetPixels();
+                    int redPixels = 0;
+                    foreach (var pixel in pixels) if (pixel.r > .5f && pixel.r > pixel.g * 3f && pixel.r > pixel.b * 3f) redPixels++;
+                    int col = view % 3, row = 1 - view / 3;
+                    atlas.SetPixels(col * size, row * size, size, size, pixels);
+                    string file = System.IO.Path.Combine(directory, asset.name + "-" + pose + "-" + viewNames[view] + ".png");
+                    System.IO.File.WriteAllBytes(file, image.EncodeToPNG());
+                    output.AppendLine("  " + viewNames[view] + " redPixels=" + redPixels + " file=" + file);
+                }
+                finally { UnityEngine.Object.DestroyImmediate(image); }
+            }
+            atlas.Apply();
+            string sheet = System.IO.Path.Combine(directory, asset.name + "-" + pose + "-6views.png");
+            System.IO.File.WriteAllBytes(sheet, atlas.EncodeToPNG());
+            output.AppendLine("  SHEET top row right/left/top; bottom row bottom/front/back: " + sheet);
+        }
+        finally
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+            if (atlas != null) UnityEngine.Object.DestroyImmediate(atlas);
+        }
+    }
+}
+}
+finally
+{
+    UnityEngine.RenderTexture.active = previous;
+    UnityEngine.Object.DestroyImmediate(rt);
+    UnityEngine.Object.DestroyImmediate(gray);
+    UnityEngine.Object.DestroyImmediate(red);
+}
+return output.ToString();

@@ -1,0 +1,30 @@
+// Render-only copies in owned PreviewScene; no native scene or asset changes.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)throw new Exception("Editor busy");
+var sourceScene=UnityEngine.SceneManagement.SceneManager.GetSceneByPath("Assets/Scenes/Debug/ArsenalLayoutAuthoring.unity");
+if(!sourceScene.isLoaded||sourceScene.isDirty)throw new Exception("Clean loaded artist workspace required");
+var stand=sourceScene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoringStand>(true)).Single();
+VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.ValidateStand(stand);
+var before=stand.GetComponentsInChildren<UnityEngine.Component>(true).Where(c=>c!=null).ToDictionary(c=>c.GetInstanceID(),c=>UnityEditor.EditorJsonUtility.ToJson(c));
+var paths=new[]{"Assets/Data/Weapons/IndustrialPegboardPresentation.asset","Assets/Data/Weapons/FullDemoArsenal.asset","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Scenes/Lobby.unity","Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat","Assets/Materials/Arsenal/IndustrialSupportMetal.mat"};
+System.Func<string> foreignState=()=>{var text=new System.Text.StringBuilder();foreach(var p in paths){var a=UnityEditor.AssetDatabase.LoadMainAssetAtPath(p);text.Append(p).Append(UnityEditor.EditorJsonUtility.ToJson(a)).Append(UnityEditor.EditorUtility.IsDirty(a)).Append(Convert.ToBase64String(System.IO.File.ReadAllBytes(p))).Append(System.IO.File.ReadAllText(p+".meta"));}for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!s.isLoaded||s.path==sourceScene.path||UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(s))continue;text.Append(s.path).Append(s.isDirty);foreach(var root in s.GetRootGameObjects())foreach(var c in root.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null)text.Append(c.GetInstanceID()).Append(UnityEditor.EditorJsonUtility.ToJson(c));}return text.ToString();};
+string foreignBefore=foreignState();
+var preview=UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var rt=new UnityEngine.RenderTexture(2400,1200,24);var previous=UnityEngine.RenderTexture.active;rt.Create();int meshes=0;
+try {
+ foreach(var filter in stand.GetComponentsInChildren<UnityEngine.MeshFilter>(true)) {
+  var renderer=filter.GetComponent<UnityEngine.MeshRenderer>();if(filter.sharedMesh==null||renderer==null||!renderer.enabled||!renderer.gameObject.activeInHierarchy)continue;
+  var copy=new UnityEngine.GameObject("Own render geometry");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(copy,preview);
+  copy.transform.SetPositionAndRotation(filter.transform.position,filter.transform.rotation);copy.transform.localScale=filter.transform.lossyScale;
+  copy.AddComponent<UnityEngine.MeshFilter>().sharedMesh=filter.sharedMesh;copy.AddComponent<UnityEngine.MeshRenderer>().sharedMaterials=renderer.sharedMaterials;meshes++;
+ }
+ var cameraRoot=new UnityEngine.GameObject("Own stand image camera");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(cameraRoot,preview);
+ var camera=cameraRoot.AddComponent<UnityEngine.Camera>();camera.scene=preview;camera.useOcclusionCulling=false;camera.orthographic=true;camera.orthographicSize=1.55f;camera.nearClipPlane=.01f;camera.farClipPlane=30;camera.targetTexture=rt;
+ camera.clearFlags=UnityEngine.CameraClearFlags.SolidColor;camera.backgroundColor=new UnityEngine.Color(.035f,.04f,.05f);camera.transform.position=new UnityEngine.Vector3(0,2.4f,-8);camera.transform.LookAt(new UnityEngine.Vector3(0,.6f,0));
+ var lightRoot=new UnityEngine.GameObject("Own stand image light");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(lightRoot,preview);var light=lightRoot.AddComponent<UnityEngine.Light>();light.type=UnityEngine.LightType.Directional;light.intensity=2.2f;light.transform.rotation=camera.transform.rotation*UnityEngine.Quaternion.Euler(20,-25,0);
+ camera.Render();UnityEngine.RenderTexture.active=rt;var texture=new UnityEngine.Texture2D(rt.width,rt.height,UnityEngine.TextureFormat.RGB24,false);
+ try { texture.ReadPixels(new UnityEngine.Rect(0,0,rt.width,rt.height),0,0);texture.Apply();System.IO.File.WriteAllBytes("tmp/arsenal-visual-stage/authoring-stand.png",UnityEngine.ImageConversion.EncodeToPNG(texture)); }
+ finally {UnityEngine.Object.DestroyImmediate(texture);}
+}finally {UnityEngine.RenderTexture.active=previous;UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(preview);rt.Release();UnityEngine.Object.DestroyImmediate(rt);}
+var after=stand.GetComponentsInChildren<UnityEngine.Component>(true).Where(c=>c!=null).ToDictionary(c=>c.GetInstanceID(),c=>UnityEditor.EditorJsonUtility.ToJson(c));
+bool unchanged=before.Count==after.Count&&before.All(row=>after.ContainsKey(row.Key)&&after[row.Key]==row.Value)&&!sourceScene.isDirty&&foreignBefore==foreignState();
+var report=new{passed=unchanged,failures=unchanged?new string[0]:new[]{"Native workspace changed during image render"},slots=stand.Slots.Count,meshes,nativeWorkspaceUnchanged=unchanged,file="tmp/arsenal-visual-stage/authoring-stand.png"};System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-stand-image.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));return report;

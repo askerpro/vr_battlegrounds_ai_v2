@@ -1,0 +1,584 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6f94e8dba8749faa8363d2b5218ff35, type: 3}
+  m_Name: IndustrialPegboardPresentation
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalPresentationStyle
+  _supportModule: {fileID: 7357499501584176699, guid: e5ae2e5aedacdbc43bc80a58c76b8817, type: 3}
+  _returnReadyMaterial: {fileID: 2100000, guid: 29e8e64cc0b8b51428fafd3536b937b0, type: 2}
+  _zones:
+  - Zone: 0
+    ItemTarget:
+      Position: {x: -0.055, y: 0.405, z: -0.072}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.71, z: -0.14}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    CardTarget:
+      Position: {x: 0.09, y: 0.905, z: -0.035}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.2, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.6, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.11, y: 0.6, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Zone: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.023000002, z: 0.07}
+      EulerAngles: {x: 0, y: 0, z: 90}
+    MagazineTarget:
+      Position: {x: 0.11, y: 0.013, z: 0.255}
+      EulerAngles: {x: 0, y: 90, z: 90}
+    CardTarget:
+      Position: {x: 0.105, y: 0.026, z: -0.075}
+      EulerAngles: {x: 90, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    Supports: []
+  _exceptions:
+  - Weapon: {fileID: 11400000, guid: 802986f4d017e7d4882c1c6022341af4, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.405, z: -0.2195749}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.71, z: -0.13108566}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.1457982, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.6065633, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.10499997, y: 0.63197505, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: 29c9d566aa4ac214ab127b4e633b4334, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.405, z: -0.22794604}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.71, z: -0.11520966}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.29085898, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.6616864, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.105, y: 0.71676207, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: f140291be0d87d9409f937afc390abf0, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.405, z: -0.22492394}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.71, z: -0.114102446}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.06191861, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.5746891, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.105000004, y: 0.718032, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: 06130e656acaee24da3fb3f2d54de872, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.42, z: -0.2296435}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.71, z: -0.11946007}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.05857327, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.57341784, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.104986295, y: 0.68610156, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: e0b50a7a3495ac74eb153cd542432c4e, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.405, z: -0.23731524}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.71, z: -0.1264253}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.14007747, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.6043894, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.10531867, y: 0.65791965, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: 7d9a79e589f45c74e9585bdbed93ce76, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.405, z: -0.20469227}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.71, z: -0.13003254}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.11681389, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.59011257, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.105, y: 0.633873, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: 4f810565631ae0c40bce683a1d290f39, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.405, z: -0.21238276}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.71, z: -0.13022465}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.1300528, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.60058004, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.105000034, y: 0.6393539, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: 16e9377ecb9b1bb41929e8aa3a7d3ae9, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.025, y: 0.405, z: -0.23316991}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.76, z: -0.11544525}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.09266018, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.5863709, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.105, y: 0.6674509, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: 404a3a34a0892dc409212566f388c37f, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.405, z: -0.1820775}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.71, z: -0.1282655}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.1631419, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.5348141, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.10502565, y: 0.64211655, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: bf5b7399e87929c45ae98591db37ec71, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.042999998, y: 0.405, z: -0.22435045}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.78, z: -0.11880886}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.15082556, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.6084737, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.105, y: 0.6870202, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: 60bc69af3cd41db4bb971e35f2a44346, type: 2}
+    Zone: 0
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.405, z: -0.25757724}
+      EulerAngles: {x: 280, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.105, y: 0.71, z: -0.12458151}
+      EulerAngles: {x: 0, y: 90, z: 10}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports:
+    - Role: Stock
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.08, y: 0.10724264, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Forearm
+      AnchorKind: 0
+      SlotPose:
+        Position: {x: -0.11, y: 0.5919122, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+    - Role: Spare
+      AnchorKind: 1
+      SlotPose:
+        Position: {x: 0.105000004, y: 0.67873836, z: -0.10013445}
+        EulerAngles: {x: 0, y: 0, z: 0}
+  - Weapon: {fileID: 11400000, guid: 7fdcb3f0b05028044a0ba801f61bf4cc, type: 2}
+    Zone: 1
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.11, y: 0.04315342, z: 0.085}
+      EulerAngles: {x: 0, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.14, y: 0.028568853, z: 0.255}
+      EulerAngles: {x: 0, y: 90, z: 90}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports: []
+  - Weapon: {fileID: 11400000, guid: 805abd57d56b11d4cbb9548e3c9ade04, type: 2}
+    Zone: 1
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.032066535, z: 0.07}
+      EulerAngles: {x: 0, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.11, y: 0.028994273, z: 0.255}
+      EulerAngles: {x: 0, y: 90, z: 90}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports: []
+  - Weapon: {fileID: 11400000, guid: b2e37e600ab1893469a53e2d5940e98b, type: 2}
+    Zone: 1
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.03152304, z: 0.07}
+      EulerAngles: {x: 0, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.11, y: 0.026919018, z: 0.255}
+      EulerAngles: {x: 0, y: 90, z: 90}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports: []
+  - Weapon: {fileID: 11400000, guid: 71578ee82c8283640ab0a08d6396549b, type: 2}
+    Zone: 1
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.025, y: 0.03702353, z: 0.07}
+      EulerAngles: {x: 0, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.11, y: 0.037097048, z: 0.255}
+      EulerAngles: {x: 0, y: 90, z: 90}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports: []
+  - Weapon: {fileID: 11400000, guid: e4fe34bd1f05bb245b5d1589a10a69d4, type: 2}
+    Zone: 1
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.050105423, z: 0.07}
+      EulerAngles: {x: 0, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.11, y: 0.028225545, z: 0.255}
+      EulerAngles: {x: 0, y: 90, z: 90}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports: []
+  - Weapon: {fileID: 11400000, guid: 43bf1b3029e7a1945b50f121df6b0a73, type: 2}
+    Zone: 1
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.035, y: 0.050477274, z: 0.07}
+      EulerAngles: {x: 0, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.155, y: 0.027030233, z: 0.255}
+      EulerAngles: {x: 0, y: 90, z: 90}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports: []
+  - Weapon: {fileID: 11400000, guid: e656ffaededf94447b00dfe8561f5caf, type: 2}
+    Zone: 1
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.029368538, z: 0.07}
+      EulerAngles: {x: 0, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.11, y: 0.02325413, z: 0.255}
+      EulerAngles: {x: 0, y: 90, z: 90}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports: []
+  - Weapon: {fileID: 11400000, guid: aee060eddb6e37d47a40b21ba4b87468, type: 2}
+    Zone: 1
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.037608176, z: 0.07}
+      EulerAngles: {x: 0, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.09, y: 0.037608188, z: 0.255}
+      EulerAngles: {x: 0, y: 90, z: 90}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports: []
+  - Weapon: {fileID: 11400000, guid: 2d5744f916e787646bda8847c74f84fc, type: 2}
+    Zone: 1
+    OverrideItem: 1
+    ItemTarget:
+      Position: {x: -0.055, y: 0.028127775, z: 0.07}
+      EulerAngles: {x: 0, y: 0, z: 90}
+    OverrideMagazine: 1
+    MagazineTarget:
+      Position: {x: 0.11, y: 0.022049095, z: 0.255}
+      EulerAngles: {x: 0, y: 90, z: 90}
+    OverrideCard: 0
+    CardTarget:
+      Position: {x: 0, y: 0, z: 0}
+      EulerAngles: {x: 0, y: 0, z: 0}
+    CardSize: {x: 0.15, y: 0.16}
+    CardFontSize: 0.16
+    OverrideSupports: 1
+    Supports: []

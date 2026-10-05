@@ -1,0 +1,51 @@
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "REFUSED Play Mode";
+var report = new System.Text.StringBuilder(); int pass=0,fail=0;
+System.Action<string,bool> check=(name,ok)=>{report.AppendLine((ok?"PASS ":"FAIL ")+name); if(ok)pass++;else fail++;};
+var paths=new[]{"Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab","Assets/Prefabs/Weapons/AR15/AR15.prefab","Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab"};
+foreach(var path in paths)
+{
+    var root=UnityEditor.PrefabUtility.LoadPrefabContents(path);
+    try
+    {
+        check(path+" guards",root.GetComponent<VrBattlegrounds.Interaction.OutOfWorldGuard>()!=null && root.GetComponent<VrBattlegrounds.Interaction.AnchoredItemCollisionIgnore>()!=null);
+        check(path+" one NI",root.GetComponentsInChildren<Mirror.NetworkIdentity>(true).Length==1);
+        check(path+" no legacy animator",root.GetComponentsInChildren<UnityEngine.Animator>(true).Length==0 && root.GetComponentsInChildren<UnityEngine.Animation>(true).Length==0);
+        check(path+" runtime motion and reminder",root.GetComponent<VrBattlegrounds.Weapons.WeaponMechanismVisuals>()!=null && root.GetComponent<VrBattlegrounds.Weapons.WeaponChamberingReminder>()!=null);
+    }
+    finally{UnityEditor.PrefabUtility.UnloadPrefabContents(root);}
+}
+var donor=UnityEditor.PrefabUtility.LoadPrefabContents("Assets/Art/Weapons/HandsPack/LegacyBuildDonors/M16_Rifle_prefab.prefab");
+var rifle=UnityEditor.PrefabUtility.LoadPrefabContents(paths[1]);
+try
+{
+    var source=new VrBattlegrounds.Editor.Gameplay.HandsPackWeapon("Hands_Automatic_Rifle03","Rifle_Body_Mesh");
+    try
+    {
+        var dg=donor.GetComponentsInChildren<UltimateXR.Manipulation.UxrGrabbableObject>(true).Single(g=>g.transform!=donor.transform && g.GetComponentsInParent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>(true).Length==0);
+        var ng=rifle.GetComponentsInChildren<UltimateXR.Manipulation.UxrGrabbableObject>(true).Single(g=>g.transform!=rifle.transform && g.GetComponentsInParent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>(true).Length==0);
+        UnityEngine.Vector3 d,nd; float l,nl;
+        check("M16 donor travel",VrBattlegrounds.Weapons.AutomaticWeaponSlideFeedback.TryGetSlideTravel(dg,out d,out l));
+        check("M16 new travel",VrBattlegrounds.Weapons.AutomaticWeaponSlideFeedback.TryGetSlideTravel(ng,out nd,out nl));
+        var axes=source.AimAxes("Aim_Idle");source.Sample(null);
+        var rot=UnityEngine.Matrix4x4.Rotate(UnityEngine.Quaternion.Inverse(UnityEngine.Quaternion.LookRotation(axes.Item1,axes.Item2)));
+        var body=donor.transform.Find("MeshContainer/Rifle_Body_Mesh");
+        var physical=dg.transform.parent.TransformVector(dg.transform.localRotation*(d*l));
+        var expected=rot.MultiplyVector(body.InverseTransformVector(physical));
+        var actual=nd*nl;
+        check("M16 independent parent/body frame fallback",UnityEngine.Vector3.Distance(expected,actual)<1e-4f && UnityEngine.Mathf.Abs(nl-.06f)<1e-4f);
+        check("M16 physical stroke preserved",UnityEngine.Mathf.Abs(rifle.transform.TransformVector(actual).magnitude-physical.magnitude)<1e-5f);
+        var t=new UnityEditor.SerializedObject(rifle.GetComponent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>()).FindProperty("_triggers").GetArrayElementAtIndex(0);
+        check("M16 trigger axis0/40degrees",t.FindPropertyRelative("_triggerRotationAxis._axis").intValue==0 && t.FindPropertyRelative("_triggerRotationDegrees").floatValue==40f);
+        var motion=rifle.GetComponent<VrBattlegrounds.Weapons.WeaponMechanismVisuals>();
+        check("M16 actual originalSlideLength",motion!=null && UnityEngine.Mathf.Abs(new UnityEditor.SerializedObject(motion).FindProperty("_originalSlideLength").floatValue-nl)<1e-5f);
+        var sourceTravel=source.Measure("Rifle_Detail_01_Mesh","Shot",null);
+        var sourceTrigger=source.Measure("Rifle_Detail_02_Mesh","Shot",null);
+        check("M16 source actually has zero action/trigger animation",sourceTravel.Far.sqrMagnitude<1e-10f && sourceTravel.MaxAngle<1e-5f && sourceTrigger.MaxAngle<1e-5f);
+        report.AppendLine("stroke local="+nl+" physical="+physical.magnitude+" expected="+expected.ToString("F6"));
+    }
+    finally{source.Dispose();}
+}
+finally{UnityEditor.PrefabUtility.UnloadPrefabContents(rifle);UnityEditor.PrefabUtility.UnloadPrefabContents(donor);}
+report.AppendLine("RESULT "+pass+" passed; "+fail+" failed; no headset/network pipeline.");
+System.IO.File.WriteAllText("tmp/weapon-interaction-extension/legacy-manual-diagnostic.txt",report.ToString());
+return report.ToString();

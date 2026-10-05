@@ -1,0 +1,34 @@
+// Ограниченный read-only baseline перед отдельным native authoring-пакетом. Нет полного SerializedProperty обхода.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)throw new System.InvalidOperationException("Editor busy");
+var folders=new[]{"Assets/Art/Arsenal/IndustrialFlatSupport"};
+var paths=new[]{"Assets/Data/Weapons/IndustrialPegboardPresentation.asset","Assets/Data/Weapons/FullDemoArsenal.asset","Assets/Materials/Arsenal/IndustrialSupportMetal.mat","Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Scenes/Lobby.unity","Assets/Scenes/Debug/ArsenalLayoutAuthoring.unity"};
+var files=new System.Collections.Generic.List<object>();
+foreach(var p in paths) {
+ var a=UnityEditor.AssetDatabase.LoadMainAssetAtPath(p);string sha;using(var hash=System.Security.Cryptography.SHA256.Create())sha=Convert.ToBase64String(hash.ComputeHash(System.IO.File.ReadAllBytes(p)));
+ files.Add(new{path=p,guid=UnityEditor.AssetDatabase.AssetPathToGUID(p),diskSha=sha,meta=System.IO.File.ReadAllText(p+".meta"),dirty=a!=null&&UnityEditor.EditorUtility.IsDirty(a),json=a==null?null:UnityEditor.EditorJsonUtility.ToJson(a)});
+}
+System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-affected-progress.json","{\"stage\":\"files\",\"count\":8}");
+var prefabs=new System.Collections.Generic.List<object>();int sourceCount=0;
+foreach(var p in paths.Where(p=>p.EndsWith(".prefab"))) {
+ var prefab=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(p);var components=new System.Collections.Generic.List<object>();
+ foreach(var c in prefab.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null){string guid;long id;UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(c,out guid,out id);components.Add(new{id,guid,type=c.GetType().FullName,json=UnityEditor.EditorJsonUtility.ToJson(c)});sourceCount++;}
+ prefabs.Add(new{path=p,components});
+}
+System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-affected-progress.json","{\"stage\":\"sourcePrefabs\",\"count\":"+sourceCount+"}");
+var scenes=new System.Collections.Generic.List<object>();var sdk=new System.Collections.Generic.List<object>();
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++) {
+ var scene=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!scene.isLoaded||UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(scene))continue;
+ if(scene.isDirty)throw new System.InvalidOperationException("Native baseline requires clean scene: "+scene.path);
+ // Полный raw component JSON сохраняется без blanket-исключения negative IDs/имён. Сам baseline не считается ownership proof превью.
+ var components=new System.Collections.Generic.List<object>();
+ foreach(var root in scene.GetRootGameObjects())foreach(var c in root.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null)components.Add(new{id=c.GetInstanceID(),type=c.GetType().FullName,json=UnityEditor.EditorJsonUtility.ToJson(c)});
+ scenes.Add(new{path=scene.path,handle=scene.handle,dirty=scene.isDirty,active=scene==UnityEngine.SceneManagement.SceneManager.GetActiveScene(),components});
+}
+foreach(var wall in UnityEngine.Object.FindObjectsByType<VrBattlegrounds.Arsenal.ArsenalWallController>(UnityEngine.FindObjectsInactive.Include,UnityEngine.FindObjectsSortMode.None)) {
+ var scene=wall.gameObject.scene;if(!scene.IsValid()||UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(scene))continue;
+ foreach(var c in wall.GetComponentsInChildren<UltimateXR.Core.Components.UxrComponent>(true))sdk.Add(new{globalId=UnityEditor.GlobalObjectId.GetGlobalObjectIdSlow(c).ToString(),uid=c.UniqueId.ToString(),type=c.GetType().FullName,json=UnityEditor.EditorJsonUtility.ToJson(c)});
+}
+var report=new{files,prefabs,scenes,sdk,selection=UnityEditor.Selection.instanceIDs,activeScene=UnityEngine.SceneManagement.SceneManager.GetActiveScene().path,flatFolderAlreadyExists=folders.Any(UnityEditor.AssetDatabase.IsValidFolder)};
+System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-affected-before.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));
+System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-affected-progress.json","{\"stage\":\"DONE\",\"sdk\":"+sdk.Count+"}");
+return new{sourceCount,sdkCount=sdk.Count,sceneCount=scenes.Count,fileCount=files.Count,report="authoring-affected-before.json"};

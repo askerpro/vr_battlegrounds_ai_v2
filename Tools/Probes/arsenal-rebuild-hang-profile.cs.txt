@@ -1,0 +1,76 @@
+// Только после согласованного короткого readonly Unity слота. Не применять patch/refresh/Save.
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "NOT RUN: human Play";
+if (UnityEditor.SessionState.GetBool("ArsenalHangProfile.Running",false)) return "Already running";
+// Выбрать точную исходную команду после уточнения у человека: Demo, Bootstrap или Selected.
+string command="Demo";
+string workspace=System.IO.Directory.GetParent(UnityEngine.Application.dataPath).FullName;
+var assembly=typeof(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow).Assembly;
+var status=assembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalEditorStatus",true);
+var actions=assembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalEditorActions",true);
+var preflight=assembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalBuildPreflight",true);
+var sources=new System.Collections.Generic.List<string>();
+if(command=="Demo")sources.AddRange(new[]{"Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Data/Weapons/FullDemoArsenal.asset","Assets/Data/Maps/MapRegistry.asset"});
+else if(command=="Bootstrap")sources.AddRange(new[]{"Assets/Data","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Prefabs/Managers/--- MANAGERS ---.prefab"});
+else {
+ var window=UnityEngine.Resources.FindObjectsOfTypeAll<VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow>().FirstOrDefault();
+ if(window==null)return "Open window first";
+ var privateFields=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+ var selected=(VrBattlegrounds.Arsenal.WeaponInfo)window.GetType().GetField("weapon",privateFields).GetValue(window);
+ if(selected==null)return "Select weapon first";
+ sources.AddRange((string[])window.GetType().GetMethod("BuildPaths",System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic).Invoke(null,new object[]{selected}));
+ sources.AddRange((string[])preflight.GetMethod("Inputs").Invoke(null,new object[]{selected}));
+}
+var queue=new System.Collections.Generic.Queue<string>(sources.Distinct());
+var expanded=new System.Collections.Generic.HashSet<string>(sources);
+var samples=new System.Collections.Generic.List<object>();
+var total=System.Diagnostics.Stopwatch.StartNew();
+System.Threading.Tasks.Task<object> hashing=null;
+bool stopped=false;
+System.Action update=null;
+System.Action<string> finish=reason=>{
+ UnityEditor.EditorApplication.update-=update;UnityEditor.SessionState.SetBool("ArsenalHangProfile.Running",false);
+ System.IO.Directory.CreateDirectory(System.IO.Path.Combine(workspace,"tmp/arsenal-ui-contract"));
+ var result=new {command=command,completed=reason,totalMs=total.ElapsedMilliseconds,samples=samples,hash=hashing!=null&&hashing.Status==System.Threading.Tasks.TaskStatus.RanToCompletion?hashing.Result:null};
+ System.IO.File.WriteAllText(System.IO.Path.Combine(workspace,"tmp/arsenal-ui-contract/rebuild-profile.json"),Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+};
+update=()=>{
+ try {
+  if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.SessionState.GetBool("ArsenalHangProfile.Cancel",false)) {stopped=true;finish("cancelled; no writes");return;}
+  if(hashing!=null){if(hashing.IsCompleted)finish(hashing.IsFaulted?"hash failed: "+hashing.Exception.GetBaseException().Message:"complete");return;}
+  if(queue.Count>0){
+   string path=queue.Dequeue();var watch=System.Diagnostics.Stopwatch.StartNew();
+   if(UnityEditor.AssetDatabase.IsValidFolder(path)){
+    var items=UnityEditor.AssetDatabase.FindAssets("",new[]{path}).Select(UnityEditor.AssetDatabase.GUIDToAssetPath).ToArray();
+    foreach(var item in items)if(expanded.Add(item))queue.Enqueue(item);
+    watch.Stop();samples.Add(new{stage="FindAssets",path=path,ms=watch.ElapsedMilliseconds,count=items.Length});
+   }else if(path.StartsWith("Assets/")&&!string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(path))){
+    var dependencies=UnityEditor.AssetDatabase.GetDependencies(path,true);foreach(var dep in dependencies)expanded.Add(dep);
+    watch.Stop();samples.Add(new{stage="GetDependencies single input",path=path,ms=watch.ElapsedMilliseconds,count=dependencies.Length});
+   }
+   if(watch.ElapsedMilliseconds>1000){finish("single native API >1s; stop before next input");return;}
+   return;
+  }
+  var paths=expanded.ToArray();
+  // Чистый worker повторяет стоимость physical SHA, без Unity API; legacy duplicate reads отдельно считаются.
+  hashing=System.Threading.Tasks.Task.Run<object>(()=>{
+   long legacyBytes=0,uniqueBytes=0;int legacyReads=0;var files=new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+   foreach(string path in paths){
+    if(stopped)throw new System.OperationCanceledException();
+    string absolute=System.IO.Path.GetFullPath(System.IO.Path.IsPathRooted(path)?path:System.IO.Path.Combine(workspace,path));
+    var list=System.IO.Directory.Exists(absolute)?System.IO.Directory.GetFiles(absolute,"*",System.IO.SearchOption.AllDirectories):new[]{absolute};
+    foreach(string file in list)if(System.IO.File.Exists(file)){legacyReads++;legacyBytes+=new System.IO.FileInfo(file).Length;files.Add(file);}
+    if(!absolute.EndsWith(".meta",System.StringComparison.OrdinalIgnoreCase)&&System.IO.File.Exists(absolute+".meta")){legacyReads++;legacyBytes+=new System.IO.FileInfo(absolute+".meta").Length;files.Add(absolute+".meta");}
+   }
+   var watch=System.Diagnostics.Stopwatch.StartNew();var sha=System.Security.Cryptography.SHA256.Create();
+   using(sha)foreach(string file in files){
+    if(stopped)throw new System.OperationCanceledException();
+    using(var stream=System.IO.File.OpenRead(file)){uniqueBytes+=stream.Length;sha.ComputeHash(stream);}
+   }
+   return new {dependencyPaths=paths.Length,uniqueFiles=files.Count,legacyReads=legacyReads,legacyBytes=legacyBytes,uniqueBytes=uniqueBytes,shaMilliseconds=watch.ElapsedMilliseconds};
+  });
+ }catch(System.Exception e){finish("error: "+e.Message);}
+};
+UnityEditor.SessionState.SetBool("ArsenalHangProfile.Cancel",false);
+UnityEditor.SessionState.SetBool("ArsenalHangProfile.Running",true);
+UnityEditor.EditorApplication.update+=update;
+return new {started=true,command=command,inputs=sources.ToArray(),cancel="SessionState.SetBool(ArsenalHangProfile.Cancel,true)",warning="one native dependency API per update; one >1s stops remainder; worker SHA never calls Unity"};

@@ -1,0 +1,97 @@
+using System;
+using System.Collections.Generic;
+
+namespace VrBattlegrounds.Editor.Arsenal
+{
+    /// <summary>Offline-only контракт terminal owner. Unity adapter не реализован: phase0 NO_GO.</summary>
+    public static class GeneratorIdentityPlayCoordinator
+    {
+        public const bool SafetyAccepted = false;
+        public const string NoGo = "NOTEXECUTED/NO_GO: CreateInstance pre-publication allocation gap; " +
+            "UID OnDestroy has no exact-instance guard; active quarantine forbids safe own Play exit. " +
+            "DDOL/prefs/args closure and native adapter require independent review.";
+
+        public static void RequirePreparedGate()
+        {
+            // Не принимает bool-подтверждение и не включает runtime через аргумент вызова.
+            throw new InvalidOperationException(NoGo);
+        }
+
+        public static string[] ReadOnlyRefusals()
+        {
+            var reasons=new List<string>();
+            if(VrBattlegrounds.DevTools.DebugBootstrapSettings.Enabled)reasons.Add("DebugBootstrap Enabled: refuse; prefs are not modified");
+            if(VrBattlegrounds.DevTools.DebugBootstrapSettings.ScreenshotOnButtonB)reasons.Add("Screenshot helper enabled: refuse");
+            foreach(var arg in Environment.GetCommandLineArgs())if(arg.StartsWith("-e2e",StringComparison.OrdinalIgnoreCase)){reasons.Add("E2E command-line context: refuse");break;}
+            if(UnityEditor.EditorPrefs.GetBool("VrBattlegrounds.StartFromOffline",true))reasons.Add("Offline Play redirect enabled: refuse; no preference suppression");
+            if(UnityEditor.EditorSettings.enterPlayModeOptionsEnabled&&(UnityEditor.EditorSettings.enterPlayModeOptions&UnityEditor.EnterPlayModeOptions.DisableDomainReload)!=0)reasons.Add("Domain reload disabled: refuse");
+            if(UnityEngine.Application.isBatchMode)reasons.Add("Headless context is outside this packet");
+            if(Mirror.NetworkClient.active||Mirror.NetworkServer.active)reasons.Add("Live network context: refuse");
+            // Только будущая readonly проверка. В OFFLINE GO метод не исполнялся.
+            return reasons.ToArray();
+        }
+
+        public enum TerminalStage { Abort, Cleanup, Drain, ExitOwnPlay, Restore, Report, Completed, Blocked }
+
+        /// <summary>Только finite protocol; delegates будущего Unity adapter сейчас не поставляются.</summary>
+        public sealed class TerminalProtocol
+        {
+            public readonly List<string> Receipts = new List<string>();
+            public readonly List<string> Failures = new List<string>();
+            public TerminalStage Stage { get; private set; } = TerminalStage.Abort;
+            private readonly Func<bool> ownsPlay, cleanupSafe, runnerDrained, idleEdit;
+            private readonly Action abortRunner, cleanup, exitOwnPlay, restore, report;
+            private readonly double deadline;
+            private int ticks, drainFrames;
+
+            public TerminalProtocol(Func<bool> ownsPlay, Func<bool> cleanupSafe, Func<bool> runnerDrained,
+                Func<bool> idleEdit, Action abortRunner, Action cleanup, Action exitOwnPlay,
+                Action restore, Action report, double deadline)
+            {
+                this.ownsPlay=ownsPlay; this.cleanupSafe=cleanupSafe; this.runnerDrained=runnerDrained;
+                this.idleEdit=idleEdit; this.abortRunner=abortRunner; this.cleanup=cleanup;
+                this.exitOwnPlay=exitOwnPlay; this.restore=restore; this.report=report; this.deadline=deadline;
+            }
+
+            private void Attempt(string label, Action action)
+            {
+                try { action(); Receipts.Add(label); }
+                catch(Exception error) { Failures.Add(label+": "+error); }
+            }
+
+            public void Tick(double now)
+            {
+                if(Stage==TerminalStage.Completed || Stage==TerminalStage.Blocked) return;
+                if(++ticks>400 || now>deadline) { Block("finite terminal deadline"); return; }
+                try
+                {
+                    switch(Stage)
+                    {
+                        case TerminalStage.Abort:
+                            Attempt("request-own-runner-abort",abortRunner); Stage=TerminalStage.Cleanup; break;
+                        case TerminalStage.Cleanup:
+                            if(!ownsPlay() || !cleanupSafe()) { Block("UID/ownership prevents terminal cleanup"); break; }
+                            Attempt("exact-owned-cleanup",cleanup); Stage=TerminalStage.Drain; break;
+                        case TerminalStage.Drain:
+                            if(runnerDrained() && ++drainFrames>=3) Stage=TerminalStage.ExitOwnPlay; break;
+                        case TerminalStage.ExitOwnPlay:
+                            if(!ownsPlay() || !cleanupSafe()) { Block("cannot exit foreign/unsafe Play"); break; }
+                            Attempt("exit-own-play",exitOwnPlay); Stage=TerminalStage.Restore; break;
+                        case TerminalStage.Restore:
+                            if(idleEdit()) { Attempt("exact-editor-restore",restore); Stage=TerminalStage.Report; } break;
+                        case TerminalStage.Report:
+                            Attempt("full-report",report); Stage=TerminalStage.Completed; break;
+                    }
+                }
+                catch(Exception error) { Block("terminal predicate fault: "+error); }
+            }
+
+            private void Block(string reason)
+            {
+                Failures.Add("NO_GO "+reason); Stage=TerminalStage.Blocked;
+                Attempt("blocked-full-report",report);
+                // Ни Destroy, ни exit, ни чужой lease release в этой ветке.
+            }
+        }
+    }
+}

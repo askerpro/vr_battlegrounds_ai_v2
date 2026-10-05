@@ -1,0 +1,34 @@
+// Изолированное измерение исходной ручки; требуется EditMode под lease. Записи ассетов нет.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)return "NOT RUN: Play";
+var r=VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.MP5K;
+var root=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Weapons/MP5K/MP5K.prefab");
+var part=root.GetComponentsInChildren<UnityEngine.MeshFilter>(true).Single(f=>f.sharedMesh!=null&&f.sharedMesh.name==r.ActionPart&&!f.name.StartsWith("GrabHighlight"));
+var action=part.GetComponentInParent<UltimateXR.Manipulation.UxrGrabbableObject>(true);
+var rows=new System.Collections.Generic.List<object>();
+using(var pack=new VrBattlegrounds.Editor.Gameplay.HandsPackWeapon(r.Folder,r.BodyPart))
+{
+ var method=typeof(VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder).GetMethod("BodyPlacement",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static);
+ var body=(UnityEngine.Matrix4x4)method.Invoke(null,new object[]{r,pack});
+ pack.Sample(null);var bind=body*pack.PartInBody(r.ActionPart);
+ var actual=root.transform.worldToLocalMatrix*part.transform.localToWorldMatrix;
+ var motion=pack.Measure(r.ActionPart,r.ActionClip,r.RestClip);
+ foreach(string clip in new[]{r.RestClip,r.PoseClip,r.ActionClip})
+ {
+  if(!pack.HasClip(clip))continue;
+  float length=pack.Clip(clip).length;
+  for(int i=0;i<=48;i++)
+  {
+   pack.Sample(null);pack.Sample(clip,length*i/48f);var matrix=body*pack.PartInBody(r.ActionPart);
+   rows.Add(new{clip=clip,time=length*i/48f,position=((UnityEngine.Vector3)matrix.GetColumn(3)).ToString("F7"),rotation=matrix.rotation.eulerAngles.ToString("F5"),fromBind=((UnityEngine.Vector3)(matrix.GetColumn(3)-bind.GetColumn(3))).ToString("F7"),angle=UnityEngine.Quaternion.Angle(bind.rotation,matrix.rotation)});
+  }
+ }
+ var align=new System.Collections.Generic.List<object>();var so=new UnityEditor.SerializedObject(action);var it=so.GetIterator();
+ while(it.Next(true))if(it.propertyType==UnityEditor.SerializedPropertyType.ObjectReference&&(it.name=="_gripAlignTransformHandLeft"||it.name=="_gripAlignTransformHandRight")&&it.objectReferenceValue is UnityEngine.Transform)
+ {
+  var t=(UnityEngine.Transform)it.objectReferenceValue;align.Add(new{path=it.propertyPath,parent=t.parent.name,partLocal=part.transform.InverseTransformPoint(t.position).ToString("F7"),boundsContains=part.sharedMesh.bounds.Contains(part.transform.InverseTransformPoint(t.position))});
+ }
+ var result=new{source=pack.ModelPath,part=r.ActionPart,meshIdentitySame=pack.MeshOf(r.ActionPart)==part.sharedMesh,bindPosition=((UnityEngine.Vector3)bind.GetColumn(3)).ToString("F7"),actualPosition=((UnityEngine.Vector3)actual.GetColumn(3)).ToString("F7"),positionError=UnityEngine.Vector3.Distance(bind.GetColumn(3),actual.GetColumn(3)),rotationError=UnityEngine.Quaternion.Angle(bind.rotation,actual.rotation),rootScale=root.transform.localScale.ToString("F6"),bounds=part.sharedMesh.bounds.ToString("F6"),slideMin=action.TranslationLimitsMin.ToString("F7"),slideMax=action.TranslationLimitsMax.ToString("F7"),sourceFar=body.MultiplyVector(motion.Far).ToString("F7"),sourceMinAngle=motion.MinAngle,sourceMaxAngle=motion.MaxAngle,sourceAxis=motion.Axis.ToString("F7"),align=align,frames=rows};
+ string json=Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented);
+ System.IO.Directory.CreateDirectory("tmp/mp5k-audit");System.IO.File.WriteAllText("tmp/mp5k-audit/source-action.json",json);
+ return json;
+}

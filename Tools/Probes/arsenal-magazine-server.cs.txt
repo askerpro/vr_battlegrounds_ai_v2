@@ -1,0 +1,248 @@
+// Одноразовая серверная диагностика. Запускать целиком через execute_code под замком Unity.
+// Настоящий NetworkServer.Spawn без транспорта/клиентов; не проверяет сетевую доставку и экономический owner-route.
+if (UnityEngine.Application.isPlaying || Mirror.NetworkServer.active || Mirror.NetworkClient.active)
+    return "NOT RUN: нужен EditMode без сети.";
+if (Mirror.NetworkServer.connections.Count != 0 || Mirror.NetworkServer.localConnection != null ||
+    Mirror.NetworkServer.spawned.Count != 0 || Mirror.NetworkClient.spawned.Count != 0)
+    return "NOT RUN: сетевые реестры/подключения должны быть пусты.";
+if (VrBattlegrounds.Managers.MapReferee.Instance != null && VrBattlegrounds.Managers.MapReferee.Instance.ActiveGameMode != null)
+    return "NOT RUN: активный режим не подменяем.";
+if (VrBattlegrounds.Economy.MatchEconomy.Current != null)
+    return "NOT RUN: существующую экономику не подменяем.";
+var output = new System.Text.StringBuilder(); int passed = 0, failed = 0;
+System.Action<string,bool> check = (name, ok) => { output.AppendLine((ok ? "PASS " : "FAIL ") + name); if (ok) passed++; else failed++; };
+var previousScenes = new System.Collections.Generic.List<(UnityEngine.SceneManagement.Scene scene,bool dirty,System.Collections.Generic.HashSet<int> roots)>();
+for (int index = 0; index < UnityEngine.SceneManagement.SceneManager.sceneCount; index++)
+{
+    var prior = UnityEngine.SceneManagement.SceneManager.GetSceneAt(index);
+    var ids = new System.Collections.Generic.HashSet<int>(); foreach (var go in prior.GetRootGameObjects()) ids.Add(go.GetInstanceID());
+    previousScenes.Add((prior,prior.isDirty,ids));
+}
+var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+System.Func<System.Type,string,System.Reflection.FieldInfo> field = (type,name) =>
+{
+    for (var current = type; current != null; current = current.BaseType)
+    {
+        var found = current.GetField(name, flags | System.Reflection.BindingFlags.DeclaredOnly); if (found != null) return found;
+    }
+    throw new System.MissingFieldException(type.FullName,name);
+};
+System.Action<object,string,object> set = (target,name,value) => field(target.GetType(),name).SetValue(target,value);
+System.Action<object,string> invoke = (target,name) => target.GetType().GetMethod(name,flags).Invoke(target,null);
+var managerField = field(typeof(UltimateXR.Manipulation.UxrGrabManager),"s_instance");
+var avatarManagerField = field(typeof(UltimateXR.Core.UxrManager),"s_instance");
+var dormitoryField = field(typeof(VrBattlegrounds.Network.NetworkUxrIdentity),"_dormitory");
+var nextIdField = field(typeof(Mirror.NetworkIdentity),"nextNetworkId");
+var serverActiveProperty = typeof(Mirror.NetworkServer).GetProperty("active",flags);
+var depth = typeof(UltimateXR.Core.StateSync.UxrStateSyncImplementer).GetProperty("SyncCallDepth",flags);
+object oldManager = managerField.GetValue(null), oldAvatarManager = avatarManagerField.GetValue(null),
+       oldDormitory = dormitoryField.GetValue(null), oldNextId = nextIdField.GetValue(null), oldDepth = depth.GetValue(null);
+bool oldServerActive = Mirror.NetworkServer.active;
+var oldAoi = Mirror.NetworkServer.aoi;
+// Только коллекции/статические события SDK, которые могут затронуть операции над собственными предметами.
+// Оригинальные ссылки сохраняются; события внешних слушателей не вызываются во время probe.
+var savedCollections = new System.Collections.Generic.List<(object collection, object[] entries)>();
+var savedDelegates = new System.Collections.Generic.List<(System.Reflection.FieldInfo field, object value)>();
+var savedObjects = new System.Collections.Generic.HashSet<object>();
+var savedTypes = new System.Collections.Generic.HashSet<System.Type>();
+System.Action<System.Type> snapshotType = type =>
+{
+    if (!savedTypes.Add(type)) return;
+    foreach (var member in type.GetFields(flags | System.Reflection.BindingFlags.DeclaredOnly))
+    {
+        if (!member.IsStatic) continue;
+        object value = member.GetValue(null);
+        if (typeof(System.Delegate).IsAssignableFrom(member.FieldType))
+        { savedDelegates.Add((member,value)); member.SetValue(null,null); continue; }
+        if (value == null || !savedObjects.Add(value)) continue;
+        bool collection = value is System.Collections.IDictionary || value is System.Collections.IList ||
+            (member.FieldType.IsGenericType && member.FieldType.GetGenericTypeDefinition() == typeof(System.Collections.Generic.HashSet<>));
+        if (!collection) continue;
+        var entries = new System.Collections.Generic.List<object>();
+        if (value is System.Collections.IDictionary dictionary) foreach (System.Collections.DictionaryEntry entry in dictionary) entries.Add(entry);
+        else foreach (object entry in (System.Collections.IEnumerable)value) entries.Add(entry);
+        savedCollections.Add((value,entries.ToArray()));
+    }
+};
+System.Action<System.Type> snapshotHierarchy = type => { for (var current = type; current != null && current.Namespace != null && current.Namespace.StartsWith("UltimateXR"); current = current.BaseType) snapshotType(current); };
+UnityEngine.GameObject root = null;
+VrBattlegrounds.Arsenal.WeaponInfo data = null;
+UltimateXR.Manipulation.UxrGrabber hand = null;
+UltimateXR.Manipulation.UxrGrabManager manager = null;
+var ownedItems = new System.Collections.Generic.List<UnityEngine.GameObject>();
+var issuedIds = new System.Collections.Generic.List<uint>();
+var scene = default(UnityEngine.SceneManagement.Scene);
+System.Action<UnityEngine.GameObject,UnityEngine.GameObject> created = null;
+try
+{
+    snapshotType(typeof(Mirror.NetworkIdentity)); // В том числе Editor sceneIds, заполненный OnValidate собственного NI.
+    snapshotType(typeof(Mirror.NetworkServer)); // spawned/connections/handlers и прежние callbacks — без Listen/Shutdown.
+    snapshotType(typeof(UltimateXR.Core.Unique.UxrUniqueIdImplementer));
+    snapshotType(typeof(UltimateXR.Core.Unique.UxrUniqueIdImplementer<UltimateXR.Core.Components.UxrComponent>));
+    snapshotType(typeof(UltimateXR.Core.StateSave.UxrStateSaveImplementer));
+    snapshotHierarchy(typeof(UltimateXR.Core.UxrManager));
+    snapshotHierarchy(typeof(UltimateXR.Manipulation.UxrGrabManager));
+    snapshotHierarchy(typeof(UltimateXR.Manipulation.UxrGrabber));
+    snapshotHierarchy(typeof(UltimateXR.Manipulation.UxrGrabbableObject));
+    snapshotHierarchy(typeof(UltimateXR.Manipulation.UxrGrabbableObjectAnchor));
+    snapshotHierarchy(typeof(UltimateXR.Avatar.UxrAvatar));
+    var original = UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>("Assets/Data/Weapons/AK105_Weapon.asset");
+    if (original == null || original.MagazinePrefab == null) throw new System.InvalidOperationException("HARNESS: AK105 metadata/magazine missing");
+    var prefab = original.MagazinePrefab;
+    if (prefab.GetComponent<VrBattlegrounds.Arsenal.MagazineManipulationHistory>() == null)
+        throw new System.InvalidOperationException("HARNESS: installer must put history on real magazine first");
+    scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+    root = new UnityEngine.GameObject("IsolatedMagazineServerProbe"); root.hideFlags = UnityEngine.HideFlags.DontSave;
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root,scene);
+    System.Func<string,UnityEngine.GameObject> child = name => { var go = new UnityEngine.GameObject(name); go.hideFlags = UnityEngine.HideFlags.DontSave; go.transform.SetParent(root.transform,false); return go; };
+    var dormitory = child("OwnInactiveDormitory"); dormitory.SetActive(false); dormitoryField.SetValue(null,dormitory.transform);
+    manager = child("OwnGrabManager").AddComponent<UltimateXR.Manipulation.UxrGrabManager>();
+    manager.Features = (UltimateXR.Manipulation.UxrManipulationFeatures)0; managerField.SetValue(null,manager);
+    var avatarManager = child("OwnAvatarManager").AddComponent<UltimateXR.Core.UxrManager>(); avatarManagerField.SetValue(null,avatarManager);
+    var avatar = child("OwnAvatar").AddComponent<UltimateXR.Avatar.UxrAvatar>();
+    var wrist = child("OwnRightWrist").transform; wrist.SetParent(avatar.transform,false); avatar.AvatarRig.RightArm.Hand.Wrist = wrist;
+    hand = child("OwnHand").AddComponent<UltimateXR.Manipulation.UxrGrabber>();
+    set(hand,"_avatar",avatar); set(hand,"_side",UltimateXR.Core.UxrHandSide.Right); set(hand,"_sideInitialized",true);
+    ((System.Collections.IList)field(typeof(UltimateXR.Core.Components.UxrComponent<UltimateXR.Manipulation.UxrGrabber>),"s_typeComponents").GetValue(null)).Add(hand);
+    check("HARNESS own hand has wrist",hand.HandBone == wrist);
+    var wallRoot = child("OwnWall");
+    var identity = wallRoot.AddComponent<Mirror.NetworkIdentity>();
+    var wall = wallRoot.AddComponent<VrBattlegrounds.Arsenal.ArsenalWallController>();
+    var slotRoot = child("OwnSlot"); slotRoot.transform.SetParent(wallRoot.transform,false);
+    var slot = slotRoot.AddComponent<VrBattlegrounds.Arsenal.FirearmSlotController>();
+    var anchorGo = child("OwnMagAnchor"); anchorGo.transform.SetParent(slotRoot.transform,false);
+    var anchor = anchorGo.AddComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+    data = UnityEngine.Object.Instantiate(original); data.hideFlags = UnityEngine.HideFlags.DontSave;
+    set(data,"_weaponPrefab",null); // Собственная metadata-копия исключает постороннюю выдачу стволов в Wall.OnStartServer.
+    slot.ConfigureWeapon(data); set(wall,"_allSlots",new VrBattlegrounds.Arsenal.ArsenalSlotController[] {slot});
+    set(wall,"_currentState",VrBattlegrounds.Arsenal.ArsenalWallController.ArsenalState.Open);
+    var offer = slotRoot.AddComponent<VrBattlegrounds.Arsenal.ArsenalMagazineOffer>(); offer.Configure(slot,anchor,null,UnityEngine.Vector3.back); invoke(offer,"Subscribe");
+    var supply = wallRoot.AddComponent<VrBattlegrounds.Arsenal.ArsenalMagazineSupply>();
+    // Mirror EditMode: Awake автоматически не вызывается. Все NB уже добавлены, вызываем настоящий NI.Awake.
+    invoke(identity,"Awake");
+    created = (source,instance) =>
+    {
+        if (source != prefab) throw new System.InvalidOperationException("HARNESS: unexpected prefab spawn");
+        ownedItems.Add(instance); instance.hideFlags = UnityEngine.HideFlags.DontSave;
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(instance,scene);
+        foreach (var component in instance.GetComponentsInChildren<UltimateXR.Core.Components.UxrComponent>(true)) snapshotHierarchy(component.GetType());
+        invoke(instance.GetComponent<Mirror.NetworkIdentity>(),"Awake");
+        invoke(instance.GetComponent<VrBattlegrounds.Arsenal.MagazineManipulationHistory>(),"Subscribe");
+    };
+    VrBattlegrounds.Network.NetworkUxrIdentity.InstanceCreated += created;
+    Mirror.NetworkServer.aoi = null; serverActiveProperty.SetValue(null,true);
+    Mirror.NetworkServer.Spawn(wallRoot); issuedIds.Add(identity.netId);
+    check("HARNESS real wall Spawn enables isServer",identity.netId != 0 && identity.isServer && supply.isServer && Mirror.NetworkServer.spawned.ContainsKey(identity.netId));
+    if (!supply.isServer || identity.netId == 0) throw new System.InvalidOperationException("HARNESS: server method would be suppressed");
+    supply.ServerRefill();
+    if (!supply.Stock.TryGetValue(0,out var firstBinding) || firstBinding.NetId == 0) throw new System.InvalidOperationException("ServerRefill produced no nonzero stock binding");
+    var first = Mirror.NetworkServer.spawned[firstBinding.NetId].GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    var firstBody = first.RigidBodySource; issuedIds.Add(firstBinding.NetId);
+    check("actual SpawnStock has NI/anchor/kinematic",first.GetComponent<Mirror.NetworkIdentity>().isServer && first.CurrentAnchor == anchor && first.transform.IsChildOf(anchor.transform) && firstBody != null && firstBody.isKinematic);
+    System.Guid sourceId = UltimateXR.Extensions.System.StringExt.GetGuid(firstBinding.NetId.ToString());
+    bool combined = true; int uuidCount = 0;
+    foreach (var component in first.GetComponentsInChildren<UltimateXR.Core.Components.UxrComponent>(true)) { uuidCount++; if (((UltimateXR.Core.Unique.IUxrUniqueId)component).CombineIdSource != sourceId || component.UniqueId == System.Guid.Empty) combined = false; }
+    check("all actual UXR component IDs combined with netId",uuidCount > 0 && combined);
+    int spawnedBefore = Mirror.NetworkServer.spawned.Count;
+    supply.ServerRefill(); check("second refill does not duplicate stock",supply.Stock[0].NetId == firstBinding.NetId && Mirror.NetworkServer.spawned.Count == spawnedBefore && ownedItems.Count == 1);
+    check("real prefab release contract is dynamic",first.RigidBodyDynamicOnRelease);
+    manager.GrabObject(hand,first,0,true);
+    check("allowed SDK grab removes stock and detaches",manager.IsBeingGrabbed(first) && !supply.Stock.ContainsKey(0) && first.CurrentAnchor == null && !first.transform.IsChildOf(slotRoot.transform));
+    var carriedPosition = first.transform.position; var carriedRotation = first.transform.rotation;
+    supply.ServerRefill();
+    var secondBinding = supply.Stock[0]; issuedIds.Add(secondBinding.NetId);
+    var second = Mirror.NetworkServer.spawned[secondBinding.NetId].GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    check("next normal refill spawns new and preserves held old",secondBinding.NetId != firstBinding.NetId && offer.CurrentItem == second && manager.IsBeingGrabbed(first) && UnityEngine.Vector3.Distance(first.transform.position,carriedPosition) < .00001f && UnityEngine.Quaternion.Angle(first.transform.rotation,carriedRotation) < .001f);
+    var equipment = wallRoot.AddComponent<VrBattlegrounds.Arsenal.ArsenalEquipmentPoses>();
+    var open = child("OwnOpenPose").transform; open.position = slotRoot.transform.position;
+    var closed = child("OwnClosedPose").transform; closed.position = open.position + new UnityEngine.Vector3(0,-1,0);
+    equipment.Configure(new[] {new VrBattlegrounds.Arsenal.ArsenalEquipmentPoses.PoseTarget {Target=slotRoot.transform,OpenPose=open,ClosedPose=closed}});
+    var stockPosition = second.transform.position; equipment.Apply(0);
+    check("fold moves stock only and preserves held pose",UnityEngine.Vector3.Distance(second.transform.position,stockPosition) > .9f && manager.IsBeingGrabbed(first) && UnityEngine.Vector3.Distance(first.transform.position,carriedPosition) < .00001f && UnityEngine.Quaternion.Angle(first.transform.rotation,carriedRotation) < .001f);
+    manager.ReleaseObject(hand,first,true);
+    check("actual SDK release leaves issued object dynamic",!manager.IsBeingGrabbed(first) && first.CurrentAnchor == null && firstBody != null && !firstBody.isKinematic);
+    equipment.Apply(1);
+    set(wall,"_currentState",VrBattlegrounds.Arsenal.ArsenalWallController.ArsenalState.Closed);
+    check("closed wall rejects free offer",!offer.AllowsGrab(hand));
+    // Прямой SDK вызов имитирует дошедший/подделанный захват. Не меняет IsGrabbable и не обходит HandleTaken.
+    manager.GrabObject(hand,second,0,true);
+    check("rejected SDK grab queued rather than erased",manager.IsBeingGrabbed(second) && supply.Stock[0].NetId == secondBinding.NetId);
+    invoke(supply,"FlushRejected");
+    var returned = supply.Stock[0]; var history = second.GetComponent<VrBattlegrounds.Arsenal.MagazineManipulationHistory>();
+    check("FlushRejected releases and returns same stock with explicit revision",!manager.IsBeingGrabbed(second) && offer.CurrentItem == second && second.RigidBodySource.isKinematic && returned.NetId == secondBinding.NetId && returned.ReturnRevision == secondBinding.ReturnRevision + 1 && returned.AllowedManipulationSequence == history.Sequence && history.Sequence >= 2 && history.LastReturnRevision == returned.ReturnRevision);
+    check("server rejected return disables closed stock",!second.IsGrabbable);
+}
+catch (System.Exception error) { failed++; output.AppendLine("PROBE FAILURE " + error); }
+finally
+{
+    if (created != null) VrBattlegrounds.Network.NetworkUxrIdentity.InstanceCreated -= created;
+    // Собственные предметы удаляем при живых собственных SDK менеджерах. Shutdown не вызываем.
+    foreach (var item in ownedItems)
+    {
+        try
+        {
+            if (item == null) continue;
+            var grab = item.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+            if (manager != null && grab != null && manager.IsBeingGrabbed(grab)) manager.ReleaseGrabs(grab,false);
+            var ni = item.GetComponent<Mirror.NetworkIdentity>();
+            if (ni != null && ni.netId != 0 && Mirror.NetworkServer.spawned.ContainsKey(ni.netId)) Mirror.NetworkServer.UnSpawn(item);
+            UnityEngine.Object.DestroyImmediate(item);
+        }
+        catch (System.Exception error) { failed++; output.AppendLine("CLEANUP item " + error); }
+    }
+    try
+    {
+        if (root != null)
+        {
+            foreach (var ni in root.GetComponentsInChildren<Mirror.NetworkIdentity>(true))
+                if (ni.netId != 0 && Mirror.NetworkServer.spawned.ContainsKey(ni.netId)) Mirror.NetworkServer.UnSpawn(ni.gameObject);
+            // Дети с SDK удаляются до двух менеджеров; их OnDestroy не может создать менеджер в человеческой сцене.
+            var children = new System.Collections.Generic.List<UnityEngine.GameObject>();
+            foreach (UnityEngine.Transform child in root.transform) if (child.name != "OwnGrabManager" && child.name != "OwnAvatarManager") children.Add(child.gameObject);
+            foreach (var child in children) if (child != null) UnityEngine.Object.DestroyImmediate(child);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+        if (data != null) UnityEngine.Object.DestroyImmediate(data);
+    }
+    catch (System.Exception error) { failed++; output.AppendLine("CLEANUP scene " + error); }
+    try { if (scene.IsValid()) UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene); }
+    catch (System.Exception error) { failed++; output.AppendLine("CLEANUP close preview " + error); }
+    // Даже при ошибке удаления восстанавливаем все затронутые статические ссылки/содержимое реестров.
+    foreach (var saved in savedCollections)
+    {
+        try
+        {
+            if (saved.collection is System.Collections.IDictionary dictionary)
+            { dictionary.Clear(); foreach (System.Collections.DictionaryEntry entry in saved.entries) dictionary.Add(entry.Key,entry.Value); }
+            else if (saved.collection is System.Collections.IList list)
+            { list.Clear(); foreach (object entry in saved.entries) list.Add(entry); }
+            else
+            { saved.collection.GetType().GetMethod("Clear").Invoke(saved.collection,null); var add = saved.collection.GetType().GetMethod("Add"); foreach (object entry in saved.entries) add.Invoke(saved.collection,new[] {entry}); }
+        }
+        catch (System.Exception error) { failed++; output.AppendLine("CLEANUP registry " + error); }
+    }
+    foreach (var saved in savedDelegates) saved.field.SetValue(null,saved.value);
+    managerField.SetValue(null,oldManager); avatarManagerField.SetValue(null,oldAvatarManager);
+    dormitoryField.SetValue(null,oldDormitory); depth.SetValue(null,oldDepth);
+    nextIdField.SetValue(null,oldNextId); Mirror.NetworkServer.aoi = oldAoi; serverActiveProperty.SetValue(null,oldServerActive);
+}
+check("cleanup SDK manager pointers and depth restored",System.Object.ReferenceEquals(managerField.GetValue(null),oldManager) && System.Object.ReferenceEquals(avatarManagerField.GetValue(null),oldAvatarManager) && System.Object.Equals(depth.GetValue(null),oldDepth));
+check("cleanup Dormitory and Mirror counter/active/AOI restored",System.Object.ReferenceEquals(dormitoryField.GetValue(null),oldDormitory) && System.Object.Equals(nextIdField.GetValue(null),oldNextId) && Mirror.NetworkServer.active == oldServerActive && Mirror.NetworkServer.aoi == oldAoi);
+check("cleanup no server/client objects or connections remain",Mirror.NetworkServer.spawned.Count == 0 && Mirror.NetworkClient.spawned.Count == 0 && Mirror.NetworkServer.connections.Count == 0 && Mirror.NetworkServer.localConnection == null);
+bool registriesRestored = true;
+foreach (var saved in savedCollections)
+{
+    if (saved.collection is System.Collections.IDictionary dictionary)
+    { if (dictionary.Count != saved.entries.Length) registriesRestored = false; foreach (System.Collections.DictionaryEntry entry in saved.entries) if (!dictionary.Contains(entry.Key) || !System.Object.Equals(dictionary[entry.Key],entry.Value)) registriesRestored = false; }
+    else { var current = new System.Collections.Generic.List<object>(); foreach (object entry in (System.Collections.IEnumerable)saved.collection) current.Add(entry); if (current.Count != saved.entries.Length) registriesRestored = false; foreach (object entry in saved.entries) if (!current.Contains(entry)) registriesRestored = false; }
+}
+check("cleanup SDK registry contents restored",registriesRestored);
+bool scenesUnchanged = UnityEngine.SceneManagement.SceneManager.sceneCount == previousScenes.Count;
+foreach (var saved in previousScenes)
+{
+    if (!saved.scene.IsValid() || !saved.scene.isLoaded || saved.scene.isDirty != saved.dirty) { scenesUnchanged = false; continue; }
+    var ids = new System.Collections.Generic.HashSet<int>(); foreach (var go in saved.scene.GetRootGameObjects()) ids.Add(go.GetInstanceID());
+    if (!ids.SetEquals(saved.roots)) scenesUnchanged = false;
+}
+check("cleanup existing scene roots and dirty flags unchanged",scenesUnchanged);
+return output.ToString() + "\nPassed=" + passed + ", Failed=" + failed;

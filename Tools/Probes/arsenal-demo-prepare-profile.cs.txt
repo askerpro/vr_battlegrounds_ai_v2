@@ -1,0 +1,48 @@
+// Read-only profiling exact Command preparation for Пересобрать демонстрационную станцию.
+// Запускать только после подтверждения UI ready, под отдельной согласованной lease. Writer отсутствует.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)return "NOT RUN: editor busy";
+string directory=System.IO.Path.GetFullPath("tmp/arsenal-ui-contract/demo-prepare-profile");System.IO.Directory.CreateDirectory(directory);
+var assembly=typeof(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow).Assembly;
+var status=assembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalEditorStatus",true);
+var actions=assembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalEditorActions",true);
+var inputs=new[]{"Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Data/Weapons/FullDemoArsenal.asset","Assets/Data/Maps/MapRegistry.asset"};
+var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();int sceneHandle=scene.handle;string scenePath=scene.path;bool sceneDirty=scene.isDirty;
+var roots=scene.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(i=>i).ToArray();
+var start=System.DateTime.UtcNow;var total=System.Diagnostics.Stopwatch.StartNew();int stage=0;
+string[] dependencies=null;System.Collections.Generic.Dictionary<string,string> hashes=null;
+var measurements=new System.Collections.Generic.List<object>();
+System.Action<string> checkpoint=name=>System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"phase.json"),Newtonsoft.Json.JsonConvert.SerializeObject(new {phase=name,utc=System.DateTime.UtcNow.ToString("O"),elapsedMs=total.ElapsedMilliseconds},Newtonsoft.Json.Formatting.Indented));
+UnityEditor.EditorApplication.CallbackFunction update=null;
+update=()=>{
+ try {
+  if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode){checkpoint("STOP: human Play");UnityEditor.EditorApplication.update-=update;return;}
+  var watch=System.Diagnostics.Stopwatch.StartNew();
+  if(stage==0){
+   checkpoint("START actual compiled Status.Dependencies");
+   dependencies=(string[])status.GetMethod("Dependencies").Invoke(null,new object[]{inputs});
+   watch.Stop();measurements.Add(new {stage="Dependencies actual complete call",ms=watch.ElapsedMilliseconds,count=dependencies.Length});
+   System.IO.File.WriteAllLines(System.IO.Path.Combine(directory,"dependency-paths.txt"),dependencies);
+   checkpoint("DONE Dependencies");stage=1;return;
+  }
+  if(stage==1){
+   checkpoint("START actual compiled Status.Snapshot");
+   hashes=(System.Collections.Generic.Dictionary<string,string>)status.GetMethod("Snapshot").Invoke(null,new object[]{dependencies});
+   watch.Stop();measurements.Add(new {stage="Snapshot actual complete call",ms=watch.ElapsedMilliseconds,count=hashes.Count});
+   checkpoint("DONE Snapshot");stage=2;return;
+  }
+  if(stage==2){
+   checkpoint("START actual compiled Actions.DirtySavedAssets");
+   var dirty=(string[])actions.GetMethod("DirtySavedAssets").Invoke(null,null);
+   watch.Stop();measurements.Add(new {stage="DirtySavedAssets actual complete call",ms=watch.ElapsedMilliseconds,count=dirty.Length});
+   var missing=hashes.Keys.Where(p=>!System.IO.File.Exists(p)).ToArray();
+   long bytes=hashes.Keys.Where(System.IO.File.Exists).Sum(p=>new System.IO.FileInfo(p).Length);
+   bool unchangedScene=UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle==sceneHandle&&scene.path==scenePath&&scene.isDirty==sceneDirty&&roots.SequenceEqual(scene.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(i=>i));
+   var result=new {startUtc=start.ToString("O"),completedUtc=System.DateTime.UtcNow.ToString("O"),totalWallMs=total.ElapsedMilliseconds,assembly=assembly.Location,sourceInputs=inputs,measurements=measurements,uniquePhysicalBytes=bytes,missing=missing,sceneUnchanged=unchangedScene,scenePath=scenePath,sceneDirty=sceneDirty,dirtyPaths=dirty};
+   System.IO.File.WriteAllText(System.IO.Path.Combine(directory,"result.json"),Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+   checkpoint("COMPLETE: no writers called");UnityEditor.EditorApplication.update-=update;
+  }
+ }catch(System.Exception e){checkpoint("ERROR "+e.ToString());UnityEditor.EditorApplication.update-=update;}
+};
+checkpoint("SCHEDULED: exact compiled readonly functions");
+UnityEditor.EditorApplication.update+=update;
+return new {started=true,output=directory,inputs=inputs,guard="no writers; each complete compiled stage on separate update; shell reads phase marker"};

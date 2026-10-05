@@ -1,0 +1,24 @@
+if (UnityEngine.Application.isPlaying) return "REFUSED Play Mode";
+var targets = new[] { "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab", "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower_Magazine.prefab", "Assets/Prefabs/Weapons/AR15/AR15.prefab", "Assets/Prefabs/Weapons/AR15/AR15_Magazine.prefab", "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab", "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS_Ammo.prefab" };
+var entries = new System.Collections.Generic.List<object>();
+foreach (var path in targets)
+{
+    var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    string guid; long localId;
+    if (!UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(root, out guid, out localId)) throw new System.Exception("No persistent root: " + path);
+    var identity = root.GetComponent<Mirror.NetworkIdentity>();
+    var grab = root.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    var fire = root.GetComponent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>();
+    var mag = root.GetComponent<UltimateXR.Mechanics.Weapons.UxrFirearmMag>();
+    object trigger = null;
+    if (fire != null)
+    {
+        var t = new UnityEditor.SerializedObject(fire).FindProperty("_triggers").GetArrayElementAtIndex(0);
+        trigger = new { degrees = t.FindPropertyRelative("_triggerRotationDegrees").floatValue, axis = t.FindPropertyRelative("_triggerRotationAxis._axis").intValue };
+    }
+    entries.Add(new { path, guid, localId, assetId = new UnityEditor.SerializedObject(identity).FindProperty("_assetId").longValue, tag = grab.Tag, scale = root.transform.localScale.ToString("F6"), trigger, capacity = mag == null ? -1 : mag.Capacity });
+}
+var json = Newtonsoft.Json.JsonConvert.SerializeObject(entries, Newtonsoft.Json.Formatting.Indented);
+System.IO.Directory.CreateDirectory("tmp/weapon-interaction-extension");
+System.IO.File.WriteAllText("tmp/weapon-interaction-extension/legacy-root-identities-current.json", json);
+return json;

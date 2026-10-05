@@ -1,0 +1,57 @@
+// Own lease + fresh Editor guard. Только доказанно свой native mesh и origin.txt.
+const string folder = "Assets/Art/Arsenal/DDDQuickhook";
+const string meshPath = folder + "/QuickhookMesh.asset";
+if (UnityEngine.Application.isPlaying || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode ||
+    UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    return "NOT RUN: Editor занят.";
+var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+if (scene.isDirty) return "NOT RUN: чужое dirty scene состояние.";
+if (UnityEditor.AssetDatabase.AssetPathToGUID(meshPath) != "5041a11c4789d7144a8f57406f23d034")
+    return "NOT RUN: не мой mesh GUID.";
+var mesh = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Mesh>(meshPath);
+if (mesh == null || UnityEditor.EditorUtility.IsDirty(mesh)) return "NOT RUN: отсутствует/dirty mesh.";
+var source = System.IO.File.ReadAllBytes(folder + "/Quickhook-2in-Medium.stl");
+string hash;
+using (var sha = System.Security.Cryptography.SHA256.Create())
+    hash = System.BitConverter.ToString(sha.ComputeHash(source)).Replace("-", "");
+if (hash != "B298798FB66D677E5D8088A136D9BA516CF6A572332FB7274A5FCF828D3B6DE0")
+    return "NOT RUN: source SHA mismatch.";
+uint count = System.BitConverter.ToUInt32(source, 80);
+if (count != 1114 || source.Length != 84 + count * 50) return "NOT RUN: topology mismatch.";
+var pivot = new UnityEngine.Vector3(600.4f, 143.95f, 4.55f);
+var vertices = new UnityEngine.Vector3[count * 3];
+var original = mesh.vertices;
+bool alreadyNormalized = true;
+for (int i = 0; i < count; i++) for (int j = 0; j < 3; j++)
+{
+    int offset = 84 + i * 50 + 12 + j * 12;
+    var raw = new UnityEngine.Vector3(System.BitConverter.ToSingle(source, offset),
+        System.BitConverter.ToSingle(source, offset + 4), System.BitConverter.ToSingle(source, offset + 8));
+    vertices[i * 3 + j] = (raw - pivot) * .001f;
+    if ((original[i * 3 + j] - vertices[i * 3 + j]).sqrMagnitude > 1e-12f) alreadyNormalized = false;
+    if ((original[i * 3 + j] - raw * .001f).sqrMagnitude > 1e-12f &&
+        (original[i * 3 + j] - vertices[i * 3 + j]).sqrMagnitude > 1e-12f)
+        return "NOT RUN: unexpected mesh edit before pivot normalization.";
+}
+int[] topology = mesh.triangles;
+for (int i = 0; i < topology.Length; i++) if (topology[i] != i) return "NOT RUN: topology changed.";
+string originPath = folder + "/origin.txt";
+string origin = System.IO.File.ReadAllText(originPath);
+const string record = "Derived pivot: subtract source (600.4,143.95,4.55)mm then multiply by .001. Mounting broad base at X600.4; stem extends approx50.8mm in -X. Whole geometry rigid translation, original STL unchanged.\n";
+if (!alreadyNormalized)
+{
+    mesh.vertices = vertices; mesh.RecalculateBounds();
+    UnityEditor.EditorUtility.SetDirty(mesh); UnityEditor.AssetDatabase.SaveAssetIfDirty(mesh);
+}
+if (!origin.Contains(record))
+{
+    System.IO.File.WriteAllText(originPath, origin + record);
+    UnityEditor.AssetDatabase.ImportAsset(originPath);
+}
+var bounds = mesh.bounds;
+var result = new { alreadyNormalized = alreadyNormalized, triangles = topology.Length / 3,
+    min = new[] { bounds.min.x, bounds.min.y, bounds.min.z },
+    max = new[] { bounds.max.x, bounds.max.y, bounds.max.z }, sceneClean = !scene.isDirty };
+System.IO.File.WriteAllText("tmp/arsenal-holder-candidate/DDD/pivot-native.json",
+    Newtonsoft.Json.JsonConvert.SerializeObject(result, Newtonsoft.Json.Formatting.Indented));
+return result;

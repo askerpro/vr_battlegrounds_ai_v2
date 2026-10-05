@@ -1,0 +1,48 @@
+// Одноразовая диагностика сохранённых ассетов и реальной подготовки; только свои prefab contents.
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "REFUSED: Play Mode";
+var report = new System.Text.StringBuilder(); int passed = 0, failed = 0;
+System.Action<string, bool> check = (name, ok) => { report.AppendLine((ok ? "PASS " : "FAIL ") + name); if (ok) passed++; else failed++; };
+var maps = UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Maps.MapRegistry>("Assets/Data/Maps/MapRegistry.asset");
+var current = UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.GameplayPath);
+var full = UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.FullPath);
+var infos = UnityEditor.AssetDatabase.FindAssets("t:WeaponInfo", new[] { "Assets/Data/Weapons" }).Select(UnityEditor.AssetDatabase.GUIDToAssetPath).Select(UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>).ToArray();
+check("20 distinct catalogue firearms", infos.Length == 20 && infos.Select(w => w.WeaponId).Distinct().Count() == 20 && infos.Select(w => w.WeaponPrefab).Distinct().Count() == 20);
+check("maps keep current10; Lobby uses full20", current.Entries.Count == 10 && full.Entries.Count == 20 && maps.maps.All(m => m.arsenalPreset == (m == maps.lobby ? full : current)));
+var managers = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Managers/--- MANAGERS ---.prefab").GetComponentsInChildren<Mirror.NetworkManager>(true).Single();
+var networkItems = infos.SelectMany(w => new[] { w.WeaponPrefab, w.MagazinePrefab }).Distinct().ToArray();
+check("all40 catalogue items registered in Mirror", networkItems.Length == 40 && networkItems.All(p => p.GetComponent<Mirror.NetworkIdentity>() != null && p.GetComponent<Mirror.NetworkIdentity>().assetId != 0 && managers.spawnPrefabs.Contains(p)));
+var common = UnityEditor.PrefabUtility.LoadPrefabContents(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.CommonPath);
+try
+{
+    var slots = common.GetComponent<VrBattlegrounds.Arsenal.ArsenalWallController>().Slots;
+    var binding = common.GetComponent<VrBattlegrounds.Arsenal.ArsenalStationPresetBinding>();
+    var before = slots.Select(s => s.WeaponData).ToArray();
+    check("common10 exact original assortment", before.SequenceEqual(current.Entries.Select(e => e.Weapon)));
+    bool rejected = false;
+    try { binding.Prepare(full); } catch (System.InvalidOperationException) { rejected = true; }
+    check("full20 rejected atomically on common10", rejected && !binding.IsPrepared && before.SequenceEqual(slots.Select(s => s.WeaponData)));
+    binding.Prepare(current); binding.Prepare(current);
+    check("current10 preparation idempotent", binding.IsPrepared && before.SequenceEqual(slots.Select(s => s.WeaponData)) && slots.All(s => s.gameObject.activeSelf));
+}
+finally { UnityEditor.PrefabUtility.UnloadPrefabContents(common); }
+var demo = UnityEditor.PrefabUtility.LoadPrefabContents(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.DemoPath);
+try
+{
+    var slots = demo.GetComponent<VrBattlegrounds.Arsenal.ArsenalWallController>().Slots;
+    var binding = demo.GetComponent<VrBattlegrounds.Arsenal.ArsenalStationPresetBinding>(); binding.Prepare(full);
+    check("demo20 zone capacity12/8 and unique slots", slots.Count == 20 && slots.Distinct().Count() == 20 && slots.Count(s => s.PresentationZone == VrBattlegrounds.Arsenal.ArsenalPresentationZone.Pegboard) == 12 && slots.Count(s => s.PresentationZone == VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf) == 8);
+    check("demo20 all assignments and cards", new[] { VrBattlegrounds.Arsenal.ArsenalPresentationZone.Pegboard, VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf }.All(zone => slots.Where(s => s.PresentationZone == zone).Select(s => s.WeaponData).SequenceEqual(full.Entries.Where(e => e.Zone == zone).Select(e => e.Weapon))) && slots.All(s => s.ItemAnchor != null && s.gameObject.activeSelf && s.GetComponentInChildren<VrBattlegrounds.Arsenal.ArsenalPriceTag>(true) != null));
+    var ids = demo.GetComponentsInChildren<MonoBehaviour>(true).Where(c => c != null).Select(c => new UnityEditor.SerializedObject(c).FindProperty("_uxrUniqueId")).Where(p => p != null).Select(p => p.stringValue).ToArray();
+    check("demo anchors unique SDK IDs", ids.All(id => !string.IsNullOrEmpty(id)) && ids.Distinct().Count() == ids.Length);
+}
+finally { UnityEditor.PrefabUtility.UnloadPrefabContents(demo); }
+var scene = UnityEngine.SceneManagement.SceneManager.GetSceneByPath("Assets/Scenes/Lobby.unity");
+var walls = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<VrBattlegrounds.Arsenal.ArsenalWallController>(true)).ToArray();
+check("Lobby four demo instances with20slots", walls.Length == 4 && walls.All(w => w.Slots.Count == 20 && UnityEditor.PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(w.gameObject) == VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.DemoPath));
+var anchors = walls.Select(w => w.GetComponent<VrBattlegrounds.Arsenal.ArsenalStationAnchor>()).ToArray();
+check("Lobby preserved zone and standing references", anchors.All(a => a.Zone != null && a.StandingPoint != null && a.GetComponentInChildren<VrBattlegrounds.Maps.SpawnZoneBoundaryOpening>(true) != null));
+bool overlap = false; for (int i = 0; i < anchors.Length; i++) for (int j = i + 1; j < anchors.Length; j++) if (anchors[i].RaisedBoundsWorld.Intersects(anchors[j].RaisedBoundsWorld)) overlap = true;
+check("Lobby raised stations do not intersect each other", !overlap);
+report.AppendLine("RESULT: " + passed + " passed; " + failed + " failed. Network clients/headset not exercised.");
+System.IO.File.WriteAllText("tmp/arsenal-presets/diagnostic.txt", report.ToString());
+return report.ToString();

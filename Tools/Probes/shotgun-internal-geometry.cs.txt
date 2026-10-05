@@ -1,0 +1,24 @@
+// Read-only: исходные prefab assets, без инстансов/сохранений.
+var output = new System.Text.StringBuilder();
+foreach (var path in new[] { "Assets/Prefabs/Weapons/ShotgunReal/Shotgun_real.prefab", "Assets/Prefabs/Weapons/Herrington/Herrington.prefab" })
+{
+    var weapon = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    var body = weapon.transform.Find("MeshContainer");
+    var anchor = body.Find("MagAnchor").GetComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+    output.AppendLine(path + " anchor=" + body.InverseTransformPoint(anchor.transform.position).ToString("F6") + " align=" + body.InverseTransformPoint(anchor.AlignTransform.position).ToString("F6") + " proximity=" + body.InverseTransformPoint(anchor.DropProximityTransform.position).ToString("F6"));
+    foreach (var filter in weapon.GetComponentsInChildren<UnityEngine.MeshFilter>(true))
+    {
+        if (filter.sharedMesh == null || !(filter.name == "Base" || filter.name == "Staple" || filter.name == "Feed" || filter.name == "Mesh" || filter.name == "ForeEnd")) continue;
+        var b = filter.sharedMesh.bounds;
+        var m = body.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+        var min = new UnityEngine.Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        var max = new UnityEngine.Vector3(float.MinValue, float.MinValue, float.MinValue);
+        for (int mask = 0; mask < 8; mask++)
+        {
+            var v = b.center + UnityEngine.Vector3.Scale(b.extents, new UnityEngine.Vector3((mask & 1) == 0 ? -1 : 1, (mask & 2) == 0 ? -1 : 1, (mask & 4) == 0 ? -1 : 1));
+            v = m.MultiplyPoint3x4(v); min = UnityEngine.Vector3.Min(min, v); max = UnityEngine.Vector3.Max(max, v);
+        }
+        output.AppendLine("  " + filter.name + " center=" + ((min + max) * 0.5f).ToString("F6") + " extents=" + ((max - min) * 0.5f).ToString("F6") + " min=" + min.ToString("F6") + " max=" + max.ToString("F6"));
+    }
+}
+return output.ToString();

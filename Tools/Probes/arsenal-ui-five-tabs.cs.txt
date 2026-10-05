@@ -1,0 +1,12 @@
+// Каждая вкладка вызывается отдельно, чтобы Editor успел исполнить настоящий OnGUI.
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "NOT RUN: Play Mode";
+var status=typeof(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow).Assembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalEditorStatus",true);
+var folders=new[]{"Assets/Data/Weapons","Assets/Data/Maps","Assets/Prefabs/Weapons","Assets/Prefabs/Arsenal","Assets/Art/Weapons","Assets/Art/HandPoses","Assets/Audio/SFX/Weapons/Kinemation"};
+var hashes=(System.Collections.Generic.Dictionary<string,string>)status.GetMethod("Snapshot").Invoke(null,new object[]{folders});
+var dependencyPaths=UnityEditor.AssetDatabase.FindAssets("",new[]{"Assets/Data/Weapons","Assets/Data/Maps","Assets/Prefabs/Weapons","Assets/Prefabs/Arsenal"}).Select(UnityEditor.AssetDatabase.GUIDToAssetPath).Where(p=>!UnityEditor.AssetDatabase.IsValidFolder(p)).OrderBy(p=>p).ToArray();
+var dependencies=dependencyPaths.ToDictionary(p=>p,p=>UnityEditor.AssetDatabase.GetAssetDependencyHash(p).ToString());
+var scenes=Enumerable.Range(0,UnityEngine.SceneManagement.SceneManager.sceneCount).Select(i=>{var scene=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);return new {handle=scene.handle,path=scene.path,dirty=scene.isDirty,roots=scene.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(id=>id).ToArray()};}).ToArray();
+var before=Newtonsoft.Json.JsonConvert.SerializeObject(new {hashes=hashes,dependencies=dependencies,scenes=scenes,active=UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle,previews=UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount});
+UnityEditor.SessionState.SetString("ArsenalUIContract.ReadonlyBefore",before);
+VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenTab(0);
+return new {physicalFiles=hashes.Count,dependencyAssets=dependencyPaths.Length,tab=0};

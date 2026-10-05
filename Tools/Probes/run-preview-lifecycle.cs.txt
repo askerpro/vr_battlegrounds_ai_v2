@@ -1,0 +1,19 @@
+// Только root под Unity lock; отдельная сборка в памяти, source остаётся за пределами Assets.
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "NOT RUN: Play Mode";
+var source = System.IO.File.ReadAllText("Tools/Probes/arsenal-preview-lifecycle.cs.txt");
+var references = System.AppDomain.CurrentDomain.GetAssemblies()
+    .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
+    .Select(a => a.Location).Distinct().ToArray();
+// Тот же установленный compiler, что у execute_code: refs через response file и фильтрация netstandard.
+var compilerType = System.AppDomain.CurrentDomain.GetAssemblies()
+    .Select(a => a.GetType("MCPForUnity.Editor.Tools.ExecuteCode", false)).FirstOrDefault(t => t != null);
+if (compilerType == null) return "HARNESS: execute_code compiler type unavailable";
+var compile = compilerType.GetMethod("CodeDomCompile", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+if (compile == null) return "HARNESS: CodeDomCompile unavailable";
+var args = new object[] { source, references, null };
+var assembly = (System.Reflection.Assembly)compile.Invoke(null, args);
+var errors = (System.Collections.Generic.List<string>)args[2];
+if (assembly == null) return "HARNESS compilation: " + string.Join("\n", errors);
+var run = assembly.GetType("VrBattlegrounds.Editor.Probes.ArsenalPreviewLifecycleProbe").GetMethod("Run");
+try { return run.Invoke(null, new object[] { false }); }
+catch (System.Reflection.TargetInvocationException error) { return "PROBE FAILURE: " + error.InnerException; }

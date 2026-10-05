@@ -1,0 +1,70 @@
+// Ошибки constructor и изоляция моделей. Только собственная additive-сцена, никаких Save/import/export.
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "NOT RUN: Play Mode";
+var previous = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+var originalScenes = new System.Collections.Generic.List<(UnityEngine.SceneManagement.Scene scene, bool dirty, int roots)>();
+for (int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++)
+{
+    var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+    originalScenes.Add((scene,scene.isDirty,scene.rootCount));
+}
+int initialPreviews = UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount;
+var output = new System.Text.StringBuilder(); int passed=0, failed=0;
+System.Action<string,bool> check = (name,ok) => { output.AppendLine((ok ? "PASS " : "FAIL ")+name); if(ok)passed++;else failed++; };
+var own = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Additive);
+var trackedSources = new System.Collections.Generic.List<GameObject>();
+try
+{
+    System.Action<string,System.Func<System.IDisposable>> rejected = (name,factory) =>
+    {
+        int roots=own.rootCount, previews=UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount;
+        var liveBefore=new System.Collections.Generic.HashSet<int>(UnityEngine.Resources.FindObjectsOfTypeAll<GameObject>().Where(g=>!UnityEditor.EditorUtility.IsPersistent(g)).Select(g=>g.GetInstanceID()));
+        bool threw=false;
+        try { using(var model=factory()) {} }
+        catch(System.ArgumentException) { threw=true; }
+        check(name+" rejects invalid recipe",threw);
+        check(name+" rejected constructor leaves no scene objects or preview scene", own.rootCount==roots && UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount==previews && UnityEngine.Resources.FindObjectsOfTypeAll<GameObject>().Where(g=>!UnityEditor.EditorUtility.IsPersistent(g)).All(g=>liveBefore.Contains(g.GetInstanceID())));
+    };
+    foreach(var folder in new[] {"Hands_Gun","Hands_Automatic_Rifle03","Hands_Shotgun"})
+        rejected(folder,()=>new VrBattlegrounds.Editor.Gameplay.HandsPackWeapon(folder,"__InvalidBodyForPreviewProbe__"));
+    var ak=VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.AK105;
+    rejected("KIN body",()=>new VrBattlegrounds.Editor.Gameplay.KinemationWeapon(ak.PackPrefab,ak.AnimFolder,ak.PoseClip,ak.Weapon.Name,"__InvalidBodyForPreviewProbe__",ak.RestClip,ak.Attachments));
+    rejected("KIN attachment",()=>new VrBattlegrounds.Editor.Gameplay.KinemationWeapon(ak.PackPrefab,ak.AnimFolder,ak.PoseClip,ak.Weapon.Name,ak.Weapon.BodyPart,ak.RestClip,new[]{"__MissingAttachmentForPreviewProbe__"}));
+
+    var factories = new System.Collections.Generic.Dictionary<string,System.Func<VrBattlegrounds.Editor.Gameplay.IWeaponModel>>
+    {
+        {"Hands Gun",()=>new VrBattlegrounds.Editor.Gameplay.HandsPackWeapon("Hands_Gun","Base_mesh")},
+        {"Hands AR15",()=>new VrBattlegrounds.Editor.Gameplay.HandsPackWeapon("Hands_Automatic_Rifle03","Rifle_Body_Mesh")},
+        {"Hands FABARM",()=>new VrBattlegrounds.Editor.Gameplay.HandsPackWeapon("Hands_Shotgun","Shogun_Base_mesh")},
+        {"KIN AK105",()=>new VrBattlegrounds.Editor.Gameplay.KinemationWeapon(ak.PackPrefab,ak.AnimFolder,ak.PoseClip,ak.Weapon.Name,ak.Weapon.BodyPart,ak.RestClip,ak.Attachments)}
+    };
+    var bodies = new System.Collections.Generic.Dictionary<string,string> { {"Hands Gun","Base_mesh"}, {"Hands AR15","Rifle_Body_Mesh"}, {"Hands FABARM","Shogun_Base_mesh"}, {"KIN AK105",ak.Weapon.BodyPart} };
+    foreach(var entry in factories)
+    {
+        int roots=own.rootCount, previews=UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount;
+        var model=entry.Value();
+        var disposable=(System.IDisposable)model;
+        try
+        {
+            var instance=(GameObject)model.GetType().GetField("_instance",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(model);
+            trackedSources.Add(instance);
+            check(entry.Key+" source is isolated from ordinary scenes",own.rootCount==roots && UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(instance.scene) && instance.scene!=previous);
+            model.Sample(null);
+            var matrix=model.PartInBody(bodies[entry.Key]);
+            bool finite=true; for(int j=0;j<16;j++) if(float.IsNaN(matrix[j]) || float.IsInfinity(matrix[j])) finite=false;
+            var parts=model is VrBattlegrounds.Editor.Gameplay.HandsPackWeapon hands ? hands.Parts : ((VrBattlegrounds.Editor.Gameplay.KinemationWeapon)model).Parts;
+            check(entry.Key+" body sampling retains finite geometry frame",finite && parts.Contains(bodies[entry.Key]));
+        }
+        finally { disposable.Dispose(); disposable.Dispose(); }
+        check(entry.Key+" double dispose restores source ownership",own.rootCount==roots && UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount==previews);
+    }
+}
+catch(System.Exception error) { failed++; output.AppendLine("HARNESS FAILURE "+error); }
+finally
+{
+    // Старый отказ constructor оставляет root только в нашей own-сцене; CloseScene удаляет именно её.
+    UnityEditor.SceneManagement.EditorSceneManager.CloseScene(own,true);
+    if(previous.IsValid() && previous.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(previous);
+}
+check("cleanup preserves pre-existing scenes and dirty flags",originalScenes.All(x=>x.scene.IsValid() && x.scene.isLoaded && x.scene.isDirty==x.dirty && x.scene.rootCount==x.roots));
+check("cleanup preserves unrelated preview scenes",UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount==initialPreviews);
+return output.ToString()+"\nPassed="+passed+", Failed="+failed;

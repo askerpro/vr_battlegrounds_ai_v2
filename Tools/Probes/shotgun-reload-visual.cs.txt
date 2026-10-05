@@ -1,0 +1,61 @@
+// Одноразовая диагностика позы: реальные SDK Awake/Place/Remove, свои временные клоны.
+// Под замком Unity, вне Play Mode. Без сохранений и без новых тестов принятой механики.
+var output = new System.Text.StringBuilder();
+var paths = new[] { "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab", "Assets/Prefabs/Weapons/Herrington/Herrington.prefab" };
+var manager = UltimateXR.Manipulation.UxrGrabManager.Instance;
+System.Func<UnityEngine.MeshFilter, UnityEngine.Transform, UnityEngine.Bounds> boundsInFrame = (filter, frame) =>
+{
+    var b = filter.sharedMesh.bounds;
+    var m = frame.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+    var result = new UnityEngine.Bounds(m.MultiplyPoint3x4(b.center), UnityEngine.Vector3.zero);
+    for (int mask = 0; mask < 8; mask++) result.Encapsulate(m.MultiplyPoint3x4(b.center + UnityEngine.Vector3.Scale(b.extents, new UnityEngine.Vector3((mask & 1) == 0 ? -1 : 1, (mask & 2) == 0 ? -1 : 1, (mask & 4) == 0 ? -1 : 1))));
+    return result;
+};
+for (int index = 0; index < paths.Length; index++)
+{
+    var instance = UnityEngine.Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(paths[index]));
+    instance.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    try
+    {
+        var frame = instance.transform.Find("MeshContainer");
+        var anchor = frame.Find("MagAnchor").GetComponent<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>();
+        var shell = anchor.GetComponentInChildren<UltimateXR.Mechanics.Weapons.UxrFirearmMag>(true).GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+        var mag = shell.GetComponent<UltimateXR.Mechanics.Weapons.UxrFirearmMag>();
+        var shellMesh = shell.transform.Find("Mesh").GetComponent<UnityEngine.MeshFilter>();
+        var loadingMesh = frame.Find(index == 0 ? "Staple" : "Feed").GetComponent<UnityEngine.MeshFilter>();
+        var loading = boundsInFrame(loadingMesh, frame);
+        var initialShell = boundsInFrame(shellMesh, frame);
+        var expectedCenter = new UnityEngine.Vector3(loading.center.x, loading.max.y + initialShell.extents.y, loading.max.z + initialShell.extents.z);
+        var legacyProximity = index == 0 ? new UnityEngine.Vector3(0f, 0.0020773541f, 0.09846945f) : new UnityEngine.Vector3(0f, -0.018229859f, 0.11536259f);
+        bool proximityPreserved = (frame.InverseTransformPoint(anchor.DropProximityTransform.position) - legacyProximity).sqrMagnitude < 4e-12f;
+        bool thresholdPreserved = UnityEngine.Mathf.Abs(anchor.MaxPlaceDistance - 0.15f) < 1e-7f;
+        bool distinctProximity = (anchor.AlignTransform.position - anchor.DropProximityTransform.position).sqrMagnitude > 1e-6f;
+        var rendererStates = shell.GetComponentsInChildren<UnityEngine.Renderer>(true);
+        var enabledStates = System.Array.ConvertAll(rendererStates, r => r.enabled);
+        var forceOffStates = System.Array.ConvertAll(rendererStates, r => r.forceRenderingOff);
+        var initialScale = shell.transform.localScale;
+        var initialRotation = shell.transform.rotation;
+        int rounds = mag.Rounds, capacity = mag.Capacity;
+        typeof(UltimateXR.Manipulation.UxrGrabbableObject).GetMethod("Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(shell, null);
+        bool startRegistered = shell.CurrentAnchor == anchor && anchor.CurrentPlacedObject == shell;
+        bool startAligned = (shell.DropAlignTransform.position - anchor.AlignTransform.position).sqrMagnitude < 1e-12f;
+        bool startInsidePose = (boundsInFrame(shellMesh, frame).center - expectedCenter).sqrMagnitude < 1e-12f;
+        manager.RemoveObjectFromAnchor(shell, true, true);
+        shell.transform.position = anchor.DropProximityTransform.position;
+        bool placed = manager.PlaceObject(shell, anchor, UltimateXR.Manipulation.UxrPlacementOptions.None, true);
+        bool sdkAligned = (shell.DropAlignTransform.position - anchor.AlignTransform.position).sqrMagnitude < 1e-12f;
+        bool sdkInsidePose = (boundsInFrame(shellMesh, frame).center - expectedCenter).sqrMagnitude < 1e-12f;
+        manager.RemoveObjectFromAnchor(shell, false, true);
+        shell.transform.position = anchor.DropProximityTransform.position;
+        bool silentPlaced = manager.PlaceObject(shell, anchor, UltimateXR.Manipulation.UxrPlacementOptions.None, false);
+        bool silentInsidePose = (boundsInFrame(shellMesh, frame).center - expectedCenter).sqrMagnitude < 1e-12f;
+        bool renderFlagsUnchanged = true;
+        for (int i = 0; i < rendererStates.Length; i++) renderFlagsUnchanged &= rendererStates[i].enabled == enabledStates[i] && rendererStates[i].forceRenderingOff == forceOffStates[i];
+        bool ammoUnchanged = rounds == mag.Rounds && capacity == mag.Capacity;
+        bool scaleRotationUnchanged = (shell.transform.localScale - initialScale).sqrMagnitude < 1e-10f && UnityEngine.Quaternion.Angle(shell.transform.rotation, initialRotation) < 0.001f;
+        bool pass = proximityPreserved && thresholdPreserved && distinctProximity && startRegistered && startAligned && startInsidePose && placed && sdkAligned && sdkInsidePose && silentPlaced && silentInsidePose && renderFlagsUnchanged && ammoUnchanged && scaleRotationUnchanged;
+        output.AppendLine(instance.name + ": " + (pass ? "PASS" : "FAIL") + " proximityPreserved=" + proximityPreserved + " distinctProximity=" + distinctProximity + " startRegistered=" + startRegistered + " startAligned=" + startAligned + " startInsidePose=" + startInsidePose + " SDKplaced=" + placed + " SDKaligned=" + sdkAligned + " SDKinsidePose=" + sdkInsidePose + " silentInsidePose=" + silentInsidePose + " renderFlagsUnchanged=" + renderFlagsUnchanged + " ammoUnchanged=" + ammoUnchanged + " scaleRotationUnchanged=" + scaleRotationUnchanged + " finalCenter=" + boundsInFrame(shellMesh, frame).center.ToString("F6"));
+    }
+    finally { UnityEngine.Object.DestroyImmediate(instance); }
+}
+return output.ToString();

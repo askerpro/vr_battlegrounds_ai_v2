@@ -180,6 +180,7 @@ namespace VrBattlegrounds.UI.Menu
 
             ApplyActions(admin);
 
+
             foreach (OverviewSection section in s.Sections)
             {
                 if (!string.IsNullOrEmpty(section.Title))

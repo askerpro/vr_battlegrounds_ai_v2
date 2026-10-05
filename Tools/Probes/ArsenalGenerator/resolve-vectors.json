@@ -1,0 +1,47 @@
+{
+  "status": "expected-contract-vectors-not-executed",
+  "scope": "task1 pure immutable foundation; no map lifetime/admission",
+  "layout": [
+    {"case": "EmptyNullStyle", "peg": 0, "shelf": 0, "slots": 0, "width": 0, "success": true},
+    {"case": "Shelf1", "peg": 0, "shelf": 1, "width": 0.4, "centers": [0]},
+    {"case": "Shelf3", "peg": 0, "shelf": 3, "width": 1.26, "centers": [-0.43, 0, 0.43]},
+    {"case": "Shelf9", "peg": 0, "shelf": 9, "width": 3.84, "centers": [-1.72,-1.29,-0.86,-0.43,0,0.43,0.86,1.29,1.72]},
+    {"case": "Current20", "peg": 11, "shelf": 9, "slots": 20, "shelfIds": ["MKR9","Viper","Gun","Revolver","Uzi","PPK","R08","SDKGun","MP5K"], "reservedSlots": 0},
+    {"case": "OrderedInterleavedEntries", "networkIndex": "exact ordered Entry index", "rowOrder": "relative Entry order filtered by actual Zone"},
+    {"case": "PegProfile", "expected": "measured accepted native profile; root ruling before writes", "legacyOffsetCopied": false}
+  ],
+  "selection": [
+    {"case": "Sized4And4", "entries": [4,4], "descriptorCapacity": [4,4], "selected": "sized44", "slots": 8},
+    {"case": "Sized3And2", "entries": [3,2], "descriptorCapacity": [4,4], "selected": "sized44", "slots": 5},
+    {"case": "FiveAndTwoBigger", "entries": [5,2], "candidates": [[4,4],[6,4]], "selected": "sized64"},
+    {"case": "TwoAndFiveBigger", "entries": [2,5], "candidates": [[4,4],[4,6]], "selected": "sized46"},
+    {"case": "FiveAndTwoUniversal", "entries": [5,2], "candidates": [[4,4]], "universal": true, "fallback": "Universal"},
+    {"case": "TwoAndFiveBare", "entries": [2,5], "candidates": [[4,4]], "universal": false, "fallback": "Bare"},
+    {"case": "MissingExplicit", "explicit": "missing", "diagnostic": "ExplicitDecorationMissing", "continueFallback": true},
+    {"case": "UndersizedExplicit", "explicit": "sized44", "entries": [5,2], "diagnostic": "ExplicitDecorationTooSmall", "continueFallback": true},
+    {"case": "ReverseEnumeration", "winnerUnchanged": true},
+    {"case": "ExactTie", "equalVolumeCapacity": true, "ids": ["b","a"], "winner": "a"},
+    {"case": "InvalidDecorationMetadata", "excludedWithDiagnostic": true, "functionalFallbackAllowed": true},
+    {"case": "DuplicateDecorationId", "failure": "InvalidCatalog"}
+  ],
+  "failures": [
+    {"case": "NonEmptyNullStyle", "failure": "UnstyledPreset"},
+    {"case": "DuplicateWeaponId", "failure": "DuplicateLogicalKey"},
+    {"case": "MissingCompiledItemMetadata", "failure": "MissingMetadata"},
+    {"case": "DuplicateRoleOrSourceUid", "failure": "InvalidTemplate"},
+    {"case": "NegativeScale", "failure": "InvalidScale"},
+    {"case": "NonUniformScale", "failure": "InvalidScale"},
+    {"case": "UniformNonUnitFunctionalFrame", "failure": "InvalidScale"},
+    {"case": "NonFinitePose", "failure": "InvalidFrame"},
+    {"case": "BarePlacementOverflow", "failure": "PlacementOverflow", "stockCreated": 0},
+    {"case": "UniversalPlacementOverflow", "failure": "PlacementOverflow", "stockCreated": 0}
+  ],
+  "immutability": [
+    {"case": "MutatePresetAfterCapture", "descriptionAndHashesUnchanged": true},
+    {"case": "MutateStyleAfterResolve", "posesSupportsCardsUnchanged": true},
+    {"case": "MutateMetadataAfterCapture", "boundsRolesScalesUnchanged": true},
+    {"case": "ChangeDecorationOnly", "logicalRoleHashUnchanged": true, "layoutHashChanged": true},
+    {"case": "OriginalPhysicalScale", "itemAndMagazineScaleUnchanged": true},
+    {"case": "CollectionMutation", "defensiveCopiesAndReadOnlyViews": true}
+  ]
+}

@@ -1,0 +1,68 @@
+// Одноразовый readonly native аудит источников align; выполнить только после передачи Unity lease.
+if (UnityEngine.Application.isPlaying || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
+    return "NOT RUN: человеческий Play не прерывать.";
+var rows = new System.Collections.Generic.List<object>();
+var errors = new System.Collections.Generic.List<string>();
+System.Func<UnityEngine.Vector3, float[]> vector = value => new[] { value.x, value.y, value.z };
+System.Func<UnityEngine.Quaternion, float[]> rotation = value => new[] { value.x, value.y, value.z, value.w };
+var before = new System.Collections.Generic.Dictionary<UnityEngine.Object, string>();
+System.Action<UnityEngine.Object> remember = target => {
+    if (target != null && !before.ContainsKey(target))
+        before.Add(target, UnityEditor.EditorJsonUtility.ToJson(target) + "|dirty=" + UnityEditor.EditorUtility.IsDirty(target));
+};
+var full = UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.FullPath);
+if (full == null || full.Entries.Count != 20) return "NOT RUN: canonical FullDemo не содержит20 entries.";
+remember(full);
+foreach (var entry in full.Entries) {
+    var info = entry.Weapon;
+    remember(info);
+    foreach (bool magazine in new[] { false, true }) {
+        var prefab = magazine ? info.MagazinePrefab : info.WeaponPrefab;
+        if (prefab == null) { errors.Add(info.WeaponId + ": missing prefab"); continue; }
+        var item = prefab.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+        remember(prefab); remember(item);
+        if (item == null) { errors.Add(info.WeaponId + ": no root grabbable"); continue; }
+        var drop = item.DropAlignTransform;
+        bool owned = drop != null && (drop == item.transform || drop.IsChildOf(item.transform));
+        string guid; long fileId;
+        UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(item, out guid, out fileId);
+        rows.Add(new {
+            weaponId = info.WeaponId, zone = entry.Zone.ToString(), kind = magazine ? "magazine" : "weapon",
+            prefab = UnityEditor.AssetDatabase.GetAssetPath(prefab), rootGrabbableGuid = guid, rootGrabbableFileId = fileId,
+            dropSelf = drop == item.transform, dropOwned = owned,
+            dropPath = owned ? UnityEditor.AnimationUtility.CalculateTransformPath(drop, item.transform) : "OUTSIDE",
+            snapMode = item.DropSnapMode.ToString(), useParenting = item.UseParenting,
+            rootScale = vector(prefab.transform.localScale),
+            dropRootLocalPosition = vector(owned ? item.transform.InverseTransformPoint(drop.position) : UnityEngine.Vector3.zero),
+            dropRootRelativeRotation = rotation(owned ? UnityEngine.Quaternion.Inverse(item.transform.rotation) * drop.rotation : UnityEngine.Quaternion.identity)
+        });
+        if (!owned) errors.Add(info.WeaponId + ": external drop align");
+    }
+}
+var station = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.DemoPath);
+var anchors = new System.Collections.Generic.List<object>();
+foreach (var slot in station.GetComponent<VrBattlegrounds.Arsenal.ArsenalWallController>().Slots) {
+    foreach (var anchor in new[] { slot.ItemAnchor, ((VrBattlegrounds.Arsenal.FirearmSlotController)slot).MagAnchor }) {
+        remember(anchor); remember(anchor.transform);
+        var align = anchor.AlignTransform;
+        bool owned = align == anchor.transform || align.IsChildOf(anchor.transform);
+        anchors.Add(new {
+            weaponId = slot.WeaponData.WeaponId, zone = slot.PresentationZone.ToString(),
+            anchorPath = UnityEditor.AnimationUtility.CalculateTransformPath(anchor.transform, slot.transform),
+            anchorSlotPosition = vector(slot.transform.InverseTransformPoint(anchor.transform.position)),
+            anchorSlotRotation = rotation(UnityEngine.Quaternion.Inverse(slot.transform.rotation) * anchor.transform.rotation),
+            alignSelf = align == anchor.transform, alignOwned = owned,
+            alignPath = owned ? UnityEditor.AnimationUtility.CalculateTransformPath(align, anchor.transform) : "OUTSIDE",
+            alignSlotPosition = vector(slot.transform.InverseTransformPoint(align.position)),
+            alignSlotRotation = rotation(UnityEngine.Quaternion.Inverse(slot.transform.rotation) * align.rotation)
+        });
+        if (!owned) errors.Add(slot.WeaponData.WeaponId + ": external anchor align");
+    }
+}
+foreach (var pair in before)
+    if (UnityEditor.EditorJsonUtility.ToJson(pair.Key) + "|dirty=" + UnityEditor.EditorUtility.IsDirty(pair.Key) != pair.Value)
+        errors.Add("readonly state changed: " + pair.Key.name);
+var result = new { readonlyNativeAudit = true, itemCount = rows.Count, anchorCount = anchors.Count, rows = rows, anchors = anchors, errors = errors };
+System.IO.Directory.CreateDirectory("tmp/arsenal-visual-stage");
+System.IO.File.WriteAllText("tmp/arsenal-visual-stage/alignment-native.json", Newtonsoft.Json.JsonConvert.SerializeObject(result, Newtonsoft.Json.Formatting.Indented));
+return new { itemCount = rows.Count, anchorCount = anchors.Count, errors = errors, path = "tmp/arsenal-visual-stage/alignment-native.json" };

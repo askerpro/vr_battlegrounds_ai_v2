@@ -1,0 +1,28 @@
+// Собственная новая persistent authoring fixture; старый общий guard должен отказать dirty сцене.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    return "REFUSED busy Editor";
+const string path="Assets/Scenes/Debug/ArsenalLayoutAuthoring.unity";
+if(System.IO.File.Exists(path) || UnityEditor.AssetDatabase.LoadMainAssetAtPath(path)!=null)return "REFUSED existing path; never overwrite";
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++)if(UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty)return "REFUSED preexisting dirty scene";
+var previous=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+System.Func<string> otherState=()=>{var text=new System.Text.StringBuilder();for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){
+    var scene=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!scene.isLoaded || scene.path==path || UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(scene))continue;
+    text.Append(scene.path).Append(scene.isDirty);foreach(var r in scene.GetRootGameObjects())foreach(var c in r.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null)text.Append(c.GetInstanceID()).Append(UnityEditor.EditorJsonUtility.ToJson(c));}return text.ToString();};
+var before=otherState();var fixture=default(UnityEngine.SceneManagement.Scene);bool refused=false;string reason=null;
+try {
+    System.IO.Directory.CreateDirectory("Assets/Scenes/Debug");
+    fixture=UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene,UnityEditor.SceneManagement.NewSceneMode.Additive);
+    var root=new UnityEngine.GameObject("ArsenalLayoutAuthoring — owned staging fixture");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root,fixture);
+    if(!UnityEditor.SceneManagement.EditorSceneManager.SaveScene(fixture,path))throw new System.InvalidOperationException("Could not save own initial fixture");
+    root.transform.localPosition=new UnityEngine.Vector3(.001f,0,0);UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(fixture);
+    var actions=typeof(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder).Assembly.GetType("VrBattlegrounds.Editor.Arsenal.ArsenalEditorActions");
+    var acquire=actions.GetMethod("AcquireLease",System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.Static);
+    try {var lease=(System.IDisposable)acquire.Invoke(null,new object[]{"OLD default dirtyStand refusal"});lease.Dispose();}
+    catch(System.Reflection.TargetInvocationException e){reason=e.InnerException.Message;refused=reason.Contains("несохранённая сцена");}
+    // Own staged test edit discarded by closing only this new fixture; Lobby untouched.
+} finally {
+    if(fixture.IsValid() && fixture.isLoaded)UnityEditor.SceneManagement.EditorSceneManager.CloseScene(fixture,true);
+    if(previous.IsValid() && previous.isLoaded)UnityEngine.SceneManagement.SceneManager.SetActiveScene(previous);
+}
+var report=new{oldDefaultDirtyStandRefused=refused,reason=reason,foreignSceneStateUnchanged=before==otherState(),createdOwnFixture=path,productionWrites=0};
+System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-dirty-red.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));return report;

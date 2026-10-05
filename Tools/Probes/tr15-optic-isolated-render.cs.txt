@@ -1,0 +1,101 @@
+// Только plain MeshFilter/MeshRenderer в собственной PreviewRenderUtility scene; никаких SDK scripts.
+// Выполнять вне Play под root lock. До/после фикса повторить, PNG сохраняются с текущим числом submeshes.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)return "NOT RUN: Play Mode";
+var source=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Weapons/TR15/TR15.prefab");
+if(source==null)throw new System.Exception("Нет TR15 prefab");
+var optic=source.GetComponentsInChildren<UnityEngine.MeshFilter>(true).Single(f=>f.name=="SM_Attach_AR15_XPS2");
+var active=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+int previewCount=UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount;
+var scenes=new System.Collections.Generic.List<string>();
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);scenes.Add(s.handle+"|"+s.isDirty+"|"+s.rootCount);}
+var previous=UnityEngine.RenderTexture.active;
+var preview=new UnityEditor.PreviewRenderUtility();
+UnityEngine.GameObject ownRoot=null;
+var ownedMaterials=new System.Collections.Generic.List<UnityEngine.Material>();
+UnityEngine.Mesh targetMesh=null;UnityEngine.Texture2D image=null;bool opened=false;
+var output=new System.Text.StringBuilder();
+try
+{
+    ownRoot=UnityEditor.EditorUtility.CreateGameObjectWithHideFlags("TR15 optic render only",UnityEngine.HideFlags.HideAndDontSave);
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(ownRoot,preview.camera.gameObject.scene);
+    preview.AddSingleGO(ownRoot);
+    bool opticCloned=false;int cloned=0;
+    foreach(var filter in source.GetComponentsInChildren<UnityEngine.MeshFilter>(true))
+    {
+        var renderer=filter.GetComponent<UnityEngine.MeshRenderer>();
+        if(filter.sharedMesh==null || renderer==null || !renderer.enabled)continue;
+        // У persistent prefab activeInHierarchy всегда false; проверяем authored activeSelf вдоль его цепочки.
+        bool skip=false;for(var t=filter.transform;t!=null;t=t.parent)if(!t.gameObject.activeSelf||t.name.StartsWith("GrabHighlight",System.StringComparison.Ordinal)){skip=true;break;}
+        if(skip)continue;
+        var clone=UnityEditor.EditorUtility.CreateGameObjectWithHideFlags(filter.name,UnityEngine.HideFlags.HideAndDontSave);
+        clone.transform.SetParent(ownRoot.transform,false);
+        clone.transform.SetPositionAndRotation(filter.transform.position,filter.transform.rotation);clone.transform.localScale=filter.transform.lossyScale;
+        clone.AddComponent<UnityEngine.MeshFilter>().sharedMesh=filter.sharedMesh;
+        clone.AddComponent<UnityEngine.MeshRenderer>().sharedMaterials=renderer.sharedMaterials;
+        cloned++;if(filter==optic)opticCloned=true;
+    }
+    if(!opticCloned||cloned<2)throw new System.Exception("HARNESS: actual optic/weapon geometry not cloned");
+    output.AppendLine("Actual optic cloned; weapon mesh renderers="+cloned);
+    var shader=UnityEngine.Shader.Find("Universal Render Pipeline/Unlit");
+    if(shader==null)throw new System.Exception("Нет URP Unlit");
+    targetMesh=new UnityEngine.Mesh{name="Owned diagnostic target quad"};
+    targetMesh.vertices=new[]{new UnityEngine.Vector3(-.5f,-.5f,0),new UnityEngine.Vector3(.5f,-.5f,0),new UnityEngine.Vector3(.5f,.5f,0),new UnityEngine.Vector3(-.5f,.5f,0)};
+    targetMesh.uv=new[]{UnityEngine.Vector2.zero,UnityEngine.Vector2.right,UnityEngine.Vector2.one,UnityEngine.Vector2.up};
+    targetMesh.triangles=new[]{0,2,1,0,3,2};targetMesh.RecalculateNormals();targetMesh.RecalculateBounds();
+    var targetRoot=UnityEditor.EditorUtility.CreateGameObjectWithHideFlags("Owned contrast target",UnityEngine.HideFlags.HideAndDontSave);targetRoot.transform.SetParent(ownRoot.transform,false);
+    var colors=new[]{UnityEngine.Color.white,new UnityEngine.Color(.03f,.3f,1),new UnityEngine.Color(1,.75f,.02f),new UnityEngine.Color(.06f,.8f,.12f)};
+    for(int i=0;i<4;i++)
+    {
+        var material=new UnityEngine.Material(shader){name="Owned target color"};ownedMaterials.Add(material);
+        material.SetColor("_BaseColor",colors[i]);material.SetFloat("_Cull",0);
+        var quad=UnityEditor.EditorUtility.CreateGameObjectWithHideFlags("Owned target "+i,UnityEngine.HideFlags.HideAndDontSave);quad.transform.SetParent(targetRoot.transform,false);
+        quad.transform.localPosition=new UnityEngine.Vector3((i%2==0?-.025f:.025f),(i<2?-.025f:.025f),0);quad.transform.localScale=UnityEngine.Vector3.one*.05f;
+        quad.AddComponent<UnityEngine.MeshFilter>().sharedMesh=targetMesh;quad.AddComponent<UnityEngine.MeshRenderer>().sharedMaterial=material;
+    }
+    // 52 подтверждённых lens triangles лежат в X/Z плоскостях source с normal +/-Y.
+    var focus=optic.transform.TransformPoint(new UnityEngine.Vector3(-.0009397f,-.0127360f,-.0102906f));
+    var normal=optic.transform.up;var up=optic.transform.forward;
+    var camera=preview.camera;camera.orthographic=false;camera.fieldOfView=23;camera.nearClipPlane=.001f;camera.farClipPlane=5;
+    camera.clearFlags=UnityEngine.CameraClearFlags.SolidColor;camera.backgroundColor=new UnityEngine.Color(.05f,.065f,.08f);camera.useOcclusionCulling=false;camera.allowHDR=false;camera.allowMSAA=false;
+    preview.ambientColor=new UnityEngine.Color(.4f,.4f,.4f);preview.lights[0].intensity=1.4f;preview.lights[0].transform.rotation=UnityEngine.Quaternion.Euler(30,-30,0);preview.lights[1].intensity=.6f;
+    string folder=System.IO.Path.GetFullPath("tmp/ar15-audit/optic-renders");System.IO.Directory.CreateDirectory(folder);
+    foreach(var view in new[]{("through-positive",normal), ("through-negative",-normal), ("housing-side",optic.transform.right)})
+    {
+        var direction=view.Item2.normalized;
+        targetRoot.transform.SetPositionAndRotation(focus+direction*.30f,UnityEngine.Quaternion.LookRotation(-direction,up));
+        targetRoot.SetActive(view.Item1!="housing-side");
+        camera.transform.position=focus-direction*.16f;camera.transform.LookAt(focus,up);
+        try
+        {
+            preview.BeginStaticPreview(new UnityEngine.Rect(0,0,768,768));opened=true;preview.Render(true,false);
+        }
+        finally {if(opened){image=preview.EndStaticPreview();opened=false;}}
+        if(image==null)throw new System.Exception("Нет rendered image");
+        string file=System.IO.Path.Combine(folder,"submeshes"+optic.sharedMesh.subMeshCount+"-"+view.Item1+".png");
+        System.IO.File.WriteAllBytes(file,image.EncodeToPNG());output.AppendLine(file);
+        UnityEngine.Object.DestroyImmediate(image);image=null;
+    }
+}
+finally
+{
+    try{if(opened){var pending=preview.EndStaticPreview();if(pending!=null)UnityEngine.Object.DestroyImmediate(pending);}}
+    finally
+    {
+        try
+        {
+            if(image!=null)UnityEngine.Object.DestroyImmediate(image);
+            if(ownRoot!=null)UnityEngine.Object.DestroyImmediate(ownRoot);
+            preview.Cleanup();
+        }
+        finally
+        {
+            if(targetMesh!=null)UnityEngine.Object.DestroyImmediate(targetMesh);
+            foreach(var material in ownedMaterials)UnityEngine.Object.DestroyImmediate(material);
+            UnityEngine.RenderTexture.active=previous;
+        }
+    }
+}
+var after=new System.Collections.Generic.List<string>();
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);after.Add(s.handle+"|"+s.isDirty+"|"+s.rootCount);}
+bool clean=scenes.SequenceEqual(after)&&active.handle==UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle&&previewCount==UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount&&UnityEngine.RenderTexture.active==previous;
+return output+"Cleanup preserves scenes/active/preview/RT="+clean;

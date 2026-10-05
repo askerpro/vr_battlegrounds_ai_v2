@@ -1,0 +1,16 @@
+// Intentional persistent artist workspace, no staging/clone or native writes.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)throw new Exception("Editor busy");
+const string path="Assets/Scenes/Debug/ArsenalLayoutAuthoring.unity";
+for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++)if(UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty)throw new Exception("Dirty scene before workspace load");
+if(UnityEngine.SceneManagement.SceneManager.GetSceneByPath(path).isLoaded)throw new Exception("Workspace already loaded; no replacement");
+var original=UnityEngine.SceneManagement.SceneManager.GetActiveScene();var selection=UnityEditor.Selection.objects;var own=default(UnityEngine.SceneManagement.Scene);bool completed=false;
+try {
+ own=UnityEditor.SceneManagement.EditorSceneManager.OpenScene(path,UnityEditor.SceneManagement.OpenSceneMode.Additive);
+ var stand=own.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoringStand>(true)).Single();
+ VrBattlegrounds.Editor.Arsenal.ArsenalLayoutAuthoring.ValidateStand(stand);
+ if(stand.Style!=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>("Assets/Data/Weapons/IndustrialPegboardPresentation.asset")||own.isDirty)throw new Exception("Workspace canonical input/dirty guard");
+ UnityEngine.SceneManagement.SceneManager.SetActiveScene(own);UnityEditor.Selection.activeGameObject=stand.gameObject;
+ completed=true;return new{loadedClean=!own.isDirty,keys=stand.Slots.Count,type=stand.GetType().FullName,assembly=stand.GetType().Assembly.GetName().Name,debugExcluded=!UnityEditor.EditorBuildSettings.scenes.Any(s=>s.path==path&&s.enabled)};
+}finally {
+ if(!completed){if(own.IsValid()&&own.isLoaded)UnityEditor.SceneManagement.EditorSceneManager.CloseScene(own,true);if(original.IsValid()&&original.isLoaded)UnityEngine.SceneManagement.SceneManager.SetActiveScene(original);UnityEditor.Selection.objects=selection;}
+}

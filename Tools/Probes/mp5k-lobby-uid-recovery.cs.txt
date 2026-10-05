@@ -1,0 +1,57 @@
+// Выполнять только после починки in-place Demo, под собственной lease, без Play.
+// По умолчанию dry run; запись UID требует явного doApply=true и полной проверки baseline.
+bool doApply=false;
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode||UnityEditor.EditorApplication.isCompiling||UnityEditor.EditorApplication.isUpdating)return "NOT RUN: editor busy";
+var baseline=Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tmp/mp5k-audit/arsenal-before.json"));
+var scene=UnityEngine.SceneManagement.SceneManager.GetSceneByPath("Assets/Scenes/Lobby.unity");
+if(!scene.IsValid()||!scene.isLoaded)throw new System.InvalidOperationException("Lobby must already be loaded; probe does not load scenes.");
+var walls=scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<VrBattlegrounds.Arsenal.ArsenalWallController>(true)).ToArray();
+if(walls.Length!=4)throw new System.InvalidOperationException("Expected four stations.");
+System.Func<string,string> originalPath=path=>path.Replace("PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_MP5K", "PresentationRoot/RiflesSlotsContainer/PegboardSlot_MP5K");
+var pending=new System.Collections.Generic.List<System.Tuple<UnityEngine.MonoBehaviour,string,string,string,ulong>>();
+var rows=new System.Collections.Generic.List<object>();
+var errors=new System.Collections.Generic.List<string>();
+var unique=new System.Collections.Generic.HashSet<string>();
+foreach(var wall in walls){
+ var ni=wall.GetComponent<Mirror.NetworkIdentity>();
+ var old=baseline["lobby"].FirstOrDefault(r=>(ulong)r["sceneId"]==ni.sceneId);
+ if(old==null){errors.Add("Unknown station sceneId "+ni.sceneId);continue;}
+ string pose=wall.transform.position.ToString("F6")+"|"+wall.transform.rotation.ToString("F6")+"|"+wall.transform.localScale.ToString("F6");
+ if(pose!=(string)old["transform"])errors.Add("Station pose changed "+ni.sceneId);
+ var components=wall.GetComponentsInChildren<UnityEngine.MonoBehaviour>(true).Where(c=>c!=null).Where(c=>new UnityEditor.SerializedObject(c).FindProperty("_uxrUniqueId")!=null).ToArray();
+ if(components.Length!=old["uids"].Count())errors.Add("UID component count changed "+ni.sceneId);
+ foreach(var component in components){
+  string path=UnityEditor.AnimationUtility.CalculateTransformPath(component.transform,wall.transform);
+  var candidates=old["uids"].Where(r=>(string)r["path"]==originalPath(path)&&(string)r["type"]==component.GetType().FullName).ToArray();
+  if(candidates.Length!=1){errors.Add("Unknown/ambiguous original component "+ni.sceneId+" "+path+" "+component.GetType().FullName);continue;}
+  string desired=(string)candidates[0]["id"];
+  if(string.IsNullOrEmpty(desired)||!unique.Add(desired))errors.Add("Invalid/duplicate baseline UID "+desired);
+  var property=new UnityEditor.SerializedObject(component).FindProperty("_uxrUniqueId");
+  rows.Add(new {sceneId=ni.sceneId,path=path,type=component.GetType().FullName,before=property.stringValue,desired=desired,changed=property.stringValue!=desired});
+  if(property.stringValue!=desired)pending.Add(System.Tuple.Create(component,property.stringValue,desired,path,ni.sceneId));
+ }
+}
+if(unique.Count!=168)errors.Add("Expected 168 unique original scene UIDs, found "+unique.Count);
+var material=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>("Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat");
+string foreign=UnityEditor.EditorJsonUtility.ToJson(material);
+if(foreign!=(string)baseline["foreignJson"])errors.Add("Foreign material serialized values changed.");
+if(errors.Count>0)doApply=false;
+if(doApply){
+ const string key="UltimateXR.Editor.AutomaticUniqueIdGeneration";bool hadKey=UnityEditor.EditorPrefs.HasKey(key),oldValue=UnityEditor.EditorPrefs.GetBool(key,true);
+ var setter=typeof(UltimateXR.Core.Components.UxrComponent).GetProperty("UniqueId").GetSetMethod(true);
+ try{
+  UnityEditor.EditorPrefs.SetBool(key,false);
+  foreach(var item in pending){
+   var component=(UltimateXR.Core.Components.UxrComponent)item.Item1;var serialized=new UnityEditor.SerializedObject(component);
+   if(serialized.FindProperty("__isInPrefab").boolValue||serialized.FindProperty("__prefabGuid").stringValue!="88273a27f53bfdd4697ec9e56448a068")throw new System.InvalidOperationException("Unproven scene provenance: "+component.name);
+   var desired=new System.Guid(item.Item3);setter.Invoke(component,new object[]{desired});
+   if(component.UniqueId!=desired||new UnityEditor.SerializedObject(component).FindProperty("_uxrUniqueId").stringValue!=item.Item3)throw new System.InvalidOperationException("Serialized/cache mismatch after recovery.");
+   UnityEditor.EditorUtility.SetDirty(component);UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(component);
+  }
+ }finally{if(hadKey)UnityEditor.EditorPrefs.SetBool(key,oldValue);else UnityEditor.EditorPrefs.DeleteKey(key);}
+}
+var result=new {applied=doApply,changes=pending.Count,matched=unique.Count,errors=errors,rows=rows,sceneDirty=scene.isDirty,foreignJson=foreign,foreignDirty=UnityEditor.EditorUtility.IsDirty(material)};
+string json=Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented);
+System.IO.File.WriteAllText("tmp/mp5k-audit/lobby-uid-recovery-"+(doApply?"applied":"dryrun")+".json",json);
+if(errors.Count>0)throw new System.InvalidOperationException(string.Join("\n",errors.ToArray()));
+return Newtonsoft.Json.JsonConvert.SerializeObject(new {applied=doApply,changes=pending.Count,matched=unique.Count,errors=errors});

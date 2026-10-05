@@ -1,0 +1,76 @@
+// Новый Peg-only уголок и canonical Shelf без крючков. Lobby/Demo/FullPreset не записываются.
+if(UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)return "REFUSED busy Editor";
+const string meshPath="Assets/Art/Arsenal/IndustrialFlatSupport/IndustrialFlatSupportMesh.asset";
+const string prefabPath="Assets/Art/Arsenal/IndustrialFlatSupport/IndustrialFlatSupport.prefab";
+if(new[]{meshPath,prefabPath}.Any(p=>System.IO.File.Exists(p) || System.IO.File.Exists(p+".meta") || !string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(p)) || UnityEditor.AssetDatabase.LoadMainAssetAtPath(p)!=null))return "REFUSED existing asset/orphan meta/GUID/output; never overwrite";
+var style=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>("Assets/Data/Weapons/IndustrialPegboardPresentation.asset");
+var metal=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>("Assets/Materials/Arsenal/IndustrialSupportMetal.mat");
+if(style==null || style.Exceptions.Count!=20 || UnityEditor.EditorUtility.IsDirty(style) || metal==null || UnityEditor.EditorUtility.IsDirty(metal))return "REFUSED canonical inputs changed/dirty";
+var prepared=Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tmp/arsenal-visual-stage/authoring-affected-before.json"));
+foreach(var row in prepared["files"]) {
+    var path=(string)row["path"];var asset=UnityEditor.AssetDatabase.LoadMainAssetAtPath(path);string sha;
+    using(var hash=System.Security.Cryptography.SHA256.Create())sha=Convert.ToBase64String(hash.ComputeHash(System.IO.File.ReadAllBytes(path)));
+    if(sha!=(string)row["diskSha"] || System.IO.File.ReadAllText(path+".meta")!=(string)row["meta"] || (asset!=null&&UnityEditor.EditorUtility.IsDirty(asset))!=(bool)row["dirty"] || (asset==null?null:UnityEditor.EditorJsonUtility.ToJson(asset))!=(string)row["json"])
+        throw new System.InvalidOperationException("Prepared native input changed: "+path);
+}
+var beforeStyle=UnityEditor.EditorJsonUtility.ToJson(style,true);
+var sourceBounds=Newtonsoft.Json.Linq.JArray.Parse(System.IO.File.ReadAllText("tmp/arsenal-visual-stage/fit-proposal-bounds.json"));
+var draft=UnityEngine.Object.Instantiate(style);UnityEngine.GameObject primitive=null,module=null;UnityEngine.Mesh mesh=null;
+var untouched=new[]{"Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat","Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab","Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab","Assets/Data/Weapons/FullDemoArsenal.asset"};
+System.Func<string,string> assetState=p=>{var a=UnityEditor.AssetDatabase.LoadMainAssetAtPath(p);return UnityEditor.EditorJsonUtility.ToJson(a)+"|"+UnityEditor.EditorUtility.IsDirty(a)+"|"+Convert.ToBase64String(System.IO.File.ReadAllBytes(p));};
+var beforeAssets=untouched.ToDictionary(p=>p,p=>assetState(p));
+System.Func<string> sceneState=()=>{var b=new System.Text.StringBuilder();for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++){
+    var s=UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);if(!s.isLoaded || UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(s))continue;
+    b.Append(s.path).Append(s.isDirty);foreach(var r in s.GetRootGameObjects())foreach(var c in r.GetComponentsInChildren<UnityEngine.Component>(true))if(c!=null)b.Append(c.GetInstanceID()).Append(UnityEditor.EditorJsonUtility.ToJson(c));}return b.ToString();};
+var beforeScene=sceneState();var preview=UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+try {
+    primitive=UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Cube);var cube=primitive.GetComponent<UnityEngine.MeshFilter>().sharedMesh;
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(primitive,preview);
+    var shapes=new[]{new{center=new UnityEngine.Vector3(0,0,.0015f),size=new UnityEngine.Vector3(.04f,.05f,.003f)},
+        new{center=new UnityEngine.Vector3(0,-.020f,-.060f),size=new UnityEngine.Vector3(.04f,.004f,.12f)},
+        new{center=new UnityEngine.Vector3(0,-.010f,-.1185f),size=new UnityEngine.Vector3(.04f,.024f,.003f)}};
+    var combine=shapes.Select(s=>new UnityEngine.CombineInstance{mesh=cube,transform=UnityEngine.Matrix4x4.TRS(s.center,UnityEngine.Quaternion.identity,s.size)}).ToArray();
+    mesh=new UnityEngine.Mesh{name="IndustrialFlatSupportMesh"};mesh.CombineMeshes(combine,true,true);mesh.RecalculateBounds();
+    UnityEngine.Object.DestroyImmediate(primitive);primitive=null;
+    module=new UnityEngine.GameObject("IndustrialFlatSupport");module.AddComponent<UnityEngine.MeshFilter>().sharedMesh=mesh;module.AddComponent<UnityEngine.MeshRenderer>().sharedMaterial=metal;
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(module,preview);
+    var input=new UnityEditor.SerializedObject(draft);input.FindProperty("_supportModule").objectReferenceValue=module;
+    foreach(var name in new[]{"_zones","_exceptions"}) {
+        var entries=input.FindProperty(name);
+        for(int i=0;i<entries.arraySize;i++) {
+            var row=entries.GetArrayElementAtIndex(i);bool shelf=row.FindPropertyRelative("Zone").enumValueIndex==1;
+            var supports=row.FindPropertyRelative("Supports");
+            if(shelf) {
+                supports.arraySize=0;
+                foreach(var pose in new[]{"ItemTarget","MagazineTarget"}) {var p=row.FindPropertyRelative(pose).FindPropertyRelative("Position");p.vector3Value+=new UnityEngine.Vector3(0,-.022f,0);}
+            } else {
+                string weapon=name=="_exceptions"?((VrBattlegrounds.Arsenal.WeaponInfo)row.FindPropertyRelative("Weapon").objectReferenceValue).WeaponId:null;
+                var bounds=weapon!=null?sourceBounds.FirstOrDefault(b=>(string)b["weapon"]==weapon):null;
+                for(int j=0;j<supports.arraySize;j++) {
+                    var pose=supports.GetArrayElementAtIndex(j).FindPropertyRelative("SlotPose");var p=pose.FindPropertyRelative("Position").vector3Value;
+                    if(j<2)p.x=j==0?-.08f:-.11f;
+                    if(j==0 && bounds!=null)p.y=(float)bounds["itemMin"][1]+.018f;
+                    if(j==2 && bounds!=null)p.y=(float)bounds["magMin"][1]+.018f;
+                    pose.FindPropertyRelative("Position").vector3Value=p;pose.FindPropertyRelative("EulerAngles").vector3Value=UnityEngine.Vector3.zero;
+                }
+            }
+        }
+    }
+    input.ApplyModifiedPropertiesWithoutUndo();VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Validate(draft);
+    System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-input-style-before.json",beforeStyle);
+    if(!UnityEditor.AssetDatabase.IsValidFolder("Assets/Art/Arsenal/IndustrialFlatSupport"))UnityEditor.AssetDatabase.CreateFolder("Assets/Art/Arsenal","IndustrialFlatSupport");
+    UnityEditor.AssetDatabase.CreateAsset(mesh,meshPath);UnityEditor.PrefabUtility.SaveAsPrefabAsset(module,prefabPath);
+    input.Update();input.FindProperty("_supportModule").objectReferenceValue=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(prefabPath);input.ApplyModifiedPropertiesWithoutUndo();
+    draft.name=style.name;UnityEditor.Undo.RecordObject(style,"Shelf rests and Peg-only authoring module");
+    UnityEditor.EditorJsonUtility.FromJsonOverwrite(UnityEditor.EditorJsonUtility.ToJson(draft),style);UnityEditor.EditorUtility.SetDirty(style);UnityEditor.AssetDatabase.SaveAssetIfDirty(style);
+    var report=new{triangles=mesh.triangles.Length/3,boundsMin=new[]{mesh.bounds.min.x,mesh.bounds.min.y,mesh.bounds.min.z},boundsMax=new[]{mesh.bounds.max.x,mesh.bounds.max.y,mesh.bounds.max.z},
+        pureVisual=module.GetComponentsInChildren<UnityEngine.Component>(true).Length==3,shelfSupportsEmpty=style.Zones.Where(z=>z.Zone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf).All(z=>z.Supports.Count==0) && style.Exceptions.Where(e=>e.Zone==VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf).All(e=>e.Supports.Count==0),
+        foreignAssetsUnchanged=untouched.All(p=>beforeAssets[p]==assetState(p)),nativeScenesUnchanged=beforeScene==sceneState(),fullDemoStillLegacy=UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>("Assets/Data/Weapons/FullDemoArsenal.asset").PresentationStyle==null};
+    System.IO.File.WriteAllText("tmp/arsenal-visual-stage/authoring-native-inputs.json",Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented));return report;
+} finally {
+    if(primitive!=null)UnityEngine.Object.DestroyImmediate(primitive);
+    if(module!=null)UnityEngine.Object.DestroyImmediate(module);
+    if(mesh!=null && !UnityEditor.EditorUtility.IsPersistent(mesh))UnityEngine.Object.DestroyImmediate(mesh);
+    UnityEngine.Object.DestroyImmediate(draft);
+    UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(preview);
+}

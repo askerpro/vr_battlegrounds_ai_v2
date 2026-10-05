@@ -1,0 +1,14 @@
+// Первая стадия: только открытие окна; затем отдельный вызов сравнения после перерисовки всех вкладок.
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "NOT RUN: Play Mode";
+var folders = new[] { "Assets/Data/Weapons", "Assets/Data/Maps", "Assets/Prefabs/Weapons", "Assets/Prefabs/Arsenal" };
+var paths = UnityEditor.AssetDatabase.FindAssets("", folders).Select(UnityEditor.AssetDatabase.GUIDToAssetPath)
+    .Where(p => !UnityEditor.AssetDatabase.IsValidFolder(p)).OrderBy(p => p).ToArray();
+var hashes = paths.ToDictionary(p => p, p => UnityEditor.AssetDatabase.GetAssetDependencyHash(p).ToString());
+var scenes = Enumerable.Range(0,UnityEngine.SceneManagement.SceneManager.sceneCount).Select(i => {
+    var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+    return new { handle=scene.handle, dirty=scene.isDirty, roots=scene.GetRootGameObjects().Select(g=>g.GetInstanceID()).OrderBy(id=>id).ToArray() };
+}).ToArray();
+var before = Newtonsoft.Json.JsonConvert.SerializeObject(new { hashes=hashes, scenes=scenes, active=UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle });
+UnityEditor.SessionState.SetString("T39.ArsenalEditor.ReadonlyBefore", before);
+VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenTab(0);
+return new { assetCount=paths.Length, tab="Каталог", window=UnityEngine.Resources.FindObjectsOfTypeAll<VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow>().Length };

@@ -1,0 +1,13 @@
+// Только чтение; безопасный короткий слот у текущего владельца Unity. Ничего не очищает и не сохраняет.
+var path="Assets/Materials/CleanMirrorMat_URP_PlanarReflection.mat";
+var mat=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>(path);
+if(mat==null)return "Missing material";
+System.Func<UnityEngine.Texture,object> describe=t=>new {unityNull=t==null,clrNull=object.ReferenceEquals(t,null),name=t!=null?t.name:null,type=t!=null?t.GetType().FullName:null,persistent=t!=null&&UnityEditor.EditorUtility.IsPersistent(t),flags=t!=null?t.hideFlags.ToString():null};
+var mirrors=UnityEngine.Resources.FindObjectsOfTypeAll<UltimateXR.Rendering.FX.UxrPlanarReflectionUrp>().Where(c=>c!=null&&!UnityEditor.EditorUtility.IsPersistent(c)).Select(c=>{
+ var so=new UnityEditor.SerializedObject(c);var renderer=(UnityEngine.Renderer)so.FindProperty("_mirrorRenderer").objectReferenceValue;
+ return new {name=c.name,scene=c.gameObject.scene.path,enabled=c.isActiveAndEnabled,size=so.FindProperty("_textureSize").intValue,renderer=renderer!=null?renderer.name:null,currentMaterial=renderer!=null&&renderer.sharedMaterial!=null?UnityEditor.AssetDatabase.GetAssetPath(renderer.sharedMaterial):null,sameMaterial=renderer!=null&&renderer.sharedMaterials.Contains(mat)};
+}).ToArray();
+var result=new {utc=System.DateTime.UtcNow.ToString("O"),play=UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode,dirty=UnityEditor.EditorUtility.IsDirty(mat),persistent=UnityEditor.EditorUtility.IsPersistent(mat),diskLength=new System.IO.FileInfo(path).Length,json=UnityEditor.EditorJsonUtility.ToJson(mat),left=describe(mat.GetTexture("_ReflectionTexLeft")),right=describe(mat.GetTexture("_ReflectionTexRight")),hasLodBias=mat.HasProperty("_ReflectionMaxLODBias"),lodBias=mat.HasProperty("_ReflectionMaxLODBias")?(float?)mat.GetFloat("_ReflectionMaxLODBias"):null,mirrors=mirrors};
+System.IO.Directory.CreateDirectory("tmp/arsenal-ui-contract");
+System.IO.File.WriteAllText("tmp/arsenal-ui-contract/mirror-dirty-state.json",Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented));
+return result;

@@ -1,0 +1,239 @@
+{
+  "CreatedUtc": "2026-10-04T17:16:18.503158+00:00",
+  "AlgorithmVersion": "mesh-fit-0.3-precision",
+  "NativeGeometryTests": {
+    "Passed": 16,
+    "Total": 16,
+    "JobId": "610883d45739484db9aa65d16b24624e",
+    "NewFourTests": "GREEN only, authorized by user; absent-API RED not run"
+  },
+  "ExternalGeometryTests": {
+    "Passed": 16,
+    "Total": 16
+  },
+  "InstalledEditorCsc": {
+    "Passed": true,
+    "Sources": 9,
+    "UnityVersion": "6000.4.1f1"
+  },
+  "AndroidCompileGate": {
+    "Passed": true,
+    "Errors": []
+  },
+  "StaticPrecision": {
+    "Cases": [
+      "Cyborg/Gun",
+      "MEF/Viper"
+    ],
+    "PngPerCase": 24,
+    "MissingReference": "invalid_reference without primary Error or loss of PNG",
+    "PreviewScenesBefore": 1,
+    "PreviewScenesAfter": 1,
+    "LobbyDirty": false
+  },
+  "VolumeReferenceProbe": [
+    {
+      "test": "exact_mesh_subasset",
+      "Error": null,
+      "expected": -8373660548275780079,
+      "actual": -8373660548275780079,
+      "LocalAnalysisVolumeApplied": true,
+      "topology": {
+        "BoundaryEdges": 0,
+        "NonManifoldEdges": 0,
+        "OrientationErrors": 0,
+        "DegenerateTriangles": 0,
+        "CanDetermineInside": true,
+        "Reason": "closed_oriented_exact_weld"
+      },
+      "localZones": 6,
+      "wholeUnknown": true
+    },
+    {
+      "test": "ambiguous_mesh_rejected",
+      "error": "В файле несколько mesh: нужен GUID + LocalFileId выбранного subasset."
+    },
+    {
+      "test": "offset_reference",
+      "Error": null,
+      "ReferenceComparisonStatus": "same_object_zone_deltas",
+      "count": 6
+    },
+    {
+      "test": "scale",
+      "ReferenceComparisonStatus": "incompatible_capture_or_state",
+      "count": 6
+    },
+    {
+      "test": "hash",
+      "ReferenceComparisonStatus": "changed_object_geometry_or_dependencies",
+      "count": 6
+    },
+    {
+      "test": "source",
+      "ReferenceComparisonStatus": "incompatible_capture_or_state",
+      "count": 6
+    },
+    {
+      "test": "null_guid",
+      "ReferenceComparisonStatus": "unknown_object_identity",
+      "count": 6
+    }
+  ],
+  "VolumeReferenceProbeNote": "Historical first probe: rejected cases still retained six old deltas. Final CompareReference clears them; verified separately by ComparisonResetProbe and ScaleCompatibilityProbe.",
+  "ComparisonResetProbe": {
+    "Before": 6,
+    "After": 0,
+    "Status": "incompatible_capture_or_state",
+    "Reason": "old deltas cleared on repeated rejected comparison"
+  },
+  "ScaleCompatibilityProbe": [
+    {
+      "axes": "(1.00, 2.00, 1.00)",
+      "ReferenceComparisonStatus": "incompatible_capture_or_state",
+      "count": 0
+    },
+    {
+      "axes": "(1.00, 1.00, 1.00)",
+      "ReferenceComparisonStatus": "same_object_zone_deltas",
+      "count": 6
+    },
+    {
+      "axes": "unknown",
+      "ReferenceComparisonStatus": "unknown_scale_configuration",
+      "count": 0
+    }
+  ],
+  "MeshReadbackProbe": [
+    {
+      "i": 1,
+      "Error": null,
+      "trianglesUnchanged": true,
+      "handUnchanged": true,
+      "maxDistanceP50DeltaMm": 0.0,
+      "LocalFileId": 6144348774432249265
+    },
+    {
+      "i": 3,
+      "Error": null,
+      "trianglesUnchanged": true,
+      "handUnchanged": true,
+      "maxDistanceP50DeltaMm": 0.0,
+      "LocalFileId": 6144348774432249265
+    },
+    {
+      "i": 9,
+      "Error": null,
+      "trianglesUnchanged": true,
+      "handUnchanged": true,
+      "maxDistanceP50DeltaMm": 0.0,
+      "LocalFileId": 3293510295895195486
+    },
+    {
+      "i": 13,
+      "Error": null,
+      "trianglesUnchanged": true,
+      "handUnchanged": true,
+      "maxDistanceP50DeltaMm": 0.0,
+      "LocalFileId": 3700182862046240825
+    },
+    {
+      "i": 21,
+      "Error": null,
+      "trianglesUnchanged": true,
+      "handUnchanged": true,
+      "maxDistanceP50DeltaMm": 0.0,
+      "LocalFileId": 4910915114450437955
+    }
+  ],
+  "RuntimeCapture": [
+    {
+      "CreatedUtc": "2026-10-04T16:55:28.4311729Z",
+      "CaptureFrame": 1480,
+      "CaptureGameTime": 7.80610466,
+      "RuntimePoseName": "DemoGun",
+      "AppliedBlend": 0.0,
+      "HandTriangles": 4078,
+      "ObjectTriangles": 5920,
+      "OtherHandTriangles": 4078,
+      "ContactCandidateCount": 109,
+      "CaptureSource": "runtime_after_sdk_update",
+      "ControllerModel": null,
+      "ControllerAlignmentApplied": true,
+      "Avatar": {
+        "Path": "",
+        "Guid": null,
+        "DependencyHash": null,
+        "LocalFileId": 0
+      },
+      "Object": {
+        "Path": "",
+        "Guid": null,
+        "DependencyHash": null,
+        "LocalFileId": 0
+      },
+      "Error": null,
+      "OutputDirectory": "F:\\UnityProjects\\Vr_Battlegrounds_ai\\Temp\\HandPoseFit\\precision-runtime\\frame-000"
+    },
+    {
+      "CreatedUtc": "2026-10-04T16:55:31.1083608Z",
+      "CaptureFrame": 1482,
+      "CaptureGameTime": 8.150702,
+      "RuntimePoseName": "DemoGun",
+      "AppliedBlend": 0.0,
+      "HandTriangles": 4078,
+      "ObjectTriangles": 5920,
+      "OtherHandTriangles": 4078,
+      "ContactCandidateCount": 108,
+      "CaptureSource": "runtime_after_sdk_update",
+      "ControllerModel": null,
+      "ControllerAlignmentApplied": true,
+      "Avatar": {
+        "Path": "",
+        "Guid": null,
+        "DependencyHash": null,
+        "LocalFileId": 0
+      },
+      "Object": {
+        "Path": "",
+        "Guid": null,
+        "DependencyHash": null,
+        "LocalFileId": 0
+      },
+      "Error": null,
+      "OutputDirectory": "F:\\UnityProjects\\Vr_Battlegrounds_ai\\Temp\\HandPoseFit\\precision-runtime\\frame-001"
+    }
+  ],
+  "RuntimeRedGreen": {
+    "Red": "isReadable false on object meshes; Hand=4078 Object=0",
+    "Green": "MeshUtility.AcquireReadOnlyMeshData; two after-SDK captures with 5920 object triangles and 24 PNG each",
+    "ImportSettingsChanged": false
+  },
+  "Cleanup": {
+    "TemporarySceneDeleted": true,
+    "TemporaryVolumeAssetDeleted": true,
+    "CaptureQueueBusy": false,
+    "PreviewScenesBefore": 1,
+    "PreviewScenesAfter": 1,
+    "RestoredScenes": [
+      "Assets/Scenes/Lobby.unity",
+      "Assets/Scenes/Debug/ArsenalLayoutAuthoring.unity"
+    ],
+    "LobbyDirty": false,
+    "EditorPrefsAndPlayStartSceneRestored": true
+  },
+  "SdkReferenceLibrary": {
+    "BaselineCount": 24,
+    "PngCount": 576,
+    "Controls": 16,
+    "Artifact": "Docs/audit/artifacts/hand-pose-fit-sdk-references-2026-10-04.json"
+  },
+  "Reviewed": "No Critical; Important issues repaired: reference identity/config, exact mesh subasset, SDK series heartbeat, renderer region mask, optional invalid reference, complete object scale axes",
+  "AcceptanceLimits": [
+    "No calibrated quality score; masks and semantic volumes require visual acceptance",
+    "No Quest/controller hardware or Mirror server acceptance; temporary SDK avatar copy stripped networking",
+    "Runtime prefab ancestry may be unknown; such source cannot be accepted for identity comparison",
+    "SDK dynamic snap reference cases need separate actual runtime dataset",
+    "Code remains uncommitted until user Unity acceptance"
+  ]
+}

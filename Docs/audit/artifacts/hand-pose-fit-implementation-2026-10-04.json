@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-04",
+  "algorithm": "mesh-fit-0.2-contact-markers",
+  "unity": "6000.4.1f1",
+  "geometryTests": {
+    "unityJob": "601e26a959604361b81315b1c0bb72da",
+    "status": "succeeded",
+    "completed": 12,
+    "total": 12,
+    "failures": 0,
+    "dotnet": "12/12 PASS",
+    "redGreen": ["missing geometry", "degenerate triangle", "closed cavity", "contact pair range and endpoint"]
+  },
+  "editorCompile": "PASS",
+  "androidCompileGate": "PASS",
+  "priorSdkBatch": {
+    "algorithm": "mesh-fit-0.1",
+    "cases": 16,
+    "errors": 0,
+    "weapons": ["Gun", "Machinegun", "Shotgun"],
+    "sides": ["Left", "Right"],
+    "poseTypes": ["Fixed", "Blend"],
+    "workingSummary": "Temp/HandPoseFit/validation-summary.json"
+  },
+  "contactRangeMmInclusive": [0, 2],
+  "contactPairReports": [
+    {
+      "avatar": "CyborgAvatarExample",
+      "object": "SDK Gun",
+      "side": "Right",
+      "point": 0,
+      "status": "analysis_incomplete",
+      "error": null,
+      "candidates": 588,
+      "selected": 300,
+      "invalidSelectedDistances": 0,
+      "unknownSignSelected": 300,
+      "png": 24,
+      "directory": "Temp/HandPoseFit/contacts-0-2-0"
+    },
+    {
+      "avatar": "MEF_Base_Avatar",
+      "object": "Viper",
+      "side": "Right",
+      "point": 0,
+      "status": "analysis_incomplete",
+      "error": null,
+      "candidates": 1148,
+      "selected": 300,
+      "invalidSelectedDistances": 0,
+      "unknownSignSelected": 300,
+      "png": 24,
+      "directory": "Temp/HandPoseFit/contacts-0-2-1"
+    }
+  ],
+  "visualReview": ["Cyborg right xray", "MEF right xray", "MEF front normal", "prior distance and section views"],
+  "sceneBeforeAfter": "Assets/Scenes/Lobby.unity; clean",
+  "previewScenesBeforeAfter": [1, 1],
+  "limits": ["no quality calibration", "approximate contact masks", "unknown sign on open surfaces", "controller alignment and two-hand support unsupported", "human Unity acceptance pending"]
+}

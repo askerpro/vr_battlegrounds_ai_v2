@@ -321,8 +321,26 @@ namespace UltimateXR.Avatar.Controllers
         {
             if (_bodyIK != null && _useBodyIK)
             {
+                // VR Battlegrounds patch 34: изгиб корпуса извне (наклон бегущего).
+                _bodyIK.ExternalBodyBend = ExternalBodyBend;
+                _bodyIK.ExternalTrunkLean = ExternalTrunkLean; // VR Battlegrounds patch 39
                 _bodyIK.PreSolveAvatarIK();
             }
+
+            // Текущая оценённая нижняя поза согласуется с телом до обоих проходов рук.
+            _animatedLegs?.PrepareCurrentPose();
+            if (_animatedLegs != null && _bodyIK != null && _useBodyIK)
+            {
+                float ownership = _animatedLegs.CurrentPoseWeight;
+                bool accepted = _bodyIK.ApplySeatedPelvis(_animatedLegs.Hips, _animatedLegs.CurrentHipsPose, ownership, out Vector3 delta);
+                _animatedLegs.CommitPlacementCorrection(delta, accepted);
+                if (!accepted && ownership > 0f && Time.unscaledTime >= _nextSeatedWarning)
+                {
+                    _nextSeatedWarning = Time.unscaledTime + 5f;
+                    UxrLegsDiagnostics.Warn($"{Avatar.name}: сидячая поза недостижима без растяжения шеи; остаток {_bodyIK.SeatedNeckResidual:0.0000} м, ревизия {_animatedLegs.PoseRevision}.", Avatar);
+                }
+            }
+            else _animatedLegs?.CommitPlacementCorrection(Vector3.zero, false);
 
             // VR Battlegrounds patch 20: решатели аватара берутся из кэша, а не из LINQ по решателям ВСЕХ
             // аватаров сцены (было O(аватаров²) и три прохода по AllComponents за кадр). Порядок — тот же,
@@ -348,6 +366,9 @@ namespace UltimateXR.Avatar.Controllers
             {
                 _bodyIK.PostSolveAvatarIK();
             }
+
+            // VR Battlegrounds patch 35: ноги — после тела (таз на месте), до рук (UxrStandardAvatarController.Custom.cs).
+            SolveLegIK();
 
             // Update arms normally
 
@@ -430,6 +451,9 @@ namespace UltimateXR.Avatar.Controllers
                 _bodyIK.Initialize(Avatar, _bodyIKSettings, _useArmIK, _useLegIK);
             }
 
+            // VR Battlegrounds patch 35: решатели ног (только при _useNativeLegIK; UxrStandardAvatarController.Custom.cs).
+            InitializeLegIK();
+
             _initialized = true;
         }
 
@@ -457,6 +481,18 @@ namespace UltimateXR.Avatar.Controllers
             UxrGrabManager.Instance.ObjectGrabbed  -= UxrGrabManager_ObjectGrabbed;
             UxrGrabManager.Instance.ObjectPlaced   -= UxrGrabManager_ObjectPlacedOrReleased;
             UxrGrabManager.Instance.ObjectReleased -= UxrGrabManager_ObjectPlacedOrReleased;
+
+            // VR Battlegrounds patch 37: ноги в позу префаба, наклон корпуса снят (UxrStandardAvatarController.Custom.cs).
+            DisableLegs();
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 37: копия рига ног уничтожается вместе с аватаром.
+        /// </summary>
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            DestroyLegs();
         }
 
         #endregion
@@ -628,7 +664,12 @@ namespace UltimateXR.Avatar.Controllers
             // VR Battlegrounds patch 24: невидимый чужой аватар решается не каждый кадр — решает
             // хук ShouldSolveRemoteAvatarThisFrame (UxrStandardAvatarController.Custom.cs). Локальный
             // аватар и отсутствие хука — каждый кадр, как в оригинале.
-            if (!ShouldSolveIKThisFrame())
+            bool solveThisFrame = ShouldSolveIKThisFrame();
+
+            // VR Battlegrounds patch 37: копия рига ног и пропуск кадра (UxrStandardAvatarController.Custom.cs).
+            PrepareLegsForSolve(solveThisFrame);
+
+            if (!solveThisFrame)
             {
                 return;
             }

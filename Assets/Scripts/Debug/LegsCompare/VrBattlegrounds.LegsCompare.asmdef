@@ -1,0 +1,19 @@
+{
+    "name": "VrBattlegrounds.LegsCompare",
+    "rootNamespace": "VrBattlegrounds.DevTools.LegsCompare",
+    "references": [
+        "VrBattlegrounds",
+        "UltimateXR"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_EDITOR"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

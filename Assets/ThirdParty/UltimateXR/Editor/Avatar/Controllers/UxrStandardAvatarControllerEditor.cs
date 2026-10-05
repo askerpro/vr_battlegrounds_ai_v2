@@ -150,10 +150,42 @@ namespace UltimateXR.Editor.Avatar.Controllers
                         EditorGUI.indentLevel--;
                     }
 
-                    GUI.enabled = false;
-                    //EditorGUILayout.PropertyField(_propUseLegIK);
-                    EditorGUILayout.Toggle(ContentUseLegIK, false);
+                    // VR Battlegrounds patch 35/37: ноги (решатель ноги — перенос Final IK — и шаги клипами) — свой флаг вместо
+                    // заглушки «Use Leg IK (TBD)»; настройки — раздел «Ноги» ниже.
                     GUI.enabled = true;
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("_useNativeLegIK"), ContentUseLegIK);
+                }
+            }
+
+            // VR Battlegrounds patch 37: раздел «Ноги» — всё о ногах в одном месте рядом с IK тела и рук.
+            if (serializedObject.FindProperty("_useNativeLegIK").boolValue)
+            {
+                _foldoutLegs = UxrEditorUtils.FoldoutStylish("Ноги (клипы ходьбы)", _foldoutLegs);
+
+                if (_foldoutLegs)
+                {
+                    SerializedProperty legs = serializedObject.FindProperty("_legs");
+
+                    if (legs.FindPropertyRelative("locomotionRig").objectReferenceValue == null)
+                    {
+                        EditorGUILayout.HelpBox("Нет копии рига — ноги стоят в позе модели. Собрать: Tools/VR Battlegrounds/Avatars/Setup Legs.", MessageType.Warning);
+                    }
+
+                    if (Application.isPlaying && avatar.GetComponent<UxrStandardAvatarController>() is UxrStandardAvatarController controller && controller.AnimatedLegs != null)
+                    {
+                        EditorGUILayout.HelpBox($"Копия рига: {(controller.AnimatedLegs.IsReady ? "работает" : "не готова")}; шаг: {(controller.AnimatedLegs.IsMoving ? "идёт" : "стоит")}; стойка {controller.LegStance:0.#}.", MessageType.None);
+                    }
+
+                    EditorGUI.indentLevel++;
+                    SerializedProperty child = legs.Copy();
+                    SerializedProperty end   = legs.GetEndProperty();
+
+                    for (bool enter = true; child.NextVisible(enter) && !SerializedProperty.EqualContents(child, end); enter = false)
+                    {
+                        EditorGUILayout.PropertyField(child, true);
+                    }
+
+                    EditorGUI.indentLevel--;
                 }
             }
 
@@ -282,7 +314,8 @@ namespace UltimateXR.Editor.Avatar.Controllers
         private GUIContent ContentArmIKOverExtendMode { get; } = new GUIContent("Arm Over-Extend",        "Controls what to do when the user extends the hands over the avatar's arm reach");
         private GUIContent ContentUseBodyIK           { get; } = new GUIContent("Use Body IK",            "Whether to try to naturally orient the avatar body using the positions of the head and hand");
         private GUIContent ContentBodyIKSettings      { get; } = new GUIContent("Body IK Settings");
-        private GUIContent ContentUseLegIK            { get; } = new GUIContent("Use Leg IK (TBD)", "");
+        // VR Battlegrounds patch 35
+        private GUIContent ContentUseLegIK            { get; } = new GUIContent("Use Leg IK (native)", "Ноги аватара шагают клипами ходьбы: решатель ноги (перенос ноги Final IK) ставит стопы в позы стоп копии рига, которая играет клипы с root motion. Настройки — раздел «Ноги». Выключено — ноги в позе модели.");
 
         private SerializedProperty _propAllowHandTracking;
         private SerializedProperty _propUseArmIK;
@@ -295,6 +328,7 @@ namespace UltimateXR.Editor.Avatar.Controllers
 
         private bool            _foldoutGeneral    = true;
         private bool            _foldoutIK         = true;
+        private bool _foldoutLegs = true; // VR Battlegrounds patch 37
         private bool            _foldoutHandEvents = true;
         private ReorderableList _reorderableEventList;
 

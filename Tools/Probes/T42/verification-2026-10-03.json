@@ -1,0 +1,465 @@
+{
+  "date": "2026-10-03",
+  "unity": "6000.4.1f1",
+  "base": "d1b5e216825d05f91ea86551e31a1915f98dbedf",
+  "scope": "Preview diagnostics and existing independent EditMode contracts; no headset approval or new gameplay tests",
+  "android": {
+    "Passed": true,
+    "Errors": [],
+    "Summary": "[AndroidCompileGate] PASS — скрипты компилируются под Android"
+  },
+  "tests": {
+    "total": 75,
+    "passed": 75,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 6.5731854,
+    "resultState": "Passed"
+  },
+  "testJob": "81cf164cce9144b4b7ea8f5c38049796",
+  "prefabs":
+  [
+    {
+      "path": "Assets/Prefabs/Player/Optimized_MEF_Player.prefab",
+      "guidUnchanged": true,
+      "exists": true,
+      "bodyIK": true,
+      "native": true,
+      "obsolete": []
+    },
+    {
+      "path": "Assets/Prefabs/Player/Optimized_MEF_Player_Black.prefab",
+      "guidUnchanged": true,
+      "exists": true,
+      "bodyIK": true,
+      "native": true,
+      "obsolete": []
+    },
+    {
+      "path": "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab",
+      "guidUnchanged": true,
+      "exists": true,
+      "bodyIK": true,
+      "native": true,
+      "obsolete": []
+    },
+    {
+      "path": "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab",
+      "guidUnchanged": true,
+      "exists": true,
+      "bodyIK": true,
+      "native": true,
+      "obsolete": []
+    },
+    {
+      "path": "Assets/Prefabs/Player/Heavy_Soldier_Base_Avatar.prefab",
+      "guidUnchanged": true,
+      "exists": true,
+      "bodyIK": true,
+      "native": true,
+      "obsolete": []
+    },
+    {
+      "path": "Assets/Prefabs/Player/MEF_Base_Avatar.prefab",
+      "guidUnchanged": true,
+      "exists": true,
+      "bodyIK": true,
+      "native": true,
+      "obsolete": []
+    }
+  ],
+  "numeric": [
+    {
+      "caseName": "near-collinear knee",
+      "jump": 0.000101,
+      "passed": true
+    },
+    {
+      "caseName": "inverted pitch 120",
+      "pitch": 60.0000076,
+      "passed": true
+    },
+    {
+      "caseName": "inverted pitch 150",
+      "pitch": 60.0000076,
+      "passed": true
+    },
+    {
+      "caseName": "inverted pitch 180",
+      "pitch": -8.000003,
+      "passed": true
+    },
+    {
+      "caseName": "rolled clamp",
+      "pitch": 8,
+      "passed": true
+    },
+    {
+      "caseName": "antipodal -179,49",
+      "delta": 0,
+      "passed": true
+    },
+    {
+      "caseName": "antipodal -179,51",
+      "delta": 0,
+      "passed": true
+    },
+    {
+      "caseName": "antipodal 179,49",
+      "delta": 0.499677062,
+      "passed": true
+    },
+    {
+      "caseName": "collapsed/outside target",
+      "passed": true
+    },
+    {
+      "caseName": "single trunk Heavy_Soldier_Base_Avatar(Clone)",
+      "spine": 29.9999027,
+      "chest": 29.9999027,
+      "upper": 29.9999542,
+      "passed": true
+    },
+    {
+      "caseName": "single trunk MEF_Base_Avatar(Clone)",
+      "spine": 29.9999542,
+      "chest": 29.99998,
+      "upper": 29.9999256,
+      "passed": true
+    },
+    {
+      "caseName": "single trunk PlayerControllersCyborgAvatar(Clone)",
+      "spine": 29.9999256,
+      "chest": 29.9999256,
+      "upper": 29.9999256,
+      "passed": true
+    }
+  ],
+  "dense": [
+    {
+      "avatar": "Heavy_Soldier_Base_Avatar(Clone)",
+      "samples": 201,
+      "maxResidual": 2.38418579e-7,
+      "maxNeckError": 5.982737e-7,
+      "maxNeckLocalDrift": 3.40983235e-7,
+      "maxSpineLocalDrift": 0,
+      "maxKneeStep": 1.28570676,
+      "allFinite": true,
+      "rejected": 0,
+      "fullSitHipError": 4.712161e-8
+    },
+    {
+      "avatar": "MEF_Base_Avatar(Clone)",
+      "samples": 201,
+      "maxResidual": 4.768372e-7,
+      "maxNeckError": 3.76972963e-7,
+      "maxNeckLocalDrift": 3.15736941e-7,
+      "maxSpineLocalDrift": 0,
+      "maxKneeStep": 1.13779032,
+      "allFinite": true,
+      "rejected": 0,
+      "fullSitHipError": 1.81280456e-7
+    },
+    {
+      "avatar": "PlayerControllersCyborgAvatar(Clone)",
+      "samples": 201,
+      "maxResidual": 2.38447683e-7,
+      "maxNeckError": 4.776948e-7,
+      "maxNeckLocalDrift": 5.03565957e-7,
+      "maxSpineLocalDrift": 0,
+      "maxKneeStep": 1.13572466,
+      "allFinite": true,
+      "rejected": 0,
+      "fullSitHipError": 1.51149948e-7
+    }
+  ],
+  "hold": [
+    {
+      "avatar": "Heavy_Soldier_Base_Avatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 2.37037057e-11,
+      "rootLocalAngle": 9.5433445,
+      "neckError": 2.391666e-7,
+      "hipError": 0.0422658622,
+      "neckLocalDrift": 3.34666936e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 20.513443,
+      "finite": true,
+      "revision": 1
+    },
+    {
+      "avatar": "Heavy_Soldier_Base_Avatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 2.38418579e-7,
+      "rootLocalAngle": 9.5433445,
+      "neckError": 7.162524e-7,
+      "hipError": 0.0537221879,
+      "neckLocalDrift": 1.23024378e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0.850412548,
+      "finite": true,
+      "revision": 2
+    },
+    {
+      "avatar": "Heavy_Soldier_Base_Avatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 2.38418579e-7,
+      "rootLocalAngle": 9.5433445,
+      "neckError": 7.174951e-7,
+      "hipError": 0.05956166,
+      "neckLocalDrift": 1.39293277e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0.4205786,
+      "finite": true,
+      "revision": 3
+    },
+    {
+      "avatar": "Heavy_Soldier_Base_Avatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 1.1920929e-7,
+      "rootLocalAngle": 9.5433445,
+      "neckError": 3.57981548e-7,
+      "hipError": 0.06250032,
+      "neckLocalDrift": 1.23024378e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0.205584154,
+      "finite": true,
+      "revision": 4
+    },
+    {
+      "avatar": "Heavy_Soldier_Base_Avatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 2.38418579e-7,
+      "rootLocalAngle": 9.5433445,
+      "neckError": 7.161008e-7,
+      "hipError": 0.06397437,
+      "neckLocalDrift": 1.23024378e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0,
+      "finite": true,
+      "revision": 5
+    },
+    {
+      "avatar": "Heavy_Soldier_Base_Avatar(Clone)",
+      "sit": 0,
+      "ownership": 0,
+      "residual": 0,
+      "rootLocalAngle": 0,
+      "neckError": 3.616261e-7,
+      "hipError": 0.06651739,
+      "neckLocalDrift": 3.40983235e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 36.5665131,
+      "finite": true,
+      "revision": 6
+    },
+    {
+      "avatar": "MEF_Base_Avatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 7.16227078e-12,
+      "rootLocalAngle": 3.57478714,
+      "neckError": 6.48014975e-12,
+      "hipError": 0.0474896058,
+      "neckLocalDrift": 1.17427128e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 22.4797726,
+      "finite": true,
+      "revision": 1
+    },
+    {
+      "avatar": "MEF_Base_Avatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 1.1920929e-7,
+      "rootLocalAngle": 3.57478714,
+      "neckError": 2.38418579e-7,
+      "hipError": 0.0311802644,
+      "neckLocalDrift": 3.4076546e-8,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0.5581291,
+      "finite": true,
+      "revision": 2
+    },
+    {
+      "avatar": "MEF_Base_Avatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 1.1920929e-7,
+      "rootLocalAngle": 3.57478714,
+      "neckError": 6.252776e-12,
+      "hipError": 0.0232037343,
+      "neckLocalDrift": 3.4076546e-8,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0.276952833,
+      "finite": true,
+      "revision": 3
+    },
+    {
+      "avatar": "MEF_Base_Avatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 1.1920929e-7,
+      "rootLocalAngle": 3.57478714,
+      "neckError": 6.82121026e-12,
+      "hipError": 0.0193236377,
+      "neckLocalDrift": 3.4076546e-8,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0,
+      "finite": true,
+      "revision": 4
+    },
+    {
+      "avatar": "MEF_Base_Avatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 1.1920929e-7,
+      "rootLocalAngle": 3.57478714,
+      "neckError": 6.252776e-12,
+      "hipError": 0.0174318254,
+      "neckLocalDrift": 3.4076546e-8,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0,
+      "finite": true,
+      "revision": 5
+    },
+    {
+      "avatar": "MEF_Base_Avatar(Clone)",
+      "sit": 0,
+      "ownership": 0,
+      "residual": 0,
+      "rootLocalAngle": 0,
+      "neckError": 1.1920929e-7,
+      "hipError": 0.0494203344,
+      "neckLocalDrift": 3.4076546e-8,
+      "spineLocalDrift": 0,
+      "kneeDelta": 34.1707153,
+      "finite": true,
+      "revision": 6
+    },
+    {
+      "avatar": "PlayerControllersCyborgAvatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 3.7255794e-9,
+      "rootLocalAngle": 3.31553221,
+      "neckError": 2.38924741e-7,
+      "hipError": 0.0320630148,
+      "neckLocalDrift": 2.61619476e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 19.9619846,
+      "finite": true,
+      "revision": 1
+    },
+    {
+      "avatar": "PlayerControllersCyborgAvatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 3.7252903e-9,
+      "rootLocalAngle": 3.31553221,
+      "neckError": 2.38813243e-7,
+      "hipError": 0.0176942684,
+      "neckLocalDrift": 2.61619476e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0.921103656,
+      "finite": true,
+      "revision": 2
+    },
+    {
+      "avatar": "PlayerControllersCyborgAvatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 1.08428821e-11,
+      "rootLocalAngle": 3.31553221,
+      "neckError": 2.394106e-7,
+      "hipError": 0.0105119282,
+      "neckLocalDrift": 2.61619476e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0.4647801,
+      "finite": true,
+      "revision": 3
+    },
+    {
+      "avatar": "PlayerControllersCyborgAvatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 6.949108e-12,
+      "rootLocalAngle": 3.31553221,
+      "neckError": 2.40072353e-7,
+      "hipError": 0.00692312932,
+      "neckLocalDrift": 2.61619476e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0.234067857,
+      "finite": true,
+      "revision": 4
+    },
+    {
+      "avatar": "PlayerControllersCyborgAvatar(Clone)",
+      "sit": 0.5,
+      "ownership": 0.5,
+      "residual": 4.33431069e-12,
+      "rootLocalAngle": 3.31553221,
+      "neckError": 2.40161341e-7,
+      "hipError": 0.00513076363,
+      "neckLocalDrift": 2.70054073e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 0,
+      "finite": true,
+      "revision": 5
+    },
+    {
+      "avatar": "PlayerControllersCyborgAvatar(Clone)",
+      "sit": 0,
+      "ownership": 0,
+      "residual": 0,
+      "rootLocalAngle": 0,
+      "neckError": 4.77207436e-7,
+      "hipError": 0.08584975,
+      "neckLocalDrift": 2.61680583e-7,
+      "spineLocalDrift": 0,
+      "kneeDelta": 29.2779026,
+      "finite": true,
+      "revision": 6
+    }
+  ],
+  "transitions": [
+    {
+      "avatar": "Heavy_Soldier_Base_Avatar(Clone)",
+      "seatedFrames": 93,
+      "movingContainsSit": false,
+      "footStateFailures": [],
+      "disabledRootAngle": 0,
+      "disabledOwnership": 0,
+      "staleCopyAngle": 0,
+      "maxNeckError": 4.78173433e-7,
+      "passed": true
+    },
+    {
+      "avatar": "MEF_Base_Avatar(Clone)",
+      "seatedFrames": 93,
+      "movingContainsSit": false,
+      "footStateFailures": [],
+      "disabledRootAngle": 0,
+      "disabledOwnership": 0,
+      "staleCopyAngle": 0,
+      "maxNeckError": 4.80548067e-7,
+      "passed": true
+    },
+    {
+      "avatar": "PlayerControllersCyborgAvatar(Clone)",
+      "seatedFrames": 93,
+      "movingContainsSit": false,
+      "footStateFailures": [],
+      "disabledRootAngle": 0,
+      "disabledOwnership": 0,
+      "staleCopyAngle": 0,
+      "maxNeckError": 4.791386e-7,
+      "passed": true
+    }
+  ]
+}

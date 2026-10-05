@@ -186,6 +186,7 @@ namespace UltimateXR.Animation.IK
         /// </summary>
         public void PreSolveAvatarIK()
         {
+            _seatedConstraintWeight = 0f;
             if (_avatarHead == null)
             {
                 return;
@@ -231,6 +232,9 @@ namespace UltimateXR.Animation.IK
 
             _avatarNeck.SetPositionAndRotation(neckPosition, neckRotation);
 
+            // VR Battlegrounds patch 38: оценщик движения — только из входа (шея из позы камеры), до любых решений тела.
+            Motion.Update(neckPosition, _avatar.transform.up, Time.time);
+
             // Update avatar pivot
 
             _avatarForward.position = GetWorldPosFromOffset(_avatarForward, _avatarNeck, _avatarForwardPosRelativeToNeck);
@@ -250,7 +254,11 @@ namespace UltimateXR.Animation.IK
                 }
             }
 
-            float bodyRotationAngle = Vector3.Angle(_straightSpineForward, _avatarForward.forward);
+            // VR Battlegrounds patch 38: излишек угла головы сверх HeadFreeRangeTorsion считается от ЦЕЛИ поворота, а не от
+            // текущего _avatarForward. Оригинал мерил от _avatarForward (выход — он догоняет цель плавно) и каждый кадр
+            // снова сдвигал цель на излишек, пока корпус не догнал: излишек копился, корпус проскакивал (голова 70° при
+            // свободном угле 59° — корпус 26° вместо 11°). Теперь цель — не дальше свободного угла от взгляда (только вход).
+            float bodyRotationAngle = Vector3.Angle(_straightSpineForward, LegacyMovementDecisions ? _avatarForward.forward : _avatarForwardTarget);
             if (bodyRotationAngle > _settings.HeadFreeRangeTorsion)
             {
                 float radians = (bodyRotationAngle - _settings.HeadFreeRangeTorsion) * Mathf.Deg2Rad;
@@ -307,6 +315,17 @@ namespace UltimateXR.Animation.IK
                 // Remove the rotation that the head can do without propagation to chest/spine:
                 headPropagateRotation = Quaternion.RotateTowards(headPropagateRotation, Quaternion.identity, _settings.HeadFreeRangeBend);
 
+                // VR Battlegrounds patch 34: изгиб корпуса извне (наклон бегущего) — поверх изгиба от головы.
+                headPropagateRotation = ExternalBodyBend * headPropagateRotation;
+
+                // VR Battlegrounds patch 39: наклон корпуса назад — не больше MaxBackBendDegrees (вперёд — свободно). Тангаж
+                // меряется независимо от крена (ClampPitch), поправка — минимальный поворот вектора «вверх», без скрутки.
+                headPropagateRotation = ClampPitch(headPropagateRotation, -MaxBackBendDegrees, 180f);
+
+                // VR Battlegrounds patch 39: наклон всего корпуса (не долями весов): назад — до MaxBackBendDegrees, вперёд — до
+                // MaxTrunkLeanDegrees.
+                Quaternion trunkLean = ClampPitch(ExternalTrunkLean, -MaxBackBendDegrees, MaxTrunkLeanDegrees);
+
                 // Compute influence on chest/spine elements:
 
                 float totalWeight = 0.0f;
@@ -357,6 +376,11 @@ namespace UltimateXR.Animation.IK
                     }
                 }
 
+                // Общий наклон — один раз на нижнем позвоночнике; child→parent выше распределяет только штатный bend.
+                Transform trunkRoot = LowestSpine;
+                if (trunkRoot != null)
+                    trunkRoot.rotation = _avatarForward.rotation * trunkLean * Quaternion.Inverse(_avatarForward.rotation) * trunkRoot.rotation;
+
                 // Make whole avatar move back so that head remains with the same position/orientation
 
                 _avatarNeck.rotation    =  neckRotation;
@@ -366,11 +390,24 @@ namespace UltimateXR.Animation.IK
 
             // If the avatar moves, straighten the forward direction
 
-            float avatarMovedDistance = Vector3.Distance(localAvatarPivotPos, _avatarForward.position);
-
-            if (avatarMovedDistance / Time.deltaTime > AvatarStraighteningMinSpeed)
+            // VR Battlegrounds patch 38: «тело идёт» — по оценщику движения (вход: шлем), а не по сдвигу опоры тела.
+            // Оригинал сравнивал localAvatarPivotPos (в осях корня аватара!) с мировой позицией _avatarForward после
+            // всех сдвигов этого кадра: шея по камере, NeckHeadBalance, изгиб от головы и внешний изгиб (патч 34 — наклон
+            // из клипа ног). Любой из этих выходов давал «скорость» > 0,3 м/с, и корпус выпрямлялся за взглядом в обход
+            // HeadFreeRangeTorsion — петля через ноги (поворот на месте → наклон из клипа → опора сдвинулась → выпрямление).
+            if (LegacyMovementDecisions)
             {
-                float degreesToStraighten = avatarMovedDistance * DegreesStraightenedPerMeterMoved;
+                float avatarMovedDistance = Vector3.Distance(localAvatarPivotPos, _avatarForward.position);
+
+                if (avatarMovedDistance / Time.deltaTime > AvatarStraighteningMinSpeed)
+                {
+                    float degreesToStraighten = avatarMovedDistance * DegreesStraightenedPerMeterMoved;
+                    _avatarForwardTarget = Vector3.RotateTowards(_avatarForwardTarget, _straightSpineForward, degreesToStraighten * Mathf.Deg2Rad, 0.0f);
+                }
+            }
+            else if (Motion.IsWalking)
+            {
+                float degreesToStraighten = Motion.Speed * Time.deltaTime * DegreesStraightenedPerMeterMoved;
                 _avatarForwardTarget = Vector3.RotateTowards(_avatarForwardTarget, _straightSpineForward, degreesToStraighten * Mathf.Deg2Rad, 0.0f);
             }
 
@@ -392,6 +429,16 @@ namespace UltimateXR.Animation.IK
         /// </summary>
         public void PostSolveAvatarIK()
         {
+            // Сидячий constraint уже согласовал шею без изменения длин. Торсия рук снова нарушила бы это решение.
+            if (_seatedConstraintWeight > 0.0001f)
+            {
+                // Передача владения не оставляет старую торсию для скачка при вставании.
+                _upperChestTorsionAngle = Mathf.MoveTowards(_upperChestTorsionAngle, 0f, Time.deltaTime * 180f);
+                _chestTorsionAngle = Mathf.MoveTowards(_chestTorsionAngle, 0f, Time.deltaTime * 180f);
+                _spineTorsionAngle = Mathf.MoveTowards(_spineTorsionAngle, 0f, Time.deltaTime * 180f);
+                _upperChestTorsionSpeed = _chestTorsionSpeed = _spineTorsionSpeed = 0f;
+                return;
+            }
             if (_avatarHead == null)
             {
                 return;
@@ -496,6 +543,9 @@ namespace UltimateXR.Animation.IK
                 return;
             }
             
+            // VR Battlegrounds patch 38: аватар перенесён (телепорт, поворот) — камера прыгнула вместе с ним, это не ходьба.
+            Motion.Reset();
+
             float angle = Vector3.SignedAngle(e.OldForward, e.NewForward, _avatar.transform.up);
             _avatarForwardTarget  = Quaternion.AngleAxis(angle, _avatar.transform.up) * _avatarForwardTarget;
             _straightSpineForward = Quaternion.AngleAxis(angle, _avatar.transform.up) * _straightSpineForward;

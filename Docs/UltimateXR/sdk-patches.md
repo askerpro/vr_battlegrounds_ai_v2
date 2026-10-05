@@ -1463,6 +1463,32 @@ Nova / Herrington. Без него основной снаряд SDK остал�
 3. После подтверждения логики пользователем заменить старые ожидания `WeaponSpreadTests`:
    пуля совпадает с осью дула, каждая дробина имеет собственный разлёт без общей неточности залпа.
 
+## 34–39. Native ноги и корпус, перенос ограниченного среза T-42
+
+Из `wip/uxrlegs-final` перенесены `UxrBodyIK.Custom`, `UxrBodyMotion`, `UxrLegIKSolver`,
+`UxrAnimatedLegs`, `UxrLegLocomotion`, `UxrLegPoseMath`, `UxrLegRootMotionReceiver`,
+`UxrLegsSettings`, `UxrPelvisEstimate`; точки подключения — partial/controller/editor
+`UxrStandardAvatarController`. Экспериментальные VRIK и отдельный FinalIK patch исключены.
+Адаптированный solver/locomotion остаётся под лицензией купленного FinalIK: не публиковать отдельно.
+
+В текущем переносе исправлены дефекты исходного сидения:
+
+- Полный trunk применяется один раз к нижнему позвоночнику после штатного weighted bend.
+- `Legs_Sit` не зависит от kneeling; BodyIK согласует текущий таз и корпус, а не наклон прошлого кадра.
+- Таз, корень ног, локальные кости и цели используют одну сохранённую оценённую позу.
+- Separate legroot размещается до решения ног; при legroot==hips автором остаётся BodyIK.
+- Отдельный legroot восстанавливает local rest перед каждым BodyIK; частичный blend не накапливается.
+  Disable инвалидирует snapshot и возвращает корень/кости ног в покой, очищая continuity и root motion.
+- В полном сидении solver выключен. В переходе baseline вращений приходит из клипа;
+  foot/toe имеют отдельную память плоскости и относительные пороги вырождения.
+- Недостижимая высота корпуса наблюдаема через `SeatedNeckResidual` и `UxrLegsDiagnostics`.
+  Игровая интеграция направляет сообщения в `GameLog.Player`; SDK не зависит от игровой сборки.
+- Контроллер генератора держит сидячие клипы только в Idle без Foot IK. Нулевая посадка
+  прерывает start/stop ходьбы; обычная остановка сохраняет переход 0,2 с.
+
+Контракт, ограничения и сохранение при обновлении SDK — [avatar-animation.md](../avatar-animation.md),
+план и результаты проверки — [T-42](../tasks/T-42-uxrlegs-seated-port.md).
+
 ## T-39. Чтение выбранного якоря и снимок ручного хвата оружия
 
 `Manipulation/UxrGrabManager.PlacementReadiness.cs` добавляет read-only
@@ -1587,6 +1613,53 @@ raycaster. Это устраняет класс рассинхронизации
 Свежий `AndroidCompileGate` после исправления: PASS. Вместе с проверками общего
 fingertip-порога, отображения и подложки — 84/84 preview-сценария PASS.
 
+## Патч 42: атомарная editor identity для генераторов префабов
+
+`UxrComponent.SetEditorUniqueId(Guid, bool, string)` существует только под `UNITY_EDITOR`.
+Он запрещён в Play и для пустого GUID; private setter одновременно обновляет сериализованный
+`_uxrUniqueId` и кеш `UniqueId`, затем задаёт `__isInPrefab`/`__prefabGuid` и помечает только
+сам компонент dirty. Метод не регистрирует runtime-компонент, не поднимает сетевые события
+и не меняет правила `OnValidate`. Вызывающий проверяет источник, владельца и уникальность ID.
+
+Причина: в `LoadPrefabContents` SDK видит nested slot GUID и `IsInPrefab=false`, а у
+сохранённой Demo — outer GUID и `true`. Сериализация временного контекста в источник может
+изменить унаследованный флаг сцены и перевыдать её ID. Кроме того, запись только строки через
+`SerializedObject` оставляет старый кеш. `ChangeUniqueId` в EditMode выдаёт случайный ID,
+поэтому для восстановления сохранённой идентичности не подходит.
+
+Генератор Demo временно отключает автоматическую выдачу ID через EditorPrefs, задаёт final
+asset provenance и сохраняет существующие component identities. В `finally` восстанавливает
+как значение настройки, так и исходное наличие ключа. Обновление Lobby задаёт scene provenance
+и сохраняет независимые ID экземпляров. При обновлении SDK перенести только этот editor API;
+runtime `ChangeUniqueId` и `OnValidate` сохраняют штатную семантику.
+
+Проверено: повтор Create даёт идентичные байты Demo; 668 исходных localFileID и 168 scene UID
+сохранены. Явный `OnValidate` для 42 source и 168 scene компонентов с включённой автоматикой
+не меняет ID. Проверка всей интеграции и финальный Bake выполняются отдельно.
+
+## Патч 43: изоляция URP reflection materials
+
+`UxrPlanarReflectionUrp` создаёт renderer-specific HideAndDontSave copies только для слотов
+с reflection properties. Callback использует назначенный renderer, включая дочерний, и пишет
+Left/Right textures и LOD только в copies. Авторские shared Material, shader, GUID и оба уровня
+MaterialPropertyBlock остаются неизменны.
+
+Ownership хранит renderer/source/copy identity. Release ищет copy в текущем массиве материалов,
+условно заменяет её на source и уничтожает собственные copies; foreign replacement/null/reorder
+сохраняются. Отключение использует собственные copies cheap материала только для mirror slots,
+включение восстанавливает их условно. Rebind/destroy освобождают ресурсы; повтор подписки не
+дублирует callback. Render exception возвращает quality/culling/recursion flags через finally.
+
+RED старого actual callback изменил обе текстуры безопасного shared fixture. После patch:
+34/34 изолированных проверок, два renderer, обе пары текстур, child assignment, PB foreign update,
+reorder/replacement/rebind, disable/enable/destroy и cleanup. Реальный URP Camera.Render дал
+изображения обеих reflection RT и зеркала. SHA/serialized/dirty настоящего CleanMirror материала,
+корни и dirty state исходной сцены сохранены. Шлем и стереовосприятие пользователем не проверены.
+
+При обновлении SDK перенести ownership helpers/поля и texture-write/lifecycle hooks в этот файл.
+Не заменять copies записью indexed PropertyBlock: она может скрыть чужой renderer-level block.
+BRP `UxrPlanarReflection` имеет смежный shared-material путь, но в этой задаче не менялся.
+
 ## Патч 44: подключение диагностики к Hand Pose Editor
 
 `Editor/Manipulation/HandPoses/UxrHandPoseEditorWindow.cs` предоставляет три callbacks: `DiagnosticsGUI`, `DiagnosticsContextUpdated`, `DiagnosticsClosed`. Панель рисуется в колонке пресетов, а текущие avatar/pose/Blend передаются после штатного обновления костей. SDK не ссылается на сборку проекта; подписчик находится в Editor-модуле HandPoseReview.
@@ -1632,28 +1705,3 @@ cleanup. Полный Test Runner не запускался, чтобы не с�
 использует этот core на конкретном snap, frozen snapshot для overlay/export и дешёвый input key.
 [Новый срез](../plans/2026-10-05-sdk-preview-diagnostics-binding.md) прошёл native проверки;
 его UI orbit/zoom/drag и game IK/Quest остаются открытыми.
-
-## Патч 42: атомарная editor identity для генераторов префабов
-
-`UxrComponent.SetEditorUniqueId(Guid, bool, string)` существует только под `UNITY_EDITOR`.
-Он запрещён в Play и для пустого GUID; private setter одновременно обновляет сериализованный
-`_uxrUniqueId` и кеш `UniqueId`, затем задаёт `__isInPrefab`/`__prefabGuid` и помечает только
-сам компонент dirty. Метод не регистрирует runtime-компонент, не поднимает сетевые события
-и не меняет правила `OnValidate`. Вызывающий проверяет источник, владельца и уникальность ID.
-
-Причина: в `LoadPrefabContents` SDK видит nested slot GUID и `IsInPrefab=false`, а у
-сохранённой Demo — outer GUID и `true`. Сериализация временного контекста в источник может
-изменить унаследованный флаг сцены и перевыдать её ID. Кроме того, запись только строки через
-`SerializedObject` оставляет старый кеш. `ChangeUniqueId` в EditMode выдаёт случайный ID,
-поэтому для восстановления сохранённой идентичности не подходит.
-
-Генератор Demo временно отключает автоматическую выдачу ID через EditorPrefs, задаёт final
-asset provenance и сохраняет существующие component identities. В `finally` восстанавливает
-как значение настройки, так и исходное наличие ключа. Обновление Lobby задаёт scene provenance
-и сохраняет независимые ID экземпляров. При обновлении SDK перенести только этот editor API;
-runtime `ChangeUniqueId` и `OnValidate` сохраняют штатную семантику.
-
-Проверено: повтор Create даёт идентичные байты Demo; 668 исходных localFileID и 168 scene UID
-сохранены. Явный `OnValidate` для 42 source и 168 scene компонентов с включённой автоматикой
-не меняет ID. Проверка всей интеграции и финальный Bake выполняются отдельно.
-

@@ -1,0 +1,19 @@
+{
+    "name": "VrBattlegrounds.PuppetStand.Editor",
+    "rootNamespace": "VrBattlegrounds.Editor.PuppetStand",
+    "references": [
+        "VrBattlegrounds",
+        "VrBattlegrounds.LegsCompare"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

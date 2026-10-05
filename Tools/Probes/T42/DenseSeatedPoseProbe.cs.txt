@@ -1,0 +1,63 @@
+// MCP execute_code: method body, C# 6. Только изолированная preview-сцена; это диагностический probe, не headset/test approval.
+
+var scene=UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var report=new System.Collections.Generic.List<object>();
+try {
+  foreach(var path in VrBattlegrounds.Editor.Avatars.AvatarLegsSetup.BodyOwners()) {
+    var go=UnityEngine.Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path));
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go,scene);
+    go.transform.SetPositionAndRotation(UnityEngine.Vector3.zero,UnityEngine.Quaternion.identity);
+    var avatar=go.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+    var controller=go.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
+    var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+    var ct=typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController);
+    var bt=typeof(UltimateXR.Animation.IK.UxrBodyIK);
+    var settings=(UltimateXR.Animation.IK.UxrBodyIKSettings)ct.GetField("_bodyIKSettings",flags).GetValue(controller);
+    var body=new UltimateXR.Animation.IK.UxrBodyIK();
+    body.Initialize(avatar,settings,true,false);
+    ct.GetField("_bodyIK",flags).SetValue(controller,body);
+    ct.GetMethod("InitializeLegIK",flags).Invoke(controller,null);
+    var legs=controller.AnimatedLegs;
+    legs.BeforeSolve(true);
+    var animator=legs.RigAnimator;
+    if(!legs.IsReady) { report.Add(new { avatar=go.name,ready=false }); continue; }
+    var hip=avatar.AvatarRig.Hips;
+    var neck=avatar.AvatarRig.Head.Neck;
+    var spine=avatar.AvatarRig.Spine;
+    var neckLocal=neck.localPosition;
+    var spineLocal=spine.localPosition;
+    var offset=(UnityEngine.Vector3)bt.GetField("_neckPosRelativeToEyes",flags).GetValue(body);
+    var prevLeft=avatar.AvatarRig.LeftLeg.LowerLeg.rotation;
+    foreach(float sit in System.Linq.Enumerable.Range(0,201).Select(i=>i<=100?i/100f:(200-i)/100f)) {
+      legs.BeforeSolve(true);
+      animator.SetFloat(UltimateXR.Animation.IK.UxrLegLocomotion.SitParam,sit);
+      animator.Play(UltimateXR.Animation.IK.UxrLegLocomotion.IdleState,0,0f);
+      animator.Update(0f);
+      var rigNeck=animator.GetBoneTransform(UnityEngine.HumanBodyBones.Neck);
+      var camera=avatar.CameraComponent.transform;
+      camera.rotation=UnityEngine.Quaternion.identity;
+      camera.position=new UnityEngine.Vector3(0f,rigNeck.position.y,0f)-offset;
+      var targetNeck=camera.position+offset;
+      controller.SolveBodyIK();
+      var l=avatar.AvatarRig.LeftLeg.LowerLeg;
+      var r=avatar.AvatarRig.RightLeg.LowerLeg;
+      bool finite=!float.IsNaN(l.position.x)&&!float.IsInfinity(l.position.x)&&!float.IsNaN(r.position.x)&&!float.IsNaN(spine.rotation.x);
+      report.Add(new {avatar=go.name,sit=sit,ownership=legs.CurrentPoseWeight,residual=body.SeatedNeckResidual,
+        neckError=UnityEngine.Vector3.Distance(neck.position,targetNeck),hipError=UnityEngine.Vector3.Distance(hip.position,legs.CurrentHipsPose.position),
+        neckLocalDrift=UnityEngine.Vector3.Distance(neck.localPosition,neckLocal),spineLocalDrift=UnityEngine.Vector3.Distance(spine.localPosition,spineLocal),
+        kneeDelta=UnityEngine.Quaternion.Angle(prevLeft,l.rotation),finite=finite,revision=legs.PoseRevision});
+      prevLeft=l.rotation;
+    }
+  }
+  
+var rows=Newtonsoft.Json.Linq.JArray.FromObject(report);
+var summaries=rows.GroupBy(x=>(string)x["avatar"]).Select(g=>new {avatar=g.Key, samples=g.Count(),
+maxResidual=g.Max(x=>(float)x["residual"]),maxNeckError=g.Max(x=>(float)x["neckError"]),
+maxNeckLocalDrift=g.Max(x=>(float)x["neckLocalDrift"]),maxSpineLocalDrift=g.Max(x=>(float)x["spineLocalDrift"]),
+maxKneeStep=g.Skip(1).Max(x=>(float)x["kneeDelta"]),allFinite=g.All(x=>(bool)x["finite"]),
+rejected=g.Count(x=>(float)x["sit"]>0.01f&&(float)x["ownership"]==0f),
+fullSitHipError=g.Where(x=>(float)x["sit"]>=0.9999f).Max(x=>(float)x["hipError"])
+}).ToArray();
+return Newtonsoft.Json.JsonConvert.SerializeObject(summaries,Newtonsoft.Json.Formatting.Indented);
+} finally { UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene); }
+

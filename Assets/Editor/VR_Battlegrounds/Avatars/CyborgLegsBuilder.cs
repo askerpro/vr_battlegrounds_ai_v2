@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using FIMSpace.FProceduralAnimation;
 using UltimateXR.Avatar;
 using UnityEditor;
 using UnityEngine;
-using VRBattlegrounds.Integration;
 using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.Editor.Avatars
@@ -38,15 +36,11 @@ namespace VrBattlegrounds.Editor.Avatars
     /// <item><b>Humanoid</b> — <c>Animator</c> на объекте <c>Cyborg</c> с аватаром <see cref="HumanAvatarPath"/>,
     ///       собранным <c>AvatarBuilder</c> из скелета киборга. Humanoid-Hips — <c>CyborgRig</c>: таз и
     ///       позвоночник киборга — соседи под ним.</item>
-    /// <item><b>Legs Animator</b> + <see cref="LegsAnimatorUxrBridge"/> на <c>Cyborg</c> — копия настроек
-    ///       <c>MEF_Base_Avatar</c> с переназначенными костями, таз плагина — <c>Pelvis</c> (таз
-    ///       <c>UxrAvatarRig</c>; <c>CyborgRig</c> UltimateXR при старте переносит под <c>Dummy Forward</c>),
-    ///       <c>baseTransform</c> — корень аватара: <c>Cyborg</c> висит на 1.55 м, и плагин, инициализируясь
-    ///       до привязки моста, мерил бы таз от него.</item>
+    /// <item><b>Ноги шагают</b> — не здесь: меню после сборки запускает <see cref="AvatarLegsSetup"/> (копия рига, решатель
+    ///       ног и клипы ходьбы UltimateXR). Humanoid-Hips киборга — <c>CyborgRig</c>, бёдра — на <c>Pelvis</c> под ним.</item>
     /// </list>
     /// Меню <c>Build Cyborg Legs</c> после сборки запускает <see cref="HitboxBuilder.Build"/> — хитбоксы ног,
-    /// призрак (вариант киборга) и трупы. Проверка — <c>AvatarLoadoutTests.Legs_Animator_настроен_на_своих_костях</c>,
-    /// <c>PrefabCompositionTests.У_каждого_аватара_один_Legs_Animator_на_humanoid_риге</c>, <c>HitboxTests</c>.
+    /// призрак (вариант киборга) и трупы. Проверка — <c>AvatarLoadoutTests.Ноги_аватара_настроены</c>, <c>HitboxTests</c>.
     /// </summary>
     public static class CyborgLegsBuilder
     {
@@ -164,6 +158,8 @@ namespace VrBattlegrounds.Editor.Avatars
 
             // Хитбоксы ног по новому скелету; сборщик хитбоксов пересобирает и призрака (вариант киборга), и трупы.
             HitboxBuilder.Build();
+            // Шаги ног: копия рига по новому скелету, решатель ног и клипы ходьбы UltimateXR.
+            AvatarLegsSetup.Run();
         }
 
         /// <summary>Собирает ноги киборга. Возвращает отчёт; при отказе префаб не меняется.</summary>
@@ -349,10 +345,6 @@ namespace VrBattlegrounds.Editor.Avatars
             animator.applyRootMotion = templateAnimator.applyRootMotion;
             animator.cullingMode = templateAnimator.cullingMode;
             animator.updateMode = templateAnimator.updateMode;
-
-            // 5. Legs Animator и мост.
-            string legsError = SetupLegsAnimator(root, model, animator, pelvis, created, template, report);
-            if (legsError != null) return legsError;
 
             report.Append($"костей ног {Bones.Length}, humanoid '{human.name}'.");
             return null;
@@ -588,64 +580,6 @@ namespace VrBattlegrounds.Editor.Avatars
             EditorUtility.SetDirty(existing);
             UnityEngine.Object.DestroyImmediate(built);
             return existing;
-        }
-
-        /// <summary>
-        /// Legs Animator и мост — копия настроек MEF, ссылки переназначены на свой риг
-        /// (скилл <c>/setup-avatar</c>, <c>game-variant.md</c>, раздел 5).
-        /// </summary>
-        private static string SetupLegsAnimator(GameObject root, Transform model, Animator animator, Transform pelvis,
-                                                Dictionary<string, Transform> bones, GameObject template, StringBuilder report)
-        {
-            LegsAnimator templateLegs = template.GetComponentInChildren<LegsAnimator>(true);
-            LegsAnimatorUxrBridge templateBridge = template.GetComponentInChildren<LegsAnimatorUxrBridge>(true);
-            if (templateLegs == null || templateBridge == null) return $"у {TemplatePath} нет Legs Animator и моста — не с чего копировать";
-
-            var legs = model.GetComponent<LegsAnimator>();
-            if (legs == null) legs = model.gameObject.AddComponent<LegsAnimator>();
-            var bridge = model.GetComponent<LegsAnimatorUxrBridge>();
-            if (bridge == null) bridge = model.gameObject.AddComponent<LegsAnimatorUxrBridge>();
-
-            EditorUtility.CopySerialized(templateLegs, legs);
-            EditorUtility.CopySerialized(templateBridge, bridge);
-
-            var so = new SerializedObject(legs);
-            so.FindProperty("Mecanim").objectReferenceValue = animator;
-            so.FindProperty("Hips").objectReferenceValue = pelvis;
-            so.FindProperty("baseTransform").objectReferenceValue = root.transform;
-            so.FindProperty("Calibrate").intValue = 2; // FixedCalibrate: анимации нет
-            SerializedProperty modules = so.FindProperty("CustomModules");
-            for (int i = 0; i < modules.arraySize; i++)
-                modules.GetArrayElementAtIndex(i).FindPropertyRelative("Parent").objectReferenceValue = legs;
-
-            SerializedProperty legList = so.FindProperty("Legs");
-            if (legList.arraySize != 2) return $"у Legs Animator MEF ног {legList.arraySize}, ожидается 2";
-            string[] sides = { "Left", "Right" };
-            for (int i = 0; i < 2; i++)
-            {
-                SerializedProperty leg = legList.GetArrayElementAtIndex(i);
-                leg.FindPropertyRelative("Owner").objectReferenceValue = legs;
-                leg.FindPropertyRelative("BoneStart").objectReferenceValue = bones["UpperLeg_" + sides[i]];
-                leg.FindPropertyRelative("BoneMid").objectReferenceValue = bones["LowerLeg_" + sides[i]];
-                leg.FindPropertyRelative("BoneEnd").objectReferenceValue = bones["Foot_" + sides[i]];
-                leg.FindPropertyRelative("BoneFeet").objectReferenceValue = null;
-            }
-            so.ApplyModifiedPropertiesWithoutUndo();
-
-            // Высота лодыжки и оси стопы — в позе префаба от пола аватара (корень), не с MEF.
-            legs.User_RefreshHelperVariablesOnParametersChange();
-            foreach (LegsAnimator.Leg leg in legs.Legs) leg.RefreshLegAnkleToHeelAndFeetAndAxes(root.transform);
-
-            var bridgeSo = new SerializedObject(bridge);
-            bridgeSo.FindProperty("footHeightOffset").floatValue = 0f;
-            bridgeSo.ApplyModifiedPropertiesWithoutUndo();
-
-            legs.enabled = true;
-            bridge.enabled = true;
-            EditorUtility.SetDirty(legs);
-
-            report.Append($"Legs Animator: AnkleToHeel {string.Join(" / ", legs.Legs.Select(l => l.AnkleToHeel.magnitude.ToString("F3")))}. ");
-            return null;
         }
 
         private static Transform Find(Transform root, string name) =>

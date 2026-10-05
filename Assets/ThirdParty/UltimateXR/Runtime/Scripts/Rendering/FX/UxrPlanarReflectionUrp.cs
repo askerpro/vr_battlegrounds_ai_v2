@@ -57,17 +57,12 @@ namespace UltimateXR.Rendering.FX
         #region Unity
 
         /// <summary>
-        ///     Stores the current material so that a "cheap" material can be assigned when disabled and the original material
-        ///     re-assigned when enabled back again.
+        ///     Штатная SDK-регистрация; копии материалов создаются при включении компонента.
         /// </summary>
         protected override void Awake()
         {
             base.Awake();
 
-            if (_mirrorRenderer != null)
-            {
-                _originalMaterial = _mirrorRenderer.sharedMaterial;
-            }
         }
 
         /// <summary>
@@ -75,6 +70,8 @@ namespace UltimateXR.Rendering.FX
         /// </summary>
         protected override void OnDestroy()
         {
+            RenderPipelineManager.beginCameraRendering -= RenderPipelineManager_BeginCameraRendering;
+            ReleaseOwnedMaterials(false);
             base.OnDestroy();
             
             foreach (KeyValuePair<Camera, Camera> camPair in _reflectionCameras)
@@ -113,11 +110,10 @@ namespace UltimateXR.Rendering.FX
         {
             base.OnEnable();
 
-            if (_mirrorRenderer != null && _originalMaterial)
-            {
-                _mirrorRenderer.sharedMaterial = _originalMaterial;
-            }
+            if (_materialsDisabled) ReleaseOwnedMaterials(false);
+            EnsureOwnedMaterials();
 
+            RenderPipelineManager.beginCameraRendering -= RenderPipelineManager_BeginCameraRendering;
             RenderPipelineManager.beginCameraRendering += RenderPipelineManager_BeginCameraRendering;
         }
 
@@ -138,10 +134,7 @@ namespace UltimateXR.Rendering.FX
                 }
             }
 
-            if (_mirrorRenderer != null && _materialWhenDisabled)
-            {
-                _mirrorRenderer.sharedMaterial = _materialWhenDisabled;
-            }
+            if (!_materialsDisabled) ReleaseOwnedMaterials(true);
         }
 
         #endregion
@@ -158,7 +151,7 @@ namespace UltimateXR.Rendering.FX
             _mirrorTransform = _mirrorTransform ? _mirrorTransform : transform;
             _mirrorRenderer  = _mirrorRenderer ? _mirrorRenderer : GetComponent<Renderer>();
 
-            if (UxrAvatar.LocalAvatarCamera != renderCamera || !_mirrorRenderer || !_mirrorRenderer.sharedMaterial)
+            if (UxrAvatar.LocalAvatarCamera != renderCamera || !_mirrorRenderer || !EnsureOwnedMaterials())
             {
                 return;
             }
@@ -172,27 +165,19 @@ namespace UltimateXR.Rendering.FX
 
             s_insideRendering = true;
 
-            CreateResources(renderCamera, out Camera reflectionCamera);
-
-            // Lower quality for reflection
-
+            Camera reflectionCamera = null;
             int oldPixelLightCount = QualitySettings.pixelLightCount;
-            if (_disablePixelLights)
+            bool oldInvertCulling = GL.invertCulling;
+            try
             {
-                QualitySettings.pixelLightCount = 0;
-            }
-
-            CopyCameraData(renderCamera, reflectionCamera);
-
-            // Update parameters
-
-            reflectionCamera.cullingMask = ~(1 << 4) & _reflectLayers.value;
-
-            
-            if (TryGetComponent<Renderer>(out var theRenderer))
-            {
-                foreach (Material m in theRenderer.sharedMaterials)
+                CreateResources(renderCamera, out reflectionCamera);
+                if (_disablePixelLights) QualitySettings.pixelLightCount = 0;
+                CopyCameraData(renderCamera, reflectionCamera);
+                reflectionCamera.cullingMask = ~(1 << 4) & _reflectLayers.value;
+                foreach (OwnedMaterialSlot slot in _ownedMaterials)
                 {
+                    Material m = slot.Copy;
+                    if (!m) continue;
                     if (m.HasProperty(VarReflectionTexLeft))
                     {
                         m.SetTexture(VarReflectionTexLeft, _reflectionTextureLeft);
@@ -205,32 +190,88 @@ namespace UltimateXR.Rendering.FX
 
                     m.SetFloat(VarReflectionMaxLodBias, _reflectionTextureLeft.width == 0 ? 0.0f : Mathf.Log(_reflectionTextureLeft.width, 2.0f));
                 }
+                reflectionCamera.enabled = true;
+                reflectionCamera.targetTexture = _reflectionTextureLeft;
+                RenderReflection(context, renderCamera, reflectionCamera, true, true, _mirrorTransform.position, -_mirrorTransform.forward);
+                reflectionCamera.targetTexture = _reflectionTextureRight;
+                RenderReflection(context, renderCamera, reflectionCamera, true, false, _mirrorTransform.position, -_mirrorTransform.forward);
             }
-
-            // Render
-
-            reflectionCamera.enabled = true;
-
-            reflectionCamera.targetTexture = _reflectionTextureLeft;
-            RenderReflection(context, renderCamera, reflectionCamera, true, true, _mirrorTransform.position, -_mirrorTransform.forward);
-            reflectionCamera.targetTexture = _reflectionTextureRight;
-            RenderReflection(context, renderCamera, reflectionCamera, true, false, _mirrorTransform.position, -_mirrorTransform.forward);
-
-            reflectionCamera.enabled = false;
-
-            // Restore quality
-
-            if (_disablePixelLights)
+            finally
             {
-                QualitySettings.pixelLightCount = oldPixelLightCount;
+                if (reflectionCamera) reflectionCamera.enabled = false;
+                if (_disablePixelLights) QualitySettings.pixelLightCount = oldPixelLightCount;
+                GL.invertCulling = oldInvertCulling;
+                s_insideRendering = false;
             }
-
-            s_insideRendering = false;
         }
 
         #endregion
 
         #region Private Methods
+
+        // VR Battlegrounds: динамические reflection параметры принадлежат renderer-specific copies.
+        // Shared assets и оба уровня MaterialPropertyBlock никогда не изменяются.
+        private bool EnsureOwnedMaterials()
+        {
+            _mirrorRenderer = _mirrorRenderer ? _mirrorRenderer : GetComponent<Renderer>();
+            if (!_mirrorRenderer || !_mirrorRenderer.gameObject.scene.IsValid())
+            {
+                ReleaseOwnedMaterials(false);
+                return false;
+            }
+            if (_ownedRenderer != _mirrorRenderer)
+            {
+                ReleaseOwnedMaterials(false);
+                _ownedRenderer = _mirrorRenderer;
+            }
+            if (_materialsDisabled) return false;
+            if (_ownedMaterials.Count > 0) return true;
+            Material[] materials = _mirrorRenderer.sharedMaterials;
+            bool changed = false;
+            for (int i = 0; i < materials.Length; i++)
+            {
+                Material source = materials[i];
+                if (!source || (!source.HasProperty(VarReflectionTexLeft) && !source.HasProperty(VarReflectionTexRight))) continue;
+                Material copy = new Material(source) { name = source.name + " (URP reflection)", hideFlags = HideFlags.HideAndDontSave };
+                _ownedMaterials.Add(new OwnedMaterialSlot { Renderer = _mirrorRenderer, Source = source, Copy = copy, OriginalIndex = i });
+                materials[i] = copy;
+                changed = true;
+            }
+            if (changed) _mirrorRenderer.sharedMaterials = materials;
+            return changed;
+        }
+
+        private void ReleaseOwnedMaterials(bool useDisabledMaterial)
+        {
+            var disabled = new List<OwnedMaterialSlot>();
+            foreach (OwnedMaterialSlot slot in _ownedMaterials)
+            {
+                if (slot.Renderer)
+                {
+                    Material[] materials = slot.Renderer.sharedMaterials;
+                    Material replacement = slot.Source;
+                    bool changed = false;
+                    for (int i = 0; i < materials.Length; i++)
+                    {
+                        // Условное восстановление по identity сохраняет чужой replacement и порядок.
+                        if (materials[i] != slot.Copy) continue;
+                        if (!changed && useDisabledMaterial && _materialWhenDisabled)
+                        {
+                            replacement = new Material(_materialWhenDisabled) { name = _materialWhenDisabled.name + " (URP disabled)", hideFlags = HideFlags.HideAndDontSave };
+                            disabled.Add(new OwnedMaterialSlot { Renderer = slot.Renderer, Source = slot.Source, Copy = replacement, OriginalIndex = slot.OriginalIndex });
+                        }
+                        materials[i] = replacement;
+                        changed = true;
+                    }
+                    if (changed) slot.Renderer.sharedMaterials = materials;
+                }
+                if (slot.Copy) DestroyImmediate(slot.Copy);
+            }
+            _ownedMaterials.Clear();
+            _ownedMaterials.AddRange(disabled);
+            _materialsDisabled = useDisabledMaterial;
+            if (!useDisabledMaterial) _ownedRenderer = null;
+        }
 
         /// <summary>
         ///     Renders the reflection.
@@ -473,7 +514,17 @@ namespace UltimateXR.Rendering.FX
         private RenderTexture _reflectionTextureLeft;
         private RenderTexture _reflectionTextureRight;
         private int           _oldReflectionTextureSize;
-        private Material      _originalMaterial;
+        private Renderer      _ownedRenderer;
+        private bool          _materialsDisabled;
+        private readonly List<OwnedMaterialSlot> _ownedMaterials = new List<OwnedMaterialSlot>();
+
+        private sealed class OwnedMaterialSlot
+        {
+            public Renderer Renderer;
+            public Material Source;
+            public Material Copy;
+            public int OriginalIndex;
+        }
 
         #endregion
     }

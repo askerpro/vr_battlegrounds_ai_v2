@@ -1,0 +1,85 @@
+// MCP execute_code: method body, C# 6. Только изолированная preview-сцена; это диагностический probe, не headset/test approval.
+
+var scene=UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var report=new System.Collections.Generic.List<object>();
+try {
+  foreach(var path in VrBattlegrounds.Editor.Avatars.AvatarLegsSetup.BodyOwners()) {
+    var go=UnityEngine.Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path));
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go,scene);
+    go.transform.SetPositionAndRotation(UnityEngine.Vector3.zero,UnityEngine.Quaternion.identity);
+    var avatar=go.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+    var controller=go.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
+    var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+    var ct=typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController);
+    var bt=typeof(UltimateXR.Animation.IK.UxrBodyIK);
+    var settings=(UltimateXR.Animation.IK.UxrBodyIKSettings)ct.GetField("_bodyIKSettings",flags).GetValue(controller);
+    var body=new UltimateXR.Animation.IK.UxrBodyIK();
+    body.Initialize(avatar,settings,true,false);
+    ct.GetField("_bodyIK",flags).SetValue(controller,body);
+    ct.GetMethod("InitializeLegIK",flags).Invoke(controller,null);
+    var legs=controller.AnimatedLegs;
+    legs.BeforeSolve(true);
+    var animator=legs.RigAnimator;
+    if(!legs.IsReady) { report.Add(new { avatar=go.name,ready=false }); continue; }
+    var hip=avatar.AvatarRig.Hips;
+    var neck=avatar.AvatarRig.Head.Neck;
+    var spine=avatar.AvatarRig.Spine;
+    var neckLocal=neck.localPosition;
+    var spineLocal=spine.localPosition;
+    var offset=(UnityEngine.Vector3)bt.GetField("_neckPosRelativeToEyes",flags).GetValue(body);
+    var prevLeft=avatar.AvatarRig.LeftLeg.LowerLeg.rotation;
+
+    var animatorController=(UnityEditor.Animations.AnimatorController)animator.runtimeAnimatorController;
+    var moveState=animatorController.layers[0].stateMachine.states.Select(s=>s.state).First(s=>s.name==UltimateXR.Animation.IK.UxrLegLocomotion.MoveState);
+    System.Func<UnityEngine.Motion,bool> hasSit=null;
+    hasSit=m=> { var tree=m as UnityEditor.Animations.BlendTree; return tree!=null && (tree.blendParameter==UltimateXR.Animation.IK.UxrLegLocomotion.SitParam || tree.children.Any(c=>hasSit(c.motion))); };
+    bool movingContainsSit=hasSit(moveState.motion);
+    var legRoot=avatar.AvatarRig.LeftLeg.UpperLeg.parent;
+    var restRoot=legRoot.localRotation;
+    var failures=new System.Collections.Generic.List<string>();
+    float maxNeckError=0f; int seatedFrames=0;
+    foreach(int scenario in new[]{0,1,2}) {
+      // 0: уже идёт; 1: идёт обычный stop; 2: идёт start.
+      legs.BeforeSolve(true);
+      animator.SetFloat(UltimateXR.Animation.IK.UxrLegLocomotion.SitParam,0f);
+      animator.SetFloat(UltimateXR.Animation.IK.UxrLegLocomotion.MoveZParam,1f);
+      animator.SetFloat(UltimateXR.Animation.IK.UxrLegLocomotion.SpeedParam,1f);
+      animator.SetBool(UltimateXR.Animation.IK.UxrLegLocomotion.IsMovingParam,scenario!=2);
+      animator.Play(scenario==2?UltimateXR.Animation.IK.UxrLegLocomotion.IdleState:UltimateXR.Animation.IK.UxrLegLocomotion.MoveState,0,0.75f);
+      animator.Update(0f);
+      controller.SolveBodyIK(); // единственный snap перед последовательностью, не на каждой пробе.
+      if(scenario==1) animator.SetBool(UltimateXR.Animation.IK.UxrLegLocomotion.IsMovingParam,false);
+      if(scenario==2) animator.SetBool(UltimateXR.Animation.IK.UxrLegLocomotion.IsMovingParam,true);
+      animator.Update(0.05f);
+      for(int frame=0;frame<31;frame++) {
+        float sit=(frame+1)/31f;
+        legs.BeforeSolve(true);
+        animator.SetFloat(UltimateXR.Animation.IK.UxrLegLocomotion.SitParam,sit);
+        animator.SetBool(UltimateXR.Animation.IK.UxrLegLocomotion.IsMovingParam,true); // sit приоритетнее ошибочного walk input.
+        animator.Update(1f/60f);
+        bool footState=animator.GetCurrentAnimatorStateInfo(0).IsName(UltimateXR.Animation.IK.UxrLegLocomotion.MoveState)
+          || (animator.IsInTransition(0) && animator.GetNextAnimatorStateInfo(0).IsName(UltimateXR.Animation.IK.UxrLegLocomotion.MoveState));
+        if(footState) failures.Add("scenario="+scenario+",frame="+frame+": FootIK state while Sit="+sit);
+        var rigNeck=animator.GetBoneTransform(UnityEngine.HumanBodyBones.Neck);
+        var camera=avatar.CameraComponent.transform;
+        camera.rotation=UnityEngine.Quaternion.identity;
+        camera.position=new UnityEngine.Vector3(0f,rigNeck.position.y,0f)-offset;
+        controller.SolveBodyIK();
+        maxNeckError=UnityEngine.Mathf.Max(maxNeckError,UnityEngine.Vector3.Distance(neck.position,camera.position+offset));
+        seatedFrames++;
+      }
+    }
+    legs.Disable();
+    float disabledRootAngle=UnityEngine.Quaternion.Angle(restRoot,legRoot.localRotation);
+    var left=avatar.AvatarRig.LeftLeg.LowerLeg;
+    var leftBefore=left.localRotation;
+    legs.AfterSolve(); // инвалидированная snapshot не должна возвращать старую позу.
+    float staleCopyAngle=UnityEngine.Quaternion.Angle(leftBefore,left.localRotation);
+    report.Add(new {avatar=go.name,seatedFrames=seatedFrames,movingContainsSit=movingContainsSit,
+      footStateFailures=failures,disabledRootAngle=disabledRootAngle,disabledOwnership=legs.CurrentPoseWeight,
+      staleCopyAngle=staleCopyAngle,maxNeckError=maxNeckError,
+      passed=!movingContainsSit && failures.Count==0 && disabledRootAngle<0.05f && staleCopyAngle<0.05f && legs.CurrentPoseWeight==0f });
+  }
+  return Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented);
+} finally { UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene); }
+

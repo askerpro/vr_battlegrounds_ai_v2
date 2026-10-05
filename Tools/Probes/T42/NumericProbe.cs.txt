@@ -1,0 +1,56 @@
+// MCP execute_code: method body, C# 6. Диагностика формул на изолированных Transform и настоящих костях аватаров.
+
+var scene=UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var report=new System.Collections.Generic.List<object>();
+try {
+ var root=new UnityEngine.GameObject("T42 Numeric Probe");
+ UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root,scene);
+ var thigh=new UnityEngine.GameObject("Thigh").transform; thigh.SetParent(root.transform);
+ var calf=new UnityEngine.GameObject("Calf").transform; calf.SetParent(thigh); calf.localPosition=UnityEngine.Vector3.down*0.5f;
+ var foot=new UnityEngine.GameObject("Foot").transform; foot.SetParent(calf); foot.localPosition=UnityEngine.Vector3.down*0.5f;
+ var solver=new UltimateXR.Animation.IK.UxrLegIKSolver();
+ solver.Initialize(thigh,calf,foot,null,UnityEngine.Vector3.right); solver.StretchCurve=null;
+ solver.PositionWeight=1f;solver.RotationWeight=0f;solver.BendToTargetWeight=0f;
+ solver.UseBendGoalPosition=true;solver.BendGoalPosition=new UnityEngine.Vector3(0,0,0.5f);solver.BendGoalWeight=1f;
+ solver.TargetPosition=new UnityEngine.Vector3(0.000101f,0,0.1f);solver.Solve();var firstKnee=calf.position;
+ solver.TargetPosition=new UnityEngine.Vector3(-0.000101f,0,0.1f);solver.Solve();
+ var jump=UnityEngine.Vector3.Distance(firstKnee,calf.position);
+ report.Add(new{caseName="near-collinear knee",jump=jump,passed=jump<0.005f});
+ foreach(float angle in new[]{120f,150f,180f}) {
+  var up=UltimateXR.Animation.IK.UxrBodyIK.ClampPitch(UnityEngine.Quaternion.AngleAxis(angle,UnityEngine.Vector3.right),-8f,60f)*UnityEngine.Vector3.up;
+  var pitch=UnityEngine.Mathf.Atan2(up.z,up.y)*UnityEngine.Mathf.Rad2Deg;
+  report.Add(new{caseName="inverted pitch "+angle,pitch=pitch,passed=pitch>=-8.01f&&pitch<=60.01f&&up.y>=0f});
+ }
+ var roll=UnityEngine.Quaternion.AngleAxis(10f,UnityEngine.Vector3.right)*UnityEngine.Quaternion.AngleAxis(60f,UnityEngine.Vector3.forward);
+ var clamped=UltimateXR.Animation.IK.UxrBodyIK.ClampPitch(roll,-8f,8f)*UnityEngine.Vector3.up;
+ var pc=UnityEngine.Mathf.Atan2(clamped.z,clamped.y)*UnityEngine.Mathf.Rad2Deg;
+ report.Add(new{caseName="rolled clamp",pitch=pc,passed=UnityEngine.Mathf.Abs(pc-8f)<0.01f});
+ var method=typeof(UltimateXR.Animation.IK.UxrLegIKSolver).GetMethod("InterpolateContinuous",System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic);
+ float previous=0f;bool has=false;UnityEngine.Vector3 last=UnityEngine.Vector3.zero;
+ foreach(float a in new[]{-179.49f,-179.51f,179.49f}) {
+  object[] args={UnityEngine.Vector3.up,UnityEngine.Quaternion.AngleAxis(a,UnityEngine.Vector3.forward)*UnityEngine.Vector3.up,UnityEngine.Vector3.forward,0.5f,previous,has};
+  var value=(UnityEngine.Vector3)method.Invoke(null,args);previous=(float)args[4];
+  var delta=has?UnityEngine.Vector3.Angle(last,value):0f;has=(bool)args[5];
+  report.Add(new{caseName="antipodal "+a,delta=delta,passed=delta<1f});last=value;
+ }
+ bool finite=true;
+ foreach(var target in new[]{UnityEngine.Vector3.zero,new UnityEngine.Vector3(1e-10f,0,0),new UnityEngine.Vector3(0,0,0.8f),new UnityEngine.Vector3(0,0,-0.8f)}){
+  solver.TargetPosition=target;solver.Solve();
+  finite &= !float.IsNaN(calf.position.x)&&!float.IsInfinity(calf.position.x)&&!float.IsNaN(thigh.rotation.x);
+ }
+ report.Add(new{caseName="collapsed/outside target",passed=finite});
+ foreach(var path in VrBattlegrounds.Editor.Avatars.AvatarLegsSetup.BodyOwners()) {
+  var go=UnityEngine.Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path));
+  UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go,scene);go.transform.SetPositionAndRotation(UnityEngine.Vector3.zero,UnityEngine.Quaternion.identity);
+  var avatar=go.GetComponent<UltimateXR.Avatar.UxrAvatar>();var c=go.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
+  var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+  var body=new UltimateXR.Animation.IK.UxrBodyIK();body.Initialize(avatar,(UltimateXR.Animation.IK.UxrBodyIKSettings)typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController).GetField("_bodyIKSettings",flags).GetValue(c),true,false);
+  body.PreSolveAvatarIK();
+  var s=avatar.AvatarRig.Spine;var ch=avatar.AvatarRig.Chest;var uc=avatar.AvatarRig.UpperChest;
+  var sr=s.rotation;var cr=ch!=null?ch.rotation:UnityEngine.Quaternion.identity;var ur=uc!=null?uc.rotation:UnityEngine.Quaternion.identity;
+  body.ExternalTrunkLean=UnityEngine.Quaternion.AngleAxis(30f,UnityEngine.Vector3.right);body.PreSolveAvatarIK();
+  var sa=UnityEngine.Quaternion.Angle(sr,s.rotation);var ca=ch!=null?UnityEngine.Quaternion.Angle(cr,ch.rotation):30f;var ua=uc!=null?UnityEngine.Quaternion.Angle(ur,uc.rotation):30f;
+  report.Add(new{caseName="single trunk "+go.name,spine=sa,chest=ca,upper=ua,passed=UnityEngine.Mathf.Abs(sa-30f)<0.05f&&UnityEngine.Mathf.Abs(ca-30f)<0.05f&&UnityEngine.Mathf.Abs(ua-30f)<0.05f});
+ }
+ return Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented);
+} finally {UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);}

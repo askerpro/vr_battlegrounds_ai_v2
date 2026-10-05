@@ -253,8 +253,10 @@ namespace UltimateXR.Core.StateSync
             if (SyncCallDepth > 0)
             {
                 e.Options = _optionStack.Pop();
-                raiseChangedEvent?.Invoke(e);
-                SyncCallDepth--;
+                // VR Battlegrounds patch: событие остаётся внутри прежнего nesting depth,
+                // но исключение подписчика не оставляет уже извлечённый scope открытым.
+                try { raiseChangedEvent?.Invoke(e); }
+                finally { SyncCallDepth--; }
             }
             else
             {

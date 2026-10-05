@@ -145,6 +145,9 @@ namespace VrBattlegrounds.Arsenal
         [Min(0f)]
         [SerializeField] private float _lostWeaponReplaceDelay = 2f;
 
+        /// <summary>Общий интервал восстановления потерянного предложения арсенала.</summary>
+        public float LostItemReplaceDelay => _lostWeaponReplaceDelay;
+
         /// <summary>Сколько секунд у стены есть пропавший слот (сервер).</summary>
         private float _lostSlotTime;
 

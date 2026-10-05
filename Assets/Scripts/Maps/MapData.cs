@@ -20,6 +20,12 @@ namespace VrBattlegrounds.Maps
         [Tooltip("Имя сцены Unity (должно совпадать с именем в Build Settings).")]
         public string sceneName = "";
 
+        [Tooltip("Назначение карты для bootstrap. Legacy debugOnly пока используется прежними редакторскими проверками.")]
+        public Runtime.MapRunKind kind = Runtime.MapRunKind.Combat;
+
+        [Tooltip("Явные исключения стенда Debug; на Combat/Lobby запрещены.")]
+        public Runtime.MapDebugExemptions debugExemptions = Runtime.MapDebugExemptions.None;
+
         [Header("Визуал")]
         [Tooltip("Превью-скриншот карты для меню выбора.")]
         public Sprite preview;
@@ -35,6 +41,10 @@ namespace VrBattlegrounds.Maps
         [Tooltip("Максимальное количество игроков на карте.")]
         [Min(2)]
         public int maxPlayers = 10;
+
+        [Header("Арсенал")]
+        [Tooltip("Ассортимент станций этой карты. Применяется при следующей загрузке сцены.")]
+        public VrBattlegrounds.Arsenal.ArsenalPreset arsenalPreset;
 
         [Header("Игровые Режимы")]
         [Tooltip("Режимы, совместимые с картой. Первая разминка в списке — режим, с которого карта " +

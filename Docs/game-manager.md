@@ -5,13 +5,16 @@
 
 # Сессия матча: выбор (режим + карты), серия карт, режим на карте
 
-Три объекта, три ответственности:
+Владельцы состояния:
 
 | Объект | Где живёт | Что делает |
 |---|---|---|
 | `SessionManager` | `SessionContext` (спавнится в `GameNetworkManager.OnStartServer`, DontDestroyOnLoad) | Хранит **выбор** администратора: режим матча и список карт серии. Единственное место поиска данных по идентификатору: `FindModeData(modeId)`, `FindMap(sceneName)` |
 | `Series` | тот же `SessionContext` | Ведёт **серию**: какая карта сейчас, общий счёт (сколько карт выиграла команда), итоги карт. Переживает смену режима на карте и смену карт |
 | `MapReferee` | объект `MatchManager` в каждой сцене (карты и лобби) | Ведёт **режим на карте**: разминка при старте, «Начать матч» — режим матча на месте, конец матча — снова разминка |
+| `MapRunAuthority` | тот же `SessionContext` | Новый единственный writer целого run descriptor; пока инертный контракт до подключения bootstrap/mode gates. Legacy MapReferee ещё ведёт прежний gameplay state |
+
+Контрактный и authoring срезы [MapRunConfig/MapBootstrap](tasks/map-runtime-bootstrap-design.md) реализуют immutable IDs/config, captured intent resolution, revision CAS, keyed cancellation и native MapRoot/catalog/preflight. `CommitPrepared` означает только CompositionReady; Ready, спавн аватаров и активацию mode он не открывает. Runtime composition и переключение gameplay owners ещё впереди; актуальный статус — [handoff](tasks/map-runtime-bootstrap-handoff.md). Текущие callbacks MapReferee и Series ниже остаются legacy.
 
 Команды (выбор игроком, выдача админом, автобаланс) — не у менеджеров, а в статическом
 сервисе `TeamChangeRequests`; право админа — `SessionPermissions.IsAdmin`.

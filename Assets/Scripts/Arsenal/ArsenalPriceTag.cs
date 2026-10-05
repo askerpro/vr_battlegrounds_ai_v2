@@ -10,8 +10,6 @@ namespace VrBattlegrounds.Arsenal
     /// </summary>
     public sealed class ArsenalPriceTag : MonoBehaviour
     {
-        private static readonly Vector3 RifleCardOffset = new Vector3(0.15f, 0.43f, -0.065f);
-        private static readonly Vector3 ShelfCardOffset = new Vector3(0.18f, 0.09f, -0.1f);
         private static readonly Color AffordableColor = new Color(0.10f, 0.12f, 0.08f);
         private static readonly Color ExpensiveColor = new Color(0.42f, 0.12f, 0.08f);
         [SerializeField] private TextMeshPro _text;
@@ -19,25 +17,18 @@ namespace VrBattlegrounds.Arsenal
         private string _shown;
         private Color _shownColor;
 
-        public static ArsenalPriceTag Create(ArsenalSlotController slot)
+        public static ArsenalPriceTag Create(ArsenalSlotController slot) => Create(slot, ArsenalPresentationApplicator.Resolve(slot));
+
+        public static ArsenalPriceTag Create(ArsenalSlotController slot, ArsenalPresentationSnapshot presentation)
         {
             var tag = slot.GetComponentInChildren<ArsenalPriceTag>(true);
             bool created = tag == null;
             var go = created ? new GameObject("WeaponCard") : tag.gameObject;
             if (created) go.transform.SetParent(slot.transform, false);
-            Transform wall = slot.Wall != null ? slot.Wall.transform : slot.transform;
-            Vector3 anchor = slot.ItemAnchor != null ? slot.ItemAnchor.transform.position : slot.transform.position;
-            Vector3 offset = slot.WeaponData != null && slot.WeaponData.Category == WeaponCategory.Rifle
-                ? RifleCardOffset : ShelfCardOffset;
-            go.transform.SetPositionAndRotation(anchor + wall.rotation * offset, wall.rotation);
-            if (slot.HasCustomCardPresentation)
-            {
-                go.transform.localPosition = slot.CardLocalPosition;
-                go.transform.localRotation = slot.CardLocalRotation;
-            }
+            ArsenalPresentationApplicator.ApplyCard(slot, go.transform, presentation);
 
             if (created) tag = go.AddComponent<ArsenalPriceTag>();
-            Vector2 size = slot.HasCustomCardPresentation ? slot.CardSize : new Vector2(0.15f, 0.16f);
+            Vector2 size = presentation.CardSize;
             if (created) tag.CreateBacking(size);
             var backing = go.transform.Find("CardBacking");
             if (backing != null) backing.localScale = new Vector3(size.x, size.y, 0.001f);
@@ -46,13 +37,22 @@ namespace VrBattlegrounds.Arsenal
             if (tag._text == null) textObject.transform.SetParent(go.transform, false);
             textObject.transform.localPosition = new Vector3(0f, 0f, -0.0007f);
             if (tag._text == null) tag._text = textObject.AddComponent<TextMeshPro>();
-            tag._text.font = TMP_Settings.defaultFontAsset;
-            tag._text.alignment = TextAlignmentOptions.Center;
-            tag._text.fontSize = slot.HasCustomCardPresentation ? slot.CardFontSize : 0.16f;
-            tag._text.rectTransform.sizeDelta = size - new Vector2(0.014f, 0.014f);
-            tag._text.textWrappingMode = TextWrappingModes.NoWrap;
-            tag._text.overflowMode = TextOverflowModes.Ellipsis;
+            tag.ConfigureText(size, presentation.CardFontSize);
             return tag;
+        }
+
+        private void ConfigureText(Vector2 size, float baseFontSize)
+        {
+            _text.font = TMP_Settings.defaultFontAsset;
+            _text.alignment = TextAlignmentOptions.Center;
+            _text.rectTransform.sizeDelta = size - new Vector2(0.014f, 0.014f);
+            // Длинное имя переносится и уменьшает всю карточку; цена и характеристики не обрезаются многоточием.
+            _text.textWrappingMode = TextWrappingModes.Normal;
+            _text.overflowMode = TextOverflowModes.Overflow;
+            _text.enableAutoSizing = true;
+            _text.fontSizeMin = baseFontSize * 0.6f;
+            _text.fontSizeMax = baseFontSize;
+            _text.fontSize = baseFontSize;
         }
 
         public void Show(WeaponInfo info, bool affordable, bool free = false)

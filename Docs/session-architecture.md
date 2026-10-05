@@ -4,6 +4,8 @@
 
 ## Концепция разделения: Session vs Avatar
 
+На постоянном `SessionContext` добавлен `MapRunAuthority` — один server writer immutable `MapRunSnapshot` для будущего bootstrap карты. Штатный `GameNetworkManager.OnStartServer` спавнит этот же префаб; новый компонент получает session epoch через обычный Mirror lifecycle, отдельного Instantiate нет. Подписка сразу отдаёт текущий целый descriptor; dedicated server публикует commit напрямую, host получает один SyncVar hook. Сейчас это инертный контракт: [native composition/admission/Relay gates](tasks/map-runtime-bootstrap-design.md) ещё не подключены, создание PlayerSession/аватаров идёт прежним путём.
+
 Сетевое присутствие игрока теперь разделено на два компонента:
 
 ### 1. `PlayerSession` (Душа / Сетевой контроллер)

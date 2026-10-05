@@ -103,6 +103,8 @@
 - **Попадания и снаряды по сети: задержка, цена симуляции, решения** → [`combat-networking.md`](combat-networking.md)
 - **Сессия, роли устройств, Host/Client** → [`session-architecture.md`](session-architecture.md)
 - **GameManager, режимы, assets, настройка** → [`game-manager.md`](game-manager.md)
+- **MapRoot/native preflight** → [статус и API bootstrap](tasks/map-runtime-bootstrap-design.md), [runtime-пакет для разрешения](tasks/map-runtime-bootstrap-runtime-integration.md). Цель — checked authoring перед runtime assembly; мы здесь — root14/0, adversarial6/0, Android PASS; осталось — разрешить отклонённую actor integration, composition/mode/Relay proofs и миграцию. MapRoot, MapRuntimeCatalog и Editor MapRunPreflight ещё не переключают production карты.
+- **Единый bootstrap карты** → [дизайн и runtime API](tasks/map-runtime-bootstrap-design.md), [план](tasks/map-runtime-bootstrap-plan.md), [handoff](tasks/map-runtime-bootstrap-handoff.md). Цель — один MapRoot с immutable run; мы здесь — контрактный и native authoring срезы, необходимые source-зависимости арсенала включены в checkpoint; осталось — composition/admission, mode/Relay, миграция и human acceptance. Handoff описывает API новых классов, local reports и команды продолжения.
 - **Дизайн-система меню планшета, новый экран** → [`ui-design-system.md`](ui-design-system.md), скил `/add-menu-screen`
 - **Архитектура UI Меню** → [`ui-menu-architecture.md`](ui-menu-architecture.md)
 - **Шрифты, кириллица, «квадраты вместо букв»** → [`ui-fonts.md`](ui-fonts.md)

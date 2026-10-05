@@ -20,6 +20,11 @@ namespace VrBattlegrounds.Arsenal
     {
         public static bool AllowsGrab(UxrGrabber grabber, UxrGrabbableObject grabbable)
         {
+            UxrGrabbableObjectAnchor directAnchor = grabbable != null ? grabbable.CurrentAnchor : null;
+            ArsenalMagazineOffer magazineOffer = directAnchor != null ? directAnchor.GetComponentInParent<ArsenalMagazineOffer>() : null;
+            if (magazineOffer != null && magazineOffer.Anchor == directAnchor)
+                return magazineOffer.AllowsGrab(grabber);
+
             ArsenalSlotController slot = SlotHolding(grabbable);
             if (slot == null) return true;
 

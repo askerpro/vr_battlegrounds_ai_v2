@@ -20,6 +20,29 @@ namespace VrBattlegrounds.Arsenal
         [Header("Item Data")]
         [Tooltip("WeaponInfo asset that configures this slot")]
         [SerializeField] private WeaponInfo _weaponInfo;
+        [Tooltip("Физическая роль слота: верхняя панель или нижняя полка. Не зависит от выбранного оружия.")]
+        [SerializeField] private ArsenalPresentationZone _presentationZone;
+        public ArsenalPresentationZone PresentationZone => _presentationZone;
+        private bool _placingValidatorAdded;
+        private string _configuredAnchorTag;
+
+        public void ConfigurePresentationZone(ArsenalPresentationZone zone) => _presentationZone = zone;
+
+        /// <summary>Настройка до выдачи оружия; обновляет совместимость якоря и карточку.</summary>
+        public void ConfigureWeapon(WeaponInfo weapon)
+        {
+            if (_itemAnchor == null) _itemAnchor = GetComponentInChildren<UxrGrabbableObjectAnchor>(true);
+            var original = _weaponInfo != null && _weaponInfo.WeaponPrefab != null
+                ? _weaponInfo.WeaponPrefab.GetComponent<UxrGrabbableObject>() : null;
+            if (_itemAnchor != null && !string.IsNullOrEmpty(_configuredAnchorTag))
+                _itemAnchor.RemoveCompatibleTags(_configuredAnchorTag);
+            if (_itemAnchor != null && original != null && !string.IsNullOrEmpty(original.Tag))
+                _itemAnchor.RemoveCompatibleTags(original.Tag);
+            _configuredAnchorTag = null;
+            _weaponInfo = weapon;
+            ConfigureAnchorCompatibility();
+            if (_priceTag != null) ArsenalPriceTag.Create(this).Show(_weaponInfo, true);
+        }
 
         [Header("Anchor")]
         [Tooltip("Snap zone for the item (auto-found if empty)")]
@@ -40,9 +63,17 @@ namespace VrBattlegrounds.Arsenal
         /// <summary>Карточка крепится к своему слоту независимо от позы оружейного якоря.</summary>
         public void ConfigureCardPresentation(Vector3 slotLocalPosition, Vector2 size, float fontSize, Quaternion? slotLocalRotation = null)
         {
+            if (ArsenalPresentationApplicator.Resolve(this).IsStyled)
+                throw new System.InvalidOperationException("Styled card pose принадлежит presentation asset, не slot cache.");
+            ConfigureDerivedCardPresentation(slotLocalPosition, size, fontSize, slotLocalRotation ?? Quaternion.identity);
+        }
+
+        /// <summary>Только материализованный результат общего presenter, не источник следующей генерации.</summary>
+        public void ConfigureDerivedCardPresentation(Vector3 slotLocalPosition, Vector2 size, float fontSize, Quaternion slotLocalRotation)
+        {
             _customCardPresentation = true;
             _cardLocalPosition = slotLocalPosition;
-            _cardLocalEulerAngles = (slotLocalRotation ?? Quaternion.identity).eulerAngles;
+            _cardLocalEulerAngles = slotLocalRotation.eulerAngles;
             _cardSize = new Vector2(Mathf.Max(0.05f, size.x), Mathf.Max(0.05f, size.y));
             _cardFontSize = Mathf.Max(0.05f, fontSize);
         }
@@ -211,10 +242,17 @@ namespace VrBattlegrounds.Arsenal
             UxrGrabbableObject prefabGrabbable = _weaponInfo.WeaponPrefab.GetComponent<UxrGrabbableObject>();
             if (prefabGrabbable == null) return;
 
-            if (!string.IsNullOrEmpty(prefabGrabbable.Tag))
+            if (!string.IsNullOrEmpty(prefabGrabbable.Tag) && _configuredAnchorTag != prefabGrabbable.Tag)
+            {
                 _itemAnchor.AddCompatibleTags(prefabGrabbable.Tag);
+                _configuredAnchorTag = prefabGrabbable.Tag;
+            }
 
-            _itemAnchor.AddPlacingValidator(AcceptsItem);
+            if (!_placingValidatorAdded)
+            {
+                _itemAnchor.AddPlacingValidator(AcceptsItem);
+                _placingValidatorAdded = true;
+            }
         }
 
         /// <summary>Радиус укладки вокруг точки, где предмет висит на стене.</summary>
@@ -223,8 +261,7 @@ namespace VrBattlegrounds.Arsenal
         /// <summary>Поза предмета на стене: смещение из <see cref="WeaponInfo"/> относительно якоря.</summary>
         private void ApplyHangPose(Transform item)
         {
-            item.localPosition = _weaponInfo.WeaponPositionOffset;
-            item.localRotation = Quaternion.Euler(_weaponInfo.WeaponRotationOffset);
+            ArsenalPresentationApplicator.ApplyWeapon(this, item);
         }
 
         /// <summary>
@@ -267,7 +304,7 @@ namespace VrBattlegrounds.Arsenal
 
         /// <summary>
         /// Assigns a network-spawned item to the slot anchor based on <see cref="_weaponInfo"/>.
-        /// Override in subclasses to spawn decorative extras (magazines, etc.).
+        /// Отдельными запасными магазинами владеет ArsenalMagazineSupply.
         /// </summary>
         public virtual void AssignNetworkItem(GameObject spawnedItem)
         {
@@ -326,7 +363,7 @@ namespace VrBattlegrounds.Arsenal
 
         /// <summary>
         /// Removes spawned item from the slot.
-        /// Override in subclasses to clean up decorative extras.
+        /// Запасные магазины обслуживаются независимо от оружия.
         /// </summary>
         public virtual void DespawnItem()
         {
@@ -481,7 +518,9 @@ namespace VrBattlegrounds.Arsenal
             if (e.GrabbableObject != null)
             {
                 _spawnedItem = e.GrabbableObject.gameObject;
-                ApplyHangPose(_spawnedItem.transform);
+                // Styled anchor уже является SDK target: не прерываем его smooth interpolation старым offset snap.
+                if (!e.GrabbableObject.IsInSmoothTransition || !ArsenalPresentationApplicator.Resolve(this).IsStyled)
+                    ApplyHangPose(_spawnedItem.transform);
             }
 
             GameLog.Arsenal.Info($"[Arsenal] Item returned to slot '{DisplayName}'.");

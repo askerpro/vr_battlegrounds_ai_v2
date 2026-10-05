@@ -1,5 +1,17 @@
 # Changelog (Журнал изменений)
 
+## 2026-10-05 — Native authoring foundation bootstrap карты
+
+- Добавлены MapRoot/local bindings, typed MapRuntimeCatalog с canonical asset refs и полной проверкой spawn registry, read-only Editor MapRunPreflight с bounded отчётом и продолжением по отсутствующим sources; kind/debug exemptions определены на MapData без пересохранения map assets.
+- Полные namespaces serialized NI/UXR IDs проверяются в своей сцене. StationKey/UID алгоритм генератора не дублируются; placement станции сохраняется, grouping roots требуют identity transform.
+- Native root14/0 и adversarial6/0 после RED→GREEN, Android PASS. Шесть карт inventoried без сохранения; runtime registrations и gameplay не заявлены. Широкий runtime integration patch отклонён автоматической проверкой разрешений и не применён; [конкретный пакет](tasks/map-runtime-bootstrap-runtime-integration.md) вынесен отдельно.
+
+## 2026-10-04 — Первый контрактный срез запуска карты
+
+- Добавлены immutable MapRunConfig/Key/MatchIntent/StationConfig, pure MapRunResolver с frozen catalog/bindings, bounded целый MapRunSnapshot с явным Mirror serializer и keyed MapRunScope с reverse teardown.
+- Инертный MapRunAuthority на существующем SessionContext единолично публикует descriptor; stale scope/revision/session отвергаются. CompositionReady не разрешает gameplay Ready. Native MapRoot/catalog adapters, Series capture, policy gates и Relay admission остаются следующими срезами [плана](tasks/map-runtime-bootstrap-plan.md).
+- Временные probes: [18/18 contract PASS (локально)](tasks/report/map-runtime-bootstrap/contracts.json) и [2/2 teardown PASS (локально)](tasks/report/map-runtime-bootstrap/teardown-latest.json) после воспроизведения reentrant BeginRun RED и исправления по ревью; [финальный Android PASS (локально)](tasks/report/map-runtime-bootstrap/android-final.json), [SessionContext readback PASS (локально)](tasks/report/map-runtime-bootstrap/session-context.json). Existing EditMode-группы 20/21: отдельный отказ LegsAnimator на трёх чужих аватарах указан в design/XML. Socketless server и separate SyncVar deserialize не доказывают remote delivery/Quest. Baseline подтвердил partial ManagerBootstrap Ready и stale mode registration; остальные temporal traces открыты. Permanent gameplay tests и коммит кода ждут пользовательского принятия по AGENTS.md.
+
 ## 2026-10-05 — Рентген SDK preview на GrabPoint и общий frozen export
 
 - После человеческой приёмки MEF preview подключены выбранные Grabbable/точка/сторона. Snapshot читает unsaved bones через SDK preview core, использует один HandRenderer и ставит его на snap. Основной хват и поддержка анализируются отдельно. JSON/25 PNG и live overlay используют один fingerprint; pose assets не сохраняются.

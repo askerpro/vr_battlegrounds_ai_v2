@@ -91,7 +91,7 @@ def main():
     assert len(cases)==len(requests)+len(originals)==123
     for r in requests:
         assert (ROOT/Path(r['OutputDirectory']).name/'report.json').exists()
-    sdk=read(Path('Docs/audit/artifacts/hand-pose-fit-sdk-references-2026-10-04.json'))
+    sdk=read(Path('Docs/tasks/report/hand-pose-fit-2026-10-05/history/hand-pose-fit-sdk-references-2026-10-04.json'))
     reference_cases=[dict(Case=r['Case'],Avatar=r['AvatarName'],Weapon=r['ObjectName'],Role='sdk-nonweapon',Side=r['Settings']['Side'],NearFraction=r['WholeHandNearFraction'],Opposition=r['MeanNormalOpposition'],CrossingFraction=r['IntersectingHandTriangleFraction'],SelfPairs=r['HandSelfIntersectionPairs'],MaxSamplingDeltaPp=r['MaxSamplingNearDeltaPp']) for r in sdk['Cases']]
     native={(c['Weapon'],c['Role'],c['Avatar']):c for c in cases if c['Side']==('Right' if c['Role']=='primary' else 'Left')}
     pairs=[]
@@ -122,7 +122,7 @@ def main():
                           'Near0–2mm unsigned: рост может означать проникновение, а не улучшение.',
                           'Исходная поддержка пистолета может касаться другой кисти; saved pair MEF не равен runtime two-hand grip.',
                           'Сырые числа пересечений нельзя сравнивать без учёта плотности/складок разных перчаток.'])
-    artifact=Path('Docs/audit/artifacts/hand-pose-fit-mef-comparison-2026-10-04.json')
+    artifact=Path('Docs/tasks/report/hand-pose-fit-2026-10-05/history/hand-pose-fit-mef-comparison-2026-10-04.json')
     artifact.write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf-8')
     gallery(evidence)
     # Для отдельного node --check: проверка JS не требует браузера или сервера.

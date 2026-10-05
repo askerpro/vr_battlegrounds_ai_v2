@@ -313,11 +313,11 @@ def gallery(path, summary):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sdk', default='Docs/audit/artifacts/hand-pose-fit-sdk-references-2026-10-04.json')
-    parser.add_argument('--comparison', default='Docs/audit/artifacts/hand-pose-fit-mef-comparison-2026-10-04.json')
+    parser.add_argument('--sdk', default='Docs/tasks/report/hand-pose-fit-2026-10-05/history/hand-pose-fit-sdk-references-2026-10-04.json')
+    parser.add_argument('--comparison', default='Docs/tasks/report/hand-pose-fit-2026-10-05/history/hand-pose-fit-mef-comparison-2026-10-04.json')
     parser.add_argument('--fixtures', default='tmp/HandPoseFitQuality20261005/fixtures.json')
     parser.add_argument('--fresh-library')
-    parser.add_argument('--manifest', default='Tools/hand-pose-fit/quality-manifest-2026-10-05.json')
+    parser.add_argument('--manifest', default='Docs/tasks/report/hand-pose-fit-2026-10-05/history/quality-manifest-2026-10-05.json')
     parser.add_argument('--artifact', default='tmp/hand-pose-fit-quality-2026-10-05.json')
     parser.add_argument('--gallery', default='tmp/HandPoseFitQuality20261005/index.html')
     args = parser.parse_args()

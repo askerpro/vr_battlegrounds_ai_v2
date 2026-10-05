@@ -97,7 +97,7 @@ def contact_bar(case):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--library", type=Path, default=Path("Temp/HandPoseFit/sdk-reference-library"))
-    parser.add_argument("--artifact", type=Path, default=Path("Docs/audit/artifacts/hand-pose-fit-sdk-references-2026-10-04.json"))
+    parser.add_argument("--artifact", type=Path, default=Path("Docs/tasks/report/hand-pose-fit-2026-10-05/history/hand-pose-fit-sdk-references-2026-10-04.json"))
     args = parser.parse_args()
     cases = [summarize(x) for x in read(args.library / "requests.json")]
     controls = [summarize(x) for x in read(args.library / "control-requests.json")]

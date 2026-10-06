@@ -232,6 +232,26 @@ class BrokerStore:
                             lease_expires_at=now + self.lease_seconds, offer_expires_at=None)
             return self._get(connection, ticket_id)
 
+    def lease_maintenance(self, owner, base_sha, input_sha, agent_root, request_key):
+        """Служебная аренда при пустой очереди: создаётся сразу LEASED одной транзакцией.
+
+        Пауза обслуживания её не блокирует, а отказ не оставляет заявку в очереди."""
+        payload = _json(dict(base_sha=base_sha, input_sha=input_sha, agent_root=agent_root, output_roots=[]))
+        with self._transaction() as (connection, now):
+            busy = connection.execute(
+                "SELECT id FROM tickets WHERE phase IN (?,?,?,?,?,?,'QUEUED','OFFERED') LIMIT 1",
+                ACTIVE_PHASES).fetchone()
+            if busy is not None:
+                raise RuntimeError("Служебная аренда требует пустой очереди")
+            connection.execute("UPDATE metadata SET value = value + 1 WHERE key = 'epoch'")
+            epoch = connection.execute("SELECT value FROM metadata WHERE key = 'epoch'").fetchone()[0]
+            cursor = connection.execute(
+                "INSERT INTO tickets(owner,request_key,payload,phase,token,epoch,created_at,updated_at,lease_expires_at)"
+                " VALUES(?,?,?,'LEASED',?,?,?,?,?)",
+                (owner, request_key, payload, secrets.token_urlsafe(32), epoch, now, now, now + self.lease_seconds))
+            self._event(connection, cursor.lastrowid, "LEASED", now)
+            return self._get(connection, cursor.lastrowid)
+
     def is_paused(self):
         return self.hold()["paused"]
 

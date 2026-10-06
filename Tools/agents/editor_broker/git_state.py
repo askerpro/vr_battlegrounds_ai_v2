@@ -418,7 +418,19 @@ class GitState:
         self._apply(result, baseline, changed, result_sha, baseline_sha)
         # HEAD/index редактора возвращаются к B только после сохранения и проверки R.
         # Команда read-tree не вызывает hooks и не удаляет ignored файлы.
-        self._git("read-tree", baseline_sha)
+        # -m сохраняет stat-кэш совпадающих записей: без него status перехэширует весь
+        # worker (десятки ГБ и LFS-фильтр) — минуты на каждый finish. При смене
+        # .gitattributes кэш устарел (иные eol/filters), нужна полная перепроверка.
+        staged = self._git("diff-index", "--cached", "--name-only", "-z", baseline_sha).split(b"\x00")
+        policy_changed = any(PurePosixPath(os.fsdecode(name)).name == ".gitattributes" for name in staged if name)
+        self._git("read-tree", *(() if policy_changed else ("-m",)), baseline_sha)
+        # Перезаписанным _apply файлам stat обнуляется (--index-info): Git считает файл изменённым
+        # уже по размеру, а eol-материализация меняет его при том же blob. Остальные — из кэша.
+        rewritten = [name for name in changed if name in baseline]
+        if rewritten and not policy_changed:
+            self._git("update-index", "-z", "--index-info", data=b"".join(
+                baseline[name][0].encode() + b" " + baseline[name][1].encode() + b"\t" +
+                os.fsencode(name) + b"\x00" for name in rewritten))
         self._git("update-ref", "--no-deref", "HEAD", baseline_sha)
         if not self.is_clean() or self._snapshot(baseline_sha) != baseline:
             raise GitStateError("Не удалось подтвердить восстановление B")

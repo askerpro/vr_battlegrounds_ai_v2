@@ -3,7 +3,9 @@ import importlib.util
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -153,6 +155,30 @@ class GitStateTests(unittest.TestCase):
         self.assertEqual((self.root / "Library/cache").read_bytes(), b"cache")
         self.assertEqual((self.root / "Assets/Editor/VR_Battlegrounds/Debug/EditorBrokerLocal/bridge.cs").read_bytes(), b"bridge")
         self.assertEqual(self.git("show", result["ref"] + ":Assets/a.txt"), b"generated")
+
+    def test_restore_does_not_rehash_unchanged_files(self):
+        # clean-фильтр журналирует каждый перехэшируемый файл: в worker это LFS на десятках ГБ.
+        log = Path(self.temp.name) / "cleaned.log"
+        script = Path(self.temp.name) / "clean.py"
+        script.write_text("import shutil, sys\nopen(sys.argv[1], 'a').write(sys.argv[2] + '\\n')\n"
+                          "shutil.copyfileobj(sys.stdin.buffer, sys.stdout.buffer)\n", encoding="utf-8")
+        self.git("config", "filter.counter.clean", f'"{sys.executable}" "{script}" "{log}" %f')
+        self.write(".gitattributes", b"*.txt filter=counter\n")
+        self.git("add", ".gitattributes")
+        self.git("commit", "-qm", "counted filter")
+        self.base = self.gs.head()
+        # Как в настоящем worker: файлы старше индекса, иначе Git перехэширует их как «racy».
+        past = time.time() - 3600
+        for name in ("Assets/a.txt", "Assets/delete.txt", ".gitattributes", ".gitignore"):
+            os.utime(self.root / name, (past, past))
+        self.git("update-index", "--really-refresh")
+        self.write("Assets/new.txt", b"generated\n")
+        result = self.capture()
+        log.unlink(missing_ok=True)
+        self.gs.restore_captured(result["sha"], self.base)
+        cleaned = log.read_text(encoding="utf-8").split() if log.exists() else []
+        self.assertNotIn("Assets/a.txt", cleaned)
+        self.assertTrue(self.gs.is_clean())
 
     def test_restore_rejects_changes_after_capture_without_mutation(self):
         self.write("Assets/a.txt", b"generated")

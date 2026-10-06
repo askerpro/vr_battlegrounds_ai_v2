@@ -278,6 +278,23 @@ class EditorBrokerTests(unittest.TestCase):
             self.broker.publish_base(self.input, self.agent)
         self.assertEqual(GitState(self.editor).head(), self.base)
 
+    def test_publish_runs_during_maintenance_pause_and_keeps_it(self):
+        self.broker.store.set_paused(True)
+        result = self.broker.publish_base(self.input, self.agent)
+        self.assertEqual(result["baseline_sha"], self.input)
+        self.assertTrue(self.broker.store.is_paused())
+        phases = [ticket["phase"] for ticket in self.broker.store.status()["tickets"]]
+        self.assertEqual(phases, ["DONE"])
+
+    def test_refused_publish_leaves_no_maintenance_ticket(self):
+        waiting = self.broker.request("agent", self.base, self.input, self.agent, [], "waiting")
+        self.broker.store.set_paused(True)
+        with self.assertRaises(Exception):
+            self.broker.publish_base(self.input, self.agent)
+        owners = [ticket["owner"] for ticket in self.broker.store.status()["tickets"]]
+        self.assertEqual(owners, ["agent"])
+        self.assertEqual(self.broker.store.get(waiting["id"])["phase"], "QUEUED")
+
     def test_hard_stop_after_park_restores_durable_original_setup(self):
         ticket = self.claim()
         park = self.unity.park

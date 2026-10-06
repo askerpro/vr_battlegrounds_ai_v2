@@ -536,9 +536,9 @@ class EditorBroker:
                 raise BrokerError("Публикация требует чистый worker на текущей базе")
             snapshot = self._ready()
             old_base = self.config["baseline_sha"]
-            ticket = self.store.enqueue("_broker-maintenance", old_base, sha, str(Path(source_root).resolve()),
-                                         [], "publish-" + uuid.uuid4().hex)
-            ticket = self.store.claim(ticket["id"], "_broker-maintenance")
+            # Не через FIFO: пауза обслуживания не должна блокировать само обслуживание.
+            ticket = self.store.lease_maintenance("_broker-maintenance", old_base, sha,
+                                                  str(Path(source_root).resolve()), "publish-" + uuid.uuid4().hex)
             ticket_id, token = ticket["id"], ticket["token"]
             try:
                 self.store.transition(ticket_id, token, "SWITCHING", original_setup=self._snapshot_setup(snapshot),

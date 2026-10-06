@@ -9,7 +9,7 @@ namespace UltimateXR.Mechanics.Weapons
     public enum UxrFirearmNotReadyReason { NoMagazine, EmptyMagazine, ChamberingRequired }
     public enum UxrFirearmTriggerDecisionKind { FireAllowed, NotReady, PrepareOnlyConsumed, OtherDenied }
     public enum UxrFirearmShotEmissionOutcome { NotEmitted, Emitted, Indeterminate }
-    public enum UxrFirearmReadinessOperation { Initialize, MagazineChanged, BeginAction, Extract, Complete, Cancel, Shot, Reconcile, Automation, CloseOnly, EmptyRestAcknowledged }
+    public enum UxrFirearmReadinessOperation { Initialize, MagazineChanged, BeginAction, Extract, Complete, Cancel, Shot, Reconcile, Automation, CloseOnly, EmptyRestAcknowledged, AmmoAdmission }
 
     public readonly struct UxrFirearmTriggerDecision
     {
@@ -49,6 +49,31 @@ namespace UltimateXR.Mechanics.Weapons
             CycleSequence.GetHashCode() ^ ExtractedCycleSequence.GetHashCode() ^ Revision.GetHashCode() ^ ShotSequence.GetHashCode();
     }
 
+    /// <summary>Неизменяемый дополнительный shot, подготовленный автором до расхода.</summary>
+    public readonly struct UxrAdditionalShotPlan
+    {
+        public int ShotIndex { get; }
+        public Vector3 Position { get; }
+        public Quaternion Orientation { get; }
+        public UxrAdditionalShotPlan(int shotIndex, Vector3 position, Quaternion orientation)
+        { ShotIndex = shotIndex; Position = position; Orientation = orientation; }
+    }
+
+    [Serializable, Preserve]
+    public sealed class UxrAdditionalShotCommit : IUxrSerializable
+    {
+        public int ShotIndex;
+        public Vector3 Position;
+        public Quaternion Orientation;
+        public UxrFirearmShotEmissionOutcome Outcome;
+        public int SerializationVersion => 1;
+        public void Serialize(IUxrSerializer serializer, int version)
+        {
+            serializer.Serialize(ref ShotIndex); serializer.Serialize(ref Position);
+            serializer.Serialize(ref Orientation); serializer.SerializeEnum(ref Outcome);
+        }
+    }
+
     /// <summary>After-values конкретного магазина и патронника; DTO не является вторым живым store.</summary>
     [Serializable, Preserve]
     public sealed class UxrFirearmReadinessCommit : IUxrSerializable
@@ -62,13 +87,16 @@ namespace UltimateXR.Mechanics.Weapons
         public UxrFirearmShotEmissionOutcome EmissionOutcome;
         public Vector3 SourcePosition;
         public Quaternion SourceOrientation;
-        public int SerializationVersion => 1;
+        public UxrAdditionalShotCommit[] AdditionalShots;
+        public int SerializationVersion => 2;
         public void Serialize(IUxrSerializer serializer, int version)
         {
             serializer.Serialize(ref TriggerIndex); serializer.Serialize(ref ExpectedRevision); serializer.Serialize(ref NextRevision);
             serializer.SerializeUniqueComponent(ref ReferencedMagazine); serializer.Serialize(ref ReferencedMagazineIdentity); serializer.Serialize(ref MagazineRoundsAfter);
             serializer.SerializeAnyVar(ref StateAfter); serializer.SerializeEnum(ref Operation); serializer.SerializeEnum(ref EmissionOutcome);
             serializer.Serialize(ref SourcePosition); serializer.Serialize(ref SourceOrientation);
+            if (version >= 2) serializer.SerializeAnyVar(ref AdditionalShots);
+            else if (serializer.IsReading) AdditionalShots = null;
         }
     }
 }

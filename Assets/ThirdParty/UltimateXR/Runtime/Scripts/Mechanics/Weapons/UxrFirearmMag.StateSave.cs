@@ -16,11 +16,19 @@ namespace UltimateXR.Mechanics.Weapons
         {
             base.SerializeState(isReading, stateSerializationVersion, level, options);
 
-            if (level > UxrStateSaveLevel.ChangesSincePreviousSave)
+            // Fixed-only snapshot пишет firearm атомарно с C; отдельной загрузки M нет.
+            if (level > UxrStateSaveLevel.ChangesSincePreviousSave && !IsFixedAmmoStore)
             {
                 // VR Battlegrounds patch: late join получает реальный единственный store,
                 // даже если исходный cache захвачен после переноса патрона в патронник.
-                SerializeStateValue(level, options | UxrStateSaveOptions.DontCheckCache, nameof(_rounds), ref _rounds);
+                int serializedRounds = _rounds;
+                SerializeStateValue(level, options | UxrStateSaveOptions.DontCheckCache, nameof(_rounds), ref serializedRounds);
+                if (isReading)
+                {
+                    if (!IsFixedSnapshotRoundsValid(serializedRounds))
+                        throw new System.InvalidOperationException("Fixed store snapshot exceeds total capacity.");
+                    _rounds = serializedRounds;
+                }
             }
         }
 

@@ -58,6 +58,8 @@ namespace UltimateXR.Mechanics.Weapons
         /// </summary>
         private void Update()
         {
+            // VR Battlegrounds patch: opt-in ledger владеет manual action через внешний physical adapter.
+            if (_firearm != null && _firearm.UsesReadinessLedger(_triggerIndex)) return;
             if (_pump == null)
             {
                 return;

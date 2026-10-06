@@ -44,6 +44,8 @@ namespace UltimateXR.Mechanics.Weapons
         public bool IsReadyToFire(int triggerIndex)
         {
             if (!UsesReadinessLedger(triggerIndex)) return IsLoaded(triggerIndex);
+            if (IsAmmoAdmissionPending(triggerIndex) || _fixedAmmoSnapshotReading) return false;
+            if (HasFixedAmmoBinding(triggerIndex) && GetFixedAmmoStore(triggerIndex) == null) return false;
             var state = GetReadinessState(triggerIndex);
             return state != null && state.ReadinessInitialized && state.ChamberRound &&
                    !state.ChamberCyclePending && !state.ActionOpen && !_readinessFaulted.Contains(triggerIndex);
@@ -52,7 +54,8 @@ namespace UltimateXR.Mechanics.Weapons
         {
             var state = GetReadinessState(triggerIndex);
             if (!UsesReadinessLedger(triggerIndex) || state == null || !state.ReadinessInitialized ||
-                !CanUse || state.ActionOpen || state.ChamberCyclePending || _readinessFaulted.Contains(triggerIndex))
+                (HasFixedAmmoBinding(triggerIndex) && GetFixedAmmoStore(triggerIndex) == null) ||
+                !CanUse || _fixedAmmoSnapshotReading || IsAmmoAdmissionPending(triggerIndex) || state.ActionOpen || state.ChamberCyclePending || _readinessFaulted.Contains(triggerIndex))
                 return new UxrFirearmTriggerDecision(UxrFirearmTriggerDecisionKind.OtherDenied);
             if (state.ChamberRound) return new UxrFirearmTriggerDecision(UxrFirearmTriggerDecisionKind.FireAllowed);
             var mag = GetCurrentReadinessMagazine(triggerIndex);
@@ -68,8 +71,9 @@ namespace UltimateXR.Mechanics.Weapons
                    mag.GetComponent<UxrFirearmMag>() != null ? mag : null;
         }
         private bool CanOwnReadiness(int triggerIndex) => UsesReadinessLedger(triggerIndex) && !IsReadinessReplay &&
-            !_readinessCommitting.Contains(triggerIndex) && CanAuthorReadinessAction?.Invoke(triggerIndex) == true;
+            !_fixedAmmoSnapshotReading && !IsAmmoAdmissionPending(triggerIndex) && !_readinessCommitting.Contains(triggerIndex) && CanAuthorReadinessAction?.Invoke(triggerIndex) == true;
         private bool CanWriteReadiness(int triggerIndex) => CanOwnReadiness(triggerIndex) &&
+            (!HasFixedAmmoBinding(triggerIndex) || GetFixedAmmoStore(triggerIndex) != null) &&
             isActiveAndEnabled && CanUse && TryGetTriggerMagazineAnchor(triggerIndex, out var anchor) && anchor.isActiveAndEnabled &&
             !_readinessFaulted.Contains(triggerIndex);
         private bool TryGetWritableState(int triggerIndex, uint revision, out UxrFirearmReadinessState state)
@@ -240,7 +244,8 @@ namespace UltimateXR.Mechanics.Weapons
         [Preserve]
         private bool ApplyReadinessCommit(UxrFirearmReadinessCommit commit)
         {
-            if (commit == null || commit.Operation == UxrFirearmReadinessOperation.Shot || !ValidateReadinessCommit(commit)) return false;
+            if (commit == null || commit.Operation == UxrFirearmReadinessOperation.Shot ||
+                commit.Operation == UxrFirearmReadinessOperation.AmmoAdmission || !ValidateReadinessCommit(commit)) return false;
             bool endAttempted = false;
             bool extractedRound = commit.Operation == UxrFirearmReadinessOperation.Extract && _runtimeTriggers[commit.TriggerIndex].Readiness?.ChamberRound == true;
             Exception failure = null;
@@ -266,9 +271,10 @@ namespace UltimateXR.Mechanics.Weapons
         {
             if (commit == null || commit.StateAfter == null ||
                 (int)commit.Operation < (int)UxrFirearmReadinessOperation.Initialize ||
-                (int)commit.Operation > (int)UxrFirearmReadinessOperation.EmptyRestAcknowledged || !UsesReadinessLedger(commit.TriggerIndex) ||
+                (int)commit.Operation > (int)UxrFirearmReadinessOperation.AmmoAdmission || !UsesReadinessLedger(commit.TriggerIndex) ||
                 !_runtimeTriggers.TryGetValue(commit.TriggerIndex, out var runtime) || _readinessCommitting.Contains(commit.TriggerIndex) ||
-                (!IsReadinessReplay && !(commit.Operation == UxrFirearmReadinessOperation.Cancel ||
+                (!IsReadinessReplay && !(commit.Operation == UxrFirearmReadinessOperation.AmmoAdmission ? CanCommitAmmoAdmission(commit.TriggerIndex) :
+                    commit.Operation == UxrFirearmReadinessOperation.Cancel ||
                     commit.Operation == UxrFirearmReadinessOperation.MagazineChanged || commit.Operation == UxrFirearmReadinessOperation.Reconcile
                         ? CanOwnReadiness(commit.TriggerIndex) : CanWriteReadiness(commit.TriggerIndex)))) return false;
             uint revision = runtime.Readiness?.Revision ?? 0;
@@ -282,7 +288,10 @@ namespace UltimateXR.Mechanics.Weapons
             if (mag == null) return commit.ReferencedMagazineIdentity == Guid.Empty && commit.MagazineRoundsAfter == 0 && commit.StateAfter.CurrentMagazine == null;
             var ammo = mag.GetComponent<UxrFirearmMag>();
             return mag.UniqueId != Guid.Empty && commit.ReferencedMagazineIdentity == mag.UniqueId && ammo != null &&
-                   commit.MagazineRoundsAfter <= ammo.Capacity && commit.StateAfter.CurrentMagazine == mag;
+                   ammo.IsFixedStoreBindingValid(this, commit.TriggerIndex) &&
+                   commit.MagazineRoundsAfter <= ammo.Capacity &&
+                   (!ammo.IsFixedAmmoStore || commit.MagazineRoundsAfter + (commit.StateAfter.ChamberRound ? 1 : 0) <= ammo.Capacity) &&
+                   commit.StateAfter.CurrentMagazine == mag;
         }
 
         private bool ValidatePostShotEmptyActionCommit(UxrFirearmReadinessCommit commit, UxrFirearmReadinessState before)
@@ -298,6 +307,7 @@ namespace UltimateXR.Mechanics.Weapons
                 case UxrFirearmReadinessOperation.MagazineChanged:
                 case UxrFirearmReadinessOperation.Reconcile:
                 case UxrFirearmReadinessOperation.CloseOnly:
+                case UxrFirearmReadinessOperation.AmmoAdmission:
                     return after.PostShotEmptyAction == (before?.PostShotEmptyAction == true);
                 default:
                     return !after.PostShotEmptyAction;
@@ -314,6 +324,12 @@ namespace UltimateXR.Mechanics.Weapons
         }
         private bool ValidateShotCommit(UxrFirearmReadinessCommit commit, UxrFirearmReadinessState before)
         {
+            if (!ValidateShotDescriptor(_triggers[commit.TriggerIndex].ProjectileShotIndex, commit.SourcePosition, commit.SourceOrientation) ||
+                commit.AdditionalShots != null && commit.AdditionalShots.Length > MaximumAdditionalShots) return false;
+            if (commit.AdditionalShots != null)
+                foreach (var shot in commit.AdditionalShots)
+                    if (shot == null || !ValidateShotDescriptor(shot.ShotIndex, shot.Position, shot.Orientation) ||
+                        (int)shot.Outcome < 0 || (int)shot.Outcome > (int)UxrFirearmShotEmissionOutcome.Indeterminate) return false;
             if (before?.ReadinessInitialized != true || !before.ChamberRound || before.ActionOpen ||
                 before.ChamberCyclePending || before.ShotSequence == uint.MaxValue ||
                 commit.ReferencedMagazine != before.CurrentMagazine ||
@@ -346,7 +362,7 @@ namespace UltimateXR.Mechanics.Weapons
             runtime.HasReloaded = runtime.Readiness.ChamberRound && !runtime.Readiness.ChamberCyclePending && !runtime.Readiness.ActionOpen;
             // Rounds setter записывает значение ДО RoundsChanged: подписчик видит согласованные M/C.
             // Отказ уведомления не откатывает расход/revision и не инициирует повтор.
-            try { if (commit.ReferencedMagazine != null) commit.ReferencedMagazine.GetComponent<UxrFirearmMag>().Rounds = commit.MagazineRoundsAfter; }
+            try { if (commit.ReferencedMagazine != null) commit.ReferencedMagazine.GetComponent<UxrFirearmMag>().WriteLedgerRounds(this, commit.TriggerIndex, commit.MagazineRoundsAfter, true); }
             catch (Exception exception) { return exception; }
             return null;
         }
@@ -370,10 +386,44 @@ namespace UltimateXR.Mechanics.Weapons
             var commit = CreateReadinessCommit(triggerIndex, state, GetCurrentReadinessMagazine(triggerIndex), rounds, UxrFirearmReadinessOperation.Shot);
             var source = _weaponSource.ShotTypes[shotIndex].ShotSource;
             commit.SourcePosition = source.position;
-            commit.SourceOrientation = ShotOrientationModifier != null ? ShotOrientationModifier(triggerIndex, source.rotation) : source.rotation;
             commit.EmissionOutcome = UxrFirearmShotEmissionOutcome.Emitted;
+            // Producer — только автор. Guard запрещает синхронную повторную запись из delegate.
+            _readinessCommitting.Add(triggerIndex);
+            try
+            {
+                commit.SourceOrientation = ShotOrientationModifier != null ? ShotOrientationModifier(triggerIndex, source.rotation) : source.rotation;
+                if (!ValidateShotDescriptor(shotIndex, commit.SourcePosition, commit.SourceOrientation)) return false;
+                var plan = AdditionalShotPlan != null ? AdditionalShotPlan(triggerIndex) : null;
+                if (plan != null)
+                {
+                    if (plan.Length > MaximumAdditionalShots) return false;
+                    commit.AdditionalShots = new UxrAdditionalShotCommit[plan.Length];
+                    for (int i = 0; i < plan.Length; i++)
+                    {
+                        var shot = plan[i];
+                        if (!ValidateShotDescriptor(shot.ShotIndex, shot.Position, shot.Orientation)) return false;
+                        commit.AdditionalShots[i] = new UxrAdditionalShotCommit { ShotIndex = shot.ShotIndex,
+                            Position = shot.Position, Orientation = shot.Orientation, Outcome = UxrFirearmShotEmissionOutcome.NotEmitted };
+                    }
+                }
+            }
+            catch { return false; }
+            finally { _readinessCommitting.Remove(triggerIndex); }
+            if (!CanWriteReadiness(triggerIndex) || !IsReadyToFire(triggerIndex)) return false;
             return CommitShotSynced(commit);
         }
+        public const int MaximumAdditionalShots = 31;
+        public Func<int, UxrAdditionalShotPlan[]> AdditionalShotPlan { get; set; }
+        private bool ValidateShotDescriptor(int index, Vector3 position, Quaternion orientation)
+        {
+            if (_weaponSource == null || index < 0 || index >= _weaponSource.ShotTypes.Count ||
+                _weaponSource.ShotTypes[index].ShotSource == null || _weaponSource.ShotTypes[index].ProjectilePrefab == null) return false;
+            if (!Finite(position.x) || !Finite(position.y) || !Finite(position.z) ||
+                !Finite(orientation.x) || !Finite(orientation.y) || !Finite(orientation.z) || !Finite(orientation.w)) return false;
+            float norm = Quaternion.Dot(orientation, orientation);
+            return Mathf.Abs(norm - 1f) <= 0.001f;
+        }
+        private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         [Preserve]
         private bool CommitShotSynced(UxrFirearmReadinessCommit commit)
         {
@@ -406,7 +456,23 @@ namespace UltimateXR.Mechanics.Weapons
                     }
                     finally { _shootingLocally = false; }
                 }
-                if (!replay && success)
+                if (commit.AdditionalShots != null)
+                {
+                    foreach (var shot in commit.AdditionalShots)
+                    {
+                        // Автор прекращает batch после первого отказа. Replay выпускает только доказанные Emitted.
+                        if (!replay && (!success || failure != null)) break;
+                        if (replay && shot.Outcome != UxrFirearmShotEmissionOutcome.Emitted) continue;
+                        UxrFirearmShotEmissionOutcome outcome;
+                        Exception sourceFailure;
+                        _shootingLocally = !replay;
+                        try { success = _weaponSource.TryShootWithOutcome(shot.ShotIndex, shot.Position, shot.Orientation, out outcome, out sourceFailure); }
+                        finally { _shootingLocally = false; }
+                        if (!replay) shot.Outcome = outcome;
+                        if (sourceFailure != null) failure = failure == null ? sourceFailure : new AggregateException(failure, sourceFailure);
+                    }
+                }
+                if (!replay && success && failure == null)
                 {
                     runtime.RecoilTimer = trigger.RecoilDurationSeconds;
                     try { trigger.ShotAudio?.Play(commit.SourcePosition); OnProjectileShot(commit.TriggerIndex); }
@@ -416,10 +482,16 @@ namespace UltimateXR.Mechanics.Weapons
             }
             catch (Exception exception) { if (failure == null) failure = exception; }
             finally { if (!endAttempted) CancelSync(); _readinessCommitting.Remove(commit.TriggerIndex); }
-            if (failure != null || commit.EmissionOutcome != UxrFirearmShotEmissionOutcome.Emitted)
+            var aggregateOutcome = commit.EmissionOutcome;
+            if (commit.AdditionalShots != null)
+                foreach (var shot in commit.AdditionalShots)
+                    if (shot.Outcome == UxrFirearmShotEmissionOutcome.Indeterminate) aggregateOutcome = UxrFirearmShotEmissionOutcome.Indeterminate;
+                    else if (shot.Outcome == UxrFirearmShotEmissionOutcome.NotEmitted && aggregateOutcome == UxrFirearmShotEmissionOutcome.Emitted)
+                        aggregateOutcome = UxrFirearmShotEmissionOutcome.NotEmitted;
+            if (failure != null || aggregateOutcome != UxrFirearmShotEmissionOutcome.Emitted)
             {
                 _readinessFaulted.Add(commit.TriggerIndex);
-                ReadinessFaulted?.Invoke(commit.TriggerIndex, commit.EmissionOutcome, failure);
+                ReadinessFaulted?.Invoke(commit.TriggerIndex, aggregateOutcome, failure);
                 return false;
             }
             return success;

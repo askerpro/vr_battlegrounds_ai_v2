@@ -493,7 +493,9 @@ namespace UltimateXR.Manipulation
         /// </summary>
         /// <param name="otherTag">Tag to check whether it is compatible</param>
         /// <returns>Whether the tag is compatible</returns>
-        private bool IsCompatibleObjectTag(string otherTag)
+        // VR Battlegrounds patch 49: public — статическая совместимость по тегу без валидаторов размещения
+        // (карман выбирает предмет для оружия в руке, а не разрешение положить его прямо сейчас).
+        public bool IsCompatibleObjectTag(string otherTag)
         {
             if (_compatibleTags == null || _compatibleTags.Count == 0)
             {

@@ -20,8 +20,12 @@ namespace VrBattlegrounds.EditorTools
         }
         public static string ArsenalFingerprint(Arsenal.ArsenalPreset preset) => AssetHash(AssetDatabase.GetAssetPath(preset));
 
-        public static object Validate(MapRuntimeCatalog catalog, IReadOnlyList<GameObject> registeredPrefabs)
+        public static object Validate(MapRuntimeCatalog catalog, IReadOnlyList<GameObject> registeredPrefabs) =>
+            Validate(catalog, registeredPrefabs, out _);
+
+        public static object Validate(MapRuntimeCatalog catalog, IReadOnlyList<GameObject> registeredPrefabs, out bool passed)
         {
+            passed = false;
             if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling)
                 throw new InvalidOperationException("Preflight требует idle Editor.");
             var failures = new List<string>(); var maps = new List<object>();
@@ -68,6 +72,7 @@ namespace VrBattlegrounds.EditorTools
             const string path = "Docs/tasks/report/map-runtime-bootstrap/details/preflight.json";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(new { passed = failures.Count == 0, failures, maps }, Newtonsoft.Json.Formatting.Indented));
+            passed = failures.Count == 0;
             return new { passed = failures.Count == 0, failureCount = failures.Count, mapCount = maps.Count,
                 failures = failures.Take(10).ToArray(), reportPath = path };
         }

@@ -94,7 +94,7 @@ Editor tools только `Assets/Editor/VR_Battlegrounds/Maps/`: MapRunPrefligh
 
 ## Задача 3. MapRoot preflight и composition primitives под закрытым gate
 
-**Состояние 2026-10-05:** authoring foundation реализован и проверен: MapRoot/native catalog/preflight, root14/0 и adversarial6/0 после фактического RED, Android PASS. Runtime integration (bootstrap/admission и actor hooks) не применена: автоматическая проверка отклонила общий пакет как широкий production lifecycle risk. Его [конкретные границы и приёмка](map-runtime-bootstrap-runtime-integration.md) предъявлены для разрешения; task3 целиком не завершён. Binding schema генератора теперь существует; source stage1 принят root, registration/composer ещё впереди.
+**Состояние 2026-10-06:** authoring foundation проверен (root14/0, adversarial6/0 после RED). Runtime integration разрешена пользователем и реализована в ветке `claude/map-runtime-bootstrap`: MapBootstrap (prepare → spawn служебных объектов → CompositionReady → разминка → server Ready), MapRunAdmission, хуки MapReferee/арсенала/AvatarManager/Series/MapLoader; вместе с ней закрыт минимальный срез задачи 4 (захваченный режим серии, коммит режима и эпоха). AndroidCompileGate PASS. Миграция сцен (задача 6) подготовлена инструментом и ждёт применения; Play Mode и приёмка не выполнены. Стык с генератором (client run point, готовность для Relay, Closing) согласован в дизайне.
 
 **Зависимости:** tasks1/2; generator owner передал минимальную schema/API ArsenalStationCompositionBinding с единственным StationKey и exclusive authored/generated mode. Это lightweight handoff до runtime generation GREEN; bootstrap не создаёт конкурирующий key компонент. Stage3 probe использует explicit captured-mode request; production Series capture замыкается task4.
 

@@ -2,11 +2,11 @@
 
 | Цель | Мы здесь | Осталось выполнить | Технический документ |
 |---|---|---|---|
-| Подключить проверенный паспорт/refs карты к inert runtime composition | MapRoot/catalog/preflight foundation проверен: root14/0, adversarial6/0 после RED, Android PASS. Production карты работают по legacy пути | Разрешение отклонённого runtime-пакета, native lifecycle gates и isolated composition proof; потом mode/Relay stages и адресная миграция | Этот документ; [план](map-runtime-bootstrap-plan.md) |
+| Подключить проверенный паспорт/refs карты к runtime composition | Пакет разрешён пользователем 2026-10-06 и реализован в ветке `claude/map-runtime-bootstrap`: MapBootstrap, MapRunAdmission, хуки владельцев, инструмент миграции; Android PASS, dry run 5/6 (шестая исправлена) | Применить миграцию сцен, Play Mode, EditMode-регресс, приёмка в шлеме; Relay-барьер и генерируемые станции — задачи 5/7 | Этот документ; [план](map-runtime-bootstrap-plan.md), [handoff](map-runtime-bootstrap-handoff.md) |
 
 ## Почему пакет выделен
 
-Автоматическая проверка разрешений отклонила общий патч с MapBootstrap/admission, MapReferee, арсеналом и AvatarManager. Причина: «широкое production-impacting изменение с риском блокировки gameplay и не является узким локальным срезом». Патч не был применён: новых MapBootstrap/MapRunAdmission/MapRunServiceBinding в Assets нет, actor hooks им не изменены. Этот документ предъявляет конкретные границы для разрешения; обход отказа через последовательное применение того же патча запрещён.
+Автоматическая проверка разрешений отклонила общий патч с MapBootstrap/admission, MapReferee, арсеналом и AvatarManager. Причина: «широкое production-impacting изменение с риском блокировки gameplay и не является узким локальным срезом». Патч не был применён: новых MapBootstrap/MapRunAdmission/MapRunServiceBinding в Assets нет, actor hooks им не изменены. Этот документ предъявил конкретные границы; 2026-10-06 пользователь явно разрешил пакет («продолжай до полного завершения интеграции и миграции»). Фактическое состояние реализации — в [handoff](map-runtime-bootstrap-handoff.md); адресная миграция сцен выполнена отдельным инструментом `MapBootstrapMigration`, а не этим пакетом.
 
 ## Предлагаемое поведение
 

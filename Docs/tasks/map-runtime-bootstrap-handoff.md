@@ -2,51 +2,90 @@
 
 | Цель | Мы здесь | Осталось выполнить | Технический документ |
 |---|---|---|---|
-| Перевести карты на единый immutable run и управляемую runtime composition | Контрактный и authoring срезы применены в активном worktree; checkpoint включает необходимые source-зависимости арсенала | Runtime composition/admission, mode transitions, Relay, адресная миграция карт и пользовательская приёмка | [Дизайн](map-runtime-bootstrap-design.md), [план](map-runtime-bootstrap-plan.md), [runtime-интеграция](map-runtime-bootstrap-runtime-integration.md) |
+| Перевести карты на единый immutable run и управляемую runtime composition | Runtime-интеграция (MapBootstrap, допуск, владельцы) написана и компилируется под Android; инструмент миграции прошёл dry run 5/6 карт, исправлен под шестую | Применить миграцию сцен через аренду, Play Mode на worker, прогон EditMode, проверка пользователем в шлеме, затем Relay-барьер и генерируемые станции | [Дизайн](map-runtime-bootstrap-design.md), [план](map-runtime-bootstrap-plan.md), [runtime-интеграция](map-runtime-bootstrap-runtime-integration.md) |
 
 ## Действующий срез
 
-Рабочая копия: `F:\UnityProjects\Vr_Battlegrounds_ai`, ветка `dev`. Реализация находится здесь; отдельной копии кода или пакета, который ещё требуется применить, нет. Checkpoint не равен полной миграции: существующие production карты продолжают legacy flow.
+Рабочая копия: linked worktree `F:\CodexWorktrees\map-runtime-bootstrap\Vr_Battlegrounds_ai`, ветка
+`claude/map-runtime-bootstrap` поверх текущего `dev`. Правки не закоммичены; Unity-изменения идут только
+через `Tools/agents/editor-broker.py`. Пакет runtime-интеграции, ранее отклонённый автоматической проверкой,
+пользователь разрешил явно: «продолжай до полного завершения интеграции и миграции».
 
-- `MapRunConfig`, `MapRunResolver`, `MapRunScope`, `MapRunSnapshot`: immutable inputs, bounded Mirror wire contract, revision/key проверки и отмена с reverse teardown.
-- `MapRunAuthority`: единственный writer на существующем SessionContext. `CommitPrepared` публикует CompositionReady; gameplay Ready не открывается. Защита от повторного BeginRun из cancellation/release callbacks уже применена.
-- `MapRoot`: frozen local bindings, canonical MapData, hierarchy/placement и whole-scene serialized identity validation. StationKey принадлежит `ArsenalStationCompositionBinding`.
-- `MapRuntimeCatalog` и Editor `MapRunPreflight`: native adapter, canonical asset refs, prefab namespace, dependency fingerprints и точные failures. Центральный catalog asset ещё не создан и не установлен.
-- На MapData добавлены kind/debug exemptions. Существующие MapData assets и сцены этим срезом не мигрировались; их корректные значения назначить при адресной миграции.
+Контрактный и authoring срезы (`MapRunConfig`/`Resolver`/`Scope`/`Snapshot`, `MapRunAuthority`, `MapRoot`,
+`MapRuntimeCatalog`, `MapRunPreflight`, kind на `MapData`) уже в `dev`. Поверх них в ветке:
 
-## Source-зависимости checkpoint
+- `MapBootstrap` (на `MapRoot`) — единственный серверный запуск карты: ValidateBindings → Resolve (режим из
+  `Series.CapturedModeId`, иначе выбор админа, лобби — NoMatch) → BeginRun → Prepare пресета станций → спавн
+  `MapReferee` и `ArsenalEquipmentCoordinator` из каталога в сцену карты → CommitPrepared (CompositionReady) →
+  `MapReferee.ServerStartRun` → server Ready → отложенные аватары. Отказ — `GameLog.Error` с кодом. Клиент
+  связывает координатор со станциями по netId из descriptor и сверяет отпечаток содержимого карты.
+- `MapRunAdmission` — производный допуск без собственного состояния: gameplay сцены без `MapBootstrap`
+  открыт (стенды), очередь аватаров до Ready — один запрос на сессию.
+- Владельцы: `MapReferee` (InitializeRun/ServerStartRun, публикация только в `ServerSwitchTo`, режим — отдельный
+  сетевой корень, клиент принимает режим только с netId из descriptor), `ArsenalWallController` (первичное
+  пополнение после допуска), `AvatarManager` (спавн через допуск), `Series` (CapturedModeId, снаряжение
+  снимается после `MapLoader.CanAcceptLoad`), `MapLoader` (LoadMap → bool, IsLoading до конца загрузки Mirror),
+  `GameNetworkManager` (ссылка на каталог).
+- Closing: `MapLoader.MapLoadStarted` → `MapRunAuthority.Close` (статус `Closing`, `MapRunScope.Close()` отменяет
+  токен без teardown). Допуск, коммит режима и все выдачи предметов (`ReplenishSlotsWhere`, `ArsenalMagazineSupply.SpawnStock`,
+  `PlayerLoadoutManager.ServerEnsureMagazines`/`ServerGiveWeapon`, покупка бота) закрыты
+  до выгрузки; teardown — по-прежнему `Retire` на выгрузке. Это пункт 3 стыка с генератором, сделан заранее.
+- Editor: `MapBootstrapMigration` (DryRun/Apply/RebakeCatalog, меню `Tools/VR Battlegrounds/Maps/Map Bootstrap/`)
+  и `MapCatalogBuildStep` (запечка и preflight перед сборкой, отказ ломает сборку).
 
-Включить исходники и `.meta` следующих producer-компонентов, чтобы checkpoint не ссылался на будущий незакоммиченный пакет: `ArsenalPreset`, `ArsenalStationCompositionBinding`, `ArsenalStationPresetBinding`, `ArsenalPresentationStyle`, `ArsenalPresentationResolver`, `ArsenalPresentationApplicator`, `ArsenalMagazineOffer`, `ArsenalMagazineSupply`, `MagazineManipulationHistory`.
+Неуправляемый путь `MapReferee` (сцена без `MapBootstrap`) сохранён для стендов и тестов; для карт реестра он
+пишет Warning. Удалить после приёмки вместе с правкой тестов.
 
-Связанные изменения `ArsenalSlotController`, `ArsenalPriceTag`, `ArsenalGrabRule`, поле `MapData.arsenalPreset` и read-only API `ArsenalWallController.LostItemReplaceDelay` также входят. Отключение прежней выдачи магазинов в FirearmSlotController и новые preset/refill lifecycle hooks стены не являются source-зависимостями bootstrap; они остаются в producer-задаче вместе с миграцией assets. Эти классы сохраняют producer ownership; bootstrap не присваивает себе их manifest/UID алгоритм. Generator/composer, редакторские инструменты генератора, migration assets и прочие задачи общего worktree в checkpoint не входят. Изменения WeaponInfo/readiness не требуются этому source-срезу.
+Решение без отдельного согласования: транзакцию смены режима со «спящим» кандидатом не делали. Каталог
+проверяет все префабы режимов до старта карты, поэтому между уничтожением старого режима и коммитом нового
+отказов не остаётся.
 
 ## Проверки и пределы
 
-При подготовке checkpoint повторно прошли contract 18/18, teardown 2/2, root 14/14 и AndroidCompileGate. Штатный компилятор Unity отдельно скомпилировал 349 game source файлов из индекса без ошибок: исходники других незакоммиченных задач не использовались, внешние SDK/package assemblies взяты из текущего Editor. Это source closure check, не proof полного чистого checkout всех внешних SDK. Сохранённый adversarial 6/6 не повторялся; teardown и adversarial имеют фактический RED до исправления. Inventory шести карт проверяет serialized IDs/world transforms, а не live SDK registration.
+База — `dev` 45ef9f6c (с ручным заряжанием дробовиков). Последние прогоны на worker:
 
-Existing EditMode группы: 20/21. Единственный отказ — LegsAnimator/bridge на трёх аватарах, которые bootstrap не менял. Не объявлять общий regression GREEN и не переписывать это ожидание до принятия игровой логики. MCP init timeout одного запуска не означал отсутствие native выполнения: итоговый XML сохранён, повтор не нужен без новой причины.
-
-Отчёты конкретных прогонов и полная история прогресса находятся в [локальном пакете](report/map-runtime-bootstrap/). Он игнорируется Git по AGENTS.md. `checkpoint-manifest.json` содержит состав, hashes и статус подготовленного индекса; `progress-history.md` сохраняет исходный ledger. Для другого компьютера пакет нужно передать отдельно вместе с репозиторием. Актуальные архитектура и следующие действия сохранены в tracked документах независимо от доступности локальных отчётов.
+- AndroidCompileGate PASS. Миграция применена: 6/6 карт, preflight каталога 6/6, иерархия и
+  площадка PASS, окклюзия перезапечена. Сегменты границы зон восстановлены генератором: 16 на каждой
+  боевой карте, мировые позы совпадают с исходными до 0.
+- Play Mode, хост: Lobby (ключ /1) → TestMap1 (/2) → GoLive → Pause → Resume → Lobby (/3). На каждом
+  шаге `MapBootstrap` Ready, аватар 1, оружие и магазины на стенах (50/50 в лобби, 80/80 на TestMap1),
+  эпоха режима 1→2→3→4. TestMap2, TestMap3, ServiceYard, ReferenceMap04 доходят до Ready.
+- EditMode по группам (лимит списка падений MCP — 25, поэтому прогон по пространствам имён) против
+  чистого dev: 49 падений в dev, на ветке добавилось одно — `GameModeWiringTests.В_сцене_лобби_есть_оркестратор_режима`
+  (ждёт сценовый MapReferee, теперь его спавнит MapBootstrap) — устаревшее ожидание, править после приёмки.
+  Группа Prefabs в dev падает >50 раз (позы рук, обратная связь оружия); затрагиваемые классы
+  (PrefabComposition, NetworkAssetIdOnDisk, UxrUniqueIdOnDisk/Stability, GameTags, OutOfWorldGuard,
+  WeaponScale) сравнены точечно.
+- Сканы всей сцены (сетевые sceneId, UltimateXR id) в рантайме отключены: UxrManager навешивает
+  `UxrCanvas` с пустым id на world-space канвасы (known-issues, Issue 36). Ограничение: проверка станций
+  по-прежнему требует непустые id всех UXR-компонентов внутри станции — world-space канвас на станции
+  дал бы такой же ложный отказ; сейчас его нет.
+- Не проверено: два клиента (поздний вход, descriptor/режим по netId), выделенный сервер, шлем.
+  Барьер начального состояния `NetworkStateRelay` не реализован (задачи 5/7).
 
 ## Следующее действие
 
-1. Проверить текущий индекс/HEAD и прочитать runtime integration write-set. Автоматическая проверка отклонила прежний широкий патч bootstrap/admission + network/referee/arsenal/avatar lifecycle из-за риска блокировки gameplay. Он не применён. Не применять его частями как обход отказа; требуется разрешение этого конкретного пакета либо новое согласованное решение меньшего объёма.
-2. Продолжить задачу 3: opt-in MapBootstrap с keyed prepare/spawn/teardown и закрытыми actor gates. Создать собственные catalog/service assets и scoped fixtures. Не удалять legacy services в существующих сценах до migration slice.
-3. Задача 4: captured Series intention, mode prepare/commit и policy admission. Задачи 5–8: настоящий SDK registration/Relay proof, local admission, initial/direct Editor start, адресная миграция и cleanup legacy flow. Проверить точные разделы плана перед правками.
-4. Не объявлять CompositionReady игровым Ready; remote LocalPlayable не доказывается socketless probe, fake ACK или таймером. Dedicated/start без SceneChanged и callback ordering обязательны.
+1. Проверка пользователем в шлеме (список — в итоговом сообщении задачи), затем коммит.
+2. После приёмки: поправить `GameModeWiringTests` (MapReferee спавнится, а не лежит в лобби), закрепить
+   тестами MapBootstrap/MapRunAdmission/Closing и класс «выдача предмета мимо допуска».
+3. Удалить неуправляемый путь MapReferee вместе с тестами, которые на него опираются.
+
+После приёмки закрепить тестом класс «выдача предмета мимо допуска»: каждый вызов
+`NetworkUxrIdentity.CreateInstance` в игровом коде (кроме Debug-стендов) стоит за проверкой `MapRunAdmission`.
+
+Отложено: Relay-барьер (задача 5), генерируемые станции и их admission (задача 7, стык с генератором
+арсенала), удаление неуправляемого пути `MapReferee`.
 
 ## Как продолжить проверку
 
-Unity общий. До acquire подготовить конкретный пакет, при nonzero acquire завершить команду без Unity action. После completion/cleanup немедленно release, затем анализировать.
-
 ```text
-После checkpoint/request/watch-ticket/claim/begin своей заявки:
-python Tools/agents/editor-broker.py guard --ticket <ticket> --token <token>
-execute_code: return VrBattlegrounds.EditorTools.MapRunContractProbe.Run();
+checkpoint → request → watch-ticket → claim → begin → guard
+execute_code: return VrBattlegrounds.EditorTools.MapBootstrapMigration.DryRun();
+execute_code: return VrBattlegrounds.EditorTools.MapBootstrapMigration.Apply();
 execute_code: return VrBattlegrounds.EditorTools.AndroidCompileGate.Run();
-python Tools/agents/editor-broker.py finish --ticket <ticket> --token <token>
+finish → receive
 ```
 
-Остальные temporary method-body probes лежат в `Tools/Probes/MapRuntimeBootstrap/`: root-preflight, catalog-adversarial, teardown, baseline, lifecycle-baseline и native-inventory. `index-compile.cs` экспортирует references/defines для source closure check штатным csc Unity; локальный `prepare-checkpoint.py` сохраняет manifest/index sources и запускает этот compiler. MCP запускать с `compiler:auto`: отдельный backend Roslyn сейчас недоступен, CodeDom выполняет эти snippets. Чтение результата MCP — только через `Tools/UnityMcp/compact-result.js`. `catalog-adversarial` удаляет собственную временную папку с проверкой GUID, поэтому требует осознанного `safety_checks:false`; не использовать это для runtime-патча.
-
-Пользователь 2026-10-05 явно разрешил этот WIP-коммит без проверки в Unity: задача ещё не завершена. Это разрешение относится к текущему checkpoint и не означает gameplay acceptance или изменение общего [правила /commit](../../.claude/commands/commit.md). При частичных изменениях общих файлов post-commit может пропустить Plastic transfer: проверять Git и Plastic отдельно по [version-control](../version-control.md), никогда не check-in весь workspace.
+Отчёты миграции пишутся в `Docs/tasks/report/map-runtime-bootstrap/` (игнорируется Git). Временные probes
+прежних срезов — `Tools/Probes/MapRuntimeBootstrap/`. Чтение результата MCP — через
+`Tools/UnityMcp/compact-result.js`.

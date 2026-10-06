@@ -190,6 +190,33 @@ Decoration: authored fixed-size prefab; deterministic smallest fit по Pegboard
 
 Если generator требует bake для SDK identity, cache содержит source fingerprint/version и stable manifest, rebuild обязателен при несовпадении. Он производный и не становится авторским master. Loading Ready с устаревшим bake запрещён.
 
+### Стык жизненного цикла (согласовано с arsenal-generator 2026-10-06)
+
+**Run известен локально — одна точка, и её ведёт MapBootstrap.** Клиентская сборка станций не стартует из
+`OnStartClient`, `Awake` станции или подписки генератора на сетевые события. MapBootstrap клиента, увидев
+descriptor своей сцены, сам вызывает тот же adapter → `ResolveDescription` → `PrepareComposition`, что и
+сервер в Compose, передавая `MapRunKey` и canonical config из descriptor. Seed и детерминированные ID генератора
+выводятся только из этого входа. Host-клиент вторую сборку не делает. Условие «run известен»:
+`Config.MapScene` совпадает со сценой этого MapBootstrap, статус `CompositionReady`/`Ready`, `SessionEpoch` равен
+текущему, а `LoadSequence` строго больше наибольшего ключа, уже принятого любым прежним MapBootstrap этого клиента.
+Последнее правило отсекает устаревший descriptor старого запуска той же сцены при `LoadMap` текущей карты и при
+«Lobby → карта → Lobby»: порядок прихода SyncVar относительно сообщения о смене сцены не гарантирован.
+Для диагностики MapBootstrap отдаёт read-only `LocalRunKey`.
+
+**Готовность клиента для Relay — без реестра участников.** MapBootstrap владеет handles генератора текущего
+ключа, поэтому локальная готовность — это его ответ: все handles дали `ValidateReady` passed по фактическим
+регистрациям ролей и readback (`ArsenalReadyReport`), авторские станции готовы сразу. Wall Ready не прокси.
+Relay спрашивает только MapBootstrap сцены (`IsLocallyReady(MapRunKey)` и событие изменения) и запрашивает
+снимок, когда текущий ключ готов. Ответ снимка несёт `MapRunKey`; ответ другого ключа отбрасывается и канал не
+открывает. Отдельного интерфейса участника не вводим: забытый участник открыл бы барьер раньше времени.
+
+**Closing до выгрузки.** На `MapLoader.MapLoadStarted` сервер публикует статус `Closing` текущего ключа:
+отменяется `MapRunScope.Cancellation`, допуск аватаров и gameplay карты закрывается, генератор и склад по токену
+прекращают пополнение и RPC. Reverse teardown (`Retiring`, Dispose поддерева станции, despawn служебных объектов)
+остаётся на выгрузке сцены. Удерживаемые и купленные предметы и авторство release — зона генератора и
+предметов, их не уничтожают через родителя станции. Клиент, увидев `Closing` своего ключа, закрывает локальные
+писатели так же.
+
 ## Разные пути старта и завершения
 
 | Сценарий | Поведение |

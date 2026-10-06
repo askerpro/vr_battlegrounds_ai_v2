@@ -351,8 +351,11 @@ class EditorBroker:
     def _restore(self, ticket_id, token, captured, original_setup, delivery=None):
         delivery = delivery or captured
         self.store.transition(ticket_id, token, "RESTORING", result=delivery, recovery_snapshot=captured)
-        self._ready(allow_compile_errors=True)
-        self._unity_call(ticket_id, token, "park", role="cleanup_park")
+        snapshot = self._ready(allow_compile_errors=True)
+        # Остановка после cleanup_park оставляет Editor припаркованным, а мост отвергает
+        # повторный park: при recover парковка уже выполнена.
+        if not snapshot.get("auto_refresh_suppressed"):
+            self._unity_call(ticket_id, token, "park", role="cleanup_park")
         self.git.restore_captured(captured["sha"], self.config["baseline_sha"])
         self.store.transition(ticket_id, token, "RESTORING", disk_restored=True)
         self._unity_call(ticket_id, token, "refresh")

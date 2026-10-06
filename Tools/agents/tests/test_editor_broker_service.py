@@ -19,22 +19,29 @@ class FakeUnity:
         self.fail_refresh = False
         self.calls = []
         self.session = "fixture"
+        self.parked = False
 
     def inspect(self):
         return {"project_root": str(self.root), "ready": not self.busy,
                 "is_playing": self.busy, "is_compiling": False, "is_updating": False,
                 "is_test_running": False, "dirty_scenes": ["foreign"] if self.dirty else [],
                 "dirty_assets": [], "prefab_stage": None, "process_id": 0, "session_id": self.session,
+                "auto_refresh_suppressed": self.parked,
                 "scenes": [{"path": "Assets/Base.unity", "is_active": True, "is_loaded": True}],
                 "prefab_path": None}
 
     def park(self):
+        # Как мост: повторная парковка без refresh запрещена.
+        if self.parked:
+            raise RuntimeError("Editor уже припаркован")
+        self.parked = True
         self.calls.append("park")
         return {"scenes": [{"path": "Assets/Base.unity", "is_active": True, "is_loaded": True}],
                 "prefab_path": None}
 
     def refresh(self):
         self.calls.append("refresh")
+        self.parked = False
         if self.fail_refresh:
             raise TimeoutError("editor did not acknowledge refresh")
         return self.inspect()
@@ -105,6 +112,17 @@ class EditorBrokerTests(unittest.TestCase):
         ticket = self.broker.request(owner, self.base, self.input, self.agent,
                                      ["Assets/Generated"], key)
         return self.broker.store.claim(ticket["id"], owner)
+
+    def test_recover_after_cleanup_park_does_not_park_again(self):
+        ticket = self.claim()
+        self.broker.begin(ticket["id"], ticket["token"])
+        # Сбой после cleanup_park: Editor припаркован, worker ещё на входе агента.
+        self.unity.park()
+        self.broker.store.transition(ticket["id"], ticket["token"], "RECOVERY_REQUIRED")
+        done = self.broker.recover(ticket["id"], ticket["token"])
+        self.assertEqual(done["phase"], "DONE")
+        self.assertFalse(self.unity.parked)
+        self.assertEqual(GitState(self.editor).head(), self.base)
 
     def test_bidirectional_generated_binary_and_meta_then_clean_baseline(self):
         ticket = self.claim()

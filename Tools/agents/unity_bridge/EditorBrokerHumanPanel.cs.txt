@@ -54,6 +54,8 @@ namespace VrBattlegrounds.EditorBrokerLocal
         }
 
         internal static bool Configured { get { return _state != null; } }
+        // Аренда остановлена сбоем: агент не работает, worker ждёт recover на его коммите.
+        internal static bool Recovery { get { return State.phase == "RECOVERY_REQUIRED"; } }
         internal static bool Running { get { return _process != null; } }
         internal static string RunningCommand { get { return _processCommand; } }
 
@@ -213,7 +215,9 @@ namespace VrBattlegrounds.EditorBrokerLocal
 
         private static void UpdateTitle(ApplicationTitleDescriptor title)
         {
-            if (State.busy)
+            if (State.busy && Recovery)
+                title.title = "[ТРЕБУЕТСЯ ВОССТАНОВЛЕНИЕ: " + State.owner + "] " + title.title;
+            else if (State.busy)
                 title.title = "[ЗАНЯТ АГЕНТОМ: " + State.owner + " · " + State.phase + "] " + title.title;
             else if (State.waiting_count > 0 && HumanOwns)
                 title.title = "[Агенты ждут редактор: " + State.waiting_count + "] " + title.title;
@@ -226,8 +230,12 @@ namespace VrBattlegrounds.EditorBrokerLocal
             Handles.BeginGUI();
             var rect = new Rect(0, 0, view.position.width, view.position.height);
             EditorGUI.DrawRect(rect, new Color(0.1f, 0.1f, 0.1f, 0.55f));
-            GUI.Label(rect, "Редактор занят агентом «" + State.owner + "»\n" + State.phase +
-                "\n\nНе меняйте проект до окончания аренды", new GUIStyle(EditorStyles.whiteLargeLabel) {
+            string text = Recovery
+                ? "Требуется восстановление аренды «" + State.owner + "»\nWorker на коммите агента и ждёт recover" +
+                  "\n\nНе меняйте проект: правки попадут в аварийный снимок"
+                : "Редактор занят агентом «" + State.owner + "»\n" + State.phase +
+                  "\n\nНе меняйте проект до окончания аренды";
+            GUI.Label(rect, text, new GUIStyle(EditorStyles.whiteLargeLabel) {
                     alignment = TextAnchor.MiddleCenter, wordWrap = true });
             Handles.EndGUI();
             Event current = Event.current;
@@ -272,7 +280,10 @@ namespace VrBattlegrounds.EditorBrokerLocal
                 return;
             }
             string stage = state.handoff_stage ?? "";
-            if (state.busy)
+            if (state.busy && EditorBrokerHumanHandoff.Recovery)
+                EditorGUILayout.HelpBox("Аренда «" + state.owner + "» остановлена сбоем: агент не работает, worker " +
+                    "остался на его коммите и ждёт recover. Правки сейчас попадут в аварийный снимок.", MessageType.Error);
+            else if (state.busy)
                 EditorGUILayout.HelpBox("Редактор занят агентом «" + state.owner + "» · " + state.phase +
                     ". Ничего не меняйте до окончания аренды.", MessageType.Warning);
             else if (stage == "AGENTS" || stage == "WAITING")

@@ -4,6 +4,7 @@ using VrBattlegrounds.Core;
 using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Managers;
+using VrBattlegrounds.Maps.Runtime;
 using System;
 using System.Linq;
 
@@ -74,6 +75,9 @@ namespace VrBattlegrounds.Player.Avatars
         [Server]
         public void SpawnAvatar(NetworkConnectionToClient conn, SessionSnapshot snapshot, PlayerSession session)
         {
+            // Карта ещё не готова (MapBootstrap не открыл server Ready) — запрос ждёт допуска.
+            if (!MapRunAdmission.TryAdmitAvatar(session, () => SpawnAvatar(conn, snapshot, session))) return;
+
             GameObject prefabToSpawn = _playerPrefab;
 
             // Новое тело без прошлого начинает жизнь заново: выбывание осталось бы с прошлой
@@ -200,6 +204,12 @@ namespace VrBattlegrounds.Player.Avatars
             // Обновляем сессию (логически данные хранятся в сессии)
             session.TeamIndex = teamId;
             session.AvatarIndex = avatarId;
+
+            // Тела нет, а карта ещё не готова: команда и скин уже в сессии, само тело создаст
+            // отложенный запрос — по состоянию сессии на момент допуска.
+            if (session.ActiveAvatar == null &&
+                !MapRunAdmission.TryAdmitAvatar(session, () => ChangeAvatar(conn, session, session.TeamIndex, session.AvatarIndex)))
+                return;
 
             ReplaceBody(conn, session, avatarPrefab, confiscate: true, "смена скина или команды");
         }

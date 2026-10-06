@@ -32,6 +32,14 @@ namespace VrBattlegrounds.Maps.Runtime
         public MapReferee RefereePrefab => _refereePrefab;
         public ArsenalBoundaryWall CoordinatorPrefab => _coordinatorPrefab;
 
+        /// <summary>Запечённый отпечаток содержимого карты; runtime не пересчитывает его по assets.</summary>
+        public string ContentFingerprintFor(MapData map)
+        {
+            foreach (var entry in _content ?? Array.Empty<ContentEntry>())
+                if (entry != null && entry.Map == map) return entry.ContentFingerprint;
+            return null;
+        }
+
         public MapCatalogValidation Validate(IReadOnlyList<GameObject> registeredPrefabs)
         {
             var errors = new List<string>();

@@ -1146,3 +1146,15 @@ Mirror регистрирует `[Command]`/`[ClientRpc]`/`[TargetRpc]` по 16-
 `UxrGrabbableObjectAnchor.IsCompatibleObject` проверяет тег **и все валидаторы размещения**. Для вопроса «подходит
 ли предмет гнезду» нужен `IsCompatibleObjectTag` (public с SDK патча 49) — иначе, например, карман не отдаёт патрон
 к дробовику в руке: валидатор окна приёма отказывает патрону, которого игрок ещё не держал.
+
+## Issue 36: в рантайме в сцене появляются `UxrCanvas` с пустым UniqueId
+
+`UxrManager` при старте навешивает `UxrCanvas` на каждый world-space `Canvas`, если у
+`UxrPointerInputModule` включён `AutoEnableOnWorldCanvases` (по умолчанию да; `UxrManager.cs`,
+`AddComponent<UxrCanvas>()`). У такого компонента `_uxrUniqueId` пустой — его нет в файле сцены.
+Скан «все `IUxrUniqueId` сцены уникальны и не пусты» в рантайме поэтому даёт ложный отказ, а в
+редакторе тех же компонентов просто нет. Сканы всей сцены — только авторская проверка (preflight,
+миграция, сборка): `MapRoot.ValidateBindings(includeSceneScans: false)` в `MapBootstrap`.
+Анкеры UltimateXR к тому же переносят предметы при старте, так что рантайм-путь объекта может не
+совпадать с путём в редакторе — сопоставлять рантайм-находки с ассетом по пути нельзя.
+

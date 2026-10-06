@@ -5,7 +5,8 @@ using VrBattlegrounds.Managers;
 
 namespace VrBattlegrounds.Maps.Runtime
 {
-    public enum MapBootstrapStatus : byte { None, Preparing, CompositionReady, Ready, Failed, Retiring }
+    /// <summary>Closing — загрузка следующей карты принята: писатели закрыты, teardown ещё впереди (на выгрузке).</summary>
+    public enum MapBootstrapStatus : byte { None, Preparing, CompositionReady, Ready, Failed, Retiring, Closing }
 
     /// <summary>Целый wire descriptor. Config immutable, поэтому подписчики не меняют authority через alias.</summary>
     public readonly struct MapRunSnapshot

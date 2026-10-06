@@ -19,9 +19,25 @@ namespace VrBattlegrounds.Maps.Runtime
         private bool _publishing;
         private bool _disposingScope;
 
+        /// <summary>Экземпляр на SessionContext этой машины; null вне сети и в окне старта сессии.</summary>
+        public static MapRunAuthority Instance { get; private set; }
+
         public MapRunSnapshot Current => _current;
         internal MapRunKey NextKey => _sessionEpoch == Guid.Empty || _loadSequence == ulong.MaxValue
             ? default : new MapRunKey(_sessionEpoch, _loadSequence + 1);
+
+        /// <summary>Сервер готов принять новую загрузку: сессия поднята и не идёт teardown.</summary>
+        internal bool CanBeginRun => CanWrite && NextKey.IsValid;
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                GameLog.Network.Error("[MapRunAuthority] Второй экземпляр на SessionContext — игнорируется.", this);
+                return;
+            }
+            Instance = this;
+        }
 
         public void Subscribe(Action<MapRunSnapshot> handler)
         {
@@ -62,6 +78,7 @@ namespace VrBattlegrounds.Maps.Runtime
         {
             DisposeScope();
             Changed = null;
+            if (Instance == this) Instance = null;
         }
 
         internal bool BeginRun(MapRunResolution resolution, out MapRunScope scope)
@@ -84,6 +101,35 @@ namespace VrBattlegrounds.Maps.Runtime
                 refereeNetId == 0 || coordinatorNetId == 0 || refereeNetId == coordinatorNetId) return false;
             Commit(new MapRunSnapshot(_current.Config, expectedRevision + 1, MapBootstrapStatus.CompositionReady,
                 MapState.Warmup, 0, string.Empty, 0, refereeNetId, coordinatorNetId, string.Empty));
+            return true;
+        }
+
+        /// <summary>
+        /// Закоммиченный режим карты: первый вызов после CompositionReady открывает server Ready,
+        /// каждый следующий — новая эпоха режима. Пишет только MapReferee своего запуска.
+        /// </summary>
+        internal bool CommitMode(MapRunScope scope, ulong expectedRevision, MapState state, string modeId, uint modeNetId)
+        {
+            if (!Matches(scope, expectedRevision) || !MapRunResolver.Identifier(modeId) || modeNetId == 0 ||
+                (_current.Status != MapBootstrapStatus.CompositionReady && _current.Status != MapBootstrapStatus.Ready) ||
+                _current.ModeEpoch == ulong.MaxValue) return false;
+            Commit(new MapRunSnapshot(_current.Config, expectedRevision + 1, MapBootstrapStatus.Ready, state,
+                _current.ModeEpoch + 1, modeId, modeNetId, _current.RefereeNetId, _current.CoordinatorNetId, string.Empty));
+            return true;
+        }
+
+        /// <summary>
+        /// Принята загрузка следующей карты: descriptor получает Closing, scope отменяется, новые коммиты
+        /// режима и допуск закрыты. Teardown — позже, <see cref="Retire"/> на выгрузке сцены.
+        /// </summary>
+        internal bool Close(MapRunScope scope, ulong expectedRevision)
+        {
+            if (!Matches(scope, expectedRevision) || _current.Status == MapBootstrapStatus.Closing) return false;
+            Commit(new MapRunSnapshot(_current.Config, expectedRevision + 1, MapBootstrapStatus.Closing, _current.MapState,
+                _current.ModeEpoch, _current.ActiveModeId, _current.ActiveModeNetId,
+                _current.RefereeNetId, _current.CoordinatorNetId, string.Empty));
+            try { scope.Close(); }
+            catch (Exception error) { GameLog.Network.Error("[MapRunAuthority] Подписчик отмены запуска отказал: " + error); }
             return true;
         }
 

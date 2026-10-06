@@ -11,10 +11,12 @@
 |---|---|---|
 | `SessionManager` | `SessionContext` (спавнится в `GameNetworkManager.OnStartServer`, DontDestroyOnLoad) | Хранит **выбор** администратора: режим матча и список карт серии. Единственное место поиска данных по идентификатору: `FindModeData(modeId)`, `FindMap(sceneName)` |
 | `Series` | тот же `SessionContext` | Ведёт **серию**: какая карта сейчас, общий счёт (сколько карт выиграла команда), итоги карт. Переживает смену режима на карте и смену карт |
-| `MapReferee` | объект `MatchManager` в каждой сцене (карты и лобби) | Ведёт **режим на карте**: разминка при старте, «Начать матч» — режим матча на месте, конец матча — снова разминка |
-| `MapRunAuthority` | тот же `SessionContext` | Новый единственный writer целого run descriptor; пока инертный контракт до подключения bootstrap/mode gates. Legacy MapReferee ещё ведёт прежний gameplay state |
+| `MapRunAuthority` | тот же `SessionContext` | **Единственный издатель** описания текущего запуска карты (`MapRunSnapshot`): config, статус сборки, `MapState`, активный режим и его эпоха. Сервер и клиенты читают состояние карты только отсюда |
+| `MapBootstrap` | объект `MapRoot` в каждой сцене реестра | **Собирает запуск карты**: проверяет `MapRoot`, разрешает `MapRunConfig` по `MapRuntimeCatalog`, спавнит служебные `MapReferee` и координатор развёртывания, открывает server Ready |
+| `MapReferee` | спавнится `MapBootstrap` из `MapRuntimeCatalog` (в сцене его нет) | Ведёт **режим на карте**: разминка при старте, «Начать матч» — режим матча на месте, конец матча — снова разминка. Каждую смену режима публикует через `MapRunAuthority` |
 
-Контрактный и authoring срезы [MapRunConfig/MapBootstrap](tasks/map-runtime-bootstrap-design.md) реализуют immutable IDs/config, captured intent resolution, revision CAS, keyed cancellation и native MapRoot/catalog/preflight. `CommitPrepared` означает только CompositionReady; Ready, спавн аватаров и активацию mode он не открывает. Runtime composition и переключение gameplay owners ещё впереди; актуальный статус — [handoff](tasks/map-runtime-bootstrap-handoff.md). Текущие callbacks MapReferee и Series ниже остаются legacy.
+Устройство запуска, допуск и отказы — раздел [Запуск карты](#запуск-карты-mapbootstrap) ниже;
+дизайн и решения — [map-runtime-bootstrap-design](tasks/map-runtime-bootstrap-design.md).
 
 Команды (выбор игроком, выдача админом, автобаланс) — не у менеджеров, а в статическом
 сервисе `TeamChangeRequests`; право админа — `SessionPermissions.IsAdmin`.
@@ -24,10 +26,15 @@ DontDestroyOnLoad
   └── SessionContext (NetworkIdentity)
         ├── SessionManager   ← выбор: режим + карты следующей серии
         ├── NetworkStateRelay
-        └── Series      ← ход серии: текущая карта, общий счёт
-Сцена карты / лобби
-  └── MatchManager
-        └── MapReferee  ← режим на карте (разминка ⇄ матч)
+        ├── Series           ← ход серии: текущая карта, общий счёт, режим серии
+        └── MapRunAuthority  ← описание текущего запуска карты (единственный издатель)
+Сцена карты / лобби (авторское)
+  ├── MapRoot + MapBootstrap  ← паспорт карты и ссылки; сборка запуска
+  ├── Environment / Gameplay / PhysicalArenaLayout
+Сцена карты (создаёт сервер, NetworkServer.Spawn)
+  ├── MapReferee                    ← режим на карте (разминка ⇄ матч)
+  ├── ArsenalEquipmentCoordinator   ← выдвижение оборудования станций
+  └── <режим> (WarmupMode / EliminationMode / …)
 ```
 
 ---
@@ -50,7 +57,7 @@ DontDestroyOnLoad
 
 | Метод / Свойство | Сервер/Клиент | Описание |
 |---|---|---|
-| `ServerBegin(maps)` | Сервер | Сбрасывает общий счёт, запоминает карты, грузит первую (`MapLoader.LoadMap`). |
+| `ServerBegin(maps, modeId)` | Сервер | Сбрасывает общий счёт, запоминает карты и **режим серии** (`CapturedModeId`), грузит первую (`MapLoader.LoadMap`). Выбор режима в меню во время серии относится к следующей серии. Снаряжение изымается только под принятую загрузку (`MapLoader.CanAcceptLoad`). |
 | `ServerRecordMapResult(winner)` | Сервер | Итог карты в общий счёт; `null` — ничья. Зовётся сам по `MapReferee.Finished`. |
 | `ServerAdvance()` | Сервер | Следующая карта; после последней — конец серии и лобби. Зовёт только кнопка админа «Следующая карта» (`MapCommand.NextMap`): после конца матча карта стоит в разминке и ждёт. |
 | `ServerEnd()` | Сервер | Досрочный конец (кнопка «Стоп / Лобби»). |
@@ -68,14 +75,73 @@ DontDestroyOnLoad
 
 | Метод / Свойство | Описание |
 |---|---|
-| `OnStartServer` | Карта (любая, и лобби) стартует в разминке — `ServerStartWarmup()`. |
-| `GoLive()` | «Начать матч»: разминка → режим матча на месте. Режим — `MapModeRules.ResolveMatchMode`: выбор админа, если совместим с картой, иначе первый совместимый; в лобби совместимых нет — отказ (`Warning`). Вызов до спавна менеджера (автостарт отладки из `Awake`) откладывается до `OnStartServer`. |
+| `ServerStartRun()` (internal) | Карта (любая, и лобби) стартует в разминке. Зовёт `MapBootstrap` после CompositionReady; коммит разминки открывает server Ready. |
+| `GoLive()` | «Начать матч»: разминка → режим матча на месте. Режим — согласованный при загрузке `MapRunConfig.MatchIntent` (режим серии, если совместим с картой, иначе первый совместимый); в лобби режима матча нет — отказ (`Warning`). Вызов до server Ready (автостарт отладки из `Awake`) откладывается и выполняется сразу после разминки. |
 | `Stop()` | Матч без победителя → разминка на этой карте. Серию не двигает, снимок паузы отбрасывает. |
 | `Pause()` / `Resume()` / `IsPaused` | «Пауза»: снимок матча (`PauseSnapshot`), прерванный раунд без победителя, карта — в разминку (`MapState.Paused`). «Продолжить»: режим матча заново со снимка — тот же номер раунда и счёт карты. |
 | `RoundWon`, `PlayerKilled` (события экземпляра, сервер) | Раунд доигран и выигран; игрок погиб (жертва, убийца, ассистенты). Слушает `Series` — статистика. |
 | `Finished` (событие экземпляра) | Режим матча объявил победителя. Слушает `Series`. Карта сразу уходит в разминку. |
-| `ActiveGameMode`, `IsLiveOrPaused`, `CurrentMap` | Режим этой машины; идёт ли матч (разминка — не матч); `MapData` своей сцены. |
-| `ActiveGameModeChangedLocal` (статическое) | Режим этой машины сменился. Нотификации часов (`WatchGameEvents`) и стена арсенала переподписываются. |
+| `ActiveGameMode`, `IsLiveOrPaused`, `CurrentState`, `CurrentMap` | Режим этой машины; идёт ли матч (разминка — не матч); состояние карты — из `MapRunAuthority.Current`; `MapData` своей сцены. |
+| `ActiveGameModeChangedLocal` (статическое) | Режим этой машины сменился. Нотификации часов (`WatchGameEvents`) и стена арсенала переподписываются. Удалённый клиент принимает только режим с `netId` из descriptor: поздний `OnStartClient` прежнего режима текущую ссылку не перебивает. |
+
+Неуправляемый судья (стенды `BotCombatStand`, `CommonArsenalReview` и EditMode-тесты: `MapReferee`
+лежит в сцене или создан тестом, `MapBootstrap` нет) сохраняет прежний путь: разминка в
+`OnStartServer`, состояние — собственный `SyncVar`. Карта реестра, стартующая так, пишет
+`Warning` — её нужно перевести на `MapRoot`.
+
+## Запуск карты (`MapBootstrap`)
+
+Новая карта не требует ручной расстановки служебных менеджеров: автор кладёт один `MapRoot`
+(паспорт `MapData`, корни `Environment`/`Gameplay`, `PhysicalArenaLayout`, зоны и станции), остальное
+собирает `MapBootstrap` по центральному `MapRuntimeCatalog` (назначен в `GameNetworkManager`).
+
+```
+Сервер (любой путь старта: смена карты, onlineScene, сцена без смены — опрос предусловий в Update)
+  MapRunAuthority готов + Mirror догрузил сцену
+  → MapRoot.ValidateBindings(includeSceneScans: false) ← отказ: MapRoot.Invalid [ошибки]
+  → MapRuntimeCatalog.Resolve(request)          ← режим: Series.CapturedModeId / выбор админа / NoMatch
+  → MapRunAuthority.BeginRun                    ← новый RunKey, статус Preparing
+  → ArsenalStationPresetBinding.Prepare(MapData.arsenalPreset)
+  → Instantiate MapReferee + ArsenalEquipmentCoordinator → в сцену карты → NetworkServer.Spawn
+  → CommitPrepared                              ← CompositionReady: gameplay ещё закрыт
+  → MapReferee.ServerStartRun → разминка → CommitMode  ← server Ready: допуск открыт
+  → отложенные аватары (MapRunAdmission.DrainAvatars), стены пополняются запросом режима
+MapLoader.MapLoadStarted → MapRunAuthority.Close ← Closing: scope.Cancellation отменён, допуск закрыт
+Выгрузка сцены → MapRunAuthority.Retire → scope снимает службы, отложенные аватары сбрасываются
+```
+
+**Closing** отделяет закрытие писателей от teardown. Принятая загрузка следующей карты сразу
+закрывает текущий запуск. Все выдачи предметов карты проверяют допуск в своей единственной точке:
+оружие стены — `ReplenishSlotsWhere`, магазины станции — `ArsenalMagazineSupply.SpawnStock`, карман и
+кобура игрока по правилам режима — `PlayerLoadoutManager.ServerEnsureMagazines`/`ServerGiveWeapon`
+(через `MapRunAdmission.CanActivateActiveMap`: аватары живут вне сцены карты), покупка бота. Иначе
+бесконечный карман разминки досыпал бы магазины после изъятия снаряжения серией, и они уехали бы на
+следующую карту. `MapReferee` не коммитит новый режим, аватары не создаются, владельцы по
+`MapRunScope.Cancellation` прекращают пополнение и RPC. Службы и станции живут до выгрузки сцены. Ещё не начатый запуск
+этой сцены после `MapLoadStarted` не начинается.
+
+**Допуск (`MapRunAdmission`)** — производный ответ, без своего флага готовности:
+`CanActivateMapGameplay(scene)` истинно для сцены без `MapBootstrap` (стенд) и для управляемой —
+только после server Ready и до Closing. До него стена арсенала не выдаёт оружие (Mirror спавнит станции
+сцены раньше сборки), а `AvatarManager` откладывает создание тела: по одному запросу на сессию,
+делегат читает команду и скин сессии в момент допуска.
+
+**Проверки карты в рантайме и в редакторе разные.** Сканы всей сцены (уникальность сетевых
+`sceneId` и UltimateXR id каждого компонента) — авторская проверка: preflight сборки, миграция,
+`MapRunPreflight`. В рантайме системы законно добавляют в сцену свои объекты — `UxrManager`
+навешивает `UxrCanvas` с пустым id на world-space канвасы (known-issues, Issue 36), — поэтому
+`MapBootstrap` проверяет только привязки и станции, а целостность сцены подтверждает отпечаток
+содержимого из каталога.
+
+**Отказ** — именованный `GameLog.Error` с картой, кодом и до 10 причин (`MapRoot.Invalid`,
+`Map.Resolution`, `Composition.Exception`, `Mode.WarmupFailed`…). Оружие, аватары и режим при
+этом не выдаются. Сломанную карту ловит раньше сборка: `MapCatalogBuildStep` перезапекает
+каталог и прогоняет preflight всего реестра (`Tools/VR Battlegrounds/Maps/Map Bootstrap/Rebake Catalog`
+делает то же вручную).
+
+**Клиент** ничего не создаёт: `MapBootstrap` связывает заспавненный координатор со станциями
+своей сцены по `netId` из descriptor и сверяет отпечаток содержимого карты с сервером
+(несовпадение — разные сборки, `GameLog.Error`).
 
 
 ---
@@ -405,13 +471,13 @@ Assets/Prefabs/GameModes/
 Админ выбирает режим (вкладка), кликает карты по порядку — очередь с номерами (MapQueue),
 повторный клик убирает карту → «Начать» → PlayerSession.CmdAdminStartSeries
   → AdminMapCommands.ServerStartSeries → SessionManager.SetSeries + StartSession
-  → Series.ServerBegin(maps) → MapLoader.LoadMap(maps[0])
+  → Series.ServerBegin(maps, режим) → MapLoader.LoadMap(maps[0])
 
-[Карта — разминка]  MapReferee.OnStartServer → ServerStartWarmup
+[Карта — разминка]  MapBootstrap → MapReferee.ServerStartRun → разминка (server Ready)
   команды сохраняются, игрок без команды остаётся без неё (киборг); арсенал открыт, урона нет
 
 Админ «Начать матч» → MenuMatchManager → PlayerSession.CmdAdminMapCommand(GoLive) → AdminMapCommands.ServerExecute → MapReferee.GoLive
-  → MapModeRules.ResolveMatchMode(карта, выбор админа) → режим матча на месте
+  → режим из MapRunConfig.MatchIntent (согласован при загрузке карты) → режим матча на месте
   → игрок без команды матча выбирает её в планшете (или выдаёт админ)
   → матч ждёт, пока команда режима будет у всех (GameMode.AllPlayersHaveModeTeam)
 

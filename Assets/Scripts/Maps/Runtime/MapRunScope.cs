@@ -14,6 +14,9 @@ namespace VrBattlegrounds.Maps.Runtime
         public CancellationToken Cancellation => _token;
         public bool IsDisposed { get; private set; }
 
+        /// <summary>Отмена объявлена: писатели запуска остановлены, ресурсы ещё живы до Dispose.</summary>
+        public bool IsClosed => IsDisposed || _token.IsCancellationRequested;
+
         public MapRunScope(MapRunKey key)
         {
             if (!key.IsValid) throw new ArgumentException("RunKey.Invalid", nameof(key));
@@ -34,12 +37,22 @@ namespace VrBattlegrounds.Maps.Runtime
             Own(resource.Dispose);
         }
 
+        /// <summary>
+        /// Закрыть запуск без teardown: отменить <see cref="Cancellation"/>, по которому владельцы
+        /// прекращают пополнение и RPC. Reverse-order teardown остаётся за <see cref="Dispose"/>.
+        /// </summary>
+        public void Close()
+        {
+            if (IsDisposed || _token.IsCancellationRequested) return;
+            _cancellation.Cancel();
+        }
+
         public void Dispose()
         {
             if (IsDisposed) return;
             IsDisposed = true;
             var failures = new List<Exception>();
-            try { _cancellation.Cancel(); }
+            try { if (!_token.IsCancellationRequested) _cancellation.Cancel(); }
             catch (Exception error) { failures.Add(error); }
             for (int i = _releases.Count - 1; i >= 0; i--)
             {

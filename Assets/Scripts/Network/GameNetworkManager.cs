@@ -32,6 +32,14 @@ namespace VrBattlegrounds.Network
         [Tooltip("Префаб SessionManager, который будет спавниться при старте сервера.")]
         [SerializeField] private GameObject _sessionContextPrefab;
 
+        [Header("Карты")]
+        [Tooltip("Центральный каталог служб и содержимого карт для MapBootstrap. Один на процесс, не на карту.")]
+        [SerializeField] private Maps.Runtime.MapRuntimeCatalog _mapRuntimeCatalog;
+
+        /// <summary>Установленный каталог запуска карт; null — менеджер не поднят или каталог не назначен.</summary>
+        public static Maps.Runtime.MapRuntimeCatalog MapCatalog =>
+            singleton is GameNetworkManager manager ? manager._mapRuntimeCatalog : null;
+
         public override void Awake()
         {
             base.Awake();

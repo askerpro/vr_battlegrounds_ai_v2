@@ -23,10 +23,13 @@ namespace VrBattlegrounds.Managers
         /// <summary>Вызывается перед началом загрузки карты. Параметр — имя сцены.</summary>
         public static event Action<string> MapLoadStarted;
 
-        /// <summary>Вызывается после завершения загрузки карты. Параметр — имя сцены.</summary>
+        /// <summary>
+        /// Сервер догрузил сцену карты (Mirror завершил смену сцены и заспавнил её объекты).
+        /// Не готовность gameplay: её публикует <c>MapBootstrap</c> через <c>MapRunAuthority</c>.
+        /// </summary>
         public static event Action<string> MapLoadCompleted;
 
-        /// <summary>Идёт ли сейчас загрузка карты.</summary>
+        /// <summary>Идёт ли сейчас загрузка карты — от принятого запроса до конца смены сцены Mirror.</summary>
         public bool IsLoading { get; private set; }
 
         /// <summary>Имя текущей загруженной карты (null если карта не загружена).</summary>
@@ -60,27 +63,30 @@ namespace VrBattlegrounds.Managers
         /// Только сервер.
         /// </summary>
         /// <param name="sceneName">Имя сцены карты (например "TestMap1").</param>
-        public void LoadMap(string sceneName)
+        /// <returns>true — запрос принят и загрузка начата.</returns>
+        public bool LoadMap(string sceneName)
         {
-            if (!NetworkServer.active)
+            if (!CanAcceptLoad(sceneName, out string reason))
             {
-                GameLog.Network.Warning("[MapLoader] LoadMap вызван не на сервере — игнорируем.");
-                return;
-            }
-
-            if (string.IsNullOrEmpty(sceneName))
-            {
-                GameLog.Network.Warning("[MapLoader] LoadMap: пустое имя сцены — игнорируем.");
-                return;
-            }
-
-            if (IsLoading)
-            {
-                GameLog.Network.Warning($"[MapLoader] LoadMap: уже идёт загрузка, запрос на '{sceneName}' игнорируется.");
-                return;
+                GameLog.Network.Warning($"[MapLoader] LoadMap('{sceneName}') игнорируется: {reason}.");
+                return false;
             }
 
             _loadCoroutine = StartCoroutine(DeferredLoadMap(sceneName));
+            return true;
+        }
+
+        /// <summary>
+        /// Будет ли принят запрос загрузки. Проверка до разрушительных действий вызывающего
+        /// (изъятие снаряжения серии): отклонённый запрос не трогает живую карту.
+        /// </summary>
+        public bool CanAcceptLoad(string sceneName, out string reason)
+        {
+            reason = !NetworkServer.active ? "вызов не на сервере"
+                : string.IsNullOrEmpty(sceneName) ? "пустое имя сцены"
+                : IsLoading ? "уже идёт загрузка"
+                : null;
+            return reason == null;
         }
 
         /// <summary>
@@ -119,6 +125,11 @@ namespace VrBattlegrounds.Managers
             GameLog.Network.Info($"[MapLoader] ServerChangeScene: {sceneName}");
             CurrentMap = sceneName;
             NetworkManager.singleton.ServerChangeScene(sceneName);
+
+            // Загрузка держится до конца асинхронной смены сцены: повторный запрос в этом окне
+            // начал бы вторую смену поверх первой.
+            while (NetworkServer.active && NetworkServer.isLoadingScene)
+                yield return null;
 
             IsLoading = false;
             _loadCoroutine = null;

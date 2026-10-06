@@ -80,6 +80,13 @@ namespace VrBattlegrounds.Managers
         /// <summary>Карты серии по порядку.</summary>
         public IReadOnlyList<string> Maps => _maps;
 
+        /// <summary>
+        /// Режим матча, зафиксированный при начале серии. Каждая карта серии согласует с ним свой
+        /// режим один раз при загрузке (<c>MapBootstrap</c>); выбор администратора во время серии
+        /// относится к следующей. Только сервер.
+        /// </summary>
+        public string CapturedModeId { get; private set; } = string.Empty;
+
         /// <summary>Индекс текущей карты в <see cref="Maps"/>, −1 — серия не начата.</summary>
         public int CurrentIndex => _currentIndex;
 
@@ -164,9 +171,10 @@ namespace VrBattlegrounds.Managers
         /// <summary>
         /// Начинает серию: сбрасывает общий счёт, запоминает карты и грузит первую.
         /// </summary>
+        /// <param name="modeId">Режим матча серии; пусто — каждая карта берёт свой первый совместимый.</param>
         /// <returns>false — пустой список карт.</returns>
         [Server]
-        public bool ServerBegin(IReadOnlyList<string> maps)
+        public bool ServerBegin(IReadOnlyList<string> maps, string modeId = null)
         {
             if (maps == null || maps.Count == 0)
             {
@@ -191,8 +199,10 @@ namespace VrBattlegrounds.Managers
             _currentIndex = 0;
             _adHoc = false;
             _running = true;
+            CapturedModeId = modeId ?? string.Empty;
 
-            GameLog.Match.Info($"[Series] Серия началась: {string.Join(" → ", ToArray(_maps))}.");
+            GameLog.Match.Info($"[Series] Серия началась: {string.Join(" → ", ToArray(_maps))}" +
+                (CapturedModeId.Length > 0 ? $", режим '{CapturedModeId}'." : "."));
             Load(_maps[0]);
             return true;
         }
@@ -282,10 +292,12 @@ namespace VrBattlegrounds.Managers
 
         private void Load(string scene)
         {
-            // Снаряжение не переживает перехода на другую карту (и в лобби).
-            EquipmentStrip.ServerStripAll($"переход на карту {scene}");
-
-            if (LoadMapOverride != null) { LoadMapOverride(scene); return; }
+            if (LoadMapOverride != null)
+            {
+                EquipmentStrip.ServerStripAll($"переход на карту {scene}");
+                LoadMapOverride(scene);
+                return;
+            }
 
             if (MapLoader.Instance == null)
             {
@@ -293,6 +305,15 @@ namespace VrBattlegrounds.Managers
                 return;
             }
 
+            // Снаряжение не переживает перехода на другую карту (и в лобби) — но снимается только
+            // под принятую загрузку: отклонённый запрос не должен раздеть игроков живой карты.
+            if (!MapLoader.Instance.CanAcceptLoad(scene, out string reason))
+            {
+                GameLog.Match.Warning($"[Series] Карта '{scene}' не загружена: {reason}.");
+                return;
+            }
+
+            EquipmentStrip.ServerStripAll($"переход на карту {scene}");
             MapLoader.Instance.LoadMap(scene);
         }
 

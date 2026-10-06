@@ -168,7 +168,7 @@ namespace VrBattlegrounds.Managers
 
             if (Series.Instance != null)
             {
-                Series.Instance.ServerBegin(ToArray());
+                Series.Instance.ServerBegin(ToArray(), _selectedModeId);
                 return;
             }
 

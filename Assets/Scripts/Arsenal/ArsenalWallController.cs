@@ -4,6 +4,7 @@ using UltimateXR.Manipulation;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Economy;
 using VrBattlegrounds.GameModes;
+using VrBattlegrounds.Maps.Runtime;
 using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
 
@@ -345,10 +346,12 @@ namespace VrBattlegrounds.Arsenal
         private void Update()
         {
             if (!EnsurePresetPrepared()) return;
-            if (isServer && !_presetInitialRefillDone)
+            // Отложенное первичное пополнение: карта ещё не допустила gameplay в OnStartServer
+            // или ассортимент подготовился позже. Только пустые слоты — режим мог уже пополнить их.
+            if (isServer && !_presetInitialRefillDone && MapRunAdmission.CanActivateMapGameplay(gameObject.scene))
             {
                 _presetInitialRefillDone = true;
-                ReplenishWeaponsNetwork(true);
+                ReplenishWeaponsNetwork(false);
             }
             if (_pendingSlotBindings.Count > 0)
                 ResolvePendingSlotBindings();
@@ -568,7 +571,9 @@ namespace VrBattlegrounds.Arsenal
             Managers.MapReferee.ActiveGameModeChangedLocal += HandleActiveModeChanged;
             HandleActiveModeChanged(ActiveMode);
 
-            if (EnsurePresetPrepared())
+            // Mirror спавнит станции сцены раньше, чем MapBootstrap опубликует запуск карты:
+            // управляемая карта выдаёт оружие только после server Ready (Update выше).
+            if (EnsurePresetPrepared() && MapRunAdmission.CanActivateMapGameplay(gameObject.scene))
             {
                 _presetInitialRefillDone = true;
                 ReplenishWeaponsNetwork(true);
@@ -686,6 +691,9 @@ namespace VrBattlegrounds.Arsenal
         [Server]
         private void ReplenishSlotsWhere(System.Func<int, bool> needsWeapon)
         {
+            // Единственная точка выдачи: до server Ready карты и после Closing (принята следующая загрузка)
+            // стена не создаёт предметов, кто бы ни попросил — первичное, раунд или замена потерянного.
+            if (!MapRunAdmission.CanActivateMapGameplay(gameObject.scene)) return;
             if (!EnsurePresetPrepared()) return;
             if (_allSlots == null || _allSlots.Length == 0)
                 _allSlots = GetComponentsInChildren<ArsenalSlotController>();

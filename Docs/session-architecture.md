@@ -4,7 +4,7 @@
 
 ## Концепция разделения: Session vs Avatar
 
-На постоянном `SessionContext` добавлен `MapRunAuthority` — один server writer immutable `MapRunSnapshot` для будущего bootstrap карты. Штатный `GameNetworkManager.OnStartServer` спавнит этот же префаб; новый компонент получает session epoch через обычный Mirror lifecycle, отдельного Instantiate нет. Подписка сразу отдаёт текущий целый descriptor; dedicated server публикует commit напрямую, host получает один SyncVar hook. Сейчас это инертный контракт: [native composition/admission/Relay gates](tasks/map-runtime-bootstrap-design.md) ещё не подключены, создание PlayerSession/аватаров идёт прежним путём.
+На постоянном `SessionContext` живёт `MapRunAuthority` — единственный издатель целого `MapRunSnapshot` текущего запуска карты. Штатный `GameNetworkManager.OnStartServer` спавнит этот же префаб; компонент получает session epoch через обычный Mirror lifecycle. Подписка сразу отдаёт текущий descriptor; dedicated server публикует коммит напрямую, host получает один SyncVar hook. Запуск карты собирает `MapBootstrap` ([устройство](game-manager.md#запуск-карты-mapbootstrap)). **Создание аватара на карте реестра ждёт server Ready**: `AvatarManager.SpawnAvatar` и пересоздание тела после смены карты идут через `MapRunAdmission.TryAdmitAvatar` — до готовности запрос откладывается (один на сессию) и выполняется по допуску; сессия `PlayerSession` создаётся сразу, как раньше.
 
 Сетевое присутствие игрока теперь разделено на два компонента:
 
@@ -242,12 +242,14 @@ sequenceDiagram
 | `SessionManager` | спавн `SessionContext` в `GameNetworkManager.OnStartServer` | до остановки сервера | пока сервер не поднят |
 | `NetworkStateRelay` | тот же объект `SessionContext` | до остановки сервера | пока сервер не поднят |
 | `Series` | тот же объект `SessionContext` — серия карт и общий счёт | до остановки сервера | пока сервер не поднят |
-| `MapReferee` | объект `MatchManager` **в сцене** — карты и лобби | до выгрузки сцены | в Offline и в окне смены сцены |
-| `GameMode` (`WarmupMode`/`EliminationMode`/`RespawnMode`) | спавн из `MapReferee`: разминка — сама в `OnStartServer` на любой карте, режим матча — по «Начать матч» на месте | до смены режима на карте или выгрузки сцены | в окне смены режима и смены сцены |
+| `MapRunAuthority` | тот же объект `SessionContext` — описание запуска карты | до остановки сервера | пока сервер не поднят |
+| `MapBootstrap` | компонент `MapRoot` **в сцене** карты реестра | до выгрузки сцены | в Offline, в окне смены сцены и на стендах без `MapRoot` |
+| `MapReferee` | спавн из `MapBootstrap` (`MapRuntimeCatalog`) в сцену карты; на стендах — объект сцены | до выгрузки сцены (`MapRunScope` снимает его с сети) | в Offline, в окне смены сцены и до CompositionReady |
+| `GameMode` (`WarmupMode`/`EliminationMode`/`RespawnMode`) | спавн из `MapReferee`: разминка — по `ServerStartRun` после CompositionReady, режим матча — по «Начать матч» на месте | до смены режима на карте или выгрузки сцены | в окне смены режима и смены сцены |
 
-Читать таблицу так: пустой `Instance` у первых восьми — это сбой, о нём пишет
-`ManagerBootstrap`. Пустой `Instance` у последних четырёх — норма, и код обязан её
-переживать без предупреждений.
+Читать таблицу так: пустой `Instance` у постоянных менеджеров (до `Series` включительно) — это
+сбой, о нём пишет `ManagerBootstrap`. Пустые ссылки у объектов сессии и сцены ниже — норма в
+названных окнах, и код обязан их переживать без предупреждений.
 
 ### Готовность вместо угадывания
 

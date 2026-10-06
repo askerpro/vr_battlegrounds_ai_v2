@@ -28,7 +28,21 @@ namespace VrBattlegrounds.Maps.Runtime
         [SerializeField] private ArsenalStationCompositionBinding[] _stations = Array.Empty<ArsenalStationCompositionBinding>();
         public MapData Map => _map;
 
-        public MapRootValidation ValidateBindings()
+        /// <summary>
+        /// Авторские станции без полной проверки — для клиентской привязки координатора развёртывания.
+        /// Сервер берёт станции только из прошедшего <see cref="ValidateBindings"/>.
+        /// </summary>
+        public IReadOnlyList<ArsenalStationCompositionBinding> StationBindings =>
+            Array.AsReadOnly(_stations ?? Array.Empty<ArsenalStationCompositionBinding>());
+
+        /// <param name="includeSceneScans">
+        /// Сканы всей сцены — сетевые <c>sceneId</c> и UltimateXR id каждого компонента. Это авторская
+        /// проверка (preflight, миграция, сборка): в рантайме системы законно добавляют в сцену свои
+        /// объекты — например, <c>UxrManager</c> навешивает <c>UxrCanvas</c> с пустым id на world-space
+        /// канвасы (<c>AutoEnableOnWorldCanvases</c>), — и скан дал бы ложный отказ. Рантайм опирается на
+        /// отпечаток содержимого, проверенный preflight-ом, и на проверки станций, которые остаются всегда.
+        /// </param>
+        public MapRootValidation ValidateBindings(bool includeSceneScans = true)
         {
             var errors = new List<string>();
             Scene scene = gameObject.scene;
@@ -125,14 +139,26 @@ namespace VrBattlegrounds.Maps.Runtime
                 _environment.GetComponentsInChildren<TeamSpawnZone>(true).Length != 0)) errors.Add("Environment.InteractiveContent");
             if (InScene<Managers.MapReferee>(scene).Length != 0 || InScene<ArsenalBoundaryWall>(scene).Length != 0)
                 errors.Add("Map.LegacyServices.Present");
+            if (includeSceneScans) ScanSceneIdentities(scene, errors);
+            return new MapRootValidation(errors, errors.Count == 0 ? new MapRootBindings(_map, _environment, _gameplay,
+                _layout, zones, stationRefs, new MapRunBindings(_map.sceneName, stationConfigs)) : null);
+        }
+
+        private static void ScanSceneIdentities(Scene scene, List<string> errors)
+        {
             var sceneIds = new HashSet<ulong>();
             foreach (var identity in InScene<NetworkIdentity>(scene))
                 if (identity.sceneId == 0 || !sceneIds.Add(identity.sceneId)) errors.Add("SceneIdentity.Invalid:" + identity.name);
-            var sceneUids = new HashSet<Guid>();
-            foreach (var component in InScene<MonoBehaviour>(scene).OfType<IUxrUniqueId>())
-                if (component.UniqueId == Guid.Empty || !sceneUids.Add(component.UniqueId)) errors.Add("SceneUxrIdentity.Invalid");
-            return new MapRootValidation(errors, errors.Count == 0 ? new MapRootBindings(_map, _environment, _gameplay,
-                _layout, zones, stationRefs, new MapRunBindings(_map.sceneName, stationConfigs)) : null);
+            // Причина и владелец — в тексте ошибки: без них отказ запуска карты не расследовать.
+            var sceneUids = new Dictionary<Guid, MonoBehaviour>();
+            foreach (var behaviour in InScene<MonoBehaviour>(scene))
+            {
+                if (!(behaviour is IUxrUniqueId component)) continue;
+                if (component.UniqueId == Guid.Empty) errors.Add("SceneUxrIdentity.Empty:" + Describe(behaviour));
+                else if (sceneUids.TryGetValue(component.UniqueId, out MonoBehaviour first))
+                    errors.Add("SceneUxrIdentity.Duplicate:" + Describe(behaviour) + "=" + Describe(first));
+                else sceneUids.Add(component.UniqueId, behaviour);
+            }
         }
 
         private bool Exempt(MapDebugExemptions flag) => _map != null && _map.kind == MapRunKind.Debug && (_map.debugExemptions & flag) != 0;
@@ -177,6 +203,13 @@ namespace VrBattlegrounds.Maps.Runtime
             writer.Write(q.x); writer.Write(q.y); writer.Write(q.z); writer.Write(q.w);
             writer.Write(s.x); writer.Write(s.y); writer.Write(s.z);
         }
+        private static string Describe(Component component)
+        {
+            var path = component.name;
+            for (Transform t = component.transform.parent; t != null; t = t.parent) path = t.name + "/" + path;
+            return component.GetType().Name + "@" + path;
+        }
+
         internal static T[] InScene<T>(Scene scene) where T : Component => scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<T>(true)).ToArray();
     }
 

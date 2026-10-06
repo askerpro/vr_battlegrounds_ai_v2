@@ -8,6 +8,7 @@ using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
+using VrBattlegrounds.Maps.Runtime;
 using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
 
@@ -275,6 +276,8 @@ namespace VrBattlegrounds.Bots
         private void SpawnPurchase(UxrGrabber grabber)
         {
             GameObject prefab = _armWith.WeaponPrefab;
+            // Покупка — выдача предмета карты: до server Ready и после Closing её нет, как у стены.
+            if (!MapRunAdmission.CanActivateActiveMap) return;
             GameObject instance = prefab != null ? NetworkUxrIdentity.CreateInstance(prefab) : null;
             if (instance == null) return;
 

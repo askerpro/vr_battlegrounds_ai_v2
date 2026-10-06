@@ -5,6 +5,7 @@ using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
+using VrBattlegrounds.Maps.Runtime;
 using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Arsenal
@@ -117,7 +118,9 @@ namespace VrBattlegrounds.Arsenal
             {
                 SubscribeOffers();
                 FlushRejected();
-                if (!_initialRefillDone || _refillRequested)
+                // Первичное пополнение — только после server Ready карты: до допуска флаг не ставится,
+                // иначе после Ready оно уже не случится. Запрос, пришедший при закрытом допуске, ждёт.
+                if ((!_initialRefillDone || _refillRequested) && MapRunAdmission.CanActivateMapGameplay(gameObject.scene))
                 {
                     _initialRefillDone = true; _refillRequested = false;
                     ServerRefill();
@@ -146,6 +149,9 @@ namespace VrBattlegrounds.Arsenal
         private void SpawnStock(int index, ArsenalMagazineOffer offer)
         {
             if (!isServer || !StateEventAuthority.IsWorldAuthority) return;
+            // Единственная точка выдачи магазинов: до server Ready и после Closing не выдаёт никто —
+            // ни первичное, ни запрошенное пополнение, ни замена потерянного.
+            if (!MapRunAdmission.CanActivateMapGameplay(gameObject.scene)) return;
             GameObject prefab = offer.Slot.WeaponData.MagazinePrefab;
             if (prefab == null || prefab.GetComponent<NetworkIdentity>() == null || prefab.GetComponent<UxrGrabbableObject>() == null ||
                 prefab.GetComponent<MagazineManipulationHistory>() == null)

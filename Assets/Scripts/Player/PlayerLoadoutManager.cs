@@ -7,6 +7,7 @@ using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Interaction;
+using VrBattlegrounds.Maps.Runtime;
 using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Player
@@ -191,7 +192,9 @@ namespace VrBattlegrounds.Player
         [Server]
         public void ServerEnsureMagazines(int perWeapon)
         {
-            if (Pocket == null) return;
+            // После Closing (принята загрузка следующей карты) правила режима карман не трогают:
+            // серия уже изъяла снаряжение, новая выдача уехала бы на следующую карту.
+            if (Pocket == null || !MapRunAdmission.CanActivateActiveMap) return;
 
             List<WeaponComponent> weapons = CollectEquippedWeapons();
             if (weapons.Count == 0) return;
@@ -233,7 +236,8 @@ namespace VrBattlegrounds.Player
         [Server]
         public bool ServerGiveWeapon(WeaponInfo info)
         {
-            if (info == null || info.WeaponPrefab == null || !UxrGrabManager.HasInstance) return false;
+            if (info == null || info.WeaponPrefab == null || !UxrGrabManager.HasInstance ||
+                !MapRunAdmission.CanActivateActiveMap) return false;
 
             UxrGrabbableObjectAnchor holster = FindFreePocket(AnchorRoleKind.Secondary);
             if (holster == null) return false;

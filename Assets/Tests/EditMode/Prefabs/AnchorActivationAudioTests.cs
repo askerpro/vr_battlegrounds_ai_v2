@@ -90,7 +90,7 @@ namespace VrBattlegrounds.Tests.Prefabs
                     var sound = anchor.GetComponent<AnchorSound>();
 
                     if (sound == null) { failures.Add($"{path} / {anchor.name}: нет AnchorSound"); continue; }
-                    if (sound.Source == null || sound.Source.clip == null) failures.Add($"{path} / {anchor.name}: нет источника или звука вставки");
+                    if (sound.Source == null || sound.InsertClip == null) failures.Add($"{path} / {anchor.name}: нет источника или звука вставки (свой клип или MagazineAnchorSoundDefaults)");
                     if (sound.TakeOutClip == null) failures.Add($"{path} / {anchor.name}: нет звука выпадения (Take Out Clip)");
                     if (sound.TakeOutOnlyByHand) failures.Add($"{path} / {anchor.name}: Take Out Only By Hand включён — выброс кнопкой A/X будет беззвучным");
                     if (sound.Source != null && anchor.ActivateOnPlaced != null && sound.Source.transform.IsChildOf(anchor.ActivateOnPlaced.transform))

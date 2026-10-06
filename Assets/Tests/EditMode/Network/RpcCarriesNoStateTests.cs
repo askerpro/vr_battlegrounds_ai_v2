@@ -38,6 +38,8 @@ namespace VrBattlegrounds.Tests.Network
                 "событие: владелец отпускает локальный планшет перед уничтожением аватара, состояния нет",
             ["PlayerController.RpcDevTeleport"] =
                 "отладочный перенос; позиция едет NetworkTransform",
+            ["CartridgeIntake.TargetAdmissionResult"] =
+                "ответ на запрос приёма патрона самому отправителю: снимает его ожидание; патроны — фиксация SDK-учёта, опоздавший получает её снимком",
             ["EliminationMode.RpcOnSidesSwapped"] =
                 "баннер HUD; сами стороны — SyncVar _sidesSwapped с хуком",
             ["EliminationMode.RpcOnRoundStarted"] =

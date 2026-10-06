@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UltimateXR.Mechanics.Weapons;
 using UnityEditor;
@@ -270,8 +271,15 @@ namespace VrBattlegrounds.Tests.Arsenal
                 if (want.KickDegrees <= 0f || want.MaxPitchDegrees <= 0f)
                     failures.Add($"{name}: сила отдачи CS2 (recoil_magnitude) в балансе не задана.");
 
-                var mag = info.MagazinePrefab != null ? info.MagazinePrefab.GetComponentInChildren<UxrFirearmMag>(true) : null;
-                if (mag == null) failures.Add($"{name}: нет магазина с UxrFirearmMag.");
+                // Ручное заряжание: «магазин» — встроенный запас в оружии, MagazinePrefab — одиночный патрон.
+                bool manualLoading = info.ReadinessProfile != null &&
+                                     info.ReadinessProfile.AmmoCapability == WeaponAmmoCapability.FixedStoreChamber;
+                if (manualLoading && (info.MagazinePrefab == null || info.MagazinePrefab.GetComponent<Cartridge>() == null))
+                    failures.Add($"{name}: ручное заряжание, а MagazinePrefab не патрон с Cartridge.");
+                var mag = manualLoading
+                    ? info.WeaponPrefab.GetComponentsInChildren<UxrFirearmMag>(true).FirstOrDefault(store => store.IsFixedAmmoStore)
+                    : info.MagazinePrefab != null ? info.MagazinePrefab.GetComponentInChildren<UxrFirearmMag>(true) : null;
+                if (mag == null) failures.Add(manualLoading ? $"{name}: нет встроенного запаса (fixed store)." : $"{name}: нет магазина с UxrFirearmMag.");
                 else if (mag.Capacity != info.MagazineSize || mag.Rounds != info.MagazineSize)
                     failures.Add($"{name}: магазин {mag.Rounds}/{mag.Capacity}, по балансу {info.MagazineSize}.");
             }

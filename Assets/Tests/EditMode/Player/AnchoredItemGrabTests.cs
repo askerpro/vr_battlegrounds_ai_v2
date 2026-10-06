@@ -86,7 +86,8 @@ namespace VrBattlegrounds.Tests.Player
                 UxrGrabbableObject root = weapon.GetComponent<UxrGrabbableObject>();
                 if (root == null) continue;
 
-                foreach (UxrGrabbableObject item in weapon.GetComponentsInChildren<UxrGrabbableObject>(true).Where(g => g != root && IsInAnchor(g)))
+                // Выключенный захват — встроенный запас ручного заряжания: рука его не возьмёт по устройству.
+                foreach (UxrGrabbableObject item in weapon.GetComponentsInChildren<UxrGrabbableObject>(true).Where(g => g != root && g.enabled && IsInAnchor(g)))
                 {
                     foreach (UxrAvatar avatar in avatars)
                     {

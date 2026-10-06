@@ -128,7 +128,7 @@ namespace VrBattlegrounds.Tests.Prefabs
                     continue;
                 }
 
-                if (sound.Source == null || sound.Source.clip == null)
+                if (sound.Source == null || sound.InsertClip == null)
                 {
                     missing.Add($"{anchor.name}: AnchorSound — нет источника или его clip (вставка магазина)");
                 }

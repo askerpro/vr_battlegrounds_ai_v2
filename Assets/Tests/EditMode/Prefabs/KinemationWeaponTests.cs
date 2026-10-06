@@ -342,7 +342,7 @@ namespace VrBattlegrounds.Tests.Prefabs
             }
             var anchor = trigger.FindPropertyRelative("_ammunitionMagAnchor").objectReferenceValue as UxrGrabbableObjectAnchor;
             AnchorSound sound = anchor.GetComponent<AnchorSound>();
-            clips.Add(("магазин вставлен", sound.Source.clip));
+            clips.Add(("магазин вставлен", sound.InsertClip));
             clips.Add(("магазин снят", sound.TakeOutClip));
 
             var failures = new List<string>();

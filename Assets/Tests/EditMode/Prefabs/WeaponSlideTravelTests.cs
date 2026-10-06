@@ -135,6 +135,15 @@ namespace VrBattlegrounds.Tests.Prefabs
                     if (mag.GetComponent<Mirror.NetworkIdentity>() != null)
                         failures.Add($"{info.WeaponPrefab.name}: у вложенного {mag.name} NetworkIdentity — Mirror не допускает вложенных");
 
+                    // Ручное заряжание: в гнезде встроенный запас, выдаются одиночные патроны — «заряжено» значит
+                    // полный запас. Состав патрона и окна приёма — ManualLoadingPrefabTests.
+                    if (mag.IsFixedAmmoStore)
+                    {
+                        if (mag.Rounds != mag.Capacity)
+                            failures.Add($"{info.WeaponPrefab.name}: встроенный запас {mag.Rounds}/{mag.Capacity} — приходит недозаряженным");
+                        continue;
+                    }
+
                     // Вставленный и запасные магазины — один префаб, иначе у оружия два разных магазина.
                     // Выдаваемый может быть вариантом вложенного (оружие-вариант сэмпла UltimateXR).
                     string nested = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(mag.gameObject);

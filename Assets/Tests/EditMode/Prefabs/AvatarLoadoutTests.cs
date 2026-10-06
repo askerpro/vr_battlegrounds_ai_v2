@@ -537,7 +537,7 @@ namespace VrBattlegrounds.Tests.Prefabs
                     continue;
                 }
 
-                if (sound.Source == null || sound.Source.clip == null) problems.Add($"{anchor.name}: нет источника или звука вставки");
+                if (sound.Source == null || sound.InsertClip == null) problems.Add($"{anchor.name}: нет источника или звука вставки");
                 if (sound.TakeOutClip == null) problems.Add($"{anchor.name}: нет звука доставания (Take Out Clip)");
                 if (!sound.TakeOutOnlyByHand) problems.Add($"{anchor.name}: доставание звучит и без руки — карман магазинов сам программно вынимает вложенное, звук будет на каждую укладку");
 

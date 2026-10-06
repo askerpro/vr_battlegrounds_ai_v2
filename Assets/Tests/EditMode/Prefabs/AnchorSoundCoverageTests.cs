@@ -84,7 +84,7 @@ namespace VrBattlegrounds.Tests.Prefabs
                 return;
             }
 
-            if (sound.Source == null || sound.Source.clip == null) failures.Add($"{where}: нет звука вставки (источник или его clip)");
+            if (sound.Source == null || sound.InsertClip == null) failures.Add($"{where}: нет звука вставки (источник или его clip)");
             if (sound.TakeOutClip == null) failures.Add($"{where}: нет звука доставания (Take Out Clip)");
         }
 

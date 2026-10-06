@@ -43,9 +43,10 @@ Windows PowerShell 5.1. Отличия, на которых спотыкаютс
 
 ## Редактирование файлов и передача кода (находки 2026-10-02)
 
-- Для правки исходников, конфигов и документации сначала использовать нативный `apply_patch`.
-  Не заменять рабочий редактор файла командой PowerShell/Python ради удобства пакетной обработки.
-- В одном патче — одна операция на путь. Попытка `Delete File` + `Add File` для того же файла
+- Для правки исходников, конфигов и документации сначала использовать нативный редактор агента
+  (Codex — `apply_patch`, Claude Code — Edit/Write). Не заменять его командой PowerShell/Python
+  ради удобства пакетной обработки.
+- Codex: в одном патче — одна операция на путь. Попытка `Delete File` + `Add File` для того же файла
   отклоняется как `multiple operations target`. Переписать в `Update File` или разделить вызовы.
 - Windows PowerShell 5.1 кодирует текст для stdin внешней программы через `$OutputEncoding`,
   по умолчанию ASCII. Here-string с кириллицей, переданный `| python -`, превращает её в `?`;
@@ -61,5 +62,6 @@ Windows PowerShell 5.1. Отличия, на которых спотыкаютс
   Developer Mode или отдельный UAC. PowerShell `New-Item -ItemType SymbolicLink` может разрешить Target
   относительно текущей папки и записать абсолютный путь: относительные симлинки проверять по `Target`.
 
-Codex загружает этот контекст через `.codex/hooks.json` (`SessionStart`: startup/resume/clear/compact).
+Codex загружает этот контекст через `.codex/hooks.json`, Claude Code — через `.claude/settings.json`
+(`SessionStart`: startup/resume/clear/compact, общий скрипт `.codex/hooks/session_context.py`).
 Хук только читает правила и выводит контекст; файлы и настройки системы не меняет.

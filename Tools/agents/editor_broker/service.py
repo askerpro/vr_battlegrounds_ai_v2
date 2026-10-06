@@ -240,6 +240,7 @@ class EditorBroker:
             raise BrokerError("Агент не должен писать в редакторский worktree")
         if base_sha != self.config["baseline_sha"] or not source.is_ancestor(base_sha, input_sha):
             raise BrokerError("Устаревшая или чужая база: обновить checkpoint вне редактора")
+        self._check_main(input_sha)
         # Проверка путей общая с Unity; даже fake-adapter не обходит ограничений.
         from .unity import _paths
         roots = _paths(self.editor_root, output_roots)
@@ -249,10 +250,31 @@ class EditorBroker:
     def claim(self, ticket_id, owner):
         with transaction_mutex(self.state):
             self._reload_config()
-            self._ready()
-            if self.git.head() != self.config["baseline_sha"] or not self.git.is_clean():
-                raise BrokerError("Перед claim требуется чистый редактор на принятой базе")
+            ticket = self.store.get(ticket_id)
+            self._check_main(ticket['input_sha'])
+            # Во время паузы/отсрочки человек уже ответил: уведомление не обновляется.
+            if self.store.hold()["held"]:
+                raise BrokerError("Человек удерживает редактор; заявка остаётся первой в очереди")
+            try:
+                self._ready()
+                if self.git.head() != self.config["baseline_sha"] or not self.git.is_clean():
+                    raise BrokerError("Перед claim требуется чистый редактор на принятой базе")
+            except Exception as error:
+                # Не отдаём истекающий OFFERED другим агентам: человек удерживает редактор.
+                self.store.set_paused(True)
+                notice = self.state / 'human-blocked.json'
+                previous = json.loads(notice.read_text(encoding='utf-8')) if notice.exists() else None
+                # Один эпизод — одно окно; после истёкшей отсрочки начинается новый эпизод.
+                if previous is None or previous.get('acknowledged'):
+                    atomic_json(notice, {'owner': owner, 'reason': str(error), 'episode': uuid.uuid4().hex})
+                raise
             return self.store.claim(ticket_id, owner)
+
+    def _check_main(self, input_sha):
+        main = GitState(Path(self.git.common_dir()).parent)
+        head = main.head()
+        if not main.is_ancestor(head, self.config['baseline_sha']) or not main.is_ancestor(head, input_sha):
+            raise BrokerError("Main обновился: опубликовать новую базу и пересоздать checkpoint/заявку")
 
     def _fail(self, ticket_id, token, error):
         pending = getattr(self.adapter, "last_request_id", None)
@@ -268,6 +290,9 @@ class EditorBroker:
             try:
                 if ticket["base_sha"] != self.config["baseline_sha"]:
                     raise BrokerError("База изменилась после постановки в очередь")
+                if self.store.is_paused():
+                    raise BrokerError("Человек запросил редактор; begin запрещён")
+                self._check_main(ticket['input_sha'])
                 if self.git.head() != ticket["base_sha"] or not self.git.is_clean():
                     raise BrokerError("Редакторские файлы изменились вне контроллера")
                 snapshot = self._ready()

@@ -32,7 +32,8 @@ class GitState:
         env["GIT_OPTIONAL_LOCKS"] = "0"
         env["GIT_LITERAL_PATHSPECS"] = "1"
         # check-ignore принимает имена файлов, а не pathspec; literal magic для него недопустим.
-        if args and args[0] == "check-ignore":
+        # stash -u под literal pathspec молча пропускает untracked файлы.
+        if args and args[0] in ("check-ignore", "stash"):
             env.pop("GIT_LITERAL_PATHSPECS", None)
         if index is not None:
             env["GIT_INDEX_FILE"] = str(index)

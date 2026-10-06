@@ -16,8 +16,10 @@ New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $response = Join-Path $OutputDirectory 'compile.rsp'
 $source = Join-Path $OutputDirectory 'EditorBrokerBridge.cs'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'EditorBrokerBridge.cs.txt') -Destination $source
+$panelSource = Join-Path $OutputDirectory 'EditorBrokerHumanPanel.cs'
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'EditorBrokerHumanPanel.cs.txt') -Destination $panelSource
 $arguments = @('/nostdlib+', '/target:library', '/langversion:9.0', '/warn:4',
-    ('/out:"' + (Join-Path $OutputDirectory 'EditorBrokerLocal.dll') + '"'), ('"' + $source + '"'))
+    ('/out:"' + (Join-Path $OutputDirectory 'EditorBrokerLocal.dll') + '"'), ('"' + $source + '"'), ('"' + $panelSource + '"'))
 $arguments += $references | ForEach-Object { '/reference:"' + $_.FullName + '"' }
 if ($McpEditorAssembly) {
     $bootstrapSource = Join-Path $OutputDirectory 'WorkerMcpBootstrap.cs'

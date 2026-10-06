@@ -69,6 +69,8 @@ class BrokerStore:
                 CREATE INDEX IF NOT EXISTS events_owner_cursor ON events(owner, id);
                 CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value INTEGER NOT NULL);
                 INSERT OR IGNORE INTO metadata(key, value) VALUES ('epoch', 0);
+                INSERT OR IGNORE INTO metadata(key, value) VALUES ('paused', 0);
+                INSERT OR IGNORE INTO metadata(key, value) VALUES ('defer_until', 0);
             """)
 
     @staticmethod
@@ -160,6 +162,9 @@ class BrokerStore:
             if active["phase"] != "RECOVERY_REQUIRED" and active["lease_expires_at"] <= now:
                 self._set_phase(connection, active["id"], "RECOVERY_REQUIRED", now)
             return
+        values = dict(connection.execute("SELECT key,value FROM metadata"))
+        if values.get("paused") or values.get("defer_until", 0) > now:
+            return
         offered = connection.execute("SELECT * FROM tickets WHERE phase = 'OFFERED' ORDER BY id LIMIT 1").fetchone()
         if offered is not None:
             if offered["offer_expires_at"] > now:
@@ -213,6 +218,9 @@ class BrokerStore:
 
     def claim(self, ticket_id, owner):
         with self._transaction() as (connection, now):
+            values = dict(connection.execute("SELECT key,value FROM metadata"))
+            if values.get("paused") or values.get("defer_until", 0) > now:
+                raise RuntimeError("Человек приостановил передачу редактора")
             ticket = self._get(connection, ticket_id)
             self._owner(ticket, owner)
             if ticket["phase"] != "OFFERED":
@@ -223,6 +231,31 @@ class BrokerStore:
                             token=secrets.token_urlsafe(32), epoch=epoch,
                             lease_expires_at=now + self.lease_seconds, offer_expires_at=None)
             return self._get(connection, ticket_id)
+
+    def is_paused(self):
+        return self.hold()["paused"]
+
+    def hold(self):
+        """Пауза человеком или действующая отсрочка; истёкшая отсрочка не держит очередь."""
+        with self._connection() as connection:
+            values = dict(connection.execute("SELECT key,value FROM metadata"))
+        defer_until = values.get("defer_until", 0)
+        if defer_until <= float(self.clock()):
+            defer_until = 0
+        return {"paused": bool(values.get("paused")), "defer_until": defer_until,
+                "held": bool(values.get("paused")) or bool(defer_until)}
+
+    def set_paused(self, paused, defer_seconds=0):
+        if not math.isfinite(defer_seconds) or defer_seconds < 0:
+            raise ValueError("Отсрочка должна быть конечной и неотрицательной")
+        with self._transaction() as (connection, now):
+            connection.execute("UPDATE metadata SET value=? WHERE key='paused'", (int(paused),))
+            connection.execute("UPDATE metadata SET value=? WHERE key='defer_until'",
+                               (math.ceil(now + defer_seconds) if defer_seconds else 0,))
+            # Сохраняем исходный id и порядок FIFO; оффер не истекает во время отказа.
+            for row in connection.execute("SELECT id FROM tickets WHERE phase='OFFERED'").fetchall():
+                self._set_phase(connection, row[0], "QUEUED", now, offer_expires_at=None)
+            return {"paused": bool(paused), "defer_until": math.ceil(now + defer_seconds) if defer_seconds else 0}
 
     def validate(self, ticket_id, token):
         with self._transaction() as (connection, _):

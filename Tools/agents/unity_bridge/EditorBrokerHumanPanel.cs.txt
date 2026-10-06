@@ -1,0 +1,324 @@
+// Панель передачи редактора человеком. Состояние читается из human-ui.json брокера,
+// поэтому переживает domain reload; Git и очередь меняет только CLI брокера.
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+namespace VrBattlegrounds.EditorBrokerLocal
+{
+    [Serializable] internal sealed class HumanUiState
+    {
+        public long updated_unix_ms = 0;
+        public bool busy = false;
+        public string owner = "";
+        public string phase = "";
+        public string handoff_stage = "";
+        public string reason = "";
+        public string episode = "";
+        public bool notify = false;
+        public int waiting_count = 0;
+        public string[] waiting_owners = new string[0];
+        public bool paused = false;
+        public long defer_until = 0;
+        public string error = "";
+        public string python = "";
+        public string cli = "";
+    }
+
+    [InitializeOnLoad]
+    public static class EditorBrokerHumanHandoff
+    {
+        private const string LocalPath = "Assets/Editor/VR_Battlegrounds/Debug/EditorBrokerLocal";
+        private const string EpisodeKey = "EditorBrokerLocal.HumanEpisode";
+        private static readonly string Root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+        private static string _state;
+        private static Process _process;
+        private static string _processCommand = "";
+        private static readonly StringBuilder Output = new StringBuilder();
+        private static double _nextRead;
+        private static double _nextStatus;
+        private static string _lastTitleKey = "";
+        internal static HumanUiState State = new HumanUiState();
+        internal static string LastResult = "";
+
+        static EditorBrokerHumanHandoff()
+        {
+            EditorApplication.update += Tick;
+            EditorApplication.updateMainWindowTitle += UpdateTitle;
+            SceneView.duringSceneGui += BlockSceneView;
+        }
+
+        internal static bool Configured { get { return _state != null; } }
+        internal static bool Running { get { return _process != null; } }
+        internal static string RunningCommand { get { return _processCommand; } }
+
+        // Человек держит редактор: нет аренды и нет незавершённой передачи агентам.
+        internal static bool HumanOwns
+        {
+            get
+            {
+                string stage = State.handoff_stage ?? "";
+                return !State.busy && (stage == "" || stage == "HUMAN");
+            }
+        }
+
+        private static void Configure()
+        {
+            string path = Path.Combine(Root, LocalPath, "bridge-config.json");
+            if (!File.Exists(path)) return;
+            var config = JsonUtility.FromJson<BridgeConfig>(File.ReadAllText(path));
+            if (config == null || string.IsNullOrEmpty(config.state_dir)) return;
+            _state = Path.GetFullPath(config.state_dir);
+            _nextStatus = 0;
+        }
+
+        private static void Tick()
+        {
+            double now = EditorApplication.timeSinceStartup;
+            if (_process != null && _process.HasExited) Finish();
+            if (now < _nextRead) return;
+            _nextRead = now + 1;
+            try
+            {
+                if (_state == null) Configure();
+                if (_state == null) return;
+                ReadState();
+                // WAITING продолжает возврат после окончания аренды — опрашиваем чаще.
+                if (_process == null && now >= _nextStatus)
+                {
+                    _nextStatus = now + (State.handoff_stage == "WAITING" ? 3 : 15);
+                    Run(false, "human-status");
+                }
+                if (State.notify && State.episode != SessionState.GetString(EpisodeKey, ""))
+                {
+                    SessionState.SetString(EpisodeKey, State.episode);
+                    EditorBrokerHumanWindow.ShowRequest();
+                }
+            }
+            catch (Exception exception)
+            {
+                LastResult = exception.Message;
+            }
+        }
+
+        private static void ReadState()
+        {
+            string path = Path.Combine(_state, "human-ui.json");
+            if (!File.Exists(path)) return;
+            HumanUiState next;
+            try { next = JsonUtility.FromJson<HumanUiState>(File.ReadAllText(path, Encoding.UTF8)); }
+            catch (IOException) { return; } // Брокер заменяет файл атомарно; прочитаем на следующем тике.
+            if (next == null) return;
+            State = next;
+            string titleKey = State.busy + "|" + State.owner + "|" + State.phase + "|" + State.waiting_count + "|" + State.paused;
+            if (titleKey != _lastTitleKey)
+            {
+                _lastTitleKey = titleKey;
+                EditorApplication.UpdateMainWindowTitle();
+                SceneView.RepaintAll();
+            }
+        }
+
+        // visible=false — фоновый опрос: результат не показывается как ответ на кнопку.
+        internal static bool Run(bool visible, params string[] arguments)
+        {
+            if (_state == null || _process != null) return false;
+            string python = string.IsNullOrEmpty(State.python) ? "python" : State.python;
+            string cli = string.IsNullOrEmpty(State.cli) ? Path.Combine(_state, "runtime", "editor-broker.py") : State.cli;
+            var line = new StringBuilder();
+            foreach (string item in new[] { cli, "--repo", Root, "--state-dir", _state })
+                line.Append('"').Append(item).Append("\" ");
+            line.Append(string.Join(" ", arguments));
+            var start = new ProcessStartInfo(python, line.ToString()) {
+                UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true,
+                RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8, WorkingDirectory = Root };
+            lock (Output) Output.Length = 0;
+            _process = new Process { StartInfo = start };
+            _process.OutputDataReceived += (sender, data) => { if (data.Data != null) lock (Output) Output.AppendLine(data.Data); };
+            _process.ErrorDataReceived += (sender, data) => { if (data.Data != null) lock (Output) Output.AppendLine(data.Data); };
+            _processCommand = visible ? arguments[0] : "";
+            // CLI ждёт ответов моста в этом же Editor: главный поток не блокируется.
+            _process.Start();
+            _process.BeginOutputReadLine();
+            _process.BeginErrorReadLine();
+            return true;
+        }
+
+        private static void Finish()
+        {
+            _process.WaitForExit();
+            string text;
+            lock (Output) text = Output.ToString().Trim();
+            bool ok = _process.ExitCode == 0;
+            _process.Dispose();
+            _process = null;
+            if (_processCommand.Length != 0)
+            {
+                LastResult = ok ? "Готово: " + _processCommand : Error(text);
+                EditorBrokerHumanWindow.Notify(ok ? "Готово" : "Отказ брокера");
+            }
+            _processCommand = "";
+            _nextRead = 0;
+            _nextStatus = 0;
+        }
+
+        private static string Error(string text)
+        {
+            const string marker = "\"error\": \"";
+            int start = text.IndexOf(marker, StringComparison.Ordinal);
+            if (start < 0) return text;
+            start += marker.Length;
+            int end = text.IndexOf('"', start);
+            return end < 0 ? text : text.Substring(start, end - start);
+        }
+
+        internal static void SaveAndRelease()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                LastResult = "Сначала выйдите из Play Mode: его состояние не переносится.";
+                return;
+            }
+            var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+            if (stage != null && stage.scene.isDirty)
+            {
+                LastResult = "Сохраните или закройте открытый префаб и повторите.";
+                return;
+            }
+            for (int index = 0; index < SceneManager.sceneCount; index++)
+            {
+                Scene scene = SceneManager.GetSceneAt(index);
+                if (!scene.isDirty && !(string.IsNullOrEmpty(scene.path) && scene.rootCount > 0)) continue;
+                string path = scene.path;
+                if (string.IsNullOrEmpty(path))
+                {
+                    path = EditorUtility.SaveFilePanelInProject("Сохранить новую сцену", "Untitled", "unity",
+                        "Новую сцену нужно сохранить до передачи редактора агентам");
+                    if (string.IsNullOrEmpty(path)) { LastResult = "Передача отменена: сцена не сохранена."; return; }
+                }
+                if (!EditorSceneManager.SaveScene(scene, path))
+                {
+                    LastResult = "Передача отменена: не удалось сохранить " + path;
+                    return;
+                }
+            }
+            AssetDatabase.SaveAssets();
+            Run(true, "human-release");
+        }
+
+        private static void UpdateTitle(ApplicationTitleDescriptor title)
+        {
+            if (State.busy)
+                title.title = "[ЗАНЯТ АГЕНТОМ: " + State.owner + " · " + State.phase + "] " + title.title;
+            else if (State.waiting_count > 0 && HumanOwns)
+                title.title = "[Агенты ждут редактор: " + State.waiting_count + "] " + title.title;
+        }
+
+        // Защита от случайной правки во время аренды; внешние IDE и процессы не блокирует.
+        private static void BlockSceneView(SceneView view)
+        {
+            if (!State.busy) return;
+            Handles.BeginGUI();
+            var rect = new Rect(0, 0, view.position.width, view.position.height);
+            EditorGUI.DrawRect(rect, new Color(0.1f, 0.1f, 0.1f, 0.55f));
+            GUI.Label(rect, "Редактор занят агентом «" + State.owner + "»\n" + State.phase +
+                "\n\nНе меняйте проект до окончания аренды", new GUIStyle(EditorStyles.whiteLargeLabel) {
+                    alignment = TextAnchor.MiddleCenter, wordWrap = true });
+            Handles.EndGUI();
+            Event current = Event.current;
+            if (current.isMouse || current.isKey || current.type == EventType.ScrollWheel ||
+                current.type == EventType.DragUpdated || current.type == EventType.DragPerform)
+            {
+                HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+                current.Use();
+            }
+        }
+    }
+
+    public sealed class EditorBrokerHumanWindow : EditorWindow
+    {
+        [MenuItem("Tools/VR Battlegrounds/Debug/Редактор и агенты")]
+        public static void Open() { GetWindow<EditorBrokerHumanWindow>(false, "Редактор и агенты").Show(); }
+
+        internal static void ShowRequest()
+        {
+            var window = GetWindow<EditorBrokerHumanWindow>(false, "Редактор и агенты");
+            window.Show();
+            window.Focus();
+            window.ShowNotification(new GUIContent("Агент просит редактор"), 6);
+        }
+
+        internal static void Notify(string message)
+        {
+            if (!HasOpenInstances<EditorBrokerHumanWindow>()) return;
+            var window = GetWindow<EditorBrokerHumanWindow>(false, "Редактор и агенты", false);
+            window.ShowNotification(new GUIContent(message), 3);
+            window.Repaint();
+        }
+
+        private void OnInspectorUpdate() { Repaint(); }
+
+        private void OnGUI()
+        {
+            HumanUiState state = EditorBrokerHumanHandoff.State;
+            if (!EditorBrokerHumanHandoff.Configured)
+            {
+                EditorGUILayout.HelpBox("Это не редакторский worker брокера: передача недоступна.", MessageType.Info);
+                return;
+            }
+            string stage = state.handoff_stage ?? "";
+            if (state.busy)
+                EditorGUILayout.HelpBox("Редактор занят агентом «" + state.owner + "» · " + state.phase +
+                    ". Ничего не меняйте до окончания аренды.", MessageType.Warning);
+            else if (stage == "AGENTS" || stage == "WAITING")
+                EditorGUILayout.HelpBox(stage == "WAITING" ? "Возврат запрошен: ждём окончания текущей аренды." :
+                    "Редактор передан агентам. Ваши изменения сохранены в stash.", MessageType.Info);
+            else if (stage == "RECOVERY_REQUIRED")
+                EditorGUILayout.HelpBox("Передача требует ручного разбора. Stash и резервный ref сохранены.", MessageType.Error);
+            else
+                EditorGUILayout.HelpBox("Редактор у вас." + (state.paused ? " Выдача аренд агентам приостановлена." : ""),
+                    MessageType.None);
+
+            if (state.waiting_count > 0 && EditorBrokerHumanHandoff.HumanOwns)
+            {
+                string owner = state.waiting_owners != null && state.waiting_owners.Length > 0 ? state.waiting_owners[0] : state.owner;
+                EditorGUILayout.HelpBox("Агент «" + owner + "» ожидает редактор (в очереди: " + state.waiting_count +
+                    "), но обнаружены локальные или несохранённые изменения.\n" +
+                    "Если вы готовы передать редактор, нажмите «Сохранить и передать агентам»: сцены и ассеты " +
+                    "сохранятся, изменения уйдут в stash. Агент продолжит после освобождения редактора." +
+                    (string.IsNullOrEmpty(state.reason) ? "" : "\n\nПричина отказа: " + state.reason), MessageType.Warning);
+                if (state.defer_until > 0)
+                    EditorGUILayout.LabelField("Отсрочка до " +
+                        DateTimeOffset.FromUnixTimeSeconds(state.defer_until).ToLocalTime().ToString("HH:mm"));
+            }
+
+            using (new EditorGUI.DisabledScope(EditorBrokerHumanHandoff.Running))
+            {
+                using (new EditorGUI.DisabledScope(!EditorBrokerHumanHandoff.HumanOwns))
+                    if (GUILayout.Button("Сохранить и передать агентам", GUILayout.Height(28)))
+                        EditorBrokerHumanHandoff.SaveAndRelease();
+                using (new EditorGUI.DisabledScope(EditorBrokerHumanHandoff.HumanOwns && state.paused))
+                    if (GUILayout.Button("Вернуть мои изменения и продолжить", GUILayout.Height(28)))
+                        EditorBrokerHumanHandoff.Run(true, "human-resume");
+                using (new EditorGUI.DisabledScope(!EditorBrokerHumanHandoff.HumanOwns || state.waiting_count == 0))
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Ещё 10 минут")) EditorBrokerHumanHandoff.Run(true, "human-defer", "--minutes", "10");
+                    if (GUILayout.Button("Отказать без срока")) EditorBrokerHumanHandoff.Run(true, "human-defer", "--minutes", "0");
+                }
+                if (stage == "RECOVERY_REQUIRED" && GUILayout.Button("Я разобрал вручную — снять передачу"))
+                    EditorBrokerHumanHandoff.Run(true, "human-clear");
+            }
+            if (EditorBrokerHumanHandoff.Running)
+                EditorGUILayout.LabelField("Выполняется: " + EditorBrokerHumanHandoff.RunningCommand);
+            if (!string.IsNullOrEmpty(state.error)) EditorGUILayout.HelpBox(state.error, MessageType.Error);
+            if (!string.IsNullOrEmpty(EditorBrokerHumanHandoff.LastResult))
+                EditorGUILayout.HelpBox(EditorBrokerHumanHandoff.LastResult, MessageType.None);
+        }
+    }
+}

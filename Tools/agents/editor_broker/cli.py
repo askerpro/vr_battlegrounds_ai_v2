@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 from .git_state import GitState
+from .human import HumanHandoff
 from .service import EditorBroker, atomic_json, default_state_dir
 from .watch import watch_ticket
 
@@ -57,6 +58,13 @@ def parser():
     events = commands.add_parser("events")
     events.add_argument("--owner", required=True)
     events.add_argument("--after", type=int, default=0)
+    # Команды Unity-панели передачи редактора человеком.
+    commands.add_parser("human-release", help="Сохранённые правки в stash, редактор агентам")
+    commands.add_parser("human-resume", help="Остановить выдачу, вернуть stash после аренды")
+    defer = commands.add_parser("human-defer", help="Отказ агенту: N минут или без срока (0)")
+    defer.add_argument("--minutes", type=float, default=0)
+    commands.add_parser("human-status")
+    commands.add_parser("human-clear", help="Забыть разобранную вручную аварийную передачу")
     return root
 
 
@@ -115,6 +123,11 @@ def main(argv=None):
                 atomic_json(report, public(result))
                 result = {**result, "ticket_count": len(tickets), "tickets": tickets[:10],
                           "report_path": str(report)}
+            elif args.command.startswith("human-"):
+                human = HumanHandoff(broker)
+                result = {"human-release": human.release, "human-resume": human.resume,
+                          "human-status": human.status, "human-clear": human.clear,
+                          "human-defer": lambda: human.defer(args.minutes)}[args.command]()
             elif args.command == "renew":
                 result = broker.store.renew(args.ticket, args.token)
             elif args.command == "finish":
@@ -123,13 +136,25 @@ def main(argv=None):
                 result = broker.recover_stopped(args.ticket, args.token)
             else:
                 result = getattr(broker, args.command)(args.ticket, args.token)
+        _human_snapshot(state)
         # Только claim сообщает capability получившему аренду владельцу.
         output = result if args.command == "claim" else public(result)
         print(json.dumps({"ok": True, "result": output}, ensure_ascii=False))
         return 0
     except Exception as error:
+        _human_snapshot(state if "state" in locals() else None)
         print(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False))
         return 2
+
+
+def _human_snapshot(state):
+    """Панель Unity читает файл, а не CLI; сбой отчёта не меняет итог команды."""
+    if state is None or not (state / "config.json").is_file():
+        return
+    try:
+        HumanHandoff(EditorBroker(state)).snapshot()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

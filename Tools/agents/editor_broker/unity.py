@@ -143,6 +143,7 @@ def install_bridge(editor_root, state_dir):
         raise RuntimeError('Локальный мост выходит за project root')
     files = {
         'EditorBrokerBridge.cs': (_TEMPLATES / 'EditorBrokerBridge.cs.txt').read_bytes(),
+        'EditorBrokerHumanPanel.cs': (_TEMPLATES / 'EditorBrokerHumanPanel.cs.txt').read_bytes(),
         'EditorBrokerLocal.asmdef': (_TEMPLATES / 'EditorBrokerLocal.asmdef.txt').read_bytes(),
     }
     configuration = {'version': BRIDGE_VERSION, 'project_root': str(root), 'state_dir': str(state)}

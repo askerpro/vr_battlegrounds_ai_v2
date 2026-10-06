@@ -822,6 +822,57 @@ namespace VrBattlegrounds.Tests.Prefabs
         //  Вспомогательное
         // ══════════════════════════════════════════════════════════════════
 
+        // ══════════════════════════════════════════════════════════════════
+        //  Глаза
+        // ══════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Камера стоит туда, где UltimateXR считает глаза (<c>Eyes Base Height</c>/<c>Eyes Forward Offset</c> читаются один
+        /// раз при появлении аватара). Сборщик (<c>ControllerAndCameraSetup.ApplyHeadDefaults</c>) берёт их из костей глаз:
+        /// настройка, разошедшаяся с костями, — камера не в глазах модели. Аватар без костей глаз (киборг) не проверяется.
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void Высота_глаз_UltimateXR_совпадает_с_костями_глаз(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            if (!TryEyeBones(avatar, out Vector3 eyesLocal)) Assert.Pass($"{avatar.name}: нет костей глаз — высота задана вручную.");
+
+            var so = new SerializedObject(avatar.GetComponent<UxrStandardAvatarController>());
+            float baseHeight = so.FindProperty("_bodyIKSettings._eyesBaseHeight").floatValue;
+            float forward = so.FindProperty("_bodyIKSettings._eyesForwardOffset").floatValue;
+            Assert.That(baseHeight, Is.EqualTo(eyesLocal.y).Within(0.002f), "Eyes Base Height ≠ высота костей глаз — пересобрать шаг 3/4 (Controller и камера).");
+            Assert.That(forward, Is.EqualTo(eyesLocal.z + 0.02f).Within(0.002f), "Eyes Forward Offset ≠ вынос костей глаз + 0,02 м.");
+        }
+
+        /// <summary>
+        /// MEF: кости глаз модели стояли на переносице под очками — камера была на уровне носа (2026-10-06). Положение
+        /// выверено в шлеме у зеркала — центр линз очков — и задаётся сборщиком (<c>ControllerAndCameraSetup.HeadDefaults</c>).
+        /// </summary>
+        [TestCaseSource(nameof(RegisteredAvatars))]
+        public void MEF_глаза_на_уровне_линз_очков(string path)
+        {
+            UxrAvatar avatar = LoadAvatar(path);
+            if (!avatar.name.Contains("MEF")) Assert.Pass("Не MEF.");
+            Assert.That(TryEyeBones(avatar, out Vector3 eyesLocal), Is.True, $"{avatar.name}: нет костей глаз.");
+            Assert.That(eyesLocal.y, Is.EqualTo(1.7203f).Within(0.002f), "Высота глаз MEF — центр линз очков, а не исходные кости модели (1,691).");
+            Assert.That(eyesLocal.z, Is.EqualTo(0.1097f).Within(0.002f), "Вынос глаз MEF вперёд — центр линз очков.");
+            var so = new SerializedObject(avatar.GetComponent<UxrStandardAvatarController>());
+            Assert.That(so.FindProperty("_bodyIKSettings._headFreeRangeBend").floatValue, Is.EqualTo(55f).Within(0.01f),
+                "Head Free Range Bend MEF — 55°: наклон головы вниз без корпуса.");
+        }
+
+        /// <summary>Середина костей глаз (humanoid Animator модели) в осях корня аватара.</summary>
+        private static bool TryEyeBones(UxrAvatar avatar, out Vector3 eyesLocal)
+        {
+            eyesLocal = default;
+            Animator rig = avatar.GetComponentsInChildren<Animator>(true).FirstOrDefault(a => a.avatar != null && a.isHuman);
+            Transform left = rig != null ? rig.GetBoneTransform(HumanBodyBones.LeftEye) : null;
+            Transform right = rig != null ? rig.GetBoneTransform(HumanBodyBones.RightEye) : null;
+            if (left == null || right == null) return false;
+            eyesLocal = avatar.transform.InverseTransformPoint((left.position + right.position) * 0.5f);
+            return true;
+        }
+
         private static Component FindByTypeName(GameObject go, string typeName)
         {
             return go.GetComponents<Component>().FirstOrDefault(c => c != null && c.GetType().Name == typeName);

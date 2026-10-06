@@ -547,6 +547,10 @@ PrefabInstance:
       propertyPath: __prefabGuid
       value: eb4946d84a27da8488cd9a1dd7bd005c
       objectReference: {fileID: 0}
+    - target: {fileID: 3875714275831111157, guid: d28f92e640efecc41b278625340bff0c, type: 3}
+      propertyPath: _audioOnPlace._clip
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 4463702150871382182, guid: d28f92e640efecc41b278625340bff0c, type: 3}
       propertyPath: _assetId
       value: 1884781728
@@ -589,7 +593,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8727987884799817396, guid: d28f92e640efecc41b278625340bff0c, type: 3}
       propertyPath: _tag
-      value: MagHerrington
+      value: Cartridge:Herrington
       objectReference: {fileID: 0}
     - target: {fileID: 8727987884799817396, guid: d28f92e640efecc41b278625340bff0c, type: 3}
       propertyPath: __isInPrefab
@@ -672,6 +676,7 @@ PrefabInstance:
     - {fileID: 3993236839786157276, guid: d28f92e640efecc41b278625340bff0c, type: 3}
     - {fileID: 337318879778232777, guid: d28f92e640efecc41b278625340bff0c, type: 3}
     - {fileID: 2543006507937967363, guid: d28f92e640efecc41b278625340bff0c, type: 3}
+    - {fileID: 3319256745463159287, guid: d28f92e640efecc41b278625340bff0c, type: 3}
     m_RemovedGameObjects:
     - {fileID: 6746332832341458751, guid: d28f92e640efecc41b278625340bff0c, type: 3}
     - {fileID: 766382521867674780, guid: d28f92e640efecc41b278625340bff0c, type: 3}
@@ -692,6 +697,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5837573240272137203, guid: d28f92e640efecc41b278625340bff0c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7838037759078328675}
+    - targetCorrespondingSourceObject: {fileID: 5837573240272137203, guid: d28f92e640efecc41b278625340bff0c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 9154710734126757838}
+    - targetCorrespondingSourceObject: {fileID: 5837573240272137203, guid: d28f92e640efecc41b278625340bff0c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 518713257824976889}
   m_SourcePrefab: {fileID: 100100000, guid: d28f92e640efecc41b278625340bff0c, type: 3}
 --- !u!1 &5706746622394682049 stripped
 GameObject:
@@ -730,6 +741,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 614d7cd64a2879f4685cfd18a6b25fb7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.MagazineManipulationHistory
+--- !u!114 &9154710734126757838
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5706746622394682049}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65ec187f8b2e4184cacf0ed596b44c18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Mechanics.Weapons.UxrFirearmAmmoUnit
+  _uxrUniqueId: de29d40c-dcef-4cc0-81c5-158f613ef190
+  __prefabGuid: eb4946d84a27da8488cd9a1dd7bd005c
+  __isInPrefab: 1
+  _consumed: 0
+--- !u!114 &518713257824976889
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5706746622394682049}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40be82c6f7b5ace40a6ba9ba923266cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.Cartridge
+  _ammoType: Herrington
+  _magazineEquivalent: 7
 --- !u!4 &7493389901237849241 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8776539678674906539, guid: d28f92e640efecc41b278625340bff0c, type: 3}

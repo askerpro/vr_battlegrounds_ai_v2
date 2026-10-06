@@ -613,6 +613,10 @@ PrefabInstance:
       propertyPath: __prefabGuid
       value: 68884ec49d8d8df4bb08344406635740
       objectReference: {fileID: 0}
+    - target: {fileID: 1048386528679869323, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      propertyPath: _audioOnPlace._clip
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 1537291027041288073, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       propertyPath: _rounds
       value: 20

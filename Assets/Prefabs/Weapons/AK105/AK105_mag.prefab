@@ -831,6 +831,10 @@ PrefabInstance:
       propertyPath: __prefabGuid
       value: 63981a783100f704195a8e10cb89fc47
       objectReference: {fileID: 0}
+    - target: {fileID: 6383590672678242254, guid: ff6c66ad770fc1f42854b90cb14b7ad0, type: 3}
+      propertyPath: _audioOnPlace._clip
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 6794648070733825217, guid: ff6c66ad770fc1f42854b90cb14b7ad0, type: 3}
       propertyPath: __isInPrefab
       value: 1

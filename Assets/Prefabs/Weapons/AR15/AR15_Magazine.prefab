@@ -674,7 +674,7 @@ MonoBehaviour:
     _clip: {fileID: 8300000, guid: 3279f9a811e68ee419c458ad8034f351, type: 3}
     _volume: 1
   _audioOnPlace:
-    _clip: {fileID: 8300000, guid: 3279f9a811e68ee419c458ad8034f351, type: 3}
+    _clip: {fileID: 0}
     _volume: 0.2
   _audioOnRelease:
     _clip: {fileID: 0}

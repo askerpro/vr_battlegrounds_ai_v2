@@ -315,11 +315,12 @@ GameObject:
   - component: {fileID: 2031635571839663873}
   - component: {fileID: 8574239098736424805}
   - component: {fileID: 8079933298784793706}
-  - component: {fileID: 7780148073428070504}
   - component: {fileID: 8654436801876709689}
   - component: {fileID: 4237427124489965965}
   - component: {fileID: 4572479225228374276}
   - component: {fileID: 8985884884630538262}
+  - component: {fileID: 7390984472909470646}
+  - component: {fileID: 2793344047676538473}
   m_Layer: 0
   m_Name: FabarmSDASS_Ammo
   m_TagString: Magazine
@@ -445,7 +446,7 @@ MonoBehaviour:
   _autoCreateStartAnchor: 0
   _autoAnchorMaxPlaceDistance: 0.1
   _startAnchor: {fileID: 0}
-  _tag: MagShotgun
+  _tag: Cartridge:FabarmSDASS
   _dropAlignTransformUseSelf: 1
   _dropAlignTransform: {fileID: 0}
   _dropSnapMode: 3
@@ -545,7 +546,7 @@ MonoBehaviour:
     _clip: {fileID: 0}
     _volume: 1
   _audioOnPlace:
-    _clip: {fileID: 8300000, guid: bf2a4e10001c05d40abb3b1931efa1bd, type: 3}
+    _clip: {fileID: 0}
     _volume: 0.2
   _audioOnRelease:
     _clip: {fileID: 0}
@@ -562,23 +563,6 @@ MonoBehaviour:
   _maxAngularSpeed: 1800
   _useExternalRigidbody: 0
   _externalRigidbody: {fileID: 0}
---- !u!114 &7780148073428070504
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1507515040717537900}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 097a8eab230aadf40bdce734556f5482, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _uxrUniqueId: e417d96d-36e6-4869-8a52-8ecd0376b1d3
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
-  __isInPrefab: 1
-  _rounds: 8
-  _capacity: 8
 --- !u!114 &8654436801876709689
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -641,6 +625,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 614d7cd64a2879f4685cfd18a6b25fb7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.MagazineManipulationHistory
+--- !u!114 &7390984472909470646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1507515040717537900}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65ec187f8b2e4184cacf0ed596b44c18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Mechanics.Weapons.UxrFirearmAmmoUnit
+  _uxrUniqueId: 26508baf-4af6-418b-bb58-add9b36cdbdb
+  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __isInPrefab: 1
+  _consumed: 0
+--- !u!114 &2793344047676538473
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1507515040717537900}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40be82c6f7b5ace40a6ba9ba923266cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.Cartridge
+  _ammoType: FabarmSDASS
+  _magazineEquivalent: 8
 --- !u!1 &2703169158142982728
 GameObject:
   m_ObjectHideFlags: 0

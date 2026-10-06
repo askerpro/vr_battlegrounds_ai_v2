@@ -154,6 +154,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: be9ee3f6-3fba-488f-864e-b56eee405e15
       objectReference: {fileID: 0}
+    - target: {fileID: 4379950197833096784, guid: 6112527c66de1c34c9738c780e843457, type: 3}
+      propertyPath: _audioOnPlace._clip
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 5210702534537492957, guid: 6112527c66de1c34c9738c780e843457, type: 3}
       propertyPath: __prefabGuid
       value: ff6c66ad770fc1f42854b90cb14b7ad0

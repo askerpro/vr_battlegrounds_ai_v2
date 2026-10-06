@@ -18,6 +18,9 @@ MonoBehaviour:
   _weaponPrefab: {fileID: 6455569017325164971, guid: d586c5e550bf0ee4a9619d4bd368ca54, type: 3}
   _magazinePrefab: {fileID: 1507515040717537900, guid: 4c0598d66f467ea4690a960b022f58da, type: 3}
   _maxMagazineCount: 3
+  _readinessProfile: {fileID: 11400000, guid: 994953da7d298f744bff3a7b2a22a9bb, type: 2}
+  _commonFeedbackProfile: {fileID: 0}
+  _feedbackOverride: {fileID: 0}
   _price: 1050
   _damage: 16
   _rangeModifier: 0.7

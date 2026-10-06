@@ -87,6 +87,8 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
 **Изолированные worktree.** Агент пишет только в свой linked worktree. Единственный инструмент
 доступа к редактору — `Tools/agents/editor-broker.py`:
 checkpoint → request → watch-ticket → claim → begin → guard перед MCP → finish → receive.
+`unityMCP` подключён через прокси брокера: чтение доступно всегда, изменяющий вызов без своей
+аренды RUNNING отклоняется, в аренде вызов автоматически идёт в worker ([прокси](Docs/agents/unity-mcp-proxy.md)).
 **Основной worktree для обычного агента — только чтение.** Запрещено прямо изменять в нём
 код, ассеты, сцены, ProjectSettings, Packages, Tools и Docs; запрещены также stage/commit,
 checkout/reset/clean и запуск генераторов, которые туда пишут. Все правки и файловые генераторы —

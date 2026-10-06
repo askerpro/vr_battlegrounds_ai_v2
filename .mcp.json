@@ -1,8 +1,13 @@
 {
     "mcpServers":  {
                        "unityMCP":  {
-                                        "type":  "http",
-                                        "url":  "http://127.0.0.1:8080/mcp"
+                                        "type":  "stdio",
+                                        "command":  "uv",
+                                        "args":  [
+                                                     "run",
+                                                     "--quiet",
+                                                     "Tools/agents/unity_mcp_proxy.py"
+                                                 ]
                                     },
                        "blender":  {
                                        "type":  "stdio",

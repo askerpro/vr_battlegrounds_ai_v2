@@ -6,6 +6,11 @@ tool_output_token_limit = 4000
 # python Tools/agents/configure_lfs_worktree.py apply
 # GIT_LFS_SKIP_SMUDGE глобально не задавать: worker должен извлекать полные ассеты.
 
+# Unity MCP через брокер редактора: прокси решает, пропускать ли вызов (см. Docs/agents/unity-mcp-proxy.md).
+[mcp_servers.unityMCP]
+command = "uv"
+args = ["run", "--quiet", "Tools/agents/unity_mcp_proxy.py"]
+
 [mcp_servers.blender]
 command = "uvx"
 args = ["blender-mcp"]

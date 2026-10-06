@@ -9,6 +9,7 @@ import sys
 
 from .git_state import GitState
 from .human import HumanHandoff
+from .mcp_gate import decide
 from .service import EditorBroker, atomic_json, default_state_dir
 from .watch import watch_ticket
 
@@ -65,6 +66,8 @@ def parser():
     defer.add_argument("--minutes", type=float, default=0)
     commands.add_parser("human-status")
     commands.add_parser("human-clear", help="Забыть разобранную вручную аварийную передачу")
+    gate = commands.add_parser("mcp-gate", help="Решение по вызову Unity MCP; JSON вызова — в stdin")
+    gate.add_argument("--agent-root")
     return root
 
 
@@ -123,6 +126,11 @@ def main(argv=None):
                 atomic_json(report, public(result))
                 result = {**result, "ticket_count": len(tickets), "tickets": tickets[:10],
                           "report_path": str(report)}
+            elif args.command == "mcp-gate":
+                # Байты: кодировка консоли Windows (cp1251) испортила бы кириллицу в коде вызова.
+                call = json.loads(sys.stdin.buffer.read().decode("utf-8") or "{}")
+                result = decide(broker, args.agent_root or args.repo, call.get("tool", ""),
+                                call.get("arguments") or {}, call.get("pinned"))
             elif args.command.startswith("human-"):
                 human = HumanHandoff(broker)
                 result = {"human-release": human.release, "human-resume": human.resume,
@@ -136,7 +144,8 @@ def main(argv=None):
                 result = broker.recover_stopped(args.ticket, args.token)
             else:
                 result = getattr(broker, args.command)(args.ticket, args.token)
-        _human_snapshot(state)
+        if args.command != "mcp-gate":  # вызывается на каждый MCP-вызов, отчёт панели не нужен
+            _human_snapshot(state)
         # Только claim сообщает capability получившему аренду владельцу.
         output = result if args.command == "claim" else public(result)
         print(json.dumps({"ok": True, "result": output}, ensure_ascii=False))

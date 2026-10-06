@@ -321,26 +321,8 @@ namespace UltimateXR.Avatar.Controllers
         {
             if (_bodyIK != null && _useBodyIK)
             {
-                // VR Battlegrounds patch 34: изгиб корпуса извне (наклон бегущего).
-                _bodyIK.ExternalBodyBend = ExternalBodyBend;
-                _bodyIK.ExternalTrunkLean = ExternalTrunkLean; // VR Battlegrounds patch 39
                 _bodyIK.PreSolveAvatarIK();
             }
-
-            // Текущая оценённая нижняя поза согласуется с телом до обоих проходов рук.
-            _animatedLegs?.PrepareCurrentPose();
-            if (_animatedLegs != null && _bodyIK != null && _useBodyIK)
-            {
-                float ownership = _animatedLegs.CurrentPoseWeight;
-                bool accepted = _bodyIK.ApplySeatedPelvis(_animatedLegs.Hips, _animatedLegs.CurrentHipsPose, ownership, out Vector3 delta);
-                _animatedLegs.CommitPlacementCorrection(delta, accepted);
-                if (!accepted && ownership > 0f && Time.unscaledTime >= _nextSeatedWarning)
-                {
-                    _nextSeatedWarning = Time.unscaledTime + 5f;
-                    UxrLegsDiagnostics.Warn($"{Avatar.name}: сидячая поза недостижима без растяжения шеи; остаток {_bodyIK.SeatedNeckResidual:0.0000} м, ревизия {_animatedLegs.PoseRevision}.", Avatar);
-                }
-            }
-            else _animatedLegs?.CommitPlacementCorrection(Vector3.zero, false);
 
             // VR Battlegrounds patch 20: решатели аватара берутся из кэша, а не из LINQ по решателям ВСЕХ
             // аватаров сцены (было O(аватаров²) и три прохода по AllComponents за кадр). Порядок — тот же,
@@ -482,7 +464,7 @@ namespace UltimateXR.Avatar.Controllers
             UxrGrabManager.Instance.ObjectPlaced   -= UxrGrabManager_ObjectPlacedOrReleased;
             UxrGrabManager.Instance.ObjectReleased -= UxrGrabManager_ObjectPlacedOrReleased;
 
-            // VR Battlegrounds patch 37: ноги в позу префаба, наклон корпуса снят (UxrStandardAvatarController.Custom.cs).
+            // VR Battlegrounds patch 37: ноги в позу префаба (UxrStandardAvatarController.Custom.cs).
             DisableLegs();
         }
 

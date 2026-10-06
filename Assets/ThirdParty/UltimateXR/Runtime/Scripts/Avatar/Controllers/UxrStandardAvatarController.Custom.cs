@@ -26,30 +26,14 @@ namespace UltimateXR.Avatar.Controllers
 
         #endregion
 
-        #region Public Types & Data (VR Battlegrounds patch 34)
+        #region Public Methods (VR Battlegrounds patch 46)
 
         /// <summary>
-        ///     VR Battlegrounds patch 34: изгиб корпуса извне (см. <c>UxrBodyIK.ExternalBodyBend</c>). Передаётся в
-        ///     решатель тела перед каждым решением; ставить до <c>UxrUpdateStage.PostProcess</c> этого кадра. При ногах из
-        ///     клипов (патч 37) его ставит <see cref="UxrAnimatedLegs" />.
+        ///     VR Battlegrounds patch 46: сдвиг предков запястий вне BodyIK — только внутри
+        ///     <c>using (controller.KeepTrackedBones())</c>. Без IK тела независимых костей нет — guard пустой.
         /// </summary>
-        public Quaternion ExternalBodyBend { get; set; } = Quaternion.identity;
-
-        /// <summary>
-        ///     VR Battlegrounds patch 39: наклон всего корпуса извне (см. <c>UxrBodyIK.ExternalTrunkLean</c>) — наклон игрока по
-        ///     шее и наклон, не дающий тазу уйти под пол. Ставит <see cref="UltimateXR.Animation.IK.UxrAnimatedLegs" />.
-        /// </summary>
-        public Quaternion ExternalTrunkLean { get; set; } = Quaternion.identity;
-
-        #endregion
-
-        #region Public Types & Data (VR Battlegrounds patch 38)
-
-        /// <summary>
-        ///     VR Battlegrounds patch 38: оценщик движения игрока (вход — шлем) из IK тела или null (IK тела выключен). Ноги
-        ///     берут из него «идёт ли», скорость и направление.
-        /// </summary>
-        public UxrBodyMotion BodyMotion => _bodyIK != null && _useBodyIK ? _bodyIK.Motion : null;
+        public UxrBodyIK.IndependentBonesGuard KeepTrackedBones() =>
+            _bodyIK != null && _useBodyIK ? _bodyIK.KeepIndependentBones() : default;
 
         #endregion
 
@@ -59,7 +43,7 @@ namespace UltimateXR.Avatar.Controllers
         // SDK, в инспекторе был заглушкой «TBD») — на нём решатель ног включился бы у всех.
         [SerializeField] [Tooltip("Ноги аватара шагают клипами ходьбы: решатель ноги (перенос ноги Final IK) ставит стопы в позы стоп копии рига, которая играет клипы с root motion. Настройки — раздел «Ноги». Выключено — ноги в позе модели.")] private bool _useNativeLegIK;
 
-        // VR Battlegrounds patch 37: настройки ног (решатель, клипы, шаги, таз, наклон корпуса, подошва).
+        // VR Battlegrounds patch 37: настройки ног (решатель, клипы, шаги, подошва).
         [SerializeField] private UxrLegsSettings _legs = new UxrLegsSettings();
 
         #endregion
@@ -146,7 +130,7 @@ namespace UltimateXR.Avatar.Controllers
 
             if (!solver.Initialized)
             {
-                UxrLegsDiagnostics.Warn($"{Avatar.name}: отсутствует бедро, голень или стопа; решатель ноги отключён.", Avatar);
+                Debug.LogWarning($"[UxrStandardAvatarController] {Avatar.name}: no upper leg / lower leg / foot in the avatar rig, native leg IK disabled for this leg.");
                 return null;
             }
 
@@ -155,8 +139,8 @@ namespace UltimateXR.Avatar.Controllers
         }
 
         /// <summary>
-        ///     VR Battlegrounds patch 37: стадия PostProcess до IK (для своего и чужих аватаров) — копия рига, Hips в позу
-        ///     префаба, пропуск кадра невидимого чужого аватара (патч 24).
+        ///     VR Battlegrounds patch 37: стадия PostProcess до IK (для своего и чужих аватаров) — копия рига, пропуск кадра
+        ///     невидимого чужого аватара (патч 24).
         /// </summary>
         private void PrepareLegsForSolve(bool solveThisFrame)
         {
@@ -175,10 +159,9 @@ namespace UltimateXR.Avatar.Controllers
             _animatedLegs?.Solve();
             _leftLegIK?.Solve();
             _rightLegIK?.Solve();
-            _animatedLegs?.AfterSolve(); // VR Battlegrounds patch 39: ниже колена — ноги прямо из копии рига
         }
 
-        /// <summary>VR Battlegrounds patch 37: компонент выключен — ноги в позу префаба, наклон корпуса снят.</summary>
+        /// <summary>VR Battlegrounds patch 37: компонент выключен — ноги в позу префаба.</summary>
         private void DisableLegs()
         {
             _animatedLegs?.Disable();
@@ -238,7 +221,6 @@ namespace UltimateXR.Avatar.Controllers
         #region Private Types & Data (VR Battlegrounds patch 24)
 
         private static bool s_loggedHookError;
-        private float _nextSeatedWarning;
 
         #endregion
     }

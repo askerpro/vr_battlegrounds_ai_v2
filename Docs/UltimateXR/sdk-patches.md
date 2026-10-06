@@ -1463,31 +1463,19 @@ Nova / Herrington. Без него основной снаряд SDK остал�
 3. После подтверждения логики пользователем заменить старые ожидания `WeaponSpreadTests`:
    пуля совпадает с осью дула, каждая дробина имеет собственный разлёт без общей неточности залпа.
 
-## 34–39. Native ноги и корпус, перенос ограниченного среза T-42
+## 35–37. Native ноги из клипов (упрощено 2026-10-06)
 
-Из `wip/uxrlegs-final` перенесены `UxrBodyIK.Custom`, `UxrBodyMotion`, `UxrLegIKSolver`,
-`UxrAnimatedLegs`, `UxrLegLocomotion`, `UxrLegPoseMath`, `UxrLegRootMotionReceiver`,
-`UxrLegsSettings`, `UxrPelvisEstimate`; точки подключения — partial/controller/editor
-`UxrStandardAvatarController`. Экспериментальные VRIK и отдельный FinalIK patch исключены.
-Адаптированный solver/locomotion остаётся под лицензией купленного FinalIK: не публиковать отдельно.
+`Animation/IK`: `UxrLegIKSolver` (аналитический решатель ноги, перенос ноги Final IK; патч 36 —
+растяжение), `UxrAnimatedLegs` (невидимая humanoid-копия скелета с Animator: клипы стоек, хода и
+поворотов, root motion, посадка подошвы на пол, цели стоп), `UxrLegLocomotion` (шаги по VRIK Animated),
+`UxrLegRootMotionReceiver`, `UxrBodyMotion` (оценщик «идёт ли игрок» по камере, принадлежит ногам),
+`UxrLegsSettings` и `UxrLegsDiagnostics`. Точки подключения — partial/controller/editor
+`UxrStandardAvatarController`: решатели создаются при `_useNativeLegIK`, ноги решаются после IK тела и до
+IK рук. Адаптированный solver/locomotion — под лицензией купленного Final IK: не публиковать отдельно.
 
-В текущем переносе исправлены дефекты исходного сидения:
-
-- Полный trunk применяется один раз к нижнему позвоночнику после штатного weighted bend.
-- `Legs_Sit` не зависит от kneeling; BodyIK согласует текущий таз и корпус, а не наклон прошлого кадра.
-- Таз, корень ног, локальные кости и цели используют одну сохранённую оценённую позу.
-- Separate legroot размещается до решения ног; при legroot==hips автором остаётся BodyIK.
-- Отдельный legroot восстанавливает local rest перед каждым BodyIK; частичный blend не накапливается.
-  Disable инвалидирует snapshot и возвращает корень/кости ног в покой, очищая continuity и root motion.
-- В полном сидении solver выключен. В переходе baseline вращений приходит из клипа;
-  foot/toe имеют отдельную память плоскости и относительные пороги вырождения.
-- Недостижимая высота корпуса наблюдаема через `SeatedNeckResidual` и `UxrLegsDiagnostics`.
-  Игровая интеграция направляет сообщения в `GameLog.Player`; SDK не зависит от игровой сборки.
-- Контроллер генератора держит сидячие клипы только в Idle без Foot IK. Нулевая посадка
-  прерывает start/stop ходьбы; обычная остановка сохраняет переход 0,2 с.
-
-Контракт, ограничения и сохранение при обновлении SDK — [avatar-animation.md](../avatar-animation.md),
-план и результаты проверки — [T-42](../tasks/T-42-uxrlegs-seated-port.md).
+Сидение, присед, колено на полу, оценка таза игрока, таз из клипа, наклоны корпуса (бывшие патчи 34,
+38, 39 в `UxrBodyIK`) и копия ног ниже колена удалены: они делали ноги вторым автором корпуса и ломали
+руки, ход и спину. `UxrBodyIK.cs` — без правок под ноги. Контракт — [avatar-animation.md](../avatar-animation.md).
 
 ## T-39. Чтение выбранного якоря и снимок ручного хвата оружия
 
@@ -1705,3 +1693,18 @@ cleanup. Полный Test Runner не запускался, чтобы не с�
 использует этот core на конкретном snap, frozen snapshot для overlay/export и дешёвый input key.
 [Новый срез](../plans/2026-10-05-sdk-preview-diagnostics-binding.md) прошёл native проверки;
 его UI orbit/zoom/drag и game IK/Quest остаются открытыми.
+
+## Патч 46: сдвиг предков запястий вне BodyIK сохраняет позы рук
+
+`Runtime/Scripts/Animation/IK/UxrBodyIK.Custom.cs` добавляет `KeepIndependentBones()` — единственный
+вход для кода вне BodyIK, который двигает предков независимых костей (запястий, поставленных
+трекингом). Возвращает структуру-guard: запоминает мировые позы, `Dispose` возвращает их.
+Хранилище отдельное от штатного push/pop `PreSolveAvatarIK`/`PostSolveAvatarIK`; вложенный
+вызов пустой. `UxrStandardAvatarController.KeepTrackedBones()` делегирует в BodyIK; без IK
+тела независимых костей нет, guard пустой, как в оригинальном SDK.
+
+Класс ошибки: ноги переноса T-42 сбрасывали `Hips` после стадии трекинга, но до push BodyIK. У Cyborg
+`Hips` — корень рига (`CyborgRig`), запястья — его потомки; руки уезжали на 30–40 см (замер 2026-10-06:
+ошибка запястий совпала с предсказанным сдвигом от сброса таза до мм). После упрощения ног таких
+сдвигов нет; guard остаётся контрактом: любой новый код, двигающий таз, позвоночник или корень рига
+аватара вне BodyIK, обязан делать это внутри `using (controller.KeepTrackedBones())`.

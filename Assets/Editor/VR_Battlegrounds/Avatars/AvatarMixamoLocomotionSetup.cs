@@ -20,7 +20,7 @@ namespace VrBattlegrounds.Editor.Avatars
     /// <item><see cref="RifleFolder"/> — «Pro Rifle Pack» (полусогнутая боевая стойка): шаг/бег/спринт и шаг в приседе × 8
     /// направлений, покой, покой в приседе, повороты на 90°.</item>
     /// <item><see cref="PistolFolder"/> — «Pistol/Handgun Locomotion Pack»: шаг, бег, назад, бег вбок; дуги и колено не берутся.
-    /// Клипы колена паков пока не подключены к runtime-контроллеру.</item>
+    /// Присед у пистолета и без оружия — колено и шаг в приседе набора винтовки (своего приседа в наборах нет).</item>
     /// <item><see cref="UnarmedFolder"/> + <see cref="PlainFolder"/> — без оружия: «Locomotion Pack» (вперёд, вбок, повороты) и
     /// назад/диагонали из набора без In Place.</item>
     /// </list>
@@ -29,14 +29,14 @@ namespace VrBattlegrounds.Editor.Avatars
     /// Импорт: Humanoid, общий Avatar в T-позе (<see cref="EnsureSharedAvatar"/>), без материалов, цикл; корень по XZ НЕ заперт
     /// (root motion двигает корень копии рига), поворот корня и высота запечены в позу — поворачивают только клипы поворота на
     /// месте; высота — по стопам («Based Upon Feet»). Фаза шага выровнена (<see cref="AlignPhase"/>); Foot IK — только у хода (покой — без него, см. <see cref="RecreateController"/>).
-    /// Контракт и пределы проверки — Docs/avatar-animation.md и T-42.
+    /// Почему так — T-42, «Доводка: стопы и подошва на клипах Mixamo».
     /// </para>
     ///
     /// <para>
     /// Контроллер собирается с нуля (повторный запуск пересобирает его на месте, GUID тот же): параметры и состояния — контракт
     /// <c>UxrLegLocomotion</c> (<c>Legs_*</c>), покой ⇄ ход по <c>Legs_IsMoving</c>, переход назад — <c>Legs_Stop</c>, маска —
     /// корень, корпус и ноги (<see cref="MaskPath"/>). Стойка — поддерево по <c>Legs_Stance</c>: 0 — без оружия, 1 — пистолет,
-    /// 2 — винтовка. Обычное сидение — <c>Legs_Sit</c> только в покое, kneeling отложен. Клипы хода — в точках их средней
+    /// 2 — винтовка. Приседа и сидения нет (упрощение 2026-10-06). Клипы хода — в точках их средней
     /// скорости (м/с, x — вправо, y — вперёд), смешивание Freeform Directional с покоем в центре.
     /// </para>
     /// </summary>
@@ -47,8 +47,6 @@ namespace VrBattlegrounds.Editor.Avatars
         public const string PistolFolder = LocomotionFolder + "/MixamoPistol";
         public const string UnarmedFolder = LocomotionFolder + "/MixamoUnarmed";
         public const string PlainFolder = LocomotionFolder + "/MixamoRM";
-        /// <summary>Поза сидения на полу (<c>Legs_Sit</c> = 1) — общая для всех стоек.</summary>
-        public const string SitFolder = LocomotionFolder + "/Sit";
         public const string ControllerPath = LocomotionFolder + "/AvatarLegs_Locomotion.controller";
         public const string MaskPath = LocomotionFolder + "/AvatarLegs.mask";
 
@@ -68,8 +66,6 @@ namespace VrBattlegrounds.Editor.Avatars
             Dictionary<string, AnimationClip> pistol = EnsureClips(PistolFolder);
             Dictionary<string, AnimationClip> unarmed = EnsureClips(UnarmedFolder);
             foreach (var pair in EnsureClips(PlainFolder)) unarmed[pair.Key] = pair.Value;
-            // Обычное сидение на полу: общая статическая поза, независимо от наличия клипа колена.
-            AnimationClip sit = EnsureClips(SitFolder).Values.FirstOrDefault();
             if (rifle.Count == 0)
             {
                 GameLog.Error($"[AvatarMixamoLocomotionSetup] Нет клипов в {RifleFolder}.");
@@ -78,25 +74,19 @@ namespace VrBattlegrounds.Editor.Avatars
 
             AnimatorController controller = RecreateController(out AnimatorState idle, out AnimatorState moving);
 
-            // Винтовка: 8 направлений × шаг/бег/спринт, присед, повороты.
+            // Винтовка: 8 направлений × шаг/бег/спринт, повороты.
             var rifleMove = new List<AnimationClip>();
             foreach (string gait in new[] { "Walk", "Run", "Sprint" })
             foreach (string dir in Directions)
                 rifleMove.Add(Get(rifle, gait + dir));
-            List<AnimationClip> rifleCrouchMove = Directions.Select(d => Get(rifle, "WalkCrouching" + d)).ToList();
-            AnimationClip kneel = Get(rifle, "IdleCrouching"), kneelTurnLeft = Get(rifle, "CrouchingTurn90Left"), kneelTurnRight = Get(rifle, "CrouchingTurn90Right");
             (BlendTree rifleIdleSet, BlendTree rifleMoveSet) = BuildSet(controller, "Rifle",
-                Get(rifle, "Idle"), Get(rifle, "Turn90Left"), Get(rifle, "Turn90Right"), rifleMove,
-                kneel, kneelTurnLeft, kneelTurnRight, rifleCrouchMove, sit);
-
-            // Клипы колена остаются входами исходного пака, но BuildSet не подключает их в текущей итерации.
+                Get(rifle, "Idle"), Get(rifle, "Turn90Left"), Get(rifle, "Turn90Right"), rifleMove);
 
             // Пистолет: шаг, бег, назад, бег вбок (сторона — по замеру скорости клипа). Своих поворотов нет — без оружия.
             List<AnimationClip> pistolMove = new[] { "PistolWalk", "PistolRun", "PistolWalkBackward", "PistolRunBackward", "PistolStrafe", "PistolStrafe_2" }
                 .Select(n => Get(pistol, n)).ToList();
             (BlendTree pistolIdleSet, BlendTree pistolMoveSet) = BuildSet(controller, "Pistol",
-                Get(pistol, "PistolIdle"), Get(unarmed, "LeftTurn90"), Get(unarmed, "RightTurn90"), pistolMove,
-                kneel, kneelTurnLeft, kneelTurnRight, rifleCrouchMove, sit);
+                Get(pistol, "PistolIdle"), Get(unarmed, "LeftTurn90"), Get(unarmed, "RightTurn90"), pistolMove);
 
             // Без оружия: вперёд и вбок — «Locomotion Pack», назад и диагонали — набор без In Place.
             List<AnimationClip> unarmedMove = new[]
@@ -106,8 +96,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 "JogBackwardDiagonal", "JogBackwardDiagonal_Mirror",
             }.Select(n => Get(unarmed, n)).ToList();
             (BlendTree unarmedIdleSet, BlendTree unarmedMoveSet) = BuildSet(controller, "Unarmed",
-                Get(unarmed, "Idle"), Get(unarmed, "LeftTurn90"), Get(unarmed, "RightTurn90"), unarmedMove,
-                kneel, kneelTurnLeft, kneelTurnRight, rifleCrouchMove, sit);
+                Get(unarmed, "Idle"), Get(unarmed, "LeftTurn90"), Get(unarmed, "RightTurn90"), unarmedMove);
 
             BlendTree idleBySet = Tree(controller, "IdleBySet", UxrLegLocomotion.StanceParam);
             idleBySet.AddChild(unarmedIdleSet, SetUnarmed);
@@ -130,25 +119,18 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <summary>
         /// Поддеревья одной стойки: покой (поворот на месте по <c>Legs_Turn</c>: −0,5 — 90° влево, +0,5 — вправо) и ход
         /// (Freeform Directional по <c>Legs_MoveX/MoveZ</c>, покой в центре).
-        /// Только покой смешивает стояние и обычное сидение по <c>Legs_Sit</c>.
-        /// Ход не содержит сидячих клипов: его Foot IK не должен оценивать сидячую смесь даже во время перехода.
         /// </summary>
         private static (BlendTree idle, BlendTree move) BuildSet(AnimatorController controller, string set,
-            AnimationClip idle, AnimationClip turnLeft, AnimationClip turnRight, List<AnimationClip> move,
-            AnimationClip crouchIdle, AnimationClip crouchTurnLeft, AnimationClip crouchTurnRight, List<AnimationClip> crouchMove,
-            AnimationClip sit)
+            AnimationClip idle, AnimationClip turnLeft, AnimationClip turnRight, List<AnimationClip> move)
         {
-            BlendTree standTurn = TurnTree(controller, set + "_Idle", StaticClip(idle), turnLeft, turnRight);
-            BlendTree idleSet = Tree(controller, set + "_IdleSet", UxrLegLocomotion.SitParam);
-            idleSet.AddChild(standTurn, 0f);
-            if (sit != null) idleSet.AddChild(StaticClip(sit), 1f);
+            BlendTree idleTree = TurnTree(controller, set + "_Idle", StaticClip(idle), turnLeft, turnRight);
 
-            BlendTree stand = Tree(controller, set + "_Move", UxrLegLocomotion.MoveXParam, UxrLegLocomotion.MoveZParam);
+            BlendTree moveTree = Tree(controller, set + "_Move", UxrLegLocomotion.MoveXParam, UxrLegLocomotion.MoveZParam);
             // Покой в центре: медленный ход — клип своего направления вместе с покоем, а не смесь противоположных
             // направлений (Freeform Cartesian без точки (0,0) гасил шаги друг другом).
-            if (idle != null) stand.AddChild(StaticClip(idle), Vector2.zero);
-            foreach (AnimationClip clip in move) AddAtSpeed(stand, clip);
-            return (idleSet, stand);
+            if (idle != null) moveTree.AddChild(StaticClip(idle), Vector2.zero);
+            foreach (AnimationClip clip in move) AddAtSpeed(moveTree, clip);
+            return (idleTree, moveTree);
         }
 
         private static BlendTree TurnTree(AnimatorController controller, string name, AnimationClip idle, AnimationClip left, AnimationClip right)
@@ -625,9 +607,8 @@ namespace VrBattlegrounds.Editor.Avatars
 
         /// <summary>
         /// Foot IK — в мышцы ног неподвижного клипа: первый кадр исходника на копии рига основного аватара с Foot IK, мышцы ног
-        /// снимаются и пишутся константами. Состояние покоя играет без Foot IK (иначе смесь колено → сидение выворачивала бедро),
-        /// а без него стопы клипов Mixamo на скелете MEF уходят в пол (колено: передняя стопа −18 см) и заваливаются. Ниже колена
-        /// ноги аватара — прямая копия рига (<c>UxrAnimatedLegs.AfterSolve</c>), поэтому поза рига должна быть верной сама.
+        /// снимаются и пишутся константами. Состояние покоя играет без Foot IK, а без него стопы клипов Mixamo на скелете MEF
+        /// уходят в пол и заваливаются — поэтому поза покоя запекается с Foot IK заранее.
         /// </summary>
         private static void BakeFootIK(AnimationClip source, AnimationClip target)
         {
@@ -719,8 +700,6 @@ namespace VrBattlegrounds.Editor.Avatars
             AddParameter(controller, UxrLegLocomotion.IsMovingParam, AnimatorControllerParameterType.Bool, 0f);
             AddParameter(controller, UxrLegLocomotion.SpeedParam, AnimatorControllerParameterType.Float, 1f);
             AddParameter(controller, UxrLegLocomotion.TurnParam, AnimatorControllerParameterType.Float, 0f);
-            AddParameter(controller, UxrLegLocomotion.CrouchParam, AnimatorControllerParameterType.Float, 0f);
-            AddParameter(controller, UxrLegLocomotion.SitParam, AnimatorControllerParameterType.Float, 0f);
             AddParameter(controller, UxrLegLocomotion.StanceParam, AnimatorControllerParameterType.Float, 0f);
 
             controller.AddLayer("Legs");
@@ -737,8 +716,7 @@ namespace VrBattlegrounds.Editor.Avatars
             // Foot IK гуманоида: стопа копии — в позе стопы исходника (с поправкой на высоту подошвы аватаров), а не
             // там, куда её приводят мышцы ноги с чужими пропорциями. Без него стопы клипов Mixamo на нашем скелете уходили
             // в пол на 5–13 см и заваливались на ребро до 25° (замер на копии рига, 2026-10-01).
-            // Покой — без Foot IK: в нём смешиваются стояние и сидение. В исходном WIP цель правой стопы между коленом
-            // и сидением смешивалась между стопой
+            // Покой — без Foot IK: в нём смешиваются колено и сидение, а цель Foot IK правой стопы смешивается между стопой
             // сзади на носке и стопой впереди, повёрнутой подошвой, — на 25–75 % бедро копии переворачивалось (колено над
             // тазом, мышцы за ±2). Без Foot IK смесь мышц линейна. Подошву покоя ставит на пол UxrAnimatedLegs (сдвиг цели
             // стопы); завал стопы покоя без Foot IK до ~7°, на ходу (Foot IK нужен: подошва −8 см, завал 23°) — не трогается.
@@ -753,33 +731,10 @@ namespace VrBattlegrounds.Editor.Avatars
             // Как в контроллере VRIK Animated (Final IK): старт с фазы 0,75 цикла, переходы 0,2 с.
             AnimatorStateTransition start = idle.AddTransition(moving);
             start.AddCondition(AnimatorConditionMode.If, 0f, UxrLegLocomotion.IsMovingParam);
-            start.AddCondition(AnimatorConditionMode.Less, 0.001f, UxrLegLocomotion.SitParam);
             start.hasExitTime = false;
             start.hasFixedDuration = true;
             start.duration = 0.2f;
             start.offset = 0.75f;
-            start.interruptionSource = TransitionInterruptionSource.SourceThenDestination;
-            start.orderedInterruption = false;
-
-            // Посадка из хода завершается до оценки сидячей смеси. Обычная остановка ниже
-            // сохраняет плавные 0,2 с, но этот интервал нельзя отдавать сидению с Foot IK.
-            AnimatorStateTransition sitStop = moving.AddTransition(idle);
-            sitStop.name = "Legs_SitStop";
-            sitStop.AddCondition(AnimatorConditionMode.Greater, 0.001f, UxrLegLocomotion.SitParam);
-            sitStop.hasExitTime = false;
-            sitStop.hasFixedDuration = true;
-            sitStop.duration = 0f;
-
-            // Посадка может начаться, когда обычный stop уже смешивает состояния.
-            AnimatorStateTransition sitIdle = machine.AddAnyStateTransition(idle);
-            sitIdle.name = "Legs_SitIdle";
-            sitIdle.AddCondition(AnimatorConditionMode.Greater, 0.001f, UxrLegLocomotion.SitParam);
-            sitIdle.hasExitTime = false;
-            sitIdle.hasFixedDuration = true;
-            sitIdle.duration = 0f;
-            // Во время Idle→Move текущим ещё считается Idle: запрет self не дал бы
-            // посадке прервать этот переход. Повторный вход безопасен: sit-клип статический.
-            sitIdle.canTransitionToSelf = true;
 
             AnimatorStateTransition stop = moving.AddTransition(idle);
             stop.name = UxrLegLocomotion.StopTransition;
@@ -787,8 +742,6 @@ namespace VrBattlegrounds.Editor.Avatars
             stop.hasExitTime = false;
             stop.hasFixedDuration = true;
             stop.duration = 0.2f;
-            stop.interruptionSource = TransitionInterruptionSource.SourceThenDestination;
-            stop.orderedInterruption = false;
 
             EditorUtility.SetDirty(controller);
             return controller;

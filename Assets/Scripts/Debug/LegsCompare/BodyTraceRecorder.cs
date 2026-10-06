@@ -85,7 +85,7 @@ namespace VrBattlegrounds.DevTools.LegsCompare
                 _chestRest = _chest != null ? Quaternion.Inverse(basis) * _chest.rotation : Quaternion.identity;
                 _hipsRest = _hips != null ? Quaternion.Inverse(basis) * _hips.rotation : Quaternion.identity;
                 _t0 = Time.time;
-                _sb.AppendLine($"avatar={avatar.name} mode={avatar.AvatarMode} legacy={UxrBodyIK.LegacyMovementDecisions}");
+                _sb.AppendLine($"avatar={avatar.name} mode={avatar.AvatarMode}");
                 _sb.AppendLine("t;dt;root_x;root_z;root_yaw;cam_x;cam_y;cam_z;cam_yaw;cam_pitch;cam_step_cm;pivot_x;pivot_z;pivot_yaw;pivot_step_cm;target_yaw;chest_yaw;hips_yaw;torsion_spine;torsion_chest;handL_yaw;handR_yaw;hands_yaw;motion_walk;motion_speed;legs_moving;legs_turn;rig_yaw;bend_deg");
             }
 
@@ -117,11 +117,11 @@ namespace VrBattlegrounds.DevTools.LegsCompare
             float rYaw = rh != null ? Yaw(rh.position - neck) : float.NaN;
             float hYaw = lh != null && rh != null ? Yaw((lh.position + rh.position) * 0.5f - neck) : float.NaN;
 
-            UxrBodyMotion motion = controller != null ? controller.BodyMotion : null;
             UxrAnimatedLegs legs = controller != null ? controller.AnimatedLegs : null;
+            UxrBodyMotion motion = legs != null ? legs.Motion : null;
             Animator rig = legs != null ? legs.RigAnimator : null;
             float turn = rig != null ? rig.GetFloat(UxrLegLocomotion.TurnParam) : 0f;
-            float bend = controller != null ? Quaternion.Angle(Quaternion.identity, controller.ExternalBodyBend) : 0f;
+            float bend = 0f; // наклона корпуса от ног больше нет (упрощение 2026-10-06)
 
             _frames++;
             _sb.AppendLine(string.Join(";",

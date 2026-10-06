@@ -83,17 +83,6 @@ namespace UltimateXR.Animation.IK
         public float BendGoalWeight { get; set; }
 
         /// <summary>
-        ///     VR Battlegrounds patch 39: точка сгиба колена без Transform — используется, если <see cref="BendGoal" /> не задан и
-        ///     <see cref="UseBendGoalPosition" />. Ставит <c>UxrAnimatedLegs</c>: колено клипа, стоящее на полу.
-        /// </summary>
-        public Vector3 BendGoalPosition { get; set; }
-
-        public bool UseBendGoalPosition { get; set; }
-
-        /// <summary>VR Battlegrounds patch 39: длина бедра (бедро → колено) в позе префаба с текущим масштабом, м.</summary>
-        public float ThighLength => Initialized ? _transforms[0].TransformVector(_restLocalP[1]).magnitude : 0.0f;
-
-        /// <summary>
         ///     VR Battlegrounds patch 36: растяжение ноги (Stretching Final IK). Аргумент — расстояние бедро→цель стопы в
         ///     длинах ноги, значение — доля удлинения бедра и голени. Без растяжения недостижимая цель — нога прямой
         ///     «палкой» и стопа отрывается от следа; с ним колено распрямляется плавно и стопа дотягивается. По умолчанию
@@ -104,9 +93,6 @@ namespace UltimateXR.Animation.IK
 
         /// <summary>VR Battlegrounds patch 36: множитель длины ноги (legLengthMlp Final IK).</summary>
         public float LegLengthMlp { get; set; } = 1.0f;
-
-        /// <summary>VR Battlegrounds patch 39: длина голени (колено → стопа) в позе префаба с текущим масштабом, м.</summary>
-        public float CalfLength => Initialized ? _transforms[1].TransformVector(_restLocalP[2]).magnitude : 0.0f;
 
         #endregion
 
@@ -135,13 +121,11 @@ namespace UltimateXR.Animation.IK
             _transforms = toes != null ? new[] { thigh, calf, foot, toes } : new[] { thigh, calf, foot };
             _bones      = new Bone[_transforms.Length];
             _restLocal  = new Quaternion[_transforms.Length];
-            _sourceLocal = new Quaternion[_transforms.Length];
             _restLocalP = new Vector3[_transforms.Length];
 
             for (int i = 0; i < _transforms.Length; ++i)
             {
                 _restLocal[i]  = _transforms[i].localRotation;
-                _sourceLocal[i] = _restLocal[i];
                 _restLocalP[i] = _transforms[i].localPosition;
                 _bones[i]      = new Bone();
             }
@@ -162,37 +146,6 @@ namespace UltimateXR.Animation.IK
             TargetPosition = LastBone.Position;
             TargetRotation = LastBone.Rotation;
             Initialized    = true;
-            ResetContinuity();
-        }
-
-        /// <summary>Локальные повороты оценённого клипа; позиции сбрасываются отдельно, чтобы растяжение не копилось.</summary>
-        public void SetAnimationPose(Quaternion thigh, Quaternion calf, Quaternion foot, Quaternion toes, float weight)
-        {
-            if (!Initialized) return;
-            _sourceLocal[0] = Quaternion.Slerp(_restLocal[0], thigh, weight);
-            _sourceLocal[1] = Quaternion.Slerp(_restLocal[1], calf, weight);
-            _sourceLocal[2] = Quaternion.Slerp(_restLocal[2], foot, weight);
-            if (HasToes) _sourceLocal[3] = Quaternion.Slerp(_restLocal[3], toes, weight);
-        }
-
-        /// <summary>Телепорт или пропуск решения: прежняя плоскость больше не является опорой.</summary>
-        public void ResetContinuity()
-        {
-            _footPlane = default;
-            _toePlane = default;
-            _hasNormalAngle = false;
-        }
-
-        /// <summary>Выключение владельца: убрать клип/растяжение и забыть плоскости прежней позы.</summary>
-        public void RestoreRestPose()
-        {
-            if (!Initialized) return;
-            for (int i = 0; i < _transforms.Length; i++)
-            {
-                _sourceLocal[i] = _restLocal[i];
-                _transforms[i].SetLocalPositionAndRotation(_restLocalP[i], _restLocal[i]);
-            }
-            ResetContinuity();
         }
 
         /// <summary>
@@ -223,7 +176,7 @@ namespace UltimateXR.Animation.IK
         {
             for (int i = 0; i < _transforms.Length; ++i)
             {
-                _transforms[i].SetLocalPositionAndRotation(_restLocalP[i], _sourceLocal[i]);
+                _transforms[i].SetLocalPositionAndRotation(_restLocalP[i], _restLocal[i]);
             }
         }
 
@@ -298,10 +251,7 @@ namespace UltimateXR.Animation.IK
             }
             else
             {
-                Vector3 axis = (_footPosition - thigh.Position).normalized;
-                Vector3 from = Vector3.ProjectOnPlane(pelvisNormal, axis);
-                Vector3 to = Vector3.ProjectOnPlane(targetNormal, axis);
-                _bendNormal = InterpolateContinuous(from, to, axis, BendToTargetWeight, ref _normalAngle, ref _hasNormalAngle);
+                _bendNormal = Vector3.Slerp(pelvisNormal, targetNormal, BendToTargetWeight);
             }
 
             _bendNormal = _bendNormal.normalized;
@@ -311,9 +261,18 @@ namespace UltimateXR.Animation.IK
         private void ApplyOffsets()
         {
             Bone  thigh  = _bones[0];
-            _goalWeight = BendGoalWeight > 0f && (BendGoal != null || UseBendGoalPosition) ? Mathf.Clamp01(BendGoalWeight) : 0f;
-            _goalPosition = BendGoal != null ? BendGoal.position : BendGoalPosition;
-            float swivel = SwivelOffset;
+            Bone  foot   = _bones[2];
+            float bAngle = 0.0f;
+
+            if (BendGoal != null && BendGoalWeight > 0.0f)
+            {
+                Vector3    b         = Vector3.Cross(BendGoal.position - thigh.Position, _position - thigh.Position);
+                Quaternion l         = Quaternion.LookRotation(_bendNormal, thigh.Position - foot.Position);
+                Vector3    bRelative = Quaternion.Inverse(l) * b;
+                bAngle = Mathf.Atan2(bRelative.x, bRelative.z) * Mathf.Rad2Deg * BendGoalWeight;
+            }
+
+            float swivel = SwivelOffset + bAngle;
 
             if (swivel != 0.0f)
             {
@@ -356,10 +315,7 @@ namespace UltimateXR.Animation.IK
             if (HasToes)
             {
                 // Проход носка: «бедро — стопа — носок» как двухзвенник, носок к цели.
-                Vector3 firstSegment = _bones[2].Position - _bones[0].Position;
-                Vector3 secondSegment = _bones[3].Position - _bones[2].Position;
-                // Сохраняем относительную достоверность до нормализации: sin угла, а не единичный шум.
-                Vector3 b = Vector3.Cross(firstSegment, secondSegment) / Mathf.Max(firstSegment.magnitude * secondSegment.magnitude, 1e-10f);
+                Vector3 b = Vector3.Cross(_bones[2].Position - _bones[0].Position, _bones[3].Position - _bones[2].Position).normalized;
                 SolveTrigonometric(0, 2, 3, _position, b);
             }
 
@@ -443,45 +399,20 @@ namespace UltimateXR.Animation.IK
         /// <summary>VirtualBone.SolveTrigonometric: двухзвенник first — second — third к цели в плоскости bendNormal.</summary>
         private void SolveTrigonometric(int first, int second, int third, Vector3 targetPosition, Vector3 bendNormal)
         {
-            Vector3 origin = _bones[first].Position;
-            Vector3 dir = targetPosition - origin;
-            float l1 = Vector3.Distance(origin, _bones[second].Position);
-            float l2 = Vector3.Distance(_bones[second].Position, _bones[third].Position);
-            float chainLength = l1 + l2;
-            if (l1 <= 1e-7f || l2 <= 1e-7f) return;
+            Vector3 dir    = targetPosition - _bones[first].Position;
+            float   sqrMag = dir.sqrMagnitude;
 
-            ref BendPlane plane = ref (third == 2 ? ref _footPlane : ref _toePlane);
-            float epsilon = chainLength * 1e-5f;
-            float distance = dir.magnitude;
-            Vector3 axis = distance > epsilon ? dir / distance
-                : plane.Valid ? plane.Axis : (_bones[third].Position - origin).normalized;
-            if (axis.sqrMagnitude < 0.5f) axis = Vector3.down;
-            Vector3 fallback = Vector3.ProjectOnPlane(plane.Valid ? plane.Direction : _bones[second].Position - origin, axis);
-            if (fallback.sqrMagnitude < epsilon * epsilon)
-                fallback = Vector3.ProjectOnPlane(Pelvis.forward + Pelvis.up, axis);
-            if (fallback.sqrMagnitude < 1e-8f)
-                fallback = Vector3.Cross(axis, Mathf.Abs(axis.y) < 0.9f ? Vector3.up : Vector3.right);
-            fallback.Normalize();
-
-            Vector3 normalDirection = Vector3.Cross(axis, bendNormal);
-            float normalConfidence = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.001f, 0.01f, normalDirection.magnitude));
-            Vector3 bendDir = InterpolateInPlane(fallback, normalDirection, axis, normalConfidence);
-            if (third == 2 && _goalWeight > 0f)
+            if (sqrMag == 0.0f)
             {
-                Vector3 hint = Vector3.ProjectOnPlane(_goalPosition - origin, axis);
-                float confidence = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.001f, 0.01f, hint.magnitude / chainLength));
-                // Не нормализуем миллиметровый шум в полный поворот колена.
-                bendDir = InterpolateInPlane(fallback, bendDir, axis, confidence);
-                bendDir = InterpolateContinuous(bendDir, hint, axis, confidence * _goalWeight, ref plane.GoalAngle, ref plane.HasGoalAngle);
+                return;
             }
-            plane.Axis = axis;
-            plane.Direction = bendDir;
-            plane.Valid = true;
 
-            float d = Mathf.Clamp(distance, Mathf.Max(Mathf.Abs(l1 - l2), epsilon), chainLength);
-            float x = Mathf.Clamp((d * d + l1 * l1 - l2 * l2) / (2f * d), -l1, l1);
-            float y = Mathf.Sqrt(Mathf.Max((l1 - x) * (l1 + x), 0f));
-            Vector3 toBendPoint = axis * x + bendDir * y;
+            float length  = Mathf.Sqrt(sqrMag);
+            float sqrMag1 = (_bones[second].Position - _bones[first].Position).sqrMagnitude;
+            float sqrMag2 = (_bones[third].Position - _bones[second].Position).sqrMagnitude;
+
+            Vector3 bendDir     = Vector3.Cross(dir, bendNormal);
+            Vector3 toBendPoint = GetDirectionToBendPoint(dir, length, bendDir, sqrMag1, sqrMag2);
 
             Quaternion q1 = Quaternion.FromToRotation(_bones[second].Position - _bones[first].Position, toBendPoint);
             RotateAroundPoint(first, _bones[first].Position, q1);
@@ -491,28 +422,17 @@ namespace UltimateXR.Animation.IK
         }
 
         /// <summary>Направление на точку сгиба по теореме косинусов (длина не равна длине первой кости).</summary>
-        private static Vector3 InterpolateInPlane(Vector3 from, Vector3 to, Vector3 axis, float weight)
+        private static Vector3 GetDirectionToBendPoint(Vector3 direction, float directionMag, Vector3 bendDirection, float sqrMag1, float sqrMag2)
         {
-            if (from.sqrMagnitude < 1e-10f) return to.sqrMagnitude > 1e-10f ? to.normalized : Vector3.zero;
-            if (to.sqrMagnitude < 1e-10f || weight <= 0f) return from.normalized;
-            from.Normalize();
-            to.Normalize();
-            float angle = Mathf.Atan2(Vector3.Dot(axis, Vector3.Cross(from, to)), Vector3.Dot(from, to)) * Mathf.Rad2Deg;
-            return (Quaternion.AngleAxis(angle * Mathf.Clamp01(weight), axis) * from).normalized;
-        }
+            float x = (directionMag * directionMag + (sqrMag1 - sqrMag2)) / 2.0f / directionMag;
+            float y = Mathf.Sqrt(Mathf.Max(sqrMag1 - x * x, 0.0f));
 
-        /// <summary>Непрерывная подписанная ветка угла; история не запрещает полный направленный поворот.</summary>
-        private static Vector3 InterpolateContinuous(Vector3 from, Vector3 to, Vector3 axis, float weight, ref float previousAngle, ref bool hasAngle)
-        {
-            if (from.sqrMagnitude < 1e-10f || to.sqrMagnitude < 1e-10f)
-                return InterpolateInPlane(from, to, axis, weight);
-            from.Normalize();
-            to.Normalize();
-            float angle = Mathf.Atan2(Vector3.Dot(axis, Vector3.Cross(from, to)), Vector3.Dot(from, to)) * Mathf.Rad2Deg;
-            if (hasAngle) angle = previousAngle + Mathf.DeltaAngle(previousAngle, angle);
-            previousAngle = angle;
-            hasAngle = true;
-            return (Quaternion.AngleAxis(angle * Mathf.Clamp01(weight), axis) * from).normalized;
+            if (direction == Vector3.zero)
+            {
+                return Vector3.zero;
+            }
+
+            return Quaternion.LookRotation(direction, bendDirection) * new Vector3(0.0f, y, x);
         }
 
         /// <summary>VirtualBone.RotateAroundPoint: поворот кости index и всех ниже по цепочке вокруг точки.</summary>
@@ -545,7 +465,6 @@ namespace UltimateXR.Animation.IK
         private Transform[]  _transforms = new Transform[0];
         private Bone[]       _bones;
         private Quaternion[] _restLocal;
-        private Quaternion[] _sourceLocal;
         private Vector3[]    _restLocalP;
 
         private Vector3    _bendNormalRelToPelvis;
@@ -557,12 +476,6 @@ namespace UltimateXR.Animation.IK
         private Quaternion _rotation = Quaternion.identity;
         private Quaternion _calfRelToThigh = Quaternion.identity;
         private Quaternion _thighRelToFoot = Quaternion.identity;
-        private struct BendPlane { public Vector3 Axis, Direction; public bool Valid, HasGoalAngle; public float GoalAngle; }
-        private BendPlane _footPlane, _toePlane;
-        private Vector3 _goalPosition;
-        private float _goalWeight;
-        private float _normalAngle;
-        private bool _hasNormalAngle;
 
         #endregion
     }

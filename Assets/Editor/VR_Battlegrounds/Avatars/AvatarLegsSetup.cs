@@ -41,7 +41,7 @@ namespace VrBattlegrounds.Editor.Avatars
             { "LegsAnimator", "DrivenLegsAnimator", "LegsAnimatorUxrBridge", "AvatarBodyPipeline", "AvatarUxrLegsDriver" };
 
         /// <summary>Поля контроллера, которые ведёт утилита: у вариантов переопределения снимаются.</summary>
-        private static readonly string[] ManagedProperties = { "_useNativeLegIK", "_legs.locomotionRig", "_legs.locomotionController", "_legs.hasKneelPose", "_legs.ankleHeight" };
+        private static readonly string[] ManagedProperties = { "_useNativeLegIK", "_legs.locomotionRig", "_legs.locomotionController", "_legs.ankleHeight" };
 
         [InitializeOnLoadMethod]
         private static void BindDiagnostics() => UxrLegsDiagnostics.WarningSink =
@@ -189,33 +189,6 @@ namespace VrBattlegrounds.Editor.Avatars
             return result.OrderBy(p => p);
         }
 
-        /// <summary>
-        /// Есть ли в контроллере ног поза на колене: смешивание по <c>Legs_Crouch</c>, где при 1 играет не то же, что при 0
-        /// (у стоек без приседа поддерево одно). Для <c>AvatarLegs_Locomotion</c> — да (колено набора винтовки), для
-        /// <c>AvatarLegs_FinalIK</c> — нет (присед там по своему параметру VRIK, не <c>Legs_Crouch</c>).
-        /// </summary>
-        public static bool ControllerHasKneelPose(RuntimeAnimatorController runtime)
-        {
-            var controller = runtime as AnimatorController;
-            if (controller == null) return false;
-            foreach (AnimatorControllerLayer layer in controller.layers)
-            foreach (ChildAnimatorState state in layer.stateMachine.states)
-                if (HasCrouchBlend(state.state.motion)) return true;
-            return false;
-        }
-
-        private static bool HasCrouchBlend(Motion motion)
-        {
-            if (!(motion is BlendTree tree)) return false;
-            if (tree.blendParameter == UxrLegLocomotion.CrouchParam && tree.children.Length >= 2)
-            {
-                Motion stand = tree.children.OrderBy(c => c.threshold).First().motion;
-                Motion crouch = tree.children.OrderBy(c => c.threshold).Last().motion;
-                if (crouch != null && crouch != stand) return true;
-            }
-            return tree.children.Any(c => HasCrouchBlend(c.motion));
-        }
-
         private static void SetupOwner(string path, AnimatorController controller, List<string> report, bool removeObsolete = true)
         {
             GameObject root = PrefabUtility.LoadPrefabContents(path);
@@ -241,7 +214,6 @@ namespace VrBattlegrounds.Editor.Avatars
                 legs.FindPropertyRelative(nameof(UxrLegsSettings.locomotionRig)).objectReferenceValue = rig;
                 legs.FindPropertyRelative(nameof(UxrLegsSettings.locomotionController)).objectReferenceValue = controller;
                 if (ankle > 0f) legs.FindPropertyRelative(nameof(UxrLegsSettings.ankleHeight)).floatValue = ankle;
-                legs.FindPropertyRelative(nameof(UxrLegsSettings.hasKneelPose)).boolValue = ControllerHasKneelPose(controller);
                 so.ApplyModifiedPropertiesWithoutUndo();
 
                 if (root.GetComponent<AvatarStanceFromGrabs>() == null) root.AddComponent<AvatarStanceFromGrabs>();

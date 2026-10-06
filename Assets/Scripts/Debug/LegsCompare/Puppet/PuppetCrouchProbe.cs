@@ -79,13 +79,8 @@ namespace VrBattlegrounds.DevTools.LegsCompare
                 _legsLooked = true;
                 _legs = root.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>()?.AnimatedLegs;
             }
+            // Оценки таза и наклона у ног больше нет (упрощение 2026-10-06): колонки остаются пустыми.
             float pelvisEst = float.NaN, lean = float.NaN;
-            if (_legs != null && _legs.IsReady)
-            {
-                float scale = root.Find("Dummy Forward") is Transform pivot ? pivot.lossyScale.y : 1f;
-                pelvisEst = _legs.PelvisEstimate.RawPelvisHeight * scale;
-                lean = _legs.PelvisEstimate.LeanAngle;
-            }
             float tilt = s.Chest != null && s.Hips != null ? Vector3.Angle(s.Chest.position - s.Hips.position, Vector3.up) : float.NaN;
             float manip = ManipulatorPelvis;
             if (!float.IsNaN(pelvisEst))

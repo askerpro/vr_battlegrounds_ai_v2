@@ -6,7 +6,7 @@
 
 ## Действующий срез
 
-Рабочая копия: `F:\UnityProjects\Vr_Battlegrounds_ai`, ветка `add-guns`. Реализация находится здесь; отдельной копии кода или пакета, который ещё требуется применить, нет. Checkpoint не равен полной миграции: существующие production карты продолжают legacy flow.
+Рабочая копия: `F:\UnityProjects\Vr_Battlegrounds_ai`, ветка `dev`. Реализация находится здесь; отдельной копии кода или пакета, который ещё требуется применить, нет. Checkpoint не равен полной миграции: существующие production карты продолжают legacy flow.
 
 - `MapRunConfig`, `MapRunResolver`, `MapRunScope`, `MapRunSnapshot`: immutable inputs, bounded Mirror wire contract, revision/key проверки и отмена с reverse teardown.
 - `MapRunAuthority`: единственный writer на существующем SessionContext. `CommitPrepared` публикует CompositionReady; gameplay Ready не открывается. Защита от повторного BeginRun из cancellation/release callbacks уже применена.

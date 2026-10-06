@@ -6,7 +6,7 @@
 
 Пользователь 2026-10-04 явно одобрил дизайн и поручил реализацию субагентами под контролем root.
 Root ведёт требования, очередь, первичное и отдельное ревью; продуктовый код не пишет.
-Рабочая ветка: `add-guns`. Общий Unity Editor используется только под собственной lease.
+Рабочая ветка: `dev`. Общий Unity Editor используется только под собственной lease.
 
 2026-10-05: stage3 принят root как bounded dependency после отдельного `/root/readiness_stage3_review` (gpt-6.1-sol/high, read-only spec/code review, APPROVE без блокеров). Root actual core SHA39/39; первоначальный общий manifest45/46 отличается только shared README, его не откатывать. Завершённые evidence: RED9/9 и45/3, GREEN18/44/48/63/67/55/59/42/124, AndroidPASS/errors[]. Принятие и пределы — `tmp/weapon-readiness-stage3-root-acceptance.md`. Тот же medium реально возобновлён на stage4; exact resolved asset plan/preflight предъявляется root перед production Apply. Физическая приёмка предъявляется после production linking этапа4 и интеграции этапа5, перед постоянными тестами/коммитом этапа6. Одобрение дизайна сохраняется; отдельной human acceptance изолированного stage3 не требуется.
 

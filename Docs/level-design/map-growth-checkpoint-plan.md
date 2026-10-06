@@ -12,7 +12,7 @@
 
 ## Проверенная исходная точка планирования
 
-- Рабочая копия: `F:/UnityProjects/Vr_Battlegrounds_ai`, ветка `add-guns`.
+- Рабочая копия: `F:/UnityProjects/Vr_Battlegrounds_ai`, ветка `dev`.
 - HEAD при подготовке плана: `49cac57289413629c3a1eead5e13bcb20a072a36`; он уже отличается от раннего checkpoint `55e40873`. Перед stage/commit снять актуальный HEAD снова.
 - Изолированная подготовка: `C:/Users/asker/.codex/worktrees/map-grower/Vr_Battlegrounds_ai`, ветка `codex/map-grower`, BASE `edd6d5646c7d9f5ae9ee70894e6661ae9e18a544`.
 - Исходный итоговый манифест `tmp/map-growth-preflight/transfer-manifest.json`: 102 пути, 66 own-source/metadata и 36 shared source/docs. При сверке нет отсутствующих файлов; изменились только общие Docs/README.md и Docs/CHANGELOG.md. Это не разрешает коммитить shared files целиком.

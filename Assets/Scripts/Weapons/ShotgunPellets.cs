@@ -59,15 +59,39 @@ namespace VrBattlegrounds.Weapons
         private void OnEnable()
         {
             _firearm.ProjectileShot += Firearm_ProjectileShot;
+            if (_firearm.AdditionalShotPlan != null && _firearm.AdditionalShotPlan != BuildAdditionalShotPlan)
+                throw new System.InvalidOperationException("Оружие уже имеет producer дополнительных shots.");
+            _firearm.AdditionalShotPlan = BuildAdditionalShotPlan;
         }
 
         private void OnDisable()
         {
             _firearm.ProjectileShot -= Firearm_ProjectileShot;
+            if (_firearm.AdditionalShotPlan == BuildAdditionalShotPlan) _firearm.AdditionalShotPlan = null;
+        }
+
+        private UxrAdditionalShotPlan[] BuildAdditionalShotPlan(int triggerIndex)
+        {
+            if (triggerIndex != _triggerIndex) return null;
+            if (_pellets < 1 || _pellets > UxrFirearmWeapon.MaximumAdditionalShots + 1 ||
+                _pelletShotIndex < 0 || _pelletShotIndex >= _source.ShotTypes.Count ||
+                _source.ShotTypes[_pelletShotIndex].ShotSource == null)
+                throw new System.InvalidOperationException("Недопустимый descriptor дроби.");
+            Transform muzzle = _source.ShotTypes[_pelletShotIndex].ShotSource;
+            var result = new UxrAdditionalShotPlan[_pellets - 1];
+            Vector3 position = muzzle.position;
+            Quaternion rotation = muzzle.rotation;
+            for (int i = 1; i < _pellets; i++)
+            {
+                Quaternion deviation = _weaponSpread != null ? _weaponSpread.PelletDeviation(i) : RandomSpread(_spreadDegrees);
+                result[i - 1] = new UxrAdditionalShotPlan(_pelletShotIndex, position, rotation * deviation);
+            }
+            return result;
         }
 
         private void Firearm_ProjectileShot(int triggerIndex)
         {
+            if (_firearm.UsesReadinessLedger(triggerIndex)) return;
             if (triggerIndex != _triggerIndex || _pelletShotIndex < 0 || _pelletShotIndex >= _source.ShotTypes.Count) return;
 
             Transform muzzle = _source.ShotTypes[_pelletShotIndex].ShotSource;

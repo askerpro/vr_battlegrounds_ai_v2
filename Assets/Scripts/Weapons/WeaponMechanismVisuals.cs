@@ -202,7 +202,7 @@ namespace VrBattlegrounds.Weapons
         {
             required = Array.Empty<ChamberActionBinding>(); emptyRearTime = -1f; error = null;
             if (profile == null || !profile.TryValidate(out error) ||
-                profile.AmmoCapability != WeaponAmmoCapability.DetachableMagazineChamber ||
+                profile.AmmoCapability == WeaponAmmoCapability.LegacyAmmo ||
                 profile.PhysicalCapability != WeaponPhysicalCapability.ActionTravel)
             { error = error ?? "Source factory требует detachable ActionTravel profile."; return false; }
             if (_body == null || _slide == null || _contactPart == null ||

@@ -6,6 +6,7 @@ using UltimateXR.Core;
 using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
+using VrBattlegrounds.Weapons;
 
 namespace VrBattlegrounds.Interaction
 {
@@ -99,7 +100,7 @@ namespace VrBattlegrounds.Interaction
             UxrFirearmMag mag = e.GrabbableObject.GetComponentInParent<UxrFirearmMag>();
             
             // Если это магазин и для его типа есть место
-            if (mag != null && CanStore(e.GrabbableObject))
+            if ((mag != null || e.GrabbableObject.GetComponent<Cartridge>() != null) && CanStore(e.GrabbableObject))
             {
                 StoreItem(e.GrabbableObject);
                 
@@ -122,6 +123,7 @@ namespace VrBattlegrounds.Interaction
         public void ForceStoreItem(UxrGrabbableObject item)
         {
             if (item == null || _storedItems.Contains(item)) return;
+            if (item.GetComponent<Cartridge>() != null && !CanStore(item)) return;
 
             StoreItem(item);
 
@@ -165,8 +167,12 @@ namespace VrBattlegrounds.Interaction
         /// </summary>
         public bool CanStore(UxrGrabbableObject item)
         {
-            if (item == null || item.GetComponentInParent<UxrFirearmMag>() == null) return true;
-            return CountOfType(TypeOf(item)) < _perTypeLimit;
+            if (item != null && item.TryGetComponent<UxrFirearmMag>(out var store) && store.IsFixedAmmoStore) return false;
+            var shell = item != null ? item.GetComponent<Cartridge>() : null;
+            // Гильза ручного заряжания — такой же боеприпас: тот же предел на тип, израсходованную не хранить.
+            if (shell != null && !shell.IsAvailable) return false;
+            if (item == null || shell == null && item.GetComponentInParent<UxrFirearmMag>() == null) return true;
+            return CountOfType(TypeOf(item)) < _perTypeLimit * (shell != null ? shell.MagazineEquivalent : 1);
         }
 
         /// <summary>Спрятанные магазины, от старых к новым.</summary>
@@ -194,7 +200,9 @@ namespace VrBattlegrounds.Interaction
         {
             foreach (UxrGrabbableObjectAnchor anchor in weaponAnchors)
             {
-                if (anchor.IsCompatibleObject(item))
+                // Только тег: валидаторы размещения — разрешение «положить сейчас» (у CartridgeIntake —
+                // «держал этот игрок», «есть место»), а не вопрос, подходит ли предмет к оружию.
+                if (item != null && anchor.IsCompatibleObjectTag(item.Tag))
                     return true;
             }
 
@@ -203,6 +211,8 @@ namespace VrBattlegrounds.Interaction
 
         private void StoreItem(UxrGrabbableObject item)
         {
+            if (item.TryGetComponent<Cartridge>(out var shell) && !shell.IsAvailable ||
+                item.TryGetComponent<UxrFirearmMag>(out var fixedStore) && fixedStore.IsFixedAmmoStore) return;
             _storedItems.Add(item);
 
             // Достаёт магазин из кармана только машина владельца (прокси-захват решается

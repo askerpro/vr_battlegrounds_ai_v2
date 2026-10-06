@@ -133,6 +133,14 @@ namespace VrBattlegrounds.Arsenal
         public int FireRate => _fireRate;
         public bool FullAuto => _fullAuto;
         public int MagazineSize => _magazineSize;
+
+        /// <summary>
+        /// Сколько выдаваемых предметов стоит одного магазина: у ручного заряжания (FixedStoreChamber) выдаются
+        /// одиночные патроны — ёмкость оружия на магазин; у остального оружия — сам магазин (1).
+        /// </summary>
+        public int AmmoItemsPerMagazine => _readinessProfile != null &&
+            _readinessProfile.AmmoCapability == VrBattlegrounds.Weapons.WeaponAmmoCapability.FixedStoreChamber
+                ? Mathf.Max(1, _magazineSize) : 1;
         public int ReserveAmmo => _reserveAmmo;
         public int Pellets => _pellets;
         public int KillAward => _killAward;

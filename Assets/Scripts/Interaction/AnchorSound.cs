@@ -35,7 +35,7 @@ namespace VrBattlegrounds.Interaction
     [RequireComponent(typeof(UxrGrabbableObjectAnchor))]
     public sealed class AnchorSound : MonoBehaviour
     {
-        [Tooltip("Источник звука. Его clip — звук вставки. Play On Awake выключен. Для доставания — не на объекте Activate On Placed: SDK выключит его при хвате.")]
+        [Tooltip("Источник звука. Его clip — звук вставки; пусто — общий звук MagazineAnchorSoundDefaults. Play On Awake выключен. Для доставания — не на объекте Activate On Placed: SDK выключит его при хвате.")]
         [SerializeField] private AudioSource _source;
 
         [Tooltip("Звук доставания рукой. Пусто — доставание без звука (так у гнёзд магазина в оружии).")]
@@ -52,6 +52,10 @@ namespace VrBattlegrounds.Interaction
         public AudioSource Source             => _source;
         public AudioClip   TakeOutClip        => _takeOutClip;
         public bool        TakeOutOnlyByHand  => _takeOutOnlyByHand;
+
+        /// <summary>Звук вставки: свой клип источника или общий из <see cref="MagazineAnchorSoundDefaults" />.</summary>
+        public AudioClip   InsertClip => _source != null && _source.clip != null ? _source.clip
+                                         : MagazineAnchorSoundDefaults.Instance != null ? MagazineAnchorSoundDefaults.Instance.InsertClip : null;
 
         private UxrGrabbableObjectAnchor _anchor;
         private UxrMagazinePocket        _magazinePocket;
@@ -79,7 +83,7 @@ namespace VrBattlegrounds.Interaction
         private void OnPlaced(object sender, UxrManipulationEventArgs e)
         {
             if (_onlyByHand && e.Grabber == null) return;
-            Play(_source != null ? _source.clip : null, e.GrabbableObject, "вставлен в");
+            Play(InsertClip, e.GrabbableObject, "вставлен в");
         }
 
         private void OnRemoved(object sender, UxrManipulationEventArgs e)

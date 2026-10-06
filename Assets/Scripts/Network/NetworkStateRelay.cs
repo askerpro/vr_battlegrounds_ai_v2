@@ -3,6 +3,7 @@ using UltimateXR.Core;
 using UltimateXR.Core.Settings;
 using UltimateXR.Core.StateSave;
 using UltimateXR.Core.StateSync;
+using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using VrBattlegrounds.Core;
 
@@ -211,6 +212,7 @@ namespace VrBattlegrounds.Network
             if (isServer)
             {
                 RpcComponentStateChanged(serializedEvent, 0u);
+                StateEventAuthority.MarkAmmoAdmissionPublished(component, eventArgs);
             }
             else if (NetworkClient.active && NetworkClient.ready)
             {
@@ -237,6 +239,10 @@ namespace VrBattlegrounds.Network
         [Command(requiresAuthority = false)]
         private void CmdComponentStateChanged(byte[] serializedEvent, NetworkConnectionToClient sender = null)
         {
+            // Новый admission разрешён только server queue; client-only payload не исполняется и не отражается observers.
+            // Нераспознанное событие идёт прежним путём (выполнить и разослать), фильтр — только для ammo-payload.
+            if (UxrSyncEventArgs.DeserializeEventBinary(serializedEvent, out var target, out var args, out _) &&
+                IsClientAmmoAdmissionPayload(target, args)) return;
             UxrManager.Instance.ExecuteStateSyncEvent(serializedEvent);
 
             // netId объекта игрока отправителя — метка «кто это породил».
@@ -297,6 +303,40 @@ namespace VrBattlegrounds.Network
 
             GameLog.Network.Info("[NetworkStateRelay] Запрашиваю у сервера начальный снимок состояния сцены.");
             CmdRequestInitialState();
+        }
+
+        public void RequestAmmoAdmissionResynchronization()
+        {
+            if (!isServer && NetworkClient.active && NetworkClient.ready) RequestInitialState();
+        }
+
+        [Server]
+        public bool ServerResynchronizeAmmoAdmissionPeers()
+        {
+            if (!UxrManager.HasInstance) return false;
+            byte[] snapshot = UxrManager.Instance.SaveStateChanges(null, null,
+                UxrStateSaveLevel.ChangesSinceBeginning, UxrGlobalSettings.Instance.NetFormatInitialState);
+            if (snapshot == null || snapshot.Length == 0) return false;
+            foreach (var connection in NetworkServer.connections.Values)
+                // Хост — сам источник снимка; загрузка поверх авторитетного состояния сбила бы его захваты.
+                if (connection != null && connection.isReady && !(connection is LocalConnectionToClient))
+                    TargetLoadInitialState(connection, snapshot);
+            return true;
+        }
+
+        private static bool IsClientAmmoAdmissionPayload(IUxrStateSync target, UxrSyncEventArgs args)
+        {
+            if (target?.Component is UxrFirearmAmmoUnit ||
+                target?.Component is UxrFirearmMag store && store.IsFixedAmmoStore) return true;
+            if (!(args is UxrMethodInvokedSyncEventArgs method)) return false;
+            if (target?.Component is UxrFirearmWeapon &&
+                (method.MethodName == "CommitAmmoAdmission" || method.MethodName == "TryAcceptAmmoUnit" ||
+                 method.MethodName == "TryBeginAmmoAdmissionBarrier" || method.MethodName == "TryEndAmmoAdmissionBarrier" ||
+                 method.MethodName == "TryAcknowledgeFixedAmmoResynchronization" || method.MethodName == "WriteReadinessCommit")) return true;
+            foreach (object parameter in method.Parameters)
+                if (parameter is UxrAmmoAdmissionCommit || parameter is UxrFixedAmmoSnapshot ||
+                    parameter is UxrFirearmReadinessCommit commit && commit.Operation == UxrFirearmReadinessOperation.AmmoAdmission) return true;
+            return false;
         }
 
         /// <summary>

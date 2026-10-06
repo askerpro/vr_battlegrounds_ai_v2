@@ -5,6 +5,7 @@ using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Maps;
 using VrBattlegrounds.PhysicalSpaceUtils;
+using VrBattlegrounds.Weapons;
 
 namespace VrBattlegrounds.Core
 {
@@ -40,7 +41,8 @@ namespace VrBattlegrounds.Core
 
         public static bool IsPlayerRoot(GameObject go)    => go.GetComponent<UxrAvatar>() != null;
         public static bool IsWeaponRoot(GameObject go)    => go.GetComponent<UxrFirearmWeapon>() != null || go.GetComponent<UxrGrenadeWeapon>() != null;
-        public static bool IsMagazineRoot(GameObject go)  => go.GetComponent<UxrFirearmMag>() != null;
+        // Боеприпас: магазин (в том числе встроенный запас оружия) или одиночный патрон ручного заряжания.
+        public static bool IsMagazineRoot(GameObject go)  => go.GetComponent<UxrFirearmMag>() != null || go.GetComponent<Cartridge>() != null;
         public static bool IsSpawnZoneRoot(GameObject go) => go.GetComponent<TeamSpawnZone>() != null;
         public static bool IsArsenalRoot(GameObject go)   => go.GetComponent<ArsenalWallController>() != null || go.GetComponent<ArsenalSlotController>() != null;
 

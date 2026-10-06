@@ -52,7 +52,8 @@ namespace VrBattlegrounds.Weapons
                 UxrGrabbableObject placed = anchor.CurrentPlacedObject;
 
                 // Гнездо вложенного оружия (если когда-то появится) принадлежит не этому оружию.
-                if (placed != null && placed.GetComponent<UxrFirearmMag>() != null && anchor.GetComponentInParent<UxrFirearmWeapon>(true) == weapon)
+                if (placed != null && placed.GetComponent<UxrFirearmMag>() != null &&
+                    !placed.GetComponent<UxrFirearmMag>().IsFixedAmmoStore && anchor.GetComponentInParent<UxrFirearmWeapon>(true) == weapon)
                 {
                     return placed;
                 }

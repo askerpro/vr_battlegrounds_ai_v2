@@ -166,9 +166,14 @@ namespace VrBattlegrounds.Weapons
             if (_body == null) _body = _visuals != null ? _visuals.Body : transform;
             if (profile == null) { error = "Не задан readiness profile."; return false; }
             if (!profile.TryValidate(out error)) return false;
-            if (profile.AmmoCapability != WeaponAmmoCapability.DetachableMagazineChamber)
+            if (profile.AmmoCapability == WeaponAmmoCapability.LegacyAmmo)
             { error = "LegacyAmmo сохраняет прежний adapter, ledger не включается."; return false; }
             if (!ValidatePhysicalConfiguration(profile, bindings, out float validatedEmptyRearTime, out error)) return false;
+            if (profile.AmmoCapability == WeaponAmmoCapability.FixedStoreChamber &&
+                (_weapon.GetComponent<CartridgeIntake>() == null ||
+                 Array.Find(_weapon.GetComponentsInChildren<UxrFirearmMag>(true),
+                    store => store.IsFixedAmmoStore && store.FixedStoreWeapon == _weapon && store.FixedStoreTrigger == _triggerIndex) == null))
+            { error = "FixedStoreChamber требует явного fixed reservoir и shell receiver."; return false; }
             if ((_weapon.CanAuthorReadinessAction != null && _weapon.CanAuthorReadinessAction.Target != this) ||
                 (_weapon.RefreshPhysicalActionState != null && _weapon.RefreshPhysicalActionState.Target != this) ||
                 (_weapon.ValidateChamberCompletion != null && _weapon.ValidateChamberCompletion.Target != this) ||
@@ -426,8 +431,13 @@ namespace VrBattlegrounds.Weapons
             if (_feedback != null && _feedback.Slide != null) _feedback.Slide.Grabbing -= HandleGrabbing;
         }
 
+        // Статическое событие переживает объект, уничтоженный без OnDisable (DestroyImmediate в EditMode):
+        // обращение к isActiveAndEnabled уничтоженного компонента бросает MissingReferenceException.
+        private void OnDestroy() { UxrStateSaveImplementer.StateSerialized -= HandleStateSerialized; }
+
         private void HandleStateSerialized(object sender, UxrStateSaveEventArgs args)
         {
+            if (this == null) { UxrStateSaveImplementer.StateSerialized -= HandleStateSerialized; return; }
             if (!isActiveAndEnabled || _weapon == null || !ReferenceEquals(sender, _weapon) ||
                 args == null || args.Serializer == null || !args.Serializer.IsReading) return;
             ClearAutomationCorrelation();

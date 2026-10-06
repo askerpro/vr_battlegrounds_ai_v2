@@ -203,7 +203,8 @@ namespace VrBattlegrounds.Player
                 stored,
                 (magazine, weapon) => UxrMagazinePocket.Fits(magazine, weapon.GetComponent<UxrGrabbableObject>()),
                 weapon => weapon.WeaponData.MagazinePrefab == null ? 0
-                    : System.Math.Min(Pocket.PerTypeLimit, perWeapon > 0 ? perWeapon : weapon.WeaponData.MaxMagazineCount),
+                    : System.Math.Min(Pocket.PerTypeLimit, perWeapon > 0 ? perWeapon : weapon.WeaponData.MaxMagazineCount)
+                      * weapon.WeaponData.AmmoItemsPerMagazine, // ручное заряжание: патронов на столько же магазинов
                 // Общей вместимости нет — предел на тип магазина (UxrMagazinePocket.PerTypeLimit).
                 int.MaxValue);
 

@@ -5,6 +5,7 @@ using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Weapons;
 
 namespace VrBattlegrounds.Interaction
 {
@@ -54,6 +55,7 @@ namespace VrBattlegrounds.Interaction
 
             foreach (UxrFirearmMag magazine in Object.FindObjectsByType<UxrFirearmMag>(FindObjectsSortMode.None))
             {
+                if (magazine.IsFixedAmmoStore) continue;
                 NetworkIdentity identity = magazine.GetComponent<NetworkIdentity>();
                 if (identity != null && identity.netId != 0) continue;
 
@@ -67,7 +69,7 @@ namespace VrBattlegrounds.Interaction
             kind = LooseItemKind.Magazine;
             if (item == null) return false;
 
-            if (item.GetComponent<UxrFirearmMag>() != null)
+            if (item.GetComponent<UxrFirearmMag>() != null && !item.GetComponent<UxrFirearmMag>().IsFixedAmmoStore || item.GetComponent<Cartridge>() != null)
             {
                 kind = LooseItemKind.Magazine;
                 return true;
@@ -144,6 +146,9 @@ namespace VrBattlegrounds.Interaction
             int removed = 0;
             foreach (UxrGrabbableObject item in candidates)
             {
+                // Принятые единицы невидимы; штатный round/map cleanup освобождает bounded retention.
+                if (NetworkServer.active && item != null && item.TryGetComponent<Cartridge>(out var shell) && shell.Unit.HasBeenConsumed)
+                { if (Remove(item)) removed++; continue; }
                 if (IsLoose(item) && Remove(item)) removed++;
             }
 

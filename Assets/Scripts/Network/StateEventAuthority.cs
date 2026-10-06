@@ -34,6 +34,32 @@ namespace VrBattlegrounds.Network
     /// </summary>
     public static class StateEventAuthority
     {
+        // Точный scope одной проверенной server admission, не смена author остальных firearm действий.
+        public sealed class AmmoAdmissionPublication : IDisposable
+        {
+            internal readonly UxrFirearmWeapon Weapon;
+            internal readonly ulong Token;
+            public bool Published { get; internal set; }
+            internal AmmoAdmissionPublication(UxrFirearmWeapon weapon, ulong token) { Weapon = weapon; Token = token; }
+            public void Dispose() { if (ReferenceEquals(_ammoPublication, this)) _ammoPublication = null; }
+        }
+        private static AmmoAdmissionPublication _ammoPublication;
+        public static AmmoAdmissionPublication BeginAmmoAdmissionPublication(UxrFirearmWeapon weapon, ulong token)
+        {
+            var receiver = weapon != null ? weapon.GetComponent<VrBattlegrounds.Weapons.CartridgeIntake>() : null;
+            if (!NetworkServer.active || _ammoPublication != null || receiver == null ||
+                !receiver.IsValidatedAdmissionPublication(token)) return null;
+            return _ammoPublication = new AmmoAdmissionPublication(weapon, token);
+        }
+        public static void MarkAmmoAdmissionPublished(IUxrStateSync component, UxrSyncEventArgs args)
+        {
+            if (IsScopedAmmoAdmission(component, args)) _ammoPublication.Published = true;
+        }
+        private static bool IsScopedAmmoAdmission(IUxrStateSync component, UxrSyncEventArgs args) =>
+            NetworkServer.active && _ammoPublication != null && component?.Component == _ammoPublication.Weapon &&
+            args is UxrMethodInvokedSyncEventArgs method && method.MethodName == "CommitAmmoAdmission" &&
+            method.Parameters.Length == 1 && method.Parameters[0] is UxrAmmoAdmissionCommit admission &&
+            admission.RequestToken == _ammoPublication.Token;
         /// <summary>Сколько событий отброшено, по ключу «Тип.Метод».</summary>
         public static IReadOnlyDictionary<string, int> DroppedCounts => Dropped;
 
@@ -83,6 +109,7 @@ namespace VrBattlegrounds.Network
         /// </summary>
         public static bool ShouldSend(IUxrStateSync component, UxrSyncEventArgs eventArgs)
         {
+            if (IsScopedAmmoAdmission(component, eventArgs)) return true;
             Component target = component?.Component;
             if (target == null) return true;
 

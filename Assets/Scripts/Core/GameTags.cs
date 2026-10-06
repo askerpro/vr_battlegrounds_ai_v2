@@ -26,7 +26,7 @@ namespace VrBattlegrounds.Core
         /// <summary>Оружие, включая гранату.</summary>
         public const string Weapon = "Weapon";
 
-        /// <summary>Магазин, в том числе встроенный в префаб оружия.</summary>
+        /// <summary>Боеприпас: магазин (в том числе встроенный в префаб оружия) или одиночный патрон ручного заряжания.</summary>
         public const string Magazine = "Magazine";
 
         /// <summary>Зона спавна команды.</summary>

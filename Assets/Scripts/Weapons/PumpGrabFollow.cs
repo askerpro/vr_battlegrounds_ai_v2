@@ -21,6 +21,7 @@ namespace VrBattlegrounds.Weapons
     /// каждой машине из рук аватаров, как и решение SDK.
     /// </para>
     /// </summary>
+    [DefaultExecutionOrder(230)]
     public sealed class PumpGrabFollow : MonoBehaviour
     {
         [Tooltip("Граббабл помпы — ребёнок оружия с Restrict Local Offset по ходу.")]
@@ -53,6 +54,19 @@ namespace VrBattlegrounds.Weapons
         {
             if (_pump != null) _pump.ConstraintsApplied -= Pump_ConstraintsApplied;
             _hand = null;
+        }
+
+        private void LateUpdate()
+        {
+            var readiness = GetComponent<WeaponReadinessController>();
+            if (_pump != null && readiness != null && readiness.IsConfigured && UxrGrabManager.HasInstance &&
+                !UxrGrabManager.Instance.IsBeingGrabbed(_pump))
+            {
+                // Controller/Visuals могли вернуть помпу. Следующий хват начинает delta от actual pose,
+                // а не resurrect сохранённый rear. Это readonly cache, не второй pose writer.
+                _pumpLocalPosition = _pump.transform.localPosition;
+                _hand = null;
+            }
         }
 
         private void Pump_ConstraintsApplied(object sender, UxrApplyConstraintsEventArgs e)

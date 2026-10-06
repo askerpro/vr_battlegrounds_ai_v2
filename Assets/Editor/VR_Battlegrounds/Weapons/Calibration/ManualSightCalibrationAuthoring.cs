@@ -159,20 +159,52 @@ namespace VrBattlegrounds.Editor.Weapons.Calibration
             EditorSceneManager.MarkSceneDirty(session.gameObject.scene); SceneView.RepaintAll();
         }
 
-        public static SightAlignmentMarker AddMarker(ManualSightCalibrationSession session, Transform parent, SightAlignmentRole role)
+        public static SightAlignmentMarker Marker(ManualSightCalibrationSession session, SightAlignmentRole role) => session.Instance == null ? null
+            : session.Instance.GetComponentsInChildren<SightAlignmentMarker>(true).FirstOrDefault(m => m.Role == role);
+
+        /// <summary>Причина, по которой объект нельзя назначить деталью целика/мушки; null — можно.</summary>
+        public static string PartProblem(ManualSightCalibrationSession session, Transform part)
+        {
+            if (session == null || session.Instance == null) return "Оружие не загружено.";
+            if (part == null) return "Выделите деталь целика или мушки в Hierarchy.";
+            if (part != session.Instance.transform && !part.IsChildOf(session.Instance.transform)) return "Выделенный объект не принадлежит загруженному оружию.";
+            if (part.GetComponent<SightAlignmentMarker>() != null) return "Выделен сам маркер — выделите деталь, в которую его вложить.";
+            return null;
+        }
+
+        /// <summary>
+        /// Назначает деталь целиком (Rear) или мушкой (Front): Empty-маркер роли создаётся внутри неё
+        /// или переносится из прежней детали. Стартовая точка — центр меша детали, дальше её ставят вручную.
+        /// </summary>
+        public static SightAlignmentMarker AssignMarker(ManualSightCalibrationSession session, Transform part, SightAlignmentRole role)
         {
             CheckEdit();
-            if (session.Instance == null || parent == null || (parent != session.Instance.transform && !parent.IsChildOf(session.Instance.transform)))
-                throw new InvalidOperationException("Выберите деталь внутри оружия в Hierarchy.");
-            if (session.Instance.GetComponentsInChildren<SightAlignmentMarker>(true).Any(m => m.Role == role))
-                throw new InvalidOperationException("Маркер этой роли уже существует. Выберите и переместите его.");
+            string problem = PartProblem(session, part);
+            if (problem != null) throw new InvalidOperationException(problem);
+            var existing = session.Instance.GetComponentsInChildren<SightAlignmentMarker>(true).Where(m => m.Role == role).ToArray();
+            if (existing.Length > 1) throw new InvalidOperationException("Найдено несколько маркеров этой роли — удалите лишние вручную.");
             Undo.IncrementCurrentGroup(); int group = Undo.GetCurrentGroup();
-            var go = new GameObject(role == SightAlignmentRole.Rear ? "SightReference_Rear" : "SightReference_Front");
-            Undo.RegisterCreatedObjectUndo(go, "Добавить точку прицела"); Undo.SetTransformParent(go.transform, parent, "Вложить точку прицела");
-            go.transform.localPosition = Vector3.zero; go.transform.localRotation = Quaternion.identity; go.transform.localScale = Vector3.one;
-            var marker = Undo.AddComponent<SightAlignmentMarker>(go); Undo.RecordObject(marker, "Роль точки прицела"); marker.Role = role;
+            var marker = existing.FirstOrDefault();
+            var go = marker != null ? marker.gameObject : new GameObject(role == SightAlignmentRole.Rear ? "SightReference_Rear" : "SightReference_Front");
+            if (marker == null) Undo.RegisterCreatedObjectUndo(go, "Добавить точку прицела");
+            Undo.SetTransformParent(go.transform, part, "Вложить точку прицела");
+            Undo.RecordObject(go.transform, "Поставить точку прицела");
+            go.transform.position = AimPointGuess(part); go.transform.localRotation = Quaternion.identity; go.transform.localScale = Vector3.one;
+            if (marker == null) { marker = Undo.AddComponent<SightAlignmentMarker>(go); Undo.RecordObject(marker, "Роль точки прицела"); marker.Role = role; }
             Undo.CollapseUndoOperations(group);
             Selection.activeGameObject = go; EditorSceneManager.MarkSceneDirty(session.gameObject.scene); return marker;
+        }
+
+        // Pivot деталей из паков часто стоит в начале оружия, поэтому стартуем с центра собственного меша детали.
+        private static Vector3 AimPointGuess(Transform part)
+        {
+            var own = part.GetComponent<Renderer>();
+            if (own != null) return own.bounds.center;
+            var nested = part.GetComponentsInChildren<Renderer>(true);
+            if (nested.Length == 0) return part.position;
+            var bounds = nested[0].bounds;
+            foreach (var renderer in nested) bounds.Encapsulate(renderer.bounds);
+            return bounds.center;
         }
 
         public static void ViewThroughSights(ManualSightCalibrationSession session)

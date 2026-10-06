@@ -103,9 +103,15 @@ namespace VrBattlegrounds.Editor.Weapons.Calibration
                     float distance = EditorGUILayout.FloatField("Сведение, м", session.Distance);
                     if (EditorGUI.EndChangeCheck()) Run(() => ManualSightCalibrationAuthoring.SetDistance(session, distance));
                     EditorGUILayout.LabelField("Допустимо: больше 0 и до 20 м; по умолчанию 15 м.", EditorStyles.wordWrappedMiniLabel);
-                    MarkerRow(session, SightAlignmentRole.Rear, "Целик · Rear");
-                    MarkerRow(session, SightAlignmentRole.Front, "Мушка · Front");
-                    EditorGUILayout.HelpBox("Для создания маркера выберите родительскую деталь оружия в Hierarchy. Empty появится в её начале координат — переместите его в точку фактического наведения. Также можно добавить Empty и компонент вручную.", MessageType.None);
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("Точки прицела", EditorStyles.boldLabel);
+                    var selected = Selection.activeTransform;
+                    string problem = ManualSightCalibrationAuthoring.PartProblem(session, selected);
+                    EditorGUILayout.LabelField("Выделено", selected != null ? selected.name : "—");
+                    if (problem != null) EditorGUILayout.HelpBox(problem, MessageType.None);
+                    MarkerRow(session, SightAlignmentRole.Rear, "Целик · Rear", "Выделенное → целик", selected, problem);
+                    MarkerRow(session, SightAlignmentRole.Front, "Мушка · Front", "Выделенное → мушка", selected, problem);
+                    EditorGUILayout.HelpBox("Выделите деталь целика/мушки в Hierarchy и нажмите кнопку роли: внутри детали появится Empty-маркер (или переедет из прежней детали) в центре её меша. Поставьте его в фактическую точку наведения: Rear — откуда смотрит глаз, Front — через что проходит луч.", MessageType.None);
                     if (session.TryIntersection(out _, out var offset, out var reason))
                     {
                         EditorGUILayout.LabelField("На плоскости мишени", EditorStyles.boldLabel);
@@ -116,6 +122,12 @@ namespace VrBattlegrounds.Editor.Weapons.Calibration
                     if (GUILayout.Button("Показать оружие целиком")) { Selection.activeGameObject = session.Instance; SceneView.lastActiveSceneView?.FrameSelected(); }
                     if (GUILayout.Button("Показать мишень крупно")) { Selection.activeGameObject = session.Target.gameObject; SceneView.lastActiveSceneView?.FrameSelected(); }
                     if (GUILayout.Button("Выровнять ShotSource на центр")) Run(() => { Undo.RecordObject(session.Placement, "Разместить оружие на стенде"); ManualSightCalibrationAuthoring.Align(session); });
+                    if (GUILayout.Button("Витрина прицелов и аксессуаров")) Run(() =>
+                    {
+                        var root = SightAccessoryShowcase.Build(session.gameObject.scene);
+                        Selection.activeGameObject = root; SceneView.lastActiveSceneView?.FrameSelected();
+                        _message = "Витрина пересобрана справа от оружия. Сцену сохраните вручную (Ctrl+S).";
+                    });
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField("Сохранение в проверочную копию", EditorStyles.boldLabel);
                     EditorGUILayout.SelectableLabel(session.OutputPath, EditorStyles.wordWrappedMiniLabel, GUILayout.Height(36));
@@ -141,17 +153,26 @@ namespace VrBattlegrounds.Editor.Weapons.Calibration
             return true;
         }
 
-        private void MarkerRow(ManualSightCalibrationSession session, SightAlignmentRole role, string label)
+        private void MarkerRow(ManualSightCalibrationSession session, SightAlignmentRole role, string label, string assignLabel, Transform selected, string problem)
         {
-            var marker = session.Instance.GetComponentsInChildren<SightAlignmentMarker>(true).FirstOrDefault(m => m.Role == role);
+            var marker = ManualSightCalibrationAuthoring.Marker(session, role);
+            EditorGUILayout.ObjectField(label, marker, typeof(SightAlignmentMarker), true);
+            if (marker != null) EditorGUILayout.LabelField(" ", "в детали: " + marker.transform.parent.name, EditorStyles.miniLabel);
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.ObjectField(label, marker, typeof(SightAlignmentMarker), true);
-                if (marker != null)
-                { if (GUILayout.Button("Выбрать", GUILayout.Width(80))) Selection.activeGameObject = marker.gameObject; }
-                else if (GUILayout.Button("Создать", GUILayout.Width(80))) Run(() => ManualSightCalibrationAuthoring.AddMarker(session, Selection.activeTransform, role));
+                using (new EditorGUI.DisabledScope(problem != null))
+                    if (GUILayout.Button(assignLabel)) Run(() =>
+                    {
+                        if (marker != null && !EditorUtility.DisplayDialog("Переназначить точку",
+                            "Маркер «" + label + "» перенесётся в «" + selected.name + "» и встанет в центр её меша. Текущая позиция маркера будет заменена (Undo доступен).", "Перенести", "Отмена")) return;
+                        ManualSightCalibrationAuthoring.AssignMarker(session, selected, role);
+                    });
+                using (new EditorGUI.DisabledScope(marker == null))
+                    if (GUILayout.Button("Выбрать маркер", GUILayout.Width(120))) Selection.activeGameObject = marker.gameObject;
             }
         }
+
+        private void OnSelectionChange() => Repaint();
 
         private void Run(Action action)
         {

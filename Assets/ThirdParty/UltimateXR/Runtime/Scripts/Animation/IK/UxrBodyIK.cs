@@ -366,7 +366,10 @@ namespace UltimateXR.Animation.IK
 
             // If the avatar moves, straighten the forward direction
 
-            float avatarMovedDistance = Vector3.Distance(localAvatarPivotPos, _avatarForward.position);
+            // VR Battlegrounds patch 48: оригинал сравнивал localAvatarPivotPos (в осях корня аватара) с мировой позицией —
+            // «сдвиг» был равен удалению корня от начала координат, и вдали от (0,0,0) корпус каждый кадр выпрямлялся за
+            // взглядом в обход HeadFreeRangeTorsion. Обе точки — в мире.
+            float avatarMovedDistance = Vector3.Distance(_avatar.transform.TransformPoint(localAvatarPivotPos), _avatarForward.position);
 
             if (avatarMovedDistance / Time.deltaTime > AvatarStraighteningMinSpeed)
             {

@@ -55,5 +55,3 @@ git --no-pager diff
 ```
 
 Ветка: работай в текущей, если это не `main`. Если `main` — сначала создай ветку.
-
-`post-commit`-хук дублирует коммит в Plastic SCM — это ожидаемо, см. `Docs/version-control.md`.

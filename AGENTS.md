@@ -21,7 +21,7 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
   `Assets/Scripts/` ломает Android-билд. Меню — `VR Battlegrounds` с пробелом (`Tools/VR Battlegrounds/...`).
 - **Коммит** — никогда сразу после кода, сначала проверка пользователем в Unity. Исключение — только
   документация и технический checkpoint через `Tools/agents/editor-broker.py`: alternate index,
-  `commit-tree`, ref `codex/tmp`, без хуков, push и Plastic. Checkpoint не означает принятие работы.
+  `commit-tree`, ref `codex/tmp`, без хуков и push. Checkpoint не означает принятие работы.
   Принятый коммит — после проверки. Подробности — `/commit`, [протокол](Docs/agents/editor-broker.md).
 - **Теги** — только из `GameTags`, руками не ставятся: правило в `GameTagRules`, расстановка —
   `Tools/VR Battlegrounds/Gameplay/Apply Game Tags`, проверка — `GameTagsTests`. Не удалять теги из
@@ -78,7 +78,7 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
 | Сессия, роли, устройства | `Docs/session-architecture.md` |
 | UI-меню / шрифты | `Docs/ui-design-system.md`, `Docs/ui-menu-architecture.md` / `Docs/ui-fonts.md` |
 | Стена арсенала | `Docs/Arsenal/Arsenal_Code_Architecture_RU.md` |
-| Сборка, Git/Plastic, перф | `Docs/release.md`, `Docs/version-control.md`, `Docs/perf-stress-test.md` |
+| Сборка, Git, перф | `Docs/release.md`, `Docs/version-control.md`, `Docs/perf-stress-test.md` |
 | Звуки (новый звук события) | `Docs/sound-library.md` — пак вне проекта, брать по файлу |
 | Unity MCP сломан | `Docs/unity-mcp.md`, `.agents/rules/unity_mcp.md` |
 
@@ -227,20 +227,7 @@ checkout/reset/clean и запуск генераторов, которые ту
   в патче, а не переходить к массовой перезаписи через терминал. Подробности — `.agents/rules/terminal.md`.
 - Bash-инструмент **изолирован от сети** (`curl` к localhost падает) — сетевые проверки через PowerShell.
 - Git — всегда `--no-pager`.
-- **Git → Plastic хук:** `.githooks/post-commit` переносит только файлы текущего HEAD
-  из `Assets`/`Packages`/`ProjectSettings` (Plastic нужен лишь подсветке в инспекторе Unity),
-  с проверкой их содержимого против Git-коммита. Если в выбранном файле остались
-  незакоммиченные правки, весь перенос пропускается с предупреждением; остальные
-  pending-файлы не включаются. Не заменять это на check-in всего workspace.
-  Повторный запуск хука обрабатывает текущий HEAD, а не ранее пропущенный commit.
-  Проверки и ограничения — `Docs/version-control.md`.
-- **Plastic в Codex:** `Authentication failed, see inner exception` внутри песочницы ещё не
-  доказывает сбой учётной записи. Повторить `cm status --nochanges` через PowerShell с
-  `sandbox_permissions="require_escalated"`; чтение changeset проверить отдельной `cm find`.
-  Успех вне песочницы означает ограничение среды; не менять токены и не просить повторный вход.
-  Для доверенного проекта узкие разрешения чтения заданы в `.codex/rules/plastic-read.rules`.
-  Правила не разрешают check-in всего workspace; запись — только в рамках поручения и по явным путям.
-  Подробности и пределы проверки — `Docs/version-control.md`.
+- **Plastic SCM не используется** (удалён 2026-10-06): Git — единственная VCS, хуков переноса нет.
 
 ## Документация
 

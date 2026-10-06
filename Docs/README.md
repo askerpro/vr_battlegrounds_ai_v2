@@ -126,7 +126,7 @@ GUID/зависимости и Android PASS; каталог: 7933 GUID, 24 Scene
 | `avatar-animation.md` | Native UXR legs: согласованная поза таза/ног и обычное сидение. Перенос T-42, проверки и принятие механики — `tasks/T-42-uxrlegs-seated-port.md`; исходный аудит — `audit/uxrlegs-seated-code-audit-2026-10-03.md`. Kneeling отложен. |
 | `Roadmap.md` | План развития проекта |
 | `CHANGELOG.md` | Журнал архитектурных и значимых изменений проекта |
-| `version-control.md` | Git/Plastic workflow: перенос только файлов HEAD, защита от незакоммиченных правок, регрессии `Tools/agents/tests/test_plastic_hook.py`, диагностика |
+| `version-control.md` | Git как единственная VCS: хуки LFS, почему убран Plastic SCM |
 | `unity-mcp.md`, `Tools/UnityMcp/` | MCP 10.2.0: discovery и автоматический output-guard патчи, воспроизводимая установка, полные отчёты и чтение по частям; сводка и резервный лимит Codex; CodeDom/MAX_PATH, UVCS и автосохранение перед `run_tests` |
 | `tasks/unity-mcp-discovery-optimization.md` | Принятый контракт MCP-оптимизации и выполненные проверки; результаты и пределы — в аудите, дальнейшая игровая работа не входит |
 | `release.md` | Сборка сервера, Quest и планшета; почему у них одинаковые UXR id |
@@ -157,7 +157,7 @@ GUID/зависимости и Android PASS; каталог: 7933 GUID, 24 Scene
 - **Проектирование карт** → [порядок чтения](#левел-дизайн-от-замысла-к-проверке), затем принципы → процесс → геометрия → проверки
 - **План развития** → [`Roadmap.md`](Roadmap.md)
 - **История изменений (Changelog)** → [`CHANGELOG.md`](CHANGELOG.md)
-- **Git/Plastic workflow и post-commit hook** → [`version-control.md`](version-control.md)
+- **Git и хуки** → [`version-control.md`](version-control.md)
 - **Unity MCP: фикс execute_code (Windows)** → [`unity-mcp.md`](unity-mcp.md)
 - **Собрать сервер, Quest, планшет** → [`release.md`](release.md)
 - **UltimateXR SDK** → [`UltimateXR/README.md`](UltimateXR/README.md)

@@ -396,11 +396,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 364547791064754977, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: __isInPrefab
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 364547791064754977, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: __prefabGuid
-      value: 0f6d7b9c63abe8043a1ea245c3b6fba9
+      value: 4a28fd7096bf0994eac0a22cbb3a922c
       objectReference: {fileID: 0}
     - target: {fileID: 364547791064754977, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       propertyPath: _uxrUniqueId
@@ -1007,7 +1007,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Mirror::Mirror.NetworkIdentity
   sceneId: 0
-  _assetId: 187740366
+  _assetId: 1133285790
   serverOnly: 0
   visibility: 0
   hasSpawned: 0

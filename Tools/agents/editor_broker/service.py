@@ -11,9 +11,13 @@ import shutil
 import subprocess
 import uuid
 
+from .debuglog import get as _get_log, timed, traced
 from .git_state import GitState
 from .queue import BrokerStore
 from .unity import FileUnityAdapter, UnityOperationError, install_bridge
+
+
+_LOG = _get_log("service")
 
 
 class BrokerError(RuntimeError):
@@ -192,7 +196,8 @@ class EditorBroker:
     def _unity_call(self, ticket_id, token, operation, *arguments, role=None):
         self._request_context = (ticket_id, token, role or operation)
         try:
-            return getattr(self.adapter, operation)(*arguments)
+            with timed(_LOG, "unity." + operation, ticket=ticket_id, role=role or operation):
+                return getattr(self.adapter, operation)(*arguments)
         finally:
             self._request_context = None
 
@@ -210,6 +215,13 @@ class EditorBroker:
             if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
                 raise BrokerError("Изменился локальный мост: " + relative)
         snapshot = self.adapter.inspect()
+        _LOG.debug("ready? ready=%s playing=%s compiling=%s updating=%s tests=%s parked=%s dirty_scenes=%s "
+                   "dirty_assets=%s ignored_dirty=%s compile_errors=%d clean=%s",
+                   snapshot.get("ready"), snapshot.get("is_playing"), snapshot.get("is_compiling"),
+                   snapshot.get("is_updating"), snapshot.get("is_test_running"),
+                   snapshot.get("auto_refresh_suppressed"), snapshot.get("dirty_scenes"),
+                   snapshot.get("dirty_assets"), len(snapshot.get("ignored_dirty_assets") or []),
+                   len(snapshot.get("compile_errors") or []), clean)
         if canonical(snapshot.get("project_root", "")) != canonical(self.editor_root):
             raise BrokerError("Unity подключён к другому worktree")
         if not allow_busy and (not snapshot.get("ready") or any(snapshot.get(key) for key in
@@ -224,6 +236,7 @@ class EditorBroker:
             raise BrokerError("Проверяемое состояние содержит ошибки компиляции")
         return snapshot
 
+    @traced(_LOG, "request")
     def request(self, owner, base_sha, input_sha, agent_root, output_roots, request_key):
         with transaction_mutex(self.state):
             self._reload_config()
@@ -247,6 +260,7 @@ class EditorBroker:
         return self.store.enqueue(owner, base_sha, input_sha, str(Path(agent_root).resolve()),
                                   roots, request_key)
 
+    @traced(_LOG, "claim")
     def claim(self, ticket_id, owner):
         with transaction_mutex(self.state):
             self._reload_config()
@@ -278,9 +292,11 @@ class EditorBroker:
 
     def _fail(self, ticket_id, token, error):
         pending = getattr(self.adapter, "last_request_id", None)
+        _LOG.error("ticket=%s RECOVERY_REQUIRED pending_request=%s: %s", ticket_id, pending, error)
         self.store.transition(ticket_id, token, "RECOVERY_REQUIRED",
                               failure=str(error), pending_request_id=pending)
 
+    @traced(_LOG, "begin")
     def begin(self, ticket_id, token):
         with transaction_mutex(self.state):
             self._reload_config()
@@ -356,7 +372,8 @@ class EditorBroker:
         # повторный park: при recover парковка уже выполнена.
         if not snapshot.get("auto_refresh_suppressed"):
             self._unity_call(ticket_id, token, "park", role="cleanup_park")
-        self.git.restore_captured(captured["sha"], self.config["baseline_sha"])
+        with timed(_LOG, "git.restore_captured", ticket=ticket_id):
+            self.git.restore_captured(captured["sha"], self.config["baseline_sha"])
         self.store.transition(ticket_id, token, "RESTORING", disk_restored=True)
         self._unity_call(ticket_id, token, "refresh")
         if original_setup:
@@ -366,6 +383,7 @@ class EditorBroker:
             raise BrokerError("Возврат базы изменил файлы; новые участники заблокированы")
         return self.store.complete(ticket_id, token, result_sha=delivery["sha"], restored=True)
 
+    @traced(_LOG, "finish")
     def finish(self, ticket_id, token, artifact_paths=()):
         with transaction_mutex(self.state):
             self._reload_config()
@@ -376,8 +394,9 @@ class EditorBroker:
                 self._ready(clean=False)
                 self.store.transition(ticket_id, token, "CAPTURING")
                 self._unity_call(ticket_id, token, "save_outputs", ticket["output_roots"])
-                captured = self.git.capture_result(self.state, ticket["input_sha"],
-                                                  ticket["output_roots"], "result-" + str(ticket_id))
+                with timed(_LOG, "git.capture_result", ticket=ticket_id):
+                    captured = self.git.capture_result(self.state, ticket["input_sha"],
+                                                      ticket["output_roots"], "result-" + str(ticket_id))
                 # Ref R существует до любых операций отката; получатель может быть offline.
                 self.store.transition(ticket_id, token, "CAPTURING", result=captured)
                 artifacts = self._artifacts(ticket_id, artifact_paths)
@@ -412,6 +431,7 @@ class EditorBroker:
                 elif result is not None or self.git.head() != ticket["base_sha"]:
                     raise BrokerError("Ответ park не содержит исходную конфигурацию сцен")
 
+    @traced(_LOG, "recover")
     def recover(self, ticket_id, token):
         with transaction_mutex(self.state):
             self._reload_config()
@@ -448,6 +468,7 @@ class EditorBroker:
                 self._fail(ticket_id, token, error)
                 raise
 
+    @traced(_LOG, "recover_stopped")
     def recover_stopped(self, ticket_id, token):
         """Только дисковое восстановление после доказанной гибели worker, без выдачи аренды."""
         with transaction_mutex(self.state):
@@ -497,6 +518,7 @@ class EditorBroker:
                 # Bridge после запуска увидит cancellation responses, не исполнит старые команды.
                 block.unlink(missing_ok=True)
 
+    @traced(_LOG, "receive")
     def receive(self, ticket_id, owner, agent_root):
         receiver = hashlib.sha256(canonical(agent_root).encode("utf-8")).hexdigest()
         with transaction_mutex(self.state / "receivers" / receiver):
@@ -518,6 +540,7 @@ class EditorBroker:
         self.store.ack_result(ticket_id, owner)
         return received
 
+    @traced(_LOG, "publish_base")
     def publish_base(self, sha, source_root):
         """Явная публикация уже принятого состояния, только при пустой очереди."""
         sha = exact_sha(sha)

@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
+from .debuglog import get as _get_log
 from .git_state import GitState
 from .service import canonical
 
@@ -34,6 +35,7 @@ READ_ACTIONS = {
     "manage_ui": frozenset(("ping", "read", "get_visual_tree", "list")),
     "read_console": frozenset(("get",)),
 }
+_LOG = _get_log("mcp_gate")
 PROTOCOL = "checkpoint → request → watch-ticket → claim → begin (Tools/agents/editor-broker.py)"
 
 
@@ -72,6 +74,13 @@ def _is_main_checkout(root):
 
 def decide(broker, agent_root, tool, arguments=None, pinned=None):
     """Возвращает allow, unity_instance для подстановки и причину отказа."""
+    decision = _decide(broker, agent_root, tool, arguments, pinned)
+    _LOG.info("tool=%s kind=%s allow=%s instance=%s agent=%s pinned=%s", tool, decision.get("kind"),
+              decision.get("allow"), decision.get("unity_instance"), Path(agent_root).name, pinned)
+    return decision
+
+
+def _decide(broker, agent_root, tool, arguments=None, pinned=None):
     arguments = arguments or {}
     kind = classify(tool, arguments)
     worker = instance_id(broker.editor_root)

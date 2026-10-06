@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 import anyio
 import mcp.types as types
@@ -27,8 +28,11 @@ from mcp.server.stdio import stdio_server
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+from editor_broker.debuglog import configure, get  # noqa: E402
 from editor_broker.mcp_gate import classify  # noqa: E402  только stdlib, без побочных эффектов
 from editor_broker.service import default_state_dir  # noqa: E402
+
+LOG = get("mcp_proxy")
 
 
 class Upstream:
@@ -47,9 +51,11 @@ class Upstream:
                     async with ClientSession(read, write) as session:
                         await session.initialize()
                         self.session, self.error = session, ""
+                        LOG.info("upstream connected %s", self.url)
                         await self._broken.wait()
             except Exception as error:  # noqa: BLE001 — сервер Unity MCP может быть не запущен
                 self.error = str(error) or type(error).__name__
+                LOG.warning("upstream lost %s: %s", self.url, self.error)
             self.session = None
             self._broken = anyio.Event()
             await anyio.sleep(1)
@@ -73,7 +79,11 @@ def _error(text):
 class Gate:
     def __init__(self, agent_root):
         self.agent_root = agent_root
-        self.enabled = (default_state_dir(agent_root) / "config.json").is_file()
+        state = default_state_dir(agent_root)
+        self.enabled = (state / "config.json").is_file()
+        if self.enabled:
+            configure(state, name="mcp-proxy")
+        LOG.info("proxy start agent=%s gate=%s", agent_root, self.enabled)
 
     def decide(self, tool, arguments, pinned):
         if not self.enabled:
@@ -89,6 +99,7 @@ class Gate:
                 # проверка включится после обновления runtime без перезапуска агентов.
                 print("unity_mcp_proxy: runtime брокера без mcp-gate, вызовы без проверки",
                       file=sys.stderr)
+                LOG.warning("runtime без mcp-gate: %s пропущен без проверки", tool)
                 return {"allow": True, "unity_instance": None}
             reply = json.loads(done.stdout.decode("utf-8"))
         except (OSError, subprocess.TimeoutExpired, ValueError) as error:
@@ -96,6 +107,7 @@ class Gate:
         if reply.get("ok"):
             return reply["result"]
         reason = "Брокер отказал: " + str(reply.get("error", "неизвестная ошибка"))
+        LOG.warning("gate error tool=%s: %s", tool, reason)
         # Недоступный брокер не мешает смотреть консоль и сцену, но изменение не пропускает.
         if classify(tool, arguments) == "read":
             return {"allow": True, "unity_instance": None}
@@ -122,7 +134,10 @@ def build(upstream, gate):
     @server.call_tool(validate_input=False)
     async def call_tool(name, arguments):
         arguments = dict(arguments or {})
+        started = time.perf_counter()
         decision = await anyio.to_thread.run_sync(gate.decide, name, arguments, state["pinned"])
+        LOG.info("call %s action=%s allow=%s instance=%s gate %.3fs", name, arguments.get("action"),
+                 decision.get("allow"), decision.get("unity_instance"), time.perf_counter() - started)
         if not decision.get("allow"):
             return _error(decision.get("reason", "Брокер отказал"))
         if decision.get("unity_instance"):
@@ -131,10 +146,12 @@ def build(upstream, gate):
         try:
             result = await session.call_tool(name, arguments)
         except Exception as error:  # noqa: BLE001
+            LOG.error("call %s failed after %.3fs: %s", name, time.perf_counter() - started, error)
             upstream.reset()
             # Изменяющий вызов не повторяем: неизвестно, успел ли Unity его выполнить.
             return _error(f"Вызов {name} прерван ({error}); соединение будет восстановлено. "
                           "Проверьте состояние Unity перед повтором.")
+        LOG.info("done %s error=%s %.3fs", name, result.isError, time.perf_counter() - started)
         if name == "set_active_instance" and not result.isError:
             state["pinned"] = arguments.get("instance")
         return result

@@ -5,7 +5,10 @@ import sys
 import time
 import uuid
 
+from .debuglog import get as _get_log, traced
 from .queue import ACTIVE_PHASES
+
+_LOG = _get_log("human")
 from .service import BrokerError, atomic_json, transaction_mutex
 
 BACKUP_REFS = 'refs/editor-broker/human/'
@@ -37,6 +40,7 @@ class HumanHandoff:
         if self.broker.git._commit(entry) == sha:
             self.broker.git._git('stash', 'drop', '-q', entry)
 
+    @traced(_LOG, "human.release")
     def release(self):
         b = self.broker
         with transaction_mutex(b.state):
@@ -79,6 +83,7 @@ class HumanHandoff:
                 self.write(record)
                 raise
 
+    @traced(_LOG, "human.resume")
     def resume(self):
         b = self.broker
         # Pause SQLite до OS mutex: даже долгий finish уже не выдаст следующую аренду.
@@ -121,6 +126,7 @@ class HumanHandoff:
                 self.write(record)
                 raise
 
+    @traced(_LOG, "human.defer")
     def defer(self, minutes=0):
         """0 — отказ без срока до явной передачи; иначе очередь ждёт указанное время."""
         if not 0 <= minutes <= 1440:
@@ -136,6 +142,7 @@ class HumanHandoff:
                 atomic_json(self.notice_path, notice)
             return result
 
+    @traced(_LOG, "human.clear")
     def clear(self):
         """Ручной разбор после RECOVERY_REQUIRED; резервный ref stash не удаляется."""
         b = self.broker

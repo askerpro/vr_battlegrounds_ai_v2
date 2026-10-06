@@ -1,5 +1,6 @@
 """Технические Git checkpoint без изменения индекса и ветки автора."""
 from contextlib import contextmanager
+import logging
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -7,7 +8,10 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import time
 import uuid
+
+_LOG = logging.getLogger("editor_broker.git")
 
 
 class GitStateError(ValueError):
@@ -39,10 +43,13 @@ class GitState:
             env["GIT_INDEX_FILE"] = str(index)
         # update-ref также вызывает reference-transaction hook; отключаем все hooks
         # только для этого процесса, без записи в конфигурацию репозитория.
+        started = time.perf_counter()
         with tempfile.TemporaryDirectory(prefix="broker-empty-hooks-") as hooks:
             result = subprocess.run(["git", "--no-pager", "-c", "core.hooksPath=" + hooks, *args],
                                     cwd=self.root, env=env, input=data, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, check=False)
+        _LOG.debug("git %s rc=%d %.3fs root=%s", " ".join(str(item) for item in args)[:300],
+                   result.returncode, time.perf_counter() - started, self.root.name)
         if check and result.returncode:
             raise GitStateError(result.stderr.decode("utf-8", "replace").strip())
         return result.stdout if check else result

@@ -6,7 +6,9 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 
+from .debuglog import configure as _configure_log, get as _get_log
 from .git_state import GitState
 from .human import HumanHandoff
 from .mcp_gate import decide
@@ -71,6 +73,18 @@ def parser():
     return root
 
 
+_LOG = _get_log("cli")
+
+
+def _masked(argv):
+    """Аргументы для журнала: значение --token никогда не пишется."""
+    result, hide = [], False
+    for item in argv:
+        result.append("***" if hide else item)
+        hide = item == "--token"
+    return " ".join(result)
+
+
 def public(value):
     if isinstance(value, dict):
         return {key: public(item) for key, item in value.items() if key != "token"}
@@ -84,8 +98,12 @@ def main(argv=None):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     args = parser().parse_args(argv)
+    started = time.perf_counter()
     try:
         state = Path(args.state_dir).resolve() if args.state_dir else default_state_dir(args.repo)
+        if args.command != "init" or state.exists():
+            _configure_log(state)
+        _LOG.info("cli start %s", _masked(sys.argv[1:] if argv is None else argv))
         # После init выполняется закреплённая runtime-копия, а не код гостевой ветки.
         runtime = state / "runtime" / "editor-broker.py"
         here = Path(__file__).resolve().parents[1] / "editor-broker.py"
@@ -149,10 +167,13 @@ def main(argv=None):
         # Только claim сообщает capability получившему аренду владельцу.
         output = result if args.command == "claim" else public(result)
         print(json.dumps({"ok": True, "result": output}, ensure_ascii=False))
+        _LOG.info("cli ok %s %.3fs", args.command, time.perf_counter() - started)
         return 0
     except Exception as error:
         _human_snapshot(state if "state" in locals() else None)
         print(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False))
+        _LOG.warning("cli error %s %.3fs %s: %s", args.command, time.perf_counter() - started,
+                     type(error).__name__, error)
         return 2
 
 

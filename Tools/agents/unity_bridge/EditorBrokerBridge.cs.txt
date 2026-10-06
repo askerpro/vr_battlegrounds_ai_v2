@@ -171,6 +171,21 @@ namespace VrBattlegrounds.EditorBrokerLocal
             }
         }
 
+        // Отладочный журнал на время интеграции: <state>/logs/bridge-yyyyMMdd.log (рядом с broker-*.log).
+        internal static void DebugLog(string message)
+        {
+            if (_config == null) return;
+            try
+            {
+                string directory = Path.Combine(Path.GetFullPath(_config.state_dir), "logs");
+                Directory.CreateDirectory(directory);
+                File.AppendAllText(Path.Combine(directory, "bridge-" + DateTime.Now.ToString("yyyyMMdd") + ".log"),
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " pid=" + System.Diagnostics.Process.GetCurrentProcess().Id +
+                    " session=" + Session.Substring(0, 8) + " " + message + "\n");
+            }
+            catch { /* Журнал не должен ломать мост. */ }
+        }
+
         private static void Configure()
         {
             string path = Path.Combine(Root, LocalPath, "bridge-config.json");
@@ -183,6 +198,7 @@ namespace VrBattlegrounds.EditorBrokerLocal
                 throw new InvalidOperationException("state_dir находится внутри переключаемого checkout");
             _config = config;
             _mailbox = Path.Combine(state, "unity");
+            DebugLog("configured root=" + Root + " parked=" + SessionState.GetBool(RefreshKey, false));
             foreach (string name in new[] { "requests", "responses", "journals" })
                 Directory.CreateDirectory(Path.Combine(_mailbox, name));
             Directory.CreateDirectory(Path.Combine(_mailbox, "archive", "requests"));
@@ -330,6 +346,10 @@ namespace VrBattlegrounds.EditorBrokerLocal
 
         private static void Complete(BridgeJournal journal, string error = "")
         {
+            BridgeRequest finished = journal.request;
+            long age = finished == null ? -1 : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - finished.created_unix_ms;
+            DebugLog("complete " + (finished == null ? "?" : finished.operation + " id=" + finished.request_id) +
+                " age_ms=" + age + (string.IsNullOrEmpty(error) ? " ok" : " error=" + error));
             journal.error = error;
             journal.stage = "complete";
             _terminalPersisted = false;
@@ -462,6 +482,7 @@ namespace VrBattlegrounds.EditorBrokerLocal
                 {
                     if (_current != null && _current.stage != "complete") Complete(_current, exception.Message);
                     else Heartbeat(exception.Message);
+                    DebugLog("tick error " + exception.GetType().Name + ": " + exception.Message);
                 }
                 catch { /* IO-сбой оставляет durable journal; следующая загрузка не повторяет изменение. */ }
             }
@@ -480,6 +501,10 @@ namespace VrBattlegrounds.EditorBrokerLocal
         {
             BridgeRequest request = journal.request;
             BridgeResult state = InspectState();
+            DebugLog("dispatch " + request.operation + " id=" + request.request_id + " busy=" + Busy(state) +
+                " parked=" + state.auto_refresh_suppressed + " dirty_scenes=" + string.Join(",", state.dirty_scenes) +
+                " dirty_assets=" + string.Join(",", state.dirty_assets) +
+                " ignored_dirty=" + string.Join(",", state.ignored_dirty_assets ?? new string[0]));
             if (request.operation == "inspect") { journal.result = state; Complete(journal); return; }
             if (Busy(state)) throw new InvalidOperationException("Unity занят: Play/compile/import/tests");
             if (request.operation != "save_outputs") RequireClean(state);

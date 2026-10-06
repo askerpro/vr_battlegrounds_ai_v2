@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import logging
 import os
 from pathlib import Path
 import subprocess
@@ -12,6 +13,7 @@ import uuid
 BRIDGE_PATH = 'Assets/Editor/VR_Battlegrounds/Debug/EditorBrokerLocal'
 BRIDGE_VERSION = 1
 _TEMPLATES = Path(__file__).resolve().parents[1] / 'unity_bridge'
+_LOG = logging.getLogger('editor_broker.unity')
 _FORBIDDEN = ('.git', 'Library', 'Temp', 'Logs', 'obj', BRIDGE_PATH)
 
 
@@ -65,6 +67,7 @@ class FileUnityAdapter:
     def _request(self, operation, **arguments):
         request_id = uuid.uuid4().hex
         self.last_request_id = request_id
+        _LOG.debug('request %s id=%s', operation, request_id)
         # Внешний журнал обязан получить id до публикации изменяющего запроса.
         if self.on_request is not None:
             self.on_request(request_id, operation, arguments)
@@ -80,7 +83,8 @@ class FileUnityAdapter:
             raise ValueError('Некорректный request_id')
         response = self.mailbox / 'responses' / (request_id + '.json')
         archived = self.mailbox / 'archive' / (request_id + '.json')
-        deadline = time.monotonic() + (self.timeout if timeout is None else timeout)
+        started = time.monotonic()
+        deadline = started + (self.timeout if timeout is None else timeout)
         while time.monotonic() < deadline:
             payload = None
             if response.is_file():
@@ -101,12 +105,15 @@ class FileUnityAdapter:
                     raise RuntimeError('Unity response project_root не совпадает')
                 if not isinstance(payload.get('ok'), bool):
                     raise RuntimeError('Unity response ok отсутствует или повреждён')
+                _LOG.debug('response id=%s ok=%s %.3fs error=%s', request_id, payload.get('ok'),
+                           time.monotonic() - started, payload.get('error'))
                 if not payload['ok']:
                     raise UnityOperationError(payload.get('error') or 'Unity bridge отказал', payload.get('result'))
                 if not isinstance(payload.get('result'), dict):
                     raise RuntimeError('Unity terminal result отсутствует')
                 return payload['result']
             time.sleep(min(.025, max(0, deadline - time.monotonic())))
+        _LOG.warning('timeout id=%s after %.1fs', request_id, time.monotonic() - started)
         raise TimeoutError(f'Unity request {request_id} не завершён; не повторять операцию. '
                            f'Ответ: {response}')
 

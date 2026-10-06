@@ -7,11 +7,16 @@ OS/file mutex на весь переход Unity/Git, а не только на 
 from contextlib import contextmanager
 import hmac
 import json
+import logging
 import math
 from pathlib import Path
 import secrets
 import sqlite3
 import time
+
+from .debuglog import configure as _configure_log
+
+_LOG = logging.getLogger("editor_broker.queue")
 
 
 ACTIVE_PHASES = ("LEASED", "SWITCHING", "RUNNING", "CAPTURING", "RESTORING", "RECOVERY_REQUIRED")
@@ -47,6 +52,7 @@ class BrokerStore:
         self.state_dir = Path(state_dir).resolve()
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self.path = self.state_dir / "broker.sqlite3"
+        _configure_log(self.state_dir)
         self.clock = clock
         self.offer_seconds = self._duration(offer_seconds)
         self.lease_seconds = self._duration(lease_seconds)
@@ -153,6 +159,9 @@ class BrokerStore:
         assignments = ", ".join(f"{name} = ?" for name in values)
         connection.execute(f"UPDATE tickets SET {assignments} WHERE id = ?",
                            (*values.values(), ticket_id))
+        # Только имена полей: значения могут содержать token.
+        _LOG.info("ticket=%s -> %s fields=%s", ticket_id, phase,
+                  ",".join(name for name in values if name not in ("phase", "updated_at")))
         self._event(connection, ticket_id, phase, now)
 
     def _advance(self, connection, now):
@@ -212,6 +221,7 @@ class BrokerStore:
                 "INSERT INTO tickets(owner,request_key,payload,phase,created_at,updated_at) VALUES(?,?,?,'QUEUED',?,?)",
                 (owner, request_key, payload, now, now))
             ticket_id = cursor.lastrowid
+            _LOG.info("ticket=%s QUEUED owner=%s key=%s input=%s", ticket_id, owner, request_key, input_sha[:12])
             self._event(connection, ticket_id, "QUEUED", now)
             self._advance(connection, now)
             return _public(self._get(connection, ticket_id))
@@ -249,6 +259,7 @@ class BrokerStore:
                 "INSERT INTO tickets(owner,request_key,payload,phase,token,epoch,created_at,updated_at,lease_expires_at)"
                 " VALUES(?,?,?,'LEASED',?,?,?,?,?)",
                 (owner, request_key, payload, secrets.token_urlsafe(32), epoch, now, now, now + self.lease_seconds))
+            _LOG.info("ticket=%s maintenance LEASED owner=%s input=%s", cursor.lastrowid, owner, input_sha[:12])
             self._event(connection, cursor.lastrowid, "LEASED", now)
             return self._get(connection, cursor.lastrowid)
 
@@ -268,6 +279,7 @@ class BrokerStore:
     def set_paused(self, paused, defer_seconds=0):
         if not math.isfinite(defer_seconds) or defer_seconds < 0:
             raise ValueError("Отсрочка должна быть конечной и неотрицательной")
+        _LOG.info("set_paused paused=%s defer_seconds=%s", paused, defer_seconds)
         with self._transaction() as (connection, now):
             connection.execute("UPDATE metadata SET value=? WHERE key='paused'", (int(paused),))
             connection.execute("UPDATE metadata SET value=? WHERE key='defer_until'",

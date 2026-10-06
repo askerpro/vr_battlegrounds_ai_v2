@@ -146,6 +146,7 @@ namespace VrBattlegrounds.EditorBrokerLocal
             _processCommand = visible ? arguments[0] : "";
             // CLI ждёт ответов моста в этом же Editor: главный поток не блокируется.
             _process.Start();
+            if (visible) EditorBrokerBridge.DebugLog("panel run " + string.Join(" ", arguments));
             _process.BeginOutputReadLine();
             _process.BeginErrorReadLine();
             return true;
@@ -157,6 +158,9 @@ namespace VrBattlegrounds.EditorBrokerLocal
             string text;
             lock (Output) text = Output.ToString().Trim();
             bool ok = _process.ExitCode == 0;
+            if (_processCommand.Length != 0 || !ok)
+                EditorBrokerBridge.DebugLog("panel done " + (_processCommand.Length != 0 ? _processCommand : "status") +
+                    " exit=" + _process.ExitCode + " " + (text.Length > 300 ? text.Substring(0, 300) : text));
             _process.Dispose();
             _process = null;
             if (_processCommand.Length != 0)

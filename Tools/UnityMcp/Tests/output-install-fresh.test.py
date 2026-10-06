@@ -47,9 +47,14 @@ with temporary_project() as temporary:
     for name in ("Install-Upstream.ps1", "discovery-10.2.0.patch", "output-guard-10.2.0.patch"):
         shutil.copy2(root / "Tools/UnityMcp" / name, tooling / name)
     shutil.copytree(root / "Tools/UnityMcp/OutputGuard", tooling / "OutputGuard")
-    shutil.copytree(root / "Tools/agents/editor_broker", project / "Tools/agents/editor_broker",
+    (project / "Tools/agents").mkdir(parents=True, exist_ok=True)
+    # Брокер развёрнут из agent-infra в общий runtime; стенду — заглушки и копия runtime.
+    for name in ("broker_runtime.py", "editor-broker.py"):
+        shutil.copy2(root / "Tools/agents" / name, project / "Tools/agents" / name)
+    sys.path.insert(0, str(root / "Tools/agents"))
+    import broker_runtime
+    shutil.copytree(broker_runtime.require(), repository / ".agent-state/editor-broker/runtime",
                     ignore=shutil.ignore_patterns("__pycache__"))
-    shutil.copy2(root / "Tools/agents/editor-broker.py", project / "Tools/agents/editor-broker.py")
     (project / "tmp").mkdir()
     # Только собственный fixture в дочернем процессе; политика Windows не изменяется.
     command = [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(tooling / "Install-Upstream.ps1"),

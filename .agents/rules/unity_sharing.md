@@ -4,7 +4,7 @@
 в свой linked worktree; Unity worker всегда открыт на собственном постоянном worktree.
 Исходники инструмента находятся в Tools/agents, постоянное состояние и runtime —
 в .agent-state/editor-broker основного checkout. tmp — только временные отчёты и стенды.
-Полный контракт и команды — [протокол](../../Docs/agents/editor-broker.md).
+Полный контракт и команды — `F:/UnityProjects/agent-infra/docs/editor-broker.md`.
 
 Основной checkout для обычного агента доступен только на чтение. Код, ассеты, ProjectSettings,
 Packages, Tools, Docs и любые генераторы изменений — только в собственном linked worktree.

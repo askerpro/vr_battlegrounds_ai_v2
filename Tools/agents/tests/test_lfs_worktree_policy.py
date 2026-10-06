@@ -76,9 +76,12 @@ class LfsWorktreeTests(unittest.TestCase):
                 policy.apply(agent, install_defaults=True)
             # Broker внедряется отдельной задачей и может отсутствовать в этой ветке.
             # Основные LFS/hook проверки выше остаются обязательными в чистом clone.
-            if not (Path(__file__).parents[1] / "editor_broker/git_state.py").is_file():
-                return
             sys.path.insert(0, str(Path(__file__).parents[1]))
+            import broker_runtime
+            try:
+                broker_runtime.ensure_importable()
+            except RuntimeError:
+                return  # брокер не развёрнут (чистый clone): LFS/hook проверки выше обязательны
             from editor_broker.git_state import GitState
             changed = b"\0changed-pixels" * 70000
             (agent / "image.tga").write_bytes(changed)

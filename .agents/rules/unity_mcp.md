@@ -119,7 +119,7 @@ Select-String "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Pattern 'MCP-FOR-UNIT
 ### Рабочая конфигурация проекта
 `.mcp.json` (и `.codex/config.toml`) запускают stdio-прокси, который цепляется к уже поднятому
 хабу `http://127.0.0.1:8080/mcp` и на каждый вызов спрашивает брокер редактора
-([Docs/agents/unity-mcp-proxy.md](../../Docs/agents/unity-mcp-proxy.md)):
+(`F:/UnityProjects/agent-infra/docs/unity-mcp-proxy.md`):
 
 ```json
 {

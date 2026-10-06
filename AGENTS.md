@@ -22,7 +22,7 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
 - **Коммит** — никогда сразу после кода, сначала проверка пользователем в Unity. Исключение — только
   документация и технический checkpoint через `Tools/agents/editor-broker.py`: alternate index,
   `commit-tree`, ref `codex/tmp`, без хуков и push. Checkpoint не означает принятие работы.
-  Принятый коммит — после проверки. Подробности — `/commit`, [протокол](Docs/agents/editor-broker.md).
+  Принятый коммит — после проверки. Подробности — `/commit`, протокол — `F:/UnityProjects/agent-infra/docs/editor-broker.md`.
 - **Теги** — только из `GameTags`, руками не ставятся: правило в `GameTagRules`, расстановка —
   `Tools/VR Battlegrounds/Gameplay/Apply Game Tags`, проверка — `GameTagsTests`. Не удалять теги из
   TagManager в открытом редакторе — индексы сдвигаются у всех загруженных объектов.
@@ -100,7 +100,7 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
 доступа к редактору — `Tools/agents/editor-broker.py`:
 checkpoint → request → watch-ticket → claim → begin → guard перед MCP → finish → receive.
 `unityMCP` подключён через прокси брокера: чтение доступно всегда, изменяющий вызов без своей
-аренды RUNNING отклоняется, в аренде вызов автоматически идёт в worker ([прокси](Docs/agents/unity-mcp-proxy.md)).
+аренды RUNNING отклоняется, в аренде вызов автоматически идёт в worker (`F:/UnityProjects/agent-infra/docs/unity-mcp-proxy.md`).
 **Основной worktree для агента в режиме worktree — только чтение.** Запрещено прямо изменять в нём
 код, ассеты, сцены, ProjectSettings, Packages, Tools и Docs; запрещены также stage/commit,
 checkout/reset/clean и запуск генераторов, которые туда пишут. Все правки и файловые генераторы —
@@ -110,9 +110,13 @@ checkout/reset/clean и запуск генераторов, которые ту
 Локальное состояние очереди в `.agent-state/` ведёт контроллер, оно не является исходниками.
 Базу брать из контроллера; редактор получает точный SHA в detached HEAD. Созданные Unity ассеты
 и `.meta` забирать через result checkpoint, не генерировать GUID повторно. Просрочка/сбой блокируют
-очередь до recovery. Источники инструмента — `Tools/agents/`; постоянное состояние и runtime —
-`.agent-state/editor-broker/`, вне переключаемого worktree. В `tmp/` — только временные отчёты/стенды.
-Полные правила активации, FIFO и возврата — [Docs/agents/editor-broker.md](Docs/agents/editor-broker.md).
+очередь до recovery. Постоянное состояние и runtime — `.agent-state/editor-broker/`, вне переключаемого
+worktree. В `tmp/` — только временные отчёты/стенды.
+**Инфраструктура агентов — отдельный репозиторий `F:/UnityProjects/agent-infra`** (брокер, мост, MCP-прокси, тесты, документы).
+`Tools/agents/editor-broker.py`, `unity_mcp_proxy.py` и `broker_runtime.py` продукта — заглушки, они
+запускают развёрнутый runtime. Правки инфраструктуры коммитятся в agent-infra, не в продукт, и попадают
+к агентам только через `deploy.py` в окно обслуживания (README agent-infra).
+Полные правила активации, FIFO и возврата — `F:/UnityProjects/agent-infra/docs/editor-broker.md`.
 **Обслуживание брокера останавливает всех агентов.** Пока меняется инфраструктура (код брокера,
 runtime, мост, база worker), очередь стоит на паузе, ожидающие заявки могут быть отменены, а застрявшие
 аренды восстанавливает обслуживающий агент. Получив сообщение об обслуживании, не трогать брокер и worker

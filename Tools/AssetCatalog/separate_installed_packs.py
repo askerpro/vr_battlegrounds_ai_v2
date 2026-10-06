@@ -9,7 +9,9 @@ import sys
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "agents"))
-from editor_broker.client_guard import ClientGuard, add_arguments
+# Брокер развёрнут из F:/UnityProjects/agent-infra в общий runtime проекта.
+__import__("broker_runtime").ensure_importable()
+from editor_broker.client_guard import ClientGuard, add_arguments  # noqa: E402
 
 PACK = "Assets/env_packs"
 REVIEW = "Assets/Scenes/ExcludedFromIndex/IndustrialCandidateReview"

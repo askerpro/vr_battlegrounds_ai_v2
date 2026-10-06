@@ -14,7 +14,7 @@ $expected = @{
  'Editor/Tools/ExecuteCode.cs' = '53552BB02B3568F0B91E7289AD269469990E368F0238A115F7C968F7CF885726'
 }
 function Assert-EditorAccess {
- $guardArgs = @((Join-Path $projectRoot 'Tools/agents/editor_broker/client_guard.py'), '--project', $projectRoot)
+ $guardArgs = @((& $PythonExecutable -c "import sys; sys.path.insert(0, r'$projectRoot/Tools/agents'); import broker_runtime; print(broker_runtime.require() / 'editor_broker' / 'client_guard.py')").Trim(), '--project', $projectRoot)
  if ($Ticket) { $guardArgs += @('--ticket', $Ticket) }
  if ($Token) { $guardArgs += @('--token', $Token) }
  if ($StateDir) { $guardArgs += @('--state-dir', $StateDir) }

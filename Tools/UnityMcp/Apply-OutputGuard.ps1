@@ -17,7 +17,7 @@ function Get-SourceHash([string]$Path) {
     finally { $sha.Dispose() }
 }
 function Assert-EditorAccess {
-    $guardArgs = @((Join-Path $projectRoot 'Tools/agents/editor_broker/client_guard.py'), '--project', $projectRoot)
+    $guardArgs = @((& $PythonExecutable -c "import sys; sys.path.insert(0, r'$projectRoot/Tools/agents'); import broker_runtime; print(broker_runtime.require() / 'editor_broker' / 'client_guard.py')").Trim(), '--project', $projectRoot)
     if ($Ticket) { $guardArgs += @('--ticket', $Ticket) }
     if ($Token) { $guardArgs += @('--token', $Token) }
     if ($StateDir) { $guardArgs += @('--state-dir', $StateDir) }

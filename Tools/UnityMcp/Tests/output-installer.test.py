@@ -25,9 +25,14 @@ with tempfile.TemporaryDirectory(prefix="mcp-installer-", dir=root / "tmp") as t
     for name in ("Apply-OutputGuard.ps1", "output-guard-10.2.0.patch"):
         shutil.copy2(source / name, tooling / name)
     shutil.copytree(source / "OutputGuard", tooling / "OutputGuard")
-    shutil.copytree(root / "Tools/agents/editor_broker", project / "Tools/agents/editor_broker",
+    (project / "Tools/agents").mkdir(parents=True, exist_ok=True)
+    # Брокер развёрнут из agent-infra в общий runtime; стенду — заглушки и копия runtime.
+    for name in ("broker_runtime.py", "editor-broker.py"):
+        shutil.copy2(root / "Tools/agents" / name, project / "Tools/agents" / name)
+    sys.path.insert(0, str(root / "Tools/agents"))
+    import broker_runtime
+    shutil.copytree(broker_runtime.require(), repository / ".agent-state/editor-broker/runtime",
                     ignore=shutil.ignore_patterns("__pycache__"))
-    shutil.copy2(root / "Tools/agents/editor-broker.py", project / "Tools/agents/editor-broker.py")
     package = project / "Packages/com.coplaydev.unity-mcp"
     (package / "Editor/Tools").mkdir(parents=True)
     (package / "Editor/Helpers").mkdir(parents=True)

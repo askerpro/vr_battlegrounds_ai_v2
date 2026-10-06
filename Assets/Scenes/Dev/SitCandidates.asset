@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d208d04174ef9c4997c9bdec2239323, type: 3}
+  m_Name: SitCandidates
+  m_EditorClassIdentifier: VrBattlegrounds.LegsCompare::VrBattlegrounds.DevTools.LegsCompare.SitCandidateList
+  stand: {fileID: 7400000, guid: cc77542a107e46145a693c5eb97c526e, type: 2}
+  kneel: {fileID: 7400000, guid: 43e227feeebf4764393c02b3e34aac98, type: 2}
+  candidates:
+  - label: "Sit_SittingOnTheFloor @0 (\u0442\u0435\u043A\u0443\u0449\u0430\u044F)"
+    clip: {fileID: -203655887218126122, guid: 2fd2921ead158c3489b8c2b5f126b392, type: 3}
+    frame: 0

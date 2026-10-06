@@ -3,7 +3,8 @@
     "rootNamespace": "VrBattlegrounds.Editor.PuppetStand",
     "references": [
         "VrBattlegrounds",
-        "VrBattlegrounds.LegsCompare"
+        "VrBattlegrounds.LegsCompare",
+        "UltimateXR"
     ],
     "includePlatforms": [
         "Editor"

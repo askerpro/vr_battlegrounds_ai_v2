@@ -1,0 +1,154 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 255fee6ccaa3a3a43bc9bde9acfb35e1, type: 3}
+  m_Name: ClipScrub
+  m_EditorClassIdentifier: VrBattlegrounds.LegsCompare::VrBattlegrounds.DevTools.LegsCompare.ClipScrubList
+  sitCandidatesFolder: Assets/Art/Animations/Locomotion/SitCandidates
+  crouchCandidatesFolder: Assets/Art/Animations/Locomotion/CrouchCandidates
+  chain:
+  - label: "\u0441\u0442\u043E\u044F"
+    clip: {fileID: 7400000, guid: cc77542a107e46145a693c5eb97c526e, type: 2}
+    frame: 0
+  - label: "\u043F\u0440\u0438\u0441\u0435\u0434 (\u043A\u043E\u043B\u0435\u043D\u043E)"
+    clip: {fileID: -203655887218126122, guid: c4ced6596b37ac047a674dd306da8ba5, type: 3}
+    frame: 21.3
+  entries:
+  - label: "Sit_SittingOnTheFloor (\u0442\u0435\u043A\u0443\u0449\u0435\u0435 \u0441\u0438\u0434\u0435\u043D\u0438\u0435)"
+    clip: {fileID: -203655887218126122, guid: 2fd2921ead158c3489b8c2b5f126b392, type: 3}
+    poseBlend: 1
+    frame: 0
+    rangeFrom: 0
+    rangeTo: 326
+  - label: Sit_EndBicycleSitUp_c9cad404_Reverse
+    clip: {fileID: 7400000, guid: f1df5a32f51346747b6ebbeaf6528267, type: 2}
+    poseBlend: 0
+    frame: 52.5
+    rangeFrom: 99
+    rangeTo: 120
+  - label: Sit_GettingUp_c9c7276e
+    clip: {fileID: -203655887218126122, guid: 05157d8c8591ac74bb4fbef8eabc5324, type: 3}
+    poseBlend: 0
+    frame: 152
+    rangeFrom: 0
+    rangeTo: 151
+  - label: Sit_GettingUp_c9c90823
+    clip: {fileID: -203655887218126122, guid: d97a978e0e89e0c47b7d7403ec3cc549, type: 3}
+    poseBlend: 0
+    frame: 33
+    rangeFrom: 0
+    rangeTo: 32
+  - label: Sit_IdleToSitup_c9cac414
+    clip: {fileID: -203655887218126122, guid: 3ea84918320e7794b8d706e422d96989, type: 3}
+    poseBlend: 0
+    frame: 52
+    rangeFrom: 54
+    rangeTo: 0
+  - label: Sit_Standing_c9c8cebb
+    clip: {fileID: -203655887218126122, guid: 3f99655fc7aa191488366a4a71fd4c99, type: 3}
+    poseBlend: 0
+    frame: 14
+    rangeFrom: 0
+    rangeTo: 13
+  - label: Sit_StandingUp_c9c8335e
+    clip: {fileID: -203655887218126122, guid: 6f6b8077f7805364b8ff34aefbe61946, type: 3}
+    poseBlend: 0
+    frame: 81
+    rangeFrom: 0
+    rangeTo: 80
+  - label: Sit_StartBicycleSitUp_c9cad347
+    clip: {fileID: -203655887218126122, guid: 797fa6799b9f08b48bd5f27fcce885c1, type: 3}
+    poseBlend: 0
+    frame: 72
+    rangeFrom: 73
+    rangeTo: 0
+  - label: Sit_ZombieStandUp_c9c6b165
+    clip: {fileID: -203655887218126122, guid: 96355719a2ca11c4fb2b87e00d86a0dc, type: 3}
+    poseBlend: 0
+    frame: 52
+    rangeFrom: 0
+    rangeTo: 51
+  - label: Sit_EndBicycleSitUp_c9cad404
+    clip: {fileID: -203655887218126122, guid: 2348c7966eb1f8a45a8937aaaf303586, type: 3}
+    poseBlend: 0
+    frame: 0
+    rangeFrom: 0
+    rangeTo: 0
+  - label: Sit_EndBicycleSitUp_c9cad404_Reverse
+    clip: {fileID: 7400000, guid: f1df5a32f51346747b6ebbeaf6528267, type: 2}
+    poseBlend: 0
+    frame: 0
+    rangeFrom: 0
+    rangeTo: 0
+  - label: Sit_GettingUp_c9c7276e_Reverse
+    clip: {fileID: 7400000, guid: 910ceaf0236d4bb469e97f085efe8a18, type: 2}
+    poseBlend: 0
+    frame: 0
+    rangeFrom: 0
+    rangeTo: 0
+  - label: Sit_GettingUp_c9c90823_Reverse
+    clip: {fileID: 7400000, guid: 125b3bd9fbc259d4c9372dd5ade13e71, type: 2}
+    poseBlend: 0
+    frame: 0
+    rangeFrom: 0
+    rangeTo: 0
+  - label: Sit_Standing_c9c8cebb_Reverse
+    clip: {fileID: 7400000, guid: ed8fd72ae4ee17a4fb5f6f18bb2aa1b5, type: 2}
+    poseBlend: 0
+    frame: 0
+    rangeFrom: 0
+    rangeTo: 0
+  - label: Sit_StandingUp_c9c8335e_Reverse
+    clip: {fileID: 7400000, guid: b6d57c5cc461ac44a935d8894c29e7e9, type: 2}
+    poseBlend: 0
+    frame: 0
+    rangeFrom: 0
+    rangeTo: 0
+  - label: Sit_ZombieStandUp_c9c6b165_Reverse
+    clip: {fileID: 7400000, guid: 35d75adc302e3a6478c107a8ec1f88ac, type: 2}
+    poseBlend: 0
+    frame: 0
+    rangeFrom: 0
+    rangeTo: 0
+  saved:
+  - label: "Crouch_BlazeCrouchToCover@21 \u2192 Sit_GettingUp_c9c7276e 84\u2013105"
+    chain:
+    - label: "\u0441\u0442\u043E\u044F"
+      clip: {fileID: 7400000, guid: cc77542a107e46145a693c5eb97c526e, type: 2}
+      frame: 0
+    - label: "\u043F\u0440\u0438\u0441\u0435\u0434 (\u043A\u043E\u043B\u0435\u043D\u043E)"
+      clip: {fileID: 7400000, guid: bc109217f7d5ab24888c3529d96282fd, type: 2}
+      frame: 21.3
+    entry:
+      label: Sit_GettingUp_c9c7276e
+      clip: {fileID: -203655887218126122, guid: 05157d8c8591ac74bb4fbef8eabc5324, type: 3}
+      poseBlend: 0
+      frame: 52.5
+      rangeFrom: 84
+      rangeTo: 105
+    blendZone: 0.372
+  - label: "Crouch_BlazeCrouchToCover@21 \u2192 Sit_EndBicycleSitUp_c9cad404_Reverse
+      99\u2013120"
+    chain:
+    - label: "\u0441\u0442\u043E\u044F"
+      clip: {fileID: 7400000, guid: cc77542a107e46145a693c5eb97c526e, type: 2}
+      frame: 0
+    - label: "\u043F\u0440\u0438\u0441\u0435\u0434 (\u043A\u043E\u043B\u0435\u043D\u043E)"
+      clip: {fileID: 7400000, guid: bc109217f7d5ab24888c3529d96282fd, type: 2}
+      frame: 21.3
+    entry:
+      label: Sit_EndBicycleSitUp_c9cad404_Reverse
+      clip: {fileID: 7400000, guid: f1df5a32f51346747b6ebbeaf6528267, type: 2}
+      poseBlend: 0
+      frame: 52.5
+      rangeFrom: 99
+      rangeTo: 120
+    blendZone: 0.372

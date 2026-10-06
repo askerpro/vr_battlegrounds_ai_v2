@@ -36,7 +36,8 @@ namespace VrBattlegrounds.Editor
         private const string StandType = "VrBattlegrounds.DevTools.LegsCompare.AvatarPuppetStand, VrBattlegrounds.LegsCompare";
         private const string FloorMaterial = "Assets/ThirdParty/UnityStarter_Robot/Environment/Materials/GridBlue_01_Mat.mat";
         private const float EyeHeight = 1.65f;
-        private const string PreviewType = "VrBattlegrounds.DevTools.LegsCompare.ClipFeetPreview, VrBattlegrounds.LegsCompare";
+        private const string LegsPanelType = "VrBattlegrounds.DevTools.LegsCompare.LegsDebugPanel, VrBattlegrounds.LegsCompare";
+        private const string PreviewType ="VrBattlegrounds.DevTools.LegsCompare.ClipFeetPreview, VrBattlegrounds.LegsCompare";
         private const string MefRigPath = "Assets/Art/Avatars/Locomotion/MEF_Base_Avatar_LocomotionRig.prefab";
         private const string MefMeshPath = "Assets/Prefabs/Player/MEF_Base_Avatar.prefab";
         private const string MannequinPath = "Assets/ThirdParty/FImpossible Creations/Plugins - Animating/Legs Animator/Demos - Legs Animator/Demos Resources/Prefabs/FAnnequin_IdleGlue.prefab";
@@ -167,6 +168,10 @@ namespace VrBattlegrounds.Editor
             so.FindProperty("leftHand").objectReferenceValue = left;
             so.FindProperty("rightHand").objectReferenceValue = right;
             so.ApplyModifiedPropertiesWithoutUndo();
+
+            // Отладка ног в Play: над аватарами — Legs_Crouch, шаги, клипы с весами; в инспекторе панели — график и пороги.
+            System.Type panelType = System.Type.GetType(LegsPanelType);
+            if (panelType != null) new GameObject("LegsDebugPanel (отладка ног)").AddComponent(panelType);
 
             var overview = new GameObject("Overview Camera").AddComponent<Camera>();
             overview.gameObject.AddComponent<AudioListener>();

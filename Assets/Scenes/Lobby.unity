@@ -1663,7 +1663,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &204461932
 Transform:
@@ -2027,7 +2027,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &259513156
 Transform:
@@ -2331,7 +2331,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &292792734
 Transform:
@@ -2630,7 +2630,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 466159125327842237}
-  - {fileID: 666750523}
   - {fileID: 593950713}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -3443,7 +3442,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &479221706
 Transform:
@@ -3916,7 +3915,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &544199441
 Transform:
@@ -5064,67 +5063,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 20, y: 2, z: 40}
   m_Center: {x: 0, y: 4, z: 16}
---- !u!1001 &612961111
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 5773889775595434469, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_Name
-      value: MapReferee
-      objectReference: {fileID: 0}
-    - target: {fileID: 6300597833603486795, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: sceneId
-      value: 663921181
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
 --- !u!1 &636582893
 GameObject:
   m_ObjectHideFlags: 0
@@ -5280,77 +5218,6 @@ Transform:
   m_Children:
   - {fileID: 1413744955}
   m_Father: {fileID: 934657706}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &666750520
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 666750523}
-  - component: {fileID: 666750522}
-  - component: {fileID: 666750521}
-  m_Layer: 0
-  m_Name: ArsenalEquipmentCoordinator
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &666750521
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 666750520}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0fe07acbd589bfd4e8329f62317fe604, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalBoundaryWall
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
-  _stations:
-  - {fileID: 0}
-  - {fileID: 945201571}
-  - {fileID: 0}
-  - {fileID: 837297329}
-  _duration: 1.35
---- !u!114 &666750522
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 666750520}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b91ecbcc199f4492b9a91e820070131, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Mirror::Mirror.NetworkIdentity
-  sceneId: 2181128570
-  _assetId: 0
-  serverOnly: 0
-  visibility: 0
-  hasSpawned: 0
---- !u!4 &666750523
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 666750520}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 324783435}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &681075134 stripped
 MonoBehaviour:
@@ -14024,6 +13891,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 204f1ad2-fa1c-45be-8267-a4068cf3fe05
       objectReference: {fileID: 0}
+    - target: {fileID: 5062873377450552718, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
+      propertyPath: _stationKey
+      value: Lobby.SpawnZone-Lobby.ArsenalWall-1
+      objectReference: {fileID: 0}
     - target: {fileID: 5065370323184141712, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
       propertyPath: m_text
       value: "<size=110%><b>R08</b></size>\n$700\n\u0423\u0440\u043E\u043D 38\n\u041C\u0430\u0433\u0430\u0437\u0438\u043D
@@ -14577,7 +14448,7 @@ PrefabInstance:
     - target: {fileID: 7345346899964579548, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
       propertyPath: _boundary
       value: 
-      objectReference: {fileID: 666750521}
+      objectReference: {fileID: 0}
     - target: {fileID: 7549692283650850825, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
       propertyPath: __isInPrefab
       value: 0
@@ -15047,15 +14918,15 @@ PrefabInstance:
   m_SourcePrefab: {fileID: 100100000, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
 --- !u!114 &837297329 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7345346899964579548, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
+  m_CorrespondingSourceObject: {fileID: 5062873377450552718, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
   m_PrefabInstance: {fileID: 837297328}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bace753a9647224985a72512cf5aeda, type: 3}
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
 --- !u!4 &837297330 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5467481081662666445, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
@@ -15078,7 +14949,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &854907380
 Transform:
@@ -15437,7 +15308,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &875243899
 Transform:
@@ -17042,6 +16913,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: ec65de6c-c9dd-450c-ad51-8881ced00cab
       objectReference: {fileID: 0}
+    - target: {fileID: 5062873377450552718, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
+      propertyPath: _stationKey
+      value: Lobby.SpawnZone-Lobby.ArsenalWall-1-2
+      objectReference: {fileID: 0}
     - target: {fileID: 5065370323184141712, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
       propertyPath: m_text
       value: "<size=110%><b>R08</b></size>\n$700\n\u0423\u0440\u043E\u043D 38\n\u041C\u0430\u0433\u0430\u0437\u0438\u043D
@@ -17595,7 +17470,7 @@ PrefabInstance:
     - target: {fileID: 7345346899964579548, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
       propertyPath: _boundary
       value: 
-      objectReference: {fileID: 666750521}
+      objectReference: {fileID: 0}
     - target: {fileID: 7549692283650850825, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
       propertyPath: __isInPrefab
       value: 0
@@ -18070,15 +17945,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &945201571 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7345346899964579548, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
+  m_CorrespondingSourceObject: {fileID: 5062873377450552718, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
   m_PrefabInstance: {fileID: 945201569}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bace753a9647224985a72512cf5aeda, type: 3}
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
 --- !u!1001 &947826675
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18145,6 +18020,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2313025353900136011, guid: b8ba96d91fbb9d7408d468465a372095, type: 3}
   m_PrefabInstance: {fileID: 947826675}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &947826677 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2860928150808680077, guid: b8ba96d91fbb9d7408d468465a372095, type: 3}
+  m_PrefabInstance: {fileID: 947826675}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d891a788d7a480e4cb148b65c0b3c59d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.LevelDesign.PhysicalArenaLayout
 --- !u!1 &959959000
 GameObject:
   m_ObjectHideFlags: 0
@@ -19490,7 +19376,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &1227313690
 Transform:
@@ -20374,7 +20260,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &1320204937
 Transform:
@@ -20499,7 +20385,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &1321983117
 Transform:
@@ -22101,7 +21987,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &1461156588
 Transform:
@@ -23729,7 +23615,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &1700003286
 Transform:
@@ -26960,7 +26846,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &1826450415
 Transform:
@@ -27072,7 +26958,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &1829558567
 Transform:
@@ -27184,7 +27070,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &1847446746
 Transform:
@@ -27460,6 +27346,73 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &1880346238
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1880346241}
+  - component: {fileID: 1880346240}
+  - component: {fileID: 1880346239}
+  m_Layer: 0
+  m_Name: MapRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1880346239
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1880346238}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4419742601700e7439c8bcf2d65493d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.Runtime.MapBootstrap
+  _deploymentDuration: 1
+--- !u!114 &1880346240
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1880346238}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79f80a8da7892724c8fa99174d3932d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.Runtime.MapRoot
+  _map: {fileID: 11400000, guid: 3cb6e2d8f6b78f6459e99216bc9d5831, type: 2}
+  _environment: {fileID: 8186738890421295950}
+  _gameplay: {fileID: 324783434}
+  _layout: {fileID: 947826677}
+  _zones:
+  - {fileID: 6995293867679397340}
+  _stations:
+  - {fileID: 837297329}
+  - {fileID: 945201571}
+--- !u!4 &1880346241
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1880346238}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1890740552
 GameObject:
   m_ObjectHideFlags: 0
@@ -28457,7 +28410,7 @@ GameObject:
   m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 18
   m_IsActive: 1
 --- !u!4 &2032385590
 Transform:
@@ -30934,8 +30887,8 @@ SceneRoots:
   - {fileID: 875153375}
   - {fileID: 869119756}
   - {fileID: 1681221241}
-  - {fileID: 612961111}
   - {fileID: 240406915}
   - {fileID: 324783435}
   - {fileID: 947826675}
   - {fileID: 308020968}
+  - {fileID: 1880346241}

@@ -276,6 +276,7 @@ MonoBehaviour:
   - {fileID: 4070875614615592137, guid: a1298bd283187ee4db62921478d8107a, type: 3}
   - {fileID: 6785962869348119002, guid: 5ee47b0123f863844a48bb32ceca9047, type: 3}
   - {fileID: 7216203593504186662, guid: ccc6dfdf9762a7c4899e851730650ff3, type: 3}
+  - {fileID: 8859971145314977072, guid: f23541848a356704c91ef319b42d5a00, type: 3}
   exceptionsDisconnect: 1
   snapshotSettings:
     bufferTimeMultiplier: 2
@@ -292,6 +293,7 @@ MonoBehaviour:
   evaluationInterval: 3
   timeInterpolationGui: 0
   _sessionContextPrefab: {fileID: 7659987172694362790, guid: c1053b4395a92db499991404aa9ad731, type: 3}
+  _mapRuntimeCatalog: {fileID: 11400000, guid: 6fd2cce8f3c742542b9756f5aa371a1f, type: 2}
 --- !u!1 &1152348050714728768
 GameObject:
   m_ObjectHideFlags: 0

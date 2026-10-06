@@ -9278,6 +9278,7 @@ GameObject:
   - component: {fileID: 1670979413833648386}
   - component: {fileID: 1753573940313833582}
   - component: {fileID: 4296809568834580879}
+  - component: {fileID: 5062873377450552718}
   m_Layer: 0
   m_Name: LobbyDemoArsenalStation
   m_TagString: Arsenal
@@ -9553,6 +9554,25 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+--- !u!114 &5062873377450552718
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4947350803663361562}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
+  _stationKey: 
+  _mode: 0
+  _controller: {fileID: 7541634586056832635}
+  _authoredBinding: {fileID: 1753573940313833582}
+  _stationAnchor: {fileID: 2506762683251235539}
+  _equipmentPoses: {fileID: 1670979413833648386}
+  _stationIdentity: {fileID: 1952301212111237558}
 --- !u!1 &4965886864794789103
 GameObject:
   m_ObjectHideFlags: 0

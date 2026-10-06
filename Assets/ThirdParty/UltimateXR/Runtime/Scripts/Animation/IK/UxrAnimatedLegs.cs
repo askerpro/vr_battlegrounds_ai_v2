@@ -18,8 +18,10 @@ namespace UltimateXR.Animation.IK
     ///         <item><term>Решатель ноги</term><description><see cref="UxrLegIKSolver" /> тянет стопу и носок аватара в позы стоп копии</description></item>
     ///     </list>
     ///     <para>
-    ///         Только ноги ниже таза: таз, корпус и их наклоны ведёт BodyIK UltimateXR, ноги ничего в нём не меняют. Сидения,
-    ///         приседа, колена на полу, оценки таза игрока и наклонов корпуса нет (упрощение 2026-10-06).
+    ///         Только ноги ниже таза: таз, корпус и их наклоны ведёт BodyIK UltimateXR, ноги ничего в нём не меняют.
+    ///         Присед и сидение — клипами (<c>Legs_Crouch</c>: 0 стоя, 1 колено, 2 сидя) по опусканию камеры относительно
+    ///         роста самого игрока; при приседе ноги ниже таза берутся из клипа (<see cref="AfterSolve" />), без решателя.
+    ///         Оценки таза игрока и наклонов корпуса нет.
     ///     </para>
     ///     <para>
     ///         <b>Порядок кадра.</b> Анимация Unity: Animator копии играет клип, root motion копится в
@@ -49,6 +51,47 @@ namespace UltimateXR.Animation.IK
 
         /// <summary>Набор клипов (стойка): 0, 1, 2…; смена сглаживается (~0,25 с).</summary>
         public float Stance { get; set; }
+
+        /// <summary>Присед: 0 — стоя, 1 — на колене, 2 — сидя (сглаженный, тот, что подан в Animator).</summary>
+        public float Crouch => _crouch;
+
+        /// <summary>
+        ///     Отладка: цель <c>Legs_Crouch</c> вручную вместо высоты головы (сглаживание и всё дальнейшее — как обычно).
+        ///     null — по голове. Стенды и отладочная панель ног.
+        /// </summary>
+        public float? CrouchOverride { get; set; }
+
+        /// <summary>Снимок решения приседа этого кадра — для отладочной панели ног.</summary>
+        public CrouchDebugState CrouchDebug => _crouchDebug;
+
+        /// <summary>Что решил присед в этом кадре: от высоты камеры до доли ног из клипа.</summary>
+        public struct CrouchDebugState
+        {
+            public bool  Valid;          // уровни клипов измерены, параметр Legs_Crouch есть
+            public float CameraHeight;   // камера над полом аватара, м
+            public float StandRef;       // рост игрока стоя (наибольшая высота камеры), м
+            public float Ratio;          // CameraHeight / StandRef
+            public float DeadZoneRatio;  // выше — стоя
+            public float KneelRatio;     // доля роста, где клип колена (Legs_Crouch 1)
+            public float SitRatio;       // доля роста, где клип сидения (Legs_Crouch 2)
+            public bool  HasSit;
+            public float Target;         // цель Legs_Crouch по голове (или ручная)
+            public bool  Overridden;     // цель задана вручную
+            public float Crouch;         // сглаженный Legs_Crouch в Animator
+            public bool  StepsOff;       // глубже порога: шагов нет, root motion выброшен
+            public float ClipLegsWeight; // доля локальной позы клипа в ногах ниже таза (AfterSolve)
+        }
+
+        /// <summary>
+        ///     Цель <c>Legs_Crouch</c> по доле роста <paramref name="ratio" /> (камера / рост стоя): до 1 − deadZone — 0, к доле
+        ///     колена — линейно до 1, к доле сидения — линейно до 2. Единственная формула: по ней решают ноги и рисует график панель.
+        /// </summary>
+        public static float CrouchFromRatio(float ratio, float deadZone, float kneelRatio, float sitRatio, bool hasSit)
+        {
+            if (ratio >= 1f - deadZone) return 0f;
+            if (ratio >= kneelRatio) return Mathf.InverseLerp(1f - deadZone, kneelRatio, ratio);
+            return hasSit ? 1f + Mathf.InverseLerp(kneelRatio, sitRatio, ratio) : 1f;
+        }
 
         #endregion
 
@@ -146,7 +189,12 @@ namespace UltimateXR.Animation.IK
                 _needsSnap      = false;
             }
 
-            Vector3 rootMotion = ApplyRootMotion(up);
+            UpdateCrouch(camera, up, scale, dt);
+            bool crouched = _crouch > _settings.locomotionCrouchLimit;
+            _crouchDebug.StepsOff = crouched;
+            Vector3 rootMotion = Vector3.zero;
+            if (crouched) _rootMotion.Consume(out _, out _);
+            else rootMotion = ApplyRootMotion(up);
 
             // Цели — поза стоп клипа ДО шага локомоции этого кадра (как VRIK: ноги читаются до правки корня).
             foreach (LegTargets leg in _legs)
@@ -156,7 +204,22 @@ namespace UltimateXR.Animation.IK
                 SetTargets(leg);
             }
 
-            locomotion.Solve(_rigRoot, _rigAnimator, pivot, forward, scale, Time.deltaTime, rootMotion, camera != null ? _motion : null);
+            // Позы ног клипа этого кадра — для AfterSolve (присед, сидение).
+            for (int i = 0; i < _legCopy.Count; i++)
+            {
+                _legCopy[i].rig.GetLocalPositionAndRotation(out Vector3 lp, out Quaternion lr);
+                _copyPoses[i] = new Pose(lp, lr);
+            }
+
+            if (crouched)
+            {
+                // На колене и сидя покачивание корпуса не запускает шаги и повороты.
+                locomotion.Reset(_rigRoot, _rigAnimator);
+            }
+            else
+            {
+                locomotion.Solve(_rigRoot, _rigAnimator, pivot, forward, scale, Time.deltaTime, rootMotion, camera != null ? _motion : null);
+            }
             if (_hasStanceParam)
             {
                 _rigAnimator.SetFloat(s_stanceParam, Stance, StanceSmoothTime, Time.deltaTime);
@@ -165,10 +228,41 @@ namespace UltimateXR.Animation.IK
             KeepRootOnFloor(up);
         }
 
+        /// <summary>
+        ///     После решателей ног: на колене и сидя ноги ниже таза — локальные позы костей клипа (смешивание от
+        ///     <see cref="UxrLegsSettings.clipLegsStart" /> до 1 по <c>Legs_Crouch</c>). Решатель в сжатой ноге сидения крутил колено; клип
+        ///     держит позу целиком. Таз и корпус не трогаются.
+        /// </summary>
+        public void AfterSolve()
+        {
+            _crouchDebug.ClipLegsWeight = 0f;
+            if (!_ready || !_solveThisFrame || _legCopy.Count == 0)
+            {
+                return;
+            }
+
+            float w = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(_settings.clipLegsStart, 1f, _crouch));
+            _crouchDebug.ClipLegsWeight = w;
+            if (w <= 0f)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _legCopy.Count; i++)
+            {
+                Transform bone = _legCopy[i].bone;
+                Pose      pose = _copyPoses[i];
+                bone.SetLocalPositionAndRotation(Vector3.Lerp(bone.localPosition, pose.position, w), Quaternion.Slerp(bone.localRotation, pose.rotation, w));
+            }
+        }
+
         /// <summary>Компонент выключен: ноги в позе префаба.</summary>
         public void Disable()
         {
             SetWeights(0f);
+            _crouch      = 0f;
+            _hasStandRef = false;
+            if (_rigAnimator != null && _hasCrouchParam) _rigAnimator.SetFloat(s_crouchParam, 0f);
             if (_rigAnimator != null)
             {
                 _rigAnimator.enabled = false; // выключенный аватар не тратит кадр на клипы; включит BeforeSolve
@@ -236,11 +330,31 @@ namespace UltimateXR.Animation.IK
                 _rootMotion = _rig.AddComponent<UxrLegRootMotionReceiver>();
             }
 
-            _hasStanceParam = false;
+            _hasStanceParam = _hasCrouchParam = false;
             foreach (AnimatorControllerParameter p in _rigAnimator.parameters)
             {
                 _hasStanceParam |= p.nameHash == s_stanceParam;
+                _hasCrouchParam |= p.nameHash == s_crouchParam;
             }
+
+            // Кости ног аватар ↔ копия по именам (копия испечена из этого же префаба) — поза клипа на колене и сидя.
+            var rigBones = new Dictionary<string, Transform>();
+            foreach (Transform t in _rig.GetComponentsInChildren<Transform>(true))
+            {
+                rigBones[t.name] = t;
+            }
+
+            _legCopy.Clear();
+            foreach (LegTargets leg in _legs)
+            {
+                if (leg.Solver == null) continue;
+                foreach (Transform bone in new[] { leg.Solver.Thigh, leg.Solver.Calf, leg.Solver.Foot, leg.Solver.Toes })
+                {
+                    if (bone != null && rigBones.TryGetValue(bone.name, out Transform rigBone)) _legCopy.Add((bone, rigBone));
+                }
+            }
+
+            _copyPoses = new Pose[_legCopy.Count];
 
             _left.RigFoot  = _rigAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
             _left.RigToes  = _rigAnimator.GetBoneTransform(HumanBodyBones.LeftToes);
@@ -258,8 +372,7 @@ namespace UltimateXR.Animation.IK
                 _rigAnimator.SetFloat(s_stanceParam, Stance);
             }
 
-            _rigAnimator.Play(UxrLegLocomotion.IdleState, 0, 0f);
-            _rigAnimator.Update(0f);
+            CaptureCrouchLevels();
 
             _needsSnap = true;
             _ready     = _left.RigFoot != null && _right.RigFoot != null;
@@ -268,6 +381,82 @@ namespace UltimateXR.Animation.IK
                 _spawnFailed = true;
                 UxrLegsDiagnostics.Warn($"'{prefab.name}': нет humanoid-костей стоп у копии рига.", _avatar);
             }
+        }
+
+        /// <summary>
+        ///     Высота шеи клипа (без масштаба) стоя, на колене и сидя — уровни <c>Legs_Crouch</c> 0, 1, 2 (как CaptureNeutrals
+        ///     WIP). Уровень без своего клипа (шея не ниже предыдущего на <see cref="MinLevelDrop" />) не используется.
+        /// </summary>
+        private void CaptureCrouchLevels()
+        {
+            Transform neck = _rigAnimator.GetBoneTransform(HumanBodyBones.Neck) ?? _rigAnimator.GetBoneTransform(HumanBodyBones.Head);
+            float     s    = Mathf.Max(_rigRoot.lossyScale.y, 1e-3f);
+            for (int level = 0; level < CrouchLevels; level++)
+            {
+                _hasLevel[level] = false;
+                if (neck == null || (level > 0 && !_hasCrouchParam)) continue;
+                if (_hasCrouchParam) _rigAnimator.SetFloat(s_crouchParam, level);
+                _rigAnimator.Play(UxrLegLocomotion.IdleState, 0, 0f);
+                _rigAnimator.Update(0f);
+                _levelNeck[level] = Vector3.Dot(neck.position - _rigRoot.position, _rigRoot.up) / s;
+                _hasLevel[level]  = level == 0 || (_hasLevel[level - 1] && _levelNeck[level] < _levelNeck[level - 1] - MinLevelDrop);
+            }
+
+            if (_hasCrouchParam) _rigAnimator.SetFloat(s_crouchParam, 0f);
+            _rigAnimator.Play(UxrLegLocomotion.IdleState, 0, 0f);
+            _rigAnimator.Update(0f);
+            _crouch      = 0f;
+            _hasStandRef = false;
+        }
+
+        /// <summary>
+        ///     Присед — по опусканию камеры относительно роста самого игрока стоя (наибольшая высота камеры; выше глаз аватара
+        ///     × <see cref="StandRefMaxOverAvatar" /> — выброс, шлем в руке), а не относительно роста аватара: разница в росте
+        ///     игрока и аватара — не присед. До <see cref="UxrLegsSettings.crouchDeadZone" /> опускания — стоя; дальше — к уровням клипов по
+        ///     доле их высоты глаз от высоты глаз стоя. Формула — <see cref="CrouchFromRatio" />, сглаживание <see cref="UxrLegsSettings.crouchSmoothTime" />.
+        /// </summary>
+        private void UpdateCrouch(Camera camera, Vector3 up, float scale, float dt)
+        {
+            _crouchDebug.Valid = false;
+            if (!_hasCrouchParam || camera == null || !_hasLevel[1])
+            {
+                return;
+            }
+
+            float eye        = EyeAboveNeck * scale;
+            float camHeight  = Vector3.Dot(camera.transform.position - _avatar.transform.position, up);
+            float avatarEyes = _levelNeck[0] * scale + eye;
+            if (!_hasStandRef)
+            {
+                _standRef    = Mathf.Max(camHeight, avatarEyes * 0.5f);
+                _hasStandRef = true;
+            }
+
+            if (camHeight > _standRef && camHeight <= avatarEyes * StandRefMaxOverAvatar) _standRef = camHeight;
+
+            float f      = camHeight / Mathf.Max(_standRef, 1e-3f);
+            float kneel  = (_levelNeck[1] * scale + eye) / avatarEyes;
+            float sit    = _hasLevel[2] ? (_levelNeck[2] * scale + eye) / avatarEyes : kneel;
+            float target = CrouchOverride ?? CrouchFromRatio(f, _settings.crouchDeadZone, kneel, sit, _hasLevel[2]);
+
+            _crouch = Mathf.Lerp(_crouch, target, 1f - Mathf.Exp(-dt / Mathf.Max(_settings.crouchSmoothTime, 1e-3f)));
+            if (Mathf.Abs(_crouch - target) < 0.001f) _crouch = target;
+            _rigAnimator.SetFloat(s_crouchParam, _crouch);
+
+            _crouchDebug = new CrouchDebugState
+            {
+                Valid         = true,
+                CameraHeight  = camHeight,
+                StandRef      = _standRef,
+                Ratio         = f,
+                DeadZoneRatio = 1f - _settings.crouchDeadZone,
+                KneelRatio    = kneel,
+                SitRatio      = sit,
+                HasSit        = _hasLevel[2],
+                Target        = target,
+                Overridden    = CrouchOverride.HasValue,
+                Crouch        = _crouch,
+            };
         }
 
         /// <summary>Root motion клипа этого кадра — корню копии: сдвиг по горизонтали, поворот — только рысканье.</summary>
@@ -473,10 +662,15 @@ namespace UltimateXR.Animation.IK
             public Vector3   PrevFootPos;
         }
 
-        private const string BodyPivotName    = "Dummy Forward";
-        private const float  StanceSmoothTime = 0.08f; // смена стойки ~0,25 с
+        private const string BodyPivotName         = "Dummy Forward";
+        private const float  StanceSmoothTime      = 0.08f; // смена стойки ~0,25 с
+        private const int    CrouchLevels          = 3;     // Legs_Crouch: 0 стоя, 1 колено, 2 сидя
+        private const float  EyeAboveNeck          = 0.11f; // глаза над шеей, м без масштаба — перевод шеи клипа в высоту глаз
+        private const float  StandRefMaxOverAvatar = 1.25f; // камера выше глаз аватара × это — не рост игрока, выброс
+        private const float  MinLevelDrop          = 0.1f;  // уровень приседа без своего клипа — не используется
 
         private static readonly int s_stanceParam = Animator.StringToHash(UxrLegLocomotion.StanceParam);
+        private static readonly int s_crouchParam = Animator.StringToHash(UxrLegLocomotion.CrouchParam);
 
         private readonly UxrStandardAvatarController _controller;
         private readonly UxrAvatar                   _avatar;
@@ -492,6 +686,15 @@ namespace UltimateXR.Animation.IK
         private Transform                _rigRoot;
         private UxrLegRootMotionReceiver _rootMotion;
         private bool                     _hasStanceParam;
+        private bool                     _hasCrouchParam;
+        private float                    _crouch;
+        private CrouchDebugState         _crouchDebug;
+        private float                    _standRef;
+        private bool                     _hasStandRef;
+        private readonly float[]         _levelNeck = new float[CrouchLevels];
+        private readonly bool[]          _hasLevel  = new bool[CrouchLevels];
+        private readonly List<(Transform bone, Transform rig)> _legCopy = new List<(Transform bone, Transform rig)>();
+        private Pose[]                   _copyPoses = new Pose[0];
         private bool                     _solveThisFrame = true;
         private bool                     _needsSnap      = true;
         private bool                     _ready;

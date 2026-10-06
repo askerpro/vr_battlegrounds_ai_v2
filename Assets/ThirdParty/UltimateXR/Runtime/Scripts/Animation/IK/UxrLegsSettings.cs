@@ -56,6 +56,23 @@ namespace UltimateXR.Animation.IK
         [Tooltip("Плавность выравнивания подошвы по полу, с. Обычно 0,05; больше — стопа медленнее садится на пол после шага.")]
         public float groundSmoothTime = 0.05f;
 
+        [Header("Присед и сидение (Legs_Crouch: 0 стоя, 1 колено, 2 сидя)")]
+        [Tooltip("Доля роста игрока: опускание головы меньше этой доли — стоя (Legs_Crouch 0). Обычно 0,12; меньше — присед начинается от лёгкого наклона.")]
+        [Range(0f, 0.4f)]
+        public float crouchDeadZone = 0.12f;
+
+        [Tooltip("Сглаживание Legs_Crouch, с. Обычно 0,15; больше — поза догоняет голову медленнее.")]
+        [Range(0.01f, 1f)]
+        public float crouchSmoothTime = 0.15f;
+
+        [Tooltip("С какого Legs_Crouch ноги ниже таза начинают брать локальную позу клипа вместо решателя ноги (полностью — с 1). Обычно 0,5.")]
+        [Range(0f, 1f)]
+        public float clipLegsStart = 0.5f;
+
+        [Tooltip("Глубже этого Legs_Crouch шагов и поворотов нет, root motion выбрасывается. Обычно 0,5.")]
+        [Range(0f, 2f)]
+        public float locomotionCrouchLimit = 0.5f;
+
         [Header("Шаги")]
         [Tooltip("Когда и как переставлять ноги вслед за игроком (перенос локомоции VRIK Animated).")]
         public UxrLegLocomotion locomotion = new UxrLegLocomotion();

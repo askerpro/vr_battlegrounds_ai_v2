@@ -36,7 +36,8 @@ namespace VrBattlegrounds.Editor.Avatars
     /// Контроллер собирается с нуля (повторный запуск пересобирает его на месте, GUID тот же): параметры и состояния — контракт
     /// <c>UxrLegLocomotion</c> (<c>Legs_*</c>), покой ⇄ ход по <c>Legs_IsMoving</c>, переход назад — <c>Legs_Stop</c>, маска —
     /// корень, корпус и ноги (<see cref="MaskPath"/>). Стойка — поддерево по <c>Legs_Stance</c>: 0 — без оружия, 1 — пистолет,
-    /// 2 — винтовка (по умолчанию; выбор по оружию пока выключен). Приседа и сидения нет (упрощение 2026-10-06). Клипы хода — в точках их средней
+    /// 2 — винтовка (по умолчанию; выбор по оружию пока выключен). Присед и сидение — <c>Legs_Crouch</c>: 0 стоя, 1 колено,
+    /// 2 сидение на полу (клипы колена и шага в приседе — набора винтовки, общие для всех стоек). Клипы хода — в точках их средней
     /// скорости (м/с, x — вправо, y — вперёд), смешивание Freeform Directional с покоем в центре.
     /// </para>
     /// </summary>
@@ -47,6 +48,8 @@ namespace VrBattlegrounds.Editor.Avatars
         public const string PistolFolder = LocomotionFolder + "/MixamoPistol";
         public const string UnarmedFolder = LocomotionFolder + "/MixamoUnarmed";
         public const string PlainFolder = LocomotionFolder + "/MixamoRM";
+        /// <summary>Поза сидения на полу (<c>Legs_Crouch</c> = 2) — общая для всех стоек.</summary>
+        public const string SitFolder = LocomotionFolder + "/Sit";
         public const string ControllerPath = LocomotionFolder + "/AvatarLegs_Locomotion.controller";
         public const string MaskPath = LocomotionFolder + "/AvatarLegs.mask";
 
@@ -74,19 +77,48 @@ namespace VrBattlegrounds.Editor.Avatars
 
             AnimatorController controller = RecreateController(out AnimatorState idle, out AnimatorState moving);
 
+            // Присед, позы ниже приседа, шаг в приседе — общие для всех стоек (своих у пистолета и без оружия нет, как в WIP):
+            // Legs_Crouch 0 — стоя, 1 — поза приседа, 1…2 — позы ниже приседа по высоте шеи (2 — самая глубокая). Поза приседа
+            // и позы ниже — из ассета AvatarLegsCrouchConfig (кнопка «Применить в игру» стенда перемотки); нет ассета — присед
+            // винтовки и сидение из Sit/, кадр 0.
+            var crouch = new CrouchClips
+            {
+                KneelTurnLeft = Get(rifle, "CrouchingTurn90Left"),
+                KneelTurnRight = Get(rifle, "CrouchingTurn90Right"),
+                Move = Directions.Select(d => Get(rifle, "WalkCrouching" + d)).Where(c => c != null).ToList(),
+            };
+            AvatarLegsCrouchConfig config = AvatarLegsCrouchConfig.Load();
+            var belowStatics = new List<AnimationClip>();
+            if (config != null && config.crouch != null && config.crouch.clip != null)
+            {
+                crouch.Kneel = StaticClip(config.crouch.clip, config.crouch.frame, AvatarLegsCrouchConfig.StaticFolder);
+                foreach (AvatarLegsCrouchConfig.PoseFrame pose in config.below)
+                {
+                    if (pose != null && pose.clip != null) belowStatics.Add(StaticClip(pose.clip, pose.frame, AvatarLegsCrouchConfig.StaticFolder));
+                }
+            }
+            else
+            {
+                crouch.Kneel = StaticClip(Get(rifle, "IdleCrouching"));
+                AnimationClip sit = EnsureClips(SitFolder).Values.FirstOrDefault();
+                if (sit != null) belowStatics.Add(StaticClip(sit));
+            }
+
+            crouch.Below = BelowThresholds(crouch.Kneel, belowStatics);
+
             // Винтовка: 8 направлений × шаг/бег/спринт, повороты.
             var rifleMove = new List<AnimationClip>();
             foreach (string gait in new[] { "Walk", "Run", "Sprint" })
             foreach (string dir in Directions)
                 rifleMove.Add(Get(rifle, gait + dir));
             (BlendTree rifleIdleSet, BlendTree rifleMoveSet) = BuildSet(controller, "Rifle",
-                Get(rifle, "Idle"), Get(rifle, "Turn90Left"), Get(rifle, "Turn90Right"), rifleMove);
+                Get(rifle, "Idle"), Get(rifle, "Turn90Left"), Get(rifle, "Turn90Right"), rifleMove, crouch);
 
             // Пистолет: шаг, бег, назад, бег вбок (сторона — по замеру скорости клипа). Своих поворотов нет — без оружия.
             List<AnimationClip> pistolMove = new[] { "PistolWalk", "PistolRun", "PistolWalkBackward", "PistolRunBackward", "PistolStrafe", "PistolStrafe_2" }
                 .Select(n => Get(pistol, n)).ToList();
             (BlendTree pistolIdleSet, BlendTree pistolMoveSet) = BuildSet(controller, "Pistol",
-                Get(pistol, "PistolIdle"), Get(unarmed, "LeftTurn90"), Get(unarmed, "RightTurn90"), pistolMove);
+                Get(pistol, "PistolIdle"), Get(unarmed, "LeftTurn90"), Get(unarmed, "RightTurn90"), pistolMove, crouch);
 
             // Без оружия: вперёд и вбок — «Locomotion Pack», назад и диагонали — набор без In Place.
             List<AnimationClip> unarmedMove = new[]
@@ -96,7 +128,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 "JogBackwardDiagonal", "JogBackwardDiagonal_Mirror",
             }.Select(n => Get(unarmed, n)).ToList();
             (BlendTree unarmedIdleSet, BlendTree unarmedMoveSet) = BuildSet(controller, "Unarmed",
-                Get(unarmed, "Idle"), Get(unarmed, "LeftTurn90"), Get(unarmed, "RightTurn90"), unarmedMove);
+                Get(unarmed, "Idle"), Get(unarmed, "LeftTurn90"), Get(unarmed, "RightTurn90"), unarmedMove, crouch);
 
             BlendTree idleBySet = Tree(controller, "IdleBySet", UxrLegLocomotion.StanceParam);
             idleBySet.AddChild(unarmedIdleSet, SetUnarmed);
@@ -120,17 +152,102 @@ namespace VrBattlegrounds.Editor.Avatars
         /// Поддеревья одной стойки: покой (поворот на месте по <c>Legs_Turn</c>: −0,5 — 90° влево, +0,5 — вправо) и ход
         /// (Freeform Directional по <c>Legs_MoveX/MoveZ</c>, покой в центре).
         /// </summary>
-        private static (BlendTree idle, BlendTree move) BuildSet(AnimatorController controller, string set,
-            AnimationClip idle, AnimationClip turnLeft, AnimationClip turnRight, List<AnimationClip> move)
+        private sealed class CrouchClips
         {
-            BlendTree idleTree = TurnTree(controller, set + "_Idle", StaticClip(idle), turnLeft, turnRight);
+            public AnimationClip Kneel, KneelTurnLeft, KneelTurnRight; // Kneel — статичная поза приседа (Legs_Crouch 1)
+            public List<AnimationClip> Move;
+            public List<(AnimationClip clip, float threshold)> Below = new List<(AnimationClip clip, float threshold)>(); // 1…2
+        }
 
-            BlendTree moveTree = Tree(controller, set + "_Move", UxrLegLocomotion.MoveXParam, UxrLegLocomotion.MoveZParam);
+        /// <summary>
+        /// Пороги поз ниже приседа на <c>Legs_Crouch</c>: по высоте шеи на копии рига — доля пути от шеи приседа (1) до самой
+        /// низкой шеи (2), как <c>UxrAnimatedLegs</c> меряет уровни 1 и 2 и линейно ведёт <c>Legs_Crouch</c> между ними по
+        /// высоте головы. Поза не ниже приседа на 1 см отбрасывается; пороги строго растут.
+        /// </summary>
+        private static List<(AnimationClip clip, float threshold)> BelowThresholds(AnimationClip kneel, List<AnimationClip> below)
+        {
+            var result = new List<(AnimationClip clip, float threshold)>();
+            float kneelNeck = NeckHeight(kneel);
+            var measured = below.Where(c => c != null).Select(c => (clip: c, neck: NeckHeight(c))).ToList();
+            foreach (var m in measured.Where(m => float.IsNaN(m.neck) || float.IsNaN(kneelNeck) || m.neck > kneelNeck - 0.01f))
+            {
+                GameLog.Player.Warning($"[AvatarMixamoLocomotionSetup] Поза {m.clip.name} не ниже приседа ({m.neck:0.00} м против {kneelNeck:0.00}) — пропущена.");
+            }
+
+            measured = measured.Where(m => !float.IsNaN(m.neck) && !float.IsNaN(kneelNeck) && m.neck <= kneelNeck - 0.01f).OrderByDescending(m => m.neck).ToList();
+            if (measured.Count == 0) return result;
+            float deepest = measured[measured.Count - 1].neck;
+            float previous = 1f;
+            foreach (var m in measured)
+            {
+                float t = kneelNeck - deepest > 1e-4f ? 1f + (kneelNeck - m.neck) / (kneelNeck - deepest) : 2f;
+                t = Mathf.Max(t, previous + 0.01f);
+                result.Add((m.clip, Mathf.Min(t, 2f)));
+                previous = t;
+            }
+
+            result[result.Count - 1] = (result[result.Count - 1].clip, 2f);
+            return result;
+        }
+
+        /// <summary>Высота шеи над полом в позе клипа (кадр 0) на копии рига основного аватара. NaN — нет рига.</summary>
+        private static float NeckHeight(AnimationClip clip)
+        {
+            if (clip == null) return float.NaN;
+            var rigPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AvatarLegsRigBaker.RigPath(MainAvatarPrefab));
+            if (rigPrefab == null) return float.NaN;
+            GameObject rig = Object.Instantiate(rigPrefab);
+            rig.hideFlags = HideFlags.HideAndDontSave;
+            PlayableGraph graph = PlayableGraph.Create("NeckHeight");
+            try
+            {
+                foreach (MonoBehaviour mb in rig.GetComponentsInChildren<MonoBehaviour>(true)) mb.enabled = false;
+                Animator animator = rig.GetComponent<Animator>();
+                animator.runtimeAnimatorController = null;
+                animator.applyRootMotion = false;
+                rig.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+                var playable = AnimationClipPlayable.Create(graph, clip);
+                playable.SetApplyFootIK(false);
+                AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
+                graph.Evaluate();
+                Transform neck = animator.GetBoneTransform(HumanBodyBones.Neck) ?? animator.GetBoneTransform(HumanBodyBones.Head);
+                return neck != null ? neck.position.y : float.NaN;
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(rig);
+            }
+        }
+
+        private static (BlendTree idle, BlendTree move) BuildSet(AnimatorController controller, string set,
+            AnimationClip idle, AnimationClip turnLeft, AnimationClip turnRight, List<AnimationClip> move, CrouchClips crouch)
+        {
+            BlendTree standTurn = TurnTree(controller, set + "_Idle", StaticClip(idle), turnLeft, turnRight);
+
+            BlendTree standMove = Tree(controller, set + "_Move", UxrLegLocomotion.MoveXParam, UxrLegLocomotion.MoveZParam);
             // Покой в центре: медленный ход — клип своего направления вместе с покоем, а не смесь противоположных
             // направлений (Freeform Cartesian без точки (0,0) гасил шаги друг другом).
-            if (idle != null) moveTree.AddChild(StaticClip(idle), Vector2.zero);
-            foreach (AnimationClip clip in move) AddAtSpeed(moveTree, clip);
-            return (idleTree, moveTree);
+            if (idle != null) standMove.AddChild(StaticClip(idle), Vector2.zero);
+            foreach (AnimationClip clip in move) AddAtSpeed(standMove, clip);
+
+            if (crouch.Kneel == null) return (standTurn, standMove);
+
+            // Покой по Legs_Crouch: 0 — стоя, 1 — поза приседа, 1…2 — позы ниже приседа по высоте шеи (2 — самая глубокая).
+            BlendTree idleSet = Tree(controller, set + "_IdleSet", UxrLegLocomotion.CrouchParam);
+            idleSet.AddChild(standTurn, 0f);
+            idleSet.AddChild(TurnTree(controller, set + "_IdleCrouching", crouch.Kneel, crouch.KneelTurnLeft, crouch.KneelTurnRight), 1f);
+            foreach ((AnimationClip clip, float threshold) in crouch.Below) idleSet.AddChild(clip, threshold);
+
+            // Ход по Legs_Crouch: 0 — стоя, 1 — шаг в приседе (глубже — шагов нет, ноги стоят клипом покоя).
+            BlendTree moveSet = Tree(controller, set + "_MoveSet", UxrLegLocomotion.CrouchParam);
+            moveSet.AddChild(standMove, 0f);
+            BlendTree crouchMove = Tree(controller, set + "_MoveCrouching", UxrLegLocomotion.MoveXParam, UxrLegLocomotion.MoveZParam);
+            crouchMove.AddChild(crouch.Kneel, Vector2.zero);
+            foreach (AnimationClip clip in crouch.Move) AddAtSpeed(crouchMove, clip);
+            moveSet.AddChild(crouchMove, 1f);
+            return (idleSet, moveSet);
         }
 
         private static BlendTree TurnTree(AnimatorController controller, string name, AnimationClip idle, AnimationClip left, AnimationClip right)
@@ -145,9 +262,10 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <summary>
         /// Импорт клипов папки: Humanoid с общим Avatar (<see cref="EnsureSharedAvatar"/>), без материалов; цикл; поворот и
         /// высота корня — в позу, XZ — root motion (у поворотов на месте поворот корня — тоже root motion). Имя клипа = имя
-        /// файла.
+        /// файла. <paramref name="loop"/> = false — клипы-переходы (присед → сидение и т.п.): без цикла и без Loop Pose, иначе
+        /// Loop Pose подмешивает конец клипа к началу и портит позы у концов перехода.
         /// </summary>
-        public static Dictionary<string, AnimationClip> EnsureClips(string folder)
+        public static Dictionary<string, AnimationClip> EnsureClips(string folder, bool loop = true)
         {
             var result = new Dictionary<string, AnimationClip>();
             if (!AssetDatabase.IsValidFolder(folder)) return result;
@@ -182,12 +300,12 @@ namespace VrBattlegrounds.Editor.Avatars
                 ModelImporterClipAnimation[] clips = importer.clipAnimations.Length > 0 ? importer.clipAnimations : importer.defaultClipAnimations;
                 foreach (ModelImporterClipAnimation clip in clips)
                 {
-                    changed |= clip.name != name || !clip.loopTime || !clip.loopPose || clip.lockRootRotation == turn || !clip.lockRootHeightY
+                    changed |= clip.name != name || clip.loopTime != loop || clip.loopPose != loop || clip.lockRootRotation == turn || !clip.lockRootHeightY
                                || clip.lockRootPositionXZ || !clip.keepOriginalOrientation || clip.keepOriginalPositionY || !clip.heightFromFeet
                                || !clip.keepOriginalPositionXZ;
                     clip.name = name;
-                    clip.loopTime = true;
-                    clip.loopPose = true;
+                    clip.loopTime = loop;
+                    clip.loopPose = loop;
                     clip.lockRootRotation = !turn;
                     clip.lockRootHeightY = true;
                     clip.lockRootPositionXZ = false;
@@ -210,7 +328,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 if (loaded != null) result[name.Replace("Rifle_", "").Replace("MixamoRM_", "").Replace("Pistol_", "").Replace("Unarmed_", "")] = loaded;
             }
 
-            if (AlignPackFacing(folder)) return EnsureClips(folder);
+            if (AlignPackFacing(folder)) return EnsureClips(folder, loop);
             return result;
         }
 
@@ -610,7 +728,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// снимаются и пишутся константами. Состояние покоя играет без Foot IK, а без него стопы клипов Mixamo на скелете MEF
         /// уходят в пол и заваливаются — поэтому поза покоя запекается с Foot IK заранее.
         /// </summary>
-        private static void BakeFootIK(AnimationClip source, AnimationClip target)
+        private static void BakeFootIK(AnimationClip source, AnimationClip target, float time = 0f)
         {
             var rigPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AvatarLegsRigBaker.RigPath(MainAvatarPrefab));
             if (rigPrefab == null) return;
@@ -628,7 +746,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
                 AnimationClipPlayable playable = AnimationClipPlayable.Create(graph, source);
                 playable.SetApplyFootIK(true);
-                playable.SetTime(0);
+                playable.SetTime(time);
                 AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
                 graph.Evaluate();
 
@@ -650,11 +768,18 @@ namespace VrBattlegrounds.Editor.Avatars
             }
         }
 
-        /// <summary>Неподвижный клип — первый кадр исходного (покой без «дыхания»: игрок в шлеме качается сам).</summary>
-        private static AnimationClip StaticClip(AnimationClip source)
+        /// <summary>
+        /// Неподвижный клип — кадр <paramref name="frame"/> исходного (по умолчанию первый: покой без «дыхания», игрок в шлеме
+        /// качается сам). Кадр 0 — рядом с исходником (<c>имя_Static</c>), другой кадр или <paramref name="folder"/> — в папке
+        /// (<c>имя_F&lt;кадр&gt;_Static</c>), чтобы не засорять папки кандидатов стенда.
+        /// </summary>
+        private static AnimationClip StaticClip(AnimationClip source, float frame = 0f, string folder = null)
         {
             if (source == null) return null;
-            string path = Path.GetDirectoryName(AssetDatabase.GetAssetPath(source)).Replace(Path.DirectorySeparatorChar, '/') + "/" + source.name + "_Static.anim";
+            float time = source.frameRate > 0f ? Mathf.Clamp(frame / source.frameRate, 0f, source.length) : 0f;
+            string dir = folder ?? Path.GetDirectoryName(AssetDatabase.GetAssetPath(source)).Replace(Path.DirectorySeparatorChar, '/');
+            string suffix = frame > 0f || folder != null ? $"_F{Mathf.RoundToInt(frame)}_Static" : "_Static";
+            string path = dir + "/" + source.name + suffix + ".anim";
             // Пересобирается каждый раз (на месте, GUID тот же): кривые исходника — мышцы, они меняются с Avatar и импортом.
             var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
             AnimationClip clip = existing != null ? existing : new AnimationClip { name = Path.GetFileNameWithoutExtension(path) };
@@ -662,7 +787,7 @@ namespace VrBattlegrounds.Editor.Avatars
             clip.frameRate = source.frameRate;
             foreach (EditorCurveBinding binding in AnimationUtility.GetCurveBindings(source))
             {
-                float value = AnimationUtility.GetEditorCurve(source, binding).Evaluate(0f);
+                float value = AnimationUtility.GetEditorCurve(source, binding).Evaluate(time);
                 AnimationUtility.SetEditorCurve(clip, binding, AnimationCurve.Constant(0f, 1f, value));
             }
 
@@ -674,7 +799,7 @@ namespace VrBattlegrounds.Editor.Avatars
             AnimationUtility.SetAnimationClipSettings(clip, settings);
             // Клип со смещением высоты (сидение) уже подогнан к MEF без Foot IK: Foot IK держит стопы на месте исходника
             // относительно тела, и поднятое тело поднимало бы стопы над полом (+11 см).
-            if (Mathf.Approximately(settings.level, 0f)) BakeFootIK(source, clip);
+            if (Mathf.Approximately(settings.level, 0f)) BakeFootIK(source, clip, time);
             if (existing == null) AssetDatabase.CreateAsset(clip, path);
             else EditorUtility.SetDirty(clip);
             return clip;
@@ -700,6 +825,7 @@ namespace VrBattlegrounds.Editor.Avatars
             AddParameter(controller, UxrLegLocomotion.IsMovingParam, AnimatorControllerParameterType.Bool, 0f);
             AddParameter(controller, UxrLegLocomotion.SpeedParam, AnimatorControllerParameterType.Float, 1f);
             AddParameter(controller, UxrLegLocomotion.TurnParam, AnimatorControllerParameterType.Float, 0f);
+            AddParameter(controller, UxrLegLocomotion.CrouchParam, AnimatorControllerParameterType.Float, 0f);
             // Винтовка — стойка по умолчанию (выбор по оружию пока выключен, AvatarStanceFromGrabs.SelectByGrabs).
             AddParameter(controller, UxrLegLocomotion.StanceParam, AnimatorControllerParameterType.Float, SetRifle);
 

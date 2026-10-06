@@ -45,6 +45,9 @@ namespace UltimateXR.Animation.IK
         /// <summary>Поворот на месте: −0,5 — 90° влево, +0,5 — вправо.</summary>
         public const string TurnParam = "Legs_Turn";
 
+        /// <summary>Присед и сидение: 0 — стоя, 1 — на колене, 2 — сидя на полу.</summary>
+        public const string CrouchParam = "Legs_Crouch";
+
         /// <summary>Набор клипов (стойка): 0, 1, 2… — смысл задаёт игра (у нас: без оружия, пистолет, винтовка).</summary>
         public const string StanceParam = "Legs_Stance";
 

@@ -159,6 +159,7 @@ namespace UltimateXR.Avatar.Controllers
             _animatedLegs?.Solve();
             _leftLegIK?.Solve();
             _rightLegIK?.Solve();
+            _animatedLegs?.AfterSolve(); // на колене и сидя ноги ниже таза — поза клипа
         }
 
         /// <summary>VR Battlegrounds patch 37: компонент выключен — ноги в позу префаба.</summary>

@@ -78,7 +78,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 3536fcfe-0afa-431e-9c7c-0c810ff797fe
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
 --- !u!1 &2104794969320233596
 GameObject:
@@ -254,7 +254,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 60b6fb1e-62e9-4fd2-b197-001757f9da79
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
 --- !u!1 &3185699120251953945
 GameObject:
@@ -301,7 +301,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 939aee00-b91f-4a87-86e8-a02a2917f6c1
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
 --- !u!1 &3331192163932962802
 GameObject:
@@ -380,7 +380,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 4ecdf5f0-6108-4fb5-a6ca-b251ca95a23c
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
 --- !u!1 &3739655566883733372
 GameObject:
@@ -427,7 +427,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
   _uxrUniqueId: 7d0b56ee-fab9-4d66-8165-49518f2226bf
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
 --- !u!1 &4102652314895574979
 GameObject:
@@ -508,7 +508,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
   _uxrUniqueId: 9071658b-b2df-4952-906a-9bddd9636709
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
 --- !u!1 &4494745033999320123
 GameObject:
@@ -588,7 +588,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 1bff7aac-a10e-4e79-9de6-64bb3c2ca8e2
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
 --- !u!1 &5114754557382782637
 GameObject:
@@ -635,7 +635,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 683415c1-0006-4957-935c-bb1e2da128d7
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
 --- !u!1 &5261392650229353727
 GameObject:
@@ -929,7 +929,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 7f1679bd-f64c-443f-8009-dddc43959558
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
   _isDummyGrabbableParent: 0
   _controlParentDirection: 1
@@ -1061,7 +1061,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: 3e25616e-9201-4e20-8308-d9005fcefede
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
   _continuousManipulationHaptics: 0
   _hapticMixMode: 1
@@ -1109,7 +1109,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: a25274fd-babc-4198-a5b7-403b159b7d3c
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
   _audioOnGrab:
     _clip: {fileID: 0}
@@ -1145,7 +1145,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _uxrUniqueId: e417d96d-36e6-4869-8a52-8ecd0376b1d3
-  __prefabGuid: 4c0598d66f467ea4690a960b022f58da
+  __prefabGuid: 0ad6e0da15e34694096e2c4ce575773f
   __isInPrefab: 1
   _rounds: 8
   _capacity: 8

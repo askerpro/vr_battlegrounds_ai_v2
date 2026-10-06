@@ -27,7 +27,8 @@ namespace VrBattlegrounds.Editor.Avatars
         {
             new PocketConfig("MagazinePocket", BoneTarget.Pelvis, 
                 new[] { "MagMachinegun", "MagGun", "MagShotgun", "M16_Mag", "MagScar", "MagUzi", "MagMP5K", "MagPPK", "MagRevolver", "MagSniper", "MagSRM12",
-                      "MagViper", "MagMKR9", "MagHerrington", "MagTR15", "MagMk14" }, 0.1f,
+                      "MagViper", "MagMKR9", "MagHerrington", "MagTR15", "MagMk14",
+                      "Cartridge:Herrington", "Cartridge:FabarmSDASS" }, 0.1f,
                 new Vector3(0f, -0.05f, 0.15f)),
             
             new PocketConfig("Anchor_Hip_R", BoneTarget.Pelvis,

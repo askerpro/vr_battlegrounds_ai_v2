@@ -59,6 +59,8 @@ namespace VrBattlegrounds.Editor.Gameplay
         public string MagazineTag;     // тег хвата магазина: его принимают якорь и карманы
         public int MagazineCapacity;
         public bool MagazineIsInternal; // боезапас внутри корпуса: внешняя точка приёма отдельно от конечной позы
+        public bool ManualLoading; // явный recipe opt-in, не вывод из имени/дроби/внутреннего магазина
+        public string ManualLoadingProfile;
 
         public string GripDonor;       // префаб с вручную настроенным хватом на том же паке
         public string GripDonorFolder; // его папка в паке
@@ -70,7 +72,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public uint NetworkAssetId;    // сетевой id зарегистрированного префаба до создания donor snapshot
         public uint MagazineAssetId;
         public string ShotAudio;       // свой звук выстрела вместо донорского (необязательно)
-        public string LoadAudio;       // звук вставки магазина/патрона в якорь (необязательно)
+        public string LoadAudio;       // звук вставки патрона в окно приёма (ручное заряжание); магазины — общий звук
         public string TakeOutAudio;    // звук снятия магазина (необязательно; иначе донорский)
         public string SlideBackAudio;  // оттягивание затвора (необязательно; иначе донорский)
         public string SlideForwardAudio; // обратный ход затвора (необязательно; иначе донорский)
@@ -121,8 +123,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             MagazineBase      = "Assets/Prefabs/Weapons/Shotgun/MagShotgun.prefab",
             MagazinePart      = "Shogun_Patron_mesh",
             MagazineTag       = "MagShotgun",
-            MagazineCapacity  = 6,
+            MagazineCapacity  = 8,
             MagazineIsInternal = true,
+            ManualLoading = true,
+            ManualLoadingProfile = "Assets/Data/Weapons/Profiles/ManualLoadFabarmReadiness.asset",
             GripDonor         = "Assets/Prefabs/Weapons/AR15/AR15.prefab",
             GripDonorFolder   = "Hands_Automatic_Rifle03",
             GripDonorBody     = "Rifle_Body_Mesh",
@@ -329,6 +333,8 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// </summary>
         public static GameObject Build(HandsPackWeaponRecipe r, IWeaponModel pack)
         {
+            if (r.ManualLoading && AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ManualLoadingProfile) == null)
+                throw new System.InvalidOperationException("Не задан явный профиль tube reload: " + r.ManualLoadingProfile);
             if (r.FinalRootScale < 0f || float.IsNaN(r.FinalRootScale) || float.IsInfinity(r.FinalRootScale))
                 throw new System.InvalidOperationException("Некорректный итоговый масштаб корня: " + r.Name);
             string folder = $"Assets/Prefabs/Weapons/{r.PrefabFolder}";
@@ -533,7 +539,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             var source = anchorGo.AddComponent<AudioSource>();
             EditorUtility.CopySerialized(gripDonor.GetComponentInChildren<UxrGrabbableObjectAnchor>(true).GetComponent<AudioSource>(), source);
             source.playOnAwake = false;
-            if (!string.IsNullOrEmpty(r.LoadAudio)) source.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(r.LoadAudio);
+            // Своего клипа у гнезда магазина нет — общий MagazineAnchorSoundDefaults. LoadAudio — только окну приёма
+            // патронов (ручное заряжание, ManualLoadingAuthoring).
+            source.clip = null;
             var sound = new SerializedObject(anchorGo.AddComponent<AnchorSound>());
             CopyFields(gripDonor.GetComponentInChildren<AnchorSound>(true), sound.targetObject, sound);
             sound.FindProperty("_source").objectReferenceValue = source;
@@ -670,6 +678,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
 
             WeaponInteractionInstaller.Apply(root, WeaponInteractionRecipes.For(root, r));
+            if (r.ManualLoading)
+                ManualLoadingAuthoring.ConfigureWeapon(root, r.Name, r.MagazineCapacity,
+                    AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ManualLoadingProfile),
+                    string.IsNullOrEmpty(r.LoadAudio) ? null : AssetDatabase.LoadAssetAtPath<AudioClip>(r.LoadAudio));
 
             return root;
         }
@@ -967,6 +979,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 mag.AddComponent<VrBattlegrounds.Arsenal.MagazineManipulationHistory>();
             if (r.FinalRootScale > 0f) mag.transform.localScale = Vector3.one * r.FinalRootScale;
             string path = $"{folder}/{mag.name}.prefab";
+            if (r.ManualLoading) ManualLoadingAuthoring.ConfigureCartridge(mag, r.Name, r.MagazineCapacity);
             return PrefabUtility.SaveAsPrefabAsset(mag, path);
         }
 

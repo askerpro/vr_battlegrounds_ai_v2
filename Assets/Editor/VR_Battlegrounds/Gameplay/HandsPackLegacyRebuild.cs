@@ -215,7 +215,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             recipe.MagazineBase = Donor(magazine);
             recipe.MagazineGripDonor = Donor(GunMag);
             recipe.MagazineTag = AssetDatabase.LoadAssetAtPath<GameObject>(Donor(magazine)).GetComponent<UxrGrabbableObject>().Tag;
-            recipe.MagazineCapacity = AssetDatabase.LoadAssetAtPath<GameObject>(Donor(magazine)).GetComponent<UxrFirearmMag>().Capacity;
+            // Патрон ручного заряжания больше не magazine-as-reservoir; fixed opt-in capacity принадлежит weapon balance/recipe.
+            if (!recipe.ManualLoading)
+                recipe.MagazineCapacity = AssetDatabase.LoadAssetAtPath<GameObject>(Donor(magazine)).GetComponent<UxrFirearmMag>().Capacity;
             recipe.GripDonor = Donor(recipe.GripDonor);
             recipe.FirearmDonor = Donor(weapon);
             recipe.PreserveDonorGameplay = true;

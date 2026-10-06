@@ -197,7 +197,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                     Name = "Herrington", PrefabFolder = "Herrington", PoseClip = "A_FP_Herrington_11-87_Idle",
                     ActionClip = "A_W_Herrington_11-87_Fire", TriggerPart = "Trigger", ActionPart = "Bolt", SupportGrip = true,
                     UxrTag = "Shotgun", MagazinePart = "Cartridge", LoadingPart = "Feed", MagazineTag = "MagHerrington", MagazineCapacity = 7,
-                    MagazineIsInternal = true
+                    MagazineIsInternal = true, ManualLoading = true,
+                    ManualLoadingProfile = "Assets/Data/Weapons/Profiles/ManualLoadHerringtonReadiness.asset"
                 });
                 r.MagazineBase = "Assets/Prefabs/Weapons/Shotgun/MagShotgun.prefab";
                 r.Pellets = true;

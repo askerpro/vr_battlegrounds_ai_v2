@@ -180,6 +180,12 @@ namespace VrBattlegrounds.Editor.Gameplay
         private static bool ApplyMagazine(WeaponInfo info)
         {
             if (info.MagazinePrefab == null) return false;
+            if (info.ReadinessProfile != null && info.ReadinessProfile.AmmoCapability == WeaponAmmoCapability.FixedStoreChamber)
+            {
+                if (info.MagazinePrefab.GetComponent<Cartridge>() == null || info.MagazinePrefab.GetComponent<UxrFirearmMag>() != null)
+                    throw new System.InvalidOperationException("Tube ammunition must be a single shell: " + info.WeaponId);
+                return false; // Полная ёмкость никогда не записывается во внешний shell.
+            }
             var mag = info.MagazinePrefab.GetComponentInChildren<UxrFirearmMag>(true);
             if (mag == null) return false;
 

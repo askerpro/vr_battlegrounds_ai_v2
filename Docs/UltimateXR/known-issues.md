@@ -1117,3 +1117,32 @@ Runtime-регистрация и штатная политика OnValidate с�
 
 ### Исправление
 Обе точки сравниваются в мире. [SDK patch 48](sdk-patches.md#патч-48-выпрямление-корпуса--сдвиг-опоры-в-одной-системе-координат).
+
+
+## Issue 33: сетевой вызов Mirror молча уходит чужому обработчику
+
+### Симптом
+Команда не доходит до сервера; в консоли при старте — «Function … and … have the same hash».
+
+### Причина
+Mirror регистрирует `[Command]`/`[ClientRpc]`/`[TargetRpc]` по 16-битному хэшу полного имени метода; при совпадении
+второй вызов не регистрируется. Переименование класса меняет хэш (`CartridgeIntake.CmdRequestAdmission` совпал
+с `NetworkStateRelay.CmdComponentStateChanged`).
+
+### Исправление
+Переименовать метод. Класс ловит `RemoteCallHashTests`.
+
+## Issue 34: SerializationException «… is not marked as serializable» при сохранении состояния
+
+### Причина
+`SerializeStateValue` с именем кэширует значение через `ObjectExt.DeepCopy`; тип без `ICloneable` уходит в
+`BinaryFormatter`, и поле-компонент его роняет.
+
+### Исправление
+Тип значения реализует `ICloneable` (`UxrFixedAmmoSnapshot`, SDK патч 49). Тест — `StateSaveValueCopyTests`.
+
+## Issue 35: `IsCompatibleObject` — не «подходит», а «можно положить сейчас»
+
+`UxrGrabbableObjectAnchor.IsCompatibleObject` проверяет тег **и все валидаторы размещения**. Для вопроса «подходит
+ли предмет гнезду» нужен `IsCompatibleObjectTag` (public с SDK патча 49) — иначе, например, карман не отдаёт патрон
+к дробовику в руке: валидатор окна приёма отказывает патрону, которого игрок ещё не держал.

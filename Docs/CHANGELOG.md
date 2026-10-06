@@ -1,5 +1,20 @@
 # Changelog (Журнал изменений)
 
+## 2026-10-06 — Ручное (поштучное) заряжание
+
+- FABARM SDASS и Herrington заряжаются одиночными патронами через окно приёма `CartridgeIntake`; сервер принимает
+  патрон одной фиксацией SDK-учёта ([SDK патч 49](UltimateXR/sdk-patches.md)). Проверено в шлеме.
+- Механика общая: `Cartridge`, `CartridgeIntake`, `ManualLoadingAuthoring`/`ManualLoadingMigration`, профиль `FixedStoreChamber`.
+- Классы ошибок, закрытые по ходу: коллизия 16-битного хэша сетевых вызовов Mirror (`RemoteCallHashTests`);
+  `SerializeStateValue` без `ICloneable` падал в `BinaryFormatter` (`StateSaveValueCopyTests`); карман выбирал
+  предмет по валидаторам размещения вместо тега (`MagazinePocketSelectionTests`); обработчики статического
+  `StateSerialized` падали на уничтоженном компоненте.
+- Звук вставки магазина/патрона — один, его задаёт приёмник (`AnchorSound` гнезда). Все гнёзда магазинов
+  звучат общим `MagazineAnchorSoundDefaults` (`MagazineInsert_Default` — моно-копия `MagPlace`), свои клипы
+  гнёзд сняты; переопределение — только у окна приёма дробовиков (FABARM `Reload_1`, Herrington `Herrington_MagIn`).
+  Звук размещения на самих магазинах (унаследован от образцов UltimateXR у 17 магазинов) убран — вставка
+  звучала дважды. Сборщик оружия клип гнезду не ставит. `AmmoInsertSoundTests`. Проверено в шлеме.
+
 ## 2026-10-06 — Камера MEF в глазах, а не на уровне носа
 
 - Кости глаз модели MEF (`CC_Base_L/R_Eye`) стояли на переносице под очками; сборщик аватара брал из них `Eyes Base Height`, и камера была на уровне носа. Положение выверено в шлеме у зеркала (центр линз: +2,95 см вверх, +5,96 см вперёд) и записано в сборщик (`ControllerAndCameraSetup.ApplyHeadDefaults`) и в `MEF_Base_Avatar` — все варианты MEF наследуют. Там же `Head Free Range Bend` = 55° (наклон головы вниз без корпуса).

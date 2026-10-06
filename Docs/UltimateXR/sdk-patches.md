@@ -1722,3 +1722,37 @@ cleanup. Полный Test Runner не запускался, чтобы не с�
 Если корпус всё ещё следует за быстрым поворотом головы (опору внутри кадра двигают и выходы решателя —
 `NeckHeadBalance`, изгиб от головы), следующий шаг — решение «тело идёт» по оценщику шлема `UxrBodyMotion`,
 как было в патче 38 переноса T-42. [Issue 32](known-issues.md#issue-32-корпус-сразу-поворачивается-за-головой-вдали-от-начала-координат).
+
+## Патч 49: ручное (поштучное) заряжание патронов (2026-10-06, не принят)
+
+Статус: worktree `claude/shotgun-per-shell`; компиляция в Unity и `AndroidCompileGate` зелёные, префабы
+мигрированы; шлем и сеть не проверены. Задача — [shotgun-per-shell-research.md](../tasks/shotgun-per-shell-research.md).
+Opt-in только для FABARM SDASS и Herrington/Remington 11-87 (`FixedStoreChamber`); прочее оружие и
+футуристический SDK Shotgun идут прежним путём.
+
+Файлы в `Runtime/Scripts/Mechanics/Weapons/`:
+
+- **Новый `UxrFirearmAmmoUnit`** — физическая единица патрона с единственным сохраняемым флагом
+  consumed. Пишет его только `CommitAmmoAdmission`; snapshot не может «воскресить» израсходованный.
+- **Новый `UxrFirearmWeapon.AmmoAdmission.cs`** — атомарный приём: M+1 в постоянном внутреннем
+  `UxrFirearmMag` и consumed единицы одной синхронизируемой фиксацией ledger
+  (`UxrFirearmReadinessOperation.AmmoAdmission`). C (патронник) и action state не меняются.
+  Порты `CanAuthorAmmoAdmission`/`ValidateAmmoUnitAdmission` задаёт игровой `CartridgeIntake` —
+  это разрешения, не второй писатель запаса. Барьер `TryBegin/EndAmmoAdmissionBarrier` блокирует
+  локальные readiness-операции на время запроса. Fixed-only snapshot DTO `UxrFixedAmmoSnapshot` реализует `ICloneable`: `SerializeStateValue` копирует значение через `ObjectExt.DeepCopy`, иначе поле-компонент уходит в `BinaryFormatter` (SerializationException).
+- **`UxrFirearmMag`** — привязка fixed store к оружию/trigger; прямой runtime setter `Rounds` для
+  fixed store запрещён, запись только через ledger sink `WriteLedgerRounds`.
+- **`UxrFirearmMag.StateSave`** — fixed store не пишет собственный rounds: его переносит атомарный
+  snapshot оружия; обычные магазины без изменений.
+- **`UxrFirearmWeapon.Readiness`** — ёмкость M+C в каждой фиксации, sink записи, барьер приёма,
+  `AdditionalShotPlan` дроби (один расход/revision на залп, replay без повторной генерации).
+- **`UxrFirearmReadinessTypes`** — операция `AmmoAdmission`, DTO выстрела v2 с дополнительными
+  выстрелами (v1 читается как пустой список).
+- **`UxrFirearmWeapon.StateSave`** — атомарная загрузка C и fixed M с проверкой до живой записи.
+- **`UxrShotgunPump`** — при включённом ledger не вызывает `Reload`; legacy-путь прежний.
+- **`Manipulation/UxrGrabbableObjectAnchor`** — `IsCompatibleObjectTag` стал public: статическая совместимость
+  по тегу без валидаторов размещения. Карман (`UxrMagazinePocket`) выбирает по ней предмет для оружия в руке;
+  `IsCompatibleObject` с валидаторами — разрешение «положить сейчас» (у `CartridgeIntake` — «держал этот игрок»).
+
+При обновлении SDK перенести все пункты вместе: по отдельности они нарушают инвариант
+единственного владельца M/C.

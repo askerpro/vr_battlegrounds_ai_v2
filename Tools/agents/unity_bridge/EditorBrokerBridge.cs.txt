@@ -54,6 +54,7 @@ namespace VrBattlegrounds.EditorBrokerLocal
         public bool is_test_running;
         public string[] dirty_scenes;
         public string[] dirty_assets;
+        public string[] ignored_dirty_assets;
         public string prefab_stage;
         public int process_id;
         public string session_id;
@@ -218,6 +219,7 @@ namespace VrBattlegrounds.EditorBrokerLocal
                 project_root = Root, is_playing = EditorApplication.isPlayingOrWillChangePlaymode,
                 is_compiling = EditorApplication.isCompiling, is_updating = EditorApplication.isUpdating,
                 is_test_running = TestsRunning(), dirty_scenes = new string[0], dirty_assets = new string[0],
+                ignored_dirty_assets = new string[0],
                 prefab_stage = "", prefab_path = "", scenes = new BridgeScene[0],
                 process_id = System.Diagnostics.Process.GetCurrentProcess().Id, session_id = Session,
                 auto_refresh_suppressed = SessionState.GetBool(RefreshKey, false),
@@ -238,15 +240,22 @@ namespace VrBattlegrounds.EditorBrokerLocal
             PrefabStage prefab = PrefabStageUtility.GetCurrentPrefabStage();
             if (prefab != null && prefab.scene.isDirty) dirtyScenes.Add(prefab.assetPath);
             var dirtyAssets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var ignoredAssets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (UnityEngine.Object item in Resources.FindObjectsOfTypeAll<UnityEngine.Object>())
             {
                 if (item == null || !EditorUtility.IsPersistent(item) || !EditorUtility.IsDirty(item)) continue;
                 string path = AssetDatabase.GetAssetPath(item);
-                if (!string.IsNullOrEmpty(path) && path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
-                    dirtyAssets.Add(path);
+                if (string.IsNullOrEmpty(path) || !path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)) continue;
+                // Несохранённое — только то, что пишет SaveAssets: нативные ассеты и настройки импорта.
+                // Объекты импорта (атлас динамического шрифта, шейдер .shader, меш FBX) Unity помечает
+                // заново при работе, а сохранить их нельзя: они лишь перечисляются для диагностики.
+                if (item is AssetImporter || AssetDatabase.IsNativeAsset(item)) dirtyAssets.Add(path);
+                else ignoredAssets.Add(path);
             }
             result.dirty_scenes = dirtyScenes.OrderBy(path => path).ToArray();
             result.dirty_assets = dirtyAssets.OrderBy(path => path).ToArray();
+            result.ignored_dirty_assets = ignoredAssets.Except(dirtyAssets, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(path => path).ToArray();
             result.prefab_stage = prefab == null ? "" : prefab.assetPath;
             BridgeResult setup = SceneSetup();
             result.scenes = setup.scenes;

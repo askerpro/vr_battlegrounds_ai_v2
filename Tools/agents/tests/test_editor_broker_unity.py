@@ -208,6 +208,21 @@ class BridgeInstallTests(unittest.TestCase):
             self.api.install_bridge(self.root, self.state)
         self.assertEqual(source.read_text(), 'foreign source')
 
+    def test_previously_installed_version_is_upgraded_to_template(self):
+        self.ignore()
+        import hashlib
+        self.api.install_bridge(self.root, self.state)
+        source = self.target / 'EditorBrokerBridge.cs'
+        template = source.read_bytes()
+        source.write_bytes(b'// previous managed bridge')
+        relative = self.api.BRIDGE_PATH + '/EditorBrokerBridge.cs'
+        with self.assertRaises(RuntimeError):
+            self.api.install_bridge(self.root, self.state)
+        previous = {relative: hashlib.sha256(b'// previous managed bridge').hexdigest()}
+        result = self.api.install_bridge(self.root, self.state, previous=previous)
+        self.assertEqual(source.read_bytes(), template)
+        self.assertEqual(result['managed_files'][relative], hashlib.sha256(template).hexdigest())
+
 
 if __name__ == '__main__':
     unittest.main()

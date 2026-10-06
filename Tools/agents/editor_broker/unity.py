@@ -128,8 +128,13 @@ class FileUnityAdapter:
         return self._request('restore', setup=setup)
 
 
-def install_bridge(editor_root, state_dir):
-    """Установка только в ignored папку; существующий чужой код не заменяется."""
+def install_bridge(editor_root, state_dir, previous=None):
+    """Установка только в ignored папку; существующий чужой код не заменяется.
+
+    previous — managed_files прежней установки из config брокера: файл обновляется до
+    шаблона, только если на диске ровно эта ранее установленная версия.
+    """
+    previous = previous or {}
     root, state = Path(editor_root).resolve(), Path(state_dir).resolve()
     if state.is_relative_to(root):
         raise ValueError('state_dir должен быть вне переключаемого checkout')
@@ -152,16 +157,30 @@ def install_bridge(editor_root, state_dir):
         for path in target.iterdir():
             if path.name not in (*files, 'bridge-config.json') and not path.name.endswith('.meta'):
                 raise RuntimeError(f'Неизвестный файл локального моста: {path}')
+        upgrades = []
         for name, data in files.items():
             path = target / name
             if path.exists() and path.read_bytes() != data:
-                raise RuntimeError(f'Неизвестная версия локального моста: {path}')
+                relative = str(path.relative_to(root)).replace('\\', '/')
+                if previous.get(relative) != hashlib.sha256(path.read_bytes()).hexdigest():
+                    raise RuntimeError(f'Неизвестная версия локального моста: {path}')
+                upgrades.append(name)
         if config.exists() and json.loads(config.read_text(encoding='utf-8-sig')) != configuration:
             raise RuntimeError('Существующая bridge-config.json принадлежит другой конфигурации')
+    else:
+        upgrades = []
     target.mkdir(parents=True, exist_ok=True)
     for name, data in files.items():
         path = target / name
-        if not path.exists():
+        if name in upgrades:
+            # Целиком: Unity не должен увидеть наполовину записанный исходник.
+            temporary = path.with_name(path.name + '.' + uuid.uuid4().hex + '.tmp')
+            with temporary.open('xb') as stream:
+                stream.write(data)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, path)
+        elif not path.exists():
             with path.open('xb') as stream:
                 stream.write(data)
                 stream.flush()

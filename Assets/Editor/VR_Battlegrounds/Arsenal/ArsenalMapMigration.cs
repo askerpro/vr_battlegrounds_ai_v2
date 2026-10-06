@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Maps;
+using VrBattlegrounds.Maps.Runtime;
 
 namespace VrBattlegrounds.EditorTools
 {
@@ -62,6 +63,9 @@ namespace VrBattlegrounds.EditorTools
                 .Where(w => w.GetComponent<ArsenalEquipmentPoses>() == null).ToArray();
             if (oldWalls.Length == 0) return UpdateLayout(scene);
             if (zones.Length == 0) throw new InvalidOperationException("Нет зоны: " + scene.name);
+            // Карта под MapBootstrap не хранит координатор в сцене: его спавнит сервер при запуске.
+            if (roots.Any(r => r.GetComponentInChildren<MapBootstrap>(true) != null))
+                throw new InvalidOperationException("Карта " + scene.name + " под MapBootstrap: старые стены заменять вручную, координатор в сцену не кладётся.");
             var coordinatorGO = new GameObject("ArsenalEquipmentCoordinator");
             SceneManager.MoveGameObjectToScene(coordinatorGO, scene);
             coordinatorGO.transform.SetParent(MapGameplayHierarchy.GameplayRoot(scene), false);
@@ -171,18 +175,58 @@ namespace VrBattlegrounds.EditorTools
                     go.AddComponent<SpawnZoneBoundaryOpening>();
                 }
             }
-            var coordinator = scene.GetRootGameObjects()
-                .SelectMany(r => r.GetComponentsInChildren<ArsenalBoundaryWall>(true)).Single();
-            foreach (var transform in coordinator.GetComponentsInChildren<Transform>(true)
-                .Where(t => t != coordinator.transform && t.name.StartsWith("ZoneBoundary_", StringComparison.Ordinal)).ToArray())
-                UnityEngine.Object.DestroyImmediate(transform.gameObject);
+            // Сегменты проекции — часть зоны, а не служебного координатора: у карты реестра координатора
+            // в сцене нет (его спавнит MapBootstrap). Прежние сегменты находятся по ссылкам визуала зоны;
+            // старые сегменты под сценовым координатором стендов — по имени, как раньше.
+            foreach (var legacy in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ArsenalBoundaryWall>(true)))
+                foreach (var transform in legacy.GetComponentsInChildren<Transform>(true)
+                    .Where(t => t != legacy.transform && t.name.StartsWith("ZoneBoundary_", StringComparison.Ordinal)).ToArray())
+                    UnityEngine.Object.DestroyImmediate(transform.gameObject);
             foreach (var zone in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<TeamSpawnZone>(true)))
-                BuildBoundary(zone, coordinator.transform);
+            {
+                RemoveBoundarySegments(zone);
+                BuildBoundary(zone);
+            }
             return ArsenalWallOpenings.Apply(scene);
         }
 
-        public static void BuildBoundary(TeamSpawnZone zone, Transform parent)
+        /// <summary>
+        /// Контейнер сегментов проекции границы зоны: в группе базы рядом с TeamSpawnZone, identity,
+        /// вне масштаба зоны и вне служебных объектов. Создаётся только для зоны, у которой есть сегменты.
+        /// </summary>
+        public static Transform BoundaryContainer(TeamSpawnZone zone)
         {
+            Transform group = zone.transform.parent;
+            if (group == null) throw new InvalidOperationException("Зона без группы базы: " + zone.name);
+            if ((group.lossyScale - Vector3.one).sqrMagnitude > 1e-6f)
+                throw new InvalidOperationException("Группа базы " + group.name + " масштабирована: сегменты границы исказятся.");
+            string name = zone.name + ".Boundary";
+            Transform container = group.Find(name);
+            if (container == null)
+            {
+                container = new GameObject(name).transform;
+                container.SetParent(group, false);
+            }
+            container.localPosition = Vector3.zero;
+            container.localRotation = Quaternion.identity;
+            container.localScale = Vector3.one;
+            return container;
+        }
+
+        /// <summary>Удалить сегменты проекции зоны по ссылкам её визуала и опустевший контейнер.</summary>
+        public static void RemoveBoundarySegments(TeamSpawnZone zone)
+        {
+            var visual = zone.GetComponent<SpawnZoneBoundaryVisual>();
+            if (visual != null)
+                foreach (var renderer in visual.Renderers.ToArray())
+                    if (renderer != null) UnityEngine.Object.DestroyImmediate(renderer.gameObject);
+            Transform container = zone.transform.parent != null ? zone.transform.parent.Find(zone.name + ".Boundary") : null;
+            if (container != null && container.childCount == 0) UnityEngine.Object.DestroyImmediate(container.gameObject);
+        }
+
+        public static void BuildBoundary(TeamSpawnZone zone)
+        {
+            Transform parent = null;
             var box = zone.GetComponent<BoxCollider>();
             Vector3 center = box.center;
             Vector3 e = box.size * .5f;
@@ -229,6 +273,7 @@ namespace VrBattlegrounds.EditorTools
                     for (int i = 0; i < count; i++)
                     {
                     var go = new GameObject("ZoneBoundary_" + zone.transform.parent.name + "_" + side + "_" + i);
+                    if (parent == null) parent = BoundaryContainer(zone);
                     go.transform.SetParent(parent, false);
                     go.name += "_" + index++;
                     go.transform.position = start + direction * (span.x + (i + .5f) * width);

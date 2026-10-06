@@ -9,6 +9,9 @@ namespace VrBattlegrounds.Maps
         [SerializeField] private Renderer[] _renderers;
         [SerializeField] private bool _frontFaceOnly;
         public bool FrontFaceOnly => _frontFaceOnly;
+        public TeamSpawnZone Zone => _zone;
+        /// <summary>Сегменты проекции границы — единственный контракт принадлежности, не имена объектов.</summary>
+        public System.Collections.Generic.IReadOnlyList<Renderer> Renderers => _renderers ?? System.Array.Empty<Renderer>();
 
         public void Configure(TeamSpawnZone zone, Renderer[] renderers, bool frontFaceOnly = false)
         { _zone = zone; _renderers = renderers; _frontFaceOnly = frontFaceOnly; }

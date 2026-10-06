@@ -324,14 +324,55 @@ class GitStateTests(unittest.TestCase):
         self.assertEqual(self.index(), before)
         self.assertEqual((self.root / "Assets/a.txt").read_bytes(), b"input-dirty\n")
 
+    def commit_link(self, name, target, message="link"):
+        """Ссылка в дереве без прав на OS symlink: core.symlinks=false, как в worker на Windows."""
+        self.git("config", "core.symlinks", "false")
+        self.write(name, target)
+        oid = self.git("hash-object", "-w", name).decode().strip()
+        self.git("update-index", "--add", "--cacheinfo", "120000," + oid + "," + name)
+        self.git("commit", "-qm", message)
+        return self.gs.head()
+
     def test_modified_git_tree_symlink_is_rejected_without_os_symlink_support(self):
-        oid = self.git("hash-object", "-w", "Assets/a.txt").decode().strip()
-        self.git("update-index", "--add", "--cacheinfo", "120000," + oid + ",Assets/link")
-        self.git("commit", "-qm", "malicious symlink tree")
+        self.commit_link("Assets/link", b"Assets/a.txt")
+        self.write("Assets/link", b"../../outside")
         before = self.index()
         with self.assertRaises(ValueError):
             self.gs.checkpoint(self.state, "bad-tree")
         self.assertEqual(self.index(), before)
+
+    def test_removed_symlink_entry_is_checkpointed(self):
+        parent = self.commit_link("Assets/link", b"Assets/a.txt")
+        (self.root / "Assets/link").unlink()
+        result = self.gs.checkpoint(self.state, "drop-link")
+        self.assertEqual(result["paths"], ["Assets/link"])
+        self.assertEqual(self.git("ls-tree", result["sha"], "Assets/link"), b"")
+        self.assertEqual(self.gs.head(), parent)
+
+    def test_switch_replaces_symlink_with_regular_file(self):
+        linked = self.commit_link("CLAUDE.md", b"AGENTS.md")
+        self.git("rm", "-q", "--cached", "CLAUDE.md")
+        self.write("CLAUDE.md", b"@AGENTS.md\n")
+        self.git("add", "CLAUDE.md")
+        self.git("commit", "-qm", "regular file")
+        regular = self.gs.head()
+        self.git("checkout", "-q", "--detach", linked)
+        self.gs.switch_detached(regular)
+        self.assertEqual(self.gs.head(), regular)
+        self.assertEqual((self.root / "CLAUDE.md").read_bytes(), b"@AGENTS.md\n")
+        self.assertTrue(self.gs.is_clean())
+
+    def test_switch_to_new_or_changed_symlink_is_rejected(self):
+        plain = self.gs.head()
+        linked = self.commit_link("CLAUDE.md", b"AGENTS.md")
+        changed = self.commit_link("CLAUDE.md", b"../outside", "changed link")
+        self.git("checkout", "-q", "--detach", plain)
+        with self.assertRaises(ValueError):
+            self.gs.switch_detached(linked)
+        self.git("checkout", "-q", "--detach", linked)
+        with self.assertRaises(ValueError):
+            self.gs.switch_detached(changed)
+        self.assertEqual(self.gs.head(), linked)
 
     def test_checkpoint_uses_canonical_text_and_clean_crlf_has_no_delta(self):
         self.write(".gitattributes", b"Assets/a.txt text eol=crlf\n")

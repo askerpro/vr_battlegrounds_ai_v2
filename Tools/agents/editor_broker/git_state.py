@@ -105,6 +105,13 @@ class GitState:
                 checked.add(current)
         return name
 
+    @staticmethod
+    def _link_introduced(name, before, after):
+        """Новая или изменённая ссылка в итоговом дереве. Удаление ссылки и замена
+        её обычным файлом безопасны: запись уже не может указать за пределы worktree."""
+        entry = after.get(name)
+        return entry is not None and entry[0] == "120000" and before.get(name) != entry
+
     def _validate_names(self, names, allowed_links=(), physical=True):
         seen = {}
         checked = set()
@@ -143,8 +150,6 @@ class GitState:
         changed = self._changed(parent)
         for name in changed:
             self._path(name)
-            if name in links:
-                raise GitStateError("Изменение существующей ссылки запрещено: " + name)
         if not changed:
             return baseline
         # diff использует stat cache штатного индекса, поэтому неизменённые 26 GB
@@ -172,6 +177,9 @@ class GitState:
                     if stage != "0":
                         raise GitStateError("Неразрешённый конфликт в частном индексе")
                     current[os.fsdecode(name)] = (mode, oid)
+        for name in changed:
+            if self._link_introduced(name, baseline, current):
+                raise GitStateError("Новая или изменённая ссылка запрещена: " + name)
         return current
 
     def _attribute_changes(self, parent, names, index):
@@ -273,8 +281,8 @@ class GitState:
         sha = self._commit(sha)
         current, target = self._tree(self.head()), self._tree(sha)
         for name in self._delta(current, target):
-            if any(tree.get(name, ("",))[0] == "120000" for tree in (current, target)):
-                raise GitStateError("Переключение изменённых ссылок запрещено: " + name)
+            if self._link_introduced(name, current, target):
+                raise GitStateError("Переключение на новую или изменённую ссылку запрещено: " + name)
         if not self.is_clean():
             raise GitStateError("Переключение грязного worktree запрещено")
         # Принятие ранее ignored ассета допустимо только с точным содержимым C.
@@ -308,10 +316,13 @@ class GitState:
     def _matches(self, name, entry, source):
         path = self.root / self._path(name)
         if entry is None:
-            return not path.exists()
+            return not os.path.lexists(path)
+        mode, oid = entry
+        if mode == "120000" and path.is_symlink():
+            target = os.readlink(path).replace("\\", "/")
+            return self._git("hash-object", "--stdin", data=os.fsencode(target)).decode().strip() == oid
         if not path.is_file():
             return False
-        mode, oid = entry
         initial = path.stat()
         actual = self._git("--attr-source=" + source, "hash-object", "--path=" + name,
                            "--stdin", data=path.read_bytes()).decode().strip()
@@ -335,13 +346,14 @@ class GitState:
         local = set()
         for args in (("ls-files", "--cached", "-z"), ("ls-files", "--others", "--exclude-standard", "-z")):
             local.update(os.fsdecode(name) for name in self._git(*args).split(b"\x00") if name)
-        links = {name for name in before.keys() & after.keys()
-                 if before[name] == after[name] and before[name][0] == "120000"}
+        # Неизменённые и заменяемые ссылки могут присутствовать на диске; новые — нет.
+        links = {name for name, entry in before.items() if entry[0] == "120000"
+                 and not self._link_introduced(name, before, after)}
         self._validate_names(set(before) | set(after) | local, links)
         pending = []
         for name in changed:
-            if any(tree.get(name, ("",))[0] == "120000" for tree in (before, after)):
-                raise GitStateError("Доставка изменённых ссылок запрещена: " + name)
+            if self._link_introduced(name, before, after):
+                raise GitStateError("Доставка новой или изменённой ссылки запрещена: " + name)
             if not self._needs_apply(name, before, after, source, target, resumable):
                 continue
             pending.append(name)

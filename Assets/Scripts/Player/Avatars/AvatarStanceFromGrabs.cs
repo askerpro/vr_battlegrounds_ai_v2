@@ -10,8 +10,9 @@ using UltimateXR.Animation.IK;
 namespace VrBattlegrounds.Player.Avatars
 {
     /// <summary>
-    /// Стойка ног аватара по оружию в руках — набор клипов ходьбы <see cref="UxrStandardAvatarController.LegStance"/>
-    /// (ноги из клипов, патч UltimateXR 37): 0 без оружия, 1 пистолет, 2 винтовка; смену сглаживает UltimateXR (~0,25 с).
+    /// Стойка ног аватара — набор клипов ходьбы <see cref="UxrStandardAvatarController.LegStance"/> (ноги из клипов, патч
+    /// UltimateXR 37): 0 без оружия, 1 пистолет, 2 винтовка; смену сглаживает UltimateXR (~0,25 с). По умолчанию — винтовка
+    /// (<see cref="DefaultStance"/>); выбор по оружию в руках сохранён, но пока выключен (<see cref="SelectByGrabs"/>).
     /// Единственная игровая часть ног: остальное (решатель, копия рига, шаги) — в UltimateXR, настройки — раздел «Ноги»
     /// контроллера.
     ///
@@ -27,6 +28,15 @@ namespace VrBattlegrounds.Player.Avatars
     {
         public const float Unarmed = 0f, Pistol = 1f, Rifle = 2f;
 
+        /// <summary>Стойка, пока выбор по оружию выключен, и до первого выбора.</summary>
+        public const float DefaultStance = Rifle;
+
+        /// <summary>
+        /// Выбирать стойку по оружию в руках (<see cref="StanceFor"/>). Пока выключено (2026-10-06): основной и единственный
+        /// используемый набор — винтовка; механизм выбора остаётся для будущих наборов.
+        /// </summary>
+        public static bool SelectByGrabs = false;
+
         [Tooltip("Ставить стойку по оружию в руках. Выкл — стойку задаёт кто-то другой (стенд, отладка).")]
         public bool followGrabs = true;
 
@@ -39,6 +49,7 @@ namespace VrBattlegrounds.Player.Avatars
         {
             _avatar = GetComponent<UxrAvatar>();
             _controller = GetComponent<UxrStandardAvatarController>();
+            if (followGrabs && _controller != null) _controller.LegStance = DefaultStance;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -49,7 +60,14 @@ namespace VrBattlegrounds.Player.Avatars
 
         private void Update()
         {
-            if (!followGrabs || _avatar == null || _controller == null || !UxrGrabManager.HasInstance) return;
+            if (!followGrabs || _avatar == null || _controller == null) return;
+            if (!SelectByGrabs)
+            {
+                _controller.LegStance = DefaultStance;
+                return;
+            }
+
+            if (!UxrGrabManager.HasInstance) return;
 
             Refresh(UxrHandSide.Left, ref _left, ref _leftCategory);
             Refresh(UxrHandSide.Right, ref _right, ref _rightCategory);

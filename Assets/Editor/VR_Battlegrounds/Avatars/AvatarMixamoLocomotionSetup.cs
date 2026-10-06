@@ -36,7 +36,7 @@ namespace VrBattlegrounds.Editor.Avatars
     /// Контроллер собирается с нуля (повторный запуск пересобирает его на месте, GUID тот же): параметры и состояния — контракт
     /// <c>UxrLegLocomotion</c> (<c>Legs_*</c>), покой ⇄ ход по <c>Legs_IsMoving</c>, переход назад — <c>Legs_Stop</c>, маска —
     /// корень, корпус и ноги (<see cref="MaskPath"/>). Стойка — поддерево по <c>Legs_Stance</c>: 0 — без оружия, 1 — пистолет,
-    /// 2 — винтовка. Приседа и сидения нет (упрощение 2026-10-06). Клипы хода — в точках их средней
+    /// 2 — винтовка (по умолчанию; выбор по оружию пока выключен). Приседа и сидения нет (упрощение 2026-10-06). Клипы хода — в точках их средней
     /// скорости (м/с, x — вправо, y — вперёд), смешивание Freeform Directional с покоем в центре.
     /// </para>
     /// </summary>
@@ -700,7 +700,8 @@ namespace VrBattlegrounds.Editor.Avatars
             AddParameter(controller, UxrLegLocomotion.IsMovingParam, AnimatorControllerParameterType.Bool, 0f);
             AddParameter(controller, UxrLegLocomotion.SpeedParam, AnimatorControllerParameterType.Float, 1f);
             AddParameter(controller, UxrLegLocomotion.TurnParam, AnimatorControllerParameterType.Float, 0f);
-            AddParameter(controller, UxrLegLocomotion.StanceParam, AnimatorControllerParameterType.Float, 0f);
+            // Винтовка — стойка по умолчанию (выбор по оружию пока выключен, AvatarStanceFromGrabs.SelectByGrabs).
+            AddParameter(controller, UxrLegLocomotion.StanceParam, AnimatorControllerParameterType.Float, SetRifle);
 
             controller.AddLayer("Legs");
             AnimatorControllerLayer[] layers = controller.layers;

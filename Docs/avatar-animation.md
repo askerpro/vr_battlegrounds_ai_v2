@@ -9,7 +9,9 @@
 
 Верхнюю часть тела ведёт UltimateXR без изменений под ноги: `UxrBodyIK` — таз, позвоночник, шея, голова;
 `UxrArmIKSolver` — руки. Ноги ничего в корпусе не меняют и пишут только кости от бедра вниз.
-`AvatarStanceFromGrabs` задаёт только стойку 0/1/2 по оружию.
+`AvatarStanceFromGrabs` задаёт только стойку (`Legs_Stance`: 0 без оружия, 1 пистолет, 2 винтовка). Сейчас
+основной и единственный используемый набор — **винтовка**: она стойка по умолчанию (`DefaultStance`, значение
+параметра в контроллере), выбор по оружию в руках сохранён, но выключен (`AvatarStanceFromGrabs.SelectByGrabs = false`).
 
 `UxrAnimatedLegs` содержит отдельную невидимую humanoid-копию скелета с Animator. Порядок кадра:
 Animator копии играет клип, root motion копится в `UxrLegRootMotionReceiver`; в стадии PostProcess

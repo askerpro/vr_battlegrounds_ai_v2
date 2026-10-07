@@ -476,10 +476,6 @@ namespace VrBattlegrounds.Weapons
             {
                 if (_quarantine) SuppressedInQuarantine++;
                 else if (TryConsume(Channel.Command, kind)) { }
-                else if (info.Op == WS.LedgerOp.Reconcile && !_ledger.ReadBefore().MagazineMismatch)
-                    // Reconcile без расхождения магазина фиксирует сам SDK: SyncAmmoLeft у FullyAutomatic после отпускания
-                    // спуска или рукояти. Это не решение контроллера и не решение машины.
-                    Count(_byDesign, "Reconcile SDK (Auto, SyncAmmoLeft)");
                 else
                 {
                     bool hadPress = _triggerSensor.Pressed || _triggerSensor.HasPendingPress;
@@ -520,10 +516,9 @@ namespace VrBattlegrounds.Weapons
                 case WS.LedgerOp.Cancel: kind = WS.LedgerCommandKind.Cancel; return true;
                 case WS.LedgerOp.CloseOnly: kind = WS.LedgerCommandKind.CloseOnly; return true;
                 case WS.LedgerOp.EmptyRestAcknowledged: kind = WS.LedgerCommandKind.AckEmptyRest; return true;
-                case WS.LedgerOp.Reconcile: kind = WS.LedgerCommandKind.Reconcile; return true;
                 case WS.LedgerOp.Automation: kind = WS.LedgerCommandKind.RefillForAutomation; return true;
                 case WS.LedgerOp.Shot: kind = WS.LedgerCommandKind.Shoot; return true;
-                default: kind = default; return false; // MagazineChanged фиксирует сам SDK, AmmoAdmission — сервер
+                default: kind = default; return false; // AmmoAdmission фиксирует сервер
             }
         }
 
@@ -725,7 +720,7 @@ namespace VrBattlegrounds.Weapons
 
         private static WS.LedgerView WithoutAdmission(in WS.LedgerView l) =>
             new WS.LedgerView(l.Initialized, l.Chamber, l.ActionOpen, l.CyclePending, l.SlideLocked, l.Faulted, false, l.MagazinePresent,
-                l.MagazineRounds, l.Capacity, l.Revision, l.CycleSequence, l.ExtractedCycle, l.ShotSequence, l.MagazineToken, l.AnchorMagazineToken);
+                l.MagazineRounds, l.Capacity, l.Revision, l.CycleSequence, l.ExtractedCycle, l.ShotSequence, l.MagazineToken, l.CycleMagazineToken);
 
         private static void Count(Dictionary<string, int> counts, string key)
         {

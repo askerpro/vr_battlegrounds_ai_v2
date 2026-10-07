@@ -643,8 +643,8 @@ namespace UltimateXR.Mechanics.Weapons
                     magCollider.enabled = true;
                 }
 
-                if (UsesReadinessLedger(i)) ReadinessMagazineChanged(i);
-                else if (trigger.UseHasReloadedForSemiAndFullAuto)
+                // VR Battlegrounds patch 53: учёт на события гнезда не реагирует — магазин он читает из гнезда.
+                if (!UsesReadinessLedger(i) && trigger.UseHasReloadedForSemiAndFullAuto)
                 {
                     SetTriggerHasReloadedSynced(i, false);
                 }
@@ -674,7 +674,8 @@ namespace UltimateXR.Mechanics.Weapons
                     magCollider.enabled = false;
                 }
 
-                if (UsesReadinessLedger(i)) ReadinessMagazineChanged(i);
+                // VR Battlegrounds patch 53: фиксации нет; M этого магазина с этого момента пишет только учёт (О1).
+                if (UsesReadinessLedger(i)) MarkLedgerStore(e.GrabbableObject);
                 else if (trigger.UseHasReloadedForSemiAndFullAuto)
                 {
                     SetTriggerHasReloadedSynced(i, false);
@@ -785,13 +786,9 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="ammo">The ammo left</param>
         private void SyncAmmoLeft(int triggerIndex, int ammo)
         {
-            // Legacy mag-only reconciliation не может писать в новый магазин opt-in.
-            if (UsesReadinessLedger(triggerIndex))
-            {
-                var state = GetReadinessState(triggerIndex);
-                if (state != null) TryReconcileReadiness(triggerIndex, state.Revision);
-                return;
-            }
+            // VR Battlegrounds patch 53: у ledger-спуска M передают только фиксации учёта — синхронизировать нечего.
+            // Прежний Reconcile здесь поднимался внутри ReleaseObject и в сеть не уходил (форк ревизии, п. 7.1).
+            if (UsesReadinessLedger(triggerIndex)) return;
             BeginSync();
 
             SetAmmoLeft(triggerIndex, ammo);

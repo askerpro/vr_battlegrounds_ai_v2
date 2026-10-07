@@ -1837,3 +1837,60 @@ ID → логический ключ не зависит от порядка с�
 (при отсутствии — этот раздел и diff коммита), затем обратный индекс в `UxrUniqueIdImplementer_1.cs`:
 его в этом patch-файле нет. Сериализация SDK не меняется. Проверить: офлайн-компиляцию,
 EditMode-тесты, `AndroidCompileGate`, уничтожение и повторный спавн оружия/аватара в Play Mode.
+
+## Патч 53: учёт патронника без копий физического состояния (этап C2, 2026-10-07, не принят)
+
+Статус: worktree `claude/shotgun-per-shell`, ждёт проверки в шлеме. Анализ и решения —
+[weapon-ledger-single-source.md](../tasks/weapon-ledger-single-source.md). Пометки в коде: `VR Battlegrounds patch 53`.
+
+### Проблема
+
+Учёт (`UxrFirearmReadinessState`) хранил копию «какой магазин вставлен» (`CurrentMagazine`), хотя её знает гнездо.
+Копию обновляла фиксация `MagazineChanged` из обработчика события гнезда и `Reconcile` из `SyncAmmoLeft` — обе
+внутри синхронизируемого `PlaceObject`/`RemoveObjectFromAnchor`/`ReleaseObject`. Вложенная фиксация не уходит
+в сеть (только верхний уровень), а replay корня её не пересчитывает: у автора ревизия +1, у остальных нет, и все
+следующие фиксации автора отклоняются на сервере и у наблюдателей (выстрел без снаряда и урона). Проба 7.1
+подтвердила это на Herrington: каждая смена магазина и каждое отпускание рукояти. Кроме того, replay флаговых
+операций молча перезаписывал M, а сбой уведомления навсегда блокировал стрельбу (`_readinessFaulted`).
+
+### Решение
+
+Файлы в `Runtime/Scripts/Mechanics/Weapons/`:
+
+- **`UxrFirearmReadinessTypes`** — состояние v3: без `CurrentMagazine`, с `CycleMagazineIdentity` (с каким
+  магазином начат цикл). v2 читается: поле магазина отбрасывается, `ChamberCyclePending=false`. Значения
+  `MagazineChanged`/`Reconcile` не перенумерованы, помечены `[Obsolete]` и отклоняются. Новые DTO:
+  `UxrFirearmReplayDivergence` (данные инцидента), `UxrFirearmLedgerCorrection` + `UxrFirearmMagazineRounds` (поправка).
+- **`UxrFirearmWeapon.Readiness`**:
+  - магазин — всегда гнездо; `IsCyclePendingFor(state, magazineId)` / `IsReadinessCyclePending` — единое правило
+    действительного Pending (цикл начат с магазином, который сейчас в гнезде). Команды автора видят недействительный
+    Pending снятым, следующая фиксация снимает и сохранённый флаг;
+  - `ReadinessMagazineChanged` и `TryReconcileReadiness` удалены;
+  - каждая операция объявляет точную дельту M (`ExpectedRoundsAfter`): 0 — Begin/Extract/Cancel/CloseOnly/EmptyRest,
+    −1 при подаче — Complete/Initialize/Shot, +1 — AmmoAdmission, refill — Automation. У автора несходимость —
+    отказ команды. На replay — значение автора + событие `ReadinessReplayDiverged(DeltaMismatch)`; стрельба не блокируется;
+  - replay проверяет identity, ёмкость и дельту **без** членства в гнезде (не зависит от порядка событий grab-менеджера);
+  - форк ревизии на replay: фиксация не применяется, событие `RevisionFork`. Поправку публикует сервер:
+    `TryPublishLedgerCorrection` → синхронизируемый `ApplyLedgerCorrection` (у публикующего — только проверка, что
+    содержание равно его состоянию; у получателя — запись учёта и M через порт `CanAcceptLedgerCorrection`);
+  - sink (`ApplyReadinessCommit`, `CommitShotSynced`, `CommitAmmoAdmission`, публикация поправки) вне replay отказывает
+    при `UxrStateSyncImplementer.SyncCallDepth > 0` и пишет предупреждение `LogLevelWeapons` (класс Б);
+  - `_readinessFaulted` удалён: сбой уведомления (RoundsChanged/Source) только поднимает `ReadinessFaulted` (В-Л5);
+  - sink пишет учёт и M после всех проверок, бросать может только уведомление (О7).
+- **`UxrFirearmWeapon.AmmoAdmission`** — проверка через общий валидатор с дельтой +1; `TryAcknowledgeFixedAmmoResynchronization`
+  удалён (снимать нечего); снимок fixed store больше не сверяется с копией магазина.
+- **`UxrFirearmWeapon.StateSave`** — без снятия fault при загрузке снимка.
+- **`UxrFirearmWeapon`** — `MagTarget_Placed/Removed` у ledger-спуска не фиксируют учёт (только коллайдер и отметка
+  магазина О1); `SyncAmmoLeft` у ledger-спуска — no-op.
+- **`UxrFirearmMag`** — `IsLedgerStore`: магазин, побывавший в ledger-оружии (запись sink, вставка в гнездо,
+  `TryEnableReadiness`), сеттер `Rounds` бросает, как у fixed store (О1). Флаг не сериализуется.
+
+Игровая сторона: `WeaponLedgerIntegrity` (лог `GameLog.WeaponSystem.Error`, серверная публикация поправки из
+`LateUpdate` контроллера), порт `CanAcceptLedgerCorrection` в `WeaponReadinessController` (сервер — нет, клиент — да),
+исключение «поправку шлёт сервер» в `StateEventAuthority.ShouldSend`. Новых Mirror Cmd/Rpc нет.
+
+### Как повторить при обновлении SDK
+
+Перенести все пункты вместе с патчем 49 и ledger 2026-10-04: по отдельности они возвращают второй источник правды
+о магазине. Проверить: офлайн-компиляцию, `AndroidCompileGate`, пробу `tmp/ledger-probe` (сценарии S0–S8),
+структурные тесты машины, Herrington — смена магазина/отпускание рукояти без фиксаций учёта.

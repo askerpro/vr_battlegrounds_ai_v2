@@ -3,7 +3,7 @@ namespace VrBattlegrounds.Weapons.Core
     /// <summary>Команды учёту SDK. Порт хоста переводит их в <c>Try*</c>-методы <c>UxrFirearmWeapon</c>.</summary>
     public enum LedgerCommandKind
     {
-        Initialize, BeginAction, Extract, CompleteChamber, CloseOnly, AckEmptyRest, Cancel, Reconcile, Shoot,
+        Initialize, BeginAction, Extract, CompleteChamber, CloseOnly, AckEmptyRest, Cancel, Shoot,
         RefillForAutomation, RequestAdmission
     }
 

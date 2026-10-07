@@ -191,6 +191,13 @@ namespace VrBattlegrounds.Weapons
                   .Append("  r").Append(s != null ? s.Revision : 0u);
                 if (weapon.IsAmmoAdmissionPending(0)) sb.Append("  <color=#FFD040>барьер</color>");
                 sb.Append('\n');
+                // Расхождения учёта процесса (C2): дельта M, форк ревизии, поправки. Должно быть пусто.
+                int delta = WeaponLedgerIntegrity.DeltaMismatchTotal, fork = WeaponLedgerIntegrity.ForkTotal,
+                    fixes = WeaponLedgerIntegrity.CorrectionsPublished + WeaponLedgerIntegrity.CorrectionsApplied,
+                    notify = WeaponLedgerIntegrity.NotificationFailures;
+                if (delta + fork + fixes + notify > 0)
+                    sb.Append("<color=#FF5040>учёт: ΔM ").Append(delta).Append("  форк ").Append(fork)
+                      .Append("  попр ").Append(fixes).Append("  увед ").Append(notify).Append("</color>\n");
             }
             else sb.Append("SDK: патроны ").Append(weapon.GetAmmoLeft(0)).Append('/').Append(weapon.GetAmmoCapacity(0)).Append('\n');
 
@@ -234,7 +241,7 @@ namespace VrBattlegrounds.Weapons
         private static string Phase(Panel panel, UxrFirearmWeapon weapon, UxrFirearmReadinessState s)
         {
             if (s == null || !s.ReadinessInitialized) return "Uninit";
-            if (s.ChamberCyclePending) return s.ChamberRound ? "CycleLoaded" : "CycleCleared";
+            if (weapon.IsReadinessCyclePending(0)) return s.ChamberRound ? "CycleLoaded" : "CycleCleared";
             if (s.ActionOpen) return "OpenIdle";
             if (s.ChamberRound) return "Ready";
             if (s.PostShotEmptyAction)

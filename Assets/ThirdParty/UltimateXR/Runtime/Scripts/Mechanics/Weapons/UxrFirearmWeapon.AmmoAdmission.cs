@@ -84,7 +84,7 @@ namespace UltimateXR.Mechanics.Weapons
         }
         private bool CanCommitAmmoAdmission(int triggerIndex) => UsesReadinessLedger(triggerIndex) &&
             !_fixedAmmoSnapshotReading && !IsReadinessReplay && !_readinessCommitting.Contains(triggerIndex) && isActiveAndEnabled && CanUse &&
-            !_readinessFaulted.Contains(triggerIndex) && CanAuthorAmmoAdmission?.Invoke(triggerIndex) == true;
+            CanAuthorAmmoAdmission?.Invoke(triggerIndex) == true;
 
         public UxrAmmoAdmissionOutcome TryAcceptAmmoUnit(int triggerIndex, uint expectedRevision,
             UxrFirearmAmmoUnit unit, ulong requestToken)
@@ -114,14 +114,12 @@ namespace UltimateXR.Mechanics.Weapons
             if (commit == null || commit.Operation != UxrFirearmReadinessOperation.AmmoAdmission ||
                 admission.Unit == null || admission.UnitIdentity == Guid.Empty || admission.RequestToken == 0 ||
                 admission.Unit.UniqueId != admission.UnitIdentity || admission.Unit.HasBeenConsumed ||
-                !ValidateReadinessCommit(commit)) return UxrAmmoAdmissionOutcome.Rejected;
-            var before = GetReadinessState(commit.TriggerIndex);
-            var store = GetFixedAmmoStore(commit.TriggerIndex);
-            if (before?.ReadinessInitialized != true || store == null || before.Revision == uint.MaxValue ||
-                before.CurrentMagazine != commit.ReferencedMagazine || commit.MagazineRoundsAfter != store.Rounds + 1)
-                return UxrAmmoAdmissionOutcome.Rejected;
-            var expected = (UxrFirearmReadinessState)before.Clone(); expected.Revision = commit.NextRevision;
-            if (!expected.Equals(commit.StateAfter)) return UxrAmmoAdmissionOutcome.Rejected;
+                IsNestedLedgerCommand(nameof(CommitAmmoAdmission))) return UxrAmmoAdmissionOutcome.Rejected;
+            // VR Battlegrounds patch 53: состояние и дельта M (+1) проверяет ValidateReadinessCommit; магазин автора —
+            // гнездо, на replay — identity и привязка fixed store без членства в гнезде.
+            if (!ValidateReadinessCommit(commit, out var divergence)) { RaiseReplayDivergence(divergence); return UxrAmmoAdmissionOutcome.Rejected; }
+            var store = commit.ReferencedMagazine.GetComponent<UxrFirearmMag>();
+            if (!IsReadinessReplay && GetFixedAmmoStore(commit.TriggerIndex) != store) return UxrAmmoAdmissionOutcome.Rejected;
 
             bool endAttempted = false, committed = false;
             Exception failure = null;
@@ -145,25 +143,15 @@ namespace UltimateXR.Mechanics.Weapons
             catch (Exception exception) { failure = failure == null ? exception : new AggregateException(failure, exception); }
             finally { if (!endAttempted) CancelSync(); _readinessCommitting.Remove(commit.TriggerIndex); }
             if (!committed) return UxrAmmoAdmissionOutcome.Rejected;
+            RaiseReplayDivergence(divergence);
             if (failure != null)
             {
-                _readinessFaulted.Add(commit.TriggerIndex);
+                // Patch 53 (В-Л5): приём зафиксирован, стрельба не блокируется; сервер пересылает снимок наблюдателям.
                 try { AmmoAdmissionFaulted?.Invoke(commit.TriggerIndex, admission.RequestToken, failure); } catch { }
-                try { ReadinessFaulted?.Invoke(commit.TriggerIndex, UxrFirearmShotEmissionOutcome.NotEmitted, failure); } catch { }
+                ReportReadinessFault(commit.TriggerIndex, UxrFirearmShotEmissionOutcome.NotEmitted, failure);
                 return UxrAmmoAdmissionOutcome.CommittedWithNotificationFailure;
             }
             return UxrAmmoAdmissionOutcome.Committed;
-        }
-
-        // ACK подтверждённой snapshot publication снимает только local fault metadata, не пишет ammo.
-        // Порт CanAuthorAmmoAdmission здесь не годится: он описывает текущий запрос, а после фиксации
-        // гильза уже consumed и запрос невалиден — fault не снимался бы никогда. Достаточно привязанного receiver.
-        public bool TryAcknowledgeFixedAmmoResynchronization(int triggerIndex, uint revision)
-        {
-            var state = GetReadinessState(triggerIndex); var store = GetFixedAmmoStore(triggerIndex);
-            if (IsReadinessReplay || CanAuthorAmmoAdmission == null || state?.Revision != revision ||
-                store == null || store.Rounds + (state.ChamberRound ? 1 : 0) > store.Capacity) return false;
-            return _readinessFaulted.Remove(triggerIndex);
         }
 
         private UxrFixedAmmoSnapshot[] CaptureFixedAmmoSnapshots()
@@ -192,7 +180,6 @@ namespace UltimateXR.Mechanics.Weapons
                     !snapshot.Store.IsFixedStoreBindingValid(this, snapshot.TriggerIndex) || !snapshot.Store.IsFixedAmmoStore ||
                     GetBoundFixedAmmoStore(snapshot.TriggerIndex) != snapshot.Store ||
                     !prospective.TryGetValue(snapshot.TriggerIndex, out var runtime) || runtime == null ||
-                    (runtime.Readiness != null && runtime.Readiness.CurrentMagazine != snapshot.Store.GetComponent<UxrGrabbableObject>()) ||
                     snapshot.Rounds < 0 || snapshot.Rounds + (runtime.Readiness?.ChamberRound == true ? 1 : 0) > snapshot.Store.Capacity) return false;
             }
             return true;

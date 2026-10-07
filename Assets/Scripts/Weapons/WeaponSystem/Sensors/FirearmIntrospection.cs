@@ -5,8 +5,8 @@ using UltimateXR.Mechanics.Weapons;
 namespace VrBattlegrounds.Weapons.Sensors
 {
     /// <summary>
-    /// Чтение закрытых полей SDK-спуска, у которых нет публичного доступа: режим огня, темп, таймер темпа,
-    /// флаг сбоя учёта. Только чтение и только для теневого режима этапа C (редактор): правка SDK ради
+    /// Чтение закрытых полей SDK-спуска, у которых нет публичного доступа: режим огня, темп, таймер темпа.
+    /// Только чтение и только для теневого режима этапа C (редактор): правка SDK ради
     /// диагностики запрещена границами этапа. На этапе D значения придут через порт учёта.
     /// Если поле SDK переименовано, <see cref="IsAvailable"/> = false и тень не включается.
     /// </summary>
@@ -15,10 +15,9 @@ namespace VrBattlegrounds.Weapons.Sensors
         private const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
         private static readonly FieldInfo Triggers = typeof(UxrFirearmWeapon).GetField("_triggers", Flags);
         private static readonly FieldInfo Runtime = typeof(UxrFirearmWeapon).GetField("_runtimeTriggers", Flags);
-        private static readonly FieldInfo Faulted = typeof(UxrFirearmWeapon).GetField("_readinessFaulted", Flags);
         private static PropertyInfo s_lastShotTimer;
 
-        public static bool IsAvailable => Triggers != null && Runtime != null && Faulted != null;
+        public static bool IsAvailable => Triggers != null && Runtime != null;
 
         /// <summary>Режим огня и темп спуска (<c>UxrFirearmTrigger.CycleType/MaxShotFrequency</c>).</summary>
         public static bool TryGetTriggerCycle(UxrFirearmWeapon weapon, int index, out UxrShotCycle cycle, out int maxFrequency)
@@ -45,8 +44,5 @@ namespace VrBattlegrounds.Weapons.Sensors
             return s_lastShotTimer != null ? (float)s_lastShotTimer.GetValue(info) : 0f;
         }
 
-        /// <summary>Учёт спуска в сбое (до resync SDK отклоняет все команды).</summary>
-        public static bool IsReadinessFaulted(UxrFirearmWeapon weapon, int index) =>
-            weapon != null && Faulted?.GetValue(weapon) is System.Collections.Generic.HashSet<int> set && set.Contains(index);
     }
 }

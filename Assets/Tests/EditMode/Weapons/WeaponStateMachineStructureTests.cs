@@ -305,14 +305,14 @@ namespace VrBattlegrounds.Tests.Weapons
             list.Add(WeaponEvent.Tick(LongTick));
             list.Add(WeaponEvent.Offered(7));
             list.Add(WeaponEvent.RejectedCommand(LedgerCommandKind.CompleteChamber));
-            list.Add(WeaponEvent.RejectedCommand(LedgerCommandKind.Reconcile));
+            list.Add(WeaponEvent.RejectedCommand(LedgerCommandKind.Cancel));
             list.Add(WeaponEvent.Committed(LedgerOp.Shot, true, true));
             list.Add(WeaponEvent.Committed(LedgerOp.Shot, true, false));
             list.Add(WeaponEvent.Committed(LedgerOp.Extract, true, false));
             list.Add(WeaponEvent.Committed(LedgerOp.Complete, false, true));
             list.Add(WeaponEvent.Committed(LedgerOp.CloseOnly, true, true));
             list.Add(WeaponEvent.Committed(LedgerOp.BeginAction, false, false));
-            list.Add(WeaponEvent.Committed(LedgerOp.MagazineChanged, false, false));
+            list.Add(WeaponEvent.Committed(LedgerOp.Cancel, false, false));
             return list.ToArray();
         }
 
@@ -323,16 +323,18 @@ namespace VrBattlegrounds.Tests.Weapons
             {
                 new LedgerView(),
                 new LedgerView(initialized: true, faulted: true, chamber: true, magazinePresent: true, magazineRounds: 2, capacity: 5,
-                    magazineToken: 1, anchorMagazineToken: 1),
+                    magazineToken: 1),
             };
             foreach (int rounds in new[] { -1, 0, 2 })
             {
                 bool present = rounds >= 0;
                 int token = present ? 1 : 0, count = Math.Max(rounds, 0);
+                // C2: pending — уже действительный Pending (хост выводит его из гнезда); магазин цикла по умолчанию —
+                // магазин в гнезде при Pending и «нет» без него.
                 LedgerView V(bool chamber, bool open, bool pending, bool locked, uint cycle = 1, uint extracted = 0, bool admission = false,
-                    int anchor = -1) =>
+                    int cycleMagazine = -1) =>
                     new LedgerView(true, chamber, open, pending, locked, false, admission, present, count, 5, 10, cycle, extracted, 3,
-                        token, anchor < 0 ? token : anchor);
+                        token, cycleMagazine >= 0 ? cycleMagazine : pending ? token : 0);
                 list.Add(V(true, false, false, false));                  // Ready
                 list.Add(V(false, false, false, false));                 // Empty
                 list.Add(V(false, false, false, true));                  // HoldOpen / EmptyAwaitRest
@@ -345,7 +347,7 @@ namespace VrBattlegrounds.Tests.Weapons
                 {
                     list.Add(V(true, false, false, false, admission: true));   // барьер приёма
                     list.Add(V(false, true, true, false, cycle: 2, extracted: 2, admission: true));
-                    list.Add(V(false, false, false, false, anchor: 2));        // магазин учёта ≠ магазин в гнезде
+                    list.Add(V(false, true, false, false, cycleMagazine: 2));  // цикл начат с другим магазином: Pending недействителен
                 }
             }
             return list.ToArray();

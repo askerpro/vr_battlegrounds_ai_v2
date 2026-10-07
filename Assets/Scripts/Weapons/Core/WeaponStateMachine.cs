@@ -298,9 +298,9 @@ namespace VrBattlegrounds.Weapons.Core
         internal bool AutoOrigin => IsAutomatic(_origin);
         internal bool CanBegin => L.CycleSequence != uint.MaxValue;
 
-        /// <summary>Цикл в учёте — тот, который начала эта машина, на том же магазине (И12).</summary>
+        /// <summary>Цикл в учёте — тот, который начала эта машина, на том же магазине (И12; C2: магазин цикла — из учёта).</summary>
         internal bool OwnsCurrentCycle => _origin != ChamberOrigin.None && L.CyclePending &&
-                                          L.CycleSequence == _cycleSeqOwned && L.MagazineToken == _expectedMagazine;
+                                          L.CycleSequence == _cycleSeqOwned && L.CycleMagazineToken == _expectedMagazine;
 
         internal bool MovedRear => S.HandleProgress > _baseline + _axes.Epsilon && S.HandleProgress > _axes.Epsilon;
         internal bool MovedForwardFromRetained => S.HandleProgress < _baseline - _axes.Epsilon &&
@@ -340,17 +340,16 @@ namespace VrBattlegrounds.Weapons.Core
             if (kind != LedgerCommandKind.RequestAdmission) _revision++;
         }
 
-        internal void Initialize() => Emit(LedgerCommandKind.Initialize, magazine: L.AnchorMagazineToken);
-        internal void Reconcile() => Emit(LedgerCommandKind.Reconcile);
+        internal void Initialize() => Emit(LedgerCommandKind.Initialize, magazine: L.MagazineToken);
         internal void Cancel() => Emit(LedgerCommandKind.Cancel);
-        internal void CloseOnly() => Emit(LedgerCommandKind.CloseOnly, magazine: L.AnchorMagazineToken);
-        internal void AckEmptyRest() => Emit(LedgerCommandKind.AckEmptyRest, magazine: L.AnchorMagazineToken);
-        internal void Refill() => Emit(LedgerCommandKind.RefillForAutomation, magazine: L.AnchorMagazineToken);
+        internal void CloseOnly() => Emit(LedgerCommandKind.CloseOnly, magazine: L.MagazineToken);
+        internal void AckEmptyRest() => Emit(LedgerCommandKind.AckEmptyRest, magazine: L.MagazineToken);
+        internal void Refill() => Emit(LedgerCommandKind.RefillForAutomation, magazine: L.MagazineToken);
         internal void RequestAdmission() => Emit(LedgerCommandKind.RequestAdmission, token: E.Token);
 
         internal void Shoot()
         {
-            Emit(LedgerCommandKind.Shoot, magazine: L.AnchorMagazineToken);
+            Emit(LedgerCommandKind.Shoot, magazine: L.MagazineToken);
             _episode = TriggerEpisode.Firing;
         }
 
@@ -358,7 +357,7 @@ namespace VrBattlegrounds.Weapons.Core
         private void Begin(ChamberOrigin origin)
         {
             uint seq = L.CycleSequence + 1;
-            _origin = origin; _cycleSeqOwned = seq; _expectedMagazine = L.AnchorMagazineToken;
+            _origin = origin; _cycleSeqOwned = seq; _expectedMagazine = L.MagazineToken;
             _gatePassed = false; _openedRear = false; _lastProgress = S.HandleProgress;
             Emit(LedgerCommandKind.BeginAction, seq, _expectedMagazine);
         }
@@ -434,7 +433,7 @@ namespace VrBattlegrounds.Weapons.Core
         internal void CancelAndClose()
         {
             Emit(LedgerCommandKind.Cancel);
-            Emit(LedgerCommandKind.CloseOnly, magazine: L.AnchorMagazineToken);
+            Emit(LedgerCommandKind.CloseOnly, magazine: L.MagazineToken);
             AfterCycleClosed();
         }
 
@@ -452,13 +451,11 @@ namespace VrBattlegrounds.Weapons.Core
             ResetGesture();
         }
 
-        /// <summary>T35: учёт отклонил команду. Жест сгорает (повтора нет); магазин учёта сверяется.</summary>
+        /// <summary>T35: учёт отклонил команду. Жест сгорает (повтора нет). Сверки нет: магазин учёт не хранит (C2).</summary>
         internal void OnCommandRejected()
         {
             _out.Report(new WeaponReport(WeaponReportKind.CommandRejected, _row.Id, E.Rejected));
             ResetGesture();
-            if (E.Rejected != LedgerCommandKind.Reconcile && L.Initialized && !L.Faulted && !L.AdmissionPending && L.MagazineMismatch)
-                Reconcile();
         }
 
         /// <summary>T15s: отложенная вставка (не было контекста) применяется, если магазин тот же.</summary>
@@ -466,14 +463,14 @@ namespace VrBattlegrounds.Weapons.Core
         {
             int magazine = _deferredInsert;
             _deferredInsert = 0;
-            if (magazine != L.AnchorMagazineToken || !InsertChambers || !CanBegin) return;
+            if (magazine != L.MagazineToken || !InsertChambers || !CanBegin) return;
             if ((WeaponMechanism.Bit(M) & MechanismSet.EmptyLike) != 0) BeginInsert();
             else if (M == MechanismState.OpenIdle && !L.Chamber) BeginInsertFromOpen();
         }
 
         // ---------- Действия строк: локальные регионы ----------
 
-        internal void DeferInsert() => _deferredInsert = L.AnchorMagazineToken;
+        internal void DeferInsert() => _deferredInsert = L.MagazineToken;
 
         internal void Contact()
         {

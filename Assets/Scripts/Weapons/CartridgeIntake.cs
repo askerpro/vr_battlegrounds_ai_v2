@@ -130,10 +130,7 @@ namespace VrBattlegrounds.Weapons
             {
                 CompleteRetirements();
                 if (_needsAllPeerResync && NetworkStateRelay.Instance != null && NetworkStateRelay.Instance.ServerResynchronizeAmmoAdmissionPeers())
-                {
-                    _needsAllPeerResync = false;
-                    _weapon.TryAcknowledgeFixedAmmoResynchronization(_triggerIndex, _weapon.GetReadinessState(_triggerIndex).Revision);
-                }
+                    _needsAllPeerResync = false; // C2 (В-Л5): сбой уведомления не блокирует учёт, снимать нечего.
                 if (_serverRequest != null) ProcessServerRequest();
             }
             if (_localToken != 0)
@@ -206,7 +203,6 @@ namespace VrBattlegrounds.Weapons
                     {
                         published = NetworkStateRelay.Instance != null && NetworkStateRelay.Instance.ServerResynchronizeAmmoAdmissionPeers();
                         _needsAllPeerResync = !published;
-                        if (published) _weapon.TryAcknowledgeFixedAmmoResynchronization(_triggerIndex, _weapon.GetReadinessState(_triggerIndex).Revision);
                     }
                 }
                 finally { publication?.Dispose(); _processing = false; }

@@ -48,6 +48,7 @@ namespace VrBattlegrounds.Weapons
         private WeaponChamberPolicy _policy;
         private WeaponEmptyPose _emptyPose;
         private WeaponPhysicalCapability _physical;
+        private WeaponLedgerIntegrity _integrity;
 
         public bool IsConfigured => _configured;
         public WeaponReadinessProfile Profile => _profile;
@@ -71,7 +72,7 @@ namespace VrBattlegrounds.Weapons
                     _cycleActive || _emptyReturn || _weapon == null) return false;
                 UxrFirearmReadinessState state = _weapon.GetReadinessState(_triggerIndex);
                 return state != null && state.ReadinessInitialized && state.PostShotEmptyAction &&
-                       !state.ChamberRound && !state.ActionOpen && !state.ChamberCyclePending;
+                       !state.ChamberRound && !state.ActionOpen && !CyclePending(state);
             }
         }
         public bool IsActionAtRest => IsPhysicallyClosed();
@@ -217,7 +218,8 @@ namespace VrBattlegrounds.Weapons
                 (_weapon.ValidateChamberCompletion != null && _weapon.ValidateChamberCompletion.Target != this) ||
                 (_weapon.ValidatePhysicalActionClosed != null && _weapon.ValidatePhysicalActionClosed.Target != this) ||
                 (_weapon.ValidatePostShotEmptyActionRest != null && _weapon.ValidatePostShotEmptyActionRest.Target != this) ||
-                (_weapon.CanPrepareReadinessForAutomation != null && _weapon.CanPrepareReadinessForAutomation.Target != this))
+                (_weapon.CanPrepareReadinessForAutomation != null && _weapon.CanPrepareReadinessForAutomation.Target != this) ||
+                (_weapon.CanAcceptLedgerCorrection != null && _weapon.CanAcceptLedgerCorrection.Target != this))
             { error = "SDK ports уже принадлежат другому adapter."; return false; }
             _emptyReturn = false; _driver.Cancel();
             CancelPendingCycle();
@@ -234,6 +236,10 @@ namespace VrBattlegrounds.Weapons
             _weapon.ValidatePhysicalActionClosed = ValidatePhysicalActionClosed;
             _weapon.ValidatePostShotEmptyActionRest = ValidatePostShotEmptyActionRest;
             _weapon.CanPrepareReadinessForAutomation = ValidateAutomationCapability;
+            _weapon.CanAcceptLedgerCorrection = CanAcceptLedgerCorrection;
+            // Наблюдатель целостности учёта: лог расхождений и серверная поправка при форке (п. 3a). Один на ствол.
+            if (_integrity == null) _integrity = new WeaponLedgerIntegrity(_weapon, this);
+            _integrity.Attach();
             _weapon.StateChanged -= HandleAutomationStateChanged;
             _weapon.StateChanged += HandleAutomationStateChanged;
             // Query-only dependency port. Единственный trigger episode owner появится на этапе3.
@@ -253,6 +259,9 @@ namespace VrBattlegrounds.Weapons
             ConfiguredAny?.Invoke(this);
             return true;
         }
+
+        // Поправку учёта из сети принимает только клиент: сервер — арбитр порядка и сам её публикует (п. 3a, В-Л6).
+        private bool CanAcceptLedgerCorrection(int trigger) => trigger == _triggerIndex && _configured && !Mirror.NetworkServer.active;
 
         private bool CanAuthor(int trigger) => trigger == _triggerIndex && _configured && (isActiveAndEnabled || _tearingDown) &&
             IsPhysicalConfigurationCurrent() && (!UxrManager.HasInstance || !UxrManager.Instance.IsInsideStateSync) && StateEventAuthority.IsAuthorOfItem(_weapon);
@@ -302,6 +311,17 @@ namespace VrBattlegrounds.Weapons
             UxrGrabbableObject magazine = anchor.CurrentPlacedObject;
             return magazine != null && magazine.CurrentAnchor == anchor && anchor.IsCompatibleObject(magazine) &&
                 magazine.GetComponent<UxrFirearmMag>() != null ? magazine : null;
+        }
+
+        /// <summary>
+        /// Действительный Pending: цикл начат с магазином, который сейчас в гнезде (C2, SDK-патч 53). Учёт магазин не
+        /// хранит, поэтому смена магазина посреди цикла снимает его выводом, без фиксации. Сохранённый флаг
+        /// (<c>state.ChamberCyclePending</c>) читается только там, где его нужно снять командой Cancel.
+        /// </summary>
+        private bool CyclePending(UxrFirearmReadinessState state)
+        {
+            UxrGrabbableObject magazine = CurrentMagazine(out _);
+            return UxrFirearmWeapon.IsCyclePendingFor(state, magazine != null ? magazine.UniqueId : Guid.Empty);
         }
 
         private void HandleGrabbing(object sender, UxrManipulationEventArgs args)
@@ -366,6 +386,8 @@ namespace VrBattlegrounds.Weapons
         private void LateUpdate()
         {
             if (!_configured) return;
+            // Поправка сервера после форка ревизии — вне replay, с верхнего уровня (иначе не уйдёт в сеть).
+            _integrity?.PublishPendingCorrection();
             RefreshSavedEmptyPresentation();
             RefreshPhysicalActionState(_triggerIndex);
             if (_physical == WeaponPhysicalCapability.NoAction) return;
@@ -409,7 +431,7 @@ namespace VrBattlegrounds.Weapons
             if (!_configured || _visuals == null || _cycleActive || _emptyReturn || _feedback.IsActionHeld ||
                 !IsPhysicalConfigurationCurrent()) return;
             var state = _weapon.GetReadinessState(_triggerIndex);
-            if (state == null || !state.PostShotEmptyAction || state.ActionOpen || state.ChamberCyclePending) return;
+            if (state == null || !state.PostShotEmptyAction || state.ActionOpen || CyclePending(state)) return;
             if (sourceHoldEnd)
             {
                 if (!_visuals.RestoreSavedEmptyPresentation(true, _validatedEmptyRearTime, _requiredBindings, _feedback.PhysicalPositionEpsilon)) return;
@@ -462,6 +484,7 @@ namespace VrBattlegrounds.Weapons
             if (_weapon != null) _weapon.StateChanged -= HandleAutomationStateChanged;
             if (_weapon != null && ReferenceEquals(_weapon.CanPrepareReadinessForAutomation?.Target, this))
                 _weapon.CanPrepareReadinessForAutomation = null;
+            _integrity?.Detach();
             _tearingDown = true;
             try { CancelPendingCycle(); }
             finally { _tearingDown = false; }
@@ -525,15 +548,7 @@ namespace VrBattlegrounds.Weapons
                 CancelPendingCycle();
                 state = _weapon.GetReadinessState(trigger);
             }
-            if (state.CurrentMagazine != magazine)
-            {
-                _commandInFlight = true;
-                try { _weapon.TryReconcileReadiness(trigger, state.Revision); }
-                finally { _commandInFlight = false; }
-                state = _weapon.GetReadinessState(trigger);
-                if (state.CurrentMagazine != magazine) return;
-            }
-            if (!_cycleActive && state.ActionOpen && !state.ChamberCyclePending && IsPhysicallyClosed())
+            if (!_cycleActive && state.ActionOpen && !CyclePending(state) && IsPhysicallyClosed())
             {
                 CompleteOwnedCycle(ChamberCompletionKind.CloseOnly);
                 state = _weapon.GetReadinessState(trigger);
@@ -679,19 +694,20 @@ namespace VrBattlegrounds.Weapons
                 !HasContext(out _) || !IsPhysicallyClosed()) return false;
             UxrFirearmReadinessState state = _weapon.GetReadinessState(trigger);
             UxrGrabbableObject current = CurrentMagazine(out UxrGrabbableObjectAnchor anchor);
+            bool pending = CyclePending(state);
             return state?.ReadinessInitialized == true && state.Revision == revision &&
-                   state.CycleSequence == _reserved.CycleSequence && state.CurrentMagazine == magazine &&
+                   state.CycleSequence == _reserved.CycleSequence &&
                    current == magazine && anchor == _reserved.Anchor &&
-                   (kind == ChamberCompletionKind.Chamber ? state.ChamberCyclePending :
-                    kind == ChamberCompletionKind.CloseOnly ? state.ActionOpen && !state.ChamberCyclePending :
-                    kind == ChamberCompletionKind.Automation ? !state.ChamberRound && !state.ActionOpen && !state.ChamberCyclePending &&
+                   (kind == ChamberCompletionKind.Chamber ? pending :
+                    kind == ChamberCompletionKind.CloseOnly ? state.ActionOpen && !pending :
+                    kind == ChamberCompletionKind.Automation ? !state.ChamberRound && !state.ActionOpen && !pending &&
                         IsAutomationCorrelationCurrent(state, out _) && magazine != null :
-                    state.PostShotEmptyAction && !state.ChamberRound && !state.ActionOpen && !state.ChamberCyclePending && HasServicedEmptyRest(state));
+                    state.PostShotEmptyAction && !state.ChamberRound && !state.ActionOpen && !pending && HasServicedEmptyRest(state));
         }
 
         private bool HasServicedEmptyRest(UxrFirearmReadinessState state)
         {
-            if (state == null || !state.PostShotEmptyAction || state.ChamberRound || state.ActionOpen || state.ChamberCyclePending) return false;
+            if (state == null || !state.PostShotEmptyAction || state.ChamberRound || state.ActionOpen || CyclePending(state)) return false;
             // NoAction preflight доказал отсутствие Action targets/work; immediate service
             // даёт только stack evidence, independent cosmetic Source не блокируется.
             return _physical == WeaponPhysicalCapability.NoAction ? IsPhysicalConfigurationCurrent() :
@@ -703,7 +719,7 @@ namespace VrBattlegrounds.Weapons
             if (_commandInFlight || !HasContext(out _) || !IsPhysicallyClosed()) return false;
             UxrFirearmReadinessState before = _weapon.GetReadinessState(_triggerIndex);
             UxrGrabbableObject magazine = CurrentMagazine(out UxrGrabbableObjectAnchor anchor);
-            if (before?.ReadinessInitialized != true || before.CurrentMagazine != magazine) return false;
+            if (before?.ReadinessInitialized != true) return false;
             if (kind == ChamberCompletionKind.EmptyRest && !HasServicedEmptyRest(before)) return false;
             if (kind == ChamberCompletionKind.Chamber &&
                 (!_cycleActive || before.Revision != _expectedRevision || before.CycleSequence != _cycleSequence ||
@@ -733,7 +749,7 @@ namespace VrBattlegrounds.Weapons
                 UxrFirearmReadinessState after = _weapon.GetReadinessState(_triggerIndex);
                 if (after != null && after.Revision == before.Revision + 1 &&
                     after.ShotSequence == before.ShotSequence && after.CycleSequence == before.CycleSequence &&
-                    after.CurrentMagazine == before.CurrentMagazine && !after.PostShotEmptyAction &&
+                    CurrentMagazine(out _) == magazine && !after.PostShotEmptyAction &&
                     after.ChamberRound == before.ChamberRound && !after.ActionOpen && !after.ChamberCyclePending)
                     CaptureAutomationCorrelation(after, ackHand);
                 else ClearAutomationCorrelation();
@@ -756,7 +772,7 @@ namespace VrBattlegrounds.Weapons
         {
             ClearAutomationCorrelation();
             UxrGrabbableObject magazine = CurrentMagazine(out UxrGrabbableObjectAnchor anchor);
-            if (state?.ReadinessInitialized != true || hand == null || state.CurrentMagazine != magazine) return;
+            if (state?.ReadinessInitialized != true || hand == null) return;
             _automationRevision = state.Revision; _automationCycle = state.CycleSequence;
             _automationShot = state.ShotSequence; _automationMagazine = magazine;
             _automationAnchor = anchor; _automationHand = hand; _hasAutomationCorrelation = true;
@@ -769,7 +785,7 @@ namespace VrBattlegrounds.Weapons
             UxrGrabbableObject magazine = CurrentMagazine(out UxrGrabbableObjectAnchor anchor);
             return hand == _automationHand && state.Revision == _automationRevision &&
                 state.CycleSequence == _automationCycle && state.ShotSequence == _automationShot &&
-                state.CurrentMagazine == _automationMagazine && magazine == _automationMagazine &&
+                magazine == _automationMagazine &&
                 anchor == _automationAnchor;
         }
 
@@ -792,7 +808,7 @@ namespace VrBattlegrounds.Weapons
                 !HasContext(out UxrGrabber hand)) return;
             UxrFirearmReadinessState current = _weapon.GetReadinessState(_triggerIndex);
             if (current == null || commit.StateAfter == null || !current.Equals(commit.StateAfter) ||
-                current.Revision != commit.NextRevision || current.CurrentMagazine != commit.ReferencedMagazine ||
+                current.Revision != commit.NextRevision || CurrentMagazine(out _) != commit.ReferencedMagazine ||
                 _weapon.GetMagazineRounds(_triggerIndex) != commit.MagazineRoundsAfter) return;
             CaptureAutomationCorrelation(current, hand);
         }
@@ -812,7 +828,7 @@ namespace VrBattlegrounds.Weapons
             if (_weapon.IsReadyToFire(_triggerIndex)) return true;
             UxrFirearmReadinessState state = _weapon.GetReadinessState(_triggerIndex);
             if (!IsAutomationCorrelationCurrent(state, out _) || state.ActionOpen ||
-                state.ChamberCyclePending || _cycleActive || state.ChamberRound)
+                CyclePending(state) || _cycleActive || state.ChamberRound)
             { ClearAutomationCorrelation(); return false; }
             UxrGrabbableObject magazine = CurrentMagazine(out UxrGrabbableObjectAnchor anchor);
             if (magazine == null || magazine.GetComponent<UxrFirearmMag>().Capacity <= 0) return false;
@@ -836,7 +852,7 @@ namespace VrBattlegrounds.Weapons
                 state = _weapon.GetReadinessState(_triggerIndex);
             }
             if (!IsAutomationCorrelationCurrent(state, out _) || !IsPhysicallyClosed() ||
-                state.ActionOpen || state.ChamberCyclePending) return false;
+                state.ActionOpen || CyclePending(state)) return false;
             _reserved = new ChamberCompletionEvidence(_triggerIndex, state.Revision, state.CycleSequence,
                 magazine, anchor, ChamberCompletionKind.Automation);
             _hasReserved = true; _commandInFlight = true;

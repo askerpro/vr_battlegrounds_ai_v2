@@ -138,7 +138,7 @@ public enum WeaponEventKind { Configured, SnapshotLoaded, LedgerCommitted, Comma
     HandleGrabbed, HandleReleased, MagazineChanged, TriggerPressed, TriggerHeld, TriggerReleased,
     ContextLost, AuthorityChanged, CartridgeOffered, AdmissionResolved, AutomationPrepareRequested, Disabled }
 public readonly struct WeaponEvent { WeaponEventKind Kind; LedgerOp Op; /*для LedgerCommitted*/ bool OpChamberBefore, OpChamberAfter; float Dt; int Token; }
-public enum LedgerCommandKind { Initialize, BeginAction, Extract, CompleteChamber, CloseOnly, AckEmptyRest, Cancel, Reconcile, Shoot, RefillForAutomation, RequestAdmission }
+public enum LedgerCommandKind { Initialize, BeginAction, Extract, CompleteChamber, CloseOnly, AckEmptyRest, Cancel, Shoot, RefillForAutomation, RequestAdmission }  // Reconcile удалён на этапе C2
 public readonly struct LedgerCommand { LedgerCommandKind Kind; uint ExpectedRevision, CycleSequence; int ExpectedMagazineToken; }
 public enum WeaponCue { ActionBack, ActionForwardChambered, ActionForwardEmpty, ChamberEjected, SlideLockCatch, DryFire }  // нет Insert/Shot — у них другие владельцы
 public readonly struct PoseTarget { PosePresentation Kind; float ClipTime; float ReturnSpeed; }
@@ -307,7 +307,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | T32 | CycleLoaded, CycleCleared | ContextLost / AuthorityChanged | `Cancel` (если ещё автор); Gesture=None | OpenIdle |
 | T33 | Gesture≠None | LedgerCommitted чужой фиксации [CycleSeq/Revision/магазин ≠ ожидаемых] | Gesture=None; `Cancel`, если Pending | Derive |
 | T34 | PastGate / Released в покое | ActionSampled [AdmissionPending] | ничего (отложено, флаг цикла не сгорает; закрывает Н6) | то же |
-| T35 | любое с Gesture≠None | CommandRejected | Gesture=None; `Reconcile`, если магазин учёта ≠ фактический; `GameLog.WeaponSystem.Warning` | Derive |
+| T35 | любое с Gesture≠None | CommandRejected | Gesture=None; `GameLog.WeaponSystem.Warning` (C2: сверки магазина нет — учёт его не хранит) | Derive |
 
 **Подготовка (Origin ≠ Manual)**
 
@@ -399,7 +399,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | Звук выстрела | SDK (`CommitShotSynced` / `Source_ShotFired`) | SDK | без изменений; в `WeaponCue` нет Shot |
 | Звуки механизма и сухой щелчок | `WeaponAudioExecutor` | AWSF, `UxrShotgunPump`, `WeaponAttemptFeedback`, `BarrelObstruction`, запасная ветка SDK | После этапа E SDK сам сухой щелчок не играет; у BarrelObstruction остаётся только датчик |
 | Звук вставки/выемки | `AnchorSound` на приёмнике | AnchorSound; ранее ещё `UxrAudioManipulation` предмета | В `WeaponCue` нет Insert; тест `AmmoInsertSoundTests` расширяется на все предметы, принимаемые оружием |
-| Вибрация механизма, отказа, препятствия; подсветка подсказки | `WeaponFeedbackExecutor` | AWSF, `WeaponChamberingReminder`, `WeaponAttemptFeedback`, `BarrelObstruction`, `UxrShotgunPump` | Один исполнитель; вибрация выстрела остаётся у SDK |
+| Вибрация механизма, отказа, препятствия; подсветка подсказки | `WeaponFeedbackExecutor` | AWSF, `WeaponChamberingReminder`, `WeaponAttemptFeedback`, `BarrelObstruction`, `UxrShotgunPump` | Один исполнитель; вызывает сервис вибрации `VrBattlegrounds.Haptics.HapticService.Play(HapticSignalId, UxrGrabber, gain, HapticHandRole)` (контракт — п. 4.2 `haptics-system-design.md` в worktree `haptics`). Вибрация отдачи тоже у WeaponSystem (решение пользователя 2026-10-07): новый `WeaponHapticCue` выстрела, Id отдачи — в данных ствола; хост реализует `IWeaponRecoilHapticsOwner`, после чего отдача SDK этого ствола гасится |
 | Подсветка гнезда | `WeaponMagazineAnchorHighlight` | — | без изменений |
 | Учёт M/C | SDK ledger | — | — |
 | `IsUseBlocked` | `WeaponUseBlocker` | — | — |
@@ -443,7 +443,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | **0. Заморозка** | Дождаться приёмки в шлеме HoldOpen-правки другого агента (Herrington). Волну HoldOpen на старой архитектуре **не применять** | — | — | правка принята или откачена | — |
 | **B. Машина** | Чистая машина и таблица (п. 3) | new `Assets/Scripts/Weapons/Core/VrBattlegrounds.Weapons.Core.asmdef` (`noEngineReferences`), `WeaponStateMachine.cs`, `WeaponTransitions.cs`, `WeaponProfileAxes.cs`, `LedgerView.cs`, `WeaponEvents.cs`; ссылка из `VrBattlegrounds.asmdef` и тестовой asmdef | — | Компиляция и Android. Временная проба: полнота, И1–И13 перебором, сценарии S01–S27 событиями. Контрактная проба с настоящим `UxrFirearmWeapon` (без сцены): каждая команда машины принимается ledger | удалить новую сборку (ничего не подключено) |
 | **C. Теневой режим** | Датчики + машина рядом со старым контроллером на Herrington и FABARM; сравнение команд, расхождения пишутся в `GameLog.WeaponSystem.Warning`. Переключатель — `Tools/VR Battlegrounds/Debug/Weapon System Shadow` (EditorPrefs) | new `WeaponSystem/Sensors/*.cs`, `WeaponShadowComparer.cs`; точки вызова в `WeaponReadinessController` (только чтение) | — | Шлем: обычная игра Herrington и FABARM (заряжание, все циклы, HoldOpen, смена магазина/патрона, бросить и поднять), ноль расхождений в логе. Пробы E2 (`StateChanged` при replay) и Н6 | выключить переключатель |
-| **C2. Учёт без копий** | Учёт не хранит физическое состояние, которое уже есть у гнезда и магазина: расхождение невозможно по устройству, а не латается сверкой. Решения пользователя 2026-10-07 — п. 8 [анализа](weapon-ledger-single-source.md) | SDK `UxrFirearmReadinessTypes.cs`, `UxrFirearmWeapon.Readiness.cs`, `UxrFirearmWeapon.cs`, `UxrFirearmWeapon.AmmoAdmission.cs` (патч 53); `WeaponReadinessController`; Core: строка T36, `MagazineMismatch`, `LedgerCommandKind.Reconcile`; `sdk-patches.md` | `CurrentMagazine` в учёте, `MagazineChanged`, `Reconcile`, ledger-ветка `SyncAmmoLeft` | Проба форка ревизии (п. 7.1 анализа) RED до правки и GREEN после; Android; шлем — смена магазина и стрельба Herrington/FABARM. Расхождение M → `GameLog.WeaponSystem.Error` + серверная поправка, стрельба не блокируется | revert коммита этапа |
+| **C2. Учёт без копий** | Учёт не хранит физическое состояние, которое уже есть у гнезда и магазина: расхождение невозможно по устройству, а не латается сверкой. Решения пользователя 2026-10-07 — п. 8 [анализа](weapon-ledger-single-source.md) | SDK `UxrFirearmReadinessTypes.cs`, `UxrFirearmWeapon.Readiness.cs`, `UxrFirearmWeapon.cs`, `UxrFirearmWeapon.AmmoAdmission.cs` (патч 53); `WeaponReadinessController`; Core: строка T36, `MagazineMismatch`, `LedgerCommandKind.Reconcile`; `sdk-patches.md` | `CurrentMagazine` в учёте, `MagazineChanged`, `Reconcile`, ledger-ветка `SyncAmmoLeft` | Проба форка ревизии (п. 7.1 анализа) RED до правки и GREEN после; Android; шлем — смена магазина и стрельба Herrington/FABARM. Расхождение M → `GameLog.WeaponSystem.Error` + серверная поправка, стрельба не блокируется. **Статус 2026-10-07: реализован, ждёт шлема** (п. 9 анализа) | revert коммита этапа |
 | **D. Пилот** | Herrington и FABARM работают на машине | `WeaponReadinessController.cs` → **`WeaponSystem.cs`** (тот же .meta/GUID, `FormerlySerializedAs`); new `WeaponPoseExecutor.cs`, `WeaponAudioExecutor.cs`, `WeaponFeedbackExecutor.cs`, `UxrReadinessLedgerPort.cs`, `WeaponMechanismRig.cs`, `WeaponAudioSet.cs`; Editor: `WeaponReadinessAuthoring` → `WeaponSystemAuthoring` (единственный writer: rig, аудио, профили; переносит данные из AWSF/WMV/`UxrShotgunPump` и удаляет их с префаба); `ManualLoadingAuthoring` вызывает его; префабы Herrington, FabarmSDASS; при необходимости SDK E2 | С двух префабов: AWSF, WMV, Router, AttemptFeedback, Reminder, выключенный `UxrShotgunPump`. Из кода: `ChamberPoseReturnDriver`, `ChamberCompletionEvidence` (переходят в порт), `WeaponTriggerAttemptRouter/Context`, `WeaponAttemptFeedback`, все ветки `HasLedgerAdapter` в AWSF/WMV/Reminder (они снова только legacy) | Компиляция, Android, readback префабов (GUID/fileID/NetworkIdentity/масштаб/хваты не изменились). **Шлем, чек-лист D:** см. под таблицей | git revert коммита этапа (данные префаба и код вместе) |
 | **E. Спуск в машину** | Эпизод спуска и классификация — в машине; SDK-патч E1 | SDK `UxrWeapon.Custom.cs` (замена `ProcessReadinessLocalTrigger` портом `DecideLocalTrigger`), `UxrFirearmWeapon.cs` (вызов порта); `WeaponSystem` TriggerSensor; `sdk-patches.md` | `LocalTriggerEpisode`, `PrepareLocalTriggerAttempt`, `CaptureLocalTriggerPolicyId`, `LocalTriggerAttemptDecided` (SDK) | Компиляция, Android, повтор пробы S05–S07/S12–S15. Шлем: Auto очередь, Semi по нажатию, TriggerAssist (по профилю-стенду), сухой щелчок ровно один, препятствие | revert SDK и игровой части вместе |
 | **F1. Волна HoldOpen** (бывший этап 4) | Browning/«Gun», Viper, TR15 | `WeaponSystemMigration.cs` (бывший `WeaponReadinessMigration`, список волн), профиль `DetachableHoldOpenReadiness.asset`, `WeaponInfo`, префабы | AWSF/WMV/Reminder с трёх префабов | Preflight → Apply → readback → повторный Apply без изменений; бот стреляет. Шлем: последний патрон → затвор сзади; смена магазина; front-only; Viper как стартовый пистолет у всех игроков | revert волны |
@@ -489,7 +489,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | `LedgerView.cs` | Снимок учёта, `LedgerOp`, `MechanismState`/`MechanismSet`, `WeaponMechanism.Derive/ReasonOf/CanFire` |
 | `WeaponEvents.cs` | 19 событий, `ActionSample`, `WeaponContext` (роль, контекст автора, replay, блокировка, темп, мир) |
 | `WeaponOutput.cs` | `LedgerCommand`, `WeaponCue`, `WeaponHapticCue`, `PoseTarget`, `WeaponReport`, `IWeaponOutput` |
-| `WeaponTransitions.cs` | Единственная таблица: 83 строки (29 с правом команды, 30 локальных, 24 явных «игнорировать») |
+| `WeaponTransitions.cs` | Единственная таблица: 82 строки (28 с правом команды, 30 локальных, 24 явных «игнорировать»); T36 удалена на этапе C2 |
 | `WeaponStateMachine.cs` | `Step` (без аллокаций, без повторного входа), `ComputePose`, локальные регионы |
 
 **Как устроен шаг.** `Step(e, L, s, c, out)`: роль = автор только вне replay; механическое состояние = `Derive(L)`,
@@ -506,7 +506,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | `Presentation` | Хранится только клип (вид, время, конец, отпущен ли Action рукой). Остальное — функция `ComputePose(Derive(L), клип, замер, Origin)` | П. 3.6 «цель позы — функция состояния»; И10/И11 следуют из устройства |
 | `PoseTarget` | Два канала: Action и нерычажные детали (`AuxiliaryPose`) | T65: рука забирает Action, нерычажные доигрывают клип |
 | Ready/Empty не в покое без руки | `ReturnToRest` со скоростью пружины вместо мгновенного `Rest` | Ручку отпустили после хвата во время Fire-клипа — без телепорта |
-| `LedgerView` | + `AnchorMagazineToken` (магазин в гнезде) | T35/T36: сравнение «магазин учёта ≠ фактический» |
+| `LedgerView` | `MagazineToken` — магазин в гнезде (единственный), `CycleMagazineToken` — магазин цикла; `CyclePending` — действительный Pending | C2: учёт не хранит магазин, Pending привязан к магазину цикла |
 | `IWeaponOutput` | + `Report` (отказ, сбой, запрос resync, ошибка таблицы) | У машины нет `GameLog` |
 | Эпизод спуска | `TriggerPressed` — фронт нажатия, всегда новое нажатие; `TriggerHeld` — уровень; эпизод гейтит только очередь | И4/И5 без зависимости от того, видел ли датчик отпускание после снимка |
 | `MagazineOnly` | `Derive`: Ready ⇔ M>0, патронника нет | Порту не нужно подделывать C |
@@ -518,8 +518,8 @@ T15/T15s — вставка без контекста автора не теря
 на столе магазином никогда не дошлёт); T18/T19 — контакт снимается и восстанавливается по замеру, пока ручку держат
 (после T13/T27/снимка/смены автора); T21 — и из HoldOpen не с проверенного зада, и из OpenIdle; T28r — подхват
 отпущенной посреди цикла ручки; T32s — осиротевший цикл (снимок, чужой автор) отменяется на замере; T34 — пока идёт
-барьер приёма патрона, никакие команды не выдаются (SDK их всё равно отклонит), жест не сгорает; T36 — Reconcile при
-расхождении магазина; T40 — TriggerAssist и из HoldOpen/EmptyAwaitRest; T46 — бот с HoldOpen спускает затвор
+барьер приёма патрона, никакие команды не выдаются (SDK их всё равно отклонит), жест не сгорает; T36 (Reconcile при
+расхождении магазина) удалена на этапе C2; T40 — TriggerAssist и из HoldOpen/EmptyAwaitRest; T46 — бот с HoldOpen спускает затвор
 `BeginAction(Automation)` (сохраняет И10); T52a — блокировка посреди очереди; T58 — иная блокировка без отклика.
 Порог извлечения засчитывается и в шаге `BeginAction` (рывок за кадр), и в момент отпускания (T28) — найдено пробой:
 одна строка на шаг иначе теряла порог.

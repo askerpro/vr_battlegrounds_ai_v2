@@ -52,10 +52,7 @@ namespace UltimateXR.Mechanics.Weapons
                         throw new System.InvalidOperationException("Invalid/partial fixed ammo snapshot.");
                     _runtimeTriggers = prospective;
                     foreach (var snapshot in fixedSnapshots)
-                    {
                         snapshot.Store.WriteLedgerRounds(this, snapshot.TriggerIndex, snapshot.Rounds, false);
-                        _readinessFaulted.Remove(snapshot.TriggerIndex);
-                    }
                 }
             }
             }

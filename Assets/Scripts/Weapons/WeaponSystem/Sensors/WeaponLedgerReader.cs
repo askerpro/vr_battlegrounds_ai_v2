@@ -1,3 +1,4 @@
+using System;
 using UltimateXR.Core;
 using UltimateXR.Core.StateSync;
 using UltimateXR.Manipulation;
@@ -24,7 +25,9 @@ namespace VrBattlegrounds.Weapons.Sensors
     /// Порт учёта только на чтение (этап C): снимок <see cref="LedgerView"/> из <c>UxrFirearmWeapon.Readiness</c>
     /// и разбор фиксаций из <c>StateChanged</c>. Команд не выдаёт. Запоминает последнее увиденное состояние,
     /// чтобы машина могла получить снимок «до фиксации» (досчёт решения старого кода в тот же момент).
-    /// Магазины сравниваются по <c>GetInstanceID</c> (0 — нет магазина).
+    /// Магазин один — гнездо (C2): учёт его не хранит. Жетоны магазинов — по <c>UniqueId</c> (0 — нет магазина),
+    /// жетон магазина цикла — по <c>CycleMagazineIdentity</c>. Pending — действительный (<c>IsCyclePendingFor</c>).
+    /// Сбоя учёта, блокирующего команды, после C2 нет (В-Л5): <c>Faulted</c> всегда ложно.
     /// </summary>
     internal sealed class WeaponLedgerReader
     {
@@ -53,14 +56,15 @@ namespace VrBattlegrounds.Weapons.Sensors
         {
             UxrGrabbableObject anchorMagazine = CurrentAnchorMagazine();
             UxrFirearmMag ammo = anchorMagazine != null ? anchorMagazine.GetComponent<UxrFirearmMag>() : null;
+            Guid socket = anchorMagazine != null ? anchorMagazine.UniqueId : Guid.Empty;
             bool initialized = s != null && s.ReadinessInitialized;
             return new LedgerView(
                 initialized: initialized,
                 chamber: initialized && s.ChamberRound,
                 actionOpen: initialized && s.ActionOpen,
-                cyclePending: initialized && s.ChamberCyclePending,
+                cyclePending: initialized && UxrFirearmWeapon.IsCyclePendingFor(s, socket),
                 slideLocked: initialized && s.PostShotEmptyAction,
-                faulted: FirearmIntrospection.IsReadinessFaulted(_weapon, _trigger),
+                faulted: false,
                 admissionPending: _weapon.IsAmmoAdmissionPending(_trigger),
                 magazinePresent: ammo != null,
                 magazineRounds: ammo != null ? ammo.Rounds : 0,
@@ -69,8 +73,15 @@ namespace VrBattlegrounds.Weapons.Sensors
                 cycleSequence: s?.CycleSequence ?? 0,
                 extractedCycle: s?.ExtractedCycleSequence ?? 0,
                 shotSequence: s?.ShotSequence ?? 0,
-                magazineToken: s != null && s.CurrentMagazine != null ? s.CurrentMagazine.GetInstanceID() : 0,
-                anchorMagazineToken: anchorMagazine != null ? anchorMagazine.GetInstanceID() : 0);
+                magazineToken: Token(socket),
+                cycleMagazineToken: s != null && s.ChamberCyclePending ? Token(s.CycleMagazineIdentity) : 0);
+        }
+
+        private static int Token(Guid identity)
+        {
+            if (identity == Guid.Empty) return 0;
+            int hash = identity.GetHashCode();
+            return hash != 0 ? hash : 1;
         }
 
         /// <summary>Магазин в гнезде спуска — та же проверка, что <c>GetCurrentReadinessMagazine</c> SDK.</summary>
@@ -112,13 +123,11 @@ namespace VrBattlegrounds.Weapons.Sensors
             switch (operation)
             {
                 case UxrFirearmReadinessOperation.Initialize: return LedgerOp.Initialize;
-                case UxrFirearmReadinessOperation.MagazineChanged: return LedgerOp.MagazineChanged;
                 case UxrFirearmReadinessOperation.BeginAction: return LedgerOp.BeginAction;
                 case UxrFirearmReadinessOperation.Extract: return LedgerOp.Extract;
                 case UxrFirearmReadinessOperation.Complete: return LedgerOp.Complete;
                 case UxrFirearmReadinessOperation.Cancel: return LedgerOp.Cancel;
                 case UxrFirearmReadinessOperation.Shot: return LedgerOp.Shot;
-                case UxrFirearmReadinessOperation.Reconcile: return LedgerOp.Reconcile;
                 case UxrFirearmReadinessOperation.Automation: return LedgerOp.Automation;
                 case UxrFirearmReadinessOperation.CloseOnly: return LedgerOp.CloseOnly;
                 case UxrFirearmReadinessOperation.EmptyRestAcknowledged: return LedgerOp.EmptyRestAcknowledged;

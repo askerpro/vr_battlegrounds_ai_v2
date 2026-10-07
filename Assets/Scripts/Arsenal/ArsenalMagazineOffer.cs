@@ -72,8 +72,13 @@ namespace VrBattlegrounds.Arsenal
             item.SetNetworkAnchor(_anchor);
             if (item.RigidBodySource != null)
             {
-                item.RigidBodySource.linearVelocity = Vector3.zero;
-                item.RigidBodySource.angularVelocity = Vector3.zero;
+                // Скорость кинематического тела Unity не принимает (предупреждение в консоль); SetNetworkAnchor
+                // мог уже перевести тело в kinematic.
+                if (!item.RigidBodySource.isKinematic)
+                {
+                    item.RigidBodySource.linearVelocity = Vector3.zero;
+                    item.RigidBodySource.angularVelocity = Vector3.zero;
+                }
                 item.RigidBodySource.isKinematic = true;
             }
         }

@@ -60,11 +60,21 @@ namespace UltimateXR.Mechanics.Weapons
         internal bool IsFixedStoreBindingValid(UxrFirearmWeapon weapon, int triggerIndex) =>
             !IsFixedAmmoStore || (_fixedStoreWeapon == weapon && _fixedStoreTrigger == triggerIndex);
 
+        // VR Battlegrounds patch 53 (О1): магазин, побывавший в ledger-оружии, пишет только учёт. Флаг ставит
+        // писатель (sink учёта, вставка в гнездо ledger-спуска); не сериализуется и не снимается.
+        private bool _ledgerStore;
+
+        /// <summary>M пишет только учёт оружия: fixed store или магазин ledger-оружия. Сеттер <see cref="Rounds" /> бросает.</summary>
+        public bool IsLedgerStore => IsFixedAmmoStore || _ledgerStore;
+
+        internal void MarkLedgerStore() => _ledgerStore = true;
+
         internal void WriteLedgerRounds(UxrFirearmWeapon weapon, int triggerIndex, int rounds, bool notify)
         {
             if (!IsFixedStoreBindingValid(weapon, triggerIndex) || rounds < 0 || rounds > _capacity ||
                 (IsFixedAmmoStore && rounds + (weapon.GetReadinessState(triggerIndex)?.ChamberRound == true ? 1 : 0) > _capacity))
                 throw new InvalidOperationException("Ledger ammo store binding/capacity mismatch.");
+            _ledgerStore = true;
             _rounds = rounds;
             if (notify) NotifyRoundsChanged();
         }
@@ -94,7 +104,8 @@ namespace UltimateXR.Mechanics.Weapons
             set
             {
                 // Fixed M пишет исключительно ledger. Прямой refill не может создать capacity+C.
-                if (IsFixedAmmoStore) throw new InvalidOperationException("Fixed ammo store must be written through firearm ledger.");
+                // VR Battlegrounds patch 53 (О1): то же для магазина ledger-оружия — второго писателя M нет.
+                if (IsLedgerStore) throw new InvalidOperationException("Ledger ammo store must be written through firearm ledger.");
                 _rounds = Mathf.Clamp(value, 0, _capacity);
                 RoundsChanged?.Invoke();
             }

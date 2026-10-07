@@ -27,7 +27,8 @@ namespace VrBattlegrounds.Network
     /// <b>Правило.</b> Событие компонента <b>на предмете в руке</b> аватара шлёт только автор этого
     /// аватара: машина, где он свой (<c>isOwned</c>), а для аватара без владельца (кукла стресс-теста) —
     /// сервер. Вне правила: <c>UxrGrabManager</c> (автор хвата — в аргументах; сервер законно
-    /// отпускает и вынимает предметы из чужих рук), <c>UxrActor</c> (здоровье — серверное), предметы,
+    /// отпускает и вынимает предметы из чужих рук), <c>UxrActor</c> (здоровье — серверное), поправка учёта оружия
+    /// <c>ApplyLedgerCorrection</c> (шлёт только сервер, арбитр порядка фиксаций), предметы,
     /// которые никто не держит, в том числе лежащие в карманах. Отброшенное считается по
     /// типу и методу — по счётчику видно, кто ещё пересчитывает действия чужих игроков.
     /// </para>
@@ -60,6 +61,9 @@ namespace VrBattlegrounds.Network
             args is UxrMethodInvokedSyncEventArgs method && method.MethodName == "CommitAmmoAdmission" &&
             method.Parameters.Length == 1 && method.Parameters[0] is UxrAmmoAdmissionCommit admission &&
             admission.RequestToken == _ammoPublication.Token;
+        private static bool IsLedgerCorrection(IUxrStateSync component, UxrSyncEventArgs args) =>
+            component?.Component is UxrFirearmWeapon && args is UxrMethodInvokedSyncEventArgs method &&
+            method.MethodName == "ApplyLedgerCorrection";
         /// <summary>Сколько событий отброшено, по ключу «Тип.Метод».</summary>
         public static IReadOnlyDictionary<string, int> DroppedCounts => Dropped;
 
@@ -110,6 +114,9 @@ namespace VrBattlegrounds.Network
         public static bool ShouldSend(IUxrStateSync component, UxrSyncEventArgs eventArgs)
         {
             if (IsScopedAmmoAdmission(component, eventArgs)) return true;
+            // Поправку учёта оружия шлёт только сервер — арбитр порядка фиксаций, кто бы ни держал ствол
+            // (этап C2, SDK-патч 53, п. 3a weapon-ledger-single-source). Клиент её не рассылает никогда.
+            if (IsLedgerCorrection(component, eventArgs)) return NetworkServer.active;
             Component target = component?.Component;
             if (target == null) return true;
 

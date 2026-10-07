@@ -2,7 +2,7 @@
 
 ## 2026-10-07 — Точная регистрация UniqueId UltimateXR (генератор арсенала, задача 2)
 
-- [SDK патч 50](UltimateXR/sdk-patches.md): `TryPrepareRuntimeUniqueId` регистрирует заранее заданный ID в `Awake`;
+- [SDK патч 51](UltimateXR/sdk-patches.md): `TryPrepareRuntimeUniqueId` регистрирует заранее заданный ID в `Awake`;
   занятый ID — отказ `UniqueId.Exact.Occupied`, а не `CollisionN`. `Unregister` окончательный для экземпляра,
   снимает только свои записи и не создаёт `UxrManager` ради уничтожения; тот же Guid может занять новый объект.
 - Класс ошибки: поздний `OnDestroy` старого объекта стирал регистрацию нового с тем же ID

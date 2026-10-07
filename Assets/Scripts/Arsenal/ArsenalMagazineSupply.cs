@@ -231,12 +231,20 @@ namespace VrBattlegrounds.Arsenal
         }
         private void ResolvePending()
         {
+            // Индекс слота проверяется по тому же правилу, что у стены: до установки массива слотов
+            // (сгенерированная станция) привязки ждут, после — недействительный индекс именованный отказ.
+            if (!_wall.SlotsInstalled) return;
             _resolved.Clear();
             foreach (int index in _pending)
             {
                 if (!_items.TryGetValue(index, out ArsenalMagazineStockBinding binding)) { _resolved.Add(index); continue; }
                 // Неполный/другой пресет не превращается в молчаливое усечение индексов.
-                if (index < 0 || index >= _wall.Slots.Count) continue;
+                if (index < 0 || index >= _wall.Slots.Count)
+                {
+                    GameLog.Arsenal.Error($"[ArsenalMagazineSupply] Привязка магазина к слоту {index}, а слотов {_wall.Slots.Count}.", this);
+                    _resolved.Add(index);
+                    continue;
+                }
                 if (!NetworkClient.spawned.TryGetValue(binding.NetId, out NetworkIdentity identity) || identity == null || !identity.gameObject.activeInHierarchy) continue;
                 var slot = _wall.Slots[index];
                 var offer = slot != null ? slot.GetComponent<ArsenalMagazineOffer>() : null;

@@ -179,7 +179,7 @@ namespace VrBattlegrounds.DevTools
                 MapModeRules.ResolveMatchMode(matchManager.CurrentMap, null, null) == null)
             {
                 // Лобби: с картой совместима только разминка, и она стартует сама
-                // в MapReferee.OnStartServer. Матча здесь не бывает.
+                // по запуску карты (MapBootstrap → MapReferee.ServerStartRun). Матча здесь не бывает.
                 GameLog.Debug.Verbose(
                     "[DebugOrchestrator] TryGoLive: на этой карте нет режимов матча (лобби).");
                 return;

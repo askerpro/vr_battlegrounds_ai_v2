@@ -60,6 +60,18 @@ namespace VrBattlegrounds.Network
         }
 
         /// <summary>
+        /// Машина без графики, состав карты собран (<c>MapBootstrap</c>): зарегистрировать выключенные компоненты с
+        /// id ещё раз. <see cref="OnSceneLoaded"/> видел сцену до сборки — службы, созданные и перенесённые в неё
+        /// позже, он не застал. Повтор безопасен: <c>RegisterIfNecessary</c> идемпотентна. На машине с графикой
+        /// ничего не делает — там регистрацию выполняет прогрев SDK.
+        /// </summary>
+        public static int RegisterAfterComposition(Scene scene)
+        {
+            if (ShouldPrecache(Application.isBatchMode, SystemInfo.graphicsDeviceType)) return 0;
+            return RegisterDisabledUniqueIds(scene);
+        }
+
+        /// <summary>
         /// Побочная работа прогрева, которую нельзя терять: <c>UxrManager.AddScenePrecachedInstances</c>
         /// регистрирует выключенные компоненты с <see cref="IUxrUniqueId"/> (в том числе на неактивных
         /// объектах, где <c>Awake</c> не вызывался), чтобы события синхронизации находили адресата. Без

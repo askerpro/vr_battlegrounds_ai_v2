@@ -306,15 +306,9 @@ namespace VrBattlegrounds.Managers
             }
 
             // Снаряжение не переживает перехода на другую карту (и в лобби) — но снимается только
-            // под принятую загрузку: отклонённый запрос не должен раздеть игроков живой карты.
-            if (!MapLoader.Instance.CanAcceptLoad(scene, out string reason))
-            {
-                GameLog.Match.Warning($"[Series] Карта '{scene}' не загружена: {reason}.");
-                return;
-            }
-
-            EquipmentStrip.ServerStripAll($"переход на карту {scene}");
-            MapLoader.Instance.LoadMap(scene);
+            // под принятую загрузку, внутри её транзакции: отклонённый запрос не раздевает игроков живой карты.
+            if (!MapLoader.Instance.LoadMap(scene, () => EquipmentStrip.ServerStripAll($"переход на карту {scene}")))
+                GameLog.Match.Warning($"[Series] Карта '{scene}' не загружена: загрузчик отклонил запрос.");
         }
 
         private static string[] ToArray(SyncList<string> list)

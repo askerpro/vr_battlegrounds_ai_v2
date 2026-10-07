@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -80,22 +81,48 @@ namespace VrBattlegrounds.Editor
         /// </summary>
         private static bool IsStandSceneOpen() => EditorSceneManager.GetActiveScene().path.StartsWith(StandScenesFolder);
 
+        /// <summary>
+        /// Открыта карта под запуском MapBootstrap (в сцене есть <see cref="VrBattlegrounds.Maps.Runtime.MapRoot"/>).
+        /// Такой сцене нужен процессный корень (менеджеры, сеть, SDK): без Offline она не запустится вовсе.
+        /// </summary>
+        private static bool IsMapSceneOpen()
+        {
+            Scene active = EditorSceneManager.GetActiveScene();
+            return active.IsValid() && active.path != OfflineScenePath && active.GetRootGameObjects()
+                .Any(root => root.GetComponentInChildren<VrBattlegrounds.Maps.Runtime.MapRoot>(true) != null);
+        }
+
+        /// <summary>С какой сцены стартует Play.</summary>
+        public enum StartKind { Temporary, ActiveScene, Offline }
+
+        /// <summary>
+        /// Единое правило старта Play. Временная сцена стенда — её владелец решил сам. Сцена стенда (Dev) — сама
+        /// себя. Карта с MapRoot — всегда через Offline: её запускает MapBootstrap общим серверным путём, а процессный
+        /// корень создаёт только Offline; личная галочка «Start from Offline Scene» карту не обходит. Прочие сцены —
+        /// по галочке.
+        /// </summary>
+        public static StartKind ResolveStart(bool hasTemporary, bool standScene, bool mapScene, bool startFromOffline)
+        {
+            if (hasTemporary) return StartKind.Temporary;
+            if (standScene) return StartKind.ActiveScene;
+            if (mapScene || startFromOffline) return StartKind.Offline;
+            return StartKind.ActiveScene;
+        }
+
+        private static StartKind CurrentStart() =>
+            ResolveStart(TemporaryStartScene != null, IsStandSceneOpen(), IsMapSceneOpen(), EditorPrefs.GetBool(PrefKey, true));
+
         private static void UpdateState()
         {
             SceneAsset temporary = TemporaryStartScene;
-            if (temporary != null)
+            StartKind start = CurrentStart();
+            if (start == StartKind.Temporary)
             {
                 EditorSceneManager.playModeStartScene = temporary;
                 return;
             }
 
-            if (IsStandSceneOpen())
-            {
-                EditorSceneManager.playModeStartScene = null;
-                return;
-            }
-            bool enabled = EditorPrefs.GetBool(PrefKey, true);
-            if (enabled)
+            if (start == StartKind.Offline)
             {
                 var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(OfflineScenePath);
                 if (sceneAsset != null)
@@ -133,7 +160,7 @@ namespace VrBattlegrounds.Editor
                 
                 GameLog.Debug.Info($"[PlayModeStartFromOffline] Exiting Edit Mode. playModeStartScene is {(EditorSceneManager.playModeStartScene != null ? EditorSceneManager.playModeStartScene.name : "null")}");
 
-                if (TemporaryStartScene != null || IsStandSceneOpen() || !EditorPrefs.GetBool(PrefKey, true)) return;
+                if (CurrentStart() != StartKind.Offline) return;
 
                 Scene activeScene = EditorSceneManager.GetActiveScene();
                 
@@ -146,6 +173,11 @@ namespace VrBattlegrounds.Editor
                 {
                     DebugBootstrapSettings.AutoLoadMapScene = activeScene.name;
                     GameLog.Debug.Info($"[PlayModeStartFromOffline] Карта '{activeScene.name}' загрузится после старта сервера (Bootstrap Settings).");
+                }
+                else
+                {
+                    GameLog.Debug.Info($"[PlayModeStartFromOffline] Play из '{activeScene.name}' стартует с Offline; Bootstrap Settings " +
+                        "выключены — обычный старт игры, карта сама не загрузится.");
                 }
             }
         }

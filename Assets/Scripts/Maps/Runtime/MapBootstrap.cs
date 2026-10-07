@@ -30,10 +30,42 @@ namespace VrBattlegrounds.Maps.Runtime
     [DisallowMultipleComponent]
     [RequireComponent(typeof(MapRoot))]
     [DefaultExecutionOrder(-1680)]
-    public sealed class MapBootstrap : MonoBehaviour
+    public sealed class MapBootstrap : MonoBehaviour, IMapRunHost
     {
         private const float StuckWarningSeconds = 10f;
         private static readonly List<MapBootstrap> Loaded = new List<MapBootstrap>();
+
+        /// <summary>
+        /// Наибольший ключ, уже принятый любым MapBootstrap этого клиента. Descriptor старого запуска той же
+        /// сцены (повторный LoadMap, «Lobby → карта → Lobby») приходит в любом порядке относительно смены сцены
+        /// и не должен стать запуском нового экземпляра. Новая сессия сервера — новая эпоха, счёт заново;
+        /// новое соединение (переподключение к той же сессии) — тоже: идущий запуск надо принять снова.
+        /// </summary>
+        private static MapRunKey _highestAcceptedKey;
+
+        /// <summary>Соединение, на котором принят <see cref="_highestAcceptedKey"/>.</summary>
+        private static NetworkConnection _acceptedOn;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetProcessState()
+        {
+            Loaded.Clear();
+            _highestAcceptedKey = default;
+            _acceptedOn = null;
+            LocalReadinessChanged = null;
+        }
+
+        /// <summary>
+        /// Локальная готовность запуска какой-либо загруженной карты изменилась (клиент принял run, запуск
+        /// закрылся). Подписчик — барьер начального снимка <c>NetworkStateRelay</c>.
+        /// </summary>
+        public static event Action LocalReadinessChanged;
+
+        /// <summary>Ключ запуска, принятого этой сценой на клиенте; на сервере — ключ текущего scope.</summary>
+        public MapRunKey LocalRunKey => NetworkServer.active ? (_scope != null ? _scope.Key : default) : _localRunKey;
+
+        private MapRunKey _localRunKey;
+        private bool _localRunClosed;
 
         [Tooltip("Длительность выдвижения оборудования станций; передаётся координатору до спавна.")]
         [SerializeField, Min(0.1f)] private float _deploymentDuration = 1f;
@@ -82,11 +114,13 @@ namespace VrBattlegrounds.Maps.Runtime
             }
             Loaded.Add(this);
             MapLoader.MapLoadStarted += HandleMapLoadStarted;
+            MapLoader.MapLoadCancelled += HandleMapLoadCancelled;
         }
 
         private void OnDestroy()
         {
             MapLoader.MapLoadStarted -= HandleMapLoadStarted;
+            MapLoader.MapLoadCancelled -= HandleMapLoadCancelled;
             Loaded.Remove(this);
             RetireServerRun("выгрузка сцены");
         }
@@ -94,7 +128,28 @@ namespace VrBattlegrounds.Maps.Runtime
         private void Update()
         {
             if (NetworkServer.active) UpdateServer();
-            else if (NetworkClient.active) BindClientServices();
+            else if (NetworkClient.active)
+            {
+                UpdateClientRun();
+                BindClientServices();
+            }
+        }
+
+        /// <summary>
+        /// Готов ли запуск <paramref name="key"/> этой сцены локально — всё, что нужно до начального снимка
+        /// SDK, на этой машине зарегистрировано. Сервер: scope этого ключа собран (CompositionReady/Ready) и не
+        /// закрыт. Клиент: run принят (<see cref="LocalRunKey"/>), не закрыт, станции готовы. Авторские станции —
+        /// объекты сцены с авторскими UniqueId и готовы сразу; handles генерируемых станций (задача 7 плана)
+        /// добавят сюда свой ValidateReady по фактическим регистрациям. Отдельного реестра участников нет:
+        /// забытый участник открыл бы барьер раньше времени.
+        /// </summary>
+        public bool IsLocallyReady(MapRunKey key)
+        {
+            if (!key.IsValid) return false;
+            if (NetworkServer.active)
+                return _scope != null && !_scope.IsClosed && _scope.Key == key &&
+                       (Stage == MapBootstrapStage.CompositionReady || Stage == MapBootstrapStage.Ready);
+            return key == _localRunKey && !_localRunClosed;
         }
 
         // ── Сервер ───────────────────────────────────────────────────────────
@@ -122,6 +177,17 @@ namespace VrBattlegrounds.Maps.Runtime
             if (_scope == null || _scope.IsDisposed || _authority == null) return;
             if (_authority.Close(_scope, _authority.Current.Revision))
                 GameLog.Match.Verbose($"[MapBootstrap] Запуск '{_config?.MapScene}' ({_scope.Key}) закрыт: загрузка '{nextScene}'.", this);
+        }
+
+        /// <summary>
+        /// Принятая загрузка отменена, а сцена этой карты осталась (Mirror не начал смену при живом сервере).
+        /// Закрытый scope не открывается заново: запуск получает именованный отказ, gameplay карты остаётся
+        /// закрыт до следующей загрузки. Остановленный сервер сам снимает запуск в <c>MapRunAuthority</c>.
+        /// </summary>
+        private void HandleMapLoadCancelled(string nextScene)
+        {
+            if (!NetworkServer.active || !_closing || _scope == null || _scope.IsDisposed) return;
+            FailRun("Load.Cancelled", "загрузка '" + nextScene + "' отменена после закрытия запуска");
         }
 
         private void TryBeginRun()
@@ -216,6 +282,10 @@ namespace VrBattlegrounds.Maps.Runtime
             coordinator.Configure(DeploymentAnimators(bindings.Stations), _deploymentDuration);
             NetworkServer.Spawn(coordinatorObject);
 
+            // Выделенный сервер без прогрева: выключенные компоненты с UniqueId служб, перенесённых в сцену
+            // после её загрузки, регистрируем сами — до первого события синхронизации.
+            HeadlessPrecacheGuard.RegisterAfterComposition(scene);
+
             uint refereeNetId = _referee.netId;
             uint coordinatorNetId = coordinator.netId;
             if (!_authority.CommitPrepared(_scope, _authority.Current.Revision, refereeNetId, coordinatorNetId))
@@ -240,6 +310,10 @@ namespace VrBattlegrounds.Maps.Runtime
             GameLog.Match.Info($"[MapBootstrap] Карта '{_config.MapScene}' готова: разминка, допуск открыт.", this);
             MapRunAdmission.DrainAvatars();
         }
+
+        MapMatchIntent IMapRunHost.MatchIntent => _config != null ? _config.MatchIntent : default;
+
+        bool IMapRunHost.CommitMode(MapState state, GameMode mode) => CommitMode(state, mode);
 
         /// <summary>Сервер: режим заспавнен и стал текущим. Первый коммит открывает server Ready.</summary>
         internal bool CommitMode(MapState state, GameMode mode)
@@ -335,6 +409,45 @@ namespace VrBattlegrounds.Maps.Runtime
         // ── Клиент ───────────────────────────────────────────────────────────
 
         /// <summary>
+        /// Единственная клиентская точка «run известен локально». Descriptor принимается, если описывает сцену
+        /// этого MapBootstrap, запуск собран (CompositionReady/Ready), эпоха сессии текущая, а LoadSequence строго
+        /// больше ключа, уже принятого любым прежним MapBootstrap этого клиента. Принятый run закрывается, когда
+        /// descriptor уходит в Closing/Retiring/Failed или сменяется другим ключом; новый run — уже новый
+        /// экземпляр сцены. Host и dedicated сюда не заходят: у них сервер.
+        /// </summary>
+        private void UpdateClientRun()
+        {
+            MapRunAuthority authority = MapRunAuthority.Instance;
+            MapRunSnapshot snapshot = authority != null ? authority.Current : default;
+
+            if (!_localRunKey.IsValid)
+            {
+                if (!ReferenceEquals(_acceptedOn, NetworkClient.connection)) _highestAcceptedKey = default;
+                if (!AcceptsClientRun(snapshot, gameObject.scene.name, _highestAcceptedKey)) return;
+                _localRunKey = snapshot.Key;
+                _highestAcceptedKey = snapshot.Key;
+                _acceptedOn = NetworkClient.connection;
+                GameLog.Match.Info($"[MapBootstrap] Клиент принял запуск '{snapshot.Config.MapScene}' ({snapshot.Key}).", this);
+                LocalReadinessChanged?.Invoke();
+                return;
+            }
+
+            if (_localRunClosed || (snapshot.Key == _localRunKey && Assembled(snapshot.Status))) return;
+            _localRunClosed = true;
+            GameLog.Match.Verbose($"[MapBootstrap] Клиент: запуск {_localRunKey} закрыт (descriptor {snapshot.Key}, {snapshot.Status}).", this);
+            LocalReadinessChanged?.Invoke();
+        }
+
+        /// <summary>Правило «run известен локально» в чистом виде (проверка — MapBootstrapClientRunTests).</summary>
+        internal static bool AcceptsClientRun(MapRunSnapshot snapshot, string sceneName, MapRunKey highestAccepted) =>
+            snapshot.Config != null && snapshot.Config.MapScene == sceneName && Assembled(snapshot.Status) &&
+            (snapshot.Key.SessionEpoch != highestAccepted.SessionEpoch ||
+             snapshot.Key.LoadSequence > highestAccepted.LoadSequence);
+
+        private static bool Assembled(MapBootstrapStatus status) =>
+            status == MapBootstrapStatus.CompositionReady || status == MapBootstrapStatus.Ready;
+
+        /// <summary>
         /// Клиент связывает заспавненный сервером координатор со станциями своей сцены.
         /// Связь — по netId из descriptor текущего запуска, в любом порядке прихода объекта и descriptor.
         /// </summary>
@@ -343,7 +456,8 @@ namespace VrBattlegrounds.Maps.Runtime
             MapRunAuthority authority = MapRunAuthority.Instance;
             if (authority == null) return;
             MapRunSnapshot snapshot = authority.Current;
-            if (snapshot.Config == null || snapshot.Config.MapScene != gameObject.scene.name) return;
+            // Только принятый run этой сцены: descriptor старого запуска той же сцены координатор не связывает.
+            if (snapshot.Config == null || !_localRunKey.IsValid || _localRunClosed || snapshot.Key != _localRunKey) return;
             CheckClientContent(snapshot.Config);
             if (snapshot.CoordinatorNetId == 0 || snapshot.CoordinatorNetId == _boundCoordinatorNetId) return;
             if (!NetworkClient.spawned.TryGetValue(snapshot.CoordinatorNetId, out NetworkIdentity identity) || identity == null)

@@ -29,13 +29,26 @@ namespace VrBattlegrounds.Managers
         /// </summary>
         public static event Action<string> MapLoadCompleted;
 
-        /// <summary>Идёт ли сейчас загрузка карты — от принятого запроса до конца смены сцены Mirror.</summary>
-        public bool IsLoading { get; private set; }
+        /// <summary>
+        /// Принятая загрузка отменена до завершения смены сцены: сервер остановлен, загрузчик уничтожен
+        /// или Mirror не начал смену. Параметр — имя сцены. Закрытый запуск прежней карты остаётся закрытым.
+        /// </summary>
+        public static event Action<string> MapLoadCancelled;
+
+        /// <summary>Идёт ли сейчас загрузка карты — от принятого запроса до конца смены сцены Mirror или отмены.</summary>
+        public bool IsLoading => _activeGeneration != 0;
+
+        /// <summary>
+        /// Номер принятой загрузки: растёт на каждый принятый запрос, отклонённый его не меняет. Корутина загрузки
+        /// завершает и отменяет только свой номер — запоздавший шаг старой загрузки новую не трогает.
+        /// </summary>
+        public ulong LoadGeneration { get; private set; }
 
         /// <summary>Имя текущей загруженной карты (null если карта не загружена).</summary>
         public string CurrentMap { get; private set; }
 
         private Coroutine _loadCoroutine;
+        private ulong _activeGeneration;
         private string _pendingScene;
 
         private void Awake()
@@ -46,6 +59,12 @@ namespace VrBattlegrounds.Managers
                 return;
             }
             Instance = this;
+        }
+
+        private void OnDisable()
+        {
+            // Корутина остановлена вместе с компонентом: загрузка не завершится, держать IsLoading нельзя.
+            CancelLoad(_activeGeneration, "загрузчик выключен");
         }
 
         private void OnDestroy()
@@ -63,8 +82,13 @@ namespace VrBattlegrounds.Managers
         /// Только сервер.
         /// </summary>
         /// <param name="sceneName">Имя сцены карты (например "TestMap1").</param>
+        /// <param name="onAccepted">
+        /// Разрушительное действие вызывающего, которое допустимо только под принятую загрузку (серия изымает
+        /// снаряжение). Выполняется синхронно после принятия и до <see cref="MapLoadStarted"/>; отклонённый
+        /// запрос его не вызывает — живая карта не теряет снаряжение из-за игнорируемой команды.
+        /// </param>
         /// <returns>true — запрос принят и загрузка начата.</returns>
-        public bool LoadMap(string sceneName)
+        public bool LoadMap(string sceneName, Action onAccepted = null)
         {
             if (!CanAcceptLoad(sceneName, out string reason))
             {
@@ -72,7 +96,14 @@ namespace VrBattlegrounds.Managers
                 return false;
             }
 
-            _loadCoroutine = StartCoroutine(DeferredLoadMap(sceneName));
+            ulong generation = ++LoadGeneration;
+            _activeGeneration = generation;
+            _pendingScene = sceneName;
+
+            try { onAccepted?.Invoke(); }
+            catch (Exception error) { GameLog.Error($"[MapLoader] Действие перед загрузкой '{sceneName}' отказало: {error}"); }
+
+            _loadCoroutine = StartCoroutine(DeferredLoadMap(sceneName, generation));
             return true;
         }
 
@@ -102,10 +133,8 @@ namespace VrBattlegrounds.Managers
         /// времени проверяется само условие — <see cref="ConnectionsSettled" />.
         /// </para>
         /// </summary>
-        private IEnumerator DeferredLoadMap(string sceneName)
+        private IEnumerator DeferredLoadMap(string sceneName, ulong generation)
         {
-            IsLoading = true;
-            _pendingScene = sceneName;
             MapLoadStarted?.Invoke(sceneName);
 
             if (!ConnectionsSettled())
@@ -114,7 +143,7 @@ namespace VrBattlegrounds.Managers
                     $"[MapLoader] Загрузка карты '{sceneName}': ждём, пока Mirror закончит AddPlayer " +
                     $"({DescribeUnsettled()})...");
 
-                while (!ConnectionsSettled())
+                while (IsCurrent(generation) && NetworkServer.active && !ConnectionsSettled())
                     yield return null;
             }
 
@@ -122,19 +151,53 @@ namespace VrBattlegrounds.Managers
             // (Ready, SpawnObjects) до того, как мы сменим сцену.
             yield return null;
 
+            if (!IsCurrent(generation)) yield break;
+            if (!NetworkServer.active || NetworkManager.singleton == null)
+            {
+                CancelLoad(generation, "сервер остановлен до смены сцены");
+                yield break;
+            }
+
             GameLog.Network.Info($"[MapLoader] ServerChangeScene: {sceneName}");
-            CurrentMap = sceneName;
             NetworkManager.singleton.ServerChangeScene(sceneName);
+            if (!NetworkServer.isLoadingScene)
+            {
+                CancelLoad(generation, "Mirror не начал смену сцены");
+                yield break;
+            }
+            CurrentMap = sceneName;
 
             // Загрузка держится до конца асинхронной смены сцены: повторный запрос в этом окне
             // начал бы вторую смену поверх первой.
-            while (NetworkServer.active && NetworkServer.isLoadingScene)
+            while (IsCurrent(generation) && NetworkServer.active && NetworkServer.isLoadingScene)
                 yield return null;
 
-            IsLoading = false;
+            if (!IsCurrent(generation)) yield break;
+            if (!NetworkServer.active)
+            {
+                CancelLoad(generation, "сервер остановлен во время смены сцены");
+                yield break;
+            }
+
+            _activeGeneration = 0;
             _loadCoroutine = null;
             _pendingScene = null;
             MapLoadCompleted?.Invoke(sceneName);
+        }
+
+        private bool IsCurrent(ulong generation) => generation != 0 && generation == _activeGeneration;
+
+        /// <summary>Отменить загрузку <paramref name="generation"/>, если она ещё текущая. Повтор безопасен.</summary>
+        private void CancelLoad(ulong generation, string reason)
+        {
+            if (!IsCurrent(generation)) return;
+            string scene = _pendingScene;
+            _activeGeneration = 0;
+            _pendingScene = null;
+            if (_loadCoroutine != null && isActiveAndEnabled) StopCoroutine(_loadCoroutine);
+            _loadCoroutine = null;
+            GameLog.Network.Warning($"[MapLoader] Загрузка '{scene}' (№{generation}) отменена: {reason}.");
+            MapLoadCancelled?.Invoke(scene);
         }
 
         /// <summary>

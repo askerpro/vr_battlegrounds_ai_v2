@@ -5,7 +5,9 @@ using UltimateXR.Core.StateSave;
 using UltimateXR.Core.StateSync;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Maps.Runtime;
 
 namespace VrBattlegrounds.Network
 {
@@ -52,14 +54,24 @@ namespace VrBattlegrounds.Network
         public static NetworkStateRelay Instance { get; private set; }
 
         /// <summary>
-        ///     Получен ли начальный снимок состояния сцены. До него применять
-        ///     инкрементальные события нельзя: они опишут изменения относительно
-        ///     состояния, которого у клиента ещё нет.
+        ///     Клиентский протокол начального снимка: когда просить, какой ответ применить,
+        ///     открыт ли канал инкрементов. До открытия инкременты отбрасываются: они описали бы
+        ///     изменения относительно состояния, которого у клиента ещё нет.
         ///
-        ///     Поле экземплярное. Статическим оно было в SDK, и именно поэтому
+        ///     Состояние экземплярное. Статическим оно было в SDK, и именно поэтому
         ///     второй подключившийся клиент начинал применять события до снимка (NET-01).
         /// </summary>
-        private bool _initialStateLoaded;
+        private readonly InitialStateBarrier _barrier = new InitialStateBarrier();
+
+        /// <summary>Клиент: подписан на смену сцены и готовность запуска карты.</summary>
+        private bool _clientSubscribed;
+
+        /// <summary>
+        ///     Открыт ли канал состояния этой машины для запуска карты <paramref name="key"/>: сервер — всегда
+        ///     (он источник), клиент — после применения свежего снимка этого запуска. Из этого выводится
+        ///     <c>MapRunAdmission.IsLocalPlayable</c>.
+        /// </summary>
+        public bool HasInitialState(MapRunKey key) => isServer || _barrier.IsOpenFor(key);
 
         /// <summary>Подписан ли релей на <see cref="UxrManager.ComponentStateChanged" />.</summary>
         private bool _subscribed;
@@ -96,8 +108,7 @@ namespace VrBattlegrounds.Network
         {
             base.OnStartServer();
 
-            // Сервер — источник правды: снимок ему просить не у кого.
-            _initialStateLoaded = true;
+            // Сервер — источник правды: снимок ему просить не у кого, канал открыт сразу (HasInitialState).
             Subscribe();
 
             GameLog.Network.Info("[NetworkStateRelay] Канал состояния поднят на сервере.");
@@ -120,19 +131,34 @@ namespace VrBattlegrounds.Network
 
             Subscribe();
             GameNetworkManager.ClientSceneChanged += HandleClientSceneChanged;
+            MapBootstrap.LocalReadinessChanged += EvaluateInitialState;
+            _clientSubscribed = true;
 
-            RequestInitialState();
+            EvaluateInitialState();
         }
 
         public override void OnStopClient()
         {
-            if (!isServer)
+            if (_clientSubscribed)
             {
                 GameNetworkManager.ClientSceneChanged -= HandleClientSceneChanged;
+                MapBootstrap.LocalReadinessChanged -= EvaluateInitialState;
+                _clientSubscribed = false;
+                CloseInitialState();
                 Unsubscribe();
             }
 
             base.OnStopClient();
+        }
+
+        /// <summary>
+        ///     Страховка событий готовности: пока канал не открыт и запроса нет, клиент каждый кадр
+        ///     сверяет локальную готовность запуска. Открытый канал и ожидаемый ответ ничего не стоят.
+        /// </summary>
+        private void Update()
+        {
+            if (_clientSubscribed && !_barrier.IsOpen && _barrier.PendingRequest == 0)
+                EvaluateInitialState();
         }
 
         // ── Отправка ──────────────────────────────────────────────────────
@@ -273,7 +299,7 @@ namespace VrBattlegrounds.Network
                 NetworkClient.localPlayer.netId == originNetId)
                 return;
 
-            if (!_initialStateLoaded)
+            if (!_barrier.AcceptsIncrements)
             {
                 GameLog.Network.Verbose(
                     "[NetworkStateRelay] Событие состояния отброшено: начальный снимок ещё не получен.");
@@ -287,27 +313,61 @@ namespace VrBattlegrounds.Network
 
         /// <summary>
         ///     Клиент догрузил новую сцену: всё, что было в предыдущей, уничтожено,
-        ///     а объекты новой ещё не описаны — снимок надо взять заново.
+        ///     а объекты новой ещё не описаны — снимок надо взять заново, когда запуск
+        ///     новой сцены станет локально готов.
         /// </summary>
         private void HandleClientSceneChanged()
         {
-            RequestInitialState();
+            CloseInitialState();
+            EvaluateInitialState();
         }
 
-        private void RequestInitialState()
+        /// <summary>
+        ///     Запуск карты активной сцены и его локальная готовность. Сцена без MapBootstrap (стенд)
+        ///     готова, как только готов клиент, и просит снимок с пустым ключом.
+        /// </summary>
+        private static bool LocalRun(out MapRunKey key)
         {
-            _initialStateLoaded = false;
+            key = default;
+            if (!NetworkClient.active || !NetworkClient.ready || NetworkClient.isLoadingScene) return false;
 
-            if (!NetworkClient.active)
-                return;
+            MapBootstrap bootstrap = MapBootstrap.ForScene(SceneManager.GetActiveScene());
+            if (bootstrap == null) return true;
 
-            GameLog.Network.Info("[NetworkStateRelay] Запрашиваю у сервера начальный снимок состояния сцены.");
-            CmdRequestInitialState();
+            key = bootstrap.LocalRunKey;
+            return key.IsValid && bootstrap.IsLocallyReady(key);
         }
+
+        /// <summary>
+        ///     Готовность запуска изменилась: запросить свежий снимок, если он нужен. Сам запрос и есть
+        ///     сообщение серверу о готовности клиента; отдельного подтверждения нет.
+        /// </summary>
+        private void EvaluateInitialState()
+        {
+            if (!_clientSubscribed) return;
+
+            bool ready = LocalRun(out MapRunKey key);
+            uint request = _barrier.Evaluate(key, ready);
+            if (request != 0) SendInitialStateRequest(key, request);
+        }
+
+        private void SendInitialStateRequest(MapRunKey key, uint request)
+        {
+            GameLog.Network.Info($"[NetworkStateRelay] Запрашиваю у сервера начальный снимок состояния (запуск {key}, запрос {request}).");
+            CmdRequestInitialState(key.SessionEpoch, key.LoadSequence, request);
+        }
+
+        private void CloseInitialState() => _barrier.Reset();
 
         public void RequestAmmoAdmissionResynchronization()
         {
-            if (!isServer && NetworkClient.active && NetworkClient.ready) RequestInitialState();
+            if (isServer || !NetworkClient.active || !NetworkClient.ready) return;
+
+            MapRunKey key = _barrier.OpenKey;
+            uint request = _barrier.RequestResynchronization();
+            if (request == 0) return;
+
+            SendInitialStateRequest(key, request);
         }
 
         [Server]
@@ -317,10 +377,12 @@ namespace VrBattlegrounds.Network
             byte[] snapshot = UxrManager.Instance.SaveStateChanges(null, null,
                 UxrStateSaveLevel.ChangesSinceBeginning, UxrGlobalSettings.Instance.NetFormatInitialState);
             if (snapshot == null || snapshot.Length == 0) return false;
+            MapRunKey key = ServerCurrentRun();
             foreach (var connection in NetworkServer.connections.Values)
                 // Хост — сам источник снимка; загрузка поверх авторитетного состояния сбила бы его захваты.
+                // Номер запроса 0: клиент применит снимок только поверх уже открытого канала того же запуска.
                 if (connection != null && connection.isReady && !(connection is LocalConnectionToClient))
-                    TargetLoadInitialState(connection, snapshot);
+                    TargetLoadInitialState(connection, key.SessionEpoch, key.LoadSequence, 0u, snapshot);
             return true;
         }
 
@@ -340,13 +402,57 @@ namespace VrBattlegrounds.Network
         }
 
         /// <summary>
-        ///     Клиент просит текущее состояние сцены. Ответ уходит только ему.
+        ///     Запуск карты активной сцены сервера — ключ descriptor; пустой ключ — сцена без MapBootstrap.
+        /// </summary>
+        private static MapRunKey ServerCurrentRun()
+        {
+            if (MapBootstrap.ForScene(SceneManager.GetActiveScene()) == null) return default;
+            MapRunAuthority authority = MapRunAuthority.Instance;
+            return authority != null ? authority.Current.Key : default;
+        }
+
+        /// <summary>
+        ///     Принимает ли сервер запрос снимка для запуска <paramref name="key"/>: это текущий запуск активной
+        ///     сцены и он собран (CompositionReady/Ready). Запрос старого запуска (клиент ещё не знает о
+        ///     перезагрузке, отмене или смене карты) не обслуживается: клиент попросит снова, когда его новая
+        ///     сцена станет готова. Сцена без MapBootstrap принимает только пустой ключ.
+        /// </summary>
+        public static bool ServerAcceptsInitialRequest(MapRunKey key, out string reason)
+        {
+            if (MapBootstrap.ForScene(SceneManager.GetActiveScene()) == null)
+            {
+                reason = key.IsValid ? "на сервере сцена без запуска карты" : null;
+                return reason == null;
+            }
+
+            MapRunAuthority authority = MapRunAuthority.Instance;
+            MapRunSnapshot current = authority != null ? authority.Current : default;
+            reason = !key.IsValid ? "клиент не назвал запуск"
+                : current.Key != key ? $"текущий запуск сервера {current.Key}"
+                : current.Status != MapBootstrapStatus.CompositionReady && current.Status != MapBootstrapStatus.Ready
+                    ? $"запуск в статусе {current.Status}"
+                    : null;
+            return reason == null;
+        }
+
+        /// <summary>
+        ///     Клиент готов к запуску <c>(epoch, sequence)</c> и просит свежее состояние сцены. Ответ уходит только
+        ///     ему и несёт тот же ключ и номер запроса. Снимок снимается сейчас: всё, что сервер разошлёт позже,
+        ///     уйдёт этому соединению после ответа тем же надёжным упорядоченным каналом.
         /// </summary>
         [Command(requiresAuthority = false)]
-        private void CmdRequestInitialState(NetworkConnectionToClient sender = null)
+        private void CmdRequestInitialState(System.Guid epoch, ulong sequence, uint request, NetworkConnectionToClient sender = null)
         {
-            if (sender == null)
+            if (sender == null || request == 0)
                 return;
+
+            var key = new MapRunKey(epoch, sequence);
+            if (!ServerAcceptsInitialRequest(key, out string reason))
+            {
+                GameLog.Network.Info($"[NetworkStateRelay] Запрос снимка {request} клиента {sender.connectionId} " +
+                                     $"для запуска {key} отклонён: {reason}.");
+                return;
+            }
 
             byte[] state = UxrManager.Instance.SaveStateChanges(
                 null,
@@ -355,29 +461,49 @@ namespace VrBattlegrounds.Network
                 UxrGlobalSettings.Instance.NetFormatInitialState);
 
             GameLog.Network.Info(
-                $"[NetworkStateRelay] Отдаю начальный снимок клиенту {sender.connectionId}: " +
+                $"[NetworkStateRelay] Отдаю начальный снимок клиенту {sender.connectionId} (запуск {key}, запрос {request}): " +
                 $"{(state != null ? state.Length : 0)} Б.");
 
-            TargetLoadInitialState(sender, state ?? new byte[0]);
+            TargetLoadInitialState(sender, epoch, sequence, request, state ?? new byte[0]);
         }
 
         /// <summary>
-        ///     Начальный снимок пришёл. До этого момента инкрементальные события
-        ///     отбрасывались — теперь их можно применять.
+        ///     Снимок пришёл. Применяется, только если это ответ на текущий запрос текущего запуска либо
+        ///     разосланная сервером пересинхронизация поверх уже открытого канала того же запуска. Ответ старого
+        ///     запуска отбрасывается и канал не открывает.
         /// </summary>
         [TargetRpc]
-        private void TargetLoadInitialState(NetworkConnectionToClient target, byte[] serializedState)
+        private void TargetLoadInitialState(NetworkConnectionToClient target, System.Guid epoch, ulong sequence, uint request,
+                                            byte[] serializedState)
         {
+            var key = new MapRunKey(epoch, sequence);
+            bool accepted = request != 0 ? _barrier.TryAcceptResponse(key, request) : _barrier.AcceptsUnsolicited(key);
+            if (!accepted)
+            {
+                GameLog.Network.Info($"[NetworkStateRelay] Снимок запуска {key} (запрос {request}) отброшен: ждём запрос " +
+                                     $"{_barrier.PendingRequest} запуска {_barrier.PendingKey}, канал " +
+                                     (_barrier.IsOpen ? $"открыт для {_barrier.OpenKey}." : "закрыт."));
+                return;
+            }
+
             if (serializedState != null && serializedState.Length > 0)
             {
+                // Барьер ждал только локальную готовность запуска: всё, что снимок упоминает, обязано уже быть.
+                // Пропуск адресата — дефект порядка, а не повод молча потерять его состояние.
+                int missing = InitialStateInventory.CountMissingTargets(serializedState, out int total);
+                if (missing > 0)
+                {
+                    GameLog.Network.Error($"[NetworkStateRelay] В снимке запуска {key} {missing} из {total} адресатов " +
+                                          "не зарегистрированы на клиенте: их состояние не применится.");
+                }
+
                 UxrManager.Instance.LoadStateChanges(serializedState);
             }
 
-            _initialStateLoaded = true;
-
             GameLog.Network.Info(
-                $"[NetworkStateRelay] Начальный снимок применён ({(serializedState != null ? serializedState.Length : 0)} Б). " +
+                $"[NetworkStateRelay] Начальный снимок запуска {key} применён ({(serializedState != null ? serializedState.Length : 0)} Б). " +
                 "Канал состояния открыт.");
+
         }
     }
 }

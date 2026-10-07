@@ -243,18 +243,27 @@ namespace VrBattlegrounds.Tests.Modes
 
         // ── Сцены ────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Оркестратор режима лобби — не сценовый объект: его спавнит <c>MapBootstrap</c> из центрального каталога.
+        /// В сцене — ровно один запуск карты (MapRoot + MapBootstrap) и ни одного сценового MapReferee
+        /// (сценовый судья был неуправляемым путём). Префаб судьи в каталоге — зарегистрированный сетевой префаб.
+        /// </summary>
         [Test]
-        public void В_сцене_лобби_есть_оркестратор_режима()
+        public void Оркестратор_режима_лобби_создаёт_запуск_карты()
         {
             Scene scene = EditorSceneManager.OpenPreviewScene(LobbyScenePath);
             try
             {
-                List<MapReferee> managers = InScene<MapReferee>(scene);
-                Assert.AreEqual(1, managers.Count, "В лобби должен быть ровно один MapReferee.");
+                Assert.AreEqual(0, InScene<MapReferee>(scene).Count,
+                    "В лобби сценовый MapReferee — неуправляемый путь. Судью спавнит MapBootstrap.");
+                Assert.AreEqual(1, InScene<VrBattlegrounds.Maps.Runtime.MapBootstrap>(scene).Count,
+                    "В лобби должен быть ровно один MapBootstrap (на MapRoot).");
 
-                MapReferee manager = managers[0];
-                Assert.IsTrue(manager.gameObject.activeSelf, "MapReferee выключен — Mirror включит его при спавне сам (сетевой объект).");
-                Assert.AreNotEqual(0UL, manager.GetComponent<NetworkIdentity>().sceneId, "У MapReferee в лобби нулевой sceneId.");
+                var catalog = AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Maps.Runtime.MapRuntimeCatalog>("Assets/Data/Maps/MapRuntimeCatalog.asset");
+                Assert.IsNotNull(catalog, "Нет центрального каталога запуска карт.");
+                Assert.IsNotNull(catalog.RefereePrefab, "В каталоге нет префаба судьи.");
+                Assert.AreEqual(0UL, catalog.RefereePrefab.GetComponent<NetworkIdentity>().sceneId,
+                    "Префаб судьи в каталоге — сценовый объект, а не спавнящийся сетевой префаб.");
 
                 Assert.IsFalse(scene.GetRootGameObjects().Any(r => r.name == "LobbyFreePlay"),
                     "В лобби остался объект LobbyFreePlay — правила лобби теперь на префабе разминки.");

@@ -156,11 +156,19 @@ namespace VrBattlegrounds.Tests.Modes
         }
 
         /// <summary>
-        /// Оркестратор на карте <paramref name="scene"/>. Режимы создаёт фабрика: в EditMode
-        /// Unity не зовёт <c>Awake</c> у инстанцированных префабов, а харнесс умеет
-        /// собирать сетевые объекты сам.
+        /// Оркестратор на карте <paramref name="scene"/>, запущенный так, как его запускает <c>MapBootstrap</c>:
+        /// режим матча согласуется при загрузке (захваченный режим идущей серии, иначе выбор администратора),
+        /// затем CompositionReady и разминка. Режимы создаёт фабрика: в EditMode Unity не зовёт <c>Awake</c>
+        /// у инстанцированных префабов, а харнесс умеет собирать сетевые объекты сам.
         /// </summary>
         private MapReferee CreateMapReferee(string scene)
+        {
+            MapReferee manager = CreateRefereeObject(scene);
+            StartMapRun(manager, scene, _warmup.modeId, CapturedModeAtLoad(scene), MatchModesOf(scene));
+            return manager;
+        }
+
+        private MapReferee CreateRefereeObject(string scene)
         {
             MapReferee manager = CreateNetworkComponent<MapReferee>("MapReferee");
             InvokeLifecycleMethod(manager, "Awake");
@@ -176,8 +184,19 @@ namespace VrBattlegrounds.Tests.Modes
                 mode.PlayerRoster = _roster;
                 return mode.gameObject;
             };
-            SpawnOnServer(manager); // OnStartServer — карта стартует сама
             return manager;
+        }
+
+        private string[] MatchModesOf(string scene) =>
+            _maps.GetBySceneName(scene).supportedModes.Select(m => m.modeId).ToArray();
+
+        /// <summary>Намерение режима в момент загрузки — то же правило, что у MapBootstrap.</summary>
+        private string CapturedModeAtLoad(string scene)
+        {
+            if (MatchModesOf(scene).Length == 0) return string.Empty;
+            Series series = Series.Instance;
+            if (series != null && series.IsRunning) return series.CapturedModeId ?? string.Empty;
+            return SessionManager.Instance != null ? SessionManager.Instance.SelectedModeId ?? string.Empty : string.Empty;
         }
 
         private static void EndMatch(GameMode mode, TeamData winner)
@@ -241,39 +260,62 @@ namespace VrBattlegrounds.Tests.Modes
 
         /// <summary>
         /// Автостарт отладки зовёт «Начать матч» по сигналу <c>Awake</c> оркестратора — раньше
-        /// его спавна. Режим дочерним объектом незаспавненного менеджера не спавнится: запрос
-        /// ждёт <c>OnStartServer</c> и выполняется после разминки.
+        /// его спавна и раньше server Ready карты. Запрос ждёт разминку запуска и выполняется сразу после неё.
         /// </summary>
         [Test]
-        public void Начать_матч_до_спавна_карты_выполняется_после_разминки()
+        public void Начать_матч_до_готовности_карты_выполняется_после_разминки()
         {
             SilenceMirrorNoise();
             CreateSession("elimination");
 
-            // Как в игре: сигнал приходит из Awake оркестратора, когда NetworkIdentity ещё
-            // не связала компоненты — у менеджера нет netIdentity, и isServer там падает с NRE.
-            GameObject go = CreateNetworkObject("MapReferee");
-            MapReferee manager = go.AddComponent<MapReferee>();
-            manager.SceneNameOverride = _mapA.sceneName;
-            manager.ModeFactory = data =>
-            {
-                GameMode mode = data == _warmup
-                    ? (GameMode)CreateNetworkComponent<WarmupMode>("WarmupMode")
-                    : CreateNetworkComponent<EliminationMode>("EliminationMode");
-                InvokeLifecycleMethod(mode, "Awake"); // как в игре: Awake подписывает колбэк SyncList до Initialize
-                mode.PlayerRoster = _roster;
-                return mode.gameObject;
-            };
+            MapReferee manager = CreateRefereeObject(_mapA.sceneName);
+            var run = BeginMapRun(manager, _mapA.sceneName, _warmup.modeId, "elimination", MatchModesOf(_mapA.sceneName));
 
-            Assert.IsFalse(manager.GoLive(), "Режим заспавнен дочерним объектом незаспавненного менеджера.");
+            Assert.IsFalse(manager.GoLive(), "«Начать матч» до готовности карты заспавнил режим.");
             Assert.IsNull(manager.ActiveGameMode);
 
-            EnableNetworking(go);
-            InvokeLifecycleMethod(manager, "Awake");
             SpawnOnServer(manager);
+            Assert.IsNull(manager.ActiveGameMode, "Судья начал разминку сам, до CompositionReady запуска.");
+            Assert.IsTrue(ComposeMapRun(run, manager));
 
             Assert.IsInstanceOf<EliminationMode>(manager.ActiveGameMode, "Отложенный «Начать матч» потерялся.");
             Assert.IsTrue(manager.IsLiveOrPaused);
+        }
+
+        /// <summary>
+        /// Неуправляемого пути нет: судья, заспавненный без запуска карты, разминку не начинает и матч не
+        /// запускает — режимы на карте появляются только через MapBootstrap.
+        /// </summary>
+        [Test]
+        public void Судья_без_запуска_карты_не_запускает_режимов()
+        {
+            SilenceMirrorNoise();
+            CreateSession("elimination");
+
+            MapReferee manager = CreateRefereeObject(_mapA.sceneName);
+            SpawnOnServer(manager);
+
+            Assert.IsNull(manager.ActiveGameMode, "Судья без запуска карты начал разминку — вернулся неуправляемый путь.");
+            Assert.IsFalse(manager.GoLive(), "Судья без запуска карты начал матч по выбору меню.");
+            Assert.IsNull(manager.ActiveGameMode);
+        }
+
+        /// <summary>
+        /// Выбор режима в меню во время карты относится к следующей серии: «Начать матч» берёт режим,
+        /// согласованный при загрузке.
+        /// </summary>
+        [Test]
+        public void Выбор_режима_во_время_карты_не_меняет_режим_запуска()
+        {
+            SilenceMirrorNoise();
+            SessionManager session = CreateSession("elimination");
+
+            MapReferee manager = CreateMapReferee(_mapB.sceneName); // MapB: Elimination и Respawn
+            session.SetSession(_mapB.sceneName, "respawn");
+
+            Assert.IsTrue(manager.GoLive());
+            Assert.IsInstanceOf<EliminationMode>(manager.ActiveGameMode,
+                "Смена выбора после загрузки поменяла режим текущей карты.");
         }
 
         // ── Смена режима на месте ────────────────────────────────────────────

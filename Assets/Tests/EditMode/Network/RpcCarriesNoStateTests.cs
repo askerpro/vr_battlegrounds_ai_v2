@@ -47,13 +47,13 @@ namespace VrBattlegrounds.Tests.Network
             ["EliminationMode.RpcOnRoundEnded"] =
                 "баннер HUD; счёт — SyncDictionary. Победитель текущего раунда только здесь — открытый вопрос T-34",
             ["GameMode.RpcOnModeStarted"] =
-                "баннер HUD; состояние матча — SyncVar MapReferee._currentState",
+                "баннер HUD; состояние матча — descriptor MapRunAuthority (SyncVar _current)",
             ["GameMode.RpcOnModeFinished"] =
                 "баннер HUD; итог карты — Series._results (SyncList)",
             ["MapReferee.RpcOnMapFinished"] =
-                "только лог; состояние — SyncVar _currentState",
+                "только лог; состояние — descriptor MapRunAuthority",
             ["MapReferee.RpcOnStopped"] =
-                "только лог; состояние — SyncVar _currentState",
+                "только лог; состояние — descriptor MapRunAuthority",
             ["MapReferee.RpcPlayerKilled"] =
                 "лента убийств и звук; K/D — SyncVar сессии",
             ["MatchEconomy.RpcTransaction"] =

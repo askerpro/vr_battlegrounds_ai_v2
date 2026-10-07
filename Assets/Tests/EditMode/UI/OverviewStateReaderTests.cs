@@ -45,7 +45,8 @@ namespace VrBattlegrounds.Tests.UI
             mode = CreateNetworkComponent<EliminationMode>("EliminationMode");
             mode.Initialize(new[] { _a, _b });
             InvokePrivateMethod(referee, "RegisterActiveGameMode", mode);
-            SetPrivateField(referee, "_currentState", MapState.Live);
+            // Состояние карты читается только из descriptor запуска — единственного писателя.
+            PublishMapState(referee, MapState.Live, "elimination");
             return referee;
         }
 

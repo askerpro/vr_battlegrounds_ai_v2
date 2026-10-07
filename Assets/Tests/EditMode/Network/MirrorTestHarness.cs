@@ -80,7 +80,9 @@ namespace VrBattlegrounds.Tests.Network
             typeof(MapReferee),
             typeof(SessionManager),
             typeof(Series),
-            typeof(MapLoader)
+            typeof(MapLoader),
+            typeof(VrBattlegrounds.Maps.Runtime.MapRunAuthority),
+            typeof(VrBattlegrounds.Network.NetworkStateRelay)
         };
 
         private GameObject _transportObject;
@@ -250,6 +252,71 @@ namespace VrBattlegrounds.Tests.Network
         protected static void SpawnOnServer(Component component)
         {
             NetworkServer.Spawn(component.gameObject);
+        }
+
+        // ── Запуск карты ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Владелец descriptor запуска карты — как компонент SessionContext в игре: заспавнен, эпоха сессии выдана.
+        /// Повторный вызов в том же тесте возвращает уже созданный.
+        /// </summary>
+        protected VrBattlegrounds.Maps.Runtime.MapRunAuthority CreateRunAuthority()
+        {
+            var existing = VrBattlegrounds.Maps.Runtime.MapRunAuthority.Instance;
+            if (existing != null) return existing;
+
+            var authority = CreateNetworkComponent<VrBattlegrounds.Maps.Runtime.MapRunAuthority>("SessionContext");
+            InvokeLifecycleMethod(authority, "Awake");
+            SpawnOnServer(authority);
+            return authority;
+        }
+
+        /// <summary>
+        /// Запустить судью карты так, как его запускает <c>MapBootstrap</c>: запуск с режимом, согласованным при
+        /// загрузке, спавн судьи, CompositionReady, разминка. Режим матча — по захваченному режиму серии
+        /// <paramref name="capturedModeId"/> среди <paramref name="matchModes"/> карты; пустой список — лобби.
+        /// </summary>
+        protected VrBattlegrounds.Tests.Maps.TestMapRun StartMapRun(MapReferee referee, string scene, string warmupModeId,
+                                                                     string capturedModeId, params string[] matchModes)
+        {
+            var run = BeginMapRun(referee, scene, warmupModeId, capturedModeId, matchModes);
+            if (referee.netId == 0) SpawnOnServer(referee);
+            Assert.IsTrue(ComposeMapRun(run, referee), "Тестовый запуск карты не начал разминку.");
+            return run;
+        }
+
+        /// <summary>Первая половина <see cref="StartMapRun"/>: запуск начат, судья связан, но ещё не заспавнен.</summary>
+        protected VrBattlegrounds.Tests.Maps.TestMapRun BeginMapRun(MapReferee referee, string scene, string warmupModeId,
+                                                                     string capturedModeId, params string[] matchModes)
+        {
+            var run = VrBattlegrounds.Tests.Maps.TestMapRun.Begin(CreateRunAuthority(), scene, warmupModeId, capturedModeId, matchModes);
+            referee.InitializeRun(run);
+            return run;
+        }
+
+        /// <summary>
+        /// Descriptor запуска карты с судьёй <paramref name="referee"/>, состоянием <paramref name="state"/> и режимом
+        /// <paramref name="modeId"/> — без смены режима судьёй. Для тестов, читающих состояние карты.
+        /// </summary>
+        protected VrBattlegrounds.Tests.Maps.TestMapRun PublishMapState(MapReferee referee, MapState state, string modeId)
+        {
+            var run = VrBattlegrounds.Tests.Maps.TestMapRun.Begin(CreateRunAuthority(), "MapA", "warmup", modeId, modeId);
+            referee.InitializeRun(run);
+            if (referee.netId == 0) SpawnOnServer(referee);
+            NetworkIdentity coordinator = EnableNetworking(CreateNetworkObject("ArsenalEquipmentCoordinator"));
+            NetworkServer.Spawn(coordinator.gameObject);
+            NetworkIdentity mode = EnableNetworking(CreateNetworkObject("PublishedMode"));
+            NetworkServer.Spawn(mode.gameObject);
+            run.Publish(referee, coordinator, mode, state, modeId);
+            return run;
+        }
+
+        /// <summary>Вторая половина <see cref="StartMapRun"/>: CompositionReady и разминка заспавненного судьи.</summary>
+        protected bool ComposeMapRun(VrBattlegrounds.Tests.Maps.TestMapRun run, MapReferee referee)
+        {
+            NetworkIdentity coordinator = EnableNetworking(CreateNetworkObject("ArsenalEquipmentCoordinator"));
+            NetworkServer.Spawn(coordinator.gameObject);
+            return run.Compose(referee, coordinator);
         }
 
         // ── Прокрутка сети и репликация ──────────────────────────────────────

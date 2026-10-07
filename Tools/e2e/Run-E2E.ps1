@@ -41,6 +41,10 @@ param(
     # Путь к плееру. Пусто — Build\e2e\VrBattlegrounds.exe в корне репозитория.
     [string] $Player = '',
 
+    # Поздний вход: пауза в секундах перед запуском последнего клиента (0 — без паузы).
+    # Нужна сценариям, где клиент приходит на уже идущую карту (map-run-relay-barrier).
+    [int]    $LateClientDelay = 0,
+
     # Не проверять свежесть билда относительно исходников.
     [switch] $SkipStaleCheck
 )
@@ -195,6 +199,10 @@ try {
     Write-Section ('Запускаю клиентов: ' + $Clients)
     for ($i = 1; $i -le $Clients; $i++) {
         $role = 'client-' + $i
+        if ($LateClientDelay -gt 0 -and $i -eq $Clients -and $Clients -gt 1) {
+            Write-Host ('  поздний вход: ' + $role + ' через ' + $LateClientDelay + ' с')
+            Start-Sleep -Seconds $LateClientDelay
+        }
         $clientResult = Join-Path $runDir ($role + '.json')
         $clientLog    = Join-Path $runDir ($role + '.log')
 

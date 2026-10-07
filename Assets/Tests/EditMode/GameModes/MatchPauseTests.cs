@@ -84,7 +84,8 @@ namespace VrBattlegrounds.Tests.Modes
                 mode.PlayerRoster = _roster;
                 return mode.gameObject;
             };
-            SpawnOnServer(_manager);
+            // Судью запускает запуск карты, как MapBootstrap: режим матча серии согласован при загрузке.
+            StartMapRun(_manager, "MapA", _warmup.modeId, _series.CapturedModeId, _elimination.modeId);
 
             _strips = 0;
             EquipmentStrip.ServerStripAllRequested += CountStrip;

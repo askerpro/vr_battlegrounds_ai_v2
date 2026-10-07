@@ -31,89 +31,18 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         [SerializeField] private Vector3 _realToVirtualOffset;
         [SerializeField] private Quaternion _realToVirtualRotation = Quaternion.identity;
         [SerializeField] private float _realToVirtualScale = 1f;
-        [SerializeField] private float _heightOffset = 0f; // Stores the physical to virtual floor difference
-        [SerializeField] private float _accumulatedHeightOffset = 0f; // Tracks the total vertical shift applied
-        [SerializeField] private float _accumulatedScaleMultiplier = 1f; // Target scale for player proportions
 
-        // ── Рефлексия во внутренности UltimateXR ─────────────────────────────
-        //
-        // Калибровка роста читает и правит приватные поля SDK: публичного доступа к ним
-        // нет. Зависимость жёсткая и молчаливая — переименованное при обновлении поле
-        // не даёт ошибки компиляции, рефлексия просто вернёт null, и рост перестанет
-        // калиброваться без единого сообщения. Поэтому каждое обращение идёт через
-        // ResolveSdkField, который на ненайденное поле пишет Error.
-        //
-        // Полный список точек, что сломается и есть ли публичная альтернатива —
-        // Docs/UltimateXR/sdk-patches.md, раздел «Зависимости от приватных членов SDK».
-
-        private const System.Reflection.BindingFlags SdkPrivateField =
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        // T-50: результаты калибровки пола и роста здесь больше не хранятся и к аватарам отсюда
+        // не применяются. Менеджер — процедура (фазы, замеры, якоря, подсказки); замер уходит
+        // в LocalPlayerCalibration.Submit, значение игрока принадлежит PlayerSession, а к аватару
+        // его ставит AvatarCalibrationApplier.
 
         /// <summary>
-        /// Приватное поле SDK по имени. Отсутствие поля — это сломавшееся обновление
-        /// UltimateXR, а не штатная ситуация, поэтому здесь <c>Error</c> с именем поля
-        /// и типа: иначе поломка видна только по жалобам на рост, спустя неделю.
+        /// Калибровка своего игрока, от которой считается новый замер: то, что сейчас стоит на своём
+        /// аватаре (с неотвеченным предсказанием), а без сессии — память машины.
         /// </summary>
-        private static System.Reflection.FieldInfo ResolveSdkField(Type sdkType, string fieldName)
-        {
-            System.Reflection.FieldInfo field = sdkType.GetField(fieldName, SdkPrivateField);
-
-            if (field == null)
-            {
-                GameLog.Error(
-                    $"[PhysicalSpaceSyncManager] В типе {sdkType.FullName} больше нет приватного поля " +
-                    $"\"{fieldName}\". UltimateXR обновился и переименовал его — калибровка роста " +
-                    "работать не будет. См. Docs/UltimateXR/sdk-patches.md, " +
-                    "раздел «Зависимости от приватных членов SDK».");
-            }
-
-            return field;
-        }
-
-        private float ExpectedEyeHeight
-        {
-            get
-            {
-                if (UxrAvatar.LocalAvatar != null)
-                {
-                    var controller = UxrAvatar.LocalAvatar.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
-                    if (controller != null)
-                    {
-                        var field = ResolveSdkField(
-                            typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController), "_bodyIKSettings");
-
-                        if (field != null)
-                        {
-                            var settings = (UltimateXR.Animation.IK.UxrBodyIKSettings)field.GetValue(controller);
-                            if (settings != null) return settings.EyesBaseHeight;
-                        }
-                    }
-                }
-
-                // Запасной рост глаз: аватара ещё нет либо настройки IK не достались.
-                return 1.75f;
-            }
-        }
-
-        /// <summary>
-        /// Результат калибровки роста: отношение роста игрока к базовому росту глаз аватара.
-        /// Единица означает «не калибровался».
-        ///
-        /// Значение локальное по происхождению, но не по применению: чужие машины должны
-        /// видеть игрока в его пропорциях, иначе коллайдеры разъезжаются с картинкой (VR-01).
-        /// Наружу его отдаёт <c>PlayerSession.CalibrationScale</c> — сюда сеть не заходит.
-        /// </summary>
-        public float AccumulatedScaleMultiplier => _accumulatedScaleMultiplier;
-
-        /// <summary>
-        /// Результат калибровки пола: суммарный вертикальный сдвиг пивота камеры, метры.
-        /// Ноль означает «пол не калибровался».
-        ///
-        /// Как и масштаб, значение локальное по происхождению и общее по применению:
-        /// без него чужие машины показывают игрока на исходной высоте (VR-08).
-        /// Наружу его отдаёт <c>PlayerSession.CalibrationHeightOffset</c>.
-        /// </summary>
-        public float AccumulatedHeightOffset => _accumulatedHeightOffset;
+        private static PlayerCalibration CurrentCalibration =>
+            PlayerSession.LocalSession != null ? PlayerSession.LocalSession.EffectiveCalibration : LocalPlayerCalibration.Current;
 
         public enum HeightCalibrationPhase { None, Floor, PlayerScale }
         public HeightCalibrationPhase CurrentHeightCalibrationPhase { get; private set; } = HeightCalibrationPhase.None;
@@ -164,28 +93,6 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         public bool IsCalibrating { get; private set; } = false;
         public bool IsCalibratingHeight => CurrentHeightCalibrationPhase != HeightCalibrationPhase.None;
 
-        /// <summary>
-        /// Калибровка по якорям <b>состоялась</b>: обе точки зарегистрированы и
-        /// <see cref="CalculateTransform" /> отработал. В отличие от
-        /// <see cref="IsCalibrating" /> (идёт ли процесс прямо сейчас) это факт о прошлом,
-        /// и живёт он ровно столько же, сколько сам менеджер, — то есть всю сессию.
-        ///
-        /// <para>
-        /// Отдельный признак нужен потому, что по самим результатам калибровки её факт
-        /// не восстанавливается: <see cref="_realToVirtualRotation" /> по умолчанию
-        /// <c>identity</c>, <see cref="_realToVirtualScale" /> равен единице, и
-        /// «не калибровался» неотличимо от «калибровался и вышло единично».
-        /// </para>
-        ///
-        /// <para>
-        /// Кому нужно. Серверу — чтобы выбрать точку спавна: до калибровки игрока можно
-        /// ставить куда угодно (зона своей команды), после — его место задано физически,
-        /// и двигать его нельзя. Наружу признак отдаёт <c>PlayerSession.IsCalibrated</c>,
-        /// сюда сеть не заходит (T-30).
-        /// </para>
-        /// </summary>
-        public bool IsCalibrated { get; private set; }
-
         // Events
         public event Action CalibrationStarted;
         public event Action CalibrationCancelled;
@@ -198,13 +105,10 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         public event Action HeightCalibrationCancelled;
 
         /// <summary>
-        /// Отработал первый шаг калибровки высоты — синхронизация пола, — и
-        /// <see cref="AccumulatedHeightOffset" /> изменился.
+        /// Отработал первый шаг калибровки высоты — синхронизация пола; замер пола отправлен.
         ///
         /// Отдельное событие, а не <see cref="HeightCalibrationCompleted" />, потому
-        /// что «завершено» поднимается только после второго шага (масштаб). Игрок,
-        /// который откалибровал пол и до масштаба не дошёл, иначе не разослал бы
-        /// свою высоту вообще.
+        /// что «завершено» поднимается только после второго шага (рост). Нужно подсказкам HUD.
         /// </summary>
         public event Action FloorHeightCalibrated;
 
@@ -356,15 +260,6 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             UxrAvatar.LocalAvatarStarted -= UxrAvatar_LocalAvatarStarted;
         }
 
-        private void Start()
-        {
-            // Apply if avatar is already present on startup
-            if (UxrAvatar.LocalAvatar != null)
-            {
-                ApplySyncToAvatar();
-            }
-        }
-
         private void UxrAvatar_GlobalAvatarMoved(object sender, UxrAvatarMoveEventArgs e)
         {
             UxrAvatar avatar = sender as UxrAvatar;
@@ -377,7 +272,8 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
         private void UxrAvatar_LocalAvatarStarted(object sender, UxrAvatarStartedEventArgs e)
         {
-            ApplySyncToAvatar();
+            // Калибровку пола и роста новому аватару ставит его применитель по данным сессии (T-50),
+            // а не этот обработчик: при смене аватара UxrAvatar.LocalAvatar ещё указывает на старый.
 
             // Первый замер — сразу, не дожидаясь перемещения. Иначе игрок, который
             // с момента спавна никуда не телепортировался, не имел бы своего места
@@ -388,38 +284,6 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 RecordLocalAvatarPlace(UxrAvatar.LocalAvatar.transform.position,
                                        UxrAvatar.LocalAvatar.transform.rotation);
             }
-        }
-
-        /// <summary>
-        /// Новый аватар локального игрока появился — вернуть ему то, что задано
-        /// калибровкой этой машины.
-        ///
-        /// <para>
-        /// <b>Здесь больше не вызывается <see cref="ApplyAvatarTransform" /></b>, и это
-        /// намеренно (T-30). Стояло условие <c>_realToVirtualScale &gt; 0</c>, то есть
-        /// «всегда»: масштаб по умолчанию равен единице. Пока игрок не калибровался,
-        /// преобразование единично и вызов ничего не делал — но у откалиброванного
-        /// это <b>сдвиг</b>, посчитанный один раз в мировых координатах той карты, где
-        /// калибровались. Наложить его повторно на каждый новый аватар значит увезти
-        /// игрока ещё раз на ту же дельту — при смене скина, при смене карты, при каждом
-        /// респавне.
-        /// </para>
-        ///
-        /// <para>
-        /// Место откалиброванного игрока после смены карты восстанавливает сервер
-        /// (<c>SpawnPlaceRegistry</c>), причём в системе координат якорей новой
-        /// карты, — см. <see cref="PhysicalSpaceAnchorFrame" />. Единственный законный
-        /// вызов <see cref="ApplyAvatarTransform" /> остался там, где он и должен быть:
-        /// в момент самой калибровки (<see cref="RegisterCalibrationPoint" />).
-        /// </para>
-        /// </summary>
-        private void ApplySyncToAvatar()
-        {
-            if (UxrAvatar.LocalAvatar == null) return;
-
-            // Локальное смещение высоты камеры (калибровка пола) живёт в префабе аватара,
-            // а не в мире, поэтому новому экземпляру его нужно наложить заново.
-            ApplyAvatarHeight();
         }
 
         private void Update()
@@ -525,8 +389,8 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 ApplyAvatarTransform();
 
                 // Признак ставится ровно здесь: калибровка состоялась тогда, когда
-                // обе точки зарегистрированы и преобразование посчитано.
-                IsCalibrated = true;
+                // обе точки зарегистрированы и преобразование посчитано. Решает сервер (T-50).
+                LocalPlayerCalibration.Submit(CurrentCalibration.WithCalibrated(true));
 
                 IsCalibrating = false;
                 ToggleRealVirtualSpaceRendering();
@@ -568,10 +432,11 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 float avatarFloorY = UxrAvatar.LocalAvatar.transform.position.y;
                 float deltaY = avatarFloorY - controllerPos.y;
 
-                _heightOffset = deltaY;
-                _accumulatedHeightOffset += deltaY;
-
-                ApplyHeightDelta(deltaY);
+                // Контроллер уже сдвинут текущим полом (смещение рук = пол), поэтому новый пол —
+                // текущий плюс невязка. Своя сессия предсказывает его сразу: вторая фаза меряет
+                // рост уже от сдвинутого пивота камеры.
+                PlayerCalibration current = CurrentCalibration;
+                LocalPlayerCalibration.Submit(current.WithFloor(current.FloorOffset + deltaY));
                 FloorHeightCalibrated?.Invoke();
 
                 CurrentHeightCalibrationPhase = HeightCalibrationPhase.PlayerScale;
@@ -592,180 +457,17 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                     return;
                 }
 
-                _accumulatedScaleMultiplier = playerRealHeight / ExpectedEyeHeight;
-                ApplyScale();
+                // Рост — в метрах (T-50): масштаб каждая машина считает сама для каждой модели
+                // по её EyesBaseHeight, поэтому калибровка на одном аватаре верна и на другом.
+                LocalPlayerCalibration.Submit(CurrentCalibration.WithEyeHeight(playerRealHeight));
 
                 CurrentHeightCalibrationPhase = HeightCalibrationPhase.None;
                 HeightCalibrationCompleted?.Invoke();
-                
-                GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Phase 2 Scale Registered. HMD Height: {playerRealHeight}m. Extents Scale: {_accumulatedScaleMultiplier:F2}");
+
+                GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Phase 2: рост глаз {playerRealHeight:F3} м.");
             }
         }
 
-        private void ApplyHeightDelta(float deltaY)
-        {
-            if (deltaY == 0f) return;
-
-            // 1. Смещаем системную камеру локально
-            ShiftAvatarCameraPivot(UxrAvatar.LocalAvatar, deltaY);
-
-            // 2. Смещаем трекинг рук глобально, изменяя константу в исходниках UXR.
-            //    Это про руки своего игрока, поэтому в ShiftAvatarCameraPivot не уехало:
-            //    чужому аватару глобальный офсет трекинга не нужен и вреден.
-            UltimateXR.Devices.UxrControllerTracking.GlobalHeightOffset = _accumulatedHeightOffset;
-        }
-
-        /// <summary>
-        /// Сдвигает пивот камеры <b>любого</b> аватара по вертикали — своего или чужого.
-        ///
-        /// <para>
-        /// Вынесено из <see cref="ApplyHeightDelta" /> по той же причине, по которой
-        /// в T-14 вынесли <see cref="ApplyScaleToAvatar" />: результат калибровки пола
-        /// нужен не только той машине, где калибровались. Тело удалённого аватара
-        /// собирает <c>UxrBodyIK</c>, и шею он ставит от мировой позиции камеры
-        /// (<c>UxrBodyIK.cs:227</c>), а <c>UxrManager</c> решает IK у <b>всех</b>
-        /// аватаров, не только у локального (<c>UxrManager.cs:1901-1908</c>). Значит
-        /// не сдвинутый пивот на чужой машине — это не «невидимая камера не там»,
-        /// а игрок, стоящий не на своей высоте (находка VR-08).
-        /// </para>
-        ///
-        /// <para>
-        /// Сдвиг, а не установка: базовая высота пивота у каждого префаба своя, и
-        /// абсолютное значение потребовало бы её знать. Учёт того, сколько уже
-        /// наложено, ведёт вызывающая сторона — <c>PlayerSession</c>, у которой
-        /// на каждый аватар ровно одна связь и известен момент её появления.
-        /// </para>
-        /// </summary>
-        /// <param name="avatar">Аватар-получатель. <c>null</c> игнорируется молча.</param>
-        /// <param name="deltaY">Насколько сдвинуть пивот вверх, метры.</param>
-        public static void ShiftAvatarCameraPivot(UxrAvatar avatar, float deltaY)
-        {
-            if (avatar == null || deltaY == 0f) return;
-
-            Transform cameraController = avatar.CameraController;
-
-            if (cameraController == null)
-            {
-                GameLog.PhysicalSpace.Warning(
-                    $"[PhysicalSpaceSyncManager] У аватара '{avatar.name}' нет пивота камеры — " +
-                    "смещение высоты применить некуда.");
-                return;
-            }
-
-            Vector3 localPos = cameraController.localPosition;
-            cameraController.localPosition = new Vector3(localPos.x, localPos.y + deltaY, localPos.z);
-        }
-
-        public void ApplyAvatarHeight()
-        {
-            // При спавне или старте сцены мы должны применить всё накопленное смещение разом,
-            // так как префаб аватара создается с нулевыми локальными оффсетами.
-            ApplyHeightDelta(_accumulatedHeightOffset);
-            ApplyScale();
-        }
-
-        private void ApplyScale()
-        {
-            ApplyScaleToAvatar(UxrAvatar.LocalAvatar, _accumulatedScaleMultiplier);
-        }
-
-        /// <summary>
-        /// Применяет пропорции игрока к <b>любому</b> аватару — своему или чужому.
-        ///
-        /// <para>
-        /// Метод статический и принимает аватар параметром именно потому, что зовут его
-        /// с двух сторон: локально после калибровки (<see cref="ApplyScale" />) и на каждой
-        /// машине из хука <c>PlayerSession.CalibrationScale</c>, когда значение приехало
-        /// по сети. Раньше масштаб применялся только к <c>UxrAvatar.LocalAvatar</c>, из-за
-        /// чего чужие аватары оставались в исходных пропорциях, а коллайдеры расходились
-        /// с картинкой — находка VR-01.
-        /// </para>
-        ///
-        /// <para>
-        /// Идемпотентен: <c>localScale</c> ставится абсолютным значением, а правка IK идёт
-        /// от отношения нового масштаба к старому и на повторном вызове с тем же значением
-        /// вырождается в единицу. Поэтому двойное применение (локальный аватар получает
-        /// масштаб и из <see cref="ApplyAvatarHeight" />, и из сетевого хука) безопасно.
-        /// </para>
-        /// </summary>
-        /// <param name="avatar">Аватар-получатель. <c>null</c> игнорируется молча: аватар мог ещё не заспавниться.</param>
-        /// <param name="scaleMultiplier">Отношение роста игрока к базовому росту глаз аватара.</param>
-        public static void ApplyScaleToAvatar(UxrAvatar avatar, float scaleMultiplier)
-        {
-            if (avatar == null) return;
-
-            var controller = avatar.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
-            if (controller == null)
-            {
-                GameLog.PhysicalSpace.Warning("UxrStandardAvatarController not found. Cannot apply scale.");
-                return;
-            }
-
-            // Масштабируем внутренний скелет (Dummy Forward), а не всё трекинг-пространство UxrAvatar,
-            // чтобы у игрока не сломался двуручный хват оружия (рассинхрон расстояний в реале и виаре).
-            //
-            // "Dummy Forward" создаёт сам SDK в UxrStandardAvatarController.Awake (UxrBodyIK.Initialize),
-            // причём независимо от UxrAvatarMode. Поэтому объект есть и на удалённых аватарах,
-            // и своего NetworkTransform у него быть не может — он не часть префаба.
-            Transform dummyForward = avatar.transform.Find("Dummy Forward");
-            float oldScale = 1f;
-
-            if (dummyForward != null)
-            {
-                oldScale = dummyForward.localScale.x;
-                dummyForward.localScale = new Vector3(scaleMultiplier, scaleMultiplier, scaleMultiplier);
-            }
-            else
-            {
-                GameLog.PhysicalSpace.Warning("Dummy Forward not found on Avatar. Scale wasn't applied correctly.");
-                return;
-            }
-
-            // Пересчитываем мировые векторы смещения внутри приватных переменных UxrBodyIK с помощью рефлексии.
-            //
-            // Правка нужна и удалённому аватару, а не только своему. Здесь раньше стояло
-            // обратное утверждение — «UxrManager решает body IK только у аватара с
-            // AvatarMode.Local» — и оно неверно: на стадии Animation действительно
-            // обновляется только локальный, а вот PostProcess, где и вызывается
-            // SolveBodyIK, UxrManager прогоняет по EnabledAvatarControllers, то есть
-            // по всем (UxrManager.cs:1901-1908). Отдельно от Animation крутится только
-            // UpdateHandPoseTransforms.
-            //
-            // Поэтому же VR-08 вообще заметна глазом: шею удалённого аватара ставит
-            // тот же IK от мировой позиции камеры (UxrBodyIK.cs:227).
-            float relativeScale = scaleMultiplier / oldScale;
-            if (Mathf.Approximately(relativeScale, 1f)) return;
-
-            var bodyIKField = ResolveSdkField(
-                typeof(UltimateXR.Avatar.Controllers.UxrStandardAvatarController), "_bodyIK");
-            if (bodyIKField == null) return;
-
-            var bodyIK = bodyIKField.GetValue(controller);
-            if (bodyIK == null)
-            {
-                GameLog.Error("[PhysicalSpaceSyncManager] UxrStandardAvatarController._bodyIK пуст — " +
-                              "пересчитать смещения IK не от чего, аватар останется в старых пропорциях.");
-                return;
-            }
-
-            var type = bodyIK.GetType();
-
-            var forwardPosField = ResolveSdkField(type, "_avatarForwardPosRelativeToNeck");
-            if (forwardPosField != null)
-            {
-                Vector3 val = (Vector3)forwardPosField.GetValue(bodyIK);
-                forwardPosField.SetValue(bodyIK, val * relativeScale);
-            }
-
-            var neckPosField = ResolveSdkField(type, "_neckPosRelativeToEyes");
-            if (neckPosField != null)
-            {
-                Vector3 val = (Vector3)neckPosField.GetValue(bodyIK);
-                neckPosField.SetValue(bodyIK, val * relativeScale);
-            }
-            
-            GameLog.PhysicalSpace.Info($"[PhysicalSpaceSyncManager] Dynamic IK Scale applied. Relative Scale Delta: {relativeScale}");
-        }
         private void CalculateTransform()
         {
             Vector3 virtualA = _virtualAnchors[0].transform.position;
@@ -795,8 +497,10 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         {
             var mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             PlayerSession session = PlayerSession.LocalSession;
-            if (mode == null || mode.PhysicalCalibrationEnabled || session == null ||
-                session.IsEliminated || session.Role != GameRole.Player) return true;
+
+            // То же правило, что решает сервер (PlayerCalibrationRules): здесь — только чтобы
+            // не начинать заведомо отклонённую процедуру.
+            if (session == null || !PlayerCalibrationRules.IsLockedByCombat(mode, session.IsEliminated, session.Role)) return true;
 
             // Изменение координат посреди боя невозможно отличить от прохода через стену.
             GameLog.PhysicalSpace.Warning("[PhysicalSpaceSyncManager] Калибровка отклонена: идёт бой.");
@@ -816,7 +520,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             // в CalculateTransform оба направления сплющены через Scale(1, 0, 1), поэтому поворот
             // чисто вокруг Y, а Y-компонента _realToVirtualOffset определяется случайной высотой,
             // на которой игрок держал контроллер при регистрации точки. Рост калибруется отдельно
-            // (BeginHeightCalibration → ApplyHeightDelta).
+            // (BeginHeightCalibration).
             // Здесь было Vector3.Scale(newPosition, new Vector3(1, position.y, 1)) — умножение Y
             // на саму себя: при y = 0 высота обнулялась, при y = 2 давала 4.
             newPosition.y = UxrAvatar.LocalAvatar.transform.position.y;

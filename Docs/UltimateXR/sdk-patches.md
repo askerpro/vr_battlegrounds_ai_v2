@@ -386,7 +386,7 @@ private static UxrMirrorAvatar _serverBroadcaster;   // кто на сервер
    - Свойства `SensorLeftPos` и `SensorRightPos` (возвращающие мировые координаты сенсоров) изменены: теперь они прибавляют `GlobalHeightOffset` к оси Y локальной позиции сенсора, перед тем как перевести её в мировые координаты (`Avatar.transform.TransformPoint`).
 
 ### Как связать с игрой
-В проекте используется `PhysicalSpaceSyncManager.cs`, который при калибровке сдвигает `CameraController.localPosition.y` и одновременно записывает смещение в `UltimateXR.Devices.UxrControllerTracking.GlobalHeightOffset`.
+В проекте `AvatarCalibrationApplier.cs` ставит `CameraController.localPosition` от базы префаба плюс пол из `PlayerSession.Calibration` и одновременно записывает этот пол в `UltimateXR.Devices.UxrControllerTracking.GlobalHeightOffset` только у своего аватара (T-50). `PhysicalSpaceSyncManager` ведёт процедуру и передаёт замеры, производное состояние аватара он не пишет.
 
 ### Как повторить при обновлении SDK
 1. В `UxrControllerTracking` добавить `public static float GlobalHeightOffset { get; set; } = 0f;`
@@ -845,7 +845,7 @@ Unique Ids`, сторож — `UxrUniqueIdOnDiskTests`.
 ## Зависимости от приватных членов SDK (рефлексия)
 
 **Дата:** 2026-08-19 (задача T-21, находка VR-03)
-**Файлы проекта:** `Assets/Scripts/PhysicalSpaceUtils/PhysicalSpaceSyncManager.cs`
+**Файлы проекта:** `Assets/Scripts/PhysicalSpaceUtils/AvatarCalibrationApplier.cs` (T-50, 2026-10-07; раньше — `PhysicalSpaceSyncManager.cs`)
 
 ### Почему это здесь
 
@@ -861,10 +861,10 @@ Unique Ids`, сторож — `UxrUniqueIdOnDiskTests`.
 
 | Где в проекте | Член SDK | Доступ | Зачем | Что сломается, если член исчезнет |
 |---|---|---|---|---|
-| `PhysicalSpaceSyncManager.ExpectedEyeHeight` | `UxrStandardAvatarController._bodyIKSettings` | чтение | достать `EyesBaseHeight` — эталонный рост глаз аватара, знаменатель в расчёте масштаба игрока | масштаб считается от запасных 1.75 м: у игроков другого роста уезжают пропорции тела и длина рук |
-| `PhysicalSpaceSyncManager.ApplyScale` | `UxrStandardAvatarController._bodyIK` | чтение | добраться до самого объекта `UxrBodyIK`, чьи смещения надо пересчитать под новый масштаб | смещения IK не пересчитываются; после калибровки роста голова и шея аватара стоят не на месте |
-| `PhysicalSpaceSyncManager.ApplyScale` | `UxrBodyIK._avatarForwardPosRelativeToNeck` | чтение + запись | вектор «шея → перёд аватара» посчитан один раз в масштабе 1; масштабируем вместе с телом | тело разворачивается не туда при масштабе, отличном от единицы |
-| `PhysicalSpaceSyncManager.ApplyScale` | `UxrBodyIK._neckPosRelativeToEyes` | чтение + запись | вектор «глаза → шея», та же история | голова садится не на шею |
+| `AvatarCalibrationApplier.CaptureBase` | `UxrStandardAvatarController._bodyIKSettings` | чтение | достать `EyesBaseHeight` этой модели — знаменатель абсолютного роста глаз игрока | без базы масштаб остаётся единичным; калибровка роста не применяется |
+| `AvatarCalibrationApplier.CaptureBase` | `UxrStandardAvatarController._bodyIK` | чтение | снять исходные смещения `UxrBodyIK` до калибровки | смещения IK не пересчитываются; после калибровки роста голова и шея аватара стоят не на месте |
+| `AvatarCalibrationApplier.CaptureBase/Apply` | `UxrBodyIK._avatarForwardPosRelativeToNeck` | чтение + запись | снять базовый вектор «шея → перёд аватара», каждый раз ставить база × масштаб | тело разворачивается не туда при масштабе, отличном от единицы |
+| `AvatarCalibrationApplier.CaptureBase/Apply` | `UxrBodyIK._neckPosRelativeToEyes` | чтение + запись | снять базовый вектор «глаза → шея», каждый раз ставить база × масштаб | голова садится не на шею |
 | `AvatarSwapDeathReplicationScenario` (ярус C) | `UxrMirrorAvatar._serverBroadcaster` | чтение, static | сценарий проверяет, что после **Патча 1** этого поля в SDK больше нет | ничего: отсутствие поля здесь — ожидаемый результат, а не поломка |
 
 ### Громкий отказ вместо тихого
@@ -872,11 +872,12 @@ Unique Ids`, сторож — `UxrUniqueIdOnDiskTests`.
 Раньше ненайденное поле означало молчаливый `return`, и после обновления SDK поломка
 вылезала неделю спустя, жалобами на калибровку. Теперь:
 
-- `PhysicalSpaceSyncManager.ResolveSdkField` — единственная точка поиска приватного поля
+- `AvatarCalibrationApplier.ResolveSdkField` — единственная точка поиска приватного поля
   в этом классе. На ненайденное поле пишет `GameLog.Error` с именем поля, полным именем
   типа и ссылкой на этот раздел. Через неё идут все четыре обращения.
-- Отдельно логируется случай, когда поле нашлось, но `_bodyIK` пуст: пересчитывать
-  смещения не от чего.
+- Отсутствующие пивот, `Dummy Forward` или `UxrStandardAvatarController` дают предупреждение.
+  Поля BodyIK применяются только к созданному объекту IK; штатно SDK создаёт его в `Awake`
+  контроллера до связывания аватара с сессией.
 - Сценарий яруса C **намеренно молчит**: он и рассчитан на отсутствие поля.
 
 ### Кандидаты на вынос в публичный API

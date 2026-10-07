@@ -18,10 +18,10 @@ namespace VrBattlegrounds.Network
     /// </para>
     ///
     /// <para>
-    /// Признак калибровки приходит здесь же, а не только командой
-    /// <c>PlayerSession.CmdSetCalibrated</c>: точку спавна сервер выбирает в момент
-    /// обработки этого сообщения, то есть до того, как у клиента появится сессия,
-    /// из которой команду можно отправить.
+    /// Калибровка игрока (пол, рост, признак калибровки по якорям) приходит здесь же, а не командой
+    /// сессии: точку спавна сервер выбирает в момент обработки этого сообщения, то есть до того,
+    /// как у клиента появится сессия (T-50). Клиент без данных (перезапуск) калибровку не несёт —
+    /// тогда сервер берёт снимок отключённой сессии.
     /// </para>
     /// </summary>
     public struct GamePlayerConnectMessage : NetworkMessage
@@ -31,12 +31,15 @@ namespace VrBattlegrounds.Network
         public int teamId;
         public int avatarId;
 
+        /// <summary>Машина знает калибровку своего игрока (<c>LocalPlayerCalibration.HasValue</c>).</summary>
+        public bool hasCalibration;
+
         /// <summary>
-        /// Игрок откалибровал своё физическое пространство по якорям. Один бит, и врать
-        /// им невыгодно: соврав, игрок получит не преимущество, а своё прежнее место
-        /// в арене вместо базы команды — та же логика, что в <c>CmdSetCalibrated</c>.
+        /// Калибровка своего игрока. Проверяет и обрезает сервер (<c>PlayerSession.ServerAcceptCalibration</c>).
+        /// Признаком калибровки по якорям врать невыгодно: соврав, игрок получит своё прежнее место
+        /// в арене вместо базы команды.
         /// </summary>
-        public bool isCalibrated;
+        public PhysicalSpaceUtils.PlayerCalibration calibration;
 
         /// <summary>Клиенту есть что сказать о своём месте: замер снят и переводим.</summary>
         public bool hasAnchorPlace;
@@ -57,7 +60,8 @@ namespace VrBattlegrounds.Network
             teamId = team;
             avatarId = avatar;
 
-            isCalibrated = false;
+            hasCalibration = PhysicalSpaceUtils.LocalPlayerCalibration.HasValue;
+            calibration = PhysicalSpaceUtils.LocalPlayerCalibration.Current;
             hasAnchorPlace = false;
             anchorPlacePosition = UnityEngine.Vector3.zero;
             anchorPlaceRotation = UnityEngine.Quaternion.identity;
@@ -65,8 +69,6 @@ namespace VrBattlegrounds.Network
 
             PhysicalSpaceUtils.PhysicalSpaceSyncManager sync = PhysicalSpaceUtils.PhysicalSpaceSyncManager.Instance;
             if (sync == null) return;
-
-            isCalibrated = sync.IsCalibrated;
 
             UnityEngine.Vector3 place;
             UnityEngine.Quaternion rotation;

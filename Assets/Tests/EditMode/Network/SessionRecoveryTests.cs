@@ -4,6 +4,7 @@ using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
+using VrBattlegrounds.PhysicalSpaceUtils;
 
 namespace VrBattlegrounds.Tests.Network
 {
@@ -123,7 +124,8 @@ namespace VrBattlegrounds.Tests.Network
         {
             SilenceMirrorNoise();
 
-            _session.IsCalibrated = true;
+            PlayerCalibration calibration = new PlayerCalibration(0.25f, 1.62f, true);
+            _session.ServerAcceptCalibration(calibration, PlayerSession.CalibrationOrigin.Connect);
             AttachAvatar(new Vector3(5f, 1f, 7f), life: 88f);
 
             NetworkConnection connection = NetworkServer.localConnection;
@@ -141,6 +143,9 @@ namespace VrBattlegrounds.Tests.Network
                 "Калибровка — характеристика игрока, как команда и скин, и переживать отключение " +
                 "обязана так же. Иначе вернувшийся откалиброванный игрок выглядит новичком, " +
                 "чьё место можно назначить.");
+            Assert.AreEqual(calibration, snapshot.Calibration,
+                "Снимок обязан хранить пол и рост (T-50): иначе вернувшийся игрок стандартного роста, " +
+                "а в бою поменять это уже нельзя.");
         }
 
         [Test]

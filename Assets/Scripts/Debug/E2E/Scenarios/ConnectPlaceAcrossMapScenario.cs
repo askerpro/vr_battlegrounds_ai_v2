@@ -70,13 +70,12 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// <para>
     /// <b>Чего сценарий не проверяет.</b> Саму калибровку: она читает положение шлема
     /// и контроллеров, то есть требует железа. Клиент не калибруется, а объявляет
-    /// результат командой <c>CmdSetCalibrated</c> — тот же приём, что
+    /// результат запросом своей сессии <c>PlayerSession.RequestCalibration</c> — тот же приём, что
     /// в <c>calibration-scale-replication</c> и <c>calibrated-position-persists</c>.
-    /// Следствие приёма: <c>PhysicalSpaceSyncManager.IsCalibrated</c> у клиента остаётся
-    /// ложным, поэтому во втором круге признак калибровки приезжает на сервер снимком
-    /// отключённой сессии, а не битом в сообщении подключения. Бит в сообщении нужен
-    /// другому случаю — откалиброванному игроку, которого сервер видит впервые, — и
-    /// его проверяет ярус A (<c>SavedAvatarPlaceTests</c>).
+    /// После ответа сервера машина помнит калибровку (<c>LocalPlayerCalibration</c>, T-50),
+    /// поэтому во втором круге признак приезжает в сообщении подключения; путь «клиент без
+    /// данных → снимок отключённой сессии» проверяет ярус B
+    /// (<c>PlayerCalibrationOwnerHostTests</c>).
     /// </para>
     /// </summary>
     public class ConnectPlaceAcrossMapScenario : IE2EScenario
@@ -437,7 +436,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 result.Set(CheckDeclared, declared.Succeeded,
                     declared.Succeeded
                         ? $"клиент объявил калибровку: {DescribeSessions()}"
-                        : declared.Diagnosis + " CmdSetCalibrated до сервера не доехал — " +
+                        : declared.Diagnosis + " запрос калибровки до сервера не доехал — " +
                           "вторую ветку правила проверять нечем.");
 
                 if (!declared.Succeeded)
@@ -720,7 +719,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 // Объявление калибровки — подмена результата процедуры по якорям.
                 if (phase >= PhaseDeclare && NetworkClient.ready && declaredOn != local.netId)
                 {
-                    local.CmdSetCalibrated(true);
+                    local.RequestCalibration(local.Calibration.WithCalibrated(true));
 
                     if (local.IsCalibrated)
                     {

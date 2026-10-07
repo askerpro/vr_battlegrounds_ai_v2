@@ -15,12 +15,16 @@ namespace VrBattlegrounds.Managers
         public int AvatarIndex;
 
         /// <summary>
-        /// Игрок объявлял калибровку физического пространства. Такая же характеристика
-        /// игрока, как команда и скин, и переживать отключение обязана так же: без неё
-        /// вернувшийся откалиброванный игрок выглядел бы для сервера новичком, чьё место
-        /// можно назначить (CAL-02).
+        /// Калибровка игрока целиком (T-50): пол, рост глаз и признак калибровки по якорям. Такая же
+        /// характеристика игрока, как команда и скин, и переживать отключение обязана так же: без
+        /// признака вернувшийся откалиброванный игрок выглядел бы для сервера новичком, чьё место
+        /// можно назначить (CAL-02), а без пола и роста вернулся бы стандартным — и переподключение
+        /// в бою уже не дало бы их поменять.
         /// </summary>
-        public bool IsCalibrated;
+        public PhysicalSpaceUtils.PlayerCalibration Calibration;
+
+        /// <summary>Признак калибровки по якорям из <see cref="Calibration" />.</summary>
+        public bool IsCalibrated => Calibration.IsCalibrated;
 
         /// <summary>
         /// Момент сохранения, секунды от старта процесса. По нему считается возраст записи:
@@ -120,7 +124,7 @@ namespace VrBattlegrounds.Managers
                 Kills = session.Kills,
                 Deaths = session.Deaths,
                 Score = session.Score,
-                IsCalibrated = session.IsCalibrated,
+                Calibration = session.Calibration,
                 NeedsPhysicalRestore = false,
                 CapturedOnMap = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
                 SavedAtSeconds = _timeSource()

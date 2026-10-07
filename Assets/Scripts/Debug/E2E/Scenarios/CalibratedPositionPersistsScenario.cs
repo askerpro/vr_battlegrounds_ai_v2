@@ -27,7 +27,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// в одном прогоне один клиент объявляет калибровку, второй нет, и после смены карты
     /// они обязаны оказаться в <b>разных</b> местах. Одна ветка без другой ничего
     /// не доказывает: «всех в зону» и «никого не двигать» по отдельности выглядят
-    /// одинаково правдоподобно.
+    /// одинаково правдоподобно. Неоткалиброванного игра не двигает: он остаётся в прежних
+    /// мировых координатах (<c>SpawnPlaceRegistry.Capture</c>; ожидание «зона команды» устарело
+    /// и исправлено в T-50).
     /// </para>
     ///
     /// <para>
@@ -83,7 +85,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckAnchors    = "якоря обеих карт задают одну и ту же систему координат арены";
         private const string CheckDisplaced  = "откалиброванного игрока увели из зоны его команды на известную точку арены";
         private const string CheckKeptPlace  = "после смены карты откалиброванный игрок остался на своём месте в арене (CAL-01)";
-        private const string CheckPlainZone  = "после смены карты неоткалиброванный игрок оказался в зоне своей команды";
+        private const string CheckPlainZone  = "после смены карты неоткалиброванный игрок остался в прежних мировых координатах";
         private const string CheckBranches   = "ветки различаются: откалиброванного в зону команды не утащило";
 
         // ── Имена проверок клиента ────────────────────────────────────────
@@ -362,7 +364,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                         ? $"откалиброван: {calibrated.PlayerName} (команда {calibrated.TeamIndex}); " +
                           $"без калибровки: {plain.PlayerName} (команда {plain.TeamIndex})"
                         : declared.Diagnosis +
-                          " CmdSetCalibrated не доехал до сервера или его прислали оба клиента — " +
+                          " Запрос калибровки не доехал до сервера или его прислали оба клиента — " +
                           "тогда сравнивать две ветки не с чем.");
 
                 if (!declaredOk)
@@ -421,6 +423,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 }
 
                 Vector3 displacedInAnchors = firstFrameOk ? firstFrame.ToLocal(displaced) : Vector3.zero;
+
+                // Место неоткалиброванного до смены карты: игра его не двигает (SpawnPlaceRegistry
+                // хранит его в мировых координатах), и это эталон его ветки.
+                Vector3 plainBefore = plain.ActiveAvatar != null ? plain.ActiveAvatar.transform.position : Vector3.zero;
 
                 // ── 8. Вторая карта ───────────────────────────────────────
                 GameLog.Debug.Info($"[E2E] Меняю карту '{firstMap}' -> '{secondMap}'");
@@ -545,7 +551,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     $"{Fmt(displacedInAnchors)}; сейчас относительно якорей {Fmt(keptInAnchors)} " +
                     $"(сдвиг в системе координат арены {keptDrift:F2} м).");
 
-                // ── 11. Ветка «не откалиброван»: зона своей команды ───────
+                // ── 11. Ветка «не откалиброван»: прежние мировые координаты ─
+                // T-50: здесь ждали зону команды, а код (SpawnPlaceRegistry.Capture) с T-30 хранит
+                // неоткалиброванного в мировых координатах — связи с ареной у него нет, и игра его
+                // не двигает. Ожидание приведено к коду.
                 TeamSpawnZone plainZone = AvatarSpawnPointResolver.FindZone(plain.Team);
                 Vector3 plainZonePos = plainZone != null ? plainZone.transform.position : Vector3.zero;
 
@@ -553,20 +562,19 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     ? plain.ActiveAvatar.transform.position
                     : Vector3.zero;
 
-                float plainToZone  = Vector3.Distance(plainWorld, plainZonePos);
-                float plainToProbe = Vector3.Distance(plainWorld, secondProbe);
-                bool plainOk = plain.ActiveAvatar != null && plainZone != null && plainToZone <= PositionTolerance;
+                float plainToBefore = Vector3.Distance(plainWorld, plainBefore);
+                float plainToZone   = Vector3.Distance(plainWorld, plainZonePos);
+                float plainToProbe  = Vector3.Distance(plainWorld, secondProbe);
+                bool plainOk = plain.ActiveAvatar != null && plainToBefore <= PositionTolerance;
 
                 result.Set(CheckPlainZone, plainOk,
                     plainOk
-                        ? $"{plain.PlayerName} в зоне своей команды: {Fmt(plainWorld)}, до зоны {plainToZone:F2} м, " +
-                          $"до места откалиброванного {plainToProbe:F2} м. До калибровки игра не знает, где игрок " +
-                          "внутри арены, и зона — разумное «где угодно»."
-                        : $"{plain.PlayerName} оказался в {Fmt(plainWorld)}: до зоны своей команды " +
-                          $"{plainToZone:F2} м при допуске {PositionTolerance:F1} м " +
-                          $"(зона={(plainZone == null ? "не найдена" : Fmt(plainZonePos))}). " +
-                          "Ветка «не откалиброван» обязана вести в зону — иначе исправление CAL-01 " +
-                          "сломало общий случай.");
+                        ? $"{plain.PlayerName} остался в прежних мировых координатах: {Fmt(plainWorld)}, до места " +
+                          $"на первой карте {plainToBefore:F2} м, до зоны своей команды {plainToZone:F2} м, " +
+                          $"до места откалиброванного {plainToProbe:F2} м."
+                        : $"{plain.PlayerName} оказался в {Fmt(plainWorld)}: до места на первой карте {Fmt(plainBefore)} " +
+                          $"{plainToBefore:F2} м при допуске {PositionTolerance:F1} м, до зоны своей команды {plainToZone:F2} м. " +
+                          "Неоткалиброванного игра не двигает — ищи, кто его перенёс.");
 
                 // ── 12. Ветки действительно разные ────────────────────────
                 float betweenPlayers = Vector3.Distance(keptWorld, plainWorld);
@@ -731,6 +739,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             bool declaredCalibration = false;
             bool reachedSecondMap = false;
             bool measured = false;
+            Vector3 firstMapPlace = Vector3.zero;
+            bool haveFirstMapPlace = false;
             string placeDetail = "(замер не выполнялся)";
             bool placeOk = false;
             int lastPhase = -1;
@@ -768,11 +778,17 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 {
                     if (declaresCalibration)
                     {
-                        local.CmdSetCalibrated(true);
+                        local.RequestCalibration(local.Calibration.WithCalibrated(true));
                         GameLog.Debug.Info("[E2E] Клиент объявил калибровку физического пространства");
                     }
 
                     declaredCalibration = true;
+                }
+
+                if (!reachedSecondMap && SceneManager.GetActiveScene().name == firstMap && local.ActiveAvatar != null)
+                {
+                    firstMapPlace = local.ActiveAvatar.transform.position;
+                    haveFirstMapPlace = true;
                 }
 
                 if (!reachedSecondMap && SceneManager.GetActiveScene().name == secondMap)
@@ -785,7 +801,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 // не пересоздан, позже сервер уже погасит прогон.
                 if (phase >= PhaseMeasure && !measured && reachedSecondMap)
                 {
-                    placeOk = MeasureOwnPlace(local, declaresCalibration, out placeDetail);
+                    placeOk = MeasureOwnPlace(local, declaresCalibration, firstMapPlace, haveFirstMapPlace, out placeDetail);
                     measured = true;
 
                     local.CmdSetDogTagGrabbed(true);
@@ -829,12 +845,13 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         ///
         /// <para>
         /// Откалиброванный обязан стоять в точке замера — туда его увёл сервер
-        /// на прошлой карте. Неоткалиброванный — в зоне своей команды. Обе точки
-        /// клиент вычисляет сам, из зон спавна на своей сцене: сравнивать надо
-        /// с независимым эталоном, а не с тем, что сообщил сервер.
+        /// на прошлой карте; точку клиент вычисляет сам, из зон спавна своей сцены.
+        /// Неоткалиброванный — там же, где стоял на первой карте (мировые координаты,
+        /// T-30), — это место клиент запомнил сам.
         /// </para>
         /// </summary>
-        private static bool MeasureOwnPlace(PlayerSession local, bool calibrated, out string detail)
+        private static bool MeasureOwnPlace(PlayerSession local, bool calibrated, Vector3 firstMapPlace,
+                                            bool haveFirstMapPlace, out string detail)
         {
             PlayerController avatar = local.ActiveAvatar;
 
@@ -844,16 +861,17 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             TeamSpawnZone zone = AvatarSpawnPointResolver.FindZone(local.Team);
 
-            if (avatar == null || !haveProbe || zone == null)
+            if (avatar == null || !haveProbe || zone == null || (!calibrated && !haveFirstMapPlace))
             {
                 detail = $"замерять нечем: аватар={(avatar == null ? "нет" : "есть")}, " +
                          $"точка замера={(haveProbe ? Fmt(probe) : probeDiagnosis)}, " +
-                         $"зона своей команды={(zone == null ? "не найдена" : zone.name)}.";
+                         $"зона своей команды={(zone == null ? "не найдена" : zone.name)}, " +
+                         $"место на первой карте={(haveFirstMapPlace ? Fmt(firstMapPlace) : "не запомнено")}.";
                 return false;
             }
 
             Vector3 position = avatar.transform.position;
-            Vector3 expected = calibrated ? probe : zone.transform.position;
+            Vector3 expected = calibrated ? probe : firstMapPlace;
             float toExpected = Vector3.Distance(position, expected);
             float toOther    = Vector3.Distance(position, calibrated ? zone.transform.position : probe);
             bool ok = toExpected <= PositionTolerance;
@@ -862,7 +880,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     ? $"свой аватар там, где положено: {Fmt(position)}."
                     : $"свой аватар в {Fmt(position)}, а ждали {Fmt(expected)} — до неё {toExpected:F2} м " +
                       $"при допуске {PositionTolerance:F1} м.") +
-                $" Ветка: {(calibrated ? "откалиброван — место задано физически, ждём своё место в арене" : "не калибровался — ждём зону своей команды")}. " +
+                $" Ветка: {(calibrated ? "откалиброван — место задано физически, ждём своё место в арене" : "не калибровался — ждём прежние мировые координаты")}. " +
                 $"Место в арене: {Fmt(probe)}, зона '{(local.Team != null ? local.Team.displayName : "?")}': " +
                 $"{Fmt(zone.transform.position)}. До второй точки {toOther:F2} м.";
 

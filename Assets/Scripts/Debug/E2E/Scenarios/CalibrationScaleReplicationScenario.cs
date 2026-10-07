@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
+using VrBattlegrounds.PhysicalSpaceUtils;
 using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.DevTools.E2E.Scenarios
@@ -44,11 +45,15 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     ///     </para>
     ///
     ///     <para>
-    ///     Свой собственный аватар клиент из проверки исключает намеренно. Локально масштаб
-    ///     ставит ещё и <c>PhysicalSpaceSyncManager</c> из накопленного значения калибровки,
-    ///     а в прогоне никто не калибровался — там осталась единица. В живой игре оба
-    ///     источника согласованы (менеджер и сессия хранят один и тот же результат),
-    ///     здесь же расхождение — артефакт того, что калибровку подменили отправкой значения.
+    ///     Свой аватар клиент тоже сверяет (T-50): масштаб любого аватара ставит один
+    ///     применитель (<c>AvatarCalibrationApplier</c>) по калибровке сессии, второго
+    ///     локального источника больше нет. Раньше свой аватар исключался — его масштаб
+    ///     ставил ещё и <c>PhysicalSpaceSyncManager</c> из своей копии значения.
+    ///     </para>
+    ///
+    ///     <para>
+    ///     Объявляется рост глаз в метрах; ожидаемый масштаб аватара — рост / <c>EyesBaseHeight</c>
+    ///     его модели (<c>AvatarCalibrationApplier.EyesBaseHeight</c>).
     ///     </para>
     ///
     ///     <para>
@@ -83,8 +88,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         // ── Пропорции, которые объявляют клиенты ──────────────────────────
 
-        private const float ScaleClient1 = 0.80f;
-        private const float ScaleClient2 = 1.30f;
+        private const float EyeClient1 = 1.40f;
+        private const float EyeClient2 = 2.20f;
 
         /// <summary>Допуск сравнения. Значение едет float-ом без пересчётов, так что запас велик.</summary>
         private const float Tolerance = 1e-3f;
@@ -105,7 +110,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckClientSession   = "сервер создал сессию для клиента";
         private const string CheckClientMap       = "клиент переехал на карту вместе с сервером";
         private const string CheckClientMirror    = "обратный канал наблюдения проверен эхом SyncVar";
-        private const string CheckClientRemote    = "чужой аватар отмасштабирован по пропорциям своего игрока";
+        private const string CheckClientRemote    = "свой и чужой аватары отмасштабированы по росту своих игроков";
 
 
         public IEnumerator Run(E2EContext context, E2EResult result)
@@ -270,8 +275,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     scalesOk
                         ? $"сервер принял пропорции: {DescribeScales()}"
                         : $"за 60 с сервер не получил от клиентов различающихся пропорций: {DescribeScales()}. " +
-                          "Либо CmdSetCalibrationScale не доехал, либо сервер обрезал значения в одно " +
-                          "(границы — PlayerSession.MinCalibrationScale/MaxCalibrationScale).");
+                          "Либо запрос калибровки не доехал, либо сервер обрезал значения в одно " +
+                          "(границы — PlayerCalibrationRules.MinEyeHeight/MaxEyeHeight).");
 
                 if (!scalesOk)
                 {
@@ -295,7 +300,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                           "Это VR-01 со стороны сервера: коллайдеры едут за костями, попадание " +
                           "считается по одной геометрии, а стрелок видит другую. " +
                           "Хук SyncVar на выделенном сервере не вызывается — масштаб обязан " +
-                          "применяться прямо в CmdSetCalibrationScale.");
+                          "применяться прямо в PlayerSession.ServerAcceptCalibration.");
 
                 // ── 7. Вердикт клиентов ───────────────────────────────────
                 SetPhase(PhaseVerify);
@@ -337,8 +342,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
-            float myScale = TargetScaleFor(context.Role);
-            GameLog.Debug.Info($"[E2E] Роль {context.Role}: объявляю пропорции {myScale:F2}");
+            float myEye = TargetEyeFor(context.Role);
+            GameLog.Debug.Info($"[E2E] Роль {context.Role}: объявляю рост глаз {myEye:F2} м");
 
             // ── Подключение ───────────────────────────────────────────────
             float deadline = Now + 30f;
@@ -461,9 +466,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 // Объявляем свои пропорции — подмена результата калибровки.
                 if (phase >= PhaseApply && !declared && echoDown)
                 {
-                    local.CmdSetCalibrationScale(myScale);
+                    local.RequestCalibration(local.Calibration.WithEyeHeight(myEye));
                     declared = true;
-                    GameLog.Debug.Info($"[E2E] Клиент отправил пропорции {myScale:F2}");
+                    GameLog.Debug.Info($"[E2E] Клиент отправил рост глаз {myEye:F2} м");
                 }
 
                 // Сверяем чужие аватары с пропорциями их сессий.
@@ -506,7 +511,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 sawRemoteScaled
                     ? $"чужой аватар отмасштабирован по пропорциям своего игрока: {lastSeen}"
                     : $"чужой аватар не в пропорциях своего игрока: {lastMismatch}. " +
-                      $"Видел: {lastSeen}. Свои пропорции отправлял: {declared} ({myScale:F2}), " +
+                      $"Видел: {lastSeen}. Свой рост отправлял: {declared} ({myEye:F2} м), " +
                       $"последняя фаза={lastPhase}. Это VR-01: калибровка роста меняет геометрию " +
                       "только локально, на чужих экранах игрок остаётся стандартного роста.");
 
@@ -525,9 +530,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         ///     Разные значения у разных клиентов: если оба останутся единичными,
         ///     «масштабы совпали» будет верно и при полностью сломанной репликации.
         /// </summary>
-        private static float TargetScaleFor(string role)
+        private static float TargetEyeFor(string role)
         {
-            return role == "client-2" ? ScaleClient2 : ScaleClient1;
+            return role == "client-2" ? EyeClient2 : EyeClient1;
         }
 
         /// <summary>
@@ -535,6 +540,16 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         ///     поэтому читаем по имени — как это делает и сам игровой код.
         ///     Возвращает -1, если объекта нет: это отличимо от любого валидного масштаба.
         /// </summary>
+        /// <summary>
+        ///     Масштаб, который обязан стоять на аватаре: рост игрока / <c>EyesBaseHeight</c> модели.
+        ///     NaN — у аватара нет применителя, то есть калибровку ему не ставил никто.
+        /// </summary>
+        private static float ExpectedScale(PlayerCalibration calibration, PlayerController avatar)
+        {
+            AvatarCalibrationApplier applier = avatar != null ? avatar.GetComponent<AvatarCalibrationApplier>() : null;
+            return applier != null ? calibration.ScaleFor(applier.EyesBaseHeight) : float.NaN;
+        }
+
         private static float DummyForwardScale(PlayerController avatar)
         {
             if (avatar == null) return -1f;
@@ -646,7 +661,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             foreach (PlayerSession session in PlayersManager.Instance.Sessions)
             {
-                if (session == null || Mathf.Abs(session.CalibrationScale - 1f) < Tolerance)
+                if (session == null || !session.Calibration.HasEyeHeight)
                     return false;
             }
 
@@ -666,7 +681,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 {
                     if (sessions[i] == null || sessions[j] == null) continue;
 
-                    if (Mathf.Abs(sessions[i].CalibrationScale - sessions[j].CalibrationScale) < Tolerance)
+                    if (Mathf.Abs(sessions[i].Calibration.EyeHeight - sessions[j].Calibration.EyeHeight) < Tolerance)
                         return false;
                 }
             }
@@ -682,7 +697,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             foreach (PlayerSession session in PlayersManager.Instance.Sessions)
             {
                 if (session != null)
-                    parts.Add($"{session.PlayerName}={session.CalibrationScale:F2}");
+                    parts.Add($"{session.PlayerName}={session.Calibration.EyeHeight:F2} м");
             }
 
             return parts.Count > 0 ? string.Join(", ", parts.ToArray()) : "(нет сессий)";
@@ -699,7 +714,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 if (session == null || session.ActiveAvatar == null)
                     return false;
 
-                if (Mathf.Abs(DummyForwardScale(session.ActiveAvatar) - session.CalibrationScale) > Tolerance)
+                if (Mathf.Abs(DummyForwardScale(session.ActiveAvatar) - ExpectedScale(session.Calibration, session.ActiveAvatar)) > Tolerance)
                     return false;
             }
 
@@ -715,8 +730,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             {
                 if (session == null) continue;
 
-                parts.Add($"{session.PlayerName}: сессия={session.CalibrationScale:F2}, " +
-                          $"Dummy Forward={DummyForwardScale(session.ActiveAvatar):F2}");
+                parts.Add($"{session.PlayerName}: рост={session.Calibration.EyeHeight:F2} м, " +
+                          $"ждали масштаб={ExpectedScale(session.Calibration, session.ActiveAvatar):F3}, " +
+                          $"Dummy Forward={DummyForwardScale(session.ActiveAvatar):F3}");
             }
 
             return parts.Count > 0 ? string.Join("; ", parts.ToArray()) : "(нет сессий)";
@@ -752,17 +768,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         // ══════════════════════════════════════════════════════════════════
 
         /// <summary>
-        ///     Сверяет масштаб <b>чужих</b> аватаров с пропорциями их сессий.
+        ///     Сверяет масштаб своего и чужих аватаров с ростом их игроков (T-50).
         ///
         ///     <para>
-        ///     Свой аватар исключён намеренно: локально его масштаб ставит ещё и
-        ///     <c>PhysicalSpaceSyncManager</c> из накопленной калибровки, а в прогоне
-        ///     никто не калибровался. Находка VR-01 и формулируется про чужие экраны.
-        ///     </para>
-        ///
-        ///     <para>
-        ///     Требуется хотя бы один чужой аватар с масштабом, отличным от единицы:
-        ///     иначе «совпало» означало бы лишь, что обе стороны остались стандартными.
+        ///     Требуется хотя бы один чужой и свой аватар с объявленным ростом: иначе «совпало»
+        ///     означало бы лишь, что обе стороны остались стандартными.
         ///     </para>
         /// </summary>
         private static bool RemoteAvatarsMatchSessions(out string mismatch, out string seen)
@@ -772,14 +782,14 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             PlayerController[] avatars = Object.FindObjectsByType<PlayerController>(FindObjectsInactive.Include);
             int remoteChecked = 0;
+            int ownChecked = 0;
             bool allMatch = true;
 
             foreach (PlayerController avatar in avatars)
             {
                 if (avatar == null) continue;
 
-                // Свой аватар пропускаем — см. комментарий к методу.
-                if (avatar.netIdentity != null && avatar.netIdentity.isOwned) continue;
+                bool own = avatar.netIdentity != null && avatar.netIdentity.isOwned;
 
                 PlayerSession session = avatar.Session;
                 if (session == null)
@@ -789,34 +799,37 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     continue;
                 }
 
+                PlayerCalibration calibration = session.EffectiveCalibration;
                 float actual = DummyForwardScale(avatar);
-                float expected = session.CalibrationScale;
+                float expected = ExpectedScale(calibration, avatar);
 
-                observed.Add($"{session.PlayerName}: сессия={expected:F2}, Dummy Forward={actual:F2}");
+                observed.Add($"{session.PlayerName}{(own ? " (свой)" : "")}: рост={calibration.EyeHeight:F2} м, " +
+                             $"ждали={expected:F3}, Dummy Forward={actual:F3}");
 
-                // Пропорции ещё не объявлены — сверять нечего, ждём следующий кадр.
-                if (Mathf.Abs(expected - 1f) < Tolerance)
+                // Рост ещё не объявлен — сверять нечего, ждём следующий кадр.
+                if (!calibration.HasEyeHeight)
                 {
                     allMatch = false;
                     continue;
                 }
 
-                if (Mathf.Abs(actual - expected) > Tolerance)
+                if (float.IsNaN(expected) || Mathf.Abs(actual - expected) > Tolerance)
                 {
-                    mismatch = $"{session.PlayerName}: ожидали {expected:F2}, на аватаре {actual:F2}";
+                    mismatch = $"{session.PlayerName}{(own ? " (свой)" : "")}: ждали {expected:F3}, на аватаре {actual:F3}";
                     allMatch = false;
                     continue;
                 }
 
-                remoteChecked++;
+                if (own) ownChecked++;
+                else remoteChecked++;
             }
 
-            seen = observed.Count > 0 ? string.Join("; ", observed.ToArray()) : "(чужих аватаров в сцене нет)";
+            seen = observed.Count > 0 ? string.Join("; ", observed.ToArray()) : "(аватаров в сцене нет)";
 
-            if (remoteChecked == 0 && string.IsNullOrEmpty(mismatch))
-                mismatch = "ни одного чужого аватара с объявленными пропорциями ещё не видно";
+            if ((remoteChecked == 0 || ownChecked == 0) && string.IsNullOrEmpty(mismatch))
+                mismatch = $"с объявленным ростом сверено: своих {ownChecked}, чужих {remoteChecked} — нужен хотя бы один каждого";
 
-            return allMatch && remoteChecked > 0;
+            return allMatch && remoteChecked > 0 && ownChecked > 0;
         }
     }
 }

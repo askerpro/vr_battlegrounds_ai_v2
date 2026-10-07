@@ -87,7 +87,7 @@ namespace VrBattlegrounds.Tests.Player
             SpawnOnServer(session);
 
             session.PlayerName = name;
-            session.IsCalibrated = calibrated;
+            session.ServerAcceptCalibration(PlayerCalibration.None.WithCalibrated(calibrated), PlayerSession.CalibrationOrigin.Connect);
 
             Assert.AreNotEqual(0u, session.netId,
                 "Без netId реестру нечем различать игроков — заготовка теста сломана.");

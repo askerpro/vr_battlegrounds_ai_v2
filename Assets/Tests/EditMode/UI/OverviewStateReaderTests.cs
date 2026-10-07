@@ -7,6 +7,7 @@ using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Tests.Network;
 using VrBattlegrounds.UI.Menu.Overview;
+using VrBattlegrounds.PhysicalSpaceUtils;
 
 namespace VrBattlegrounds.Tests.UI
 {
@@ -54,7 +55,7 @@ namespace VrBattlegrounds.Tests.UI
             SpawnOnServer(session);
             session.PlayerName = name;
             session.TeamIndex = team.teamIndex;
-            session.IsCalibrated = true;
+            session.ServerAcceptCalibration(PlayerCalibration.None.WithCalibrated(true), PlayerSession.CalibrationOrigin.Connect);
 
             GameObject go = CreateNetworkObject(name);
             UxrActor actor = go.AddComponent<UxrActor>();

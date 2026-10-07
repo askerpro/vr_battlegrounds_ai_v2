@@ -63,104 +63,66 @@ namespace VrBattlegrounds.Player
             if (StateEventAuthority.IsWorldAuthority) _wallPassStatus = status;
         }
 
-        /// <summary>
-        /// Пропорции игрока, снятые калибровкой роста: отношение его роста к базовому
-        /// росту глаз аватара. Единица — «не калибровался».
-        ///
-        /// <para>
-        /// Живёт в сессии, а не на аватаре, потому что это постоянная характеристика
-        /// игрока: она переживает смену скина, команды и карты, а аватар при каждом
-        /// из этих событий пересоздаётся.
-        /// </para>
-        ///
-        /// <para>
-        /// До T-14 масштаб применялся только локально (<c>PhysicalSpaceSyncManager.ApplyScale</c>),
-        /// и на чужих экранах игрок оставался в исходных пропорциях: у <c>Dummy Forward</c>
-        /// своего <c>NetworkTransform</c> нет и быть не может — объект создаёт SDK в рантайме, —
-        /// а на корневых <c>NetworkTransform</c> аватаров <c>syncScale</c> выключен.
-        /// Коллайдеры при этом ехали за костями, то есть расходились прицел и попадание (VR-01).
-        /// </para>
-        /// </summary>
-        [SyncVar(hook = nameof(OnCalibrationScaleChanged))]
-        public float CalibrationScale = 1f;
+        // ── Калибровка игрока (T-50) ──────────────────────────────────────────
+        //
+        // Сессия — владелец калибровки игрока: абсолютные значения в метрах (PlayerCalibration),
+        // единственный писатель — сервер (ServerAcceptCalibration). Значение переживает смену скина,
+        // команды и карты, а аватар при каждом из этих событий пересоздаётся. К аватару его ставит
+        // AvatarCalibrationApplier — на каждой машине, своему и чужому, одним правилом.
+        //
+        // Своя сессия предсказывает свой запрос: замер применяется к своему аватару сразу, а при
+        // отказе сервера (бой) откатывается к значению сервера тем же применителем. Ответ сервера —
+        // номер последнего обработанного запроса (_answeredCalibrationRequest), SyncVar рядом со
+        // значением: опоздавший клиент получает то же состояние, отдельный RPC не нужен.
 
-        /// <summary>Нижняя граница пропорций: примерно рост ребёнка при базовых 1.75 м.</summary>
-        public const float MinCalibrationScale = 0.5f;
+        /// <summary>Калибровка игрока, решённая сервером. Пишет только <see cref="ServerAcceptCalibration" />.</summary>
+        [SyncVar(hook = nameof(OnCalibrationChanged))]
+        private PlayerCalibration _calibration;
 
-        /// <summary>Верхняя граница пропорций: выше начинается уже не игрок, а способ занять пол-арены.</summary>
-        public const float MaxCalibrationScale = 1.5f;
+        /// <summary>Номер последнего запроса калибровки клиента, на который сервер ответил (принял или отклонил).</summary>
+        [SyncVar(hook = nameof(OnCalibrationAnswered))]
+        private int _answeredCalibrationRequest;
+
+        /// <summary>Калибровка игрока, решённая сервером.</summary>
+        public PlayerCalibration Calibration => _calibration;
 
         /// <summary>
-        /// Смещение пола, снятое первым шагом калибровки высоты: на столько поднят
-        /// пивот камеры относительно префаба. Ноль — «пол не калибровался».
-        ///
-        /// <para>
-        /// Живёт здесь по той же причине, что и <see cref="CalibrationScale" />: это
-        /// характеристика физического пространства игрока, она переживает смену скина,
-        /// команды и карты, а аватар при каждом из этих событий пересоздаётся.
-        /// </para>
-        ///
-        /// <para>
-        /// До этой правки смещение не уезжало никуда (<b>VR-08</b>).
-        /// <c>ApplyHeightDelta</c> двигает <c>UxrAvatar.CameraController</c> — родителя
-        /// камеры, — а <c>NetworkTransform</c> во всех шести аватарных префабах стоит
-        /// на самой <c>Camera</c> и синхронизирует <c>localPosition</c>
-        /// (<c>coordinateSpace: Local</c>). Локальная позиция камеры относительно
-        /// пивота при калибровке пола не меняется — меняется позиция пивота, а на нём
-        /// <c>NetworkTransform</c> нет ни у одного префаба. Итог: на чужих экранах
-        /// игрок стоял на исходной высоте.
-        /// </para>
+        /// Игрок откалибровал своё физическое пространство по якорям карты. Признак выбора точки
+        /// спавна (T-30): до калибровки игрока можно ставить в зону команды, после — его место задано
+        /// физически. Только чтение: пишет сервер через <see cref="ServerAcceptCalibration" />.
         /// </summary>
-        [SyncVar(hook = nameof(OnCalibrationHeightOffsetChanged))]
-        public float CalibrationHeightOffset;
+        public bool IsCalibrated => _calibration.IsCalibrated;
+
+        /// <summary>Номер последнего отправленного запроса. Только у своей сессии.</summary>
+        private int _sentCalibrationRequest;
+
+        /// <summary>Предсказанный ответ сервера на последний запрос. Только у своей сессии.</summary>
+        private PlayerCalibration _predictedCalibration;
 
         /// <summary>
-        /// Предел смещения пола по модулю, метры. Значение приходит от клиента и двигает
-        /// голову аватара, то есть точку попадания в неё, — поэтому граница жёсткая
-        /// и проверяется на сервере. Полтора метра с запасом перекрывают любую разницу
-        /// между виртуальным полом и физическим.
+        /// Калибровка, которую видит аватар на этой машине: у своей сессии с неотвеченным запросом —
+        /// предсказание, иначе — значение сервера.
         /// </summary>
-        public const float MaxCalibrationHeightOffset = 1.5f;
+        public PlayerCalibration EffectiveCalibration =>
+            isLocalPlayer && _sentCalibrationRequest > _answeredCalibrationRequest ? _predictedCalibration : _calibration;
 
-        /// <summary>
-        /// Игрок откалибровал своё физическое пространство по якорям карты
-        /// (<c>PhysicalSpaceSyncManager.IsCalibrated</c>). Признак самого факта, а не его
-        /// результата: результат — мировая поза аватара, и она у сервера уже есть.
-        ///
-        /// <para>
-        /// Живёт здесь по той же причине, что <see cref="CalibrationScale" /> и
-        /// <see cref="CalibrationHeightOffset" />: это характеристика игрока, а не
-        /// аватара, и она переживает смену скина, команды и карты.
-        /// </para>
-        ///
-        /// <para>
-        /// Ради чего заведён (T-30). Сервер обязан выбрать точку спавна, а правильных
-        /// ответов два. <b>До</b> калибровки позиция игрока внутри арены неизвестна,
-        /// и ставить его можно куда угодно — зона своей команды и есть разумное
-        /// «куда угодно». <b>После</b> калибровки его место задано физически: игрок
-        /// стоит в комнате, и двигать его нельзя. Отличить один случай от другого
-        /// было нечем — по <c>_realToVirtualRotation</c> и <c>_realToVirtualScale</c>
-        /// «не калибровался» неотличимо от «калибровался и вышло единично».
-        /// </para>
-        /// </summary>
-        [SyncVar] public bool IsCalibrated;
+        /// <summary>Откуда пришло значение: подключение (сообщение клиента или снимок) или запрос игрока.</summary>
+        public enum CalibrationOrigin
+        {
+            /// <summary>Первичное значение при создании сессии — без запрета в бою.</summary>
+            Connect,
 
-        /// <summary>
-        /// Сколько смещения уже наложено на <b>текущий</b> аватар. Нужен, потому что
-        /// <see cref="PhysicalSpaceSyncManager.ShiftAvatarCameraPivot" /> сдвигает, а не
-        /// ставит: базовая высота пивота у каждого префаба своя. Обнуляется при смене
-        /// аватара — новый приходит из префаба, то есть со сдвигом ноль.
-        /// </summary>
-        private float _appliedHeightOffset;
+            /// <summary>Игрок прошёл процедуру калибровки.</summary>
+            Player
+        }
 
         private const double InitialCalibrationWindow = 5.0;
         private double _initialCalibrationDeadline;
         private bool _initialCalibrationReceived;
-        private bool _initialCalibrationSent;
 
         /// <summary>
-        /// Первичная калибровка приходит до выбора опоры T-40. Бот не ждёт клиента;
-        /// после ограниченного окна сервер использует исходные пропорции.
+        /// Первичная калибровка приходит до выбора опоры T-40 — в сообщении подключения. Бот не ждёт
+        /// клиента; сессия без первичного значения ждёт ограниченное окно.
         /// </summary>
         internal bool InitialCalibrationReady => connectionToClient == null ||
             _initialCalibrationReceived || NetworkTime.time >= _initialCalibrationDeadline;
@@ -309,7 +271,8 @@ namespace VrBattlegrounds.Player
         public override void OnStartServer()
         {
             base.OnStartServer();
-            _initialCalibrationReceived = false;
+            // Признак первичной калибровки не сбрасывается: её может принести создатель сессии
+            // (PlayersManager) раньше спавна, а экземпляр сессии всегда новый.
             _initialCalibrationDeadline = NetworkTime.time + InitialCalibrationWindow;
             GameLog.Player.Info($"[PlayerSession] {netId} started on server for {PlayerName}.");
             SessionReady?.Invoke(this);
@@ -321,7 +284,6 @@ namespace VrBattlegrounds.Player
             if (isLocalPlayer)
             {
                 LocalSession = this;
-                _initialCalibrationSent = false;
 
                 // Хук ActiveAvatarNetId мог отработать раньше: Mirror применяет SyncVar
                 // до вызова OnStartClient, и тогда LocalSession ещё не был назначен,
@@ -329,6 +291,10 @@ namespace VrBattlegrounds.Player
                 LocalAvatarChanged?.Invoke(ActiveAvatar);
 
                 SubscribeToLocalCalibration();
+
+                // Значение, решённое сервером при подключении, приехало в данных спавна сессии:
+                // машина запоминает его (в том числе снимок после перезапуска) и ставит своему аватару.
+                ApplyCalibrationToAvatar();
             }
             GameLog.Player.Info($"[PlayerSession] {netId} started on client for {PlayerName}.");
         }
@@ -354,114 +320,124 @@ namespace VrBattlegrounds.Player
             }
         }
 
-        // ── Публикация локальной калибровки ───────────────────────────────────
+        // ── Калибровка своего игрока: запрос и предсказание ──────────────────
 
-        /// <summary>Подписан ли этот экземпляр на калибровку. Защита от двойной подписки и от отписки чужой сессии.</summary>
+        /// <summary>Подписан ли этот экземпляр на замеры. Защита от двойной подписки и от отписки чужой сессии.</summary>
         private bool _subscribedToCalibration;
 
         /// <summary>
-        /// Локальный игрок начинает публиковать результат своей калибровки роста.
+        /// Своя сессия слушает замеры процедуры калибровки (<see cref="LocalPlayerCalibration.Submitted" />).
         ///
-        /// Направление зависимости выбрано «сеть → калибровка», а не наоборот:
-        /// <see cref="PhysicalSpaceSyncManager" /> по своему контракту ничего не знает
-        /// о Mirror (калибровка — процедура физического пространства одной машины),
-        /// поэтому подписывается сессия, а не менеджер зовёт команду.
-        ///
-        /// Текущее значение отправляется сразу: игрок обычно калибруется в лобби,
-        /// то есть до того, как сервер создаст ему сессию, и одного события
-        /// <c>HeightCalibrationCompleted</c> не хватило бы — оно уже прошло.
+        /// <para>
+        /// Первичного запроса здесь нет и быть не должно (T-50 этап 3): своё значение клиент принёс
+        /// в сообщении подключения, а без значения (перезапуск приложения) он ничего не публикует —
+        /// иначе пустые данные затёрли бы снимок сервера, и откалиброванный игрок после следующей
+        /// смены карты оказался бы в зоне команды.
+        /// </para>
         /// </summary>
         private void SubscribeToLocalCalibration()
         {
-            PhysicalSpaceSyncManager sync = PhysicalSpaceSyncManager.Instance;
+            if (_subscribedToCalibration) return;
 
-            if (sync == null)
-            {
-                GameLog.Player.Warning(
-                    $"[PlayerSession] {PlayerName}: PhysicalSpaceSyncManager.Instance пуст — " +
-                    "пропорции игрока не поедут на другие машины.");
-                return;
-            }
-
-            if (!_subscribedToCalibration)
-            {
-                sync.HeightCalibrationCompleted += PublishLocalCalibration;
-                sync.FloorHeightCalibrated += PublishLocalCalibration;
-
-                // Калибровка по якорям — отдельная процедура со своим событием, и именно
-                // она отвечает на вопрос «известно ли, где игрок стоит в арене» (T-30).
-                sync.CalibrationCompleted += PublishLocalCalibration;
-                _subscribedToCalibration = true;
-            }
-
-            PublishLocalCalibration();
+            LocalPlayerCalibration.Submitted += RequestCalibration;
+            _subscribedToCalibration = true;
         }
 
         private void UnsubscribeFromLocalCalibration()
         {
             if (!_subscribedToCalibration) return;
 
-            PhysicalSpaceSyncManager sync = PhysicalSpaceSyncManager.Instance;
-            if (sync != null)
-            {
-                sync.HeightCalibrationCompleted -= PublishLocalCalibration;
-                sync.FloorHeightCalibrated -= PublishLocalCalibration;
-                sync.CalibrationCompleted -= PublishLocalCalibration;
-            }
-
+            LocalPlayerCalibration.Submitted -= RequestCalibration;
             _subscribedToCalibration = false;
         }
 
         /// <summary>
-        /// Отправляет серверу текущее состояние калибровки физического пространства:
-        /// пропорции игрока, смещение пола и сам факт калибровки по якорям. Значения
-        /// снимаются одной процедурой в несколько шагов, поэтому и уезжают вместе.
+        /// Своя сессия просит сервер принять новую калибровку и сразу показывает её на своём аватаре.
+        /// Предсказание нормализуется тем же правилом, что и на сервере, поэтому совпадает с ответом,
+        /// кроме отказа (бой) — тогда ответ сервера откатывает аватар к его значению.
         /// </summary>
-        private void PublishLocalCalibration()
+        public void RequestCalibration(PlayerCalibration requested)
         {
-            PhysicalSpaceSyncManager sync = PhysicalSpaceSyncManager.Instance;
-            if (sync == null) return;
-
-            if (!_initialCalibrationSent)
+            if (!isLocalPlayer)
             {
-                _initialCalibrationSent = true;
-                CmdPublishInitialCalibration(sync.AccumulatedScaleMultiplier,
-                    sync.AccumulatedHeightOffset, sync.IsCalibrated);
+                GameLog.PhysicalSpace.Warning($"[PlayerSession] {PlayerName}: запрос калибровки не от своей сессии — отброшен.");
                 return;
             }
 
-            CmdSetCalibrationScale(sync.AccumulatedScaleMultiplier);
-            CmdSetCalibrationHeightOffset(sync.AccumulatedHeightOffset);
-            CmdSetCalibrated(sync.IsCalibrated);
+            if (!PlayerCalibrationRules.TryNormalize(requested, out PlayerCalibration predicted))
+            {
+                GameLog.PhysicalSpace.Warning($"[PlayerSession] {PlayerName}: замер калибровки нечисловой — не отправлен.");
+                return;
+            }
+
+            _predictedCalibration = predicted;
+            _sentCalibrationRequest++;
+            ApplyCalibrationToAvatar();
+
+            CmdRequestCalibration(requested, _sentCalibrationRequest);
+        }
+
+        [Command]
+        private void CmdRequestCalibration(PlayerCalibration requested, int request)
+        {
+            ServerAcceptCalibration(requested, CalibrationOrigin.Player, request);
         }
 
         /// <summary>
-        /// Однократный снимок при подключении, в том числе к уже идущему бою.
-        /// Поздний первый запрос не даёт сбросить принятую сервером опору.
+        /// <b>Единственный писатель</b> калибровки игрока. Все правила — нормализация, отказ
+        /// нечисловому, запрет в бою — здесь, через <see cref="PlayerCalibrationRules" />.
+        ///
+        /// <para>
+        /// Без атрибута <c>[Server]</c> по той же причине, что <see cref="ServerSetReady" />: метод
+        /// гоняется EditMode-тестами без поднятого сервера, заглушка Mirror съела бы вызов. Игровые
+        /// вызывающие — серверные: <c>CmdRequestCalibration</c> и <c>PlayersManager</c> при подключении.
+        /// </para>
         /// </summary>
-        [Command]
-        private void CmdPublishInitialCalibration(float scale, float heightOffset, bool calibrated)
+        /// <param name="requested">Что прислал клиент (или что восстановлено из снимка).</param>
+        /// <param name="origin">Подключение — без запрета в бою; запрос игрока — с ним.</param>
+        /// <param name="request">Номер запроса клиента, на который это ответ; 0 — не ответ на запрос.</param>
+        /// <returns><c>true</c> — значение принято (возможно, обрезанным).</returns>
+        public bool ServerAcceptCalibration(PlayerCalibration requested, CalibrationOrigin origin, int request = 0)
         {
-            if (_initialCalibrationReceived) return;
-            if (!TryNormalizeCalibrationScale(scale, out float normalizedScale) ||
-                !TryNormalizeCalibrationHeightOffset(heightOffset, out float normalizedOffset))
+            bool accepted = PlayerCalibrationRules.TryNormalize(requested, out PlayerCalibration normalized);
+
+            if (!accepted)
             {
-                GameLog.PhysicalSpace.Warning($"[PlayerSession] {PlayerName}: первичная калибровка нечисловая — запрос отброшен.");
-                return;
+                GameLog.PhysicalSpace.Warning($"[PlayerSession] {PlayerName}: калибровка нечисловая — отклонена.");
+            }
+            else if (origin == CalibrationOrigin.Player && normalized != _calibration && IsCalibrationLockedByCombat())
+            {
+                accepted = false;
+                GameLog.PhysicalSpace.Warning($"[PlayerSession] {PlayerName}: изменение калибровки отклонено — идёт бой.");
             }
 
-            bool changesCalibration = !Mathf.Approximately(CalibrationScale, normalizedScale) ||
-                !Mathf.Approximately(CalibrationHeightOffset, normalizedOffset) || IsCalibrated != calibrated;
-            if (NetworkTime.time >= _initialCalibrationDeadline && changesCalibration && RejectCombatCalibration()) return;
+            if (accepted)
+            {
+                if (normalized != requested)
+                {
+                    GameLog.PhysicalSpace.Warning(
+                        $"[PlayerSession] {PlayerName}: калибровка вне границ (пол ±{PlayerCalibrationRules.MaxFloorOffset:F1} м, " +
+                        $"рост {PlayerCalibrationRules.MinEyeHeight:F1}–{PlayerCalibrationRules.MaxEyeHeight:F1} м): {requested} → {normalized}.");
+                }
 
-            CalibrationScale = normalizedScale;
-            CalibrationHeightOffset = normalizedOffset;
-            IsCalibrated = calibrated;
-            ApplyCalibrationScale();
-            ApplyCalibrationHeightOffset();
-            _initialCalibrationReceived = true;
-            GameLog.PhysicalSpace.Info($"[PlayerSession] {PlayerName}: первичная калибровка принята, " +
-                $"scale={normalizedScale:F2}, floor={normalizedOffset:F2}, calibrated={calibrated}.");
+                _calibration = normalized;
+                GameLog.PhysicalSpace.Info($"[PlayerSession] {PlayerName}: калибровка принята ({origin}) — {normalized}.");
+            }
+
+            if (origin == CalibrationOrigin.Connect) _initialCalibrationReceived = true;
+
+            // Ответ — и на принятый, и на отклонённый запрос: клиент снимает предсказание.
+            if (request > _answeredCalibrationRequest) _answeredCalibrationRequest = request;
+
+            // На выделенном сервере хук SyncVar не вызывается, а попадания считает он: применяем сами.
+            ApplyCalibrationToAvatar();
+            return accepted;
+        }
+
+        private bool IsCalibrationLockedByCombat()
+        {
+            var mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
+            return PlayerCalibrationRules.IsLockedByCombat(mode, IsEliminated, Role);
         }
 
         // ── SyncVar Hooks ─────────────────────────────────────────────────────
@@ -501,23 +477,44 @@ namespace VrBattlegrounds.Player
         }
 
         /// <summary>
-        /// Приехали новые пропорции игрока. Применяем их к аватару на этой машине.
-        /// Если аватара ещё нет — молчим: масштаб доложит <see cref="ApplyCalibrationScale" />
-        /// из <see cref="LinkAvatar" />, когда аватар заспавнится.
+        /// Сервер изменил калибровку. Ставим её аватару на этой машине. Если аватара ещё нет —
+        /// значение применит <see cref="LinkAvatar" />, когда аватар появится: порядок «SyncVar
+        /// приехал / аватар заспавнился» не определён, а применение абсолютное.
         /// </summary>
-        private void OnCalibrationScaleChanged(float oldScale, float newScale)
+        private void OnCalibrationChanged(PlayerCalibration oldValue, PlayerCalibration newValue)
         {
-            ApplyCalibrationScale();
+            ApplyCalibrationToAvatar();
+        }
+
+        /// <summary>Сервер ответил на запрос своей сессии: предсказание снимается или откатывается.</summary>
+        private void OnCalibrationAnswered(int oldRequest, int newRequest)
+        {
+            ApplyCalibrationToAvatar();
         }
 
         /// <summary>
-        /// Приехало новое смещение пола. Ставим его аватару на этой машине.
-        /// Если аватара ещё нет — молчим: смещение доложит <see cref="ApplyCalibrationHeightOffset" />
-        /// из <see cref="LinkAvatar" />, когда аватар заспавнится.
+        /// Ставит <see cref="EffectiveCalibration" /> текущему аватару через его
+        /// <see cref="AvatarCalibrationApplier" />. Зовётся отовсюду, где значение или аватар
+        /// могли измениться (связь, хуки, запрос, решение сервера), — применение идемпотентно.
+        ///
+        /// <para>
+        /// Свой аватар — аватар своей сессии (<c>isLocalPlayer</c>), а не <c>UxrAvatar.LocalAvatar</c>:
+        /// при смене аватара тот ещё указывает на старый, и на этом держался B1.
+        /// </para>
         /// </summary>
-        private void OnCalibrationHeightOffsetChanged(float oldOffset, float newOffset)
+        private void ApplyCalibrationToAvatar()
         {
-            ApplyCalibrationHeightOffset();
+            // Своя сессия без неотвеченного запроса знает решение сервера — машина запоминает его
+            // для следующего подключения (в том числе откат отклонённого замера).
+            if (isLocalPlayer && _sentCalibrationRequest <= _answeredCalibrationRequest)
+                LocalPlayerCalibration.Adopt(_calibration);
+
+            if (_activeAvatar == null) return;
+
+            var uxrAvatar = _activeAvatar.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+            if (uxrAvatar == null) return;
+
+            AvatarCalibrationApplier.For(uxrAvatar).Apply(EffectiveCalibration, ownAvatar: isLocalPlayer);
         }
 
         // ── Разрешение связи ──────────────────────────────────────────────────
@@ -547,67 +544,13 @@ namespace VrBattlegrounds.Player
 
             _activeAvatar = avatar;
 
-            // Новый аватар пришёл из префаба, то есть пивот камеры у него не сдвинут.
-            // Счётчик наложенного обязан обнулиться раньше, чем ApplyCalibrationHeightOffset
-            // посчитает, сколько досылать.
-            _appliedHeightOffset = 0f;
-
             if (avatar != null) avatar.LinkSession(this);
 
-            // Аватар пересоздаётся при смене скина, команды и карты, а пропорции игрока
-            // живут в сессии и переживают это. Досылаем их каждому новому аватару —
-            // иначе после первой же смены скина игрок снова стал бы стандартного роста.
-            ApplyCalibrationScale();
-            ApplyCalibrationHeightOffset();
+            // Аватар пересоздаётся при смене скина, команды и карты, а калибровка игрока живёт
+            // в сессии и переживает это. Новый аватар получает её от базы своего префаба.
+            ApplyCalibrationToAvatar();
 
             if (LocalSession == this) LocalAvatarChanged?.Invoke(avatar);
-        }
-
-        /// <summary>
-        /// Ставит <see cref="CalibrationScale" /> текущему аватару. Зовётся с двух сторон —
-        /// из хука SyncVar (значение приехало) и из <see cref="LinkAvatar" /> (появился аватар), —
-        /// потому что порядок этих двух событий не определён: SyncVar может доехать до спавна
-        /// аватара и наоборот. Применение идемпотентно, поэтому двойной вызов безопасен.
-        /// </summary>
-        private void ApplyCalibrationScale()
-        {
-            if (_activeAvatar == null) return;
-
-            var uxrAvatar = _activeAvatar.GetComponent<UltimateXR.Avatar.UxrAvatar>();
-            if (uxrAvatar == null) return;
-
-            PhysicalSpaceSyncManager.ApplyScaleToAvatar(uxrAvatar, CalibrationScale);
-        }
-
-        /// <summary>
-        /// Ставит <see cref="CalibrationHeightOffset" /> пивоту камеры текущего аватара.
-        /// Зовётся с тех же двух сторон, что и <see cref="ApplyCalibrationScale" />, и
-        /// по той же причине: порядок «приехал SyncVar» и «появился аватар» не определён.
-        ///
-        /// <para>
-        /// <b>Свой аватар пропускается.</b> Ему смещение уже наложил
-        /// <c>PhysicalSpaceSyncManager.ApplyAvatarHeight</c> при спавне — там же ставится
-        /// <c>UxrControllerTracking.GlobalHeightOffset</c>, отвечающий за трекинг
-        /// собственных рук. Наложить второй раз значило бы поднять себя вдвое, а
-        /// разбирать здесь, «сколько уже сделал менеджер», — завести второго владельца
-        /// у одного значения. Владелец локального смещения — менеджер, владелец
-        /// удалённого — сессия.
-        /// </para>
-        /// </summary>
-        private void ApplyCalibrationHeightOffset()
-        {
-            if (_activeAvatar == null) return;
-
-            var uxrAvatar = _activeAvatar.GetComponent<UltimateXR.Avatar.UxrAvatar>();
-            if (uxrAvatar == null) return;
-
-            if (ReferenceEquals(uxrAvatar, UltimateXR.Avatar.UxrAvatar.LocalAvatar)) return;
-
-            float delta = CalibrationHeightOffset - _appliedHeightOffset;
-            if (Mathf.Approximately(delta, 0f)) return;
-
-            PhysicalSpaceSyncManager.ShiftAvatarCameraPivot(uxrAvatar, delta);
-            _appliedHeightOffset = CalibrationHeightOffset;
         }
 
         /// <summary>
@@ -735,148 +678,6 @@ namespace VrBattlegrounds.Player
         {
             HasGrabbedDogTag = state;
             GameLog.Player.Verbose($"[PlayerSession] {PlayerName} dog tag grabbed set to {state}");
-        }
-
-        /// <summary>
-        /// Клиент сообщает результат своей калибровки роста. Дальше значение расходится
-        /// SyncVar-ом, и каждая машина ставит его своему экземпляру аватара.
-        ///
-        /// Границы жёсткие и проверяются на сервере: значение приходит от клиента,
-        /// а масштаб аватара — это ещё и размер коллайдеров, то есть площадь попадания.
-        /// Ноль, отрицательное или NaN дополнительно уронили бы матрицы трансформа.
-        /// </summary>
-        [Command]
-        public void CmdSetCalibrationScale(float scale)
-        {
-            if (!TryNormalizeCalibrationScale(scale, out float normalized))
-            {
-                GameLog.Player.Warning(
-                    $"[PlayerSession] {PlayerName}: пришёл нечисловой масштаб калибровки — запрос отброшен.");
-                return;
-            }
-
-            if (!Mathf.Approximately(CalibrationScale, normalized) && RejectCombatCalibration()) return;
-
-            if (!Mathf.Approximately(normalized, scale))
-            {
-                GameLog.Player.Warning(
-                    $"[PlayerSession] {PlayerName}: масштаб калибровки {scale:F2} вне границ " +
-                    $"[{MinCalibrationScale:F2}; {MaxCalibrationScale:F2}] — обрезан до {normalized:F2}.");
-            }
-
-            CalibrationScale = normalized;
-
-            // На выделенном сервере хук SyncVar не вызывается — Mirror зовёт его только
-            // в host-режиме, — поэтому применяем здесь же. Для сервера это не косметика:
-            // масштаб двигает коллайдеры, а попадания считает именно он.
-            ApplyCalibrationScale();
-
-            GameLog.Player.Info(
-                $"[PlayerSession] {PlayerName}: пропорции игрока приняты сервером — {normalized:F2}");
-        }
-
-        /// <summary>
-        /// Приводит присланный клиентом масштаб к допустимому. Вынесен из
-        /// <see cref="CmdSetCalibrationScale" /> отдельным чистым методом, потому что тело
-        /// <c>[Command]</c> weaver переписывает и напрямую из теста его не вызвать.
-        /// </summary>
-        /// <returns><c>false</c>, если значение нечисловое и принимать его нельзя вовсе.</returns>
-        public static bool TryNormalizeCalibrationScale(float scale, out float normalized)
-        {
-            if (float.IsNaN(scale) || float.IsInfinity(scale))
-            {
-                normalized = 1f;
-                return false;
-            }
-
-            normalized = Mathf.Clamp(scale, MinCalibrationScale, MaxCalibrationScale);
-            return true;
-        }
-
-        /// <summary>
-        /// Клиент сообщает результат калибровки пола. Дальше значение расходится
-        /// SyncVar-ом, и каждая машина сдвигает пивот камеры своего экземпляра
-        /// этого аватара.
-        ///
-        /// Границы проверяются на сервере по той же причине, что и у масштаба:
-        /// смещение двигает голову аватара, то есть точку попадания в неё.
-        /// </summary>
-        [Command]
-        public void CmdSetCalibrationHeightOffset(float offset)
-        {
-            if (!TryNormalizeCalibrationHeightOffset(offset, out float normalized))
-            {
-                GameLog.Player.Warning(
-                    $"[PlayerSession] {PlayerName}: пришло нечисловое смещение пола — запрос отброшен.");
-                return;
-            }
-
-            if (!Mathf.Approximately(CalibrationHeightOffset, normalized) && RejectCombatCalibration()) return;
-
-            if (!Mathf.Approximately(normalized, offset))
-            {
-                GameLog.Player.Warning(
-                    $"[PlayerSession] {PlayerName}: смещение пола {offset:F2} м вне границ " +
-                    $"±{MaxCalibrationHeightOffset:F2} м — обрезано до {normalized:F2} м.");
-            }
-
-            CalibrationHeightOffset = normalized;
-
-            // На выделенном сервере хук SyncVar не вызывается — Mirror зовёт его только
-            // в host-режиме, — поэтому применяем здесь же: попадания считает сервер,
-            // а смещение двигает голову.
-            ApplyCalibrationHeightOffset();
-
-            GameLog.Player.Info(
-                $"[PlayerSession] {PlayerName}: смещение пола принято сервером — {normalized:F2} м");
-        }
-
-        /// <summary>
-        /// Клиент сообщает, откалибровал ли он своё физическое пространство по якорям.
-        ///
-        /// <para>
-        /// Проверять здесь нечего: это один бит, и врать им игроку невыгодно. Соврав
-        /// «я откалиброван», он получит после смены карты не преимущество, а своё же
-        /// прежнее место в арене вместо базы команды.
-        /// </para>
-        /// </summary>
-        [Command]
-        public void CmdSetCalibrated(bool calibrated)
-        {
-            if (IsCalibrated == calibrated) return;
-            if (RejectCombatCalibration()) return;
-
-            IsCalibrated = calibrated;
-
-            GameLog.Player.Info(
-                $"[PlayerSession] {PlayerName}: калибровка физического пространства " +
-                $"{(calibrated ? "объявлена — место игрока задано физически" : "снята — место игрока назначает игра")}");
-        }
-
-        private bool RejectCombatCalibration()
-        {
-            var mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
-            if (mode == null || mode.PhysicalCalibrationEnabled || IsEliminated || Role != GameRole.Player) return false;
-            GameLog.PhysicalSpace.Warning($"[PlayerSession] {PlayerName}: изменение калибровки отклонено — идёт бой.");
-            return true;
-        }
-
-        /// <summary>
-        /// Приводит присланное клиентом смещение пола к допустимому. Вынесен отдельным
-        /// чистым методом по той же причине, что и <see cref="TryNormalizeCalibrationScale" />:
-        /// тело <c>[Command]</c> weaver переписывает и напрямую из теста его не вызвать.
-        /// </summary>
-        /// <returns><c>false</c>, если значение нечисловое и принимать его нельзя вовсе.</returns>
-        public static bool TryNormalizeCalibrationHeightOffset(float offset, out float normalized)
-        {
-            if (float.IsNaN(offset) || float.IsInfinity(offset))
-            {
-                normalized = 0f;
-                return false;
-            }
-
-            normalized = Mathf.Clamp(offset, -MaxCalibrationHeightOffset, MaxCalibrationHeightOffset);
-            return true;
         }
 
         /// <summary>

@@ -6,6 +6,7 @@ using UnityEngine;
 using VrBattlegrounds;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Network;
+using VrBattlegrounds.PhysicalSpaceUtils;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Player.Avatars;
 
@@ -53,7 +54,8 @@ namespace VrBattlegrounds.Managers
             GameLog.Network.Info("[PlayersManager] Awake: Instance установлен.");
         }
 
-        private PlayerSession CreatePlayerSession(NetworkConnectionToClient conn, GameRole role, string deviceToken, ClientDeviceType deviceType, bool isAdmin, SessionSnapshot snapshot = null, int initialTeamId = 0, int initialAvatarId = 0)
+        private PlayerSession CreatePlayerSession(NetworkConnectionToClient conn, GameRole role, string deviceToken, ClientDeviceType deviceType, bool isAdmin, SessionSnapshot snapshot = null, int initialTeamId = 0, int initialAvatarId = 0,
+                                                  PlayerCalibration? initialCalibration = null)
         {
             if (_playerSessionPrefab == null)
             {
@@ -85,6 +87,11 @@ namespace VrBattlegrounds.Managers
                 session.AvatarIndex = initialAvatarId;
             }
 
+            // До спавна: решённое значение уезжает в данных спавна, и своя сессия клиента в
+            // OnStartClient уже видит калибровку сервера, а не пустую.
+            if (initialCalibration.HasValue)
+                session.ServerAcceptCalibration(initialCalibration.Value, PlayerSession.CalibrationOrigin.Connect);
+
             NetworkServer.AddPlayerForConnection(conn, sessionGO);
             RegisterSession(conn, session);
 
@@ -108,7 +115,8 @@ namespace VrBattlegrounds.Managers
                 msg.avatarId = snapshot.AvatarIndex;
             }
 
-            PlayerSession session = CreatePlayerSession(conn, GameRole.Player, msg.deviceToken, msg.deviceType, false, snapshot, msg.teamId, msg.avatarId);
+            PlayerSession session = CreatePlayerSession(conn, GameRole.Player, msg.deviceToken, msg.deviceType, false, snapshot,
+                                                        msg.teamId, msg.avatarId, InitialCalibration(msg, snapshot));
 
             ApplyPhysicalPlace(session, msg, snapshot);
 
@@ -124,14 +132,27 @@ namespace VrBattlegrounds.Managers
         }
 
         /// <summary>
+        /// Первичная калибровка новой сессии (T-50): что принёс клиент, а без его данных
+        /// (перезапуск приложения) — снимок отключённой сессии. Клиент без данных ничего не
+        /// публикует, поэтому снимок не затирается. Проверяет значение сессия
+        /// (<c>PlayerSession.ServerAcceptCalibration</c>) — единственный писатель.
+        /// </summary>
+        public static PlayerCalibration InitialCalibration(GamePlayerConnectMessage msg, SessionSnapshot snapshot)
+        {
+            if (msg.hasCalibration) return msg.calibration;
+            return snapshot != null ? snapshot.Calibration : PlayerCalibration.None;
+        }
+
+        /// <summary>
         /// Раскладывает по местам то, что игрок принёс с собой о своём <b>физическом</b>
-        /// положении: признак калибровки и место в системе координат якорей.
+        /// положении: место в системе координат якорей. Признак калибровки уже решён при
+        /// создании сессии (<see cref="InitialCalibration" />).
         ///
         /// <para>
         /// Зачем это здесь. Точку спавна сервер выбирает прямо сейчас, в обработке
         /// сообщения подключения, — то есть до того, как у клиента появится сессия,
-        /// из которой можно было бы прислать <c>CmdSetCalibrated</c>. Признак поэтому
-        /// едет в самом сообщении. Снимок отключённой сессии, если он есть, знает то же
+        /// из которой можно было бы прислать <c>RequestCalibration</c>. Калибровка поэтому
+        /// едет целиком в самом сообщении. Снимок отключённой сессии, если он есть, знает то же
         /// самое и заведомо не хуже: он снят сервером.
         /// </para>
         ///
@@ -149,8 +170,6 @@ namespace VrBattlegrounds.Managers
         {
             if (session == null) return;
 
-            session.IsCalibrated = msg.isCalibrated || (snapshot != null && snapshot.IsCalibrated);
-
             if (!msg.hasAnchorPlace) return;
 
             SpawnPlaceRegistry.Remember(session.netId, msg.anchorPlacePosition,
@@ -159,7 +178,8 @@ namespace VrBattlegrounds.Managers
             GameLog.PhysicalSpace.Info(
                 $"[PlayersManager] {session.PlayerName} принёс своё место с карты '{msg.anchorPlaceMap}': " +
                 $"относительно якорей {msg.anchorPlacePosition}, откалиброван={session.IsCalibrated} " +
-                $"(сообщение={msg.isCalibrated}, снимок={(snapshot != null ? snapshot.IsCalibrated.ToString() : "нет")}).");
+                $"(сообщение={(msg.hasCalibration ? msg.calibration.IsCalibrated.ToString() : "нет данных")}, " +
+                $"снимок={(snapshot != null ? snapshot.IsCalibrated.ToString() : "нет")}).");
         }
 
         public void RegisterSession(NetworkConnection conn, PlayerSession session)

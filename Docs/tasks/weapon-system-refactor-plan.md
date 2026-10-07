@@ -1,7 +1,7 @@
 # WeaponSystem: архитектурный план рефакторинга оружия
 
 Предлагаемый путь: `Docs/tasks/weapon-system-refactor-plan.md`.
-Дата: 2026-10-07. Статус: **план принят** (В1–В11 по рекомендациям); этап B (машина) реализован, не подключён — п. 5.1.
+Дата: 2026-10-07. Статус: **план принят** (В1–В11 по рекомендациям); этап B (машина) принят — п. 5.1; этап C (теневой режим) проверен в шлеме, расхождения S1–S4 — п. 5.2.
 
 Всё ниже прочитано в коде worktree `F:/CodexWorktrees/shotgun-per-shell/Vr_Battlegrounds_ai`. В этом worktree есть незакоммиченная правка другого агента (HoldOpen: `HoldsEmptyActionOpen` / `OwnsActionPose` / `ResetVisuals → Deferred`). План исходит из того, что эта правка применена. Выводы, помеченные «гипотеза», получены чтением кода; их нужно проверить пробой. Прогона не было.
 
@@ -443,6 +443,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | **0. Заморозка** | Дождаться приёмки в шлеме HoldOpen-правки другого агента (Herrington). Волну HoldOpen на старой архитектуре **не применять** | — | — | правка принята или откачена | — |
 | **B. Машина** | Чистая машина и таблица (п. 3) | new `Assets/Scripts/Weapons/Core/VrBattlegrounds.Weapons.Core.asmdef` (`noEngineReferences`), `WeaponStateMachine.cs`, `WeaponTransitions.cs`, `WeaponProfileAxes.cs`, `LedgerView.cs`, `WeaponEvents.cs`; ссылка из `VrBattlegrounds.asmdef` и тестовой asmdef | — | Компиляция и Android. Временная проба: полнота, И1–И13 перебором, сценарии S01–S27 событиями. Контрактная проба с настоящим `UxrFirearmWeapon` (без сцены): каждая команда машины принимается ledger | удалить новую сборку (ничего не подключено) |
 | **C. Теневой режим** | Датчики + машина рядом со старым контроллером на Herrington и FABARM; сравнение команд, расхождения пишутся в `GameLog.WeaponSystem.Warning`. Переключатель — `Tools/VR Battlegrounds/Debug/Weapon System Shadow` (EditorPrefs) | new `WeaponSystem/Sensors/*.cs`, `WeaponShadowComparer.cs`; точки вызова в `WeaponReadinessController` (только чтение) | — | Шлем: обычная игра Herrington и FABARM (заряжание, все циклы, HoldOpen, смена магазина/патрона, бросить и поднять), ноль расхождений в логе. Пробы E2 (`StateChanged` при replay) и Н6 | выключить переключатель |
+| **C2. Учёт без копий** | Учёт не хранит физическое состояние, которое уже есть у гнезда и магазина: расхождение невозможно по устройству, а не латается сверкой. Решения пользователя 2026-10-07 — п. 8 [анализа](weapon-ledger-single-source.md) | SDK `UxrFirearmReadinessTypes.cs`, `UxrFirearmWeapon.Readiness.cs`, `UxrFirearmWeapon.cs`, `UxrFirearmWeapon.AmmoAdmission.cs` (патч 53); `WeaponReadinessController`; Core: строка T36, `MagazineMismatch`, `LedgerCommandKind.Reconcile`; `sdk-patches.md` | `CurrentMagazine` в учёте, `MagazineChanged`, `Reconcile`, ledger-ветка `SyncAmmoLeft` | Проба форка ревизии (п. 7.1 анализа) RED до правки и GREEN после; Android; шлем — смена магазина и стрельба Herrington/FABARM. Расхождение M → `GameLog.WeaponSystem.Error` + серверная поправка, стрельба не блокируется | revert коммита этапа |
 | **D. Пилот** | Herrington и FABARM работают на машине | `WeaponReadinessController.cs` → **`WeaponSystem.cs`** (тот же .meta/GUID, `FormerlySerializedAs`); new `WeaponPoseExecutor.cs`, `WeaponAudioExecutor.cs`, `WeaponFeedbackExecutor.cs`, `UxrReadinessLedgerPort.cs`, `WeaponMechanismRig.cs`, `WeaponAudioSet.cs`; Editor: `WeaponReadinessAuthoring` → `WeaponSystemAuthoring` (единственный writer: rig, аудио, профили; переносит данные из AWSF/WMV/`UxrShotgunPump` и удаляет их с префаба); `ManualLoadingAuthoring` вызывает его; префабы Herrington, FabarmSDASS; при необходимости SDK E2 | С двух префабов: AWSF, WMV, Router, AttemptFeedback, Reminder, выключенный `UxrShotgunPump`. Из кода: `ChamberPoseReturnDriver`, `ChamberCompletionEvidence` (переходят в порт), `WeaponTriggerAttemptRouter/Context`, `WeaponAttemptFeedback`, все ветки `HasLedgerAdapter` в AWSF/WMV/Reminder (они снова только legacy) | Компиляция, Android, readback префабов (GUID/fileID/NetworkIdentity/масштаб/хваты не изменились). **Шлем, чек-лист D:** см. под таблицей | git revert коммита этапа (данные префаба и код вместе) |
 | **E. Спуск в машину** | Эпизод спуска и классификация — в машине; SDK-патч E1 | SDK `UxrWeapon.Custom.cs` (замена `ProcessReadinessLocalTrigger` портом `DecideLocalTrigger`), `UxrFirearmWeapon.cs` (вызов порта); `WeaponSystem` TriggerSensor; `sdk-patches.md` | `LocalTriggerEpisode`, `PrepareLocalTriggerAttempt`, `CaptureLocalTriggerPolicyId`, `LocalTriggerAttemptDecided` (SDK) | Компиляция, Android, повтор пробы S05–S07/S12–S15. Шлем: Auto очередь, Semi по нажатию, TriggerAssist (по профилю-стенду), сухой щелчок ровно один, препятствие | revert SDK и игровой части вместе |
 | **F1. Волна HoldOpen** (бывший этап 4) | Browning/«Gun», Viper, TR15 | `WeaponSystemMigration.cs` (бывший `WeaponReadinessMigration`, список волн), профиль `DetachableHoldOpenReadiness.asset`, `WeaponInfo`, префабы | AWSF/WMV/Reminder с трёх префабов | Preflight → Apply → readback → повторный Apply без изменений; бот стреляет. Шлем: последний патрон → затвор сзади; смена магазина; front-only; Viper как стартовый пистолет у всех игроков | revert волны |
@@ -479,8 +480,8 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 сцена и SDK не менялись. Проверки в шлеме этапу B не нужны.
 
 **Файлы** (`Assets/Scripts/Weapons/Core/`, сборка `VrBattlegrounds.Weapons.Core`, `noEngineReferences: true`,
-`autoReferenced: false`; на неё ссылается только `VrBattlegrounds.Tests.EditMode`, ссылку из `VrBattlegrounds.asmdef`
-добавит этап C вместе с первым потребителем):
+`autoReferenced: false`; на неё ссылаются `VrBattlegrounds.Tests.EditMode` и, с этапа C, `VrBattlegrounds.asmdef`
+— первый потребитель, теневой режим п. 5.2):
 
 | Файл | Что внутри |
 |---|---|
@@ -536,6 +537,92 @@ Unity (worker, 2026-10-07): консоль без ошибок, `AndroidCompileG
 **Не входит в B и остаётся этапам C/D:** корреляция бота с выстрелом (сейчас `IsAutomationCorrelationCurrent`
 контроллера) — проверка хоста/порта; какую руку подсвечивать подсказкой; перевод старых enum `WeaponReadinessProfile`
 в оси машины (одинаковые имена в разных пространствах имён; при общем `using` — квалифицировать).
+
+
+### 5.2 Этап C — теневой режим: статус
+
+Реализован и проверен в шлеме (ниже). Машина работает рядом со старым `WeaponReadinessController` на Herrington и
+FabarmSDASS и **ничего не исполняет**: команды учёту, цель позы, звуки, вибрации и подсказка только записываются и
+сравниваются с тем, что сделал старый код. Префабы, сцены, SDK и сеть не менялись.
+
+**Файлы** (`Assets/Scripts/Weapons/WeaponSystem/`, сборка `VrBattlegrounds`, ссылается на Core):
+
+| Файл | Что внутри |
+|---|---|
+| `WeaponShadowComparer.cs` | Хост тени (MonoBehaviour, порядок 205 — до контроллера 210), сопоставление, карантин, лог, сводка |
+| `WeaponShadowSettings.cs` | Переключатель (EditorPrefs `VrBattlegrounds.WeaponSystemShadow`, по умолчанию выключен; в сборке игрока всегда выключен) |
+| `Sensors/WeaponActionSensor.cs` | Ход ручки, мин. прогресс обязательных деталей, покой, проверенный зад Empty, хват (`Grabbed/Released`) |
+| `Sensors/WeaponContextSensor.cs` | Роль, replay, контекст автора (правило `HasContext`), блокировка, таймер темпа, авторство мира |
+| `Sensors/WeaponTriggerSensor.cs` | Фронты спуска автора из `SyncTriggerPressStates` (событие `StateChanged`) |
+| `Sensors/WeaponMagazineSensor.cs`, `WeaponIntakeSensor.cs` | Смена магазина опросом; окно приёма патрона и барьер SDK |
+| `Sensors/WeaponLedgerReader.cs` | Порт учёта только на чтение: `LedgerView`, разбор фиксаций (`ApplyReadinessCommit`, `CommitShotSynced`, `CommitAmmoAdmission`) |
+| `Sensors/FirearmIntrospection.cs` | Чтение закрытых полей SDK-спуска отражением (режим огня, таймер темпа, сбой учёта) — правка SDK ради диагностики запрещена |
+| `WeaponStatePanels.cs`, `WeaponStatePanelSettings.cs` | Дебаг-панель в шлеме над стволами в 3 м: учёт SDK, ход Action, состояние тени и последнее расхождение; галочка `Tools/VR Battlegrounds/Debug/Weapon State Panel` (EditorPrefs, только редактор, независимо от тени) |
+
+Точки наблюдения в `WeaponReadinessController` (поведение не меняют): статическое `ConfiguredAny` (тень подключается
+во время игры к настроенному контроллеру через `AddComponent`, `HideFlags.DontSave`), `AutomationPreparationRequested`,
+`TriggerIndex`, `TryGetRequiredActionProgress`, `IsActionAtValidatedEmptyRear`. Переключатель —
+`Tools/VR Battlegrounds/Debug/Weapon System Shadow`; включение во время Play подключает тень к уже настроенным стволам.
+
+**Как сравнивается.** Замер датчиков до контроллера: команды машины — ожидания; фиксация автора гасит ожидание того же
+вида. Решение старого кода вне его `LateUpdate` (замер SDK перед выстрелом, окно приёма, бот) машина досчитывает тем же
+замером на учёте «до фиксации». Не совпало — `GameLog.WeaponSystem.Warning` (раз в 10 с на вид, с числом повторов),
+затем карантин: машина с нуля, сравнение ждёт спокойного состояния. Сухой щелчок сравнивается с
+`WeaponTriggerAttemptRouter.NotReadyAttempted`, звук досылания — с `AutomaticWeaponSlideFeedback.ManualCycleCompleted`;
+остальные звуки и вибрации машины — новые выводы без сравнения (Н1/Н2), считаются в сводке. Поза — по устойчивому
+результату (HoldRear дольше 0,35 с без проверенного зада; возврат в покой дольше 1 с без покоя). Reconcile без
+расхождения магазина — фиксация самого SDK (`SyncAmmoLeft` у FullyAutomatic), не решение. Выключение оружия и
+снимок — карантин без сравнения (порядок `OnDisable` компонентов не определён).
+
+**Пробы 2026-10-07** (worker, Play в лобби, программные хваты локального аватара, ход ручки задаётся после стадии
+UltimateXR; отчёты — `tmp/weapon-shadow/`, локально):
+- Herrington: частичный ход, 7 выстрелов до HoldOpen, толчок вперёд из HoldOpen, отпускание на заднем упоре (пружина
+  досылает), Н6 — 20 совпадений (BeginAction×4, Extract×2, Complete×2, Cancel, CloseOnly, Shoot×7, RequestAdmission,
+  звук досылания×2), 0 расхождений поз (HoldRear у проверенного зада); расхождения — только Н6 и Reconcile SDK (класс найден пробой, исправлен в сравнении).
+- FABARM: 5 полных и 1 частичный цикл помпы, 3 выстрела — 20 совпадений, 0 расхождений команд; последний выстрел — S1.
+- Шум пробы, не логика: программный хват левой рукой срабатывает не каждый раз — помпа, двигаемая без руки, дала
+  расхождение позы ReturnToRest (в игре невозможно); сухой щелчок от подставного фронта спуска без пути SDK.
+- **E2:** `StateChanged` компонента поднимается при replay (`UxrManager.ExecuteStateSyncEvent`) и для `ApplyReadinessCommit`,
+  и для `CommitShotSynced`; учёт применяется, тень видит фиксацию как наблюдатель. Патч SDK E2 не нужен.
+- **Н6 подтверждена:** при барьере приёма в момент досылания `TryCompleteChamber` отклонён, флаг цикла сгорел, после
+  снятия барьера — Cancel + CloseOnly, патрон не дослан (C=0). Машина ждёт (T34) и досылает (T71).
+
+**Расхождения спецификации и решения пользователя 2026-10-07** (машина пока не менялась; правка — одним пакетом):
+
+| № | Что | Старый код | Машина | Решение |
+|---|---|---|---|---|
+| S1 | Последний выстрел ствола без Empty-клипа (FABARM) | Играет Fire-клип как Empty-показ; `AckEmptyRest` после клипа (~0,9 с) | Клипа нет (T62); `AckEmptyRest` сразу (T31); курок не анимируется | **Решено: как старый код.** Без Empty-клипа последний выстрел играет обычный Fire-клип; T31 ждёт конца любого клипа |
+| S2 | Нажатие спуска во время таймера темпа (на заряженном и на пустом) | SDK молчит (ни щелчка, ни подготовки) | T53/T40 — сухой щелчок/подготовка | **Решено: новый отклик.** Отрицательная вибрация (класс «отрицательный» будущей системы хаптиков, `Docs/tasks/haptics-research.md`) и **отдельный искусственный звук отказа** — не щелчок пустого магазина и не щелчок недосланного патрона; подсветки нет. В машине — своя причина/сигнал (например, `WeaponNotReadyReason.RateOfFire` или `WeaponCue.Refusal`), не DryFire; подготовки (T40) нет. Звук выбран пользователем: `UI_Error_Subtle_Deep_stereo.wav` (0,21 с) из внешней библиотеки `_SoundLibrary/Universal Sound FX/USER_INTERFACES/Errors/` (`Docs/sound-library.md`); импорт (wav + .meta, моно) — при подключении сигнала на этапе D |
+| S3 | T36 Reconcile | Только в контексте автора (основная рукоять) | Без контекста | **Решено архитектурно (этап C2):** расхождение учёта с гнездом — признак второго источника правды. Учёт не хранит копию магазина, а выводит её из гнезда; Reconcile, T36 и `MagazineMismatch` удаляются. Анализ и решения — `Docs/tasks/weapon-ledger-single-source.md` |
+| S4 | Отпущенная посреди цикла ручка (помпа FABARM) | Остаётся на месте: у FABARM `AutomaticWeaponSlideFeedback._autoReturnOnRelease = 0` (у Herrington 1), пружины нет | Released → ReturnToRest со скоростью пружины (T28/T29, В7) | **Решено пользователем 2026-10-07: старый код прав.** Новая ось профиля «отпущенный Action: пружина / остаётся» (Herrington — пружина, FABARM — остаётся); значение переносит writer этапа D из `_autoReturnOnRelease` |
+| Н6 | Досылание на барьере приёма | Цикл отменяется, патрон не дослан | Ждёт и досылает | Принять машину (исправление Н6) |
+
+Правки машины по S1, S2, S4 вносятся одним пакетом; S3 закрывается этапом C2.
+
+**Звук оттягивания Action (шлем 2026-10-07).** У стволов на учёте готовности старый код не играет звук заднего упора:
+`AutomaticWeaponSlideFeedback.LateUpdate` для них выходит раньше `PlayForwardFeedback`. Слышен только возврат.
+Решение пользователя — чинить на этапе D: машина уже выдаёт `WeaponCue.ActionBack`, его играет исполнитель звука.
+
+**Карантин тени.** Известное S2 (сигнал без расхождения учёта) больше не включает карантин: в первой версии одно
+раннее нажатие на FABARM выключило сравнение ствола до конца сессии (336 пропущенных сопоставлений).
+
+**Идея для этапов D/E (заявка пользователя): сигнал «патроны заканчиваются», как в CS2.** На последних N выстрелах к
+звуку выстрела добавляется отдельный слой — `WeaponCue.LowAmmo`, решается по учёту после выстрела, порог N — в профиле
+ствола. Слышат все игроки, включая противников (элемент тактики): это оформление синхронизированного выстрела — каждая
+машина играет слой у себя по реплицированной фиксации Shot, 3D у ствола, как сам звук выстрела. Отдельного сетевого
+вызова нет, проверки автора нет. Детали — позже.
+
+**Шлем 2026-10-07 (пользователь):** «всё, кроме автовозврата оттянутой помпы, работает» — это S4. Сводка тени
+(локально `tmp/weapon-shadow/report-headset.txt`): FABARM — 105 совпадений, 7 расхождений (S1×5, S4×2 `pose:ReturnToRest`);
+Herrington — 42 совпадения, 2 расхождения (S2: сухой щелчок при таймере темпа). Других расхождений нет.
+
+**Проверка:** офлайн-компиляция всех сборок; Unity — консоль без ошибок, `AndroidCompileGate` PASS,
+`WeaponStateMachineStructureTests` 14/14. Постоянных тестов этап C не добавляет (правило 2026-10-02).
+
+**Шлем (чек-лист этапа C):** галочка включена; Herrington и FABARM из арсенала: заряжание окном, все циклы,
+частичный ход, отпускание посреди цикла, HoldOpen и толчок вперёд, сухой щелчок пустым/без досылания, смена
+патрона, бросить и поднять. В консоли — строки `[WeaponShadow]`; цель — ноль расхождений, кроме помеченных
+«известное S1/S2/Н6». Итог — сводка при выходе из Play.
 
 ---
 

@@ -68,6 +68,8 @@ namespace VrBattlegrounds.Weapons
         public Vector3 RestLocalPosition => _localStart;
         public float PhysicalPositionEpsilon => FrontPositionEpsilon();
         public float AutoReturnSpeed => _autoReturnSpeed;
+        /// <summary>Пружина возвращает отпущенную ручку (у помпы FABARM — нет; S4 плана WeaponSystem).</summary>
+        public bool AutoReturnOnRelease => _autoReturnOnRelease;
         public float SlideTravelLength => TryGetSlideTravel(_slide, out _, out float length) ? length : 0f;
         public bool IsActionHeld => _slide != null && UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
         public float SignedSlideProgress => TryGetSlideTravel(_slide, out Vector3 axis, out float length)

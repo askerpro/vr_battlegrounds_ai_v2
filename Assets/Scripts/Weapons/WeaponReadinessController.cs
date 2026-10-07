@@ -76,6 +76,23 @@ namespace VrBattlegrounds.Weapons
         }
         public bool IsActionAtRest => IsPhysicallyClosed();
         public float EmptyRearTime => _validatedEmptyRearTime;
+        public int TriggerIndex => _triggerIndex;
+
+        // ── Только наблюдение (этап C WeaponSystem, теневой режим). Поведение контроллера не меняют. ──
+
+        /// <summary>Контроллер успешно настроен (Start/OnEnable). Подписчик — только наблюдатель (теневой режим).</summary>
+        public static event Action<WeaponReadinessController> ConfiguredAny;
+
+        /// <summary>Бот запросил подготовку (<see cref="RequestAutomationPreparation"/>), до любых команд учёту.</summary>
+        public event Action AutomationPreparationRequested;
+
+        /// <summary>Минимальный прогресс обязательных Action-деталей (тот же замер, что порог извлечения).</summary>
+        public bool TryGetRequiredActionProgress(out float minimum) => TryGetMinimumProgress(out minimum);
+
+        /// <summary>Action стоит в проверенной задней позе Empty (то же доказательство, что для толчка вперёд из HoldOpen).</summary>
+        public bool IsActionAtValidatedEmptyRear => _configured && _physical == WeaponPhysicalCapability.ActionTravel &&
+            _visuals != null && _feedback != null && _requiredBindings != null && _validatedEmptyRearTime >= 0f &&
+            _visuals.IsValidatedEmptyRearPose(_validatedEmptyRearTime, _requiredBindings, _feedback.PhysicalPositionEpsilon);
 
         public bool TryGetManualPositionMapping(Transform target, out Vector3 rest, out Vector3 rear)
         {
@@ -233,6 +250,7 @@ namespace VrBattlegrounds.Weapons
             finally { _initializing = false; }
             if (wasUninitialized && initialized && HasContext(out UxrGrabber initialHand))
                 CaptureAutomationCorrelation(_weapon.GetReadinessState(_triggerIndex), initialHand);
+            ConfiguredAny?.Invoke(this);
             return true;
         }
 
@@ -787,6 +805,7 @@ namespace VrBattlegrounds.Weapons
         /// <summary>Подготовка авторского бота; движение не означает разрешённый выстрел.</summary>
         public bool RequestAutomationPreparation()
         {
+            AutomationPreparationRequested?.Invoke();
             if (!_configured || _commandInFlight || !StateEventAuthority.IsWorldAuthority ||
                 !HasContext(out _)) { ClearAutomationCorrelation(); return false; }
             // Retained C не требует rest у косметического Fire или наличия магазина.

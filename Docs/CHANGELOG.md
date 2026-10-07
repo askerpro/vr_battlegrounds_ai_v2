@@ -1,5 +1,17 @@
 # Changelog (Журнал изменений)
 
+## 2026-10-07 — WeaponSystem этап C: теневой режим и дебаг-панель оружия
+
+- Теневой режим (`Assets/Scripts/Weapons/WeaponSystem/`): датчики и машина `WeaponStateMachine` работают рядом со
+  старым `WeaponReadinessController` на Herrington и FabarmSDASS и ничего не исполняют. Сравнитель
+  `WeaponShadowComparer` сверяет команды учёту, сухой щелчок, звук досылания и позу Action; расхождения —
+  `GameLog.WeaponSystem.Warning`, сводка при выходе из Play. Только редактор, галочка
+  `Tools/VR Battlegrounds/Debug/Weapon System Shadow`.
+- Дебаг-панель `WeaponStatePanels`: над огнестрелом в 3 м от головы — учёт SDK (C, M/ёмкость, ревизия), ход Action,
+  состояние тени и последнее расхождение. Только редактор, галочка `Tools/VR Battlegrounds/Debug/Weapon State Panel`.
+- В `WeaponReadinessController` добавлены только точки наблюдения, поведение не менялось.
+- Шлем: расхождения спецификации S1–S4 найдены и решены пользователем (план, п. 5.2); S3 закрывается этапом C2.
+
 ## 2026-10-07 — Unity MCP не восстанавливает настройки Codex
 
 - Проверка статуса Codex больше не записывает глобальный конфиг; автоматические

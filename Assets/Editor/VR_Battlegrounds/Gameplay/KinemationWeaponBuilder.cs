@@ -149,7 +149,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                 Name = "Viper", PrefabFolder = "Viper", PoseClip = "A_FP_WK-11_Viper_Idle_Pose", ActionClip = "A_W_WK-11_Viper_Fire",
                 TriggerPart = "Trigger", ActionPart = "Bolt", ActionGripContact = new Vector3(0f, -0.025f, 0f), SupportGrip = true,
                 UxrTag = "Gun", MagazinePart = "Magazine", MagazineExtraParts = new[] { "Cartridge_026", "Cartridge_025" },
-                MagazineTag = "MagViper", MagazineCapacity = 20
+                MagazineTag = "MagViper", MagazineCapacity = 20,
+                ReadinessProfile = WeaponReadinessAuthoring.DetachableHoldOpenProfile
             }),
             PackPrefab = "W_WK-11_Viper", AnimFolder = "WK-11_Viper", RestClip = "A_W_WK-11_Viper_Idle", PoseClip = "A_FP_WK-11_Viper_Idle_Pose",
             Excluded = new[] { "Cartridge*", "String", "Follower" }, ReloadClip = "A_W_WK-11_Viper_Reload_Empty",
@@ -231,7 +232,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                     Name = "TR15", PrefabFolder = "TR15", PoseClip = "A_FP_TR15_Idle_Pose_Non_Grip", ActionClip = "A_W_TR15_Fire",
                     TriggerPart = "Trigger", ActionPart = "Bolt", ActionGripPart = "Charger", ActionGripContact = new Vector3(-0.004f, 0f, -0.006f), ActionExtraParts = new[] { "Charger" }, SupportGrip = true,
                     UxrTag = "BackWeapon", MagazinePart = "Magazine", MagazineExtraParts = new[] { "Cartridge_1", "Cartridge_2" },
-                    MagazineTag = "MagTR15", MagazineCapacity = 20
+                    MagazineTag = "MagTR15", MagazineCapacity = 20,
+                    ReadinessProfile = WeaponReadinessAuthoring.DetachableHoldOpenProfile
                 });
                 r.MuzzlePart = Silencer;
                 return new KinemationWeaponRecipe

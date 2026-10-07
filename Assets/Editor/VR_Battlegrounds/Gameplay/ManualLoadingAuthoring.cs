@@ -129,7 +129,6 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
             if (feedback == null) throw new InvalidOperationException("Action feedback required.");
 
-            ChamberActionBinding[] bindings; float emptyTime;
             if (pump != null)
             {
                 var action = feedback.Slide;
@@ -145,31 +144,11 @@ namespace VrBattlegrounds.Editor.Gameplay
                 Vector3 rest = restFrame.MultiplyPoint3x4(Vector3.zero);
                 Quaternion rotation = restFrame.rotation;
                 Vector3 fullTravel = bodyFrame.inverse.MultiplyVector(MatrixToRoot(action.transform.parent, root.transform).MultiplyVector(direction * length));
-                bindings = new[] { new ChamberActionBinding { Target = action.transform, RestPosition = rest, RearPosition = rest + fullTravel,
+                var bindings = new[] { new ChamberActionBinding { Target = action.transform, RestPosition = rest, RearPosition = rest + fullTravel,
                     RestRotation = rotation, RearRotation = rotation, AnimateRotation = false } };
-                emptyTime = -1f;
+                WeaponReadinessAuthoring.WriteController(root, profile, body, bindings, -1f);
             }
-            else if (!visuals.TryBuildPreparedActionMapping(profile, out bindings, out emptyTime, out string error))
-                throw new InvalidOperationException(error);
-            var controller = GetOrAdd<WeaponReadinessController>(root.gameObject);
-            var settings = new SerializedObject(controller);
-            settings.FindProperty("_profile").objectReferenceValue = profile;
-            settings.FindProperty("_body").objectReferenceValue = visuals.Body;
-            settings.FindProperty("_emptyRearTime").floatValue = emptyTime;
-            var required = settings.FindProperty("_requiredBindings"); required.arraySize = bindings.Length;
-            for (int i = 0; i < bindings.Length; i++)
-            {
-                var item = required.GetArrayElementAtIndex(i); var binding = bindings[i];
-                item.FindPropertyRelative("Target").objectReferenceValue = binding.Target;
-                item.FindPropertyRelative("RestPosition").vector3Value = binding.RestPosition;
-                item.FindPropertyRelative("RearPosition").vector3Value = binding.RearPosition;
-                item.FindPropertyRelative("RestRotation").quaternionValue = binding.RestRotation;
-                item.FindPropertyRelative("RearRotation").quaternionValue = binding.RearRotation;
-                item.FindPropertyRelative("AnimateRotation").boolValue = binding.AnimateRotation;
-            }
-            settings.ApplyModifiedPropertiesWithoutUndo();
-            if (root.GetComponent<WeaponTriggerAttemptRouter>() == null) root.AddComponent<WeaponTriggerAttemptRouter>();
-            if (root.GetComponent<WeaponAttemptFeedback>() == null) root.AddComponent<WeaponAttemptFeedback>();
+            else WeaponReadinessAuthoring.ConfigureFromSource(root, profile);
             // Перенос только ссылки владельца insertion highlight, не новые материалы/геометрия.
             var highlight = internalAnchor.GetComponent<WeaponMagazineAnchorHighlight>();
             if (highlight != null)

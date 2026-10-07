@@ -176,7 +176,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                 Name = "BrowningHiPower", PrefabFolder = "BrowningHiPower", Folder = "Hands_Gun", BodyPart = "Base_mesh",
                 PoseClip = "Aiming_Idle", ActionClip = "Shot", TriggerPart = "Trigger_mesh", ActionPart = "Gate_mesh",
                 SupportGrip = true,
-                MagazinePart = "Magazine_mesh"
+                MagazinePart = "Magazine_mesh",
+                ReadinessProfile = WeaponReadinessAuthoring.DetachableHoldOpenProfile
             });
             var rifle = HandsPackWeaponBuilder.RifleDonor(new HandsPackWeaponRecipe
             {

@@ -61,6 +61,8 @@ namespace VrBattlegrounds.Editor.Gameplay
         public bool MagazineIsInternal; // боезапас внутри корпуса: внешняя точка приёма отдельно от конечной позы
         public bool ManualLoading; // явный recipe opt-in, не вывод из имени/дроби/внутреннего магазина
         public string ManualLoadingProfile;
+        // Явный профиль готовности съёмного магазина (патронник, ручной цикл, Empty-поза); пусто — legacy без ledger.
+        public string ReadinessProfile;
 
         public string GripDonor;       // префаб с вручную настроенным хватом на том же паке
         public string GripDonorFolder; // его папка в паке
@@ -335,6 +337,8 @@ namespace VrBattlegrounds.Editor.Gameplay
         {
             if (r.ManualLoading && AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ManualLoadingProfile) == null)
                 throw new System.InvalidOperationException("Не задан явный профиль tube reload: " + r.ManualLoadingProfile);
+            if (!string.IsNullOrEmpty(r.ReadinessProfile) && (r.ManualLoading || AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ReadinessProfile) == null))
+                throw new System.InvalidOperationException("Профиль готовности не найден или конфликтует с ManualLoading: " + r.ReadinessProfile);
             if (r.FinalRootScale < 0f || float.IsNaN(r.FinalRootScale) || float.IsInfinity(r.FinalRootScale))
                 throw new System.InvalidOperationException("Некорректный итоговый масштаб корня: " + r.Name);
             string folder = $"Assets/Prefabs/Weapons/{r.PrefabFolder}";
@@ -682,6 +686,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                 ManualLoadingAuthoring.ConfigureWeapon(root, r.Name, r.MagazineCapacity,
                     AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ManualLoadingProfile),
                     string.IsNullOrEmpty(r.LoadAudio) ? null : AssetDatabase.LoadAssetAtPath<AudioClip>(r.LoadAudio));
+            else if (!string.IsNullOrEmpty(r.ReadinessProfile))
+                WeaponReadinessAuthoring.ConfigureFromSource(root, AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ReadinessProfile));
 
             return root;
         }

@@ -150,6 +150,74 @@ namespace VrBattlegrounds.Network
             Align(instance);
         }
 
+        // ── Сгенерированные объекты без NetworkIdentity ───────────────────
+
+        /// <summary>
+        ///     Выдаёт заранее вычисленные UniqueId свежим неактивным компонентам, которые ни разу не просыпались
+        ///     (сгенерированные части станций). Компоненты регистрируются под этими ID в своём <c>Awake</c>
+        ///     (SDK патч 51: занятый ID — отказ, не <c>CollisionN</c>). Сетевого объекта и <c>netId</c> им
+        ///     не нужно: ID одинаковы на всех машинах, потому что вычислены из общего входа.
+        ///     <para>
+        ///     Сначала проверяется весь набор, и только потом что-либо меняется: пустой ID, повтор цели или ID,
+        ///     ID, уже занятый в реестре, или компонент, который уже активен/просыпался/получал ID, — именованный
+        ///     отказ без изменений. Если подготовка всё же оборвалась на середине, часть компонентов уже помечена:
+        ///     такое поддерево не активировать, а уничтожить.
+        ///     </para>
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Набор назначений не прошёл проверку.</exception>
+        public static void PrepareGeneratedIdentities(IReadOnlyList<NetworkUxrIdentityAssignment> assignments)
+        {
+            if (assignments == null || assignments.Count == 0)
+            {
+                throw new InvalidOperationException("NetworkUxrIdentity.Generated.Empty");
+            }
+
+            var targets = new HashSet<UltimateXR.Core.Components.UxrComponent>();
+            var ids = new HashSet<Guid>();
+
+            foreach (NetworkUxrIdentityAssignment assignment in assignments)
+            {
+                if (assignment.Target == null)
+                {
+                    throw new InvalidOperationException("NetworkUxrIdentity.Generated.NullTarget");
+                }
+
+                if (assignment.ExpectedUniqueId == Guid.Empty)
+                {
+                    throw new InvalidOperationException("NetworkUxrIdentity.Generated.EmptyId:" + assignment.Target.name);
+                }
+
+                if (!targets.Add(assignment.Target))
+                {
+                    throw new InvalidOperationException("NetworkUxrIdentity.Generated.DuplicateTarget:" + assignment.Target.name);
+                }
+
+                if (!ids.Add(assignment.ExpectedUniqueId))
+                {
+                    throw new InvalidOperationException("NetworkUxrIdentity.Generated.DuplicateId:" + assignment.ExpectedUniqueId);
+                }
+
+                // Свежесть читаем без побочных эффектов: ленивые implementers SDK здесь не создаются.
+                if (!assignment.Target.TryGetUninitializedRuntimeUniqueId(out Guid _))
+                {
+                    throw new InvalidOperationException("NetworkUxrIdentity.Generated.NotFreshInactive:" + assignment.Target.name);
+                }
+
+                if (UxrUniqueIdImplementer.TryGetComponentById(assignment.ExpectedUniqueId, out IUxrUniqueId _))
+                {
+                    throw new InvalidOperationException("NetworkUxrIdentity.Generated.Occupied:" + assignment.ExpectedUniqueId);
+                }
+            }
+
+            foreach (NetworkUxrIdentityAssignment assignment in assignments)
+            {
+                if (!assignment.Target.TryPrepareRuntimeUniqueId(assignment.ExpectedUniqueId, out string error))
+                {
+                    throw new InvalidOperationException("NetworkUxrIdentity.Generated.PrepareFailed:" + assignment.Target.name + ":" + error);
+                }
+            }
+        }
+
         // ── Выравнивание идентичности ─────────────────────────────────────
 
         /// <summary>

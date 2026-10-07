@@ -76,6 +76,7 @@ UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игр
 | Новая фича | `Docs/README.md` (нет ли дубля) → `Docs/gameplay.md`, затем `/feature` |
 | Матч, режимы, раунды | `Docs/gameplay.md`, `Docs/game-manager.md` |
 | Сессия, роли, устройства | `Docs/session-architecture.md` |
+| Автопроверка нескольких Play Mode экземпляров | `Docs/test-stand.md` |
 | UI-меню / шрифты | `Docs/ui-design-system.md`, `Docs/ui-menu-architecture.md` / `Docs/ui-fonts.md` |
 | Стена арсенала | `Docs/Arsenal/Arsenal_Code_Architecture_RU.md` |
 | Сборка, Git, перф | `Docs/release.md`, `Docs/version-control.md`, `Docs/perf-stress-test.md` |
@@ -200,7 +201,41 @@ rebase дал конфликт с чужой работой. После влив
 4. **Шум харнесса ≠ отказ логики.** Mirror пишет `Error` на `[ClientRpc]` вне сервера, `[Server]`-методы
    вне сервера молча глушатся — такое падение теста — дефект теста.
 
-Два клиента и шлем автономно недоступны: такие задачи закрывать, вынося логику под юнит-тест.
+### Адресный стенд Play Mode
+
+Для автоматической проверки нескольких процессов читать `Docs/test-stand.md` и использовать
+`VrBattlegrounds.EditorTools.TestStand.PlayModeTestStand`. Он запускает ServerOnly + два клиента
+через временную копию Play Mode сценария; сеть запускают штатные владельцы игры.
+
+- **Доступ к worker:** собственный worktree → checkpoint/request/claim/begin/guard.
+  MCP-прокси должен быть запущен из своего worktree; проверить worker root/instance из `guard`.
+  MCP, закреплённый за основным checkout, не использовать для изменения worker.
+- **Запуск через `execute_code`:** `PlayModeTestStand.StartProbe()`; затем опрашивать `Status()`.
+  Ждать три участника: один `Server=true, Client=false`, два `Client=true, Connected=true`.
+- **Выбор цели:** взять из текущего `Status()` полный адрес `RunId` + `ParticipantId` +
+  `ProcessSessionId`. Роль Client и PID сами по себе адресом не являются. После перезапуска
+  или смены сессии получить адрес заново; не подменять недоступного клиента другим процессом.
+- **Команда:** `Send(new StandRequest { RunId=..., ParticipantId=..., ProcessSessionId=...,
+  RequestId=..., Action=..., MarkerName=..., TimeBudgetMs=5000 })` из того же namespace.
+  Пока `Completed=false`, опрашивать `Operation(RequestId)`. Проверять `Reply.Passed` и адрес/PID
+  исполнителя; завершение MCP-вызова само по себе не означает прохождения проверки.
+- **Пилот поддерживает:** `create-marker`, `read-marker`, `remove-marker`, `state` (MarkerName пустой).
+  Маркер несетевой; изоляцию проверять чтением у всех участников. Новый шаг — новый RequestId;
+  повтор идентичного запроса возвращает прежний результат. При `EffectUnknown=true` эффект мог
+  произойти: не повторять действие с новым RequestId без проверки состояния.
+- **Завершение, включая отказ проверки:** `Stop()` → ждать `Phase=idle`, `Playing=false`;
+  проверить `CleanupPassed`, затем немедленно `finish` и получить/проверить результат брокера.
+  Не завершать чужой Play и не держать аренду для анализа. Тестовые токены/профили не записывать
+  в PlayerPrefs или ассеты; стенд сам восстанавливает свои временные настройки.
+- **Готовый прогон:** после guard, из своего worktree:
+  `uv run --with 'mcp>=1.20,<2' Tools/TestStand/worker_probe.py --instance '<guard.unity_instance>' --editor-root '<guard.project_root>' --output tmp/test-stand/live.json`.
+  Проверять `passed`, выполненные проверки и ошибки очистки в JSON, а не только exit code.
+
+Стенд подтверждает адресное управление процессами и локальные маркеры. XR-ввод, хват/ходьба/UI,
+Quest, disconnect/reconnect и сетевые fault-сценарии пока не реализованы; не выдавать пилот
+за их приёмку. Фактический domain reload и recovery после смерти процесса требуют отдельных
+проб. Недоступную автономно игровую проверку выносить под проверяемую логику и явно указывать
+границы доказательности; реальные два клиента теперь доступны через этот стенд.
 
 ## Баги: чинить класс, а не экземпляр
 

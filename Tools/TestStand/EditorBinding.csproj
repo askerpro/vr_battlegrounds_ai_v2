@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>UNITY_EDITOR</DefineConstants>
+    <Nullable>disable</Nullable>
+    <UnityManaged Condition="'$(UnityManaged)' == ''">C:/Program Files/Unity/Hub/Editor/6000.4.1f1/Editor/Data/Managed</UnityManaged>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(UnityManaged)/UnityEngine/*.dll"><Private>false</Private></Reference>
+    <Compile Include="../../Assets/Editor/VR_Battlegrounds/Testing/*.cs" />
+    <Compile Include="../../Assets/Scripts/Core/LocalClientProfile.cs" />
+    <Compile Include="../../Assets/Scripts/Core/ClientDeviceIdentity.cs" />
+    <Compile Include="../../Assets/Scripts/Core/ClientDeviceType.cs" />
+    <Compile Include="../../Assets/Scripts/Core/GameRole.cs" />
+    <Compile Include="EditorBindingStubs.cs" />
+  </ItemGroup>
+</Project>

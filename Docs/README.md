@@ -8,6 +8,9 @@
 [SessionStart-хук](../.codex/hooks.json) и [скрипт загрузки](../.codex/hooks/session_context.py).
 Скрипт только читает правила; хук загружается при старте, возобновлении и сжатии контекста.
 
+Адресный [стенд Play Mode](test-stand.md): управление выбранным процессом через MCP и Unity IPC,
+Server+2clients, временный профиль и DeviceToken; [план и проверки](tasks/vr-test-stand-implementation.md).
+
 ---
 
 Политика быстрых worktree: [Git LFS](agents/lfs-worktrees.md). Полные оружейные/солдатские

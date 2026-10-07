@@ -49,6 +49,9 @@
 ExportedObj/
 .consulo/
 *.csproj
+!/Tools/TestStand/*.csproj
+/Tools/TestStand/obj/
+/Tools/TestStand/bin/
 *.unityproj
 *.sln
 *.slnx

@@ -22,7 +22,7 @@ namespace VrBattlegrounds.DevTools.E2E
     /// </code>
     ///
     /// Про <c>-e2eDeviceToken</c>. <see cref="Network.GameNetworkManager"/> берёт токен
-    /// устройства из <see cref="PlayerPrefs"/>, а два процесса одного билда на одной
+    /// устройства через <see cref="Core.ClientDeviceIdentity"/>, а два процесса одного билда на одной
     /// машине делят один и тот же PlayerPrefs — без переопределения оба клиента
     /// представятся серверу одним устройством.
     /// </summary>
@@ -64,17 +64,24 @@ namespace VrBattlegrounds.DevTools.E2E
             if (string.IsNullOrEmpty(role))
                 role = Mirror.Utils.IsHeadless() ? "server" : "client";
 
-            return new E2EContext
-            {
-                Scenario        = scenario,
-                Role            = role,
-                ResultPath      = Read(args, "-e2eResult"),
-                Timeout         = ReadFloat(args, "-e2eTimeout", 240f),
-                Map             = ReadOr(args, "-e2eMap", "TestMap2"),
-                ExpectedClients = (int)ReadFloat(args, "-e2eClients", 2f),
-                ServerAddress   = Read(args, "-e2eServerAddress"),
-                DeviceToken     = Read(args, "-e2eDeviceToken")
-            };
+            float timeout = ReadFloat(args, "-e2eTimeout", 240f);
+            if (float.IsNaN(timeout) || float.IsInfinity(timeout) || timeout <= 0) timeout = 240f;
+            float clients = ReadFloat(args, "-e2eClients", 2f);
+            if (float.IsNaN(clients) || float.IsInfinity(clients) || clients < 0 || clients >= int.MaxValue) clients = 2f;
+            return Create(scenario, role, Read(args, "-e2eResult"), timeout,
+                ReadOr(args, "-e2eMap", "TestMap2"), (int)clients,
+                Read(args, "-e2eServerAddress"), Read(args, "-e2eDeviceToken"));
+        }
+
+        /// <summary>Общий контекст для CLI и Editor; не запускает сеть и не меняет профиль.</summary>
+        public static E2EContext Create(string scenario, string role, string resultPath = null, float timeout = 240f,
+            string map = "TestMap2", int expectedClients = 2, string serverAddress = null, string deviceToken = null)
+        {
+            if (string.IsNullOrEmpty(scenario) || string.IsNullOrEmpty(role)) throw new ArgumentException("Нужны сценарий и роль E2E.");
+            if (float.IsNaN(timeout) || float.IsInfinity(timeout) || timeout <= 0 || expectedClients < 0)
+                throw new ArgumentException("Некорректные ожидания E2E.");
+            return new E2EContext { Scenario = scenario, Role = role, ResultPath = resultPath, Timeout = timeout,
+                Map = map, ExpectedClients = expectedClients, ServerAddress = serverAddress, DeviceToken = deviceToken };
         }
 
         public override string ToString()

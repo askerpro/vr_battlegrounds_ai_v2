@@ -161,20 +161,7 @@ namespace VrBattlegrounds.Network
 
         private void SendConnectMessage()
         {
-            // Берем или генерируем deviceToken для сессии (сохраняется у клиента локально)
-            string token = UnityEngine.PlayerPrefs.GetString("DeviceToken", "");
-            if (string.IsNullOrEmpty(token))
-            {
-                token = System.Guid.NewGuid().ToString();
-                UnityEngine.PlayerPrefs.SetString("DeviceToken", token);
-                UnityEngine.PlayerPrefs.Save();
-            }
-
-#if UNITY_EDITOR
-            // Чтобы редактор и билд на одном ПК (имеющие общие PlayerPrefs),
-            // а также клоны редактора (ParrelSync) воспринимались сервером как разные устройства:
-            token += "_editor_" + UnityEngine.Application.dataPath.GetHashCode();
-#endif
+            string token = VrBattlegrounds.Core.ClientDeviceIdentity.ConnectionToken;
 
             if (LocalClientProfile.LocalRole == GameRole.Player)
             {

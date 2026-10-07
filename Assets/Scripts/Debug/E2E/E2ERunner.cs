@@ -28,6 +28,11 @@ namespace VrBattlegrounds.DevTools.E2E
         private E2EResult _result;
         private float _startedRealtime;
         private bool _finished;
+        private bool _quitServerOnFinish;
+        private IDisposable _identityScope;
+        private static E2ERunner _active;
+        public bool Finished => _finished;
+        public E2EResult Result => _result;
 
 
         // ── Бутстрап ───────────────────────────────────────────────────────
@@ -39,17 +44,41 @@ namespace VrBattlegrounds.DevTools.E2E
             if (context == null)
                 return;
 
-            // DeviceToken должен быть переопределён до того, как GameNetworkManager
-            // отправит GamePlayerConnectMessage — то есть до любого подключения.
-            if (!string.IsNullOrEmpty(context.DeviceToken))
-            {
-                PlayerPrefs.SetString("DeviceToken", context.DeviceToken);
-                PlayerPrefs.Save();
-            }
+            Begin(context);
+        }
 
+        /// <summary>Один исполнитель для CLI и Editor. Профиль и запуск сети ведёт вызывающий адаптер.</summary>
+        public static E2ERunner Begin(E2EContext context, bool quitServerOnFinish = true)
+        {
+            if (context == null) throw new ArgumentNullException(nameof(context));
+            if (_active != null) throw new InvalidOperationException("E2E-сценарий уже запущен в этом процессе.");
             GameObject host = new GameObject("E2ERunner");
             DontDestroyOnLoad(host);
-            host.AddComponent<E2ERunner>().Initialize(context);
+            var runner = host.AddComponent<E2ERunner>();
+            _active = runner;
+            try
+            {
+                if (!string.IsNullOrEmpty(context.DeviceToken))
+                {
+                    if (ClientDeviceIdentity.HasTemporaryToken)
+                    {
+                        if (ClientDeviceIdentity.BaseToken != context.DeviceToken)
+                            throw new InvalidOperationException("Идентичность E2E отличается от идентичности текущего стенда.");
+                    }
+                    else runner._identityScope = ClientDeviceIdentity.BeginTemporaryToken(context.DeviceToken);
+                }
+                runner._quitServerOnFinish = quitServerOnFinish && !Application.isEditor;
+                runner.Initialize(context);
+                return runner;
+            }
+            catch
+            {
+                runner._identityScope?.Dispose();
+                runner._identityScope = null;
+                _active = null;
+                Destroy(host);
+                throw;
+            }
         }
 
         private void Initialize(E2EContext context)
@@ -74,7 +103,7 @@ namespace VrBattlegrounds.DevTools.E2E
 
         private void Start()
         {
-            StartCoroutine(DriveScenario());
+            if (_context != null) StartCoroutine(DriveScenario());
         }
 
         // ── Прокрутка сценария ─────────────────────────────────────────────
@@ -160,12 +189,14 @@ namespace VrBattlegrounds.DevTools.E2E
             // Клиентские роли держат процесс живым до конца прогона: если клиент
             // выйдет раньше сервера, сервер потеряет игрока и его вердикт станет
             // невалидным. Гасит такие процессы дирижёр.
-            if (_context.IsServerRole)
+            if (_context.IsServerRole && _quitServerOnFinish)
                 Application.Quit(exitCode);
         }
 
         private void OnApplicationQuit()
         {
+            _identityScope?.Dispose();
+            _identityScope = null;
             if (_finished || _result == null)
                 return;
 
@@ -174,6 +205,21 @@ namespace VrBattlegrounds.DevTools.E2E
             _result.AbortPending("процесс завершился досрочно");
             _result.DurationSeconds = Time.realtimeSinceStartup - _startedRealtime;
             _result.WriteTo(_context.ResultPath);
+        }
+
+        private void OnDestroy()
+        {
+            if (!_finished && _result != null)
+            {
+                _result.Status = E2EResult.StatusError;
+                _result.Summary = "исполнитель уничтожен до завершения сценария";
+                _result.AbortPending(_result.Summary);
+                _result.DurationSeconds = Time.realtimeSinceStartup - _startedRealtime;
+                _result.WriteTo(_context.ResultPath);
+            }
+            _identityScope?.Dispose();
+            _identityScope = null;
+            if (_active == this) _active = null;
         }
 
         // ── Реестр сценариев ───────────────────────────────────────────────

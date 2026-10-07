@@ -1,5 +1,14 @@
 # Changelog (Журнал изменений)
 
+## 2026-10-07 — WeaponSystem, этап B: машина состояний оружия
+
+- Новая сборка `VrBattlegrounds.Weapons.Core` (без UnityEngine): `WeaponStateMachine` и единая таблица переходов
+  `WeaponTransitions` (83 строки), оси профиля, `LedgerView` (механическое состояние выводится из учёта SDK, не
+  хранится), события и выход (команды учёту, звуки, цель позы). Команды выдаются только строками автора —
+  наблюдатель не может их выдать по устройству таблицы. К игре пока не подключена (этап C — теневой режим).
+- Структурные тесты `WeaponStateMachineStructureTests`: полнота таблицы, команды только у автора, HoldOpen без
+  возврата в покой, обход достижимых состояний на 6 профилях. План — `Docs/tasks/weapon-system-refactor-plan.md`.
+
 ## 2026-10-07 — Точная регистрация UniqueId UltimateXR (генератор арсенала, задача 2)
 
 - [SDK патч 51](UltimateXR/sdk-patches.md): `TryPrepareRuntimeUniqueId` регистрирует заранее заданный ID в `Awake`;

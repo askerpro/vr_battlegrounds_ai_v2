@@ -3,6 +3,7 @@
     "rootNamespace": "VrBattlegrounds.Tests",
     "references": [
         "VrBattlegrounds",
+        "VrBattlegrounds.Weapons.Core",
         "VrBattlegrounds.LevelDesign.Editor",
         "VrBattlegrounds.DebugBootstrap",
         "Mirror",

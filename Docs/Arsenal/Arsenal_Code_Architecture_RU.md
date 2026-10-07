@@ -210,6 +210,21 @@ Read/Write включается только явным импортным write
 ошибка `GameLog.Arsenal`, а не молчаливая потеря. Склад магазинов (`ArsenalMagazineSupply`) проверяет
 индекс по тому же признаку стены.
 
+**Сборка сгенерированной станции** — `ArsenalStationComposer` (вызывает только MapBootstrap через адаптер,
+на сервере и каждом клиенте с одним ключом запуска):
+1. `PrepareComposition(description, scope, binding)`: под корнем `ArsenalEquipmentPoses` — выключенный
+   `GeneratedSlots` с клонами шаблонов в порядке манифеста (слот в `ClosedPose`) и метками `Open_i`/`Closed_i`;
+   ID ролей — `ArsenalGeneratedIdentityBinding` + `NetworkUxrIdentity.PrepareGeneratedIdentities`; затем
+   `ArsenalStationPresetBinding.PrepareGenerated` (сначала проверка всего, потом контекст представления, потом
+   оружие), `InstallGeneratedSlots`, цели поз. Сбой до необратимых шагов уничтожает поддерево целиком. Повтор
+   с тем же описанием и запуском — тот же handle; иначе отказ `ArsenalComposer.AlreadyComposed`.
+2. `Activate` включает поддерево — компоненты регистрируются под ID манифеста.
+3. `ValidateReady` — Pending до включения, Passed когда каждая роль зарегистрирована своим компонентом,
+   Failed после разборки, закрытия запуска или если ID занят чужим. Это только «собрано»; выдачу предметов
+   разрешает `MapRunAdmission`.
+4. Разборку ведёт `MapRunScope`: снимает свои цели поз, отцепляет чужие `UxrGrabbableObject` из поддерева и
+   уничтожает его. У сгенерированной станции `TryPrepareFromScene` ждёт сборщика молча.
+
 ---
 
 ## 3. Выдача экипировки игроку

@@ -68,8 +68,11 @@ namespace VrBattlegrounds.Arsenal
         public string ReadyMaterialSourceGuid { get; }
         public Bounds SupportLocalBounds { get; }
         public IReadOnlyList<ArsenalSupportPose> Supports { get; }
+        /// <summary>Неизменяемый снимок, из которого собрано представление: его отдаёт слоту сгенерированная станция.</summary>
+        public ArsenalPresentationSnapshot Snapshot { get; }
         public ArsenalFrozenPresentation(ArsenalPresentationSnapshot snapshot, ArsenalCompositionCatalog catalog)
         {
+            Snapshot=snapshot;
             ItemTarget=snapshot.ItemTarget; MagazineTarget=snapshot.MagazineTarget; CardTarget=snapshot.CardTarget;
             CardSize=snapshot.CardSize; CardFontSize=snapshot.CardFontSize; SupportModule=snapshot.Style.SupportModule;
             ReadyMaterial=snapshot.Style.ReturnReadyMaterial; Supports=Array.AsReadOnly(snapshot.Supports.ToArray());

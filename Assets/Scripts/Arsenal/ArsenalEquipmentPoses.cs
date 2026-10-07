@@ -21,6 +21,24 @@ namespace VrBattlegrounds.Arsenal
         public void ConfigureFoldedBounds(Bounds bounds) => _foldedBoundsLocal = bounds;
         public void Configure(PoseTarget[] targets) => _targets = targets;
 
+        /// <summary>Добавляет цели сгенерированных слотов к авторским; двигает их тот же общий прогресс станции.</summary>
+        public void AddTargets(System.Collections.Generic.IReadOnlyList<PoseTarget> added)
+        {
+            var merged = new System.Collections.Generic.List<PoseTarget>(_targets ?? Array.Empty<PoseTarget>());
+            merged.AddRange(added);
+            _targets = merged.ToArray();
+        }
+
+        /// <summary>Снимает ровно эти цели (по объекту Target); остальные остаются.</summary>
+        public void RemoveTargets(System.Collections.Generic.ICollection<Transform> targets)
+        {
+            if (_targets == null) return;
+            var kept = new System.Collections.Generic.List<PoseTarget>(_targets.Length);
+            foreach (var pose in _targets)
+                if (pose.Target == null || !targets.Contains(pose.Target)) kept.Add(pose);
+            _targets = kept.ToArray();
+        }
+
         // Содержимое движется весь интервал; корпус станции остаётся неподвижным.
         public static float EquipmentFraction(float progress)
         {

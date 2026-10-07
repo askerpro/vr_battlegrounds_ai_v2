@@ -19,9 +19,20 @@ namespace VrBattlegrounds.Arsenal
         public string EditorDemoSourceHash { get => _editorDemoSourceHash; set => _editorDemoSourceHash = value; }
 #endif
         private ArsenalPreset _prepared;
+        // Сгенерированная станция готовится не из сцены, а сборщиком по описанию (PrepareGenerated).
+        private ArsenalStationDescription _preparedGenerated;
         private readonly Dictionary<ArsenalSlotController, ArsenalPresentationSnapshot> _presentation = new Dictionary<ArsenalSlotController, ArsenalPresentationSnapshot>();
         private string _lastError;
-        public bool IsPrepared => _prepared != null;
+        public bool IsPrepared => _prepared != null || _preparedGenerated != null;
+
+        private bool IsGeneratedComposition
+        {
+            get
+            {
+                var composition = GetComponent<ArsenalStationCompositionBinding>();
+                return composition != null && composition.Mode == ArsenalCompositionMode.Generated;
+            }
+        }
         public void ConfigureRegistry(MapRegistry registry) => _mapRegistry = registry;
         public ArsenalPreset PresentationPresetCache => _presentationPresetCache;
 #if UNITY_EDITOR
@@ -37,8 +48,9 @@ namespace VrBattlegrounds.Arsenal
         {
             if (Application.isPlaying)
             {
-                if (_prepared == null) throw new InvalidOperationException("Presentation context ещё не подготовлен.");
+                if (!IsPrepared) throw new InvalidOperationException("Presentation context ещё не подготовлен.");
                 if (_presentation.TryGetValue(slot, out var current)) return current;
+                if (_preparedGenerated != null) throw new InvalidOperationException("Слот не принадлежит сгенерированной станции.");
                 return ArsenalLegacyPresentationAdapter.Resolve(slot);
             }
             var map = _mapRegistry != null ? _mapRegistry.GetBySceneName(gameObject.scene.name) : null;
@@ -68,6 +80,8 @@ namespace VrBattlegrounds.Arsenal
         public bool TryPrepareFromScene()
         {
             if (IsPrepared) return true;
+            // Сгенерированную станцию готовит сборщик (PrepareGenerated); до него ждём молча — это не ошибка карты.
+            if (IsGeneratedComposition) return false;
             var map = _mapRegistry != null ? _mapRegistry.GetBySceneName(gameObject.scene.name) : null;
             try
             {
@@ -86,9 +100,59 @@ namespace VrBattlegrounds.Arsenal
             }
         }
 
+        /// <summary>
+        /// Готовит сгенерированную станцию: слоты созданы сборщиком в порядке манифеста описания, i-й слот —
+        /// i-я запись манифеста. Как и авторский <see cref="Prepare" />, сначала проверяет всё, потом публикует
+        /// контекст представления и только затем настраивает оружие слотов. Повтор с тем же описанием безопасен.
+        /// </summary>
+        public void PrepareGenerated(ArsenalStationDescription description, IReadOnlyList<ArsenalSlotController> slots)
+        {
+            if (!IsGeneratedComposition) throw new InvalidOperationException("PrepareGenerated: станция не в режиме Generated.");
+            if (description == null || !description.Success) throw new InvalidOperationException("PrepareGenerated: описание с ошибками.");
+            if (_prepared != null) throw new InvalidOperationException("PrepareGenerated: станция уже подготовлена авторским ассортиментом.");
+            if (_preparedGenerated != null)
+            {
+                if (!ReferenceEquals(_preparedGenerated, description)) throw new InvalidOperationException("Нельзя менять описание собранной станции.");
+                return;
+            }
+            if (slots == null || slots.Count != description.Slots.Count)
+                throw new InvalidOperationException("PrepareGenerated: число слотов не совпадает с манифестом.");
+
+            var preparedPresentation = new Dictionary<ArsenalSlotController, ArsenalPresentationSnapshot>();
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                var manifest = description.Slots[i];
+                if (slot == null || preparedPresentation.ContainsKey(slot)) throw new InvalidOperationException("PrepareGenerated: пустой или повторный слот " + i + ".");
+                var weapon = manifest.Entry.WeaponResource;
+                if (weapon == null || weapon.WeaponPrefab == null || weapon.MagazinePrefab == null)
+                    throw new InvalidOperationException("PrepareGenerated: нет оружия или магазина у " + manifest.Entry.LogicalSlotKey + ".");
+                var firearm = slot as FirearmSlotController;
+                if (firearm == null || slot.ItemAnchor == null || firearm.MagAnchor == null)
+                    throw new InvalidOperationException("PrepareGenerated: шаблон слота без оружейного/магазинного якоря " + i + ".");
+                ArsenalPresentationResolver.ValidateFrame(slot.transform, slot.ItemAnchor.transform, slot.ItemAnchor.AlignTransform);
+                ArsenalPresentationResolver.ValidateFrame(slot.transform, firearm.MagAnchor.transform, firearm.MagAnchor.AlignTransform);
+                var snapshot = manifest.Entry.Presentation.Snapshot;
+                if (snapshot == null || !snapshot.IsStyled) throw new InvalidOperationException("PrepareGenerated: нестилизованное представление " + i + ".");
+                preparedPresentation.Add(slot, snapshot);
+            }
+
+            // Всё проверено; контекст опубликован ДО ConfigureWeapon (тот читает представление через ResolvePresentation).
+            _presentation.Clear();
+            foreach (var pair in preparedPresentation) _presentation.Add(pair.Key, pair.Value);
+            _preparedGenerated = description;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                slots[i].ConfigurePresentationZone(description.Slots[i].Entry.Zone);
+                slots[i].ConfigureWeapon(description.Slots[i].Entry.WeaponResource);
+            }
+            _lastError = null;
+        }
+
         /// <summary>Проверяет весь ассортимент до изменения слотов. Повтор той же настройки безопасен.</summary>
         public void Prepare(ArsenalPreset preset)
         {
+            if (_preparedGenerated != null) throw new InvalidOperationException("Станция уже собрана генератором.");
             if (preset == null || string.IsNullOrWhiteSpace(preset.PresetId))
                 throw new InvalidOperationException("У карты не задан арсенал с постоянным ID.");
             if (_prepared != null)

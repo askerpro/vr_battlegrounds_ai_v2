@@ -236,11 +236,11 @@ Transform:
   m_GameObject: {fileID: 77686569}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.96875, y: 0, z: 6.5372677}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalPosition: {x: 0.96874976, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 838325792}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &106533319
 GameObject:
@@ -325,12 +325,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 106533319}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
-  m_LocalPosition: {x: 6.781251, y: 0, z: -6.5332675}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -6.7812495, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 911159039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &157447751
 PrefabInstance:
@@ -675,12 +675,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 201063306}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
-  m_LocalPosition: {x: 0.9687495, y: 0, z: -6.5332675}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.9687493, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 911159039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &215965042
 PrefabInstance:
@@ -753,7 +753,7 @@ PrefabInstance:
     - target: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _boundary
       value: 
-      objectReference: {fileID: 1187769966}
+      objectReference: {fileID: 0}
     - target: {fileID: 2143163056846856084, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
       value: 0
@@ -861,6 +861,10 @@ PrefabInstance:
     - target: {fileID: 4884708640821682270, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _uxrUniqueId
       value: 6a11ba00-17b3-4523-9f06-b1ea4f4e091d
+      objectReference: {fileID: 0}
+    - target: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+      propertyPath: _stationKey
+      value: BotCombatStand.SpawnZone.ArsenalWall-1-2
       objectReference: {fileID: 0}
     - target: {fileID: 5735350740147238584, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
@@ -986,15 +990,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &215965044 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+  m_CorrespondingSourceObject: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
   m_PrefabInstance: {fileID: 215965042}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bace753a9647224985a72512cf5aeda, type: 3}
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
 --- !u!1 &222394151
 GameObject:
   m_ObjectHideFlags: 0
@@ -1157,67 +1161,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 271754167}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1001 &335873377
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 5773889775595434469, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_Name
-      value: MapReferee
-      objectReference: {fileID: 0}
-    - target: {fileID: 6300597833603486795, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: sceneId
-      value: 2806134070
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7224397667782521793, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
 --- !u!1 &360375258
 GameObject:
   m_ObjectHideFlags: 0
@@ -1587,12 +1530,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 384192208}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
-  m_LocalPosition: {x: -0.9687505, y: 0, z: -6.5332675}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.96875024, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 911159039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &411474830
 PrefabInstance:
@@ -1665,7 +1608,7 @@ PrefabInstance:
     - target: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _boundary
       value: 
-      objectReference: {fileID: 1187769966}
+      objectReference: {fileID: 0}
     - target: {fileID: 2143163056846856084, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
       value: 0
@@ -1773,6 +1716,10 @@ PrefabInstance:
     - target: {fileID: 4884708640821682270, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _uxrUniqueId
       value: 4e3c51ab-572e-4a37-9276-241697d5767c
+      objectReference: {fileID: 0}
+    - target: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+      propertyPath: _stationKey
+      value: BotCombatStand.SpawnZone.ArsenalWall-3-3
       objectReference: {fileID: 0}
     - target: {fileID: 5735350740147238584, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
@@ -1898,15 +1845,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &411474832 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+  m_CorrespondingSourceObject: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
   m_PrefabInstance: {fileID: 411474830}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bace753a9647224985a72512cf5aeda, type: 3}
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
 --- !u!1 &425778467
 GameObject:
   m_ObjectHideFlags: 0
@@ -2537,12 +2484,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 586009476}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
-  m_LocalPosition: {x: 4.843751, y: 0, z: -6.5332675}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -4.84375, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 911159039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &602326727
 PrefabInstance:
@@ -4274,12 +4221,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 613357134}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
-  m_LocalPosition: {x: -4.8437514, y: 0, z: -6.5332675}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 4.8437505, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 911159039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &664027081
 GameObject:
@@ -4643,6 +4590,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2313025353900136011, guid: b8ba96d91fbb9d7408d468465a372095, type: 3}
   m_PrefabInstance: {fileID: 836685171}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &836685173 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2860928150808680077, guid: b8ba96d91fbb9d7408d468465a372095, type: 3}
+  m_PrefabInstance: {fileID: 836685171}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d891a788d7a480e4cb148b65c0b3c59d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.LevelDesign.PhysicalArenaLayout
 --- !u!1 &837343657
 GameObject:
   m_ObjectHideFlags: 0
@@ -4770,6 +4728,45 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
+--- !u!1 &838325791
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 838325792}
+  m_Layer: 0
+  m_Name: SpawnZone.Boundary
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &838325792
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 838325791}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2072228459}
+  - {fileID: 1947474927}
+  - {fileID: 1013778804}
+  - {fileID: 1405818833}
+  - {fileID: 77686572}
+  - {fileID: 1217401895}
+  - {fileID: 1667339534}
+  - {fileID: 1448099265}
+  m_Father: {fileID: 5964725698407072495}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &845682073
 GameObject:
   m_ObjectHideFlags: 0
@@ -4801,6 +4798,45 @@ Transform:
   m_Children:
   - {fileID: 1651149071}
   m_Father: {fileID: 1338103632}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &911159038
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 911159039}
+  m_Layer: 0
+  m_Name: SpawnZone.Boundary
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &911159039
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 911159038}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 106533322}
+  - {fileID: 586009479}
+  - {fileID: 1461367264}
+  - {fileID: 201063309}
+  - {fileID: 384192211}
+  - {fileID: 1880142411}
+  - {fileID: 613357137}
+  - {fileID: 1887289268}
+  m_Father: {fileID: 3181956816747499731}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &971169923
 GameObject:
@@ -5102,11 +5138,11 @@ Transform:
   m_GameObject: {fileID: 1013778801}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -2.906251, y: 0, z: 6.5372677}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalPosition: {x: -2.9062502, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 838325792}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1030946824
 GameObject:
@@ -5250,7 +5286,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 466159125327842237}
-  - {fileID: 1187769968}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1055898662
@@ -9464,7 +9499,7 @@ PrefabInstance:
     - target: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _boundary
       value: 
-      objectReference: {fileID: 1187769966}
+      objectReference: {fileID: 0}
     - target: {fileID: 2143163056846856084, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
       value: 0
@@ -9572,6 +9607,10 @@ PrefabInstance:
     - target: {fileID: 4884708640821682270, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _uxrUniqueId
       value: 5c13d546-181b-4e36-8b21-6d9b076d9175
+      objectReference: {fileID: 0}
+    - target: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+      propertyPath: _stationKey
+      value: BotCombatStand.SpawnZone.ArsenalWall-3-2
       objectReference: {fileID: 0}
     - target: {fileID: 5735350740147238584, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
@@ -9692,15 +9731,15 @@ PrefabInstance:
   m_SourcePrefab: {fileID: 100100000, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
 --- !u!114 &1173534253 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+  m_CorrespondingSourceObject: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
   m_PrefabInstance: {fileID: 1173534252}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bace753a9647224985a72512cf5aeda, type: 3}
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
 --- !u!4 &1173534254 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 94458109775581282, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
@@ -9832,97 +9871,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1524550016}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1187769965
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1187769968}
-  - component: {fileID: 1187769967}
-  - component: {fileID: 1187769966}
-  m_Layer: 0
-  m_Name: ArsenalEquipmentCoordinator
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1187769966
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1187769965}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0fe07acbd589bfd4e8329f62317fe604, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalBoundaryWall
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
-  _stations:
-  - {fileID: 1498970333}
-  - {fileID: 2132119015}
-  - {fileID: 1258701277}
-  - {fileID: 411474832}
-  - {fileID: 1609995179}
-  - {fileID: 215965044}
-  - {fileID: 1965998743}
-  - {fileID: 1173534253}
-  _duration: 1.35
---- !u!114 &1187769967
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1187769965}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b91ecbcc199f4492b9a91e820070131, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Mirror::Mirror.NetworkIdentity
-  sceneId: 4159883942
-  _assetId: 0
-  serverOnly: 0
-  visibility: 0
-  hasSpawned: 0
---- !u!4 &1187769968
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1187769965}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 2072228459}
-  - {fileID: 1947474927}
-  - {fileID: 1013778804}
-  - {fileID: 1405818833}
-  - {fileID: 77686572}
-  - {fileID: 1217401895}
-  - {fileID: 1667339534}
-  - {fileID: 1448099265}
-  - {fileID: 106533322}
-  - {fileID: 586009479}
-  - {fileID: 1461367264}
-  - {fileID: 201063309}
-  - {fileID: 384192211}
-  - {fileID: 1880142411}
-  - {fileID: 613357137}
-  - {fileID: 1887289268}
-  m_Father: {fileID: 1055846962}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1198544368
 GameObject:
@@ -10991,11 +10939,11 @@ Transform:
   m_GameObject: {fileID: 1217401892}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 2.906251, y: 0, z: 6.5372677}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalPosition: {x: 2.9062502, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 838325792}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1258701275
 PrefabInstance:
@@ -11068,7 +11016,7 @@ PrefabInstance:
     - target: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _boundary
       value: 
-      objectReference: {fileID: 1187769966}
+      objectReference: {fileID: 0}
     - target: {fileID: 2143163056846856084, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
       value: 0
@@ -11176,6 +11124,10 @@ PrefabInstance:
     - target: {fileID: 4884708640821682270, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _uxrUniqueId
       value: aba71b77-39c6-49f7-9896-f4b618db0c45
+      objectReference: {fileID: 0}
+    - target: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+      propertyPath: _stationKey
+      value: BotCombatStand.SpawnZone.ArsenalWall-2-2
       objectReference: {fileID: 0}
     - target: {fileID: 5735350740147238584, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
@@ -11301,15 +11253,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &1258701277 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+  m_CorrespondingSourceObject: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
   m_PrefabInstance: {fileID: 1258701275}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bace753a9647224985a72512cf5aeda, type: 3}
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
 --- !u!1 &1278733445
 GameObject:
   m_ObjectHideFlags: 0
@@ -11653,11 +11605,11 @@ Transform:
   m_GameObject: {fileID: 1405818830}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.96875, y: 0, z: 6.5372677}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalPosition: {x: -0.96874976, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 838325792}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1406482779
 GameObject:
@@ -11873,11 +11825,11 @@ Transform:
   m_GameObject: {fileID: 1448099262}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 6.781252, y: 0, z: 6.5372677}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalPosition: {x: 6.7812505, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 838325792}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1454523498
 GameObject:
@@ -12089,12 +12041,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1461367261}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
-  m_LocalPosition: {x: 2.9062505, y: 0, z: -6.5332675}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -2.9062498, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 911159039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1498970331
 PrefabInstance:
@@ -12167,7 +12119,7 @@ PrefabInstance:
     - target: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _boundary
       value: 
-      objectReference: {fileID: 1187769966}
+      objectReference: {fileID: 0}
     - target: {fileID: 2143163056846856084, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
       value: 0
@@ -12275,6 +12227,10 @@ PrefabInstance:
     - target: {fileID: 4884708640821682270, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _uxrUniqueId
       value: 2c06f5ca-a0ab-4b51-90a8-f0acd5a95423
+      objectReference: {fileID: 0}
+    - target: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+      propertyPath: _stationKey
+      value: BotCombatStand.SpawnZone.ArsenalWall-3
       objectReference: {fileID: 0}
     - target: {fileID: 5735350740147238584, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
@@ -12400,15 +12356,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &1498970333 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+  m_CorrespondingSourceObject: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
   m_PrefabInstance: {fileID: 1498970331}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bace753a9647224985a72512cf5aeda, type: 3}
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
 --- !u!1001 &1505371603
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -21316,7 +21272,7 @@ PrefabInstance:
     - target: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _boundary
       value: 
-      objectReference: {fileID: 1187769966}
+      objectReference: {fileID: 0}
     - target: {fileID: 2143163056846856084, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
       value: 0
@@ -21424,6 +21380,10 @@ PrefabInstance:
     - target: {fileID: 4884708640821682270, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _uxrUniqueId
       value: 49013059-b565-4ba9-985d-181e9c223f45
+      objectReference: {fileID: 0}
+    - target: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+      propertyPath: _stationKey
+      value: BotCombatStand.SpawnZone.ArsenalWall
       objectReference: {fileID: 0}
     - target: {fileID: 5735350740147238584, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
@@ -21549,15 +21509,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &1609995179 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+  m_CorrespondingSourceObject: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
   m_PrefabInstance: {fileID: 1609995177}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bace753a9647224985a72512cf5aeda, type: 3}
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
 --- !u!1 &1612340974
 GameObject:
   m_ObjectHideFlags: 0
@@ -22058,11 +22018,11 @@ Transform:
   m_GameObject: {fileID: 1667339531}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.843751, y: 0, z: 6.5372677}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalPosition: {x: 4.84375, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 838325792}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1690472378
 GameObject:
@@ -23486,12 +23446,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1880142408}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
-  m_LocalPosition: {x: -2.9062514, y: 0, z: -6.5332675}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 2.9062507, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 911159039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1887289265
 GameObject:
@@ -23576,12 +23536,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1887289265}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
-  m_LocalPosition: {x: -6.7812524, y: 0, z: -6.5332675}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 6.781251, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 911159039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1934524457
 GameObject:
@@ -23906,11 +23866,11 @@ Transform:
   m_GameObject: {fileID: 1947474924}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -4.843751, y: 0, z: 6.5372677}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalPosition: {x: -4.84375, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 838325792}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1965998741
 PrefabInstance:
@@ -23983,7 +23943,7 @@ PrefabInstance:
     - target: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _boundary
       value: 
-      objectReference: {fileID: 1187769966}
+      objectReference: {fileID: 0}
     - target: {fileID: 2143163056846856084, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
       value: 0
@@ -24091,6 +24051,10 @@ PrefabInstance:
     - target: {fileID: 4884708640821682270, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _uxrUniqueId
       value: 7f6e1de7-d765-4058-aeec-5bb0d5e482cf
+      objectReference: {fileID: 0}
+    - target: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+      propertyPath: _stationKey
+      value: BotCombatStand.SpawnZone.ArsenalWall-2
       objectReference: {fileID: 0}
     - target: {fileID: 5735350740147238584, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
@@ -24216,15 +24180,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &1965998743 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+  m_CorrespondingSourceObject: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
   m_PrefabInstance: {fileID: 1965998741}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bace753a9647224985a72512cf5aeda, type: 3}
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
 --- !u!1 &2064701595
 GameObject:
   m_ObjectHideFlags: 0
@@ -24436,11 +24400,85 @@ Transform:
   m_GameObject: {fileID: 2072228456}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -6.781252, y: 0, z: 6.5372677}
-  m_LocalScale: {x: 0.96875024, y: 1, z: 1}
+  m_LocalPosition: {x: -6.7812505, y: 0, z: 6.5372663}
+  m_LocalScale: {x: 0.96875, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1187769968}
+  m_Father: {fileID: 838325792}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2078529538
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2078529541}
+  - component: {fileID: 2078529540}
+  - component: {fileID: 2078529539}
+  m_Layer: 0
+  m_Name: MapRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2078529539
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2078529538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4419742601700e7439c8bcf2d65493d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.Runtime.MapBootstrap
+  _deploymentDuration: 1.35
+--- !u!114 &2078529540
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2078529538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79f80a8da7892724c8fa99174d3932d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.Runtime.MapRoot
+  _map: {fileID: 11400000, guid: ba23eb4a40326604aab4f4aa44ccbf3f, type: 2}
+  _environment: {fileID: 1524550015}
+  _gameplay: {fileID: 1055846961}
+  _layout: {fileID: 836685173}
+  _zones:
+  - {fileID: 6995293867679397339}
+  - {fileID: 6995293867679397341}
+  _stations:
+  - {fileID: 2132119015}
+  - {fileID: 1609995179}
+  - {fileID: 1965998743}
+  - {fileID: 1498970333}
+  - {fileID: 1258701277}
+  - {fileID: 1173534253}
+  - {fileID: 215965044}
+  - {fileID: 411474832}
+--- !u!4 &2078529541
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2078529538}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2105334343
 GameObject:
@@ -25283,7 +25321,7 @@ PrefabInstance:
     - target: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _boundary
       value: 
-      objectReference: {fileID: 1187769966}
+      objectReference: {fileID: 0}
     - target: {fileID: 2143163056846856084, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
       value: 0
@@ -25391,6 +25429,10 @@ PrefabInstance:
     - target: {fileID: 4884708640821682270, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _uxrUniqueId
       value: 1f80142a-9915-4627-a50d-d251e4d392f0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+      propertyPath: _stationKey
+      value: BotCombatStand.SpawnZone.ArsenalWall-1
       objectReference: {fileID: 0}
     - target: {fileID: 5735350740147238584, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: __isInPrefab
@@ -25516,15 +25558,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &2132119015 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
+  m_CorrespondingSourceObject: {fileID: 4916864760472282679, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
   m_PrefabInstance: {fileID: 2132119013}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bace753a9647224985a72512cf5aeda, type: 3}
+  m_Script: {fileID: 11500000, guid: 720407be52e3ee44983eea738d082a8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalDeploymentAnimator
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding
 --- !u!1 &2142962195
 GameObject:
   m_ObjectHideFlags: 0
@@ -25823,6 +25865,7 @@ Transform:
   m_Children:
   - {fileID: 2294245628033685447}
   - {fileID: 1198544369}
+  - {fileID: 911159039}
   m_Father: {fileID: 466159125327842237}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!114 &3803994563732107454
@@ -26047,6 +26090,7 @@ Transform:
   m_Children:
   - {fileID: 5816353275939148964}
   - {fileID: 222394152}
+  - {fileID: 838325792}
   m_Father: {fileID: 466159125327842237}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6445553734741889281
@@ -26261,7 +26305,6 @@ MeshFilter:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 335873377}
   - {fileID: 432905656}
   - {fileID: 1524550016}
   - {fileID: 1055898664}
@@ -26269,3 +26312,4 @@ SceneRoots:
   - {fileID: 1055846962}
   - {fileID: 836685171}
   - {fileID: 1859003780}
+  - {fileID: 2078529541}

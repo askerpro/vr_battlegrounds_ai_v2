@@ -25,12 +25,17 @@ namespace VrBattlegrounds.Managers
     /// Жизнь режима на карте: какой режим сейчас заспавнен и как он меняется.
     ///
     /// <para>
-    /// <b>Режим на карте меняется на месте, без перезагрузки сцены.</b> Любая карта
-    /// (лобби тоже) стартует в разминке (<see cref="ServerStartWarmup"/>, из
-    /// <c>OnStartServer</c>). «Начать матч» (<see cref="GoLive"/>) останавливает
-    /// разминку и спавнит режим матча; матч кончился (<see cref="Finished"/>) —
-    /// снова разминка, а серия (<see cref="Series"/>) решает, какая карта следующая.
-    /// Какой режим допустим на карте — <see cref="MapModeRules"/> по <c>MapData.supportedModes</c>.
+    /// <b>Судья принадлежит запуску карты.</b> Его спавнит <see cref="MapBootstrap"/> из каталога и до спавна
+    /// передаёт свой запуск (<see cref="InitializeRun"/>); разминку судья начинает по <see cref="ServerStartRun"/>
+    /// после CompositionReady. Судьи без запуска (сценового, «неуправляемого») больше нет: режим и состояние
+    /// карты публикует только descriptor <see cref="MapRunAuthority"/>.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Режим на карте меняется на месте, без перезагрузки сцены.</b> «Начать матч» (<see cref="GoLive"/>)
+    /// останавливает разминку и спавнит режим матча, согласованный при загрузке (<see cref="MapRunConfig.MatchIntent"/>);
+    /// матч кончился (<see cref="Finished"/>) — снова разминка, а серия (<see cref="Series"/>) решает, какая
+    /// карта следующая.
     /// </para>
     ///
     /// <para>
@@ -47,23 +52,17 @@ namespace VrBattlegrounds.Managers
         /// <summary>Матч на карте завершён (сервер). Null = ничья. Слушает серия карт.</summary>
         public event Action<TeamData> Finished;
 
-        /// <summary>
-        /// Состояние неуправляемого судьи (стенд без MapRoot, EditMode-тесты). Управляемый запуск карты
-        /// публикует состояние только через descriptor <see cref="MapRunAuthority"/>.
-        /// </summary>
-        [SyncVar] private MapState _currentState = MapState.Warmup;
-
         private GameMode _gameMode;
         private GameObject _gameModeInstance;
 
-        /// <summary>Сервер: запуск карты, которому принадлежит этот судья; null — неуправляемый.</summary>
-        private MapBootstrap _run;
+        /// <summary>Сервер: запуск карты, которому принадлежит этот судья. На клиенте null.</summary>
+        private IMapRunHost _run;
 
         /// <summary>
-        /// Состояние карты. Управляемый запуск — из единого descriptor (сервер и клиент читают одно),
-        /// неуправляемый — собственный SyncVar.
+        /// Состояние карты — из единого descriptor запуска (сервер и клиент читают одно). Пока descriptor
+        /// этого судьи не опубликован — разминка.
         /// </summary>
-        public MapState CurrentState => TryGetRunSnapshot(out MapRunSnapshot snapshot) ? snapshot.MapState : _currentState;
+        public MapState CurrentState => TryGetRunSnapshot(out MapRunSnapshot snapshot) ? snapshot.MapState : MapState.Warmup;
 
         /// <summary>Descriptor запуска, который опубликовал именно этот экземпляр судьи.</summary>
         private bool TryGetRunSnapshot(out MapRunSnapshot snapshot)
@@ -79,7 +78,7 @@ namespace VrBattlegrounds.Managers
         /// Сервер, до спавна: судья принадлежит запуску карты. Разминку он начнёт не в
         /// <c>OnStartServer</c>, а по <see cref="ServerStartRun"/> — после CompositionReady.
         /// </summary>
-        internal void InitializeRun(MapBootstrap run) => _run = run;
+        internal void InitializeRun(IMapRunHost run) => _run = run;
 
         /// <summary>Идёт матч (режим матча, а не разминка).</summary>
         public bool IsLiveOrPaused => CurrentState != MapState.Warmup;
@@ -111,25 +110,17 @@ namespace VrBattlegrounds.Managers
         // ── Unity lifecycle ───────────────────────────────────────────────────
 
         /// <summary>
-        /// Карта (любая, и лобби) стартует в разминке — без администратора. Управляемый запуск
-        /// ждёт <see cref="ServerStartRun"/> от своего <see cref="MapBootstrap"/>: состав карты ещё
-        /// не опубликован, и режим со своими правилами начинать рано.
+        /// Разминку судья здесь не начинает: состав карты ещё не опубликован. Её начнёт
+        /// <see cref="ServerStartRun"/> от своего запуска. Судья без запуска — ошибка состава сцены.
         /// </summary>
         public override void OnStartServer()
         {
             base.OnStartServer();
-            _startedOnServer = true;
+            _spawnedOnServer = true;
 
-            if (_run != null) return;
-
-            if (CurrentMap != null)
-                GameLog.Match.Warning($"[MapReferee] Карта '{SceneName}' из реестра стартует без MapRoot — " +
-                    "прежний неуправляемый путь. Карты реестра запускает MapBootstrap.", this);
-
-            if (_gameMode == null)
-                ServerStartWarmup();
-
-            ProcessDeferredGoLive();
+            if (_run == null)
+                GameLog.Error($"[MapReferee] Судья карты '{SceneName}' заспавнен без запуска карты: режимов не будет. " +
+                    "Судью создаёт только MapBootstrap (MapRoot сцены).", this);
         }
 
         /// <summary>
@@ -180,9 +171,9 @@ namespace VrBattlegrounds.Managers
         }
 
         /// <summary>
-        /// «Начать матч» пришёл раньше, чем объект заспавнен (автостарт отладки слушает
-        /// <see cref="SubscribeToInstance"/>, а тот срабатывает в <c>Awake</c>). Спавнить режим
-        /// дочерним объектом незаспавненного менеджера нельзя — запрос ждёт <c>OnStartServer</c>.
+        /// «Начать матч» пришёл раньше server Ready карты (автостарт отладки слушает
+        /// <see cref="SubscribeToInstance"/>, а тот срабатывает в <c>Awake</c>). Запрос выполняется
+        /// сразу после разминки — в <see cref="ServerStartRun"/>.
         /// </summary>
         private bool _goLiveRequestedBeforeSpawn;
 
@@ -190,7 +181,7 @@ namespace VrBattlegrounds.Managers
         /// <c>OnStartServer</c> уже прошёл. Своя отметка, а не <c>isServer</c>: в <c>Awake</c>
         /// у <c>NetworkBehaviour</c> ещё нет <c>netIdentity</c>, и <c>isServer</c> падает с NRE.
         /// </summary>
-        private bool _startedOnServer;
+        private bool _spawnedOnServer;
 
         /// <summary>
         /// Режим заспавнен на этой машине. На сервере ссылку ставит <see cref="ServerSwitchTo"/>,
@@ -310,9 +301,9 @@ namespace VrBattlegrounds.Managers
         }
 
         /// <summary>
-        /// «Начать матч»: разминка → режим, выбранный администратором
-        /// (<c>SessionManager.SelectedGameModeData</c>), на месте. Выбор несовместим с картой —
-        /// первый совместимый режим матча; совместимых нет (лобби) — матч не начинается.
+        /// «Начать матч»: разминка → режим матча, согласованный один раз при загрузке карты
+        /// (<see cref="MapRunConfig.MatchIntent"/>), на месте. Текущий выбор меню не читается: выбор во
+        /// время карты относится к следующей серии. Режима матча у запуска нет (лобби) — матч не начинается.
         /// </summary>
         /// <returns>true — режим матча заспавнен.</returns>
         [Server]
@@ -324,50 +315,22 @@ namespace VrBattlegrounds.Managers
                 return false;
             }
 
-            if (!_startedOnServer || (_run != null && !_run.IsServerReady))
+            if (_run == null && _spawnedOnServer)
+            {
+                GameLog.Error($"[MapReferee] «Начать матч» на карте '{SceneName}': у судьи нет запуска карты.", this);
+                return false;
+            }
+
+            // Судья ещё не связан с запуском (сигнал из Awake приходит внутри Instantiate, до InitializeRun)
+            // или карта не открыла server Ready — запрос выполнится после разминки.
+            if (_run == null || !_run.IsServerReady)
             {
                 _goLiveRequestedBeforeSpawn = true;
                 GameLog.Match.Verbose("[MapReferee] «Начать матч» до готовности карты — после разминки.");
                 return false;
             }
 
-            if (_run != null) return GoLiveRun();
-
-            GameModeData selected = SessionManager.Instance != null &&
-                                    !string.IsNullOrEmpty(SessionManager.Instance.SelectedModeId)
-                ? SessionManager.Instance.SelectedGameModeData
-                : null;
-
-            MapData map = CurrentMap;
-            GameModeData mode = MapModeRules.ResolveMatchMode(map, selected, Registry);
-
-            if (mode == null)
-            {
-                GameLog.Match.Warning(
-                    $"[MapReferee] Матч не начат: на карте '{SceneName}' нет совместимого режима матча " +
-                    $"(выбран '{(selected != null ? selected.modeId : "ничего")}').");
-                return false;
-            }
-
-            if (selected != null && mode != selected)
-            {
-                GameLog.Match.Info(
-                    $"[MapReferee] Режим '{selected.modeId}' несовместим с картой '{SceneName}' — " +
-                    $"берётся первый совместимый: '{mode.modeId}'.");
-            }
-
-            return ServerSwitchTo(mode, stopCurrent: true, MapState.Live);
-        }
-
-        /// <summary>
-        /// «Начать матч» управляемой карты: режим согласован один раз при загрузке
-        /// (<see cref="MapRunConfig.MatchIntent"/>), а не читается из текущего выбора меню —
-        /// выбор во время карты относится к следующей серии.
-        /// </summary>
-        [Server]
-        private bool GoLiveRun()
-        {
-            MapMatchIntent intent = _run.Config.MatchIntent;
+            MapMatchIntent intent = _run.MatchIntent;
             if (!intent.HasMatch)
             {
                 GameLog.Match.Warning($"[MapReferee] Матч не начат: запуск карты '{SceneName}' без режима матча ({intent.ResolutionReason}).");
@@ -504,7 +467,7 @@ namespace VrBattlegrounds.Managers
         [Server]
         private bool ServerSwitchTo(GameModeData data, bool stopCurrent, MapState state, PauseSnapshot restore = null)
         {
-            if (data == null) return false;
+            if (data == null || _run == null) return false;
 
             if (data.modePrefab == null && ModeFactory == null)
             {
@@ -554,11 +517,10 @@ namespace VrBattlegrounds.Managers
             mode.Finished += OnModeFinished;
             mode.RoundWonServer += OnModeRoundWon;
 
-            // Единственная публикация: неуправляемый — свой SyncVar, управляемый — descriptor
-            // запуска. Коммит до BeginWhenReady: команды, пополнение стен и старт режима идут
-            // уже под опубликованным режимом (первый коммит открывает server Ready).
-            _currentState = state;
-            if (_run != null && !_run.CommitMode(state, mode))
+            // Единственная публикация — descriptor запуска. Коммит до BeginWhenReady: команды,
+            // пополнение стен и старт режима идут уже под опубликованным режимом (первый коммит
+            // открывает server Ready).
+            if (_run == null || !_run.CommitMode(state, mode))
             {
                 GameLog.Error($"[MapReferee] Режим '{data.modeId}' не опубликован: запуск карты '{SceneName}' уже снят.");
                 return false;
@@ -572,12 +534,10 @@ namespace VrBattlegrounds.Managers
         }
 
         /// <summary>
-        /// Экземпляр режима. Управляемая карта — отдельный сетевой корень в сцене карты, без вложения
-        /// под NetworkIdentity судьи; неуправляемый судья сохраняет прежнее дочернее размещение.
+        /// Экземпляр режима — отдельный сетевой корень в сцене карты, без вложения под NetworkIdentity судьи.
         /// </summary>
         private GameObject InstantiateMode(GameObject prefab)
         {
-            if (_run == null) return Instantiate(prefab, transform);
             GameObject instance = Instantiate(prefab);
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(instance, gameObject.scene);
             return instance;
@@ -590,7 +550,6 @@ namespace VrBattlegrounds.Managers
         [Server]
         private void OnModeFinished(TeamData winner)
         {
-            _currentState = MapState.Warmup;
             _pausedSnapshot = null;
             _pausedMode = null;
 

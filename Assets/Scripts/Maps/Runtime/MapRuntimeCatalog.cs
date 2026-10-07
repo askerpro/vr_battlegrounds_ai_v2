@@ -22,12 +22,31 @@ namespace VrBattlegrounds.Maps.Runtime
             public string ArsenalFingerprint;
         }
         [SerializeField] private MapRegistry _maps;
+        [Tooltip("Отладочные стенды (MapData.kind = Debug): запускаются тем же MapBootstrap, но в меню реестра карт их нет.")]
+        [SerializeField] private MapData[] _debugMaps = Array.Empty<MapData>();
         [SerializeField] private GameModeRegistry _modes;
         [SerializeField] private MapReferee _refereePrefab;
         [SerializeField] private ArsenalBoundaryWall _coordinatorPrefab;
         [SerializeField] private ContentEntry[] _content = Array.Empty<ContentEntry>();
         [SerializeField] private uint _compositionVersion = 1;
         public MapRegistry Maps => _maps;
+
+        /// <summary>Отладочные стенды каталога: вне меню реестра, тот же запуск карты.</summary>
+        public IReadOnlyList<MapData> DebugMaps => Array.AsReadOnly(_debugMaps ?? Array.Empty<MapData>());
+
+        /// <summary>Все карты каталога: реестр меню и отладочные стенды.</summary>
+        public IEnumerable<MapData> AllMaps =>
+            (_maps != null && _maps.maps != null ? _maps.maps : Array.Empty<MapData>()).Concat(_debugMaps ?? Array.Empty<MapData>());
+
+        /// <summary>Каноническая MapData сцены: из реестра, иначе из отладочных стендов.</summary>
+        public MapData FindMap(string sceneName)
+        {
+            MapData map = _maps != null && _maps.maps != null ? _maps.GetBySceneName(sceneName) : null;
+            if (map != null) return map;
+            foreach (MapData debug in _debugMaps ?? Array.Empty<MapData>())
+                if (debug != null && debug.sceneName == sceneName) return debug;
+            return null;
+        }
         public GameModeRegistry Modes => _modes;
         public MapReferee RefereePrefab => _refereePrefab;
         public ArsenalBoundaryWall CoordinatorPrefab => _coordinatorPrefab;
@@ -44,8 +63,10 @@ namespace VrBattlegrounds.Maps.Runtime
         {
             var errors = new List<string>();
             if (_maps == null || _maps.maps == null || _maps.maps.Length == 0) errors.Add("Catalog.MapRegistry.Missing");
-            else if (_maps.maps.Where(m => m != null).Select(m => m.sceneName).Distinct(StringComparer.Ordinal).Count() != _maps.maps.Length)
+            else if (AllMaps.Where(m => m != null).Select(m => m.sceneName).Distinct(StringComparer.Ordinal).Count() != AllMaps.Count())
                 errors.Add("Catalog.MapRegistry.InvalidOrDuplicate");
+            foreach (MapData debug in _debugMaps ?? Array.Empty<MapData>())
+                if (debug == null || debug.kind != MapRunKind.Debug) errors.Add("Catalog.DebugMap.NotDebug:" + (debug != null ? debug.sceneName : "null"));
             if (_modes == null || _modes.Warmup == null) errors.Add("Catalog.ModeRegistry.Warmup.Missing");
             if (_compositionVersion == 0) errors.Add("Catalog.CompositionVersion.Invalid");
             if (registeredPrefabs == null) errors.Add("Catalog.SpawnRegistry.Missing");
@@ -58,7 +79,7 @@ namespace VrBattlegrounds.Maps.Runtime
             {
                 if (entry == null || entry.Map == null || !seen.Add(entry.Map)) { errors.Add("Catalog.Content.InvalidOrDuplicate"); continue; }
                 var map = entry.Map;
-                if (_maps == null || _maps.maps == null || _maps.GetBySceneName(map.sceneName) != map) errors.Add("Catalog.Content.ForeignMap:" + map.sceneName);
+                if (FindMap(map.sceneName) != map) errors.Add("Catalog.Content.ForeignMap:" + map.sceneName);
                 if (string.IsNullOrEmpty(entry.ScenePath) || !MapRunResolver.Identifier(entry.ContentFingerprint) ||
                     !MapRunResolver.Identifier(entry.ArsenalFingerprint)) errors.Add("Catalog.Content.Provenance:" + map.sceneName);
                 if (map.arsenalPreset == null || !MapRunResolver.Identifier(map.arsenalPreset.PresetId)) errors.Add("Map.Arsenal.Missing:" + map.sceneName);
@@ -82,7 +103,7 @@ namespace VrBattlegrounds.Maps.Runtime
                     map.arsenalPreset != null ? map.arsenalPreset.PresetId : null, entry.ArsenalFingerprint,
                     (map.supportedModes ?? Array.Empty<GameModeData>()).Where(m => m != null && (_modes == null || m != _modes.Warmup)).Select(m => m.modeId)));
             }
-            if (_maps != null && _maps.maps != null && _maps.maps.Any(m => m == null || !seen.Contains(m))) errors.Add("Catalog.Content.Incomplete");
+            if (AllMaps.Any(m => m == null || !seen.Contains(m))) errors.Add("Catalog.Content.Incomplete");
             if (_modes != null)
             {
                 var all = new List<GameModeData>(_modes.modes ?? Array.Empty<GameModeData>());
@@ -134,7 +155,7 @@ namespace VrBattlegrounds.Maps.Runtime
             var errors = new List<string>(validation.Errors);
             if (bindings == null) errors.Add("Map.Bindings.Missing");
             if (errors.Count != 0) return new MapRunResolution(null, errors);
-            var canonical = _maps.GetBySceneName(request.MapScene);
+            var canonical = FindMap(request.MapScene);
             if (canonical == null) errors.Add("Map.Unknown:" + request.MapScene);
             else if (bindings.Map != canonical) errors.Add("Map.Bindings.MapDataMismatch");
             if (errors.Count != 0) return new MapRunResolution(null, errors);

@@ -36,6 +36,15 @@ namespace VrBattlegrounds.EditorTools
         private const string RegistryPath = "Assets/Data/Maps/MapRegistry.asset";
         private const string ModesPath = "Assets/Data/GameModes/GameModeRegistry.asset";
         private const string ReportDirectory = "Docs/tasks/report/map-runtime-bootstrap/details/";
+        /// <summary>
+        /// Отладочные стенды, которые запускаются через MapBootstrap, но не входят в меню реестра карт:
+        /// MapData и сцена. Каталог держит их в отдельном списке (<c>MapRuntimeCatalog.DebugMaps</c>).
+        /// </summary>
+        private static readonly (string MapPath, string ScenePath)[] DebugStands =
+        {
+            ("Assets/Scenes/Debug/BotCombatStandMap.asset", "Assets/Scenes/Debug/BotCombatStand.unity"),
+        };
+
         private static readonly string[] StationPrefabPaths =
         {
             "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab",
@@ -50,6 +59,9 @@ namespace VrBattlegrounds.EditorTools
         [MenuItem(Menu + "Apply Migration")]
         private static void ApplyMenu() => Core.GameLog.Debug.Info("[MapBootstrapMigration] " + Newtonsoft.Json.JsonConvert.SerializeObject(Apply()));
 
+        [MenuItem(Menu + "Apply Debug Stands")]
+        private static void ApplyStandsMenu() => Core.GameLog.Debug.Info("[MapBootstrapMigration] " + Newtonsoft.Json.JsonConvert.SerializeObject(ApplyDebugStands()));
+
         [MenuItem(Menu + "Rebake Catalog")]
         private static void RebakeMenu() => Core.GameLog.Debug.Info("[MapBootstrapMigration] " + Newtonsoft.Json.JsonConvert.SerializeObject(RebakeCatalog()));
 
@@ -59,7 +71,7 @@ namespace VrBattlegrounds.EditorTools
             EnsureIdle();
             var maps = new List<object>();
             var failures = new List<string>();
-            foreach (MapData map in RegistryMaps())
+            foreach (MapData map in CatalogMaps())
             {
                 string path = ScenePath(map.sceneName);
                 if (path == null) { failures.Add("Scene.Missing:" + map.sceneName); continue; }
@@ -105,8 +117,45 @@ namespace VrBattlegrounds.EditorTools
                 maps.Add(new { scene = map.sceneName, actions, errors });
             }
 
+            MigrateDebugStands(failures, maps);
             object rebake = RebakeCatalog();
             return Report("migration-apply.json", failures, new { passed = failures.Count == 0, failures, maps, rebake });
+        }
+
+        /// <summary>
+        /// Только отладочные стенды: внести их в каталог, перевести сцены на MapRoot/MapBootstrap (сценовый
+        /// MapReferee и координатор удаляются), перезапечь каталог. Карты реестра не открываются.
+        /// </summary>
+        public static object ApplyDebugStands()
+        {
+            EnsureIdle();
+            var failures = new List<string>();
+            var maps = new List<object>();
+            GameObject coordinator = AssetDatabase.LoadAssetAtPath<GameObject>(CoordinatorPath);
+            if (coordinator == null) failures.Add("Coordinator.Missing:" + CoordinatorPath);
+            else
+            {
+                EnsureCatalogAsset(coordinator);
+                MigrateDebugStands(failures, maps);
+            }
+            object rebake = RebakeCatalog();
+            return Report("migration-debug-stands.json", failures, new { passed = failures.Count == 0, failures, maps, rebake });
+        }
+
+        private static void MigrateDebugStands(List<string> failures, List<object> maps)
+        {
+            foreach (MapData map in DebugMapAssets())
+            {
+                SetKind(map, MapRunKind.Debug);
+                string path = ScenePath(map.sceneName);
+                if (path == null) { failures.Add("Scene.Missing:" + map.sceneName); continue; }
+                Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                var actions = new List<string>();
+                var errors = MigrateScene(scene, map, actions, dryRun: false);
+                failures.AddRange(errors.Select(e => map.sceneName + "/" + e));
+                if (!EditorSceneManager.SaveScene(scene)) failures.Add("Scene.SaveFailed:" + map.sceneName);
+                maps.Add(new { scene = map.sceneName, actions, errors });
+            }
         }
 
         /// <summary>
@@ -124,7 +173,7 @@ namespace VrBattlegrounds.EditorTools
             var modes = AssetDatabase.LoadAssetAtPath<GameModeRegistry>(ModesPath);
             var so = new SerializedObject(catalog);
             SerializedProperty content = so.FindProperty("_content");
-            MapData[] maps = RegistryMaps().ToArray();
+            MapData[] maps = CatalogMaps().ToArray();
             content.arraySize = maps.Length;
             for (int i = 0; i < maps.Length; i++)
             {
@@ -409,6 +458,7 @@ namespace VrBattlegrounds.EditorTools
             var so = new SerializedObject(catalog);
             so.FindProperty("_maps").objectReferenceValue = AssetDatabase.LoadAssetAtPath<MapRegistry>(RegistryPath);
             so.FindProperty("_modes").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameModeRegistry>(ModesPath);
+            SetArray(so.FindProperty("_debugMaps"), DebugMapAssets().ToArray());
             so.FindProperty("_refereePrefab").objectReferenceValue =
                 AssetDatabase.LoadAssetAtPath<GameObject>(RefereePath).GetComponent<MapReferee>();
             so.FindProperty("_coordinatorPrefab").objectReferenceValue = coordinator.GetComponent<ArsenalBoundaryWall>();
@@ -464,10 +514,20 @@ namespace VrBattlegrounds.EditorTools
             return registry != null ? registry.maps.Where(m => m != null) : Enumerable.Empty<MapData>();
         }
 
+        /// <summary>Карты каталога: реестр меню и отладочные стенды.</summary>
+        private static IEnumerable<MapData> CatalogMaps() => RegistryMaps().Concat(DebugMapAssets());
+
+        private static IEnumerable<MapData> DebugMapAssets() =>
+            DebugStands.Select(s => AssetDatabase.LoadAssetAtPath<MapData>(s.MapPath)).Where(m => m != null);
+
         private static string ScenePath(string sceneName)
         {
             foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes)
                 if (Path.GetFileNameWithoutExtension(scene.path) == sceneName) return scene.path;
+            // Стенд не в сборке: его сцену знает список стендов.
+            foreach (var stand in DebugStands)
+                if (Path.GetFileNameWithoutExtension(stand.ScenePath) == sceneName &&
+                    AssetDatabase.LoadAssetAtPath<SceneAsset>(stand.ScenePath) != null) return stand.ScenePath;
             return null;
         }
 

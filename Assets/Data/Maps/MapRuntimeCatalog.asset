@@ -13,32 +13,38 @@ MonoBehaviour:
   m_Name: MapRuntimeCatalog
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.Runtime.MapRuntimeCatalog
   _maps: {fileID: 11400000, guid: 71b7b06f6e5c4e246a1df765ec535257, type: 2}
+  _debugMaps:
+  - {fileID: 11400000, guid: ba23eb4a40326604aab4f4aa44ccbf3f, type: 2}
   _modes: {fileID: 11400000, guid: f8f3650e0967c6a4196fa716df9628b3, type: 2}
   _refereePrefab: {fileID: 8468141904930754360, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
   _coordinatorPrefab: {fileID: 5476845416789196474, guid: f23541848a356704c91ef319b42d5a00, type: 3}
   _content:
   - Map: {fileID: 11400000, guid: c836ec814acc21a4e82f9cae9b2b3df2, type: 2}
     ScenePath: Assets/Scenes/Maps/TestMap1.unity
-    ContentFingerprint: 0598dbf62daae79f33f48f83d2e6869e9676dbe9f618f4dd807e97e41ce5057c
+    ContentFingerprint: 23827c497a69dbb89b5b3f4325cbcf02e3bd051a16cef23d1d0342efa7d3ecc0
     ArsenalFingerprint: 3594c146a8222b4e1e97cc91c120d7fc
   - Map: {fileID: 11400000, guid: 42dbd48ebf8c61d4d9ff696663519780, type: 2}
     ScenePath: Assets/Scenes/Maps/TestMap2.unity
-    ContentFingerprint: 6636db94dcc6f33b585b390ad9ac01d69952c2f4e6a9ef3095db207b95b584aa
+    ContentFingerprint: 185698564c744e39aedd11a3dc3a09bf29023adc32b1f39fe60c876509587a0f
     ArsenalFingerprint: 3594c146a8222b4e1e97cc91c120d7fc
   - Map: {fileID: 11400000, guid: 4fd1a4cc3f42c4045a45e634233bb6c0, type: 2}
     ScenePath: Assets/Scenes/Maps/TestMap3.unity
-    ContentFingerprint: 814e909929abc9d9597cbac8c09c6d567cbf901917c5982e0cf7173341a74873
+    ContentFingerprint: e11fb06d5f85dc8068a30bbfae9992ca4fe9e92327efa65b791f263da47e339a
     ArsenalFingerprint: 3594c146a8222b4e1e97cc91c120d7fc
   - Map: {fileID: 11400000, guid: 3cb6e2d8f6b78f6459e99216bc9d5831, type: 2}
     ScenePath: Assets/Scenes/Lobby.unity
-    ContentFingerprint: 2b02b7743bb8ea554732a1dc7e26f5c33ac813f2a3bef596fce953c2936bd9d5
+    ContentFingerprint: cdf7888110571846e5dcdd8f0058508673177fb8ca65d1e4bfe07ebf1e53a2fc
     ArsenalFingerprint: a35806abd3ab549a4049e23af8090b66
   - Map: {fileID: 11400000, guid: 16a3be3dbee18c9469db1ed1b0bb7224, type: 2}
     ScenePath: Assets/Scenes/Maps/ServiceYard.unity
-    ContentFingerprint: 69a4c42ceb7b6dae57d836344fd71b4894b991866acc4cd0f649060cff243716
+    ContentFingerprint: 22a0ec7ef0e4aaece6bf4632ed98e0f022a97fa3201312c87af7534e9b5bff79
     ArsenalFingerprint: 3594c146a8222b4e1e97cc91c120d7fc
   - Map: {fileID: 11400000, guid: 757969f4d7c8e9544935e2be06549423, type: 2}
     ScenePath: Assets/Scenes/Maps/ReferenceMap04.unity
-    ContentFingerprint: d4b34dddd5e9ab4f148a45c91bbe01e2d719cea9e0f207bf1ec838d23688c574
+    ContentFingerprint: ab87570998b4454fd00479c305def7ec66bd81a07b3141311a4862a79d144221
+    ArsenalFingerprint: 3594c146a8222b4e1e97cc91c120d7fc
+  - Map: {fileID: 11400000, guid: ba23eb4a40326604aab4f4aa44ccbf3f, type: 2}
+    ScenePath: Assets/Scenes/Debug/BotCombatStand.unity
+    ContentFingerprint: 1baa6ea9a64d60b20cbfb95a468caa8f1fb53aaed4e5fb065a3bcf6b67e43972
     ArsenalFingerprint: 3594c146a8222b4e1e97cc91c120d7fc
   _compositionVersion: 1

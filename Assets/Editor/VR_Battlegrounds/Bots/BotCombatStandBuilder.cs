@@ -32,6 +32,7 @@ namespace VrBattlegrounds.EditorTools
             map.name = "BotCombatStandMap"; map.sceneName = "BotCombatStand"; map.displayName = "Стенд ботов";
             map.supportedModes = AssetDatabase.FindAssets("t:GameModeData").Select(AssetDatabase.GUIDToAssetPath).Select(AssetDatabase.LoadAssetAtPath<VrBattlegrounds.GameModes.GameModeData>).Where(m => m != null).ToArray();
             map.debugOnly = true; map.arenaSizeMeters = new Vector2(24, 20);
+            map.kind = VrBattlegrounds.Maps.Runtime.MapRunKind.Debug;
             AssetDatabase.CreateAsset(map, DataPath);
             if (!AssetDatabase.CopyAsset("Assets/Scenes/Maps/TestMap1.unity", ScenePath))
                 throw new InvalidOperationException("Не удалось создать копию сцены.");
@@ -55,6 +56,13 @@ namespace VrBattlegrounds.EditorTools
                 Box(env.transform, "South_Hard", new Vector3(0, 1.5f, -10), new Vector3(24, 3, 0.3f), neutral);
                 Box(env.transform, "West_Hard", new Vector3(-12, 1.5f, 0), new Vector3(0.3f, 3, 20), neutral);
                 Box(env.transform, "East_Hard", new Vector3(12, 1.5f, 0), new Vector3(0.3f, 3, 20), neutral);
+                // Копия карты несёт её MapRoot: запуск стенда — свой паспорт, тот же MapBootstrap.
+                foreach (var root in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<VrBattlegrounds.Maps.Runtime.MapRoot>(true)))
+                {
+                    var rootSo = new SerializedObject(root);
+                    rootSo.FindProperty("_map").objectReferenceValue = map;
+                    rootSo.ApplyModifiedPropertiesWithoutUndo();
+                }
                 var standGO = new GameObject("[DevStand] BotCombatStand");
                 SceneManager.MoveGameObjectToScene(standGO, scene);
                 var stand = standGO.AddComponent<BotCombatStand>();
@@ -76,9 +84,11 @@ namespace VrBattlegrounds.EditorTools
                 cameraGO.transform.position = new Vector3(14, 16, -19); cameraGO.transform.LookAt(Vector3.zero);
                 EditorSceneManager.SaveScene(scene);
                 AssetDatabase.SaveAssetIfDirty(map);
-                return "Создан серверный стенд, моделей оружия: " + stand.Weapons.Length + "; " + ScenePath;
             }
             finally { EditorSceneManager.CloseScene(scene, true); }
+            // Стенд запускается MapBootstrap, как карта: каталог должен знать его паспорт и отпечаток.
+            object migration = VrBattlegrounds.EditorTools.MapBootstrapMigration.ApplyDebugStands();
+            return "Создан серверный стенд; " + ScenePath + "; миграция: " + Newtonsoft.Json.JsonConvert.SerializeObject(migration);
         }
 
         /// <summary>Исправление собственного стенда ранней версии; игровые карты не открываются.</summary>

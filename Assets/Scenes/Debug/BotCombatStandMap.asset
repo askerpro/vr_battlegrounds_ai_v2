@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   displayName: "\u0421\u0442\u0435\u043D\u0434 \u0431\u043E\u0442\u043E\u0432"
   sceneName: BotCombatStand
-  kind: 1
+  kind: 2
   debugExemptions: 0
   preview: {fileID: 0}
   description: TestMap1

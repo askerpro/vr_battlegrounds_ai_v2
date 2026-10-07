@@ -98,6 +98,8 @@ namespace VrBattlegrounds.Player
 
         /// <summary>Предсказанный ответ сервера на последний запрос. Только у своей сессии.</summary>
         private PlayerCalibration _predictedCalibration;
+        // Только состояние процедуры запроса: SDK-перенос публикуется после ответа сервера.
+        private bool _placementPredictionPending;
 
         /// <summary>
         /// Калибровка, которую видит аватар на этой машине: у своей сессии с неотвеченным запросом —
@@ -113,7 +115,10 @@ namespace VrBattlegrounds.Player
             Connect,
 
             /// <summary>Игрок прошёл процедуру калибровки.</summary>
-            Player
+            Player,
+
+            /// <summary>Серверное наблюдение позы: меняет только placement, не параметры калибровки.</summary>
+            ObservedPlacement
         }
 
         private const double InitialCalibrationWindow = 5.0;
@@ -266,6 +271,7 @@ namespace VrBattlegrounds.Player
             // Компоненты сессии, а не аватара: все скины и боты получают одну механику.
             if (GetComponent<WallPassMonitor>() == null) gameObject.AddComponent<WallPassMonitor>();
             if (GetComponent<WallPassFeedback>() == null) gameObject.AddComponent<WallPassFeedback>();
+            if (GetComponent<PlayerPlacementTracker>() == null) gameObject.AddComponent<PlayerPlacementTracker>();
         }
 
         public override void OnStartServer()
@@ -370,9 +376,11 @@ namespace VrBattlegrounds.Player
                 return;
             }
 
+            bool placementChanged = predicted.Placement != EffectiveCalibration.Placement;
+            _placementPredictionPending |= placementChanged;
             _predictedCalibration = predicted;
             _sentCalibrationRequest++;
-            ApplyCalibrationToAvatar();
+            ApplyCalibrationToAvatar(applyPlacement: placementChanged);
 
             CmdRequestCalibration(requested, _sentCalibrationRequest);
         }
@@ -399,6 +407,13 @@ namespace VrBattlegrounds.Player
         /// <returns><c>true</c> — значение принято (возможно, обрезанным).</returns>
         public bool ServerAcceptCalibration(PlayerCalibration requested, CalibrationOrigin origin, int request = 0)
         {
+            PlayerPlacement previousPlacement = _calibration.Placement;
+            // Наблюдение не может подменить пол/рост/признак и не отвечает на запрос клиента.
+            if (origin == CalibrationOrigin.ObservedPlacement)
+            {
+                requested = _calibration.WithPlacement(requested.Placement);
+                request = 0;
+            }
             bool accepted = PlayerCalibrationRules.TryNormalize(requested, out PlayerCalibration normalized);
 
             if (!accepted)
@@ -430,9 +445,29 @@ namespace VrBattlegrounds.Player
             if (request > _answeredCalibrationRequest) _answeredCalibrationRequest = request;
 
             // На выделенном сервере хук SyncVar не вызывается, а попадания считает он: применяем сами.
-            ApplyCalibrationToAvatar();
+            ApplyCalibrationToAvatar(applyPlacement: accepted && origin == CalibrationOrigin.Player &&
+                                                     _calibration.Placement != previousPlacement);
             return accepted;
         }
+
+        /// <summary>Единый захват для смены тела/карты/отключения; принятая привязка защищена от задержки NT.</summary>
+        public bool ServerCapturePlacement(Vector3 position, Quaternion rotation, string reason, bool preferAccepted = true)
+        {
+            if (preferAccepted && IsCalibrated && _calibration.Placement.IsAnchored) return true;
+            string map = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (!PlayerPlacement.TryCapture(position, rotation, IsCalibrated, map, out PlayerPlacement place, out string diagnosis))
+            {
+                GameLog.PhysicalSpace.Warning($"[PlayerSession] {PlayerName}: место не снято ({reason}): {diagnosis}.");
+                return false;
+            }
+            if (!string.IsNullOrEmpty(diagnosis))
+                GameLog.PhysicalSpace.Warning($"[PlayerSession] {PlayerName}: {diagnosis} ({reason}).");
+            return ServerRememberPlacement(place);
+        }
+
+        /// <summary>Фасады передают value type; запись выполняет только ServerAcceptCalibration.</summary>
+        public bool ServerRememberPlacement(PlayerPlacement placement) =>
+            ServerAcceptCalibration(_calibration.WithPlacement(placement), CalibrationOrigin.ObservedPlacement);
 
         private bool IsCalibrationLockedByCombat()
         {
@@ -489,7 +524,13 @@ namespace VrBattlegrounds.Player
         /// <summary>Сервер ответил на запрос своей сессии: предсказание снимается или откатывается.</summary>
         private void OnCalibrationAnswered(int oldRequest, int newRequest)
         {
-            ApplyCalibrationToAvatar();
+            bool settled = newRequest >= _sentCalibrationRequest;
+            bool apply = settled && _placementPredictionPending;
+            bool acceptedPlacement = _predictedCalibration.Placement == _calibration.Placement;
+            // Предсказание/откат не порождают сетевого SDK-события. Иначе observer серверного
+            // replay успел бы принять предсказанную позу раньше проверки запрета калибровки в бою.
+            ApplyCalibrationToAvatar(applyPlacement: apply, synchronizePlacement: apply && acceptedPlacement);
+            if (settled) _placementPredictionPending = false;
         }
 
         /// <summary>
@@ -502,7 +543,7 @@ namespace VrBattlegrounds.Player
         /// при смене аватара тот ещё указывает на старый, и на этом держался B1.
         /// </para>
         /// </summary>
-        private void ApplyCalibrationToAvatar()
+        private void ApplyCalibrationToAvatar(bool applyPlacement = false, bool synchronizePlacement = false)
         {
             // Своя сессия без неотвеченного запроса знает решение сервера — машина запоминает его
             // для следующего подключения (в том числе откат отклонённого замера).
@@ -514,7 +555,8 @@ namespace VrBattlegrounds.Player
             var uxrAvatar = _activeAvatar.GetComponent<UltimateXR.Avatar.UxrAvatar>();
             if (uxrAvatar == null) return;
 
-            AvatarCalibrationApplier.For(uxrAvatar).Apply(EffectiveCalibration, ownAvatar: isLocalPlayer);
+            AvatarCalibrationApplier.For(uxrAvatar).Apply(EffectiveCalibration, ownAvatar: isLocalPlayer,
+                applyPlacement: applyPlacement, synchronizePlacement: synchronizePlacement);
         }
 
         // ── Разрешение связи ──────────────────────────────────────────────────

@@ -739,6 +739,26 @@ namespace UltimateXR.Core
         }
 
         /// <summary>
+        /// VR Battlegrounds patch 55: переносит корень трекинга в точную позу.
+        /// В отличие от MoveAvatarTo, сетевой replay не зависит от задержки камеры получателя.
+        /// Положение и направление камеры внутри корня остаются прежними.
+        /// Автор синхронизируемого действия определяется вызывающим игровым кодом.
+        /// </summary>
+        public void MoveAvatarRootTo(UxrAvatar avatar, Vector3 position, Quaternion rotation, bool propagateEvents = true)
+        {
+            BeginSync(UxrStateSyncOptions.Network);
+
+            Transform avatarTransform = avatar.transform;
+            Vector3 oldPosition = avatarTransform.position;
+            Quaternion oldRotation = avatarTransform.rotation;
+            OnAvatarMoving(avatar, new UxrAvatarMoveEventArgs(oldPosition, oldRotation, position, rotation), propagateEvents);
+            avatarTransform.SetPositionAndRotation(position, rotation);
+            // Как в MoveAvatarTo: зависимые события AvatarMoved не вкладываются в перенос.
+            EndSyncMethod(new object[] { avatar, position, rotation, propagateEvents });
+            OnAvatarMoved(avatar, new UxrAvatarMoveEventArgs(oldPosition, oldRotation, position, rotation), propagateEvents);
+        }
+
+        /// <summary>
         ///     Moves the avatar to a new floor level.
         /// </summary>
         /// <param name="avatar">The avatar to move</param>

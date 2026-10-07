@@ -4,7 +4,6 @@ using System.Linq;
 using UltimateXR.Avatar;
 using UltimateXR.Core;
 using UltimateXR.Devices;
-using UltimateXR.Locomotion;
 using UltimateXR.Extensions.Unity;
 using UltimateXR.Extensions.Unity.Math;
 using UnityEngine;
@@ -47,45 +46,6 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         public enum HeightCalibrationPhase { None, Floor, PlayerScale }
         public HeightCalibrationPhase CurrentHeightCalibrationPhase { get; private set; } = HeightCalibrationPhase.None;
 
-        [Header("Scene Transition Sync")]
-        [Tooltip("If true, the avatar's last known global position and rotation will be reapplied when it respawns in a new scene.")]
-        [SerializeField] private bool _preserveAvatarPositionAcrossScenes = true;
-
-        // ── Место игрока, которое переживает смену карты ──────────────────────
-        //
-        // Здесь лежала МИРОВАЯ поза аватара, и это была находка CAL-02: клиент клал её
-        // в GamePlayerConnectMessage, а сервер применял дословно. Тогда арена в TestMap1
-        // была повёрнута на 90° относительно TestMap2 и Lobby — одна и та же мировая точка
-        // означала на соседней карте другое место арены. Сейчас арены выровнены
-        // (MapAlignmentTests), но хранить надо всё равно позицию ОТНОСИТЕЛЬНО
-        // ЯКОРЕЙ: они отмечают одни и те же физические метки в комнате, и поза
-        // относительно них у карт общая (см. PhysicalSpaceAnchorFrame).
-        //
-        // Пересчёт делается здесь, а не при отправке сообщения, и это существенно:
-        // к моменту отправки клиент уже переехал на карту сервера, старой сцены нет,
-        // и переводить мировую позицию было бы не по чему.
-
-        private Vector3? _savedPlacePosition;
-        private Quaternion? _savedPlaceRotation;
-        private string _savedPlaceMap = string.Empty;
-
-        /// <summary>Система координат якорей той сцены, что сейчас активна. Кэш.</summary>
-        private PhysicalSpaceAnchorFrame _sceneFrame;
-
-        /// <summary>Дескриптор сцены, для которой построен <see cref="_sceneFrame" />. Ноль — ни для какой.</summary>
-        private int _sceneFrameHandle;
-
-        /// <summary>Когда снова пробовать построить систему координат, если прошлый раз не вышло.</summary>
-        private float _nextFrameAttempt;
-
-        /// <summary>
-        /// Как часто повторять неудачную попытку построить систему координат якорей,
-        /// секунды. Поиск якорей идёт через <c>FindObjectsByType</c>, а спрашивают его
-        /// на каждое движение аватара: на сцене без якорей (Offline, меню) без паузы
-        /// это был бы полный обход сцены каждый кадр.
-        /// </summary>
-        private const float FrameRetryPeriod = 1f;
-
         // Calibration State
         private List<PhysicalSpaceAnchor> _virtualAnchors = new List<PhysicalSpaceAnchor>();
         private Vector3[] _realAnchorPositions = new Vector3[2];
@@ -112,124 +72,30 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         /// </summary>
         public event Action FloorHeightCalibrated;
 
-        /// <summary>
-        /// Где стоял аватар этой машины в последний раз — <b>в системе координат
-        /// якорей</b> той карты, где он стоял.
-        ///
-        /// <para>
-        /// Единственный потребитель — <c>GamePlayerConnectMessage</c>: игрок приносит
-        /// своё место с собой, когда подключается к серверу, стоящему уже на другой
-        /// карте. Применять его или нет, решает сервер по признаку калибровки
-        /// (<c>SpawnPlaceRegistry</c>): до калибровки игра не знает, где игрок
-        /// внутри арены, и вправе поставить его в зону команды.
-        /// </para>
-        /// </summary>
-        /// <param name="localPosition">Позиция относительно якорей.</param>
-        /// <param name="localRotation">Поворот относительно якорей.</param>
-        /// <param name="capturedOnMap">Имя карты, на которой снят замер. Только для лога.</param>
+        /// <summary>Проекция памяти своего игрока; отдельного сохранённого места здесь нет.</summary>
         public bool TryGetSavedAvatarPlace(out Vector3 localPosition, out Quaternion localRotation,
                                            out string capturedOnMap)
         {
-            if (_preserveAvatarPositionAcrossScenes && _savedPlacePosition.HasValue && _savedPlaceRotation.HasValue)
-            {
-                localPosition = _savedPlacePosition.Value;
-                localRotation = _savedPlaceRotation.Value;
-                capturedOnMap = _savedPlaceMap;
-                return true;
-            }
-
-            localPosition = Vector3.zero;
-            localRotation = Quaternion.identity;
-            capturedOnMap = string.Empty;
-            return false;
+            PlayerPlacement placement = LocalPlayerCalibration.Current.Placement;
+            localPosition = placement.IsAnchored ? placement.Position : Vector3.zero;
+            localRotation = placement.IsAnchored ? placement.Rotation : Quaternion.identity;
+            capturedOnMap = placement.IsAnchored ? placement.CapturedOnMap : string.Empty;
+            return placement.IsAnchored;
         }
 
-        /// <summary>
-        /// Запоминает мировую позу аватара этой машины в координатах якорей активной сцены.
-        ///
-        /// <para>
-        /// Публичный, потому что это единственный вход в память о месте игрока и его
-        /// проверяет EditMode-тест: поднимать ради этого настоящий <c>UxrAvatar</c>
-        /// и гонять событие SDK дороже, чем польза. Игровой код зовёт метод из
-        /// <c>UxrAvatar.GlobalAvatarMoved</c> и <c>UxrAvatar.LocalAvatarStarted</c>.
-        /// </para>
-        ///
-        /// <para>
-        /// Без якорей на сцене замер не делается вовсе — и это правильнее, чем запомнить
-        /// мировую позицию «на всякий случай»: непереводимая поза хуже её отсутствия,
-        /// потому что молча означает не то место.
-        /// </para>
-        /// </summary>
+        /// <summary>Совместимый вход записи снимка в память машины.</summary>
         public void RecordLocalAvatarPlace(Vector3 worldPosition, Quaternion worldRotation)
         {
-            if (!_preserveAvatarPositionAcrossScenes) return;
-
-            PhysicalSpaceAnchorFrame frame;
-            if (!TryGetSceneFrame(out frame)) return;
-
-            _savedPlacePosition = frame.ToLocal(worldPosition);
-            _savedPlaceRotation = frame.ToLocal(worldRotation);
-            _savedPlaceMap = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (!PhysicalSpaceAnchorFrame.TryBuildFromScene(out var frame, out _)) return;
+            LocalPlayerCalibration.RecordPlacement(PlayerPlacement.Anchored(
+                frame.ToLocal(worldPosition), frame.ToLocal(worldRotation),
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().name), CurrentCalibration);
         }
 
-        /// <summary>
-        /// Система координат якорей активной сцены, с кэшем на саму сцену.
-        ///
-        /// <para>
-        /// Кэш нужен из-за частоты вызова: <c>UxrAvatar.GlobalAvatarMoved</c> приходит
-        /// на каждое перемещение аватара, а построение системы координат — это
-        /// <c>FindObjectsByType</c> по всей сцене. Ключ кэша — дескриптор сцены,
-        /// то есть при смене карты кадр строится заново сам.
-        /// </para>
-        /// </summary>
-        private bool TryGetSceneFrame(out PhysicalSpaceAnchorFrame frame)
-        {
-            int activeHandle = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
+        private static UxrAvatar CurrentAvatar => PlayerSession.LocalSession != null
+            ? PlayerSession.LocalSession.ActiveAvatar?.GetComponent<UxrAvatar>()
+            : UxrAvatar.LocalAvatar;
 
-            if (_sceneFrameHandle == activeHandle && _sceneFrame.IsValid)
-            {
-                frame = _sceneFrame;
-                return true;
-            }
-
-            // Сцена сменилась — прошлая попытка ничего не говорит о новой.
-            if (_sceneFrameHandle != activeHandle)
-            {
-                _sceneFrameHandle = activeHandle;
-                _sceneFrame = default(PhysicalSpaceAnchorFrame);
-                _nextFrameAttempt = 0f;
-            }
-
-            if (Time.realtimeSinceStartup < _nextFrameAttempt)
-            {
-                frame = default(PhysicalSpaceAnchorFrame);
-                return false;
-            }
-
-            string diagnosis;
-            if (!PhysicalSpaceAnchorFrame.TryBuildFromScene(out _sceneFrame, out diagnosis))
-            {
-                _nextFrameAttempt = Time.realtimeSinceStartup + FrameRetryPeriod;
-                frame = default(PhysicalSpaceAnchorFrame);
-                return false;
-            }
-
-            frame = _sceneFrame;
-            return true;
-        }
-
-        /// <summary>
-        /// Отсев дубликата — только собственного компонента.
-        ///
-        /// <para>
-        /// Здесь стоял <c>Destroy(gameObject)</c>, и это была находка <b>NET-20</b>:
-        /// компонент висит на <b>корне</b> общей ветки менеджеров, поэтому уничтожал
-        /// не себя, а всех соседей разом. Отсев дубликата всей ветки — работа
-        /// <see cref="Managers.PersistentRoot" />, который делает это в <c>Start</c>,
-        /// когда все <c>Awake</c> отработали. Ранний <c>Destroy</c> корня оставлял
-        /// выключенным <c>NetworkManager</c>, успевший уйти из ветки своим ходом.
-        /// </para>
-        /// </summary>
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -248,54 +114,17 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             if (Instance == this) Instance = null;
         }
 
-        private void OnEnable()
-        {
-            UxrAvatar.GlobalAvatarMoved += UxrAvatar_GlobalAvatarMoved;
-            UxrAvatar.LocalAvatarStarted += UxrAvatar_LocalAvatarStarted;
-        }
-
-        private void OnDisable()
-        {
-            UxrAvatar.GlobalAvatarMoved -= UxrAvatar_GlobalAvatarMoved;
-            UxrAvatar.LocalAvatarStarted -= UxrAvatar_LocalAvatarStarted;
-        }
-
-        private void UxrAvatar_GlobalAvatarMoved(object sender, UxrAvatarMoveEventArgs e)
-        {
-            UxrAvatar avatar = sender as UxrAvatar;
-            // Запоминаем корневые координаты локального аватара — в координатах якорей.
-            if (UxrAvatar.LocalAvatar != null && avatar == UxrAvatar.LocalAvatar)
-            {
-                RecordLocalAvatarPlace(avatar.transform.position, avatar.transform.rotation);
-            }
-        }
-
-        private void UxrAvatar_LocalAvatarStarted(object sender, UxrAvatarStartedEventArgs e)
-        {
-            // Калибровку пола и роста новому аватару ставит его применитель по данным сессии (T-50),
-            // а не этот обработчик: при смене аватара UxrAvatar.LocalAvatar ещё указывает на старый.
-
-            // Первый замер — сразу, не дожидаясь перемещения. Иначе игрок, который
-            // с момента спавна никуда не телепортировался, не имел бы своего места
-            // вовсе: UxrAvatar.GlobalAvatarMoved поднимает UxrManager, то есть
-            // телепорт и локомоция, а не шаги по комнате.
-            if (UxrAvatar.LocalAvatar != null)
-            {
-                RecordLocalAvatarPlace(UxrAvatar.LocalAvatar.transform.position,
-                                       UxrAvatar.LocalAvatar.transform.rotation);
-            }
-        }
-
         private void Update()
         {
+            if (CurrentAvatar == null || CurrentAvatar.ControllerInput == null) return;
             if (IsCalibratingHeight)
             {
                 // Both hands can be used to touch the floor or press button
-                if (UxrAvatar.LocalAvatarInput.GetButtonsPressUp(UxrHandSide.Left, UxrInputButtons.Button1))
+                if (CurrentAvatar.ControllerInput.GetButtonsPressUp(UxrHandSide.Left, UxrInputButtons.Button1))
                 {
                     ProcessHeightCalibrationStep(UxrHandSide.Left);
                 }
-                else if (UxrAvatar.LocalAvatarInput.GetButtonsPressUp(UxrHandSide.Right, UxrInputButtons.Button1))
+                else if (CurrentAvatar.ControllerInput.GetButtonsPressUp(UxrHandSide.Right, UxrInputButtons.Button1))
                 {
                     ProcessHeightCalibrationStep(UxrHandSide.Right);
                 }
@@ -305,13 +134,13 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             if (!IsCalibrating) return;
 
             // Wait for input to register anchor points
-            if (UxrAvatar.LocalAvatarInput.GetButtonsPressUp(UxrHandSide.Left, UxrInputButtons.Button1))
+            if (CurrentAvatar.ControllerInput.GetButtonsPressUp(UxrHandSide.Left, UxrInputButtons.Button1))
             {
-                RegisterCalibrationPoint(UxrAvatar.LocalAvatarInput.GetController3DModel(UxrHandSide.Left).transform.position);
+                RegisterCalibrationPoint(CurrentAvatar.ControllerInput.GetController3DModel(UxrHandSide.Left).transform.position);
             }
-            if (UxrAvatar.LocalAvatarInput.GetButtonsPressUp(UxrHandSide.Right, UxrInputButtons.Button1))
+            if (CurrentAvatar.ControllerInput.GetButtonsPressUp(UxrHandSide.Right, UxrInputButtons.Button1))
             {
-                RegisterCalibrationPoint(UxrAvatar.LocalAvatarInput.GetController3DModel(UxrHandSide.Right).transform.position);
+                RegisterCalibrationPoint(CurrentAvatar.ControllerInput.GetController3DModel(UxrHandSide.Right).transform.position);
             }
         }
 
@@ -386,11 +215,11 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 SecondAnchorRegistered?.Invoke();
 
                 CalculateTransform();
-                ApplyAvatarTransform();
-
-                // Признак ставится ровно здесь: калибровка состоялась тогда, когда
-                // обе точки зарегистрированы и преобразование посчитано. Решает сервер (T-50).
-                LocalPlayerCalibration.Submit(CurrentCalibration.WithCalibrated(true));
+                if (!ApplyAvatarTransform())
+                {
+                    CancelCalibration();
+                    return;
+                }
 
                 IsCalibrating = false;
                 ToggleRealVirtualSpaceRendering();
@@ -422,14 +251,14 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 HeightCalibrationCancelled?.Invoke();
                 return;
             }
-            if (UxrAvatar.LocalAvatar == null) return;
+            if (CurrentAvatar == null) return;
 
             if (CurrentHeightCalibrationPhase == HeightCalibrationPhase.Floor)
             {
                 // PHASE 1: СИНХРОНИЗАЦИЯ ПОЛА
-                Vector3 controllerPos = UxrAvatar.LocalAvatarInput.GetController3DModel(hand).transform.position;
+                Vector3 controllerPos = CurrentAvatar.ControllerInput.GetController3DModel(hand).transform.position;
                 
-                float avatarFloorY = UxrAvatar.LocalAvatar.transform.position.y;
+                float avatarFloorY = CurrentAvatar.transform.position.y;
                 float deltaY = avatarFloorY - controllerPos.y;
 
                 // Контроллер уже сдвинут текущим полом (смещение рук = пол), поэтому новый пол —
@@ -445,11 +274,11 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             else if (CurrentHeightCalibrationPhase == HeightCalibrationPhase.PlayerScale)
             {
                 // PHASE 2: МАСШТАБ ТЕЛА СИНХРОНИЗАЦИЯ
-                if (UxrAvatar.LocalAvatar.CameraComponent == null) return;
+                if (CurrentAvatar.CameraComponent == null) return;
 
                 // We calculate global height of the headset relative to the avatar's ground level.
                 // Using LocalPosition ignores the Phase 1 floor offset (deltaY applied to CameraController).
-                float playerRealHeight = UxrAvatar.LocalAvatar.CameraComponent.transform.position.y - UxrAvatar.LocalAvatar.transform.position.y;
+                float playerRealHeight = CurrentAvatar.CameraComponent.transform.position.y - CurrentAvatar.transform.position.y;
 
                 if (playerRealHeight < 0.6f)
                 {
@@ -482,7 +311,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             Vector3 dirVirtual = Vector3.Scale(virtualB - virtualA, new Vector3(1, 0, 1)).normalized;
             Vector3 dirReal = Vector3.Scale(realB - realA, new Vector3(1, 0, 1)).normalized;
-            _realToVirtualRotation = Quaternion.FromToRotation(dirReal, dirVirtual);
+            _realToVirtualRotation = Quaternion.AngleAxis(Vector3.SignedAngle(dirReal, dirVirtual, Vector3.up), Vector3.up);
 
             Vector3 realBInVirtual = _realToVirtualRotation * (realB * _realToVirtualScale);
             _realToVirtualOffset = Vector3.Scale(virtualB - realBInVirtual, new Vector3(1, 1, 1));
@@ -508,30 +337,21 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             return false;
         }
 
-        /// <summary>Применяет рассчитанное смещение и поворот к локальному аватару.</summary>
-        public void ApplyAvatarTransform()
+        /// <summary>Передаёт единый замер места и признака калибровки владельцу игрока.</summary>
+        public bool ApplyAvatarTransform()
         {
-            if (!CanChangeCalibrationNow()) return;
-            if (UxrAvatar.LocalAvatar == null) return;
-
-            Vector3 newPosition = TransformRealToVirtual(UxrAvatar.LocalAvatar.transform.position);
-
-            // Высоту оставляем как есть. Калибровка по якорям выравнивает только плоскость пола:
-            // в CalculateTransform оба направления сплющены через Scale(1, 0, 1), поэтому поворот
-            // чисто вокруг Y, а Y-компонента _realToVirtualOffset определяется случайной высотой,
-            // на которой игрок держал контроллер при регистрации точки. Рост калибруется отдельно
-            // (BeginHeightCalibration).
-            // Здесь было Vector3.Scale(newPosition, new Vector3(1, position.y, 1)) — умножение Y
-            // на саму себя: при y = 0 высота обнулялась, при y = 2 давала 4.
-            newPosition.y = UxrAvatar.LocalAvatar.transform.position.y;
-
-            // Rotate the local avatar's current rotation by the calculated yaw difference
-            Quaternion newRotation = UxrAvatar.LocalAvatar.transform.rotation * Quaternion.Euler(0, _realToVirtualRotation.eulerAngles.y, 0);
-
-            UxrManager.Instance.TeleportLocalAvatar(
-                newPosition,
-                newRotation,
-                UxrTranslationType.Immediate);
+            UxrAvatar avatar = CurrentAvatar;
+            if (!CanChangeCalibrationNow() || avatar == null) return false;
+            if (!PhysicalSpaceAnchorFrame.TryBuildFromScene(out var frame, out _)) return false;
+            Vector3 position = TransformRealToVirtual(avatar.transform.position);
+            position.y = avatar.transform.position.y;
+            Quaternion rotation = _realToVirtualRotation * avatar.transform.rotation;
+            PlayerCalibration measured = CurrentCalibration.WithCalibrated(true).WithPlacement(
+                PlayerPlacement.Anchored(frame.ToLocal(position), frame.ToLocal(rotation),
+                    UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
+            if (!PlayerCalibrationRules.TryNormalize(measured, out measured)) return false;
+            LocalPlayerCalibration.Submit(measured);
+            return true;
         }
 
         private Vector3 TransformRealToVirtual(Vector3 realPosition)
@@ -564,7 +384,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
         private void ToggleRealVirtualSpaceRendering()
         {
-            if (UxrAvatar.LocalAvatar?.CameraComponent == null) return;
+            if (CurrentAvatar?.CameraComponent == null) return;
 
             // Ensure these layers exist in Project Settings -> Tags and Layers
             int virtualSpaceLayer = LayerMask.NameToLayer("VirtualSpace");
@@ -579,14 +399,14 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             if (IsCalibrating)
             {
                 // Show RealSpace, Hide VirtualSpace
-                UxrAvatar.LocalAvatar.CameraComponent.cullingMask &= ~(1 << virtualSpaceLayer);
-                UxrAvatar.LocalAvatar.CameraComponent.cullingMask |= (1 << realSpaceLayer);
+                CurrentAvatar.CameraComponent.cullingMask &= ~(1 << virtualSpaceLayer);
+                CurrentAvatar.CameraComponent.cullingMask |= (1 << realSpaceLayer);
             }
             else
             {
                 // Show VirtualSpace, Hide RealSpace
-                UxrAvatar.LocalAvatar.CameraComponent.cullingMask &= ~(1 << realSpaceLayer);
-                UxrAvatar.LocalAvatar.CameraComponent.cullingMask |= (1 << virtualSpaceLayer);
+                CurrentAvatar.CameraComponent.cullingMask &= ~(1 << realSpaceLayer);
+                CurrentAvatar.CameraComponent.cullingMask |= (1 << virtualSpaceLayer);
             }
         }
     }

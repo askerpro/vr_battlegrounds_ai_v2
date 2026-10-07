@@ -369,6 +369,10 @@ private static UxrMirrorAvatar _serverBroadcaster;   // кто на сервер
 
 ## Патч 4: Глобальное смещение высоты трекинга (Global Height Offset)
 
+Историческая реализация. В T-50 этапе 4 глобальная статика заменена
+[патчем 54](#патч-54-смещение-пола-принадлежит-устройству-трекинга-t-50-этап-4):
+в текущем SDK восстанавливать instance `HeightOffset`, не старый статический API.
+
 **Файлы:**
 - `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Devices/UxrControllerTracking.cs`
 
@@ -386,14 +390,14 @@ private static UxrMirrorAvatar _serverBroadcaster;   // кто на сервер
    - Свойства `SensorLeftPos` и `SensorRightPos` (возвращающие мировые координаты сенсоров) изменены: теперь они прибавляют `GlobalHeightOffset` к оси Y локальной позиции сенсора, перед тем как перевести её в мировые координаты (`Avatar.transform.TransformPoint`).
 
 ### Как связать с игрой
-В проекте `AvatarCalibrationApplier.cs` ставит `CameraController.localPosition` от базы префаба плюс пол из `PlayerSession.Calibration` и одновременно записывает этот пол в `UltimateXR.Devices.UxrControllerTracking.GlobalHeightOffset` только у своего аватара (T-50). `PhysicalSpaceSyncManager` ведёт процедуру и передаёт замеры, производное состояние аватара он не пишет.
+В проекте `AvatarCalibrationApplier.cs` ставит `CameraController.localPosition` от базы префаба плюс пол из `PlayerSession.Calibration` и записывает пол в instance `UxrControllerTracking.HeightOffset` устройств своего связанного аватара (T-50, SDK54). `PhysicalSpaceSyncManager` ведёт процедуру и передаёт замеры, производное состояние аватара он не пишет.
 
 ### Как повторить при обновлении SDK
-1. В `UxrControllerTracking` добавить `public static float GlobalHeightOffset { get; set; } = 0f;`
+1. Текущий вариант (SDK54): в `UxrControllerTracking` добавить `public float HeightOffset { get; set; } = 0f;`.
 2. Изменить геттеры для `SensorLeftPos` и `SensorRightPos`:
 ```csharp
    Vector3 pos = LocalAvatarLeftHandSensorPos; // или Right
-   pos.y += GlobalHeightOffset;
+   pos.y += HeightOffset;
    return Avatar.transform.TransformPoint(pos);
 ```
 
@@ -1894,3 +1898,38 @@ EditMode-тесты, `AndroidCompileGate`, уничтожение и повто�
 Перенести все пункты вместе с патчем 49 и ledger 2026-10-04: по отдельности они возвращают второй источник правды
 о магазине. Проверить: офлайн-компиляцию, `AndroidCompileGate`, пробу `tmp/ledger-probe` (сценарии S0–S8),
 структурные тесты машины, Herrington — смена магазина/отпускание рукояти без фиксаций учёта.
+
+## Патч 54: смещение пола принадлежит устройству трекинга (T-50 этап 4)
+
+Файл: `Runtime/Scripts/Devices/UxrControllerTracking.cs`. Номер зарезервирован
+в общем плане `calibration-owner` до изменения SDK.
+
+Общая статика `GlobalHeightOffset` заменена runtime-свойством экземпляра `HeightOffset`.
+Оба сенсора добавляют offset собственного устройства до перевода координат через аватар.
+Свойство не сериализуется в префаб: значение игрока приходит из `PlayerSession.Calibration`.
+Единственный игровой писатель — `AvatarCalibrationApplier` связанного своего аватара;
+он находит и выключенные устройства. Чужой аватар и старое тело не меняют offset нового.
+
+При обновлении SDK восстановить instance-свойство и оба места чтения в `SensorLeftPos` /
+`SensorRightPos`; статический API не возвращать. Проверки: AndroidCompileGate,
+существующие тесты калибровки с чтением конкретного устройства, техническая проба изоляции.
+Пользователь подтвердил ручную проверку нового среза в Unity/шлеме (Host/Lobby, worker,2026-10-07).
+После приёмки связанные проверки69/69 и AndroidCompileGate PASS.
+
+## Патч 55: синхронизация точной позы корня трекинга (T-50 этап 4)
+
+Файл: `Runtime/Scripts/Core/UxrManager.cs`. Номер зарезервирован в coordination до изменения.
+`MoveAvatarRootTo(UxrAvatar, Vector3, Quaternion, bool)` синхронизирует root-position/rotation,
+сохраняя локальную позу камеры. События Moving/Moved и порядок закрытия SyncMethod совпадают
+со штатным `MoveAvatarTo`; зависимые события не вкладываются в перенос.
+
+Штатный camera-floor target не годится для калибровки: root и камера имеют независимые NT,
+поэтому при задержке головы replay получателя вычисляет другой корень (например, x=10,2 вместо 10).
+Игровой применитель вызывает root API только как автор и после принятого ответа сессии.
+Предсказание и откат используют локальную проекцию, не публикуют SDK-событие.
+
+При обновлении SDK перенести метод рядом с MoveAvatarTo. Проверки: roundtrip метода через SDK
+state event, различающиеся camera-local poses автора/получателя, отсутствие replay до принятия,
+идемпотентный ack, AndroidCompileGate. Runtime control с camera-dependent replay отказал на0,837436м;
+исправленный SDK replay и ack входят в зелёные69/69. Ручная проверка пользователем подтверждена;
+детали удалённого двухклиентского transport отдельно не перечислялись.

@@ -15,7 +15,7 @@ namespace VrBattlegrounds.Managers
         public int AvatarIndex;
 
         /// <summary>
-        /// Калибровка игрока целиком (T-50): пол, рост глаз и признак калибровки по якорям. Такая же
+        /// Калибровка игрока целиком (T-50): пол, рост глаз, признак и поза корня трекинга. Такая же
         /// характеристика игрока, как команда и скин, и переживать отключение обязана так же: без
         /// признака вернувшийся откалиброванный игрок выглядел бы для сервера новичком, чьё место
         /// можно назначить (CAL-02), а без пола и роста вернулся бы стандартным — и переподключение
@@ -39,28 +39,34 @@ namespace VrBattlegrounds.Managers
 
         // Physical state to restore
         public float Health;
-        public Vector3 Position;
-        public Quaternion Rotation;
+        /// <summary>Совместимость старого харнесса: проекция одной позы, отдельного поля хранения нет.</summary>
+        public Vector3 Position
+        {
+            get => Calibration.Placement.Position;
+            set => Calibration = Calibration.WithPlacement(PhysicalSpaceUtils.PlayerPlacement.World(value, Rotation, CapturedOnMap));
+        }
+        public Quaternion Rotation
+        {
+            get => Calibration.Placement.HasValue ? Calibration.Placement.Rotation : Quaternion.identity;
+            set => Calibration = Calibration.WithPlacement(PhysicalSpaceUtils.PlayerPlacement.World(Position, value, CapturedOnMap));
+        }
         public bool NeedsPhysicalRestore;
 
         /// <summary>
-        /// Карта, на которой снят снимок. <see cref="Position" /> и <see cref="Rotation" />
-        /// — <b>мировые</b> координаты, и на другой карте они верны, только если арена там
-        /// стоит так же. Сейчас арены всех карт выровнены (<c>MapAlignmentTests</c>); раньше
-        /// в <c>TestMap1</c> она была повёрнута на 90°.
+        /// Карта отключения и контекст восстановления живого тела. Пространство координат
+        /// самой позы определяется Calibration.Placement; мировая поза годится для подключения
+        /// на той же карте, anchor-pose переводится в систему якорей новой карты.
         /// </summary>
         public string CapturedOnMap = string.Empty;
 
         /// <summary>
-        /// Можно ли ставить вернувшегося игрока в <see cref="Position" />.
+        /// Живой snapshot той же карты имеет приоритет перед клиентским воспоминанием.
         ///
         /// <para>
         /// Условий два, и второе появилось вместе с CAL-02: игрок был жив (иначе
-        /// возвращать его на место гибели незачем) <b>и</b> сервер всё ещё на той же
-        /// карте. Пока карта та же, «вернуть туда, где стоял» — точный ответ, и он
-        /// точнее любого пересчёта. Как только карта сменилась, мировая точка означает
-        /// другое место арены, и решать, куда ставить игрока, обязан тот, кто знает
-        /// про калибровку, — <c>SpawnPlaceRegistry</c> или зона команды.
+        /// восстанавливать здоровье нельзя) <b>и</b> сервер всё ещё на той же карте.
+        /// Саму физическую привязку откалиброванного игрока смерть не сбрасывает:
+        /// этот случай независимо решает PlayersManager.InitialCalibration.
         /// </para>
         /// </summary>
         /// <param name="currentMap">Имя активной сцены сервера сейчас.</param>
@@ -115,6 +121,9 @@ namespace VrBattlegrounds.Managers
         {
             if (string.IsNullOrEmpty(deviceToken) || session == null) return;
 
+            if (avatar != null)
+                session.ServerCapturePlacement(avatar.transform.position, avatar.transform.rotation, "отключение");
+
             var snapshot = new SessionSnapshot
             {
                 DeviceToken = deviceToken,
@@ -133,9 +142,6 @@ namespace VrBattlegrounds.Managers
             if (avatar != null)
             {
                 snapshot.Health = avatar.Health;
-                snapshot.Position = avatar.transform.position;
-                snapshot.Rotation = avatar.transform.rotation;
-
                 // Спавним на месте только если игрок был жив
                 if (avatar.IsAlive)
                 {

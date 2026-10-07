@@ -124,7 +124,9 @@ namespace VrBattlegrounds.Tests.Network
         {
             SilenceMirrorNoise();
 
-            PlayerCalibration calibration = new PlayerCalibration(0.25f, 1.62f, true);
+            PlayerPlacement acceptedPlace = PlayerPlacement.Anchored(new Vector3(2f, 0f, 5f),
+                Quaternion.Euler(0f, 37f, 0f), UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+            PlayerCalibration calibration = new PlayerCalibration(0.25f, 1.62f, true).WithPlacement(acceptedPlace);
             _session.ServerAcceptCalibration(calibration, PlayerSession.CalibrationOrigin.Connect);
             AttachAvatar(new Vector3(5f, 1f, 7f), life: 88f);
 
@@ -143,6 +145,7 @@ namespace VrBattlegrounds.Tests.Network
                 "Калибровка — характеристика игрока, как команда и скин, и переживать отключение " +
                 "обязана так же. Иначе вернувшийся откалиброванный игрок выглядит новичком, " +
                 "чьё место можно назначить.");
+            // Принятая якорная поза не подменяется запаздывающим мировым корнем тела.
             Assert.AreEqual(calibration, snapshot.Calibration,
                 "Снимок обязан хранить пол и рост (T-50): иначе вернувшийся игрок стандартного роста, " +
                 "а в бою поменять это уже нельзя.");

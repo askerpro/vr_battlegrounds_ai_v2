@@ -118,8 +118,6 @@ namespace VrBattlegrounds.Managers
             PlayerSession session = CreatePlayerSession(conn, GameRole.Player, msg.deviceToken, msg.deviceType, false, snapshot,
                                                         msg.teamId, msg.avatarId, InitialCalibration(msg, snapshot));
 
-            ApplyPhysicalPlace(session, msg, snapshot);
-
             // Спавним физический аватар
             if (AvatarManager.Instance != null)
             {
@@ -139,48 +137,33 @@ namespace VrBattlegrounds.Managers
         /// </summary>
         public static PlayerCalibration InitialCalibration(GamePlayerConnectMessage msg, SessionSnapshot snapshot)
         {
-            if (msg.hasCalibration) return msg.calibration;
-            return snapshot != null ? snapshot.Calibration : PlayerCalibration.None;
+            PlayerCalibration value = msg.hasCalibration ? msg.calibration : snapshot != null ? snapshot.Calibration : PlayerCalibration.None;
+            PlayerPlacement place = PlayerPlacement.None;
+            string map = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+
+            // Клиент переносит только привязку к якорям; присланный мир нельзя считать
+            // серверным снимком. Поза серверного живого тела на той же карте точнее памяти.
+            if (value.IsCalibrated && msg.hasCalibration && msg.calibration.Placement.IsAnchored)
+                place = msg.calibration.Placement;
+            else if (value.IsCalibrated && snapshot != null && snapshot.Calibration.Placement.IsAnchored)
+                place = snapshot.Calibration.Placement;
+
+            if (snapshot != null)
+            {
+                bool sameMap = !string.IsNullOrEmpty(snapshot.CapturedOnMap) &&
+                    string.Equals(snapshot.CapturedOnMap, map, System.StringComparison.Ordinal);
+                PlayerPlacement saved = snapshot.Calibration.Placement;
+                bool calibratedWorld = value.IsCalibrated && snapshot.IsCalibrated &&
+                    saved.Space == PlayerPlacement.CoordinateSpace.World;
+                if (sameMap && saved.HasValue && (snapshot.NeedsPhysicalRestore || calibratedWorld))
+                    place = saved.Space == PlayerPlacement.CoordinateSpace.World
+                        ? PlayerPlacement.World(saved.Position, saved.Rotation, snapshot.CapturedOnMap)
+                        : saved;
+            }
+
+            return value.WithPlacement(place);
         }
 
-        /// <summary>
-        /// Раскладывает по местам то, что игрок принёс с собой о своём <b>физическом</b>
-        /// положении: место в системе координат якорей. Признак калибровки уже решён при
-        /// создании сессии (<see cref="InitialCalibration" />).
-        ///
-        /// <para>
-        /// Зачем это здесь. Точку спавна сервер выбирает прямо сейчас, в обработке
-        /// сообщения подключения, — то есть до того, как у клиента появится сессия,
-        /// из которой можно было бы прислать <c>RequestCalibration</c>. Калибровка поэтому
-        /// едет целиком в самом сообщении. Снимок отключённой сессии, если он есть, знает то же
-        /// самое и заведомо не хуже: он снят сервером.
-        /// </para>
-        ///
-        /// <para>
-        /// Место кладётся в реестр <b>всегда</b>, а решает, применять его или нет,
-        /// <c>SpawnPlaceRegistry.TryResolve</c> — по признаку калибровки. Гейт один
-        /// на весь проект, и это тот же гейт, что при смене карты (T-30): второй,
-        /// поставленный здесь, разъехался бы с первым при первой же правке. Находка,
-        /// ради которой всё это, — <b>CAL-02</b>: раньше позиция из сообщения
-        /// применялась дословно и всем подряд.
-        /// </para>
-        /// </summary>
-        private static void ApplyPhysicalPlace(PlayerSession session, GamePlayerConnectMessage msg,
-                                               SessionSnapshot snapshot)
-        {
-            if (session == null) return;
-
-            if (!msg.hasAnchorPlace) return;
-
-            SpawnPlaceRegistry.Remember(session.netId, msg.anchorPlacePosition,
-                                            msg.anchorPlaceRotation, msg.anchorPlaceMap);
-
-            GameLog.PhysicalSpace.Info(
-                $"[PlayersManager] {session.PlayerName} принёс своё место с карты '{msg.anchorPlaceMap}': " +
-                $"относительно якорей {msg.anchorPlacePosition}, откалиброван={session.IsCalibrated} " +
-                $"(сообщение={(msg.hasCalibration ? msg.calibration.IsCalibrated.ToString() : "нет данных")}, " +
-                $"снимок={(snapshot != null ? snapshot.IsCalibrated.ToString() : "нет")}).");
-        }
 
         public void RegisterSession(NetworkConnection conn, PlayerSession session)
         {

@@ -63,6 +63,14 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             GameLog.PhysicalSpace.Verbose($"[LocalPlayerCalibration] Значение сервера: {decided}.");
         }
 
+        /// <summary>Последняя поза своего корня для подключения; пол/рост/флаг остаются решением сессии.</summary>
+        public static void RecordPlacement(PlayerPlacement placement, PlayerCalibration? source = null)
+        {
+            if (!PlayerPlacement.TryNormalize(placement, out PlayerPlacement valid)) return;
+            s_current = (source ?? s_current).WithPlacement(valid);
+            HasValue = true;
+        }
+
         /// <summary>Забыть запись: новый процесс, тесты.</summary>
         public static void Reset()
         {

@@ -32,11 +32,15 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         /// <summary>Игрок откалибровал своё пространство по якорям карты: его место задано физически.</summary>
         public bool IsCalibrated;
 
+        /// <summary>Единственная запись позы корня трекинга; кости/камера в неё не входят.</summary>
+        public PlayerPlacement Placement;
+
         public PlayerCalibration(float floorOffset, float eyeHeight, bool isCalibrated)
         {
             FloorOffset = floorOffset;
             EyeHeight = eyeHeight;
             IsCalibrated = isCalibrated;
+            Placement = PlayerPlacement.None;
         }
 
         /// <summary>Игрок не калибровался ничем.</summary>
@@ -55,14 +59,21 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             return EyeHeight / eyesBaseHeight;
         }
 
-        public PlayerCalibration WithFloor(float floorOffset) => new PlayerCalibration(floorOffset, EyeHeight, IsCalibrated);
+        public PlayerCalibration WithFloor(float floorOffset) => new PlayerCalibration(floorOffset, EyeHeight, IsCalibrated).WithPlacement(Placement);
 
-        public PlayerCalibration WithEyeHeight(float eyeHeight) => new PlayerCalibration(FloorOffset, eyeHeight, IsCalibrated);
+        public PlayerCalibration WithEyeHeight(float eyeHeight) => new PlayerCalibration(FloorOffset, eyeHeight, IsCalibrated).WithPlacement(Placement);
 
-        public PlayerCalibration WithCalibrated(bool isCalibrated) => new PlayerCalibration(FloorOffset, EyeHeight, isCalibrated);
+        public PlayerCalibration WithCalibrated(bool isCalibrated) => new PlayerCalibration(FloorOffset, EyeHeight, isCalibrated).WithPlacement(Placement);
+
+        public PlayerCalibration WithPlacement(PlayerPlacement placement)
+        {
+            PlayerCalibration result = this;
+            result.Placement = placement;
+            return result;
+        }
 
         public bool Equals(PlayerCalibration other) =>
-            FloorOffset.Equals(other.FloorOffset) && EyeHeight.Equals(other.EyeHeight) && IsCalibrated == other.IsCalibrated;
+            FloorOffset.Equals(other.FloorOffset) && EyeHeight.Equals(other.EyeHeight) && IsCalibrated == other.IsCalibrated && Placement.Equals(other.Placement);
 
         public override bool Equals(object obj) => obj is PlayerCalibration other && Equals(other);
 
@@ -72,7 +83,8 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             {
                 int hash = FloorOffset.GetHashCode();
                 hash = hash * 397 ^ EyeHeight.GetHashCode();
-                return hash * 397 ^ IsCalibrated.GetHashCode();
+                hash = hash * 397 ^ IsCalibrated.GetHashCode();
+                return hash * 397 ^ Placement.GetHashCode();
             }
         }
 
@@ -120,7 +132,8 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         /// <returns><c>false</c> — принимать нельзя вовсе.</returns>
         public static bool TryNormalize(PlayerCalibration requested, out PlayerCalibration normalized)
         {
-            if (!IsFinite(requested.FloorOffset) || !IsFinite(requested.EyeHeight))
+            if (!IsFinite(requested.FloorOffset) || !IsFinite(requested.EyeHeight) ||
+                !PlayerPlacement.TryNormalize(requested.Placement, out PlayerPlacement placement))
             {
                 normalized = PlayerCalibration.None;
                 return false;
@@ -131,7 +144,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             // Ноль и меньше — «рост не калибровался», а не «очень маленький игрок».
             float eye = requested.EyeHeight > 0f ? Mathf.Clamp(requested.EyeHeight, MinEyeHeight, MaxEyeHeight) : 0f;
 
-            normalized = new PlayerCalibration(floor, eye, requested.IsCalibrated);
+            normalized = new PlayerCalibration(floor, eye, requested.IsCalibrated).WithPlacement(placement);
             return true;
         }
 

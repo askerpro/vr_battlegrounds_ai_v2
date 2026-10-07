@@ -5,7 +5,10 @@ using UltimateXR.Avatar;
 using UltimateXR.Avatar.Controllers;
 using UltimateXR.Devices;
 using UnityEngine;
+using Mirror;
+using UltimateXR.Core;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.PhysicalSpaceUtils
 {
@@ -23,7 +26,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
     ///   <item>пивот камеры (<c>UxrAvatar.CameraController</c>) = база префаба + пол;</item>
     ///   <item><c>Dummy Forward</c> = рост глаз / <c>EyesBaseHeight</c> <b>этой</b> модели;</item>
     ///   <item>поля BodyIK <c>_neckPosRelativeToEyes</c>, <c>_avatarForwardPosRelativeToNeck</c> = база × масштаб;</item>
-    ///   <item>смещение рук (<c>UxrControllerTracking.GlobalHeightOffset</c>) = пол — только у своего аватара.</item>
+    ///   <item>смещение рук (<c>UxrControllerTracking.HeightOffset</c>) = пол — только у своего аватара.</item>
     /// </list>
     ///
     /// <para>
@@ -77,6 +80,9 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         private Vector3 _forwardBase;
         private float _eyesBaseHeight;
 
+        /// <summary>Наблюдатель SDK не публикует обратно позу, которую сейчас ставит применитель.</summary>
+        public bool IsApplyingPlacement { get; private set; }
+
         /// <summary>Последнее применённое значение.</summary>
         public PlayerCalibration Applied { get; private set; }
 
@@ -107,7 +113,8 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         /// </summary>
         /// <param name="calibration">Калибровка игрока, которому принадлежит аватар.</param>
         /// <param name="ownAvatar">Аватар игрока этой машины: только ему принадлежит трекинг рук.</param>
-        public void Apply(PlayerCalibration calibration, bool ownAvatar)
+        public void Apply(PlayerCalibration calibration, bool ownAvatar, bool applyPlacement = false,
+                          bool synchronizePlacement = false)
         {
             CaptureBase();
 
@@ -125,9 +132,18 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 ForwardField?.SetValue(_bodyIK, _forwardBase * scale);
             }
 
-            // Смещение рук — глобальная статика SDK: трекинг контроллеров есть только у своего аватара.
+            // Патч SDK 54: каждое устройство принадлежит конкретному аватару, общей статики нет.
             if (ownAvatar)
-                UxrControllerTracking.GlobalHeightOffset = calibration.FloorOffset;
+            {
+                UxrAvatar avatar = GetComponent<UxrAvatar>();
+                foreach (UxrControllerTracking tracking in GetComponentsInChildren<UxrControllerTracking>(true))
+                {
+                    if (tracking.Avatar == avatar) tracking.HeightOffset = calibration.FloorOffset;
+                }
+            }
+
+            if (applyPlacement && calibration.Placement.HasValue)
+                ApplyPlacement(calibration, ownAvatar, synchronizePlacement);
 
             if (Applied != calibration || !Mathf.Approximately(AppliedScale, scale))
             {
@@ -138,6 +154,44 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             Applied = calibration;
             AppliedScale = scale;
+        }
+
+        private void ApplyPlacement(PlayerCalibration calibration, bool ownAvatar, bool synchronizePlacement)
+        {
+            PhysicalSpaceAnchorFrame frame = default;
+            if (calibration.Placement.IsAnchored) PhysicalSpaceAnchorFrame.TryBuildFromScene(out frame, out _);
+            string map = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (!calibration.Placement.TryResolve(calibration.IsCalibrated, map, frame, out Vector3 position,
+                                                  out Quaternion rotation, out string diagnosis))
+            {
+                GameLog.PhysicalSpace.Warning($"[AvatarCalibrationApplier] Поза {name} не применена: {diagnosis}.", this);
+                return;
+            }
+            if (!synchronizePlacement && Vector3.SqrMagnitude(transform.position - position) < 0.0000000001f &&
+                Quaternion.Angle(transform.rotation, rotation) < 0.001f) return;
+
+            UxrAvatar avatar = GetComponent<UxrAvatar>();
+            bool author = avatar != null && StateEventAuthority.IsAuthoredHere(avatar);
+            IsApplyingPlacement = true;
+            try
+            {
+                if (synchronizePlacement && ownAvatar && author && UxrManager.Instance != null && avatar.CameraComponent != null)
+                {
+                    // SDK-патч 55 синхронизирует root target. Camera-floor target на получателе
+                    // пересчитывал бы корень от запаздывающего трекинга чужой головы.
+                    UxrManager.Instance.MoveAvatarRootTo(avatar, position, rotation);
+                }
+                else if (NetworkServer.active || (ownAvatar && author))
+                {
+                    // Проекция принятого сервером значения для коллайдеров. SDK-событие чужого
+                    // владельца не публикуем; его автор применит предсказание/ответ сам.
+                    transform.SetPositionAndRotation(position, rotation);
+                }
+            }
+            finally
+            {
+                IsApplyingPlacement = false;
+            }
         }
 
         /// <summary>

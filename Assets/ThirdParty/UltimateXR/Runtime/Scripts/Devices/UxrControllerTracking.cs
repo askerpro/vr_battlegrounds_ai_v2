@@ -63,9 +63,11 @@ namespace UltimateXR.Devices
         public bool HasRightHandSensorSetup => _rightHandSensor != null;
 
         /// <summary>
-        /// Глобальный вертикальный оффсет для калибровки высоты контроллеров аватара.
+        /// Вертикальное смещение сенсоров этого устройства в координатах его аватара.
+        /// VR Battlegrounds patch 54: калибровка одного аватара не меняет трекинг другого.
+        /// Значение runtime, его задаёт применитель калибровки своего игрока.
         /// </summary>
-        public static float GlobalHeightOffset { get; set; } = 0f;
+        public float HeightOffset { get; set; } = 0f;
 
         /// <inheritdoc />
         public Vector3 SensorLeftPos 
@@ -73,7 +75,7 @@ namespace UltimateXR.Devices
             get
             {
                 Vector3 pos = LocalAvatarLeftHandSensorPos;
-                pos.y += GlobalHeightOffset;
+                pos.y += HeightOffset;
                 return Avatar.transform.TransformPoint(pos);
             }
         }
@@ -84,7 +86,7 @@ namespace UltimateXR.Devices
             get
             {
                 Vector3 pos = LocalAvatarRightHandSensorPos;
-                pos.y += GlobalHeightOffset;
+                pos.y += HeightOffset;
                 return Avatar.transform.TransformPoint(pos);
             }
         }

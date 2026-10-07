@@ -38,10 +38,10 @@ namespace VrBattlegrounds.Tests.Network
         private const float PivotBaseY = 0.12f;
 
         [SetUp]
-        public void ResetHands() => UxrControllerTracking.GlobalHeightOffset = 0f;
+        public void ResetHands() { } // SDK 54: общего состояния устройств больше нет.
 
         [TearDown]
-        public void RestoreHands() => UxrControllerTracking.GlobalHeightOffset = 0f;
+        public void RestoreHands() { }
 
         private void CreateSessionPair(out PlayerSession server, out PlayerSession client)
         {
@@ -62,6 +62,7 @@ namespace VrBattlegrounds.Tests.Network
 
             avatarObject.AddComponent<UxrActor>();
             UxrAvatar uxrAvatar = avatarObject.AddComponent<UxrAvatar>();
+            avatarObject.AddComponent<CalibrationTrackingStub>();
             avatarObject.AddComponent<UxrStandardAvatarController>();
             PlayerController avatar = avatarObject.AddComponent<PlayerController>();
 
@@ -166,7 +167,7 @@ namespace VrBattlegrounds.Tests.Network
                 "локальной, и на чужих экранах игрок стоит не на своей высоте.");
             Assert.AreEqual(0.4f, pivot.localPosition.x, 1e-4f, "Калибровка пола не должна двигать пивот вбок.");
             Assert.AreEqual(-0.25f, pivot.localPosition.z, 1e-4f, "Калибровка пола не должна двигать пивот вперёд-назад.");
-            Assert.AreEqual(0f, UxrControllerTracking.GlobalHeightOffset, 1e-4f,
+            Assert.AreEqual(0f, avatar.GetComponent<CalibrationTrackingStub>().HeightOffset, 1e-4f,
                 "Пол чужого игрока сдвинул руки этой машины: трекинг контроллеров есть только у своего аватара.");
         }
 

@@ -5,7 +5,9 @@ using NUnit.Framework;
 using UltimateXR.Animation.IK;
 using UltimateXR.Avatar;
 using UltimateXR.Avatar.Controllers;
+using UltimateXR.Core;
 using UltimateXR.Core.Components;
+using UltimateXR.Core.StateSync;
 using UltimateXR.Devices;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
@@ -16,6 +18,13 @@ using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Tests.Network
 {
+    // Технический адаптер SDK 54: прежние ожидания проверяют устройство конкретного аватара.
+    public sealed class CalibrationTrackingStub : UxrControllerTracking
+    {
+        public override System.Type RelatedControllerInputType => typeof(UxrControllerInput);
+        public override string SDKDependency => string.Empty;
+    }
+
     /// <summary>
     /// T-50: класс ошибки «несколько писателей производного состояния аватара, применение
     /// дельтами, владение по гоночному признаку». Тесты держат весь класс, а не баг B1.
@@ -77,7 +86,6 @@ namespace VrBattlegrounds.Tests.Network
         {
             SilenceMirrorNoise();
             Assert.IsNotNull(AvatarTypeList, "UltimateXR: нет UxrComponent<T>.s_typeComponents — харнесс несовместим.");
-            UxrControllerTracking.GlobalHeightOffset = 0f;
             Sync = CreateManager<PhysicalSpaceSyncManager>("PhysicalSpaceSyncManager");
             DriverReset();
         }
@@ -89,7 +97,6 @@ namespace VrBattlegrounds.Tests.Network
             foreach (UxrAvatar avatar in _registered) list.Remove(avatar);
             _registered.Clear();
 
-            UxrControllerTracking.GlobalHeightOffset = 0f;
             typeof(PhysicalSpaceSyncManager).GetProperty("Instance").GetSetMethod(true).Invoke(null, new object[] { null });
             DriverReset();
         }
@@ -110,6 +117,7 @@ namespace VrBattlegrounds.Tests.Network
 
             go.AddComponent<UxrActor>();
             UxrAvatar uxr = go.AddComponent<UxrAvatar>();
+            go.AddComponent<CalibrationTrackingStub>();
             UxrStandardAvatarController controller = go.AddComponent<UxrStandardAvatarController>();
             PlayerController pc = go.AddComponent<PlayerController>();
 
@@ -188,8 +196,15 @@ namespace VrBattlegrounds.Tests.Network
 
         protected static void AssertHands(float floor, string context)
         {
-            Assert.AreEqual(floor, UxrControllerTracking.GlobalHeightOffset, Eps,
-                $"{context}: смещение рук {UxrControllerTracking.GlobalHeightOffset:F3} м, а пол {floor:F3} м — руки не на контроллерах (B1).");
+            float hands = 0f;
+            foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+            {
+                PlayerSession session = identity.GetComponent<PlayerSession>();
+                if (session != null && session.isLocalPlayer && session.ActiveAvatar != null)
+                    hands = session.ActiveAvatar.GetComponent<CalibrationTrackingStub>().HeightOffset;
+            }
+            Assert.AreEqual(floor, hands, Eps,
+                $"{context}: смещение рук {hands:F3} м, а пол {floor:F3} м — руки не на контроллерах (B1).");
         }
 
         // ══════════════════════════════════════════════════════════════════
@@ -242,7 +257,10 @@ namespace VrBattlegrounds.Tests.Network
         /// <summary>UltimateXR поднял LocalAvatarStarted для своего аватара.</summary>
         protected void OwnAvatarStarted(Stub stub)
         {
-            InvokePrivateMethod(Sync, "UxrAvatar_LocalAvatarStarted", stub.Uxr, new UxrAvatarStartedEventArgs(stub.Uxr));
+            // Связь сессии, а не глобальный LocalAvatar, определяет применяемое устройство.
+            PlayerSession session = stub.Controller.Session;
+            if (session != null && session.ActiveAvatar == stub.Controller)
+                AvatarCalibrationApplier.For(stub.Uxr).Apply(session.EffectiveCalibration, session.isLocalPlayer);
         }
 
         /// <summary>Сервер восстановил сессию из снимка отключённого откалиброванного игрока.</summary>
@@ -265,13 +283,257 @@ namespace VrBattlegrounds.Tests.Network
         }
     }
 
-    /// <summary>Ярус A: выделенный сервер / удалённый клиент, свой аватар объявлен признаками.</summary>
+    /// <summary>Ярус B: локальный клиент отправляет команды; доставка ответа управляется PumpNetwork.</summary>
     public class PlayerCalibrationOwnerTests : CalibrationOwnerFixture
     {
+        protected override bool NeedsLocalClient => true;
+
+        [Test]
+        public void Замер_своего_игрока_отправляется_без_ошибок_клиентского_контекста()
+        {
+            PlayerSession session = CreateOwnSession();
+            Stub avatar = CreateAvatar("ClientContextAvatar", session, CyborgEyes, own: true);
+            session.ActiveAvatar = avatar.Controller;
+            var errors = new List<string>();
+            Application.LogCallback listener = (message, stack, type) =>
+            {
+                if (type == LogType.Error && message.Contains("CmdRequestCalibration")) errors.Add(message);
+            };
+            Application.logMessageReceived += listener;
+            try
+            {
+                CalibrateOwn(session, Floor, EyeHeight);
+                Assert.IsEmpty(errors, "Замер требует подключённого клиента, а не подавления ошибки Mirror.");
+                Assert.AreEqual(new PlayerCalibration(Floor, EyeHeight, true), session.Calibration,
+                    "Команда должна доставить замер серверу.");
+            }
+            finally { Application.logMessageReceived -= listener; }
+        }
+
+        private static PlayerCalibration At(Vector3 position) =>
+            new PlayerCalibration(Floor, EyeHeight, true).WithPlacement(PlayerPlacement.World(
+                position, Quaternion.Euler(0f, 42f, 0f), UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
+
+        private static void AssertCalibrationPose(PlayerCalibration expected, PlayerCalibration actual, string message = null)
+        {
+            Assert.AreEqual(expected.FloorOffset, actual.FloorOffset, message);
+            Assert.AreEqual(expected.EyeHeight, actual.EyeHeight, message);
+            Assert.AreEqual(expected.IsCalibrated, actual.IsCalibrated, message);
+            Assert.AreEqual(expected.Placement.Space, actual.Placement.Space, message);
+            Assert.AreEqual(expected.Placement.CapturedOnMap, actual.Placement.CapturedOnMap, message);
+            Vector3 position = actual.Placement.Position;
+            Quaternion rotation = actual.Placement.Rotation;
+            foreach (float component in new[] { position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, rotation.w })
+                Assert.IsFalse(float.IsNaN(component) || float.IsInfinity(component), "Принятая поза должна быть конечной.");
+            Assert.That(Vector3.Distance(expected.Placement.Position, actual.Placement.Position), Is.LessThan(Eps), message);
+            // Нормализация может менять последние биты quaternion, сохраняя ту же ориентацию.
+            Quaternion normalized = expected.Placement.Rotation.normalized;
+            Vector4 reference = new Vector4(normalized.x, normalized.y, normalized.z, normalized.w);
+            Vector4 value = new Vector4(rotation.x, rotation.y, rotation.z, rotation.w);
+            Assert.That(Mathf.Min(Vector4.Distance(reference, value), Vector4.Distance(-reference, value)), Is.LessThan(.000001f), message);
+            Assert.That(Mathf.Abs(Quaternion.Dot(actual.Placement.Rotation, actual.Placement.Rotation) - 1f), Is.LessThan(.000001f), message);
+        }
+
+        [Test]
+        public void Смена_тела_не_затирает_принятую_якорную_позу_запаздывающим_корнем()
+        {
+            PlayerSession session = CreateOwnSession();
+            var accepted = new PlayerCalibration(Floor, EyeHeight, true).WithPlacement(
+                PlayerPlacement.Anchored(new Vector3(2f, 0f, 5f), Quaternion.Euler(0f, 37f, 0f), "A"));
+            session.ServerAcceptCalibration(accepted, PlayerSession.CalibrationOrigin.Connect);
+            Assert.IsTrue(session.ServerCapturePlacement(new Vector3(99f, 0f, 99f), Quaternion.identity, "смена тела"));
+            Assert.AreEqual(accepted, session.Calibration);
+        }
+
+        private sealed class SdkCapture : System.IDisposable
+        {
+            public readonly UxrManager Manager;
+            public int Moves;
+            public byte[] Bytes;
+            private readonly UxrAvatar _avatar;
+            private readonly FieldInfo _singletonField;
+            private readonly object _previousSingleton;
+            private readonly System.EventHandler<UxrSyncEventArgs> _listener;
+            private bool _disposed;
+
+            public SdkCapture(UxrAvatar avatar)
+            {
+                _avatar = avatar;
+                for (System.Type type = typeof(UxrManager); type != null; type = type.BaseType)
+                {
+                    var field = type.GetField("s_instance", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+                    if (field != null) { _singletonField = field; break; }
+                }
+                Assert.IsNotNull(_singletonField, "SDK singleton изменился: обновить харнесс, а не использовать чужой менеджер.");
+                _previousSingleton = _singletonField.GetValue(null);
+                Manager = new GameObject("T50SdkCaptureManager").AddComponent<UxrManager>();
+                _listener = (sender, args) =>
+                {
+                    if (args is UxrMethodInvokedSyncEventArgs method && method.MethodName == "MoveAvatarRootTo")
+                    {
+                        Moves++;
+                        Bytes = args.SerializeEventBinary(Manager);
+                    }
+                };
+                try
+                {
+                    _singletonField.SetValue(null, Manager);
+                    Manager.RegisterIfNecessary();
+                    avatar.RegisterIfNecessary();
+                    ((IUxrStateSync)Manager).StateChanged += _listener;
+                }
+                catch (System.Exception registrationError)
+                {
+                    try { Dispose(); }
+                    catch (System.Exception cleanupError) { throw new System.AggregateException(registrationError, cleanupError); }
+                    throw;
+                }
+            }
+
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _disposed = true;
+                try { ((IUxrStateSync)Manager).StateChanged -= _listener; }
+                finally
+                {
+                    try
+                    {
+                        try { if (_avatar != null) _avatar.Unregister(); }
+                        finally { Manager.Unregister(); }
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            if (ReferenceEquals(_singletonField.GetValue(null), Manager)) _singletonField.SetValue(null, _previousSingleton);
+                        }
+                        finally { Object.DestroyImmediate(Manager.gameObject); }
+                    }
+                }
+                Assert.AreSame(_previousSingleton, _singletonField.GetValue(null), "SDK singleton должен пережить тест без подмены.");
+            }
+        }
+
+        [Test]
+        public void Принятая_поза_публикуется_один_раз_после_ответа_сервера()
+        {
+            PlayerSession session = CreateOwnSession();
+            Stub avatar = CreateAvatar("AcceptedPlacement", session, CyborgEyes, true, NetworkServer.localConnection);
+            session.ActiveAvatar = avatar.Controller;
+            PlayerCalibration original = At(Vector3.zero);
+            session.ServerAcceptCalibration(original, PlayerSession.CalibrationOrigin.Connect);
+            using (var sdk = new SdkCapture(avatar.Uxr))
+            {
+                PlayerCalibration measured = At(new Vector3(10f, 0f, 5f));
+                session.RequestCalibration(measured);
+                Assert.That(Vector3.Distance(avatar.Controller.transform.position, measured.Placement.Position), Is.LessThan(Eps));
+                AssertCalibrationPose(original, session.Calibration, "Предсказание не меняет серверный снимок.");
+                Assert.AreEqual(0, sdk.Moves, "Предсказание не должно публиковать SDK-событие.");
+                PumpNetwork(6);
+                AssertCalibrationPose(measured, session.Calibration);
+                Assert.AreEqual(1, sdk.Moves, "Принятие должно опубликовать ровно один перенос.");
+                InvokePrivateMethod(session, "OnCalibrationAnswered", SentRequest(session), SentRequest(session));
+                Assert.AreEqual(1, sdk.Moves, "Повторный ответ не переносит корень ещё раз.");
+                AssertCalibrationPose(measured, LocalPlayerCalibration.Current);
+            }
+        }
+
+        [Test]
+        public void Отказ_позы_откатывает_корень_и_кэш_без_SDK_события()
+        {
+            PlayerSession session = CreateOwnSession();
+            Stub avatar = CreateAvatar("RejectedPlacement", session, CyborgEyes, true, NetworkServer.localConnection);
+            session.ActiveAvatar = avatar.Controller;
+            PlayerCalibration original = At(Vector3.zero);
+            session.ServerAcceptCalibration(original, PlayerSession.CalibrationOrigin.Connect);
+            using (var sdk = new SdkCapture(avatar.Uxr))
+            {
+                session.RequestCalibration(At(new Vector3(10f, 0f, 5f)));
+                // Доставка ответа управляется тестом; команду до TearDown не прокручиваем.
+                ServerRejectsLastRequest(session);
+                Assert.That(Vector3.Distance(avatar.Controller.transform.position, original.Placement.Position), Is.LessThan(Eps));
+                Assert.That(Quaternion.Angle(avatar.Controller.transform.rotation, original.Placement.Rotation), Is.LessThan(.001f));
+                AssertCalibrationPose(original, LocalPlayerCalibration.Current);
+                Assert.AreEqual(0, sdk.Moves);
+            }
+        }
+
+        [Test]
+        public void SDK_replay_сохраняет_корень_при_задержке_локальной_позы_камеры()
+        {
+            PlayerSession session = CreateOwnSession();
+            Stub avatar = CreateAvatar("RootReplay", session, CyborgEyes, true, NetworkServer.localConnection);
+            Transform camera = avatar.Uxr.CameraComponent.transform;
+            camera.localPosition = new Vector3(1f, 1.7f, .4f);
+            camera.localRotation = Quaternion.Euler(0f, 23f, 0f);
+            using (var sdk = new SdkCapture(avatar.Uxr))
+            {
+                Vector3 target = new Vector3(10f, 0f, 8f);
+                Quaternion yaw = Quaternion.Euler(0f, 37f, 0f);
+                sdk.Manager.MoveAvatarRootTo(avatar.Uxr, target, yaw);
+                Assert.IsNotNull(sdk.Bytes, "Проверка должна пройти через бинарное SDK-событие.");
+                Vector3 laggingHead = new Vector3(.8f, 1.7f, .2f);
+                camera.localPosition = laggingHead;
+                avatar.Controller.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                var replay = sdk.Manager.ExecuteStateSyncEvent(sdk.Bytes);
+                Assert.IsFalse(replay.IsError);
+                Assert.That(Vector3.Distance(avatar.Controller.transform.position, target), Is.LessThan(Eps));
+                Assert.That(Quaternion.Angle(avatar.Controller.transform.rotation, yaw), Is.LessThan(.001f));
+                Assert.AreEqual(laggingHead, camera.localPosition);
+                Assert.That(Quaternion.Angle(camera.localRotation, Quaternion.Euler(0f, 23f, 0f)), Is.LessThan(.001f));
+            }
+        }
+
+        [Test]
+        public void Смещение_выключенного_устройства_своего_аватара_не_меняет_чужое()
+        {
+            PlayerSession own = CreateOwnSession();
+            Stub current = CreateAvatar("OwnTracking", own, CyborgEyes, true);
+            own.ActiveAvatar = current.Controller;
+            var tracking = current.Uxr.GetComponent<CalibrationTrackingStub>();
+            tracking.enabled = false;
+            PlayerSession remote = CreateRemoteSession();
+            Stub other = CreateAvatar("ForeignTracking", remote, MefEyes, false);
+            remote.ActiveAvatar = other.Controller;
+            var foreign = other.Uxr.GetComponent<CalibrationTrackingStub>();
+            foreign.HeightOffset = -.12f;
+            CalibrateOwn(own, Floor, EyeHeight);
+            CalibrateRemote(remote, -.2f, 1.7f, MefEyes);
+            Assert.AreEqual(Floor, tracking.HeightOffset, Eps);
+            Assert.AreEqual(-.12f, foreign.HeightOffset, Eps);
+            Stub replacement = CreateAvatar("ReplacementTracking", own, HeavyEyes, true);
+            own.ActiveAvatar = replacement.Controller;
+            Assert.AreEqual(Floor, replacement.Uxr.GetComponent<CalibrationTrackingStub>().HeightOffset, Eps);
+            Assert.AreEqual(-.12f, foreign.HeightOffset, Eps);
+        }
+
+        [Test]
+        public void Архивирование_не_переносит_тело_и_наблюдение_старого_аватара_игнорируется()
+        {
+            PlayerSession session = CreateOwnSession();
+            Stub old = CreateAvatar("OldObservedBody", session, CyborgEyes, true);
+            session.ActiveAvatar = old.Controller;
+            PlayerCalibration original = At(Vector3.zero);
+            session.ServerAcceptCalibration(original, PlayerSession.CalibrationOrigin.Connect);
+            PlayerPlacement archived = At(new Vector3(20f, 0f, 4f)).Placement;
+            Vector3 bodyPosition = old.Controller.transform.position;
+            session.ServerRememberPlacement(archived);
+            Assert.AreEqual(bodyPosition, old.Controller.transform.position);
+            AssertCalibrationPose(original.WithPlacement(archived), session.Calibration);
+            Stub replacement = CreateAvatar("NewObservedBody", session, MefEyes, true);
+            session.ActiveAvatar = replacement.Controller;
+            var tracker = session.gameObject.AddComponent<PlayerPlacementTracker>();
+            old.Controller.transform.position = new Vector3(99f, 0f, 99f);
+            tracker.RecordAvatar(old.Uxr);
+            AssertCalibrationPose(original.WithPlacement(archived), session.Calibration);
+        }
+
         private PlayerSession CreateOwnSession()
         {
             PlayerSession session = CreateNetworkComponent<PlayerSession>("OwnSession");
-            SpawnOnServer(session);
+            NetworkServer.Spawn(session.gameObject, NetworkServer.localConnection);
+            PumpNetwork();
             MarkAsLocalPlayer(session);
             return session;
         }

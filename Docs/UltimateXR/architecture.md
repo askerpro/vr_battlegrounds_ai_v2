@@ -24,6 +24,17 @@ MonoBehaviour
 
 ## Центральный менеджер — `UxrManager`
 
+Игровая калибровка принадлежит `PlayerSession.Calibration`: pose входит в тот же `PlayerPlacement` snapshot.
+`AvatarCalibrationApplier` выводит высоту/масштаб и задаёт `UxrControllerTracking.HeightOffset`
+конкретным устройствам своего связанного аватара (SDK54). `PlayerPlacementTracker` наблюдает разрешённые
+переносы и обновляет снимок, не телепортируя аватар при архивировании.
+
+Для принятой калибровки SDK55 `MoveAvatarRootTo` сериализует точную позу корня и сохраняет локальную
+позу камеры получателя; задержка её отдельного трекинга не меняет root target. Предсказание/отказ
+используют локальную проекцию, публикация SDK идёт один раз после принятого ответа.
+Автор действия определяется игровым `StateEventAuthority`, владелец данных остаётся сессией.
+Контракт и проверки — [T-50 этап4](../tasks/T-50-stage4-design.md), [SDK-патчи54/55](sdk-patches.md).
+
 **Путь:** `Runtime/Scripts/Core/UxrManager.cs`  
 **Доступ:** `UxrManager.Instance` (Singleton, создаётся автоматически)
 

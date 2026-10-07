@@ -44,33 +44,10 @@ namespace VrBattlegrounds.Player.Avatars
         }
 
         /// <summary>
-        /// Создаёт первый физический аватар только что подключившейся сессии.
-        ///
-        /// <para>
-        /// <b>Откуда берётся позиция.</b> Правильных ответов три, и порядок между ними
-        /// такой:
-        /// </para>
-        /// <list type="number">
-        /// <item><b>Снимок восстановления на той же карте.</b> Игрок переподключился,
-        ///       карта не менялась — вернуть его туда, где стоял, точнее любого пересчёта.
-        ///       Как только карта сменилась, мировая точка снимка означает другое место
-        ///       арены, и ветка не годится (см. <c>SessionSnapshot.CanRestorePlaceOn</c>).</item>
-        /// <item><b>Место, заданное калибровкой.</b> Игрок принёс его с собой
-        ///       в <c>GamePlayerConnectMessage</c> — в координатах якорей, — а разложил
-        ///       по местам <c>PlayersManager.HandlePlayerConnect</c>. Ветка достижима
-        ///       только для откалиброванного игрока: решает
-        ///       <see cref="SpawnPlaceRegistry"/>, тем же правилом, что при смене
-        ///       карты (T-30).</item>
-        /// <item><b>Зона своей команды.</b> До калибровки игра не знает, где игрок внутри
-        ///       арены, и зона — разумное «где угодно».</item>
-        /// </list>
-        ///
-        /// <para>
-        /// Здесь стояла четвёртая ветка — <c>msg.hasSavedPosition</c>, — и она была
-        /// находкой <b>CAL-02</b>: мировая позиция с прошлой карты, применяемая всем
-        /// подряд. Ветка убрана целиком, а два законных случая остались за теми, кто
-        /// ими и владеет: <c>SessionRecoveryManager</c> и <see cref="SpawnPlaceRegistry"/>.
-        /// </para>
+        /// Создаёт первое тело сессии. InitialCalibration уже выбрал единую Placement:
+        /// живой same-map snapshot, привязку к якорям либо допустимый world fallback.
+        /// AvatarSpawnPointResolver разрешает её до Instantiate; при отсутствии места —
+        /// зона команды, NetworkStartPosition, начало координат. Отдельного override здесь нет.
         /// </summary>
         [Server]
         public void SpawnAvatar(NetworkConnectionToClient conn, SessionSnapshot snapshot, PlayerSession session)
@@ -111,26 +88,6 @@ namespace VrBattlegrounds.Player.Avatars
             Vector3 spawnPos = spawnPoint.Position;
             Quaternion spawnRot = spawnPoint.Rotation;
 
-            // Снимок восстановления бьёт точку спавна, но только на своей карте: игрок
-            // переподключился и обязан вернуться туда, где был, а не на базу.
-            string currentMap = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            if (snapshot != null && snapshot.CanRestorePlaceOn(currentMap))
-            {
-                spawnPos = snapshot.Position;
-                spawnRot = snapshot.Rotation;
-
-                GameLog.Player.Info(
-                    $"[AvatarManager] SpawnAvatar: {session.PlayerName} возвращён на своё место " +
-                    $"из снимка сессии — карта '{currentMap}' не менялась, {spawnPos}.");
-            }
-            else if (snapshot != null && snapshot.NeedsPhysicalRestore)
-            {
-                GameLog.Player.Info(
-                    $"[AvatarManager] SpawnAvatar: снимок {session.PlayerName} снят на карте " +
-                    $"'{snapshot.CapturedOnMap}', а сервер уже на '{currentMap}' — мировая позиция " +
-                    $"из снимка означала бы другое место арены (CAL-02). Точку выбрал резолвер: {spawnPoint}.");
-            }
-
             GameObject avatarInstance = Instantiate(prefabToSpawn, spawnPos, spawnRot);
             avatarInstance.name = $"{prefabToSpawn.name} [{ServerAuthoredAvatar.OwnerLabel(conn)}]";
 
@@ -159,6 +116,8 @@ namespace VrBattlegrounds.Player.Avatars
             // Связь проставляется строго ПОСЛЕ спавна: до него netId равен нулю,
             // и клиенты получили бы пустую ссылку на аватар.
             session.ActiveAvatar = avatarClass;
+            if (avatarClass != null)
+                session.ServerCapturePlacement(spawnPos, spawnRot, "первичный спавн");
 
             // Вернувшийся живым после переподключения продолжает себя; остальные — новые в матче.
             Admit(avatarClass, continuesPrevious: snapshot != null && snapshot.NeedsPhysicalRestore);
@@ -253,24 +212,14 @@ namespace VrBattlegrounds.Player.Avatars
             // Находим текущий активный аватар, чтобы забрать его координаты и потом уничтожить
             PlayerController oldAvatar = session.ActiveAvatar;
 
-            Vector3 spawnPos;
-            Quaternion spawnRot;
-
             if (oldAvatar != null)
             {
-                // Смена скина, команды или тела: игрок стоит там, куда пришёл сам.
-                spawnPos = oldAvatar.transform.position;
-                spawnRot = oldAvatar.transform.rotation;
+                session.ServerCapturePlacement(oldAvatar.transform.position, oldAvatar.transform.rotation, reason);
             }
-            else
-            {
-                // Аватара не осталось — смена карты. Откалиброванное место восстанавливаем.
-                AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(session.Team, session);
-                LogSpawnPoint("ChangeAvatar/после смены карты", session, spawnPoint);
-
-                spawnPos = spawnPoint.Position;
-                spawnRot = spawnPoint.Rotation;
-            }
+            AvatarSpawnPoint spawnPoint = AvatarSpawnPointResolver.Resolve(session.Team, session);
+            LogSpawnPoint("ChangeAvatar", session, spawnPoint);
+            Vector3 spawnPos = spawnPoint.Position;
+            Quaternion spawnRot = spawnPoint.Rotation;
 
             GameObject newPlayerInstance = Instantiate(avatarPrefab, spawnPos, spawnRot);
             newPlayerInstance.name = $"{avatarPrefab.name} [{ServerAuthoredAvatar.OwnerLabel(conn)}]";
@@ -291,6 +240,8 @@ namespace VrBattlegrounds.Player.Avatars
             // Только после спавна: netId нового аватара нужен клиентам, иначе связь
             // на них останется указывать на уже уничтоженный старый аватар.
             session.ActiveAvatar = newPc;
+            if (newPc != null)
+                session.ServerCapturePlacement(spawnPos, spawnRot, "новое тело");
 
             // Без прежнего (смена карты) — в каком состоянии входит новый, решает режим.
             // С прежним — выбывание уже на сессии, телу переносится здоровье. Режим может

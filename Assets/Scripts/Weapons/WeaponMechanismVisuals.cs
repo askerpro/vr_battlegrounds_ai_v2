@@ -487,6 +487,14 @@ namespace VrBattlegrounds.Weapons
         {
             if (!HasLedgerAdapter || !_manual || _ownedChamberReturn || _bindings == null) return;
             bool held = _slide != null && UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
+            if (!held && ReadinessAdapter.HoldsEmptyActionOpen)
+            {
+                // Отпустили ручку без начатого цикла: поза снова принадлежит HoldOpen.
+                // Контроллер заново проецирует validated rear, без возврата к rest.
+                _manual = false;
+                _emptyWork = EmptyPresentationWork.Deferred;
+                return;
+            }
             float progress = _feedback.SignedSlideProgress;
             float epsilon = _feedback.PhysicalPositionEpsilon / _feedback.SlideTravelLength;
             if (!held || (_catchRequired && progress + epsilon >= _catchProgress)) _catchRequired = false;
@@ -867,10 +875,14 @@ namespace VrBattlegrounds.Weapons
             _cycle = null;
             if (!HasLedgerAdapter)
             { _manual = false; _emptyHeld = false; _catchRequired = false; _manualRotationRearProgress = 0f; }
+            // Source-фаза принадлежит _cycle: обнулив его, нельзя оставить фазу «в процессе» —
+            // иначе Empty никогда не завершится (ни HoldOpen, ни EmptyRest ACK). Применение позы — контроллеру.
+            bool holdOpen = HasLedgerAdapter && ReadinessAdapter.HoldsEmptyActionOpen;
+            if (HasLedgerAdapter && (_emptyWork == EmptyPresentationWork.Source || holdOpen)) _emptyWork = EmptyPresentationWork.Deferred;
             if (_bindings == null) return;
             foreach (Binding binding in _bindings)
             {
-                if (HasLedgerAdapter && IsAction(binding) && (_ownedChamberReturn || _suppressActionCycle)) continue;
+                if (HasLedgerAdapter && IsAction(binding) && (_ownedChamberReturn || _suppressActionCycle || holdOpen)) continue;
                 if (binding.Target == null || (binding.InMagazine && (_currentMagazine == null || _currentMagazine.CurrentAnchor != _magazineAnchor))) continue;
                 binding.Target.localPosition = binding.RestPosition;
                 if (binding.Rotate) binding.Target.localRotation = binding.RestRotation;

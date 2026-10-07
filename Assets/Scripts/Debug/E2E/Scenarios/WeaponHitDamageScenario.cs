@@ -317,12 +317,12 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             UxrProjectileSource source = firearm != null ? firearm.GetComponent<UxrProjectileSource>() : null;
             UxrShotDescriptor shot = source != null && source.ShotTypes.Count > 0 ? source.ShotTypes[0] : null;
-            int ammo = firearm != null ? firearm.GetAmmoLeft(0) : 0;
+            int ammo = firearm != null ? firearm.GetTotalAmmoLeft(0) : 0;
 
             bool weaponOk = firearm != null && shot != null && shot.ShotSource != null && ammo > 0;
             result.Set(CheckWeapon, weaponOk,
                 weaponOk
-                    ? $"оружие '{item.name}' netId={item.netId}, {WeaponIdOf(item)}; патронов в магазине: {ammo}; " +
+                    ? $"оружие '{item.name}' netId={item.netId}, {WeaponIdOf(item)}; патронов (магазин + патронник): {ammo}; " +
                       $"{DescribeSources(item.gameObject)}. " +
                       $"UxrFirearmWeapon берёт источник через GetCachedComponent<UxrProjectileSource>() — " +
                       $"это первый компонент нужного типа на объекте, и стреляет именно он."
@@ -332,8 +332,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                         : $"оружие '{item.name}' найдено, но стрелять им нельзя: описаний выстрела " +
                           $"{(source == null ? "нет компонента" : source.ShotTypes.Count.ToString())}, " +
                           $"ShotSource={(shot == null || shot.ShotSource == null ? "не задан" : "есть")}, патронов {ammo}. " +
-                          $"Патроны берутся из магазина на UxrFirearmTrigger.AmmunitionMagAnchor: " +
-                          $"без вставленного магазина TryToShootRound всегда возвращает false.");
+                          $"Патроны — магазин на UxrFirearmTrigger.AmmunitionMagAnchor плюс патрон в патроннике у оружия с профилем готовности " +
+                          $"(GetTotalAmmoLeft); без того и другого TryToShootRound возвращает false.");
 
             result.Set(CheckShotConf, true, SurveyRegistryWeapons(shot, ReferenceCollisionMask));
 
@@ -417,7 +417,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 bool ok = firearm.TryToShootRound(0);
                 if (ok) fired++;
 
-                attempts.Add($"#{i}: {(ok ? "выстрел" : "отказ")} (патронов {firearm.GetAmmoLeft(0)}, Life {avatar.Health:F0})");
+                attempts.Add($"#{i}: {(ok ? "выстрел" : "отказ")} (патронов {firearm.GetTotalAmmoLeft(0)}, Life {avatar.Health:F0})");
 
                 // Снаряду хватает пары кадров: 2.5 м при 150 м/с — это 0.017 с,
                 // но трассировка начинается только со второго кадра жизни снаряда
@@ -1193,7 +1193,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 UxrFirearmWeapon candidate = identity.GetComponentInChildren<UxrFirearmWeapon>(true);
                 if (candidate == null) continue;
-                if (candidate.GetAmmoLeft(0) <= 0) continue;
+                if (candidate.GetTotalAmmoLeft(0) <= 0) continue;
 
                 bool preferred = WeaponIdOf(identity) == "оружие M16";
 

@@ -52,7 +52,28 @@ namespace VrBattlegrounds.Weapons
         public bool IsConfigured => _configured;
         public WeaponReadinessProfile Profile => _profile;
         public WeaponEmptyPose EmptyPose => _emptyPose;
-        public bool OwnsActionPose => _driver.Active;
+        /// <summary>
+        /// Владелец позы Action: return driver или удерживаемая HoldOpen-поза. Все rest-writers
+        /// (пружина ручки, возврат после отпускания, ResetVisuals) обязаны спрашивать этот предикат.
+        /// </summary>
+        public bool OwnsActionPose => _driver.Active || HoldsEmptyActionOpen;
+
+        /// <summary>
+        /// HoldOpen после последнего патрона: Action остаётся в validated rear, пока игрок сам не
+        /// начнёт ручной цикл (BeginAction снимает PostShotEmptyAction). Источник — только SDK state
+        /// и профиль, без локальной копии; одинаково у автора и наблюдателя/late join.
+        /// </summary>
+        public bool HoldsEmptyActionOpen
+        {
+            get
+            {
+                if (!_configured || _physical != WeaponPhysicalCapability.ActionTravel || _emptyPose != WeaponEmptyPose.HoldOpen ||
+                    _cycleActive || _emptyReturn || _weapon == null) return false;
+                UxrFirearmReadinessState state = _weapon.GetReadinessState(_triggerIndex);
+                return state != null && state.ReadinessInitialized && state.PostShotEmptyAction &&
+                       !state.ChamberRound && !state.ActionOpen && !state.ChamberCyclePending;
+            }
+        }
         public bool IsActionAtRest => IsPhysicallyClosed();
         public float EmptyRearTime => _validatedEmptyRearTime;
 

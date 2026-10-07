@@ -1,5 +1,11 @@
 # Changelog (Журнал изменений)
 
+## 2026-10-06 — Затвор HoldOpen остаётся открытым после последнего патрона
+
+- Класс ошибки: HoldOpen был одноразовой проекцией позы, владельцем позы Action считался только return driver. Пружина ручки (`AutomaticWeaponSlideFeedback`) за ~0,06 с возвращала ручку и вложенный затвор вперёд — Herrington после последнего выстрела оказывался закрытым. Теперь `WeaponReadinessController.HoldsEmptyActionOpen` (часть `OwnsActionPose`) — единственный предикат для всех rest-writers: пружины, возврата после отпускания ручки и `ResetVisuals`.
+- `ResetVisuals` во время Source-фазы Empty больше не оставляет фазу «в процессе» навсегда: она переходит в Deferred.
+- Этап 4 готовности: единый writer компонентов `WeaponReadinessAuthoring` (сборщики, ручное заряжание, миграция), `WeaponReadinessMigration` для волны HoldOpen (Browning, Viper, TR15) — подготовлено, к префабам не применено. Проверка в Unity/шлеме ожидается.
+
 ## 2026-10-06 — Запуск карты через MapBootstrap
 
 - Карты реестра собирает `MapBootstrap` на `MapRoot`: проверка карты, `MapRunConfig` по центральному `MapRuntimeCatalog`, спавн `MapReferee` и `ArsenalEquipmentCoordinator` из зарегистрированных префабов, CompositionReady, разминка — server Ready. Сценовые `MapReferee` и координатор из карт реестра убираются инструментом `Tools/VR Battlegrounds/Maps/Map Bootstrap/Apply Migration`.

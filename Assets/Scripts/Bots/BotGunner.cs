@@ -278,7 +278,7 @@ namespace VrBattlegrounds.Bots
             GameObject prefab = _armWith.WeaponPrefab;
             // Покупка — выдача предмета карты: до server Ready и после Closing её нет, как у стены.
             if (!MapRunAdmission.CanActivateActiveMap) return;
-            GameObject instance = prefab != null ? NetworkUxrIdentity.CreateInstance(prefab) : null;
+            GameObject instance = prefab != null ? MapRunAdmission.CreateActiveMapItem(prefab) : null;
             if (instance == null) return;
 
             instance.transform.SetPositionAndRotation(grabber.transform.position, grabber.transform.rotation);

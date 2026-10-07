@@ -17,6 +17,14 @@ namespace VrBattlegrounds.Player
                 return true;
             }
 
+            // Карта на этой машине ещё не играбельна: удалённый клиент не применил свежий начальный снимок
+            // своего запуска, сервер не открыл server Ready или уже закрыл карту (Closing). Захват сейчас
+            // описал бы состояние, которого у сервера нет. Удерживаемое этим не отпускается.
+            if (!Maps.Runtime.MapRunAdmission.IsLocalPlayable)
+            {
+                return false;
+            }
+
             // Делегат SDK спрашивает каждую точку каждого предмета каждый кадр, до проверки
             // расстояния, — производные от иерархии данные берутся из покадрового кэша.
             GrabOnlyWhenParentHeld parentRule = GrabbableHierarchyCache.GetPartRule(grabbable, out UxrGrabbableObject partParent);

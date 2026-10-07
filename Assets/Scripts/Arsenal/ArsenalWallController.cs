@@ -812,7 +812,7 @@ namespace VrBattlegrounds.Arsenal
                     // Создание инстанса ведёт сетевой слой: он же гасит «Auto Anchor»
                     // до Awake и выравнивает UniqueId после спавна. Стена о идентичности
                     // предметов не знает и знать не должна — см. NetworkUxrIdentity.
-                    GameObject spawned = NetworkUxrIdentity.CreateInstance(slot.WeaponData.WeaponPrefab);
+                    GameObject spawned = MapRunAdmission.CreateMapItem(gameObject.scene, slot.WeaponData.WeaponPrefab);
                     if (spawned == null) continue;
 
                     spawned.SetActive(true);

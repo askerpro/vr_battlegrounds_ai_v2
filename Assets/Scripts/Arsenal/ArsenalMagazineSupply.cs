@@ -159,7 +159,8 @@ namespace VrBattlegrounds.Arsenal
                 GameLog.Arsenal.Error("[ArsenalMagazineSupply] Не настроен сетевой захватываемый магазин: " + offer.Slot.name, this);
                 return;
             }
-            GameObject item = NetworkUxrIdentity.CreateInstance(prefab);
+            GameObject item = MapRunAdmission.CreateMapItem(gameObject.scene, prefab);
+            if (item == null) return;
             item.SetActive(true);
             offer.Assign(item.GetComponent<UxrGrabbableObject>());
             NetworkUxrIdentity.SpawnServerObject(item);

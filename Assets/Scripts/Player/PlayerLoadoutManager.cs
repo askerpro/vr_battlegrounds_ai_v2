@@ -242,7 +242,7 @@ namespace VrBattlegrounds.Player
             UxrGrabbableObjectAnchor holster = FindFreePocket(AnchorRoleKind.Secondary);
             if (holster == null) return false;
 
-            GameObject weapon = NetworkUxrIdentity.CreateInstance(info.WeaponPrefab);
+            GameObject weapon = MapRunAdmission.CreateActiveMapItem(info.WeaponPrefab);
             if (weapon == null) return false;
 
             weapon.transform.SetPositionAndRotation(holster.transform.position, holster.transform.rotation);
@@ -302,7 +302,7 @@ namespace VrBattlegrounds.Player
             // Создание и спавн ведёт сетевой слой: он гасит «Auto Anchor» до Awake
             // и выравнивает UniqueId по netId. Без выравнивания захват магазина
             // не применится на другой машине — это NET-16, см. NetworkUxrIdentity.
-            GameObject magazine = NetworkUxrIdentity.CreateInstance(info.MagazinePrefab);
+            GameObject magazine = MapRunAdmission.CreateActiveMapItem(info.MagazinePrefab);
             if (magazine == null) return;
 
             // Клиенты увидят объект там, где он был при спавне, — до того, как спрячут

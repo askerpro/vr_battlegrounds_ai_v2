@@ -238,8 +238,8 @@ sequenceDiagram
 | `NetworkStateRelay` | тот же объект `SessionContext` | до остановки сервера | пока сервер не поднят |
 | `Series` | тот же объект `SessionContext` — серия карт и общий счёт | до остановки сервера | пока сервер не поднят |
 | `MapRunAuthority` | тот же объект `SessionContext` — описание запуска карты | до остановки сервера | пока сервер не поднят |
-| `MapBootstrap` | компонент `MapRoot` **в сцене** карты реестра | до выгрузки сцены | в Offline, в окне смены сцены и на стендах без `MapRoot` |
-| `MapReferee` | спавн из `MapBootstrap` (`MapRuntimeCatalog`) в сцену карты; на стендах — объект сцены | до выгрузки сцены (`MapRunScope` снимает его с сети) | в Offline, в окне смены сцены и до CompositionReady |
+| `MapBootstrap` | компонент `MapRoot` **в сцене** карты реестра или отладочного стенда каталога | до выгрузки сцены | в Offline, в окне смены сцены и на стендах без `MapRoot` |
+| `MapReferee` | спавн из `MapBootstrap` (`MapRuntimeCatalog`) в сцену карты; сценового судьи нет нигде | до выгрузки сцены (`MapRunScope` снимает его с сети) | в Offline, в окне смены сцены и до CompositionReady |
 | `GameMode` (`WarmupMode`/`EliminationMode`/`RespawnMode`) | спавн из `MapReferee`: разминка — по `ServerStartRun` после CompositionReady, режим матча — по «Начать матч» на месте | до смены режима на карте или выгрузки сцены | в окне смены режима и смены сцены |
 
 Читать таблицу так: пустой `Instance` у постоянных менеджеров (до `Series` включительно) — это

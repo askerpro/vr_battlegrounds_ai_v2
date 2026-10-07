@@ -2,17 +2,16 @@
 
 | Цель | Мы здесь | Осталось выполнить | Технический документ |
 |---|---|---|---|
-| Перевести карты на единый immutable run и управляемую runtime composition | Runtime-интеграция (MapBootstrap, допуск, владельцы) написана и компилируется под Android; инструмент миграции прошёл dry run 5/6 карт, исправлен под шестую | Применить миграцию сцен через аренду, Play Mode на worker, прогон EditMode, проверка пользователем в шлеме, затем Relay-барьер и генерируемые станции | [Дизайн](map-runtime-bootstrap-design.md), [план](map-runtime-bootstrap-plan.md), [runtime-интеграция](map-runtime-bootstrap-runtime-integration.md) |
+| Перевести карты на единый immutable run и управляемую runtime composition | Runtime-интеграция и миграция шести карт реестра влиты в `dev` (6f54dac0, 01c28d22, a8d521b0). Доводка задач 5 и 8 (барьер Relay, транзакция загрузки, удаление неуправляемого пути MapReferee, постоянные тесты) проверена пользователем и влита в `dev` — см. [прогресс](map-runtime-bootstrap-progress.md) | Старт карты мимо лобби в отладке, мелкие правки; генерируемые станции (задача 7 ждёт API сборщика генератора) | [Дизайн](map-runtime-bootstrap-design.md), [план](map-runtime-bootstrap-plan.md), [прогресс](map-runtime-bootstrap-progress.md), [runtime-интеграция](map-runtime-bootstrap-runtime-integration.md) |
 
 ## Действующий срез
 
 Рабочая копия: linked worktree `F:\CodexWorktrees\map-runtime-bootstrap\Vr_Battlegrounds_ai`, ветка
-`claude/map-runtime-bootstrap` поверх текущего `dev`. Правки не закоммичены; Unity-изменения идут только
-через `Tools/agents/editor-broker.py`. Пакет runtime-интеграции, ранее отклонённый автоматической проверкой,
-пользователь разрешил явно: «продолжай до полного завершения интеграции и миграции».
+`claude/map-runtime-bootstrap`. Всё описанное в этом разделе и доводка задач 5 и 8 уже в `dev`; ход и проверки
+доводки — в [прогресс-документе](map-runtime-bootstrap-progress.md). Unity-изменения
+идут только через `Tools/agents/editor-broker.py`.
 
-Контрактный и authoring срезы (`MapRunConfig`/`Resolver`/`Scope`/`Snapshot`, `MapRunAuthority`, `MapRoot`,
-`MapRuntimeCatalog`, `MapRunPreflight`, kind на `MapData`) уже в `dev`. Поверх них в ветке:
+В `dev`:
 
 - `MapBootstrap` (на `MapRoot`) — единственный серверный запуск карты: ValidateBindings → Resolve (режим из
   `Series.CapturedModeId`, иначе выбор админа, лобби — NoMatch) → BeginRun → Prepare пресета станций → спавн
@@ -33,8 +32,8 @@
 - Editor: `MapBootstrapMigration` (DryRun/Apply/RebakeCatalog, меню `Tools/VR Battlegrounds/Maps/Map Bootstrap/`)
   и `MapCatalogBuildStep` (запечка и preflight перед сборкой, отказ ломает сборку).
 
-Неуправляемый путь `MapReferee` (сцена без `MapBootstrap`) сохранён для стендов и тестов; для карт реестра он
-пишет Warning. Удалить после приёмки вместе с правкой тестов.
+Неуправляемый путь `MapReferee` в ветке удалён (см. [прогресс](map-runtime-bootstrap-progress.md)): стенд
+`BotCombatStand` запускается MapBootstrap как отладочная карта каталога, EditMode-тесты — через `TestMapRun`.
 
 Решение без отдельного согласования: транзакцию смены режима со «спящим» кандидатом не делали. Каталог
 проверяет все префабы режимов до старта карты, поэтому между уничтожением старого режима и коммитом нового
@@ -65,16 +64,12 @@
 
 ## Следующее действие
 
-1. Проверка пользователем в шлеме (список — в итоговом сообщении задачи), затем коммит.
-2. После приёмки: поправить `GameModeWiringTests` (MapReferee спавнится, а не лежит в лобби), закрепить
-   тестами MapBootstrap/MapRunAdmission/Closing и класс «выдача предмета мимо допуска».
-3. Удалить неуправляемый путь MapReferee вместе с тестами, которые на него опираются.
+Барьер Relay, транзакция загрузки, direct Play, постоянные тесты, класс «выдача предмета мимо допуска» и удаление
+неуправляемого пути `MapReferee` сделаны в ветке; ход, проверки и пределы — в
+[прогресс-документе](map-runtime-bootstrap-progress.md).
 
-После приёмки закрепить тестом класс «выдача предмета мимо допуска»: каждый вызов
-`NetworkUxrIdentity.CreateInstance` в игровом коде (кроме Debug-стендов) стоит за проверкой `MapRunAdmission`.
-
-Отложено: Relay-барьер (задача 5), генерируемые станции и их admission (задача 7, стык с генератором
-арсенала), удаление неуправляемого пути `MapReferee`.
+1. Проверка пользователем в шлеме (чек-лист — в прогресс-документе), затем коммит ветки.
+2. Генерируемые станции (задача 7) — после handoff API `ArsenalStationComposer` от arsenal-generator.
 
 ## Как продолжить проверку
 
@@ -86,6 +81,7 @@ execute_code: return VrBattlegrounds.EditorTools.AndroidCompileGate.Run();
 finish → receive
 ```
 
-Отчёты миграции пишутся в `Docs/tasks/report/map-runtime-bootstrap/` (игнорируется Git). Временные probes
-прежних срезов — `Tools/Probes/MapRuntimeBootstrap/`. Чтение результата MCP — через
-`Tools/UnityMcp/compact-result.js`.
+Отчёты миграции пишутся в `Docs/tasks/report/map-runtime-bootstrap/` (игнорируется Git). Probes прежних срезов
+заменены постоянными тестами (`Assets/Tests/EditMode/Maps/MapRunContractTests.cs`, `MapCatalogIntegrityTests.cs`);
+в `Tools/Probes/MapRuntimeBootstrap/` остались инструменты инвентаризации и probe direct Play/Relay. Чтение результата
+MCP — через `Tools/UnityMcp/compact-result.js`.

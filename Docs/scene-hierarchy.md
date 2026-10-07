@@ -65,11 +65,11 @@ Legacy-поля floor/sourceColliders оставлены только для ч�
   триггеры правил игры и объекты, состояние которых изменяется механикой.
 - **MapRoot** — один корень с identity-трансформом: `MapRoot` (паспорт `MapData`, ссылки на
   Environment, Gameplay, PhysicalArenaLayout, зоны и станции) и `MapBootstrap`. Служебные
-  `MapReferee` и `ArsenalEquipmentCoordinator` в сцену карты реестра **не кладутся**: их
+  `MapReferee` и `ArsenalEquipmentCoordinator` ни в какую сцену **не кладутся** (ни в карту реестра, ни в стенд): их
   спавнит сервер при запуске ([запуск карты](game-manager.md#запуск-карты-mapbootstrap)).
   Ключ места станции хранит `ArsenalStationCompositionBinding` на станции.
-- **Сервисы сцены** — UxrManager, GlobalLogic и подобные объекты (на стендах без MapRoot —
-  ещё MapReferee и координатор). Их группировка определяется lifecycle и сетевым контрактом;
+- **Сервисы сцены** — UxrManager, GlobalLogic и подобные объекты. Стенду, которому нужен режим
+  на карте, ставится MapRoot (отладочный стенд каталога), а не сценовый судья. Группировка сервисов определяется lifecycle и сетевым контрактом;
   не переносить механически в Environment или под анимируемые игровые объекты.
 
 PhysicalArenaLayout — отдельный корень, общий префаб чертежа. Игровой Environment

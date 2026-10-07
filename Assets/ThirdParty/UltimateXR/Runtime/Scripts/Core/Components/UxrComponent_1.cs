@@ -117,10 +117,13 @@ namespace UltimateXR.Core.Components
         protected override void Awake()
         {
             base.Awake();
-
+            if (IsLifecycleRetired) return;
             OnRegistering();
+            if (IsLifecycleRetired) return; // Callback-cancel before typed insertion.
             s_typeComponents.Add((T)this);
-            OnRegistered();
+            _registeredInTypeList = true;
+            try { OnRegistered(); }
+            finally { if (IsLifecycleRetired) ReleaseTypedRegistration(); }
         }
 
         /// <summary>
@@ -128,11 +131,21 @@ namespace UltimateXR.Core.Components
         /// </summary>
         protected override void OnDestroy()
         {
-            base.OnDestroy();
+            var failures = new List<Exception>();
+            CaptureCleanup(() => base.OnDestroy(), failures);
+            CaptureCleanup(ReleaseTypedRegistration, failures);
+            if (failures.Count != 0) throw new AggregateException("UxrTypedComponent.DestroyFailed", failures);
+        }
 
-            OnUnregistering();
+        private void ReleaseTypedRegistration()
+        {
+            if (!_registeredInTypeList) return;
+            _registeredInTypeList = false;
+            var failures = new List<Exception>();
+            CaptureCleanup(OnUnregistering, failures);
             s_typeComponents.Remove((T)this);
-            OnUnregistered();
+            CaptureCleanup(OnUnregistered, failures);
+            if (failures.Count != 0) throw new AggregateException("UxrTypedComponent.UnregisterFailed", failures);
         }
 
         /// <summary>
@@ -215,6 +228,7 @@ namespace UltimateXR.Core.Components
         ///     Static list containing all registered components of this type.
         /// </summary>
         private static readonly List<T> s_typeComponents = new List<T>();
+        private bool _registeredInTypeList;
 
         #endregion
     }

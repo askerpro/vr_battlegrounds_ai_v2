@@ -1762,3 +1762,77 @@ Opt-in только для FABARM SDASS и Herrington/Remington 11-87 (`FixedSto
 
 При обновлении SDK перенести все пункты вместе: по отдельности они нарушают инвариант
 единственного владельца M/C.
+
+## Патч 50: точная регистрация ID и окончательная отмена регистрации (генератор арсенала, задача 2)
+
+Статус 2026-10-07: закоммичен по решению пользователя без проверки в шлеме. Проверен в Unity worker
+на базе `b1f99767`: консоль без ошибок, `AndroidCompileGate` Passed. EditMode-группы, которые создают
+и уничтожают компоненты UltimateXR (Network, Interaction, Economy, ArsenalWall, Modes, Bots, Managers,
+SpawnZones, Arsenal, Player; 849 тестов), дают с патчем ровно те же 9 падений, что и чистая база.
+Все 9 — существующие падения контента и экономики, к регистрации ID не относятся.
+Пробы задачи 2 в Play Mode (база `a8d521b0`, worker загружает Lobby, в реестре 2245 компонентов) —
+25/25 до обратного индекса: точный ID; отказ `UniqueId.Exact.Occupied` при занятом ID без `CollisionN`,
+чужой владелец не тронут; окончательный `Unregister` на экземпляр, тот же Guid доступен новому объекту;
+поздний Destroy старого объекта не стирает регистрацию нового (и для штатного пути); соответствие
+ID → логический ключ не зависит от порядка создания (64 объекта). Векторы seed — 24/24 на реальных
+`MapRunKey`/`MapRunScope`/`GuidExt.Combine`. Замер выгрузки: 2000 компонентов UltimateXR уничтожались
+за 762 мс до обратного индекса и за 15 мс после (2000 обычных объектов — 11 мс). С обратным индексом
+(2026-10-07, `a8d521b0`): `AndroidCompileGate` Passed, проба 26/26 (плюс совпадение индекса с реестром,
+2245 = 2245), рантаймовые EditMode-группы — только известные падения. Новое на этой базе —
+`GameModeWiringTests.В_сцене_лобби_есть_оркестратор_режима`: `MapReferee` теперь спавнит MapBootstrap,
+а не сцена; к патчу не относится.
+Не проверены: повторная загрузка той же карты (`LoadMap` той же сцены, Lobby → карта → Lobby), Quest.
+Сетевая часть (`NetworkUxrIdentity`) и выделение сгенерированных объектов
+в сцене карты сюда не входят: они ждут общего механизма запуска карты.
+Контракт — `tmp/arsenal-generator-proofs/lifecycle-contract-20261005/` (локально),
+[план генератора](../tasks/arsenal-generator-plan.md), задача 2.
+
+Файлы: `Core/Components/UxrComponent.cs`, `UxrComponent_1.cs`, `Core/StateSave/UxrStateSaveImplementer.cs`,
+`UxrStateSaveImplementer_1.cs`, `Core/StateSync/UxrStateSyncImplementer_1.cs`,
+`Core/Unique/UxrUniqueIdImplementer.cs`, `UxrUniqueIdImplementer_1.cs`.
+
+### Проблема
+
+Сгенерированным слотам арсенала нужен заранее известный ID, одинаковый на сервере и клиентах,
+независимо от порядка создания. Штатная регистрация SDK при совпадении выдаёт ID `CollisionN`
+и не умеет отказаться. Кроме того, отмена регистрации неатомарна:
+- `Unregister` удаляет запись по текущему `UniqueId`, а не по фактическому владельцу;
+- `Unregister` лениво создаёт implementers и `UxrManager` ради уничтожения;
+- callback во время регистрации может уничтожить компонент, а регистрация после этого продолжится;
+- `StateSave` оставляет компонент в `enabled`/pending наборах;
+- исключение в одном шаге очистки обрывает остальные.
+
+### Решение
+
+- `TryPrepareRuntimeUniqueId(Guid)` / `TryGetUninitializedRuntimeUniqueId` — только для свежего
+  неактивного компонента до `Awake`. Подготовленный ID регистрируется в `Awake` через
+  `InitializeExactUniqueId`: занятый ID — отказ, не `CollisionN`. Перед публикацией ID пересчитываются
+  начальные трансформы. После подготовки `ChangeUniqueId`/`CombineUniqueId` запрещены.
+- `Unregister` окончательный (`_runtimeIdentityRetired`). Он удаляет из словаря все ID, которыми
+  фактически владеет компонент, не создаёт implementers и Manager, выполняет все шаги очистки
+  и собирает их ошибки в `AggregateException`. Повторная регистрация после него — исключение.
+  Штатные вызовы (`OnDestroy`, `UxrInstanceManager` перед `Destroy`) это не задевает.
+- Между шагами регистрации — `EnsureRegistrationAlive`: если callback уничтожил компонент,
+  регистрация прерывается. `OnEnable`/`OnDisable` после отмены ничего не делают.
+- Типизированный список `UxrComponent<T>` снимается только если компонент в него вставлен.
+- `StateSave`: при отмене очищаются все наборы и pending, отложенный `StoreInitialState` пропускает
+  отменённых и собирает ошибки; dummy-сериализация проверяет отмену после callback.
+- `StateSync`: отписка у того же `UxrManager`, у которого подписались, без создания нового.
+- `UxrUniqueIdImplementer.TryGetComponentById<T>` раньше всегда возвращал `false` (не было `return true`).
+  Обобщённая версия в проекте сейчас не вызывается.
+- Обратный индекс «компонент → его ID» (`s_idsByComponent`, сравнение по ссылке) в
+  `UxrUniqueIdImplementer<T>`. Словарь ID пишется только через `SetId` и `RemoveIdIfOwnedBy`, поэтому
+  индекс не расходится с реестром. `HasOwnedRegistration` и `Unregister` работают за число своих ID,
+  а не за размер реестра: без индекса выгрузка карты стоила O(N²) (замер выше).
+
+### Открытые риски
+
+- Окончательная отмена меняет поведение любого кода, который вызывает `Unregister` у живого
+  компонента и регистрирует его снова. На 2026-10-06 таких вызовов в `Assets/Scripts` и SDK нет.
+
+### Как повторить при обновлении SDK
+
+Наложить `tmp/arsenal-generator-proofs/lifecycle-contract-20261005/producer-retirement/sdk-core-only.patch`
+(при отсутствии — этот раздел и diff коммита), затем обратный индекс в `UxrUniqueIdImplementer_1.cs`:
+его в этом patch-файле нет. Сериализация SDK не меняется. Проверить: офлайн-компиляцию,
+EditMode-тесты, `AndroidCompileGate`, уничтожение и повторный спавн оружия/аватара в Play Mode.

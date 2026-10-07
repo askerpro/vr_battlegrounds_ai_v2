@@ -79,16 +79,24 @@ namespace UltimateXR.Core.StateSave
         /// </summary>
         public void RegisterIfNecessary()
         {
-            if (!Application.isPlaying)
-            {
-                return;
-            }
-            
-            if (!_registered)
+            if (!Application.isPlaying) return;
+            if (RegistrationRetired) throw new InvalidOperationException("StateSave.Register.Retired");
+            if (_registrationInFlight) throw new InvalidOperationException("StateSave.Register.Reentry");
+            if (_registered) return;
+            _registrationInFlight = true;
+            try
             {
                 RegisterComponent(_targetComponent);
+                if (RegistrationRetired) throw new InvalidOperationException("StateSave.Register.RetiredDuringCallback");
                 _registered = true;
             }
+            catch
+            {
+                _registered = false;
+                base.UnregisterComponent(_targetComponent); // Fault terminal; exact partial tuples only.
+                throw;
+            }
+            finally { _registrationInFlight = false; }
         }
 
         /// <summary>
@@ -96,6 +104,7 @@ namespace UltimateXR.Core.StateSave
         /// </summary>
         public void Unregister()
         {
+            _registered = false;
             base.UnregisterComponent(_targetComponent);
         }
 
@@ -875,6 +884,7 @@ namespace UltimateXR.Core.StateSave
         private readonly UxrStateSaveEventArgs                          _stateSaveArgs         = new UxrStateSaveEventArgs();
         private readonly Dictionary<string, Dictionary<string, string>> _transformVarNameCache = new Dictionary<string, Dictionary<string, string>>();
         private          bool                                           _registered;
+        private bool _registrationInFlight;
 
         private UxrAvatar _avatar;
 

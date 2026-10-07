@@ -272,16 +272,23 @@ namespace UltimateXR.Core.StateSync
         /// </summary>
         public void RegisterIfNecessary()
         {
-            if (!Application.isPlaying)
+            if (!Application.isPlaying) return;
+            if (_retired) throw new InvalidOperationException("StateSync.Register.Retired");
+            if (_registered) return;
+            UxrManager manager = UxrManager.Instance;
+            if (_retired) throw new InvalidOperationException("StateSync.Register.RetiredDuringManagerCreation");
+            _registeredManager = manager;
+            _registered = true;
+            try
             {
-                return;
+                manager.RegisterStateSyncComponent<T>(_targetComponent);
+                if (_retired)
+                {
+                    manager.UnregisterStateSyncComponent<T>(_targetComponent);
+                    throw new InvalidOperationException("StateSync.Register.RetiredDuringSubscription");
+                }
             }
-            
-            if (!_registered)
-            {
-                UxrManager.Instance.RegisterStateSyncComponent<T>(_targetComponent);
-                _registered = true;
-            }
+            catch { Unregister(); throw; }
         }
 
         /// <summary>
@@ -289,7 +296,12 @@ namespace UltimateXR.Core.StateSync
         /// </summary>
         public void Unregister()
         {
-            UxrManager.Instance.UnregisterStateSyncComponent<T>(_targetComponent);
+            _retired = true;
+            if (!_registered) return;
+            _registered = false;
+            UxrManager manager = _registeredManager;
+            _registeredManager = null;
+            if (!ReferenceEquals(manager, null)) manager.UnregisterStateSyncComponent<T>(_targetComponent);
         }
 
         #endregion
@@ -304,6 +316,8 @@ namespace UltimateXR.Core.StateSync
         private readonly T                          _targetComponent;
         private readonly Stack<UxrStateSyncOptions> _optionStack = new Stack<UxrStateSyncOptions>();
         private          bool                       _registered;
+        private UxrManager _registeredManager;
+        private bool _retired;
 
         #endregion
     }

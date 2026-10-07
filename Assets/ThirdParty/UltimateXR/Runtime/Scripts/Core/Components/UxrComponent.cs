@@ -266,6 +266,60 @@ namespace UltimateXR.Core.Components
         }
 #endif
 
+        /// <summary>VR Battlegrounds: raw fresh source metadata, без lazy implementer/cache writes.</summary>
+        public bool TryGetUninitializedRuntimeUniqueId(out Guid sourceId)
+        {
+            sourceId = Guid.Empty;
+            if (!Application.isPlaying || gameObject.activeInHierarchy || _awakeStarted || _runtimeIdentityRetired ||
+                _runtimeIdentityPrepared || (_uniqueIdImplementer != null && !_uniqueIdImplementer.IsPristine) || _stateSaveImplementer != null ||
+                _stateSyncImplementer != null || UniqueIdIsTypeName) return false;
+            return string.IsNullOrEmpty(_uxrUniqueId) || Guid.TryParse(_uxrUniqueId, out sourceId);
+        }
+
+        /// <summary>VR Battlegrounds: fresh inactive exact UID, без публикации/pose lifecycle.</summary>
+        public bool TryPrepareRuntimeUniqueId(Guid id, out string error)
+        {
+            error = null;
+            if (!Application.isPlaying || gameObject.activeInHierarchy || _awakeStarted || _runtimeIdentityRetired ||
+                (_uniqueIdImplementer != null && !_uniqueIdImplementer.IsPristine) || _stateSaveImplementer != null || _stateSyncImplementer != null ||
+                UniqueIdIsTypeName || id == Guid.Empty)
+            { error = "UniqueId.Prepare.NotFreshInactive"; return false; }
+            if (_runtimeIdentityPrepared)
+            {
+                if (_cachedGuid == id && _uxrUniqueId == id.ToString()) return true;
+                error = "UniqueId.Prepare.DifferentRequest"; return false;
+            }
+            UniqueId = id;
+            _runtimeIdentityPrepared = true;
+            return true;
+        }
+
+        private void RegisterPreparedRuntimeIdentity()
+        {
+            if (_runtimeIdentityRetired || _runtimeIdentityRegistrationFaulted || _runtimeIdentityRegistrationBusy)
+                throw new InvalidOperationException("UniqueId.Prepared.InvalidLifecycle");
+            if (_runtimeIdentityRegistered)
+            {
+                if (!UxrUniqueIdImplementer.TryGetComponentById(_cachedGuid, out IUxrUniqueId actual) || !ReferenceEquals(actual, this))
+                    throw new InvalidOperationException("UniqueId.Prepared.OwnershipLost");
+                return; // Awake не перезаписывает уже frozen initial transforms.
+            }
+            _runtimeIdentityRegistrationBusy = true;
+            try
+            {
+                RecomputeInitialTransformData(); // FINAL geometry до UID events/dummy serialization.
+                UniqueIdImplementer.InitializeExactUniqueId(this, _cachedGuid, c => c.OnRegistering(), c => c.OnRegistered());
+                EnsureRegistrationAlive();
+                StateSaveImplementer.RegisterIfNecessary();
+                EnsureRegistrationAlive();
+                StateSyncImplementer.RegisterIfNecessary();
+                EnsureRegistrationAlive();
+                _runtimeIdentityRegistered = true;
+            }
+            catch { _runtimeIdentityRegistrationFaulted = true; throw; }
+            finally { _runtimeIdentityRegistrationBusy = false; }
+        }
+
         /// <summary>
         ///     <para>
         ///         Registers the <see cref="UxrComponent" /> making sure that its Unique ID is available enabling it
@@ -284,6 +338,8 @@ namespace UltimateXR.Core.Components
         /// <returns></returns>
         public void RegisterIfNecessary()
         {
+            if (_runtimeIdentityRetired) throw new InvalidOperationException("UniqueId.Register.Retired");
+            if (_runtimeIdentityPrepared) { RegisterPreparedRuntimeIdentity(); return; }
             UniqueIdImplementer.InitializeUniqueIdIfNecessary(this,
                                                               c => c.UniqueIdImplementer,
                                                               (c, id) => c.UniqueId = id,
@@ -292,8 +348,11 @@ namespace UltimateXR.Core.Components
                                                               c => c.OnRegistering(),
                                                               c => c.OnRegistered());
 
+            EnsureRegistrationAlive();
             StateSaveImplementer.RegisterIfNecessary();
+            EnsureRegistrationAlive();
             StateSyncImplementer.RegisterIfNecessary();
+            EnsureRegistrationAlive();
 
             // Store initial transform data
             RecomputeInitialTransformData();
@@ -302,19 +361,34 @@ namespace UltimateXR.Core.Components
         /// <inheritdoc />
         public void Unregister()
         {
-            if (!UniqueIdImplementer.IsUnregistered)
-            {
-                OnUnregistering();
-                UniqueIdImplementer.Unregister();
-                StateSaveImplementer.Unregister();
-                StateSyncImplementer.Unregister();
-                OnUnregistered();
-            }
+            // VR Battlegrounds: не создавать implementers/Manager ради уничтожения.
+            if (_runtimeIdentityRetired) return;
+            _runtimeIdentityRetired = true;
+            var failures = new List<Exception>();
+            bool hadImplementer = _uniqueIdImplementer != null && _uniqueIdImplementer.HasOwnedRegistration;
+            if (hadImplementer) CaptureCleanup(OnUnregistering, failures);
+            if (_uniqueIdImplementer != null) CaptureCleanup(_uniqueIdImplementer.Unregister, failures);
+            if (_stateSaveImplementer != null) CaptureCleanup(_stateSaveImplementer.Unregister, failures);
+            if (_stateSyncImplementer != null) CaptureCleanup(_stateSyncImplementer.Unregister, failures);
+            if (hadImplementer) CaptureCleanup(OnUnregistered, failures);
+            if (failures.Count != 0) throw new AggregateException("UxrComponent.UnregisterFailed", failures);
+        }
+
+        protected bool IsLifecycleRetired => _runtimeIdentityRetired || IsBeingDestroyed;
+        private void EnsureRegistrationAlive()
+        {
+            if (IsLifecycleRetired) throw new InvalidOperationException("UxrComponent.Register.TerminalDuringCallback");
+        }
+
+        protected static void CaptureCleanup(Action action, List<Exception> failures)
+        {
+            try { action(); } catch (Exception error) { failures.Add(error); }
         }
 
         /// <inheritdoc />
         public Guid ChangeUniqueId(Guid newUniqueId)
         {
+            if (_runtimeIdentityPrepared || _runtimeIdentityRetired) throw new InvalidOperationException("UniqueId.ImmutablePreparedOrRetired");
             Guid uniqueId = UniqueIdImplementer.ChangeUniqueId(newUniqueId,
                                                                c => c.UniqueIdImplementer,
                                                                (c, id) => c.UniqueId = id,
@@ -323,14 +397,18 @@ namespace UltimateXR.Core.Components
                                                                c => c.OnRegistering(),
                                                                c => c.OnRegistered());
 
+            EnsureRegistrationAlive();
             StateSaveImplementer.RegisterIfNecessary();
+            EnsureRegistrationAlive();
             StateSyncImplementer.RegisterIfNecessary();
+            EnsureRegistrationAlive();
             return uniqueId;
         }
 
         /// <inheritdoc />
         public void CombineUniqueId(Guid guid, bool recursive = true)
         {
+            if (_runtimeIdentityPrepared || _runtimeIdentityRetired) throw new InvalidOperationException("UniqueId.ImmutablePreparedOrRetired");
             UniqueIdImplementer.CombineUniqueId(guid,
                                                 c => c.UniqueIdImplementer,
                                                 (c, id) => c.UniqueId = id,
@@ -346,14 +424,20 @@ namespace UltimateXR.Core.Components
 
                 foreach (UxrComponent c in childComponents)
                 {
+                    c.EnsureRegistrationAlive();
                     c.StateSaveImplementer.RegisterIfNecessary();
+                    c.EnsureRegistrationAlive();
                     c.StateSyncImplementer.RegisterIfNecessary();
+                    c.EnsureRegistrationAlive();
                 }
             }
             else
             {
+                EnsureRegistrationAlive();
                 StateSaveImplementer.RegisterIfNecessary();
+                EnsureRegistrationAlive();
                 StateSyncImplementer.RegisterIfNecessary();
+                EnsureRegistrationAlive();
             }
         }
 
@@ -622,6 +706,7 @@ namespace UltimateXR.Core.Components
         /// </summary>
         protected virtual void Awake()
         {
+            _awakeStarted = true;
             if (!Application.isPlaying)
             {
                 // Only store data in play mode
@@ -658,6 +743,7 @@ namespace UltimateXR.Core.Components
         /// </summary>
         protected virtual void OnEnable()
         {
+            if (IsLifecycleRetired) return;
             StateSaveImplementer.NotifyOnEnable();
             GlobalEnabled?.Invoke(this);
         }
@@ -667,6 +753,7 @@ namespace UltimateXR.Core.Components
         /// </summary>
         protected virtual void OnDisable()
         {
+            if (IsLifecycleRetired) return;
             StateSaveImplementer.NotifyOnDisable();
             GlobalDisabled?.Invoke(this);
         }
@@ -1205,6 +1292,8 @@ namespace UltimateXR.Core.Components
         private readonly Dictionary<Type, Component> _cachedComponents = new Dictionary<Type, Component>();
 
         private Guid _cachedGuid;
+        private bool _awakeStarted, _runtimeIdentityPrepared, _runtimeIdentityRegistered;
+        private bool _runtimeIdentityRegistrationBusy, _runtimeIdentityRegistrationFaulted, _runtimeIdentityRetired;
         private bool _hasInitialTransformData = true;
 
         // Helpers that leverage implementation of IUxrUniqueId, IUxrStateSync and IUxrStateSave

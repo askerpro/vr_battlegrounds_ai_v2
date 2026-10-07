@@ -114,6 +114,7 @@ namespace UltimateXR.Core.Unique
 
                         return false;
                     }
+                    return true;
                 }
             }
 
@@ -167,7 +168,8 @@ namespace UltimateXR.Core.Unique
         /// <typeparam name="T">The component type</typeparam>
         protected void UnregisterImplementer<T>(T targetComponent, UxrUniqueIdImplementer<T> implementer) where T : Component, IUxrUniqueId
         {
-            s_allImplementers.Remove(targetComponent);
+            if (s_allImplementers.TryGetValue(targetComponent, out UxrUniqueIdImplementer current) &&
+                ReferenceEquals(current, implementer)) s_allImplementers.Remove(targetComponent);
         }
 
         #endregion

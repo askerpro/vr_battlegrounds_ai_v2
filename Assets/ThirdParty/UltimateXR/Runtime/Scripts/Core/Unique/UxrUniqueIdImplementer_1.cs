@@ -35,6 +35,12 @@ namespace UltimateXR.Core.Unique
         ///     Gets whether the component was unregistered using <see cref="Unregister"/>.
         /// </summary>
         public bool IsUnregistered { get; private set; }
+        // VR Battlegrounds: обратный индекс, без перебора всего реестра (выгрузка карты не O(N²)).
+        public bool HasOwnedRegistration =>
+            s_idsByComponent.TryGetValue(_targetComponent, out HashSet<Guid> owned) && owned.Count != 0;
+        // Editor OnValidate может создать implementer без runtime initialization.
+        public bool IsPristine => !IsUnregistered && InitializedComponent == null && !HasOwnedRegistration &&
+            OriginalUniqueId == Guid.Empty && CombineIdSource == Guid.Empty && !_exactRegistrationInFlight;
 
         #endregion
 
@@ -371,9 +377,46 @@ namespace UltimateXR.Core.Unique
         /// </summary>
         public void Unregister()
         {
-            s_componentsById.Remove(_targetComponent.UniqueId);
-            UnregisterImplementer(_targetComponent, this);
+            // VR Battlegrounds: terminal cleanup читает actual ownership, не lazy UID.
+            if (IsUnregistered) return;
             IsUnregistered = true;
+            if (s_idsByComponent.TryGetValue(_targetComponent, out HashSet<Guid> ownedIds))
+                foreach (Guid id in new List<Guid>(ownedIds))
+                    RemoveIdIfOwnedBy(id, _targetComponent);
+            UnregisterImplementer(_targetComponent, this);
+        }
+
+        /// <summary>VR Battlegrounds: exact first publication, без CollisionN/source publication.</summary>
+        public void InitializeExactUniqueId(T component, Guid id, Action<T> onRegistering, Action<T> onRegistered)
+        {
+            if (_exactRegistrationInFlight || IsUnregistered || id == Guid.Empty ||
+                !ReferenceEquals(component, _targetComponent))
+                throw new InvalidOperationException("UniqueId.Exact.InvalidLifecycle");
+            if (ReferenceEquals(InitializedComponent, component))
+            {
+                if (!s_componentsById.TryGetValue(id, out T owner) || !ReferenceEquals(owner, component))
+                    throw new InvalidOperationException("UniqueId.Exact.OwnershipLost");
+                return;
+            }
+            if (InitializedComponent != null || component.UniqueIdIsTypeName || component.UniqueId != id)
+                throw new InvalidOperationException("UniqueId.Exact.NotPrepared");
+            _exactRegistrationInFlight = true;
+            try
+            {
+                if (TryGetComponentById(id, out IUxrUniqueId existing))
+                    throw new InvalidOperationException("UniqueId.Exact.Occupied");
+                onRegistering?.Invoke(component);
+                // Повторный preflight после произвольного синхронного callback.
+                if (IsUnregistered || component.UniqueId != id || TryGetComponentById(id, out existing))
+                    throw new InvalidOperationException("UniqueId.Exact.PrepublicationChanged");
+                SetId(id, component);
+                OriginalUniqueId = id;
+                InitializedComponent = component; // До внешнего post-publication callback.
+                onRegistered?.Invoke(component);
+                if (IsUnregistered || !s_componentsById.TryGetValue(id, out T current) || !ReferenceEquals(current, component))
+                    throw new InvalidOperationException("UniqueId.Exact.PostpublicationChanged");
+            }
+            finally { _exactRegistrationInFlight = false; }
         }
 
         #endregion
@@ -489,7 +532,7 @@ namespace UltimateXR.Core.Unique
             if (unregisterId != default)
             {
                 onChanging?.Invoke(component, unregisterId, newId);
-                s_componentsById.Remove(unregisterId);
+                RemoveIdIfOwnedBy(unregisterId, component); // VR Battlegrounds: вместе с обратным индексом
             }
 
             // Register new ID
@@ -497,8 +540,8 @@ namespace UltimateXR.Core.Unique
             onRegistering?.Invoke(component);
             assignId.Invoke(component, newId);
 
-            s_componentsById[newId] = component;
-            
+            SetId(newId, component); // VR Battlegrounds: вместе с обратным индексом
+
             onRegistered?.Invoke(component);
 
             // Call ID change events
@@ -511,12 +554,44 @@ namespace UltimateXR.Core.Unique
             return newId;
         }
 
+        /// <summary>
+        ///     VR Battlegrounds: единственная запись в реестр. Обратный индекс компонент → ID обновляется
+        ///     в той же точке, поэтому не расходится со словарём.
+        /// </summary>
+        private static void SetId(Guid id, T component)
+        {
+            if (s_componentsById.TryGetValue(id, out T previous) && !ReferenceEquals(previous, component))
+                RemoveIdIfOwnedBy(id, previous);
+            s_componentsById[id] = component;
+            if (!s_idsByComponent.TryGetValue(component, out HashSet<Guid> owned))
+                s_idsByComponent.Add(component, owned = new HashSet<Guid>());
+            owned.Add(id);
+        }
+
+        /// <summary>VR Battlegrounds: удаление только если ID принадлежит именно этому компоненту.</summary>
+        private static void RemoveIdIfOwnedBy(Guid id, T component)
+        {
+            if (!s_componentsById.TryGetValue(id, out T owner) || !ReferenceEquals(owner, component)) return;
+            s_componentsById.Remove(id);
+            if (s_idsByComponent.TryGetValue(component, out HashSet<Guid> owned) && owned.Remove(id) && owned.Count == 0)
+                s_idsByComponent.Remove(component);
+        }
+
+        /// <summary>Сравнение по ссылке: Unity переопределяет ==/Equals для уничтоженных объектов.</summary>
+        private sealed class ReferenceComparer : IEqualityComparer<T>
+        {
+            public bool Equals(T x, T y) => ReferenceEquals(x, y);
+            public int GetHashCode(T obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
+        }
+
         #endregion
 
         #region Private Types & Data
 
         private static readonly Dictionary<Guid, T> s_componentsById = new Dictionary<Guid, T>();
+        private static readonly Dictionary<T, HashSet<Guid>> s_idsByComponent = new Dictionary<T, HashSet<Guid>>(new ReferenceComparer());
         private readonly        T                   _targetComponent;
+        private bool _exactRegistrationInFlight;
 
         #endregion
     }

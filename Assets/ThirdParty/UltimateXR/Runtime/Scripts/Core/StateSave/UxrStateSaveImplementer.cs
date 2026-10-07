@@ -145,12 +145,16 @@ namespace UltimateXR.Core.StateSave
         /// </summary>
         internal static void NotifyEndOfFrame()
         {
-            foreach (UxrStateSaveImplementer implementer in s_pendingStoreInitialStates)
+            var pending = new List<UxrStateSaveImplementer>(s_pendingStoreInitialStates);
+            var failures = new List<Exception>();
+            foreach (UxrStateSaveImplementer implementer in pending)
             {
-                implementer.StoreInitialState();
+                // Exact drain до external serializer callback: new work остаётся до следующего frame.
+                if (!s_pendingStoreInitialStates.Remove(implementer) || implementer.RegistrationRetired) continue;
+                try { implementer.StoreInitialState(); }
+                catch (Exception error) { failures.Add(error); }
             }
-
-            s_pendingStoreInitialStates.Clear();
+            if (failures.Count != 0) throw new AggregateException("StateSave.InitialStateDrainFailed", failures);
         }
 
         #endregion
@@ -211,6 +215,7 @@ namespace UltimateXR.Core.StateSave
         /// </summary>
         protected void RegisterComponent(IUxrStateSave stateSave)
         {
+            if (RegistrationRetired) return;
             if (stateSave is UxrInstanceManager)
             {
                 return;
@@ -218,7 +223,9 @@ namespace UltimateXR.Core.StateSave
 
             // Do a serialization test and check if there is any state saving. If not we can ignore it because this component doesn't save any data.
 
-            if (!stateSave.SerializeState(UxrDummySerializer.WriteModeSerializer, stateSave.StateSerializationVersion, UxrStateSaveLevel.Complete, UxrStateSaveOptions.DontSerialize | UxrStateSaveOptions.DontCacheChanges))
+            bool hasState = stateSave.SerializeState(UxrDummySerializer.WriteModeSerializer, stateSave.StateSerializationVersion, UxrStateSaveLevel.Complete, UxrStateSaveOptions.DontSerialize | UxrStateSaveOptions.DontCacheChanges);
+            if (RegistrationRetired) return; // Callback мог завершить lifetime.
+            if (!hasState)
             {
                 return;
             }
@@ -242,21 +249,16 @@ namespace UltimateXR.Core.StateSave
         /// </summary>
         protected void UnregisterComponent(IUxrStateSave stateSave)
         {
-            if (stateSave is UxrInstanceManager)
-            {
-                return;
-            }
-
-            if (stateSave is IUxrSingleton)
-            {
-                s_allSingletons.Remove(stateSave);
-                s_saveRequiredSingletons.Remove(stateSave);
-            }
-            else
-            {
-                s_allComponents.Remove(stateSave);
-                s_saveRequiredComponents.Remove(stateSave);
-            }
+            RegistrationRetired = true;
+            if (stateSave is UxrInstanceManager) return; // Прежнее исключение SDK сохранено.
+            // VR Battlegrounds: partial registration и inactive destruction очищают exact tuple.
+            s_pendingStoreInitialStates.Remove(this);
+            s_allSingletons.Remove(stateSave);
+            s_enabledSingletons.Remove(stateSave);
+            s_saveRequiredSingletons.Remove(stateSave);
+            s_allComponents.Remove(stateSave);
+            s_enabledComponents.Remove(stateSave);
+            s_saveRequiredComponents.Remove(stateSave);
         }
 
         /// <summary>
@@ -264,6 +266,7 @@ namespace UltimateXR.Core.StateSave
         /// </summary>
         protected void NotifyOnEnable(IUxrStateSave stateSave)
         {
+            if (RegistrationRetired) return;
             if (stateSave is UxrInstanceManager)
             {
                 return;
@@ -302,6 +305,7 @@ namespace UltimateXR.Core.StateSave
         /// </summary>
         protected void NotifyOnDisable(IUxrStateSave stateSave)
         {
+            if (RegistrationRetired) return;
             if (stateSave is UxrInstanceManager)
             {
                 return;
@@ -328,6 +332,8 @@ namespace UltimateXR.Core.StateSave
         }
 
         #endregion
+
+        protected bool RegistrationRetired { get; private set; }
 
         #region Private Types & Data
 

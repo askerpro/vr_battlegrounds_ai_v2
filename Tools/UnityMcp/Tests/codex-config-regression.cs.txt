@@ -1,0 +1,52 @@
+// Выполнять через execute_code. Проверяет настоящие классы пакета на временных файлах.
+var failures = new System.Collections.Generic.List<string>();
+var cases = new System.Collections.Generic.Dictionary<string, string>
+{
+    { "missing-server", "[features]\nmemories = true\n" },
+    { "custom-proxy", "[mcp_servers.unityMCP]\ncommand = 'uv'\nargs = ['run', '--quiet', 'Tools/agents/unity_mcp_proxy.py']\n" },
+    { "different-url", "[mcp_servers.unityMCP]\nurl = 'http://127.0.0.1:1/mcp'\nenabled = false\n" },
+    { "version-mismatch", "[mcp_servers.unityMCP]\ncommand = 'uvx'\nargs = ['--from', 'mcpforunityserver==0.0.1', 'mcp-for-unity']\n" },
+    { "malformed", "[mcp_servers.unityMCP\n" }
+};
+string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "unity-mcp-codex-" + System.Guid.NewGuid().ToString("N"));
+System.IO.Directory.CreateDirectory(folder);
+int checks = 0;
+try
+{
+    foreach (var item in cases)
+    {
+        string path = System.IO.Path.Combine(folder, item.Key + ".toml");
+        System.IO.File.WriteAllText(path, item.Value);
+        var configurator = new MCPForUnity.Editor.Clients.Configurators.CodexConfigurator();
+        var field = typeof(MCPForUnity.Editor.Clients.McpClientConfiguratorBase).GetField("client", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var client = (MCPForUnity.Editor.Models.McpClient)field.GetValue(configurator);
+        client.windowsConfigPath = client.macConfigPath = client.linuxConfigPath = path;
+        var before = System.IO.File.ReadAllBytes(path);
+        foreach (bool rewrite in new[] { true, false, true })
+        {
+            System.IO.File.WriteAllText(path, item.Value);
+            configurator.CheckStatus(rewrite);
+            checks++;
+            if (!System.Linq.Enumerable.SequenceEqual(before, System.IO.File.ReadAllBytes(path)))
+                failures.Add(item.Key + ": CheckStatus(" + rewrite + ") changed config");
+        }
+    }
+    string snippet = MCPForUnity.Editor.Helpers.CodexConfigHelper.BuildCodexServerBlock("uv");
+    checks++;
+    if (snippet.Contains("rmcp_client")) failures.Add("generated snippet contains rmcp_client");
+    string existing = "[features]\nmemories = true\nrmcp_client = true\n[mcp_servers.other]\ncommand = 'keep-me'\n";
+    string updated = MCPForUnity.Editor.Helpers.CodexConfigHelper.UpsertCodexServerBlock(existing, "uv");
+    checks++;
+    if (updated.Contains("rmcp_client")) failures.Add("explicit configuration retains rmcp_client");
+    checks++;
+    if (!updated.Contains("memories = true") || !updated.Contains("keep-me")) failures.Add("explicit configuration changed unrelated settings");
+    checks++;
+    if (!MCPForUnity.Editor.Helpers.CodexConfigHelper.TryParseCodexServer(updated, out _, out _, out _)) failures.Add("explicit configuration did not create valid server");
+}
+finally
+{
+    // Удаляются только перечисленные файлы уникального стенда.
+    foreach (var item in cases) System.IO.File.Delete(System.IO.Path.Combine(folder, item.Key + ".toml"));
+    System.IO.Directory.Delete(folder);
+}
+return new { passed = failures.Count == 0, checks, failures };

@@ -7,6 +7,7 @@ $commit = '30d22075093d1d35dfb0091c1c7550e9ad948577'
 $target = Join-Path $projectRoot 'Packages/com.coplaydev.unity-mcp'
 $patch = Join-Path $PSScriptRoot 'discovery-10.2.0.patch'
 $outputPatch = Join-Path $PSScriptRoot 'output-guard-10.2.0.patch'
+$codexPatch = Join-Path $PSScriptRoot 'codex-config-10.2.0.patch'
 $expected = @{
  'Editor/MCPForUnity.Editor.asmdef' = '04EE726B8AF51854B8D7B5AD74859F9A0DC2BB04065068C2FA59472920E79A6A'
  'Editor/Services/ToolDiscoveryService.cs' = '15A013E071D1CED799D4DA23103286DABBBA50F816BB5CA49957C3AE1F02BB10'
@@ -66,14 +67,19 @@ foreach ($path in $expected.Keys) {
 $relativeRoot = $packageRoot.Substring($projectRoot.Length + 1).Replace([IO.Path]::DirectorySeparatorChar, [char]'/')
 Push-Location $projectRoot
 try {
- & git --no-pager -c core.autocrlf=false apply --check "--directory=$relativeRoot" $patch
+ # Git checkout на Windows может дать патчам CRLF, а ZIP содержит LF.
+ & git --no-pager -c core.autocrlf=false apply --ignore-space-change --check "--directory=$relativeRoot" $patch
  if ($LASTEXITCODE -ne 0) { throw 'Патч не применим.' }
- & git --no-pager -c core.autocrlf=false apply "--directory=$relativeRoot" $patch
+ & git --no-pager -c core.autocrlf=false apply --ignore-space-change "--directory=$relativeRoot" $patch
  if ($LASTEXITCODE -ne 0) { throw 'Патч не применён.' }
- & git --no-pager -c core.autocrlf=false apply --check "--directory=$relativeRoot" $outputPatch
+ & git --no-pager -c core.autocrlf=false apply --ignore-space-change --check "--directory=$relativeRoot" $outputPatch
  if ($LASTEXITCODE -ne 0) { throw 'Патч ограничения вывода не применим.' }
- & git --no-pager -c core.autocrlf=false apply "--directory=$relativeRoot" $outputPatch
+ & git --no-pager -c core.autocrlf=false apply --ignore-space-change "--directory=$relativeRoot" $outputPatch
  if ($LASTEXITCODE -ne 0) { throw 'Патч ограничения вывода не применён.' }
+ & git --no-pager -c core.autocrlf=false apply --ignore-space-change --check "--directory=$relativeRoot" $codexPatch
+ if ($LASTEXITCODE -ne 0) { throw 'Патч конфигурации Codex не применим.' }
+ & git --no-pager -c core.autocrlf=false apply --ignore-space-change "--directory=$relativeRoot" $codexPatch
+ if ($LASTEXITCODE -ne 0) { throw 'Патч конфигурации Codex не применён.' }
  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'OutputGuard/ExecuteCodeOutputGuard.cs') -Destination (Join-Path $packageRoot 'Editor/Helpers/ExecuteCodeOutputGuard.cs')
  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'OutputGuard/ExecuteCodeOutputGuard.cs.meta.txt') -Destination (Join-Path $packageRoot 'Editor/Helpers/ExecuteCodeOutputGuard.cs.meta')
  Assert-EditorAccess

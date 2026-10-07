@@ -1,0 +1,193 @@
+diff --git a/Editor/Clients/McpClientConfiguratorBase.cs b/Editor/Clients/McpClientConfiguratorBase.cs
+index 74fd836f..2bc41bc6 100644
+--- a/Editor/Clients/McpClientConfiguratorBase.cs
++++ b/Editor/Clients/McpClientConfiguratorBase.cs
+@@ -440,7 +440,9 @@ namespace MCPForUnity.Editor.Clients
+ 
+         public override bool IsInstalled => ParentDirectoryExists(GetConfigPath());
+ 
+-        public override McpStatus CheckStatus(bool attemptAutoRewrite = true)
++        // VR Battlegrounds patch: конфиг Codex принадлежит пользователю/проекту.
++        // Даже явный attemptAutoRewrite не даёт проверке статуса право записи.
++        public override McpStatus CheckStatus(bool attemptAutoRewrite = false)
+         {
+             try
+             {
+@@ -532,16 +534,6 @@ namespace MCPForUnity.Editor.Clients
+ 
+                     if (hasVersionMismatch)
+                     {
+-                        if (attemptAutoRewrite)
+-                        {
+-                            string result = McpConfigurationHelper.ConfigureCodexClient(path, client);
+-                            if (result == "Configured successfully")
+-                            {
+-                                client.SetStatus(McpStatus.Configured);
+-                                client.configuredTransport = HttpEndpointUtility.GetCurrentServerTransport();
+-                                return client.status;
+-                            }
+-                        }
+                         client.SetStatus(McpStatus.VersionMismatch, mismatchReason);
+                         return client.status;
+                     }
+@@ -551,23 +543,7 @@ namespace MCPForUnity.Editor.Clients
+                     client.configuredTransport = Models.ConfiguredTransport.Unknown;
+                 }
+ 
+-                if (attemptAutoRewrite)
+-                {
+-                    string result = McpConfigurationHelper.ConfigureCodexClient(path, client);
+-                    if (result == "Configured successfully")
+-                    {
+-                        client.SetStatus(McpStatus.Configured);
+-                        client.configuredTransport = HttpEndpointUtility.GetCurrentServerTransport();
+-                    }
+-                    else
+-                    {
+-                        client.SetStatus(McpStatus.IncorrectPath);
+-                    }
+-                }
+-                else
+-                {
+-                    client.SetStatus(McpStatus.IncorrectPath);
+-                }
++                client.SetStatus(McpStatus.IncorrectPath);
+             }
+             catch (Exception ex)
+             {
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+diff --git a/Editor/Helpers/CodexConfigHelper.cs b/Editor/Helpers/CodexConfigHelper.cs
+index 45ae5a39..fdc1d0e2 100644
+--- a/Editor/Helpers/CodexConfigHelper.cs
++++ b/Editor/Helpers/CodexConfigHelper.cs
+@@ -39,8 +39,6 @@ namespace MCPForUnity.Editor.Helpers
+                 string httpUrl = HttpEndpointUtility.GetMcpRpcUrl();
+                 unityMCP["url"] = new TomlString { Value = httpUrl };
+ 
+-                // Enable Codex's Rust MCP client for HTTP/SSE transport
+-                EnsureRmcpClientFeature(table);
+             }
+             else
+             {
+@@ -88,8 +86,6 @@ namespace MCPForUnity.Editor.Helpers
+             // Parse existing TOML or create new root table
+             var root = TryParseToml(existingToml) ?? new TomlTable();
+ 
+-            bool useHttpTransport = EditorPrefs.GetBool(MCPForUnity.Editor.Constants.EditorPrefKeys.UseHttpTransport, true);
+-
+             // Ensure mcp_servers table exists
+             if (!root.TryGetNode("mcp_servers", out var mcpServersNode) || !(mcpServersNode is TomlTable))
+             {
+@@ -100,9 +96,11 @@ namespace MCPForUnity.Editor.Helpers
+             // Create or update unityMCP table
+             mcpServers["unityMCP"] = CreateUnityMcpTable(uvPath);
+ 
+-            if (useHttpTransport)
++            // VR Battlegrounds patch: текущий Codex больше не поддерживает этот флаг.
++            // Удаляем только устаревший ключ, сохраняя остальные настройки пользователя.
++            if (TryGetTable(root, "features", out var features))
+             {
+-                EnsureRmcpClientFeature(root);
++                features.Delete("rmcp_client");
+             }
+ 
+             // Serialize back to TOML
+@@ -229,22 +227,6 @@ namespace MCPForUnity.Editor.Helpers
+             return unityMCP;
+         }
+ 
+-        /// <summary>
+-        /// Ensures the features table contains the rmcp_client flag for HTTP/SSE transport.
+-        /// </summary>
+-        private static void EnsureRmcpClientFeature(TomlTable root)
+-        {
+-            if (root == null) return;
+-
+-            if (!root.TryGetNode("features", out var featuresNode) || featuresNode is not TomlTable features)
+-            {
+-                features = new TomlTable();
+-                root["features"] = features;
+-            }
+-
+-            features["rmcp_client"] = new TomlBoolean { Value = true };
+-        }
+-
+         private static bool TryGetTable(TomlTable parent, string key, out TomlTable table)
+         {
+             table = null;
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+diff --git a/Editor/Migrations/StdIoVersionMigration.cs b/Editor/Migrations/StdIoVersionMigration.cs
+index ee105095..c4ea6d38 100644
+--- a/Editor/Migrations/StdIoVersionMigration.cs
++++ b/Editor/Migrations/StdIoVersionMigration.cs
+@@ -54,6 +54,10 @@ namespace MCPForUnity.Editor.Migrations
+             {
+                 try
+                 {
++                    // VR Battlegrounds patch: глобальный Codex меняется только по явному действию.
++                    if (configurator is CodexMcpConfigurator)
++                        continue;
++
+                     if (!configurator.SupportsAutoConfigure)
+                         continue;
+ 
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+diff --git a/Editor/Migrations/LegacyServerSrcMigration.cs b/Editor/Migrations/LegacyServerSrcMigration.cs
+index 4fbeac85..19d7493c 100644
+--- a/Editor/Migrations/LegacyServerSrcMigration.cs
++++ b/Editor/Migrations/LegacyServerSrcMigration.cs
+@@ -40,7 +40,8 @@ namespace MCPForUnity.Editor.Migrations
+             {
+                 McpLog.Info("Detected legacy embedded MCP server configuration. Updating all client configs...");
+ 
+-                var summary = MCPServiceLocator.Client.ConfigureAllDetectedClients();
++                // VR Battlegrounds patch: не восстанавливать удалённую пользователем запись Codex.
++                var summary = MCPServiceLocator.Client.ConfigureAllDetectedClients(includeCodex: false);
+ 
+                 if (summary.FailureCount > 0)
+                 {
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+diff --git a/Editor/Services/IClientConfigurationService.cs b/Editor/Services/IClientConfigurationService.cs
+index 6172e8fb..4ea85e81 100644
+--- a/Editor/Services/IClientConfigurationService.cs
++++ b/Editor/Services/IClientConfigurationService.cs
+@@ -19,7 +19,7 @@ namespace MCPForUnity.Editor.Services
+         /// Configures all detected/installed MCP clients (skips clients where CLI/tools not found)
+         /// </summary>
+         /// <returns>Summary of configuration results</returns>
+-        ClientConfigurationSummary ConfigureAllDetectedClients();
++        ClientConfigurationSummary ConfigureAllDetectedClients(bool includeCodex = true);
+ 
+         /// <summary>
+         /// Checks the configuration status of a client
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+diff --git a/Editor/Services/ClientConfigurationService.cs b/Editor/Services/ClientConfigurationService.cs
+index d3eb8669..4ab6c4c1 100644
+--- a/Editor/Services/ClientConfigurationService.cs
++++ b/Editor/Services/ClientConfigurationService.cs
+@@ -33,7 +33,7 @@ namespace MCPForUnity.Editor.Services
+             ConfigureWithTransportCoercion(configurator);
+         }
+ 
+-        public ClientConfigurationSummary ConfigureAllDetectedClients()
++        public ClientConfigurationSummary ConfigureAllDetectedClients(bool includeCodex = true)
+         {
+             // When using a local server path, clean stale build artifacts once before configuring all clients.
+             if (AssetPathUtility.IsLocalServerPath())
+@@ -44,7 +44,8 @@ namespace MCPForUnity.Editor.Services
+             var summary = new ClientConfigurationSummary();
+             foreach (var configurator in configurators)
+             {
+-                if (!configurator.IsInstalled)
++                // VR Battlegrounds patch: автоматические миграции исключают глобальный Codex.
++                if ((!includeCodex && configurator is CodexMcpConfigurator) || !configurator.IsInstalled)
+                 {
+                     summary.SkippedCount++;
+                     continue;
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40
+[attr]vendor-lfs filter=lfs diff=lfs merge=lfs -text not allowed: F:/UnityProjects/Vr_Battlegrounds_ai/.gitattributes:40

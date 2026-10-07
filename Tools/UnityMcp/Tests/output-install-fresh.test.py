@@ -1,4 +1,4 @@
-"""Свежая установка обоих MCP-патчей из закреплённого offline ZIP в собственную копию."""
+"""Свежая установка MCP-патчей из закреплённого offline ZIP в собственную копию."""
 from pathlib import Path
 from contextlib import contextmanager
 import shutil
@@ -44,7 +44,7 @@ with temporary_project() as temporary:
                    cwd=repository, check=True, capture_output=True)
     tooling = project / "Tools/UnityMcp"
     tooling.mkdir(parents=True)
-    for name in ("Install-Upstream.ps1", "discovery-10.2.0.patch", "output-guard-10.2.0.patch"):
+    for name in ("Install-Upstream.ps1", "discovery-10.2.0.patch", "output-guard-10.2.0.patch", "codex-config-10.2.0.patch"):
         shutil.copy2(root / "Tools/UnityMcp" / name, tooling / name)
     shutil.copytree(root / "Tools/UnityMcp/OutputGuard", tooling / "OutputGuard")
     (project / "Tools/agents").mkdir(parents=True, exist_ok=True)
@@ -95,4 +95,7 @@ with temporary_project() as temporary:
     assert execute.read_bytes() == expected
     for staged_root in (project / "tmp/UnityMcpInstall").glob("*/source/*"):
         assert {child.name for child in staged_root.iterdir()} == {"MCPForUnity"}, "unneeded upstream extracted"
-    print("PASS fresh offline installation: pinned hashes, both patches, helper/meta, overwrite refusal, scoped ZIP extraction")
+    installed_codex = (package / "Editor/Helpers/CodexConfigHelper.cs").read_text(encoding="utf-8")
+    assert "EnsureRmcpClientFeature" not in installed_codex
+    assert 'features.Delete("rmcp_client")' in installed_codex
+    print("PASS fresh offline installation: pinned hashes, all patches, helper/meta, overwrite refusal, scoped ZIP extraction")

@@ -1,410 +1,59 @@
 # VR Battlegrounds AI
 
-VR-шутер для Quest 2/3 на Unity 6 (URP). Над проектом работают ИИ-агенты и человек. Этот файл (`AGENTS.md`) —
-единственный источник правил агента. `CLAUDE.md` и `.codex/AGENTS.md` — симлинки на него;
-`.agentrules`, `.cursorrules` и `.clinerules` — только указатели сюда. Углублённые правила — в `.agents/rules/`.
+Quest 2/3 VR shooter, Unity 6 URP. Game code: `Assets/Scripts/`; vendored SDKs: `Assets/ThirdParty/`; package versions: `Packages/manifest.json`.
+Communicate with the user in Russian. Code comments and product documentation are Russian; agent instructions may be English.
+This is the canonical entry point. `CLAUDE.md` imports it; `.codex/AGENTS.md` links to it. These rules override older recipes and hooks.
 
-UltimateXR и Mirror вендорятся в `Assets/ThirdParty/`, код игры — сборка `Assets/Scripts/VrBattlegrounds.asmdef`.
-Версии пакетов — `Packages/manifest.json`. Комментарии и документация — на русском.
+## Always apply
 
-## Жёсткие правила
+- Preserve other people's changes. Write only in your assigned checkout; check its mode before edits or Unity operations.
+- Use `GameLog.<Channel>.<Level>`, never Debug.Log. If no channel fits, use GameLog.Error.
+- Live-server map changes go through `MapLoader.Instance.LoadMap(sceneName)`. Mirror owns GameNetworkManager.offlineScene/onlineScene.
+- Synchronized actions from updates, timers, physics, RPCs or hooks require `StateEventAuthority.IsAuthorOfItem` / `IsWorldAuthority`.
+- Editor scripts belong in `Assets/Editor/VR_Battlegrounds/<category>/`, never under Assets/Scripts. Menu names use `VR Battlegrounds` with a space.
+- Assign tags through `GameTags` / `GameTagRules`; never remove TagManager entries in an open Editor.
+- Keep one owner of state and one responsibility per class. Stop an approach that adds competing writers or bypasses invariants; propose the architectural solution. Continue independent/approved work.
+- Before the user validates changed gameplay in Unity/headset, do not write or rewrite its tests. Check compilation, run applicable existing checks, list outdated expectations and provide acceptance steps. After confirmation, update tests in the same task, including avatar tests.
+- Obtain and report actual validation results and their scope. Tool success is not a passed check; pending user acceptance is not task completion.
+- Code/assets require user verification before an accepted commit. Documentation-only commits and broker technical checkpoints are exempt; a checkpoint does not accept work.
+- `origin/dev` is the accepted-work source. Integrate accepted work fast-forward only; no force-push. Local main-checkout dev mirrors origin/dev.
+- Keep task material in `tasks/<task-id>/`: compact dated Readme.md, Details.md, plan.json, tools/, contracts/, changelog/. Generated reports belong in reports/, outside Git; never force-add them.
+- Ordinary tasks do not edit shared indexes/changelogs: README.md, Docs/README.md, CHANGELOG.md, Docs/CHANGELOG.md, SDK journals or tasks/README.md. Product Docs changes need an explicit stage and area owner.
+- SDK patches: reserve the number through `coordination.py patch-reserve`, record it in `tasks/<task-id>/changelog/<date>-sdk-<number>.md`; Mirror code also gets `VR Battlegrounds patch`. Shared SDK journals are historical.
+- Use native file editing first (Codex apply_patch, Claude Edit/Write). Follow the injected terminal/encoding guidance; use git --no-pager.
 
-Нарушение ломает билд или игру.
+## Checkout, Unity and coordination
 
-- **Логи** — только `GameLog.<Канал>.<Уровень>(...)`, например `GameLog.Match.Info("...")`,
-  `GameLog.Player.Verbose("...", this)`. Каналы: `Network`, `Player`, `Match`, `Debug`, `WeaponSystem`,
-  `UI`, `PhysicalSpace`, `Arsenal`, `Perf`; вне категории — `GameLog.Error(...)`. `Debug.Log` запрещён.
-- **Смена карты на живом сервере** — только `MapLoader.Instance.LoadMap(sceneName)`. Прямые
-  `SceneManager.LoadScene` / `ServerChangeScene` рассинхронизируют клиентов. Исключение —
-  `offlineScene`/`onlineScene` у `GameNetworkManager`: их ведёт сам Mirror, не трогать (NET-21).
-- **Editor-скрипты** — только в `Assets/Editor/VR_Battlegrounds/<категория>/`. Папка `Editor` внутри
-  `Assets/Scripts/` ломает Android-билд. Меню — `VR Battlegrounds` с пробелом (`Tools/VR Battlegrounds/...`).
-- **Коммит** — никогда сразу после кода, сначала проверка пользователем в Unity. Исключение — только
-  документация и технический checkpoint через `Tools/agents/editor-broker.py`: alternate index,
-  `commit-tree`, ref `codex/tmp`, без хуков и push. Checkpoint не означает принятие работы.
-  Принятый коммит — после проверки. Подробности — `/commit`, протокол — `F:/UnityProjects/agent-infra/docs/editor-broker.md`.
-- **Теги** — только из `GameTags`, руками не ставятся: правило в `GameTagRules`, расстановка —
-  `Tools/VR Battlegrounds/Gameplay/Apply Game Tags`, проверка — `GameTagsTests`. Не удалять теги из
-  TagManager в открытом редакторе — индексы сдвигаются у всех загруженных объектов.
-- **Префабы оружия и магазинов** (`Assets/Prefabs/Weapons/`): не-trigger коллайдер на `Rigidbody`,
-  `Collision Detection` не `Discrete`, `OutOfWorldGuard`; у оружия с якорем магазина —
-  `AnchoredItemCollisionIgnore`; у каждой вложенной детали `UxrGrabbableObject` — `GrabOnlyWhenParentHeld`.
-  Размер — масштабом корня, эталон в `WeaponScaleTests`. Проверка: `WeaponDropPhysicsTests`,
-  `OutOfWorldGuardTests`, `WeaponPartGrabTests`. Новое оружие — `/add-weapon`.
-- **Аватары и их тесты меняются вместе.** Любая правка аватара (компонент, карман, якорь, поза, хват,
-  слой, запись в `AvatarRegistry`) в той же задаче отражается в `AvatarLoadoutTests` и
-  `PrefabCompositionTests`; убранное требование — с комментарием почему. Новый аватар — `/setup-avatar`.
-- **Сетевые действия — один автор.** UltimateXR пересчитывает действия чужого игрока на каждой машине.
-  Код из Update, таймера, физики, RPC или хука, вызывающий синхронизируемый метод (`Shoot`, `Reload`,
-  `ReleaseObject`, `IsGrabbable`…), обязан проверить `StateEventAuthority.IsAuthorOfItem` /
-  `IsWorldAuthority`. Иначе — двойной выстрел и урон (Issue 23).
-- **Геометрия карты** — после правки: `Tools/VR Battlegrounds/Gameplay/Bake Occlusion (all maps)`.
-  Подвижное на карте — с `Animator`/`Rigidbody`/`NetworkIdentity` или явным игровым компонентом,
-  уже исключённым в `OcclusionBakeTool.DynamicMarkers` (например, `ShootingTarget`), иначе станет окклюдером.
-- **Правки SDK**: запись в `tasks/<task-id>/changelog/<YYYY-MM-DD>-sdk-<номер>.md`,
-  номер резервировать через `coordination.py patch-reserve`. Для Mirror также пометка
-  `VR Battlegrounds patch` в коде. Общие `sdk-patches.md` / `mirror-patches.md` агент задачи
-  не редактирует; прежние записи остаются историческим справочником.
-- **Меню планшета** — экран только вариант `Screen_Base` в `Assets/Prefabs/UI/Menu/Screens/`, содержимое только
-  через `MenuKit`, цвета и размеры только из `MenuTheme`, «Назад» и разделы — только каркас. Проверка:
-  `MenuDesignRulesTests`, `MenuContainmentTests`. Новый экран — `/add-menu-screen`, дизайн — `Docs/ui-design-system.md`.
-- **Single Responsibility** — чужеродную логику в синглтоны не дописывать, выносить в отдельный класс.
-- **Иерархия карты** — `Environment` содержит только неинтерактивное окружение.
-  Спавны, арсеналы и реагирующие мишени принадлежат `Gameplay` карты. Контент конкретной
-  карты не применять в общий префаб физической арены. Арсеналы не вкладывать в масштабируемый
-  `TeamSpawnZone`; связь — `ArsenalStationAnchor.Zone`. Перед изменением иерархии читать
-  `Docs/scene-hierarchy.md`; проверять `MapGameplayHierarchy.ValidateAll()` и
-  `PhysicalArenaLayoutMigration.ValidateAll()`.
-  Метки принадлежат активной ветке CalibrationAnchors в PhysicalArenaLayout.
-  Разделение: `PhysicalArenaLayout` — диагностический чертёж площадки без Collider,
-  `Environment` — собственная игровая геометрия карты, `Gameplay` — игровые сущности.
-  Геометрия чертежа яркая и скрыта по умолчанию; якоря остаются активными.
-  Совмещение пола/стен карты с площадкой — ответственность разработчика карты, без автоматического переноса.
+Compare `git rev-parse --absolute-git-dir` with `git rev-parse --path-format=absolute --git-common-dir`.
+- **Same: main checkout.** Work directly with the user's checkout/Editor, without a worker lease. Do not manage worker, queue or .agent-state unless assigned.
+- **Different: linked worktree.** Write only there; the main checkout is read-only. Unity mutations require your RUNNING broker lease and guard. The proxy must run from your worktree.
+- Before a worker request prepare exact actions/release conditions and fetch/rebase origin/dev. Route: checkpoint → request → watch-ticket → claim → begin → guard → execute/wait → finish → receive.
+- Finish immediately after your prepared package and cleanup, including failed checks, before diagnosis, edits or waiting for a person. Do not finish during an active operation. Renew only for ongoing Unity work.
+- Never interrupt human Play Mode, dirty scenes, prefab stages or others' tests. During maintenance, leave broker/worker alone until completion is announced.
+- Read current coordination mode; **missing/off** uses the legacy pipeline, **enforced** requires registration, contracts/stage admission and merge-request/merge-execute. Stage admission is not a Unity lease. Do not change mode yourself.
+- Broker/proxy sources and deployment belong to `F:/UnityProjects/agent-infra`; product Tools/agents files are launchers.
+- Save complete MCP reports to task reports/ and return only passed/counts/up to 10 examples/path. Use `Tools/UnityMcp/compact-result.js` with a 2000-token output budget.
+- `executionCompleted=true` means the action ran; never repeat it for output. After a timeout inspect durable/native state before retrying a mutation. Without MCP use current Editor.log evidence and concrete user edit steps.
 
-## Поиск
+## Read only what this task needs
 
-Своего кода ~10× меньше, чем в `Assets/ThirdParty/`. Grep — всегда с `path="Assets/Scripts"` или
-`"Assets/Editor"`; в `ThirdParty/`, `Packages/` — только если задача про SDK. Для API UltimateXR
-исходники `Assets/ThirdParty/UltimateXR/Runtime/Scripts/` точнее доков.
-`.unity` и `.prefab` целиком не читать — Grep по имени класса или GUID.
+Use rg scoped to the relevant area. For game C# start in Assets/Scripts or Assets/Editor; search ThirdParty/Packages only for the relevant SDK/package. Search .unity/.prefab by class/GUID instead of reading entire files.
+**Do not load every linked document.** Search large indexes/reference files and read the matching section only.
 
-## Что читать под задачу
-
-Не читать документацию впрок. Индекс — `Docs/README.md`.
-
-| Задача | Читать |
+| Task | Required route |
 |---|---|
-| **Баг** | **`Docs/troubleshooting.md` (индекс по симптому) первым** → `Docs/UltimateXR/known-issues.md`, затем `/debug` |
-| Новая фича | `Docs/README.md` (нет ли дубля) → `Docs/gameplay.md`, затем `/feature` |
-| Матч, режимы, раунды | `Docs/gameplay.md`, `Docs/game-manager.md` |
-| Сессия, роли, устройства | `Docs/session-architecture.md` |
-| Автопроверка нескольких Play Mode экземпляров | `Docs/test-stand.md` |
-| UI-меню / шрифты | `Docs/ui-design-system.md`, `Docs/ui-menu-architecture.md` / `Docs/ui-fonts.md` |
-| Стена арсенала | `Docs/Arsenal/Arsenal_Code_Architecture_RU.md` |
-| Сборка, Git, перф | `Docs/release.md`, `Docs/version-control.md`, `Docs/perf-stress-test.md` |
-| Звуки (новый звук события) | `Docs/sound-library.md` — пак вне проекта, брать по файлу |
-| Unity MCP сломан | `Docs/unity-mcp.md`, `.agents/rules/unity_mcp.md` |
+| Code/assets | Relevant section of [workflow details](.agents/rules/project-workflows.md#asset-rules); architecture/naming when applicable |
+| Bug | Search [troubleshooting](Docs/troubleshooting.md) by symptom first; read matching SDK [known issue](Docs/UltimateXR/known-issues.md) if relevant |
+| Feature | Search [Docs index](Docs/README.md) for existing ownership; read the relevant [gameplay](Docs/gameplay.md) section |
+| Match/round/map flow | Relevant [gameplay](Docs/gameplay.md) / [game-manager](Docs/game-manager.md) section |
+| Session/roles/devices | [session architecture](Docs/session-architecture.md) |
+| Weapons/avatars/menu | Matching asset section; recipes in .claude/skills/add-weapon, setup-avatar or add-menu-screen |
+| Map hierarchy/geometry | [scene hierarchy](Docs/scene-hierarchy.md), asset rules and occlusion/validation steps |
+| Unity automation/tests | [Unity access](.agents/rules/project-workflows.md#unity-access) and [verification](.agents/rules/project-workflows.md#verification-and-acceptance); multi-process probes: [test stand](Docs/test-stand.md) |
+| MCP failure | Current sections of [MCP diagnostics](Docs/unity-mcp.md); old 9.x fixes are historical |
+| Coordination/integration | [integration route](.agents/rules/project-workflows.md#integration-and-coordination); enforced details: [agent_coordination](.agents/rules/agent_coordination.md) |
+| Task docs/delegation/LFS | Matching section of [workflow details](.agents/rules/project-workflows.md); LFS: [worktrees](Docs/agents/lfs-worktrees.md) |
+| UI/fonts/arsenal | [UI design](Docs/ui-design-system.md), [menu](Docs/ui-menu-architecture.md), [fonts](Docs/ui-fonts.md) / [arsenal](Docs/Arsenal/Arsenal_Code_Architecture_RU.md) |
+| Build/Git/performance/audio | Relevant [release](Docs/release.md), [version control](Docs/version-control.md), [stress test](Docs/perf-stress-test.md) / [sound library](Docs/sound-library.md) |
 
-## Unity MCP
-
-**Два режима работы агента.** Режим определяется тем, где запущен агент:
-`git rev-parse --absolute-git-dir` совпадает с `git rev-parse --path-format=absolute --git-common-dir` —
-основной worktree, иначе linked worktree.
-- **Режим worktree** (по умолчанию, параллельные агенты) — агент в своём linked worktree и полностью
-  следует политике брокера, описанной ниже.
-- **Режим основного worktree** — пользователь сам запустил агента в основном checkout. Предполагается,
-  что агент — единственный писатель репозитория: он правит файлы, делает stage/commit и работает
-  с Unity пользователя напрямую, не следуя политике брокера (очередь, аренда, запрет записи в основной
-  worktree на него не распространяются). Редакторский worker, очередь и `.agent-state/` не трогать без
-  прямого поручения. Прокси `unityMCP` в этом режиме пропускает изменения в Unity пользователя,
-  а изменения в worker — только через аренду.
-
-**Изолированные worktree.** В режиме worktree агент пишет только в свой linked worktree. Единственный инструмент
-доступа к редактору — `Tools/agents/editor-broker.py`:
-checkpoint → request → watch-ticket → claim → begin → guard перед MCP → finish → receive.
-`unityMCP` подключён через прокси брокера: чтение доступно всегда, изменяющий вызов без своей
-аренды RUNNING отклоняется, в аренде вызов автоматически идёт в worker (`F:/UnityProjects/agent-infra/docs/unity-mcp-proxy.md`).
-**Основной worktree для агента в режиме worktree — только чтение.** Запрещено прямо изменять в нём
-код, ассеты, сцены, ProjectSettings, Packages, Tools и Docs; запрещены также stage/commit,
-checkout/reset/clean и запуск генераторов, которые туда пишут. Все правки и файловые генераторы —
-в собственном linked worktree. Редакторский worker меняет только контроллер в своей аренде.
-Принятую пользователем работу агент вливает сам — в `origin/dev` по разделу «Вливание работы»;
-основной worktree только подтягивает `origin/dev` (`--ff-only`). Заявка в очередь права вливать не даёт.
-Локальное состояние очереди в `.agent-state/` ведёт контроллер, оно не является исходниками.
-Базу брать из контроллера; редактор получает точный SHA в detached HEAD. Созданные Unity ассеты
-и `.meta` забирать через result checkpoint, не генерировать GUID повторно. Просрочка/сбой блокируют
-очередь до recovery. Постоянное состояние и runtime — `.agent-state/editor-broker/`, вне переключаемого
-worktree. Отчёты, пробы и временные стенды задачи — в `tasks/<task-id>/reports/` своего worktree.
-**Инфраструктура агентов — отдельный репозиторий `F:/UnityProjects/agent-infra`** (брокер, мост, MCP-прокси, тесты, документы).
-`Tools/agents/editor-broker.py`, `unity_mcp_proxy.py` и `broker_runtime.py` продукта — заглушки, они
-запускают развёрнутый runtime. Правки инфраструктуры коммитятся в agent-infra, не в продукт, и попадают
-к агентам только через `deploy.py` в окно обслуживания (README agent-infra).
-Полные правила активации, FIFO и возврата — `F:/UnityProjects/agent-infra/docs/editor-broker.md`.
-**Обслуживание брокера останавливает всех агентов.** Пока меняется инфраструктура (код брокера,
-runtime, мост, база worker), очередь стоит на паузе, ожидающие заявки могут быть отменены, а застрявшие
-аренды восстанавливает обслуживающий агент. Получив сообщение об обслуживании, не трогать брокер и worker
-до сообщения о завершении; после него подать заявку заново — прежний порядок очереди не восстанавливается.
-До активации/при недоступном контроллере изменяющие операции в общем редакторе запрещены;
-продолжать работу в своём worktree. Редактор человека не прерывать. Правила — `.agents/rules/unity_sharing.md`.
-
-**Аренду не держать во время размышлений.** До `request` подготовить конкретные действия и условие освобождения.
-После завершения подготовленного пакета получить результат, завершить свои временные изменения и следующим
-шагом вызвать `finish` — **до анализа ошибок, чтения кода, проектирования, написания следующей правки,
-документации или ожидания ответа**. Ошибка проверки тоже результат: расследовать её уже без замка.
-Не выполнять `finish` посреди компиляции, импорта или асинхронного прогона; дождаться завершения операции.
-`renew` — только для продолжающейся операции Unity или её необходимого завершения, не для размышлений.
-
-Инструменты `mcp__unityMCP__*` — предпочтительный способ видеть консоль и сцену. Если их нет —
-не блокироваться: ошибки компиляции — `%LOCALAPPDATA%\Unity\Editor\Editor.log` (`/unity-check`);
-правки сцен и объектов — списком для пользователя. `execute_code` падает с MAX_PATH — патч в
-`.agents/rules/unity_mcp.md`.
-
-**Вывод MCP ограничивать до попадания в контекст.** Массовые проверки сохраняют полный отчёт
-в `tasks/<task-id>/reports/`, возвращают статус, счётчики, не более 10 примеров и путь к отчёту. В `functions.exec`
-не печатать сырой ответ Unity через `text(result)`: использовать `compactUnityResult` из
-`Tools/UnityMcp/compact-result.js`, лимит вывода `max_output_tokens: 2000`.
-Внешнее `success=true` означает выполнение инструмента; исход проверки задаётся отдельным
-`passed`. Правила, шаблон сохранения и загрузка обёртки — `.agents/rules/unity_mcp.md`.
-В MCP также установлен автоматический ограничитель execute_code: крупный результат —
-`__mcp_output` + `summary`, детали читать через `ExecuteCodeOutputGuard.ReadReport`.
-Ошибка с `executionCompleted=true` означает, что код уже выполнен; повторять его нельзя.
-
-## Вливание работы и конвейер агентов
-
-**`origin/dev` — единственный источник принятой работы.** Локальный `dev` основного checkout —
-его зеркало: только `git pull --ff-only`, непушнутых коммитов там не держать (иначе база worker
-расходится с `origin/dev` и нужен rebase истории). Force-push в `dev` запрещён.
-Человек может работать в основном checkout на своей ветке: ветка и HEAD основного checkout на
-очередь worker и вливание агентов не влияют. Агенты вливают в `origin/dev` как обычно; локальный
-`dev` при этом обновляется без переключения — `git fetch origin dev:dev`.
-
-**Вливание задачи** (после принятия пользователем, из своего worktree и ветки):
-1. `git fetch` → `git rebase origin/dev`. Конфликты решает тот, кто вливает **позже**, в своём
-   worktree; чужую работу не откатывать. Если rebase задел код/ассеты — перепроверить (worker при необходимости).
-2. `git push origin HEAD:dev` — только fast-forward. Отказ (`origin/dev` сдвинулся) — снова fetch → rebase → push.
-3. Сообщить сопровождающему брокера (сессия из его последнего объявления) новый SHA: база worker
-   обновляется публикацией (`publish-base`). Пока брокер не делает этого сам — не ждать молча.
-
-**Перед каждой заявкой на worker** — `git fetch` и `git rebase origin/dev`: брокер принимает только
-работу поверх текущей базы. Вливать маленькими принятыми пунктами и часто: сцены, префабы и `.meta`
-сливаются rebase плохо, крупная долгоживущая ветка гарантирует конфликты.
-
-**Единый протокол координации.** Реализация и миграция описаны в
-`.agents/rules/agent_coordination.md`, актуальный статус — `tasks/agent-coordination-protocol/Readme.md`.
-Пока режим отсутствует/off, действует существующий конвейер ниже. После активации enforced
-агент ведёт один документ `tasks/<task-id>/Readme.md`, регистрирует полный план и контракты,
-получает допуск этапа и подаёт заявку на вливание точного принятого SHA через
-`Tools/agents/coordination.py`. Документы публикуются отдельно в `agents/status`; публикация
-документа не принимает код. Устаревшие договорённости заменяются явно согласованной ревизией,
-а пересмотр блокирует только затронутые этапы. Смена режима — только сопровождающим при миграции.
-Монитор событий и автоматическое пробуждение клиентов пока только запланированы.
-
-**Конвейер вливания — согласовать один раз после принятия плана задачи.** Каталог
-`.agent-state/coordination/` общий для всех worktree (вне Git, рядом с состоянием брокера):
-- `<owner>.md` — свой план: задача, worktree/ветка, пункты по порядку и для каждого — затрагиваемые
-  области (папки, ключевые файлы, сцены/префабы, SDK и зарезервированный номер патча),
-  статус пункта (в работе / принят / влит SHA). Документы и записи об изменениях — в
-  собственной `tasks/<task-id>/`; общие индексы и журналы не объявлять областью задачи.
-- Прочитать планы остальных. Пересечение областей с чужими **ближайшими** пунктами — написать
-  владельцам (SendMessage) и договориться о порядке; итог — в `pipeline.md`, например:
-  «А: 2, 3 → Б: 1, 2 → А: 4, 5 → С: всё». Без пересечений конвейер не нужен — вливать по готовности.
-- Номера SDK-патчей занимать в своём плане до коммита: второй агент берёт следующий свободный.
-
-**Пересогласовывать только по событию**, не регулярно: появился новый план с пересечением;
-свой план расширился на новые области; пункт не успевает к своему месту или влит вне очереди;
-rebase дал конфликт с чужой работой. После вливания пункта обновить его статус в своём файле.
-Порядок из `pipeline.md` соблюдать при push: свой пункт — после влитых предшественников.
-
-## Самопроверка
-
-**Решение пользователя 2026-10-02:** тесты писать на подтверждённую игровую логику. До проверки новой или
-изменённой механики пользователем в шлеме/Unity не писать и не переписывать тесты. На этом этапе проверить
-компиляцию, перечислить устаревшие ожидания тестов и дать список проверки в шлеме. После подтверждения —
-закрепить принятую логику тестами. Это правило имеет приоритет над «тест красный до правки» ниже.
-
-**Задача не закрыта, пока агент сам не получил зелёный результат.** «Пользователю нужно проверить» —
-незаконченная работа.
-
-- Компиляция под Android: `execute_code` → `VrBattlegrounds.EditorTools.AndroidCompileGate.Run()`.
-- Тесты: `run_tests(mode="EditMode", assembly_names=["VrBattlegrounds.Tests.EditMode"])` → `get_test_job`.
-
-1. **Сначала харнесс, потом правка.** Нечем проверить — проверялка входит в задачу.
-2. **Тест красный до правки.** Проверка, ни разу не показавшая отказ, ничего не доказывает.
-3. **Чтение кода — гипотеза, прогон — факт.** Включая собственные выводы и аудиты.
-4. **Шум харнесса ≠ отказ логики.** Mirror пишет `Error` на `[ClientRpc]` вне сервера, `[Server]`-методы
-   вне сервера молча глушатся — такое падение теста — дефект теста.
-
-### Адресный стенд Play Mode
-
-Для автоматической проверки нескольких процессов читать `Docs/test-stand.md` и использовать
-`VrBattlegrounds.EditorTools.TestStand.PlayModeTestStand`. Он запускает ServerOnly + два клиента
-через временную копию Play Mode сценария; сеть запускают штатные владельцы игры.
-
-- **Доступ к worker:** собственный worktree → checkpoint/request/claim/begin/guard.
-  MCP-прокси должен быть запущен из своего worktree; проверить worker root/instance из `guard`.
-  MCP, закреплённый за основным checkout, не использовать для изменения worker.
-- **Запуск через `execute_code`:** `PlayModeTestStand.StartProbe()`; затем опрашивать `Status()`.
-  Ждать три участника: один `Server=true, Client=false`, два `Client=true, Connected=true`.
-- **Выбор цели:** взять из текущего `Status()` полный адрес `RunId` + `ParticipantId` +
-  `ProcessSessionId`. Роль Client и PID сами по себе адресом не являются. После перезапуска
-  или смены сессии получить адрес заново; не подменять недоступного клиента другим процессом.
-- **Команда:** `Send(new StandRequest { RunId=..., ParticipantId=..., ProcessSessionId=...,
-  RequestId=..., Action=..., MarkerName=..., TimeBudgetMs=5000 })` из того же namespace.
-  Пока `Completed=false`, опрашивать `Operation(RequestId)`. Проверять `Reply.Passed` и адрес/PID
-  исполнителя; завершение MCP-вызова само по себе не означает прохождения проверки.
-- **Пилот поддерживает:** `create-marker`, `read-marker`, `remove-marker`, `state` (MarkerName пустой).
-  Маркер несетевой; изоляцию проверять чтением у всех участников. Новый шаг — новый RequestId;
-  повтор идентичного запроса возвращает прежний результат. При `EffectUnknown=true` эффект мог
-  произойти: не повторять действие с новым RequestId без проверки состояния.
-- **Завершение, включая отказ проверки:** `Stop()` → ждать `Phase=idle`, `Playing=false`;
-  проверить `CleanupPassed`, затем немедленно `finish` и получить/проверить результат брокера.
-  Не завершать чужой Play и не держать аренду для анализа. Тестовые токены/профили не записывать
-  в PlayerPrefs или ассеты; стенд сам восстанавливает свои временные настройки.
-- **Готовый прогон:** после guard, из своего worktree:
-  `uv run --with 'mcp>=1.20,<2' Tools/TestStand/worker_probe.py --instance '<guard.unity_instance>' --editor-root '<guard.project_root>' --output tmp/test-stand/live.json`.
-  Проверять `passed`, выполненные проверки и ошибки очистки в JSON, а не только exit code.
-
-Стенд подтверждает адресное управление процессами и локальные маркеры. XR-ввод, хват/ходьба/UI,
-Quest, disconnect/reconnect и сетевые fault-сценарии пока не реализованы; не выдавать пилот
-за их приёмку. Фактический domain reload и recovery после смерти процесса требуют отдельных
-проб. Недоступную автономно игровую проверку выносить под проверяемую логику и явно указывать
-границы доказательности; реальные два клиента теперь доступны через этот стенд.
-
-## Баги: чинить класс, а не экземпляр
-
-**Архитектура важнее отдельной фичи.** Если фича требует второго источника истины или писателя,
-ручного взаимного подправления состояний либо обхода инварианта, остановить именно эту обходную
-попытку. Так же поступать, если такая проблема обнаружена в существующем коде при изучении.
-Назвать конфликт владения состоянием, жизненного цикла или инварианта и все затронутые сценарии;
-вынести архитектурное решение ведущему агенту/пользователю с рекомендуемым вариантом, ценой и
-рисками. Не маскировать проблему исправлением одного экземпляра ради фичи. Независимую работу
-и уже одобренный целостный рефакторинг с одним владельцем состояния продолжать; это правило не
-требует повторного разрешения на каждую рутинную правку и не запрещает необходимые патчи SDK.
-
-1. **Назвать класс ошибки** — какое допущение нарушено и почему код позволил его нарушить.
-2. **Найти все экземпляры** класса, а не только место падения.
-3. **Предложить архитектуру, при которой баг невозможен** — единая точка входа, инвариант в одном
-   месте, генерация вместо ручной настройки. Образцы: `StateEventAuthority`, `GameTags`+`GameTagRules`,
-   `MapLoader.LoadMap`.
-4. **Закрепить тестом**, который ловит весь класс.
-
-Точечная правка — только как срочная мера, с записью класса ошибки и предложенного решения.
-Большой рефакторинг — сначала предложить пользователю.
-
-## Стиль работы
-
-- **Словарь игры:** серия (`Series`) → карта (`MapReferee`: `Warmup → Live → Paused`) → половина → раунд
-  (`RoundPhases`) → фаза (`RoundPhase`). Разминка — состояние карты без матча, не режим каталога.
-  «Матч» — только в текстах для игрока («Начать матч»), в именах классов его нет.
-- **События — без префикса `On`** (`RoundStartedLocal`, `SessionConnected`); `On…`/`Handle…` —
-  обработчики и методы, поднимающие событие.
-
-- **Личные дебаг-настройки** (пауза без фокуса, автозапуск карты, боты и т.п.) — не в ассетах под git, а в
-  EditorPrefs (настройка машины) или SessionState (текущая сессия редактора) + галочка в
-  `Tools/VR Battlegrounds/Debug/`. Тест или стенд меняет такую настройку из кода и возвращает после себя. Образцы —
-  `UxrManager.EditorFocusPauseEnabled`, `PlayModeStartFromOffline`.
-- На архитектурных развилках — зачем, риски, одна-две альтернативы, но рекомендовать одно.
-- Уточнять, только если разные прочтения ведут к разной работе; рутинное решать самому и говорить, что выбрал.
-
-## Выбор субагентов и reasoning effort
-
-Политика применяется, когда делегирование разрешено текущими инструкциями. Она не требует
-субагента для каждой задачи. Явный выбор модели и effort пользователем имеет приоритет.
-
-Для субагентов разработки и анализа использовать `gpt-6.1-sol`, если она доступна и пользователь
-не выбрал другую модель. Уровень выбирать по сложности **конкретного поручения**, а не всей задачи
-или длине промпта. Это рабочая политика проекта, не измеренный бенчмарк моделей.
-
-| Effort | Когда выбирать |
-|---|---|
-| `low` | Поиск файлов и ассетов, сбор фактов по заданным критериям, запуск готовых проверок без диагностики |
-| `medium` | Базовый уровень исполнителя: реализация по принятому контракту, ограниченные правки, сборка оружия по готовому маршруту, инструменты редактора с ясными требованиями |
-| `high` | Архитектура, сложная диагностика и ревью: сетевой authority/lifecycle, смена аватара, IK, оптимизация SDK, проектирование метрик, согласование требований нескольких систем |
-| `xhigh` | Разбор особенно сложных противоречий или архитектурных альтернатив, если `high` оставил конкретный нерешённый вопрос; ограничить поручение этим вопросом |
-| `max` / `ultra` | Только по явному выбору пользователя или с конкретным обоснованием, почему предыдущего уровня недостаточно; не использовать по умолчанию |
-
-- Перед запуском кратко указать роль, модель, effort и причину выбора. Выбирать только уровни,
-  поддерживаемые выбранной моделью и текущим клиентом; названия уровней разных моделей не считать эквивалентными.
-  Если инструмент позволяет, задавать настройки явно. При ограничениях наследования сообщить фактические настройки.
-- В поручении задать результат, границы файлов/систем, разрешённые действия, критерии приёмки и
-  зависимости. Чистый контекст предпочтителен для независимого аудита; передать ему необходимые
-  требования и источники, а не всю историю. Для продолжения существующей работы сохранять нужный контекст.
-- Разделять выбор архитектуры (`high`) и реализацию принятого среза (`medium`). Если исполнитель
-  обнаружил нерешённую архитектурную развилку, вынести её на отдельный анализ до зависимых правок.
-- Повышать effort при конкретной неопределённости, а не из-за долгого ожидания Unity, MCP или тестов.
-  При расширении задачи сначала уточнить её границы и зависимости; высокий effort не заменяет узкое поручение.
-- Основной агент проверяет результат и интеграцию. Успех субагента или высокий effort не заменяют
-  самопроверку, замок Unity и подтверждение механики пользователем по правилам выше.
-
-## Терминал
-
-### Git LFS и лёгкие ворктри
-
-- Бинарники полных KINEMATION, Hands/Weapons и Military Soldier хранятся в LFS; пакеты не урезать. `.meta`, код и текстовые Unity-ассеты остаются в обычном Git.
-- Конфиг роли — `Tools/agents/lfs-worktree-policy.json`. Новый агентский worktree оставляет LFS-указатели; после создания выполнить `python Tools/agents/configure_lfs_worktree.py apply`. Не запускать полный `git lfs pull` по умолчанию.
-- Для просмотра/изменения конкретного бинарника извлечь только нужный путь: `git lfs pull --include="Assets/..."`. Работу Unity выполнять на полном worker через принятый протокол; не открывать агентский проект с указателями в Unity.
-- Общие фильтры Git пропускают smudge, чтобы создание worktree из main не копировало гигабайты. Основной checkout после переключения извлекает локальный кеш через `.githooks/post-checkout`; Unity worker имеет worktree-переопределение полного smudge. Не задавать `GIT_LFS_SKIP_SMUDGE` глобально или для worker.
-- На новой машине интегратор устанавливает defaults: `python Tools/agents/configure_lfs_worktree.py apply --install-defaults`. Для зарегистрированного worker проверить `status`, извлечь недостающие LFS-объекты до открытия Unity. Историю Git ради LFS автоматически не переписывать.
-- Не удалять общий LFS-кеш и не использовать `git lfs prune` без отдельной оценки всех worktree. Полный маршрут и пределы — `Docs/agents/lfs-worktrees.md`.
-
-- **Редактирование файлов:** сначала нативный `apply_patch`. Одна операция на файл в одном патче;
-  для замены содержимого — `Update File`, не `Delete File` + `Add File` того же пути. Ошибку патча исправлять
-  в патче, а не переходить к массовой перезаписи через терминал. Подробности — `.agents/rules/terminal.md`.
-- Bash-инструмент **изолирован от сети** (`curl` к localhost падает) — сетевые проверки через PowerShell.
-- Git — всегда `--no-pager`.
-- **Plastic SCM не используется** (удалён 2026-10-06): Git — единственная VCS, хуков переноса нет.
-
-## Документация
-
-Документы левел-дизайна описывают текущее согласованное состояние, а не историю обсуждения.
-В Docs хранить очищенные действующие требования, архитектуру и текущее состояние продукта.
-Историю разработки, варианты решений, пробы и расследования вести в папке задачи.
-Единый реестр метрик — Docs/level-design/map-evaluation.md: приоритет технического ревью, статус
-«есть / частично / можно автоматизировать / ручная оценка» и пределы проверки.
-При изменениях переписывать действующее требование и статус; принятые выводы аудитов
-включать в тематические документы. Отменённые решения не оставлять дополнительными правилами.
-История — в Git и отдельных записях `tasks/<task-id>/changelog/`.
-
-**Все материалы работы над задачей** — в `tasks/<task-id>/*` своего worktree:
-вспомогательные утилиты, расследования, анализ, промежуточные выводы, планы и отчёты.
-Игровые исходники и ассеты изменять в штатных папках проекта.
-
-- `Readme.md` — живой компактный обзор: цель и мотивация, текущий статус и владелец,
-  принятое архитектурное решение, короткий план с прогрессом, зависимости/блокеры,
-  фактически пройденные проверки и следующий шаг. Обновлять при изменении этих фактов,
-  перед передачей задачи и завершением хода; указывать дату обновления. Ориентир —
-  до 400 слов без автоматически сформированного статуса. Передавать другим агентам
-  сначала ссылку на этот обзор, детали — только по необходимости.
-- `Details.md` — текущий подробный анализ и расследования: факты/гипотезы, обоснования,
-  особенности интеграции, существенные промежуточные выводы и ссылки на доказательства.
-  Не вести второй независимый статус или копию машинного плана.
-- `plan.json` — единственный редактируемый машинный план: этапы, области записи,
-  `after`, `needs` и точные ревизии контрактов. Хаб хранит ссылку на локальный источник
-  и автоматически полученную зарегистрированную ревизию; вручную план в хаб не копировать.
-- `tools/` — временные утилиты для проб, анализа и проверок этой задачи; `changelog/<YYYY-MM-DD>-<slug>.md`
-  — отдельные записи изменений; `contracts/` — собственные спецификации контрактов.
-  Эти файлы под Git и входят в области этапа. Приватные токены сюда не записывать.
-- `reports/` — сгенерированные результаты, сырые логи, дампы и отладочные пробы, вне Git.
-
-**Долгоживущие утилиты проекта** — в `Tools/<категория>/`, с понятной точкой входа,
-инструкцией и владельцем области. Проверенную временную утилиту переносить туда явным
-этапом, когда она становится частью обслуживания проекта; в задаче оставить ссылку,
-мотивацию и результат проверки, вторую рабочую копию не поддерживать. Исходники
-инфраструктуры агентов принадлежат отдельному agent-infra, продуктовый Tools/agents — входные обёртки.
-
-Собственные зависимости и договорённости записывать в локальный план, их причины —
-в Details.md; Readme.md содержит только важные для текущей работы ограничения.
-Общий хаб — единственный источник подтверждённых ACK/ревизий, допусков, событий
-и результатов вливания. Контекст чужой задачи читать по ссылкам, не копировать целиком.
-
-**Общие документы не входят в обычную задачу.** Не редактировать и не включать в writes
-`Docs/README.md`, `README.md`, `CHANGELOG.md`, `Docs/CHANGELOG.md`, общие журналы SDK
-и `tasks/README.md`. Индекс tasks формирует координатор. Перенос очищенной правды
-в тематический Docs-файл — явный отдельный этап с владельцем области, после принятия
-решения; без истории разработки и без обновления общего индекса/журнала.
-Общие правила изменяет их сопровождающий по поручению пользователя.
-
-**Сгенерированные результаты и отладочные данные** — только в `tasks/<task-id>/reports/`
-от корня своего worktree; для аудита использовать его `audit_id` как идентификатор задачи.
-Туда сохранять отладочные данные, пробы, временные стенды, JSON/XML, HTML-галереи,
-PNG/видео, логи, дампы, снимки входов и итоговые отчёты прогонов. Паттерн
-`/tasks/*/reports/` исключён из Git; содержимое не добавлять в историю, в том числе
-через `git add -f`. Уже созданные локальные артефакты своей задачи переносить туда
-с сохранением относительных ссылок. Под Git остаются исходники, единый актуальный
-документ `tasks/<task-id>/Readme.md`, вспомогательные исходники, планы/контракты и краткие принятые выводы;
-ссылки на локальные отчёты помечать как локальные. Постоянное состояние брокеров
-остаётся в `.agent-state/`.
-
-Новый код без документации не оставлять; тривиальное (геттеры, колбэки) не документировать.
-
-| Что сделал | Куда |
-|---|---|
-| Ход задачи, план, архитектурное решение | `tasks/<task-id>/Readme.md`, `Details.md`, `plan.json` |
-| Временная утилита, проба, анализ задачи | `tasks/<task-id>/tools/` |
-| Утилита постоянного обслуживания проекта | `Tools/<категория>/`, явный этап и владелец |
-| Значимое изменение, фикс, патч SDK | `tasks/<task-id>/changelog/<YYYY-MM-DD>-<slug>.md` |
-| Подтверждённые требования/архитектура продукта | тематический `Docs/*.md`, отдельный этап с владельцем |
-| Сырые отчёты, логи, пробы, снимки | `tasks/<task-id>/reports/`, вне Git |
-| Новое правило для агента | этот файл или `.agents/rules/<зона>.md` |
-
-Пришлось лезть в код за тем, что должно быть в доках, — дописать доки той же задачей.
+Detailed operating commands: [editor broker](F:/UnityProjects/agent-infra/docs/editor-broker.md) and [proxy routing](F:/UnityProjects/agent-infra/docs/unity-mcp-proxy.md), only when operating them.

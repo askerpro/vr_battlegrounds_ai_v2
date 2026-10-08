@@ -29,7 +29,13 @@ namespace VrBattlegrounds.Maps.Runtime
         [SerializeField] private ArsenalBoundaryWall _coordinatorPrefab;
         [SerializeField] private ContentEntry[] _content = Array.Empty<ContentEntry>();
         [SerializeField] private uint _compositionVersion = 1;
+        [Tooltip("Скомпилированные ресурсы генератора арсенала. Нужен только картам со станциями в режиме Generated: " +
+                 "без него такая карта не запускается (Station.Generated.CatalogMissing).")]
+        [SerializeField] private ArsenalCompositionCatalog _arsenalComposition;
         public MapRegistry Maps => _maps;
+
+        /// <summary>Ресурсы генератора для станций в режиме Generated; null — сгенерированных станций в проекте нет.</summary>
+        public ArsenalCompositionCatalog ArsenalComposition => _arsenalComposition;
 
         /// <summary>Отладочные стенды каталога: вне меню реестра, тот же запуск карты.</summary>
         public IReadOnlyList<MapData> DebugMaps => Array.AsReadOnly(_debugMaps ?? Array.Empty<MapData>());

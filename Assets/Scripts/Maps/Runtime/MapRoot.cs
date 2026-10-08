@@ -106,7 +106,7 @@ namespace VrBattlegrounds.Maps.Runtime
                 if (binding == null || !seen.Add(binding)) { errors.Add("Station.Reference.Invalid"); continue; }
                 string key = binding.StationKey;
                 if (!MapRunResolver.Identifier(key) || !keys.Add(key)) errors.Add("Station.Key.InvalidOrDuplicate:" + key);
-                if (binding.Mode != ArsenalCompositionMode.Authored) errors.Add("Station.Generated.NotAdmitted:" + key);
+                if (!Enum.IsDefined(typeof(ArsenalCompositionMode), binding.Mode)) errors.Add("Station.Mode.Invalid:" + key);
                 if (binding.gameObject.scene != scene || !InGameplay(binding.transform) ||
                     !((binding.transform.lossyScale - Vector3.one).sqrMagnitude < .000001f))
                     errors.Add("Station.Frame:" + key);
@@ -130,8 +130,12 @@ namespace VrBattlegrounds.Maps.Runtime
                 }
                 var uids = binding.GetComponentsInChildren<MonoBehaviour>(true).OfType<IUxrUniqueId>().Select(u => u.UniqueId).ToArray();
                 if (uids.Any(id => id == Guid.Empty || !allUids.Add(id))) errors.Add("Station.UxrIdentity:" + key);
-                // Hash только читает authored IDs/frames; не назначает UID или семантический seed.
-                stationConfigs.Add(new MapStationConfig(key, string.Empty, "Authored", AuthoredFingerprint(binding, uids), 1));
+                // Hash только читает authored IDs/frames; не назначает UID или семантический seed. Сгенерированная станция
+                // здесь описана только оболочкой: оформление, layout hash и версию схемы ID её записи до публикации
+                // config подставляет MapBootstrap из описания генератора (MapArsenalCompositionAdapter.Apply).
+                bool authored = binding.Mode == ArsenalCompositionMode.Authored;
+                stationConfigs.Add(new MapStationConfig(key, string.Empty,
+                    authored ? MapArsenalCompositionAdapter.AuthoredFallback : "Generated", AuthoredFingerprint(binding, uids), 1));
             }
             if (stationRefs.Length == 0 && !Exempt(MapDebugExemptions.Stations)) errors.Add("Station.Missing");
             if (InScene<ArsenalWallController>(scene).Any(w => !seen.Any(s => s != null && s.Controller == w))) errors.Add("Station.Unlisted");
@@ -229,6 +233,10 @@ namespace VrBattlegrounds.Maps.Runtime
             Zones = new ReadOnlyCollection<TeamSpawnZone>(zones.ToArray());
             Stations = new ReadOnlyCollection<ArsenalStationCompositionBinding>(stations.ToArray()); Description = description;
         }
+
+        /// <summary>Те же ссылки с другим описанием станций (записи сгенерированных станций из описания генератора).</summary>
+        internal MapRootBindings WithDescription(MapRunBindings description) =>
+            new MapRootBindings(Map, Environment, Gameplay, Layout, Zones.ToArray(), Stations.ToArray(), description);
     }
     public sealed class MapRootValidation
     {

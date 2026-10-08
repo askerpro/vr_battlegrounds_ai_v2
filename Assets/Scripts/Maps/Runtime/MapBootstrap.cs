@@ -12,14 +12,20 @@ using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Maps.Runtime
 {
-    public enum MapBootstrapStage : byte { WaitingPrerequisites, CompositionReady, Ready, Failed }
+    /// <summary>
+    /// Стадия запуска на сервере. <see cref="ComposingStations"/> — запуск начат, станции собраны и включены,
+    /// ждём регистрации ID сгенерированных станций; служебные объекты ещё не созданы.
+    /// </summary>
+    public enum MapBootstrapStage : byte { WaitingPrerequisites, CompositionReady, Ready, Failed, ComposingStations }
 
     /// <summary>
     /// Сборка запуска одной карты. Сервер проверяет <see cref="MapRoot"/>, разрешает
-    /// <see cref="MapRunConfig"/> по центральному <see cref="MapRuntimeCatalog"/>, спавнит служебные
+    /// <see cref="MapRunConfig"/> по центральному <see cref="MapRuntimeCatalog"/>, собирает станции (авторские —
+    /// ассортимент паспорта, сгенерированные — через <see cref="MapArsenalCompositionAdapter"/>), спавнит служебные
     /// MapReferee и координатор развёртывания из зарегистрированных префабов, публикует CompositionReady
     /// и запускает разминку; server Ready открывает только первый закоммиченный режим.
-    /// Клиент ничего не создаёт: связывает уже заспавненный координатор с авторскими станциями сцены.
+    /// Клиент сетевых объектов не создаёт: собирает сгенерированные станции своей сцены тем же адаптером с ключом
+    /// принятого запуска и связывает уже заспавненный координатор со станциями сцены.
     ///
     /// <para>
     /// Все пути старта (смена карты, первый onlineScene, сцена без смены) сходятся в одном
@@ -66,6 +72,14 @@ namespace VrBattlegrounds.Maps.Runtime
 
         private MapRunKey _localRunKey;
         private bool _localRunClosed;
+        private bool _localRunFailed;
+
+        /// <summary>Клиент: scope принятого запуска — владелец собранных здесь сгенерированных станций.</summary>
+        private MapRunScope _localScope;
+        private MapArsenalCompositionAdapter _localArsenal;
+
+        /// <summary>Сборщик станций. Игра — <see cref="ArsenalStationComposer"/>; EditMode-тесты подставляют свой.</summary>
+        internal IArsenalStationComposer Composer { get; set; } = RuntimeArsenalStationComposer.Instance;
 
         [Tooltip("Длительность выдвижения оборудования станций; передаётся координатору до спавна.")]
         [SerializeField, Min(0.1f)] private float _deploymentDuration = 1f;
@@ -75,6 +89,9 @@ namespace VrBattlegrounds.Maps.Runtime
         private MapRunScope _scope;
         private MapRunConfig _config;
         private MapReferee _referee;
+        private MapRootBindings _bindings;
+        private MapRuntimeCatalog _catalog;
+        private MapArsenalCompositionAdapter _arsenal;
         private uint _boundCoordinatorNetId;
         private MapRunKey _checkedClientKey;
         private float _waitingSince = -1f;
@@ -101,7 +118,11 @@ namespace VrBattlegrounds.Maps.Runtime
         public bool IsServerReady =>
             Stage == MapBootstrapStage.Ready && _scope != null && !_scope.IsDisposed &&
             _authority != null && _authority == MapRunAuthority.Instance &&
-            _authority.Current.IsReady && _authority.Current.Key == _scope.Key;
+            _authority.Current.IsReady && _authority.Current.Key == _scope.Key && StationsPassed(_arsenal);
+
+        /// <summary>Все сгенерированные станции запуска собраны и зарегистрированы (последний опрос); без них — да.</summary>
+        private static bool StationsPassed(MapArsenalCompositionAdapter arsenal) =>
+            arsenal == null || arsenal.Readiness == ArsenalCompositionReadiness.Passed;
 
         private void Awake()
         {
@@ -123,6 +144,7 @@ namespace VrBattlegrounds.Maps.Runtime
             MapLoader.MapLoadCancelled -= HandleMapLoadCancelled;
             Loaded.Remove(this);
             RetireServerRun("выгрузка сцены");
+            DisposeLocalScope();
         }
 
         private void Update()
@@ -138,18 +160,20 @@ namespace VrBattlegrounds.Maps.Runtime
         /// <summary>
         /// Готов ли запуск <paramref name="key"/> этой сцены локально — всё, что нужно до начального снимка
         /// SDK, на этой машине зарегистрировано. Сервер: scope этого ключа собран (CompositionReady/Ready) и не
-        /// закрыт. Клиент: run принят (<see cref="LocalRunKey"/>), не закрыт, станции готовы. Авторские станции —
-        /// объекты сцены с авторскими UniqueId и готовы сразу; handles генерируемых станций (задача 7 плана)
-        /// добавят сюда свой ValidateReady по фактическим регистрациям. Отдельного реестра участников нет:
-        /// забытый участник открыл бы барьер раньше времени.
+        /// закрыт. Клиент: run принят (<see cref="LocalRunKey"/>), не закрыт, не отказал, станции готовы. Авторские
+        /// станции — объекты сцены с авторскими UniqueId и готовы сразу; сгенерированные — когда все их handles дали
+        /// <c>ValidateReady</c> Passed по фактическим регистрациям ролей (опрос в <c>Update</c>). Отдельного реестра
+        /// участников нет: забытый участник открыл бы барьер раньше времени.
         /// </summary>
         public bool IsLocallyReady(MapRunKey key)
         {
             if (!key.IsValid) return false;
             if (NetworkServer.active)
                 return _scope != null && !_scope.IsClosed && _scope.Key == key &&
-                       (Stage == MapBootstrapStage.CompositionReady || Stage == MapBootstrapStage.Ready);
-            return key == _localRunKey && !_localRunClosed;
+                       (Stage == MapBootstrapStage.CompositionReady || Stage == MapBootstrapStage.Ready) &&
+                       StationsPassed(_arsenal);
+            return key == _localRunKey && !_localRunClosed && !_localRunFailed && _localArsenal != null &&
+                   StationsPassed(_localArsenal);
         }
 
         // ── Сервер ───────────────────────────────────────────────────────────
@@ -161,6 +185,8 @@ namespace VrBattlegrounds.Maps.Runtime
                 ResetServerRun();
 
             if (Stage == MapBootstrapStage.WaitingPrerequisites && !_closing) TryBeginRun();
+            else if (Stage == MapBootstrapStage.ComposingStations) ContinueComposition();
+            else if (Stage == MapBootstrapStage.CompositionReady || Stage == MapBootstrapStage.Ready) WatchStations();
         }
 
         /// <summary>
@@ -221,9 +247,22 @@ namespace VrBattlegrounds.Maps.Runtime
             }
 
             MapData map = validation.Bindings.Map;
+
+            // Описания сгенерированных станций — до публикации config: их выбор оформления и layout hash входят в
+            // config, клиент сверяет с ними своё описание. Отказ описания — отказ запуска, без отката на Authored.
+            var arsenalErrors = new List<string>();
+            MapArsenalCompositionAdapter arsenal = MapArsenalCompositionAdapter.Describe(validation.Bindings.Stations,
+                map.arsenalPreset, catalog.ArsenalComposition, Composer, arsenalErrors);
+            if (arsenalErrors.Count != 0)
+            {
+                FailBeforeRun("Arsenal.Generated.Description", arsenalErrors);
+                return;
+            }
+            MapRootBindings bindings = validation.Bindings.WithDescription(arsenal.Apply(validation.Bindings.Description));
+
             var request = new MapRunRequest(authority.NextKey, map.sceneName, CapturedModeId(map),
                 catalog.ContentFingerprintFor(map));
-            MapRunResolution resolution = catalog.Resolve(request, validation.Bindings,
+            MapRunResolution resolution = catalog.Resolve(request, bindings,
                 NetworkManager.singleton != null ? NetworkManager.singleton.spawnPrefabs : null);
             if (!resolution.Passed)
             {
@@ -239,17 +278,101 @@ namespace VrBattlegrounds.Maps.Runtime
 
             _scope = scope;
             _config = resolution.Config;
+            _bindings = bindings;
+            _catalog = catalog;
+            _arsenal = arsenal;
             GameLog.Match.Info($"[MapBootstrap] Запуск '{_config.MapScene}' ({_config.Key}): режим матча " +
                 $"'{(_config.MatchIntent.HasMatch ? _config.MatchIntent.ModeId : "нет")}' ({_config.MatchIntent.ResolutionReason}).", this);
 
             try
             {
-                Compose(validation.Bindings, catalog);
+                // Ассортимент авторских станций — из канонического паспорта карты, до любой выдачи. Повтор того же
+                // preset безопасен. Сгенерированные станции готовит сборщик по описанию, не этот путь.
+                foreach (ArsenalStationCompositionBinding station in _bindings.Stations)
+                    if (station.Mode == ArsenalCompositionMode.Authored)
+                        station.AuthoredBinding.Prepare(map.arsenalPreset);
+            }
+            catch (Exception error)
+            {
+                FailRun("Composition.Exception", error.Message);
+                return;
+            }
+
+            if (!ComposeGeneratedStations(_arsenal, _scope, out string composeError))
+            {
+                FailRun("Arsenal.Generated.Compose", composeError);
+                return;
+            }
+
+            Stage = MapBootstrapStage.ComposingStations;
+            _waitingSince = -1f;
+            _stuckReported = false;
+            ContinueComposition();
+        }
+
+        /// <summary>
+        /// Собрать и включить сгенерированные станции в scope запуска (сервер и клиент одинаково). Сбой сборщика
+        /// назван им самим («ArsenalComposer.*», «NetworkUxrIdentity.Generated.*»); уже собранное разберёт scope.
+        /// </summary>
+        private bool ComposeGeneratedStations(MapArsenalCompositionAdapter arsenal, MapRunScope scope, out string error)
+        {
+            error = null;
+            if (!arsenal.HasStations) return true;
+            try
+            {
+                arsenal.Compose(scope);
+            }
+            catch (Exception failure)
+            {
+                error = failure.Message;
+                return false;
+            }
+
+            // Машина без графики: выключенные компоненты с ID внутри включённых станций регистрируем сами.
+            HeadlessPrecacheGuard.RegisterAfterComposition(gameObject.scene);
+            arsenal.Poll();
+            return true;
+        }
+
+        /// <summary>
+        /// Сервер, станции собраны: ждать регистрации ID всех сгенерированных станций (опрос каждый кадр), затем
+        /// создать служебные объекты. Pending — ждать, Failed — именованный отказ запуска. Closing — не отказ:
+        /// запуск уже закрыт загрузкой следующей карты.
+        /// </summary>
+        private void ContinueComposition()
+        {
+            if (_closing || _scope == null || _scope.IsClosed) return;
+            ArsenalCompositionReadiness readiness = _arsenal.Poll();
+            if (readiness == ArsenalCompositionReadiness.Pending)
+            {
+                ReportStuck("регистрация сгенерированных станций (" + _arsenal.Reason + ")");
+                return;
+            }
+            if (readiness == ArsenalCompositionReadiness.Failed)
+            {
+                FailRun("Arsenal.Generated.NotReady", _arsenal.Reason);
+                return;
+            }
+
+            try
+            {
+                ComposeServices(_bindings, _catalog);
             }
             catch (Exception error)
             {
                 FailRun("Composition.Exception", error.Message);
             }
+        }
+
+        /// <summary>
+        /// Сервер, запуск собран: сгенерированная станция, потерявшая регистрацию (ID занял чужой, поддерево
+        /// уничтожено), — именованный отказ, а не молчаливое закрытие допуска.
+        /// </summary>
+        private void WatchStations()
+        {
+            if (_arsenal == null || !_arsenal.HasStations || _closing || _scope == null || _scope.IsClosed) return;
+            if (_arsenal.Poll() == ArsenalCompositionReadiness.Failed)
+                FailRun("Arsenal.Generated.Lost", _arsenal.Reason);
         }
 
         /// <summary>
@@ -265,12 +388,8 @@ namespace VrBattlegrounds.Maps.Runtime
             return session != null ? session.SelectedModeId ?? string.Empty : string.Empty;
         }
 
-        private void Compose(MapRootBindings bindings, MapRuntimeCatalog catalog)
+        private void ComposeServices(MapRootBindings bindings, MapRuntimeCatalog catalog)
         {
-            // Ассортимент — из канонического паспорта карты, до любой выдачи. Повтор того же preset безопасен.
-            foreach (ArsenalStationCompositionBinding station in bindings.Stations)
-                station.AuthoredBinding.Prepare(bindings.Map.arsenalPreset);
-
             Scene scene = gameObject.scene;
             GameObject refereeObject = SpawnService(catalog.RefereePrefab.gameObject, scene);
             _referee = refereeObject.GetComponent<MapReferee>();
@@ -377,6 +496,9 @@ namespace VrBattlegrounds.Maps.Runtime
             _scope = null;
             _config = null;
             _referee = null;
+            _bindings = null;
+            _catalog = null;
+            _arsenal = null;
             _authority = null;
             FailureCode = string.Empty;
             _closing = false;
@@ -424,19 +546,120 @@ namespace VrBattlegrounds.Maps.Runtime
             {
                 if (!ReferenceEquals(_acceptedOn, NetworkClient.connection)) _highestAcceptedKey = default;
                 if (!AcceptsClientRun(snapshot, gameObject.scene.name, _highestAcceptedKey)) return;
-                _localRunKey = snapshot.Key;
                 _highestAcceptedKey = snapshot.Key;
                 _acceptedOn = NetworkClient.connection;
-                GameLog.Match.Info($"[MapBootstrap] Клиент принял запуск '{snapshot.Config.MapScene}' ({snapshot.Key}).", this);
-                LocalReadinessChanged?.Invoke();
+                MapRuntimeCatalog catalog = GameNetworkManager.MapCatalog;
+                AcceptLocalRun(snapshot.Config, catalog != null ? catalog.ArsenalComposition : null);
                 return;
             }
 
-            if (_localRunClosed || (snapshot.Key == _localRunKey && Assembled(snapshot.Status))) return;
-            _localRunClosed = true;
+            if (_localRunClosed) return;
+            if (snapshot.Key == _localRunKey && Assembled(snapshot.Status))
+            {
+                PollLocalRun();
+                return;
+            }
             GameLog.Match.Verbose($"[MapBootstrap] Клиент: запуск {_localRunKey} закрыт (descriptor {snapshot.Key}, {snapshot.Status}).", this);
+            CloseLocalRun();
+        }
+
+        /// <summary>
+        /// Клиент принял запуск <paramref name="config"/>: собрать сгенерированные станции своей сцены тем же
+        /// адаптером и с тем же ключом, что сервер. Описание сверяется с опубликованным config до сборки; расхождение,
+        /// отказ описания или сборщика — именованный отказ запуска на этом клиенте (снимок не запрашивается,
+        /// взаимодействие закрыто), без подмены авторскими слотами.
+        /// </summary>
+        internal void AcceptLocalRun(MapRunConfig config, ArsenalCompositionCatalog compositionCatalog)
+        {
+            _localRunKey = config.Key;
+            _waitingSince = -1f;
+            _stuckReported = false;
+            GameLog.Match.Info($"[MapBootstrap] Клиент принял запуск '{config.MapScene}' ({config.Key}).", this);
+
+            var errors = new List<string>();
+            MapArsenalCompositionAdapter arsenal = MapArsenalCompositionAdapter.Describe(_root.StationBindings,
+                _root.Map != null ? _root.Map.arsenalPreset : null, compositionCatalog, Composer, errors);
+            if (errors.Count != 0)
+            {
+                FailLocalRun("Arsenal.Generated.Description", Join(errors));
+                return;
+            }
+            if (!arsenal.Verify(config, _root.StationBindings, errors))
+            {
+                FailLocalRun("Arsenal.Generated.ConfigMismatch", Join(errors));
+                return;
+            }
+
+            _localArsenal = arsenal;
+            if (arsenal.HasStations)
+            {
+                _localScope = new MapRunScope(config.Key);
+                if (!ComposeGeneratedStations(arsenal, _localScope, out string composeError))
+                {
+                    FailLocalRun("Arsenal.Generated.Compose", composeError);
+                    return;
+                }
+                if (arsenal.Readiness == ArsenalCompositionReadiness.Failed)
+                {
+                    FailLocalRun("Arsenal.Generated.NotReady", arsenal.Reason);
+                    return;
+                }
+            }
+
             LocalReadinessChanged?.Invoke();
         }
+
+        /// <summary>
+        /// Клиент: опрос сгенерированных станций принятого запуска. Pending → Passed сообщает барьеру Relay готовность,
+        /// Failed — именованный отказ.
+        /// </summary>
+        internal void PollLocalRun()
+        {
+            if (_localArsenal == null || !_localArsenal.HasStations || _localRunFailed || _localRunClosed) return;
+            ArsenalCompositionReadiness before = _localArsenal.Readiness;
+            ArsenalCompositionReadiness now = _localArsenal.Poll();
+            if (now == ArsenalCompositionReadiness.Failed)
+            {
+                FailLocalRun("Arsenal.Generated.NotReady", _localArsenal.Reason);
+                return;
+            }
+            if (now == ArsenalCompositionReadiness.Pending) ReportStuck("регистрация сгенерированных станций (" + _localArsenal.Reason + ")");
+            if (now != before) LocalReadinessChanged?.Invoke();
+        }
+
+        /// <summary>Клиент: descriptor ушёл из собранного состояния — запуск закрыт, писатели по scope остановлены.</summary>
+        internal void CloseLocalRun()
+        {
+            if (_localRunClosed) return;
+            _localRunClosed = true;
+            _localScope?.Close();
+            LocalReadinessChanged?.Invoke();
+        }
+
+        private void FailLocalRun(string code, string detail)
+        {
+            _localRunFailed = true;
+            FailureCode = code;
+            GameLog.Error($"[MapBootstrap] Клиент: запуск '{gameObject.scene.name}' ({_localRunKey}) отказал: {code}" +
+                (string.IsNullOrEmpty(detail) ? "" : " — " + detail) +
+                ". Снимок состояния не запрашивается, взаимодействие с картой закрыто.", this);
+            DisposeLocalScope();
+            LocalReadinessChanged?.Invoke();
+        }
+
+        /// <summary>Разборка того, что собрал клиент: scope принятого запуска (станции генератора).</summary>
+        private void DisposeLocalScope()
+        {
+            MapRunScope scope = _localScope;
+            _localScope = null;
+            if (scope == null) return;
+            try { scope.Dispose(); }
+            catch (Exception error) { GameLog.Error("[MapBootstrap] Ошибка разборки станций клиента: " + error, this); }
+        }
+
+        private static string Join(IReadOnlyList<string> errors) =>
+            errors == null || errors.Count == 0 ? string.Empty
+                : string.Join(", ", errors.Take(10)) + (errors.Count > 10 ? $", … ещё {errors.Count - 10}" : "");
 
         /// <summary>Правило «run известен локально» в чистом виде (проверка — MapBootstrapClientRunTests).</summary>
         internal static bool AcceptsClientRun(MapRunSnapshot snapshot, string sceneName, MapRunKey highestAccepted) =>

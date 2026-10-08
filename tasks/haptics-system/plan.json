@@ -1,0 +1,121 @@
+{
+  "task_id": "haptics-system",
+  "owner": "haptics",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/haptics/Vr_Battlegrounds_ai",
+  "base_sha": "048b9206fca27b7a144ccc41cc5916c89411e45c",
+  "doc_path": "tasks/haptics-system/Readme.md",
+  "title": "Единая система вибрации",
+  "stages": [
+    {
+      "id": "clips-interaction",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Haptics/UxrHapticClip.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Haptics/UxrHapticWaveform.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Haptics/UxrHapticPriority.cs",
+        "Assets/Scripts/Haptics/**",
+        "Assets/Scripts/Haptics.meta",
+        "Assets/Data/Haptics/**",
+        "Assets/Data/Haptics.meta",
+        "Assets/Resources/HapticRoles.asset",
+        "Assets/Resources/HapticCatalog.asset",
+        "Assets/Scripts/Interaction/PocketHaptics.cs",
+        "Assets/Scripts/Interaction/PocketReadiness.cs",
+        "Assets/Scripts/Interaction/AnchorReadiness.cs",
+        "Assets/Editor/VR_Battlegrounds/Haptics/**",
+        "Assets/Editor/VR_Battlegrounds/Haptics.meta",
+        "Assets/Tests/EditMode/Haptics/**",
+        "Assets/Tests/EditMode/Haptics.meta",
+        "Assets/Tests/EditMode/Interaction/PocketTapTests.cs",
+        "tasks/haptics-system/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "pocket-removal",
+      "writes": [
+        "Assets/Scripts/Interaction/PocketHaptics.cs",
+        "Assets/Prefabs/Player/PlayerBase.prefab",
+        "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GhostAvatarBuilder.cs",
+        "Assets/Tests/EditMode/Prefabs/AvatarLoadoutTests.cs",
+        "tasks/haptics-system/**"
+      ],
+      "after": [
+        {"task": "haptics-system", "stage": "clips-interaction", "state": "merged"}
+      ],
+      "needs": []
+    },
+    {
+      "id": "sdk-routing",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Devices/UxrControllerInput.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Devices/Integrations/UxrUnityXRControllerInput.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Haptics/UxrHapticRouting.cs",
+        "Assets/Scripts/Haptics/**",
+        "Assets/Data/Haptics/**",
+        "Assets/Resources/HapticRoles.asset",
+        "Assets/Tests/EditMode/Haptics/**",
+        "tasks/haptics-system/**"
+      ],
+      "after": [
+        {"task": "haptics-system", "stage": "clips-interaction", "state": "merged"}
+      ],
+      "needs": []
+    },
+    {
+      "id": "sources",
+      "writes": [
+        "Assets/Scripts/Player/Ghost/GhostViewEffect.cs",
+        "Assets/Scripts/Player/WallPass/WallPassFeedback.cs",
+        "Assets/Scripts/UI/HUD/WristDisplay.cs",
+        "Assets/Scripts/Debug/DebugMode/DebugGestureInput.cs",
+        "Assets/Scripts/Haptics/**",
+        "Assets/Data/Haptics/**",
+        "Assets/Resources/HapticRoles.asset",
+        "Assets/Tests/EditMode/Haptics/**",
+        "tasks/haptics-system/**"
+      ],
+      "after": [
+        {"task": "haptics-system", "stage": "clips-interaction", "state": "merged"}
+      ],
+      "needs": []
+    },
+    {
+      "id": "item-clicks",
+      "writes": [
+        "Assets/Prefabs/UI/Menu/Tablet/Tablet_Base.prefab",
+        "Assets/Resources/HapticRoles.asset",
+        "Assets/Data/Haptics/**",
+        "tasks/haptics-system/**"
+      ],
+      "after": [
+        {"task": "haptics-system", "stage": "sdk-routing", "state": "merged"}
+      ],
+      "needs": []
+    },
+    {
+      "id": "behavior-tests",
+      "writes": [
+        "Assets/Tests/EditMode/Haptics/**",
+        "tasks/haptics-system/**"
+      ],
+      "after": [
+        {"task": "haptics-system", "stage": "clips-interaction", "state": "accepted"}
+      ],
+      "needs": []
+    },
+    {
+      "id": "docs-transfer",
+      "writes": [
+        "Docs/troubleshooting.md",
+        "tasks/haptics-system/**"
+      ],
+      "after": [
+        {"task": "haptics-system", "stage": "clips-interaction", "state": "merged"}
+      ],
+      "needs": []
+    }
+  ]
+}

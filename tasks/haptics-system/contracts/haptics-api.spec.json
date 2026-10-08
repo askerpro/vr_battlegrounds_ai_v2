@@ -1,0 +1,8 @@
+{
+  "summary": "Вибрация через единственного владельца мотора: HapticService.Play(UxrHapticClip clip, UxrGrabber hand, HapticHandRole role = Primary, float gain = 1). Клип — UltimateXR.Haptics.UxrHapticClip с формой UxrHapticWaveform (SDK-патч 66): форма — общий ассет (Assets/Data/Haptics/Waveforms), сила/приоритет Low|Normal|High|Critical/пауза повтора/кулдаун/вторая рука — в клипе точки интеграции. Рука чужого аватара, бота или null и клип без формы — no-op. IWeaponRecoilHapticsOwner { bool OwnsRecoilHaptics } — гашение отдачи SDK по стволу на этапе sdk-routing. Временные прямые вызовы потребителя ведутся в HapticOwnershipTests.Pending владельцем контракта. Полный текст: tasks/haptics-system/contracts/haptics-api.md.",
+  "motivation": "Решение пользователя 2026-10-08: открытый реестр форм вместо закрытого перечня HapticSignalId; один тип клипа и в компонентах SDK, и в коде игры; параметры воспроизведения задаёт точка интеграции.",
+  "transition_cost": "Потребитель weapon-system: клипы отказа/отдачи — поля UxrHapticClip в наборе откликов ствола вместо числовых Id; временный адаптер WeaponHapticOutput переводится на HapticService.Play одной строкой после вливания clips-interaction.",
+  "aspects": ["play-api", "clip-format", "recoil-ownership", "ownership-guard"],
+  "compatibility": "breaking",
+  "providing_stage": "clips-interaction"
+}

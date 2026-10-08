@@ -4,7 +4,7 @@
 
 **Цель:** из одного Preset/Style получать нужные functional slots/container в runtime и полностью transient Editor preview внутри обычного artist Prefab Mode.
 
-**Архитектура:** чистый resolver собирает immutable description; fixed authored decorations выбираются smallest-fit → universal → bare. Существующая scene station shell сохраняет NI и внешние ссылки; local generated children имеют manifest-derived UXR identities и активируются только после bootstrap admission.
+**Архитектура:** чистый resolver собирает immutable description и применяет настройки стиля как есть (решение пользователя 2026-10-07: генератор не знает размеров оружия и ничего не проверяет на «влезает»); корпус выбирается по числу слотов: заказанный → наименьший по местам → универсальный → без корпуса. Существующая scene station shell сохраняет NI и внешние ссылки; local generated children имеют manifest-derived UXR identities и активируются только после bootstrap admission.
 
 **Технологии:** Unity 6/URP, C#, vendored UltimateXR/Mirror, AndroidCompileGate, Unity PrefabStage, временные probes.
 
@@ -16,7 +16,7 @@
 
 - Preset единолично владеет ordered WeaponInfo/Entry.Zone; Style defaults по Zone и exact WeaponInfo/Zone targets — единственный источник поз. Binding/cache/output не master.
 - Shelf ширина 0,4 м, глубина 0,66 м, gap 0,03 м. Artwork и физические weapon/mag prefabs не масштабировать. Station/functional frames unit scale; nonuniform/negative scale fail.
-- Fallback missing/undersized decoration не блокирует functional generation; actual placement overflow и invalid functional inputs — именованный отказ до stock.
+- Генератор применяет позы стиля как есть и не проверяет размеры, корпус и место на карте: что не влезает — правка стиля человеком. Отказ только там, где станцию не собрать или сломается сеть: нет ключа/пресета/каталога, пустое оружие, повтор WeaponId, пресет без стиля, нет шаблона зоны.
 - Только GameLog, комментарии/документация на русском; Editor source только `Assets/Editor/VR_Battlegrounds/Arsenal/`.
 - Scene/prefab/import/compile/PlayMode/test/bake — собственная Unity lease. Не прерывать чужой PlayMode, не сохранять чужие dirty assets или global SaveAssets.
 - До acquire подготовить конкретный пакет и условие release; дождаться конца import/compile/async probe, завершить свои временные изменения и следующим шагом release. Анализ ошибок, следующий patch, docs и ожидания — без замка; renew только продолжающейся операции/её завершения.
@@ -31,7 +31,7 @@
 1. SDK initial snapshot раньше generated anchors или spawned item IDs: local readiness должна задерживать запрос свежего snapshot; текущая Relay incoming очередь отсутствует. Задачи 2/6.
 2. Reorder/changed_zone/capacity crossing на новой загрузке: logical keys сохраняются, index manifest явно меняется, старый callback/UID не адресует новый run. Задачи 1/2/3/6.
 3. Artist unsaved material/decor edits, save/reopen и domain reload: refresh не перечитывает author prefab из файла, overlay никогда не сериализуется. Задача 4.
-4. Bare/universal с отсутствующим catalog при валидном Preset: функции/identities доступны без корпуса, настоящий placement overflow всё равно отвергается. Задачи 1/3/5/6/7.
+4. Bare/universal без подходящего корпуса при валидном Preset: функции/identities доступны без корпуса; размеры и место на карте генератор не проверяет. Задачи 1/3/5/6/7.
 5. Retiring станция и held/bought magazine/weapon: generator disposal не уничтожает предмет через parent hierarchy и не инициирует неавторский SDK release. Задачи 3/6/7.
 
 ## Порядок, API и карта файлов
@@ -89,9 +89,8 @@ Temporary harness: `Tools/Probes/ArsenalGenerator/` для inputs/expected vecto
 - [ ] Передать bootstrap owner минимальную CompositionBinding schema для MapRoot refs: StationKey единственный serialized key, exclusive Authored/Generated mode, default Authored. Pure description не содержит MapRunKey/expected runtime IDs; preview не делает synthetic run и не поднимает authority. Этот handoff не opt-in станции.
 - [ ] Создать probe `ResolveCases`: empty→0 slots; Shelf N=3 width=1,26 м и centers -0,43/0/+0,43; Shelf N=9 width=3,84 м; current20→11 Pegboard/9 Shelf с MP5K/MKR9 Shelf; one-zone не создаёт пустой второй ряд. Зафиксировать фактический legacy RED там, где он существует.
 - [ ] Реализовать центрацию каждого ряда, max row width, profile closed/open frames. Pegboard dimensions импортировать из accepted template baseline, измерить и сохранить profile; не переносить устаревшие constants Builder или StretchHousing.
-- [ ] Probe `SelectionCases`: sized4/4 даёт4/4 и3/2 без резервных slots; 5/2 и2/5 выбирают bigger→universal→bare; reverse catalog enumeration не меняет winner; identical size ties ordinal DecorationId. Explicit undersized/missing проходит fallback с diagnostic; invalid Style/frame/template fail до materializer.
-- [ ] Probe `ScaleAndBounds`: negative/nonuniform unit frame rejected; original item physicalScale unchanged; target occupied envelope выходит из offered usableBounds→candidate не fit, из map placementBounds→Failed; fallback не скрывает последний отказ.
-- [ ] Compile metadata measurement в Editor с active geometry/TRS и DropAlign, runtime descriptor не требует readable meshes. Fingerprint включить resolved content/schema/template sourceIDs/geometry/Style/modules/card-data/decoration frame; separate identity hash не включает decor.
+- [x] Выбор корпуса по количеству слотов (заказанный → наименьший по местам → универсальный → без корпуса); размеры оружия не участвуют.
+- [x] Геометрия оружия рантайму не нужна (решение 2026-10-07): позы берутся из стиля, отпечаток раскладки — из применённых настроек.
 - [ ] GREEN pure vectors/local input-description readback без runtime lifetime; AndroidCompileGate Errors=[]. Документировать measured Pegboard profile и selection comparator в тематических docs после root review, без integrated runtime/human acceptance claim.
 
 ## Задача 2. Semantic UXR manifest и dormant registration proof
@@ -139,7 +138,7 @@ Temporary harness: `Tools/Probes/ArsenalGenerator/` для inputs/expected vecto
 - [ ] Скопировать accepted fixed Common/Lobby artwork в новые authored resources без удаления production source; функциональные DogTag/readiness/wallet/station network components остаются у прежних owners. Puredecor validator исключает gameplay/SDK/NI/Rigidbody, сохраняет static artwork colliders; fixed original dims/readback без StretchHousing. Новый visual concepts input в Docs/Arsenal/concepts уже принадлежит visual owner, не расширять его Style/module write-set.
 - [ ] Dry-run всех scene links: таблица old child localFileID/UID/role→new logical binding; scene NI/root pose/Zone/standing/facing/opening/deployment refs отдельные preserved rows. 668/168 baseline annotate retained vs explicitly removed/derived; не утверждать все ID сохранены после удаления children.
 - [ ] Предложить StationKey assignment в dry run; serialized production запись отложить task7 либо upstream approved authored-only migration, сохраняя source slots и default Authored mode. MapRoot ссылается на binding. Duplicate key/missing Zone/non-unit frame или external child reference без resolver mapping блокируют cutover.
-- [ ] Build validator охватывает all registered presets/maps, network prefab assetIds/catalog inclusion, role metadata, geometry envelope/openings/neighbor station gaps, saved scene IDs и explicit migration mode. Decor absence разрешён; corrupt functional resources отказ.
+- [ ] Build validator охватывает all registered presets/maps, network prefab assetIds/catalog inclusion, role metadata и explicit migration mode. Размеры оружия и «влезает ли» не проверяются (решение 2026-10-07).
 - [ ] Probe `StagedResourcesDoNotCutover`: Common/Lobby/scenes прежние hashes/slot arrays/runtime mode, no deleted children; dry-run повторяется идентично. Isolated resource preview/reopen и metadata GREEN, Android gate. Runtime/Quest cost и production hierarchy/Bake checks принадлежат task7 после complete admission, не выдавать staged resources за playable production.
 
 ## Задача 6. MapBootstrap adapter, Relay ordering и complete admission

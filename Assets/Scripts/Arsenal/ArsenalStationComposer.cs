@@ -129,6 +129,9 @@ namespace VrBattlegrounds.Arsenal
                     });
                     assignments.AddRange(ArsenalGeneratedIdentityBinding.Bind(instance, manifest.Template, scope.Key,
                         description.StationKey, manifest.Entry.LogicalSlotKey));
+                    // Якоря оружия и магазина — в позы стиля: туда UltimateXR примагничивает возвращаемый предмет.
+                    // У авторских станций это делает редакторский сборщик и сохраняет в префаб; здесь — до включения.
+                    ArsenalPresentationApplicator.MaterializeFrames(slot, manifest.Entry.Presentation.Snapshot);
                     slots.Add(slot);
                 }
 
@@ -160,6 +163,12 @@ namespace VrBattlegrounds.Arsenal
             if (handle.IsActive) return;
             handle.IsActive = true;
             handle.Root.SetActive(true);
+
+            // Роль на выключенном внутри шаблона объекте не получит Awake и не зарегистрируется сама —
+            // готовность зависла бы в Pending. Регистрируем её явно; проснувшись позже, она повторно не регистрируется.
+            foreach (NetworkUxrIdentityAssignment assignment in handle.Assignments)
+                if (assignment.Target != null && !assignment.Target.gameObject.activeInHierarchy)
+                    assignment.Target.RegisterIfNecessary();
         }
 
         /// <summary>

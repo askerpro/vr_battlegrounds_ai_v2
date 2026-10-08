@@ -130,8 +130,7 @@ namespace VrBattlegrounds.Arsenal
                 var firearm = slot as FirearmSlotController;
                 if (firearm == null || slot.ItemAnchor == null || firearm.MagAnchor == null)
                     throw new InvalidOperationException("PrepareGenerated: шаблон слота без оружейного/магазинного якоря " + i + ".");
-                ArsenalPresentationResolver.ValidateFrame(slot.transform, slot.ItemAnchor.transform, slot.ItemAnchor.AlignTransform);
-                ArsenalPresentationResolver.ValidateFrame(slot.transform, firearm.MagAnchor.transform, firearm.MagAnchor.AlignTransform);
+                // Позы стиля применяются как есть: рамки и размеры не проверяются (их настраивает человек).
                 var snapshot = manifest.Entry.Presentation.Snapshot;
                 if (snapshot == null || !snapshot.IsStyled) throw new InvalidOperationException("PrepareGenerated: нестилизованное представление " + i + ".");
                 preparedPresentation.Add(slot, snapshot);

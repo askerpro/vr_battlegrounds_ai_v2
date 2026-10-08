@@ -6,7 +6,7 @@ using UnityEngine;
 namespace VrBattlegrounds.Arsenal
 {
     public enum ArsenalCompositionFailureKind
-    { InvalidInput, UnstyledPreset, InvalidCatalog, DuplicateLogicalKey, MissingMetadata, InvalidTemplate, InvalidFrame, InvalidScale, PlacementOverflow }
+    { InvalidInput, UnstyledPreset, DuplicateLogicalKey, MissingTemplate }
     public enum ArsenalDecorationFallback { Sized, Universal, Bare }
     public sealed class ArsenalCompositionFailure
     {
@@ -52,7 +52,10 @@ namespace VrBattlegrounds.Arsenal
             Damage=weapon.Damage; MagazineSize=weapon.MagazineSize; Rpm=WeaponInfo.ShotFrequency(weapon.FireRate)*60;
             FullAuto=weapon.FullAuto; Category=weapon.Category; }
     }
-    /// <summary>Style values копируются; UObject refs только для локальной материализации, не источник поз/hash.</summary>
+    /// <summary>
+    /// Позы оружия, магазина, карточки и опор, настроенные человеком в стиле представления. Генератор применяет их
+    /// как есть: размеры и «влезает ли» не проверяются — это зона того, кто настраивал визуал слота.
+    /// </summary>
     public sealed class ArsenalFrozenPresentation
     {
         public ArsenalPresentationPose ItemTarget { get; }
@@ -62,29 +65,15 @@ namespace VrBattlegrounds.Arsenal
         public float CardFontSize { get; }
         public GameObject SupportModule { get; }
         public Material ReadyMaterial { get; }
-        public string ModuleFingerprint { get; }
-        public string ReadyMaterialFingerprint { get; }
-        public string ModuleSourceGuid { get; }
-        public string ReadyMaterialSourceGuid { get; }
-        public Bounds SupportLocalBounds { get; }
         public IReadOnlyList<ArsenalSupportPose> Supports { get; }
         /// <summary>Неизменяемый снимок, из которого собрано представление: его отдаёт слоту сгенерированная станция.</summary>
         public ArsenalPresentationSnapshot Snapshot { get; }
-        public ArsenalFrozenPresentation(ArsenalPresentationSnapshot snapshot, ArsenalCompositionCatalog catalog)
+        public ArsenalFrozenPresentation(ArsenalPresentationSnapshot snapshot)
         {
             Snapshot=snapshot;
             ItemTarget=snapshot.ItemTarget; MagazineTarget=snapshot.MagazineTarget; CardTarget=snapshot.CardTarget;
             CardSize=snapshot.CardSize; CardFontSize=snapshot.CardFontSize; SupportModule=snapshot.Style.SupportModule;
             ReadyMaterial=snapshot.Style.ReturnReadyMaterial; Supports=Array.AsReadOnly(snapshot.Supports.ToArray());
-            var module=catalog.Supports.Where(m=>m.Module==SupportModule).ToArray();
-            var ready=catalog.Materials.Where(m=>m.Material==ReadyMaterial).ToArray();
-            if(SupportModule!=null&&module.Length!=1||ReadyMaterial!=null&&ready.Length!=1)
-                throw new InvalidOperationException("Нет однозначных compiled support/material metadata.");
-            ModuleFingerprint=module.Length==1?module[0].SourceFingerprint:"";
-            ReadyMaterialFingerprint=ready.Length==1?ready[0].SourceFingerprint:"";
-            ModuleSourceGuid=module.Length==1?module[0].SourceGuid:"";
-            ReadyMaterialSourceGuid=ready.Length==1?ready[0].SourceGuid:"";
-            SupportLocalBounds=module.Length==1?module[0].LocalBounds:default;
         }
     }
     public sealed class ArsenalFrozenEntry
@@ -93,12 +82,10 @@ namespace VrBattlegrounds.Arsenal
         public string LogicalSlotKey { get; }
         public ArsenalPresentationZone Zone { get; }
         public WeaponInfo WeaponResource { get; }
-        public ArsenalWeaponGeometry Geometry { get; }
         public ArsenalFrozenPresentation Presentation { get; }
         public ArsenalCardContent Card { get; }
-        public ArsenalFrozenEntry(int index, WeaponInfo weapon, ArsenalPresentationZone zone,
-            ArsenalWeaponGeometry geometry, ArsenalFrozenPresentation presentation)
-        { NetworkIndex=index; LogicalSlotKey=weapon.WeaponId; Zone=zone; WeaponResource=weapon; Geometry=geometry;
+        public ArsenalFrozenEntry(int index, WeaponInfo weapon, ArsenalPresentationZone zone, ArsenalFrozenPresentation presentation)
+        { NetworkIndex=index; LogicalSlotKey=weapon.WeaponId; Zone=zone; WeaponResource=weapon;
             Presentation=presentation; Card=new ArsenalCardContent(weapon); }
     }
     /// <summary>Capture до run: defensive копии resources и source values, никаких runtime keys или Ready.</summary>
@@ -142,17 +129,10 @@ namespace VrBattlegrounds.Arsenal
                     if(!keys.Add(weapon.WeaponId)) { fail(ArsenalCompositionFailureKind.DuplicateLogicalKey,weapon.WeaponId,"Повтор WeaponId."); continue; }
                     if(source.Zone!=ArsenalPresentationZone.Pegboard&&source.Zone!=ArsenalPresentationZone.Shelf)
                     { fail(ArsenalCompositionFailureKind.InvalidInput,weapon.WeaponId,"Неизвестная Zone."); continue; }
-                    if(preset.PresentationStyle==null) { fail(ArsenalCompositionFailureKind.UnstyledPreset,weapon.WeaponId,"Generated требует Style; authored legacy остаётся отдельным."); continue; }
-                    var metadata=catalog.Weapons.Where(m=>m.Weapon==weapon).ToArray();
-                    if(metadata.Length!=1||metadata[0].WeaponId!=weapon.WeaponId)
-                    { fail(ArsenalCompositionFailureKind.MissingMetadata,weapon.WeaponId,"Нет однозначных compiled metadata текущего WeaponId."); continue; }
-                    // Новый Capture проверяет canonical refs; ранее captured input остаётся неизменным.
-                    var geometry=metadata[0];
-                    if(geometry.Item.Resource!=weapon.WeaponPrefab||geometry.Item.Present!=(weapon.WeaponPrefab!=null)||
-                        geometry.Magazine.Resource!=weapon.MagazinePrefab||geometry.Magazine.Present!=(weapon.MagazinePrefab!=null))
-                    { fail(ArsenalCompositionFailureKind.MissingMetadata,weapon.WeaponId,"Compiled ресурсы/Present не соответствуют текущему WeaponInfo; требуется compiler."); continue; }
-                    try { entries.Add(new ArsenalFrozenEntry(i,weapon,source.Zone,metadata[0],new ArsenalFrozenPresentation(
-                        ArsenalPresentationResolver.Resolve(weapon,source.Zone,preset.PresentationStyle),catalog))); }
+                    if(preset.PresentationStyle==null) { fail(ArsenalCompositionFailureKind.UnstyledPreset,weapon.WeaponId,"Generated требует Style: это и есть настройки, которые генератор применяет."); continue; }
+                    // Позы берутся из стиля как есть; размеры оружия генератор не знает и не проверяет.
+                    try { entries.Add(new ArsenalFrozenEntry(i,weapon,source.Zone,new ArsenalFrozenPresentation(
+                        ArsenalPresentationResolver.Resolve(weapon,source.Zone,preset.PresentationStyle)))); }
                     catch(Exception ex) { fail(ArsenalCompositionFailureKind.InvalidInput,weapon.WeaponId,ex.Message); }
                 }
             }
@@ -170,10 +150,9 @@ namespace VrBattlegrounds.Arsenal
         public int RowIndex { get; }
         public ArsenalPresentationPose OpenPose { get; }
         public ArsenalPresentationPose ClosedPose { get; }
-        public Bounds SlotOccupiedBounds { get; }
         public ArsenalSlotManifest(ArsenalFrozenEntry entry, ArsenalFunctionalSlotTemplate template, int row,
-            ArsenalPresentationPose open, ArsenalPresentationPose closed, Bounds occupied)
-        { Entry=entry; Template=template; RowIndex=row; OpenPose=open; ClosedPose=closed; SlotOccupiedBounds=occupied; }
+            ArsenalPresentationPose open, ArsenalPresentationPose closed)
+        { Entry=entry; Template=template; RowIndex=row; OpenPose=open; ClosedPose=closed; }
     }
     public sealed class ArsenalDecorationSelection
     {
@@ -198,21 +177,15 @@ namespace VrBattlegrounds.Arsenal
         public ArsenalDecorationSelection Selection { get; }
         public float PegRowWidth { get; }
         public float ShelfRowWidth { get; }
-        public Bounds StructuralBounds { get; }
-        public Bounds OpenOccupiedBounds { get; }
-        public Bounds ClosedOccupiedBounds { get; }
-        public Bounds SweptOccupiedBounds { get; }
-        public Bounds WorldBounds { get; }
         public string LayoutFingerprint { get; }
         public string LogicalRoleFingerprint { get; }
         public ArsenalStationDescription(ArsenalStationBuildInput input, IEnumerable<ArsenalCompositionFailure> failures,
             IEnumerable<ArsenalSlotManifest> slots, ArsenalDecorationSelection selection, float peg, float shelf,
-            Bounds structure, Bounds open, Bounds closed, Bounds swept, Bounds world, string layoutHash, string roleHash)
+            string layoutHash, string roleHash)
         {
             StationKey=input.StationKey; PresetId=input.PresetId; Failures=Array.AsReadOnly(failures.ToArray());
             Slots=Array.AsReadOnly(slots.ToArray()); Selection=selection; PegRowWidth=peg; ShelfRowWidth=shelf;
-            StructuralBounds=structure; OpenOccupiedBounds=open; ClosedOccupiedBounds=closed; SweptOccupiedBounds=swept;
-            WorldBounds=world; LayoutFingerprint=layoutHash; LogicalRoleFingerprint=roleHash;
+            LayoutFingerprint=layoutHash; LogicalRoleFingerprint=roleHash;
         }
     }
 }

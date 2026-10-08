@@ -3,7 +3,7 @@
   "owner": "haptics",
   "client": "claude",
   "worktree": "F:/CodexWorktrees/haptics/Vr_Battlegrounds_ai",
-  "base_sha": "048b9206fca27b7a144ccc41cc5916c89411e45c",
+  "base_sha": "4640ccd500edc0fd55a7d97738e1e0fb9e6e9ae6",
   "doc_path": "tasks/haptics-system/Readme.md",
   "title": "Единая система вибрации",
   "stages": [
@@ -33,6 +33,17 @@
       "needs": []
     },
     {
+      "id": "behavior-tests",
+      "writes": [
+        "Assets/Tests/EditMode/Haptics/**",
+        "tasks/haptics-system/**"
+      ],
+      "after": [
+        {"task": "haptics-system", "stage": "clips-interaction", "state": "merged"}
+      ],
+      "needs": []
+    },
+    {
       "id": "pocket-removal",
       "writes": [
         "Assets/Scripts/Interaction/PocketHaptics.cs",
@@ -43,7 +54,7 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "clips-interaction", "state": "merged"}
+        {"task": "haptics-system", "stage": "behavior-tests", "state": "merged"}
       ],
       "needs": []
     },
@@ -60,7 +71,7 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "clips-interaction", "state": "merged"}
+        {"task": "haptics-system", "stage": "pocket-removal", "state": "merged"}
       ],
       "needs": []
     },
@@ -78,7 +89,7 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "clips-interaction", "state": "merged"}
+        {"task": "haptics-system", "stage": "sdk-routing", "state": "merged"}
       ],
       "needs": []
     },
@@ -91,18 +102,7 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "sdk-routing", "state": "merged"}
-      ],
-      "needs": []
-    },
-    {
-      "id": "behavior-tests",
-      "writes": [
-        "Assets/Tests/EditMode/Haptics/**",
-        "tasks/haptics-system/**"
-      ],
-      "after": [
-        {"task": "haptics-system", "stage": "clips-interaction", "state": "accepted"}
+        {"task": "haptics-system", "stage": "sources", "state": "merged"}
       ],
       "needs": []
     },
@@ -113,7 +113,7 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "clips-interaction", "state": "merged"}
+        {"task": "haptics-system", "stage": "item-clicks", "state": "merged"}
       ],
       "needs": []
     }

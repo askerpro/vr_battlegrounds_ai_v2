@@ -13,6 +13,8 @@ using System;
 namespace VrBattlegrounds.Weapons
 {
     /// <summary>
+    ///     Прежний (legacy) механизм затвора стволов, ещё не переведённых на <see cref="WeaponSystem"/> (волны F, план
+    ///     WeaponSystem). На стволах с учётом готовности его нет: позу, звук и досылание ведёт машина.
     ///     Отслеживает движение граббабельного затвора по локальной оси (как <see cref="UxrShotgunPump" />).
     ///     При <see cref="_chamberRoundOnSlideReturn" /> на обратном ходе вызывается <see cref="UxrFirearmWeapon.Reload" />.
     ///     Для Semi/Fully с флагом Use Has Reloaded For Semi And Full Auto в UltimateXR «патрон в патроннике» сбрасывается при
@@ -74,24 +76,6 @@ namespace VrBattlegrounds.Weapons
         public bool IsActionHeld => _slide != null && UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
         public float SignedSlideProgress => TryGetSlideTravel(_slide, out Vector3 axis, out float length)
             ? Vector3.Dot(_slide.transform.localPosition - _localStart, axis) / length : 0f;
-        private WeaponReadinessController ReadinessAdapter => GetComponent<WeaponReadinessController>();
-        private bool HasLedgerAdapter => ReadinessAdapter != null && ReadinessAdapter.IsConfigured && _firearm.UsesReadinessLedger(_triggerIndex);
-
-        public void NotifyLedgerManualCompletion()
-        {
-            if (!HasLedgerAdapter || !_firearm.HasChamberRound(_triggerIndex)) return;
-            ClearLedgerVisualHold();
-            PlayBackFeedback(true);
-            ManualCycleCompleted?.Invoke();
-        }
-
-        public void ClearLedgerVisualHold()
-        {
-            if (!HasLedgerAdapter) return;
-            _cosmeticHold = false;
-            CancelManualCycle(); // Только legacy gesture fields, не pose/SDK ledger.
-        }
-
         public bool TryGetNumericalEndpointDiagnostics(out float coordinate, out float length, out float epsilon)
         {
             coordinate = 0f; epsilon = 0f;
@@ -137,7 +121,7 @@ namespace VrBattlegrounds.Weapons
 
         public void CancelVisualHold()
         {
-            if (!HasLedgerAdapter && _cosmeticHold && _slide != null) _slide.transform.localPosition = _localStart;
+            if (_cosmeticHold && _slide != null) _slide.transform.localPosition = _localStart;
             _cosmeticHold = false;
             CancelManualCycle();
         }
@@ -215,14 +199,6 @@ namespace VrBattlegrounds.Weapons
             }
 
             bool isGrabbed = UxrGrabManager.Instance != null && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
-            if (HasLedgerAdapter)
-            {
-                // Spring только physical; никакой второй Reload/ready writer.
-                if (_autoReturnOnRelease && !isGrabbed && !_cosmeticHold && !ReadinessAdapter.OwnsActionPose)
-                    ApplyAutoReturn(dir);
-                ReadinessAdapter.RefreshPhysicalActionState(_triggerIndex);
-                return;
-            }
             if (_cosmeticHold && !isGrabbed) return;
 
             if (_autoReturnOnRelease && !isGrabbed)
@@ -282,7 +258,7 @@ namespace VrBattlegrounds.Weapons
 
         private void HandleSlideGrabbing(object sender, UxrManipulationEventArgs e)
         {
-            if (HasLedgerAdapter || !isActiveAndEnabled || !HasManualContext() || _pendingClose) return;
+            if (!isActiveAndEnabled || !HasManualContext() || _pendingClose) return;
             _manualInteraction = true;
             if (_cosmeticHold)
             {

@@ -22,9 +22,8 @@ namespace VrBattlegrounds.Weapons.Sensors
     }
 
     /// <summary>
-    /// Порт учёта только на чтение (этап C): снимок <see cref="LedgerView"/> из <c>UxrFirearmWeapon.Readiness</c>
-    /// и разбор фиксаций из <c>StateChanged</c>. Команд не выдаёт. Запоминает последнее увиденное состояние,
-    /// чтобы машина могла получить снимок «до фиксации» (досчёт решения старого кода в тот же момент).
+    /// Чтение учёта: снимок <see cref="LedgerView"/> из <c>UxrFirearmWeapon.Readiness</c> и разбор фиксаций из
+    /// <c>StateChanged</c>. Команд не выдаёт (их исполняет <see cref="UxrReadinessLedgerPort"/>).
     /// Магазин один — гнездо (C2): учёт его не хранит. Жетоны магазинов — по <c>UniqueId</c> (0 — нет магазина),
     /// жетон магазина цикла — по <c>CycleMagazineIdentity</c>. Pending — действительный (<c>IsCyclePendingFor</c>).
     /// Сбоя учёта, блокирующего команды, после C2 нет (В-Л5): <c>Faulted</c> всегда ложно.
@@ -77,7 +76,8 @@ namespace VrBattlegrounds.Weapons.Sensors
                 cycleMagazineToken: s != null && s.ChamberCyclePending ? Token(s.CycleMagazineIdentity) : 0);
         }
 
-        private static int Token(Guid identity)
+        /// <summary>Жетон магазина для машины (0 — нет магазина). Одно правило для чтения учёта и проверки команды порта.</summary>
+        public static int Token(Guid identity)
         {
             if (identity == Guid.Empty) return 0;
             int hash = identity.GetHashCode();

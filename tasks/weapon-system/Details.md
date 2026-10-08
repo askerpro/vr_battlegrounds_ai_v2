@@ -70,3 +70,30 @@
   `tasks/weapon-system/reports/`).
 - `machine-s124`: аренда 170 — `AndroidCompileGate` PASS, `VrBattlegrounds.Tests.Weapons` 16/16. Таблица — 83
   перехода. Шлем: цель — ноль расхождений тени на Herrington и FABARM, кроме Н6.
+- `drive` (2026-10-08, не влит): все сборки компилируются офлайн (`tmp/weapon-shadow/compile.ps1`), включая
+  тесты. В Unity не проверено: на тикеты 219 и 220 брокер сразу дал OFFERED, но отказал в claim — «нужен
+  чистый редактор на принятой базе». Изменения не применялись, оба тикета отменены. План аренды:
+  1. `WeaponSystemAuthoring.MigratePilots()` — preflight, правка ассетов, readback: GUID, fileID, `_assetId`,
+     масштаб и хваты не меняются; удаляются ровно AWSF, WMV, Reminder, `UxrShotgunPump` и два отсутствующих скрипта.
+  2. `AndroidCompileGate`.
+  3. EditMode-тесты.
+
+## Этап drive: решения реализации и открытые вопросы
+
+| Тема | Решение |
+|---|---|
+| События SDK | Фиксации, фронты спуска и хват приходят внутри синхронизации SDK; команда там была бы отклонена (класс Б). Хост ставит событие в очередь со снимком учёта, контекста и хода и разбирает её с верхнего уровня. Фронт спуска снимается до выстрела, поэтому ложного сухого щелчка после последнего патрона нет |
+| До этапа E | `Shoot` и `RequestAdmission` порт не исполняет: решают спуск SDK и `CartridgeIntake`. Запасной щелчок SDK подавлен подпиской на `LocalTriggerAttemptDecided`. `DryFire(Obstructed)` и его вибрация остаются у `BarrelObstruction` |
+| Вибрация | Контракт haptics-api, ревизия 2. Клипы `UxrHapticClip` лежат в `WeaponHapticSet` хоста (`ActionRear`, `NotReady`, `Faulted`, `RateOfFire`). Набор отдельный, рядом с `WeaponAudioSet`: у звука и вибрации разные исполнители, данные канала — у его исполнителя. Отправляет одна точка `WeaponHapticOutput`, пока через `UxrControllerInput.SendHapticFeedback(side, clip)` и только локальной руке. Замена на `HapticService.Play(clip, hand, role, gain)` — одна строка. Значения по умолчанию пишет `WeaponSystemAuthoring`, и только в пустой клип: отказы — RumbleFreq 0,4, 0,06–0,15 с; ход — Click 0,25. Формы двойного и тройного импульса и приоритет High/Normal появятся с патчем 66. Отдачу даёт SDK, `IWeaponRecoilHapticsOwner` не реализован |
+| Звуки | Переносятся по смыслу события. У помпы `_audioSlide` — оттяжка. У затвора сборщиков `_audioSlideBack` — оттяжка (рецепт `SlideBackAudio`). Прежний AWSF играл поля затвора наоборот. Herrington: оттяжка — `Herrington_BoltBack`, досылание — `Herrington_BoltForward` |
+| Тень | Удалена: машине больше не с чем сравниваться. `WeaponShadowSettings` остался только ради меню `Debug/WeaponSystemShadowMenu.cs` (вне области этапа); удалить вместе с меню |
+| `FormerlySerializedAs` | `_triggerIndex` и `_profile` сохранили имена. Остальные поля переехали внутрь `_rig` (вложенный класс), атрибут туда не дотягивается. Их перезаписывает writer |
+| Изменение поведения | Вибрация NotReady — на любую причину, раньше только ChamberingRequired. Частичная оттяжка теперь звучит при закрытии (Н1) |
+
+**Открыто (файлы вне области `drive`):**
+
+- Абстрактный `WeaponReadinessController` — переходное имя хоста. Его используют `BotGunner` (bots-fix),
+  `PumpGrabFollow`, `WeaponLedgerIntegrity` и `ManualLoadingPrefabTests`. Убрать, когда эти файлы перейдут
+  на `WeaponSystem`.
+- `ArsenalWeaponDiagnostics` (Editor/Arsenal) пометит у пилотов «Нет WeaponMechanismVisuals».
+- Устаревшие ожидания тестов (п. 6 плана) — список уточняется прогоном.

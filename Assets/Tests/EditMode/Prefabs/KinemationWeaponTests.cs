@@ -265,22 +265,38 @@ namespace VrBattlegrounds.Tests.Prefabs
             // должна помещаться в одностороннюю тягу, плюс принятые 4 мм довзведения.
             if (c.EmptyClip != null)
             {
-                var visuals = prefab.GetComponent<WeaponMechanismVisuals>();
-                Assert.IsNotNull(visuals, "Нет владельца механических поз.");
-                Assert.That(new SerializedObject(visuals).FindProperty("_originalSlideLength").floatValue,
-                    Is.EqualTo(expected.magnitude).Within(0.001f), "Исходный Fire-ход потерян.");
-                Assert.IsNotNull(visuals.Motion?.Empty, "Нет отдельной Empty-позы.");
                 // Обязательные детали берём из контракта кейса, а не из проверяемых bindings:
                 // потерянный Charger не должен уменьшать ожидаемый ход TR15.
                 var parts = c.Parts.Where(p => p.Value.StartsWith(c.ActionPath + "/", System.StringComparison.Ordinal))
                     .Select(p => p.Key).ToArray();
                 Assert.That(parts, Does.Contain(c.ActionPart), "Кейс не задаёт деталь затвора под ручной тягой.");
-                Assert.IsNotNull(visuals.Bindings, "Нет bindings механических деталей.");
+
+                var visuals = prefab.GetComponent<WeaponMechanismVisuals>();
+                var host = prefab.GetComponent<WeaponSystem>();
+                (string part, Transform target)[] bound;
+                if (visuals == null && host != null && host.Rig.HasAction)
+                {
+                    // Этап drive (пилот Herrington): механические позы ведёт хост WeaponSystem, данные — в Rig
+                    // (детали клипа Rig.Parts — перенос bindings WeaponMechanismVisuals один к одному).
+                    // Проверка _originalSlideLength снята: поле было у WeaponMechanismVisuals, которого на пилоте нет;
+                    // Fire-ход живёт в дорожке Motion.Fire, а сам ход затвора по-прежнему сверяется с клипом ниже.
+                    Assert.IsNotNull(host.Rig.Motion?.Empty, "Нет отдельной Empty-позы.");
+                    bound = host.Rig.Parts.Where(p => p != null).Select(p => (p.Name, p.Target)).ToArray();
+                }
+                else
+                {
+                    Assert.IsNotNull(visuals, "Нет владельца механических поз.");
+                    Assert.That(new SerializedObject(visuals).FindProperty("_originalSlideLength").floatValue,
+                        Is.EqualTo(expected.magnitude).Within(0.001f), "Исходный Fire-ход потерян.");
+                    Assert.IsNotNull(visuals.Motion?.Empty, "Нет отдельной Empty-позы.");
+                    Assert.IsNotNull(visuals.Bindings, "Нет bindings механических деталей.");
+                    bound = visuals.Bindings.Where(b => b != null).Select(b => (b.Part, b.Target)).ToArray();
+                }
                 foreach (string part in parts)
                 {
-                    var bindings = visuals.Bindings.Where(b => b != null && b.Part == part).ToArray();
+                    var bindings = bound.Where(b => b.part == part).ToArray();
                     Assert.That(bindings.Length, Is.EqualTo(1), $"{part}: нужен один binding ручной детали.");
-                    Assert.That(bindings[0].Target, Is.SameAs(Find(prefab, c.Parts[part])),
+                    Assert.That(bindings[0].target, Is.SameAs(Find(prefab, c.Parts[part])),
                         $"{part}: binding не ссылается на предусмотренную ручную деталь.");
                 }
                 using var emptyPack = new PackModel(c);
@@ -378,11 +394,19 @@ namespace VrBattlegrounds.Tests.Prefabs
             SerializedProperty trigger = new SerializedObject(prefab.GetComponent<UxrFirearmWeapon>()).FindProperty("_triggers").GetArrayElementAtIndex(0);
             clips.Add(("выстрел", trigger.FindPropertyRelative("_shotAudio._clip").objectReferenceValue as AudioClip));
             var feedback = prefab.GetComponent<AutomaticWeaponSlideFeedback>();
+            var host = prefab.GetComponent<WeaponSystem>();
             if (feedback != null) // у револьвера затвора нет
             {
                 var slide = new SerializedObject(feedback);
                 clips.Add(("затвор назад", slide.FindProperty("_audioSlideBack._clip").objectReferenceValue as AudioClip));
                 clips.Add(("затвор вперёд", slide.FindProperty("_audioSlideForward._clip").objectReferenceValue as AudioClip));
+            }
+            else if (host != null && host.Rig.HasAction)
+            {
+                // Этап drive (пилот Herrington): AutomaticWeaponSlideFeedback снят, звуки затвора — в WeaponAudioSet хоста.
+                // Звук отказа Refusal здесь не проверяется: он не звук ствола, а общий UI-сигнал (S2).
+                clips.Add(("затвор назад", host.Audio.ActionBack.Clip));
+                clips.Add(("затвор вперёд", host.Audio.For(VrBattlegrounds.Weapons.Core.WeaponCue.ActionForwardChambered)?.Clip));
             }
             var anchor = trigger.FindPropertyRelative("_ammunitionMagAnchor").objectReferenceValue as UxrGrabbableObjectAnchor;
             AnchorSound sound = anchor.GetComponent<AnchorSound>();

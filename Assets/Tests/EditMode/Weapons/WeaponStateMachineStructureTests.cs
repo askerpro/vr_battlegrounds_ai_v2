@@ -10,6 +10,7 @@ namespace VrBattlegrounds.Tests.Weapons
     /// Структурные контракты машины оружия (план WeaponSystem, п. 3.5–3.7, решение В2): полнота таблицы (И8),
     /// наблюдатель без команд (И9), при HoldOpen без руки нет возврата в покой (И10, класс ошибок 1),
     /// клип всегда завершается и не переживает снимок/выключение (И11, класс 4), ровно одна цель позы за шаг (И13),
+    /// отпущенный Action при оси Stay не возвращается пружиной (S4), нажатие до конца темпа не выдаёт команд (S2),
     /// Derive и недопустимые оси. Это архитектурные свойства, а не настройка механики: поведенческие сценарии
     /// S01–S33 пишутся после приёмки пилота в шлеме.
     ///
@@ -32,6 +33,13 @@ namespace VrBattlegrounds.Tests.Weapons
             WeaponChamberPolicy.ManualReturn, WeaponEmptyPose.ReturnToRest, extractionGate: 0.9f, epsilon: 0.02f,
             springReturnSpeed: 4f, autoReturnSpeed: 2f, hasFireClip: true, fireClipDuration: 0.3f,
             hasFixedStoreIntake: true);
+
+        /// <summary>Помпа без пружины отпущенной ручки и без Empty-клипа — как FABARM (S1, S4).</summary>
+        private static WeaponProfileAxes StayPump() => new WeaponProfileAxes(
+            WeaponFireMode.Manual, WeaponAmmoCapability.FixedStoreChamber, WeaponPhysicalCapability.ActionTravel,
+            WeaponChamberPolicy.ManualReturn, WeaponEmptyPose.ReturnToRest, extractionGate: 0.9f, epsilon: 0.02f,
+            springReturnSpeed: 4f, autoReturnSpeed: 2f, hasFireClip: true, fireClipDuration: 0.3f,
+            hasFixedStoreIntake: true, releasedAction: WeaponReleasedAction.Stay);
 
         private static WeaponProfileAxes AssistPistol() => new WeaponProfileAxes(
             WeaponFireMode.Auto, WeaponAmmoCapability.DetachableMagazineChamber, WeaponPhysicalCapability.ActionTravel,
@@ -57,6 +65,7 @@ namespace VrBattlegrounds.Tests.Weapons
         {
             yield return new TestCaseData(HoldOpenRifle()).SetName("HoldOpenRifle");
             yield return new TestCaseData(FixedStorePump()).SetName("FixedStorePump");
+            yield return new TestCaseData(StayPump()).SetName("StayPump");
             yield return new TestCaseData(AssistPistol()).SetName("AssistPistol");
             yield return new TestCaseData(InsertHoldOpen()).SetName("InsertHoldOpen");
             yield return new TestCaseData(NoActionAuto()).SetName("NoActionAuto");
@@ -131,9 +140,12 @@ namespace VrBattlegrounds.Tests.Weapons
                 }
                 if (output.Poses != 1) Fail($"И13: целей позы {output.Poses}");
                 if (output.Unhandled + output.TableViolations != 0 || after.Violations != 0) Fail("И8/И9: нарушение таблицы");
-                if (!c.ActsAsAuthor && output.Commands.Count + output.Haptics + output.HintsOn + output.DryFires != 0)
+                if (!c.ActsAsAuthor && output.Commands.Count + output.Haptics + output.HintsOn + output.Denials != 0)
                     Fail("И9/И7: наблюдатель выдал команду или авторский отклик");
-                if (output.DryFires > 1) Fail("И7: больше одного сухого щелчка за нажатие");
+                if (output.Denials > 1) Fail("И7: больше одного отклика отказа за нажатие");
+                if (e.Kind == WeaponEventKind.TriggerPressed && c.RofTimer > 0f && c.Blocked == WeaponBlockReason.None &&
+                    (output.Commands.Count != 0 || output.HintsOn != 0))
+                    Fail("S2: нажатие до конца таймера темпа выдало команду или подсказку");
                 if (output.Commands.Count > 2) Fail("Больше двух команд за шаг");
                 if (mechanism == MechanismState.HoldOpen && !s.Held &&
                     after.LastPose.Action != PosePresentation.EmptyClip && after.LastPose.Action != PosePresentation.HoldRear)
@@ -150,6 +162,27 @@ namespace VrBattlegrounds.Tests.Weapons
 
             Assert.That(states, Is.GreaterThan(10), $"Обход не вышел за начальное состояние ({states}) — набор входов неверен.");
             Assert.That(failures, Is.Empty, string.Join("\n", failures));
+        }
+
+        [Test]
+        public void ComputePose_ReleasedActionStay_NeverSpringsWithoutPreparation()
+        {
+            WeaponProfileAxes stay = StayPump();
+            foreach (MechanismState state in Enum.GetValues(typeof(MechanismState)))
+            foreach (ClipKind clip in Enum.GetValues(typeof(ClipKind)))
+            foreach (bool atRest in new[] { false, true })
+            foreach (ChamberOrigin origin in Enum.GetValues(typeof(ChamberOrigin)))
+            {
+                var sample = new ActionSample(false, false, atRest ? 0f : 0.5f, atRest ? 0f : 0.5f, atRest, false);
+                PoseTarget pose = WeaponStateMachine.ComputePose(state, stay, sample, clip, 0.1f, false, origin);
+                bool preparing = origin == ChamberOrigin.Insert || origin == ChamberOrigin.Assist || origin == ChamberOrigin.Automation;
+                bool cycle = state == MechanismState.CycleLoaded || state == MechanismState.CycleCleared || state == MechanismState.OpenIdle;
+                string where = $"S4: state={state} clip={clip} atRest={atRest} origin={origin}";
+                if (preparing && cycle)
+                    Assert.That(pose.Action, Is.EqualTo(PosePresentation.ReturnToRest), where + " — подготовку без руки возвращает машина");
+                else
+                    Assert.That(pose.Action, Is.Not.EqualTo(PosePresentation.ReturnToRest), where);
+            }
         }
 
         [Test]
@@ -214,6 +247,7 @@ namespace VrBattlegrounds.Tests.Weapons
         {
             Assert.That(WeaponProfileAxes.TryValidate(HoldOpenRifle(), out _), Is.True);
             Assert.That(WeaponProfileAxes.TryValidate(FixedStorePump(), out _), Is.True);
+            Assert.That(WeaponProfileAxes.TryValidate(StayPump(), out _), Is.True);
             Assert.That(WeaponProfileAxes.TryValidate(NoActionAuto(), out _), Is.True);
             Assert.That(WeaponProfileAxes.TryValidate(MagazineOnlyRevolver(), out _), Is.True);
 
@@ -223,6 +257,14 @@ namespace VrBattlegrounds.Tests.Weapons
             AssertInvalid(new WeaponProfileAxes(WeaponFireMode.Semi, WeaponAmmoCapability.DetachableMagazineChamber,
                 WeaponPhysicalCapability.NoAction, WeaponChamberPolicy.AutoOnMagazineInsert, WeaponEmptyPose.HoldOpen, 0f, 0f, 0f, 0f),
                 "NoAction + HoldOpen");
+            AssertInvalid(new WeaponProfileAxes(WeaponFireMode.Semi, WeaponAmmoCapability.DetachableMagazineChamber,
+                WeaponPhysicalCapability.NoAction, WeaponChamberPolicy.AutoOnMagazineInsert, WeaponEmptyPose.ReturnToRest, 0f, 0f, 0f, 0f,
+                releasedAction: WeaponReleasedAction.Stay),
+                "NoAction + Stay");
+            AssertInvalid(new WeaponProfileAxes(WeaponFireMode.Semi, WeaponAmmoCapability.DetachableMagazineChamber,
+                WeaponPhysicalCapability.ActionTravel, WeaponChamberPolicy.ManualReturn, WeaponEmptyPose.ReturnToRest, 0.8f, 0.02f, 4f, 2f,
+                releasedAction: (WeaponReleasedAction)7),
+                "неизвестное значение оси отпущенного Action");
             AssertInvalid(new WeaponProfileAxes(WeaponFireMode.Semi, WeaponAmmoCapability.MagazineOnly,
                 WeaponPhysicalCapability.NoAction, WeaponChamberPolicy.TriggerAssistPrepareOnly, WeaponEmptyPose.ReturnToRest, 0f, 0f, 0f, 0f),
                 "MagazineOnly + политика досылания");
@@ -372,6 +414,7 @@ namespace VrBattlegrounds.Tests.Weapons
             new WeaponContext(WeaponRole.Author, true, isWorldAuthority: true),
             new WeaponContext(WeaponRole.Author, false),
             new WeaponContext(WeaponRole.Author, true, blocked: WeaponBlockReason.Obstructed, rofTimer: 0.1f),
+            new WeaponContext(WeaponRole.Author, true, rofTimer: 0.1f),
             new WeaponContext(WeaponRole.Author, true, insideReplay: true),
             new WeaponContext(WeaponRole.Observer, false),
         };
@@ -382,18 +425,18 @@ namespace VrBattlegrounds.Tests.Weapons
         private sealed class RecordingOutput : IWeaponOutput
         {
             public readonly List<LedgerCommand> Commands = new List<LedgerCommand>();
-            public int Poses, Haptics, HintsOn, DryFires, Unhandled, TableViolations;
+            public int Poses, Haptics, HintsOn, Denials, Unhandled, TableViolations;
             public Action OnPose;
 
             public void Reset()
             {
                 Commands.Clear();
-                Poses = Haptics = HintsOn = DryFires = Unhandled = TableViolations = 0;
+                Poses = Haptics = HintsOn = Denials = Unhandled = TableViolations = 0;
             }
 
             public void Command(in LedgerCommand command) => Commands.Add(command);
             public void Pose(in PoseTarget target) { Poses++; OnPose?.Invoke(); }
-            public void Cue(WeaponCue cue, WeaponNotReadyReason reason) { if (cue == WeaponCue.DryFire) DryFires++; }
+            public void Cue(WeaponCue cue, WeaponNotReadyReason reason) { if (cue == WeaponCue.DryFire || cue == WeaponCue.Refusal) Denials++; }
             public void Haptic(WeaponHapticCue cue) => Haptics++;
             public void Hint(bool on) { if (on) HintsOn++; }
 

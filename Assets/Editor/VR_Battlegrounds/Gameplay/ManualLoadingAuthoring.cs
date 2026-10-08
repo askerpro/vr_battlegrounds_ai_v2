@@ -103,52 +103,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             receiverSettings.FindProperty("_allowOrderedRetirement").boolValue = true;
             receiverSettings.ApplyModifiedPropertiesWithoutUndo();
 
-            var pump = root.GetComponent<UxrShotgunPump>();
-            var feedback = root.GetComponent<AutomaticWeaponSlideFeedback>();
-            var visuals = root.GetComponent<WeaponMechanismVisuals>();
-            if (visuals == null) throw new InvalidOperationException("Native Action visuals required.");
-            if (pump != null)
-            {
-                var pumpSettings = new SerializedObject(pump);
-                var pumpGrip = pumpSettings.FindProperty("_pump").objectReferenceValue as UxrGrabbableObject;
-                if (pumpGrip == null || root.GetComponent<PumpGrabFollow>()?.Pump != pumpGrip)
-                    throw new InvalidOperationException("Native pump/follow binding mismatch.");
-                if (feedback == null) feedback = root.AddComponent<AutomaticWeaponSlideFeedback>();
-                var feedbackSettings = new SerializedObject(feedback);
-                feedbackSettings.FindProperty("_slide").objectReferenceValue = pumpGrip;
-                feedbackSettings.FindProperty("_slideThreshold").floatValue = pumpSettings.FindProperty("_slideThreshold").floatValue;
-                feedbackSettings.FindProperty("_autoReturnOnRelease").boolValue = false;
-                foreach (var pair in new[] {
-                    new[] { "_audioSlide", "_audioSlideForward" }, new[] { "_audioSlideBack", "_audioSlideBack" },
-                    new[] { "_audioSlideAlreadyLoaded", "_audioSlideForwardWhenLoaded" }, new[] { "_audioSlideBackAlreadyLoaded", "_audioSlideBackWhenLoaded" },
-                    new[] { "_hapticClipSlide", "_hapticForward" }, new[] { "_hapticClipSlideBack", "_hapticBack" },
-                    new[] { "_hapticClipSlideAlreadyLoaded", "_hapticForwardWhenLoaded" }, new[] { "_hapticClipSlideBackAlreadyLoaded", "_hapticBackWhenLoaded" } })
-                    CopySample(pumpSettings, feedbackSettings, pair[0], pair[1]);
-                feedbackSettings.ApplyModifiedPropertiesWithoutUndo();
-                pump.enabled = false; // Controller owns all physical ledger commands, follow only solves hand pose.
-            }
-            if (feedback == null) throw new InvalidOperationException("Action feedback required.");
-
-            if (pump != null)
-            {
-                var action = feedback.Slide;
-                var targets = visuals.GetRequiredActionTargets();
-                if (targets.Length != 1 || targets[0] != action.transform || visuals.ContactPart == null ||
-                    !visuals.ContactPart.IsChildOf(action.transform) || visuals.Body == null ||
-                    !AutomaticWeaponSlideFeedback.TryGetSlideTravel(action, out var direction, out float length))
-                    throw new InvalidOperationException("Native pump must have a single rigid Action graph.");
-                var body = visuals.Body;
-                // Общий authored root, как runtime source-rest validator: без cancellation мировых координат.
-                Matrix4x4 bodyFrame = MatrixToRoot(body, root.transform);
-                Matrix4x4 restFrame = bodyFrame.inverse * MatrixToRoot(action.transform, root.transform);
-                Vector3 rest = restFrame.MultiplyPoint3x4(Vector3.zero);
-                Quaternion rotation = restFrame.rotation;
-                Vector3 fullTravel = bodyFrame.inverse.MultiplyVector(MatrixToRoot(action.transform.parent, root.transform).MultiplyVector(direction * length));
-                var bindings = new[] { new ChamberActionBinding { Target = action.transform, RestPosition = rest, RearPosition = rest + fullTravel,
-                    RestRotation = rotation, RearRotation = rotation, AnimateRotation = false } };
-                WeaponReadinessAuthoring.WriteController(root, profile, body, bindings, -1f);
-            }
-            else WeaponReadinessAuthoring.ConfigureFromSource(root, profile);
+            // Хост оружия, механизм, звуки и подсказка — единственный writer (помпа, затвор или уже переведённый ствол).
+            WeaponSystemAuthoring.Configure(root, profile);
             // Перенос только ссылки владельца insertion highlight, не новые материалы/геометрия.
             var highlight = internalAnchor.GetComponent<WeaponMagazineAnchorHighlight>();
             if (highlight != null)
@@ -192,43 +148,6 @@ namespace VrBattlegrounds.Editor.Gameplay
             settings.FindProperty("_allowSwap").boolValue = false;
             settings.ApplyModifiedPropertiesWithoutUndo();
         }
-        private static Matrix4x4 MatrixToRoot(Transform target, Transform root)
-        {
-            Matrix4x4 result = Matrix4x4.identity;
-            for (Transform current = target; current != root; current = current.parent)
-            {
-                if (current == null) throw new InvalidOperationException("Native Action has a foreign root.");
-                result = Matrix4x4.TRS(current.localPosition, current.localRotation, current.localScale) * result;
-            }
-            return result;
-        }
-        private static void CopySample(SerializedObject source, SerializedObject target, string sourceName, string targetName)
-        {
-            var sample = source.FindProperty(sourceName);
-            if (sample == null || target.FindProperty(targetName) == null) throw new InvalidOperationException("Native pump feedback schema mismatch.");
-            var property = sample.Copy(); var end = sample.GetEndProperty();
-            while (property.Next(true) && !SerializedProperty.EqualContents(property, end))
-            {
-                string relative = property.propertyPath.Substring(sourceName.Length);
-                var output = target.FindProperty(targetName + relative);
-                if (output == null) throw new InvalidOperationException("Native feedback property missing: " + relative);
-                if (property.isArray && property.propertyType != SerializedPropertyType.String) output.arraySize = property.arraySize;
-                switch (property.propertyType)
-                {
-                    case SerializedPropertyType.ObjectReference: output.objectReferenceValue = property.objectReferenceValue; break;
-                    case SerializedPropertyType.Integer: output.longValue = property.longValue; break;
-                    case SerializedPropertyType.Enum: output.intValue = property.intValue; break;
-                    case SerializedPropertyType.Boolean: output.boolValue = property.boolValue; break;
-                    case SerializedPropertyType.Float: output.floatValue = property.floatValue; break;
-                    case SerializedPropertyType.String: output.stringValue = property.stringValue; break;
-                    case SerializedPropertyType.Vector2: output.vector2Value = property.vector2Value; break;
-                    case SerializedPropertyType.Vector3: output.vector3Value = property.vector3Value; break;
-                    case SerializedPropertyType.Vector4: output.vector4Value = property.vector4Value; break;
-                    case SerializedPropertyType.Color: output.colorValue = property.colorValue; break;
-                    case SerializedPropertyType.Quaternion: output.quaternionValue = property.quaternionValue; break;
-                    case SerializedPropertyType.AnimationCurve: output.animationCurveValue = property.animationCurveValue; break;
-                }
-            }
-        }
+
     }
 }

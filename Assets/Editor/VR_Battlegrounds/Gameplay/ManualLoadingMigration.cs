@@ -69,7 +69,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                     ManualLoadingAuthoring.ConfigureWeapon(root, entry.AmmoType, entry.Capacity, profile,
                         AssetDatabase.LoadAssetAtPath<AudioClip>(entry.InsertClip));
                     rows.Add(new { entry.Weapon, entry.Cartridge, entry.Capacity, rootGuid, networkAssetId,
-                        scale = new[] { scale.x, scale.y, scale.z }, actionBindings = new SerializedObject(root.GetComponent<WeaponReadinessController>()).FindProperty("_requiredBindings").arraySize,
+                        scale = new[] { scale.x, scale.y, scale.z }, actionBindings = root.GetComponent<WeaponSystem>().Rig.ActionBindings.Length,
                         retirementEnabled=true, nativeRuntimeProof=false });
                 }
                 catch (Exception exception) { failures.Add(entry.Weapon + ": " + exception.Message); }

@@ -23,7 +23,8 @@ namespace VrBattlegrounds.Tests.Prefabs
     ///   <item>Выстрел и сухой щелчок без патронов — <c>Shot Audio</c> и <c>Shot Audio No Ammo</c> у каждого
     ///   спуска <see cref="UxrFirearmWeapon" />.</item>
     ///   <item>Перезарядка — два звука затвора: оттягивание и обратный ход
-    ///   (<see cref="AutomaticWeaponSlideFeedback" /> или <see cref="UxrShotgunPump" />).</item>
+    ///   (<see cref="AutomaticWeaponSlideFeedback" /> или <see cref="UxrShotgunPump" />; у пилотов этапа drive —
+    ///   <see cref="WeaponAudioSet" /> хоста <see cref="WeaponSystem" />).</item>
     ///   <item>Магазин — вставка и снятие: <see cref="AnchorSound" /> на гнезде магазина каждого спуска,
     ///   <c>clip</c> его источника и <c>Take Out Clip</c>.</item>
     ///   <item>Каждая точка хвата (основная, дополнительные, точки деталей) — объект
@@ -87,6 +88,18 @@ namespace VrBattlegrounds.Tests.Prefabs
                 RequireClip(so, "_audioSlide", $"{pump.name} (UxrShotgunPump): Audio Slide (обратный ход)", missing);
             }
 
+            // Этап drive (Herrington, FABARM): AutomaticWeaponSlideFeedback/UxrShotgunPump сняты, звуки хода — в WeaponAudioSet
+            // хоста WeaponSystem по сигналам машины. У остальных стволов хост есть (тот же GUID скрипта), но Rig пуст до волн F.
+            foreach (WeaponSystem host in weapon.GetComponentsInChildren<WeaponSystem>(true))
+            {
+                if (!host.Rig.HasAction) continue;
+                mechanisms++;
+                if (!WeaponAudioSet.Has(host.Audio.For(VrBattlegrounds.Weapons.Core.WeaponCue.ActionBack)))
+                    missing.Add($"{host.name} (WeaponSystem): Audio Action Back (оттягивание)");
+                if (!WeaponAudioSet.Has(host.Audio.For(VrBattlegrounds.Weapons.Core.WeaponCue.ActionForwardChambered)))
+                    missing.Add($"{host.name} (WeaponSystem): Audio Action Forward (обратный ход)");
+            }
+
             // Без затвора (револьвер T-38): патрон не досылается — спуск стреляет прямо из барабана
             // (Use Has Reloaded… выключен, огонь не ручной), перезарядка — сменой барабана, её звук у
             // MagAnchor проверяет Звуки_вставки_и_снятия_магазина. Затвору звучать нечем и незачем.
@@ -94,7 +107,7 @@ namespace VrBattlegrounds.Tests.Prefabs
                 Assert.Pass($"{weapon.name}: затвора нет и досылать патрон не нужно — звуки перезарядки у магазина.");
 
             Assert.Greater(mechanisms, 0,
-                           $"{weapon.name}: нет механизма перезарядки (AutomaticWeaponSlideFeedback или UxrShotgunPump) — звукам затвора неоткуда играть.");
+                           $"{weapon.name}: нет механизма перезарядки (AutomaticWeaponSlideFeedback, UxrShotgunPump или Rig хоста WeaponSystem) — звукам затвора неоткуда играть.");
             Assert.IsEmpty(missing, $"{weapon.name}: не назначены звуки перезарядки:\n  " + string.Join("\n  ", missing));
         }
 
@@ -193,23 +206,24 @@ namespace VrBattlegrounds.Tests.Prefabs
                 string where = $"{PointName(weapon, grabbable, point)} → '{highlight.name}'";
                 GameObject visual = highlight;
                 // SDK включает rendererless proximity-сигнал; Action-визуалом единолично
-                // управляет WeaponChamberingReminder. Проверяем точную связь владельца,
+                // управляет его владелец: WeaponChamberingReminder, а у пилотов этапа drive — хост WeaponSystem
+                // (HintProximity → HintVisual). Проверяем точную связь владельца,
                 // затем ту же сетку и материалы его визуала, без исключений по имени оружия.
-                var owners = weapon.GetComponentsInChildren<WeaponChamberingReminder>(true)
-                    .Where(owner => owner.ProximitySignal == highlight).ToArray();
+                var owners = HintOwners(weapon).Where(owner => owner.proximity == highlight).ToArray();
                 if (owners.Length > 0)
                 {
-                    if (owners.Length != 1 || owners[0].Visual == null || owners[0].Visual == highlight ||
-                        owners[0].Visual == weapon ||
-                        !owners[0].Visual.transform.IsChildOf(weapon.transform) ||
+                    GameObject ownerVisual = owners[0].visual;
+                    if (owners.Length != 1 || ownerVisual == null || ownerVisual == highlight ||
+                        ownerVisual == weapon ||
+                        !ownerVisual.transform.IsChildOf(weapon.transform) ||
                         !highlight.transform.IsChildOf(grabbable.transform) ||
                         highlight.GetComponentsInChildren<Renderer>(true).Length != 0)
                     {
                         problems.Add($"{where}: неверная связь proximity-сигнала и единственного владельца Action-визуала");
                         continue;
                     }
-                    visual = owners[0].Visual;
-                    where += $" → '{visual.name}' (WeaponChamberingReminder)";
+                    visual = ownerVisual;
+                    where += $" → '{visual.name}' ({owners[0].owner})";
                 }
                 Renderer[] renderers = visual.GetComponentsInChildren<Renderer>(true);
 
@@ -320,8 +334,8 @@ namespace VrBattlegrounds.Tests.Prefabs
         {
             // Эти визуалы не назначаются прямо в EnableOnHandNear/ActivateOn…:
             // их включают игровые владельцы, а SDK передаёт только proximity-сигнал.
-            foreach (var owner in weapon.GetComponentsInChildren<WeaponChamberingReminder>(true))
-                if (owner.Visual != null && owner.Visual.transform.IsChildOf(weapon.transform)) yield return owner.Visual;
+            foreach (var owner in HintOwners(weapon))
+                if (owner.visual != null && owner.visual.transform.IsChildOf(weapon.transform)) yield return owner.visual;
             foreach (var owner in weapon.GetComponentsInChildren<WeaponMagazineAnchorHighlight>(true))
                 if (owner.Visual != null && owner.Visual.transform.IsChildOf(weapon.transform)) yield return owner.Visual;
 
@@ -348,6 +362,19 @@ namespace VrBattlegrounds.Tests.Prefabs
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Владельцы подсказки «дошли патрон»: proximity-сигнал SDK → Action-визуал. Прежний WeaponChamberingReminder
+        /// у стволов на старом коде; хост WeaponSystem — у пилотов этапа drive (у остальных его поля подсказки пусты).
+        /// </summary>
+        private static IEnumerable<(GameObject proximity, GameObject visual, string owner)> HintOwners(GameObject weapon)
+        {
+            foreach (var reminder in weapon.GetComponentsInChildren<WeaponChamberingReminder>(true))
+                yield return (reminder.ProximitySignal, reminder.Visual, nameof(WeaponChamberingReminder));
+            foreach (var host in weapon.GetComponentsInChildren<WeaponSystem>(true))
+                if (host.HintProximity != null || host.HintVisual != null)
+                    yield return (host.HintProximity, host.HintVisual, nameof(WeaponSystem));
         }
 
         private static string PointName(GameObject weapon, UxrGrabbableObject grabbable, int point)

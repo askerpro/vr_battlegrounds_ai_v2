@@ -1,9 +1,9 @@
 using System.Reflection;
 using NUnit.Framework;
 using UltimateXR.Manipulation;
-using UltimateXR.Mechanics.Weapons;
 using UnityEditor;
 using UnityEngine;
+using VrBattlegrounds.Weapons;
 
 namespace VrBattlegrounds.Tests.Player
 {
@@ -33,7 +33,10 @@ namespace VrBattlegrounds.Tests.Player
         {
             using var harness = new TwoHandGrabHarness(Weapon, AssetDatabase.GUIDToAssetPath(MefAvatarGuid), 0, grabMain: false);
 
-            var pump = new SerializedObject(harness.Weapon.GetComponent<UxrShotgunPump>()).FindProperty("_pump").objectReferenceValue as UxrGrabbableObject;
+            // Этап drive: UxrShotgunPump с FABARM снят, помпой управляет хост WeaponSystem — ручка помпы теперь Rig.Handle.
+            var host = harness.Weapon.GetComponent<WeaponSystem>();
+            Assert.IsTrue(host != null, "Контроль: у дробовика есть хост WeaponSystem.");
+            UxrGrabbableObject pump = host.Rig.Handle;
             Assert.IsNotNull(pump, "Контроль: у дробовика есть помпа.");
 
             // Исходное место детали для ограничения хода SDK запоминает в Awake — в EditMode его нет.

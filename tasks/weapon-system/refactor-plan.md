@@ -1,7 +1,7 @@
 # WeaponSystem: архитектурный план рефакторинга оружия
 
 Предлагаемый путь: `Docs/tasks/weapon-system-refactor-plan.md`.
-Дата: 2026-10-07. Статус: **план принят** (В1–В11 по рекомендациям); этап B (машина) принят — п. 5.1; этап C (теневой режим) проверен в шлеме, расхождения S1–S4 — п. 5.2.
+Дата: 2026-10-07. Статус: **план принят** (В1–В11 по рекомендациям); этап B (машина) принят — п. 5.1; этап C (теневой режим) проверен в шлеме, расхождения S1–S4 — п. 5.2; этап D (`drive`) написан, Unity-проверка ждёт worker — п. 5.3.
 
 Всё ниже прочитано в коде worktree `F:/CodexWorktrees/shotgun-per-shell/Vr_Battlegrounds_ai`. В этом worktree есть незакоммиченная правка другого агента (HoldOpen: `HoldsEmptyActionOpen` / `OwnsActionPose` / `ResetVisuals → Deferred`). План исходит из того, что эта правка применена. Выводы, помеченные «гипотеза», получены чтением кода; их нужно проверить пробой. Прогона не было.
 
@@ -216,6 +216,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | PhysicalCapability | NoAction, ActionTravel | профиль + проверка rig | NoAction + ManualReturn; NoAction + HoldOpen |
 | ChamberPolicy | ManualReturn, AutoOnMagazineInsert, TriggerAssistPrepareOnly | профиль | MagazineOnly + любая политика, кроме AutoOnMagazineInsert (досылания нет) |
 | EmptyPose | HoldOpen, ReturnToRest | профиль | HoldOpen без проверенной задней позы rig |
+| ReleasedAction | Spring, Stay | профиль (до этапа D — `AutomaticWeaponSlideFeedback.AutoReturnOnRelease`) | NoAction + Stay |
 
 Данные конкретного ствола (порог извлечения — бывший `_slideThreshold`, скорость возврата, ε, время задней позы Empty, длительности клипов) лежат в `WeaponMechanismRig` на хосте, не в общем профиле.
 
@@ -300,10 +301,10 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | T25 | Pulling | ActionSampled [MinRequiredProgress ≥ Gate ∧ OpenedRear] | `Extract(seq)`, если ExtractedSeq≠seq; Gesture=PastGate; вибрация зада | CycleCleared |
 | T26 | PastGate | ActionSampled [AllAtRest ∧ ¬AdmissionPending] | `CompleteChamber(ExpectedMagazine)` | Ready (была подача) / Empty |
 | T27 | Pulling | ActionSampled [AllAtRest] (порог не достигнут) | `Cancel` + `CloseOnly`; если ручку ещё держат — Gesture=Contact (Baseline=0) | Ready (C сохранён) / Empty |
-| T28 | Pulling, PastGate | HandleReleased | Gesture=Released (признак прохождения порога сохраняется) | Presentation=ReturnToRest(скорость пружины) |
+| T28 | Pulling, PastGate | HandleReleased | Gesture=Released (признак прохождения порога сохраняется) | Spring: ReturnToRest(скорость пружины); Stay: Action остаётся (`Stay`), цикл ждёт хвата (S4) |
 | T29 | Released | ActionSampled [AllAtRest] | как T26, если порог пройден, иначе как T27 | как T26/T27 |
 | T30 | OpenIdle | ActionSampled [AllAtRest ∧ контекст] | `CloseOnly` | Ready / Empty |
-| T31 | EmptyAwaitRest | ActionSampled [AllAtRest ∧ Presentation ∉ {EmptyClip} ∧ контекст] | `AckEmptyRest` | Empty |
+| T31 | EmptyAwaitRest | ActionSampled [AllAtRest ∧ клипа нет (Empty, а без него Fire — S1) ∧ контекст] | `AckEmptyRest` | Empty |
 | T32 | CycleLoaded, CycleCleared | ContextLost / AuthorityChanged | `Cancel` (если ещё автор); Gesture=None | OpenIdle |
 | T33 | Gesture≠None | LedgerCommitted чужой фиксации [CycleSeq/Revision/магазин ≠ ожидаемых] | Gesture=None; `Cancel`, если Pending | Derive |
 | T34 | PastGate / Released в покое | ActionSampled [AdmissionPending] | ничего (отложено, флаг цикла не сгорает; закрывает Н6) | то же |
@@ -313,7 +314,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 
 | № | Из | Событие [условие] | Команды / эффекты | → |
 |---|---|---|---|---|
-| T40 | Empty [причина ChamberingRequired] | TriggerPressed [новое нажатие, TriggerAssist] | NotReady-отклик один раз; Episode=Consumed; `BeginAction(Assist)`; если AllAtRest — `CompleteChamber` | Preparing → Ready, но эпизод Consumed (И5) |
+| T40 | Empty [причина ChamberingRequired] | TriggerPressed [новое нажатие, TriggerAssist, RofTimer≤0] | NotReady-отклик один раз; Episode=Consumed; `BeginAction(Assist)`; если AllAtRest — `CompleteChamber` | Preparing → Ready, но эпизод Consumed (И5) |
 | T41 | Preparing | Tick [¬Held] | — | Presentation=ReturnToRest(AutoReturnSpeed) |
 | T42 | Preparing | ActionSampled [AllAtRest] | `CompleteChamber` | Ready |
 | T43 | Preparing | HandleGrabbed | возврат на паузе, после отпускания продолжается с текущей позы | Presentation=FollowHand |
@@ -326,11 +327,13 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | T50 | Ready, Episode=Armed | TriggerPressed [¬Blocked, контекст] | повторный замер датчика; `Shoot`; Episode=Firing | по фиксации (T60–T62) |
 | T51 | Ready, Episode=Firing | TriggerHeld [Auto, RofTimer≤0] | `Shoot` | то же |
 | T52 | ¬Ready, Episode=Firing | TriggerHeld | Episode=Consumed (очередь останавливается, без серии откликов) | — |
-| T53 | Empty, HoldOpen, EmptyAwaitRest | TriggerPressed [новое, ¬Assist ∨ причина ≠ ChamberingRequired] | NotReady(причина) один раз → DryFire + вибрация по профилю; Hint latch при ChamberingRequired; Episode=Consumed | то же |
-| T54 | CycleLoaded/Cleared, OpenIdle, Uninitialized, Faulted, AdmissionPending | TriggerPressed | OtherDenied, без отклика о патронах; Episode=Consumed | то же |
+| T53 | Empty, HoldOpen, EmptyAwaitRest | TriggerPressed [новое, RofTimer≤0, ¬Assist ∨ причина ≠ ChamberingRequired] | NotReady(причина) один раз → DryFire + вибрация по профилю; Hint latch при ChamberingRequired; Episode=Consumed | то же |
+| T54 | CycleLoaded/Cleared, OpenIdle | TriggerPressed | Решение пользователя 2026-10-09: открытый или недовозвращённый Action — та же проблема, что недосланный патрон: NotReady(причина) как T53 — DryFire, вибрация, при ChamberingRequired подсветка Action; таймер темпа — T57 | то же |
+| T54u | Uninitialized | TriggerPressed | OtherDenied, без отклика о патронах; Episode=Consumed | то же |
 | T55 | любое | TriggerPressed [Blocked=Obstructed] | DryFire(Obstructed) + вибрация препятствия; Episode=Consumed | то же |
 | T56 | любое | TriggerReleased | Episode=Armed | — |
-| T57 | Ready | TriggerPressed [Semi/Manual, RofTimer>0] | Episode=Firing без выстрела (как сейчас в SDK: нажатие пропадает) | — |
+| T57 | Ready [Semi/Manual], Empty, HoldOpen, EmptyAwaitRest | TriggerPressed [RofTimer>0] | Отказ `RateOfFire` (S2): звук `Refusal`, вибрация `RateOfFire` (отрицательный класс); не DryFire, не подготовка, без подсказки; Episode=Consumed | то же |
+| T57a | Ready | TriggerPressed [Auto, RofTimer>0] | Episode=Firing без выстрела, очередь продолжит T51 (не отказ: выстрел ждёт темпа) | — |
 
 **Результат выстрела (обе роли)**
 
@@ -338,7 +341,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 |---|---|---|---|---|
 | T60 | Ready | LedgerCommitted(Shot) [после выстрела C=1] | Presentation=FireClip(0) | Ready |
 | T61 | Ready | LedgerCommitted(Shot) [Manual, C=0, M>0] | FireClip(0) | Empty (ChamberingRequired) |
-| T62 | Ready | LedgerCommitted(Shot) [Locked] | EmptyClip(0, ShotSeq), или сразу HoldRear/ReturnToRest, если клипа нет | HoldOpen / EmptyAwaitRest |
+| T62 | Ready | LedgerCommitted(Shot) [Locked] | EmptyClip(0, ShotSeq); без Empty-клипа — FireClip(0) (S1); без клипов — сразу HoldRear/возврат | HoldOpen / EmptyAwaitRest |
 | T63 | Presentation=EmptyClip | Tick [ClipTime ≥ (HoldOpen ? EmptyRearTime : EmptyClipDuration)] | HoldRear (+ SlideLockCatch) / ReturnToRest | — |
 | T64 | Presentation=FireClip | Tick [ClipTime ≥ FireClipDuration] | Rest | — |
 | T65 | FireClip / EmptyClip | HandleGrabbed | FollowHand для Action; нерычажные детали доигрывают клип | — |
@@ -364,7 +367,8 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | Ручку держат | рука (SDK grab / PumpGrabFollow) | FollowHand: путь покой→зад по прогрессу, непрерывный поворот (логика `ApplyOwnedManualRotation`) | клип или покой |
 | FireClip / EmptyClip | дорожка клипа | дорожка клипа | дорожка клипа |
 | HoldOpen | **HoldRear** (проверенный зад) | HoldRear | покой |
-| CycleLoaded/Cleared, OpenIdle, EmptyAwaitRest, Preparing — без руки | ReturnToRest(скорость) | ReturnToRest | покой |
+| Preparing — без руки | ReturnToRest(AutoReturnSpeed) | ReturnToRest | покой |
+| CycleLoaded/Cleared, OpenIdle, EmptyAwaitRest — без руки | Spring: ReturnToRest(скорость пружины); Stay: `Stay` (остаётся; в покое — Rest) | так же | покой |
 | Ready, Empty | Rest | Rest | покой |
 
 ### 3.7 Инварианты (проверяются перебором достижимых состояний)
@@ -399,7 +403,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | Звук выстрела | SDK (`CommitShotSynced` / `Source_ShotFired`) | SDK | без изменений; в `WeaponCue` нет Shot |
 | Звуки механизма и сухой щелчок | `WeaponAudioExecutor` | AWSF, `UxrShotgunPump`, `WeaponAttemptFeedback`, `BarrelObstruction`, запасная ветка SDK | После этапа E SDK сам сухой щелчок не играет; у BarrelObstruction остаётся только датчик |
 | Звук вставки/выемки | `AnchorSound` на приёмнике | AnchorSound; ранее ещё `UxrAudioManipulation` предмета | В `WeaponCue` нет Insert; тест `AmmoInsertSoundTests` расширяется на все предметы, принимаемые оружием |
-| Вибрация механизма, отказа, препятствия; подсветка подсказки | `WeaponFeedbackExecutor` | AWSF, `WeaponChamberingReminder`, `WeaponAttemptFeedback`, `BarrelObstruction`, `UxrShotgunPump` | Один исполнитель; вызывает сервис вибрации `VrBattlegrounds.Haptics.HapticService.Play(HapticSignalId, UxrGrabber, gain, HapticHandRole)` (контракт — п. 4.2 `haptics-system-design.md` в worktree `haptics`). Вибрация отдачи тоже у WeaponSystem (решение пользователя 2026-10-07): новый `WeaponHapticCue` выстрела, Id отдачи — в данных ствола; хост реализует `IWeaponRecoilHapticsOwner`, после чего отдача SDK этого ствола гасится |
+| Вибрация механизма, отказа, препятствия; подсветка подсказки | `WeaponFeedbackExecutor` | AWSF, `WeaponChamberingReminder`, `WeaponAttemptFeedback`, `BarrelObstruction`, `UxrShotgunPump` | Один исполнитель; вызывает сервис вибрации `VrBattlegrounds.Haptics.HapticService.Play(HapticSignalId, UxrGrabber, gain, HapticHandRole)` (контракт — п. 4.2 [`tasks/haptics-system/Details.md`](../haptics-system/Details.md)). Вибрация отдачи тоже у WeaponSystem (решение пользователя 2026-10-07): новый `WeaponHapticCue` выстрела, Id отдачи — в данных ствола; хост реализует `IWeaponRecoilHapticsOwner`, после чего отдача SDK этого ствола гасится |
 | Подсветка гнезда | `WeaponMagazineAnchorHighlight` | — | без изменений |
 | Учёт M/C | SDK ledger | — | — |
 | `IsUseBlocked` | `WeaponUseBlocker` | — | — |
@@ -489,7 +493,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | `LedgerView.cs` | Снимок учёта, `LedgerOp`, `MechanismState`/`MechanismSet`, `WeaponMechanism.Derive/ReasonOf/CanFire` |
 | `WeaponEvents.cs` | 19 событий, `ActionSample`, `WeaponContext` (роль, контекст автора, replay, блокировка, темп, мир) |
 | `WeaponOutput.cs` | `LedgerCommand`, `WeaponCue`, `WeaponHapticCue`, `PoseTarget`, `WeaponReport`, `IWeaponOutput` |
-| `WeaponTransitions.cs` | Единственная таблица: 82 строки (28 с правом команды, 30 локальных, 24 явных «игнорировать»); T36 удалена на этапе C2 |
+| `WeaponTransitions.cs` | Единственная таблица: 83 строки (28 с правом команды, 31 локальная, 24 явных «игнорировать»); T36 удалена на этапе C2; T57a добавлена правкой S2 |
 | `WeaponStateMachine.cs` | `Step` (без аллокаций, без повторного входа), `ComputePose`, локальные регионы |
 
 **Как устроен шаг.** `Step(e, L, s, c, out)`: роль = автор только вне replay; механическое состояние = `Derive(L)`,
@@ -511,7 +515,7 @@ public sealed class WeaponSystem : MonoBehaviour {     // файл переим�
 | Эпизод спуска | `TriggerPressed` — фронт нажатия, всегда новое нажатие; `TriggerHeld` — уровень; эпизод гейтит только очередь | И4/И5 без зависимости от того, видел ли датчик отпускание после снимка |
 | `MagazineOnly` | `Derive`: Ready ⇔ M>0, патронника нет | Порту не нужно подделывать C |
 | В8 против T54 | В сбое нажатие даёт сухой щелчок с вибрацией `Faulted` (строка T82) | Принятое В8 приоритетнее «без отклика» в T54 |
-| T57 | Таймер темпа на нажатии — `Firing` без выстрела для всех режимов; Auto продолжит T51 | Иначе у Auto эта клетка без строки |
+| T57/T57a | Таймер темпа на нажатии: Auto — `Firing` без выстрела (T57a, продолжит T51); Semi/Manual и пустое — отказ `RateOfFire` (T57, S2) | Auto в SDK стреляет по истечении темпа, пока спуск держат, — это не отказ |
 
 **Строки «+B»** (пробелы таблицы п. 3.5, заполнены по поведению прежнего контроллера; в Doc строки помечены «+B»):
 T15/T15s — вставка без контекста автора не теряется, досылание при появлении контекста (иначе NoAction-ствол со вставленным
@@ -587,7 +591,7 @@ UltimateXR; отчёты — `tmp/weapon-shadow/`, локально):
 - **Н6 подтверждена:** при барьере приёма в момент досылания `TryCompleteChamber` отклонён, флаг цикла сгорел, после
   снятия барьера — Cancel + CloseOnly, патрон не дослан (C=0). Машина ждёт (T34) и досылает (T71).
 
-**Расхождения спецификации и решения пользователя 2026-10-07** (машина пока не менялась; правка — одним пакетом):
+**Расхождения спецификации и решения пользователя 2026-10-07** (S1, S2, S4 внесены в машину одним пакетом, ждут шлема):
 
 | № | Что | Старый код | Машина | Решение |
 |---|---|---|---|---|
@@ -597,7 +601,16 @@ UltimateXR; отчёты — `tmp/weapon-shadow/`, локально):
 | S4 | Отпущенная посреди цикла ручка (помпа FABARM) | Остаётся на месте: у FABARM `AutomaticWeaponSlideFeedback._autoReturnOnRelease = 0` (у Herrington 1), пружины нет | Released → ReturnToRest со скоростью пружины (T28/T29, В7) | **Решено пользователем 2026-10-07: старый код прав.** Новая ось профиля «отпущенный Action: пружина / остаётся» (Herrington — пружина, FABARM — остаётся); значение переносит writer этапа D из `_autoReturnOnRelease` |
 | Н6 | Досылание на барьере приёма | Цикл отменяется, патрон не дослан | Ждёт и досылает | Принять машину (исправление Н6) |
 
-Правки машины по S1, S2, S4 вносятся одним пакетом; S3 закрывается этапом C2.
+**S1, S2, S4 внесены в машину** (одним пакетом, ждут проверки тени в шлеме):
+- S1 — T62 играет Fire-клип, если Empty-клипа нет; T31 и T44 ждут конца любого клипа (`ClipNow == None`).
+- S2 — новые `WeaponNotReadyReason.RateOfFire`, `WeaponCue.Refusal`, `WeaponHapticCue.RateOfFire`. Строка T57
+  (Ready Semi/Manual и Empty/HoldOpen/EmptyAwaitRest при `RofTimer>0`) стоит перед T50/T40/T53 и даёт отказ без
+  подсказки; T57a — Auto ждёт темпа. В тени отказ — новый вывод машины без пары (SDK молчит), не расхождение.
+- S4 — ось `WeaponReleasedAction {Spring, Stay}` (`WeaponProfileAxes.ReleasedAction`, `TryValidate`: NoAction + Stay
+  недопустимо). При Stay `ComputePose` вместо возврата пружиной выдаёт новую цель `PosePresentation.Stay` (в покое —
+  Rest); возврат подготовки (Insert/Assist/Automation) не меняется. Тень читает ось из `AutoReturnOnRelease`.
+
+S3 закрыт этапом C2.
 
 **Звук оттягивания Action (шлем 2026-10-07).** У стволов на учёте готовности старый код не играет звук заднего упора:
 `AutomaticWeaponSlideFeedback.LateUpdate` для них выходит раньше `PlayForwardFeedback`. Слышен только возврат.
@@ -615,14 +628,40 @@ UltimateXR; отчёты — `tmp/weapon-shadow/`, локально):
 **Шлем 2026-10-07 (пользователь):** «всё, кроме автовозврата оттянутой помпы, работает» — это S4. Сводка тени
 (локально `tmp/weapon-shadow/report-headset.txt`): FABARM — 105 совпадений, 7 расхождений (S1×5, S4×2 `pose:ReturnToRest`);
 Herrington — 42 совпадения, 2 расхождения (S2: сухой щелчок при таймере темпа). Других расхождений нет.
+После правки S1/S2/S4 пометки «известное S1/S2/S4» из тени убраны; цель следующего шлема — ноль расхождений, кроме Н6.
 
 **Проверка:** офлайн-компиляция всех сборок; Unity — консоль без ошибок, `AndroidCompileGate` PASS,
-`WeaponStateMachineStructureTests` 14/14. Постоянных тестов этап C не добавляет (правило 2026-10-02).
+`WeaponStateMachineStructureTests` 14/14. Постоянных тестов этап C не добавляет (правило 2026-10-02). Правка S1/S2/S4
+обновила структурные тесты: профиль StayPump в обходе, контекст «темп без блокировки», инвариант «нажатие до конца
+темпа не выдаёт команд и подсказки», `ComputePose` при Stay без возврата пружиной, `TryValidate` для новой оси.
 
 **Шлем (чек-лист этапа C):** галочка включена; Herrington и FABARM из арсенала: заряжание окном, все циклы,
 частичный ход, отпускание посреди цикла, HoldOpen и толчок вперёд, сухой щелчок пустым/без досылания, смена
 патрона, бросить и поднять. В консоли — строки `[WeaponShadow]`; цель — ноль расхождений, кроме помеченных
-«известное S1/S2/Н6». Итог — сводка при выходе из Play.
+«известное Н6» (S1/S2/S4 машина теперь повторяет; отказ темпа — в «новых выводах»). Итог — сводка при выходе из Play.
+
+### 5.3 Этап D (`drive`) — статус
+
+Код написан, не влит. Все сборки компилируются офлайн. В Unity не проверено: worker не на чистой базе, claim
+отклонён. Решения реализации и открытые вопросы — [Details.md](Details.md), раздел «Этап drive».
+
+| Файл (`Assets/Scripts/Weapons/WeaponSystem/`) | Что |
+|---|---|
+| `WeaponSystem.cs` | Хост — бывший `WeaponReadinessController.cs`, тот же `.meta`/GUID. Датчики → шаг → порт → исполнители; очередь событий SDK со снимком; простой лежащего ствола без шага |
+| `UxrReadinessLedgerPort.cs` | Команды → `Try*` SDK; порты SDK; физическое доказательство одной командой (бывшие `ChamberCompletionEvidence`, резерв контроллера) |
+| `WeaponPoseExecutor.cs` | Единственный писатель позы: FollowHand (непрерывный поворот, перехват ручки), клипы Fire/Empty, HoldRear, ReturnToRest, Stay |
+| `WeaponAudioExecutor.cs`, `WeaponAudioSet.cs` | Звуки `WeaponCue`, включая `ActionBack` и `Refusal` (`UI_Error_Subtle_Deep_stereo.wav`, моно) |
+| `WeaponFeedbackExecutor.cs`, `WeaponHapticOutput.cs` | Вибрация (одна точка до сервиса haptics) и подсветка-подсказка |
+| `WeaponMechanismRig.cs` | Данные механизма: ручка, Action-привязки (покой/зад), локальный покой, клипы, детали, числа хода |
+| `WeaponReadinessController.cs` | Абстрактное переходное имя хоста для файлов вне области этапа |
+
+Удалены `ChamberPoseReturnDriver`, `ChamberCompletionEvidence`, `WeaponTriggerAttemptRouter/Context`,
+`WeaponAttemptFeedback` и `WeaponShadowComparer`. Ветки `HasLedgerAdapter` удалены из AWSF, WMV и Reminder —
+это снова legacy остальных 21 ствола. Writer — `Editor/.../WeaponSystemAuthoring.cs`, его вызывают
+`ManualLoadingAuthoring` и сборщики. Пилот переводит `MigratePilots` с readback.
+
+**Чек-лист D** — под таблицей п. 5. Что ещё нужно для готовности: аренда (миграция, readback, Android,
+EditMode), затем шлем.
 
 ---
 

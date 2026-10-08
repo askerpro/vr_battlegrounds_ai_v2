@@ -44,6 +44,16 @@ namespace VrBattlegrounds.Tests.Prefabs
                     else if (!AutomaticWeaponSlideFeedback.TryGetSlideTravel(slide, out _, out _))
                         failures.Add($"{path}: у '{slide.name}' нет хода — нужен Restrict Local Offset и ненулевые Translation Limits");
                 }
+
+                // Этап drive (Herrington, FABARM): AutomaticWeaponSlideFeedback снят, порог извлечения считает хост WeaponSystem
+                // по ходу ручки Rig.Handle — тот же контракт «ход из Translation Limits». Пустой Rig — ствол ещё на старом коде.
+                foreach (var host in prefab.GetComponentsInChildren<WeaponSystem>(true))
+                {
+                    if (!host.Rig.HasAction) continue;
+                    checks++;
+                    if (!WeaponMechanismRig.TryGetTravel(host.Rig.Handle, out _, out _))
+                        failures.Add($"{path}: у ручки '{host.Rig.Handle.name}' (WeaponSystem) нет хода — нужен Restrict Local Offset и ненулевые Translation Limits");
+                }
             }
 
             Assert.That(checks, Is.GreaterThan(0), "Не найдено ни одного затвора — тест ничего не проверил.");

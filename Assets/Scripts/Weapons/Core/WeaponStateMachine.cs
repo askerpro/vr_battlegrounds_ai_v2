@@ -182,6 +182,8 @@ namespace VrBattlegrounds.Weapons.Core
         /// Цель позы — функция состояния (план п. 3.6, инварианты И10, И11). Исполнитель своей фазы не хранит.
         /// Порядок: нет хода → покой; ручку держат → рука; HoldOpen → клип до задней позы или задержка;
         /// цикл/открыт → возврат; клип, если Action ещё его; Empty-ожидание или не в покое → возврат; иначе покой.
+        /// Возврат подготовки (Insert/Assist/Automation) — всегда <c>AutoReturnSpeed</c>. Возврат отпущенного рукой
+        /// Action — по оси <see cref="WeaponProfileAxes.ReleasedAction"/>: пружина или Stay (остаётся, S4).
         /// </summary>
         public static PoseTarget ComputePose(MechanismState m, in WeaponProfileAxes a, in ActionSample s,
             ClipKind clip, float clipTime, bool clipActionDetached, ChamberOrigin origin)
@@ -200,15 +202,25 @@ namespace VrBattlegrounds.Weapons.Core
                 case MechanismState.CycleLoaded:
                 case MechanismState.CycleCleared:
                 case MechanismState.OpenIdle:
-                    return new PoseTarget(PosePresentation.ReturnToRest, aux, clipTime, IsAutomatic(origin) ? a.AutoReturnSpeed : a.SpringReturnSpeed);
+                    return IsAutomatic(origin)
+                        ? new PoseTarget(PosePresentation.ReturnToRest, aux, clipTime, a.AutoReturnSpeed)
+                        : ReleasedPose(a, s, aux, clipTime);
                 default:
                     if (clipOwnsAction)
                         return new PoseTarget(clip == ClipKind.Fire ? PosePresentation.FireClip : PosePresentation.EmptyClip, aux, clipTime, 0f);
                     if (m == MechanismState.EmptyAwaitRest || !s.AllAtRest)
-                        return new PoseTarget(PosePresentation.ReturnToRest, aux, clipTime, a.SpringReturnSpeed);
+                        return ReleasedPose(a, s, aux, clipTime);
                     return new PoseTarget(PosePresentation.Rest, aux, clipTime, 0f);
             }
         }
+
+        /// <summary>
+        /// Action без руки и без подготовки: Spring — пружина в покой; Stay — остаётся, где отпустили (в покое — Rest).
+        /// </summary>
+        private static PoseTarget ReleasedPose(in WeaponProfileAxes a, in ActionSample s, AuxiliaryPose aux, float clipTime) =>
+            a.ReleasedActionStays
+                ? new PoseTarget(s.AllAtRest ? PosePresentation.Rest : PosePresentation.Stay, aux, clipTime, 0f)
+                : new PoseTarget(PosePresentation.ReturnToRest, aux, clipTime, a.SpringReturnSpeed);
 
         // ---------- Шаг: до и после таблицы ----------
 
@@ -239,7 +251,9 @@ namespace VrBattlegrounds.Weapons.Core
 
         private void PostStep()
         {
-            if (_hintLatched && !(Role == WeaponRole.Author && (WeaponMechanism.Bit(M) & MechanismSet.EmptyLike) != 0 &&
+            // Подсказка живёт, пока патрон не дослан: пусто, открытый или недовозвращённый Action (T53/T54).
+            if (_hintLatched && !(Role == WeaponRole.Author &&
+                                  (WeaponMechanism.Bit(M) & (MechanismSet.EmptyLike | MechanismSet.Cycle | MechanismSet.OpenIdle)) != 0 &&
                                   WeaponMechanism.ReasonOf(L) == WeaponNotReadyReason.ChamberingRequired))
                 HintOff();
             PoseTarget pose = ComputePose(M, _axes, S, _clip, _clipTime, _clipActionDetached, _origin);
@@ -536,6 +550,12 @@ namespace VrBattlegrounds.Weapons.Core
 
         internal void SetEpisode(TriggerEpisode episode) => _episode = episode;
 
+        /// <summary>
+        /// T62: показ последнего выстрела — Empty-клип; у ствола без Empty-клипа — обычный Fire-клип (S1, как
+        /// прежний код). AckEmptyRest (T31/T44) ждёт конца любого клипа.
+        /// </summary>
+        internal void StartLastShotClip() => StartClip(_axes.HasEmptyClip ? ClipKind.Empty : ClipKind.Fire);
+
         internal void StartClip(ClipKind kind)
         {
             bool has = kind == ClipKind.Fire ? _axes.HasFireClip : _axes.HasEmptyClip;
@@ -583,6 +603,18 @@ namespace VrBattlegrounds.Weapons.Core
                 _hintLatched = true;
                 _out.Hint(true);
             }
+        }
+
+        /// <summary>
+        /// T57: нажатие до конца таймера темпа (S2). Не сухой щелчок и не подготовка: отдельный звук отказа
+        /// <see cref="WeaponCue.Refusal"/> и отрицательная вибрация; подсказки нет; нажатие израсходовано (И7).
+        /// </summary>
+        internal void RefuseRateOfFire()
+        {
+            _episode = TriggerEpisode.Consumed;
+            if (!AuthorOnly()) return;
+            _out.Cue(WeaponCue.Refusal, WeaponNotReadyReason.RateOfFire);
+            _out.Haptic(WeaponHapticCue.RateOfFire);
         }
 
         /// <summary>OtherDenied: нажатие израсходовано без отклика о патронах.</summary>

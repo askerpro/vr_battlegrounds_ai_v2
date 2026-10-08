@@ -687,7 +687,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                     AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ManualLoadingProfile),
                     string.IsNullOrEmpty(r.LoadAudio) ? null : AssetDatabase.LoadAssetAtPath<AudioClip>(r.LoadAudio));
             else if (!string.IsNullOrEmpty(r.ReadinessProfile))
-                WeaponReadinessAuthoring.ConfigureFromSource(root, AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ReadinessProfile));
+                WeaponSystemAuthoring.Configure(root, AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ReadinessProfile));
 
             return root;
         }

@@ -9,11 +9,11 @@ using UnityEngine;
 namespace VrBattlegrounds.Weapons
 {
     /// <summary>
-    /// Дебаг-панель состояния оружия в шлеме (этап C WeaponSystem): над каждым огнестрелом в радиусе
+    /// Дебаг-панель состояния оружия в шлеме (этапы C/D WeaponSystem): над каждым огнестрелом в радиусе
     /// <see cref="Radius"/> от головы локального игрока — мелкий world-space текст, повёрнутый к камере HMD:
     /// имя и где лежит ствол, учёт SDK (фаза, патронник, запас/ёмкость, ревизия, барьер приёма), ход Action и хват,
-    /// при включённом теневом режиме — состояние машины, совпадения/расхождения и последнее расхождение
-    /// (красным ~3 с). Ствол без учёта готовности показывает патроны SDK.
+    /// у ствола на машине (<see cref="WeaponSystem"/>) — жест, эпизод, клип, строка таблицы, цель позы и отказы учёта
+    /// (красным, если были). Ствол без учёта готовности показывает патроны SDK.
     ///
     /// Только редактор (<see cref="WeaponStatePanelSettings"/>). Префабы и сцены не меняются: один объект-менеджер
     /// создаётся во время игры в DontDestroyOnLoad (без HideFlags.DontSave — такие объекты переживают выход из Play), панели — его дети, не дети оружия: хват, прицел и физика
@@ -26,7 +26,6 @@ namespace VrBattlegrounds.Weapons
         public const float Radius = 3f;
         private const float TextInterval = 0.125f;
         private const float ScanInterval = 0.5f;
-        private const float DivergenceHighlight = 3f;
         private const float FontSize = 0.2f;
         private static readonly Vector3 Offset = new Vector3(0f, 0.17f, 0f);
 
@@ -35,9 +34,7 @@ namespace VrBattlegrounds.Weapons
         private sealed class Panel
         {
             public UxrFirearmWeapon Weapon;
-            public WeaponReadinessController Controller;
-            public AutomaticWeaponSlideFeedback Feedback;
-            public WeaponShadowComparer Shadow;
+            public WeaponSystem Host;
             public UxrFirearmMag Store;
             public string Name;
             public TextMeshPro Text;
@@ -153,8 +150,7 @@ namespace VrBattlegrounds.Weapons
             var panel = new Panel
             {
                 Weapon = weapon,
-                Controller = weapon.GetComponent<WeaponReadinessController>(),
-                Feedback = weapon.GetComponent<AutomaticWeaponSlideFeedback>(),
+                Host = weapon.GetComponent<WeaponSystem>(),
                 Name = weapon.name.Replace("_instance", "").Replace("(Clone)", "")
             };
             foreach (UxrFirearmMag mag in weapon.GetComponentsInChildren<UxrFirearmMag>(true))
@@ -201,27 +197,24 @@ namespace VrBattlegrounds.Weapons
             }
             else sb.Append("SDK: патроны ").Append(weapon.GetAmmoLeft(0)).Append('/').Append(weapon.GetAmmoCapacity(0)).Append('\n');
 
-            AutomaticWeaponSlideFeedback feedback = panel.Feedback;
-            if (feedback != null && feedback.Slide != null)
+            WeaponSystem host = panel.Host;
+            if (host != null && host.IsConfigured && host.Rig.HasAction)
             {
-                bool held = UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(feedback.Slide);
-                sb.Append("ход ").Append(Mathf.RoundToInt(feedback.SignedSlideProgress * 100f)).Append('%');
-                if (held) sb.Append("  рука");
-                if (panel.Controller != null && panel.Controller.IsConfigured)
-                    sb.Append(panel.Controller.IsActionAtRest ? "  покой" : panel.Controller.IsActionAtValidatedEmptyRear ? "  задержка" : "");
+                sb.Append("ход ").Append(Mathf.RoundToInt(host.ActionProgress * 100f)).Append('%');
+                if (host.Rig.IsHandleHeld) sb.Append("  рука");
+                sb.Append(host.IsActionAtRest ? "  покой" : host.IsActionAtValidatedRear ? "  задержка" : "");
                 sb.Append('\n');
             }
-
-            if (panel.Shadow == null) panel.Shadow = weapon.GetComponent<WeaponShadowComparer>();
-            WeaponShadowComparer shadow = panel.Shadow;
-            if (shadow != null && shadow.IsAttached)
+            if (host != null && host.IsConfigured)
             {
-                sb.Append("тень: ").Append(shadow.MachineBrief).Append("  совп ").Append(shadow.MatchedTotal)
-                  .Append("  расх ").Append(shadow.DivergenceTotal);
-                if (shadow.InQuarantine) sb.Append("  карантин");
-                if (shadow.LastDivergenceKey != null)
-                    sb.Append('\n').Append(now - shadow.LastDivergenceTime < DivergenceHighlight ? "<color=#FF5040>! " : "<color=#A0A0A0>посл.: ")
-                      .Append(shadow.LastDivergenceKey).Append("</color>");
+                VrBattlegrounds.Weapons.Core.WeaponMachineState state = host.MachineState;
+                sb.Append("машина: ").Append(state.Gesture).Append(' ').Append(state.Episode);
+                if (state.Clip != VrBattlegrounds.Weapons.Core.ClipKind.None) sb.Append(' ').Append(state.Clip);
+                sb.Append("  ").Append(host.LastRowId ?? "—").Append("  поза ").Append(host.LastPose.Action);
+                if (host.HintOn) sb.Append("  подсказка");
+                if (host.CommandsRejected + host.TableViolations > 0)
+                    sb.Append("\n<color=#FF5040>отказы учёта ").Append(host.CommandsRejected)
+                      .Append("  ошибки таблицы ").Append(host.TableViolations).Append("</color>");
             }
 
             if (Same(sb, panel.Shown)) return;
@@ -245,8 +238,8 @@ namespace VrBattlegrounds.Weapons
             if (s.ActionOpen) return "OpenIdle";
             if (s.ChamberRound) return "Ready";
             if (s.PostShotEmptyAction)
-                return panel.Controller != null && panel.Controller.EmptyPose == WeaponEmptyPose.HoldOpen &&
-                       panel.Controller.Profile != null && panel.Controller.Profile.PhysicalCapability == WeaponPhysicalCapability.ActionTravel
+                return panel.Host != null && panel.Host.Profile != null && panel.Host.Profile.EmptyPose == WeaponEmptyPose.HoldOpen &&
+                       panel.Host.Profile.PhysicalCapability == WeaponPhysicalCapability.ActionTravel
                     ? "HoldOpen" : "EmptyAwaitRest";
             return "Empty";
         }

@@ -31,20 +31,35 @@ namespace VrBattlegrounds.Weapons.Core
         }
     }
 
-    /// <summary>Причина отказа спуска. Порт переводит первые три в <c>UxrFirearmNotReadyReason</c>.</summary>
-    public enum WeaponNotReadyReason { None, NoMagazine, EmptyMagazine, ChamberingRequired, Obstructed, Faulted }
+    /// <summary>
+    /// Причина отказа спуска. Порт переводит NoMagazine, EmptyMagazine и ChamberingRequired в <c>UxrFirearmNotReadyReason</c>.
+    /// <see cref="RateOfFire"/> — нажатие до конца таймера темпа (решение S2): не про патроны, отдельный отказ
+    /// (<see cref="WeaponCue.Refusal"/>), без подсказки.
+    /// </summary>
+    public enum WeaponNotReadyReason { None, NoMagazine, EmptyMagazine, ChamberingRequired, Obstructed, Faulted, RateOfFire }
 
     /// <summary>
     /// Звуки механизма (план п. 4.2). Вставки и выстрела здесь нет и быть не может: у них другие
     /// владельцы (<c>AnchorSound</c>, SDK) — класс ошибок 2.
+    /// <see cref="DryFire"/> — щелчок отказа по патронам/препятствию/сбою; <see cref="Refusal"/> — искусственный
+    /// звук отказа, не щелчок (S2: таймер темпа; звук <c>UI_Error_Subtle_Deep</c> подключается на этапе D).
     /// </summary>
-    public enum WeaponCue { ActionBack, ActionForwardChambered, ActionForwardEmpty, ChamberEjected, SlideLockCatch, DryFire }
+    public enum WeaponCue { ActionBack, ActionForwardChambered, ActionForwardEmpty, ChamberEjected, SlideLockCatch, DryFire, Refusal }
 
-    /// <summary>Вибрации механизма и отказа. Вибрация выстрела остаётся у SDK.</summary>
-    public enum WeaponHapticCue { ActionRear, NotReady, Obstructed, Faulted }
+    /// <summary>
+    /// Вибрации оружия. Решение пользователя: все вибрации оружия, включая отдачу выстрела, ведёт WeaponSystem;
+    /// исполняет их сервис вибрации <c>VrBattlegrounds.Haptics.HapticService</c> (worktree haptics). Сигнал
+    /// выстрела добавляется на этапе D, до тех пор вибрация выстрела остаётся у SDK.
+    /// <see cref="RateOfFire"/> — отрицательный класс (отказ без отклика о патронах, S2).
+    /// </summary>
+    public enum WeaponHapticCue { ActionRear, NotReady, Obstructed, Faulted, RateOfFire }
 
-    /// <summary>Цель позы ручки (когда её не держат) и связанных Action-деталей (план п. 3.6).</summary>
-    public enum PosePresentation { Rest, FollowHand, FireClip, EmptyClip, HoldRear, ReturnToRest }
+    /// <summary>
+    /// Цель позы ручки (когда её не держат) и связанных Action-деталей (план п. 3.6).
+    /// <see cref="Stay"/> — Action остаётся там, где его отпустила рука: исполнитель его не двигает
+    /// (ось <see cref="WeaponReleasedAction.Stay"/>, решение S4).
+    /// </summary>
+    public enum PosePresentation { Rest, FollowHand, FireClip, EmptyClip, HoldRear, ReturnToRest, Stay }
 
     /// <summary>Цель позы нерычажных деталей (курок, барабан и т. п.).</summary>
     public enum AuxiliaryPose { Rest, FireClip, EmptyClip }
@@ -108,7 +123,7 @@ namespace VrBattlegrounds.Weapons.Core
         /// <summary>Ровно один раз за шаг (И13).</summary>
         void Pose(in PoseTarget target);
 
-        /// <summary>Звук механизма. DryFire — только автор.</summary>
+        /// <summary>Звук механизма. DryFire и Refusal — только автор.</summary>
         void Cue(WeaponCue cue, WeaponNotReadyReason reason);
 
         /// <summary>Вибрация. Только автор.</summary>

@@ -8,7 +8,10 @@ using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Weapons
 {
-    /// <summary>Подсказка ручного досылания; единственный писатель Action-визуала. Механика оружия не меняется.</summary>
+    /// <summary>
+    /// Подсказка ручного досылания прежних (legacy) стволов; единственный писатель Action-визуала. Механика оружия не меняется.
+    /// На стволах <see cref="WeaponSystem"/> компонента нет: подсказку ведёт машина (<see cref="WeaponFeedbackExecutor"/>).
+    /// </summary>
     [RequireComponent(typeof(UxrFirearmWeapon))]
     public sealed class WeaponChamberingReminder : MonoBehaviour
     {
@@ -20,8 +23,6 @@ namespace VrBattlegrounds.Weapons
         [SerializeField, Min(0f)] private float _hapticCooldown = 0.6f;
 
         private UxrFirearmWeapon _firearm;
-        private WeaponAttemptFeedback _attemptFeedback;
-        private bool _usesTypedFeedback;
         private UxrGrabbableObject _triggerGrip;
         private int _triggerGripPoint;
         private UxrGrabber _reminderHand;
@@ -38,10 +39,7 @@ namespace VrBattlegrounds.Weapons
         private void OnEnable()
         {
             if (_firearm == null) _firearm = GetComponent<UxrFirearmWeapon>();
-            _attemptFeedback = GetComponent<WeaponAttemptFeedback>();
-            _usesTypedFeedback = _attemptFeedback != null;
-            if (_usesTypedFeedback) _attemptFeedback.FeedbackRequested += ReceiveAttempt;
-            else _firearm.ChamberingRequired += HandleChamberingRequired;
+            _firearm.ChamberingRequired += HandleChamberingRequired;
             if (_firearm.TryGetTriggerGrip(_triggerIndex, out _triggerGrip, out _triggerGripPoint))
             {
                 _triggerGrip.Released += HandleGripReleased;
@@ -53,9 +51,7 @@ namespace VrBattlegrounds.Weapons
 
         private void OnDisable()
         {
-            if (_usesTypedFeedback && _attemptFeedback != null) _attemptFeedback.FeedbackRequested -= ReceiveAttempt;
-            else if (_firearm != null) _firearm.ChamberingRequired -= HandleChamberingRequired;
-            _attemptFeedback = null; _usesTypedFeedback = false;
+            if (_firearm != null) _firearm.ChamberingRequired -= HandleChamberingRequired;
             if (_triggerGrip != null)
             {
                 _triggerGrip.Released -= HandleGripReleased;
@@ -72,18 +68,6 @@ namespace VrBattlegrounds.Weapons
 
         // Страховка при прекращении avatar update, снятии магазина и выключении manager.
         private void LateUpdate() => UpdateFeedback();
-
-        public void ReceiveAttempt(WeaponTriggerAttemptContext context, UxrFirearmNotReadyReason reason, WeaponAttemptReaction reaction)
-        {
-            if (context.Firearm != _firearm || context.TriggerIndex != _triggerIndex ||
-                reason != UxrFirearmNotReadyReason.ChamberingRequired || reaction == null ||
-                !reaction.ChamberReminderEnabled || !_firearm.CanUse || !IsTriggerHand(context.MainGrabber)) return;
-            // Причина взята из immutable attempt, а не пересчитана после inline подготовки.
-            LatchAndPulse(context.MainGrabber, reaction.ReminderHapticEnabled,
-                reaction.UseExistingReminderParameters ? _hapticAmplitude : reaction.HapticAmplitude,
-                reaction.UseExistingReminderParameters ? _hapticSeconds : reaction.HapticSeconds,
-                reaction.UseExistingReminderParameters ? _hapticCooldown : reaction.HapticCooldown);
-        }
 
         private void HandleChamberingRequired(int triggerIndex, UxrGrabber hand)
         {

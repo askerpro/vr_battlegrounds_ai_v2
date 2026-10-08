@@ -12,7 +12,7 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// <summary>
     /// Этап 4 готовности оружия (Docs/tasks/weapon-readiness-feedback-design.md): адресный preflight → apply → readback
     /// профиля «съёмный магазин + патронник + HoldOpen» для явного списка стволов. Список расширяется по таблице дизайна
-    /// только после проверки предыдущей волны в шлеме. Компоненты пишет <see cref="WeaponReadinessAuthoring"/> — тот же
+    /// только после проверки предыдущей волны в шлеме. Компоненты пишет <see cref="WeaponSystemAuthoring"/> — тот же
     /// writer, что у сборщиков, поэтому пересборка префаба даёт те же bindings. Вызывать в idle Editor (своя аренда).
     /// </summary>
     public static class WeaponReadinessMigration
@@ -26,7 +26,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             new Entry { Info = "Assets/Data/Weapons/Viper_Weapon.asset", Weapon = "Assets/Prefabs/Weapons/Viper/Viper.prefab" },
             new Entry { Info = "Assets/Data/Weapons/TR15_Weapon.asset", Weapon = "Assets/Prefabs/Weapons/TR15/TR15.prefab" },
         };
-        private const string ProfilePath = WeaponReadinessAuthoring.DetachableHoldOpenProfile;
+        private const string ProfilePath = WeaponSystemAuthoring.DetachableHoldOpenProfile;
 
         [MenuItem("Tools/VR Battlegrounds/Gameplay/Weapon Readiness/Preflight HoldOpen Wave")]
         public static void PreflightMenu() => Log(Preflight());
@@ -56,7 +56,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                         if (info.ReadinessProfile != null && info.ReadinessProfile != profile)
                             throw new InvalidOperationException("Чужой профиль готовности уже назначен: " + entry.Info);
                         root = PrefabUtility.LoadPrefabContents(entry.Weapon);
-                        WeaponReadinessAuthoring.ConfigureFromSource(root, profile);
+                        WeaponSystemAuthoring.Configure(root, profile);
                         rows.Add(Describe(entry, root));
                     }
                     catch (Exception exception) { failures.Add(entry.Weapon + ": " + exception.Message); }
@@ -95,7 +95,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                     GameObject root = PrefabUtility.LoadPrefabContents(entry.Weapon);
                     try
                     {
-                        WeaponReadinessAuthoring.ConfigureFromSource(root, profile);
+                        WeaponSystemAuthoring.Configure(root, profile);
                         if (PrefabUtility.SaveAsPrefabAsset(root, entry.Weapon) == null) throw new InvalidOperationException("Weapon save failed.");
                     }
                     finally { PrefabUtility.UnloadPrefabContents(root); }
@@ -125,12 +125,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             foreach (var entry in HoldOpenWave)
             {
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(entry.Weapon);
-                var controller = prefab != null ? prefab.GetComponent<WeaponReadinessController>() : null;
+                var controller = prefab != null ? prefab.GetComponent<WeaponSystem>() : null;
                 var info = AssetDatabase.LoadAssetAtPath<WeaponInfo>(entry.Info);
                 if (controller == null || controller.Profile != profile) failures.Add(entry.Weapon + ": controller/profile");
                 if (info == null || info.ReadinessProfile != profile) failures.Add(entry.Info + ": WeaponInfo.ReadinessProfile");
-                if (prefab != null && (prefab.GetComponent<WeaponTriggerAttemptRouter>() == null || prefab.GetComponent<WeaponAttemptFeedback>() == null))
-                    failures.Add(entry.Weapon + ": router/attempt feedback");
+                if (prefab != null && (prefab.GetComponent<AutomaticWeaponSlideFeedback>() != null || prefab.GetComponent<WeaponMechanismVisuals>() != null))
+                    failures.Add(entry.Weapon + ": остались прежние AWSF/WMV рядом с WeaponSystem");
                 var identity = prefab != null ? prefab.GetComponent<Mirror.NetworkIdentity>() : null;
                 uint canonical = Mirror.NetworkIdentity.AssetGuidToUint(new Guid(AssetDatabase.AssetPathToGUID(entry.Weapon)));
                 var match = System.Text.RegularExpressions.Regex.Match(File.ReadAllText(DiskPath(entry.Weapon)), @"^  _assetId: (\d+)",
@@ -144,8 +144,8 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         private static object Describe(Entry entry, GameObject root)
         {
-            var controller = new SerializedObject(root.GetComponent<WeaponReadinessController>());
-            var bindings = controller.FindProperty("_requiredBindings");
+            var controller = new SerializedObject(root.GetComponent<WeaponSystem>());
+            var bindings = controller.FindProperty("_rig._actionBindings");
             var targets = new List<string>();
             for (int i = 0; i < bindings.arraySize; i++)
             {
@@ -155,7 +155,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                     " rear=" + item.FindPropertyRelative("RearPosition").vector3Value.ToString("F4") +
                     " rot=" + item.FindPropertyRelative("AnimateRotation").boolValue);
             }
-            return new { entry.Weapon, emptyRearTime = controller.FindProperty("_emptyRearTime").floatValue, bindings = targets,
+            return new { entry.Weapon, emptyRearTime = controller.FindProperty("_rig._emptyRearTime").floatValue, bindings = targets,
                 scale = root.transform.localScale.ToString("F4") };
         }
 

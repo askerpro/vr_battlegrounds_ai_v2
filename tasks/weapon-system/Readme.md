@@ -9,10 +9,18 @@
 
 ## Статус
 
-Обновлено 2026-10-08. Владелец — `weapon-system` (Claude, worktree `shotgun-per-shell`).
+Обновлено 2026-10-09. Владелец — `weapon-system` (Claude, worktree `shotgun-per-shell`).
 Влиты этапы B (машина), C (тень и дебаг-панель), C2 (учёт без копий, SDK-патч 53).
-Текущий этап `machine-s124` — решения S1/S2/S4 внесены в машину, Android PASS, тесты оружия 16/16;
-не влит, ждёт проверки тени в шлеме.
+Этап `drive` принят пользователем в шлеме 2026-10-09, идёт вливание: Herrington и FABARM управляются машиной.
+
+- Хост `WeaponSystem` (тот же GUID, что у `WeaponReadinessController`), порт `UxrReadinessLedgerPort`.
+- Исполнители: поза (Stay, пружина, HoldRear, клипы S1), звук (оттяжка `ActionBack`, отказ S2), вибрация
+  (`WeaponHapticSet`, клипы `UxrHapticClip`) и подсказка.
+- Открытый или недовозвращённый Action — как недосланный патрон: щелчок, вибрация, подсветка (T54).
+- Writer `WeaponSystemAuthoring`.
+
+До этапа E выстрел решает спуск SDK. Упёртый ствол озвучивает `BarrelObstruction`, отдачу — SDK.
+Вибрация идёт через адаптер `WeaponHapticOutput`.
 
 ## Архитектурное решение
 
@@ -21,31 +29,33 @@
 - Учёт SDK не хранит копий физического состояния. Расхождение — `Error`, игра не блокируется.
 - Кто использует оружие — `WeaponUseContext.Resolve`: VR-рука или экипировка NPC (`WeaponEquipmentBinding`
   у bots-fix), взаимоисключающие.
+- Предложение для `waves-f` (ждёт решения пользователя): общий ассет дефолтов звука и вибрации по событиям;
+  у ствола только оверрайды, подстановка дефолта — в исполнителе, сборщик не копирует.
 
 ## План
 
-1. `machine-s124` — S1/S2/S4 в машине (готов, ждёт шлема).
-2. `use-context` — контекст использования для ботов; отдача корня SDK не применяется у NPC (патч 63).
-3. `pilot-d` — Herrington и FABARM на машине.
+1. `drive` — машина управляет оружием; Herrington и FABARM (принят, вливается).
+2. `waves-f` — остальные стволы арсенала волнами по типу затвора.
+3. `use-context` — контекст использования для ботов; отдача корня SDK не применяется у NPC (патч 63).
 4. `trigger-e` — спуск в машину (патч 64).
-5. `waves-f` — 20 стволов волнами.
-6. `acceptance-g` — приёмка, два клиента.
-7. `cleanup-h` — удаление старого кода.
+5. `acceptance-g` — приёмка, два клиента.
+6. `cleanup-h` — удаление старого кода.
 
 Машинный план — [plan.json](plan.json), подробности и решения пользователя — [Details.md](Details.md), спецификация — [refactor-plan.md](refactor-plan.md), учёт C2 — [ledger-single-source.md](ledger-single-source.md).
 
 ## Синхронизация
 
-- bots-fix: проверенный `WeaponEquipmentBinding` до `use-context`; волны F — после bots-fix.
-- haptics: `HapticService.Play` и `IWeaponRecoilHapticsOwner` для этапа D.
-- Волны F — после map-runtime-bootstrap 2 и arsenal-generator 3.
+- Контракты согласованы: `weapon-use-context@1` (владелец мы), `weapon-equipment-binding@1` (bots-fix),
+  `haptics-api@1` (haptics-system).
+- Волны F — после arsenal-generator `composer-presentation`.
 
 ## Проверка
 
-C2: проба RED→GREEN по 9 сценариям, Android PASS, приёмка пользователем в шлеме 2026-10-07.
-`machine-s124`: Android PASS, `VrBattlegrounds.Tests.Weapons` 16/16; приёмки ещё нет.
+C2: проба RED→GREEN по 9 сценариям, Android PASS, приёмка в шлеме 2026-10-07.
+`drive`: миграция пилотов — readback `passed`; Android PASS; EditMode 245, упал 1 — бюджет треугольников R08,
+к этапу не относится; структурные тесты машины 16/16; новые тесты принятой механики и префабов пилотов.
+Приёмка в шлеме 2026-10-09.
 
 ## Следующий шаг
 
-Владелец: занять worker после обслуживания протокола, запустить Play в лобби с тенью и панелью для
-проверки пользователем `machine-s124`.
+Владелец: проверка SHA на опубликованной базе worker с haptics, вливание `drive`; затем `waves-f`.

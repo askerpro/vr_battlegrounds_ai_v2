@@ -5,7 +5,12 @@ using UnityEngine;
 
 namespace VrBattlegrounds.Weapons
 {
-    /// <summary>Один визуальный цикл на выстрел; ручная тяга имеет приоритет. Косметика не вызывает Reload/Shoot.</summary>
+    /// <summary>
+    /// Прежний (legacy) показ механизма стволов, ещё не переведённых на <see cref="WeaponSystem"/> (волны F плана WeaponSystem):
+    /// один визуальный цикл на выстрел, ручная тяга имеет приоритет. Косметика не вызывает Reload/Shoot.
+    /// На стволах с учётом готовности компонента нет — позу ведёт <see cref="WeaponPoseExecutor"/>. Здесь же — фабрика
+    /// Action-привязок для writer (<see cref="TryBuildPreparedActionMapping"/>), до переноса в редактор на этапе H.
+    /// </summary>
     [DisallowMultipleComponent, DefaultExecutionOrder(200)]
     public sealed class WeaponMechanismVisuals : MonoBehaviour
     {
@@ -47,27 +52,7 @@ namespace VrBattlegrounds.Weapons
         public Binding[] Bindings => _bindings;
         public Transform Body => _body;
         public Transform ContactPart => _contactPart;
-        public bool IsHeldEmpty => _emptyHeld && (!HasLedgerAdapter || _emptyShot);
-        public bool HasSourceEmptyPresentation => _emptyShot && (_cycle != null || _emptyHeld);
-        private bool _ownedChamberReturn;
-        private bool _suppressActionCycle;
-        private bool _emptyShot;
-        // Только локальная работа одного pose owner. Это не копия SDK origin/Ready.
-        private enum EmptyPresentationWork { None, Source, Deferred, HoldSettled, RestServiced, ReturnDriver }
-        private EmptyPresentationWork _emptyWork;
-        private uint _emptyWorkShot;
-        public bool IsSourceEmptyInProgress => _emptyWork == EmptyPresentationWork.Source;
-        public bool IsEmptyActionApplicationDeferred => _emptyWork == EmptyPresentationWork.Deferred;
-        public bool HasEmptyPresentationFor(uint shot) => _emptyWork != EmptyPresentationWork.None && _emptyWorkShot == shot;
-        public bool HasServicedEmptyRest(uint shot) => _emptyWork == EmptyPresentationWork.RestServiced && _emptyWorkShot == shot && !_ownedChamberReturn;
-
-        public void CompleteOwnedEmptyReturn(uint shot, bool actualRest)
-        {
-            if (_emptyWork == EmptyPresentationWork.ReturnDriver && _emptyWorkShot == shot && actualRest)
-                _emptyWork = EmptyPresentationWork.RestServiced;
-        }
-        private WeaponReadinessController ReadinessAdapter => GetComponent<WeaponReadinessController>();
-        private bool HasLedgerAdapter => _weapon != null && ReadinessAdapter != null && ReadinessAdapter.IsConfigured && _weapon.UsesReadinessLedger(0);
+        public bool IsHeldEmpty => _emptyHeld;
 
         public Transform[] GetRequiredActionTargets()
         {
@@ -131,12 +116,6 @@ namespace VrBattlegrounds.Weapons
                 matrix = Matrix4x4.TRS(position, rotation, current.localScale) * matrix;
             }
             return true;
-        }
-
-        public void BeginOwnedChamberReturn()
-        {
-            _ownedChamberReturn = true; _suppressActionCycle = true; _manual = false;
-            if (_emptyShot && _emptyWork != EmptyPresentationWork.None) _emptyWork = EmptyPresentationWork.ReturnDriver;
         }
 
         public bool TryValidateEmptyRearPose(float time, ChamberActionBinding[] required, float epsilon)
@@ -374,187 +353,6 @@ namespace VrBattlegrounds.Weapons
         private static bool FiniteSource(Quaternion value) => FiniteSource(value.x) && FiniteSource(value.y) &&
             FiniteSource(value.z) && FiniteSource(value.w) && Mathf.Abs(Quaternion.Dot(value, value) - 1f) <= 0.00001f;
 
-        public bool IsValidatedEmptyRearPose(float time, ChamberActionBinding[] required, float epsilon)
-        {
-            if (!TryGetValidatedEmptyRearPoses(time, required, epsilon, out var poses)) return false;
-            foreach (ChamberActionBinding binding in required)
-                if (!ChamberActionBinding.TryGetBodyPose(binding.Target, _body, out Pose actual) ||
-                    (actual.position - poses[binding.Target].position).sqrMagnitude > epsilon * epsilon ||
-                    !ChamberActionBinding.RotationNear(actual.rotation, poses[binding.Target].rotation)) return false;
-            return true;
-        }
-
-        public void ClearConsumedEmptyPresentation()
-        {
-            if (!_emptyShot || _ownedChamberReturn || _manual) return;
-            // Action ownership закончено; independent Source каналы доигрывают свой
-            // цикл. Отмена origin не гасит чужой firing/FX канал и не меняет pose.
-            _emptyShot = false; _emptyHeld = false; _suppressActionCycle = _cycle != null;
-            _emptyWork = EmptyPresentationWork.None;
-            _feedback?.ClearLedgerVisualHold();
-            // Не ResetVisuals: canceled/partial actual pose не телепортируется в rest.
-        }
-
-        public bool RestoreSavedEmptyPresentation(bool holdOpen, float time, ChamberActionBinding[] required, float epsilon)
-        {
-            if (!HasLedgerAdapter || _ownedChamberReturn || _slide == null ||
-                (UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(_slide))) return false;
-            var state = _weapon.GetReadinessState(0);
-            if (state == null || !state.PostShotEmptyAction || state.ChamberRound || state.ActionOpen || state.ChamberCyclePending) return false;
-            // Авторская source phase не перескакивает к snapshot endpoint от polling origin.
-            if (IsSourceEmptyInProgress && _emptyWorkShot == state.ShotSequence) return false;
-            System.Collections.Generic.Dictionary<Transform, Pose> rear = null;
-            if (holdOpen && !TryGetValidatedEmptyRearPoses(time, required, epsilon, out rear)) return false;
-            var sorted = (ChamberActionBinding[])required.Clone();
-            Array.Sort(sorted, (left, right) => HierarchyDepth(left.Target).CompareTo(HierarchyDepth(right.Target)));
-            foreach (ChamberActionBinding binding in sorted)
-            {
-                if (holdOpen)
-                {
-                    if (!ChamberActionBinding.TrySetBodyPose(binding.Target, _body, rear[binding.Target], true)) return false;
-                }
-                else
-                {
-                    if (!TryGetSourceLocalRestPose(binding.Target, out Pose rest)) return false;
-                    binding.Target.SetLocalPositionAndRotation(rest.position, rest.rotation);
-                }
-            }
-            // Snapshot settle меняет только Action presentation. Старый source cycle,
-            // уже переведённый в independent-only, не обрывается этим pose projection.
-            if (!(_suppressActionCycle && _emptyWork != EmptyPresentationWork.Source && _cycle != null)) _cycle = null;
-            _emptyShot = true; _emptyHeld = true; _manual = false; _catchRequired = false;
-            bool endpoint = holdOpen ? IsValidatedEmptyRearPose(time, required, epsilon) : true;
-            if (!holdOpen) foreach (ChamberActionBinding binding in required) endpoint &= binding.IsAtRest(_body, epsilon);
-            if (!endpoint) { _emptyWork = EmptyPresentationWork.Deferred; return false; }
-            _emptyWorkShot = state.ShotSequence;
-            _emptyWork = holdOpen ? EmptyPresentationWork.HoldSettled : EmptyPresentationWork.RestServiced;
-            // Никаких Source/Reload/feed/extraction/audio callbacks при snapshot projection.
-            return true;
-        }
-
-        private static int HierarchyDepth(Transform target)
-        {
-            int depth = 0;
-            for (Transform current = target; current != null; current = current.parent) depth++;
-            return depth;
-        }
-
-        public void EndOwnedChamberReturn()
-        {
-            _ownedChamberReturn = false;
-            if (_emptyWork == EmptyPresentationWork.ReturnDriver) _emptyWork = EmptyPresentationWork.Deferred;
-            _manual = _slide != null && UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
-            _emptyHeld = false;
-            // Не ResetVisuals: actual pose сохраняется, SDK сам проверяет физическое закрытие.
-        }
-
-        public void InvalidateActionPresentationAfterStateLoad()
-        {
-            // Pure local invalidation: не читать partly loaded grab state, не писать
-            // transforms/SDK. Independent source channels продолжают свой цикл.
-            _manual = false; _ownedChamberReturn = false; _catchRequired = false;
-            _manualRotationRearProgress = 0f;
-            _emptyShot = _emptyHeld = false; _emptyWork = EmptyPresentationWork.None;
-            _suppressActionCycle = _cycle != null;
-        }
-
-        public bool CaptureCurrentManualContact()
-        {
-            if (!HasLedgerAdapter || _feedback == null || _bindings == null ||
-                !UxrGrabManager.HasInstance || !UxrGrabManager.Instance.IsBeingGrabbed(_slide)) return false;
-            var poses = new Pose[_bindings.Length];
-            for (int index = 0; index < _bindings.Length; index++)
-                if (IsAction(_bindings[index]) &&
-                    !ChamberActionBinding.TryGetBodyPose(_bindings[index].Target, _body, out poses[index])) return false;
-            float progress = _feedback.SignedSlideProgress;
-            if (float.IsNaN(progress) || float.IsInfinity(progress)) return false;
-            _manual = true; _suppressActionCycle = true; _catchRequired = false;
-            _manualRotationRearProgress = Mathf.Max(0f, progress);
-            for (int index = 0; index < _bindings.Length; index++)
-            {
-                Binding binding = _bindings[index];
-                if (!IsAction(binding)) continue;
-                binding.FrozenPosition = binding.Target.localPosition; binding.FrozenRotation = binding.Target.localRotation;
-                binding.FrozenBodyPosition = poses[index].position; binding.FrozenBodyRotation = poses[index].rotation;
-                binding.RotationAnchorBody = poses[index].rotation;
-                binding.RotationAnchorProgress = binding.RotationLastProgress = progress;
-                binding.RotationOpening = true;
-            }
-            return true; // Только capture текущей позы, без handoff/нового хвата/жеста.
-        }
-
-        public void RefreshOwnedManualPose()
-        {
-            if (!HasLedgerAdapter || !_manual || _ownedChamberReturn || _bindings == null) return;
-            bool held = _slide != null && UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
-            if (!held && ReadinessAdapter.HoldsEmptyActionOpen)
-            {
-                // Отпустили ручку без начатого цикла: поза снова принадлежит HoldOpen.
-                // Контроллер заново проецирует validated rear, без возврата к rest.
-                _manual = false;
-                _emptyWork = EmptyPresentationWork.Deferred;
-                return;
-            }
-            float progress = _feedback.SignedSlideProgress;
-            float epsilon = _feedback.PhysicalPositionEpsilon / _feedback.SlideTravelLength;
-            if (!held || (_catchRequired && progress + epsilon >= _catchProgress)) _catchRequired = false;
-            if (_manualRotationRearProgress <= 0f && progress > epsilon) _manualRotationRearProgress = progress;
-            foreach (Binding binding in _bindings)
-            {
-                if (!IsAction(binding)) continue;
-                if (_catchRequired && binding.Target != _contactPart)
-                    ChamberActionBinding.TrySetBodyPose(binding.Target, _body,
-                        new Pose(binding.FrozenBodyPosition, binding.FrozenBodyRotation), binding.Rotate);
-                else if (held && binding.Target == _contactPart)
-                {
-                    binding.Target.localPosition = binding.FrozenPosition;
-                    if (binding.Rotate) ApplyOwnedManualRotation(binding, progress);
-                }
-                else if (held)
-                {
-                    if (ReadinessAdapter.TryGetManualPositionMapping(binding.Target, out Vector3 rest, out Vector3 rear) &&
-                        ChamberActionBinding.TryGetBodyPose(binding.Target, _body, out Pose current))
-                        ChamberActionBinding.TrySetBodyPose(binding.Target, _body,
-                            new Pose(Vector3.Lerp(rest, rear, Mathf.Clamp01(progress)), current.rotation), false);
-                    if (binding.Rotate) ApplyOwnedManualRotation(binding, progress);
-                }
-                else
-                {
-                    binding.Target.localPosition = Vector3.MoveTowards(binding.Target.localPosition, binding.RestPosition, _feedback.AutoReturnSpeed * Time.deltaTime);
-                    if (binding.Rotate) binding.Target.localRotation = Quaternion.RotateTowards(binding.Target.localRotation, binding.RestRotation, 720f * Time.deltaTime);
-                }
-            }
-            // Не ResetVisuals по широкому расстоянию: endpoint читает все actual channels.
-            if (!held && ReadinessAdapter.IsActionAtRest) _manual = false;
-        }
-
-        private void ApplyOwnedManualRotation(Binding binding, float progress)
-        {
-            if (!ReadinessAdapter.TryGetManualRotationMapping(binding.Target, out Quaternion rest, out Quaternion rear)) return;
-            float epsilon = _feedback.PhysicalPositionEpsilon / _feedback.SlideTravelLength;
-            float delta = progress - binding.RotationLastProgress;
-            bool opening = delta > epsilon ? true : delta < -epsilon ? false : binding.RotationOpening;
-            if (opening != binding.RotationOpening)
-            {
-                if (!ChamberActionBinding.TryGetBodyPose(binding.Target, _body, out Pose captured)) return;
-                binding.RotationAnchorBody = captured.rotation;
-                binding.RotationAnchorProgress = binding.RotationLastProgress;
-                binding.RotationOpening = opening;
-            }
-            Quaternion value = binding.RotationAnchorBody;
-            if (opening)
-            {
-                float distance = 1f - binding.RotationAnchorProgress;
-                if (distance > epsilon)
-                    value = Quaternion.Slerp(binding.RotationAnchorBody, rear, Mathf.Clamp01((progress - binding.RotationAnchorProgress) / distance));
-            }
-            else if (binding.RotationAnchorProgress > epsilon)
-                value = Quaternion.Slerp(rest, binding.RotationAnchorBody, Mathf.Clamp01(progress / binding.RotationAnchorProgress));
-            if (ChamberActionBinding.TryGetBodyPose(binding.Target, _body, out Pose actual))
-                ChamberActionBinding.TrySetBodyPose(binding.Target, _body, new Pose(actual.position, value), true);
-            binding.RotationLastProgress = progress;
-        }
-
         private void OnEnable()
         {
             _weapon = GetComponent<UxrFirearmWeapon>();
@@ -578,14 +376,8 @@ namespace VrBattlegrounds.Weapons
         public void PlayShot(int triggerIndex, bool emptyAfterShot)
         {
             bool held = _slide != null && UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
-            if (triggerIndex != 0 || _motion == null || (!HasLedgerAdapter && (_manual || held))) return;
+            if (triggerIndex != 0 || _motion == null || _manual || held) return;
             _cycle = emptyAfterShot && _motion.Empty != null ? _motion.Empty : _motion.Fire;
-            // Если отдельного Empty clip нет, существующий Fire остаётся владельцем
-            // последней source phase. Политика ReturnToRest не обрывает этот канал.
-            _emptyShot = emptyAfterShot && (_motion.Empty != null || HasLedgerAdapter);
-            _emptyWork = HasLedgerAdapter && _emptyShot ? EmptyPresentationWork.Source : EmptyPresentationWork.None;
-            if (_emptyWork == EmptyPresentationWork.Source) _emptyWorkShot = _weapon.GetReadinessState(triggerIndex).ShotSequence;
-            _suppressActionCycle = HasLedgerAdapter && (_manual || held || _ownedChamberReturn);
             _emptyHeld = false;
             _catchRequired = false;
             _started = Time.time;
@@ -595,12 +387,6 @@ namespace VrBattlegrounds.Weapons
         {
             UpdateMagazineBinding();
             bool held = _slide != null && UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
-            if (HasLedgerAdapter && _manual)
-            {
-                RefreshOwnedManualPose();
-                UpdateIndependentSourceChannels();
-                return;
-            }
             if (_manual)
             {
                 float progress = _feedback != null ? _feedback.GetSlideProgress() : 0f;
@@ -655,21 +441,13 @@ namespace VrBattlegrounds.Weapons
                 }
                 return;
             }
-            if (HasLedgerAdapter && _suppressActionCycle && _emptyWork != EmptyPresentationWork.Source)
-            { UpdateIndependentSourceChannels(); return; }
             if (_cycle == null) return;
-            float endTime = HasLedgerAdapter && _emptyShot && ReadinessAdapter.EmptyPose == WeaponEmptyPose.HoldOpen
-                ? ReadinessAdapter.EmptyRearTime : _cycle.Duration;
-            bool holdEnd = _cycle.HoldEnd || (HasLedgerAdapter && _emptyShot && ReadinessAdapter.EmptyPose == WeaponEmptyPose.HoldOpen);
+            float endTime = _cycle.Duration;
+            bool holdEnd = _cycle.HoldEnd;
             float time = Mathf.Min(Time.time - _started, endTime);
             foreach (Binding binding in _bindings) ApplyTrack(binding, _cycle, time);
-            if (holdEnd && !_ownedChamberReturn && !_suppressActionCycle) CoupleHeldEmptyContact();
+            if (holdEnd) CoupleHeldEmptyContact();
             if (time < endTime) return;
-            if (HasLedgerAdapter && _emptyShot)
-            {
-                FinishLedgerEmptySource(holdEnd);
-                return;
-            }
             if (holdEnd)
             {
                 if (!_emptyHeld) FinishEmpty();
@@ -718,24 +496,6 @@ namespace VrBattlegrounds.Weapons
             for (int i = 0; i < _bindings.Length; i++) if (IsAction(_bindings[i]) && _bindings[i].Target != null)
                 _bindings[i].Target.SetPositionAndRotation(positions[i], rotations[i]);
             _cycle = null;
-            if (HasLedgerAdapter && ReadinessAdapter.EmptyPose == WeaponEmptyPose.ReturnToRest) ReadinessAdapter.RequestEmptyReturn();
-        }
-
-        private void FinishLedgerEmptySource(bool holdEnd)
-        {
-            // Source phase завершается один раз даже при held Action. Применение позы
-            // может оставаться deferred; source time не разрешает двигать удерживаемую деталь.
-            _cycle = null;
-            _emptyWork = EmptyPresentationWork.Deferred;
-            _emptyHeld = false;
-            if (!holdEnd) foreach (Binding binding in _bindings)
-            {
-                if (binding.Target == null || IsAction(binding) || binding.InMagazine) continue;
-                binding.Target.SetLocalPositionAndRotation(binding.RestPosition, binding.Rotate ? binding.RestRotation : binding.Target.localRotation);
-            }
-            bool held = _slide != null && UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(_slide);
-            if (held || _ownedChamberReturn || _suppressActionCycle) return;
-            ReadinessAdapter.ServiceFinishedEmptyPresentation(holdEnd);
         }
 
         private void HandleGrabbing(object sender, UxrManipulationEventArgs e)
@@ -746,37 +506,23 @@ namespace VrBattlegrounds.Weapons
                 Vector3 residual = _slide.transform.InverseTransformVector(_contactPart.parent.TransformVector(_contactPart.localPosition - contact.RestPosition));
                 var poses = new Pose[_bindings.Length];
                 for (int i = 0; i < _bindings.Length; i++) if (_bindings[i].Target != null)
-                {
-                    if (HasLedgerAdapter) ChamberActionBinding.TryGetBodyPose(_bindings[i].Target, _body, out poses[i]);
-                    else poses[i] = new Pose(_bindings[i].Target.position, _bindings[i].Target.rotation);
-                }
+                    poses[i] = new Pose(_bindings[i].Target.position, _bindings[i].Target.rotation);
                 Vector3 slideBeforeHandoff = _slide.transform.localPosition;
                 _feedback.BeginVisualHandoff(direction * Vector3.Dot(residual, direction));
                 for (int i = 0; i < _bindings.Length; i++) if (IsAction(_bindings[i]) && _bindings[i].Target != null)
-                {
-                    if (HasLedgerAdapter)
-                    {
-                        if ((_slide.transform.localPosition - slideBeforeHandoff).sqrMagnitude > 0f)
-                            ChamberActionBinding.TrySetBodyPose(_bindings[i].Target, _body, poses[i], _bindings[i].Rotate);
-                    }
-                    else _bindings[i].Target.SetPositionAndRotation(poses[i].position, poses[i].rotation);
-                }
+                    _bindings[i].Target.SetPositionAndRotation(poses[i].position, poses[i].rotation);
                 if ((_slide.transform.localPosition - slideBeforeHandoff).sqrMagnitude > 0f)
                     UxrGrabManager.CaptureGrabbingObjectPose(e);
             }
             _manual = true;
             float rearProgress = _feedback != null ? _feedback.GetSlideProgress() : 0f;
             _manualRotationRearProgress = float.IsNaN(rearProgress) || float.IsInfinity(rearProgress) || rearProgress <= 0f ? 0f : rearProgress;
-            if (HasLedgerAdapter) _suppressActionCycle = true;
-            else _cycle = null;
+            _cycle = null;
             _catchRequired = false;
             foreach (Binding b in _bindings) if (b.Target != null)
             {
                 b.FrozenPosition = b.Target.localPosition; b.FrozenRotation = b.Target.localRotation;
-                if (HasLedgerAdapter && ChamberActionBinding.TryGetBodyPose(b.Target, _body, out Pose captured))
-                { b.FrozenBodyPosition = captured.position; b.FrozenBodyRotation = captured.rotation; }
-                else
-                { b.FrozenBodyPosition = _body.InverseTransformPoint(b.Target.position); b.FrozenBodyRotation = Quaternion.Inverse(_body.rotation) * b.Target.rotation; }
+                b.FrozenBodyPosition = _body.InverseTransformPoint(b.Target.position); b.FrozenBodyRotation = Quaternion.Inverse(_body.rotation) * b.Target.rotation;
                 b.RotationAnchorBody = b.FrozenBodyRotation;
                 b.RotationAnchorProgress = b.RotationLastProgress = _feedback != null ? _feedback.SignedSlideProgress : 0f;
                 b.RotationOpening = true;
@@ -787,7 +533,7 @@ namespace VrBattlegrounds.Weapons
                 float far = 0f;
                 foreach (Binding b in _bindings) if (IsAction(b) && b.Target != _contactPart)
                     far = Mathf.Max(far, Vector3.Dot(_slide.transform.InverseTransformVector(b.Target.parent.TransformVector(b.Target.localPosition - b.RestPosition)), dir));
-                if (!HasLedgerAdapter && far > 0.001f)
+                if (far > 0.001f)
                 {
                     _catchRequired = true;
                     _catchProgress = _feedback.GetSlideProgress() + far / length;
@@ -821,18 +567,12 @@ namespace VrBattlegrounds.Weapons
 
         private void ApplyTrack(Binding binding, WeaponMechanismMotion.Cycle cycle, float time)
         {
-            if (HasLedgerAdapter && IsAction(binding) && (_ownedChamberReturn || _suppressActionCycle)) return;
             if (binding.Target == null || cycle == null || (binding.InMagazine && (_currentMagazine == null || _currentMagazine.CurrentAnchor != _magazineAnchor))) return;
             WeaponMechanismMotion.Track track = Array.Find(cycle.Tracks, t => t.Part == binding.Part);
             if (track == null) return;
             Pose pose = track.Evaluate(time);
-            if (HasLedgerAdapter && IsAction(binding))
-                ChamberActionBinding.TrySetBodyPose(binding.Target, _body, pose, track.AnimateRotation && binding.Rotate);
-            else
-            {
-                binding.Target.position = _body.TransformPoint(pose.position);
-                if (track.AnimateRotation && binding.Rotate) binding.Target.rotation = _body.rotation * pose.rotation;
-            }
+            binding.Target.position = _body.TransformPoint(pose.position);
+            if (track.AnimateRotation && binding.Rotate) binding.Target.rotation = _body.rotation * pose.rotation;
         }
 
         private void UpdateMagazineBinding()
@@ -849,40 +589,13 @@ namespace VrBattlegrounds.Weapons
             }
         }
 
-        private void UpdateIndependentSourceChannels()
-        {
-            if (_cycle == null || _bindings == null) return;
-            float time = Mathf.Min(Time.time - _started, _cycle.Duration);
-            foreach (Binding binding in _bindings) if (!IsAction(binding)) ApplyTrack(binding, _cycle, time);
-            if (HasLedgerAdapter && _emptyShot && _emptyWork == EmptyPresentationWork.Source)
-            {
-                float end = ReadinessAdapter.EmptyPose == WeaponEmptyPose.HoldOpen ? ReadinessAdapter.EmptyRearTime : _cycle.Duration;
-                if (Time.time - _started >= end) FinishLedgerEmptySource(_cycle.HoldEnd);
-                return;
-            }
-            if (time < _cycle.Duration || (_cycle.HoldEnd && !(HasLedgerAdapter && _suppressActionCycle))) return;
-            _cycle = null;
-            foreach (Binding binding in _bindings)
-            {
-                if (binding.Target == null || IsAction(binding) || binding.InMagazine) continue;
-                binding.Target.localPosition = binding.RestPosition;
-                if (binding.Rotate) binding.Target.localRotation = binding.RestRotation;
-            }
-        }
-
         public void ResetVisuals()
         {
             _cycle = null;
-            if (!HasLedgerAdapter)
-            { _manual = false; _emptyHeld = false; _catchRequired = false; _manualRotationRearProgress = 0f; }
-            // Source-фаза принадлежит _cycle: обнулив его, нельзя оставить фазу «в процессе» —
-            // иначе Empty никогда не завершится (ни HoldOpen, ни EmptyRest ACK). Применение позы — контроллеру.
-            bool holdOpen = HasLedgerAdapter && ReadinessAdapter.HoldsEmptyActionOpen;
-            if (HasLedgerAdapter && (_emptyWork == EmptyPresentationWork.Source || holdOpen)) _emptyWork = EmptyPresentationWork.Deferred;
+            _manual = false; _emptyHeld = false; _catchRequired = false; _manualRotationRearProgress = 0f;
             if (_bindings == null) return;
             foreach (Binding binding in _bindings)
             {
-                if (HasLedgerAdapter && IsAction(binding) && (_ownedChamberReturn || _suppressActionCycle || holdOpen)) continue;
                 if (binding.Target == null || (binding.InMagazine && (_currentMagazine == null || _currentMagazine.CurrentAnchor != _magazineAnchor))) continue;
                 binding.Target.localPosition = binding.RestPosition;
                 if (binding.Rotate) binding.Target.localRotation = binding.RestRotation;

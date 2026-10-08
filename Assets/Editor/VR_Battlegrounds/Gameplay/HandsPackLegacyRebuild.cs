@@ -177,7 +177,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 PoseClip = "Aiming_Idle", ActionClip = "Shot", TriggerPart = "Trigger_mesh", ActionPart = "Gate_mesh",
                 SupportGrip = true,
                 MagazinePart = "Magazine_mesh",
-                ReadinessProfile = WeaponReadinessAuthoring.DetachableHoldOpenProfile
+                ReadinessProfile = WeaponSystemAuthoring.DetachableHoldOpenProfile
             });
             var rifle = HandsPackWeaponBuilder.RifleDonor(new HandsPackWeaponRecipe
             {

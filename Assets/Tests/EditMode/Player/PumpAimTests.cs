@@ -4,6 +4,8 @@ using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
 using UnityEditor;
 using UnityEngine;
+using VrBattlegrounds.Weapons;
+using WS = VrBattlegrounds.Weapons.Core;
 
 namespace VrBattlegrounds.Tests.Player
 {
@@ -38,15 +40,23 @@ namespace VrBattlegrounds.Tests.Player
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 var weapon = AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
+                var pumps = new List<UxrGrabbableObject>();
                 foreach (UxrShotgunPump pumpAction in weapon.GetComponentsInChildren<UxrShotgunPump>(true))
                 {
                     var pump = new SerializedObject(pumpAction).FindProperty("_pump").objectReferenceValue as UxrGrabbableObject;
-                    if (pump == null)
-                    {
-                        failures.Add($"{path}: у UxrShotgunPump не назначена помпа");
-                        continue;
-                    }
+                    if (pump == null) failures.Add($"{path}: у UxrShotgunPump не назначена помпа");
+                    else pumps.Add(pump);
+                }
 
+                // Этап drive: у пилотов WeaponSystem (FABARM) UxrShotgunPump снят — помпой управляет хост, ручка помпы —
+                // Rig.Handle. Помпу от затвора отличает ось ReleasedAction = Stay (у помпы нет пружины, решение S4);
+                // затвор с пружиной (Herrington) наводить ствол не должен, поэтому он в проверку не входит.
+                foreach (WeaponSystem host in weapon.GetComponentsInChildren<WeaponSystem>(true))
+                    if (host.Rig.HasAction && host.Rig.ReleasedAction == WS.WeaponReleasedAction.Stay)
+                        pumps.Add(host.Rig.Handle);
+
+                foreach (UxrGrabbableObject pump in pumps)
+                {
                     checks++;
                     if (!pump.ControlParentDirection)
                         failures.Add($"{path} / {pump.name}: Control Parent Direction выключен — рука на помпе не наводит ствол");

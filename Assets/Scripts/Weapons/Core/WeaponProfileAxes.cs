@@ -18,6 +18,13 @@ namespace VrBattlegrounds.Weapons.Core
     public enum WeaponEmptyPose { HoldOpen, ReturnToRest }
 
     /// <summary>
+    /// Что делает Action, отпущенный рукой (посреди цикла или вне его): возвращается пружиной (Herrington) или
+    /// остаётся на месте до следующего хвата (помпа FABARM, решение S4). На подготовку без руки
+    /// (вставка, TriggerAssist, бот) ось не влияет: её возврат ведёт машина.
+    /// </summary>
+    public enum WeaponReleasedAction { Spring, Stay }
+
+    /// <summary>
     /// Оси профиля одного ствола и числа его rig (план п. 3.1). Неизменяемый снимок, который хост
     /// собирает при настройке из профиля, SDK-спуска и проверенного rig. Машина других настроек не читает.
     ///
@@ -31,6 +38,7 @@ namespace VrBattlegrounds.Weapons.Core
         public readonly WeaponPhysicalCapability Physical;
         public readonly WeaponChamberPolicy Policy;
         public readonly WeaponEmptyPose EmptyPose;
+        public readonly WeaponReleasedAction ReleasedAction;
 
         /// <summary>Порог извлечения: минимальный прогресс всех обязательных деталей (бывший <c>_slideThreshold</c>).</summary>
         public readonly float ExtractionGate;
@@ -38,7 +46,7 @@ namespace VrBattlegrounds.Weapons.Core
         /// <summary>Допуск движения ручки в долях хода.</summary>
         public readonly float Epsilon;
 
-        /// <summary>Скорость пружины после отпускания ручки посреди ручного цикла.</summary>
+        /// <summary>Скорость пружины после отпускания ручки (ось <see cref="ReleasedAction"/> = Spring).</summary>
         public readonly float SpringReturnSpeed;
 
         /// <summary>Скорость возврата при подготовке без руки (вставка магазина, TriggerAssist, бот).</summary>
@@ -60,7 +68,7 @@ namespace VrBattlegrounds.Weapons.Core
             float extractionGate, float epsilon, float springReturnSpeed, float autoReturnSpeed,
             bool hasFireClip = false, float fireClipDuration = 0f,
             bool hasEmptyClip = false, float emptyClipDuration = 0f, float emptyRearTime = -1f,
-            bool hasFixedStoreIntake = false)
+            bool hasFixedStoreIntake = false, WeaponReleasedAction releasedAction = WeaponReleasedAction.Spring)
         {
             FireMode = fireMode; Ammo = ammo; Physical = physical; Policy = policy; EmptyPose = emptyPose;
             ExtractionGate = extractionGate; Epsilon = epsilon;
@@ -68,10 +76,14 @@ namespace VrBattlegrounds.Weapons.Core
             HasFireClip = hasFireClip; FireClipDuration = fireClipDuration;
             HasEmptyClip = hasEmptyClip; EmptyClipDuration = emptyClipDuration; EmptyRearTime = emptyRearTime;
             HasFixedStoreIntake = hasFixedStoreIntake;
+            ReleasedAction = releasedAction;
         }
 
         /// <summary>Затвор остаётся на задержке (HoldOpen имеет смысл только при ручном ходе).</summary>
         public bool HoldsOpen => Physical == WeaponPhysicalCapability.ActionTravel && EmptyPose == WeaponEmptyPose.HoldOpen;
+
+        /// <summary>Отпущенный рукой Action остаётся на месте (пружины нет).</summary>
+        public bool ReleasedActionStays => Physical == WeaponPhysicalCapability.ActionTravel && ReleasedAction == WeaponReleasedAction.Stay;
 
         /// <summary>
         /// Недопустимые сочетания осей (план п. 3.1) и непроверенные числа rig. Машина с таким
@@ -82,7 +94,7 @@ namespace VrBattlegrounds.Weapons.Core
             error = null;
             if (!Enum.IsDefined(typeof(WeaponFireMode), a.FireMode) || !Enum.IsDefined(typeof(WeaponAmmoCapability), a.Ammo) ||
                 !Enum.IsDefined(typeof(WeaponPhysicalCapability), a.Physical) || !Enum.IsDefined(typeof(WeaponChamberPolicy), a.Policy) ||
-                !Enum.IsDefined(typeof(WeaponEmptyPose), a.EmptyPose))
+                !Enum.IsDefined(typeof(WeaponEmptyPose), a.EmptyPose) || !Enum.IsDefined(typeof(WeaponReleasedAction), a.ReleasedAction))
                 error = "Профиль содержит неизвестное значение оси.";
             else if (a.Ammo == WeaponAmmoCapability.MagazineOnly && a.Policy != WeaponChamberPolicy.AutoOnMagazineInsert)
                 error = "MagazineOnly не имеет патронника: допустима только политика AutoOnMagazineInsert.";
@@ -90,6 +102,8 @@ namespace VrBattlegrounds.Weapons.Core
                 error = "NoAction не поддерживает ManualReturn: дослать рукой нечем.";
             else if (a.Physical == WeaponPhysicalCapability.NoAction && a.EmptyPose == WeaponEmptyPose.HoldOpen)
                 error = "NoAction не поддерживает HoldOpen: удерживать нечего.";
+            else if (a.Physical == WeaponPhysicalCapability.NoAction && a.ReleasedAction == WeaponReleasedAction.Stay)
+                error = "NoAction не поддерживает Stay: отпускать нечего.";
             else if (a.Ammo == WeaponAmmoCapability.FixedStoreChamber && !a.HasFixedStoreIntake)
                 error = "FixedStoreChamber требует привязанного fixed store и окна приёма патрона.";
             else if (a.HasFireClip && !Positive(a.FireClipDuration))

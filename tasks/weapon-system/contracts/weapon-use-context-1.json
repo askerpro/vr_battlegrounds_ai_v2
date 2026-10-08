@@ -1,0 +1,8 @@
+{
+  "summary": "WeaponUseContext.Resolve(UxrFirearmWeapon, int trigger) -> Kind {None, VrHand, Equipment}, User (UxrAvatar), Hand (UxrGrabber, только VrHand), AuthoredHere, Epoch. Источник VrHand — SDK-хват основной рукоятью; Equipment — WeaponEquipmentBinding (IsActive/Owner/OwnerAlive/Epoch). Оба активны одновременно — None + GameLog.WeaponSystem.Error. Право автоматики ключуется по (Kind, User, Epoch); единственный вход подготовки — RequestAutomationPreparation. В режиме Equipment SDK-отдача корня огнестрела не применяется (порт в UxrFirearmWeapon, SDK-патч 63); в режиме VrHand без изменений.",
+  "motivation": "NPC с полными клипами экипируют оружие без UxrGrabber; контроллер готовности знал только физическую руку, поэтому бот не мог стрелять. Один вывод контекста без фальшивого грабера, без копий M/C и без второго жизненного цикла; у NPC нет второго писателя корня оружия.",
+  "transition_cost": "weapon-system: новый WeaponUseContext.cs, хост WeaponSystem (бывший WeaponReadinessController) переходит с HasContext(out UxrGrabber) на Resolve, временный G1 удаляется, порт отдачи корня в UxrFirearmWeapon. bots-fix: Gunner/factory вызывают только RequestAutomationPreparation; binding остаётся единственным писателем экипировки.",
+  "aspects": ["context", "automation", "npc-root-recoil"],
+  "compatibility": "additive",
+  "providing_stage": "use-context"
+}

@@ -2,9 +2,40 @@
 
 Дата: 2026-10-07. Владелец реализации: текущая сессия Codex в основном checkout.
 
+```coordination
+{
+  "task_id": "agent-coordination-protocol",
+  "owner": "coordination-maintenance",
+  "client": "codex",
+  "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
+  "base_sha": "5aafcbc4644b02ad391143bbc0392563caa973d9",
+  "doc_path": "Docs/tasks/agent-coordination-protocol.md",
+  "title": "Внедрение протокола координации",
+  "stages": [
+    {
+      "id": "rollout",
+      "writes": [
+        "Docs/tasks/agent-coordination-protocol.md",
+        ".agents/rules/agent_coordination.md",
+        "AGENTS.md",
+        ".gitignore",
+        ".codex/hooks.json",
+        ".claude/settings.json",
+        "Tools/agents/coordination.py",
+        "Tools/agents/coordination-hook.py",
+        "Docs/README.md",
+        "Docs/tasks/README.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}
+```
+
 | Цель | Мы здесь | Осталось выполнить | Технический документ |
 |---|---|---|---|
-| Агенты в отдельных worktree согласуют архитектуру, изменяют контракты соразмерно новым требованиям и вливают работу по зависимостям | Новые модули сохранены в agent-infra; полный подготовленный пакет: 241 тест PASS, 6 штатных skip; замечания независимого ревью исправлены | Объявленное окно обслуживания: подключение к действующему брокеру, развёртывание и миграция задач | Этот документ |
+| Агенты в отдельных worktree согласуют архитектуру, изменяют контракты соразмерно новым требованиям и вливают работу по зависимостям | Runtime 5b4fb90 развёрнут; полный прогон 246 PASS (6 skip), deployed smoke PASS; собственный документ опубликован в agents/status | Регистрация и подтверждения восьми активных владельцев, проверка перехвата в реальных клиентах, enforced и завершение обслуживания | Этот документ |
 
 ## Согласованные требования
 
@@ -132,6 +163,47 @@ Git-checkpoint и изолированном worktree вместе с тремя
 `tasks/agent-coordination-protocol/reports/coordination-review/recheck.log`.
 
 ## Переход сопровождающего
+
+Текущий статус перехода, 2026-10-08: окно обслуживания подтверждено сопровождающим;
+очередь на нашей паузе, активных аренд нет, база worker 5aafcbc4 сохраняется.
+Master agent-infra обновлён fast-forward и runtime 5b4fb90 развёрнут штатным deploy.py --wait.
+Резервная копия: `.agent-state/editor-broker/runtime-versions/before-5fbbfeb78b8347c18abc32c4ea577c6f`.
+В инфраструктуре восстановлены потерянные при
+подготовке два продления lease (transition и начало finish), добавлен детерминированный
+RED → GREEN тест ожидания у границы lease. Исправлен настоящий Codex apply_patch payload
+в tool_input.command; RED → GREEN. Адресный пакет — 13 тестов PASS; полный финальный
+прогон исправленной версии — **246 тестов PASS, 6 штатных skip**.
+Лог: `tasks/agent-coordination-protocol/reports/rollout-suite-final.log`.
+Собственные первоначальные bootstrap-файлы сохранены в stash agent-infra
+`96e61dac81d5e34d9c19a1645622962ccf19d82f` после точной сверки blob; чужие правки не откатывались.
+
+Пользователь подтвердил восемь активных задач; calibration-owner завершён и исключён.
+Черновики миграции и инвентаризация подготовлены только в
+`tasks/agent-coordination-protocol/reports/migration-drafts/` и `migration-inventory.json`.
+Они не заменяют документы владельцев, не зарегистрированы и не создают ACK. У legs-ik
+в опубликованном плане нет отдельного действующего worktree — путь должен уточнить владелец.
+Сопровождающему направлен адресный запрос уведомить участников и собрать полные планы.
+
+Локальные клиенты: Codex 0.162.0-alpha.2, Claude Code 2.1.292. Публичный Codex hooks/list
+подтвердил для основного checkout trusted/enabled PreToolUse и SessionStart, без ошибок
+и предупреждений; `tasks/agent-coordination-protocol/reports/codex-hook-trust.json`.
+Это подтверждает загрузку конфигурации, но не подменяет проверку перехвата LLM-toolcall
+и обновления старых worktree/клиентских сессий. Развёрнутые CLI/hook проверены на отдельном
+repo с тремя worktree: конфликтующий этап отклонён, независимый запущен; фактический
+Codex patch-payload для чужих путей и прямой push получают deny, свои reports разрешены.
+Лог: `tasks/agent-coordination-protocol/reports/deployed-runtime-smoke.json`.
+Live registry в этом smoke не изменялся; перехват вызова настоящего LLM-клиента остаётся
+проверкой строгой активации после миграции. Собственная задача контроллера зарегистрирована,
+публикация в `agents/status` работает, режим явно off. Сопровождающему направлен запрос
+адресно уведомить восемь владельцев через его SendMessage; monitor не запускался.
+
+Проверено: из восьми активных задач пока зарегистрировано **0/8**, ACK за владельцев
+не создавались. Старая очередь 206/207/208 отменена штатно, checkpoint сохранены;
+активных аренд и pending-заявок после отмены нет. Очередь остаётся paused, режим off.
+Регистрация выполняется владельцами из обновлённого собственного worktree; существующий
+документ hand-rig-quality не перезаписывается. Для legs-ik нужно подтвердить отдельный путь.
+Запрос адресной рассылки передан сопровождающему; подтверждение её доставки ожидается.
+Дальнейшая строгая активация зависит от этих внешних данных и не считается выполненной.
 
 1. Объявить обслуживание всем действующим агентам, поставить очередь на паузу и дождаться
    finish/recovery текущей операции. Это отдельный переход по AGENTS.md, не часть unit-тестов.

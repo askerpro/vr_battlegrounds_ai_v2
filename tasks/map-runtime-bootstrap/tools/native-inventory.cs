@@ -49,9 +49,9 @@ foreach (var data in registry.maps)
     }
     finally { UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene); }
 }
-string report = "Docs/tasks/report/map-runtime-bootstrap/details/native-inventory-20261005.json";
+string report = "tasks/map-runtime-bootstrap/reports/details/native-inventory-20261005.json";
 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(report));
 System.IO.File.WriteAllText(report, Newtonsoft.Json.JsonConvert.SerializeObject(new {maps, failures, limit = "Native preview world transforms/serialized IDs. Actual runtime UXR registration and Relay refs require later live probe."}, Newtonsoft.Json.Formatting.Indented));
-string summary = "Docs/tasks/report/map-runtime-bootstrap/native-inventory-summary.json";
+string summary = "tasks/map-runtime-bootstrap/reports/native-inventory-summary.json";
 System.IO.File.WriteAllText(summary, Newtonsoft.Json.JsonConvert.SerializeObject(new {mapCount = maps.Count, failureCount = failures.Count, reportPath = report, failures = failures.GetRange(0,System.Math.Min(10,failures.Count)), registeredRuntimeIdsVerified = false}, Newtonsoft.Json.Formatting.Indented));
 return new {passed = failures.Count == 0, mapCount = maps.Count, failureCount = failures.Count, reportPath = report, summaryPath = summary};

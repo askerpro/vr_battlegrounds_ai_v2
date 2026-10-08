@@ -1,0 +1,42 @@
+// Задача 7 map-runtime-bootstrap. Вызов 3 из 3: выгрузка сцен K2/K3 разобрала станции, реестр ID чист, уборка фикстур.
+if (!UnityEngine.Application.isPlaying) return new { executed = false, passed = false, reason = "NotPlaying" };
+var state = (System.Collections.Generic.Dictionary<string, object>)System.AppDomain.CurrentDomain.GetData("GenProbe7");
+if (state == null) return new { executed = false, passed = false, reason = "Нет состояния вызова 2" };
+foreach (var key in new[] { "unload2", "unload3" })
+    if (state.ContainsKey(key) && !((UnityEngine.AsyncOperation)state[key]).isDone)
+        return new { executed = false, passed = false, reason = "Сцены ещё выгружаются — повторить вызов" };
+var checks = (System.Collections.Generic.List<string>)state["checks"];
+var failures = (System.Collections.Generic.List<string>)state["failures"];
+var facts = (System.Collections.Generic.List<string>)state["facts"];
+var logs = (System.Collections.Generic.List<string>)state["logs"];
+System.Action<bool, string> check = (ok, name) => { checks.Add((ok ? "PASS " : "FAIL ") + name); if (!ok) failures.Add(name); };
+try
+{
+    if (state.ContainsKey("idsK2"))
+    {
+        var idsK2 = (System.Collections.Generic.List<System.Guid>)state["idsK2"];
+        int stillRegistered = 0;
+        foreach (var id in idsK2)
+        {
+            UltimateXR.Core.Unique.IUxrUniqueId c;
+            if (UltimateXR.Core.Unique.UxrUniqueIdImplementer.TryGetComponentById(id, out c)) stillRegistered++;
+        }
+        check(stillRegistered == 0, "Unload.NewRunIdsUnregistered");
+        check(((VrBattlegrounds.Arsenal.ArsenalCompositionHandle)state["handle2"]).IsDisposed, "Unload.NewRunHandleDisposed");
+        // Ошибки, кроме одной ожидаемой именованной (расхождение config), — после неё не должно быть ни одной.
+        int expected = (int)state["logsExpected"];
+        check(logs.Count == expected, "Unload.NoErrorsAfterChecks");
+    }
+}
+finally
+{
+    UnityEngine.Application.logMessageReceived -= (UnityEngine.Application.LogCallback)state["onLog"];
+    var foreign = (UnityEngine.GameObject)state["foreign"];
+    if (foreign != null) UnityEngine.Object.Destroy(foreign);
+    UnityEngine.Object.Destroy((UnityEngine.Object)state["preset"]);
+    UnityEngine.Object.Destroy((UnityEngine.Object)state["map1"]);
+    if (state.ContainsKey("owned"))
+        foreach (var o in (System.Collections.Generic.List<UnityEngine.Object>)state["owned"]) if (o != null) UnityEngine.Object.Destroy(o);
+    System.AppDomain.CurrentDomain.SetData("GenProbe7", null);
+}
+return new { executed = true, passed = failures.Count == 0, stage = 3, checkCount = checks.Count, checks = checks, failures = failures, facts = facts, errorLogCount = logs.Count, errorLogs = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(logs, 8)) };

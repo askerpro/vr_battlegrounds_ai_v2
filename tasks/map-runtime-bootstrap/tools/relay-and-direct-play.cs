@@ -66,7 +66,7 @@ finally
         UnityEditor.SceneManagement.NewSceneMode.Single);
 }
 
-string path = "Docs/tasks/report/map-runtime-bootstrap/relay-direct-play-" + (failed == 0 ? "green" : "red") + ".json";
+string path = "tasks/map-runtime-bootstrap/reports/relay-direct-play-" + (failed == 0 ? "green" : "red") + ".json";
 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
 System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(new { passed = failed == 0, failureCount = failed, checks = rows },
     Newtonsoft.Json.Formatting.Indented));

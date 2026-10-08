@@ -1,0 +1,185 @@
+// Задача 7 map-runtime-bootstrap: адаптер генерируемых станций, Play Mode без сети, настоящий сборщик. Вызов 1 из 3.
+// Ассеты не меняются: пресет со стилем — копия FullDemoArsenal в памяти, станции — во временных runtime-сценах.
+// 1. Описание → config (как сервер до публикации).
+// 2. GeneratedAnchorMissingAtInitialRequest: до Activate ValidateReady=Pending (компоненты не включены — снимок
+//    применять нельзя, даже если ID уже в реестре); после — Passed и инвентарь снимка видит все ID.
+// 3. Клиентская половина MapBootstrap (AcceptLocalRun) с настоящим сборщиком: готовность, барьер, Closing, выгрузка сцены
+//    с чужим предметом в слоте. Продолжение — вызов 2 (следующие кадры).
+if (!UnityEngine.Application.isPlaying) return new { executed = false, passed = false, reason = "NotPlaying" };
+if (Mirror.NetworkServer.active || Mirror.NetworkClient.active)
+    return new { executed = false, passed = false, reason = "Сеть активна: клиентская половина не проверяема" };
+var BF = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static |
+         System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+var checks = new System.Collections.Generic.List<string>();
+var failures = new System.Collections.Generic.List<string>();
+var facts = new System.Collections.Generic.List<string>();
+var logs = new System.Collections.Generic.List<string>();
+System.Action<bool, string> check = (ok, name) => { checks.Add((ok ? "PASS " : "FAIL ") + name); if (!ok) failures.Add(name); };
+UnityEngine.Application.LogCallback onLog = (msg, st, type) => { if (type == UnityEngine.LogType.Error || type == UnityEngine.LogType.Exception) logs.Add(type + ": " + (msg.Length > 240 ? msg.Substring(0, 240) : msg)); };
+UnityEngine.Application.logMessageReceived += onLog;
+var asm = typeof(VrBattlegrounds.Maps.Runtime.MapBootstrap).Assembly;
+var adapterType = asm.GetType("VrBattlegrounds.Maps.Runtime.MapArsenalCompositionAdapter");
+System.Func<object, string, object[], object> call = (o, name, args) => {
+    try { return o.GetType().GetMethod(name, BF).Invoke(o, args); }
+    catch (System.Reflection.TargetInvocationException e) { throw e.InnerException; } };
+System.Func<object, string, object> field = (o, name) => o.GetType().GetField(name, BF).GetValue(o);
+System.Action<object, string, object> set = (o, name, v) => { var t = o.GetType(); while (t.GetField(name, BF) == null) t = t.BaseType; t.GetField(name, BF).SetValue(o, v); };
+
+// ── Фикстура ────────────────────────────────────────────────────────────────
+var catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalCompositionCatalog>("Assets/Data/Arsenal/ArsenalCompositionCatalog.asset");
+var style = UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPresentationStyle>("Assets/Data/Weapons/IndustrialPegboardPresentation.asset");
+var source = UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>("Assets/Data/Weapons/FullDemoArsenal.asset");
+var preset = UnityEngine.Object.Instantiate(source);
+preset.name = "GenProbe7Preset";
+set(preset, "_presentationStyle", style);
+var kept = new System.Collections.Generic.List<VrBattlegrounds.Arsenal.ArsenalPreset.Entry>();
+foreach (var e in source.Entries)
+{
+    if (e.Weapon == null) continue;
+    bool ok = System.Linq.Enumerable.Count(catalog.Weapons, m => m.Weapon == e.Weapon) == 1;
+    try { VrBattlegrounds.Arsenal.ArsenalPresentationResolver.Resolve(e.Weapon, e.Zone, style); } catch { ok = false; }
+    if (ok && kept.Count < 4) kept.Add(e);
+}
+set(preset, "_entries", kept);
+string nonce = System.Guid.NewGuid().ToString("N").Substring(0, 6);
+var scene1 = UnityEngine.SceneManagement.SceneManager.CreateScene("GenProbe7A_" + nonce);
+System.Func<UnityEngine.SceneManagement.Scene, string, VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding> station = (scene, key) => {
+    var go = new UnityEngine.GameObject(key); go.SetActive(false);
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, scene);
+    go.AddComponent<Mirror.NetworkIdentity>();
+    var wall = go.AddComponent<VrBattlegrounds.Arsenal.ArsenalWallController>();
+    var presets = go.AddComponent<VrBattlegrounds.Arsenal.ArsenalStationPresetBinding>();
+    var poses = go.AddComponent<VrBattlegrounds.Arsenal.ArsenalEquipmentPoses>();
+    var anchor = go.AddComponent<VrBattlegrounds.Arsenal.ArsenalStationAnchor>();
+    anchor.ConfigureRaisedBounds(new UnityEngine.Bounds(UnityEngine.Vector3.zero, UnityEngine.Vector3.one * 50f));
+    var b = go.AddComponent<VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding>();
+    set(b, "_stationKey", key); set(b, "_mode", VrBattlegrounds.Arsenal.ArsenalCompositionMode.Generated);
+    set(b, "_controller", wall); set(b, "_authoredBinding", presets); set(b, "_stationAnchor", anchor); set(b, "_equipmentPoses", poses);
+    go.transform.position = new UnityEngine.Vector3(3f, 0f, -2f); go.transform.rotation = UnityEngine.Quaternion.Euler(0f, 90f, 0f);
+    go.SetActive(true); return b; };
+System.Func<string, VrBattlegrounds.Arsenal.ArsenalPreset, VrBattlegrounds.Maps.MapData> mapData = (scene, p) => {
+    var m = UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Maps.MapData>(); m.sceneName = scene; m.arsenalPreset = p; m.name = "GenProbe7Map"; return m; };
+System.Func<UnityEngine.SceneManagement.Scene, VrBattlegrounds.Maps.MapData, VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding[], VrBattlegrounds.Maps.Runtime.MapBootstrap> bootstrapIn = (scene, map, stations) => {
+    var go = new UnityEngine.GameObject("MapRoot"); go.SetActive(false);
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, scene);
+    var root = go.AddComponent<VrBattlegrounds.Maps.Runtime.MapRoot>();
+    set(root, "_map", map); set(root, "_stations", stations);
+    var bs = go.AddComponent<VrBattlegrounds.Maps.Runtime.MapBootstrap>();
+    bs.enabled = false; // Update не нужен: клиентскую половину ведёт проба
+    go.SetActive(true); return bs; };
+System.Func<System.Collections.Generic.IEnumerable<System.Guid>, byte[]> snapshot = targets => {
+    var body = new System.IO.MemoryStream(); var w = new System.IO.BinaryWriter(body);
+    foreach (var id in targets)
+    {
+        var rs = new System.IO.MemoryStream(); var rw = new System.IO.BinaryWriter(rs);
+        rw.Write(UltimateXR.Extensions.System.IO.BinaryWriterExt.UniqueComponentId); rw.Write(id.ToByteArray()); rw.Write(new byte[] { 1, 2, 3 }); rw.Flush();
+        var record = rs.ToArray(); UltimateXR.Extensions.System.IO.BinaryWriterExt.WriteCompressedInt32(w, record.Length); w.Write(record);
+    }
+    w.Flush(); var b = body.ToArray(); var r = new byte[4 + b.Length];
+    r[0] = (byte)UltimateXR.Core.Serialization.UxrSerializationFormat.BinaryUncompressed;
+    System.BitConverter.GetBytes((ushort)UltimateXR.Core.UxrConstants.Serialization.CurrentBinaryVersion).CopyTo(r, 2);
+    b.CopyTo(r, 4); return r; };
+System.Func<object, VrBattlegrounds.Arsenal.ArsenalCompositionHandle> firstHandle = adapter => {
+    var list = (System.Collections.IList)field(adapter, "_stations");
+    return list.Count == 0 ? null : (VrBattlegrounds.Arsenal.ArsenalCompositionHandle)field(list[0], "Handle"); };
+System.Func<VrBattlegrounds.Arsenal.ArsenalCompositionHandle, System.Collections.Generic.List<System.Guid>> ids = h => {
+    var r = new System.Collections.Generic.List<System.Guid>(); foreach (var a in h.Assignments) r.Add(a.ExpectedUniqueId); return r; };
+// Config, который опубликовал бы сервер: описание адаптером из тех же входов, запись поверх оболочки, resolver.
+System.Func<VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding, string, VrBattlegrounds.Maps.Runtime.MapRunKey, VrBattlegrounds.Maps.Runtime.MapRunConfig> serverConfig = (st, scene, key) => {
+    var errors = new System.Collections.Generic.List<string>();
+    var adapter = adapterType.GetMethod("Describe", BF).Invoke(null, new object[] { new[] { st }, preset, catalog, null, errors });
+    if (errors.Count != 0) throw new System.InvalidOperationException("Describe: " + string.Join(", ", errors.ToArray()));
+    var shell = new VrBattlegrounds.Maps.Runtime.MapRunBindings(scene, new[] { new VrBattlegrounds.Maps.Runtime.MapStationConfig(st.StationKey, "", "Generated", "shell", 1) });
+    var bindings = (VrBattlegrounds.Maps.Runtime.MapRunBindings)call(adapter, "Apply", new object[] { shell });
+    var cat = new VrBattlegrounds.Maps.Runtime.MapRunResolverCatalog("warmup", new string[0], new[] {
+        new VrBattlegrounds.Maps.Runtime.MapRunMapDescription(scene, VrBattlegrounds.Maps.Runtime.MapRunKind.Lobby, "content", 1, "arsenal", "arsenal-v1", new string[0]) });
+    var res = VrBattlegrounds.Maps.Runtime.MapRunResolver.Resolve(new VrBattlegrounds.Maps.Runtime.MapRunRequest(key, scene, "", "content"), cat, bindings);
+    if (!res.Passed) throw new System.InvalidOperationException("Resolve: " + string.Join(", ", System.Linq.Enumerable.ToArray(res.Errors)));
+    return res.Config; };
+
+var epoch = System.Guid.NewGuid();
+var k1 = new VrBattlegrounds.Maps.Runtime.MapRunKey(epoch, 1);
+var state = new System.Collections.Generic.Dictionary<string, object>();
+try
+{
+    check(kept.Count >= 2, "Fixture.StyledPresetEntries");
+    // ── 2. Адресаты до и после включения (прямой сборщик, станция A) ───────
+    var stA = station(scene1, "GenProbe7StationA");
+    var errorsA = new System.Collections.Generic.List<string>();
+    var adapterA = adapterType.GetMethod("Describe", BF).Invoke(null, new object[] { new[] { stA }, preset, catalog, null, errorsA });
+    check(errorsA.Count == 0, "Describe.StyledFixture");
+    facts.Add("describeErrors=" + string.Join(" | ", errorsA.ToArray()));
+    var listA = (System.Collections.IList)field(adapterA, "_stations");
+    var descA = (VrBattlegrounds.Arsenal.ArsenalStationDescription)field(listA[0], "Description");
+    facts.Add("descA slots=" + descA.Slots.Count + " fallback=" + descA.Selection.Kind + " layout=" + descA.LayoutFingerprint.Substring(0, 12));
+    var scopeA = new VrBattlegrounds.Maps.Runtime.MapRunScope(new VrBattlegrounds.Maps.Runtime.MapRunKey(epoch, 100));
+    var handleA = VrBattlegrounds.Arsenal.ArsenalStationComposer.PrepareComposition(descA, scopeA, stA);
+    string reason;
+    var before = VrBattlegrounds.Arsenal.ArsenalStationComposer.ValidateReady(handleA, out reason);
+    int totalA; int missingBefore = VrBattlegrounds.Network.InitialStateInventory.CountMissingTargets(snapshot(ids(handleA)), out totalA);
+    check(before == VrBattlegrounds.Arsenal.ArsenalCompositionReadiness.Pending, "AnchorMissing.PendingBeforeActivate");
+    // Регистрация ID может произойти уже при Prepare (CombineUniqueId) — на выключенных компонентах. Поэтому барьер
+    // опирается на ValidateReady (Passed только после включения), а не на одно наличие ID в реестре.
+    check(totalA > 0, "AnchorMissing.ManifestHasTargets");
+    facts.Add("A: targets=" + totalA + " registeredBeforeActivate=" + (totalA - missingBefore) + " (компоненты ещё не включены)");
+    VrBattlegrounds.Arsenal.ArsenalStationComposer.Activate(handleA);
+    var after = VrBattlegrounds.Arsenal.ArsenalStationComposer.ValidateReady(handleA, out reason);
+    int missingAfter = VrBattlegrounds.Network.InitialStateInventory.CountMissingTargets(snapshot(ids(handleA)), out totalA);
+    check(after == VrBattlegrounds.Arsenal.ArsenalCompositionReadiness.Passed && missingAfter == 0, "AnchorMissing.PassedMeansInventoryResolved");
+    scopeA.Dispose();
+
+    // ── 3. Клиентская половина MapBootstrap, станция B, запуск K1 ──────────
+    var stB = station(scene1, "GenProbe7StationB");
+    var map1 = mapData(scene1.name, preset);
+    var bs1 = bootstrapIn(scene1, map1, new[] { stB });
+    var config1 = serverConfig(stB, scene1.name, k1);
+    var cfg = System.Linq.Enumerable.Single(config1.Stations);
+    facts.Add("config1: fallback=" + cfg.DecorationFallback + " decoration='" + cfg.DecorationId + "' layout=" + cfg.LayoutFingerprint.Substring(0, 12) + " schema=" + cfg.IdentitySchemaVersion);
+    check(cfg.DecorationFallback != "Authored" && cfg.LayoutFingerprint.Length == 64, "Config.GeneratedEntryFromDescription");
+    int changes = 0; System.Action counter = () => changes++;
+    VrBattlegrounds.Maps.Runtime.MapBootstrap.LocalReadinessChanged += counter;
+    try { call(bs1, "AcceptLocalRun", new object[] { config1, catalog }); }
+    finally { VrBattlegrounds.Maps.Runtime.MapBootstrap.LocalReadinessChanged -= counter; }
+    check(string.IsNullOrEmpty(bs1.FailureCode), "Client.AcceptedWithoutFailure:" + bs1.FailureCode);
+    check(bs1.LocalRunKey == k1 && bs1.IsLocallyReady(k1), "Client.LocallyReadyAfterRealComposition");
+    check(changes == 1, "Client.ReadinessEventRaised");
+    var handleB = firstHandle(field(bs1, "_localArsenal"));
+    check(handleB != null && handleB.Scope.Key == k1, "Client.HandleUnderAcceptedRunKey");
+    var wallB = stB.Controller;
+    check(wallB.SlotsInstalled && wallB.Slots.Count == handleB.Slots.Count && handleB.Root.activeSelf, "Client.SlotsInstalledAndActive");
+    var idsK1 = ids(handleB);
+    int totalB; int missingB = VrBattlegrounds.Network.InitialStateInventory.CountMissingTargets(snapshot(idsK1), out totalB);
+    check(totalB == 2 * handleB.Slots.Count && missingB == 0, "Inventory.SeesGeneratedIdsAfterReady");
+    if (UltimateXR.Core.UxrManager.HasInstance)
+    {
+        var real = UltimateXR.Core.UxrManager.Instance.SaveStateChanges(null, null, UltimateXR.Core.StateSave.UxrStateSaveLevel.ChangesSinceBeginning,
+            UltimateXR.Core.Settings.UxrGlobalSettings.Instance.NetFormatInitialState);
+        var inReal = VrBattlegrounds.Network.InitialStateInventory.Targets(real);
+        int generatedInReal = 0; foreach (var id in idsK1) if (inReal.Contains(id)) generatedInReal++;
+        facts.Add("realSnapshot targets=" + inReal.Count + " generatedTargets=" + generatedInReal + "/" + idsK1.Count);
+    }
+    var barrier = new VrBattlegrounds.Network.InitialStateBarrier();
+    uint req1 = barrier.Evaluate(k1, bs1.IsLocallyReady(k1));
+    check(req1 != 0, "Barrier.RequestsSnapshotWhenReady");
+    // Чужой предмет в слоте: разборка станции при выгрузке сцены не должна его уничтожать через родителя или сыпать ошибками.
+    var foreign = new UnityEngine.GameObject("GenProbe7Foreign"); foreign.SetActive(false);
+    foreign.AddComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    foreign.transform.SetParent(handleB.Slots[0].transform, true);
+    call(bs1, "CloseLocalRun", new object[0]);
+    check(!bs1.IsLocallyReady(k1) && handleB.Scope.IsClosed && !handleB.IsDisposed, "Closing.ClosesScopeWithoutTeardown");
+    check(VrBattlegrounds.Arsenal.ArsenalStationComposer.ValidateReady(handleB, out reason) == VrBattlegrounds.Arsenal.ArsenalCompositionReadiness.Failed, "Closing.ValidateReadyFailed");
+    state["idsK1"] = idsK1; state["req1"] = req1; state["barrier"] = barrier; state["k1"] = k1; state["epoch"] = epoch;
+    state["preset"] = preset; state["catalog"] = catalog; state["map1"] = map1; state["handleB"] = handleB; state["foreign"] = foreign;
+    state["checks"] = checks; state["failures"] = failures; state["facts"] = facts; state["logs"] = logs; state["onLog"] = onLog;
+    state["unload1"] = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(scene1);
+    state["scene1"] = scene1.name;
+}
+catch (System.Exception error)
+{
+    failures.Add("Exception: " + error.GetType().Name + ": " + error.Message);
+    UnityEngine.Application.logMessageReceived -= onLog;
+    if (scene1.isLoaded) UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(scene1);
+    return new { executed = true, passed = false, stage = 1, checks = checks, failures = failures, facts = facts, errorLogs = logs };
+}
+System.AppDomain.CurrentDomain.SetData("GenProbe7", state);
+return new { executed = true, passed = failures.Count == 0, stage = 1, checkCount = checks.Count, failures = failures, facts = facts, errorLogCount = logs.Count, errorLogs = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(logs, 8)) };

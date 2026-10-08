@@ -1,0 +1,150 @@
+// Задача 7 map-runtime-bootstrap. Вызов 2 из 3 (через кадры после вызова 1).
+// 4. Выгрузка сцены разобрала станцию K1: ID старого запуска не зарегистрированы, чужой предмет не уничтожен через родителя.
+// 5. GeneratedSnapshotOldRunResponse: та же станция в новом экземпляре сцены (запуск K2) — новые ID, ответ снимка K1 не
+//    принимается барьером и не адресует ничего нового; ответ K2 — принимается, все адресаты на месте.
+// 6. Расхождение config с настоящим сборщиком: станция не собирается.
+if (!UnityEngine.Application.isPlaying) return new { executed = false, passed = false, reason = "NotPlaying" };
+var state = (System.Collections.Generic.Dictionary<string, object>)System.AppDomain.CurrentDomain.GetData("GenProbe7");
+if (state == null) return new { executed = false, passed = false, reason = "Нет состояния вызова 1" };
+var unload1 = (UnityEngine.AsyncOperation)state["unload1"];
+if (!unload1.isDone) return new { executed = false, passed = false, reason = "Сцена 1 ещё выгружается — повторить вызов" };
+var BF = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static |
+         System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+var checks = (System.Collections.Generic.List<string>)state["checks"];
+var failures = (System.Collections.Generic.List<string>)state["failures"];
+var facts = (System.Collections.Generic.List<string>)state["facts"];
+var logs = (System.Collections.Generic.List<string>)state["logs"];
+int logsBefore = logs.Count;
+System.Action<bool, string> check = (ok, name) => { checks.Add((ok ? "PASS " : "FAIL ") + name); if (!ok) failures.Add(name); };
+var asm = typeof(VrBattlegrounds.Maps.Runtime.MapBootstrap).Assembly;
+var adapterType = asm.GetType("VrBattlegrounds.Maps.Runtime.MapArsenalCompositionAdapter");
+System.Func<object, string, object[], object> call = (o, name, args) => {
+    try { return o.GetType().GetMethod(name, BF).Invoke(o, args); }
+    catch (System.Reflection.TargetInvocationException e) { throw e.InnerException; } };
+System.Func<object, string, object> field = (o, name) => o.GetType().GetField(name, BF).GetValue(o);
+System.Action<object, string, object> set = (o, name, v) => { var t = o.GetType(); while (t.GetField(name, BF) == null) t = t.BaseType; t.GetField(name, BF).SetValue(o, v); };
+if (!state.ContainsKey("owned")) state["owned"] = new System.Collections.Generic.List<UnityEngine.Object>();
+var owned = (System.Collections.Generic.List<UnityEngine.Object>)state["owned"];
+var preset = (VrBattlegrounds.Arsenal.ArsenalPreset)state["preset"];
+var catalog = (VrBattlegrounds.Arsenal.ArsenalCompositionCatalog)state["catalog"];
+var idsK1 = (System.Collections.Generic.List<System.Guid>)state["idsK1"];
+var barrier = (VrBattlegrounds.Network.InitialStateBarrier)state["barrier"];
+uint req1 = (uint)state["req1"];
+var k1 = (VrBattlegrounds.Maps.Runtime.MapRunKey)state["k1"];
+var epoch = (System.Guid)state["epoch"];
+var handleB = (VrBattlegrounds.Arsenal.ArsenalCompositionHandle)state["handleB"];
+var foreign = (UnityEngine.GameObject)state["foreign"];
+System.Func<System.Collections.Generic.IEnumerable<System.Guid>, byte[]> snapshot = targets => {
+    var body = new System.IO.MemoryStream(); var w = new System.IO.BinaryWriter(body);
+    foreach (var id in targets)
+    {
+        var rs = new System.IO.MemoryStream(); var rw = new System.IO.BinaryWriter(rs);
+        rw.Write(UltimateXR.Extensions.System.IO.BinaryWriterExt.UniqueComponentId); rw.Write(id.ToByteArray()); rw.Write(new byte[] { 1, 2, 3 }); rw.Flush();
+        var record = rs.ToArray(); UltimateXR.Extensions.System.IO.BinaryWriterExt.WriteCompressedInt32(w, record.Length); w.Write(record);
+    }
+    w.Flush(); var b = body.ToArray(); var r = new byte[4 + b.Length];
+    r[0] = (byte)UltimateXR.Core.Serialization.UxrSerializationFormat.BinaryUncompressed;
+    System.BitConverter.GetBytes((ushort)UltimateXR.Core.UxrConstants.Serialization.CurrentBinaryVersion).CopyTo(r, 2);
+    b.CopyTo(r, 4); return r; };
+System.Func<UnityEngine.SceneManagement.Scene, string, VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding> station = (scene, key) => {
+    var go = new UnityEngine.GameObject(key); go.SetActive(false);
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, scene);
+    go.AddComponent<Mirror.NetworkIdentity>();
+    var wall = go.AddComponent<VrBattlegrounds.Arsenal.ArsenalWallController>();
+    var presets = go.AddComponent<VrBattlegrounds.Arsenal.ArsenalStationPresetBinding>();
+    var poses = go.AddComponent<VrBattlegrounds.Arsenal.ArsenalEquipmentPoses>();
+    var anchor = go.AddComponent<VrBattlegrounds.Arsenal.ArsenalStationAnchor>();
+    anchor.ConfigureRaisedBounds(new UnityEngine.Bounds(UnityEngine.Vector3.zero, UnityEngine.Vector3.one * 50f));
+    var b = go.AddComponent<VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding>();
+    set(b, "_stationKey", key); set(b, "_mode", VrBattlegrounds.Arsenal.ArsenalCompositionMode.Generated);
+    set(b, "_controller", wall); set(b, "_authoredBinding", presets); set(b, "_stationAnchor", anchor); set(b, "_equipmentPoses", poses);
+    go.transform.position = new UnityEngine.Vector3(3f, 0f, -2f); go.transform.rotation = UnityEngine.Quaternion.Euler(0f, 90f, 0f);
+    go.SetActive(true); return b; };
+System.Func<UnityEngine.SceneManagement.Scene, VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding[], VrBattlegrounds.Maps.Runtime.MapBootstrap> bootstrapIn = (scene, stations) => {
+    var m = UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Maps.MapData>(); m.sceneName = scene.name; m.arsenalPreset = preset; m.name = "GenProbe7Map";
+    owned.Add(m);
+    var go = new UnityEngine.GameObject("MapRoot"); go.SetActive(false);
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, scene);
+    var root = go.AddComponent<VrBattlegrounds.Maps.Runtime.MapRoot>();
+    set(root, "_map", m); set(root, "_stations", stations);
+    var bs = go.AddComponent<VrBattlegrounds.Maps.Runtime.MapBootstrap>();
+    bs.enabled = false;
+    go.SetActive(true); return bs; };
+System.Func<VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding, string, VrBattlegrounds.Maps.Runtime.MapRunKey, VrBattlegrounds.Maps.Runtime.MapRunConfig> serverConfig = (st, scene, key) => {
+    var errors = new System.Collections.Generic.List<string>();
+    var adapter = adapterType.GetMethod("Describe", BF).Invoke(null, new object[] { new[] { st }, preset, catalog, null, errors });
+    if (errors.Count != 0) throw new System.InvalidOperationException("Describe: " + string.Join(", ", errors.ToArray()));
+    var shell = new VrBattlegrounds.Maps.Runtime.MapRunBindings(scene, new[] { new VrBattlegrounds.Maps.Runtime.MapStationConfig(st.StationKey, "", "Generated", "shell", 1) });
+    var bindings = (VrBattlegrounds.Maps.Runtime.MapRunBindings)call(adapter, "Apply", new object[] { shell });
+    var cat = new VrBattlegrounds.Maps.Runtime.MapRunResolverCatalog("warmup", new string[0], new[] {
+        new VrBattlegrounds.Maps.Runtime.MapRunMapDescription(scene, VrBattlegrounds.Maps.Runtime.MapRunKind.Lobby, "content", 1, "arsenal", "arsenal-v1", new string[0]) });
+    var res = VrBattlegrounds.Maps.Runtime.MapRunResolver.Resolve(new VrBattlegrounds.Maps.Runtime.MapRunRequest(key, scene, "", "content"), cat, bindings);
+    if (!res.Passed) throw new System.InvalidOperationException("Resolve: " + string.Join(", ", System.Linq.Enumerable.ToArray(res.Errors)));
+    return res.Config; };
+
+string nonce = System.Guid.NewGuid().ToString("N").Substring(0, 6);
+var scene2 = UnityEngine.SceneManagement.SceneManager.CreateScene("GenProbe7B_" + nonce);
+var scene3 = UnityEngine.SceneManagement.SceneManager.CreateScene("GenProbe7C_" + nonce);
+try
+{
+    // ── 4. Выгрузка сцены K1 ──────────────────────────────────────────────
+    int total; int missingOld = VrBattlegrounds.Network.InitialStateInventory.CountMissingTargets(snapshot(idsK1), out total);
+    check(handleB.IsDisposed, "Unload.SceneUnloadDisposedClientScope");
+    check(missingOld == total && total > 0, "Unload.OldRunIdsUnregistered");
+    facts.Add("afterUnload: foreignAlive=" + (foreign != null) + " foreignScene=" + (foreign != null ? foreign.scene.name : "-") +
+              " foreignParent=" + (foreign != null && foreign.transform.parent != null ? foreign.transform.parent.name : "null"));
+    facts.Add("unloadErrorLogs=" + logsBefore);
+
+    // ── 5. Новый экземпляр той же сцены, запуск K2 ───────────────────────
+    var k2 = new VrBattlegrounds.Maps.Runtime.MapRunKey(epoch, 2);
+    var stB2 = station(scene2, "GenProbe7StationB");
+    var bs2 = bootstrapIn(scene2, new[] { stB2 });
+    var config2 = serverConfig(stB2, scene2.name, k2);
+    barrier.Reset(); // смена сцены у клиента
+    call(bs2, "AcceptLocalRun", new object[] { config2, catalog });
+    check(string.IsNullOrEmpty(bs2.FailureCode) && bs2.IsLocallyReady(k2), "Reload.NewRunReady:" + bs2.FailureCode);
+    var list2 = (System.Collections.IList)field(field(bs2, "_localArsenal"), "_stations");
+    var handle2 = (VrBattlegrounds.Arsenal.ArsenalCompositionHandle)field(list2[0], "Handle");
+    var idsK2 = new System.Collections.Generic.List<System.Guid>(); foreach (var a in handle2.Assignments) idsK2.Add(a.ExpectedUniqueId);
+    bool disjoint = true; foreach (var id in idsK2) if (idsK1.Contains(id)) disjoint = false;
+    check(disjoint && idsK2.Count == idsK1.Count, "Reload.NewRunHasOwnIds");
+    uint req2 = barrier.Evaluate(k2, bs2.IsLocallyReady(k2));
+    check(req2 != 0 && req2 != req1, "Reload.NewRequestForNewRun");
+    check(!barrier.TryAcceptResponse(k1, req1), "OldRunResponse.RejectedByBarrier");
+    check(!barrier.IsOpen, "OldRunResponse.ChannelStaysClosed");
+    int missingOldInNew = VrBattlegrounds.Network.InitialStateInventory.CountMissingTargets(snapshot(idsK1), out total);
+    check(missingOldInNew == total, "OldRunResponse.AddressesNothingInNewRun");
+    check(barrier.TryAcceptResponse(k2, req2) && barrier.IsOpenFor(k2), "NewRunResponse.Accepted");
+    int missingNew = VrBattlegrounds.Network.InitialStateInventory.CountMissingTargets(snapshot(idsK2), out total);
+    check(missingNew == 0, "NewRunResponse.AllTargetsRegistered");
+
+    // ── 6. Расхождение config: станция не собирается ──────────────────────
+    var stC = station(scene3, "GenProbe7StationC");
+    var bs3 = bootstrapIn(scene3, new[] { stC });
+    var good = serverConfig(stC, scene3.name, new VrBattlegrounds.Maps.Runtime.MapRunKey(epoch, 3));
+    var s = System.Linq.Enumerable.Single(good.Stations);
+    var tampered = new VrBattlegrounds.Maps.Runtime.MapRunBindings(scene3.name, new[] {
+        new VrBattlegrounds.Maps.Runtime.MapStationConfig(s.StationKey, s.DecorationId, s.DecorationFallback, new string('0', 64), s.IdentitySchemaVersion) });
+    var cat3 = new VrBattlegrounds.Maps.Runtime.MapRunResolverCatalog("warmup", new string[0], new[] {
+        new VrBattlegrounds.Maps.Runtime.MapRunMapDescription(scene3.name, VrBattlegrounds.Maps.Runtime.MapRunKind.Lobby, "content", 1, "arsenal", "arsenal-v1", new string[0]) });
+    var bad = VrBattlegrounds.Maps.Runtime.MapRunResolver.Resolve(new VrBattlegrounds.Maps.Runtime.MapRunRequest(
+        new VrBattlegrounds.Maps.Runtime.MapRunKey(epoch, 3), scene3.name, "", "content"), cat3, tampered).Config;
+    int logsBeforeMismatch = logs.Count;
+    call(bs3, "AcceptLocalRun", new object[] { bad, catalog });
+    check(bs3.FailureCode == "Arsenal.Generated.ConfigMismatch", "Mismatch.NamedFailure:" + bs3.FailureCode);
+    check(!stC.Controller.SlotsInstalled && stC.EquipmentPoses.transform.Find("GeneratedSlots") == null, "Mismatch.StationNotComposed");
+    check(!bs3.IsLocallyReady(bad.Key), "Mismatch.NotReady");
+    check(logs.Count == logsBeforeMismatch + 1, "Mismatch.OneNamedError");
+
+    state["idsK2"] = idsK2; state["handle2"] = handle2; state["logsExpected"] = logs.Count;
+    state["unload2"] = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(scene2);
+    state["unload3"] = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(scene3);
+}
+catch (System.Exception error)
+{
+    failures.Add("Exception: " + error.GetType().Name + ": " + error.Message);
+    if (scene2.isLoaded) state["unload2"] = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(scene2);
+    if (scene3.isLoaded) state["unload3"] = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(scene3);
+    state["logsExpected"] = logs.Count;
+}
+return new { executed = true, passed = failures.Count == 0, stage = 2, checkCount = checks.Count, failures = failures, facts = facts, errorLogCount = logs.Count, errorLogs = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(logs, 8)) };

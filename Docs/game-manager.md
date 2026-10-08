@@ -16,7 +16,7 @@
 | `MapReferee` | спавнится `MapBootstrap` из `MapRuntimeCatalog` (в сцене его нет) | Ведёт **режим на карте**: разминка при старте, «Начать матч» — режим матча на месте, конец матча — снова разминка. Каждую смену режима публикует через `MapRunAuthority` |
 
 Устройство запуска, допуск и отказы — раздел [Запуск карты](#запуск-карты-mapbootstrap) ниже;
-дизайн и решения — [map-runtime-bootstrap-design](tasks/map-runtime-bootstrap-design.md).
+решения, состояние и пределы проверки — [документ задачи map-runtime-bootstrap](../tasks/map-runtime-bootstrap/Readme.md).
 
 Команды (выбор игроком, выдача админом, автобаланс) — не у менеджеров, а в статическом
 сервисе `TeamChangeRequests`; право админа — `SessionPermissions.IsAdmin`.
@@ -99,9 +99,13 @@ DontDestroyOnLoad
 Сервер (любой путь старта: смена карты, onlineScene, сцена без смены — опрос предусловий в Update)
   MapRunAuthority готов + Mirror догрузил сцену
   → MapRoot.ValidateBindings(includeSceneScans: false) ← отказ: MapRoot.Invalid [ошибки]
+  → MapArsenalCompositionAdapter.Describe + Apply ← станции Generated: описание генератора в config;
+                                                   отказ: Arsenal.Generated.Description
   → MapRuntimeCatalog.Resolve(request)          ← режим: Series.CapturedModeId / выбор админа / NoMatch
   → MapRunAuthority.BeginRun                    ← новый RunKey, статус Preparing
-  → ArsenalStationPresetBinding.Prepare(MapData.arsenalPreset)
+  → ArsenalStationPresetBinding.Prepare(MapData.arsenalPreset)   ← только Authored
+  → ArsenalStationComposer.PrepareComposition + Activate (scope)  ← только Generated; стадия ComposingStations:
+      ValidateReady каждый кадр — Pending ждать, Failed → Arsenal.Generated.NotReady
   → Instantiate MapReferee + ArsenalEquipmentCoordinator → в сцену карты → NetworkServer.Spawn
   → CommitPrepared                              ← CompositionReady: gameplay ещё закрыт
   → MapReferee.ServerStartRun → разминка → CommitMode  ← server Ready: допуск открыт
@@ -111,7 +115,9 @@ MapLoader.MapLoadStarted → MapRunAuthority.Close ← Closing: scope.Cancellati
 
 Клиент (удалённый)
   descriptor своей сцены, CompositionReady/Ready, LoadSequence больше принятого → LocalRunKey
-  → MapBootstrap.IsLocallyReady(key) → NetworkStateRelay просит свежий снимок SDK (ключ + номер запроса)
+  → станции Generated: то же описание, Verify с config (расхождение → Arsenal.Generated.ConfigMismatch),
+    сборка в собственном MapRunScope ключа, ValidateReady каждый кадр
+  → MapBootstrap.IsLocallyReady(key) (все станции Passed) → NetworkStateRelay просит свежий снимок SDK (ключ + номер запроса)
   → ответ того же ключа и номера применён → канал инкрементов открыт → LocalPlayable
 ```
 
@@ -123,8 +129,8 @@ MapLoader.MapLoadStarted → MapRunAuthority.Close ← Closing: scope.Cancellati
 
 **Барьер начального состояния (Relay).** Удалённый клиент просит снимок состояния UltimateXR не на
 `OnStartClient`/смене сцены, а когда запуск его сцены локально готов: `MapBootstrap` клиента принял
-descriptor (`LocalRunKey`) и все станции зарегистрированы (авторские — сразу; генерируемые добавят сюда свой
-`ValidateReady`). Сервер отвечает только на текущий собранный запуск активной сцены. Ответ несёт `MapRunKey` и
+descriptor (`LocalRunKey`) и все станции зарегистрированы (авторские — сразу; генерируемые — когда
+`ArsenalStationComposer.ValidateReady` всех handles дал Passed по фактическим регистрациям ролей). Сервер отвечает только на текущий собранный запуск активной сцены. Ответ несёт `MapRunKey` и
 номер запроса: ответ старого запуска (перезагрузка той же сцены, отмена, смена карты) не применяется и канал
 не открывает. Инкременты до открытия канала отбрасываются — снимок свежий, всё более позднее сервер шлёт после
 него тем же надёжным каналом. Сетевые объекты, созданные сервером до снимка (аватары, предметы), приходят
@@ -163,7 +169,18 @@ descriptor (`LocalRunKey`) и все станции зарегистрирова
 каталог и прогоняет preflight всего реестра (`Tools/VR Battlegrounds/Maps/Map Bootstrap/Rebake Catalog`
 делает то же вручную).
 
-**Клиент** ничего не создаёт: `MapBootstrap` связывает заспавненный координатор со станциями
+**Генерируемые станции арсенала** (`ArsenalStationCompositionBinding.Mode == Generated`) собирает
+`MapArsenalCompositionAdapter` на сервере и на каждом удалённом клиенте с одним `MapRunKey`; host вторую сборку не
+делает. Входы описания одинаковы на всех машинах: `MapData.arsenalPreset` (нужен стиль), каталог ресурсов
+`MapRuntimeCatalog.ArsenalComposition`, мировая поза `ArsenalEquipmentPoses` и конверт
+`ArsenalStationAnchor.RaisedBoundsWorld`. Сервер записывает выбор оформления, fallback, layout hash и версию схемы
+ID в `MapStationConfig` до публикации; клиент сверяет с ними своё описание и при расхождении станцию не собирает.
+Готовность Relay и server Ready требуют Passed всех станций. Отказы — `Arsenal.Generated.Description`
+(описание, нет каталога), `ConfigMismatch`, `Compose` (сборщик), `NotReady` (ValidateReady Failed), `Lost` (сервер,
+после CompositionReady); отката на авторские слоты нет. Разборка — scope запуска (Closing закрывает, выгрузка
+сцены разбирает). Стильного пресета в проекте пока нет: в игре станции Authored, путь проверен на тестовой станции.
+
+**Клиент** сетевых объектов не создаёт: `MapBootstrap` связывает заспавненный координатор со станциями
 своей сцены по `netId` из descriptor и сверяет отпечаток содержимого карты с сервером
 (несовпадение — разные сборки, `GameLog.Error`).
 

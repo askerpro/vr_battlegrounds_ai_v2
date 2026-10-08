@@ -1,0 +1,26 @@
+{
+  "task_id": "map-runtime-bootstrap",
+  "owner": "map-runtime-bootstrap",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/map-runtime-bootstrap/Vr_Battlegrounds_ai",
+  "base_sha": "ec92098a5d9b2f988d9634906469df9eead6fe6d",
+  "doc_path": "tasks/map-runtime-bootstrap/Readme.md",
+  "title": "Запуск карты через MapBootstrap",
+  "stages": [
+    {
+      "id": "generated-stations",
+      "writes": [
+        "Assets/Scripts/Maps/Runtime/MapArsenalCompositionAdapter.cs",
+        "Assets/Scripts/Maps/Runtime/MapBootstrap.cs",
+        "Assets/Scripts/Maps/Runtime/MapRoot.cs",
+        "Assets/Scripts/Maps/Runtime/MapRuntimeCatalog.cs",
+        "Assets/Tests/EditMode/Maps/MapArsenalCompositionAdapterTests.cs",
+        "Tools/Probes/MapRuntimeBootstrap/**",
+        "Docs/game-manager.md",
+        "tasks/map-runtime-bootstrap/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

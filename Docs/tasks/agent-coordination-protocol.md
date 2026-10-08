@@ -16,15 +16,8 @@
       "id": "rollout",
       "writes": [
         "Docs/tasks/agent-coordination-protocol.md",
-        ".agents/rules/agent_coordination.md",
-        "AGENTS.md",
-        ".gitignore",
-        ".codex/hooks.json",
-        ".claude/settings.json",
-        "Tools/agents/coordination.py",
-        "Tools/agents/coordination-hook.py",
-        "Docs/README.md",
-        "Docs/tasks/README.md"
+        ".agent-state/coordination/agent-coordination-maintenance.md",
+        ".agent-state/coordination/agent-coordination-to-maintainer.md"
       ],
       "after": [],
       "needs": []
@@ -197,8 +190,9 @@ Live registry в этом smoke не изменялся; перехват выз
 публикация в `agents/status` работает, режим явно off. Сопровождающему направлен запрос
 адресно уведомить восемь владельцев через его SendMessage; monitor не запускался.
 
-Проверено: из восьми активных задач пока зарегистрировано **0/8**, ACK за владельцев
-не создавались. Старая очередь 206/207/208 отменена штатно, checkpoint сохранены;
+Миграция восьми активных задач пока не завершена; точный состав регистраций смотреть
+через `coordination.py status` и автоматически формируемый индекс `agents/status`.
+ACK за владельцев не создавались. Старая очередь 206/207/208 отменена штатно, checkpoint сохранены;
 активных аренд и pending-заявок после отмены нет. Очередь остаётся paused, режим off.
 Регистрация выполняется владельцами из обновлённого собственного worktree; существующий
 документ hand-rig-quality не перезаписывается. Для legs-ik нужно подтвердить отдельный путь.

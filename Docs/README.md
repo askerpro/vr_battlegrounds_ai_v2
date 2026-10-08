@@ -11,10 +11,10 @@
 Адресный [стенд Play Mode](test-stand.md): управление выбранным процессом через MCP и Unity IPC,
 Server+2clients, временный профиль и DeviceToken; [план и проверки](tasks/vr-test-stand-implementation.md).
 
-Координация агентов: [протокол, реализация и статус](tasks/agent-coordination-protocol.md),
+Координация агентов: [протокол, реализация и статус](../tasks/agent-coordination-protocol/Readme.md),
 [правила CLI](../.agents/rules/agent_coordination.md). PreToolUse-хуки Codex/Claude проверяют
 допуск после отдельной активации; пока режим off, обычные разрешения сохраняются.
-[Межклиентный монитор событий](tasks/agent-coordination-event-monitor.md) пока только запланирован.
+[Межклиентный монитор событий](../tasks/agent-coordination-protocol/event-monitor.md) пока только запланирован.
 
 ---
 

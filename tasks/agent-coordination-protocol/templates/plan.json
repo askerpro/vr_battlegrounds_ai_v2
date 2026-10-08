@@ -1,0 +1,17 @@
+{
+  "task_id": "task-id",
+  "owner": "task-owner",
+  "client": "codex",
+  "worktree": "F:/CodexWorktrees/task-id/Vr_Battlegrounds_ai",
+  "base_sha": "0000000000000000000000000000000000000000",
+  "doc_path": "tasks/task-id/Readme.md",
+  "title": "Заполнить цель задачи",
+  "stages": [
+    {
+      "id": "implementation",
+      "writes": ["tasks/task-id/**"],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "task_id": "weapon-system",
+  "owner": "weapon-system",
+  "client": "claude",
+  "session_id": "25b51afb-9e6a-4f64-b798-f8d815cab294",
+  "worktree": "F:/CodexWorktrees/shotgun-per-shell/Vr_Battlegrounds_ai",
+  "base_sha": "2cedfe999fbdd2e3bdf8e9c90e1eafce79fa3b10",
+  "doc_path": "tasks/weapon-system/Readme.md",
+  "title": "Единая WeaponSystem: машина состояний оружия",
+  "stages": [
+    {
+      "id": "machine-s124",
+      "writes": [
+        "Assets/Scripts/Weapons/Core/**",
+        "Assets/Scripts/Weapons/WeaponSystem/**",
+        "Assets/Tests/EditMode/Weapons/**",
+        "tasks/weapon-system/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "use-context",
+      "writes": [
+        "Assets/Scripts/Weapons/WeaponUseContext.cs",
+        "Assets/Scripts/Weapons/WeaponReadinessController.cs",
+        "Assets/Scripts/Weapons/WeaponSystem/Sensors/WeaponContextSensor.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs",
+        "Assets/Tests/EditMode/Weapons/**",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "machine-s124",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "pilot-d",
+      "writes": [
+        "Assets/Scripts/Weapons/Core/**",
+        "Assets/Scripts/Weapons/WeaponSystem/**",
+        "Assets/Scripts/Weapons/WeaponReadinessController.cs",
+        "Assets/Scripts/Weapons/WeaponMechanismVisuals.cs",
+        "Assets/Scripts/Weapons/AutomaticWeaponSlideFeedback.cs",
+        "Assets/Scripts/Weapons/WeaponChamberingReminder.cs",
+        "Assets/Scripts/Weapons/WeaponAttemptFeedback.cs",
+        "Assets/Scripts/Weapons/WeaponTriggerAttemptRouter.cs",
+        "Assets/Scripts/Weapons/WeaponTriggerAttemptContext.cs",
+        "Assets/Scripts/Weapons/WeaponFeedbackProfile.cs",
+        "Assets/Scripts/Weapons/ChamberPoseReturnDriver.cs",
+        "Assets/Scripts/Weapons/ChamberCompletionEvidence.cs",
+        "Assets/Prefabs/Weapons/Herrington/**",
+        "Assets/Prefabs/Weapons/FabarmSDASS/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/**",
+        "Assets/Audio/SFX/Weapons/**",
+        "Assets/Tests/EditMode/Weapons/**",
+        "Docs/gameplay.md",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "use-context",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "trigger-e",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeapon.Custom.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs",
+        "Assets/Scripts/Weapons/Core/**",
+        "Assets/Scripts/Weapons/WeaponSystem/**",
+        "Assets/Tests/EditMode/Weapons/**",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "pilot-d",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "waves-f",
+      "writes": [
+        "Assets/Scripts/Weapons/Core/**",
+        "Assets/Scripts/Weapons/WeaponSystem/**",
+        "Assets/Scripts/Arsenal/WeaponInfo.cs",
+        "Assets/Data/Weapons/**",
+        "Assets/Prefabs/Weapons/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/**",
+        "Assets/Tests/EditMode/Weapons/**",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "trigger-e",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "acceptance-g",
+      "writes": [
+        "Assets/Tests/EditMode/Weapons/**",
+        "Docs/gameplay.md",
+        "Docs/troubleshooting.md",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "waves-f",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "cleanup-h",
+      "writes": [
+        "Assets/Scripts/Weapons/WeaponMechanismVisuals.cs",
+        "Assets/Scripts/Weapons/AutomaticWeaponSlideFeedback.cs",
+        "Assets/Scripts/Weapons/WeaponChamberingReminder.cs",
+        "Assets/Scripts/Weapons/WeaponReadinessController.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/**",
+        "Assets/Editor/VR_Battlegrounds/Weapons/**",
+        "Assets/Tests/EditMode/Weapons/**",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "acceptance-g",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "owner": "coordination-maintenance",
   "client": "codex",
   "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
-  "base_sha": "5aafcbc4644b02ad391143bbc0392563caa973d9",
+  "base_sha": "5285ceb73c49d6cb3271a6b91dfcba6cd34e6134",
   "doc_path": "tasks/agent-coordination-protocol/Readme.md",
   "title": "Внедрение протокола координации",
   "stages": [
@@ -15,6 +15,20 @@
         ".agent-state/coordination/agent-coordination-to-maintainer.md"
       ],
       "after": [],
+      "needs": []
+    },
+    {
+      "id": "base-publication",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        ".agents/rules/agent_coordination.md",
+        ".agents/rules/project-workflows.md",
+        ".agent-state/coordination/agent-coordination-maintenance.md",
+        ".agent-state/coordination/agent-coordination-to-maintainer.md"
+      ],
+      "after": [
+        {"task": "agent-coordination-protocol", "stage": "rollout", "state": "merged"}
+      ],
       "needs": []
     }
   ]

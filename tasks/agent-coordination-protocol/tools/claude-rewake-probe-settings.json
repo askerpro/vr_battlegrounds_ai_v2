@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "SessionStart": [{
+      "hooks": [{
+        "type": "command",
+        "command": "python",
+        "args": ["-X", "utf8", "F:/UnityProjects/Vr_Battlegrounds_ai/tasks/agent-coordination-protocol/tools/watch_probe_event.py", "--event", "F:/UnityProjects/Vr_Battlegrounds_ai/tasks/agent-coordination-protocol/reports/rewake-event.json", "--rewake"],
+        "asyncRewake": true,
+        "timeout": 40
+      }]
+    }]
+  }
+}

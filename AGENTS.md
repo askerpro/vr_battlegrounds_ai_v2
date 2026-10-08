@@ -22,6 +22,36 @@ This is the canonical entry point. `CLAUDE.md` imports it; `.codex/AGENTS.md` li
 - SDK patches: reserve the number through `coordination.py patch-reserve`, record it in `tasks/<task-id>/changelog/<date>-sdk-<number>.md`; Mirror code also gets `VR Battlegrounds patch`. Shared SDK journals are historical.
 - Use native file editing first (Codex apply_patch, Claude Edit/Write). Follow the injected terminal/encoding guidance; use git --no-pager.
 
+## Delegation and context ownership
+
+Applies to Codex and Claude through this entry point. The principal agent owns the task's
+working context: goal, constraints, accepted decisions, contracts, dependencies, progress
+and user communication. Keep detailed execution traces in task artifacts, outside that context.
+
+- Proactively delegate bounded research, diagnosis, implementation or review when it would
+  introduce substantial transient detail or when independent work can proceed in parallel.
+  Use the current client's native subagents within the already authorized task; routine
+  delegation needs no separate user approval. Respect explicit user preferences and tool limits.
+- Do small direct edits and tightly coupled decisions yourself when delegation adds overhead.
+  Keep architectural decisions with the principal agent; escalate unresolved choices before
+  dependent implementation. Delegation must not expand task scope or existing permissions.
+- Give each subagent a concrete outcome, minimal relevant context and source links, file/system
+  scope, dependencies, allowed actions, acceptance checks and required return format.
+  Prefer a fresh context for independent investigations; do not copy the full chat by default.
+- Parallel writers use isolated worktrees or explicitly reserved, non-overlapping file scopes.
+  Never allow concurrent edits to a shared file. Subagents follow the same coordination,
+  Unity lease, acceptance and integration rules; delegation does not bypass a gate.
+- The principal agent updates the compact task Readme.md and plan.json. Subagents keep detailed
+  findings and artifacts in their assigned task subfolder; generated traces go under reports/.
+  Return conclusions, evidence paths/SHAs, changed files, actual checks and their scope,
+  remaining risks and questions. Reference raw logs instead of pasting them into the main chat.
+- Inspect subagent evidence and relevant diffs before integration. The principal agent owns
+  verification, contract reconciliation, final status and user acceptance; a subagent's success
+  message is not proof. Continue independent work while a delegated task runs.
+- Cross-task requests and answers go to the hub inbox first, then notify through the native
+  channel when available using task-id/event_id. See [coordination communication](.agents/rules/agent_coordination.md#общение-агентов-принятое-правило-от-2026-10-09)
+  and [model/effort guidance](.agents/rules/project-workflows.md#delegation).
+
 ## Checkout, Unity and coordination
 
 Compare `git rev-parse --absolute-git-dir` with `git rev-parse --path-format=absolute --git-common-dir`.

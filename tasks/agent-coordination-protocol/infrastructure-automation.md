@@ -71,8 +71,9 @@ Stop прекращает получение новых тикетов; акти
   4a85f7656314e2005b63b8b5aa3c634ad6eab255, fast-forward в master.
 - [x] Deployment после штатного завершения 248; runtime 4a85f76, pause=false,
   runner PID 59736, recovery=false. Объявление об окончании — inbox 762.
-- [ ] Проверочный production request-base №250: QUEUED после аренды 249 карты,
-  должен завершиться already_published без операций Unity. Подтверждение DONE отдельно.
+- [x] Проверочный production request-base №250: DONE already_published после аренды 249,
+  результат inbox 778. №251 автоматически опубликовал b9804be89; baseline/head совпадают,
+  worker чист, pause=false и recovery=false. Системный PID 59736 исполнил оба тикета.
 
 Дополнено: bounded watch-inbox для штатного Monitor (3/3), lifecycle (5/5), CLI (3/3),
 узкое исключение request-base в hook после завершения этапа (1/1).

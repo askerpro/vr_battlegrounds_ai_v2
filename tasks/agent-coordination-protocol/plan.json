@@ -3,7 +3,7 @@
   "owner": "coordination-maintenance",
   "client": "codex",
   "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
-  "base_sha": "ebeb2de7bb22e6033a4c376b1ca7e9e529b35bac",
+  "base_sha": "b9804be89311b72cdacab83ad7960bd8d045e266",
   "doc_path": "tasks/agent-coordination-protocol/Readme.md",
   "title": "Внедрение протокола координации",
   "stages": [
@@ -40,6 +40,30 @@
       ],
       "after": [
         {"task": "agent-coordination-protocol", "stage": "base-publication", "state": "merged"}
+      ],
+      "needs": []
+    },
+    {
+      "id": "worker-test-admission-fix",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "AGENTS.md"
+      ],
+      "after": [
+        {"task": "agent-coordination-protocol", "stage": "infrastructure-automation", "state": "merged"}
+      ],
+      "needs": []
+    },
+    {
+      "id": "native-routing",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "AGENTS.md",
+        ".agents/rules/agent_coordination.md",
+        ".agents/rules/project-workflows.md"
+      ],
+      "after": [
+        {"task": "agent-coordination-protocol", "stage": "worker-test-admission-fix", "state": "merged"}
       ],
       "needs": []
     }

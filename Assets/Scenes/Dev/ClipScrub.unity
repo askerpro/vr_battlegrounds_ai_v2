@@ -223,7 +223,7 @@ GameObject:
   - component: {fileID: 423510291}
   m_Layer: 0
   m_Name: Floor
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -966,12 +966,14 @@ MonoBehaviour:
   rightHand: {fileID: 525534359}
   liveLegs: 0
   pelvisFromClip: 0
+  nativeLegsWhenStanding: 1
   floor: {fileID: 423510294}
   analysisFloorAuto: 1
   analysisFloorDrop: 0.1
   list: {fileID: 11400000, guid: c811439babae106439a5d2fb81d6e002, type: 2}
   puppetPrefab: {fileID: 2331924161539022085, guid: b6fe59db941fa944696ece5e1aabc032, type: 3}
   spacing: 1.5
+  view: 0
   onlyInspected: 1
   followHead: 1
   transitionBlendZone: 0.1

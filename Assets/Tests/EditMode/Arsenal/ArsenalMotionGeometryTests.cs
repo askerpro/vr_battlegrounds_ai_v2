@@ -71,6 +71,74 @@ namespace VrBattlegrounds.Tests.Arsenal
             Assert.That(ArsenalMotionGeometryAudit.Audit(_scene), Is.Not.Empty);
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void StationaryColliderOnlyContainmentIsDetectedWithoutChangingSource(int shape)
+        {
+            var equipment = Station(Vector3.zero, Vector3.zero, Vector3.one * .2f);
+            var wall = NewObject("PhysicalOnlyWall");
+            Collider collider;
+            if (shape == 0)
+            {
+                var box = wall.AddComponent<BoxCollider>();
+                box.size = Vector3.one * .1f;
+                collider = box;
+            }
+            else if (shape == 1)
+            {
+                var sphere = wall.AddComponent<SphereCollider>();
+                sphere.radius = .05f;
+                collider = sphere;
+            }
+            else
+            {
+                var capsule = wall.AddComponent<CapsuleCollider>();
+                capsule.radius = .03f;
+                capsule.height = .16f;
+                collider = capsule;
+            }
+            Transform target = equipment.Targets[0].Target;
+            Vector3 position = target.localPosition, scale = target.localScale;
+            Quaternion rotation = target.localRotation;
+            Assert.That(ArsenalMotionGeometryAudit.Audit(_scene), Is.Not.Empty,
+                "Физическая форма полностью внутри оборудования; renderer не требуется.");
+            Assert.That(target.localPosition, Is.EqualTo(position));
+            Assert.That(target.localRotation, Is.EqualTo(rotation));
+            Assert.That(target.localScale, Is.EqualTo(scale));
+            Assert.That(wall.transform.position, Is.EqualTo(Vector3.zero));
+            Assert.That(collider.enabled, Is.True);
+            Assert.That(target.GetComponent<BoxCollider>().enabled, Is.False);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void MeshBoundsEmptyCornerDoesNotCountAsCollision(bool insideMesh)
+        {
+            var equipment = Station(Vector3.zero, Vector3.zero, Vector3.one);
+            var mesh = new Mesh { name = "Motion audit wedge" };
+            try
+            {
+                // Угол bounds (x=.85,z=.8) пуст: реальная форма — треугольная призма.
+                mesh.vertices = new[]
+                {
+                    new Vector3(-1f,-.05f,-1f), new Vector3(1f,-.05f,-1f), new Vector3(0f,-.05f,1f),
+                    new Vector3(-1f,.05f,-1f), new Vector3(1f,.05f,-1f), new Vector3(0f,.05f,1f)
+                };
+                mesh.triangles = new[] { 0,1,2, 3,5,4, 0,4,1, 0,3,4, 1,5,2, 1,4,5, 2,3,0, 2,5,3 };
+                mesh.RecalculateBounds();
+                equipment.Targets[0].Target.GetComponent<MeshFilter>().sharedMesh = mesh;
+                var wall = Cube("WedgeWall");
+                wall.transform.localScale = Vector3.one * .1f;
+                wall.transform.position = insideMesh ? Vector3.zero : new Vector3(.85f, 0f, .8f);
+                var errors = ArsenalMotionGeometryAudit.Audit(_scene).ToArray();
+                Assert.That(errors.Length > 0, Is.EqualTo(insideMesh), string.Join("\n", errors));
+                Assert.That(equipment.Targets[0].Target.GetComponent<MeshFilter>().sharedMesh, Is.SameAs(mesh));
+                Assert.That(equipment.Targets[0].Target.position, Is.EqualTo(Vector3.zero));
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
         private ArsenalEquipmentPoses Station(Vector3 closedPosition, Vector3 openPosition, Vector3 size)
         {
             var station = NewObject("Station");

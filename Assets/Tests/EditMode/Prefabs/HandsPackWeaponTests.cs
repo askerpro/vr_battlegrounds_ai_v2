@@ -230,7 +230,14 @@ namespace VrBattlegrounds.Tests.Prefabs
             Transform body = prefab.transform.Find(c.BodyPath);
             Vector3 expected = prefab.transform.InverseTransformDirection(body.TransformDirection(axis)).normalized * travel;
 
+            // Принятый контракт MP5K: VR-тяга линейна по -Z. Reload пака дополнительно
+            // паркует ручку вбок; эти координаты не становятся свободой ручного граббабла.
+            if (c.ActionPart == "Rifle04_Detail_Mesh") expected = Vector3.Project(expected, Vector3.back);
+
             Assert.AreEqual(UxrTranslationConstraintMode.RestrictLocalOffset, action.TranslationConstraint, $"{action.name}: ход не ограничен");
+            Assert.That(expected.magnitude, Is.GreaterThan(0.001f), "Клип не задаёт ненулевого ручного хода.");
+            Assert.That(Vector3.Distance(action.TranslationLimitsMin, Vector3.Min(expected, Vector3.zero)), Is.LessThan(0.001f));
+            Assert.That(Vector3.Distance(action.TranslationLimitsMax, Vector3.Max(expected, Vector3.zero)), Is.LessThan(0.001f));
             Assert.That(Vector3.Distance(limit, expected), Is.LessThan(0.001f),
                         $"{prefab.name}/{action.name}: ход {limit * 100f} см, в клипе '{c.Clip}' {expected * 100f} см");
         }

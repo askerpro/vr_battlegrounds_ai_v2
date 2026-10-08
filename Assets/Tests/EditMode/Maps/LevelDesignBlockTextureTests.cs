@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -23,7 +24,23 @@ namespace VrBattlegrounds.Tests.Maps
         private const string MaterialsFolder = "Assets/ThirdParty/UnityStarter_Robot/Environment/Materials/";
 
         /// <summary>Метров на один повтор текстуры; должно совпадать с <c>LevelDesignBlockTexturer.TileMeters</c>.</summary>
-        private const float TileMeters = 3f;
+        private static float TileMeters
+        {
+            get
+            {
+                // Инструмент находится в editor-сборке; плотностью владеет его
+                // паспорт сетки, а не историческая копия числа в тесте.
+                System.Type owner = System.AppDomain.CurrentDomain.GetAssemblies()
+                    .Select(a => a.GetType("VrBattlegrounds.Editor.LevelDesignBlockTexturer"))
+                    .FirstOrDefault(t => t != null);
+                Assert.IsNotNull(owner, "Нет владельца плотности UV LevelDesignBlockTexturer");
+                var property = owner.GetProperty("TileMeters");
+                Assert.IsNotNull(property, "Нет контракта TileMeters");
+                float meters = (float)property.GetValue(null);
+                Assert.Greater(meters, 0f, "Паспорт задаёт недопустимую плотность UV");
+                return meters;
+            }
+        }
 
         /// <summary>Допуск плотности: хорда фасетки цилиндра короче дуги на ~0.5 %.</summary>
         private const float Tolerance = 0.03f;

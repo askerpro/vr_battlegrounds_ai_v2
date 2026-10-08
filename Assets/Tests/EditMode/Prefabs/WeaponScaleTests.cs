@@ -4,6 +4,8 @@ using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
 using UnityEditor;
 using UnityEngine;
+using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Maps;
 
 namespace VrBattlegrounds.Tests.Prefabs
 {
@@ -24,13 +26,17 @@ namespace VrBattlegrounds.Tests.Prefabs
     public class WeaponScaleTests
     {
         private static readonly string[] WeaponRoots = { "Assets/Prefabs/Weapons" };
+        private const string DraftRoot = "Assets/Prefabs/Weapons/SightCalibrationDrafts/";
+
+        // Опубликованные A/B-копии SightGameplayReviewBuilder. Не эвристика по suffix:
+        // семейство применяется только к точной ссылке WeaponPrefab указанного WeaponInfo.
+        private static readonly string[] PublishedSightFamilies = { "TR15", "MKR9", "SniperRifle", "Viper", "SRM12" };
 
         // Наибольший габарит с вложенным магазином, метры. Эталон — реальный прототип.
         private static readonly Dictionary<string, Vector2> RealLengths = new Dictionary<string, Vector2>
         {
             { "BrowningHiPower",         new Vector2(0.17f, 0.23f) }, // Browning Hi-Power: принятый игровой диапазон сохраняется
             { "Gun",              new Vector2(0.17f, 0.23f) }, // пистолет сэмпла UltimateXR
-            { "AR15", new Vector2(0.95f, 1.05f) }, // AR-15: принятый игровой диапазон сохраняется
             { "Shotgun",          new Vector2(0.80f, 1.10f) }, // Remington 870: 100–106 см
             { "FabarmSDASS",     new Vector2(0.66f, 0.78f) }, // FABARM SDASS: принятый игровой диапазон сохраняется
             { "Machinegun",       new Vector2(0.85f, 1.20f) }, // ручной пулемёт / штурмовая винтовка
@@ -64,6 +70,21 @@ namespace VrBattlegrounds.Tests.Prefabs
         {
             var failures = new List<string>();
             int checks   = 0;
+            var registry = AssetDatabase.LoadAssetAtPath<WeaponRegistry>("Assets/Data/Weapons/Resources/WeaponRegistry.asset");
+            Assert.IsNotNull(registry, "Нет WeaponRegistry.");
+            var production = new HashSet<GameObject>();
+            foreach (var info in registry.Weapons)
+                if (info != null && info.WeaponPrefab != null) production.Add(info.WeaponPrefab);
+            if (registry.DefaultSidearm != null && registry.DefaultSidearm.WeaponPrefab != null)
+                production.Add(registry.DefaultSidearm.WeaponPrefab);
+            // Прямое назначение карты тоже делает draft игровым: такую позицию нельзя исключить.
+            foreach (string mapGuid in AssetDatabase.FindAssets("t:MapData", new[] { "Assets/Data/Maps" }))
+            {
+                var map = AssetDatabase.LoadAssetAtPath<MapData>(AssetDatabase.GUIDToAssetPath(mapGuid));
+                if (map == null || map.arsenalPreset == null) continue;
+                foreach (var entry in map.arsenalPreset.Entries)
+                    if (entry.Weapon != null && entry.Weapon.WeaponPrefab != null) production.Add(entry.Weapon.WeaponPrefab);
+            }
 
             foreach (var guid in AssetDatabase.FindAssets("t:Prefab", WeaponRoots))
             {
@@ -73,7 +94,35 @@ namespace VrBattlegrounds.Tests.Prefabs
                 // Оружие — то, что стреляет или взрывается; магазины проверяет второй тест.
                 if (prefab.GetComponent<UxrFirearmWeapon>() == null && prefab.GetComponent<UxrGrenadeWeapon>() == null) continue;
 
-                if (!RealLengths.TryGetValue(prefab.name, out Vector2 range))
+                // ManualSightCalibrationAuthoring пишет сюда временные authoring/probe outputs.
+                // Само наличие компонента оружия не публикует их в игровой каталог.
+                if (path.StartsWith(DraftRoot, System.StringComparison.Ordinal) && !production.Contains(prefab)) continue;
+
+                string family = prefab.name;
+                foreach (string publishedFamily in PublishedSightFamilies)
+                {
+                    string infoPath = $"Assets/Data/Weapons/SightCalibration/Review/{publishedFamily}_SightReview.asset";
+                    var review = AssetDatabase.LoadAssetAtPath<WeaponInfo>(infoPath);
+                    if (review != null && review.WeaponPrefab == prefab)
+                    {
+                        Assert.AreEqual(publishedFamily + "_SightReview", review.WeaponId, $"{infoPath}: нарушена опубликованная идентичность review.");
+                        Assert.IsNotNull(registry.GetById(publishedFamily)?.WeaponPrefab, $"{infoPath}: отсутствует исходное семейство {publishedFamily}.");
+                        family = publishedFamily;
+                        break;
+                    }
+                }
+
+                if (family == "AR15")
+                {
+                    // Принятая Ar15ScaleCalibration: контакт рукоятки с TR15, корень 0,70.
+                    // Старый метровый диапазон относился к модели до этой калибровки.
+                    checks++;
+                    if (Vector3.Distance(prefab.transform.localScale, Vector3.one * 0.70f) > 0.0001f)
+                        failures.Add($"{path}: калибровка AR15 требует равномерный масштаб корня 0,70.");
+                    continue;
+                }
+
+                if (!RealLengths.TryGetValue(family, out Vector2 range))
                 {
                     failures.Add($"{path}: нет эталона размера в WeaponScaleTests.RealLengths");
                     continue;

@@ -185,11 +185,33 @@ namespace VrBattlegrounds.Tests.Prefabs
                                                             .Where(m => m != null));
 
             var problems = new List<string>();
+            if (bodyMaterials.Count == 0)
+                problems.Add("Владельцы подсветки исключили все материалы корпуса: граница визуала задана неверно.");
 
             foreach ((UxrGrabbableObject grabbable, int point, GameObject highlight) in highlights)
             {
                 string where = $"{PointName(weapon, grabbable, point)} → '{highlight.name}'";
-                Renderer[] renderers = highlight.GetComponentsInChildren<Renderer>(true);
+                GameObject visual = highlight;
+                // SDK включает rendererless proximity-сигнал; Action-визуалом единолично
+                // управляет WeaponChamberingReminder. Проверяем точную связь владельца,
+                // затем ту же сетку и материалы его визуала, без исключений по имени оружия.
+                var owners = weapon.GetComponentsInChildren<WeaponChamberingReminder>(true)
+                    .Where(owner => owner.ProximitySignal == highlight).ToArray();
+                if (owners.Length > 0)
+                {
+                    if (owners.Length != 1 || owners[0].Visual == null || owners[0].Visual == highlight ||
+                        owners[0].Visual == weapon ||
+                        !owners[0].Visual.transform.IsChildOf(weapon.transform) ||
+                        !highlight.transform.IsChildOf(grabbable.transform) ||
+                        highlight.GetComponentsInChildren<Renderer>(true).Length != 0)
+                    {
+                        problems.Add($"{where}: неверная связь proximity-сигнала и единственного владельца Action-визуала");
+                        continue;
+                    }
+                    visual = owners[0].Visual;
+                    where += $" → '{visual.name}' (WeaponChamberingReminder)";
+                }
+                Renderer[] renderers = visual.GetComponentsInChildren<Renderer>(true);
 
                 if (renderers.Length == 0)
                 {
@@ -296,6 +318,13 @@ namespace VrBattlegrounds.Tests.Prefabs
         /// </summary>
         private static IEnumerable<GameObject> HighlightObjects(GameObject weapon)
         {
+            // Эти визуалы не назначаются прямо в EnableOnHandNear/ActivateOn…:
+            // их включают игровые владельцы, а SDK передаёт только proximity-сигнал.
+            foreach (var owner in weapon.GetComponentsInChildren<WeaponChamberingReminder>(true))
+                if (owner.Visual != null && owner.Visual.transform.IsChildOf(weapon.transform)) yield return owner.Visual;
+            foreach (var owner in weapon.GetComponentsInChildren<WeaponMagazineAnchorHighlight>(true))
+                if (owner.Visual != null && owner.Visual.transform.IsChildOf(weapon.transform)) yield return owner.Visual;
+
             foreach (UxrGrabbableObject grabbable in weapon.GetComponentsInChildren<UxrGrabbableObject>(true))
             {
                 for (int point = 0; point < grabbable.GrabPointCount; ++point)

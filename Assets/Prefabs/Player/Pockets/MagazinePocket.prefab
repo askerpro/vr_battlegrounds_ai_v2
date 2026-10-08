@@ -339,6 +339,8 @@ MonoBehaviour:
   - MagHerrington
   - MagTR15
   - MagMk14
+  - MagAK105
+  - MagR08
   - Cartridge:Herrington
   - Cartridge:FabarmSDASS
   _maxPlaceDistance: 0.1

@@ -8,7 +8,7 @@ using UnityEngine;
 namespace VrBattlegrounds.Tests.Prefabs
 {
     /// <summary>
-    /// Две ветки игровых аватаров по типу кисти.
+    /// Ветки игровых аватаров по происхождению кисти.
     ///
     /// <para>
     /// <c>PlayerBase_SdkHands</c> — кисть со скелетом SDK (BigHands/Cyborg: 4 кости на палец с пястной).
@@ -21,6 +21,8 @@ namespace VrBattlegrounds.Tests.Prefabs
     /// <para>
     /// Поза наследуется по цепочке <c>UxrAvatar._parentPrefab</c>; она должна совпадать с настоящей
     /// цепочкой вариантов Unity, иначе SDK ищет позы и записи хвата не там.
+    /// Исходный Cyborg остаётся вариантом SDK CyborgAvatar_URP: PlayerBasePrefabBuilder
+    /// создаёт из него отдельный независимый каркас, а не переносит исходный аватар.
     /// </para>
     /// </summary>
     public class AvatarHandPoseChainTests
@@ -28,6 +30,12 @@ namespace VrBattlegrounds.Tests.Prefabs
         private const string PlayerBase     = "Assets/Prefabs/Player/PlayerBase.prefab";
         private const string SdkHands       = "Assets/Prefabs/Player/PlayerBase_SdkHands.prefab";
         private const string NonSdkHands    = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
+        // Явный SDK-origin из CyborgLegsBuilder/PlayerBasePrefabBuilder; произвольный
+        // ThirdParty-префаб не считается допустимой базой зарегистрированного аватара.
+        private static readonly string[] SdkRoots =
+        {
+            "Assets/ThirdParty/UltimateXR/Runtime/Prefabs/Avatars/CyborgAvatar_URP.prefab"
+        };
         // Позы, снятые с паков оружия (Hands — HandsPackPoseImporter, KINEMATION — KinemationWeaponBuilder): нейтральны к скелету.
         private static readonly string[] PackPoses = { "Assets/Art/HandPoses/HandsPack/", "Assets/Art/HandPoses/Kinemation/" };
 
@@ -43,6 +51,13 @@ namespace VrBattlegrounds.Tests.Prefabs
         {
             List<string> chain = UnityChain(Load(path));
 
+            if (SdkRoots.Contains(chain.Last()))
+            {
+                Assert.That(chain.Any(p => p == PlayerBase || p == SdkHands || p == NonSdkHands), Is.False,
+                    $"{path}: SDK-origin смешан с веткой игрового каркаса — {Describe(chain)}");
+                return;
+            }
+
             Assert.That(chain.Last(), Is.EqualTo(PlayerBase), $"{path}: цепочка вариантов не доходит до PlayerBase — {Describe(chain)}");
             Assert.That(chain.Contains(SdkHands) ^ chain.Contains(NonSdkHands), Is.True,
                         $"{path}: цепочка обязана идти ровно через одну базу кисти — {Describe(chain)}");
@@ -53,7 +68,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         {
             List<string> chain = UnityChain(Load(path));
 
-            // Каждый уровень, кроме PlayerBase: _parentPrefab = настоящий родитель в Unity.
+            // Каждый уровень: _parentPrefab = настоящий родитель в Unity, у корня — null.
             for (int i = 0; i < chain.Count - 1; i++)
             {
                 UxrAvatar avatar = Load(chain[i]).GetComponent<UxrAvatar>();
@@ -62,15 +77,20 @@ namespace VrBattlegrounds.Tests.Prefabs
                 Assert.That(AssetDatabase.GetAssetPath(avatar.ParentPrefab), Is.EqualTo(chain[i + 1]),
                             $"{chain[i]}: _parentPrefab не совпадает с вариантом Unity");
             }
+            Assert.That(Load(chain.Last()).GetComponent<UxrAvatar>().ParentPrefab, Is.Null,
+                $"{chain.Last()}: корень Unity-цепочки наследует позы чужого префаба");
         }
 
         /// <summary>Путь префаба и всех его родителей-вариантов вверх до корня.</summary>
         private static List<string> UnityChain(GameObject prefab)
         {
             var chain = new List<string>();
+            var seen = new HashSet<string>();
             for (GameObject current = prefab; current != null; current = PrefabUtility.GetCorrespondingObjectFromSource(current))
             {
-                chain.Add(AssetDatabase.GetAssetPath(current));
+                string path = AssetDatabase.GetAssetPath(current);
+                Assert.That(seen.Add(path), Is.True, $"Цикл в цепочке вариантов: {Describe(chain)} → {path}");
+                chain.Add(path);
             }
             return chain;
         }

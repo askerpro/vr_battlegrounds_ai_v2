@@ -14,7 +14,8 @@ namespace VrBattlegrounds.Tests.Maps
     /// <summary>
     /// Табло лазерной сетки на настоящих картах (T-47): на каждой сцене Build Settings у каждой командной
     /// зоны есть <see cref="LaserGridScreens"/>, каждая стена арсенала принадлежит командной зоне и получает
-    /// персональный кусок, в сетке зоны — 4 общих табло; всё в пределах граней, не за стенами и без наложений.
+    /// персональный кусок; общие табло — по одному на отображаемую грань (переднюю у новой проекции,
+    /// четыре у старой коробки). Всё в пределах граней, не за стенами и без наложений.
     ///
     /// <para>
     /// Заодно ловит класс ошибки «стена считается вне зоны»: на картах стены — соседи зоны, а не её дети,
@@ -58,7 +59,7 @@ namespace VrBattlegrounds.Tests.Maps
         }
 
         [TestCaseSource(nameof(MapScenes))]
-        public void На_карте_у_каждой_стены_кусок_и_в_сетке_4_общих(string scenePath)
+        public void На_карте_у_каждой_стены_кусок_и_общие_табло_видимых_граней(string scenePath)
         {
             Scene scene = EditorSceneManager.OpenPreviewScene(scenePath);
             try
@@ -82,8 +83,12 @@ namespace VrBattlegrounds.Tests.Maps
 
                 foreach (ArsenalWallController wall in walls)
                 {
-                    TeamSpawnZone zone = SpawnZoneMembership.ZoneOf(wall.transform, zones);
-                    if (zone == null || zone.HomeTeam == null)
+                    // Станции отделены от масштабируемой зоны; явная связь — владелец
+                    // принадлежности, как в LaserGridScreens и ArsenalOwnershipPolicy.
+                    ArsenalStationAnchor anchor = wall.GetComponent<ArsenalStationAnchor>();
+                    TeamSpawnZone zone = anchor != null && anchor.Zone != null
+                        ? anchor.Zone : SpawnZoneMembership.ZoneOf(wall.transform, zones);
+                    if (zone == null || !zones.Contains(zone) || zone.HomeTeam == null)
                         problems.Add($"стена '{Path(wall.transform)}' не стоит ни в одной командной зоне " +
                                      $"(зона: {(zone != null ? zone.name : "нет")})");
                 }
@@ -97,8 +102,16 @@ namespace VrBattlegrounds.Tests.Maps
                     LaserGridBox box = LaserGridScreens.DescribeBox(zone, FloorUnder(scene, zone));
                     List<LaserGridScreenPose> poses = LaserGridScreens.Plan(box, mine);
 
+                    // Как LaserGridScreens: принятую переднюю проекцию зоны заполняют
+                    // только позы Front; остальные грани плана не создаются.
+                    SpawnZoneBoundaryVisual visual = zone.GetComponent<SpawnZoneBoundaryVisual>();
+                    bool frontOnly = visual != null && visual.FrontFaceOnly;
+                    if (frontOnly) poses = poses.Where(p => p.Face == LaserGridFace.Front).ToList();
+
                     int common = poses.Count(p => p.Kind == LaserGridScreenKind.Common);
-                    if (common != 4) problems.Add($"зона '{zone.name}': общих табло {common}, а не 4");
+                    int expectedCommon = frontOnly ? 1 : 4;
+                    if (common != expectedCommon)
+                        problems.Add($"зона '{zone.name}': общих табло {common}, а не {expectedCommon}");
 
                     for (int i = 0; i < mine.Count; i++)
                     {

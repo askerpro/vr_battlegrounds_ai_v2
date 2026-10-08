@@ -14,8 +14,8 @@ using VrBattlegrounds.Maps;
 namespace VrBattlegrounds.Tests.Maps
 {
     /// <summary>
-    /// Планировка лобби (<c>Lobby.unity</c>): арена без краевых стен, по краю — столы по пояс,
-    /// в центре — тумба арсенала из четырёх стен лицом на все стороны, за краем — мишени.
+    /// Планировка лобби (<c>Lobby.unity</c>): по краю — столы по пояс и две неподвижные
+    /// станции общей нейтральной зоны, за краем — мишени. Проёмы станций делят столешницы.
     ///
     /// <para>
     /// Сцена открывается превью-сценой, игровой цикл не нужен: всё проверяется геометрией
@@ -66,33 +66,28 @@ namespace VrBattlegrounds.Tests.Maps
         // ── Арсенал ──────────────────────────────────────────────────────────
 
         [Test]
-        public void Арсенал_тумба_из_четырёх_стен_в_центре_лицом_наружу()
+        public void Две_станции_арсенала_принадлежат_нейтральной_зоне_и_смотрят_на_арену()
         {
             ArsenalWallController[] walls = All<ArsenalWallController>().ToArray();
-            Assert.AreEqual(4, walls.Length,
-                "В лобби должно быть ровно 4 стены арсенала: " + string.Join(", ", walls.Select(w => w.name)));
+            Assert.AreEqual(2, walls.Length,
+                "В лобби должны быть две станции арсенала: " + string.Join(", ", walls.Select(w => w.name)));
+            TeamSpawnZone[] zones = All<TeamSpawnZone>().Where(z => z.gameObject.activeInHierarchy).ToArray();
+            Assert.AreEqual(1, zones.Length, "В лобби одна нейтральная зона.");
+            Assert.IsNull(zones[0].HomeTeam, "Общий арсенал лобби не принадлежит команде.");
 
             Bounds arena = ArenaFloor();
-            var facings = new HashSet<Vector2Int>();
 
             foreach (ArsenalWallController wall in walls)
             {
-                Vector3 fromCenter = wall.transform.position - arena.center;
-                fromCenter.y = 0f;
-                Assert.Less(fromCenter.magnitude, 3f, $"{wall.name} стоит не в центре арены: {wall.transform.position}.");
-
-                // Лицо стены — её локальный -Z (так стоят стены и на картах).
-                Vector3 face = -wall.transform.forward;
-                face.y = 0f;
-                face.Normalize();
-
-                Assert.Greater(Vector3.Dot(face, fromCenter.normalized), 0.5f,
-                    $"{wall.name} смотрит не наружу: лицо {face}, от центра {fromCenter.normalized}.");
-
-                facings.Add(new Vector2Int(Mathf.RoundToInt(face.x), Mathf.RoundToInt(face.z)));
+                ArsenalStationAnchor station = wall.GetComponent<ArsenalStationAnchor>();
+                Assert.IsNotNull(station, $"{wall.name}: нет разметки места экипировки.");
+                Assert.AreSame(zones[0], station.Zone, $"{wall.name}: станция не связана с общей зоной.");
+                Assert.IsNotNull(station.StandingPoint, $"{wall.name}: нет места экипировки.");
+                Assert.IsTrue(station.HasBoardDirection, $"{wall.name}: нет направления личного табло.");
+                Vector3 toArena = Vector3.ProjectOnPlane(arena.center - station.StandingPosition, Vector3.up).normalized;
+                Assert.Greater(Vector3.Dot(station.BoardFacing, toArena), 0.5f,
+                    $"{wall.name}: табло места экипировки направлено от арены.");
             }
-
-            Assert.AreEqual(4, facings.Count, "Стены смотрят не на все четыре стороны: " + string.Join(", ", facings));
         }
 
         [Test]
@@ -125,8 +120,19 @@ namespace VrBattlegrounds.Tests.Maps
                     Vector3 origin = arena.center + side - dir * 1.5f + across * s;
                     origin.y = arena.max.y + EyeHeight + 0.2f;
 
-                    if (physics.Raycast(origin, dir, out RaycastHit hit, 5f, ~0, QueryTriggerInteraction.Ignore))
+                    var hits = new RaycastHit[128];
+                    int count = physics.Raycast(origin, dir, hits, 5f, ~0, QueryTriggerInteraction.Ignore);
+                    Assert.Less(count, hits.Length, "Недостаточная ёмкость луча проверки края арены.");
+                    for (int i = 0; i < count; i++)
+                    {
+                        RaycastHit hit = hits[i];
+                        // Сохранённые станции стоят у края арены. Они не являются краевой стеной;
+                        // разрешение относится только к корпусу станции с явной нейтральной зоной.
+                        ArsenalStationAnchor station = hit.collider.GetComponentInParent<ArsenalStationAnchor>();
+                        if (station != null && station.Wall != null && station.Zone != null && station.Zone.HomeTeam == null)
+                            continue;
                         blocked.Add($"{dir} из {origin}: {hit.collider.name} на {hit.distance:F1} м");
+                    }
                 }
             }
 
@@ -178,8 +184,17 @@ namespace VrBattlegrounds.Tests.Maps
         {
             Transform tables = RangeChild(TablesName);
             Transform table = tables.Cast<Transform>().First();
-            Bounds b = table.GetComponentsInChildren<Collider>().Select(c => c.bounds)
-                            .Aggregate((a, c) => { a.Encapsulate(c); return a; });
+            // Проёмы станций оставляют пустоту в центре общего bounds стола. Кладём предмет
+            // на настоящую верхнюю твёрдую часть, а не в центр прежнего цельного столешничного объёма.
+            Collider[] solids = table.GetComponentsInChildren<Collider>()
+                .Where(c => c.enabled && !c.isTrigger && c.gameObject.activeInHierarchy).ToArray();
+            Assert.IsNotEmpty(solids, $"{table.name}: нет твёрдой поверхности.");
+            float topY = solids.Max(c => c.bounds.max.y);
+            BoxCollider top = solids.OfType<BoxCollider>()
+                .Where(c => Mathf.Abs(c.bounds.max.y - topY) < 0.001f)
+                .OrderByDescending(c => c.bounds.size.x * c.bounds.size.z).FirstOrDefault();
+            Assert.IsNotNull(top, $"{table.name}: не найдена верхняя плоская часть столешницы.");
+            Bounds b = top.bounds;
 
             PhysicsScene physics = _scene.GetPhysicsScene();
             var failures = new List<string>();

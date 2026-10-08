@@ -1049,7 +1049,7 @@ GameObject:
   - component: {fileID: 271754169}
   m_Layer: 0
   m_Name: South_Hard
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -2162,7 +2162,7 @@ GameObject:
   - component: {fileID: 520477225}
   m_Layer: 0
   m_Name: Detour_Hard
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -2289,7 +2289,7 @@ GameObject:
   - component: {fileID: 577593971}
   m_Layer: 0
   m_Name: North_Hard
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -5158,7 +5158,7 @@ GameObject:
   - component: {fileID: 1030946826}
   m_Layer: 0
   m_Name: Floor
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -9316,7 +9316,7 @@ GameObject:
   - component: {fileID: 1148940101}
   m_Layer: 0
   m_Name: East_Hard
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -9760,7 +9760,7 @@ GameObject:
   - component: {fileID: 1174515676}
   m_Layer: 0
   m_Name: Cover_Visual
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -11409,7 +11409,7 @@ GameObject:
   - component: {fileID: 1394109095}
   m_Layer: 0
   m_Name: Cover_Soft
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -11846,7 +11846,7 @@ GameObject:
   - component: {fileID: 1454523500}
   m_Layer: 0
   m_Name: Cover_Hard
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -21053,7 +21053,7 @@ GameObject:
   - component: {fileID: 1527160957}
   m_Layer: 0
   m_Name: West_Hard
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

@@ -80,18 +80,29 @@ namespace VrBattlegrounds.EditorTools.VersionControl
 
         private static void FlushPending()
         {
+            if (!CanWrite())
+            {
+                EditorApplication.update -= RetryPending;
+                EditorApplication.update += RetryPending;
+                return;
+            }
             _scheduled = false;
             var paths = new List<string>(Pending);
             Pending.Clear();
-
-            if (!CanWrite()) return;
 
             foreach (string path in paths)
             {
                 string result = Normalize(path);
                 if (result != null)
-                    Debug.Log($"[UxrUniqueIdPersister] {path}: {result}");
+                    VrBattlegrounds.Core.GameLog.Debug.Info($"[UxrUniqueIdPersister] {path}: {result}");
             }
+        }
+
+        private static void RetryPending()
+        {
+            if (!CanWrite()) return;
+            EditorApplication.update -= RetryPending;
+            FlushPending();
         }
 
         [MenuItem(MenuPath)]
@@ -99,11 +110,11 @@ namespace VrBattlegrounds.EditorTools.VersionControl
         {
             if (!CanWrite())
             {
-                Debug.LogWarning("[UxrUniqueIdPersister] Сохранять префабы может только основной редактор вне Play Mode.");
+                VrBattlegrounds.Core.GameLog.Debug.Warning("[UxrUniqueIdPersister] Сохранять префабы может только основной редактор вне Play Mode.");
                 return;
             }
 
-            Debug.Log($"[UxrUniqueIdPersister] {NormalizeAll()}");
+            VrBattlegrounds.Core.GameLog.Debug.Info($"[UxrUniqueIdPersister] {NormalizeAll()}");
         }
 
         /// <summary>Прогон по всем префабам проекта. Базы раньше вариантов. Возвращает отчёт.</summary>
@@ -172,6 +183,9 @@ namespace VrBattlegrounds.EditorTools.VersionControl
                 PrefabUtility.SavePrefabAsset(prefab);
                 actions = actions == null ? "сохранён с верными флагами" : actions + ", сохранён с верными флагами";
             }
+
+            // Сохранение UXR не должно отменять уже завершённую нормализацию Mirror.
+            if (actions != null) NetworkAssetIdNormalizer.Normalize(new[] { path }, false);
 
             return actions;
         }

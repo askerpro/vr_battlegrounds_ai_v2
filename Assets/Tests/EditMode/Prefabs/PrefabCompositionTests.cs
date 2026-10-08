@@ -6,6 +6,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UltimateXR.Avatar;
+using UltimateXR.Avatar.Controllers;
 using UltimateXR.Core;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
@@ -392,42 +393,81 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         /// <summary>
-        /// Процедурные ноги: у каждого аватара ровно один <c>LegsAnimator</c> и рядом с ним один
-        /// <c>LegsAnimatorUxrBridge</c> — на объекте рига с humanoid-<c>Animator</c>, внутри аватара, но
-        /// не на его корне. Ноги считает каждая машина сама (сеть их не синхронизирует), поэтому
-        /// мост ищет свой <c>UxrAvatar</c> вверх по иерархии и его <c>Dummy Forward</c>; на корне
-        /// плагин взял бы корень аватара за риг, а два плагина тянули бы одни кости каждый к своему
-        /// полу. Подробные настройки — <c>AvatarLoadoutTests.Legs_Animator_настроен_на_своих_костях</c>.
-        /// Добавлено вместе с ногами киборга: до них у киборга не было ни рига, ни ног.
+        /// Единственный владелец native ног — контроллер своего UxrAvatar.
+        /// Legacy LegsAnimator/bridge заменены native UXR (Docs/avatar-animation.md)
+        /// и не должны одновременно писать те же кости. Подробные ссылки рига —
+        /// AvatarLoadoutTests.Native_UXR_ноги_настроены_на_своих_костях.
         /// </summary>
         [Test]
-        public void У_каждого_аватара_один_Legs_Animator_на_humanoid_риге()
+        public void У_каждого_аватара_один_владелец_native_UXR_ног()
         {
             var problems = new List<string>();
 
             foreach (GameObject avatar in AvatarPrefabs())
             {
-                // Сборки плагина и моста (Assembly-CSharp) тестам недоступны — по имени типа.
-                Component[] legs = avatar.GetComponentsInChildren<Component>(true).Where(c => c != null && c.GetType().Name == "LegsAnimator").ToArray();
-                Component[] bridges = avatar.GetComponentsInChildren<Component>(true).Where(c => c != null && c.GetType().Name == "LegsAnimatorUxrBridge").ToArray();
-
-                if (legs.Length != 1 || bridges.Length != 1)
+                UxrStandardAvatarController[] controllers = avatar.GetComponentsInChildren<UxrStandardAvatarController>(true);
+                if (controllers.Length != 1 || controllers[0].gameObject != avatar)
                 {
-                    problems.Add($"{avatar.name}: LegsAnimator {legs.Length}, мостов {bridges.Length} — нужно по одному");
-                    continue;
+                    problems.Add($"{avatar.name}: нужен один UxrStandardAvatarController на корне своего аватара, найдено {controllers.Length}");
                 }
+                else if (!controllers[0].enabled || !controllers[0].UseNativeLegIK)
+                    problems.Add($"{avatar.name}: native ноги выключены");
 
-                GameObject host = legs[0].gameObject;
-                Animator animator = host.GetComponent<Animator>();
-                if (bridges[0].gameObject != host)
-                    problems.Add($"{avatar.name}: мост на '{bridges[0].name}', плагин на '{host.name}' — должны быть на одном объекте");
-                if (host == avatar)
-                    problems.Add($"{avatar.name}: Legs Animator на корне аватара, а не на риге");
-                if (animator == null || animator.avatar == null || !animator.avatar.isHuman)
-                    problems.Add($"{avatar.name}: на '{host.name}' нет humanoid-Animator — у плагина нет рига");
+                // Типы legacy-сборок тестам недоступны; выключенный компонент не пишет позу.
+                foreach (Behaviour legacy in PrefabAuthoredActivity.ActiveLegacyLegWriters(avatar))
+                {
+                    problems.Add($"{avatar.name}: активен legacy {legacy.GetType().Name} на '{legacy.name}' одновременно с native ногами");
+                }
             }
 
-            Assert.IsEmpty(problems, "Процедурные ноги аватаров собраны не там:\n  " + string.Join("\n  ", problems));
+            Assert.IsEmpty(problems, "Владение ногами аватаров нарушено:\n  " + string.Join("\n  ", problems));
+        }
+
+        [TestCase(true, true, true, true, true)]
+        [TestCase(false, true, true, true, false)]
+        [TestCase(true, false, true, true, false)]
+        [TestCase(true, true, false, true, false)]
+        [TestCase(true, true, true, false, false)]
+        public void Авторская_активность_учитывает_предков_и_enabled(bool rootActive, bool ancestorActive,
+            bool childActive, bool enabled, bool expected)
+        {
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+            try
+            {
+                var root = new GameObject("Activity Root");
+                UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
+                var ancestor = new GameObject("Ancestor");
+                ancestor.transform.SetParent(root.transform);
+                var child = new GameObject("Writer");
+                child.transform.SetParent(ancestor.transform);
+                Animator writer = child.AddComponent<Animator>();
+                root.SetActive(rootActive);
+                ancestor.SetActive(ancestorActive);
+                child.SetActive(childActive);
+                writer.enabled = enabled;
+
+                Assert.That(PrefabAuthoredActivity.IsActive(writer, root), Is.EqualTo(expected));
+            }
+            finally
+            {
+                UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+            }
+        }
+
+        [Test]
+        public void Авторская_активность_работает_на_ассете_префаба_вне_сцены()
+        {
+            foreach (GameObject prefab in AvatarPrefabs())
+            {
+                Assert.That(EditorUtility.IsPersistent(prefab), Is.True);
+                UxrStandardAvatarController controller = prefab.GetComponent<UxrStandardAvatarController>();
+                Assert.That(controller, Is.Not.Null, $"{prefab.name}: нет контроллера аватара");
+                Assert.That(prefab.activeSelf && controller.enabled, Is.True,
+                    $"{prefab.name}: игровой аватар выключен в сохранённой конфигурации");
+                // Для AssetDatabase assets activeInHierarchy может быть false даже
+                // у включённого корня; этот positive control ловит прежний false negative.
+                Assert.That(PrefabAuthoredActivity.IsActive(controller, prefab), Is.True, prefab.name);
+            }
         }
 
         /// <summary>
@@ -484,5 +524,30 @@ namespace VrBattlegrounds.Tests.Prefabs
 
             return current != null ? current : camera;
         }
+    }
+
+    /// <summary>
+    /// Сохранённая активность внутри префаба, независимо от принадлежности сцене.
+    /// Общая проверка для композиции и подробной конфигурации native ног.
+    /// </summary>
+    internal static class PrefabAuthoredActivity
+    {
+        internal static bool IsActive(Behaviour behaviour, GameObject prefabRoot)
+        {
+            if (behaviour == null) throw new ArgumentNullException(nameof(behaviour));
+            if (prefabRoot == null) throw new ArgumentNullException(nameof(prefabRoot));
+            bool active = behaviour.enabled;
+            for (Transform current = behaviour.transform; current != null; current = current.parent)
+            {
+                active &= current.gameObject.activeSelf;
+                if (current == prefabRoot.transform) return active;
+            }
+            throw new ArgumentException("Компонент не принадлежит проверяемому префабу.", nameof(behaviour));
+        }
+
+        internal static IEnumerable<Behaviour> ActiveLegacyLegWriters(GameObject prefabRoot) =>
+            prefabRoot.GetComponentsInChildren<Behaviour>(true)
+                .Where(c => c != null && (c.GetType().Name == "LegsAnimator" || c.GetType().Name == "LegsAnimatorUxrBridge"))
+                .Where(c => IsActive(c, prefabRoot));
     }
 }

@@ -66,12 +66,24 @@ namespace VrBattlegrounds.EditorTools.VersionControl
 
         private static void FlushPending()
         {
+            if (!CanWrite())
+            {
+                EditorApplication.update -= RetryPending;
+                EditorApplication.update += RetryPending;
+                return;
+            }
             _scheduled = false;
             var paths = new List<string>(Pending);
             Pending.Clear();
 
-            if (!CanWrite()) return;
             Normalize(paths, log: false);
+        }
+
+        private static void RetryPending()
+        {
+            if (!CanWrite()) return;
+            EditorApplication.update -= RetryPending;
+            FlushPending();
         }
 
         [MenuItem(MenuPath)]
@@ -82,7 +94,7 @@ namespace VrBattlegrounds.EditorTools.VersionControl
                 paths.Add(AssetDatabase.GUIDToAssetPath(guid));
 
             int fixedCount = Normalize(paths, log: true);
-            Debug.Log($"[NetworkAssetIdNormalizer] Проверено префабов: {paths.Count}, исправлено: {fixedCount}.");
+            VrBattlegrounds.Core.GameLog.Debug.Info($"[NetworkAssetIdNormalizer] Проверено префабов: {paths.Count}, исправлено: {fixedCount}.");
         }
 
         /// <summary>
@@ -119,7 +131,7 @@ namespace VrBattlegrounds.EditorTools.VersionControl
                 if (!RewriteOnDisk(path, canonical))
                 {
                     if (log)
-                        Debug.LogWarning($"[NetworkAssetIdNormalizer] {path}: строки _assetId в файле нет " +
+                        VrBattlegrounds.Core.GameLog.Debug.Warning($"[NetworkAssetIdNormalizer] {path}: строки _assetId в файле нет " +
                                          "(вариант наследует id базы) — пропущен, задайте значение руками.");
                     continue;
                 }
@@ -127,7 +139,7 @@ namespace VrBattlegrounds.EditorTools.VersionControl
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
 
                 fixedCount++;
-                if (log) Debug.Log($"[NetworkAssetIdNormalizer] {path}: _assetId → {canonical}.");
+                if (log) VrBattlegrounds.Core.GameLog.Debug.Info($"[NetworkAssetIdNormalizer] {path}: _assetId → {canonical}.");
             }
 
             return fixedCount;

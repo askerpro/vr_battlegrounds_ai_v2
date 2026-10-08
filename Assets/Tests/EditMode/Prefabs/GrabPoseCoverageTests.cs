@@ -167,8 +167,11 @@ namespace VrBattlegrounds.Tests.Prefabs
                     {
                         HashSet<UxrGrabbableObject> proxies = AnchorProxies(root);
 
-                        foreach (UxrGrabbableObject grabbable in root.GetComponentsInChildren<UxrGrabbableObject>(true))
+                        // Сцена проверяет доступные в игре предметы. Выключенные музейные ветки SDK
+                        // не участвуют в игре; префабы отдельно проверяются вместе с неактивными детьми.
+                        foreach (UxrGrabbableObject grabbable in root.GetComponentsInChildren<UxrGrabbableObject>(false))
                         {
+                            if (!grabbable.isActiveAndEnabled) continue;
                             if (proxies.Contains(grabbable)) continue;
 
                             GameObject source = PrefabUtility.GetCorrespondingObjectFromOriginalSource(grabbable.gameObject);

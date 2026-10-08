@@ -9,7 +9,7 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Tests.Arsenal
 {
     /// <summary>
-    /// Матрица «попаданий до убийства» (T-38, этап 2) — главный артефакт баланса: оружие реестра × зона × дистанция →
+    /// Матрица «попаданий до убийства» (T-38, этап 2) — главный артефакт баланса: боевое оружие × зона × дистанция →
     /// сколько попаданий убивают игрока со 100 жизни. Менять числа баланса — менять матрицу осознанно.
     ///
     /// <para>
@@ -48,14 +48,12 @@ namespace VrBattlegrounds.Tests.Arsenal
         private static readonly HitZone[] Zones = { HitZone.Head, HitZone.Torso, HitZone.Leg };
 
         [Test]
-        public void Каждый_ствол_реестра_в_матрице()
+        public void Каждый_ствол_боевого_ассортимента_в_матрице()
         {
-            var registry = AssetDatabase.LoadAssetAtPath<WeaponRegistry>($"{WeaponsFolder}/Resources/WeaponRegistry.asset");
-            Assert.IsNotNull(registry, "Нет WeaponRegistry.");
             var missing = new List<string>();
-            foreach (WeaponInfo info in registry.Weapons)
-                if (info != null && !Expected.ContainsKey(info.name)) missing.Add(info.name);
-            Assert.IsEmpty(missing, "Стволы реестра без строки в матрице попаданий до убийства: " + string.Join(", ", missing));
+            foreach (WeaponInfo info in WeaponBalanceTests.GameplayWeapons())
+                if (!Expected.ContainsKey(info.name)) missing.Add(info.name);
+            Assert.IsEmpty(missing, "Боевые стволы без принятой строки в матрице попаданий до убийства: " + string.Join(", ", missing));
         }
 
         [Test]

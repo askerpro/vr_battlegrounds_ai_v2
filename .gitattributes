@@ -12,7 +12,9 @@ Tools/agents/editor-broker.py text eol=lf
 # Unity YAML merge driver
 *.unity text merge=unityyamlmerge eol=crlf
 *.prefab text merge=unityyamlmerge eol=crlf
-*.asset text merge=unityyamlmerge eol=crlf
+# .asset бывают YAML и бинарными (LightingData, NavMesh, TerrainData).
+# Принудительный text меняет байты бинарного заголовка при checkout.
+*.asset text=auto merge=unityyamlmerge eol=crlf
 *.meta text eol=crlf
 *.controller text merge=unityyamlmerge eol=crlf
 *.anim text merge=unityyamlmerge eol=crlf

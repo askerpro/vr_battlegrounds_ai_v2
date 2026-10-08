@@ -8,40 +8,48 @@ using VrBattlegrounds.Arsenal;
 namespace VrBattlegrounds.Tests.Arsenal
 {
     /// <summary>
-    /// Каждая стена арсенала вмещает весь доступный арсенал игры (решение пользователя). Доступный арсенал —
-    /// <see cref="WeaponRegistry" />; места на стене не хватает — из реестра убирается слабейшее, а не прячется
-    /// на другой стене.
+    /// Общая игровая станция соответствует исходному игровому пресету. WeaponRegistry — каталог,
+    /// ассортимент карты выбирает MapData.arsenalPreset; Demo/Lobby используют отдельную широкую станцию.
     ///
     /// <para>
     /// Класс ошибки: набор стены правился по месту — слот базовой стены, переопределение в префабе карты, — и
-    /// разные стены показывали разное, часть стволов была только на соседней грани. Теперь набор задаёт одна
-    /// базовая стена, переопределять её слоты в картах и сценах нельзя.
+    /// разные стены показывали разное. Авторский набор берётся из пресета; ручные переопределения
+    /// слотов вне заготовок арсенала запрещены. Требование равенства всему каталогу отменено с пресетами.
     /// </para>
     /// </summary>
     public class ArsenalWallCoversRegistryTests
     {
         private const string Wall = "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab";
+        private const string GameplayPreset = "Assets/Data/Weapons/CurrentGameplayArsenal.asset";
         private static readonly string[] MapRoots = { "Assets/Prefabs", "Assets/Scenes" };
 
         [Test]
-        public void Стена_вмещает_весь_реестр()
+        public void Общая_станция_соответствует_игровому_пресету()
         {
             WeaponRegistry registry = AssetDatabase.LoadAssetAtPath<WeaponRegistry>("Assets/Data/Weapons/Resources/WeaponRegistry.asset");
             Assert.IsNotNull(registry, "Нет WeaponRegistry.");
+            var preset = AssetDatabase.LoadAssetAtPath<ArsenalPreset>(GameplayPreset);
+            Assert.IsNotNull(preset, "Нет исходного игрового пресета.");
+            Assert.IsNotEmpty(preset.Entries, "Пустой пресет не является успешной проверкой станции.");
+            Assert.That(preset.Entries.All(e => e.Weapon != null && registry.Weapons.Contains(e.Weapon)), Is.True,
+                "Игровой пресет содержит пустое оружие или запись вне каталога.");
 
             var onWall = new HashSet<WeaponInfo>();
             var wall = AssetDatabase.LoadAssetAtPath<GameObject>(Wall);
+            Assert.IsNotNull(wall, "Нет общей игровой станции.");
             foreach (FirearmSlotController slot in wall.GetComponentsInChildren<FirearmSlotController>(true))
             {
                 var info = new SerializedObject(slot).FindProperty("_weaponInfo").objectReferenceValue as WeaponInfo;
                 if (info != null) onWall.Add(info);
             }
 
-            var missing = registry.Weapons.Where(w => w != null && !onWall.Contains(w)).Select(w => w.name).ToList();
-            var extra = onWall.Where(w => !registry.Weapons.Contains(w)).Select(w => w.name).ToList();
+            var expected = new HashSet<WeaponInfo>(preset.Entries.Select(e => e.Weapon));
+            Assert.That(expected.Count, Is.EqualTo(preset.Entries.Count), "В игровом пресете повторяется оружие.");
+            var missing = expected.Where(w => !onWall.Contains(w)).Select(w => w.name).ToList();
+            var extra = onWall.Where(w => !expected.Contains(w)).Select(w => w.name).ToList();
 
-            Assert.IsEmpty(missing, "Стволов реестра нет на стене — места не хватает, убери слабейшее из реестра: " + string.Join(", ", missing));
-            Assert.IsEmpty(extra, "На стене стволы вне реестра: " + string.Join(", ", extra));
+            Assert.IsEmpty(missing, "На общей станции отсутствуют позиции игрового пресета: " + string.Join(", ", missing));
+            Assert.IsEmpty(extra, "На общей станции позиции вне игрового пресета: " + string.Join(", ", extra));
         }
 
         [Test]

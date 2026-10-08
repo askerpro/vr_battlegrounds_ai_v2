@@ -130,6 +130,136 @@ namespace VrBattlegrounds.Tests.Prefabs
         //  Карманы
         // ══════════════════════════════════════════════════════════════════
 
+        [Test]
+        public void Генератор_кармана_берёт_новые_теги_магазинов_из_реестра()
+        {
+            Undo.IncrementCurrentGroup();
+            int undoGroup = Undo.GetCurrentGroup();
+            Scene scene = EditorSceneManager.NewPreviewScene();
+            var registry = ScriptableObject.CreateInstance<WeaponRegistry>();
+            var firstWeapon = ScriptableObject.CreateInstance<WeaponInfo>();
+            var secondWeapon = ScriptableObject.CreateInstance<WeaponInfo>();
+            try
+            {
+                GameObject first = new GameObject("Magazine Z");
+                SceneManager.MoveGameObjectToScene(first, scene);
+                first.AddComponent<UxrGrabbableObject>().Tag = "MagRegressionZ";
+                GameObject second = new GameObject("Magazine A");
+                SceneManager.MoveGameObjectToScene(second, scene);
+                second.AddComponent<UxrGrabbableObject>().Tag = "MagRegressionA";
+                SetTemporaryMagazine(firstWeapon, first);
+                SetTemporaryMagazine(secondWeapon, second);
+                SetTemporaryRegistry(registry, firstWeapon, secondWeapon);
+
+                System.Reflection.MethodInfo source = PocketSetupMethod("GetMagazineCompatibleTags", true);
+                var tags = (IReadOnlyList<string>)source.Invoke(null, new object[] { registry });
+                Assert.That(tags, Does.Contain("MagRegressionZ").And.Contain("MagRegressionA"));
+                Assert.That(tags, Does.Contain("Cartridge:Herrington").And.Contain("Cartridge:FabarmSDASS"),
+                    "Авторские теги одиночных патронов не должны исчезать при появлении нового магазина.");
+                Assert.That(tags, Is.EqualTo(tags.Distinct().OrderBy(t => t, System.StringComparer.Ordinal).ToArray()));
+                Assert.Throws<System.NotSupportedException>(() => ((ICollection<string>)tags).Add("InjectedTag"));
+                SetTemporaryRegistry(registry, secondWeapon, firstWeapon);
+                Assert.That((IReadOnlyList<string>)source.Invoke(null, new object[] { registry }), Is.EqualTo(tags),
+                    "Порядок каталога не должен менять сериализованные compatible tags.");
+
+                // Проверяем сам путь записи, а не только расчёт: authored tags кармана
+                // должны переживать upsert с новым тегом из каталога.
+                GameObject pocket = new GameObject("Temporary MagazinePocket");
+                SceneManager.MoveGameObjectToScene(pocket, scene);
+                var anchor = pocket.AddComponent<UxrGrabbableObjectAnchor>();
+                var authored = new SerializedObject(anchor);
+                SerializedProperty compatible = authored.FindProperty("_compatibleTags");
+                compatible.arraySize = 1;
+                compatible.GetArrayElementAtIndex(0).stringValue = "Cartridge:AuthoredRegression";
+                authored.ApplyModifiedPropertiesWithoutUndo();
+                System.Reflection.MethodInfo write = PocketSetupMethod("EnsureAnchorTags", false);
+                write.Invoke(null, new object[] { pocket, tags.ToArray(), 0.1f, true });
+                string[] once = ReadCompatibleTags(anchor);
+                Assert.That(once, Does.Contain("Cartridge:AuthoredRegression").And.Contain("MagRegressionZ"));
+                write.Invoke(null, new object[] { pocket, tags.ToArray(), 0.1f, true });
+                Assert.That(ReadCompatibleTags(anchor), Is.EqualTo(once), "Повторный upsert должен быть идемпотентным.");
+            }
+            finally
+            {
+                // Запись Editor helper пользуется Undo. Убираем только записи стенда,
+                // чтобы Test Runner не оставлял их в пользовательской истории.
+                Undo.RevertAllDownToGroup(undoGroup);
+                Object.DestroyImmediate(firstWeapon);
+                Object.DestroyImmediate(secondWeapon);
+                Object.DestroyImmediate(registry);
+                EditorSceneManager.ClosePreviewScene(scene);
+            }
+        }
+
+        [Test]
+        public void Генератор_кармана_отказывает_при_неполном_каталоге()
+        {
+            Scene scene = EditorSceneManager.NewPreviewScene();
+            var registry = ScriptableObject.CreateInstance<WeaponRegistry>();
+            var weapon = ScriptableObject.CreateInstance<WeaponInfo>();
+            try
+            {
+                System.Reflection.MethodInfo source = PocketSetupMethod("GetMagazineCompatibleTags", true);
+                var absent = Assert.Throws<System.Reflection.TargetInvocationException>(() => source.Invoke(null, new object[] { null }));
+                Assert.That(absent.InnerException, Is.TypeOf<System.ArgumentNullException>());
+                var empty = Assert.Throws<System.Reflection.TargetInvocationException>(() => source.Invoke(null, new object[] { registry }));
+                Assert.That(empty.InnerException, Is.TypeOf<System.InvalidOperationException>());
+
+                GameObject magazine = new GameObject("Broken Magazine");
+                SceneManager.MoveGameObjectToScene(magazine, scene);
+                SetTemporaryMagazine(weapon, magazine);
+                SetTemporaryRegistry(registry, weapon);
+                var broken = Assert.Throws<System.Reflection.TargetInvocationException>(() => source.Invoke(null, new object[] { registry }));
+                Assert.That(broken.InnerException, Is.TypeOf<System.InvalidOperationException>());
+                magazine.AddComponent<UxrGrabbableObject>().Tag = " ";
+                var untagged = Assert.Throws<System.Reflection.TargetInvocationException>(() => source.Invoke(null, new object[] { registry }));
+                Assert.That(untagged.InnerException, Is.TypeOf<System.InvalidOperationException>());
+            }
+            finally
+            {
+                Object.DestroyImmediate(weapon);
+                Object.DestroyImmediate(registry);
+                EditorSceneManager.ClosePreviewScene(scene);
+            }
+        }
+
+        // Editor-сборка недоступна по asmdef-ссылке: reflection сохраняет настоящую
+        // проверку генератора, не копируя его алгоритм в тестовую сборку.
+        private static System.Reflection.MethodInfo PocketSetupMethod(string name, bool isPublic)
+        {
+            System.Type type = System.AppDomain.CurrentDomain.GetAssemblies()
+                .Select(a => a.GetType("VrBattlegrounds.Editor.Avatars.AvatarPocketSetup"))
+                .FirstOrDefault(t => t != null);
+            Assert.That(type, Is.Not.Null, "Не найдена Editor-сборка AvatarPocketSetup.");
+            var method = type.GetMethod(name, System.Reflection.BindingFlags.Static |
+                (isPublic ? System.Reflection.BindingFlags.Public : System.Reflection.BindingFlags.NonPublic));
+            Assert.That(method, Is.Not.Null, $"AvatarPocketSetup.{name} не найден.");
+            return method;
+        }
+
+        private static void SetTemporaryMagazine(WeaponInfo weapon, GameObject magazine)
+        {
+            var so = new SerializedObject(weapon);
+            so.FindProperty("_weaponPrefab").objectReferenceValue = magazine;
+            so.FindProperty("_magazinePrefab").objectReferenceValue = magazine;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetTemporaryRegistry(WeaponRegistry registry, params WeaponInfo[] weapons)
+        {
+            var so = new SerializedObject(registry);
+            SerializedProperty list = so.FindProperty("_weapons");
+            list.arraySize = weapons.Length;
+            for (int i = 0; i < weapons.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = weapons[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static string[] ReadCompatibleTags(UxrGrabbableObjectAnchor anchor)
+        {
+            SerializedProperty tags = new SerializedObject(anchor).FindProperty("_compatibleTags");
+            return Enumerable.Range(0, tags.arraySize).Select(i => tags.GetArrayElementAtIndex(i).stringValue).ToArray();
+        }
+
         [TestCaseSource(nameof(RegisteredAvatars))]
         public void Часы_HUD_едут_вместе_с_предплечьем(string path)
         {
@@ -696,123 +826,57 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         /// <summary>
-        /// У каждого аватара есть humanoid-риг с ногами, Legs Animator (FImpossible) и мост
-        /// <c>LegsAnimatorUxrBridge</c> на объекте рига с <c>Animator</c>, а все ссылки
-        /// ведут в свой риг. Без него ботинки проваливаются в пол при приседании.
-        /// Настройки копируются с MEF, и ссылки на кости при копировании не
-        /// переносятся (скелеты названы по-разному) — пустая кость ломает IK молча.
-        /// Сборки плагина и моста тестам недоступны — проверка по имени типа.
-        /// <para>
-        /// Исключения для аватара без ног больше нет: у киборга ноги робота Kyle
-        /// (<c>Tools/VR Battlegrounds/Avatars/Build Cyborg Legs</c>). Аватар без ног — дефект,
-        /// а не вариант: хитбоксов ног нет, труп не собрать, в зеркале тело висит в воздухе.
-        /// </para>
+        /// Структурный контракт native UXR: humanoid-риг, обе ноги своего аватара,
+        /// отдельная humanoid-копия для клипов и включённый контроллер ног.
+        /// Legacy LegsAnimator/bridge заменены native UXR (Docs/avatar-animation.md).
+        /// Алгоритмы приседа и сидения здесь не проверяются: их пользовательская
+        /// приёмка остаётся отдельной задачей.
         /// </summary>
         [TestCaseSource(nameof(RegisteredAvatars))]
-        public void Legs_Animator_настроен_на_своих_костях(string path)
+        public void Native_UXR_ноги_настроены_на_своих_костях(string path)
         {
             UxrAvatar avatar = LoadAvatar(path);
             Animator animator = avatar.GetComponentsInChildren<Animator>(true)
                                       .FirstOrDefault(a => a.avatar != null && a.avatar.isHuman);
             Assert.IsNotNull(animator, $"{avatar.name}: нет humanoid-рига (Animator с человеческим Avatar) — ног нет");
 
-            Component legs   = FindByTypeName(animator.gameObject, "LegsAnimator");
-            Component bridge = FindByTypeName(animator.gameObject, "LegsAnimatorUxrBridge");
-            Assert.IsNotNull(legs,   $"{avatar.name}: нет LegsAnimator на '{animator.name}'");
-            Assert.IsNotNull(bridge, $"{avatar.name}: нет LegsAnimatorUxrBridge на '{animator.name}'");
+            UxrStandardAvatarController controller = avatar.GetComponent<UxrStandardAvatarController>();
+            Assert.That(controller, Is.Not.Null, $"{avatar.name}: нет UxrStandardAvatarController");
+            Assert.That(controller.enabled && controller.UseNativeLegIK, Is.True,
+                $"{avatar.name}: native ноги выключены в префабе");
+            Assert.That(avatar.AvatarRigType, Is.EqualTo(UxrAvatarRigType.HalfOrFullBody),
+                $"{avatar.name}: native ноги требуют риг HalfOrFullBody");
+            Assert.That(controller.Legs, Is.Not.Null, $"{avatar.name}: нет настроек native ног");
+
+            GameObject copy = controller.Legs.locomotionRig;
+            Assert.That(copy, Is.Not.Null, $"{avatar.name}: не назначена отдельная копия рига для клипов");
+            Assert.That(EditorUtility.IsPersistent(copy), Is.True, $"{avatar.name}: копия рига должна быть ассетом");
+            // UxrAnimatedLegs берёт _rig.GetComponent<Animator>(), без поиска в детях.
+            Animator copyAnimator = copy.GetComponent<Animator>();
+            Assert.That(copyAnimator, Is.Not.Null, $"{avatar.name}: на корне копии рига нет Animator");
+            Assert.That(copyAnimator.avatar != null && copyAnimator.avatar.isHuman, Is.True,
+                $"{avatar.name}: копия рига не humanoid");
+            Assert.That(controller.Legs.locomotionController != null || copyAnimator.runtimeAnimatorController != null,
+                Is.True, $"{avatar.name}: у копии рига не назначен контроллер клипов");
 
             var problems = new List<string>();
-            // Оба включены с самого старта: плагин запоминает опорную позу таза при инициализации,
-            // и она должна быть позой модели, а не позой, в которую UltimateXR уже поставил тело
-            // по камере. Включённый позже (мостом или галочкой) он держал таз на +14 см.
-            if (!((Behaviour)legs).enabled)
-                problems.Add("LegsAnimator выключен в префабе — инициализируется поздно, в позе IK, и поднимает таз");
-            if (!((Behaviour)bridge).enabled)
-                problems.Add("LegsAnimatorUxrBridge выключен — корень ног не привязан к аватару");
-
-            // Позицию таза Legs Animator возвращает в начале кадра только в режиме FixedCalibrate
-            // (LegsA.Hips.Reference.PreCalibrate); остальные режимы ждут, что её перезапишет
-            // анимация. Контроллера у рига нет — поправка высоты таза копится кадр за кадром,
-            // таз уезжает, а UltimateXR, держа голову у камеры, вдавливает шею в плечи.
-            const int fixedCalibrate = 2;
-            int calibrate = new SerializedObject(legs).FindProperty("Calibrate").intValue;
-            if (animator.runtimeAnimatorController == null && calibrate != fixedCalibrate)
-                problems.Add($"Calibrate = {calibrate}, а у рига нет контроллера анимации — нужен FixedCalibrate ({fixedCalibrate})");
-
-            var so = new SerializedObject(legs);
-            if (so.FindProperty("Mecanim").objectReferenceValue != animator)
-                problems.Add("Mecanim не свой Animator");
-
-            // Таз плагина — таз скелета UltimateXR (у MEF он же humanoid-Hips). Не humanoid-Hips вообще:
-            // у киборга кости таза и позвоночника — соседи под CyborgRig, humanoid-Hips там — сам
-            // CyborgRig, а его UltimateXR при старте делает корнем тела и переносит под Dummy Forward;
-            // мост вернул бы ему локальную позу из-под старого родителя — тело улетело бы.
-            Transform rigHips = avatar.AvatarRig.Hips;
-            var hips = so.FindProperty("Hips").objectReferenceValue as Transform;
-            if (hips == null || hips != rigHips)
-                problems.Add($"Hips = '{(hips != null ? hips.name : "null")}', ожидается таз UxrAvatarRig '{(rigHips != null ? rigHips.name : "null")}'");
-
-            SerializedProperty legList = so.FindProperty("Legs");
-            for (int i = 0; i < legList.arraySize; i++)
+            foreach (Behaviour legacy in PrefabAuthoredActivity.ActiveLegacyLegWriters(avatar.gameObject))
+                problems.Add($"активен legacy {legacy.GetType().Name} на '{legacy.name}' одновременно с native ногами");
+            UxrAvatarLeg[] rigLegs = { avatar.AvatarRig.LeftLeg, avatar.AvatarRig.RightLeg };
+            for (int i = 0; i < rigLegs.Length; i++)
             {
-                var start = legList.GetArrayElementAtIndex(i).FindPropertyRelative("BoneStart").objectReferenceValue as Transform;
-                if (hips != null && start != null && !start.IsChildOf(hips))
-                    problems.Add($"Legs[{i}].BoneStart = '{start.name}' не под тазом '{hips.name}' — сдвиг таза не двигает ногу");
-            }
-            if (legList.arraySize != 2)
-                problems.Add($"ног {legList.arraySize}, ожидается 2");
-
-            for (int i = 0; i < legList.arraySize; i++)
-            {
-                foreach (string bone in new[] { "BoneStart", "BoneMid", "BoneEnd" })
+                Transform[] bones = { rigLegs[i].UpperLeg, rigLegs[i].LowerLeg, rigLegs[i].Foot };
+                string[] names = { "UpperLeg", "LowerLeg", "Foot" };
+                for (int j = 0; j < bones.Length; j++)
                 {
-                    var t = legList.GetArrayElementAtIndex(i).FindPropertyRelative(bone).objectReferenceValue as Transform;
-                    if (t == null)
-                        problems.Add($"Legs[{i}].{bone} пуст");
-                    else if (!t.IsChildOf(animator.transform))
-                        problems.Add($"Legs[{i}].{bone} = '{t.name}' не из своего рига");
+                    if (bones[j] == null)
+                        problems.Add($"UxrAvatarRig.Leg[{i}].{names[j]} пуст");
+                    else if (!bones[j].IsChildOf(animator.transform))
+                        problems.Add($"UxrAvatarRig.Leg[{i}].{names[j]} = '{bones[j].name}' не из своего humanoid-рига");
                 }
-            }
-
-            // Ноги Legs Animator — те же кости, что ноги скелета UltimateXR: по UxrAvatarRig строятся
-            // хитбоксы ног (HitboxBuilder), по humanoid-разметке — труп. Разошлись — пуля бьёт в
-            // капсулу, которая стоит не там, где нарисована нога.
-            UxrAvatarRig rig = avatar.AvatarRig;
-            UxrAvatarLeg[] rigLegs = { rig.LeftLeg, rig.RightLeg };
-            for (int i = 0; i < Mathf.Min(2, legList.arraySize); i++)
-            {
-                SerializedProperty leg = legList.GetArrayElementAtIndex(i);
-                Transform[] plugin =
-                {
-                    leg.FindPropertyRelative("BoneStart").objectReferenceValue as Transform,
-                    leg.FindPropertyRelative("BoneMid").objectReferenceValue as Transform,
-                    leg.FindPropertyRelative("BoneEnd").objectReferenceValue as Transform,
-                };
-                Transform[] uxr = { rigLegs[i].UpperLeg, rigLegs[i].LowerLeg, rigLegs[i].Foot };
-                if (!plugin.SequenceEqual(uxr))
-                    problems.Add($"Legs[{i}] ({string.Join("/", plugin.Select(b => b != null ? b.name : "null"))}) ≠ " +
-                                 $"ноге UxrAvatarRig ({string.Join("/", uxr.Select(b => b != null ? b.name : "null"))})");
-            }
-
-            // Высота лодыжки над подошвой — AnkleToHeel у каждой ноги (плагин ставит на пол пятку,
-            // а не лодыжку). Нулевой — ботинки в полу, и прежде это лечили подъёмом пола в мосте,
-            // а плагин поднимал под «пол» всё тело: таз +15 см, голова в плечах.
-            for (int i = 0; i < legList.arraySize; i++)
-            {
-                Vector3 heel = legList.GetArrayElementAtIndex(i).FindPropertyRelative("AnkleToHeel").vector3Value;
-                if (heel.magnitude < 0.03f)
-                    problems.Add($"Legs[{i}].AnkleToHeel = {heel} — не вычислен (Leg.RefreshLegAnkleToHeelAndFeet в позе префаба)");
-            }
-
-            float floorLift = new SerializedObject(bridge).FindProperty("footHeightOffset").floatValue;
-            if (Mathf.Abs(floorLift) > 0.02f)
-                problems.Add($"LegsAnimatorUxrBridge.footHeightOffset = {floorLift} — плагин поднимет под «пол» всё тело; высоту лодыжки задаёт AnkleToHeel");
-
-            SerializedProperty modules = so.FindProperty("CustomModules");
-            for (int i = 0; i < modules.arraySize; i++)
-            {
-                if (modules.GetArrayElementAtIndex(i).FindPropertyRelative("ModuleReference").objectReferenceValue == null)
-                    problems.Add($"CustomModules[{i}] без модуля");
+                if (bones.All(b => b != null) &&
+                    (!bones[1].IsChildOf(bones[0]) || !bones[2].IsChildOf(bones[1])))
+                    problems.Add($"UxrAvatarRig.Leg[{i}]: бедро, голень и стопа не образуют цепочку");
             }
 
             Assert.IsEmpty(problems, $"{avatar.name}:\n{string.Join("\n", problems)}");
@@ -871,11 +935,6 @@ namespace VrBattlegrounds.Tests.Prefabs
             if (left == null || right == null) return false;
             eyesLocal = avatar.transform.InverseTransformPoint((left.position + right.position) * 0.5f);
             return true;
-        }
-
-        private static Component FindByTypeName(GameObject go, string typeName)
-        {
-            return go.GetComponents<Component>().FirstOrDefault(c => c != null && c.GetType().Name == typeName);
         }
 
         private static UxrGrabbableObjectAnchor FindAnchor(UxrAvatar avatar, string name)

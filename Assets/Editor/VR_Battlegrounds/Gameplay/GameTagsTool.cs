@@ -31,6 +31,7 @@ namespace VrBattlegrounds.Editor
             public readonly List<string> SkippedScenes  = new List<string>();
             public readonly List<string> Conflicts      = new List<string>();
             public int ChangedObjects;
+            internal readonly List<string> SavedPrefabs = new List<string>();
 
             public override string ToString() =>
                 $"Теги заведены: {Join(AddedTags)}\n" +
@@ -46,7 +47,7 @@ namespace VrBattlegrounds.Editor
         private static void Menu()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-            Debug.Log("[GameTagsTool]\n" + Run());
+            GameLog.Debug.Info("[GameTagsTool]\n" + Run());
         }
 
         public static Result Run()
@@ -63,6 +64,12 @@ namespace VrBattlegrounds.Editor
             ApplyToPrefabs(result);
             ApplyToScenes(result);
             AssetDatabase.SaveAssets();
+            // SaveAsPrefabAsset сохраняет сценовые служебные значения. Завершаем
+            // запись существующими владельцами ID: UXR может сохранить префаб,
+            // поэтому канонический Mirror assetId записывается последним.
+            foreach (string path in result.SavedPrefabs)
+                EditorTools.VersionControl.UxrUniqueIdPersister.Normalize(path);
+            EditorTools.VersionControl.NetworkAssetIdNormalizer.Normalize(result.SavedPrefabs, false);
             return result;
         }
 
@@ -113,6 +120,7 @@ namespace VrBattlegrounds.Editor
                     }
 
                     result.ChangedObjects += changed;
+                    result.SavedPrefabs.Add(path);
                     result.ChangedAssets.Add($"{path} ({changed})");
                 }
                 finally

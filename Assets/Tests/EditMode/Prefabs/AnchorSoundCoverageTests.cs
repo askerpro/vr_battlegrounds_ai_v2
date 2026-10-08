@@ -59,8 +59,11 @@ namespace VrBattlegrounds.Tests.Prefabs
                 try
                 {
                     foreach (GameObject root in scene.GetRootGameObjects())
-                    foreach (UxrGrabbableObjectAnchor anchor in root.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
+                    // Выключенные музейные ветки SDK недоступны игроку. Все состояния
+                    // проектных префабов остаются под отдельной проверкой выше.
+                    foreach (UxrGrabbableObjectAnchor anchor in root.GetComponentsInChildren<UxrGrabbableObjectAnchor>(false))
                     {
+                        if (!anchor.isActiveAndEnabled) continue;
                         checks++;
                         Check(anchor, $"{buildScene.path} :: {PathOf(anchor.transform, null)}", failures);
                     }

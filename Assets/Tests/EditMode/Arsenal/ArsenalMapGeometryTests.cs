@@ -13,7 +13,8 @@ namespace VrBattlegrounds.Tests.Arsenal
     {
         public static IEnumerable<TestCaseData> Scenes()
         {
-            yield return new TestCaseData("Assets/Scenes/Lobby.unity", 4);
+            // Lobby — две противоположные станции стрельбища; боевые карты сохраняют восемь.
+            yield return new TestCaseData("Assets/Scenes/Lobby.unity", 2);
             yield return new TestCaseData("Assets/Scenes/Tools/CommonArsenalReview.unity", 2);
             foreach (string guid in AssetDatabase.FindAssets("t:Scene", new[] { "Assets/Scenes/Maps" }))
                 yield return new TestCaseData(AssetDatabase.GUIDToAssetPath(guid), 8);

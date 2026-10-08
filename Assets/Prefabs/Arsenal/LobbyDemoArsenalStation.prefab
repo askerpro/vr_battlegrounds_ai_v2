@@ -1231,7 +1231,7 @@ GameObject:
   - component: {fileID: 3088517764329448207}
   m_Layer: 0
   m_Name: RearPlate
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3304,7 +3304,7 @@ GameObject:
   - component: {fileID: 1670746515142170498}
   m_Layer: 0
   m_Name: FloorFoot
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -8569,7 +8569,7 @@ GameObject:
   - component: {fileID: 6577151331790377730}
   m_Layer: 0
   m_Name: SlimTopTrim
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -9699,7 +9699,7 @@ GameObject:
   - component: {fileID: 8662957534400717839}
   m_Layer: 0
   m_Name: RightUpright
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -11445,7 +11445,7 @@ GameObject:
   - component: {fileID: 8005530108400484873}
   m_Layer: 0
   m_Name: EquipmentTray
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -12768,7 +12768,7 @@ GameObject:
   - component: {fileID: 7748927116800483396}
   m_Layer: 0
   m_Name: BottomCrossmember
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -16304,7 +16304,7 @@ GameObject:
   - component: {fileID: 460065005318958860}
   m_Layer: 0
   m_Name: FloorFoot
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -16893,7 +16893,7 @@ GameObject:
   - component: {fileID: 2683612909729923368}
   m_Layer: 0
   m_Name: LeftUpright
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -17180,7 +17180,7 @@ GameObject:
   - component: {fileID: 7342526160093630253}
   m_Layer: 0
   m_Name: TrayFrontLip
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

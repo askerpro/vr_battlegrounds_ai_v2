@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UltimateXR.Manipulation;
 using UnityEditor;
@@ -76,6 +77,32 @@ namespace VrBattlegrounds.Tests.Prefabs
                     if (anchor == null) continue;
 
                     checks++;
+                    var fixedStores = info.WeaponPrefab.GetComponentsInChildren<UltimateXR.Mechanics.Weapons.UxrFirearmMag>(true)
+                        .Where(store => store.IsFixedAmmoStore).ToArray();
+                    bool fixedLoading = info.ReadinessProfile != null &&
+                        info.ReadinessProfile.AmmoCapability == WeaponAmmoCapability.FixedStoreChamber;
+                    if (fixedLoading || fixedStores.Length > 0)
+                    {
+                        // Поштучный боезапас вставляется в CartridgeIntake, а не в скрытый
+                        // ammunition anchor встроенного запаса. Оба контракта проверяем явно.
+                        var cartridge = info.MagazinePrefab.GetComponent<Cartridge>();
+                        var intake = info.WeaponPrefab.GetComponent<CartridgeIntake>();
+                        if (!fixedLoading || fixedStores.Length != 1 || fixedStores[0].FixedStoreWeapon != firearm ||
+                            fixedStores[0].FixedStoreTrigger != i || !fixedStores[0].transform.IsChildOf(anchor.transform) ||
+                            fixedStores[0].Capacity != info.MagazineSize)
+                            failures.Add($"{info.name}: профиль, скрытый встроенный запас и ammunition anchor не согласованы.");
+                        if (cartridge == null || cartridge.Unit == null || cartridge.Grabbable != magGrabbable ||
+                            info.MagazinePrefab.GetComponent<UltimateXR.Mechanics.Weapons.UxrFirearmMag>() != null ||
+                            cartridge.MagazineEquivalent != info.MagazineSize)
+                            failures.Add($"{info.name}: выдаваемый боезапас не одиночный патрон согласованной ёмкости.");
+                        if (intake == null || intake.Intake == null || intake.Intake == anchor ||
+                            !intake.Intake.transform.IsChildOf(info.WeaponPrefab.transform) ||
+                            new SerializedObject(intake).FindProperty("_triggerIndex").intValue != i ||
+                            cartridge == null || string.IsNullOrEmpty(intake.AmmoType) || intake.AmmoType != cartridge.AmmoType ||
+                            !intake.Intake.IsCompatibleObjectTag(magGrabbable.Tag))
+                            failures.Add($"{info.name}: приёмник патрона не согласован с типом, тегом или спуском оружия.");
+                        continue;
+                    }
                     var tags = new SerializedObject(anchor).FindProperty("_compatibleTags");
                     var list = new List<string>();
                     for (int t = 0; t < tags.arraySize; t++) list.Add(tags.GetArrayElementAtIndex(t).stringValue);

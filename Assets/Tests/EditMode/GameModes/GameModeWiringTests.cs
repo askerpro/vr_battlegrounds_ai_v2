@@ -12,6 +12,8 @@ using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Interaction;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Maps;
+using VrBattlegrounds.Maps.Runtime;
+using VrBattlegrounds.Network;
 using VrBattlegrounds.UI.Menu;
 
 namespace VrBattlegrounds.Tests.Modes
@@ -254,16 +256,29 @@ namespace VrBattlegrounds.Tests.Modes
             Scene scene = EditorSceneManager.OpenPreviewScene(LobbyScenePath);
             try
             {
-                Assert.AreEqual(0, InScene<MapReferee>(scene).Count,
-                    "В лобби сценовый MapReferee — неуправляемый путь. Судью спавнит MapBootstrap.");
-                Assert.AreEqual(1, InScene<VrBattlegrounds.Maps.Runtime.MapBootstrap>(scene).Count,
-                    "В лобби должен быть ровно один MapBootstrap (на MapRoot).");
-
-                var catalog = AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Maps.Runtime.MapRuntimeCatalog>("Assets/Data/Maps/MapRuntimeCatalog.asset");
-                Assert.IsNotNull(catalog, "Нет центрального каталога запуска карт.");
-                Assert.IsNotNull(catalog.RefereePrefab, "В каталоге нет префаба судьи.");
+                Assert.IsEmpty(InScene<MapReferee>(scene), "Служебный MapReferee спавнит MapBootstrap; авторская копия создаёт второго владельца.");
+                List<MapRoot> roots = InScene<MapRoot>(scene);
+                Assert.That(roots.Count, Is.EqualTo(1), "В лобби нужен один авторский вход MapRoot.");
+                Assert.IsTrue(roots[0].gameObject.activeInHierarchy, "MapRoot выключен.");
+                Assert.AreSame(Maps().lobby, roots[0].Map, "MapRoot не связан с картой Lobby реестра.");
+                Assert.That(InScene<MapBootstrap>(scene).Count, Is.EqualTo(1), "Нужен один MapBootstrap.");
+                Assert.IsNotNull(roots[0].GetComponent<MapBootstrap>(), "MapBootstrap должен принадлежать MapRoot.");
+                var catalog = AssetDatabase.LoadAssetAtPath<MapRuntimeCatalog>("Assets/Data/Maps/MapRuntimeCatalog.asset");
+                Assert.IsNotNull(catalog, "Нет каталога служб карты.");
+                Assert.AreSame(Maps(), catalog.Maps, "Bootstrap использует другой реестр карт.");
+                Assert.IsNotNull(catalog.RefereePrefab, "Не задан префаб MapReferee для спавна.");
+                Assert.IsTrue(catalog.RefereePrefab.gameObject.activeSelf, "Префаб MapReferee выключен.");
+                Assert.IsNotNull(catalog.RefereePrefab.GetComponent<NetworkIdentity>(), "Службе нужна сетевая идентичность.");
                 Assert.AreEqual(0UL, catalog.RefereePrefab.GetComponent<NetworkIdentity>().sceneId,
                     "Префаб судьи в каталоге — сценовый объект, а не спавнящийся сетевой префаб.");
+                var managers = AssetDatabase.LoadAssetAtPath<GameObject>(ManagersPrefabPath);
+                Assert.IsNotNull(managers, "Нет общего префаба менеджеров.");
+                var network = managers.GetComponentInChildren<GameNetworkManager>(true);
+                Assert.IsNotNull(network, "Нет GameNetworkManager.");
+                var catalogReference = new SerializedObject(network).FindProperty("_mapRuntimeCatalog");
+                Assert.IsNotNull(catalogReference, "Не найдено авторское поле каталога GameNetworkManager.");
+                Assert.AreSame(catalog, catalogReference.objectReferenceValue, "GameNetworkManager должен передавать bootstrap проверенный каталог служб.");
+                Assert.Contains(catalog.RefereePrefab.gameObject, network.spawnPrefabs, "Служба MapReferee не зарегистрирована для сетевого спавна.");
 
                 Assert.IsFalse(scene.GetRootGameObjects().Any(r => r.name == "LobbyFreePlay"),
                     "В лобби остался объект LobbyFreePlay — правила лобби теперь на префабе разминки.");
@@ -289,23 +304,41 @@ namespace VrBattlegrounds.Tests.Modes
                 List<ArsenalWallController> walls = InScene<ArsenalWallController>(scene);
                 Assert.IsNotEmpty(walls, "Контроль: тумба арсенала в лобби есть.");
 
-                Bounds tumba = new Bounds(walls[0].transform.position, Vector3.zero);
-                foreach (ArsenalWallController wall in walls)
-                    foreach (Renderer r in wall.GetComponentsInChildren<Renderer>(true))
-                        tumba.Encapsulate(r.bounds);
-                tumba.Expand(new Vector3(1f, 0f, 1f)); // метр на руки и корпус
-
-                // Точка спавна зоны (AvatarSpawnPointResolver): своя или центр зоны. Зона лобби — на всю
-                // арену, её центр — в тумбе, поэтому точка задана отдельно.
                 Vector3 spawn = zones[0].SpawnPoint.position;
-                bool inside = Mathf.Abs(spawn.x - tumba.center.x) <= tumba.extents.x &&
-                              Mathf.Abs(spawn.z - tumba.center.z) <= tumba.extents.z;
-                Assert.IsFalse(inside, $"Точка спавна {spawn} внутри тумбы арсенала {tumba}.");
+                foreach (ArsenalWallController wall in walls)
+                {
+                    var renderers = wall.GetComponentsInChildren<Renderer>(true);
+                    Assert.IsNotEmpty(renderers, $"{wall.name}: у станции нет проверяемой геометрии.");
+                    Bounds footprint = renderers[0].bounds;
+                    foreach (Renderer renderer in renderers.Skip(1)) footprint.Encapsulate(renderer.bounds);
+                    Assert.IsFalse(OverlapsStationFootprint(spawn, footprint),
+                        $"Точка спавна {spawn} внутри станции {wall.name}: {footprint}.");
+                }
             }
             finally
             {
                 EditorSceneManager.ClosePreviewScene(scene);
             }
+        }
+
+        private static bool OverlapsStationFootprint(Vector3 spawn, Bounds footprint) =>
+            Mathf.Abs(spawn.x - footprint.center.x) <= footprint.extents.x + .5f &&
+            Mathf.Abs(spawn.z - footprint.center.z) <= footprint.extents.z + .5f;
+
+        [TestCase(0f, false)]
+        [TestCase(-4f, true)]
+        [TestCase(4f, true)]
+        [TestCase(-5.4f, true)]
+        [TestCase(-6f, false)]
+        public void Разнесённые_станции_не_превращают_проход_в_препятствие(float spawnX, bool expected)
+        {
+            // Общий AABB двух станций ошибочно перекрывал свободный проход между ними.
+            var stations = new[]
+            {
+                new Bounds(new Vector3(-4f, 1f, 0f), new Vector3(2f, 2f, 2f)),
+                new Bounds(new Vector3(4f, 1f, 0f), new Vector3(2f, 2f, 2f))
+            };
+            Assert.That(stations.Any(b => OverlapsStationFootprint(new Vector3(spawnX, 0f, 0f), b)), Is.EqualTo(expected));
         }
     }
 }

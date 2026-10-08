@@ -36,6 +36,21 @@ namespace VrBattlegrounds.Tests.Prefabs
                 var clip = new SerializedObject(weapon).FindProperty("_triggers").GetArrayElementAtIndex(0)
                                                        .FindPropertyRelative("_shotAudio._clip").objectReferenceValue as AudioClip;
                 if (clip == null) { failures.Add($"{info.WeaponPrefab.name}: нет звука выстрела"); continue; }
+                // Опубликованная копия для проверки прицела сохраняет голос своего
+                // исходного оружия; это не новый тип ствола. Произвольный суффикс
+                // не даёт исключения: проверяем точные ассеты и происхождение.
+                WeaponInfo donor = PublishedReviewDonor(registry, info);
+                if (donor != null)
+                {
+                    var donorWeapon = donor.WeaponPrefab.GetComponent<UxrFirearmWeapon>();
+                    Assert.IsNotNull(donorWeapon, $"{donor.name}: нет исходного firearm");
+                    var donorClip = new SerializedObject(donorWeapon).FindProperty("_triggers")
+                        .GetArrayElementAtIndex(0).FindPropertyRelative("_shotAudio._clip")
+                        .objectReferenceValue as AudioClip;
+                    Assert.IsNotNull(donorClip, $"{donor.name}: нет исходного звука");
+                    Assert.AreSame(donorClip, clip, $"{info.name}: review-копия потеряла исходный голос");
+                    continue;
+                }
                 if (!byClip.TryGetValue(clip, out List<string> owners)) byClip[clip] = owners = new List<string>();
                 owners.Add(info.WeaponPrefab.name);
             }
@@ -43,6 +58,23 @@ namespace VrBattlegrounds.Tests.Prefabs
             failures.AddRange(byClip.Where(p => p.Value.Count > 1)
                                     .Select(p => $"{string.Join(", ", p.Value)} — один выстрел {AssetDatabase.GetAssetPath(p.Key)}"));
             Assert.IsEmpty(failures, "Стволы звучат одинаково:\n" + string.Join("\n", failures));
+        }
+
+        private static WeaponInfo PublishedReviewDonor(WeaponRegistry registry, WeaponInfo info)
+        {
+            string path = AssetDatabase.GetAssetPath(info);
+            foreach (string family in new[] { "MKR9", "SRM12", "TR15", "Viper", "SniperRifle" })
+            {
+                string id = family + "_SightReview";
+                if (path != $"Assets/Data/Weapons/SightCalibration/Review/{id}.asset") continue;
+                Assert.AreEqual(id, info.WeaponId, $"{path}: нарушена опубликованная идентичность");
+                Assert.AreEqual($"Assets/Prefabs/Weapons/SightReview/{id}.prefab",
+                    AssetDatabase.GetAssetPath(info.WeaponPrefab), $"{path}: подменён review-префаб");
+                WeaponInfo donor = registry.GetById(family);
+                Assert.IsNotNull(donor?.WeaponPrefab, $"{path}: исходный тип {family} отсутствует в реестре");
+                return donor;
+            }
+            return null;
         }
     }
 }

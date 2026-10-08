@@ -119,15 +119,29 @@ namespace VrBattlegrounds.Tests.Player
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Where(p => !p.StartsWith("Assets/ThirdParty/"))
                 .Select(AssetDatabase.LoadAssetAtPath<AvatarRegistry>)
-                .Where(r => r != null)
+                .Where(r => r != null && r.avatars != null)
                 .SelectMany(r => r.avatars);
 
-            foreach (AvatarData data in avatars)
+            string[] paths = avatars.Where(data => data != null && data.prefab != null)
+                .Select(data => AssetDatabase.GetAssetPath(data.prefab)).Distinct().ToArray();
+            bool hasBridge = false;
+            foreach (string path in paths)
             {
-                if (data == null || data.prefab == null) continue;
-                if (FindBridge(data.prefab) == null) continue;
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (FindBridge(prefab) == null) continue;
 
-                yield return new TestCaseData(AssetDatabase.GetAssetPath(data.prefab)).SetName($"{{m}}({data.prefab.name})");
+                hasBridge = true;
+                yield return new TestCaseData(path).SetName($"{{m}}({prefab.name})");
+            }
+
+            if (!hasBridge)
+            {
+                // Native UXR не возвращает таз через legacy-мост (Docs/avatar-animation.md).
+                // NUnit требует аргумент даже для неприменимого параметризованного теста.
+                var unavailable = new TestCaseData((string)null).SetName("{m}(legacy bridge отсутствует)");
+                if (paths.Length > 0)
+                    unavailable.Ignore("В зарегистрированных аватарах нет LegsAnimatorUxrBridge: используется native UXR. Проверка legacy-моста неприменима.");
+                yield return unavailable;
             }
         }
 
@@ -139,6 +153,7 @@ namespace VrBattlegrounds.Tests.Player
         [TestCaseSource(nameof(AvatarsWithLegs))]
         public void Мост_возвращает_таз_в_позу_префаба(string path)
         {
+            Assert.That(path, Is.Not.Null, "Не найден ни один зарегистрированный префаб аватара — источник проверки пуст.");
             Scene scene = EditorSceneManager.NewPreviewScene();
             try
             {

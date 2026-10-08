@@ -269,6 +269,8 @@ namespace VrBattlegrounds.Tests.Economy
             WeaponInfo pistol = Weapon(700);
             ArsenalWallController wall = Wall("Wall", pistol);
             wall.ServerSetOwner(_pa.netId);
+            wall.OpenArsenal(immediate: true);
+            Assert.IsTrue(wall.CanTrade, "Покупка и возврат проверяются на открытой торговой стене.");
             ArsenalCheckout checkout = _mode.GetComponent<ArsenalCheckout>();
             InvokeLifecycleMethod(checkout, "Awake");
             UxrGrabbableObject item = NetworkItem("Item");
@@ -292,6 +294,8 @@ namespace VrBattlegrounds.Tests.Economy
 
             ArsenalWallController wall = Wall("Wall", Weapon(2900));
             wall.ServerSetOwner(_pa.netId);
+            wall.OpenArsenal(immediate: true);
+            Assert.IsTrue(wall.CanTrade, "Отказ должен быть вызван нехваткой денег, а не закрытой стеной.");
             ArsenalCheckout checkout = _mode.GetComponent<ArsenalCheckout>();
             InvokeLifecycleMethod(checkout, "Awake");
 
@@ -308,6 +312,8 @@ namespace VrBattlegrounds.Tests.Economy
             StartMatch();
 
             ArsenalWallController wall = Wall("Wall", Weapon(200));
+            wall.OpenArsenal(immediate: true);
+            Assert.IsTrue(wall.CanTrade, "Отказ должен быть вызван отсутствием владельца, а не закрытой стеной.");
             ArsenalCheckout checkout = _mode.GetComponent<ArsenalCheckout>();
             InvokeLifecycleMethod(checkout, "Awake");
 

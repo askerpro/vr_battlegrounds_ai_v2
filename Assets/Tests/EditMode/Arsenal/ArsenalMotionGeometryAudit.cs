@@ -28,9 +28,12 @@ namespace VrBattlegrounds.Tests.Arsenal
                     foreach (Collider wall in root.GetComponentsInChildren<Collider>(true))
                         if (IsStaticObstacle(wall.transform) && wall.enabled && !wall.isTrigger)
                         {
-                            walls.Add(wall);
-                            names.Add(wall, Path(wall.transform));
-                            wallBounds.Add(wall, ColliderBounds(wall));
+                            // ComputePenetration не сравнивает тела из разных preview physics scenes.
+                            // Видимый невыпуклый меш также не заменяет solid collider при полном вложении.
+                            Collider obstacle = CopyCollider(wall, preview);
+                            walls.Add(obstacle);
+                            names.Add(obstacle, Path(wall.transform));
+                            wallBounds.Add(obstacle, ColliderBounds(obstacle));
                         }
                     // Отсутствие физического коллайдера не разрешает полке пересекать видимую стену.
                     foreach (MeshRenderer renderer in root.GetComponentsInChildren<MeshRenderer>(true))
@@ -51,13 +54,15 @@ namespace VrBattlegrounds.Tests.Arsenal
                         wallBounds.Add(meshCollider, TransformBounds(clone.transform, filter.sharedMesh.bounds));
                     }
                 }
+                Physics.SyncTransforms();
+                foreach (Collider wall in walls) wallBounds[wall] = ColliderBounds(wall);
                 foreach (ArsenalEquipmentPoses source in stations)
                 {
                     var host = new GameObject("Motion audit");
                     SceneManager.MoveGameObjectToScene(host, preview);
                     var equipment = host.AddComponent<ArsenalEquipmentPoses>();
                     var poses = new List<ArsenalEquipmentPoses.PoseTarget>();
-                    var boxes = new List<BoxCollider>();
+                    var geometry = new List<MeshCollider>();
                     int steps = 100;
                     foreach (var pose in source.Targets)
                     {
@@ -66,7 +71,7 @@ namespace VrBattlegrounds.Tests.Arsenal
                             errors.Add($"{scene.path}/{Path(source.transform)}: неполная конфигурация поз.");
                             continue;
                         }
-                        Transform target = CopyGeometry(pose.Target, host.transform, boxes, true);
+                        Transform target = CopyGeometry(pose.Target, host.transform, geometry, true);
                         Transform closed = Marker(pose.ClosedPose, host.transform);
                         Transform open = Marker(pose.OpenPose, host.transform);
                         poses.Add(new ArsenalEquipmentPoses.PoseTarget { Target = target, ClosedPose = closed, OpenPose = open });
@@ -74,7 +79,7 @@ namespace VrBattlegrounds.Tests.Arsenal
                         steps = Mathf.Max(steps, Mathf.CeilToInt(1.5f * Vector3.Distance(closed.position, open.position) / .002f));
                         steps = Mathf.Max(steps, Mathf.CeilToInt(1.5f * Quaternion.Angle(closed.rotation, open.rotation) / .25f));
                     }
-                    if (poses.Count == 0 || boxes.Count == 0)
+                    if (poses.Count == 0 || geometry.Count == 0)
                         errors.Add($"{scene.path}/{Path(source.transform)}: нет проверяемой геометрии оборудования.");
                     if (steps > 4096) throw new InvalidOperationException($"{source.name}: ход требует {steps} шагов; расширьте бюджет проверялки.");
                     equipment.Configure(poses.ToArray());
@@ -83,10 +88,10 @@ namespace VrBattlegrounds.Tests.Arsenal
                     foreach (var pose in poses)
                     {
                         float radius = 0f;
-                        foreach (var box in boxes)
+                        foreach (var shape in geometry)
                         {
-                            if (!box.transform.IsChildOf(pose.Target)) continue;
-                            var bounds = TransformBounds(box.transform, new Bounds(box.center, box.size));
+                            if (!shape.transform.IsChildOf(pose.Target)) continue;
+                            var bounds = ColliderBounds(shape);
                             radius = Mathf.Max(radius, Vector3.Distance(pose.Target.position, bounds.center) + bounds.extents.magnitude);
                         }
                         sweep.Encapsulate(new Bounds(pose.ClosedPose.position, Vector3.one * radius * 2f));
@@ -99,18 +104,18 @@ namespace VrBattlegrounds.Tests.Arsenal
                     {
                         float progress = sample / (float)steps;
                         equipment.Apply(progress);
-                        foreach (BoxCollider box in boxes)
+                        foreach (MeshCollider shape in geometry)
                         {
-                            var bounds = TransformBounds(box.transform, new Bounds(box.center, box.size));
+                            var bounds = ColliderBounds(shape);
                             foreach (Collider wall in nearbyWalls)
                             {
                                 string obstacle = names[wall];
                                 if (reported.Contains(obstacle) || !bounds.Intersects(wallBounds[wall])) continue;
-                                if (Physics.ComputePenetration(box, box.transform.position, box.transform.rotation,
+                                if (Physics.ComputePenetration(shape, shape.transform.position, shape.transform.rotation,
                                     wall, wall.transform.position, wall.transform.rotation, out _, out float depth) && depth > .001f)
                                 {
                                     reported.Add(obstacle);
-                                    errors.Add($"{scene.path}/{Path(source.transform)}: {box.name} пересекает {obstacle}, progress={progress:F3}, depth={depth:F4}м");
+                                    errors.Add($"{scene.path}/{Path(source.transform)}: {shape.name} пересекает {obstacle}, progress={progress:F3}, depth={depth:F4}м");
                                 }
                             }
                         }
@@ -129,6 +134,46 @@ namespace VrBattlegrounds.Tests.Arsenal
                 transform.GetComponentInParent<UxrGrabbableObject>(true) == null &&
                 transform.GetComponentInParent<Animator>(true) == null &&
                 transform.GetComponentInParent<ArsenalEquipmentPoses>(true) == null;
+        }
+
+        private static Collider CopyCollider(Collider source, Scene preview)
+        {
+            var clone = new GameObject("Static collider probe");
+            SceneManager.MoveGameObjectToScene(clone, preview);
+            clone.transform.SetPositionAndRotation(source.transform.position, source.transform.rotation);
+            clone.transform.localScale = source.transform.lossyScale;
+            switch (source)
+            {
+                case BoxCollider box:
+                    var boxCopy = clone.AddComponent<BoxCollider>();
+                    boxCopy.center = box.center;
+                    boxCopy.size = box.size;
+                    return boxCopy;
+                case SphereCollider sphere:
+                    var sphereCopy = clone.AddComponent<SphereCollider>();
+                    sphereCopy.center = sphere.center;
+                    sphereCopy.radius = sphere.radius;
+                    return sphereCopy;
+                case CapsuleCollider capsule:
+                    var capsuleCopy = clone.AddComponent<CapsuleCollider>();
+                    capsuleCopy.center = capsule.center;
+                    capsuleCopy.radius = capsule.radius;
+                    capsuleCopy.height = capsule.height;
+                    capsuleCopy.direction = capsule.direction;
+                    return capsuleCopy;
+                case MeshCollider mesh:
+                    var meshCopy = clone.AddComponent<MeshCollider>();
+                    meshCopy.cookingOptions = mesh.cookingOptions;
+                    meshCopy.sharedMesh = mesh.sharedMesh;
+                    meshCopy.convex = mesh.convex;
+                    return meshCopy;
+                case TerrainCollider terrain:
+                    var terrainCopy = clone.AddComponent<TerrainCollider>();
+                    terrainCopy.terrainData = terrain.terrainData;
+                    return terrainCopy;
+                default:
+                    throw new InvalidOperationException($"{Path(source.transform)}: непроверяемая форма {source.GetType().Name}.");
+            }
         }
 
         private static Bounds ColliderBounds(Collider collider)
@@ -159,7 +204,7 @@ namespace VrBattlegrounds.Tests.Arsenal
             return marker;
         }
 
-        private static Transform CopyGeometry(Transform source, Transform parent, List<BoxCollider> boxes, bool root)
+        private static Transform CopyGeometry(Transform source, Transform parent, List<MeshCollider> geometry, bool root)
         {
             var copy = new GameObject(source.name).transform;
             copy.SetParent(parent, false);
@@ -179,12 +224,14 @@ namespace VrBattlegrounds.Tests.Arsenal
             if (source.gameObject.activeInHierarchy && mesh != null && mesh.sharedMesh != null &&
                 renderer != null && renderer.enabled && source.GetComponentInParent<UxrGrabbableObject>(true) == null)
             {
-                var box = copy.gameObject.AddComponent<BoxCollider>();
-                box.center = mesh.sharedMesh.bounds.center;
-                box.size = mesh.sharedMesh.bounds.size;
-                boxes.Add(box);
+                // Bounds оставляем для отсечения кандидатов; контакт проверяем выпуклой оболочкой меша.
+                // Непустой угол AABB не обязан принадлежать геометрии оборудования.
+                var shape = copy.gameObject.AddComponent<MeshCollider>();
+                shape.sharedMesh = mesh.sharedMesh;
+                shape.convex = true;
+                geometry.Add(shape);
             }
-            foreach (Transform child in source) CopyGeometry(child, copy, boxes, false);
+            foreach (Transform child in source) CopyGeometry(child, copy, geometry, false);
             return copy;
         }
 

@@ -43,6 +43,7 @@ namespace VrBattlegrounds.Tests.Prefabs
             public string ActionPath = "Slide";
             public string TriggerPart = "Trigger";
             public string Clip;                     // клип оружия с ходом затвора и спуска
+            public string EmptyClip;                // отдельная открытая поза; ручной ход включает ещё 4 мм
             public string[] Dropped;                // кости, которых в префабе быть не должно (лишние патроны)
             public int MaxTriangles;                // бюджет ствола с магазином
             public Dictionary<string, string> Attachments; // обвес пака (MeshRenderer: глушитель, коллиматор) → путь в префабе
@@ -109,7 +110,7 @@ namespace VrBattlegrounds.Tests.Prefabs
                     { "Trigger", "MeshContainer/Trigger" }, { "Bolt", "Slide/Bolt" }, { "Hammer", "MeshContainer/Hammer" },
                     { "Magazine", "MeshContainer/MagAnchor/Viper_mag/Mesh" }, { "Cartridge_026", "MeshContainer/MagAnchor/Viper_mag/Cartridge_026" }
                 },
-                ActionPart = "Bolt", Clip = "A_W_WK-11_Viper_Fire",
+                ActionPart = "Bolt", Clip = "A_W_WK-11_Viper_Fire", EmptyClip = "A_W_WK-11_Viper_Fire_Empty",
                 Dropped = new[] { "Cartridge", "Cartridge_001", "String", "Follower" }, MaxTriangles = 13000
             };
             yield return new Case
@@ -120,7 +121,7 @@ namespace VrBattlegrounds.Tests.Prefabs
                 {
                     { "Trigger", "MeshContainer/Trigger" }, { "Bolt", "Slide/Bolt" }, { "Feed", "MeshContainer/Feed" }
                 },
-                ActionPart = "Bolt", Clip = "A_W_Herrington_11-87_Fire",
+                ActionPart = "Bolt", Clip = "A_W_Herrington_11-87_Fire", EmptyClip = "A_W_Herrington_11-87_Fire_Out",
                 Dropped = new string[0], MaxTriangles = 10000
             };
             yield return new Case
@@ -137,7 +138,7 @@ namespace VrBattlegrounds.Tests.Prefabs
                     { "SM_Attach_AR15_Silencer", "MeshContainer/SM_Attach_AR15_Silencer" }, { "SM_Attach_AR15_XPS2", "MeshContainer/SM_Attach_AR15_XPS2" }
                 },
                 Muzzle = "SM_Attach_AR15_Silencer",
-                ActionPart = "Bolt", Clip = "A_W_TR15_Fire",
+                ActionPart = "Bolt", Clip = "A_W_TR15_Fire", EmptyClip = "A_W_TR15_Fire_Out",
                 Dropped = new[] { "Cartridge_3", "Cartridge_30", "Follower", "Spring", "Reticle", "SM_Attach_AR15_Grip" }, MaxTriangles = 30000
             };
         }
@@ -260,7 +261,38 @@ namespace VrBattlegrounds.Tests.Prefabs
             Transform body = Find(prefab, c.BodyPath);
             Vector3 expected = prefab.transform.InverseTransformDirection(body.TransformDirection(far));
 
+            // Fire-ход и полный ручной ход — разные величины. Открытая Empty-поза
+            // должна помещаться в одностороннюю тягу, плюс принятые 4 мм довзведения.
+            if (c.EmptyClip != null)
+            {
+                var visuals = prefab.GetComponent<WeaponMechanismVisuals>();
+                Assert.IsNotNull(visuals, "Нет владельца механических поз.");
+                Assert.That(new SerializedObject(visuals).FindProperty("_originalSlideLength").floatValue,
+                    Is.EqualTo(expected.magnitude).Within(0.001f), "Исходный Fire-ход потерян.");
+                Assert.IsNotNull(visuals.Motion?.Empty, "Нет отдельной Empty-позы.");
+                // Обязательные детали берём из контракта кейса, а не из проверяемых bindings:
+                // потерянный Charger не должен уменьшать ожидаемый ход TR15.
+                var parts = c.Parts.Where(p => p.Value.StartsWith(c.ActionPath + "/", System.StringComparison.Ordinal))
+                    .Select(p => p.Key).ToArray();
+                Assert.That(parts, Does.Contain(c.ActionPart), "Кейс не задаёт деталь затвора под ручной тягой.");
+                Assert.IsNotNull(visuals.Bindings, "Нет bindings механических деталей.");
+                foreach (string part in parts)
+                {
+                    var bindings = visuals.Bindings.Where(b => b != null && b.Part == part).ToArray();
+                    Assert.That(bindings.Length, Is.EqualTo(1), $"{part}: нужен один binding ручной детали.");
+                    Assert.That(bindings[0].Target, Is.SameAs(Find(prefab, c.Parts[part])),
+                        $"{part}: binding не ссылается на предусмотренную ручную деталь.");
+                }
+                using var emptyPack = new PackModel(c);
+                float empty = emptyPack.MaxProjectedTravel(parts, c.EmptyClip,
+                    prefab.transform.worldToLocalMatrix * body.localToWorldMatrix, Vector3.back);
+                expected = Vector3.back * (Mathf.Max(expected.magnitude, empty) + 0.004f);
+            }
+
             Assert.AreEqual(UxrTranslationConstraintMode.RestrictLocalOffset, action.TranslationConstraint, $"{action.name}: ход не ограничен");
+            Assert.That(expected.magnitude, Is.GreaterThan(0.001f), "Клип не задаёт ручного хода.");
+            Assert.That(Vector3.Distance(action.TranslationLimitsMin, Vector3.Min(expected, Vector3.zero)), Is.LessThan(0.001f));
+            Assert.That(Vector3.Distance(action.TranslationLimitsMax, Vector3.Max(expected, Vector3.zero)), Is.LessThan(0.001f));
             Assert.That(Vector3.Distance(limit, expected), Is.LessThan(0.001f), $"{prefab.name}: ход затвора {limit * 100f} см, в клипе '{c.Clip}' {expected * 100f} см");
         }
 
@@ -306,7 +338,19 @@ namespace VrBattlegrounds.Tests.Prefabs
             {
                 if (m == null) { failures.Add($"{prefab.name}/{r.name}: пустой материал"); continue; }
                 if (r.name == "GrabHighlight") continue;
-                if (m.shader.name != LitShader) failures.Add($"{prefab.name}/{r.name}: «{m.name}» на шейдере {m.shader.name}, ожидается {LitShader}");
+                bool opticLens = c.PackPrefab == "W_TR15" && r.name == "SM_Attach_AR15_XPS2" &&
+                    AssetDatabase.GetAssetPath(m) == "Assets/Art/Weapons/Kinemation/TR15/Materials/TR15_XPS2_Lens.mat";
+                if (opticLens)
+                {
+                    // Только game-owned прозрачная линза XPS2: корпус по-прежнему URP Lit.
+                    if (m.shader.name != "Universal Render Pipeline/Unlit" ||
+                        m.GetFloat("_Surface") != 1f || m.GetFloat("_ZWrite") != 0f ||
+                        m.GetFloat("_SrcBlend") != (float)UnityEngine.Rendering.BlendMode.SrcAlpha ||
+                        m.GetFloat("_DstBlend") != (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha ||
+                        m.renderQueue != (int)UnityEngine.Rendering.RenderQueue.Transparent || m.GetTexture("_BaseMap") == null)
+                        failures.Add($"{prefab.name}/{r.name}: линза должна быть прозрачной Unlit с alpha blending без записи глубины и с текстурой.");
+                }
+                else if (m.shader.name != LitShader) failures.Add($"{prefab.name}/{r.name}: «{m.name}» на шейдере {m.shader.name}, ожидается {LitShader}");
                 if (AssetDatabase.GetAssetPath(m).StartsWith(Pack)) failures.Add($"{prefab.name}/{r.name}: «{m.name}» — материал пака, а не проекта");
 
                 foreach (string property in m.GetTexturePropertyNames())
@@ -480,6 +524,25 @@ namespace VrBattlegrounds.Tests.Prefabs
                     a.SampleAnimation(_animator.gameObject, t);
                     Vector3 d = (Vector3)PartInBody(part).GetColumn(3) - (Vector3)rest.GetColumn(3);
                     if (d.magnitude > far.magnitude) far = d;
+                }
+                return far;
+            }
+
+            /// <summary>Проекция всех движущихся деталей Empty-клипа, независимо от экспортированного motion asset.</summary>
+            public float MaxProjectedTravel(string[] parts, string clip, Matrix4x4 bodyToRoot, Vector3 axis)
+            {
+                var rest = parts.ToDictionary(p => p, p => (Vector3)PartInBody(p).GetColumn(3));
+                AnimationClip a = Clip(clip);
+                float far = 0f;
+                int steps = Mathf.CeilToInt(a.length * 120f);
+                for (int i = 0; i <= steps; i++)
+                {
+                    a.SampleAnimation(_animator.gameObject, Mathf.Min(i / 120f, a.length));
+                    foreach (string part in parts)
+                    {
+                        Vector3 delta = (Vector3)PartInBody(part).GetColumn(3) - rest[part];
+                        far = Mathf.Max(far, Vector3.Dot(bodyToRoot.MultiplyVector(delta), axis));
+                    }
                 }
                 return far;
             }

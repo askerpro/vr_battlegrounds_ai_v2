@@ -2016,7 +2016,7 @@ GameObject:
   - component: {fileID: 313114088}
   m_Layer: 0
   m_Name: BoundaryEnd_Hard
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 18
@@ -3259,13 +3259,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4250720545520845057, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 514860384}
   m_SourcePrefab: {fileID: 100100000, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
 --- !u!4 &514860382 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6357730625091053818, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
   m_PrefabInstance: {fileID: 514860381}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &514860383 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4250720545520845057, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
+  m_PrefabInstance: {fileID: 514860381}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &514860384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 514860383}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!1 &525714561
 GameObject:
   m_ObjectHideFlags: 0
@@ -3505,13 +3527,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6823161340125233354, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 557924899}
   m_SourcePrefab: {fileID: 100100000, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
 --- !u!4 &557924897 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1353713167873002874, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
   m_PrefabInstance: {fileID: 557924896}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &557924898 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6823161340125233354, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
+  m_PrefabInstance: {fileID: 557924896}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &557924899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 557924898}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!1 &564472258
 GameObject:
   m_ObjectHideFlags: 0
@@ -3730,7 +3774,7 @@ GameObject:
   - component: {fileID: 651824706}
   m_Layer: 0
   m_Name: BoundaryEnd_Hard
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 18
@@ -5130,13 +5174,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 889999060046430605, guid: 1db53474e0111634a87467c58a9fca6b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 921756078}
   m_SourcePrefab: {fileID: 100100000, guid: 1db53474e0111634a87467c58a9fca6b, type: 3}
 --- !u!4 &921756076 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3645683155322224518, guid: 1db53474e0111634a87467c58a9fca6b, type: 3}
   m_PrefabInstance: {fileID: 921756075}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &921756077 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 889999060046430605, guid: 1db53474e0111634a87467c58a9fca6b, type: 3}
+  m_PrefabInstance: {fileID: 921756075}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &921756078
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 921756077}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!1001 &946014551
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6296,13 +6362,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6823161340125233354, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1159975197}
   m_SourcePrefab: {fileID: 100100000, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
 --- !u!4 &1159975195 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1353713167873002874, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
   m_PrefabInstance: {fileID: 1159975194}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1159975196 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6823161340125233354, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
+  m_PrefabInstance: {fileID: 1159975194}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1159975197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1159975196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!1 &1188013280
 GameObject:
   m_ObjectHideFlags: 0
@@ -6443,7 +6531,7 @@ GameObject:
   - component: {fileID: 1226719367}
   m_Layer: 0
   m_Name: BoundarySide_Hard
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 18
@@ -7079,7 +7167,7 @@ GameObject:
   - component: {fileID: 1566110744}
   m_Layer: 0
   m_Name: BoundarySide_Hard
-  m_TagString: Untagged
+  m_TagString: Environment
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 18
@@ -7491,13 +7579,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8708375740064232239, guid: 85afe5db618489440a35d5d6de2ed8f9, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1635591802}
   m_SourcePrefab: {fileID: 100100000, guid: 85afe5db618489440a35d5d6de2ed8f9, type: 3}
 --- !u!4 &1635591800 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6370932066343550235, guid: 85afe5db618489440a35d5d6de2ed8f9, type: 3}
   m_PrefabInstance: {fileID: 1635591799}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1635591801 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8708375740064232239, guid: 85afe5db618489440a35d5d6de2ed8f9, type: 3}
+  m_PrefabInstance: {fileID: 1635591799}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1635591802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1635591801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!1 &1646017119
 GameObject:
   m_ObjectHideFlags: 0
@@ -7759,13 +7869,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4250720545520845057, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1694233774}
   m_SourcePrefab: {fileID: 100100000, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
 --- !u!4 &1694233772 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6357730625091053818, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
   m_PrefabInstance: {fileID: 1694233771}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1694233773 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4250720545520845057, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
+  m_PrefabInstance: {fileID: 1694233771}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1694233774
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1694233773}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!1 &1709504602
 GameObject:
   m_ObjectHideFlags: 0
@@ -8252,13 +8384,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6823161340125233354, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1807068957}
   m_SourcePrefab: {fileID: 100100000, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
 --- !u!4 &1807068955 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1353713167873002874, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
   m_PrefabInstance: {fileID: 1807068954}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1807068956 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6823161340125233354, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
+  m_PrefabInstance: {fileID: 1807068954}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1807068957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1807068956}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!1 &1813561229
 GameObject:
   m_ObjectHideFlags: 0
@@ -8939,13 +9093,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6823161340125233354, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1890380564}
   m_SourcePrefab: {fileID: 100100000, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
 --- !u!4 &1890380562 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1353713167873002874, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
   m_PrefabInstance: {fileID: 1890380561}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1890380563 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6823161340125233354, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
+  m_PrefabInstance: {fileID: 1890380561}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1890380564
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1890380563}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!1 &1904924136
 GameObject:
   m_ObjectHideFlags: 0
@@ -9765,13 +9941,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6823161340125233354, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2105906795}
   m_SourcePrefab: {fileID: 100100000, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
 --- !u!4 &2105906793 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1353713167873002874, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
   m_PrefabInstance: {fileID: 2105906792}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2105906794 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6823161340125233354, guid: 4fbeb7d6fb47b0b448967f5a79ebefd0, type: 3}
+  m_PrefabInstance: {fileID: 2105906792}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2105906795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2105906794}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!1001 &2122527144
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9831,13 +10029,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4250720545520845057, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2122527147}
   m_SourcePrefab: {fileID: 100100000, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
 --- !u!4 &2122527145 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6357730625091053818, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
   m_PrefabInstance: {fileID: 2122527144}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2122527146 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4250720545520845057, guid: c6dc10dfb2864bb41b8d138fa09ff701, type: 3}
+  m_PrefabInstance: {fileID: 2122527144}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2122527147
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2122527146}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!1001 &2141775021
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9897,13 +10117,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6779602525872165564, guid: efdefa269e40d0147a9976d637b359a2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2141775024}
   m_SourcePrefab: {fileID: 100100000, guid: efdefa269e40d0147a9976d637b359a2, type: 3}
 --- !u!4 &2141775022 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3070028544969783124, guid: efdefa269e40d0147a9976d637b359a2, type: 3}
   m_PrefabInstance: {fileID: 2141775021}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2141775023 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6779602525872165564, guid: efdefa269e40d0147a9976d637b359a2, type: 3}
+  m_PrefabInstance: {fileID: 2141775021}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2141775024
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141775023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b17c28256606994384c3ba68dc15117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.CoverSurface
+  _class: 0
+  _penetrationModifier: 3
 --- !u!4 &52688434659303746
 Transform:
   m_ObjectHideFlags: 0

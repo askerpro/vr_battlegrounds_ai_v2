@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UltimateXR.Manipulation;
 using VrBattlegrounds.Interaction;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Arsenal;
 
 namespace VrBattlegrounds.Editor.Avatars
 {
@@ -21,7 +23,8 @@ namespace VrBattlegrounds.Editor.Avatars
         private const string PocketPrefabFolder = "Assets/Prefabs/Player/Pockets";
         
         /// <summary>
-        /// Конфигурация карманов — единый источник правды для тегов и параметров.
+        /// Авторские базовые теги и параметры карманов. Теги магазинов дополняются
+        /// из WeaponRegistry: новый зарегистрированный магазин не требует правки списка.
         /// </summary>
         private static readonly PocketConfig[] Pockets = new[]
         {
@@ -135,6 +138,9 @@ namespace VrBattlegrounds.Editor.Avatars
         public static string Setup(GameObject selected)
         {
             if (selected == null) throw new System.ArgumentNullException(nameof(selected));
+            // Проверяем каталог до первой записи: неполная конфигурация не должна
+            // оставлять частично обновлённые карманы.
+            string[] magazineTags = GetMagazineCompatibleTags(WeaponRegistry.Instance).ToArray();
 
             // --- Находим кости ---
             Transform pelvis, spine;
@@ -152,16 +158,19 @@ namespace VrBattlegrounds.Editor.Avatars
 
             foreach (var config in Pockets)
             {
+                bool magazine = config.Name == "MagazinePocket";
+                string[] tags = magazine ? magazineTags : config.Tags;
                 Transform targetBone = config.Bone == BoneTarget.Pelvis ? pelvis : spine;
                 Transform existing = FindRecursive(selected.transform, config.Name);
 
                 if (existing != null)
                 {
                     // Upsert — обновляем только теги
-                    if (config.Tags != null)
+                    if (tags != null)
                     {
                         var anchor = existing.GetComponent<UxrGrabbableObjectAnchor>();
-                        EnsureAnchorTags(existing.gameObject, config.Tags, anchor != null ? anchor.MaxPlaceDistance : config.MaxPlaceDistance);
+                        EnsureAnchorTags(existing.gameObject, tags, anchor != null ? anchor.MaxPlaceDistance : config.MaxPlaceDistance,
+                            preserveExistingTags: magazine);
                     }
                     updated++;
                     continue;
@@ -180,13 +189,19 @@ namespace VrBattlegrounds.Editor.Avatars
                     instance.transform.SetParent(targetBone, false);
                     instance.transform.localPosition = config.DefaultPosition;
                     instance.transform.localRotation = Quaternion.identity;
+                    if (tags != null)
+                    {
+                        var anchor = instance.GetComponent<UxrGrabbableObjectAnchor>();
+                        EnsureAnchorTags(instance, tags, anchor != null ? anchor.MaxPlaceDistance : config.MaxPlaceDistance,
+                            preserveExistingTags: magazine);
+                    }
                     
                     GameLog.Player.Info($"[AvatarPocketSetup] {config.Name} — инстанцирован из префаба");
                 }
                 else
                 {
                     // Фоллбэк — создаём вручную
-                    instance = CreatePocketManually(config, targetBone);
+                    instance = CreatePocketManually(config, targetBone, tags);
                     GameLog.Player.Info($"[AvatarPocketSetup] {config.Name} — создан вручную (префаб не найден)");
                 }
                 
@@ -216,9 +231,37 @@ namespace VrBattlegrounds.Editor.Avatars
         #region === Helpers ===
 
         /// <summary>
+        /// Снимок совместимости кармана: авторские ammo tags плюс фактические теги
+        /// магазинов всего каталога. Порядок независим от порядка WeaponRegistry.
+        /// Ничего не меняет в каталоге, префабах или конфигурации карманов.
+        /// </summary>
+        public static IReadOnlyList<string> GetMagazineCompatibleTags(WeaponRegistry registry)
+        {
+            if (registry == null) throw new System.ArgumentNullException(nameof(registry));
+            if (registry.Weapons == null || registry.Weapons.Count == 0)
+                throw new System.InvalidOperationException("WeaponRegistry пуст: совместимость кармана магазинов не определена.");
+
+            var tags = new SortedSet<string>(Pockets.First(p => p.Name == "MagazinePocket").Tags, System.StringComparer.Ordinal);
+            for (int i = 0; i < registry.Weapons.Count; i++)
+            {
+                WeaponInfo weapon = registry.Weapons[i];
+                if (weapon == null || weapon.WeaponPrefab == null)
+                    throw new System.InvalidOperationException($"WeaponRegistry[{i}]: не задан WeaponInfo или префаб оружия.");
+                // Магазин — optional в WeaponInfo; оружие без него не требует тега.
+                if (weapon.MagazinePrefab == null) continue;
+
+                UxrGrabbableObject magazine = weapon.MagazinePrefab.GetComponent<UxrGrabbableObject>();
+                if (magazine == null || string.IsNullOrWhiteSpace(magazine.Tag))
+                    throw new System.InvalidOperationException($"WeaponRegistry[{i}] '{weapon.WeaponId}': MagazinePrefab не имеет UxrGrabbableObject с непустым Tag на корне.");
+                tags.Add(magazine.Tag);
+            }
+            return System.Array.AsReadOnly(tags.ToArray());
+        }
+
+        /// <summary>
         /// Создаёт карман вручную (фоллбэк, если префаб не найден).
         /// </summary>
-        private static GameObject CreatePocketManually(PocketConfig config, Transform bone)
+        private static GameObject CreatePocketManually(PocketConfig config, Transform bone, string[] tags)
         {
             GameObject go = new GameObject(config.Name);
             Undo.RegisterCreatedObjectUndo(go, $"Create {config.Name}");
@@ -226,10 +269,10 @@ namespace VrBattlegrounds.Editor.Avatars
             go.transform.localPosition = config.DefaultPosition;
             go.transform.localRotation = Quaternion.identity;
 
-            if (config.Tags != null)
+            if (tags != null)
             {
                 // Это Anchor-тип кармана
-                EnsureAnchorTags(go, config.Tags, config.MaxPlaceDistance);
+                EnsureAnchorTags(go, tags, config.MaxPlaceDistance);
             }
             else
             {
@@ -315,7 +358,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <summary>
         /// Находит или добавляет UxrGrabbableObjectAnchor, затем обновляет теги и maxPlaceDistance.
         /// </summary>
-        private static void EnsureAnchorTags(GameObject go, string[] tags, float maxPlaceDistance)
+        private static void EnsureAnchorTags(GameObject go, string[] tags, float maxPlaceDistance, bool preserveExistingTags = false)
         {
             UxrGrabbableObjectAnchor anchor = go.GetComponent<UxrGrabbableObjectAnchor>();
             if (anchor == null)
@@ -324,8 +367,19 @@ namespace VrBattlegrounds.Editor.Avatars
             SerializedObject so = new SerializedObject(anchor);
 
             SerializedProperty tagsProp = so.FindProperty("_compatibleTags");
-            if (tagsProp != null)
+            if (tagsProp == null)
+                throw new System.InvalidOperationException("UxrGrabbableObjectAnchor._compatibleTags не найден: карман не обновлён.");
             {
+                if (preserveExistingTags)
+                {
+                    var merged = new SortedSet<string>(tags, System.StringComparer.Ordinal);
+                    for (int i = 0; i < tagsProp.arraySize; i++)
+                    {
+                        string authored = tagsProp.GetArrayElementAtIndex(i).stringValue;
+                        if (!string.IsNullOrWhiteSpace(authored)) merged.Add(authored);
+                    }
+                    tags = merged.ToArray();
+                }
                 tagsProp.ClearArray();
                 for (int i = 0; i < tags.Length; i++)
                 {

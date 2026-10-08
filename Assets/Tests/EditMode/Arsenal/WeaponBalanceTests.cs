@@ -5,6 +5,8 @@ using UltimateXR.Mechanics.Weapons;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Maps;
+using VrBattlegrounds.Maps.Runtime;
 using VrBattlegrounds.Weapons;
 
 namespace VrBattlegrounds.Tests.Arsenal
@@ -58,7 +60,7 @@ namespace VrBattlegrounds.Tests.Arsenal
             return cs;
         }
 
-        // Ключ — имя ассета WeaponInfo. Новый ствол арсенала — строка сюда.
+        // Ключ — имя ассета WeaponInfo. Новое боевое оружие — осознанно принятая строка сюда.
         private static readonly Dictionary<string, Cs2> Roster = new Dictionary<string, Cs2>
         {
             // ── Реестр (стена арсенала), T-39 ──
@@ -92,6 +94,52 @@ namespace VrBattlegrounds.Tests.Arsenal
         {
             foreach (string guid in AssetDatabase.FindAssets("t:WeaponInfo", new[] { WeaponsFolder }))
                 yield return AssetDatabase.LoadAssetAtPath<WeaponInfo>(AssetDatabase.GUIDToAssetPath(guid));
+        }
+
+        // Глобальный каталог включает demo и диагностические копии. Боевой контракт
+        // принадлежит MapData.arsenalPreset; выбор новой позиции обязан раскрыть пробелы баланса.
+        internal static IReadOnlyCollection<WeaponInfo> GameplayWeapons()
+        {
+            var registry = AssetDatabase.LoadAssetAtPath<WeaponRegistry>($"{WeaponsFolder}/Resources/WeaponRegistry.asset");
+            var maps = AssetDatabase.LoadAssetAtPath<MapRegistry>("Assets/Data/Maps/MapRegistry.asset");
+            Assert.IsNotNull(registry, "Нет WeaponRegistry.");
+            Assert.IsNotNull(registry.Weapons, "В WeaponRegistry нет списка оружия.");
+            Assert.IsNotNull(maps, "Нет MapRegistry.");
+            Assert.IsNotNull(maps.maps, "В MapRegistry нет списка карт.");
+            var result = new HashSet<WeaponInfo>();
+
+            void AddPreset(ArsenalPreset preset, string owner)
+            {
+                Assert.IsNotNull(preset, $"{owner}: нет боевого ассортимента.");
+                Assert.IsNotNull(preset.Entries, $"{owner}: нет списка позиций.");
+                Assert.That(preset.Entries.Count, Is.GreaterThan(0), $"{owner}: пустой боевой ассортимент.");
+                foreach (var entry in preset.Entries)
+                {
+                    var info = entry.Weapon;
+                    Assert.IsNotNull(info, $"{owner}: пустая позиция.");
+                    Assert.That(registry.Weapons, Does.Contain(info), $"{owner}: {info.name} отсутствует в каталоге.");
+                    Assert.IsTrue(info.HasBalance, $"{owner}: {info.name} без баланса.");
+                    Assert.IsNotNull(info.WeaponPrefab, $"{owner}: {info.name} без оружейного префаба.");
+                    result.Add(info);
+                }
+            }
+
+            AddPreset(AssetDatabase.LoadAssetAtPath<ArsenalPreset>($"{WeaponsFolder}/CurrentGameplayArsenal.asset"), "CurrentGameplayArsenal");
+            // Бесплатный стартовый пистолет выдаётся независимо от слотов станции.
+            Assert.IsNotNull(registry.DefaultSidearm, "Не назначен стартовый пистолет.");
+            Assert.That(registry.Weapons, Does.Contain(registry.DefaultSidearm), "Стартовый пистолет отсутствует в каталоге.");
+            Assert.IsTrue(registry.DefaultSidearm.HasBalance, "Стартовый пистолет без баланса.");
+            result.Add(registry.DefaultSidearm);
+            int combatMaps = 0;
+            foreach (var map in maps.maps)
+            {
+                Assert.IsNotNull(map, "MapRegistry содержит пустую карту.");
+                if (map.kind != MapRunKind.Combat) continue;
+                combatMaps++;
+                AddPreset(map.arsenalPreset, map.name);
+            }
+            Assert.That(combatMaps, Is.GreaterThan(0), "MapRegistry не содержит ни одной Combat-карты.");
+            return result;
         }
 
         // Спуск SDK (UxrFirearmTrigger) — internal-класс: частота и индекс выстрела читаются сериализацией.
@@ -135,18 +183,32 @@ namespace VrBattlegrounds.Tests.Arsenal
         }
 
         /// <summary>
-        /// Каждый ствол реестра (то, что продаёт стена) — в таблице ролей CS2. Иначе новый ствол уходит на стену с числами
+        /// Каждый ствол боевого ассортимента — в таблице ролей CS2. Иначе новый ствол уходит на стену с числами
         /// донора, и никто этого не видит: проверка значений выше ходит только по строкам таблицы.
         /// </summary>
         [Test]
-        public void Каждый_ствол_реестра_в_таблице_CS2()
+        public void Каждый_ствол_боевого_ассортимента_в_таблице_CS2()
+        {
+            var missing = new List<string>();
+            foreach (WeaponInfo info in GameplayWeapons())
+                if (!Roster.ContainsKey(info.name)) missing.Add(info.name);
+            Assert.IsEmpty(missing, "Боевые стволы без принятой роли CS2 в WeaponBalanceTests.Roster: " + string.Join(", ", missing));
+        }
+
+        [Test]
+        public void Каталог_содержит_готовые_позиции_с_балансом()
         {
             var registry = AssetDatabase.LoadAssetAtPath<WeaponRegistry>($"{WeaponsFolder}/Resources/WeaponRegistry.asset");
             Assert.IsNotNull(registry, "Нет WeaponRegistry.");
-            var missing = new List<string>();
-            foreach (WeaponInfo info in registry.Weapons)
-                if (info != null && !Roster.ContainsKey(info.name)) missing.Add(info.name);
-            Assert.IsEmpty(missing, "Стволы реестра без роли CS2 в WeaponBalanceTests.Roster: " + string.Join(", ", missing));
+            Assert.IsNotNull(registry.Weapons, "В WeaponRegistry нет списка оружия.");
+            Assert.That(registry.Weapons.Count, Is.GreaterThan(0), "Пустой каталог оружия.");
+            foreach (var info in registry.Weapons)
+            {
+                Assert.IsNotNull(info, "Каталог содержит пустую позицию.");
+                Assert.IsTrue(info.HasBalance, $"{info.name}: нет баланса.");
+                Assert.IsNotNull(info.WeaponPrefab, $"{info.name}: нет оружейного префаба.");
+                Assert.IsNotNull(info.MagazinePrefab, $"{info.name}: нет выдаваемого боезапаса.");
+            }
         }
 
         [Test]

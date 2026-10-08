@@ -1,6 +1,19 @@
 {
   "description": "Контекст безопасного редактирования файлов и работы терминала",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "apply_patch|exec_command|Edit|Write|NotebookEdit|Bash|PowerShell|mcp__unityMCP__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/Tools/agents/coordination-hook.py\"",
+            "commandWindows": "powershell.exe -NoProfile -NonInteractive -Command \"& python -X utf8 (Join-Path (git --no-pager rev-parse --show-toplevel) 'Tools/agents/coordination-hook.py')\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "^(startup|resume|clear|compact)$",

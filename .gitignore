@@ -140,6 +140,8 @@ InitTestScene*.unity*
 /Assets/Editor/VR_Battlegrounds/Debug/EditorBrokerLocal.meta
 
 # Генерируемые локальные отчёты агентов; правило в AGENTS.md.
+/tasks/*/reports/
+# Старый каталог: уже созданные локальные отчёты также не попадают в историю.
 /Docs/tasks/report/
 
 # Локальные выгрузки диагностики хвата; не импортировать и не коммитить.

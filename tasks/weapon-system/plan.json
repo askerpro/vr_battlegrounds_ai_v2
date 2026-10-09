@@ -110,6 +110,16 @@
       "needs": []
     },
     {
+      "id": "expert-kb",
+      "writes": [
+        "Docs/weapons/**",
+        ".claude/agents/weapon-system-expert.md",
+        ".claude/agent-memory/weapon-system-expert/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
       "id": "ejection-manual",
       "writes": [
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmReadinessTypes.cs",

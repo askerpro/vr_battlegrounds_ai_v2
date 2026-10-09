@@ -142,3 +142,31 @@ dotnet_naming_style.всечастиспрописнойбуквы.required_pref
 dotnet_naming_style.всечастиспрописнойбуквы.required_suffix = 
 dotnet_naming_style.всечастиспрописнойбуквы.word_separator = 
 dotnet_naming_style.всечастиспрописнойбуквы.capitalization = pascal_case
+
+# LF только управляемых путей phaseA; default/legacy ассеты не переписываются.
+[{.gitattributes,.editorconfig,AGENTS.md}]
+end_of_line = lf
+
+[.vscode/settings.json]
+end_of_line = lf
+
+[.agents/rules/**.md]
+end_of_line = lf
+
+[Assets/Scripts/**.cs]
+end_of_line = lf
+
+[Assets/Editor/VR_Battlegrounds/**.cs]
+end_of_line = lf
+
+[Docs/**.md]
+end_of_line = lf
+
+[Tools/**.{py,ps1,js,cjs,patch}]
+end_of_line = lf
+
+[*.sh]
+end_of_line = lf
+
+[.githooks/**]
+end_of_line = lf

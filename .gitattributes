@@ -184,3 +184,25 @@ Assets/ThirdParty/Military[[:space:]]Soldier[[:space:]]Mega[[:space:]]Bundle/**/
 Assets/ThirdParty/Military[[:space:]]Soldier[[:space:]]Mega[[:space:]]Bundle/**/*.[dD][dD][sS] filter=lfs diff=lfs merge=lfs -text
 Assets/ThirdParty/Military[[:space:]]Soldier[[:space:]]Mega[[:space:]]Bundle/**/*.[gG][lL][bB] filter=lfs diff=lfs merge=lfs -text
 Assets/ThirdParty/Military[[:space:]]Soldier[[:space:]]Mega[[:space:]]Bundle/**/*.[bB][lL][eE][nN][dD] filter=lfs diff=lfs merge=lfs -text
+
+# LF для управляемых source/docs/tools; legacy YAML и SDK assets не мигрируются.
+.gitattributes text eol=lf
+.editorconfig text eol=lf
+.vscode/settings.json text eol=lf
+AGENTS.md text eol=lf
+.agents/rules/**/*.md text eol=lf
+Assets/Scripts/**/*.cs text eol=lf
+Assets/Editor/VR_Battlegrounds/**/*.cs text eol=lf
+Docs/**/*.md text eol=lf
+Tools/**/*.py text eol=lf
+Tools/**/*.ps1 text eol=lf
+Tools/**/*.js text eol=lf
+Tools/**/*.cjs text eol=lf
+Tools/**/*.patch text eol=lf
+
+# SDK исходники и только staging штатного installer сохраняют pinned LF bytes.
+Packages/com.coplaydev.unity-mcp/**/*.cs text eol=lf
+tmp/UnityMcpInstall/**/source/*/MCPForUnity/**/*.cs text eol=lf
+
+# Unified patch context blank lines retain their required prefix space.
+Tools/UnityMcp/script-lf-10.2.0.patch whitespace=-blank-at-eol

@@ -8,6 +8,7 @@ import stat
 import sys
 import tempfile
 import zipfile
+import hashlib
 
 root = Path(__file__).resolve().parents[3]
 if len(sys.argv) < 2:
@@ -44,7 +45,9 @@ with temporary_project() as temporary:
                    cwd=repository, check=True, capture_output=True)
     tooling = project / "Tools/UnityMcp"
     tooling.mkdir(parents=True)
-    for name in ("Install-Upstream.ps1", "discovery-10.2.0.patch", "output-guard-10.2.0.patch", "codex-config-10.2.0.patch"):
+    # Реальные product attrs обязательны: CRLF fallback действует и в ignored staging.
+    shutil.copy2(root / ".gitattributes", project / ".gitattributes")
+    for name in ("Install-Upstream.ps1", "discovery-10.2.0.patch", "output-guard-10.2.0.patch", "codex-config-10.2.0.patch", "script-lf-10.2.0.patch"):
         shutil.copy2(root / "Tools/UnityMcp" / name, tooling / name)
     shutil.copytree(root / "Tools/UnityMcp/OutputGuard", tooling / "OutputGuard")
     (project / "Tools/agents").mkdir(parents=True, exist_ok=True)
@@ -89,6 +92,11 @@ with temporary_project() as temporary:
     helper = package / "Editor/Helpers/ExecuteCodeOutputGuard.cs"
     assert helper.read_bytes() == (tooling / "OutputGuard/ExecuteCodeOutputGuard.cs").read_bytes()
     assert (helper.parent / (helper.name + ".meta")).read_bytes() == (tooling / "OutputGuard/ExecuteCodeOutputGuard.cs.meta.txt").read_bytes()
+    script = package / "Editor/Tools/ManageScript.cs"
+    script_bytes = script.read_bytes()
+    assert hashlib.sha256(script_bytes).hexdigest() == "782c06c696002c46fb7b38dc0b6891af5188c2756b0c4a14f8e0e15dd1ae2455"
+    assert script_bytes.count(b"contents = NormalizeNewlines(contents);") == 2
+    assert script_bytes.count(b"working = NormalizeNewlines(working);") == 2
     expected = execute.read_bytes()
     refused = subprocess.run(command, cwd=project, env=environment, capture_output=True, timeout=15)
     assert refused.returncode != 0, "existing embedded package was overwritten"
@@ -98,4 +106,4 @@ with temporary_project() as temporary:
     installed_codex = (package / "Editor/Helpers/CodexConfigHelper.cs").read_text(encoding="utf-8")
     assert "EnsureRmcpClientFeature" not in installed_codex
     assert 'features.Delete("rmcp_client")' in installed_codex
-    print("PASS fresh offline installation: pinned hashes, all patches, helper/meta, overwrite refusal, scoped ZIP extraction")
+    print("PASS fresh offline installation: pinned hashes, all four patches, ManageScript LF SHA, helper/meta, overwrite refusal, scoped ZIP extraction")

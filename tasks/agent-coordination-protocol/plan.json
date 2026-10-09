@@ -243,6 +243,42 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "scoped-lf-writers-maintenance",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        ".editorconfig",
+        ".gitattributes",
+        ".vscode/settings.json",
+        "AGENTS.md",
+        "Docs/agents/text-eol.md",
+        "ProjectSettings/EditorSettings.asset",
+        "Tools/UnityMcp/**",
+        "Tools/agents/check_text_eol.py",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/**"
+      ],
+      "deletes": [
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/TextCreate.cs",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/TextCreate.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/LegacyUpdate.cs",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/LegacyUpdate.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/TextEdits.cs",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/TextEdits.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/StructuredEdits.cs",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/StructuredEdits.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/UnityTemplate.cs",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe/UnityTemplate.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraLfProbe.meta"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "startup-readonly-client-information-repair",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

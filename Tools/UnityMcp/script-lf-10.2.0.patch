@@ -1,0 +1,42 @@
+diff --git a/Editor/Tools/ManageScript.cs b/Editor/Tools/ManageScript.cs
+--- a/Editor/Tools/ManageScript.cs
++++ b/Editor/Tools/ManageScript.cs
+@@ -355,6 +355,9 @@
+                 contents = GenerateDefaultScriptContent(name, scriptType, namespaceName);
+             }
+ 
++            // LF применяется к итоговому payload только этой успешной операции.
++            contents = NormalizeNewlines(contents);
++
+             // Validate syntax with detailed error reporting using GUI setting
+             ValidationLevel validationLevel = GetValidationLevelFromGUI();
+             bool isValid = ValidateScriptSyntax(contents, validationLevel, out string[] validationErrors);
+@@ -452,6 +455,9 @@
+             {
+                 return new ErrorResponse("Content is required for the 'update' action.");
+             }
++
++            // LF применяется к итоговому payload только этой успешной операции.
++            contents = NormalizeNewlines(contents);
+ 
+             // Validate syntax with detailed error reporting using GUI setting
+             ValidationLevel validationLevel = GetValidationLevelFromGUI();
+@@ -753,6 +759,8 @@
+             }
+ #endif
+ 
++            // После edits/formatter; исходные SHA и offsets уже проверены.
++            working = NormalizeNewlines(working);
+             string newSha = ComputeSha256(working);
+ 
+             // Atomic write and schedule refresh
+@@ -1634,6 +1642,9 @@
+                     );
+                 }
+ 
++                // No-op выше сохраняет файл; изменённый итоговый payload получает LF.
++                working = NormalizeNewlines(working);
++
+                 // Validate result using override from options if provided; otherwise GUI strictness
+                 var level = GetValidationLevelFromGUI();
+                 try

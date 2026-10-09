@@ -8,11 +8,13 @@ $target = Join-Path $projectRoot 'Packages/com.coplaydev.unity-mcp'
 $patch = Join-Path $PSScriptRoot 'discovery-10.2.0.patch'
 $outputPatch = Join-Path $PSScriptRoot 'output-guard-10.2.0.patch'
 $codexPatch = Join-Path $PSScriptRoot 'codex-config-10.2.0.patch'
+$scriptLfPatch = Join-Path $PSScriptRoot 'script-lf-10.2.0.patch'
 $expected = @{
  'Editor/MCPForUnity.Editor.asmdef' = '04EE726B8AF51854B8D7B5AD74859F9A0DC2BB04065068C2FA59472920E79A6A'
  'Editor/Services/ToolDiscoveryService.cs' = '15A013E071D1CED799D4DA23103286DABBBA50F816BB5CA49957C3AE1F02BB10'
  'Editor/Tools/CommandRegistry.cs' = 'D2CBAEDE1D68E5C54877E1E1976284EE86829AAF669E77F3333DA93E4AB61B86'
  'Editor/Tools/ExecuteCode.cs' = '53552BB02B3568F0B91E7289AD269469990E368F0238A115F7C968F7CF885726'
+ 'Editor/Tools/ManageScript.cs' = '792403CF258942342A4ED0BE95C01B9EB38A0E4AE8536C8A313F5596DB4B5C11'
 }
 function Assert-EditorAccess {
  $guardArgs = @((& $PythonExecutable -c "import sys; sys.path.insert(0, r'$projectRoot/Tools/agents'); import broker_runtime; print(broker_runtime.require() / 'editor_broker' / 'client_guard.py')").Trim(), '--project', $projectRoot)
@@ -80,6 +82,10 @@ try {
  if ($LASTEXITCODE -ne 0) { throw 'Патч конфигурации Codex не применим.' }
  & git --no-pager -c core.autocrlf=false apply --ignore-space-change "--directory=$relativeRoot" $codexPatch
  if ($LASTEXITCODE -ne 0) { throw 'Патч конфигурации Codex не применён.' }
+ & git --no-pager -c core.autocrlf=false apply --ignore-space-change --check "--directory=$relativeRoot" $scriptLfPatch
+ if ($LASTEXITCODE -ne 0) { throw 'Патч LF-писателя не применим.' }
+ & git --no-pager -c core.autocrlf=false apply --ignore-space-change "--directory=$relativeRoot" $scriptLfPatch
+ if ($LASTEXITCODE -ne 0) { throw 'Патч LF-писателя не применён.' }
  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'OutputGuard/ExecuteCodeOutputGuard.cs') -Destination (Join-Path $packageRoot 'Editor/Helpers/ExecuteCodeOutputGuard.cs')
  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'OutputGuard/ExecuteCodeOutputGuard.cs.meta.txt') -Destination (Join-Path $packageRoot 'Editor/Helpers/ExecuteCodeOutputGuard.cs.meta')
  Assert-EditorAccess

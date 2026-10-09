@@ -20,6 +20,7 @@ This is the canonical entry point. `CLAUDE.md` imports it; `.codex/AGENTS.md` li
 - Keep task material in `tasks/<task-id>/`: compact dated Readme.md, Details.md, plan.json, tools/, contracts/, changelog/. Generated reports belong in reports/, outside Git; never force-add them.
 - Ordinary tasks do not edit shared indexes/changelogs: README.md, Docs/README.md, CHANGELOG.md, Docs/CHANGELOG.md, SDK journals or tasks/README.md. Product Docs changes need an explicit stage and area owner.
 - SDK patches: reserve the number through `coordination.py patch-reserve`, record it in `tasks/<task-id>/changelog/<date>-sdk-<number>.md`; Mirror code also gets `VR Battlegrounds patch`. Shared SDK journals are historical.
+- New/changed managed source/docs/tools use LF; check only owned physical paths plus staged blobs before checkpoint. Untouched legacy files are not batch-normalized. [EOL contract](Docs/agents/text-eol.md).
 - Use native file editing first (Codex apply_patch, Claude Edit/Write). Follow the injected terminal/encoding guidance; use git --no-pager.
 
 ## Delegation and context ownership

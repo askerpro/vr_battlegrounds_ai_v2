@@ -14,7 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
   _displayName: FABARM SDASS
   _weaponId: ShotgunReal
-  _description: "Помповый дробовик FABARM SDASS с пистолетной рукоятью. Магазин на 8 патронов; залп из 9 дробин эффективен вблизи."
+  _description: "\u041F\u043E\u043C\u043F\u043E\u0432\u044B\u0439 \u0434\u0440\u043E\u0431\u043E\u0432\u0438\u043A
+    FABARM SDASS \u0441 \u043F\u0438\u0441\u0442\u043E\u043B\u0435\u0442\u043D\u043E\u0439
+    \u0440\u0443\u043A\u043E\u044F\u0442\u044C\u044E. \u041C\u0430\u0433\u0430\u0437\u0438\u043D
+    \u043D\u0430 8 \u043F\u0430\u0442\u0440\u043E\u043D\u043E\u0432; \u0437\u0430\u043B\u043F
+    \u0438\u0437 9 \u0434\u0440\u043E\u0431\u0438\u043D \u044D\u0444\u0444\u0435\u043A\u0442\u0438\u0432\u0435\u043D
+    \u0432\u0431\u043B\u0438\u0437\u0438."
   _weaponPrefab: {fileID: 6455569017325164971, guid: d586c5e550bf0ee4a9619d4bd368ca54, type: 3}
   _magazinePrefab: {fileID: 1507515040717537900, guid: 4c0598d66f467ea4690a960b022f58da, type: 3}
   _maxMagazineCount: 3
@@ -43,4 +48,6 @@ MonoBehaviour:
   _weaponPositionOffset: {x: 0, y: 0, z: 0}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _layouts:
+  - {fileID: 11400000, guid: d9a08c527ffacc046836c87795324766, type: 2}
   _icon: {fileID: 0}

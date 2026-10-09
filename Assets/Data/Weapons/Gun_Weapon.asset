@@ -14,10 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
   _displayName: Browning Hi-Power
   _weaponId: Gun
-  _description: "Самозарядный Browning Hi-Power. Недорогой пистолет с умеренной отдачей для ближнего боя и запасного вооружения."
+  _description: "\u0421\u0430\u043C\u043E\u0437\u0430\u0440\u044F\u0434\u043D\u044B\u0439
+    Browning Hi-Power. \u041D\u0435\u0434\u043E\u0440\u043E\u0433\u043E\u0439 \u043F\u0438\u0441\u0442\u043E\u043B\u0435\u0442
+    \u0441 \u0443\u043C\u0435\u0440\u0435\u043D\u043D\u043E\u0439 \u043E\u0442\u0434\u0430\u0447\u0435\u0439
+    \u0434\u043B\u044F \u0431\u043B\u0438\u0436\u043D\u0435\u0433\u043E \u0431\u043E\u044F
+    \u0438 \u0437\u0430\u043F\u0430\u0441\u043D\u043E\u0433\u043E \u0432\u043E\u043E\u0440\u0443\u0436\u0435\u043D\u0438\u044F."
   _weaponPrefab: {fileID: 1013363612589426, guid: a89abddac5809dc47a6715d7ebeab24e, type: 3}
   _magazinePrefab: {fileID: 7658064994636483981, guid: 7cc1b24032fe06543b2b7edf8c18c8b4, type: 3}
   _maxMagazineCount: 3
+  _readinessProfile: {fileID: 0}
+  _commonFeedbackProfile: {fileID: 0}
+  _feedbackOverride: {fileID: 0}
   _price: 300
   _damage: 38
   _rangeModifier: 0.9
@@ -40,4 +47,6 @@ MonoBehaviour:
   _weaponPositionOffset: {x: 0, y: 0, z: 0}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _layouts:
+  - {fileID: 11400000, guid: 3d53088258926504db644b8b2f8ddefb, type: 2}
   _icon: {fileID: 0}

@@ -13,24 +13,25 @@ MonoBehaviour:
   m_Name: CurrentGameplayArsenal
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalPreset
   _presetId: CurrentGameplay
+  _presentationStyle: {fileID: 11400000, guid: 4bae57367dca4a3428e5aff9be952446, type: 2}
   _entries:
   - Weapon: {fileID: 11400000, guid: 802986f4d017e7d4882c1c6022341af4, type: 2}
-    Zone: 0
+    Row: pegboard
   - Weapon: {fileID: 11400000, guid: 7fdcb3f0b05028044a0ba801f61bf4cc, type: 2}
-    Zone: 1
+    Row: shelf
   - Weapon: {fileID: 11400000, guid: 29c9d566aa4ac214ab127b4e633b4334, type: 2}
-    Zone: 0
+    Row: pegboard
   - Weapon: {fileID: 11400000, guid: f140291be0d87d9409f937afc390abf0, type: 2}
-    Zone: 0
+    Row: pegboard
   - Weapon: {fileID: 11400000, guid: 06130e656acaee24da3fb3f2d54de872, type: 2}
-    Zone: 0
+    Row: pegboard
   - Weapon: {fileID: 11400000, guid: e0b50a7a3495ac74eb153cd542432c4e, type: 2}
-    Zone: 0
+    Row: pegboard
   - Weapon: {fileID: 11400000, guid: 805abd57d56b11d4cbb9548e3c9ade04, type: 2}
-    Zone: 1
+    Row: shelf
   - Weapon: {fileID: 11400000, guid: b2e37e600ab1893469a53e2d5940e98b, type: 2}
-    Zone: 1
+    Row: shelf
   - Weapon: {fileID: 11400000, guid: 71578ee82c8283640ab0a08d6396549b, type: 2}
-    Zone: 1
+    Row: shelf
   - Weapon: {fileID: 11400000, guid: e4fe34bd1f05bb245b5d1589a10a69d4, type: 2}
-    Zone: 1
+    Row: shelf

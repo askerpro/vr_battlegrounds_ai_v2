@@ -14,10 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
   _displayName: AX-50
   _weaponId: SniperRifle
-  _description: "Болтовая винтовка AX-50. Магазин на 10 патронов, мощный выстрел и низкий темп огня."
+  _description: "\u0411\u043E\u043B\u0442\u043E\u0432\u0430\u044F \u0432\u0438\u043D\u0442\u043E\u0432\u043A\u0430
+    AX-50. \u041C\u0430\u0433\u0430\u0437\u0438\u043D \u043D\u0430 10 \u043F\u0430\u0442\u0440\u043E\u043D\u043E\u0432,
+    \u043C\u043E\u0449\u043D\u044B\u0439 \u0432\u044B\u0441\u0442\u0440\u0435\u043B
+    \u0438 \u043D\u0438\u0437\u043A\u0438\u0439 \u0442\u0435\u043C\u043F \u043E\u0433\u043D\u044F."
   _weaponPrefab: {fileID: 4144354778344050857, guid: ae620c2caa0384243bbe976dc7e1199d, type: 3}
   _magazinePrefab: {fileID: 8141809575723388705, guid: 07afbe3c7f538ec4399eca18cb85cb4e, type: 3}
   _maxMagazineCount: 3
+  _readinessProfile: {fileID: 0}
+  _commonFeedbackProfile: {fileID: 0}
+  _feedbackOverride: {fileID: 0}
   _price: 1700
   _damage: 88
   _rangeModifier: 0.98
@@ -40,4 +46,6 @@ MonoBehaviour:
   _weaponPositionOffset: {x: 0, y: 0, z: 0}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _layouts:
+  - {fileID: 11400000, guid: a54f4ccb44115b84ab0c55dac6c09234, type: 2}
   _icon: {fileID: 0}

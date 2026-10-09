@@ -47,4 +47,5 @@ MonoBehaviour:
   _weaponPositionOffset: {x: 0, y: 0.06, z: 0}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _layouts: []
   _icon: {fileID: 0}

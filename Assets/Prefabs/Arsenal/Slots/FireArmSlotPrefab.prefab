@@ -785,12 +785,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.FirearmSlotController
   _weaponInfo: {fileID: 11400000, guid: 4f810565631ae0c40bce683a1d290f39, type: 2}
+  _presentationZone: 0
+  _slotWidth: 0.4
+  _defaultLayout: {fileID: 11400000, guid: 2ad267b006047dd4aa11b0e996747188, type: 2}
   _itemAnchor: {fileID: 6398143880287876599}
-  _customCardPresentation: 1
-  _cardLocalPosition: {x: 0.135, y: 0.7485462, z: 0.030117135}
-  _cardLocalEulerAngles: {x: 9.999999, y: 0, z: 0}
-  _cardSize: {x: 0.15, y: 0.16}
-  _cardFontSize: 0.16
   _slotLight: {fileID: 7916389798647193099}
   _availableColor: {r: 1, g: 0.85, b: 0.6, a: 1}
   _unavailableColor: {r: 0, g: 0, b: 0, a: 1}

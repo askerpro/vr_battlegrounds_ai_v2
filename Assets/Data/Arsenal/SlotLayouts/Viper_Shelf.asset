@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e5dda01b2b462143b4b75082aa094f4, type: 3}
+  m_Name: Viper_Shelf
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalSlotLayout
+  _slotKind: 1
+  _itemTarget:
+    Position: {x: -0.055, y: 0.032066535, z: 0.07}
+    EulerAngles: {x: 0, y: 0, z: 90}
+  _magazineTarget:
+    Position: {x: 0.11, y: 0.028994273, z: 0.255}
+    EulerAngles: {x: 0, y: 90, z: 90}
+  _cardTarget:
+    Position: {x: 0.105, y: 0.026, z: -0.075}
+    EulerAngles: {x: 90, y: 0, z: 0}
+  _cardSize: {x: 0.15, y: 0.16}
+  _cardFontSize: 0.16
+  _supports: []
+  _placeZone:
+    Center: {x: -0.055, y: 0.032066535, z: 0.07}
+    Size: {x: 0.2, y: 0.2, z: 0.2}
+    EulerAngles: {x: 0, y: 0, z: 0}

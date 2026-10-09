@@ -20,6 +20,9 @@ MonoBehaviour:
   _weaponPrefab: {fileID: 2269598592341582059, guid: 2472d08be23174c4b9863d83cddf68f8, type: 3}
   _magazinePrefab: {fileID: 2754127896509867834, guid: 32bac82101ae21544b671d744fd34d82, type: 3}
   _maxMagazineCount: 3
+  _readinessProfile: {fileID: 0}
+  _commonFeedbackProfile: {fileID: 0}
+  _feedbackOverride: {fileID: 0}
   _price: 1700
   _damage: 88
   _rangeModifier: 0.98
@@ -42,4 +45,6 @@ MonoBehaviour:
   _weaponPositionOffset: {x: 0, y: 0, z: 0.05}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _layouts:
+  - {fileID: 11400000, guid: ba879a6081bd2524396f497e8fc253f7, type: 2}
   _icon: {fileID: 0}

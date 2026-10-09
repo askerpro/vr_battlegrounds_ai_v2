@@ -14,10 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
   _displayName: AK-105
   _weaponId: AK105
-  _description: "Автоматический карабин AK-105. Универсальное основное оружие для коротких очередей и огня на средней дистанции."
+  _description: "\u0410\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439
+    \u043A\u0430\u0440\u0430\u0431\u0438\u043D AK-105. \u0423\u043D\u0438\u0432\u0435\u0440\u0441\u0430\u043B\u044C\u043D\u043E\u0435
+    \u043E\u0441\u043D\u043E\u0432\u043D\u043E\u0435 \u043E\u0440\u0443\u0436\u0438\u0435
+    \u0434\u043B\u044F \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0445 \u043E\u0447\u0435\u0440\u0435\u0434\u0435\u0439
+    \u0438 \u043E\u0433\u043D\u044F \u043D\u0430 \u0441\u0440\u0435\u0434\u043D\u0435\u0439
+    \u0434\u0438\u0441\u0442\u0430\u043D\u0446\u0438\u0438."
   _weaponPrefab: {fileID: 3900771781936566667, guid: 732e5b48d3557594583580ed383cc981, type: 3}
   _magazinePrefab: {fileID: 1786085660339194700, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
   _maxMagazineCount: 3
+  _readinessProfile: {fileID: 0}
+  _commonFeedbackProfile: {fileID: 0}
+  _feedbackOverride: {fileID: 0}
   _price: 2700
   _damage: 33
   _rangeModifier: 0.98
@@ -40,4 +48,6 @@ MonoBehaviour:
   _weaponPositionOffset: {x: 0, y: 0, z: 0}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _layouts:
+  - {fileID: 11400000, guid: 9ce51d6f92864d74ea4464aadf5debba, type: 2}
   _icon: {fileID: 0}

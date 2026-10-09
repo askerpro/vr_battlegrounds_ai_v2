@@ -48,3 +48,4 @@ MonoBehaviour:
     ContentFingerprint: 71a969eaacb4bad218c8bf4827bc712cee346ee246729857af2eadb66e82ad46
     ArsenalFingerprint: 3594c146a8222b4e1e97cc91c120d7fc
   _compositionVersion: 1
+  _arsenalComposition: {fileID: 11400000, guid: b8538636e1c0b6c4f92d6b8d8e4737b0, type: 2}

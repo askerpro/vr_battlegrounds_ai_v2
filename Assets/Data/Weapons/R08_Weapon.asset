@@ -14,10 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
   _displayName: R08
   _weaponId: R08
-  _description: "Самозарядный пистолет R08. Компактное запасное оружие с мощным одиночным выстрелом."
+  _description: "\u0421\u0430\u043C\u043E\u0437\u0430\u0440\u044F\u0434\u043D\u044B\u0439
+    \u043F\u0438\u0441\u0442\u043E\u043B\u0435\u0442 R08. \u041A\u043E\u043C\u043F\u0430\u043A\u0442\u043D\u043E\u0435
+    \u0437\u0430\u043F\u0430\u0441\u043D\u043E\u0435 \u043E\u0440\u0443\u0436\u0438\u0435
+    \u0441 \u043C\u043E\u0449\u043D\u044B\u043C \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u044B\u043C
+    \u0432\u044B\u0441\u0442\u0440\u0435\u043B\u043E\u043C."
   _weaponPrefab: {fileID: 8504929066865201802, guid: fac3a1d89b21c3c42b8292f09026d44b, type: 3}
   _magazinePrefab: {fileID: 4089589820379981812, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}
   _maxMagazineCount: 3
+  _readinessProfile: {fileID: 0}
+  _commonFeedbackProfile: {fileID: 0}
+  _feedbackOverride: {fileID: 0}
   _price: 700
   _damage: 38
   _rangeModifier: 0.85
@@ -40,4 +47,6 @@ MonoBehaviour:
   _weaponPositionOffset: {x: 0, y: -0.03, z: 0.1}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _layouts:
+  - {fileID: 11400000, guid: e1d3bf14b1b58f548988f7fa12f4d598, type: 2}
   _icon: {fileID: 0}

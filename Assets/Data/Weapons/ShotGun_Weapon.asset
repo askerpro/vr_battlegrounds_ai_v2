@@ -14,10 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
   _displayName: Shotgun
   _weaponId: Shotgun
-  _description: "Футуристическое оружие с ручным циклом перезаряжания. Выпускает один мощный снаряд; дробового залпа нет."
+  _description: "\u0424\u0443\u0442\u0443\u0440\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435
+    \u043E\u0440\u0443\u0436\u0438\u0435 \u0441 \u0440\u0443\u0447\u043D\u044B\u043C
+    \u0446\u0438\u043A\u043B\u043E\u043C \u043F\u0435\u0440\u0435\u0437\u0430\u0440\u044F\u0436\u0430\u043D\u0438\u044F.
+    \u0412\u044B\u043F\u0443\u0441\u043A\u0430\u0435\u0442 \u043E\u0434\u0438\u043D
+    \u043C\u043E\u0449\u043D\u044B\u0439 \u0441\u043D\u0430\u0440\u044F\u0434; \u0434\u0440\u043E\u0431\u043E\u0432\u043E\u0433\u043E
+    \u0437\u0430\u043B\u043F\u0430 \u043D\u0435\u0442."
   _weaponPrefab: {fileID: 5857197354937311182, guid: 8b9da2dc5df93b94e96eb12b2ac13288, type: 3}
   _magazinePrefab: {fileID: 5837573240272137203, guid: d28f92e640efecc41b278625340bff0c, type: 3}
   _maxMagazineCount: 3
+  _readinessProfile: {fileID: 0}
+  _commonFeedbackProfile: {fileID: 0}
+  _feedbackOverride: {fileID: 0}
   _price: 2700
   _damage: 40
   _rangeModifier: 0.85
@@ -40,4 +48,6 @@ MonoBehaviour:
   _weaponPositionOffset: {x: 0, y: 0, z: 0}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _layouts:
+  - {fileID: 11400000, guid: fa7b9c329bc46b048a4fa087e1bd8368, type: 2}
   _icon: {fileID: 0}

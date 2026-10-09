@@ -14,10 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.WeaponInfo
   _displayName: Revolver
   _weaponId: Revolver
-  _description: "Тяжёлый револьвер. Сменный барабан на 6 патронов и мощный одиночный выстрел."
+  _description: "\u0422\u044F\u0436\u0451\u043B\u044B\u0439 \u0440\u0435\u0432\u043E\u043B\u044C\u0432\u0435\u0440.
+    \u0421\u043C\u0435\u043D\u043D\u044B\u0439 \u0431\u0430\u0440\u0430\u0431\u0430\u043D
+    \u043D\u0430 6 \u043F\u0430\u0442\u0440\u043E\u043D\u043E\u0432 \u0438 \u043C\u043E\u0449\u043D\u044B\u0439
+    \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u044B\u0439 \u0432\u044B\u0441\u0442\u0440\u0435\u043B."
   _weaponPrefab: {fileID: 1347677723873503563, guid: 3eee9bb131ea6a64ca4fc336d3eea0b9, type: 3}
   _magazinePrefab: {fileID: 6196372738328328043, guid: 24bb8e6e4c7897848802a0c534714580, type: 3}
   _maxMagazineCount: 3
+  _readinessProfile: {fileID: 0}
+  _commonFeedbackProfile: {fileID: 0}
+  _feedbackOverride: {fileID: 0}
   _price: 700
   _damage: 53
   _rangeModifier: 0.85
@@ -40,4 +46,6 @@ MonoBehaviour:
   _weaponPositionOffset: {x: 0, y: -0.03, z: 0.1}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}
   _magazinePositionOffset: {x: 0, y: 0, z: 0}
+  _layouts:
+  - {fileID: 11400000, guid: a1a1e79f1cba85c41a4b0910cea32618, type: 2}
   _icon: {fileID: 0}

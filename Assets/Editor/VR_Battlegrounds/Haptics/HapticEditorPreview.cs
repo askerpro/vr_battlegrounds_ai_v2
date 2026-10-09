@@ -97,7 +97,10 @@ namespace VrBattlegrounds.EditorTools.Haptics
         }
     }
 
-    /// <summary>Записывает формы и роли вибрации при выходе из Play, чтобы подобранные в шлеме значения не потерялись.</summary>
+    /// <summary>
+    /// Записывает формы и конфиг отклика при выходе из Play, чтобы подобранные в шлеме значения не потерялись. Префабы отклика
+    /// окно «Вибрация» сохраняет сразу при правке.
+    /// </summary>
     [InitializeOnLoad]
     internal static class HapticAutoSave
     {
@@ -116,7 +119,7 @@ namespace VrBattlegrounds.EditorTools.Haptics
 
         public static void SaveAll()
         {
-            foreach (string guid in AssetDatabase.FindAssets("t:" + nameof(UxrHapticWaveform) + " t:" + nameof(HapticRoles)))
+            foreach (string guid in AssetDatabase.FindAssets("t:" + nameof(UxrHapticWaveform) + " t:" + nameof(InteractionFeedbackConfig)))
             {
                 Object asset = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GUIDToAssetPath(guid));
                 if (asset != null && EditorUtility.IsDirty(asset)) AssetDatabase.SaveAssetIfDirty(asset);

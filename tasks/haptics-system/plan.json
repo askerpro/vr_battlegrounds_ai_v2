@@ -44,6 +44,27 @@
       "needs": []
     },
     {
+      "id": "interaction-feedback",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.GrabCandidates.cs",
+        "Assets/Scripts/Haptics/**",
+        "Assets/Scripts/Interaction/AnchorReadiness.cs",
+        "Assets/Prefabs/Feedback/**",
+        "Assets/Prefabs/Feedback.meta",
+        "Assets/Resources/HapticRoles.asset",
+        "Assets/Resources/InteractionFeedbackConfig.asset",
+        "Assets/Data/Haptics/**",
+        "Assets/Editor/VR_Battlegrounds/Haptics/**",
+        "Assets/Tests/EditMode/Haptics/**",
+        "tasks/haptics-system/**"
+      ],
+      "after": [
+        {"task": "haptics-system", "stage": "behavior-tests", "state": "merged"}
+      ],
+      "needs": []
+    },
+    {
       "id": "pocket-removal",
       "writes": [
         "Assets/Scripts/Interaction/PocketHaptics.cs",
@@ -54,7 +75,7 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "behavior-tests", "state": "merged"}
+        {"task": "haptics-system", "stage": "interaction-feedback", "state": "merged"}
       ],
       "needs": []
     },

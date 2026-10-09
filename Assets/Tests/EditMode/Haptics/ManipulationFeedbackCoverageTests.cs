@@ -13,9 +13,10 @@ using VrBattlegrounds.Interaction;
 namespace VrBattlegrounds.Tests.Haptics
 {
     /// <summary>
-    /// Ни один якорь и ни один хватаемый предмет игры не остаётся без отклика незаметно. Для каждого якоря и корневого
-    /// хватаемого предмета в префабах игры вычисляется клип по тому же порядку, что и в игре: <see cref="HapticOverride" />
-    /// объекта → роль из <see cref="HapticRoles" />. Объект без отклика допустим только в списке
+    /// Ни один якорь и ни один хватаемый предмет игры не остаётся без отклика готовности незаметно. Для каждого якоря и
+    /// корневого хватаемого предмета в префабах игры префаб отклика выбирается так же, как в игре
+    /// (<see cref="InteractionFeedback" />): <see cref="InteractionFeedbackOverride" /> объекта → <see cref="InteractionFeedbackConfig" />
+    /// (роль якоря или «в досягаемости»). Объект без отклика допустим только в списке
     /// <see cref="NoFeedbackYet" /> с причиной — так новый предмет или якорь без отклика сразу виден, а текущие пробелы
     /// перечислены. Полный перечень — <c>Temp/HapticFeedbackCoverage.txt</c>. Обзорные и черновые префабы прицелов — не игра.
     /// </summary>
@@ -29,99 +30,7 @@ namespace VrBattlegrounds.Tests.Haptics
         /// Пока без отклика: «префаб | путь объекта | вид» → причина. Строка уходит, когда объект получил отклик (тест
         /// проверяет, что список не устарел).
         /// </summary>
-        private const string WeaponSocket = "гнездо магазина/патрона: роль World пустая — вибрация готовности гнезда решается " +
-                                            "на этапе grabber-readiness (подсветку гнезда даёт WeaponMagazineAnchorHighlight, область weapon-system)";
-        private const string ArsenalSlot = "слот арсенала/жетона: роль World пустая — вибрация готовности слота решается на этапе grabber-readiness";
-        private const string ItemNoGrab = "хват предмета: роль ItemGrab пустая — готовность взять (ItemInReach) — этап grabber-readiness, " +
-                                          "щелчок хвата SDK (UxrManipulationHapticFeedback) — этап item-clicks";
-
-        private static readonly Dictionary<string, string> NoFeedbackYet = new Dictionary<string, string>
-        {
-            ["Assets/Prefabs/Arsenal/DogTag/DogTagPanel.prefab | DogTagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_AK105/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_AK105/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_M16/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_M16/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_Machinegun/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_Machinegun/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_SRM12_SightReview/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_SRM12_SightReview/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_Scar/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_Scar/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_Shotgun/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_Shotgun/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_SniperRifle/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_SniperRifle/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_SniperRifle_SightReview/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_SniperRifle_SightReview/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_TR15_SightReview/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/RiflesSlotsContainer/PegboardSlot_TR15_SightReview/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_MKR9_SightReview/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_MKR9_SightReview/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_MP5K/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_MP5K/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_PPK/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_PPK/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_R08/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_R08/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_SDKGun/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_SDKGun/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_Viper_SightReview/MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab | PresentationRoot/ShelfRoot/ShelfSlotsContainer/ShelfSlot_Viper_SightReview/WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab | MagAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab | WeaponAnchor | готовность якоря"] = ArsenalSlot,
-            ["Assets/Prefabs/Arsenal/DogTag/DogTagPanel.prefab | DogTag | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/UI/Menu/Tablet/Tablet_Base.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/AK105/AK105.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/AR15/AR15.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/AR15/AR15_Magazine.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower_Magazine.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS_Ammo.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/Herrington/Herrington.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/MKR9/MKR9.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/MP5K/MP5K.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/Mk14/Mk14.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/PPK/PPK.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/R08/R08.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/Revolver/Revolver.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/SRM12/SRM12.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/Scar/Scar.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/SniperRifle/SniperRifle.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/TR15/TR15.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/Uzi/Uzi.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/Viper/Viper.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Grenade.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Gun.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Machinegun.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/MagGun.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/MagMachinegun.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/MagShotgun.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Shotgun.prefab | (корень) | хват предмета"] = ItemNoGrab,
-            ["Assets/Prefabs/Weapons/AK105/AK105.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/AR15/AR15.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab | CartridgeIntake | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/Herrington/Herrington.prefab | CartridgeIntake | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/Herrington/Herrington.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/MKR9/MKR9.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/MP5K/MP5K.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/Mk14/Mk14.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/PPK/PPK.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/R08/R08.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/Revolver/Revolver.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/SRM12/SRM12.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/Scar/Scar.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/SniperRifle/SniperRifle.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/TR15/TR15.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/Uzi/Uzi.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/Prefabs/Weapons/Viper/Viper.prefab | MeshContainer/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Gun.prefab | GunGeo/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Machinegun.prefab | MachinegunGeo/MagAnchor | готовность якоря"] = WeaponSocket,
-            ["Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Shotgun.prefab | ShotGunGeo/MagAnchor | готовность якоря"] = WeaponSocket,
-        };
+        private static readonly Dictionary<string, string> NoFeedbackYet = new Dictionary<string, string>();
 
         private readonly struct Entry
         {
@@ -138,8 +47,8 @@ namespace VrBattlegrounds.Tests.Haptics
 
         private static List<Entry> Scan()
         {
-            var roles = Resources.Load<HapticRoles>(nameof(HapticRoles));
-            Assert.IsNotNull(roles, "Нет Resources/HapticRoles.asset.");
+            var config = Resources.Load<InteractionFeedbackConfig>(nameof(InteractionFeedbackConfig));
+            Assert.IsNotNull(config, "Нет Resources/InteractionFeedbackConfig.asset.");
 
             // Объект оценивается там, где он реально стоит (карман — внутри аватара), а в перечень попадает один раз — по
             // исходному префабу. Отклик засчитывается, если он есть хоть в одном месте использования.
@@ -160,11 +69,11 @@ namespace VrBattlegrounds.Tests.Haptics
                 foreach (UxrGrabbableObjectAnchor anchor in prefab.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
                 {
                     if (anchor.GrabProxy != null) proxies.Add(anchor.GrabProxy);
-                    var own = anchor.GetComponent<HapticOverride>();
+                    var own = anchor.GetComponent<InteractionFeedbackOverride>();
                     AnchorRoleKind role = AnchorRole.Get(anchor);
-                    UxrHapticClip clip = HapticOverride.Pick(own != null ? own.AnchorReady : null, roles.AnchorReady(role));
-                    string source = own != null && own.AnchorReady.HasWaveform ? "HapticOverride" : $"роль {role}";
-                    Add($"{Origin(anchor)} | готовность якоря", source, clip != null && clip.HasWaveform);
+                    GameObject feedback = own != null && own.Ready != null ? own.Ready : config.AnchorReady(role);
+                    string source = own != null && own.Ready != null ? nameof(InteractionFeedbackOverride) : $"конфиг, роль {role}";
+                    Add($"{Origin(anchor)} | готовность якоря", Describe(source, feedback), feedback != null);
                 }
 
                 foreach (UxrGrabbableObject item in prefab.GetComponentsInChildren<UxrGrabbableObject>(true))
@@ -173,14 +82,17 @@ namespace VrBattlegrounds.Tests.Haptics
                     // часть предмета, не отдельный предмет.
                     if (proxies.Contains(item)) continue;
                     if (item.transform.parent != null && item.transform.parent.GetComponentInParent<UxrGrabbableObject>(true) != null) continue;
-                    var own = item.GetComponent<HapticOverride>();
-                    UxrHapticClip clip = HapticOverride.Pick(own != null ? own.Grab : null, roles.ItemGrab);
-                    string source = own != null && own.Grab.HasWaveform ? "HapticOverride" : "роль ItemGrab";
-                    Add($"{Origin(item)} | хват предмета", source, clip != null && clip.HasWaveform);
+                    var own = item.GetComponent<InteractionFeedbackOverride>();
+                    GameObject feedback = own != null && own.Ready != null ? own.Ready : config.ItemInReach;
+                    string source = own != null && own.Ready != null ? nameof(InteractionFeedbackOverride) : "конфиг, в досягаемости";
+                    Add($"{Origin(item)} | готовность взять", Describe(source, feedback), feedback != null);
                 }
             }
             return entries.Values.ToList();
         }
+
+        private static string Describe(string source, GameObject feedback) =>
+            feedback != null ? $"{source} → {feedback.name}" : source;
 
         /// <summary>«Исходный префаб | путь объекта в нём» — один ключ для объекта, где бы префаб ни был вложен.</summary>
         private static string Origin(Component component)
@@ -204,7 +116,7 @@ namespace VrBattlegrounds.Tests.Haptics
             WriteReport(entries);
 
             string[] missing = entries.Where(e => !e.Covered && !NoFeedbackYet.ContainsKey(e.Key)).Select(e => e.Key).ToArray();
-            Assert.IsEmpty(missing, $"Без отклика ({missing.Length}) — задать роль/HapticOverride или внести в NoFeedbackYet с " +
+            Assert.IsEmpty(missing, $"Без отклика ({missing.Length}) — задать в конфиге/InteractionFeedbackOverride или внести в NoFeedbackYet с " +
                                     $"причиной. Полный перечень: {ReportPath}\n" + string.Join("\n", missing.Take(40)));
         }
 

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf4149bfb23e4b67a9198c53178eefb3, type: 3}
+  m_Name: InteractionFeedbackConfig
+  m_EditorClassIdentifier: 
+  _readyMagazinePocket: {fileID: 1000000000000000001, guid: 17f70dc08ac5409cbe9721b5e8dbdbff, type: 3}
+  _readyPrimaryAnchor: {fileID: 1000000000000000001, guid: 17f70dc08ac5409cbe9721b5e8dbdbff, type: 3}
+  _readySecondaryAnchor: {fileID: 1000000000000000001, guid: 17f70dc08ac5409cbe9721b5e8dbdbff, type: 3}
+  _readyAvatarOther: {fileID: 1000000000000000001, guid: 17f70dc08ac5409cbe9721b5e8dbdbff, type: 3}
+  _readyWorldAnchor: {fileID: 1000000000000000001, guid: 17f70dc08ac5409cbe9721b5e8dbdbff, type: 3}
+  _itemInReach: {fileID: 1000000000000000001, guid: 17f70dc08ac5409cbe9721b5e8dbdbff, type: 3}
+  _itemGrab: {fileID: 0}
+  _itemPlace: {fileID: 0}
+  _itemRelease: {fileID: 0}
+  _oneShotLifetime: 2

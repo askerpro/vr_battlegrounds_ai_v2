@@ -52,11 +52,11 @@ namespace VrBattlegrounds.Haptics
             s_instance.StartVoice(clip, hand.Side, gain, role, continuous: false, owner: null);
         }
 
-        /// <summary>Разовый клип на руке локального игрока.</summary>
-        public static void Play(UxrHapticClip clip, UxrHandSide side, float gain = 1f)
+        /// <summary>Разовый клип на руке локального игрока. <paramref name="role" /> — как у перегрузки с рукой.</summary>
+        public static void Play(UxrHapticClip clip, UxrHandSide side, float gain = 1f, HapticHandRole role = HapticHandRole.Primary)
         {
             if (s_instance == null) return;
-            s_instance.StartVoice(clip, side, gain, HapticHandRole.Primary, continuous: false, owner: null);
+            s_instance.StartVoice(clip, side, gain, role, continuous: false, owner: null);
         }
 
         /// <summary>Разовый клип на обеих руках локального игрока — два независимых голоса.</summary>
@@ -69,12 +69,14 @@ namespace VrBattlegrounds.Haptics
         /// <summary>
         /// Непрерывный клип на руке локального игрока: форма повторяется с паузой <see cref="UxrHapticClip.RepeatGapMs" />.
         /// Живёт, пока не вызван <see cref="HapticHandle.End" />, пока <paramref name="owner" /> не уничтожен и не выключен
-        /// и пока не сменился локальный аватар.
+        /// и пока не сменился локальный аватар. <paramref name="role" /> = Secondary умножает силу на
+        /// <see cref="UxrHapticClip.SecondaryHandGain" />.
         /// </summary>
-        public static HapticHandle Begin(UxrHapticClip clip, UxrHandSide side, Object owner, float gain = 1f)
+        public static HapticHandle Begin(UxrHapticClip clip, UxrHandSide side, Object owner, float gain = 1f,
+                                         HapticHandRole role = HapticHandRole.Primary)
         {
             if (s_instance == null || owner == null) return default;
-            return new HapticHandle(s_instance.StartVoice(clip, side, gain, HapticHandRole.Primary, continuous: true, owner));
+            return new HapticHandle(s_instance.StartVoice(clip, side, gain, role, continuous: true, owner));
         }
 
         internal static void End(int voice)
@@ -126,7 +128,6 @@ namespace VrBattlegrounds.Haptics
             var host = new GameObject(nameof(HapticService));
             DontDestroyOnLoad(host);
             host.AddComponent<HapticService>();
-            host.AddComponent<InteractionHaptics>();
         }
 
         private static float Now => Time.unscaledTime;

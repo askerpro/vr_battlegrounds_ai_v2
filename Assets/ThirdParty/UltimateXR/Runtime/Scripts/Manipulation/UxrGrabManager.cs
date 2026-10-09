@@ -845,12 +845,16 @@ namespace UltimateXR.Manipulation
 
             Dictionary<UxrGrabbableObject, List<int>> possibleGrabs = null;
 
+            BeginGrabCandidatesFrame(); // VR Battlegrounds patch 67
+
             foreach (UxrGrabber grabber in UxrGrabber.EnabledComponents)
             {
                 if (grabber.GrabbedObject == null && IsLocalAffordanceGrabber(grabber))
                 {
                     if (GetClosestGrabbableObject(grabber, out UxrGrabbableObject grabbableCandidate, out int grabPointCandidate) && !IsBeingGrabbed(grabbableCandidate, grabPointCandidate))
                     {
+                        SetGrabCandidate(grabber, grabbableCandidate, grabPointCandidate); // VR Battlegrounds patch 67
+
                         if (possibleGrabs == null)
                         {
                             possibleGrabs = new Dictionary<UxrGrabbableObject, List<int>>();
@@ -867,6 +871,8 @@ namespace UltimateXR.Manipulation
                     }
                 }
             }
+
+            EndGrabCandidatesFrame(); // VR Battlegrounds patch 67
 
             // Second pass: update visual feedback objects for grabbable objects.
 

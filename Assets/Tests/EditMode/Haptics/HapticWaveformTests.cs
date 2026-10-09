@@ -10,8 +10,9 @@ namespace VrBattlegrounds.Tests.Haptics
 {
     /// <summary>
     /// Формы вибрации (<see cref="UxrHapticWaveform" />, SDK-патч 66) — общий реестр проекта, ими пользуются клипы во многих
-    /// местах. Структурные правила, а не подобранные числа: числа подбираются в шлеме. Роли (<see cref="HapticRoles" />) —
-    /// единственный ассет, его клипы ссылаются только на существующие формы.
+    /// местах. Структурные правила, а не подобранные числа: числа подбираются в шлеме. Отклик взаимодействий
+    /// (<see cref="InteractionFeedbackConfig" />) — единственный ассет, он ссылается только на префабы отклика, а их
+    /// <see cref="HapticPlayer" /> — только на формы проекта.
     /// </summary>
     public class HapticWaveformTests
     {
@@ -47,21 +48,41 @@ namespace VrBattlegrounds.Tests.Haptics
             Assert.IsEmpty(errors, string.Join("\n", errors));
         }
 
-        [Test]
-        public void Роли_грузятся_и_ссылаются_на_формы_проекта()
-        {
-            var roles = Resources.Load<HapticRoles>(nameof(HapticRoles));
-            Assert.IsNotNull(roles, "Нет Assets/Resources/HapticRoles.asset — вибрации взаимодействий не будет.");
+        private const string FeedbackFolder = "Assets/Prefabs/Feedback/";
 
-            var so = new SerializedObject(roles);
+        [Test]
+        public void Конфиг_отклика_грузится_и_ссылается_на_префабы_отклика()
+        {
+            var config = Resources.Load<InteractionFeedbackConfig>(nameof(InteractionFeedbackConfig));
+            Assert.IsNotNull(config, "Нет Assets/Resources/InteractionFeedbackConfig.asset — отклика взаимодействий не будет.");
+
             var errors = new List<string>();
-            SerializedProperty property = so.GetIterator();
+            SerializedProperty property = new SerializedObject(config).GetIterator();
             while (property.NextVisible(true))
             {
-                if (property.name != "_waveform" || property.propertyType != SerializedPropertyType.ObjectReference) continue;
-                Object waveform = property.objectReferenceValue;
-                if (waveform != null && !AssetDatabase.GetAssetPath(waveform).StartsWith("Assets/Data/"))
-                    errors.Add($"{property.propertyPath}: форма вне Assets/Data — {AssetDatabase.GetAssetPath(waveform)}");
+                if (property.propertyType != SerializedPropertyType.ObjectReference || property.objectReferenceValue == null ||
+                    property.name == "m_Script") continue;
+                string path = AssetDatabase.GetAssetPath(property.objectReferenceValue);
+                if (!path.StartsWith(FeedbackFolder)) errors.Add($"{property.propertyPath}: отклик вне {FeedbackFolder} — {path}");
+            }
+
+            Assert.IsEmpty(errors, string.Join("\n", errors));
+        }
+
+        [Test]
+        public void Вибрация_префабов_отклика_играет_формы_проекта()
+        {
+            var errors = new List<string>();
+            foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { FeedbackFolder.TrimEnd('/') }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                foreach (HapticPlayer player in AssetDatabase.LoadAssetAtPath<GameObject>(path).GetComponentsInChildren<HapticPlayer>(true))
+                {
+                    UxrHapticClip clip = player.Clip;
+                    if (clip == null || !clip.HasWaveform) errors.Add($"{path}/{player.name}: клип без формы — вибрации не будет");
+                    else if (!AssetDatabase.GetAssetPath(clip.Waveform).StartsWith("Assets/Data/"))
+                        errors.Add($"{path}/{player.name}: форма вне Assets/Data — {AssetDatabase.GetAssetPath(clip.Waveform)}");
+                }
             }
 
             Assert.IsEmpty(errors, string.Join("\n", errors));

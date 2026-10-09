@@ -194,6 +194,47 @@ Monitor — дополнение к обязательным проверкам,
 хуки доставки не устанавливать в рамках текущего протокола. Пробы сохранены как
 исследование, не как рабочий маршрут. [Принятое решение](../../tasks/agent-coordination-protocol/communication-policy.md).
 
+### Адресация штатных уведомлений
+
+task-id, owner, UUID плана и native endpoint — разные идентификаторы. Адрес хранится
+отдельно от plan.json/контрактов/допуска: смена сессии не меняет архитектурную ревизию.
+При старте/возобновлении **основной агент** читает свежий штатный listing и публикует
+только собственный адрес из своего зарегистрированного checkout. Claude: первая строка
+ListAgents содержит точный `name [ref]`; имя без ref, сырой ref и UUID плана не подходят.
+Подагент видит principal и не публикует его endpoint как собственный адрес другой задачи.
+
+Из status взять native_route.epoch: 0 при отсутствии. Например, после собственного
+ListAgents (значения заменить на фактические, чужие адреса не угадывать):
+
+```powershell
+python Tools/agents/coordination.py route-publish --task <task-id> --owner <owner> --channel claude-code-peers --address "<name> [<ref>]" --expected-epoch <epoch>
+python Tools/agents/coordination.py route-resolve --task <sender-task> --owner <sender-owner> --to <recipient-task>
+```
+
+native_candidate содержит адрес-кандидат, обе binding и requires_native_discovery=true.
+Это не подтверждение доступности/доставки. Перед SendMessage отправитель получает
+свежий **полный** ListAgents и сверяет точное name/ref получателя и собственную первую
+строку с sender_binding. При смене своего адреса повторяет самопубликацию. Только после
+сверки использует точный `to` в штатном инструменте. Нельзя массово уведомлять похожие имена.
+Неполный/неоднозначный список, отсутствующий ref или отказ native resolution требуют
+ручного переноса task-id/event_id человеком; событие остаётся в inbox.
+
+manual с reason возвращается для missing/cleared/stale binding, неизвестного адресата,
+разных client/channel. Epoch — CAS счётчик записи, updated — её время; произвольный TTL
+не заменяет свежий discovery. Дубли client/channel/address разных задач запрещены.
+Проверка owner/checkout кооперативная, native identity не аутентифицируется хабом.
+При недоступной адресации основной агент из своего checkout очищает маршрут:
+
+```powershell
+python Tools/agents/coordination.py route-clear --task <task-id> --owner <owner> --expected-epoch <epoch> --reason "native discovery или адресация этого клиента недоступны"
+```
+
+Clear сохраняет tombstone с новым epoch, старый epoch не оживляет адрес. Команды
+работают без begin и не меняют plan revision/permit, не публикуют Git-документы и не шлют
+сообщений сами. Codex collaboration текущего дерева не является глобальным каталогом
+других чатов: `/root` не рекламировать как межсессионный адрес. Inbox остаётся основным
+каналом независимо от наличия route; согласование контрактов и ACK по прежним правилам.
+
 ## Вливание
 
 В строгом режиме прямой push заменяется `merge-request --task ... --stage ... --owner ...

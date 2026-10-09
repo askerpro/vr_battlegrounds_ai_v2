@@ -60,7 +60,9 @@
         "tasks/agent-coordination-protocol/**",
         "AGENTS.md",
         ".agents/rules/agent_coordination.md",
-        ".agents/rules/project-workflows.md"
+        ".agents/rules/project-workflows.md",
+        "Tools/agents/broker_runtime.py",
+        "Tools/agents/unity_mcp_proxy.py"
       ],
       "after": [
         {"task": "agent-coordination-protocol", "stage": "worker-test-admission-fix", "state": "merged"}

@@ -4,6 +4,7 @@
 Подключается в .mcp.json / .codex/config.toml. Прокси на каждый вызов спрашивает брокер
 (см. docs/unity-mcp-proxy.md в F:/UnityProjects/agent-infra); stdio передаётся процессу как есть.
 """
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -18,5 +19,8 @@ if __name__ == "__main__":
     except RuntimeError as error:
         print("unity_mcp_proxy: " + str(error), file=sys.stderr)
         raise SystemExit(1)
-    worktree = subprocess.check_output(["git", "-C", str(HERE), "rev-parse", "--show-toplevel"], text=True).strip()
-    raise SystemExit(subprocess.call(["uv", "run", "--quiet", str(script), "--repo", worktree, *sys.argv[1:]]))
+    hidden = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    worktree = subprocess.check_output(["git", "-C", str(HERE), "rev-parse", "--show-toplevel"],
+                                      text=True, creationflags=hidden).strip()
+    raise SystemExit(subprocess.call(["uv", "run", "--quiet", str(script), "--repo", worktree,
+                                     *sys.argv[1:]], creationflags=hidden))

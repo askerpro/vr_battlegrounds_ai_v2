@@ -51,6 +51,11 @@ and user communication. Keep detailed execution traces in task artifacts, outsid
 - Cross-task requests and answers go to the hub inbox first, then notify through the native
   channel when available using task-id/event_id. See [coordination communication](.agents/rules/agent_coordination.md#общение-агентов-принятое-правило-от-2026-10-09)
   and [model/effort guidance](.agents/rules/project-workflows.md#delegation).
+- At session start/resume, the principal agent refreshes its own native route in the hub
+  from a fresh native listing, or clears it when this client cannot address peer sessions.
+  Before notifying another task, resolve its candidate and confirm both endpoints in a
+  fresh listing. Never infer an address from plan UUID, folder, busy state or an old name;
+  unknown/ambiguous endpoints use manual delivery. See [native routes](.agents/rules/agent_coordination.md#адресация-штатных-уведомлений).
 
 ## Checkout, Unity and coordination
 

@@ -5,6 +5,7 @@
 поэтому заглушки Tools/agents/*.py и инструменты проекта всегда работают на развёрнутой версии
 без коммитов в продукт.
 """
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -15,7 +16,8 @@ def runtime_dir(start=None):
     location = Path(start or __file__).resolve()
     folder = location if location.is_dir() else location.parent
     common = subprocess.check_output(["git", "-C", str(folder), "rev-parse", "--path-format=absolute",
-                                      "--git-common-dir"], text=True).strip()
+                                      "--git-common-dir"], text=True,
+                                      creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0).strip()
     return Path(common).parent / ".agent-state" / "editor-broker" / "runtime"
 
 

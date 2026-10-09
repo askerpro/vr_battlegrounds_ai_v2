@@ -274,3 +274,16 @@ Runtime `6ada1e8df475fa85ef4691ea52fffe7b4980b8da` развёрнут при с�
    паузу штатным `deploy.py --resume`. Не включать строгий режим посреди активной аренды.
 
 Монитор/пробуждение клиентов не входят в этот переход и остаются отдельным планом.
+
+
+## Фактическое обслуживание 2026-10-09
+
+Первым выполнено восстановление ticket292. Остановка предыдущего оператора подтверждена event1368 и operator-handoff-result1372, незавершённых requests/journals и Play/tests/import/dirty scenes/prefab не было. Перед штатным recovery создан независимый ref3e702d4df9878e608b2164eaf42261f2b7d165ae и побайтовая копия17 файлов/9GUID. Штатный recover создал R=e56ab413cb0da6c739ca4dca1a4cebcae38f86c1, refs/heads/codex/tmp/recovery-292-cf94793ed6f345749f7a103e8290626c; EquipmentProbe5 файлов/3GUID проверены побайтово. Изменения occlusion/settings совпали с Git blobs после clean-фильтров, их физические варианты сохранены отдельно. DONE, active=null, blocked=false, recovery_required=false; worker HEAD B=edcb79e84eb72443a63fc4de7d7c66dec0bd8fe2, нормализованное содержимое чистое, raw status12 EOL/stat записей, diff пуст. Unity PID25300/session52d0819e1fc94cc8825106c08a29b38c, Lobby восстановлена, ready=true, heartbeat<1с. Это инфраструктурное восстановление, не игровая приёмка.
+
+CAS handoff ревизии19→20 выполнен event1384 в F:/CodexWorktrees/agent-coordination-protocol/Vr_Battlegrounds_ai. Owner и все10 старых stages/specs/history сохранены, включая mcp-initialize-repair planned; foreign tasks/contracts/receipts/patches/settings не менялись внутри CAS. Documents опубликованы087234f13c42f82af0a16a576508b3d366c2e00f, собственный inbox заработал. Route cleared epoch5 оставлен без нового адреса: свежего native discovery здесь нет. Позже зарегистрирована ревизия22 с отдельным этапом инструкций и зависимостью после verification MCP.
+
+MCP исследован отдельно. HTTP и прямой runtime initialize отвечали, но штатный launcher воспроизводимо зависал во всех трёх проверенных проблемных checkout. Причина/исправление/rollout и фактические проверки описаны в mcp-launcher-repair.md. Source commit141c5ab; shared runtime не менялся. После rollout9 известной clean версии точные клиентские команды проверены10/10. Перезапуск уже работающих клиентов ещё должен выполнить их владелец.
+
+Tools/mcp_call.py не указан в проверенных активных AGENTS/.agents/Docs инструкциях или доступных skills. Фактическая диагностическая утилита находится только в tasks/avatar-renderer-regression/tools/mcp_call.py checkout2cf1 (event1226); event1237 сокращал её до caller tools/mcp_call.py. Это task-local helper, не общий Tools helper bots-fix. Добавлено обязательное rg --files перед чтением/запуском helpers и --help найденной CLI, пояснение product launchers/source/runtime и границы compact-result. Не создавался новый инструмент поиска.
+
+Все generated evidence и одноразовые admin утилиты: reports/recovery-292-20261009/, вне Git. Исходные checkout/reports и чужие игровые изменения сохранены. Уведомления worker1381/1382, MCP1394–1403, bots-fix stop→begin guidance1404; ACK не выдавались.

@@ -2,8 +2,8 @@
   "task_id": "agent-coordination-protocol",
   "owner": "coordination-maintenance",
   "client": "codex",
-  "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
-  "base_sha": "b9804be89311b72cdacab83ad7960bd8d045e266",
+  "worktree": "F:/CodexWorktrees/agent-coordination-protocol/Vr_Battlegrounds_ai",
+  "base_sha": "edcb79e84eb72443a63fc4de7d7c66dec0bd8fe2",
   "doc_path": "tasks/agent-coordination-protocol/Readme.md",
   "title": "Внедрение протокола координации",
   "stages": [
@@ -27,7 +27,11 @@
         ".agent-state/coordination/agent-coordination-to-maintainer.md"
       ],
       "after": [
-        {"task": "agent-coordination-protocol", "stage": "rollout", "state": "merged"}
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "rollout",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -39,7 +43,11 @@
         ".agents/rules/project-workflows.md"
       ],
       "after": [
-        {"task": "agent-coordination-protocol", "stage": "base-publication", "state": "merged"}
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "base-publication",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -50,7 +58,11 @@
         "AGENTS.md"
       ],
       "after": [
-        {"task": "agent-coordination-protocol", "stage": "infrastructure-automation", "state": "merged"}
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "infrastructure-automation",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -65,28 +77,77 @@
         "Tools/agents/unity_mcp_proxy.py"
       ],
       "after": [
-        {"task": "agent-coordination-protocol", "stage": "worker-test-admission-fix", "state": "merged"}
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "worker-test-admission-fix",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
     {
       "id": "infra-checkout-handoff",
-      "writes": ["tasks/agent-coordination-protocol/**", ".agents/rules/agent_coordination.md", "AGENTS.md",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        ".agents/rules/agent_coordination.md",
+        "AGENTS.md",
         ".agent-state/worktrees/agent-coordination-protocol/tasks/agent-coordination-protocol/plan.json",
-        ".agent-state/worktrees/agent-coordination-protocol/tasks/agent-coordination-protocol/Readme.md"],
-      "after": [{"task":"agent-coordination-protocol","stage":"mandatory-native-monitor","state":"merged"}],
+        ".agent-state/worktrees/agent-coordination-protocol/tasks/agent-coordination-protocol/Readme.md"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "mandatory-native-monitor",
+          "state": "merged"
+        }
+      ],
       "needs": []
     },
     {
       "id": "mandatory-native-monitor",
-      "writes": ["tasks/agent-coordination-protocol/**", ".agents/rules/agent_coordination.md", "AGENTS.md"],
-      "after": [{"task":"agent-coordination-protocol","stage":"legacy-doc-deletion","state":"merged"}],
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        ".agents/rules/agent_coordination.md",
+        "AGENTS.md"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "legacy-doc-deletion",
+          "state": "merged"
+        }
+      ],
       "needs": []
     },
     {
       "id": "legacy-doc-deletion",
-      "writes": ["tasks/agent-coordination-protocol/**", ".agents/rules/agent_coordination.md"],
-      "after": [{"task":"agent-coordination-protocol","stage":"checkout-root-resolution","state":"merged"}],
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        ".agents/rules/agent_coordination.md"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "checkout-root-resolution",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "mcp-initialize-repair",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "Tools/agents/unity_mcp_proxy.py",
+        "Tools/agents/broker_runtime.py"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "infrastructure-automation",
+          "state": "merged"
+        }
+      ],
       "needs": []
     },
     {
@@ -96,7 +157,32 @@
         ".agents/rules/agent_coordination.md"
       ],
       "after": [
-        {"task": "agent-coordination-protocol", "stage": "native-routing", "state": "merged"}
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "native-routing",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "tool-discovery-guidance",
+      "writes": [
+        "AGENTS.md",
+        ".agents/rules/unity_mcp.md",
+        "tasks/agent-coordination-protocol/**"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "infra-checkout-handoff",
+          "state": "merged"
+        },
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "mcp-initialize-repair",
+          "state": "verified"
+        }
       ],
       "needs": []
     }

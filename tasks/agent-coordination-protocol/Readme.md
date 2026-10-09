@@ -1,7 +1,7 @@
 # Координация агентов
 
 Обновлено: 2026-10-09. Владелец: coordination-maintenance, Codex.
-Checkout: F:/UnityProjects/Vr_Battlegrounds_ai.
+Checkout: F:/CodexWorktrees/agent-coordination-protocol/Vr_Battlegrounds_ai.
 
 ## Цель и границы
 
@@ -40,7 +40,7 @@ Checkout: F:/UnityProjects/Vr_Battlegrounds_ai.
 
 ## Текущий план
 
-Готовится отдельный checkout сопровождающего, см. [handoff](checkout-handoff.md).
+Регистрация перенесена административным CAS handoff revision 19 → 20 в внешний checkout; история этапов сохранена.
 Адрес infra_issue остаётся agent-coordination-protocol независимо от пути checkout.
 В текущем Codex штатный Monitor с доставкой вывода в контекст не найден;
 применяются обязательные проверки inbox/status и штатные уведомления.
@@ -65,3 +65,16 @@ deletes, отказ Add/Edit и наличие CLI; чужие файлы не �
 Подробности: [Details.md](Details.md), [правило общения](communication-policy.md),
 [автоматизация](infrastructure-automation.md),
 [исследование recovery](worker-recovery-analysis.md), [отложенный монитор](event-monitor.md).
+
+## Проверка сопровождающего 2026-10-09
+
+Ticket 292 восстановлен: DONE, blocked=false, recovery_required=false; worker вернулся на B edcb79e8, Lobby восстановлена, ready=true. Аварийный R e56ab413 сохранён без игровой приёмки. MCP HTTP и закреплённый stdio proxy прошли initialize, tools/list и instances/read; stdio initialize 0,98 с, 48 инструментов.
+
+Уточнение проверки MCP: выше проверялся прямой runtime. Точная проектная команда
+`uv run --quiet Tools/agents/unity_mcp_proxy.py` воспроизвела initialize timeout
+в bots-fix, vr-test-stand и 2cf1. Причина — неявные standard handles при Windows
+CREATE_NO_WINDOW в launcher; явные stdin/stdout/stderr устраняют отказ.
+Исходный тест real pipes RED, после правки GREEN; связанные 24 проверки прошли.
+Исходники исправления изолированы в F:/CodexWorktrees/c14d/agent-infra.
+
+Native Monitor с доставкой в контекст не обнаружен; inbox проверяется явно. Codex list_threads/read_thread/send_message_to_thread доступны и проверены. Собственный native route опубликован после fresh discovery: epoch6, session01a11ed8-9871-72d3-8f28-e61675d7bff0; route-resolve с bots-fix работает в обе стороны. ACK только конкретных прочитанных событий. Артефакты: reports/recovery-292-20261009/.

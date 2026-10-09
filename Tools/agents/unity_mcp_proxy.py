@@ -23,4 +23,5 @@ if __name__ == "__main__":
     worktree = subprocess.check_output(["git", "-C", str(HERE), "rev-parse", "--show-toplevel"],
                                       text=True, creationflags=hidden).strip()
     raise SystemExit(subprocess.call(["uv", "run", "--quiet", str(script), "--repo", worktree,
-                                     *sys.argv[1:]], creationflags=hidden))
+                                     *sys.argv[1:]], creationflags=hidden,
+                                    stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr))

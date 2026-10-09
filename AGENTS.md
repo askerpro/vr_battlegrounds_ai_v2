@@ -51,6 +51,11 @@ and user communication. Keep detailed execution traces in task artifacts, outsid
 - Cross-task requests and answers go to the hub inbox first, then notify through the native
   channel when available using task-id/event_id. See [coordination communication](.agents/rules/agent_coordination.md#общение-агентов-принятое-правило-от-2026-10-09)
   and [model/effort guidance](.agents/rules/project-workflows.md#delegation).
+- `client` в плане — справочная информация: запускай Codex или Claude по доступности
+  квоты, без требования совпадения с прежним client или отдельной передачи клиента.
+  Owner/worktree/session и допускающие leases сохраняют свои проверки. Общение между
+  задачами всегда проходит через canonical inbox; native-уведомление возможно только
+  внутри одного семейства после свежей проверки обоих адресов, и не означает ACK.
 - At session start/resume, check inbox and hub status. If the client provides a native
   Monitor that delivers process output into the agent context, the principal agent MUST
   attach one bounded read-only watch-inbox for its task/session and restart it after timeout

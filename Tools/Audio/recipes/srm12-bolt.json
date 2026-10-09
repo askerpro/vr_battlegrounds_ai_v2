@@ -1,0 +1,15 @@
+{
+  "note": "SRM12: исходный BoltBack.wav почти тишина (пик −51 dBFS), а BoltForward.wav содержит весь цикл затвора. Режем цикл на оттяжку и возврат. Найдено в шлеме, задача weapon-system, этап waves-f, 2026-10-09.",
+  "fade_ms": 5,
+  "jobs": [
+    {
+      "source": "Assets/Audio/SFX/Weapons/Kinemation/SRM12/SRM12_BoltForward.wav",
+      "source_sha256": "6a54a4f521fb73f697afccad4c2769b1350e22c31e545e58abcf543d5bd2181a",
+      "cut_note": "analyze --window-ms 10: события 0,05–0,11 (захват), 0,19–0,35 (оттяжка до упора), 0,40–0,54 (возврат), 0,62–0,67 (дозакрытие). Пауза 0,350–0,405 с, минимум −62 dBFS в 0,378 с (search 0.30:0.50) — точка разреза. Начало 0,045 с срезает 45 мс тишины перед захватом (задержка отклика), конец 0,70 с — хвост тишины.",
+      "outputs": [
+        { "path": "Assets/Audio/SFX/Weapons/Kinemation/SRM12/SRM12_BoltBack_Cut.wav", "start": 0.045, "end": 0.378, "note": "оттяжка: захват + ход назад до упора" },
+        { "path": "Assets/Audio/SFX/Weapons/Kinemation/SRM12/SRM12_BoltForward_Cut.wav", "start": 0.378, "end": 0.70, "note": "возврат: ход вперёд + дозакрытие" }
+      ]
+    }
+  ]
+}

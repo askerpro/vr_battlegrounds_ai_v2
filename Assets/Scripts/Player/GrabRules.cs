@@ -52,7 +52,7 @@ namespace VrBattlegrounds.Player
                 return false;
             }
 
-            return TwoHandGrabPolicy.IsGrabAllowed(grabber, grabbable, grabPoint);
+            return TwoHandGrabPolicy.IsGrabAllowed(grabber, grabbable, grabPoint, ManipulationConstraints.AllowsHandTransfer(grabbable));
         }
     }
 }

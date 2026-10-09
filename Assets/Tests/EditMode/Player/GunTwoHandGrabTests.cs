@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using UltimateXR.Manipulation;
+using UnityEngine;
 using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Tests.Player
@@ -44,7 +45,7 @@ namespace VrBattlegrounds.Tests.Player
         {
             using var harness = new TwoHandGrabHarness(weaponPath, avatarPath, supportPoint);
             harness.PlaceLeftOnSupport();
-            harness.Left.CanGrabDelegate = (grabbable, point) => TwoHandGrabPolicy.IsGrabAllowed(harness.Left, grabbable, point);
+            harness.Left.CanGrabDelegate = (grabbable, point) => TwoHandGrabPolicy.IsGrabAllowed(harness.Left, grabbable, point, ManipulationConstraints.AllowsHandTransfer(grabbable));
 
             bool found = TwoHandGrabHarness.Manager.GetClosestGrabbableObject(harness.Left, out UxrGrabbableObject grabbable, out int grabPoint,
                                                                              new[] { harness.Grabbable });
@@ -53,6 +54,53 @@ namespace VrBattlegrounds.Tests.Player
             Assert.AreEqual(supportPoint, grabPoint,
                             "Левая рука выбрала основную точку, которую держит правая, — оружие перескочит в левую руку " +
                             "вместо хвата двумя руками.");
+        }
+
+        /// <summary>
+        /// Решение пользователя 2026-10-09 (<see cref="ManipulationConstraints" />): рука, потянувшаяся к магазину
+        /// в кармане рядом с рукоятью, перехватывала оружие. Своя вторая рука не берёт точку, которую держит первая,
+        /// даже стоя ладонью ровно на ней.
+        /// </summary>
+        [TestCaseSource(typeof(TwoHandGrabCases), nameof(TwoHandGrabCases.All))]
+        public void Своя_вторая_рука_не_перехватывает_оружие(string weaponPath, string avatarPath, int supportPoint)
+        {
+            using var harness = new TwoHandGrabHarness(weaponPath, avatarPath, supportPoint);
+            PlaceLeftOnMain(harness);
+
+            Assert.IsFalse(ManipulationConstraints.AllowsHandTransfer(harness.Grabbable),
+                           "Перехват огнестрела своей второй рукой разрешён — выключатель ManipulationConstraints.AllowHandTransfer " +
+                           "включён или оружие не распознано как огнестрел (UxrFirearmWeapon на корне).");
+            Assert.IsFalse(TwoHandGrabPolicy.IsGrabAllowed(harness.Left, harness.Grabbable, TwoHandGrabCases.MainPoint,
+                                                           ManipulationConstraints.AllowsHandTransfer(harness.Grabbable)),
+                           "Левая ладонь на основной точке, которую держит правая, и политика её отдаёт — оружие перескочит в левую руку.");
+        }
+
+        [TestCaseSource(typeof(TwoHandGrabCases), nameof(TwoHandGrabCases.All))]
+        public void Выключатель_возвращает_перехват_оружия(string weaponPath, string avatarPath, int supportPoint)
+        {
+            bool saved = ManipulationConstraints.AllowHandTransfer;
+
+            try
+            {
+                ManipulationConstraints.AllowHandTransfer = true;
+                using var harness = new TwoHandGrabHarness(weaponPath, avatarPath, supportPoint);
+                PlaceLeftOnMain(harness);
+
+                Assert.IsTrue(ManipulationConstraints.AllowsHandTransfer(harness.Grabbable),
+                              "Выключатель AllowHandTransfer включён, а ограничение всё равно запрещает перехват.");
+                Assert.IsTrue(TwoHandGrabPolicy.IsOwnOtherHand(harness.Right, harness.Left),
+                              "Контроль: правая и левая — руки одного аватара.");
+            }
+            finally
+            {
+                ManipulationConstraints.AllowHandTransfer = saved;
+            }
+        }
+
+        private static void PlaceLeftOnMain(TwoHandGrabHarness harness)
+        {
+            harness.Grabbable.ComputeRequiredGrabberTransform(harness.Left, TwoHandGrabCases.MainPoint, out Vector3 position, out Quaternion rotation, false);
+            harness.Left.transform.SetPositionAndRotation(position, rotation);
         }
     }
 }

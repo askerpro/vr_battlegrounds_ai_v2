@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UltimateXR.Manipulation;
+using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 
 namespace VrBattlegrounds.Interaction
@@ -36,6 +37,7 @@ namespace VrBattlegrounds.Interaction
             public GrabOnlyWhenParentHeld PartRule;
             public UxrGrabbableObject     PartParent;
             public SupportGripRequiresMain SupportRule;
+            public bool                   IsFirearm;
         }
 
         private sealed class ReferenceComparer : IEqualityComparer<UxrGrabbableObject>
@@ -79,6 +81,12 @@ namespace VrBattlegrounds.Interaction
             return grabbable == null ? null : GetEntry(grabbable).SupportRule;
         }
 
+        /// <summary>Есть ли на самом предмете <see cref="UxrFirearmWeapon" />, из кэша кадра.</summary>
+        public static bool IsFirearm(UxrGrabbableObject grabbable)
+        {
+            return grabbable != null && GetEntry(grabbable).IsFirearm;
+        }
+
         private static Entry GetEntry(UxrGrabbableObject grabbable)
         {
             int frame = Time.frameCount;
@@ -101,6 +109,7 @@ namespace VrBattlegrounds.Interaction
             entry.PartRule   = grabbable.TryGetComponent(out GrabOnlyWhenParentHeld rule) ? rule : null;
             entry.PartParent = entry.PartRule != null ? entry.PartRule.Parent : null;
             entry.SupportRule = grabbable.TryGetComponent(out SupportGripRequiresMain supportRule) ? supportRule : null;
+            entry.IsFirearm   = grabbable.TryGetComponent(out UxrFirearmWeapon _);
 
             s_entries[grabbable] = entry;
             return entry;

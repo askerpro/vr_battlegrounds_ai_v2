@@ -17,16 +17,23 @@ namespace VrBattlegrounds.Player
     /// Правило: точка, которую держит другая рука, уступает, если свободная точка того же
     /// предмета достижима. Нет достижимых свободных — передача из руки в руку работает как раньше.
     /// </para>
+    ///
+    /// <para>
+    /// Если перехват предмета запрещён (<see cref="ManipulationConstraints.AllowsHandTransfer" />), точку,
+    /// которую держит другая рука того же игрока, взять нельзя вовсе: переложить предмет — отпустить и взять
+    /// заново. Руки других игроков это не трогает.
+    /// </para>
     /// </summary>
     public static class TwoHandGrabPolicy
     {
         /// <summary>
         /// Разрешает ли политика <paramref name="grabber"/> брать <paramref name="grabPoint"/>.
-        /// Подключается через <c>UxrGrabber.CanGrabDelegate</c>.
+        /// Подключается через <c>UxrGrabber.CanGrabDelegate</c> (<c>GrabRules</c>).
+        /// <paramref name="allowHandTransfer"/> — можно ли перехватить этот предмет своей второй рукой.
         /// </summary>
-        public static bool IsGrabAllowed(UxrGrabber grabber, UxrGrabbableObject grabbable, int grabPoint)
+        public static bool IsGrabAllowed(UxrGrabber grabber, UxrGrabbableObject grabbable, int grabPoint, bool allowHandTransfer)
         {
-            if (grabbable == null || !grabbable.AllowMultiGrab || grabbable.GrabPointCount < 2)
+            if (grabbable == null)
             {
                 return true;
             }
@@ -38,10 +45,28 @@ namespace VrBattlegrounds.Player
                 return true;
             }
 
+            // До проверки числа точек: у предмета с одной точкой хвата перехват тоже запрещён.
+            if (!allowHandTransfer && manager.GetGrabbingHand(grabbable, grabPoint, out UxrGrabber holder) &&
+                IsOwnOtherHand(holder, grabber))
+            {
+                return false;
+            }
+
+            if (!grabbable.AllowMultiGrab || grabbable.GrabPointCount < 2)
+            {
+                return true;
+            }
+
             // Рекурсия ограничена: CanBeGrabbedByGrabber снова зовёт делегат, но только для
             // свободной точки, а для неё политика отвечает сразу, не спрашивая достижимость.
             // Запрос — структура, а не пара лямбд: делегат зовётся каждый кадр, замыкания давали мусор.
             return !ShouldYieldToFreePoint(grabPoint, grabbable.GrabPointCount, new LivePointQuery(manager, grabber, grabbable));
+        }
+
+        /// <summary><paramref name="holder"/> — другая рука того же аватара, что и <paramref name="grabber"/>.</summary>
+        public static bool IsOwnOtherHand(UxrGrabber holder, UxrGrabber grabber)
+        {
+            return holder != null && holder != grabber && holder.Avatar != null && holder.Avatar == grabber.Avatar;
         }
 
         /// <summary>

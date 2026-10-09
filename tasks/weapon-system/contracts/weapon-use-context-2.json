@@ -1,0 +1,29 @@
+{
+  "summary": "WeaponUseContext.Resolve(UxrFirearmWeapon, int trigger) -> Kind {None, VrHand, Equipment}, User (UxrAvatar), Hand (UxrGrabber, только VrHand), AuthoredHere, Epoch. Источник VrHand — SDK-хват основной рукоятью; Equipment — WeaponEquipmentBinding (IsActive/Owner/OwnerAlive/Epoch). Raw SDK-хват и equipment claim одновременно — None + GameLog.WeaponSystem.Error до локальных фильтров. Право автоматики ключуется по (Kind, User, Epoch), единственный вход подготовки — RequestAutomationPreparation. SDK-патч для ключа use-context: 70. IUxrFirearmRootRecoilPolicy.AllowsRootRecoil запрещает только запись root transform SDK при активном equipment claim; provider реализует binding, AllowsRootRecoil => !IsActive, независимо Owner/OwnerAlive/валидности resolver/выключения WeaponSystem.",
+  "motivation": "NPC используют штатное оружие без фальшивого UxrGrabber, копий M/C и второго automation lifecycle. Политика recoil живёт у единственного владельца equipment claim и не исчезает при teardown хоста оружия. Уточнение номера патча и owner-side provider не меняет API resolver/подготовки.",
+  "transition_cost": "weapon-system: resolver, чистые HasAuthorContext/AutomationAllowed, grant key и отзыв до Drain, SDK IUxrFirearmRootRecoilPolicy и root recoil guard (SDK70). bots-fix: read-only policy adapter на WeaponEquipmentBinding и единственный потребитель RequestAutomationPreparation; никто не пишет в чужую область без отдельного согласования. До dependent implementation нужен точный binding source candidate и согласованный DEVELOPMENT composition route; production activation после фактической приёмки/вливания. VR release/regrab, включая propagateEvents=false, требует доказанного полного lifetime source до выдачи допуска.",
+  "aspects": [
+    "context",
+    "automation",
+    "npc-root-recoil"
+  ],
+  "compatibility": "additive",
+  "providing_stage": "use-context",
+  "architecture_decision": {
+    "source": "2026-10-09: пользователь в текущей Codex-сессии выбрал Binding реализует SDK-политику; план tasks/weapon-system/use-context.md, журнал Docs/weapons/decisions.md. Cross-task запрос bots-fix 2085/2185, ответ weapon-system 2246.",
+    "decision": "Владелец equipment claim (bots-fix) реализует минимальную read-only SDK recoil policy; SDK-порт и его потребитель принадлежат weapon-system. Активный claim запрещает root recoil до валидности владельца и независимо lifecycle WeaponSystem. Выбор пользователя не заменяет ACK владельца binding, допуск, Unity lease или приёмку механики. Source API binding остаётся ревизии1; новая grab-lifetime API не объявляется согласованной этим предложением."
+  },
+  "api": {
+    "sdk_namespace": "UltimateXR.Mechanics.Weapons",
+    "sdk_type": "IUxrFirearmRootRecoilPolicy",
+    "sdk_read": [
+      "bool AllowsRootRecoil { get; }"
+    ],
+    "provider_owner": "bots-fix",
+    "provider_type": "VrBattlegrounds.Weapons.WeaponEquipmentBinding",
+    "provider_rule": "!IsActive; disabled provider не исключается из запрета",
+    "consumer_owner": "weapon-system",
+    "consumer_type": "UltimateXR.Mechanics.Weapons.UxrFirearmWeapon",
+    "consumer_rule": "Все policy providers фактического RootGrabbable должны разрешить position/rotation recoil. Timer, projectile, звук/вибрация и observer presentation сохраняются; без policy прежний VR путь."
+  }
+}

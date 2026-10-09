@@ -1,13 +1,39 @@
 {
   "task_id": "weapon-system",
-  "owner": "weapon-system",
-  "client": "claude",
-  "session_id": "25b51afb-9e6a-4f64-b798-f8d815cab294",
-  "worktree": "F:/CodexWorktrees/shotgun-per-shell/Vr_Battlegrounds_ai",
+  "owner": "weapon-system-expert",
+  "client": "codex",
+  "session_id": null,
+  "worktree": "F:/CodexWorktrees/weapon-system-expert/Vr_Battlegrounds_ai",
   "base_sha": "048b9206fca27b7a144ccc41cc5916c89411e45c",
   "doc_path": "tasks/weapon-system/Readme.md",
   "title": "Единая WeaponSystem: машина состояний оружия",
   "stages": [
+    {
+      "id": "use-context-planning",
+      "writes": [
+        "tasks/weapon-system/use-context.md",
+        "tasks/weapon-system/changelog/2026-10-09-use-context-planning.md",
+        "tasks/weapon-system/contracts/weapon-use-context-2.json",
+        "Docs/weapons/decisions.md"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "handover",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "codex-expert",
+      "writes": [
+        ".codex/agents/weapon-system-expert.toml",
+        ".codex/config.toml"
+      ],
+      "after": [],
+      "needs": []
+    },
     {
       "id": "drive",
       "writes": [
@@ -157,6 +183,11 @@
       "after": [
         {
           "task": "weapon-system",
+          "stage": "use-context-planning",
+          "state": "verified"
+        },
+        {
+          "task": "weapon-system",
           "stage": "ejection",
           "state": "merged"
         },
@@ -172,9 +203,14 @@
       "id": "use-context",
       "writes": [
         "Assets/Scripts/Weapons/WeaponUseContext.cs",
+        "Assets/Scripts/Weapons/WeaponUseContext.cs.meta",
+        "Assets/Scripts/Weapons/Core/WeaponEvents.cs",
+        "Assets/Scripts/Weapons/Core/WeaponStateMachine.cs",
         "Assets/Scripts/Weapons/WeaponSystem/WeaponSystem.cs",
         "Assets/Scripts/Weapons/WeaponSystem/Sensors/WeaponContextSensor.cs",
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/IUxrFirearmRootRecoilPolicy.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/IUxrFirearmRootRecoilPolicy.cs.meta",
         "Assets/Tests/EditMode/Weapons/**",
         "tasks/weapon-system/**"
       ],

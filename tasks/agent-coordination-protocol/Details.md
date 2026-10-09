@@ -287,3 +287,6 @@ MCP исследован отдельно. HTTP и прямой runtime initiali
 Tools/mcp_call.py не указан в проверенных активных AGENTS/.agents/Docs инструкциях или доступных skills. Фактическая диагностическая утилита находится только в tasks/avatar-renderer-regression/tools/mcp_call.py checkout2cf1 (event1226); event1237 сокращал её до caller tools/mcp_call.py. Это task-local helper, не общий Tools helper bots-fix. Добавлено обязательное rg --files перед чтением/запуском helpers и --help найденной CLI, пояснение product launchers/source/runtime и границы compact-result. Не создавался новый инструмент поиска.
 
 Все generated evidence и одноразовые admin утилиты: reports/recovery-292-20261009/, вне Git. Исходные checkout/reports и чужие игровые изменения сохранены. Уведомления worker1381/1382, MCP1394–1403, bots-fix stop→begin guidance1404; ACK не выдавались.
+
+
+2026-10-09: аварийный MCP launcher fix выпущен штатным merge773f87b6fd2a446f8442058cfb920df8 в origin/dev, SHA1e169ec9a9eb47476eb3ce95620e61fea2fae8a3. Source-инструкции закреплены a6db6ad; продуктовые AGENTS/unity_mcp обновлены правилом merge→локальный rebase и обязательного штатного выпуска после аварии. Worker readiness и MCP initialize проверяются отдельно; игровая приёмка не выдается.

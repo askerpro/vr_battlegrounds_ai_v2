@@ -7,6 +7,23 @@
 Версии на 2026-08-16: пакет `com.coplaydev.unity-mcp` **10.1.2** (источник — Git, ветка `main`,
 живёт в `Library/PackageCache/`), python-сервер `mcpforunityserver` **10.1.2**.
 
+## Поиск инструментов
+
+Перед `Get-Content` или запуском helper сначала перечислить файлы в нужной области
+текущего checkout: `rg --files Tools/agents Tools/UnityMcp`. Использовать путь из
+выдачи и прочитать `--help` найденной CLI. Если путь взят из старого отчёта или
+другого worktree, проверить его наличие заново; после ObjectNotFound сузить поиск,
+а не угадывать следующее имя.
+
+`Tools/agents/editor-broker.py`, `coordination.py`, `unity_mcp_proxy.py` — launchers
+общего закреплённого runtime. Исходники инфраструктуры искать через `rg --files`
+в source worktree отдельного репозитория `F:/UnityProjects/agent-infra`.
+`Tools/UnityMcp/compact-result.js` обрабатывает ответ и не отправляет MCP-вызов.
+`Tools/mcp_call.py` в проверенном bots-fix checkout отсутствует; штатные вызовы Unity
+идут через доступные MCP tools. Если они не появились в клиенте, передать проблему
+сопровождающему через inbox и переподключить MCP-клиент; readiness worker и
+успешный MCP initialize проверяются отдельно.
+
 ## Защита контекста от массовых результатов
 
 В установленном MCP 10.2.0 execute_code автоматически сохраняет результаты >6000
@@ -272,3 +289,18 @@ execute_code → action: execute, code: return "It works!";
 `EquipmentStripTests.Оружие_в_руке_уничтожается_и_рука_свободна`: синглтон `UxrGrabManager` остаётся в полусостоянии
 (`HasInstance` ложно при живом экземпляре). Это шум харнесса, не отказ логики (2026-09-29). Перед итоговым прогоном:
 `execute_code` → `EditorUtility.RequestScriptReload()`, затем `refresh_unity` и тесты — зелёные.
+
+
+## Доставка инфраструктурных исправлений
+
+Сопровождающий закрепляет исходники в изолированном agent-infra, а продуктовые
+launchers/hooks/инструкции выпускает отдельным candidate через штатный merge
+в origin/dev. Владельцы выполняют локальный rebase своих веток; до rebase
+сохраняют локальные tracked/staged/untracked изменения и новые файлы/.meta.
+
+Прямой патч в checkout агента — аварийное исключение с проверкой hash/diff
+и backup. После аварийного rollout обязателен незамедлительный штатный выпуск.
+Для MCP stdio аварийная правка уже включена в origin/dev коммитом 1e169ec9:
+stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr. Перед rebase сохраните
+локальный launcher diff адресным patch/stash; после rebase сравните его с новой
+базой. Не применяйте одинаковый патч повторно и не удаляйте чужие diff/stash.

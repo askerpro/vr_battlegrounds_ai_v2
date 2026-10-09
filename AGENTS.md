@@ -78,12 +78,14 @@ Compare `git rev-parse --absolute-git-dir` with `git rev-parse --path-format=abs
 - Never interrupt human Play Mode, dirty scenes, prefab stages or others' tests. During maintenance, leave broker/worker alone until completion is announced.
 - Read current coordination mode; **missing/off** uses the legacy pipeline, **enforced** requires registration, contracts/stage admission and merge-request/merge-execute. Stage admission is not a Unity lease. Do not change mode yourself.
 - Broker/proxy sources and deployment belong to `F:/UnityProjects/agent-infra`; product Tools/agents files are launchers.
+- Инфраструктурные launchers/hooks/инструкции выпускаются через проверенный candidate и штатный merge в origin/dev; владельцы обновляют свои ветки локальным rebase с сохранением tracked/staged/untracked изменений. Прямая запись в чужой checkout допустима только как аварийная мера с backup и обязательным незамедлительным штатным выпуском. [Маршрут сопровождающего](F:/UnityProjects/agent-infra/docs/maintenance-guide.md).
 - Save complete MCP reports to task reports/ and return only passed/counts/up to 10 examples/path. Use `Tools/UnityMcp/compact-result.js` with a 2000-token output budget.
 - `executionCompleted=true` means the action ran; never repeat it for output. After a timeout inspect durable/native state before retrying a mutation. Without MCP use current Editor.log evidence and concrete user edit steps.
 
 ## Read only what this task needs
 
 Use rg scoped to the relevant area. For game C# start in Assets/Scripts or Assets/Editor; search ThirdParty/Packages only for the relevant SDK/package. Search .unity/.prefab by class/GUID instead of reading entire files.
+Before reading or running a helper, discover its actual path with `rg --files` in the relevant area; then read the found CLI's `--help`. Verify paths in the current checkout even when an old report names them. For infrastructure, list `Tools/agents` and `Tools/UnityMcp` first: product `Tools/agents` files are launchers, implementation lives in agent-infra. See [MCP tool discovery](.agents/rules/unity_mcp.md#поиск-инструментов).
 **Do not load every linked document.** Search large indexes/reference files and read the matching section only.
 
 | Task | Required route |

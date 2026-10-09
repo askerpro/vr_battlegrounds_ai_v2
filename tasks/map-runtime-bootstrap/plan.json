@@ -3,7 +3,7 @@
   "owner": "map-runtime-bootstrap",
   "client": "claude",
   "worktree": "F:/CodexWorktrees/map-runtime-bootstrap/Vr_Battlegrounds_ai",
-  "base_sha": "f4e5fd3ddd265b046018c641f970505ba5cbc6f0",
+  "base_sha": "eb0f09065ac9f29f7f73d3f78106a5e5cf39b8e3",
   "doc_path": "tasks/map-runtime-bootstrap/Readme.md",
   "title": "Запуск карты через MapBootstrap",
   "stages": [
@@ -41,6 +41,44 @@
         {
           "task": "map-runtime-bootstrap",
           "stage": "generated-stations",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "series-smoke",
+      "writes": [
+        "Assets/Tests/EditMode/GameModes/SeriesSmokeTests.cs",
+        "Docs/testing.md",
+        "tasks/map-runtime-bootstrap/**"
+      ],
+      "after": [
+        {
+          "task": "map-runtime-bootstrap",
+          "stage": "startup-route",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "series-smoke-e2e",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/Scenarios/SeriesSmokeScenario.cs",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Docs/testing.md",
+        "tasks/map-runtime-bootstrap/**"
+      ],
+      "after": [
+        {
+          "task": "map-runtime-bootstrap",
+          "stage": "series-smoke",
+          "state": "merged"
+        },
+        {
+          "task": "vr-test-stand",
+          "stage": "play-launch-integration",
           "state": "merged"
         }
       ],

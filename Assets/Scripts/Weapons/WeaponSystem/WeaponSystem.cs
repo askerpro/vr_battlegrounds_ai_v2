@@ -113,6 +113,7 @@ namespace VrBattlegrounds.Weapons
 
         private bool _configured, _started, _stepping, _draining, _dispatching, _subscribed;
         private bool _haveContext, _lastCtx;
+        private int _initAttempts, _initRejects;
         private WS.WeaponRole _lastRole;
         private WS.LedgerView _view;
         private bool _viewDirty = true;
@@ -221,6 +222,7 @@ namespace VrBattlegrounds.Weapons
             _queue.Clear();
             _haveContext = false;
             _viewDirty = true;
+            _initAttempts = _initRejects = 0;
             _machine = new WS.WeaponStateMachine(_axes);
             _configured = true;
             StepNow(WS.WeaponEvent.Of(WS.WeaponEventKind.Configured)); // T01: однократная миграция учёта у автора
@@ -454,6 +456,7 @@ namespace VrBattlegrounds.Weapons
                         GameLog.WeaponSystem.Error($"[WeaponSystem] {name}: команда {command.Kind} — {exception}", this);
                     }
                     _viewDirty = true;
+                    if (command.Kind == WS.LedgerCommandKind.Initialize) LogInitialize(accepted);
                     if (accepted) continue;
                     // Остальные команды шага рассчитаны на ревизию после отклонённой — учёт отклонил бы и их.
                     CommandsRejected++;
@@ -474,10 +477,34 @@ namespace VrBattlegrounds.Weapons
             finally { _dispatching = false; }
         }
 
+        /// <summary>
+        /// Повтор Initialize без спама: первый отказ — предупреждение с причиной (видимые условия порта), следующие — Verbose;
+        /// успех после отказов — Info с номером попытки.
+        /// </summary>
+        private void LogInitialize(bool accepted)
+        {
+            _initAttempts++;
+            if (accepted)
+            {
+                if (_initRejects > 0)
+                    GameLog.WeaponSystem.Info($"[WeaponSystem] {name}: учёт инициализирован со {_initAttempts}-й попытки.", this);
+                _initAttempts = _initRejects = 0;
+                return;
+            }
+            _initRejects++;
+            string why = _port.LastInitializeRefusal ?? "причина не определена";
+            if (_initRejects == 1)
+                GameLog.WeaponSystem.Warning($"[WeaponSystem] {name}: учёт отклонил Initialize — {why}. Повтор: хват основной рукой, " +
+                                             "магазин, нажатие спуска, смена автора, запрос бота; дальше отказы — Verbose.", this);
+            else GameLog.WeaponSystem.Verbose($"[WeaponSystem] {name}: Initialize отклонён ({_initRejects}-й раз) — {why}.", this);
+        }
+
         private void Log(in WS.WeaponReport report)
         {
             switch (report.Kind)
             {
+                case WS.WeaponReportKind.CommandRejected when report.Command == WS.LedgerCommandKind.Initialize:
+                    break; // отказ Initialize уже записан LogInitialize (без спама)
                 case WS.WeaponReportKind.CommandRejected:
                     GameLog.WeaponSystem.Warning($"[WeaponSystem] {name}: учёт отклонил команду {report.Command} (строка {report.RowId}); жест сброшен.", this);
                     break;

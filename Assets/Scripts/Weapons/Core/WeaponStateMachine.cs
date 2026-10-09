@@ -106,6 +106,13 @@ namespace VrBattlegrounds.Weapons.Core
         private float _baseline, _lastProgress;
         private int _expectedMagazine, _deferredInsert;
 
+        /// <summary>
+        /// Пауза между повторами Initialize (строка T01t). Таймер — не регион учёта и не копия факта SDK: только частота
+        /// попыток автора, поэтому в <see cref="WeaponMachineState"/> не входит.
+        /// </summary>
+        public const float InitRetrySeconds = 0.5f;
+        private float _initWait = InitRetrySeconds;
+
         // Входы текущего шага (копии in-параметров). Читаются условиями строк таблицы.
         internal WeaponEvent E;
         internal LedgerView L;
@@ -231,6 +238,9 @@ namespace VrBattlegrounds.Weapons.Core
                 case WeaponEventKind.Tick:
                     // И11: клип стареет только временем; конец — строки T63/T64.
                     if (_clip != ClipKind.None && E.Dt > 0f && !float.IsInfinity(E.Dt)) _clipTime += E.Dt;
+                    // Повтор Initialize (T01t): вне руки повтор «созрел» — первый же шаг в руке пробует сразу.
+                    if (!C.MainGripLocal) _initWait = InitRetrySeconds;
+                    else if (E.Dt > 0f && !float.IsInfinity(E.Dt) && _initWait < InitRetrySeconds) _initWait += E.Dt;
                     break;
                 case WeaponEventKind.ActionSampled:
                     // Ход назад после вперёд (T23) открывает путь к порогу; наблюдается до разбора таблицы.
@@ -363,7 +373,20 @@ namespace VrBattlegrounds.Weapons.Core
             if (kind != LedgerCommandKind.RequestAdmission) _revision++;
         }
 
-        internal void Initialize() => Emit(LedgerCommandKind.Initialize, magazine: L.MagazineToken);
+        internal void Initialize()
+        {
+            _initWait = 0f;
+            Emit(LedgerCommandKind.Initialize, magazine: L.MagazineToken);
+        }
+
+        /// <summary>
+        /// Повтор Initialize после отказа (строки +init: T16i, T01t, T37i, T44i, T54i). Отказ при старте не должен быть
+        /// необратимым: учёт мог не принять команду, пока владелец ещё не заспавнен или автор не установлен.
+        /// </summary>
+        internal void RetryInitialize() => Initialize();
+
+        /// <summary>Пауза после прошлой попытки Initialize истекла (или ствол только что взят в руку).</summary>
+        internal bool InitRetryDue => _initWait >= InitRetrySeconds;
         internal void Cancel() => Emit(LedgerCommandKind.Cancel);
         internal void CloseOnly() => Emit(LedgerCommandKind.CloseOnly, magazine: L.MagazineToken);
         internal void AckEmptyRest() => Emit(LedgerCommandKind.AckEmptyRest, magazine: L.MagazineToken);

@@ -9,7 +9,7 @@ namespace VrBattlegrounds.Tests.Weapons
     /// Поведение машины оружия, принятое пользователем в шлеме на этапе drive (Herrington и FABARM, 2026-10-09):
     /// S1 — показ последнего выстрела без Empty-клипа; S2/T57/T57a — нажатие до конца таймера темпа;
     /// S4 — отпущенный Action при оси Stay; T53/T54 — открытый или недовозвращённый Action как недосланный патрон,
-    /// подсказка держится, пока причина ChamberingRequired; T54u — без отклика до инициализации.
+    /// подсказка держится, пока причина ChamberingRequired; T54i/T54u — без отклика до инициализации, с попыткой Initialize.
     ///
     /// Каждый тест прогоняет машину по событиям, как хост, и проверяет конкретный вывод: команды учёту, звук с
     /// причиной, вибрацию, подсказку, цель позы. Откат любого правила меняет этот вывод.
@@ -300,24 +300,27 @@ namespace VrBattlegrounds.Tests.Weapons
             Assert.That(output.HintEvents, Is.EqualTo(new[] { false }), "Запаса нет — досылать нечего, подсказка гаснет.");
         }
 
-        // ── T54u: не инициализирован ────────────────────────────────────────────────────────
+        // ── T54i/T54u: не инициализирован ───────────────────────────────────────────────────
 
-        [Test]
-        public void T54u_НеИнициализирован_НажатиеБезОтклика()
+        /// <summary>
+        /// Принято в шлеме 2026-10-09 (повтор Initialize): нажатие на не инициализированном стволе израсходовано без отклика
+        /// о патронах; при истёкшем таймере темпа — попытка Initialize (T54i), до его конца — без команд (T54u, S2).
+        /// </summary>
+        [TestCase(0f, "T54i", 1)]
+        [TestCase(0.1f, "T54u", 0)]
+        public void T54_НеИнициализирован_НажатиеБезОтклика_ИПопыткаИнициализации(float rof, string row, int initializes)
         {
-            foreach (float rof in new[] { 0f, 0.1f })
-            {
-                var machine = new WeaponStateMachine(SemiSpringNoEmptyClip());
-                var output = new Recorder();
-                Step(machine, output, WeaponEvent.Of(WeaponEventKind.TriggerPressed), Uninitialized(), ActionSample.AtRest, Author(rof));
+            var machine = new WeaponStateMachine(SemiSpringNoEmptyClip());
+            var output = new Recorder();
+            Step(machine, output, WeaponEvent.Of(WeaponEventKind.TriggerPressed), Uninitialized(), ActionSample.AtRest, Author(rof));
 
-                Assert.That(machine.LastRowId, Is.EqualTo("T54u"), $"rof={rof}");
-                Assert.That(output.Cues, Is.Empty, "T54u: без звука.");
-                Assert.That(output.Haptics, Is.Empty, "T54u: без вибрации.");
-                Assert.That(output.HintsOn, Is.Zero, "T54u: без подсказки.");
-                Assert.That(output.Commands, Is.Empty, "T54u: без команд.");
-                Assert.That(machine.State.Episode, Is.EqualTo(TriggerEpisode.Consumed));
-            }
+            Assert.That(machine.LastRowId, Is.EqualTo(row), $"rof={rof}");
+            Assert.That(output.Cues, Is.Empty, "Без звука (ни DryFire, ни Refusal).");
+            Assert.That(output.Haptics, Is.Empty, "Без вибрации.");
+            Assert.That(output.HintsOn, Is.Zero, "Без подсказки.");
+            Assert.That(output.Commands.Select(c => c.Kind), Is.EqualTo(Enumerable.Repeat(LedgerCommandKind.Initialize, initializes)),
+                rof > 0f ? "S2: до конца таймера темпа команд нет." : "Ровно одна попытка Initialize.");
+            Assert.That(machine.State.Episode, Is.EqualTo(TriggerEpisode.Consumed), "Нажатие израсходовано: выстрел — следующим нажатием.");
         }
 
         // ── Инфраструктура ──────────────────────────────────────────────────────────────────

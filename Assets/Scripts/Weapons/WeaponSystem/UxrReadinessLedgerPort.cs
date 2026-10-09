@@ -1,5 +1,7 @@
 using System;
+using System.Text;
 using UltimateXR.Core;
+using UltimateXR.Core.StateSync;
 using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
 using VrBattlegrounds.Network;
@@ -94,9 +96,14 @@ namespace VrBattlegrounds.Weapons
             switch (command.Kind)
             {
                 case LedgerCommandKind.Initialize:
+                {
+                    bool accepted;
                     _initializing = true;
-                    try { return _weapon.TryInitializeReadiness(_trigger); }
+                    try { accepted = _weapon.TryInitializeReadiness(_trigger); }
                     finally { _initializing = false; }
+                    LastInitializeRefusal = accepted ? null : DescribeInitializeRefusal();
+                    return accepted;
+                }
                 case LedgerCommandKind.BeginAction:
                     return _weapon.TryBeginManualAction(_trigger, revision, command.CycleSequence);
                 case LedgerCommandKind.Extract:
@@ -128,6 +135,41 @@ namespace VrBattlegrounds.Weapons
                 default:
                     return false;
             }
+        }
+
+        /// <summary>Видимые условия, не выполненные при последнем отказе Initialize (null — последний Initialize принят).</summary>
+        public string LastInitializeRefusal { get; private set; }
+
+        /// <summary>
+        /// Какие из видимых снаружи условий <c>TryInitializeReadiness</c> не выполнены (SDK не меняется: только публичные
+        /// признаки и наш порт <c>CanAuthorReadinessAction</c>). Строка собирается только при отказе.
+        /// </summary>
+        private string DescribeInitializeRefusal()
+        {
+            var failed = new StringBuilder();
+            void Add(string what) { if (failed.Length > 0) failed.Append(", "); failed.Append(what); }
+            if (!_weapon.UsesReadinessLedger(_trigger)) Add("учёт спуска не включён");
+            if (!_weapon.isActiveAndEnabled) Add("ствол не isActiveAndEnabled");
+            if (_weapon.IsUseBlocked) Add("CanUse=false: IsUseBlocked (упор ствола)");
+            if (_weapon.Owner != null && _weapon.Owner.IsDead) Add($"CanUse=false: владелец {_weapon.Owner.name} мёртв");
+            if (UltimateXR.Mechanics.Weapons.UxrWeaponManager.HasInstance && !UltimateXR.Mechanics.Weapons.UxrWeaponManager.Instance.WeaponSystemEnabled)
+                Add("CanUse=false: UxrWeaponManager.WeaponSystemEnabled=false");
+            if (!CanAuthor(_trigger))
+            {
+                Add("CanAuthorReadinessAction=false");
+                if (_host == null || !_host.IsConfigured) Add("хост не настроен");
+                else if (!_host.isActiveAndEnabled) Add("хост выключен");
+                if (!_rig.IsPrepared) Add("механизм не подготовлен");
+                else if (_rig.HasAction && !_rig.IsCurrent()) Add("механизм не текущий");
+                if (!StateEventAuthority.IsAuthorOfItem(_weapon)) Add("не автор предмета (StateEventAuthority)");
+            }
+            if (!_weapon.TryGetTriggerMagazineAnchor(_trigger, out UxrGrabbableObjectAnchor anchor)) Add("нет гнезда магазина");
+            else if (!anchor.isActiveAndEnabled) Add($"гнездо {anchor.name} не isActiveAndEnabled");
+            if (UxrStateSyncImplementer.SyncCallDepth != 0) Add($"SyncCallDepth={UxrStateSyncImplementer.SyncCallDepth}");
+            if (UxrManager.HasInstance && UxrManager.Instance.IsInsideStateSync) Add("внутри replay (IsInsideStateSync)");
+            if (_weapon.GetReadinessState(_trigger)?.ReadinessInitialized == true) Add("учёт уже инициализирован");
+            if (failed.Length == 0) Add("видимые условия выполнены (скрытые: приём патрона, фиксированный запас, повторная проверка покоя)");
+            return failed.ToString();
         }
 
         private bool WithEvidence(LedgerCommandKind kind, uint revision, Func<bool> sdkCall)

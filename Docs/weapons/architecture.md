@@ -86,10 +86,20 @@ SDK           UxrFirearmWeapon(.Readiness/.AmmoAdmission), UxrFirearmMag, UxrPro
   (NoAction/ActionTravel), ChamberPolicy (ManualReturn / AutoOnMagazineInsert / TriggerAssistPrepareOnly),
   EmptyPose (HoldOpen/ReturnToRest), ReleasedAction (Spring/Stay). Ассеты — `Assets/Data/WeaponSystem/Profiles/`.
 - Данные конкретного ствола (порог извлечения, скорости, клипы, детали) — `WeaponMechanismRig` на хосте.
-- Отклик: `WeaponFeedbackDefaults` на категорию (автомат, дробовик, пистолет —
-  `Assets/Data/WeaponSystem/*FeedbackDefaults.asset`); на стволе — только оверрайды. Подстановка — одно правило
-  `WeaponAudioSet.Resolve` / `WeaponHapticSet.Resolve` в момент проигрывания: набор ствола целиком → дефолт →
-  (для сухого щелчка) звук SDK.
+- Отклик: `WeaponFeedbackDefaults` на категорию (автомат, дробовик, пистолет, снайперская винтовка —
+  `Assets/Data/WeaponSystem/*FeedbackDefaults.asset`): звук, вибрация и вылет (патрон, гильза). На стволе — только
+  оверрайды. Подстановка — одно правило `WeaponAudioSet.Resolve` / `WeaponHapticSet.Resolve` /
+  `WeaponEjectionSet.Resolve` в момент проигрывания: набор ствола целиком → дефолт → (для сухого щелчка) звук SDK.
+  Новый калибр, общий для класса оружия, — новая категория, а не оверрайды на каждом стволе.
+
+## Инициализация учёта
+
+Учёт ствола инициализирует автор командой `Initialize`. Учёт законно отказывает, пока ствол неготов к использованию
+(например, в начале раунда `UxrWeaponManager.WeaponSystemEnabled=false`, а выдача уже положила ствол в кобуру).
+Поэтому машина не полагается на одну попытку при `Start`: пока ствол `Uninitialized`, автор повторяет `Initialize`
+при хвате основной рукой (сразу, затем не чаще 0,5 с), вставке магазина, нажатии спуска, смене автора и запросе
+бота (строки T01t, T16i, T54i, T37i, T44i). Порт пишет, какое видимое условие не выполнено: один Warning на ствол,
+успех — Info «инициализирован со N-й попытки».
 
 ## Авторинг
 
@@ -113,8 +123,9 @@ SDK           UxrFirearmWeapon(.Readiness/.AmmoAdmission), UxrFirearmMag, UxrPro
 | F5 (не переведены) | Revolver, R08, SDK Shotgun | legacy; развилка (roadmap) |
 
 Обзорные копии стены лобби (`Prefabs/Weapons/SightReview/*`) переводятся вместе со своим стволом.
-Категории: дробовик — Herrington, FABARM, SRM12, SDK Shotgun; пистолет — Browning, Viper, PPK, Uzi, SDKGun,
-Revolver, R08; остальное — автомат.
+Категории: дробовик — Herrington, FABARM, SDK Shotgun; пистолет — Browning, Viper, PPK, Uzi, SDKGun, Revolver, R08;
+снайперская винтовка — SniperRifle (в арсенале AX-50), SRM12 (в арсенале Desert Tech SRS — снайперская, не дробовик);
+остальное — автомат. Имя префаба не равно названию в арсенале: категорию сверять по `WeaponInfo._displayName`.
 
 ## Отладка
 

@@ -7,9 +7,9 @@ roadmap живёт здесь, а Readme задачи ссылается).
 |---|---|---|---|
 | — | drive | Машина управляет оружием; Herrington, FABARM | влит 5285ceb7 |
 | — | waves-f | F1–F4, дефолты отклика, конвейер звуков, частичный ход, запрет перехвата | влит 5af1c7ef |
-| 1 | ejection | Вылет живого патрона и гильзы, визуал, видят все; слой Ignore Raycast | принят в шлеме, закоммичен 97ba8bf8, не влит; не прогнаны WeaponEjectionTests и оверрайд снайперского патрона SniperRifle |
-| 1a | ejection-manual | Гильза ручного цикла (FABARM, SRM12, SniperRifle): признак SpentCaseInChamber в учёте SDK, патч 68 | спроектирован (`tasks/weapon-system/reports/ejection-manual/design.md`, вне Git — перенести в Details) |
-| 1b | expert-kb | База знаний `Docs/weapons/` и профиль эксперта | развёрнут 2026-10-09 |
+| — | ejection | Вылет живого патрона и гильзы (визуал, видят все, слой Ignore Raycast); категория «снайперская винтовка»; повтор инициализации учёта | влит 722d14df |
+| 1 | ejection-manual | Гильза ручного цикла (FABARM, SRM12 = DT SRS, SniperRifle = AX-50): признак SpentCaseInChamber в учёте SDK, патч 68 | спроектирован (`tasks/weapon-system/reports/ejection-manual/design.md`, вне Git — перенести в Details) |
+| — | expert-kb | База знаний `Docs/weapons/` и профиль эксперта | вливается |
 | 2 | waves-f5 | Revolver, R08, SDK Shotgun. Рекомендация A: барабан = магазин, NoAction + AutoOnMagazineInsert; SDK Shotgun — `PumpGrabFollow` + корпус | ждёт решения |
 | 3 | use-context | `WeaponUseContext` для ботов (`weapon-use-context@1`), SDK-патч 63 (отдача корня у NPC) | ждёт `weapon-equipment-binding` от bots-fix |
 | 4 | ammo-pack | Пачка патронов (спидлоадер, коробка) | идея пользователя |

@@ -43,8 +43,13 @@ namespace VrBattlegrounds.Weapons.Core
     /// владельцы (<c>AnchorSound</c>, SDK) — класс ошибок 2.
     /// <see cref="DryFire"/> — щелчок отказа по патронам/препятствию/сбою; <see cref="Refusal"/> — искусственный
     /// звук отказа, не щелчок (S2: таймер темпа; звук <c>UI_Error_Subtle_Deep</c> подключается на этапе D).
+    /// <para>
+    /// Сигналы — общие для каналов: один сигнал слушают звук и вылет (этап ejection). <see cref="ChamberEjected"/> —
+    /// из патронника извлечён живой патрон (звук слоя и вылет патрона). <see cref="CasingEjected"/> — самозарядный
+    /// ствол выбросил стреляную гильзу при выстреле (только вылет). Оба — по фиксации учёта, одинаково у автора и наблюдателя.
+    /// </para>
     /// </summary>
-    public enum WeaponCue { ActionBack, ActionForwardChambered, ActionForwardEmpty, ChamberEjected, SlideLockCatch, DryFire, Refusal, ActionReturnPartial }
+    public enum WeaponCue { ActionBack, ActionForwardChambered, ActionForwardEmpty, ChamberEjected, SlideLockCatch, DryFire, Refusal, ActionReturnPartial, CasingEjected }
 
     /// <summary>
     /// Вибрации оружия. Решение пользователя: все вибрации оружия, включая отдачу выстрела, ведёт WeaponSystem;

@@ -21,7 +21,7 @@ namespace VrBattlegrounds.Weapons
     /// <b>Устройство.</b> Датчики (ход, контекст, спуск, магазин, окно приёма) → шаг машины → порт учёта
     /// (<see cref="UxrReadinessLedgerPort"/>, команды только у автора вне replay) → исполнители по одному на канал:
     /// поза (<see cref="WeaponPoseExecutor"/>), звук (<see cref="WeaponAudioExecutor"/>), вибрация и подсказка
-    /// (<see cref="WeaponFeedbackExecutor"/>). Исполнители — обычные C#-объекты внутри хоста: второго писателя канала
+    /// (<see cref="WeaponFeedbackExecutor"/>), вылет патрона и гильзы (<see cref="WeaponEjectionExecutor"/>). Исполнители — обычные C#-объекты внутри хоста: второго писателя канала
     /// на префабе быть не может. Учёт патронов не копируется: снимок <see cref="WS.LedgerView"/> читается заново.
     /// </para>
     /// <para>
@@ -46,7 +46,11 @@ namespace VrBattlegrounds.Weapons
         [SerializeField] private WeaponMechanismRig _rig = new WeaponMechanismRig();
         [SerializeField] private WeaponAudioSet _audio = new WeaponAudioSet();
         [SerializeField] private WeaponHapticSet _haptics = new WeaponHapticSet();
-        [Tooltip("Дефолты звука и вибрации категории ствола. Пустые поля Audio/Haptics ствола берутся отсюда.")]
+        [Tooltip("Вылет ствола (оверрайды): живой патрон и гильза. Пустая запись — дефолт категории.")]
+        [SerializeField] private WeaponEjectionSet _ejection = new WeaponEjectionSet();
+        [Tooltip("Окно выброса: точка и поворот (+X — наружу, +Y — вверх, +Z — к дулу) на детали ствола.")]
+        [SerializeField] private WeaponEjectionPort _ejectionPort = new WeaponEjectionPort();
+        [Tooltip("Дефолты звука, вибрации и вылета категории ствола. Пустые поля Audio/Haptics/Ejection ствола берутся отсюда.")]
         [SerializeField] private WeaponFeedbackDefaults _feedbackDefaults;
         [Tooltip("Подсветка Action «дошли патрон» (видна по защёлке машины или когда рука рядом).")]
         [SerializeField] private GameObject _hintVisual;
@@ -104,6 +108,7 @@ namespace VrBattlegrounds.Weapons
         private WeaponPoseExecutor _pose;
         private WeaponAudioExecutor _sound;
         private WeaponFeedbackExecutor _feedback;
+        private WeaponEjectionExecutor _ejectionOut;
         private WeaponLedgerIntegrity _integrity;
 
         private bool _configured, _started, _stepping, _draining, _dispatching, _subscribed;
@@ -120,6 +125,8 @@ namespace VrBattlegrounds.Weapons
         public WeaponMechanismRig Rig => _rig;
         public WeaponAudioSet Audio => _audio;
         public WeaponHapticSet Haptics => _haptics;
+        public WeaponEjectionSet Ejection => _ejection;
+        public WeaponEjectionPort EjectionPort => _ejectionPort;
         public WeaponFeedbackDefaults FeedbackDefaults => _feedbackDefaults;
         public GameObject HintVisual => _hintVisual;
         public GameObject HintProximity => _hintProximity;
@@ -135,6 +142,7 @@ namespace VrBattlegrounds.Weapons
         public int CommandsRejected { get; private set; }
         public int SoundsPlayed => _sound?.Played ?? 0;
         public int HapticsSent => _feedback?.HapticsSent ?? 0;
+        public int EjectaSpawned => _ejectionOut?.Spawned ?? 0;
         public bool HintOn => _feedback != null && _feedback.HintOn;
         public float ActionProgress => _rig.IsPrepared ? _rig.HandleProgress : 0f;
         public bool IsActionAtRest => _rig.IsPrepared && _rig.IsAtRest();
@@ -191,6 +199,7 @@ namespace VrBattlegrounds.Weapons
                 _pose = new WeaponPoseExecutor(_rig, _axes.HoldsOpen);
                 _sound = new WeaponAudioExecutor(_weapon, _triggerIndex, _audio, _feedbackDefaults, _rig);
                 _feedback = new WeaponFeedbackExecutor(_haptics, _feedbackDefaults, _hintVisual, _hintProximity);
+                _ejectionOut = new WeaponEjectionExecutor(_weapon, _ejectionPort, _ejection, _feedbackDefaults);
                 _integrity = new WeaponLedgerIntegrity(_weapon, this);
             }
             if (!_port.TryInstall(out error))
@@ -327,6 +336,7 @@ namespace VrBattlegrounds.Weapons
             Drain();
 
             if (!idle) _pose.Apply(_poseTarget, Time.deltaTime);
+            _ejectionOut.Track(idle);
             _feedback.Refresh();
         }
 
@@ -451,7 +461,11 @@ namespace VrBattlegrounds.Weapons
                     break;
                 }
                 UxrGrabber mainHand = pending.MainHand != null ? pending.MainHand : _context.MainHand();
-                for (int index = 0; index < _out.Cues.Count; index++) _sound.Play(_out.Cues[index], _out.Reasons[index], mainHand);
+                for (int index = 0; index < _out.Cues.Count; index++)
+                {
+                    _sound.Play(_out.Cues[index], _out.Reasons[index], mainHand);
+                    _ejectionOut.Play(_out.Cues[index]);
+                }
                 for (int index = 0; index < _out.Haptics.Count; index++) _feedback.Haptic(_out.Haptics[index], mainHand, _action.HandleHand());
                 if (_out.HintSet) _feedback.Hint(_out.HintOn);
                 foreach (WS.WeaponReport report in _out.Reports) Log(report);

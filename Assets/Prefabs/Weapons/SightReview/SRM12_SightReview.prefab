@@ -2628,9 +2628,6 @@ MonoBehaviour:
     _actionForwardEmpty:
       _clip: {fileID: 8300000, guid: 7ecea352e3acb4e4c941344af80ff0f8, type: 3}
       _volume: 1
-    _actionReturnPartial:
-      _clip: {fileID: 0}
-      _volume: 1
     _chamberEjected:
       _clip: {fileID: 0}
       _volume: 1
@@ -2696,6 +2693,23 @@ MonoBehaviour:
       _repeatGapMs: 0
       _cooldownSeconds: 0
       _secondaryHandGain: 1
+  _ejection:
+    _liveRound:
+      _prefab: {fileID: 0}
+      _velocity: {x: 1.8, y: 1.2, z: -0.3}
+      _velocityJitter: 0.2
+      _spin: {x: 0, y: 12, z: 20}
+      _lifetime: 10
+    _spentCasing:
+      _prefab: {fileID: 0}
+      _velocity: {x: 1.8, y: 1.2, z: -0.3}
+      _velocityJitter: 0.2
+      _spin: {x: 0, y: 12, z: 20}
+      _lifetime: 10
+  _ejectionPort:
+    _anchor: {fileID: 997765773864982255}
+    _localPosition: {x: 0.022, y: 0.03906, z: -0.15744}
+    _localRotation: {x: 0, y: 0, z: 0, w: 1}
   _feedbackDefaults: {fileID: 11400000, guid: bd43905bcfa91cb4cb14f0f873d0266c, type: 2}
   _hintVisual: {fileID: 2111917741311032165}
   _hintProximity: {fileID: 1292811686694229197}

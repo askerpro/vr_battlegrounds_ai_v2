@@ -88,3 +88,16 @@ MonoBehaviour:
       _repeatGapMs: 0
       _cooldownSeconds: 0
       _secondaryHandGain: 1
+  _ejection:
+    _liveRound:
+      _prefab: {fileID: 1967182621460876409, guid: 7d7b00820834d1b41a61c9035ccc5233, type: 3}
+      _velocity: {x: 0.9, y: 0.6, z: 0}
+      _velocityJitter: 0.2
+      _spin: {x: 0, y: 5, z: 8}
+      _lifetime: 10
+    _spentCasing:
+      _prefab: {fileID: 6147724332003662246, guid: 3eee60dadf1215d4aa2173d720c2dfb9, type: 3}
+      _velocity: {x: 1.8, y: 1, z: -0.3}
+      _velocityJitter: 0.2
+      _spin: {x: 0, y: 8, z: 12}
+      _lifetime: 10

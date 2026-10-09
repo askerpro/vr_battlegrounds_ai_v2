@@ -6,7 +6,7 @@ namespace VrBattlegrounds.Weapons
     public enum WeaponFeedbackCategory { Rifle, Shotgun, Pistol }
 
     /// <summary>
-    /// Дефолты звука и вибрации одной категории оружия (автомат, дробовик, пистолет). Ствол (хост <see cref="WeaponSystem"/>)
+    /// Дефолты звука, вибрации и вылета (патрон, гильза — этап ejection) одной категории оружия (автомат, дробовик, пистолет). Ствол (хост <see cref="WeaponSystem"/>)
     /// хранит ссылку на ассет своей категории, а в своих <see cref="WeaponAudioSet"/>/<see cref="WeaponHapticSet"/> — только
     /// оверрайды. Пустое поле ствола — дефолт категории. Подставляют исполнители звука и вибрации в момент проигрывания
     /// (<see cref="WeaponAudioSet.Resolve"/>, <see cref="WeaponHapticSet.Resolve"/>), поэтому правка ассета сразу меняет
@@ -29,8 +29,12 @@ namespace VrBattlegrounds.Weapons
         [Tooltip("Вибрации категории по сигналам машины.")]
         [SerializeField] private WeaponHapticSet _haptics = new WeaponHapticSet();
 
+        [Tooltip("Вылет категории: живой патрон при извлечении и гильза при выстреле (этап ejection).")]
+        [SerializeField] private WeaponEjectionSet _ejection = new WeaponEjectionSet();
+
         public WeaponFeedbackCategory Category => _category;
         public WeaponAudioSet Audio => _audio;
         public WeaponHapticSet Haptics => _haptics;
+        public WeaponEjectionSet Ejection => _ejection;
     }
 }

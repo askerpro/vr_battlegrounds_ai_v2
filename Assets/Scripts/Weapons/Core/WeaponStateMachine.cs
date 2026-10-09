@@ -243,7 +243,7 @@ namespace VrBattlegrounds.Weapons.Core
                     if (_clip != ClipKind.None) _clipActionDetached = true;
                     break;
                 case WeaponEventKind.LedgerCommitted:
-                    // T66, план п. 4.2: звук по операции фиксации — одинаково у автора и наблюдателя.
+                    // T66, план п. 4.2: звук и вылет по операции фиксации — одинаково у автора и наблюдателя.
                     CueForCommit();
                     break;
             }
@@ -278,6 +278,12 @@ namespace VrBattlegrounds.Weapons.Core
                 // «перезарядка не выполнена» (звук отказа, вибрация, подсветка), не трогая полный цикл.
                 case LedgerOp.CloseOnly:
                     _out.Cue(WeaponCue.ActionReturnPartial, WeaponNotReadyReason.None);
+                    break;
+                // Этап ejection: самозарядный ствол выбрасывает гильзу самим выстрелом (и последним тоже). У ручного Action
+                // (помпа, болт) гильза вылетает при оттяжке после выстрела — учёт SDK стреляную гильзу в патроннике не
+                // хранит (ManualReload снимает C), поэтому здесь сигнала нет; см. tasks/weapon-system/changelog/2026-10-09-ejection.md.
+                case LedgerOp.Shot:
+                    if (_axes.FireMode != WeaponFireMode.Manual) _out.Cue(WeaponCue.CasingEjected, WeaponNotReadyReason.None);
                     break;
             }
         }

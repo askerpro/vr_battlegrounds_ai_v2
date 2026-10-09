@@ -227,6 +227,11 @@ namespace VrBattlegrounds.Editor.Gameplay
                 if (defaults.Category != spec.Category) throw new InvalidOperationException($"{spec.Path}: категория {defaults.Category}, нужна {spec.Category}");
                 result[spec.Category.ToString()] = defaults;
             }
+            // Этап ejection: префабы вылета и пустые записи вылета категорий. Preflight ничего не создаёт и не пишет.
+            Dictionary<string, GameObject> ejecta = EnsureEjecta(create, created);
+            if (create)
+                foreach (DefaultsSpec spec in DefaultsSpecs)
+                    FillEjectionDefaults((WeaponFeedbackDefaults)result[spec.Category.ToString()], ejecta);
             return result;
         }
 
@@ -350,6 +355,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (ClipOverrides.TryGetValue(root.name, out var overrides))
                 foreach (var (field, clip) in overrides) SetClip(settings.FindProperty("_audio"), field, clip);
             DropCopiesOfDefaults(settings, defaults);
+            WritePort(settings, root);
+            WriteEjectionOverrides(settings, root);
             settings.FindProperty("_hintVisual").objectReferenceValue = source.HintVisual;
             settings.FindProperty("_hintProximity").objectReferenceValue = source.HintProximity;
             settings.ApplyModifiedPropertiesWithoutUndo();
@@ -597,6 +604,535 @@ namespace VrBattlegrounds.Editor.Gameplay
             return result;
         }
 
+        // ── Окно выброса (этап ejection) ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Система ствола: начало — источник выстрела спуска 0 (<c>UxrShotDescriptor.ShotSource</c>), +Z — к дулу (его forward),
+        /// +Y — вверх (его up, ортогонализован), +X — вправо. В ней задана таблица <see cref="EjectionPorts"/>: так числа
+        /// не зависят от масштаба и поворота корня модели и одинаковы у обзорной копии.
+        /// </summary>
+        public static bool TryGetBarrelFrame(GameObject root, out Vector3 origin, out Quaternion frame, out string error)
+        {
+            origin = default; frame = Quaternion.identity; error = null;
+            var weapon = root.GetComponent<UxrFirearmWeapon>();
+            var source = root.GetComponent<UxrProjectileSource>();
+            if (weapon == null || source == null) { error = "нет UxrFirearmWeapon/UxrProjectileSource"; return false; }
+            SerializedProperty index = new SerializedObject(weapon).FindProperty("_triggers.Array.data[0]._projectileShotIndex");
+            int shot = index != null ? index.intValue : 0;
+            if (shot < 0 || shot >= source.ShotTypes.Count || source.ShotTypes[shot].ShotSource == null)
+            { error = "нет источника выстрела спуска 0"; return false; }
+            Transform muzzle = source.ShotTypes[shot].ShotSource;
+            Vector3 forward = muzzle.forward, up = Vector3.ProjectOnPlane(muzzle.up, forward);
+            if (up.sqrMagnitude < 1e-6f) { error = "источник выстрела без up"; return false; }
+            origin = muzzle.position;
+            frame = Quaternion.LookRotation(forward, up);
+            return true;
+        }
+
+        /// <summary>
+        /// Окно выброса ствола в системе ствола (<see cref="TryGetBarrelFrame"/>, метры): X — вправо (+ — правый бок),
+        /// Y — вверх, Z — к дулу (минус — назад от дула). Окно повёрнуто как ствол: +X окна — наружу вправо. Якорь —
+        /// корень оружия (окно на корпусе; затвор пистолета к выстрелу стоит в покое). Числа сняты с геометрии моделей
+        /// (отчёт <c>tasks/weapon-system/reports/ejection/geometry*.json</c>) и проверяются в шлеме. Обзорная копия
+        /// (<c>*_SightReview</c>) берёт строку исходного ствола.
+        /// </summary>
+        private static readonly Dictionary<string, Vector3> EjectionPorts = new Dictionary<string, Vector3>
+        {
+            // Окно — деталь модели: пылезащитная крышка / затворное окно справа.
+            ["TR15"] = new Vector3(0.022f, -0.012f, -0.505f),        // MeshContainer/Dustcover
+            ["MKR9"] = new Vector3(0.025f, -0.016f, -0.203f),        // MeshContainer/Dustcover
+            ["FabarmSDASS"] = new Vector3(0.016f, 0f, -0.465f),      // MeshContainer/Gate (затворное окно)
+            // Над затвором: правый борт ствольной коробки на уровне затвора.
+            ["Herrington"] = new Vector3(0.020f, -0.003f, -0.470f),  // Slide/Bolt z −0,536…−0,453, рукоять справа
+            ["Mk14"] = new Vector3(0.012f, 0.010f, -0.615f),         // Slide/BoltCharger (окно сверху-справа, как у M14)
+            ["SRM12"] = new Vector3(0.022f, 0f, -0.680f),            // Slide/Bolt z −0,741…−0,624
+            ["SniperRifle"] = new Vector3(0.020f, 0.005f, -0.730f),  // Slide/Sniper_Rifle_Gate z −0,838…−0,683
+            ["Uzi"] = new Vector3(0.020f, 0.010f, -0.225f),          // Slide/Reload_frame (правый борт)
+            ["Scar"] = new Vector3(0.018f, 0f, -0.320f),             // MeshContainer/Scar_Planck (правый борт)
+            // Пистолеты: верх-право кожуха-затвора, за казёнником.
+            ["Viper"] = new Vector3(0.009f, 0.013f, -0.120f),        // Slide/Bolt z −0,186…−0,007, верх 0,018
+            ["BrowningHiPower"] = new Vector3(0.009f, 0.009f, -0.110f), // Slide/Gate z −0,177…0,011
+            ["PPK"] = new Vector3(0.011f, 0.012f, -0.110f),          // Slide/Gun02_Detail_01 z −0,172…0,010
+            ["Gun"] = new Vector3(0.011f, 0.008f, -0.020f),          // GunGeo z −0,110…0,098 (без затвора)
+            // Окна нет в модели: над передним краем магазинной шахты, правый борт коробки.
+            ["AK105"] = new Vector3(0.022f, 0.008f, -0.390f),        // гнездо магазина z −0,413…−0,328
+            ["AR15"] = new Vector3(0.022f, -0.012f, -0.478f),        // по TR15: окно в 0,058 м впереди спуска
+            ["MP5K"] = new Vector3(0.020f, 0.005f, -0.155f),         // спуск z −0,213
+            ["Machinegun"] = new Vector3(0.025f, 0f, -0.300f),       // MagDecal z −0,340…−0,248
+        };
+
+        private const string ReviewSuffix = "_SightReview";
+
+        // ── Префабы вылета и дефолты вылета категорий (этап ejection) ───────────────────────
+
+        public const string EjectionFolder = "Assets/Prefabs/Weapons/Ejection";
+        /// <summary>
+        /// Слой вылета. Отдельного слоя «только окружение» в проекте нет (оружие, руки и карта — на Default), новых слоёв
+        /// этап не заводит. Ignore Raycast: пуля и лучи UI/телепорта его не видят, а с картой он сталкивается; со своим стволом
+        /// вылет не сталкивается через <c>Physics.IgnoreCollision</c> (<see cref="WeaponEjectaPool"/>).
+        /// </summary>
+        public const string EjectaLayer = "Ignore Raycast";
+        private const string EjectaPhysicsPath = EjectionFolder + "/EjectaPhysics.physicMaterial";
+        private static readonly string[] BrassImpacts =
+            { "Assets/Audio/SFX/Arsenal/IMPACT_Metal_Cling_Bright_mono.wav", "Assets/Audio/SFX/Impacts/IMPACT_Bullet_Metal_01_mono.wav" };
+        private static readonly string[] HullImpacts = { "Assets/Audio/SFX/Impacts/IMPACT_Bullet_Metal_01_mono.wav" };
+
+        /// <summary>
+        /// Префаб вылета: меш пака только ссылкой (<see cref="Mesh"/> — FBX пака или извлечённый меш ствола), материалы —
+        /// рендерера FBX или рендерера ствола <see cref="MaterialFrom"/>, где этот меш уже нарисован. Размер — реальный
+        /// (<see cref="Length"/>, <see cref="Diameter"/>, м): длинная ось меша → +Z, узкий конец (пуля, дульце) — к +Z.
+        /// </summary>
+        private sealed class EjectaSpec
+        {
+            public string Name, Mesh, MaterialFrom;
+            public float Length, Diameter, Mass, Volume;
+            public string[] Impacts;
+            public string Path => EjectionFolder + "/" + Name + ".prefab";
+        }
+
+        private const string Casings = "Assets/ThirdParty/KINEMATION/TacticalShooterPack/Meshes/Casings/";
+        private const string ArtKinemation = "Assets/Art/Weapons/Kinemation/";
+
+        private static readonly EjectaSpec[] EjectaSpecs =
+        {
+            new EjectaSpec { Name = "Pistol_Round", Mesh = ArtKinemation + "Viper/Meshes/Viper_Cartridge_025.asset",
+                MaterialFrom = "Assets/Prefabs/Weapons/Viper/Viper_mag.prefab", Length = 0.0297f, Diameter = 0.0099f, Mass = 0.008f, Volume = 0.45f, Impacts = BrassImpacts },
+            new EjectaSpec { Name = "Pistol_Casing", Mesh = Casings + "9mm/SM_9mm_Casing.FBX",
+                Length = 0.019f, Diameter = 0.0099f, Mass = 0.004f, Volume = 0.4f, Impacts = BrassImpacts },
+            new EjectaSpec { Name = "Rifle_Round", Mesh = ArtKinemation + "TR15/Meshes/TR15_Cartridge_1.asset",
+                MaterialFrom = "Assets/Prefabs/Weapons/TR15/TR15_mag.prefab", Length = 0.057f, Diameter = 0.0096f, Mass = 0.012f, Volume = 0.45f, Impacts = BrassImpacts },
+            new EjectaSpec { Name = "Rifle_Casing", Mesh = Casings + "556x45_NATO/SM_5_56x45-NATO_Casing.FBX",
+                Length = 0.045f, Diameter = 0.0096f, Mass = 0.006f, Volume = 0.4f, Impacts = BrassImpacts },
+            new EjectaSpec { Name = "Shotgun_Shell", Mesh = ArtKinemation + "Herrington/Meshes/Herrington_Cartridge.asset",
+                MaterialFrom = "Assets/Prefabs/Weapons/Herrington/Herrington_mag.prefab", Length = 0.07f, Diameter = 0.0205f, Mass = 0.035f, Volume = 0.35f, Impacts = HullImpacts },
+            new EjectaSpec { Name = "Shotgun_Hull", Mesh = Casings + "12-Gauge/SM_12-Gauge.FBX",
+                Length = 0.07f, Diameter = 0.0205f, Mass = 0.012f, Volume = 0.3f, Impacts = HullImpacts },
+            // Снайперский .308 (7.62×51): патрон — меш Mk14 (тот же калибр), гильза — .338 Lapua Kinemation под размер .308.
+            new EjectaSpec { Name = "Sniper_Round", Mesh = ArtKinemation + "Mk14/Meshes/Mk14_Mk14_Ammo_001.asset",
+                MaterialFrom = "Assets/Prefabs/Weapons/Mk14/Mk14_mag.prefab", Length = 0.071f, Diameter = 0.0119f, Mass = 0.024f, Volume = 0.45f, Impacts = BrassImpacts },
+            new EjectaSpec { Name = "Sniper_Casing", Mesh = Casings + "338_Lapua/SM_338-Lapua_Casing.FBX",
+                Length = 0.051f, Diameter = 0.0119f, Mass = 0.012f, Volume = 0.4f, Impacts = BrassImpacts },
+        };
+
+        /// <summary>Начальный вылет категории: какой префаб и импульс (система окна: +X наружу, +Y вверх, +Z к дулу).</summary>
+        private static readonly (WeaponFeedbackCategory Category, string Live, Vector3 LiveVelocity, Vector3 LiveSpin,
+            string Spent, Vector3 SpentVelocity, Vector3 SpentSpin)[] EjectionDefaults =
+        {
+            (WeaponFeedbackCategory.Rifle, "Rifle_Round", new Vector3(0.9f, 0.7f, -0.1f), new Vector3(0f, 6f, 10f),
+                "Rifle_Casing", new Vector3(2.4f, 1.2f, -0.5f), new Vector3(0f, 15f, 25f)),
+            (WeaponFeedbackCategory.Pistol, "Pistol_Round", new Vector3(0.8f, 0.8f, 0f), new Vector3(0f, 6f, 10f),
+                "Pistol_Casing", new Vector3(1.6f, 1.4f, -0.3f), new Vector3(0f, 15f, 25f)),
+            (WeaponFeedbackCategory.Shotgun, "Shotgun_Shell", new Vector3(0.9f, 0.6f, 0f), new Vector3(0f, 5f, 8f),
+                "Shotgun_Hull", new Vector3(1.8f, 1.0f, -0.3f), new Vector3(0f, 8f, 12f)),
+        };
+
+        /// <summary>
+        /// Оверрайды вылета ствола (имя корня без <c>_SightReview</c> → поле набора → префаб и импульс): калибр ствола не
+        /// совпадает с категорией. Решения пользователя 2026-10-09: MKR9 — 9 мм в категории «автомат», гильза и импульс
+        /// пистолетные; SniperRifle (SRS) — снайперский патрон .308 (меш патрона Mk14 7.62×51) и гильза
+        /// (меш .338 Lapua Kinemation под размер .308) — гильза пригодится, когда у ручного цикла появится её сигнал.
+        /// </summary>
+        private static readonly Dictionary<string, (string Field, string Ejecta, Vector3 Velocity, Vector3 Spin)[]> EjectionOverrides =
+            new Dictionary<string, (string Field, string Ejecta, Vector3 Velocity, Vector3 Spin)[]>
+            {
+                ["MKR9"] = new[] { ("_spentCasing", "Pistol_Casing", new Vector3(1.6f, 1.4f, -0.3f), new Vector3(0f, 15f, 25f)) },
+                ["SniperRifle"] = new[]
+                {
+                    ("_liveRound", "Sniper_Round", new Vector3(0.9f, 0.7f, -0.1f), new Vector3(0f, 5f, 8f)),
+                    ("_spentCasing", "Sniper_Casing", new Vector3(2.0f, 1.0f, -0.4f), new Vector3(0f, 10f, 15f)),
+                },
+            };
+
+        private static readonly string[] EjectionFields = { "_liveRound", "_spentCasing" };
+
+        /// <summary>Имя префаба-оверрайда вылета ствола по сигналу; null — у ствола дефолт категории (для тестов и отчёта).</summary>
+        public static string EjectionOverrideOf(string weaponName, WS.WeaponCue cue)
+        {
+            string field = cue == WS.WeaponCue.ChamberEjected ? "_liveRound" : cue == WS.WeaponCue.CasingEjected ? "_spentCasing" : null;
+            if (field == null || !EjectionOverrides.TryGetValue(PortKey(weaponName), out var rows)) return null;
+            foreach (var row in rows) if (row.Field == field) return row.Ejecta;
+            return null;
+        }
+
+        /// <summary>Пути всех префабов вылета, которые создаёт writer.</summary>
+        public static IEnumerable<string> EjectaPrefabPaths => EjectaSpecs.Select(spec => spec.Path);
+
+        /// <summary>
+        /// Записать оверрайды вылета из <see cref="EjectionOverrides"/>; остальные записи — пустые (дефолт категории).
+        /// Префаб вылета ещё не создан (preflight до первой миграции) — оверрайд пуст, его наличие проверяет Readback.
+        /// </summary>
+        private static void WriteEjectionOverrides(SerializedObject settings, GameObject root)
+        {
+            EjectionOverrides.TryGetValue(PortKey(root.name), out var rows);
+            foreach (string field in EjectionFields)
+            {
+                SerializedProperty entry = settings.FindProperty("_ejection." + field);
+                entry.boxedValue = new WeaponEjectile();
+                if (rows == null) continue;
+                foreach (var row in rows)
+                {
+                    if (row.Field != field) continue;
+                    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Array.Find(EjectaSpecs, spec => spec.Name == row.Ejecta).Path);
+                    if (prefab == null) continue;
+                    entry.FindPropertyRelative("_prefab").objectReferenceValue = prefab;
+                    entry.FindPropertyRelative("_velocity").vector3Value = row.Velocity;
+                    entry.FindPropertyRelative("_velocityJitter").floatValue = 0.2f;
+                    entry.FindPropertyRelative("_spin").vector3Value = row.Spin;
+                    entry.FindPropertyRelative("_lifetime").floatValue = 10f;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Префабы вылета: существующий не перезаписывается (дальше это данные дизайнера), отсутствующий создаётся.
+        /// Возвращает имя → префаб; при <paramref name="create"/>=false отсутствующие пропускаются.
+        /// </summary>
+        private static Dictionary<string, GameObject> EnsureEjecta(bool create, List<string> created)
+        {
+            var result = new Dictionary<string, GameObject>();
+            if (create && !AssetDatabase.IsValidFolder(EjectionFolder))
+            {
+                AssetDatabase.CreateFolder("Assets/Prefabs/Weapons", "Ejection");
+                created.Add(EjectionFolder);
+            }
+            PhysicsMaterial physics = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(EjectaPhysicsPath);
+            if (physics == null && create)
+            {
+                CheckAbsent(EjectaPhysicsPath);
+                physics = new PhysicsMaterial("EjectaPhysics")
+                {
+                    bounciness = 0.35f, dynamicFriction = 0.5f, staticFriction = 0.6f,
+                    bounceCombine = PhysicsMaterialCombine.Maximum, frictionCombine = PhysicsMaterialCombine.Average
+                };
+                AssetDatabase.CreateAsset(physics, EjectaPhysicsPath);
+                created.Add(EjectaPhysicsPath);
+            }
+            foreach (EjectaSpec spec in EjectaSpecs)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(spec.Path);
+                if (prefab == null && create)
+                {
+                    CheckAbsent(spec.Path);
+                    prefab = CreateEjecta(spec, physics);
+                    created.Add(spec.Path);
+                }
+                if (prefab != null) result[spec.Name] = prefab;
+            }
+            return result;
+        }
+
+        private static GameObject CreateEjecta(EjectaSpec spec, PhysicsMaterial physics)
+        {
+            Mesh mesh = LoadMesh(spec.Mesh, out Material[] materials);
+            if (spec.MaterialFrom != null) materials = MaterialsOf(spec.MaterialFrom, mesh);
+            if (materials == null || materials.Length == 0 || materials.Any(material => material == null))
+                throw new InvalidOperationException($"{spec.Name}: нет материала меша {spec.Mesh}");
+            int layer = LayerMask.NameToLayer(EjectaLayer);
+            if (layer < 0) throw new InvalidOperationException("Нет слоя " + EjectaLayer);
+
+            var root = new GameObject(spec.Name) { layer = layer };
+            try
+            {
+                var visual = new GameObject("Mesh") { layer = layer };
+                visual.transform.SetParent(root.transform, false);
+                visual.AddComponent<MeshFilter>().sharedMesh = mesh;
+                var renderer = visual.AddComponent<MeshRenderer>();
+                renderer.sharedMaterials = materials;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // Quest: мелочь без теней
+                renderer.receiveShadows = false;
+                // Длинная ось меша → +Z корня, узкий конец → +Z; масштаб — реальная длина.
+                Bounds bounds = mesh.bounds;
+                int axis = bounds.size.x >= bounds.size.y && bounds.size.x >= bounds.size.z ? 0 : bounds.size.y >= bounds.size.z ? 1 : 2;
+                Vector3 along = axis == 0 ? Vector3.right : axis == 1 ? Vector3.up : Vector3.forward;
+                if (NarrowEndSign(mesh, axis) < 0) along = -along;
+                Quaternion rotation = Quaternion.FromToRotation(along, Vector3.forward);
+                float scale = spec.Length / bounds.size[axis];
+                visual.transform.localRotation = rotation;
+                visual.transform.localScale = Vector3.one * scale;
+                visual.transform.localPosition = -(rotation * (bounds.center * scale));
+
+                var body = root.AddComponent<Rigidbody>();
+                body.mass = spec.Mass;
+                body.interpolation = RigidbodyInterpolation.Interpolate;
+                body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+                var shape = root.AddComponent<CapsuleCollider>();
+                shape.direction = 2;
+                shape.radius = spec.Diameter * 0.5f;
+                shape.height = spec.Length;
+                shape.sharedMaterial = physics;
+                var audio = root.AddComponent<AudioSource>();
+                audio.playOnAwake = false;
+                audio.spatialBlend = 1f;
+                audio.rolloffMode = AudioRolloffMode.Logarithmic;
+                audio.minDistance = 0.3f;
+                audio.maxDistance = 12f;
+                audio.priority = 200;
+                var ejecta = root.AddComponent<WeaponEjecta>();
+                var data = new SerializedObject(ejecta);
+                data.FindProperty("_audio").objectReferenceValue = audio;
+                data.FindProperty("_impactVolume").floatValue = spec.Volume;
+                SerializedProperty clips = data.FindProperty("_impactClips");
+                clips.arraySize = spec.Impacts.Length;
+                for (int index = 0; index < spec.Impacts.Length; index++)
+                    clips.GetArrayElementAtIndex(index).objectReferenceValue =
+                        AssetDatabase.LoadAssetAtPath<AudioClip>(spec.Impacts[index]) ?? throw new InvalidOperationException("Нет звука " + spec.Impacts[index]);
+                data.ApplyModifiedPropertiesWithoutUndo();
+                GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, spec.Path);
+                return saved != null ? saved : throw new InvalidOperationException(spec.Path + ": сохранение не удалось");
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        /// <summary>Меш и материалы его рендерера: FBX пака — первый рендерер модели; ассет меша — материалов нет.</summary>
+        private static Mesh LoadMesh(string path, out Material[] materials)
+        {
+            materials = null;
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (model != null)
+            {
+                foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
+                {
+                    Mesh found = renderer is SkinnedMeshRenderer skinned ? skinned.sharedMesh :
+                        renderer.GetComponent<MeshFilter>() is MeshFilter filter ? filter.sharedMesh : null;
+                    if (found == null) continue;
+                    materials = renderer.sharedMaterials;
+                    return found;
+                }
+            }
+            return AssetDatabase.LoadAssetAtPath<Mesh>(path) ??
+                   AssetDatabase.LoadAllAssetsAtPath(path).OfType<Mesh>().FirstOrDefault() ??
+                   throw new InvalidOperationException("Нет меша " + path);
+        }
+
+        /// <summary>Материалы рендерера ствола, который уже рисует этот меш (патрон в магазине).</summary>
+        private static Material[] MaterialsOf(string prefabPath, Mesh mesh)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) ?? throw new InvalidOperationException("Нет префаба " + prefabPath);
+            foreach (MeshFilter filter in prefab.GetComponentsInChildren<MeshFilter>(true))
+                if (filter.sharedMesh == mesh && filter.GetComponent<MeshRenderer>() is MeshRenderer renderer) return renderer.sharedMaterials;
+            foreach (SkinnedMeshRenderer skinned in prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (skinned.sharedMesh == mesh) return skinned.sharedMaterials;
+            throw new InvalidOperationException($"{prefabPath}: меш {mesh.name} не нарисован ни одним рендерером");
+        }
+
+        /// <summary>+1 — узкий конец меша на + оси, −1 — на −: средний радиус вершин крайних 15 % длины.</summary>
+        private static int NarrowEndSign(Mesh mesh, int axis)
+        {
+            Vector3[] vertices = mesh.vertices;
+            Bounds bounds = mesh.bounds;
+            float min = bounds.min[axis], length = bounds.size[axis];
+            double plus = 0, minus = 0; int plusCount = 0, minusCount = 0;
+            foreach (Vector3 vertex in vertices)
+            {
+                float t = (vertex[axis] - min) / length;
+                Vector3 offset = vertex - bounds.center; offset[axis] = 0f;
+                if (t > 0.85f) { plus += offset.magnitude; plusCount++; }
+                else if (t < 0.15f) { minus += offset.magnitude; minusCount++; }
+            }
+            if (plusCount == 0 || minusCount == 0) return 1;
+            return plus / plusCount <= minus / minusCount ? 1 : -1;
+        }
+
+        /// <summary>
+        /// Только чтение: снимок сбоку (PNG 512×256) каждого префаба/модели/меша вылета в сцене предпросмотра — чтобы сверить
+        /// внешний вид патронов и гильз без шлема. Возвращает строку на путь: габарит и материалы.
+        /// </summary>
+        public static List<string> EjectaPreview(string outDir, params string[] paths)
+        {
+            EnsureIdle();
+            Directory.CreateDirectory(outDir);
+            var lines = new List<string>();
+            UnityEngine.SceneManagement.Scene scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+            var texture = new RenderTexture(512, 256, 24);
+            var image = new Texture2D(512, 256, TextureFormat.RGB24, false);
+            try
+            {
+                var cameraObject = new GameObject("PreviewCamera");
+                UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(cameraObject, scene);
+                var camera = cameraObject.AddComponent<Camera>();
+                camera.scene = scene; camera.orthographic = true; camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(0.55f, 0.6f, 0.65f); camera.nearClipPlane = 0.001f; camera.farClipPlane = 10f;
+                camera.targetTexture = texture;
+                var lightObject = new GameObject("PreviewLight");
+                UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(lightObject, scene);
+                var light = lightObject.AddComponent<Light>();
+                light.type = LightType.Directional; light.intensity = 1.6f;
+                lightObject.transform.rotation = Quaternion.Euler(35f, -40f, 0f);
+                foreach (string path in paths)
+                {
+                    GameObject instance = null;
+                    try
+                    {
+                        Object asset = AssetDatabase.LoadMainAssetAtPath(path);
+                        if (asset is GameObject prefab) instance = Object.Instantiate(prefab);
+                        else if (asset is Mesh mesh)
+                        {
+                            instance = new GameObject(mesh.name);
+                            instance.AddComponent<MeshFilter>().sharedMesh = mesh;
+                            instance.AddComponent<MeshRenderer>().sharedMaterial = AssetDatabase.GetBuiltinExtraResource<Material>("Default-Diffuse.mat");
+                        }
+                        else { lines.Add(path + ": не загружается"); continue; }
+                        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(instance, scene);
+                        instance.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                        Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true);
+                        if (renderers.Length == 0) { lines.Add(path + ": нет рендереров"); continue; }
+                        Bounds bounds = renderers[0].bounds;
+                        foreach (Renderer renderer in renderers) bounds.Encapsulate(renderer.bounds);
+                        Vector3 size = bounds.size;
+                        int axis = size.x >= size.y && size.x >= size.z ? 0 : size.y >= size.z ? 1 : 2;
+                        Vector3 along = axis == 0 ? Vector3.right : axis == 1 ? Vector3.up : Vector3.forward;
+                        Vector3 view = axis == 0 ? Vector3.forward : Vector3.right;
+                        camera.transform.position = bounds.center - view * 1f;
+                        camera.transform.rotation = Quaternion.LookRotation(view, Vector3.Cross(view, along));
+                        camera.orthographicSize = Mathf.Max(size[axis] * 0.3f, 0.005f);
+                        camera.Render();
+                        RenderTexture previous = RenderTexture.active;
+                        RenderTexture.active = texture;
+                        image.ReadPixels(new Rect(0, 0, 512, 256), 0, 0);
+                        image.Apply();
+                        RenderTexture.active = previous;
+                        string file = Path.Combine(outDir, Path.GetFileNameWithoutExtension(path) + ".png");
+                        File.WriteAllBytes(file, image.EncodeToPNG());
+                        lines.Add($"{path}: размер {size.ToString("F4")}, материалы " + string.Join(", ", renderers.SelectMany(renderer => renderer.sharedMaterials)
+                            .Select(material => material != null ? material.name + "/" + material.shader.name : "null")) + " → " + Path.GetFileName(file));
+                    }
+                    catch (Exception exception) { lines.Add(path + ": " + exception.Message); }
+                    finally { if (instance != null) Object.DestroyImmediate(instance); }
+                }
+            }
+            finally
+            {
+                UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+                texture.Release(); Object.DestroyImmediate(texture); Object.DestroyImmediate(image);
+            }
+            return lines;
+        }
+
+        /// <summary>
+        /// Заполнить пустой вылет ассета категории (только пустые записи: дальше это данные дизайнера). false — нечего менять.
+        /// </summary>
+        private static bool FillEjectionDefaults(WeaponFeedbackDefaults defaults, Dictionary<string, GameObject> ejecta)
+        {
+            var spec = EjectionDefaults.First(item => item.Category == defaults.Category);
+            var data = new SerializedObject(defaults);
+            bool changed = FillEjectile(data.FindProperty("_ejection._liveRound"), ejecta, spec.Live, spec.LiveVelocity, spec.LiveSpin);
+            changed |= FillEjectile(data.FindProperty("_ejection._spentCasing"), ejecta, spec.Spent, spec.SpentVelocity, spec.SpentSpin);
+            if (!changed) return false;
+            data.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(defaults);
+            AssetDatabase.SaveAssetIfDirty(defaults);
+            return true;
+        }
+
+        private static bool FillEjectile(SerializedProperty entry, Dictionary<string, GameObject> ejecta, string name, Vector3 velocity, Vector3 spin)
+        {
+            if (entry.FindPropertyRelative("_prefab").objectReferenceValue != null) return false;
+            if (!ejecta.TryGetValue(name, out GameObject prefab)) throw new InvalidOperationException("Нет префаба вылета " + name);
+            entry.FindPropertyRelative("_prefab").objectReferenceValue = prefab;
+            entry.FindPropertyRelative("_velocity").vector3Value = velocity;
+            entry.FindPropertyRelative("_velocityJitter").floatValue = 0.2f;
+            entry.FindPropertyRelative("_spin").vector3Value = spin;
+            entry.FindPropertyRelative("_lifetime").floatValue = 10f;
+            return true;
+        }
+
+        /// <summary>Сигналы вылета, которые машина может выдать стволу: патрон — у ручного хода, гильза — у самозарядного.</summary>
+        private static IEnumerable<WS.WeaponCue> EjectionCuesOf(WeaponSystem host)
+        {
+            WeaponReadinessProfile profile = host.Profile;
+            if (profile != null && profile.PhysicalCapability == WeaponPhysicalCapability.ActionTravel) yield return WS.WeaponCue.ChamberEjected;
+            var weapon = host.GetComponent<UxrFirearmWeapon>();
+            SerializedProperty cycle = weapon != null ? new SerializedObject(weapon).FindProperty("_triggers.Array.data[0]._cycleType") : null;
+            if (cycle != null && cycle.intValue != (int)UxrShotCycle.ManualReload) yield return WS.WeaponCue.CasingEjected;
+        }
+
+        private static string PortKey(string rootName) =>
+            rootName.EndsWith(ReviewSuffix, StringComparison.Ordinal) ? rootName.Substring(0, rootName.Length - ReviewSuffix.Length) : rootName;
+
+        /// <summary>Записать окно выброса из таблицы <see cref="EjectionPorts"/>. Ствола нет в таблице — ошибка writer.</summary>
+        private static void WritePort(SerializedObject settings, GameObject root)
+        {
+            if (!EjectionPorts.TryGetValue(PortKey(root.name), out Vector3 local))
+                throw new InvalidOperationException($"{root.name}: нет строки окна выброса (WeaponSystemAuthoring.EjectionPorts).");
+            if (!TryGetBarrelFrame(root, out Vector3 origin, out Quaternion frame, out string error))
+                throw new InvalidOperationException($"{root.name}: окно выброса — {error}.");
+            Transform anchor = root.transform;
+            Vector3 world = origin + frame * local;
+            SerializedProperty port = settings.FindProperty("_ejectionPort");
+            port.FindPropertyRelative("_anchor").objectReferenceValue = anchor;
+            port.FindPropertyRelative("_localPosition").vector3Value = Round(anchor.InverseTransformPoint(world));
+            port.FindPropertyRelative("_localRotation").quaternionValue = Round(Quaternion.Inverse(anchor.rotation) * frame);
+        }
+
+        // Повторный apply обязан дать те же байты: округление гасит шум float при пересчёте через мировые координаты.
+        private static Vector3 Round(Vector3 value) =>
+            new Vector3((float)Math.Round(value.x, 5), (float)Math.Round(value.y, 5), (float)Math.Round(value.z, 5));
+
+        private static Quaternion Round(Quaternion value)
+        {
+            var rounded = new Quaternion((float)Math.Round(value.x, 5), (float)Math.Round(value.y, 5), (float)Math.Round(value.z, 5),
+                (float)Math.Round(value.w, 5));
+            return rounded.normalized;
+        }
+
+        /// <summary>
+        /// Только чтение: геометрия стволов в системе ствола для таблицы <see cref="EjectionPorts"/> — габариты каждого
+        /// рендерера (кроме магазина), ручка Action, корпус rig и узлы с именами окна выброса из моделей паков.
+        /// </summary>
+        public static Dictionary<string, object> EjectionGeometry(params string[] names)
+        {
+            EnsureIdle();
+            var rows = new List<object>(); var failures = new List<string>();
+            var socket = new System.Text.RegularExpressions.Regex("eject|shell|casing|brass|port", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            foreach (Entry entry in names.Length > 0 ? Named(names) : Weapons.Where(item => item.Wave != "F5"))
+            {
+                GameObject root = PrefabUtility.LoadPrefabContents(entry.Prefab);
+                try
+                {
+                    if (!TryGetBarrelFrame(root, out Vector3 origin, out Quaternion frame, out string error)) { failures.Add(entry.Name + ": " + error); continue; }
+                    Quaternion inverse = Quaternion.Inverse(frame);
+                    Vector3 ToBarrel(Vector3 world) => inverse * (world - origin);
+                    var renderers = new List<object>();
+                    foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+                    {
+                        if (renderer.GetComponentInParent<UxrFirearmMag>(true) != null) continue;
+                        Bounds local = renderer is SkinnedMeshRenderer skinned ? skinned.localBounds :
+                            renderer.GetComponent<MeshFilter>() is MeshFilter filter && filter.sharedMesh != null ? filter.sharedMesh.bounds : default;
+                        if (local.size == Vector3.zero) continue;
+                        Transform frameOf = renderer is SkinnedMeshRenderer skin && skin.rootBone != null ? skin.rootBone : renderer.transform;
+                        Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
+                        for (int corner = 0; corner < 8; corner++)
+                        {
+                            Vector3 point = local.center + Vector3.Scale(local.extents,
+                                new Vector3((corner & 1) == 0 ? -1 : 1, (corner & 2) == 0 ? -1 : 1, (corner & 4) == 0 ? -1 : 1));
+                            Vector3 barrel = ToBarrel(frameOf.TransformPoint(point));
+                            min = Vector3.Min(min, barrel); max = Vector3.Max(max, barrel);
+                        }
+                        renderers.Add(new { path = AnimationUtility.CalculateTransformPath(renderer.transform, root.transform),
+                            min = min.ToString("F3"), max = max.ToString("F3") });
+                    }
+                    var host = root.GetComponent<WeaponSystem>();
+                    WeaponMechanismRig rig = host != null ? host.Rig : null;
+                    var sockets = root.GetComponentsInChildren<Transform>(true).Where(item => socket.IsMatch(item.name))
+                        .Select(item => AnimationUtility.CalculateTransformPath(item, root.transform) + " @" + ToBarrel(item.position).ToString("F3") +
+                            " right→" + (inverse * item.right).ToString("F2") + " fwd→" + (inverse * item.forward).ToString("F2")).ToList();
+                    rows.Add(new
+                    {
+                        entry.Name, entry.Category,
+                        rootScale = root.transform.localScale.ToString("F3"),
+                        handle = rig != null && rig.Handle != null ? AnimationUtility.CalculateTransformPath(rig.Handle.transform, root.transform) +
+                            " @" + ToBarrel(rig.Handle.transform.position).ToString("F3") : null,
+                        body = rig != null && rig.Body != null ? AnimationUtility.CalculateTransformPath(rig.Body, root.transform) : null,
+                        sockets, renderers
+                    });
+                }
+                catch (Exception exception) { failures.Add(entry.Name + ": " + exception.Message); }
+                finally { PrefabUtility.UnloadPrefabContents(root); }
+            }
+            return new Dictionary<string, object> { ["passed"] = failures.Count == 0, ["failures"] = failures, ["rows"] = rows,
+                ["scope"] = "Только чтение префабов; система ствола: X вправо, Y вверх, Z к дулу, начало — источник выстрела" };
+        }
+
         // ── Отчёт об отклике: событие → оверрайд / дефолт / нет звука вовсе ─────────────────
 
         private static readonly WS.WeaponCue[] ActionCues =
@@ -642,6 +1178,15 @@ namespace VrBattlegrounds.Editor.Gameplay
                 foreach (WS.WeaponCue forward in new[] { WS.WeaponCue.ActionForwardChambered, WS.WeaponCue.ActionForwardEmpty })
                     if (actionClips.TryGetValue(forward, out AudioClip clip) && SfxClipLevel.SameBytes(back, clip))
                         warnings?.Add($"{host.name}: ActionBack и {forward} побайтно одинаковы — {back.name} / {clip.name}");
+            // Вылет (этап ejection): не ошибка preflight — дефолты вылета заполняет миграция; после неё проверяет Readback.
+            foreach (WS.WeaponCue cue in EjectionCuesOf(host))
+            {
+                WeaponEjectile ejectile = WeaponEjectionSet.Resolve(host.Ejection, defaults != null ? defaults.Ejection : null, cue, out WeaponFeedbackSource source);
+                lines.Add($"вылет {cue}: {(ejectile == null ? "нет (заполнит миграция)" : Describe(source, ejectile.Prefab.name, false))}");
+            }
+            WeaponEjectionPort port = host.EjectionPort;
+            lines.Add(port.IsValid ? $"окно выброса: {port.Anchor.name} {port.LocalPosition.ToString("F3")}" : "окно выброса: НЕТ");
+            if (!port.IsValid) errors.Add(host.name + ": нет окна выброса");
             var haptics = new List<WS.WeaponHapticCue>(TriggerHaptics);
             if (travel) haptics.Insert(0, WS.WeaponHapticCue.ActionRear);
             foreach (WS.WeaponHapticCue cue in haptics)
@@ -744,6 +1289,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             foreach (Entry entry in entries)
                 foreach (string path in new[] { entry.Prefab, entry.Prefab + ".meta" })
                     backups[path] = File.ReadAllBytes(DiskPath(path));
+            // Существующие дефолты категорий: миграция дописывает в них пустой вылет (этап ejection) — откат побайтно.
+            foreach (DefaultsSpec spec in DefaultsSpecs)
+                if (File.Exists(DiskPath(spec.Path))) backups[spec.Path] = File.ReadAllBytes(DiskPath(spec.Path));
             var created = new List<string>(); var failures = new List<string>(); var warnings = new List<string>(); var rows = new List<object>();
             try
             {
@@ -774,7 +1322,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             {
                 foreach (KeyValuePair<string, byte[]> backup in backups) File.WriteAllBytes(DiskPath(backup.Key), backup.Value);
                 foreach (string path in created) AssetDatabase.DeleteAsset(path);
-                foreach (Entry entry in entries) AssetDatabase.ImportAsset(entry.Prefab, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                foreach (string path in backups.Keys.Where(path => !path.EndsWith(".meta", StringComparison.Ordinal)))
+                    AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
                 return new Dictionary<string, object> { ["passed"] = false, ["failures"] = new List<string> { exception.Message }, ["rows"] = rows };
             }
             AssetDatabase.SaveAssets();
@@ -825,6 +1374,21 @@ namespace VrBattlegrounds.Editor.Gameplay
                 asset.GetComponent<WeaponChamberingReminder>() != null || asset.GetComponent<UxrShotgunPump>() != null)
                 yield return entry.Prefab + ": остались прежние компоненты";
             if (!host.TryValidateConfiguration(out string error)) yield return entry.Prefab + ": " + error;
+            if (!host.EjectionPort.IsValid || !host.EjectionPort.Anchor.IsChildOf(asset.transform)) yield return entry.Prefab + ": окно выброса вне ствола";
+            var defaults = (WeaponFeedbackDefaults)data[entry.Category.ToString()];
+            foreach (WS.WeaponCue cue in new[] { WS.WeaponCue.ChamberEjected, WS.WeaponCue.CasingEjected })
+            {
+                string wanted = EjectionOverrideOf(asset.name, cue);
+                WeaponEjectile own = host.Ejection.For(cue);
+                if (wanted != null && (own.Prefab == null || own.Prefab.name != wanted)) yield return entry.Prefab + ": нет оверрайда " + cue + " " + wanted;
+            }
+            foreach (WS.WeaponCue cue in EjectionCuesOf(host))
+            {
+                WeaponEjectile ejectile = WeaponEjectionSet.Resolve(host.Ejection, defaults.Ejection, cue, out _);
+                if (ejectile == null) yield return entry.Prefab + ": нет вылета " + cue;
+                else if (ejectile.Prefab.GetComponent<WeaponEjecta>() == null || ejectile.Prefab.GetComponent<Rigidbody>() == null)
+                    yield return entry.Prefab + ": префаб вылета без WeaponEjecta/Rigidbody — " + ejectile.Prefab.name;
+            }
         }
 
         private sealed class Snapshot
@@ -895,7 +1459,9 @@ namespace VrBattlegrounds.Editor.Gameplay
                     " rear=" + binding.RearPosition.ToString("F4") + " rot=" + binding.AnimateRotation).ToList(),
                 rig.ExtractionGate, rig.SpringReturnSpeed, released = rig.ReleasedAction.ToString(), rig.EmptyRearTime,
                 motion = rig.Motion != null ? rig.Motion.name : null, parts = (rig.Parts ?? Array.Empty<WeaponMechanismRig.Part>()).Length,
-                hint = host.HintVisual != null ? host.HintVisual.name : null
+                hint = host.HintVisual != null ? host.HintVisual.name : null,
+                ejectionPort = host.EjectionPort.IsValid ? host.EjectionPort.Anchor.name + " " + host.EjectionPort.LocalPosition.ToString("F4") +
+                    " " + host.EjectionPort.LocalRotation.eulerAngles.ToString("F1") : null
             };
         }
 

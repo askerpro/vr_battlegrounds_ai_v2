@@ -110,6 +110,28 @@
       "needs": []
     },
     {
+      "id": "ejection-manual",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmReadinessTypes.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.Readiness.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs",
+        "Assets/Scripts/Weapons/Core/**",
+        "Assets/Scripts/Weapons/WeaponSystem/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponSystemAuthoring.cs",
+        "Assets/Prefabs/Weapons/**",
+        "Assets/Tests/EditMode/Weapons/**",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "ejection",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "use-context",
       "writes": [
         "Assets/Scripts/Weapons/WeaponUseContext.cs",
@@ -122,7 +144,7 @@
       "after": [
         {
           "task": "weapon-system",
-          "stage": "ejection",
+          "stage": "ejection-manual",
           "state": "merged"
         }
       ],
@@ -153,7 +175,7 @@
       "after": [
         {
           "task": "weapon-system",
-          "stage": "ejection",
+          "stage": "ejection-manual",
           "state": "merged"
         }
       ],

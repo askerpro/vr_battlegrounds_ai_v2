@@ -3,7 +3,7 @@
   "owner": "map-runtime-bootstrap",
   "client": "claude",
   "worktree": "F:/CodexWorktrees/map-runtime-bootstrap/Vr_Battlegrounds_ai",
-  "base_sha": "ec92098a5d9b2f988d9634906469df9eead6fe6d",
+  "base_sha": "f4e5fd3ddd265b046018c641f970505ba5cbc6f0",
   "doc_path": "tasks/map-runtime-bootstrap/Readme.md",
   "title": "Запуск карты через MapBootstrap",
   "stages": [
@@ -20,6 +20,30 @@
         "tasks/map-runtime-bootstrap/**"
       ],
       "after": [],
+      "needs": []
+    },
+    {
+      "id": "startup-route",
+      "writes": [
+        "Assets/Scripts/Managers/ServerStartupRoute.cs",
+        "Assets/Scripts/Network/GameNetworkManager.cs",
+        "Assets/Scripts/Managers/Series.cs",
+        "Assets/Tests/EditMode/Managers/ServerStartupRouteTests.cs",
+        "Docs/game-manager.md",
+        "Docs/session-architecture.md",
+        "tasks/map-runtime-bootstrap/**",
+        "Assets/Scripts/Debug/E2E/IE2EScenario.cs",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/MapRunRelayBarrierScenario.cs",
+        "Docs/testing.md"
+      ],
+      "after": [
+        {
+          "task": "map-runtime-bootstrap",
+          "stage": "generated-stations",
+          "state": "merged"
+        }
+      ],
       "needs": []
     }
   ]

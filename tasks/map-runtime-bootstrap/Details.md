@@ -35,8 +35,7 @@
 - часть `_arsenalComposition` ассета `MapRuntimeCatalog.asset`;
 - перевод лобби и карт на генерируемые станции. Это задача arsenal-generator;
 - SDK UltimateXR и Mirror. На SDK-патч 51 из `dev` мы опираемся, но не меняем его;
-- правила режимов: раунды, урон, экономика, команды;
-- единый механизм запуска Play в редакторе. Это задача [play-launch](play-launch-proposal.md).
+- правила режимов: раунды, урон, экономика, команды.
 
 ## Архитектура
 
@@ -211,6 +210,70 @@ API сборщика влит в `dev` 34d3ccb0, namespace `VrBattlegrounds.Arse
 - Факт пробы: роли могут регистрироваться ещё на выключенных компонентах, поэтому присутствие ID в реестре —
   не признак готовности. Барьер опирается только на `ValidateReady` = Passed.
 
+## Этап `startup-route`: старт сервера сразу в целевую сцену (проект)
+
+**Зачем.** Пользователь (2026-10-07/08): лобби не обязательно в пути старта; Play из сцены карты должен идти
+Offline → карта. Механизм запуска Play (окно, конфиг, директор) ведёт задача `vr-test-stand`; первая смена сцены
+сервера — область запуска карты, поэтому точка входа — здесь, а директор её только вызывает (контракт
+`map-startup-route`).
+
+**Факты Mirror** (`ThirdParty/Mirror/Core/NetworkManager.cs`): `StartServer` → `OnStartServer` → `ServerChangeScene(onlineScene)`;
+`StartHost` → `ServerChangeScene(onlineScene)` → (сцена загружена) → `FinishStartHost` → `OnStartServer`. Порядок у
+сервера и хоста разный, поэтому совет NET-21 «перенести переход в `OnStartServer`» для хоста лобби не убирает. Общая
+точка обоих путей — виртуальный `ServerChangeScene`, переопределённый в `GameNetworkManager`.
+
+**Решение.**
+- `ServerStartupRoute` (Managers, процессный, только сервер): `TryRequest(scene, modeId, owner, out handle, out error)`
+  до `StartServer`/`StartHost` возвращает `StartupRouteHandle : IDisposable` с собственным `RequestId`; один живой запрос,
+  второй — отказ `StartupRoute.Busy`. `modeId`, сцена и владелец неизменны с момента запроса. Проверка сразу: сцена есть в
+  `MapRuntimeCatalog` (карты и `DebugMaps`) и в списке сборки (`StartupRoute.SceneNotLoadable`), режим совместим
+  (`StartupRoute.ModeIncompatible`). Отказ — именованный, без тихого отката на Lobby.
+- `GameNetworkManager.ServerChangeScene`: первая смена сцены сервера при активном запросе грузит цель вместо
+  `onlineScene`. Поле `onlineScene` в префабе не меняется (NET-21: оно же — конфиг меню); без запроса поведение прежнее.
+- `GameNetworkManager.OnStartServer` (у сервера — до смены сцены, у хоста — после): при `modeId` запрос начинает серию
+  из одной карты без повторной загрузки (`Series` — новый вход «серия уже грузит первую карту»), чтобы `MapBootstrap`
+  взял режим из `CapturedModeId`. У хоста `MapBootstrap` ждёт `MapRunAuthority` с `SessionContext`, который появляется
+  в том же `OnStartServer`, — оба порядка сходятся до Resolve.
+- **Жизнь запроса:** `Requested` → (первая смена сцены сервера) `SceneConsumed` → (захват режима в `OnStartServer`)
+  `Completed`, запись удалена. Без `modeId` запрос завершается сразу после выбора сцены. `handle.Dispose()` и
+  `Cancel(requestId, owner)` снимают только свой запрос и только в `Requested`; после `SceneConsumed` запрос уже
+  исполняется и доводится до захвата режима (Dispose лишь освобождает handle). Неудачный старт (сеть не поднялась,
+  `ServerChangeScene` не вызван) оставляет `Requested` — владелец снимает его своим Dispose; `StopServer` при неактивном
+  сервере (`OnStopServer` не вызывается) на запрос не опирается. `OnStopServer` снимает запрос в `SceneConsumed`
+  (сервер остановлен до захвата режима). Чужой новый запрос не удаляется: снятие сверяет `RequestId`.
+- Клиенты не меняются: Mirror присылает им текущую сцену сервера.
+- Готовность наблюдается существующими средствами: `MapBootstrap.IsServerReady`, снимок `MapRunAuthority`.
+
+**Проверено (2026-10-09, аренда worker 243, вход 05cd7867, finish принят, лишних изменений нет):** компиляция 0 ошибок,
+AndroidCompileGate PASS; EditMode Managers/Maps/Network/Modes — 549 тестов, 5 падений только в тестах содержимого сцен
+(эмбиент, текстуры блокаута, раскладка лобби, LD20, LD23), `ServerStartupRouteTests` 13/13. Play: хост с запросом
+TestMap1/elimination — загружены только Offline → TestMap1, серия с режимом `elimination`, server Ready; выделенный
+сервер с запросом TestMap2 без режима — Offline → TestMap2, без серии, server Ready; запрос на стенд ботов —
+`StartupRoute.SceneNotLoadable` (стенд не в списке сборки); без запроса — Offline → Lobby как раньше; ошибок консоли 0.
+Запрос ставился в обработчике загрузки Offline до `GameNetworkDiscovery.Start` — так же будет звать директор.
+
+**E2E двух процессов, `map-run-startup-route` (2026-10-09, плеер из аренды 253): GREEN.** Выделенный сервер запросил
+TestMap1/elimination до старта сети и стартовал сразу в карту (сцены сервера: TestMap1, без Lobby), серия
+`elimination`, server Ready; первый клиент и поздний (через 40 с) вошли в идущую карту, LocalPlayable и снимок Relay
+для ключа запуска, адресаты снимков зарегистрированы; перезагрузка той же карты — новый ключ у сервера и обоих клиентов.
+Артефакты (локально): `Tools/e2e/results/20261009-033112-map-run-startup-route/`.
+
+**Окно запроса.** До загрузки Offline (`BeforeSceneLoad`) `GameNetworkManager` ещё нет — каталог карт недоступен, запрос
+получает `SceneNotLoadable` с текстом «звать после загрузки Offline». Правильное окно — после `Awake` менеджеров Offline
+и до `Start`, который поднимает сеть (`SceneManager.sceneLoaded` первой сцены); E2E вызывает подготовку сервера там же
+(`IE2EServerStartup`).
+
+**Ограничение среды:** e2e и Play в worker делят порты 7778/47777 — прогон во время чужого Play с сетью падает
+`SocketException`; параметра порта у e2e нет.
+
+**Не входит:** окно, конфиг, директор, стенды, `LocalMenuManager` (лобби по-прежнему определяется по `onlineScene` и
+остаётся верным: в карте меню — игровое).
+
+**Проверка этапа:** EditMode — разбор запроса, отказы, cancel до старта → новый запрос, неудачный старт → Dispose →
+новый запрос, чужой Dispose не снимает новый запрос, хост: выбор сцены → режим сохранён до `OnStartServer` → захват; Play на worker — хост и выделенный сервер стартуют сразу в
+TestMap1 и в стенд ботов, с режимом и без, server Ready, без промежуточного Lobby; без запроса — прежний Offline → Lobby;
+поздний клиент попадает в карту сервера.
+
 ## Принятые решения и причины
 
 1. **Явный `MapRoot` + типизированный каталог + зарегистрированные сетевые префабы** вместо обязательного
@@ -231,7 +294,7 @@ API сборщика влит в `dev` 34d3ccb0, namespace `VrBattlegrounds.Arse
    `UxrManager` навешивает `UxrCanvas` с пустым id на world-space канвасы (known-issues, Issue 36). Поэтому
    `MapBootstrap` проверяет только привязки и станции, а целостность сцены подтверждает отпечаток из каталога.
 8. **Карта с `MapRoot` в Play стартует через Offline** (процессный корень) независимо от галочки
-   «Start from Offline Scene». Механизм запуска Play пересматривает задача [play-launch](play-launch-proposal.md).
+   «Start from Offline Scene».
 9. **Генерируемые станции описываются до публикации config.** Клиент сверяет config, а не выбирает сам.
    Без отката на Authored; host вторую сборку не делает.
 10. **Постоянные тесты написаны до приёмки в шлеме** по прямому поручению пользователя. Это исключение из правила AGENTS.md.
@@ -306,7 +369,7 @@ API сборщика влит в `dev` 34d3ccb0, namespace `VrBattlegrounds.Arse
 - Проверка станции требует непустых UXR id у всех компонентов внутри неё. World-space канвас на станции дал бы
   ложный отказ; сейчас таких нет.
 - Настроенный локальный SDK root не перенесён в startup процесса: процессный корень по-прежнему даёт Offline.
-- Play из сцены карты идёт Offline → Lobby → карта: Lobby задаёт `onlineScene`, а `DebugOrchestrator` грузит карту только после лобби. Исправление — в [play-launch](play-launch-proposal.md).
+- Play из сцены карты идёт Offline → Lobby → карта: Lobby задаёт `onlineScene`, а `DebugOrchestrator` грузит карту только после лобби.
 - Перезагрузка той же сцены держится на SDK-патче 51 (точная регистрация и отмена регистрации UniqueId). Обходов в
   коде bootstrap нет.
 - `MapBootstrapMigration` и `MapRunPreflight` пишут отчёты в старый игнорируемый каталог

@@ -184,6 +184,20 @@ ID в `MapStationConfig` до публикации; клиент сверяет 
 своей сцены по `netId` из descriptor и сверяет отпечаток содержимого карты с сервером
 (несовпадение — разные сборки, `GameLog.Error`).
 
+### Первая сцена сервера (`ServerStartupRoute`)
+
+Без запроса сервер стартует штатно: Mirror грузит `onlineScene` (Lobby). Чтобы сервер или хост стартовал сразу в
+карту или отладочный стенд, до `StartServer`/`StartHost` вызывают
+`ServerStartupRoute.TryRequest(scene, modeId, owner, out handle, out error)`; первую смену сцены сервера
+`GameNetworkManager.ServerChangeScene` направляет в цель, `onlineScene` не меняется (NET-21). С `modeId` серия из одной
+карты фиксирует режим (`Series.ServerBeginStartup`) до Resolve запуска карты. Порядок Mirror у сервера и хоста разный
+(`OnStartServer` до или после первой сцены) — захват режима ждёт и выбранную сцену, и `Series`.
+
+Отказы именованные, без отката на Lobby: `StartupRoute.Busy` (уже есть живой запрос), `SceneNotLoadable` (нет в
+`MapRuntimeCatalog` или в списке сборки), `ModeIncompatible`, `NetworkActive`, `InvalidRequest`. `handle.Dispose()`
+снимает свой запрос только до выбора сцены; после — запрос доводится до захвата режима, остановка сервера снимает его.
+Клиенты не меняются: Mirror присылает им текущую сцену сервера. Готовность — `MapBootstrap.IsServerReady`.
+
 
 ---
 

@@ -70,6 +70,12 @@
       "needs": []
     },
     {
+      "id": "mandatory-native-monitor",
+      "writes": ["tasks/agent-coordination-protocol/**", ".agents/rules/agent_coordination.md", "AGENTS.md"],
+      "after": [{"task":"agent-coordination-protocol","stage":"legacy-doc-deletion","state":"merged"}],
+      "needs": []
+    },
+    {
       "id": "legacy-doc-deletion",
       "writes": ["tasks/agent-coordination-protocol/**", ".agents/rules/agent_coordination.md"],
       "after": [{"task":"agent-coordination-protocol","stage":"checkout-root-resolution","state":"merged"}],

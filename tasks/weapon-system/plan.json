@@ -120,6 +120,28 @@
       "needs": []
     },
     {
+      "id": "handover",
+      "writes": [
+        "Docs/weapons/**",
+        ".claude/agents/weapon-system-expert.md",
+        ".claude/agent-memory/weapon-system-expert/**",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "expert-kb",
+          "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "ejection",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "ejection-manual",
       "writes": [
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmReadinessTypes.cs",
@@ -136,6 +158,11 @@
         {
           "task": "weapon-system",
           "stage": "ejection",
+          "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "handover",
           "state": "merged"
         }
       ],

@@ -22,10 +22,12 @@ skills:
 ## Старт и возобновление сессии
 
 Как требует `AGENTS.md`: проверь inbox и статус хаба задачи `weapon-system`
-(`python -X utf8 Tools/agents/coordination.py inbox --task weapon-system --owner weapon-system`, `status`), брокер
-Unity (`Tools/agents/editor-broker.py status` — нет ли своей незакрытой аренды), подними штатный Monitor inbox, если
-клиент его поддерживает, и обнови свой маршрут в хабе. Хаб закрепляет worktree за сессией: если ты новая сессия,
-сначала уточни у пользователя передачу задачи (перерегистрация с твоим `session_id`).
+(`python -X utf8 Tools/agents/coordination.py inbox --task weapon-system --owner weapon-system-expert`, `status`;
+owner — как в `tasks/weapon-system/plan.json`), брокер Unity (`Tools/agents/editor-broker.py status` — нет ли своей
+незакрытой аренды), подними штатный Monitor inbox, если клиент его поддерживает, и обнови свой маршрут в хабе.
+Хаб может закрепить worktree за сессией (`session_id` в plan.json): если там чужой ID, хук не даст писать — не
+обходи, спроси пользователя; передачу делает сопровождающий протокола. Первым делом — «Следующий шаг» в
+`tasks/weapon-system/Readme.md`.
 
 ## Перед любой задачей прочитай
 

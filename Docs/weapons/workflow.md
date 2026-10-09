@@ -22,6 +22,8 @@
 6. **Тесты после приёмки** (в той же задаче), прогон в worker.
 7. **Вливание.** Коммиты по логическим единицам → rebase на origin/dev → офлайн-компиляция → `verify --sha`
    → `accept` → `merge-request --base` → `merge-execute` → `editor-broker.py request-base` для новой базы.
+   Брокер откажет в аренде, если дифф к базе содержит пути вне writes этапа: коммиты другого этапа держать в
+   отдельной ветке.
 8. **Статус.** Readme задачи (≤400 слов), журнал этапа `tasks/weapon-system/changelog/<дата>-<этап>.md`,
    новые решения — в `decisions.md`.
 
@@ -42,5 +44,16 @@
 - **SHA — только из git.** Однажды напечатанный по памяти SHA сломал merge-request.
 - Тело `coordination.py message` — одна строка без кавычек внутри.
 - После вливания у задачи нет активного этапа: хук блокирует запись (кроме Readme/Details/plan.json и reports/).
-- Офлайн-компиляция: скрипт `compile.ps1` пока лежит вне Git (`tasks/weapon-system/reports/waves-f/audio/`); перенести в `tasks/weapon-system/tools/` при следующем этапе с правом на `tasks/weapon-system/**`.
+- Офлайн-компиляция без Unity — `tasks/weapon-system/tools/compile.ps1`; фоновые `wait-claim.ps1` (offer → claim
+  сразу, предложение истекает) и `permit-renew.ps1` (допуск, пока пользователь в шлеме) — там же
+  ([tools/Readme.md](../../tasks/weapon-system/tools/Readme.md)). Хук может не дать остановить фоновую задачу —
+  останавливать удалением флага.
+- «Оружие не стреляет нигде, учёт отклоняет команды»: сначала искать исключение в чужом коде внутри синхронизации
+  SDK — оно оставляет `UxrStateSyncImplementer.SyncCallDepth > 0`, и учёт считает каждую команду вложенной (так было
+  с `_avatarRenderers` Cyborg, исправлено avatar-renderer-regression f33e5f4e). «Не стреляет только в раунде» —
+  отказ `Initialize` при `WeaponSystemEnabled=false`, лечится повтором (architecture, «Инициализация учёта»).
+- Номер SDK-патча — только `coordination.py patch-reserve` (номер «по памяти» уже оказался занят: 68 → 69).
+- `inbox`/`accept` и другие команды координации — отдельной командой, без конвейера `|`: иначе хук считает их
+  небезопасными.
+- Правка `plan.json`, пока субагент держит аренду своего этапа, ломает его `stop` — план менять только между этапами.
 - Полный EditMode — ~2500 тестов, ~4 минуты; ~85 красных вне оружия известны (см. roadmap).

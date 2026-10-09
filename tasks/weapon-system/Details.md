@@ -116,8 +116,9 @@
 | Вибрация | Одинакова для трёх категорий (значения пилотов drive): отказы RumbleFreqNormal 0,4 (0,08 / 0,15 с), темп RumbleFreqLow 0,4 (0,06 с), ход Click 0,25 |
 | Категория ствола | Явная таблица `WeaponSystemAuthoring.Weapons` (имя корня = рецепт сборщика): в `WeaponInfo` есть только Rifle/Pistol, дробовика нет (SRM12, Herrington — Rifle), `ShotgunPellets` есть не у всех дробовиков. Preflight сверяет «пистолет» таблицы с `WeaponInfo.Category` (только чтение). Ствол без строки writer не настроит |
 
-Категории: дробовик — Herrington, FABARM, SRM12, SDK Shotgun; пистолет — Browning, Viper, PPK, Uzi (в арсенале
-Pistol), SDKGun, Revolver, R08; автомат — остальные.
+Категории на waves-f: дробовик — Herrington, FABARM, SRM12, SDK Shotgun; пистолет — Browning, Viper, PPK, Uzi (в арсенале
+Pistol), SDKGun, Revolver, R08; автомат — остальные. **Устарело (этап ejection):** SRM12 — Desert Tech SRS, не дробовик;
+добавлена четвёртая категория «снайперская винтовка» (SRM12, SniperRifle = AX-50). Актуально — `Docs/weapons/architecture.md`.
 
 **Волны.** Таблица волн, профилей и категорий — одна (`WeaponSystemAuthoring.Weapons`), её же читают сборщики
 (рецепт без профиля → профиль волны). Профили — `Assets/Data/WeaponSystem/Profiles/`: `DetachableHoldOpenReadiness`

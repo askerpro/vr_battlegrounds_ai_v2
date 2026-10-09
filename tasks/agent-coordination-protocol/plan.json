@@ -227,6 +227,22 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "startup-readonly-client-information-repair",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "AGENTS.md",
+        ".agents/rules/agent_coordination.md"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "binary-and-mcp-diagnostics-repair",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

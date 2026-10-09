@@ -3,7 +3,7 @@
   "owner": "map-runtime-bootstrap",
   "client": "claude",
   "worktree": "F:/CodexWorktrees/map-runtime-bootstrap/Vr_Battlegrounds_ai",
-  "base_sha": "eb0f09065ac9f29f7f73d3f78106a5e5cf39b8e3",
+  "base_sha": "c7eb831f5d82f733f8d6f9ab4b86042176397be1",
   "doc_path": "tasks/map-runtime-bootstrap/Readme.md",
   "title": "Запуск карты через MapBootstrap",
   "stages": [

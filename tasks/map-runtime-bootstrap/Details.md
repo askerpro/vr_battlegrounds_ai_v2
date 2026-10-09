@@ -60,11 +60,10 @@
 ```text
 MapRunAuthority готов + Mirror догрузил сцену
 → MapRoot.ValidateBindings(includeSceneScans: false)
-→ Generated-станции: MapArsenalCompositionAdapter.Describe + Apply (описание в config до публикации)
+→ Станции арсенала: MapArsenalCompositionAdapter.Describe + Apply (описание генератора в config до публикации)
 → MapRuntimeCatalog.Resolve      (режим: Series.CapturedModeId, иначе выбор админа; лобби — NoMatch)
 → MapRunAuthority.BeginRun       (новый ключ, Preparing)
-→ Authored-станции: ArsenalStationPresetBinding.Prepare(MapData.arsenalPreset)
-→ Generated-станции: PrepareComposition + Activate в scope запуска; стадия ComposingStations, пока все не Passed
+→ Станции: PrepareComposition + Activate в scope запуска; стадия ComposingStations, пока все не Passed
 → MapReferee и ArsenalEquipmentCoordinator из каталога → в сцену карты → NetworkServer.Spawn
 → CommitPrepared                 (CompositionReady: gameplay ещё закрыт)
 → MapReferee.ServerStartRun → разминка → CommitMode (server Ready: допуск открыт)
@@ -136,8 +135,7 @@ server Ready стоят в очереди, по одному запросу на
 - Инкременты до открытия канала отбрасываются. Снимок свежий, а всё более позднее идёт после него тем же
   надёжным каналом. Объекты, созданные сервером до снимка, приходят раньше ответа. Ещё не созданный
   аватар в снимке не упоминается и барьер не держит, поэтому цикла «аватар → Ready → снимок» нет.
-- Готовность определяет `MapBootstrap`: авторские станции готовы сразу, генерируемые — когда все handles дали
-  Passed. Отдельного реестра участников нет: забытый участник открыл бы барьер раньше времени.
+- Готовность определяет `MapBootstrap`: станции готовы, когда все handles сборщика дали Passed. Отдельного реестра участников нет: забытый участник открыл бы барьер раньше времени.
   Готовность стены не используется как замена этой проверки.
 - Пропущенный адресат снимка — `GameLog.Network.Error` от `InitialStateInventory`, а не молчаливый пропуск SDK.
 - Closing отменяет ожидаемый ответ. Открытый канал живёт до смены сцены. Пересинхронизация боезапаса идёт
@@ -185,7 +183,8 @@ server Ready стоят в очереди, по одному запросу на
 - `Poll`: сводная готовность по приоритету Failed > Pending > Passed. `IsServerReady` и `IsLocallyReady` требуют Passed.
 - Шов `IArsenalStationComposer` (экземплярное свойство `MapBootstrap`) позволяет EditMode-тестам проверить
   ожидание и отказы без Play Mode. В игре используется `RuntimeArsenalStationComposer`.
-- Отката с Generated на Authored нет.
+- Авторского формата станций больше нет (решение пользователя 2026-10-08, удалён этапом arsenal-generator
+  `composer-presentation`): все станции всех карт собирает генератор, отказ сборки — отказ запуска.
 - `ArsenalStationComposer` сообщает только, что станция собрана. Выдачу предметов решает `MapRunAdmission`.
 
 ### Стык с генератором
@@ -318,7 +317,7 @@ TestMap1 и в стенд ботов, с режимом и без, server Ready,
 8. **Карта с `MapRoot` в Play стартует через Offline** (процессный корень) независимо от галочки
    «Start from Offline Scene».
 9. **Генерируемые станции описываются до публикации config.** Клиент сверяет config, а не выбирает сам.
-   Без отката на Authored; host вторую сборку не делает.
+   Отказ сборки — отказ запуска; host вторую сборку не делает.
 10. **Постоянные тесты написаны до приёмки в шлеме** по прямому поручению пользователя. Это исключение из правила AGENTS.md.
 11. **Сетевые пункты проверки приняты по e2e двух процессов** (решение пользователя 2026-10-07): второго игрока нет.
     Общая проверка игры — после вливания работ всех агентов.
@@ -385,9 +384,14 @@ TestMap1 и в стенд ботов, с режимом и без, server Ready,
 
 ## Известные ограничения
 
-- **В игре станции пока Authored.** Пресета со стилем нет: у `FullDemoArsenal` стиль null, у `CurrentGameplayArsenal`
-  поля нет. Перевод Common/Lobby на генерируемые станции — задача генератора. До неё путь Generated проверяется
-  только тестовой станцией.
+- **Все карты на генераторе** (arsenal-generator, «данные нового флоу на всех картах», 4107a18b; каталог
+  `MapRuntimeCatalog.ArsenalComposition` назначен). Серверная половина адаптера и e2e двух процессов на настоящих картах
+  перепроверены после этого вливания (2026-10-09, аренда 285, база eb0f0906): хост Lobby (2 станции, Passed) →
+  TestMap1 (8 станций, Passed) → перезагрузка той же карты → Lobby, server Ready на каждом шаге, ошибок консоли 0;
+  E2E `map-run-startup-route` (выделенный сервер + 2 клиента, поздний, перезагрузка карты) на картах со
+  сгенерированными станциями — GREEN, в логах сервера и клиентов 0 отказов `Arsenal.Generated.*`/`Station.Generated.*`
+  (клиентская сверка с config прошла), 0 исключений и ошибок. Артефакты (локально):
+  `Tools/e2e/results/20261009-060047-map-run-startup-route/`.
 - Проверка станции требует непустых UXR id у всех компонентов внутри неё. World-space канвас на станции дал бы
   ложный отказ; сейчас таких нет.
 - Настроенный локальный SDK root не перенесён в startup процесса: процессный корень по-прежнему даёт Offline.
@@ -405,7 +409,7 @@ TestMap1 и в стенд ботов, с режимом и без, server Ready,
   нет новых падений против чистого dev той же базы (сравнение по именам).
 - Пробы `generated-stations-1..3` проходят полностью.
 - Play на хосте: Offline → лобби → серия на TestMap1 → «Начать матч» → «Стоп» → лобби. Стены и магазины
-  пополняются, в консоли нет `Arsenal.Generated.*` и `Station.Generated.*`. Игра с Authored-станциями работает как раньше.
+  пополняются, в консоли нет `Arsenal.Generated.*` и `Station.Generated.*`.
 - Документация актуальна: Readme.md и этот документ, `Docs/game-manager.md`; запись изменений — в [changelog/](changelog/).
 - Пользователь поручил проверить через MCP и влить. Отдельной проверки в шлеме этот этап не требует: видимого изменения в игре нет.
 

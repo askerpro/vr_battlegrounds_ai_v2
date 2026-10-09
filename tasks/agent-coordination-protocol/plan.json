@@ -213,6 +213,20 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "binary-and-mcp-diagnostics-repair",
+      "writes": [
+        "tasks/agent-coordination-protocol/**"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "readonly-startup-repair",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

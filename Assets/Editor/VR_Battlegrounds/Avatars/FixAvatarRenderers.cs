@@ -36,8 +36,16 @@ public static class FixAvatarRenderers
     public static string Setup(UxrAvatar avatar)
     {
         if (!avatar) throw new ArgumentNullException(nameof(avatar));
-        var renderers = avatar.GetComponentsInChildren<Renderer>(true)
-            .Where(r => r.GetComponentInParent<UxrHandIntegration>() == null).ToArray();
+        // Непустой сериализованный список задаёт владение геометрией. В дочерних объектах
+        // могут находиться часы, лучи и временные копии тела, которые SDK не должен переключать.
+        var configured = avatar.AvatarRenderers.ToArray();
+        var candidates = configured.Length > 0
+            ? configured
+            : avatar.GetComponentsInChildren<Renderer>(true);
+        var renderers = candidates
+            .Where(r => r != null && r.GetComponentInParent<UxrAvatar>(true) == avatar &&
+                        r.GetComponentInParent<UxrHandIntegration>(true) == null &&
+                        !IsEditorOnly(r.transform, avatar.transform)).Distinct().ToArray();
         var so = new SerializedObject(avatar);
         var prop = so.FindProperty("_avatarRenderers");
         if (prop == null) throw new InvalidOperationException("В SDK отсутствует _avatarRenderers.");
@@ -45,5 +53,16 @@ public static class FixAvatarRenderers
         for (int i = 0; i < renderers.Length; i++) prop.GetArrayElementAtIndex(i).objectReferenceValue = renderers[i];
         so.ApplyModifiedProperties();
         return $"{avatar.name}: назначено renderers {renderers.Length}.";
+    }
+
+    private static bool IsEditorOnly(Transform renderer, Transform avatarRoot)
+    {
+        // Неактивный LOD остаётся частью тела. Исключается только явно авторская ветка.
+        for (Transform current = renderer; current != null; current = current.parent)
+        {
+            if (current.CompareTag("EditorOnly")) return true;
+            if (current == avatarRoot) break;
+        }
+        return false;
     }
 }

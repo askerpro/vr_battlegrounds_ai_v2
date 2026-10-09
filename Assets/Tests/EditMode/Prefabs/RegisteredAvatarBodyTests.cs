@@ -90,15 +90,28 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         [TestCaseSource(nameof(Avatars))]
-        public void Список_рендереров_UxrAvatar_без_пустых_и_со_всем_телом(string path)
+        public void Список_рендереров_UxrAvatar_без_пустых_и_с_собственной_геометрией(string path)
         {
             GameObject avatar = Load(path);
             List<Renderer> renderers = avatar.GetComponent<UxrAvatar>().AvatarRenderers.ToList();
 
             Assert.That(renderers.Count(r => r == null), Is.Zero, "В _avatarRenderers остались ссылки на удалённые меши");
-
-            string[] missing = BodySkins(avatar).Where(s => !renderers.Contains(s)).Select(s => s.name).ToArray();
-            Assert.That(missing, Is.Empty, "Меши тела не в _avatarRenderers — UltimateXR их не спрячет и не подсветит");
+            Assert.That(renderers, Is.Not.Empty, "Не задана геометрия игрового тела");
+            Assert.That(renderers.Distinct().Count(), Is.EqualTo(renderers.Count), "Повторные ссылки на рендереры");
+            UxrAvatar owner = avatar.GetComponent<UxrAvatar>();
+            Assert.That(renderers.All(r => r.GetComponentInParent<UxrAvatar>(true) == owner), Is.True,
+                "В список попала геометрия другого аватара");
+            Assert.That(renderers.All(r => r.GetComponentInParent<UxrHandIntegration>(true) == null), Is.True,
+                "Моделями кистей управляет UxrHandIntegration");
+            // Дочерняя геометрия не обязательно принадлежит телу: например, Cyborg/Ghost —
+            // отдельная вспомогательная копия. LODGroup может содержать часы и другие аксессуары;
+            // полнота тела проверяется для его SkinnedMeshRenderer, как и проверки BodySkins.
+            Renderer[] lodRenderers = avatar.GetComponentsInChildren<LODGroup>(true)
+                .SelectMany(g => g.GetLODs()).SelectMany(l => l.renderers)
+                .Where(r => r is SkinnedMeshRenderer && r.GetComponentInParent<UxrAvatar>(true) == owner &&
+                            r.GetComponentInParent<UxrHandIntegration>(true) == null).Distinct().ToArray();
+            Assert.That(lodRenderers.Where(r => !renderers.Contains(r)), Is.Empty,
+                "Геометрия LOD тела не входит в _avatarRenderers");
         }
 
         /// <summary>Часы с табло раунда (<see cref="WristDisplay"/>) — у каждого аватара, ровно одни.</summary>

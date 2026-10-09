@@ -1,0 +1,29 @@
+{
+  "task_id": "avatar-renderer-regression",
+  "owner": "avatar-renderer-regression",
+  "client": "codex",
+  "session_id": "01a11685-f9a0-74e2-a2d4-dc607fbb9844",
+  "worktree": "F:/CodexWorktrees/2cf1/Vr_Battlegrounds_ai",
+  "base_sha": "ce7658893e05c4eef84b9a7181b5355eb1826756",
+  "doc_path": "tasks/avatar-renderer-regression/Readme.md",
+  "title": "Исправить регрессию рендереров Cyborg",
+  "stages": [{
+    "id": "asset-repair",
+    "writes": [
+      "tasks/avatar-renderer-regression/**",
+      "Assets/Editor/VR_Battlegrounds/Avatars/FixAvatarRenderers.cs",
+      "Assets/Tests/EditMode/Prefabs/AvatarRendererOwnershipTests.cs",
+      "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab",
+      "Assets/Tests/EditMode/Prefabs/RegisteredAvatarBodyTests.cs"
+    ],
+    "after": [],
+    "needs": []
+  }, {
+    "id": "user-acceptance",
+    "writes": [
+      "tasks/avatar-renderer-regression/**"
+    ],
+    "after": [{"task": "avatar-renderer-regression", "stage": "asset-repair", "state": "verified"}],
+    "needs": []
+  }]
+}

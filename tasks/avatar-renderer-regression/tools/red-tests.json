@@ -1,0 +1,7 @@
+{
+  "mode": "EditMode",
+  "assembly_names": ["VrBattlegrounds.Tests.EditMode"],
+  "group_names": ["VrBattlegrounds.Tests.Prefabs.AvatarRendererOwnershipTests"],
+  "include_failed_tests": true,
+  "init_timeout": 120000
+}

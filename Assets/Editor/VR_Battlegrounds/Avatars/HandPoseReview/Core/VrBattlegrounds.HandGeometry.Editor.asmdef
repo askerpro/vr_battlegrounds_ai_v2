@@ -1,0 +1,7 @@
+{
+  "name": "VrBattlegrounds.HandGeometry.Editor",
+  "rootNamespace": "VrBattlegrounds.Editor.HandGeometry",
+  "references": ["Unity.Collections", "Unity.Newtonsoft.Json"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

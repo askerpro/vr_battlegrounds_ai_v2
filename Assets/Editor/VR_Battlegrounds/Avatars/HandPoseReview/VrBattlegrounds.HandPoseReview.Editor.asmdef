@@ -1,7 +1,7 @@
 {
   "name": "VrBattlegrounds.HandPoseReview.Editor",
   "rootNamespace": "VrBattlegrounds.Editor.HandPoseReview",
-  "references": ["UltimateXR", "UltimateXR.Editor", "Unity.Newtonsoft.Json", "Unity.Collections"],
+  "references": ["UltimateXR", "UltimateXR.Editor", "Unity.Newtonsoft.Json", "Unity.Collections", "VrBattlegrounds.HandGeometry.Editor"],
   "includePlatforms": ["Editor"],
   "autoReferenced": true
 }

@@ -103,7 +103,8 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 for(int i=0;i<_sourceMesh.blendShapeCount;i++)skin.SetBlendShapeWeight(i,_skin.GetBlendShapeWeight(i));
                 if(_pose.PoseType==UxrHandPoseType.Fixed) UxrAvatarRig.UpdateHandUsingDescriptor(hand,_side==UxrHandSide.Left?_pose.HandDescriptorLeft:_pose.HandDescriptorRight,_handAxes,_fingerAxes);
                 else UxrAvatarRig.UpdateHandUsingDescriptor(hand,_side==UxrHandSide.Left?_pose.HandDescriptorOpenLeft:_pose.HandDescriptorOpenRight,_side==UxrHandSide.Left?_pose.HandDescriptorClosedLeft:_pose.HandDescriptorClosedRight,blend?blendValue:0,_handAxes,_fingerAxes);
-                baked=new Mesh{hideFlags=HideFlags.HideAndDontSave};skin.BakeMesh(baked,false);
+                // VR Battlegrounds patch 59: полный localToWorld ниже применяет scale ровно один раз.
+                baked=new Mesh{hideFlags=HideFlags.HideAndDontSave};skin.BakeMesh(baked,true);
                 var grabberCopy=Copy(grabberTransform);
                 // Proxy имеет unit scale: сохраняем avatar scale, исключая только масштаб grabbable hierarchy.
                 var toGrabber=Matrix4x4.TRS(grabberCopy.position,grabberCopy.rotation,Vector3.one).inverse*skin.localToWorldMatrix;

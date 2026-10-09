@@ -1,0 +1,185 @@
+{
+  "task_id": "hand-rig-quality",
+  "owner": "hand-rig-quality",
+  "client": "codex",
+  "worktree": "F:/CodexWorktrees/hands-rig-quality/Vr_Battlegrounds_ai",
+  "base_sha": "546670a329e6049758066c872050c2da0905d72f",
+  "doc_path": "tasks/hand-rig-quality/Readme.md",
+  "title": "Качество рига и скиннинга кистей",
+  "stages": [
+    {
+      "id": "static-analyzer",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/**",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandRigQuality/**",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandRigQuality.meta",
+        "Assets/ThirdParty/UltimateXR/Editor/Manipulation/HandPoses/UxrPreviewHandGripMesh.cs",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**",
+        "tasks/hand-rig-quality/expert/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "expert-deployment",
+      "writes": [
+        ".codex/experts/avatar-grip-expert.md",
+        ".codex/experts/avatar-grip-expert.config.toml",
+        "tasks/hand-rig-quality/expert/**",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "static-analyzer",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "palm-validation",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandRigQuality/**",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/Tests/HandRigQualityDiagnosticTests.cs",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "expert-deployment",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "dynamic-probes",
+      "writes": [
+        "Assets/Scripts/Debug/LegsCompare/Puppet/**",
+        "Assets/Editor/VR_Battlegrounds/PuppetStand/**",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandRigQuality/**",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/**",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "palm-validation",
+          "state": "merged"
+        },
+        {
+          "task": "legs-ik",
+          "stage": "pose-set",
+          "state": "merged"
+        },
+        {
+          "task": "legs-ik",
+          "stage": "sit-clip",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "mef-correction",
+      "writes": [
+        "Tools/mef-avatar/**",
+        "Assets/Models/Avatars/MEF_Optimized/**",
+        "Assets/Prefabs/Player/Optimized_MEF_Player.prefab",
+        "Assets/Tests/EditMode/Prefabs/AvatarLoadoutTests.cs",
+        "Assets/Tests/EditMode/Prefabs/PrefabCompositionTests.cs",
+        "Assets/Tests/EditMode/Prefabs/GrabPoseCoverageTests.cs",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "dynamic-probes",
+          "state": "merged"
+        },
+        {
+          "task": "haptics-system",
+          "stage": "pocket-removal",
+          "state": "merged"
+        },
+        {
+          "task": "legs-ik",
+          "stage": "pose-set",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "acceptance",
+      "writes": [
+        "Assets/Tests/EditMode/Prefabs/AvatarLoadoutTests.cs",
+        "Assets/Tests/EditMode/Prefabs/PrefabCompositionTests.cs",
+        "Assets/Tests/EditMode/Prefabs/GrabPoseCoverageTests.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/Tests/**",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "mef-correction",
+          "state": "merged"
+        },
+        {
+          "task": "haptics-system",
+          "stage": "pocket-removal",
+          "state": "merged"
+        },
+        {
+          "task": "legs-ik",
+          "stage": "pose-set",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "documentation",
+      "writes": [
+        "Docs/hand-rig-quality-tool.md",
+        "Docs/troubleshooting.md",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "acceptance",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

@@ -1,9 +1,9 @@
 {
   "name": "VrBattlegrounds.HandPoseReview.Tests",
-  "references": ["VrBattlegrounds.HandPoseReview.Editor", "UltimateXR", "UltimateXR.Editor", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
+  "references": ["VrBattlegrounds.HandPoseReview.Editor", "VrBattlegrounds.HandGeometry.Editor", "VrBattlegrounds.HandRigQuality.Editor", "Unity.Newtonsoft.Json", "Unity.Collections", "UltimateXR", "UltimateXR.Editor", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
   "includePlatforms": ["Editor"],
   "overrideReferences": true,
-  "precompiledReferences": ["nunit.framework.dll"],
+  "precompiledReferences": ["nunit.framework.dll", "Newtonsoft.Json.dll"],
   "autoReferenced": false,
   "defineConstraints": ["UNITY_INCLUDE_TESTS"]
 }

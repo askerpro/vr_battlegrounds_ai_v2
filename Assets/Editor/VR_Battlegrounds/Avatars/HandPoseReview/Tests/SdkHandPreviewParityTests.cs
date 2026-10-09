@@ -254,7 +254,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview.Tests
                         arm.HandUniversalLocalAxes, arm.FingerUniversalLocalAxes);
                 if (Baked) Object.DestroyImmediate(Baked);
                 Baked = new Mesh { hideFlags = HideFlags.HideAndDontSave };
-                Skin.BakeMesh(Baked, false);
+                Skin.BakeMesh(Baked, true);
             }
 
             public void Dispose()

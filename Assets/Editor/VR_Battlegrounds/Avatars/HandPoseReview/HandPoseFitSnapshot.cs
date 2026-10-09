@@ -10,6 +10,7 @@ using UnityEditor;
 using Unity.Collections;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using VrBattlegrounds.Editor.HandGeometry;
 
 namespace VrBattlegrounds.Editor.HandPoseReview
 {
@@ -209,7 +210,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             foreach(Renderer renderer in objectRoot.GetComponentsInChildren<Renderer>(false)) {
                 if(!renderer.enabled || excluded.Contains(renderer) || renderer is ParticleSystemRenderer || renderer.GetComponent<UxrGrabbableObjectPreviewMeshProxy>() || renderer.name.IndexOf("GrabHighlight",StringComparison.OrdinalIgnoreCase)>=0) continue;
                 Mesh mesh=null; bool baked=false;
-                if(renderer is SkinnedMeshRenderer skin) {mesh=new Mesh();baked=true;skin.BakeMesh(mesh,false);}
+                if(renderer is SkinnedMeshRenderer skin) {mesh=new Mesh();baked=true;skin.BakeMesh(mesh,true);}
                 else if(renderer is MeshRenderer) {var filter=renderer.GetComponent<MeshFilter>();mesh=filter?filter.sharedMesh:null;}
                 if(!mesh) {report.Limitations.Add("Исключён неподдерживаемый renderer: "+HumanPath(renderer.transform,objectRoot.transform));continue;}
                 try {
@@ -287,26 +288,22 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             foreach(var skin in avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
                 if((_runtime||skin!=main) && (!skin.enabled || !skin.gameObject.activeInHierarchy)) continue;
                 Mesh source=skin.sharedMesh;if(!source || !skin.bones.Any(allowed.Contains)) continue;
-                var mesh=new Mesh();
-                try {
-                    skin.BakeMesh(mesh,false); Vector3[] v=mesh.vertices;var bones=skin.bones;
+                {
+                    var sample=HandMeshCapture.Capture(skin,_worldToFrame,avatar.transform,false);
+                    Vector3[] v=sample.Vertices;var bones=sample.Bones;
                     var weights=new float[v.Length];var dominant=new int[v.Length];
-                    using(var counts=source.GetBonesPerVertex()) using(var all=source.GetAllBoneWeights()) {
-                        int offset=0;
-                        for(int i=0;i<v.Length;i++) {float best=0;dominant[i]=-1;
-                            for(int j=0;j<counts[i];j++) {var w=all[offset++];if(w.boneIndex>=bones.Length || !allowed.Contains(bones[w.boneIndex])) continue;weights[i]+=w.weight;if(w.weight>best) {best=w.weight;dominant[i]=w.boneIndex;} }
-                        }
+                    for(int i=0;i<v.Length;i++) {float best=0;dominant[i]=-1;
+                        for(int j=sample.WeightOffsets[i];j<sample.WeightOffsets[i+1];j++) {var w=sample.Weights[j];if(!allowed.Contains(bones[w.BoneIndex])) continue;weights[i]+=w.Weight;if(w.Weight>best) {best=w.Weight;dominant[i]=w.BoneIndex;} }
                     }
                     string path=HumanPath(skin.transform,avatar.transform); var extracted=new List<FitTriangle>();
-                    for(int sub=0;sub<mesh.subMeshCount;sub++) {
-                        if(mesh.GetTopology(sub)!=MeshTopology.Triangles) continue;int[] ix=mesh.GetTriangles(sub);
+                    for(int sub=0;sub<sample.SubmeshTriangles.Length;sub++) {
+                        int[] ix=sample.SubmeshTriangles[sub];
                         for(int i=0;i<ix.Length;i+=3) {
                             int a=ix[i],b=ix[i+1],c=ix[i+2];if((weights[a]+weights[b]+weights[c])/3<.5f) continue;
                             // Голосование трёх вершин устойчивее, чем выбор первой вершины на границе фаланги.
                             int di=new[]{a,b,c}.Where(x=>dominant[x]>=0).GroupBy(x=>dominant[x]).OrderByDescending(g=>g.Sum(x=>weights[x])).Select(g=>g.Key).DefaultIfEmpty(-1).First();if(di<0) continue;
                             Transform bone=bones[di];string zone=zones.TryGetValue(bone,out string z)?z:"palm_wrist";
-                            var matrix=_worldToFrame*skin.localToWorldMatrix;
-                            var t=new FitTriangle(matrix.MultiplyPoint3x4(v[a]),matrix.MultiplyPoint3x4(v[b]),matrix.MultiplyPoint3x4(v[c]),zone){Source=path,SourceTriangle=i/3,SourceSubMesh=sub,FingerSegment=segments.TryGetValue(bone,out string segment)?segment:"palm_wrist"};
+                            var t=new FitTriangle(v[a],v[b],v[c],zone){Source=path,SourceTriangle=i/3,SourceSubMesh=sub,FingerSegment=segments.TryGetValue(bone,out string segment)?segment:"palm_wrist"};
                             if(t.Area<1e-12f) continue;Hand.Add(t);extracted.Add(t);
                             var axes=avatar.AvatarRigInfo.GetArmInfo(r.Side);
                             Vector3 localUp=zone=="palm_wrist"?axes.HandUniversalLocalAxes.LocalUp:axes.FingerUniversalLocalAxes.LocalUp;
@@ -315,7 +312,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                         }
                     }
                     report.Surfaces.Add(new FitSurfaceReport {Path=path,Kind="hand",Triangles=extracted.Count,Topology=HandPoseFitGeometry.Topology(extracted.ToArray())});
-                } finally {Object.DestroyImmediate(mesh);}
+                }
             }
             report.Limitations.Add("Зоны по весам костей, ладонная маска по нормалям — требуют визуальной проверки для нового рига/перчатки; palm_wrist включает границу запястья.");
         }

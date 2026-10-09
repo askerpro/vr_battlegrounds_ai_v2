@@ -1,0 +1,7 @@
+{
+  "name": "VrBattlegrounds.HandRigQuality.Editor",
+  "rootNamespace": "VrBattlegrounds.Editor.HandRigQuality",
+  "references": ["VrBattlegrounds.HandGeometry.Editor", "UltimateXR", "Unity.Newtonsoft.Json"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

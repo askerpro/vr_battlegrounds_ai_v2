@@ -65,6 +65,26 @@ namespace VrBattlegrounds.Network
             VrBattlegrounds.DevTools.DebugModeNetwork.RegisterServerHandlers();
             VrBattlegrounds.Bots.BotNetwork.RegisterServerHandlers();
             VrBattlegrounds.Bots.BotMatchNetwork.RegisterServerHandlers();
+
+            // У хоста первая сцена уже загружена (Mirror зовёт OnStartServer после неё): теперь есть Series,
+            // и маршрут старта захватывает режим. У выделенного сервера сцена ещё впереди — захват в ServerChangeScene.
+            ServerStartupRoute.OnServerStarted();
+        }
+
+        /// <summary>
+        /// Единственная точка первой смены сцены сервера и для StartServer, и для StartHost: при запросе
+        /// <see cref="ServerStartupRoute"/> сервер стартует сразу в цель вместо <c>onlineScene</c>. Поле
+        /// <c>onlineScene</c> не меняется (NET-21); остальные смены сцены идут без изменений.
+        /// </summary>
+        public override void ServerChangeScene(string newSceneName)
+        {
+            base.ServerChangeScene(ServerStartupRoute.ResolveServerScene(newSceneName, onlineScene));
+        }
+
+        public override void OnStopServer()
+        {
+            ServerStartupRoute.OnServerStopped();
+            base.OnStopServer();
         }
 
         public override void OnServerSceneChanged(string sceneName)

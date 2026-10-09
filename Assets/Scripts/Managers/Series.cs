@@ -176,6 +176,21 @@ namespace VrBattlegrounds.Managers
         [Server]
         public bool ServerBegin(IReadOnlyList<string> maps, string modeId = null)
         {
+            if (!BeginCore(maps, modeId)) return false;
+            Load(_maps[0]);
+            return true;
+        }
+
+        /// <summary>
+        /// Серия из одной карты, которую уже грузит маршрут старта сервера (<see cref="ServerStartupRoute"/>):
+        /// счёт и режим серии фиксируются, повторной загрузки нет. Захват режима — до Resolve запуска карты.
+        /// </summary>
+        [Server]
+        public bool ServerBeginStartup(string scene, string modeId) =>
+            BeginCore(new[] { scene }, modeId);
+
+        private bool BeginCore(IReadOnlyList<string> maps, string modeId)
+        {
             if (maps == null || maps.Count == 0)
             {
                 GameLog.Match.Warning("[Series] ServerBegin: пустой список карт — серия не начата.");
@@ -203,7 +218,6 @@ namespace VrBattlegrounds.Managers
 
             GameLog.Match.Info($"[Series] Серия началась: {string.Join(" → ", ToArray(_maps))}" +
                 (CapturedModeId.Length > 0 ? $", режим '{CapturedModeId}'." : "."));
-            Load(_maps[0]);
             return true;
         }
 

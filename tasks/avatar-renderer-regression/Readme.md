@@ -1,5 +1,7 @@
 # Регрессия рендереров Cyborg
 
+Запрос пользователя выполнен через субагента и review principal: подготовлены [дизайн](architecture/Design.md), [план владения геометрией](architecture/OwnershipPlan.md) и [план безопасной синхронизации](architecture/StateSyncPlan.md). Это DRAFT для просмотра пользователя: два независимых направления, один editor writer и SDK scope с явным commit/abort. Этап architecture-planning пишет только материалы задачи; продуктовый код, ассеты и тесты не меняются. Реализация требует отдельных задач/worktrees после согласования плана. Статическая проверка документов не является проверкой будущего кода в Unity.
+
 Дата: 2026-10-09. Владелец: avatar-renderer-regression.
 Checkout: F:/CodexWorktrees/2cf1/Vr_Battlegrounds_ai. Ветка: codex/avatar-renderer-regression. Проверочная база: edcb79e8; интеграционная база: ce765889.
 

@@ -25,5 +25,10 @@
     ],
     "after": [{"task": "avatar-renderer-regression", "stage": "asset-repair", "state": "verified"}],
     "needs": []
+  }, {
+    "id": "architecture-planning",
+    "writes": ["tasks/avatar-renderer-regression/**"],
+    "after": [{"task": "avatar-renderer-regression", "stage": "asset-repair", "state": "merged"}],
+    "needs": []
   }]
 }

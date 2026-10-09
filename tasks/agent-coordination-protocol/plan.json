@@ -185,6 +185,20 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "infrastructure-friction-repair",
+      "writes": [
+        "tasks/agent-coordination-protocol/**"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "tool-discovery-guidance",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

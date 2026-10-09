@@ -89,6 +89,7 @@ internal static class Program
         });
         ProfileTests.Run(Test);
         ResultTests.Run(Test);
+        LaunchConfigurationTests.Run(Test);
         Test("превышение бюджета не повторяет частичный эффект", () =>
         {
             var gate = Gate(); int calls = 0;

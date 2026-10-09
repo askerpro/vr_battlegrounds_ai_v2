@@ -65,12 +65,15 @@ namespace VrBattlegrounds.EditorTools
         /// </summary>
         public static Result Run()
         {
+            return RunForScenes();
+        }
+
+        /// <summary>Automation включает только явно требуемые Debug-fixtures, остальные игровые сцены сохраняются.</summary>
+        public static Result RunForScenes(params string[] requiredDebugScenes)
+        {
             Result result = new Result();
 
-            string[] scenes = EditorBuildSettings.scenes
-                .Where(s => s.enabled)
-                .Select(s => s.path)
-                .ToArray();
+            string[] scenes = BuildSceneResolver.Resolve(true, requiredDebugScenes);
 
             if (scenes.Length == 0)
             {

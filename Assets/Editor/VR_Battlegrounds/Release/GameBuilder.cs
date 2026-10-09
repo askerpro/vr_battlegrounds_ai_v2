@@ -571,7 +571,7 @@ namespace VrBattlegrounds.EditorTools.Release
         }
 
         private static string[] EnabledScenes() =>
-            EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+            BuildSceneResolver.Resolve(false);
 
         private static IEnumerable<string> Split(string defines) =>
             defines.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(d => d.Trim()).Where(d => d.Length > 0);

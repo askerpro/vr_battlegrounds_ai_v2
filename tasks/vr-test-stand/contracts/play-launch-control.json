@@ -1,0 +1,19 @@
+{
+  "summary": "Один PlayLaunch planner/request owner для окна и автоматизации; адресный MPE backend и штатный сетевой lifecycle",
+  "motivation": "Исключить вторых writers запуска, общие EditorPrefs и команды неверному процессу или старому аватару",
+  "transition_cost": "Bootstrap adapters и существующие стенды переводятся на checkout config/process scopes; NET-21 и accepted marker API сохраняются. Требуется проверка Android, multi-process, reconnect и cleanup до приёмки",
+  "aspects": ["planning", "request-ownership", "profile", "participant-address", "readiness", "cleanup", "network-lifecycle"],
+  "compatibility": "additive",
+  "providing_stage": "play-launch-integration",
+  "structural": true,
+  "architecture_decision": "Пользователь поручил объединить планы, сохранил анализ integration-analysis.md и затем явно разрешил реализацию 2026-10-08. Один launch owner, штатные Network/Map owners, без NET-21/skip-Lobby/XR обходов",
+  "rules": [
+    "PlayLaunch owns frozen configuration and coordinator lifecycle; consumers cannot write user profile during a request",
+    "GameNetworkDiscovery owns network start/disconnect/reconnect; MapLoader owns live map changes",
+    "RunId/ParticipantId/ProcessSessionId identifies a process session; connection epoch/avatar netId identifies a reconnect target",
+    "Ready requires fresh owner-observed heartbeat and real role, admission, valid run key and explicit target scene",
+    "Stop/Cancel retain owned configuration until cleanup; cleanup failure is not accepted as success",
+    "Native explicit toolbar launch is single-editor; multi-process uses shared backend snapshots",
+    "XR input and packet faults are not provided by revision1"
+  ]
+}

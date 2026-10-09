@@ -3,6 +3,7 @@ using UltimateXR.Core;
 using UltimateXR.Core.Settings;
 using UltimateXR.Core.StateSave;
 using UltimateXR.Core.StateSync;
+using UltimateXR.Locomotion;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -222,6 +223,12 @@ namespace VrBattlegrounds.Network
         /// </summary>
         private void Send(IUxrStateSync component, UxrSyncEventArgs eventArgs)
         {
+            // До spawn автор аватара ещё неизвестен. Отложенное locomotion-событие
+            // проверяем повторно после выравнивания id; временный ammo scope
+            // и серверное здоровье этим правилом не затрагиваются.
+            if (component?.Component is UxrLocomotion && !StateEventAuthority.ShouldSend(component, eventArgs))
+                return;
+
             byte[] serializedEvent = eventArgs.SerializeEventBinary(component);
             if (serializedEvent == null)
                 return;
@@ -265,11 +272,23 @@ namespace VrBattlegrounds.Network
         [Command(requiresAuthority = false)]
         private void CmdComponentStateChanged(byte[] serializedEvent, NetworkConnectionToClient sender = null)
         {
+            // Disconnect снимает соединение немедленно, но его уже разобранный
+            // batch может ещё содержать команды. Они не принадлежат живому отправителю.
+            if (sender == null ||
+                !NetworkServer.connections.TryGetValue(sender.connectionId, out var currentConnection) ||
+                !ReferenceEquals(currentConnection, sender))
+            {
+                GameLog.Network.Verbose("[NetworkStateRelay] Пакет состояния от снятого соединения отклонён.");
+                return;
+            }
+
             // Новый admission разрешён только server queue; client-only payload не исполняется и не отражается observers.
-            // Нераспознанное событие идёт прежним путём (выполнить и разослать), фильтр — только для ammo-payload.
-            if (UxrSyncEventArgs.DeserializeEventBinary(serializedEvent, out var target, out var args, out _) &&
-                IsClientAmmoAdmissionPayload(target, args)) return;
-            UxrManager.Instance.ExecuteStateSyncEvent(serializedEvent);
+            // Невалидный пакет уже диагностирован декодером: не разбираем его снова
+            // и не распространяем ошибку на observers.
+            if (!UxrSyncEventArgs.DeserializeEventBinary(serializedEvent, out var target, out var args, out _)) return;
+            if (IsClientAmmoAdmissionPayload(target, args)) return;
+            var execution = UxrManager.Instance.ExecuteStateSyncEvent(serializedEvent);
+            if (execution.IsError) return;
 
             // netId объекта игрока отправителя — метка «кто это породил».
             // Автору событие обратно не применяем: у него оно уже произошло,

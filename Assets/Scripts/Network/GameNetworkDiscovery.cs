@@ -54,7 +54,25 @@ namespace VrBattlegrounds.Network
 
         private void Start()
         {
-            // Пробуем определить роль по тегу Multiplayer Play Mode
+            if (_holdClientAutoStart && !NetworkServer.active)
+            {
+                if (Application.isEditor && _useEditorUI) { CreateRuntimeUI(); UpdateRuntimeUI(); }
+                return;
+            }
+            // У управляемого запуска роль принадлежит frozen request; MPP-тег может остаться от прошлого сценария.
+            if (Application.isEditor && VrBattlegrounds.DevTools.DebugBootstrapGate.ManagedLaunchActive)
+            {
+                AppRole? managedRole = VrBattlegrounds.DevTools.DebugBootstrapGate.EditorRoleOverride?.Invoke();
+                if (!managedRole.HasValue)
+                {
+                    GameLog.Network.Error("[GameNetworkDiscovery] У управляемого запуска отсутствует владелец роли.");
+                    return;
+                }
+                ApplyRole(managedRole.Value);
+                return;
+            }
+
+            // В обычном запуске определяем роль по тегу Multiplayer Play Mode.
             AppRole? tagRole = TryGetRoleFromPlayerTag();
             if (tagRole.HasValue)
             {
@@ -142,6 +160,16 @@ namespace VrBattlegrounds.Network
             }
 
             CurrentRole = role;
+            if (role == AppRole.Server || role == AppRole.Host)
+            {
+                string error = VrBattlegrounds.DevTools.DebugBootstrapGate.EditorBeforeServerStart?.Invoke();
+                if (!string.IsNullOrEmpty(error))
+                {
+                    CurrentRole = null;
+                    GameLog.Network.Error("[GameNetworkDiscovery] Подготовка запуска отклонена: " + error);
+                    return;
+                }
+            }
             GameLog.Network.Info($"[GameNetworkDiscovery] Запуск в режиме: {role}");
 
             switch (role)
@@ -157,6 +185,13 @@ namespace VrBattlegrounds.Network
                     break;
 
                 case AppRole.Client:
+                    _holdClientAutoStart = false;
+                    string explicitAddress = VrBattlegrounds.DevTools.DebugBootstrapGate.EditorClientAddressOverride?.Invoke();
+                    if (!string.IsNullOrEmpty(explicitAddress))
+                    {
+                        ConnectToAddress(explicitAddress);
+                        break;
+                    }
                     _discovery.OnServerFound.AddListener(OnServerFound);
                     _discovery.StartDiscovery();
                     break;
@@ -185,6 +220,7 @@ namespace VrBattlegrounds.Network
                     NetworkManager.singleton.StopHost();
                     break;
                 case AppRole.Client:
+                    _holdClientAutoStart = true;
                     NetworkManager.singleton.StopClient();
                     break;
             }
@@ -198,6 +234,7 @@ namespace VrBattlegrounds.Network
         /// </summary>
         private void OnServerFound(ServerResponse response)
         {
+            _lastServerUri = response.uri;
             GameLog.Network.Info($"[GameNetworkDiscovery] Сервер найден: {response.serverId} | {response.EndPoint} | {response.uri}");
 
             _discovery.StopDiscovery();
@@ -244,7 +281,7 @@ namespace VrBattlegrounds.Network
             var textObj = new GameObject("StatusText");
             textObj.transform.SetParent(_selectionPanel.transform, false);
             _statusText = textObj.AddComponent<UnityEngine.UI.Text>();
-            _statusText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _statusText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             _statusText.fontSize = 14;
             _statusText.color = Color.yellow;
             _statusText.alignment = TextAnchor.MiddleCenter;
@@ -259,7 +296,7 @@ namespace VrBattlegrounds.Network
             var stopLabelObj = new GameObject("RoleText");
             stopLabelObj.transform.SetParent(_stopPanel.transform, false);
             var roleText = stopLabelObj.AddComponent<UnityEngine.UI.Text>();
-            roleText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            roleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             roleText.fontSize = 16;
             roleText.color = Color.white;
             roleText.alignment = TextAnchor.MiddleCenter;
@@ -313,7 +350,7 @@ namespace VrBattlegrounds.Network
             textObj.transform.SetParent(btnObj.transform, false);
             var text = textObj.AddComponent<UnityEngine.UI.Text>();
             text.text = label;
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = 16;
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
@@ -368,6 +405,60 @@ namespace VrBattlegrounds.Network
         #endregion
 
         #region Private Data
+
+        // Единственный владелец клиентского lifecycle переживает замену компонента при переходе в Offline.
+        private static bool _holdClientAutoStart;
+        private static System.Uri _lastServerUri;
+        public static void NotifyClientStopped(bool controlledLaunch)
+        {
+            if (controlledLaunch && !NetworkServer.active) _holdClientAutoStart = true;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetClientControl() { _holdClientAutoStart = false; _lastServerUri = null; }
+
+        public static bool ClientManagerReady
+        {
+            get
+            {
+                var manager = NetworkManager.singleton;
+                if (manager == null || NetworkClient.active || NetworkClient.isLoadingScene || NetworkServer.active) return false;
+                var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                return scene.name == manager.offlineScene || scene.path == manager.offlineScene;
+            }
+        }
+
+        /// <summary>Штатное отключение отдельного клиента. Host/Server не останавливаются.</summary>
+        public void RequestClientDisconnect()
+        {
+            if (NetworkServer.active) throw new System.InvalidOperationException("HostDisconnectUnsupported");
+            if (!NetworkClient.active) throw new System.InvalidOperationException("ClientNotActive");
+            if (CurrentRole == null) CurrentRole = AppRole.Client;
+            if (CurrentRole != AppRole.Client) throw new System.InvalidOperationException("ClientRoleRequired");
+            StopCurrent();
+        }
+
+        /// <summary>Подключение после завершения штатного перехода в Offline. Стартует только этот владелец.</summary>
+        public void RequestClientConnect(string address = null)
+        {
+            if (!ClientManagerReady) throw new System.InvalidOperationException("ClientManagerNotReady");
+            if (CurrentRole != null && CurrentRole != AppRole.Client) throw new System.InvalidOperationException("ClientRoleRequired");
+            CurrentRole = AppRole.Client;
+            _holdClientAutoStart = false;
+            try
+            {
+                if (!string.IsNullOrEmpty(address)) ConnectToAddress(address);
+                else if (_lastServerUri != null) NetworkManager.singleton.StartClient(_lastServerUri);
+                else { _discovery.OnServerFound.AddListener(OnServerFound); _discovery.StartDiscovery(); }
+            }
+            catch { CurrentRole = null; _holdClientAutoStart = true; throw; }
+        }
+        private static void ConnectToAddress(string address)
+        {
+            if (System.Uri.TryCreate(address, System.UriKind.Absolute, out var uri) && address.Contains("://"))
+                NetworkManager.singleton.StartClient(uri);
+            else { NetworkManager.singleton.networkAddress = address; NetworkManager.singleton.StartClient(); }
+        }
 
         private const int ButtonWidth  = 220;
         private const int ButtonHeight = 40;

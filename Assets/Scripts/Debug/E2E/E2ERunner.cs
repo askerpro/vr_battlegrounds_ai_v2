@@ -51,6 +51,8 @@ namespace VrBattlegrounds.DevTools.E2E
         public static E2ERunner Begin(E2EContext context, bool quitServerOnFinish = true)
         {
             if (context == null) throw new ArgumentNullException(nameof(context));
+            if (context.ExternallyLaunched != DebugBootstrapGate.ManagedLaunchActive && Application.isEditor)
+                throw new InvalidOperationException("E2E bootstrap конфликтует с владельцем Play Launch.");
             if (_active != null) throw new InvalidOperationException("E2E-сценарий уже запущен в этом процессе.");
             GameObject host = new GameObject("E2ERunner");
             DontDestroyOnLoad(host);

@@ -36,6 +36,7 @@ namespace VrBattlegrounds.DevTools.E2E
         public int ExpectedClients { get; private set; }
         public string ServerAddress { get; private set; }
         public string DeviceToken { get; private set; }
+        public bool ExternallyLaunched { get; private set; }
 
         /// <summary>Роль «сервер»: процесс поднимает выделенный сервер и выносит вердикт.</summary>
         public bool IsServerRole => Role == "server";
@@ -75,13 +76,13 @@ namespace VrBattlegrounds.DevTools.E2E
 
         /// <summary>Общий контекст для CLI и Editor; не запускает сеть и не меняет профиль.</summary>
         public static E2EContext Create(string scenario, string role, string resultPath = null, float timeout = 240f,
-            string map = "TestMap2", int expectedClients = 2, string serverAddress = null, string deviceToken = null)
+            string map = "TestMap2", int expectedClients = 2, string serverAddress = null, string deviceToken = null, bool externallyLaunched = false)
         {
             if (string.IsNullOrEmpty(scenario) || string.IsNullOrEmpty(role)) throw new ArgumentException("Нужны сценарий и роль E2E.");
             if (float.IsNaN(timeout) || float.IsInfinity(timeout) || timeout <= 0 || expectedClients < 0)
                 throw new ArgumentException("Некорректные ожидания E2E.");
             return new E2EContext { Scenario = scenario, Role = role, ResultPath = resultPath, Timeout = timeout,
-                Map = map, ExpectedClients = expectedClients, ServerAddress = serverAddress, DeviceToken = deviceToken };
+                Map = map, ExpectedClients = expectedClients, ServerAddress = serverAddress, DeviceToken = deviceToken, ExternallyLaunched = externallyLaunched };
         }
 
         public override string ToString()

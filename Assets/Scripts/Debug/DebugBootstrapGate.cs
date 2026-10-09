@@ -12,12 +12,26 @@ namespace VrBattlegrounds.DevTools
     {
         /// <summary>Отладочный сценарий редактора остановлен до конца Play.</summary>
         public static bool IsSuppressed { get; private set; }
+        private static ManagedLaunchScope _managed;
+        public static bool ManagedLaunchActive => _managed != null;
+        public static System.IDisposable BeginManagedLaunch()
+        {
+            if (_managed != null) throw new System.InvalidOperationException("У launch уже есть локальный владелец.");
+            _managed = new ManagedLaunchScope(); return _managed;
+        }
+        private sealed class ManagedLaunchScope : System.IDisposable
+        {
+            public void Dispose() { if (ReferenceEquals(_managed, this)) _managed = null; }
+        }
 
         /// <summary>
-        /// Роль, с которой стартовать экземпляру редактора без тега Multiplayer Play Mode; null — спросить окном.
-        /// Выставляет оркестратор из личных настроек разработчика.
+        /// Frozen роль управляемого запуска; вне него — fallback редактора без MPP-тега.
+        /// Участник managed request связывает роль до Start сети; legacy оркестратор предоставляет fallback.
         /// </summary>
         public static System.Func<Network.GameNetworkDiscovery.AppRole?> EditorRoleOverride { get; set; }
+        public static System.Func<string> EditorClientAddressOverride { get; set; }
+        /// <summary>Подготовка собственного маршрута до StartServer/StartHost; код отказа запрещает старт.</summary>
+        public static System.Func<string> EditorBeforeServerStart { get; set; }
 
         /// <summary>Остановить отладочный сценарий редактора: дальше им дирижирует вызывающий.</summary>
         public static void Suppress(string reason)
@@ -34,6 +48,8 @@ namespace VrBattlegrounds.DevTools
             // Статика переживает Play без перезагрузки домена.
             IsSuppressed = false;
             EditorRoleOverride = null;
+            EditorClientAddressOverride = null;
+            EditorBeforeServerStart = null;
         }
     }
 }

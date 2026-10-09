@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Mirror;
 using UltimateXR.Avatar;
 using UltimateXR.Core.StateSync;
+using UltimateXR.Locomotion;
 using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
@@ -123,6 +124,20 @@ namespace VrBattlegrounds.Network
             // Автор определяется не компонентом: хват — аргументами, здоровье — сервером.
             if (target is UxrGrabManager || target is UxrActor) return true;
 
+            // Locomotion пересчитывается и на копиях аватара. В частности, Mirror
+            // вызывает OnDisable при Destroy ещё до удаления из spawned: проверка
+            // одного despawn не отсекает чужой UpdateTeleportState. Автор движения
+            // тот же, что у аватара; здоровье и серверный сброс хвата выше не меняются.
+            if (target is UxrLocomotion)
+            {
+                UxrAvatar avatar = target.GetComponentInParent<UxrAvatar>(true);
+                if (avatar != null && !IsAuthoredHere(avatar))
+                {
+                    CountDropped(target, eventArgs, avatar);
+                    return false;
+                }
+            }
+
             if (!UxrGrabManager.HasInstance) return true;
 
             if (!TryGetHolders(target.transform, out List<UxrAvatar> holders)) return true;
@@ -188,7 +203,7 @@ namespace VrBattlegrounds.Network
             // Первый раз по ключу — в лог: это список компонентов, пересчитывающих чужие действия.
             if (count == 0)
             {
-                GameLog.Network.Info($"[StateEventAuthority] Не рассылаю {key}: пересчитано на копии, предмет держит " +
+                GameLog.Network.Info($"[StateEventAuthority] Не рассылаю {key}: пересчитано на копии аватара " +
                                      $"'{holder.name}', автор не эта машина. Дальше такие события только считаются.");
             }
         }

@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.UI.Menu;
 
 namespace VrBattlegrounds.Managers
 {
@@ -44,10 +46,13 @@ namespace VrBattlegrounds.Managers
         {
             if (Instance != null && Instance != this)
             {
-                // Дубликат. Ветку не трогаем до Start — почему именно так, см. Start.
+                // Сетевую ветку сохраняем до Start — почему именно так, см. Start.
                 // Ни DontDestroyOnLoad, ни объявления состава: и то и другое сделал
                 // живой корень при старте процесса.
                 _isDuplicate = true;
+                DisableDuplicateUiOwners<EventSystem>();
+                DisableDuplicateUiOwners<LocalMenuManager>();
+                DisableDuplicateUiOwners<MenuController>();
                 return;
             }
 
@@ -58,7 +63,34 @@ namespace VrBattlegrounds.Managers
 
             DontDestroyOnLoad(gameObject);
 
+            // Только принятый корень создаёт владельца fallback audio: дубликат
+            // Offline не должен поднимать ещё один listener или менять audio pause.
+            if (GetComponent<LocalAudioListenerOwner>() == null)
+                gameObject.AddComponent<LocalAudioListenerOwner>();
+
             ManagerBootstrap.Declare();
+        }
+
+        /// <summary>
+        /// Гасит только объекты владельцев UI до их Awake: они не должны заменять живые
+        /// singleton или поднимать второй input module до отложенного удаления дубликата.
+        /// Корень и сетевой менеджер должны остаться активны, чтобы не повторить NET-20.
+        /// </summary>
+        private void DisableDuplicateUiOwners<T>() where T : Component
+        {
+            foreach (T owner in GetComponentsInChildren<T>(true))
+            {
+                GameObject branch = owner.gameObject;
+                if (branch == gameObject || branch.GetComponentInChildren<Mirror.NetworkManager>(true) != null)
+                {
+                    GameLog.Error(
+                        $"[PersistentRoot] Не выключаю дубликат UI '{branch.name}': его ветка содержит " +
+                        "постоянный корень или NetworkManager. Владельцы UI должны быть отдельными дочерними объектами.");
+                    continue;
+                }
+
+                branch.SetActive(false);
+            }
         }
 
         /// <summary>

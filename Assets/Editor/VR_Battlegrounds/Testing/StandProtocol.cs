@@ -16,6 +16,10 @@ namespace VrBattlegrounds.EditorTools.TestStand
         public string Action;
         public string MarkerName;
         public int TimeBudgetMs = 5000;
+        public int ExpectedConnectionEpoch;
+        public uint ExpectedAvatarNetId;
+        public string Scenario;
+        public int ScenarioTimeoutSeconds = 240;
     }
 
     /// <summary>Фактический получатель и исход команды, отдельно от успеха вызова MCP.</summary>
@@ -89,7 +93,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
         {
             string error = Validate(request);
             if (error != null) return Address(StandReply.Error(error), request);
-            string fingerprint = request.Action + "|" + request.MarkerName + "|" + request.TimeBudgetMs.ToString(CultureInfo.InvariantCulture);
+            string fingerprint = request.Action + "|" + request.MarkerName + "|" + request.TimeBudgetMs.ToString(CultureInfo.InvariantCulture) + "|" + request.ExpectedConnectionEpoch + "|" + request.ExpectedAvatarNetId + "|" + request.Scenario + "|" + request.ScenarioTimeoutSeconds;
             if (_completed.TryGetValue(request.RequestId, out Entry old))
             {
                 if (old.Fingerprint != fingerprint) return Address(StandReply.Error("request-conflict"), request);
@@ -122,9 +126,13 @@ namespace VrBattlegrounds.EditorTools.TestStand
             if (request.ParticipantId != _participant) return "wrong-participant";
             if (request.ProcessSessionId != _session) return "wrong-session";
             if (request.TimeBudgetMs < 1 || request.TimeBudgetMs > 30000) return "invalid-budget";
-            if (request.Action != "create-marker" && request.Action != "read-marker" && request.Action != "remove-marker" && request.Action != "state") return "invalid-action";
-            if (request.Action != "state" && !ValidMarker(request.MarkerName)) return "invalid-marker";
-            if (request.Action == "state" && !string.IsNullOrEmpty(request.MarkerName)) return "invalid-marker";
+            bool network = request.Action == "disconnect" || request.Action == "reconnect";
+            bool e2e = request.Action == "run-e2e";
+            if (request.Action != "create-marker" && request.Action != "read-marker" && request.Action != "remove-marker" && request.Action != "state" && !network && !e2e) return "invalid-action";
+            if (e2e && (!ValidMarker(request.Scenario) || request.ScenarioTimeoutSeconds < 1 || request.ScenarioTimeoutSeconds > 3600)) return "scenario-invalid";
+            if (network && request.ExpectedConnectionEpoch < 1) return "connection-epoch-required";
+            if (!network && !e2e && request.Action != "state" && !ValidMarker(request.MarkerName)) return "invalid-marker";
+            if ((network || e2e || request.Action == "state") && !string.IsNullOrEmpty(request.MarkerName)) return "invalid-marker";
             return null;
         }
 

@@ -198,7 +198,7 @@ namespace VrBattlegrounds.DevTools.LegsCompare
         private PuppetShots _shots;
         private PuppetClipSource _clip;
         private readonly PuppetFootprints _footprints = new PuppetFootprints();
-        private bool _savedFocusPause;
+        private IDisposable _focusPause;
         private float _age;
         private bool _ready;
         private PuppetHandPose _appliedHands = (PuppetHandPose)(-1);
@@ -226,8 +226,8 @@ namespace VrBattlegrounds.DevTools.LegsCompare
         private void Start()
         {
             Instance = this;
-            _savedFocusPause = UxrManager.EditorFocusPauseEnabled;
-            UxrManager.EditorFocusPauseEnabled = false;
+            // При managed launch настройкой владеет координатор; обычный стенд берёт собственный scope.
+            if (!DebugBootstrapGate.ManagedLaunchActive) _focusPause = UxrManager.BeginEditorFocusPauseOverride(false);
             if (clipPreview != null) clipPreview.SetActive(false);
 
             for (int i = 0; i < avatarPrefabs.Length; i++)
@@ -261,7 +261,7 @@ namespace VrBattlegrounds.DevTools.LegsCompare
         private void OnDestroy()
         {
             UxrManager.StageUpdated -= OnStageUpdated;
-            UxrManager.EditorFocusPauseEnabled = _savedFocusPause;
+            _focusPause?.Dispose(); _focusPause = null;
             Time.captureFramerate = 0;
             _shots?.Dispose();
             _clip?.Dispose();

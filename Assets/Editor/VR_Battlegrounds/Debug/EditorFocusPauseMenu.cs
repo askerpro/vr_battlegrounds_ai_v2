@@ -16,7 +16,9 @@ namespace VrBattlegrounds.Editor
         [MenuItem(MenuPath)]
         private static void Toggle()
         {
-            UxrManager.EditorFocusPauseEnabled = !UxrManager.EditorFocusPauseEnabled;
+            var profile = VrBattlegrounds.DevTools.PlayLaunchSettings.ReadProfile();
+            profile.PauseOnFocusLoss = !profile.PauseOnFocusLoss;
+            VrBattlegrounds.DevTools.PlayLaunchSettings.SaveProfile(profile);
             GameLog.Debug.Info($"[EditorFocusPauseMenu] Пауза UltimateXR без фокуса редактора: {(UxrManager.EditorFocusPauseEnabled ? "включена" : "выключена")}.");
         }
 

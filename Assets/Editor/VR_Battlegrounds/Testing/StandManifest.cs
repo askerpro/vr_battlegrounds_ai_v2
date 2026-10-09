@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using UnityEngine;
+using VrBattlegrounds.DevTools;
 
 namespace VrBattlegrounds.EditorTools.TestStand
 {
@@ -28,6 +29,14 @@ namespace VrBattlegrounds.EditorTools.TestStand
         public StandSetting[] Settings;
         public bool NativeStopRequested;
         public StandParticipantState[] ReleasedParticipants;
+        public string Owner;
+        public PlayLaunchConfiguration Configuration;
+        public string StartScenePath;
+        public string TargetScenePath;
+        public string SceneKind;
+        public bool MarkerProbe;
+        public bool ExpectTargetScene;
+        public string PreviousStartScenePath;
 
         internal static string ProjectRoot
         {
@@ -88,6 +97,8 @@ namespace VrBattlegrounds.EditorTools.TestStand
         public string ProcessSessionId;
         public int ProcessId;
         public string Role;
+        public string NetworkRole;
+        public string RequestedRole;
         public bool Playing;
         public bool Server;
         public bool Client;
@@ -101,6 +112,20 @@ namespace VrBattlegrounds.EditorTools.TestStand
         public bool ProfileRestored;
         public bool PersistentTokenUnchanged;
         public string Scene;
+        public bool MapPlayable;
+        public double LastSeenAgeSeconds;
+        public string MapRunKey;
+        public bool MapRunValid;
+        public string StartupError;
+        public int ConnectionEpoch;
+        public uint AvatarNetId;
+        public uint SessionNetId;
+        public int ServerSessions;
+        public bool ClientManagerReady;
+        public string DeviceToken;
+        public string E2EStatus;
+        public bool E2EFinished;
+        public bool E2EPassed;
     }
 
     [Serializable]

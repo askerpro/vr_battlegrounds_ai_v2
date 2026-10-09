@@ -7,28 +7,26 @@ namespace VrBattlegrounds.Tests.DevTools
 {
     /// <summary>
     /// Пауза UltimateXR, пока редактор не в фокусе (патч 33): выключает IK и стадии обновления — тесты и стенды в
-    /// фоне видят аватар в T-позе. Личный флаг <see cref="UxrManager.EditorFocusPauseEnabled"/> (EditorPrefs, меню
-    /// <c>Tools/VR Battlegrounds/Debug/Pause XR When Editor Unfocused</c>), снятый во время паузы, обязан её снять.
+    /// фоне видят аватар в T-позе. Процессный override <see cref="UxrManager.EditorFocusPauseEnabled"/>
+    /// не меняет checkout-профиль или EditorPrefs; снятый во время паузы флаг обязан её снять.
     /// </summary>
     public class EditorFocusPauseTests
     {
         private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
 
         private GameObject _go;
-        private bool _savedPause;
+        private System.IDisposable _focus;
 
         [SetUp]
         public void SetUp()
         {
-            _savedPause = UxrManager.EditorFocusPauseEnabled;
             _go = new GameObject("UxrManager_FocusTest");
         }
 
         [TearDown]
         public void TearDown()
         {
-            // Личная настройка разработчика — вернуть как было.
-            UxrManager.EditorFocusPauseEnabled = _savedPause;
+            _focus?.Dispose(); _focus = null;
             Object.DestroyImmediate(_go);
         }
 
@@ -37,7 +35,7 @@ namespace VrBattlegrounds.Tests.DevTools
         {
             UxrManager manager = PausedManager();
 
-            UxrManager.EditorFocusPauseEnabled = false;
+            _focus = UxrManager.BeginEditorFocusPauseOverride(false);
             Invoke(manager, "HandleEditorFocusChange");
 
             Assert.IsFalse(manager.IsPausedByEditorFocus, "Update снова работает: стадии и события обновления идут.");
@@ -45,13 +43,20 @@ namespace VrBattlegrounds.Tests.DevTools
         }
 
         [Test]
-        public void Флаг_хранится_в_EditorPrefs_а_не_в_ассете()
+        public void Процессный_scope_не_меняет_EditorPrefs_и_восстанавливает_provider()
         {
-            UxrManager.EditorFocusPauseEnabled = false;
-            Assert.IsFalse(UnityEditor.EditorPrefs.GetBool("VrBattlegrounds.PauseXrWhenEditorUnfocused", true));
-
-            UxrManager.EditorFocusPauseEnabled = true;
-            Assert.IsTrue(UnityEditor.EditorPrefs.GetBool("VrBattlegrounds.PauseXrWhenEditorUnfocused", false));
+            const string key = "VrBattlegrounds.PauseXrWhenEditorUnfocused";
+            bool present = UnityEditor.EditorPrefs.HasKey(key);
+            bool saved = UnityEditor.EditorPrefs.GetBool(key, true);
+            bool effective = UxrManager.EditorFocusPauseEnabled;
+            using (UxrManager.BeginEditorFocusPauseOverride(!effective))
+            {
+                Assert.AreEqual(!effective, UxrManager.EditorFocusPauseEnabled);
+                Assert.AreEqual(present, UnityEditor.EditorPrefs.HasKey(key));
+                Assert.AreEqual(saved, UnityEditor.EditorPrefs.GetBool(key, true));
+                Assert.Throws<System.InvalidOperationException>(() => UxrManager.BeginEditorFocusPauseOverride(effective));
+            }
+            Assert.AreEqual(effective, UxrManager.EditorFocusPauseEnabled);
         }
 
         /// <summary>

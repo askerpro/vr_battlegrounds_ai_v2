@@ -11,6 +11,8 @@ using UnityEditor.MPE;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using UltimateXR.Core;
+using VrBattlegrounds.DevTools;
+using UnityEditor.SceneManagement;
 
 namespace VrBattlegrounds.EditorTools.TestStand
 {
@@ -39,6 +41,12 @@ namespace VrBattlegrounds.EditorTools.TestStand
 
         public static string StartProbe(bool debugBootstrapEnabled = true)
         {
+            return PlayLaunch.StartMarkerProbe(debugBootstrapEnabled);
+        }
+
+        internal static string StartConfigured(PlayLaunchConfiguration configuration, string owner, string runId,
+            string startScene, string targetScene, string kind, bool markerProbe, bool expectTargetScene)
+        {
             RequireMain();
             if (EditorApplication.isPlayingOrWillChangePlaymode || NativeState() != "Idle")
                 throw new InvalidOperationException("Сначала завершите текущий Play Mode сценарий.");
@@ -47,24 +55,23 @@ namespace VrBattlegrounds.EditorTools.TestStand
             UnityEngine.Object previous = ActiveScenario();
             _run = new StandManifest
             {
-                RunId = Guid.NewGuid().ToString("N"), OwnerPid = StandManifest.CurrentPid, Phase = "running",
-                Participants = new[] { "main", "Player 2", "Player 3" },
+                RunId = runId, OwnerPid = StandManifest.CurrentPid, Phase = "running",
+                Participants = Enumerable.Range(0, configuration.ClientCount + 1).Select(i => i == 0 ? "main" : "Player " + (i + 1)).ToArray(),
                 PreviousScenarioName = previous.name, PreviousScenarioPath = AssetDatabase.GetAssetPath(previous),
-                NetworkPort = FreeUdpPort(), DiscoveryPort = FreeUdpPort(),
-                Settings = new[] { Capture("VrBattlegrounds.DebugBootstrap.Enabled", true),
-                    Capture("VrBattlegrounds.DebugBootstrap.HostIsAdmin", true),
-                    Capture("VrBattlegrounds.PauseXrWhenEditorUnfocused", true) }
+                NetworkPort = configuration.HasOwnedServer ? FreeUdpPort() : 0, DiscoveryPort = configuration.HasOwnedServer ? FreeUdpPort() : 0,
+                Settings = Array.Empty<StandSetting>(), Owner = owner, Configuration = configuration.Copy(),
+                StartScenePath = startScene, TargetScenePath = targetScene, SceneKind = kind, MarkerProbe = markerProbe,
+                ExpectTargetScene = expectTargetScene,
+                PreviousStartScenePath = AssetDatabase.GetAssetPath(EditorSceneManager.playModeStartScene)
             };
-            while (_run.DiscoveryPort == _run.NetworkPort) _run.DiscoveryPort = FreeUdpPort();
+            while (_run.NetworkPort > 0 && _run.DiscoveryPort == _run.NetworkPort) _run.DiscoveryPort = FreeUdpPort();
             Peers.Clear(); Seen.Clear(); Operations.Clear(); Fingerprints.Clear();
             _cleanupPassed = false;
             _nativeStopRequested = false;
             try
             {
                 _run.Write();
-                EditorPrefs.SetBool("VrBattlegrounds.DebugBootstrap.Enabled", debugBootstrapEnabled);
-                EditorPrefs.SetBool("VrBattlegrounds.DebugBootstrap.HostIsAdmin", debugBootstrapEnabled);
-                UxrManager.EditorFocusPauseEnabled = false;
+                EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(startScene);
                 PlayModeStandParticipant.Sync();
                 if (!ChannelService.IsRunning()) ChannelService.Start();
                 EventService.Start();
@@ -85,14 +92,48 @@ namespace VrBattlegrounds.EditorTools.TestStand
 
         public static string Status()
         {
-            Tick();
+            // Продвижение запуска и cleanup принадлежит EditorApplication.update.
+            // Чтение статуса не должно инициировать Stop/restore, в том числе
+            // при восстановлении MCP-соединения после domain reload.
             var run = StandManifest.Read();
+            foreach (var peer in Peers.Values)
+                peer.LastSeenAgeSeconds = Seen.TryGetValue(peer.ParticipantId, out double seen)
+                    ? Math.Max(0, EditorApplication.timeSinceStartup - seen) : double.MaxValue;
             return JsonUtility.ToJson(new StandStatus
             {
                 RunId = run?.RunId, Phase = run?.Phase ?? "idle", Playing = EditorApplication.isPlaying,
                 CleanupPassed = _cleanupPassed, LastRunId = _lastRunId,
                 Participants = Peers.Values.Where(p => p.RunId == (run?.RunId ?? _lastRunId)).OrderBy(p => p.ParticipantId).ToArray()
             });
+        }
+
+        internal static void RequireSingleEditorNativePlay(string expectedRole)
+        {
+            RequireMain();
+            var active = ActiveScenario();
+            if (active == null) throw new PlayLaunchException("NativeScenarioUnknown", "Нельзя определить native topology; используйте Play Launch.");
+            var serialized = new SerializedObject(active);
+            var editors = serialized.FindProperty("m_EnableEditors");
+            var additionalEditors = serialized.FindProperty("m_EditorInstances");
+            var localPlayers = serialized.FindProperty("m_LocalInstances");
+            var remotePlayers = serialized.FindProperty("m_RemoteInstances");
+            if (editors == null || additionalEditors == null)
+                throw new PlayLaunchException("NativeScenarioUnknown", "Нельзя определить дополнительные процессы native scenario.");
+            if (!editors.boolValue)
+                throw new PlayLaunchException("NativeEditorsDisabled", "В explicit native scenario выключена Editor-группа; используйте Play Launch или одиночный Host/Client scenario.");
+            if ((editors.boolValue && additionalEditors.arraySize > 0) ||
+                (localPlayers != null && localPlayers.arraySize > 0) ||
+                (remotePlayers != null && remotePlayers.arraySize > 0))
+                throw new PlayLaunchException("NativeTopologyUnsupported", "Явный toolbar launch поддерживает один редактор; несколько процессов запускайте через Play Launch.");
+            var main = serialized.FindProperty("m_MainEditorInstance");
+            var tag = main?.FindPropertyRelative("m_PlayerTag");
+            if (tag == null) throw new PlayLaunchException("NativeScenarioUnknown", "Не определена роль main editor.");
+            string role = tag.stringValue;
+            if ((string.Equals(role, "server", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(role, "host", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(role, "client", StringComparison.OrdinalIgnoreCase)) &&
+                !string.Equals(role, expectedRole, StringComparison.OrdinalIgnoreCase))
+                throw new PlayLaunchException("NativeRoleMismatch", "Роль native scenario отличается от frozen профиля; используйте Play Launch.");
         }
 
         public static string Configuration()
@@ -256,15 +297,25 @@ namespace VrBattlegrounds.EditorTools.TestStand
             var serialized = new SerializedObject(copy);
             var clients = serialized.FindProperty("m_EditorInstances");
             if (clients == null || clients.arraySize != 1) throw new InvalidOperationException("Изменился контракт EditorInstances сценария.");
-            clients.InsertArrayElementAtIndex(1);
-            var third = clients.GetArrayElementAtIndex(1);
-            third.FindPropertyRelative("Name").stringValue = "Player 3";
-            third.FindPropertyRelative("<CorrespondingNodeId>k__BackingField").stringValue = "Player 3|2_run";
-            var nodes = third.FindPropertyRelative("m_Nodes");
-            for (int i = 0; i < nodes.arraySize; i++) nodes.GetArrayElementAtIndex(i).stringValue = i == 0 ? "Player 3|2_run" : "Player 3|2_deploy";
-            var scene = AssetDatabase.LoadAssetAtPath<SceneAsset>("Assets/Scenes/Offline.unity");
+            for (int i = 1; i < _run.Configuration.ClientCount; i++) clients.InsertArrayElementAtIndex(i);
+            if (_run.Configuration.ClientCount == 0) clients.ClearArray();
+            // Флаг включает всю Editor-группу, в том числе главный процесс при пустом списке дополнительных.
+            serialized.FindProperty("m_EnableEditors").boolValue = true;
+            serialized.FindProperty("m_MainEditorInstance").FindPropertyRelative("m_PlayerTag").stringValue =
+                _run.Configuration.Role == "host" ? "Host" : _run.Configuration.Role == "server" ? "Server" : "Client";
+            var scene = AssetDatabase.LoadAssetAtPath<SceneAsset>(_run.StartScenePath);
+            if (scene == null) throw new InvalidOperationException("Стартовая сцена отсутствует.");
             serialized.FindProperty("m_MainEditorInstance").FindPropertyRelative("m_InitialScene").objectReferenceValue = scene;
-            for (int i = 0; i < clients.arraySize; i++) clients.GetArrayElementAtIndex(i).FindPropertyRelative("m_InitialScene").objectReferenceValue = scene;
+            for (int i = 0; i < clients.arraySize; i++)
+            {
+                var child = clients.GetArrayElementAtIndex(i); string name = "Player " + (i + 2);
+                child.FindPropertyRelative("Name").stringValue = name;
+                child.FindPropertyRelative("m_PlayerTag").stringValue = System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(_run.Configuration.RoleForParticipant(i + 1));
+                child.FindPropertyRelative("<CorrespondingNodeId>k__BackingField").stringValue = name + "|" + (i + 1) + "_run";
+                var nodes = child.FindPropertyRelative("m_Nodes");
+                for (int n = 0; n < nodes.arraySize; n++) nodes.GetArrayElementAtIndex(n).stringValue = name + "|" + (i + 1) + (n == 0 ? "_run" : "_deploy");
+                child.FindPropertyRelative("m_InitialScene").objectReferenceValue = AssetDatabase.LoadAssetAtPath<SceneAsset>("Assets/Scenes/Offline.unity");
+            }
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return copy;
         }
@@ -286,15 +337,12 @@ namespace VrBattlegrounds.EditorTools.TestStand
             if (_temporaryScenario == null && active != null && active.name == "VR Test Stand " + _run.RunId)
                 _temporaryScenario = active as ScriptableObject;
             if (previous != null) SetScenario(previous);
-            foreach (var setting in _run.Settings)
-            {
-                if (setting.Key == "VrBattlegrounds.PauseXrWhenEditorUnfocused") UxrManager.EditorFocusPauseEnabled = setting.Value;
-                if (setting.HadKey) EditorPrefs.SetBool(setting.Key, setting.Value); else EditorPrefs.DeleteKey(setting.Key);
-            }
+            EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(_run.PreviousStartScenePath);
             if (File.Exists(StandManifest.FilePath)) File.Delete(StandManifest.FilePath);
             if (_temporaryScenario != null) UnityEngine.Object.DestroyImmediate(_temporaryScenario);
             _temporaryScenario = null;
             _run = null;
+            PlayLaunch.ReleaseCompletedRun(_lastRunId);
         }
 
         private static int FreeUdpPort()

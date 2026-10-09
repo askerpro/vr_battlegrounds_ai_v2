@@ -13,6 +13,13 @@
     <Compile Include="../../Assets/Scripts/Core/ClientDeviceIdentity.cs" />
     <Compile Include="../../Assets/Scripts/Core/ClientDeviceType.cs" />
     <Compile Include="../../Assets/Scripts/Core/GameRole.cs" />
+    <Compile Include="../../Assets/Scripts/Core/StandaloneSceneMarker.cs" />
+    <Compile Include="../../Assets/Scripts/Debug/Bootstrap/PlayLaunch*.cs" />
+    <Compile Include="../../Assets/Editor/VR_Battlegrounds/Debug/Bootstrap/PlayLaunchSettings.cs" />
+    <Compile Include="../../Assets/Scripts/Debug/Bootstrap/DebugBootstrapSettings.cs" />
+    <Compile Include="../../Assets/Scripts/Debug/DebugBootstrapGate.cs" />
+    <Compile Include="../../Assets/Editor/VR_Battlegrounds/Debug/PlayLaunchWindow.cs" />
+    <Compile Include="../../Assets/Editor/VR_Battlegrounds/Release/BuildSceneResolver.cs" />
     <Compile Include="EditorBindingStubs.cs" />
   </ItemGroup>
 </Project>

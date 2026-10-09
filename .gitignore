@@ -52,6 +52,7 @@ ExportedObj/
 !/Tools/TestStand/*.csproj
 /Tools/TestStand/obj/
 /Tools/TestStand/bin/
+/UserSettings/VrBattlegrounds/
 *.unityproj
 *.sln
 *.slnx

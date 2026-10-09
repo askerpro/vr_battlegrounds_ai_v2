@@ -1,0 +1,107 @@
+{
+  "task_id": "vr-test-stand",
+  "owner": "vr-test-stand",
+  "client": "codex",
+  "worktree": "F:/CodexWorktrees/vr-test-stand/Vr_Battlegrounds_ai",
+  "base_sha": "34535cad7515d9aad39bede16b74c967731e9df1",
+  "doc_path": "tasks/vr-test-stand/Readme.md",
+  "title": "Адресный стенд и интеграция Play Launch",
+  "stages": [
+    {
+      "id": "play-launch-integration",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Testing/**",
+        "Assets/Editor/VR_Battlegrounds/Debug/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatStandEditor.cs",
+        "Assets/Editor/VR_Battlegrounds/Release/BuildSceneResolver.cs",
+        "Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs",
+        "Assets/Scripts/Debug/Bootstrap/**",
+        "Assets/Scripts/Debug/DebugBootstrapGate.cs",
+        "Assets/Scripts/Debug/E2E/E2EContext.cs",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/SessionRecoveryOnReconnectScenario.cs",
+        "Assets/Scripts/Debug/LegsCompare/AvatarPuppetStand.cs",
+        "Assets/Scripts/Debug/LegsCompare/Sit/ClipScrubStand.Live.cs",
+        "Assets/Scripts/Core/StandaloneSceneMarker.cs",
+        "Assets/Scripts/Network/GameNetworkDiscovery.cs",
+        "Assets/Scripts/Network/GameNetworkManager.cs",
+        "Assets/Scripts/Network/NetworkStateRelay.cs",
+        "Assets/Scripts/Network/StateEventAuthority.cs",
+        "Assets/Scripts/Network/DespawnedObjectEventFilter.cs",
+        "Assets/Scripts/Managers/PersistentRoot.cs",
+        "Assets/Scripts/Managers/LocalAudioListenerOwner.cs",
+        "Assets/Scripts/Managers/LocalAudioListenerOwner.cs.meta",
+        "Assets/Scripts/Player/Avatars/AvatarManager.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/UxrManager.cs",
+        "Assets/Tests/EditMode/DevTools/EditorFocusPauseTests.cs",
+        "Assets/Scenes/Dev/**",
+        "Assets/Scenes/Tools/**",
+        "ProjectSettings/EditorBuildSettings.asset",
+        "tasks/vr-test-stand/Readme.md",
+        "tasks/vr-test-stand/implementation-plan.md",
+        ".gitignore",
+        "tasks/vr-test-stand/Details.md",
+        "tasks/vr-test-stand/plan.json",
+        "tasks/vr-test-stand/tools/**",
+        "tasks/vr-test-stand/contracts/**",
+        "tasks/vr-test-stand/changelog/**",
+        "tasks/vr-test-stand/integration-analysis.md",
+        "Tools/TestStand/**"
+      ],
+      "after": [
+        {
+          "task": "map-runtime-bootstrap",
+          "stage": "startup-route",
+          "state": "merged"
+        },
+        {
+          "task": "arsenal-generator",
+          "stage": "composer-presentation",
+          "state": "merged"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "map-startup-route",
+          "revision": 2,
+          "aspects": [
+            "*"
+          ],
+          "readiness": "active"
+        }
+      ]
+    },
+    {
+      "id": "docs-publication",
+      "writes": [
+        "Docs/test-stand.md",
+        "tasks/vr-test-stand/Readme.md",
+        "tasks/vr-test-stand/Details.md",
+        "tasks/vr-test-stand/plan.json"
+      ],
+      "after": [
+        {
+          "task": "vr-test-stand",
+          "stage": "play-launch-integration",
+          "state": "merged"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "play-launch-control",
+          "revision": 1,
+          "aspects": [
+            "planning",
+            "request-ownership",
+            "profile",
+            "participant-address",
+            "readiness",
+            "cleanup",
+            "network-lifecycle"
+          ],
+          "readiness": "active"
+        }
+      ]
+    }
+  ]
+}

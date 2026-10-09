@@ -113,6 +113,7 @@ namespace VrBattlegrounds.Network
 
         public override void OnStopClient()
         {
+            GameNetworkDiscovery.NotifyClientStopped(LocalClientProfile.HasTemporaryOverride);
             NetworkUxrIdentity.UninstallClientSpawnHandlers();
             base.OnStopClient();
         }

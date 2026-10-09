@@ -37,7 +37,7 @@ namespace VrBattlegrounds.DevTools
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void SpawnOnPlay()
         {
-            if (!DebugBootstrapSettings.Enabled || LocalClientProfile.HasTemporaryOverride || DebugBootstrapGate.IsSuppressed) return;
+            if (!DebugBootstrapSettings.Enabled || (LocalClientProfile.HasTemporaryOverride && !DebugBootstrapGate.ManagedLaunchActive) || DebugBootstrapGate.IsSuppressed) return;
 
             var go = new GameObject(nameof(DebugOrchestrator));
             DontDestroyOnLoad(go);
@@ -45,7 +45,7 @@ namespace VrBattlegrounds.DevTools
         }
 
         // Сценарий идёт, пока его не остановил E2E-прогон (DebugBootstrapGate).
-        private static bool Active => DebugBootstrapSettings.Enabled && !DebugBootstrapGate.IsSuppressed && !LocalClientProfile.HasTemporaryOverride;
+        private static bool Active => DebugBootstrapSettings.Enabled && !DebugBootstrapGate.IsSuppressed && (!LocalClientProfile.HasTemporaryOverride || DebugBootstrapGate.ManagedLaunchActive);
 
         // Флаг: карта уже была запрошена в этой сессии — не грузить повторно.
         private bool _mapLoadRequested;
@@ -56,14 +56,14 @@ namespace VrBattlegrounds.DevTools
 
         private void Awake()
         {
-            if (LocalClientProfile.HasTemporaryOverride || DebugBootstrapGate.IsSuppressed) return;
+            if ((LocalClientProfile.HasTemporaryOverride && !DebugBootstrapGate.ManagedLaunchActive) || DebugBootstrapGate.IsSuppressed) return;
             if (DebugBootstrapSettings.AutoStartFallbackRole)
             {
                 GameNetworkDiscovery.AppRole role = DebugBootstrapSettings.FallbackRole;
                 DebugBootstrapGate.EditorRoleOverride = () => DebugBootstrapGate.IsSuppressed ? null : role;
             }
 
-            if (DebugBootstrapSettings.HostIsAdmin)
+            if (DebugBootstrapSettings.HostIsAdmin && !LocalClientProfile.HasTemporaryOverride)
             {
                 // Запуск в качестве хоста
                 LocalClientProfile.SetDebugOverride(ClientDeviceType.VR, true, GameRole.Player);

@@ -9,6 +9,7 @@ using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
+using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.DevTools.E2E.Scenarios
 {
@@ -145,7 +146,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield break;
             }
 
-            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
+            if (!DebugBootstrapGate.ManagedLaunchActive) DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             // ── 2. Клиент ─────────────────────────────────────────────────
             deadline = Now + 90f;
@@ -285,7 +286,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             session.Score = MarkedScore;
 
             avatar.RestoreHealth(MarkedHealth);
-            avatar.transform.position = positionBefore + PositionOffset;
+            // Движением владеет клиент: перенос должен пройти через его штатный RPC.
+            avatar.ServerDevTeleport(positionBefore + PositionOffset, avatar.transform.rotation);
 
             // Даём кадрам пройти: позицию мог бы отыграть назад чужой код,
             // и тогда набранное состояние надо признать недействительным.
@@ -509,7 +511,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             result.Declare(CheckClientConnected, CheckClientSession, CheckClientMap,
                            CheckClientDropped, CheckClientReconnected);
 
-            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
+            if (!DebugBootstrapGate.ManagedLaunchActive) DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             // ── Подключение ───────────────────────────────────────────────
             float deadline = Now + 30f;
@@ -644,7 +646,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             // Сцена Offline подняла свою копию менеджеров — дирижёр отладки среди них.
-            DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
+            if (!DebugBootstrapGate.ManagedLaunchActive) DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             GameLog.Debug.Info($"[E2E] Разрыв обработан (менеджер сменился={managerReplaced}), " +
                               $"начинаю возврат. {DescribeNetwork()}");
@@ -856,6 +858,14 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// <summary>Прямое подключение мимо Discovery — фоллбэк, когда UDP-броадкаст не доехал.</summary>
         private void ConnectDirectly(string address)
         {
+#if UNITY_EDITOR
+            if (DebugBootstrapGate.ManagedLaunchActive)
+            {
+                var owner = NetworkManager.singleton != null ? NetworkManager.singleton.GetComponent<GameNetworkDiscovery>() : null;
+                if (owner != null && GameNetworkDiscovery.ClientManagerReady) owner.RequestClientConnect(address);
+                return;
+            }
+#endif
             Mirror.Discovery.NetworkDiscovery discovery = Object.FindFirstObjectByType<Mirror.Discovery.NetworkDiscovery>();
             if (discovery != null)
                 discovery.StopDiscovery();

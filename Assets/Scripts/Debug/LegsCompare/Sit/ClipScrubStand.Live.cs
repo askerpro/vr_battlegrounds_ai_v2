@@ -95,7 +95,7 @@ namespace VrBattlegrounds.DevTools.LegsCompare
 
         private readonly List<LiveRow> _live = new List<LiveRow>();
         private bool _liveSubscribed;
-        private bool _savedFocusPause;
+        private System.IDisposable _focusPause;
         private float _floorBaseY;
 
         private bool LiveMode => Application.isPlaying && livePrefab != null;
@@ -143,8 +143,7 @@ namespace VrBattlegrounds.DevTools.LegsCompare
 
             if (!_liveSubscribed)
             {
-                _savedFocusPause = UxrManager.EditorFocusPauseEnabled;
-                UxrManager.EditorFocusPauseEnabled = false; // стенд смотрят из Scene view — без фокуса Game UltimateXR не должен вставать
+                if (!DebugBootstrapGate.ManagedLaunchActive) _focusPause = UxrManager.BeginEditorFocusPauseOverride(false);
                 UxrManager.StageUpdated += OnLiveStage;
                 _liveSubscribed = true;
             }
@@ -165,7 +164,7 @@ namespace VrBattlegrounds.DevTools.LegsCompare
             if (_liveSubscribed)
             {
                 UxrManager.StageUpdated -= OnLiveStage;
-                UxrManager.EditorFocusPauseEnabled = _savedFocusPause;
+                _focusPause?.Dispose(); _focusPause = null;
                 _liveSubscribed = false;
             }
 

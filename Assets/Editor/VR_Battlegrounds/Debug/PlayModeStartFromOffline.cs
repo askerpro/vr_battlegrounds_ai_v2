@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 using UnityEditor.SceneManagement;
 using VrBattlegrounds.DevTools;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.EditorTools.TestStand;
 
 namespace VrBattlegrounds.Editor
 {
@@ -25,6 +26,7 @@ namespace VrBattlegrounds.Editor
         /// <summary>Единственный writer стартовой сцены принимает временный запрос диагностического стенда.</summary>
         public static bool TrySetTemporaryStartScene(SceneAsset scene, string owner)
         {
+            if (VrBattlegrounds.DevTools.PlayLaunchSettings.RequestActive) return false;
             if (scene == null || string.IsNullOrWhiteSpace(owner) || EditorApplication.isPlayingOrWillChangePlaymode
                 || !string.IsNullOrEmpty(SessionState.GetString(TemporaryOwnerKey, ""))) return false;
             SessionState.SetString(PreviousSceneKey, AssetDatabase.GetAssetPath(EditorSceneManager.playModeStartScene));
@@ -54,15 +56,13 @@ namespace VrBattlegrounds.Editor
         [MenuItem("Tools/VR Battlegrounds/Debug/Start from Offline Scene")]
         public static void ToggleAction()
         {
-            bool enabled = EditorPrefs.GetBool(PrefKey, true);
-            EditorPrefs.SetBool(PrefKey, !enabled);
-            UpdateState();
+            PlayLaunchWindow.Open();
         }
 
         [MenuItem("Tools/VR Battlegrounds/Debug/Start from Offline Scene", true)]
         public static bool ToggleActionValidate()
         {
-            Menu.SetChecked("Tools/VR Battlegrounds/Debug/Start from Offline Scene", EditorPrefs.GetBool(PrefKey, true));
+            Menu.SetChecked("Tools/VR Battlegrounds/Debug/Start from Offline Scene", false);
             return true;
         }
 
@@ -110,10 +110,11 @@ namespace VrBattlegrounds.Editor
         }
 
         private static StartKind CurrentStart() =>
-            ResolveStart(TemporaryStartScene != null, IsStandSceneOpen(), IsMapSceneOpen(), EditorPrefs.GetBool(PrefKey, true));
+            ResolveStart(TemporaryStartScene != null, IsStandSceneOpen() && PlayLaunchSettings.Effective.SceneSource == "active", IsMapSceneOpen(), PlayLaunchSettings.Effective.SceneSource != "active");
 
         private static void UpdateState()
         {
+            if (VrBattlegrounds.DevTools.PlayLaunchSettings.RequestActive) return;
             SceneAsset temporary = TemporaryStartScene;
             StartKind start = CurrentStart();
             if (start == StartKind.Temporary)
@@ -131,7 +132,7 @@ namespace VrBattlegrounds.Editor
                 }
                 else
                 {
-                    Debug.LogWarning($"[PlayModeStartFromOffline] Сцена {OfflineScenePath} не найдена. Создайте или обновите путь.");
+                    GameLog.Debug.Warning($"[PlayModeStartFromOffline] Сцена {OfflineScenePath} не найдена. Создайте или обновите путь.");
                 }
             }
             else
@@ -147,6 +148,7 @@ namespace VrBattlegrounds.Editor
             // стенд получал отказ «стартовую сцену уже занял другой стенд» до перезапуска редактора.
             if (state == PlayModeStateChange.EnteredEditMode)
             {
+                PlayLaunch.ReleaseNativePlay();
                 string owner = SessionState.GetString(TemporaryOwnerKey, "");
                 if (!string.IsNullOrEmpty(owner)) ClearTemporaryStartScene(owner);
                 UpdateState();
@@ -155,6 +157,16 @@ namespace VrBattlegrounds.Editor
 
             if (state == PlayModeStateChange.ExitingEditMode)
             {
+                if (!PlayLaunchSettings.RequestActive && TemporaryStartScene == null && PlayLaunchSettings.Effective.SceneSource != "active")
+                {
+                    try { PlayLaunch.PrepareNativePlay(); }
+                    catch (System.Exception error)
+                    {
+                        GameLog.Debug.Error("[PlayLaunch] Toolbar Play отклонён: " + error.Message);
+                        EditorApplication.isPlaying = false;
+                    }
+                    return;
+                }
                 // Принудительно обновляем начальную сцену перед самым стартом
                 UpdateState();
                 
@@ -169,9 +181,9 @@ namespace VrBattlegrounds.Editor
 
                 // Карта автозапуска — в SessionState текущей сессии редактора (DebugBootstrapSettings), не в ассет:
                 // раньше каждый Play из карты правил ассет под git.
-                if (DebugBootstrapSettings.Enabled)
+                if (DebugBootstrapSettings.Enabled && !VrBattlegrounds.DevTools.PlayLaunchSettings.RequestActive)
                 {
-                    DebugBootstrapSettings.AutoLoadMapScene = activeScene.name;
+                    DebugBootstrapSettings.AutoLoadMapScene = PlayLaunchSettings.Effective.SceneSource == "active" ? activeScene.name : "";
                     GameLog.Debug.Info($"[PlayModeStartFromOffline] Карта '{activeScene.name}' загрузится после старта сервера (Bootstrap Settings).");
                 }
                 else

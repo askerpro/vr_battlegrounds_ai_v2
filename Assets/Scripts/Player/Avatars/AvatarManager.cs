@@ -100,13 +100,6 @@ namespace VrBattlegrounds.Player.Avatars
                 avatarClass.SessionNetId = session.netId;
                 avatarClass.AvatarPlayerName = session.PlayerName;
                 avatarClass.SourcePrefab = prefabToSpawn;
-
-                // Здоровье возвращается независимо от карты: оно не про место.
-                // Условие то же — игрок был жив, — но не про то, где он стоял.
-                if (snapshot != null && snapshot.NeedsPhysicalRestore)
-                {
-                    avatarClass.RestoreHealth(snapshot.Health);
-                }
             }
 
             // Спавним аватар и отдаем авторитет игроку.
@@ -116,6 +109,10 @@ namespace VrBattlegrounds.Player.Avatars
             // Связь проставляется строго ПОСЛЕ спавна: до него netId равен нулю,
             // и клиенты получили бы пустую ссылку на аватар.
             session.ActiveAvatar = avatarClass;
+            // Spawn должен предшествовать событию здоровья; связь с сессией уже задана.
+            // Иначе observer ещё не зарегистрировал UXR-компонент нового аватара.
+            if (avatarClass != null && snapshot != null && snapshot.NeedsPhysicalRestore)
+                avatarClass.RestoreHealth(snapshot.Health);
             if (avatarClass != null)
                 session.ServerCapturePlacement(spawnPos, spawnRot, "первичный спавн");
 

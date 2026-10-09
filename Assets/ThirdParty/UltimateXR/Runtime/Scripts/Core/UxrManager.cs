@@ -202,18 +202,41 @@ namespace UltimateXR.Core
         // VR Battlegrounds patch 33: личный переключатель машины — EditorPrefs, не ассет в git.
         private const string EditorFocusPausePrefKey = "VrBattlegrounds.PauseXrWhenEditorUnfocused";
         private static bool? s_editorFocusPauseEnabled;
+        // VR Battlegrounds patch 58: процессный provider/override, без записи общих EditorPrefs.
+        private static System.Func<bool> s_editorFocusPauseProvider;
+        private static EditorFocusPauseScope s_editorFocusPauseScope;
+        public static void BindEditorFocusPauseProvider(System.Func<bool> provider)
+        {
+            if (provider == null) throw new System.ArgumentNullException(nameof(provider));
+            if (s_editorFocusPauseProvider != null) throw new System.InvalidOperationException("Editor focus provider already owned.");
+            s_editorFocusPauseProvider = provider;
+        }
+        public static System.IDisposable BeginEditorFocusPauseOverride(bool enabled)
+        {
+            if (s_editorFocusPauseScope != null) throw new System.InvalidOperationException("Editor focus override already owned.");
+            s_editorFocusPauseScope = new EditorFocusPauseScope(enabled); return s_editorFocusPauseScope;
+        }
+        private sealed class EditorFocusPauseScope : System.IDisposable
+        {
+            internal readonly bool Enabled;
+            internal EditorFocusPauseScope(bool enabled) { Enabled = enabled; }
+            public void Dispose() { if (ReferenceEquals(s_editorFocusPauseScope, this)) s_editorFocusPauseScope = null; }
+        }
 
         /// <summary>
         ///     VR Battlegrounds patch 33: ставить ли UltimateXR на паузу, пока окно редактора не в фокусе. Нужно, когда
-        ///     на машине открыто несколько редакторов (хост и клиенты). Хранится в EditorPrefs этой машины, в git не
-        ///     попадает; по умолчанию включено. Меню — <c>Tools/VR Battlegrounds/Debug/Pause XR When Editor Unfocused</c>;
-        ///     тесты и стенды выставляют его из кода и возвращают после себя.
+        ///     на машине открыто несколько редакторов (хост и клиенты). Patch 58: checkout provider и временный
+        ///     процессный scope владеют настройкой; без provider сохранён legacy EditorPrefs fallback.
+        ///     Тесты и стенды используют BeginEditorFocusPauseOverride и Dispose, без записи личного профиля.
         /// </summary>
         public static bool EditorFocusPauseEnabled
         {
-            get => s_editorFocusPauseEnabled ??= UnityEditor.EditorPrefs.GetBool(EditorFocusPausePrefKey, true);
+            get => s_editorFocusPauseScope != null ? s_editorFocusPauseScope.Enabled : s_editorFocusPauseProvider != null ? s_editorFocusPauseProvider() :
+                (s_editorFocusPauseEnabled ??= UnityEditor.EditorPrefs.GetBool(EditorFocusPausePrefKey, true));
             set
             {
+                if (s_editorFocusPauseScope != null || s_editorFocusPauseProvider != null)
+                    throw new System.InvalidOperationException("Focus settings belong to checkout profile or active launch.");
                 s_editorFocusPauseEnabled = value;
                 UnityEditor.EditorPrefs.SetBool(EditorFocusPausePrefKey, value);
             }

@@ -1,0 +1,95 @@
+{
+  "task_id": "lobby-decoration",
+  "owner": "lobby-decoration",
+  "client": "codex",
+  "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
+  "base_sha": "6c0473fda8faa5e217117da0e5f6a4ed2866b634",
+  "doc_path": "tasks/lobby-decoration/Readme.md",
+  "title": "Оформление лесного военного лобби и событийный эмбиент",
+  "stages": [
+    {
+      "id": "asset-acquisition",
+      "writes": [
+        "tasks/lobby-decoration/Readme.md",
+        "tasks/lobby-decoration/Details.md",
+        "tasks/lobby-decoration/plan.json",
+        "tasks/lobby-decoration/changelog/**",
+        "Docs/level-design/maps/lobby-field-range-assets.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "implementation",
+      "writes": [
+        "Assets/Art/Lobby/**",
+        "Assets/Art/Lobby.meta",
+        "Assets/Materials/Lobby/**",
+        "Assets/Materials/Lobby.meta",
+        "Assets/Prefabs/Environment/LobbyDecoration/**",
+        "Assets/Prefabs/Environment/LobbyDecoration.meta",
+        "Assets/Scripts/Environment/Audio/**",
+        "Assets/Scripts/Environment/Audio.meta",
+        "Assets/Scripts/Environment.meta",
+        "Assets/Data/Audio/LobbyAmbienceProfile.asset",
+        "Assets/Data/Audio/LobbyAmbienceProfile.asset.meta",
+        "Assets/Data/Audio.meta",
+        "Assets/Audio/SFX/Lobby/**",
+        "Assets/Audio/SFX/Lobby.meta",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/**",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration.meta",
+        "Assets/Scenes/Lobby.unity",
+        "Assets/Scenes/Lobby/OcclusionCullingData.asset",
+        "Assets/Scenes/Lobby/OcclusionCullingData.asset.meta",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset",
+        "tasks/lobby-decoration/implementation/**"
+      ],
+      "after": [
+        {
+          "task": "lobby-decoration",
+          "stage": "asset-acquisition",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "user-acceptance",
+      "writes": [
+        "tasks/lobby-decoration/Readme.md",
+        "tasks/lobby-decoration/Details.md",
+        "tasks/lobby-decoration/plan.json",
+        "tasks/lobby-decoration/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "lobby-decoration",
+          "stage": "implementation",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "accepted-tests-and-release",
+      "writes": [
+        "Assets/Tests/EditMode/Maps/LobbyLayoutTests.cs",
+        "Assets/Tests/EditMode/Environment/LobbyAmbienceTests.cs",
+        "Assets/Tests/EditMode/Environment/LobbyAmbienceTests.cs.meta",
+        "Assets/Tests/EditMode/Environment.meta",
+        "tasks/lobby-decoration/Readme.md",
+        "tasks/lobby-decoration/Details.md",
+        "tasks/lobby-decoration/plan.json",
+        "tasks/lobby-decoration/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "lobby-decoration",
+          "stage": "user-acceptance",
+          "state": "accepted"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Адресный стенд и интеграция Play Launch
 
-Обновлено: 2026-10-09. Владелец: vr-test-stand. Worktree: `F:/CodexWorktrees/vr-test-stand/Vr_Battlegrounds_ai`, ветка `codex/vr-test-stand`; база после rebase — `34535cad`.
+Обновлено: 2026-10-09. Владелец: vr-test-stand. Worktree: `F:/CodexWorktrees/vr-test-stand/Vr_Battlegrounds_ai`, ветка `codex/vr-test-stand`; принятая интеграция `51c8c047`, база документации — тот же SHA.
 
 ## Цель и границы
 
@@ -12,7 +12,7 @@
 
 PlayLaunch владеет frozen config; PlayModeTestStand — MPE/IPC; GameNetworkDiscovery — сетью. Адрес включает RunId, ParticipantId, ProcessSessionId; reconnect проверяет epoch/avatar. Ready требует свежие heartbeat и фактический допуск карты. NET-21 сохраняется.
 
-Полный анализ: [Details.md](Details.md). Единственный машинный план: [plan.json](plan.json). Контракт: [play-launch-control](contracts/play-launch-control.json); ревизия 1 согласована владельцем, ещё не active.
+Полный анализ: [Details.md](Details.md). Единственный машинный план: [plan.json](plan.json). Контракт [play-launch-control](contracts/play-launch-control.json) ревизии1 active, implementation51c8c047. Инструкции потребителям: [Docs/test-stand.md](../../Docs/test-stand.md), ссылка уже есть в каноническом AGENTS.md.
 
 ## План
 
@@ -24,7 +24,7 @@ SDK patch 58 записывается только в собственный [ch
 
 ## Проверка и состояние
 
-База34535cad; планrevision20, допускepoch47 RUNNING. Оба предшественника влиты. Rebase без конфликтов; backup32606e9a сохраняет74файла,74/74совпали по хешам перед обновлением metadata. Launcher чистый. Worker363–366 finish/receive DONE, последний result557b47c0 paths[], binaryinvalid[]. Пользователь 2026-10-09 явно принял текущую итерацию и разрешил commit/publication после самопроверки; самопроверка функционального пакета завершена, публикация выполняется.
+Код51c8c047 принят и влит через merge7a87a4f88c324b7c81bc6c888188610a, remoteHEAD подтверждён. Планrevision21; play-launch-integrationMERGED, docs-publicationepoch3RUNNING. Worker363–366 finish/receiveDONE, последний557b47c0 paths[], binaryinvalid[]. Запрос368 публикует кодовую базу в worker поFIFO; QUEUED не означаетDONE. Пользователь явно принял текущую итерацию после функциональной самопроверки. Документация публикуется отдельно, только4файла её области.
 
 356 на базе6c: Unity/Android gate PASS, managed recovery server10/10/client5/5 PASS. Capturemetrics false исправлены и подтверждены независимым audit; исходные отчёты не переписываем. Аудит полного358 на0071:136rawsegments/4PID/12identities,31,164,419newbytes, issues0; прежние teleport/Life/font/UXR UI/audio ошибки0. Реальны nativeXR8errors, licensing9 и UPM3managederrors. Успех функций не означает error-free/fullsuite/Quest acceptance.
 
@@ -36,7 +36,7 @@ Worker358 fullcandidate5cases56/56PASS. Whole-candidate review без подтв
 
 ## Следующее действие
 
-Коммит и публикация принятого функционального пакета по hub, затем инструкции Docs/test-stand.md отдельным docs-publication stage. NativeXR/UPM/licensing startup и baselinewarnings сохраняются в реестре следующей итерации; инфраструктурные EditModestartup/transport2350/2352 расследует сопровождающий. Ошибки не скрываем и не объявляем исправленными.
+Завершить docs-publication и проверить FIFO публикацию баз в worker. NativeXR/UPM/licensing startup и baselinewarnings сохраняются в реестре следующей итерации; EditModestartup/transport2350/2352 расследует сопровождающий, ответ2359 подтверждает ограничения, без testPASS. Ошибки не скрываем и не объявляем исправленными.
 
 Готовые исправления: health restore после spawn/ActiveAvatar; только живой sender и успешный stateevent отражаются; locomotion публикует автор аватара, включая deferredgate; duplicate UI не просыпается, NetworkManager сохраняет NET20escape; fontLegacyRuntime; один fallbackAudioListener, ServerOnlysilent с восстановлениемpause. Status наблюдает, Editorupdate владеетcleanup; exactempty observations могут ждать45s, мутации не повторяются. Новые gameplay/avatar tests до приёмки не добавлены.
 

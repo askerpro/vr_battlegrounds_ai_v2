@@ -3,7 +3,7 @@
   "owner": "vr-test-stand",
   "client": "codex",
   "worktree": "F:/CodexWorktrees/vr-test-stand/Vr_Battlegrounds_ai",
-  "base_sha": "34535cad7515d9aad39bede16b74c967731e9df1",
+  "base_sha": "51c8c0478515f95cd1996b43755fcd7ba9f2ddef",
   "doc_path": "tasks/vr-test-stand/Readme.md",
   "title": "Адресный стенд и интеграция Play Launch",
   "stages": [

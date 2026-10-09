@@ -1,109 +1,141 @@
-# Адресный стенд Play Mode
+# Play Launch и адресный стенд Play Mode
 
-Первый этап автоматизации: агент запускает выделенный сервер и два клиента через существующий
-Play Mode Scenarios, получает адреса реальных процессов и исполняет ограниченные команды
-в выбранном экземпляре. Сеть запускает существующий `GameNetworkDiscovery` по тегам сценария.
+Окно `Tools/VR Battlegrounds/Debug/Play Launch` и MCP используют один planner и замороженный
+request. `PlayModeTestStand` запускает процессы через MPPM/MPE и доставляет IPC-команды.
+Сеть ведёт `GameNetworkDiscovery`, карты — штатные MapLoader/startup route; Mirror владеет
+offline/online сценами. Контракт `play-launch-control@1` опубликован вместе с кодом `51c8c047`.
 
-## Запуск из Unity MCP
+## Профиль и обычный Play
 
-В linked worktree использовать собственную аренду редакторского worker через брокер.
-Вызовы ниже выполняются через штатный `execute_code`; результат — JSON-строка.
+Профиль хранится отдельно для каждого checkout: `UserSettings/VrBattlegrounds/play-launch.json`,
+schemaVersion 1. Папка игнорируется Git. Во время request конфигурация заморожена, постоянный
+профиль нельзя перезаписать. Legacy EditorPrefs импортируются только явным действием пользователя.
+
+Источники сцен: `active`, `lobby`, `scene` с `ScenePath`. Карта с MapRoot запускается через Offline
+и согласованный серверный startup route; standalone с StandaloneSceneMarker — без сети.
+Неразмеченная сцена требует явного `AllowUnmarked`. Planner проверяет каталог, Build Settings,
+совместимость режима и topology до запуска.
+
+Для обычного toolbar Play с явным источником выбрать одиночный native scenario с ролью,
+совпадающей с профилем, и `ClientCount=0`. Многопроцессный профиль запускать через Play Launch.
+Несовпадение роли или дополнительные экземпляры дают отказ до запуска. Native request имеет
+Owner=`native-play`; его `Status().Ready` не рассчитывается по StandManifest. Фактическую
+готовность проверять по Mirror, целевой сцене, MapRunAdmission и валидному MapBootstrap.LocalRunKey.
+
+## Порядок работы агента
+
+В linked worktree: fetch/rebase → checkpoint → request/watch-ticket → claim/begin → guard,
+затем MCP из своего worktree. Перед операциями проверить фактический worker root, idle,
+отсутствие чужого request/Play, dirty scenes и prefab stage. Допуск этапа хаба не заменяет lease.
+Полный JSON и логи сохранять в ignored `tasks/<task-id>/reports/`; выводить компактный итог.
+
+Предварительный план не запускает Play:
 
 ```csharp
-return VrBattlegrounds.EditorTools.TestStand.PlayModeTestStand.StartProbe();
+var config = new VrBattlegrounds.DevTools.PlayLaunchConfiguration {
+    Enabled = true, Role = "server", ClientCount = 2, HostIsAdmin = false,
+    SceneSource = "scene", ScenePath = "Assets/Scenes/Maps/TestMap2.unity",
+    ModeId = "elimination", AutoGoLive = false, BotCount = 0,
+    PauseOnFocusLoss = false, Readiness = "map-playable"
+};
+return VrBattlegrounds.EditorTools.TestStand.PlayLaunch.Plan(UnityEngine.JsonUtility.ToJson(config));
 ```
 
-Запуск копирует `Server+client` во временный сценарий с двумя клиентами и начальной сценой Offline.
-Исходный сценарий и ассеты не сохраняются с изменениями. `Status()` возвращает участников с
-`RunId`, `ParticipantId`, `ProcessSessionId`, PID, тегами, фактическими флагами Mirror и сценой.
-Готовность сети означает один ServerOnly и два клиента с `Connected=true`.
+Проверить `Passed`, `Code`, resolved scene/topology. Затем однократно передать **тот же JSON**
+в `PlayLaunch.Play(json, "<свой-owner>")`. Методы facade возвращают JSON-строки.
+`Role=server, ClientCount=2` означает Server+2Client; для Client+Host — Role=client,
+ClientCount=1, AdditionalPlayerRoles=new[] { "host" }. Роль `ask` не разрешена автоматическому запуску.
+`StartProbe()` прежнего маркерного пилота сохранён; новые потребители используют общий facade.
 
 ```csharp
-return VrBattlegrounds.EditorTools.TestStand.PlayModeTestStand.Status();
+return VrBattlegrounds.EditorTools.TestStand.PlayLaunch.Status();
 ```
 
-Для команды взять адрес нужного участника из текущего статуса:
+Managed `Ready=true` требует свежих heartbeat, фактических ролей/соединений, ожидаемой сцены,
+реального допуска и ключа карты. Один локально созданный сервер и его клиенты получают общую
+свободную пару UDP network/discovery портов. Успех MCP-вызова не означает Ready или прохождение проверки.
+
+## Адресные команды и reconnect
+
+Из свежего Status выбрать участника по RunId + ParticipantId + ProcessSessionId. PID или одна
+роль адресом не являются. Отдельный MCP-сервер каждого clone не требуется: команды доставляет MPE IPC.
 
 ```csharp
 var request = new VrBattlegrounds.EditorTools.TestStand.StandRequest {
-    RunId = "<RunId>", ParticipantId = "Player 2", ProcessSessionId = "<ProcessSessionId>",
-    RequestId = "marker-1", Action = "create-marker", MarkerName = "probe", TimeBudgetMs = 5000
+    RunId = "<текущий-run>", ParticipantId = "<цель>", ProcessSessionId = "<текущая-сессия>",
+    RequestId = "marker-1", Action = "create-marker", MarkerName = "probe", TimeBudgetMs = 5000,
+    ExpectedConnectionEpoch = 1, ExpectedAvatarNetId = 0
 };
 return VrBattlegrounds.EditorTools.TestStand.PlayModeTestStand.Send(request);
 ```
 
-Доступны `create-marker`, `read-marker`, `remove-marker`, `state` (для `state` MarkerName пустой).
-Маркер — локальный несетевой GameObject без физики. Проверка изоляции читает тот же MarkerName
-у каждого участника и требует, чтобы он существовал только у цели.
+Epoch и avatar netId брать из текущего участника, числа выше — placeholders. Действия:
+`create-marker`, `read-marker`, `remove-marker`, `state`, `disconnect`, `reconnect`, `run-e2e`.
+Маркер локальный, несетевой и без физики. Для сетевых команд MarkerName пустой, актуальный
+ExpectedConnectionEpoch обязателен; ненулевой ExpectedAvatarNetId дополнительно защищает цель.
 
-`Send` возвращает операцию. Пока `Completed=false`, опрашивать `Operation(RequestId)`.
-Новый RequestId обязателен для нового действия; повтор с тем же содержимым возвращает прежний
-результат. Изменённое содержимое под прежним RequestId отклоняется. Ответ включает адрес
-и PID фактического исполнителя. Команды идут через Unity MPE IPC; отдельный MCP-сервер клиента
-не требуется. Устаревшая сессия или запуск не получают команды.
+Disconnect адресуется отдельному Client-only, а не Host. Сервер и наблюдающий клиент должны
+оставаться живыми. После reconnect заново получить epoch/avatar и полный адрес; проверить admission,
+новую identity, восстановленное состояние и число сессий. Старый epoch/avatar должен быть отклонён.
+`run-e2e` задаёт Scenario/ScenarioTimeoutSeconds и использует уже запущенную сеть. Для готового
+сценария восстановления использовать пакет managed_e2e_worker_probe ниже.
 
-`EffectUnknown=true` означает, что эффект мог произойти, но его подтверждение не получено.
-Не повторять такое действие с новым RequestId без проверки состояния. Бюджет ожидания
-не прерывает уже выполняющийся код Unity. Кэши ограничены и не вытесняют выполненные запросы.
-Перезагрузка домена меняет ProcessSessionId; адрес нужно получить заново.
+`Send` возвращает operation; пока `Completed=false`, читать `Operation(RequestId)`. После завершения
+проверить Reply.Passed, полный адрес/PID исполнителя и EffectUnknown. Тот же RequestId с прежним
+payload возвращает сохранённый результат; новый payload под прежним ID отклоняется.
+EffectUnknown, timeout или executionCompleted=true не разрешают повтор мутации ради вывода.
+Сначала прочитать durable/native состояние. Domain reload меняет ProcessSessionId.
+
+## Завершение и звук
 
 ```csharp
-return VrBattlegrounds.EditorTools.TestStand.PlayModeTestStand.Operation("marker-1");
-// По завершении своего прогона:
-return VrBattlegrounds.EditorTools.TestStand.PlayModeTestStand.Stop();
+return VrBattlegrounds.EditorTools.TestStand.PlayLaunch.Cancel("<свой-run>", "<свой-owner>");
 ```
 
-После Stop дождаться `Phase=idle`, `Playing=false` и проверить `CleanupPassed`.
-Не освобождать аренду во время продолжающейся операции Play Mode, компиляции или импорта.
+Дождаться State=`Idle`, Playing=false, пустого Owner и CleanupPassed=true для managed run.
+Native cleanup проверять напрямую: Editor idle, request освобождён, сеть выключена; сохранённый
+backend CleanupPassed не является его собственной квитанцией. Проверить восстановление профиля,
+токена, native scenario и стартовой сцены. После конечного пакета сразу finish/receive,
+**до** диагностики, правок или ожидания пользователя; активную операцию не прерывать.
 
-## Временные настройки
+ServerOnly беззвучен. Host/client используют штатный звук; на Offline/reconnect fallback listener
+уступает фактически активному listener локального аватара. Временная ServerOnly audio pause
+восстанавливается при выходе. Стенд не пишет EditorPrefs/PlayerPrefs для временных профилей/токенов.
+Descriptor и IPC-маркеры удаляются своим владельцем; общий IPC-сервис не закрывается.
 
-Участники получают VR / Player / Admin=false через единственную IDisposable-область
-`LocalClientProfile.BeginTemporaryOverride`. Она блокирует отладочный override и восстанавливает
-предыдущие nullable-поля. `ClientDeviceIdentity` обеспечивает отдельный токен каждого участника
-без записи тестового значения в PlayerPrefs. Обычное подключение сохраняет прежний fallback
-и Editor-суффикс. CLI E2E использует ту же временную идентичность.
-
-На время прогона сохраняются и восстанавливаются Debug Bootstrap Enabled / HostIsAdmin,
-настройка паузы XR без фокуса и предыдущий Play Mode сценарий. Порты транспорта и Discovery
-меняются только у runtime-компонентов. Descriptor находится в `Temp/VRBattlegroundsTestStand`.
-Остановка отзывает команды, удаляет свои маркеры и освобождает области; общий IPC-сервис не закрывается.
-При аварийном завершении координатора личные EditorPrefs могут требовать восстановления;
-это ограничение пилота нужно учитывать при дальнейшей реализации recovery.
-
-## Проверки
+## Готовые проверки
 
 ```powershell
 dotnet run --project Tools/TestStand/ProtocolHarness.csproj
 dotnet build Tools/TestStand/EditorBinding.csproj
-# Только в собственной RUNNING-аренде после guard, из своего worktree:
-uv run --with 'mcp>=1.20,<2' Tools/TestStand/worker_probe.py --instance '<worker>' --editor-root '<worker-root>' --output tmp/test-stand/live.json
+# Только в своей RUNNING-аренде после guard:
+uv run --with 'mcp>=1.20,<2' tasks/vr-test-stand/tools/launch_worker_probe.py --instance '<worker>' --editor-root '<worker-root>' --output tasks/vr-test-stand/reports/launch.json
+uv run --with 'mcp>=1.20,<2' tasks/vr-test-stand/tools/managed_e2e_worker_probe.py --instance '<worker>' --editor-root '<worker-root>' --output tasks/vr-test-stand/reports/recovery.json
+uv run --with 'mcp>=1.20,<2' tasks/vr-test-stand/tools/native_bot_worker_probe.py --instance '<worker>' --editor-root '<worker-root>' --output tasks/vr-test-stand/reports/native-bot.json
 ```
 
-ProtocolHarness выполняет настоящий код адресного gate, областей профиля/токена и E2E-вердикта (22 проверки); Unity-порты
-там заменены минимальными заглушками. EditorBinding компилирует Editor-код с установленными
-managed DLL Unity; путь SDK задаётся `-p:UnityManaged=...`. Эти проверки не доказывают IPC и сеть.
-`worker_probe.py` запускает штатный прокси из своего worktree, проверяет фактическую цель,
-AndroidCompileGate и два запуска при выключенном/включённом Debug Bootstrap. Полный отчёт сохраняется
-в JSON. Живой результат и недоказанные критерии записываются в плане реализации.
+Launch probe поддерживает --case (server-two-clients, client-host, game-server, disabled-game-server,
+standalone) и --compile-only. Recovery probe запускает **сервер и одного клиента**, как требует
+существующий сценарий SessionRecoveryOnReconnectScenario. Spectator/двухклиентная изоляция — отдельная
+launch проверка. Все пакеты сохраняют логи actual PID до, во время и после собственного запуска,
+отдельно учитывая старые baseline bytes, ротацию и полноту capture. Логи не очищать; исключать только
+оговорённые lighting assets, остальные ошибки сохранять в реестре и передавать владельцу.
 
-2026-10-07: worker ticket 147, Android PASS, 53/53 живых утверждения, 22/22 локальных проверки.
-Подтверждены Server+2clients, адресные маркеры, повторный запуск, отказы адресов, очистка,
-восстановление личных настроек и обычный Play до/после. Input checkpoint: `8ed6484a`.
-Проверены настройки domain reload None / DisableDomainReload; фактический reload main
-не доказан (ProcessSessionId не изменился). Forced reload, смерть процесса и потеря IPC
-остаются отдельными проверками. Тесты обрыва/таймаута здесь относятся к протоколу и вердикту.
+ProtocolHarness выполняет production protocol/profile/config код с заглушками Unity: 32/32 на
+2026-10-09. EditorBinding — компиляция привязок к Unity DLL, не доказательство сети. Runtime пакеты:
+worker358 launch56/56; worker364 Android и recovery server10/10/client5/5; worker365 native/Bot33/33,
+cleanup/capture PASS. BotT01 завершён с NeedsReview/Passed=null; запуск и capture доказаны,
+выстрелы не проверены. Подробные результаты и raw evidence — [задача](../tasks/vr-test-stand/Readme.md).
 
-## Следующие этапы
+## Границы текущей итерации
 
-1. Добавить адресные disconnect/reconnect через единственного владельца сетевого lifecycle,
-   ожидание восстановления PlayerSession, сохранённого места, authority и количества игроков.
-2. Добавить XR-input adapter с одним владельцем позы/кнопок; совместимость Meta Simulator
-   исследовать отдельно с текущим Oculus backend проекта. Не подключать второй писатель поверх UltimateXR.
-3. Проверять UI реальным указателем/нажатием, хват — через штатный ввод и UltimateXR,
-   а не прямым вызовом результата игрового действия.
-4. Сетевые fault-сценарии различать: штатное отключение, пропажа пакетов, задержка, смерть сервера,
-   перезапуск с новым адресом. Сохранение сессии и восстановление транспорта — разные критерии.
+SelectedEditMode365 не стартовали до init timeout;366 потерял WebSocket до job receipt. Эти проверки
+не объявляются зелёными; диагностика передана сопровождающему (infra2350/2352/2359).
+Не повторять run_tests при неизвестном исходе; terminal MCP job сам по себе не доказывает остановку
+underlying Unity TestRunner. Перед новым запросом проверить native readiness.
 
-Маркерный пилот не устанавливает качество хвата, ходьбы, stereo XR, Quest или устойчивость
-переподключения. Серверный main позволяет отключать выбранного клиента без остановки сервера.
+Следующие этапы: HardwareXR startup policy и реальные OVR/UPM/licensing ошибки окружения;
+checkout-local Default/Fixed/Auto port overrides; единый XR-input adapter для поз/кнопок/UI/хвата/ходьбы;
+packet faults и смерть координатора/сервера. Фиксированные port overrides и VRBG_LAUNCH_CONFIG ещё
+не предоставлены. Профиль уже локален и вне Git. Не добавлять второй writer поверх UltimateXR.
+Полный test suite, физический toolbar click, качество хвата/stereo/Quest текущими отчётами не доказаны.

@@ -70,6 +70,12 @@
       "needs": []
     },
     {
+      "id": "legacy-doc-deletion",
+      "writes": ["tasks/agent-coordination-protocol/**", ".agents/rules/agent_coordination.md"],
+      "after": [{"task":"agent-coordination-protocol","stage":"checkout-root-resolution","state":"merged"}],
+      "needs": []
+    },
+    {
       "id": "checkout-root-resolution",
       "writes": [
         "tasks/agent-coordination-protocol/**",

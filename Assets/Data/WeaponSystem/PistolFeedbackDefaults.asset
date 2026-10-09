@@ -1,0 +1,90 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e5975d1ab6745e9b0144f559844090d, type: 3}
+  m_Name: PistolFeedbackDefaults
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponFeedbackDefaults
+  _category: 2
+  _audio:
+    _actionBack:
+      _clip: {fileID: 8300000, guid: 783d96a83231a404187e3885058739e9, type: 3}
+      _volume: 1
+    _actionForwardChambered:
+      _clip: {fileID: 8300000, guid: b64ebde5f6a9d994d8185e42893099f8, type: 3}
+      _volume: 1
+    _actionForwardEmpty:
+      _clip: {fileID: 8300000, guid: b64ebde5f6a9d994d8185e42893099f8, type: 3}
+      _volume: 1
+    _chamberEjected:
+      _clip: {fileID: 0}
+      _volume: 1
+    _slideLockCatch:
+      _clip: {fileID: 0}
+      _volume: 1
+    _dryFire:
+      _clip: {fileID: 8300000, guid: fe726d3155153a34b8f4aca59c732479, type: 3}
+      _volume: 1
+    _refusal:
+      _clip: {fileID: 8300000, guid: 3528b32d7ea4fb644bb6bb668e0bd775, type: 3}
+      _volume: 1
+  _haptics:
+    _actionRear:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 6
+      _fallbackAmplitude: 0.25
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _notReady:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 3
+      _fallbackAmplitude: 0.4
+      _fallbackDurationSeconds: 0.08
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _faulted:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 3
+      _fallbackAmplitude: 0.4
+      _fallbackDurationSeconds: 0.15
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _rateOfFire:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 2
+      _fallbackAmplitude: 0.4
+      _fallbackDurationSeconds: 0.06
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1

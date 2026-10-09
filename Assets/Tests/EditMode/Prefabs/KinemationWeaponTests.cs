@@ -405,8 +405,10 @@ namespace VrBattlegrounds.Tests.Prefabs
             {
                 // Этап drive (пилот Herrington): AutomaticWeaponSlideFeedback снят, звуки затвора — в WeaponAudioSet хоста.
                 // Звук отказа Refusal здесь не проверяется: он не звук ствола, а общий UI-сигнал (S2).
-                clips.Add(("затвор назад", host.Audio.ActionBack.Clip));
-                clips.Add(("затвор вперёд", host.Audio.For(VrBattlegrounds.Weapons.Core.WeaponCue.ActionForwardChambered)?.Clip));
+                // Этап waves-f: звучит то, что выберет исполнитель, — оверрайд ствола или дефолт категории (Resolve).
+                WeaponAudioSet defaults = host.FeedbackDefaults != null ? host.FeedbackDefaults.Audio : null;
+                clips.Add(("затвор назад", WeaponAudioSet.Resolve(host.Audio, defaults, VrBattlegrounds.Weapons.Core.WeaponCue.ActionBack, out _)?.Clip));
+                clips.Add(("затвор вперёд", WeaponAudioSet.Resolve(host.Audio, defaults, VrBattlegrounds.Weapons.Core.WeaponCue.ActionForwardChambered, out _)?.Clip));
             }
             var anchor = trigger.FindPropertyRelative("_ammunitionMagAnchor").objectReferenceValue as UxrGrabbableObjectAnchor;
             AnchorSound sound = anchor.GetComponent<AnchorSound>();

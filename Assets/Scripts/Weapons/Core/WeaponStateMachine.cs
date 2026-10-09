@@ -273,8 +273,11 @@ namespace VrBattlegrounds.Weapons.Core
                     _out.Cue(!E.OpChamberBefore && E.OpChamberAfter ? WeaponCue.ActionForwardChambered : WeaponCue.ActionForwardEmpty,
                         WeaponNotReadyReason.None);
                     break;
+                // CloseOnly — Action закрылся без извлечения и подачи (частичная оттяжка, T27/T30/T23). Отдельный сигнал
+                // (решение пользователя 2026-10-09): звук — как у возврата, а позже сюда можно добавить отклик
+                // «перезарядка не выполнена» (звук отказа, вибрация, подсветка), не трогая полный цикл.
                 case LedgerOp.CloseOnly:
-                    _out.Cue(WeaponCue.ActionForwardEmpty, WeaponNotReadyReason.None);
+                    _out.Cue(WeaponCue.ActionReturnPartial, WeaponNotReadyReason.None);
                     break;
             }
         }

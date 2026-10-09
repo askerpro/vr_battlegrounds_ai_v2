@@ -966,6 +966,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2221394708238033473, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1433752314967464850}
+    - targetCorrespondingSourceObject: {fileID: 2221394708238033473, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2704754807432936685}
     - targetCorrespondingSourceObject: {fileID: 3717225048965593575, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1183850422047703232}
@@ -1216,6 +1219,112 @@ MonoBehaviour:
   _fullSpeed: 5
   _cooldown: 0.2
   _maxVolume: 0.9
+--- !u!114 &2704754807432936685
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7352647028226897614}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a26a7cf7c39a2346b3e418ed895b0a4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponSystem
+  _triggerIndex: 0
+  _profile: {fileID: 11400000, guid: a4aea5c2602f48547aec4f1910c78ddc, type: 2}
+  _rig:
+    _body: {fileID: 0}
+    _handle: {fileID: 0}
+    _contactPart: {fileID: 0}
+    _actionBindings: []
+    _actionLocalRest: []
+    _extractionGate: 0.7
+    _springReturnSpeed: 1.5
+    _autoReturnSpeed: 1.5
+    _releasedAction: 0
+    _emptyRearTime: -1
+    _motion: {fileID: 0}
+    _parts: []
+    _magazineAnchor: {fileID: 0}
+  _audio:
+    _actionBack:
+      _clip: {fileID: 0}
+      _volume: 1
+    _actionForwardChambered:
+      _clip: {fileID: 0}
+      _volume: 1
+    _actionForwardEmpty:
+      _clip: {fileID: 0}
+      _volume: 1
+    _chamberEjected:
+      _clip: {fileID: 0}
+      _volume: 1
+    _slideLockCatch:
+      _clip: {fileID: 0}
+      _volume: 1
+    _dryFire:
+      _clip: {fileID: 0}
+      _volume: 1
+    _refusal:
+      _clip: {fileID: 0}
+      _volume: 1
+  _haptics:
+    _actionRear:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _notReady:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _faulted:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _rateOfFire:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+  _feedbackDefaults: {fileID: 11400000, guid: 85985b5ea9e111e4db2bfdf1c03eb563, type: 2}
+  _hintVisual: {fileID: 0}
+  _hintProximity: {fileID: 0}
 --- !u!4 &7358196801872260230 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2217937269811886089, guid: 0f6d7b9c63abe8043a1ea245c3b6fba9, type: 3}

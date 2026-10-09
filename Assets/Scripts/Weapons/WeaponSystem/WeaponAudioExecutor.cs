@@ -8,7 +8,8 @@ namespace VrBattlegrounds.Weapons
 {
     /// <summary>
     /// Единственный исполнитель звуков механизма (этап D, план п. 4.2): играет сигнал машины <see cref="WeaponCue"/> клипом
-    /// из <see cref="WeaponAudioSet"/>. Сам ничего не решает: звуки фиксаций (ActionBack, ActionForward*, ChamberEjected)
+    /// оверрайда ствола, а без него — дефолта категории (<see cref="WeaponAudioSet.Resolve"/>, в момент проигрывания: правка
+    /// ассета <see cref="WeaponFeedbackDefaults"/> действует сразу). Сам ничего не решает: звуки фиксаций (ActionBack, ActionForward*, ChamberEjected)
     /// машина выдаёт по учёту одинаково у автора и наблюдателя (Н1, Н2), DryFire и Refusal — только у автора.
     ///
     /// <para>
@@ -22,11 +23,12 @@ namespace VrBattlegrounds.Weapons
         private readonly UxrFirearmWeapon _weapon;
         private readonly int _trigger;
         private readonly WeaponAudioSet _set;
+        private readonly WeaponFeedbackDefaults _defaults;
         private readonly WeaponMechanismRig _rig;
 
-        public WeaponAudioExecutor(UxrFirearmWeapon weapon, int trigger, WeaponAudioSet set, WeaponMechanismRig rig)
+        public WeaponAudioExecutor(UxrFirearmWeapon weapon, int trigger, WeaponAudioSet set, WeaponFeedbackDefaults defaults, WeaponMechanismRig rig)
         {
-            _weapon = weapon; _trigger = trigger; _set = set; _rig = rig;
+            _weapon = weapon; _trigger = trigger; _set = set; _defaults = defaults; _rig = rig;
         }
 
         /// <summary>Сколько сигналов сыграно (для проб).</summary>
@@ -34,19 +36,19 @@ namespace VrBattlegrounds.Weapons
 
         public void Play(WeaponCue cue, WeaponNotReadyReason reason, UxrGrabber mainHand)
         {
-            if (_weapon == null || _set == null) return;
+            if (_weapon == null) return;
             if (cue == WeaponCue.DryFire && reason == WeaponNotReadyReason.Obstructed) return; // владелец — BarrelObstruction (до E)
-            UxrAudioSample sample = _set.For(cue);
+            UxrAudioSample sample = WeaponAudioSet.Resolve(_set, _defaults != null ? _defaults.Audio : null, cue, out WeaponFeedbackSource source);
             if (cue == WeaponCue.DryFire || cue == WeaponCue.Refusal)
             {
                 Vector3 trigger = _weapon.GetTriggerNoAmmoSoundPosition(_trigger, mainHand);
-                if (WeaponAudioSet.Has(sample)) sample.Play(trigger);
-                else if (cue == WeaponCue.DryFire) _weapon.PlayTriggerNoAmmoSound(_trigger, trigger);
+                if (sample != null) sample.Play(trigger);
+                else if (source == WeaponFeedbackSource.Sdk) _weapon.PlayTriggerNoAmmoSound(_trigger, trigger);
                 else return;
                 Played++;
                 return;
             }
-            if (!WeaponAudioSet.Has(sample)) return;
+            if (sample == null) return;
             Transform at = _rig.Handle != null ? _rig.Handle.transform : _weapon.transform;
             sample.Play(at.position);
             Played++;

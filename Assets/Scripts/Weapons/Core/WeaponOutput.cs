@@ -44,7 +44,7 @@ namespace VrBattlegrounds.Weapons.Core
     /// <see cref="DryFire"/> — щелчок отказа по патронам/препятствию/сбою; <see cref="Refusal"/> — искусственный
     /// звук отказа, не щелчок (S2: таймер темпа; звук <c>UI_Error_Subtle_Deep</c> подключается на этапе D).
     /// </summary>
-    public enum WeaponCue { ActionBack, ActionForwardChambered, ActionForwardEmpty, ChamberEjected, SlideLockCatch, DryFire, Refusal }
+    public enum WeaponCue { ActionBack, ActionForwardChambered, ActionForwardEmpty, ChamberEjected, SlideLockCatch, DryFire, Refusal, ActionReturnPartial }
 
     /// <summary>
     /// Вибрации оружия. Решение пользователя: все вибрации оружия, включая отдачу выстрела, ведёт WeaponSystem;

@@ -89,15 +89,17 @@ namespace VrBattlegrounds.Tests.Prefabs
             }
 
             // Этап drive (Herrington, FABARM): AutomaticWeaponSlideFeedback/UxrShotgunPump сняты, звуки хода — в WeaponAudioSet
-            // хоста WeaponSystem по сигналам машины. У остальных стволов хост есть (тот же GUID скрипта), но Rig пуст до волн F.
+            // хоста WeaponSystem по сигналам машины. Этап waves-f: ствол хранит только оверрайды, пустое поле — дефолт категории;
+            // проверяется то, что сыграет исполнитель (WeaponAudioSet.Resolve), а не поле ствола.
             foreach (WeaponSystem host in weapon.GetComponentsInChildren<WeaponSystem>(true))
             {
                 if (!host.Rig.HasAction) continue;
                 mechanisms++;
-                if (!WeaponAudioSet.Has(host.Audio.For(VrBattlegrounds.Weapons.Core.WeaponCue.ActionBack)))
-                    missing.Add($"{host.name} (WeaponSystem): Audio Action Back (оттягивание)");
-                if (!WeaponAudioSet.Has(host.Audio.For(VrBattlegrounds.Weapons.Core.WeaponCue.ActionForwardChambered)))
-                    missing.Add($"{host.name} (WeaponSystem): Audio Action Forward (обратный ход)");
+                WeaponAudioSet defaults = host.FeedbackDefaults != null ? host.FeedbackDefaults.Audio : null;
+                if (!WeaponAudioSet.Has(WeaponAudioSet.Resolve(host.Audio, defaults, VrBattlegrounds.Weapons.Core.WeaponCue.ActionBack, out _)))
+                    missing.Add($"{host.name} (WeaponSystem): Audio Action Back (оттягивание) — ни оверрайда, ни дефолта категории");
+                if (!WeaponAudioSet.Has(WeaponAudioSet.Resolve(host.Audio, defaults, VrBattlegrounds.Weapons.Core.WeaponCue.ActionForwardChambered, out _)))
+                    missing.Add($"{host.name} (WeaponSystem): Audio Action Forward (обратный ход) — ни оверрайда, ни дефолта категории");
             }
 
             // Без затвора (револьвер T-38): патрон не досылается — спуск стреляет прямо из барабана

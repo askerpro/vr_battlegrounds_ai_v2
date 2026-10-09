@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UltimateXR.Audio;
+using UltimateXR.Haptics;
 using UltimateXR.Mechanics.Weapons;
 using UnityEditor;
 using UnityEngine;
@@ -91,31 +92,50 @@ namespace VrBattlegrounds.Tests.Weapons
         [TestCaseSource(nameof(Pilots))]
         public void Звуки_механизма_из_WeaponAudioSet(Pilot pilot)
         {
-            WeaponAudioSet audio = Load(pilot).GetComponent<WeaponSystem>().Audio;
+            // Этап waves-f (принят 2026-10-09): ствол хранит только оверрайды, пустое поле — дефолт категории «дробовик».
+            // Проверяется то, что сыграет исполнитель, — WeaponAudioSet.Resolve, а не поле ствола.
+            WeaponSystem host = Load(pilot).GetComponent<WeaponSystem>();
+            WeaponFeedbackDefaults defaults = host.FeedbackDefaults;
+            Assert.That(defaults, Is.Not.Null, "У хоста ссылка на дефолты категории.");
+            Assert.That(defaults.Category, Is.EqualTo(WeaponFeedbackCategory.Shotgun), "Herrington и FABARM — категория «дробовик».");
+
             var wrong = new List<string>();
-            void Expect(string what, UxrAudioSample sample, string clip)
+            void Expect(WS.WeaponCue cue, string clip, WeaponFeedbackSource expectedSource)
             {
+                UxrAudioSample sample = WeaponAudioSet.Resolve(host.Audio, defaults.Audio, cue, out WeaponFeedbackSource source);
                 string actual = sample?.Clip != null ? sample.Clip.name : null;
-                if (actual != clip) wrong.Add($"{what}: '{actual ?? "пусто"}', ожидается '{clip ?? "пусто"}'");
+                if (actual != clip || source != expectedSource)
+                    wrong.Add($"{cue}: '{actual ?? "пусто"}' ({source}), ожидается '{clip}' ({expectedSource})");
             }
-            Expect("ActionBack", audio.ActionBack, pilot.ActionBack);
-            Expect("ActionForwardChambered", audio.ActionForwardChambered, pilot.ActionForwardChambered);
-            Expect("ActionForwardEmpty", audio.ActionForwardEmpty, pilot.ActionForwardEmpty);
-            Expect("Refusal (S2)", audio.Refusal, RefusalClip);
+            // Звуки механизма — свои у ствола (оверрайды из прежних компонентов).
+            Expect(WS.WeaponCue.ActionBack, pilot.ActionBack, WeaponFeedbackSource.Override);
+            Expect(WS.WeaponCue.ActionForwardChambered, pilot.ActionForwardChambered ?? pilot.ActionForwardEmpty, WeaponFeedbackSource.Override);
+            Expect(WS.WeaponCue.ActionForwardEmpty, pilot.ActionForwardEmpty, WeaponFeedbackSource.Override);
+            Expect(WS.WeaponCue.ActionReturnPartial, pilot.ActionForwardEmpty, WeaponFeedbackSource.Override);
+            // Отказ S2 — общий звук категории, на стволе копии нет.
+            Expect(WS.WeaponCue.Refusal, RefusalClip, WeaponFeedbackSource.Default);
             Assert.That(wrong, Is.Empty, string.Join("\n", wrong));
 
-            // Сигнал досылания всегда звучит: пустой ForwardChambered берёт ForwardEmpty.
-            Assert.That(WeaponAudioSet.Has(audio.For(WS.WeaponCue.ActionForwardChambered)), Is.True);
-            Assert.That(WeaponAudioSet.Has(audio.For(WS.WeaponCue.ActionBack)), Is.True);
+            Assert.That(WeaponAudioSet.Has(host.Audio.Refusal), Is.False,
+                "Копия звука отказа на стволе снята: правка дефолта «дробовик» должна действовать сразу.");
+            Assert.That(WeaponAudioSet.Has(host.Audio.ActionForwardChambered), Is.EqualTo(pilot.ActionForwardChambered != null),
+                "Помпа FABARM: своего звука досылания нет, звучит закрытие без подачи.");
         }
 
         [TestCaseSource(nameof(Pilots))]
         public void Вибрации_отказов_и_хода_не_пустые(Pilot pilot)
         {
-            WeaponHapticSet haptics = Load(pilot).GetComponent<WeaponSystem>().Haptics;
-            var silent = new[] { WS.WeaponHapticCue.NotReady, WS.WeaponHapticCue.Faulted, WS.WeaponHapticCue.RateOfFire, WS.WeaponHapticCue.ActionRear }
-                .Where(cue => !WeaponHapticSet.Has(haptics.For(cue))).ToList();
-            Assert.That(silent, Is.Empty, "Сигналы машины без вибрации: " + string.Join(", ", silent));
+            // Этап waves-f: вибрации пилотов равны дефолту категории — на стволе их нет, исполнитель берёт дефолт.
+            WeaponSystem host = Load(pilot).GetComponent<WeaponSystem>();
+            Assert.That(host.FeedbackDefaults, Is.Not.Null, "У хоста ссылка на дефолты категории.");
+            var wrong = new List<string>();
+            foreach (WS.WeaponHapticCue cue in new[] { WS.WeaponHapticCue.NotReady, WS.WeaponHapticCue.Faulted, WS.WeaponHapticCue.RateOfFire, WS.WeaponHapticCue.ActionRear })
+            {
+                UxrHapticClip clip = WeaponHapticSet.Resolve(host.Haptics, host.FeedbackDefaults.Haptics, cue, out WeaponFeedbackSource source);
+                if (!WeaponHapticSet.Has(clip)) wrong.Add($"{cue}: без вибрации");
+                else if (source != WeaponFeedbackSource.Default) wrong.Add($"{cue}: источник {source}, ожидается дефолт категории");
+            }
+            Assert.That(wrong, Is.Empty, string.Join("\n", wrong));
         }
 
         private static GameObject Load(Pilot pilot)

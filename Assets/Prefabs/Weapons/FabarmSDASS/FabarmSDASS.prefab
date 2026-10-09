@@ -466,6 +466,12 @@ MonoBehaviour:
     _fallbackClipType: 6
     _fallbackAmplitude: 0.8
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticClipOnPlace:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -473,6 +479,12 @@ MonoBehaviour:
     _fallbackClipType: 6
     _fallbackAmplitude: 0.4
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticClipOnRelease:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -480,6 +492,12 @@ MonoBehaviour:
     _fallbackClipType: 0
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
 --- !u!114 &7121474895116295525
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2746,6 +2764,12 @@ MonoBehaviour:
       _fallbackClipType: 8
       _fallbackAmplitude: 1
       _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
     _triggerGrabbable: {fileID: 2104307230834376735}
     _grabbableGrabPointIndex: 0
     _triggerTransform: {fileID: 957290741430033431}
@@ -2985,37 +3009,62 @@ MonoBehaviour:
       _clip: {fileID: 0}
       _volume: 1
     _refusal:
-      _clip: {fileID: 8300000, guid: 3528b32d7ea4fb644bb6bb668e0bd775, type: 3}
+      _clip: {fileID: 0}
       _volume: 1
   _haptics:
     _actionRear:
       _clip: {fileID: 0}
       _clipAmplitude: 1
       _hapticMode: 1
-      _fallbackClipType: 6
-      _fallbackAmplitude: 0.25
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
       _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
     _notReady:
       _clip: {fileID: 0}
       _clipAmplitude: 1
       _hapticMode: 1
-      _fallbackClipType: 3
-      _fallbackAmplitude: 0.4
-      _fallbackDurationSeconds: 0.08
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
     _faulted:
       _clip: {fileID: 0}
       _clipAmplitude: 1
       _hapticMode: 1
-      _fallbackClipType: 3
-      _fallbackAmplitude: 0.4
-      _fallbackDurationSeconds: 0.15
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
     _rateOfFire:
       _clip: {fileID: 0}
       _clipAmplitude: 1
       _hapticMode: 1
-      _fallbackClipType: 2
-      _fallbackAmplitude: 0.4
-      _fallbackDurationSeconds: 0.06
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+  _feedbackDefaults: {fileID: 11400000, guid: bd43905bcfa91cb4cb14f0f873d0266c, type: 2}
   _hintVisual: {fileID: 6127461960425013349}
   _hintProximity: {fileID: 6913912697481248505}
 --- !u!1 &6675585888481552551

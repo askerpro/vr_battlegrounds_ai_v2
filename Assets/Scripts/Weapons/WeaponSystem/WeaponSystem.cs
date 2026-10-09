@@ -46,6 +46,8 @@ namespace VrBattlegrounds.Weapons
         [SerializeField] private WeaponMechanismRig _rig = new WeaponMechanismRig();
         [SerializeField] private WeaponAudioSet _audio = new WeaponAudioSet();
         [SerializeField] private WeaponHapticSet _haptics = new WeaponHapticSet();
+        [Tooltip("Дефолты звука и вибрации категории ствола. Пустые поля Audio/Haptics ствола берутся отсюда.")]
+        [SerializeField] private WeaponFeedbackDefaults _feedbackDefaults;
         [Tooltip("Подсветка Action «дошли патрон» (видна по защёлке машины или когда рука рядом).")]
         [SerializeField] private GameObject _hintVisual;
         [Tooltip("Сигнал близости руки (аффорданс SDK) для подсветки Action.")]
@@ -118,6 +120,7 @@ namespace VrBattlegrounds.Weapons
         public WeaponMechanismRig Rig => _rig;
         public WeaponAudioSet Audio => _audio;
         public WeaponHapticSet Haptics => _haptics;
+        public WeaponFeedbackDefaults FeedbackDefaults => _feedbackDefaults;
         public GameObject HintVisual => _hintVisual;
         public GameObject HintProximity => _hintProximity;
 
@@ -186,8 +189,8 @@ namespace VrBattlegrounds.Weapons
                 _magazine = new WeaponMagazineSensor(_ledger);
                 _intake = new WeaponIntakeSensor(_weapon, _triggerIndex);
                 _pose = new WeaponPoseExecutor(_rig, _axes.HoldsOpen);
-                _sound = new WeaponAudioExecutor(_weapon, _triggerIndex, _audio, _rig);
-                _feedback = new WeaponFeedbackExecutor(_haptics, _hintVisual, _hintProximity);
+                _sound = new WeaponAudioExecutor(_weapon, _triggerIndex, _audio, _feedbackDefaults, _rig);
+                _feedback = new WeaponFeedbackExecutor(_haptics, _feedbackDefaults, _hintVisual, _hintProximity);
                 _integrity = new WeaponLedgerIntegrity(_weapon, this);
             }
             if (!_port.TryInstall(out error))
@@ -231,6 +234,17 @@ namespace VrBattlegrounds.Weapons
             _trigger?.Reset();
             _queue.Clear();
             _configured = false;
+        }
+
+        /// <summary>
+        /// Проверка данных хоста без запуска (сборщик, preflight волн): профиль, спуск с гнездом, механизм и оси машины —
+        /// те же правила, что при настройке в игре. Учёт SDK не подключается, состояние не меняется.
+        /// </summary>
+        public bool TryValidateConfiguration(out string error)
+        {
+            if (_configured) { error = null; return true; }
+            _weapon = GetComponent<UxrFirearmWeapon>();
+            return TryValidate(out error);
         }
 
         private bool TryValidate(out string error)

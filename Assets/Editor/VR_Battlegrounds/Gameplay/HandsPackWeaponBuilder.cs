@@ -686,8 +686,14 @@ namespace VrBattlegrounds.Editor.Gameplay
                 ManualLoadingAuthoring.ConfigureWeapon(root, r.Name, r.MagazineCapacity,
                     AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ManualLoadingProfile),
                     string.IsNullOrEmpty(r.LoadAudio) ? null : AssetDatabase.LoadAssetAtPath<AudioClip>(r.LoadAudio));
-            else if (!string.IsNullOrEmpty(r.ReadinessProfile))
-                WeaponSystemAuthoring.Configure(root, AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ReadinessProfile));
+            else
+            {
+                // Профиль — из рецепта, иначе из таблицы волн WeaponSystem (переведённый ствол пересобирается сразу на машине).
+                string readiness = !string.IsNullOrEmpty(r.ReadinessProfile) ? r.ReadinessProfile : WeaponSystemAuthoring.ProfilePathFor(r.Name);
+                if (!string.IsNullOrEmpty(readiness))
+                    WeaponSystemAuthoring.Configure(root, AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(readiness) ??
+                        throw new System.InvalidOperationException("Нет профиля готовности " + readiness));
+            }
 
             return root;
         }

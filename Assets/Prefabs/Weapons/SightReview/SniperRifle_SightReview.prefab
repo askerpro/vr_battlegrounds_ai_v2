@@ -750,13 +750,12 @@ GameObject:
   - component: {fileID: 1714860926801353344}
   - component: {fileID: 8879908808492876682}
   - component: {fileID: 894817082835462514}
-  - component: {fileID: 9004164070611481411}
   - component: {fileID: 8405273870888861586}
   - component: {fileID: 2823668211008666378}
   - component: {fileID: 5802606577204872477}
   - component: {fileID: 7470205667058336813}
   - component: {fileID: 6305414004971044833}
-  - component: {fileID: 8323099416017078947}
+  - component: {fileID: 808099613062051531}
   m_Layer: 0
   m_Name: SniperRifle_SightReview
   m_TagString: Weapon
@@ -1011,6 +1010,12 @@ MonoBehaviour:
       _fallbackClipType: 8
       _fallbackAmplitude: 1
       _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
     _triggerGrabbable: {fileID: 3923211276760131208}
     _grabbableGrabPointIndex: 0
     _triggerTransform: {fileID: 3935914230277084083}
@@ -1040,68 +1045,6 @@ MonoBehaviour:
   serverOnly: 0
   visibility: 0
   hasSpawned: 0
---- !u!114 &9004164070611481411
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4070875614615592137}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 58c1c1de3766f584691d4d80f90cf75e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.AutomaticWeaponSlideFeedback
-  _uxrUniqueId: a266326d-1ada-485d-ae1a-efe8ed2630dc
-  __prefabGuid: a1298bd283187ee4db62921478d8107a
-  __isInPrefab: 1
-  _triggerIndex: 0
-  _slide: {fileID: 8294376610172425676}
-  _slideThreshold: 0.855
-  _autoReturnOnRelease: 1
-  _autoReturnSpeed: 1.5
-  _chamberRoundOnSlideReturn: 1
-  _logBoltCycle: 1
-  _audioSlideForward:
-    _clip: {fileID: 8300000, guid: dc32b8fc851caab4ab723c3a3bd08340, type: 3}
-    _volume: 1
-  _audioSlideBack:
-    _clip: {fileID: 8300000, guid: 52517715cb195da41940f3fbf3a7092f, type: 3}
-    _volume: 1
-  _audioSlideForwardWhenLoaded:
-    _clip: {fileID: 0}
-    _volume: 1
-  _audioSlideBackWhenLoaded:
-    _clip: {fileID: 0}
-    _volume: 1
-  _hapticForward:
-    _clip: {fileID: 0}
-    _clipAmplitude: 1
-    _hapticMode: 1
-    _fallbackClipType: 6
-    _fallbackAmplitude: 1
-    _fallbackDurationSeconds: -1
-  _hapticBack:
-    _clip: {fileID: 0}
-    _clipAmplitude: 1
-    _hapticMode: 1
-    _fallbackClipType: 6
-    _fallbackAmplitude: 1
-    _fallbackDurationSeconds: -1
-  _hapticForwardWhenLoaded:
-    _clip: {fileID: 0}
-    _clipAmplitude: 1
-    _hapticMode: 1
-    _fallbackClipType: 10
-    _fallbackAmplitude: 1
-    _fallbackDurationSeconds: -1
-  _hapticBackWhenLoaded:
-    _clip: {fileID: 0}
-    _clipAmplitude: 1
-    _hapticMode: 1
-    _fallbackClipType: 10
-    _fallbackAmplitude: 1
-    _fallbackDurationSeconds: -1
 --- !u!114 &8405273870888861586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1184,7 +1127,7 @@ MonoBehaviour:
   _fullSpeed: 5
   _cooldown: 0.2
   _maxVolume: 0.9
---- !u!114 &8323099416017078947
+--- !u!114 &808099613062051531
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1193,15 +1136,111 @@ MonoBehaviour:
   m_GameObject: {fileID: 4070875614615592137}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0830e8833ac4458aad36c0f5295f90ae, type: 3}
+  m_Script: {fileID: 11500000, guid: 7a26a7cf7c39a2346b3e418ed895b0a4, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponChamberingReminder
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponSystem
   _triggerIndex: 0
-  _proximitySignal: {fileID: 5772514671307145475}
-  _visual: {fileID: 8205999372640144268}
-  _hapticAmplitude: 0.15
-  _hapticSeconds: 0.08
-  _hapticCooldown: 0.6
+  _profile: {fileID: 11400000, guid: 8a4fabd5f200820459515d46b7b30001, type: 2}
+  _rig:
+    _body: {fileID: 1118917243140558269}
+    _handle: {fileID: 8294376610172425676}
+    _contactPart: {fileID: 8135900729995036198}
+    _actionBindings:
+    - Target: {fileID: 8135900729995036198}
+      RestPosition: {x: 0, y: 0, z: 0}
+      RestRotation: {x: 0, y: 0, z: 0, w: 1}
+      RearPosition: {x: -0.000000024214387, y: 0, z: -0.07986107}
+      RearRotation: {x: 0, y: 0, z: 0, w: 1}
+      AnimateRotation: 0
+    _actionLocalRest:
+    - Position: {x: 0, y: 0, z: 0}
+      Rotation: {x: 0, y: 0, z: 0, w: 1}
+    _extractionGate: 0.855
+    _springReturnSpeed: 1.5
+    _autoReturnSpeed: 1.5
+    _releasedAction: 0
+    _emptyRearTime: -1
+    _motion: {fileID: 0}
+    _parts: []
+    _magazineAnchor: {fileID: 0}
+  _audio:
+    _actionBack:
+      _clip: {fileID: 8300000, guid: 52517715cb195da41940f3fbf3a7092f, type: 3}
+      _volume: 1
+    _actionForwardChambered:
+      _clip: {fileID: 0}
+      _volume: 1
+    _actionForwardEmpty:
+      _clip: {fileID: 8300000, guid: dc32b8fc851caab4ab723c3a3bd08340, type: 3}
+      _volume: 1
+    _chamberEjected:
+      _clip: {fileID: 0}
+      _volume: 1
+    _slideLockCatch:
+      _clip: {fileID: 0}
+      _volume: 1
+    _dryFire:
+      _clip: {fileID: 0}
+      _volume: 1
+    _refusal:
+      _clip: {fileID: 0}
+      _volume: 1
+  _haptics:
+    _actionRear:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _notReady:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _faulted:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _rateOfFire:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+  _feedbackDefaults: {fileID: 11400000, guid: 85985b5ea9e111e4db2bfdf1c03eb563, type: 2}
+  _hintVisual: {fileID: 8205999372640144268}
+  _hintProximity: {fileID: 5772514671307145475}
 --- !u!1 &4106077379521173809
 GameObject:
   m_ObjectHideFlags: 0

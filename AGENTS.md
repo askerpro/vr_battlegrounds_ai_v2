@@ -57,6 +57,11 @@ and user communication. Keep detailed execution traces in task artifacts, outsid
   while the session continues. Do not create duplicates or substitute an unattended daemon.
   Signals require fresh inbox/status checks; monitoring never ACKs or executes requests.
   See [monitor lifecycle](.agents/rules/agent_coordination.md#штатный-monitor-inbox).
+- Report worker, broker/proxy, coordination-hook and agent-infra issues to the hub:
+  address task agent-coordination-protocol, kind infra_issue, with an explicit
+  'for the worker and agent-infra maintainer' label, symptom/impact, reproduction,
+  ticket/event/commit IDs and evidence links. Then notify through the native channel
+  when available. Do not leave the report only in chat or self-repair shared infrastructure.
 - At session start/resume, the principal agent refreshes its own native route in the hub
   from a fresh native listing, or clears it when this client cannot address peer sessions.
   Before notifying another task, resolve its candidate and confirm both endpoints in a

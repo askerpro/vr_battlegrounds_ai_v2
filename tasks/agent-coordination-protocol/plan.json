@@ -70,6 +70,14 @@
       "needs": []
     },
     {
+      "id": "infra-checkout-handoff",
+      "writes": ["tasks/agent-coordination-protocol/**", ".agents/rules/agent_coordination.md", "AGENTS.md",
+        ".agent-state/worktrees/agent-coordination-protocol/tasks/agent-coordination-protocol/plan.json",
+        ".agent-state/worktrees/agent-coordination-protocol/tasks/agent-coordination-protocol/Readme.md"],
+      "after": [{"task":"agent-coordination-protocol","stage":"mandatory-native-monitor","state":"merged"}],
+      "needs": []
+    },
+    {
       "id": "mandatory-native-monitor",
       "writes": ["tasks/agent-coordination-protocol/**", ".agents/rules/agent_coordination.md", "AGENTS.md"],
       "after": [{"task":"agent-coordination-protocol","stage":"legacy-doc-deletion","state":"merged"}],

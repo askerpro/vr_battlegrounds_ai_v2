@@ -40,6 +40,11 @@ Checkout: F:/UnityProjects/Vr_Battlegrounds_ai.
 
 ## Текущий план
 
+Готовится отдельный checkout сопровождающего, см. [handoff](checkout-handoff.md).
+Адрес infra_issue остаётся agent-coordination-protocol независимо от пути checkout.
+В текущем Codex штатный Monitor с доставкой вывода в контекст не найден;
+применяются обязательные проверки inbox/status и штатные уведомления.
+
 Обязательный watch-inbox через штатный Monitor записан в AGENTS.md и правилах
 для клиентов, доставляющих вывод в контекст. Запуск при старте/возобновлении,
 повтор после timeout; один watcher на задачу/сессию, без автоматических ACK/действий.

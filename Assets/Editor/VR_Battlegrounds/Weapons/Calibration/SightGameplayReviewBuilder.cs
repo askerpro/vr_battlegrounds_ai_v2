@@ -115,10 +115,10 @@ namespace VrBattlegrounds.Editor.Weapons.Calibration
             foreach(var entry in entries)
             {
                 pairs.Add(entry); var variant=variants.FirstOrDefault(w=>w.WeaponId==entry.Weapon.WeaponId+"_SightReview");
-                if(variant!=null) pairs.Add(new ArsenalPreset.Entry {Weapon=variant,Zone=entry.Zone});
+                if(variant!=null) pairs.Add(new ArsenalPreset.Entry {Weapon=variant,Row=entry.Row});
             }
             var assortment=new SerializedObject(preset); var array=assortment.FindProperty("_entries"); array.arraySize=pairs.Count;
-            for(int i=0;i<pairs.Count;i++) {array.GetArrayElementAtIndex(i).FindPropertyRelative("Weapon").objectReferenceValue=pairs[i].Weapon;array.GetArrayElementAtIndex(i).FindPropertyRelative("Zone").enumValueIndex=(int)pairs[i].Zone;}
+            for(int i=0;i<pairs.Count;i++) {array.GetArrayElementAtIndex(i).FindPropertyRelative("Weapon").objectReferenceValue=pairs[i].Weapon;array.GetArrayElementAtIndex(i).FindPropertyRelative("Row").stringValue=pairs[i].Row;}
             assortment.ApplyModifiedPropertiesWithoutUndo(); AssetDatabase.SaveAssetIfDirty(preset);
             const string managers="Assets/Prefabs/Managers/--- MANAGERS ---.prefab";
             var managerRoot=PrefabUtility.LoadPrefabContents(managers);
@@ -134,12 +134,13 @@ namespace VrBattlegrounds.Editor.Weapons.Calibration
             return "Weapons PASS: "+variants.Count+" playable review copies, registry="+registry.Count+", preset="+pairs.Count+", originals unchanged.";
         }
 
+        /// <summary>Станцию лобби собирает генератор арсенала при запуске карты: достаточно сохранённого пресета.</summary>
         public static string PrepareArsenal()
         {
             CheckEdit();
-            string build=VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.CreateDemoPrefab();
-            string migration=VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.MigrateLobby();
-            return build+" "+migration;
+            var preset=AssetDatabase.LoadAssetAtPath<ArsenalPreset>(VrBattlegrounds.EditorTools.ArsenalPresetAssetBuilder.FullPath);
+            AssetDatabase.SaveAssetIfDirty(preset);
+            return "Пресет "+preset.name+" сохранён; станцию лобби соберёт генератор при запуске карты.";
         }
 
         public static string PrepareTargets()

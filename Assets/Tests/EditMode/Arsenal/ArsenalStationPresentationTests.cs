@@ -4,44 +4,64 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Tests.Arsenal;
 
 namespace VrBattlegrounds.Tests.ArsenalWall
 {
+    /// <summary>
+    /// Общая игровая станция в новом флоу: корпус без слотов, ряды корпуса вешают слоты пресета, сборщик слота
+    /// ставит карточку по раскладке. Слоты собираются исполнителями сборщика (<see cref="ArsenalTestStation.BuildSlots" />).
+    /// </summary>
     public class ArsenalStationPresentationTests
     {
         private const string Station = "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab";
+        private const string GameplayPreset = "Assets/Data/Weapons/CurrentGameplayArsenal.asset";
 
         [Test]
-        public void SavedStationHasFiveSlotsPerRowAndMkr9OnShelf()
+        public void Корпус_без_слотов_и_ряд_полки_едет_с_нижней_частью()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Station);
-            var poses = prefab.GetComponent<ArsenalEquipmentPoses>();
-            Assert.That(poses.Targets.Length, Is.EqualTo(2));
-            foreach (var row in poses.Targets)
-                Assert.That(row.Target.GetComponentsInChildren<FirearmSlotController>(true).Length, Is.EqualTo(5), row.Target.name);
-            var lower = poses.Targets.Single(p => p.ClosedPose.name.Contains("Lower"));
-            Assert.That(lower.Target.GetComponentsInChildren<FirearmSlotController>(true)
-                .Any(s => s.WeaponData != null && s.WeaponData.name.Contains("MKR9")), Is.True);
+            Assert.That(prefab.GetComponentsInChildren<ArsenalSlotController>(true), Is.Empty, "Слоты в корпусе — только от генератора.");
+            var rows = prefab.GetComponentsInChildren<ArsenalSlotRow>(true);
+            CollectionAssert.AreEquivalent(new[] { "pegboard", "shelf" }, rows.Select(r => r.RowKey).ToArray());
+            var lower = prefab.GetComponent<ArsenalEquipmentPoses>().Targets.Single(p => p.ClosedPose.name.Contains("Lower"));
+            Assert.That(rows.Single(r => r.RowKey == "shelf").transform.IsChildOf(lower.Target), Is.True,
+                "Полка должна выезжать вместе с нижней частью корпуса.");
         }
 
         [Test]
-        public void CardsAreSavedAndRuntimeCreationReusesThem()
+        public void Пять_слотов_в_каждом_ряду_и_MKR9_на_полке()
         {
             var instance = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Station));
             try
             {
-                var slots = instance.GetComponentsInChildren<FirearmSlotController>(true);
-                Assert.That(slots.Length, Is.EqualTo(10));
-                foreach (var slot in slots)
+                var built = ArsenalTestStation.BuildSlots(instance, GameplayPreset);
+                foreach (var row in instance.GetComponentsInChildren<ArsenalSlotRow>(true))
+                    Assert.That(row.GetComponentsInChildren<FirearmSlotController>(true).Length, Is.EqualTo(5), row.RowKey);
+                var mkr9 = built.Single(b => b.Manifest.Entry.WeaponResource.name.Contains("MKR9"));
+                Assert.That(mkr9.Row.RowKey, Is.EqualTo("shelf"));
+                Assert.That(mkr9.Slot.transform.parent, Is.SameAs(mkr9.Row.transform));
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
+        public void Карточка_одна_на_слот_и_на_полке_лежит()
+        {
+            var instance = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Station));
+            try
+            {
+                var built = ArsenalTestStation.BuildSlots(instance, GameplayPreset);
+                Assert.That(built.Count, Is.EqualTo(10));
+                foreach (var b in built)
                 {
-                    var card = slot.GetComponentsInChildren<ArsenalPriceTag>(true).Single();
-                    Assert.That(ArsenalPriceTag.Create(slot), Is.SameAs(card), slot.name);
-                    Assert.That(slot.GetComponentsInChildren<ArsenalPriceTag>(true).Length, Is.EqualTo(1));
+                    var card = b.Slot.GetComponentsInChildren<ArsenalPriceTag>(true).Single();
+                    Assert.That(ArsenalPriceTag.Create(b.Slot, b.Presentation), Is.SameAs(card), b.Slot.name);
+                    Assert.That(b.Slot.GetComponentsInChildren<ArsenalPriceTag>(true).Length, Is.EqualTo(1));
+                    if (b.Row.RowKey == "shelf")
+                        Assert.That(Mathf.Abs(Vector3.Dot(card.transform.forward, Vector3.up)), Is.GreaterThan(.99f),
+                            "Карточка слота полки должна лежать на горизонтальной панели: " + b.Slot.name);
                 }
-                var lower = instance.GetComponent<ArsenalEquipmentPoses>().Targets.Single(p => p.ClosedPose.name.Contains("Lower"));
-                foreach (var card in lower.Target.GetComponentsInChildren<ArsenalPriceTag>(true))
-                    Assert.That(Mathf.Abs(Vector3.Dot(card.transform.forward, Vector3.up)), Is.GreaterThan(.99f),
-                        "Карточка нижнего слота должна лежать на горизонтальной панели.");
             }
             finally { Object.DestroyImmediate(instance); }
         }

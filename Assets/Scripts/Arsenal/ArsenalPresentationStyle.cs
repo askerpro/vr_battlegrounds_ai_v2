@@ -25,46 +25,16 @@ namespace VrBattlegrounds.Arsenal
         public ArsenalPresentationPose SlotPose;
     }
 
-    /// <summary>Единственный автор композиции: target poses SDK anchors и карточки по физической зоне.</summary>
+    /// <summary>
+    ///     Внешний вид арсенала: модуль опор и материал подсказки возврата. Раскладку в слоте задаёт ассет
+    ///     <see cref="ArsenalSlotLayout" />, геометрию рядов — корпус (<see cref="ArsenalSlotRow" />).
+    /// </summary>
     [CreateAssetMenu(fileName = "ArsenalPresentation", menuName = "VR Battlegrounds/Arsenal/Presentation Style")]
     public sealed class ArsenalPresentationStyle : ScriptableObject
     {
-        [Serializable]
-        public sealed class ZoneDefaults
-        {
-            public ArsenalPresentationZone Zone;
-            public ArsenalPresentationPose ItemTarget;
-            public ArsenalPresentationPose MagazineTarget;
-            public ArsenalPresentationPose CardTarget;
-            public Vector2 CardSize = new Vector2(.15f, .16f);
-            public float CardFontSize = .16f;
-            public List<ArsenalSupportPose> Supports = new List<ArsenalSupportPose>();
-        }
-
-        [Serializable]
-        public sealed class WeaponException
-        {
-            public WeaponInfo Weapon;
-            public ArsenalPresentationZone Zone;
-            public bool OverrideItem;
-            public ArsenalPresentationPose ItemTarget;
-            public bool OverrideMagazine;
-            public ArsenalPresentationPose MagazineTarget;
-            public bool OverrideCard;
-            public ArsenalPresentationPose CardTarget;
-            public Vector2 CardSize = new Vector2(.15f, .16f);
-            public float CardFontSize = .16f;
-            public bool OverrideSupports;
-            public List<ArsenalSupportPose> Supports = new List<ArsenalSupportPose>();
-        }
-
         [SerializeField] private GameObject _supportModule;
         [SerializeField] private Material _returnReadyMaterial;
-        [SerializeField] private List<ZoneDefaults> _zones = new List<ZoneDefaults>();
-        [SerializeField] private List<WeaponException> _exceptions = new List<WeaponException>();
         public GameObject SupportModule => _supportModule;
         public Material ReturnReadyMaterial => _returnReadyMaterial;
-        public IReadOnlyList<ZoneDefaults> Zones => _zones;
-        public IReadOnlyList<WeaponException> Exceptions => _exceptions;
     }
 }

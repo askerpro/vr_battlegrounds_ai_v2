@@ -24,7 +24,7 @@ namespace VrBattlegrounds.Tests.Arsenal
         private static readonly string[] MapRoots = { "Assets/Prefabs", "Assets/Scenes" };
 
         [Test]
-        public void Общая_станция_соответствует_игровому_пресету()
+        public void Общая_станция_принимает_весь_игровой_пресет()
         {
             WeaponRegistry registry = AssetDatabase.LoadAssetAtPath<WeaponRegistry>("Assets/Data/Weapons/Resources/WeaponRegistry.asset");
             Assert.IsNotNull(registry, "Нет WeaponRegistry.");
@@ -33,23 +33,20 @@ namespace VrBattlegrounds.Tests.Arsenal
             Assert.IsNotEmpty(preset.Entries, "Пустой пресет не является успешной проверкой станции.");
             Assert.That(preset.Entries.All(e => e.Weapon != null && registry.Weapons.Contains(e.Weapon)), Is.True,
                 "Игровой пресет содержит пустое оружие или запись вне каталога.");
+            Assert.That(preset.Entries.Select(e => e.Weapon).Distinct().Count(), Is.EqualTo(preset.Entries.Count), "В игровом пресете повторяется оружие.");
 
-            var onWall = new HashSet<WeaponInfo>();
+            // Ассортимент стены — пресет: каждую запись вешает ряд корпуса, раскладка — своя у оружия или умолчание ряда.
             var wall = AssetDatabase.LoadAssetAtPath<GameObject>(Wall);
             Assert.IsNotNull(wall, "Нет общей игровой станции.");
-            foreach (FirearmSlotController slot in wall.GetComponentsInChildren<FirearmSlotController>(true))
+            var rows = wall.GetComponentsInChildren<ArsenalSlotRow>(true).ToDictionary(r => r.RowKey);
+            var problems = new List<string>();
+            foreach (var entry in preset.Entries)
             {
-                var info = new SerializedObject(slot).FindProperty("_weaponInfo").objectReferenceValue as WeaponInfo;
-                if (info != null) onWall.Add(info);
+                if (!rows.TryGetValue(entry.Row, out ArsenalSlotRow row)) { problems.Add(entry.Weapon.name + ": нет ряда " + entry.Row); continue; }
+                if (!entry.Weapon.TryGetSlotLayout(row.Zone, out _) && (row.SlotPrefab == null || row.SlotPrefab.DefaultLayout == null))
+                    problems.Add(entry.Weapon.name + ": нет раскладки для ряда " + entry.Row);
             }
-
-            var expected = new HashSet<WeaponInfo>(preset.Entries.Select(e => e.Weapon));
-            Assert.That(expected.Count, Is.EqualTo(preset.Entries.Count), "В игровом пресете повторяется оружие.");
-            var missing = expected.Where(w => !onWall.Contains(w)).Select(w => w.name).ToList();
-            var extra = onWall.Where(w => !expected.Contains(w)).Select(w => w.name).ToList();
-
-            Assert.IsEmpty(missing, "На общей станции отсутствуют позиции игрового пресета: " + string.Join(", ", missing));
-            Assert.IsEmpty(extra, "На общей станции позиции вне игрового пресета: " + string.Join(", ", extra));
+            Assert.IsEmpty(problems, "Общая станция не принимает записи игрового пресета:\n" + string.Join("\n", problems));
         }
 
         [Test]

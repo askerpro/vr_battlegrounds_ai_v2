@@ -95,7 +95,7 @@ namespace VrBattlegrounds.Maps.Runtime
                     foreach (var item in map.arsenalPreset.Entries)
                     {
                         if (item.Weapon == null || !MapRunResolver.Identifier(item.Weapon.WeaponId) || !weapons.Add(item.Weapon.WeaponId) ||
-                            !Enum.IsDefined(typeof(ArsenalPresentationZone), item.Zone)) { errors.Add("Map.Arsenal.Entry.Invalid:" + map.sceneName); continue; }
+                            string.IsNullOrWhiteSpace(item.Row)) { errors.Add("Map.Arsenal.Entry.Invalid:" + map.sceneName); continue; }
                         AddPrefab(item.Weapon.WeaponPrefab, "Weapon:" + item.Weapon.WeaponId, required, errors);
                         AddPrefab(item.Weapon.MagazinePrefab, "Magazine:" + item.Weapon.WeaponId, required, errors);
                     }

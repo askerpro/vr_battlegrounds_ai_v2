@@ -1,62 +1,66 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UltimateXR.Manipulation;
 
 namespace VrBattlegrounds.Arsenal
 {
-    /// <summary>Неизменные значения одного разрешения; styled targets не читаются из slot cache.</summary>
+    /// <summary>
+    ///     Представление одного слота: раскладка слота (своя у оружия или умолчание слота) и внешний вид арсенала.
+    ///     Неизменно после разрешения; слот читает его через <see cref="ArsenalStationPresetBinding" />.
+    /// </summary>
     public sealed class ArsenalPresentationSnapshot
     {
         public readonly ArsenalPresentationStyle Style;
+        /// <summary>Ассет раскладки, из которого собрано представление.</summary>
+        public readonly ArsenalSlotLayout Layout;
+        /// <summary>Раскладка принесена оружием; ложь — умолчание слота.</summary>
+        public readonly bool FromWeapon;
         public readonly ArsenalPresentationPose ItemTarget, MagazineTarget, CardTarget;
         public readonly Vector2 CardSize;
         public readonly float CardFontSize;
-        public readonly ArsenalPresentationPose LegacyItemPose;
+        public readonly ArsenalPlaceZone PlaceZone;
         private readonly ArsenalSupportPose[] _supports;
         public IReadOnlyList<ArsenalSupportPose> Supports => Array.AsReadOnly(_supports);
-        public bool IsStyled => Style != null;
-        internal ArsenalPresentationSnapshot(ArsenalPresentationStyle style, ArsenalPresentationPose item,
-            ArsenalPresentationPose magazine, ArsenalPresentationPose card, Vector2 size, float font,
-            IReadOnlyList<ArsenalSupportPose> supports, ArsenalPresentationPose legacy = default)
+        internal ArsenalPresentationSnapshot(ArsenalPresentationStyle style, ArsenalSlotLayout layout, bool fromWeapon)
         {
-            Style = style; ItemTarget = item; MagazineTarget = magazine; CardTarget = card;
-            CardSize = size; CardFontSize = font; LegacyItemPose = legacy;
-            _supports = new ArsenalSupportPose[supports == null ? 0 : supports.Count];
-            for (int i = 0; i < _supports.Length; i++) _supports[i] = supports[i];
+            Style = style; Layout = layout; FromWeapon = fromWeapon;
+            ItemTarget = layout.ItemTarget; MagazineTarget = layout.MagazineTarget; CardTarget = layout.CardTarget;
+            CardSize = layout.CardSize; CardFontSize = layout.CardFontSize; PlaceZone = layout.PlaceZone;
+            _supports = layout.Supports != null ? layout.Supports.ToArray() : Array.Empty<ArsenalSupportPose>();
         }
     }
 
-    /// <summary>Один pure выбор defaults/exceptions. Contact fit не является runtime writer.</summary>
+    /// <summary>
+    ///     Разрешение представления слота: своя раскладка оружия для вида слота, иначе раскладка слота по умолчанию;
+    ///     плюс внешний вид арсенала.
+    /// </summary>
     public static class ArsenalPresentationResolver
     {
-        public static ArsenalPresentationSnapshot Resolve(WeaponInfo weapon, ArsenalPresentationZone zone, ArsenalPresentationStyle style)
+        public static ArsenalPresentationSnapshot Resolve(WeaponInfo weapon, ArsenalPresentationZone slotKind, ArsenalPresentationStyle style,
+            ArsenalSlotLayout slotDefault)
         {
-            if (weapon == null || style == null) throw new InvalidOperationException("Styled resolver требует WeaponInfo и style.");
-            Validate(style);
-            ArsenalPresentationStyle.ZoneDefaults defaults = null;
-            foreach (var candidate in style.Zones) if (candidate.Zone == zone) defaults = candidate;
-            if (defaults == null) throw new InvalidOperationException("Неизвестная физическая зона композиции.");
-            var item = defaults.ItemTarget; var magazine = defaults.MagazineTarget; var card = defaults.CardTarget;
-            var size = defaults.CardSize; float font = defaults.CardFontSize;
-            IReadOnlyList<ArsenalSupportPose> supports = defaults.Supports;
-            foreach (var exception in style.Exceptions)
-            {
-                if (exception.Weapon != weapon || exception.Zone != zone) continue;
-                if (exception.OverrideItem) item = exception.ItemTarget;
-                if (exception.OverrideMagazine) magazine = exception.MagazineTarget;
-                if (exception.OverrideCard) { card = exception.CardTarget; size = exception.CardSize; font = exception.CardFontSize; }
-                if (exception.OverrideSupports) supports = exception.Supports;
-            }
+            if (weapon == null || style == null) throw new InvalidOperationException("Представление требует оружие и стиль арсенала.");
+            bool fromWeapon = weapon.TryGetSlotLayout(slotKind, out ArsenalSlotLayout layout);
+            if (!fromWeapon) layout = slotDefault;
+            if (layout == null)
+                throw new InvalidOperationException("Нет раскладки для слота " + slotKind + ": ни у оружия " + weapon.WeaponId + ", ни по умолчанию у слота.");
+            if (layout.SlotKind != slotKind)
+                throw new InvalidOperationException("Раскладка " + layout.name + " для слота " + layout.SlotKind + ", а слот " + slotKind + ".");
+            ValidatePose(layout.ItemTarget); ValidatePose(layout.MagazineTarget); ValidatePose(layout.CardTarget);
+            ValidateCard(layout.CardSize, layout.CardFontSize); ValidateSupports(layout.Supports);
+            if (layout.Supports != null && layout.Supports.Count != 0 && (style.SupportModule == null || style.ReturnReadyMaterial == null))
+                throw new InvalidOperationException("Опоры раскладки " + layout.name + " требуют модуль опор и материал подсказки в стиле арсенала.");
+            ValidateStyle(style);
             ValidatePrefabAlignment(weapon.WeaponPrefab);
             ValidatePrefabAlignment(weapon.MagazinePrefab);
-            return new ArsenalPresentationSnapshot(style, item, magazine, card, size, font, supports);
+            return new ArsenalPresentationSnapshot(style, layout, fromWeapon);
         }
 
         /// <summary>Generated frames проверяются до runtime Configure; cache служит только диагностикой projection.</summary>
         public static void ValidateMaterialized(ArsenalSlotController slot, ArsenalPresentationSnapshot snapshot)
         {
-            if (!snapshot.IsStyled) return;
             void Match(Transform frame, ArsenalPresentationPose target)
             {
                 if (frame == null || (frame.position - slot.transform.TransformPoint(target.Position)).sqrMagnitude > 1e-10f ||
@@ -67,8 +71,6 @@ namespace VrBattlegrounds.Arsenal
             Match(((FirearmSlotController)slot).MagAnchor.AlignTransform, snapshot.MagazineTarget);
             var card = slot.GetComponentInChildren<ArsenalPriceTag>(true);
             Match(card != null ? card.transform : null, snapshot.CardTarget);
-            if (slot.CardSize != snapshot.CardSize || slot.CardFontSize != snapshot.CardFontSize)
-                throw new InvalidOperationException("Stale generated card size/font: " + slot.name);
             var container = slot.transform.Find(ArsenalPresentationApplicator.SupportsContainerName);
             if (snapshot.Supports.Count == 0)
             {
@@ -155,37 +157,14 @@ namespace VrBattlegrounds.Arsenal
                 ValidateSupportTree(output.Find(input.GetChild(i).name), input.GetChild(i), false, ready);
         }
 
-        public static void Validate(ArsenalPresentationStyle style)
+        /// <summary>Модуль опор — только визуальная геометрия: без коллайдеров, физики и поведения.</summary>
+        public static void ValidateStyle(ArsenalPresentationStyle style)
         {
-            if (style == null || style.Zones == null || style.Zones.Count != 2)
-                throw new InvalidOperationException("Стиль требует ровно Pegboard и Shelf defaults.");
-            var zones = new HashSet<ArsenalPresentationZone>();
-            foreach (var zone in style.Zones)
-            {
-                if (zone == null || !Enum.IsDefined(typeof(ArsenalPresentationZone), zone.Zone) || !zones.Add(zone.Zone))
-                    throw new InvalidOperationException("Неизвестная или повторная зона стиля.");
-                ValidatePose(zone.ItemTarget); ValidatePose(zone.MagazineTarget); ValidatePose(zone.CardTarget);
-                ValidateCard(zone.CardSize, zone.CardFontSize); ValidateSupports(zone.Supports);
-            }
-            var keys = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var exception in style.Exceptions)
-            {
-                if (exception == null || exception.Weapon == null || !Enum.IsDefined(typeof(ArsenalPresentationZone), exception.Zone) ||
-                    !keys.Add(exception.Weapon.GetInstanceID() + ":" + (int)exception.Zone))
-                    throw new InvalidOperationException("Недопустимый или повторный WeaponInfo/zone exception.");
-                ValidatePose(exception.ItemTarget); ValidatePose(exception.MagazineTarget); ValidatePose(exception.CardTarget);
-                ValidateCard(exception.CardSize, exception.CardFontSize); ValidateSupports(exception.Supports);
-            }
             if (style.SupportModule != null && (style.SupportModule.GetComponentsInChildren<Collider>(true).Length != 0 ||
                 style.SupportModule.GetComponentsInChildren<Rigidbody>(true).Length != 0 ||
                 style.SupportModule.GetComponentsInChildren<MonoBehaviour>(true).Length != 0 ||
                 style.SupportModule.GetComponentsInChildren<Animator>(true).Length != 0))
-                throw new InvalidOperationException("Support module должен содержать только визуальную геометрию.");
-            bool hasSupports = false;
-            foreach (var zone in style.Zones) hasSupports |= zone.Supports.Count != 0;
-            foreach (var exception in style.Exceptions) hasSupports |= exception.OverrideSupports && exception.Supports.Count != 0;
-            if (hasSupports && (style.SupportModule == null || style.ReturnReadyMaterial == null))
-                throw new InvalidOperationException("Supports требуют visual module и один Style-owned near material.");
+                throw new InvalidOperationException("Модуль опор должен содержать только визуальную геометрию.");
         }
 
         public static void ValidatePrefabAlignment(GameObject prefab)
@@ -195,7 +174,7 @@ namespace VrBattlegrounds.Arsenal
                 (item.DropAlignTransform != item.transform && !item.DropAlignTransform.IsChildOf(item.transform)))
                 throw new InvalidOperationException("Предмет не имеет собственного root/drop alignment.");
             if (item.DropSnapMode != UxrSnapToAnchorMode.PositionAndRotation)
-                throw new InvalidOperationException("Styled presentation требует SDK PositionAndRotation drop snap: " + prefab.name);
+                throw new InvalidOperationException("Представление требует SDK PositionAndRotation drop snap: " + prefab.name);
             ValidateScale(prefab.transform.localScale, "item root");
             for (var node = item.DropAlignTransform; node != null && node != item.transform; node = node.parent)
                 ValidateScale(node.localScale, "drop alignment chain");
@@ -237,51 +216,6 @@ namespace VrBattlegrounds.Arsenal
                 if (!Enum.IsDefined(typeof(ArsenalSupportAnchorKind), support.AnchorKind))
                     throw new InvalidOperationException("Неизвестный support anchor kind.");
                 ValidatePose(support.SlotPose);
-            }
-        }
-    }
-
-    /// <summary>Единственный совместимый адаптер сохранённой legacy presentation; никогда не вызывается styled path.</summary>
-    public static class ArsenalLegacyPresentationAdapter
-    {
-        public static ArsenalPresentationSnapshot Resolve(ArsenalSlotController slot)
-        {
-            if (slot == null) throw new ArgumentNullException(nameof(slot));
-            Vector3 cardPosition; Quaternion cardRotation; Vector2 size; float font;
-            if (slot.HasCustomCardPresentation)
-            {
-                cardPosition = slot.CardLocalPosition; cardRotation = slot.CardLocalRotation;
-                size = slot.CardSize; font = slot.CardFontSize;
-            }
-            else
-            {
-                Transform wall = slot.Wall != null ? slot.Wall.transform : slot.transform;
-                Vector3 anchor = slot.ItemAnchor != null ? slot.ItemAnchor.transform.position : slot.transform.position;
-                Vector3 offset = slot.WeaponData != null && slot.WeaponData.Category == WeaponCategory.Rifle
-                    ? new Vector3(.15f, .43f, -.065f) : new Vector3(.18f, .09f, -.1f);
-                cardPosition = slot.transform.InverseTransformPoint(anchor + wall.rotation * offset);
-                cardRotation = Quaternion.Inverse(slot.transform.rotation) * wall.rotation;
-                size = new Vector2(.15f, .16f); font = .16f;
-            }
-            var legacy = new ArsenalPresentationPose {
-                Position = slot.WeaponData != null ? slot.WeaponData.WeaponPositionOffset : Vector3.zero,
-                EulerAngles = slot.WeaponData != null ? slot.WeaponData.WeaponRotationOffset : Vector3.zero };
-            return new ArsenalPresentationSnapshot(null, default, default,
-                new ArsenalPresentationPose(cardPosition, cardRotation), size, font, null, legacy);
-        }
-
-        /// <summary>Только явный Build(default) авторит legacy template. Обычный Ensure сохранённую custom pose не сбрасывает.</summary>
-        public static void SeedCard(ArsenalSlotController slot, bool explicitDefault)
-        {
-            if (slot.HasCustomCardPresentation && !explicitDefault) return;
-            foreach (var board in slot.GetComponentsInChildren<Transform>(true))
-            {
-                if (board.name != "PegboardSection") continue;
-                bool underside = Vector3.Dot(board.TransformDirection(Vector3.back), Vector3.up) < -.5f;
-                Vector3 point = board.TransformPoint(new Vector3(.3f, .25f, underside ? .54f : -.54f));
-                slot.ConfigureCardPresentation(slot.transform.InverseTransformPoint(point), new Vector2(.15f, .16f), .16f,
-                    Quaternion.Inverse(slot.transform.rotation) * board.rotation * (underside ? Quaternion.Euler(180f, 0f, 0f) : Quaternion.identity));
-                return;
             }
         }
     }

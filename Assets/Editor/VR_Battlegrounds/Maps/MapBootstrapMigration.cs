@@ -305,7 +305,6 @@ namespace VrBattlegrounds.EditorTools
                 keyProperty.stringValue = key;
             }
             keys.Add(key);
-            so.FindProperty("_mode").enumValueIndex = (int)ArsenalCompositionMode.Authored;
             AssignOwnerRefs(so, wall);
             so.ApplyModifiedPropertiesWithoutUndo();
             return key;
@@ -321,7 +320,6 @@ namespace VrBattlegrounds.EditorTools
         private static void AssignOwnerRefs(SerializedObject so, Component station)
         {
             so.FindProperty("_controller").objectReferenceValue = station.GetComponent<ArsenalWallController>();
-            so.FindProperty("_authoredBinding").objectReferenceValue = station.GetComponent<ArsenalStationPresetBinding>();
             so.FindProperty("_stationAnchor").objectReferenceValue = station.GetComponent<ArsenalStationAnchor>();
             so.FindProperty("_equipmentPoses").objectReferenceValue = station.GetComponent<ArsenalEquipmentPoses>();
             so.FindProperty("_stationIdentity").objectReferenceValue = station.GetComponent<NetworkIdentity>();
@@ -439,7 +437,6 @@ namespace VrBattlegrounds.EditorTools
                 var binding = contents.GetComponent<ArsenalStationCompositionBinding>() ??
                               contents.AddComponent<ArsenalStationCompositionBinding>();
                 var so = new SerializedObject(binding);
-                so.FindProperty("_mode").enumValueIndex = (int)ArsenalCompositionMode.Authored;
                 AssignOwnerRefs(so, wall);
                 so.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.SaveAsPrefabAsset(contents, path);

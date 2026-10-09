@@ -86,7 +86,7 @@ namespace VrBattlegrounds.Editor.Arsenal
                 var descriptor = new ArsenalDecorationDescriptor("fixture/" + nonce, "fixture", artworkAsset,
                     AssetDatabase.GetAssetDependencyHash(c.Path).ToString(), initial.Slots.Count, initial.Slots.Count, true,
                     default, Vector3.one, new Bounds(Vector3.zero, Vector3.one * 100), c.Mesh.bounds);
-                c.Catalog = ArsenalCompositionCatalog.CreateCompiled("fixture/" + nonce, catalog.Templates,
+                c.Catalog = ArsenalCompositionCatalog.CreateCompiled("fixture/" + nonce,
                     new[] { descriptor }, catalog.Weapons, catalog.Supports, catalog.Materials);
                 SaveOwn(c, c.Catalog, "Catalog.asset");
                 SaveOwn(c, c.Preset, "Preset.asset");

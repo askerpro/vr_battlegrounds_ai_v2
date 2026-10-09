@@ -1,35 +1,34 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
+using UltimateXR.Manipulation;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UltimateXR.Manipulation;
-using VrBattlegrounds.Arsenal;
 
-namespace VrBattlegrounds.Editor.Arsenal
+namespace VrBattlegrounds.Arsenal
 {
-    /// <summary>In-place projection визуальных опор и SDK-подсказки из одного Style.</summary>
-    public static class ArsenalSupportModuleBuilder
+    /// <summary>
+    ///     Проекция представления слота по стилю: якоря, карточка, визуальные опоры и подсказки возврата SDK.
+    ///     Единая точка для редакторского сборщика авторских станций (результат сохраняется в префаб) и для
+    ///     сборщика сгенерированной станции (на свежем клоне шаблона, до включения). Позы применяются как есть.
+    ///     Повтор на уже спроецированном слоте обновляет его на месте; смену состава опор не делает.
+    /// </summary>
+    public static class ArsenalSupportProjection
     {
-        public const string ContainerName = ArsenalPresentationApplicator.SupportsContainerName;
-        public const string HintsName = ArsenalPresentationApplicator.ReturnHintsContainerName;
-
-        /// <summary>Единый порядок explicit projection: frames, карточка, опоры, полная stale-проверка.</summary>
+        /// <summary>Единый порядок: якоря, карточка, опоры.</summary>
         public static void MaterializePresentation(ArsenalSlotController slot, ArsenalPresentationSnapshot snapshot)
         {
             ArsenalPresentationApplicator.MaterializeFrames(slot, snapshot);
             ArsenalPresentationApplicator.MaterializeCard(slot, snapshot);
-            Materialize(slot, snapshot);
+            MaterializeSupports(slot, snapshot);
         }
 
-        public static void Materialize(ArsenalSlotController slot, ArsenalPresentationSnapshot snapshot)
+        public static void MaterializeSupports(ArsenalSlotController slot, ArsenalPresentationSnapshot snapshot)
         {
-            if (!snapshot.IsStyled) return;
             var module = snapshot.Style.SupportModule;
-            var container = slot.transform.Find(ContainerName);
+            var container = slot.transform.Find(ArsenalPresentationApplicator.SupportsContainerName);
             ValidateRoles(container, snapshot.Supports, module);
-            var hints = slot.transform.Find(HintsName);
+            var hints = slot.transform.Find(ArsenalPresentationApplicator.ReturnHintsContainerName);
             foreach (ArsenalSupportAnchorKind kind in Enum.GetValues(typeof(ArsenalSupportAnchorKind)))
             {
                 var poses = snapshot.Supports.Where(s => s.AnchorKind == kind).ToArray();
@@ -42,8 +41,8 @@ namespace VrBattlegrounds.Editor.Arsenal
                     throw new InvalidOperationException("Чужая SDK near-подсказка: отдельный план замены обязателен.");
             }
             if (snapshot.Supports.Count == 0) return;
-            container = EnsureIdentity(slot.transform, ContainerName, true);
-            hints = EnsureIdentity(slot.transform, HintsName, true);
+            container = EnsureIdentity(slot.transform, ArsenalPresentationApplicator.SupportsContainerName, true);
+            hints = EnsureIdentity(slot.transform, ArsenalPresentationApplicator.ReturnHintsContainerName, true);
             foreach (var pose in snapshot.Supports) MaterializeRole(container, pose, module, null);
             foreach (ArsenalSupportAnchorKind kind in Enum.GetValues(typeof(ArsenalSupportAnchorKind)))
             {
@@ -58,14 +57,10 @@ namespace VrBattlegrounds.Editor.Arsenal
                 var anchor = Anchor(slot, kind);
                 if (anchor.ActivateOnCompatibleNear != group.gameObject) anchor.ActivateOnCompatibleNear = group.gameObject;
             }
-            ValidateProjection(slot, snapshot);
         }
 
         private static UxrGrabbableObjectAnchor Anchor(ArsenalSlotController slot, ArsenalSupportAnchorKind kind) =>
             kind == ArsenalSupportAnchorKind.Weapon ? slot.ItemAnchor : (slot as FirearmSlotController)?.MagAnchor;
-
-        public static void ValidateProjection(ArsenalSlotController slot, ArsenalPresentationSnapshot snapshot) =>
-            ArsenalPresentationResolver.ValidateMaterialized(slot, snapshot);
 
         private static Transform EnsureIdentity(Transform parent, string name, bool active)
         {
@@ -132,8 +127,17 @@ namespace VrBattlegrounds.Editor.Arsenal
             }
         }
 
+        /// <summary>Узлы поддерева по относительному пути (корень — пустая строка), как AnimationUtility.CalculateTransformPath.</summary>
         private static Dictionary<string, Transform> Nodes(Transform root) => root.GetComponentsInChildren<Transform>(true)
-            .ToDictionary(t => AnimationUtility.CalculateTransformPath(t, root), StringComparer.Ordinal);
+            .ToDictionary(t => Path(t, root), StringComparer.Ordinal);
+
+        private static string Path(Transform node, Transform root)
+        {
+            if (node == root) return string.Empty;
+            var path = node.name;
+            for (var parent = node.parent; parent != root; parent = parent.parent) path = parent.name + "/" + path;
+            return path;
+        }
 
         private static void ValidateTopology(Transform target, Transform source)
         {

@@ -23,6 +23,12 @@ namespace VrBattlegrounds.Arsenal
         [Tooltip("Физическая роль слота: верхняя панель или нижняя полка. Не зависит от выбранного оружия.")]
         [SerializeField] private ArsenalPresentationZone _presentationZone;
         public ArsenalPresentationZone PresentationZone => _presentationZone;
+        [Tooltip("Ширина слота вдоль ряда, м. Ряд корпуса (ArsenalSlotRow) раскладывает слоты по ней и своему зазору.")]
+        [SerializeField] private float _slotWidth = 0.4f;
+        public float SlotWidth => _slotWidth;
+        [Tooltip("Раскладка слота по умолчанию: как лежит оружие без своей раскладки для этого вида слота.")]
+        [SerializeField] private ArsenalSlotLayout _defaultLayout;
+        public ArsenalSlotLayout DefaultLayout => _defaultLayout;
         private bool _placingValidatorAdded;
         private string _configuredAnchorTag;
 
@@ -47,36 +53,6 @@ namespace VrBattlegrounds.Arsenal
         [Header("Anchor")]
         [Tooltip("Snap zone for the item (auto-found if empty)")]
         [SerializeField] private UxrGrabbableObjectAnchor _itemAnchor;
-
-        [Header("Карточка на панели")]
-        [SerializeField] private bool _customCardPresentation;
-        [SerializeField] private Vector3 _cardLocalPosition;
-        [SerializeField] private Vector3 _cardLocalEulerAngles;
-        [SerializeField] private Vector2 _cardSize = new Vector2(0.15f, 0.16f);
-        [SerializeField] private float _cardFontSize = 0.16f;
-        public bool HasCustomCardPresentation => _customCardPresentation;
-        public Vector3 CardLocalPosition => _cardLocalPosition;
-        public Quaternion CardLocalRotation => Quaternion.Euler(_cardLocalEulerAngles);
-        public Vector2 CardSize => _cardSize;
-        public float CardFontSize => _cardFontSize;
-
-        /// <summary>Карточка крепится к своему слоту независимо от позы оружейного якоря.</summary>
-        public void ConfigureCardPresentation(Vector3 slotLocalPosition, Vector2 size, float fontSize, Quaternion? slotLocalRotation = null)
-        {
-            if (ArsenalPresentationApplicator.Resolve(this).IsStyled)
-                throw new System.InvalidOperationException("Styled card pose принадлежит presentation asset, не slot cache.");
-            ConfigureDerivedCardPresentation(slotLocalPosition, size, fontSize, slotLocalRotation ?? Quaternion.identity);
-        }
-
-        /// <summary>Только материализованный результат общего presenter, не источник следующей генерации.</summary>
-        public void ConfigureDerivedCardPresentation(Vector3 slotLocalPosition, Vector2 size, float fontSize, Quaternion slotLocalRotation)
-        {
-            _customCardPresentation = true;
-            _cardLocalPosition = slotLocalPosition;
-            _cardLocalEulerAngles = slotLocalRotation.eulerAngles;
-            _cardSize = new Vector2(Mathf.Max(0.05f, size.x), Mathf.Max(0.05f, size.y));
-            _cardFontSize = Mathf.Max(0.05f, fontSize);
-        }
 
         [Header("Visual Feedback")]
         [SerializeField] private Light _slotLight;
@@ -183,19 +159,6 @@ namespace VrBattlegrounds.Arsenal
                 _itemAnchor = GetComponentInChildren<UxrGrabbableObjectAnchor>();
 
             ConfigureAnchorCompatibility();
-
-            // В Play mode удаляем превью-объекты, которые визуализировал кастомный эдитор (ArsenalSlotEditorBase)
-            // Иначе они останутся на сцене как мусор и будут наслаиваться на реальные игровые объекты.
-            if (UnityEngine.Application.isPlaying)
-            {
-                foreach (Transform child in GetComponentsInChildren<Transform>(true))
-                {
-                    if (child.gameObject.name == "__ItemPreview__" || child.gameObject.name == "__MagPreview__")
-                    {
-                        Destroy(child.gameObject);
-                    }
-                }
-            }
         }
 
         protected virtual void OnEnable()
@@ -518,8 +481,8 @@ namespace VrBattlegrounds.Arsenal
             if (e.GrabbableObject != null)
             {
                 _spawnedItem = e.GrabbableObject.gameObject;
-                // Styled anchor уже является SDK target: не прерываем его smooth interpolation старым offset snap.
-                if (!e.GrabbableObject.IsInSmoothTransition || !ArsenalPresentationApplicator.Resolve(this).IsStyled)
+                // Якорь уже стоит в позе раскладки — цель SDK: не прерываем его плавную укладку.
+                if (!e.GrabbableObject.IsInSmoothTransition)
                     ApplyHangPose(_spawnedItem.transform);
             }
 

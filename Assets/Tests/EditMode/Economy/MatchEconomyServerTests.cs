@@ -10,6 +10,7 @@ using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Maps;
 using VrBattlegrounds.Player;
+using VrBattlegrounds.Tests.Arsenal;
 using VrBattlegrounds.Tests.Network;
 
 namespace VrBattlegrounds.Tests.Economy
@@ -111,8 +112,17 @@ namespace VrBattlegrounds.Tests.Economy
             SetPrivateField(info, "_price", price);
             SetPrivateField(info, "_killAward", killAward);
             SetPrivateField(info, "_displayName", "Test" + price);
+            SetPrivateField(info, "_weaponPrefab", Grabbable("Test" + price + "Prefab"));
+            SetPrivateField(info, "_magazinePrefab", Grabbable("Test" + price + "Magazine"));
             _assets.Add(info);
             return info;
+        }
+
+        private GameObject Grabbable(string name)
+        {
+            GameObject go = CreateObject(name);
+            go.AddComponent<UxrGrabbableObject>();
+            return go;
         }
 
         // ── Раунды и половины ─────────────────────────────────
@@ -194,16 +204,9 @@ namespace VrBattlegrounds.Tests.Economy
             GameObject wallObject = CreateNetworkObject(name);
             if (parent != null) wallObject.transform.SetParent(parent, false);
 
-            GameObject slotObject = new GameObject("Slot");
-            slotObject.transform.SetParent(wallObject.transform);
-            GameObject anchorObject = new GameObject("ItemAnchor");
-            anchorObject.transform.SetParent(slotObject.transform);
-
-            ArsenalSlotController slot = slotObject.AddComponent<ArsenalSlotController>();
-            SetPrivateField(slot, "_itemAnchor", anchorObject.AddComponent<UxrGrabbableObjectAnchor>());
-            SetPrivateField(slot, "_weaponInfo", info);
-
-            ArsenalWallController wall = wallObject.AddComponent<ArsenalWallController>();
+            // Стена собрана, как её собирает генератор: слот с представлением, массив слотов установлен.
+            FirearmSlotController slot = ArsenalTestStation.AddSlot(wallObject, "Slot");
+            ArsenalWallController wall = ArsenalTestStation.Prepare(wallObject, new[] { slot }, new[] { info });
             EnableNetworking(wallObject);
             InvokeLifecycleMethod(wall, "Awake");
             InvokeLifecycleMethod(wall, "Start");

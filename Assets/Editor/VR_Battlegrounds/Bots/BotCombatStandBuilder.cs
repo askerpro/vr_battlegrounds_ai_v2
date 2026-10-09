@@ -67,7 +67,6 @@ namespace VrBattlegrounds.EditorTools
                 SceneManager.MoveGameObjectToScene(standGO, scene);
                 var stand = standGO.AddComponent<BotCombatStand>();
                 stand.Map = map;
-                ConfigureStations(scene, map);
                 stand.DetourWall = Box(env.transform, "Detour_Hard", new Vector3(0, 1.05f, 0), new Vector3(6, 2.1f, 0.6f), hard);
                 stand.HardCover = Box(env.transform, "Cover_Hard", new Vector3(0, 1.05f, -1.5f), new Vector3(3.5f, 2.1f, 0.6f), hard);
                 stand.SoftCover = Box(env.transform, "Cover_Soft", new Vector3(0, 1.05f, -1.5f), new Vector3(3.5f, 2.1f, 0.6f), soft);
@@ -108,7 +107,6 @@ namespace VrBattlegrounds.EditorTools
                 SetBox(env, "Detour_Hard", new Vector3(0,1.05f,0), new Vector3(6,2.1f,.6f));
                 foreach (var name in new[] { "Cover_Hard", "Cover_Soft", "Cover_Visual" })
                     SetBox(env, name, new Vector3(0,1.05f,-1.5f), new Vector3(3.5f,2.1f,.6f));
-                ConfigureStations(scene, AssetDatabase.LoadAssetAtPath<MapData>(DataPath));
                 EditorSceneManager.SaveScene(scene);
                 return "Размеры и ориентация геометрии стенда восстановлены.";
             }
@@ -122,18 +120,6 @@ namespace VrBattlegrounds.EditorTools
             child.SetPositionAndRotation(position, Quaternion.identity); child.localScale = scale;
         }
 
-        private static void ConfigureStations(Scene scene, MapData map)
-        {
-            const string path="Assets/Scenes/Debug/BotCombatStandRegistry.asset";
-            var registry=AssetDatabase.LoadAssetAtPath<MapRegistry>(path);
-            if(registry==null)
-            {
-                registry=ScriptableObject.CreateInstance<MapRegistry>(); registry.name="BotCombatStandRegistry";
-                registry.maps=new[]{map}; AssetDatabase.CreateAsset(registry,path);
-            }
-            foreach(var binding in scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<ArsenalStationPresetBinding>(true)))
-                binding.ConfigureRegistry(registry);
-        }
 
         private static Material Material(string name, Color color)
         {

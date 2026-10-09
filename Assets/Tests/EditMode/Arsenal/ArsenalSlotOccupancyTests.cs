@@ -2,6 +2,7 @@ using NUnit.Framework;
 using UltimateXR.Manipulation;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Tests.Arsenal;
 using VrBattlegrounds.Tests.Network;
 
 namespace VrBattlegrounds.Tests.ArsenalWall
@@ -28,21 +29,17 @@ namespace VrBattlegrounds.Tests.ArsenalWall
     public class ArsenalSlotOccupancyTests : MirrorTestHarness
     {
         /// <summary>
-        /// Слот с якорем и настроенным <see cref="WeaponInfo"/> — ровно то, что видит
-        /// <c>ReplenishWeaponsNetwork</c> на боевой стене.
+        /// Слот собранной станции с настроенным <see cref="WeaponInfo"/> — ровно то, что видит
+        /// <c>ReplenishWeaponsNetwork</c> на боевой стене. Выдача ставит предмет в позу раскладки слота,
+        /// поэтому слот вне станции не бывает и здесь.
         /// </summary>
         private ArsenalSlotController CreateSlot(string name, out UxrGrabbableObjectAnchor anchor)
         {
-            GameObject slotObject = CreateObject(name);
+            GameObject station = CreateNetworkObject("Station");
+            FirearmSlotController slot = ArsenalTestStation.AddSlot(station, name);
+            ArsenalTestStation.Prepare(station, new[] { slot }, new[] { CreateWeaponInfo() });
 
-            GameObject anchorObject = new GameObject("ItemAnchor");
-            anchorObject.transform.SetParent(slotObject.transform);
-            anchor = anchorObject.AddComponent<UxrGrabbableObjectAnchor>();
-
-            ArsenalSlotController slot = slotObject.AddComponent<ArsenalSlotController>();
-            SetPrivateField(slot, "_itemAnchor", anchor);
-            SetPrivateField(slot, "_weaponInfo", CreateWeaponInfo());
-
+            anchor = slot.ItemAnchor;
             return slot;
         }
 
@@ -51,6 +48,8 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             WeaponInfo info = ScriptableObject.CreateInstance<WeaponInfo>();
             SetPrivateField(info, "_displayName", "TestRifle");
             SetPrivateField(info, "_weaponId", "test_rifle");
+            SetPrivateField(info, "_weaponPrefab", CreateSpawnedWeapon("TestRiflePrefab"));
+            SetPrivateField(info, "_magazinePrefab", CreateSpawnedWeapon("TestRifleMagazine"));
             return info;
         }
 

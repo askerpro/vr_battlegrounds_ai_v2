@@ -43,29 +43,26 @@ namespace VrBattlegrounds.Arsenal
     public sealed class ArsenalCompositionCatalog : ScriptableObject
     {
         public const int CurrentCompilerVersion = 1;
-        public const int CurrentLayoutVersion = 1;
+        public const int CurrentLayoutVersion = 2;
         public const int CurrentIdentitySchemaVersion = 1;
         [SerializeField] private string _catalogId;
         [SerializeField] private int _compilerVersion = CurrentCompilerVersion;
-        [SerializeField] private ArsenalFunctionalSlotTemplate[] _templates = Array.Empty<ArsenalFunctionalSlotTemplate>();
         [SerializeField] private ArsenalDecorationDescriptor[] _decorations = Array.Empty<ArsenalDecorationDescriptor>();
         [SerializeField] private ArsenalWeaponGeometry[] _weapons = Array.Empty<ArsenalWeaponGeometry>();
         [SerializeField] private ArsenalSupportGeometry[] _supports = Array.Empty<ArsenalSupportGeometry>();
         [SerializeField] private ArsenalMaterialResource[] _materials = Array.Empty<ArsenalMaterialResource>();
         public string CatalogId => _catalogId;
         public int CompilerVersion => _compilerVersion;
-        public IReadOnlyList<ArsenalFunctionalSlotTemplate> Templates => Array.AsReadOnly(_templates);
         public IReadOnlyList<ArsenalDecorationDescriptor> Decorations => Array.AsReadOnly(_decorations);
         public IReadOnlyList<ArsenalWeaponGeometry> Weapons => Array.AsReadOnly(_weapons);
         public IReadOnlyList<ArsenalSupportGeometry> Supports => Array.AsReadOnly(_supports);
         public IReadOnlyList<ArsenalMaterialResource> Materials => Array.AsReadOnly(_materials);
         /// <summary>Только resource compiler создаёт новый каталог; existing native asset не изменяется этим API.</summary>
-        public static ArsenalCompositionCatalog CreateCompiled(string id, IEnumerable<ArsenalFunctionalSlotTemplate> templates,
+        public static ArsenalCompositionCatalog CreateCompiled(string id,
             IEnumerable<ArsenalDecorationDescriptor> decorations, IEnumerable<ArsenalWeaponGeometry> weapons,
             IEnumerable<ArsenalSupportGeometry> supports, IEnumerable<ArsenalMaterialResource> materials=null)
         {
             var result=CreateInstance<ArsenalCompositionCatalog>(); result._catalogId=id;
-            result._templates=new List<ArsenalFunctionalSlotTemplate>(templates).ConvertAll(t=>t.Freeze()).ToArray();
             result._decorations=new List<ArsenalDecorationDescriptor>(decorations).ConvertAll(d=>d.Freeze()).ToArray();
             result._weapons=new List<ArsenalWeaponGeometry>(weapons).ToArray();
             result._supports=new List<ArsenalSupportGeometry>(supports).ToArray();

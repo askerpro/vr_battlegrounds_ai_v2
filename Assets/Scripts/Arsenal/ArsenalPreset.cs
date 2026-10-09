@@ -14,7 +14,8 @@ namespace VrBattlegrounds.Arsenal
         public struct Entry
         {
             public WeaponInfo Weapon;
-            public ArsenalPresentationZone Zone;
+            [Tooltip("Ключ ряда корпуса станции (ArsenalSlotRow.RowKey), куда вешается слот этого оружия.")]
+            public string Row;
         }
         [SerializeField] private List<Entry> _entries = new List<Entry>();
         public string PresetId => _presetId;

@@ -249,7 +249,7 @@ namespace VrBattlegrounds.Maps.Runtime
             MapData map = validation.Bindings.Map;
 
             // Описания сгенерированных станций — до публикации config: их выбор оформления и layout hash входят в
-            // config, клиент сверяет с ними своё описание. Отказ описания — отказ запуска, без отката на Authored.
+            // config, клиент сверяет с ними своё описание. Отказ описания — отказ запуска.
             var arsenalErrors = new List<string>();
             MapArsenalCompositionAdapter arsenal = MapArsenalCompositionAdapter.Describe(validation.Bindings.Stations,
                 map.arsenalPreset, catalog.ArsenalComposition, Composer, arsenalErrors);
@@ -283,20 +283,6 @@ namespace VrBattlegrounds.Maps.Runtime
             _arsenal = arsenal;
             GameLog.Match.Info($"[MapBootstrap] Запуск '{_config.MapScene}' ({_config.Key}): режим матча " +
                 $"'{(_config.MatchIntent.HasMatch ? _config.MatchIntent.ModeId : "нет")}' ({_config.MatchIntent.ResolutionReason}).", this);
-
-            try
-            {
-                // Ассортимент авторских станций — из канонического паспорта карты, до любой выдачи. Повтор того же
-                // preset безопасен. Сгенерированные станции готовит сборщик по описанию, не этот путь.
-                foreach (ArsenalStationCompositionBinding station in _bindings.Stations)
-                    if (station.Mode == ArsenalCompositionMode.Authored)
-                        station.AuthoredBinding.Prepare(map.arsenalPreset);
-            }
-            catch (Exception error)
-            {
-                FailRun("Composition.Exception", error.Message);
-                return;
-            }
 
             if (!ComposeGeneratedStations(_arsenal, _scope, out string composeError))
             {

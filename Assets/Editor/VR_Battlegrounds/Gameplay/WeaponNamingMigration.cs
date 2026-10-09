@@ -156,7 +156,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 if (map == null) continue;
                 links.Add(map.sceneName + ":" + Reference(map.arsenalPreset));
                 if (map.arsenalPreset != null)
-                    links.AddRange(map.arsenalPreset.Entries.Select(e => Reference(e.Weapon) + ":" + (int)e.Zone));
+                    links.AddRange(map.arsenalPreset.Entries.Select(e => Reference(e.Weapon) + ":" + e.Row));
             }
             return string.Join("|", links);
         }

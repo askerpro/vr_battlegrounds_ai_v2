@@ -10,6 +10,18 @@ using VrBattlegrounds.Maps.Runtime;
 namespace VrBattlegrounds.Arsenal
 {
     /// <summary>
+    ///     Роль компонента слота с UniqueId: ключ роли и UniqueId компонента в префабе слота, прочитанный с
+    ///     неразбуженного клона. По нему компонент клона связывается с ролью, а не по имени или пути объекта.
+    /// </summary>
+    [Serializable]
+    public struct ArsenalTemplateRole
+    {
+        public string RoleKey, SourceUniqueId, SourceComponentId, ComponentType;
+        public ArsenalTemplateRole(string key, string uid, string id, string type)
+        { RoleKey = key; SourceUniqueId = uid; SourceComponentId = id; ComponentType = type; }
+    }
+
+    /// <summary>
     ///     Детерминированные UniqueId ролей сгенерированной станции. Одинаковый вход даёт одинаковый ID на сервере,
     ///     клиентах и у позднего клиента — независимо от порядка создания объектов.
     ///     ID = <c>GuidExt.Combine(RoleBaseUid(роль), SemanticSeed(ключ запуска, станция, логический слот, роль))</c>.

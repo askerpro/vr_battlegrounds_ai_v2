@@ -24,12 +24,14 @@ namespace VrBattlegrounds.Editor.Arsenal
             .SelectMany(w => new[] { w.WeaponPrefab, w.MagazinePrefab }).Where(p => p != null)
             .Select(AssetDatabase.GetAssetPath).Distinct().ToArray();
 
+        /// <summary>Ряды корпуса станции: ключ и вид слота.</summary>
         public static string Capacity(string path)
         {
             var root = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            var wall = root != null ? root.GetComponent<ArsenalWallController>() : null;
-            if (wall == null) return "Станция отсутствует";
-            return $"{wall.Slots.Count} слотов: панель {wall.Slots.Count(s => s.PresentationZone == ArsenalPresentationZone.Pegboard)}, полка {wall.Slots.Count(s => s.PresentationZone == ArsenalPresentationZone.Shelf)}";
+            if (root == null || root.GetComponent<ArsenalWallController>() == null) return "Станция отсутствует";
+            var rows = root.GetComponentsInChildren<ArsenalSlotRow>(true);
+            if (rows.Length == 0) return "У корпуса нет рядов";
+            return "Ряды: " + string.Join(", ", rows.Select(r => r.RowKey + " (" + r.Zone + ")"));
         }
 
         public static string ValidateEntries(IList<ArsenalPreset.Entry> entries)
@@ -37,7 +39,7 @@ namespace VrBattlegrounds.Editor.Arsenal
             if (entries.Count == 0) return "Ассортимент пуст.";
             if (entries.Any(e => e.Weapon == null || e.Weapon.WeaponPrefab == null || string.IsNullOrWhiteSpace(e.Weapon.WeaponId)))
                 return "Каждой строке нужны данные, ID и префаб оружия.";
-            if (entries.Any(e => !Enum.IsDefined(typeof(ArsenalPresentationZone), e.Zone))) return "В ассортименте есть неизвестная зона.";
+            if (entries.Any(e => string.IsNullOrWhiteSpace(e.Row))) return "Каждой строке нужен ряд корпуса.";
             if (entries.Any(e => e.Weapon.MagazinePrefab == null)) return "Каждому оружию нужен префаб магазина.";
             if (entries.Select(e => e.Weapon.WeaponId).Distinct().Count() != entries.Count) return "ID оружия повторяются.";
             if (entries.Select(e => e.Weapon.WeaponPrefab).Distinct().Count() != entries.Count) return "Префабы оружия повторяются.";
@@ -49,27 +51,29 @@ namespace VrBattlegrounds.Editor.Arsenal
             if (preset == null || string.IsNullOrWhiteSpace(preset.PresetId)) return "Ассортименту нужен постоянный ID.";
             var values = entries ?? preset.Entries.ToArray();
             string invalid = ValidateEntries(values);
-            if (invalid != null || preset.PresentationStyle == null) return invalid;
-            try
-            {
-                foreach (var entry in values) ArsenalPresentationResolver.Resolve(entry.Weapon, entry.Zone, preset.PresentationStyle);
-                return null;
-            }
-            catch (InvalidOperationException exception) { return "Недопустимый presentation style: " + exception.Message; }
+            if (invalid != null) return invalid;
+            if (preset.PresentationStyle == null) return "Ассортименту нужен стиль арсенала (внешний вид станции).";
+            return null;
         }
 
+        /// <summary>
+        /// Ассортимент ложится на корпус станции карты: ряд каждой записи есть в корпусе, для вида слота ряда есть
+        /// раскладка — своя у оружия или по умолчанию у префаба слота. Вместимость ряда не проверяется.
+        /// </summary>
         public static string CapacityProblem(IEnumerable<ArsenalPreset.Entry> entries, MapData map)
         {
             if (map == null) return "Выберите карту.";
             string path = map.sceneName == "Lobby" ? EditorTools.ArsenalPresetAssetBuilder.DemoPath : EditorTools.ArsenalPresetAssetBuilder.CommonPath;
             var root = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            var wall = root != null ? root.GetComponent<ArsenalWallController>() : null;
-            if (wall == null) return "Нет станции для проверки вместимости: " + path;
-            if (wall.Slots.Any(s => s == null) || wall.Slots.Distinct().Count() != wall.Slots.Count)
-                return "У станции пустые или повторные ссылки слотов: " + path;
-            foreach (ArsenalPresentationZone zone in Enum.GetValues(typeof(ArsenalPresentationZone)))
-                if (entries.Count(e => e.Zone == zone) > wall.Slots.Count(s => s.PresentationZone == zone))
-                    return "Не хватает слотов зоны " + zone + " для карты " + map.displayName;
+            if (root == null || root.GetComponent<ArsenalWallController>() == null) return "Нет станции карты: " + path;
+            var rows = root.GetComponentsInChildren<ArsenalSlotRow>(true);
+            foreach (var entry in entries)
+            {
+                var row = rows.FirstOrDefault(r => r.RowKey == entry.Row);
+                if (row == null) return "В корпусе станции карты " + map.displayName + " нет ряда «" + entry.Row + "».";
+                if (entry.Weapon != null && !entry.Weapon.TryGetSlotLayout(row.Zone, out _) && (row.SlotPrefab == null || row.SlotPrefab.DefaultLayout == null))
+                    return "Для " + entry.Weapon.WeaponId + " нет раскладки слота " + row.Zone + ": ни своей, ни по умолчанию у префаба слота ряда «" + entry.Row + "».";
+            }
             return null;
         }
 

@@ -11,8 +11,9 @@ namespace VrBattlegrounds.Tests.Arsenal
     /// <summary>
     /// Раскладка станции по пресету (генератор арсенала, решение 2026-10-07 «применять, не проверять»).
     ///
-    /// Что доказывает. Генератор раскладывает слоты по шагу шаблона зоны и порядку пресета, позы берёт из
-    /// стиля как есть и не требует геометрии оружия: станция собирается даже при нулевом отведённом месте.
+    /// Что доказывает. Генератор раскладывает слоты по порядку пресета (геометрию ряда знает ряд корпуса,
+    /// не раскладка), позы берёт из стиля как есть и не требует геометрии оружия: станция собирается даже при
+    /// нулевом отведённом месте.
     /// Отказ — только когда станцию нельзя собрать или сломается сеть. Отпечаток раскладки зависит от входа,
     /// а не от вычислений, и одинаков при повторе.
     /// Работает на настоящих каталоге, стиле и FullDemoArsenal; стиль назначается копии пресета в памяти.
@@ -36,6 +37,9 @@ namespace VrBattlegrounds.Tests.Arsenal
             Assert.IsNotNull(source, PresetPath);
             _preset = Object.Instantiate(source);
             SetStyle(_preset, AssetDatabase.LoadAssetAtPath<ArsenalPresentationStyle>(StylePath));
+            // Записи нового формата: оружие и ряд корпуса.
+            SetEntries(_preset, source.Entries.Where(e => e.Weapon != null)
+                .Select((e, i) => new ArsenalPreset.Entry { Weapon = e.Weapon, Row = i % 2 == 0 ? "pegboard" : "shelf" }).ToList());
         }
 
         [TearDown]
@@ -71,25 +75,7 @@ namespace VrBattlegrounds.Tests.Arsenal
             {
                 Assert.AreEqual(i, description.Slots[i].Entry.NetworkIndex);
                 Assert.AreEqual(_preset.Entries[i].Weapon.WeaponId, description.Slots[i].Entry.LogicalSlotKey);
-                Assert.AreEqual(_preset.Entries[i].Zone, description.Slots[i].Entry.Zone);
-            }
-        }
-
-        [Test]
-        public void Ряд_центрируется_с_шагом_шаблона()
-        {
-            ArsenalStationDescription description = Resolve(_preset);
-            foreach (IGrouping<ArsenalPresentationZone, ArsenalSlotManifest> row in description.Slots.GroupBy(s => s.Entry.Zone))
-            {
-                ArsenalSlotManifest[] slots = row.OrderBy(s => s.RowIndex).ToArray();
-                ArsenalFunctionalSlotTemplate template = slots[0].Template;
-                for (int i = 0; i < slots.Length; i++)
-                {
-                    float x = (i - (slots.Length - 1) * .5f) * (template.PanelWidth + template.Gap);
-                    var offset = new ArsenalPresentationPose(new Vector3(x, 0, 0), Quaternion.identity);
-                    Assert.Less((slots[i].OpenPose.Position - ArsenalStationResolver.Compose(template.OpenRow, offset).Position).sqrMagnitude, 1e-10f, row.Key + " open " + i);
-                    Assert.Less((slots[i].ClosedPose.Position - ArsenalStationResolver.Compose(template.ClosedRow, offset).Position).sqrMagnitude, 1e-10f, row.Key + " closed " + i);
-                }
+                Assert.AreEqual(_preset.Entries[i].Row, description.Slots[i].Entry.RowKey);
             }
         }
 

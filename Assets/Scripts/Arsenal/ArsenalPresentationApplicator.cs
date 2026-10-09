@@ -4,7 +4,7 @@ using UltimateXR.Manipulation;
 
 namespace VrBattlegrounds.Arsenal
 {
-    /// <summary>Явные derived transform writes. Не сохраняет inputs и не выполняет styled contact fit.</summary>
+    /// <summary>Перенос представления слота в трансформы: якоря, предмет в слоте, карточка. Позы — как в раскладке.</summary>
     public static class ArsenalPresentationApplicator
     {
         public const string SupportsContainerName = "PresentationSupports";
@@ -12,7 +12,8 @@ namespace VrBattlegrounds.Arsenal
         public static ArsenalPresentationSnapshot Resolve(ArsenalSlotController slot)
         {
             var binding = slot.GetComponentInParent<ArsenalStationPresetBinding>(true);
-            return binding != null ? binding.ResolvePresentation(slot) : ArsenalLegacyPresentationAdapter.Resolve(slot);
+            if (binding == null) throw new InvalidOperationException("Слот вне станции: " + slot.name);
+            return binding.ResolvePresentation(slot);
         }
 
         /// <summary>Материализует effective AlignTransform target перемещением whole anchor root; дочерние align/proxy TRS сохраняются.</summary>
@@ -32,7 +33,6 @@ namespace VrBattlegrounds.Arsenal
 
         public static void MaterializeFrames(ArsenalSlotController slot, ArsenalPresentationSnapshot presentation)
         {
-            if (!presentation.IsStyled) return;
             MaterializeAnchor(slot.transform, slot.ItemAnchor, presentation.ItemTarget);
             var firearm = slot as FirearmSlotController;
             if (firearm != null && firearm.MagAnchor != null)
@@ -56,7 +56,6 @@ namespace VrBattlegrounds.Arsenal
         /// <summary>Общее вычисление для runtime, render-only preview и builder. Styled target только из immutable snapshot.</summary>
         public static ArsenalPresentationPose ItemLocalPose(ArsenalSlotController slot, bool magazine, ArsenalPresentationSnapshot presentation)
         {
-            if (!presentation.IsStyled) return magazine ? default : presentation.LegacyItemPose;
             var anchor = magazine ? ((FirearmSlotController)slot).MagAnchor : slot.ItemAnchor;
             if (anchor == null) throw new InvalidOperationException("Нет item presentation anchor.");
             ArsenalPresentationResolver.ValidateFrame(slot.transform, anchor.transform, anchor.AlignTransform);
@@ -69,7 +68,6 @@ namespace VrBattlegrounds.Arsenal
 
         public static Vector3 ProjectionLocalScale(GameObject source, Transform parent, ArsenalPresentationSnapshot presentation)
         {
-            if (!presentation.IsStyled) return source.transform.localScale;
             ArsenalPresentationResolver.ValidateScale(parent.lossyScale, "projection parent");
             return source.transform.localScale / parent.lossyScale.x;
         }
@@ -87,22 +85,11 @@ namespace VrBattlegrounds.Arsenal
         }
 #endif
 
-        public static void ApplyWeapon(ArsenalSlotController slot, Transform item)
-        {
-            var presentation = Resolve(slot);
-            if (presentation.IsStyled) ApplyStyledItem(slot, item, false, presentation);
-            else ApplyItemLocalPose(item, slot.ItemAnchor.transform, presentation.LegacyItemPose);
-        }
+        public static void ApplyWeapon(ArsenalSlotController slot, Transform item) => ApplyItem(slot, item, false, Resolve(slot));
 
-        public static void ApplyMagazine(ArsenalMagazineOffer offer, Transform item)
-        {
-            var presentation = Resolve(offer.Slot);
-            if (presentation.IsStyled) ApplyStyledItem(offer.Slot, item, true, presentation);
-            else ApplyItemLocalPose(item, offer.Anchor.transform, default);
-            if (!presentation.IsStyled) offer.FitToSurface(item);
-        }
+        public static void ApplyMagazine(ArsenalMagazineOffer offer, Transform item) => ApplyItem(offer.Slot, item, true, Resolve(offer.Slot));
 
-        private static void ApplyStyledItem(ArsenalSlotController slot, Transform item, bool magazine, ArsenalPresentationSnapshot presentation)
+        private static void ApplyItem(ArsenalSlotController slot, Transform item, bool magazine, ArsenalPresentationSnapshot presentation)
         {
             var target = magazine ? presentation.MagazineTarget : presentation.ItemTarget;
             var prefab = magazine ? slot.WeaponData.MagazinePrefab : slot.WeaponData.WeaponPrefab;
@@ -111,12 +98,6 @@ namespace VrBattlegrounds.Arsenal
             var world = RootPose(prefab, slot.transform.TransformPoint(target.Position), slot.transform.rotation * target.Rotation,
                 item.lossyScale.x / prefab.transform.localScale.x);
             item.SetPositionAndRotation(world.Position, world.Rotation);
-        }
-
-        private static void ApplyItemLocalPose(Transform item, Transform anchor, ArsenalPresentationPose pose)
-        {
-            // SDK может parent-ить к отдельному AlignTransform; world application не меняет эту связь и localScale.
-            item.SetPositionAndRotation(anchor.TransformPoint(pose.Position), anchor.rotation * pose.Rotation);
         }
 
         public static void ApplyCard(ArsenalSlotController slot, Transform card, ArsenalPresentationSnapshot presentation)
@@ -130,11 +111,7 @@ namespace VrBattlegrounds.Arsenal
 
         public static ArsenalPriceTag MaterializeCard(ArsenalSlotController slot, ArsenalPresentationSnapshot presentation)
         {
-            var card = ArsenalPriceTag.Create(slot, presentation);
-            if (presentation.IsStyled)
-                slot.ConfigureDerivedCardPresentation(presentation.CardTarget.Position, presentation.CardSize,
-                    presentation.CardFontSize, presentation.CardTarget.Rotation);
-            return card;
+            return ArsenalPriceTag.Create(slot, presentation);
         }
     }
 }

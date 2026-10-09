@@ -5,7 +5,10 @@ using VrBattlegrounds.Arsenal;
 
 namespace VrBattlegrounds.EditorTools
 {
-    /// <summary>Сохраняет реальные карточки в префабах слотов; игра использует эти же объекты.</summary>
+    /// <summary>
+    ///     Материал подложки карточки в префабах слотов. Позу и размер карточки задаёт раскладка оружия при сборке
+    ///     слота; здесь — только внешний вид общей карточки шаблона.
+    /// </summary>
     public static class ArsenalCardPrefabBuilder
     {
         private const string MaterialPath = "Assets/Art/ArsenalBoundary/WeaponCardBacking.mat";
@@ -18,7 +21,7 @@ namespace VrBattlegrounds.EditorTools
                 var root = PrefabUtility.LoadPrefabContents(path);
                 try
                 {
-                    foreach (var slot in root.GetComponentsInChildren<ArsenalSlotController>(true)) Ensure(slot, true);
+                    foreach (var slot in root.GetComponentsInChildren<ArsenalSlotController>(true)) Ensure(slot);
                     PrefabUtility.SaveAsPrefabAsset(root, path);
                 }
                 finally { PrefabUtility.UnloadPrefabContents(root); }
@@ -28,11 +31,10 @@ namespace VrBattlegrounds.EditorTools
             if (backing != null) AssetDatabase.SaveAssetIfDirty(backing);
         }
 
-        public static ArsenalPriceTag Ensure(ArsenalSlotController slot, bool configureDefault = false)
+        public static ArsenalPriceTag Ensure(ArsenalSlotController slot)
         {
-            if (!ArsenalPresentationApplicator.Resolve(slot).IsStyled)
-                ArsenalLegacyPresentationAdapter.SeedCard(slot, configureDefault);
-            var card = ArsenalPresentationApplicator.MaterializeCard(slot);
+            var card = slot.GetComponentInChildren<ArsenalPriceTag>(true);
+            if (card == null) throw new InvalidOperationException("В префабе слота нет карточки WeaponCard: " + slot.name);
             var renderer = card.transform.Find("CardBacking").GetComponent<Renderer>();
             var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
             if (material == null)

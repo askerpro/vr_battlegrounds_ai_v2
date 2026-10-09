@@ -102,6 +102,11 @@ namespace VrBattlegrounds.Arsenal
         [Tooltip("Local position offset for the magazine on its anchor")]
         [SerializeField] private Vector3 _magazinePositionOffset = Vector3.zero;
 
+        [Tooltip("Свои раскладки слота арсенала (ассеты ArsenalSlotLayout), не больше одной на вид слота. " +
+                 "Нет раскладки для вида — оружие ложится по раскладке слота по умолчанию.")]
+        [SerializeField] private System.Collections.Generic.List<ArsenalSlotLayout> _layouts =
+            new System.Collections.Generic.List<ArsenalSlotLayout>();
+
         // ── Visual ─────────────────────────────────────────────
         [Header("Visual")]
         [Tooltip("Icon for use in UI (buy menu, HUD, kill feed)")]
@@ -122,6 +127,18 @@ namespace VrBattlegrounds.Arsenal
         public Vector3 WeaponPositionOffset => _weaponPositionOffset;
         public Vector3 WeaponRotationOffset => _weaponRotationOffset;
         public Vector3 MagazinePositionOffset => _magazinePositionOffset;
+
+        /// <summary>Свои раскладки слота арсенала этого оружия.</summary>
+        public System.Collections.Generic.IReadOnlyList<ArsenalSlotLayout> SlotLayouts => _layouts;
+
+        /// <summary>Своя раскладка для вида слота; нет — берётся раскладка слота по умолчанию.</summary>
+        public bool TryGetSlotLayout(ArsenalPresentationZone slotKind, out ArsenalSlotLayout layout)
+        {
+            foreach (var candidate in _layouts)
+                if (candidate != null && candidate.SlotKind == slotKind) { layout = candidate; return true; }
+            layout = null;
+            return false;
+        }
         public Sprite Icon => _icon;
 
         /// <summary>Задан ли баланс: оружие без него (сэмплы SDK) команда баланса не трогает.</summary>

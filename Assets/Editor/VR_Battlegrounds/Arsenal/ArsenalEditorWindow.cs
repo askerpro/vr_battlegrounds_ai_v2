@@ -245,13 +245,13 @@ namespace VrBattlegrounds.Editor.Arsenal
                         var entry = draft[i];
                         EditorGUI.BeginChangeCheck();
                         entry.Weapon = (WeaponInfo)EditorGUILayout.ObjectField((i + 1).ToString(), entry.Weapon, typeof(WeaponInfo), false);
-                        entry.Zone = (ArsenalPresentationZone)EditorGUILayout.EnumPopup(entry.Zone, GUILayout.Width(100));
+                        entry.Row = EditorGUILayout.TextField(entry.Row, GUILayout.Width(100));
                         if (EditorGUI.EndChangeCheck()) { draft[i] = entry; CancelPlan(); }
                         if (GUILayout.Button("↑", GUILayout.Width(25)) && i > 0) { var previous = draft[i - 1]; draft[i - 1] = entry; draft[i] = previous; CancelPlan(); }
                         if (GUILayout.Button("−", GUILayout.Width(25))) { draft.RemoveAt(i); CancelPlan(); break; }
                     }
                 }
-                if (GUILayout.Button("Добавить выбранное оружие")) { draft.Add(new ArsenalPreset.Entry { Weapon = weapon, Zone = ArsenalPresentationZone.Pegboard }); CancelPlan(); }
+                if (GUILayout.Button("Добавить выбранное оружие")) { draft.Add(new ArsenalPreset.Entry { Weapon = weapon, Row = "pegboard" }); CancelPlan(); }
                 string problem = ArsenalEditorStatus.ValidatePreset(preset, draft);
                 foreach (var consumer in maps.Where(m => m.arsenalPreset == preset))
                     problem = problem ?? ArsenalEditorStatus.CapacityProblem(draft, consumer);
@@ -260,7 +260,7 @@ namespace VrBattlegrounds.Editor.Arsenal
                 {
                     var target = preset;
                     var entries = draft.ToArray();
-                    Command("Сохранить выбранный ассортимент", new[] { AssetDatabase.GetAssetPath(target) }, "Карты-потребители: " + string.Join(", ", maps.Where(m => m.arsenalPreset == target).Select(m => m.displayName)) + ". Порядок и зоны сохраняются как показано.", () =>
+                    Command("Сохранить выбранный ассортимент", new[] { AssetDatabase.GetAssetPath(target) }, "Карты-потребители: " + string.Join(", ", maps.Where(m => m.arsenalPreset == target).Select(m => m.displayName)) + ". Порядок и ряды сохраняются как показано.", () =>
                     {
                         string invalid = ArsenalEditorStatus.ValidatePreset(target, entries);
                         foreach (var consumer in maps.Where(m => m.arsenalPreset == target)) invalid = invalid ?? ArsenalEditorStatus.CapacityProblem(entries, consumer);
@@ -268,9 +268,9 @@ namespace VrBattlegrounds.Editor.Arsenal
                         Undo.RecordObject(target, "Ассортимент арсенала");
                         var so = new SerializedObject(target);
                         var property = so.FindProperty("_entries"); property.arraySize = entries.Length;
-                        for (int i = 0; i < entries.Length; i++) { var item = property.GetArrayElementAtIndex(i); item.FindPropertyRelative("Weapon").objectReferenceValue = entries[i].Weapon; item.FindPropertyRelative("Zone").enumValueIndex = (int)entries[i].Zone; }
+                        for (int i = 0; i < entries.Length; i++) { var item = property.GetArrayElementAtIndex(i); item.FindPropertyRelative("Weapon").objectReferenceValue = entries[i].Weapon; item.FindPropertyRelative("Row").stringValue = entries[i].Row; }
                         so.ApplyModifiedProperties(); AssetDatabase.SaveAssetIfDirty(target);
-                        return "Ассортимент сохранён. Геометрия станции не расширялась.";
+                        return "Ассортимент сохранён. Станцию соберёт генератор при запуске карты.";
                     }, new[] { ArsenalPresetAssetBuilder.CommonPath, ArsenalPresetAssetBuilder.DemoPath }.Concat(maps.Select(AssetDatabase.GetAssetPath)).ToArray(), savesAllAssets: false);
                 }
             }
@@ -290,31 +290,23 @@ namespace VrBattlegrounds.Editor.Arsenal
             Command("Применить баланс всего каталога", ArsenalEditorStatus.Prefabs(allBalanced), "Все предметы с заданным балансом и их магазины; SDK без баланса пропускаются.", () => WeaponBalanceApplier.Apply(allBalanced), allBalanced.Select(AssetDatabase.GetAssetPath).ToArray(), savesAllAssets: false);
             Command("Восстановить старый проект: перенести имена Hands", WeaponNamingMigration.AffectedPaths, "Историческая миграция фиксированных шести GUID, а не редактор новых имён. Шесть prefab и Art motion/interaction folders; имена шести WeaponInfo. Частичный отказ не откатывается автоматически.", WeaponNamingMigration.Apply);
             Command("Дополнить регистрацию каталога в каноническом менеджере", new[] { "Assets/Prefabs/Managers/--- MANAGERS ---.prefab" }, "Все WeaponInfo каталога: оружие и магазины; сцена не используется для поиска менеджера.", () => ArsenalPresetAssetBuilder.RegisterNetworkPrefabs(catalogue), ArsenalEditorStatus.Prefabs(catalogue).Concat(catalogue.Select(AssetDatabase.GetAssetPath)).ToArray(), savesAllAssets: false);
-            EditorGUILayout.HelpBox("Начальная конфигурация рассчитана на каталог 20 оружий и Common с 10 слотами. Для добавления оружия используйте явную регистрацию; bootstrap не является владельцем пользовательского ассортимента.", MessageType.Info);
-            Command("Начальная конфигурация 20/10 (восстановление)", new[] { "Assets/Data", ArsenalPresetAssetBuilder.CommonPath, "Assets/Prefabs/Managers/--- MANAGERS ---.prefab" }, "Исторический bootstrap: WeaponInfo, Registry, defaults, карты, network registration и Common binding; каноническая policy зон FullDemo. Только исходный каталог 20/10, не добавление нового предмета.", ArsenalPresetAssetBuilder.ConfigureAssets, savesAllAssets: false);
         }
         private void DrawStations()
         {
             EditorGUILayout.LabelField("Игровая станция", EditorStyles.boldLabel);
             DrawStation(ArsenalPresetAssetBuilder.CommonPath);
-            EditorGUILayout.HelpBox("Поддержанного сборщика общей геометрии Common нет. Ассортимент её не расширяет.", MessageType.Info);
+            EditorGUILayout.HelpBox("Слоты станций собирает генератор при запуске карты: корпус задаёт ряды (ArsenalSlotRow), пресет — какое оружие в какой ряд, раскладку в слоте — оружие.", MessageType.Info);
             EditorGUILayout.LabelField("Префаб станции лобби", EditorStyles.boldLabel);
             DrawStation(ArsenalPresetAssetBuilder.DemoPath);
-            EditorGUILayout.HelpBox("Источник — сохранённый «Полный ассортимент лобби». Сначала пересоберите станцию по сохранённому ассортименту, затем обновите четыре станции лобби. Обновляются состав, карточки, склад и проёмы; позы и владельцы станций сохраняются.", MessageType.Info);
-            Command("Пересобрать префаб станции лобби", new[] { ArsenalPresetAssetBuilder.DemoPath }, "Источники: общая игровая станция и «Полный ассортимент лобби»; изменяется только префаб станции лобби.", ArsenalPresetAssetBuilder.CreateDemoPrefab, new[] { ArsenalPresetAssetBuilder.CommonPath, ArsenalPresetAssetBuilder.FullPath, "Assets/Data/Maps/MapRegistry.asset" }, savesAllAssets: false);
-            Command("Обновить четыре станции лобби", new[] { "Assets/Scenes/Lobby.unity" }, "Пресет «Полный ассортимент лобби» должен совпадать с префабом станции лобби. При рассогласовании сначала пересоберите станцию по сохранённому ассортименту. Обновляются четыре существующие станции и проёмы. После геометрии — общий Bake Occlusion.", ArsenalPresetAssetBuilder.MigrateLobby, new[] { ArsenalPresetAssetBuilder.DemoPath, ArsenalPresetAssetBuilder.FullPath }, savesAllAssets: false);
             var scene = SceneManager.GetActiveScene();
             using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(scene.path)))
                 Command("Обновить ниши активной карты: " + scene.name, new[] { scene.path }, "Геометрия активной сцены; сцена станет dirty и не сохранится автоматически. Затем Bake Occlusion (all maps).", () => { string report = ArsenalMapMigration.UpdateLayout(scene); EditorSceneManager.MarkSceneDirty(scene); return report; }, new[] { "Assets/Art/ArsenalBoundary" }, scene, false);
             var review = AssetDatabase.LoadAssetAtPath<SceneAsset>("Assets/Scenes/Debug/CommonArsenalReview.unity");
             if (review != null && GUILayout.Button("Открыть стенд CommonArsenalReview")) Try(() => ArsenalEditorActions.Run("Открыть стенд арсенала", Array.Empty<string>(), () => { EditorSceneManager.OpenScene(AssetDatabase.GetAssetPath(review)); return "Открыт стенд."; }, false));
-            if (GUILayout.Button("Проверить запасные магазины станций")) Try(() => ArsenalEditorActions.Run("Проверка запасных магазинов станций", Array.Empty<string>(), ArsenalMagazineOfferInstaller.DiagnoseCurrentPrefabs, false));
-            Command("Настроить магазины двух станций и историю магазинов каталога", new[] { ArsenalPresetAssetBuilder.CommonPath, ArsenalPresetAssetBuilder.DemoPath }.Concat(catalogue.Where(w => w.MagazinePrefab != null).Select(w => AssetDatabase.GetAssetPath(w.MagazinePrefab))).ToArray(), "Installer для общей игровой станции и префаба станции лобби; история всех магазинов каталога.", ArsenalMagazineOfferInstaller.ApplyCurrentPrefabs, savesAllAssets: false);
             maintenance = EditorGUILayout.Foldout(maintenance, "Обслуживание всех карт и общих карточек", true);
             if (!maintenance) return;
             Command("Мигрировать игровые карты и Lobby", new[] { "Assets/Scenes/Maps", "Assets/Scenes/Lobby.unity", "Assets/Prefabs/Maps/ZoneBoundaryDisplayHousing.prefab" }, "Все карты и Lobby + общий prefab корпуса display; сохраняет сцены и backups. После геометрии нужен общий Bake Occlusion.", ArsenalMapMigration.Run, new[] { ArsenalPresetAssetBuilder.CommonPath, ArsenalPresetAssetBuilder.DemoPath, "Assets/Art/ArsenalBoundary" }, savesAllAssets: false);
             Command("Обновить общие карточки слотов", new[] { "Assets/Prefabs/Arsenal/Slots", "Assets/Art/ArsenalBoundary/WeaponCardBacking.mat" }, "Общий builder карточек затрагивает slot prefabs и backing material, используемые всеми станциями.", () => { ArsenalCardPrefabBuilder.Build(); return "Общие карточки обновлены."; }, savesAllAssets: false);
-            Command("Удалить старые превью из четырёх префабов и активной сцены", new[] { ArsenalPresetAssetBuilder.CommonPath, "Assets/Prefabs/Arsenal/Slots/ShelfSlotPrefab Variant.prefab", "Assets/Prefabs/Arsenal/Slots/ShelfSlotPrefab.prefab", "Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab", scene.path }, "CleanupPreviews: Common и три slot prefabs + показанная сцена. Сцену нужно сохранить вручную.", () => { CleanupPreviews.Clean(scene); return "Очистка завершена."; }, sceneContext: scene, savesAllAssets: false);
         }
         private void DrawStation(string path)
         {
@@ -323,7 +315,6 @@ namespace VrBattlegrounds.Editor.Arsenal
             Link("Префаб станции", root);
             if (root == null) return;
             var wall = root.GetComponent<ArsenalWallController>();
-            if (wall != null) EditorGUILayout.LabelField("Якоря: " + wall.Slots.Count(s => s.ItemAnchor != null) + "; карточки: " + root.GetComponentsInChildren<ArsenalPriceTag>(true).Length);
             var anchor = root.GetComponent<ArsenalStationAnchor>();
             var equipment = root.GetComponent<ArsenalEquipmentPoses>();
             if (anchor != null) EditorGUILayout.LabelField("Габарит открытой станции: " + anchor.RaisedBoundsWorld.size.ToString("F2"));

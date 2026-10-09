@@ -6,7 +6,7 @@ using UnityEngine;
 namespace VrBattlegrounds.Arsenal
 {
     public enum ArsenalCompositionFailureKind
-    { InvalidInput, UnstyledPreset, DuplicateLogicalKey, MissingTemplate }
+    { InvalidInput, UnstyledPreset, DuplicateLogicalKey }
     public enum ArsenalDecorationFallback { Sized, Universal, Bare }
     public sealed class ArsenalCompositionFailure
     {
@@ -52,41 +52,17 @@ namespace VrBattlegrounds.Arsenal
             Damage=weapon.Damage; MagazineSize=weapon.MagazineSize; Rpm=WeaponInfo.ShotFrequency(weapon.FireRate)*60;
             FullAuto=weapon.FullAuto; Category=weapon.Category; }
     }
-    /// <summary>
-    /// Позы оружия, магазина, карточки и опор, настроенные человеком в стиле представления. Генератор применяет их
-    /// как есть: размеры и «влезает ли» не проверяются — это зона того, кто настраивал визуал слота.
-    /// </summary>
-    public sealed class ArsenalFrozenPresentation
-    {
-        public ArsenalPresentationPose ItemTarget { get; }
-        public ArsenalPresentationPose MagazineTarget { get; }
-        public ArsenalPresentationPose CardTarget { get; }
-        public Vector2 CardSize { get; }
-        public float CardFontSize { get; }
-        public GameObject SupportModule { get; }
-        public Material ReadyMaterial { get; }
-        public IReadOnlyList<ArsenalSupportPose> Supports { get; }
-        /// <summary>Неизменяемый снимок, из которого собрано представление: его отдаёт слоту сгенерированная станция.</summary>
-        public ArsenalPresentationSnapshot Snapshot { get; }
-        public ArsenalFrozenPresentation(ArsenalPresentationSnapshot snapshot)
-        {
-            Snapshot=snapshot;
-            ItemTarget=snapshot.ItemTarget; MagazineTarget=snapshot.MagazineTarget; CardTarget=snapshot.CardTarget;
-            CardSize=snapshot.CardSize; CardFontSize=snapshot.CardFontSize; SupportModule=snapshot.Style.SupportModule;
-            ReadyMaterial=snapshot.Style.ReturnReadyMaterial; Supports=Array.AsReadOnly(snapshot.Supports.ToArray());
-        }
-    }
+    /// <summary>Запись пресета: какое оружие, в какой ряд корпуса и что на его карточке.</summary>
     public sealed class ArsenalFrozenEntry
     {
         public int NetworkIndex { get; }
         public string LogicalSlotKey { get; }
-        public ArsenalPresentationZone Zone { get; }
+        /// <summary>Ключ ряда корпуса (<see cref="ArsenalSlotRow.RowKey" />).</summary>
+        public string RowKey { get; }
         public WeaponInfo WeaponResource { get; }
-        public ArsenalFrozenPresentation Presentation { get; }
         public ArsenalCardContent Card { get; }
-        public ArsenalFrozenEntry(int index, WeaponInfo weapon, ArsenalPresentationZone zone, ArsenalFrozenPresentation presentation)
-        { NetworkIndex=index; LogicalSlotKey=weapon.WeaponId; Zone=zone; WeaponResource=weapon;
-            Presentation=presentation; Card=new ArsenalCardContent(weapon); }
+        public ArsenalFrozenEntry(int index, WeaponInfo weapon, string rowKey)
+        { NetworkIndex=index; LogicalSlotKey=weapon.WeaponId; RowKey=rowKey??""; WeaponResource=weapon; Card=new ArsenalCardContent(weapon); }
     }
     /// <summary>Capture до run: defensive копии resources и source values, никаких runtime keys или Ready.</summary>
     public sealed class ArsenalStationBuildInput
@@ -95,20 +71,21 @@ namespace VrBattlegrounds.Arsenal
         public string PresetId { get; }
         public string CatalogId { get; }
         public int CompilerVersion { get; }
+        /// <summary>Внешний вид арсенала: модуль опор и материал подсказки возврата.</summary>
+        public ArsenalPresentationStyle Style { get; }
         public ArsenalVisualRequest Visual { get; }
         public ArsenalPlacementInput Placement { get; }
         public IReadOnlyList<ArsenalFrozenEntry> Entries { get; }
-        public IReadOnlyList<ArsenalFunctionalSlotTemplate> Templates { get; }
         public IReadOnlyList<ArsenalDecorationDescriptor> Decorations { get; }
         public IReadOnlyList<ArsenalSupportGeometry> Supports { get; }
         public IReadOnlyList<ArsenalCompositionFailure> Failures { get; }
-        private ArsenalStationBuildInput(string station, string preset, string catalog, int version, ArsenalVisualRequest visual,
-            ArsenalPlacementInput placement, IEnumerable<ArsenalFrozenEntry> entries, IEnumerable<ArsenalFunctionalSlotTemplate> templates,
+        private ArsenalStationBuildInput(string station, string preset, string catalog, int version, ArsenalPresentationStyle style, ArsenalVisualRequest visual,
+            ArsenalPlacementInput placement, IEnumerable<ArsenalFrozenEntry> entries,
             IEnumerable<ArsenalDecorationDescriptor> decorations, IEnumerable<ArsenalSupportGeometry> supports,
             IEnumerable<ArsenalCompositionFailure> failures)
         {
-            StationKey=station; PresetId=preset; CatalogId=catalog; CompilerVersion=version; Visual=visual; Placement=placement;
-            Entries=Array.AsReadOnly(entries.ToArray()); Templates=Array.AsReadOnly(templates.Select(t=>t.Freeze()).ToArray());
+            StationKey=station; PresetId=preset; CatalogId=catalog; CompilerVersion=version; Style=style; Visual=visual; Placement=placement;
+            Entries=Array.AsReadOnly(entries.ToArray());
             Decorations=Array.AsReadOnly(decorations.Select(d=>d.Freeze()).ToArray()); Supports=Array.AsReadOnly(supports.ToArray());
             Failures=Array.AsReadOnly(failures.ToArray());
         }
@@ -119,6 +96,8 @@ namespace VrBattlegrounds.Arsenal
             Action<ArsenalCompositionFailureKind,string,string> fail=(kind,key,detail)=>errors.Add(new ArsenalCompositionFailure(kind,stationKey,key,detail));
             if(string.IsNullOrWhiteSpace(stationKey)||preset==null||catalog==null||string.IsNullOrWhiteSpace(preset.PresetId))
                 fail(ArsenalCompositionFailureKind.InvalidInput,null,"Нужны StationKey, PresetId и catalog.");
+            if(preset!=null&&preset.PresentationStyle==null)
+                fail(ArsenalCompositionFailureKind.UnstyledPreset,null,"У пресета нет стиля арсенала (внешний вид станции).");
             if(preset!=null&&catalog!=null)
             {
                 var keys=new HashSet<string>(StringComparer.Ordinal);
@@ -127,32 +106,26 @@ namespace VrBattlegrounds.Arsenal
                     var source=preset.Entries[i]; var weapon=source.Weapon;
                     if(weapon==null||string.IsNullOrWhiteSpace(weapon.WeaponId)) { fail(ArsenalCompositionFailureKind.InvalidInput,null,"Пустой WeaponInfo/WeaponId."); continue; }
                     if(!keys.Add(weapon.WeaponId)) { fail(ArsenalCompositionFailureKind.DuplicateLogicalKey,weapon.WeaponId,"Повтор WeaponId."); continue; }
-                    if(source.Zone!=ArsenalPresentationZone.Pegboard&&source.Zone!=ArsenalPresentationZone.Shelf)
-                    { fail(ArsenalCompositionFailureKind.InvalidInput,weapon.WeaponId,"Неизвестная Zone."); continue; }
-                    if(preset.PresentationStyle==null) { fail(ArsenalCompositionFailureKind.UnstyledPreset,weapon.WeaponId,"Generated требует Style: это и есть настройки, которые генератор применяет."); continue; }
-                    // Позы берутся из стиля как есть; размеры оружия генератор не знает и не проверяет.
-                    try { entries.Add(new ArsenalFrozenEntry(i,weapon,source.Zone,new ArsenalFrozenPresentation(
-                        ArsenalPresentationResolver.Resolve(weapon,source.Zone,preset.PresentationStyle)))); }
-                    catch(Exception ex) { fail(ArsenalCompositionFailureKind.InvalidInput,weapon.WeaponId,ex.Message); }
+                    if(string.IsNullOrWhiteSpace(source.Row)) { fail(ArsenalCompositionFailureKind.InvalidInput,weapon.WeaponId,"Запись пресета без ряда."); continue; }
+                    // Позы оружия в слоте разрешает сборщик слота по виду ряда: ряд — часть корпуса на сцене.
+                    entries.Add(new ArsenalFrozenEntry(i,weapon,source.Row));
                 }
             }
             return new ArsenalStationBuildInput(stationKey,preset!=null?preset.PresetId:null,catalog!=null?catalog.CatalogId:null,
-                catalog!=null?catalog.CompilerVersion:0,visual,placement,entries,
-                catalog!=null?catalog.Templates:Array.Empty<ArsenalFunctionalSlotTemplate>(),
+                catalog!=null?catalog.CompilerVersion:0,preset!=null?preset.PresentationStyle:null,visual,placement,entries,
                 catalog!=null?catalog.Decorations:Array.Empty<ArsenalDecorationDescriptor>(),
                 catalog!=null?catalog.Supports:Array.Empty<ArsenalSupportGeometry>(),errors);
         }
     }
+    /// <summary>
+    ///     Слот в порядке станции: что в нём и каким по счёту он стоит в своём ряду. Геометрии нет — где ряд и
+    ///     какой у него шаг, знает ряд корпуса (<see cref="ArsenalSlotRow" />) на сцене.
+    /// </summary>
     public sealed class ArsenalSlotManifest
     {
         public ArsenalFrozenEntry Entry { get; }
-        public ArsenalFunctionalSlotTemplate Template { get; }
         public int RowIndex { get; }
-        public ArsenalPresentationPose OpenPose { get; }
-        public ArsenalPresentationPose ClosedPose { get; }
-        public ArsenalSlotManifest(ArsenalFrozenEntry entry, ArsenalFunctionalSlotTemplate template, int row,
-            ArsenalPresentationPose open, ArsenalPresentationPose closed)
-        { Entry=entry; Template=template; RowIndex=row; OpenPose=open; ClosedPose=closed; }
+        public ArsenalSlotManifest(ArsenalFrozenEntry entry, int row) { Entry=entry; RowIndex=row; }
     }
     public sealed class ArsenalDecorationSelection
     {
@@ -169,22 +142,20 @@ namespace VrBattlegrounds.Arsenal
     {
         public string StationKey { get; }
         public string PresetId { get; }
+        public ArsenalPresentationStyle Style { get; }
         public int LayoutVersion => ArsenalCompositionCatalog.CurrentLayoutVersion;
         public int IdentitySchemaVersion => ArsenalCompositionCatalog.CurrentIdentitySchemaVersion;
         public bool Success => Failures.Count==0;
         public IReadOnlyList<ArsenalCompositionFailure> Failures { get; }
         public IReadOnlyList<ArsenalSlotManifest> Slots { get; }
         public ArsenalDecorationSelection Selection { get; }
-        public float PegRowWidth { get; }
-        public float ShelfRowWidth { get; }
         public string LayoutFingerprint { get; }
         public string LogicalRoleFingerprint { get; }
         public ArsenalStationDescription(ArsenalStationBuildInput input, IEnumerable<ArsenalCompositionFailure> failures,
-            IEnumerable<ArsenalSlotManifest> slots, ArsenalDecorationSelection selection, float peg, float shelf,
-            string layoutHash, string roleHash)
+            IEnumerable<ArsenalSlotManifest> slots, ArsenalDecorationSelection selection, string layoutHash, string roleHash)
         {
-            StationKey=input.StationKey; PresetId=input.PresetId; Failures=Array.AsReadOnly(failures.ToArray());
-            Slots=Array.AsReadOnly(slots.ToArray()); Selection=selection; PegRowWidth=peg; ShelfRowWidth=shelf;
+            StationKey=input.StationKey; PresetId=input.PresetId; Style=input.Style; Failures=Array.AsReadOnly(failures.ToArray());
+            Slots=Array.AsReadOnly(slots.ToArray()); Selection=selection;
             LayoutFingerprint=layoutHash; LogicalRoleFingerprint=roleHash;
         }
     }

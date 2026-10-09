@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Network;
+using VrBattlegrounds.Tests.Arsenal;
 using VrBattlegrounds.Tests.Network;
 
 namespace VrBattlegrounds.Tests.ArsenalWall
@@ -66,22 +67,14 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             AssetDatabase.DeleteAsset(ProbeFolder);
         }
 
-        /// <summary>Стена с одним слотом, настроенным на временный префаб оружия.</summary>
+        /// <summary>Собранная стена с одним слотом, настроенным на временный префаб оружия.</summary>
         private ArsenalWallController CreateWall(out ArsenalSlotController slot)
         {
             GameObject wallObject = CreateNetworkObject("ArsenalWall");
 
-            GameObject slotObject = new GameObject("Slot");
-            slotObject.transform.SetParent(wallObject.transform);
-
-            GameObject anchorObject = new GameObject("ItemAnchor");
-            anchorObject.transform.SetParent(slotObject.transform);
-
-            slot = slotObject.AddComponent<ArsenalSlotController>();
-            SetPrivateField(slot, "_itemAnchor", anchorObject.AddComponent<UxrGrabbableObjectAnchor>());
-            SetPrivateField(slot, "_weaponInfo", CreateWeaponInfo());
-
-            ArsenalWallController wall = wallObject.AddComponent<ArsenalWallController>();
+            FirearmSlotController firearm = ArsenalTestStation.AddSlot(wallObject, "Slot");
+            ArsenalWallController wall = ArsenalTestStation.Prepare(wallObject, new[] { firearm }, new[] { CreateWeaponInfo() });
+            slot = firearm;
             EnableNetworking(wallObject);
 
             // В EditMode Unity не зовёт Awake, а без него у стены пуст список слотов.
@@ -96,6 +89,8 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             SetPrivateField(info, "_displayName", "ProbeWeapon");
             SetPrivateField(info, "_weaponId", "probe_weapon");
             SetPrivateField(info, "_weaponPrefab", _weaponAsset);
+            // Магазин станция требует от любого ствола; выдачу оружия он не трогает.
+            SetPrivateField(info, "_magazinePrefab", _weaponAsset);
             return info;
         }
 

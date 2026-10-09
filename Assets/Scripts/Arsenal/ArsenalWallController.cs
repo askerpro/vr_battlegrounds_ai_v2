@@ -63,9 +63,8 @@ namespace VrBattlegrounds.Arsenal
     public class ArsenalWallController : NetworkBehaviour
     {
         // ── Inspector ──────────────────────────────────────────
-        [Header("Arsenal Slots")]
-        [Tooltip("All slots on the wall (firearms + shelf items). Auto-found if empty.")]
-        [SerializeField] private ArsenalSlotController[] _allSlots;
+        // Слоты станции устанавливает только сборщик (InstallSlots); в префабе их нет.
+        private ArsenalSlotController[] _allSlots = System.Array.Empty<ArsenalSlotController>();
 
         [Header("Components")]
         [SerializeField] private DogTagController _dogTagController;
@@ -265,8 +264,6 @@ namespace VrBattlegrounds.Arsenal
         /// </summary>
         private void EnsureReferences()
         {
-            EnsureSlotArray();
-
             if (_dogTagController == null)
                 _dogTagController = GetComponentInChildren<DogTagController>();
 
@@ -349,58 +346,19 @@ namespace VrBattlegrounds.Arsenal
         // ── Массив слотов ──────────────────────────────────────
 
         /// <summary>
-        /// Массив слотов известен, и индексы привязок можно проверять. Авторская станция — как только у неё
-        /// есть слоты (сериализованные или найденные в иерархии); сгенерированная — только после
-        /// <see cref="InstallGeneratedSlots" />. До этого привязки по индексу копятся, а не отбрасываются.
+        /// Массив слотов известен, и индексы привязок можно проверять: после <see cref="InstallSlots" />.
+        /// До этого привязки по индексу копятся, а не отбрасываются.
         /// </summary>
-        public bool SlotsInstalled
-        {
-            get
-            {
-                EnsureSlotArray();
-                return _slotsInstalled;
-            }
-        }
+        public bool SlotsInstalled => _slotsInstalled;
 
         private bool _slotsInstalled;
 
-        private bool IsGeneratedComposition
-        {
-            get
-            {
-                var composition = GetComponent<ArsenalStationCompositionBinding>();
-                return composition != null && composition.Mode == ArsenalCompositionMode.Generated;
-            }
-        }
-
         /// <summary>
-        /// Единственная точка, которая заводит массив слотов. Авторская станция ищет слоты в иерархии,
-        /// пока их нет; сгенерированная иерархию не читает (порядок детей не порядок манифеста) и ждёт установки.
+        /// Устанавливает слоты станции один раз, в порядке индексов манифеста — тот же порядок на всех машинах.
+        /// Вызывает только сборщик станции. Привязки, пришедшие раньше, разбираются сразу.
         /// </summary>
-        private void EnsureSlotArray()
+        public void InstallSlots(System.Collections.Generic.IReadOnlyList<ArsenalSlotController> slots)
         {
-            if (_slotsInstalled) return;
-
-            if (IsGeneratedComposition)
-            {
-                _allSlots = System.Array.Empty<ArsenalSlotController>();
-                return;
-            }
-
-            if (_allSlots == null || _allSlots.Length == 0)
-                _allSlots = GetComponentsInChildren<ArsenalSlotController>();
-
-            _slotsInstalled = _allSlots.Length > 0;
-        }
-
-        /// <summary>
-        /// Устанавливает слоты сгенерированной станции один раз, в порядке индексов манифеста — тот же порядок
-        /// на всех машинах. Вызывает только сборщик станции. Привязки, пришедшие раньше, разбираются сразу.
-        /// </summary>
-        public void InstallGeneratedSlots(System.Collections.Generic.IReadOnlyList<ArsenalSlotController> slots)
-        {
-            if (!IsGeneratedComposition)
-                throw new System.InvalidOperationException("ArsenalWall.InstallSlots.NotGenerated:" + name);
             if (_slotsInstalled)
                 throw new System.InvalidOperationException("ArsenalWall.InstallSlots.AlreadyInstalled:" + name);
             if (slots == null || slots.Count == 0)
@@ -437,7 +395,7 @@ namespace VrBattlegrounds.Arsenal
         {
             EnsureReferences();
             var binding = GetComponent<ArsenalStationPresetBinding>();
-            return binding == null || binding.TryPrepareFromScene();
+            return binding != null && binding.IsPrepared;
         }
 
         private void Update()
@@ -800,7 +758,6 @@ namespace VrBattlegrounds.Arsenal
             // стена не создаёт предметов, кто бы ни попросил — первичное, раунд или замена потерянного.
             if (!MapRunAdmission.CanActivateMapGameplay(gameObject.scene)) return;
             if (!EnsurePresetPrepared()) return;
-            EnsureSlotArray();
 
             for (int i = 0; i < _allSlots.Length; i++)
             {

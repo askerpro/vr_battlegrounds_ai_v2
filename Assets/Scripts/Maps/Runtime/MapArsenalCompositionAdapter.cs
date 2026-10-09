@@ -38,7 +38,7 @@ namespace VrBattlegrounds.Maps.Runtime
     /// <see cref="MapRunKey"/>; host вторую сборку не делает.
     ///
     /// <para>
-    /// Порядок: <see cref="Describe"/> строит описание каждой станции в режиме Generated из тех же входов, что у всех
+    /// Порядок: <see cref="Describe"/> строит описание каждой станции из тех же входов, что у всех
     /// машин (паспорт карты, каталог ресурсов, поза станции в сцене). Сервер записывает выбор оформления, fallback,
     /// layout hash и версию схемы ID в <see cref="MapStationConfig"/> до публикации config (<see cref="Apply"/>);
     /// клиент сверяет своё описание с опубликованным (<see cref="Verify"/>) и при расхождении не собирает станцию.
@@ -48,14 +48,11 @@ namespace VrBattlegrounds.Maps.Runtime
     ///
     /// <para>
     /// Геометрию, ID и выбор оформления адаптер не вычисляет — это владельцы генератора. Разборку ведёт scope запуска
-    /// (handle принадлежит ему с момента сборки), своего teardown у адаптера нет. Авторские станции сюда не попадают.
+    /// (handle принадлежит ему с момента сборки), своего teardown у адаптера нет.
     /// </para>
     /// </summary>
     internal sealed class MapArsenalCompositionAdapter
     {
-        /// <summary>Значение <see cref="MapStationConfig.DecorationFallback"/> авторской станции (пишет <see cref="MapRoot"/>).</summary>
-        internal const string AuthoredFallback = "Authored";
-
         private sealed class Station
         {
             public ArsenalStationCompositionBinding Binding;
@@ -85,8 +82,8 @@ namespace VrBattlegrounds.Maps.Runtime
         }
 
         /// <summary>
-        /// Описания станций в режиме Generated. Отказ описания (нестилизованный пресет, нет каталога, переполнение
-        /// места) — именованная ошибка в <paramref name="errors"/>: <c>Station.Generated.&lt;вид&gt;:&lt;StationKey&gt;</c>.
+        /// Описания станций карты. Отказ описания (пресет без стиля или без ряда записи, нет каталога) — именованная
+        /// ошибка в <paramref name="errors"/>: <c>Station.Generated.&lt;вид&gt;:&lt;StationKey&gt;</c>.
         /// </summary>
         public static MapArsenalCompositionAdapter Describe(IEnumerable<ArsenalStationCompositionBinding> stations, ArsenalPreset preset,
             ArsenalCompositionCatalog catalog, IArsenalStationComposer composer, List<string> errors)
@@ -95,7 +92,7 @@ namespace VrBattlegrounds.Maps.Runtime
             var described = new List<Station>();
             foreach (ArsenalStationCompositionBinding station in stations ?? Array.Empty<ArsenalStationCompositionBinding>())
             {
-                if (station == null || station.Mode != ArsenalCompositionMode.Generated) continue;
+                if (station == null) continue;
                 string key = station.StationKey;
                 if (catalog == null)
                 {
@@ -158,8 +155,8 @@ namespace VrBattlegrounds.Maps.Runtime
         }
 
         /// <summary>
-        /// Клиент: опубликованный сервером config описывает те же станции. Режим (Authored/Generated) каждой станции
-        /// сцены совпадает; у сгенерированной совпадают оформление, fallback, layout hash и версия схемы ID.
+        /// Клиент: опубликованный сервером config описывает те же станции: совпадают оформление, fallback, layout hash
+        /// и версия схемы ID.
         /// Расхождение — разные сборки или входы; станцию не собирать и не подменять своим выбором.
         /// </summary>
         public bool Verify(MapRunConfig config, IEnumerable<ArsenalStationCompositionBinding> sceneStations, List<string> errors)
@@ -171,13 +168,6 @@ namespace VrBattlegrounds.Maps.Runtime
                 foreach (MapStationConfig station in config.Stations)
                     if (station.StationKey != null) published[station.StationKey] = station;
 
-            foreach (ArsenalStationCompositionBinding binding in sceneStations ?? Array.Empty<ArsenalStationCompositionBinding>())
-            {
-                if (binding == null || binding.Mode != ArsenalCompositionMode.Authored) continue;
-                if (published.TryGetValue(binding.StationKey ?? "", out MapStationConfig server) && server.DecorationFallback != AuthoredFallback)
-                    errors.Add("Station.Generated.ModeMismatch:" + binding.StationKey);
-            }
-
             foreach (Station station in _stations)
             {
                 string key = station.Description.StationKey;
@@ -187,8 +177,7 @@ namespace VrBattlegrounds.Maps.Runtime
                     continue;
                 }
                 MapStationConfig local = ConfigFor(station.Description);
-                if (server.DecorationFallback == AuthoredFallback) errors.Add("Station.Generated.ModeMismatch:" + key);
-                else if (server.IdentitySchemaVersion != local.IdentitySchemaVersion) errors.Add("Station.Generated.IdentitySchemaMismatch:" + key);
+                if (server.IdentitySchemaVersion != local.IdentitySchemaVersion) errors.Add("Station.Generated.IdentitySchemaMismatch:" + key);
                 else if (server.DecorationId != local.DecorationId || server.DecorationFallback != local.DecorationFallback)
                     errors.Add($"Station.Generated.DecorationMismatch:{key} (сервер {server.DecorationFallback}/{server.DecorationId}, " +
                                $"клиент {local.DecorationFallback}/{local.DecorationId})");

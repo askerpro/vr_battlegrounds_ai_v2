@@ -25,6 +25,8 @@ namespace VrBattlegrounds.Editor.Arsenal
             public Transform Item;
             public Transform Magazine;
             public Transform Card;
+            /// <summary>Коробка приёма: поза ручки — центр и поворот, размер — BoxCollider ручки.</summary>
+            public Transform PlaceZone;
             public string CommittedBaseline;
             public List<SupportHandle> Supports = new List<SupportHandle>();
         }

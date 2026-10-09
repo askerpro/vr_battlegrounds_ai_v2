@@ -23,7 +23,7 @@ namespace VrBattlegrounds.Tests.Maps
     /// Что доказывает. Описание сгенерированной станции строится из входов, одинаковых на всех машинах, и его выбор
     /// оформления, fallback, layout hash и версия схемы ID попадают в config запуска до публикации; клиент сверяет своё
     /// описание с config и при расхождении не собирает станцию. Отказ описания (нестилизованный пресет, нет каталога
-    /// ресурсов) — именованный, без отката на Authored. Готовность клиента для барьера Relay
+    /// ресурсов) — именованный. Готовность клиента для барьера Relay
     /// (<see cref="MapBootstrap.IsLocallyReady"/>) ждёт, пока сборщик не подтвердит регистрацию ID всех станций
     /// (<c>GeneratedAnchorMissingAtInitialRequest</c>): до этого снимок не просится; отказ сборщика именован.
     /// </para>
@@ -31,8 +31,8 @@ namespace VrBattlegrounds.Tests.Maps
     /// <para>
     /// Пределы. Сборщик (<see cref="ArsenalStationComposer"/>) требует Play Mode, поэтому здесь его заменяет
     /// <see cref="FakeComposer"/> со сценарием ответов. Настоящая сборка, регистрация ID и разборка через scope —
-    /// Play Mode-проба задачи 7 (см. прогресс-документ). Стильного пресета в проекте нет: фикстура — копия
-    /// FullDemoArsenal в памяти со стилем IndustrialPegboardPresentation, ассеты не меняются.
+    /// Play Mode-проба генератора. Фикстура пресета — копия FullDemoArsenal в памяти: стиль
+    /// IndustrialPegboardPresentation и записи в ряд «pegboard»; ассеты не меняются.
     /// </para>
     /// </summary>
     public class MapArsenalCompositionAdapterTests
@@ -66,41 +66,35 @@ namespace VrBattlegrounds.Tests.Maps
             return catalog;
         }
 
-        /// <summary>Копия FullDemoArsenal в памяти со стилем: записи, которые стиль и каталог умеют разрешить.</summary>
+        private const string RowKey = "pegboard";
+
+        /// <summary>Копия FullDemoArsenal в памяти со стилем: первые записи, все в ряд <see cref="RowKey"/>.</summary>
         private ArsenalPreset StyledPreset(int maxEntries = 4)
         {
-            var source = AssetDatabase.LoadAssetAtPath<ArsenalPreset>("Assets/Data/Weapons/FullDemoArsenal.asset");
             var style = AssetDatabase.LoadAssetAtPath<ArsenalPresentationStyle>("Assets/Data/Weapons/IndustrialPegboardPresentation.asset");
-            Assert.IsNotNull(source, "Нет FullDemoArsenal.");
             Assert.IsNotNull(style, "Нет IndustrialPegboardPresentation.");
-            ArsenalCompositionCatalog catalog = Catalog();
+            return Preset(style, maxEntries);
+        }
 
+        /// <summary>Та же копия без стиля арсенала.</summary>
+        private ArsenalPreset UnstyledPreset() => Preset(null, 4);
+
+        private ArsenalPreset Preset(ArsenalPresentationStyle style, int maxEntries)
+        {
+            var source = AssetDatabase.LoadAssetAtPath<ArsenalPreset>("Assets/Data/Weapons/FullDemoArsenal.asset");
+            Assert.IsNotNull(source, "Нет FullDemoArsenal.");
             ArsenalPreset preset = UnityEngine.Object.Instantiate(source);
             _owned.Add(preset);
             typeof(ArsenalPreset).GetField("_presentationStyle", Fields).SetValue(preset, style);
-            var kept = new List<ArsenalPreset.Entry>();
-            foreach (ArsenalPreset.Entry entry in source.Entries)
-            {
-                if (entry.Weapon == null || catalog.Weapons.Count(m => m.Weapon == entry.Weapon) != 1) continue;
-                try { ArsenalPresentationResolver.Resolve(entry.Weapon, entry.Zone, style); }
-                catch (Exception) { continue; }
-                if (kept.Count < maxEntries) kept.Add(entry);
-            }
-            Assume.That(kept.Count, Is.GreaterThanOrEqualTo(2), "Каталог и стиль не разрешают и двух записей FullDemoArsenal.");
+            var kept = source.Entries.Where(e => e.Weapon != null).Take(maxEntries)
+                .Select(e => new ArsenalPreset.Entry { Weapon = e.Weapon, Row = RowKey }).ToList();
+            Assume.That(kept.Count, Is.GreaterThanOrEqualTo(2), "В FullDemoArsenal меньше двух записей.");
             typeof(ArsenalPreset).GetField("_entries", Fields).SetValue(preset, kept);
             return preset;
         }
 
-        private ArsenalPreset UnstyledPreset()
-        {
-            var source = AssetDatabase.LoadAssetAtPath<ArsenalPreset>("Assets/Data/Weapons/FullDemoArsenal.asset");
-            Assert.IsNotNull(source);
-            Assume.That(source.PresentationStyle, Is.Null, "FullDemoArsenal получил стиль — фикстура «нестилизованного пресета» устарела.");
-            return source;
-        }
-
-        /// <summary>Оболочка станции в режиме <paramref name="mode"/>, как её проверяет MapRoot и ждёт сборщик.</summary>
-        private ArsenalStationCompositionBinding Station(string key, ArsenalCompositionMode mode = ArsenalCompositionMode.Generated)
+        /// <summary>Оболочка станции с рядом <see cref="RowKey"/>, как её проверяет MapRoot и ждёт сборщик.</summary>
+        private ArsenalStationCompositionBinding Station(string key)
         {
             var go = new GameObject(key);
             _owned.Add(go);
@@ -112,9 +106,7 @@ namespace VrBattlegrounds.Tests.Maps
             anchor.ConfigureRaisedBounds(new Bounds(Vector3.zero, Vector3.one * 50f));
             var binding = go.AddComponent<ArsenalStationCompositionBinding>();
             Set(binding, "_stationKey", key);
-            Set(binding, "_mode", mode);
             Set(binding, "_controller", wall);
-            Set(binding, "_authoredBinding", presets);
             Set(binding, "_stationAnchor", anchor);
             Set(binding, "_equipmentPoses", poses);
             return binding;
@@ -129,8 +121,9 @@ namespace VrBattlegrounds.Tests.Maps
             return resolution.Config;
         }
 
-        private static MapRunBindings Authored(string scene, params string[] keys) =>
-            new MapRunBindings(scene, keys.Select(k => new MapStationConfig(k, "", MapArsenalCompositionAdapter.AuthoredFallback, "shell-" + k, 1)));
+        /// <summary>Записи оболочек станций, как их пишет <see cref="MapRoot"/> до описания генератора.</summary>
+        private static MapRunBindings Shell(string scene, params string[] keys) =>
+            new MapRunBindings(scene, keys.Select(k => new MapStationConfig(k, "", "Generated", "shell-" + k, 1)));
 
         private static void Set(object target, string field, object value)
         {
@@ -162,10 +155,12 @@ namespace VrBattlegrounds.Tests.Maps
                 if (ThrowOnPrepare != null) throw new InvalidOperationException(ThrowOnPrepare);
                 Prepared++;
                 LastScope = scope;
-                var root = new GameObject("FakeGeneratedSlots");
+                // Слот-заглушка: handle владеет слотами и уничтожает их при разборке.
+                var root = new GameObject("FakeGeneratedSlot");
+                root.SetActive(false);
                 Roots.Add(root);
-                var handle = new ArsenalCompositionHandle(description, scope, station, root, Array.Empty<ArsenalSlotController>(),
-                    Array.Empty<NetworkUxrIdentityAssignment>(), new List<Transform>());
+                var handle = new ArsenalCompositionHandle(description, scope, station, new[] { root.AddComponent<ArsenalSlotController>() },
+                    Array.Empty<NetworkUxrIdentityAssignment>());
                 scope.Own(handle);
                 return handle;
             }
@@ -189,25 +184,21 @@ namespace VrBattlegrounds.Tests.Maps
         public void Описание_сгенерированной_станции_попадает_в_config_до_публикации()
         {
             ArsenalStationCompositionBinding generated = Station(StationKey);
-            ArsenalStationCompositionBinding authored = Station("AuthoredStation", ArsenalCompositionMode.Authored);
             var errors = new List<string>();
 
-            MapArsenalCompositionAdapter adapter = MapArsenalCompositionAdapter.Describe(new[] { generated, authored },
+            MapArsenalCompositionAdapter adapter = MapArsenalCompositionAdapter.Describe(new[] { generated },
                 StyledPreset(), Catalog(), new FakeComposer(), errors);
 
             CollectionAssert.IsEmpty(errors, "Описание тестовой станции отказало.");
-            Assert.AreEqual(1, adapter.StationCount, "Авторская станция попала в адаптер генератора.");
+            Assert.AreEqual(1, adapter.StationCount);
 
-            MapRunBindings applied = adapter.Apply(Authored("Lobby", StationKey, "AuthoredStation"));
+            MapRunBindings applied = adapter.Apply(Shell("Lobby", StationKey));
             MapStationConfig station = applied.Stations.Single(s => s.StationKey == StationKey);
-            Assert.AreNotEqual(MapArsenalCompositionAdapter.AuthoredFallback, station.DecorationFallback,
-                "Запись сгенерированной станции осталась авторской оболочкой.");
+            Assert.AreNotEqual("shell-" + StationKey, station.LayoutFingerprint, "Запись станции осталась записью оболочки.");
             Assert.IsTrue(Enum.TryParse(station.DecorationFallback, out ArsenalDecorationFallback _),
                 "Fallback оформления не из описания генератора: " + station.DecorationFallback);
             Assert.AreEqual(64, station.LayoutFingerprint.Length, "Layout hash описания не записан.");
             Assert.AreEqual((uint)ArsenalCompositionCatalog.CurrentIdentitySchemaVersion, station.IdentitySchemaVersion);
-            Assert.AreEqual("shell-AuthoredStation", applied.Stations.Single(s => s.StationKey == "AuthoredStation").LayoutFingerprint,
-                "Запись авторской станции изменена адаптером.");
 
             // Запись проходит resolver и сетевой descriptor без потерь — клиент сверяет именно её.
             MapRunConfig config = Config(new MapRunKey(Guid.NewGuid(), 1), "Lobby", applied);
@@ -220,7 +211,7 @@ namespace VrBattlegrounds.Tests.Maps
         }
 
         [Test]
-        public void Нестилизованный_пресет_даёт_именованный_отказ_без_отката_на_Authored()
+        public void Пресет_без_стиля_даёт_именованный_отказ()
         {
             var errors = new List<string>();
             MapArsenalCompositionAdapter adapter = MapArsenalCompositionAdapter.Describe(new[] { Station(StationKey) },
@@ -238,48 +229,35 @@ namespace VrBattlegrounds.Tests.Maps
             MapArsenalCompositionAdapter.Describe(new[] { Station(StationKey) }, StyledPreset(), null, new FakeComposer(), errors);
             CollectionAssert.AreEqual(new[] { "Station.Generated.CatalogMissing:" + StationKey }, errors);
 
-            // Карта без сгенерированных станций каталог ресурсов не требует.
+            // Карта без станций каталог ресурсов не требует.
             errors.Clear();
-            MapArsenalCompositionAdapter authoredOnly = MapArsenalCompositionAdapter.Describe(
-                new[] { Station("AuthoredStation", ArsenalCompositionMode.Authored) }, null, null, new FakeComposer(), errors);
+            MapArsenalCompositionAdapter none = MapArsenalCompositionAdapter.Describe(
+                Array.Empty<ArsenalStationCompositionBinding>(), null, null, new FakeComposer(), errors);
             CollectionAssert.IsEmpty(errors);
-            Assert.AreEqual(ArsenalCompositionReadiness.Passed, authoredOnly.Readiness, "Карта только с авторскими станциями не готова.");
+            Assert.AreEqual(ArsenalCompositionReadiness.Passed, none.Readiness, "Карта без станций не готова.");
         }
 
         [Test]
         public void Клиент_сверяет_config_и_не_принимает_расхождения()
         {
             ArsenalStationCompositionBinding generated = Station(StationKey);
-            ArsenalStationCompositionBinding authored = Station("AuthoredStation", ArsenalCompositionMode.Authored);
-            var stations = new[] { generated, authored };
+            var stations = new[] { generated };
             var errors = new List<string>();
             MapArsenalCompositionAdapter adapter = MapArsenalCompositionAdapter.Describe(stations, StyledPreset(), Catalog(), new FakeComposer(), errors);
             CollectionAssert.IsEmpty(errors);
-            MapRunBindings published = adapter.Apply(Authored("Lobby", StationKey, "AuthoredStation"));
+            MapRunBindings published = adapter.Apply(Shell("Lobby", StationKey, "OtherStation"));
             var key = new MapRunKey(Guid.NewGuid(), 1);
 
             Assert.IsTrue(adapter.Verify(Config(key, "Lobby", published), stations, errors), string.Join(", ", errors));
 
             MapStationConfig server = published.Stations.Single(s => s.StationKey == StationKey);
             var layout = new MapRunBindings("Lobby", new[] { new MapStationConfig(StationKey, server.DecorationId, server.DecorationFallback,
-                new string('0', 64), server.IdentitySchemaVersion), published.Stations.Single(s => s.StationKey == "AuthoredStation") });
+                new string('0', 64), server.IdentitySchemaVersion), published.Stations.Single(s => s.StationKey == "OtherStation") });
             Assert.IsFalse(adapter.Verify(Config(key, "Lobby", layout), stations, errors));
             CollectionAssert.Contains(errors, "Station.Generated.LayoutMismatch:" + StationKey);
 
             errors.Clear();
-            Assert.IsFalse(adapter.Verify(Config(key, "Lobby", Authored("Lobby", StationKey, "AuthoredStation")), stations, errors),
-                "Сервер считает станцию авторской, клиент собрал бы свою — расхождение не замечено.");
-            CollectionAssert.Contains(errors, "Station.Generated.ModeMismatch:" + StationKey);
-
-            errors.Clear();
-            var reversed = new MapRunBindings("Lobby", published.Stations.Select(s => s.StationKey == "AuthoredStation"
-                ? new MapStationConfig(s.StationKey, "", "Bare", new string('1', 64), 1) : s));
-            Assert.IsFalse(adapter.Verify(Config(key, "Lobby", reversed), stations, errors),
-                "Сервер собрал станцию генератором, у клиента она авторская — расхождение не замечено.");
-            CollectionAssert.Contains(errors, "Station.Generated.ModeMismatch:AuthoredStation");
-
-            errors.Clear();
-            Assert.IsFalse(adapter.Verify(Config(key, "Lobby", Authored("Lobby", "AuthoredStation")), stations, errors));
+            Assert.IsFalse(adapter.Verify(Config(key, "Lobby", Shell("Lobby", "OtherStation")), stations, errors));
             CollectionAssert.Contains(errors, "Station.Generated.NotPublished:" + StationKey);
         }
 
@@ -346,7 +324,7 @@ namespace VrBattlegrounds.Tests.Maps
             // Config, который опубликовал бы сервер: описание из тех же входов.
             var errors = new List<string>();
             MapRunBindings published = MapArsenalCompositionAdapter.Describe(new[] { station }, preset, Catalog(), new FakeComposer(), errors)
-                .Apply(Authored(TestScene, StationKey));
+                .Apply(Shell(TestScene, StationKey));
             CollectionAssert.IsEmpty(errors);
             if (tamper != null) published = tamper(published);
             return (bootstrap, composer, Config(new MapRunKey(Guid.NewGuid(), 1), TestScene, published));
@@ -440,38 +418,43 @@ namespace VrBattlegrounds.Tests.Maps
         }
 
         [Test]
-        public void Без_сгенерированных_станций_клиент_готов_сразу()
+        public void Без_станций_клиент_готов_сразу()
         {
             Assume.That(NetworkServer.active, Is.False);
             var go = new GameObject("MapRoot");
             _owned.Add(go);
             var root = go.AddComponent<MapRoot>();
-            Set(root, "_stations", new[] { Station("AuthoredStation", ArsenalCompositionMode.Authored) });
+            Set(root, "_stations", Array.Empty<ArsenalStationCompositionBinding>());
             var bootstrap = go.AddComponent<MapBootstrap>();
             Invoke(bootstrap, "Awake");
             _bootstrap = bootstrap;
             var composer = new FakeComposer();
             bootstrap.Composer = composer;
-            MapRunConfig config = Config(new MapRunKey(Guid.NewGuid(), 1), TestScene, Authored(TestScene, "AuthoredStation"));
+            MapRunConfig config = Config(new MapRunKey(Guid.NewGuid(), 1), TestScene, Shell(TestScene));
 
             bootstrap.AcceptLocalRun(config, null);
 
-            Assert.IsTrue(bootstrap.IsLocallyReady(config.Key), "Карта только с авторскими станциями ждёт генератора.");
+            Assert.IsTrue(bootstrap.IsLocallyReady(config.Key), "Карта без станций ждёт генератора.");
             Assert.AreEqual(0, composer.Prepared);
         }
 
         [Test]
-        public void MapRoot_допускает_станцию_в_режиме_Generated()
+        public void MapRoot_допускает_оболочку_станции_с_рядом()
         {
             var go = new GameObject("MapRoot");
             _owned.Add(go);
             var root = go.AddComponent<MapRoot>();
-            Set(root, "_stations", new[] { Station(StationKey) });
+            ArsenalStationCompositionBinding station = Station(StationKey);
+            var row = new GameObject("PegboardRow");
+            row.transform.SetParent(station.transform, false);
+            row.AddComponent<ArsenalSlotRow>();
+            Set(root, "_stations", new[] { station });
 
             IReadOnlyList<string> errors = root.ValidateBindings(includeSceneScans: false).Errors;
 
-            Assert.IsFalse(errors.Any(e => e.StartsWith("Station.Generated") || e.StartsWith("Station.Mode")),
-                "Сгенерированная станция отвергнута проверкой привязок: " + string.Join(", ", errors));
+            Assert.IsFalse(errors.Any(e => e.StartsWith("Station.Generated") || e.StartsWith("Station.Rows") ||
+                                           e.StartsWith("Station.AuthoredSlots") || e.StartsWith("Station.OwnerRefs")),
+                "Оболочка станции отвергнута проверкой привязок: " + string.Join(", ", errors));
         }
     }
 }

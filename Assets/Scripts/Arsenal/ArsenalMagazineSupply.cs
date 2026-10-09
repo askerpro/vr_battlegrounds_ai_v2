@@ -34,7 +34,7 @@ namespace VrBattlegrounds.Arsenal
         {
             if (_wall == null) _wall = GetComponent<ArsenalWallController>();
             var binding = GetComponent<ArsenalStationPresetBinding>();
-            return _wall != null && (binding == null || binding.TryPrepareFromScene());
+            return _wall != null && binding != null && binding.IsPrepared;
         }
         private void OnEnable()
         {

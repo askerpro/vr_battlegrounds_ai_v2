@@ -89,6 +89,27 @@
       "needs": []
     },
     {
+      "id": "ejection",
+      "writes": [
+        "Assets/Scripts/Weapons/Core/**",
+        "Assets/Scripts/Weapons/WeaponSystem/**",
+        "Assets/Data/WeaponSystem/**",
+        "Assets/Prefabs/Weapons/**",
+        "Assets/Audio/SFX/Weapons/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponSystemAuthoring.cs",
+        "Assets/Tests/EditMode/Weapons/**",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "waves-f",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "use-context",
       "writes": [
         "Assets/Scripts/Weapons/WeaponUseContext.cs",
@@ -101,7 +122,7 @@
       "after": [
         {
           "task": "weapon-system",
-          "stage": "waves-f",
+          "stage": "ejection",
           "state": "merged"
         }
       ],
@@ -132,7 +153,7 @@
       "after": [
         {
           "task": "weapon-system",
-          "stage": "waves-f",
+          "stage": "ejection",
           "state": "merged"
         }
       ],

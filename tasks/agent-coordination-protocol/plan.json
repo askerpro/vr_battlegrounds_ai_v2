@@ -199,6 +199,20 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "readonly-startup-repair",
+      "writes": [
+        "tasks/agent-coordination-protocol/**"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "infrastructure-friction-repair",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

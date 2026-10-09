@@ -2,7 +2,7 @@
 
 **Задача/владелец:** `hand-rig-quality`, Codex. **Обновлено:** 2026-10-09.
 **Worktree:** `F:/CodexWorktrees/hands-rig-quality/Vr_Battlegrounds_ai`,
-ветка `codex/hands-rig-quality`, база `origin/dev 546670a3`.
+ветка `codex/hands-rig-quality`, база `origin/dev 387cbd14`.
 
 ## Цель и границы
 
@@ -21,7 +21,10 @@ M2/M3/M5 предварительные. После rebase на `546670a3` но�
 Анализ эксперта по кистям, модели, Hands Integration, позам и инструментам подготовлен.
 Исходные черновики в локальных reports исключены из Git; их содержимое сохранено
 в версионируемом [expert/](expert/analysis.md), сырые отчёты остаются вне Git.
-[Профиль](expert/draft-profile.agent.md) пока не развёрнут.
+Статический пакет влит в `origin/dev 3def410a` по указанию «как есть».
+Постоянная [роль](expert/avatar-grip-expert.md), [профиль и запуск](expert/launch.md),
+[передача](expert/handoff.md) подготовлены. Профиль установлен; TOML/KB checks PASS.
+Base-publication348 пока QUEUED; экспертная сессия стартует после завершения допуска.
 
 ## Завершение текущего пакета
 
@@ -32,9 +35,9 @@ M2/M3/M5 предварительные. После rebase на `546670a3` но�
 1. `static-analyzer`: влить текущий код/SDK-патч59/тесты/материалы задачи через
    merge-request/merge-execute и request-base. Перенос экспорта reports, повторная
    Unity/Android-проверка и визуальная приёмка передаются эксперту. План — в [Details.md](Details.md).
-2. `expert-deployment`: подготовить постоянный профиль и шаблон Codex-конфигурации,
-   проверить загрузку роли/KB при запуске, влить; применить профиль на машине и штатно
-   передать задачу одной новой principal-сессии. Продолжение до этого не запускать.
+2. `expert-deployment`: проверить и влить роль/профиль из expert/, установить локальный
+   профиль Codex и открыть экспертную сессию для чтения контекста. Старый principal
+   завершает допуск; игровой код в стартовом ходе эксперт не меняет.
 3. Под экспертом: `palm-validation` → `dynamic-probes` → `mef-correction` →
    `acceptance` → `documentation`, с приёмкой и вливанием каждого этапа.
 

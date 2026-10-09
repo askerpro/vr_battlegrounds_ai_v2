@@ -3,7 +3,7 @@
   "owner": "hand-rig-quality",
   "client": "codex",
   "worktree": "F:/CodexWorktrees/hands-rig-quality/Vr_Battlegrounds_ai",
-  "base_sha": "546670a329e6049758066c872050c2da0905d72f",
+  "base_sha": "387cbd14a6dd2228e06acc7da641e194593b7d07",
   "doc_path": "tasks/hand-rig-quality/Readme.md",
   "title": "Качество рига и скиннинга кистей",
   "stages": [
@@ -27,8 +27,6 @@
     {
       "id": "expert-deployment",
       "writes": [
-        ".codex/experts/avatar-grip-expert.md",
-        ".codex/experts/avatar-grip-expert.config.toml",
         "tasks/hand-rig-quality/expert/**",
         "tasks/hand-rig-quality/Readme.md",
         "tasks/hand-rig-quality/Details.md",

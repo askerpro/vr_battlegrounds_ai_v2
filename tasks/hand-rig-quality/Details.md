@@ -216,6 +216,17 @@ changelog/ задачи, SDK-патч59 резервируется ключом 
 
 ### Уточнение пользователя: влить как есть и создать эксперта
 
+Статический пакет влит штатным merge-execute:3def410af565333f755ba1cb1c0b8ba1d2d72c28,
+request fcec8b886bf648198ca0d8ad030d27ef. Удалённый refs/heads/dev подтверждён через
+git ls-remote.41 собственный файл, Git diff --check PASS, отчётов и launcher в коммите нет.
+Base-publication348 QUEUED, runner stopped_by_operator; Unity-база не подтверждена.
+Роль и профиль развёртываются отдельным документационным этапом expert-deployment.
+Отдельный профиль C:/Users/asker/.codex/avatar-grip-expert.config.toml установлен без
+изменения общего config.toml. validate_profile.py: TOML/role/KB/handoff/content PASS;
+codex.cmd -p avatar-grip-expert --help exit0. Профильный пакет перенесён без конфликтов
+на новую accepted базу387cbd14a6dd2228e06acc7da641e194593b7d07; она содержит3def410a.
+Help не подтверждает модельную загрузку роли: это проверит стартовая экспертная сессия.
+
 Прямое указание: «давай пока замержим как есть и создадим агента эксперта по хватам».
 Оно заменяет требование предварительной новой ручной проверки для текущего пакета.
 Это разрешение на вливание, а не утверждение, что новая Unity/Android-проверка прошла.

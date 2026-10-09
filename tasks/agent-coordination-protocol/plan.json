@@ -68,6 +68,17 @@
         {"task": "agent-coordination-protocol", "stage": "worker-test-admission-fix", "state": "merged"}
       ],
       "needs": []
+    },
+    {
+      "id": "checkout-root-resolution",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        ".agents/rules/agent_coordination.md"
+      ],
+      "after": [
+        {"task": "agent-coordination-protocol", "stage": "native-routing", "state": "merged"}
+      ],
+      "needs": []
     }
   ]
 }

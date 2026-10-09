@@ -85,19 +85,19 @@ namespace VrBattlegrounds.Editor.Gameplay
             E("AR15", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
             E("Mk14", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
             E("MKR9", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
-            E("SRM12", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Shotgun),
+            E("SRM12", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),  // Desert Tech SRS — снайперская, не дробовик
             E("PPK", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Pistol),
             E("MP5K", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
             E("Scar", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
             E("Uzi", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Pistol),
-            E("SniperRifle", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
+            E("SniperRifle", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),  // AX-50
             E("Gun", "F4", DetachableNoActionProfile, WeaponFeedbackCategory.Pistol),
             E("Machinegun", "F4", DetachableNoActionProfile, WeaponFeedbackCategory.Rifle),
             Review("Viper", "F1", DetachableHoldOpenProfile, WeaponFeedbackCategory.Pistol),
             Review("TR15", "F1", DetachableHoldOpenProfile, WeaponFeedbackCategory.Rifle),
             Review("MKR9", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
-            Review("SRM12", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Shotgun),
-            Review("SniperRifle", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
+            Review("SRM12", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),
+            Review("SniperRifle", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),
             E("Revolver", "F5", null, WeaponFeedbackCategory.Pistol),
             E("R08", "F5", null, WeaponFeedbackCategory.Pistol),
             E("Shotgun", "F5", null, WeaponFeedbackCategory.Shotgun),
@@ -124,7 +124,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <summary>
         /// Начальные звуки механизма категорий — клипы, уже назначенные в проекте типичному стволу категории:
         /// автомат — AK105 (затвор Kinemation, эталон автомата), дробовик — помпа <c>UxrShotgunPump</c> (FABARM и SDK Shotgun),
-        /// пистолет — Viper (стартовый пистолет у всех игроков). Извлечения патрона и задержки затвора в проекте не назначено
+        /// пистолет — Viper (стартовый пистолет у всех игроков), снайперская — затвор SniperRifle (AX-50). Извлечения патрона и задержки затвора в проекте не назначено
         /// ни одному стволу: это необязательные слои поверх оттяжки и позы, в дефолтах пусто.
         /// </summary>
         private static readonly DefaultsSpec[] DefaultsSpecs =
@@ -138,6 +138,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             new DefaultsSpec { Category = WeaponFeedbackCategory.Pistol, Path = DataFolder + "/PistolFeedbackDefaults.asset",
                 Back = "Assets/Audio/SFX/Weapons/Kinemation/Viper/Viper_BoltBack.wav",
                 Forward = "Assets/Audio/SFX/Weapons/Kinemation/Viper/Viper_BoltForward.wav", Why = "Viper" },
+            // Снайперская винтовка (решение пользователя 2026-10-09): эталон — затвор SniperRifle (AX-50).
+            new DefaultsSpec { Category = WeaponFeedbackCategory.Sniper, Path = DataFolder + "/SniperFeedbackDefaults.asset",
+                Back = "Assets/Audio/SFX/Universal/Zatvor2.mp3",
+                Forward = "Assets/Audio/SFX/Universal/Zatvor1.mp3", Why = "SniperRifle (AX-50)" },
         };
 
         private const string Srm12Sfx = "Assets/Audio/SFX/Weapons/Kinemation/SRM12/";
@@ -724,23 +728,21 @@ namespace VrBattlegrounds.Editor.Gameplay
                 "Pistol_Casing", new Vector3(1.6f, 1.4f, -0.3f), new Vector3(0f, 15f, 25f)),
             (WeaponFeedbackCategory.Shotgun, "Shotgun_Shell", new Vector3(0.9f, 0.6f, 0f), new Vector3(0f, 5f, 8f),
                 "Shotgun_Hull", new Vector3(1.8f, 1.0f, -0.3f), new Vector3(0f, 8f, 12f)),
+            // Снайперская: патрон .308 (меш Mk14 7.62×51) и гильза (.338 Lapua под размер .308) — гильза пригодится,
+            // когда у ручного цикла появится её сигнал.
+            (WeaponFeedbackCategory.Sniper, "Sniper_Round", new Vector3(0.9f, 0.7f, -0.1f), new Vector3(0f, 5f, 8f),
+                "Sniper_Casing", new Vector3(2.0f, 1.0f, -0.4f), new Vector3(0f, 10f, 15f)),
         };
 
         /// <summary>
         /// Оверрайды вылета ствола (имя корня без <c>_SightReview</c> → поле набора → префаб и импульс): калибр ствола не
-        /// совпадает с категорией. Решения пользователя 2026-10-09: MKR9 — 9 мм в категории «автомат», гильза и импульс
-        /// пистолетные; SniperRifle (SRS) — снайперский патрон .308 (меш патрона Mk14 7.62×51) и гильза
-        /// (меш .338 Lapua Kinemation под размер .308) — гильза пригодится, когда у ручного цикла появится её сигнал.
+        /// совпадает с категорией. Решение пользователя 2026-10-09: MKR9 — 9 мм в категории «автомат», гильза и импульс
+        /// пистолетные. Снайперские стволы (SniperRifle, SRM12) — своя категория, их вылет — дефолт категории.
         /// </summary>
         private static readonly Dictionary<string, (string Field, string Ejecta, Vector3 Velocity, Vector3 Spin)[]> EjectionOverrides =
             new Dictionary<string, (string Field, string Ejecta, Vector3 Velocity, Vector3 Spin)[]>
             {
                 ["MKR9"] = new[] { ("_spentCasing", "Pistol_Casing", new Vector3(1.6f, 1.4f, -0.3f), new Vector3(0f, 15f, 25f)) },
-                ["SniperRifle"] = new[]
-                {
-                    ("_liveRound", "Sniper_Round", new Vector3(0.9f, 0.7f, -0.1f), new Vector3(0f, 5f, 8f)),
-                    ("_spentCasing", "Sniper_Casing", new Vector3(2.0f, 1.0f, -0.4f), new Vector3(0f, 10f, 15f)),
-                },
             };
 
         private static readonly string[] EjectionFields = { "_liveRound", "_spentCasing" };

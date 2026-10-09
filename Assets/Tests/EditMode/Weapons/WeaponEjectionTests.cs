@@ -24,8 +24,9 @@ namespace VrBattlegrounds.Tests.Weapons
     /// </para>
     /// <para>
     /// Данные: оверрайд ствола важнее дефолта категории, пустой оверрайд — дефолт, пусто везде — вылета нет. Префабы:
-    /// у каждого ствола D–F4 окно выброса внутри ствола и вылет на каждый его сигнал; MKR9 — пистолетная гильза, SniperRifle —
-    /// снайперский патрон; префабы вылета — только визуал (слой Ignore Raycast, Rigidbody, без граббабла).
+    /// у каждого ствола D–F4 окно выброса внутри ствола и вылет на каждый его сигнал; MKR9 — пистолетная гильза (оверрайд);
+    /// SniperRifle (AX-50) и SRM12 (Desert Tech SRS) — категория «снайперская», снайперский патрон по дефолту категории;
+    /// префабы вылета — только визуал (слой Ignore Raycast, Rigidbody, без граббабла).
     /// </para>
     /// Пул (<c>WeaponEjectaPool</c>) здесь не проверяется: он работает только в Play (вне Play вылет не спавнится).
     /// </summary>
@@ -217,6 +218,7 @@ namespace VrBattlegrounds.Tests.Weapons
         [TestCase(WeaponFeedbackCategory.Rifle)]
         [TestCase(WeaponFeedbackCategory.Pistol)]
         [TestCase(WeaponFeedbackCategory.Shotgun)]
+        [TestCase(WeaponFeedbackCategory.Sniper)]
         public void Дефолты_категории_заполнены_патроном_и_гильзой(WeaponFeedbackCategory category)
         {
             var defaults = (WeaponFeedbackDefaults)Call("LoadDefaults", category);
@@ -284,12 +286,29 @@ namespace VrBattlegrounds.Tests.Weapons
 
         [TestCase("MKR9", WS.WeaponCue.CasingEjected, "Pistol_Casing")]
         [TestCase("MKR9_SightReview", WS.WeaponCue.CasingEjected, "Pistol_Casing")]
-        [TestCase("SniperRifle", WS.WeaponCue.ChamberEjected, "Sniper_Round")]
-        [TestCase("SniperRifle_SightReview", WS.WeaponCue.ChamberEjected, "Sniper_Round")]
         public void Калибр_ствола_вне_категории_задан_оверрайдом(string name, WS.WeaponCue cue, string ejecta)
         {
             Assert.That(Call("EjectionOverrideOf", name, cue), Is.EqualTo(ejecta),
-                "Решение пользователя 2026-10-09: MKR9 — пистолетная гильза, SniperRifle — снайперский патрон.");
+                "Решение пользователя 2026-10-09: MKR9 (9 мм) в категории «автомат» — пистолетная гильза.");
+        }
+
+        [TestCase("SniperRifle", WS.WeaponCue.ChamberEjected)]
+        [TestCase("SniperRifle_SightReview", WS.WeaponCue.ChamberEjected)]
+        [TestCase("SRM12", WS.WeaponCue.ChamberEjected)]
+        [TestCase("SRM12_SightReview", WS.WeaponCue.ChamberEjected)]
+        public void Снайперские_стволы_в_своей_категории_и_вылет_по_дефолту(string name, WS.WeaponCue cue)
+        {
+            Assert.That(Call("EjectionOverrideOf", name, cue), Is.Null, "Снайперский вылет — дефолт категории, не оверрайд.");
+            string path = name.EndsWith("_SightReview")
+                ? $"Assets/Prefabs/Weapons/SightReview/{name}.prefab" : $"Assets/Prefabs/Weapons/{name}/{name}.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            WeaponSystem host = prefab != null ? prefab.GetComponent<WeaponSystem>() : null;
+            Assert.That(host, Is.Not.Null, path + ": нет хоста.");
+            Assert.That(host.FeedbackDefaults != null && host.FeedbackDefaults.Category == WeaponFeedbackCategory.Sniper,
+                "Решение пользователя 2026-10-09: SniperRifle (AX-50) и SRM12 (Desert Tech SRS) — категория «снайперская винтовка».");
+            WeaponEjectile ejectile = WeaponEjectionSet.Resolve(host.Ejection, host.FeedbackDefaults.Ejection, cue, out WeaponFeedbackSource source);
+            Assert.That(source, Is.EqualTo(WeaponFeedbackSource.Default));
+            Assert.That(ejectile.Prefab.name, Is.EqualTo("Sniper_Round"), name + ": снайперский патрон.");
         }
     }
 }

@@ -2710,7 +2710,7 @@ MonoBehaviour:
     _anchor: {fileID: 997765773864982255}
     _localPosition: {x: 0.022, y: 0.03906, z: -0.15744}
     _localRotation: {x: 0, y: 0, z: 0, w: 1}
-  _feedbackDefaults: {fileID: 11400000, guid: bd43905bcfa91cb4cb14f0f873d0266c, type: 2}
+  _feedbackDefaults: {fileID: 11400000, guid: ee79f60f82f1f1a478b8a425c0b43772, type: 2}
   _hintVisual: {fileID: 2111917741311032165}
   _hintProximity: {fileID: 1292811686694229197}
 --- !u!1 &7255111292342257725

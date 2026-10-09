@@ -1255,7 +1255,7 @@ MonoBehaviour:
     _anchor: {fileID: 1118917243140558269}
     _localPosition: {x: 0.01825, y: 0.05911, z: 0.08164}
     _localRotation: {x: 0, y: 0, z: 0, w: 1}
-  _feedbackDefaults: {fileID: 11400000, guid: 85985b5ea9e111e4db2bfdf1c03eb563, type: 2}
+  _feedbackDefaults: {fileID: 11400000, guid: ee79f60f82f1f1a478b8a425c0b43772, type: 2}
   _hintVisual: {fileID: 8205999372640144268}
   _hintProximity: {fileID: 5772514671307145475}
 --- !u!1 &4106077379521173809

@@ -2,8 +2,11 @@ using UnityEngine;
 
 namespace VrBattlegrounds.Weapons
 {
-    /// <summary>Категория отклика оружия: какой ассет дефолтов звука и вибрации у ствола (решение пользователя 2026-10-09).</summary>
-    public enum WeaponFeedbackCategory { Rifle, Shotgun, Pistol }
+    /// <summary>
+    /// Категория отклика оружия: какой ассет дефолтов звука, вибрации и вылета у ствола (решения пользователя 2026-10-09:
+    /// автомат, дробовик, пистолет; затем снайперская винтовка). Значения сериализованы в ассетах — новые только в конец.
+    /// </summary>
+    public enum WeaponFeedbackCategory { Rifle, Shotgun, Pistol, Sniper }
 
     /// <summary>
     /// Дефолты звука, вибрации и вылета (патрон, гильза — этап ejection) одной категории оружия (автомат, дробовик, пистолет). Ствол (хост <see cref="WeaponSystem"/>)

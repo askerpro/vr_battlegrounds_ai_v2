@@ -97,3 +97,80 @@
   на `WeaponSystem`.
 - `ArsenalWeaponDiagnostics` (Editor/Arsenal) пометит у пилотов «Нет WeaponMechanismVisuals».
 - Устаревшие ожидания тестов (п. 6 плана) — список уточняется прогоном.
+
+## Этап waves-f
+
+Реализован 2026-10-09, проверен в worker (аренды 240 — отказ readback по `_assetId`, без записи; 241 — применено).
+Шлем впереди. Локальные отчёты: `tasks/weapon-system/reports/waves-f/` (preflight, migrate2-*.json).
+
+**Дефолты отклика по категориям** (решение пользователя 2026-10-09).
+
+| Что | Решение |
+|---|---|
+| Данные | `WeaponFeedbackDefaults` (`Assets/Scripts/Weapons/WeaponSystem/`): категория, `WeaponAudioSet`, `WeaponHapticSet` — те же типы, что у ствола. Ассеты `Assets/Data/WeaponSystem/{Rifle,Shotgun,Pistol}FeedbackDefaults.asset` |
+| Ствол | Хост хранит `_feedbackDefaults` (ссылка на ассет категории); его `_audio`/`_haptics` — только оверрайды |
+| Подстановка | Одно правило `WeaponAudioSet.Resolve` / `WeaponHapticSet.Resolve`: сначала набор ствола целиком (досылание без своего звука — звук закрытия ствола), затем дефолт. Сухой щелчок без источника — звук SDK. Исполнители вызывают правило при каждом проигрывании: правка ассета действует сразу |
+| Writer | Дефолты не копирует. Ставит ссылку категории; оверрайд, равный дефолту (прежние копии отказа S2 и вибраций пилотов), снимает. Звуки механизма из прежних компонентов — данные ствола, остаются оверрайдами. Отчёт: событие → оверрайд / дефолт / звук SDK / «нет вовсе» (ошибка preflight) |
+| Начальные звуки | Автомат — AK105 (`AK105_BoltBack/Forward`, затвор Kinemation, эталон автомата); дробовик — помпа `UxrShotgunPump` (`ShotgunPump01/02`, FABARM и SDK Shotgun); пистолет — Viper (`Viper_BoltBack/Forward`, стартовый пистолет). Сухой щелчок — `TriggerNoAmmo` (он же у спусков SDK всех стволов), отказ — `UI_Error_Subtle_Deep_stereo` |
+| Необязательные слои | Извлечение живого патрона и задержка затвора: клипов в проекте не назначено ни одному стволу, в дефолтах пусто. Это слои поверх оттяжки и позы HoldRear — молчание допустимо, preflight его не считает ошибкой |
+| Вибрация | Одинакова для трёх категорий (значения пилотов drive): отказы RumbleFreqNormal 0,4 (0,08 / 0,15 с), темп RumbleFreqLow 0,4 (0,06 с), ход Click 0,25 |
+| Категория ствола | Явная таблица `WeaponSystemAuthoring.Weapons` (имя корня = рецепт сборщика): в `WeaponInfo` есть только Rifle/Pistol, дробовика нет (SRM12, Herrington — Rifle), `ShotgunPellets` есть не у всех дробовиков. Preflight сверяет «пистолет» таблицы с `WeaponInfo.Category` (только чтение). Ствол без строки writer не настроит |
+
+Категории: дробовик — Herrington, FABARM, SRM12, SDK Shotgun; пистолет — Browning, Viper, PPK, Uzi (в арсенале
+Pistol), SDKGun, Revolver, R08; автомат — остальные.
+
+**Волны.** Таблица волн, профилей и категорий — одна (`WeaponSystemAuthoring.Weapons`), её же читают сборщики
+(рецепт без профиля → профиль волны). Профили — `Assets/Data/WeaponSystem/Profiles/`: `DetachableHoldOpenReadiness`
+(F1), `DetachableReturnToRestReadiness` (F2, F3), `DetachableNoActionReadiness` (F4, AutoOnMagazineInsert).
+Обзорные копии стены лобби (`SightReview/*`) переведены вместе с исходным стволом (вопрос В10); черновик
+`SightCalibrationDrafts/MKR9_NativeProbe` не тронут (удаляется на cleanup-h). Затвор без клипов (F3): один жёсткий
+Action — ручка, корпус — её родитель, зад — покой + полный ход. `WeaponInfo` не меняется.
+
+Порядок миграции на ствол: preflight на загруженной копии (writer, проверка хоста `TryValidateConfiguration` —
+те же правила, что в игре, отчёт отклика) → `LoadPrefabContents` → writer → `SaveAsPrefabAsset` → канонический
+`_assetId` (`NetworkAssetIdNormalizer`: сохранение пишет 0) → readback → повторный apply, байты не меняются. Сбой —
+побайтный откат волны. Удалённые `_uxrUniqueId` в диффе — только у снятых AWSF.
+
+**F5 — развилка, не переведена.** Хост жёстко связан с учётом SDK с патронником; профиль `LegacyAmmo` он отвергает.
+
+| Вариант | Суть | Цена и риски |
+|---|---|---|
+| **А (рекомендую). Револьвер = магазин + патронник без ручного хода** | Барабан — съёмный магазин, профиль как F4 (NoAction, AutoOnMagazineInsert): досылание при вставке и после каждого выстрела делает учёт SDK. Барабан R08 — деталь клипа `InMagazine` rig (уже поддержана) | Новой архитектуры нет, только строка таблицы. Учёт — «5 в барабане + 1 в патроннике», сумма та же; показ числа патронов у барабана нужно проверить в шлеме |
+| Б. Порт учёта MagazineOnly | Интерфейс `IWeaponLedgerPort`, второй порт поверх legacy-счётчика SDK, синтетический `LedgerView` | Правка хоста, датчиков и порта (~300 строк), риск для пилотов; второй путь учёта |
+
+SDK Shotgun: нужен `PumpGrabFollow` и корпус для помпы (как FABARM) — авторинг префаба; делать в том же проходе F5
+после решения по револьверу.
+
+**Боты.** В `dev` `BotGunner` требует `WeaponInfo.ReadinessProfile` = профиль хоста; у переведённых стволов поле
+пустое (как и до этапа), бот из них не стреляет — так было и для legacy-стволов. В bots-fix
+`WeaponAutomationCapability` читает `controller.Profile`: переведённые стволы проходят проверку определения,
+подготовка — `RequestAutomationPreparation` (T44). Стрельба бота в Play не проверялась. `VrBattlegrounds.Tests.Bots`
+зелёные.
+
+**Проверка (аренда 241).** Миграция D–F4 `passed`; `AndroidCompileGate` PASS; EditMode (Weapons, Bots, Haptics,
+префабы оружия, `WeaponDropPhysicsTests`, `OutOfWorldGuardTests`, `WeaponPartGrabTests`, `NetworkAssetIdOnDiskTests`,
+`UxrUniqueId*`, Pump*) — 449, красных 7:
+
+- устаревшие ожидания (переписать после приёмки): `WeaponSystemPilotPrefabTests.Звуки_механизма_из_WeaponAudioSet`
+  и `.Вибрации_отказов_и_хода_не_пустые` (Herrington, FABARM) — ждут отказ и вибрации на стволе, теперь они в
+  дефолте категории; проверять надо `Resolve`. Тем же правилом переписать проверки `host.Audio.For` в
+  `WeaponFeedbackTests`/`KinemationWeaponTests` (пока зелёные: оверрайды механизма у переведённых есть);
+- вне этапа: бюджет треугольников R08 (известно с drive); `WeaponShotSoundTests` — общий звук выстрела у стволов
+  HandsPack; `WeaponDropPhysicsTests` — лог «Invalid serialized file header» `TestMap2/LightingData.asset` в worker.
+
+Шире прогона: `GrabPoseCoverageTests`, `HandsPackHandPoseTests`, `KinemationHandPoseTests` красные по хватам аватаров —
+этап их данных не меняет.
+
+**Тесты после приёмки (2026-10-09, аренда 261).** Переписаны под `Resolve`: `WeaponSystemPilotPrefabTests` (звук, вибрации — из дефолта «дробовик»), проверки звуков хода в `WeaponFeedbackTests`/`KinemationWeaponTests`. Новые: `WeaponActionReturnPartialTests` (CloseOnly → ровно ActionReturnPartial, полный цикл → ActionForward*), `WeaponFeedbackResolveTests` (оверрайд/дефолт/SDK/None, частичный ход = ActionForwardEmpty), `WeaponSystemWavePrefabTests` (F1–F4 по таблице: один хост, нет прежних компонентов, категория/профиль/дефолты, `FeedbackReport` без ошибок; SRM12 `_Cut` не тишина; сторож уровня), `Tools/Audio/tests/test_audio_cut.py` (`cut --recipe --check`). EditMode 475: 473 зелёные, 2 вне этапа (треугольники R08, `LightingData` TestMap2); `AndroidCompileGate` PASS.
+
+**Шлем, чек-лист по категориям** (все — из арсенала, обычная игра):
+
+- Пистолет (Viper, PPK, SDKGun): оттяжка и возврат — звук Viper/«затвор» ствола; последний патрон Viper — затвор
+  сзади, толчок вперёд досылает; PPK — затвор возвращается в покой; SDKGun — стреляет сразу после вставки магазина;
+  спуск в паузе — тихий «UI_Error» и слабая вибрация; пустой — щелчок и двойная вибрация.
+- Автомат (AK105, TR15, Scar, Machinegun): AK105 — звук своего затвора, частичная оттяжка без извлечения, отпущенный
+  затвор пружиной досылает; TR15 — HoldOpen; Scar — затвор без клипа ходит по оси, щелчок вибрации на заднем упоре;
+  Machinegun — очередь сразу после вставки магазина, без затвора.
+- Дробовик (Herrington, FABARM, SRM12): отказ темпа и вибрации те же, что вчера, но теперь из дефолта; SRM12 —
+  цикл затвора между выстрелами (Manual), звук SRM12.
+- Наблюдатель (второй клиент): слышит затвор переведённых стволов.

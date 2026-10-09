@@ -43,29 +43,46 @@
       "id": "waves-f",
       "writes": [
         "Assets/Audio/SFX/Weapons/**",
-        "Assets/Data/Weapons/**",
-        "Assets/Editor/VR_Battlegrounds/Gameplay/**",
+        "Assets/Data/WeaponSystem/**",
+        "Assets/Data/WeaponSystem.meta",
+        "Tools/Audio/**",
+        "Assets/Editor/VR_Battlegrounds/Audio/**",
+        "Assets/Editor/VR_Battlegrounds/Audio.meta",
+        "Docs/sound-library.md",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponSystemAuthoring.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponReadinessMigration.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/HandsPackWeaponBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/HandsPackLegacyRebuild.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/KinemationWeaponBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/ManualLoadingAuthoring.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/ManualLoadingMigration.cs",
         "Assets/Prefabs/Weapons/**",
-        "Assets/Scripts/Arsenal/WeaponInfo.cs",
         "Assets/Scripts/Weapons/AutomaticWeaponSlideFeedback.cs",
         "Assets/Scripts/Weapons/Core/**",
         "Assets/Scripts/Weapons/WeaponChamberingReminder.cs",
         "Assets/Scripts/Weapons/WeaponMechanismVisuals.cs",
-        "Assets/Scripts/Weapons/WeaponReadinessController.cs",
         "Assets/Scripts/Weapons/WeaponSystem/**",
         "Assets/Tests/EditMode/Weapons/**",
+        "Assets/Tests/EditMode/Player/PumpAimTests.cs",
+        "Assets/Tests/EditMode/Player/PumpGrabFollowTests.cs",
+        "Assets/Tests/EditMode/Prefabs/KinemationWeaponTests.cs",
+        "Assets/Tests/EditMode/Prefabs/ManualLoadingPrefabTests.cs",
+        "Assets/Tests/EditMode/Prefabs/WeaponFeedbackTests.cs",
+        "Assets/Tests/EditMode/Prefabs/WeaponSlideTravelTests.cs",
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrShotgunPump.cs",
+        "Assets/Scripts/Player/TwoHandGrabPolicy.cs",
+        "Assets/Scripts/Player/GrabRules.cs",
+        "Assets/Scripts/Player/ManipulationConstraints.cs",
+        "Assets/Scripts/Player/ManipulationConstraints.cs.meta",
+        "Assets/Scripts/Interaction/GrabbableHierarchyCache.cs",
+        "Assets/Tests/EditMode/Player/TwoHandGrabPolicyTests.cs",
+        "Assets/Tests/EditMode/Player/GunTwoHandGrabTests.cs",
         "tasks/weapon-system/**"
       ],
       "after": [
         {
           "task": "weapon-system",
           "stage": "drive",
-          "state": "merged"
-        },
-        {
-          "task": "arsenal-generator",
-          "stage": "composer-presentation",
           "state": "merged"
         }
       ],
@@ -84,7 +101,7 @@
       "after": [
         {
           "task": "weapon-system",
-          "stage": "drive",
+          "stage": "waves-f",
           "state": "merged"
         }
       ],

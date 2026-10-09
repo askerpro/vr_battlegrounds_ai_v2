@@ -1,0 +1,34 @@
+// Пересохранение данных нового флоу (execute_code, Edit Mode, C# 6): снимает осиротевшие поля старого флоу
+// (_slotLayouts оружия, Zone записей пресета, _zones/_exceptions стиля, _mode/_authoredBinding, _allSlots).
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "PlayMode";
+var paths = new System.Collections.Generic.List<string>();
+foreach (var guid in UnityEditor.AssetDatabase.FindAssets("t:WeaponInfo", new[] { "Assets/Data/Weapons" })) paths.Add(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+paths.AddRange(new[] {
+    "Assets/Data/Weapons/FullDemoArsenal.asset", "Assets/Data/Weapons/CurrentGameplayArsenal.asset",
+    "Assets/Data/Weapons/IndustrialPegboardPresentation.asset", "Assets/Data/Arsenal/ArsenalCompositionCatalog.asset",
+    "Assets/Data/Maps/MapRuntimeCatalog.asset",
+    "Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab", "Assets/Prefabs/Arsenal/Slots/ShelfSlotPrefab Variant.prefab",
+    "Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab", "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab",
+    "Assets/Scenes/Lobby.unity", "Assets/Scenes/Maps/ReferenceMap04.unity", "Assets/Scenes/Maps/ServiceYard.unity",
+    "Assets/Scenes/Maps/TestMap1.unity", "Assets/Scenes/Maps/TestMap2.unity", "Assets/Scenes/Maps/TestMap3.unity",
+    "Assets/Scenes/Debug/BotCombatStand.unity", "Assets/Scenes/Tools/CommonArsenalReview.unity" });
+var missing = new System.Collections.Generic.List<string>();
+foreach (var p in paths) if (string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(p)) || !System.IO.File.Exists(p)) missing.Add(p);
+if (missing.Count > 0) return new { executed = false, missing = missing };
+const string idPrefs = "UltimateXR.Editor.AutomaticUniqueIdGeneration";
+bool hadIdPrefs = UnityEditor.EditorPrefs.HasKey(idPrefs), previousIdPrefs = UnityEditor.EditorPrefs.GetBool(idPrefs, true);
+try
+{
+    UnityEditor.EditorPrefs.SetBool(idPrefs, false);
+    UnityEditor.AssetDatabase.ForceReserializeAssets(paths, UnityEditor.ForceReserializeAssetsOptions.ReserializeAssetsAndMetadata);
+}
+finally { if (hadIdPrefs) UnityEditor.EditorPrefs.SetBool(idPrefs, previousIdPrefs); else UnityEditor.EditorPrefs.DeleteKey(idPrefs); }
+UnityEditor.AssetDatabase.SaveAssets();
+var orphan = new System.Collections.Generic.List<string>();
+foreach (var p in paths)
+{
+    string text = System.IO.File.ReadAllText(p);
+    foreach (var field in new[] { "_slotLayouts:", "_authoredBinding", "  _mode:", "_allSlots:", "_zones:", "_exceptions:" })
+        if (text.Contains(field)) orphan.Add(p + " " + field.Trim());
+}
+return new { executed = true, reserialized = paths.Count, orphanCount = orphan.Count, orphan = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(orphan, 10)) };

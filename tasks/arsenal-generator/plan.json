@@ -1,0 +1,165 @@
+{
+  "task_id": "arsenal-generator",
+  "owner": "arsenal-generator",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/arsenal-generator/Vr_Battlegrounds_ai",
+  "base_sha": "ebeb2de7bb22e6033a4c376b1ca7e9e529b35bac",
+  "doc_path": "tasks/arsenal-generator/Readme.md",
+  "title": "Генератор станций арсенала",
+  "stages": [
+    {
+      "id": "composer-presentation",
+      "writes": [
+        "Assets/Scripts/Arsenal/ArsenalAnimator.cs",
+        "Assets/Scripts/Arsenal/ArsenalCompositionCatalog.cs",
+        "Assets/Scripts/Arsenal/ArsenalDecorationDescriptor.cs",
+        "Assets/Scripts/Arsenal/ArsenalEquipmentPoses.cs",
+        "Assets/Scripts/Arsenal/ArsenalGeneratedIdentityBinding.cs",
+        "Assets/Scripts/Arsenal/ArsenalGeneratedIdentityManifest.cs",
+        "Assets/Scripts/Arsenal/ArsenalLayoutAuthoringStand.cs",
+        "Assets/Scripts/Arsenal/ArsenalMagazineOffer.cs",
+        "Assets/Scripts/Arsenal/ArsenalMagazineSupply.cs",
+        "Assets/Scripts/Arsenal/ArsenalPresentationApplicator.cs",
+        "Assets/Scripts/Arsenal/ArsenalPresentationResolver.cs",
+        "Assets/Scripts/Arsenal/ArsenalPresentationStyle.cs",
+        "Assets/Scripts/Arsenal/ArsenalPreset.cs",
+        "Assets/Scripts/Arsenal/ArsenalPriceTag.cs",
+        "Assets/Scripts/Arsenal/ArsenalSlotBuilder.cs",
+        "Assets/Scripts/Arsenal/ArsenalSlotController.cs",
+        "Assets/Scripts/Arsenal/ArsenalSlotRow.cs",
+        "Assets/Scripts/Arsenal/ArsenalSlotLayout.cs",
+        "Assets/Scripts/Arsenal/ArsenalAnchorPlaceZone.cs",
+        "Assets/Scripts/Arsenal/ArsenalStationAnchor.cs",
+        "Assets/Scripts/Arsenal/ArsenalStationComposer.cs",
+        "Assets/Scripts/Arsenal/ArsenalStationCompositionBinding.cs",
+        "Assets/Scripts/Arsenal/ArsenalStationDescription.cs",
+        "Assets/Scripts/Arsenal/ArsenalStationPresetBinding.cs",
+        "Assets/Scripts/Arsenal/ArsenalStationResolver.cs",
+        "Assets/Scripts/Arsenal/ArsenalSupportProjection.cs",
+        "Assets/Scripts/Arsenal/ArsenalWallController.cs",
+        "Assets/Scripts/Arsenal/ArsenalFunctionalSlotTemplate.cs",
+        "Assets/Scripts/Arsenal/FirearmSlotController.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ArsenalItemGrabScenario.cs",
+        "Assets/Editor/VR_Battlegrounds/Arsenal/**",
+        "Assets/Tests/EditMode/Arsenal/**",
+        "Assets/Tests/EditMode/ArsenalEquipmentMotionTests.cs",
+        "Assets/Tests/EditMode/Economy/MatchEconomyServerTests.cs",
+        "Assets/Prefabs/Arsenal/**",
+        "Assets/Data/Arsenal/**",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset",
+        "Assets/Scenes/Lobby.unity",
+        "Assets/Scenes/Maps/ReferenceMap04.unity",
+        "Assets/Scenes/Maps/ServiceYard.unity",
+        "Assets/Scenes/Maps/TestMap1.unity",
+        "Assets/Scenes/Maps/TestMap2.unity",
+        "Assets/Scenes/Maps/TestMap3.unity",
+        "Docs/Arsenal/**",
+        "Assets/Scripts/Maps/Runtime/MapBootstrap.cs",
+        "Assets/Scripts/Maps/Runtime/MapRoot.cs",
+        "Assets/Scripts/Maps/Runtime/MapArsenalCompositionAdapter.cs",
+        "Assets/Tests/EditMode/Maps/MapArsenalCompositionAdapterTests.cs",
+        "Assets/Data/Weapons/AK105_Weapon.asset",
+        "Assets/Data/Weapons/Gun_Weapon.asset",
+        "Assets/Data/Weapons/Herrington_Weapon.asset",
+        "Assets/Data/Weapons/M16_Weapon.asset",
+        "Assets/Data/Weapons/MKR9_Weapon.asset",
+        "Assets/Data/Weapons/MP5K_Weapon.asset",
+        "Assets/Data/Weapons/Machinegun_Weapon.asset",
+        "Assets/Data/Weapons/Mk14_Weapon.asset",
+        "Assets/Data/Weapons/PPK_Weapon.asset",
+        "Assets/Data/Weapons/R08_Weapon.asset",
+        "Assets/Data/Weapons/Revolver_Weapon.asset",
+        "Assets/Data/Weapons/SDKGun_Weapon.asset",
+        "Assets/Data/Weapons/SRM12_Weapon.asset",
+        "Assets/Data/Weapons/Scar_Weapon.asset",
+        "Assets/Data/Weapons/ShotGun_Weapon.asset",
+        "Assets/Data/Weapons/ShotgunReal_Weapon.asset",
+        "Assets/Data/Weapons/SightCalibration/Review/MKR9_SightReview.asset",
+        "Assets/Data/Weapons/SightCalibration/Review/SRM12_SightReview.asset",
+        "Assets/Data/Weapons/SightCalibration/Review/SniperRifle_SightReview.asset",
+        "Assets/Data/Weapons/SightCalibration/Review/TR15_SightReview.asset",
+        "Assets/Data/Weapons/SightCalibration/Review/Viper_SightReview.asset",
+        "Assets/Data/Weapons/SniperRifle_Weapon.asset",
+        "Assets/Data/Weapons/TR15_Weapon.asset",
+        "Assets/Data/Weapons/Uzi_Weapon.asset",
+        "Assets/Data/Weapons/Viper_Weapon.asset",
+        "Assets/Data/Weapons/FullDemoArsenal.asset",
+        "Assets/Data/Weapons/CurrentGameplayArsenal.asset",
+        "Assets/Data/Weapons/IndustrialPegboardPresentation.asset",
+        "Assets/Scripts/Arsenal/WeaponInfo.cs",
+        "Assets/Editor/VR_Battlegrounds/Weapons/Calibration/SightGameplayReviewBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatStandBuilder.cs",
+        "Assets/Scenes/Debug/BotCombatStand.unity",
+        "Assets/Scenes/Tools/CommonArsenalReview.unity",
+        "Assets/Editor/VR_Battlegrounds/Maps/MapBootstrapMigration.cs",
+        "Assets/Scripts/Maps/Runtime/MapRuntimeCatalog.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponNamingMigration.cs",
+        "Assets/Scenes/Lobby/OcclusionCullingData.asset",
+        "Assets/Scenes/Maps/ReferenceMap04/OcclusionCullingData.asset",
+        "Assets/Scenes/Maps/ServiceYard/OcclusionCullingData.asset",
+        "Assets/Scenes/Maps/TestMap1/OcclusionCullingData.asset",
+        "Assets/Scenes/Maps/TestMap2/OcclusionCullingData.asset",
+        "Assets/Scenes/Maps/TestMap3/OcclusionCullingData.asset",
+        "tasks/arsenal-generator/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "decorations",
+      "writes": [
+        "Assets/Prefabs/Arsenal/Decorations/**",
+        "Assets/Scripts/Arsenal/ArsenalDecorationDescriptor.cs",
+        "Assets/Scripts/Arsenal/ArsenalStationResolver.cs",
+        "Assets/Scripts/Arsenal/ArsenalStationComposer.cs",
+        "Assets/Data/Arsenal/ArsenalCompositionCatalog.asset",
+        "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalCompositionMetadataCompiler.cs",
+        "Docs/Arsenal/**",
+        "tasks/arsenal-generator/**"
+      ],
+      "after": [
+        {
+          "task": "arsenal-generator",
+          "stage": "composer-presentation",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "prefab-preview",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalPrefabStagePreview.cs",
+        "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalDecorationDescriptorEditor.cs",
+        "Assets/Scripts/Arsenal/ArsenalPriceTag.cs",
+        "Docs/Arsenal/**",
+        "tasks/arsenal-generator/**"
+      ],
+      "after": [
+        {
+          "task": "arsenal-generator",
+          "stage": "decorations",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "acceptance",
+      "writes": [
+        "Assets/Tests/EditMode/Arsenal/**",
+        "Assets/Scripts/Arsenal/**",
+        "Docs/Arsenal/**",
+        "tasks/arsenal-generator/**"
+      ],
+      "after": [
+        {
+          "task": "arsenal-generator",
+          "stage": "composer-presentation",
+          "state": "accepted"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

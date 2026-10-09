@@ -12,24 +12,39 @@ ArsenalDeploymentAnimator хранит серверный снимок движ�
 
 ## 1. Базовые данные и структуры
 
-### Canonical target poses: source checkpoint
+### Сборка станции: исполнители и данные
 
-`ArsenalPresentationStyle` хранит defaults `Pegboard`/`Shelf` и абсолютные исключения по exact `(WeaponInfo, Zone)` в одном ассете. Поля ItemTarget/MagazineTarget обозначают effective SDK `AlignTransform` в slot frame, CardTarget — обычную slot-local позу карточки. Отдельных editable item offsets в styled конфигурации нет; старые поля WeaponInfo относятся только к legacy adapter. `ArsenalPreset.PresentationStyle` выбирает стиль; скрытый `ArsenalStationPresetBinding.PresentationPresetCache` — производная ссылка исходного пресета для prefab, runtime источник остаётся MapData.
+Станцию любой карты собирает генератор при запуске карты; слотов в префабах и сценах нет, режима
+«авторская станция» нет. Сборщик станции не знает геометрии — он связывает исполнителей:
 
-`ArsenalPresentationResolver` проверяет зоны, ключи исключений, конечность значений, scale и собственный DropAlign. `ArsenalPresentationApplicator` переносит whole anchor root, компенсируя относительный authored AlignTransform, и выводит root pose предмета из prefab DropAlign без изменения scale. Styled contact не сдвигается повторно в runtime: editor Fit/Bake должен сохранять предложенную позу в тот же canonical target. `ArsenalLegacyPresentationAdapter` централизует прежние offsets/custom-card/fallback; ordinary Ensure/installer custom card pose не сбрасывает.
+| Кто | Данные | Работа |
+|---|---|---|
+| Корпус станции (префаб) | корпус, ряды, контроллер стены, склад, сеть | — |
+| Ряд `ArsenalSlotRow` (в корпусе) | ключ ряда, вид слота, префаб слота, точка и поворот слотов, зазор, выравнивание | вешает слоты своими детьми; едет вместе с корпусом |
+| Префаб слота | ширина `SlotWidth`, якоря, объект карточки, раскладка по умолчанию `DefaultLayout` | — |
+| Раскладка слота `ArsenalSlotLayout` (ассет) | вид слота; позы оружия, магазина, карточки; размер карточки; опоры; коробка приёма | — |
+| Оружие `WeaponInfo` | карточка; свои раскладки слота (не больше одной на вид) | — |
+| Пресет `ArsenalPreset` | записи «оружие → ключ ряда», стиль арсенала | — |
+| Стиль `ArsenalPresentationStyle` | только вид: модуль опор, материал подсказки возврата | — |
+| Сборщик слота `ArsenalSlotBuilder` | — | клон префаба слота: ID ролей, позы по раскладке, карточка, опоры, коробка приёма, предложение магазина |
+| Сборщик станции `ArsenalStationComposer` | — | пресет → раскладка → сборщик слота → ряд; ID и готовность |
 
-Каждая опора Style имеет явный `ArsenalSupportAnchorKind` (`Weapon`/`Magazine`). `ArsenalSupportModuleBuilder` сохраняет существующие role objects и создаёт производные `PresentationSupports` и `PresentationReturnHints` в тех же `SupportPose`. Один `ReturnReadyMaterial` принадлежит Style. Сигнал привязан к существующему `ActivateOnCompatibleNear`: его видимостью, совместимостью и занятостью управляет SDK, нового поиска или политики возврата нет. `ArsenalMagazineOffer.RejectManualPlacement` продолжает запрещать возврат в склад; декоративный держатель не обещает приём магазина. Runtime preflight проверяет topology/TRS/material/SDK references; чужую near-подсказку генератор не заменяет. Null-style legacy не меняется.
+Раскладка слота: своя у оружия для вида слота ряда, иначе раскладка по умолчанию префаба слота; нет обеих —
+именованный отказ. Одну раскладку могут разделять несколько стволов — правка ассета меняет их все. Позы
+применяются как есть, размеры оружия и «влезает ли» не проверяются. Коробка приёма `ArsenalAnchorPlaceZone`
+работает через штатный валидатор якоря UltimateXR: сфера якоря расширяется до угла коробки, валидатор
+пропускает только точку приёма предмета внутри коробки.
 
-Текущая проверка source hint-среза: изолированный native стенд RED4 → GREEN14, повтор сохраняет instance IDs и serialized JSON, чужие сцены/материал неизменны, Android gate PASS. Отдельный RED подтвердил порядок записи карточки: `MaterializePresentation(slot, snapshot)` сначала применяет frames, затем карточку, затем опоры и полную валидацию; builder и installer используют один endpoint. Старые public overloads сохранены. Это проверка генерации/связей и существующего запрета stock-return, а не проверка поднесения контроллером в шлеме.
-
-Текущий статус: schema и consumers скомпилированы, Android source gate PASS и console0; nested fixture — 31/31, включая uniform parent scale, authored Drop/Align и actual SDK smooth-return endpoint. `IndustrialPegboardPresentation.asset` адресно сохранён с двумя defaults и двадцатью exact exceptions после ручного просмотра render-only предложений. MIT DDD Quickhook использует собственный общий untextured metal; Style содержит общий ready material. Native batch — 11/11: retained module IDs, scene/material/disk invariants. FullDemo пока не ссылается на Style: Demo/Lobby сохраняют legacy вид. Materialized outputs, actual after/regen фотографии, локальная SDK near eligibility и итоговый Bake остаются незавершёнными.
+Настройка: корпус, ряды и префаб слота — Prefab Mode; раскладки — стенд `ArsenalLayoutAuthoring`
+(сцена `ArsenalLayoutAuthoring.unity`): ручки оружия, магазина, карточки, опор и коробки приёма; «Запечь»
+пишет в действующий ассет раскладки, «Отдельная раскладка» копирует его для ствола; пресет — окно «Арсенал».
 
 Ядром системы служат ScriptableObjects, которые отвязывают данные снаряжения от конкретной физической реализации слотов стены или инвентаря игрока.
 
 *   `WeaponInfo` (**ScriptableObject**) — Описание конкретного снаряжения (оружия, гранаты, аптечки).
     *   **Префабы**: `WeaponPrefab`, `MagazinePrefab`.
     *   **Опции спавна**: `MaxMagazineCount` (сколько обойм автоматически выдавать в начале раунда).
-    *   **Метаданные**: Цена, иконка, категория (`WeaponCategory`), оффсеты для позиционирования.
+    *   **Метаданные**: Цена, иконка, категория (`WeaponCategory`), свои раскладки слота арсенала.
     *   Является единственным источником истины при расчете стоимости и спавне предметов.
 *   `WeaponComponent` (**MonoBehaviour**) — Компонент, навешиваемый на корневой объект (root) инстанцированного оружия префаба. Хранит ссылку на родительский `WeaponInfo`. Служит мостом для систем инвентаря — если игрок держит объект с `WeaponComponent`, мы сразу понимаем, какое это оружие.
 *   `WeaponRegistry` (**ScriptableObject**) — Общий реестр всего доступного в игре оружия (для централизованного поиска и валидации).
@@ -37,23 +52,10 @@ ArsenalDeploymentAnimator хранит серверный снимок движ�
 ---
 
 
-**Состав станции задаёт карта:** `MapData.arsenalPreset` выбирает упорядоченный ассортимент из общего каталога.
-`ArsenalStationPresetBinding` проверяет и назначает его до выдачи предметов, сохраняя индексы сетевых слотов.
-Начальные игровые карты сохраняют прежние 10 позиций (5 перфопанель / 5 полка, MKR9 на полке).
-Lobby использует полный каталог 20 и отдельный `LobbyDemoArsenalStation`; вместимость каждой зоны
-соответствует явным записям FullDemo: 11 Pegboard и 9 Shelf. MP5K и MKR9 фактически находятся на Shelf
-в исходном Demo и всех четырёх сохранённых станциях Lobby; положение не
-выводится из общей категории SMG. MKR9 и MP5K остаются разными предметами с прежними ID.
-`WeaponRegistry.DefaultSidearm` остаётся Viper. Категория оружия и физическая зона слота независимы.
-Контракт, Inspector и маршрут сборки — [ассортименты карт](arsenal-presets.md).
-
-Нижняя панель имеет ту же ширину 0,4 м, что верхняя, глубину 0,66 м и зазор 0,03 м.
-Девять панелей образуют центрированный ряд шириной 3,84 м; свободные края рамы допустимы.
-Карточки сохраняют размер и лежат внутри панели с запасом 1 см, магазины помещаются по ширине.
-Common и пользовательские пресеты этой коррекцией не перестраиваются. Генератор изменяет существующие
-слоты на месте: повтор сохраняет source localFileID, scene SDK UID и корневые позы станций.
-Editor API `UxrComponent.SetEditorUniqueId` согласует строку, кеш и final prefab provenance;
-временное подавление SDK OnValidate всегда возвращает исходное наличие/значение EditorPrefs.
+**Состав станции задаёт карта:** `MapData.arsenalPreset` выбирает упорядоченный ассортимент из общего каталога
+(записи «оружие → ряд»). Игровые карты — `CurrentGameplayArsenal` на корпусе `CommonOpenArsenalStation`
+(ряды `pegboard`/`shelf`), лобби — `FullDemoArsenal` на корпусе `LobbyDemoArsenalStation`. Ряд вешает
+столько слотов, сколько записей ему досталось, по центру своей точки. Категория оружия и вид слота независимы.
 
 ### Редактор данных и безопасное превью
 
@@ -62,14 +64,6 @@ Editor API `UxrComponent.SetEditorUniqueId` согласует строку, к�
 арендой, `ArsenalBuildPreflight` проверяет весь выбранный набор до writer. Публичные маршруты builders
 сохранены; старые Arsenal menu writers не являются отдельной точкой применения. Чтение/выбор не создаёт
 превью и не сохраняет данные. Пресет сохраняет порядок, зоны и сетевые индексы; MapData меняет только ссылку.
-
-`ArsenalSlotPreview` строит временную геометрию только из MeshFilter/MeshRenderer: исходные TRS, материалы
-и цепочка activeSelf сохраняются, SDK/physics/runtime-компоненты оружия не клонируются. Превью принадлежит
-проверенному якорю своего слота; orphan и reload cleanup не затрагивают persistent assets и helper scenes.
-`Ensure` сохраняет неизменное превью, но пересобирает его при изменении fingerprint исходника. Подгонка
-смещений WeaponInfo через существующий Inspector сохраняется и действует на все станции предмета.
-Исходные три «призрака на полу» на скриншоте не были захвачены диагностикой: подтверждён класс нарушения
-владения/жизненного цикла превью, а не точный источник каждого объекта того кадра.
 
 `HandsPackWeapon` и `KinemationWeapon` создают модель в собственной изолированной PreviewScene и очищают
 её при исключении/Dispose. Readiness KIN читается без reimport через `ReadableSourcePaths/RequireReadable`;
@@ -201,31 +195,27 @@ Read/Write включается только явным импортным write
 Стена отдаёт свои слоты наружу через `ArsenalWallController.Slots` — тот же порядок,
 которым привязка их адресует, и он одинаков во всех процессах.
 
-**Массив слотов заводит одна точка** — `EnsureSlotArray`, признак — `SlotsInstalled`.
-Авторская станция берёт слоты из сериализованного поля или иерархии. Сгенерированная станция
-(`ArsenalStationCompositionBinding.Mode == Generated`) иерархию не читает — порядок детей не порядок
-манифеста — и ждёт `InstallGeneratedSlots(слоты)`: сборщик вызывает его один раз, в порядке индексов
-манифеста; повтор, пустой набор, null или дубль — отказ. До установки привязки по индексу копятся
-(спавн и `SyncDictionary` приходят раньше сборки станции); после неё индекс вне массива — именованная
-ошибка `GameLog.Arsenal`, а не молчаливая потеря. Склад магазинов (`ArsenalMagazineSupply`) проверяет
-индекс по тому же признаку стены.
+**Массив слотов** стены устанавливает только сборщик станции: `InstallSlots(слоты)` один раз, в порядке индексов
+манифеста; иерархию стена не читает. Повтор, пустой набор, null или дубль — отказ. До установки привязки по
+индексу копятся (спавн и `SyncDictionary` приходят раньше сборки); после неё индекс вне массива — именованная
+ошибка `GameLog.Arsenal`. Склад магазинов (`ArsenalMagazineSupply`) проверяет индекс по тому же признаку.
 
-**Сборка сгенерированной станции** — `ArsenalStationComposer` (вызывает только MapBootstrap через адаптер,
-на сервере и каждом клиенте с одним ключом запуска):
-1. `PrepareComposition(description, scope, binding)`: под корнем `ArsenalEquipmentPoses` — выключенный
-   `GeneratedSlots` с клонами шаблонов в порядке манифеста (слот в `ClosedPose`) и метками `Open_i`/`Closed_i`;
-   ID ролей — `ArsenalGeneratedIdentityBinding` + `NetworkUxrIdentity.PrepareGeneratedIdentities`; затем
-   `ArsenalStationPresetBinding.PrepareGenerated` (сначала проверка всего, потом контекст представления, потом
-   оружие), `InstallGeneratedSlots`, цели поз. Якоря оружия и магазина переносятся в позы стиля
-   (`MaterializeFrames`) — у авторских станций это делает редакторский сборщик и сохраняет в префаб. Сбой до необратимых шагов уничтожает поддерево целиком. Повтор
-   с тем же описанием и запуском — тот же handle; иначе отказ `ArsenalComposer.AlreadyComposed`.
-2. `Activate` включает поддерево — компоненты регистрируются под ID манифеста; роль на выключенном
-   внутри шаблона объекте регистрируется явно, чтобы готовность не зависла.
+**Сборка станции** — `ArsenalStationComposer` (вызывает только MapBootstrap через адаптер, на сервере и каждом
+клиенте с одним ключом запуска):
+1. `PrepareComposition(description, scope, binding)`: для каждой записи — ряд корпуса по ключу
+   (`ArsenalComposer.MissingRow`), представление (`ArsenalComposer.Presentation`), сборщик слота под выключенным
+   контейнером, затем ряд `Arrange` вешает слоты; ID ролей — `NetworkUxrIdentity.PrepareGeneratedIdentities`;
+   `ArsenalStationPresetBinding.Prepare` (контекст представления, затем оружие), `InstallSlots`. Сбой до
+   необратимых шагов уничтожает собранные слоты. Повтор с тем же описанием и запуском — тот же handle.
+2. `Activate` включает слоты — компоненты регистрируются под ID манифеста; роль на выключенном объекте
+   регистрируется явно, чтобы готовность не зависла.
 3. `ValidateReady` — Pending до включения, Passed когда каждая роль зарегистрирована своим компонентом,
-   Failed после разборки, закрытия запуска или если ID занят чужим. Это только «собрано»; выдачу предметов
-   разрешает `MapRunAdmission`.
-4. Разборку ведёт `MapRunScope`: снимает свои цели поз, отцепляет чужие `UxrGrabbableObject` из поддерева и
-   уничтожает его. У сгенерированной станции `TryPrepareFromScene` ждёт сборщика молча.
+   Failed после разборки, закрытия запуска или если ID занят чужим. Выдачу предметов разрешает `MapRunAdmission`.
+4. Разборку ведёт `MapRunScope`: чужие `UxrGrabbableObject` отцепляются, свои слоты уничтожаются.
+
+Описание станции (`ArsenalStationResolver`) — порядок, ряд и место в ряду, без геометрии; его отпечаток
+хешируется по входам (порядок, ряды, свои раскладки оружия, стиль) и сверяется клиентом с config сервера.
+`MapRoot` отвергает станцию без рядов (`Station.Rows.Missing`) и с оставшимися слотами (`Station.AuthoredSlots`).
 
 ---
 

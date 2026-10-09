@@ -1,0 +1,118 @@
+// Одноразовая миграция (execute_code, Edit Mode, C# 6): встроенные раскладки WeaponInfo → ассеты ArsenalSlotLayout.
+// Умолчания вида слота — старые общие позы стиля IndustrialPegboardPresentation (значения из ассета стиля).
+// Свой ассет — только у ствола, чья раскладка отличается от умолчания; одинаковые объединяются. Коробка приёма —
+// куб 0,2 м вокруг позы оружия (≈ прежняя сфера якоря 0,1 м). Префабам слотов назначаются умолчания.
+var report = new System.Collections.Generic.List<string>();
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return "PlayMode";
+const string folder = "Assets/Data/Arsenal/SlotLayouts";
+if (!UnityEditor.AssetDatabase.IsValidFolder(folder)) UnityEditor.AssetDatabase.CreateFolder("Assets/Data/Arsenal", "SlotLayouts");
+System.Func<float, float, float, float, float, float, VrBattlegrounds.Arsenal.ArsenalPresentationPose> P = (px, py, pz, ex, ey, ez) =>
+    new VrBattlegrounds.Arsenal.ArsenalPresentationPose { Position = new UnityEngine.Vector3(px, py, pz), EulerAngles = new UnityEngine.Vector3(ex, ey, ez) };
+System.Action<UnityEditor.SerializedProperty, VrBattlegrounds.Arsenal.ArsenalPresentationPose> SetPose = (prop, pose) => {
+    prop.FindPropertyRelative("Position").vector3Value = pose.Position; prop.FindPropertyRelative("EulerAngles").vector3Value = pose.EulerAngles; };
+System.Func<VrBattlegrounds.Arsenal.ArsenalPresentationPose, VrBattlegrounds.Arsenal.ArsenalPresentationPose, bool> Same = (a, b) =>
+    (a.Position - b.Position).sqrMagnitude < 1e-10f && UnityEngine.Quaternion.Angle(a.Rotation, b.Rotation) < .001f;
+
+// Содержимое раскладки как значение: kind, item, magazine, card, size, font, supports.
+System.Func<VrBattlegrounds.Arsenal.ArsenalWeaponSlotLayout, VrBattlegrounds.Arsenal.ArsenalWeaponSlotLayout, bool> Equal = (a, b) => {
+    if (a.SlotKind != b.SlotKind || !Same(a.ItemTarget, b.ItemTarget) || !Same(a.MagazineTarget, b.MagazineTarget) || !Same(a.CardTarget, b.CardTarget)) return false;
+    if ((a.CardSize - b.CardSize).sqrMagnitude > 1e-10f || UnityEngine.Mathf.Abs(a.CardFontSize - b.CardFontSize) > 1e-6f) return false;
+    if (a.Supports.Count != b.Supports.Count) return false;
+    for (int i = 0; i < a.Supports.Count; i++)
+        if (a.Supports[i].Role != b.Supports[i].Role || a.Supports[i].AnchorKind != b.Supports[i].AnchorKind || !Same(a.Supports[i].SlotPose, b.Supports[i].SlotPose)) return false;
+    return true; };
+
+var pegDefault = new VrBattlegrounds.Arsenal.ArsenalWeaponSlotLayout {
+    SlotKind = VrBattlegrounds.Arsenal.ArsenalPresentationZone.Pegboard,
+    ItemTarget = P(-0.055f, 0.405f, -0.072f, 280f, 0f, 90f), MagazineTarget = P(0.105f, 0.71f, -0.14f, 0f, 90f, 10f),
+    CardTarget = P(0.09f, 0.905f, -0.035f, 0f, 0f, 0f), CardSize = new UnityEngine.Vector2(0.15f, 0.16f), CardFontSize = 0.16f };
+pegDefault.Supports.Add(new VrBattlegrounds.Arsenal.ArsenalSupportPose { Role = "Stock", AnchorKind = VrBattlegrounds.Arsenal.ArsenalSupportAnchorKind.Weapon, SlotPose = P(-0.08f, 0.2f, -0.10013445f, 0f, 0f, 0f) });
+pegDefault.Supports.Add(new VrBattlegrounds.Arsenal.ArsenalSupportPose { Role = "Forearm", AnchorKind = VrBattlegrounds.Arsenal.ArsenalSupportAnchorKind.Weapon, SlotPose = P(-0.11f, 0.6f, -0.10013445f, 0f, 0f, 0f) });
+pegDefault.Supports.Add(new VrBattlegrounds.Arsenal.ArsenalSupportPose { Role = "Spare", AnchorKind = VrBattlegrounds.Arsenal.ArsenalSupportAnchorKind.Magazine, SlotPose = P(0.11f, 0.6f, -0.10013445f, 0f, 0f, 0f) });
+var shelfDefault = new VrBattlegrounds.Arsenal.ArsenalWeaponSlotLayout {
+    SlotKind = VrBattlegrounds.Arsenal.ArsenalPresentationZone.Shelf,
+    ItemTarget = P(-0.055f, 0.023000002f, 0.07f, 0f, 0f, 90f), MagazineTarget = P(0.11f, 0.013f, 0.255f, 0f, 90f, 90f),
+    CardTarget = P(0.105f, 0.026f, -0.075f, 90f, 0f, 0f), CardSize = new UnityEngine.Vector2(0.15f, 0.16f), CardFontSize = 0.16f };
+
+var created = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<VrBattlegrounds.Arsenal.ArsenalWeaponSlotLayout, VrBattlegrounds.Arsenal.ArsenalSlotLayout>>();
+System.Func<VrBattlegrounds.Arsenal.ArsenalWeaponSlotLayout, string, VrBattlegrounds.Arsenal.ArsenalSlotLayout> Create = (data, name) => {
+    foreach (var pair in created) if (Equal(pair.Key, data)) return pair.Value;
+    string path = UnityEditor.AssetDatabase.GenerateUniqueAssetPath(folder + "/" + name + ".asset");
+    var asset = UnityEngine.ScriptableObject.CreateInstance<VrBattlegrounds.Arsenal.ArsenalSlotLayout>();
+    UnityEditor.AssetDatabase.CreateAsset(asset, path);
+    var so = new UnityEditor.SerializedObject(asset);
+    so.FindProperty("_slotKind").enumValueIndex = (int)data.SlotKind;
+    SetPose(so.FindProperty("_itemTarget"), data.ItemTarget);
+    SetPose(so.FindProperty("_magazineTarget"), data.MagazineTarget);
+    SetPose(so.FindProperty("_cardTarget"), data.CardTarget);
+    so.FindProperty("_cardSize").vector2Value = data.CardSize;
+    so.FindProperty("_cardFontSize").floatValue = data.CardFontSize;
+    var supports = so.FindProperty("_supports"); supports.arraySize = data.Supports.Count;
+    for (int i = 0; i < data.Supports.Count; i++)
+    {
+        var s = supports.GetArrayElementAtIndex(i);
+        s.FindPropertyRelative("Role").stringValue = data.Supports[i].Role;
+        s.FindPropertyRelative("AnchorKind").enumValueIndex = (int)data.Supports[i].AnchorKind;
+        SetPose(s.FindPropertyRelative("SlotPose"), data.Supports[i].SlotPose);
+    }
+    var zone = so.FindProperty("_placeZone");
+    zone.FindPropertyRelative("Center").vector3Value = data.ItemTarget.Position;
+    zone.FindPropertyRelative("Size").vector3Value = UnityEngine.Vector3.one * 0.2f;
+    zone.FindPropertyRelative("EulerAngles").vector3Value = UnityEngine.Vector3.zero;
+    so.ApplyModifiedPropertiesWithoutUndo();
+    UnityEditor.EditorUtility.SetDirty(asset);
+    created.Add(new System.Collections.Generic.KeyValuePair<VrBattlegrounds.Arsenal.ArsenalWeaponSlotLayout, VrBattlegrounds.Arsenal.ArsenalSlotLayout>(data, asset));
+    report.Add("создан " + path);
+    return asset; };
+
+var pegAsset = Create(pegDefault, "Default_Pegboard");
+var shelfAsset = Create(shelfDefault, "Default_Shelf");
+
+// Оружие пресетов: свой ассет только при отличии от умолчания.
+var weapons = new System.Collections.Generic.HashSet<VrBattlegrounds.Arsenal.WeaponInfo>();
+foreach (var presetPath in new[] { "Assets/Data/Weapons/CurrentGameplayArsenal.asset", "Assets/Data/Weapons/FullDemoArsenal.asset" })
+    foreach (var e in UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>(presetPath).Entries) if (e.Weapon != null) weapons.Add(e.Weapon);
+int own = 0, byDefault = 0;
+foreach (var weapon in weapons)
+{
+    var so = new UnityEditor.SerializedObject(weapon);
+    var refs = so.FindProperty("_layouts"); refs.arraySize = 0;
+    foreach (var embedded in weapon.MigrationEmbeddedLayouts)
+    {
+        var def = embedded.SlotKind == VrBattlegrounds.Arsenal.ArsenalPresentationZone.Pegboard ? pegDefault : shelfDefault;
+        if (Equal(embedded, def)) { byDefault++; continue; }
+        var asset = Create(embedded, weapon.WeaponId + "_" + embedded.SlotKind);
+        int n = refs.arraySize; refs.arraySize = n + 1; refs.GetArrayElementAtIndex(n).objectReferenceValue = asset; own++;
+    }
+    so.FindProperty("_slotLayouts").arraySize = 0;
+    so.ApplyModifiedPropertiesWithoutUndo();
+    UnityEditor.EditorUtility.SetDirty(weapon);
+}
+report.Add("оружий " + weapons.Count + ": своих ссылок " + own + ", по умолчанию " + byDefault + ", ассетов всего " + created.Count);
+
+// Умолчания префабам слотов.
+const string idPrefs = "UltimateXR.Editor.AutomaticUniqueIdGeneration";
+bool hadIdPrefs = UnityEditor.EditorPrefs.HasKey(idPrefs), previousIdPrefs = UnityEditor.EditorPrefs.GetBool(idPrefs, true);
+try
+{
+    UnityEditor.EditorPrefs.SetBool(idPrefs, false);
+    foreach (var pair in new[] {
+        new System.Collections.Generic.KeyValuePair<string, VrBattlegrounds.Arsenal.ArsenalSlotLayout>("Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab", pegAsset),
+        new System.Collections.Generic.KeyValuePair<string, VrBattlegrounds.Arsenal.ArsenalSlotLayout>("Assets/Prefabs/Arsenal/Slots/ShelfSlotPrefab Variant.prefab", shelfAsset) })
+    {
+        var root = UnityEditor.PrefabUtility.LoadPrefabContents(pair.Key);
+        try
+        {
+            var slot = root.GetComponent<VrBattlegrounds.Arsenal.ArsenalSlotController>();
+            var so = new UnityEditor.SerializedObject(slot);
+            so.FindProperty("_defaultLayout").objectReferenceValue = pair.Value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            UnityEditor.PrefabUtility.SaveAsPrefabAsset(root, pair.Key);
+            report.Add(pair.Key + " → " + pair.Value.name);
+        }
+        finally { UnityEditor.PrefabUtility.UnloadPrefabContents(root); }
+    }
+}
+finally { if (hadIdPrefs) UnityEditor.EditorPrefs.SetBool(idPrefs, previousIdPrefs); else UnityEditor.EditorPrefs.DeleteKey(idPrefs); }
+UnityEditor.AssetDatabase.SaveAssets();
+return report;

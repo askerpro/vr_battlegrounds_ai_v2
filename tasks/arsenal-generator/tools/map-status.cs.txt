@@ -1,0 +1,15 @@
+// Состояние запуска карты на хосте (Play Mode, C# 6): сцена, сервер, MapBootstrap, стены арсенала.
+if (!UnityEngine.Application.isPlaying) return new { playing = false };
+var result = new System.Collections.Generic.List<string>();
+for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+{
+    var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+    if (!scene.isLoaded) continue;
+    var boot = VrBattlegrounds.Maps.Runtime.MapBootstrap.ForScene(scene);
+    string walls = "";
+    foreach (var root in scene.GetRootGameObjects())
+        foreach (var wall in root.GetComponentsInChildren<VrBattlegrounds.Arsenal.ArsenalWallController>(true))
+            walls += " wall(" + wall.SlotsInstalled + "," + (wall.SlotsInstalled ? wall.Slots.Count : 0) + ")";
+    result.Add(scene.name + (boot == null ? " noBootstrap" : " stage=" + boot.Stage + " ready=" + boot.IsServerReady + " fail=" + boot.FailureCode) + walls);
+}
+return new { playing = true, server = Mirror.NetworkServer.active, client = Mirror.NetworkClient.isConnected, active = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, scenes = result };

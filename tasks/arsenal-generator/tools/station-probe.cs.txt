@@ -1,0 +1,115 @@
+// Новый флоу (Play Mode, C# 6): сборка обеих станций из корпусов без слотов. Ассеты не сохраняются.
+// Проверяет: готовность, слоты в своих рядах с шагом ширина+зазор, раскладку (своя оружия / умолчание префаба),
+// материализацию поз и карточки, коробку приёма (внутри — да, снаружи — нет), предложения магазина, стену, разборку.
+var checks = new System.Collections.Generic.List<string>();
+var failures = new System.Collections.Generic.List<string>();
+var facts = new System.Collections.Generic.List<string>();
+var logs = new System.Collections.Generic.List<string>();
+System.Action<bool, string> check = (ok, name) => { checks.Add((ok ? "PASS " : "FAIL ") + name); if (!ok) failures.Add(name); };
+UnityEngine.Application.LogCallback onLog = (msg, stack, type) => { if (type == UnityEngine.LogType.Error || type == UnityEngine.LogType.Exception) logs.Add(type + ": " + (msg.Length > 240 ? msg.Substring(0, 240) : msg)); };
+if (!UnityEngine.Application.isPlaying) return new { executed = false, passed = false, reason = "NotPlaying" };
+var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+var catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalCompositionCatalog>("Assets/Data/Arsenal/ArsenalCompositionCatalog.asset");
+var cases = new[] {
+    new { Station = "Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab", Preset = "Assets/Data/Weapons/FullDemoArsenal.asset", Key = "Probe.Lobby", Epoch = 21 },
+    new { Station = "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab", Preset = "Assets/Data/Weapons/CurrentGameplayArsenal.asset", Key = "Probe.Common", Epoch = 22 } };
+UnityEngine.Application.logMessageReceived += onLog;
+try
+{
+    foreach (var c in cases)
+    {
+        string tag = c.Key + ": ";
+        var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(c.Station);
+        var preset = UnityEditor.AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.ArsenalPreset>(c.Preset);
+        var holder = new UnityEngine.GameObject("NewFlowProbe_" + c.Key); holder.SetActive(false);
+        try
+        {
+            var shell = UnityEngine.Object.Instantiate(prefab, holder.transform);
+            check(shell.GetComponentsInChildren<VrBattlegrounds.Arsenal.ArsenalSlotController>(true).Length == 0, tag + "Shell.NoSlots");
+            var rows = new System.Collections.Generic.Dictionary<string, VrBattlegrounds.Arsenal.ArsenalSlotRow>();
+            foreach (var row in shell.GetComponentsInChildren<VrBattlegrounds.Arsenal.ArsenalSlotRow>(true)) rows[row.RowKey] = row;
+            check(rows.Count == 2, tag + "Shell.TwoRows");
+            var comp = shell.GetComponent<VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding>();
+            typeof(VrBattlegrounds.Arsenal.ArsenalStationCompositionBinding).GetField("_stationKey", flags).SetValue(comp, c.Key);
+
+            var description = VrBattlegrounds.Arsenal.ArsenalStationResolver.ResolveDescription(VrBattlegrounds.Arsenal.ArsenalStationBuildInput.Capture(c.Key, preset, catalog, comp.VisualRequest,
+                new VrBattlegrounds.Arsenal.ArsenalPlacementInput(default(VrBattlegrounds.Arsenal.ArsenalPresentationPose), UnityEngine.Vector3.one, new UnityEngine.Bounds())));
+            facts.Add(tag + "slots=" + description.Slots.Count + " failures=" + description.Failures.Count + (description.Failures.Count > 0 ? " first=" + description.Failures[0].Kind + ":" + description.Failures[0].Detail : ""));
+            check(description.Success && description.Slots.Count == preset.Entries.Count, tag + "Description.AllEntries");
+            if (!description.Success) continue;
+
+            var scope = new VrBattlegrounds.Maps.Runtime.MapRunScope(new VrBattlegrounds.Maps.Runtime.MapRunKey(new System.Guid("00112233-4455-6677-8899-aabbccddeef0"), (ulong)c.Epoch));
+            var dummy = new UnityEngine.GameObject("ProbeItem"); dummy.SetActive(false);
+            var item = dummy.AddComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+            try
+            {
+                holder.SetActive(true);
+                var handle = VrBattlegrounds.Arsenal.ArsenalStationComposer.PrepareComposition(description, scope, comp);
+                VrBattlegrounds.Arsenal.ArsenalStationComposer.Activate(handle);
+                string reason;
+                var ready = VrBattlegrounds.Arsenal.ArsenalStationComposer.ValidateReady(handle, out reason);
+                check(ready == VrBattlegrounds.Arsenal.ArsenalCompositionReadiness.Passed, tag + "Ready.Passed (" + reason + ")");
+
+                int wrongRow = 0, wrongPitch = 0, wrongLayout = 0, stale = 0, cards = 0, offers = 0, zones = 0, zoneMiss = 0, zoneIn = 0, zoneOut = 0, radius = 0, own = 0;
+                var perRow = new System.Collections.Generic.Dictionary<string, int>();
+                var prevInRow = new System.Collections.Generic.Dictionary<string, VrBattlegrounds.Arsenal.ArsenalSlotController>();
+                for (int i = 0; i < handle.Slots.Count; i++)
+                {
+                    var s = handle.Slots[i];
+                    var entry = description.Slots[i].Entry;
+                    VrBattlegrounds.Arsenal.ArsenalSlotRow row;
+                    if (!rows.TryGetValue(entry.RowKey, out row) || s.transform.parent != row.transform) { wrongRow++; continue; }
+                    perRow[entry.RowKey] = (perRow.ContainsKey(entry.RowKey) ? perRow[entry.RowKey] : 0) + 1;
+                    VrBattlegrounds.Arsenal.ArsenalSlotController prev;
+                    if (prevInRow.TryGetValue(entry.RowKey, out prev))
+                    {
+                        float expected = (prev.SlotWidth + s.SlotWidth) * .5f + row.Gap;
+                        if (UnityEngine.Mathf.Abs(UnityEngine.Mathf.Abs(s.transform.localPosition.x - prev.transform.localPosition.x) - expected) > 1e-4f) wrongPitch++;
+                    }
+                    prevInRow[entry.RowKey] = s;
+
+                    var snapshot = VrBattlegrounds.Arsenal.ArsenalPresentationApplicator.Resolve(s);
+                    VrBattlegrounds.Arsenal.ArsenalSlotLayout weaponLayout;
+                    bool hasOwn = entry.WeaponResource.TryGetSlotLayout(row.Zone, out weaponLayout);
+                    if (hasOwn) own++;
+                    var expectedLayout = hasOwn ? weaponLayout : row.SlotPrefab.DefaultLayout;
+                    if (snapshot.Layout != expectedLayout || snapshot.FromWeapon != hasOwn) { wrongLayout++; if (wrongLayout <= 2) facts.Add(tag + "layout[" + i + "]=" + (snapshot.Layout != null ? snapshot.Layout.name : "null") + " expected=" + (expectedLayout != null ? expectedLayout.name : "null")); }
+                    try { VrBattlegrounds.Arsenal.ArsenalPresentationResolver.ValidateMaterialized(s, snapshot); }
+                    catch (System.Exception e) { stale++; if (stale <= 2) facts.Add(tag + "stale[" + i + "]=" + e.Message); }
+                    if (s.GetComponentInChildren<VrBattlegrounds.Arsenal.ArsenalPriceTag>(true) != null) cards++;
+                    var offer = s.GetComponent<VrBattlegrounds.Arsenal.ArsenalMagazineOffer>();
+                    if (offer != null && offer.Slot == s && offer.Anchor == ((VrBattlegrounds.Arsenal.FirearmSlotController)s).MagAnchor) offers++;
+
+                    if (!snapshot.PlaceZone.IsSet) continue;
+                    var zone = s.ItemAnchor.GetComponent<VrBattlegrounds.Arsenal.ArsenalAnchorPlaceZone>();
+                    if (zone == null || zone.Frame != s.transform) { zoneMiss++; continue; }
+                    zones++;
+                    var z = snapshot.PlaceZone;
+                    dummy.transform.position = s.transform.TransformPoint(z.Center);
+                    if (zone.Contains(item)) zoneIn++;
+                    dummy.transform.position = s.transform.TransformPoint(z.Center + z.Rotation * new UnityEngine.Vector3(z.Size.x, 0f, 0f));
+                    if (!zone.Contains(item)) zoneOut++;
+                    if (s.ItemAnchor.MaxPlaceDistance + 1e-4f >= UnityEngine.Vector3.Distance(s.ItemAnchor.DropProximityTransform.position, s.transform.TransformPoint(z.Center))) radius++;
+                }
+                int n = handle.Slots.Count;
+                facts.Add(tag + "rows=" + string.Join(",", System.Linq.Enumerable.Select(perRow, p => p.Key + ":" + p.Value)) + " ownLayouts=" + own
+                    + " cards=" + cards + " offers=" + offers + " zones=" + zones + " in=" + zoneIn + " out=" + zoneOut + " radius=" + radius + " of " + n);
+                check(wrongRow == 0, tag + "Rows.SlotParentedToRow");
+                check(wrongPitch == 0, tag + "Rows.PitchWidthPlusGap");
+                check(wrongLayout == 0, tag + "Layout.WeaponOrDefault");
+                check(stale == 0, tag + "Layout.Materialized");
+                check(cards == n && offers == n, tag + "CardAndOffer");
+                check(zoneMiss == 0 && zones == n, tag + "PlaceZone.Installed");
+                check(zoneIn == zones && zoneOut == zones && radius == zones, tag + "PlaceZone.ContainsInsideOnly");
+                check(comp.Controller.SlotsInstalled && comp.Controller.Slots.Count == n, tag + "Wall.SlotsInstalled");
+                scope.Dispose();
+                check(handle.IsDisposed, tag + "Dispose");
+            }
+            finally { if (!scope.IsClosed) scope.Dispose(); UnityEngine.Object.Destroy(dummy); }
+        }
+        catch (System.Exception e) { failures.Add(tag + "Exception:" + e.GetType().Name + ":" + e.Message); }
+        finally { UnityEngine.Object.Destroy(holder); }
+    }
+}
+finally { UnityEngine.Application.logMessageReceived -= onLog; }
+return new { executed = true, passed = failures.Count == 0 && logs.Count == 0, checkCount = checks.Count, checks = checks, failures = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(failures, 10)), facts = facts, errorLogCount = logs.Count, errorLogs = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(logs, 6)) };

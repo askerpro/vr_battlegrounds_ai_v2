@@ -1,0 +1,189 @@
+# Генератор арсенала: поэтапный план реализации
+
+> Для исполнителя: сначала прочитать [design](design.md) и актуальный AGENTS.md. После root review выполнять по срезам через superpowers:executing-plans либо superpowers:subagent-driven-development только при разрешённом делегировании. Этот план не разрешает конкурентные writes visual/SDK/bootstrap файлов.
+
+**Цель:** из одного Preset/Style получать нужные functional slots/container в runtime и полностью transient Editor preview внутри обычного artist Prefab Mode.
+
+**Архитектура:** чистый resolver собирает immutable description и применяет настройки стиля как есть (решение пользователя 2026-10-07: генератор не знает размеров оружия и ничего не проверяет на «влезает»); корпус выбирается по числу слотов: заказанный → наименьший по местам → универсальный → без корпуса. Существующая scene station shell сохраняет NI и внешние ссылки; local generated children имеют manifest-derived UXR identities и активируются только после bootstrap admission.
+
+**Технологии:** Unity 6/URP, C#, vendored UltimateXR/Mirror, AndroidCompileGate, Unity PrefabStage, временные probes.
+
+**Spec:** [arsenal-generator-design.md](design.md).
+
+**Статус 2026-10-04:** пользователь поручил реализацию по принятому high/root контракту. Исполнитель gpt-6.1-sol/medium назначен на task0 baseline/handoff и tmp подготовку task1; [ход реализации](../../.superpowers/sdd/arsenal-generator-plan/progress.md). Runtime генератор и production cutover ещё не выполнены. Upstream MapRunConfig/MapRunKey/MapRunScope/Authority уже существуют; actual admission contract и интеграция проверяются перед зависимыми runtime срезами. Final visual Stand прошёл backend110/0, Inspector24/0, Android и render20; root сверил27/27 manifest. FullDemo.Style null, productionLinked=false и artisticAll20FitComplete=false: ручная художественная компоновка не объявляется завершённой. Checkbox генератора остаются открыты до собственных actual proofs.
+
+## Общие ограничения
+
+- Preset единолично владеет ordered WeaponInfo/Entry.Zone; Style defaults по Zone и exact WeaponInfo/Zone targets — единственный источник поз. Binding/cache/output не master.
+- Shelf ширина 0,4 м, глубина 0,66 м, gap 0,03 м. Artwork и физические weapon/mag prefabs не масштабировать. Station/functional frames unit scale; nonuniform/negative scale fail.
+- Генератор применяет позы стиля как есть и не проверяет размеры, корпус и место на карте: что не влезает — правка стиля человеком. Отказ только там, где станцию не собрать или сломается сеть: нет ключа/пресета/каталога, пустое оружие, повтор WeaponId, пресет без стиля, нет шаблона зоны.
+- Только GameLog, комментарии/документация на русском; Editor source только `Assets/Editor/VR_Battlegrounds/Arsenal/`.
+- Scene/prefab/import/compile/PlayMode/test/bake — собственная Unity lease. Не прерывать чужой PlayMode, не сохранять чужие dirty assets или global SaveAssets.
+- До acquire подготовить конкретный пакет и условие release; дождаться конца import/compile/async probe, завершить свои временные изменения и следующим шагом release. Анализ ошибок, следующий patch, docs и ожидания — без замка; renew только продолжающейся операции/её завершения.
+- Не менять Supply/return/ammo/readiness/аватары/торговлю; сохранение их поведения подтверждать existing harness и probes.
+- Никакого live regeneration с удерживаемыми/купленными items. Новый immutable input принимается следующей загрузкой карты.
+- Временные RED/GREEN probes сейчас; новые/переписанные permanent gameplay expectations и commit кода только после human Unity/шлем acceptance по AGENTS.md.
+- Подготовка fixed artwork/resources/dry run разрешена до complete admission, без opt-in production. Destructive slot removal и gameplay cutover задачи7 требуют GREEN complete bootstrap/Relay admission задачи6; working Common/Lobby до этого сохраняют authored slots. SDK patch только по failed identity probe, отдельным scope.
+- Runtime MapRunKey/authority/admission types производит bootstrap owner; пока их нет, no temporary shadow RunKey/authority/fake admission и no integrated compile claim. Pure layout/preview работают без map lifetime.
+
+## Review focus
+
+1. SDK initial snapshot раньше generated anchors или spawned item IDs: local readiness должна задерживать запрос свежего snapshot; текущая Relay incoming очередь отсутствует. Задачи 2/6.
+2. Reorder/changed_zone/capacity crossing на новой загрузке: logical keys сохраняются, index manifest явно меняется, старый callback/UID не адресует новый run. Задачи 1/2/3/6.
+3. Artist unsaved material/decor edits, save/reopen и domain reload: refresh не перечитывает author prefab из файла, overlay никогда не сериализуется. Задача 4.
+4. Bare/universal без подходящего корпуса при валидном Preset: функции/identities доступны без корпуса; размеры и место на карте генератор не проверяет. Задачи 1/3/5/6/7.
+5. Retiring станция и held/bought magazine/weapon: generator disposal не уничтожает предмет через parent hierarchy и не инициирует неавторский SDK release. Задачи 3/6/7.
+
+## Порядок, API и карта файлов
+
+Последовательность по зависимостям: задача0 baseline → задача1 pure resolver/минимальная CompositionBinding schema → задачи4/5 independent preview/resources/dry run; bootstrap primitive/shared-contract handoff → задача2 identity proof → задача3 isolated runtime install → задача6 complete bootstrap/Relay admission GREEN на generated fixtures → задача7 production opt-in/naming → задача8 acceptance/tests. Задачи4/5 могут идти до runtime срезов, production disabled. Bootstrap task3 принимает lightweight binding из задачи1, не ждёт generator runtime GREEN; generator runtime затем принимает bootstrap primitive types, а не создаёт их копию. До GREEN identities/admission Common/Lobby продолжают authored путь. Рекомендуемый исполнитель реализации — medium по принятому API, reviewer/high на identity/lifecycle; это назначает root, новых агентов этот документ не создаёт.
+
+Новые runtime файлы в `Assets/Scripts/Arsenal/`: `ArsenalCompositionCatalog.cs`, `ArsenalDecorationDescriptor.cs`, `ArsenalFunctionalSlotTemplate.cs`, `ArsenalStationDescription.cs`, `ArsenalStationResolver.cs`, `ArsenalGeneratedIdentityManifest.cs`, `ArsenalStationComposer.cs`, `ArsenalStationCompositionBinding.cs`. Identity layer: новый DTO `Assets/Scripts/Network/NetworkUxrIdentityAssignment.cs`, адресное расширение `NetworkUxrIdentity.cs`. Editor: `ArsenalPrefabStagePreview.cs`, `ArsenalDecorationDescriptorEditor.cs`, `ArsenalStationGenerationMigration.cs`, `ArsenalCompositionBuildValidator.cs`.
+
+Existing integration после handoff: ArsenalStationPresetBinding, ArsenalWallController, ArsenalEquipmentPoses, ArsenalStationAnchor, ArsenalPriceTag и ArsenalMagazineSupply (только composition gate/index admission). Builder/SlotPreview изменения только для маршрутизации legacy/new owner, не второго resolver. Bootstrap adapter и Relay seam — отдельный accepted write-set network/map owner. WeaponInfo/SDK/weapon/mag/аватары не входят автоматически.
+
+Shared signatures из design:
+
+```csharp
+ArsenalStationDescription ArsenalStationResolver.ResolveDescription(ArsenalStationBuildInput input);
+ArsenalCompositionHandle ArsenalStationComposer.PrepareComposition(
+    ArsenalStationDescription description, ArsenalCompositionScope scope);
+ArsenalReadyReport ArsenalStationComposer.ValidateReady(ArsenalCompositionHandle handle);
+void ArsenalStationComposer.Activate(ArsenalCompositionHandle handle, ArsenalAdmissionToken token);
+void ArsenalCompositionHandle.Dispose();
+void NetworkUxrIdentity.PrepareGeneratedIdentities(
+    IReadOnlyList<NetworkUxrIdentityAssignment> assignments);
+```
+
+`ArsenalStationBuildInput`/description pure resolver не содержат runtime key: это authoring layout/selection/logical-role metadata для Editor и runtime. Expected runtime UXR assignments строятся позже из description+scope. Scope/token — адаптация shared map lifetime, не второй MapRunAuthority: scope содержит upstream MapRunKey/Epoch/Scene/CancellationToken/owned resources; admission token только внешний result MapRunAdmission `(MapRunKey, Epoch, description hash, admission kind)`. Producer — bootstrap tasks2/3, server Ready после его task4, remote LocalPlayable после tasks5/7. Эти API пока не runtime; before dependent source root получает handoff или согласованный narrow shared contract. Минимальная CompositionBinding schema вводится task1 без MapRunKey dependency: StationKey единственный serialized source, exclusive Authored/Generated mode, MapRoot содержит refs.
+
+Стык жизненного цикла с MapBootstrap (согласовано с map-bootstrap 2026-10-06; источник — `Docs/tasks/map-runtime-bootstrap-design.md`, «Seam генератора арсенала» → «Стык жизненного цикла», ветка claude/map-runtime-bootstrap):
+- Сборку и на сервере, и на клиенте вызывает только MapBootstrap через адаптер: ResolveDescription → PrepareComposition с (MapRunKey, canonical config из descriptor). Генератор не стартует сборку от OnStartClient или Awake станции; seed берётся из входа. Host второй сборки не делает. Условие «run известен локально» проверяет MapBootstrap: сцена, статус CompositionReady/Ready, текущий SessionEpoch, LoadSequence строго больше ранее принятого.
+- `ValidateReady(handle)` можно опрашивать повторно: Pending/Passed/Failed по фактическим регистрациям ролей и readback; handle переживает повторный опрос. Барьер Relay спрашивает только MapBootstrap сцены (`IsLocallyReady(MapRunKey)` + событие); ответ снимка с чужим ключом отбрасывается. Реестра участников нет.
+- Closing: на MapLoadStarted MapBootstrap публикует Closing текущего ключа и отменяет `MapRunScope.Cancellation`. По этому токену генератор и склад закрывают пополнение и RPC. Dispose поддерева — при выгрузке, удерживаемые и купленные предметы через родителя не уничтожаются.
+- Единые точки выдачи с допуском (в ветке map-bootstrap): оружие — `ArsenalWallController.ReplenishSlotsWhere`, магазины — `ArsenalMagazineSupply.SpawnStock`. Новые пути выдачи генератора идут только через них, отдельный спавн предметов не добавлять.
+
+Internal интеграция нынешнего owner: `ArsenalWallController.InstallGeneratedSlots(IReadOnlyList<ArsenalSlotController> slots, ArsenalStationDescription description)` и `ArsenalStationPresetBinding.PrepareGenerated(ArsenalStationDescription description, IReadOnlyList<ArsenalSlotController> slots)`. При task7 cutover controller станет ArsenalController, не вторым active component. Изменение names/type signatures в review обновляет документы до реализации.
+
+Temporary harness: `Tools/Probes/ArsenalGenerator/` для inputs/expected vectors; временный native runner `Assets/Editor/VR_Battlegrounds/Arsenal/Diagnostics/ArsenalGeneratorProbe.cs` с public `Run(string caseName)` возвращает JSON `{caseName, success, errors, events, sideEffectCounts, manifestHashes, created, disposed}`. Artifacts — `tmp/arsenal-generator-proofs/`. Это диагностический tooling, не permanent gameplay test assembly. Каждый runner очищает owned objects/materials/server context в finally и проверяет cleanup counters. Future code file вводится только в implementation scope, сейчас его нет.
+
+## Задача 0. Проверяемый baseline и handoff
+
+**Файлы:** временный runner/inputs/proofs выше; только read existing source/native до root review. Никаких Preset/Style/Builder writers параллельно visual.
+
+**Результат:** baseline failures и native provenance inventory, позволяющие точно сравнить миграцию.
+
+- [ ] Получить final visual handoff с source SHAs/API, native Style assignment, current20 after/regen visuals, native fit/module и identity ledger. Свежий partial checkpoint: source batch2 Android/nested GREEN,1073 prefab components/168 scene JSON preserved; новый Style seed, но FullDemo.Style null и draft20 не accepted fit. Independent resolver/preview/resource preparation не объявлять завершённым runtime.
+- [ ] После Unity lease снять свежий Editor state, foreign dirty paths, station sceneId/UXR IDs/provenance/world poses/external references для Common/Lobby и всех зарегистрированных maps; source slots/templates: `Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab` и `ShelfSlotPrefab Variant.prefab` читать выборочно через native API/GUID grep.
+- [ ] Добавить baseline cases `LegacyCapacity4Overflows`, `EarlySlotIndexLost`, `NativeCardEnsureDirty`, `DuplicateTemplateUidOrder`; assertions exact capacity refusal, callbacks discarded before array, source-card hash change, semantic identity divergence либо точный harmless result. NativeCardEnsureDirty после source batch2 может уже быть GREEN — не объявлять его RED и не повторять отменённый writer.
+- [ ] Запустить runner через execute_code `VrBattlegrounds.EditorTools.ArsenalGeneratorProbe.Run("Baseline")`, сохранить raw JSON и cleanup. Если фактический namespace редакторского проекта другой — выбрать один на этом шаге и обновить invocation один раз.
+- [ ] Выполнить `VrBattlegrounds.EditorTools.AndroidCompileGate.Run()` в execute_code; записать Errors=[] либо существующий blocker отдельно. Root review baseline до writes.
+
+## Задача 1. Pure description, resource metadata и layout
+
+**Create:** catalog/descriptor/functional template/description/resolver файлы из карты и lightweight ArsenalStationCompositionBinding.cs (StationKey/exclusive mode/owner refs без runtime key). **Modify:** Preset не менять по форме состава; Style только read API после handoff. **Native:** один `Assets/Data/Arsenal/ArsenalCompositionCatalog.asset`, accepted functional templates/metadata; production scenes/станции не менять.
+
+**Consumes:** immutable source Preset+Style, explicit placement/visual request, template metadata. **Produces:** ResolveDescription, deterministic ordered SlotManifest, LayoutFingerprint, SelectionResult, OccupiedBounds.
+
+- [ ] Определить DTO constructors/read-only copies, enum fallback и typed errors; source object mutations после Resolve не меняют slots/poses/hash. CatalogIds не имена файлов, GUID/ID пустоты/дубликаты отказ.
+- [ ] Передать bootstrap owner минимальную CompositionBinding schema для MapRoot refs: StationKey единственный serialized key, exclusive Authored/Generated mode, default Authored. Pure description не содержит MapRunKey/expected runtime IDs; preview не делает synthetic run и не поднимает authority. Этот handoff не opt-in станции.
+- [ ] Создать probe `ResolveCases`: empty→0 slots; Shelf N=3 width=1,26 м и centers -0,43/0/+0,43; Shelf N=9 width=3,84 м; current20→11 Pegboard/9 Shelf с MP5K/MKR9 Shelf; one-zone не создаёт пустой второй ряд. Зафиксировать фактический legacy RED там, где он существует.
+- [ ] Реализовать центрацию каждого ряда, max row width, profile closed/open frames. Pegboard dimensions импортировать из accepted template baseline, измерить и сохранить profile; не переносить устаревшие constants Builder или StretchHousing.
+- [x] Выбор корпуса по количеству слотов (заказанный → наименьший по местам → универсальный → без корпуса); размеры оружия не участвуют.
+- [x] Геометрия оружия рантайму не нужна (решение 2026-10-07): позы берутся из стиля, отпечаток раскладки — из применённых настроек.
+- [ ] GREEN pure vectors/local input-description readback без runtime lifetime; AndroidCompileGate Errors=[]. Документировать measured Pegboard profile и selection comparator в тематических docs после root review, без integrated runtime/human acceptance claim.
+
+## Задача 2. Semantic UXR manifest и dormant registration proof
+
+**Gate:** task1 GREEN и primitive handoff bootstrap tasks2/3 либо root accepted narrow shared contract: actual MapRunKey/MapRunScope/read-only authority/admission API. Пока types design-only — native identity work не притворяется интегрированным и не добавляет временный RunKey. **Create:** ArsenalGeneratedIdentityManifest.cs, NetworkUxrIdentityAssignment.cs. **Modify:** NetworkUxrIdentity.cs только generator identity API; SDK не изменять. **Consumes:** task1 logical/role manifest/templates и shared MapRunKey/StationKey. **Produces:** exact expected runtime UXR assignments и verified local SDK registrations.
+
+- [ ] Probe `TemplateIdentityBaseline`: реальные clones функциональных templates в inactive scope, разные create/register orders и pre-existing copies. Снять GlobalRegistering/Registered/UniqueIdChanged, CurrentAnchor/state-save side-effect counters. Existing CreateInstance/Combine поведение сначала измерить без «починки».
+- [ ] Реализовать pure seed derivation: length-prefixed UTF-8 tuple, deterministic hash/16 bytes/version/variant masks, golden GUID vectors для пустых/Unicode IDs и границ field separation. IdentitySchemaVersion фиксировать вместе с algorithm и vendored GuidExt.Combine expected vector.
+- [ ] Role refs table включает все generated IUxrUniqueId, source IDs только provenance/preflight, schema-derived canonical RoleBaseUID, no duplicate/missing/typename-singleton roles. LogicalSlotKey=WeaponId; NetworkIndex=Entries index; Zone/template sourceUID/decoration не base и не seed. Reorder/zone в том же hypothetical RunKey сохраняют logical UIDs, новый RunKey меняет их; semantic role/schema changes явные. Expected=vendored Combine(RoleBaseUID,SemanticSeed), semantic hash отдельно от raw provenance/layout.
+- [ ] Добавить PrepareGeneratedIdentities только после actual baseline/root выбора existing exact assignment или generic pre-Awake seam/derived cache: preflight all assignments/collisions, exact actual==expected и lookup==target на согласованной фазе registration после final geometry; duplicate того же owned handle idempotent, повтор combine не выполняется. Wrong precombined/stale target — fail, не corrective second combine. Source temporary registration/events/state-save и ownership-safe cleanup обязаны пройти native trace до API choice.
+- [ ] Probe `SemanticIdentityPermutation`: server/client/late-client разные create order→same manifest/UIDs; host один assign; 100 одинаковых templates без duplicate expected IDs; collision с foreign registered target→Failed, чужой target неизменён. Измерить initial SDK registration effects: source OriginalUniqueId сохраняется до collision, но runtime result ещё нужно доказать.
+- [ ] Probe `DisabledHeadlessIdentity`: inactive/disabled anchors registered после composition, Awake/initial transform readback совпадает с final frames; dedicated не нуждается в precache; dispose удаляет только own IDs и registry/temporary collisions не повреждает foreign lookup.
+- [ ] Если exact readback/side effects не проходят, вынести root конкретный trace и две альтернативы: narrow pre-Awake SDK assignment (отдельный approved patch+sdk-patches) либо proven derived cache. Не вводить patch/NI per slot в текущем executor scope автоматически.
+- [ ] GREEN manifest vectors + native registration/cleanup; Android gate. Нельзя принять только offline compilation как runtime gate.
+
+## Задача 3. Runtime composition и install-once admission
+
+**Gate:** tasks1/2 GREEN и actual upstream shared primitive/admission contract; production mode остаётся Authored. **Create:** ArsenalStationComposer.cs; **Modify:** lightweight CompositionBinding task1, existing ArsenalWallController/Binding, EquipmentPoses/StationAnchor; Supply только gate/index queue integration. **Consumes:** accepted generator+bootstrap API. **Produces:** PrepareComposition/ValidateReady/Activate/Dispose на isolated generated fixtures, legacy/generated exclusive paths.
+
+- [ ] Probe `EarlyCallbacks`: scene NI OnStartServer/OnStartClient, dictionary indices и deployment hook приходят до generated array; no refill/place/stock changes, pending bindings сохраняются. Assert invalid index только после known manifest, не silent discard before build.
+- [ ] Implement composer states и owned inactive root. CreateInstance(template) callback subscriptions проверить: InstanceCreated не присваивает WeaponComponent functional slot. Configure all snapshots/anchors/card data/supports/deployment до identity registration и активации; no actual weapon/mag preview spawned runtime на этой стадии.
+- [ ] InstallSlots once перед Active: `_allSlots` exactly entry-index manifest, явные subscribe/unsubscribe for new slots, Binding context frozen snapshots; `EnsureReferences` не overwrites generated empty/exact array через GetComponentsInChildren. До install shell имеет explicit empty array; OnEnable/OnDisable/null callbacks safe и gated. Authored legacy продолжает нынешний prepare until opt-in.
+- [ ] Probe `RuntimeParity`: чистый description == realized slot/anchor/card/holder local poses, scale, ordered indices и SDK lookup; 0/1-zone/current20/fallback all pass. Field refs typed, no hierarchy-name discovery.
+- [ ] ValidateReady report подтверждает только local composition/registrations. Принять external admission token current MapRunKey: server Ready после policy gates допускает stock/avatar writers, remote LocalPlayable после fresh Relay snapshot допускает local interaction. No token from Composer/CompositionReady shortcut. Host не второй composer, Update retry не второй initial stock fill; supply formulas неизменны. Complete admission proof задачи6 ещё обязателен, поэтому на этом шаге production не включается.
+- [ ] Probe `RepeatCancelDisable`: duplicate Prepare returns same handle; new description in same live run rejected; cancel mid-stage→registry/material/root counts baseline; stale delayed callback не активирует следующий run; disable/re-enable не rebuild и не duplicate subscriptions.
+- [ ] Probe `RetireHeldItems`: реальные SDK Grab/Remove item/mag + stock retirement + composer dispose; удерживаемый/купленный предмет не child disposed root, remains alive до своего штатного network owner retirement, не меняет manipulation sequence/scale. Client must not invoke server release.
+- [ ] GREEN real isolated server context и existing supply tests без [Server]/ClientRpc harness noise; Android gate. Human changes ещё не закреплять permanent tests.
+
+## Задача 4. Полностью transient Prefab Mode preview
+
+**Create:** ArsenalPrefabStagePreview.cs, ArsenalDecorationDescriptorEditor.cs. **Modify:** PriceTag pure card-data formatter и existing SlotPreview routing только после handoff; никакого source-card Ensure write. **Consumes:** task1 description + canonical Applicator pure pose math, без runtime MapRunKey/authority/admission. **Produces:** artist обычный Prefab Mode с overlay, no serialization; independent от tasks2/3.
+
+- [ ] Probe `ArtistDirtyBaseline`: в isolated test prefab сделать unsaved material/transform/decor edit, отметить author hash/dirty/Undo state. Новая preview сборка запрещена gameplay Instantiate; overlay clone only allowed visual types, no SDK/NI/physics/stock counters.
+- [ ] Create overlay sibling in current stage, recursive DontSave/NotEditable + editor ownership token; registry и reload recovery привязаны stage asset/epoch. Visual geometry сохраняет source activeSelf/TRS/materials; TMP/backing card использует общий formatted data и Style target/size.
+- [ ] Preview preset SessionState; active authored stage ресурс fixed; UI показывает Fits/TooSmall/Universal и automatic winner, не заменяет открытый prefab. Functional source edit открывает template/module; transient slot не разрешает persistent decor attachment.
+- [ ] Implement coalesced fingerprint refresh from current in-memory artwork; replace overlay only. Existing UI/editor lease guards automated mutations, foreign owner defers refresh; stale epoch/owner после delayCall отвергнут. Source Style/preset update пересчитывает тот же resolver; no LoadPrefabContents reload для dirty stage, no Undo source/native card rewrites.
+- [ ] Probe `PreviewLifecycle`: save/autosave/reopen, domain reload, prefab close, scene close, quit, enter play, exception и orphan detached sibling. YAML author prefab не содержит overlay names/components/refs; unchanged selection не dirty asset, dirty edits survive refresh/reopen после штатного Save. Names-only deletion forbidden, foreign helper scene/count unchanged.
+- [ ] Probe `ArtistWorkflows`: панель material, рамка decor, каждый-slot module decor, explicit unique variant, magazine target Save/Reset→единственный canonical asset writer; repeat/reorder/count-change сохраняет artwork and style. Numeric entry edit не заменяет обычный artwork authoring flow.
+- [ ] Compare pure description/layout/Item/Mag/Card fingerprints с accepted pose math и current20 screenshots, nested bounds/scale; GREEN raw save/readback/cleanup и Android для этого independent среза. Когда task3 готов, добавить actual runtime parity сравнение в task6; не заявлять runtime GREEN до producer handoff.
+
+## Задача 5. Fixed artwork resources и migration dry run без production opt-in
+
+**Create:** ArsenalStationGenerationMigration.cs (dry-run API), ArsenalCompositionBuildValidator.cs; fixed decorative resources в `Assets/Prefabs/Arsenal/Decorations/`, functional templates/catalog и isolated fixtures. **Modify:** только собственные staged resources, не production Common/Lobby/scene instances. **Consumes:** accepted visual resource inputs и tasks1/4 GREEN. **Produces:** ready artwork/catalog/dry-run inventory, production Authored остаётся прежним; before runtime handoff этот срез разрешён.
+
+- [ ] Скопировать accepted fixed Common/Lobby artwork в новые authored resources без удаления production source; функциональные DogTag/readiness/wallet/station network components остаются у прежних owners. Puredecor validator исключает gameplay/SDK/NI/Rigidbody, сохраняет static artwork colliders; fixed original dims/readback без StretchHousing. Новый visual concepts input в Docs/Arsenal/concepts уже принадлежит visual owner, не расширять его Style/module write-set.
+- [ ] Dry-run всех scene links: таблица old child localFileID/UID/role→new logical binding; scene NI/root pose/Zone/standing/facing/opening/deployment refs отдельные preserved rows. 668/168 baseline annotate retained vs explicitly removed/derived; не утверждать все ID сохранены после удаления children.
+- [ ] Предложить StationKey assignment в dry run; serialized production запись отложить task7 либо upstream approved authored-only migration, сохраняя source slots и default Authored mode. MapRoot ссылается на binding. Duplicate key/missing Zone/non-unit frame или external child reference без resolver mapping блокируют cutover.
+- [ ] Build validator охватывает all registered presets/maps, network prefab assetIds/catalog inclusion, role metadata и explicit migration mode. Размеры оружия и «влезает ли» не проверяются (решение 2026-10-07).
+- [ ] Probe `StagedResourcesDoNotCutover`: Common/Lobby/scenes прежние hashes/slot arrays/runtime mode, no deleted children; dry-run повторяется идентично. Isolated resource preview/reopen и metadata GREEN, Android gate. Runtime/Quest cost и production hierarchy/Bake checks принадлежат task7 после complete admission, не выдавать staged resources за playable production.
+
+## Задача 6. MapBootstrap adapter, Relay ordering и complete admission
+
+**Gate:** tasks1–5 GREEN в своих границах; upstream bootstrap primitive handoff и policy/Relay tasks4/5 GREEN на authored path. Generated production stations всё ещё выключены; proof выполняется на isolated generated fixtures. **Owner:** отдельный bootstrap/network исполнитель по accepted write-set. **Modify:** `Assets/Scripts/Maps/Runtime/MapArsenalCompositionAdapter.cs` (предлагаемый bootstrap файл) и accepted Relay/GameNetworkManager startup seam; generator source только по согласованному API. **Consumes:** generator description/result/identity + shared bootstrap lifetime. **Produces:** complete server Ready/remote LocalPlayable admission GREEN; только этот результат разрешает task7 cutover.
+
+- [ ] MapRun resolver вызывает ResolveDescription и фиксирует IDs/selection/fallback/layout hash в immutable config; не хранит editable entries/Style copy. Prepare local registered subtree, validate complete result, then общий map admission. Пользователь принял Series mode capture (A), future Selection только для следующей Series; этот adapter mode не выбирает и не становится его вторым владельцем. Актуальный bootstrap контракт уже разделяет CompositionReady/server Ready/LocalPlayable и current fresh snapshot; actual implementation/proof этих API предъявляет upstream owner, не Composer.
+- [ ] Probe `DescriptorAndSpawnPermutations`: descriptor раньше/позже scene NI, `_slotItems`/mag stock, spawned items, SDK initial snapshot; host one composition, remote same manifest, unknown/fingerprint mismatch closes gate without local substitute decor.
+- [ ] Минимальный Relay seam: RequestInitialState после current local registrations и observable reference closure фактического snapshot (persistent SDK и уже существующие anchors/items/avatars). Network owner предъявляет inventory/capture cut/actual spawn-before-state ordering; no future-avatar requirement. Если inventory отсутствует — unresolved gate. Не задерживать уже полученный snapshot, теряя последующие RPC; actual reliable Target snapshot→increments, no missing IDs/lost manipulations/return revision.
+- [ ] Probe `LateJoinReloadCancellation`: snapshot response старого run после unload/new run, late stock before SDK state, already taken/thrown magazine, incremental racing local compose, dedicated/no local avatar. Stale generation никогда не адресует new anchors. Actual request/response token или bounded queue/resync выбрать только если минимальный seam не даёт guarantees; owner документирует result, root принимает до transport edits.
+- [ ] Probe `AvatarAdmissionHasNoSnapshotCycle`: server Ready после composition+policy gates допускает stock/avatar creation независимо от remote snapshot; remote barrier ждёт только current snapshot refs, последующие spawns используют existing identity transport. После fresh apply открывается LocalPlayable; host без второго snapshot, dedicated без ожидания client/avatar hook.
+- [ ] Probe admission atomicity: Composer Ready только CompositionReady contribution; server writers допускаются server Ready, remote interaction — LocalPlayable. No shortcut от MapLoadCompleted/ManagerBootstrap.IsReady; pending unload closes writers before Dispose, повтор no duplicate stock. Actual runtime/Editor parity по description/current20 обязателен здесь.
+- [ ] GREEN pure serialization + native SDK/server-context permutations/reference closure/cancellation и автономная extraction logic; Android gate. Root принимает complete admission trace перед task7. Live two-client/шлем остаются human acceptance boundary, не выдавать source/harness за устройство.
+
+## Задача 7. Production opt-in, destructive migration и naming Arsenal
+
+**Лобби — первая карта на генераторе (решение пользователя 2026-10-08).** Корпус станции остаётся авторским
+(`LobbyDemoArsenalStation` в сцене), из экземпляров удаляются только ряды слотов; слоты по `FullDemoArsenal`
+со стилем собирает сборщик. Инструмент — `ArsenalGeneratedLobbyMigration`. Статус: код сборщика (карточки,
+опоры, предложение магазина), центр ряда в компиляторе и инструмент готовы офлайн; пересборка каталога и
+проба `lobby-parity` — под арендой; перевод сцены — после вливания адаптера map-runtime-bootstrap (поле
+`MapRuntimeCatalog._arsenalComposition`), затем `MapGameplayHierarchy.ValidateAll()` и Bake Occlusion.
+
+**Gate:** task6 complete admission GREEN принят root; final visual native fit/identity handoff доступен. До gate apply/destructive removal и generated production mode запрещены. **Modify:** exact declared Common/Lobby source и зарегистрированные scene station instances, Builder legacy routing, dry-run migration API task5 и scoped controller rename. **Produces:** работающие generated stations с проверенными ссылками/именами без второго controller/master.
+
+- [ ] Сверить свежий foreign dirty/lease/source ledger; повторить task5 dry run с complete admission версиями. Назначить stable StationKey один раз, MapRoot содержит refs. External child references адресно перевести на typed station/logical/role bindings; unmigrated refs abort до write.
+- [ ] Naming inventory до rename: actual ArsenalWallController.cs/type/API, public/editor/MCP/execute_code calls, nameof/reflection/type-name strings, serialized managed refs/fields, scene object labels/asset paths/build-resource registries, tests/doc labels. Related Wall классы сначала классифицировать по ответственности; no blind global replace.
+- [ ] Переименовать существующий единственный controller в ArsenalController и station prefabs по Arsenal[id].prefab (например ArsenalCommon/ArsenalLobby), сохраняя script/prefab .meta GUID и verified component/NI links. Compatibility — forwarding entry/method или approved adapter для необходимых callers, не второй active Wall/Arsenal component. Фактические legacy baseline/source paths в proofs не переписывать как уже changed.
+- [ ] Сохранить отличимые ArsenalPreset/PresentationStyle/Decoration names; fixed artwork `ArsenalDecorationCommon.prefab` — resource, не generated master/per-preset saved composition requirement. Адресно удалить old saved slot/card output и переключить только approved stations в Generated, не использовать removed output для regenerate.
+- [ ] Addressed saves; readback shell sceneId/root pose/Zone/standing/facing/DogTag UIDs/external links/meta GUID unchanged. Generated children IDs объявлены derived migration, new network indices entry-order version. Foreign scene YAML/docs/assets untouched; повтор apply no additional diffs.
+- [ ] Probe `MigrationRepeat` на actual current10/current20 layout/deployment/stock после save/reload; server Ready и remote LocalPlayable получены по уже принятому admission, Common/Lobby не остаются без ready owner. Grabbed/bought items не удалены parent cleanup, closure/cancel всё ещё GREEN.
+- [ ] `MapGameplayHierarchy.ValidateAll()` и `PhysicalArenaLayoutMigration.ValidateAll()`, structural/geometry visibility/motion audits; затем `Tools/VR Battlegrounds/Gameplay/Bake Occlusion (all maps)` после geometry/flags changes под lease, raw all-map report. Соблюсти release сразу после завершения prepared Unity batch, до анализа.
+- [ ] Android gate/console и measured Quest generation ms/frame spike, renderer/material/TMP/object counts, open/closed/swept bounds/collision/occlusion. Не заявлять устройство PASS без замера. Human gameplay acceptance и code commit ещё ждут task8.
+
+## Задача 8. Принятие, постоянные tests, docs и scoped выпуск
+
+**Gate:** пользователь проверил изменённую механику/artist flow в Unity/шлеме; root получил raw GREEN предыдущих срезов. До этого код не коммитить, permanent gameplay expectations не менять.
+
+- [ ] Human checklist: Prefab Mode material/decor сохраняются обычным Save; change preset count/zone не деформирует корпус; current20 каждое оружие/магазин/карточка читаемы; grab/return/stock/refill/close/open/readiness без изменения принятой игры; late join/reload same map и ownership на двух клиентах; Quest 2/3 reach/deployment/performance.
+- [ ] Source grep exact affected assertions `ArsenalWallCoversRegistryTests`, `ArsenalStationPresentationTests`, `ArsenalSlotOccupancyTests`, `ArsenalWallStateReplicationTests`, `ArsenalPrefabMutationTests`, `DogTagSetupTests`, `ArsenalAnimatorTests`, `ArsenalEquipmentMotionTests`, `LobbyLayoutTests`. Отменённые saved-slot/catalog expectations заменить только принятыми manifest/authoring invariants с объяснением, preserved NI/weapon/avatar requirements оставить.
+- [ ] Перенести confirmed vectors/lifecycle/parity/selection/identity/snapshot/disposal в appropriate permanent tests, не tests mirror private implementation. Существующие supply/history/refill assertions остаются регрессией.
+- [ ] Fresh `run_tests(mode="EditMode", assembly_names=["VrBattlegrounds.Tests.EditMode"])` → `get_test_job` и AndroidCompileGate; scopes failures разделить на actual changed logic vs foreign baseline, не делать claim complete при unresolved own failures.
+- [ ] Переписать current requirements/status в Docs/Arsenal/arsenal-presets.md, Arsenal_Code_Architecture_RU.md, arsenal-magazines.md; README registry и CHANGELOG root после review. SDK patch doc только если фактически появился approved patch. Temporary probes retain exact proof paths, production cleanup temporary dependencies verify.
+- [ ] Root + независимый reviewer проверяют whole diff, identity trace, docs, exact writer ownership и actual visual proofs. Только затем scoped stage/commit явных файлов после human acceptance; Git/Plastic independently verify по Docs/version-control.md, foreign dirty не stage.
+
+## План self-review
+
+Продуктовый flow tasks1/4/5, layout/fallback/scale tasks1/3, identity tasks2/6, lifecycle/stock/held teardown tasks3/6/7, staged resources/dry run task5, complete admission task6, destructive production/naming/hierarchy task7, human/tests/release task8. Primitive types производит bootstrap; lightweight binding schema раньше upstream MapRoot, dependent runtime позже shared handoff — no circular compile/shadow authority. Snapshot refs только фактические, server Ready не ждёт remote snapshot; remote LocalPlayable отдельно. Никакая shared mutation до handoff не поручена. Derived prefab/cache отсутствует в mandatory plan; только measured necessity с root scope/version checks. Required signatures совпадают с design; current visual batch2 proof не считается generator/native fit completion. Ни один generator runtime/compile GREEN в docs-only correction не заявлен.

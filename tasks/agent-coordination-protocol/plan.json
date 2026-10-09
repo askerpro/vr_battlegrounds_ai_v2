@@ -279,6 +279,20 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "readonly-getcontent-totalcount",
+      "writes": [
+        "tasks/agent-coordination-protocol/**"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "scoped-lf-writers-maintenance",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

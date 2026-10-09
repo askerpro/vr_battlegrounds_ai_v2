@@ -30,10 +30,39 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// ровно для ключа принятого run и descriptor; после перезагрузки — для нового, большего ключа; ни одного адресата
     /// снимка без регистрации (<c>InitialStateInventory</c>). Сценарий только наблюдает.
     /// </para>
+    ///
+    /// <para>
+    /// <b>Вариант <c>map-run-startup-route</c>.</b> Сервер до старта сети запрашивает первую сцену через
+    /// <see cref="ServerStartupRoute"/> (карта прогона, режим elimination) и стартует сразу в неё, минуя Lobby; клиенты
+    /// подключаются уже к идущей карте, второй — позже. Дальше — тот же поздний клиент и перезагрузка.
+    /// </para>
     /// </summary>
-    public class MapRunRelayBarrierScenario : IE2EScenario
+    public class MapRunRelayBarrierScenario : IE2EScenario, IE2EServerStartup
     {
-        public string Name => "map-run-relay-barrier";
+        private readonly bool _startupRoute;
+
+        public MapRunRelayBarrierScenario() : this(false) { }
+
+        public MapRunRelayBarrierScenario(bool startupRoute) => _startupRoute = startupRoute;
+
+        public string Name => _startupRoute ? "map-run-startup-route" : "map-run-relay-barrier";
+
+        private const string StartupMode = "elimination";
+        private const string CheckStartupRoute = "сервер стартовал сразу в карту маршрутом старта, без Lobby, с режимом серии";
+
+        // Подготовка и прогон — разные экземпляры (E2ERunner.Resolve), поэтому общее состояние процесса статично.
+        private static readonly List<string> ServerScenes = new List<string>();
+        private static string _routeError;
+
+        public string BeforeNetworkStart(E2EContext context)
+        {
+            if (!_startupRoute) return null;
+            ServerScenes.Clear();
+            SceneManager.sceneLoaded += (scene, mode) => ServerScenes.Add(scene.name);
+            _routeError = ServerStartupRoute.TryRequest(context.Map, StartupMode, "e2e-" + Name, out _, out string error)
+                ? null : error;
+            return _routeError;
+        }
 
         private const string CheckDedicated = "сервер поднят как выделенный (ServerOnly)";
         private const string CheckFirstClient = "первый клиент подключился";
@@ -59,7 +88,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private IEnumerator RunServer(E2EContext context, E2EResult result)
         {
-            result.Declare(CheckDedicated, CheckFirstClient, CheckMapReady, CheckLateClient, CheckReload);
+            if (_startupRoute) result.Declare(CheckDedicated, CheckStartupRoute, CheckFirstClient, CheckMapReady, CheckLateClient, CheckReload);
+            else result.Declare(CheckDedicated, CheckFirstClient, CheckMapReady, CheckLateClient, CheckReload);
 
             float deadline = Now + 60f;
             while (!NetworkServer.active && Now < deadline) yield return null;
@@ -69,22 +99,49 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
             DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
-            var first = new E2EWaitOutcome();
-            yield return E2EWait.Until(first, "первая сессия", 90f, () => SessionCount() >= 1, () => $"сессий {SessionCount()}");
-            result.Set(CheckFirstClient, first.Succeeded, first.Diagnosis);
-            if (!first.Succeeded) { result.Summary = "клиентов нет"; yield break; }
-
             SessionManager session = SessionManager.Instance;
-            session.SetSession(context.Map, "elimination");
-            AssignTeams(session);
-            session.StartSession();
-
             var ready = new E2EWaitOutcome();
-            yield return E2EWait.Until(ready, "server Ready карты", 120f, () => ServerReadyKey(context.Map).IsValid,
-                () => $"сцена '{SceneManager.GetActiveScene().name}', запуск {DescribeRun()}");
-            MapRunKey firstKey = ServerReadyKey(context.Map);
-            result.Set(CheckMapReady, ready.Succeeded, ready.Succeeded ? $"запуск {firstKey}" : ready.Diagnosis);
-            if (!ready.Succeeded) { result.Summary = "карта не собралась"; yield break; }
+            MapRunKey firstKey;
+            if (_startupRoute)
+            {
+                // Карта грузится сама — первой сценой сервера; клиенты придут уже в неё.
+                yield return E2EWait.Until(ready, "server Ready карты", 120f, () => ServerReadyKey(context.Map).IsValid,
+                    () => $"сцена '{SceneManager.GetActiveScene().name}', запуск {DescribeRun()}, маршрут {ServerStartupRoute.State}");
+                firstKey = ServerReadyKey(context.Map);
+                result.Set(CheckMapReady, ready.Succeeded, ready.Succeeded ? $"запуск {firstKey}" : ready.Diagnosis);
+                if (!ready.Succeeded) { result.Summary = "карта не собралась"; yield break; }
+
+                Series series = Series.Instance;
+                string mode = series != null ? series.CapturedModeId : null;
+                bool routed = _routeError == null && !ServerScenes.Contains("Lobby") && ServerScenes.Contains(context.Map)
+                              && mode == StartupMode && ServerStartupRoute.State == StartupRouteState.None;
+                result.Set(CheckStartupRoute, routed, $"запрос: {_routeError ?? "принят"}; сцены сервера: " +
+                           $"{string.Join(" → ", ServerScenes)}; режим серии '{mode}'; маршрут {ServerStartupRoute.State}");
+                if (!routed) { result.Summary = "сервер стартовал не маршрутом"; yield break; }
+
+                var first = new E2EWaitOutcome();
+                yield return E2EWait.Until(first, "первая сессия", 120f, () => SessionCount() >= 1, () => $"сессий {SessionCount()}");
+                result.Set(CheckFirstClient, first.Succeeded, first.Diagnosis);
+                if (!first.Succeeded) { result.Summary = "клиентов нет"; yield break; }
+                AssignTeams(session);
+            }
+            else
+            {
+                var first = new E2EWaitOutcome();
+                yield return E2EWait.Until(first, "первая сессия", 90f, () => SessionCount() >= 1, () => $"сессий {SessionCount()}");
+                result.Set(CheckFirstClient, first.Succeeded, first.Diagnosis);
+                if (!first.Succeeded) { result.Summary = "клиентов нет"; yield break; }
+
+                session.SetSession(context.Map, "elimination");
+                AssignTeams(session);
+                session.StartSession();
+
+                yield return E2EWait.Until(ready, "server Ready карты", 120f, () => ServerReadyKey(context.Map).IsValid,
+                    () => $"сцена '{SceneManager.GetActiveScene().name}', запуск {DescribeRun()}");
+                firstKey = ServerReadyKey(context.Map);
+                result.Set(CheckMapReady, ready.Succeeded, ready.Succeeded ? $"запуск {firstKey}" : ready.Diagnosis);
+                if (!ready.Succeeded) { result.Summary = "карта не собралась"; yield break; }
+            }
 
             var late = new E2EWaitOutcome();
             yield return E2EWait.Until(late, "поздний клиент", 180f, () => SessionCount() >= context.ExpectedClients,

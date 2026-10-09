@@ -99,6 +99,21 @@ namespace VrBattlegrounds.DevTools.E2E
             _result.WriteTo(_context.ResultPath);
 
             GameLog.Debug.Info($"[E2E] Старт харнесса: {_context}");
+
+            // Сервер до старта сети: первая сцена и прочее, что нельзя сделать из Run (он начнётся в Start, порядок
+            // относительно GameNetworkDiscovery.Start не гарантирован). Окно — загрузка первой сцены (Offline):
+            // менеджеры уже прошли Awake (каталог карт доступен), а Start, который поднимает сеть, ещё не вызван.
+            if (_context.IsServerRole && Resolve(_context.Scenario) is IE2EServerStartup startup)
+            {
+                UnityEngine.Events.UnityAction<UnityEngine.SceneManagement.Scene, UnityEngine.SceneManagement.LoadSceneMode> once = null;
+                once = (scene, mode) =>
+                {
+                    UnityEngine.SceneManagement.SceneManager.sceneLoaded -= once;
+                    string refusal = startup.BeforeNetworkStart(_context);
+                    if (refusal != null) GameLog.Debug.Error($"[E2E] Подготовка сервера отказала: {refusal}");
+                };
+                UnityEngine.SceneManagement.SceneManager.sceneLoaded += once;
+            }
         }
 
         private void Start()
@@ -239,6 +254,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new CalibratedPositionPersistsScenario();
             yield return new ConnectPlaceAcrossMapScenario();
             yield return new MapRunRelayBarrierScenario();
+            yield return new MapRunRelayBarrierScenario(startupRoute: true);
         }
 
         private static IE2EScenario Resolve(string name)

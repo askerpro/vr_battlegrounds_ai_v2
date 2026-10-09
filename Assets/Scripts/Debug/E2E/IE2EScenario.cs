@@ -26,5 +26,16 @@ namespace VrBattlegrounds.DevTools.E2E
         /// <summary>Проигрывает сценарий и заполняет <paramref name="result"/>.</summary>
         IEnumerator Run(E2EContext context, E2EResult result);
     }
+
+    /// <summary>
+    /// Сценарий, которому серверу нужно сделать что-то до старта сети (например, запросить первую сцену через
+    /// <c>ServerStartupRoute</c>). <see cref="E2ERunner"/> зовёт его до загрузки первой сцены, то есть раньше, чем
+    /// <c>GameNetworkDiscovery</c> поднимет сервер. Экземпляр для этого вызова отдельный от <see cref="IE2EScenario.Run"/>.
+    /// </summary>
+    public interface IE2EServerStartup
+    {
+        /// <returns>null — подготовлено; иначе текст отказа, он попадёт в результат прогона.</returns>
+        string BeforeNetworkStart(E2EContext context);
+    }
 }
 #endif

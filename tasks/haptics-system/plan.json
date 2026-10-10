@@ -75,7 +75,8 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "interaction-feedback", "state": "merged"}
+        {"task": "haptics-system", "stage": "interaction-feedback", "state": "merged"},
+        {"task": "avatar-renderer-regression", "stage": "asset-repair", "state": "verified"}
       ],
       "needs": []
     },

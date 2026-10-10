@@ -1,4 +1,4 @@
-"""Ограниченный повтор только наблюдений при пустом отказе моста после reload."""
+"""Ограниченный повтор наблюдений при пустом отказе или подтверждённом disconnect."""
 import asyncio
 import json
 from pathlib import Path
@@ -58,6 +58,31 @@ def empty_failure(reply):
             and all(value.get(k) is None for k in ('message', 'data', 'error')))
 
 
+def plugin_disconnected_failure(reply):
+    """Принимает только наблюдавшийся отказ plugin с явным разрешением retry."""
+    if getattr(reply, 'isError', False):
+        return False
+    content = getattr(reply, 'content', None)
+    if not isinstance(content, (list, tuple)) or len(content) != 1:
+        return False
+    text = getattr(content[0], 'text', None)
+    if not isinstance(text, str):
+        return False
+    try:
+        value = json.loads(text)
+    except (ValueError, TypeError):
+        return False
+    if not isinstance(value, dict) or set(value) != {'success', 'message', 'data', 'error', 'hint'}:
+        return False
+    structured = getattr(reply, 'structuredContent', None)
+    if structured is not None and structured != value:
+        return False
+    message = value['message']
+    return (value['success'] is False and value['data'] is None and value['hint'] == 'retry'
+            and isinstance(message, str) and value['error'] == message
+            and re.fullmatch(r'Unity plugin session [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} disconnected while awaiting command_result', message) is not None)
+
+
 async def execute_observation(expression, send, unpack, record, save, *, mutation=False,
                               budget=45.0, interval=1.0, clock=time.monotonic, sleep=asyncio.sleep):
     allowed = not mutation and observation_allowed(expression)
@@ -73,7 +98,8 @@ async def execute_observation(expression, send, unpack, record, save, *, mutatio
             if allowed:
                 remaining = deadline - clock()
                 if remaining <= 0:
-                    raise TimeoutError('Истёк бюджет наблюдения после пустого MCP-ответа')
+                    attempt['retryRejectedReason'] = 'observation_budget_expired'
+                    raise TimeoutError('Истёк бюджет разрешённого MCP-наблюдения')
                 reply = await asyncio.wait_for(send(), remaining)
             else:
                 reply = await send()
@@ -85,6 +111,21 @@ async def execute_observation(expression, send, unpack, record, save, *, mutatio
                 remaining = deadline - clock()
                 if remaining <= interval:
                     raise TimeoutError('Пустой отказ MCP сохраняется после ограниченного ожидания наблюдения')
+                attempt['retryDelaySeconds'] = interval
+                attempt['finished'] = time.time()
+                attempt['elapsedSeconds'] = clock() - attempt['monotonicStarted']
+                save()
+                await sleep(interval)
+                continue
+            if plugin_disconnected_failure(reply):
+                attempt['pluginDisconnectedEnvelope'] = True
+                if not allowed:
+                    attempt['retryRejectedReason'] = 'expression_not_allowed'
+                    return unpack(reply)
+                remaining = deadline - clock()
+                if remaining <= interval:
+                    attempt['retryRejectedReason'] = 'observation_budget_expired'
+                    raise TimeoutError('Disconnect Unity plugin сохраняется после ограниченного ожидания наблюдения')
                 attempt['retryDelaySeconds'] = interval
                 attempt['finished'] = time.time()
                 attempt['elapsedSeconds'] = clock() - attempt['monotonicStarted']

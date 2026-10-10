@@ -34,6 +34,9 @@ var configs = System.Linq.Enumerable.Where(System.Linq.Enumerable.Cast<UnityEngi
 SNAPSHOT = PREFIX + '''var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
 var bootstrap = VrBattlegrounds.Maps.Runtime.MapBootstrap.ForScene(scene);
 var launch = UnityEngine.JsonUtility.FromJson<VrBattlegrounds.EditorTools.TestStand.PlayLaunchStatus>(VrBattlegrounds.EditorTools.TestStand.PlayLaunch.Status());
+var networkManager = Mirror.NetworkManager.singleton;
+var discovery = UnityEngine.Object.FindAnyObjectByType<Mirror.Discovery.NetworkDiscovery>();
+var discoveryPort = discovery == null ? null : new UnityEditor.SerializedObject(discovery).FindProperty("serverBroadcastListenPort");
 return new {
     NativeState = manager.GetProperty("State", flags).GetValue(null).ToString(),
     Playing = UnityEditor.EditorApplication.isPlaying, Transition = UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode,
@@ -42,6 +45,8 @@ return new {
     Dirty = !UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode && System.Linq.Enumerable.Any(System.Linq.Enumerable.Range(0, UnityEngine.SceneManagement.SceneManager.sceneCount), i => UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty),
     Scene = scene.name, Server = Mirror.NetworkServer.active, Client = Mirror.NetworkClient.active,
     Connected = Mirror.NetworkClient.isConnected, Loading = Mirror.NetworkServer.isLoadingScene,
+    ActualNetworkPort = networkManager != null && networkManager.transport is Mirror.PortTransport networkTransport ? (int?)networkTransport.Port : null,
+    ActualDiscoveryPort = discoveryPort == null ? (int?)null : discoveryPort.intValue,
     MapPlayable = VrBattlegrounds.Maps.Runtime.MapRunAdmission.IsLocalPlayable,
     MapRunValid = bootstrap != null && bootstrap.LocalRunKey.IsValid,
     MapRunKey = bootstrap == null ? "" : bootstrap.LocalRunKey.ToString(),
@@ -76,6 +81,11 @@ def idle(value):
 
 
 async def run(args):
+    configuration = CONFIG.copy()
+    if args.network_policy is not None:
+        configuration.update(NetworkPortPolicy=args.network_policy)
+        if args.network_policy == "fixed":
+            configuration.update(NetworkPort=args.network_port, DiscoveryPort=args.discovery_port)
     output = Path(args.output).resolve()
     reports = (PROJECT_ROOT / "tasks/vr-test-stand/reports").resolve()
     if not output.is_relative_to(reports):
@@ -88,6 +98,7 @@ async def run(args):
     worker = Path(args.editor_root).resolve()
     report = {"passed": False, "owner": "native-play", "entrypoint": "native Start; physical toolbar click not verified",
               "userAcceptance": "pending", "checks": [], "calls": [], "artifacts": str(evidence)}
+    report.update(nativeOnly=args.native_only, networkPolicy=args.network_policy, nativeConfiguration=configuration)
     logs = ProbeLogs(output, report, worker)
 
     def save():
@@ -185,7 +196,7 @@ async def run(args):
                         logs.observe(state)
                         stop_attempted.add(phase)
                         if phase == "native":
-                            check("Native cleanup frozen config", all(current["Effective"].get(k) == v for k, v in CONFIG.items()), current["Effective"])
+                            check("Native cleanup frozen config", all(current["Effective"].get(k) == v for k, v in configuration.items()), current["Effective"])
                             await code(PREFIX + 'manager.GetMethod("Stop", flags).Invoke(null, null); return "native-stop-issued";', True)
                         else:
                             await code("return " + LAUNCH + ".Cancel(" + json.dumps(state["RunId"]) + ', "BotCombatStand");', True)
@@ -240,7 +251,7 @@ async def run(args):
                                            + 'System.IO.Path.GetFullPath(' + SETTINGS + '.ProfilePath) != System.IO.Path.GetFullPath(' + path_literal + ')) '
                                            + 'throw new System.InvalidOperationException("Temporary profile restore guard failed"); '
                                            + 'if (System.IO.File.Exists(' + path_literal + ') && UnityEngine.JsonUtility.ToJson(' + SETTINGS + '.ReadProfile()) != '
-                                           + 'UnityEngine.JsonUtility.ToJson(' + SETTINGS + '.Decode(' + literal(CONFIG) + '))) '
+                                           + 'UnityEngine.JsonUtility.ToJson(' + SETTINGS + '.Decode(' + literal(configuration) + '))) '
                                            + 'throw new System.InvalidOperationException("Temporary profile changed; refusing delete"); '
                                            + 'System.IO.File.Delete(' + path_literal + ');')
                     else:
@@ -306,7 +317,7 @@ for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++) if
                     await asyncio.to_thread(logs.capture, "before-native", force=True)
                     mutated = True
                     phase = "native"
-                    await code(PREFIX + 'manager.GetProperty("ActiveScenario", flags).SetValue(null, UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.ScriptableObject>("Assets/Settings/PlayMode/Host.asset")); ' + SETTINGS + '.SaveProfile(' + SETTINGS + '.Decode(' + literal(CONFIG) + ')); return "native-profile-prepared";', True)
+                    await code(PREFIX + 'manager.GetProperty("ActiveScenario", flags).SetValue(null, UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.ScriptableObject>("Assets/Settings/PlayMode/Host.asset")); ' + SETTINGS + '.SaveProfile(' + SETTINGS + '.Decode(' + literal(configuration) + ')); return "native-profile-prepared";', True)
                     topology = await code(PREFIX + '''var active = (UnityEngine.Object)manager.GetProperty("ActiveScenario", flags).GetValue(null);
 var serialized = new UnityEditor.SerializedObject(active);
 return new { Path = UnityEditor.AssetDatabase.GetAssetPath(active), Enabled = serialized.FindProperty("m_EnableEditors").boolValue,
@@ -323,53 +334,63 @@ return new { Path = UnityEditor.AssetDatabase.GetAssetPath(active), Enabled = se
                         return (s["Playing"] and s["Scene"] == "TestMap2" and s["Server"] and s["Client"] and s["Connected"]
                                 and not s["Loading"] and s["MapPlayable"] and s["MapRunValid"] and s["RequestActive"]
                                 and s["Launch"].get("Owner") == "native-play" and s["Launch"].get("RunId")
-                                and not s["Launch"].get("Error") and all(s["Effective"].get(k) == v for k, v in CONFIG.items()))
+                                and not s["Launch"].get("Error") and all(s["Effective"].get(k) == v for k, v in configuration.items()))
 
                     ready = await poll(SNAPSHOT, native_ready, args.ready_timeout)
                     run_ids[phase] = ready["Launch"]["RunId"]
                     logs.owner = "native-play"
                     logs.observe(ready["Launch"])
                     report["nativeReady"] = ready
+                    if args.network_policy in ("fixed", "auto"):
+                        actual = (ready.get("ActualNetworkPort"), ready.get("ActualDiscoveryPort"))
+                        if args.network_policy == "fixed":
+                            check("Native Fixed actual ports", actual == (args.network_port, args.discovery_port), actual)
+                        else:
+                            check("Native Auto actual ports", all(isinstance(port, int) and 1 <= port <= 65535 for port in actual)
+                                  and actual[0] != actual[1], actual)
                     await asyncio.sleep(1)
                     stable = await code(SNAPSHOT)
                     check("Native direct readiness stable", native_ready(stable) and stable["MapRunKey"] == ready["MapRunKey"], stable)
+                    if args.network_policy in ("fixed", "auto"):
+                        check("Native actual ports stable", all(stable.get(key) == ready.get(key) for key in ("ActualNetworkPort", "ActualDiscoveryPort")), stable)
                     await asyncio.to_thread(logs.capture, "native-before-cleanup", ready["Launch"], True)
                     await cleanup()
                     await restore()
-                    phase = "bot"
-                    logs.owner = "BotCombatStand"
-                    check("Bot начинает только idle", idle(await code(SNAPSHOT)))
-                    options = '{ OutputDirectory = ' + json.dumps(str(worker / "Temp/VrTestStand" / output.stem / "bot-t01")) + ', Profile = VrBattlegrounds.DevTools.BotCombatStand.BotStandProfile.Production, Seeds = new[] { 101 }, CaseSeconds = 10f, Capture = true, Cases = new[] { VrBattlegrounds.DevTools.BotCombatStand.BotStandScenarioId.T01 } }'
-                    await code("return " + BOT + ".Prepare(new VrBattlegrounds.DevTools.BotCombatStand.BotStandRunOptions " + options + ", true);", True)
-                    state = await poll("return " + LAUNCH + ".Status();", lambda s: s.get("Owner") == "BotCombatStand" and s.get("RunId"), args.ready_timeout, LAUNCH + ".Status()")
-                    run_ids[phase] = state["RunId"]
-                    logs.observe(state)
-                    terminal = await poll("return " + BOT + ".Status();", lambda s: s.get("finished") or s.get("stage") == "Failed", args.ready_timeout + 120)
-                    report["botTerminal"] = terminal
-                    state = await launch()
-                    report["botLaunch"] = state
-                    check("Bot managed launch readiness", state.get("Ready") and state.get("RunId") == run_ids[phase] and state.get("Owner") == "BotCombatStand", state)
-                    check("Bot завершён без editor ошибки", terminal.get("finished") and not terminal.get("error") and terminal.get("launchId") == run_ids[phase], terminal)
-                    source = Path(terminal["reportPath"]).resolve()
-                    expected = (worker / "Temp/VrTestStand" / output.stem / "bot-t01").resolve()
-                    check("Bot artifact own path", source.is_relative_to(expected) and source.name == "summary.json" and source.is_file(), str(source))
-                    shutil.copytree(expected, evidence / "bot-t01", dirs_exist_ok=True)
-                    result = json.loads(source.read_text(encoding="utf-8-sig"))
-                    report["botResult"] = result
-                    status = result["status"]
-                    cases = result["cases"]
-                    check("T01 integration completion; gameplay review pending", status["IsFinished"] and status["Total"] == status["Completed"] == 1
-                          and all(status[k] == 0 for k in ("Failed", "InvalidFixture", "Unsupported"))
-                          and status["NeedsReview"] == 1 and status["Passed"] is None and not status.get("Error")
-                          and len(cases) == 1 and cases[0]["Id"] == "T01" and cases[0]["Seed"] == 101
-                          and cases[0]["Status"] == "NeedsReview" and cases[0]["Frames"], status)
-                    check("Bot HTML сохранён", (evidence / "bot-t01/report.html").is_file())
-                    images = cases[0].get("Images", [])
-                    check("Bot capture artifacts сохранены", len(images) >= 5 and all(Path(p).resolve().is_relative_to(expected)
-                          and (evidence / "bot-t01" / Path(p).resolve().relative_to(expected)).is_file() for p in images), len(images))
-                    await asyncio.to_thread(logs.capture, "bot-before-cleanup", state, True)
-                    await cleanup()
-                    await restore()
+                    if not args.native_only:
+                        phase = "bot"
+                        logs.owner = "BotCombatStand"
+                        check("Bot начинает только idle", idle(await code(SNAPSHOT)))
+                        options = '{ OutputDirectory = ' + json.dumps(str(worker / "Temp/VrTestStand" / output.stem / "bot-t01")) + ', Profile = VrBattlegrounds.DevTools.BotCombatStand.BotStandProfile.Production, Seeds = new[] { 101 }, CaseSeconds = 10f, Capture = true, Cases = new[] { VrBattlegrounds.DevTools.BotCombatStand.BotStandScenarioId.T01 } }'
+                        await code("return " + BOT + ".Prepare(new VrBattlegrounds.DevTools.BotCombatStand.BotStandRunOptions " + options + ", true);", True)
+                        state = await poll("return " + LAUNCH + ".Status();", lambda s: s.get("Owner") == "BotCombatStand" and s.get("RunId"), args.ready_timeout, LAUNCH + ".Status()")
+                        run_ids[phase] = state["RunId"]
+                        logs.observe(state)
+                        terminal = await poll("return " + BOT + ".Status();", lambda s: s.get("finished") or s.get("stage") == "Failed", args.ready_timeout + 120)
+                        report["botTerminal"] = terminal
+                        state = await launch()
+                        report["botLaunch"] = state
+                        check("Bot managed launch readiness", state.get("Ready") and state.get("RunId") == run_ids[phase] and state.get("Owner") == "BotCombatStand", state)
+                        check("Bot завершён без editor ошибки", terminal.get("finished") and not terminal.get("error") and terminal.get("launchId") == run_ids[phase], terminal)
+                        source = Path(terminal["reportPath"]).resolve()
+                        expected = (worker / "Temp/VrTestStand" / output.stem / "bot-t01").resolve()
+                        check("Bot artifact own path", source.is_relative_to(expected) and source.name == "summary.json" and source.is_file(), str(source))
+                        shutil.copytree(expected, evidence / "bot-t01", dirs_exist_ok=True)
+                        result = json.loads(source.read_text(encoding="utf-8-sig"))
+                        report["botResult"] = result
+                        status = result["status"]
+                        cases = result["cases"]
+                        check("T01 integration completion; gameplay review pending", status["IsFinished"] and status["Total"] == status["Completed"] == 1
+                              and all(status[k] == 0 for k in ("Failed", "InvalidFixture", "Unsupported"))
+                              and status["NeedsReview"] == 1 and status["Passed"] is None and not status.get("Error")
+                              and len(cases) == 1 and cases[0]["Id"] == "T01" and cases[0]["Seed"] == 101
+                              and cases[0]["Status"] == "NeedsReview" and cases[0]["Frames"], status)
+                        check("Bot HTML сохранён", (evidence / "bot-t01/report.html").is_file())
+                        images = cases[0].get("Images", [])
+                        check("Bot capture artifacts сохранены", len(images) >= 5 and all(Path(p).resolve().is_relative_to(expected)
+                              and (evidence / "bot-t01" / Path(p).resolve().relative_to(expected)).is_file() for p in images), len(images))
+                        await asyncio.to_thread(logs.capture, "bot-before-cleanup", state, True)
+                        await cleanup()
+                        await restore()
                     report["functionalPassed"] = True
                 except Exception as error:
                     report["error"] = type(error).__name__ + ": " + str(error)
@@ -401,7 +422,16 @@ if __name__ == "__main__":
     parser.add_argument("--ready-timeout", type=int, default=90)
     parser.add_argument("--cleanup-timeout", type=int, default=90)
     parser.add_argument("--call-timeout", type=int, default=45)
+    parser.add_argument("--native-only", action="store_true", help="Только native запуск; cleanup, точное восстановление и покрытие логов обязательны")
+    parser.add_argument("--network-policy", choices=("default", "fixed", "auto"), help="Временная политика портов native профиля")
+    parser.add_argument("--network-port", type=int, help="Игровой порт для fixed")
+    parser.add_argument("--discovery-port", type=int, help="Discovery порт для fixed")
     args = parser.parse_args()
+    if args.network_policy == "fixed":
+        if not all(port is not None and 1 <= port <= 65535 for port in (args.network_port, args.discovery_port)) or args.network_port == args.discovery_port:
+            parser.error("Для fixed нужны два разных порта от 1 до 65535")
+    elif args.network_port is not None or args.discovery_port is not None:
+        parser.error("Номера портов применимы только с --network-policy fixed")
     if not all(10 <= getattr(args, k) <= 180 for k in ("ready_timeout", "cleanup_timeout", "call_timeout")):
         parser.error("Все сроки должны быть от 10 до 180 секунд")
     result = asyncio.run(run(args))

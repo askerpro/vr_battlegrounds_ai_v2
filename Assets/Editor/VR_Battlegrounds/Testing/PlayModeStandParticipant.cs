@@ -33,6 +33,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
         private static IDisposable _launch;
         private static StartupRouteHandle _startupRoute;
         private static Func<string> _beforeServerStart;
+        private static Func<string> _clientAddress;
         private static Func<GameNetworkDiscovery.AppRole?> _roleOverride;
         private static string _startupError;
         private static Action _unsubscribe;
@@ -248,7 +249,9 @@ namespace VrBattlegrounds.EditorTools.TestStand
                 MapPlayable = MapRunAdmission.IsLocalPlayable,
                 MapRunKey = MapBootstrap.ForScene(SceneManager.GetActiveScene())?.LocalRunKey.ToString(),
                 MapRunValid = MapBootstrap.ForScene(SceneManager.GetActiveScene())?.LocalRunKey.IsValid ?? false,
-                StartupError = _startupError,
+                StartupError = _startupError ?? PlayLaunchNetworkPorts.StartupError,
+                NetworkPort = NetworkManager.singleton != null && NetworkManager.singleton.transport is PortTransport port ? port.Port : 0,
+                DiscoveryPort = PlayLaunchNetworkPorts.ActualDiscoveryPort,
                 ConnectionEpoch = _connectionEpoch, AvatarNetId = session?.ActiveAvatarNetId ?? 0, SessionNetId = session?.netId ?? 0,
                 ServerSessions = PlayersManager.Instance?.Sessions.Count ?? 0, ClientManagerReady = GameNetworkDiscovery.ClientManagerReady,
                 DeviceToken = ClientDeviceIdentity.HasTemporaryToken ? ClientDeviceIdentity.BaseToken : PlayerPrefs.GetString("DeviceToken", ""),
@@ -274,18 +277,10 @@ namespace VrBattlegrounds.EditorTools.TestStand
                 _roleOverride = () => role;
                 DebugBootstrapGate.EditorRoleOverride = _roleOverride;
             }
-            DebugBootstrapGate.EditorClientAddressOverride = () => _run?.Configuration?.ClientAddress;
+            _clientAddress = () => _run?.Configuration?.ClientAddress;
+            DebugBootstrapGate.EditorClientAddressOverride = _clientAddress;
             _beforeServerStart = PrepareStartupRoute;
             DebugBootstrapGate.EditorBeforeServerStart = _beforeServerStart;
-            var manager = UnityEngine.Object.FindAnyObjectByType<NetworkManager>();
-            if (_run.NetworkPort > 0 && manager != null && manager.transport is PortTransport port) port.Port = (ushort)_run.NetworkPort;
-            var discovery = UnityEngine.Object.FindAnyObjectByType<NetworkDiscovery>();
-            if (discovery != null && _run.DiscoveryPort > 0)
-            {
-                var serialized = new SerializedObject(discovery);
-                serialized.FindProperty("serverBroadcastListenPort").intValue = _run.DiscoveryPort;
-                serialized.ApplyModifiedPropertiesWithoutUndo();
-            }
         }
 
         private static string PrepareStartupRoute()
@@ -303,6 +298,9 @@ namespace VrBattlegrounds.EditorTools.TestStand
 
         private static void Release()
         {
+            if (DebugBootstrapGate.EditorClientAddressOverride == _clientAddress)
+                DebugBootstrapGate.EditorClientAddressOverride = null;
+            _clientAddress = null;
             if (DebugBootstrapGate.EditorRoleOverride == _roleOverride)
                 DebugBootstrapGate.EditorRoleOverride = null;
             _roleOverride = null;

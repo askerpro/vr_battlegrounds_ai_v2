@@ -103,6 +103,8 @@ namespace VrBattlegrounds.EditorTools.TestStand
         public bool Server;
         public bool Client;
         public bool Connected;
+        public int NetworkPort;
+        public int DiscoveryPort;
         public bool Active;
         public int MarkerCount;
         public bool ProfileTemporary;

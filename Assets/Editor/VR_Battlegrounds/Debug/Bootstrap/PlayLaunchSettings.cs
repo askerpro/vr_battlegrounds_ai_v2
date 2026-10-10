@@ -14,6 +14,7 @@ namespace VrBattlegrounds.DevTools
         private static Func<bool> _requestActive;
         private static PlayLaunchConfiguration _cached;
         private static long _stamp = long.MinValue;
+        private static string _cachedPath;
         static PlayLaunchSettings() { UxrManager.BindEditorFocusPauseProvider(() => Effective.PauseOnFocusLoss); }
         public static bool RequestActive => _requestActive != null && _requestActive();
         public static bool HasLaunchConfiguration => _resolver?.Invoke() != null;
@@ -30,7 +31,7 @@ namespace VrBattlegrounds.DevTools
             return configuration;
         }
         private static PlayLaunchProfileStore Store => new PlayLaunchProfileStore(CheckoutRoot,
-            Decode, config => JsonUtility.ToJson(config, true), () => RequestActive);
+            Decode, config => JsonUtility.ToJson(config, true), () => RequestActive, Environment.GetEnvironmentVariable("VRBG_LAUNCH_CONFIG"));
         public static string ProfilePath => Store.FilePath;
         public static void BindActiveLaunch(Func<PlayLaunchConfiguration> configuration, Func<bool> active)
         {
@@ -41,12 +42,12 @@ namespace VrBattlegrounds.DevTools
         public static PlayLaunchConfiguration ReadProfile()
         {
             var store = Store; long stamp = File.Exists(store.FilePath) ? File.GetLastWriteTimeUtc(store.FilePath).Ticks : 0;
-            if (_cached == null || stamp != _stamp) { _cached = store.Read(); _stamp = stamp; }
+            if (_cached == null || stamp != _stamp || _cachedPath != store.FilePath) { _cached = store.Read(); _stamp = stamp; _cachedPath = store.FilePath; }
             return _cached.Copy();
         }
         public static void SaveProfile(PlayLaunchConfiguration configuration)
         {
-            Store.Save(configuration); _cached = configuration.Copy(); _stamp = File.GetLastWriteTimeUtc(Store.FilePath).Ticks;
+            var store = Store; store.Save(configuration); _cached = configuration.Copy(); _stamp = File.GetLastWriteTimeUtc(store.FilePath).Ticks; _cachedPath = store.FilePath;
         }
         public static void Change(Action<PlayLaunchConfiguration> change)
         {

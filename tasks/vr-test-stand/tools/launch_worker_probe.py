@@ -5,6 +5,7 @@ from datetime import timedelta
 import json
 from pathlib import Path
 import subprocess
+import socket
 import time
 import sys
 import uuid
@@ -61,7 +62,7 @@ async def run(args):
                 try:
                     async def send():
                         return await session.call_tool('execute_code', {'action': 'execute', 'code': 'return ' + expression + ';'})
-                    value = await execute_observation(expression, send, unpack, item, save, mutation=mutation)
+                    value = await execute_observation(expression, send, unpack, item, save, mutation=mutation, budget=args.observation_timeout)
                     item['result'] = value
                     if logs.sources:
                         await asyncio.to_thread(logs.capture, 'call', value)
@@ -119,6 +120,7 @@ async def run(args):
                 'System.Security.Cryptography.SHA256.Create().ComputeHash(System.IO.File.ReadAllBytes(' + json.dumps(args.editor_root.rstrip("/\\")) + ' + "/" + p))) })) }')
             active = None
             worker_verified = False
+            reserved_socket = None
             try:
                 identity = await code("UnityEngine.Application.dataPath")
                 check("MCP указывает на worker", identity.replace("\\", "/").lower() == args.editor_root.replace("\\", "/").rstrip("/").lower() + "/assets", identity)
@@ -137,6 +139,12 @@ async def run(args):
                 baseline = await code(baseline_expression)
                 bad = await code(LAUNCH + '.Plan(' + literal({"Role": "unknown"}) + ')')
                 check("неверная роль отказывает до Play", not bad["Passed"] and bad["Code"] == "RoleInvalid", bad)
+                if args.occupy_game_port:
+                    reserved_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                        reserved_socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+                    reserved_socket.bind(("0.0.0.0", args.network_port))
+                    report["occupiedGamePort"] = args.network_port
 
                 for name, configuration in [
                     ("server-two-clients", {"Role": "server", "ClientCount": 2, "SceneSource": "lobby", "ModeId": "", "AutoGoLive": False, "PauseOnFocusLoss": False}),
@@ -147,6 +155,8 @@ async def run(args):
                 ]:
                     if name not in args.cases:
                         continue
+                    if args.network_policy:
+                        configuration.update(NetworkPortPolicy=args.network_policy, NetworkPort=args.network_port, DiscoveryPort=args.discovery_port)
                     print("case=" + name, flush=True)
                     await asyncio.to_thread(logs.capture, 'before-play-' + name, force=True)
                     plan = await code(LAUNCH + ".Plan(" + literal(configuration) + ")")
@@ -155,9 +165,25 @@ async def run(args):
                     check("Play возвращает RunId " + name, bool(active.get("RunId")), active)
                     ready = await wait(LAUNCH + ".Status()", lambda s: s["Ready"] or s["State"] == "Failed", 150)
                     await asyncio.to_thread(logs.capture, 'ready-' + name, ready, True)
+                    if args.expect_error:
+                        check("ожидаемый отказ " + name, ready["State"] == "Failed" and not ready["Ready"] and
+                              ready.get("Error", "").startswith(args.expect_error), ready)
+                        report["cases"].append(ready)
+                        await code(LAUNCH + ".Cancel(" + json.dumps(ready["RunId"]) + ', ' + json.dumps(owner) + ')')
+                        stopped = await wait(LAUNCH + ".Status()", lambda s: s["State"] in ("Idle", "Failed") and not s["Playing"] and s["CleanupPassed"], 90)
+                        report.setdefault('caseCleanup', []).append({'case': name, 'status': stopped})
+                        check("очистка после отказа " + name, stopped["CleanupPassed"], stopped)
+                        after = await code(baseline_expression)
+                        check("baseline после отказа " + name, baseline == after, {"before": baseline, "after": after})
+                        active = None
+                        continue
                     check("Ready " + name, ready["Ready"], ready)
                     report["cases"].append(ready)
                     peers = ready["Participants"]
+                    if args.network_policy and name != "standalone":
+                        expected = (args.network_port, args.discovery_port) if args.network_policy == "fixed" else (peers[0]["NetworkPort"], peers[0]["DiscoveryPort"])
+                        check("одна фактическая пара портов " + name, expected[0] > 0 and expected[1] > 0 and expected[0] != expected[1] and
+                              all((p["NetworkPort"], p["DiscoveryPort"]) == expected for p in peers), {"expected": expected, "participants": peers})
                     check("все участники активны " + name, len(peers) == configuration["ClientCount"] + 1 and all(p["Active"] for p in peers), peers)
                     if name == "standalone":
                         check("standalone без сети", not any(p["Server"] or p["Client"] for p in peers), peers)
@@ -228,6 +254,8 @@ async def run(args):
                     report["cleanupError"] = str(error)
                     report["passed"] = False
                 await asyncio.to_thread(logs.capture, 'after-cleanup', force=True)
+                if reserved_socket is not None:
+                    reserved_socket.close()
                 report['passed'] = report['passed'] and report['logs']['coverageComplete']
                 output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     return report["passed"]
@@ -239,9 +267,20 @@ if __name__ == "__main__":
     parser.add_argument("--editor-root", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--compile-only", action="store_true")
+    parser.add_argument("--observation-timeout", type=int, default=45, help="Бюджет только разрешённых наблюдений Status/Operation, 10..180 секунд")
+    parser.add_argument("--network-policy", choices=["default", "fixed", "auto"])
+    parser.add_argument("--network-port", type=int, default=0)
+    parser.add_argument("--discovery-port", type=int, default=0)
+    parser.add_argument("--occupy-game-port", action="store_true")
+    parser.add_argument("--expect-error", choices=["PortOccupied"])
     parser.add_argument("--case", dest="cases", action="append", choices=["server-two-clients", "client-host", "game-server", "disabled-game-server", "standalone"])
     args = parser.parse_args()
+    if not 10 <= args.observation_timeout <= 180:
+        parser.error("Бюджет наблюдения должен быть от 10 до 180 секунд")
     args.cases = list(dict.fromkeys(args.cases or ["server-two-clients", "client-host", "game-server"]))
+    if (args.occupy_game_port or args.expect_error) and not (args.occupy_game_port and args.expect_error and args.network_policy == "fixed"
+                                                         and args.network_port > 0 and args.cases == ["game-server"]):
+        parser.error("Для PortOccupied нужны --case game-server --network-policy fixed --network-port и оба флага --occupy-game-port --expect-error PortOccupied")
     try:
         completed = asyncio.run(run(args))
         saved = json.loads(Path(args.output).read_text(encoding="utf-8"))

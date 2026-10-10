@@ -159,6 +159,17 @@ namespace VrBattlegrounds.Network
                 return;
             }
 
+            string networkError = Application.isEditor ? VrBattlegrounds.DevTools.DebugBootstrapGate.EditorBeforeNetworkStart?.Invoke(NetworkManager.singleton, _discovery, role) : null;
+            if (!string.IsNullOrEmpty(networkError))
+            {
+                if (networkError == "LaunchStopping")
+                {
+                    GameLog.Network.Info("[GameNetworkDiscovery] Поздний старт сети отменён владельцем завершаемого Play.");
+                    return;
+                }
+                GameLog.Network.Error("[GameNetworkDiscovery] Настройка портов отклонена: " + networkError);
+                return;
+            }
             CurrentRole = role;
             if (role == AppRole.Server || role == AppRole.Host)
             {
@@ -443,6 +454,8 @@ namespace VrBattlegrounds.Network
         {
             if (!ClientManagerReady) throw new System.InvalidOperationException("ClientManagerNotReady");
             if (CurrentRole != null && CurrentRole != AppRole.Client) throw new System.InvalidOperationException("ClientRoleRequired");
+            string networkError = Application.isEditor ? VrBattlegrounds.DevTools.DebugBootstrapGate.EditorBeforeNetworkStart?.Invoke(NetworkManager.singleton, _discovery, AppRole.Client) : null;
+            if (!string.IsNullOrEmpty(networkError)) throw new System.InvalidOperationException(networkError);
             CurrentRole = AppRole.Client;
             _holdClientAutoStart = false;
             try

@@ -10,13 +10,20 @@ namespace VrBattlegrounds.DevTools
         private readonly Func<string, PlayLaunchConfiguration> _decode;
         private readonly Func<PlayLaunchConfiguration, string> _encode;
         private readonly Func<bool> _requestActive;
+        private readonly bool _explicitPath;
         public string FilePath { get; }
 
         public PlayLaunchProfileStore(string checkoutRoot, Func<string, PlayLaunchConfiguration> decode,
-            Func<PlayLaunchConfiguration, string> encode, Func<bool> requestActive = null)
+            Func<PlayLaunchConfiguration, string> encode, Func<bool> requestActive = null, string configurationPath = null)
         {
             if (string.IsNullOrWhiteSpace(checkoutRoot)) throw new ArgumentException("Нужен checkout root.");
-            FilePath = Path.Combine(Path.GetFullPath(checkoutRoot), "UserSettings", "VrBattlegrounds", "play-launch.json");
+            string root = Path.GetFullPath(checkoutRoot);
+            _explicitPath = !string.IsNullOrWhiteSpace(configurationPath);
+            FilePath = _explicitPath ? Path.GetFullPath(Path.IsPathRooted(configurationPath) ? configurationPath : Path.Combine(root, configurationPath))
+                : Path.Combine(root, "UserSettings", "VrBattlegrounds", "play-launch.json");
+            if (_explicitPath && FilePath.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && !FilePath.StartsWith(Path.Combine(root, "UserSettings") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                throw new PlayLaunchException("ProfilePathInvalid", "Локальный конфиг внутри checkout должен находиться в игнорируемой папке UserSettings.");
             _decode = decode ?? throw new ArgumentNullException(nameof(decode));
             _encode = encode ?? throw new ArgumentNullException(nameof(encode));
             _requestActive = requestActive ?? (() => false);
@@ -24,7 +31,11 @@ namespace VrBattlegrounds.DevTools
 
         public PlayLaunchConfiguration Read()
         {
-            if (!File.Exists(FilePath)) return new PlayLaunchConfiguration();
+            if (!File.Exists(FilePath))
+            {
+                if (_explicitPath) throw new PlayLaunchException("ProfileMissing", "Указанный VRBG_LAUNCH_CONFIG не найден: " + FilePath);
+                return new PlayLaunchConfiguration();
+            }
             PlayLaunchConfiguration configuration;
             try { configuration = _decode(File.ReadAllText(FilePath, new UTF8Encoding(false, true))); }
             catch (Exception e) { throw new PlayLaunchException("ProfileInvalid", "Профиль не прочитан: " + e.Message); }

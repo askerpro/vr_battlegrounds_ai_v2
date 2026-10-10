@@ -22,6 +22,51 @@ schemaVersion 1. Папка игнорируется Git. Во время reques
 Owner=`native-play`; его `Status().Ready` не рассчитывается по StandManifest. Фактическую
 готовность проверять по Mirror, целевой сцене, MapRunAdmission и валидному MapBootstrap.LocalRunKey.
 
+## Локальные сетевые порты
+
+Политика задаётся в том же локальном профиле или разовом JSON запуска:
+
+| NetworkPortPolicy | Поведение |
+| --- | --- |
+| `default` | Обычный Editor сохраняет порты компонентов приложения; owned managed stand сохраняет автоматическую изоляцию своего сервера. |
+| `fixed` | Одна указанная пара NetworkPort/DiscoveryPort для всех участников. Нужны разные числа1..65535. |
+| `auto` | Координатор выбирает свободную пару и замораживает её для запуска. Managed topology должна содержать собственный сервер. |
+
+Например, для отдельного checkout:
+
+```json
+{
+  "NetworkPortPolicy": "fixed",
+  "NetworkPort": 29771,
+  "DiscoveryPort": 29772
+}
+```
+
+Для worker рекомендуется `{"NetworkPortPolicy":"auto"}`, для основного Editor — `default`.
+Обе настройки остаются вне Git в UserSettings каждого checkout; профиль clone читается из
+исходного checkout. Если два запуска используют Fixed, их пары должны различаться целиком:
+одного отдельного игрового порта недостаточно при общем discovery порте.
+
+`VRBG_LAUNCH_CONFIG` выбирает другой файл **того же JSON формата**. Переменную задать перед
+запуском Editor; relative путь разрешается от исходного checkout. Например:
+
+```powershell
+$env:VRBG_LAUNCH_CONFIG = 'UserSettings/VrBattlegrounds/play-launch.worker.json'
+```
+
+Внутри checkout разрешены только файлы под игнорируемым UserSettings; абсолютный внешний файл
+также допустим. Указанный, но отсутствующий файл даёт ProfileMissing, битый — ProfileInvalid.
+Без переменной используется прежний play-launch.json; чтение отсутствующего стандартного
+профиля не создаёт файл. Окно показывает выбранный путь и позволяет явно сохранить политику.
+
+Порты применяет один Editor-владелец перед штатным стартом любой роли и reconnect; сцены и
+префабы не сохраняются. Native Auto требует Play главного Editor, который публикует пару для
+clones; для native сценария без главного Play использовать Fixed/default или Play Launch.
+Занятый порт даёт PortOccupied и отказ запуска; ошибка принадлежит конкретному RunId.
+Проверка свободного сокета не резервирует его: реальный transport bind тоже может отказать.
+Фактические NetworkPort/DiscoveryPort доступны в Participants адресного Status.
+Эта конфигурация относится к Editor/MPP; release-приложение сохраняет свои штатные порты.
+
 ## Порядок работы агента
 
 В linked worktree: fetch/rebase → checkpoint → request/watch-ticket → claim/begin → guard,
@@ -115,7 +160,19 @@ uv run --with 'mcp>=1.20,<2' tasks/vr-test-stand/tools/native_bot_worker_probe.p
 ```
 
 Launch probe поддерживает --case (server-two-clients, client-host, game-server, disabled-game-server,
-standalone) и --compile-only. Recovery probe запускает **сервер и одного клиента**, как требует
+standalone), --compile-only, --network-policy и Fixed --network-port/--discovery-port.
+Для отрицательной пробы PortOccupied: --case game-server --network-policy fixed с парой портов,
+--occupy-game-port --expect-error PortOccupied. --observation-timeout10..180 (default45) меняет
+только бюджет разрешённых наблюдений. Native probe с --native-only пропускает BotT01 и
+поддерживает те же параметры политики; точный baseline и полный capture остаются обязательными.
+Helper может ограниченно повторять только чистые `PlayLaunch.Status()` и адресный
+`PlayModeTestStand.Operation(requestId)`: при пустом отказе или строго распознанном JSON-отказе
+«Unity plugin session … disconnected while awaiting command_result» с `hint=retry`.
+Каждая попытка сохраняется в отчёте. Запуски, сетевые команды, неизвестные ошибки,
+transport exceptions и timeout не повторяются; после обрыва мутации сначала проверить её
+durable состояние. Отрицательный тест порта должен доказать новый runtime отказ и затем
+успешный запуск после освобождения порта; одной ошибки в Status недостаточно.
+Recovery probe запускает **сервер и одного клиента**, как требует
 существующий сценарий SessionRecoveryOnReconnectScenario. Spectator/двухклиентная изоляция — отдельная
 launch проверка. Все пакеты сохраняют логи actual PID до, во время и после собственного запуска,
 отдельно учитывая старые baseline bytes, ротацию и полноту capture. Логи не очищать; исключать только
@@ -135,7 +192,6 @@ SelectedEditMode365 не стартовали до init timeout;366 потеря
 underlying Unity TestRunner. Перед новым запросом проверить native readiness.
 
 Следующие этапы: HardwareXR startup policy и реальные OVR/UPM/licensing ошибки окружения;
-checkout-local Default/Fixed/Auto port overrides; единый XR-input adapter для поз/кнопок/UI/хвата/ходьбы;
-packet faults и смерть координатора/сервера. Фиксированные port overrides и VRBG_LAUNCH_CONFIG ещё
-не предоставлены. Профиль уже локален и вне Git. Не добавлять второй writer поверх UltimateXR.
+единый XR-input adapter для поз/кнопок/UI/хвата/ходьбы; packet faults и смерть координатора/сервера.
+Профиль локален и вне Git. Не добавлять второй writer поверх UltimateXR.
 Полный test suite, физический toolbar click, качество хвата/stereo/Quest текущими отчётами не доказаны.

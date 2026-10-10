@@ -123,6 +123,17 @@ namespace VrBattlegrounds.EditorTools.TestStand
             SessionState.EraseString(NativePreviousSceneKey);
             UnityEditor.SceneManagement.EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(previous);
         }
+        internal static void ReportNativeNetworkFailure(string error)
+        {
+            var request = ReadRequest();
+            if (request == null || request.Owner != "native-play" || StandManifest.Read() != null) return;
+            SessionState.SetString(ErrorKey, error);
+            EditorApplication.delayCall += () =>
+            {
+                if (ReadRequest()?.RunId == request.RunId && StandManifest.Read() == null)
+                    EditorApplication.isPlaying = false;
+            };
+        }
         private static void HandleNativeScene(Scene scene, LoadSceneMode mode)
         {
             var request = ReadRequest();

@@ -12,6 +12,9 @@ namespace VrBattlegrounds.DevTools
         public string ScenePath = "";
         public string Role = "host";
         public string ClientAddress = "";
+        public string NetworkPortPolicy = "default";
+        public int NetworkPort;
+        public int DiscoveryPort;
         public int ClientCount;
         public string[] AdditionalPlayerRoles;
         public bool HostIsAdmin = true;
@@ -44,6 +47,10 @@ namespace VrBattlegrounds.DevTools
         public void Validate()
         {
             if (SchemaVersion != 1) throw new PlayLaunchException("SchemaUnsupported", "Поддерживается schemaVersion 1.");
+            if (NetworkPortPolicy != "default" && NetworkPortPolicy != "fixed" && NetworkPortPolicy != "auto")
+                throw new PlayLaunchException("PortPolicyInvalid", "Режим портов: default, fixed или auto.");
+            if (NetworkPortPolicy == "fixed" && (NetworkPort < 1 || NetworkPort > 65535 || DiscoveryPort < 1 || DiscoveryPort > 65535 || NetworkPort == DiscoveryPort))
+                throw new PlayLaunchException("PortInvalid", "Нужны разные игровые/discovery порты в диапазоне 1..65535.");
             if (Role != "host" && Role != "server" && Role != "client" && Role != "ask")
                 throw new PlayLaunchException("RoleInvalid", "Роль: host, server, client или ask.");
             if (ClientCount < 0 || ClientCount > 16 || BotCount < 0 || MinPlayers < 0)

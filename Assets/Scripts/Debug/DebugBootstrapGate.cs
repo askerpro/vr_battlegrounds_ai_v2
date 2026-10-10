@@ -32,6 +32,8 @@ namespace VrBattlegrounds.DevTools
         public static System.Func<string> EditorClientAddressOverride { get; set; }
         /// <summary>Подготовка собственного маршрута до StartServer/StartHost; код отказа запрещает старт.</summary>
         public static System.Func<string> EditorBeforeServerStart { get; set; }
+        /// <summary>Один Editor-владелец применяет frozen порты до старта сети каждой роли.</summary>
+        public static System.Func<Mirror.NetworkManager, Mirror.Discovery.NetworkDiscovery, Network.GameNetworkDiscovery.AppRole, string> EditorBeforeNetworkStart { get; set; }
 
         /// <summary>Остановить отладочный сценарий редактора: дальше им дирижирует вызывающий.</summary>
         public static void Suppress(string reason)

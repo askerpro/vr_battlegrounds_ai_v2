@@ -3,8 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.MPE;
@@ -53,18 +51,18 @@ namespace VrBattlegrounds.EditorTools.TestStand
             var existing = StandManifest.Read();
             if (existing != null) throw new InvalidOperationException("Уже существует активный запуск стенда.");
             UnityEngine.Object previous = ActiveScenario();
+            PlayLaunchNetworkPorts.Resolve(configuration, true, out int networkPort, out int discoveryPort);
             _run = new StandManifest
             {
                 RunId = runId, OwnerPid = StandManifest.CurrentPid, Phase = "running",
                 Participants = Enumerable.Range(0, configuration.ClientCount + 1).Select(i => i == 0 ? "main" : "Player " + (i + 1)).ToArray(),
                 PreviousScenarioName = previous.name, PreviousScenarioPath = AssetDatabase.GetAssetPath(previous),
-                NetworkPort = configuration.HasOwnedServer ? FreeUdpPort() : 0, DiscoveryPort = configuration.HasOwnedServer ? FreeUdpPort() : 0,
+                NetworkPort = networkPort, DiscoveryPort = discoveryPort,
                 Settings = Array.Empty<StandSetting>(), Owner = owner, Configuration = configuration.Copy(),
                 StartScenePath = startScene, TargetScenePath = targetScene, SceneKind = kind, MarkerProbe = markerProbe,
                 ExpectTargetScene = expectTargetScene,
                 PreviousStartScenePath = AssetDatabase.GetAssetPath(EditorSceneManager.playModeStartScene)
             };
-            while (_run.NetworkPort > 0 && _run.DiscoveryPort == _run.NetworkPort) _run.DiscoveryPort = FreeUdpPort();
             Peers.Clear(); Seen.Clear(); Operations.Clear(); Fingerprints.Clear();
             _cleanupPassed = false;
             _nativeStopRequested = false;
@@ -343,15 +341,6 @@ namespace VrBattlegrounds.EditorTools.TestStand
             _temporaryScenario = null;
             _run = null;
             PlayLaunch.ReleaseCompletedRun(_lastRunId);
-        }
-
-        private static int FreeUdpPort()
-        {
-            using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
-            {
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
-                return ((IPEndPoint)socket.LocalEndPoint).Port;
-            }
         }
 
         private static void RequireMain()

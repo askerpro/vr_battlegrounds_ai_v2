@@ -43,6 +43,13 @@ namespace VrBattlegrounds.Editor
                     for (int i = 0; i < _draft.ClientCount; i++) _draft.AdditionalPlayerRoles[i] = Choice("Player " + (i + 2), _draft.AdditionalPlayerRoles[i], new[] { "client", "host", "server" });
                 }
                 _draft.ClientAddress = EditorGUILayout.TextField("Адрес сервера", _draft.ClientAddress);
+                _draft.NetworkPortPolicy = Choice("Сетевые порты", _draft.NetworkPortPolicy, new[] { "default", "fixed", "auto" });
+                if (_draft.NetworkPortPolicy == "fixed")
+                {
+                    _draft.NetworkPort = EditorGUILayout.IntField("Игровой порт", _draft.NetworkPort);
+                    _draft.DiscoveryPort = EditorGUILayout.IntField("Discovery порт", _draft.DiscoveryPort);
+                }
+                EditorGUILayout.LabelField("Файл профиля", PlayLaunchSettings.ProfilePath);
                 _draft.HostIsAdmin = EditorGUILayout.Toggle("Host — админ", _draft.HostIsAdmin);
                 _draft.ModeId = EditorGUILayout.TextField("modeId (пусто — без серии)", _draft.ModeId);
                 _draft.AutoGoLive = EditorGUILayout.Toggle("Автостарт серии", _draft.AutoGoLive);

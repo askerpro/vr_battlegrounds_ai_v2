@@ -58,9 +58,11 @@ and user communication. Keep detailed execution traces in task artifacts, outsid
   задачами всегда проходит через canonical inbox; native-уведомление возможно только
   внутри одного семейства после свежей проверки обоих адресов, и не означает ACK.
 - Inbox is notifications, not ACK (ACK applies to contracts/plans). Read it with
-  `coordination.py inbox --task <t> --owner <o> --unread`: unread events come in order and
-  are marked read automatically (no manual marking; `ack-events` is kept for compatibility);
-  service broadcasts are summarized in `system_read`. Register with
+  `coordination.py inbox --task <t> --owner <o> --unread`: unread events come in order within
+  an output byte budget (~20 KB, `--max-bytes`) and are marked read automatically; repeat while
+  `has_more` (no manual marking; `ack-events` is compatibility only, not `contract-ack`).
+  Contract notices for your task (contract_proposed/agreed/active) arrive as messages; other
+  service broadcasts are summarized in `system_read` with latest ids for `inbox --event <id>`. Register with
   `register --document tasks/<task-id>/Readme.md` (not plan.json). In the Codex sandbox,
   register/begin/message/`inbox --unread` and other writing coordination commands need
   escalation (the hub is outside the writable root); `attempt to write a readonly database`

@@ -204,10 +204,13 @@ python Tools/agents/coordination.py message --task <my-task> --owner <my-owner> 
 python Tools/agents/coordination.py inbox --task <my-task> --owner <my-owner> --unread
 ```
 
-`inbox --unread` выдаёт непрочитанное по порядку (до 50, `--limit` до 100) и само
-помечает выданное прочитанным; вручную помечать не нужно, `ack-events` оставлен для
-совместимости. Служебные broadcast (история этапов/контрактов/публикаций) не выдаются
-целиком, а сводятся в `system_read`. Пока `has_more` = true, повторить `--unread`.
+`inbox --unread` выдаёт непрочитанное по порядку в пределах байтового бюджета вывода
+(~20 КБ по умолчанию, `--max-bytes`) и само помечает выданное прочитанным; остаток
+показывают `remaining`/`has_more` — повторять вызов, пока `has_more` = true. Вручную
+помечать не нужно, `ack-events` оставлен для совместимости (это не `contract-ack`).
+Уведомления контрактов затронутой задачи (contract_proposed/agreed/active) приходят как
+обычные сообщения; прочие служебные broadcast сводятся в `system_read` с последними id
+по видам — подробности открывает `inbox --event <id>`.
 Флаг доступен после развёртывания runtime с `inbox --unread`; проверьте `inbox --help`.
 
 Проверять status, свой inbox и актуальные after/needs/контракты при регистрации/возобновлении,

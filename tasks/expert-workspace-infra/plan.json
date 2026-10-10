@@ -1,0 +1,12 @@
+{
+  "task_id": "expert-workspace-infra",
+  "owner": "expert-workspace-infra",
+  "client": "codex",
+  "worktree": "F:/CodexWorktrees/expert-workspace-infra/Vr_Battlegrounds_ai",
+  "base_sha": "1001415bed29124af821a9a641d0bae2a7224a5b",
+  "doc_path": "tasks/expert-workspace-infra/Readme.md",
+  "title": "Универсальная рабочая зона экспертов",
+  "stages": [
+    {"id": "workspace", "writes": ["tasks/expert-workspace-infra/**", "experts/vr-test-stand/**"], "after": [], "needs": []}
+  ]
+}

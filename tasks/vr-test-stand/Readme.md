@@ -1,6 +1,10 @@
 # Адресный стенд и интеграция Play Launch
 
-Обновлено: 2026-10-10. Владелец: vr-test-stand. Worktree: `F:/CodexWorktrees/vr-test-stand/Vr_Battlegrounds_ai`, ветка `codex/vr-test-stand`; принятый код `51c8c047`, документация `9bcef90d`; текущая база `0c1a7fbc`.
+Обновлено: 2026-10-10. Владелец: vr-test-stand. Worktree: `F:/CodexWorktrees/vr-test-stand/Vr_Battlegrounds_ai`, ветка `codex/vr-test-stand`; принятый код `51c8c047`/`07002dde`, документация `9bcef90d`; текущая база `8fbf1cad`.
+
+## Пилот рабочей зоны экспертов
+
+Актуальный снимок: play-launch-integration, docs-publication и checkout-network-ports merged; публикация портов386 DONE. Старые формулировки о подготовке публикации ниже относятся к истории итерации. Новая работа — documentation-only пакет [pilot-handoff/Readme.md](pilot-handoff/Readme.md) для разработчика универсального workflow. Там компактные источники, snapshot и упражнения чистой сессии; схема будущей инфраструктуры не фиксируется.
 
 ## Цель и границы
 

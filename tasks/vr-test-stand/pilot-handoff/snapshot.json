@@ -1,0 +1,69 @@
+{
+  "purpose": "Исходный снимок для пилота миграции; не обязательная схема универсальной рабочей зоны",
+  "snapshotDate": "2026-10-10",
+  "taskId": "vr-test-stand",
+  "owner": "vr-test-stand",
+  "sourceCodeBase": "8fbf1cad460e507de5cd9a0a717c2c238b741126",
+  "sourcePlanRevision": 27,
+  "coordinationAuthority": "fresh hub status/inbox, not this snapshot",
+  "entryPoints": ["tasks/vr-test-stand/pilot-handoff/Readme.md", "tasks/vr-test-stand/pilot-handoff/sources.md"],
+  "completed": [
+    {
+      "unit": "stage",
+      "id": "play-launch-integration",
+      "title": "Единый PlayLaunch и адресное управление",
+      "shortDescription": "Общий planner, checkout profile, MMP backend, адресный reconnect и штатная startup-route",
+      "hubStateAtCapture": "merged",
+      "commit": "51c8c0478515f95cd1996b43755fcd7ba9f2ddef",
+      "sources": ["tasks/vr-test-stand/Details.md", "tasks/vr-test-stand/contracts/play-launch-control.json"]
+    },
+    {
+      "unit": "stage",
+      "id": "docs-publication",
+      "title": "Инструкции использования стенда",
+      "shortDescription": "Профиль, lifecycle, команды, cleanup и границы проверок",
+      "hubStateAtCapture": "merged",
+      "commit": "9bcef90d6c0b89f437f9760c719f223df42477f6",
+      "sources": ["Docs/test-stand.md"]
+    },
+    {
+      "unit": "stage",
+      "id": "checkout-network-ports",
+      "title": "Изоляция сетевых портов checkout",
+      "shortDescription": "Default/Fixed/Auto, локальный JSON, VRBG_LAUNCH_CONFIG и наблюдаемая фактическая пара",
+      "hubStateAtCapture": "merged",
+      "commit": "07002dde2e090c1a1f51bb51387ed546e734e20e",
+      "publishedWorkerTicket": 386,
+      "publishedWorkerOutcome": "DONE",
+      "testedInput": "29fb97d6aa6e4e80a2e735a53cf78ee76f708fca",
+      "testedBase": "0c1a7fbcc85d36235e4f2f9a2ab4f8b2bdf4653f",
+      "checks": ["383: genuine busy10/10", "383: free Fixed37/37, Ready, addressed commands, reconnect, exact cleanup", "Android gate PASS", "ProtocolHarness32/32", "EditorBinding0errors/0warnings"],
+      "logAudit": "99 exact segments,26481794 new bytes; unexpected product errors0; expected PortOccupied1",
+      "sources": ["tasks/vr-test-stand/Details.md", "Docs/test-stand.md"],
+      "optionalLocalEvidence": ["ports-self-check.json", "ports-busy-383.json", "ports-after-busy-383.json", "ports-383-audit/findings.md"]
+    }
+  ],
+  "handoffStage": {"id": "expert-workspace-pilot-handoff", "stateAtCapture": "running", "scope": "Документы пилота, не реализация универсального workflow"},
+  "backlog": [
+    {"candidateId": "xr-startup", "registeredHubStage": false, "priority": 1, "title": "XR startup policy", "shortDescription": "Явная политика запуска без аппаратного XR для сетевых проверок; сохранить production-путь"},
+    {"candidateId": "xr-input", "registeredHubStage": false, "priority": 2, "title": "Программный XR-ввод", "shortDescription": "Один адаптер поз/кнопок/стиков; адресный пилот движения руки и нажатия"},
+    {"candidateId": "interaction-scenarios", "registeredHubStage": false, "priority": 3, "title": "Хват, UI и движение", "shortDescription": "Наблюдаемые результаты действий и сетевое отображение у второго клиента"},
+    {"candidateId": "match-e2e", "registeredHubStage": false, "priority": 4, "title": "Полный игровой цикл", "shortDescription": "Покупка, баланс, раунд, движение, выстрел, победа и следующая подготовка; согласовать с владельцами"},
+    {"candidateId": "network-faults", "registeredHubStage": false, "priority": 5, "title": "Сбои сети и процессов", "shortDescription": "Потери/задержки, смерть сервера/координатора и восстановление"}
+  ],
+  "contracts": [
+    {"id": "play-launch-control", "revision": 1, "ownerTask": "vr-test-stand", "stateAtCapture": "active", "implementation": "51c8c0478515f95cd1996b43755fcd7ba9f2ddef", "source": "tasks/vr-test-stand/contracts/play-launch-control.json"},
+    {"id": "map-startup-route", "revision": 2, "ownerTask": "map-runtime-bootstrap", "stateAtCapture": "active", "source": "tasks/map-runtime-bootstrap/Readme.md"}
+  ],
+  "limits": [
+    "negative377 aggregate PASS revoked: old error reused before Play; original report preserved",
+    "new disconnect retry recovery tested diagnostically10/10, not triggered live383",
+    "Auto37513/13 and native37618/18+18/18 are older input-specific evidence",
+    "Alternate env path/cache and clone-only fallback reviewed statically, no separate live case",
+    "Warnings retained: menu, teamID0 missing, manager duplicates and compiler diagnostics",
+    "Native XR/audio/provider, licensing, UPM and Git config lock retained as separate boundaries",
+    "Full suite, physical toolbar click, Quest and synthetic XR/gameplay E2E not accepted by these probes",
+    "Backlog candidates are not admitted implementation stages"
+  ],
+  "evidenceAvailability": {"trackedSummary": "tasks/vr-test-stand/Details.md", "reportsTracked": false, "optionalLocalRoot": "F:/CodexWorktrees/vr-test-stand/Vr_Battlegrounds_ai/tasks/vr-test-stand/reports/"}
+}

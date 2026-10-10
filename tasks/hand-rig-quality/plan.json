@@ -5,7 +5,7 @@
   "worktree": "F:/CodexWorktrees/hands-rig-quality/Vr_Battlegrounds_ai",
   "base_sha": "387cbd14a6dd2228e06acc7da641e194593b7d07",
   "doc_path": "tasks/hand-rig-quality/Readme.md",
-  "title": "Качество рига и скиннинга кистей",
+  "title": "Качество кистей и хватов MEF",
   "stages": [
     {
       "id": "static-analyzer",
@@ -43,6 +43,40 @@
       "needs": []
     },
     {
+      "id": "expert-registration",
+      "writes": [
+        ".codex/agents/avatar-grip-expert.toml",
+        "tasks/hand-rig-quality/expert/launch.md",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "expert-deployment",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "mef-grip-audit",
+      "writes": [
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "expert-registration",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "palm-validation",
       "writes": [
         "Assets/Editor/VR_Battlegrounds/Avatars/HandRigQuality/**",
@@ -54,6 +88,11 @@
         "tasks/hand-rig-quality/changelog/**"
       ],
       "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "mef-grip-audit",
+          "state": "verified"
+        },
         {
           "task": "hand-rig-quality",
           "stage": "expert-deployment",
@@ -110,6 +149,11 @@
         "tasks/hand-rig-quality/changelog/**"
       ],
       "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "mef-grip-audit",
+          "state": "verified"
+        },
         {
           "task": "hand-rig-quality",
           "stage": "dynamic-probes",

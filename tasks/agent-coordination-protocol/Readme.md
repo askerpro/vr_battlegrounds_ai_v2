@@ -86,3 +86,10 @@ Native Monitor с доставкой в контекст не обнаружен
 аудитом и статистикой. Source9e5fa445 закреплён/проверен; штатный выпуск через origin/dev
 и runtime deployment сопровождающего, без прямых патчей в checkout агентов.
 [Проверки и границы](changelog/2026-10-10-audited-emergency-hooks.md).
+
+
+## Global off и наблюдение — 2026-10-10
+
+По поручению пользователя общий mode off уже включён. Source53f6760 добавляет
+best-effort аудит без блокировки команд; штатный выпуск через origin/dev и managed
+runtime deployment. [Проверки и границы](changelog/2026-10-10-global-off-observability.md).

@@ -309,6 +309,22 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "global-off-observability",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "AGENTS.md",
+        ".agents/rules/agent_coordination.md"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "audited-emergency-hooks",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

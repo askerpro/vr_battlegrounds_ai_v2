@@ -377,3 +377,33 @@ tool input с удалёнными секретами, обычное решен
 только точный актуальный план из проверенного снимка через native apply_patch метаданных,
 получи begin своего существующего этапа, сохрани план отдельным metadata commit и затем
 выполни обычный rebase. Сохранённый stash не удаляй до проверки возврата изменений/.meta.
+
+
+## Полное временное отключение coordination gate
+
+По прямому поручению пользователя сопровождающий переключил общий хаб в `mode off`
+на время ремонта. В этом режиме локальные PreToolUse и координационный SCOPE/PERMIT
+в broker admission отключены; registration/begin ради допуска локального инструмента
+не нужны. FIFO, собственная RUNNING-аренда Unity, renew, snapshot/result/recovery,
+проверка published B и внутренние проверки coordination CLI сохраняются.
+
+Выключатель общий для всех checkout, включая Codex и Claude, rebase/restart не нужен.
+Команда ниже исполняется сопровождающим один раз; повторять выключение не требуется:
+
+```powershell
+python Tools/agents/coordination.py --repo "F:/UnityProjects/Vr_Battlegrounds_ai" --state-dir "F:/UnityProjects/Vr_Battlegrounds_ai/.agent-state/coordination" configure --mode off
+```
+
+Source-fix `53f6760cb27a5b54e7aee1b8c34e0d98743f5389` добавляет best-effort redacted
+аудит каждого вызова hook и его would-block через прежние emergency-hook-stats/log.
+После deployment аудит не требует зарегистрированной задачи и не блокирует команду
+при ошибке/lock БД; отсутствующий реестр не пересоздаётся. Решение hook не означает,
+что команда исполнена. Клиентский sandbox/OS permissions этим режимом не меняются.
+
+Не включайте `enforced` самостоятельно: сначала сопровождающий дожидается завершения
+QUEUED/OFFERED/active заявок, созданных в off (они имеют coordination=null), проверяет
+актуальность локальных планов и выполняет тот же configure с `--mode enforced`.
+Режим off не принимает чужую игровую работу и не меняет ownership/контракты/ACK.
+До восстановления enforcement сохраняйте чужие checkout и согласованные границы.
+Этот режим заменяет предыдущий запрет на configure off именно по поручению пользователя;
+индивидуальный TTL emergency-hook-on остаётся отдельным режимом при enforced.

@@ -120,3 +120,13 @@ Detailed operating commands: [editor broker](F:/UnityProjects/agent-infra/docs/e
 аудируются; expiry возвращает обычный режим. Это не передача чужой области и не
 отмена аренды worker, контрактов, ACK или публикации через брокер. Команды и порядок:
 [аварийный режим с аудитом](.agents/rules/agent_coordination.md#аварийный-режим-pretooluse-с-аудитом).
+
+
+## Временный общий mode off
+
+Пользователь поручил временно отключить coordination gate до починки. Общий mode off
+снимает PreToolUse и координационный SCOPE admission, без регистрации/begin ради
+локальных инструментов. Очередь/аренды Unity и snapshot/recovery сохраняются.
+После runtime deployment source53f6760 вызовы наблюдаются best-effort redacted аудитом;
+ошибка аудита не блокирует off. [Команды и возврат](.agents/rules/agent_coordination.md#полное-временное-отключение-coordination-gate).
+Не включайте enforced до завершения off-created Unity заявок.

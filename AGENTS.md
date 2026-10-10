@@ -20,7 +20,7 @@ This is the canonical entry point. `CLAUDE.md` imports it; `.codex/AGENTS.md` li
 - Keep task material in `tasks/<task-id>/`: compact dated Readme.md, Details.md, plan.json, tools/, contracts/, changelog/. Generated reports belong in reports/, outside Git; never force-add them.
 - Ordinary tasks do not edit shared indexes/changelogs: README.md, Docs/README.md, CHANGELOG.md, Docs/CHANGELOG.md, SDK journals or tasks/README.md. Product Docs changes need an explicit stage and area owner.
 - SDK patches: reserve the number through `coordination.py patch-reserve`, record it in `tasks/<task-id>/changelog/<date>-sdk-<number>.md`; Mirror code also gets `VR Battlegrounds patch`. Shared SDK journals are historical.
-- New/changed managed source/docs/tools use LF; check only owned physical paths plus staged blobs before checkpoint. Untouched legacy files are not batch-normalized. [EOL contract](Docs/agents/text-eol.md).
+- New/changed managed source/docs/tools use LF; check only owned physical paths plus staged blobs before checkpoint. Untouched legacy files are not batch-normalized. PhaseB: Unity YAML, ProjectSettings and tasks/**/*.md|json are LF too; never re-materialize YAML by hand (Unity saves converge it); binary .asset files are `binary`; pre-push rejects CR in pushed eol=lf blobs. [EOL contract](Docs/agents/text-eol.md).
 - Use native file editing first (Codex apply_patch, Claude Edit/Write). Follow the injected terminal/encoding guidance; use git --no-pager.
 
 ## Delegation and context ownership
@@ -57,6 +57,14 @@ and user communication. Keep detailed execution traces in task artifacts, outsid
   Owner/worktree/session и допускающие leases сохраняют свои проверки. Общение между
   задачами всегда проходит через canonical inbox; native-уведомление возможно только
   внутри одного семейства после свежей проверки обоих адресов, и не означает ACK.
+- Inbox is notifications, not ACK (ACK applies to contracts/plans). Read it with
+  `coordination.py inbox --task <t> --owner <o> --unread`: unread events come in order and
+  are marked read automatically (no manual marking; `ack-events` is kept for compatibility);
+  service broadcasts are summarized in `system_read`. Register with
+  `register --document tasks/<task-id>/Readme.md` (not plan.json). In the Codex sandbox,
+  register/begin/message/`inbox --unread` and other writing coordination commands need
+  escalation (the hub is outside the writable root); `attempt to write a readonly database`
+  means retry with escalation.
 - At session start/resume, check inbox and hub status. If the client provides a native
   Monitor that delivers process output into the agent context, the principal agent MUST
   attach one bounded read-only watch-inbox for its task/session and restart it after timeout

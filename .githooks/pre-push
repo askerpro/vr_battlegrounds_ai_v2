@@ -1,3 +1,62 @@
 #!/bin/sh
 command -v git-lfs >/dev/null 2>&1 || { printf >&2 "\n%s\n\n" "This repository is configured for Git LFS but 'git-lfs' was not found on your path. If you no longer wish to use Git LFS, remove this hook by deleting the 'pre-push' file in the hooks directory (set by 'core.hookspath'; usually '.git/hooks')."; exit 2; }
-git lfs pre-push "$@"
+
+# stdin нужен и EOL-проверке, и git lfs pre-push, поэтому буферизуем его.
+input=$(cat)
+
+# Read-only EOL-проверка (PhaseB): в отправляемых коммитах изменённые пути с
+# eol=lf (кроме -text/binary/LFS) не должны содержать CR в blob. Файлы не меняются.
+# Строка stdin: <local ref> <local sha> <remote ref> <remote sha>.
+eol_tmp=$(mktemp -d "${TMPDIR:-/tmp}/pre-push-eol.XXXXXX") || exit 2
+trap 'rm -rf "$eol_tmp"' EXIT
+cr=$(printf '\r')
+printf '%s\n' "$input" | while read -r local_ref local_sha remote_ref remote_sha; do
+    case $local_sha in *[!0]*) ;; *) continue ;; esac  # пустая строка или удаление
+    commit=$(git rev-parse --verify -q "$local_sha^{commit}") || continue
+    base=
+    case $remote_sha in *[!0]*) base=$(git rev-parse --verify -q "$remote_sha^{commit}") ;; esac
+    if [ -z "$base" ]; then
+        # Новая ветка или удалённый sha неизвестен локально: база — merge-base с dev.
+        for dev in "refs/remotes/$1/dev" refs/remotes/origin/dev; do
+            base=$(git merge-base "$dev" "$commit" 2>/dev/null) && break
+            base=
+        done
+    fi
+    if [ -z "$base" ]; then
+        printf >&2 'pre-push EOL: нет базы для %s, проверка пропущена\n' "$local_ref"
+        continue
+    fi
+    git -c core.quotepath=off diff --name-only --no-renames --diff-filter=ACMRT "$base" "$commit" -- \
+        > "$eol_tmp/paths" || exit 2
+    [ -s "$eol_tmp/paths" ] || continue
+    # Атрибуты берём из отправляемого коммита (git >= 2.40), иначе из рабочей копии.
+    git -c core.quotepath=off check-attr --source "$commit" --stdin eol text < "$eol_tmp/paths" \
+        > "$eol_tmp/attrs" 2>/dev/null \
+        || git -c core.quotepath=off check-attr --stdin eol text < "$eol_tmp/paths" > "$eol_tmp/attrs" \
+        || exit 2
+    awk '{
+        v = $0; sub(/.*: /, "", v); rest = substr($0, 1, length($0) - length(v) - 2)
+        a = rest; sub(/.*: /, "", a); p = substr(rest, 1, length(rest) - length(a) - 2)
+        if (!(p in seen)) { seen[p] = 1; order[++n] = p }
+        if (a == "eol") eol[p] = v; else if (a == "text") text[p] = v
+      } END { for (i = 1; i <= n; i++) { p = order[i]; if (eol[p] == "lf" && text[p] != "unset") print p } }' \
+        "$eol_tmp/attrs" > "$eol_tmp/lf"
+    [ -s "$eol_tmp/lf" ] || continue
+    # git grep -I пропускает бинарные blob (NUL/атрибуты); -l перечисляет blob с CR.
+    tr '\n' '\0' < "$eol_tmp/lf" \
+        | xargs -0 git -c core.quotepath=off --literal-pathspecs grep -I -l -e "$cr" "$commit" -- 2>/dev/null \
+        | awk -v c="$commit:" -v r="$local_ref" 'index($0, c) == 1 { print "  " r ": " substr($0, length(c) + 1) }' \
+        >> "$eol_tmp/report"
+done || exit $?
+if [ -s "$eol_tmp/report" ]; then
+    printf >&2 '\npre-push EOL: CR в путях с eol=lf (файлы не изменены; сохраните LF и сделайте новый коммит):\n'
+    cat "$eol_tmp/report" >&2
+    printf >&2 'Подробности: Docs/agents/text-eol.md\n\n'
+    exit 1
+fi
+
+if [ -n "$input" ]; then
+    printf '%s\n' "$input" | git lfs pre-push "$@"
+else
+    git lfs pre-push "$@" </dev/null
+fi

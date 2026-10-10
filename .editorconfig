@@ -170,3 +170,17 @@ end_of_line = lf
 
 [.githooks/**]
 end_of_line = lf
+
+# PhaseB: Unity YAML/текстовые форматы, ProjectSettings, манифест пакетов и tasks/** — LF
+# (зеркало .gitattributes; бинарные .asset там помечены binary).
+[*.{unity,prefab,asset,meta,controller,anim,mat,overrideController,mask,physicMaterial,physicsMaterial2D,lighting,preset,giparams,terrainlayer,mixer,asmdef,asmref,inputactions,uss,uxml}]
+end_of_line = lf
+
+[ProjectSettings/**]
+end_of_line = lf
+
+[Packages/{manifest,packages-lock}.json]
+end_of_line = lf
+
+[tasks/**.{md,json}]
+end_of_line = lf

@@ -3,8 +3,18 @@
 PhaseA охватывает собственные C# в Assets/Scripts и Assets/Editor/VR_Battlegrounds,
 Docs Markdown, agent instructions и Tools Python/PowerShell/JS/patches. Новые и
 успешно изменяемые файлы этих путей сохраняйте с LF. Не переписывайте untouched
-legacy/foreign файлы: YAML/.asset/.meta, binary/LFS и generated IDE outputs пока
-сохраняют свои правила. GUID/meta и чужие staged/untracked изменения сохраняются.
+legacy/foreign файлы; binary/LFS и generated IDE outputs сохраняют свои правила.
+GUID/meta и чужие staged/untracked изменения сохраняются.
+
+PhaseB добавляет LF для Unity YAML (.meta/.prefab/.unity/.asset/.mat/.controller/.anim
+и прочих текстовых форматов Unity из индекса), ProjectSettings/**, Packages/manifest.json,
+packages-lock.json и tasks/**/*.md|json. Индекс уже LF: атрибуты меняют только
+рабочую копию. YAML физически не перематериализуйте вручную и не делайте массовый
+checkout/renormalize: файлы сходятся к LF при сохранениях Unity. Утилита
+перематериализации сопровождающего — только для текстовых исходников и чистых
+(без локальных изменений) файлов. 36 бинарных Unity SerializedFile .asset
+(LightingData, NavMesh, TerrainData) помечены binary в .gitattributes; vendor .cs/.shader
+остаются CRLF по умолчанию. Default `* text=auto eol=crlf` не меняется.
 
 Перед checkpoint и публикацией проверьте только явно принадлежащие вам файлы:
 `python Tools/agents/check_text_eol.py --repo . --staged --path Assets/Scripts/Your.cs`.
@@ -22,10 +32,13 @@ No-op не переписывает файл; returned SHA соответств�
 Существующий embedded package installer не перезаписывает: его обновление root
 проводит отдельно с guard, исходным hash/backup и проверкой результата.
 
-Unity new C# использует Unix. Это не конвертирует существующие скрипты и не задаёт
-EOL для всех serialized assets. IDE csproj/sln генераторы сохраняют CRLF.
-Полная LF-политика оставшихся tracked text/Unity YAML — отдельная phaseB после
-writer inventory и каноничности binary; массовый git add --renormalize запрещён.
+Unity new C# использует Unix. Это не конвертирует существующие скрипты.
+IDE csproj/sln генераторы сохраняют CRLF. Массовый git add --renormalize запрещён.
+
+`.githooks/pre-push` read-only проверяет отправляемый диапазон (remote sha..local sha;
+для новой ветки — от merge-base с dev): изменённые пути с eol=lf, кроме -text/binary,
+не должны содержать CR в blob. Нарушение — exit 1 со списком путей; файлы не
+исправляются. Удаления и пропущенная база не блокируют push; затем работает git lfs pre-push.
 
 Source checker/runtime и tracked launcher выпускаются штатно отдельно; владельцы
 обновляются rebase от origin/dev с сохранением своих diff/staged/untracked/meta.

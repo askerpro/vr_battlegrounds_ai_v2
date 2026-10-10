@@ -64,8 +64,13 @@ renew/stop/begin; управляющий Python-скрипт из вложенн
 ```powershell
 python Tools/agents/coordination.py register --document tasks/<task-id>/Readme.md --expected-revision 0
 python Tools/agents/coordination.py status
-python Tools/agents/coordination.py inbox --task <task-id> --owner <owner>
+python Tools/agents/coordination.py inbox --task <task-id> --owner <owner> --unread
 ```
+
+`--document` — всегда `tasks/<task-id>/Readme.md`, не plan.json: plan.json берётся
+из той же папки автоматически. В песочнице Codex register/begin/message, `inbox --unread`
+и другие пишущие команды coordination требуют escalation: общий хаб вне writable root.
+Ошибка `attempt to write a readonly database` означает «повторить с escalation».
 
 Агент читает сводку других планов и полные документы пересекающихся задач; для Git-документа
 ссылка включает ветку `agents/status` либо точный SHA. Основной `dev` может отставать по
@@ -188,17 +193,22 @@ ACK относится к точной ревизии контракта и пр
    «прочитай inbox», task-id и event_id. Для другого вендора или недоступной/неподтверждённой
    штатной доставки передаёт эти данные человеку для ручного уведомления.
    Новый чат ради доставки не создаётся.
-3. Получатель читает свой inbox и необходимые документы, **всегда записывает ответ
-   адресным `message`**, выполняет `ack-events` для конкретных прочитанных и учтённых ID.
+3. Получатель читает свой inbox (`--unread`) и необходимые документы, **всегда записывает
+   ответ адресным `message`**. Inbox — нотификации, не ACK: ACK относится к контрактам/планам.
    Об ответе уведомляет тем же маршрутом: штатным сигналом либо через человека.
    Если содержательная переписка уже состоялась в штатном канале, её координационные
    запросы, ответы и выводы всё равно записать в inbox до зависимых действий.
 
 ```powershell
 python Tools/agents/coordination.py message --task <my-task> --owner <my-owner> --to <recipient-task> --kind coordination_requested --body "<краткий запрос и ссылки>"
-python Tools/agents/coordination.py inbox --task <my-task> --owner <my-owner>
-python Tools/agents/coordination.py ack-events --task <my-task> --owner <my-owner> --event <event-id>
+python Tools/agents/coordination.py inbox --task <my-task> --owner <my-owner> --unread
 ```
+
+`inbox --unread` выдаёт непрочитанное по порядку (до 50, `--limit` до 100) и само
+помечает выданное прочитанным; вручную помечать не нужно, `ack-events` оставлен для
+совместимости. Служебные broadcast (история этапов/контрактов/публикаций) не выдаются
+целиком, а сводятся в `system_read`. Пока `has_more` = true, повторить `--unread`.
+Флаг доступен после развёртывания runtime с `inbox --unread`; проверьте `inbox --help`.
 
 Проверять status, свой inbox и актуальные after/needs/контракты при регистрации/возобновлении,
 перед begin этапа, новой заявкой/началом работы Unity worker и заявкой на вливание,
@@ -208,7 +218,7 @@ python Tools/agents/coordination.py ack-events --task <my-task> --owner <my-owne
 следующую страницу с `--cursor <next_cursor>`; это стабильный снимок, не отметка прочтения.
 Новые события попадут в следующий свежий опрос. После native-уведомления можно сразу
 прочитать `inbox ... --event <event-id>`, даже если событие далеко в истории.
-Непрочитанное не подтверждать; ACK всегда явный и относится к конкретным событиям.
+Без `--unread` inbox остаётся read-only просмотром и ничего не помечает прочитанным.
 Активную Unity-операцию не прерывать ради сообщений: после подготовленного пакета
 сначала finish, затем разбор координации. Остановку/finish/recovery не задерживать.
 
@@ -249,7 +259,7 @@ python Tools/agents/coordination.py watch-inbox --task <task-id> --owner <owner>
 
 Watcher выводит только сигналы о новых pending ID, без ACK и исполнения запросов.
 Получив сигнал, агент в безопасной точке читает свежий inbox и status, проверяет
-затронутые планы/контракты, отвечает и отдельно подтверждает прочитанное.
+затронутые планы/контракты и отвечает; `inbox --unread` сам помечает выданное прочитанным.
 Активную Unity-операцию не прерывать: сначала штатный finish подготовленного пакета.
 Если Monitor недоступен или не доставляет вывод, записать ограничение в Readme.md задачи,
 соблюдать обязательные проверки перед зависимыми действиями и ручной маршрут уведомлений.

@@ -65,16 +65,30 @@
       "needs": []
     },
     {
+      "id": "manipulation-expert",
+      "writes": [
+        ".claude/agents/manipulation-expert.md",
+        ".claude/agent-memory/manipulation-expert/**",
+        "tasks/haptics-system/**"
+      ],
+      "after": [
+        {"task": "haptics-system", "stage": "interaction-feedback", "state": "merged"}
+      ],
+      "needs": []
+    },
+    {
       "id": "pocket-removal",
       "writes": [
         "Assets/Scripts/Interaction/PocketHaptics.cs",
         "Assets/Prefabs/Player/PlayerBase.prefab",
         "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab",
+        "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab",
         "Assets/Editor/VR_Battlegrounds/Avatars/GhostAvatarBuilder.cs",
         "Assets/Tests/EditMode/Prefabs/AvatarLoadoutTests.cs",
         "tasks/haptics-system/**"
       ],
       "after": [
+        {"task": "haptics-system", "stage": "manipulation-expert", "state": "merged"},
         {"task": "haptics-system", "stage": "interaction-feedback", "state": "merged"},
         {"task": "avatar-renderer-regression", "stage": "asset-repair", "state": "verified"}
       ],

@@ -2,7 +2,7 @@
 
 **Задача/владелец:** `hand-rig-quality`, Codex. **Обновлено:** 2026-10-10.
 **Worktree:** `F:/CodexWorktrees/hands-rig-quality/Vr_Battlegrounds_ai`,
-ветка `codex/hands-rig-quality`; текущий checkout `6c0473fd`.
+ветка `codex/hands-rig-quality`; принятая база `origin/dev 83d8f34d`.
 
 ## Цель и границы
 
@@ -16,7 +16,10 @@
 ## Состояние
 
 Статический анализатор 0.5 и CLI-профиль эксперта влиты. Именованный проектный агент
-пока отсутствует: сначала `expert-registration` → штатное вливание, затем аудит MEF.
+добавлен в `.codex/agents/avatar-grip-expert.toml`; штатное вливание ещё впереди.
+Native app-server подтвердил `agentRole=avatar-grip-expert` в дочернем ephemeral-потоке;
+TOML/пути KB и сохранённый CLI-профиль PASS. [Доказательства](reports/expert-runtime-summary.json)
+локальные, без Unity/MEF-проверок. Сначала вливание `expert-registration`, затем аудит MEF.
 Указание пользователя 2026-10-10 разрешает этот порядок и вливание конфигурации агента.
 Исторически на базе `2c845870`:
 89/89 тестов, Android, 6/6 сравнений и контроли PASS; SDK100, MEF75,77/75,87
@@ -54,7 +57,7 @@
 прежние зависимости поздних этапов сохранены. Вход Puppet согласуется отдельно.
 До измерений: fetch/rebase origin/dev, свежие inbox/status и состояние worker,
 точный пакет действий и отдельная аренда. Изменённые gameplay-тесты — после приёмки.
-Следующий шаг — выполнить инвентаризацию; сейчас подготовлен только план.
+Следующий шаг — влить конфигурацию эксперта, затем выполнить инвентаризацию MEF.
 
 [Роль эксперта](expert/avatar-grip-expert.md) · [Инструкция](tool.md) ·
 [История](changelog/2026-10-07-static-analyzer.md).

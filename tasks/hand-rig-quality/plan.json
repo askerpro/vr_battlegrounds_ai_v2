@@ -3,7 +3,7 @@
   "owner": "hand-rig-quality",
   "client": "codex",
   "worktree": "F:/CodexWorktrees/hands-rig-quality/Vr_Battlegrounds_ai",
-  "base_sha": "387cbd14a6dd2228e06acc7da641e194593b7d07",
+  "base_sha": "83d8f34d384d89f125ce23aeb3030b40cb315698",
   "doc_path": "tasks/hand-rig-quality/Readme.md",
   "title": "Качество кистей и хватов MEF",
   "stages": [

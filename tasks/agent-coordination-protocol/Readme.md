@@ -93,3 +93,10 @@ Native Monitor с доставкой в контекст не обнаружен
 По поручению пользователя общий mode off уже включён. Source53f6760 добавляет
 best-effort аудит без блокировки команд; штатный выпуск через origin/dev и managed
 runtime deployment. [Проверки и границы](changelog/2026-10-10-global-off-observability.md).
+
+
+## Неизменяемые Unity inputs — 2026-10-10
+
+Source c72db11a06bb4cfc1d76c4142f692949cf476ab3 интегрирует reviewed b253fe4 поверх
+offaudit53f6760. [Проверки](changelog/2026-10-10-immutable-worker-inputs.md).
+Modeoff по поручению пользователя сохраняется; новый API опционален.

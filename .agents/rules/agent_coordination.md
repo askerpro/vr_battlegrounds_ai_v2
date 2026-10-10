@@ -407,3 +407,21 @@ QUEUED/OFFERED/active заявок, созданных в off (они имеют
 До восстановления enforcement сохраняйте чужие checkout и согласованные границы.
 Этот режим заменяет предыдущий запрет на configure off именно по поручению пользователя;
 индивидуальный TTL emergency-hook-on остаётся отдельным режимом при enforced.
+
+
+## Точные неизменяемые input components
+
+Source c72db11a06bb4cfc1d76c4142f692949cf476ab3 добавляет opt-in technical input-grant
+и request --input-components/--input-components-sha256. Это отдельный поддерживаемый
+контракт, который сохраняет writes/outputs и проверяет чужие байты/GUID/SDK reservation.
+Provider может явно выдать grant из PLANNED providing stage своего scope; consumer
+ссылается на grant и собственные recorded verified dependencies. Точная инструкция
+[immutable inputs](F:/UnityProjects/agent-infra/docs/immutable-input-components.md).
+
+Mode off по поручению пользователя остаётся общим; прежний request без components
+работает как прежде. Новые manifests полностью проверяются даже в off. TTL1200,
+expiry/revoke запрещают новое admission; RUNNING pinned receipt позволяет безопасно
+finish/capture/restore. Полный R/ref сохраняется перед отказом при изменении компонента.
+При новом B/revision/epoch нужен новый manifest/input, прежние inbox-разрешения сами
+не становятся grants. Публикует grant только владелец; не назначайте себе чужие writes,
+ACK или gameplay acceptance. Откат только через текущий deploy preflight совместимости.

@@ -325,6 +325,22 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "immutable-worker-inputs",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "AGENTS.md",
+        ".agents/rules/agent_coordination.md"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "global-off-observability",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

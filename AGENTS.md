@@ -130,3 +130,8 @@ Detailed operating commands: [editor broker](F:/UnityProjects/agent-infra/docs/e
 После runtime deployment source53f6760 вызовы наблюдаются best-effort redacted аудитом;
 ошибка аудита не блокирует off. [Команды и возврат](.agents/rules/agent_coordination.md#полное-временное-отключение-coordination-gate).
 Не включайте enforced до завершения off-created Unity заявок.
+
+
+При будущем technical совместном Unity input используйте явные immutable grants и
+recorded own dependency proofs: [контракт](F:/UnityProjects/agent-infra/docs/immutable-input-components.md).
+Global mode off остаётся; обычные requests без нового manifest не требуют этой схемы.

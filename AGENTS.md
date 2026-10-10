@@ -111,3 +111,12 @@ Before reading or running a helper, discover its actual path with `rg --files` i
 | Build/Git/performance/audio | Relevant [release](Docs/release.md), [version control](Docs/version-control.md), [stress test](Docs/perf-stress-test.md) / [sound library](Docs/sound-library.md) |
 
 Detailed operating commands: [editor broker](F:/UnityProjects/agent-infra/docs/editor-broker.md) and [proxy routing](F:/UnityProjects/agent-infra/docs/unity-mcp-proxy.md), only when operating them.
+
+
+## Временный аварийный режим координационного hook
+
+При infra-блокере пользователь разрешил своему агенту включить `emergency-hook-on`
+с причиной и TTL до 60 минут. Каждая попытка инструмента и исходное решение hook
+аудируются; expiry возвращает обычный режим. Это не передача чужой области и не
+отмена аренды worker, контрактов, ACK или публикации через брокер. Команды и порядок:
+[аварийный режим с аудитом](.agents/rules/agent_coordination.md#аварийный-режим-pretooluse-с-аудитом).

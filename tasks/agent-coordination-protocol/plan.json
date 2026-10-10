@@ -293,6 +293,22 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "audited-emergency-hooks",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        ".agents/rules/agent_coordination.md",
+        "AGENTS.md"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "readonly-getcontent-totalcount",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

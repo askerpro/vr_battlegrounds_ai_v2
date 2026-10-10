@@ -78,3 +78,11 @@ CREATE_NO_WINDOW в launcher; явные stdin/stdout/stderr устраняют 
 Исходники исправления изолированы в F:/CodexWorktrees/c14d/agent-infra.
 
 Native Monitor с доставкой в контекст не обнаружен; inbox проверяется явно. Codex list_threads/read_thread/send_message_to_thread доступны и проверены. Собственный native route опубликован после fresh discovery: epoch6, session01a11ed8-9871-72d3-8f28-e61675d7bff0; route-resolve с bots-fix работает в обе стороны. ACK только конкретных прочитанных событий. Артефакты: reports/recovery-292-20261009/.
+
+
+## Аудируемый аварийный режим — 2026-10-10
+
+Пользователь разрешил временное снятие локальных hook-блокеров с TTL, обязательным
+аудитом и статистикой. Source9e5fa445 закреплён/проверен; штатный выпуск через origin/dev
+и runtime deployment сопровождающего, без прямых патчей в checkout агентов.
+[Проверки и границы](changelog/2026-10-10-audited-emergency-hooks.md).

@@ -340,3 +340,40 @@ publish-base остаётся инструментом сопровождающ�
 
 Полная спецификация, план, проверки и актуальный статус реализации:
 [документ задачи](../../tasks/agent-coordination-protocol/Readme.md).
+
+
+## Аварийный режим PreToolUse с аудитом
+
+Пользователь разрешил временно снимать локальные координационные hook-блокеры под его
+ответственность, пока сопровождающий исправляет инфраструктуру. Владелец включает режим
+только для своей зарегистрированной задачи и checkout, с конкретной причиной и ссылкой
+на infra_issue. Режим действует максимум 3600 секунд; после срока обычный hook возвращается
+автоматически. CLI доступен после штатного runtime deployment; сначала прочитай его help.
+
+```powershell
+python Tools/agents/coordination.py emergency-hook-on --help
+python Tools/agents/coordination.py emergency-hook-on --task <task-id> --owner <owner> --ttl 3600 --reason "infra_issue <event_id>: точная блокирующая операция"
+python Tools/agents/coordination.py emergency-hook-off --task <task-id> --owner <owner> --reason "блокер снят"
+python Tools/agents/coordination.py emergency-hook-stats --task <task-id>
+python Tools/agents/coordination.py emergency-hook-log --task <task-id> --after 0 --limit 50
+```
+
+Если задача закреплена за session, передай её подтверждённый `--session-id`. Режим не
+передаёт ownership, не принимает игровую работу и не меняет контракты или ACK. Проверки
+чужой сессии/checkout и сетевого push сохраняются. Координационные CLI-проверки, FIFO,
+claim/begin/guard/renew/finish worker и Unity MCP proxy продолжают работать; старый
+`configure --mode off` для этой цели не использовать.
+
+Журнал фиксирует включение/выключение/истечение и каждую попытку вызова под активным
+режимом: task, owner, client/model как метаданные, checkout, session, срок, причину,
+tool input с удалёнными секретами, обычное решение hook и фактическое решение допуска.
+Это журнал попыток и решений PreToolUse, а не подтверждение выполнения команды.
+Без успешной записи аудита emergency-допуск не выдаётся. Сопровождающий разбирает
+статистику по задачам, инструментам и причинам отказа и использует её для исправлений.
+Токены и необработанные tool input не переносить в inbox или отчёты.
+
+Перед rebase сохраняй актуальный план отдельно: stash может вернуть старую редакцию
+`plan.json` и вызвать REVISION. Не регистрируй старый план поверх canonical. Восстанови
+только точный актуальный план из проверенного снимка через native apply_patch метаданных,
+получи begin своего существующего этапа, сохрани план отдельным metadata commit и затем
+выполни обычный rebase. Сохранённый stash не удаляй до проверки возврата изменений/.meta.

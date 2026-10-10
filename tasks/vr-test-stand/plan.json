@@ -125,6 +125,19 @@
       "needs": [
         {"contract": "play-launch-control", "revision": 1, "aspects": ["profile", "planning", "network-lifecycle", "cleanup"], "readiness": "active"}
       ]
+    },
+    {
+      "id": "expert-workspace-pilot-handoff",
+      "writes": [
+        "tasks/vr-test-stand/pilot-handoff/**",
+        "tasks/vr-test-stand/Readme.md",
+        "tasks/vr-test-stand/Details.md",
+        "tasks/vr-test-stand/plan.json"
+      ],
+      "after": [
+        {"task": "vr-test-stand", "stage": "checkout-network-ports", "state": "merged"}
+      ],
+      "needs": []
     }
   ]
 }

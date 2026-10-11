@@ -1,0 +1,37 @@
+{
+  "summary": "Read-only UxrGrabber.GrabLifetimeEpoch:int. Единственный SDK источник lifetime: глобально уникальный положительный stamp до каждой записи GrabbedObject, disable/destroy и чтения grab state. Getter возвращает0 в незавершённой mutation/restore и при исчерпании allocator; это fail-closed контекст. Resolver читает фактическую основную руку, host единолично владеет grant.",
+  "motivation": "Пользователь 2026-10-10 выбрал SDK lifetime-порт для полного use-context. Public events не покрывают silent операции/прямой setter/disable/fullrestore. Уточнение после source preflight: callbacks во время ref replacement также не должны получить новый grant на частично восстановленном состоянии.",
+  "transition_cost": "weapon-system: additive SDK71 в четырёх Manipulation файлах, затем VR resolver/grant. haptics: ACK точного scope после review; merged interaction-feedback сохраняет прежние callbacks/payload и feedback-порядок. До SDK записи нужен этот ACK и формальный begin. Support-only обычная смена не меняет stamp основной руки. Network/serialized payload и M/C не меняются. Новые gameplay-тесты после пользовательской проверки.",
+  "aspects": ["main-hand-lifetime", "disable-restore-invalidation", "sdk-owner-scope"],
+  "compatibility": "additive",
+  "providing_stage": "use-context-sdk-lifetime",
+  "architecture_decision": {
+    "source": "Текущая сессия 2026-10-10: пользователь Согласовать SDK lifetime-порт и выполнить полный контракт. reports/use-context-grab-lifetime/findings.md и SDK71 preflight.",
+    "decision": "SDK scalar stamp на каждой реальной руке и единый saturating int allocator, без повторного использования. SDK per-hand mutation depth и bounded global manager grab-state transition depth делают getter0 до finally. Это validity источника, а не второй host/grant lifecycle. Exhaustion0; host не выдаёт VR grant при0."
+  },
+  "api": {
+    "namespace": "UltimateXR.Manipulation",
+    "type": "UxrGrabber",
+    "read": ["int GrabLifetimeEpoch { get; }"],
+    "writer": "Только SDK, internal mutation helpers",
+    "zero": "Нет usable source во время незавершённой mutation/restore либо allocator exhausted",
+    "serialization": "Ни stamp, ни source guard не сериализуются. Restore отзывает старые и восстановленные entries; getters0 в ref-write callbacks. Payload неизменен."
+  },
+  "coverage": [
+    "Setter GrabbedObject: каждое присваивание, включая null/тот же объект; local scope и новый stamp до side effects",
+    "Hand OnDisable/OnDestroy: local scope до base/callbacks",
+    "Hand full state read: validity guard до base/ref write, balanced finally",
+    "Manager OnDisable/OnDestroy: global transition scope, advance всех текущих живых grabbers до callbacks",
+    "Grabbable_Disabled: advance живых grabbers удаляемой manipulation до dictionary removal",
+    "Manager full state read: один global scope, advance старых/восстановленных grabbers до/после dictionary replacement",
+    "Orphan whole-manipulation removal: advance surviving live entries; destroyed support-only removal не меняет main stamp",
+    "Обычный support-only release/regrab использует только собственный hand stamp, без global manager scope"
+  ],
+  "writes": [
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabber.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabber.StateSave.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.StateSave.cs"
+  ],
+  "acceptance": "Static coverage/reentrancy review и существующая офлайн-компиляция с exact Equipment overlay. Unity/Android/шлем отдельно pending: same-hand same-frame silent release/regrab, transfer, support-only, disable/re-enable, restore/replay/restore callbacks, queued old-key author commands и сохранённое observer presentation. Snapshot SDK не означает accepted gameplay."
+}

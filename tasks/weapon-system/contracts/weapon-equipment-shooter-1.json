@@ -1,0 +1,38 @@
+{
+  "summary": "Read-only SDK IUxrWeaponOwnerProvider.TryGetOwner(out UxrActor owner): true означает активный ownership override, в том числе owner=null при невалидном claim; false — override отсутствует. WeaponEquipmentBinding реализует provider без SDK Owner writes. SDK читает provider на actual firearm RootGrabbable; active invalid/conflicting claim не использует stale VR owner. Projectile фиксирует actor при фактической эмиссии, direct impact использует этот actor вместо текущего держателя.",
+  "motivation": "Bots-fix2717 подтвердил Actor composition и необходимость SDK ownership bridge. Exact binding хранит UxrAvatar отдельно; SDK Owner сейчас задаётся только Awake/Grab. Перечитывание owner при impact ошибочно отдаёт credit новому держателю после transfer/drop.",
+  "transition_cost": "weapon-system: SDK interface/consumer/CanUse/impact snapshot, без game зависимости SDK. bots-fix: точный Binding adapter, Owner.GetComponent<UxrActor>() из живого разрешённого active claim без actor cache; ACK этой ревизии до зависимой реализации и новый exact development candidate. SDK number резервируется отдельно. Совместная compilation и Unity input разрешаются только после reviewed final source, ownership/stage admission и broker package. Production activation/accepted commit/new tests после пользовательской приёмки.",
+  "aspects": ["actor-provider", "emission-owner", "invalid-claim-denial"],
+  "compatibility": "additive",
+  "providing_stage": "use-context-sdk-attribution",
+  "architecture_decision": {
+    "source": "User full use-context authorization; source audit reports/use-context-implementation/shot-attribution-audit.md; bots-fix2717 explicit minimal architecture agreement.",
+    "decision": "Binding owns canonical claim и только предоставляет read-only actor. SDK Owner getter возвращает provider actor, не записывает его в legacy _owner. Active invalid claim = null Owner и CanUse=false; отсутствие active providers сохраняет legacy VR Owner. Frozen actor относится к выстрелу, не equipment claim. Явная existing deflection attribution сохраняется."
+  },
+  "api": {
+    "namespace": "UltimateXR.Mechanics.Weapons",
+    "type": "IUxrWeaponOwnerProvider",
+    "read": ["bool TryGetOwner(out UxrActor owner)"],
+    "true": "Active equipment claim, owner может быть null; нельзя fallback на VR owner",
+    "false": "Нет active equipment claim у данного provider",
+    "provider": "WeaponEquipmentBinding (bots-fix)",
+    "consumer": "UxrWeapon/UxrFirearmWeapon actual root, disabled providers включены (weapon-system)",
+    "multiple": "Все active providers должны вернуть один и тот же живой actor; отсутствие actor/несогласие/SDK raw main grip конфликт даёт invalid override и CanUse=false."
+  },
+  "emission": {
+    "capture": "Read actor once при RegisterNewProjectileShot до ProjectileInfo создания; существующий WeaponOwner snapshot используется при direct и non-actor impact.",
+    "transfer_drop": "Дальнейшая смена holder/claim не меняет owner выпущенного projectile.",
+    "deflection": "Существующее явное правило ProjectileDeflectSource.Owner на deflected actor impact сохраняется; эта ревизия не замораживает отдельный deflector lifecycle.",
+    "destroyed_actor": "Если captured UxrActor уничтожен к impact, передаётся null (Unity destroyed-object semantics). Immutable Session kill-credit после уничтожения actor этой SDK actor-only ревизией не обещается; требуется отдельный game/session контракт при такой необходимости. Смена holder никогда не используется как замена уничтоженного shooter.",
+    "destroyed_weapon": "Direct impact больше не вызывает TryGetWeaponOwner на уничтоженном/перехваченном source weapon; visual/projectile lifetime и game damage authority остаются существующими."
+  },
+  "writes_weapon_system": [
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/IUxrWeaponOwnerProvider.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/IUxrWeaponOwnerProvider.cs.meta",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeapon.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeapon.Custom.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeaponManager.cs"
+  ],
+  "acceptance": "Source review/compilation отдельно; Unity/Mirror/Android/шлем pending. NPC и VR hit/credit, transfer/drop между emission и hit, активный unresolved/dead/conflicting claim, disabled Binding provider, owner отсутствует, multiple providers, source weapon destruction, actor destruction(null attribution), deflection. Никаких fakehands/M+C copies, shared state writers или новых gameplay tests до user acceptance."
+}

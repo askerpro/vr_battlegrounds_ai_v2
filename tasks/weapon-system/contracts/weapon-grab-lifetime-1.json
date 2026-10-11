@@ -1,0 +1,35 @@
+{
+  "summary": "Read-only UxrGrabber.GrabLifetimeEpoch:int. Единственный источник lifetime — SDK; положительный глобально уникальный stamp обновляется до каждой записи GrabbedObject, disable/destroy и чтения grab state. Zero — исчерпание источника, автоматика fail-closed. Resolver читает stamp только фактической основной руки; host владеет единственным grant.",
+  "motivation": "Пользователь 2026-10-10 выбрал SDK lifetime-порт для полного use-context. Public manipulation events не покрывают propagateEvents=false, прямой setter, disable/cleanup и full restore; polling final snapshot не ловит same-frame release/regrab.",
+  "transition_cost": "weapon-system реализует additive SDK patch и затем VR resolver/grant. haptics подтверждает непересечение UxrGrabManager.cs с уже merged interaction-feedback; существующие сигналы/порядок feedback сохраняются. До SDK записи нужен review/ACK владельца пересечения и формальный begin. Сериализованный/network payload не меняется; новые gameplay-тесты только после пользовательской проверки.",
+  "aspects": ["main-hand-lifetime", "disable-restore-invalidation", "sdk-owner-scope"],
+  "compatibility": "additive",
+  "providing_stage": "use-context-sdk-lifetime",
+  "architecture_decision": {
+    "source": "Текущая Codex-сессия 2026-10-10: ответ пользователя Согласовать SDK lifetime-порт и выполнить полный контракт; reports/use-context-grab-lifetime/findings.md.",
+    "decision": "Один scalar stamp на реальном UxrGrabber, единый saturating int allocator SDK. Любое изменение lifetime обновляет stamp до side effects; exhaustion никогда не переиспользует значение и выдаёт 0. Host не создаёт дополнительный VR lifecycle. Каждый support grabber имеет свой stamp, support-only смена не отзывает main grant. Binding Epoch остаётся у bots-fix."
+  },
+  "api": {
+    "namespace": "UltimateXR.Manipulation",
+    "type": "UxrGrabber",
+    "read": ["int GrabLifetimeEpoch { get; }"],
+    "writer": "SDK only, internal AdvanceGrabLifetime",
+    "serialization": "Несериализуемый stamp; restore инвалидирует старые и восстановленные живые записи без network payload изменений."
+  },
+  "coverage": [
+    "GrabbedObject setter: каждое присваивание, включая тот же объект и null, до изменения поля/GO",
+    "UxrGrabber OnDisable/OnDestroy до base/callbacks",
+    "UxrGrabber full state read до base/ref write",
+    "UxrGrabManager OnDisable/OnDestroy: все живые текущие grabbers до callbacks",
+    "Grabbable_Disabled: живые grabbers удаляемой manipulation до dictionary removal",
+    "UxrGrabManager full state read: старые и восстановленные grabbers до/после dictionary replace",
+    "Orphan whole-manipulation removal: invalidate surviving live entries; destroyed support-only removal не меняет main stamp"
+  ],
+  "writes": [
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabber.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabber.StateSave.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.StateSave.cs"
+  ],
+  "acceptance": "Сначала static path coverage и существующая офлайн-компиляция с exact Equipment overlay; Unity/Android/шлем pending. Приёмка: same-hand same-frame silent release/regrab, transfer, support-only regrab, disable/re-enable, full restore/replay, старые queued commands и observer presentation. SDK source не создаёт readiness/M/C или оборудование."
+}

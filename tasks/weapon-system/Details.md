@@ -19,6 +19,165 @@
 
 ## Сделано
 
+### 2026-10-10: история проверок use-context (перенесено из Readme 2026-10-11)
+
+VR/Equipment resolver/grant/Core/queue реализованы; review без оставшихся Critical/Important.
+SDK-порт реализован: [код](../../Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/IUxrFirearmRootRecoilPolicy.cs),
+[отчёт](reports/use-context-sdk-port/implementation.md), [ревью](reports/use-context-sdk-port/review.md) без замечаний.
+Helper исправлен: Core/SDK553/game431/DebugBootstrap6/Editor262/Tests231 compile PASS, exit0.
+Тесты только скомпилированы; Unity/Android/шлем/NPC для нового среза не проверялись.
+Технический candidate `c01d8ea2` содержит три SDK-файла относительно `4dee70e1`; accepted commit не создан.
+Финальная DEVELOPMENT-компиляция с exact11 binding после VR actual-grip fix:
+Core/SDK554/game434/DebugBootstrap6/Editor262/Tests231 PASS exit0; тесты не запускались.
+Полный silent VR lifetime из [исследования](reports/use-context-grab-lifetime/findings.md) текущие события SDK
+не обеспечивают; SDK71 заменил sentinel на positive unique source с getter0 во время mutation/restore.
+Haptics2686 согласовал exact4 scope, патч67 сохранён; bounded grab restore не означает atomic scene restore.
+SDK72 устраняет stale/null NPC Owner и чтение нового держателя при impact; destroyed actor даёт null,
+immutable Session credit после actor destruction отдельно не обещается. Полный SDK72 + Binding8435c229:
+Core6/SDK555/Game434/DebugBootstrap6/Editor262/Tests231 compile PASS exit0; тесты не запускались.
+Независимое SDK72 source review: 0 замечаний; Unity/Mirror weaving/попадание и runtime атрибуция не проверены.
+Canonical PPK/AK105 authoring — наш scope (2776); отдельный tiny stage через единственный
+WeaponSystemAuthoring.Configure добавит serialized Binding с сохранением GUID/assetId. Этап RUNNING epoch1;
+writer реализован и скомпилирован после Mirror-default guard, exact19 source candidate `d8efaee0`.
+Независимое writer review: 0 оставшихся замечаний. Joint exact30 input `a5247ba3` на accepted0c1.
+Bots-fix2933 разрешил exact11 dependency в нашей guarded Unity-композиции. Preflight в reports/.
+Broker request отклонён SCOPE на dependency `Assets/Scripts/Bots/BotClipBody.cs`; тикет не создан.
+Свежая проверка runtime `9e5fa445`: пауза worker снята (3052), но input SCOPE guard не изменился;
+emergency hook-режим не снимает broker/CLI guards. Уточнение реального блокера направлено в hub3063.
+TTL authoring-допуска истёк; после исправления input admission потребуется свежий begin.
+3096: владелец infra подтвердил, что input admission ещё открыт, и готовит immutable grants/receipts.
+По его запросу подтверждены 18/18 blob+mode зависимостей против четырёх recorded verified SHA;
+mapping — reports/use-context-prefab-authoring/own-input-provenance-18.json, передан сопровождающему3121.
+Для подготовки артефакта истёкший этап безопасно освобождён и открыт epoch3, затем завершён.
+Consumer подтвердил ограниченный immutable-input маршрут/purpose/TTL1200 (3126); API ещё не выпущен.
+Unity не запускалась, future grant ещё не выдан; actual authoring ждёт штатного выпуска и свежего begin.
+Инфраструктурный запрос правильного input-admission маршрута направлен сопровождающему (3005), bots-fix уведомлён (3008).
+3152/3155: по прямому распоряжению пользователя сопровождающий установил modeoff; input SCOPE снят,
+Unity FIFO/lease сохраняются. Новый own19 `4add6ae0`, joint30 `4a726b4a` на actual published1001415.
+Broker398 RUNNING/guarded → Unity import без Console errors → authoring PPK/AK105,
+strict serialized readback и byte-idempotence PASS; AndroidCompileGate PASS. Finish/receive завершены,
+result `2660b0e9`, only2 prefab paths, unexpected0, active=null/recovery=false.
+Binding root fileIDs: PPK6443472434469855942, AK1059212996456720744057; GUID/assetId прежние.
+Технический own21 пакет `d942dce3` включает SDK/context/writer и обе canonical assets.
+Полный отчёт — reports/use-context-prefab-authoring/unity/authoring.json; asset review завершён, 0 замечаний.
+Raw diff-check отмечает две стандартные Unity строки `m_Name: `; emitted bytes сохранены, это не full check0.
+Совместный NPC/server-client/VR/шлем и credit runtime ещё pending. Accepted code commit,
+production activation и новые gameplay-тесты — после проверки пользователем.
+Штатные peer listing/Monitor этому клиенту недоступны: маршрут очищен, используются inbox/status
+перед зависимыми действиями и ручные уведомления. Аренда398 завершена, worker освобождён.
+Условный запрос пользователя на подготовку merge проверен: финальные проверки полного пакета
+ещё не пройдены. [Готовность и точный маршрут](reports/merge-readiness.md); accepted/merge-request не созданы.
+
+### 2026-10-10: canonical authoring выполнен, пакет передан bots-fix
+
+База `1001415bed29124af821a9a641d0bae2a7224a5b`, план r37. Сопровождающий по распоряжению
+пользователя снял input SCOPE (3152/3155, modeoff); FIFO/guarded Unity-аренды сохраняются.
+Own source19 `4add6ae0`, joint30 `4a726b4a` включает Binding8435c229 по разрешению2933.
+Аренда398: импорт Unity/Mirror weaving без Console errors; authoring PPK/AK105,
+serialized readback, GUID/assetId и byte-idempotence PASS; AndroidCompileGate PASS.
+Finish/receive завершены, result `2660b0e9739e5490b0cc60fa58e5d2c32fb482b8`, только два prefab,
+unexpected0. В каждом добавлены root component reference и Binding document (+16 строк).
+PPK Binding fileID6443472434469855942; AK105 fileID9212996456720744057.
+Отчёт: reports/use-context-prefab-authoring/unity/authoring.json,
+SHA256 `9c47abe485b1e8563dadc6a994189bce9096cdccda368f884b3b68d0ba04c96e`.
+Независимое asset review: 0 Critical/Important/Minor, source19 совпадает 19/19.
+Unity `m_Name: ` даёт две whitespace-строки в raw diff-check; сохранены emitted bytes.
+Managed compile: Core6/SDK555/Game434/DebugBootstrap6/Editor263/Tests231 exit0;
+тесты только скомпилированы, не исполнялись.
+
+Полный собственный технический source+assets21 пакет:
+`d942dce3db9caeecfbe5e023f20f0117bb8bb0fd`, parent `d3faa240d73d52884667f4def6391aaac5bf33bc`.
+3172 разрешает bots-fix точный неизменённый дифф21 в их DEVELOPMENT Unity-входе для собственного
+NPC authoring и bounded runtime под собственной арендой; ancestry/docs и ownership не передаются.
+3176: пакет получен, дифф проверен, готовятся authoring и отдельный armed runtime.
+3163: их source compile на свежем B100 прошёл; это ещё не Unity/runtime-приёмка.
+Оба сообщения прочитаны и ACKed. Ожидаются exact source/result SHA и runtime evidence.
+Source SDK70/71/72/use-context technical verified; authoring в хабе planned epoch4.
+NPC/server-client spawn, SDK shot ledger, ActorSource/credit, VR/Quest и user acceptance pending.
+Accepted code/assets commit и merge-request не созданы. Ниже — история предыдущих проверок.
+
+### 2026-10-10: возобновление выполнения и устранение compile-input ошибки
+
+Текущий план r36: accepted base `0c1a7fbc`, fetch/autostash rebase успешны, tracked WIP и foreign untracked сохранены.
+SDK71 source implemented/native4/CRLF, technical verified030037fb, независимое
+review0 и compilationall6 exit0. Haptics2686 подтвердил те же exact4 SDK sites/порядок после merged
+interaction-feedback; patch67all3calls+protectedpartials unchanged. Порт weapon-grab-lifetime@2 agreed;
+отдельный formal haptics ACK2 не приписывается, ownership scope использует явное письменное2686.
+
+VR/Equipment full source6 использует positive SDK epoch, active hand/manager и equality actual triggergrip.
+ReviewImportantSDKquery stale-main-with-support исправлен; finalcompile послеfix exit0, noexecutedtests.
+Fullcontexttechnical exact13 d8dec7e32141fc7dc91c89099b36e2c46c30def9 (6game+SDK70/71), stageverified.
+SDK72 actor-port@1 agreed обеими сторонами; use-context-sdk-attribution RUNNINGepoch1.
+Exact6 candidate21fcd298; full-source compile c Binding8435c229 exact11 overlay PASS exit0:
+Core6/SDK555/Game434/DebugBootstrap6/Editor262/Tests231. Тесты не исполнялись, runtime не проверен.
+Exact6source proposal+actor boundary reports/use-context-attribution; interface readiness first sends toBots.
+
+Canonical authoring2776 belongsweapon-system: PPK/AK105 beforeAwake Binding needed. Existing
+HandsPackWeaponBuilder calls canonical writer WeaponSystemAuthoring.Configure; threepathstage should
+extend that one writer/compare whitelist +2prefabs, not add competing builderwriter. Fresh preflight
+reports/use-context-prefab-authoring/preflight.md recordsGUIDs/fileIDs/_assetId. Tiny authoring stage
+зарегистрирован: единственный writer и два canonical prefab. Draft просмотрен; begin ждёт SDK72 verified.
+2933 разрешил exact11 Binding8435c229 в нашей Unity DEVELOPMENT-композиции.
+Final writer +202/-1 содержит reject неверных inherited Mirror defaults; review 0 remaining.
+Final own19 `d8efaee0`, joint30 `a5247ba3` с accepted0c1 sole parent; actual full compile six PASS exit0.
+Broker request с correct ownerweapon-system-expert отклонён SCOPE на BotClipBody dependency;
+нет ticket/lease/Unity mutation. Infra_issue3005, bots-fix3008; source input-admission маршрут уточняется.
+Full jointUnity permission2704 remainspending final SDK72+authoring review; report-onlyold3ab0beaf insufficient.
+
+@2 согласован обеими сторонами (publication01e10823); план r31, use-context RUNNING epoch1. SDK70
+checkpoint c01 технически verified: после исправления собственного compile-helper прошли Core, SDK553,
+game431, DebugBootstrap6, Editor262, Tests231; это компиляция, не запуск тестов или gameplay acceptance.
+Причина PlayLaunch CS0246 — устаревшая DLL; helper теперь строит текущую DebugBootstrap с asmref provider.
+Точные результаты: reports/use-context-sdk-port/compile-helper-repair.md.
+
+Bots-fix предоставил exact11 checkpoint c05eabbfb77ebc68a197593c54d1567ee3ab68da; независимый review
+manifest/базы/хэшей подтвердил совместимость с8e3+c01, без content/API blockers. Только DEVELOPMENT
+overlay в reports, без импорта foreign Assets или ancestry. tools/prepare-binding-overlay.py проверяет
+11 путей, bytes/hash и базу до генерации. Компиляция нового resolver/host ещё впереди.
+
+Окончательный Equipment review: Critical/Important remaining0 после replay-fix; compiler exit0
+Core/SDK554/game434/DebugBootstrap6/Editor262/Tests231. Технический checkpoint exact9
+3ab0beaf015f8a9c4a789a874b1e33a3d4df1a16 parent4dee70e1; только narrowdiff разрешён bots-fix
+для DEVELOPMENT reports composition (2685), никаких ancestry merge/production acceptance.
+
+Полное silent VR lifetime требование @2 не закрывается публичными SDK-событиями. Прежняя запись
+о достаточности existing VR была неполной: нельзя вводить постоянный grant с sentinel0. Запрошено
+архитектурное решение пользователя: он выбрал полный SDK lifetime-порт. План r32: отдельный
+use-context-sdk-lifetime перед полной VR grant реализацией, после merged haptics interaction-feedback.
+weapon-grab-lifetime@1 предложен, SDK71 зарезервирован; haptics ACK exact4 scope запрошен2681.
+Пока готовится proposal без SDK записи; VR grant в Equipment DEV candidate возвращает false.
+Дополнительный audit shot-attribution-audit.md: binding Owner не передаётся в SDK UxrWeapon.Owner,
+на direct impact owner перечитывается. Bots-fix2685 получил запрос actor composition/контракта сохранения
+emission owner до impact. Новые gameplay-тесты, accepted commit и activation pending.
+
+### 2026-10-10: начало реализации use-context
+
+Пользователь поручил исполнителю начать согласованный контракт `weapon-use-context@1`.
+План DEVELOPMENT переведён на `agreed` зависимости и приоритет перед `ejection-manual`;
+права production-активации и приёмка не меняются. Полный `begin use-context` хаб отклонил
+`CONTRACT_NOT_AGREED`: предлагаемая @2 ещё требует точного ACK bots-fix (запрос 2502).
+
+Доступная самостоятельная часть — `use-context-sdk-port`: SDK-интерфейс `IUxrFirearmRootRecoilPolicy`
+и guard position/rotation recoil на фактическом root, без игровых зависимостей и без provider в чужом binding.
+Допуск r30/epoch3; реализацию ведёт `/root/use_context_implementer` (`gpt-6.1-sol`, medium).
+Принятая база `8e3c513f5627de786ea0df0c1e6db5d81c78e09c`, собственный rebase сохранил tracked/untracked правки.
+
+Решение по границам: новый универсальный `GrabLifetimeEpoch` из исследования не входит в согласованную @1
+и не добавляется в SDK70 скрыто. Контракт требует сохранения VR-пути; новые постоянные права VR не вводятся.
+Equipment интеграция должна использовать epoch единственного binding и одно право автоматики хоста.
+Отзыв Equipment-права и фильтрация старого ключа до авторских команд обязательны; широкое новое SDK API
+требует своего согласования/области и не блокирует независимый SDK-порт отдачи.
+
+Проверка среза: offline Core/SDK/game/Editor/existing-tests compile, scope/readback и независимое code review.
+Новые gameplay-тесты и accepted code commit — после проверки пользователем; Unity пока не запрашивалась.
+
+Фактический результат: SDK70 interface/meta и 13 строк consumer guard реализованы. Principal прочитал diff,
+логи и независимое review (0 замечаний); Core/UltimateXR553/VrBattlegrounds431 compile PASS,
+Editor262 FAIL8 CS0246 PlayLaunchConfiguration/PlayLaunchRequestOwner вне SDK, tests не достигнуты.
+SDK technical candidate `c01d8ea2999f2ccd2da72043222bf44dcf1dacf2`, parent `4dee70e1a840d1d6d0df38da408dcfe50e7aae88`:
+ровно три SDK-пути; HEAD/index не изменены. Это не accepted commit, не Unity/Android PASS и не NPC firing.
+Provider adapter/binding/composition остаются у bots-fix; полный этап ждёт formalACK2 и dependency-пакет.
+
 | Что | Коммит |
 |---|---|
 | Ручное заряжание дробовиков (FABARM, Herrington); бесконечная выдача патронов карманом и арсеналом; один звук вставки — у приёмника | e15c53ce |

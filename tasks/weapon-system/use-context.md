@@ -1,6 +1,6 @@
 # Use context: план реализации и бриф исполнителю
 
-Дата: 2026-10-09. Задача: `weapon-system`; владелец: `weapon-system-expert` (Codex).
+Дата: 2026-10-10. Задача: `weapon-system`; владелец: `weapon-system-expert` (Codex).
 
 > Для исполнителя: выполнять план по задачам с `superpowers:executing-plans`; основной агент
 > делегирует срез и проверяет доказательства. Канонические правила — `AGENTS.md`.
@@ -15,8 +15,8 @@
 
 **Стек:** Unity 6 URP, C#, UltimateXR, Mirror, Quest 2/3.
 
-**Спецификация:** [weapon-use-context@1](contracts/weapon-use-context-1.json), согласованный в хабе;
-уточнение policy/номера SDK — [предложение @2](contracts/weapon-use-context-2.json), отдельный ACK bots-fix;
+**Спецификация:** [weapon-use-context@2](contracts/weapon-use-context-2.json), согласованный в хабе обеими сторонами;
+история API — [@1](contracts/weapon-use-context-1.json);
 [архитектура](../../Docs/weapons/architecture.md), [инварианты](../../Docs/weapons/invariants.md),
 [решения](../../Docs/weapons/decisions.md). Запрос bots-fix: события 2085/2185; ответ владельца: 2246.
 
@@ -25,15 +25,20 @@
 - Подготовка зарегистрирована этапом `use-context-planning`: документация и бриф, без Unity и игровых правок.
 - В текущем checkout нет `Assets/Scripts/Weapons/Equipment/WeaponEquipmentBinding.cs`.
   Исходник есть у bots-fix; это непринятый кандидат, а не разрешение его копировать.
-- `weapon-equipment-binding@1` и `weapon-use-context@1` согласованы (`agreed`), binding ещё не `active`.
-- Формальный `use-context` пока ждёт влитый `ejection-manual` и активный binding. Эти ворота сохраняются.
+- `weapon-equipment-binding@1` и `weapon-use-context@2` согласованы (`agreed`), binding ещё не `active`.
+- План r31 переносит `ejection-manual` после use-context; DEVELOPMENT использует agreed-зависимости.
+  SDK70 technically verified; `use-context` RUNNING epoch1. Production acceptance этим не заменяется.
 - До продуктовой записи нужен доказанный источник VR grab-lifetime: обычные `ObjectGrabbed/ObjectReleased`
   могут не приходить при `propagateEvents=false`. VR sentinel 0 с такими событиями не закрывает stale grant.
-- Нужен ответ bots-fix: точный SHA/перечень файлов foundation, владелец composition и маршрут совместного
-  DEVELOPMENT preview. Ожидание стрельбы для приёмки foundation не должно превращаться в обход этих ворот.
-- Перед продуктовой записью основной агент либо подтверждает существующий допуск после готовности зависимостей,
-  либо согласует и регистрирует отдельный development-этап с потреблением `agreed`. Такой этап ещё не разрешён.
-  `active`, пользовательская приёмка и production cutover этим не подменяются.
+- Bots-fix предоставил exact11 c05eabbfb77ebc68a197593c54d1567ee3ab68da, разрешённый только для
+  isolated DEVELOPMENT reports composition. Manifest/base/hashes проверены, binding остаётся у bots-fix.
+- Equipment resolver/grant/Core/queue реализован и reviewed, checkpoint exact9 `3ab0beaf`; финальная
+  overlay-компиляция exit0 Core/SDK554/game434/DebugBootstrap6/Editor262/Tests231, без запуска тестов.
+- Пользователь выбрал SDK lifetime-порт для полного VR grant. SDK71 зарезервирован; конкретный
+  [weapon-grab-lifetime@2](contracts/weapon-grab-lifetime-2.json) уточняет source getter0 во время
+  незавершённого setter/restore, чтобы callbacks не получали grant по частично восстановленному state.
+  План r33 выделяет lifetime planning/SDK стадии перед full-context; owner ACK haptics пока ожидается.
+  VR automation в Equipment DEV candidate временно false, это не accepted production поведение.
 - У брокера на момент подготовки `active=null`, `blocked=false`, `recovery_required=false`.
   Перед Unity необходимы свежие status/inbox, fetch/rebase принятой `origin/dev` с сохранением чужих изменений,
   технический checkpoint и собственная аренда. Старые результаты компиляции не считаются текущими.
@@ -51,7 +56,7 @@
 | `Assets/Scripts/Weapons/Core/WeaponStateMachine.cs` | Контекстные guards существующей таблицы |
 | `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/IUxrFirearmRootRecoilPolicy.cs` и `.meta` | Минимальный SDK-порт разрешения отдачи корня |
 | `Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs` | Потребление SDK-политики только вокруг записи root transform |
-| `tasks/weapon-system/changelog/2026-10-09-sdk-70.md` | Журнал фактической SDK-правки после реализации |
+| `tasks/weapon-system/changelog/2026-10-10-sdk-70.md` | Журнал фактической SDK-правки после реализации |
 | `tasks/weapon-system/reports/use-context-implementation/` | Локальные результаты подготовки/проверок вне Git |
 
 Новая asmdef не нужна: resolver/host — `VrBattlegrounds`, SDK-порт — `UltimateXR`, Core остаётся
@@ -109,7 +114,7 @@
 Сигнатура нового SDK-порта: `IUxrFirearmRootRecoilPolicy { bool AllowsRootRecoil { get; } }`.
 SDK не ссылается на игровые `WeaponUseContext` или `WeaponEquipmentBinding`.
 
-**Решение пользователя 2026-10-09, ожидает owner-side согласования bots-fix:** binding реализует
+**Решение пользователя 2026-10-09, согласованное bots-fix в @2:** binding реализует
 политику `AllowsRootRecoil => !IsActive`; код adapter принадлежит bots-fix. Активный claim запрещает отдачу
 при unresolved/dead owner, выключенном компоненте и teardown WeaponSystem. Подключение policy должно находиться
 на фактическом root grabbable, который использует SDK `RootGrabbable`.

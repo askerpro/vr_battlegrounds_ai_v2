@@ -43,6 +43,13 @@ namespace VrBattlegrounds.EditorTools.Release
     /// Роль планшета включается <c>extraScriptingDefines</c>, без правки Player Settings.
     /// </para>
     ///
+    /// <para>
+    /// Тестовая сборка получает штамп ревизии исходников в версии приложения
+    /// (<see cref="BuildRevisionStamp" />, versionName <c>0.1.0+&lt;ревизия&gt;</c>); прод — нет.
+    /// Перед Android-сборкой модальный диалог «Unsupported Input Handling on Android» подавляется
+    /// на текущую сессию редактора ответом «Ignore»: иначе сборка агента в редакторе висит до человека.
+    /// </para>
+    ///
     /// Вызов:
     ///   — из редактора: Tools/VR Battlegrounds/Release/…
     ///   — агентом:      GameBuilder.Build(new[] { BuildProfile.Server }, BuildConfig.Test)
@@ -67,15 +74,36 @@ namespace VrBattlegrounds.EditorTools.Release
         /// <summary>Без них UltimateXR не подключает Mirror: аватары не выравнивают id по netId.</summary>
         private static readonly string[] RequiredDefines = { "MIRROR", "ULTIMATEXR_USE_MIRROR_SDK" };
 
+        /// <summary>
+        /// Ключ opt-out диалога «Unsupported Input Handling on Android» (кнопки «Ignore» / «Cancel Build»)
+        /// из UnityEditor.Android.Extensions, CheckPrerequisites.ValidateInputHandling.
+        /// </summary>
+        private const string InputHandlingDialogKey = "AndroidInputHandlingWarning";
+
+        /// <summary>
+        /// Префикс, под которым EditorDialog (Unity 6000.4) хранит opt-out: SessionState.GetInt(префикс + ключ),
+        /// значение — DialogResult. Публичный EditorUtility.SetDialogOptOutDecision пишет SessionState.SetBool
+        /// без префикса, и этот диалог его не читает (проверено по IL UnityEditor.CoreModule 6000.4.1f1).
+        /// </summary>
+        private const string DialogOptOutPrefix = "DialogOptOut.";
+
+        /// <summary><c>PlayerSettings.activeInputHandler</c>: 0 — старый Input Manager, 1 — Input System, 2 — оба.</summary>
+        private const int ActiveInputHandlingBoth = 2;
+
         /// <summary>Итог сборки одного или нескольких профилей.</summary>
         public sealed class Result
         {
             public bool Passed = true;
             public string Fingerprint = string.Empty;
+
+            /// <summary>Штамп ревизии исходников; пусто — сборка без штампа (прод).</summary>
+            public string Revision = string.Empty;
+
             public readonly List<string> Lines = new List<string>();
 
             public string Summary =>
                 ResultMarker + (Passed ? " PASS" : " FAIL") + (Fingerprint.Length > 0 ? $" — UXR id {Fingerprint}" : "") +
+                (Revision.Length > 0 ? $" — ревизия {Revision}" : "") +
                 "\n" + string.Join("\n", Lines);
 
             public Result Fail(string message)
@@ -152,7 +180,15 @@ namespace VrBattlegrounds.EditorTools.Release
         }
 
         /// <summary>Собирает профили в <c>Build/&lt;профиль&gt;/</c>. Останавливается на первой ошибке.</summary>
-        public static Result Build(IEnumerable<BuildProfile> profiles, BuildConfig config)
+        public static Result Build(IEnumerable<BuildProfile> profiles, BuildConfig config) =>
+            Build(profiles, config, null);
+
+        /// <summary>
+        /// То же с заданной ревизией штампа: пара e2e-плеер + APK штампуется одной ревизией, посчитанной
+        /// один раз (<see cref="BuildRevisionStamp.ReadRevision" />). <c>null</c> — посчитать здесь.
+        /// Для <see cref="BuildConfig.Prod" /> штампа нет, ревизия игнорируется.
+        /// </summary>
+        public static Result Build(IEnumerable<BuildProfile> profiles, BuildConfig config, string revision)
         {
             var result = new Result();
             List<BuildProfile> ordered = OrderBySwitches(profiles.Distinct());
@@ -166,32 +202,39 @@ namespace VrBattlegrounds.EditorTools.Release
             UxrIdFingerprint baseline = Preflight(scenes, needsAndroid, result);
             if (!result.Passed) return result;
 
+            if (needsAndroid) SuppressAndroidInputHandlingDialog(result);
+
             BuildTarget originalTarget = EditorUserBuildSettings.activeBuildTarget;
             BuildTargetGroup originalGroup = BuildPipeline.GetBuildTargetGroup(originalTarget);
             StandaloneBuildSubtarget originalSubtarget = EditorUserBuildSettings.standaloneBuildSubtarget;
 
-            try
+            // Штамп на все профили запуска сразу; Dispose возвращает версию и сохраняет настройки
+            // до общей сверки id после сохранения ниже. Прод — без штампа: versionName магазина не трогаем.
+            using (BuildRevisionStamp stamp = config == BuildConfig.Test ? StampFor(revision, result) : null)
             {
-                foreach (BuildProfile profile in ordered)
+                try
                 {
-                    if (!BuildOne(profile, scenes, baseline, config, result)) break;
+                    foreach (BuildProfile profile in ordered)
+                    {
+                        if (!BuildOne(profile, scenes, baseline, config, result)) break;
+                    }
                 }
-            }
-            finally
-            {
-                // Редактор оставляем на той платформе, на которой он был: Play Mode с активным
-                // Dedicated Server или Android — не то, чего ждёт следующий, кто нажмёт Play.
-                // В batch-режиме полное переключение (реимпорт) незачем, но подцель Standalone
-                // возвращаем: она хранится в Library, и редактор, открытый после сборки сервера,
-                // оказывался на Dedicated Server.
-                if (Application.isBatchMode) EditorUserBuildSettings.standaloneBuildSubtarget = originalSubtarget;
-
-                if (!Application.isBatchMode &&
-                    (EditorUserBuildSettings.activeBuildTarget != originalTarget ||
-                     EditorUserBuildSettings.standaloneBuildSubtarget != originalSubtarget))
+                finally
                 {
-                    EditorUserBuildSettings.standaloneBuildSubtarget = originalSubtarget;
-                    EditorUserBuildSettings.SwitchActiveBuildTarget(originalGroup, originalTarget);
+                    // Редактор оставляем на той платформе, на которой он был: Play Mode с активным
+                    // Dedicated Server или Android — не то, чего ждёт следующий, кто нажмёт Play.
+                    // В batch-режиме полное переключение (реимпорт) незачем, но подцель Standalone
+                    // возвращаем: она хранится в Library, и редактор, открытый после сборки сервера,
+                    // оказывался на Dedicated Server.
+                    if (Application.isBatchMode) EditorUserBuildSettings.standaloneBuildSubtarget = originalSubtarget;
+
+                    if (!Application.isBatchMode &&
+                        (EditorUserBuildSettings.activeBuildTarget != originalTarget ||
+                         EditorUserBuildSettings.standaloneBuildSubtarget != originalSubtarget))
+                    {
+                        EditorUserBuildSettings.standaloneBuildSubtarget = originalSubtarget;
+                        EditorUserBuildSettings.SwitchActiveBuildTarget(originalGroup, originalTarget);
+                    }
                 }
             }
 
@@ -293,6 +336,66 @@ namespace VrBattlegrounds.EditorTools.Release
             result.Fingerprint = fingerprint.Hash;
             result.Lines.Add($"UXR id: {fingerprint.Summary}");
             return fingerprint;
+        }
+
+        // ── Штамп ревизии и диалог ввода Android ───────────────────────
+
+        private static BuildRevisionStamp StampFor(string revision, Result result)
+        {
+            if (revision == null)
+            {
+                revision = BuildRevisionStamp.ReadRevision(out string warning);
+                if (warning != null) result.Lines.Add("ВНИМАНИЕ: " + warning);
+            }
+
+            var stamp = new BuildRevisionStamp(revision);
+            result.Revision = stamp.Revision;
+            result.Lines.Add($"Ревизия сборки: {stamp.Revision} — версия на время сборки {stamp.StampedVersion}");
+            return stamp;
+        }
+
+        /// <summary>
+        /// Отвечает за человека «Ignore» на модальный «Unsupported Input Handling on Android» на текущую
+        /// сессию редактора (SessionState, не EditorPrefs): без этого сборка агента в открытом редакторе
+        /// висит до клика. В batch-режиме Unity диалог не показывает, только пишет предупреждение.
+        /// </summary>
+        private static void SuppressAndroidInputHandlingDialog(Result result)
+        {
+            // DialogResult.DefaultAction — кнопка ok (здесь «Ignore»): EditorDialog вернёт true и сборка
+            // продолжится. Любое другое значение означало бы «Cancel Build».
+            SessionState.SetInt(DialogOptOutPrefix + InputHandlingDialogKey, (int)DialogResult.DefaultAction);
+
+            int? handler = ReadActiveInputHandler();
+
+            if (handler == ActiveInputHandlingBoth)
+            {
+                result.Lines.Add("ВНИМАНИЕ: Active Input Handling = Both: Unity предупреждает о проблемах ввода и " +
+                                 "производительности на Android; диалог подавлен автоматически, корень — backlog input-handling-new-only.");
+            }
+            else if (handler == null)
+            {
+                result.Lines.Add("ВНИМАНИЕ: не удалось прочитать Active Input Handling; диалог ввода Android подавлен на сессию.");
+            }
+        }
+
+        /// <summary>Читает <c>activeInputHandler</c> из Player Settings без изменения; null — не прочитался.</summary>
+        private static int? ReadActiveInputHandler()
+        {
+            try
+            {
+                UnityEngine.Object settings = Unsupported.GetSerializedAssetInterfaceSingleton("PlayerSettings");
+                if (settings == null) return null;
+
+                using (var serialized = new SerializedObject(settings))
+                {
+                    SerializedProperty property = serialized.FindProperty("activeInputHandler");
+                    return property?.intValue;
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ── Одна сборка ────────────────────────────────────────────────
@@ -526,6 +629,9 @@ namespace VrBattlegrounds.EditorTools.Release
         }
 
         // ── Справочное ─────────────────────────────────────────────────
+
+        /// <summary>Полный путь результата профиля (APK, exe сервера).</summary>
+        public static string OutputPathFor(BuildProfile profile) => SpecFor(profile).Path;
 
         private static Spec SpecFor(BuildProfile profile)
         {

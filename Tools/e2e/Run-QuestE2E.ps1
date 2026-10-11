@@ -16,16 +16,23 @@
 # Гасит дирижёр только то, что запустил сам: свой серверный PID и его потомков (как Run-E2E.ps1),
 # на шлеме — am force-stop пакета, который до прогона не был запущен (иначе отказ).
 #
+# Ревизии сборок: e2e-плеер и тестовый APK несут штамп ревизии исходников в версии
+# (<база>+<ревизия>, BuildRevisionStamp). Ревизия APK читается из versionName установленного пакета,
+# ревизия сервера — из appVersion его результата; разные ревизии или ревизия, которой нет, — код 2.
+# -Build собирает пару одной ревизией batch-режимом Unity (редактор этого checkout должен быть закрыт;
+# при открытом — StartPairBuild в редакторе, затем прогон с -Apk).
+#
 # Коды возврата:
 #   0 — все проверки обеих сторон зелёные
 #   1 — сценарий поймал отказ (completed, но есть красные проверки)
 #   2 — прогон не состоялся: нет устройства/плеера/правила брандмауэра, нет вердикта, битый JSON,
-#       не собран артефакт, расхождение сборок, нет run.json
+#       не собран артефакт, сборки из разных ревизий или без ревизии, не собралась пара (-Build), нет run.json
 #
 # Запуск:
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Scenario device-smoke -Arg artifact=1
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Apk Build\Quest\VrBattlegrounds_Quest.apk
+#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Build
 # В режиме -File массив -Arg передаётся через запятую: -Arg mode=short,puppets=8.
 
 [CmdletBinding()]
@@ -69,7 +76,20 @@ param(
 
     # Пакет и activity приложения на шлеме.
     [string]   $Package = 'com.UnityTechnologies.com.unity.template.urpblank',
-    [string]   $Activity = 'com.unity3d.player.UnityPlayerGameActivity'
+    [string]   $Activity = 'com.unity3d.player.UnityPlayerGameActivity',
+
+    # Собрать пару (e2e-плеер сервера + APK Quest/Test одной ревизии) batch-режимом Unity и прогнать её.
+    # Несовместим с -Apk и -ServerPlayer. Редактор этого checkout должен быть закрыт.
+    [switch]   $Build,
+
+    # Только с -Build: проверить условия сборки и напечатать команду Unity, ничего не запуская (код 0).
+    [switch]   $DryRunBuild,
+
+    # Предел сборки пары в минутах.
+    [int]      $BuildTimeoutMinutes = 90,
+
+    # Путь к Unity.exe для -Build. Пусто — версия из ProjectSettings/ProjectVersion.txt в Unity Hub.
+    [string]   $Unity = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -399,6 +419,73 @@ function Get-BuildInfo($Data) {
     }
 }
 
+# ── Ревизии сборок ────────────────────────────────────────────────────────
+
+# Ревизия из версии вида <база>+<ревизия> (BuildRevisionStamp); $null — штампа нет или он unknown.
+function Get-SourceRevision([string] $Version) {
+    if ([string]::IsNullOrEmpty($Version)) { return $null }
+    if ($Version -notmatch '\+([^+\s]+)$') { return $null }
+    $revision = $Matches[1]
+    if ($revision -eq 'unknown') { return $null }
+    return $revision
+}
+
+function Format-VersionForReport([string] $Version) {
+    if ([string]::IsNullOrEmpty($Version)) { return 'нет версии' }
+    return $Version
+}
+
+# Сверка версий сервера (appVersion его результата) и шлема (versionName пакета). Возвращает
+# server/client — ревизии ($null, если не определены), mismatch — причина отказа или $null, check — строка для run.json.
+function Get-RevisionCheck([string] $ServerVersion, [string] $ClientVersion) {
+    $serverRevision = Get-SourceRevision $ServerVersion
+    $clientRevision = Get-SourceRevision $ClientVersion
+    $result = [ordered]@{ server = $serverRevision; client = $clientRevision; mismatch = $null; check = $null }
+
+    if ($null -eq $serverRevision -or $null -eq $clientRevision) {
+        $result.mismatch = 'ревизия сборки не определена: сервер ' + (Format-VersionForReport $ServerVersion) +
+            ', шлем ' + (Format-VersionForReport $ClientVersion) + ' (нужен штамп <версия>+<ревизия>, сборки Test/e2e)'
+    }
+    elseif ($serverRevision -cne $clientRevision) {
+        $result.mismatch = 'сборки из разных ревизий: сервер ' + $serverRevision + ', шлем ' + $clientRevision
+    }
+    elseif ($ServerVersion -cne $ClientVersion) {
+        $result.mismatch = 'версии сервера и шлема различаются при одной ревизии: ' + $ServerVersion + ' / ' + $ClientVersion
+    }
+
+    if ($null -ne $result.mismatch) { $result.check = $result.mismatch }
+    else {
+        $result.check = 'ревизии совпадают: ' + $serverRevision
+        if ($serverRevision.EndsWith('-dirty')) {
+            $result.check += ' (рабочая копия с изменениями: одинаковый штамп не гарантирует одинаковых исходников)'
+        }
+    }
+    return $result
+}
+
+# ── Сборка пары (-Build) ──────────────────────────────────────────────────
+
+# Открытый редактор держит Temp\UnityLockfile открытым на запись (как в Tools/release/Build-Game.ps1).
+function Test-EditorOpen([string] $LockPath) {
+    if (-not (Test-Path -LiteralPath $LockPath)) { return $false }
+    try {
+        $stream = [System.IO.File]::Open($LockPath, 'Open', 'ReadWrite', 'None')
+        $stream.Close()
+        return $false
+    }
+    catch { return $true }
+}
+
+function Get-UnityBuildArgs([string] $StatusPath, [string] $LogPath) {
+    return @(
+        '-batchmode', '-quit',
+        '-projectPath', $RepoRoot,
+        '-executeMethod', 'VrBattlegrounds.EditorTools.E2EPlayerBuilder.RunPairBatch',
+        '-pairStatus', $StatusPath,
+        '-logFile', $LogPath
+    )
+}
+
 # Свободное имя для артефакта в папке назначения (одинаковые имена с разных путей не затирают друг друга).
 function Get-ArtifactDestination([string] $Directory, [string] $Leaf) {
     $candidate = Join-Path $Directory $Leaf
@@ -452,13 +539,69 @@ if (-not $autoPorts) {
     if ($portError -ne '') { Stop-Refused ('порты прогона заданы неверно: ' + $portError) }
 }
 
-if ([string]::IsNullOrEmpty($ServerPlayer)) { $ServerPlayer = Join-Path $RepoRoot 'Build\e2e\VrBattlegrounds.exe' }
-if (-not (Test-Path -LiteralPath $ServerPlayer)) {
-    Stop-Refused ('Windows-плеер сервера не найден: ' + $ServerPlayer) @(
-        'Собери e2e-плеер той же ревизии, что APK: Tools > VR Battlegrounds > Debug > Собрать e2e-плеер (Windows),',
-        'или укажи -ServerPlayer <путь к .exe>.')
+# ── сборка пары (-Build): условия до устройства, сама сборка — в начале прогона ──
+$UnityPath = ''
+$BuiltApk = Join-Path $RepoRoot 'Build\Quest\VrBattlegrounds_Quest.apk'
+$PairStatusInEditor = 'Build/e2e-pair-status.json'
+if ($DryRunBuild -and -not $Build) { Stop-Refused '-DryRunBuild работает только вместе с -Build' }
+if ($Build) {
+    if (-not [string]::IsNullOrEmpty($Apk)) { Stop-Refused '-Build и -Apk несовместимы: -Build ставит APK, собранный в этом прогоне' }
+    if (-not [string]::IsNullOrEmpty($ServerPlayer)) { Stop-Refused '-Build и -ServerPlayer несовместимы: сервер — e2e-плеер, собранный в этом прогоне' }
+    if ($BuildTimeoutMinutes -lt 1) { Stop-Refused ('-BuildTimeoutMinutes меньше 1: ' + $BuildTimeoutMinutes) }
+
+    # Лёгкий агентский worktree (роль LFS «agent») держит вместо больших ассетов LFS-указатели: batch Unity на нём
+    # импортировал бы указатели как ассеты и собрал бы битую игру (Docs/agents/lfs-worktrees.md). Роль читаем штатным
+    # Tools/agents/configure_lfs_worktree.py status: основной checkout («main») и worker держат полные файлы.
+    $lfsRole = ''
+    try {
+        $lfsStatus = Invoke-Tool 'python' @('-X', 'utf8', (Join-Path $RepoRoot 'Tools\agents\configure_lfs_worktree.py'), 'status') 60
+        if ($lfsStatus.Out -match '"role"\s*:\s*"([^"]+)"') { $lfsRole = $Matches[1] }
+    } catch {}
+    if ($lfsRole -eq 'agent') {
+        Stop-Refused '-Build недоступен в этом checkout: LFS-роль «agent», большие ассеты — указатели.' @(
+            'Собери пару там, где ассеты полные: агент — на worker под арендой через',
+            ('  VrBattlegrounds.EditorTools.E2EPlayerBuilder.StartPairBuild("' + $PairStatusInEditor + '"),'),
+            'человек — в основном checkout. Затем запусти без -Build с -Apk и -ServerPlayer на собранную пару.')
+    }
+
+    if (Test-EditorOpen (Join-Path $RepoRoot 'Temp\UnityLockfile')) {
+        Stop-Refused ('редактор открыт; соберите пару в редакторе: VrBattlegrounds.EditorTools.E2EPlayerBuilder.StartPairBuild("' +
+            $PairStatusInEditor + '") (агент — на worker под арендой), затем запустите без -Build с -Apk') @(
+            'Пустой файл статуса — сборка идёт; JSON с serverPassed/questPassed — закончена.',
+            ('Затем: Run-QuestE2E.ps1 -Apk ' + $BuiltApk))
+    }
+
+    if ([string]::IsNullOrEmpty($Unity)) {
+        $versionLine = Select-String -LiteralPath (Join-Path $RepoRoot 'ProjectSettings\ProjectVersion.txt') -Pattern '^m_EditorVersion: (.+)$'
+        if ($null -eq $versionLine) { Stop-Refused 'в ProjectSettings/ProjectVersion.txt нет m_EditorVersion' }
+        $Unity = Join-Path $env:ProgramFiles ('Unity\Hub\Editor\' + $versionLine.Matches[0].Groups[1].Value.Trim() + '\Editor\Unity.exe')
+    }
+    if (-not (Test-Path -LiteralPath $Unity)) { Stop-Refused ('не найден Unity: ' + $Unity + '. Укажи путь параметром -Unity.') }
+    $UnityPath = (Resolve-Path -LiteralPath $Unity).Path
+    $ServerPlayer = [System.IO.Path]::GetFullPath((Join-Path $RepoRoot 'Build\e2e\VrBattlegrounds.exe'))
+
+    if ($DryRunBuild) {
+        $previewDir = Join-Path $RepoRoot 'Tools\e2e\results\<прогон>'
+        $previewArgs = Get-UnityBuildArgs (Join-Path $previewDir 'pair-status.json') (Join-Path $previewDir 'unity-build.log')
+        Write-Section 'Сухой прогон -Build: Unity не запускается, устройство и ПК не тронуты'
+        Write-Host ('  редактор этого checkout закрыт, Unity: ' + $UnityPath)
+        Write-Host ('  команда: ' + (ConvertTo-CommandLineArg $UnityPath) + ' ' + (($previewArgs | ForEach-Object { ConvertTo-CommandLineArg $_ }) -join ' '))
+        Write-Host ('  предел:  ' + $BuildTimeoutMinutes + ' мин')
+        Write-Host ('  APK:     ' + $BuiltApk)
+        Write-Host ('  сервер:  ' + $ServerPlayer)
+        exit 0
+    }
 }
-$ServerPlayer = (Resolve-Path -LiteralPath $ServerPlayer).Path
+
+if ([string]::IsNullOrEmpty($ServerPlayer)) { $ServerPlayer = Join-Path $RepoRoot 'Build\e2e\VrBattlegrounds.exe' }
+if (-not $Build) {
+    if (-not (Test-Path -LiteralPath $ServerPlayer)) {
+        Stop-Refused ('Windows-плеер сервера не найден: ' + $ServerPlayer) @(
+            'Собери пару одной ревизии: -Build (редактор закрыт) или E2EPlayerBuilder.StartPairBuild в редакторе,',
+            'или укажи -ServerPlayer <путь к .exe>.')
+    }
+    $ServerPlayer = (Resolve-Path -LiteralPath $ServerPlayer).Path
+}
 if (-not [string]::IsNullOrEmpty($Apk)) {
     if (-not (Test-Path -LiteralPath $Apk)) { Stop-Refused ('APK не найден: ' + $Apk) }
     $Apk = (Resolve-Path -LiteralPath $Apk).Path
@@ -542,7 +685,7 @@ if ($null -ne $blockingDialog) {
     if ($blockingDialog -match 'LinkDisconnected') { $dialogHint = 'Диалог «Link отключён»: закрой его на шлеме и повтори прогон.' }
     Stop-Refused ('на шлеме ' + $Serial + ' открыт системный диалог ' + $blockingDialog + ' — приложение не получит фокус.') @($dialogHint)
 }
-if ($Apk -eq '') {
+if ($Apk -eq '' -and -not $Build) {
     $installed = Get-PackageVersion
     if ($null -eq $installed.versionCode) { Stop-Refused ('пакет ' + $Package + ' не установлен на ' + $Serial + '; укажи -Apk') }
 }
@@ -666,7 +809,8 @@ $manifest = [ordered]@{
         device = [ordered]@{ command = ('am start -S -W -n ' + $component + " -e unity '" + $unityArgs + "'"); unityArgs = $unityArgs; amStartOutput = $null; pid = $null }
         server = [ordered]@{ player = $ServerPlayer; args = $serverArgs; pid = $null }
     }
-    builds = [ordered]@{ server = $null; client = $null; check = $null }
+    build = $null
+    builds = [ordered]@{ server = $null; client = $null; revisionServer = $null; revisionClient = $null; check = $null }
     link = [ordered]@{ wasActive = ($null -ne $linkComponent); component = $linkComponent; stopped = $false; restored = $null; detail = $null }
     artifacts = [ordered]@{ server = @(); client = @() }
     files = @()
@@ -692,8 +836,69 @@ $failure = $null
 $deviceStarted = $false
 $runStartedAt = (Get-Date).AddSeconds(-1)
 $exitCode = 2
+$pairRevision = $null
 
 try {
+    # ── сборка пары (-Build) ──
+    if ($Build) {
+        Write-Section 'Собираю пару: e2e-плеер сервера и APK Quest/Test одной ревизии (batch Unity)'
+        $pairStatusPath = Join-Path $runDir 'pair-status.json'
+        $unityLog = Join-Path $runDir 'unity-build.log'
+        $unityBuildArgs = Get-UnityBuildArgs $pairStatusPath $unityLog
+        $manifest.build = [ordered]@{
+            status = 'running'; revision = $null; durationSeconds = $null; unityExitCode = $null
+            unity = $UnityPath; args = $unityBuildArgs; statusFile = 'pair-status.json'; log = 'unity-build.log'; error = $null
+        }
+        if (Test-EditorOpen (Join-Path $RepoRoot 'Temp\UnityLockfile')) {
+            $manifest.build.status = 'not-started'
+            throw 'редактор этого checkout открылся до сборки — собери пару в редакторе (StartPairBuild) и запусти с -Apk'
+        }
+        Write-Host ('  лог Unity: ' + $unityLog + ' (предел ' + $BuildTimeoutMinutes + ' мин)')
+        $buildStarted = Get-Date
+        $unityRun = Invoke-Tool $UnityPath $unityBuildArgs ($BuildTimeoutMinutes * 60)
+        $manifest.build.durationSeconds = [math]::Round(((Get-Date) - $buildStarted).TotalSeconds)
+        $manifest.build.unityExitCode = $unityRun.ExitCode
+        $pairData = Read-ResultJson $pairStatusPath
+        if ($null -ne $pairData) { $manifest.build.revision = [string] $pairData.revision }
+
+        if ($unityRun.TimedOut) {
+            $manifest.build.status = 'timeout'
+            throw ('сборка пары не уложилась в ' + $BuildTimeoutMinutes + ' мин, Unity остановлен; смотри ' + $unityLog)
+        }
+        if ($null -eq $pairData) {
+            $manifest.build.status = 'failed'
+            throw ('сборка пары не оставила статуса (код Unity ' + $unityRun.ExitCode + '); смотри ' + $unityLog)
+        }
+        if (-not ($pairData.serverPassed -and $pairData.questPassed) -or $unityRun.ExitCode -ne 0) {
+            $manifest.build.status = 'failed'
+            $manifest.build.error = [string] $pairData.error
+            throw ('сборка пары не удалась: ' + [string] $pairData.error + ' (код Unity ' + $unityRun.ExitCode + '); смотри ' + $unityLog + ' и pair-status.json')
+        }
+        foreach ($builtFile in @($BuiltApk, $ServerPlayer)) {
+            if (-not (Test-Path -LiteralPath $builtFile)) {
+                $manifest.build.status = 'failed'
+                throw ('сборка пары отметилась успешной, но файла нет: ' + $builtFile)
+            }
+        }
+        $manifest.build.status = 'passed'
+        $pairRevision = Get-SourceRevision ('+' + [string] $pairData.revision)
+        $Apk = (Resolve-Path -LiteralPath $BuiltApk).Path
+        Write-Host ('  собрано за ' + $manifest.build.durationSeconds + ' с, ревизия ' + $pairData.revision)
+
+        # Сборка шла долго: условия шлема, проверенные до неё, перепроверяются.
+        $foreignPid = Get-AppPid
+        if ($null -ne $foreignPid) { throw ('за время сборки приложение ' + $Package + ' запустили не нашим прогоном (pid ' + $foreignPid + ')') }
+        $linkNow = Get-LinkComponent
+        if ($null -ne $linkNow -and -not $StopLink) { throw ('за время сборки шлем ушёл в Quest Link (' + $linkNow + ') — выйди из Link или запусти с -StopLink') }
+        if ($null -ne $linkNow -and $null -eq $linkComponent) {
+            $linkComponent = $linkNow
+            $manifest.link.wasActive = $true
+            $manifest.link.component = $linkNow
+        }
+        $dialogNow = Get-BlockingDialog
+        if ($null -ne $dialogNow) { throw ('за время сборки на шлеме открылся системный диалог ' + $dialogNow) }
+    }
+
     # ── условия прогона ──
     $manifest.device.model = Get-DeviceProp 'ro.product.model'
     $manifest.device.fingerprint = Get-DeviceProp 'ro.build.fingerprint'
@@ -726,6 +931,18 @@ try {
     $manifest.device.versionName = $version.versionName
     $manifest.device.lastUpdateTime = $version.lastUpdateTime
     if ($null -eq $version.versionCode) { throw ('пакет ' + $Package + ' не установлен') }
+
+    # ── ревизия APK до запуска; ревизию сервера отдаст его результат, сверка обеих — после прогона ──
+    $installedRevision = Get-SourceRevision $version.versionName
+    $manifest.builds.revisionClient = $installedRevision
+    if ($null -eq $installedRevision) {
+        Write-Host ('  versionName ' + (Format-VersionForReport $version.versionName) +
+            ' без штампа ревизии — сверка сборок даст код 2 (нужен APK Test/e2e со штампом)') -ForegroundColor Yellow
+    }
+    else { Write-Host ('  versionName ' + $version.versionName + ', ревизия APK ' + $installedRevision) }
+    if ($null -ne $pairRevision -and $installedRevision -cne $pairRevision) {
+        throw ('сборки из разных ревизий: собрана пара ' + $pairRevision + ', на шлеме установлен ' + (Format-VersionForReport $version.versionName))
+    }
 
     # ── сервер ──
     Write-Section 'Запускаю выделенный сервер'
@@ -921,17 +1138,22 @@ finally {
     # ── сверка сборок обеих сторон ──
     $manifest.builds.server = Get-BuildInfo $serverData
     $manifest.builds.client = Get-BuildInfo $clientData
+    # Ревизия шлема — из versionName установленного пакета (без него — из appVersion его результата),
+    # сервера — из appVersion его результата. Без результата сервера сверять нечего: прогон и так код 2.
     $buildMismatch = $null
-    $check = 'нет данных: в результате стороны нет условий сборки (старая сборка?)'
-    if ($null -ne $serverData -and $null -ne $clientData -and $null -ne $serverData.appVersion -and $null -ne $clientData.appVersion) {
-        if ([string] $serverData.unityVersion -ne [string] $clientData.unityVersion) {
+    $check = 'нет данных: результат сервера не получен, ревизию сервера сверить нельзя'
+    $clientVersion = [string] $manifest.device.versionName
+    if ($clientVersion -eq '' -and $null -ne $clientData) { $clientVersion = [string] $clientData.appVersion }
+    if ($null -ne $serverData) {
+        $revisionCheck = Get-RevisionCheck ([string] $serverData.appVersion) $clientVersion
+        $manifest.builds.revisionServer = $revisionCheck.server
+        $manifest.builds.revisionClient = $revisionCheck.client
+        $check = $revisionCheck.check
+        if ($null -ne $clientData -and [string] $serverData.unityVersion -ne [string] $clientData.unityVersion) {
             $buildMismatch = 'версии Unity сервера и шлема различаются: ' + $serverData.unityVersion + ' / ' + $clientData.unityVersion
+            $check = $buildMismatch + '; ' + $check
         }
-        elseif ([string] $serverData.appVersion -ne [string] $clientData.appVersion) {
-            $buildMismatch = 'appVersion сервера и шлема различаются: ' + $serverData.appVersion + ' / ' + $clientData.appVersion
-        }
-        $check = 'appVersion и unityVersion совпадают; штамп ревизии исходников вшивает этап quest-build (buildGuid у APK и Windows-плеера разный по природе)'
-        if ($null -ne $buildMismatch) { $check = $buildMismatch }
+        elseif ($null -ne $revisionCheck.mismatch) { $buildMismatch = $revisionCheck.mismatch }
     }
     $manifest.builds.check = $check
 

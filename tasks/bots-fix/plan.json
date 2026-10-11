@@ -131,6 +131,11 @@
           "task": "bots-fix",
           "stage": "pf-prototype",
           "state": "accepted"
+        },
+        {
+          "task": "grab-authority",
+          "stage": "death-release-authority",
+          "state": "merged"
         }
       ],
       "needs": [

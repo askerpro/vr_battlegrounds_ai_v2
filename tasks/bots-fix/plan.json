@@ -89,7 +89,13 @@
       "writes": [
         "Assets/Scripts/Bots/**",
         "Assets/Scripts/Debug/BotCombatStand/**",
-        "Assets/Editor/VR_Battlegrounds/Bots/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatSetup.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatStandBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandHandMotionRecorder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandHarnessControls.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandIdleMotionProbe.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandRecorder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandVisualCapture.cs",
         "tasks/bots-fix/**",
         "Assets/Scripts/Managers/PlayersManager.cs"
       ],
@@ -111,7 +117,13 @@
       "writes": [
         "Assets/Scripts/Bots/**",
         "Assets/Scripts/Debug/BotCombatStand/**",
-        "Assets/Editor/VR_Battlegrounds/Bots/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatSetup.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatStandBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandHandMotionRecorder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandHarnessControls.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandIdleMotionProbe.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandRecorder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandVisualCapture.cs",
         "tasks/bots-fix/**"
       ],
       "after": [
@@ -138,7 +150,13 @@
       "writes": [
         "Assets/Scripts/Bots/**",
         "Assets/Scripts/Debug/BotCombatStand/**",
-        "Assets/Editor/VR_Battlegrounds/Bots/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatSetup.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatStandBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandHandMotionRecorder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandHarnessControls.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandIdleMotionProbe.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandRecorder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandVisualCapture.cs",
         "tasks/bots-fix/**"
       ],
       "after": [
@@ -170,7 +188,13 @@
       "writes": [
         "Assets/Scripts/Bots/**",
         "Assets/Scripts/Debug/BotCombatStand/**",
-        "Assets/Editor/VR_Battlegrounds/Bots/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatSetup.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatStandBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandHandMotionRecorder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandHarnessControls.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandIdleMotionProbe.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandRecorder.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandVisualCapture.cs",
         "tasks/bots-fix/**",
         "Assets/Resources/Bots/**",
         "Assets/Tests/EditMode/Bots/**"

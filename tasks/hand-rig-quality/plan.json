@@ -96,6 +96,26 @@
       "needs": []
     },
     {
+      "id": "grip-authoring",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/**",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring.meta",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "contact-metrics",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "palm-validation",
       "writes": [
         "Assets/Editor/VR_Battlegrounds/Avatars/HandRigQuality/**",
@@ -160,6 +180,8 @@
     {
       "id": "mef-correction",
       "writes": [
+        "Assets/Art/HandPoses/**",
+        "Assets/Art/Avatars/MEF_Rig/HandPoses/**",
         "Tools/mef-avatar/**",
         "Assets/Models/Avatars/MEF_Optimized/**",
         "Assets/Prefabs/Player/Optimized_MEF_Player.prefab",
@@ -191,6 +213,11 @@
         {
           "task": "legs-ik",
           "stage": "pose-set",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-authoring",
           "state": "merged"
         }
       ],

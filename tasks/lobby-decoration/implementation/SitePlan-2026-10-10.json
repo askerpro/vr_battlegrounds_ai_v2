@@ -1,0 +1,30 @@
+{
+  "revision": 3,
+  "owner": "root",
+  "date": "2026-10-10",
+  "status": "directed_layout_pending_native_validation",
+  "space": "XZ metres relative to actual arena.center; Y from actual arena.max.y",
+  "perimeter": {"x": [-36, 36], "z": [-38, 45], "gateX": [24, 32], "gateZ": -38},
+  "zones": [
+    {"id": "interior", "role": "шатёр и арсеналы", "x": [-7.75, 7.75], "z": [-7.48, 7.48], "executor": "interior_zone", "state": "native_visual_corrections", "notes": "Two shelves and4cases perstation placed; root reviewed8zones-v1 PNGs. Fix facing and floating stacks; art gate pending. Preserve full201 sweeps/mirror exclusions."},
+    {"id": "range", "role": "стрельбище", "x": [-12, 12], "z": [7.48, 32], "executor": "integrator_existing_draft", "state": "pending_validation", "targetsX": [-6, -3, 0, 3, 6], "targetZOffsetFromTentEnd": 15, "backstopX": [-12, 12], "backstopZ": [26, 32]},
+    {"id": "construction", "role": "строительный участок", "x": [-31, -20], "z": [10, 22], "executor": "construction_zone_only", "state": "native_art_reviewed", "notes": "26 real vendor instances, 0 colliders; root viewed 3 native captures. East3m aisle clear. This is scoped art review, not user acceptance or Quest validation."},
+    {"id": "container_depot", "role": "контейнерный склад", "x": [-31, -16], "z": [30, 41], "executor": "integrator_existing_draft", "state": "pending_validation", "containerCenters": [[-26,34],[-26,38],[-20,37]], "notes": "Organized cargo storage outside shooting rays, inside the fence; no loose weapon crate scatter."},
+    {"id": "barracks", "role": "две казармы", "x": [-31, -16], "z": [-24, -8], "executor": "later_zone_assignment", "state": "reserved", "buildings": [{"x": [-29, -25], "z": [-22, -10]}, {"x": [-22, -18], "z": [-22, -10]}]},
+    {"id": "workshop", "role": "склад-мастерская", "x": [18, 30], "z": [-29, -13], "executor": "later_zone_assignment", "state": "reserved", "buildingX": [20, 28], "buildingZ": [-27, -15]},
+    {"id": "service_yard", "role": "машина и техническая площадка", "x": [10, 17], "z": [-33, -15], "executor": "integrator_existing_draft", "state": "pending_validation", "vehicleCenter": [14, -22], "vehicleLongAxis": "Z", "technicalCenter": [14, -27], "fuelCenter": [12, -30.5]},
+    {"id": "canopy", "role": "навес со столом", "x": [-31, -13], "z": [-36, -25], "executor": "rest_canopy_zone", "state": "bounded_implementation", "center": [-22, -30.5], "source": "SM_Tent_b", "sourceUniformScale": 1, "sourceSizeXZ": [15.494, 8.035]},
+    {"id": "checkpoint", "role": "КПП и вышка у угла", "x": [17, 36], "z": [-38, -27], "executor": "checkpoint_zone", "state": "native_layout_valid_art_clearance_pending", "towerCenter": [34, -31], "towerYaw": 0, "towerHeight": 8, "towerEnvelopeX": [32.2, 35.9], "towerEnvelopeZ": [-33, -29], "guardBoothCenter": [21, -32], "guardBoothSizeXZ": [4,4], "roadX": [24, 32], "roadZ": [-38, -27]}
+  ],
+  "scenery": {"role": "скалы и лес за оградой", "placement": "outside perimeter, continuous layered slopes with north valley saddle", "executor": "integrator_existing_draft", "state": "pending_validation"},
+  "temporaryFloodlights": {"state": "native_placed_scoped_reviewed", "userApprovedPlaceholder": true, "poleHeight": 6, "cubeHeadsPerPole": 2, "spotlightsPerPole": 1, "realtimeShadows": false, "sites": [{"zone": "range", "xz": [-11,18]}, {"zone": "range", "xz": [11,18]}, {"zone": "checkpoint", "xz": [33,-36]}, {"zone": "barracks", "xz": [-16.5,-23.5]}], "notes": "Label ПРОЖЕКТОР; pole, heads, label and light share one replaceable parent in their zone. Native source models unavailable; user requested cubes until replacement. Six final PNG and southern on/off viewed, not Quest acceptance."},
+  "rules": [
+    "Root owns zone positions and reserves; agents decorate one assigned zone only.",
+    "One persistent interior agent. One bounded exterior zone at a time; fresh checkpoint task after construction review.",
+    "Integrator alone writes Scene/MCP/common authoring and integrates frozen packages.",
+    "No area expansion without root reconciliation. Reports return actual world bounds; footprints are envelopes, not forced object sizes.",
+    "No isolated weapon crates/tables/barrels in open territory. Props belong to functional groups.",
+    "Arena physics, station sweeps, mirror access, target gameplay and clear shot rays remain protected.",
+    "Source fixtures and visible lighting; temporary floodlight cubes explicitly approved by user. Final expensive bake only after zone art review."
+  ]
+}

@@ -1,0 +1,50 @@
+// Ограниченная замена собственного BarracksDressing; общий Build не вызывается.
+var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+if (Application.isPlaying || EditorApplication.isCompiling || EditorApplication.isUpdating || scene.isDirty || UnityEngine.SceneManagement.SceneManager.sceneCount != 1 || scene.path != "Assets/Scenes/Lobby.unity") throw new Exception("Небезопасное состояние Editor");
+if (UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null) throw new Exception("Открыт prefab stage");
+var env = scene.GetRootGameObjects().Single(x => x.name == "Environment");
+var live = env.transform.Find("LobbyDecoration");
+const string asset = "Assets/Prefabs/Environment/LobbyDecoration/FieldCamp.prefab";
+if (live == null || PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(live.gameObject) != asset || live.Find("FunctionalZones") != null) throw new Exception("Не тот собственный экземпляр/группировка уже применена");
+var definition = scene.GetRootGameObjects().SelectMany(x => x.GetComponentsInChildren<VrBattlegrounds.LevelDesign.PhysicalArenaDefinition>(true)).Single();
+var floor = definition.FloorBounds;
+var tent = VrBattlegrounds.EditorTools.LobbyMilitaryCampSources.TentBounds(floor);
+var reportDir = "tasks/lobby-decoration/reports/implementation/barracks-zone/hinge-depth";
+System.IO.Directory.CreateDirectory(reportDir);
+var backup = System.IO.File.ReadAllBytes(asset);
+System.IO.File.WriteAllBytes(reportDir + "/FieldCamp-before.prefab", backup);
+GameObject contents = null;
+try
+{
+    contents = PrefabUtility.LoadPrefabContents(asset);
+    var old = contents.transform.Find("BarracksDressing");
+    var pole = old == null ? null : old.Find("Placeholder__Прожектор_4");
+    if (pole == null || pole.GetComponentsInChildren<Light>(true).Length != 1 || contents.GetComponentsInChildren<Light>(true).Length != 13) throw new Exception("Не подтверждены исходные13Light/опора4");
+    var polePosition = pole.position; var poleRotation = pole.rotation; var poleScale = pole.lossyScale;
+    pole.SetParent(contents.transform, true);
+    UnityEngine.Object.DestroyImmediate(old.gameObject);
+    VrBattlegrounds.EditorTools.LobbyBarracksDressingBuilder.Build(contents.transform, floor, tent);
+    pole.SetParent(contents.transform.Find("BarracksDressing"), true);
+    if (Vector3.Distance(pole.position,polePosition) > .0001f || Quaternion.Angle(pole.rotation,poleRotation) > .0001f || Vector3.Distance(pole.lossyScale,poleScale) > .0001f || contents.GetComponentsInChildren<Light>(true).Length != 13) throw new Exception("Изменена опора/числоLight");
+    bool saved; PrefabUtility.SaveAsPrefabAsset(contents,asset,out saved);
+    if (!saved) throw new Exception("Prefab не сохранён");
+}
+catch
+{
+    System.IO.File.WriteAllBytes(asset, backup);
+    AssetDatabase.ImportAsset(asset,ImportAssetOptions.ForceUpdate);
+    throw;
+}
+finally
+{
+    if (contents != null) PrefabUtility.UnloadPrefabContents(contents);
+}
+var lights = live.GetComponentsInChildren<Light>(true);
+var poles = live.GetComponentsInChildren<Transform>(true).Count(t=>t.name.StartsWith("Placeholder__Прожектор_"));
+if (lights.Length != 13 || poles != 4) throw new Exception("После обновления нарушены13Light/4опоры; сцену не сохранять");
+System.IO.File.WriteAllText(reportDir+"/dressing.json",JsonUtility.ToJson(VrBattlegrounds.EditorTools.LobbyBarracksDressingBuilder.LastReport,true));
+var native = new {utc=DateTime.UtcNow.ToString("o"), lightCount=lights.Length, placeholderGroups=poles, mainBindings=scene.GetRootGameObjects().SelectMany(x=>x.GetComponentsInChildren<VrBattlegrounds.LobbyZones.LobbyZoneLayoutBinding>(true)).Count()};
+System.IO.File.WriteAllText(reportDir+"/native-build.json",Newtonsoft.Json.JsonConvert.SerializeObject(native,Newtonsoft.Json.Formatting.Indented));
+UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
+if (!UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene)) throw new Exception("Не сохранена сцена");
+return new {saved=true, lightCount=lights.Length, placeholderGroups=poles,dirty=scene.isDirty,path=reportDir+"/native-build.json"};

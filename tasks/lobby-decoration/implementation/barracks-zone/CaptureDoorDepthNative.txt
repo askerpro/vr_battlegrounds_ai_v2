@@ -1,0 +1,31 @@
+// Те же камеры, что в отклонённом срезе: сравнение глубины дверных заполнений.
+if (Application.isPlaying || EditorApplication.isCompiling || EditorApplication.isUpdating || UnityEngine.SceneManagement.SceneManager.sceneCount != 1) throw new Exception("Editor занят");
+var metadata = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tasks/lobby-decoration/reports/implementation/visual-review/barracks-closed/metadata.json"));
+var directory = "tasks/lobby-decoration/reports/implementation/visual-review/barracks-hinge-depth/";
+System.IO.Directory.CreateDirectory(directory);
+var records = new System.Collections.Generic.List<object>();
+foreach (var view in metadata["views"])
+{
+    var eye = new Vector3((float)view["eye"][0],(float)view["eye"][1],(float)view["eye"][2]);
+    var target = new Vector3((float)view["target"][0],(float)view["target"][1],(float)view["target"][2]);
+    var name = (string)view["name"];
+    var go = new GameObject("TemporaryDoorDepthReview") {hideFlags=HideFlags.HideAndDontSave};
+    RenderTexture rt=null; Texture2D tex=null; var prior=RenderTexture.active;
+    try
+    {
+        var cam=go.AddComponent<Camera>();cam.enabled=false;cam.useOcclusionCulling=false;
+        go.transform.SetPositionAndRotation(eye,Quaternion.LookRotation(target-eye));
+        cam.fieldOfView=name=="from-tent"?60:45;cam.aspect=1280f/900;cam.nearClipPlane=.03f;cam.farClipPlane=800;cam.clearFlags=CameraClearFlags.Skybox;
+        rt=RenderTexture.GetTemporary(1280,900,24,RenderTextureFormat.ARGB32);cam.targetTexture=rt;cam.Render();RenderTexture.active=rt;
+        tex=new Texture2D(1280,900,TextureFormat.RGB24,false);tex.ReadPixels(new Rect(0,0,1280,900),0,0);tex.Apply();
+        var file=directory+name+".png";System.IO.File.WriteAllBytes(file,tex.EncodeToPNG());
+        records.Add(new {name=name,path=file,eye=new[]{eye.x,eye.y,eye.z},lookAt=new[]{target.x,target.y,target.z},fov=cam.fieldOfView,width=1280,height=900});
+    }
+    finally
+    {
+        RenderTexture.active=prior;UnityEngine.Object.DestroyImmediate(go);
+        if(rt!=null)RenderTexture.ReleaseTemporary(rt);if(tex!=null)UnityEngine.Object.DestroyImmediate(tex);
+    }
+}
+System.IO.File.WriteAllText(directory+"metadata.json",Newtonsoft.Json.JsonConvert.SerializeObject(new{utc=DateTime.UtcNow.ToString("o"),views=records},Newtonsoft.Json.Formatting.Indented));
+return new {count=records.Count,path=directory,dirty=UnityEngine.SceneManagement.SceneManager.GetActiveScene().isDirty,play=Application.isPlaying};

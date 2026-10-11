@@ -1,0 +1,10 @@
+{"placement": {
+ "WarehouseZone": [23.0, 2.0, 0],
+ "BarracksZone": [21.0, -17.0, 90],
+ "CheckpointZone": [43.5, -13.5, 270],
+ "TransportZone": [-5.5, -39.0, 180],
+ "ShippingDepotZone": [5.9, -25.0, 0],
+ "ConstructionZone": [-8.5, -22.5, 270],
+ "RestCanopyZone": [20.0, 17.5, 0],
+ "VehicleYardZone": [27.0, 33.0, 270]
+}}

@@ -30,6 +30,8 @@
         "Assets/Prefabs/Environment/LobbyDecoration.meta",
         "Assets/Scripts/Environment/Audio/**",
         "Assets/Scripts/Environment/Audio.meta",
+        "Assets/Scripts/Environment/LobbyZoneLayoutBinding.cs",
+        "Assets/Scripts/Environment/LobbyZoneLayoutBinding.cs.meta",
         "Assets/Scripts/Environment.meta",
         "Assets/Data/Audio/LobbyAmbienceProfile.asset",
         "Assets/Data/Audio/LobbyAmbienceProfile.asset.meta",

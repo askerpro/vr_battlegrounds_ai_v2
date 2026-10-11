@@ -1,0 +1,5394 @@
+{
+ "name": "checkpoint-post",
+ "description": "Одноэтажный пост из модулей (LV_Showcase, 6 одинаковых экземпляров; взят экземпляр с ящиками и мешками на крыше): коробка 6.5x9 м по осям стен, плоская крыша-площадка с навесом 2.35 м на стороне -X на 5 столбах, перила, наружная лестница, интерьер (стеллаж с ящиками, шкафы)",
+ "source": "HDRP(Default)/Scenes/Showcase/LV_Showcase.unity (MilitaryCamp); скрипты find_posts.py/post_local.py/export_post.py",
+ "sourceInstance": {
+  "index": 5,
+  "worldOrigin": [
+   -71.756125,
+   51.1727,
+   -886.00025
+  ],
+  "worldYaw": -0.9544438317058872
+ },
+ "frame": "y=0 — низ бетонного цоколя SM_Border_2m (земля); пол стен на y=0.367; начало — центр коробки стен; +Z — сторона двери (наружу); эйлер Unity ZXY и кватернион [x,y,z,w]",
+ "footprint": {
+  "wallAxesXZ": [
+   6.5,
+   9.0
+  ],
+  "plinthOuterXZ": [
+   6.7,
+   9.2
+  ],
+  "roofDeckX": [
+   -5.75,
+   3.4
+  ],
+  "roofDeckZ": [
+   -4.65,
+   4.65
+  ],
+  "canopySide": "-X (вынос ~2.35 м, 5 столбов SM_Concrete_pile_A на x=-5.6)",
+  "heights": {
+   "floor": 0.367,
+   "roofDeckTop": 3.517,
+   "railingTop": 4.5
+  }
+ },
+ "triangles": {
+  "lod0ByGroup": {
+   "deck": 11580,
+   "groundProps": 5616,
+   "interior": 56764,
+   "roofProps": 24918,
+   "shell": 10506
+  },
+  "lod0Total": 109384,
+  "lod0WithoutInterior": 52620
+ },
+ "missingStems": [
+  "SM_AmmoCase_01_base",
+  "SM_Border_2m",
+  "SM_Border_90d",
+  "SM_Building_roof_1x2_02",
+  "SM_Building_roof_2x4_01",
+  "SM_Building_wall_1m_A_2",
+  "SM_Building_wall_corner_90d_A_2",
+  "SM_Building_wall_entrance_2m_B",
+  "SM_Building_wall_window_2m_A_2",
+  "SM_Building_wall_window_2m_B_2",
+  "SM_ClothesCabinet_door_a",
+  "SM_ClothesCabinet_door_b",
+  "SM_Cornice_1m_A",
+  "SM_Cornice_2m_A",
+  "SM_Cornice_3m_A",
+  "SM_Cornice_90d_A",
+  "SM_Fence_1m",
+  "SM_Fence_90d",
+  "SM_MetalShelves",
+  "SM_MilitaryCrate_01_base",
+  "SM_Tire_02",
+  "SM_cabinet_door",
+  "SM_cabinet_drawer"
+ ],
+ "missingStemGuids": {
+  "SM_AmmoCase_01_base": "abc00000000012510634726775454294",
+  "SM_Border_2m": "abc00000000001902639084988825760",
+  "SM_Border_90d": "abc00000000005377392960842134064",
+  "SM_Building_roof_1x2_02": "abc00000000010607521527048775274",
+  "SM_Building_roof_2x4_01": "abc00000000000150124084206246574",
+  "SM_Building_wall_1m_A_2": "2fbd3691bd95273499d9a4744a2cf046",
+  "SM_Building_wall_corner_90d_A_2": "e63c206da02abb944892d4983bd63b92",
+  "SM_Building_wall_entrance_2m_B": "abc00000000007867181177345026373",
+  "SM_Building_wall_window_2m_A_2": "5e991c93f02605f4296466227bb8c56a",
+  "SM_Building_wall_window_2m_B_2": "e595c34e52726d347bbe7c793f5d7776",
+  "SM_ClothesCabinet_door_a": "abc00000000005534643473393650393",
+  "SM_ClothesCabinet_door_b": "abc00000000014373859192383866002",
+  "SM_Cornice_1m_A": "abc00000000016074327791990369306",
+  "SM_Cornice_2m_A": "abc00000000000682649867183743831",
+  "SM_Cornice_3m_A": "abc00000000000167621498760165196",
+  "SM_Cornice_90d_A": "abc00000000014749421710352669989",
+  "SM_Fence_1m": "abc00000000014940045378452064234",
+  "SM_Fence_90d": "abc00000000012600844335108615553",
+  "SM_MetalShelves": "abc00000000017569690582065895197",
+  "SM_MilitaryCrate_01_base": "abc00000000007165557189980783514",
+  "SM_Tire_02": "abc00000000012653026101846956897",
+  "SM_cabinet_door": "abc00000000006585340309445130861",
+  "SM_cabinet_drawer": "abc00000000006745716355513173226"
+ },
+ "parts": [
+  {
+   "stem": "SM_Concrete_pile_A",
+   "group": "deck",
+   "position": [
+    -5.6,
+    -0.1,
+    -4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.1875,
+    1.375,
+    1.1875
+   ],
+   "imported": true,
+   "lod0Triangles": 44
+  },
+  {
+   "stem": "SM_Concrete_pile_A",
+   "group": "deck",
+   "position": [
+    -5.6,
+    -0.1,
+    -2.2
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.1875,
+    1.375,
+    1.1875
+   ],
+   "imported": true,
+   "lod0Triangles": 44
+  },
+  {
+   "stem": "SM_Concrete_pile_A",
+   "group": "deck",
+   "position": [
+    -5.6,
+    -0.1,
+    0.05
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.1875,
+    1.375,
+    1.1875
+   ],
+   "imported": true,
+   "lod0Triangles": 44
+  },
+  {
+   "stem": "SM_Concrete_pile_A",
+   "group": "deck",
+   "position": [
+    -5.6,
+    -0.1,
+    2.4
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.1875,
+    1.375,
+    1.1875
+   ],
+   "imported": true,
+   "lod0Triangles": 44
+  },
+  {
+   "stem": "SM_Concrete_pile_A",
+   "group": "deck",
+   "position": [
+    -5.6,
+    -0.1,
+    4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.1875,
+    1.375,
+    1.1875
+   ],
+   "imported": true,
+   "lod0Triangles": 44
+  },
+  {
+   "stem": "SM_Cornice_1m_A",
+   "group": "deck",
+   "position": [
+    -5.6,
+    3.302,
+    -2.45
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0995,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 203
+  },
+  {
+   "stem": "SM_Cornice_1m_A",
+   "group": "deck",
+   "position": [
+    3.2,
+    3.302,
+    2.45
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.102,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 203
+  },
+  {
+   "stem": "SM_Cornice_2m_A",
+   "group": "deck",
+   "position": [
+    -4.7,
+    3.302,
+    -4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 202
+  },
+  {
+   "stem": "SM_Cornice_2m_A",
+   "group": "deck",
+   "position": [
+    -2.7,
+    3.302,
+    -4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 202
+  },
+  {
+   "stem": "SM_Cornice_2m_A",
+   "group": "deck",
+   "position": [
+    -2.7,
+    3.302,
+    4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 202
+  },
+  {
+   "stem": "SM_Cornice_2m_A",
+   "group": "deck",
+   "position": [
+    -0.7,
+    3.302,
+    4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 202
+  },
+  {
+   "stem": "SM_Cornice_3m_A",
+   "group": "deck",
+   "position": [
+    -5.6,
+    3.302,
+    0.55
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 202
+  },
+  {
+   "stem": "SM_Cornice_3m_A",
+   "group": "deck",
+   "position": [
+    -5.6,
+    3.302,
+    3.55
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 202
+  },
+  {
+   "stem": "SM_Cornice_3m_A",
+   "group": "deck",
+   "position": [
+    -0.7,
+    3.302,
+    -4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 202
+  },
+  {
+   "stem": "SM_Cornice_3m_A",
+   "group": "deck",
+   "position": [
+    2.3,
+    3.302,
+    4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 202
+  },
+  {
+   "stem": "SM_Cornice_3m_A",
+   "group": "deck",
+   "position": [
+    3.2,
+    3.302,
+    -3.55
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 202
+  },
+  {
+   "stem": "SM_Cornice_3m_A",
+   "group": "deck",
+   "position": [
+    3.2,
+    3.302,
+    -0.55
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 202
+  },
+  {
+   "stem": "SM_Cornice_90d_A",
+   "group": "deck",
+   "position": [
+    -4.7,
+    3.302,
+    -3.55
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 420
+  },
+  {
+   "stem": "SM_Cornice_90d_A",
+   "group": "deck",
+   "position": [
+    -4.7,
+    3.302,
+    3.55
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 420
+  },
+  {
+   "stem": "SM_Cornice_90d_A",
+   "group": "deck",
+   "position": [
+    2.3,
+    3.302,
+    -3.55
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 420
+  },
+  {
+   "stem": "SM_Cornice_90d_A",
+   "group": "deck",
+   "position": [
+    2.3,
+    3.302,
+    3.55
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 420
+  },
+  {
+   "stem": "SM_Fence_1m",
+   "group": "deck",
+   "position": [
+    -5.75,
+    3.6,
+    -3.2
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 184
+  },
+  {
+   "stem": "SM_Fence_1m",
+   "group": "deck",
+   "position": [
+    -5.75,
+    3.6,
+    0.1
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 184
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    -5.75,
+    3.6,
+    -1.05
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    -5.75,
+    3.6,
+    4.4
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    -5.45,
+    3.6,
+    -4.6
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    -3.4,
+    3.6,
+    4.65
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    -3.3,
+    3.6,
+    -4.6
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    -1.25,
+    3.6,
+    4.65
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    -1.15,
+    3.6,
+    -4.6
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    0.9,
+    3.6,
+    4.65
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    1.0,
+    3.6,
+    -4.6
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    3.05,
+    3.6,
+    4.65
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    3.4,
+    3.6,
+    -4.2
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    3.4,
+    3.6,
+    -2.05
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    3.4,
+    3.6,
+    0.1
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_2m",
+   "group": "deck",
+   "position": [
+    3.4,
+    3.6,
+    2.25
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 238
+  },
+  {
+   "stem": "SM_Fence_90d",
+   "group": "deck",
+   "position": [
+    -5.768,
+    3.6,
+    -4.35
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 230
+  },
+  {
+   "stem": "SM_Fence_90d",
+   "group": "deck",
+   "position": [
+    -5.55,
+    3.6,
+    4.65
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 230
+  },
+  {
+   "stem": "SM_Fence_90d",
+   "group": "deck",
+   "position": [
+    3.132,
+    3.6,
+    -4.6
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 230
+  },
+  {
+   "stem": "SM_Fence_90d",
+   "group": "deck",
+   "position": [
+    3.4,
+    3.6,
+    4.4
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 230
+  },
+  {
+   "stem": "SM_Stairs_2m_A",
+   "group": "deck",
+   "position": [
+    -5.8,
+    3.65,
+    2.2
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2634
+  },
+  {
+   "stem": "SM_SandBarrier_02",
+   "group": "groundProps",
+   "position": [
+    -3.652,
+    -0.04,
+    -5.078
+   ],
+   "rotationEuler": [
+    0.0,
+    -178.28,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.99989,
+    0.0,
+    -0.01502
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2756
+  },
+  {
+   "stem": "SM_SandBarrier_03",
+   "group": "groundProps",
+   "position": [
+    -2.477,
+    -0.04,
+    -5.644
+   ],
+   "rotationEuler": [
+    0.0,
+    90.95,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.71297,
+    0.0,
+    0.70119
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 1430
+  },
+  {
+   "stem": "SM_SandBarrier_03",
+   "group": "groundProps",
+   "position": [
+    -4.166,
+    -0.01,
+    2.325
+   ],
+   "rotationEuler": [
+    0.0,
+    90.95,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.71297,
+    0.0,
+    0.70119
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 1430
+  },
+  {
+   "stem": "SM_AmmoCartridgeBoxes_01",
+   "group": "interior",
+   "position": [
+    -2.513,
+    0.645,
+    -1.775
+   ],
+   "rotationEuler": [
+    0.0,
+    83.14,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.66353,
+    0.0,
+    0.74815
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 12
+  },
+  {
+   "stem": "SM_AmmoCartridgeBoxes_01",
+   "group": "interior",
+   "position": [
+    -2.603,
+    2.373,
+    -1.735
+   ],
+   "rotationEuler": [
+    0.0,
+    87.88,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.69388,
+    0.0,
+    0.72009
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 12
+  },
+  {
+   "stem": "SM_AmmoCartridgeBoxes_02",
+   "group": "interior",
+   "position": [
+    -2.339,
+    1.509,
+    -2.516
+   ],
+   "rotationEuler": [
+    0.0,
+    1.85,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.01616,
+    0.0,
+    0.99987
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 12
+  },
+  {
+   "stem": "SM_AmmoCartridgeBoxes_03",
+   "group": "interior",
+   "position": [
+    -2.582,
+    2.373,
+    -1.912
+   ],
+   "rotationEuler": [
+    0.0,
+    66.81,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.55056,
+    0.0,
+    0.8348
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 12
+  },
+  {
+   "stem": "SM_AmmoCase_01",
+   "group": "interior",
+   "position": [
+    -2.592,
+    0.645,
+    -1.917
+   ],
+   "rotationEuler": [
+    0.0,
+    86.5,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.68518,
+    0.0,
+    0.72837
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 1708
+  },
+  {
+   "stem": "SM_AmmoCase_01",
+   "group": "interior",
+   "position": [
+    1.123,
+    1.41,
+    -4.024
+   ],
+   "rotationEuler": [
+    0.0,
+    -173.1,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.99819,
+    0.0,
+    -0.06016
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 1708
+  },
+  {
+   "stem": "SM_AmmoCase_01",
+   "group": "interior",
+   "position": [
+    -2.442,
+    2.373,
+    -3.467
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.4,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.7096,
+    0.0,
+    -0.7046
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 1708
+  },
+  {
+   "stem": "SM_AmmoCase_01",
+   "group": "interior",
+   "position": [
+    -2.441,
+    2.373,
+    -3.604
+   ],
+   "rotationEuler": [
+    0.0,
+    89.48,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70389,
+    0.0,
+    0.71031
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 1708
+  },
+  {
+   "stem": "SM_AmmoCase_01",
+   "group": "interior",
+   "position": [
+    -2.44,
+    2.373,
+    -3.733
+   ],
+   "rotationEuler": [
+    0.0,
+    89.48,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70389,
+    0.0,
+    0.71031
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 1708
+  },
+  {
+   "stem": "SM_AmmoCase_01_base",
+   "group": "interior",
+   "position": [
+    1.336,
+    1.41,
+    -4.012
+   ],
+   "rotationEuler": [
+    0.0,
+    -4.88,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.04258,
+    0.0,
+    0.99909
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 368
+  },
+  {
+   "stem": "SM_AmmoCase_02",
+   "group": "interior",
+   "position": [
+    -2.669,
+    0.645,
+    -1.435
+   ],
+   "rotationEuler": [
+    0.0,
+    -87.63,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.69233,
+    0.0,
+    0.72158
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 3038
+  },
+  {
+   "stem": "SM_AmmoCase_02",
+   "group": "interior",
+   "position": [
+    -2.662,
+    0.645,
+    -1.726
+   ],
+   "rotationEuler": [
+    0.0,
+    -1.28,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.01117,
+    0.0,
+    0.99994
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 3038
+  },
+  {
+   "stem": "SM_AmmoCase_02",
+   "group": "interior",
+   "position": [
+    -2.174,
+    2.373,
+    -3.844
+   ],
+   "rotationEuler": [
+    0.0,
+    66.81,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.55056,
+    0.0,
+    0.8348
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 3038
+  },
+  {
+   "stem": "SM_Chair",
+   "group": "interior",
+   "position": [
+    -2.28,
+    0.367,
+    -0.264
+   ],
+   "rotationEuler": [
+    0.0,
+    66.81,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.55056,
+    0.0,
+    0.8348
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 872
+  },
+  {
+   "stem": "SM_Chair",
+   "group": "interior",
+   "position": [
+    2.464,
+    0.367,
+    3.606
+   ],
+   "rotationEuler": [
+    0.0,
+    -92.9,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.72477,
+    0.0,
+    -0.68899
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 872
+  },
+  {
+   "stem": "SM_ClothesCabinet",
+   "group": "interior",
+   "position": [
+    2.251,
+    0.367,
+    -3.862
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 496
+  },
+  {
+   "stem": "SM_ClothesCabinet_door_a",
+   "group": "interior",
+   "position": [
+    2.051,
+    0.517,
+    -3.497
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 1042
+  },
+  {
+   "stem": "SM_ClothesCabinet_door_b",
+   "group": "interior",
+   "position": [
+    1.584,
+    0.517,
+    -3.497
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 1042
+  },
+  {
+   "stem": "SM_ClothesCabinet_door_b",
+   "group": "interior",
+   "position": [
+    2.52,
+    0.517,
+    -3.497
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 1042
+  },
+  {
+   "stem": "SM_Lamp_long",
+   "group": "interior",
+   "position": [
+    0.089,
+    3.367,
+    0.01
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 768
+  },
+  {
+   "stem": "SM_MetalShelves",
+   "group": "interior",
+   "position": [
+    -2.365,
+    0.367,
+    -2.509
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 6398
+  },
+  {
+   "stem": "SM_MilitaryCrate_01",
+   "group": "interior",
+   "position": [
+    2.377,
+    0.367,
+    2.867
+   ],
+   "rotationEuler": [
+    0.0,
+    74.04,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.60208,
+    0.0,
+    0.79844
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 4712
+  },
+  {
+   "stem": "SM_MilitaryCrate_01_base",
+   "group": "interior",
+   "position": [
+    -2.356,
+    0.645,
+    -2.289
+   ],
+   "rotationEuler": [
+    0.0,
+    91.25,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.71475,
+    0.0,
+    0.69938
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 2671
+  },
+  {
+   "stem": "SM_MilitaryCrate_02",
+   "group": "interior",
+   "position": [
+    -2.256,
+    0.645,
+    -3.296
+   ],
+   "rotationEuler": [
+    0.0,
+    66.81,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.55056,
+    0.0,
+    0.8348
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 1887
+  },
+  {
+   "stem": "SM_MilitaryCrate_03",
+   "group": "interior",
+   "position": [
+    -2.387,
+    1.509,
+    -3.205
+   ],
+   "rotationEuler": [
+    0.0,
+    -3.23,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0282,
+    0.0,
+    0.9996
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 5508
+  },
+  {
+   "stem": "SM_MilitaryCrate_03",
+   "group": "interior",
+   "position": [
+    -2.328,
+    1.509,
+    -1.961
+   ],
+   "rotationEuler": [
+    0.0,
+    43.38,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.36957,
+    0.0,
+    0.9292
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 5508
+  },
+  {
+   "stem": "SM_MilitaryCrate_03",
+   "group": "interior",
+   "position": [
+    -2.554,
+    2.373,
+    -2.64
+   ],
+   "rotationEuler": [
+    0.0,
+    179.5,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.99999,
+    0.0,
+    0.00441
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 5508
+  },
+  {
+   "stem": "SM_cabinet_a",
+   "group": "interior",
+   "position": [
+    0.773,
+    0.367,
+    -3.869
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 180
+  },
+  {
+   "stem": "SM_cabinet_door",
+   "group": "interior",
+   "position": [
+    0.066,
+    0.517,
+    -3.531
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 20
+  },
+  {
+   "stem": "SM_cabinet_door",
+   "group": "interior",
+   "position": [
+    0.789,
+    0.517,
+    -3.531
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 20
+  },
+  {
+   "stem": "SM_cabinet_drawer",
+   "group": "interior",
+   "position": [
+    0.066,
+    1.167,
+    -3.531
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 74
+  },
+  {
+   "stem": "SM_cabinet_drawer",
+   "group": "interior",
+   "position": [
+    0.789,
+    1.167,
+    -3.531
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 74
+  },
+  {
+   "stem": "SM_SandBarrier_01",
+   "group": "roofProps",
+   "position": [
+    1.394,
+    3.517,
+    -3.81
+   ],
+   "rotationEuler": [
+    0.0,
+    90.95,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.71297,
+    0.0,
+    0.70119
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2982
+  },
+  {
+   "stem": "SM_StrappedContainer",
+   "group": "roofProps",
+   "position": [
+    2.246,
+    3.517,
+    3.009
+   ],
+   "rotationEuler": [
+    0.0,
+    96.81,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.74785,
+    0.0,
+    0.66386
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 16500
+  },
+  {
+   "stem": "SM_Tire_02",
+   "group": "roofProps",
+   "position": [
+    1.074,
+    3.517,
+    3.877
+   ],
+   "rotationEuler": [
+    0.0,
+    90.95,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.71297,
+    0.0,
+    0.70119
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 5436
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -3.35,
+    0.0,
+    -2.1
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -3.35,
+    0.0,
+    1.9
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -3.2,
+    0.0,
+    -2.1
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -3.2,
+    0.0,
+    1.9
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.1004,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -2.85,
+    0.0,
+    -4.6
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -0.85,
+    0.0,
+    -4.6
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -0.713,
+    0.0,
+    4.6
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.074,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    0.692,
+    0.0,
+    4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0824,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    2.85,
+    0.0,
+    -4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    0.8537,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    3.2,
+    0.0,
+    -1.9
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.1004,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    3.2,
+    0.0,
+    2.1
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    3.35,
+    0.0,
+    -1.9
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    3.35,
+    0.0,
+    2.1
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -3.15,
+    0.35,
+    -2.1
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    0.9063,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -3.15,
+    0.35,
+    -0.1
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -3.15,
+    0.35,
+    1.9
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -3.15,
+    0.35,
+    3.9
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -2.65,
+    0.35,
+    -4.4
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    0.6562,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -1.35,
+    0.35,
+    -4.4
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    -0.65,
+    0.35,
+    4.4
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    0.65,
+    0.35,
+    -4.4
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    2.65,
+    0.35,
+    4.4
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    3.0,
+    0.35,
+    1.9
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    3.0,
+    0.35,
+    3.9
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    3.15,
+    0.35,
+    -3.9
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    0.9063,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_2m",
+   "group": "shell",
+   "position": [
+    3.15,
+    0.35,
+    -2.1
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 118
+  },
+  {
+   "stem": "SM_Border_90d",
+   "group": "shell",
+   "position": [
+    -3.35,
+    0.0,
+    -4.1
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 197
+  },
+  {
+   "stem": "SM_Border_90d",
+   "group": "shell",
+   "position": [
+    -2.85,
+    0.0,
+    4.6
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 197
+  },
+  {
+   "stem": "SM_Border_90d",
+   "group": "shell",
+   "position": [
+    2.85,
+    0.0,
+    -4.6
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 197
+  },
+  {
+   "stem": "SM_Border_90d",
+   "group": "shell",
+   "position": [
+    3.35,
+    0.0,
+    4.1
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 197
+  },
+  {
+   "stem": "SM_Border_90d",
+   "group": "shell",
+   "position": [
+    -3.15,
+    0.35,
+    -3.9
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 197
+  },
+  {
+   "stem": "SM_Border_90d",
+   "group": "shell",
+   "position": [
+    -2.65,
+    0.35,
+    4.4
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 197
+  },
+  {
+   "stem": "SM_Border_90d",
+   "group": "shell",
+   "position": [
+    2.65,
+    0.35,
+    -4.4
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 197
+  },
+  {
+   "stem": "SM_Border_90d",
+   "group": "shell",
+   "position": [
+    3.15,
+    0.35,
+    3.9
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 197
+  },
+  {
+   "stem": "SM_Building_roof_1x2_02",
+   "group": "shell",
+   "position": [
+    -1.008,
+    0.176,
+    5.256
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.1812,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 108
+  },
+  {
+   "stem": "SM_Building_roof_2x4_01",
+   "group": "shell",
+   "position": [
+    3.25,
+    3.367,
+    0.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.25
+   ],
+   "imported": false,
+   "lod0Triangles": 32
+  },
+  {
+   "stem": "SM_Building_roof_2x4_01",
+   "group": "shell",
+   "position": [
+    3.25,
+    3.367,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 32
+  },
+  {
+   "stem": "SM_Building_roof_4x4_01",
+   "group": "shell",
+   "position": [
+    -2.75,
+    3.367,
+    0.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    0.7187,
+    1.0,
+    1.25
+   ],
+   "imported": true,
+   "lod0Triangles": 38
+  },
+  {
+   "stem": "SM_Building_roof_4x4_01",
+   "group": "shell",
+   "position": [
+    -2.75,
+    3.367,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    0.7187,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 38
+  },
+  {
+   "stem": "SM_Building_roof_4x4_01",
+   "group": "shell",
+   "position": [
+    1.25,
+    3.367,
+    0.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.25
+   ],
+   "imported": true,
+   "lod0Triangles": 38
+  },
+  {
+   "stem": "SM_Building_roof_4x4_01",
+   "group": "shell",
+   "position": [
+    1.25,
+    3.367,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 38
+  },
+  {
+   "stem": "SM_Building_roof_4x4_02",
+   "group": "shell",
+   "position": [
+    -1.627,
+    -0.001,
+    5.666
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.1792,
+    0.8108
+   ],
+   "imported": true,
+   "lod0Triangles": 82
+  },
+  {
+   "stem": "SM_Building_roof_4x4_02",
+   "group": "shell",
+   "position": [
+    1.2,
+    0.217,
+    0.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0937,
+    1.0,
+    1.25
+   ],
+   "imported": true,
+   "lod0Triangles": 82
+  },
+  {
+   "stem": "SM_Building_roof_4x4_02",
+   "group": "shell",
+   "position": [
+    1.2,
+    0.217,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0937,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 82
+  },
+  {
+   "stem": "SM_Building_roof_4x4_02",
+   "group": "shell",
+   "position": [
+    3.2,
+    0.217,
+    0.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    0.5,
+    1.0,
+    1.25
+   ],
+   "imported": true,
+   "lod0Triangles": 82
+  },
+  {
+   "stem": "SM_Building_roof_4x4_02",
+   "group": "shell",
+   "position": [
+    3.2,
+    0.217,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    0.5,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 82
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    0.367,
+    -4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    90.0
+   ],
+   "quaternion": [
+    0.5,
+    0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    0.367,
+    -2.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    90.0
+   ],
+   "quaternion": [
+    0.5,
+    0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    0.367,
+    -0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    90.0
+   ],
+   "quaternion": [
+    0.5,
+    0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    0.367,
+    2.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    90.0
+   ],
+   "quaternion": [
+    0.5,
+    0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -2.75,
+    0.367,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    90.0
+   ],
+   "quaternion": [
+    0.70711,
+    0.70711,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -0.75,
+    0.367,
+    -4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.0,
+    -0.0,
+    0.70711,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    0.75,
+    0.367,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    90.0
+   ],
+   "quaternion": [
+    0.70711,
+    0.70711,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    1.25,
+    0.367,
+    -4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.0,
+    -0.0,
+    0.70711,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    2.75,
+    0.367,
+    -4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.0,
+    -0.0,
+    0.70711,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    0.367,
+    -2.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.5,
+    -0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    0.367,
+    0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.5,
+    -0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    0.367,
+    2.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.5,
+    -0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    0.367,
+    4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.5,
+    -0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    1.367,
+    -4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    90.0
+   ],
+   "quaternion": [
+    0.5,
+    0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    1.367,
+    -0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    90.0
+   ],
+   "quaternion": [
+    0.5,
+    0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -2.75,
+    1.367,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    90.0
+   ],
+   "quaternion": [
+    0.70711,
+    0.70711,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    0.75,
+    1.367,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    90.0
+   ],
+   "quaternion": [
+    0.70711,
+    0.70711,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    1.25,
+    1.367,
+    -4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.0,
+    -0.0,
+    0.70711,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    2.75,
+    1.367,
+    -4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.0,
+    -0.0,
+    0.70711,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    1.367,
+    -2.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.5,
+    -0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    1.367,
+    0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.5,
+    -0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    1.367,
+    4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.5,
+    -0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    2.367,
+    -4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    90.0
+   ],
+   "quaternion": [
+    0.5,
+    0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    2.367,
+    -0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    90.0
+   ],
+   "quaternion": [
+    0.5,
+    0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -2.75,
+    2.367,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    90.0
+   ],
+   "quaternion": [
+    0.70711,
+    0.70711,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    0.75,
+    2.367,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    90.0
+   ],
+   "quaternion": [
+    0.70711,
+    0.70711,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    1.25,
+    2.367,
+    -4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.0,
+    -0.0,
+    0.70711,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    2.75,
+    2.367,
+    -4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.0,
+    -0.0,
+    0.70711,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    2.367,
+    -2.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.5,
+    -0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    2.367,
+    0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.5,
+    -0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    2.367,
+    4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    90.0
+   ],
+   "quaternion": [
+    -0.5,
+    -0.5,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_1m_A_2",
+   "group": "shell",
+   "position": [
+    -0.75,
+    2.867,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    90.0
+   ],
+   "quaternion": [
+    0.70711,
+    0.70711,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    0.5,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 64
+  },
+  {
+   "stem": "SM_Building_wall_corner_90d_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    0.367,
+    -4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 34
+  },
+  {
+   "stem": "SM_Building_wall_corner_90d_A_2",
+   "group": "shell",
+   "position": [
+    -2.75,
+    0.367,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 34
+  },
+  {
+   "stem": "SM_Building_wall_corner_90d_A_2",
+   "group": "shell",
+   "position": [
+    2.75,
+    0.367,
+    -4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 34
+  },
+  {
+   "stem": "SM_Building_wall_corner_90d_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    0.367,
+    4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 34
+  },
+  {
+   "stem": "SM_Building_wall_corner_90d_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    1.867,
+    -4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 34
+  },
+  {
+   "stem": "SM_Building_wall_corner_90d_A_2",
+   "group": "shell",
+   "position": [
+    -2.75,
+    1.867,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 34
+  },
+  {
+   "stem": "SM_Building_wall_corner_90d_A_2",
+   "group": "shell",
+   "position": [
+    2.75,
+    1.867,
+    -4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 34
+  },
+  {
+   "stem": "SM_Building_wall_corner_90d_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    1.867,
+    4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    0.75,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 34
+  },
+  {
+   "stem": "SM_Building_wall_entrance_2m_B",
+   "group": "shell",
+   "position": [
+    -0.75,
+    0.367,
+    4.3
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 176
+  },
+  {
+   "stem": "SM_Building_wall_window_2m_A_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    1.367,
+    -0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 400
+  },
+  {
+   "stem": "SM_Building_wall_window_2m_A_2",
+   "group": "shell",
+   "position": [
+    -2.75,
+    1.367,
+    -4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 400
+  },
+  {
+   "stem": "SM_Building_wall_window_2m_A_2",
+   "group": "shell",
+   "position": [
+    3.25,
+    1.367,
+    0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 400
+  },
+  {
+   "stem": "SM_Building_wall_window_2m_B_2",
+   "group": "shell",
+   "position": [
+    -3.25,
+    1.367,
+    4.0
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": false,
+   "lod0Triangles": 720
+  },
+  {
+   "stem": "SM_Door_single",
+   "group": "shell",
+   "position": [
+    0.553,
+    0.381,
+    4.45
+   ],
+   "rotationEuler": [
+    0.0,
+    -171.16,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.99703,
+    0.0,
+    -0.07705
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 664
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -3.051,
+    0.486,
+    -2.617
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.1
+   ],
+   "quaternion": [
+    0.00063,
+    0.70711,
+    -0.00063,
+    -0.70711
+   ],
+   "scale": [
+    -0.9275,
+    0.9699,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -3.051,
+    0.488,
+    2.119
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    -0.04
+   ],
+   "quaternion": [
+    -0.00026,
+    0.70711,
+    0.00026,
+    -0.70711
+   ],
+   "scale": [
+    -1.1872,
+    0.9699,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -3.051,
+    0.49,
+    -0.248
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.1
+   ],
+   "quaternion": [
+    0.00063,
+    0.70711,
+    -0.00063,
+    -0.70711
+   ],
+   "scale": [
+    -1.1872,
+    0.9699,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -0.856,
+    0.496,
+    4.302
+   ],
+   "rotationEuler": [
+    -0.71,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.00616,
+    0.0,
+    -0.0,
+    -0.99998
+   ],
+   "scale": [
+    -1.1872,
+    0.9699,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    3.247,
+    0.496,
+    4.302
+   ],
+   "rotationEuler": [
+    -0.71,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.00616,
+    0.0,
+    -0.0,
+    -0.99998
+   ],
+   "scale": [
+    -1.2081,
+    0.8402,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -3.051,
+    0.498,
+    4.492
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.1
+   ],
+   "quaternion": [
+    0.00063,
+    0.70711,
+    -0.00063,
+    -0.70711
+   ],
+   "scale": [
+    -1.1872,
+    0.9699,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -1.545,
+    0.498,
+    -4.3
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    0.8441,
+    0.7095,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    0.554,
+    0.498,
+    -4.3
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0535,
+    0.7095,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    3.05,
+    0.498,
+    -1.814
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.34,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    3.05,
+    0.498,
+    0.851
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.34,
+    0.5597,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    3.05,
+    0.498,
+    4.485
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    -0.71
+   ],
+   "quaternion": [
+    -0.00435,
+    0.70709,
+    -0.00435,
+    0.70709
+   ],
+   "scale": [
+    1.8206,
+    1.2098,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    3.233,
+    0.498,
+    -4.3
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.34,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -3.25,
+    0.847,
+    -2.416
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    0.9505,
+    0.3732,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -3.25,
+    0.847,
+    0.002
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.211,
+    0.6314,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -3.25,
+    0.847,
+    2.421
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.211,
+    0.6314,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -3.25,
+    0.847,
+    4.294
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    0.9414,
+    0.4915,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -3.05,
+    0.847,
+    -4.499
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    0.9505,
+    0.3732,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -1.154,
+    0.847,
+    -4.499
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.3005,
+    0.6765,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    -0.697,
+    0.847,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.1819,
+    0.7395,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    1.44,
+    0.847,
+    -4.499
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    0.8056,
+    0.6765,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    3.06,
+    0.847,
+    4.5
+   ],
+   "rotationEuler": [
+    0.0,
+    180.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.1819,
+    0.7395,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    3.25,
+    0.847,
+    -4.292
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.8206,
+    0.7894,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    3.25,
+    0.847,
+    -0.668
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.251,
+    0.9294,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  },
+  {
+   "stem": "SM_Wall_Concrete_Trim_01",
+   "group": "shell",
+   "position": [
+    3.25,
+    0.847,
+    1.828
+   ],
+   "rotationEuler": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    -0.70711
+   ],
+   "scale": [
+    1.251,
+    0.7395,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2
+  }
+ ]
+}

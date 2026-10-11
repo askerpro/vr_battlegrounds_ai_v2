@@ -1,0 +1,93 @@
+<div id="lobby-site-plan-1010">
+  <div class="text-lg">План базы сверху</div>
+  <svg role="img" aria-label="Схема расположения функциональных зон базы; вверх — направление стрельбы"></svg>
+  <div class="viz-row text-sm">
+    <span>1 — шатёр</span><span>2 — стрельбище</span><span>3 — стройка</span>
+    <span>4 — казармы</span><span>5 — склад-мастерская</span>
+    <span>6 — навес</span><span>7 — КПП и вышка</span><span>8 — контейнеры</span>
+    <span>П — временный прожектор</span>
+  </div>
+  <style>
+    #lobby-site-plan-1010 svg { display:block; width:100%; }
+    #lobby-site-plan-1010 svg text { fill:var(--foreground); font:12px system-ui,sans-serif; }
+  </style>
+  <script>
+    (() => {
+      const root = document.getElementById('lobby-site-plan-1010');
+      const svg = root.querySelector('svg');
+      const NS = 'http://www.w3.org/2000/svg';
+      const zones = [
+        {n:1,name:'Шатёр',x:[-7.75,7.75],z:[-7.48,7.48]},
+        {n:2,name:'Стрельбище',x:[-12,12],z:[7.48,32]},
+        {n:3,name:'Стройка',x:[-31,-20],z:[10,22]},
+        {n:4,name:'Казармы',x:[-31,-16],z:[-24,-8]},
+        {n:5,name:'Склад',x:[18,30],z:[-29,-13]},
+        {n:6,name:'Навес',x:[-31,-13],z:[-36,-25]},
+        {n:7,name:'КПП',x:[17,36],z:[-38,-27]},
+        {n:8,name:'Контейнеры',x:[-31,-16],z:[30,41]}
+      ];
+      function draw() {
+        const width = root.getBoundingClientRect().width;
+        if (!width) return;
+        const pad = 28, scale = (width - pad * 2) / 86;
+        const height = 100 * scale + pad * 2;
+        const X = x => pad + (x + 43) * scale;
+        const Y = z => pad + (54 - z) * scale;
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.style.height = `${height}px`;
+        svg.replaceChildren();
+        function mark(tag, attrs, text) {
+          const node = document.createElementNS(NS,tag);
+          for (const [key,value] of Object.entries(attrs)) node.setAttribute(key,value);
+          if (text !== undefined) node.textContent = text;
+          svg.appendChild(node);
+          return node;
+        }
+        function rect(x,z,w,d,attrs) {
+          return mark('rect',{x:X(x),y:Y(z+d),width:w*scale,height:d*scale,...attrs});
+        }
+        mark('text',{x:X(0),y:18,'text-anchor':'middle'},'Направление стрельбы ↑');
+        mark('path',{d:`M ${X(-40)} ${Y(46)} L ${X(-31)} ${Y(51)} L ${X(-23)} ${Y(47)} L ${X(-13)} ${Y(50)} L ${X(0)} ${Y(46)} L ${X(15)} ${Y(51)} L ${X(30)} ${Y(47)} L ${X(40)} ${Y(52)}`,fill:'none',stroke:'var(--muted-foreground)','stroke-width':2});
+        mark('text',{x:X(0),y:Y(48)-8,'text-anchor':'middle'},'Скальные склоны за оградой');
+        rect(-36,-38,72,83,{fill:'none',stroke:'var(--foreground)','stroke-width':1.5,'stroke-dasharray':'5 3'});
+        rect(-7.75,-9.48,15.5,18.96,{fill:'none',stroke:'var(--muted-foreground)','stroke-width':1,'stroke-dasharray':'3 3','data-tooltip':'Физическая арена; шатёр короче на 2 м с каждого открытого торца'});
+        for (const zone of zones) {
+          rect(zone.x[0],zone.z[0],zone.x[1]-zone.x[0],zone.z[1]-zone.z[0],{
+            fill: zone.n===1 ? 'color-mix(in srgb,var(--viz-series-1) 22%,transparent)' : 'color-mix(in srgb,var(--foreground) 7%,transparent)',
+            stroke:'var(--border)','stroke-width':1,
+            'data-tooltip':`${zone.n}. ${zone.name}; X ${zone.x.join('…')} м, Z ${zone.z.join('…')} м`
+          });
+          const cx=(zone.x[0]+zone.x[1])/2;
+          const cz=(zone.z[0]+zone.z[1])/2;
+          const label = width>=560 ? `${zone.n} ${zone.name}` : String(zone.n);
+          mark('text',{x:X(cx),y:Y(cz)+4,'text-anchor':'middle'},label);
+        }
+        rect(-12,26,24,6,{fill:'color-mix(in srgb,var(--foreground) 18%,transparent)',stroke:'none','data-tooltip':'Общий защитный земляной или скальный вал'});
+        mark('text',{x:X(0),y:Y(29)+4,'text-anchor':'middle'},'Вал');
+        for (const x of [-6,-3,0,3,6]) rect(x-.6,22.1,1.2,.76,{fill:'var(--foreground)','data-tooltip':'Мишень: 15 м от края шатра'});
+        mark('path',{d:`M ${X(11)} ${Y(7.48)} L ${X(11)} ${Y(22.48)}`,stroke:'var(--foreground)','stroke-width':1.2,fill:'none'});
+        mark('text',{x:X(14),y:Y(15)+4},'15 м');
+        rect(10,-33,7,18,{fill:'color-mix(in srgb,var(--foreground) 7%,transparent)',stroke:'var(--border)','stroke-width':1,'data-tooltip':'Техническая площадка: машина, инструменты и топливо при мастерской'});
+        rect(24,-38,8,11,{fill:'color-mix(in srgb,var(--foreground) 12%,transparent)',stroke:'none','data-tooltip':'Подъезд к воротам'});
+        rect(32.282,-32.722,3.435,3.444,{fill:'none',stroke:'var(--foreground)','stroke-width':1.5,'data-tooltip':'Сторожевая вышка у КПП, вне восьмиметровой дороги'});
+        mark('text',{x:X(34),y:Y(-31)+4,'text-anchor':'middle'},'В');
+        mark('line',{x1:X(24),x2:X(32),y1:Y(-38),y2:Y(-38),stroke:'var(--viz-series-1)','stroke-width':4,'data-tooltip':'Ворота базы'});
+        for (const pole of [
+          {x:-11,z:18,name:'Стрельбище, запад'},
+          {x:11,z:18,name:'Стрельбище, восток'},
+          {x:33,z:-36,name:'КПП'},
+          {x:-16.5,z:-23.5,name:'Казармы'}
+        ]) {
+          mark('circle',{cx:X(pole.x),cy:Y(pole.z),r:8,fill:'var(--viz-series-2)',
+            'data-tooltip':`${pole.name}: временная опора с двумя кубами «ПРОЖЕКТОР», X ${pole.x} м, Z ${pole.z} м`});
+          mark('text',{x:X(pole.x),y:Y(pole.z)+4,'text-anchor':'middle'},'П');
+        }
+        const lineY=height-12;
+        mark('line',{x1:X(-36),x2:X(-26),y1:lineY,y2:lineY,stroke:'var(--foreground)','stroke-width':2});
+        mark('text',{x:X(-31),y:lineY-6,'text-anchor':'middle'},'10 м');
+      }
+      new ResizeObserver(draw).observe(root);
+      draw();
+    })();
+  </script>
+</div>

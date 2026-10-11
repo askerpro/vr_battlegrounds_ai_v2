@@ -1,0 +1,490 @@
+{
+ "name": "tall-lite",
+ "description": "Облегчённая высокая вышка (Quest): 5 секций, 4 опоры, 2 штыря, тарелка e (нижняя), панель h; только импортированные stems",
+ "source": "HDRP(Default)/Scenes/Showcase/LV_Showcase.unity (MilitaryCamp), разбор parse_showcase.py/tower_local.py",
+ "sourceInstances": [
+  {
+   "cluster": 0,
+   "basePos": [
+    -215.1934,
+    61.0521,
+    -1045.1755
+   ],
+   "baseEuler": [
+    0.0,
+    31.74,
+    0.0
+   ]
+  },
+  {
+   "cluster": 1,
+   "basePos": [
+    26.7773,
+    47.2094,
+    -870.1226
+   ],
+   "baseEuler": [
+    0.0,
+    90.0,
+    0.0
+   ]
+  },
+  {
+   "cluster": 2,
+   "basePos": [
+    -165.1841,
+    61.0282,
+    -1055.6676
+   ],
+   "baseEuler": [
+    0.0,
+    135.29,
+    0.0
+   ]
+  },
+  {
+   "cluster": 3,
+   "basePos": [
+    -92.4553,
+    61.0282,
+    -1011.3414
+   ],
+   "baseEuler": [
+    0.0,
+    -135.14,
+    0.0
+   ]
+  },
+  {
+   "cluster": 4,
+   "basePos": [
+    -143.8127,
+    61.0282,
+    -946.6165
+   ],
+   "baseEuler": [
+    0.0,
+    138.53,
+    0.0
+   ]
+  },
+  {
+   "cluster": 6,
+   "basePos": [
+    -172.1249,
+    60.5955,
+    -875.5423
+   ],
+   "baseEuler": [
+    0.0,
+    90.0,
+    0.0
+   ]
+  },
+  {
+   "cluster": 7,
+   "basePos": [
+    -193.8765,
+    66.949,
+    -965.1069
+   ],
+   "baseEuler": [
+    0.0,
+    90.0,
+    0.0
+   ]
+  },
+  {
+   "cluster": 8,
+   "basePos": [
+    -83.7417,
+    51.7433,
+    -854.9639
+   ],
+   "baseEuler": [
+    0.0,
+    90.0,
+    0.0
+   ]
+  },
+  {
+   "cluster": 9,
+   "basePos": [
+    -284.0228,
+    69.5696,
+    -838.4547
+   ],
+   "baseEuler": [
+    0.0,
+    90.0,
+    0.0
+   ]
+  }
+ ],
+ "frame": "локальная система основания вышки: y=0 — низ бетонных опор (земля), ось Y вверх, оси X/Z вдоль граней фермы; поворот — эйлер Unity (ZXY) и кватернион [x,y,z,w]",
+ "prefabGuidNote": "GUID префабов SM_Antenna_* совпадают в HDRP и URP архиве",
+ "triangles": {
+  "lod0Sum": 43866,
+  "questRuntimeByHorizontalDistance_m": {
+   "10": 8411,
+   "20": 6185,
+   "40": 5921,
+   "60": 5921,
+   "lod1Sum": 21932
+  },
+  "lodBias": 1.5
+ },
+ "parts": [
+  {
+   "stem": "SM_Antenna_c",
+   "role": "бетонная опора-подпятник под ногу 0.47x0.37x0.47",
+   "position": [
+    -0.78,
+    0.0,
+    -0.783
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 132
+  },
+  {
+   "stem": "SM_Antenna_c",
+   "role": "бетонная опора-подпятник под ногу 0.47x0.37x0.47",
+   "position": [
+    -0.78,
+    0.0,
+    0.78
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 132
+  },
+  {
+   "stem": "SM_Antenna_c",
+   "role": "бетонная опора-подпятник под ногу 0.47x0.37x0.47",
+   "position": [
+    0.78,
+    0.0,
+    -0.783
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 132
+  },
+  {
+   "stem": "SM_Antenna_c",
+   "role": "бетонная опора-подпятник под ногу 0.47x0.37x0.47",
+   "position": [
+    0.78,
+    0.0,
+    0.78
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 132
+  },
+  {
+   "stem": "SM_Antenna_a",
+   "role": "секция решётчатой фермы 1.80x4.02x1.80, pivot снизу по центру",
+   "position": [
+    0.0,
+    0.373,
+    0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 5940
+  },
+  {
+   "stem": "SM_Antenna_a",
+   "role": "секция решётчатой фермы 1.80x4.02x1.80, pivot снизу по центру",
+   "position": [
+    0.0,
+    4.392,
+    0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 5940
+  },
+  {
+   "stem": "SM_Antenna_e",
+   "role": "тарелка РРЛ ~D1.65 на кронштейне",
+   "position": [
+    -0.832,
+    4.932,
+    -0.776
+   ],
+   "rotationEuler": [
+    0.0,
+    0.16,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.00135,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 4188
+  },
+  {
+   "stem": "SM_Antenna_a",
+   "role": "секция решётчатой фермы 1.80x4.02x1.80, pivot снизу по центру",
+   "position": [
+    0.0,
+    8.409,
+    0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 5940
+  },
+  {
+   "stem": "SM_Antenna_a",
+   "role": "секция решётчатой фермы 1.80x4.02x1.80, pivot снизу по центру",
+   "position": [
+    0.0,
+    12.428,
+    0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 5940
+  },
+  {
+   "stem": "SM_Antenna_a",
+   "role": "секция решётчатой фермы 1.80x4.02x1.80, pivot снизу по центру",
+   "position": [
+    0.0,
+    16.446,
+    0.0
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 5940
+  },
+  {
+   "stem": "SM_Antenna_h",
+   "role": "панельная антенна 1.86 м на кронштейне",
+   "position": [
+    -0.772,
+    17.033,
+    0.779
+   ],
+   "rotationEuler": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.70711,
+    0.0,
+    0.70711
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 5378
+  },
+  {
+   "stem": "SM_Antenna_g",
+   "role": "штырь 4.4 м на верхнем торце ноги",
+   "position": [
+    -0.777,
+    20.464,
+    -0.778
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2036
+  },
+  {
+   "stem": "SM_Antenna_g",
+   "role": "штырь 4.4 м на верхнем торце ноги",
+   "position": [
+    0.778,
+    20.464,
+    0.778
+   ],
+   "rotationEuler": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "imported": true,
+   "lod0Triangles": 2036
+  }
+ ]
+}

@@ -128,7 +128,9 @@ owner в одном worktree; `task-handoff` (CAS) меняет owner и пер�
    в `experts/<expert>/expert.json` owner уже = id. Новая сессия эксперта: `route-publish`, затем
    `inbox --owner <expert> --unread`; MCP initialize из нового пути.
 
-Пары и порядок: launch-infra ← vr-test-stand (нет активных этапов — пилот); avatar-ik ← legs-ik; затем на
+Уроки пилота launch-infra ← vr-test-stand (2026-10-11, выполнен, rev 29): каталог держат не только сессии, но и процессы приложения Codex с cwd в worktree (MCP-прокси, node_repl, node, uvx/blender-mcp) и сам `codex.exe app-server` (наблюдатель каталога) — перед move закрыть приложение Codex; поиск держателей — по cwd процессов, не по командной строке. `task-handoff` запускать launcher-ом из нового worktree и с явным `--to-worktree`. Пути evidence влитых этапов в хабе остаются старыми (сообщено сопровождающему, 3324).
+
+Пары и порядок: launch-infra ← vr-test-stand (выполнено); avatar-ik ← legs-ik; затем на
 границе этапа: bots ← bots-fix (running armed-development), avatar-grip ← hand-rig-quality (running
 mef-grip-audit), manipulation ← haptics-system (running manipulation-kb), gameplay ← arsenal-generator (running
 planning), weapon-system ← weapon-system (6 verified → `--allow-unmerged`). Вторая задача в уже занятый worktree

@@ -1,0 +1,57 @@
+{
+  "package": "bots-fix armed runtime B2",
+  "date": "2026-10-11",
+  "basedOn": "tasks/bots-fix/tools/armed-runtime-b (структура шагов B0-B7 та же)",
+  "technicalInput": "НОВЫЙ checkpoint: 212ad9f8d853dc5eb242b00e7975b210b551a7f9 + BotGunner.cs, BotStandRecorder.cs, BotStandWeaponObserver.cs, BotStandRunContracts.cs (SHA назначает principal при checkpoint)",
+  "outputRoot": "tasks/bots-fix/reports/armed-runtime-b2",
+  "queue": {
+    "caseSeconds": 20,
+    "combos": [
+      {"id": "mef-ak105", "cases": ["T07", "T05"]},
+      {"id": "cyborg-ak105", "cases": ["T07", "T05"]},
+      {"id": "mef-ppk", "cases": ["T07"], "role": "контроль"}
+    ],
+    "expectedCaseSeconds": 100
+  },
+  "differencesFromB": [
+    "output root armed-runtime-b2, AppDomain marker bots-fix.armed-runtime-b2.queue",
+    "B4: 3 сочетания и 5 case (было 4x2=8), cases на сочетание; сначала AK105",
+    "visual-frames.json: поле muzzle (forwardStatus/forwardHit{collider,distance,actor,isTarget,isSelf}, aim{pitch,yaw,angle}, animator{state,next,transition}, seesTargetGate, timing); muzzleRay помечен как луч видимости",
+    "summary.json: WeaponTimeline с оружейными событиями субъекта, новое поле WeaponCandidatesRejected",
+    "analyze.py: muzzleAim по состояниям Animator, доля isTarget, shootingSource (timeline или b-sampler fallback)"
+  ],
+  "offlineChecks": {
+    "compile": "compile-check.ps1 (C# 7.3, обёртка MCP execute_code, сборки 212ad9f8 + overlay файлов B2): 8/8 payload, 0 ошибок",
+    "analyzer": "analyze.py: smoke на копии отчётов B (fallback) и синтетике (timeline + muzzle) в scratchpad"
+  },
+  "steps": [
+    {"id": "B0", "tool": "execute_code", "payload": "b0-preflight.cs", "kind": "read-only", "repeatable": true,
+     "pre": "idle EditMode, RUNNING lease + guard", "expectSeconds": 5,
+     "pass": "passed=true", "terminal": "passed=false"},
+    {"id": "B1", "tool": "execute_code", "payload": "b1-authoring.cs", "kind": "mutation", "repeatable": false,
+     "pre": "B0 PASS; новый technical input B2 импортирован и скомпилирован", "expectSeconds": 180,
+     "pass": "passed=true: models3/sockets6/motions27, mismatches/unknown/errors 0",
+     "terminal": "passed=false или exception; после таймаута сначала B5.files.authoringResult"},
+    {"id": "B2", "tool": "execute_code", "payload": "b2-identity-post-authoring.cs", "kind": "mutation (SaveAssets)", "repeatable": false,
+     "pre": "B1 PASS", "expectSeconds": 30, "pass": "passed=true", "terminal": "passed=false или null"},
+    {"id": "B3", "tool": "execute_code", "payload": "b3-runtime-launch.cs", "kind": "mutation (enter Play)", "repeatable": false,
+     "pre": "B1 и B2 PASS (payload проверяет сам); renew lease", "expectSeconds": 90,
+     "pass": "started=true; затем B5: launch.state=Ready, stand.stage=Running, stand.finished=true",
+     "terminal": "refused/exception; launch.state=Failed; stand.stage=Failed; нет Ready за 120 с"},
+    {"id": "B5", "tool": "execute_code", "payload": "b5-runtime-status.cs", "kind": "read-only", "repeatable": true,
+     "pre": "любое состояние", "expectSeconds": 2, "pass": "информационный опрос каждые ~15 с"},
+    {"id": "B4", "tool": "execute_code", "payload": "b4-runtime-queue.cs", "kind": "mutation (RunCases chain)", "repeatable": false,
+     "pre": "Play стенда, warmup finished, invalidFixture=0, Live=Combat", "expectSeconds": 130,
+     "pass": "B5.queue.state=completed",
+     "terminal": "exception, refused с terminal; queue.state=failed/live-ended/aborted -> сразу B6, B7, finish"},
+    {"id": "console", "tool": "read_console", "kind": "read-only",
+     "pre": "до B6", "pass": "0 compile errors; ошибки runtime сохраняются в отчёт, не PASS"},
+    {"id": "B6", "tool": "execute_code", "payload": "b6-runtime-stop.cs", "kind": "mutation (exit Play)", "repeatable": false,
+     "pre": "queue завершена или terminal", "expectSeconds": 20,
+     "pass": "B5: editor.playing=false, launch.state=Idle, stand.owned=false"},
+    {"id": "B7", "tool": "execute_code", "payload": "b7-identity-post-play.cs", "kind": "mutation (SaveAssets)", "repeatable": false,
+     "pre": "Play завершён, stand.owned=false", "expectSeconds": 30, "pass": "passed=true"},
+    {"id": "finish", "tool": "broker finish", "pre": "B7 выполнен (или terminal + B6 сделан)"},
+    {"id": "verdict", "tool": "python -I analyze.py", "kind": "offline, после finish", "pass": "b-verdict.json verdict=PASS"}
+  ]
+}

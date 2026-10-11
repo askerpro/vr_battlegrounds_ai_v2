@@ -1,0 +1,207 @@
+{
+  "task_id": "bots-fix",
+  "owner": "bots",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/bots/Vr_Battlegrounds_ai",
+  "base_sha": "3240427c9d6c48c30694da906381031303fccb2e",
+  "doc_path": "tasks/bots-fix/Readme.md",
+  "title": "Боты: штатный поток игрока — аватар без владельца + адаптер намерений ИИ (Blaze)",
+  "stages": [
+    {
+      "id": "binding-foundation",
+      "writes": [
+        "Assets/Scripts/Weapons/Equipment.meta",
+        "Assets/Scripts/Weapons/Equipment/WeaponEquipmentBinding.cs",
+        "Assets/Scripts/Weapons/Equipment/WeaponEquipmentBinding.cs.meta",
+        "Assets/Scripts/Weapons/Equipment/IWeaponEquipmentSocketOwner.cs",
+        "Assets/Scripts/Weapons/Equipment/IWeaponEquipmentSocketOwner.cs.meta"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "armed-development",
+      "writes": [
+        "Assets/ThirdParty/Blaze AI/Scripts/BlazeAI.cs",
+        "Assets/ThirdParty/Blaze AI/Scripts/Behaviours/CoverShooterBehaviour.cs",
+        "Assets/Scripts/Player/Avatars/AvatarTeardown.cs",
+        "Assets/Scripts/Player/EquipmentStrip.cs",
+        "Assets/Scripts/Player/PlayerLoadoutManager.cs",
+        "Assets/Scripts/Interaction/LooseItems.cs",
+        "Assets/Scripts/Network/GameNetworkManager.cs",
+        "Assets/Scripts/Player/Avatars/AvatarManager.cs",
+        "Assets/Scripts/Bots/**",
+        "Assets/Scripts/Weapons/Equipment/BotEquipmentLifecycle.cs",
+        "Assets/Scripts/Weapons/Equipment/BotEquipmentLifecycle.cs.meta",
+        "Assets/Scripts/Weapons/Equipment/WeaponEquipmentBinding.GrabAvailability.cs",
+        "Assets/Scripts/Weapons/Equipment/WeaponEquipmentBinding.GrabAvailability.cs.meta",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObject.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.Manipulation.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/IUxrGrabAvailability.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/IUxrGrabAvailability.cs.meta",
+        "Assets/Scripts/Managers/PlayersManager.cs",
+        "Assets/Scripts/Player/PlayerSession.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotClipComposition.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotClipComposition.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatSetup.cs",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotStandRecorder.cs",
+        "Assets/Resources/Bots/**",
+        "Assets/Scripts/Debug/BotCombatStand/**",
+        "tasks/bots-fix/**"
+      ],
+      "after": [],
+      "needs": [
+        {
+          "contract": "weapon-equipment-binding",
+          "revision": 2,
+          "aspects": [
+            "api",
+            "ownership",
+            "sdk-grab-exclusion",
+            "snapshot"
+          ],
+          "readiness": "agreed"
+        },
+        {
+          "contract": "weapon-use-context",
+          "revision": 2,
+          "aspects": [
+            "context",
+            "automation",
+            "npc-root-recoil"
+          ],
+          "readiness": "agreed"
+        },
+        {
+          "contract": "weapon-equipment-shooter",
+          "revision": 1,
+          "aspects": [
+            "actor-provider",
+            "emission-owner",
+            "invalid-claim-denial"
+          ],
+          "readiness": "agreed"
+        }
+      ]
+    },
+    {
+      "id": "pf-prototype",
+      "writes": [
+        "Assets/Scripts/Bots/**",
+        "Assets/Scripts/Debug/BotCombatStand/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/**",
+        "tasks/bots-fix/**",
+        "Assets/Scripts/Managers/PlayersManager.cs"
+      ],
+      "after": [],
+      "needs": [
+        {
+          "contract": "weapon-use-context",
+          "revision": 2,
+          "aspects": [
+            "context",
+            "automation"
+          ],
+          "readiness": "agreed"
+        }
+      ]
+    },
+    {
+      "id": "pf-equipment",
+      "writes": [
+        "Assets/Scripts/Bots/**",
+        "Assets/Scripts/Debug/BotCombatStand/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/**",
+        "tasks/bots-fix/**"
+      ],
+      "after": [
+        {
+          "task": "bots-fix",
+          "stage": "pf-prototype",
+          "state": "accepted"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "weapon-use-context",
+          "revision": 2,
+          "aspects": [
+            "context",
+            "automation"
+          ],
+          "readiness": "agreed"
+        }
+      ]
+    },
+    {
+      "id": "pf-network",
+      "writes": [
+        "Assets/Scripts/Bots/**",
+        "Assets/Scripts/Debug/BotCombatStand/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/**",
+        "tasks/bots-fix/**"
+      ],
+      "after": [
+        {
+          "task": "bots-fix",
+          "stage": "pf-equipment",
+          "state": "accepted"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "pf-quest",
+      "writes": [
+        "tasks/bots-fix/**",
+        "Assets/Scripts/Bots/**"
+      ],
+      "after": [
+        {
+          "task": "bots-fix",
+          "stage": "pf-network",
+          "state": "accepted"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "clip-cutover",
+      "writes": [
+        "Assets/Scripts/Bots/**",
+        "Assets/Scripts/Debug/BotCombatStand/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/**",
+        "tasks/bots-fix/**",
+        "Assets/Resources/Bots/**",
+        "Assets/Tests/EditMode/Bots/**",
+        "Docs/tasks/T-48-bots-match.md",
+        "Docs/tasks/bots-blaze-integration.md",
+        "Docs/tasks/bot-combat-stand.md",
+        "Docs/tasks/bots-validation-stand-plan.md"
+      ],
+      "after": [
+        {
+          "task": "bots-fix",
+          "stage": "pf-quest",
+          "state": "accepted"
+        },
+        {
+          "task": "bots-fix",
+          "stage": "binding-foundation",
+          "state": "merged"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "weapon-use-context",
+          "revision": 2,
+          "aspects": [
+            "context",
+            "automation"
+          ],
+          "readiness": "active"
+        }
+      ]
+    }
+  ]
+}

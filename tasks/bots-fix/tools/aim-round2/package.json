@@ -1,0 +1,75 @@
+{
+  "package": "bots-fix aim round II (этапы 3-4: aim-слой Animator + pitch)",
+  "date": "2026-10-11",
+  "basedOn": "tasks/bots-fix/tools/aim-round1 (структура шагов B0-B7 и очередь B4 те же)",
+  "design": "tasks/bots-fix/aim-plan.md",
+  "technicalInput": "НОВЫЙ checkpoint (SHA назначает principal): c599ac572c592e4f30e39e5f52526119e66fc00e + Assets/Scripts/Bots/{BotAim.cs,BotClipBody.cs,BotRuntimeController.cs,BotCombatAssets.cs}, Assets/Editor/VR_Battlegrounds/Bots/{BotCombatSetup.cs,BotClipComposition.cs,BotStandRecorder.cs} и прочие .cs, отличающиеся от c599ac57 в Assets/Scripts/Bots, Assets/Scripts/Weapons/Equipment, Assets/Editor/VR_Battlegrounds/Bots (их собирает compile-check.ps1)",
+  "outputRoot": "tasks/bots-fix/reports/aim-round2",
+  "expectedChangedPaths": [
+    "Assets/Resources/Bots/BotPistol.controller", "Assets/Resources/Bots/BotRifle.controller", "Assets/Resources/Bots/BotUnarmed.controller (байты могут не измениться)",
+    "Assets/Resources/Bots/BotCombatAssets.asset",
+    "Assets/Resources/Bots/Aim.meta (новая папка)",
+    "Assets/Resources/Bots/Aim/BotAim_Ref.anim(+.meta)", "Assets/Resources/Bots/Aim/BotAim_Up.anim(+.meta)", "Assets/Resources/Bots/Aim/BotAim_Down.anim(+.meta)",
+    "Assets/Resources/Bots/Aim/BotAim_Body.mask(+.meta)",
+    "Assets/Resources/Bots/ClipAvatars/*, Assets/Resources/Bots/ClipBodies/* (пересборка composition, как в раунде I)"
+  ],
+  "queue": {
+    "caseSeconds": 20,
+    "combos": [
+      {"id": "mef-ak105", "cases": ["T07", "T05"]},
+      {"id": "cyborg-ak105", "cases": ["T07", "T05"]},
+      {"id": "mef-ppk", "cases": ["T07"]},
+      {"id": "cyborg-ppk", "cases": ["T07"]}
+    ],
+    "expectedCaseSeconds": 120
+  },
+  "differencesFromRound1": [
+    "output root aim-round2, AppDomain marker bots-fix.aim-round2.queue",
+    "B0: блокер, если в загруженных сборках нет BotAim.TickPitch/BotClipBody.SetAimPitch/_aimPitchCenti/BotClipComposition.ValidateControllerLayout/BotCombatSetup.AimLayer/ClipAimBinding.pitchGain; наличие aim-ассетов до A",
+    "B1: BotCombatSetup.Build генерирует BotAim_Ref/Up/Down (+reference pose = Ref), маску Body и слой Aim (Additive, вес 1, iKPass=false, 1D BlendTree AimPitch -30/0/+30) у BotPistol/BotRifle; BotUnarmed без слоя. Повтор Setup+BuildCalibration -> побайтно те же 3 контроллера, 3 клипа, маска, BotCombatAssets.asset (determinism.generatedBytesEqual). ValidateControllerLayout = 0 ошибок; aims 36 с конечным |g| >= 0.1; preview: при AimPitch=0 дельта локальных поворотов костей < 0.01° (36 строк), справочно эффект AimPitch=+20 (грудь/таз/голова/стопы/кисть, утечка вне маски)",
+    "B4: sampler пишет aim.pitch{param,target,integral,g,basePitch,active,elevation,lastError,animator,synced}",
+    "рекордер: frame.aim.pitch{param,target,integral,g,basePitch,...}; aim-frames.json + aimPitch/pitchActive",
+    "analyze.py: + aimPitch (медиана |pitch| Idle/Shoot <= 1.5° по combo, кадры с PitchActive; Move справочно), shootTarget (isTargetShare в Shoot >= 0.8; при < 3 visual-кадрах — доля Sees по каждому кадру), shotsVsRound1 (AK105: MEF >= 39, Cyborg >= 24), aimPitchControl (|param| <= 25, <= 120°/с, |I| <= 5); aimYaw и sliding как в раунде I; stage4Verdict"
+  ],
+  "acceptance": {
+    "stage4Verdict": "PASS: authoring/identity/queue PASS, aimAuthoring PASS, по каждому combo equip+aimYaw+aimPitch+shootTarget+shotsVsRound1(AK105)+sliding PASS",
+    "verdict": "все гейты, включая прежние (shooting/preparation/movement/strafe/turns)",
+    "informational": "aimPitch.byState Move/Back/Left/Right, aimPitchControl, aimLayer.rows plus20 (наклон таза/сдвиг стоп), g и нелинейность по тройкам (calibration.json)",
+    "notCovered": "клиентская проекция AimPitch (SyncVar + damping) и хост — этап 5 (ServerOnly + 2 клиента, ревью network-expert)"
+  },
+  "offlineChecks": {
+    "compile": "compile-check.ps1 (C# 7.3, обёртка MCP execute_code, сборки c599ac57 + overlay всех отличающихся .cs трёх папок): 7 сборок + 8/8 payload, 0 ошибок",
+    "analyzer": "analyze.py: smoke на копии отчётов раунда I (pitch-полей нет -> aimPitch/aimAuthoring Unknown) и синтетике (pitch bias 0.4° -> aimPitch PASS, 2.2° -> FAIL)"
+  },
+  "steps": [
+    {"id": "B0", "tool": "execute_code", "payload": "b0-preflight.cs", "kind": "read-only", "repeatable": true,
+     "pre": "idle EditMode, RUNNING lease + guard", "expectSeconds": 5,
+     "pass": "passed=true", "terminal": "passed=false"},
+    {"id": "B1", "tool": "execute_code", "payload": "b1-authoring.cs", "kind": "mutation", "repeatable": false,
+     "pre": "B0 PASS; technical input раунда II импортирован и скомпилирован", "expectSeconds": 360,
+     "pass": "passed=true: models3/sockets6/motions27/aims36, repeatBytesEqual=true, generatedBytesEqual=true, layoutErrors=0, identityMaxDeg<0.01, mismatches/unknown/errors 0",
+     "terminal": "passed=false или exception; после таймаута сначала B5.files.authoringResult"},
+    {"id": "B2", "tool": "execute_code", "payload": "b2-identity-post-authoring.cs", "kind": "mutation (SaveAssets)", "repeatable": false,
+     "pre": "B1 PASS", "expectSeconds": 30, "pass": "passed=true", "terminal": "passed=false или null"},
+    {"id": "B3", "tool": "execute_code", "payload": "b3-runtime-launch.cs", "kind": "mutation (enter Play)", "repeatable": false,
+     "pre": "B1 и B2 PASS (payload проверяет сам); renew lease", "expectSeconds": 90,
+     "pass": "started=true; затем B5: launch.state=Ready, stand.stage=Running, stand.finished=true",
+     "terminal": "refused/exception; launch.state=Failed; stand.stage=Failed; нет Ready за 120 с"},
+    {"id": "B5", "tool": "execute_code", "payload": "b5-runtime-status.cs", "kind": "read-only", "repeatable": true,
+     "pre": "любое состояние", "expectSeconds": 2, "pass": "информационный опрос каждые ~15 с"},
+    {"id": "B4", "tool": "execute_code", "payload": "b4-runtime-queue.cs", "kind": "mutation (RunCases chain)", "repeatable": false,
+     "pre": "Play стенда, warmup finished, invalidFixture=0, Live=Combat", "expectSeconds": 160,
+     "pass": "B5.queue.state=completed",
+     "terminal": "exception, refused с terminal; queue.state=failed/live-ended/aborted -> сразу B6, B7, finish"},
+    {"id": "console", "tool": "read_console", "kind": "read-only",
+     "pre": "до B6", "pass": "0 compile errors; нет '[BotAim] В BotCombatAssets нет калибровки aims[]' и '[BotAim] Нет усиления aim-слоя'; нет 'Parameter \"AimPitch\" does not exist'; ошибки runtime сохраняются в отчёт, не PASS"},
+    {"id": "B6", "tool": "execute_code", "payload": "b6-runtime-stop.cs", "kind": "mutation (exit Play)", "repeatable": false,
+     "pre": "queue завершена или terminal", "expectSeconds": 20,
+     "pass": "B5: editor.playing=false, launch.state=Idle, stand.owned=false"},
+    {"id": "B7", "tool": "execute_code", "payload": "b7-identity-post-play.cs", "kind": "mutation (SaveAssets)", "repeatable": false,
+     "pre": "Play завершён, stand.owned=false", "expectSeconds": 30, "pass": "passed=true"},
+    {"id": "finish", "tool": "broker finish", "pre": "B7 выполнен (или terminal + B6 сделан)"},
+    {"id": "verdict", "tool": "python -I tasks/bots-fix/tools/aim-round2/analyze.py", "kind": "offline, после finish",
+     "pass": "b-verdict.json stage4Verdict=PASS (критерий раунда II); verdict — сводка всех гейтов для principal"}
+  ]
+}

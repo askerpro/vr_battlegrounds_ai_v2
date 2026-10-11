@@ -1,0 +1,66 @@
+{
+  "package": "bots-fix aim round I (этапы 0-2: BotAimMath, калибровка aims[], yaw корпусом)",
+  "date": "2026-10-11",
+  "basedOn": "tasks/bots-fix/tools/armed-runtime-b2 (структура шагов B0-B7 та же)",
+  "design": "tasks/bots-fix/aim-plan.md",
+  "technicalInput": "НОВЫЙ checkpoint: fd193835e4cc73a31e7ee5d1e00a96dd084789ff + Assets/Scripts/Bots/{BotAimMath.cs,BotAim.cs (+.meta),BotBody.cs,BotGunner.cs,BotRuntimeController.cs,BotCombatAssets.cs}, Assets/Editor/VR_Battlegrounds/Bots/{BotClipComposition.cs,BotStandRecorder.cs} (SHA назначает principal при checkpoint)",
+  "outputRoot": "tasks/bots-fix/reports/aim-round1",
+  "queue": {
+    "caseSeconds": 20,
+    "combos": [
+      {"id": "mef-ak105", "cases": ["T07", "T05"]},
+      {"id": "cyborg-ak105", "cases": ["T07", "T05"]},
+      {"id": "mef-ppk", "cases": ["T07"]},
+      {"id": "cyborg-ppk", "cases": ["T07"]}
+    ],
+    "expectedCaseSeconds": 120
+  },
+  "differencesFromB2": [
+    "output root aim-round1, AppDomain marker bots-fix.aim-round1.queue",
+    "B0: блокер, если в загруженных сборках нет BotAimMath/BotAim/TryGetAim/SampleAim; libraryCounts.aims",
+    "B1: aims=36 (3 модели x pistol/rifle x Idle/Move/Back/Left/Right/Shoot), уникальность/конечность/TryGetAim по source и body; повторный BuildCalibration (calibration-repeat/) -> SHA256 BotCombatAssets.asset обязан совпасть (determinism.repeatBytesEqual)",
+    "B4: 4 сочетания, 6 case; b-sampler пишет aim{delta,deltaActive,integral,psi,c,phi,proxyYaw,lastYawError,appliedOffset}",
+    "рекордер: frame.aim{delta,deltaActive,integral,psi,c,phi,...}; aim-frames.json — покадровая ошибка дула после gate (onBeforeRender)",
+    "analyze.py: прежние гейты + aimYaw (медиана |yaw| в Idle и Shoot <= 1.5° по combo, кадры с активной δ) + sliding (не хуже B2/B) + aimDelta (|δ|<=15°, <=90°/с) + aimAuthoring; stage2Verdict отдельно от verdict"
+  ],
+  "acceptance": {
+    "stage2Verdict": "PASS: authoring/identity/queue PASS, aimAuthoring PASS (aims 36, байты равны), по каждому combo equip+aimYaw+sliding PASS",
+    "verdict": "все гейты, включая shooting; pitch наводится только в раунде II, поэтому FAIL стрельбы AK105 здесь — ожидаемое ограничение, решает principal",
+    "informational": "muzzleAim.byAnimatorState, aimYaw.byState pitch (база для раунда II), aimDelta статистика"
+  },
+  "offlineChecks": {
+    "compile": "compile-check.ps1 (C# 7.3, обёртка MCP execute_code, сборки fd193835 + overlay 8 файлов): 7 сборок + 8/8 payload, 0 ошибок",
+    "analyzer": "analyze.py: smoke на копии отчётов B2 (поля aim отсутствуют -> aimYaw Unknown) и синтетике (aim-frames bias 0.4° -> PASS, 2.2° -> FAIL)"
+  },
+  "steps": [
+    {"id": "B0", "tool": "execute_code", "payload": "b0-preflight.cs", "kind": "read-only", "repeatable": true,
+     "pre": "idle EditMode, RUNNING lease + guard", "expectSeconds": 5,
+     "pass": "passed=true", "terminal": "passed=false"},
+    {"id": "B1", "tool": "execute_code", "payload": "b1-authoring.cs", "kind": "mutation", "repeatable": false,
+     "pre": "B0 PASS; technical input раунда I импортирован и скомпилирован", "expectSeconds": 240,
+     "pass": "passed=true: models3/sockets6/motions27/aims36, repeatBytesEqual=true, mismatches/unknown/errors 0",
+     "terminal": "passed=false или exception; после таймаута сначала B5.files.authoringResult"},
+    {"id": "B2", "tool": "execute_code", "payload": "b2-identity-post-authoring.cs", "kind": "mutation (SaveAssets)", "repeatable": false,
+     "pre": "B1 PASS", "expectSeconds": 30, "pass": "passed=true", "terminal": "passed=false или null"},
+    {"id": "B3", "tool": "execute_code", "payload": "b3-runtime-launch.cs", "kind": "mutation (enter Play)", "repeatable": false,
+     "pre": "B1 и B2 PASS (payload проверяет сам); renew lease", "expectSeconds": 90,
+     "pass": "started=true; затем B5: launch.state=Ready, stand.stage=Running, stand.finished=true",
+     "terminal": "refused/exception; launch.state=Failed; stand.stage=Failed; нет Ready за 120 с"},
+    {"id": "B5", "tool": "execute_code", "payload": "b5-runtime-status.cs", "kind": "read-only", "repeatable": true,
+     "pre": "любое состояние", "expectSeconds": 2, "pass": "информационный опрос каждые ~15 с"},
+    {"id": "B4", "tool": "execute_code", "payload": "b4-runtime-queue.cs", "kind": "mutation (RunCases chain)", "repeatable": false,
+     "pre": "Play стенда, warmup finished, invalidFixture=0, Live=Combat", "expectSeconds": 160,
+     "pass": "B5.queue.state=completed",
+     "terminal": "exception, refused с terminal; queue.state=failed/live-ended/aborted -> сразу B6, B7, finish"},
+    {"id": "console", "tool": "read_console", "kind": "read-only",
+     "pre": "до B6", "pass": "0 compile errors; нет '[BotAim] В BotCombatAssets нет калибровки aims[]'; ошибки runtime сохраняются в отчёт, не PASS"},
+    {"id": "B6", "tool": "execute_code", "payload": "b6-runtime-stop.cs", "kind": "mutation (exit Play)", "repeatable": false,
+     "pre": "queue завершена или terminal", "expectSeconds": 20,
+     "pass": "B5: editor.playing=false, launch.state=Idle, stand.owned=false"},
+    {"id": "B7", "tool": "execute_code", "payload": "b7-identity-post-play.cs", "kind": "mutation (SaveAssets)", "repeatable": false,
+     "pre": "Play завершён, stand.owned=false", "expectSeconds": 30, "pass": "passed=true"},
+    {"id": "finish", "tool": "broker finish", "pre": "B7 выполнен (или terminal + B6 сделан)"},
+    {"id": "verdict", "tool": "python -I tasks/bots-fix/tools/aim-round1/analyze.py", "kind": "offline, после finish",
+     "pass": "b-verdict.json stage2Verdict=PASS (критерий раунда I); verdict — сводка всех гейтов для principal"}
+  ]
+}

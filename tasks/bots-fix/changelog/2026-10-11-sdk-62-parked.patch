@@ -1,0 +1,37 @@
+diff --git a/Assets/ThirdParty/UltimateXR/Runtime/Scripts/Animation/IK/UxrArmIKSolver.cs b/Assets/ThirdParty/UltimateXR/Runtime/Scripts/Animation/IK/UxrArmIKSolver.cs
+index a46bef593..00824c11f 100644
+--- a/Assets/ThirdParty/UltimateXR/Runtime/Scripts/Animation/IK/UxrArmIKSolver.cs
++++ b/Assets/ThirdParty/UltimateXR/Runtime/Scripts/Animation/IK/UxrArmIKSolver.cs
+@@ -116,6 +116,8 @@ namespace UltimateXR.Animation.IK
+             Vector3 localClaviclePos = ToLocalAvatarPos(Clavicle.position);
+             Vector3 localForearmPos  = ToLocalAvatarPos(Forearm.position);
+             Vector3 localHandPos     = ToLocalAvatarPos(Hand.position);
++            // VR Battlegrounds patch 62: clavicle меняет родителя кисти, но не её входную цель.
++            Quaternion finalHandRotation = Hand.rotation;
+ 
+             if (Clavicle != null)
+             {
+@@ -167,7 +169,7 @@ namespace UltimateXR.Animation.IK
+                     }
+                 }
+ 
+-                Hand.position = ToWorldPos(localHandPos);
++                Hand.SetPositionAndRotation(ToWorldPos(localHandPos), finalHandRotation);
+             }
+ 
+             // Find the plane of intersection between 2 spheres (sphere with "upper arm" radius and sphere with "forearm" radius).
+@@ -222,7 +224,6 @@ namespace UltimateXR.Animation.IK
+             }
+ 
+             Vector3    finalLocalHandPosition = ToLocalAvatarPos(Hand.position);
+-            Quaternion finalHandRotation      = Hand.rotation;
+ 
+             // Compute the point inside this circle using the elbowAperture parameter.
+             // Possible range is from bottom to exterior (far left or far right for left arm and right arm respectively).
+@@ -559,4 +560,4 @@ namespace UltimateXR.Animation.IK
+ 
+         #endregion
+     }
+-}
+\ No newline at end of file
++}

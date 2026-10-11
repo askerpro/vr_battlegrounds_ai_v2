@@ -1,0 +1,97 @@
+diff --git a/Assets/Editor/VR_Battlegrounds/Bots/BotClipComposition.cs b/Assets/Editor/VR_Battlegrounds/Bots/BotClipComposition.cs
+index ed804a816..29222f8a7 100644
+--- a/Assets/Editor/VR_Battlegrounds/Bots/BotClipComposition.cs
++++ b/Assets/Editor/VR_Battlegrounds/Bots/BotClipComposition.cs
+@@ -27,10 +27,10 @@ namespace VrBattlegrounds.EditorTools
+     {
+         private const string Folder = "Assets/Resources/Bots/ClipAvatars";
+         private const string BodiesFolder = "Assets/Resources/Bots/ClipBodies";
++        // Модели ботов — MEF и MEF Black (решение пользователя 2026-10-11: Cyborg исключён из ботов и калибровки).
+         private static readonly string[] Models = {
+             "Assets/Prefabs/Player/Optimized_MEF_Player_Black.prefab",
+-            "Assets/Prefabs/Player/Optimized_MEF_Player.prefab",
+-            "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab"
++            "Assets/Prefabs/Player/Optimized_MEF_Player.prefab"
+         };
+         // Состояния вооружённых контроллеров, для которых калибруется наведение (aims[]).
+         private static readonly string[] AimStates = { "Idle", "Move", "Back", "Left", "Right", "Shoot" };
+@@ -263,7 +263,12 @@ namespace VrBattlegrounds.EditorTools
+                     var firearm = item.GetComponentInChildren<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>(true);
+                     if (!WeaponGripBinding.TryResolve(firearm, out var binding)) throw new InvalidOperationException("Нет primary: " + id);
+                     var point = binding.Grip.GetGrabPoint(binding.Primary);
+-                    var align = point.GetGripPoseInfo(guid)?.GripAlignTransformHandRight;
++                    // Запись хвата — по цепочке префабов эталонного аватара (канон UXR), не по строке GUID; default
++                    // (тихий fallback UXR) не годится: у него нет align. Совпадение записи у каждого тела — ниже, в отчёте.
++                    var referenceEntry = point.GetGripPoseInfo(referenceAvatar);
++                    if (referenceEntry == null || referenceEntry == point.DefaultGripPoseInfo || referenceEntry.AvatarPrefabGuid != guid)
++                        throw new InvalidOperationException("Эталонный аватар не разрешается в свою запись хвата: " + id);
++                    var align = referenceEntry.GripAlignTransformHandRight;
+                     if (align == null || !align.IsChildOf(item.transform) || point.SnapReference != UxrSnapReference.UseOtherTransform ||
+                         point.SnapMode != UxrSnapToHandMode.PositionAndRotation) throw new InvalidOperationException("Нет explicit reference grip: " + id);
+                     float scale = CheckedScale(item.transform);
+@@ -284,7 +289,26 @@ namespace VrBattlegrounds.EditorTools
+                         var wrist = avatar.GetHandBone(UltimateXR.Core.UxrHandSide.Right);
+                         var targetFrame = AnatomicalHand(avatar);
+                         var npc = (GameObject)PrefabUtility.InstantiatePrefab(model.prefab, scene);
+-                        var npcWrist = npc.GetComponent<UxrAvatar>().GetHandBone(UltimateXR.Core.UxrHandSide.Right);
++                        var npcAvatar = npc.GetComponent<UxrAvatar>();
++                        var npcWrist = npcAvatar.GetHandBone(UltimateXR.Core.UxrHandSide.Right);
++                        // Какая запись хвата реально выбирается для тела (источник и ClipBody) по цепочке префабов:
++                        // primary — правая рука (socket), support — опорная рука (BotSupportHandIK). Только отчёт.
++                        Func<UxrAvatar, int, string> entryOf = (subject, index) => {
++                            if (index < 0) return "no-point";
++                            var grabPoint = binding.Grip.GetGrabPoint(index);
++                            var entry = grabPoint != null ? grabPoint.GetGripPoseInfo(subject) : null;
++                            return entry == null ? "null" : entry == grabPoint.DefaultGripPoseInfo ? "default" : entry.AvatarPrefabGuid;
++                        };
++                        var supportPoint = binding.Support >= 0 ? binding.Grip.GetGrabPoint(binding.Support) : null;
++                        var supportEntry = supportPoint != null ? supportPoint.GetGripPoseInfo(npcAvatar) : null;
++                        var gripEntries = new Dictionary<string, object> {
++                            { "primarySource", entryOf(avatar, binding.Primary) }, { "primaryClipBody", entryOf(npcAvatar, binding.Primary) },
++                            { "supportIndex", binding.Support }, { "supportSource", entryOf(avatar, binding.Support) },
++                            { "supportClipBody", entryOf(npcAvatar, binding.Support) },
++                            { "supportAlignClipBody", supportEntry != null && supportEntry.GripAlignTransformHandLeft != null
++                                ? supportEntry.GripAlignTransformHandLeft.name : null },
++                            { "primaryMatchesReference", point.GetGripPoseInfo(npcAvatar) == referenceEntry },
++                            { "clipBodyPrefabGuidChain", npcAvatar.GetPrefabGuidChain().ToArray() } };
+                         CheckedScale(npcWrist);
+                         float restMm = Vector3.Distance(original.transform.InverseTransformPoint(wrist.position), npc.transform.InverseTransformPoint(npcWrist.position)) * 1000f;
+                         float restAngle = Quaternion.Angle(Quaternion.Inverse(original.transform.rotation) * wrist.rotation, Quaternion.Inverse(npc.transform.rotation) * npcWrist.rotation);
+@@ -319,7 +343,7 @@ namespace VrBattlegrounds.EditorTools
+                         socket.position = correction * socket.position;
+                         socket.rotation = correction * socket.rotation;
+                         sockets.Add(socket);
+-                        reports.Add(new { model = model.source.name, weapon = id, referenceGuid = guid, primary = binding.Primary,
++                        reports.Add(new { model = model.source.name, weapon = id, referenceGuid = guid, primary = binding.Primary, gripEntries,
+                             roundTripMm, roundTripAngle, restMm, restAngle, socketPosition = socket.position.ToString("F5"), socketRotation = socket.rotation.ToString("F5") });
+                         // Наведение: socket уже окончательный (Idle-коррекция выше), здесь только чтение позы клипа.
+                         // Дуло = wrist · socket · muzzle offset — та же проекция, что у WeaponEquipmentBinding.
+@@ -678,6 +702,8 @@ namespace VrBattlegrounds.EditorTools
+                 if (!(armed is UnityEditor.Animations.AnimatorController armedAsset) || armedAsset.layers.Any(layer => layer.iKPass))
+                     throw new InvalidOperationException("NPC armed controller отсутствует или содержит IK Pass.");
+             if (instance.GetComponent<BotClipBody>() == null) instance.AddComponent<BotClipBody>();
++            // Опорная рука — один проход LimbIK после Animator; только на теле бота (ClipBody), не в префабах игроков.
++            if (instance.GetComponent<BotSupportHandIK>() == null) instance.AddComponent<BotSupportHandIK>();
+         }
+ 
+         private static void RestoreRest(Dictionary<Transform, SkeletonBone> rest)
+diff --git a/Assets/Scripts/Bots/BotClipBody.cs b/Assets/Scripts/Bots/BotClipBody.cs
+index 6a12a3643..92de93672 100644
+--- a/Assets/Scripts/Bots/BotClipBody.cs
++++ b/Assets/Scripts/Bots/BotClipBody.cs
+@@ -47,6 +47,8 @@ namespace VrBattlegrounds.Bots
+         private bool _remoteBound, _remoteWarned, _sourceWarned;
+         public Animator Animator { get; private set; }
+         public bool IsConfigured => Animator != null && Animator.enabled;
++        /// <summary>Текущая поза клипов (Unarmed/Pistol/Rifle); на клиенте — из принятого snapshot.</summary>
++        public BotClipPose Pose => _pose;
+         public Transform RightHand => IsConfigured ? Animator.GetBoneTransform(HumanBodyBones.RightHand) : null;
+         /// <summary>Последний AimPitch: сервер — переданный в Animator, клиент — принятый из SyncVar (до сглаживания).</summary>
+         public float AimPitch { get; private set; }
+diff --git a/Assets/Scripts/VrBattlegrounds.asmdef b/Assets/Scripts/VrBattlegrounds.asmdef
+index ca020d1de..8841805e1 100644
+--- a/Assets/Scripts/VrBattlegrounds.asmdef
++++ b/Assets/Scripts/VrBattlegrounds.asmdef
+@@ -1 +1 @@
+-{"name":"VrBattlegrounds","rootNamespace":"VrBattlegrounds","references":["GUID:6374614e0977dec468dae8c470916f0c","GUID:34609f2eb7016594f90e3e90ed90c1f6","GUID:30817c1a0e6d646d99c048fc403f5979","GUID:72872094b21c16e48b631b2224833d49","GUID:767f25efd20d4339a8b1683f8dc1d7d8","Unity.TextMeshPro","Unity.XR.Oculus","Unity.RenderPipelines.Core.Runtime","Unity.RenderPipelines.Universal.Runtime","BlazeAI.Runtime"],"includePlatforms":[],"excludePlatforms":[],"allowUnsafeCode":false,"overrideReferences":false,"precompiledReferences":[],"autoReferenced":true,"defineConstraints":[],"versionDefines":[{"name":"com.unity.xr.oculus","expression":"","define":"VRB_XR_OCULUS"}],"noEngineReferences":false}
++{"name":"VrBattlegrounds","rootNamespace":"VrBattlegrounds","references":["GUID:6374614e0977dec468dae8c470916f0c","GUID:34609f2eb7016594f90e3e90ed90c1f6","GUID:30817c1a0e6d646d99c048fc403f5979","GUID:72872094b21c16e48b631b2224833d49","GUID:767f25efd20d4339a8b1683f8dc1d7d8","Unity.TextMeshPro","Unity.XR.Oculus","Unity.RenderPipelines.Core.Runtime","Unity.RenderPipelines.Universal.Runtime","BlazeAI.Runtime","GUID:8d9ae50380df4489b6f99ff56648884a"],"includePlatforms":[],"excludePlatforms":[],"allowUnsafeCode":false,"overrideReferences":false,"precompiledReferences":[],"autoReferenced":true,"defineConstraints":[],"versionDefines":[{"name":"com.unity.xr.oculus","expression":"","define":"VRB_XR_OCULUS"}],"noEngineReferences":false}

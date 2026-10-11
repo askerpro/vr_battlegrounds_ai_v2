@@ -1,5 +1,6 @@
 Обновлено 2026-10-11. Кандидаты вне хаба; порядок — приоритет. `tasks/bots-fix/` — в worktree владельца.
 
+0. `npc-anim-architecture` — исследование перехода на готовые решения (Final IK, KINEMATION, Animation Rigging и др.) вместо самописной калибровки: опорная рука, крен, завал, отдача; решение пользователя 2026-10-11, pose-fit остановлен — `tasks/bots-fix/research/`.
 1. `grip-fit` — support-кисть вне цевья, Rifle вверх (MEF 23.58°, Cyborg 36.25°), хваты Cyborg; отложено пользователем — `tasks/bots-fix/Readme.md` «Блокеры и следующие действия», `grip-contact-plan.md`.
 2. `stand-coverage` — все входы/клипы, T02/T04/T09, V01/L01 Unsupported, эталоны поз, защита; выстрел NPC в Unity не подтверждён — `Docs/tasks/bot-combat-stand.md` «Наблюдения», `bots-validation-stand-plan.md` «Этапы реализации» 3–5.
 3. `stand-launch-request` — содержимое стенда после ухода `BotCombatStandEditor` от записи EditorBuildSettings/Bootstrap/registry (механизм — launch-infra `stands-migration`), порядок с clip-cutover не согласован — `tasks/vr-test-stand/Details.md`.

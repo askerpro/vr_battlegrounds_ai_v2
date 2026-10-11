@@ -1,0 +1,402 @@
+"""Офлайн-вердикт прогона B2 (без Unity, после finish аренды).
+
+Читает отчёты под tasks/bots-fix/reports/armed-runtime-b2/ и пишет b-verdict.json рядом.
+Только stdlib. Unknown/NotObserved/NeedsReview никогда не считается PASS.
+
+Отличия от armed-runtime-b:
+- сочетания B2: mef-ak105 и cyborg-ak105 (T07+T05), контрольный mef-ppk (T07);
+- muzzleAim: распределение pitch/yaw ствола (ShotSource.forward к центру твёрдых коллайдеров цели,
+  система корня субъекта, +pitch вверх, +yaw вправо) по состояниям Animator и доля кадров, где
+  действительный луч ствола (BotGunner.TryGetMuzzleForwardHit — тот же, что gate Sees) упирается в цель;
+  источник — visual-frames.json (поле muzzle рекордера стенда);
+- стрельба считается по восстановленной WeaponTimeline; если в ней нет оружейных событий субъекта,
+  используется b-sampler (ShotSequence/патроны) с явной пометкой shootingSource и вердиктом NeedsReview.
+
+Запуск из корня worktree:  python -I tasks/bots-fix/tools/armed-runtime-b2/analyze.py [root]
+"""
+import json
+import math
+import pathlib
+import statistics
+import sys
+
+ROOT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "tasks/bots-fix/reports/armed-runtime-b2")
+COMBOS = {
+    "mef-ak105": ("Assets/Prefabs/Player/Optimized_MEF_Player.prefab", "AK105_Weapon", "Rifle", ("T07", "T05")),
+    "cyborg-ak105": ("Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab", "AK105_Weapon", "Rifle", ("T07", "T05")),
+    "mef-ppk": ("Assets/Prefabs/Player/Optimized_MEF_Player.prefab", "PPK_Weapon", "Pistol", ("T07",)),
+}
+# Оружейные события наблюдателя стенда (не damage/actor): по ним видно, что timeline восстановлен.
+WEAPON_EVENTS = ("source-emitted", "firearm-projectile-event", "ledger-commit", "readiness-fault", "sample",
+                 "preparation-first-pre-request", "first-seen-registration", "first-seen-sample",
+                 "first-seen-pre-request", "first-seen-commit", "first-seen-existing")
+DIRECTIONS = {"Move": (0.0, 1.0), "Back": (0.0, -1.0), "Left": (-1.0, 0.0), "Right": (1.0, 0.0)}
+MOVING_SPEED = 0.3  # м/с между выборками 0.1 с
+GATING = ("equip", "preparation", "shooting", "movement", "animationSpeed", "strafe", "turns")
+
+
+def load(path):
+    try:
+        return json.loads(pathlib.Path(path).read_text(encoding="utf-8-sig"))
+    except FileNotFoundError:
+        return None
+
+
+def verdict(status, **details):
+    return dict(verdict=status, **details)
+
+
+def passed_of(doc):
+    if doc is None:
+        return "Unknown"
+    value = doc.get("passed")
+    return "PASS" if value is True else "FAIL" if value is False else "Unknown"
+
+
+def yaw_delta(a, b):
+    return (b - a + 180.0) % 360.0 - 180.0
+
+
+def analyse_movement(cases):
+    travel, moving, consistent, mismatched, sliding, strafe, ratios, turn = 0.0, 0, 0, 0, 0, 0, [], 0.0
+    for samples in cases:
+        rows = [s for s in samples if s.get("feet") and s.get("yaw") is not None]
+        for prev, cur in zip(rows, rows[1:]):
+            dt = cur["t"] - prev["t"]
+            if dt <= 1e-4:
+                continue
+            dx, dz = cur["feet"][0] - prev["feet"][0], cur["feet"][2] - prev["feet"][2]
+            dist = math.hypot(dx, dz)
+            travel += dist
+            turn += abs(yaw_delta(prev["yaw"], cur["yaw"]))
+            speed = dist / dt
+            if speed < MOVING_SPEED:
+                continue
+            moving += 1
+            state = cur.get("state")
+            if state in ("Idle", "Shoot") and not cur.get("transition"):
+                sliding += 1
+                continue
+            if state not in DIRECTIONS:
+                continue
+            yaw = math.radians(cur["yaw"])
+            local_x = (dx * math.cos(yaw) - dz * math.sin(yaw)) / dist
+            local_z = (dx * math.sin(yaw) + dz * math.cos(yaw)) / dist
+            ex, ez = DIRECTIONS[state]
+            if local_x * ex + local_z * ez >= 0.5:
+                consistent += 1
+                if state in ("Left", "Right"):
+                    strafe += 1
+            else:
+                mismatched += 1
+            native, rate = cur.get("nativeMetersPerSecond"), cur.get("rate")
+            if native and rate and native > 0.01 and rate > 0.01:
+                ratios.append(speed / (native * rate))
+    metrics = dict(travelMeters=round(travel, 3), movingSamples=moving, directionConsistent=consistent,
+                   directionMismatched=mismatched, slidingSamples=sliding, strafeSamples=strafe,
+                   cumulativeYawDegrees=round(turn, 1), speedRatioSamples=len(ratios),
+                   speedRatioMedian=round(statistics.median(ratios), 3) if ratios else None)
+    directional = consistent + mismatched
+    if moving and sliding / moving > 0.25:
+        movement = verdict("FAIL", reason="скольжение: корень движется в Idle/Shoot")
+    elif directional and mismatched / directional > 0.2:
+        movement = verdict("FAIL", reason="клип не соответствует направлению движения")
+    elif travel >= 1.0 and consistent > 0:
+        movement = verdict("PASS")
+    else:
+        movement = verdict("Unknown", reason="движение не наблюдалось")
+    if len(ratios) < 5:
+        speed_verdict = verdict("Unknown", reason="мало moving-выборок")
+    elif 0.75 <= statistics.median(ratios) <= 1.33:
+        speed_verdict = verdict("PASS")
+    else:
+        speed_verdict = verdict("FAIL", reason="скорость корня не совпадает с темпом клипа")
+    strafe_verdict = verdict("PASS") if strafe >= 3 else verdict("Unknown", reason="strafe не наблюдался")
+    turns = verdict("PASS") if turn >= 45.0 else verdict("Unknown", reason="повороты < 45°")
+    return metrics, movement, speed_verdict, strafe_verdict, turns
+
+
+def analyse_rigidity(cases):
+    poses = [s["weaponInHand"] for samples in cases for s in samples if s.get("weaponInHand")]
+    if len(poses) < 5:
+        return verdict("Unknown", reason="нет выборок оружия в руке")
+    med = [statistics.median(p[i] for p in poses) for i in range(7)]
+    norm = math.sqrt(sum(v * v for v in med[3:])) or 1.0
+    q0 = [v / norm for v in med[3:]]
+    dpos = max(math.dist(p[:3], med[:3]) for p in poses) * 1000.0
+    dang = max(math.degrees(2 * math.acos(min(1.0, abs(sum(a * b for a, b in zip(p[3:], q0)))))) for p in poses)
+    status = "PASS" if dpos <= 2.0 and dang <= 1.0 else "NeedsReview"
+    return verdict(status, maxPositionMm=round(dpos, 3), maxAngleDeg=round(dang, 3), samples=len(poses),
+                   scope="Приблизительно: выборка до LateUpdate, не гейт.")
+
+
+def sampler_deltas(samplers):
+    """Fallback без timeline: дельты ShotSequence/патронов по b-sampler внутри каждого case."""
+    seq_delta = ammo_delta = 0
+    observed = False
+    for samples in samplers:
+        seq = [s["shotSequence"] for s in samples if s.get("shotSequence") is not None]
+        totals = [s["total"] for s in samples if s.get("total") is not None]
+        if seq or totals:
+            observed = True
+        seq_delta += (max(seq) - seq[0]) if seq else 0
+        ammo_delta += (totals[0] - min(totals)) if totals else 0
+    return (seq_delta, ammo_delta) if observed else (None, None)
+
+
+def analyse_shooting(case_docs, subject_ids, samplers):
+    emitted = projectile = commits = emitted_commits = faults = hits = unauthored = requests = 0
+    baselines, damage, seq_delta, ammo_delta, observed = 0, 0.0, 0, 0, False
+    weapon_events = dropped = rejected = 0
+    for case in case_docs:
+        dropped += int(case.get("WeaponCandidateEventsDropped") or 0)
+        rejected += int(case.get("WeaponCandidatesRejected") or 0)
+        # Каждый case создаёт новое тело и новое оружие: дельты считаются внутри case и суммируются.
+        seq, totals = [], []
+        metrics = case.get("Metrics") or {}
+        unauthored += int(metrics.get("subjectUnauthoredProjectileEvents") or 0)
+        requests += int(metrics.get("subjectBlazeShootRequests") or 0)
+        for b in case.get("PreparationBaselines") or []:
+            if b.get("SubjectNetId") in subject_ids:
+                baselines += 1
+                if b.get("ShotSequence") is not None:
+                    seq.append(("baseline", b["ShotSequence"]))
+                if b.get("TotalRounds") is not None:
+                    totals.append(("baseline", b["TotalRounds"]))
+        for e in case.get("WeaponTimeline") or []:
+            kind = e.get("Event")
+            if kind in ("damage-received",):
+                if e.get("ActorSourceNetId") in subject_ids and not e.get("DamageCanceled") and (e.get("Damage") or 0) > 0:
+                    before, after = e.get("LifeBefore"), e.get("LifeAfter")
+                    if before is None or after is None or after < before:
+                        hits += 1
+                        damage += e.get("Damage") or 0
+                continue
+            if e.get("SubjectNetId") not in subject_ids:
+                continue
+            if kind in WEAPON_EVENTS:
+                weapon_events += 1
+            if kind == "source-emitted":
+                emitted += 1
+            elif kind == "firearm-projectile-event":
+                projectile += 1
+            elif kind == "readiness-fault":
+                faults += 1
+            elif kind == "ledger-commit" and e.get("Operation") == "Shot":
+                commits += 1
+                if e.get("EmissionOutcome") == "Emitted":
+                    emitted_commits += 1
+            for key in ("ShotSequence", "CommittedShotSequence"):
+                if e.get(key) is not None:
+                    seq.append((kind, e[key]))
+            if e.get("TotalRounds") is not None:
+                totals.append((kind, e["TotalRounds"]))
+        seq_values = [v for _, v in seq]
+        total_values = [v for _, v in totals]
+        if seq_values or total_values:
+            observed = True
+        seq_delta += (max(seq_values) - seq_values[0]) if seq_values else 0
+        ammo_delta += (total_values[0] - min(total_values)) if total_values else 0
+    if not observed:
+        seq_delta = ammo_delta = None
+    source = "WeaponTimeline"
+    if weapon_events == 0:
+        # Timeline без оружейных событий субъекта (как в прогоне B): только косвенный источник.
+        source = "b-sampler fallback (WeaponTimeline пуст; ledger/emission не наблюдались)"
+        seq_delta, ammo_delta = sampler_deltas(samplers)
+    metrics = dict(shootingSource=source, timelineWeaponEvents=weapon_events, weaponCandidateEventsDropped=dropped,
+                   weaponCandidatesRejected=rejected,
+                   blazeShootRequests=requests, sourceEmitted=emitted, projectileEvents=projectile,
+                   ledgerShotCommits=commits, ledgerShotCommitsEmitted=emitted_commits, readinessFaults=faults,
+                   shotSequenceDelta=seq_delta, totalRoundsDelta=ammo_delta, unauthoredEmissions=unauthored,
+                   preparationBaselines=baselines, targetHits=hits, targetDamage=round(damage, 2))
+    if weapon_events == 0:
+        if unauthored > 0:
+            shooting = verdict("FAIL", reason="снаряд без author authority", source=source)
+        elif (seq_delta or 0) >= 1 and (ammo_delta or 0) >= 1:
+            shooting = verdict("NeedsReview", reason="выстрелы видны только по b-sampler; timeline не восстановлен",
+                               source=source)
+        elif requests > 0:
+            shooting = verdict("FAIL", reason="запросы Blaze не стали SDK-выстрелами (по b-sampler)", source=source)
+        else:
+            shooting = verdict("Unknown", reason="Blaze не запрашивал атаку", source=source)
+        hit = verdict("PASS") if hits else verdict("NotObserved")
+        return metrics, shooting, hit
+    if unauthored > 0:
+        shooting = verdict("FAIL", reason="снаряд без author authority")
+    elif emitted_commits and (not seq_delta or not ammo_delta):
+        shooting = verdict("FAIL", reason="ledger Shot без изменения ShotSequence/патронов")
+    elif emitted_commits >= 1 and emitted >= 1 and (seq_delta or 0) >= 1 and (ammo_delta or 0) >= 1:
+        shooting = verdict("PASS")
+    elif requests > 0:
+        shooting = verdict("FAIL", reason="запросы Blaze не стали SDK-выстрелами")
+    else:
+        shooting = verdict("Unknown", reason="Blaze не запрашивал атаку")
+    hit = verdict("PASS") if hits else verdict("NotObserved")
+    return metrics, shooting, hit
+
+
+def quantiles(values):
+    if not values:
+        return None
+    ordered = sorted(values)
+
+    def q(fraction):
+        index = fraction * (len(ordered) - 1)
+        low, high = math.floor(index), math.ceil(index)
+        return ordered[low] + (ordered[high] - ordered[low]) * (index - low)
+
+    return dict(n=len(ordered), min=round(ordered[0], 2), p10=round(q(0.1), 2), median=round(q(0.5), 2),
+                p90=round(q(0.9), 2), max=round(ordered[-1], 2))
+
+
+def muzzle_rows(frames):
+    rows = []
+    for frame in frames or []:
+        muzzle = frame.get("muzzle")
+        if not isinstance(muzzle, dict) or not frame.get("weapon"):
+            continue
+        animator = muzzle.get("animator") or {}
+        state = animator.get("state") or "none"
+        if animator.get("transition") and animator.get("next"):
+            state = state + "->" + animator["next"]
+        rows.append(dict(state=state, muzzle=muzzle))
+    return rows
+
+
+def analyse_muzzle(frame_sets):
+    rows = [row for frames in frame_sets for row in muzzle_rows(frames)]
+    if not rows:
+        return verdict("Unknown", reason="нет кадров с полем muzzle (рекордер не обновлён или оружие не взято)")
+    timing, status, colliders, states = {}, {}, {}, {}
+    is_target = gate = agree = after_gate = 0
+    for row in rows:
+        muzzle = row["muzzle"]
+        kind = "BeforeRender" if str(muzzle.get("timing", "")).startswith("BeforeRender") else "AvatarsUpdated"
+        timing[kind] = timing.get(kind, 0) + 1
+        forward = muzzle.get("forwardStatus") or "Unknown"
+        status[forward] = status.get(forward, 0) + 1
+        hit = muzzle.get("forwardHit") or {}
+        target = bool(hit.get("isTarget"))
+        if hit:
+            label = hit.get("collider") or "?"
+            if hit.get("isTarget"):
+                label = "target:" + label
+            elif hit.get("isSelf"):
+                label = "self:" + label
+            colliders[label] = colliders.get(label, 0) + 1
+        is_target += target
+        if kind == "BeforeRender":
+            after_gate += 1
+            gate += bool(muzzle.get("seesTargetGate"))
+            agree += target == bool(muzzle.get("seesTargetGate"))
+        group = states.setdefault(row["state"], dict(pitch=[], yaw=[], angle=[], frames=0, isTarget=0))
+        group["frames"] += 1
+        group["isTarget"] += target
+        aim = muzzle.get("aim") or {}
+        for key in ("pitch", "yaw", "angle"):
+            if aim.get(key) is not None:
+                group[key].append(float(aim[key]))
+    by_state = {name: dict(frames=g["frames"], isTargetShare=round(g["isTarget"] / g["frames"], 3),
+                           pitch=quantiles(g["pitch"]), yaw=quantiles(g["yaw"]), angle=quantiles(g["angle"]))
+                for name, g in sorted(states.items(), key=lambda item: -item[1]["frames"])}
+    top = dict(sorted(colliders.items(), key=lambda item: -item[1])[:8])
+    return dict(verdict="Measured", frames=len(rows), isTargetShare=round(is_target / len(rows), 3),
+                timing=timing, forwardStatus=status, forwardHitColliders=top, byAnimatorState=by_state,
+                gateConsistency=dict(afterGateFrames=after_gate, seesTargetGate=gate, isTargetMatchesGate=agree,
+                                     note="SeesTarget зависит и от допуска боя/цели driver; расхождение — повод смотреть кадры"),
+                convention="pitch/yaw = ShotSource.forward минус направление на центр твёрдых коллайдеров цели; "
+                           "система корня субъекта; +pitch вверх, +yaw вправо; градусы",
+                scope="Информационно, не гейт: выборка рекордера 0.5 с.")
+
+
+def analyse_combo(combo, expected):
+    source, weapon, category, expected_cases = expected
+    folder = ROOT / "runtime" / combo
+    summary = load(folder / "summary.json")
+    if summary is None:
+        return dict(verdict="Unknown", reason="нет summary.json")
+    cases = summary.get("cases") or []
+    invalid = [c.get("Id") + ": " + str(c.get("Error")) for c in cases if c.get("Status") in ("InvalidFixture", "Unsupported")]
+    samplers, frame_sets = [], []
+    for case in cases:
+        case_folder = folder / f"{case.get('Id')}-{case.get('Seed')}"
+        doc = load(case_folder / "b-sampler.json")
+        samplers.append((doc or {}).get("samples") or [])
+        frame_sets.append(load(case_folder / "visual-frames.json") or [])
+    missing_cases = sorted(set(expected_cases) - {c.get("Id") for c in cases})
+    if missing_cases:
+        invalid.append("нет case: " + ", ".join(missing_cases))
+    flat = [s for samples in samplers for s in samples if not s.get("missingSubject")]
+    subject_ids = {s.get("subjectNetId") for s in flat if s.get("subjectNetId")}
+    sources = {s.get("source") for s in flat}
+    weapons = {s.get("weapon") for s in flat if s.get("weapon")}
+    categories = {s.get("category") for s in flat if s.get("category")}
+    controllers = {s.get("controller") for s in flat if s.get("controller")}
+    result = dict(caseStatus={c.get("Id"): c.get("Status") for c in cases},
+                  findings={c.get("Id"): c.get("Findings") for c in cases if c.get("Findings")},
+                  samples=len(flat), sources=sorted(x for x in sources if x), weapons=sorted(weapons),
+                  controllers=sorted(controllers))
+    if not flat:
+        result["equip"] = verdict("Unknown", reason="нет выборок sampler")
+    elif sources != {source}:
+        result["equip"] = verdict("FAIL", reason="модель subject не совпадает с ожидаемой")
+    elif not weapons:
+        result["equip"] = verdict("FAIL", reason="оружие не экипировано")
+    elif weapons != {weapon} or categories != {category} or not all(category in c for c in controllers if c != "BotUnarmed"):
+        result["equip"] = verdict("FAIL", reason="оружие/категория/контроллер не совпадают")
+    else:
+        result["equip"] = verdict("PASS")
+    preparations = [s.get("preparation") for s in flat if s.get("weapon")]
+    shooting_metrics, result["shooting"], result["targetHit"] = analyse_shooting(cases, subject_ids, samplers)
+    result["muzzleAim"] = analyse_muzzle(frame_sets)
+    if "Fired" in preparations and shooting_metrics["preparationBaselines"] >= 1:
+        result["preparation"] = verdict("PASS")
+    elif preparations and "Fired" not in preparations:
+        result["preparation"] = verdict("FAIL", reason="подготовка не достигла готовности", seen=sorted(set(preparations)))
+    else:
+        result["preparation"] = verdict("Unknown", reason="нет cold baseline или выборок")
+    movement_metrics, result["movement"], result["animationSpeed"], result["strafe"], result["turns"] = analyse_movement(samplers)
+    result["weaponRigidity"] = analyse_rigidity(samplers)
+    result["lethalHit"] = verdict("NotApplicable", reason="стенд даёт цели Life=100000 (BotStandSession.cs:104)")
+    result["metrics"] = dict(shooting_metrics, **movement_metrics)
+    gating = [result[k]["verdict"] for k in GATING]
+    if invalid:
+        result["verdict"], result["invalid"] = "InvalidFixture", invalid
+    elif "FAIL" in gating:
+        result["verdict"] = "FAIL"
+    elif all(v == "PASS" for v in gating):
+        result["verdict"] = "PASS"
+    else:
+        result["verdict"] = "Unknown"
+    return result
+
+
+def main():
+    queue = load(ROOT / "runtime" / "queue.json")
+    out = dict(
+        authoring=passed_of(load(ROOT / "result.json")),
+        identityPostAuthoring=passed_of(load(ROOT / "identity-post-authoring.json")),
+        identityPostPlay=passed_of(load(ROOT / "identity-post-play.json")),
+        queueState=(queue or {}).get("state"),
+        combos={combo: analyse_combo(combo, expected) for combo, expected in COMBOS.items()},
+        scope="Технический прогон B2 на стенде; не игровая/пользовательская приёмка, не Quest/remote client.",
+    )
+    states = [out["authoring"], out["identityPostAuthoring"], out["identityPostPlay"]] + \
+             [c["verdict"] for c in out["combos"].values()]
+    if out["queueState"] != "completed":
+        states.append("Unknown")
+    out["verdict"] = "FAIL" if "FAIL" in states else "PASS" if all(s == "PASS" for s in states) else "Unknown"
+    (ROOT / "b-verdict.json").write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    compact = dict(verdict=out["verdict"], authoring=out["authoring"], identityPostAuthoring=out["identityPostAuthoring"],
+                   identityPostPlay=out["identityPostPlay"], queueState=out["queueState"],
+                   combos={k: dict(verdict=v.get("verdict"), **{g: v[g]["verdict"] for g in GATING if g in v},
+                                   shootingSource=(v.get("metrics") or {}).get("shootingSource"),
+                                   muzzleIsTargetShare=(v.get("muzzleAim") or {}).get("isTargetShare"))
+                           for k, v in out["combos"].items()},
+                   report=str(ROOT / "b-verdict.json"))
+    print(json.dumps(compact, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

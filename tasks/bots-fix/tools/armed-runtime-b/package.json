@@ -1,0 +1,40 @@
+{
+  "package": "bots-fix armed runtime B",
+  "date": "2026-10-11",
+  "technicalInput": "bd2e3bf803fa1491b7197b3407162097ddf5e219",
+  "outputRoot": "tasks/bots-fix/reports/armed-runtime-b",
+  "offlineChecks": {
+    "compile": "compile-check.ps1 (C# 7.3, обёртка MCP execute_code, сборки из technicalInput): 8/8 payload, 0 ошибок",
+    "analyzer": "analyze.py: синтетический smoke в scratchpad"
+  },
+  "steps": [
+    {"id": "B0", "tool": "execute_code", "payload": "b0-preflight.cs", "kind": "read-only", "repeatable": true,
+     "pre": "idle EditMode, RUNNING lease + guard", "expectSeconds": 5,
+     "pass": "passed=true", "terminal": "passed=false"},
+    {"id": "B1", "tool": "execute_code", "payload": "b1-authoring.cs", "kind": "mutation", "repeatable": false,
+     "pre": "B0 PASS", "expectSeconds": 180,
+     "pass": "passed=true: models3/sockets6/motions27, mismatches/unknown/errors 0",
+     "terminal": "passed=false или exception; после таймаута сначала B5.files.authoringResult"},
+    {"id": "B2", "tool": "execute_code", "payload": "b2-identity-post-authoring.cs", "kind": "mutation (SaveAssets)", "repeatable": false,
+     "pre": "B1 PASS", "expectSeconds": 30, "pass": "passed=true", "terminal": "passed=false или null"},
+    {"id": "B3", "tool": "execute_code", "payload": "b3-runtime-launch.cs", "kind": "mutation (enter Play)", "repeatable": false,
+     "pre": "B1 и B2 PASS (payload проверяет сам); renew lease", "expectSeconds": 90,
+     "pass": "started=true; затем B5: launch.state=Ready, stand.stage=Running, stand.finished=true",
+     "terminal": "refused/exception; launch.state=Failed; stand.stage=Failed; нет Ready за 120 с"},
+    {"id": "B5", "tool": "execute_code", "payload": "b5-runtime-status.cs", "kind": "read-only", "repeatable": true,
+     "pre": "любое состояние", "expectSeconds": 2, "pass": "информационный опрос каждые ~15 с"},
+    {"id": "B4", "tool": "execute_code", "payload": "b4-runtime-queue.cs", "kind": "mutation (RunCases chain)", "repeatable": false,
+     "pre": "Play стенда, warmup finished, invalidFixture=0, Live=Combat", "expectSeconds": 200,
+     "pass": "B5.queue.state=completed",
+     "terminal": "exception, refused с terminal; queue.state=failed/live-ended/aborted -> сразу B6, B7, finish"},
+    {"id": "console", "tool": "read_console", "kind": "read-only",
+     "pre": "до B6", "pass": "0 compile errors; ошибки runtime сохраняются в отчёт, не PASS"},
+    {"id": "B6", "tool": "execute_code", "payload": "b6-runtime-stop.cs", "kind": "mutation (exit Play)", "repeatable": false,
+     "pre": "queue завершена или terminal", "expectSeconds": 20,
+     "pass": "B5: editor.playing=false, launch.state=Idle, stand.owned=false"},
+    {"id": "B7", "tool": "execute_code", "payload": "b7-identity-post-play.cs", "kind": "mutation (SaveAssets)", "repeatable": false,
+     "pre": "Play завершён, stand.owned=false", "expectSeconds": 30, "pass": "passed=true"},
+    {"id": "finish", "tool": "broker finish", "pre": "B7 выполнен (или terminal + B6 сделан)"},
+    {"id": "verdict", "tool": "python -I analyze.py", "kind": "offline, после finish", "pass": "b-verdict.json verdict=PASS"}
+  ]
+}

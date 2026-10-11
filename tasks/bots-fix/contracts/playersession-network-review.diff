@@ -1,0 +1,34 @@
+diff --git a/Assets/Scripts/Player/PlayerSession.cs b/Assets/Scripts/Player/PlayerSession.cs
+index 82abdd4d2..b3c96a5bd 100644
+--- a/Assets/Scripts/Player/PlayerSession.cs
++++ b/Assets/Scripts/Player/PlayerSession.cs
+@@ -36,6 +36,29 @@ namespace VrBattlegrounds.Player
+         [SyncVar] public string DeviceToken = string.Empty;
+ 
+         [SyncVar] public ClientDeviceType DeviceType;
++        // Канонический признак управляемого AI: задаётся фабрикой до Spawn, читается presentation клиентов.
++        [SyncVar] private bool _botControlled;
++        public bool IsBotControlled => _botControlled;
++
++        // Серверный выбор модели сессии; команда/AvatarIndex и presentation клиентов его не копируют.
++        private GameObject _botAvatarSource;
++        private bool _botAvatarSourceFixed;
++        public GameObject BotAvatarSource => _botAvatarSource;
++        public bool HasBotAvatarSource => _botAvatarSourceFixed;
++
++        internal void SetBotAvatarSourceBeforeSpawn(GameObject source)
++        {
++            if (!NetworkServer.active || netId != 0 || !IsBotControlled || _botAvatarSourceFixed || source == null)
++                throw new InvalidOperationException("Модель AI-сессии фиксируется один раз сервером до Spawn.");
++            _botAvatarSource = source;
++            _botAvatarSourceFixed = true;
++        }
++
++        internal void SetBotControlBeforeSpawn(bool value)
++        {
++            if (netId != 0) throw new InvalidOperationException("Тип управления сессией фиксируется до Spawn.");
++            _botControlled = value;
++        }
+         [SyncVar] public bool IsAdmin;
+         [SyncVar] public GameRole Role;
+ 

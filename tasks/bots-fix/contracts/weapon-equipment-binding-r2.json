@@ -1,0 +1,34 @@
+{
+  "summary": "WeaponEquipmentBinding на корне оружия: read-only IsActive, Owner(UxrAvatar), OwnerAlive, Epoch; один серверный equipment snapshot без M/C.",
+  "motivation": "Clip-only NPC экипируют действительный firearm без fake VR hand, конкурирующего SDK-grab и второго владельца позы.",
+  "transition_cost": "Новый root NetworkBehaviour до Awake/Spawn, derived SDK availability + low-level grab gate, snapshot/teardown. UseContext/WRC реализует weapon-system после проверенного foundation. Production cutover отдельным атомарным этапом; fixture/metadata/Unity acceptance обязательны.",
+  "aspects": [
+    "api",
+    "ownership",
+    "sdk-grab-exclusion",
+    "snapshot",
+    "attachment"
+  ],
+  "compatibility": "additive",
+  "providing_stage": "binding-foundation",
+  "structural": true,
+  "architecture_decision": {
+    "source": "Поручение пользователя plan + independent review + implementation after APPROVED; tasks/bots-fix/full-clips-review.md; .agent-state/coordination/weapon-system-to-bots-full-clips.md, BOTS-FULL-CLIPS-CONTRACT-20261007-1, UUID25b51afb-9e6a-4f64-b798-f8d815cab294, явно получен и прочитан/согласен 2026-10-08.",
+    "decision": "Сервер один пишет binding; SDK-hand/equipment mutually exclusive. Неразрешённый owner сохраняет claim; OwnerAlive из canonical alive current body. Все ancestor availability providers AND, direct/replayed admission до BeginSync; received claim откатывает prediction без echo и второго Release implementation; nested receive откладывается. Ни M/C, ни второй automation lifecycle. Readiness и Resolve принадлежат weapon-system. Historical approval не заменяет формальные ACK точной ревизии нового протокола."
+  },
+  "api": {
+    "namespace": "VrBattlegrounds.Weapons",
+    "type": "WeaponEquipmentBinding",
+    "read": [
+      "bool IsActive",
+      "UxrAvatar Owner",
+      "bool OwnerAlive",
+      "int Epoch"
+    ],
+    "authority": "Только server/world author изменяет spawned binding. Epoch растёт на attach/drop/transfer; client только projection.",
+    "admission": "Current live canonical bot body + map admission + free SDK hands/anchor + свободный RightHand socket.",
+    "firing": "RequestAutomationPreparation единственный вход. Resolver при конфликте SDK/equipment возвращает None, без стрельбы. Gunner требует свежую attachment/body/epoch/phase и actual ShotSource."
+  },
+  "evidence": "Источник реализован и SOURCE APPROVED; локальная компиляция PASS. Новые Unity runtime/metadata/Mirror serialization/Android/user acceptance пока pending; обслуживания worker это предложение не снимает.",
+  "revision_note": "r2 (2026-10-11): только учёт поставщика. Минимальный foundation (5 путей: Weapons/Equipment.meta, Equipment/WeaponEquipmentBinding.cs+meta, Equipment/IWeaponEquipmentSocketOwner.cs+meta) влит совместным пакетом weapon-system коммитом 6849ba0e6; поставщик — отдельный этап bots-fix/binding-foundation. API, владение и аспекты не меняются; IUxrGrabAvailability (sdk-grab-exclusion) и первая реализация IWeaponEquipmentSocketOwner остаются за equipment-foundation/clip-cutover под гейтом ревью manipulation и network (3649/3656/3597)."
+}

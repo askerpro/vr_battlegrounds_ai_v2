@@ -2,8 +2,8 @@
 
 1. `hand-writer-contract` — контракт порядка писателей кисти с avatar-ik (список — AGENT.md «Invariants»); bots-fix пишет `BotBody`/`UxrArmIKSolver` — analysis.md «Минимальная база знаний», `expert-map.md`.
 2. `grip-pose-coverage` — `GrabPoseCoverageTests` влит красным (d8d94cf9: MEF без хвата планшета/жетона/части оружия, Cyborg — пистолета/M16/дробовика), генератора переноса поз на базы нет; сверить с инвентарём mef-grip-audit.
-   Зависимый: bots-fix (4078/4096) — IK опорной руки Cyborg-ботов «без цели» и socket правой руки
-   на запечённом GUID MEF_Base_Avatar до записи на базе `PlayerBase_SdkHands` (точка 1 AK105/PPK и др.).
+   Боты от него не зависят: решение пользователя (bots-fix 4115) — Cyborg убран из ботов (MEF, MEF Black).
+   Нужен только для игроков на Cyborg; запись — на базе `PlayerBase_SdkHands`.
 3. `hrq-fresh-verification` — 89/89, 6/6, Android PASS HRQ 0.5 сняты на 2c845870; свежий прогон, возможно в palm-validation — handoff.md «Незавершённое и ограничения».
 4. `hrq-export-reports` — экспорт HRQ из `Docs/tasks/report/hand-rig-quality` в `tasks/hand-rig-quality/reports` — Details.md «Порядок завершения static-analyzer» п.2.
 5. `sdk59-changelog-name` — `changelog/2026-10-07-sdk-preview-scale.md` → `<date>-sdk-59.md` со ссылками — там же.

@@ -44,6 +44,7 @@
 | arsenal-generator | gameplay | `arsenal-generator` | planning running | 0/42 | 5 | 1 |
 | weapon-system | weapon-system | `weapon-system-expert` | 6 этапов verified | 1/4 | 36 | 2 |
 | bots-fix | bots | `bots-fix` | armed-development running | 0/2 | 72 | 2 |
+| map-runtime-bootstrap | gameplay | `F:/CodexWorktrees/map-runtime-bootstrap/Vr_Battlegrounds_ai` | Claude-агент готовился начать series-smoke-e2e (ждал порты checkout — уже влиты); E2ERunner — каркас launch-infra |
 | lobby-decoration | level-design | **основной checkout** `F:/UnityProjects` | implementation running | 1/21 | 65 | 2 |
 
 - **Волна 0 — сразу.** Чистые worktree без активной работы; переход почти бесплатный. Проверяет процедуру.
@@ -63,9 +64,9 @@
 inbox `expert-workspace-infra`: точка перехода достигнута / handoff записан. Новую сессию эксперта запускает
 пользователь. Итог по каждой задаче — строка в Details этой задачи.
 
-## Приём работы у Codex без передачи (лимиты кончились)
+## Приём работы без передачи (Codex без лимитов, остановленный Claude)
 
-Codex-сессия не может записать handoff — эксперт восстанавливает его сам. До rebase в worktree нет
+Прежняя сессия не может записать handoff — эксперт восстанавливает его сам по журналам Codex и Claude Code (`session_handoff.py`). Готовые промпты — `handoff/takeover-<task-id>.md`. До rebase в worktree нет
 `Tools/experts` и профилей экспертов, поэтому первая сессия — обычный `claude` в worktree задачи с промптом
 ниже, инструменты берутся из `F:/CodexWorktrees/expert-workspace-infra/Vr_Battlegrounds_ai` (далее `$EW`).
 После rebase следующие сессии запускаются `claude --agent <id>-expert`.
@@ -86,7 +87,7 @@ Codex-сессия не может записать handoff — эксперт �
 закончились лимиты посреди работы, handoff он не оставил. Прими задачу и доделывай по его плану.
 Общайся по-русски, правила — AGENTS.md. EW=F:/CodexWorktrees/expert-workspace-infra/Vr_Battlegrounds_ai
 1. Зона и живое состояние: python -B -X utf8 $EW/Tools/experts/awake.py $EW/experts/<id> --repo .
-2. Что делал Codex: python -B -X utf8 $EW/Tools/experts/codex_handoff.py --worktree .
+2. Что делал Codex: python -B -X utf8 $EW/Tools/experts/session_handoff.py --worktree .
 3. Сверь факты, переписка Codex — не факт: git status и diff --stat; tasks/<task-id>/Readme.md «Следующий шаг»
    и plan.json; хаб (Tools/agents/coordination.py status, inbox задачи); брокер
    (Tools/agents/editor-broker.py status — своя незакрытая аренда/тикет: штатно recover/finish до любых правок).

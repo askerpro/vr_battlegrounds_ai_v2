@@ -174,7 +174,8 @@
         "tasks/vr-test-stand/Details.md",
         "tasks/vr-test-stand/plan.json",
         "tasks/vr-test-stand/changelog/**",
-        "tasks/vr-test-stand/tools/**"
+        "tasks/vr-test-stand/tools/**",
+        "experts/launch-infra/**"
       ],
       "after": [
         {

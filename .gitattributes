@@ -103,6 +103,14 @@ Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/**/*.[bB][lL][eE][nN][dD]
 "Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[dD][dD][sS]" vendor-lfs
 "Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[gG][lL][bB]" vendor-lfs
 "Assets/ThirdParty/Military Soldier Mega Bundle/**/*.[bB][lL][eE][nN][dD]" vendor-lfs
+# Выборочные копии купленных паков для оформления лобби (MilitaryCamp и каталог окружений).
+Assets/Art/Lobby/**/*.[pP][nN][gG] vendor-lfs
+Assets/Art/Lobby/**/*.[tT][gG][aA] vendor-lfs
+Assets/Art/Lobby/**/*.[jJ][pP][gG] vendor-lfs
+Assets/Art/Lobby/**/*.[pP][sS][dD] vendor-lfs
+Assets/Art/Lobby/**/*.[eE][xX][rR] vendor-lfs
+Assets/Art/Lobby/**/*.[fF][bB][xX] vendor-lfs
+Assets/Art/Lobby/**/*.[oO][bB][jJ] vendor-lfs
 # END GAME VENDOR LFS
 # Set default behavior for command prompt diff.
 #

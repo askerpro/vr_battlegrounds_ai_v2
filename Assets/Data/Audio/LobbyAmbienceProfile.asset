@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3157860f2b964a42889053abed2610e4, type: 3}
+  m_Name: LobbyAmbienceProfile
+  m_EditorClassIdentifier: 
+  forest: {fileID: 8300000, guid: 7f8d6aa05b1d53d45b77433921ea50da, type: 3}
+  forestVolume: 0.08
+  globalPause: {x: 18, y: 35}
+  episodes:
+  - kind: 0
+    mode: 1
+    clips:
+    - {fileID: 8300000, guid: f9023bdac4028a94781731d25af39fce, type: 3}
+    cooldown: {x: 70, y: 140}
+    repeats: {x: 1, y: 1}
+    duration: 18
+    volume: 0.35
+    fade: 4
+    minDistance: 5
+    maxDistance: 150
+  - kind: 1
+    mode: 1
+    clips:
+    - {fileID: 8300000, guid: 57e63483c4a64869a26476a3e97a8384, type: 3}
+    cooldown: {x: 70, y: 140}
+    repeats: {x: 1, y: 1}
+    duration: 19
+    volume: 0.3
+    fade: 3
+    minDistance: 5
+    maxDistance: 150
+  - kind: 2
+    mode: 0
+    clips:
+    - {fileID: 8300000, guid: 9ff447723c674553b2de1a4327da0661, type: 3}
+    cooldown: {x: 70, y: 140}
+    repeats: {x: 1, y: 1}
+    duration: 2
+    volume: 0.13
+    fade: 0.2
+    minDistance: 5
+    maxDistance: 150
+  - kind: 3
+    mode: 1
+    clips:
+    - {fileID: 8300000, guid: 69a04eaf03f12f04aa6c625408e26554, type: 3}
+    - {fileID: 8300000, guid: 38943895396b7aa409b3721f82a745b7, type: 3}
+    cooldown: {x: 70, y: 140}
+    repeats: {x: 1, y: 1}
+    duration: 12
+    volume: 0.18
+    fade: 2
+    minDistance: 5
+    maxDistance: 150

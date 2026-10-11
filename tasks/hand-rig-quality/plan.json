@@ -77,6 +77,25 @@
       "needs": []
     },
     {
+      "id": "contact-metrics",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/**",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "mef-grip-audit",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "palm-validation",
       "writes": [
         "Assets/Editor/VR_Battlegrounds/Avatars/HandRigQuality/**",
@@ -96,6 +115,11 @@
         {
           "task": "hand-rig-quality",
           "stage": "expert-deployment",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "contact-metrics",
           "state": "merged"
         }
       ],

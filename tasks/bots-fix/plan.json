@@ -133,8 +133,8 @@
           "state": "accepted"
         },
         {
-          "task": "grab-authority",
-          "stage": "death-release-authority",
+          "task": "death-body-defer",
+          "stage": "deferred-body",
           "state": "merged"
         }
       ],

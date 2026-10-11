@@ -12,7 +12,10 @@ namespace VrBattlegrounds.Editor.HandPoseReview
     /// <summary>Единый редакторный вход: синхронный анализ, без изменения игровых ассетов.</summary>
     public static class HandPoseFitAnalyzer
     {
-        public static HandPoseFitReport Analyze(HandPoseFitRequest request)
+        public static HandPoseFitReport Analyze(HandPoseFitRequest request) => Analyze(request,null);
+
+        /// <param name="withSnapshot">Вызывается после обработки, пока жив временный снимок (предпросмотр правок); до записи report.json.</param>
+        public static HandPoseFitReport Analyze(HandPoseFitRequest request,Action<HandPoseFitSnapshot,HandPoseFitReport> withSnapshot)
         {
             request=request?.Copy();
             var report=new HandPoseFitReport {CreatedUtc=DateTime.UtcNow.ToString("O"),UnityVersion=Application.unityVersion,Settings=request,Status="invalid_configuration"};
@@ -28,6 +31,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 Directory.CreateDirectory(directory);report.OutputDirectory=directory;
                 using(var snapshot=new HandPoseFitSnapshot(request,report)) {
                     ProcessSnapshot(snapshot,report);
+                    withSnapshot?.Invoke(snapshot,report);
                 }
             }
             catch(NotSupportedException e) {report.Status="unsupported_context";report.Error=e.Message;}
@@ -72,13 +76,39 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             foreach(var z in report.Zones) {var pairs=candidates.Where(p=>p.Zone==z.Zone).ToArray();if(pairs.Length>0) z.MeanNearNormalOpposition=pairs.Sum(p=>p.NormalOppositionDot*p.AreaMm2)/pairs.Sum(p=>p.AreaMm2);}
             // Знаковые метрики по пальцам считаются по всей кисти (не по PalmarOnly-маске) и всей поверхности предмета.
             report.ContactMetrics=HandPoseContactMetrics.Measure(snapshot,report,full);
-            report.Reliability.Add(new FitReliability{Metric="finger_contact_sign",Status="approximate",Reason="Знак — обобщённое число оборотов всей поверхности предмета (w>=0,5 — внутри); на открытых мешах у дыр знак размыт (AmbiguousWindingFarAreaMm2), обращённые части дают w<0 (NegativeWindingAreaMm2). Подушечка — по осям distal-кости SDK; правил контакта нет."});
+            report.Reliability.Add(new FitReliability{Metric="finger_contact_sign",Status="approximate",Reason="Знак — обобщённое число оборотов всей поверхности предмета (w>=0,5 — внутри); на открытых мешах у дыр знак размыт (AmbiguousWindingFarAreaMm2), обращённые части дают w<0 (NegativeWindingAreaMm2). Подушечка — по осям distal-кости SDK."});
+            ApplyGripRules(snapshot,report,full);
             int markerCount=Math.Min(request.MaxContactMarkers,candidates.Count);
             for(int i=0;i<markerCount;i++) report.ContactMarkers.Add(candidates[(int)((long)i*candidates.Count/markerCount)]);
             report.Status=report.Reliability.Any(x=>x.Status!="measured")?"analysis_incomplete":"analysis_complete";
             report.Limitations.Add("Диапазон контакта не задаёт норму качества; отдельные показатели и неизвестность не заменяются итоговым баллом.");
             report.Limitations.Add("Связность контактных участков и распределение площади оцениваются по выборке; локальные дефекты между точками могут быть пропущены.");
             if(request.RenderImages) HandPoseFitRenderer.Render(snapshot,report,contact,full,topology);
+        }
+
+        /// <summary>Правила грубых нарушений, подсказки сгиба и лист ревью. Ошибка правил не прерывает измерения.</summary>
+        static void ApplyGripRules(HandPoseFitSnapshot snapshot,HandPoseFitReport report,FitSurface full)
+        {
+            var r=report.Settings;if(!r.ApplyGripRules||report.ContactMetrics==null) return;
+            FitBandSet bands=null;
+            try {bands=FitBandSet.Load(string.IsNullOrEmpty(r.ContactBandsPath)?null:r.ContactBandsPath);}
+            catch(Exception e) {report.Reliability.Add(new FitReliability{Metric="grip_rules",Status="unavailable",Reason="Не загружены полосы: "+e.Message});return;}
+            string type=string.IsNullOrEmpty(r.GripType)?report.GripTypeAuto:r.GripType;
+            string source=string.IsNullOrEmpty(r.GripType)?"auto:"+(report.GripTypeAutoReason??"unknown"):"override";
+            report.GripRules=HandPoseGripRules.Evaluate(report.ContactMetrics,bands,type,source,r);
+            report.Findings.AddRange(HandPoseGripRules.Describe(report.GripRules));
+            report.Reliability.Add(new FitReliability{Metric="grip_rules",Status="approximate",Reason="Полосы — распределение эталонов SDK Cyborg/BigHands своего типа хвата (контакт-полосы "+bands.Version+"); ищутся только грубые выходы за полосу. Палец вне поверхности допустим; скрытость дефекта не оценивается — судит человек по листу ревью."+(report.GripRules.LowConfidence?" Тип с малым числом эталонов: low_confidence.":"")});
+            FitHandAxes axes=null;
+            try {axes=FitHandAxes.From(snapshot.Hand,report.Joints,r.Side==UltimateXR.Core.UxrHandSide.Right,snapshot.WristPosition);}
+            catch(Exception e) {report.Limitations.Add("Оси кисти не построены: "+e.Message);}
+            if(r.ComputeCorrectionHints) report.CorrectionHints=HandPoseBendSolver.Hints(snapshot.Hand,snapshot.FingerChains,report.ContactMetrics,report.GripRules,bands,full,axes);
+            if(r.RenderReviewSheet&&axes!=null&&!string.IsNullOrEmpty(report.OutputDirectory)) {
+                string title=HandPoseReviewSheet.Title(report);
+                var state=new FitReviewState{Label="BEFORE",Hand=snapshot.Hand,Metrics=report.ContactMetrics,Verdict=report.GripRules,Hints=report.CorrectionHints};
+                report.ReviewSheet=HandPoseReviewSheet.Render(snapshot,full,snapshot.ObjectSurface,axes,state,HandPoseReviewSheet.Header(title,report.GripRules),Path.Combine(report.OutputDirectory,"review-sheet.png"),r.ReviewPanelSize);
+                report.ReviewJson=Path.Combine(report.OutputDirectory,"review.json");
+                File.WriteAllText(report.ReviewJson,HandPoseReviewSheet.SummaryJson(title,report.ContactMetrics,report.GripRules,report.CorrectionHints,"review-sheet.png"),new UTF8Encoding(false));
+            }
         }
 
         /// <summary>JSON-вход для execute_code. Объекты указываются AssetDatabase-путями.</summary>
@@ -132,6 +162,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             foreach(var region in r.ContactRegions) if(region==null||string.IsNullOrWhiteSpace(region.Name)||!Finite(region.Bounds.center)||!Finite(region.Bounds.size)||region.Bounds.size.x<=0||region.Bounds.size.y<=0||region.Bounds.size.z<=0) throw new ArgumentException("Неверный контактный регион.");
             if(float.IsNaN(r.ContactWindowMm)||float.IsInfinity(r.ContactWindowMm)||r.ContactWindowMm<=0||r.ContactWindowMm>50) throw new ArgumentException("ContactWindowMm: (0..50].");
             if(float.IsNaN(r.PadHalfAngleDeg)||r.PadHalfAngleDeg<=0||r.PadHalfAngleDeg>90||r.PadSamplesPerFinger<16||r.PadSamplesPerFinger>5000) throw new ArgumentException("PadHalfAngleDeg: (0..90]; PadSamplesPerFinger: 16..5000.");
+            if(!(r.NotableExcessMm>0)||!(r.GrossExcessMm>=r.NotableExcessMm)||!(r.MissExcessMm>0)||r.MissFingerCount<1||r.MissFingerCount>5||float.IsInfinity(r.GrossExcessMm)||float.IsInfinity(r.MissExcessMm)) throw new ArgumentException("Пороги правил: 0<NotableExcessMm<=GrossExcessMm, MissExcessMm>0, MissFingerCount 1..5.");
+            if(!string.IsNullOrEmpty(r.GripType)&&!HandPoseGripRules.GripTypes.Contains(r.GripType)) throw new ArgumentException("GripType: пусто (авто) или "+string.Join(", ",HandPoseGripRules.GripTypes)+".");
+            if(r.ReviewPanelSize<256||r.ReviewPanelSize>1024) throw new ArgumentException("ReviewPanelSize: 256..1024.");
             if(!Finite(r.AnalysisVolumePositionMeters)||!Finite(r.AnalysisVolumeEulerDegrees)||!Finite(r.AnalysisVolumeScale)||r.AnalysisVolumeScale.x<=0||r.AnalysisVolumeScale.y<=0||r.AnalysisVolumeScale.z<=0) throw new ArgumentException("Неверное преобразование аналитического объёма.");
         }
         static bool Finite(Vector3 v) => !(float.IsNaN(v.x)||float.IsNaN(v.y)||float.IsNaN(v.z)||float.IsInfinity(v.x)||float.IsInfinity(v.y)||float.IsInfinity(v.z));

@@ -59,6 +59,16 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         public int PadSamplesPerFinger = 256;
         // Кадр по bounds кисти (+30 мм) вместо фиксированного FrameSizeMeters вокруг GripCenter.
         public bool FrameToHandBounds;
+        // Правила грубых нарушений по полосам эталона SDK (contact-bands). GripType пуст — тип из роли точки хвата;
+        // иначе явный override: pistol_grip, foregrip, pump, pinch_small, handle. Пороги — выход за полосу, мм.
+        public bool ApplyGripRules = true;
+        public string GripType = "", ContactBandsPath = "";
+        public float NotableExcessMm = 5, GrossExcessMm = 10, MissExcessMm = 15;
+        public int MissFingerCount = 3;
+        // Подсказки сгиба (расчёт на жёсткой модели пальца, позы не меняются) и компактный лист ревью для LLM/человека.
+        public bool ComputeCorrectionHints = true, RenderReviewSheet = true;
+        public int ReviewPanelSize = 512;
+        public string ReviewTitle = "";
         public HandPoseFitRequest Copy() {var copy=(HandPoseFitRequest)MemberwiseClone();copy.ContactRendererPaths=(ContactRendererPaths??Array.Empty<string>()).ToArray();copy.ContactRegions=(ContactRegions??Array.Empty<FitContactRegion>()).Select(x=>x?.Copy()).ToArray();copy.AnalysisVolumeReview=AnalysisVolumeReview?.Copy();return copy;}
     }
 
@@ -109,8 +119,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview
 
     public sealed class HandPoseFitReport
     {
-        public int SchemaVersion = 3;
-        public string AlgorithmVersion = "mesh-fit-0.5-signed-finger-contact", CreatedUtc, UnityVersion, Status, Error, OutputDirectory;
+        public int SchemaVersion = 4;
+        public string AlgorithmVersion = "mesh-fit-0.6-grip-rules", CreatedUtc, UnityVersion, Status, Error, OutputDirectory;
         public string EvidenceMode;
         public FitVolumeReviewAudit LocalVolumeReviewAudit;
         public string LocalVolumeDistanceMeaning="unsigned_distance_and_bins_to_actual_analysis_volume_meters_object_root; not_grip_acceptance";
@@ -155,6 +165,11 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         public string DistanceBinMeaning="unsigned_mm: [0,.5], (.5,1], (1,2], (2,5], (5,infinity); not_quality_thresholds";
         // Новое в схеме 3: знаковое расстояние по числу оборотов, подушечки по пальцам. Прежние unsigned-поля не меняются.
         public FitContactMetrics ContactMetrics;
+        // Схема 4: тип хвата из роли точки, грубые нарушения по полосам SDK, подсказки сгиба, лист ревью.
+        public string GripTypeAuto, GripTypeAutoReason;
+        public FitGripVerdict GripRules;
+        public FitCorrectionHints CorrectionHints;
+        public string ReviewSheet, ReviewJson;
     }
 
     // Unity-векторы имеют вычисляемые свойства normalized; обычная JSON-рефлексия рекурсивна.

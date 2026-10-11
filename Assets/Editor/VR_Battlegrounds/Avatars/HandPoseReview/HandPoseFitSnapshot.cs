@@ -14,6 +14,12 @@ using VrBattlegrounds.Editor.HandGeometry;
 
 namespace VrBattlegrounds.Editor.HandPoseReview
 {
+    /// <summary>Кисть, повторно захваченная после правки на временном клоне.</summary>
+    public sealed class FitEditedHand
+    {
+        public List<FitTriangle> Hand;public List<FitFingerFrame> Frames;public List<FitFingerChain> Chains;public List<FitJointReport> Joints;public Vector3 Wrist;
+    }
+
     /// <summary>Владелец временной preview-сцены; исходные prefab/mesh/pose не меняются.</summary>
     public sealed class HandPoseFitSnapshot : IDisposable
     {
@@ -25,8 +31,15 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         public readonly List<FitTriangle> OtherHand=new List<FitTriangle>(),AnalysisVolume=new List<FitTriangle>();
         // Рамки distal-костей анализируемой кисти (оси той же кости, кадр корня предмета) для подушечек.
         public readonly List<FitFingerFrame> FingerFrames=new List<FitFingerFrame>();
+        // Цепочки сгиба пальцев (оси curl SDK) и запястье анализируемой кисти — для подсказок и правки на копии.
+        public readonly List<FitFingerChain> FingerChains=new List<FitFingerChain>();
+        public Vector3 WristPosition;
         Matrix4x4 _worldToFrame=Matrix4x4.identity;
         bool _runtime;
+        // Временный клон статического снимка: единственное место, где применяется правка позы для предпросмотра.
+        UxrAvatar _avatar;UxrGrabber _grabber;HandPoseFitRequest _request;GameObject _avatarRoot;
+        readonly List<Renderer> _avatarRenderers=new List<Renderer>();
+        public bool SupportsEdits => _avatar!=null && !_runtime;
         HandPoseFitSnapshot() {}
         /// <summary>Математические fixtures без preview-сцены и SDK. Заполняет только геометрию.</summary>
         public static HandPoseFitSnapshot FromGeometry() => new HandPoseFitSnapshot();
@@ -40,6 +53,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 var point=grabbable.GetGrabPoint(r.GrabPoint);
                 if(point.SnapMode!=UxrSnapToHandMode.PositionAndRotation) throw new NotSupportedException("Для SDK preview требуется Snap Mode Position And Rotation.");
                 if(!point.BothHandsCompatible && point.HandSide!=r.Side) throw new ArgumentException("Эта точка не поддерживает выбранную сторону.");
+                report.GripTypeAuto=HandPoseGripRules.DetectGripType(grabbable,r.GrabPoint,out string gripReason);report.GripTypeAutoReason=gripReason;
                 var grabber=avatar.GetComponentsInChildren<UxrGrabber>(true).FirstOrDefault(g=>g.Side==r.Side);
                 if(!grabber || !(grabber.HandRenderer is SkinnedMeshRenderer skin) || !skin.sharedMesh) throw new NotSupportedException("Кисть должна иметь SDK Skinned HandRenderer.");
                 var align=grabbable.Editor_GetGrabPointGrabAlignTransform(avatar,r.GrabPoint,r.Side);
@@ -56,8 +70,10 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 report.GrabbablePath=HumanPath(grabbable.transform,root.transform);report.AlignToControllerEnabled=point.AlignToController;report.ControllerAlignmentApplied=false;
                 var hand=avatar.GetHand(r.Side);var zones=new Dictionary<Transform,string>();var segments=new Dictionary<Transform,string>();
                 var fingerAxes=avatar.AvatarRigInfo.GetArmInfo(r.Side).FingerUniversalLocalAxes;
+                if(hand.Wrist) WristPosition=sourceToSnap.MultiplyPoint3x4(hand.Wrist.position);
                 void Finger(UxrAvatarFinger f,string name) {
                     if(f.Distal) FingerFrames.Add(FitFingerFrame.FromBone(name,f.Distal,fingerAxes,sourceToSnap));
+                    AddChain(f,name,fingerAxes,sourceToSnap);
                     var nodes=new[]{f.Metacarpal,f.Proximal,f.Intermediate,f.Distal};var labels=new[]{"metacarpal","proximal","intermediate","distal"};
                     for(int i=0;i<nodes.Length;i++) if(nodes[i]) {
                         foreach(var child in nodes[i].GetComponentsInChildren<Transform>(true)){zones[child]=name;segments[child]=name+"/"+labels[i];}
@@ -120,6 +136,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 UxrAvatar avatar=grabber.Avatar;var held=grabber.GrabbedObject;var root=geometryRoot?geometryRoot:held.gameObject;
                 if(!avatar||EditorUtility.IsPersistent(avatar)||!held.transform.IsChildOf(root.transform)) throw new ArgumentException("Неверный живой аватар/корень геометрии.");
                 int point=UxrGrabManager.Instance.GetGrabbedPoint(grabber);if(point<0) throw new ArgumentException("SDK не подтвердил точку текущего хвата.");
+                report.GripTypeAuto=HandPoseGripRules.DetectGripType(held,point,out string gripReason);report.GripTypeAutoReason=gripReason;
                 r.Side=grabber.Side;r.GrabPoint=point;r.GrabbableIndexPath=IndexPath(held.transform,root.transform);
                 report.GrabbablePath=HumanPath(held.transform,root.transform);report.CaptureSource="runtime_after_sdk_update";
                 report.CaptureFrame=Time.frameCount;report.CaptureGameTime=Time.time;
@@ -161,6 +178,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             if(point.HideHandGrabberRenderer) throw new NotSupportedException("Точка намеренно скрывает руку.");
             if(point.SnapMode!=UxrSnapToHandMode.PositionAndRotation) throw new NotSupportedException("Нужен статический PositionAndRotation.");
             if(grabbable.GetComponents<UxrGrabPointShape>().Any()) throw new NotSupportedException("Dynamic snap shape не поддерживается.");
+            report.GripTypeAuto=HandPoseGripRules.DetectGripType(grabbable,r.GrabPoint,out string gripReason);report.GripTypeAutoReason=gripReason;
             if(r.Profile=="hand_support") throw new NotSupportedException("Профиль поддержки другой рукой требует второго snapshot.");
             var info=point.GetGripPoseInfo(avatar);
             if(info==null) throw new ArgumentException("Не разрешилась запись хвата.");
@@ -198,6 +216,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             report.GrabbablePath=HumanPath(gripTransform,objectRoot.transform);
             CaptureHand(avatar,grabber,r,report);
             CaptureObject(objectRoot,r,report);CaptureVolume(r,report);CaptureOtherHand(avatar,r);EnsureGeometry();
+            _avatar=avatar;_grabber=grabber;_request=r;_avatarRoot=avatarRoot;
+            _avatarRenderers.AddRange(avatarRoot.GetComponentsInChildren<Renderer>(true).Where(x=>x.enabled));
             foreach(Renderer renderer in avatarRoot.GetComponentsInChildren<Renderer>(true)) renderer.enabled=false;
             foreach(Renderer renderer in objectRoot.GetComponentsInChildren<Renderer>(true)) renderer.enabled=false;
             report.Limitations.Add("Статический снимок: полный IK, движение контроллеров и игровые ограничения двух рук не проверяются.");
@@ -260,9 +280,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             var grabber=avatar.GetComponentsInChildren<UxrGrabber>(true).FirstOrDefault(g=>g.Side==side);
             if(!grabber || (_runtime && (!grabber.HandRenderer||!grabber.HandRenderer.enabled))) return;
             // Выделение второй кисти тем же способом, без изменения её позы.
-            int handCount=Hand.Count,contactCount=ContactHand.Count,frameCount=FingerFrames.Count;var savedBounds=HandBounds;var copy=r.Copy();copy.Side=side;copy.PalmarOnly=false;
+            int handCount=Hand.Count,contactCount=ContactHand.Count,frameCount=FingerFrames.Count,chainCount=FingerChains.Count;var savedBounds=HandBounds;var savedWrist=WristPosition;var copy=r.Copy();copy.Side=side;copy.PalmarOnly=false;
             CaptureHand(avatar,grabber,copy,new HandPoseFitReport());OtherHand.AddRange(Hand.Skip(handCount));Hand.RemoveRange(handCount,Hand.Count-handCount);ContactHand.RemoveRange(contactCount,ContactHand.Count-contactCount);HandBounds=savedBounds;
-            FingerFrames.RemoveRange(frameCount,FingerFrames.Count-frameCount);
+            FingerFrames.RemoveRange(frameCount,FingerFrames.Count-frameCount);FingerChains.RemoveRange(chainCount,FingerChains.Count-chainCount);WristPosition=savedWrist;
         }
 
         GameObject Clone(GameObject prefab)
@@ -284,8 +304,10 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             var zones=new Dictionary<Transform,string>();
             var segments=new Dictionary<Transform,string>();
             var fingerAxes=avatar.AvatarRigInfo.GetArmInfo(r.Side).FingerUniversalLocalAxes;
+            if(hand.Wrist) WristPosition=_worldToFrame.MultiplyPoint3x4(hand.Wrist.position);
             void Finger(UxrAvatarFinger f,string name) {
                 if(f.Distal) FingerFrames.Add(FitFingerFrame.FromBone(name,f.Distal,fingerAxes,_worldToFrame));
+                AddChain(f,name,fingerAxes,_worldToFrame);
                 var nodes=new[]{f.Metacarpal,f.Proximal,f.Intermediate,f.Distal};var labels=new[]{"metacarpal","proximal","intermediate","distal"};
                 for(int i=0;i<nodes.Length;i++) if(nodes[i]) {foreach(Transform child in nodes[i].GetComponentsInChildren<Transform>(true)) {zones[child]=name;segments[child]=name+"/"+labels[i];}
                     report.Joints.Add(new FitJointReport {Zone=name,Segment=labels[i],Path=HumanPath(nodes[i],avatar.transform),PositionMeters=_worldToFrame.MultiplyPoint3x4(nodes[i].position),LocalRotation=nodes[i].localRotation});}
@@ -326,6 +348,56 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 }
             }
             report.Limitations.Add("Зоны по весам костей, ладонная маска по нормалям — требуют визуальной проверки для нового рига/перчатки; palm_wrist включает границу запястья.");
+        }
+
+        void AddChain(UxrAvatarFinger f,string name,UltimateXR.Core.Math.UxrUniversalLocalAxes axes,Matrix4x4 toFrame)
+        {
+            if(!f.Proximal||!f.Intermediate||!f.Distal) return;
+            var chain=new FitFingerChain{Finger=name,Weights=FitFingerChain.SdkWeights(name),FingerprintDirection=-toFrame.MultiplyVector(f.Distal.TransformDirection(axes.LocalUp)).normalized};
+            var bones=new[]{f.Proximal,f.Intermediate,f.Distal};
+            for(int i=0;i<3;i++) {chain.Pivots[i]=toFrame.MultiplyPoint3x4(bones[i].position);chain.Axes[i]=toFrame.MultiplyVector(bones[i].TransformDirection(axes.LocalRight)).normalized;}
+            FingerChains.Add(chain);
+        }
+
+        /// <summary>
+        /// Предпросмотр правки на временном клоне: curl пальцев как UxrAvatarRig.CurlFinger (LocalRight, Space.Self),
+        /// поворот кисти вокруг запястья и сдвиг в осях кисти, повторный захват той же функцией, затем полный откат клона.
+        /// Ассеты (позы, префабы) не затрагиваются: клон живёт в preview-сцене снимка.
+        /// </summary>
+        public FitEditedHand CaptureEdited(FitPoseEdit edit,FitHandAxes axes)
+        {
+            if(!SupportsEdits) throw new NotSupportedException("Предпросмотр правки доступен только для статического снимка префаба.");
+            if(edit==null||axes==null) throw new ArgumentException("Нужны правка и оси кисти.");
+            var hand=_avatar.GetHand(_request.Side);var fingerAxes=_avatar.AvatarRigInfo.GetArmInfo(_request.Side).FingerUniversalLocalAxes;
+            var fingers=new Dictionary<string,UxrAvatarFinger>{{"thumb",hand.Thumb},{"index",hand.Index},{"middle",hand.Middle},{"ring",hand.Ring},{"little",hand.Little}};
+            var saved=new List<(Transform bone,Quaternion rotation)>();
+            foreach(var f in fingers.Values) foreach(var bone in new[]{f.Proximal,f.Intermediate,f.Distal}) if(bone) saved.Add((bone,bone.localRotation));
+            var root=_avatarRoot.transform;Vector3 rootPosition=root.position;Quaternion rootRotation=root.rotation;
+            int handCount=Hand.Count,contactCount=ContactHand.Count,frameCount=FingerFrames.Count,chainCount=FingerChains.Count;var savedBounds=HandBounds;var savedWrist=WristPosition;
+            try {
+                foreach(var pair in edit.FingerCurlDeg??new Dictionary<string,float>()) {
+                    if(!fingers.TryGetValue(pair.Key,out var f)) throw new ArgumentException("Неизвестный палец: "+pair.Key);
+                    if(float.IsNaN(pair.Value)||Mathf.Abs(pair.Value)>120) throw new ArgumentException("Curl пальца вне [-120; 120]°: "+pair.Key);
+                    var weights=FitFingerChain.SdkWeights(pair.Key);var bones=new[]{f.Proximal,f.Intermediate,f.Distal};
+                    for(int i=0;i<3;i++) if(bones[i]) bones[i].Rotate(fingerAxes.LocalRight,weights[i]*pair.Value,Space.Self);
+                }
+                Matrix4x4 frameToWorld=_worldToFrame.inverse;Quaternion basis=frameToWorld.rotation;
+                Quaternion rotation=basis*axes.Rotation(edit.HandRotationDeg)*Quaternion.Inverse(basis);
+                Vector3 pivot=frameToWorld.MultiplyPoint3x4(axes.Wrist);
+                root.SetPositionAndRotation(pivot+rotation*(root.position-pivot),rotation*root.rotation);
+                root.position+=frameToWorld.MultiplyVector(axes.ToFrame(edit.HandShiftMm*.001f));
+                foreach(var renderer in _avatarRenderers) renderer.enabled=true;
+                var joints=new HandPoseFitReport();
+                CaptureHand(_avatar,_grabber,_request,joints);
+                return new FitEditedHand{Hand=Hand.Skip(handCount).ToList(),Frames=FingerFrames.Skip(frameCount).ToList(),Chains=FingerChains.Skip(chainCount).ToList(),Joints=joints.Joints,Wrist=WristPosition};
+            } finally {
+                Hand.RemoveRange(handCount,Hand.Count-handCount);ContactHand.RemoveRange(contactCount,ContactHand.Count-contactCount);
+                FingerFrames.RemoveRange(frameCount,FingerFrames.Count-frameCount);FingerChains.RemoveRange(chainCount,FingerChains.Count-chainCount);
+                HandBounds=savedBounds;WristPosition=savedWrist;
+                foreach(var renderer in _avatarRenderers) if(renderer) renderer.enabled=false;
+                foreach(var item in saved) item.bone.localRotation=item.rotation;
+                root.SetPositionAndRotation(rootPosition,rootRotation);
+            }
         }
 
         /// <summary>Renderer, входящие только в LOD1+ какого-либо LODGroup под корнем.</summary>

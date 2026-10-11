@@ -1,0 +1,774 @@
+{
+ "version": "contact-bands-v1",
+ "source": {
+  "runId": "calib-fbb5bd5b-01",
+  "inputSha": "fbb5bd5bcc85a5e6e7853a1980e30abe31ff6868",
+  "calibrationJson": "tasks/hand-rig-quality/reports/mef-grip-audit/calib-fbb5bd5b-01/calibration.json (reports вне Git)",
+  "calibrationJsonSha256": "7a49d82e54fa924ae5512e54144e11c899566c10ca3c54c360c54250e4bb47c0",
+  "positives": "стоковые хваты SDK Cyborg и BigHands, обе руки; dynamic snap исключены",
+  "band": "[P5 - margin, P95 + margin] по позитивам SDK (Cyborg+BigHands, обе руки) типа хвата; percentile numpy linear",
+  "margin": "max(floor, 0.25*IQR); floor 2 мм для расстояний/глубин (окно касания ContactWindowMm), 0.05 для opposition; нижняя граница глубины не ниже 0",
+  "generator": "tasks/hand-rig-quality/reports/mef-grip-audit/<run>/tools/make_contact_bands.py"
+ },
+ "meaning": {
+  "pad": "PadSignedDistanceMm: + зазор подушечки, − подушечка внутри предмета",
+  "padMin": "PadMinSignedMm",
+  "padDepth": "PadPenetrationDepthMm",
+  "fingerDepth": "FingerPenetrationDepthMm по всем фалангам",
+  "palm.min": "palm_wrist MinSignedMm",
+  "palm.p50": "palm_wrist P50SignedMm (справочно, в правилах не используется)",
+  "palm.depth": "palm_wrist PenetrationDepthMm"
+ },
+ "lowConfidenceMaxCases": 4,
+ "types": {
+  "pistol_grip": {
+   "cases": 12,
+   "grips": [
+    "bighands:Gun-p0",
+    "bighands:Machinegun-p0",
+    "bighands:Shotgun-root-p0",
+    "cyborg:Gun-p0",
+    "cyborg:Machinegun-p0",
+    "cyborg:Shotgun-root-p0"
+   ],
+   "metrics": {
+    "thumb.pad": {
+     "n": 12,
+     "p50": 9.61,
+     "lo": 4.22,
+     "hi": 18.91
+    },
+    "thumb.padMin": {
+     "n": 12,
+     "p50": 1.21,
+     "lo": -5.3,
+     "hi": 10.31
+    },
+    "thumb.padDepth": {
+     "n": 12,
+     "p50": 0.0,
+     "lo": 0.0,
+     "hi": 5.3
+    },
+    "thumb.fingerDepth": {
+     "n": 12,
+     "p50": 4.05,
+     "lo": 0.0,
+     "hi": 7.67
+    },
+    "index.pad": {
+     "n": 12,
+     "p50": 2.1,
+     "lo": -4.35,
+     "hi": 14.3
+    },
+    "index.padMin": {
+     "n": 12,
+     "p50": -2.15,
+     "lo": -11.48,
+     "hi": 2.45
+    },
+    "index.padDepth": {
+     "n": 12,
+     "p50": 2.15,
+     "lo": 0.0,
+     "hi": 11.48
+    },
+    "index.fingerDepth": {
+     "n": 12,
+     "p50": 7.07,
+     "lo": 0.0,
+     "hi": 12.35
+    },
+    "middle.pad": {
+     "n": 12,
+     "p50": 0.36,
+     "lo": -7.16,
+     "hi": 9.09
+    },
+    "middle.padMin": {
+     "n": 12,
+     "p50": -0.14,
+     "lo": -7.79,
+     "hi": 8.44
+    },
+    "middle.padDepth": {
+     "n": 12,
+     "p50": 1.14,
+     "lo": 0.0,
+     "hi": 7.79
+    },
+    "middle.fingerDepth": {
+     "n": 12,
+     "p50": 6.33,
+     "lo": 0.0,
+     "hi": 13.65
+    },
+    "ring.pad": {
+     "n": 12,
+     "p50": 1.47,
+     "lo": -8.54,
+     "hi": 10.51
+    },
+    "ring.padMin": {
+     "n": 12,
+     "p50": -2.54,
+     "lo": -9.51,
+     "hi": 9.58
+    },
+    "ring.padDepth": {
+     "n": 12,
+     "p50": 2.54,
+     "lo": 0.0,
+     "hi": 9.1
+    },
+    "ring.fingerDepth": {
+     "n": 12,
+     "p50": 4.18,
+     "lo": 0.0,
+     "hi": 14.52
+    },
+    "little.pad": {
+     "n": 12,
+     "p50": 0.8,
+     "lo": -8.16,
+     "hi": 8.33
+    },
+    "little.padMin": {
+     "n": 12,
+     "p50": -1.91,
+     "lo": -10.26,
+     "hi": 7.43
+    },
+    "little.padDepth": {
+     "n": 12,
+     "p50": 1.91,
+     "lo": 0.0,
+     "hi": 10.26
+    },
+    "little.fingerDepth": {
+     "n": 12,
+     "p50": 6.82,
+     "lo": 0.0,
+     "hi": 13.32
+    },
+    "palm.min": {
+     "n": 12,
+     "p50": -5.35,
+     "lo": -13.44,
+     "hi": 15.14
+    },
+    "palm.p50": {
+     "n": 12,
+     "p50": 33.97,
+     "lo": 14.74,
+     "hi": 62.26
+    },
+    "palm.depth": {
+     "n": 12,
+     "p50": 5.35,
+     "lo": 0.0,
+     "hi": 13.44
+    }
+   }
+  },
+  "foregrip": {
+   "cases": 4,
+   "grips": [
+    "bighands:Machinegun-p1",
+    "cyborg:Machinegun-p1"
+   ],
+   "metrics": {
+    "thumb.pad": {
+     "n": 4,
+     "p50": 3.04,
+     "lo": -0.08,
+     "hi": 6.21
+    },
+    "thumb.padMin": {
+     "n": 4,
+     "p50": -3.53,
+     "lo": -6.9,
+     "hi": 0.04
+    },
+    "thumb.padDepth": {
+     "n": 4,
+     "p50": 3.53,
+     "lo": 0.0,
+     "hi": 6.9
+    },
+    "thumb.fingerDepth": {
+     "n": 4,
+     "p50": 6.21,
+     "lo": 0.0,
+     "hi": 8.83
+    },
+    "index.pad": {
+     "n": 4,
+     "p50": -0.13,
+     "lo": -5.75,
+     "hi": 2.2
+    },
+    "index.padMin": {
+     "n": 4,
+     "p50": -2.7,
+     "lo": -7.13,
+     "hi": -0.27
+    },
+    "index.padDepth": {
+     "n": 4,
+     "p50": 2.7,
+     "lo": 0.0,
+     "hi": 7.13
+    },
+    "index.fingerDepth": {
+     "n": 4,
+     "p50": 4.43,
+     "lo": 0.0,
+     "hi": 9.46
+    },
+    "middle.pad": {
+     "n": 4,
+     "p50": -0.89,
+     "lo": -8.27,
+     "hi": 2.18
+    },
+    "middle.padMin": {
+     "n": 4,
+     "p50": -5.0,
+     "lo": -9.09,
+     "hi": -1.01
+    },
+    "middle.padDepth": {
+     "n": 4,
+     "p50": 5.0,
+     "lo": 0.0,
+     "hi": 9.09
+    },
+    "middle.fingerDepth": {
+     "n": 4,
+     "p50": 5.48,
+     "lo": 0.0,
+     "hi": 13.37
+    },
+    "ring.pad": {
+     "n": 4,
+     "p50": -2.18,
+     "lo": -9.93,
+     "hi": 0.45
+    },
+    "ring.padMin": {
+     "n": 4,
+     "p50": -5.74,
+     "lo": -11.29,
+     "hi": -0.6
+    },
+    "ring.padDepth": {
+     "n": 4,
+     "p50": 5.74,
+     "lo": 0.0,
+     "hi": 11.29
+    },
+    "ring.fingerDepth": {
+     "n": 4,
+     "p50": 6.17,
+     "lo": 0.0,
+     "hi": 15.63
+    },
+    "little.pad": {
+     "n": 4,
+     "p50": 0.4,
+     "lo": -10.48,
+     "hi": 3.58
+    },
+    "little.padMin": {
+     "n": 4,
+     "p50": -3.54,
+     "lo": -11.41,
+     "hi": 2.65
+    },
+    "little.padDepth": {
+     "n": 4,
+     "p50": 3.54,
+     "lo": 0.0,
+     "hi": 11.41
+    },
+    "little.fingerDepth": {
+     "n": 4,
+     "p50": 6.23,
+     "lo": 0.0,
+     "hi": 19.44
+    },
+    "palm.min": {
+     "n": 4,
+     "p50": 10.37,
+     "lo": -8.78,
+     "hi": 30.12
+    },
+    "palm.p50": {
+     "n": 4,
+     "p50": 47.33,
+     "lo": 28.78,
+     "hi": 68.65
+    },
+    "palm.depth": {
+     "n": 4,
+     "p50": 1.1,
+     "lo": 0.0,
+     "hi": 4.42
+    }
+   }
+  },
+  "pump": {
+   "cases": 4,
+   "grips": [
+    "bighands:Shotgun-pump-p0",
+    "cyborg:Shotgun-pump-p0"
+   ],
+   "metrics": {
+    "thumb.pad": {
+     "n": 4,
+     "p50": 4.61,
+     "lo": -4.83,
+     "hi": 11.2
+    },
+    "thumb.padMin": {
+     "n": 4,
+     "p50": -1.79,
+     "lo": -12.03,
+     "hi": 6.31
+    },
+    "thumb.padDepth": {
+     "n": 4,
+     "p50": 2.71,
+     "lo": 0.0,
+     "hi": 11.73
+    },
+    "thumb.fingerDepth": {
+     "n": 4,
+     "p50": 8.11,
+     "lo": 0.0,
+     "hi": 16.9
+    },
+    "index.pad": {
+     "n": 4,
+     "p50": 1.33,
+     "lo": -1.84,
+     "hi": 3.96
+    },
+    "index.padMin": {
+     "n": 4,
+     "p50": -1.96,
+     "lo": -8.52,
+     "hi": 1.75
+    },
+    "index.padDepth": {
+     "n": 4,
+     "p50": 1.96,
+     "lo": 0.0,
+     "hi": 8.52
+    },
+    "index.fingerDepth": {
+     "n": 4,
+     "p50": 11.2,
+     "lo": 0.0,
+     "hi": 13.42
+    },
+    "middle.pad": {
+     "n": 4,
+     "p50": -0.7,
+     "lo": -7.88,
+     "hi": 1.9
+    },
+    "middle.padMin": {
+     "n": 4,
+     "p50": -3.07,
+     "lo": -12.61,
+     "hi": -0.55
+    },
+    "middle.padDepth": {
+     "n": 4,
+     "p50": 3.07,
+     "lo": 0.0,
+     "hi": 12.61
+    },
+    "middle.fingerDepth": {
+     "n": 4,
+     "p50": 11.41,
+     "lo": 0.0,
+     "hi": 13.81
+    },
+    "ring.pad": {
+     "n": 4,
+     "p50": 1.88,
+     "lo": -1.01,
+     "hi": 9.21
+    },
+    "ring.padMin": {
+     "n": 4,
+     "p50": -0.76,
+     "lo": -8.33,
+     "hi": 2.26
+    },
+    "ring.padDepth": {
+     "n": 4,
+     "p50": 0.76,
+     "lo": 0.0,
+     "hi": 8.33
+    },
+    "ring.fingerDepth": {
+     "n": 4,
+     "p50": 10.97,
+     "lo": 0.0,
+     "hi": 13.37
+    },
+    "little.pad": {
+     "n": 4,
+     "p50": 6.42,
+     "lo": -3.13,
+     "hi": 15.87
+    },
+    "little.padMin": {
+     "n": 4,
+     "p50": 3.31,
+     "lo": -2.5,
+     "hi": 10.37
+    },
+    "little.padDepth": {
+     "n": 4,
+     "p50": 0.0,
+     "lo": 0.0,
+     "hi": 2.67
+    },
+    "little.fingerDepth": {
+     "n": 4,
+     "p50": 11.39,
+     "lo": 0.0,
+     "hi": 13.44
+    },
+    "palm.min": {
+     "n": 4,
+     "p50": 0.02,
+     "lo": -15.81,
+     "hi": 17.62
+    },
+    "palm.p50": {
+     "n": 4,
+     "p50": 36.47,
+     "lo": 17.8,
+     "hi": 52.97
+    },
+    "palm.depth": {
+     "n": 4,
+     "p50": 5.22,
+     "lo": 0.0,
+     "hi": 13.06
+    }
+   }
+  },
+  "pinch_small": {
+   "cases": 16,
+   "grips": [
+    "bighands:Battery-p0",
+    "bighands:Battery-p1",
+    "bighands:Grenade-p0",
+    "bighands:LightBulb-p0",
+    "cyborg:Battery-p0",
+    "cyborg:Battery-p1",
+    "cyborg:Grenade-p0",
+    "cyborg:LightBulb-p0"
+   ],
+   "metrics": {
+    "thumb.pad": {
+     "n": 16,
+     "p50": 10.35,
+     "lo": -3.85,
+     "hi": 28.53
+    },
+    "thumb.padMin": {
+     "n": 16,
+     "p50": 4.29,
+     "lo": -4.52,
+     "hi": 13.48
+    },
+    "thumb.padDepth": {
+     "n": 16,
+     "p50": 0.0,
+     "lo": 0.0,
+     "hi": 4.45
+    },
+    "thumb.fingerDepth": {
+     "n": 16,
+     "p50": 0.05,
+     "lo": 0.0,
+     "hi": 6.26
+    },
+    "index.pad": {
+     "n": 16,
+     "p50": 4.78,
+     "lo": -6.75,
+     "hi": 22.31
+    },
+    "index.padMin": {
+     "n": 16,
+     "p50": -1.62,
+     "lo": -8.17,
+     "hi": 19.7
+    },
+    "index.padDepth": {
+     "n": 16,
+     "p50": 1.62,
+     "lo": 0.0,
+     "hi": 8.17
+    },
+    "index.fingerDepth": {
+     "n": 16,
+     "p50": 4.13,
+     "lo": 0.0,
+     "hi": 20.97
+    },
+    "middle.pad": {
+     "n": 16,
+     "p50": 2.72,
+     "lo": -11.46,
+     "hi": 25.61
+    },
+    "middle.padMin": {
+     "n": 16,
+     "p50": -0.35,
+     "lo": -12.35,
+     "hi": 24.51
+    },
+    "middle.padDepth": {
+     "n": 16,
+     "p50": 0.58,
+     "lo": 0.0,
+     "hi": 11.65
+    },
+    "middle.fingerDepth": {
+     "n": 16,
+     "p50": 5.27,
+     "lo": 0.0,
+     "hi": 17.25
+    },
+    "ring.pad": {
+     "n": 16,
+     "p50": 2.15,
+     "lo": -9.01,
+     "hi": 25.77
+    },
+    "ring.padMin": {
+     "n": 16,
+     "p50": -1.59,
+     "lo": -11.57,
+     "hi": 23.86
+    },
+    "ring.padDepth": {
+     "n": 16,
+     "p50": 1.59,
+     "lo": 0.0,
+     "hi": 11.04
+    },
+    "ring.fingerDepth": {
+     "n": 16,
+     "p50": 4.87,
+     "lo": 0.0,
+     "hi": 13.92
+    },
+    "little.pad": {
+     "n": 16,
+     "p50": 3.77,
+     "lo": -6.84,
+     "hi": 20.49
+    },
+    "little.padMin": {
+     "n": 16,
+     "p50": -0.56,
+     "lo": -9.61,
+     "hi": 19.42
+    },
+    "little.padDepth": {
+     "n": 16,
+     "p50": 0.56,
+     "lo": 0.0,
+     "hi": 7.99
+    },
+    "little.fingerDepth": {
+     "n": 16,
+     "p50": 3.92,
+     "lo": 0.0,
+     "hi": 9.34
+    },
+    "palm.min": {
+     "n": 16,
+     "p50": 27.15,
+     "lo": -10.82,
+     "hi": 46.29
+    },
+    "palm.p50": {
+     "n": 16,
+     "p50": 68.05,
+     "lo": 44.9,
+     "hi": 81.18
+    },
+    "palm.depth": {
+     "n": 16,
+     "p50": 0.0,
+     "lo": 0.0,
+     "hi": 4.45
+    }
+   }
+  },
+  "handle": {
+   "cases": 12,
+   "grips": [
+    "bighands:LaserGrip-p0",
+    "bighands:LockRotationGeo-p0",
+    "bighands:LockRotationGeo-p1",
+    "cyborg:LaserGrip-p0",
+    "cyborg:LockRotationGeo-p0",
+    "cyborg:LockRotationGeo-p1"
+   ],
+   "metrics": {
+    "thumb.pad": {
+     "n": 12,
+     "p50": 21.06,
+     "lo": 8.82,
+     "hi": 46.92
+    },
+    "thumb.padMin": {
+     "n": 12,
+     "p50": 11.23,
+     "lo": 5.26,
+     "hi": 31.11
+    },
+    "thumb.padDepth": {
+     "n": 12,
+     "p50": 0.0,
+     "lo": 0.0,
+     "hi": 2.0
+    },
+    "thumb.fingerDepth": {
+     "n": 12,
+     "p50": 0.0,
+     "lo": 0.0,
+     "hi": 5.91
+    },
+    "index.pad": {
+     "n": 12,
+     "p50": 1.03,
+     "lo": -7.89,
+     "hi": 6.81
+    },
+    "index.padMin": {
+     "n": 12,
+     "p50": -1.02,
+     "lo": -8.64,
+     "hi": 4.42
+    },
+    "index.padDepth": {
+     "n": 12,
+     "p50": 1.02,
+     "lo": 0.0,
+     "hi": 8.64
+    },
+    "index.fingerDepth": {
+     "n": 12,
+     "p50": 5.35,
+     "lo": 0.0,
+     "hi": 10.52
+    },
+    "middle.pad": {
+     "n": 12,
+     "p50": 0.11,
+     "lo": -13.61,
+     "hi": 47.84
+    },
+    "middle.padMin": {
+     "n": 12,
+     "p50": -0.65,
+     "lo": -10.92,
+     "hi": 29.59
+    },
+    "middle.padDepth": {
+     "n": 12,
+     "p50": 0.65,
+     "lo": 0.0,
+     "hi": 7.74
+    },
+    "middle.fingerDepth": {
+     "n": 12,
+     "p50": 5.29,
+     "lo": 0.0,
+     "hi": 10.25
+    },
+    "ring.pad": {
+     "n": 12,
+     "p50": 0.27,
+     "lo": -16.93,
+     "hi": 65.25
+    },
+    "ring.padMin": {
+     "n": 12,
+     "p50": -0.12,
+     "lo": -14.1,
+     "hi": 48.89
+    },
+    "ring.padDepth": {
+     "n": 12,
+     "p50": 0.31,
+     "lo": 0.0,
+     "hi": 6.25
+    },
+    "ring.fingerDepth": {
+     "n": 12,
+     "p50": 4.19,
+     "lo": 0.0,
+     "hi": 8.08
+    },
+    "little.pad": {
+     "n": 12,
+     "p50": 1.54,
+     "lo": -19.39,
+     "hi": 78.1
+    },
+    "little.padMin": {
+     "n": 12,
+     "p50": 1.23,
+     "lo": -17.67,
+     "hi": 66.33
+    },
+    "little.padDepth": {
+     "n": 12,
+     "p50": 0.0,
+     "lo": 0.0,
+     "hi": 6.52
+    },
+    "little.fingerDepth": {
+     "n": 12,
+     "p50": 2.73,
+     "lo": 0.0,
+     "hi": 7.3
+    },
+    "palm.min": {
+     "n": 12,
+     "p50": 32.85,
+     "lo": -11.38,
+     "hi": 101.56
+    },
+    "palm.p50": {
+     "n": 12,
+     "p50": 69.92,
+     "lo": 40.1,
+     "hi": 143.51
+    },
+    "palm.depth": {
+     "n": 12,
+     "p50": 0.0,
+     "lo": 0.0,
+     "hi": 2.0
+    }
+   }
+  }
+ }
+}

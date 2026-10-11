@@ -108,6 +108,18 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                     foreach(var f in metrics.Fingers) html.Append("<tr><td>"+Escape(f.Finger)+"</td><td>"+F(f.PadSignedDistanceMm)+"</td><td>"+F(f.PadMinSignedMm)+"</td><td>"+F(f.PadPenetrationDepthMm)+"</td><td>"+F(f.PadWindowAreaMm2)+"</td><td>"+N(f.PadPointOpposition)+"</td><td>"+N(f.PadAreaFraction)+"</td><td>"+F(f.FingerMinSignedMm)+"</td></tr>");
                     html.Append("</table>");
                 }
+                var rules=report.GripRules;
+                if(rules!=null) {
+                    string F(double v) => (v>=0?"+":"")+v.ToString("F1",CultureInfo.InvariantCulture);
+                    html.Append("<h2>Грубые нарушения по полосам SDK</h2><p>Тип хвата "+Escape(rules.GripType)+" ("+Escape(rules.GripTypeSource)+"), полосы "+Escape(rules.BandsVersion)+", эталонов "+rules.BandCases+(rules.LowConfidence?", <b>low_confidence</b>":"")+". Итог: <b>"+Escape(rules.Overall)+"</b>"+(rules.HandFlags.Count>0?" · кисть: "+Escape(string.Join(", ",rules.HandFlags)):"")+". notable — выход ≥"+rules.NotableExcessMm+" мм, gross — ≥"+rules.GrossExcessMm+" мм. Палец вне поверхности допустим: правило ищет только грубые выходы, финальная оценка — по листу ревью.</p>");
+                    html.Append("<table><tr><th>Палец</th><th>Подушечка, мм</th><th>Полоса SDK</th><th>P50 SDK</th><th>Severity</th><th>Направление</th><th>Выход, мм</th><th>Подсказка curl, °</th><th>Ожидается, мм</th></tr>");
+                    foreach(var f in rules.Fingers.Concat(rules.Palm!=null?new[]{rules.Palm}:new FitFingerVerdict[0])) {
+                        var h=report.CorrectionHints?.Fingers.FirstOrDefault(x=>x.Finger==f.Finger&&x.Severity!=null);
+                        html.Append("<tr><td>"+Escape(f.Finger)+"</td><td>"+(f.PadMm.HasValue?F(f.PadMm.Value):"—")+"</td><td>"+(f.PadBandLo.HasValue?"["+F(f.PadBandLo.Value)+"; "+F(f.PadBandHi.Value)+"]":"—")+"</td><td>"+(f.PadBandMedian.HasValue?F(f.PadBandMedian.Value):"—")+"</td><td>"+Escape(f.Severity)+"</td><td>"+Escape(f.Direction)+"</td><td>"+f.MaxExcessMm.ToString("F1",CultureInfo.InvariantCulture)+"</td><td>"+(h!=null?F(h.CurlDeg)+(h.Recommended?"":" (не нужна)")+(h.DepthLimited?" *глубина":""):"—")+"</td><td>"+(h!=null?F(h.ExpectedMm):"—")+"</td></tr>");
+                    }
+                    html.Append("</table>");
+                    if(!string.IsNullOrEmpty(report.ReviewSheet)) html.Append("<h2>Лист ревью</h2><img src='"+Escape(Path.GetFileName(report.ReviewSheet))+"' style='max-width:100%'>");
+                }
                 html.Append("<ul>");foreach(string item in report.Findings) html.Append("<li>"+Escape(item)+"</li>");html.Append("</ul>");
                 foreach(string name in names) {html.Append("<section><h2>"+name+"</h2>");foreach(var image in report.Cameras.Where(c=>c.View==name)) html.Append("<figure><figcaption>"+image.Mode+"</figcaption><img src='"+image.Image+"'></figure>");html.Append("</section>");}
                 File.WriteAllText(Path.Combine(report.OutputDirectory,"index.html"),html.ToString(),new UTF8Encoding(false));
@@ -145,17 +157,17 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                     "<section><h2>Текущий ракурс · frozen editor geometry</h2><img src='editor-view-xray.png'></section>",new UTF8Encoding(false));
             } finally {foreach(var go in objects)Object.DestroyImmediate(go);foreach(var resource in resources)Object.DestroyImmediate(resource);}
         }
-        static Material Material(Shader shader,bool transparent,bool unlit)
+        internal static Material Material(Shader shader,bool transparent,bool unlit)
         {var m=new Material(shader){hideFlags=HideFlags.HideAndDontSave};m.SetFloat("_Src",transparent?(int)BlendMode.SrcAlpha:(int)BlendMode.One);m.SetFloat("_Dst",transparent?(int)BlendMode.OneMinusSrcAlpha:(int)BlendMode.Zero);m.SetFloat("_ZWrite",transparent?0:1);m.SetFloat("_ZTest",transparent?(int)CompareFunction.Always:(int)CompareFunction.LessEqual);m.SetFloat("_Shade",unlit?0:1);m.SetFloat("_Alpha",transparent&&!unlit?.15f:1);m.renderQueue=transparent?3000:2000;return m;}
-        static GameObject Add(HandPoseFitSnapshot snapshot,Mesh mesh,Material material)
+        internal static GameObject Add(HandPoseFitSnapshot snapshot,Mesh mesh,Material material)
         {var go=new GameObject("HandPoseFit diagnostic mesh"){hideFlags=HideFlags.HideAndDontSave};snapshot.Preview.AddSingleGO(go);go.AddComponent<MeshFilter>().sharedMesh=mesh;go.AddComponent<MeshRenderer>().sharedMaterial=material;return go;}
-        static Mesh Mesh(IEnumerable<FitTriangle> triangles,Func<FitTriangle,Color> color)
+        internal static Mesh Mesh(IEnumerable<FitTriangle> triangles,Func<FitTriangle,Color> color)
         {
             var v=new List<Vector3>();var n=new List<Vector3>();var c=new List<Color>();
             foreach(var t in triangles) {v.Add(t.A);v.Add(t.B);v.Add(t.C);Color tint=color(t);for(int i=0;i<3;i++){n.Add(t.Normal);c.Add(tint);}}
             var mesh=new Mesh{indexFormat=IndexFormat.UInt32,hideFlags=HideFlags.HideAndDontSave};mesh.SetVertices(v);mesh.SetNormals(n);mesh.SetColors(c);mesh.SetTriangles(Enumerable.Range(0,v.Count).ToArray(),0);mesh.RecalculateBounds();return mesh;
         }
-        static Mesh Wire(IEnumerable<FitTriangle> triangles,Color color)
+        internal static Mesh Wire(IEnumerable<FitTriangle> triangles,Color color)
         {
             var v=new List<Vector3>();foreach(var t in triangles) v.AddRange(new[]{t.A,t.B,t.B,t.C,t.C,t.A});
             var mesh=new Mesh{indexFormat=IndexFormat.UInt32,hideFlags=HideFlags.HideAndDontSave};mesh.SetVertices(v);mesh.SetColors(Enumerable.Repeat(color,v.Count).ToList());mesh.SetIndices(Enumerable.Range(0,v.Count).ToArray(),MeshTopology.Lines,0);mesh.RecalculateBounds();return mesh;

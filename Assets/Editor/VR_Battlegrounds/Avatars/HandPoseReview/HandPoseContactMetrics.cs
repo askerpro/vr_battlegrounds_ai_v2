@@ -192,6 +192,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
 
         static string Name(FitTriangle t) => string.IsNullOrEmpty(t.FingerSegment)?"palm_wrist":t.FingerSegment;
 
+        /// <summary>Знаковое расстояние точки до предмета, мм: минус — внутри (число оборотов ≥0,5).</summary>
+        public static double SignedMm(FitSurface surface,Vector3 p) => Evaluate(surface,p).Signed;
+
         static Probe Evaluate(FitSurface surface,Vector3 p)
         {
             var hit=surface.NearestHit(p);double mm=(hit.Position-p).magnitude*1000.0,w=surface.WindingNumber(p);bool inside=w>=.5;

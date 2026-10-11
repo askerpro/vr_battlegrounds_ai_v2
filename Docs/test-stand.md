@@ -76,7 +76,43 @@ clones; для native сценария без главного Play исполь
 отсутствие чужого request/Play, dirty scenes и prefab stage. Допуск этапа хаба не заменяет lease.
 Полный JSON и логи сохранять в ignored `tasks/<task-id>/reports/`; выводить компактный итог.
 
-Предварительный план не запускает Play:
+### Как агенту включить Play (через Offline)
+
+Агент включает Play **только** через `PlayLaunch.Plan` → `PlayLaunch.Play` → `PlayLaunch.Status`. Не использовать
+`EditorApplication.isPlaying = true`, кнопку Play, `EditorSceneManager.playModeStartScene` и галочку
+«Start from Offline Scene»: это обычный Play по личному профилю checkout, у него нет готовности, портов и уборки.
+При профиле `SceneSource="active"` (по умолчанию) обычный Play в Untitled или в сцене без `MapRoot` стартует
+саму эту сцену, а не Offline → Lobby.
+
+PlayLaunch сам выбирает стартовую сцену и возвращает прежнюю после Play:
+
+| Цель | Конфигурация | Старт |
+|---|---|---|
+| Лобби | `SceneSource="lobby"` (или `"active"` при активной Untitled/Offline) | Offline → Lobby |
+| Карта, один процесс | `SceneSource="scene"`, `ScenePath` карты, `Role="host"`, `ClientCount=0`, `ModeId` | Offline → маршрут старта → карта, без Lobby |
+| Карта, сервер + клиенты | `Role="server"`, `ClientCount=2` (пример ниже) | каждый процесс через Offline, общая пара портов |
+| Сцена стенда (`StandaloneSceneMarker`) | `SceneSource="scene"`, путь стенда | сама сцена, без сети |
+
+Порядок:
+1. `Plan(json)` — Play не запускает. Проверить `Passed=true`, `SceneKind` (`Game` для сетевой сцены) и
+   `StartScenePath="Assets/Scenes/Offline.unity"`, `TargetScenePath` — нужная сцена. Иначе не запускать: разобрать `Code`.
+2. `Play(json, "<свой-owner>")` — тот же JSON, один раз. Повтор после таймаута MCP — только после `Status()`.
+3. `Status()` до `State="Ready"`/`Ready=true` (для `map-playable` — карта собрана и допущена). `Failed` — читать `Error`.
+4. Выход: `Cancel(runId, owner)` или `EditorApplication.isPlaying = false`; не `EditorApplication.Exit`.
+
+Однопроцессный запуск карты:
+
+```csharp
+var config = new VrBattlegrounds.DevTools.PlayLaunchConfiguration {
+    Enabled = true, Role = "host", ClientCount = 0, HostIsAdmin = true,
+    SceneSource = "scene", ScenePath = "Assets/Scenes/Maps/TestMap1.unity",
+    ModeId = "elimination", AutoGoLive = false, BotCount = 0,
+    PauseOnFocusLoss = false, Readiness = "map-playable"
+};
+return VrBattlegrounds.EditorTools.TestStand.PlayLaunch.Plan(UnityEngine.JsonUtility.ToJson(config));
+```
+
+Многопроцессный план (не запускает Play):
 
 ```csharp
 var config = new VrBattlegrounds.DevTools.PlayLaunchConfiguration {

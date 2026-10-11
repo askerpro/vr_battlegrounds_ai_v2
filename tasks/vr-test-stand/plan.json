@@ -185,6 +185,24 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "agent-play-recipe",
+      "writes": [
+        "Docs/test-stand.md",
+        "tasks/vr-test-stand/Readme.md",
+        "tasks/vr-test-stand/Details.md",
+        "tasks/vr-test-stand/plan.json",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "vr-test-stand",
+          "stage": "e2e-run-isolation",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

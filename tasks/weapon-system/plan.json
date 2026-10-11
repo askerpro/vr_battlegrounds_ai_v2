@@ -361,6 +361,11 @@
           "task": "weapon-system",
           "stage": "handover",
           "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "sight-tr15-optic",
+          "state": "verified"
         }
       ],
       "needs": []
@@ -503,6 +508,11 @@
           "task": "arsenal-generator",
           "stage": "composer-presentation",
           "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "sight-tr15-optic",
+          "state": "verified"
         }
       ],
       "needs": []
@@ -512,8 +522,20 @@
       "writes": [
         "Assets/Data/Weapons/FullDemoArsenal.asset",
         "Assets/Data/Maps/MapRuntimeCatalog.asset",
-        "Docs/weapons/decisions.md",
-        "tasks/weapon-system/**"
+        "Docs/weapons/decisions.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "sight-tr15-optic",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Gameplay/Tr15OpticBuilder.cs",
+        "Assets/Prefabs/Weapons/TR15/TR15.prefab",
+        "Assets/Art/Weapons/Kinemation/TR15/Materials/TR15_XPS2_Reticle.mat",
+        "Assets/Art/Weapons/Kinemation/TR15/Materials/TR15_XPS2_Reticle.mat.meta",
+        "Assets/Art/Weapons/Kinemation/TR15/Meshes/TR15_XPS2_Optic.asset",
+        "Assets/Tests/EditMode/Prefabs/KinemationWeaponTests.cs"
       ],
       "after": [],
       "needs": []

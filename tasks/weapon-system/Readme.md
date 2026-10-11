@@ -9,6 +9,14 @@
 
 ## Статус
 
+2026-10-12 — **калибровка прицелов**, главный приоритет пользователя ([решения](../../Docs/weapons/decisions.md) «Прицелы»).
+- `sight-tr15-optic`: коллиматор эталона TR15 Sight Review перенесён в основной TR15 через `Tr15OpticBuilder`,
+  принят в шлеме, коммит `9d5276eb`. Builder теперь сохраняет Mirror `_assetId` (раньше обнулял).
+- `sight-arsenal-dedupe`: убрать 5 копий Sight Review со стены лобби. Zone ACK gameplay есть (4093);
+  ждёт порядка с level-design `lobby-decoration/implementation` (оба пишут каталог карт, запрос 4100).
+- Дальше: родная механика остальных стволов, первыми те, где правка быстрее (замер ошибки сведения).
+- Хаб use-context: ждём `record-merged` сопровождающего (3895) и `binding-foundation` у bots-fix.
+
 Обновлено 2026-10-11. Владелец — эксперт `weapon-system`; задача перенесена в его постоянный worktree
 `F:/CodexWorktrees/weapon-system/Vr_Battlegrounds_ai`, ветка `claude/weapon-system` (хаб 3358/3361, план r39).
 

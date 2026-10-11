@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "bots",
+  "owner": "bots-fix",
+  "tasks": ["bots-fix"],
+  "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
+  "reviewed_at": "2026-10-11",
+  "watch_paths": [
+    "Assets/Scripts/Bots/**", "Assets/Scripts/Debug/BotCombatStand/**", "Assets/Editor/VR_Battlegrounds/Bots/**",
+    "Assets/Resources/Bots/**", "Assets/ThirdParty/Blaze AI/Scripts/**", "Assets/Tests/EditMode/Bots/**",
+    "Assets/Scripts/Player/Avatars/ServerAuthoredAvatar.cs", "Assets/Scripts/UI/Menu/Overview/OverviewBotMatch.cs",
+    "Docs/BlazeAI/**", "Docs/tasks/T-48-bots-match.md", "Docs/tasks/bots-blaze-integration.md",
+    "Docs/tasks/bot-combat-stand.md", "Docs/tasks/bots-validation-stand-plan.md", "Docs/audit/bots-audit-2026-10-03.md",
+    "tasks/bots-fix/**"
+  ]
+}

@@ -1,0 +1,26 @@
+{"ok": true, "result": {"snapshot": {
+  "tasks": [
+    {"task_id": "audio-assets", "owner": "audio-assets", "revision": 4, "worktree": "W:/audio", "doc_path": "tasks/audio-assets/Readme.md", "session_id": "SESSION-SECRET-1",
+     "stages": [
+       {"id": "import-rules", "state": "merged", "merged_sha": "1111111111111111111111111111111111111111", "evidence": "Z:/nowhere/report.json",
+        "spec": {"writes": ["src/audio/**"], "after": [], "needs": []}},
+       {"id": "loudness", "state": "running", "token": "LEASE-TOKEN-SECRET", "epoch": 2,
+        "spec": {"writes": ["src/audio/loudness/**", "docs/audio.md"], "after": [{"task": "build-pipeline", "stage": "cache", "state": "merged"}], "needs": [{"contract": "build-hooks", "revision": 3, "aspects": ["*"], "readiness": "active"}]}}
+     ]},
+    {"task_id": "build-pipeline", "owner": "build", "revision": 9, "worktree": "W:/build", "doc_path": "tasks/build/Readme.md",
+     "stages": [
+       {"id": "cache", "state": "verified", "spec": {"writes": ["build/**"], "after": [], "needs": []}},
+       {"id": "bundle", "state": "planned", "spec": {"writes": ["build/bundle/**", "src/audiox/**"], "after": [{"task": "audio-assets", "stage": "loudness", "state": "merged"}], "needs": [{"contract": "audio-bank-format", "revision": 1, "aspects": ["*"], "readiness": "agreed"}]}},
+       {"id": "docs-sync", "state": "running", "spec": {"writes": ["docs/**"], "after": [], "needs": []}},
+       {"id": "old", "state": "merged", "spec": {"writes": [], "after": [{"task": "audio-assets", "stage": "import-rules", "state": "merged"}], "needs": []}}
+     ]},
+    {"task_id": "unrelated", "owner": "other", "revision": 1, "worktree": "W:/x", "doc_path": "tasks/x/Readme.md",
+     "stages": [{"id": "s", "state": "running", "spec": {"writes": ["x/**"], "after": [], "needs": []}}]}
+  ],
+  "contracts": [
+    {"id": "audio-bank-format", "owner_task": "audio-assets", "versions": [{"revision": 1, "state": "agreed", "acks": {"build-pipeline": 9}, "spec": {"summary": "LONG SPEC BODY"}}]},
+    {"id": "build-hooks", "owner_task": "build-pipeline", "versions": [{"revision": 1, "state": "active", "acks": {}}, {"revision": 2, "state": "active", "acks": {}}, {"revision": 3, "state": "agreed", "acks": {"audio-assets": 4}}]},
+    {"id": "unrelated-contract", "owner_task": "unrelated", "versions": [{"revision": 1, "state": "active", "acks": {}}]}
+  ],
+  "merges": [{"id": "m1", "merge_token": "MERGE-TOKEN-SECRET"}]
+}}}

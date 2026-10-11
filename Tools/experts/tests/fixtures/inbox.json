@@ -1,0 +1,4 @@
+{"ok": true, "result": [
+  {"id": 42, "recipient": "audio-assets", "kind": "contract_question", "payload": {"from_task": "build-pipeline", "body": "INBOX BODY SECRET"}},
+  {"id": 40, "recipient": "*", "kind": "maintenance", "payload": {"body": "broadcast body"}}
+], "pagination": {"pending_total": 7, "direct_pending": 1, "snapshot_event_id": 50}}

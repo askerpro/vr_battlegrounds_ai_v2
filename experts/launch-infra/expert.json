@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "launch-infra",
+  "owner": "vr-test-stand",
+  "tasks": ["vr-test-stand"],
+  "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
+  "reviewed_at": "2026-10-11",
+  "watch_paths": [
+    "Docs/test-stand.md", "Docs/testing.md", "Docs/release.md",
+    "tasks/vr-test-stand/contracts/**", "Tools/e2e/**", "Tools/release/**", "Tools/TestStand/**",
+    "Assets/Editor/VR_Battlegrounds/Testing/**", "Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs",
+    "Assets/Editor/VR_Battlegrounds/Release/BuildSceneResolver.cs", "Assets/Editor/VR_Battlegrounds/Debug/E2EPlayerBuilder.cs",
+    "Assets/Editor/VR_Battlegrounds/Debug/PlayModeStartFromOffline.cs", "Assets/Editor/VR_Battlegrounds/Debug/PlayLaunchWindow.cs",
+    "Assets/Scripts/Debug/DebugBootstrapGate.cs", "Assets/Scripts/Debug/Bootstrap/**",
+    "Assets/Scripts/Debug/E2E/E2ERunner.cs", "Assets/Scripts/Debug/E2E/IE2EScenario.cs", "Assets/Scripts/Debug/E2E/E2EContext.cs",
+    "Assets/Scripts/Debug/E2E/E2EResult.cs", "Assets/Scripts/Debug/E2E/E2EWait.cs",
+    "Assets/Scripts/Debug/DebugMode/DebugMode.cs", "Assets/Scripts/Debug/DebugMode/DebugAdminPolicy.cs", "Assets/Scripts/Debug/DebugMode/DebugClientSync.cs",
+    "Assets/Scripts/Debug/DebugMode/DebugGestureInput.cs", "Assets/Scripts/Debug/DebugMode/DebugHoldGesture.cs", "Assets/Scripts/Debug/DebugMode/DebugHitMarkers.cs",
+    "Assets/Scripts/Debug/DebugMode/DebugPerfReadout.cs", "Assets/Scripts/Debug/DebugMode/DebugTeleportPoint.cs", "Assets/Scripts/Debug/DebugMode/DebugTeleportTargets.cs",
+    "Assets/Scripts/Debug/DebugMode/DebugModeMessages.cs", "Assets/Scripts/Debug/DebugMode/DebugModeNetwork.cs",
+    "ProjectSettings/VirtualProjectsConfig.json", "ProjectSettings/MultiplayerManager.asset"
+  ]
+}

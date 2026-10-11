@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "performance",
+  "owner": "performance",
+  "tasks": [],
+  "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
+  "reviewed_at": "2026-10-11",
+  "watch_paths": [
+    "Docs/perf-stress-test.md",
+    "Assets/Scripts/Debug/StressTest/**",
+    "Assets/Editor/VR_Battlegrounds/Debug/StressTestMenu.cs",
+    "Assets/Scripts/Core/PerformanceLevelInstaller.cs",
+    "Assets/Scripts/Core/PerformanceLevelPolicy.cs",
+    "Assets/Scripts/Core/FoveatedRenderingInstaller.cs",
+    "Assets/Scripts/Core/GameSettings.cs",
+    "Assets/Tests/EditMode/DevTools/Perf*.cs",
+    "Assets/Tests/EditMode/DevTools/StressTest*.cs",
+    "Assets/Tests/EditMode/DevTools/PerformanceLevelPolicyTests.cs",
+    "ProjectSettings/QualitySettings.asset",
+    "ProjectSettings/GraphicsSettings.asset",
+    "Assets/URPDefaultResources/**",
+    "Assets/Settings/Graphics/**",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/OcclusionBakeTool.cs",
+    "Assets/Tests/EditMode/Maps/OcclusionCullingBakedTests.cs",
+    "Assets/Scripts/Player/Avatars/RemoteAvatar*.cs",
+    "Assets/Scripts/Debug/E2E/Scenarios/ShotPipelineBudgetScenario.cs"
+  ]
+}

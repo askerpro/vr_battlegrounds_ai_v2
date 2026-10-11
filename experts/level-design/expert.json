@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "level-design",
+  "owner": "lobby-decoration",
+  "tasks": ["lobby-decoration"],
+  "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
+  "reviewed_at": "2026-10-11",
+  "watch_paths": [
+    "Docs/level-design/**", "Docs/maps/**", "Docs/scene-hierarchy.md",
+    "Assets/Scenes/Lobby.unity", "Assets/Scenes/Lobby/**", "Assets/Scenes/Maps/**",
+    "Assets/Prefabs/LevelDesign/**", "Assets/Prefabs/Arenas/**", "Assets/Prefabs/Environment/**",
+    "Assets/Editor/VR_Battlegrounds/LevelDesign/**",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/OcclusionBakeTool.cs",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/MapGameplayHierarchy.cs",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/PhysicalArenaLayoutMigration.cs",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/CoverClassTool.cs",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/SpawnZoneCreator.cs",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/LevelDesignBlockTexturer.cs",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/LevelDesignConcreteFence.cs",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/LevelDesignPalletFence.cs",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/LevelDesignSoftCrate.cs",
+    "Assets/Editor/VR_Battlegrounds/Weapons/Calibration/LobbyRangeLayoutBuilder.cs",
+    "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab", "Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab",
+    "Assets/Scripts/Maps/Blockout*.cs", "Assets/Scripts/Maps/PhysicalArena*.cs",
+    "Assets/Scripts/Maps/PhysicalObstacle*.cs", "Assets/Scripts/Maps/SpawnZoneBoundary*.cs",
+    "Assets/Scripts/Maps/Cover/**",
+    "Assets/Tests/EditMode/Maps/**",
+    "Assets/ThirdParty/ParticlePack/**", "Assets/env_packs/**",
+    "Tools/AssetCatalog/**", "Tools/agents/inspect_asset_packages.py"
+  ]
+}

@@ -1,12 +1,20 @@
 {
   "task_id": "expert-workspace-infra",
   "owner": "expert-workspace-infra",
-  "client": "codex",
+  "client": "claude",
   "worktree": "F:/CodexWorktrees/expert-workspace-infra/Vr_Battlegrounds_ai",
-  "base_sha": "1001415bed29124af821a9a641d0bae2a7224a5b",
+  "base_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
   "doc_path": "tasks/expert-workspace-infra/Readme.md",
-  "title": "Универсальная рабочая зона экспертов",
+  "title": "Рабочие места экспертов и awake",
   "stages": [
-    {"id": "workspace", "writes": ["tasks/expert-workspace-infra/**", "experts/vr-test-stand/**"], "after": [], "needs": []}
+    {"id": "workspace", "writes": [
+      "tasks/expert-workspace-infra/**",
+      "experts/**",
+      ".claude/agents/launch-infra-expert.md", ".claude/agents/gameplay-expert.md", ".claude/agents/network-expert.md",
+      ".claude/agents/ui-expert.md", ".claude/agents/performance-expert.md", ".claude/agents/avatar-ik-expert.md", ".claude/agents/bots-expert.md", ".claude/agents/level-design-expert.md", ".claude/agents/avatar-grip-expert.md", ".claude/agents/weapon-system-expert.md", ".codex/agents/avatar-grip-expert.toml",
+      ".gitattributes", ".claude/settings.json", ".agents/rules/terminal.md",
+      ".codex/agents/launch-infra-expert.toml", ".codex/agents/gameplay-expert.toml", ".codex/agents/network-expert.toml",
+      ".codex/agents/ui-expert.toml", ".codex/agents/performance-expert.toml", ".codex/agents/avatar-ik-expert.toml", ".codex/agents/bots-expert.toml", ".codex/agents/level-design-expert.toml"
+    ], "after": [], "needs": []}
   ]
 }

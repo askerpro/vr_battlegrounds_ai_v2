@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "manipulation",
+  "owner": "haptics",
+  "tasks": ["haptics-system"],
+  "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
+  "reviewed_at": "2026-10-11",
+  "watch_paths": [
+    "Assets/Scripts/Haptics/**",
+    "Assets/Scripts/Interaction/**",
+    "Assets/Scripts/Player/GrabRules.cs",
+    "Assets/Scripts/Player/PlayerGrabManager.cs",
+    "Assets/Scripts/Player/TwoHandGrabPolicy.cs",
+    "Assets/Scripts/Player/ManipulationConstraints.cs",
+    "Assets/Scripts/Player/EquipmentStrip.cs",
+    "Assets/Scripts/Player/Ghost/GhostGrabRule.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/**",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Haptics/**",
+    "Assets/Editor/VR_Battlegrounds/Haptics/**",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/AnchorSoundInstaller.cs",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/GrabbableAnchorGizmos.cs",
+    "Assets/Prefabs/Feedback/**",
+    "Assets/Resources/InteractionFeedbackConfig.asset",
+    "Assets/Data/Haptics/**",
+    "Assets/Tests/EditMode/Haptics/**",
+    "Assets/Tests/EditMode/Interaction/**",
+    "Docs/magazine-pocket.md",
+    "Docs/UltimateXR/interactions.md",
+    "tasks/haptics-system/expert/**",
+    "Docs/manipulation/**",
+    "tasks/haptics-system/contracts/**"
+  ]
+}

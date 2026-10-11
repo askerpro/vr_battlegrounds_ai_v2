@@ -199,6 +199,8 @@ Tools/**/*.ps1 text eol=lf
 Tools/**/*.js text eol=lf
 Tools/**/*.cjs text eol=lf
 Tools/**/*.patch text eol=lf
+.claude/agents/** text eol=lf
+.codex/agents/** text eol=lf
 
 # SDK исходники и только staging штатного installer сохраняют pinned LF bytes.
 Packages/com.coplaydev.unity-mcp/**/*.cs text eol=lf

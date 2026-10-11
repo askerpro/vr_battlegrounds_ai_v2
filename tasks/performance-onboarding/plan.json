@@ -1,0 +1,15 @@
+{
+  "task_id": "performance-onboarding",
+  "owner": "performance",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/performance/Vr_Battlegrounds_ai",
+  "base_sha": "6063798988ae6aa113b49566ce4be823e2641587",
+  "doc_path": "tasks/performance-onboarding/Readme.md",
+  "title": "Исследование нового окружения и регистрация в хабе",
+  "stages": [
+    {"id": "onboarding", "writes": [
+      "tasks/performance-onboarding/**",
+      "experts/performance/**"
+    ], "after": [], "needs": []}
+  ]
+}

@@ -19,3 +19,15 @@
 Отклонены: A (отпускать до Die) — много точек смерти, сама смерть всё равно не доходит; B (обход
 `UseTopLevelStateChangesOnly`) — двойной повтор у клиентов, второй писатель.
 Проверка — ярус C после правки и приёмки. Попутно: backlog `mirror-rigidbody-enable-arg`.
+
+## Реализация gameplay: death-body-defer, diff e11f915f9 — ACK с условием (4382 → 4388)
+
+`AvatarManager.CanReplaceBodyNow` проверяет условие при постановке и при исполнении. Очередь ведёт только
+сервер, одна запись на сессию, тело выбирается при исполнении. `PlayerGrabManager` больше не отпускает на
+смерти, `RpcOnDied` оставлен только с логом. held-motion manipulation (4363 → 4375): ACK, выстрел несёт позу
+дула автора (`UxrProjectileSource.cs:152`).
+Условие до вливания: при смерти без смены тела (нет призрака) отпускание не происходит. Нужна серверная
+верхнеуровневая страховка в отложенном шаге.
+Отдельная работа: серверные записи SDK внутри `DieInternal` (`PlayerLoadoutManager.ServerHandlePlayerDied →
+RemoveObjectFromAnchor`, `ServerEliminateSilently` с Life=0 изнутри синхронизации) клиентам не уходят.
+Их нужно перенести в отложенный шаг.

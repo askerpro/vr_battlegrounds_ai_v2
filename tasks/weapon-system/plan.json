@@ -172,7 +172,7 @@
         },
         {
           "contract": "weapon-equipment-binding",
-          "revision": 1,
+          "revision": 2,
           "aspects": [
             "ownership"
           ],
@@ -198,7 +198,7 @@
       "needs": [
         {
           "contract": "weapon-equipment-binding",
-          "revision": 1,
+          "revision": 2,
           "aspects": [
             "api",
             "ownership",
@@ -405,7 +405,7 @@
       "needs": [
         {
           "contract": "weapon-equipment-binding",
-          "revision": 1,
+          "revision": 2,
           "aspects": [
             "api",
             "ownership",
@@ -505,6 +505,17 @@
           "state": "merged"
         }
       ],
+      "needs": []
+    },
+    {
+      "id": "sight-arsenal-dedupe",
+      "writes": [
+        "Assets/Data/Weapons/FullDemoArsenal.asset",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset",
+        "Docs/weapons/decisions.md",
+        "tasks/weapon-system/**"
+      ],
+      "after": [],
       "needs": []
     }
   ]

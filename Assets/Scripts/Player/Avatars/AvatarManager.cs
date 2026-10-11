@@ -274,8 +274,13 @@ namespace VrBattlegrounds.Player.Avatars
         private void ReconcileBodyNow(PlayerSession session, string reason)
         {
             // Зовут только с верхнего уровня (ServerReconcileBody при CanReplaceBodyNow, очередь из LateUpdate).
+            // Если всё же изнутри синхронизации — не исполнять, а отложить до следующего LateUpdate.
             if (!CanReplaceBodyNow())
-                GameLog.Error($"[AvatarManager] {session.PlayerName}: смена тела ({reason}) исполняется внутри синхронизации UltimateXR — нарушен порядок death-body-defer.");
+            {
+                GameLog.Error($"[AvatarManager] {session.PlayerName}: смена тела ({reason}) вызвана внутри синхронизации UltimateXR — нарушен порядок death-body-defer, запрос отложен.");
+                if (session.ActiveAvatar != null) DeferBody(session, reason, change: false);
+                return;
+            }
 
             // Тела нет (смена карты) — его создаст спавн уже по состоянию.
             PlayerController current = session.ActiveAvatar;

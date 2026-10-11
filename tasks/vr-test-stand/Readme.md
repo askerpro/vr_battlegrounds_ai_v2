@@ -1,7 +1,7 @@
 # Адресный стенд и интеграция Play Launch
 
 Обновлено: 2026-10-11. Владелец: эксперт `launch-infra`. Worktree: `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
-ветка `codex/vr-test-stand`, база `17293aa3c`. План хаба rev 30.
+ветка `codex/vr-test-stand`, база `17293aa3c`. План хаба rev 32.
 
 ## Цель и границы
 
@@ -27,7 +27,7 @@ SDK patch 58 — [changelog](changelog/2026-10-08-sdk-58.md).
 | `docs-publication` | merged `9bcef90d` |
 | `checkout-network-ports` | merged `07002dde` (прогон worker383) |
 | `expert-workspace-pilot-handoff` | merged `1001415b` |
-| `e2e-run-isolation` | running — проверено на worker, ждёт приёмки |
+| `e2e-run-isolation` | merged `7ceb8a08` (worker 421) |
 
 ## Текущий этап: `e2e-run-isolation`
 
@@ -45,7 +45,7 @@ SDK patch 58 — [changelog](changelog/2026-10-08-sdk-58.md).
 
 **Состояние:** реализовано, проверено на worker (аренда 421): компиляция и AndroidCompileGate PASS, сборка плеера
 PASS, `map-run-startup-route` GREEN дважды — на автопаре и при занятых 7778/47777; неполная пара даёт `error` без
-старта сети. Ждёт приёмки пользователем, затем коммит и штатное вливание.
+старта сети. Принято пользователем, влито `7ceb8a08`; публикация базы worker — ticket 431.
 
 Следом: `e2e-log-verdict` (агрегация логов всех процессов, механизм известных шумов), затем
 `map-runtime-bootstrap/series-smoke-e2e`.

@@ -12,7 +12,9 @@ sys.dont_write_bytecode = True
 
 import argparse
 import json
+import mmap
 import os
+import time
 from pathlib import Path
 
 MAX_BYTES = 20000
@@ -136,14 +138,32 @@ def extract(path, client):
     return found
 
 
-def candidates(codex_root, claude_root, target):
+def cwd_needles(worktree):
+    """Байтовые формы `"cwd":"<путь>"` в JSON: сессия могла начаться в другом каталоге и перейти сюда позже."""
+    raw = str(Path(worktree).resolve())
+    forms = {raw, raw[:1].lower() + raw[1:], raw[:1].upper() + raw[1:]}
+    return [('"cwd":' + json.dumps(form)).encode("utf-8") for form in forms]
+
+
+def moved_here(path, needles):
+    try:
+        with open(path, "rb") as handle, mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ) as data:
+            return any(data.find(needle) >= 0 for needle in needles)
+    except (OSError, ValueError):
+        return False
+
+
+def candidates(codex_root, claude_root, target, worktree, days):
     found = []
+    needles = cwd_needles(worktree)
+    horizon = time.time() - days * 86400
     for client, root in (("codex", codex_root), ("claude", claude_root)):
         if not root.is_dir():
             continue
         pattern = "**/*.jsonl" if client == "codex" else "*/*.jsonl"
         for path in root.glob(pattern):
-            if matches(head_cwd(path, client), target):
+            cwd = head_cwd(path, client)
+            if matches(cwd, target) or (cwd and path.stat().st_mtime >= horizon and moved_here(path, needles)):
                 found.append((last_stamp(path), client, path))
     return sorted(found, reverse=True)
 
@@ -155,9 +175,10 @@ def main(argv=None):
     parser.add_argument("--client", choices=("all", "codex", "claude"), default="all")
     parser.add_argument("--codex-sessions", default=str(Path.home() / ".codex" / "sessions"))
     parser.add_argument("--claude-projects", default=str(Path.home() / ".claude" / "projects"))
+    parser.add_argument("--days", type=int, default=21, help="глубина поиска сессий, перешедших в worktree позже")
     args = parser.parse_args(argv)
     target = norm(Path(args.worktree).resolve())
-    found = [c for c in candidates(Path(args.codex_sessions), Path(args.claude_projects), target)
+    found = [c for c in candidates(Path(args.codex_sessions), Path(args.claude_projects), target, args.worktree, args.days)
              if args.client in ("all", c[1])][: max(1, args.last)]
     out = [f"# Агенты в `{args.worktree}`: сессий показано {len(found)}",
            "> История переписки, не факт состояния: сверь с `git status`/diff, хабом и Readme задачи.", ""]

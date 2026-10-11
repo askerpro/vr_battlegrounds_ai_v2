@@ -1,6 +1,6 @@
 # Автоматический перф-прогон на шлеме Quest
 
-Обновлено: 2026-10-11. Владелец: эксперт `launch-infra`. Worktree: `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
+Обновлено: 2026-10-12. Владелец: эксперт `launch-infra`. Worktree: `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
 ветка `codex/vr-test-stand`. Поручение пользователя 2026-10-11.
 
 ## Цель
@@ -18,7 +18,10 @@
 
 ## План
 
-1. `design` — исследование текущего состояния, проект конвейера, контракт с performance.
-2. Реализация — этапы определяются по итогам `design`.
+1. `design` — merged `ef477dc2`.
+2. `device-runner` — merged `1fc34c84`: `Tools/e2e/Run-QuestE2E.ps1`, шлем-клиент + ПК-сервер, контракт
+   `quest-device-run` r3; Quest 3 device-smoke GREEN.
+3. `quest-build` — planned: сборка из конвейера, opt-out диалога Input Handling, штамп ревизии APK/сервера.
+4. `perf-scenario` — у performance: сценарий `perf-stress`.
 
 Подробности: [Details.md](Details.md). Машинный план: [plan.json](plan.json). Отчёты — `reports/`, вне Git.

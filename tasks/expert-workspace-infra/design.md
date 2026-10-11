@@ -66,6 +66,8 @@ inbox доступен только из worktree владельца → пом�
 awake. Правила поведения, зона, инварианты и правило памяти живут только в `experts/<id>/AGENT.md`.
 Профиль Codex (без хука) — команда awake при старте. Шаблоны — `templates/`.
 
+Выбор эксперта в worktree: `.claude/settings.local.json` с `{"agent": "<id>-expert"}` в постоянном worktree эксперта — любая сессия Claude там (CLI или VS Code, где отдельного выбора агента нет) стартует экспертом; `agent_type` в SessionStart заполняется, хук доставляет пакет (проверено 2026-10-11 в worktree launch-infra). Файл локальный: `.claude/settings.local.json` добавлен в `info/exclude` репозитория. В основном checkout не ставится.
+
 Хук: `.claude/settings.json` SessionStart (startup/resume/clear/compact) вызывает `awake.py --hook <блок>`
 отдельной командой на каждый блок. Он читает `agent_type` из JSON хука; для `<id>-expert` с
 `experts/<id>/expert.json` кладёт свой блок полного пакета в `additionalContext` (потолок Claude Code —

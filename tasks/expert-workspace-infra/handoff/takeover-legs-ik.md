@@ -20,7 +20,9 @@ Owner задачи в хабе уже `avatar-ik` (task-handoff выполнен
    незакоммичено, следующий шаг.
 5. Обнови базу: чекпоинт локальных изменений (WIP-коммит в своей ветке или stash с уникальным тегом), git fetch,
    git rebase origin/dev, восстановить изменения; конфликты решаешь ты. После rebase в worktree есть experts/avatar-ik/ и
-   хук: следующие сессии — claude --agent avatar-ik-expert. Новый маршрут: route-publish.
+   хук. Затем (кроме основного checkout F:/UnityProjects) создай .claude/settings.local.json с {"agent": "avatar-ik-expert"}
+   (файл локальный, в Git не попадает): любая новая сессия Claude в этом worktree — в том числе в VS Code —
+   стартует экспертом avatar-ik с пакетом awake. Новый маршрут: route-publish.
 6. Продолжай план. Перед begin — zone-check --task legs-ik. Гейты AGENTS не снимаются: Unity — только в своей аренде;
    код/ассеты — приёмка пользователем до коммита; вливание — штатно. Сначала коротко скажи пользователю, где
    остановился прежний агент и с какого безопасного шага продолжаешь, затем начинай.

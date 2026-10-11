@@ -136,3 +136,37 @@ PASS, `E2EPlayerBuilder` PASS, `GameBuilder` Quest/Test PASS (APK 679 МБ). П�
 
 Не проверено: фоллбэк прямого подключения вживую (Discovery сработал), брандмауэр включён (на машине выключен),
 повтор после rebase, `-Topology host` (шов роли — зона network).
+
+### Реализация `quest-build` (2026-10-12, до компиляции на worker)
+
+- **Диалог «Unsupported Input Handling on Android».** По IL Unity 6000.4.1f1: `CheckPrerequisites.ValidateInputHandling`
+  (UnityEditor.Android.Extensions) вызывает `EditorUtility.DisplayDialog(…, ok "Ignore", cancel "Cancel Build",
+  ForThisSession, "AndroidInputHandlingWarning")` и при `false` отменяет сборку; в batch диалога нет. `DisplayDialog`
+  → `EditorDialog.DisplayDecisionDialogWithOptOut`: opt-out читается из `EditorPrefs`/`SessionState.GetInt("DialogOptOut."
+  + ключ)` как `DialogResult`, `true` только при `DefaultAction` (= ok, «Ignore»). `EditorUtility.SetDialogOptOutDecision`
+  пишет `SessionState.SetBool(ключ)` без префикса — этот диалог его не видит. Поэтому `GameBuilder` пишет
+  `SessionState.SetInt("DialogOptOut.AndroidInputHandlingWarning", (int)DialogResult.DefaultAction)` перед Android-сборкой.
+- **Штамп ревизии** — `Release/BuildRevisionStamp.cs`: `git rev-parse --short=12 HEAD` (+`-dirty` по `git status
+  --porcelain -uno -- Assets Packages ProjectSettings`, `unknown` без git), `bundleVersion = <база>+<ревизия>` на время
+  сборки, `Dispose` — возврат и `AssetDatabase.SaveAssets()`. `GameBuilder.Build(…, Test[, revision])` и e2e-плеер; прод — нет.
+- **Пара** — `E2EPlayerBuilder.StartPairBuild(statusPath)` (delayCall, статус-JSON) и `RunPairBatch` (`-pairStatus`).
+- **Дирижёр** — сверка ревизий (versionName пакета / `appVersion` сервера, код 2), `-Build` (batch Unity, отказ при
+  занятом `Temp/UnityLockfile`), `-DryRunBuild`, блоки `build` и `builds.revision*` в `run.json`.
+- Проверено без Unity: парсер PowerShell, `-Build -DryRunBuild` (редактор закрыт → команда Unity; занятый lockfile в
+  копии скрипта → отказ 2; конфликты `-Apk`/`-ServerPlayer`/`-Unity`), сверка ревизий на синтетических JSON (8 случаев),
+  компиляция изменённых editor-файлов против DLL Unity 6000.4.1f1 со стабами зависимостей.
+
+### Живая проверка `quest-build` (2026-10-12)
+
+Worker, аренда 461, вход `d1e3da3b`: компиляция и AndroidCompileGate PASS. Перед сборкой стёрт сохранённый в сессии
+ответ человека `DialogOptOut.AndroidInputHandlingWarning` (было 0 — подтверждает формат ключа из IL), затем
+`StartPairBuild`: пара собрана за 452 с **без модального окна**, ревизия `d1e3da3ba8fc` на обеих сборках, в отчёте
+Quest-сборки — предупреждение «Active Input Handling = Both». После сборки `bundleVersion` = `0.1.0`,
+`ProjectSettings.asset` не изменён (worker: только прежние `MapRuntimeCatalog.asset`, `PC.asset` — unexpected, не доставлены).
+
+Шлем: `Run-QuestE2E.ps1 -Scenario device-smoke -Apk ... -Arg artifact=1 -StopLink` — GREEN, `20261012-021845-quest-device-smoke`;
+versionName APK `0.1.0+d1e3da3ba8fc`, run.json `builds.check` «ревизии совпадают: d1e3da3ba8fc».
+
+`-Build` (batch) вживую не запускался: в агентском worktree LFS-роль `agent` → дирижёр отказывает (добавлено после
+проверки: ассеты-указатели дали бы битую сборку); `-DryRunBuild` и отказ проверены. Не проверено: `-Build` в
+основном checkout, `RunPairBatch` в batch-режиме.

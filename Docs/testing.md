@@ -492,7 +492,33 @@ Play Launch ([test-stand.md](test-stand.md) «Локальные сетевые 
 powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1
 powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Scenario device-smoke -Arg artifact=1
 powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Apk Build\Quest\VrBattlegrounds_Quest.apk
+powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Build
 ```
+
+**Сборки одной ревизии.** e2e-плеер сервера и APK Quest (конфигурация Test) несут штамп ревизии исходников в версии:
+`<база>+<ревизия>` ([release.md](release.md), «Штамп ревизии»). Собирать их парой — одной ревизией, посчитанной один раз:
+
+- **`-Build`** (редактор этого checkout закрыт): дирижёр после проверок устройства запускает Unity batch
+  `-executeMethod VrBattlegrounds.EditorTools.E2EPlayerBuilder.RunPairBatch -pairStatus <прогон>/pair-status.json
+  -logFile <прогон>/unity-build.log` (предел `-BuildTimeoutMinutes`, по умолчанию 90), затем ставит
+  `Build\Quest\VrBattlegrounds_Quest.apk` и сервер `Build\e2e\VrBattlegrounds.exe`; условия шлема перепроверяет после
+  сборки. В `run.json` — блок `build` (`status`, `revision`, `durationSeconds`, код Unity). Несовместим с `-Apk` и
+  `-ServerPlayer`. `-DryRunBuild` — только проверить условия и напечатать команду Unity (код 0). Только в checkout с
+  полными ассетами (основной, worker): в лёгком агентском worktree (LFS-роль `agent`, ассеты — указатели) `-Build`
+  отказывает — агент собирает пару на worker через `StartPairBuild`, копирует `Build\` к себе и запускает с `-Apk`
+  и `-ServerPlayer`.
+- **Редактор открыт** (`Temp\UnityLockfile` занят) — `-Build` отказывает (код 2). Пара собирается в редакторе:
+  `VrBattlegrounds.EditorTools.E2EPlayerBuilder.StartPairBuild("Build/e2e-pair-status.json")` (агент — на worker под
+  арендой) ставит сборку в `delayCall` и сразу возвращает; пустой файл статуса — сборка идёт, JSON (`serverPassed`,
+  `questPassed`, `revision`, `serverSummary`, `questSummary`, `apkPath`, `serverPath`, `error`) — закончена. Затем
+  прогон без `-Build` с `-Apk`.
+
+**Сверка ревизий.** Ревизия APK — часть versionName установленного пакета после `+` (читается до запуска и печатается),
+ревизия сервера — из `appVersion` его `server.json`. После прогона дирижёр сравнивает их: разные — причина «сборки из
+разных ревизий», нет штампа у одной стороны (или `unknown`) — «ревизия сборки не определена»; обе дают код 2. В
+`run.json`: `builds.revisionServer`, `builds.revisionClient`, `builds.check`. С `-Build` расхождение установленного APK
+с ревизией пары — отказ ещё до запуска сервера. Совпадение штампов с `-dirty` не гарантирует одинаковых исходников —
+об этом пишет `builds.check`.
 
 Параметры: `-Scenario` (по умолчанию `device-smoke`), `-Topology client|host` (`host` — код 2: нужен шов выбора роли
 в плеере, зона network), `-Map`, `-Timeout` (не меньше 60 с; сценариям уходит на 30 с меньше), `-Arg ключ=значение`
@@ -523,12 +549,14 @@ force-stop`, гашение своего серверного PID и потом�
 Папка `Tools/e2e/results/<yyyyMMdd-HHmmss>-quest-<сценарий>/`: `server.json`, `server.log`, `client-1.json`,
 `client-1.logcat.txt` (процесс приложения, все теги), `unity.logcat.txt` (тег Unity), `logcat-stream.txt` (весь
 logcat за прогон потоком — кольцевой буфер шлема мал), `logcat-full.txt` (только если pid не найден),
-`artifacts/client-1/` и `artifacts/server/` (то, что сценарии объявили в `E2EResult.Artifacts`), `summary.json`
+`artifacts/client-1/` и `artifacts/server/` (то, что сценарии объявили в `E2EResult.Artifacts`), с `-Build` —
+`pair-status.json` и `unity-build.log`, `summary.json`
 (как у Run-E2E) и `run.json` — манифест условий: пакет и версия, APK и SHA-256, модель, fingerprint, серийник, UTC
 начала и конца, аргументы обеих сторон целиком, батарея до и после, Wi-Fi шлема, CPU ПК, порты, адрес сервера,
 условия сборки обеих сторон (`buildGuid`, `appVersion`, `unityVersion`, `developmentBuild`, `platform` из их
-результатов), итоговый код. Без `run.json` прогон не состоялся. Расхождение `appVersion`/`unityVersion` сторон — код 2;
-сверка штампа ревизии исходников появится с этапом `quest-build`.
+результатов), ревизии обеих сторон и сверка (`builds.revisionServer`/`revisionClient`/`check`), шаг сборки `build`
+(с `-Build`), итоговый код. Без `run.json` прогон не состоялся. Разные ревизии, ревизия без штампа или разные
+`unityVersion` сторон — код 2.
 
 Для сценариев: параметры читаются только через `E2EContext.Arg(ключ)` (ошибка разбора `-e2eArg` — `error` до запуска
 сценария); файлы для забора объявляются `E2EResult.AddArtifact(путь)` — только абсолютный путь внутри

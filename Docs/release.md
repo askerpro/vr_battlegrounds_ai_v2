@@ -11,6 +11,7 @@ Android-планшете. Код — `Assets/Editor/VR_Battlegrounds/Release/`.
 | Проверка без сборки | `Tools/VR Battlegrounds/Release/Проверить UXR id (без сборки)` |
 | CLI, редактор закрыт | `powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 [-Targets quest,tablet] [-Config Test\|Prod]` |
 | Агент | `GameBuilder.Build(new[] { BuildProfile.Server }, BuildConfig.Test)` → `Result.Summary` |
+| Пара для прогона на шлеме | `E2EPlayerBuilder.StartPairBuild(<статус>)` в редакторе или `Run-QuestE2E.ps1 -Build` — [testing.md](testing.md) |
 
 ### Конфигурация: тест и прод
 
@@ -32,6 +33,22 @@ Test). IL2CPP-настройки Android выставляет `BuildConfigScope`
 
 Прод со stripping Low может вырезать то, что UltimateXR и Mirror достают рефлексией: прод-сборку прогонять
 на шлеме целиком.
+
+**Штамп ревизии** (тест и e2e-плеер, не прод): на время сборки `BuildRevisionStamp` ставит
+`bundleVersion = <база>+<ревизия>` (например `0.1.0+605c90736abc`; `-dirty` — есть изменения отслеживаемых файлов
+в `Assets/`, `Packages/`, `ProjectSettings/`; `unknown` — git недоступен, сборка не падает). Ревизия —
+`git rev-parse --short=12 HEAD`, её видно в `Result.Summary`, во versionName APK и в `Application.version`.
+После сборки версия возвращается и настройки сохраняются — `ProjectSettings.asset` не меняется. Прод не штампуется:
+versionName магазина не трогаем. Пару для прогона на шлеме (e2e-плеер + APK одной ревизии) собирает
+`E2EPlayerBuilder` — [testing.md](testing.md), «Прогон на шлеме».
+
+**Диалог «Unsupported Input Handling on Android»** (Active Input Handling = Both): перед Android-сборкой `GameBuilder`
+отвечает за человека «Ignore» на текущую сессию редактора — без этого сборка агента в открытом редакторе висела
+до клика. В итоге сборки — строка `ВНИМАНИЕ: Active Input Handling = Both…`; корень — backlog
+`input-handling-new-only`. Публичный `EditorUtility.SetDialogOptOutDecision` для этого не годится: в Unity 6000.4
+диалог читает opt-out из `SessionState` под ключом `DialogOptOut.<ключ>` как `DialogResult`, поэтому сборщик пишет
+`SessionState.SetInt("DialogOptOut.AndroidInputHandlingWarning", DialogResult.DefaultAction)`. В batch-режиме Unity
+диалог не показывает, только предупреждение в логе.
 
 В тест-сборке события UXR несут отладочные подписи (патч 8; совместимо с прод-сборками) и работает
 больше не работает `DebugOrchestrator`: с 2026-09-30 он только в редакторе (сборка `VrBattlegrounds.DebugBootstrap`) и
@@ -99,6 +116,7 @@ Oculus на месте. Проверка на шлеме: `adb shell dumpsys pac
 - лоадеры и `InitManagerOnStart` XR Management — в памяти, **без** `AssetDatabase.SaveAssets()`
   (`XRPackageMetadataStore.AssignLoader` его зовёт и сохранил бы невыданные на диск id — known-issues #11);
 - идентификатор Android-пакета (планшет), min SDK Android (Quest);
+- `bundleVersion` со штампом ревизии (тест, e2e) — возвращается и сохраняется `AssetDatabase.SaveAssets()`;
 - активная платформа — после сборки в редакторе переключается обратно.
 
 На диск пишется одно: при первой сборке Android в `XRGeneralSettingsPerBuildTarget.asset` заводятся

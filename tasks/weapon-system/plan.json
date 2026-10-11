@@ -1,10 +1,9 @@
 {
   "task_id": "weapon-system",
-  "owner": "weapon-system-expert",
+  "owner": "weapon-system",
   "client": "codex",
-  "session_id": null,
-  "worktree": "F:/CodexWorktrees/weapon-system-expert/Vr_Battlegrounds_ai",
-  "base_sha": "048b9206fca27b7a144ccc41cc5916c89411e45c",
+  "worktree": "F:/CodexWorktrees/weapon-system/Vr_Battlegrounds_ai",
+  "base_sha": "1001415bed29124af821a9a641d0bae2a7224a5b",
   "doc_path": "tasks/weapon-system/Readme.md",
   "title": "Единая WeaponSystem: машина состояний оружия",
   "stages": [
@@ -64,6 +63,167 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "use-context-sdk-port",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/IUxrFirearmRootRecoilPolicy.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/IUxrFirearmRootRecoilPolicy.cs.meta",
+        "tasks/weapon-system/changelog/2026-10-10-sdk-70.md",
+        "tasks/weapon-system/tools/compile.ps1"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "use-context-planning",
+          "state": "verified"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "handover",
+          "state": "merged"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "weapon-use-context",
+          "revision": 1,
+          "aspects": [
+            "npc-root-recoil"
+          ],
+          "readiness": "agreed"
+        }
+      ]
+    },
+    {
+      "id": "use-context-lifetime-planning",
+      "writes": [
+        "tasks/weapon-system/contracts/weapon-grab-lifetime-2.json",
+        "tasks/weapon-system/use-context.md"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "use-context-sdk-port",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "use-context-sdk-lifetime",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabber.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabber.StateSave.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.StateSave.cs",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "use-context-sdk-port",
+          "state": "verified"
+        },
+        {
+          "task": "haptics-system",
+          "stage": "interaction-feedback",
+          "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "use-context-lifetime-planning",
+          "state": "verified"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "weapon-grab-lifetime",
+          "revision": 2,
+          "aspects": [
+            "main-hand-lifetime",
+            "disable-restore-invalidation",
+            "sdk-owner-scope"
+          ],
+          "readiness": "agreed"
+        }
+      ]
+    },
+    {
+      "id": "use-context-sdk-attribution",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/IUxrWeaponOwnerProvider.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/IUxrWeaponOwnerProvider.cs.meta",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeapon.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeapon.Custom.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeaponManager.cs",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "use-context",
+          "state": "verified"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "weapon-equipment-shooter",
+          "revision": 1,
+          "aspects": [
+            "actor-provider",
+            "emission-owner",
+            "invalid-claim-denial"
+          ],
+          "readiness": "agreed"
+        },
+        {
+          "contract": "weapon-equipment-binding",
+          "revision": 1,
+          "aspects": [
+            "ownership"
+          ],
+          "readiness": "agreed"
+        }
+      ]
+    },
+    {
+      "id": "use-context-prefab-authoring",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponSystemAuthoring.cs",
+        "Assets/Prefabs/Weapons/PPK/PPK.prefab",
+        "Assets/Prefabs/Weapons/AK105/AK105.prefab",
+        "tasks/weapon-system/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-system",
+          "stage": "use-context-sdk-attribution",
+          "state": "verified"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "weapon-equipment-binding",
+          "revision": 1,
+          "aspects": [
+            "api",
+            "ownership",
+            "snapshot"
+          ],
+          "readiness": "agreed"
+        },
+        {
+          "contract": "weapon-equipment-shooter",
+          "revision": 1,
+          "aspects": [
+            "actor-provider"
+          ],
+          "readiness": "agreed"
+        }
+      ]
     },
     {
       "id": "waves-f",
@@ -183,6 +343,21 @@
       "after": [
         {
           "task": "weapon-system",
+          "stage": "use-context",
+          "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "use-context-sdk-attribution",
+          "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "use-context-prefab-authoring",
+          "state": "merged"
+        },
+        {
+          "task": "weapon-system",
           "stage": "use-context-planning",
           "state": "verified"
         },
@@ -217,7 +392,22 @@
       "after": [
         {
           "task": "weapon-system",
-          "stage": "ejection-manual",
+          "stage": "use-context-sdk-port",
+          "state": "verified"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "use-context-sdk-lifetime",
+          "state": "verified"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "use-context-planning",
+          "state": "verified"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "handover",
           "state": "merged"
         }
       ],
@@ -231,7 +421,26 @@
             "sdk-grab-exclusion",
             "snapshot"
           ],
-          "readiness": "active"
+          "readiness": "agreed"
+        },
+        {
+          "contract": "weapon-use-context",
+          "revision": 2,
+          "aspects": [
+            "context",
+            "automation",
+            "npc-root-recoil"
+          ],
+          "readiness": "agreed"
+        },
+        {
+          "contract": "weapon-grab-lifetime",
+          "revision": 2,
+          "aspects": [
+            "main-hand-lifetime",
+            "disable-restore-invalidation"
+          ],
+          "readiness": "agreed"
         }
       ]
     },

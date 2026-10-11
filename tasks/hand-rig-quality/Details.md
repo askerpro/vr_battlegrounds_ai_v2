@@ -274,6 +274,72 @@ AR15-translation-summary.json под reports/. Маски, signed volume, runtim
 в существующем authoring pipeline; постоянный общий offset и новый runtime writer
 этим исследованием не обоснованы.
 
+### Конфигурационный разбор хватов MEF — 2026-10-11
+
+Уровень доказательства — конфигурация (inventory.json `audit-0c1a7fbc-01`, база0c1a7fbc)
+и ссылки ассетов; геометрия этим разделом не оценивается. Эффективные MEF-записи
+у 214 кейсов разрешаются по GUID `MEF_Base_Avatar` (b6fe59db…), у36 — default fallback.
+
+**Нет MEF-записи, default fallback без align (18 наблюдений, 9 предметов):**
+
+| Предмет | Точки | Статус в игре |
+|---|---|---|
+| Tablet / Tablet_Base | Left Handle (пустая поза), Right Handle (GrabStandard) | всегда; Fit: unsupported (dynamic snap) |
+| DogTagPanel | DogTag | станции арсенала (Common/LobbyDemo) |
+| Gun (SDK) + MagGun | корпус, магазин | WeaponRegistry: SDKGun |
+| Machinegun + MagMachinegun | Trigger Grab, Front Grab, магазин | WeaponRegistry: Machinegun |
+| Shotgun (SDK) + MagShotgun | корпус, магазин, ShotGunGeo/Pump | WeaponRegistry: ShotGun |
+| Grenade + Pin | корпус, чека | ссылок из сцен/префабов/данных нет — вне игры |
+
+**Есть запись, но поза общая, не под предмет:**
+- Магазины всех17 оружий — `GrabClaw` blend0,68 (BrowningHiPower — ещё `GrabBall` 0,67).
+  На AR15 доказана потеря контакта (раздел выше); кандидаты из reload — AR15/TR15.
+- Затворы/рукоятки взведения — `general_grab` 0 (13 оружий) или `Grab` 0 (PPK,
+  BrowningHiPower, Viper). Помпа FabarmSDASS — `GrabClaw` 0,44.
+- AR15: основная `Gun` 0, поддержка `GrabClaw` 0,44; FabarmSDASS — только `Gun` 0.
+  Остальные13 оружий имеют собственные Kinemation/HandsPack Grip/Support; Uzi — одна точка.
+
+**Наблюдения, требующие подтверждения геометрией/runtime:** вложенные
+FabarmSDASS_Ammo, Herrington_mag и Grenade/Pin имеют `enabled=false` в префабе
+(вероятно, включаются в игре — проверить); SightReview-префабы зарегистрированы
+в WeaponRegistry и повторяют позы базового оружия.
+
+### Полная статическая матрица — 2026-10-11
+
+Прогон `audit-3dff412c-02`: worker input `3dff412c` (checkpoint526e0a09 + база081ec677,
+закреплён ref `codex/tmp/hand-rig-quality-mef-grip-audit-02-input-merge`), тикеты
+412 (метрики, result99ee9a67) и414 (рендер, result d055ab80), finish accepted,
+changed/unexpected/binary-invalid пусты, receive выполнен. Уровень — static deformed
+contact в prefab hold; runtime, Quest, controller_reference, blend0/0,5/1 не выполнялись.
+
+- Инвентарь совпал с прошлым: 50 префабов, 99 grabbables, 250 кейсов. Сцены (8, через
+  OpenPreviewScene без изменений): 224 grabbable, 50 активных — DogTagPanel без значимых
+  overrides, 174 — выключенные ветки сэмплов UXR.
+- 182 измерены сохранённой позой (все `analysis_incomplete`), 32 — подстановкой SDK
+  `Grab` (затворы с пустой позой), 8 unsupported (планшет), 28 error (нет записи и align).
+- 190 dedup-групп (24 объединены по совпадению метрик), 1140 PNG; framing-proof:
+  0 вершин вне кадра и под надписями во всех кадрах. ZIP SHA256 метрик
+  `0c7b33e6…f9c`, рендера `d54515ad…e84`.
+
+Оговорки метрик: distal P50 считается по всей поверхности сегмента, включая тыльную —
+это не зазор; значимы 0% площади в окне0–2мм и сравнения рук/предметов. Вложенные
+детали измерены против всего оружия; контакт магазина — по отдельному префабу.
+
+**Находки (реестр — `findings.json` прогона):**
+
+| ID | Что | Доказательство |
+|---|---|---|
+| F1 | Нет MEF-записи: планшет, жетон, SDK Gun/Machinegun/Shotgun с деталями | 28 error, 8 unsupported |
+| F2 | Пустая поза затворов16 оружий → SDK `Grab` (Issue26) | metrics-fallback; контакт приемлемый, поза не выбрана намеренно |
+| F3 | `GrabClaw` на магазинах/патронах не обхватывает предмет: 12/36 групп без distal-контакта, медиана P50 32мм; левая рука хуже правой у15 (+15…+34мм palm) | g099 R08_mag, g107 Revolver_mag |
+| F4 | MKR9: левая кисть на точке0 над ствольной коробкой (palm62 против24мм у правой), у точки1 обратно; align Left/Right в MKR9.prefab не зеркальны (у AK105 Left=Right с−x) | g062/g063 |
+| F5 | AR15 support `GrabClaw`0,44 без distal-контакта; помпа FabarmSDASS P50 52–63мм | triage4,10 |
+| F6 | Позы пака Scar/R08 support/MP5K/Uzi/SniperRifle/BHP с большими P50 — кандидаты, нужен приближенный кадр | g108 |
+
+Эталон симметрии и контакта: AK105, Mk14, Herrington, R08 точка0 (P50 2–6мм обеих рук).
+Инфраструктура: 33 бинарных `.asset` с CRLF-порчей восстановлены из HEAD; execute_code
+>30с отдаёт ложный `success:false` — infra_issue #3431.
+
 ### 1. Полный инвентарь и матрица случаев
 
 - [ ] Зафиксировать SHA, Unity/SDK, активный MEF, рост/масштаб, режим контроллеров

@@ -19,7 +19,7 @@ namespace VrBattlegrounds.Editor.Avatars
     /// приводит его к этому виду.
     ///
     /// <list type="bullet">
-    /// <item><b>Снимается снаряжение и игра живого:</b> <c>PlayerLoadoutManager</c>, <c>PocketHaptics</c>,
+    /// <item><b>Снимается снаряжение и игра живого:</b> <c>PlayerLoadoutManager</c>,
     ///       <c>MagazineEjectInput</c>, карманы и кобуры (якоря и их
     ///       ручки-прокси), любые хватаемые предметы на теле.</item>
     /// <item><b>Снимаются хитбоксы</b> — все сплошные коллайдеры. Триггер камеры остаётся: по нему
@@ -48,7 +48,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <summary>Компоненты живого игрока, которых у призрака нет. Порядок — сначала зависимые.</summary>
         private static readonly string[] LivingOnlyComponents =
         {
-            "MagazineEjectInput", "PocketHaptics", "PlayerLoadoutManager",
+            "MagazineEjectInput", "PlayerLoadoutManager",
         };
 
         public static void Build()

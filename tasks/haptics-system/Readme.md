@@ -20,8 +20,8 @@
 | `behavior-tests` — смешивание, покрытие отклика | влит `d009709c` |
 | `interaction-feedback` — SDK-патч 67, `InteractionFeedback`, префаб-отклик, вторая рука | влит `df153b74`, принят в шлеме 2026-10-09 |
 | `manipulation-expert` — эксперт и база знаний, `.claude/agents/` | влит `83d8f34d` |
-| `manipulation-kb` — база знаний в `Docs/manipulation/`, инварианты по группам, профиль — адаптер awake | вливается 2026-10-11 |
-| `pocket-removal` — снять `PocketHaptics` с аватаров | порядок согласован; после `manipulation-kb` |
+| `manipulation-kb` — база знаний в `Docs/manipulation/`, инварианты по группам, профиль — адаптер awake | влит `081ec677` |
+| `pocket-removal` — снять `PocketHaptics` с аватаров | принят в шлеме 2026-10-11, вливается |
 | `sdk-routing` — перехват вибрации SDK (патч 65), форма в компонентах SDK | не начат |
 | `sources` — гибель, стена, часы, жест отладки | не начат |
 | `item-clicks` — клики хвата SDK на общий клип, разовые события | после `sdk-routing`, с weapon-system |
@@ -47,4 +47,4 @@
 
 ## Следующий шаг
 
-Этап `pocket-removal` по плану в [handoff.md](handoff.md).
+Этап `sdk-routing` (патч 65, перехват вибрации SDK) — модель в [Details.md](Details.md) п. 5, план в [handoff.md](handoff.md).

@@ -6803,9 +6803,6 @@ PrefabInstance:
       addedObject: {fileID: 3774624752932667480}
     - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 3705747643474500777}
-    - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 1983294309419792135}
     - targetCorrespondingSourceObject: {fileID: 9064259894265353843, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
       insertIndex: -1
@@ -6853,26 +6850,6 @@ Transform:
 --- !u!4 &423403972287618082 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4048014495524566751, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-  m_PrefabInstance: {fileID: 4453308068191464189}
-  m_PrefabAsset: {fileID: 0}
---- !u!23 &531337332675431091 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 4220686948171980878, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-  m_PrefabInstance: {fileID: 4453308068191464189}
-  m_PrefabAsset: {fileID: 0}
---- !u!23 &531337333056520375 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 4220686947524422218, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-  m_PrefabInstance: {fileID: 4453308068191464189}
-  m_PrefabAsset: {fileID: 0}
---- !u!23 &531337333910491149 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 4220686947205364464, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
-  m_PrefabInstance: {fileID: 4453308068191464189}
-  m_PrefabAsset: {fileID: 0}
---- !u!23 &531337334047811625 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 4220686947338437332, guid: e7468ec6b7af89c4d94d451ec3c1807b, type: 3}
   m_PrefabInstance: {fileID: 4453308068191464189}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &555891612640787215 stripped
@@ -7308,20 +7285,6 @@ MonoBehaviour:
   _enableObjectListLeft: []
   _enableObjectListRight: []
   _enableObjectList: []
---- !u!114 &3705747643474500777
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4613916165338528910}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e14c4d0d52ad32e499e71bb1dd2250c7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.PocketHaptics
-  _tapAmplitude: 0.5
-  _tapSeconds: 0.3
 --- !u!114 &1983294309419792135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7694,10 +7657,5 @@ PrefabInstance:
 --- !u!4 &5221201766344899072 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2361585616498344493, guid: a0f4423b771d0dd478596daa93a49b63, type: 3}
-  m_PrefabInstance: {fileID: 7544486830451685421}
-  m_PrefabAsset: {fileID: 0}
---- !u!23 &7188191905535236324 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 824986358441009353, guid: a0f4423b771d0dd478596daa93a49b63, type: 3}
   m_PrefabInstance: {fileID: 7544486830451685421}
   m_PrefabAsset: {fileID: 0}

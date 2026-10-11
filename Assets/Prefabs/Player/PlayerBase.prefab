@@ -6983,7 +6983,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8bff4360497a1b6459448aff51a960e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _capacity: 4
+  _perTypeLimit: 3
 --- !u!65 &8168337458836143574
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -68019,7 +68019,6 @@ GameObject:
   - component: {fileID: 819370689037101168}
   - component: {fileID: 8370583342903300142}
   - component: {fileID: 3660179452437783722}
-  - component: {fileID: 2661479309573987799}
   - component: {fileID: 8369001338393055065}
   - component: {fileID: 2287495973934865713}
   - component: {fileID: -5707408599596345928}
@@ -68501,6 +68500,39 @@ MonoBehaviour:
   __prefabGuid: eee4c6960159a24459810d9c0851279c
   __isInPrefab: 1
   _allowHandTracking: 1
+  _useNativeLegIK: 0
+  _legs:
+    kneeFollowsFoot: 0.5
+    legsWeight: 1
+    locomotionRig: {fileID: 0}
+    locomotionController: {fileID: 0}
+    teleportDistance: 1.5
+    ankleHeight: 0.135
+    groundFeet: 1
+    plantedSpeed: 0.25
+    groundSmoothTime: 0.05
+    crouchDeadZone: 0.12
+    crouchSmoothTime: 0.15
+    clipLegsStart: 0.5
+    locomotionCrouchLimit: 0.5
+    locomotion:
+      moveThreshold: 0.3
+      minAnimationSpeed: 0.1
+      maxAnimationSpeed: 3
+      animationSmoothTime: 0.1
+      standOffset: {x: 0, y: 0}
+      rootLerpSpeedWhileMoving: 30
+      rootLerpSpeedWhileStopping: 10
+      rootLerpSpeedWhileTurning: 10
+      maxRootOffset: 0.5
+      maxRootAngleMoving: 10
+      maxRootAngleStanding: 60
+      turnStartAngle: 20
+      turnStopAngle: 6
+      turnReleaseSpeed: 12
+      stepLengthMlp: 1
+      blendRing: 1.8
+      blendRingExponent: 0.5
   _useArmIK: 1
   _armIKElbowAperture: 0.5
   _armIKOverExtendMode: 1
@@ -68682,20 +68714,6 @@ MonoBehaviour:
   _enableObjectListLeft: []
   _enableObjectListRight: []
   _enableObjectList: []
---- !u!114 &2661479309573987799
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7006129303043550839}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e14c4d0d52ad32e499e71bb1dd2250c7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.PocketHaptics
-  _tapAmplitude: 0.5
-  _tapSeconds: 0.3
 --- !u!114 &8369001338393055065
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -68958,7 +68976,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
+  m_Children: []
   m_Father: {fileID: 7494400686204886494}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &4699206007694710179

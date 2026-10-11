@@ -598,19 +598,8 @@ namespace VrBattlegrounds.Tests.Prefabs
                 $"{avatar.name}: нет PlayerLoadoutManager на корне — магазины в начале раунда не выдаются.");
         }
 
-        /// <summary>
-        /// <see cref="PocketHaptics" /> — единственный способ найти карман в игре: зоны карманов
-        /// не видны, и игрок узнаёт «сейчас положу / сейчас достану» по вибрации контроллера.
-        /// Без компонента карманы работают, но вслепую — и ошибки в консоли нет.
-        /// </summary>
-        [TestCaseSource(nameof(RegisteredAvatars))]
-        public void На_корне_есть_хаптики_карманов(string path)
-        {
-            UxrAvatar avatar = LoadAvatar(path);
-
-            Assert.IsNotNull(avatar.GetComponent<PocketHaptics>(),
-                $"{avatar.name}: нет PocketHaptics на корне — карманы не отзываются вибрацией.");
-        }
+        // Вибрацию готовности карманов даёт общий InteractionFeedback по якорям, а не компонент
+        // аватара; покрытие якорей откликом — ManipulationFeedbackCoverageTests (pocket-removal).
 
         // Требование «у выбывшего прячется всё тело» (SpectatorController.Geo/ExtraGeo/GhostPrefab) снято
         // в T-35: выбывший — отдельный аватар-призрак (GhostAvatarTests), тело погибшего — труп

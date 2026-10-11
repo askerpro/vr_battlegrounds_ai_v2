@@ -14,7 +14,11 @@ PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
    Ложное «устарел»: `Run-E2E.ps1` берёт `Assets\Editor` в корни свежести + сравнение по mtime → штамп по
    содержимому (`build-stamp.json`, SHA-256 runtime-исходников). Неблокирующая сборка: основной путь — batch-Unity
    на своей копии; в редакторе — delayCall + статус-файл (главный поток всё равно занят, renew аренды) и откат
-   трёх файлов с согласия performance/gameplay.
+   трёх файлов с согласия performance/gameplay. Аренда 421: сборка пачкает ещё `ProjectSettings/GraphicsSettings.asset`
+   и `Assets/Settings/Graphics/UniversalRenderPipelineGlobalSettings.asset`; обход MCP-таймаута через `delayCall` +
+   статус-файл работает (`tasks/vr-test-stand/tools/e2e-isolation-build.cs.txt`, 75 с).
+   Попутно: `SessionRecoveryOnReconnectScenario.ConnectDirectly` (`:869-894`) в плеере зовёт `StartClient()` мимо шва
+   портов — перевести на `RequestClientConnect` (ревью network 2026-10-11); владелец содержания сценария — network.
 3. `xr-startup` — запуск без аппаратного XR для сетевых проверок, production-путь не трогать — PH, VTS.
 4. `xr-input` — один адаптер поз/кнопок/стиков, ревью avatar-ik — VTS §5, §7, §14.
 6. `stands-migration` — BotCombatStand сам правит EditorBuildSettings/Bootstrap/registry, ловит `StartupRoute.SceneNotLoadable`; перевести на общий запрос, порядок с bots-fix — VTS.

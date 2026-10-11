@@ -218,3 +218,21 @@ armed-development) остаётся архивом в ветке и в dev не 
 - network: 4 NetworkTransform на бота, ServerOnly/хост/поздний вход/reconnect, удаление SyncVar BotClipBody.
 - gameplay: откат бот-ветки в AvatarManager, хитбоксы игрока у ботов.
 - performance: бюджет N ботов × IK (сервер, хост, Quest-клиент).
+
+## Ход этапа pf-prototype
+
+- gameplay 4257: zone-ack на PlayersManager.cs (scope 666ea287…) по diff 4252; любая новая правка зоны — новый diff.
+  Перед вливанием: в логе стенда PlayerFlow «калибровка принята (Connect)», гибрид в матче без изменений.
+- manipulation 4259: начальная поза купленного ствола до SpawnServerObject по геометрии SDK — допустима (разово);
+  аллокации GetPrefabGuidChain — принять на этапе 0, исправление у них (кандидат grip-pose-cache); при блокере
+  бюджета прислать цифры.
+
+## Решение пользователя 2026-10-13: миграция на новую архитектуру
+
+«Новая архитектура нравится гораздо больше — можно удалять старый флоу на клипах и мигрировать.» Следствия:
+- player-flow становится единственным режимом ботов в матче; старый гибрид dev (BotBody-руки, PoseRightHand,
+  SetWeaponHands, FireRequestedShot, стадийный выстрел) и флаг режима удаляются на clip-cutover.
+- Порядок этапов: pf-prototype → pf-equipment → pf-network → **clip-cutover** (перевод матча, удаление гибрида,
+  BotCombatAssets/контроллеров прокси — если Blaze-proxy без них работает, binding r3, документы, тесты после
+  приёмки) → pf-quest (перф на финальном коде).
+- Архив клипового пути `bots-fix-clip-archive` и `parked/pose-fit-2026-10-12` удаляются после приёмки clip-cutover.

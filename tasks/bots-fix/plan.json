@@ -174,21 +174,6 @@
       "needs": []
     },
     {
-      "id": "pf-quest",
-      "writes": [
-        "tasks/bots-fix/**",
-        "Assets/Scripts/Bots/**"
-      ],
-      "after": [
-        {
-          "task": "bots-fix",
-          "stage": "pf-network",
-          "state": "accepted"
-        }
-      ],
-      "needs": []
-    },
-    {
       "id": "clip-cutover",
       "writes": [
         "Assets/Scripts/Bots/**",
@@ -207,7 +192,7 @@
       "after": [
         {
           "task": "bots-fix",
-          "stage": "pf-quest",
+          "stage": "pf-network",
           "state": "accepted"
         },
         {
@@ -227,6 +212,21 @@
           "readiness": "active"
         }
       ]
+    },
+    {
+      "id": "pf-quest",
+      "writes": [
+        "tasks/bots-fix/**",
+        "Assets/Scripts/Bots/**"
+      ],
+      "after": [
+        {
+          "task": "bots-fix",
+          "stage": "clip-cutover",
+          "state": "accepted"
+        }
+      ],
+      "needs": []
     }
   ]
 }

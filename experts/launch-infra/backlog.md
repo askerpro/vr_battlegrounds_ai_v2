@@ -5,6 +5,9 @@ PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
 Порядок пересмотрен 2026-10-11 — `journal/2026-10-11-e2e-path-priority.md`.
 `player-launch` взят в хаб: `vr-test-stand/e2e-run-isolation`.
 
+0. `quest-perf-pipeline` — взят в работу 2026-10-11 по поручению пользователя: автоматический конвейер на шлеме —
+   сборка Android → adb install → запуск перф-теста → закрытие → сбор логов и перф-результатов. Конвейер, сборка и
+   запуск — launch-infra; содержание замеров, метрики и бюджеты — performance (контракт формата результатов).
 1. `live-smoke-runner` → этап `e2e-log-verdict` — агрегация ошибок всех процессов и механизм известных шумов для `series-smoke-e2e` — MRB «Известные шумы тестов и харнесса», VTS «Финальная проверка383».
 2. `async-player-build` — `E2EPlayerBuilder.Run()` блокирует главный поток (таймаут MCP), пачкает `PC.asset`, `ProjectSettings.asset`, `MapRuntimeCatalog.asset`; ложное «устарел» — `Docs/testing.md` «Шероховатость: проверка свежести билда». Диагностика 2026-10-11 (чтение кода): `PC.asset` — URP
    `ShaderBuildPreprocessor` под Standalone+Development, мусор, зона performance; `ProjectSettings.asset` — снимок

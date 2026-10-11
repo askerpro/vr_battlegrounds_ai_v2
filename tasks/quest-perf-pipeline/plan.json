@@ -1,0 +1,39 @@
+{
+  "task_id": "quest-perf-pipeline",
+  "owner": "launch-infra",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai",
+  "base_sha": "7c42ac5db934ae8ad6f3defb2b6ca1dc2f6367cb",
+  "doc_path": "tasks/quest-perf-pipeline/Readme.md",
+  "title": "Автоматический перф-прогон на шлеме Quest",
+  "stages": [
+    {
+      "id": "design",
+      "writes": [
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "device-runner",
+      "writes": [
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Assets/Scripts/Debug/E2E/E2EContext.cs",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Docs/testing.md",
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "design",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

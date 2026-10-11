@@ -1,0 +1,38 @@
+{
+  "task_id": "death-body-defer",
+  "owner": "gameplay",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/gameplay/Vr_Battlegrounds_ai",
+  "base_sha": "0a31765aaa00b5e3564682f965ce7bad5a54000d",
+  "doc_path": "tasks/death-body-defer/Readme.md",
+  "title": "Смерть доходит до клиентов: смена тела на верхнем уровне",
+  "stages": [
+    {
+      "id": "deferred-body",
+      "writes": [
+        "Assets/Scripts/Player/Avatars/AvatarManager.cs",
+        "Assets/Scripts/Player/Avatars/AvatarTeardown.cs",
+        "Assets/Scripts/Player/PlayerController.cs",
+        "Assets/Scripts/Player/PlayerGrabManager.cs",
+        "tasks/death-body-defer/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "accepted-tests",
+      "writes": [
+        "Assets/Tests/EditMode/Player/**",
+        "tasks/death-body-defer/**"
+      ],
+      "after": [
+        {
+          "task": "death-body-defer",
+          "stage": "deferred-body",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

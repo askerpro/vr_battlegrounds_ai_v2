@@ -10,6 +10,10 @@
     {"id": "state-review", "writes": [
       "tasks/network-state-review/**",
       "experts/network/**"
-    ], "after": [], "needs": []}
+    ], "after": [], "needs": []},
+    {"id": "journal-publish", "writes": [
+      "tasks/network-state-review/**",
+      "experts/network/**"
+    ], "after": [{"task": "network-state-review", "stage": "state-review", "state": "merged"}], "needs": []}
   ]
 }

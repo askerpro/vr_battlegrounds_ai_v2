@@ -39,3 +39,10 @@
 `OnClientDisconnectInternal` синхронно выполняет `OnStopClient` → `NetworkClient.Shutdown` (`connectState=None`),
 и только потом `Invoke(ClientChangeOfflineScene)`, то есть Offline грузится не раньше следующего кадра. Если такой
 отказ всё же придёт, это реальный второй старт сети и он валит прогон.
+
+## Влито
+
+`7ceb8a08` (событие 3685). Сетевой diff совпадает с проверенным `network-zone.diff`: 11 строк `GameNetworkDiscovery.cs`,
+9 строк Mirror patch 2, 7 строк `DebugBootstrapGate.cs`. Worker 421 (данные launch-infra): `map-run-startup-route` GREEN
+на автопаре и при занятых 7778/47777; неполная пара даёт ошибку без старта сети. Открытый пункт —
+`SessionRecoveryOnReconnectScenario.ConnectDirectly` мимо шва портов, backlog `e2e-reconnect-port-seam`.

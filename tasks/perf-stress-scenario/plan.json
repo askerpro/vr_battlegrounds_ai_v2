@@ -1,0 +1,45 @@
+{
+  "task_id": "perf-stress-scenario",
+  "owner": "performance",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/performance/Vr_Battlegrounds_ai",
+  "base_sha": "2c3148767e5e511d9b9def5bee654cf179c6f694",
+  "doc_path": "tasks/perf-stress-scenario/Readme.md",
+  "title": "Стресс-тест на шлеме без рук: сценарий perf-stress, арена, обход точек обзора",
+  "stages": [
+    {"id": "setup", "writes": [
+      "tasks/perf-stress-scenario/**",
+      "experts/performance/**"
+    ], "after": [], "needs": []},
+    {"id": "scenario", "writes": [
+      "Assets/Scripts/Debug/E2E/Scenarios/PerfStressScenario.cs",
+      "Assets/Scripts/Debug/E2E/Scenarios/PerfStressScenario.cs.meta",
+      "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+      "Assets/Scripts/Debug/StressTest/**",
+      "Assets/Tests/EditMode/DevTools/StressTestPlanTests.cs",
+      "Assets/Tests/EditMode/DevTools/PerfStressScenarioArgsTests.cs",
+      "Assets/Tests/EditMode/DevTools/PerfStressScenarioArgsTests.cs.meta",
+      "Docs/perf-stress-test.md",
+      "tasks/perf-stress-scenario/**",
+      "experts/performance/**"
+    ], "after": [{"task": "perf-stress-scenario", "stage": "setup", "state": "merged"}], "needs": [{"contract": "quest-device-run", "revision": 3, "aspects": ["scenario-args", "result", "artifacts", "lifecycle"], "readiness": "agreed"}]},
+    {"id": "arena-layout", "writes": [
+      "Assets/Scripts/Debug/StressTest/**",
+      "Assets/Scripts/Debug/E2E/Scenarios/PerfStressScenario.cs",
+      "Assets/Tests/EditMode/DevTools/StressTestLayoutTests.cs",
+      "Assets/Tests/EditMode/DevTools/StressTestPlanTests.cs",
+      "Docs/perf-stress-test.md",
+      "tasks/perf-stress-scenario/**",
+      "experts/performance/**"
+    ], "after": [{"task": "perf-stress-scenario", "stage": "scenario", "state": "merged"}], "needs": []},
+    {"id": "view-tour", "writes": [
+      "Assets/Scripts/Debug/StressTest/**",
+      "Assets/Scripts/Debug/E2E/Scenarios/PerfStressScenario.cs",
+      "Assets/Tests/EditMode/DevTools/StressTestPlanTests.cs",
+      "Assets/Tests/EditMode/DevTools/PerfStressScenarioArgsTests.cs",
+      "Docs/perf-stress-test.md",
+      "tasks/perf-stress-scenario/**",
+      "experts/performance/**"
+    ], "after": [{"task": "perf-stress-scenario", "stage": "arena-layout", "state": "merged"}], "needs": []}
+  ]
+}

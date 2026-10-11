@@ -71,7 +71,10 @@ C2, `drive`, `waves-f`, `ejection` — шлем пользователя, Androi
 
 Аренда 428: AndroidCompileGate PASS, тесты оружия 236/236 (включая новые use-context),
 хват/сеть/боты/аватары 777 PASS + 1 Ignored. Коммиты: foundation bots-fix, затем use-context;
-вливание fast-forward в origin/dev. Журнал — [changelog/2026-10-11-use-context.md](changelog/2026-10-11-use-context.md).
+вливание fast-forward в origin/dev `74de9191`. Журнал — [changelog/2026-10-11-use-context.md](changelog/2026-10-11-use-context.md).
+В хабе этапы пакета use-context проведены до merged отдельным docs-кандидатом поверх origin/dev,
+который содержит влитый код; это активирует контракты `weapon-use-context`, `weapon-grab-lifetime`
+и `weapon-equipment-shooter` и снимает зависимость clip-cutover у bots-fix.
 Следующие этапы: `ejection-manual`, затем `trigger-e` → `acceptance-g` → `cleanup-h`.
 
 Наши authoring/readback/idempotence и Android уже PASS, asset review завершён: 0 замечаний.

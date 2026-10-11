@@ -138,6 +138,30 @@ planning), weapon-system ← weapon-system (6 verified → `--allow-unmerged`). 
 старом worktree, затем checkout в worktree эксперта и `task-handoff --to-worktree`. network, performance, ui:
 минимальная задача-владелец и worktree эксперта — до подключения проверки зон к begin.
 
+## Итог миграции 2026-10-11
+
+Все 10 продуктовых задач переданы экспертам (task-handoff, owner = эксперт):
+
+| Эксперт | Задача | Worktree | Ревизия |
+|---|---|---|---|
+| launch-infra | vr-test-stand | F:/CodexWorktrees/launch-infra (постоянный) | 29 |
+| launch-infra | map-runtime-bootstrap | F:/CodexWorktrees/map-runtime-bootstrap (прежний) | 16 |
+| avatar-ik | legs-ik | F:/CodexWorktrees/avatar-ik (постоянный) | 7 |
+| avatar-ik | avatar-renderer-regression | F:/CodexWorktrees/2cf1 (прежний) | 13 |
+| avatar-grip | hand-rig-quality | F:/CodexWorktrees/hands-rig-quality (прежний: reports держит системный процесс) | 23 |
+| bots | bots-fix | F:/CodexWorktrees/bots (постоянный) | 23 |
+| manipulation | haptics-system | F:/CodexWorktrees/manipulation (постоянный) | 14 |
+| gameplay | arsenal-generator | F:/CodexWorktrees/gameplay (постоянный) | 17 |
+| weapon-system | weapon-system | F:/CodexWorktrees/weapon-system (постоянный) | 39 |
+| level-design | lobby-decoration | основной checkout F:/UnityProjects (owner-only; plan.json не закоммичен) | 9 |
+
+Остановлены при миграции (stop → planned, файлы на месте; эксперт делает begin заново): bots-fix/armed-development,
+hand-rig-quality/mef-grip-audit, haptics-system/manipulation-kb, arsenal-generator/planning,
+lobby-decoration/implementation. Порядок: handoff owner из старого worktree (идентичность пишется без register) →
+git worktree move → handoff --to-worktree из нового пути → commit plan.json. Перед move остановлены процессы прежнего
+приложения Codex (app-server 8432 и дочерние) и осиротевший MCP-прокси arsenal-generator — с разрешения пользователя.
+Промпты приёма обновлены под новые пути: handoff/takeover-<task>.md.
+
 ## Риски
 
 - Rebase с большим dirty (bots-fix 72, lobby-decoration 65, weapon-system 36) — только владельцем, после чекпоинта.

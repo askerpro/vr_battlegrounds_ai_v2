@@ -100,3 +100,9 @@ runtime deployment. [Проверки и границы](changelog/2026-10-10-gl
 Source c72db11a06bb4cfc1d76c4142f692949cf476ab3 интегрирует reviewed b253fe4 поверх
 offaudit53f6760. [Проверки](changelog/2026-10-10-immutable-worker-inputs.md).
 Modeoff по поручению пользователя сохраняется; новый API опционален.
+
+## EOL PhaseB и inbox --unread — 2026-10-11
+
+Сопровождающий — Claude. Runtime ce950de88a7d27b51b27a71515e7309af1afc864: inbox --unread,
+readonly gate, register UX, EOL-защиты broker. Продукт: Unity YAML/ProjectSettings/tasks в LF,
+бинарные .asset — binary, pre-push EOL-проверка. [Проверки](changelog/2026-10-11-eol-phaseb-inbox-unread.md).

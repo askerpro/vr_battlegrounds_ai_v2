@@ -1,7 +1,7 @@
 {
   "task_id": "agent-coordination-protocol",
   "owner": "coordination-maintenance",
-  "client": "codex",
+  "client": "claude",
   "worktree": "F:/CodexWorktrees/agent-coordination-protocol/Vr_Battlegrounds_ai",
   "base_sha": "edcb79e84eb72443a63fc4de7d7c66dec0bd8fe2",
   "doc_path": "tasks/agent-coordination-protocol/Readme.md",
@@ -337,6 +337,28 @@
         {
           "task": "agent-coordination-protocol",
           "stage": "global-off-observability",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "eol-phaseb-inbox-unread",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "AGENTS.md",
+        ".agents/rules/agent_coordination.md",
+        ".agents/rules/project-workflows.md",
+        ".gitattributes",
+        ".editorconfig",
+        ".githooks/pre-push",
+        "Docs/agents/text-eol.md",
+        "Tools/agents/text_eol_rematerialize.py"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "immutable-worker-inputs",
           "state": "merged"
         }
       ],

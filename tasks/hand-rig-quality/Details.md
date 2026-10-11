@@ -55,9 +55,224 @@ CLI-профиль для самостоятельного запуска сох
 Все генерируемые материалы — в `tasks/hand-rig-quality/reports/mef-grip-audit/<run-id>/`,
 вне Git. Пакет результата: `inventory.json`, `cases.json`, отдельные JSON/PNG
 измерений, `coverage.json`, `findings.json`, локальный `index.html` и лист
-пользовательской проверки. Это планируемые артефакты, сейчас они не созданы.
+пользовательской проверки. Полный пакет ещё не создан; полученный первый проход
+и его ограничения перечислены ниже.
 Краткие выводы и ссылки остаются в Readme/Details; форматы существующих отчётов
 Hand Pose Fit не меняются.
+
+### Первый фактический проход — 2026-10-10
+
+Принятая база кода/ассетов — `0c1a7fbcc85d36235e4f2f9a2ab4f8b2bdf4653f`;
+worker input `6d9eea27534ccfbdf18f83a8d740293adb890b8e` отличается только двумя
+документами задачи. Полные generated-отчёты:
+`reports/mef-grip-audit/audit-0c1a7fbc-01/`.
+
+- Инвентарь: 50 prefab-ассетов, 99 вхождений grabbables, 250 сочетаний
+  точки/допустимой руки. Вложенные и неактивные компоненты включены, аватары и
+  anchor GrabProxy исключены. Это не количество уникальных игровых предметов;
+  scene overrides, текущая доступность и динамические состояния ещё не покрыты.
+- 18 наблюдений `CheckGrabbable` означают отсутствие MEF-записи с переходом на
+  default fallback, а не18 подтверждённых геометрических дефектов. Часть повторяет
+  variant/base и вложенный/отдельный магазин; идентичности сохранены в inventory.
+  Метод использован как helper, NUnit-прогон здесь не выполнялся.
+- Bootstrap: AR15, Tablet, AR15_Magazine, FabarmSDASS_Ammo, обе руки, точка0.
+  Шесть расчётов вернули `analysis_incomplete`, планшет — два
+  `unsupported_context` (`Dynamic snap shape не поддерживается`). Для планшета
+  геометрия не измерена. AR15 использует MEF Gun blend0, магазин/патрон —
+  MEF GrabClaw blend0,68. Контактные маски/области и анализ объёма не подтверждены;
+  знаковая глубина unknown из-за топологии/самопересечений предметов.
+  Null penetration-метрики и нулевые known-counts не дают PASS.
+- Рендер: шесть успешных capture-контекстов, по24 PNG (шесть ракурсов ×
+  normal/xray/distance/section), всего144. Просмотрены AR15 Right/right-xray,
+  AR15_Magazine Right/front-xray, FabarmSDASS_Ammo Right/front-xray.
+  Снимки показывают фактический деформированный меш из статического capture;
+  жёлтый цвет обозначает неизвестный знак расстояния.
+- Тикеты381/382: finish accepted, changed paths/unexpected paths/binary-invalid
+  пусты, аренды освобождены. Рентген-пакет382 потерял MCP callback, но durable ZIP
+  завершён и выгружен без повторного запуска. ZIP SHA256
+  `def86fa22cce15970aff3bfd7b92042f582c2760461edf0a524cf9e0afe08403`,
+  CRC/границы распаковки и144 PNG проверены. Это доказательство готовых рендеров,
+  не успешной доставки callback и не полного аудита качества.
+
+### Reload-клипы как источник поз магазина/патрона
+
+По вопросу пользователя проверено наличие реальных KINEMATION Character FBX:
+`Animations/TR15/Character/A_FP_TR15_Reload_Tactical.FBX` (take того же имени,
+кадры0..209) и `A_FP_TR15_Reload_Empty.FBX` (0..257), importAnimation включён.
+Placeholder Reload_*.anim нельзя подменять этими источниками при извлечении.
+
+В Hands Weapons Animations также найдены реальные источники
+`Modelas/Hands_Gun02/Animations/Hands_Gun02@Reload.FBX` и
+`Modelas/Hands_Shotgun/Animations/Hands_Shotgun@Recharge.FBX`:
+importAnimation включён, clipAnimations пуст — take импортируется автоматически.
+Recharge — кандидат для поштучного заряжания; содержимое нужного кадра ещё не
+просмотрено, длина и frame rate должны быть прочитаны из Unity AnimationClip.
+
+Существующие `HandsPackPoseExtractor.Extract` и `KinemationPoseExtractor.Extract`
+принимают `AnimationClip`, `time` в секундах и сторону. Они сэмплируют временную
+копию рига, возвращают `UxrHandDescriptor` в универсальных осях и удаляют копию.
+Таким способом можно получить позу пальцев выбранного reload-кадра для MEF.
+Текущие `HandsPackPoseImporter.Recipes` используют idle/aim и время0; готового
+рецепта магазина из reload здесь нет. Import сохраняет pose-ассет и префаб,
+поэтому production Import под диагностическим этапом не запускается.
+
+Для согласованного хвата нужно сохранить transform **магазина/патрона**, а не
+корпуса оружия, относительно кисти на том же кадре. Hands extractor принимает
+bodyMesh/bodyBone и вычисляет bone × bindpose; при наличии детали в исходном
+skinned mesh этот путь можно использовать для неё. Kinemation extractor сейчас
+снимает Character clip в time, но weaponRest в0 и заполнение магазина в0:
+это достаточная основа для пальцев, но не доказательство reload-положения магазина.
+Нужно проверить связанные анимации/кости детали и сэмплировать их синхронно.
+
+Следующий диагностический пакет: выбрать фазу устойчивого удержания магазина
+или патрона, получить временную позу и относительный transform, применить к MEF
+без сохранения ассетов, сравнить обе допустимые руки/ракурсы тем же Hand Pose Fit.
+После выбора кадра требуется подгонка под геометрию целевого предмета и проверка
+runtime: длины пальцев и геометрия исходного пака отличаются. Авторинг/назначение
+production-поз требует отдельной области записи; новый writer пальцев/IK не нужен.
+
+### Выполненный перенос reload-кадров — 2026-10-10
+
+После уточнения пользователя работа продолжена до фактического извлечения и MEF-снимков.
+Production import/pose assignment не запускался; все применения — только на временных копиях.
+
+1. Тикет385, база0c1a7fbc/input9bb2bdad: по21 кадру TR15 Tactical/Empty и
+   shotgun Recharge, всего63. Дескрипторы обеих кистей сохранены в
+   `reports/reload-samples.json` (SHA256
+   `67e055bbc08cd09e633b8fe58eb6d5d12d02365450bb9cd808329730da28e041`).
+   TR15 Character/Weapon клипы сэмплированы синхронно; pose JSON содержит реальный
+   выбранный кадр. Первый тикет384 не выполнил код из-за отсутствия Roslyn;
+   отдельный385 использовал документированный C#6 CodeDom.
+2. Тикет388, база07002dde/input2067091c: AR15 использует именно source
+   Hands_Automatic_Rifle03/Hands_Rifle_03@Reload, а TR15 — собственный KINEMATION.
+   Выполнены3 baseline +11 временных finger/placement кандидатов +11 finger-only
+   controls:25 отчётов,14 рендер-контекстов,336 PNG. Фактическая кисть имеет
+   3925 треугольников, как baseline; lower LOD исключены тем же правилом,
+   что обычный static snapshot. Object triangles: AR15 917, TR15 2104, Fabarm180.
+   Использованы FromGeometry и существующие private CaptureHand/CaptureObject/
+   EnsureGeometry через reflection; CaptureHand по-прежнему вызывает реальный
+   HandMeshCapture/BakeMesh, а не SDK preview mesh. Joint/zone фильтры не переписаны.
+   `reports/reload-contact.zip` SHA256
+   `b8f7cdbee0c4984afc76a8ee1930cf115c6aaafb28a4a55dd61b649f2165af3d`;
+   распакован в `reports/reload-contact/`, сводка `reload-contact-summary.json`.
+3. Первичный Fabarm source mesh Shogun_Patron_mesh в выбранных Recharge кадрах
+   не находился у левой руки (0 sampled proximity/0 intersections при source placement).
+   Тикет389 проверил168 сочетаний:21 момента ×2 clips (Recharge/beginning) ×
+   2 source-руки ×2 patron meshes. Ближайший кандидат — Left,
+   Shogun_Patron_mesh001, Recharge0,56с; bone-to-surface расстояния — только
+   поиск фазы, не измерение контакта перчатки. Отчёт `reports/shell-phase.json`,
+   SHA256 `cc1099082c558c96b0751d810150d5a3c6c72ec2aea1e8309f4790eeadb19974`.
+4. Тикет392, база8fbf1cad/input3b0afcd5: duplicate shell001 имеет такую же
+   центрированную triangle geometry, что игровой Shogun_Patron_mesh; измеренный
+   mismatch0 мм, source part single-bone. Перенос учитывает различие центров сеток,
+   bindpose, универсальные оси кисти и отношение масштабов. Четыре left-MEF
+   кандидата Recharge0/0,14/0,56/0,63с:4 отчёта,96 PNG.
+   `reports/shell-contact.zip` SHA256
+   `85bca5481c1d55a27c009c2a522dfb2fabdc632089d49f07dcbada96b2c73d6f`;
+   распакован в `reports/shell-contact/`, сводка `shell-contact-summary.json`.
+
+Каждый архив проверен SHA256/CRC, границы распаковки, количество/размер PNG.
+Тикеты385/388/389/392 finish accepted, changes/unexpected/binary-invalid=[];
+receive выполнен, аренды освобождены. Публикации новых accepted bases387/391 — DONE.
+Callback388 потерян после выполненного рендера; durable ZIP готов и код не повторялся.
+Два rebase до07002dde/8fbf1cad сохранили три собственных dirty документа через autostash.
+
+**Кандидаты для дальнейшей подгонки (не quality PASS):**
+AR15 кадры28/44 (0,9333/1,4667с), TR15 кадр31,35 (0,5225с).
+Unsigned sampled proximity0–2мм для AR15 current=0,022, кадр28=0,0507,
+кадр44=0,0543; для TR15 current=0,0603, кадр31,35=0,076.
+Эти числа смешивают приближение/касание/возможное пересечение при неизвестном знаке;
+увеличение proximity или intersection pairs не доказывает улучшение.
+Для патрона на всех четырёх кадрах thumb NearSurfaceFraction=0;
+контактные кандидаты относятся к index/middle. Для щипкового варианта требуется
+подгонка большого пальца; вариант удержания между index/middle оценивается отдельно
+по предполагаемому сценарию, без универсального требования thumb-контакта.
+Ни один вариант не принят автоматически. Все29 отчётов Error=null,
+`analysis_incomplete` с явными unreviewed mask/volume/topology/static ограничениями.
+
+Визуально просмотрены: AR15 baseline/front, AR15 frame1/front и frame2/right,
+TR15 frame1/front/right, Fabarm первоначальный frame1/front,
+исправленный shell frame2/front/right. Фиксированное framing .25/.28м в части
+ракурсов обрезает предмет/кисть; финальный пакет должен вычислять общий bounds center/size.
+Проверка runtime snap, правой MEF/зеркалирования, SDK reference, полного покрытия
+предметов и пользовательская Unity/Quest-приёмка не выполнены.
+
+### Причина потери контакта и обрезания AR15 — 2026-10-10
+
+Проверен конкретный случай: AR15/left, source `Hands_Rifle_03@Reload`,
+кадр28, t=0,933333337с, перенос на MEF. База1001415b, scoped input9ac203d3.
+Это диагностические временные экземпляры, не сохранённая SDK grab-point pose
+и не подтверждение того же дефекта в runtime или на всех предметах.
+
+**Контакт присутствует в исходном кадре и теряется на MEF.** Извлечённая поза,
+применённая обратно к исходной руке, воспроизводит меш с RMS0,000159мм;
+на четырёх проверенных source-кадрах max<0,001мм. Направления соответствующих
+фаланг MEF/source совпадают до0,001°, но длины отличаются неравномерно:
+при масштабе магазина0,7 source index proximal→intermediate=26,809мм,
+MEF=40,270мм; middle=26,278/40,984мм; ring=22,442/38,949мм.
+SDK переносит вращения, сохраняя длины и положения костей MEF. Поэтому
+перенос углов и равномерное масштабирование положения предмета относительно
+запястья не сохраняют исходные контакты. Различия суставов растут вдоль цепей,
+единого потерянного pivot-offset для всех пальцев данные не показывают.
+
+Source/target magazine используют `Rifle_Magazine_Mesh`; проверяемый
+mesh-origin→root→mesh-origin roundtrip даёт0мм. Source renderer/wrist scale≈1.
+Это ограниченная проверка указанного преобразования, не доказательство всех
+bindpose/rotation/runtime случаев. Подробные границы:
+[placement-diagnosis.md](reports/placement-diagnosis.md),
+[source replay](reports/source-roundtrip-summary.json),
+[суставы](reports/pose-joints-summary.json).
+
+**Гипотеза пользователя о сдвиге проверена отдельно.** Семь translation-only
+контролей при неизменных углах пальцев, повороте и размере магазина.
+Сдвиг предмета по среднему различию distal суставов index/middle/ring
+`[+2,3145; −14,7875; +8,7860]мм` в wrist-universal frame, длина17,356мм:
+
+| Концевая фаланга | Без сдвига: proximity0–2мм / P50 | Со сдвигом: proximity0–2мм / P50 |
+|---|---:|---:|
+| index | 0% / 28,50мм | 6,14% / 14,17мм |
+| middle | 0% / 22,22мм | 20,83% / 6,22мм |
+| ring | 0% / 26,81мм | 18,18% / 11,02мм |
+
+Чистые ±X10мм не возвращают контакт этих трёх сегментов. Сдвиг17,36мм
+подтверждает чувствительность к размещению, но не идеальный хват: медианные
+зазоры остаются, intersections309→349 означают касания/пересечения поверхностей,
+знак/penetration неизвестен. Thumb distal proximity0 уже в source;
+универсальное требование контакта большого пальца отсюда не следует.
+Вектор относится к **движению предмета**, его нельзя без обратного преобразования
+копировать в local GrabPoint. [Контроли](reports/AR15-translation-summary.json).
+
+**Почему автоматический отчёт не назвал дефект.** В исходном raw report
+`Findings=[]`, ContactRegions=[], MaskReviewed=false, PalmarOnly=false.
+Все333 sampled distal index/middle/ring точки вне окна0–2мм; общий proximity
+смешивает их с ладонью и другими сегментами. Findings формируются по назначенным
+правилам контактных зон: без них метрики зазора не превращаются в дефект.
+Raw отчёт сохранён без правок; ручная интерпретация отделена в
+[AR15-review-findings.json](reports/AR15-review-findings.json).
+
+**Почему снимок был обрезан.** Renderer использует фиксированное поле0,28м
+вокруг wrist/GripCenter без автоматического fit; верхние надписи также закрывают
+геометрию. В новом диагностическом пакете задан общий bounds center и размер
+с запасом1,35. Проекция14 526 triangle vertex references во все6 камер:
+до исправления84–496 вне viewport, после0; перекрытие header/footer после0.
+Геометрия/контактные метрики при смене кадрирования не изменились.
+[Доказательство](reports/AR15-framing/framing-proof.json),
+[исправленный исходный хват](reports/AR15-framing/AR15-frame-0/top-distance.png),
+[вариант со сдвигом](reports/AR15-translation/AR15-distal-anchor/top-distance.png).
+Production renderer пока не изменён; исправлены настройки этих новых снимков.
+
+Worker395/396/397 finish accepted и receive, changed/unexpected/binary-invalid=[].
+Все аренды освобождены. Дополнительно23 отчёта/168 PNG, включающие контрольные
+повторы; это не число новых хватов. ZIP проверены по SHA256/CRC, PNG768×768.
+Result SHA:395 `50ce173b0daf62c50803841ee85b0cd2cc459cce`,
+396 `01291114b9ddce7ebbe5917642cb5f820ccd876d`,
+397 `b43071efcbc46a3862706d85ff68b4419253dcf7`.
+Полные сводки: AR15-framing-summary.json, source-roundtrip-summary.json,
+AR15-translation-summary.json под reports/. Маски, signed volume, runtime,
+полное покрытие и Unity/Quest-приёмка открыты. Следующее направление исправления:
+подгонка размещения и при необходимости позы по геометрии MEF и намерению контакта
+в существующем authoring pipeline; постоянный общий offset и новый runtime writer
+этим исследованием не обоснованы.
 
 ### 1. Полный инвентарь и матрица случаев
 

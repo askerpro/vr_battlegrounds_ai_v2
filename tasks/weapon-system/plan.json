@@ -1,7 +1,7 @@
 {
   "task_id": "weapon-system",
   "owner": "weapon-system",
-  "client": "codex",
+  "client": "claude",
   "worktree": "F:/CodexWorktrees/weapon-system/Vr_Battlegrounds_ai",
   "base_sha": "1001415bed29124af821a9a641d0bae2a7224a5b",
   "doc_path": "tasks/weapon-system/Readme.md",

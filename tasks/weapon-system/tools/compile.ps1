@@ -51,6 +51,8 @@ foreach ($asm in $ours) {
     if ($asm -eq 'UltimateXR') { $rel += @($overlaySources | Where-Object { $_ -like 'Assets/ThirdParty/UltimateXR/Runtime/*.cs' }) }
     if ($asm -eq 'VrBattlegrounds') { $rel += @($overlaySources | Where-Object { $_ -like 'Assets/Scripts/Weapons/Equipment/*.cs' -or $_ -like 'Assets/Scripts/Bots/*.cs' -or $_ -eq 'Assets/Scripts/Player/PlayerSession.cs' }) }
     if ($asm -eq 'VrBattlegrounds') { $rel += @($untracked + @(git -C $wt ls-files -- 'Assets/Scripts/Weapons/WeaponSystem') | Where-Object { $_ -like 'Assets/Scripts/Weapons/WeaponSystem/*.cs' }) }
+    # Совместный пакет: foundation bots-fix (Weapons/Equipment) лежит в рабочей копии; старый csproj папку не знает.
+    if ($asm -eq 'VrBattlegrounds') { $rel += @($untracked | Where-Object { $_ -like 'Assets/Scripts/Weapons/Equipment/*.cs' }) }
     # asmref относит Editor provider к DebugBootstrap; старый csproj может его ещё не содержать.
     if ($asm -eq 'VrBattlegrounds.DebugBootstrap') { $rel += @($untracked | Where-Object { $_ -like 'Assets/Editor/VR_Battlegrounds/Debug/Bootstrap/*.cs' }) }
     if ($asm -eq 'Assembly-CSharp-Editor') { $rel = @($rel | Where-Object { $_ -notlike 'Assets/Editor/VR_Battlegrounds/Debug/Bootstrap/*.cs' }) }

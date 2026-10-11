@@ -13,10 +13,9 @@
 `F:/CodexWorktrees/weapon-system/Vr_Battlegrounds_ai`, ветка `claude/weapon-system` (хаб 3358/3361, план r39).
 
 Выполняется `use-context`: единый контекст руки и экипировки для реальной стрельбы NPC.
-VR/Equipment, SDK70/71/72 и canonical authoring PPK/AK105 технически verified.
-Незакоммиченный код в worktree побайтно равен проверенному пакету own21 `d942dce3`.
-Ждём совместный NPC-прогон bots-fix и VR-приёмку пользователем; accepted commit и merge ещё не созданы.
-[План и бриф](use-context.md), история проверок — [Details.md](Details.md) «Сделано».
+2026-10-11 пользователь принял механику в шлеме (аренда 425, Play Mode `Offline.unity`) на совместном
+пакете checkpoint `d21bec7e`: own21 + foundation bots-fix `93f67ded` + полные метки SDK71.
+Дальше тесты, accepted commit и merge. [План и бриф](use-context.md), история проверок — [Details.md](Details.md) «Сделано».
 
 `codex-expert`: [адаптер Codex](../../.codex/agents/weapon-system-expert.toml) приведён к общему шаблону
 экспертов (3275); правила роли — `experts/weapon-system/AGENT.md`. Отдельный запуск Codex не проверялся.
@@ -58,20 +57,23 @@ C2, `drive`, `waves-f`, `ejection` — шлем пользователя, Androi
 
 ## Следующий шаг
 
-Блокеры на 2026-10-11:
+Совместный пакет принят пользователем 2026-10-11. Что уже есть:
 
-1. Runtime bots-fix (этап B на own21 `d942dce3`). Их authoring NPC прошёл: 399, затем 402 — 3 тела,
-   readback 0 расхождений (3260). Перед Play был найден пробел фикстуры стенда (3205); bots-fix его
-   исправляет в своей зоне. Фактические выстрелы, SDK-учёт, ActorSource и damage credit пока не получены.
-2. VR-приёмка пользователем в шлеме: стволы игрока на новом коде (контекст руки, SDK-порт отдачи,
-   lifetime захвата). От NPC не зависит, может идти параллельно.
-3. Вопрос infra 3202 про `.meta` файлов `WeaponAutomationCapability`/`WeaponGripBinding` закрыт ответом 3381:
-   это writes bots-fix/`equipment-foundation`, уведомление bots-fix — 3383.
+- NPC-прогоны bots-fix на own21: ticket413/415/419 (3427/3455/3584). Подтверждены выстрелы SDK, учёт,
+  ActorSource и damage credit у MEF и Cyborg на PPK и AK105.
+- Сетевое ревью network (3597): ACK совместного вливания одним пакетом. Условия 3–5 переданы
+  bots-fix (3603), они обязательны до clip-cutover.
+- Условия manipulation по `weapon-grab-lifetime` r2 (3447) выполнены: метки `VR Battlegrounds patch 71`,
+  патч 67 и `GrabCandidates.cs` не тронуты.
+- Аренда 425: импорт без ошибок, Mirror weaver обработал Binding, Missing Script 0; шлем — OK.
+  Замечание пользователя про скольжение PPK в ладони при отдаче вынесено в backlog `recoil-hand-follow`:
+  это штатная SDK-отдача, пакет её не меняет.
 
-После 1 и 2: accepted commit, обновление тестов, merge в origin/dev; затем `use-context-prefab-authoring`
-(в хабе planned, фактически выполнен в аренде 398) и `ejection-manual`.
+Аренда 428: AndroidCompileGate PASS, тесты оружия 236/236 (включая новые use-context),
+хват/сеть/боты/аватары 777 PASS + 1 Ignored. Коммиты: foundation bots-fix, затем use-context;
+вливание fast-forward в origin/dev. Журнал — [changelog/2026-10-11-use-context.md](changelog/2026-10-11-use-context.md).
+Следующие этапы: `ejection-manual`, затем `trigger-e` → `acceptance-g` → `cleanup-h`.
 
 Наши authoring/readback/idempotence и Android уже PASS, asset review завершён: 0 замечаний.
-Свежая managed compile: Core6/SDK555/Game434/DebugBootstrap6/Editor263/Tests231 exit0;
-тесты не запускались. Accepted commit и merge-request не созданы.
+Свежая офлайн-компиляция пакета: Core/UltimateXR554/Game434/DebugBootstrap6/Editor263/Tests231 exit0.
 [Готовность к merge](reports/merge-readiness.md), [текущие результаты](Details.md).

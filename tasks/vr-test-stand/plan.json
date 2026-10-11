@@ -1,8 +1,8 @@
 {
   "task_id": "vr-test-stand",
-  "owner": "vr-test-stand",
+  "owner": "launch-infra",
   "client": "codex",
-  "worktree": "F:/CodexWorktrees/vr-test-stand/Vr_Battlegrounds_ai",
+  "worktree": "F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai",
   "base_sha": "8fbf1cad460e507de5cd9a0a717c2c238b741126",
   "doc_path": "tasks/vr-test-stand/Readme.md",
   "title": "Адресный стенд и интеграция Play Launch",
@@ -120,10 +120,24 @@
         "tasks/vr-test-stand/contracts/**"
       ],
       "after": [
-        {"task": "vr-test-stand", "stage": "docs-publication", "state": "merged"}
+        {
+          "task": "vr-test-stand",
+          "stage": "docs-publication",
+          "state": "merged"
+        }
       ],
       "needs": [
-        {"contract": "play-launch-control", "revision": 1, "aspects": ["profile", "planning", "network-lifecycle", "cleanup"], "readiness": "active"}
+        {
+          "contract": "play-launch-control",
+          "revision": 1,
+          "aspects": [
+            "profile",
+            "planning",
+            "network-lifecycle",
+            "cleanup"
+          ],
+          "readiness": "active"
+        }
       ]
     },
     {
@@ -135,7 +149,11 @@
         "tasks/vr-test-stand/plan.json"
       ],
       "after": [
-        {"task": "vr-test-stand", "stage": "checkout-network-ports", "state": "merged"}
+        {
+          "task": "vr-test-stand",
+          "stage": "checkout-network-ports",
+          "state": "merged"
+        }
       ],
       "needs": []
     }

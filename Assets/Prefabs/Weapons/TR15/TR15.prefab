@@ -2479,6 +2479,7 @@ GameObject:
   - component: {fileID: 3035998785012884321}
   - component: {fileID: 7390576046651798932}
   - component: {fileID: 5795847316641424362}
+  - component: {fileID: 5008501289232378507}
   m_Layer: 0
   m_Name: SM_Attach_AR15_XPS2
   m_TagString: Untagged
@@ -2535,7 +2536,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 593b4d8bc0fd86943ba06ef1f016f258, type: 2}
-  - {fileID: 2100000, guid: 8f217c2a8a5aa674b9c2934459827764, type: 2}
+  - {fileID: 2100000, guid: a1064d686a996af49ab3e96f75cfdded, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2559,6 +2560,27 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &5008501289232378507
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7545281204900987995}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e96076759b0cc7e4b9c4f774c28a3464, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.Sights.WeaponOpticView
+  _lensRenderer: {fileID: 5795847316641424362}
+  _lensMaterialIndex: 1
+  _source: {fileID: 1369702286592093933}
+  _shotTypeIndex: 0
+  _weapon: {fileID: 11400000, guid: 802986f4d017e7d4882c1c6022341af4, type: 2}
+  _sightId: XPS2
+  _settings: {fileID: 11400000, guid: 8528714aa2c14bf7a71129e7c47f23c5, type: 2}
+  _profile: {fileID: 0}
+  _calibratedZeroDistance: 15
 --- !u!1 &8400485310580996895
 GameObject:
   m_ObjectHideFlags: 0

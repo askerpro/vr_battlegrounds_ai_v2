@@ -355,16 +355,17 @@ namespace VrBattlegrounds.Tests.Prefabs
                 if (m == null) { failures.Add($"{prefab.name}/{r.name}: пустой материал"); continue; }
                 if (r.name == "GrabHighlight") continue;
                 bool opticLens = c.PackPrefab == "W_TR15" && r.name == "SM_Attach_AR15_XPS2" &&
-                    AssetDatabase.GetAssetPath(m) == "Assets/Art/Weapons/Kinemation/TR15/Materials/TR15_XPS2_Lens.mat";
+                    AssetDatabase.GetAssetPath(m) == "Assets/Art/Weapons/Kinemation/TR15/Materials/TR15_XPS2_Reticle.mat";
                 if (opticLens)
                 {
-                    // Только game-owned прозрачная линза XPS2: корпус по-прежнему URP Lit.
-                    if (m.shader.name != "Universal Render Pipeline/Unlit" ||
-                        m.GetFloat("_Surface") != 1f || m.GetFloat("_ZWrite") != 0f ||
-                        m.GetFloat("_SrcBlend") != (float)UnityEngine.Rendering.BlendMode.SrcAlpha ||
-                        m.GetFloat("_DstBlend") != (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha ||
-                        m.renderQueue != (int)UnityEngine.Rendering.RenderQueue.Transparent || m.GetTexture("_BaseMap") == null)
-                        failures.Add($"{prefab.name}/{r.name}: линза должна быть прозрачной Unlit с alpha blending без записи глубины и с текстурой.");
+                    // Только game-owned окно коллиматора XPS2 (принято пользователем 2026-10-12): сетка конечного фокуса,
+                    // прозрачная очередь; корпус по-прежнему URP Lit.
+                    if (m.shader.name != VrBattlegrounds.Weapons.Sights.WeaponOpticView.ShaderName ||
+                        m.renderQueue != (int)UnityEngine.Rendering.RenderQueue.Transparent)
+                        failures.Add($"{prefab.name}/{r.name}: окно коллиматора должно быть на шейдере сетки конечного фокуса в прозрачной очереди.");
+                    var view = r.GetComponent<VrBattlegrounds.Weapons.Sights.WeaponOpticView>();
+                    if (view == null || r.GetComponents<VrBattlegrounds.Weapons.Sights.WeaponOpticView>().Length != 1)
+                        failures.Add($"{prefab.name}/{r.name}: на окне коллиматора нужен ровно один WeaponOpticView.");
                 }
                 else if (m.shader.name != LitShader) failures.Add($"{prefab.name}/{r.name}: «{m.name}» на шейдере {m.shader.name}, ожидается {LitShader}");
                 if (AssetDatabase.GetAssetPath(m).StartsWith(Pack)) failures.Add($"{prefab.name}/{r.name}: «{m.name}» — материал пака, а не проекта");

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -10,10 +11,23 @@ using VrBattlegrounds.UI.Menu.Kit;
 
 namespace VrBattlegrounds.Maps
 {
-    /// <summary>Последний контакт SDK для общего экрана стрельбища; наблюдение не вызывает сетевые действия.</summary>
+    /// <summary>
+    /// Последний контакт SDK для экранов стрельбища; наблюдение не вызывает сетевые действия.
+    /// Хранит последний снимок по каждой мишени (экран дорожки) и общий последний (общий экран).
+    /// </summary>
     [DefaultExecutionOrder(10000)]
     public sealed class ShootingRangePhotoCapture : MonoBehaviour
     {
+        /// <summary>Последнее попадание в одну мишень.</summary>
+        public sealed class Shot
+        {
+            public Texture2D Photo;
+            public string WeaponName;
+            public Vector2 OffsetMillimetres;
+            public float Distance;
+            public int Revision;
+        }
+
         public static ShootingRangePhotoCapture Active { get; private set; }
         public Texture2D Photo { get; private set; }
         public string TargetName { get; private set; }
@@ -30,6 +44,11 @@ namespace VrBattlegrounds.Maps
         private RenderTexture _render;
         private bool _pending;
         private Vector3 _point;
+        private ShootingTarget _pendingTarget;
+        private readonly Dictionary<ShootingTarget, Shot> _shots = new Dictionary<ShootingTarget, Shot>();
+
+        /// <summary>Последнее попадание в мишень; false, если в неё ещё не попадали.</summary>
+        public bool TryGetShot(ShootingTarget target, out Shot shot) => _shots.TryGetValue(target, out shot);
 
         private void OnEnable()
         {
@@ -47,7 +66,9 @@ namespace VrBattlegrounds.Maps
 
         private void OnDestroy()
         {
-            if(Photo!=null) Destroy(Photo);
+            // Общий Photo — один из снимков мишеней; освобождаются только снимки мишеней.
+            foreach(var shot in _shots.Values) if(shot.Photo!=null) Destroy(shot.Photo);
+            _shots.Clear();
             if(_studio!=null) Destroy(_studio);
             if(_render!=null) {_render.Release();Destroy(_render);}
         }
@@ -94,7 +115,7 @@ namespace VrBattlegrounds.Maps
                 _camera.transform.SetPositionAndRotation(bounds.center+normal*.3f,Quaternion.LookRotation(-normal,target.Pivot.up));
                 OffsetMillimetres=new Vector2(Vector3.Dot(delta,_camera.transform.right),Vector3.Dot(delta,_camera.transform.up))*1000;
                 _camera.orthographicSize=Mathf.Max(bounds.size.magnitude*.6f,.03f);
-                TargetName=target.name;WeaponName=weapon;Distance=distance;_pending=true;return true;
+                TargetName=target.name;WeaponName=weapon;Distance=distance;_pendingTarget=target;_pending=true;return true;
             }
             catch(Exception exception){GameLog.WeaponSystem.Error("[RangePhoto] "+exception,this);return false;}
         }
@@ -142,13 +163,25 @@ namespace VrBattlegrounds.Maps
                         texture.SetPixel(cx+x,cy+y,mark);
                 }
                 texture.Apply(false,false);
-                if(Photo!=null)Destroy(Photo);Photo=texture;texture=null;Revision++;return true;
+                Revision++;
+                if(_pendingTarget!=null)
+                {
+                    if(!_shots.TryGetValue(_pendingTarget,out var shot)){shot=new Shot();_shots.Add(_pendingTarget,shot);}
+                    if(shot.Photo!=null)Destroy(shot.Photo);
+                    shot.Photo=texture;shot.WeaponName=WeaponName;shot.OffsetMillimetres=OffsetMillimetres;shot.Distance=Distance;shot.Revision=Revision;
+                }
+                else if(Photo!=null&&!_shots.Values.Any(s=>s.Photo==Photo))Destroy(Photo);
+                Photo=texture;texture=null;return true;
             }
             catch(Exception exception){if(texture!=null)Destroy(texture);GameLog.WeaponSystem.Error("[RangePhoto] Render: "+exception,this);return false;}
             finally{RenderTexture.active=previous;foreach(var copy in _copies)copy.gameObject.SetActive(false);}
         }
 
         public void Clear()
-        {if(Photo!=null)Destroy(Photo);Photo=null;_pending=false;Revision++;}
+        {
+            if(Photo!=null&&!_shots.Values.Any(s=>s.Photo==Photo))Destroy(Photo);
+            foreach(var shot in _shots.Values) if(shot.Photo!=null) Destroy(shot.Photo);
+            _shots.Clear();Photo=null;_pending=false;_pendingTarget=null;Revision++;
+        }
     }
 }

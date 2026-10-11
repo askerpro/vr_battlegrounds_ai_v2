@@ -218,6 +218,32 @@ class AwakeTest(unittest.TestCase):
         self.assertNotIn("НЕДОСТУПНО в этой машине: Прогон", out)
         self.assertNotIn("длинное описание " * 12, out)
 
+    def write_manifest(self, **changes):
+        manifest = json.loads((self.ws / "expert.json").read_text(encoding="utf-8"))
+        manifest.update(changes)
+        (self.ws / "expert.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    def test_manifest_v2_owns_defines_zone(self):
+        # зона — только owns: docs/** пересекается с docs-sync, src/audio/** у bundle нет
+        self.write_manifest(schema_version=2, owner="audio-assets", owns=["docs/**"])
+        code, out = self.awake()
+        self.assertEqual(code, 0, out)
+        self.assertIn("- build-pipeline/`docs-sync` running (owner build): `docs/**`", out)
+
+    def test_manifest_v2_rejects_bad_fields(self):
+        cases = [
+            dict(schema_version=2, owner="other", owns=[]),           # owner != id
+            dict(schema_version=2, owner="audio-assets", owns=["src/a**/x"]),  # ** не целым сегментом
+            dict(schema_version=2, owner="audio-assets", owns=["../x"]),
+            dict(schema_version=2, owner="audio-assets", owns=["src/[ab].cs"]),
+            dict(schema_version=1, owns=["docs/**"]),                 # owns только в v2
+        ]
+        for case in cases:
+            self.write_manifest(**case)
+            code, out = self.awake()
+            self.assertEqual(code, 2, case)
+            self.assertIn("manifest_invalid", out)
+
     def test_invalid_manifest_is_controlled_error(self):
         (self.ws / "expert.json").write_text('{"schema_version": 1, "id": "Bad Id", "extra": 1}', encoding="utf-8")
         code, out = self.awake()

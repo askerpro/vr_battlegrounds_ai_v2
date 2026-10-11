@@ -16,3 +16,8 @@
   preferences only. Commits in your paths after the review SHA → re-check the map, update `reviewed_sha`/`reviewed_at`.
 - Task lifecycle: backlog candidate → user picks → `tasks/<task-id>/` + hub registration + id in `expert.json` →
   after merge a journal entry, id removed from `expert.json` (`tasks/expert-workspace-infra/new-expert.md`).
+- Hub: you are the owner of your tasks (owner = expert id). Inbox of all your tasks:
+  `Tools/agents/coordination.py inbox --owner <id> --unread` (from a worktree of one of your tasks; marks read);
+  address another expert with `message --to owner:<id>`. Before `begin` run `zone-check --task <task>`: writes into
+  another owner's `owns` need that owner's ACK or a contract with `zone_writes`. Your zone is `owns` in `expert.json`.
+- Moving a task to your permanent worktree — `task-handoff` per `tasks/expert-workspace-infra/migration-plan.md`.

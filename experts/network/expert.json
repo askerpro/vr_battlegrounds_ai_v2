@@ -1,11 +1,11 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "network",
   "owner": "network",
   "tasks": [],
   "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
   "reviewed_at": "2026-10-11",
-  "watch_paths": [
+  "owns": [
     "Assets/Scripts/Network/**",
     "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Networking/**",
     "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/StateSync/**",
@@ -13,6 +13,8 @@
     "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/Unique/**",
     "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/Components/**",
     "Assets/Editor/VR_Battlegrounds/VersionControl/UxrUniqueIdPersister.cs",
+    "Assets/Editor/VR_Battlegrounds/VersionControl/NetworkAssetIdNormalizer.cs",
+    "Assets/Editor/VR_Battlegrounds/Gameplay/GameNetworkDiscoveryEditor.cs",
     "Assets/ThirdParty/Mirror/**",
     "Assets/Scripts/Player/PlayerSession.cs",
     "Assets/Scripts/Managers/SessionManager.cs",
@@ -20,18 +22,18 @@
     "Assets/Scripts/Managers/PersistentRoot.cs",
     "Assets/Scripts/Core/GameRole.cs",
     "Assets/Scripts/Core/ClientDeviceIdentity.cs",
+    "Assets/Tests/EditMode/Network/**",
+    "Docs/session-architecture.md",
+    "Docs/combat-networking.md",
+    "Docs/Mirror/**",
+    "Docs/UltimateXR/network-sync.md"
+  ],
+  "watch_paths": [
     "Assets/Scripts/Bots/BotNetwork.cs",
     "Assets/Scripts/Bots/BotMatchNetwork.cs",
     "Assets/Scripts/Debug/DebugMode/DebugModeNetwork.cs",
     "Assets/Scripts/Debug/DebugMode/DebugModeMessages.cs",
     "Assets/Scripts/Debug/StressTest/StressTestNetwork.cs",
-    "Assets/Scripts/Debug/StressTest/StressTestMessages.cs",
-    "Assets/Tests/EditMode/Network/**",
-    "Assets/Editor/VR_Battlegrounds/Gameplay/GameNetworkDiscoveryEditor.cs",
-    "Assets/Editor/VR_Battlegrounds/VersionControl/NetworkAssetIdNormalizer.cs",
-    "Docs/session-architecture.md",
-    "Docs/combat-networking.md",
-    "Docs/Mirror/**",
-    "Docs/UltimateXR/network-sync.md"
+    "Assets/Scripts/Debug/StressTest/StressTestMessages.cs"
   ]
 }

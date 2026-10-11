@@ -47,5 +47,5 @@ AGENT.md обоих затронутых экспертов.
 - performance ↔ все: performance задаёт бюджеты и проверяет; оптимизацию в чужой зоне делает владелец зоны по ТЗ/ревью performance.
 - Общие документы: `Docs/gameplay.md` — владение по разделам (каждый эксперт — свои разделы, gameplay — структура документа); `Docs/troubleshooting.md` — записи по зоне владельца.
 - Расположение файлов не определяет владельца: инструменты level-design в `Editor/VR_Battlegrounds/Gameplay/` и `Weapons/Calibration/LobbyRangeLayoutBuilder` принадлежат level-design; этапы перечисляют чужие файлы явно и согласуют их с владельцем.
-- Инструменты `Editor/VR_Battlegrounds/Gameplay/`: редакторы режимов/судьи/игроков/сессии и GameTagsTool — gameplay; HitEffectBuilder — weapon-system; LaserGridScreensPreview — ui; валидаторы карт и OcclusionBakeTool — level-design. `ServerAuthoredAvatar` — совместно avatar-ik и bots до отдельного решения.
+- Инструменты `Editor/VR_Battlegrounds/Gameplay/`: редакторы режимов/судьи/игроков/сессии и GameTagsTool — gameplay; HitEffectBuilder — weapon-system; LaserGridScreensPreview — ui; валидаторы карт и OcclusionBakeTool — level-design. `ServerAuthoredAvatar` — bots (решение пользователя 2026-10-11).
 - SDK: патчи — общее правило AGENTS (`patch-reserve`); обновление версии SDK — межэкспертная задача под руководством владельца модуля из таблицы.

@@ -20,7 +20,6 @@ import re
 import subprocess
 from pathlib import Path
 
-SCHEMA_VERSION = 1
 DEFAULT_MAX_BYTES = 24576
 HOOK_MAX_CHARS = 9500  # потолок additionalContext SessionStart — 10 000 символов
 COMMON_FILE = "COMMON.md"  # общие правила всех экспертов рядом с рабочими местами
@@ -36,7 +35,19 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 PATH_RE = re.compile(r"^([A-Za-z]:[\\/]|/|\.{1,2}[\\/]|[\w.-]+[\\/])")
 STOP_REASON_LIMIT = 100
 EVIDENCE_TEXT_LIMIT = 140
-MANIFEST_KEYS = {"schema_version", "id", "owner", "tasks", "reviewed_sha", "reviewed_at", "watch_paths"}
+MANIFEST_KEYS = {"schema_version", "id", "owner", "tasks", "reviewed_sha", "reviewed_at", "watch_paths", "owns"}
+OPTIONAL_KEYS = {"watch_paths", "owns"}
+SCHEMA_VERSIONS = (1, 2)  # v2: owner = id, owns — зона владения для реестра зон хаба
+
+
+def bad_pattern(pattern):
+    """Синтаксис реестра зон: относительный путь через /, без .., ** только целым сегментом, без [] ! {}."""
+    if not isinstance(pattern, str) or not pattern or pattern.startswith("/") or "\\" in pattern:
+        return True
+    parts = pattern.split("/")
+    if ".." in parts or any(ch in pattern for ch in "[]!{}"):
+        return True
+    return any("**" in part and part != "**" for part in parts)
 NOTICE = ("Пакет только для ориентации: не выдаёт допуск, аренду, ownership и не ACK-ает inbox. "
           "Перед действием — штатные проверки AGENTS.md (status/inbox/guard).")
 
@@ -64,13 +75,21 @@ def load_manifest(workspace):
     if not isinstance(data, dict):
         raise AwakeError("manifest_invalid", f"{path.as_posix()}: ожидается объект")
     unknown = sorted(set(data) - MANIFEST_KEYS)
-    missing = sorted(MANIFEST_KEYS - {"watch_paths"} - set(data))
+    missing = sorted(MANIFEST_KEYS - OPTIONAL_KEYS - set(data))
     if unknown:
         problems.append("неизвестные поля " + ", ".join(unknown))
     if missing:
         problems.append("нет полей " + ", ".join(missing))
-    if data.get("schema_version") != SCHEMA_VERSION:
-        problems.append("schema_version должен быть 1")
+    version = data.get("schema_version")
+    if version not in SCHEMA_VERSIONS:
+        problems.append("schema_version: 1 или 2")
+    if version == 2 and data.get("owner") != data.get("id"):
+        problems.append("v2: owner должен совпадать с id")
+    if "owns" in data and version != 2:
+        problems.append("owns допустим только в schema_version 2")
+    owns = data.get("owns", [])
+    if not isinstance(owns, list) or any(bad_pattern(p) for p in owns):
+        problems.append("owns: относительные шаблоны через /, без .., ** целым сегментом, без [] ! {}")
     for key in ("id", "owner"):
         if not isinstance(data.get(key), str) or not ID_RE.match(data.get(key, "")):
             problems.append(f"{key}: ожидается id [a-z0-9._-]")
@@ -87,6 +106,7 @@ def load_manifest(workspace):
     if problems:
         raise AwakeError("manifest_invalid", f"{path.as_posix()}: " + "; ".join(problems))
     data.setdefault("watch_paths", [])
+    data.setdefault("owns", [])
     return data
 
 
@@ -322,8 +342,14 @@ def project_hub(snapshot, my_tasks, my_patterns):
             "dependents": dependents, "intrusions": intrusions}
 
 
+def zone_patterns(own_tasks, manifest):
+    """Зона для «чужих этапов в моих путях»: owns (v2), иначе наблюдаемые пути (v1)."""
+    return sorted(manifest["owns"]) if manifest.get("owns") else watch_patterns(own_tasks, manifest)
+
+
 def watch_patterns(own_tasks, manifest):
-    patterns = set(manifest.get("watch_paths", []))
+    """Пути свежести AGENT.md: владение, наблюдение и writes своих этапов."""
+    patterns = set(manifest.get("watch_paths", [])) | set(manifest.get("owns", []))
     for task in own_tasks:
         for stage in task.get("stages", []) if isinstance(task, dict) else []:
             patterns.update((stage.get("spec") or {}).get("writes", []) or [])
@@ -365,7 +391,7 @@ def build(workspace, repo, manifest, status_override, inbox_override, use_hub, n
             hub_lines.append(f"- ХАБ НЕДОСТУПЕН: {error or 'нет snapshot'}. Состояние задач/контрактов неизвестно; не выводить его из файлов.")
         else:
             mine = [t for t in snapshot.get("tasks", []) if isinstance(t, dict) and t.get("task_id") in manifest["tasks"]]
-            hub = project_hub(snapshot, manifest["tasks"], watch_patterns(mine, manifest))
+            hub = project_hub(snapshot, manifest["tasks"], zone_patterns(mine, manifest))
     else:
         hub_lines.append("- Хаб отключён флагом --no-hub: состояние задач/контрактов неизвестно.")
 

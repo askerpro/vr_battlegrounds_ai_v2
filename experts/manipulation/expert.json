@@ -1,11 +1,11 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "manipulation",
-  "owner": "haptics",
+  "owner": "manipulation",
   "tasks": ["haptics-system"],
   "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
   "reviewed_at": "2026-10-11",
-  "watch_paths": [
+  "owns": [
     "Assets/Scripts/Haptics/**",
     "Assets/Scripts/Interaction/**",
     "Assets/Scripts/Player/GrabRules.cs",
@@ -25,9 +25,9 @@
     "Assets/Tests/EditMode/Haptics/**",
     "Assets/Tests/EditMode/Interaction/**",
     "Docs/magazine-pocket.md",
-    "Docs/UltimateXR/interactions.md",
-    "tasks/haptics-system/expert/**",
-    "Docs/manipulation/**",
-    "tasks/haptics-system/contracts/**"
+    "Docs/UltimateXR/interactions.md"
+  ],
+  "watch_paths": [
+    "Docs/manipulation/**"
   ]
 }

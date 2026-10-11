@@ -109,7 +109,32 @@ inbox `expert-workspace-infra`: точка перехода достигнута
 
 ## Постоянные worktree экспертов (вариант B)
 
-Сопровождающий принял (событие 3305): этап 1 — owner = эксперт, несколько задач одного owner в одном worktree, команды смены owner и переноса worktree задачи; этап 2 — реестр зон и ACK владельца зоны. До выпуска этапа 1 — вариант A: эксперт работает в worktree каждой задачи, ничего не переносится. Команды миграции сопровождающий пришлёт в inbox expert-workspace-infra.
+Этап 1 выпущен сопровождающим (событие 3312, runtime b1d115c): owner задачи = эксперт; несколько задач одного
+owner в одном worktree; `task-handoff` (CAS) меняет owner и переносит worktree, сохраняя этапы, контракты, ACK и
+историю; агрегированный inbox `inbox --owner <expert>`; адресат `owner:<id>`; `zone-check`/`zone-lint` — только
+чтение. Подробно — agent-infra `docs/maintenance-guide.md`, «Эксперт: постоянный worktree и task-handoff».
+
+Миграция одной задачи (делает эксперт/оператор миграции, не сопровождающий; по одной задаче):
+
+0. Безопасная точка: running-этап доведён до verify/stop; тикеты брокера задачи DONE/CANCELLED; сессии в
+   worktree нет (move не сработает, пока каталог держат Unity, IDE или терминал); локальные правки сохранены.
+1. Из старого worktree: `coordination.py register --document tasks/<task>/Readme.md --expected-revision <N>` —
+   записывает идентичность worktree (ревизия растёт; при needs контрактов затем contract-ack).
+2. `mkdir F:/CodexWorktrees/<expert>`; `git -C F:/UnityProjects/Vr_Battlegrounds_ai worktree move
+   F:/CodexWorktrees/<old>/Vr_Battlegrounds_ai F:/CodexWorktrees/<expert>/Vr_Battlegrounds_ai`.
+3. Из нового пути: `coordination.py --repo F:/CodexWorktrees/<expert>/Vr_Battlegrounds_ai task-handoff --task <task>
+   --owner <старый owner> --expected-revision <N> --to-owner <expert> [--allow-unmerged]`.
+4. Проверить `status` (owner, worktree, ревизия N+1, этапы); закоммитить изменённый `tasks/<task>/plan.json`;
+   в `experts/<expert>/expert.json` owner уже = id. Новая сессия эксперта: `route-publish`, затем
+   `inbox --owner <expert> --unread`; MCP initialize из нового пути.
+
+Пары и порядок: launch-infra ← vr-test-stand (нет активных этапов — пилот); avatar-ik ← legs-ik; затем на
+границе этапа: bots ← bots-fix (running armed-development), avatar-grip ← hand-rig-quality (running
+mef-grip-audit), manipulation ← haptics-system (running manipulation-kb), gameplay ← arsenal-generator (running
+planning), weapon-system ← weapon-system (6 verified → `--allow-unmerged`). Вторая задача в уже занятый worktree
+(map-runtime-bootstrap → launch-infra, avatar-renderer-regression → avatar-ik): ветку задачи сначала освободить в
+старом worktree, затем checkout в worktree эксперта и `task-handoff --to-worktree`. network, performance, ui:
+минимальная задача-владелец и worktree эксперта — до подключения проверки зон к begin.
 
 ## Риски
 

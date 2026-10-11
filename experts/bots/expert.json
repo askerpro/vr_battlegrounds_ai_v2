@@ -1,16 +1,39 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "bots",
-  "owner": "bots-fix",
-  "tasks": ["bots-fix"],
+  "owner": "bots",
+  "tasks": [
+    "bots-fix"
+  ],
   "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
   "reviewed_at": "2026-10-11",
+  "owns": [
+    "Assets/Scripts/Bots/**",
+    "Assets/Scripts/Bots/BotBody.cs",
+    "Assets/Scripts/Bots/BotNavMeshSources.cs",
+    "Assets/Scripts/Player/Avatars/ServerAuthoredAvatar.cs",
+    "Assets/Scripts/Debug/BotCombatStand/**",
+    "Assets/Scenes/Debug/BotCombatStand*",
+    "Assets/Scenes/Debug/BotStand*.mat",
+    "Assets/Editor/VR_Battlegrounds/Bots/**",
+    "Assets/Editor/VR_Battlegrounds/Debug/BotMenu.cs",
+    "Assets/Resources/Bots/**",
+    "Assets/ThirdParty/Blaze AI/**",
+    "Assets/Tests/EditMode/Bots/**",
+    "Assets/Tests/EditMode/DevTools/BotTests.cs",
+    "Docs/BlazeAI/**",
+    "Docs/tasks/T-48-bots-match.md",
+    "Docs/tasks/bots-blaze-integration.md",
+    "Docs/tasks/bot-combat-stand.md",
+    "Docs/tasks/bots-validation-stand-plan.md",
+    "Docs/audit/bots-audit-2026-10-03.md"
+  ],
   "watch_paths": [
-    "Assets/Scripts/Bots/**", "Assets/Scripts/Debug/BotCombatStand/**", "Assets/Editor/VR_Battlegrounds/Bots/**",
-    "Assets/Resources/Bots/**", "Assets/ThirdParty/Blaze AI/Scripts/**", "Assets/Tests/EditMode/Bots/**",
-    "Assets/Scripts/Player/Avatars/ServerAuthoredAvatar.cs", "Assets/Scripts/UI/Menu/Overview/OverviewBotMatch.cs",
-    "Docs/BlazeAI/**", "Docs/tasks/T-48-bots-match.md", "Docs/tasks/bots-blaze-integration.md",
-    "Docs/tasks/bot-combat-stand.md", "Docs/tasks/bots-validation-stand-plan.md", "Docs/audit/bots-audit-2026-10-03.md",
-    "tasks/bots-fix/**"
+    "Assets/Scripts/UI/Menu/Overview/OverviewBotMatch.cs",
+    "Assets/Scripts/Managers/PlayersManager.cs",
+    "Assets/Scripts/Player/Avatars/AvatarManager.cs",
+    "Assets/Scripts/Player/Avatars/AvatarTeardown.cs",
+    "Docs/gameplay.md",
+    "Docs/troubleshooting.md"
   ]
 }

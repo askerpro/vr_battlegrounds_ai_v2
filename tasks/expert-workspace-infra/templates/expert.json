@@ -1,9 +1,10 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "<expert-id>",
-  "owner": "<owner из plan.json задачи>",
+  "owner": "<expert-id>",
   "tasks": ["<task-id>"],
   "reviewed_sha": "<полный SHA, на котором сверена карта AGENT.md>",
   "reviewed_at": "<YYYY-MM-DD>",
-  "watch_paths": ["<дополнительные пути/glob помимо writes этапов, например Docs/<area>.md>"]
+  "owns": ["<пути владения: только они проверяются в begin — чужой этап здесь требует вашего ACK>"],
+  "watch_paths": ["<наблюдаемые пути/ревью: только для awake, допуск не проверяется>"]
 }

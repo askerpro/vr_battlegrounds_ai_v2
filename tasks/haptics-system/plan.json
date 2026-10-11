@@ -1,8 +1,8 @@
 {
   "task_id": "haptics-system",
-  "owner": "haptics",
+  "owner": "manipulation",
   "client": "claude",
-  "worktree": "F:/CodexWorktrees/haptics/Vr_Battlegrounds_ai",
+  "worktree": "F:/CodexWorktrees/manipulation/Vr_Battlegrounds_ai",
   "base_sha": "4640ccd500edc0fd55a7d97738e1e0fb9e6e9ae6",
   "doc_path": "tasks/haptics-system/Readme.md",
   "title": "Единая система вибрации",
@@ -39,7 +39,11 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "clips-interaction", "state": "merged"}
+        {
+          "task": "haptics-system",
+          "stage": "clips-interaction",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -60,7 +64,11 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "behavior-tests", "state": "merged"}
+        {
+          "task": "haptics-system",
+          "stage": "behavior-tests",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -72,7 +80,29 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "interaction-feedback", "state": "merged"}
+        {
+          "task": "haptics-system",
+          "stage": "interaction-feedback",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "manipulation-kb",
+      "writes": [
+        "Docs/manipulation/**",
+        "Docs/manipulation.meta",
+        ".claude/agents/manipulation-expert.md",
+        ".claude/agent-memory/manipulation-expert/**",
+        "tasks/haptics-system/**"
+      ],
+      "after": [
+        {
+          "task": "haptics-system",
+          "stage": "manipulation-expert",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -88,9 +118,21 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "manipulation-expert", "state": "merged"},
-        {"task": "haptics-system", "stage": "interaction-feedback", "state": "merged"},
-        {"task": "avatar-renderer-regression", "stage": "asset-repair", "state": "verified"}
+        {
+          "task": "haptics-system",
+          "stage": "manipulation-kb",
+          "state": "merged"
+        },
+        {
+          "task": "haptics-system",
+          "stage": "interaction-feedback",
+          "state": "merged"
+        },
+        {
+          "task": "avatar-renderer-regression",
+          "stage": "asset-repair",
+          "state": "verified"
+        }
       ],
       "needs": []
     },
@@ -107,7 +149,11 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "pocket-removal", "state": "merged"}
+        {
+          "task": "haptics-system",
+          "stage": "pocket-removal",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -125,7 +171,11 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "sdk-routing", "state": "merged"}
+        {
+          "task": "haptics-system",
+          "stage": "sdk-routing",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -138,7 +188,11 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "sources", "state": "merged"}
+        {
+          "task": "haptics-system",
+          "stage": "sources",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -149,7 +203,11 @@
         "tasks/haptics-system/**"
       ],
       "after": [
-        {"task": "haptics-system", "stage": "item-clicks", "state": "merged"}
+        {
+          "task": "haptics-system",
+          "stage": "item-clicks",
+          "state": "merged"
+        }
       ],
       "needs": []
     }

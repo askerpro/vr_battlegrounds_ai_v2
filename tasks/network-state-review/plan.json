@@ -1,0 +1,15 @@
+{
+  "task_id": "network-state-review",
+  "owner": "network",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/network/Vr_Battlegrounds_ai",
+  "base_sha": "17293aa3c1d0c30cb650ef146a59ad7b0bb56d97",
+  "doc_path": "tasks/network-state-review/Readme.md",
+  "title": "Анализ состояния сетевой зоны и разбор бэклога",
+  "stages": [
+    {"id": "state-review", "writes": [
+      "tasks/network-state-review/**",
+      "experts/network/**"
+    ], "after": [], "needs": []}
+  ]
+}

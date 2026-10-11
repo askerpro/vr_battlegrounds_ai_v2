@@ -43,6 +43,17 @@ experts/ — 6 checked, 0 issues (добавлена локальная .gitattr
 Не сделано: пользовательская проверка, коммит кода, установка адаптеров профилей, launcher в
 agent-infra. Unity/игровые проверки не выполнялись и не требуются.
 
+## 2026-10-11: реестр зон v2
+
+Сопровождающий выпустил этап 1 (3312: owner = эксперт, task-handoff, inbox --owner, owner:<id>, zone-check/zone-lint).
+Формат реестра (3308) подтверждён с решениями пользователя по спорным и ничейным путям (3314). Все 11 expert.json
+переведены на schema v2 (owner = id, owns — владение, watch_paths — наблюдение; субагенты по 3 группам, principal
+исправил ServerAuthoredAvatar → bots, URPProjectSettings → performance). awake понимает v2 (тесты 18/18), COMMON.md —
+inbox --owner/owner:<id>/zone-check/task-handoff, план миграции — порядок 3312. zone-lint по ветке: совладения
+13 → 2 (намеренные PlayerSession/SessionManager network+gameplay), мёртвые 2 → 0, tasks/** 9 → 0, предупреждения
+9 → 0, ничьих файлов 4743 → 1805; 43 пересечения решаются специфичностью (намеренные точные файлы внутри чужих
+зон). Полные отчёты — reports/zone-lint-v1.json, zone-lint-v2.json (вне Git).
+
 ## 2026-10-11: миграция агентов и запрос сопровождающему
 
 Работа всех прежних агентов переходит к экспертам зон (решение пользователя); map-runtime-bootstrap доделывает

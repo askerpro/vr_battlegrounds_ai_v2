@@ -1,0 +1,38 @@
+{
+  "task_id": "map-port",
+  "owner": "map-port",
+  "client": "claude",
+  "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
+  "base_sha": "6c0473fda8faa5e217117da0e5f6a4ed2866b634",
+  "doc_path": "tasks/map-port/Readme.md",
+  "title": "Карта «Контейнерный терминал»: исследование темы",
+  "stages": [
+    {
+      "id": "research",
+      "writes": [
+        "tasks/map-port/Readme.md",
+        "tasks/map-port/Details.md",
+        "tasks/map-port/plan.json"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "theme-brief",
+      "writes": [
+        "tasks/map-port/Readme.md",
+        "tasks/map-port/Details.md",
+        "tasks/map-port/plan.json",
+        "tasks/map-port/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "map-port",
+          "stage": "research",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

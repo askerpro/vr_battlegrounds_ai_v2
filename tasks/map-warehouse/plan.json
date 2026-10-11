@@ -1,0 +1,38 @@
+{
+  "task_id": "map-warehouse",
+  "owner": "map-warehouse",
+  "client": "claude",
+  "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
+  "base_sha": "6c0473fda8faa5e217117da0e5f6a4ed2866b634",
+  "doc_path": "tasks/map-warehouse/Readme.md",
+  "title": "Карта «Логистический склад»: исследование темы",
+  "stages": [
+    {
+      "id": "research",
+      "writes": [
+        "tasks/map-warehouse/Readme.md",
+        "tasks/map-warehouse/Details.md",
+        "tasks/map-warehouse/plan.json"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "theme-brief",
+      "writes": [
+        "tasks/map-warehouse/Readme.md",
+        "tasks/map-warehouse/Details.md",
+        "tasks/map-warehouse/plan.json",
+        "tasks/map-warehouse/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "map-warehouse",
+          "stage": "research",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

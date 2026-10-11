@@ -25,10 +25,9 @@ namespace VrBattlegrounds.Player
             _avatar = GetComponent<UxrAvatar>();
             _grabbers.AddRange(GetComponentsInChildren<UxrGrabber>(true));
 
-            if (_playerController != null)
-            {
-                _playerController.PlayerDied += OnPlayerDied;
-            }
+            // На смерть не подписан (death-body-defer): отпускание из обработчика смерти шло бы
+            // внутри её синхронизации и на каждой машине. При смерти отпускает только сервер —
+            // AvatarTeardown.ReleaseBeforeDestroy, на верхнем уровне при смене тела.
         }
 
         private void OnEnable()
@@ -58,14 +57,6 @@ namespace VrBattlegrounds.Player
             _delegates.Clear();
         }
 
-        private void OnDestroy()
-        {
-            if (_playerController != null)
-            {
-                _playerController.PlayerDied -= OnPlayerDied;
-            }
-        }
-
         #endregion
 
         #region Private Methods
@@ -82,11 +73,6 @@ namespace VrBattlegrounds.Player
             }
 
             return GrabRules.IsGrabAllowed(grabber, grabbable, grabPointIndex);
-        }
-
-        private void OnPlayerDied(PlayerController controller)
-        {
-            ReleaseAllGrabbedObjects();
         }
 
         public void ReleaseAllGrabbedObjects()

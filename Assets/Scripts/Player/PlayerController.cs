@@ -171,9 +171,10 @@ namespace VrBattlegrounds.Player
 
         /// <summary>
         /// Тело — представление состояния игрока: выбывший становится призраком, возрождённый —
-        /// аватаром своей команды (T-35). Этот аватар после вызова может быть уже заменён — дальше
-        /// работать со <see cref="PlayerSession.ActiveAvatar"/>. Без <c>AvatarManager</c> (тест) —
-        /// ничего: тело остаётся тем же.
+        /// аватаром своей команды (T-35). Когда менять, решает <see cref="AvatarManager"/>: с верхнего
+        /// уровня — сразу (этот аватар после вызова может быть уже заменён — дальше работать со
+        /// <see cref="PlayerSession.ActiveAvatar"/>), изнутри синхронизации UltimateXR (смерть) —
+        /// в <c>LateUpdate</c> этого кадра. Без <c>AvatarManager</c> (тест) — ничего: тело остаётся тем же.
         /// </summary>
         private void ReconcileBody(string reason)
         {
@@ -245,7 +246,7 @@ namespace VrBattlegrounds.Player
         ///
         /// <para>
         /// Поэтому локальных подписчиков (<see cref="Maps.TeamSpawnZone" />,
-        /// <see cref="PlayerGrabManager" />) оповещают именно здесь, а не в
+        /// <c>GhostViewEffect</c>) оповещают именно здесь, а не в
         /// <see cref="Die" />. <c>Die</c> помечен <c>[Server]</c>, и на выделенном сервере
         /// у клиента это заглушка: событие <see cref="PlayerDied" /> не доходило до клиента
         /// вовсе, и мёртвый игрок видел свою зону спавна не в момент гибели, а на ближайшей
@@ -260,6 +261,12 @@ namespace VrBattlegrounds.Player
         /// и подписчик, читающий <see cref="IsAlive" /> прямо в обработчике (а зона спавна
         /// делает именно так), мог бы увидеть ещё живого игрока. Здесь же <c>Life</c>
         /// обнуляется в первой строке <c>DieInternal</c>, то есть до самого события.
+        /// </para>
+        ///
+        /// <para>
+        /// На сервере обработчик исполняется внутри <c>BeginSync</c> … <c>EndSync</c> смерти: тело здесь
+        /// не снимается (иначе событие смерти не ушло бы клиентам) — смену тела <see cref="Die"/> отдаёт
+        /// <see cref="AvatarManager"/>, а тот откладывает её до верхнего уровня.
         /// </para>
         /// </summary>
         private void OnActorDied(UxrActor actor)
@@ -329,8 +336,15 @@ namespace VrBattlegrounds.Player
         }
 
         /// <summary>
-        /// Серверная половина смерти: режим наблюдателя, сброс предметов из рук
-        /// на клиентах и оповещение игрового режима.
+        /// Серверная половина смерти: выбывание, оповещение игрового режима, труп и смена тела
+        /// на призрака.
+        ///
+        /// <para>
+        /// Исполняется внутри синхронизации смерти (<c>UxrActor.DieInternal</c>). Смену тела
+        /// (<see cref="ReconcileBody"/>) <see cref="AvatarManager"/> откладывает до <c>LateUpdate</c>
+        /// этого кадра — после <c>EndSync</c>. Тогда же, на верхнем уровне, сервер отпускает руки
+        /// и роняет снаряжение (<see cref="AvatarTeardown.ReleaseBeforeDestroy"/>).
+        /// </para>
         ///
         /// <para>
         /// Локальных подписчиков отсюда больше не оповещают — <see cref="PlayerDied" />
@@ -361,7 +375,8 @@ namespace VrBattlegrounds.Player
             ServerBecomeCorpse(_lastImpact);
             _lastImpact = DeathImpact.None;
 
-            // Последним: режим и статистика смотрели на погибшее тело.
+            // Последним: режим и статистика смотрели на погибшее тело. Мы внутри синхронизации
+            // смерти — AvatarManager не меняет тело сейчас, а ставит запрос до LateUpdate.
             ReconcileBody("смерть");
         }
 
@@ -403,28 +418,20 @@ namespace VrBattlegrounds.Player
         }
 
         /// <summary>
-        /// Страховка на случай, если канал состояния UltimateXR молчит: предметы
-        /// из рук обязаны выпасть у всех.
+        /// Смерть дошла до клиента сообщением Mirror — только лог (сверка с <see cref="PlayerDied"/>,
+        /// который приходит каналом состояния UltimateXR).
         ///
-        /// С исправлением остатка NET-04 это дублирование: <see cref="PlayerGrabManager" />
-        /// подписан на <see cref="PlayerDied" />, а тот теперь поднимается на каждой машине
-        /// из <see cref="OnActorDied" />. Оставлено намеренно — каналы независимы,
-        /// и повторный сброс предметов безвреден, тогда как их пропажа из-за молчащего
-        /// канала состояния видна игроку сразу.
+        /// <para>
+        /// Предметы из рук здесь больше не отпускаются (death-body-defer, zone-ack manipulation).
+        /// Единственный отпускающий при смерти — сервер в <see cref="AvatarTeardown.ReleaseBeforeDestroy"/>
+        /// на верхнем уровне, при смене тела на призрака: одно <c>ReleaseObject</c> на руку, одна поза
+        /// предмета у всех. Страховка владельца давала второе отпускание со своей скоростью броска.
+        /// </para>
         /// </summary>
         [ClientRpc]
         private void RpcOnDied()
         {
-            // Отпускание синхронизируемое, а RPC исполняется на каждом клиенте вне повтора события:
-            // каждый рассылал своё отпускание своей скоростью броска. Страхует только владелец —
-            // один раз; остальным отпускание придёт его событием (known-issues, Issue 23).
-            if (!isOwned) return;
-
-            var grabManager = GetComponent<PlayerGrabManager>();
-            if (grabManager != null)
-            {
-                grabManager.ReleaseAllGrabbedObjects();
-            }
+            GameLog.Player.Verbose($"[PlayerController] {name}: смерть подтверждена сервером (RPC).", this);
         }
 
         /// <summary>

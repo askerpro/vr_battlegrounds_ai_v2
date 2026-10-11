@@ -1,4 +1,6 @@
 using Mirror;
+using UltimateXR.Core;
+using UltimateXR.Core.StateSync;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Network;
@@ -6,6 +8,7 @@ using VrBattlegrounds.Player;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Maps.Runtime;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace VrBattlegrounds.Player.Avatars
@@ -17,6 +20,14 @@ namespace VrBattlegrounds.Player.Avatars
     /// <para>
     /// Соединение <c>conn</c> может быть <c>null</c> — это сессия бота
     /// (<c>Bots.BotDirector</c>): аватар спавнится без владельца, позу рассылает сервер.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Смена тела — только с верхнего уровня</b> (задача death-body-defer). Запрос изнутри
+    /// синхронизации UltimateXR (<c>BeginSync</c> … <c>EndSync</c> или исполнение принятого события)
+    /// не меняет тело, а ставится в очередь и исполняется в <c>LateUpdate</c> того же кадра — см.
+    /// <see cref="CanReplaceBodyNow"/>. Иначе <c>NetworkServer.Destroy</c> снимал бы тело раньше
+    /// <c>EndSync</c>, и событие (смерть, <c>UxrActor.DieInternal</c>) отбрасывалось бы Relay.
     /// </para>
     /// </summary>
     [DefaultExecutionOrder(VrBattlegrounds.Managers.ManagerOrder.AvatarManager)]
@@ -33,6 +44,36 @@ namespace VrBattlegrounds.Player.Avatars
 
         public static event Action<PlayerController> AvatarSpawned;
 
+        /// <summary>
+        /// Отложенный запрос смены тела сессии — одна запись на сессию (<see cref="DeferBody"/>).
+        /// Желаемое тело запись не хранит: его выбирают при исполнении по состоянию сессии.
+        /// </summary>
+        private sealed class PendingBody
+        {
+            public PlayerSession Session;
+
+            /// <summary>
+            /// Тело, о котором запрос (на момент постановки); null — тела не было (смена после смены
+            /// карты, уже допущенная картой). Тело к исполнению стало другим — запрос устарел.
+            /// </summary>
+            public PlayerController Body;
+
+            /// <summary>Последняя причина — для лога и для <c>ReplaceBody</c>.</summary>
+            public string Reason;
+
+            /// <summary>
+            /// Был запрос <see cref="ChangeAvatar"/> (смена скина или команды): тело заменяется
+            /// безусловно, снаряжение прежнего изымается. Липкий флаг — см. <see cref="DeferBody"/>.
+            /// </summary>
+            public bool Change;
+        }
+
+        /// <summary>Очередь отложенной смены тела, в порядке постановки. Пишет и читает только сервер.</summary>
+        private readonly List<PendingBody> _pendingBodies = new List<PendingBody>();
+
+        /// <summary>Буфер исполнения: исполнение может поставить новый запрос — он ждёт следующего кадра.</summary>
+        private readonly List<PendingBody> _executingBodies = new List<PendingBody>();
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -41,6 +82,11 @@ namespace VrBattlegrounds.Player.Avatars
                 return;
             }
             Instance = this;
+        }
+
+        private void LateUpdate()
+        {
+            if (_pendingBodies.Count > 0) ExecutePendingBodies();
         }
 
         /// <summary>
@@ -146,6 +192,11 @@ namespace VrBattlegrounds.Player.Avatars
         ///       смена команды переносила на точку спавна новой команды — это расклеивало
         ///       картинку с телом. В свою зону игрок теперь приходит сам.</item>
         /// </list>
+        ///
+        /// <para>
+        /// Команда и скин пишутся в сессию сразу; само тело изнутри синхронизации UltimateXR
+        /// меняется отложенно (<see cref="DeferBody"/>, с изъятием снаряжения), вне её — сразу.
+        /// </para>
         /// </summary>
         [Server]
         public void ChangeAvatar(NetworkConnectionToClient conn, PlayerSession session, int teamId, int avatarId)
@@ -167,7 +218,14 @@ namespace VrBattlegrounds.Player.Avatars
                 !MapRunAdmission.TryAdmitAvatar(session, () => ChangeAvatar(conn, session, session.TeamIndex, session.AvatarIndex)))
                 return;
 
-            ReplaceBody(conn, session, avatarPrefab, confiscate: true, "смена скина или команды");
+            const string reason = "смена скина или команды";
+            if (!CanReplaceBodyNow())
+            {
+                DeferBody(session, reason, change: true);
+                return;
+            }
+
+            ReplaceBody(conn, session, avatarPrefab, confiscate: true, reason);
         }
 
         /// <summary>
@@ -179,12 +237,36 @@ namespace VrBattlegrounds.Player.Avatars
         /// Снаряжение прежнего тела не изымается, а падает (<see cref="AvatarTeardown.ReleaseBeforeDestroy"/>):
         /// у погибшего оружие остаётся на месте гибели, у призрака снаряжения нет.
         /// </para>
+        ///
+        /// <para>
+        /// <b>Смерть зовёт это изнутри синхронизации</b> (<c>UxrActor.DieInternal</c>: <c>BeginSync</c> →
+        /// <c>Died</c> → <see cref="PlayerController.Die"/> → сюда → <c>EndSync</c>). Тогда тело не
+        /// меняется, а запрос ставится в очередь (<see cref="DeferBody"/>) и исполняется в
+        /// <c>LateUpdate</c> этого кадра: к тому времени событие смерти уже ушло клиентам с живым
+        /// ещё телом. Вне синхронизации (возрождение из фаз раунда) — сразу.
+        /// </para>
         /// </summary>
         [Server]
         public void ServerReconcileBody(PlayerSession session, string reason)
         {
             if (session == null) return;
 
+            if (!CanReplaceBodyNow())
+            {
+                // Тела нет (смена карты) — его создаст спавн уже по состоянию; ставить нечего.
+                if (session.ActiveAvatar != null) DeferBody(session, reason, change: false);
+                return;
+            }
+
+            ReconcileBodyNow(session, reason);
+        }
+
+        /// <summary>
+        /// Тело к состоянию сессии — сейчас, с верхнего уровня. Желаемое тело выбирается здесь, по
+        /// текущему состоянию: смерть и возрождение одного кадра дают ноль замен, а не две.
+        /// </summary>
+        private void ReconcileBodyNow(PlayerSession session, string reason)
+        {
             // Тела нет (смена карты) — его создаст спавн уже по состоянию.
             PlayerController current = session.ActiveAvatar;
             if (current == null) return;
@@ -194,6 +276,156 @@ namespace VrBattlegrounds.Player.Avatars
 
             GameLog.Player.Info($"[AvatarManager] {session.PlayerName}: тело → {desired.name} ({reason}).");
             ReplaceBody(session.connectionToClient, session, desired, confiscate: false, reason);
+        }
+
+        // ── Отложенная смена тела (death-body-defer) ───────────────────────────────────────────
+
+        /// <summary>
+        /// Можно ли менять тело сейчас: не внутри <c>BeginSync</c> … <c>EndSync</c>
+        /// (<see cref="UxrStateSyncImplementer.SyncCallDepth"/>) и не внутри исполнения принятого
+        /// события (<see cref="UxrManager.IsInsideStateSync"/>). То же условие, что у
+        /// <c>WeaponSystem.CanCommandNow</c>. Spawn/Destroy внутри открытого события снимают тело
+        /// раньше, чем событие уйдёт в сеть (<c>DespawnedObjectEventFilter</c> его отбросит).
+        /// </summary>
+        private static bool CanReplaceBodyNow() =>
+            UxrStateSyncImplementer.SyncCallDepth == 0 && !(UxrManager.HasInstance && UxrManager.Instance.IsInsideStateSync);
+
+        /// <summary>
+        /// Ставит смену тела сессии в очередь — одна запись на сессию.
+        ///
+        /// <para>
+        /// <b>Слияние.</b> Повторный запрос той же сессии в том же кадре новую запись не заводит:
+        /// <see cref="PendingBody.Reason"/> — последний; <see cref="PendingBody.Change"/> липкий
+        /// (ИЛИ): был в кадре <see cref="ChangeAvatar"/> — тело заменится безусловно и с изъятием
+        /// снаряжения. Правило смены скина/команды сильнее правила смерти: ствол прежнего тела не
+        /// должен пережить смену и остаться ничьим (T-35); падение «на месте гибели» при этом
+        /// теряется, но и призраком игрок станет — префаб выбирается по состоянию (выбывший —
+        /// призрак, <see cref="TeamAvatarStrategy"/>). Параметры <c>ChangeAvatar</c> (команда, скин)
+        /// уже записаны в сессию, отдельно не хранятся; префаб выбирается при исполнении.
+        /// </para>
+        ///
+        /// <para>
+        /// Запись о другом теле (его уже сменил прямой вызов с верхнего уровня) устарела —
+        /// заменяется новой целиком.
+        /// </para>
+        /// </summary>
+        [Server]
+        private void DeferBody(PlayerSession session, string reason, bool change)
+        {
+            PlayerController body = session.ActiveAvatar;
+            PendingBody entry = FindPendingBody(session);
+
+            if (entry != null && !ReferenceEquals(entry.Body, body))
+            {
+                _pendingBodies.Remove(entry);
+                entry = null;
+            }
+
+            if (entry == null)
+            {
+                entry = new PendingBody { Session = session, Body = body };
+                _pendingBodies.Add(entry);
+            }
+
+            entry.Reason = reason;
+            entry.Change |= change;
+
+            GameLog.Player.Info(
+                $"[AvatarManager] {session.PlayerName}: смена тела отложена до верхнего уровня ({reason}" +
+                $"{(entry.Change ? ", со сменой скина/команды" : "")}).");
+        }
+
+        private PendingBody FindPendingBody(PlayerSession session)
+        {
+            foreach (PendingBody entry in _pendingBodies)
+                if (ReferenceEquals(entry.Session, session)) return entry;
+            return null;
+        }
+
+        /// <summary>
+        /// Исполняет очередь с верхнего уровня (<c>LateUpdate</c>). Условие проверяется явно: исполнение
+        /// принятого события может прийтись и на <c>LateUpdate</c> — тогда очередь ждёт следующего.
+        /// </summary>
+        private void ExecutePendingBodies()
+        {
+            // Тела меняет только авторитет мира — сервер. Сервер остановлен — менять нечего.
+            if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority)
+            {
+                DropAllPendingBodies("сервер остановлен");
+                return;
+            }
+
+            if (!CanReplaceBodyNow()) return;
+
+            // Mirror сейчас меняет сцену: прежние тела уйдут вместе с ней. Ждём — после загрузки запрос
+            // устареет сам (тела нет), а отменённая смена оставит его исполниться.
+            if (NetworkServer.isLoadingScene) return;
+
+            _executingBodies.Clear();
+            _executingBodies.AddRange(_pendingBodies);
+            _pendingBodies.Clear();
+
+            foreach (PendingBody entry in _executingBodies)
+            {
+                try
+                {
+                    ExecutePendingBody(entry);
+                }
+                catch (Exception error)
+                {
+                    string who = entry.Session != null ? entry.Session.PlayerName : "(сессия уничтожена)";
+                    GameLog.Error($"[AvatarManager] {who}: отложенная смена тела ({entry.Reason}) отказала: {error}");
+                }
+            }
+
+            _executingBodies.Clear();
+        }
+
+        private void ExecutePendingBody(PendingBody entry)
+        {
+            PlayerSession session = entry.Session;
+
+            // Отключение: сессию уничтожил сервер (её тело снимает OnServerDisconnect).
+            if (session == null || !session.isServer)
+            {
+                GameLog.Player.Info($"[AvatarManager] Отложенная смена тела ({entry.Reason}) снята: сессии больше нет.");
+                return;
+            }
+
+            PlayerController current = session.ActiveAvatar;
+            bool hadBody = !ReferenceEquals(entry.Body, null);
+
+            // Тело уже другое или его нет: сменила карта (тело ушло со сценой — новое создаст спавн по
+            // состоянию) или прямой вызов с верхнего уровня — он уже выбрал тело по состоянию.
+            if (hadBody ? current == null || !ReferenceEquals(current, entry.Body) : current != null)
+            {
+                GameLog.Player.Info(
+                    $"[AvatarManager] {session.PlayerName}: отложенная смена тела ({entry.Reason}) снята — тело уже сменилось.");
+                return;
+            }
+
+            if (!entry.Change)
+            {
+                ReconcileBodyNow(session, entry.Reason);
+                return;
+            }
+
+            // Смена скина/команды: команда и скин уже в сессии; префаб — по ним и по выбыванию.
+            GameObject desired = PrefabFor(session.TeamIndex, session.AvatarIndex, session, _combatAvatarStrategy, _playerPrefab);
+            if (desired == null) return;
+
+            GameLog.Player.Info($"[AvatarManager] {session.PlayerName}: тело → {desired.name} ({entry.Reason}, отложенно).");
+            ReplaceBody(session.connectionToClient, session, desired, confiscate: true, entry.Reason);
+        }
+
+        private void DropAllPendingBodies(string why)
+        {
+            foreach (PendingBody entry in _pendingBodies)
+            {
+                string who = entry.Session != null ? entry.Session.PlayerName : "(сессия уничтожена)";
+                GameLog.Player.Info($"[AvatarManager] {who}: отложенная смена тела ({entry.Reason}) снята — {why}.");
+            }
+            _pendingBodies.Clear();
         }
 
         /// <summary>

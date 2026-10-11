@@ -11,7 +11,6 @@ import sys
 sys.dont_write_bytecode = True
 
 import argparse
-import datetime
 import json
 import os
 from pathlib import Path
@@ -40,12 +39,36 @@ def head_cwd(path, client):
                     break
                 record = json.loads(line)
                 if client == "codex" and record.get("type") == "session_meta":
-                    return (record.get("payload") or {}).get("cwd")
+                    meta = record.get("payload") or {}
+                    # служебные под-сессии (guardian_review и др.) — не основная работа
+                    if meta.get("parent_thread_id") or meta.get("thread_source") not in (None, "user"):
+                        return None
+                    return meta.get("cwd")
                 if client == "claude" and record.get("cwd"):
                     return record["cwd"]
     except (OSError, ValueError, UnicodeDecodeError):
         return None
     return None
+
+
+def last_stamp(path):
+    """Время последней записи по меткам timestamp в хвосте журнала (mtime у журналов Codex ненадёжен)."""
+    try:
+        with open(path, "rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            size = handle.tell()
+            handle.seek(max(0, size - 65536))
+            tail = handle.read().decode("utf-8", "ignore").splitlines()
+    except OSError:
+        return ""
+    for line in reversed(tail):
+        try:
+            stamp = json.loads(line).get("timestamp")
+        except ValueError:
+            continue
+        if isinstance(stamp, str):
+            return stamp
+    return ""
 
 
 def matches(cwd, target):
@@ -121,7 +144,7 @@ def candidates(codex_root, claude_root, target):
         pattern = "**/*.jsonl" if client == "codex" else "*/*.jsonl"
         for path in root.glob(pattern):
             if matches(head_cwd(path, client), target):
-                found.append((path.stat().st_mtime, client, path))
+                found.append((last_stamp(path), client, path))
     return sorted(found, reverse=True)
 
 
@@ -140,10 +163,9 @@ def main(argv=None):
            "> История переписки, не факт состояния: сверь с `git status`/diff, хабом и Readme задачи.", ""]
     if not found:
         out.append("Сессий Codex/Claude с этим cwd (или родительским) нет.")
-    for mtime, client, path in reversed(found):
+    for stamp, client, path in reversed(found):
         data = extract(path, client)
-        changed = datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
-        out.append(f"## {client}: {path.name} (последняя запись {changed})")
+        out.append(f"## {client}: {path.name} (последняя запись {stamp[:16].replace('T', ' ')} UTC)")
         out.append("### Пользователь (последние)")
         out += [f"- [{s}] {clip(t, USER_CHARS)}" for s, t in data["user"][-USER_LIMIT:]] or ["- нет"]
         out.append("### Агент (последние)")

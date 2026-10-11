@@ -1,9 +1,8 @@
 {
   "schema_version": 1,
   "id": "gameplay",
-  "owner": "map-runtime-bootstrap",
+  "owner": "arsenal-generator",
   "tasks": [
-    "map-runtime-bootstrap",
     "arsenal-generator"
   ],
   "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",

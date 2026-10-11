@@ -36,7 +36,7 @@
 | Задача | Эксперт | Worktree | Этап сейчас | ahead/behind | dirty | Волна |
 |---|---|---|---|---|---|---|
 | vr-test-stand | launch-infra | `vr-test-stand` | нет активных | 0/4 | 0 | 0 |
-| map-runtime-bootstrap | gameplay | `map-runtime-bootstrap` | нет активных | 0/20 | 0 | 0 |
+| map-runtime-bootstrap | launch-infra | `map-runtime-bootstrap` | нет активных | 0/20 | 0 | 0 |
 | avatar-renderer-regression | avatar-ik | `2cf1` | ждёт приёмки/верифицирован | 1/33 | 0 | 0 |
 | legs-ik | avatar-ik | `legs-ik` | нет активных (wip) | 3/45 | 3 | 1 |
 | hand-rig-quality | avatar-grip | `hands-rig-quality` | mef-grip-audit running | 0/4 | 3 | 1 |
@@ -44,7 +44,7 @@
 | arsenal-generator | gameplay | `arsenal-generator` | planning running | 0/42 | 5 | 1 |
 | weapon-system | weapon-system | `weapon-system-expert` | 6 этапов verified | 1/4 | 36 | 2 |
 | bots-fix | bots | `bots-fix` | armed-development running | 0/2 | 72 | 2 |
-| map-runtime-bootstrap | gameplay | `F:/CodexWorktrees/map-runtime-bootstrap/Vr_Battlegrounds_ai` | Claude-агент готовился начать series-smoke-e2e (ждал порты checkout — уже влиты); E2ERunner — каркас launch-infra |
+| map-runtime-bootstrap | launch-infra | `F:/CodexWorktrees/map-runtime-bootstrap/Vr_Battlegrounds_ai` | Claude-агент готовился начать series-smoke-e2e (ждал порты checkout — уже влиты); сценарий согласовать с gameplay |
 | lobby-decoration | level-design | **основной checkout** `F:/UnityProjects` | implementation running | 1/21 | 65 | 2 |
 
 - **Волна 0 — сразу.** Чистые worktree без активной работы; переход почти бесплатный. Проверяет процедуру.
@@ -66,6 +66,8 @@ inbox `expert-workspace-infra`: точка перехода достигнута
 
 ## Приём работы без передачи (Codex без лимитов, остановленный Claude)
 
+Принцип (решение пользователя 2026-10-11): работа каждого прежнего агента переходит к эксперту зоны по карте — для всех задач, независимо от клиента и состояния прежней сессии.
+
 Прежняя сессия не может записать handoff — эксперт восстанавливает его сам по журналам Codex и Claude Code (`session_handoff.py`). Готовые промпты — `handoff/takeover-<task-id>.md`. До rebase в worktree нет
 `Tools/experts` и профилей экспертов, поэтому первая сессия — обычный `claude` в worktree задачи с промптом
 ниже, инструменты берутся из `F:/CodexWorktrees/expert-workspace-infra/Vr_Battlegrounds_ai` (далее `$EW`).
@@ -78,6 +80,9 @@ inbox `expert-workspace-infra`: точка перехода достигнута
 | weapon-system | weapon-system | `F:/CodexWorktrees/weapon-system-expert/Vr_Battlegrounds_ai` | цепочка use-context (6 этапов verified) |
 | vr-test-stand | launch-infra | `F:/CodexWorktrees/vr-test-stand/Vr_Battlegrounds_ai` | активных этапов нет |
 | avatar-renderer-regression | avatar-ik | `F:/CodexWorktrees/2cf1/Vr_Battlegrounds_ai` | ждёт приёмки / архитектура рендереров |
+| legs-ik | avatar-ik | `F:/CodexWorktrees/legs-ik/Vr_Battlegrounds_ai` | Claude; wip-ветка, этапы planned, pose-set ждёт pocket-removal |
+| haptics-system | manipulation | `F:/CodexWorktrees/haptics/Vr_Battlegrounds_ai` | Claude; manipulation-kb running; заменить профиль manipulation |
+| arsenal-generator | gameplay | `F:/CodexWorktrees/arsenal-generator/Vr_Battlegrounds_ai` | Claude; planning running; decorations согласовать с level-design |
 | lobby-decoration | level-design | `F:/UnityProjects/Vr_Battlegrounds_ai` (**основной checkout**) | implementation; rebase — только с согласия пользователя |
 
 Промпт (подставить `<id>`, `<task-id>`):

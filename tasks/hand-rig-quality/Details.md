@@ -507,7 +507,13 @@ Play Mode со сцены Lobby, аватар MEF. Finish accepted, paths=[], re
 - F7: позы Kinemation AK105 (рукоять, цевьё) — пальцы проникают в меш; хороших MEF-хватов
   оружия для эталона сейчас нет.
 - F8: боковые ручки планшета не захватываются MEF (Cyborg — да), хват идёт по центру сквозь экран.
-  Это не поза, а выбор точки/кандидата хвата — нужен разбор с manipulation (зона хвата).
+  **Причина (manipulation, 4169):** в Tablet_Base записи точек 0/1 только для SDK-аватаров
+  (dc011efb, 7195d091, e7468ec6, 8e0e0632), цепочки MEF нет; у DefaultGripPoseInfo align пуст,
+  `_grabProximityTransformUseSelf=1` → proximity = корень планшета, снап в центр; ручки ~0,42м
+  от корня при `_maxDistanceGrab` 0,2. Правила кандидатов не при чём. F8 — частный случай F1:
+  нужна запись с align у ручек; по правилу зоны — на базе кисти `PlayerBase_NonSdkHands`
+  (b2400db8), не на варианте. Попутно: у Cyborg Right Handle `_handPose` пуст. Проверка после
+  записи — проба manipulation `F:/CodexWorktrees/manipulation/Vr_Battlegrounds_ai/tasks/haptics-system/reports/f8/probe.cs`.
 
 ### 1. Полный инвентарь и матрица случаев
 

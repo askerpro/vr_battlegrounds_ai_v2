@@ -126,6 +126,16 @@ namespace VrBattlegrounds.Editor.HandPoseReview.Tests
             Assert.That(s.ExpectedMm, Is.LessThan(s.StartMm));
         }
 
+        [Test] public void BendSolverExtendsPenetratingPad()
+        {
+            // Подушечка на 5 мм внутри коробки: к цели +2 мм ведёт разгиб, а не сгиб «сквозь предмет».
+            var surface = Box();var pad = new Vector3(0, -.035f, .08f);
+            var s = HandPoseBendSolver.Solve(Chain(), pad, new[] {(pad, 2)}, p => HandPoseContactMetrics.SignedMm(surface, p), 2, 10);
+            Assert.That(s.StartMm, Is.EqualTo(-5).Within(.01));
+            Assert.That(s.CurlDeg, Is.LessThan(0));Assert.That(s.Converged, Is.True);
+            Assert.That(s.ExpectedMm, Is.EqualTo(2).Within(.3));
+        }
+
         [Test] public void ChainApplyKeepsSegmentHierarchy()
         {
             var chain = Chain();var tip = new Vector3(0, 0, .085f);

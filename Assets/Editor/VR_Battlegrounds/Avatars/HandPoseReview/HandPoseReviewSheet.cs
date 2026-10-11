@@ -29,8 +29,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview
     public static class HandPoseReviewSheet
     {
         static readonly Color Background = new Color(.08f, .10f, .13f), Band = new Color(.04f, .05f, .07f);
-        static readonly Color Inside = new Color(1, .12f, .1f), Touch = new Color(.15f, .95f, .3f), GapNear = new Color(.55f, .8f, 1f), GapFar = new Color(.1f, .2f, .8f), Far = new Color(.55f, .55f, .6f);
-        static readonly Color ObjectColor = new Color(.72f, .73f, .76f);
+        static readonly Color Inside = new Color(1, .12f, .1f), Touch = new Color(.15f, .95f, .3f), GapNear = new Color(.55f, .8f, 1f), GapFar = new Color(.1f, .2f, .8f), Far = new Color(.86f, .66f, .5f);
+        static readonly Color ObjectColor = new Color(.6f, .62f, .66f);
         public const float FarMm = 20, MarginMeters = .025f, ScaleBarMm = 20;
 
         public static Color SeverityColor(string severity) => severity == "gross" ? new Color(1, .25f, .2f) : severity == "notable" ? new Color(1, .65f, .1f) : new Color(.35f, .95f, .45f);
@@ -169,7 +169,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
 
         static void Annotate(Texture2D t, Camera camera, Vector3 center, float size, string caption, FitReviewState state)
         {
-            int w = t.width, scale = Math.Max(1, w / 256), line = 9 * scale;
+            int w = t.width, scale = Math.Max(1, Mathf.RoundToInt(w / 256f)), line = 9 * scale;
             Fill(t, 0, t.height - line - 4, w, t.height, Band);FitRasterLabels.Text(t, 6, t.height - 3, caption, scale, Color.white);
             // Линейка 20 мм внизу слева.
             int bar = Mathf.RoundToInt(w * ScaleBarMm * .001f / size);
@@ -177,10 +177,18 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             if (state.Metrics == null) return;
             Vector3 right = camera.transform.right, up = camera.transform.up;
             var placed = new List<RectInt>();
-            foreach (var f in state.Metrics.Fingers.Where(x => x.Status == "measured").OrderByDescending(x => Vector3.Dot(x.PadPointMeters - center, up))) {
+            var measured = state.Metrics.Fingers.Where(x => x.Status == "measured").OrderByDescending(x => Vector3.Dot(x.PadPointMeters - center, up)).ToList();
+            int X(Vector3 p) => Mathf.RoundToInt((Vector3.Dot(p - center, right) / size + .5f) * w);
+            int Y(Vector3 p) => Mathf.RoundToInt((Vector3.Dot(p - center, up) / size + .5f) * t.height);
+            // Сначала все точки подушечек, затем подписи: подпись не закрывается чужой точкой.
+            foreach (var f in measured) {
+                var v = state.Verdict?.Fingers.FirstOrDefault(x => x.Finger == f.Finger);int px = X(f.PadPointMeters), py = Y(f.PadPointMeters);
+                Fill(t, px - 2 * scale - 1, py - 2 * scale - 1, px + 2 * scale + 2, py + 2 * scale + 2, Band);Fill(t, px - 2 * scale, py - 2 * scale, px + 2 * scale + 1, py + 2 * scale + 1, SeverityColor(v?.Severity));
+                placed.Add(new RectInt(px - 2 * scale - 1, py - 2 * scale - 1, 4 * scale + 3, 4 * scale + 3));
+            }
+            foreach (var f in measured) {
                 var v = state.Verdict?.Fingers.FirstOrDefault(x => x.Finger == f.Finger);Color color = SeverityColor(v?.Severity);
-                int px = Mathf.RoundToInt((Vector3.Dot(f.PadPointMeters - center, right) / size + .5f) * w), py = Mathf.RoundToInt((Vector3.Dot(f.PadPointMeters - center, up) / size + .5f) * t.height);
-                Fill(t, px - 2 * scale - 1, py - 2 * scale - 1, px + 2 * scale + 2, py + 2 * scale + 2, Band);Fill(t, px - 2 * scale, py - 2 * scale, px + 2 * scale + 1, py + 2 * scale + 1, color);
+                int px = X(f.PadPointMeters), py = Y(f.PadPointMeters);
                 string text = Short(f.Finger) + " " + Mm(f.PadSignedDistanceMm) + (v != null && v.Severity != "ok" ? " " + (v.Severity == "gross" ? "G" : "N") : "");
                 int tw = FitRasterLabels.Width(text, scale) + 4, th = 7 * scale + 4;
                 int tx = px + 4 * scale + tw < w ? px + 4 * scale : px - 4 * scale - tw, ty = Mathf.Clamp(py + th / 2, th + 2, t.height - line - 6);
@@ -195,7 +203,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         {
             int rows = panels.GetLength(0), cols = panels.GetLength(1), size = panels[0, 0].width;
             int width = cols * size, scale = width >= 1400 ? 2 : Math.Max(1, width / 600), line = 9 * scale + 4;
-            var legend = new List<(Color, string)> {(Inside, "INSIDE"), (Touch, "TOUCH +-2MM"), (GapNear, "GAP 2MM"), (GapFar, "GAP 20MM"), (Far, "FAR >20MM")};
+            var legend = new List<(Color, string)> {(Inside, "INSIDE"), (Touch, "TOUCH +-2MM"), (GapNear, "GAP 2MM"), (GapFar, "GAP 20MM"), (Far, "HAND FAR >20MM"), (ObjectColor, "OBJECT")};
             int headerHeight = header.Count * line + 6, footerHeight = (footer.Count + 2) * line + 8;
             int height = headerHeight + rows * size + footerHeight;
             var sheet = new Texture2D(width, height, TextureFormat.RGB24, false);

@@ -89,7 +89,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         /// <summary>
         /// Роль точки: оружие — точка спуска (pistol_grip), другая точка корневого grabbable (foregrip),
         /// магазин (pinch_small), другой дочерний grabbable оружия (pump). Без оружия: магазин/патрон — pinch_small,
-        /// ограниченный grabbable — handle, свободный мелкий предмет — pinch_small, крупный — handle.
+        /// механизм с закреплённым перемещением — handle, мелкий предмет (габарит < 15 см) — pinch_small, крупный — handle.
         /// </summary>
         public static string DetectGripType(UxrGrabbableObject grabbable, int point, out string reason)
         {
@@ -104,7 +104,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 reason = "weapon_child_grabbable";return "pump";
             }
             if (magazine) {reason = "magazine_or_ammo";return "pinch_small";}
-            if (grabbable.IsConstrained) {reason = "constrained_grabbable";return "handle";}
+            // Закреплённый на месте механизм (рычаг, ручка генератора): перемещение Locked, допускается только поворот.
+            // Ограничение смещения само по себе не делает предмет ручкой: батарейка SDK — RestrictLocalOffset.
+            if (grabbable.TranslationConstraint == UxrTranslationConstraintMode.Locked) {reason = "translation_locked_mechanism";return "handle";}
             float size = RendererExtent(grabbable.transform);
             reason = (size < SmallObjectMaxMeters ? "small_object_" : "large_object_") + (size * 1000).ToString("0", CultureInfo.InvariantCulture) + "mm";
             return size < SmallObjectMaxMeters ? "pinch_small" : "handle";

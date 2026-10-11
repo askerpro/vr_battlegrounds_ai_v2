@@ -113,7 +113,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         public const float MinDeg = -45, MaxDeg = 60, ScanStepDeg = 2;
 
         /// <summary>
-        /// Угол curl, приводящий знаковое расстояние подушечки к цели; если по пути глубина пальца выходит за предел —
+        /// Угол curl, приводящий знаковое расстояние подушечки к цели (зазор — сгибом, проникновение — разгибом,
+        /// первое пересечение от текущей позы); если по пути глубина пальца выходит за предел —
         /// наибольший по модулю угол в сторону цели без превышения (DepthLimited).
         /// </summary>
         public static FitBendSolution Solve(FitFingerChain chain, Vector3 padPoint, IReadOnlyList<(Vector3 point, int segment)> depthPoints, Func<Vector3, double> signedMm, double targetMm, double depthLimitMm)
@@ -124,23 +125,25 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             s.DepthLimitMm = Math.Max(depthLimitMm, s.StartDepthMm);
             Vector3 moved = chain.Apply(padPoint, 2, 10) - padPoint;s.CurlTowardPalmMmPer10Deg = Vector3.Dot(moved, chain.FingerprintDirection.normalized) * 1000;
 
-            // Скан с шагом 2°, затем бисекция на ближайшем к нулю пересечении цели.
-            var angles = new List<float>();for (float a = MinDeg; a <= MaxDeg + 1e-3f; a += ScanStepDeg) angles.Add(a);
+            // Направление по физике хвата: зазор закрывается сгибом к ладони, проникновение — разгибом. Иначе ближайшее
+            // пересечение цели может оказаться «сквозь предмет» (подушечка выходит с другой стороны рукояти).
+            int toward = s.CurlTowardPalmMmPer10Deg >= 0 ? 1 : -1, direction = s.StartMm > targetMm ? toward : -toward;
+            // Скан от 0 в выбранную сторону с шагом 2°, бисекция на первом пересечении цели.
+            var angles = new List<float>();float limit = direction > 0 ? MaxDeg : -MinDeg;
+            for (float a = 0; a <= limit + 1e-3f; a += ScanStepDeg) angles.Add(direction * a);
             var values = angles.Select(Pad).ToArray();
             float best = 0;double bestError = Math.Abs(s.StartMm - targetMm);bool crossed = false;
-            for (int i = 0; i + 1 < angles.Count; i++) {
+            for (int i = 0; i + 1 < angles.Count && !crossed; i++) {
                 double e0 = values[i] - targetMm, e1 = values[i + 1] - targetMm;
                 if (e0 == 0 || e0 * e1 < 0) {
                     float lo = angles[i], hi = angles[i + 1];
                     for (int k = 0; k < 24; k++) {float mid = (lo + hi) / 2;if ((Pad(lo) - targetMm) * (Pad(mid) - targetMm) <= 0) hi = mid;else lo = mid;}
-                    float root = (lo + hi) / 2;
-                    if (!crossed || Mathf.Abs(root) < Mathf.Abs(best)) {best = root;bestError = Math.Abs(Pad(root) - targetMm);}
-                    crossed = true;
+                    best = (lo + hi) / 2;bestError = Math.Abs(Pad(best) - targetMm);crossed = true;
                 }
-                if (!crossed && Math.Abs(e0) < bestError) {best = angles[i];bestError = Math.Abs(e0);}
+                else if (Math.Abs(e1) < bestError) {best = angles[i + 1];bestError = Math.Abs(e1);}
             }
             s.Converged = crossed;
-            if (!crossed) s.Note = "цель вне достижимого диапазона curl [" + MinDeg + "; " + MaxDeg + "]°: взят угол с наименьшей ошибкой";
+            if (!crossed) s.Note = "цель не достигается " + (direction * toward > 0 ? "сгибом" : "разгибом") + " в пределах " + limit + "°: взят угол с наименьшей ошибкой";
             // Ограничение глубины: бисекция по доле пути 0..best (глубина считается монотонной по пути).
             if (Depth(best) > s.DepthLimitMm + .05) {
                 float lo = 0, hi = best;

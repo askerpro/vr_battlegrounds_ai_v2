@@ -21,15 +21,15 @@
 
 | Этап | Суть | Состояние |
 |---|---|---|
-| `death-release-authority` | Сначала стенд/лог (дубль подтвердить), затем сброс только у автора аватара (`StateEventAuthority`): бот — сервер, человек — владелец | не начат |
+| `death-release-authority` | Прогон 2026-10-12: отпускание и сама смерть до клиентов не доходят ([факты](changelog/2026-10-12-death-probe.md)). Вариант C network 4303: реализация — в совместном этапе gameplay `death-body-defer/deferred-body` (наш zone-ack на `PlayerGrabManager`); у нас — ревью диффа хвата и прогон-проверка | остановлен в пользу `death-body-defer` |
 | `held-motion` | SDK-патч (номер — `patch-reserve`): сопротивление только у автора держащего аватара и относительно его корня; ACK weapon-system по значениям в префабах; шлем с двумя клиентами | после `death-release-authority` |
 
 ## Синхронизация
 
-- bots-fix: их `pf-equipment` ставит `after` на `grab-authority/death-release-authority`; их этап `held-motion` снят (4228).
+- bots-fix: их `pf-equipment` ставит `after` на `death-body-defer/deferred-body`; их этап `held-motion` снят (4228).
 - weapon-system: значения сопротивления в префабах оружия — их; ACK до `held-motion`.
 - network: ревью сетевой части (автор ownerless-аватара, поздний вход).
 
 ## Следующий шаг
 
-`death-release-authority`: стенд Server + 2 клиента, смерть с оружием в руках — лог `ReleaseObject` на каждой машине.
+Ревью диффа gameplay `death-body-defer/deferred-body` и прогон-проверка (как тикет 453); затем `held-motion`.

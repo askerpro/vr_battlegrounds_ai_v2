@@ -34,6 +34,7 @@ namespace VrBattlegrounds.Haptics
             public int Id;
             public UxrHapticWaveform Waveform;
             public UxrHapticPriority Priority;
+            public float ClipGain;
             public float Gain;
             public float GapSeconds;
             public float Start;
@@ -75,7 +76,7 @@ namespace VrBattlegrounds.Haptics
 
             var voice = new Voice
             {
-                Id = _nextId++, Waveform = clip.Waveform, Priority = clip.Priority, Gain = total,
+                Id = _nextId++, Waveform = clip.Waveform, Priority = clip.Priority, ClipGain = clip.WaveformGain, Gain = total,
                 GapSeconds = clip.RepeatGapMs * 0.001f, Start = now, Continuous = continuous
             };
             hand.Voices.Add(voice);
@@ -97,6 +98,25 @@ namespace VrBattlegrounds.Haptics
                     return;
                 }
             }
+        }
+
+        /// <summary>
+        /// Сменить множитель вызова у звучащего голоса: итоговая сила — сила клипа × <paramref name="gain" />. Мотор получает
+        /// новую силу сразу, если она изменилась. false — голоса уже нет.
+        /// </summary>
+        public bool SetGain(int voiceId, float gain, float now)
+        {
+            for (int h = 0; h < _hands.Length; h++)
+            {
+                foreach (Voice voice in _hands[h].Voices)
+                {
+                    if (voice.Id != voiceId) continue;
+                    voice.Gain = voice.ClipGain * Mathf.Max(0f, gain);
+                    Output((UxrHandSide)h, now, force: false);
+                    return true;
+                }
+            }
+            return false;
         }
 
         public bool IsActive(int voiceId)

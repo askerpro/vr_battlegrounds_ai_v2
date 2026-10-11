@@ -166,6 +166,9 @@ namespace UltimateXR.Devices.Integrations
         /// <inheritdoc />
         public override void SendHapticFeedback(UxrHandSide handSide, UxrHapticClip hapticClip)
         {
+            // VR Battlegrounds patch 65: запрос уходит игровому сервису вибрации, SDK мотор не трогает.
+            if (UxrHapticRouting.TryRoute(UxrHapticRequest.ForClip(this, handSide, hapticClip))) return;
+
             InputDevice inputDevice = GetInputDevice(handSide);
 
             if (!inputDevice.isValid)
@@ -249,6 +252,9 @@ namespace UltimateXR.Devices.Integrations
                                                 float         durationSeconds,
                                                 UxrHapticMode hapticMode = UxrHapticMode.Mix)
         {
+            // VR Battlegrounds patch 65: запрос уходит игровому сервису вибрации, SDK мотор не трогает.
+            if (UxrHapticRouting.TryRoute(UxrHapticRequest.ForRaw(this, handSide, frequency, amplitude, durationSeconds, hapticMode))) return;
+
             InputDevice inputDevice = GetInputDevice(handSide);
 
             if (!inputDevice.isValid)
@@ -315,6 +321,9 @@ namespace UltimateXR.Devices.Integrations
         /// <inheritdoc />
         public override void StopHapticFeedback(UxrHandSide handSide)
         {
+            // VR Battlegrounds patch 65: запрос уходит игровому сервису вибрации, SDK мотор не трогает.
+            if (UxrHapticRouting.TryRoute(UxrHapticRequest.ForStop(this, handSide))) return;
+
             InputDevice inputDevice = GetInputDevice(handSide);
 
             if (!inputDevice.isValid)

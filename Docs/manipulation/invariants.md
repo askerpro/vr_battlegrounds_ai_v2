@@ -75,12 +75,16 @@
 
 25. **Один писатель мотора.** Мотор пишет только `UnityXRHapticDevice` по команде `HapticMixer` внутри `HapticService`.
     Остальные — `HapticService.Play/PlayBoth/Begin` с `UxrHapticClip`. Сторож — `HapticOwnershipTests` (временные
-    исключения — список `Pending` с владельцем задачи; сейчас `WeaponHapticOutput.cs` weapon-system до `sdk-routing`).
+    исключения — список `Pending` с владельцем задачи). Вибрации SDK идут в сервис через маршрутизатор патча 65 —
+    прямой вызов SDK в игровом коде всё равно запрещён (сторож проверяет и 4 точки `TryRoute`).
 26. **Только своя рука.** Рука чужого аватара, бота или `null` — no-op (`HapticService.IsLocalHand`). Сетевых
     вибраций не бывает.
-27. **Клип без формы — тишина.** Форма — общий ассет `Assets/Data/Haptics/Waveforms/`; клип ссылается только на формы
+27. **Клип без формы — тишина** (кроме запросов SDK: им запасной клип по типу из `SdkHapticFallbacks`, решение
+    2026-10-11). Форма — общий ассет `Assets/Data/Haptics/Waveforms/`; клип ссылается только на формы
     проекта (`HapticWaveformTests`). Импульс короче 30 мс на LRA Quest 2 не ощущается.
 28. **Приоритеты:** Low < Normal < High < Critical. Слышен высший; `Normal` смешивается по максимуму; разовый поверх
     непрерывного; непрерывный `Low` под высшим — на паузе; пауза повтора не занимает мотор; кулдаун — на (клип, рука)
     (`HapticMixerTests`).
 29. **Вторая рука** на том же предмете — роль `Secondary`, сила × `SecondaryHandGain` клипа (`InteractionFeedbackTests`).
+30. **Перехват SDK (патч 65) принимает каждый запрос** и не зовёт SDK для вывода; без установленного маршрутизатора SDK
+    ведёт себя как до патча. Правка 4 точек в `Devices/` — только по ACK avatar-ik (`SdkHapticRouterTests`, `HapticOwnershipTests`).

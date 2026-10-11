@@ -44,9 +44,9 @@
 | 66 | `Haptics/UxrHapticClip.cs`, `UxrHapticWaveform.cs`, `UxrHapticPriority.cs` | форма, сила, приоритет, пауза, кулдаун, вторая рука в клипе — [запись](../../tasks/haptics-system/changelog/2026-10-08-sdk-66.md) |
 | 67 | `UxrGrabManager.cs` (`UpdateAffordances`), `UxrGrabManager.GrabCandidates.cs` | кандидат хвата руки — [запись](../../tasks/haptics-system/changelog/2026-10-09-sdk-67.md) |
 | T-39 | `UxrGrabManager.PlacementReadiness.cs`, `.WeaponHandoff.cs`, `UxrManipulationEventArgs.cs` | `GetAnchorPlacementCandidate`; свежий снимок позы в Grabbing |
-| 65 (резерв) | `Devices/UxrControllerInput.cs`, `UxrUnityXRControllerInput.cs`, `Haptics/UxrHapticRouting.cs` | перехват вибраций SDK — этап `sdk-routing`, не реализован |
+| 65 | `Devices/UxrControllerInput.cs`, `UxrUnityXRControllerInput.cs`, `Haptics/UxrHapticRouting.cs` | перехват вибраций SDK в `HapticService` (`SdkHapticRouter`) — [запись](../../tasks/haptics-system/changelog/2026-10-11-sdk-65.md) |
 
-`UxrManipulationHapticFeedback` и `SendHapticFeedback` SDK пока без патчей — они вибрируют мимо сервиса до `sdk-routing`.
+Клики `UxrManipulationHapticFeedback` на 6 префабах звучат запасной формой Click; свои клипы им даст этап `item-clicks`.
 
 ## Известные проблемы и симптомы
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -66,6 +67,71 @@ namespace VrBattlegrounds.Tests.Haptics
 
             Assert.IsEmpty(stale, "Файл переведён или удалён — убрать его из HapticOwnershipTests.Pending:\n" +
                                   string.Join("\n", stale));
+        }
+
+        private const string PatchMark = "VR Battlegrounds patch 65";
+        private const string SdkDevices = "ThirdParty/UltimateXR/Runtime/Scripts/Devices/";
+
+        /// <summary>
+        /// Точки SDK, где запрос вибрации первым делом уходит <c>HapticService</c> через <c>UxrHapticRouting</c> (SDK-патч 65,
+        /// <c>tasks/haptics-system/Details.md</c> §6 п. 3): путь от Assets, метод и фабрика запроса. Прямые вызовы мотора в этих
+        /// файлах остаются (ветка SDK без маршрутизатора) и правилом владельца выше не прощаются.
+        /// </summary>
+        private static readonly (string path, string method, string request)[] RoutedSdkPoints =
+        {
+            (SdkDevices + "UxrControllerInput.cs", "SendHapticFeedback", "ForClipType"),
+            (SdkDevices + "Integrations/UxrUnityXRControllerInput.cs", "SendHapticFeedback", "ForClip"),
+            (SdkDevices + "Integrations/UxrUnityXRControllerInput.cs", "SendHapticFeedback", "ForRaw"),
+            (SdkDevices + "Integrations/UxrUnityXRControllerInput.cs", "StopHapticFeedback", "ForStop"),
+        };
+
+        /// <summary>
+        /// Вибрации UltimateXR перехватываются: в каждой точке первая инструкция метода — <c>UxrHapticRouting.TryRoute</c> с
+        /// меткой патча. Без неё SDK снова пишет в мотор в обход сервиса и обрывает его вибрацию.
+        /// </summary>
+        [Test]
+        public void Вибрация_SDK_маршрутизируется_патчем_65()
+        {
+            var errors = new List<string>();
+            foreach ((string path, string method, string request) in RoutedSdkPoints)
+            {
+                string file = Path.Combine(Application.dataPath, path);
+                if (!File.Exists(file))
+                {
+                    errors.Add($"{path}: файла нет");
+                    continue;
+                }
+
+                string[] lines = File.ReadAllLines(file);
+                var route = new Regex(@"^\s*if\s*\(\s*UxrHapticRouting\.TryRoute\(\s*UxrHapticRequest\." + request +
+                                      @"\(\s*this\s*,\s*handSide\b.*\)\)\s*return\s*;");
+                int at = Array.FindIndex(lines, l => route.IsMatch(l));
+                if (at < 0)
+                {
+                    errors.Add($"{path}: нет перехвата UxrHapticRouting.TryRoute(UxrHapticRequest.{request}(this, handSide, …))");
+                    continue;
+                }
+
+                string mark = at > 0 ? lines[at - 1].Trim() : "";
+                if (!mark.StartsWith("//") || !mark.Contains(PatchMark))
+                    errors.Add($"{path}:{at + 1}: перед перехватом нет комментария «{PatchMark}»");
+
+                // Перехват — первая инструкция метода: между заголовком и ним только параметры и скобка.
+                var header = new Regex(@"\bvoid\s+" + method + @"\s*\(");
+                int start = at - 1;
+                while (start >= 0 && at - start <= 12 && !header.IsMatch(lines[start])) start--;
+                if (start < 0 || !header.IsMatch(lines[start]))
+                    errors.Add($"{path}:{at + 1}: перехват {request} не в методе {method}");
+                else if (lines.Skip(start).Take(at - start).Any(l => !l.TrimStart().StartsWith("//") && l.Contains(";")))
+                    errors.Add($"{path}:{at + 1}: перехват {request} — не первая инструкция {method}");
+            }
+
+            string routing = Path.Combine(Application.dataPath, "ThirdParty/UltimateXR/Runtime/Scripts/Haptics/UxrHapticRouting.cs");
+            if (!File.Exists(routing) || !File.ReadAllText(routing).Contains(PatchMark))
+                errors.Add($"UxrHapticRouting.cs: нет файла или метки «{PatchMark}»");
+
+            Assert.IsEmpty(errors, "SDK-патч 65 нарушен — вибрации UltimateXR пишут в мотор в обход HapticService:\n" +
+                                   string.Join("\n", errors));
         }
 
         private static IEnumerable<(string path, int line, string text)> FindDirectCalls()

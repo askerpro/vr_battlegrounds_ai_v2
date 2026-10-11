@@ -416,6 +416,9 @@ namespace UltimateXR.Devices
                                        float             durationSeconds = -1.0f,
                                        UxrHapticMode     hapticMode      = UxrHapticMode.Mix)
         {
+            // VR Battlegrounds patch 65: запрос уходит игровому сервису вибрации до разворота в корутину.
+            if (UxrHapticRouting.TryRoute(UxrHapticRequest.ForClipType(this, handSide, clipType, amplitude, durationSeconds, hapticMode))) return;
+
             StartCoroutine(SendHapticFeedbackCoroutine(handSide, clipType, amplitude, durationSeconds, hapticMode));
         }
 

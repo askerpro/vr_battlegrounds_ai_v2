@@ -64,9 +64,14 @@ SDK владеет состоянием хвата (кто что держит, 
   `UxrHapticWaveform` + сила, приоритет, пауза повтора, кулдаун, вторая рука. Рука чужого/бота — тишина.
 - Голоса: разовый (`Play`) и непрерывный (`Begin` → `HapticHandle`, живёт пока жив owner). До 8 голосов на руку.
 - Подбор: окно `Tools/VR Battlegrounds/Haptics/Вибрация`, drawer клипа с пробой на руках в Play, автозапись при выходе.
-- Вибрации SDK (`UxrManipulationHapticFeedback`, `SendHapticFeedback` в компонентах SDK) пока идут мимо сервиса —
-  их перехватит `sdk-routing` (патч 65). Отдачу weapon-system пока даёт временный `WeaponHapticOutput` (контракт
-  `contracts/haptics-api.md`: потребитель зовёт `HapticService.Play(clip, руку)`).
+- Вибрации SDK перехватывает патч 65 (`Haptics/UxrHapticRouting.cs`, первой строкой в
+  `UxrControllerInput.SendHapticFeedback(ClipType)` и трёх override `UxrUnityXRControllerInput`): маршрутизатор
+  `SdkHapticRouter` (ставит `HapticService`) переводит запрос в голос сервиса и принимает каждый запрос — мотор SDK не
+  трогает. Чужой аватар — тишина; клип с формой — как есть; без формы и тип SDK — запасной клип типа из
+  `Resources/SdkHapticFallbacks.asset` (числа подбирает пользователь); сырой запрос и гул Rumble — один продлеваемый голос
+  со сроком; `Stop` гасит только голоса маршрутизатора. Отдачу Shot* гасит ствол с `IWeaponRecoilHapticsOwner`
+  (контракт `haptics-api`). Router без сервиса — `null`, SDK как до патча; сброс в `SubsystemRegistration`.
+  Временный `WeaponHapticOutput` weapon-system и прочие прямые вызовы из `Pending` звучат через маршрутизатор.
 
 ## 7. Отклик взаимодействий
 

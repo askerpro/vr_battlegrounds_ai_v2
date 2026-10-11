@@ -15,7 +15,8 @@ namespace VrBattlegrounds.Haptics
     /// Единственный владелец вибромоторов контроллеров (<c>tasks/haptics-system/Details.md</c>). Остальной код и компоненты
     /// просят сыграть <see cref="UxrHapticClip" /> с формой (<see cref="UxrHapticWaveform" />, SDK-патч 66): форма — общий
     /// ассет, сила, приоритет, пауза повтора и кулдаун — в клипе точки интеграции. Смешивание — <see cref="HapticMixer" />,
-    /// запись в мотор — <see cref="UnityXRHapticDevice" />.
+    /// запись в мотор — <see cref="UnityXRHapticDevice" />. Вибрации UltimateXR перехватывает SDK-патч 65 и отдаёт сервису
+    /// через <see cref="SdkHapticRouter" />: его ставит и снимает сервис.
     ///
     /// <para>
     /// Вибрация только на руке локального игрока: вызов с грабером чужого аватара или бота — no-op. Поэтому
@@ -35,9 +36,12 @@ namespace VrBattlegrounds.Haptics
         private static HapticService s_instance;
 
         private readonly List<(int voice, Object owner)> _owned = new List<(int, Object)>();
+        private readonly Dictionary<int, float> _timedUntil = new Dictionary<int, float>();
+        private readonly List<int> _expired = new List<int>();
         private UnityXRHapticDevice _device;
         private HapticMixer _mixer;
         private UxrAvatar _localAvatar;
+        private SdkHapticRouter _sdkRouter;
 
         // ---------- API ----------
 
@@ -84,9 +88,50 @@ namespace VrBattlegrounds.Haptics
             if (s_instance == null || voice == 0) return;
             s_instance._mixer.End(voice, Now);
             s_instance._owned.RemoveAll(o => o.voice == voice);
+            s_instance._timedUntil.Remove(voice);
         }
 
         internal static bool IsActive(int voice) => s_instance != null && voice != 0 && s_instance._mixer.IsActive(voice);
+
+        // ---------- Голоса маршрутизатора SDK (патч 65, SdkHapticRouter) ----------
+
+        /// <summary>
+        /// Разовый клип на руке локального игрока; возвращает id голоса (0 — отброшен). Id нужен маршрутизатору SDK, чтобы
+        /// остановка SDK гасила только его голоса.
+        /// </summary>
+        internal static int PlayVoice(UxrHapticClip clip, UxrHandSide side, float gain)
+        {
+            if (s_instance == null) return 0;
+            return s_instance.StartVoice(clip, side, gain, HapticHandRole.Primary, continuous: false, owner: null);
+        }
+
+        /// <summary>
+        /// Голос на срок: форма повторяется с паузой клипа до <c>сейчас + seconds</c>, затем голос заканчивается сам.
+        /// Возвращает id голоса или 0, если запуск отброшен.
+        /// </summary>
+        internal static int BeginTimed(UxrHapticClip clip, UxrHandSide side, float gain, float seconds)
+        {
+            if (s_instance == null || seconds <= 0f) return 0;
+            int voice = s_instance.StartVoice(clip, side, gain, HapticHandRole.Primary, continuous: true, owner: null);
+            if (voice != 0) s_instance._timedUntil[voice] = Now + seconds;
+            return voice;
+        }
+
+        /// <summary>
+        /// Продлить голос на срок из <see cref="BeginTimed" />: новый конец — <c>сейчас + seconds</c>, новая сила вызова
+        /// <paramref name="gain" />. false — голос уже закончился (тогда нужен новый).
+        /// </summary>
+        internal static bool ExtendTimed(int voice, float gain, float seconds)
+        {
+            if (s_instance == null || voice == 0 || !s_instance._timedUntil.ContainsKey(voice)) return false;
+            if (!s_instance._mixer.SetGain(voice, gain, Now))
+            {
+                s_instance._timedUntil.Remove(voice);
+                return false;
+            }
+            s_instance._timedUntil[voice] = Now + Mathf.Max(0f, seconds);
+            return true;
+        }
 
         // ---------- Диагностика (окно подбора) ----------
 
@@ -142,6 +187,10 @@ namespace VrBattlegrounds.Haptics
             s_instance = this;
             _device = new UnityXRHapticDevice();
             _mixer = new HapticMixer(_device);
+
+            // Вибрации UltimateXR (патч 65) идут через сервис: у мотора один писатель.
+            _sdkRouter = new SdkHapticRouter(SdkHapticFallbacks.Instance);
+            _sdkRouter.Install();
         }
 
         private void OnEnable() => UxrHapticWaveform.Changed += OnWaveformChanged;
@@ -157,7 +206,9 @@ namespace VrBattlegrounds.Haptics
 
         private void OnDestroy()
         {
-            if (s_instance == this) s_instance = null;
+            if (s_instance != this) return;
+            _sdkRouter?.Uninstall();
+            s_instance = null;
         }
 
         private void OnApplicationPause(bool paused)
@@ -174,6 +225,8 @@ namespace VrBattlegrounds.Haptics
                 if (_localAvatar != null) StopAllVoices();
                 _localAvatar = local;
             }
+
+            ExpireTimedVoices();
 
             for (int i = _owned.Count - 1; i >= 0; i--)
             {
@@ -206,6 +259,21 @@ namespace VrBattlegrounds.Haptics
         {
             _mixer.StopAll();
             _owned.Clear();
+            _timedUntil.Clear();
+        }
+
+        private void ExpireTimedVoices()
+        {
+            if (_timedUntil.Count == 0) return;
+            float now = Now;
+            foreach (KeyValuePair<int, float> timed in _timedUntil)
+                if (now >= timed.Value || !_mixer.IsActive(timed.Key)) _expired.Add(timed.Key);
+            foreach (int voice in _expired)
+            {
+                _mixer.End(voice, now);
+                _timedUntil.Remove(voice);
+            }
+            _expired.Clear();
         }
     }
 

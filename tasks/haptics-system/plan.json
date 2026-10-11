@@ -143,10 +143,13 @@
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Devices/UxrControllerInput.cs",
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Devices/Integrations/UxrUnityXRControllerInput.cs",
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Haptics/UxrHapticRouting.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Haptics/UxrHapticRouting.cs.meta",
         "Assets/Scripts/Haptics/**",
         "Assets/Data/Haptics/**",
-        "Assets/Resources/HapticRoles.asset",
+        "Assets/Resources/SdkHapticFallbacks.asset",
+        "Assets/Resources/SdkHapticFallbacks.asset.meta",
         "Assets/Tests/EditMode/Haptics/**",
+        "Docs/manipulation/**",
         "tasks/haptics-system/**"
       ],
       "after": [

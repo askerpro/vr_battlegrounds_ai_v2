@@ -17,4 +17,10 @@
 - После приёмки удаляются `BotClipBody` (AimPitch), `BotAvatarSpawnRegistry` и регистрация префабов в
   `GameNetworkManager.OnStartClient`. Тогда условие 3611 снимается вместе с кодом, если эта ветка не вольётся раньше.
 
+Уточнение bots (4213): новая модель строится от `origin/dev`. Клиповый путь не вливается, поэтому
+`PlayerSession._botControlled`/`BotAvatarSource`, `BotAvatarSpawnRegistry` и `RegisterClientPrefabs` в dev не
+попадут. Признак бота только серверный (`BotDirector.IsBot`), тело выбирается через `TeamAvatarStrategy` (gameplay
+4204). Клиентам признак не нужен. Условие 3611 снято. Возражений нет: бот-сессия без соединения и с пустым
+deviceToken в восстановление не попадает.
+
 Этап 2 (ярус C): ServerOnly + 2 клиента, хост, поздний клиент к бою с вооружённым ботом, reconnect; байт/с.

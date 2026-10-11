@@ -264,18 +264,41 @@ namespace VrBattlegrounds.Player.Avatars
         /// <summary>
         /// Тело к состоянию сессии — сейчас, с верхнего уровня. Желаемое тело выбирается здесь, по
         /// текущему состоянию: смерть и возрождение одного кадра дают ноль замен, а не две.
+        ///
+        /// <para>
+        /// Замены нет, а тело мертво (стратегия без призрака): руки отпускает сервер здесь же
+        /// (<see cref="AvatarTeardown.ReleaseHandsOnServer"/>) — иначе мёртвое тело держало бы предмет
+        /// до возрождения. Живое тело (возрождение) ничего не отпускает.
+        /// </para>
         /// </summary>
         private void ReconcileBodyNow(PlayerSession session, string reason)
         {
+            // Зовут только с верхнего уровня (ServerReconcileBody при CanReplaceBodyNow, очередь из LateUpdate).
+            if (!CanReplaceBodyNow())
+                GameLog.Error($"[AvatarManager] {session.PlayerName}: смена тела ({reason}) исполняется внутри синхронизации UltimateXR — нарушен порядок death-body-defer.");
+
             // Тела нет (смена карты) — его создаст спавн уже по состоянию.
             PlayerController current = session.ActiveAvatar;
             if (current == null) return;
 
             GameObject desired = PrefabFor(session.TeamIndex, session.AvatarIndex, session, _combatAvatarStrategy, _playerPrefab);
-            if (desired == null || current.SourcePrefab == desired) return;
+            if (desired == null || current.SourcePrefab == desired)
+            {
+                // IsAlive после Die: Life = 0 (DieInternal) и выбывание на сессии — мёртв по обоим.
+                // Призрак тоже «мёртв», но он и есть тело выбывшего и держит свой планшет — не трогаем.
+                if (!current.IsAlive && !IsGhostBody(current)) AvatarTeardown.ReleaseHandsOnServer(current, reason);
+                return;
+            }
 
             GameLog.Player.Info($"[AvatarManager] {session.PlayerName}: тело → {desired.name} ({reason}).");
             ReplaceBody(session.connectionToClient, session, desired, confiscate: false, reason);
+        }
+
+        /// <summary>Тело — призрак стратегии (<see cref="TeamAvatarStrategy.GhostPrefab"/>).</summary>
+        private bool IsGhostBody(PlayerController body)
+        {
+            GameObject ghost = _combatAvatarStrategy is TeamAvatarStrategy team ? team.GhostPrefab : null;
+            return ghost != null && body.SourcePrefab == ghost;
         }
 
         // ── Отложенная смена тела (death-body-defer) ───────────────────────────────────────────

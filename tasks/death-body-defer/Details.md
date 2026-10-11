@@ -19,7 +19,7 @@
 | Вызов | Откуда | Внутри синхронизации? |
 |---|---|---|
 | `ServerReconcileBody("смерть")` | `PlayerController.Die` ← `OnActorDied` ← `UxrActor.DieInternal` | да (сервер, `BeginSync` смерти) → отложенно |
-| `ServerReconcileBody(reason)` | `ServerEliminateSilently`: `EliminationMode` «бой кончился» (может прийти из цепочки смерти) / «новый аватар в матче» (из `Admit` внутри `ReplaceBody`) | по обстоятельствам — механизм решает сам |
+| `ServerReconcileBody(reason)` | `ServerEliminateSilently`: `EliminationMode` «бой кончился» (тик фазы) / «новый аватар в матче» (`Begin`, `Admit` в `SpawnAvatar`/`ReplaceBody`) | нет (см. раздел ниже); механизм всё равно решает сам |
 | `ServerReconcileBody("возрождение")` | `PlayerController.Respawn` ← фазы раунда | обычно нет → сразу |
 | `ChangeAvatar` | `SessionTeamAssigner.Apply` (выбор игрока, админ, автобаланс режима, боты), `PlayerSession` Cmd, `GameNetworkManager.OnServerReady`, `BotStandSession`, E2E | обычно нет; если да → отложенно с изъятием |
 
@@ -48,4 +48,45 @@
   `PlayerController.RpcOnDied` (RPC оставлен как лог-маркер: удаление требует правки
   `Assets/Tests/EditMode/Network/RpcCarriesNoStateTests.cs`, вне writes этапа accepted-tests).
 - Единственный отпускающий при смерти — сервер, `AvatarTeardown.ReleaseBeforeDestroy` в `ReplaceBody`,
-  теперь на верхнем уровне (`LateUpdate`). `AvatarTeardown.cs` не менялся.
+  теперь на верхнем уровне (`LateUpdate`).
+- Условие network (ревью 4388, вариант а): смерть без смены тела (стратегия без призрака, `ghostPrefab == null`,
+  или префаб не нашёлся). `ReconcileBodyNow` при «замены нет, тело мертво (`!IsAlive`), тело не призрак» зовёт
+  `AvatarTeardown.ReleaseHandsOnServer` — только руки, тот же `ReleaseHands` (одно `ReleaseObject` на руку),
+  гейт `NetworkServer.active && StateEventAuthority.IsWorldAuthority`. Снаряжение и планшет не трогаются.
+  `IsAlive` после `Die` ложен по обоим признакам: `Life = 0` (`DieInternal`) и выбывание на сессии.
+  Призрак исключён: он и есть тело выбывшего и держит свой планшет (на хосте сервер видит его руки).
+  Возрождение (тело живо) ничего не отпускает. `ReconcileBodyNow` пишет `GameLog.Error`, если вызван
+  не с верхнего уровня (по построению недостижимо).
+
+## Записи внутри DieInternal (вне этапа)
+
+Только чтение, для будущего этапа; не исправлялось.
+
+**`PlayerController.ServerEliminateSilently`** — две точки вызова, обе вне синхронизации:
+
+- `EliminationMode.cs:958` «бой кончился»: `EliminationMode.Update` (`:465-468`) → `ServerTick` (`:477`) →
+  `ServerSetRoundPhase` (`:515`, `:904`) → при `Resolution` `ServerEndRoundDeaths` (`:925-927`) → `:958`.
+  Верхний уровень: смерть только ставит заявку `RoundPhases.RequestRoundEnd` (`RoundPhases.cs:266`, фазу не
+  меняет), фазу меняет ближайший тик. Значит, `Life = 0` выживших — отдельное событие глубины 1.
+- `EliminationMode.cs:842` «новый аватар в матче»: `ServerAdmitAvatar` ←
+  (а) `Begin` (`EliminationMode.cs:375`, корутина старта режима) — верхний уровень;
+  (б) `AvatarManager.Admit` (`AvatarManager.cs:579`) ← `SpawnAvatar` (`PlayersManager.cs:124`,
+  `BotDirector.cs:343`, `BotStandSession.cs:63`, отложенный допуск `MapRunAdmission`) — верхний уровень;
+  ← `ReplaceBody` (`AvatarManager.cs:502`, только при `oldAvatar == null`) — после этого этапа
+  `ReplaceBody` исполняется только с верхнего уровня (`ChangeAvatar`/`ReconcileBodyNow`/очередь).
+  До этапа он мог идти изнутри `DieInternal`, но с прежним телом (`continuesPrevious: true`) — без этого вызова.
+
+**`PlayerLoadoutManager.ServerHandlePlayerDied`** (`PlayerLoadoutManager.cs:104-105` подписка в
+`OnStartServer`, `:148`) зовёт **тот же** `ServerDropEquipment("погиб")` (`:161`), что и
+`AvatarTeardown.ReleaseBeforeDestroy` (`AvatarTeardown.cs:59`). Якоря одни и те же — карманы и кобуры самого
+аватара (`AnchorRole.IsAvatarPocket`, `:170`; `PlayerLoadoutManager` — компонент аватара), операция —
+`UxrGrabManager.RemoveObjectFromAnchor(item, true, true)` (`:175`). Разница — момент: при смерти она
+исполняется на сервере внутри `DieInternal` (обработчик `PlayerDied`), глубина > 1, а
+`RemoveObjectFromAnchor` открывает `BeginSync` без `IgnoreNestingCheck`
+(`UxrGrabManager.Manipulation.cs:393`); при `UseTopLevelStateChangesOnly = true` (`UxrManager.cs:170`, проект
+не меняет) вложенное событие отдельно не уходит (`UxrManager.cs:1819`). Клиент, повторяя `DieInternal`, свой
+`ServerHandlePlayerDied` пропускает (`!isServer`). Потом верхнеуровневый `ServerDropEquipment` из
+`ReleaseBeforeDestroy` находит карманы на сервере уже пустыми и ничего не шлёт. **Риск:** у клиентов предмет может
+остаться в кобуре мёртвого тела до его уничтожения. В варианте без призрака (замены нет) верхнеуровневого
+повторения нет вовсе. Кандидат будущего этапа: снять подписку или отложить сброс до верхнего уровня
+(тот же механизм, что у тела).

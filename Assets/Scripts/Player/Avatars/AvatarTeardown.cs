@@ -1,6 +1,7 @@
 using Mirror;
 using UltimateXR.Manipulation;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Network;
 
 namespace VrBattlegrounds.Player.Avatars
 {
@@ -74,6 +75,23 @@ namespace VrBattlegrounds.Player.Avatars
 
             EquipmentStrip.ServerStrip(avatar, reason);
             ReleaseBeforeDestroy(avatar, reason);
+        }
+
+        /// <summary>
+        /// Только руки, без снаряжения и планшета: смерть без смены тела (стратегия без призрака —
+        /// <see cref="AvatarManager"/>). Тело живёт дальше мёртвым, и без этого держало бы предмет
+        /// до возрождения: владелец при смерти больше не отпускает (death-body-defer). Сервер, с
+        /// верхнего уровня — то же одно <c>ReleaseObject</c> на руку, что при замене тела.
+        /// Снаряжение при смерти роняет <see cref="PlayerLoadoutManager"/>.
+        /// </summary>
+        /// <param name="avatar">Мёртвое тело; null — ничего не делать.</param>
+        /// <param name="reason">Причина для лога.</param>
+        public static void ReleaseHandsOnServer(PlayerController avatar, string reason)
+        {
+            if (avatar == null || !NetworkServer.active || !StateEventAuthority.IsWorldAuthority) return;
+
+            ReleaseHands(avatar);
+            GameLog.Player.Info($"[AvatarTeardown] {avatar.name}: руки отпущены без смены тела ({reason}).", avatar);
         }
 
         /// <summary>

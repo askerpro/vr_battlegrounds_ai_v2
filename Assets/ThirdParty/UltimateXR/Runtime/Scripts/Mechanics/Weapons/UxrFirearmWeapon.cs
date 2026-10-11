@@ -694,6 +694,18 @@ namespace UltimateXR.Mechanics.Weapons
             // Get the grabbable object and apply recoil depending on the number of hands that are grabbing the gun
 
             UxrGrabbableObject grabbableObject    = sender as UxrGrabbableObject;
+
+            // VR Battlegrounds patch 70: все политики фактического корня должны разрешить отдачу.
+            // Выключенный компонент сохраняет право запрета; состав перечитывается без массива на каждый вызов.
+            grabbableObject.GetComponents(_rootRecoilPolicyProviders);
+            for (int index = 0; index < _rootRecoilPolicyProviders.Count; index++)
+            {
+                if (_rootRecoilPolicyProviders[index] is IUxrFirearmRootRecoilPolicy policy && !policy.AllowsRootRecoil)
+                {
+                    return;
+                }
+            }
+
             Transform          grabbableTransform = grabbableObject.transform;
             int                grabbingHandCount  = UxrGrabManager.Instance.GetGrabbingHandCount(grabbableObject);
 
@@ -798,6 +810,28 @@ namespace UltimateXR.Mechanics.Weapons
 
         #endregion
 
+        #region Protected Overrides UxrWeapon
+
+        /// <summary>VR Battlegrounds patch 72: тот же actual root, который использует SDK recoil.</summary>
+        protected override UxrGrabbableObject OwnerProviderRoot => _triggers != null ? RootGrabbable : null;
+
+        /// <summary>SDK72: raw primary grips всех спусков; support не создаёт ownership conflict.</summary>
+        protected override bool HasRawOwnerMainGrip
+        {
+            get
+            {
+                if (!UxrGrabManager.HasInstance) return false;
+                for (int index = 0; index < TriggerCount; index++)
+                {
+                    if (TryGetTriggerGrip(index, out UxrGrabbableObject grip, out int point) &&
+                        UxrGrabManager.Instance.GetGrabbingHand(grip, point, out UxrGrabber _)) return true;
+                }
+                return false;
+            }
+        }
+
+        #endregion
+
         #region Private Types & Data
 
         /// <summary>
@@ -826,6 +860,7 @@ namespace UltimateXR.Mechanics.Weapons
 
         private UxrProjectileSource                 _weaponSource;
         private Dictionary<int, RuntimeTriggerInfo> _runtimeTriggers = new Dictionary<int, RuntimeTriggerInfo>();
+        private readonly List<MonoBehaviour>        _rootRecoilPolicyProviders = new List<MonoBehaviour>(4);
 
         #endregion
     }

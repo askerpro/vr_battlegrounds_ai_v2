@@ -65,7 +65,9 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="orientation">World orientation. The projectile will travel in the forward (z) direction</param>
         public void RegisterNewProjectileShot(UxrProjectileSource projectileSource, UxrShotDescriptor shotDescriptor, Vector3 position, Quaternion orientation)
         {
-            _projectiles.Add(new ProjectileInfo(projectileSource.TryGetWeaponOwner(), projectileSource, shotDescriptor, position, orientation));
+            // VR Battlegrounds patch 72: actor фиксируется один раз до projectile Awake/FX callbacks.
+            UxrActor weaponOwner = projectileSource.TryGetWeaponOwner();
+            _projectiles.Add(new ProjectileInfo(weaponOwner != null ? weaponOwner : null, projectileSource, shotDescriptor, position, orientation));
         }
 
         /// <summary>
@@ -325,7 +327,9 @@ namespace UltimateXR.Mechanics.Weapons
                                 else
                                 {
                                     // Direct hit from a projectile
-                                    targetActor.ReceiveImpact(_projectiles[i].ProjectileSource.TryGetWeaponOwner(), raycastHit, damage, impactForce);
+                                    // SDK72: transfer/drop не переписывает shooter уже выпущенного projectile.
+                                    UxrActor weaponOwner = _projectiles[i].WeaponOwner;
+                                    targetActor.ReceiveImpact(weaponOwner != null ? weaponOwner : null, raycastHit, damage, impactForce);
                                 }
                             }
                             else
@@ -359,7 +363,9 @@ namespace UltimateXR.Mechanics.Weapons
                                                                 _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecalLife,
                                                                 _projectiles[i].ShotDescriptor.DecalFadeoutDuration);
 
-                                NonActorImpacted?.Invoke(_projectiles[i].ProjectileSource, new UxrNonDamagingImpactEventArgs(_projectiles[i].ProjectileSource.TryGetWeaponOwner(), _projectiles[i].ProjectileSource, raycastHit));
+                                // SDK72: уничтоженный captured actor даёт null, не нового держателя оружия.
+                                UxrActor weaponOwner = _projectiles[i].WeaponOwner;
+                                NonActorImpacted?.Invoke(_projectiles[i].ProjectileSource, new UxrNonDamagingImpactEventArgs(weaponOwner != null ? weaponOwner : null, _projectiles[i].ProjectileSource, raycastHit));
 
                                 if (penetration.Kind == UxrPenetrationKind.Penetrate)
                                 {

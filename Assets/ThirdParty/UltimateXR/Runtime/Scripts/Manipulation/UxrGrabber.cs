@@ -5,6 +5,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using UltimateXR.Avatar;
 using UltimateXR.Avatar.Rig;
 using UltimateXR.Core;
@@ -226,6 +227,15 @@ namespace UltimateXR.Manipulation
         public Quaternion UnprocessedGrabberRotation { get; internal set; }
 
         /// <summary>
+        ///     VR Battlegrounds patch 71: несериализуемый SDK stamp жизненного цикла хвата.
+        ///     Положительные значения глобально уникальны; 0 запрещает использование во время
+        ///     изменения хвата/менеджера или после исчерпания источника.
+        /// </summary>
+        public int GrabLifetimeEpoch =>
+            _grabLifetimeMutationDepth == 0 && Volatile.Read(ref _grabStateMutationDepth) == 0 &&
+            Volatile.Read(ref _lastGrabLifetimeEpoch) < int.MaxValue ? _grabLifetimeEpoch : 0;
+
+        /// <summary>
         ///     Gets the currently grabbed object if there is one. null if no object is being grabbed.
         /// </summary>
         public UxrGrabbableObject GrabbedObject
@@ -233,14 +243,22 @@ namespace UltimateXR.Manipulation
             get => _grabbedObject;
             set
             {
-                _grabbedObject = value;
-
-                if (_objectsToDisableOnGrab != null)
+                BeginGrabLifetimeMutation(); // VR Battlegrounds patch 71: также для повторного объекта/null.
+                try
                 {
-                    foreach (GameObject go in _objectsToDisableOnGrab)
+                    _grabbedObject = value;
+
+                    if (_objectsToDisableOnGrab != null)
                     {
-                        go.SetActive(value == null);
+                        foreach (GameObject go in _objectsToDisableOnGrab)
+                        {
+                            go.SetActive(value == null);
+                        }
                     }
+                }
+                finally
+                {
+                    EndGrabLifetimeMutation();
                 }
             }
         }
@@ -482,11 +500,19 @@ namespace UltimateXR.Manipulation
         /// </summary>
         protected override void OnDestroy()
         {
-            base.OnDestroy();
-
-            if (GrabbedObject != null)
+            BeginGrabLifetimeMutation(); // VR Battlegrounds patch 71: до base и всех lifecycle callbacks.
+            try
             {
-                UxrGrabManager.Instance.ReleaseObject(this, GrabbedObject, true);
+                base.OnDestroy();
+
+                if (GrabbedObject != null)
+                {
+                    UxrGrabManager.Instance.ReleaseObject(this, GrabbedObject, true);
+                }
+            }
+            finally
+            {
+                EndGrabLifetimeMutation();
             }
         }
 
@@ -495,17 +521,72 @@ namespace UltimateXR.Manipulation
         /// </summary>
         protected override void OnDisable()
         {
-            base.OnDisable();
-
-            if (GrabbedObject != null)
+            BeginGrabLifetimeMutation(); // VR Battlegrounds patch 71: до base и всех lifecycle callbacks.
+            try
             {
-                UxrGrabManager.Instance.ReleaseObject(this, GrabbedObject, true);
+                base.OnDisable();
+
+                if (GrabbedObject != null)
+                {
+                    UxrGrabManager.Instance.ReleaseObject(this, GrabbedObject, true);
+                }
+            }
+            finally
+            {
+                EndGrabLifetimeMutation();
             }
         }
 
         #endregion
 
+        #region Internal Methods
+
+        /// <summary>
+        ///     VR Battlegrounds patch 71: меняет только SDK stamp, не хват, события или учёт.
+        ///     Единый CAS-источник насыщается на int.MaxValue без повторного использования.
+        /// </summary>
+        internal void AdvanceGrabLifetime()
+        {
+            while (true)
+            {
+                int previous = Interlocked.CompareExchange(ref _lastGrabLifetimeEpoch, 0, 0);
+                if (previous == int.MaxValue)
+                {
+                    _grabLifetimeEpoch = 0;
+                    return;
+                }
+
+                int next = previous + 1;
+                if (Interlocked.CompareExchange(ref _lastGrabLifetimeEpoch, next, previous) == previous)
+                {
+                    _grabLifetimeEpoch = next;
+                    return;
+                }
+            }
+        }
+
+        /// <summary>VR Battlegrounds patch 71: общий короткий scope restore/изменения менеджера, без кэша рук.</summary>
+        internal static void BeginGrabStateMutation() => Interlocked.Increment(ref _grabStateMutationDepth);
+
+        /// <summary>VR Battlegrounds patch 71: парный выход всегда вызывается из finally.</summary>
+        internal static void EndGrabStateMutation() => Interlocked.Decrement(ref _grabStateMutationDepth);
+
+        #endregion
+
         #region Private Methods
+
+        /// <summary>VR Battlegrounds patch 71: повторный вход оставляет getter закрытым до выхода самого внешнего scope.</summary>
+        private void BeginGrabLifetimeMutation()
+        {
+            _grabLifetimeMutationDepth++;
+            AdvanceGrabLifetime();
+        }
+
+        private void EndGrabLifetimeMutation()
+        {
+            try { AdvanceGrabLifetime(); }
+            finally { _grabLifetimeMutationDepth--; }
+        }
 
         /// <summary>
         ///     Assigns the hand the grabber belongs to.
@@ -582,6 +663,12 @@ namespace UltimateXR.Manipulation
         private bool               _sideInitialized;
         private UxrHandSide        _side;
         private UxrGrabbableObject _grabbedObject;
+
+        // VR Battlegrounds patch 71: source не сбрасывается при enable/restore; поля не входят в serialized payload.
+        private static int _lastGrabLifetimeEpoch;
+        private static int _grabStateMutationDepth;
+        [System.NonSerialized] private int _grabLifetimeEpoch;
+        [System.NonSerialized] private int _grabLifetimeMutationDepth;
 
         #endregion
     }

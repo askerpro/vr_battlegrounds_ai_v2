@@ -27,7 +27,17 @@ namespace UltimateXR.Mechanics.Weapons
                     return false;
                 }
 
-                if (Owner != null && Owner.IsDead)
+                // VR Battlegrounds patch 72: active invalid claim не наследует legacy VR разрешение.
+                UxrActor owner;
+                if (TryResolveOwnerOverride(out owner))
+                {
+                    if (owner == null) return false;
+                }
+                else
+                {
+                    owner = _owner;
+                }
+                if (owner != null && owner.IsDead)
                 {
                     return false;
                 }

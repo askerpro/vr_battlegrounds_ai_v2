@@ -308,12 +308,22 @@ namespace UltimateXR.Manipulation
         /// </summary>
         protected override void OnDestroy()
         {
-            base.OnDestroy();
+            UxrGrabber.BeginGrabStateMutation(); // VR Battlegrounds patch 71: до callbacks все SDK stamps закрыты.
+            try
+            {
+                AdvanceCurrentGrabLifetimes();
+                base.OnDestroy();
 
-            UxrGrabbableObjectAnchor.GlobalEnabled  -= GrabbableObjectAnchor_Enabled;
-            UxrGrabbableObjectAnchor.GlobalDisabled -= GrabbableObjectAnchor_Disabled;
-            // VR Battlegrounds patch 12: в оригинале здесь стояло "+=" — отписка от события подписывала заново.
-            UxrGrabbableObject.GlobalDisabled       -= GrabbableObject_Disabled;
+                UxrGrabbableObjectAnchor.GlobalEnabled  -= GrabbableObjectAnchor_Enabled;
+                UxrGrabbableObjectAnchor.GlobalDisabled -= GrabbableObjectAnchor_Disabled;
+                // VR Battlegrounds patch 12: в оригинале здесь стояло "+=" — отписка от события подписывала заново.
+                UxrGrabbableObject.GlobalDisabled       -= GrabbableObject_Disabled;
+            }
+            finally
+            {
+                try { AdvanceCurrentGrabLifetimes(); }
+                finally { UxrGrabber.EndGrabStateMutation(); }
+            }
         }
 
         /// <summary>
@@ -331,9 +341,19 @@ namespace UltimateXR.Manipulation
         /// </summary>
         protected override void OnDisable()
         {
-            base.OnDisable();
+            UxrGrabber.BeginGrabStateMutation(); // VR Battlegrounds patch 71: до callbacks все SDK stamps закрыты.
+            try
+            {
+                AdvanceCurrentGrabLifetimes();
+                base.OnDisable();
 
-            UxrAvatar.GlobalAvatarMoved -= UxrAvatar_GlobalAvatarMoved;
+                UxrAvatar.GlobalAvatarMoved -= UxrAvatar_GlobalAvatarMoved;
+            }
+            finally
+            {
+                try { AdvanceCurrentGrabLifetimes(); }
+                finally { UxrGrabber.EndGrabStateMutation(); }
+            }
         }
 
         #endregion
@@ -364,9 +384,18 @@ namespace UltimateXR.Manipulation
         /// <param name="grabbableObject">Grabbable object that was disabled</param>
         private void GrabbableObject_Disabled(UxrGrabbableObject grabbableObject)
         {
-            if (_currentManipulations.ContainsKey(grabbableObject))
+            if (_currentManipulations.TryGetValue(grabbableObject, out RuntimeManipulationInfo manipulationInfo))
             {
-                _currentManipulations.Remove(grabbableObject);
+                UxrGrabber.BeginGrabStateMutation();
+                try
+                {
+                    AdvanceGrabLifetimes(manipulationInfo); // VR Battlegrounds patch 71: до silent dictionary removal.
+                    _currentManipulations.Remove(grabbableObject);
+                }
+                finally
+                {
+                    UxrGrabber.EndGrabStateMutation();
+                }
             }
         }
 
@@ -638,6 +667,29 @@ namespace UltimateXR.Manipulation
 
         #region Private Methods
 
+        /// <summary>VR Battlegrounds patch 71: инвалидирует живые руки текущих записей без событий и копии состояния.</summary>
+        private void AdvanceCurrentGrabLifetimes()
+        {
+            if (_currentManipulations == null) return;
+            foreach (RuntimeManipulationInfo manipulationInfo in _currentManipulations.Values)
+            {
+                AdvanceGrabLifetimes(manipulationInfo);
+            }
+        }
+
+        /// <summary>VR Battlegrounds patch 71: не вызывает Unity callbacks и не изменяет коллекцию хватов.</summary>
+        private static void AdvanceGrabLifetimes(RuntimeManipulationInfo manipulationInfo)
+        {
+            if (manipulationInfo == null || manipulationInfo.Grabs == null) return;
+            foreach (RuntimeGrabInfo grabInfo in manipulationInfo.Grabs)
+            {
+                if (grabInfo != null && grabInfo.Grabber != null)
+                {
+                    grabInfo.Grabber.AdvanceGrabLifetime();
+                }
+            }
+        }
+
         /// <summary>
         ///     VR Battlegrounds patch 12. Вычищает из <see cref="_currentManipulations" /> захваты, которые уже
         ///     никто не держит: уничтожен сам предмет или рука (Unity-null).
@@ -673,9 +725,22 @@ namespace UltimateXR.Manipulation
                 return;
             }
 
-            foreach (UxrGrabbableObject grabbableObject in orphaned)
+            UxrGrabber.BeginGrabStateMutation();
+            try
             {
-                _currentManipulations.Remove(grabbableObject);
+                foreach (UxrGrabbableObject grabbableObject in orphaned)
+                {
+                    // VR Battlegrounds patch 71: только whole removal; удаление мёртвой support выше не меняет main stamp.
+                    if (_currentManipulations.TryGetValue(grabbableObject, out RuntimeManipulationInfo manipulationInfo))
+                    {
+                        AdvanceGrabLifetimes(manipulationInfo);
+                    }
+                    _currentManipulations.Remove(grabbableObject);
+                }
+            }
+            finally
+            {
+                UxrGrabber.EndGrabStateMutation();
             }
 
             if (UxrGlobalSettings.Instance.LogLevelManipulation >= UxrLogLevel.Warnings)

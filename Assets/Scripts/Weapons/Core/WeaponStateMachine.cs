@@ -239,7 +239,7 @@ namespace VrBattlegrounds.Weapons.Core
                     // И11: клип стареет только временем; конец — строки T63/T64.
                     if (_clip != ClipKind.None && E.Dt > 0f && !float.IsInfinity(E.Dt)) _clipTime += E.Dt;
                     // Повтор Initialize (T01t): вне руки повтор «созрел» — первый же шаг в руке пробует сразу.
-                    if (!C.MainGripLocal) _initWait = InitRetrySeconds;
+                    if (!C.HasAuthorContext) _initWait = InitRetrySeconds;
                     else if (E.Dt > 0f && !float.IsInfinity(E.Dt) && _initWait < InitRetrySeconds) _initWait += E.Dt;
                     break;
                 case WeaponEventKind.ActionSampled:
@@ -321,10 +321,10 @@ namespace VrBattlegrounds.Weapons.Core
         internal int DeferredInsertNow => _deferredInsert;
 
         /// <summary>Контекст автора: основную рукоять держит локальная рука.</summary>
-        internal bool Ctx => C.MainGripLocal;
+        internal bool Ctx => C.HasAuthorContext;
 
         /// <summary>Жест автора на ручке с контекстом.</summary>
-        internal bool Contacting => _gesture == GestureState.Contact && Ctx && S.HeldByAuthorMainContext;
+        internal bool Contacting => _gesture == GestureState.Contact && Ctx && C.MainGripLocal && S.HeldByAuthorMainContext;
 
         internal bool GestureInCycle => _gesture == GestureState.Pulling || _gesture == GestureState.PastGate || _gesture == GestureState.Released;
         internal bool GatePassedGesture => _gesture == GestureState.PastGate || (_gesture == GestureState.Released && _gatePassed);
@@ -350,9 +350,9 @@ namespace VrBattlegrounds.Weapons.Core
         internal bool AssistChambers => _axes.Policy == WeaponChamberPolicy.TriggerAssistPrepareOnly &&
                                         WeaponMechanism.ReasonOf(L) == WeaponNotReadyReason.ChamberingRequired;
 
-        internal bool AutomationContext => C.IsWorldAuthority && Ctx;
+        internal bool AutomationContext => C.IsWorldAuthority && C.AutomationAllowed;
 
-        internal bool CanOfferCartridge => _axes.Ammo == WeaponAmmoCapability.FixedStoreChamber && Ctx && E.Token != 0 &&
+        internal bool CanOfferCartridge => _axes.Ammo == WeaponAmmoCapability.FixedStoreChamber && Ctx && C.MainGripLocal && E.Token != 0 &&
                                            !L.AdmissionPending && L.Total < L.Capacity;
 
         private static bool IsAutomatic(ChamberOrigin origin) =>

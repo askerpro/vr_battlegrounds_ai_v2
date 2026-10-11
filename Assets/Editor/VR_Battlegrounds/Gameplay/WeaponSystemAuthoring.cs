@@ -375,7 +375,196 @@ namespace VrBattlegrounds.Editor.Gameplay
             GameObjectUtility.RemoveMonoBehavioursWithMissingScript(root); // Router и AttemptFeedback (скрипты удалены)
             if (!host.TryValidateConfiguration(out string hostError))
                 throw new InvalidOperationException("Хост не проходит проверку настройки: " + hostError);
+            if (IsEquipmentTargetName(root.name)) EnsureEquipmentBinding(root);
             EditorUtility.SetDirty(host);
+        }
+
+        private const string EquipmentBindingScriptGuid = "bf92bfabda1ac5141ab1ed168d9538f8";
+        private static bool IsEquipmentTargetName(string name) => name == "PPK" || name == "AK105";
+        private static bool IsEquipmentTargetPath(string path) => path == "Assets/Prefabs/Weapons/PPK/PPK.prefab" ||
+            path == "Assets/Prefabs/Weapons/AK105/AK105.prefab";
+
+        /// <summary>Только авторинг до Instantiate/Awake/Spawn: единственный binding на фактическом SDK root.</summary>
+        private static bool EnsureEquipmentBinding(GameObject root)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode || root == null || !IsEquipmentTargetName(root.name))
+                throw new InvalidOperationException("Equipment authoring разрешён только для PPK/AK105 вне Play.");
+            var firearms = root.GetComponentsInChildren<UxrFirearmWeapon>(true);
+            if (firearms.Length != 1 || firearms[0].gameObject != root || root.GetComponents<Rigidbody>().Length != 1 ||
+                root.GetComponents<UxrGrabbableObject>().Length != 1 || root.GetComponents<UxrProjectileSource>().Length != 1 ||
+                root.GetComponents<Mirror.NetworkIdentity>().Length != 1 || root.GetComponents<WeaponSystem>().Length != 1)
+                throw new InvalidOperationException(root.name + ": неполная или неоднозначная root-композиция.");
+            if (!firearms[0].TryGetTriggerGrip(0, out UxrGrabbableObject grip, out _))
+                throw new InvalidOperationException(root.name + ": нет основной рукояти trigger0.");
+            UxrGrabbableObject actualRoot = grip.UsesGrabbableParentDependency ? grip.GrabbableParent : grip;
+            if (actualRoot == null || actualRoot.gameObject != root)
+                throw new InvalidOperationException(root.name + ": SDK RootGrabbable не совпадает с canonical root.");
+            var bindings = root.GetComponentsInChildren<WeaponEquipmentBinding>(true);
+            if (bindings.Length > 1 || (bindings.Length == 1 && bindings[0].gameObject != root))
+                throw new InvalidOperationException(root.name + ": duplicate/child equipment binding.");
+            bool added = bindings.Length == 0;
+            WeaponEquipmentBinding binding = added ? root.AddComponent<WeaponEquipmentBinding>() : bindings[0];
+            MonoScript script = MonoScript.FromMonoBehaviour(binding);
+            if (script == null || AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(script)) != EquipmentBindingScriptGuid ||
+                !binding.enabled || binding.IsActive || binding.Owner != null || binding.Epoch != 0 || !binding.AllowsRootRecoil)
+                throw new InvalidOperationException(root.name + ": неверный script GUID, disabled binding или активный claim.");
+            if (binding.syncDirection != Mirror.SyncDirection.ServerToClient || binding.syncMode != Mirror.SyncMode.Observers ||
+                binding.syncInterval != 0)
+                throw new InvalidOperationException(root.name + ": binding требует Mirror ServerToClient, Observers и syncInterval=0.");
+            if (added) EditorUtility.SetDirty(binding);
+            return added;
+        }
+
+        private static Entry[] EquipmentEntries(string[] names)
+        {
+            if (names == null || names.Length == 0 || names.Distinct(StringComparer.Ordinal).Count() != names.Length ||
+                names.Any(name => !IsEquipmentTargetName(name)))
+                throw new InvalidOperationException("Нужен непустой уникальный список только PPK/AK105.");
+            Entry[] entries = Named(names).ToArray();
+            if (entries.Any(entry => !IsEquipmentTargetPath(entry.Prefab)))
+                throw new InvalidOperationException("Путь таблицы не совпадает с canonical PPK/AK105.");
+            return entries;
+        }
+
+        private static void EnsureEquipmentAuthoringIdle()
+        {
+            EnsureIdle();
+            if (UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null)
+                throw new InvalidOperationException("Закройте prefab stage перед equipment authoring.");
+            for (int index = 0; index < UnityEngine.SceneManagement.SceneManager.sceneCount; index++)
+                if (UnityEngine.SceneManagement.SceneManager.GetSceneAt(index).isDirty)
+                    throw new InvalidOperationException("Нельзя менять префабы при dirty scene.");
+        }
+
+        /// <summary>Проверить только две canonical композиции на временных копиях; без EnsureData/записи ассетов.</summary>
+        public static Dictionary<string, object> PreflightEquipmentBindings(params string[] names)
+        {
+            EnsureEquipmentAuthoringIdle();
+            var failures = new List<string>(); var rows = new List<object>();
+            foreach (Entry entry in EquipmentEntries(names))
+            {
+                GameObject root = null;
+                try
+                {
+                    GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(entry.Prefab);
+                    if (asset == null) throw new InvalidOperationException("Нет canonical prefab.");
+                    Snapshot before = Capture(entry.Prefab, asset);
+                    if (before.MissingScripts != 0 || before.AssetId != before.CanonicalAssetId)
+                        throw new InvalidOperationException("Missing scripts или неканонический _assetId до авторинга.");
+                    root = PrefabUtility.LoadPrefabContents(entry.Prefab);
+                    bool added = EnsureEquipmentBinding(root);
+                    rows.Add(new { entry.Name, entry.Prefab, wouldAdd = added, before.RootFileId, before.RootBindingId });
+                }
+                catch (Exception exception) { failures.Add(entry.Prefab + ": " + exception.Message); }
+                finally { if (root != null) PrefabUtility.UnloadPrefabContents(root); }
+            }
+            return new Dictionary<string, object> { ["passed"] = failures.Count == 0, ["failures"] = failures,
+                ["rows"] = rows, ["scope"] = "Equipment authoring preflight без сохранения; runtime не проверен" };
+        }
+
+        /// <summary>Добавить только root binding; snapshot/actor owner/хост/геометрия не переписываются.</summary>
+        public static Dictionary<string, object> ApplyEquipmentBindings(params string[] names)
+        {
+            EnsureEquipmentAuthoringIdle();
+            Entry[] entries = EquipmentEntries(names);
+            Dictionary<string, object> preflight = PreflightEquipmentBindings(names);
+            if (!(bool)preflight["passed"]) return preflight;
+            var backups = new Dictionary<string, byte[]>();
+            var beforeSnapshots = new Dictionary<string, Snapshot>();
+            foreach (Entry entry in entries)
+            {
+                beforeSnapshots[entry.Prefab] = Capture(entry.Prefab, AssetDatabase.LoadAssetAtPath<GameObject>(entry.Prefab));
+                backups[entry.Prefab] = File.ReadAllBytes(DiskPath(entry.Prefab));
+                backups[entry.Prefab + ".meta"] = File.ReadAllBytes(DiskPath(entry.Prefab + ".meta"));
+            }
+            var failures = new List<string>(); var rows = new List<object>();
+            try
+            {
+                foreach (Entry entry in entries)
+                {
+                    bool added = ApplyEquipmentBinding(entry);
+                    GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(entry.Prefab);
+                    Snapshot after = Capture(entry.Prefab, asset);
+                    failures.AddRange(Compare(entry.Prefab, beforeSnapshots[entry.Prefab], after));
+                    CompareEquipmentBytes(entry.Prefab, backups[entry.Prefab], File.ReadAllBytes(DiskPath(entry.Prefab)),
+                        beforeSnapshots[entry.Prefab], after);
+                    if (!backups[entry.Prefab + ".meta"].SequenceEqual(File.ReadAllBytes(DiskPath(entry.Prefab + ".meta"))))
+                        throw new InvalidOperationException(entry.Prefab + ": .meta bytes изменились.");
+                    byte[] firstPass = File.ReadAllBytes(DiskPath(entry.Prefab));
+                    if (ApplyEquipmentBinding(entry) || !firstPass.SequenceEqual(File.ReadAllBytes(DiskPath(entry.Prefab))))
+                        throw new InvalidOperationException(entry.Prefab + ": повторный apply не идемпотентен.");
+                    rows.Add(new { entry.Name, entry.Prefab, added, after.RootBindingId, idempotent = true });
+                }
+                if (failures.Count != 0) throw new InvalidOperationException("Readback composition не прошёл.");
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception.Message);
+                // Возвращаем оба выбранных ассета и .meta побайтно, включая успех первого перед сбоем второго.
+                foreach (KeyValuePair<string, byte[]> backup in backups) File.WriteAllBytes(DiskPath(backup.Key), backup.Value);
+                foreach (Entry entry in entries) AssetDatabase.ImportAsset(entry.Prefab, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                rows.Clear();
+            }
+            return new Dictionary<string, object> { ["passed"] = failures.Count == 0, ["failures"] = failures,
+                ["rows"] = rows, ["scope"] = "Root binding authoring/readback; Mirror spawn, runtime и шлем не проверены" };
+        }
+
+        private static bool ApplyEquipmentBinding(Entry entry)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(entry.Prefab);
+            bool added;
+            try
+            {
+                added = EnsureEquipmentBinding(root);
+                if (added && PrefabUtility.SaveAsPrefabAsset(root, entry.Prefab) == null)
+                    throw new InvalidOperationException(entry.Prefab + ": сохранение не удалось.");
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+            if (added)
+            {
+                VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.Normalize(new[] { entry.Prefab }, false);
+                AssetDatabase.ImportAsset(entry.Prefab, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            }
+            return added;
+        }
+
+        // Белый список YAML: новый binding document и ровно одна ссылка в root GameObject.m_Component.
+        // Все прежние serialized documents должны остаться точными: TRS/hierarchy/grabs/source/host/identity/rig.
+        private static void CompareEquipmentBytes(string path, byte[] beforeBytes, byte[] afterBytes, Snapshot before, Snapshot after)
+        {
+            if (after.RootBindingCount != 1 || after.RootBindingId == 0 || before.RootFileId != after.RootFileId)
+                throw new InvalidOperationException(path + ": неверный root binding/fileID readback.");
+            if (before.RootBindingCount == 1)
+            {
+                if (!beforeBytes.SequenceEqual(afterBytes)) throw new InvalidOperationException(path + ": existing binding изменил prefab bytes.");
+                return;
+            }
+            var oldBlocks = EquipmentYamlBlocks(beforeBytes); var newBlocks = EquipmentYamlBlocks(afterBytes);
+            if (!newBlocks.Keys.Except(oldBlocks.Keys).SequenceEqual(new[] { after.RootBindingId }) || oldBlocks.Keys.Except(newBlocks.Keys).Any())
+                throw new InvalidOperationException(path + ": добавлен/удалён не только root binding document.");
+            foreach (KeyValuePair<long, string> block in oldBlocks)
+            {
+                string current = newBlocks[block.Key];
+                if (block.Key == before.RootFileId)
+                {
+                    string pattern = @"(?m)^  - component: \{fileID: " + after.RootBindingId + @"\}\n";
+                    if (System.Text.RegularExpressions.Regex.Matches(current, pattern).Count != 1)
+                        throw new InvalidOperationException(path + ": root component entry не единственный.");
+                    current = System.Text.RegularExpressions.Regex.Replace(current, pattern, "");
+                }
+                if (block.Value != current) throw new InvalidOperationException(path + ": изменён прежний YAML document " + block.Key);
+            }
+        }
+
+        private static Dictionary<long, string> EquipmentYamlBlocks(byte[] bytes)
+        {
+            string yaml = new System.Text.UTF8Encoding(false, true).GetString(bytes).Replace("\r\n", "\n");
+            var matches = System.Text.RegularExpressions.Regex.Matches(yaml, @"(?ms)^--- !u!\d+ &(-?\d+)(?: stripped)?\n.*?(?=^--- !u!|\z)");
+            var blocks = new Dictionary<long, string>();
+            if (matches.Count == 0) throw new InvalidOperationException("Prefab не содержит ожидаемых Unity YAML documents.");
+            blocks.Add(0, yaml.Substring(0, matches[0].Index));
+            foreach (System.Text.RegularExpressions.Match match in matches) blocks.Add(long.Parse(match.Groups[1].Value), match.Value);
+            return blocks;
         }
 
         private static Source FromHost(WeaponSystem host)
@@ -1399,6 +1588,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             public uint AssetId, CanonicalAssetId;
             public string Scale;
             public int MissingScripts;
+            public long RootFileId, RootBindingId;
+            public int RootBindingCount;
             public readonly Dictionary<string, long> Components = new Dictionary<string, long>();
             public readonly Dictionary<string, int> GrabPoints = new Dictionary<string, int>();
         }
@@ -1416,6 +1607,11 @@ namespace VrBattlegrounds.Editor.Gameplay
             };
             // У обычного префаба — строка компонента, у варианта — переопределение в m_Modifications.
             snapshot.AssetId = VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.ReadOnDisk(path) ?? 0;
+            AssetDatabase.TryGetGUIDAndLocalFileIdentifier(asset, out string _, out snapshot.RootFileId);
+            var rootBindings = asset.GetComponents<WeaponEquipmentBinding>();
+            snapshot.RootBindingCount = rootBindings.Length;
+            if (rootBindings.Length == 1)
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(rootBindings[0], out string _, out snapshot.RootBindingId);
             foreach (Transform transform in asset.GetComponentsInChildren<Transform>(true))
             {
                 foreach (Component component in transform.GetComponents<Component>())
@@ -1438,7 +1634,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (after.MissingScripts != 0) yield return path + ": остались отсутствующие скрипты";
             bool hadHost = before.Components.Keys.Any(key => key.StartsWith(nameof(WeaponSystem) + "@", StringComparison.Ordinal));
             foreach (string key in after.Components.Keys.Except(before.Components.Keys))
-                if (hadHost || !key.StartsWith(nameof(WeaponSystem) + "@", StringComparison.Ordinal)) yield return path + ": новый компонент " + key;
+            {
+                bool rootBinding = IsEquipmentTargetPath(path) && before.RootBindingCount == 0 && after.RootBindingCount == 1 &&
+                    after.RootBindingId != 0 && key == nameof(WeaponEquipmentBinding) + "@" + after.RootBindingId;
+                if (!rootBinding && (hadHost || !key.StartsWith(nameof(WeaponSystem) + "@", StringComparison.Ordinal)))
+                    yield return path + ": новый компонент " + key;
+            }
             foreach (string key in before.Components.Keys.Except(after.Components.Keys))
                 if (!Removable.Contains(key.Substring(0, key.IndexOf('@')))) yield return path + ": удалён не прежний компонент " + key;
             foreach (KeyValuePair<string, int> grab in before.GrabPoints)

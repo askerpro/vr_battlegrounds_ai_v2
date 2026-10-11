@@ -7,6 +7,7 @@ using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Network;
 using VrBattlegrounds.Weapons.Sensors;
 using WS = VrBattlegrounds.Weapons.Core;
 
@@ -64,6 +65,8 @@ namespace VrBattlegrounds.Weapons
             public WS.WeaponContext Context;
             public WS.ActionSample Sample;
             public UxrGrabber MainHand;
+            public WeaponUseContext Use;
+            public ulong ContextGeneration;
             public bool Recapture;
         }
 
@@ -115,6 +118,9 @@ namespace VrBattlegrounds.Weapons
         private bool _haveContext, _lastCtx;
         private int _initAttempts, _initRejects;
         private WS.WeaponRole _lastRole;
+        private WeaponUseContext _lastUse, _automationUse;
+        private bool _automationGranted, _contextResetPending, _reconciling;
+        private ulong _contextGeneration;
         private WS.LedgerView _view;
         private bool _viewDirty = true;
         private float _viewReadAt;
@@ -166,11 +172,12 @@ namespace VrBattlegrounds.Weapons
 
         private void OnDisable()
         {
+            RevokeAutomation();
             UxrStateSaveImplementer.StateSerialized -= OnStateSerialized;
             if (_configured)
             {
                 _port.TearingDown = true;
-                try { StepNow(WS.WeaponEvent.Of(WS.WeaponEventKind.Disabled)); }
+                try { Step(Capture(WS.WeaponEvent.Of(WS.WeaponEventKind.Disabled), false)); }
                 finally { _port.TearingDown = false; }
             }
             Teardown();
@@ -232,6 +239,9 @@ namespace VrBattlegrounds.Weapons
 
         private void Teardown()
         {
+            RevokeAutomation();
+            _haveContext = _contextResetPending = false;
+            _lastUse = default;
             if (_subscribed)
             {
                 if (_weapon != null) _weapon.StateChanged -= OnWeaponStateChanged;
@@ -310,14 +320,6 @@ namespace VrBattlegrounds.Weapons
             _integrity.PublishPendingCorrection();
             Drain();
 
-            WS.WeaponContext context = _context.Read(out _);
-            if (_haveContext)
-            {
-                if (context.Role != _lastRole) { _trigger.Reset(); StepNow(WS.WeaponEvent.Of(WS.WeaponEventKind.AuthorityChanged)); }
-                else if (_lastCtx && !context.MainGripLocal) { _trigger.Reset(); StepNow(WS.WeaponEvent.Of(WS.WeaponEventKind.ContextLost)); }
-            }
-            _haveContext = true; _lastRole = context.Role; _lastCtx = context.MainGripLocal;
-
             if (_magazine.Poll()) { _viewDirty = true; StepNow(WS.WeaponEvent.Of(WS.WeaponEventKind.MagazineChanged)); }
             if (_intake.HasIntake)
             {
@@ -348,7 +350,7 @@ namespace VrBattlegrounds.Weapons
         /// </summary>
         private bool IsIdle()
         {
-            if (_queue.Count > 0 || _trigger.Pressed || _rig.IsHandleHeld || _context.MainHand() != null) return false;
+            if (_queue.Count > 0 || _trigger.Pressed || _rig.IsHandleHeld || _lastCtx || _automationGranted || _context.MainHand() != null) return false;
             WS.WeaponMachineState state = _machine.State;
             if (state.Gesture != WS.GestureState.None || state.Origin != WS.ChamberOrigin.None || state.Clip != WS.ClipKind.None ||
                 state.HintLatched) return false;
@@ -362,6 +364,7 @@ namespace VrBattlegrounds.Weapons
         /// <summary>Повторный замер перед выстрелом SDK (порт <c>RefreshPhysicalActionState</c>, план п. 3.4).</summary>
         internal void SampleBeforeShot()
         {
+            InvalidateLostAutomation();
             if (!_configured || _stepping || _draining || _dispatching || !CanCommandNow()) return;
             StepNow(WS.WeaponEvent.Of(WS.WeaponEventKind.ActionSampled));
             Drain();
@@ -370,10 +373,69 @@ namespace VrBattlegrounds.Weapons
         /// <summary>Подготовка оружия бота (контракт <c>BotGunner</c>): событие машины T44–T46, true — готово стрелять.</summary>
         public override bool RequestAutomationPreparation()
         {
-            if (!_configured || _stepping || _draining || _dispatching) return false;
+            InvalidateLostAutomation();
+            if (!_configured || _stepping || _draining || _dispatching || !CanCommandNow()) return false;
+            WeaponUseContext use = ReconcileUse();
+            if (!IsUseEligible(use) || !StateEventAuthority.IsWorldAuthority) return false;
+            _automationUse = use;
+            _automationGranted = true;
             StepNow(WS.WeaponEvent.Of(WS.WeaponEventKind.AutomationPrepareRequested));
             Drain();
-            return _weapon.IsReadyToFire(_triggerIndex);
+            WeaponUseContext current = ReconcileUse();
+            return use.SameKey(current) && IsUseEligible(current) && HasAutomationGrant(current) && _weapon.IsReadyToFire(_triggerIndex);
+        }
+
+        internal bool HasAutomationGrant(in WeaponUseContext use) =>
+            _automationGranted && use.Kind != WeaponUseKind.None && use.SameKey(_automationUse);
+
+        private bool IsUseEligible(in WeaponUseContext use) =>
+            _configured && isActiveAndEnabled && _weapon != null && _weapon.isActiveAndEnabled && _weapon.CanUse &&
+            use.Kind != WeaponUseKind.None && use.User != null && use.AuthoredHere && StateEventAuthority.IsAuthorOfItem(_weapon) &&
+            !(UxrManager.HasInstance && UxrManager.Instance.IsInsideStateSync) &&
+            (use.Kind == WeaponUseKind.Equipment ? StateEventAuthority.IsWorldAuthority :
+                UxrGrabManager.HasInstance && UxrGrabManager.Instance.isActiveAndEnabled && use.Hand != null &&
+                use.Hand.isActiveAndEnabled && use.Epoch > 0 && use.Hand.GrabLifetimeEpoch == use.Epoch);
+
+        private void RevokeAutomation()
+        {
+            _automationGranted = false;
+            _automationUse = default;
+            _contextGeneration++;
+            _trigger?.Reset();
+        }
+
+        /// <summary>Отзыв безопасен и внутри replay: авторский reset выполняется позже с верхнего уровня.</summary>
+        private void InvalidateLostAutomation()
+        {
+            if (!_automationGranted) return;
+            WeaponUseContext current = WeaponUseContext.Resolve(_weapon, _triggerIndex);
+            if (IsUseEligible(current) && current.SameKey(_automationUse)) return;
+            RevokeAutomation();
+            _contextResetPending = true;
+            // Один SyncCallDepth собственного SDK-вызова не означает replay и не отзывает разрешение.
+        }
+
+        /// <summary>Отзыв до очереди. Reset шагает напрямую: StepNow сначала исполнил бы старые события.</summary>
+        private WeaponUseContext ReconcileUse()
+        {
+            WeaponUseContext use = WeaponUseContext.Resolve(_weapon, _triggerIndex);
+            if (_reconciling || _stepping || _dispatching || !_configured) return use;
+            _reconciling = true;
+            try
+            {
+                WS.WeaponRole role = StateEventAuthority.IsAuthorOfItem(_weapon) ? WS.WeaponRole.Author : WS.WeaponRole.Observer;
+                bool eligible = IsUseEligible(use);
+                bool authorityChanged = _haveContext && role != _lastRole;
+                bool changed = _haveContext && (!_lastUse.SameKey(use) || _lastUse.Hand != use.Hand || (_lastCtx && !eligible));
+                bool reset = authorityChanged || _contextResetPending || (changed && (_lastCtx || _automationGranted));
+                if (authorityChanged || changed || _contextResetPending || (_automationGranted && !eligible)) RevokeAutomation();
+                _contextResetPending = false;
+                _haveContext = true; _lastRole = role; _lastCtx = eligible; _lastUse = use;
+                if (reset)
+                    Step(Capture(WS.WeaponEvent.Of(authorityChanged ? WS.WeaponEventKind.AuthorityChanged : WS.WeaponEventKind.ContextLost), false));
+                return use;
+            }
+            finally { _reconciling = false; }
         }
 
         // ── Очередь и шаг ───────────────────────────────────────────────────────────────────
@@ -384,6 +446,9 @@ namespace VrBattlegrounds.Weapons
         /// <summary>Событие с верхнего уровня: сначала разобрать очередь, затем шаг на свежем снимке.</summary>
         private void StepNow(in WS.WeaponEvent e, bool rateOfFire = false)
         {
+            InvalidateLostAutomation();
+            if (!_configured || _stepping || _dispatching || !CanCommandNow()) return;
+            ReconcileUse();
             Drain();
             Pending pending = Capture(e, rateOfFire);
             Step(pending);
@@ -392,6 +457,7 @@ namespace VrBattlegrounds.Weapons
         /// <summary>Событие изнутри синхронизации SDK: в очередь со снимком на момент события.</summary>
         private void Enqueue(in WS.WeaponEvent e, bool rateOfFire = false, bool recapture = false)
         {
+            InvalidateLostAutomation();
             if (!_configured) return;
             _viewDirty = true;
             Pending pending = recapture ? new Pending { Event = e, Recapture = true } : Capture(e, rateOfFire);
@@ -400,22 +466,27 @@ namespace VrBattlegrounds.Weapons
 
         private Pending Capture(in WS.WeaponEvent e, bool rateOfFire)
         {
-            WS.WeaponContext context = _context.Read(out UxrGrabber hand, rateOfFire);
+            WeaponUseContext use = WeaponUseContext.Resolve(_weapon, _triggerIndex);
+            WS.WeaponContext context = _context.Read(use, out UxrGrabber hand, rateOfFire);
             return new Pending
             {
                 Event = e, Ledger = ReadView(), Context = context, MainHand = hand,
+                Use = use, ContextGeneration = _contextGeneration,
                 Sample = _action.Sample(hand != null ? hand.Avatar : null)
             };
         }
 
         private void Drain()
         {
+            InvalidateLostAutomation();
             if (_draining || _stepping || _dispatching || !_configured || !CanCommandNow()) return;
+            ReconcileUse();
             _draining = true;
             try
             {
                 for (int guard = 0; _queue.Count > 0 && guard < DrainLimit; guard++)
                 {
+                    ReconcileUse();
                     Pending pending = _queue.Dequeue();
                     if (pending.Recapture)
                     {
@@ -432,12 +503,52 @@ namespace VrBattlegrounds.Weapons
         private void Step(in Pending pending)
         {
             if (_stepping || _machine == null) return;
+            Pending step = pending;
+            if (pending.Context.ActsAsAuthor && !MayAuthor(pending))
+            {
+                // Фиксации сохраняют звук/вылет/позу наблюдателя, но старый ключ больше не выполняет авторские строки.
+                step.Context = new WS.WeaponContext(WS.WeaponRole.Observer, false, true, pending.Context.Blocked,
+                    pending.Context.RofTimer, pending.Context.IsWorldAuthority, false, false);
+                WS.ActionSample sample = pending.Sample;
+                step.Sample = new WS.ActionSample(sample.Held, false, sample.HandleProgress, sample.MinRequiredProgress,
+                    sample.AllAtRest, sample.AtValidatedRear);
+                step.MainHand = null;
+            }
             _stepping = true;
             _out.Clear();
-            try { _machine.Step(pending.Event, pending.Ledger, pending.Sample, pending.Context, _out); }
+            try { _machine.Step(step.Event, step.Ledger, step.Sample, step.Context, _out); }
             catch (Exception exception) { GameLog.WeaponSystem.Error($"[WeaponSystem] {name}: шаг {pending.Event.Kind} — {exception}", this); }
             finally { _stepping = false; }
-            Dispatch(pending);
+            Dispatch(step);
+        }
+
+        private static bool IsControlEvent(WS.WeaponEventKind kind) => kind == WS.WeaponEventKind.Configured ||
+            kind == WS.WeaponEventKind.SnapshotLoaded || kind == WS.WeaponEventKind.ContextLost ||
+            kind == WS.WeaponEventKind.AuthorityChanged || kind == WS.WeaponEventKind.Disabled;
+
+        private bool MayAuthor(in Pending pending, bool requireUsable = false)
+        {
+            InvalidateLostAutomation();
+            if (!pending.Context.ActsAsAuthor || !CanCommandNow() || !StateEventAuthority.IsAuthorOfItem(_weapon)) return false;
+            if (IsControlEvent(pending.Event.Kind)) return true;
+            WeaponUseContext current = WeaponUseContext.Resolve(_weapon, _triggerIndex);
+            bool liveEligible = IsUseEligible(current);
+            // Свежий VR-шаг с CanUse=false сохраняет прежний авторский отклик об упоре; команды всё равно запрещены.
+            bool stepEligible = liveEligible || (!requireUsable && current.Kind == WeaponUseKind.VrHand && current.AuthoredHere &&
+                _configured && isActiveAndEnabled && _weapon.isActiveAndEnabled && current.Hand != null &&
+                current.Hand.isActiveAndEnabled && current.Epoch > 0 && current.Hand.GrabLifetimeEpoch == current.Epoch &&
+                UxrGrabManager.HasInstance && UxrGrabManager.Instance.isActiveAndEnabled);
+            bool valid = pending.ContextGeneration == _contextGeneration && pending.Use.SameKey(current) &&
+                         pending.Use.Hand == current.Hand && stepEligible &&
+                         (current.Kind != WeaponUseKind.Equipment ||
+                             (pending.Context.HasAuthorContext && pending.Context.AutomationAllowed && HasAutomationGrant(current)));
+            // Старый pending не отзывает новое разрешение. Отзыв требует потери именно текущего live-ключа.
+            if (_automationGranted && (!liveEligible || !current.SameKey(_automationUse)))
+            {
+                RevokeAutomation();
+                _contextResetPending = true;
+            }
+            return valid;
         }
 
         private void Dispatch(in Pending pending)
@@ -448,6 +559,7 @@ namespace VrBattlegrounds.Weapons
                 for (int index = 0; index < _out.Commands.Count; index++)
                 {
                     WS.LedgerCommand command = _out.Commands[index];
+                    if (!MayAuthor(pending, requireUsable: true)) break;
                     bool accepted;
                     try { accepted = _port.Execute(command); }
                     catch (Exception exception)
@@ -463,13 +575,14 @@ namespace VrBattlegrounds.Weapons
                     _queue.Enqueue(Capture(WS.WeaponEvent.RejectedCommand(command.Kind), false));
                     break;
                 }
-                UxrGrabber mainHand = pending.MainHand != null ? pending.MainHand : _context.MainHand();
+                bool vrFeedback = pending.Use.Kind == WeaponUseKind.VrHand;
+                UxrGrabber mainHand = vrFeedback ? pending.MainHand ?? _context.MainHand() : null;
                 for (int index = 0; index < _out.Cues.Count; index++)
                 {
                     _sound.Play(_out.Cues[index], _out.Reasons[index], mainHand);
                     _ejectionOut.Play(_out.Cues[index]);
                 }
-                for (int index = 0; index < _out.Haptics.Count; index++) _feedback.Haptic(_out.Haptics[index], mainHand, _action.HandleHand());
+                for (int index = 0; index < _out.Haptics.Count; index++) _feedback.Haptic(_out.Haptics[index], mainHand, vrFeedback ? _action.HandleHand() : null);
                 if (_out.HintSet) _feedback.Hint(_out.HintOn);
                 foreach (WS.WeaponReport report in _out.Reports) Log(report);
                 if (_out.HasPose) _poseTarget = _out.PoseValue;
@@ -550,6 +663,11 @@ namespace VrBattlegrounds.Weapons
         {
             if (this == null) { UxrStateSaveImplementer.StateSerialized -= OnStateSerialized; return; }
             if (!_configured || !ReferenceEquals(sender, _weapon) || args?.Serializer == null || !args.Serializer.IsReading) return;
+            if (_automationGranted)
+            {
+                RevokeAutomation();
+                _contextResetPending = true;
+            }
             // Событие приходит до загрузки остальных компонентов: снимок для шага берётся при разборе очереди.
             _trigger.Reset();
             _magazine.Rebase();

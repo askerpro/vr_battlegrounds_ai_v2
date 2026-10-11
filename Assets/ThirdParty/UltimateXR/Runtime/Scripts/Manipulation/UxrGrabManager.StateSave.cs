@@ -14,14 +14,29 @@ namespace UltimateXR.Manipulation
         /// <inheritdoc />
         protected override void SerializeState(bool isReading, int stateSerializationVersion, UxrStateSaveLevel level, UxrStateSaveOptions options)
         {
-            base.SerializeState(isReading, stateSerializationVersion, level, options);
-
-            // Manipulations are already handled through events, we don't serialize them in incremental changes
-
-            if (level > UxrStateSaveLevel.ChangesSincePreviousSave)
+            bool restoreGrabState = isReading && level > UxrStateSaveLevel.ChangesSincePreviousSave;
+            if (restoreGrabState) UxrGrabber.BeginGrabStateMutation();
+            try
             {
-                // We don't want to compare dictionaries, we save the manipulations info always by using null as name to avoid overhead.
-                SerializeStateValue(level, options, null, ref _currentManipulations);
+                if (restoreGrabState) AdvanceCurrentGrabLifetimes(); // VR Battlegrounds patch 71: старые записи до base/ref write.
+                base.SerializeState(isReading, stateSerializationVersion, level, options);
+
+                // Manipulations are already handled through events, we don't serialize them in incremental changes
+
+                if (level > UxrStateSaveLevel.ChangesSincePreviousSave)
+                {
+                    // We don't want to compare dictionaries, we save the manipulations info always by using null as name to avoid overhead.
+                    SerializeStateValue(level, options, null, ref _currentManipulations);
+                }
+            }
+            finally
+            {
+                if (restoreGrabState)
+                {
+                    // VR Battlegrounds patch 71: восстановленные/частично прочитанные записи; тот же payload.
+                    try { AdvanceCurrentGrabLifetimes(); }
+                    finally { UxrGrabber.EndGrabStateMutation(); }
+                }
             }
         }
 

@@ -831,6 +831,7 @@ GameObject:
   - component: {fileID: 1615918946304245674}
   - component: {fileID: 6585882548489614804}
   - component: {fileID: 1071364196811291507}
+  - component: {fileID: 9212996456720744057}
   m_Layer: 0
   m_Name: AK105
   m_TagString: Weapon
@@ -1352,6 +1353,21 @@ MonoBehaviour:
   _feedbackDefaults: {fileID: 11400000, guid: 85985b5ea9e111e4db2bfdf1c03eb563, type: 2}
   _hintVisual: {fileID: 2245827110958899509}
   _hintProximity: {fileID: 3183629355385080189}
+--- !u!114 &9212996456720744057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3900771781936566667}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf92bfabda1ac5141ab1ed168d9538f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponEquipmentBinding
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
 --- !u!1 &4053690855538267502
 GameObject:
   m_ObjectHideFlags: 0

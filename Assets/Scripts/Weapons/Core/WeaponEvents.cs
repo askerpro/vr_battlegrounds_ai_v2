@@ -72,7 +72,9 @@ namespace VrBattlegrounds.Weapons.Core
 
     /// <summary>
     /// Контекст шага. <see cref="Role"/> — по <c>StateEventAuthority.IsAuthorOfItem</c>;
-    /// <see cref="MainGripLocal"/> — основную рукоять держит локальная рука автора («контекст автора»);
+    /// <see cref="MainGripLocal"/> — основную рукоять держит локальная рука автора;
+    /// <see cref="HasAuthorContext"/> — допустим ручной контекст либо разрешён текущий equipment;
+    /// <see cref="AutomationAllowed"/> — хост разрешил подготовку текущему пользователю;
     /// <see cref="InsideReplay"/> — шаг внутри replay state sync (машина ведёт себя как наблюдатель);
     /// <see cref="RofTimer"/> — остаток таймера темпа SDK; <see cref="IsWorldAuthority"/> — сервер/офлайн (бот).
     /// </summary>
@@ -80,14 +82,23 @@ namespace VrBattlegrounds.Weapons.Core
     {
         public readonly WeaponRole Role;
         public readonly bool MainGripLocal, InsideReplay, IsWorldAuthority;
+        public readonly bool HasAuthorContext, AutomationAllowed;
         public readonly WeaponBlockReason Blocked;
         public readonly float RofTimer;
 
         public WeaponContext(WeaponRole role, bool mainGripLocal, bool insideReplay = false,
             WeaponBlockReason blocked = WeaponBlockReason.None, float rofTimer = 0f, bool isWorldAuthority = false)
+            : this(role, mainGripLocal, insideReplay, blocked, rofTimer, isWorldAuthority,
+                mainGripLocal, isWorldAuthority && mainGripLocal)
+        {
+        }
+
+        public WeaponContext(WeaponRole role, bool mainGripLocal, bool insideReplay,
+            WeaponBlockReason blocked, float rofTimer, bool isWorldAuthority, bool hasAuthorContext, bool automationAllowed)
         {
             Role = role; MainGripLocal = mainGripLocal; InsideReplay = insideReplay; Blocked = blocked;
             RofTimer = rofTimer; IsWorldAuthority = isWorldAuthority;
+            HasAuthorContext = hasAuthorContext; AutomationAllowed = automationAllowed;
         }
 
         /// <summary>Шаг идёт как у автора: только тогда таблица допускает команды учёту (И9).</summary>

@@ -2,7 +2,7 @@
   "schema_version": 2,
   "id": "manipulation",
   "owner": "manipulation",
-  "tasks": ["haptics-system"],
+  "tasks": ["haptics-system", "grab-authority"],
   "reviewed_sha": "081ec6777d6b47015c317c3a58ae296adcc32693",
   "reviewed_at": "2026-10-11",
   "owns": [

@@ -40,3 +40,4 @@
 | 2026-10-09 | Коммит кода — после проверки пользователем в шлеме; вливание — только хабом (`merge-request`/`merge-execute`). |
 | 2026-10-09 | Снятие `PocketHaptics` с аватаров — после горячего исправления avatar-renderer-regression; bots-fix, hand-rig-quality, legs-ik ждут нас (`after`). |
 | 2026-10-10 | Контракт weapon-system `weapon-grab-lifetime@1` (stamp жизни хвата в `UxrGrabber`) подтверждён: не пересекается с патчем 67 при сохранении его трёх вызовов. |
+| 2026-10-12 | Бот = обычный аватар (решение bots-fix): хват бота — на сервере под `IsWorldAuthority` через `CanBeGrabbedByGrabber`/`TryGrab` (тот же `GrabRules`), бот берёт только не удерживаемое. Блокеры ботов (`grab-authority`: сброс рук при смерти у автора, удержание предмета у автора относительно корня) — раньше `sources`. |

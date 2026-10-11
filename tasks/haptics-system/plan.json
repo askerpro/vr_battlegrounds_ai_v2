@@ -110,6 +110,7 @@
       "id": "pocket-removal",
       "writes": [
         "Assets/Scripts/Interaction/PocketHaptics.cs",
+        "Assets/Scripts/Interaction/PocketHaptics.cs.meta",
         "Assets/Prefabs/Player/PlayerBase.prefab",
         "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab",
         "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab",

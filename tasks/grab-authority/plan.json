@@ -27,13 +27,7 @@
         "Docs/manipulation/**",
         "tasks/grab-authority/**"
       ],
-      "after": [
-        {
-          "task": "grab-authority",
-          "stage": "death-release-authority",
-          "state": "merged"
-        }
-      ],
+      "after": [],
       "needs": []
     }
   ]

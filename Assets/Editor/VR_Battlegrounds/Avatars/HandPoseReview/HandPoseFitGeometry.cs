@@ -13,7 +13,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         public FitTriangle(Vector3 a, Vector3 b, Vector3 c, string zone = "surface")
         { A = a; B = b; C = c; Zone = zone; Source = ""; FingerSegment = ""; SourceTriangle = 0; SourceSubMesh = 0; }
         public float Area => Vector3.Cross(B - A, C - A).magnitude * 0.5f;
-        public Vector3 Normal => Vector3.Cross(B - A, C - A).normalized;
+        // Vector3.normalized обнуляет векторы короче 1e-5, а |Cross| миллиметровой грани ~1e-6 м²:
+        // нормируем вручную, иначе мелкие грани кисти/предмета получают нулевую нормаль.
+        public Vector3 Normal { get { Vector3 c = Vector3.Cross(B - A, C - A); float m = c.magnitude; return m > 1e-20f ? c / m : Vector3.zero; } }
         public Bounds Bounds { get { var b = new Bounds(A, Vector3.zero); b.Encapsulate(B); b.Encapsulate(C); return b; } }
     }
 
@@ -46,7 +48,11 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         public readonly FitTriangle[] Triangles;
         readonly int[] _order;
         readonly Node _root;
-        sealed class Node { public Bounds Bounds; public int Start, Count; public Node Left, Right; }
+        bool _dipoles;
+        // Дальнее поле узла: центр площади, сумма площадь×нормаль, радиус охвата вершин.
+        sealed class Node { public Bounds Bounds; public int Start, Count; public Node Left, Right; public Vector3 Center, AreaNormal; public float Radius, AreaSum; }
+        /// <summary>Узел считается дальним, если расстояние до его центра больше Beta×радиус.</summary>
+        public const float WindingBeta = 3f;
 
         public FitSurface(FitTriangle[] triangles)
         {
@@ -97,6 +103,50 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             }
         }
         public int IntersectionCount(FitTriangle t) => Overlaps(t.Bounds).Count(i=>HandPoseFitGeometry.Intersects(t,Triangles[i]));
+
+        /// <summary>
+        /// Обобщённое число оборотов (сумма телесных углов / 4π) по BVH: ближние узлы точно,
+        /// дальние — дипольным приближением первого порядка. Работает на открытых и non-manifold
+        /// мешах: внутри замкнутой наружно ориентированной поверхности ≈1, снаружи ≈0.
+        /// </summary>
+        public double WindingNumber(Vector3 p)
+        {
+            if(!_dipoles) {Dipole(_root);_dipoles=true;}
+            return Winding(_root,p)/(4*Math.PI);
+        }
+
+        /// <summary>Точная сумма по всем треугольникам; для контроля приближения.</summary>
+        public double WindingNumberExact(Vector3 p)
+        {
+            double sum=0;foreach(FitTriangle t in Triangles) sum+=HandPoseFitGeometry.SolidAngle(p,t);
+            return sum/(4*Math.PI);
+        }
+
+        double Winding(Node n,Vector3 p)
+        {
+            Vector3 d=n.Center-p;double distance2=d.sqrMagnitude,reach=(double)n.Radius*WindingBeta;
+            if(distance2>reach*reach) {double distance=Math.Sqrt(distance2);return ((double)d.x*n.AreaNormal.x+(double)d.y*n.AreaNormal.y+(double)d.z*n.AreaNormal.z)/(distance2*distance);}
+            if(n.Left==null) {double sum=0;for(int i=n.Start;i<n.Start+n.Count;i++) sum+=HandPoseFitGeometry.SolidAngle(p,Triangles[_order[i]]);return sum;}
+            return Winding(n.Left,p)+Winding(n.Right,p);
+        }
+
+        void Dipole(Node n)
+        {
+            double area=0;Vector3 normal=Vector3.zero,center=Vector3.zero;
+            if(n.Left==null) {
+                for(int i=n.Start;i<n.Start+n.Count;i++) {
+                    FitTriangle t=Triangles[_order[i]];Vector3 cross=Vector3.Cross(t.B-t.A,t.C-t.A);float a=cross.magnitude*.5f;
+                    normal+=cross*.5f;center+=(t.A+t.B+t.C)/3*a;area+=a;
+                }
+            } else {
+                Dipole(n.Left);Dipole(n.Right);normal=n.Left.AreaNormal+n.Right.AreaNormal;
+                float la=n.Left.AreaSum,ra=n.Right.AreaSum;area=la+ra;center=n.Left.Center*la+n.Right.Center*ra;
+            }
+            n.AreaSum=(float)area;n.AreaNormal=normal;n.Center=area>0?center/(float)area:n.Bounds.center;
+            float radius=0;
+            for(int i=n.Start;i<n.Start+n.Count;i++) {FitTriangle t=Triangles[_order[i]];radius=Mathf.Max(radius,Mathf.Max((t.A-n.Center).magnitude,Mathf.Max((t.B-n.Center).magnitude,(t.C-n.Center).magnitude)));}
+            n.Radius=radius;
+        }
         /// <summary>Копирует уже построенный BVH для GPU; порядок/разбиение имеет одного владельца.</summary>
         public void ExportGpuBvh(out Vector4[] minimum, out Vector4[] maximum, out Vector4[] ranges, out FitTriangle[] ordered)
         {
@@ -210,6 +260,19 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             return result;
         }
         static bool ShareVertex(FitTriangle a,FitTriangle b) => a.A==b.A||a.A==b.B||a.A==b.C||a.B==b.A||a.B==b.B||a.B==b.C||a.C==b.A||a.C==b.B||a.C==b.C;
+
+        /// <summary>
+        /// Знаковый телесный угол треугольника из точки p (Van Oosterom–Strackee), double.
+        /// Положителен, когда нормаль Cross(B-A,C-A) направлена от p (точка с внутренней стороны грани).
+        /// </summary>
+        public static double SolidAngle(Vector3 p, FitTriangle t)
+        {
+            double ax=t.A.x-p.x,ay=t.A.y-p.y,az=t.A.z-p.z,bx=t.B.x-p.x,by=t.B.y-p.y,bz=t.B.z-p.z,cx=t.C.x-p.x,cy=t.C.y-p.y,cz=t.C.z-p.z;
+            double al=Math.Sqrt(ax*ax+ay*ay+az*az),bl=Math.Sqrt(bx*bx+by*by+bz*bz),cl=Math.Sqrt(cx*cx+cy*cy+cz*cz);
+            double determinant=ax*(by*cz-bz*cy)-ay*(bx*cz-bz*cx)+az*(bx*cy-by*cx);
+            double denominator=al*bl*cl+(ax*bx+ay*by+az*bz)*cl+(bx*cx+by*cy+bz*cz)*al+(cx*ax+cy*ay+cz*az)*bl;
+            return 2*Math.Atan2(determinant,denominator);
+        }
 
         public static bool? IsInside(Vector3 p, FitSurface surface, FitTopology topology)
         {

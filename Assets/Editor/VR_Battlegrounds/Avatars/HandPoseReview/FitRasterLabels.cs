@@ -23,7 +23,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             string range=report.Settings.ContactDistanceMinMm.ToString("0.##",CultureInfo.InvariantCulture)+"-"+report.Settings.ProximityMm.ToString("0.##",CultureInfo.InvariantCulture);
             Text(texture,8,texture.height-line*2-4,report.Settings.ShowContactMarkers?"PAIRS "+range+" MM INCLUSIVE / CYAN RING OBJECT":"CONTACT MARKERS OFF",scale);
             Text(texture,8,texture.height-line*3-4,"DOT GREEN OUTSIDE / YELLOW UNKNOWN / RED INSIDE",scale);
-            Text(texture,8,texture.height-line*4-4,mode=="distance"?"HEAT CYAN-ORANGE MM / MAGENTA TOUCH / GRAY MASK":"XRAY SHOWS HIDDEN PAIRS / SECTION CLIPS PAIRS",scale);
+            Text(texture,8,texture.height-line*4-4,mode=="distance"?"HEAT CYAN-ORANGE MM / MAGENTA TOUCH / GRAY MASK":mode=="pads"?"PADS RED INSIDE / GREEN WINDOW / BLUE GAP / YELLOW DISTAL":"XRAY SHOWS HIDDEN PAIRS / SECTION CLIPS PAIRS",scale);
             string frameLabel=report.CaptureSource!=null && report.CaptureSource.StartsWith("editor_",StringComparison.Ordinal)?"EDITOR FRAME "+report.CaptureFrame:report.CaptureFrame>=0?"RUNTIME FRAME "+report.CaptureFrame:"PREFAB STATIC";
             Text(texture,8,texture.height-line*5-4,(frameLabel+" STATE "+report.StateName).ToUpperInvariant(),scale);
             float mm=frame<.1f?frame*1000*.25f:50;int length=(int)(texture.width*mm*.001f/frame);int y0=18;

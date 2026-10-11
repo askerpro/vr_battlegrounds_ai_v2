@@ -53,6 +53,12 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         public Vector3 AnalysisVolumePositionMeters,AnalysisVolumeEulerDegrees,AnalysisVolumeScale=Vector3.one;
         public bool AnalysisVolumeReviewed, IncludeOtherHand=true, CheckHandSelfIntersections=true;
         public FitVolumeReview AnalysisVolumeReview;
+        // Знаковые per-finger метрики: окно «касания» по модулю расстояния со знаком (мм) и полуугол
+        // подушечки вокруг направления отпечатка distal-кости. Параметры метода, не нормы качества.
+        public float ContactWindowMm = 2, PadHalfAngleDeg = 60;
+        public int PadSamplesPerFinger = 256;
+        // Кадр по bounds кисти (+30 мм) вместо фиксированного FrameSizeMeters вокруг GripCenter.
+        public bool FrameToHandBounds;
         public HandPoseFitRequest Copy() {var copy=(HandPoseFitRequest)MemberwiseClone();copy.ContactRendererPaths=(ContactRendererPaths??Array.Empty<string>()).ToArray();copy.ContactRegions=(ContactRegions??Array.Empty<FitContactRegion>()).Select(x=>x?.Copy()).ToArray();copy.AnalysisVolumeReview=AnalysisVolumeReview?.Copy();return copy;}
     }
 
@@ -103,8 +109,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview
 
     public sealed class HandPoseFitReport
     {
-        public int SchemaVersion = 2;
-        public string AlgorithmVersion = "mesh-fit-0.4-local-volume", CreatedUtc, UnityVersion, Status, Error, OutputDirectory;
+        public int SchemaVersion = 3;
+        public string AlgorithmVersion = "mesh-fit-0.5-signed-finger-contact", CreatedUtc, UnityVersion, Status, Error, OutputDirectory;
         public string EvidenceMode;
         public FitVolumeReviewAudit LocalVolumeReviewAudit;
         public string LocalVolumeDistanceMeaning="unsigned_distance_and_bins_to_actual_analysis_volume_meters_object_root; not_grip_acceptance";
@@ -147,6 +153,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         public FitTopology AnalysisVolumeTopology;
         public bool LocalAnalysisVolumeApplied;
         public string DistanceBinMeaning="unsigned_mm: [0,.5], (.5,1], (1,2], (2,5], (5,infinity); not_quality_thresholds";
+        // Новое в схеме 3: знаковое расстояние по числу оборотов, подушечки по пальцам. Прежние unsigned-поля не меняются.
+        public FitContactMetrics ContactMetrics;
     }
 
     // Unity-векторы имеют вычисляемые свойства normalized; обычная JSON-рефлексия рекурсивна.

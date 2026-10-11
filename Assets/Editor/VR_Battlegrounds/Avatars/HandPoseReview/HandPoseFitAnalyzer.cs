@@ -70,6 +70,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             HandPoseFitPrecision.Measure(snapshot,report,contact,full,topology,samples,candidates);
             report.ContactCandidateCount=candidates.Count;report.ContactPatches=HandPoseFitGeometry.ContactPatches(snapshot.ContactHand.ToArray(),candidates);
             foreach(var z in report.Zones) {var pairs=candidates.Where(p=>p.Zone==z.Zone).ToArray();if(pairs.Length>0) z.MeanNearNormalOpposition=pairs.Sum(p=>p.NormalOppositionDot*p.AreaMm2)/pairs.Sum(p=>p.AreaMm2);}
+            // Знаковые метрики по пальцам считаются по всей кисти (не по PalmarOnly-маске) и всей поверхности предмета.
+            report.ContactMetrics=HandPoseContactMetrics.Measure(snapshot,report,full);
+            report.Reliability.Add(new FitReliability{Metric="finger_contact_sign",Status="approximate",Reason="Знак — обобщённое число оборотов всей поверхности предмета (w>=0,5 — внутри); на открытых мешах у дыр знак размыт (AmbiguousWindingFarAreaMm2), обращённые части дают w<0 (NegativeWindingAreaMm2). Подушечка — по осям distal-кости SDK; правил контакта нет."});
             int markerCount=Math.Min(request.MaxContactMarkers,candidates.Count);
             for(int i=0;i<markerCount;i++) report.ContactMarkers.Add(candidates[(int)((long)i*candidates.Count/markerCount)]);
             report.Status=report.Reliability.Any(x=>x.Status!="measured")?"analysis_incomplete":"analysis_complete";
@@ -127,6 +130,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             if(r.ContactRegions==null) r.ContactRegions=Array.Empty<FitContactRegion>();
             if(r.CheckSamplingConvergence && r.SampleCount>50000) throw new ArgumentException("Для двойной выборки SampleCount не больше 50000.");
             foreach(var region in r.ContactRegions) if(region==null||string.IsNullOrWhiteSpace(region.Name)||!Finite(region.Bounds.center)||!Finite(region.Bounds.size)||region.Bounds.size.x<=0||region.Bounds.size.y<=0||region.Bounds.size.z<=0) throw new ArgumentException("Неверный контактный регион.");
+            if(float.IsNaN(r.ContactWindowMm)||float.IsInfinity(r.ContactWindowMm)||r.ContactWindowMm<=0||r.ContactWindowMm>50) throw new ArgumentException("ContactWindowMm: (0..50].");
+            if(float.IsNaN(r.PadHalfAngleDeg)||r.PadHalfAngleDeg<=0||r.PadHalfAngleDeg>90||r.PadSamplesPerFinger<16||r.PadSamplesPerFinger>5000) throw new ArgumentException("PadHalfAngleDeg: (0..90]; PadSamplesPerFinger: 16..5000.");
             if(!Finite(r.AnalysisVolumePositionMeters)||!Finite(r.AnalysisVolumeEulerDegrees)||!Finite(r.AnalysisVolumeScale)||r.AnalysisVolumeScale.x<=0||r.AnalysisVolumeScale.y<=0||r.AnalysisVolumeScale.z<=0) throw new ArgumentException("Неверное преобразование аналитического объёма.");
         }
         static bool Finite(Vector3 v) => !(float.IsNaN(v.x)||float.IsNaN(v.y)||float.IsNaN(v.z)||float.IsInfinity(v.x)||float.IsInfinity(v.y)||float.IsInfinity(v.z));

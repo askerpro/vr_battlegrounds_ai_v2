@@ -23,6 +23,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         public Bounds HandBounds;
         public Vector3 GripCenter;
         public readonly List<FitTriangle> OtherHand=new List<FitTriangle>(),AnalysisVolume=new List<FitTriangle>();
+        // Рамки distal-костей анализируемой кисти (оси той же кости, кадр корня предмета) для подушечек.
+        public readonly List<FitFingerFrame> FingerFrames=new List<FitFingerFrame>();
         Matrix4x4 _worldToFrame=Matrix4x4.identity;
         bool _runtime;
         HandPoseFitSnapshot() {}
@@ -53,7 +55,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 report.AvatarGuidChain=avatar.GetPrefabGuidChain().ToArray();report.ObjectScale=root.transform.lossyScale.x;report.ObjectScaleAxes=root.transform.lossyScale;
                 report.GrabbablePath=HumanPath(grabbable.transform,root.transform);report.AlignToControllerEnabled=point.AlignToController;report.ControllerAlignmentApplied=false;
                 var hand=avatar.GetHand(r.Side);var zones=new Dictionary<Transform,string>();var segments=new Dictionary<Transform,string>();
+                var fingerAxes=avatar.AvatarRigInfo.GetArmInfo(r.Side).FingerUniversalLocalAxes;
                 void Finger(UxrAvatarFinger f,string name) {
+                    if(f.Distal) FingerFrames.Add(FitFingerFrame.FromBone(name,f.Distal,fingerAxes,sourceToSnap));
                     var nodes=new[]{f.Metacarpal,f.Proximal,f.Intermediate,f.Distal};var labels=new[]{"metacarpal","proximal","intermediate","distal"};
                     for(int i=0;i<nodes.Length;i++) if(nodes[i]) {
                         foreach(var child in nodes[i].GetComponentsInChildren<Transform>(true)){zones[child]=name;segments[child]=name+"/"+labels[i];}
@@ -256,8 +260,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             var grabber=avatar.GetComponentsInChildren<UxrGrabber>(true).FirstOrDefault(g=>g.Side==side);
             if(!grabber || (_runtime && (!grabber.HandRenderer||!grabber.HandRenderer.enabled))) return;
             // Выделение второй кисти тем же способом, без изменения её позы.
-            int handCount=Hand.Count,contactCount=ContactHand.Count;var savedBounds=HandBounds;var copy=r.Copy();copy.Side=side;copy.PalmarOnly=false;
+            int handCount=Hand.Count,contactCount=ContactHand.Count,frameCount=FingerFrames.Count;var savedBounds=HandBounds;var copy=r.Copy();copy.Side=side;copy.PalmarOnly=false;
             CaptureHand(avatar,grabber,copy,new HandPoseFitReport());OtherHand.AddRange(Hand.Skip(handCount));Hand.RemoveRange(handCount,Hand.Count-handCount);ContactHand.RemoveRange(contactCount,ContactHand.Count-contactCount);HandBounds=savedBounds;
+            FingerFrames.RemoveRange(frameCount,FingerFrames.Count-frameCount);
         }
 
         GameObject Clone(GameObject prefab)
@@ -278,15 +283,21 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             foreach(Transform bone in hand.Transforms) foreach(Transform child in bone.GetComponentsInChildren<Transform>(true)) allowed.Add(child);
             var zones=new Dictionary<Transform,string>();
             var segments=new Dictionary<Transform,string>();
+            var fingerAxes=avatar.AvatarRigInfo.GetArmInfo(r.Side).FingerUniversalLocalAxes;
             void Finger(UxrAvatarFinger f,string name) {
+                if(f.Distal) FingerFrames.Add(FitFingerFrame.FromBone(name,f.Distal,fingerAxes,_worldToFrame));
                 var nodes=new[]{f.Metacarpal,f.Proximal,f.Intermediate,f.Distal};var labels=new[]{"metacarpal","proximal","intermediate","distal"};
                 for(int i=0;i<nodes.Length;i++) if(nodes[i]) {foreach(Transform child in nodes[i].GetComponentsInChildren<Transform>(true)) {zones[child]=name;segments[child]=name+"/"+labels[i];}
                     report.Joints.Add(new FitJointReport {Zone=name,Segment=labels[i],Path=HumanPath(nodes[i],avatar.transform),PositionMeters=_worldToFrame.MultiplyPoint3x4(nodes[i].position),LocalRotation=nodes[i].localRotation});}
             }
             Finger(hand.Thumb,"thumb");Finger(hand.Index,"index");Finger(hand.Middle,"middle");Finger(hand.Ring,"ring");Finger(hand.Little,"little");
             var main=grabber.HandRenderer as SkinnedMeshRenderer;
+            // Только LOD0 тела: в Play Mode LODGroup не выключает Renderer нижних уровней, поэтому их
+            // нужно исключить явно, иначе снимок смешивает Body_LOD0/1/2 (как в статике после Clone).
+            var lowerLods=LowerLodRenderers(avatar.gameObject);
             foreach(var skin in avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
                 if((_runtime||skin!=main) && (!skin.enabled || !skin.gameObject.activeInHierarchy)) continue;
+                if(lowerLods.Contains(skin)) continue;
                 Mesh source=skin.sharedMesh;if(!source || !skin.bones.Any(allowed.Contains)) continue;
                 {
                     var sample=HandMeshCapture.Capture(skin,_worldToFrame,avatar.transform,false);
@@ -315,6 +326,17 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 }
             }
             report.Limitations.Add("Зоны по весам костей, ладонная маска по нормалям — требуют визуальной проверки для нового рига/перчатки; palm_wrist включает границу запястья.");
+        }
+
+        /// <summary>Renderer, входящие только в LOD1+ какого-либо LODGroup под корнем.</summary>
+        public static HashSet<Renderer> LowerLodRenderers(GameObject root)
+        {
+            var result=new HashSet<Renderer>();
+            foreach(var lod in root.GetComponentsInChildren<LODGroup>(true)) {
+                var levels=lod.GetLODs();if(levels.Length==0) continue;var first=new HashSet<Renderer>(levels[0].renderers);
+                foreach(var level in levels.Skip(1)) foreach(var renderer in level.renderers) if(renderer&&!first.Contains(renderer)) result.Add(renderer);
+            }
+            return result;
         }
 
         static List<FitTriangle> ReadTriangles(Mesh mesh,Matrix4x4 matrix,string path,string zone)

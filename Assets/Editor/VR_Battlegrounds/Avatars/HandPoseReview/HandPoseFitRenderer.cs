@@ -19,9 +19,12 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         {
             var r=report.Settings;Shader shader=Shader.Find("Hidden/VRBattlegrounds/HandPoseFit");
             if(!shader) throw new InvalidOperationException("Не импортирован shader анализатора.");
-            Camera camera=snapshot.Preview.camera;camera.orthographic=true;camera.orthographicSize=r.FrameSizeMeters*.5f;camera.nearClipPlane=.001f;camera.farClipPlane=20;
+            // Кадр по bounds кисти: наибольший габарит + 30 мм с каждой стороны, поправка на полосы подписей.
+            float frame=r.FrameSizeMeters,labelShift=0;
+            if(r.FrameToHandBounds) {Vector3 size=snapshot.HandBounds.size;frame=(Mathf.Max(size.x,Mathf.Max(size.y,size.z))+.06f)*r.ImageSize/(r.ImageSize-90f);labelShift=frame*15f/r.ImageSize;}
+            Camera camera=snapshot.Preview.camera;camera.orthographic=true;camera.orthographicSize=frame*.5f;camera.nearClipPlane=.001f;camera.farClipPlane=20;
             camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.08f,.10f,.13f);camera.cullingMask=-1;
-            Vector3 center=r.OverrideFrameCenter?r.FrameCenterMeters:snapshot.GripCenter;
+            Vector3 center=r.OverrideFrameCenter?r.FrameCenterMeters:r.FrameToHandBounds?snapshot.HandBounds.center:snapshot.GripCenter;
             string[] names={"front","back","left","right","top","bottom"};
             Vector3[] dirs={Vector3.forward,Vector3.back,Vector3.left,Vector3.right,Vector3.up,Vector3.down};
             var resources=new List<Object>();var objects=new List<GameObject>();
@@ -40,27 +43,42 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                     return inside.HasValue?tint:Color.Lerp(tint,new Color(.5f,.2f,.9f),.5f);
                 });resources.Add(heat);
                 GameObject hg=Add(snapshot,hand,solid),wg=Add(snapshot,weapon,solid),wireg=Add(snapshot,wire,line),heatg=Add(snapshot,heat,solid);objects.AddRange(new[]{hg,wg,wireg,heatg});
+                // Режим pads: маска подушечек и знак расстояния в центре грани (визуальная проверка метода).
+                GameObject padsg=null;var metrics=report.ContactMetrics;
+                if(metrics!=null&&metrics.PadTriangleIndices.Count>0) {
+                    var colors=new Dictionary<(string,int,int),Color>();
+                    for(int i=0;i<snapshot.Hand.Count;i++) {
+                        var t=snapshot.Hand[i];var key=(t.Source,t.SourceSubMesh,t.SourceTriangle);
+                        if(metrics.PadTriangleIndices.Contains(i)) {
+                            Vector3 p=(t.A+t.B+t.C)/3;double mm=full.Distance(p)*1000;
+                            colors[key]=full.WindingNumber(p)>=.5?new Color(1,.12f,.1f):mm<=metrics.WindowMm?new Color(.15f,.95f,.3f):Color.Lerp(new Color(.45f,.75f,1f),new Color(.1f,.15f,.75f),Mathf.Clamp01((float)mm/20f));
+                        } else if(metrics.DistalTriangleIndices.Contains(i)) colors[key]=new Color(.95f,.85f,.2f);
+                    }
+                    Mesh pads=Mesh(snapshot.Hand,t=>colors.TryGetValue((t.Source,t.SourceSubMesh,t.SourceTriangle),out var c)?c:new Color(.4f,.4f,.45f));resources.Add(pads);padsg=Add(snapshot,pads,solid);objects.Add(padsg);
+                }
+                string[] modeNames=padsg?new[]{"normal","xray","distance","section","pads"}:new[]{"normal","xray","distance","section"};
                 GameObject otherg=null,volumeg=null,regionsg=null;
                 if(snapshot.OtherHand.Count>0) {Mesh other=Mesh(snapshot.OtherHand,_=>new Color(.65f,.35f,.9f));resources.Add(other);otherg=Add(snapshot,other,solid);objects.Add(otherg);}
                 if(snapshot.AnalysisVolume.Count>0) {Mesh volume=Wire(snapshot.AnalysisVolume,new Color(1,.65f,.15f,.8f));resources.Add(volume);volumeg=Add(snapshot,volume,line);objects.Add(volumeg);}
                 if(r.ContactRegions.Length>0) {Mesh bounds=RegionBounds(r.ContactRegions);resources.Add(bounds);regionsg=Add(snapshot,bounds,line);objects.Add(regionsg);}
                 for(int view=0;view<6;view++) {
                     Vector3 dir=dirs[view],up=Mathf.Abs(Vector3.Dot(dir,Vector3.up))>.9f?Vector3.forward:Vector3.up;
-                    camera.transform.position=center+dir*2;camera.transform.rotation=Quaternion.LookRotation(-dir,up);
-                    for(int mode=0;mode<4;mode++) {
-                        string modeName=new[]{"normal","xray","distance","section"}[mode];
-                        hg.SetActive(mode==0||mode==1);wg.SetActive(mode!=3);wireg.SetActive(mode==1||mode==2);heatg.SetActive(mode==2);
+                    camera.transform.position=center+dir*2+up*labelShift;camera.transform.rotation=Quaternion.LookRotation(-dir,up);
+                    for(int mode=0;mode<modeNames.Length;mode++) {
+                        string modeName=modeNames[mode];
+                        hg.SetActive(mode==0||mode==1);wg.SetActive(mode!=3);wireg.SetActive(mode==1||mode==2||mode==4);heatg.SetActive(mode==2);
+                        if(padsg) padsg.SetActive(mode==4);
                         if(otherg) otherg.SetActive(mode==0||mode==1);
                         if(volumeg) volumeg.SetActive(mode==1||mode==2);
                         if(regionsg) regionsg.SetActive(mode==1||mode==2);
-                        wg.GetComponent<MeshRenderer>().sharedMaterial=mode==1||mode==2?ghost:solid;
+                        wg.GetComponent<MeshRenderer>().sharedMaterial=mode==1||mode==2||mode==4?ghost:solid;
                         var sectionObjects=new List<GameObject>();var sectionMeshes=new List<Mesh>();
                         try {
                             if(mode==3) {
                                 Mesh hm=Mesh(Clip(snapshot.Hand,center,dir),_=>HandColor),wm=Mesh(Clip(snapshot.ObjectSurface,center,dir),_=>ObjectColor);sectionMeshes.Add(hm);sectionMeshes.Add(wm);
                                 sectionObjects.Add(Add(snapshot,hm,solid));sectionObjects.Add(Add(snapshot,wm,solid));
                             }
-                            if(r.ShowContactMarkers && report.ContactMarkers.Count>0) {
+                            if(r.ShowContactMarkers && report.ContactMarkers.Count>0 && mode!=4) {
                                 // В рентгене показываем скрытые контакты; в обычном виде учитываем глубину.
                                 markers.SetFloat("_ZTest",mode==1||mode==2?(int)CompareFunction.Always:(int)CompareFunction.LessEqual);
                                 IEnumerable<FitContactCandidate> pairs=report.ContactMarkers;
@@ -71,7 +89,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                             snapshot.Preview.BeginStaticPreview(new Rect(0,0,r.ImageSize,r.ImageSize));snapshot.Preview.Render(true);
                             Texture2D texture=snapshot.Preview.EndStaticPreview();
                             try {
-                                FitRasterLabels.Label(texture,report,modeName,names[view],r.FrameSizeMeters);
+                                FitRasterLabels.Label(texture,report,modeName,names[view],frame);
                                 string name=names[view]+"-"+modeName+".png";File.WriteAllBytes(Path.Combine(report.OutputDirectory,name),texture.EncodeToPNG());
                                 report.Cameras.Add(new FitCameraReport{View=names[view],Mode=modeName,Image=name,Position=camera.transform.position,Forward=camera.transform.forward,Up=camera.transform.up,OrthographicSizeMeters=camera.orthographicSize,SectionNormal=mode==3?dir:Vector3.zero,SectionOffsetMeters=mode==3?Vector3.Dot(center,dir):0});
                             } finally {Object.DestroyImmediate(texture);}
@@ -83,7 +101,14 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 string Escape(string value) => System.Security.SecurityElement.Escape(value??"");
                 html.Append("<p>Источник: "+Escape(report.CaptureSource)+"; кадр "+report.CaptureFrame+"; состояние "+Escape(report.StateName)+". Фиолетовая поверхность — другая кисть; оранжевые рёбра — аналитический объём; зелёные рамки — контактные регионы.</p><h2>Достоверность</h2><ul>");
                 foreach(var item in report.Reliability) html.Append("<li>"+Escape(item.Metric)+": "+Escape(item.Status)+" — "+Escape(item.Reason)+"</li>");html.Append("</ul><h2>Контакт по фалангам</h2><table><tr><th>Зона</th><th>P50, мм</th><th>Доля близости</th><th>Неизвестный знак</th></tr>");
-                foreach(var item in report.Segments) html.Append("<tr><td>"+Escape(item.Zone)+"</td><td>"+item.DistanceP50Mm.ToString("F2",CultureInfo.InvariantCulture)+"</td><td>"+item.NearSurfaceFraction.ToString("P1",CultureInfo.InvariantCulture)+"</td><td>"+item.UnknownSignSamples+"</td></tr>");html.Append("</table><ul>");foreach(string item in report.Findings) html.Append("<li>"+Escape(item)+"</li>");html.Append("</ul>");
+                foreach(var item in report.Segments) html.Append("<tr><td>"+Escape(item.Zone)+"</td><td>"+item.DistanceP50Mm.ToString("F2",CultureInfo.InvariantCulture)+"</td><td>"+item.NearSurfaceFraction.ToString("P1",CultureInfo.InvariantCulture)+"</td><td>"+item.UnknownSignSamples+"</td></tr>");html.Append("</table>");
+                if(metrics!=null) {
+                    string F(double v) => v.ToString("F1",CultureInfo.InvariantCulture);string N(double? v) => v.HasValue?v.Value.ToString("F2",CultureInfo.InvariantCulture):"—";
+                    html.Append("<h2>Подушечки со знаком</h2><p>Расстояние со знаком, мм: плюс — зазор снаружи, минус — точка кисти внутри предмета (число оборотов ≥0,5). Окно ±"+F(metrics.WindowMm)+" мм, полуугол подушечки "+F(metrics.PadHalfAngleDeg)+"°. Режим pads: красный — внутри, зелёный — в окне, голубой→синий — зазор до 20 мм, жёлтый — distal вне подушечки. Пороги качества не заданы.</p><table><tr><th>Палец</th><th>Подушечка, мм</th><th>Мин. по подушечке</th><th>Глубина проникновения</th><th>Площадь в окне, мм²</th><th>Opposition</th><th>Доля подушечки в distal</th><th>Мин. по пальцу</th></tr>");
+                    foreach(var f in metrics.Fingers) html.Append("<tr><td>"+Escape(f.Finger)+"</td><td>"+F(f.PadSignedDistanceMm)+"</td><td>"+F(f.PadMinSignedMm)+"</td><td>"+F(f.PadPenetrationDepthMm)+"</td><td>"+F(f.PadWindowAreaMm2)+"</td><td>"+N(f.PadPointOpposition)+"</td><td>"+N(f.PadAreaFraction)+"</td><td>"+F(f.FingerMinSignedMm)+"</td></tr>");
+                    html.Append("</table>");
+                }
+                html.Append("<ul>");foreach(string item in report.Findings) html.Append("<li>"+Escape(item)+"</li>");html.Append("</ul>");
                 foreach(string name in names) {html.Append("<section><h2>"+name+"</h2>");foreach(var image in report.Cameras.Where(c=>c.View==name)) html.Append("<figure><figcaption>"+image.Mode+"</figcaption><img src='"+image.Image+"'></figure>");html.Append("</section>");}
                 File.WriteAllText(Path.Combine(report.OutputDirectory,"index.html"),html.ToString(),new UTF8Encoding(false));
             } finally {foreach(var o in objects) Object.DestroyImmediate(o);foreach(var resource in resources) Object.DestroyImmediate(resource);}

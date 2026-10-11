@@ -148,7 +148,7 @@ planning), weapon-system ← weapon-system (6 verified → `--allow-unmerged`). 
 | launch-infra | map-runtime-bootstrap | F:/CodexWorktrees/map-runtime-bootstrap (прежний) | 16 |
 | avatar-ik | legs-ik | F:/CodexWorktrees/avatar-ik (постоянный) | 7 |
 | avatar-ik | avatar-renderer-regression | F:/CodexWorktrees/2cf1 (прежний) | 13 |
-| avatar-grip | hand-rig-quality | F:/CodexWorktrees/hands-rig-quality (прежний: reports держит системный процесс) | 23 |
+| avatar-grip | hand-rig-quality | F:/CodexWorktrees/avatar-grip (постоянный; перенос после снятия блокировки reports) | 24 |
 | bots | bots-fix | F:/CodexWorktrees/bots (постоянный) | 23 |
 | manipulation | haptics-system | F:/CodexWorktrees/manipulation (постоянный) | 14 |
 | gameplay | arsenal-generator | F:/CodexWorktrees/gameplay (постоянный) | 17 |

@@ -1,6 +1,6 @@
 # Приём `hand-rig-quality` экспертом `avatar-grip`
 
-Открыть worktree: F:/CodexWorktrees/hands-rig-quality/Vr_Battlegrounds_ai
+Открыть worktree: F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai
 Owner задачи в хабе уже `avatar-grip` (task-handoff выполнен 2026-10-11). Первая сессия — обычный `claude` в этом каталоге
 (до rebase в worktree может не быть профиля эксперта); промпт ниже целиком.
 
@@ -9,7 +9,6 @@ Owner задачи в хабе уже `avatar-grip` (task-handoff выполне
 остановился посреди работы, handoff не оставил. Прими задачу и доделывай по его плану.
 Общайся по-русски, правила — AGENTS.md.
 При миграции этап `mef-grip-audit` остановлен (stop → planned, файлы на месте): после сверки сделай begin заново.
-Worktree ещё не перенесён в F:/CodexWorktrees/avatar-grip (каталог reports держит системный процесс); owner уже avatar-grip, работать можно здесь.
 1. Зона и живое состояние:
    python -B -X utf8 F:/CodexWorktrees/expert-workspace-infra/Vr_Battlegrounds_ai/Tools/experts/awake.py F:/CodexWorktrees/expert-workspace-infra/Vr_Battlegrounds_ai/experts/avatar-grip --repo .
 2. Что делал прежний агент:

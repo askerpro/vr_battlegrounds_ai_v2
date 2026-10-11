@@ -21,7 +21,8 @@
 1. `design` — merged `ef477dc2`.
 2. `device-runner` — merged `1fc34c84`: `Tools/e2e/Run-QuestE2E.ps1`, шлем-клиент + ПК-сервер, контракт
    `quest-device-run` r3; Quest 3 device-smoke GREEN.
-3. `quest-build` — planned: сборка из конвейера, opt-out диалога Input Handling, штамп ревизии APK/сервера.
+3. `quest-build` — merged `2c314876`: `StartPairBuild`/`RunPairBatch`, `-Build`, штамп ревизии `0.1.0+<sha>`,
+   сверка ревизий APK/сервер, подавление модального окна Input Handling.
 4. `perf-scenario` — у performance: сценарий `perf-stress`.
 
 Подробности: [Details.md](Details.md). Машинный план: [plan.json](plan.json). Отчёты — `reports/`, вне Git.

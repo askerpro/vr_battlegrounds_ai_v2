@@ -22,6 +22,9 @@
         "Tools/e2e/Run-QuestE2E.ps1",
         "Assets/Scripts/Debug/E2E/E2EContext.cs",
         "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/E2EResult.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/DeviceSmokeScenario.cs.meta",
+        "Assets/Scripts/Debug/E2E/Scenarios/DeviceSmokeScenario.cs",
         "Docs/testing.md",
         "tasks/quest-perf-pipeline/**",
         "experts/launch-infra/**"
@@ -30,6 +33,45 @@
         {
           "task": "quest-perf-pipeline",
           "stage": "design",
+          "state": "merged"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "quest-device-run",
+          "revision": 3,
+          "aspects": [
+            "launch",
+            "topology",
+            "ports",
+            "scenario-args",
+            "result",
+            "artifacts",
+            "lifecycle",
+            "device-prep",
+            "logs",
+            "run-manifest"
+          ],
+          "readiness": "agreed"
+        }
+      ]
+    },
+    {
+      "id": "quest-build",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Debug/E2EPlayerBuilder.cs",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Tools/release/Build-Game.ps1",
+        "Docs/release.md",
+        "Docs/testing.md",
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "device-runner",
           "state": "merged"
         }
       ],

@@ -8,6 +8,14 @@ PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
 0. `quest-perf-pipeline` — взят в работу 2026-10-11 по поручению пользователя: автоматический конвейер на шлеме —
    сборка Android → adb install → запуск перф-теста → закрытие → сбор логов и перф-результатов. Конвейер, сборка и
    запуск — launch-infra; содержание замеров, метрики и бюджеты — performance (контракт формата результатов).
+   Блокер сборки 2026-10-12: Android-сборка из редактора показывает модальное «Unsupported Input Handling on
+   Android» (Active Input Handling = Both, ключ opt-out `AndroidInputHandlingWarning`) — worker простоял ~1 ч.
+   Симптом закрывает этап `quest-build` (opt-out перед сборкой + предупреждение в отчёте); сопровождающему —
+   infra_issue 4176 (детект модальных окон в брокере).
+0a. `input-handling-new-only` — корень: перейти на Input System only. В рантайме сторонних пакетов есть legacy
+   `Input`: UXR `UxrGamepadInput`/`UxrKeyboardInput`, FImpossible `LegsAnimator`, Mirror `GUIConsole`/
+   `RemoteStatistics`/`ToggleHotkey`, KINEMATION `KShooterMenu`/`TacticalShooterPlayer`. Нужен аудит путей
+   вызова на Quest с avatar-ik (ввод, ноги) и manipulation; `ProjectSettings` — моя зона, решение — совместное.
 1. `live-smoke-runner` → этап `e2e-log-verdict` — агрегация ошибок всех процессов и механизм известных шумов для `series-smoke-e2e` — MRB «Известные шумы тестов и харнесса», VTS «Финальная проверка383».
 2. `async-player-build` — `E2EPlayerBuilder.Run()` блокирует главный поток (таймаут MCP), пачкает `PC.asset`, `ProjectSettings.asset`, `MapRuntimeCatalog.asset`; ложное «устарел» — `Docs/testing.md` «Шероховатость: проверка свежести билда». Диагностика 2026-10-11 (чтение кода): `PC.asset` — URP
    `ShaderBuildPreprocessor` под Standalone+Development, мусор, зона performance; `ProjectSettings.asset` — снимок

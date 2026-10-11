@@ -482,11 +482,65 @@ Play Launch ([test-stand.md](test-stand.md) «Локальные сетевые 
 | Инкрементальная пересборка после правки C# | ~17 с |
 | Сам прогон (сервер + 2 клиента) | ~40 с |
 
+#### Прогон на шлеме (Run-QuestE2E.ps1)
+
+Контракт: [quest-device-run](../tasks/quest-perf-pipeline/contracts/quest-device-run.json) (rev3). Шлем — настоящий
+клиент выделенного сервера на ПК по LAN (prod flow): дирижёр поднимает Windows-плеер сервера
+(`-batchmode -nographics`, роль `server`), затем запускает установленное приложение на шлеме клиентом `client-1`.
+
+```
+powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1
+powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Scenario device-smoke -Arg artifact=1
+powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Apk Build\Quest\VrBattlegrounds_Quest.apk
+```
+
+Параметры: `-Scenario` (по умолчанию `device-smoke`), `-Topology client|host` (`host` — код 2: нужен шов выбора роли
+в плеере, зона network), `-Map`, `-Timeout` (не меньше 60 с; сценариям уходит на 30 с меньше), `-Arg ключ=значение`
+(каждый уходит обеим сторонам как `-e2eArg`; в режиме `-File` несколько — через запятую; без пробелов и запятых
+в значениях), `-Apk` (`install -r` и SHA-256 в `run.json`), `-Serial`, `-Adb` (иначе PATH, затем Android SDK Unity
+версии проекта), `-ServerPlayer` (по умолчанию `Build\e2e\VrBattlegrounds.exe`), `-NetworkPort`/`-DiscoveryPort`
+(0 и 0 — авто, как у Run-E2E), `-ServerAddress` (по умолчанию IPv4 ПК в подсети `wlan0` шлема), `-Package`, `-Activity`.
+
+Отказ с кодом 2 до прогона, ничего не трогая: нет adb или устройства (нужно ровно одно в состоянии `device`, либо
+`-Serial`), приложение уже запущено (`pidof`) — не наш процесс, нет плеера сервера, нет общей подсети, неверные
+`-Arg`/порты. **Брандмауэр**: если активный профиль Windows включён и нет разрешающего входящего UDP-правила для exe
+сервера (или есть блокирующее), дирижёр отказывает и печатает готовые `New-NetFirewallRule`/`netsh` — их выполняет
+человек с правами администратора; сам скрипт брандмауэр не меняет.
+
+Порядок: сервер → заглушка `server.json` → `KEYCODE_WAKEUP`, `prox_close`, `logcat -c` → `am start -S -W -n
+<pkg>/<activity> -e unity "<аргументы>"` с `-e2eQuitOnFinish` и результатом в `/sdcard/Android/data/<pkg>/files/e2e/
+<прогон>/client-1.json` → опрос обоих вердиктов до статуса ≠ `started` или таймаута. В `finally` всегда: `am
+force-stop`, гашение своего серверного PID и потомков, `automation_disable`, logcat, сбор, `run.json`.
+
+**Шлем должен быть свободен.** Пока на шлеме открыт системный диалог (`…Dialog…` от `com.oculus`/`com.meta`:
+«нужны контроллеры», «Link отключён», граница), игра не получит фокус — дирижёр проверяет это до прогона и отказывает
+с именем диалога; закрывает его человек. Контроллеры держать включёнными: при спящих Quest показывает
+`LaunchCheckControllerRequiredDialog`. **Quest Link**: в Link шлем работает дисплеем ПК, и игра не стартует — без
+флага дирижёр отказывает; `-StopLink` закрывает Link-клиент (`com.oculus.xrstreamingclient`) на прогон и **не
+возвращает** его (решение пользователя 2026-10-12: перезапуск со шлема не восстанавливает связь с ПК надёжно) —
+переподключить Link вручную; в `run.json` — блок `link`.
+
+Папка `Tools/e2e/results/<yyyyMMdd-HHmmss>-quest-<сценарий>/`: `server.json`, `server.log`, `client-1.json`,
+`client-1.logcat.txt` (процесс приложения, все теги), `unity.logcat.txt` (тег Unity), `logcat-stream.txt` (весь
+logcat за прогон потоком — кольцевой буфер шлема мал), `logcat-full.txt` (только если pid не найден),
+`artifacts/client-1/` и `artifacts/server/` (то, что сценарии объявили в `E2EResult.Artifacts`), `summary.json`
+(как у Run-E2E) и `run.json` — манифест условий: пакет и версия, APK и SHA-256, модель, fingerprint, серийник, UTC
+начала и конца, аргументы обеих сторон целиком, батарея до и после, Wi-Fi шлема, CPU ПК, порты, адрес сервера,
+условия сборки обеих сторон (`buildGuid`, `appVersion`, `unityVersion`, `developmentBuild`, `platform` из их
+результатов), итоговый код. Без `run.json` прогон не состоялся. Расхождение `appVersion`/`unityVersion` сторон — код 2;
+сверка штампа ревизии исходников появится с этапом `quest-build`.
+
+Для сценариев: параметры читаются только через `E2EContext.Arg(ключ)` (ошибка разбора `-e2eArg` — `error` до запуска
+сценария); файлы для забора объявляются `E2EResult.AddArtifact(путь)` — только абсолютный путь внутри
+`Application.persistentDataPath`, иначе красная проверка «артефакт вне persistentDataPath». Самопроверка каркаса —
+сценарий `device-smoke` (сервер ждёт подключение с сессией, клиент — `NetworkClient.isConnected`, с `artifact=1`
+обе стороны пишут `persistentDataPath/e2e-smoke/<utc>.txt`). Во время прогона редактор и MCP на этом ПК не трогать.
+
 #### Что где лежит
 
 | Что | Где |
 |---|---|
-| Дирижёр | `Tools/e2e/Run-E2E.ps1` |
+| Дирижёр | `Tools/e2e/Run-E2E.ps1`; шлем — `Tools/e2e/Run-QuestE2E.ps1` |
 | Артефакты прогона (JSON + логи плееров) | `Tools/e2e/results/<дата>-<сценарий>/` |
 | Харнесс внутри плеера | `Assets/Scripts/Debug/E2E/` |
 | Сценарии | `Assets/Scripts/Debug/E2E/Scenarios/` |
@@ -494,7 +548,9 @@ Play Launch ([test-stand.md](test-stand.md) «Локальные сетевые 
 | Плеер | `Build/e2e/` (в `.gitignore`) |
 
 Аргументы плеера: `-e2eScenario`, `-e2eRole`, `-e2eResult`, `-e2eTimeout`, `-e2eMap`,
-`-e2eClients`, `-e2eServerAddress`, `-e2eDeviceToken`. Без `-e2eScenario` харнесс
+`-e2eClients`, `-e2eServerAddress`, `-e2eDeviceToken`, `-e2eNetworkPort`/`-e2eDiscoveryPort`, `-e2eArg ключ=значение`
+(повторяемый), `-e2eQuitOnFinish` (выход после вердикта в любой роли; относительный `-e2eResult` — от
+`persistentDataPath`). Без `-e2eScenario` харнесс
 не поднимается вообще, поэтому в обычном билде он инертен.
 
 Харнесс ставится не через сцену и не через префаб, а через

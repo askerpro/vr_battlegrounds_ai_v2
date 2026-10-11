@@ -85,16 +85,7 @@
           "state": "merged"
         }
       ],
-      "needs": [
-        {
-          "contract": "weapon-use-context",
-          "revision": 1,
-          "aspects": [
-            "npc-root-recoil"
-          ],
-          "readiness": "agreed"
-        }
-      ]
+      "needs": []
     },
     {
       "id": "use-context-lifetime-planning",

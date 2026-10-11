@@ -7,6 +7,12 @@
   Закончил — Play выкл, `finish`, `receive` до любых правок.
 - Аренда брокера: ждать OFFERED на переднем плане (`watch-ticket --until offered --timeout 580`, цикл); после
   `claim`/`begin` выполнить весь пакет и `finish` в том же ходе. Истёкшая аренда блокирует очередь всем агентам.
+- Допуск этапа хаба (`begin`) живёт ~20 мин: при долгой работе на worker продлевать `coordination.py renew --token`;
+  истёкший `verify` даёт EXPIRED — `renew` после истечения штатно восстанавливает. Заявка брокера: `--input` = SHA
+  коммита (технический checkpoint), `--base` = опубликованная база worker; новый `origin/dev` без публикации →
+  «устаревшая база», подать `request-base` на `origin/dev` и ждать DONE. Вход-коммит избегает испорченных бинарников.
+- Голову в шлеме — `PlayLaunch.Plan/Play` (Role host, ClientCount 0, сцена Lobby), стоп — `PlayLaunch.Cancel(run, owner)`
+  до `CleanupPassed=true`. `GhostAvatar.prefab` не пересохранять через `SaveAsPrefabAsset` — портит UXR id и `_assetId`.
 - Ключ `request --key` уникален навсегда: повтор с другим содержимым — отказ «ключ уже закреплён».
 - Пока у этапа нет `begin`, хук пускает только простые команды координации без пайпов, `$(...)` и циклов; полный SHA
   — отдельной командой `git rev-parse HEAD`. После `verify` допуск этапа закрыт.

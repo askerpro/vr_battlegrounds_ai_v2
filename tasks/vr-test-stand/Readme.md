@@ -27,7 +27,7 @@ SDK patch 58 — [changelog](changelog/2026-10-08-sdk-58.md).
 | `docs-publication` | merged `9bcef90d` |
 | `checkout-network-ports` | merged `07002dde` (прогон worker383) |
 | `expert-workspace-pilot-handoff` | merged `1001415b` |
-| `e2e-run-isolation` | planned — см. ниже |
+| `e2e-run-isolation` | running — проверено на worker, ждёт приёмки |
 
 ## Текущий этап: `e2e-run-isolation`
 
@@ -41,8 +41,11 @@ SDK patch 58 — [changelog](changelog/2026-10-08-sdk-58.md).
 `DebugBootstrapGate.PlayerBeforeNetworkStart` (в Editor остаётся прежний писатель). Порт discovery в плеере —
 публичное свойство Mirror `NetworkDiscoveryBase` (патч SDK, номер через patch-reserve).
 
-Зона network (`GameNetworkDiscovery.cs`, Mirror): zone-request event 3489; задачи у network в хабе нет, адресный
-message отклонён — проектное ревью запрошено у эксперта network. Без его согласия эти два файла не меняются.
+Зона network: согласие с 6 условиями, ACK диффа, zone-ack event 3566 (Details §15).
+
+**Состояние:** реализовано, проверено на worker (аренда 421): компиляция и AndroidCompileGate PASS, сборка плеера
+PASS, `map-run-startup-route` GREEN дважды — на автопаре и при занятых 7778/47777; неполная пара даёт `error` без
+старта сети. Ждёт приёмки пользователем, затем коммит и штатное вливание.
 
 Следом: `e2e-log-verdict` (агрегация логов всех процессов, механизм известных шумов), затем
 `map-runtime-bootstrap/series-smoke-e2e`.

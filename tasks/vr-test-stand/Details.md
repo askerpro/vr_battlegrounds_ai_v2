@@ -587,5 +587,31 @@ Checkpoint29fb97d6, worker383: busy10/10 с новым RunId919815a6 и реал
    `SessionRecoveryOnReconnectScenario.cs:869-894`) вернёт подключение к чужому серверу.
 4. Клиент применяет оба порта; RequireFree — только Server/Host. Аналог `EditorClientAddressOverride` не нужен.
 5. Патч Mirror — только аксессор; общий журнал Mirror исторический. Diff показать network до checkpoint.
+6. (сессия эксперта network, `experts/network/journal/2026-10-11-e2e-run-isolation-review.md`, 7abce42d6)
+   Поле `serverBroadcastListenPort` не переименовывать и не снимать `[SerializeField]`: его по имени читают
+   `PlayLaunchNetworkPorts.cs:182,248` и `SocketInheritanceTests.cs:83`, значение сериализовано в сценах.
+   Формальный zone-ack — zone-override через сопровождающего (у network нет задачи в хабе).
+
+Финальное ревью диффа (эксперт network, read-only): ACK. Дубликат MANAGERS после disconnect ложного отказа не
+даёт: `NetworkClient.Shutdown()` (`NetworkManager.cs:1271`) раньше отложенной загрузки Offline. Остаётся обход шва
+в `SessionRecoveryOnReconnectScenario.ConnectDirectly` (`:869-894`): в плеере `StartClient()` нового менеджера до
+его ApplyRole уйдёт на порт префаба; отказ `NetworkAlreadyActive` тогда верный. Исправление — направить через
+`RequestClientConnect`, как ветку редактора (`:862-866`); это содержание сценария, вне writes этапа — отдельный
+пункт. Идемпотентный успех при активной сети на паре прогона не принят: паритет с Editor-владельцем, иначе второй
+StartClient на активном клиенте.
 Остаточные риски: TOCTOU между выбором пары и bind; необработанный SocketException из `new UdpClient`
 (`NetworkDiscoveryBase.cs:167`). Формальный zone-ack: event 3489; у network нет задачи в хабе, policy off.
+
+**Проверка worker, аренда 421** (вход `b53f68363d`, база `17293aa3c`, Unity `Vr_Battlegrounds_ai@72e96145498eb8a0`,
+2026-10-11; evidence вне Git: `tasks/vr-test-stand/reports/e2e-run-isolation-421/`):
+- Editor-компиляция без ошибок, новые типы загружены; AndroidCompileGate PASS, ошибок 0.
+- Сборка e2e-плеера через `delayCall` и статус-файл (`tools/e2e-isolation-build.cs.txt`): PASS за 75 с, MCP не ждал
+  главный поток. Побочные изменения worker: `MapRuntimeCatalog.asset`, `PC.asset`, `ProjectSettings.asset`,
+  `GraphicsSettings.asset`, `UniversalRenderPipelineGlobalSettings.asset`; finish — `unexpected`, `accepted=false`, не доставлены.
+- Прогон 1 `map-run-startup-route` TestMap1, 2 клиента, поздний 40 с: GREEN (сервер 6/6, клиенты 4/4 и 4/4), автопара
+  62870/62871; в логах всех трёх процессов «Порты применены» с этой парой.
+- Прогон 2 тот же при занятых посторонним процессом UDP 7778 и 47777: GREEN (3/3 роли), пара 65268/65269.
+- Негатив: плеер-сервер только с `-e2eNetworkPort 30001` — результат `error` «порты e2e: задан -e2eNetworkPort без
+  -e2eDiscoveryPort», код выхода 2, шов отказал `PortInvalid`, сеть не стартовала.
+Не проверено: параллельный прогон двух дирижёров; живой отказ bind discovery на сервере; `VRBG_NO_E2E`-сборка
+(новый код под тем же `#if`, шов в рантайме без ссылок на E2E); полный EditMode suite; шлем не нужен.

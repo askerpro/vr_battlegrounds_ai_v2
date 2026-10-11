@@ -1,0 +1,23 @@
+// Тело execute_code на worker (этап e2e-run-isolation), только в своей RUNNING-аренде после guard.
+// Ставит сборку e2e-плеера в delayCall и сразу возвращается: MCP не ждёт BuildPlayer на главном потоке.
+// Итог пишется в tasks/vr-test-stand/reports/e2e-build.json корня worker; агент ждёт файл снаружи Unity.
+string root = System.IO.Path.GetFullPath(".");
+string status = System.IO.Path.Combine(root, "tasks", "vr-test-stand", "reports", "e2e-build.json");
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(status));
+if (System.IO.File.Exists(status)) System.IO.File.Delete(status);
+UnityEditor.EditorApplication.delayCall += () =>
+{
+    string json;
+    try
+    {
+        var result = VrBattlegrounds.EditorTools.E2EPlayerBuilder.Run();
+        json = "{\"passed\":" + (result.Passed ? "true" : "false") + ",\"seconds\":" + result.Seconds.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)
+             + ",\"summary\":\"" + result.Summary.Replace("\\", "/").Replace("\"", "'") + "\"}";
+    }
+    catch (System.Exception error)
+    {
+        json = "{\"passed\":false,\"summary\":\"" + (error.GetType().Name + ": " + error.Message).Replace("\\", "/").Replace("\"", "'") + "\"}";
+    }
+    System.IO.File.WriteAllText(status, json, new System.Text.UTF8Encoding(false));
+};
+return "scheduled: " + status;

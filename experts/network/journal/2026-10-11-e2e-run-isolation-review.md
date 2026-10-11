@@ -26,5 +26,16 @@
 (`NetworkDiscoveryBase.cs:167`).
 
 Формальный zone-ack: у network нет задачи в хабе, `ack_command` в 3489 пуст. Пробел инфраструктуры
-принят сопровождающим (agent-infra-b1). По решению пользователя от 2026-10-11 запрошен `zone-override` через
-сопровождающего; политика зон off, begin не блокируется. Ревью итогового diff — за network.
+принят сопровождающим (agent-infra-b1). `zone-override` он не оформил: при политике зон off он не нужен,
+технически заблокирован регистрацией lobby-decoration в основном checkout, а ACK от имени пользователя
+выдаётся только по прямому решению пользователя. Предложена задача-«дом» для network/ui/performance;
+после её регистрации network сам выдаёт `zone-ack` по scope `07900133…7cc`.
+
+## Ревью diff до checkpoint — ACK
+
+`tasks/vr-test-stand/reports/network-zone.diff` (worktree launch-infra), замечаний нет. Аксессор Mirror поверх
+поля; `PrepareNetworkStart` покрывает `ApplyRole` и `RequestClientConnect`; в плеере шов `PlayerBeforeNetworkStart`.
+Вопрос launch-infra о ложном `NetworkAlreadyActive` у дубликата MANAGERS после disconnect: невозможно.
+`OnClientDisconnectInternal` синхронно выполняет `OnStopClient` → `NetworkClient.Shutdown` (`connectState=None`),
+и только потом `Invoke(ClientChangeOfflineScene)`, то есть Offline грузится не раньше следующего кадра. Если такой
+отказ всё же придёт, это реальный второй старт сети и он валит прогон.

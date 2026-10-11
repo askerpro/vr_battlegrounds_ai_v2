@@ -2,7 +2,7 @@
 
 Interaction with grabbables on top of UltimateXR (grab rules, two hands, anchors, pockets, placement,
 release, grab networking by network's rules, loose items) plus interaction effects, vibration, feedback.
-`haptics-system` is one task, not the zone. Facts: KB `tasks/haptics-system/expert/`; here — navigation.
+`haptics-system` is one task, not the zone. Facts: KB `Docs/manipulation/`; here — navigation.
 
 ## Owns
 - Grab admission (`GrabRules`, `PlayerGrabManager` delegates), two-hand policy, anchors/pockets and placement
@@ -17,7 +17,7 @@ release, grab networking by network's rules, loose items) plus interaction effec
 - network: how to replicate (relay, authority, StateSync), UniqueId/registry; reviews your network part.
 - gameplay: arsenal economy. avatar-ik: UxrManager, frame order, input (Devices), locomotion, body IK, calibration.
 
-## Invariants (numbered — `tasks/haptics-system/expert/invariants.md`)
+## Invariants (numbered — `Docs/manipulation/invariants.md`)
 - SDK owns grab state. Grab-state copy, second motor/feedback writer, own proximity math, bypassing
   `GrabRules`/`StateEventAuthority` — conflict.
 - Motor written only by `UnityXRHapticDevice` on `HapticMixer` command inside `HapticService`; vibration only
@@ -30,7 +30,7 @@ release, grab networking by network's rules, loose items) plus interaction effec
 - Vibration numbers (strength, waveform, priority) are a project setting the user tunes in Play Mode via
   Quest Link; never pick them; no player vibration settings.
 - `architecture.md` §8 = code-reading hypotheses until a run confirms them.
-- User decisions: `tasks/haptics-system/expert/decisions.md` (new ones there, journal links).
+- User decisions: `Docs/manipulation/decisions.md` (new ones there, journal links).
 
 ## Architecture
 `$UXR` = `Assets/ThirdParty/UltimateXR/Runtime/Scripts`.
@@ -45,9 +45,8 @@ release, grab networking by network's rules, loose items) plus interaction effec
 - Grab network: network's Relay, `StateEventAuthority`, `NetworkUxrIdentity` in `Assets/Scripts/Network/`.
 
 ## Details (grep heading)
-- `tasks/haptics-system/expert/architecture.md` §1–§9 («1. Слои» … «9. Соседние владельцы»).
-- `tasks/haptics-system/expert/sources.md` «SDK UltimateXR…» (patches), «Тесты…», «Инструменты редактора».
-- `tasks/haptics-system/expert/handoff.md` (`pocket-removal` plan); `tasks/haptics-system/Details.md` items 0.4, 2, 5, 9 only.
+- `Docs/manipulation/architecture.md` §1–§9 («1. Слои» … «9. Соседние владельцы»).
+- `Docs/manipulation/sources.md` «SDK UltimateXR…» (patches), «Тесты…», «Инструменты редактора».
+- `tasks/haptics-system/handoff.md` (`pocket-removal` plan); `tasks/haptics-system/Details.md` items 0.4, 2, 5, 9 only.
 - `Docs/troubleshooting.md` «Взаимодействие с предметами»; `Docs/UltimateXR/known-issues.md` Issue 6, 7, 13–18, 20, 35, 38.
 - Check facts `tasks/haptics-system/changelog/`; contract `tasks/haptics-system/contracts/haptics-api.md`.
-- Stage `manipulation-kb` moves the KB under Docs; after merge re-point these links.

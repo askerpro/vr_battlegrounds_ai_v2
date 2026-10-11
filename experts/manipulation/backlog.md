@@ -1,4 +1,4 @@
-Обновлено 2026-10-11. Кандидаты вне хаба; порядок — приоритет. §N — `tasks/haptics-system/expert/architecture.md`.
+Обновлено 2026-10-11. Кандидаты вне хаба; порядок — приоритет. §N — `Docs/manipulation/architecture.md`.
 
 1. `death-release-authority` — `OnPlayerDied` освобождает руки с propagate на каждой машине без автора, возможен дубль; сначала стенд/лог — §8, Issue 23.
 2. `server-grab-validation` — сервер не проверяет правила хвата, кроме арсенала (`ServerRejectTake`); с network — §8.

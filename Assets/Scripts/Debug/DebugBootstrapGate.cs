@@ -34,6 +34,13 @@ namespace VrBattlegrounds.DevTools
         public static System.Func<string> EditorBeforeServerStart { get; set; }
         /// <summary>Один Editor-владелец применяет frozen порты до старта сети каждой роли.</summary>
         public static System.Func<Mirror.NetworkManager, Mirror.Discovery.NetworkDiscovery, Network.GameNetworkDiscovery.AppRole, string> EditorBeforeNetworkStart { get; set; }
+        /// <summary>
+        /// Аналог <see cref="EditorBeforeNetworkStart"/> для собранного плеера: применяет пару портов до старта сети
+        /// каждой роли, код отказа запрещает старт. Ставит только E2E-харнесс (<c>E2EPlayerPorts</c>); в обычном
+        /// запуске пусто. Сброс в <see cref="ResetOnPlay"/> не нужен: в плеере домен не переживает Play,
+        /// а в редакторе этот шов не вызывается.
+        /// </summary>
+        public static System.Func<Mirror.NetworkManager, Mirror.Discovery.NetworkDiscovery, Network.GameNetworkDiscovery.AppRole, string> PlayerBeforeNetworkStart { get; set; }
 
         /// <summary>Остановить отладочный сценарий редактора: дальше им дирижирует вызывающий.</summary>
         public static void Suppress(string reason)

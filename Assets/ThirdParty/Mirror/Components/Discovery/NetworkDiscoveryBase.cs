@@ -36,6 +36,16 @@ namespace Mirror.Discovery
         [Tooltip("The UDP port the server will listen for multi-cast messages")]
         protected int serverBroadcastListenPort = 47777;
 
+        // VR Battlegrounds patch 2: публичный аксессор порта Discovery без логики — e2e-харнесс собранного
+        // плеера изолирует прогон своей парой портов (в плеере нет SerializedObject, через который это делает редактор).
+        // tasks/vr-test-stand/changelog/2026-10-11-sdk-mirror-2.md.
+        /// <summary>
+        /// UDP-порт, на котором сервер слушает запросы Discovery и на который клиент шлёт broadcast.
+        /// Смена порта во время <see cref="AdvertiseServer"/> или <see cref="StartDiscovery"/> вступает в силу
+        /// только после их перезапуска.
+        /// </summary>
+        public int ServerBroadcastListenPort { get => serverBroadcastListenPort; set => serverBroadcastListenPort = value; }
+
         [SerializeField]
         [Tooltip("Time in seconds between multi-cast messages")]
         [Range(1, 60)]

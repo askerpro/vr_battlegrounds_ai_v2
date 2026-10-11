@@ -11,6 +11,14 @@
 # Вердикт выносит сценарий внутри плеера, а не этот скрипт: см.
 # Assets/Scripts/Debug/E2E/. Скрипт только запускает, ждёт, добивает и сводит.
 #
+# Изоляция прогона. Каждый прогон получает свою пару UDP-портов (KCP и Discovery):
+# по умолчанию две свободные, выбранные bind на порт 0, либо явно -NetworkPort/-DiscoveryPort.
+# Пара уходит серверу и каждому клиенту аргументами -e2eNetworkPort/-e2eDiscoveryPort,
+# поэтому прогон не конфликтует с редактором, worker и плеерами других worktree на 7778/47777,
+# а клиент не найдёт через Discovery чужой сервер. Гасит скрипт только процессы, которые
+# запустил сам (и их потомков по ParentProcessId), — никогда не по имени процесса:
+# сирота чужого прогона сидит на своих портах и этому прогону не мешает.
+#
 # Коды возврата:
 #   0 — все проверки зелёные
 #   1 — проверки прошли, часть красная (находка воспроизводится)
@@ -19,6 +27,7 @@
 # Запуск:
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -Map TestMap2 -Timeout 420
+#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -NetworkPort 27778 -DiscoveryPort 27777
 
 [CmdletBinding()]
 param(
@@ -45,6 +54,11 @@ param(
     # Нужна сценариям, где клиент приходит на уже идущую карту (map-run-relay-barrier).
     [int]    $LateClientDelay = 0,
 
+    # Пара UDP-портов прогона: KCP (сеть Mirror) и Discovery. 0 и 0 — выбрать
+    # автоматически две свободные. Задаются только вместе; один без другого — ошибка.
+    [int]    $NetworkPort = 0,
+    [int]    $DiscoveryPort = 0,
+
     # Не проверять свежесть билда относительно исходников.
     [switch] $SkipStaleCheck
 )
@@ -62,17 +76,90 @@ function Write-Section([string] $Text) {
     Write-Host ('== ' + $Text) -ForegroundColor Cyan
 }
 
-# ── 0. Добить осиротевшие процессы ────────────────────────────────────────
-# Висящий плеер держит UDP-порт Discovery и рвёт следующий прогон.
-$ProcessName = [System.IO.Path]::GetFileNameWithoutExtension($Player)
-$orphans = @(Get-Process -Name $ProcessName -ErrorAction SilentlyContinue)
-if ($orphans.Count -gt 0) {
-    Write-Section ('Добиваю осиротевшие процессы: ' + $orphans.Count)
-    foreach ($orphan in $orphans) {
-        try { Stop-Process -Id $orphan.Id -Force -ErrorAction Stop } catch {}
-    }
-    Start-Sleep -Seconds 2
+# ── Порты прогона ─────────────────────────────────────────────────────────
+
+# Свободный UDP-порт: bind на порт 0 выдаёт система, сокет сразу освобождается.
+function Get-FreeUdpPort {
+    $client = [System.Net.Sockets.UdpClient]::new([System.Net.IPEndPoint]::new([System.Net.IPAddress]::Any, 0))
+    try { return ([System.Net.IPEndPoint] $client.Client.LocalEndPoint).Port }
+    finally { $client.Close() }
 }
+
+# Две разные свободные UDP-порта: KCP и Discovery.
+function Select-PortPair {
+    $network = Get-FreeUdpPort
+    $discovery = Get-FreeUdpPort
+    while ($discovery -eq $network) { $discovery = Get-FreeUdpPort }
+    return @($network, $discovery)
+}
+
+# Порт свободен прямо сейчас: эксклюзивный bind и немедленное освобождение (как preflight в плеере).
+function Test-UdpPortFree([int] $Port) {
+    $socket = $null
+    try {
+        $socket = [System.Net.Sockets.Socket]::new(
+            [System.Net.Sockets.AddressFamily]::InterNetwork,
+            [System.Net.Sockets.SocketType]::Dgram,
+            [System.Net.Sockets.ProtocolType]::Udp)
+        $socket.ExclusiveAddressUse = $true
+        $socket.Bind([System.Net.IPEndPoint]::new([System.Net.IPAddress]::Any, $Port))
+        return $true
+    }
+    catch { return $false }
+    finally { if ($null -ne $socket) { $socket.Close() } }
+}
+
+# Ошибка явной пары портов или пустая строка.
+function Get-PortPairError([int] $Network, [int] $Discovery) {
+    if ($Network -lt 1 -or $Network -gt 65535) { return ('-NetworkPort вне 1..65535: ' + $Network) }
+    if ($Discovery -lt 1 -or $Discovery -gt 65535) { return ('-DiscoveryPort вне 1..65535: ' + $Discovery) }
+    if ($Network -eq $Discovery) { return ('-NetworkPort и -DiscoveryPort совпадают: ' + $Network) }
+    return ''
+}
+
+# Потомки своих процессов по ParentProcessId (рекурсивно), без самих корней.
+# Потомок должен быть создан не раньше $NotBefore: так PID, переиспользованный
+# после смерти родителя, не утащит чужой процесс.
+function Get-DescendantProcessIds([int[]] $RootIds, [datetime] $NotBefore) {
+    $result = New-Object System.Collections.Generic.List[int]
+    if ($null -eq $RootIds -or $RootIds.Count -eq 0) { return $result.ToArray() }
+
+    $all = @()
+    try { $all = @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop) } catch { $all = @() }
+
+    $queue = New-Object System.Collections.Generic.Queue[int]
+    foreach ($id in $RootIds) { $queue.Enqueue($id) }
+    while ($queue.Count -gt 0) {
+        $parent = $queue.Dequeue()
+        foreach ($candidate in $all) {
+            $candidateId = [int] $candidate.ProcessId
+            if ([int] $candidate.ParentProcessId -ne $parent) { continue }
+            if ($RootIds -contains $candidateId -or $result.Contains($candidateId)) { continue }
+            if ($null -ne $candidate.CreationDate -and $candidate.CreationDate -lt $NotBefore) { continue }
+            $result.Add($candidateId)
+            $queue.Enqueue($candidateId)
+        }
+    }
+    return $result.ToArray()
+}
+
+$autoPorts = ($NetworkPort -eq 0 -and $DiscoveryPort -eq 0)
+if (-not $autoPorts) {
+    $portError = ''
+    if ($NetworkPort -eq 0 -or $DiscoveryPort -eq 0) {
+        $portError = '-NetworkPort и -DiscoveryPort задаются только вместе (0 и 0 — автоматически)'
+    }
+    else {
+        $portError = Get-PortPairError $NetworkPort $DiscoveryPort
+    }
+    if ($portError -ne '') {
+        Write-Host ''
+        Write-Host ('Порты прогона заданы неверно: ' + $portError) -ForegroundColor Red
+        exit 2
+    }
+}
+
+$ProcessName = [System.IO.Path]::GetFileNameWithoutExtension($Player)
 
 # ── 1. Плеер на месте и не устарел ────────────────────────────────────────
 if (-not (Test-Path $Player)) {
@@ -137,6 +224,31 @@ $scenarioTimeout = [Math]::Max(30, $Timeout - 20)
 $serverResult = Join-Path $runDir 'server.json'
 $serverLog    = Join-Path $runDir 'server.log'
 
+# Пара портов выбирается и перепроверяется непосредственно перед стартом сервера:
+# между выбором и bind в плеере порт может занять кто-то ещё (TOCTOU). Авто-пару
+# при занятости выбираем заново, не больше трёх попыток; явную пару не подменяем.
+$portsReady = $false
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+    if ($autoPorts) {
+        $pair = Select-PortPair
+        $NetworkPort = $pair[0]
+        $DiscoveryPort = $pair[1]
+    }
+    if ((Test-UdpPortFree $NetworkPort) -and (Test-UdpPortFree $DiscoveryPort)) { $portsReady = $true; break }
+    Write-Host ('  порты заняты: KCP ' + $NetworkPort + ', Discovery ' + $DiscoveryPort + ' (попытка ' + $attempt + ')') -ForegroundColor Yellow
+    if (-not $autoPorts) { break }
+}
+if (-not $portsReady) {
+    Write-Host ''
+    if ($autoPorts) {
+        Write-Host 'Не удалось подобрать свободную пару UDP-портов за 3 попытки.' -ForegroundColor Red
+    }
+    else {
+        Write-Host ('Заданные порты заняты: KCP ' + $NetworkPort + ', Discovery ' + $DiscoveryPort) -ForegroundColor Red
+    }
+    exit 2
+}
+
 Write-Section 'Конфигурация прогона'
 Write-Host ('  плеер:     ' + $Player)
 Write-Host ('  собран:    ' + $playerStamp.ToString('u'))
@@ -144,6 +256,9 @@ Write-Host ('  сценарий:  ' + $Scenario)
 Write-Host ('  карта:     ' + $Map)
 Write-Host ('  клиентов:  ' + $Clients)
 Write-Host ('  таймаут:   ' + $Timeout + ' с (сценарию ' + $scenarioTimeout + ' с)')
+$portMode = 'заданы явно'
+if ($autoPorts) { $portMode = 'выбраны автоматически' }
+Write-Host ('  порты:     KCP ' + $NetworkPort + ', Discovery ' + $DiscoveryPort + ' (' + $portMode + ')')
 Write-Host ('  результат: ' + $runDir)
 
 $launched = New-Object System.Collections.ArrayList
@@ -155,6 +270,8 @@ function Start-Player([string[]] $ExtraArgs, [string] $LogPath) {
 }
 
 $exitCode = 2
+# Нижняя граница времени создания потомков своих процессов (запас — на точность часов).
+$runStartedAt = (Get-Date).AddSeconds(-1)
 try {
     # ── 3. Сервер ─────────────────────────────────────────────────────────
     Write-Section 'Запускаю выделенный сервер'
@@ -165,7 +282,9 @@ try {
         '-e2eResult', $serverResult,
         '-e2eMap', $Map,
         '-e2eClients', "$Clients",
-        '-e2eTimeout', "$scenarioTimeout"
+        '-e2eTimeout', "$scenarioTimeout",
+        '-e2eNetworkPort', "$NetworkPort",
+        '-e2eDiscoveryPort', "$DiscoveryPort"
     )
     $serverProc = Start-Player -ExtraArgs $serverArgs -LogPath $serverLog
     [void]$launched.Add($serverProc)
@@ -216,7 +335,9 @@ try {
             '-e2eMap', $Map,
             '-e2eServerAddress', '127.0.0.1',
             '-e2eDeviceToken', ('e2e-' + $role),
-            '-e2eTimeout', "$scenarioTimeout"
+            '-e2eTimeout', "$scenarioTimeout",
+            '-e2eNetworkPort', "$NetworkPort",
+            '-e2eDiscoveryPort', "$DiscoveryPort"
         )
 
         $clientProc = Start-Player -ExtraArgs $clientArgs -LogPath $clientLog
@@ -284,7 +405,14 @@ try {
 }
 finally {
     # ── 6. Добить всё, что запускали ──────────────────────────────────────
+    # Только свои PID и их потомки (плеер мог породить дочерний процесс).
+    # Никакого прохода по имени: он гасил плееры других worktree и worker.
     Write-Section 'Гашу процессы'
+    $rootIds = New-Object System.Collections.Generic.List[int]
+    foreach ($proc in $launched) { $rootIds.Add([int] $proc.Id) }
+    # Дерево снимаем до убийства корней: потом связь с родителем уже не проверить.
+    $descendantIds = @(Get-DescendantProcessIds $rootIds.ToArray() $runStartedAt)
+
     foreach ($proc in $launched) {
         try {
             if (-not $proc.HasExited) {
@@ -295,11 +423,12 @@ finally {
         catch {}
     }
 
-    # Контрольный проход по имени: плеер мог породить дочерний процесс.
-    Start-Sleep -Seconds 1
-    $leftovers = @(Get-Process -Name $ProcessName -ErrorAction SilentlyContinue)
-    foreach ($leftover in $leftovers) {
-        try { Stop-Process -Id $leftover.Id -Force -ErrorAction Stop } catch {}
+    foreach ($childId in $descendantIds) {
+        try {
+            Stop-Process -Id $childId -Force -ErrorAction Stop
+            Write-Host ('  убит дочерний pid ' + $childId)
+        }
+        catch {}
     }
 }
 
@@ -378,6 +507,8 @@ $summary = [pscustomobject]@{
     scenario = $Scenario
     map = $Map
     clients = $Clients
+    networkPort = $NetworkPort
+    discoveryPort = $DiscoveryPort
     startedLocal = $stamp
     verdict = $verdict
     exitCode = $exitCode

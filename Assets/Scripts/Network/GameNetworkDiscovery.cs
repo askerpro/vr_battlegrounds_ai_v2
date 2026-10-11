@@ -149,6 +149,14 @@ namespace VrBattlegrounds.Network
         #region Private Methods
 
         /// <summary>
+        /// Единственный выбор шва подготовки сети до старта роли: в редакторе — Editor-владелец портов,
+        /// в собранном плеере — E2E-харнесс. Возвращает код отказа или null.
+        /// </summary>
+        private string PrepareNetworkStart(AppRole role) => Application.isEditor
+            ? VrBattlegrounds.DevTools.DebugBootstrapGate.EditorBeforeNetworkStart?.Invoke(NetworkManager.singleton, _discovery, role)
+            : VrBattlegrounds.DevTools.DebugBootstrapGate.PlayerBeforeNetworkStart?.Invoke(NetworkManager.singleton, _discovery, role);
+
+        /// <summary>
         /// Применяет выбранную роль: запускает сеть и Discovery в нужном режиме.
         /// </summary>
         private void ApplyRole(AppRole role)
@@ -159,7 +167,7 @@ namespace VrBattlegrounds.Network
                 return;
             }
 
-            string networkError = Application.isEditor ? VrBattlegrounds.DevTools.DebugBootstrapGate.EditorBeforeNetworkStart?.Invoke(NetworkManager.singleton, _discovery, role) : null;
+            string networkError = PrepareNetworkStart(role);
             if (!string.IsNullOrEmpty(networkError))
             {
                 if (networkError == "LaunchStopping")
@@ -454,7 +462,7 @@ namespace VrBattlegrounds.Network
         {
             if (!ClientManagerReady) throw new System.InvalidOperationException("ClientManagerNotReady");
             if (CurrentRole != null && CurrentRole != AppRole.Client) throw new System.InvalidOperationException("ClientRoleRequired");
-            string networkError = Application.isEditor ? VrBattlegrounds.DevTools.DebugBootstrapGate.EditorBeforeNetworkStart?.Invoke(NetworkManager.singleton, _discovery, AppRole.Client) : null;
+            string networkError = PrepareNetworkStart(AppRole.Client);
             if (!string.IsNullOrEmpty(networkError)) throw new System.InvalidOperationException(networkError);
             CurrentRole = AppRole.Client;
             _holdClientAutoStart = false;

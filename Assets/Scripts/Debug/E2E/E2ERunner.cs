@@ -44,6 +44,10 @@ namespace VrBattlegrounds.DevTools.E2E
             if (context == null)
                 return;
 
+            // Порты прогона ставятся до первой сцены: её GameNetworkDiscovery.Start уже поднимает сеть.
+            if (!Application.isEditor)
+                E2EPlayerPorts.Install(context);
+
             Begin(context);
         }
 
@@ -105,7 +109,8 @@ namespace VrBattlegrounds.DevTools.E2E
             // Сервер до старта сети: первая сцена и прочее, что нельзя сделать из Run (он начнётся в Start, порядок
             // относительно GameNetworkDiscovery.Start не гарантирован). Окно — загрузка первой сцены (Offline):
             // менеджеры уже прошли Awake (каталог карт доступен), а Start, который поднимает сеть, ещё не вызван.
-            if (_context.IsServerRole && Resolve(_context.Scenario) is IE2EServerStartup startup)
+            // При ошибке портов прогон валится до сценария (DriveScenario) — подготовку сервера не запускаем.
+            if (_context.PortError == null && _context.IsServerRole && Resolve(_context.Scenario) is IE2EServerStartup startup)
             {
                 UnityEngine.Events.UnityAction<UnityEngine.SceneManagement.Scene, UnityEngine.SceneManagement.LoadSceneMode> once = null;
                 once = (scene, mode) =>
@@ -129,6 +134,13 @@ namespace VrBattlegrounds.DevTools.E2E
         {
             _startedRealtime = Time.realtimeSinceStartup;
 
+            // Неверная пара портов: сценарий не запускаем вовсе, иначе его фоллбэки подключатся на порты по умолчанию.
+            if (_context.PortError != null)
+            {
+                FailOnPorts(_context.PortError);
+                yield break;
+            }
+
             IE2EScenario scenario = Resolve(_context.Scenario);
             if (scenario == null)
             {
@@ -147,6 +159,13 @@ namespace VrBattlegrounds.DevTools.E2E
             while (true)
             {
                 object current;
+
+                // Отказ шва портов в рантайме: дальше сценарий ушёл бы в фоллбэк StartClient на порт сцены.
+                if (E2EPlayerPorts.LastRefusal != null)
+                {
+                    FailOnPorts(E2EPlayerPorts.LastRefusal);
+                    yield break;
+                }
 
                 try
                 {
@@ -184,6 +203,16 @@ namespace VrBattlegrounds.DevTools.E2E
                 _result.Summary = _result.Passed ? "все проверки зелёные" : "есть красные проверки";
 
             Finish(_result.Passed ? 0 : 1);
+        }
+
+        /// <summary>Прогон не состоялся из-за портов: вердикт «ошибка», сценарий дальше не крутится.</summary>
+        private void FailOnPorts(string reason)
+        {
+            _result.Status = E2EResult.StatusError;
+            _result.Summary = $"порты e2e: {reason}";
+            _result.AbortPending("прогон остановлен: порты e2e не применены");
+            GameLog.Error($"[E2E] Сценарий '{_context.Scenario}' остановлен: порты e2e: {reason}");
+            Finish(2);
         }
 
         /// <summary>

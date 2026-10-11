@@ -23,4 +23,17 @@
    после приёмки.
 
 Остаток вне пакета: handover Issue 38 не меняется. Ревью `PlayerSession` (`_botControlled`, `BotAvatarSource`)
-этим согласием не покрыто.
+этим согласием не покрыто — см. ниже.
+
+## bots-fix/armed-development: PlayerSession — ACK, GameNetworkManager — условие (3607 → 3611)
+
+`PlayerSession`: `[SyncVar] _botControlled` задаётся фабрикой до Spawn и не меняется, это корректное состояние
+для опоздавшего. `BotAvatarSource` только серверный. Бот-сессии в восстановление не попадают (запись только при
+отключении с непустым deviceToken). Некритично: проверка `NetworkServer.active` в `SetBotControlBeforeSpawn`.
+
+`GameNetworkManager.OnStartClient` (на ревью не присылали, смотрел по рабочей копии bots) регистрирует
+ClipBody-префабы. Повтор при каждом старте нужен: `NetworkClient.Shutdown` очищает prefabs. UniqueId выравнивает
+SDK: в вариантах сохранён `UxrMirrorAvatar`. Условие до вливания: отказ регистрации вызывает `StopClient`, после
+чего `GameNetworkDiscovery.Start` в плеере снова подключается. Детерминированный отказ даёт бесконечный цикл
+переподключения, на хосте — переход в ServerOnly. Решение: ранняя проверка на сервере, валидатор или тест и
+терминальный отказ клиента без автоповтора, с launch-infra.

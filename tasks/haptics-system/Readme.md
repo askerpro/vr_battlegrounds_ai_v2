@@ -1,8 +1,9 @@
 # haptics-system — единая система вибрации и отклика взаимодействий
 
-Обновлено 2026-10-10. Владелец: агент `manipulation-expert` (`.claude/agents/manipulation-expert.md`, запуск
-`claude --agent manipulation-expert`), worktree `F:/CodexWorktrees/haptics/Vr_Battlegrounds_ai`, ветка `haptics`,
-owner в хабе — `haptics`. База знаний эксперта — [expert/](expert/handoff.md).
+Обновлено 2026-10-11. Владелец: эксперт `manipulation` (`.claude/agents/manipulation-expert.md`, запуск
+`claude --agent manipulation-expert`), постоянный worktree `F:/CodexWorktrees/manipulation/Vr_Battlegrounds_ai`,
+ветка `haptics`, owner в хабе — `manipulation`. База знаний — [Docs/manipulation/](../../Docs/manipulation/invariants.md),
+передача — [handoff.md](handoff.md).
 
 ## Цель и мотивация
 
@@ -18,17 +19,18 @@ owner в хабе — `haptics`. База знаний эксперта — [exp
 | `clips-interaction` — клип с формой (SDK-патч 66), сервис, окно «Вибрация» | влит `4640ccd5` |
 | `behavior-tests` — смешивание, покрытие отклика | влит `d009709c` |
 | `interaction-feedback` — SDK-патч 67, `InteractionFeedback`, префаб-отклик, вторая рука | влит `df153b74`, принят в шлеме 2026-10-09 |
-| `manipulation-expert` — эксперт и база знаний (`expert/`, `.claude/agents/`) | в работе 2026-10-10 |
-| `pocket-removal` — снять `PocketHaptics` с аватаров | порядок согласован; после эксперта |
+| `manipulation-expert` — эксперт и база знаний, `.claude/agents/` | влит `83d8f34d` |
+| `manipulation-kb` — база знаний в `Docs/manipulation/`, инварианты по группам, профиль — адаптер awake | вливается 2026-10-11 |
+| `pocket-removal` — снять `PocketHaptics` с аватаров | порядок согласован; после `manipulation-kb` |
 | `sdk-routing` — перехват вибрации SDK (патч 65), форма в компонентах SDK | не начат |
 | `sources` — гибель, стена, часы, жест отладки | не начат |
 | `item-clicks` — клики хвата SDK на общий клип, разовые события | после `sdk-routing`, с weapon-system |
-| `docs-transfer` — troubleshooting, перенос KB в Docs | после приёмки |
+| `docs-transfer` — troubleshooting | после приёмки |
 
 ## Архитектура
 
-Кратко — [expert/architecture.md](expert/architecture.md) (§6 вибрация, §7 отклик), правила —
-[expert/invariants.md](expert/invariants.md), решения пользователя — [expert/decisions.md](expert/decisions.md).
+Кратко — [architecture.md](../../Docs/manipulation/architecture.md) (§6 вибрация, §7 отклик), правила —
+[invariants.md](../../Docs/manipulation/invariants.md), решения пользователя — [decisions.md](../../Docs/manipulation/decisions.md).
 Модель смешивания и патч 65 — [Details.md](Details.md); постановка — [task.md](task.md); исследование — [research.md](research.md).
 
 ## Синхронизация
@@ -45,4 +47,4 @@ owner в хабе — `haptics`. База знаний эксперта — [exp
 
 ## Следующий шаг
 
-Влить этап `manipulation-expert` (документация). Затем `pocket-removal` по плану в [expert/handoff.md](expert/handoff.md).
+Этап `pocket-removal` по плану в [handoff.md](handoff.md).

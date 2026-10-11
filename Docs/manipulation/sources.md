@@ -41,8 +41,8 @@
 | 25–28 | `UxrGrabbableObject(.Custom).cs`, `Querying.cs` | ускорение поиска хвата без смены результата (порядок проверок, грубая отсечка) |
 | 26 | `UxrGrabManager.cs`, `#if VRB_UXR_ANCHOR_GRABBER_NEAR` | проход «рука рядом с якорем» выключен (не включать) |
 | 49 | `UxrGrabbableObjectAnchor.IsCompatibleObjectTag` | совместимость по тегу публична |
-| 66 | `Haptics/UxrHapticClip.cs`, `UxrHapticWaveform.cs`, `UxrHapticPriority.cs` | форма, сила, приоритет, пауза, кулдаун, вторая рука в клипе — [запись](../changelog/2026-10-08-sdk-66.md) |
-| 67 | `UxrGrabManager.cs` (`UpdateAffordances`), `UxrGrabManager.GrabCandidates.cs` | кандидат хвата руки — [запись](../changelog/2026-10-09-sdk-67.md) |
+| 66 | `Haptics/UxrHapticClip.cs`, `UxrHapticWaveform.cs`, `UxrHapticPriority.cs` | форма, сила, приоритет, пауза, кулдаун, вторая рука в клипе — [запись](../../tasks/haptics-system/changelog/2026-10-08-sdk-66.md) |
+| 67 | `UxrGrabManager.cs` (`UpdateAffordances`), `UxrGrabManager.GrabCandidates.cs` | кандидат хвата руки — [запись](../../tasks/haptics-system/changelog/2026-10-09-sdk-67.md) |
 | T-39 | `UxrGrabManager.PlacementReadiness.cs`, `.WeaponHandoff.cs`, `UxrManipulationEventArgs.cs` | `GetAnchorPlacementCandidate`; свежий снимок позы в Grabbing |
 | 65 (резерв) | `Devices/UxrControllerInput.cs`, `UxrUnityXRControllerInput.cs`, `Haptics/UxrHapticRouting.cs` | перехват вибраций SDK — этап `sdk-routing`, не реализован |
 
@@ -93,8 +93,8 @@ PlayMode-тестов нет. Стенд `Docs/test-stand.md` хват/XR-вво
 - Карманы и позы — `Avatars/AvatarPocketSetup.cs`, `PocketZonesPrefabWriter.cs`, `HandPosesSetup.cs`;
   Hand Pose Fit / Hand Rig Quality — область avatar-grip-expert.
 
-## Документы задачи
+## Документы задачи haptics-system
 
-[Readme](../Readme.md) — статус и следующий шаг; [Details](../Details.md) — модель (п. 0.4 — отклик, п. 2 — голоса,
-п. 5 — патч 65, п. 9 — все источники вибрации); [contracts/haptics-api.md](../contracts/haptics-api.md) — контракт с
-WeaponSystem; [research.md](../research.md) — исследование LRA/Quest; [changelog/](../changelog/) — факты проверок.
+[Readme](../../tasks/haptics-system/Readme.md) — статус и следующий шаг; [Details](../../tasks/haptics-system/Details.md) — модель (п. 0.4 — отклик, п. 2 — голоса,
+п. 5 — патч 65, п. 9 — все источники вибрации); [contracts/haptics-api.md](../../tasks/haptics-system/contracts/haptics-api.md) — контракт с
+WeaponSystem; [research.md](../../tasks/haptics-system/research.md) — исследование LRA/Quest; [changelog/](../../tasks/haptics-system/changelog/) — факты проверок.

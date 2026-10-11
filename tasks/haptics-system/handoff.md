@@ -1,7 +1,7 @@
-# Передача: haptics-system → manipulation-expert
+# Передача задачи haptics-system эксперту manipulation-expert
 
 2026-10-10. Передаёт: Claude Code сессия задачи `haptics-system` (worktree `F:/CodexWorktrees/haptics/Vr_Battlegrounds_ai`,
-ветка `haptics`, owner в хабе — `haptics`). Статус этапов — [Readme](../Readme.md) и `coordination.py status`.
+ветка `haptics`, owner в хабе — `haptics`). Статус этапов — [Readme](Readme.md) и `coordination.py status`.
 
 ## Влито в origin/dev
 
@@ -30,7 +30,7 @@
    - Проверка в шлеме: карманы вибрируют как прежде.
 2. **`sdk-routing`** — патч 65: перехват `UxrControllerInput.SendHapticFeedback` в сервис, форма в компонентах SDK;
    `IWeaponRecoilHapticsOwner` гасит отдачу SDK по стволу; убрать `WeaponHapticOutput` из `Pending` по готовности
-   weapon-system. Модель — [Details.md п. 5](../Details.md).
+   weapon-system. Модель — [Details.md п. 5](Details.md).
 3. **`sources`** — гибель (`Death`), стена (`WallPassFeedback`), часы (`WristDisplay`), жест отладки, `GhostViewEffect`.
 4. **`item-clicks`** — клики хвата SDK (`UxrManipulationHapticFeedback`) на 6 префабах → общий клип; разовые
    «взят/уложен/отпущен» в `InteractionFeedbackConfig`. По согласованию с weapon-system.
@@ -40,5 +40,5 @@
 
 - Контракт `haptics-api` rev 1 (weapon-system → `HapticService.Play(clip, grabber, role, gain)`) — согласован.
 - `weapon-grab-lifetime@1` — ACK дан 2026-10-10 с условием сохранить вызовы патча 67.
-- Кандидаты на проверку — [architecture.md §8](architecture.md) (дубль освобождения рук при смерти и др.).
+- Кандидаты на проверку — [Docs/manipulation/architecture.md §8](../../Docs/manipulation/architecture.md) (дубль освобождения рук при смерти и др.).
 - Отложено: инспектор формы-графика с перетаскиванием точек.

@@ -1,0 +1,520 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
+using VrBattlegrounds.Core;
+using VrBattlegrounds.LevelDesign;
+
+namespace VrBattlegrounds.EditorTools
+{
+    /// <summary>
+    /// Ночной пресет Lobby. Единственный владелец ночных параметров: RenderSettings (небо, ambient, туман),
+    /// LightingSettings сцены, режимов, значений и положения источников Environment, ночных материалов ламп,
+    /// GI-флагов статичного декора и группы light probes.
+    /// «Ночной пресет освещения» — ночь на realtime-источниках, видна сразу без запекания.
+    /// «Ночь: подготовить запекание» — переводит лампы и прожекторы базы в Baked, ставит GI-флаги и пробы;
+    /// само запекание (Generate Lighting) — отдельный ручной шаг.
+    /// </summary>
+    public static class LobbyNightLighting
+    {
+        private const string MenuRoot = "Tools/VR Battlegrounds/Lobby Decoration/";
+        private const string ScenePath = "Assets/Scenes/Lobby.unity";
+        private const string NightFolder = "Assets/Materials/Lobby/Night";
+        private const string LightingAssetPath = "Assets/Scenes/Lobby/LobbyNight.lighting";
+        private const string Report = "tasks/lobby-decoration/reports/implementation/night-lighting/";
+        private const string ContainerName = "NightLighting";
+        private const string ProbeGroupName = "NightLightProbes";
+        private const string WindowGlowPrefix = "WindowGlow__";
+
+        // Значения цветов — как в инспекторе (sRGB); проект в Linear, Unity переводит сам.
+        private static readonly Color FogColor = new Color(.050f, .062f, .088f);
+        private static readonly Color AmbientSky = new Color(.12f, .15f, .24f);
+        private static readonly Color AmbientEquator = new Color(.07f, .08f, .11f);
+        private static readonly Color AmbientGround = new Color(.03f, .028f, .025f);
+        private static readonly Color MoonColor = new Color(.62f, .71f, .95f);
+        private static readonly Color WarmLamp = new Color(1f, .74f, .46f);
+        private static readonly Color FloodWhite = new Color(1f, .93f, .80f);
+
+        // Масштаб в лайтмапе относительно базовых 10 texel/м. Зона вне таблицы не получает GI (отчёт предупреждает).
+        private static readonly Dictionary<string, float> ZoneLightmapScale = new Dictionary<string, float>(StringComparer.Ordinal)
+        {
+            { "ArmoryRangeZone", 1.0f },
+            { "RestCanopyZone", .5f },
+            { "BarracksZone", .4f },
+            { "WarehouseZone", .4f },
+            { "CheckpointZone", .4f },
+            { "VehicleYardZone", .3f },
+            { "ShippingDepotZone", .3f },
+            { "ConstructionZone", .3f },
+            { "PerimeterZone", .15f },
+            { "OuterGround", .15f },
+        };
+
+        [MenuItem(MenuRoot + "Ночной пресет освещения")]
+        public static void Apply() => Run(false);
+
+        [MenuItem(MenuRoot + "Ночь: подготовить запекание")]
+        public static void PrepareBake() => Run(true);
+
+        private static void Run(bool bake)
+        {
+            var scene = Check();
+            var environment = scene.GetRootGameObjects().SingleOrDefault(r => r.name == "Environment")
+                ?? throw new InvalidOperationException("В Lobby нет корня Environment.");
+            var log = new StringBuilder();
+            log.AppendLine((bake ? "Подготовка запекания" : "Ночной пресет") + " Lobby " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+
+            // Ассеты создаются до Undo-группы: AssetDatabase.CreateAsset не откатывается Undo.
+            var materials = EnsureMaterials(log);
+            var lighting = bake ? EnsureLightingSettings(log) : null;
+
+            Undo.IncrementCurrentGroup();
+            int group = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName(bake ? "Ночь: подготовка запекания Lobby" : "Ночной пресет освещения Lobby");
+            try
+            {
+                var moon = ApplyLights(environment.transform, bake, log);
+                ApplyRenderSettings(materials.Sky, moon, log);
+                ApplyEmissiveMaterials(environment.transform, materials, log);
+                if (bake)
+                {
+                    ApplySceneLightingSettings(lighting, log);
+                    ApplyStaticGi(environment.transform, log);
+                    ApplyLightProbes(scene, environment.transform, log);
+                }
+                Undo.CollapseUndoOperations(group);
+            }
+            catch
+            {
+                Undo.RevertAllDownToGroup(group);
+                throw;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            Directory.CreateDirectory(Report);
+            File.WriteAllText(Report + (bake ? "night-bake-prep.txt" : "night-preset.txt"), log.ToString());
+            GameLog.Debug.Info("[LobbyNightLighting] " + (bake ? "Сцена подготовлена к запеканию; запустите Generate Lighting отдельно." : "Ночь на realtime-источниках применена.")
+                + " Сохраните Lobby. Отчёт: " + Report);
+        }
+
+        private static Scene Check()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || EditorApplication.isUpdating
+                || PrefabStageUtility.GetCurrentPrefabStage() != null)
+                throw new InvalidOperationException("Нужен свободный Editor вне Play/компиляции/prefab stage.");
+            if (Lightmapping.isRunning)
+                throw new InvalidOperationException("Идёт запекание освещения; дождитесь окончания.");
+            var scene = SceneManager.GetActiveScene();
+            if (scene.path != ScenePath || SceneManager.sceneCount != 1)
+                throw new InvalidOperationException("Откройте только " + ScenePath + ".");
+            if (scene.isDirty)
+                throw new InvalidOperationException("Сначала сохраните свои изменения сцены; пресет не перезаписывает dirty Lobby.");
+            return scene;
+        }
+
+        // ---------- Материалы ----------
+
+        private sealed class NightMaterials
+        {
+            public Material Sky, LampLong, DoorLamp, FloodFace, WindowGlow;
+            public readonly Dictionary<string, Material> SwapByName = new Dictionary<string, Material>(StringComparer.Ordinal);
+        }
+
+        private static NightMaterials EnsureMaterials(StringBuilder log)
+        {
+            EnsureFolder(NightFolder);
+            var result = new NightMaterials();
+
+            result.Sky = LoadOrCreate("LobbyNightSky", "Skybox/Procedural", log, m =>
+            {
+                m.SetFloat("_SunDisk", 1);              // Simple: дешёвый диск «луны» от RenderSettings.sun.
+                m.SetFloat("_SunSize", .03f);
+                m.SetFloat("_SunSizeConvergence", 6);
+                m.SetFloat("_AtmosphereThickness", .35f);
+                m.SetColor("_SkyTint", new Color(.16f, .20f, .33f));
+                m.SetColor("_GroundColor", new Color(.02f, .022f, .028f));
+                m.SetFloat("_Exposure", .18f);
+            });
+
+            // URP Lit с картой эмиссии из того же пака: исходные M_* сделаны на Shader Graph без эмиссии.
+            result.LampLong = CopyEmissive("LobbyNightLampLong", "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/Materials/MI_Lamp_long1.mat", log);
+            result.DoorLamp = CopyEmissive("LobbyNightDoorLamp", "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/Materials/MI_Door_lamp.mat", log);
+            result.FloodFace = LoadOrCreate("LobbyNightFloodFace", "Universal Render Pipeline/Unlit", log, m => m.SetColor("_BaseColor", new Color(1f, .95f, .84f)));
+            result.WindowGlow = LoadOrCreate("LobbyNightWindowGlow", "Universal Render Pipeline/Unlit", log, m => m.SetColor("_BaseColor", new Color(.85f, .58f, .30f)));
+
+            if (result.LampLong != null) result.SwapByName["M_Lamp_long"] = result.LampLong;
+            if (result.DoorLamp != null) result.SwapByName["M_Door_lamp"] = result.DoorLamp;
+            result.SwapByName["PlaceholderFloodlightFace"] = result.FloodFace;
+            AssetDatabase.SaveAssets();
+            return result;
+        }
+
+        private static Material LoadOrCreate(string name, string shaderName, StringBuilder log, Action<Material> configure)
+        {
+            string path = NightFolder + "/" + name + ".mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                var shader = Shader.Find(shaderName) ?? throw new InvalidOperationException("Не найден шейдер " + shaderName + ".");
+                material = new Material(shader) { name = name };
+                configure(material);
+                AssetDatabase.CreateAsset(material, path);
+                log.AppendLine("Создан материал " + path);
+            }
+            else log.AppendLine("Материал уже есть, не перезаписан: " + path);
+            return material;
+        }
+
+        private static Material CopyEmissive(string name, string sourcePath, StringBuilder log)
+        {
+            string path = NightFolder + "/" + name + ".mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null) { log.AppendLine("Материал уже есть, не перезаписан: " + path); return material; }
+            var source = AssetDatabase.LoadAssetAtPath<Material>(sourcePath);
+            if (source == null) { log.AppendLine("ПРЕДУПРЕЖДЕНИЕ: нет источника " + sourcePath + "; замена пропущена."); return null; }
+            material = new Material(source) { name = name };
+            material.EnableKeyword("_EMISSION");
+            material.SetColor("_EmissionColor", WarmLamp);
+            // Свет ламп запекают настоящие источники; эмиссия только видна, второй раз в GI не идёт.
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            AssetDatabase.CreateAsset(material, path);
+            log.AppendLine("Создан материал " + path + " из " + sourcePath);
+            return material;
+        }
+
+        private static void EnsureFolder(string path)
+        {
+            if (AssetDatabase.IsValidFolder(path)) return;
+            string parent = Path.GetDirectoryName(path).Replace('\\', '/');
+            EnsureFolder(parent);
+            AssetDatabase.CreateFolder(parent, Path.GetFileName(path));
+        }
+
+        // ---------- LightingSettings ----------
+
+        private static LightingSettings EnsureLightingSettings(StringBuilder log)
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<LightingSettings>(LightingAssetPath);
+            if (settings != null) { log.AppendLine("LightingSettings уже есть, не перезаписан: " + LightingAssetPath); return settings; }
+            settings = new LightingSettings
+            {
+                name = "LobbyNight",
+                bakedGI = true,
+                realtimeGI = false,
+                lightmapper = LightingSettings.Lightmapper.ProgressiveGPU,
+                mixedBakeMode = MixedLightingMode.IndirectOnly,   // Baked Indirect: без shadowmask-текстур.
+                directionalityMode = LightmapsMode.NonDirectional, // половина памяти и дешевле выборка на Quest.
+                lightmapResolution = 10f,
+                lightmapPadding = 4,
+                lightmapMaxSize = 1024,
+                lightmapCompression = LightmapCompression.NormalQuality,
+                ao = true,
+                aoMaxDistance = .8f,
+                aoExponentIndirect = 1f,
+                aoExponentDirect = 0f,
+                directSampleCount = 32,
+                indirectSampleCount = 256,
+                environmentSampleCount = 128,
+                maxBounces = 2,
+                albedoBoost = 1f,
+                indirectScale = 1f,
+                filteringMode = LightingSettings.FilterMode.Auto,
+            };
+            Directory.CreateDirectory(Path.GetDirectoryName(LightingAssetPath));
+            AssetDatabase.CreateAsset(settings, LightingAssetPath);
+            log.AppendLine("Создан " + LightingAssetPath);
+            return settings;
+        }
+
+        private static void ApplySceneLightingSettings(LightingSettings settings, StringBuilder log)
+        {
+            var lightmapSettings = SceneLightmapSettingsObject();
+            Undo.RecordObject(lightmapSettings, "Ночной LightingSettings");
+            Lightmapping.lightingSettings = settings;
+            log.AppendLine("Сцене назначен " + LightingAssetPath + " (только ручной Generate Lighting).");
+        }
+
+        // ---------- RenderSettings ----------
+
+        private static void ApplyRenderSettings(Material sky, Light moon, StringBuilder log)
+        {
+            Undo.RecordObject(SceneRenderSettingsObject(), "Ночные RenderSettings");
+            RenderSettings.skybox = sky;
+            RenderSettings.sun = moon;
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = AmbientSky;
+            RenderSettings.ambientEquatorColor = AmbientEquator;
+            RenderSettings.ambientGroundColor = AmbientGround;
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = FogColor;
+            RenderSettings.fogStartDistance = 22f;
+            RenderSettings.fogEndDistance = 105f;
+            RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
+            RenderSettings.defaultReflectionResolution = 64;
+            RenderSettings.reflectionIntensity = .4f;
+            log.AppendLine("RenderSettings: ночное небо, Trilight ambient, линейный туман 22–105 м, отражения неба 64px x0.4.");
+        }
+
+        // Внутренние объекты сцены нужны только для Undo; при смене API — явная ошибка вместо тихой правки без отката.
+        private static UnityEngine.Object SceneRenderSettingsObject()
+        {
+            var method = typeof(RenderSettings).GetMethod("GetRenderSettings", BindingFlags.NonPublic | BindingFlags.Static);
+            var value = method?.Invoke(null, null) as UnityEngine.Object;
+            return value != null ? value : Resources.FindObjectsOfTypeAll<RenderSettings>().FirstOrDefault()
+                ?? throw new InvalidOperationException("Не найден объект RenderSettings для Undo.");
+        }
+
+        private static UnityEngine.Object SceneLightmapSettingsObject()
+        {
+            var method = typeof(LightmapEditorSettings).GetMethod("GetLightmapSettings", BindingFlags.NonPublic | BindingFlags.Static);
+            var value = method?.Invoke(null, null) as UnityEngine.Object;
+            return value != null ? value : Resources.FindObjectsOfTypeAll<LightmapSettings>().FirstOrDefault()
+                ?? throw new InvalidOperationException("Не найден объект LightmapSettings для Undo.");
+        }
+
+        // ---------- Источники ----------
+
+        // Стрельбища по обе стороны навеса: прожектор, чьё пятно попадает сюда, освещает мишени.
+        private static bool LitsRange(Light light)
+        {
+            if (light.type != LightType.Spot || light.transform.forward.y > -.05f) return false;
+            var hit = light.transform.position + light.transform.forward * (-light.transform.position.y / light.transform.forward.y);
+            return Mathf.Abs(hit.x) < 12f && Mathf.Abs(hit.z) > 14f && Mathf.Abs(hit.z) < 32f;
+        }
+
+        private static Light ApplyLights(Transform environment, bool bake, StringBuilder log)
+        {
+            Light moon = null;
+            int baked = 0, mixed = 0, realtime = 0, snapped = 0;
+            foreach (var light in environment.GetComponentsInChildren<Light>(true))
+            {
+                Undo.RecordObject(light, "Ночной свет");
+                Undo.RecordObject(light.gameObject, "Ночной свет");
+                Undo.RecordObject(light.transform, "Ночной свет");
+                string name = light.name;
+                if (light.type == LightType.Directional && (name == "CampDaylight" || name == "CampMoonlight"))
+                {
+                    if (moon != null) throw new InvalidOperationException("В Environment больше одного главного направленного света.");
+                    moon = light;
+                    light.name = "CampMoonlight";
+                    light.lightmapBakeType = LightmapBakeType.Realtime; // главный свет считается всегда; без теней почти бесплатен.
+                    light.color = MoonColor;
+                    light.intensity = .22f;
+                    light.shadows = LightShadows.None;
+                    light.transform.rotation = Quaternion.Euler(32f, 135f, 0f); // луна на северо-западе, над стрельбищем.
+                    realtime++;
+                }
+                else if (name == "InteriorWarmLight") { Warm(light, bake, 4.5f, 6.5f); if (bake) baked++; else realtime++; }
+                else if (name == "ExteriorWarmLight" || name == "CanopyWarmLight")
+                {
+                    if (SnapToFixture(light, environment, log)) snapped++;
+                    Warm(light, bake, name == "CanopyWarmLight" ? 4f : 5f, name == "CanopyWarmLight" ? 6f : 8f);
+                    if (bake) baked++; else realtime++;
+                }
+                else if (LitsRange(light))
+                {
+                    // Стрельбище — главный объект: прямой свет realtime (игроки/оружие/мишени), отскок в лайтмапе.
+                    light.lightmapBakeType = LightmapBakeType.Mixed;
+                    light.color = FloodWhite;
+                    light.intensity = 180f;
+                    light.range = 30f;
+                    light.spotAngle = 100f;
+                    light.innerSpotAngle = 70f;
+                    light.shadows = LightShadows.None;
+                    light.renderMode = LightRenderMode.ForcePixel;
+                    mixed++;
+                }
+                else if (light.type == LightType.Spot)
+                {
+                    // Прожекторы территории (КПП, казармы): пятно на подходах.
+                    light.color = FloodWhite;
+                    light.intensity = 110f;
+                    light.range = Mathf.Max(light.range, 24f);
+                    light.spotAngle = 80f;
+                    light.innerSpotAngle = 55f;
+                    if (bake) { light.lightmapBakeType = LightmapBakeType.Baked; light.shadows = LightShadows.Soft; light.shapeRadius = .15f; baked++; }
+                    else { light.lightmapBakeType = LightmapBakeType.Realtime; light.shadows = LightShadows.None; realtime++; }
+                }
+                else log.AppendLine("ПРЕДУПРЕЖДЕНИЕ: источник без правила оставлен как есть: " + HierarchyPath(light.transform, environment) + " (" + light.lightmapBakeType + ")");
+            }
+            if (moon == null) throw new InvalidOperationException("Не найден Environment/CampDaylight (или CampMoonlight).");
+            if (mixed > 4) throw new InvalidOperationException("Больше четырёх realtime-прожекторов стрельбищ: на мишень с одной стороны должно приходиться не больше двух (лимит URP на объект).");
+            log.AppendLine("Свет: realtime " + realtime + ", прожекторы стрельбищ (mixed) " + mixed + ", baked " + baked + "; перенесено к светильникам " + snapped + ".");
+            return moon;
+        }
+
+        // Тёплая лампа: в превью — realtime без теней, при подготовке запекания — Baked с мягкими тенями.
+        private static void Warm(Light light, bool bake, float intensity, float range)
+        {
+            light.color = WarmLamp;
+            light.intensity = intensity;
+            light.range = range;
+            light.bounceIntensity = 1f;
+            if (bake) { light.lightmapBakeType = LightmapBakeType.Baked; light.shadows = LightShadows.Soft; light.shapeRadius = .15f; }
+            else { light.lightmapBakeType = LightmapBakeType.Realtime; light.shadows = LightShadows.None; }
+        }
+
+        // Свет зоны, отставший от своего светильника после перестановки, переносится к ближайшему сокету
+        // «LightingSocket__…CommonLightingOwner» той же зоны (или к лампе-плафону, если сокета нет).
+        private static bool SnapToFixture(Light light, Transform environment, StringBuilder log)
+        {
+            var zone = light.transform;
+            while (zone.parent != null && zone.parent != environment) zone = zone.parent;
+            var fixtures = zone.GetComponentsInChildren<Transform>(true)
+                .Where(t => t != light.transform && (t.name.StartsWith("LightingSocket", StringComparison.Ordinal) || t.name.StartsWith("SM_Door_lamp_a", StringComparison.Ordinal) || t.name.StartsWith("RidgeFixture", StringComparison.Ordinal)))
+                .ToList();
+            if (fixtures.Count == 0) return false;
+            var nearest = fixtures.OrderBy(t => (t.position - light.transform.position).sqrMagnitude).First();
+            if ((nearest.position - light.transform.position).magnitude < .6f) return false;
+            var socket = fixtures.Where(t => t.name.StartsWith("LightingSocket", StringComparison.Ordinal)).OrderBy(t => (t.position - light.transform.position).sqrMagnitude).FirstOrDefault() ?? nearest;
+            log.AppendLine("Перенесён к светильнику: " + HierarchyPath(light.transform, environment) + " " + light.transform.position.ToString("F1") + " → " + socket.name + " " + socket.position.ToString("F1"));
+            light.transform.position = socket.position + Vector3.down * .1f;
+            return true;
+        }
+
+        // ---------- Эмиссия ----------
+
+        private static void ApplyEmissiveMaterials(Transform environment, NightMaterials materials, StringBuilder log)
+        {
+            int swapped = 0, windows = 0;
+            foreach (var renderer in environment.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var shared = renderer.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < shared.Length; i++)
+                {
+                    if (shared[i] == null) continue;
+                    if (materials.SwapByName.TryGetValue(shared[i].name, out var night)) { shared[i] = night; changed = true; swapped++; }
+                }
+                if (renderer.name.StartsWith(WindowGlowPrefix, StringComparison.Ordinal))
+                {
+                    for (int i = 0; i < shared.Length; i++) shared[i] = materials.WindowGlow;
+                    changed = true; windows++;
+                }
+                if (!changed) continue;
+                Undo.RecordObject(renderer, "Ночная эмиссия");
+                renderer.sharedMaterials = shared;
+            }
+            log.AppendLine("Эмиссия: заменено слотов ламп/прожекторов " + swapped + ", окон " + WindowGlowPrefix + "* " + windows + ".");
+            if (windows == 0) log.AppendLine("Окна: карточек " + WindowGlowPrefix + "* нет; их добавляет владелец зданий, материал " + NightFolder + "/LobbyNightWindowGlow.mat готов.");
+        }
+
+        // ---------- Static GI ----------
+
+        private static void ApplyStaticGi(Transform environment, StringBuilder log)
+        {
+            int lightmapped = 0, probeLit = 0, skipped = 0;
+            foreach (Transform zone in environment)
+            {
+                if (zone.GetComponent<Light>() != null || zone.name == ContainerName) continue;
+                if (!ZoneLightmapScale.TryGetValue(zone.name, out float scale))
+                {
+                    log.AppendLine("ПРЕДУПРЕЖДЕНИЕ: зона без правила GI пропущена: " + zone.name);
+                    continue;
+                }
+                foreach (var renderer in zone.GetComponentsInChildren<MeshRenderer>(true))
+                {
+                    var go = renderer.gameObject;
+                    var flags = GameObjectUtility.GetStaticEditorFlags(go);
+                    bool authoredStatic = (flags & (StaticEditorFlags.OccludeeStatic | StaticEditorFlags.BatchingStatic)) != 0;
+                    if (!authoredStatic || !go.activeInHierarchy || IsDynamic(renderer) || IsCutoutOrTransparent(renderer)
+                        || go.GetComponent<TextMesh>() != null)
+                    {
+                        skipped++;
+                        continue;
+                    }
+                    var filter = go.GetComponent<MeshFilter>();
+                    var mesh = filter != null ? filter.sharedMesh : null;
+                    bool small = renderer.bounds.size.magnitude < .35f;
+                    bool hasUv2 = mesh != null && mesh.HasVertexAttribute(VertexAttribute.TexCoord1);
+                    Undo.RecordObject(go, "Ночной static GI");
+                    Undo.RecordObject(renderer, "Ночной static GI");
+                    GameObjectUtility.SetStaticEditorFlags(go, flags | StaticEditorFlags.ContributeGI);
+                    // Только для запекания теней от baked-источников: realtime-теней в пресете нет, shadow pass не рисуется.
+                    renderer.shadowCastingMode = ShadowCastingMode.On;
+                    if (small || !hasUv2)
+                    {
+                        renderer.receiveGI = ReceiveGI.LightProbes;
+                        // Пробы стоят только над ареной и стрельбищем; дальние зоны оставляют свой режим (ambient).
+                        if (zone.name == "ArmoryRangeZone") renderer.lightProbeUsage = LightProbeUsage.BlendProbes;
+                        probeLit++;
+                    }
+                    else
+                    {
+                        renderer.receiveGI = ReceiveGI.Lightmaps;
+                        renderer.scaleInLightmap = scale;
+                        lightmapped++;
+                    }
+                }
+            }
+            log.AppendLine("Static GI: в лайтмапе " + lightmapped + ", ContributeGI через probes " + probeLit + ", пропущено (не static/динамика/cutout/текст) " + skipped + ".");
+        }
+
+        private static bool IsDynamic(Renderer renderer) =>
+            renderer.GetComponentInParent<Rigidbody>(true) != null
+            || renderer.GetComponentInParent<Animator>(true) != null
+            || renderer.GetComponentsInParent<MonoBehaviour>(true).Any(c => c != null && c.GetType().Name == "NetworkIdentity");
+
+        private static bool IsCutoutOrTransparent(Renderer renderer) =>
+            renderer.sharedMaterials.Any(m => m != null && (m.renderQueue >= (int)RenderQueue.AlphaTest || m.IsKeywordEnabled("_ALPHATEST_ON")));
+
+        // ---------- Light probes ----------
+
+        private static void ApplyLightProbes(Scene scene, Transform environment, StringBuilder log)
+        {
+            var arena = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<PhysicalArenaDefinition>(true)).Single();
+            if (!arena.TryFloorBounds(out var floor)) throw new InvalidOperationException("Нет границ пола PhysicalArenaDefinition.");
+
+            var container = environment.Find(ContainerName);
+            if (container == null)
+            {
+                var go = new GameObject(ContainerName);
+                Undo.RegisterCreatedObjectUndo(go, "Ночной контейнер освещения");
+                Undo.SetTransformParent(go.transform, environment, "Ночной контейнер освещения");
+                go.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                container = go.transform;
+            }
+            var probes = container.Find(ProbeGroupName)?.GetComponent<LightProbeGroup>();
+            if (probes == null)
+            {
+                var go = new GameObject(ProbeGroupName);
+                Undo.RegisterCreatedObjectUndo(go, "Ночные light probes");
+                Undo.SetTransformParent(go.transform, container, "Ночные light probes");
+                go.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                probes = Undo.AddComponent<LightProbeGroup>(go);
+            }
+            Undo.RecordObject(probes, "Ночные light probes");
+            var positions = new List<Vector3>();
+            float y0 = floor.max.y;
+            // Арена: игроки, руки, оружие. Шаг 2.5 м, три высоты (пол, пояс, над головой).
+            for (float x = floor.min.x + .25f; x <= floor.max.x - .2f; x += 2.5f)
+            for (float z = floor.min.z + .25f; z <= floor.max.z - .2f; z += 2.5f)
+                foreach (float h in new[] { .3f, 1.3f, 2.5f })
+                    positions.Add(new Vector3(x, y0 + h, z));
+            // Стрельбище: мишени и пули на север от арены. Шаг 4 м, две высоты.
+            for (float x = floor.min.x - 3f; x <= floor.max.x + 3f; x += 4f)
+            for (float z = floor.max.z + 2f; z <= floor.max.z + 26f; z += 4f)
+                foreach (float h in new[] { .5f, 2.5f })
+                    positions.Add(new Vector3(x, y0 + h, z));
+            var local = probes.transform;
+            probes.probePositions = positions.Select(p => local.InverseTransformPoint(p)).ToArray();
+            log.AppendLine("Light probes: " + positions.Count + " точек в " + ContainerName + "/" + ProbeGroupName + ".");
+        }
+
+        private static string HierarchyPath(Transform t, Transform root)
+        {
+            var parts = new List<string>();
+            for (var c = t; c != null && c != root; c = c.parent) parts.Add(c.name);
+            parts.Reverse();
+            return string.Join("/", parts);
+        }
+    }
+}

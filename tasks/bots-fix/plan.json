@@ -173,11 +173,7 @@
         "Assets/Editor/VR_Battlegrounds/Bots/**",
         "tasks/bots-fix/**",
         "Assets/Resources/Bots/**",
-        "Assets/Tests/EditMode/Bots/**",
-        "Docs/tasks/T-48-bots-match.md",
-        "Docs/tasks/bots-blaze-integration.md",
-        "Docs/tasks/bot-combat-stand.md",
-        "Docs/tasks/bots-validation-stand-plan.md"
+        "Assets/Tests/EditMode/Bots/**"
       ],
       "after": [
         {

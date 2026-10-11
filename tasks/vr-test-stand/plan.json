@@ -156,6 +156,34 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "e2e-run-isolation",
+      "writes": [
+        "Tools/e2e/Run-E2E.ps1",
+        "Assets/Scripts/Debug/E2E/E2EContext.cs",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/E2EPlayerPorts.cs",
+        "Assets/Scripts/Debug/E2E/E2EPlayerPorts.cs.meta",
+        "Assets/Scripts/Debug/DebugBootstrapGate.cs",
+        "Assets/Scripts/Network/GameNetworkDiscovery.cs",
+        "Assets/ThirdParty/Mirror/Components/Discovery/NetworkDiscoveryBase.cs",
+        "Docs/testing.md",
+        "Docs/test-stand.md",
+        "tasks/vr-test-stand/Readme.md",
+        "tasks/vr-test-stand/Details.md",
+        "tasks/vr-test-stand/plan.json",
+        "tasks/vr-test-stand/changelog/**",
+        "tasks/vr-test-stand/tools/**"
+      ],
+      "after": [
+        {
+          "task": "vr-test-stand",
+          "stage": "checkout-network-ports",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

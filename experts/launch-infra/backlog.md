@@ -2,11 +2,21 @@
 MRB = `tasks/map-runtime-bootstrap/Details.md`,
 PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
 
-1. `xr-startup` — запуск без аппаратного XR для сетевых проверок, production-путь не трогать — PH, VTS.
-2. `player-launch` — порты собранных плееров: `Run-E2E.ps1` без портов делит 7778/47777 с Play на worker (SocketException); один lifecycle с PlayLaunch — MRB.
-3. `async-player-build` — `E2EPlayerBuilder.Run()` блокирует главный поток (таймаут MCP), пачкает `PC.asset`, `ProjectSettings.asset`, `MapRuntimeCatalog.asset`; ложное «устарел» — `Docs/testing.md` «Шероховатость: проверка свежести билда».
+Порядок пересмотрен 2026-10-11 — `journal/2026-10-11-e2e-path-priority.md`.
+`player-launch` взят в хаб: `vr-test-stand/e2e-run-isolation`.
+
+1. `live-smoke-runner` → этап `e2e-log-verdict` — агрегация ошибок всех процессов и механизм известных шумов для `series-smoke-e2e` — MRB «Известные шумы тестов и харнесса», VTS «Финальная проверка383».
+2. `async-player-build` — `E2EPlayerBuilder.Run()` блокирует главный поток (таймаут MCP), пачкает `PC.asset`, `ProjectSettings.asset`, `MapRuntimeCatalog.asset`; ложное «устарел» — `Docs/testing.md` «Шероховатость: проверка свежести билда». Диагностика 2026-10-11 (чтение кода): `PC.asset` — URP
+   `ShaderBuildPreprocessor` под Standalone+Development, мусор, зона performance; `ProjectSettings.asset` — снимок
+   Player Settings посреди сборки (XR `preloadedAssets`), мусор, моя зона (`GameBuilder.cs:181-203` восстанавливает,
+   E2E-сборщик нет); `MapRuntimeCatalog.asset` — `MapCatalogBuildStep` перезапекает отпечаток намеренно, для Git шум,
+   зона gameplay. E2E-сборщик без `XrBuildSettingsScope` — Oculus-лоадер в Windows-плеере (связь с `xr-startup`).
+   Ложное «устарел»: `Run-E2E.ps1` берёт `Assets\Editor` в корни свежести + сравнение по mtime → штамп по
+   содержимому (`build-stamp.json`, SHA-256 runtime-исходников). Неблокирующая сборка: основной путь — batch-Unity
+   на своей копии; в редакторе — delayCall + статус-файл (главный поток всё равно занят, renew аренды) и откат
+   трёх файлов с согласия performance/gameplay.
+3. `xr-startup` — запуск без аппаратного XR для сетевых проверок, production-путь не трогать — PH, VTS.
 4. `xr-input` — один адаптер поз/кнопок/стиков, ревью avatar-ik — VTS §5, §7, §14.
-5. `live-smoke-runner` — агрегация ошибок всех процессов и механизм известных шумов для `series-smoke-e2e` — MRB «Известные шумы тестов и харнесса», VTS «Финальная проверка383».
 6. `stands-migration` — BotCombatStand сам правит EditorBuildSettings/Bootstrap/registry, ловит `StartupRoute.SceneNotLoadable`; перевести на общий запрос, порядок с bots-fix — VTS.
 7. `worktree-isolation` — EditorPrefs профиля (`DebugBootstrapSettings.KeyPrefix`) и UXR focus-pause общие между worktree — VTS.
 8. `headless-roles` — клиент `-nographics` считается сервером; общий запуск стресс-теста/сервера/e2e с performance — `Docs/testing.md` «Подводные камни, найденные прогоном».

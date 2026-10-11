@@ -564,3 +564,28 @@ Helper mcp_observation_retry.py теперь распознаёт только �
 Полный независимый аудит383:99/99точных contiguoussegments,26481794newbytes, capture/integrity/ownership/missing0; неожиданных новых producterror/exceptionheadlines0, ожидаемый PortOccupied1. Предупреждения сохранены: menu7, teamID0missing3, PlayersManagerduplicates3, SDKduplicates14; compile78unique diagnostics. NativeXR1/4 иaudio1/1 busy/after; After licensing6/UPM2/Gitconfiglock1. TeamRegistry и manager lifecycle требуют отдельного анализа: регрессия или игровой ущерб не доказаны. Infra configlock и provisioning localworkerconfig переданы сопровождающему2992. Полные реестры в reports/ports-383-audit/, bounded self-check в reports/ports-self-check.json. Альтернативный envpath/cache и clone-only fallback проверены review, не отдельным livecase.
 
 Checkpoint29fb97d6, worker383: busy10/10 с новым RunId919815a6 и реальным runtime PortOccupied; после освобождения порта37/37 (Server+2Client и отдельный game-server). Ready на29771/29772, адресный marker не появился у второго клиента, reconnect сохраняетidentity и отвергает старыеepoch/avatar; baseline/cleanup/capturePASS. AndroidCompileGatePASS на текущем коде. Guardidle, finisha1bb744a/receivepaths[]. Review не нашёл новых дефектов и закрыл live gate;377 остаётся revoked.32чистых наблюдения383 выполнены пооднойпопытке, новой recoveryветкиdisconnect не было: это доказано диагностическими10/10, а не живым отказом. После rebase повторены ProtocolHarness32/32 и EditorBinding0errors/0warnings. Полные rawлоги383 проверяются отдельно; ограничения Quest/fullsuite/nativeXR сохраняются.
+
+## 15. Изоляция прогона собранных плееров — этап e2e-run-isolation (2026-10-11)
+
+**Дефекты** `Tools/e2e/Run-E2E.ps1` на базе `17293aa3c`: порты не передаются (7778/47777 у всех процессов);
+клиент через Discovery может найти чужой сервер; гашение по имени процесса задевает плееры других worktree;
+логи процессов не разбираются (последнее — следующий этап `e2e-log-verdict`).
+
+**Дизайн.** Run-E2E.ps1 выбирает свободную пару UDP (или берёт `-NetworkPort`/`-DiscoveryPort`) и передаёт
+`-e2eNetworkPort`/`-e2eDiscoveryPort` всем процессам, гасит только свои PID. `E2EContext` разбирает пару; неполная
+или битая пара — отказ, не default. `E2EPlayerPorts` ставит `DebugBootstrapGate.PlayerBeforeNetworkStart` только в
+плеере (BeforeSceneLoad) и применяет пару к переданным transport/discovery при каждом вызове. `GameNetworkDiscovery`
+выбирает шов в одном приватном методе для ApplyRole и reconnect: Editor — `PlayLaunchNetworkPorts`, плеер —
+`E2EPlayerPorts`; один писатель на процесс. Порт discovery — Mirror patch 2 (patch-reserve, аксессор
+`ServerBroadcastListenPort`), запись в [changelog](changelog/2026-10-11-sdk-mirror-2.md). Рефлексия отвергнута.
+
+**Ревью network (эксперт, read-only, 2026-10-11): ACK с условиями.**
+1. Один метод выбора шва для точек ApplyRole и reconnect.
+2. Применять при каждом вызове без кэша: дубликат MANAGERS в Offline (`Offline.unity:192,234`) несёт свой
+   NetworkDiscovery на 47777; проверки как в Editor (диапазон, network≠discovery, PortTransport, сеть не активна).
+3. Отказ портов валит прогон: иначе fallback сценариев `StartClient()` на 7778 (`ArsenalItemGrabScenario.cs:351-357`,
+   `SessionRecoveryOnReconnectScenario.cs:869-894`) вернёт подключение к чужому серверу.
+4. Клиент применяет оба порта; RequireFree — только Server/Host. Аналог `EditorClientAddressOverride` не нужен.
+5. Патч Mirror — только аксессор; общий журнал Mirror исторический. Diff показать network до checkpoint.
+Остаточные риски: TOCTOU между выбором пары и bind; необработанный SocketException из `new UdpClient`
+(`NetworkDiscoveryBase.cs:167`). Формальный zone-ack: event 3489; у network нет задачи в хабе, policy off.

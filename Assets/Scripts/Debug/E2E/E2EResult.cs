@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using UnityEngine;
 using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.DevTools.E2E
@@ -53,9 +54,126 @@ namespace VrBattlegrounds.DevTools.E2E
         public DateTime StartedUtc = DateTime.UtcNow;
         public double DurationSeconds;
 
+        // ── Условия сборки процесса: дирижёр переносит их в run.json (контракт quest-device-run) ──
+
+        /// <summary><see cref="Application.buildGUID"/>; в редакторе пусто.</summary>
+        public string BuildGuid = string.Empty;
+        /// <summary><see cref="Application.version"/>.</summary>
+        public string AppVersion = string.Empty;
+        /// <summary><see cref="Application.unityVersion"/>.</summary>
+        public string UnityVersion = string.Empty;
+        /// <summary>Development-сборка (<c>Debug.isDebugBuild</c>).</summary>
+        public bool DevelopmentBuild;
+        /// <summary><see cref="Application.platform"/>.</summary>
+        public string Platform = string.Empty;
+
+        /// <summary>Имя красной проверки, которую ставит <see cref="AddArtifact"/> на путь вне persistentDataPath.</summary>
+        public const string CheckArtifactOutside = "артефакт вне persistentDataPath";
+
         private readonly List<E2ECheck> _checks = new List<E2ECheck>();
+        private readonly List<string> _artifacts = new List<string>();
 
         public IReadOnlyList<E2ECheck> Checks => _checks;
+
+        /// <summary>
+        /// Файлы и каталоги, которые дирижёр заберёт в папку прогона после вердикта. Только абсолютные пути
+        /// внутри <see cref="Application.persistentDataPath"/>; пополняется только через <see cref="AddArtifact"/>,
+        /// чтобы правило пути нельзя было обойти.
+        /// </summary>
+        public IReadOnlyList<string> Artifacts => _artifacts;
+
+        /// <summary>
+        /// Снимает условия сборки текущего процесса. Вызывается исполнителем на главном потоке до первой записи файла.
+        /// </summary>
+        public void CaptureBuildConditions()
+        {
+            BuildGuid = Application.buildGUID ?? string.Empty;
+            AppVersion = Application.version ?? string.Empty;
+            UnityVersion = Application.unityVersion ?? string.Empty;
+            DevelopmentBuild = UnityEngine.Debug.isDebugBuild;
+            Platform = Application.platform.ToString();
+        }
+
+        /// <summary>
+        /// Объявляет артефакт прогона — файл или каталог на устройстве. Принимается только абсолютный путь строго
+        /// внутри <see cref="Application.persistentDataPath"/> (после нормализации); иначе путь в список не попадает,
+        /// а в результат добавляется красная проверка <see cref="CheckArtifactOutside"/>.
+        /// </summary>
+        /// <returns>true — артефакт принят.</returns>
+        public bool AddArtifact(string path)
+        {
+            string normalized = NormalizeInsidePersistentData(path, out string reason);
+            if (normalized == null)
+            {
+                RejectArtifact($"'{path}': {reason}");
+                return false;
+            }
+
+            if (!_artifacts.Contains(normalized))
+                _artifacts.Add(normalized);
+            return true;
+        }
+
+        private void RejectArtifact(string detail)
+        {
+            GameLog.Error($"[E2E] Артефакт отклонён: {detail}");
+            E2ECheck check = _checks.Find(c => c.Name == CheckArtifactOutside);
+            if (check == null)
+            {
+                _checks.Add(new E2ECheck { Name = CheckArtifactOutside, Passed = false, Detail = detail });
+                return;
+            }
+
+            check.Passed = false;
+            check.Detail = string.IsNullOrEmpty(check.Detail) ? detail : check.Detail + "; " + detail;
+        }
+
+        /// <summary>Нормализованный абсолютный путь внутри persistentDataPath или null с причиной.</summary>
+        private static string NormalizeInsidePersistentData(string path, out string reason)
+        {
+            reason = null;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                reason = "пустой путь";
+                return null;
+            }
+
+            if (!Path.IsPathRooted(path))
+            {
+                reason = "путь не абсолютный";
+                return null;
+            }
+
+            string root;
+            string full;
+            try
+            {
+                root = Path.GetFullPath(Application.persistentDataPath)
+                           .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            }
+            catch (Exception e)
+            {
+                reason = $"путь не нормализуется: {e.GetType().Name}: {e.Message}";
+                return null;
+            }
+
+            // На Windows файловая система регистронезависима, на Android — нет.
+            StringComparison comparison =
+                Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor
+                    ? StringComparison.OrdinalIgnoreCase
+                    : StringComparison.Ordinal;
+            string prefix = root + Path.DirectorySeparatorChar;
+            string candidate = full.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            if (string.IsNullOrEmpty(root) ||
+                !candidate.StartsWith(prefix.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar), comparison))
+            {
+                reason = $"вне persistentDataPath ('{root}')";
+                return null;
+            }
+
+            return full;
+        }
 
         /// <summary>
         /// Вердикт: сценарий дошёл до конца и все объявленные проверки зелёные.
@@ -149,6 +267,18 @@ namespace VrBattlegrounds.DevTools.E2E
             sb.Append("  \"startedUtc\": ").Append(Json(StartedUtc.ToString("o", CultureInfo.InvariantCulture))).Append(",\n");
             sb.Append("  \"durationSeconds\": ")
               .Append(DurationSeconds.ToString("F2", CultureInfo.InvariantCulture)).Append(",\n");
+            sb.Append("  \"buildGuid\": ").Append(Json(BuildGuid)).Append(",\n");
+            sb.Append("  \"appVersion\": ").Append(Json(AppVersion)).Append(",\n");
+            sb.Append("  \"unityVersion\": ").Append(Json(UnityVersion)).Append(",\n");
+            sb.Append("  \"developmentBuild\": ").Append(DevelopmentBuild ? "true" : "false").Append(",\n");
+            sb.Append("  \"platform\": ").Append(Json(Platform)).Append(",\n");
+            sb.Append("  \"artifacts\": [");
+            for (int i = 0; i < _artifacts.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append(Json(_artifacts[i]));
+            }
+            sb.Append("],\n");
             sb.Append("  \"checks\": [\n");
 
             for (int i = 0; i < _checks.Count; i++)

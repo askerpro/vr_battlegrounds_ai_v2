@@ -98,6 +98,8 @@ namespace VrBattlegrounds.DevTools.E2E
                 Status = E2EResult.StatusStarted,
                 Summary = "сценарий запущен, вердикта ещё нет"
             };
+            // Условия сборки — уже в заглушке: дирижёр сверяет стороны и по оборванному прогону.
+            _result.CaptureBuildConditions();
 
             // Заглушка пишется немедленно: если процесс упадёт или его убьют
             // по таймауту, дирижёр всё равно увидит файл и отличит падение
@@ -109,8 +111,9 @@ namespace VrBattlegrounds.DevTools.E2E
             // Сервер до старта сети: первая сцена и прочее, что нельзя сделать из Run (он начнётся в Start, порядок
             // относительно GameNetworkDiscovery.Start не гарантирован). Окно — загрузка первой сцены (Offline):
             // менеджеры уже прошли Awake (каталог карт доступен), а Start, который поднимает сеть, ещё не вызван.
-            // При ошибке портов прогон валится до сценария (DriveScenario) — подготовку сервера не запускаем.
-            if (_context.PortError == null && _context.IsServerRole && Resolve(_context.Scenario) is IE2EServerStartup startup)
+            // При ошибке портов или параметров прогон валится до сценария (DriveScenario) — подготовку сервера не запускаем.
+            if (_context.PortError == null && _context.ArgError == null && _context.IsServerRole &&
+                Resolve(_context.Scenario) is IE2EServerStartup startup)
             {
                 UnityEngine.Events.UnityAction<UnityEngine.SceneManagement.Scene, UnityEngine.SceneManagement.LoadSceneMode> once = null;
                 once = (scene, mode) =>
@@ -138,6 +141,17 @@ namespace VrBattlegrounds.DevTools.E2E
             if (_context.PortError != null)
             {
                 FailOnPorts(_context.PortError);
+                yield break;
+            }
+
+            // Неверные -e2eArg: сценарий с частью параметров или с умолчаниями вместо заданных не запускаем.
+            if (_context.ArgError != null)
+            {
+                _result.Status = E2EResult.StatusError;
+                _result.Summary = $"параметры e2e: {_context.ArgError}";
+                _result.AbortPending("прогон остановлен: параметры -e2eArg не разобраны");
+                GameLog.Error($"[E2E] Сценарий '{_context.Scenario}' остановлен: параметры e2e: {_context.ArgError}");
+                Finish(2);
                 yield break;
             }
 
@@ -232,10 +246,13 @@ namespace VrBattlegrounds.DevTools.E2E
             foreach (E2ECheck check in _result.Checks)
                 GameLog.Debug.Info($"[E2E]   [{(check.Passed ? "OK  " : "FAIL")}] {check.Name} — {check.Detail}");
 
-            // Клиентские роли держат процесс живым до конца прогона: если клиент
+            // Клиентские роли без -e2eQuitOnFinish держат процесс живым до конца прогона: если клиент
             // выйдет раньше сервера, сервер потеряет игрока и его вердикт станет
-            // невалидным. Гасит такие процессы дирижёр.
-            if (_context.IsServerRole && _quitServerOnFinish)
+            // невалидным. Гасит такие процессы дирижёр. С -e2eQuitOnFinish (шлем: дирижёр не гасит
+            // процесс по PID, а приложение не должно висеть после вердикта) выходит любая роль.
+            bool quit = (_context.IsServerRole && _quitServerOnFinish) ||
+                        (_context.QuitOnFinish && !Application.isEditor);
+            if (quit)
                 Application.Quit(exitCode);
         }
 
@@ -286,6 +303,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new ConnectPlaceAcrossMapScenario();
             yield return new MapRunRelayBarrierScenario();
             yield return new MapRunRelayBarrierScenario(startupRoute: true);
+            yield return new DeviceSmokeScenario();
         }
 
         private static IE2EScenario Resolve(string name)

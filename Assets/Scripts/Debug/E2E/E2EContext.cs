@@ -1,6 +1,9 @@
 // Ярус C (два процесса) — разбор аргументов командной строки.
 #if !VRBG_NO_E2E
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
 using System.Text;
 using UnityEngine;
 
@@ -13,7 +16,7 @@ namespace VrBattlegrounds.DevTools.E2E
     /// <code>
     /// -e2eScenario      &lt;имя&gt;   обязателен; без него харнесс не поднимается вообще
     /// -e2eRole          &lt;роль&gt;  server | client-1 | client-2 (по умолчанию — по IsHeadless)
-    /// -e2eResult        &lt;путь&gt;  куда писать JSON-вердикт (абсолютный путь)
+    /// -e2eResult        &lt;путь&gt;  куда писать JSON-вердикт; относительный путь — от Application.persistentDataPath
     /// -e2eTimeout       &lt;сек&gt;   общий таймаут сценария, по умолчанию 240
     /// -e2eMap           &lt;сцена&gt; карта, которую грузит сервер, по умолчанию TestMap2
     /// -e2eClients       &lt;N&gt;     сколько клиентов ждёт сервер, по умолчанию 2
@@ -21,7 +24,13 @@ namespace VrBattlegrounds.DevTools.E2E
     /// -e2eDeviceToken   &lt;токен&gt; уникальный DeviceToken клиента (см. ниже)
     /// -e2eNetworkPort   &lt;порт&gt;  UDP-порт KCP прогона (только вместе с -e2eDiscoveryPort)
     /// -e2eDiscoveryPort &lt;порт&gt;  UDP-порт Discovery прогона (только вместе с -e2eNetworkPort)
+    /// -e2eArg   &lt;ключ&gt;=&lt;значение&gt; параметр сценария-потребителя, повторяемый (читается через Arg)
+    /// -e2eQuitOnFinish             после записи вердикта закрыть процесс в любой роли (прогон на шлеме)
     /// </code>
+    ///
+    /// Про <c>-e2eArg</c>. Единственный канал параметров сценария (контракт quest-device-run). Ключ без <c>=</c>,
+    /// пустой ключ или повтор ключа — не молчаливый пропуск, а <see cref="ArgError"/>: исполнитель валит прогон
+    /// до запуска сценария, как при ошибке портов.
     ///
     /// Про порты. Пара изолирует прогон от соседних плееров и редакторов на той же машине: без неё все
     /// процессы сидят на 7778/47777, и клиент через Discovery может найти чужой сервер. Ошибка в паре
@@ -52,6 +61,25 @@ namespace VrBattlegrounds.DevTools.E2E
         public string PortError { get; private set; }
         /// <summary>Пара портов прогона задана.</summary>
         public bool HasPorts => NetworkPort != 0 && DiscoveryPort != 0;
+        /// <summary>Параметры сценария из <c>-e2eArg ключ=значение</c>; только для чтения, ключи регистрозависимы.</summary>
+        public IReadOnlyDictionary<string, string> Args { get; private set; } = EmptyArgs;
+        /// <summary>Ошибка разбора <c>-e2eArg</c>; null — параметры заданы корректно или не заданы вовсе.</summary>
+        public string ArgError { get; private set; }
+        /// <summary>
+        /// Закрыть процесс после записи вердикта в любой роли (<c>-e2eQuitOnFinish</c>). Без флага закрывается
+        /// только сервер: клиентов на ПК гасит дирижёр.
+        /// </summary>
+        public bool QuitOnFinish { get; private set; }
+
+        private static readonly IReadOnlyDictionary<string, string> EmptyArgs =
+            new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
+
+        /// <summary>Значение параметра сценария <c>-e2eArg ключ=значение</c> или <paramref name="fallback"/>.</summary>
+        public string Arg(string key, string fallback = null)
+        {
+            if (string.IsNullOrEmpty(key)) return fallback;
+            return Args.TryGetValue(key, out string value) ? value : fallback;
+        }
 
         /// <summary>Роль «сервер»: процесс поднимает выделенный сервер и выносит вердикт.</summary>
         public bool IsServerRole => Role == "server";
@@ -86,20 +114,24 @@ namespace VrBattlegrounds.DevTools.E2E
             if (float.IsNaN(clients) || float.IsInfinity(clients) || clients < 0 || clients >= int.MaxValue) clients = 2f;
             string portError = ReadPorts(args, out int networkPort, out int discoveryPort);
             bool portsValid = portError == null;
-            E2EContext context = Create(scenario, role, Read(args, "-e2eResult"), timeout,
+            string argError = ReadScenarioArgs(args, out Dictionary<string, string> scenarioArgs);
+            E2EContext context = Create(scenario, role, ResolveResultPath(Read(args, "-e2eResult")), timeout,
                 ReadOr(args, "-e2eMap", "TestMap2"), (int)clients,
                 Read(args, "-e2eServerAddress"), Read(args, "-e2eDeviceToken"),
                 networkPort: portsValid ? networkPort : 0,
-                discoveryPort: portsValid ? discoveryPort : 0);
+                discoveryPort: portsValid ? discoveryPort : 0,
+                args: argError == null ? scenarioArgs : null,
+                quitOnFinish: Has(args, "-e2eQuitOnFinish"));
             // Не бросаем: исполнитель обязан записать ошибку в файл результата и не запускать сценарий.
             context.PortError = portError;
+            context.ArgError = argError;
             return context;
         }
 
         /// <summary>Общий контекст для CLI и Editor; не запускает сеть и не меняет профиль.</summary>
         public static E2EContext Create(string scenario, string role, string resultPath = null, float timeout = 240f,
             string map = "TestMap2", int expectedClients = 2, string serverAddress = null, string deviceToken = null, bool externallyLaunched = false,
-            int networkPort = 0, int discoveryPort = 0)
+            int networkPort = 0, int discoveryPort = 0, IReadOnlyDictionary<string, string> args = null, bool quitOnFinish = false)
         {
             if (string.IsNullOrEmpty(scenario) || string.IsNullOrEmpty(role)) throw new ArgumentException("Нужны сценарий и роль E2E.");
             if (float.IsNaN(timeout) || float.IsInfinity(timeout) || timeout <= 0 || expectedClients < 0)
@@ -111,7 +143,20 @@ namespace VrBattlegrounds.DevTools.E2E
             }
             return new E2EContext { Scenario = scenario, Role = role, ResultPath = resultPath, Timeout = timeout,
                 Map = map, ExpectedClients = expectedClients, ServerAddress = serverAddress, DeviceToken = deviceToken, ExternallyLaunched = externallyLaunched,
-                NetworkPort = networkPort, DiscoveryPort = discoveryPort };
+                NetworkPort = networkPort, DiscoveryPort = discoveryPort, QuitOnFinish = quitOnFinish,
+                Args = args == null || args.Count == 0 ? EmptyArgs : Snapshot(args) };
+        }
+
+        /// <summary>Снимок параметров: вызывающий не изменит словарь контекста задним числом.</summary>
+        private static IReadOnlyDictionary<string, string> Snapshot(IReadOnlyDictionary<string, string> source)
+        {
+            var copy = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, string> pair in source)
+            {
+                if (string.IsNullOrEmpty(pair.Key)) throw new ArgumentException("Пустой ключ параметра E2E.");
+                copy[pair.Key] = pair.Value ?? string.Empty;
+            }
+            return new ReadOnlyDictionary<string, string>(copy);
         }
 
         /// <summary>
@@ -139,8 +184,23 @@ namespace VrBattlegrounds.DevTools.E2E
               .Append(", таймаут=").Append(Timeout).Append("с")
               .Append(", порты=").Append(HasPorts ? $"KCP {NetworkPort} / Discovery {DiscoveryPort}" : "(по умолчанию сцены)")
               .Append(", результат=").Append(string.IsNullOrEmpty(ResultPath) ? "(не задан)" : ResultPath);
+            if (QuitOnFinish)
+                sb.Append(", выход по вердикту");
+            if (Args.Count > 0)
+            {
+                sb.Append(", параметры=");
+                bool first = true;
+                foreach (KeyValuePair<string, string> pair in Args)
+                {
+                    if (!first) sb.Append(' ');
+                    sb.Append(pair.Key).Append('=').Append(pair.Value);
+                    first = false;
+                }
+            }
             if (PortError != null)
                 sb.Append(", ошибка портов: ").Append(PortError);
+            if (ArgError != null)
+                sb.Append(", ошибка параметров: ").Append(ArgError);
             return sb.ToString();
         }
 
@@ -182,6 +242,47 @@ namespace VrBattlegrounds.DevTools.E2E
             if (!TryParsePort(discoveryRaw, out discoveryPort))
                 return $"-e2eDiscoveryPort не целое число: '{discoveryRaw}'";
             return ValidatePorts(networkPort, discoveryPort);
+        }
+
+        /// <summary>
+        /// Относительный путь результата — от <see cref="Application.persistentDataPath"/>: на шлеме дирижёр знает
+        /// только каталог приложения, а рабочий каталог процесса Android не определён. Абсолютный путь — как есть.
+        /// </summary>
+        private static string ResolveResultPath(string path)
+        {
+            if (string.IsNullOrEmpty(path) || Path.IsPathRooted(path))
+                return path;
+            return Path.Combine(Application.persistentDataPath, path);
+        }
+
+        /// <summary>
+        /// Разбирает все <c>-e2eArg ключ=значение</c>. Возвращает текст ошибки или null. При ошибке словарь
+        /// не применяется целиком: сценарий с частью параметров запускать нельзя.
+        /// </summary>
+        private static string ReadScenarioArgs(string[] args, out Dictionary<string, string> result)
+        {
+            result = new Dictionary<string, string>(StringComparer.Ordinal);
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (!string.Equals(args[i], "-e2eArg", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (i + 1 >= args.Length)
+                    return "-e2eArg без значения ключ=значение";
+
+                string pair = args[++i] ?? string.Empty;
+                int separator = pair.IndexOf('=');
+                if (separator < 0)
+                    return $"-e2eArg без '=': '{pair}'";
+                if (separator == 0)
+                    return $"-e2eArg с пустым ключом: '{pair}'";
+
+                string key = pair.Substring(0, separator);
+                if (result.ContainsKey(key))
+                    return $"-e2eArg: ключ '{key}' задан повторно";
+                result.Add(key, pair.Substring(separator + 1));
+            }
+
+            return null;
         }
 
         private static bool TryParsePort(string value, out int port)

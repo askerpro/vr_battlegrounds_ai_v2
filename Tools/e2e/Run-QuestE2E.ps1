@@ -1,0 +1,1014 @@
+﻿# Дирижёр e2e-прогона на шлеме Quest (контракт tasks/quest-perf-pipeline/contracts/quest-device-run.json, rev3).
+#
+# Топология client (по умолчанию, prod flow): на ПК поднимается выделенный сервер — Windows-плеер
+# (-batchmode -nographics, роль server), шлем запускается настоящим клиентом и находит сервер через
+# Discovery по LAN на изолированной паре портов прогона; -e2eServerAddress <IP ПК> — запасной путь.
+# Вердикт выносят сценарии внутри плееров (JSON E2EResult), дирижёр только запускает, ждёт, гасит,
+# собирает и сводит. Топология host на шлеме требует шва выбора роли в плеере (зона network) и
+# в этой ревизии не реализована: -Topology host отвечает кодом 2.
+#
+# Дирижёр — единственный, кто работает с устройством через adb (выбор устройства, установка APK,
+# пробуждение и датчик приближения, am start, ожидание, force-stop, logcat, pull). Настройки шлема
+# меняются только на время прогона: KEYCODE_WAKEUP и prox_close перед стартом, automation_disable
+# в finally. Сам скрипт ничего не меняет в брандмауэре Windows: при отсутствии правила он отказывает
+# и печатает команду, которую выполняет человек с правами администратора.
+#
+# Гасит дирижёр только то, что запустил сам: свой серверный PID и его потомков (как Run-E2E.ps1),
+# на шлеме — am force-stop пакета, который до прогона не был запущен (иначе отказ).
+#
+# Коды возврата:
+#   0 — все проверки обеих сторон зелёные
+#   1 — сценарий поймал отказ (completed, но есть красные проверки)
+#   2 — прогон не состоялся: нет устройства/плеера/правила брандмауэра, нет вердикта, битый JSON,
+#       не собран артефакт, расхождение сборок, нет run.json
+#
+# Запуск:
+#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1
+#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Scenario device-smoke -Arg artifact=1
+#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Apk Build\Quest\VrBattlegrounds_Quest.apk
+# В режиме -File массив -Arg передаётся через запятую: -Arg mode=short,puppets=8.
+
+[CmdletBinding()]
+param(
+    # Имя сценария для -e2eScenario (обе стороны).
+    [string]   $Scenario = 'device-smoke',
+
+    # client — шлем клиент выделенного сервера на ПК; host — не реализовано (код 2).
+    [string]   $Topology = 'client',
+
+    # Сцена карты для -e2eMap (сервер грузит её, если сценарий этого требует).
+    [string]   $Map = 'TestMap2',
+
+    # Общий таймаут ожидания вердиктов в секундах (с момента запуска шлема). Сценариям уходит на 30 с меньше.
+    [int]      $Timeout = 300,
+
+    # Параметры сценария ключ=значение, каждый уходит обеим сторонам как -e2eArg. Значения без пробелов и запятых.
+    [string[]] $Arg = @(),
+
+    # APK для установки (adb install -r). Пусто — используется уже установленное приложение.
+    [string]   $Apk = '',
+
+    # Серийный номер устройства. Пусто — единственное устройство в состоянии device.
+    [string]   $Serial = '',
+
+    # Путь к adb.exe. Пусто — PATH, затем Android SDK Unity версии из ProjectSettings/ProjectVersion.txt.
+    [string]   $Adb = '',
+
+    # Windows-плеер выделенного сервера. Пусто — Build\e2e\VrBattlegrounds.exe в корне репозитория.
+    [string]   $ServerPlayer = '',
+
+    # Пара UDP-портов прогона: KCP и Discovery. 0 и 0 — две свободные, выбранные автоматически.
+    [int]      $NetworkPort = 0,
+    [int]      $DiscoveryPort = 0,
+
+    # IPv4 ПК для -e2eServerAddress. Пусто — адрес ПК в одной подсети с wlan0 шлема.
+    [string]   $ServerAddress = '',
+
+    # Шлем в Quest Link: закрыть Link-клиент перед прогоном (обрывает PC VR-сессию, обратно не возвращается). Без флага — отказ.
+    [switch]   $StopLink,
+
+    # Пакет и activity приложения на шлеме.
+    [string]   $Package = 'com.UnityTechnologies.com.unity.template.urpblank',
+    [string]   $Activity = 'com.unity3d.player.UnityPlayerGameActivity'
+)
+
+$ErrorActionPreference = 'Stop'
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$ContractRevision = 3
+# Символы, допустимые в аргументах строки -e unity "<...>": её разбирают и sh шлема, и Unity по пробелам.
+$SafeToken = '^[A-Za-z0-9_.:/=+@%-]+$'
+
+function Write-Section([string] $Text) {
+    Write-Host ''
+    Write-Host ('== ' + $Text) -ForegroundColor Cyan
+}
+
+# Отказ до начала прогона: папка прогона не создаётся, устройство и ПК не тронуты.
+function Stop-Refused([string] $Message, [string[]] $Hints = @()) {
+    Write-Host ''
+    Write-Host ('ОТКАЗ: ' + $Message) -ForegroundColor Red
+    foreach ($hint in $Hints) { Write-Host ('  ' + $hint) }
+    exit 2
+}
+
+# ── Запуск внешних программ ───────────────────────────────────────────────
+
+# Аргумент командной строки Windows по правилам MSVCRT (кавычки только при пробелах и кавычках).
+function ConvertTo-CommandLineArg([string] $Value) {
+    if ($Value -eq '') { return '""' }
+    if ($Value -notmatch '[\s"]') { return $Value }
+    $escaped = [regex]::Replace($Value, '(\\*)"', '$1$1\"')
+    $escaped = [regex]::Replace($escaped, '(\\+)$', '$1$1')
+    return '"' + $escaped + '"'
+}
+
+# Запуск с перехватом stdout/stderr и таймаутом. Не через & : в PowerShell 5.1 stderr нативной
+# программы при ErrorActionPreference=Stop превращается в исключение.
+function Invoke-Tool([string] $FilePath, [string[]] $Arguments, [int] $TimeoutSeconds = 60) {
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $FilePath
+    $quoted = @()
+    foreach ($a in $Arguments) { $quoted += (ConvertTo-CommandLineArg $a) }
+    $psi.Arguments = ($quoted -join ' ')
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+    $psi.StandardOutputEncoding = New-Object System.Text.UTF8Encoding($false)
+    $psi.StandardErrorEncoding = New-Object System.Text.UTF8Encoding($false)
+
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $outTask = $proc.StandardOutput.ReadToEndAsync()
+    $errTask = $proc.StandardError.ReadToEndAsync()
+    $timedOut = -not $proc.WaitForExit($TimeoutSeconds * 1000)
+    if ($timedOut) { try { $proc.Kill() } catch {} }
+    # Поток может держать открытым порождённый процесс (первый старт adb-сервера) — ждём ограниченно.
+    $out = ''
+    $err = ''
+    if ($outTask.Wait(10000)) { $out = $outTask.Result }
+    if ($errTask.Wait(2000)) { $err = $errTask.Result }
+    $code = -1
+    if (-not $timedOut) { try { $code = $proc.ExitCode } catch { $code = -1 } }
+    return [pscustomobject]@{ ExitCode = $code; Out = $out; Err = $err; TimedOut = $timedOut }
+}
+
+function Invoke-Adb([string[]] $Arguments, [int] $TimeoutSeconds = 60) {
+    return Invoke-Tool $script:AdbPath (@('-s', $script:Serial) + $Arguments) $TimeoutSeconds
+}
+
+function Invoke-AdbShell([string[]] $Arguments, [int] $TimeoutSeconds = 60) {
+    return Invoke-Adb (@('shell') + $Arguments) $TimeoutSeconds
+}
+
+function Write-TextFile([string] $Path, [string] $Text) {
+    [System.IO.File]::WriteAllText($Path, $Text, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+# ── Порты (как в Run-E2E.ps1) ─────────────────────────────────────────────
+
+function Get-FreeUdpPort {
+    $client = [System.Net.Sockets.UdpClient]::new([System.Net.IPEndPoint]::new([System.Net.IPAddress]::Any, 0))
+    try { return ([System.Net.IPEndPoint] $client.Client.LocalEndPoint).Port }
+    finally { $client.Close() }
+}
+
+function Select-PortPair {
+    $network = Get-FreeUdpPort
+    $discovery = Get-FreeUdpPort
+    while ($discovery -eq $network) { $discovery = Get-FreeUdpPort }
+    return @($network, $discovery)
+}
+
+function Test-UdpPortFree([int] $Port) {
+    $socket = $null
+    try {
+        $socket = [System.Net.Sockets.Socket]::new(
+            [System.Net.Sockets.AddressFamily]::InterNetwork,
+            [System.Net.Sockets.SocketType]::Dgram,
+            [System.Net.Sockets.ProtocolType]::Udp)
+        $socket.ExclusiveAddressUse = $true
+        $socket.Bind([System.Net.IPEndPoint]::new([System.Net.IPAddress]::Any, $Port))
+        return $true
+    }
+    catch { return $false }
+    finally { if ($null -ne $socket) { $socket.Close() } }
+}
+
+function Get-PortPairError([int] $Network, [int] $Discovery) {
+    if ($Network -lt 1 -or $Network -gt 65535) { return ('-NetworkPort вне 1..65535: ' + $Network) }
+    if ($Discovery -lt 1 -or $Discovery -gt 65535) { return ('-DiscoveryPort вне 1..65535: ' + $Discovery) }
+    if ($Network -eq $Discovery) { return ('-NetworkPort и -DiscoveryPort совпадают: ' + $Network) }
+    return ''
+}
+
+# Потомки своих процессов по ParentProcessId, созданные не раньше $NotBefore (как в Run-E2E.ps1).
+function Get-DescendantProcessIds([int[]] $RootIds, [datetime] $NotBefore) {
+    $result = New-Object System.Collections.Generic.List[int]
+    if ($null -eq $RootIds -or $RootIds.Count -eq 0) { return $result.ToArray() }
+    $all = @()
+    try { $all = @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop) } catch { $all = @() }
+    $queue = New-Object System.Collections.Generic.Queue[int]
+    foreach ($id in $RootIds) { $queue.Enqueue($id) }
+    while ($queue.Count -gt 0) {
+        $parent = $queue.Dequeue()
+        foreach ($candidate in $all) {
+            $candidateId = [int] $candidate.ProcessId
+            if ([int] $candidate.ParentProcessId -ne $parent) { continue }
+            if ($RootIds -contains $candidateId -or $result.Contains($candidateId)) { continue }
+            if ($null -ne $candidate.CreationDate -and $candidate.CreationDate -lt $NotBefore) { continue }
+            $result.Add($candidateId)
+            $queue.Enqueue($candidateId)
+        }
+    }
+    return $result.ToArray()
+}
+
+# ── Сеть: подсеть шлема и адрес ПК ────────────────────────────────────────
+
+function ConvertTo-UInt32Address([string] $Address) {
+    $bytes = ([System.Net.IPAddress]::Parse($Address)).GetAddressBytes()
+    [Array]::Reverse($bytes)
+    return [System.BitConverter]::ToUInt32($bytes, 0)
+}
+
+function Test-SameSubnet([string] $A, [string] $B, [int] $Prefix) {
+    if ($Prefix -le 0) { return $true }
+    $mask = [uint32]::MaxValue
+    if ($Prefix -lt 32) { $mask = [uint32](([uint64][uint32]::MaxValue) -shl (32 - $Prefix) -band [uint32]::MaxValue) }
+    return (((ConvertTo-UInt32Address $A) -band $mask) -eq ((ConvertTo-UInt32Address $B) -band $mask))
+}
+
+# ── Брандмауэр (только чтение, без прав администратора) ───────────────────
+
+# Возвращает @{ Ok; Detail }. Ok=false — нет разрешающего входящего правила для exe в активном
+# включённом профиле или есть блокирующее (блок побеждает разрешение).
+function Test-ServerFirewall([string] $ExePath, [int[]] $Ports) {
+    $profiles = @(Get-NetFirewallProfile -ErrorAction Stop)
+    $active = New-Object System.Collections.Generic.List[string]
+    foreach ($connection in @(Get-NetConnectionProfile -ErrorAction SilentlyContinue)) {
+        $name = [string] $connection.NetworkCategory
+        if ($name -eq 'DomainAuthenticated') { $name = 'Domain' }
+        if (-not $active.Contains($name)) { $active.Add($name) }
+    }
+    if ($active.Count -eq 0) { $active.Add('Public') }
+
+    $enabled = New-Object System.Collections.Generic.List[string]
+    foreach ($p in $profiles) {
+        if ($active.Contains([string] $p.Name) -and [string] $p.Enabled -eq 'True') { $enabled.Add([string] $p.Name) }
+    }
+    if ($enabled.Count -eq 0) {
+        return @{ Ok = $true; Detail = ('брандмауэр выключен для активных профилей: ' + ($active -join ', ')) }
+    }
+
+    $target = [System.IO.Path]::GetFullPath($ExePath)
+    $allowed = New-Object System.Collections.Generic.List[string]
+    $blocked = New-Object System.Collections.Generic.List[string]
+    foreach ($filter in @(Get-NetFirewallApplicationFilter -ErrorAction SilentlyContinue)) {
+        $program = [string] $filter.Program
+        if ($program -eq '' -or $program -eq 'Any') { continue }
+        $expanded = [Environment]::ExpandEnvironmentVariables($program)
+        if (-not [string]::Equals($expanded, $target, [StringComparison]::OrdinalIgnoreCase)) { continue }
+        foreach ($rule in @($filter | Get-NetFirewallRule -ErrorAction SilentlyContinue)) {
+            if ([string] $rule.Direction -ne 'Inbound' -or [string] $rule.Enabled -ne 'True') { continue }
+            $ruleProfiles = @(([string] $rule.Profile) -split ',\s*')
+            $portFilter = $rule | Get-NetFirewallPortFilter -ErrorAction SilentlyContinue
+            $protocolOk = ($null -eq $portFilter) -or (@('Any', 'UDP') -contains [string] $portFilter.Protocol)
+            $portsOk = $true
+            if ($null -ne $portFilter) {
+                $local = @($portFilter.LocalPort | ForEach-Object { [string] $_ })
+                if (-not ($local -contains 'Any')) {
+                    foreach ($port in $Ports) { if (-not ($local -contains [string] $port)) { $portsOk = $false } }
+                }
+            }
+            foreach ($name in $enabled) {
+                if (-not ($ruleProfiles -contains 'Any' -or $ruleProfiles -contains $name)) { continue }
+                if ([string] $rule.Action -eq 'Block' -and $protocolOk) { $blocked.Add($name + ': ' + $rule.DisplayName) }
+                elseif ([string] $rule.Action -eq 'Allow' -and $protocolOk -and $portsOk) { $allowed.Add($name) }
+            }
+        }
+    }
+
+    if ($blocked.Count -gt 0) {
+        return @{ Ok = $false; Detail = ('блокирующее входящее правило для плеера: ' + ($blocked -join '; ')) }
+    }
+    $missing = @($enabled | Where-Object { -not $allowed.Contains($_) })
+    if ($missing.Count -gt 0) {
+        return @{ Ok = $false; Detail = ('нет разрешающего входящего UDP-правила для плеера в профилях: ' + ($missing -join ', ')) }
+    }
+    return @{ Ok = $true; Detail = ('есть разрешающее входящее правило для плеера: ' + ($enabled -join ', ')) }
+}
+
+# ── Состояние устройства ─────────────────────────────────────────────────
+
+function Get-Battery {
+    $r = Invoke-AdbShell @('dumpsys', 'battery') 20
+    if ($r.ExitCode -ne 0) { return $null }
+    $text = $r.Out
+    $level = $null; $temp = $null; $ac = $null; $usb = $null; $wireless = $null; $status = $null
+    if ($text -match '(?m)^\s*level:\s*(\d+)') { $level = [int] $Matches[1] }
+    if ($text -match '(?m)^\s*temperature:\s*(-?\d+)') { $temp = [double] $Matches[1] / 10.0 }
+    if ($text -match '(?m)^\s*AC powered:\s*(\w+)') { $ac = ($Matches[1] -eq 'true') }
+    if ($text -match '(?m)^\s*USB powered:\s*(\w+)') { $usb = ($Matches[1] -eq 'true') }
+    if ($text -match '(?m)^\s*Wireless powered:\s*(\w+)') { $wireless = ($Matches[1] -eq 'true') }
+    if ($text -match '(?m)^\s*status:\s*(\d+)') { $status = [int] $Matches[1] }
+    return [ordered]@{
+        level = $level; temperatureC = $temp; acPowered = $ac; usbPowered = $usb
+        wirelessPowered = $wireless; status = $status; capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
+    }
+}
+
+function Get-DeviceProp([string] $Name) {
+    $r = Invoke-AdbShell @('getprop', $Name) 20
+    if ($r.ExitCode -ne 0) { return $null }
+    $value = $r.Out.Trim()
+    if ($value -eq '') { return $null }
+    return $value
+}
+
+function Get-PackageVersion {
+    $r = Invoke-AdbShell @('dumpsys', 'package', $Package) 30
+    $code = $null; $name = $null; $updated = $null
+    if ($r.ExitCode -eq 0) {
+        if ($r.Out -match 'versionCode=(\d+)') { $code = [long] $Matches[1] }
+        if ($r.Out -match 'versionName=(\S+)') { $name = $Matches[1] }
+        if ($r.Out -match 'lastUpdateTime=([^\r\n]+)') { $updated = $Matches[1].Trim() }
+    }
+    return [ordered]@{ versionCode = $code; versionName = $name; lastUpdateTime = $updated }
+}
+
+# Wi-Fi шлема из mWifiInfo (dumpsys wifi); при недоступности — cmd wifi status; иначе null.
+function Get-DeviceWifi {
+    $line = ''
+    $r = Invoke-AdbShell @('dumpsys wifi | grep -m 1 "mWifiInfo SSID"') 30
+    if ($r.ExitCode -eq 0) { $line = $r.Out }
+    if ($line -notmatch 'SSID:') {
+        $r = Invoke-AdbShell @('cmd', 'wifi', 'status') 30
+        if ($r.ExitCode -eq 0) { $line = $r.Out }
+    }
+    if ($line -notmatch 'SSID:') { return $null }
+    $ssid = $null; $freq = $null; $rssi = $null; $link = $null; $standard = $null
+    if ($line -match 'SSID:\s*"([^"]*)"') { $ssid = $Matches[1] }
+    if ($line -match 'Frequency:\s*(\d+)\s*MHz') { $freq = [int] $Matches[1] }
+    if ($line -match 'RSSI:\s*(-?\d+)') { $rssi = [int] $Matches[1] }
+    if ($line -match ',\s*Link speed:\s*(\d+)\s*Mbps') { $link = [int] $Matches[1] }
+    if ($line -match 'Wi-Fi standard:\s*(\w+)') { $standard = $Matches[1] }
+    return [ordered]@{ ssid = $ssid; frequencyMhz = $freq; rssiDbm = $rssi; linkSpeedMbps = $link; wifiStandard = $standard }
+}
+
+# Quest Link активен: Link-клиент запущен и его activity — верхняя в фокусе.
+$LinkPackage = 'com.oculus.xrstreamingclient'
+# Компонент активной Link-activity (пакет/класс) или $null, если Link не на переднем плане.
+function Get-LinkComponent {
+    $r = Invoke-AdbShell @('pidof', $LinkPackage) 15
+    if ($r.ExitCode -ne 0 -or $r.Out.Trim() -eq '') { return $null }
+    $act = Invoke-AdbShell @('dumpsys', 'activity', 'activities') 30
+    foreach ($line in ($act.Out -split "`n")) {
+        if ($line -match ('topResumedActivity=.*\s(' + [regex]::Escape($LinkPackage) + '/[^\s}]+)')) { return $Matches[1] }
+    }
+    return $null
+}
+function Test-LinkActive { return ($null -ne (Get-LinkComponent)) }
+
+# Системный диалог шлема в фокусе (контроллеры, Link отключён, граница и т.п.) или $null. Пока он открыт,
+# приложение не получит фокус и am start зависнет; дирижёр диалоги не закрывает — это действие человека.
+function Get-BlockingDialog {
+    $act = Invoke-AdbShell @('dumpsys', 'activity', 'activities') 30
+    foreach ($line in ($act.Out -split "`n")) {
+        if ($line -match 'topResumedActivity=.*\s((?:com\.oculus|com\.meta)[^\s/]*/[^\s}]*Dialog[^\s}]*)') { return $Matches[1] }
+    }
+    return $null
+}
+
+function Get-AppPid {
+    $r = Invoke-AdbShell @('pidof', $Package) 15
+    if ($r.ExitCode -ne 0) { return $null }
+    $value = $r.Out.Trim()
+    if ($value -match '^(\d+)') { return [int] $Matches[1] }
+    return $null
+}
+
+# Путь артефакта шлема допустим только внутри каталога файлов приложения (persistentDataPath).
+function Test-DeviceArtifactPath([string] $Path) {
+    if ([string]::IsNullOrEmpty($Path) -or $Path -notmatch $SafeToken) { return $false }
+    if ($Path -match '(^|/)\.\.(/|$)') { return $false }
+    $roots = @('/sdcard/', '/storage/emulated/0/', '/storage/self/primary/')
+    foreach ($root in $roots) {
+        $prefix = $root + 'Android/data/' + $Package + '/files/'
+        if ($Path.StartsWith($prefix, [StringComparison]::Ordinal) -and $Path.Length -gt $prefix.Length) { return $true }
+    }
+    return $false
+}
+
+function Read-ResultJson([string] $Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $null }
+    try { return (ConvertFrom-Json (Get-Content -LiteralPath $Path -Raw -ErrorAction Stop)) } catch { return $null }
+}
+
+function Get-Status($Data) {
+    if ($null -eq $Data) { return '' }
+    return [string] $Data.status
+}
+
+function Get-BuildInfo($Data) {
+    if ($null -eq $Data) { return $null }
+    return [ordered]@{
+        buildGuid = $Data.buildGuid; appVersion = $Data.appVersion; unityVersion = $Data.unityVersion
+        developmentBuild = $Data.developmentBuild; platform = $Data.platform
+    }
+}
+
+# Свободное имя для артефакта в папке назначения (одинаковые имена с разных путей не затирают друг друга).
+function Get-ArtifactDestination([string] $Directory, [string] $Leaf) {
+    $candidate = Join-Path $Directory $Leaf
+    $index = 2
+    while (Test-Path -LiteralPath $candidate) {
+        $candidate = Join-Path $Directory ([string] $index + '-' + $Leaf)
+        $index++
+    }
+    return $candidate
+}
+
+# ══════════════════════════════════════════════════════════════════════════
+#  1. Проверки до прогона: при отказе ни устройство, ни ПК не тронуты
+# ══════════════════════════════════════════════════════════════════════════
+
+if ($Topology -eq 'host') {
+    Stop-Refused 'host на шлеме требует шва выбора роли в плеере (зона network), не реализовано.' @(
+        'Собранный плеер на шлеме стартует клиентом (роль выбирает GameNetworkDiscovery). Используй -Topology client.')
+}
+if ($Topology -ne 'client') { Stop-Refused ('неизвестная топология "' + $Topology + '": допустимы client и host') }
+
+if ($Scenario -notmatch $SafeToken) { Stop-Refused ('имя сценария с недопустимыми символами: "' + $Scenario + '"') }
+if ($Map -notmatch $SafeToken) { Stop-Refused ('имя карты с недопустимыми символами: "' + $Map + '"') }
+if ($Timeout -lt 60) { Stop-Refused ('-Timeout меньше 60 с: сценарию нужно на 30 с меньше дирижёра') }
+$scenarioTimeout = $Timeout - 30
+
+# -Arg: в режиме -File массив приходит одной строкой через запятую.
+$scenarioArgs = New-Object System.Collections.Generic.List[string]
+$argKeys = New-Object System.Collections.Generic.List[string]
+foreach ($item in $Arg) {
+    foreach ($pair in ([string] $item -split ',')) {
+        if ($pair -eq '') { continue }
+        if ($pair -notmatch '^([^=\s]+)=(\S*)$') {
+            Stop-Refused ('-Arg "' + $pair + '": нужен вид ключ=значение, непустой ключ, без пробелов')
+        }
+        $argKey = $Matches[1]
+        if ($pair -notmatch $SafeToken) {
+            Stop-Refused ('-Arg "' + $pair + '": недопустимые символы (строку -e unity разбирают sh шлема и Unity; разрешены ' + $SafeToken + ')')
+        }
+        if ($argKeys.Contains($argKey)) { Stop-Refused ('-Arg: ключ "' + $argKey + '" задан повторно') }
+        $argKeys.Add($argKey)
+        $scenarioArgs.Add($pair)
+    }
+}
+
+$autoPorts = ($NetworkPort -eq 0 -and $DiscoveryPort -eq 0)
+if (-not $autoPorts) {
+    $portError = ''
+    if ($NetworkPort -eq 0 -or $DiscoveryPort -eq 0) { $portError = '-NetworkPort и -DiscoveryPort задаются только вместе (0 и 0 — автоматически)' }
+    else { $portError = Get-PortPairError $NetworkPort $DiscoveryPort }
+    if ($portError -ne '') { Stop-Refused ('порты прогона заданы неверно: ' + $portError) }
+}
+
+if ([string]::IsNullOrEmpty($ServerPlayer)) { $ServerPlayer = Join-Path $RepoRoot 'Build\e2e\VrBattlegrounds.exe' }
+if (-not (Test-Path -LiteralPath $ServerPlayer)) {
+    Stop-Refused ('Windows-плеер сервера не найден: ' + $ServerPlayer) @(
+        'Собери e2e-плеер той же ревизии, что APK: Tools > VR Battlegrounds > Debug > Собрать e2e-плеер (Windows),',
+        'или укажи -ServerPlayer <путь к .exe>.')
+}
+$ServerPlayer = (Resolve-Path -LiteralPath $ServerPlayer).Path
+if (-not [string]::IsNullOrEmpty($Apk)) {
+    if (-not (Test-Path -LiteralPath $Apk)) { Stop-Refused ('APK не найден: ' + $Apk) }
+    $Apk = (Resolve-Path -LiteralPath $Apk).Path
+}
+
+# ── adb ──
+$AdbPath = ''
+if (-not [string]::IsNullOrEmpty($Adb)) {
+    if (-not (Test-Path -LiteralPath $Adb)) { Stop-Refused ('-Adb не найден: ' + $Adb) }
+    $AdbPath = (Resolve-Path -LiteralPath $Adb).Path
+}
+else {
+    $command = Get-Command 'adb.exe' -ErrorAction SilentlyContinue
+    if ($null -ne $command) { $AdbPath = $command.Source }
+    else {
+        $versionFile = Join-Path $RepoRoot 'ProjectSettings\ProjectVersion.txt'
+        $unityVersion = ''
+        if (Test-Path -LiteralPath $versionFile) {
+            $versionText = Get-Content -LiteralPath $versionFile -Raw
+            if ($versionText -match 'm_EditorVersion:\s*(\S+)') { $unityVersion = $Matches[1] }
+        }
+        if ($unityVersion -ne '') {
+            $candidate = Join-Path $env:ProgramFiles ('Unity\Hub\Editor\' + $unityVersion + '\Editor\Data\PlaybackEngines\AndroidPlayer\SDK\platform-tools\adb.exe')
+            if (Test-Path -LiteralPath $candidate) { $AdbPath = $candidate }
+        }
+    }
+}
+if ($AdbPath -eq '') {
+    Stop-Refused 'adb не найден: ни -Adb, ни PATH, ни Android SDK Unity версии проекта.' @(
+        'Укажи -Adb <путь к adb.exe> или установи модуль Android Build Support в Unity Hub.')
+}
+
+# ── устройство ──
+[void](Invoke-Tool $AdbPath @('start-server') 30)
+$devicesResult = Invoke-Tool $AdbPath @('devices') 30
+if ($devicesResult.ExitCode -ne 0) { Stop-Refused ('adb devices завершился с кодом ' + $devicesResult.ExitCode + ': ' + $devicesResult.Err.Trim()) }
+$deviceStates = [ordered]@{}
+foreach ($line in ($devicesResult.Out -split "`r?`n")) {
+    if ($line -match '^(\S+)\s+(\S+)\s*$' -and $line -notmatch '^List of devices') { $deviceStates[$Matches[1]] = $Matches[2] }
+}
+if ($Serial -ne '') {
+    if (-not $deviceStates.Contains($Serial)) {
+        Stop-Refused ('устройство "' + $Serial + '" не подключено. Видны: ' + (($deviceStates.Keys | ForEach-Object { $_ + ' (' + $deviceStates[$_] + ')' }) -join ', '))
+    }
+    if ($deviceStates[$Serial] -ne 'device') { Stop-Refused ('устройство "' + $Serial + '" в состоянии ' + $deviceStates[$Serial] + ', нужно device') }
+}
+else {
+    $ready = @($deviceStates.Keys | Where-Object { $deviceStates[$_] -eq 'device' })
+    if ($ready.Count -ne 1) {
+        $seen = 'нет'
+        if ($deviceStates.Count -gt 0) { $seen = (($deviceStates.Keys | ForEach-Object { $_ + ' (' + $deviceStates[$_] + ')' }) -join ', ') }
+        Stop-Refused ('нужно ровно одно устройство в состоянии device, найдено ' + $ready.Count + '. Видны: ' + $seen) @('Укажи -Serial.')
+    }
+    $Serial = $ready[0]
+}
+if ($Serial -notmatch $SafeToken) { Stop-Refused ('серийный номер с недопустимыми символами: ' + $Serial) }
+
+# ── одно устройство — один прогон ──
+$foreignPid = Get-AppPid
+if ($null -ne $foreignPid) {
+    Stop-Refused ('приложение ' + $Package + ' уже запущено на ' + $Serial + ' (pid ' + $foreignPid + ') — не нашим прогоном.') @(
+        'Закрой его на шлеме или дождись конца чужого прогона; дирижёр не гасит чужие процессы.')
+}
+
+# ── Quest Link ──
+# В Link шлем работает дисплеем ПК: Link-клиент держит фокус, нативное приложение не получит его,
+# и am start зависнет. По умолчанию — отказ. По -StopLink Link закрывается внутри прогона (try),
+# обратно не запускается (связь с ПК со шлема не восстанавливается надёжно) — это фиксируется в run.json.
+$linkComponent = Get-LinkComponent
+if ($null -ne $linkComponent -and -not $StopLink) {
+    Stop-Refused ('шлем ' + $Serial + ' в Quest Link (' + $linkComponent + ' на переднем плане) — игра не получит фокус.') @(
+        'Выйди из Link на шлеме (быстрые настройки → Quest Link → отключить) и повтори прогон,',
+        'или запусти с -StopLink: дирижёр закроет Link (обратно не возвращает — переподключишь сам).')
+}
+$linkStopped = $false
+
+$blockingDialog = Get-BlockingDialog
+if ($null -ne $blockingDialog) {
+    $dialogHint = 'Закрой его на шлеме (надень шлем или нажми кнопку контроллера) и повтори прогон.'
+    if ($blockingDialog -match 'ControllerRequired') { $dialogHint = 'Система требует контроллеры: разбуди их (кнопка на контроллере) и повтори прогон.' }
+    if ($blockingDialog -match 'LinkDisconnected') { $dialogHint = 'Диалог «Link отключён»: закрой его на шлеме и повтори прогон.' }
+    Stop-Refused ('на шлеме ' + $Serial + ' открыт системный диалог ' + $blockingDialog + ' — приложение не получит фокус.') @($dialogHint)
+}
+if ($Apk -eq '') {
+    $installed = Get-PackageVersion
+    if ($null -eq $installed.versionCode) { Stop-Refused ('пакет ' + $Package + ' не установлен на ' + $Serial + '; укажи -Apk') }
+}
+
+# ── адреса: шлем и ПК в одной подсети ──
+$deviceIp = $null
+$devicePrefix = 0
+$ipResult = Invoke-AdbShell @('ip', '-f', 'inet', 'addr', 'show', 'wlan0') 20
+if ($ipResult.Out -match 'inet\s+(\d+\.\d+\.\d+\.\d+)/(\d+)') { $deviceIp = $Matches[1]; $devicePrefix = [int] $Matches[2] }
+if ($null -eq $deviceIp) { Stop-Refused ('у шлема нет IPv4 на wlan0 — он не в Wi-Fi сети. Вывод: ' + ($ipResult.Out + $ipResult.Err).Trim()) }
+
+$pcCandidates = @()
+try {
+    $pcCandidates = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
+        Where-Object { $_.IPAddress -ne '127.0.0.1' -and -not $_.IPAddress.StartsWith('169.254.') } |
+        ForEach-Object { [string] $_.IPAddress })
+} catch { $pcCandidates = @() }
+if ($ServerAddress -eq '') {
+    $sameSubnet = @($pcCandidates | Where-Object { Test-SameSubnet $_ $deviceIp $devicePrefix })
+    if ($sameSubnet.Count -eq 0) {
+        Stop-Refused ('у ПК нет IPv4 в подсети шлема ' + $deviceIp + '/' + $devicePrefix + '. Адреса ПК: ' + ($pcCandidates -join ', ')) @(
+            'Подключи ПК и шлем к одной сети или укажи -ServerAddress.')
+    }
+    $ServerAddress = $sameSubnet[0]
+}
+elseif ($ServerAddress -notmatch '^\d+\.\d+\.\d+\.\d+$') { Stop-Refused ('-ServerAddress не IPv4: ' + $ServerAddress) }
+elseif (-not (Test-SameSubnet $ServerAddress $deviceIp $devicePrefix)) {
+    Write-Host ('  внимание: -ServerAddress ' + $ServerAddress + ' не в подсети шлема ' + $deviceIp + '/' + $devicePrefix) -ForegroundColor Yellow
+}
+
+# ── порты ──
+$portsReady = $false
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+    if ($autoPorts) { $pair = Select-PortPair; $NetworkPort = $pair[0]; $DiscoveryPort = $pair[1] }
+    if ((Test-UdpPortFree $NetworkPort) -and (Test-UdpPortFree $DiscoveryPort)) { $portsReady = $true; break }
+    if (-not $autoPorts) { break }
+}
+if (-not $portsReady) { Stop-Refused ('нет свободной пары UDP-портов (KCP ' + $NetworkPort + ', Discovery ' + $DiscoveryPort + ')') }
+
+# ── брандмауэр Windows ──
+$firewall = $null
+try { $firewall = Test-ServerFirewall $ServerPlayer @($NetworkPort, $DiscoveryPort) }
+catch { Stop-Refused ('не удалось прочитать правила брандмауэра Windows: ' + $_.Exception.Message) }
+if (-not $firewall.Ok) {
+    Stop-Refused ('брандмауэр Windows не пропустит UDP шлема к серверу: ' + $firewall.Detail) @(
+        'Скрипт сам ничего не меняет. Человек с правами администратора выполняет одну из команд:',
+        ('  New-NetFirewallRule -DisplayName "VR Battlegrounds e2e server" -Direction Inbound -Action Allow -Protocol UDP -Program "' + $ServerPlayer + '" -Profile Any'),
+        ('  netsh advfirewall firewall add rule name="VR Battlegrounds e2e server" dir=in action=allow protocol=UDP program="' + $ServerPlayer + '" profile=any enable=yes'))
+}
+
+# ══════════════════════════════════════════════════════════════════════════
+#  2. Прогон: с этого места run.json пишется всегда (finally)
+# ══════════════════════════════════════════════════════════════════════════
+
+$stamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
+$runId = $stamp + '-quest-' + $Scenario
+$runDir = Join-Path $RepoRoot ('Tools\e2e\results\' + $runId)
+New-Item -ItemType Directory -Path $runDir -Force | Out-Null
+
+$deviceFilesDir = '/sdcard/Android/data/' + $Package + '/files'
+$deviceResult = $deviceFilesDir + '/e2e/' + $runId + '/client-1.json'
+$serverResult = Join-Path $runDir 'server.json'
+$serverLog = Join-Path $runDir 'server.log'
+$clientResult = Join-Path $runDir 'client-1.json'
+$deviceToken = 'e2e-quest-' + $Serial
+
+$serverArgs = @(
+    '-batchmode', '-nographics',
+    '-e2eScenario', $Scenario,
+    '-e2eRole', 'server',
+    '-e2eResult', $serverResult,
+    '-e2eMap', $Map,
+    '-e2eClients', '1',
+    '-e2eTimeout', "$scenarioTimeout",
+    '-e2eNetworkPort', "$NetworkPort",
+    '-e2eDiscoveryPort', "$DiscoveryPort",
+    '-logFile', $serverLog
+)
+$clientTokens = @(
+    '-e2eScenario', $Scenario,
+    '-e2eRole', 'client-1',
+    '-e2eResult', $deviceResult,
+    '-e2eMap', $Map,
+    '-e2eTimeout', "$scenarioTimeout",
+    '-e2eQuitOnFinish',
+    '-e2eNetworkPort', "$NetworkPort",
+    '-e2eDiscoveryPort', "$DiscoveryPort",
+    '-e2eServerAddress', $ServerAddress,
+    '-e2eDeviceToken', $deviceToken
+)
+foreach ($pair in $scenarioArgs) { $serverArgs += @('-e2eArg', $pair); $clientTokens += @('-e2eArg', $pair) }
+foreach ($token in $clientTokens) {
+    if ($token -notmatch $SafeToken) { Stop-Refused ('аргумент шлема с недопустимыми символами: "' + $token + '"') }
+}
+$unityArgs = $clientTokens -join ' '
+$component = $Package + '/' + $Activity
+
+$manifest = [ordered]@{
+    contract = 'quest-device-run'
+    contractRevision = $ContractRevision
+    runId = $runId
+    scenario = $Scenario
+    topology = $Topology
+    map = $Map
+    timeoutSeconds = $Timeout
+    scenarioTimeoutSeconds = $scenarioTimeout
+    scenarioArgs = $scenarioArgs.ToArray()
+    startedUtc = (Get-Date).ToUniversalTime().ToString('o')
+    finishedUtc = $null
+    device = [ordered]@{
+        serial = $Serial; model = $null; fingerprint = $null; package = $Package; activity = $Activity
+        versionCode = $null; versionName = $null; lastUpdateTime = $null; ip = $deviceIp; prefixLength = $devicePrefix
+    }
+    apk = $null
+    batteryBefore = $null
+    batteryAfter = $null
+    deviceWifi = $null
+    pc = [ordered]@{ cpu = $null; computerName = $env:COMPUTERNAME; firewall = $firewall.Detail }
+    network = [ordered]@{ serverAddress = $ServerAddress; networkPort = $NetworkPort; discoveryPort = $DiscoveryPort; autoPorts = $autoPorts }
+    launch = [ordered]@{
+        device = [ordered]@{ command = ('am start -S -W -n ' + $component + " -e unity '" + $unityArgs + "'"); unityArgs = $unityArgs; amStartOutput = $null; pid = $null }
+        server = [ordered]@{ player = $ServerPlayer; args = $serverArgs; pid = $null }
+    }
+    builds = [ordered]@{ server = $null; client = $null; check = $null }
+    link = [ordered]@{ wasActive = ($null -ne $linkComponent); component = $linkComponent; stopped = $false; restored = $null; detail = $null }
+    artifacts = [ordered]@{ server = @(); client = @() }
+    files = @()
+    failure = $null
+    exitCode = 2
+    verdict = $null
+}
+
+Write-Section 'Конфигурация прогона'
+Write-Host ('  устройство: ' + $Serial + ' (' + $deviceIp + '/' + $devicePrefix + ')')
+Write-Host ('  сервер:     ' + $ServerPlayer)
+Write-Host ('  адрес ПК:   ' + $ServerAddress)
+Write-Host ('  сценарий:   ' + $Scenario + ', карта ' + $Map + ', параметры: ' + ($scenarioArgs -join ' '))
+Write-Host ('  таймаут:    ' + $Timeout + ' с (сценариям ' + $scenarioTimeout + ' с)')
+Write-Host ('  порты:      KCP ' + $NetworkPort + ', Discovery ' + $DiscoveryPort)
+Write-Host ('  брандмауэр: ' + $firewall.Detail)
+Write-Host ('  результат:  ' + $runDir)
+
+$serverProc = $null
+$logcatProc = $null
+$appPid = $null
+$failure = $null
+$deviceStarted = $false
+$runStartedAt = (Get-Date).AddSeconds(-1)
+$exitCode = 2
+
+try {
+    # ── условия прогона ──
+    $manifest.device.model = Get-DeviceProp 'ro.product.model'
+    $manifest.device.fingerprint = Get-DeviceProp 'ro.build.fingerprint'
+    try { $manifest.pc.cpu = ([string] (Get-CimInstance -ClassName Win32_Processor -ErrorAction Stop | Select-Object -First 1).Name).Trim() } catch {}
+    $manifest.deviceWifi = Get-DeviceWifi
+
+    if ($null -ne $linkComponent) {
+        Write-Section 'Закрываю Quest Link на время прогона (-StopLink)'
+        [void](Invoke-AdbShell @('am', 'force-stop', $LinkPackage) 20)
+        $linkStopped = $true
+        $manifest.link.stopped = $true
+        Start-Sleep -Seconds 3
+        if (Test-LinkActive) { throw ('Quest Link не закрылся после force-stop ' + $LinkPackage) }
+        Write-Host ('  закрыт ' + $linkComponent + '; обратно не возвращается')
+    }
+
+    if ($Apk -ne '') {
+        Write-Section 'Устанавливаю APK'
+        $hash = (Get-FileHash -LiteralPath $Apk -Algorithm SHA256).Hash.ToLowerInvariant()
+        $manifest.apk = [ordered]@{ name = [System.IO.Path]::GetFileName($Apk); path = $Apk; sha256 = $hash; installed = $false }
+        $install = Invoke-Adb @('install', '-r', $Apk) 600
+        if ($install.ExitCode -ne 0 -or $install.Out -notmatch 'Success') {
+            throw ('adb install не удался: ' + ($install.Out + ' ' + $install.Err).Trim())
+        }
+        $manifest.apk.installed = $true
+        Write-Host ('  установлен, sha256 ' + $hash)
+    }
+    $version = Get-PackageVersion
+    $manifest.device.versionCode = $version.versionCode
+    $manifest.device.versionName = $version.versionName
+    $manifest.device.lastUpdateTime = $version.lastUpdateTime
+    if ($null -eq $version.versionCode) { throw ('пакет ' + $Package + ' не установлен') }
+
+    # ── сервер ──
+    Write-Section 'Запускаю выделенный сервер'
+    if (-not ((Test-UdpPortFree $NetworkPort) -and (Test-UdpPortFree $DiscoveryPort))) {
+        throw ('порты заняты перед стартом сервера: KCP ' + $NetworkPort + ', Discovery ' + $DiscoveryPort)
+    }
+    $quotedServerArgs = @()
+    foreach ($a in $serverArgs) { $quotedServerArgs += (ConvertTo-CommandLineArg $a) }
+    $serverProc = Start-Process -FilePath $ServerPlayer -ArgumentList $quotedServerArgs -PassThru
+    $manifest.launch.server.pid = $serverProc.Id
+    Write-Host ('  pid ' + $serverProc.Id)
+
+    $ready = $false
+    $readyDeadline = (Get-Date).AddSeconds(90)
+    while ((Get-Date) -lt $readyDeadline) {
+        if (Test-Path -LiteralPath $serverResult) { $ready = $true; break }
+        if ($serverProc.HasExited) { break }
+        Start-Sleep -Milliseconds 500
+    }
+    if (-not $ready) { throw ('сервер не отметился файлом результата за 90 с, смотри ' + $serverLog) }
+    Write-Host '  харнесс сервера поднялся'
+    # StartServer и AdvertiseServer идут уже в первой сцене.
+    Start-Sleep -Seconds 6
+
+    # ── шлем ──
+    Write-Section 'Готовлю шлем'
+    $manifest.batteryBefore = Get-Battery
+    [void](Invoke-AdbShell @('input', 'keyevent', 'KEYCODE_WAKEUP') 20)
+    [void](Invoke-AdbShell @('am', 'broadcast', '-a', 'com.oculus.vrpowermanager.prox_close') 20)
+    [void](Invoke-Adb @('logcat', '-c') 20)
+    # Кольцевой буфер logcat шлема мал (сотни КиБ): за прогон он перезаписывается, поэтому весь прогон
+    # дополнительно пишется потоком в файл. Настройки буфера не меняем.
+    $streamLog = Join-Path $runDir 'logcat-stream.txt'
+    $logcatProc = Start-Process -FilePath $AdbPath -ArgumentList @('-s', $Serial, 'logcat', '-v', 'threadtime') `
+        -RedirectStandardOutput $streamLog -RedirectStandardError (Join-Path $runDir 'logcat-stream.err.txt') `
+        -WindowStyle Hidden -PassThru
+
+    Write-Section 'Запускаю приложение на шлеме'
+    Write-Host ('  am start -n ' + $component)
+    Write-Host ('  unity: ' + $unityArgs)
+    $deviceStarted = $true
+    $start = Invoke-AdbShell @('am', 'start', '-S', '-W', '-n', $component, '-e', 'unity', ("'" + $unityArgs + "'")) 120
+    $manifest.launch.device.amStartOutput = ($start.Out + $start.Err).Trim()
+    if ($start.ExitCode -ne 0 -or $start.Out -match 'Error' -or $start.Out -notmatch 'Status:\s*ok') {
+        $dialogNow = $null
+        try { $dialogNow = Get-BlockingDialog } catch {}
+        $dialogText = 'системного диалога в фокусе не видно'
+        if ($null -ne $dialogNow) { $dialogText = 'на шлеме открыт системный диалог ' + $dialogNow }
+        throw ('am start не удался (код ' + $start.ExitCode + ', таймаут ' + $start.TimedOut + '; ' + $dialogText + '): ' +
+               ($manifest.launch.device.amStartOutput -replace '\s*\r?\n\s*', ' | '))
+    }
+    # -W сообщает, какая activity оказалась на экране. Системный диалог вместо приложения (например,
+    # LaunchCheckControllerRequiredDialogActivity при выключенных контроллерах) — приложение не запущено.
+    if ($start.Out -match '(?m)^Activity:\s*(\S+)') {
+        $shown = $Matches[1]
+        if (-not $shown.StartsWith($Package + '/', [StringComparison]::Ordinal)) {
+            $hint = ''
+            if ($shown -match 'ControllerRequired') { $hint = ' — система требует контроллеры: включи их (или сборка должна объявлять поддержку рук)' }
+            throw ('вместо приложения шлем показал ' + $shown + $hint)
+        }
+    }
+    for ($i = 0; $i -lt 20 -and $null -eq $appPid; $i++) {
+        $appPid = Get-AppPid
+        if ($null -eq $appPid) { Start-Sleep -Milliseconds 500 }
+    }
+    $manifest.launch.device.pid = $appPid
+    if ($null -eq $appPid) { Write-Host '  pid приложения не найден — процесс уже завершился?' -ForegroundColor Yellow }
+    else { Write-Host ('  pid ' + $appPid) }
+
+    # ── ожидание вердиктов ──
+    Write-Section 'Жду вердикты сервера и шлема'
+    $deadline = (Get-Date).AddSeconds($Timeout)
+    $clientGoneTicks = 0
+    $serverGoneTicks = 0
+    $lastLine = ''
+    while ($true) {
+        $serverStatus = Get-Status (Read-ResultJson $serverResult)
+        $clientStatus = ''
+        $cat = Invoke-AdbShell @('cat', $deviceResult) 20
+        if ($cat.ExitCode -eq 0) {
+            try { $clientStatus = [string] (ConvertFrom-Json $cat.Out).status } catch { $clientStatus = '' }
+        }
+        $serverDone = ($serverStatus -ne '' -and $serverStatus -ne 'started')
+        $clientDone = ($clientStatus -ne '' -and $clientStatus -ne 'started')
+        $line = '  сервер: ' + $serverStatus + ', шлем: ' + $clientStatus
+        if ($line -ne $lastLine) { Write-Host $line; $lastLine = $line }
+        if ($serverDone -and $clientDone) { break }
+
+        # Процесс исчез, а вердикта нет — дальше он уже не появится (короткий запас на запись файла).
+        if (-not $clientDone -and $null -eq (Get-AppPid)) { $clientGoneTicks++ } else { $clientGoneTicks = 0 }
+        if (-not $serverDone -and $serverProc.HasExited) { $serverGoneTicks++ } else { $serverGoneTicks = 0 }
+        if ($clientGoneTicks -ge 3) { Write-Host '  приложение на шлеме завершилось без вердикта' -ForegroundColor Yellow; break }
+        if ($serverGoneTicks -ge 3) { Write-Host '  сервер завершился без вердикта' -ForegroundColor Yellow; break }
+        if ((Get-Date) -ge $deadline) { Write-Host ('  таймаут дирижёра ' + $Timeout + ' с') -ForegroundColor Yellow; break }
+        Start-Sleep -Seconds 2
+    }
+}
+catch {
+    $failure = $_.Exception.Message
+    Write-Host ''
+    Write-Host ('Прогон прерван: ' + $failure) -ForegroundColor Red
+}
+finally {
+    # ══ 3. Уборка и сбор: всегда, в том числе при Ctrl+C и исключении ══
+    Write-Section 'Гашу процессы и возвращаю шлем'
+    if ($deviceStarted) {
+        try { [void](Invoke-AdbShell @('am', 'force-stop', $Package) 30); Write-Host '  am force-stop' } catch {}
+    }
+    if ($null -ne $serverProc) {
+        try {
+            $descendants = @(Get-DescendantProcessIds @([int] $serverProc.Id) $runStartedAt)
+            if (-not $serverProc.HasExited) { Stop-Process -Id $serverProc.Id -Force -ErrorAction Stop; Write-Host ('  убит сервер pid ' + $serverProc.Id) }
+            foreach ($childId in $descendants) {
+                try { Stop-Process -Id $childId -Force -ErrorAction Stop; Write-Host ('  убит дочерний pid ' + $childId) } catch {}
+            }
+        } catch {}
+    }
+    try { [void](Invoke-AdbShell @('am', 'broadcast', '-a', 'com.oculus.vrpowermanager.automation_disable') 30); Write-Host '  automation_disable' } catch {}
+
+    # Link закрыт нами по -StopLink. Автоматический возврат не делаем (решение пользователя 2026-10-12: перезапуск
+    # Link-клиента со шлема не восстанавливает связь с ПК надёжно) — отмечаем в run.json и подсказываем человеку.
+    if ($linkStopped) {
+        $manifest.link.restored = $false
+        $manifest.link.detail = 'Link закрыт на время прогона и автоматически не возвращается — переподключи его на шлеме, если нужен'
+        Write-Host ('  Quest Link: ' + $manifest.link.detail) -ForegroundColor Yellow
+    }
+
+    if ($deviceStarted) {
+        # logcat: процесс приложения (все теги) и полный Unity-тег; без pid — ещё и весь буфер.
+        try {
+            if ($null -ne $appPid) {
+                $r = Invoke-Adb @('logcat', '-d', '-v', 'threadtime', ('--pid=' + $appPid)) 120
+                Write-TextFile (Join-Path $runDir 'client-1.logcat.txt') $r.Out
+            }
+            $r = Invoke-Adb @('logcat', '-d', '-v', 'threadtime', '-s', 'Unity') 120
+            Write-TextFile (Join-Path $runDir 'unity.logcat.txt') $r.Out
+            if ($null -eq $appPid) {
+                $r = Invoke-Adb @('logcat', '-d', '-v', 'threadtime') 180
+                Write-TextFile (Join-Path $runDir 'logcat-full.txt') $r.Out
+            }
+        } catch { Write-Host ('  logcat не снят: ' + $_.Exception.Message) -ForegroundColor Yellow }
+        if ($null -ne $logcatProc) {
+            try { if (-not $logcatProc.HasExited) { Stop-Process -Id $logcatProc.Id -Force -ErrorAction Stop } } catch {}
+        }
+
+        try {
+            $pull = Invoke-Adb @('pull', $deviceResult, $clientResult) 60
+            if ($pull.ExitCode -ne 0) { Write-Host ('  результат шлема не забран: ' + ($pull.Out + $pull.Err).Trim()) -ForegroundColor Yellow }
+        } catch {}
+        try { $manifest.batteryAfter = Get-Battery } catch {}
+    }
+
+    # ── артефакты ──
+    $artifactProblems = New-Object System.Collections.Generic.List[string]
+    $clientData = Read-ResultJson $clientResult
+    $serverData = Read-ResultJson $serverResult
+    if ($null -ne $clientData -and $null -ne $clientData.artifacts) {
+        $dest = Join-Path $runDir 'artifacts\client-1'
+        foreach ($path in @($clientData.artifacts)) {
+            $entry = [ordered]@{ source = [string] $path; local = $null; ok = $false; detail = $null }
+            if (-not (Test-DeviceArtifactPath ([string] $path))) {
+                $entry.detail = 'путь вне каталога файлов приложения или с недопустимыми символами'
+            }
+            else {
+                New-Item -ItemType Directory -Path $dest -Force | Out-Null
+                $local = Get-ArtifactDestination $dest ([string] $path).TrimEnd('/').Split('/')[-1]
+                $r = Invoke-Adb @('pull', [string] $path, $local) 600
+                $entry.local = $local.Substring($runDir.Length + 1)
+                $entry.ok = ($r.ExitCode -eq 0 -and (Test-Path -LiteralPath $local))
+                $entry.detail = ($r.Out + $r.Err).Trim()
+            }
+            if (-not $entry.ok) { $artifactProblems.Add('client-1: ' + $path + ' — ' + $entry.detail) }
+            $manifest.artifacts.client += ,$entry
+        }
+    }
+    if ($null -ne $serverData -and $null -ne $serverData.artifacts) {
+        $dest = Join-Path $runDir 'artifacts\server'
+        foreach ($path in @($serverData.artifacts)) {
+            $entry = [ordered]@{ source = [string] $path; local = $null; ok = $false; detail = $null }
+            try {
+                if (-not (Test-Path -LiteralPath ([string] $path))) { throw 'нет на диске' }
+                New-Item -ItemType Directory -Path $dest -Force | Out-Null
+                $local = Get-ArtifactDestination $dest (Split-Path -Leaf ([string] $path))
+                Copy-Item -LiteralPath ([string] $path) -Destination $local -Recurse -Force -ErrorAction Stop
+                $entry.local = $local.Substring($runDir.Length + 1)
+                $entry.ok = $true
+            } catch { $entry.detail = $_.Exception.Message }
+            if (-not $entry.ok) { $artifactProblems.Add('server: ' + $path + ' — ' + $entry.detail) }
+            $manifest.artifacts.server += ,$entry
+        }
+    }
+
+    # ── сверка сборок обеих сторон ──
+    $manifest.builds.server = Get-BuildInfo $serverData
+    $manifest.builds.client = Get-BuildInfo $clientData
+    $buildMismatch = $null
+    $check = 'нет данных: в результате стороны нет условий сборки (старая сборка?)'
+    if ($null -ne $serverData -and $null -ne $clientData -and $null -ne $serverData.appVersion -and $null -ne $clientData.appVersion) {
+        if ([string] $serverData.unityVersion -ne [string] $clientData.unityVersion) {
+            $buildMismatch = 'версии Unity сервера и шлема различаются: ' + $serverData.unityVersion + ' / ' + $clientData.unityVersion
+        }
+        elseif ([string] $serverData.appVersion -ne [string] $clientData.appVersion) {
+            $buildMismatch = 'appVersion сервера и шлема различаются: ' + $serverData.appVersion + ' / ' + $clientData.appVersion
+        }
+        $check = 'appVersion и unityVersion совпадают; штамп ревизии исходников вшивает этап quest-build (buildGuid у APK и Windows-плеера разный по природе)'
+        if ($null -ne $buildMismatch) { $check = $buildMismatch }
+    }
+    $manifest.builds.check = $check
+
+    # ── вердикт ──
+    Write-Section 'Отчёт'
+    $roleReports = New-Object System.Collections.ArrayList
+    $anyMissing = $false
+    $anyInconclusive = $false
+    $anyRed = $false
+    foreach ($item in @(@{ role = 'server'; path = $serverResult; data = $serverData }, @{ role = 'client-1'; path = $clientResult; data = $clientData })) {
+        $data = $item.data
+        if ($null -eq $data) {
+            $anyMissing = $true
+            Write-Host ('[' + $item.role + '] результата нет или битый JSON: ' + $item.path) -ForegroundColor Red
+            [void]$roleReports.Add([pscustomobject]@{ role = $item.role; passed = $false; status = 'missing'; summary = 'файл результата не получен или не разобрался' })
+            continue
+        }
+        $colour = 'Red'
+        if ($data.passed) { $colour = 'Green' }
+        Write-Host ('[' + $item.role + '] passed=' + $data.passed + ' status=' + $data.status + ' (' + $data.durationSeconds + ' с)') -ForegroundColor $colour
+        Write-Host ('           ' + $data.summary)
+        foreach ($c in @($data.checks)) {
+            if ($null -eq $c) { continue }
+            $mark = 'FAIL'; $cc = 'Red'
+            if ($c.passed) { $mark = ' OK '; $cc = 'Green' }
+            Write-Host ('   [' + $mark + '] ' + $c.name) -ForegroundColor $cc
+            Write-Host ('           ' + $c.detail) -ForegroundColor DarkGray
+        }
+        if ($data.status -ne 'completed') { $anyInconclusive = $true }
+        if (-not $data.passed -and $data.status -eq 'completed') { $anyRed = $true }
+        [void]$roleReports.Add([pscustomobject]@{ role = $item.role; passed = $data.passed; status = $data.status; summary = $data.summary; checks = $data.checks })
+    }
+
+    $reasons = New-Object System.Collections.Generic.List[string]
+    if ($null -ne $failure) { $reasons.Add($failure) }
+    if ($anyMissing) { $reasons.Add('нет результата одной из сторон') }
+    if ($anyInconclusive) { $reasons.Add('сценарий не дошёл до completed') }
+    if ($null -ne $buildMismatch) { $reasons.Add($buildMismatch) }
+    foreach ($p in $artifactProblems) { $reasons.Add('артефакт не собран: ' + $p) }
+
+    if ($reasons.Count -gt 0) { $exitCode = 2 }
+    elseif ($anyRed) { $exitCode = 1 }
+    else { $exitCode = 0 }
+
+    $verdict = 'INCONCLUSIVE — прогон не состоялся, вердикт вынести нельзя'
+    if ($exitCode -eq 1) { $verdict = 'RED — сценарий поймал отказ' }
+    if ($exitCode -eq 0) { $verdict = 'GREEN — все проверки зелёные' }
+
+    $manifest.failure = $null
+    if ($reasons.Count -gt 0) { $manifest.failure = ($reasons -join '; ') }
+    $manifest.exitCode = $exitCode
+    $manifest.verdict = $verdict
+    $manifest.finishedUtc = (Get-Date).ToUniversalTime().ToString('o')
+
+    $summary = [pscustomobject]@{
+        scenario = $Scenario; topology = $Topology; map = $Map; clients = 1; serial = $Serial
+        networkPort = $NetworkPort; discoveryPort = $DiscoveryPort; serverAddress = $ServerAddress
+        startedLocal = $stamp; verdict = $verdict; exitCode = $exitCode; failure = $manifest.failure
+        roles = $roleReports
+    }
+    try { Write-TextFile (Join-Path $runDir 'summary.json') ($summary | ConvertTo-Json -Depth 8) } catch {}
+    try {
+        $manifest.files = @(Get-ChildItem -LiteralPath $runDir -Recurse -File | ForEach-Object { $_.FullName.Substring($runDir.Length + 1) })
+        Write-TextFile (Join-Path $runDir 'run.json') ($manifest | ConvertTo-Json -Depth 10)
+    }
+    catch {
+        Write-Host ('run.json не записан: ' + $_.Exception.Message) -ForegroundColor Red
+        $exitCode = 2
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $runDir 'run.json'))) { $exitCode = 2 }
+
+    $verdictColour = 'Yellow'
+    if ($exitCode -eq 1) { $verdictColour = 'Red' }
+    if ($exitCode -eq 0) { $verdictColour = 'Green' }
+    Write-Host ''
+    foreach ($reason in $reasons) { Write-Host ('  причина: ' + $reason) -ForegroundColor Yellow }
+    Write-Host ('ИТОГ: ' + $verdict) -ForegroundColor $verdictColour
+    Write-Host ('Папка прогона: ' + $runDir)
+}
+exit $exitCode

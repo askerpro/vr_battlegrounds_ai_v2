@@ -18,6 +18,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
     /// <summary>Очередь воспроизводимых сценариев; решения живого бота остаются у Blaze.</summary>
     public sealed class BotCombatStand : MonoBehaviour
     {
+        /// <summary>Предел длительности case: 30 с — замеры, до 120 с — демо-прогон для визуальной проверки.</summary>
+        public const float MaxCaseSeconds = 120f;
+
         public MapData Map;
         public GameObject DetourWall, HardCover, SoftCover, VisualCover;
         public WeaponInfo[] Weapons;
@@ -133,9 +136,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 catch (NotSupportedException e) { result.Status = "Unsupported"; result.Error = e.Message; }
                 catch (Exception e) { result.Status = "InvalidFixture"; result.Error = e.Message; }
                 float start = Time.time;
-                while (!_cancel && result.Status != "InvalidFixture" && result.Status != "Unsupported" && Time.time - start < Mathf.Clamp(options.CaseSeconds, 1f, 30f))
+                while (!_cancel && result.Status != "InvalidFixture" && result.Status != "Unsupported" && Time.time - start < Mathf.Clamp(options.CaseSeconds, 1f, MaxCaseSeconds))
                 {
-                    _session.Tick(Time.time - start, Mathf.Clamp(options.CaseSeconds, 1f, 30f));
+                    _session.Tick(Time.time - start, Mathf.Clamp(options.CaseSeconds, 1f, MaxCaseSeconds));
                     Sample(result);
                     try { CaseSampled?.Invoke(result, _session); }
                     catch (Exception e) { result.Status = "InvalidFixture"; result.Error = e.Message; }

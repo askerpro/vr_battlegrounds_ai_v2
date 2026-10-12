@@ -236,3 +236,16 @@ armed-development) остаётся архивом в ветке и в dev не 
   BotCombatAssets/контроллеров прокси — если Blaze-proxy без них работает, binding r3, документы, тесты после
   приёмки) → pf-quest (перф на финальном коде).
 - Архив клипового пути `bots-fix-clip-archive` и `parked/pose-fit-2026-10-12` удаляются после приёмки clip-cutover.
+
+## Замеры этапа pf-prototype (стенд, Editor; отчёты tasks/bots-fix/reports/pf-round1..4, вне Git)
+
+| Раунд (тикет) | Итог |
+|---|---|
+| pf-round1 (454) | 0 выстрелов: профиль готовности искали в WeaponData (у AK105/PPK — на WeaponSystem префаба); PPK недостижим |
+| pf-round2 (457) | AK105 45/45; 62% Occluded из-за гейта «луч в силуэт»; PPK смещён 12 см (MainGripAimLock) |
+| pf-round3 (462) | Эталон без отдачи/неточности: AK105 109/110, PPK 75/75; S/R/F/PF hitRate 0,42–0,86 при atShot ≤0,8°; PF смещение 34 мм |
+| pf-round4 (469) | PE 59/59, E 62/62; PF 34 мм устранено (поддержка после устоявшегося хвата); F hitRate 0,61–0,85; выстрел: TryToShootRound ~80% стоимости |
+
+Открыто: хвост зазора кисть–снап AK105 p95 35–45 мм = отставание предмета при движении (held-motion, SDK-патч 73
+manipulation); MainGripAimLock + held-motion у людей (finding 4442/4445 weapon-system/manipulation); стоимость
+TryToShootRound на авторе (сообщено performance/weapon-system).

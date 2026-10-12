@@ -96,6 +96,23 @@
       "needs": []
     },
     {
+      "id": "hand-graft-exp",
+      "writes": [
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "contact-metrics",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "grip-authoring",
       "writes": [
         "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/**",

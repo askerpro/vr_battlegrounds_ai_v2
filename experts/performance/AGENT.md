@@ -21,6 +21,7 @@ review; optimisation in a foreign zone is done by its owner from your spec/revie
 ## Invariants
 - A number without conditions is not a fact: build (Development/release), device, role, mode, scene, SHA.
 - Editor shows relative growth only; budgets are judged on the headset. Do not touch Editor/MCP during a run.
+- Budgets are judged on the Test (Development) build: if it fits, Prod fits with margin (user, 2026-10-13).
 - The stress test only records FFR/levels, never sets them. `StressTestServer.Run` phases and `StressTestPlan` change together.
 - Post-processing, HDR, render scale != 1, opaque/depth texture, renderer features push rendering past
   FFR: re-measure before changing them.

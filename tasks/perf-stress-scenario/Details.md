@@ -62,3 +62,29 @@ DeviationYaw, FloorDeviation.
 Условие замера GPU (4718): лежащий шлем даёт камеру на 0,80 м и тангаж +32° вниз — для GPU-замера лобби шлем ставить
 на подставку ровно на высоте глаз, взгляд горизонтально. Фактические высота и тангаж из outcome — в отчёт фазы;
 прогон с тангажом далеко от 0° для сравнения сцен не годится.
+
+## Этап `controller-free-launch`
+
+Решение пользователя 2026-10-12: e2e/перф-прогоны на шлеме без пробуждения контроллеров. Исследование (launch-infra
+5183 + субагент, 2026-10-12): системный `LaunchCheckControllerRequiredDialogActivity` показывается VR-приложению
+(`com.oculus.intent.category.VR`) без объявленной поддержки рук. Oculus XR Plugin 4.5.4 записи рук не пишет
+(`OculusBuildProcessor.cs` ~607–691). Источник — форум Meta (Scriptable Testing), не официальная документация:
+проверить на шлеме.
+
+Решение: новый `Assets/Editor/VR_Battlegrounds/Release/QuestControllerFreeManifest.cs` —
+`IPostGenerateGradleAndroidProject`, callbackOrder 10002 (после `OculusManifest` 10000 и `QuestManifestValidator`
+10001), действует только когда GameBuilder взвёл его для профиля Quest и конфигурации Test (`Arm`/`Disarm` вокруг
+`BuildPipeline.BuildPlayer`, как у валидатора, `GameBuilder.cs` ~519/527 — зона launch-infra, zone-ack). Идемпотентно
+добавляет в `/manifest`:
+`<uses-feature android:name="oculus.software.handtracking" android:required="false"/>` и
+`<uses-permission android:name="com.oculus.permission.HAND_TRACKING"/>`. Prod не меняется.
+`QuestManifestValidator` (по готовому манифесту и aapt): в Test записи рук обязательны, в Prod их быть не должно.
+
+Побочные эффекты: Horizon OS при отложенных контроллерах переключится на руки; UltimateXR не переключится —
+`UxrMetaHandTracking` под `#if ULTIMATEXR_USE_OCULUS_SDK` (define нет), ввод только через
+`UxrUnityXRControllerInput`; руки аватара замирают, как при спящих контроллерах. Ревью avatar-ik — уведомление.
+
+Проверка на шлеме: системная настройка «отслеживание рук» включена; при спящих контроллерах `am start -W` даёт
+activity пакета, а не диалог; после пробуждения контроллеров ввод аватара работает; запроса разрешения нет;
+Prod-APK (aapt) без записей рук; perf-stress GREEN без касания контроллеров. Тесты EditMode на патч манифеста —
+после приёмки.

@@ -516,7 +516,8 @@ namespace VrBattlegrounds.EditorTools.Release
 
                         // Манифест проверяется сразу после генерации Gradle (QuestManifestValidator) —
                         // только в этой сборке и только для Android-профиля.
-                        if (android) QuestManifestValidator.Arm(profile);
+                        if (android) QuestManifestValidator.Arm(profile, config);
+                        if (android) QuestControllerFreeManifest.Arm(profile, config);
 
                         try
                         {
@@ -525,6 +526,7 @@ namespace VrBattlegrounds.EditorTools.Release
                         finally
                         {
                             if (android) QuestManifestValidator.Disarm();
+                            if (android) QuestControllerFreeManifest.Disarm();
                         }
                     }
 
@@ -549,7 +551,7 @@ namespace VrBattlegrounds.EditorTools.Release
                     }
 
                     if (!SameIds(profile, "после сборки", scenes, baseline, result)) return false;
-                    if (android && !CheckApkManifest(profile, spec.Path, result)) return false;
+                    if (android && !CheckApkManifest(profile, config, spec.Path, result)) return false;
 
                     baseline.WriteTo(directory, profile);
                     if (profile == BuildProfile.Server) CopyServerLauncher(directory);
@@ -616,7 +618,7 @@ namespace VrBattlegrounds.EditorTools.Release
         /// сливается с библиотеками. Нет aapt или он не отработал — предупреждение: проверка после
         /// генерации Gradle уже прошла.
         /// </summary>
-        private static bool CheckApkManifest(BuildProfile profile, string apkPath, Result result)
+        private static bool CheckApkManifest(BuildProfile profile, BuildConfig config, string apkPath, Result result)
         {
             string aapt = FindAapt(out string searched);
 
@@ -635,7 +637,7 @@ namespace VrBattlegrounds.EditorTools.Release
 
             QuestManifestValidator.ManifestFacts facts = QuestManifestValidator.ReadAaptXmlTree(output);
             var warnings = new List<string>();
-            string failure = QuestManifestValidator.Evaluate(profile, facts, warnings);
+            string failure = QuestManifestValidator.Evaluate(profile, config, facts, warnings);
 
             foreach (string warning in warnings)
             {

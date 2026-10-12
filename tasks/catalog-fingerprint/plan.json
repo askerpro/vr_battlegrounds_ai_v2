@@ -1,0 +1,36 @@
+{
+  "task_id": "catalog-fingerprint",
+  "owner": "gameplay",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/gameplay/Vr_Battlegrounds_ai",
+  "base_sha": "160223c7b01b2ad8ceab2a7c8132237256bf5382",
+  "doc_path": "tasks/catalog-fingerprint/Readme.md",
+  "title": "Отпечатки каталога карт не зависят от окружения",
+  "stages": [
+    {
+      "id": "env-independent",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Maps/MapRunPreflight.cs",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset",
+        "tasks/catalog-fingerprint/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "accepted-tests",
+      "writes": [
+        "Assets/Tests/EditMode/Maps/**",
+        "tasks/catalog-fingerprint/**"
+      ],
+      "after": [
+        {
+          "task": "catalog-fingerprint",
+          "stage": "env-independent",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

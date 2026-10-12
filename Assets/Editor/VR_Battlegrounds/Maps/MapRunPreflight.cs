@@ -12,13 +12,21 @@ namespace VrBattlegrounds.EditorTools
     /// <summary>Read-only проверка полного registry в preview scenes; пользовательские сцены не сохраняет.</summary>
     public static class MapRunPreflight
     {
+        /// <summary>
+        /// Отпечаток содержимого карты: сцена, MapData и реестр режимов. Не зависит от окружения —
+        /// см. <see cref="AssetHash"/>: одинаков в любой рабочей копии одного коммита, поэтому серверная и
+        /// клиентская сборки (каталог пересобирается при сборке, <c>MapCatalogBuildStep</c>) совпадают.
+        /// </summary>
         public static string ContentFingerprint(string scenePath, Maps.MapData map, GameModes.GameModeRegistry modes)
         {
-            var parts = new List<string> { "map-content-v1", AssetHash(scenePath), AssetHash(AssetDatabase.GetAssetPath(map)),
+            var parts = new List<string> { "map-content-v2", AssetHash(scenePath), AssetHash(AssetDatabase.GetAssetPath(map)),
                 AssetHash(AssetDatabase.GetAssetPath(modes)) };
             return Hash(string.Join("\n", parts));
         }
-        public static string ArsenalFingerprint(Arsenal.ArsenalPreset preset) => AssetHash(AssetDatabase.GetAssetPath(preset));
+
+        /// <summary>Отпечаток пресета арсенала карты — так же не зависит от окружения (<see cref="AssetHash"/>).</summary>
+        public static string ArsenalFingerprint(Arsenal.ArsenalPreset preset) =>
+            Hash("arsenal-content-v2\n" + AssetHash(AssetDatabase.GetAssetPath(preset)));
 
         public static object Validate(MapRuntimeCatalog catalog, IReadOnlyList<GameObject> registeredPrefabs) =>
             Validate(catalog, registeredPrefabs, out _);
@@ -76,10 +84,64 @@ namespace VrBattlegrounds.EditorTools
             return new { passed = failures.Count == 0, failureCount = failures.Count, mapCount = maps.Count,
                 failures = failures.Take(10).ToArray(), reportPath = path };
         }
+        /// <summary>
+        /// Хеш содержимого ассета на диске: файл и его <c>.meta</c>.
+        ///
+        /// <para>
+        /// Раньше здесь был <c>AssetDatabase.GetAssetDependencyHash</c> — хеш сырых байтов. Он зависел от
+        /// переводов строк рабочей копии: в Git YAML хранится в LF (eol=lf), а в старых рабочих копиях файлы
+        /// лежат в CRLF, пока Unity их не пересохранит. Тот же коммит давал разные отпечатки: ложный
+        /// <c>Catalog.*.Stale</c> в preflight и разные каталоги у сборок с разных машин.
+        /// </para>
+        ///
+        /// <para>
+        /// Теперь текстовый YAML Unity (файл начинается с <c>%YAML</c>; <c>.meta</c> — всегда YAML) хешируется
+        /// с CRLF, приведёнными к LF, — ровно как его хранит Git. Бинарный ассет — байты как есть.
+        /// </para>
+        /// </summary>
         private static string AssetHash(string path)
         {
             if (string.IsNullOrEmpty(path) || AssetDatabase.LoadMainAssetAtPath(path) == null) throw new InvalidOperationException("Content.Source.Missing:" + path);
-            return AssetDatabase.GetAssetDependencyHash(path).ToString();
+            string meta = path + ".meta";
+            if (!File.Exists(path) || !File.Exists(meta)) throw new InvalidOperationException("Content.Source.Missing:" + path);
+            return Hash("asset-content-v2\n" + FileContentHash(path) + "\n" + FileContentHash(meta));
+        }
+
+        private static string FileContentHash(string path)
+        {
+            byte[] bytes = File.ReadAllBytes(path);
+            if (IsUnityYaml(bytes)) bytes = CrlfToLf(bytes);
+            using (var hash = System.Security.Cryptography.SHA256.Create())
+                return BitConverter.ToString(hash.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
+        }
+
+        private static readonly byte[] YamlHeader = System.Text.Encoding.ASCII.GetBytes("%YAML");
+        private static readonly byte[] MetaHeader = System.Text.Encoding.ASCII.GetBytes("fileFormatVersion:");
+
+        /// <summary>Текстовая сериализация Unity: ассет с заголовком <c>%YAML</c> или <c>.meta</c>.</summary>
+        private static bool IsUnityYaml(byte[] bytes) => StartsWith(bytes, YamlHeader) || StartsWith(bytes, MetaHeader);
+
+        private static bool StartsWith(byte[] bytes, byte[] prefix)
+        {
+            if (bytes.Length < prefix.Length) return false;
+            for (int i = 0; i < prefix.Length; i++)
+                if (bytes[i] != prefix[i]) return false;
+            return true;
+        }
+
+        /// <summary>Только пары CR LF → LF; одиночный CR (внутри строковых значений) не трогается.</summary>
+        private static byte[] CrlfToLf(byte[] bytes)
+        {
+            var result = new byte[bytes.Length];
+            int n = 0;
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                if (bytes[i] == (byte)'\r' && i + 1 < bytes.Length && bytes[i + 1] == (byte)'\n') continue;
+                result[n++] = bytes[i];
+            }
+            if (n == bytes.Length) return bytes;
+            Array.Resize(ref result, n);
+            return result;
         }
         private static string Hash(string value)
         {

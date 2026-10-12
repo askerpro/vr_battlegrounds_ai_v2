@@ -4,7 +4,8 @@
   "owner": "gameplay",
   "tasks": [
     "arsenal-generator",
-    "death-body-defer"
+    "death-body-defer",
+    "catalog-fingerprint"
   ],
   "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
   "reviewed_at": "2026-10-11",

@@ -1,0 +1,18 @@
+{
+    "name": "VrBattlegrounds.SightSplit.Editor",
+    "rootNamespace": "VrBattlegrounds.Editor.Gameplay.SightSplit",
+    "references": [
+        "VrBattlegrounds"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

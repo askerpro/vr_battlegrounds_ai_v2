@@ -1,0 +1,28 @@
+{
+    "name": "VrBattlegrounds.Tests.EditMode.Sights",
+    "rootNamespace": "VrBattlegrounds.Tests.Sights",
+    "references": [
+        "VrBattlegrounds",
+        "VrBattlegrounds.SightTools.Editor",
+        "VrBattlegrounds.SightSplit.Editor",
+        "UltimateXR",
+        "Mirror",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

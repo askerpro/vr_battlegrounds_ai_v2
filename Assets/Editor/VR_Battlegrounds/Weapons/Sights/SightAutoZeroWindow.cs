@@ -1,0 +1,430 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Rendering;
+using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Editor.Gameplay.SightSplit;
+using VrBattlegrounds.Weapons.Sights;
+
+namespace VrBattlegrounds.Editor.Weapons.Sights
+{
+    /// <summary>
+    /// Автосведение механических прицелов (решения 2026-10-11/12). Два режима стенда (несохраняемая сцена):
+    /// <list type="bullet">
+    /// <item>комплект SightKit_* под MeshContainer копии оружия — пользователь ставит корень на планку и раздвигает
+    /// половины вдоль планки (локальная Z);</item>
+    /// <item>«Родной прицел» — вшитый прицел ствола из <see cref="SightSplitTable"/>, разделённый
+    /// <see cref="SightPartSplitter"/> на копии (<see cref="NativeSightStand"/>, меши только в памяти).</item>
+    /// </list>
+    /// «Свести» двигает подвижную деталь только по её локальной Y. Решение «Только инструменты» (2026-10-12):
+    /// «Сохранить в таблицу» и «Применить к префабу» выключены — финальная калибровка отдельной задачей; код их
+    /// сохранён (<see cref="WeaponSightTable"/>, <see cref="WeaponSightAuthoring"/>).
+    /// </summary>
+    public sealed class SightAutoZeroWindow : EditorWindow
+    {
+        private const string SettingsPath = WeaponSightAuthoring.SettingsPath;
+        private const string RegistryPath = "Assets/Data/Weapons/Resources/WeaponRegistry.asset";
+        private const string NativeOption = "Родной прицел";
+        private const string LockedHint = "Финальная калибровка — отдельная задача (решение 2026-10-12 «Только инструменты»)";
+        // Запись таблицы и применение к префабам выключены в этой задаче; включит отдельная задача калибровки.
+        private static readonly bool SaveUnlocked = false;
+        private static readonly bool ApplyUnlocked = false;
+        private const float RailTolerance = .00001f; // 0,01 мм
+        private const float ViewDistance = .18f;
+
+        private WeaponInfo[] _weapons = Array.Empty<WeaponInfo>();
+        private GameObject[] _kits = Array.Empty<GameObject>();
+        [SerializeField] private int _weaponIndex, _kitIndex;
+        [SerializeField] private GameObject _standWeapon, _standKit, _standKitPrefab;
+        [SerializeField] private WeaponInfo _standInfo;
+        [SerializeField] private bool _standNative;
+        [SerializeField] private string _message = "";
+        [SerializeField] private Vector2 _scroll;
+        private SightAutoZeroResult _last;
+        private NativeSightStand _native;
+
+        [MenuItem("Tools/VR Battlegrounds/Weapons/Sight Auto-Zero")]
+        public static void ShowWindow()
+        {
+            var window = GetWindow<SightAutoZeroWindow>("Sight Auto-Zero");
+            window.minSize = new Vector2(380, 460);
+        }
+
+        private void OnEnable()
+        {
+            var registry = AssetDatabase.LoadAssetAtPath<WeaponRegistry>(RegistryPath);
+            _weapons = registry != null ? registry.Weapons.Where(w => w != null && w.WeaponPrefab != null).ToArray() : Array.Empty<WeaponInfo>();
+            _kits = AssetDatabase.FindAssets("t:Prefab SightKit_", new[] { SightKitBuilder.PrefabFolder })
+                .Select(AssetDatabase.GUIDToAssetPath).Where(p => System.IO.Path.GetFileName(p).StartsWith("SightKit_", StringComparison.Ordinal))
+                .Select(AssetDatabase.LoadAssetAtPath<GameObject>).Where(g => g != null).ToArray();
+            SceneView.duringSceneGui += DrawLines;
+        }
+
+        private void OnDisable() => SceneView.duringSceneGui -= DrawLines;
+
+        private void OnDestroy() => DisposeNative();
+
+        /// <summary>Объект, внутри которого ищутся половины: комплект или (в режиме родного прицела) копия ствола.</summary>
+        private GameObject Scope => _standNative ? _standWeapon : _standKit;
+
+        private bool StandAlive => _standWeapon != null && _standInfo != null
+            && (_standNative ? _standWeapon.GetComponentsInChildren<SightAdjustablePart>(true).Length == 2 : _standKit != null && _standKitPrefab != null);
+
+        private void OnGUI()
+        {
+            _scroll = EditorGUILayout.BeginScrollView(_scroll);
+            EditorGUILayout.LabelField("Автосведение механического прицела", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("Стенд — временная сцена, не сохраняйте её. Комплект: поставьте корень на планку, раздвиньте " +
+                "Rear/Front только вдоль планки (локальная Z корня). «Родной прицел»: вшитый прицел ствола уже разделён на копии. " +
+                "«Свести» — только по высоте ходом подвижной детали; боковое расхождение показывается, но не исправляется.", MessageType.Info);
+            var settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(SettingsPath);
+            EditorGUILayout.LabelField("Пристрелка Z", settings != null ? settings.DefaultZeroDistance + " м (настройки калибровки)" : "нет настроек");
+
+            using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling))
+            {
+                if (_weapons.Length > 0)
+                    _weaponIndex = EditorGUILayout.Popup("Оружие", Mathf.Clamp(_weaponIndex, 0, _weapons.Length - 1), _weapons.Select(w => w.DisplayName).ToArray());
+                else EditorGUILayout.HelpBox("В реестре нет оружия: " + RegistryPath, MessageType.Warning);
+                WeaponInfo selected = _weapons.Length > 0 ? _weapons[Mathf.Clamp(_weaponIndex, 0, _weapons.Length - 1)] : null;
+                SightSplitSpec nativeSpec = selected != null ? NativeSightStand.SpecFor(selected.WeaponPrefab) : null;
+                WeaponSightTable table = WeaponSightTable.Load();
+                var entry = selected != null && table != null ? table.Find(selected) : null;
+
+                // Список: комплекты + «Родной прицел» (только для стволов из SightSplitTable).
+                var options = _kits.Select(k => k.name).ToList();
+                if (nativeSpec != null) options.Add(NativeOption);
+                bool nativeSelected = false;
+                GameObject kitSelected = null;
+                if (options.Count > 0)
+                {
+                    _kitIndex = EditorGUILayout.Popup("Прицел", Mathf.Clamp(_kitIndex, 0, options.Count - 1), options.ToArray());
+                    nativeSelected = nativeSpec != null && Mathf.Clamp(_kitIndex, 0, options.Count - 1) == _kits.Length;
+                    if (!nativeSelected && _kits.Length > 0) kitSelected = _kits[Mathf.Clamp(_kitIndex, 0, _kits.Length - 1)];
+                }
+                else EditorGUILayout.HelpBox("Нет префабов SightKit_* в " + SightKitBuilder.PrefabFolder, MessageType.Warning);
+                if (nativeSpec != null) EditorGUILayout.LabelField("Родной прицел", nativeSpec.Note, EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.LabelField("В таблице", entry == null ? "записи нет" :
+                    $"{(entry.Kit != null ? entry.Kit.name : "встроенный")}, сдвиг {entry.MovingOffset * 1000:+0.00;-0.00;0.00} мм, {entry.ZeroDistance} м");
+
+                using (new EditorGUI.DisabledScope(selected == null || (!nativeSelected && kitSelected == null)))
+                    if (GUILayout.Button("Открыть стенд"))
+                        Run(() => { if (nativeSelected) OpenNativeStand(selected, nativeSpec); else OpenStand(selected, kitSelected, entry); });
+
+                if (StandAlive)
+                {
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("Стенд", _standNative ? $"{_standInfo.DisplayName} · родной прицел" : $"{_standInfo.DisplayName} + {_standKitPrefab.name}");
+                    if (_standNative && _native != null && _native.Notes.Count > 0)
+                        EditorGUILayout.HelpBox(string.Join("\n", _native.Notes), MessageType.None);
+                    if (!_standNative)
+                    {
+                        if (GUILayout.Button("Выделить корень комплекта")) { Selection.activeGameObject = _standKit; SceneView.lastActiveSceneView?.FrameSelected(); }
+                        if (GUILayout.Button("Вернуть половины на планку (X/Y и поворот как в префабе)")) Run(ResetHalves);
+                    }
+                    else if (GUILayout.Button("Вернуть деталь в нейтраль")) Run(ResetPartsToNeutral);
+                    if (GUILayout.Button("Свести")) Run(() => Solve(settings, true));
+                    if (GUILayout.Button("Вид через прицел")) Run(ViewThroughSights);
+                    DrawResult();
+                    EditorGUILayout.Space();
+                    using (new EditorGUI.DisabledScope(!SaveUnlocked || _standNative || _last == null || !_last.Ok))
+                        if (GUILayout.Button(new GUIContent("Сохранить в таблицу", LockedHint))) Run(() => SaveToTable(settings));
+                    using (new EditorGUI.DisabledScope(!ApplyUnlocked || _standNative))
+                        if (GUILayout.Button(new GUIContent("Применить к префабу", LockedHint)))
+                            Run(() => _message = WeaponSightAuthoring.Apply(_standInfo));
+                    if (!SaveUnlocked || !ApplyUnlocked) EditorGUILayout.HelpBox(LockedHint + ": сохранение и применение выключены.", MessageType.None);
+                    if (!_standNative && GUILayout.Button("Проверить запись таблицы (без записи)")) Run(() => _message = WeaponSightAuthoring.Preflight(_standInfo));
+                }
+            }
+            if (!string.IsNullOrEmpty(_message)) EditorGUILayout.HelpBox(_message, MessageType.None);
+            EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawResult()
+        {
+            if (_last == null) return;
+            if (!_last.Ok) EditorGUILayout.HelpBox(_last.Error, MessageType.Warning);
+            double z = _last.ZeroDistance;
+            EditorGUILayout.LabelField("Результат", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Требуемый сдвиг", $"{SightAutoZeroSolver.Mm(_last.RequiredWorldShift)} мм (итог {SightAutoZeroSolver.Mm(_last.RequiredOffset)} мм)");
+            EditorGUILayout.LabelField("Ход детали", $"−{_last.TravelDown * 1000:0.00} … +{_last.TravelUp * 1000:0.00} мм");
+            EditorGUILayout.LabelField($"Вертикаль на {z} м", $"до {SightAutoZeroSolver.Mm(_last.Before.VerticalAt(z))} → после {SightAutoZeroSolver.Mm(_last.After.VerticalAt(z))} мм");
+            EditorGUILayout.LabelField($"Горизонталь на {z} м", $"{SightAutoZeroSolver.Mm(_last.After.HorizontalAt(z))} мм (не исправляется)");
+            var distances = SightAutoZeroSolver.ReportDistances.Concat(new[] { z }).Distinct().OrderBy(d => d);
+            foreach (double d in distances)
+                EditorGUILayout.LabelField($"  {d} м", $"верт. {SightAutoZeroSolver.Mm(_last.After.VerticalAt(d))}, гор. {SightAutoZeroSolver.Mm(_last.After.HorizontalAt(d))}, |e| {_last.After.TotalAt(d) * 1000:0.00} мм");
+        }
+
+        private void Run(Action action)
+        {
+            try { action(); }
+            catch (Exception e) { _message = e.Message; }
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        // ── Стенд ───────────────────────────────────────────────
+
+        private GameObject NewStandScene()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return null;
+            DisposeNative();
+            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            _standWeapon = null; _standKit = null; _standKitPrefab = null; _standInfo = null; _last = null;
+            return new GameObject("SightAutoZero_Stand (не сохранять)");
+        }
+
+        private void DisposeNative()
+        {
+            _native?.Dispose();
+            _native = null;
+        }
+
+        private void OpenStand(WeaponInfo info, GameObject kitPrefab, WeaponSightTable.Entry entry)
+        {
+            GameObject stand = NewStandScene();
+            if (stand == null) return;
+            // Обычные копии, не экземпляры префабов: со стенда нельзя применить overrides в оружие или комплект.
+            GameObject weapon = Instantiate(info.WeaponPrefab, stand.transform, false);
+            weapon.name = info.WeaponPrefab.name;
+            Transform container = WeaponSightAuthoring.FindContainer(weapon.transform);
+            foreach (Transform child in container.Cast<Transform>().ToArray())
+                if (child.name.StartsWith("SightKit_", StringComparison.Ordinal)) DestroyImmediate(child.gameObject); // прежний комплект заменяется
+            if (weapon.GetComponentsInChildren<SightAdjustablePart>(true).Length > 0)
+                throw new InvalidOperationException($"{weapon.name}: у оружия уже есть детали прицела вне комплекта — стенд комплекта не открыт");
+            GameObject kit = Instantiate(kitPrefab, container, false);
+            kit.name = kitPrefab.name;
+            SightKitScale.Apply(kit.transform); // реальный размер при любом масштабе корня оружия
+            Transform muzzle = SightParts.FindShotSource(weapon);
+            if (entry != null && entry.Kit == kitPrefab)
+            {
+                kit.transform.localPosition = entry.KitLocalPosition;
+                kit.transform.localRotation = entry.KitLocalRotation;
+                SetZ(kit.transform.Find("Rear"), entry.RearAlongRail);
+                SetZ(kit.transform.Find("Front"), entry.FrontAlongRail);
+                SightAdjustablePart moving = WeaponSightAuthoring.Moving(kit);
+                moving.transform.localPosition = moving.NeutralLocalPosition + Vector3.up * entry.MovingOffset;
+            }
+            else PlaceAboveBore(weapon, kit.transform, muzzle);
+            _standWeapon = weapon; _standKit = kit; _standKitPrefab = kitPrefab; _standInfo = info; _standNative = false;
+            Selection.activeGameObject = kit;
+            SceneView.lastActiveSceneView?.FrameSelected();
+            _message = entry != null && entry.Kit == kitPrefab ? "Стенд открыт с позой из таблицы." : "Стенд открыт: комплект поставлен над осью ствола — посадите его на планку.";
+        }
+
+        /// <summary>Стенд родного прицела: копия ствола, разделённая SightPartSplitter (меши в памяти, префаб не меняется).</summary>
+        private void OpenNativeStand(WeaponInfo info, SightSplitSpec spec)
+        {
+            GameObject stand = NewStandScene();
+            if (stand == null) return;
+            _native = NativeSightStand.Build(spec, stand.scene, stand.transform);
+            _standWeapon = _native.Weapon; _standInfo = info; _standNative = true;
+            Selection.activeGameObject = _native.Moving != null ? _native.Moving.gameObject : _native.Front.gameObject;
+            SceneView.lastActiveSceneView?.FrameSelected();
+            _message = "Стенд родного прицела открыт: " + spec.Note + (_native.Moving == null ? ". Подвижной детали нет — «Свести» только покажет ошибку." : ".");
+        }
+
+        /// <summary>Начальная поза нового комплекта: по оси ShotSource, над серединой оружия, на верхней границе bounds.</summary>
+        private static void PlaceAboveBore(GameObject weapon, Transform kit, Transform muzzle)
+        {
+            kit.rotation = Quaternion.LookRotation(muzzle.forward, muzzle.up);
+            var renderers = weapon.GetComponentsInChildren<Renderer>(true).Where(r => !r.transform.IsChildOf(kit)).ToArray();
+            if (renderers.Length == 0) { kit.position = muzzle.position; return; }
+            Bounds b = renderers[0].bounds;
+            foreach (var r in renderers) b.Encapsulate(r.bounds);
+            float along = Vector3.Dot(b.center - muzzle.position, muzzle.forward), top = float.MinValue;
+            for (int i = 0; i < 8; i++)
+            {
+                var corner = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
+                top = Mathf.Max(top, Vector3.Dot(corner - muzzle.position, muzzle.up));
+            }
+            kit.position = muzzle.position + muzzle.forward * along + muzzle.up * top;
+        }
+
+        private static void SetZ(Transform half, float z)
+        {
+            if (half == null) throw new InvalidOperationException("У комплекта нет половины Rear/Front");
+            half.localPosition = new Vector3(half.localPosition.x, half.localPosition.y, z);
+        }
+
+        private void RequireStand()
+        {
+            if (!StandAlive) throw new InvalidOperationException("Стенд не открыт или объекты удалены — откройте стенд заново");
+        }
+
+        private void ResetHalves()
+        {
+            RequireStand();
+            Undo.RecordObject(_standKit.transform, "Вернуть масштаб комплекта");
+            SightKitScale.Apply(_standKit.transform);
+            foreach (string name in new[] { "Rear", "Front" })
+            {
+                Transform half = _standKit.transform.Find(name), source = _standKitPrefab.transform.Find(name);
+                Undo.RecordObject(half, "Вернуть половину прицела на планку");
+                half.localPosition = new Vector3(source.localPosition.x, source.localPosition.y, half.localPosition.z);
+                half.localRotation = source.localRotation;
+                half.localScale = source.localScale;
+            }
+            ResetParts(false);
+        }
+
+        private void ResetPartsToNeutral()
+        {
+            RequireStand();
+            ResetParts(true);
+        }
+
+        /// <summary>Детали — в собранную позицию (подвижная сохраняет сдвиг по Y, если <paramref name="includeMoving"/> = false).</summary>
+        private void ResetParts(bool includeMoving)
+        {
+            foreach (var part in Scope.GetComponentsInChildren<SightAdjustablePart>(true))
+            {
+                Undo.RecordObject(part.transform, "Вернуть деталь прицела");
+                Vector3 n = part.NeutralLocalPosition;
+                part.transform.localPosition = new Vector3(n.x, part.IsAdjustable && !includeMoving ? part.transform.localPosition.y : n.y, n.z);
+                part.transform.localRotation = Quaternion.identity;
+                part.transform.localScale = Vector3.one;
+            }
+            _last = null;
+        }
+
+        /// <summary>
+        /// Проверка посадки. Комплект: корень в реальном размере, половины сдвинуты только по Z. Оба режима: детали
+        /// не сдвинуты вручную (подвижная — только по Y).
+        /// </summary>
+        private string LayoutProblem()
+        {
+            if (!_standNative)
+            {
+                string scale = SightKitScale.Problem(_standKit.transform);
+                if (scale != null) return scale + " («Вернуть половины на планку» восстановит)";
+                foreach (string name in new[] { "Rear", "Front" })
+                {
+                    Transform half = _standKit.transform.Find(name), source = _standKitPrefab.transform.Find(name);
+                    if (half == null || source == null) return "У комплекта нет половины " + name;
+                    if (Mathf.Abs(half.localPosition.x - source.localPosition.x) > RailTolerance || Mathf.Abs(half.localPosition.y - source.localPosition.y) > RailTolerance
+                        || Quaternion.Angle(half.localRotation, source.localRotation) > .01f || (half.localScale - source.localScale).sqrMagnitude > 1e-10f)
+                        return $"{name} сдвинута не вдоль планки: двигайте половины только по локальной Z корня («Вернуть половины на планку»)";
+                }
+            }
+            foreach (var part in Scope.GetComponentsInChildren<SightAdjustablePart>(true))
+            {
+                Vector3 p = part.transform.localPosition, n = part.NeutralLocalPosition;
+                if (Mathf.Abs(p.x - n.x) > RailTolerance || Mathf.Abs(p.z - n.z) > RailTolerance || (!part.IsAdjustable && Mathf.Abs(p.y - n.y) > RailTolerance)
+                    || Quaternion.Angle(part.transform.localRotation, Quaternion.identity) > .01f)
+                    return $"Деталь {part.name} сдвинута вручную: подвижная деталь двигается только сведением по Y" +
+                           (_standNative ? " («Вернуть деталь в нейтраль»)" : "");
+            }
+            return null;
+        }
+
+        private SightAutoZeroResult Solve(WeaponSightCalibrationSettings settings, bool write)
+        {
+            RequireStand();
+            if (settings == null) throw new InvalidOperationException("Нет настроек калибровки: " + SettingsPath);
+            string problem = LayoutProblem();
+            if (problem != null) throw new InvalidOperationException(problem);
+            SightParts.Find(Scope, out var rear, out var front, out var moving);
+            Transform muzzle = SightParts.FindShotSource(_standWeapon);
+            var result = SightAutoZeroSolver.Solve(SightParts.Input(rear, front, moving, muzzle, settings.DefaultZeroDistance));
+            if (write)
+            {
+                _last = result;
+                if (result.Ok && moving != null)
+                {
+                    Undo.RecordObject(moving.transform, "Свести прицел");
+                    Vector3 n = moving.NeutralLocalPosition;
+                    moving.transform.localPosition = new Vector3(n.x, n.y + (float)result.RequiredOffset, n.z);
+                    _message = "Сведено: подвижная деталь сдвинута по высоте. Проверьте «Вид через прицел».";
+                }
+                else _message = moving == null ? "Подвижной детали нет: показана ошибка на дистанциях." : "Не сведено: " + result.Error;
+            }
+            return result;
+        }
+
+        /// <summary>Запись в таблицу (в этой задаче кнопка выключена: финальная калибровка — отдельно).</summary>
+        private void SaveToTable(WeaponSightCalibrationSettings settings)
+        {
+            if (_standNative) throw new InvalidOperationException("Таблица хранит только комплекты; родной прицел — задача финальной калибровки");
+            // Повторный расчёт без записи: состояние стенда должно быть сведённым прямо сейчас.
+            var check = Solve(settings, false);
+            if (!check.Ok) throw new InvalidOperationException("Не сведено: " + check.Error);
+            if (Math.Abs(check.RequiredWorldShift) > 1e-6) throw new InvalidOperationException("Стенд изменился после сведения — нажмите «Свести» ещё раз");
+            Transform muzzleAsset = SightParts.FindShotSource(_standInfo.WeaponPrefab);
+            var fingerprint = ShotSourceFingerprint.Capture(muzzleAsset, _standInfo.WeaponPrefab.transform);
+            string drift = fingerprint.Compare(ShotSourceFingerprint.Capture(SightParts.FindShotSource(_standWeapon), _standWeapon.transform));
+            if (drift != null) throw new InvalidOperationException("Копия оружия на стенде отличается от префаба (" + drift + ") — откройте стенд заново");
+            SightAdjustablePart moving = WeaponSightAuthoring.Moving(_standKit);
+            var entry = new WeaponSightTable.Entry
+            {
+                Weapon = _standInfo, Kit = _standKitPrefab,
+                KitLocalPosition = _standKit.transform.localPosition, KitLocalRotation = _standKit.transform.localRotation,
+                RearAlongRail = _standKit.transform.Find("Rear").localPosition.z, FrontAlongRail = _standKit.transform.Find("Front").localPosition.z,
+                MovingOffset = moving.Offset, ZeroDistance = settings.DefaultZeroDistance, ShotSource = fingerprint
+            };
+            WeaponSightTable table = WeaponSightTable.LoadOrCreate();
+            Undo.RecordObject(table, "Сохранить сведение прицела");
+            table.Set(entry);
+            EditorUtility.SetDirty(table);
+            AssetDatabase.SaveAssetIfDirty(table);
+            _message = $"Сохранено в таблицу: {_standInfo.WeaponId}, сдвиг {entry.MovingOffset * 1000:+0.00;-0.00;0.00} мм. Префаб оружия не менялся.";
+        }
+
+        private void ViewThroughSights()
+        {
+            RequireStand();
+            SightParts.Find(Scope, out var rearPart, out var frontPart, out _);
+            Vector3 rear = rearPart.transform.position, front = frontPart.transform.position;
+            Transform muzzle = SightParts.FindShotSource(_standWeapon);
+            Vector3 forward = front - rear;
+            if (forward.sqrMagnitude < 1e-10f || Vector3.Dot(forward, muzzle.forward) <= 0)
+                throw new InvalidOperationException("Мушка не впереди целика вдоль оси выстрела");
+            var view = SceneView.lastActiveSceneView ?? GetWindow<SceneView>();
+            view.orthographic = false;
+            // Камера Scene View — на ViewDistance позади R по линии R→F; пивот орбиты — точка R.
+            view.LookAtDirect(rear, Quaternion.LookRotation(forward.normalized, muzzle.up), .1f);
+            view.size *= ViewDistance / Mathf.Max(view.cameraDistance, .0001f);
+            view.Focus();
+            view.Repaint();
+        }
+
+        private void DrawLines(SceneView view)
+        {
+            if (!StandAlive) return;
+            var settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(SettingsPath);
+            if (settings == null) return;
+            Transform muzzle;
+            SightAdjustablePart rear, front;
+            try
+            {
+                muzzle = SightParts.FindShotSource(_standWeapon);
+                SightParts.Find(Scope, out rear, out front, out _);
+            }
+            catch (InvalidOperationException) { return; }
+            float z = settings.DefaultZeroDistance;
+            Vector3 target = muzzle.position + muzzle.forward * z;
+            Color colour = Handles.color;
+            var depth = Handles.zTest;
+            try
+            {
+                Handles.zTest = CompareFunction.Always;
+                Handles.color = Color.green;
+                Handles.DrawLine(muzzle.position, target, 2f);
+                Handles.DrawWireDisc(target, muzzle.forward, .01f);
+                Vector3 dir = front.transform.position - rear.transform.position;
+                float du = Vector3.Dot(dir, muzzle.forward);
+                if (du <= 0f) return;
+                float t = (z - Vector3.Dot(rear.transform.position - muzzle.position, muzzle.forward)) / du;
+                Vector3 hit = rear.transform.position + dir * t;
+                Handles.color = Color.cyan;
+                Handles.DrawLine(rear.transform.position, hit, 2f);
+                Handles.DrawWireDisc(rear.transform.position, muzzle.forward, .001f);
+                Handles.DrawWireDisc(front.transform.position, muzzle.forward, .001f);
+                Handles.DrawWireDisc(hit, muzzle.forward, .006f);
+            }
+            finally { Handles.color = colour; Handles.zTest = depth; }
+        }
+    }
+}

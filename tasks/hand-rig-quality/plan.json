@@ -128,6 +128,15 @@
     {
       "id": "sdk-hands-seam",
       "writes": [
+        "Assets/Prefabs/Managers/--- MANAGERS ---.prefab",
+        "Assets/Data/Teams/Terrorists_Team.asset",
+        "Assets/Data/Player/Avatars/AvatarsRegistry.asset",
+        "Assets/Data/Player/Avatars/MEF_cyborg_hands.asset.meta",
+        "Assets/Data/Player/Avatars/MEF_cyborg_hands.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands.meta",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/**",
+        "Assets/Models/Avatars/MEF_CyborgHands.meta",
+        "Assets/Models/Avatars/MEF_CyborgHands/**",
         "Assets/Models/Avatars/MEF_SdkHands/**",
         "Assets/Prefabs/Player/Experimental/MEF_sdk_hands/**",
         "tasks/hand-rig-quality/Readme.md",

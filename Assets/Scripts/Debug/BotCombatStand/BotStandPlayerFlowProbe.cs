@@ -37,7 +37,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             // Этап pf-equipment: цели и траектории кистей, уборка; вложенные — поза покоя, подвод к снапу, уборка;
             // вызовы SDK хвата/отпускания из BotHands.
             "BotRuntimeController.Equipment", "BotRuntimeController.Equipment.Rest", "BotRuntimeController.Equipment.Reach",
-            "BotRuntimeController.Equipment.Stow", "BotHands.GrabObject", "BotHands.Release"
+            "BotRuntimeController.Equipment.Stow", "BotHands.GrabObject", "BotHands.Release",
+            // Разложение пиков BotHands.Tick (ревью manipulation 5005).
+            "BotHands.CanGrab", "BotHands.SnapCheck", "BotHands.GrabQuery", "BotHands.ResolveGrips"
         };
         private static readonly string[] OutcomeNames = Enum.GetNames(typeof(BotShotOutcome));
         private const int MaxTimelineEvents = 24;
@@ -144,6 +146,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private readonly List<float> _grabGrabberMm = new List<float>(), _grabCommandedMm = new List<float>();
         private readonly List<float> _supportGrabGrabberMm = new List<float>(), _supportGrabCommandedMm = new List<float>();
         private int _reachTimeoutsSeen, _supportTimeoutsSeen, _shotsGateClosed;
+        /// <summary>Уборки, где SDK не положил ствол в якорь, а уронил (Stows − StowsPlaced, по всем телам; ревью 5005).</summary>
+        private int _stowDropped;
         // Хват после прибытия кисти (eq-round2: должно быть ≤ 0,15 с, в т.ч. на ходу) и первый выстрел после экипировки.
         private readonly List<float> _primaryGrabAfterArrival = new List<float>(), _supportGrabAfterArrival = new List<float>();
         private readonly List<float> _firstShotAfterEquip = new List<float>();
@@ -393,6 +397,13 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     UxrGrabbableObject stowed = _hands.LastStowedItem;
                     Equipment(placed ? "stowPlacedByRelease" : "stowReleasedNotPlaced", stowed != null ? stowed.name : null,
                         _hands.LastStowAnchor);
+                    // Уронил: отпускание без якоря (в т.ч. по StowSettleSeconds, когда предмет не вошёл в радиус якоря).
+                    int dropped = (_hands.Stows - _stowsSeen) - (_hands.StowsPlaced - _stowsPlacedSeen);
+                    if (dropped > 0)
+                    {
+                        _stowDropped += dropped;
+                        Equipment("stowDropped", stowed != null ? stowed.name : null, dropped);
+                    }
                     _stowedGrip = stowed;
                     _stowedAt = now;
                 }
@@ -1069,6 +1080,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     ["primaryGrabs"] = _hands.PrimaryGrabs, ["supportGrabs"] = _hands.SupportGrabs,
                     ["supportReleases"] = _hands.SupportReleases, ["stows"] = _hands.Stows, ["stowsPlaced"] = _hands.StowsPlaced
                 },
+                ["stowDropped"] = _stowDropped,
                 ["criteria"] = new Dictionary<string, object>
                 {
                     ["noDuplicateBotComponents"] = !duplicates,
@@ -1083,6 +1095,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                                                  MaxOf(_supportReachSeconds) <= BotHandTrajectory.CeilingSeconds,
                     ["grabWithin150msOfArrival"] = MaxOf(_primaryGrabAfterArrival) <= 0.15f && MaxOf(_supportGrabAfterArrival) <= 0.15f,
                     ["noShotBeforeSupportOrTimeout"] = _shotsGateClosed == 0,
+                    ["stowDroppedZero"] = _stowDropped == 0,
                     ["note"] = "Флаги для оценки главным агентом; статус сценария не меняют. Время подвода — по кадрам пробы; потолок " +
                                "прибытия BotHandTrajectory.CeilingSeconds (длинный кадр редактора может его превысить — смотреть timeline)."
                 },

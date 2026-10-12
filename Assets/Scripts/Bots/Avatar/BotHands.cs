@@ -51,6 +51,13 @@ namespace VrBattlegrounds.Bots
         /// <summary>Вложенные маркеры вызовов SDK (хват, отпускание/размещение) — их стоимость отдельно от нашей логики.</summary>
         private static readonly ProfilerMarker GrabMarker = new ProfilerMarker("BotHands.GrabObject");
         private static readonly ProfilerMarker ReleaseMarker = new ProfilerMarker("BotHands.Release");
+        // Разложение пиков Tick (ревью manipulation 5005): правила хвата SDK (CanBeGrabbedByGrabber → GrabRules), снапы SDK
+        // (ComputeRequiredGrabberTransform: допуск хвата, PrimarySettled, замер кадра хвата), запросы менеджера хвата
+        // (IsBeingGrabbed/GetGrabbingHand), рукояти оружия (TryGetTriggerGrip).
+        private static readonly ProfilerMarker CanGrabMarker = new ProfilerMarker("BotHands.CanGrab");
+        private static readonly ProfilerMarker SnapMarker = new ProfilerMarker("BotHands.SnapCheck");
+        private static readonly ProfilerMarker QueryMarker = new ProfilerMarker("BotHands.GrabQuery");
+        private static readonly ProfilerMarker ResolveMarker = new ProfilerMarker("BotHands.ResolveGrips");
 
         /// <summary>
         /// Кисть «прибыла» к снапу (eq-round1): заданный драйвером граббер (команда кисти × граббер в системе запястья —
@@ -147,7 +154,13 @@ namespace VrBattlegrounds.Bots
                 UxrGrabber left = _avatar.GetGrabber(UxrHandSide.Left);
                 if (right == null) return;
 
-                bool resolved = TryResolveGrips(firearm, out UxrGrabbableObject grip, out int primary, out int support);
+                bool resolved;
+                UxrGrabbableObject grip;
+                int primary, support;
+                using (ResolveMarker.Auto())
+                {
+                    resolved = TryResolveGrips(firearm, out grip, out primary, out support);
+                }
 
                 if (resolved && (frame.ReleaseSupport || frame.Stow))
                 {
@@ -157,8 +170,11 @@ namespace VrBattlegrounds.Bots
 
                 if (frame.Release)
                 {
-                    ReleaseForeign(manager, left, resolved ? grip : null);
-                    ReleaseForeign(manager, right, resolved ? grip : null);
+                    using (ReleaseMarker.Auto())
+                    {
+                        ReleaseForeign(manager, left, resolved ? grip : null);
+                        ReleaseForeign(manager, right, resolved ? grip : null);
+                    }
                     return;
                 }
 
@@ -166,12 +182,33 @@ namespace VrBattlegrounds.Bots
 
                 if (!Holds(grip, primary, UxrHandSide.Right))
                 {
-                    if (!frame.GrabPrimary || !frame.HasRightHand || manager.IsBeingGrabbed(grip) || right.GrabbedObject != null) return;
+                    if (!frame.GrabPrimary || !frame.HasRightHand || right.GrabbedObject != null) return;
+                    bool held;
+                    using (QueryMarker.Auto())
+                    {
+                        held = manager.IsBeingGrabbed(grip);
+                    }
+                    if (held) return;
                     // Прибытие по факту: снап перечитан у SDK после всех стадий этого кадра.
-                    if (!WithinGrab(_avatar, grip, primary, UxrHandSide.Right, frame.RightHand, out float mm, out float degrees)) return;
-                    if (!grip.CanBeGrabbedByGrabber(right, primary)) return;
+                    bool within;
+                    float mm, degrees;
+                    using (SnapMarker.Auto())
+                    {
+                        within = WithinGrab(_avatar, grip, primary, UxrHandSide.Right, frame.RightHand, out mm, out degrees);
+                    }
+                    if (!within) return;
+                    bool allowed;
+                    using (CanGrabMarker.Auto())
+                    {
+                        allowed = grip.CanBeGrabbedByGrabber(right, primary);
+                    }
+                    if (!allowed) return;
 
-                    var moment = Moment(grip, primary, right, mm, degrees);
+                    BotGrabMoment moment;
+                    using (SnapMarker.Auto())
+                    {
+                        moment = Moment(grip, primary, right, mm, degrees);
+                    }
                     using (GrabMarker.Auto())
                     {
                         manager.GrabObject(right, grip, primary, true);
@@ -187,14 +224,34 @@ namespace VrBattlegrounds.Bots
 
                 if (!frame.GrabSupport || support < 0 || left == null || left.GrabbedObject != null) return;
                 // Поддержка — только после того, как основной хват устоялся (поза для MainGripAimLock снимается верно).
-                if (!PrimarySettled(grip, primary, right, frame)) return;
-                if (!frame.HasLeftHand ||
-                    !WithinGrab(_avatar, grip, support, UxrHandSide.Left, frame.LeftHand, out float supportMm, out float supportDegrees)) return;
-                if (!grip.CanBeGrabbedByGrabber(left, support)) return;
+                if (!frame.HasLeftHand) return;
+                bool ready;
+                float supportMm = float.NaN, supportDegrees = float.NaN;
+                using (SnapMarker.Auto())
+                {
+                    ready = PrimarySettled(grip, primary, right, frame) &&
+                            WithinGrab(_avatar, grip, support, UxrHandSide.Left, frame.LeftHand, out supportMm, out supportDegrees);
+                }
+                if (!ready) return;
+                bool supportAllowed;
+                using (CanGrabMarker.Auto())
+                {
+                    supportAllowed = grip.CanBeGrabbedByGrabber(left, support);
+                }
+                if (!supportAllowed) return;
                 // Точку поддержки держит чужая рука — не выхватываем.
-                if (manager.GetGrabbingHand(grip, support, out UxrGrabber _)) return;
+                bool taken;
+                using (QueryMarker.Auto())
+                {
+                    taken = manager.GetGrabbingHand(grip, support, out UxrGrabber _);
+                }
+                if (taken) return;
 
-                var supportMoment = Moment(grip, support, left, supportMm, supportDegrees);
+                BotGrabMoment supportMoment;
+                using (SnapMarker.Auto())
+                {
+                    supportMoment = Moment(grip, support, left, supportMm, supportDegrees);
+                }
                 using (GrabMarker.Auto())
                 {
                     manager.GrabObject(left, grip, support, true);

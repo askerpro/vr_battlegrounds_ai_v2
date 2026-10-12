@@ -366,6 +366,11 @@
           "task": "weapon-system",
           "stage": "sight-tr15-optic",
           "state": "verified"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "sight-iron-kits",
+          "state": "verified"
         }
       ],
       "needs": []
@@ -513,6 +518,11 @@
           "task": "weapon-system",
           "stage": "sight-tr15-optic",
           "state": "verified"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "sight-iron-kits",
+          "state": "verified"
         }
       ],
       "needs": []
@@ -536,6 +546,29 @@
         "Assets/Art/Weapons/Kinemation/TR15/Materials/TR15_XPS2_Reticle.mat.meta",
         "Assets/Art/Weapons/Kinemation/TR15/Meshes/TR15_XPS2_Optic.asset",
         "Assets/Tests/EditMode/Prefabs/KinemationWeaponTests.cs"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "sight-iron-kits",
+      "writes": [
+        "Assets/Art/Weapons/Sights/IronKits/**",
+        "Assets/Art/Weapons/Sights/IronKits.meta",
+        "Assets/Prefabs/Weapons/Sights/**",
+        "Assets/Prefabs/Weapons/Sights.meta",
+        "Assets/Scripts/Weapons/Sights/SightAdjustablePart.cs",
+        "Assets/Scripts/Weapons/Sights/SightAdjustablePart.cs.meta",
+        "Assets/Data/WeaponSystem/Sights/**",
+        "Assets/Data/WeaponSystem/Sights.meta",
+        "Assets/Editor/VR_Battlegrounds/Weapons/Sights/**",
+        "Assets/Editor/VR_Battlegrounds/Weapons/Sights.meta",
+        "Assets/Tests/EditMode/Sights/**",
+        "Assets/Tests/EditMode/Sights.meta",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/SightSplit/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/SightSplit.meta",
+        "Assets/Tests/EditMode/SightSplit/**",
+        "Assets/Tests/EditMode/SightSplit.meta"
       ],
       "after": [],
       "needs": []

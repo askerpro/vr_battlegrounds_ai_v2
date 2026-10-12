@@ -12,10 +12,14 @@
 2026-10-12 — **калибровка прицелов**, главный приоритет пользователя ([решения](../../Docs/weapons/decisions.md) «Прицелы»).
 - `sight-tr15-optic`: коллиматор эталона TR15 Sight Review перенесён в основной TR15 через `Tr15OpticBuilder`,
   принят в шлеме, коммит `9d5276eb`. Builder теперь сохраняет Mirror `_assetId` (раньше обнулял).
-- `sight-arsenal-dedupe`: убрать 5 копий Sight Review со стены лобби. Zone ACK gameplay есть (4093);
-  ждёт порядка с level-design `lobby-decoration/implementation` (оба пишут каталог карт, запрос 4100).
-- Дальше: родная механика остальных стволов, первыми те, где правка быстрее (замер ошибки сведения).
-- Хаб use-context: ждём `record-merged` сопровождающего (3895) и `binding-foundation` у bots-fix.
+- `sight-iron-kits` влит (`a3b06c63`): инструменты автосведения — комплекты TR15/MX68, SightAdjustablePart,
+  решатель «Свести», таблица, writer `WeaponSightAuthoring`, окно Sight Auto-Zero (комплект на планке и
+  «Родной прицел» через разделитель SightSplit). Опробовано пользователем на стенде; тесты 104/104.
+  Запись в таблицу и применение к префабам выключены — финальная калибровка отдельной задачей.
+- `sight-arsenal-dedupe`: пресет без 5 копий готов в worktree (не закоммичен). Порядок с level-design
+  согласован (4565), но rebake каталога меняет отпечатки всех карт — отпечаток зависит от EOL рабочей
+  копии (дефект MapRunPreflight, зона gameplay). Ждём решения gameplay (4757).
+- Хаб use-context: все этапы записаны merged (`record-merged`, 74de9191), контракты active.
 
 Обновлено 2026-10-11. Владелец — эксперт `weapon-system`; задача перенесена в его постоянный worktree
 `F:/CodexWorktrees/weapon-system/Vr_Battlegrounds_ai`, ветка `claude/weapon-system` (хаб 3358/3361, план r39).

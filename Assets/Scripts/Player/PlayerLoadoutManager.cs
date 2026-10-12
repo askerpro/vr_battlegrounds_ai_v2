@@ -60,7 +60,6 @@ namespace VrBattlegrounds.Player
 
         private UxrAvatar _avatar;
         private UxrMagazinePocket _pocket;
-        private PlayerController _player;
 
         /// <summary>Карман магазинов этого аватара или null, если его нет в префабе.</summary>
         public UxrMagazinePocket Pocket
@@ -81,7 +80,6 @@ namespace VrBattlegrounds.Player
         {
             if (_avatar == null) _avatar = GetComponent<UxrAvatar>();
             if (_pocket == null) _pocket = GetComponentInChildren<UxrMagazinePocket>(true);
-            if (_player == null) _player = GetComponent<PlayerController>();
         }
 
         // ── Сервер ─────────────────────────────────────────────
@@ -97,12 +95,6 @@ namespace VrBattlegrounds.Player
             {
                 Pocket.ItemReleased -= ServerHandleItemReleased;
                 Pocket.ItemReleased += ServerHandleItemReleased;
-            }
-
-            if (_player != null)
-            {
-                _player.PlayerDied -= ServerHandlePlayerDied;
-                _player.PlayerDied += ServerHandlePlayerDied;
             }
         }
 
@@ -124,37 +116,36 @@ namespace VrBattlegrounds.Player
 
             if (_pocket != null)
                 _pocket.ItemReleased -= ServerHandleItemReleased;
-
-            if (_player != null)
-                _player.PlayerDied -= ServerHandlePlayerDied;
         }
 
         /// <summary>
-        /// Погибший теряет снаряжение: оружие из кобур выпадает на месте смерти и становится
-        /// ничьим (его можно подобрать, в конце раунда его уберёт общая уборка), магазины
-        /// из кармана исчезают. Оружие из рук роняет <see cref="PlayerGrabManager"/>.
+        /// Роняет оружие из кобур и убирает магазины из кармана: оружие выпадает на месте и
+        /// становится ничьим (его можно подобрать, в конце раунда его уберёт общая уборка),
+        /// магазины из кармана исчезают.
         ///
         /// <para>
-        /// Кобуры висят на скелете, а не внутри модели, которую прячет наблюдатель: без этого
-        /// призрак ходил с видимым оружием на спине и получал его обратно при респауне.
+        /// <b>Единственный путь сброса снаряжения</b>, и зовёт его только
+        /// <see cref="VrBattlegrounds.Player.Avatars.AvatarTeardown"/> на сервере: перед уничтожением
+        /// аватара (<c>ReleaseBeforeDestroy</c> — смена тела погибшего на призрака, отключение, уборка
+        /// бота или стенда) и для мёртвого тела без замены (<c>ReleaseDeadBodyOnServer</c>, стратегия
+        /// без призрака). При смерти оба вызова идут из <see cref="VrBattlegrounds.Player.Avatars.AvatarManager"/>
+        /// на верхнем уровне — после <c>EndSync</c> смерти (задача death-body-defer, этап death-equipment-drop).
         /// </para>
         ///
         /// <para>
-        /// Событие смерти поднимается на каждой машине; снятие с якоря делает только сервер —
-        /// оно синхронизируется каналом состояния UltimateXR, и на клиентах тело предмета
-        /// становится динамическим так же, как у сервера.
+        /// <b>Не звать изнутри синхронизации UltimateXR</b> (обработчики <c>PlayerDied</c>,
+        /// <c>UxrActor.DieInternal</c>). <c>RemoveObjectFromAnchor</c> открывает свой <c>BeginSync</c>;
+        /// вложенное событие при <c>UseTopLevelStateChangesOnly</c> отдельно клиентам не уходит, а клиент
+        /// свой серверный обработчик пропускает — у клиентов оружие оставалось в кобуре мёртвого тела.
+        /// Прежняя подписка на <c>PlayerDied</c> снята именно поэтому.
         /// </para>
-        /// </summary>
-        private void ServerHandlePlayerDied(PlayerController player)
-        {
-            if (!isServer) return;
-
-            ServerDropEquipment("погиб");
-        }
-
-        /// <summary>
-        /// Роняет оружие из кобур и убирает магазины из кармана. Зовут смерть и
-        /// <see cref="VrBattlegrounds.Player.Avatars.AvatarTeardown"/> перед уничтожением аватара.
+        ///
+        /// <para>
+        /// Снятие с якоря делает только сервер — оно синхронизируется каналом состояния UltimateXR, и
+        /// на клиентах тело предмета становится динамическим так же, как у сервера. Кобуры висят на
+        /// скелете, а не внутри модели, которую прячет наблюдатель: без сброса призрак ходил бы с
+        /// видимым оружием на спине и получал его обратно при респауне.
+        /// </para>
         /// </summary>
         /// <param name="reason">Почему снимается снаряжение — только для лога.</param>
         [Server]

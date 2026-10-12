@@ -8,8 +8,10 @@ namespace VrBattlegrounds.Player.Avatars
     /// <summary>
     /// Освобождает аватар перед тем, как сервер его уничтожит: смена скина или команды
     /// (<see cref="AvatarManager.ChangeAvatar"/> — с изъятием снаряжения,
-    /// <see cref="ConfiscateBeforeDestroy"/>), отключение игрока
-    /// (<c>GameNetworkManager.OnServerDisconnect</c>).
+    /// <see cref="ConfiscateBeforeDestroy"/>), смена тела погибшего на призрака
+    /// (<see cref="ReleaseBeforeDestroy"/>), отключение игрока (<c>GameNetworkManager.OnServerDisconnect</c>).
+    /// Мёртвое тело без смены освобождается так же, только без уничтожения
+    /// (<see cref="ReleaseDeadBodyOnServer"/>). Других путей сброса снаряжения при смерти нет.
     ///
     /// <para>
     /// <b>Зачем.</b> Рука UltimateXR, уничтоженная вместе с аватаром, ничего не отпускает:
@@ -50,15 +52,7 @@ namespace VrBattlegrounds.Player.Avatars
             // Локальное (планшет) сервер не видит — его отпускает владелец, до уничтожения.
             if (NetworkServer.active && avatar.isServer) avatar.ServerReleaseLocalItems();
 
-            ReleaseHands(avatar);
-
-            // Снаряжение — сетевые объекты, трогает их только сервер. Вне сервера
-            // (EditMode-тест) [Server]-метод всё равно заглушится, но с шумом в лог.
-            if (NetworkServer.active)
-            {
-                PlayerLoadoutManager loadout = avatar.GetComponent<PlayerLoadoutManager>();
-                if (loadout != null) loadout.ServerDropEquipment(reason);
-            }
+            ReleaseHandsAndEquipment(avatar, reason);
 
             GameLog.Player.Info($"[AvatarTeardown] {avatar.name}: освобождён перед уничтожением ({reason}).", avatar);
         }
@@ -78,20 +72,43 @@ namespace VrBattlegrounds.Player.Avatars
         }
 
         /// <summary>
-        /// Только руки, без снаряжения и планшета: смерть без смены тела (стратегия без призрака —
-        /// <see cref="AvatarManager"/>). Тело живёт дальше мёртвым, и без этого держало бы предмет
-        /// до возрождения: владелец при смерти больше не отпускает (death-body-defer). Сервер, с
-        /// верхнего уровня — то же одно <c>ReleaseObject</c> на руку, что при замене тела.
-        /// Снаряжение при смерти роняет <see cref="PlayerLoadoutManager"/>.
+        /// Мёртвое тело без смены (стратегия без призрака — <see cref="AvatarManager"/>): руки отпускают
+        /// и снаряжение падает тем же шагом и в том же порядке, что в <see cref="ReleaseBeforeDestroy"/>.
+        /// Тело живёт дальше мёртвым и без этого держало бы предмет в руке и оружие в кобуре до
+        /// возрождения: ни владелец, ни обработчики смерти больше ничего не отпускают и не роняют
+        /// (death-body-defer). Сервер, с верхнего уровня — одно <c>ReleaseObject</c> на руку и снятие
+        /// с якоря, которые доходят до клиентов.
+        ///
+        /// <para>
+        /// Планшет и прочее локальное (<see cref="PlayerController.ServerReleaseLocalItems"/>) не
+        /// трогается: тело не уничтожается, локальное остаётся владельцу.
+        /// </para>
         /// </summary>
         /// <param name="avatar">Мёртвое тело; null — ничего не делать.</param>
         /// <param name="reason">Причина для лога.</param>
-        public static void ReleaseHandsOnServer(PlayerController avatar, string reason)
+        public static void ReleaseDeadBodyOnServer(PlayerController avatar, string reason)
         {
             if (avatar == null || !NetworkServer.active || !StateEventAuthority.IsWorldAuthority) return;
 
+            ReleaseHandsAndEquipment(avatar, reason);
+            GameLog.Player.Info($"[AvatarTeardown] {avatar.name}: мёртвое тело без смены — руки отпущены, снаряжение сброшено ({reason}).", avatar);
+        }
+
+        /// <summary>
+        /// Общий шаг освобождения: сначала руки (<see cref="ReleaseHands"/>), потом снаряжение
+        /// (<see cref="PlayerLoadoutManager.ServerDropEquipment"/>) — порядок из описания класса.
+        /// </summary>
+        private static void ReleaseHandsAndEquipment(PlayerController avatar, string reason)
+        {
             ReleaseHands(avatar);
-            GameLog.Player.Info($"[AvatarTeardown] {avatar.name}: руки отпущены без смены тела ({reason}).", avatar);
+
+            // Снаряжение — сетевые объекты, трогает их только сервер. Вне сервера
+            // (EditMode-тест) [Server]-метод всё равно заглушится, но с шумом в лог.
+            if (NetworkServer.active)
+            {
+                PlayerLoadoutManager loadout = avatar.GetComponent<PlayerLoadoutManager>();
+                if (loadout != null) loadout.ServerDropEquipment(reason);
+            }
         }
 
         /// <summary>

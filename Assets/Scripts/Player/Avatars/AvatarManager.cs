@@ -266,9 +266,11 @@ namespace VrBattlegrounds.Player.Avatars
         /// текущему состоянию: смерть и возрождение одного кадра дают ноль замен, а не две.
         ///
         /// <para>
-        /// Замены нет, а тело мертво (стратегия без призрака): руки отпускает сервер здесь же
-        /// (<see cref="AvatarTeardown.ReleaseHandsOnServer"/>) — иначе мёртвое тело держало бы предмет
-        /// до возрождения. Живое тело (возрождение) ничего не отпускает.
+        /// Замены нет, а тело мертво (стратегия без призрака): сервер здесь же отпускает руки и роняет
+        /// снаряжение (<see cref="AvatarTeardown.ReleaseDeadBodyOnServer"/>) — иначе мёртвое тело держало
+        /// бы предмет в руке и оружие в кобуре до возрождения. С заменой то же делает
+        /// <see cref="AvatarTeardown.ReleaseBeforeDestroy"/> в <see cref="ReplaceBody"/>: при смерти сброс
+        /// ровно один, и только здесь, на верхнем уровне. Живое тело (возрождение) ничего не отпускает.
         /// </para>
         /// </summary>
         private void ReconcileBodyNow(PlayerSession session, string reason)
@@ -291,7 +293,8 @@ namespace VrBattlegrounds.Player.Avatars
             {
                 // IsAlive после Die: Life = 0 (DieInternal) и выбывание на сессии — мёртв по обоим.
                 // Призрак тоже «мёртв», но он и есть тело выбывшего и держит свой планшет — не трогаем.
-                if (!current.IsAlive && !IsGhostBody(current)) AvatarTeardown.ReleaseHandsOnServer(current, reason);
+                // Повтор на уже сброшенном теле безвреден: руки, кобуры и карман пусты — нечего снимать.
+                if (!current.IsAlive && !IsGhostBody(current)) AvatarTeardown.ReleaseDeadBodyOnServer(current, reason);
                 return;
             }
 

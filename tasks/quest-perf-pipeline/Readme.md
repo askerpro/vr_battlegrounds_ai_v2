@@ -24,6 +24,9 @@
 3. `quest-build` — merged `2c314876`: `StartPairBuild`/`RunPairBatch`, `-Build`, штамп ревизии `0.1.0+<sha>`,
    сверка ревизий APK/сервер, подавление модального окна Input Handling.
 4. `e2e-views` — merged `68950d0b`: `E2EViews` (точки обзора через `MoveAvatarTo`), `-ViewsFile`, LFS-проверка `-Build`.
-5. performance: задача `perf-stress-scenario` (scenario → arena-layout → view-tour); запрос lobby-decoration 4449.
+5. `quest-vr-manifest` — merged `92d7cee8`: Quest-сборки снова VR (OculusManifest под `#if UNITY_ANDROID`), проверки манифеста.
+6. `e2e-head-pose` — merged `a311cdb1`: симуляция позы головы `-HeadPose`.
+7. Следующий: объявление поддержки рук в Test/e2e — запуск без контроллеров.
+8. performance: задача `perf-stress-scenario` (scenario → arena-layout → view-tour); запрос lobby-decoration 4449.
 
 Подробности: [Details.md](Details.md). Машинный план: [plan.json](plan.json). Отчёты — `reports/`, вне Git.

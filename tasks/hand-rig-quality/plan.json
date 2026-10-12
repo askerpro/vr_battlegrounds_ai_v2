@@ -154,6 +154,27 @@
       "needs": []
     },
     {
+      "id": "wrist-gap",
+      "writes": [
+        "Assets/Models/Avatars/MEF_CyborgHands/**",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/**",
+        "Assets/Art/Shaders/WristGap/**",
+        "Assets/Art/Shaders/WristGap.meta",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "sdk-hands-seam",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "grip-authoring",
       "writes": [
         "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/**",
@@ -178,6 +199,11 @@
         {
           "task": "hand-rig-quality",
           "stage": "sdk-hands-seam",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "wrist-gap",
           "state": "merged"
         }
       ],
@@ -218,6 +244,11 @@
         {
           "task": "hand-rig-quality",
           "stage": "sdk-hands-seam",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "wrist-gap",
           "state": "merged"
         }
       ],

@@ -26,7 +26,13 @@ namespace VrBattlegrounds.DevTools.E2E
     /// -e2eDiscoveryPort &lt;порт&gt;  UDP-порт Discovery прогона (только вместе с -e2eNetworkPort)
     /// -e2eArg   &lt;ключ&gt;=&lt;значение&gt; параметр сценария-потребителя, повторяемый (читается через Arg)
     /// -e2eQuitOnFinish             после записи вердикта закрыть процесс в любой роли (прогон на шлеме)
+    /// -e2eHeadPose      eye=&lt;м&gt;|calib симуляция позы головы на шлеме (<see cref="E2EHeadPose"/>, контракт r5)
     /// </code>
+    ///
+    /// Про <c>-e2eHeadPose</c>. <c>eye=1.6</c> — высота глаз над корнем аватара в метрах (в пределах
+    /// <c>PlayerCalibrationRules.MinEyeHeight..MaxEyeHeight</c>), <c>calib</c> — цель из применённой калибровки
+    /// (<c>Applied.EyeHeight</c>, без неё 1.6). Без флага симуляции нет. Ошибка разбора (нет значения, неизвестный вид,
+    /// не число, вне пределов) — <see cref="HeadPoseError"/>, симуляция не включается.
     ///
     /// Про <c>-e2eArg</c>. Единственный канал параметров сценария (контракт quest-device-run). Ключ без <c>=</c>,
     /// пустой ключ или повтор ключа — не молчаливый пропуск, а <see cref="ArgError"/>: исполнитель валит прогон
@@ -70,6 +76,12 @@ namespace VrBattlegrounds.DevTools.E2E
         /// только сервер: клиентов на ПК гасит дирижёр.
         /// </summary>
         public bool QuitOnFinish { get; private set; }
+        /// <summary>Симуляция позы головы запрошена корректным <c>-e2eHeadPose</c>.</summary>
+        public bool HeadPoseEnabled { get; private set; }
+        /// <summary>Цель симуляции, м (<c>eye=</c>); NaN — режим <c>calib</c> или симуляция не запрошена.</summary>
+        public float HeadPoseEye { get; private set; } = float.NaN;
+        /// <summary>Ошибка разбора <c>-e2eHeadPose</c>; null — флаг задан корректно или не задан вовсе.</summary>
+        public string HeadPoseError { get; private set; }
 
         private static readonly IReadOnlyDictionary<string, string> EmptyArgs =
             new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
@@ -125,6 +137,9 @@ namespace VrBattlegrounds.DevTools.E2E
             // Не бросаем: исполнитель обязан записать ошибку в файл результата и не запускать сценарий.
             context.PortError = portError;
             context.ArgError = argError;
+            context.HeadPoseError = ReadHeadPose(args, out bool headPose, out float headPoseEye);
+            context.HeadPoseEnabled = headPose;
+            context.HeadPoseEye = headPoseEye;
             return context;
         }
 
@@ -186,6 +201,10 @@ namespace VrBattlegrounds.DevTools.E2E
               .Append(", результат=").Append(string.IsNullOrEmpty(ResultPath) ? "(не задан)" : ResultPath);
             if (QuitOnFinish)
                 sb.Append(", выход по вердикту");
+            if (HeadPoseEnabled)
+                sb.Append(", поза головы=").Append(float.IsNaN(HeadPoseEye)
+                    ? "calib"
+                    : "eye=" + HeadPoseEye.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
             if (Args.Count > 0)
             {
                 sb.Append(", параметры=");
@@ -201,6 +220,8 @@ namespace VrBattlegrounds.DevTools.E2E
                 sb.Append(", ошибка портов: ").Append(PortError);
             if (ArgError != null)
                 sb.Append(", ошибка параметров: ").Append(ArgError);
+            if (HeadPoseError != null)
+                sb.Append(", ошибка позы головы: ").Append(HeadPoseError);
             return sb.ToString();
         }
 
@@ -282,6 +303,49 @@ namespace VrBattlegrounds.DevTools.E2E
                 result.Add(key, pair.Substring(separator + 1));
             }
 
+            return null;
+        }
+
+        /// <summary>
+        /// Разбирает <c>-e2eHeadPose eye=&lt;м&gt;|calib</c>. Флага нет — симуляции нет, без ошибки. Возвращает текст
+        /// ошибки или null; при ошибке симуляция выключена (<paramref name="enabled"/> = false).
+        /// </summary>
+        private static string ReadHeadPose(string[] args, out bool enabled, out float eye)
+        {
+            enabled = false;
+            eye = float.NaN;
+            const string key = "-e2eHeadPose";
+            if (!Has(args, key))
+                return null;
+
+            string value = Read(args, key);
+            if (string.IsNullOrEmpty(value) || value.StartsWith("-", StringComparison.Ordinal))
+                return key + " без значения: нужно eye=<м> или calib";
+
+            if (string.Equals(value, "calib", StringComparison.OrdinalIgnoreCase))
+            {
+                enabled = true;
+                return null;
+            }
+
+            const string eyePrefix = "eye=";
+            if (!value.StartsWith(eyePrefix, StringComparison.OrdinalIgnoreCase))
+                return $"{key}: неизвестное значение '{value}' (нужно eye=<м> или calib)";
+
+            string number = value.Substring(eyePrefix.Length);
+            if (!float.TryParse(number, System.Globalization.NumberStyles.AllowDecimalPoint,
+                                System.Globalization.CultureInfo.InvariantCulture, out float parsed) ||
+                float.IsNaN(parsed) || float.IsInfinity(parsed))
+                return $"{key}: высота глаз не число: '{number}'";
+
+            float min = PhysicalSpaceUtils.PlayerCalibrationRules.MinEyeHeight;
+            float max = PhysicalSpaceUtils.PlayerCalibrationRules.MaxEyeHeight;
+            if (parsed < min || parsed > max)
+                return string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "{0}: высота глаз {1} м вне {2}..{3} м (PlayerCalibrationRules)", key, parsed, min, max);
+
+            enabled = true;
+            eye = parsed;
             return null;
         }
 

@@ -27,6 +27,11 @@
 # прогона, копируется в папку прогона, на шлем (files/e2e/<прогон>/views.json) и в persistentDataPath сервера
 # (e2e/<прогон>/views.json); обе стороны получают -e2eArg views=e2e/<прогон>/views.json (путь от persistentDataPath).
 #
+# Поза головы (-HeadPose, контракт r5): по умолчанию шлем-клиент получает -e2eHeadPose eye=1.6 — высоту глаз и горизонт
+# камеры задаёт E2EHeadPose, человек шлем не держит. calib — цель из калибровки, off — реальный трекинг (замеры
+# с позой шлема). Серверу флаг не передаётся. До устройства манифест APK (-Apk или собранный -Build) разбирается
+# aapt: включённые LateLatching/SpaceWarp при симуляции — код 2; проверить нельзя — предупреждение, renderCheck=unknown.
+#
 # Коды возврата:
 #   0 — все проверки обеих сторон зелёные
 #   1 — сценарий поймал отказ (completed, но есть красные проверки)
@@ -38,6 +43,7 @@
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Scenario device-smoke -Arg artifact=1
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Apk Build\Quest\VrBattlegrounds_Quest.apk
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Build
+#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -HeadPose off
 # В режиме -File массив -Arg передаётся через запятую: -Arg mode=short,puppets=8.
 
 [CmdletBinding()]
@@ -97,7 +103,11 @@ param(
     [string]   $Unity = '',
 
     # Локальный JSON точек обзора; уходит обеим сторонам как -e2eArg views=<путь от persistentDataPath>.
-    [string]   $ViewsFile = ''
+    [string]   $ViewsFile = '',
+
+    # Симуляция позы головы на шлеме: высота глаз в метрах (-e2eHeadPose eye=<м>), calib (цель из калибровки)
+    # или off (реальный трекинг шлема — для замеров с настоящей позой).
+    [string]   $HeadPose = '1.6'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -488,6 +498,8 @@ function Get-UnityBuildArgs([string] $StatusPath, [string] $LogPath) {
     return @(
         '-batchmode', '-quit',
         '-projectPath', $RepoRoot,
+        # Quest собирается только Android-доменом редактора (OculusManifest под #if UNITY_ANDROID, Docs/release.md).
+        '-buildTarget', 'Android',
         '-executeMethod', 'VrBattlegrounds.EditorTools.E2EPlayerBuilder.RunPairBatch',
         '-pairStatus', $StatusPath,
         '-logFile', $LogPath
@@ -600,6 +612,151 @@ function Get-ServerDataPath {
     return (Join-Path $env:USERPROFILE ('AppData\LocalLow\' + $company.Matches[0].Groups[1].Value + '\' + $product.Matches[0].Groups[1].Value))
 }
 
+# ── Поза головы (-HeadPose, контракт r5) ──────────────────────────────────
+
+# Пределы высоты глаз — как PlayerCalibrationRules.MinEyeHeight/MaxEyeHeight (их же проверяет E2EContext).
+$HeadPoseMinEye = 0.9
+$HeadPoseMaxEye = 2.5
+
+# Разбор -HeadPose: число (высота глаз, м) → eye=<м>, calib, off. Ошибка — текст в error.
+function Read-HeadPose([string] $Value) {
+    $result = [ordered]@{ value = $Value; mode = $null; eye = $null; clientArg = $null; error = $null }
+    $text = ([string] $Value).Trim()
+    if ($text -ieq 'off') { $result.mode = 'off'; return $result }
+    if ($text -ieq 'calib') { $result.mode = 'calib'; $result.clientArg = 'calib'; return $result }
+    if ($text -notmatch '^\d+(\.\d+)?$') {
+        $result.error = 'нужна высота глаз в метрах (например 1.6, точка — разделитель), calib или off'
+        return $result
+    }
+    $eye = [double]::Parse($text, [System.Globalization.CultureInfo]::InvariantCulture)
+    if ($eye -lt $HeadPoseMinEye -or $eye -gt $HeadPoseMaxEye) {
+        $result.error = ('высота глаз ' + $text + ' м вне ' + $HeadPoseMinEye + '..' + $HeadPoseMaxEye + ' м (PlayerCalibrationRules)')
+        return $result
+    }
+    $result.mode = 'eye'
+    $result.eye = $eye
+    $result.clientArg = 'eye=' + $eye.ToString('0.###', [System.Globalization.CultureInfo]::InvariantCulture)
+    return $result
+}
+
+# aapt из Android SDK Unity версии проекта (самые новые build-tools), затем PATH; $null — не найден.
+function Find-Aapt {
+    $versionFile = Join-Path $RepoRoot 'ProjectSettings\ProjectVersion.txt'
+    if (Test-Path -LiteralPath $versionFile) {
+        $versionText = Get-Content -LiteralPath $versionFile -Raw
+        if ($versionText -match 'm_EditorVersion:\s*(\S+)') {
+            $buildTools = Join-Path $env:ProgramFiles ('Unity\Hub\Editor\' + $Matches[1] + '\Editor\Data\PlaybackEngines\AndroidPlayer\SDK\build-tools')
+            if (Test-Path -LiteralPath $buildTools) {
+                $dirs = @(Get-ChildItem -LiteralPath $buildTools -Directory | Sort-Object -Descending -Property @{ Expression = {
+                    $v = $null
+                    if ([version]::TryParse($_.Name, [ref] $v)) { $v } else { [version] '0.0' }
+                } })
+                foreach ($dir in $dirs) {
+                    $exe = Join-Path $dir.FullName 'aapt.exe'
+                    if (Test-Path -LiteralPath $exe) { return $exe }
+                }
+            }
+        }
+    }
+    $command = Get-Command 'aapt.exe' -ErrorAction SilentlyContinue
+    if ($null -ne $command) { return $command.Source }
+    return $null
+}
+
+# meta-data манифеста из вывода `aapt dump xmltree`: имя → значение. Строка — как есть; булево (type 0x12) — true/false;
+# прочие типы — сырой текст aapt; без android:value — $null.
+function Read-ManifestMetaData([string] $XmlTree) {
+    $result = @{}
+    $inMeta = $false
+    $name = $null
+    $value = $null
+    foreach ($line in (($XmlTree -split "`r?`n") + @('E: <конец>'))) {
+        if ($line -match '^\s*E:\s+(\S+)') {
+            if ($inMeta -and $null -ne $name) { $result[$name] = $value }
+            $inMeta = ($Matches[1] -eq 'meta-data')
+            $name = $null
+            $value = $null
+            continue
+        }
+        if (-not $inMeta) { continue }
+        if ($line -match '^\s*A:\s+android:name(\([^)]*\))?="([^"]*)"') { $name = $Matches[2]; continue }
+        if ($line -match '^\s*A:\s+android:value(\([^)]*\))?=(.*)$') {
+            $rawValue = $Matches[2].Trim()
+            if ($rawValue -match '^"([^"]*)"') { $value = $Matches[1] }
+            elseif ($rawValue -match '^\(type 0x12\)0x([0-9a-fA-F]+)') {
+                if ([Convert]::ToUInt32($Matches[1], 16) -ne 0) { $value = 'true' } else { $value = 'false' }
+            }
+            else { $value = $rawValue }
+        }
+    }
+    return $result
+}
+
+# Значение флага по ключам манифеста, оканчивающимся на $Suffix: true — хоть один включён, false — все выключены,
+# absent — ключа нет, иначе — сырое значение.
+function Get-ManifestFlag($Meta, [string] $Suffix) {
+    $keys = @($Meta.Keys | Where-Object { $_ -match ('(?i)' + [regex]::Escape($Suffix) + '$') })
+    if ($keys.Count -eq 0) { return 'absent' }
+    $values = @($keys | ForEach-Object { ([string] $Meta[$_]).ToLowerInvariant() })
+    if ($values -contains 'true') { return 'true' }
+    if (@($values | Where-Object { $_ -ne 'false' }).Count -eq 0) { return 'false' }
+    return ($values -join ',')
+}
+
+# LateLatching/SpaceWarp по манифесту APK (контракт r5: при симуляции позы оба выключены).
+# status: passed — оба ключа есть и false; failed — хоть один true; unknown — проверить нельзя или ключа нет.
+# Ключ LateLatching пишет OculusBuildProcessor (com.unity.xr.oculus.LateLatching); SpaceWarp Oculus XR Plugin 4.5
+# в манифест не пишет — его в рантайме проверяет E2EHeadPose (OculusSettings) на шлеме.
+function Get-ApkRenderCheck([string] $ApkPath) {
+    $check = [ordered]@{
+        status = 'unknown'; source = 'apk-manifest'; apk = $ApkPath; aapt = $null
+        lateLatching = $null; spaceWarp = $null; oculusKeys = $null; detail = $null
+    }
+    $aapt = Find-Aapt
+    if ($null -eq $aapt) {
+        $check.source = $null
+        $check.detail = 'aapt не найден (build-tools Android SDK Unity версии проекта, PATH) — манифест APK не проверен'
+        return $check
+    }
+    $check.aapt = $aapt
+    $dump = Invoke-Tool $aapt @('dump', 'xmltree', $ApkPath, 'AndroidManifest.xml') 120
+    if ($dump.TimedOut -or $dump.ExitCode -ne 0) {
+        $check.detail = ('aapt dump xmltree не удался (код ' + $dump.ExitCode + '): ' + ($dump.Err + ' ' + $dump.Out).Trim())
+        return $check
+    }
+    $meta = Read-ManifestMetaData $dump.Out
+    $check.oculusKeys = @($meta.Keys | Where-Object { $_ -like 'com.unity.xr.oculus.*' -or $_ -like 'com.oculus.*' } | Sort-Object)
+    $check.lateLatching = Get-ManifestFlag $meta '.LateLatching'
+    $check.spaceWarp = Get-ManifestFlag $meta 'SpaceWarp'
+
+    $on = @()
+    if ($check.lateLatching -eq 'true') { $on += 'LateLatching' }
+    if ($check.spaceWarp -eq 'true') { $on += 'SpaceWarp' }
+    if ($on.Count -gt 0) {
+        $check.status = 'failed'
+        $check.detail = ('в манифесте включено: ' + ($on -join ', ') + ' — рантайм подменял бы позу рендера позой шлема')
+        return $check
+    }
+    if ($check.lateLatching -eq 'false' -and $check.spaceWarp -eq 'false') {
+        $check.status = 'passed'
+        $check.detail = 'LateLatching=false, SpaceWarp=false'
+        return $check
+    }
+    $missing = @()
+    if ($check.lateLatching -ne 'false') { $missing += ('LateLatching=' + $check.lateLatching) }
+    if ($check.spaceWarp -ne 'false') { $missing += ('SpaceWarp=' + $check.spaceWarp) }
+    $check.detail = ('по манифесту не подтверждено: ' + ($missing -join ', ') + '; ключей Oculus в манифесте: ' +
+        $check.oculusKeys.Count + '. Рантайм-проверку (OculusSettings) делает E2EHeadPose на шлеме')
+    return $check
+}
+
+function Write-HeadPoseRender($Check) {
+    $color = 'Gray'
+    if ($Check.status -eq 'unknown') { $color = 'Yellow' }
+    if ($Check.status -eq 'failed') { $color = 'Red' }
+    Write-Host ('  рендер для позы головы: ' + $Check.status + ' — ' + $Check.detail) -ForegroundColor $color
+}
+
 # ══════════════════════════════════════════════════════════════════════════
 #  1. Проверки до прогона: при отказе ни устройство, ни ПК не тронуты
 # ══════════════════════════════════════════════════════════════════════════
@@ -632,6 +789,13 @@ foreach ($item in $Arg) {
         $argKeys.Add($argKey)
         $scenarioArgs.Add($pair)
     }
+}
+
+# ── поза головы (-HeadPose) ──
+$headPoseInfo = Read-HeadPose $HeadPose
+if ($null -ne $headPoseInfo.error) {
+    Stop-Refused ('-HeadPose "' + $HeadPose + '": ' + $headPoseInfo.error) @(
+        'Допустимо: высота глаз в метрах (по умолчанию 1.6), calib — из калибровки, off — реальный трекинг шлема.')
 }
 
 # ── точки обзора (-ViewsFile) ──
@@ -745,6 +909,26 @@ if (-not $Build) {
 if (-not [string]::IsNullOrEmpty($Apk)) {
     if (-not (Test-Path -LiteralPath $Apk)) { Stop-Refused ('APK не найден: ' + $Apk) }
     $Apk = (Resolve-Path -LiteralPath $Apk).Path
+}
+
+# ── рендер для симуляции позы головы: LateLatching/SpaceWarp по манифесту APK, до устройства ──
+# С -Build APK появится в прогоне — проверка после сборки; без -Apk и -Build проверить нечего (renderCheck=unknown).
+$headPoseRender = $null
+if (-not [string]::IsNullOrEmpty($Apk)) {
+    $headPoseRender = Get-ApkRenderCheck $Apk
+    Write-HeadPoseRender $headPoseRender
+    if ($headPoseRender.status -eq 'failed' -and $headPoseInfo.mode -ne 'off') {
+        Stop-Refused ('-HeadPose ' + $headPoseInfo.mode + ': APK ' + $Apk + ' — ' + $headPoseRender.detail) @(
+            'Выключи Late Latching и Application SpaceWarp (Project Settings → XR Plug-in Management → Oculus) и пересобери APK,',
+            'или запусти с -HeadPose off (реальный трекинг шлема).')
+    }
+}
+elseif (-not $Build) {
+    $headPoseRender = [ordered]@{
+        status = 'unknown'; source = $null; apk = $null; aapt = $null; lateLatching = $null; spaceWarp = $null; oculusKeys = $null
+        detail = 'APK не задан (-Apk/-Build) — манифест установленного пакета не проверяется; рантайм-проверку делает E2EHeadPose'
+    }
+    if ($headPoseInfo.mode -ne 'off') { Write-HeadPoseRender $headPoseRender }
 }
 
 # ── adb ──
@@ -917,6 +1101,8 @@ $clientTokens = @(
     '-e2eDeviceToken', $deviceToken
 )
 foreach ($pair in $scenarioArgs) { $serverArgs += @('-e2eArg', $pair); $clientTokens += @('-e2eArg', $pair) }
+# Поза головы — только шлему: серверу (headless) симулировать нечего.
+if ($headPoseInfo.mode -ne 'off') { $clientTokens += @('-e2eHeadPose', $headPoseInfo.clientArg) }
 
 # Точки обзора: один относительный путь от persistentDataPath для обеих сторон; файл кладётся в оба места до запуска.
 $viewsArgPath = $null
@@ -962,6 +1148,15 @@ $manifest = [ordered]@{
     link = [ordered]@{ wasActive = ($null -ne $linkComponent); component = $linkComponent; stopped = $false; restored = $null; detail = $null }
     artifacts = [ordered]@{ server = @(); client = @() }
     views = $null
+    headPose = [ordered]@{
+        value = $HeadPose
+        mode = $headPoseInfo.mode
+        eye = $headPoseInfo.eye
+        clientArg = $headPoseInfo.clientArg
+        contractRule = 'quest-device-run r5: симуляция позы головы'
+        renderCheck = $(if ($null -ne $headPoseRender) { $headPoseRender.status } else { 'unknown' })
+        render = $headPoseRender
+    }
     files = @()
     failure = $null
     exitCode = 2
@@ -994,6 +1189,8 @@ Write-Host ('  брандмауэр: ' + $firewall.Detail)
 if ($null -ne $manifest.views) {
     Write-Host ('  точки:      ' + $manifest.views.count + ' из ' + $ViewsFile + ' (' + ($manifest.views.names -join ', ') + ')')
 }
+if ($headPoseInfo.mode -eq 'off') { Write-Host '  поза головы: off — реальный трекинг шлема' }
+else { Write-Host ('  поза головы: -e2eHeadPose ' + $headPoseInfo.clientArg + ' (рендер: ' + $manifest.headPose.renderCheck + ')') }
 Write-Host ('  результат:  ' + $runDir)
 
 $serverProc = $null
@@ -1051,6 +1248,15 @@ try {
         $pairRevision = Get-SourceRevision ('+' + [string] $pairData.revision)
         $Apk = (Resolve-Path -LiteralPath $BuiltApk).Path
         Write-Host ('  собрано за ' + $manifest.build.durationSeconds + ' с, ревизия ' + $pairData.revision)
+
+        # Рендер для симуляции позы головы — по манифесту только что собранного APK, до установки.
+        $headPoseRender = Get-ApkRenderCheck $Apk
+        $manifest.headPose.render = $headPoseRender
+        $manifest.headPose.renderCheck = $headPoseRender.status
+        Write-HeadPoseRender $headPoseRender
+        if ($headPoseRender.status -eq 'failed' -and $headPoseInfo.mode -ne 'off') {
+            throw ('-HeadPose ' + $headPoseInfo.mode + ': собранный APK — ' + $headPoseRender.detail + '; выключи Late Latching/SpaceWarp или -HeadPose off')
+        }
 
         # Сборка шла долго: условия шлема, проверенные до неё, перепроверяются.
         $foreignPid = Get-AppPid

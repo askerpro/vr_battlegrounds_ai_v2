@@ -41,6 +41,16 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// доставка файла обеим сторонам.
     /// </para>
     ///
+    /// <para>
+    /// <b>Поза головы.</b> С <c>-e2eHeadPose</c> (<see cref="E2EHeadPose"/>, контракт r5) клиент после своей сессии и
+    /// аватара ждёт <see cref="HeadPoseSettleFrames"/> кадров и <see cref="HeadPoseSampleFrames"/> кадров собирает
+    /// <c>camera.y − root.y</c>, тангаж и крен камеры; проверка «поза головы симулирована» зелёная, если отклонение
+    /// высоты от цели ≤ <see cref="HeadPoseMaxHeightError"/> м, |тангаж| и |крен| ≤ <see cref="HeadPoseMaxAngle"/>°,
+    /// разброс ≤ <see cref="HeadPoseMaxHeightSpread"/> м и ≤ <see cref="HeadPoseMaxAngleSpread"/>°. В detail — числа и
+    /// статус трекинга контроллеров (руки не симулируются). При обходе точек высота в каждой точке
+    /// (<c>camera.y − пол аватара</c>) тоже отклоняется от цели не больше допуска, блок <c>headPose</c> — в views-артефакте.
+    /// </para>
+    ///
     /// <para>Без <c>views</c> игровое состояние сценарий не меняет: только наблюдает за сетью и пишет свой файл.</para>
     /// </summary>
     public class DeviceSmokeScenario : IE2EScenario
@@ -52,6 +62,28 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckArtifact = "файл-артефакт записан и объявлен";
         private const string CheckViews = "обход точек обзора";
         private const string CheckViewsRead = "файл точек обзора прочитан";
+        private const string CheckHeadPose = "поза головы симулирована";
+
+        /// <summary>Выдержка после включения симуляции до замера, кадры.</summary>
+        private const int HeadPoseSettleFrames = 30;
+
+        /// <summary>Длина замера позы головы, кадры.</summary>
+        private const int HeadPoseSampleFrames = 300;
+
+        /// <summary>Допуск |camera.y − root.y − цель|, м (контракт r5: цель ±1 см).</summary>
+        private const float HeadPoseMaxHeightError = 0.01f;
+
+        /// <summary>Допуск |тангаж| и |крен| камеры, градусы.</summary>
+        private const float HeadPoseMaxAngle = 0.5f;
+
+        /// <summary>Допуск разброса высоты за замер (max − min), м.</summary>
+        private const float HeadPoseMaxHeightSpread = 0.005f;
+
+        /// <summary>Допуск разброса тангажа и крена за замер (max − min), градусы.</summary>
+        private const float HeadPoseMaxAngleSpread = 0.2f;
+
+        /// <summary>Сколько ждать, пока симуляция возьмёт свой аватар.</summary>
+        private const float HeadPoseActivateWait = 10f;
 
         /// <summary>Допуск отклонения пола аватара от точки по горизонтали, м.</summary>
         private const float ViewsMaxDeviationXZ = 0.05f;
@@ -140,9 +172,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         {
             bool wantArtifact = WantsArtifact(context);
             bool wantViews = WantsViews(context);
+            bool wantHeadPose = WantsHeadPose(context);
             result.Declare(CheckClientJoined);
             if (wantArtifact) result.Declare(CheckArtifact);
             if (wantViews) result.Declare(CheckViews);
+            if (wantHeadPose) result.Declare(CheckHeadPose);
 
             DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
             float deadline = Now + context.Timeout - TimeoutMargin;
@@ -181,8 +215,12 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 yield break;
             }
 
+            // Поза головы — до обхода: замер стоящего на месте аватара; обход затем проверяет высоту в каждой точке.
+            if (wantHeadPose)
+                yield return CheckHeadPoseSimulated(context, result, deadline);
+
             if (views != null)
-                yield return WalkViews(views, result, deadline);
+                yield return WalkViews(views, result, deadline, wantHeadPose && E2EHeadPose.Active);
 
             yield return E2EWait.Hold(Mathf.Min(ClientHold, Remaining(deadline)));
         }
@@ -239,7 +277,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// Клиент: ждёт свой аватар (аватар сессии и есть <c>UxrAvatar.LocalAvatar</c>), обходит точки через
         /// <see cref="E2EViews.GoTo"/>, пишет views-&lt;utc&gt;.json и выносит проверку по допускам.
         /// </summary>
-        private static IEnumerator WalkViews(IReadOnlyList<E2EViewPoint> views, E2EResult result, float deadline)
+        private static IEnumerator WalkViews(IReadOnlyList<E2EViewPoint> views, E2EResult result, float deadline,
+                                             bool checkHeadPose)
         {
             var avatarReady = new E2EWaitOutcome();
             yield return E2EWait.Until(avatarReady, "свой аватар сессии с камерой (UxrAvatar.LocalAvatar)",
@@ -262,7 +301,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 GameLog.Debug.Info($"[E2E] Точка обзора '{point.Name}': {DescribeOutcome(outcome)}");
             }
 
-            string path = WriteViews(outcomes, out string writeError);
+            // Цель позы головы снимается после обхода: в режиме calib её меняет только калибровка.
+            float headTarget = checkHeadPose ? E2EHeadPose.Target : float.NaN;
+            string path = WriteViews(outcomes, checkHeadPose ? HeadPoseViewsJson(outcomes, headTarget) : null, out string writeError);
             bool accepted = path != null && result.AddArtifact(path);
 
             int reached = 0;
@@ -272,14 +313,30 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 bool ok = o.Succeeded &&
                           o.DeviationXZ < ViewsMaxDeviationXZ &&
                           Mathf.Abs(o.DeviationYaw) < ViewsMaxDeviationYaw;
+                string headFailure = null;
+                if (ok && checkHeadPose)
+                {
+                    float headError = ViewHeadHeight(o) - headTarget;
+                    if (!(Mathf.Abs(headError) <= HeadPoseMaxHeightError))
+                    {
+                        ok = false;
+                        headFailure = string.Format(CultureInfo.InvariantCulture,
+                            "высота головы {0:F3} м, цель {1:F3} м, откл. {2:+0.000;-0.000} м > {3:F2} м",
+                            ViewHeadHeight(o), headTarget, headError, HeadPoseMaxHeightError);
+                    }
+                }
+
                 if (ok) reached++;
-                else failures.Add($"'{o.Point.Name}': {DescribeOutcome(o)}");
+                else failures.Add($"'{o.Point.Name}': {headFailure ?? DescribeOutcome(o)}");
             }
 
             var detail = new StringBuilder();
             detail.Append(string.Format(CultureInfo.InvariantCulture,
                 "достигнуто {0}/{1} (допуск XZ < {2:F2} м, курс < {3:F0}°)", reached, outcomes.Count,
                 ViewsMaxDeviationXZ, ViewsMaxDeviationYaw));
+            if (checkHeadPose)
+                detail.Append(string.Format(CultureInfo.InvariantCulture,
+                    ", высота головы — цель {0:F3} ± {1:F2} м в каждой точке", headTarget, HeadPoseMaxHeightError));
             if (outcomes.Count > 0 && outcomes[0].Succeeded)
                 detail.Append("; первая точка: ").Append(DescribeOutcome(outcomes[0]));
             if (failures.Count > 0) detail.Append("; не достигнуты: ").Append(string.Join("; ", failures));
@@ -322,16 +379,23 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 o.CameraYaw, o.CameraPitch, o.CameraRoll, o.EyeHeight);
         }
 
-        /// <summary>Пишет итоги обхода в persistentDataPath/e2e-smoke/views-&lt;utc&gt;.json; путь или null с причиной.</summary>
-        private static string WriteViews(IReadOnlyList<E2EViewOutcome> outcomes, out string error)
+        /// <summary>
+        /// Пишет итоги обхода в persistentDataPath/e2e-smoke/views-&lt;utc&gt;.json; путь или null с причиной.
+        /// <paramref name="headPoseJson"/> — блок <c>headPose</c> верхнего уровня перед <c>views</c> (или null).
+        /// </summary>
+        private static string WriteViews(IReadOnlyList<E2EViewOutcome> outcomes, string headPoseJson, out string error)
         {
             error = null;
             string path = Path.Combine(Application.persistentDataPath, "e2e-smoke",
                 "views-" + DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmssfff'Z'", CultureInfo.InvariantCulture) + ".json");
+            string json = E2EViews.ToJson(outcomes);
+            // ToJson начинается с "{\n  \"views\"": блок позы вставляется первым полем объекта.
+            if (headPoseJson != null && json.StartsWith("{\n", StringComparison.Ordinal))
+                json = "{\n  \"headPose\": " + headPoseJson + ",\n" + json.Substring(2);
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.WriteAllText(path, E2EViews.ToJson(outcomes), new UTF8Encoding(false));
+                File.WriteAllText(path, json, new UTF8Encoding(false));
                 return path;
             }
             catch (Exception e)
@@ -340,6 +404,161 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 return null;
             }
         }
+
+        // ── Поза головы ──────────────────────────────────────────────────────
+
+        private static bool WantsHeadPose(E2EContext context) =>
+            context.HeadPoseEnabled || context.HeadPoseError != null;
+
+        /// <summary>
+        /// Клиент: ждёт свой аватар и включённую симуляцию, выдержка <see cref="HeadPoseSettleFrames"/> кадров, затем
+        /// <see cref="HeadPoseSampleFrames"/> кадров замера мировой позы камеры относительно корня аватара.
+        /// </summary>
+        private static IEnumerator CheckHeadPoseSimulated(E2EContext context, E2EResult result, float deadline)
+        {
+            if (context.HeadPoseError != null)
+            {
+                result.Set(CheckHeadPose, false, "ошибка флага -e2eHeadPose: " + context.HeadPoseError);
+                result.Summary = "поза головы не симулирована";
+                yield break;
+            }
+
+            var avatarReady = new E2EWaitOutcome();
+            yield return E2EWait.Until(avatarReady, "свой аватар сессии с камерой (UxrAvatar.LocalAvatar)",
+                Mathf.Min(AvatarWait, Remaining(deadline)), LocalAvatarReady, DescribeAvatar);
+            if (!avatarReady.Succeeded)
+            {
+                result.Set(CheckHeadPose, false, avatarReady.Diagnosis);
+                result.Summary = "нет своего аватара — поза головы не проверена";
+                yield break;
+            }
+
+            var active = new E2EWaitOutcome();
+            yield return E2EWait.Until(active, "E2EHeadPose пишет позу своего аватара",
+                Mathf.Min(HeadPoseActivateWait, Remaining(deadline)),
+                () => E2EHeadPose.Active && E2EHeadPose.Avatar == UxrAvatar.LocalAvatar && E2EHeadPose.WriteCount > 0,
+                DescribeHeadPose);
+            if (!active.Succeeded)
+            {
+                result.Set(CheckHeadPose, false, active.Diagnosis + "; " + E2EHeadPose.DescribeControllers());
+                result.Summary = "поза головы не симулирована";
+                yield break;
+            }
+
+            for (int i = 0; i < HeadPoseSettleFrames; i++)
+                yield return null;
+
+            UxrAvatar avatar = UxrAvatar.LocalAvatar;
+            float minHeight = float.PositiveInfinity, maxHeight = float.NegativeInfinity;
+            float minPitch = float.PositiveInfinity, maxPitch = float.NegativeInfinity;
+            float minRoll = float.PositiveInfinity, maxRoll = float.NegativeInfinity;
+            float maxHeightError = 0f, sumHeight = 0f, target = E2EHeadPose.Target;
+            int samples = 0;
+            string lost = null;
+            for (int i = 0; i < HeadPoseSampleFrames; i++)
+            {
+                if (Remaining(deadline) <= 0f) { lost = "истёк таймаут сценария"; break; }
+                if (avatar == null || avatar.AvatarMode != UxrAvatarMode.Local || avatar.CameraComponent == null)
+                {
+                    lost = "локальный аватар сменился или исчез за время замера";
+                    break;
+                }
+
+                Transform camera = avatar.CameraComponent.transform;
+                Vector3 euler = camera.rotation.eulerAngles;
+                float height = camera.position.y - avatar.transform.position.y;
+                float pitch = -Mathf.DeltaAngle(0f, euler.x);
+                float roll = Mathf.DeltaAngle(0f, euler.z);
+                target = E2EHeadPose.Target;
+
+                minHeight = Mathf.Min(minHeight, height); maxHeight = Mathf.Max(maxHeight, height);
+                minPitch = Mathf.Min(minPitch, pitch); maxPitch = Mathf.Max(maxPitch, pitch);
+                minRoll = Mathf.Min(minRoll, roll); maxRoll = Mathf.Max(maxRoll, roll);
+                float error = Mathf.Abs(height - target);
+                if (!(error <= maxHeightError)) maxHeightError = error;
+                sumHeight += height;
+                samples++;
+                yield return null;
+            }
+
+            float maxAbsPitch = samples > 0 ? Mathf.Max(Mathf.Abs(minPitch), Mathf.Abs(maxPitch)) : float.NaN;
+            float maxAbsRoll = samples > 0 ? Mathf.Max(Mathf.Abs(minRoll), Mathf.Abs(maxRoll)) : float.NaN;
+            float heightSpread = maxHeight - minHeight;
+            float pitchSpread = maxPitch - minPitch;
+            float rollSpread = maxRoll - minRoll;
+
+            bool passed = lost == null && samples == HeadPoseSampleFrames &&
+                          maxHeightError <= HeadPoseMaxHeightError &&
+                          maxAbsPitch <= HeadPoseMaxAngle && maxAbsRoll <= HeadPoseMaxAngle &&
+                          heightSpread <= HeadPoseMaxHeightSpread &&
+                          pitchSpread <= HeadPoseMaxAngleSpread && rollSpread <= HeadPoseMaxAngleSpread;
+
+            var detail = new StringBuilder();
+            detail.Append(string.Format(CultureInfo.InvariantCulture,
+                "цель {0:F3} м ({1}); кадров {2}/{3}", target,
+                E2EHeadPose.CalibTarget ? "calib" : "eye", samples, HeadPoseSampleFrames));
+            if (samples > 0)
+            {
+                detail.Append(string.Format(CultureInfo.InvariantCulture,
+                    "; высота camera.y − root.y: средняя {0:F4} м, макс. откл. {1:F4} м (≤ {2:F2}), разброс {3:F4} м (≤ {4:F3}); " +
+                    "тангаж макс. |{5:F2}|° (≤ {6:F1}), разброс {7:F2}°; крен макс. |{8:F2}|° (≤ {6:F1}), разброс {9:F2}° (≤ {10:F1})",
+                    sumHeight / samples, maxHeightError, HeadPoseMaxHeightError, heightSpread, HeadPoseMaxHeightSpread,
+                    maxAbsPitch, HeadPoseMaxAngle, pitchSpread, maxAbsRoll, rollSpread, HeadPoseMaxAngleSpread));
+            }
+            if (lost != null) detail.Append("; прервано: ").Append(lost);
+            detail.Append("; посторонних изменений позы камеры: ").Append(E2EHeadPose.ForeignWrites.ToString(CultureInfo.InvariantCulture));
+            detail.Append("; рендер: ").Append(E2EHeadPose.RenderCheck);
+            detail.Append("; ").Append(E2EHeadPose.DescribeControllers());
+
+            result.Set(CheckHeadPose, passed, detail.ToString());
+            GameLog.Debug.Info("[E2E] Поза головы: " + detail);
+            if (!passed) result.Summary = "поза головы не симулирована";
+        }
+
+        private static string DescribeHeadPose()
+        {
+            return $"Armed={E2EHeadPose.Armed}, Active={E2EHeadPose.Active}, записей={E2EHeadPose.WriteCount}, " +
+                   $"аватар симуляции={(E2EHeadPose.Avatar != null ? E2EHeadPose.Avatar.name : "null")}, " +
+                   $"отказ={E2EHeadPose.Refusal ?? "нет"}";
+        }
+
+        /// <summary>Высота головы в точке обзора: камера над полом аватара (уровень корня), м.</summary>
+        private static float ViewHeadHeight(E2EViewOutcome o) => o.CameraPosition.y - o.AvatarFloor.y;
+
+        /// <summary>Блок <c>headPose</c> views-артефакта: цель, режим и высота головы по точкам.</summary>
+        private static string HeadPoseViewsJson(IReadOnlyList<E2EViewOutcome> outcomes, float target)
+        {
+            var sb = new StringBuilder(256);
+            sb.Append("{ \"mode\": \"").Append(E2EHeadPose.CalibTarget ? "calib" : "eye").Append('"')
+              .Append(", \"target\": ").Append(Json(target))
+              .Append(", \"tolerance\": ").Append(Json(HeadPoseMaxHeightError))
+              .Append(", \"points\": [");
+            for (int i = 0; i < outcomes.Count; i++)
+            {
+                E2EViewOutcome o = outcomes[i];
+                if (i > 0) sb.Append(", ");
+                // Имя точки уже проверено E2EViews (только безопасные ASCII-символы) — экранирование не нужно.
+                sb.Append("{ \"name\": \"").Append(o.Point != null ? o.Point.Name : string.Empty).Append('"');
+                if (o.Succeeded)
+                {
+                    float height = ViewHeadHeight(o);
+                    sb.Append(", \"height\": ").Append(Json(height))
+                      .Append(", \"deviation\": ").Append(Json(height - target))
+                      .Append(", \"pitch\": ").Append(Json(o.CameraPitch))
+                      .Append(", \"roll\": ").Append(Json(o.CameraRoll));
+                }
+                else
+                {
+                    sb.Append(", \"height\": null, \"deviation\": null");
+                }
+                sb.Append(" }");
+            }
+            sb.Append("] }");
+            return sb.ToString();
+        }
+
+        private static string Json(float value) =>
+            float.IsNaN(value) || float.IsInfinity(value) ? "null" : value.ToString("0.0####", CultureInfo.InvariantCulture);
 
         // ── Артефакт ─────────────────────────────────────────────────────────
 

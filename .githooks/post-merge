@@ -1,0 +1,15 @@
+#!/bin/sh
+# post-merge: git вызывает после успешного merge/pull, включая fast-forward;
+# $1 = 1 для merge --squash (изменения только в индексе и рабочей копии), иначе 0.
+# Новые LFS-файлы пишутся через smudge --skip основного checkout и остаются
+# указателями; post-checkout здесь не вызывается. В обоих случаях (squash или нет)
+# рабочая копия уже обновлена, поэтому гидратация одинаковая — та же, что у
+# post-checkout (git lfs checkout из локального кеша, без сети), через общий
+# configure_lfs_worktree.py hydrate: только main/worker, агентские worktree — no-op.
+# Исход merge хук не меняет: ошибки только сообщаются. Merge с конфликтом post-merge
+# не вызывает: после его завершения выполнить configure_lfs_worktree.py checkout.
+command -v git-lfs >/dev/null 2>&1 || { printf >&2 "\n%s\n\n" "This repository is configured for Git LFS but 'git-lfs' was not found on your path. If you no longer wish to use Git LFS, remove this hook by deleting the 'post-merge' file in the hooks directory (set by 'core.hookspath'; usually '.git/hooks')."; exit 0; }
+git lfs post-merge "$@"
+[ -f Tools/agents/configure_lfs_worktree.py ] || exit 0
+python Tools/agents/configure_lfs_worktree.py hydrate || printf >&2 "%s\n" "post-merge: LFS-гидратация после merge не завершена; до открытия Unity выполнить python Tools/agents/configure_lfs_worktree.py checkout (при нехватке кеша — адресный git lfs pull)."
+exit 0

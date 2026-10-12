@@ -11,7 +11,7 @@
 | Роль | Фильтр checkout | Работа с ассетами |
 |---|---|---|
 | Новый агент | `git-lfs filter-process --skip` | Указатели; адресное извлечение только для задачи |
-| Основной checkout | `--skip`, затем post-checkout | Сохранённые полные файлы; hook извлекает объекты из локального кеша |
+| Основной checkout | `--skip`, затем post-checkout / post-merge / post-rewrite | Сохранённые полные файлы; hooks извлекают объекты из локального кеша |
 | Зарегистрированный Unity worker | Полный filter-process в worktree config | Настоящие файлы перед импортом Unity |
 
 `git worktree add` использует настройки вызывающей рабочей копии. Поэтому основной checkout также оставляет smudge выключенным: его полное извлечение выполняется отдельно после checkout, а создаваемый из него агент не получает гигабайты файлов. Worker имеет отдельное полное переопределение. При ручном создании из worker использовать `git worktree add --no-checkout`, настроить роль целевого worktree, затем выполнить checkout из него.
@@ -33,7 +33,7 @@ python -X utf8 Tools/agents/configure_lfs_worktree.py apply
 python -X utf8 Tools/agents/configure_lfs_worktree.py status
 ```
 
-`.githooks/post-checkout` вызывает этот маршрут автоматически, когда helper есть в выбранной версии. В старых ветках helper может отсутствовать; Git defaults всё равно пропускают smudge, а профиль задаётся явно перед работой. `.codex/config.toml` содержит ссылку на этот маршрут; вымышленных настроек Codex для Git не используется.
+`.githooks/post-checkout` вызывает этот маршрут автоматически, когда helper есть в выбранной версии. `.githooks/post-merge` (merge/pull, включая fast-forward и `--squash`) и `.githooks/post-rewrite` (rebase) выполняют ту же гидратацию через `configure_lfs_worktree.py hydrate`: только main/worker, агентские worktree не трогаются. Без них файлы, записанные merge или повторным применением коммитов rebase, остаются указателями. При `rebase --autostash` git вызывает post-rewrite до применения autostash, поэтому грязный LFS-файл main может остаться указателем: восстановить `git lfs checkout -- <путь>`. Merge с конфликтом post-merge не вызывает: после завершения выполнить `configure_lfs_worktree.py checkout`. В старых ветках helper может отсутствовать; Git defaults всё равно пропускают smudge, а профиль задаётся явно перед работой. `.codex/config.toml` содержит ссылку на этот маршрут; вымышленных настроек Codex для Git не используется.
 
 Для конкретного ассета: `git lfs pull --include="Assets/путь/к/файлу"`. Не выполнять полный pull по умолчанию. Не открывать агентский Unity-проект с LFS-указателями: импорт будет некорректен. Основной post-checkout не загружает сеть: при отсутствующем кеше сообщает, что нужен адресный pull. Для нового зарегистрированного worker интегратор повторяет install-defaults и выполняет извлечение до открытия Unity.
 

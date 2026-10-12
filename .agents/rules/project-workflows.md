@@ -108,7 +108,8 @@ runtime, мост, база worker), очередь стоит на паузе, 
 `renew` — только для продолжающейся операции Unity или её необходимого завершения, не для размышлений.
 
 **Play в Unity агент включает только через PlayLaunch** — `Docs/test-stand.md`, раздел
-«Как агенту включить Play (через Offline)»; прямой `EditorApplication.isPlaying` запрещён.
+«Как агенту включить Play (через Offline)»; прямой `EditorApplication.isPlaying = true` запрещён
+(выход через `= false` — шаг 4 того же рецепта).
 
 Инструменты `mcp__unityMCP__*` — предпочтительный способ видеть консоль и сцену. Если их нет —
 не блокироваться: ошибки компиляции — `%LOCALAPPDATA%\Unity\Editor\Editor.log` (`/unity-check`);
@@ -313,7 +314,7 @@ Quest, disconnect/reconnect и сетевые fault-сценарии пока н
 - Бинарники полных KINEMATION, Hands/Weapons и Military Soldier хранятся в LFS; пакеты не урезать. `.meta`, код и текстовые Unity-ассеты остаются в обычном Git.
 - Конфиг роли — `Tools/agents/lfs-worktree-policy.json`. Новый агентский worktree оставляет LFS-указатели; после создания выполнить `python Tools/agents/configure_lfs_worktree.py apply`. Не запускать полный `git lfs pull` по умолчанию.
 - Для просмотра/изменения конкретного бинарника извлечь только нужный путь: `git lfs pull --include="Assets/..."`. Работу Unity выполнять на полном worker через принятый протокол; не открывать агентский проект с указателями в Unity.
-- Общие фильтры Git пропускают smudge, чтобы создание worktree из main не копировало гигабайты. Основной checkout после переключения извлекает локальный кеш через `.githooks/post-checkout`; Unity worker имеет worktree-переопределение полного smudge. Не задавать `GIT_LFS_SKIP_SMUDGE` глобально или для worker.
+- Общие фильтры Git пропускают smudge, чтобы создание worktree из main не копировало гигабайты. Основной checkout после переключения, merge/pull и rebase извлекает локальный кеш через `.githooks/post-checkout`, `post-merge` и `post-rewrite` (агентские worktree они не трогают); при `rebase --autostash` грязный LFS-файл main может остаться указателем — `git lfs checkout -- <путь>`; Unity worker имеет worktree-переопределение полного smudge. Не задавать `GIT_LFS_SKIP_SMUDGE` глобально или для worker.
 - На новой машине интегратор устанавливает defaults: `python Tools/agents/configure_lfs_worktree.py apply --install-defaults`. Для зарегистрированного worker проверить `status`, извлечь недостающие LFS-объекты до открытия Unity. Историю Git ради LFS автоматически не переписывать.
 - Не удалять общий LFS-кеш и не использовать `git lfs prune` без отдельной оценки всех worktree. Полный маршрут и пределы — `Docs/agents/lfs-worktrees.md`.
 

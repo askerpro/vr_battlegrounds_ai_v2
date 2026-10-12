@@ -69,16 +69,26 @@ def after_checkout(root):
     if result["role"] in {"main", "worker"}:
         git(root, "lfs", "checkout")
         state = json.loads(git(root, "lfs", "ls-files", "--json"))
-        pending = [item["name"] for item in state.get("files", []) if not item.get("checkout", False)]
+        pending = [item["name"] for item in state.get("files") or [] if not item.get("checkout", False)]
         if pending:
             raise ValueError(f"LFS-кеш не содержит {len(pending)} файлов; до Unity выполнить адресный git lfs pull")
         result["hydrated"] = True
     return result
 
 
+def hydrate(root):
+    """post-rewrite/post-merge: та же гидратация, что after_checkout, только для main/worker.
+
+    Агентский worktree (hydration skip) не настраивается и не извлекается: только чтение роли."""
+    root, _, _, role = context(root)
+    if role == "agent":
+        return {"root": str(root), "role": role, "hydration": "skip", "hydrated": False}
+    return after_checkout(root)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["apply", "status", "checkout"])
+    parser.add_argument("action", choices=["apply", "status", "checkout", "hydrate"])
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--install-defaults", action="store_true")
     args = parser.parse_args()
@@ -86,6 +96,8 @@ if __name__ == "__main__":
         result = apply(args.root, args.install_defaults)
     elif args.action == "checkout":
         result = after_checkout(args.root)
+    elif args.action == "hydrate":
+        result = hydrate(args.root)
     else:
         root, _, _, role = context(args.root)
         result = {"root": str(root), "role": role, "process": git(root, "config", "--get", "filter.lfs.process", check=False)}

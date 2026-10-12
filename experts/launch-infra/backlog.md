@@ -16,6 +16,12 @@ PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
    `Input`: UXR `UxrGamepadInput`/`UxrKeyboardInput`, FImpossible `LegsAnimator`, Mirror `GUIConsole`/
    `RemoteStatistics`/`ToggleHotkey`, KINEMATION `KShooterMenu`/`TacticalShooterPlayer`. Нужен аудит путей
    вызова на Quest с avatar-ik (ввод, ноги) и manipulation; `ProjectSettings` — моя зона, решение — совместное.
+0b. `stand-multiprocess-sceneid` — находка bots 5080 (2026-10-12, bots-fix net-round1 attempt-2, тикет 517): BotCombatStand в
+   мультипроцессе PlayLaunch (S2C, H1C) — на каждом клиенте 21 «Spawn scene object not found for <sceneId>» / «Could not spawn
+   assetId=0». Гипотеза bots: сервер открывает Assets/Scenes/Debug/BotCombatStand.unity напрямую, клиенты — через Offline→карта,
+   sceneId расходятся. Связано с `stands-migration`. Плюс: логи клонов MPPM (Library/VP/*/Logs/Editor.log) перезаписываются
+   каждым Play — PlayLaunch должен архивировать лог клона на RunId/фазу (брокер --output Library/VP не принимает).
+   Отчёты: worktree bots tasks/bots-fix/reports/net-round1/runtime/attempt-2/.
 1. `live-smoke-runner` → этап `e2e-log-verdict` — агрегация ошибок всех процессов и механизм известных шумов для `series-smoke-e2e` — MRB «Известные шумы тестов и харнесса», VTS «Финальная проверка383».
 2. `async-player-build` — `E2EPlayerBuilder.Run()` блокирует главный поток (таймаут MCP), пачкает `PC.asset`, `ProjectSettings.asset`, `MapRuntimeCatalog.asset`; ложное «устарел» — `Docs/testing.md` «Шероховатость: проверка свежести билда». Диагностика 2026-10-11 (чтение кода): `PC.asset` — URP
    `ShaderBuildPreprocessor` под Standalone+Development, мусор, зона performance; `ProjectSettings.asset` — снимок
@@ -46,3 +52,9 @@ full suite, клик toolbar, Quest, synthetic XR/gameplay E2E не принят
 - `troubleshooting-link` — запись в `Docs/troubleshooting.md` (раздел «Сборка и инструменты»): Link не подключается
   после `-StopLink`, помогает только перезапуск среды Meta Quest Link на ПК (2026-10-12). Пока описано в
   `Docs/testing.md`; в troubleshooting — когда этап `hand-rig-quality/documentation` освободит файл.
+
+- `quest-manifest-oculus-keys` — в манифесте APK (GameBuilder Quest/Test, 2026-10-12, aapt) нет Oculus-ключей
+  (`vr_only`, `supportedDevices`, VR-категория), хотя XR работает (OpenXR-сессия до VISIBLE). Вероятно,
+  `OculusBuildProcessor` не видит лоадер из-за смены в памяти в `XrBuildSettingsScope`. Влияние: категория в лаунчере,
+  список устройств, проверка LateLatching/SpaceWarp дирижёром (`renderCheck=unknown`). Сессия в прогонах доходит до
+  VISIBLE, не FOCUSED — проверить связь с prox/фокусом.

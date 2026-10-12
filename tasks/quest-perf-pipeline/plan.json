@@ -108,6 +108,101 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "e2e-log-verdict",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/E2ELogCapture.cs",
+        "Assets/Scripts/Debug/E2E/E2ELogCapture.cs.meta",
+        "Assets/Scripts/Debug/E2E/E2EResult.cs",
+        "Tools/e2e/E2ELogVerdict.psm1",
+        "Tools/e2e/known-noise.json",
+        "Tools/e2e/Run-E2E.ps1",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Docs/testing.md",
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "e2e-views",
+          "state": "merged"
+        },
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "e2e-head-pose",
+          "state": "merged"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "quest-device-run",
+          "revision": 5,
+          "aspects": [
+            "result",
+            "logs"
+          ],
+          "readiness": "agreed"
+        }
+      ]
+    },
+    {
+      "id": "quest-vr-manifest",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Release/XrBuildSettingsScope.cs",
+        "Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Release/QuestManifestValidator.cs",
+        "Assets/Editor/VR_Battlegrounds/Release/QuestManifestValidator.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Debug/E2EPlayerBuilder.cs",
+        "Tools/release/Build-Game.ps1",
+        "Docs/release.md",
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "e2e-views",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "e2e-head-pose",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/E2EHeadPose.cs",
+        "Assets/Scripts/Debug/E2E/E2EHeadPose.cs.meta",
+        "Assets/Scripts/Debug/E2E/E2EContext.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/DeviceSmokeScenario.cs",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Docs/testing.md",
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "e2e-views",
+          "state": "merged"
+        },
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "quest-vr-manifest",
+          "state": "merged"
+        }
+      ],
+      "needs": [
+        {
+          "contract": "quest-device-run",
+          "revision": 5,
+          "aspects": [
+            "head-pose"
+          ],
+          "readiness": "agreed"
+        }
+      ]
     }
   ]
 }

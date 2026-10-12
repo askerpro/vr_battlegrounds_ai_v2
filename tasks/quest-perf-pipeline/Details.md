@@ -202,3 +202,99 @@ tasks/quest-perf-pipeline/tools/lobby-views.json` — **GREEN** `20261012-033522
 `tools/lobby-views.json` — точки из запроса level-design 4449 (пол x/z + yaw, высоту не задаём).
 
 Не проверено: `-Build` с LFS-проверкой в основном checkout (там 0 указателей из 2206, проверено только чтением).
+
+### Контракт r4 — вердикт по логам (2026-10-12)
+
+`quest-device-run` r4 (providing_stage `e2e-log-verdict`): ACK performance 4863, своя задача; agreed. Условие перф-зоны:
+`E2ELogCapture` без аллокаций для Log/Warning во время замера — обработчик отбрасывает их по LogType первой проверкой.
+Дизайн: захват в процессе (`logMessageReceivedThreaded`, ставится при создании E2EResult — E2ERunner.cs не трогаем:
+там идёт perf-stress-scenario/scenario), шум каркаса — `Tools/e2e/known-noise.json`, шум сценария —
+`result.DeclareKnownNoise(id, regex, reason)`. Этап на паузе по решению пользователя: сначала симуляция позы головы.
+
+### Симуляция позы головы — исследование avatar-ik (2026-10-12)
+
+Пользователь: перф-тесты не должны требовать, чтобы человек держал шлем на нужной высоте. Исследование (консультант
+avatar-ik, read-only): HMD → камера через legacy `TrackedPoseDriver`, который `UxrAvatar.Start` добавляет в рантайме
+(`UxrAvatar.cs:1394-1423`; пишет local pose в Update -30000 и в onBeforeRender); голову UXR-трекинг не ведёт; симулятора
+HMD в UXR нет. Вариант A (принят): `avatar.CameraTrackingEnabled = false` (штатный API, `UxrAvatar.cs:482-515`) только у
+`UxrAvatar.LocalAvatar` в e2e, один писатель local pose камеры в `UxrManager.StageUpdating(UxrUpdateStage.Update)`
+(прецедент `BotAvatarDriver.cs:95-122`); не писать пивот/Dummy Forward/BodyIK/кости/калибровку; высота критерием
+`camera.y − root.y` = цель ±1 см (цель — `Applied.EyeHeight`, иначе 1.6; local Y = цель − FloorOffset); тангаж/крен 0,
+курс — E2EViews; повтор на LocalAvatarChanged/после AvatarMode (Mirror-спавн включает TPD снова); восстановление при
+выключении. B (писать поверх TPD) и C (trackingType) отклонены — два писателя/обход. Рендер: LateLatching 0, SpaceWarp 0
+(контракт: должны остаться 0); GPU рендерит симулированную позу, ATW лежащего шлема ≈ 0. Сеть: NetworkTransform камеры
+Local, ClientToServer — симуляция реплицируется. Руки — v1 нет (статус контроллеров в отчёт), v2 отдельно.
+Побочное: `OculusSettings TargetQuest3: 0` — передать performance.
+
+Подтверждение avatar-ik 4877 (вариант A, B/C отклонены), условия:
+1. Только `UxrAvatar.LocalAvatar` и только при `-e2eScenario`; один писатель local pose камеры в `StageUpdating(Update)` —
+   до UpdateAvatar локального контроллера и AvatarUsingTracking; позже в кадре камеру не трогать.
+2. Local Y — через `pivot.InverseTransformPoint(root.position + up × цель)` (база префаба у пивота может быть ненулевой);
+   приёмка мировая: `camera.y − root.y` = цель ±1 см.
+3. Замер роста калибровки читает `camera.y − root.y` (`PhysicalSpaceSyncManager.cs:281`) и измерит цель; цель =
+   `Applied.EyeHeight` или 1.6; не запускать замер калибровки в сценарии с другой целью; не писать
+   PlayerCalibration/пивот/Dummy Forward/BodyIK/кости.
+4. Повтор на `LocalAvatarChanged` и после смены `AvatarMode`; при выключении — `CameraTrackingEnabled = true`, без
+   оставленных подписок.
+5. На шлеме подтвердить фактом, что рендер следует позе камеры при выключенном TPD (лог позы и снимок кадра).
+6. Руки: лежащие контроллеры тянут IK рук — могут попасть в кадр и влиять на GPU; фиксировать в отчёте.
+Дифф — avatar-ik до вливания.
+
+Решение пользователя (через performance, 4897, 2026-10-12): хоста на Quest не будет — host-топология для прогонов на
+шлеме не нужна. Шов выбора роли в плеере (зона network) снят с плана; `-Topology host` в дирижёре — код 2,
+параметр убрать при следующей правке дирижёра.
+
+Аренда 499 (вход `21e7bf1f`): компиляция и AndroidCompileGate PASS, `E2EHeadPose` загружен. `StartPairBuild` не стартовал —
+в worker-редакторе не срабатывает `EditorApplication.delayCall` (проба: delayCall не выполнен, одноразовый
+`update` — да); пара собрана вручную через `update` (617 с, ревизия `21e7bf1f3017`), сборки скопированы в `Build\`.
+`StartPairBuild` переведён на одноразовый `EditorApplication.update` (+ ошибка сборки пишется в статус). Сопровождающему —
+infra_issue. Прогон на шлеме отложен: села батарея шлема (пользователь, 2026-10-12).
+
+### БЛОКЕР: Quest-сборки плоские (2026-10-12)
+
+Прогон `20261012-180954` (вход `21e7bf1f`, `-HeadPose 1.6`): пользователь видит на шлеме чёрное 2D-окно, звук лобби.
+`dumpsys package`: только `android.intent.category.LAUNCHER`, нет `com.oculus.intent.category.VR`; aapt по APK — 0
+Oculus-ключей. Сборки GameBuilder Quest/Test (пары StartPairBuild) — плоские; прогоны device-smoke шли в 2D (сессия до
+VISIBLE, не FOCUSED). Симуляция головы при этом: высота 1.6000 м, тангаж/крен 0.00°, 128/300 кадров — прервано
+«локальный аватар сменился» (вероятно, следствие 2D). Перф-цифры с этих сборок недействительны (сообщено performance и
+lobby-decoration). Разбор причины + пост-проверка VR-категории в GameBuilder.
+
+### Реализация `quest-vr-manifest` (2026-10-12, до компиляции на worker)
+
+Причина: `XrBuildSettingsScope.Apply` менял лоадеры Android только в памяти, объект оставался чистым; посреди
+`BuildPlayer` Unity его выгружала и перечитывала с диска (`m_Loaders: []`), и `OculusManifest` (callbackOrder 10000)
+выходил без правки манифеста. Исправление: на время сборки `DontUnloadUnusedAsset` + `SetDirty` для
+`XRGeneralSettingsPerBuildTarget`, `XRGeneralSettings` группы и его менеджера; возврат по группе, флаги назад,
+`ClearDirty` (файл не пересериализуется). Переписан ли файл во время сборки — сверка SHA1, тогда предупреждение и
+грязность остаётся. Новый `QuestManifestValidator` (10001, взводит GameBuilder): Quest без VR-категории или
+`supportedDevices` — `BuildFailedException` с состоянием XR сейчас/при выставлении; планшет с VR-категорией — ошибка;
+без Quest 3 (`eureka`/`quest3`) — предупреждение. Плюс aapt по готовому APK. E2E-плеер — в скоупе профиля Server.
+Локально: csc против ScriptAssemblies основного checkout — 0 ошибок; правила на манифестах: Gradle worker 10-12 FAIL,
+Gradle main 09-29 PASS (+ предупреждение quest2), aapt `Build/Quest` APK FAIL. Обвязка и логи: reports/ не создавались,
+проба — во временной папке агента.
+
+#### Настоящая причина плоских сборок (аренда 516, 2026-10-12)
+
+Валидатор остановил плоскую сборку до Gradle (страховка работает). Диагностика: в момент проверки XRGeneralSettings(Android)
+тот же объект (id 68838), OculusLoader на месте → гипотеза «перечитывание с диска» ОПРОВЕРГНУТА. В логе среди
+IPostGenerateGradleAndroidProject вызваны только `Unity.XR.Management…AndroidManifestBuildEventReceiver` и наш валидатор —
+`OculusManifest` (OculusBuildProcessor.cs:413 `#if UNITY_ANDROID`) в editor-сборке отсутствует: редактор worker
+скомпилирован под Standalone, GameBuilder переключает платформу и сразу зовёт BuildPlayer без перекомпиляции editor-скриптов.
+29.09 основной checkout стоял на Android — работало. `-Targets all` в Build-Game.ps1 (первый профиль server → -buildTarget
+Win64) даёт тот же дефект. SetDirty/DontUnload в XrBuildSettingsScope лечили не то и привели к записи XR-ассета на диск
+посреди сборки (к finish вернулся) — откатываются. Исправление: проверка наличия типа OculusManifest перед сборкой Quest,
+StartPairBuild переключает на Android и продолжает после перекомпиляции (Quest первым), Build-Game.ps1 — отдельный запуск
+Unity на группу платформ. Evidence: tasks/quest-perf-pipeline/reports/vr-manifest-516-validator.log (вне Git).
+
+Доработка (субагент, 2026-10-12, без Unity): XrBuildSettingsScope = origin/dev + read-only `Describe` (InitOnStart,
+лоадеры) для текста валидатора. `QuestManifestValidator.OculusManifestCompiled()` — тип `UnityEditor.XR.Oculus.OculusManifest`
+(не `Unity.XR.Oculus.Editor.*`; сборка Unity.XR.Oculus.Editor) в домене; в Library основного checkout Android-dag
+(1300b0a) содержит его, Standalone-dag (1900b0a) — нет. GameBuilder.Build проверяет до всех сборок (тип в вызове не
+меняется): Quest — Fail, только Tablet — предупреждение (Mirror AndroidManifestHelper под тем же `#if`, multicast для
+LAN-discovery). StartPairBuild: задание в SessionState, `SwitchActiveBuildTargetAsync`, `[InitializeOnLoadMethod]`
+продолжает (до 3 перезагрузок), ошибки компиляции ловит `assemblyCompilationFinished`; файл статуса пустой всё время.
+BuildPair: Quest → e2e-плеер; e2e-плеер явно переключает на StandaloneWindows64 до XR-скоупа (реимпорт XR при
+переключении), после пары редактор на Standalone. RunPairBatch без Android-домена — код 1: Run-QuestE2E.ps1
+(этап e2e-head-pose) должен добавить `-buildTarget Android`. Build-Game.ps1: Android-группа, затем server, лог на запуск.
+Проверки: csc Assembly-CSharp-Editor (rsp 1900b0aEDbg, исходники worktree) — 0 ошибок/0 предупреждений в изменённых;
+ParseFile Build-Game.ps1 — 0; Get-BuildRuns на 9 наборах + 3 ошибочных; коды 2 без Unity.

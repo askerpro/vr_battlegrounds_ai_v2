@@ -23,3 +23,4 @@ MonoBehaviour:
   helmetUniformStrength: 0
   avatars:
   - {fileID: 11400000, guid: 294e4428ec16fb84d9dd876e1cbb523a, type: 2}
+  - {fileID: 11400000, guid: be2bdcda311f5d9429364417f752d875, type: 2}

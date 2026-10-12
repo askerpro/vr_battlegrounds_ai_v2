@@ -98,6 +98,8 @@
     {
       "id": "hand-graft-exp",
       "writes": [
+        "Assets/Tests/EditMode/Prefabs/TeamAvatarsTests.cs",
+        "Assets/Data/Teams/Terrorists_Team.asset",
         "Assets/Art/Avatars/MEF_SdkHands.meta",
         "Assets/Art/Avatars/MEF_SdkHands/**",
         "Assets/Prefabs/Managers/--- MANAGERS ---.prefab",

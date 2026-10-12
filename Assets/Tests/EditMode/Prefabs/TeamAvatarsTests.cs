@@ -58,11 +58,15 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         [TestCaseSource(nameof(TeamChangeRequests))]
-        public void У_команды_матча_один_зарегистрированный_аватар(TeamData team)
+        public void У_команды_матча_есть_зарегистрированные_аватары(TeamData team)
         {
-            Assert.That(team.avatars.Count, Is.EqualTo(1), $"{team.displayName}: аватаров {team.avatars.Count}, нужен один.");
-            Assert.That(team.avatars[0], Is.Not.Null, $"{team.displayName}: пустой слот аватара.");
-            Assert.That(RegisteredAvatars.Data(), Does.Contain(team.avatars[0]), $"{team.displayName}: аватар не из реестра.");
+            // Решение пользователя 2026-10-12: у команды минимум один аватар (скины на выбор), не ровно один.
+            Assert.That(team.avatars.Count, Is.GreaterThanOrEqualTo(1), $"{team.displayName}: нет ни одного аватара.");
+            for (int i = 0; i < team.avatars.Count; i++)
+            {
+                Assert.That(team.avatars[i], Is.Not.Null, $"{team.displayName}: пустой слот аватара {i}.");
+                Assert.That(RegisteredAvatars.Data(), Does.Contain(team.avatars[i]), $"{team.displayName}: аватар {i} не из реестра.");
+            }
         }
 
         [Test]

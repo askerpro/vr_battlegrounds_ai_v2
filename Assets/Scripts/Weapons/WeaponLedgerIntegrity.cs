@@ -17,6 +17,7 @@ namespace VrBattlegrounds.Weapons
     /// <b>Что делает.</b> Пишет <c>GameLog.WeaponSystem.Error</c> с данными инцидента (раз в 10 с на вид, со счётчиком
     /// повторов) и на сервере публикует поправку учёта после форка ревизии. Стрельбу не блокирует ничто: расхождение —
     /// непредвиденная ситуация, причину устраняют по логу, а игроку игра не ломается (решение 2026-10-07).
+    /// Отказ replay не по ревизии (SDK-патч 76, <c>ReplayRejected</c>) — ошибка один раз на ствол и причину.
     /// </para>
     ///
     /// <para>
@@ -37,6 +38,8 @@ namespace VrBattlegrounds.Weapons
         public static int CorrectionsPublished { get; private set; }
         public static int CorrectionsApplied { get; private set; }
         public static int NotificationFailures { get; private set; }
+        /// <summary>SDK-патч 76: replay фиксации отклонён не по ревизии (ReplayRejected).</summary>
+        public static int ReplayRejectedTotal { get; private set; }
 
         private sealed class Throttle { public float Last = float.NegativeInfinity; public int Suppressed; }
 
@@ -44,6 +47,7 @@ namespace VrBattlegrounds.Weapons
         private readonly WeaponReadinessController _owner;
         private readonly Dictionary<string, Throttle> _throttle = new Dictionary<string, Throttle>();
         private readonly List<UxrGrabbableObject> _correctionMagazines = new List<UxrGrabbableObject>();
+        private readonly Dictionary<UxrFirearmReplayRejectReason, int> _rejected = new Dictionary<UxrFirearmReplayRejectReason, int>();
         private bool _correctionPending, _attached;
 
         public WeaponLedgerIntegrity(UxrFirearmWeapon weapon, WeaponReadinessController owner)
@@ -100,6 +104,9 @@ namespace VrBattlegrounds.Weapons
                     DeltaMismatchTotal++;
                     what = "M получателя не сходится с дельтой операции — применено значение автора";
                     break;
+                case UxrFirearmReplayDivergenceKind.ReplayRejected:
+                    ReportRejected(d);
+                    return;
                 case UxrFirearmReplayDivergenceKind.RevisionFork:
                     ForkTotal++;
                     what = "форк ревизии — фиксация не применена";
@@ -122,6 +129,40 @@ namespace VrBattlegrounds.Weapons
                 $"ревизии: ожидаемая {d.ExpectedRevision}, следующая {d.NextRevision}, локальная {d.LocalRevision}; {rounds}; " +
                 $"replay={d.Replay}, поправка {(correctionQueued ? "поставлена в публикацию" : d.Kind == UxrFirearmReplayDivergenceKind.CorrectionApplied ? "применена" : "нет")}. " +
                 Context(d.TriggerIndex, d.Replay));
+        }
+
+        /// <summary>
+        /// SDK-патч 76: replay отклонил фиксацию не по ревизии. Ошибка — один раз на ствол и причину (дальше отказы той же
+        /// причины только считаются и уходят в Verbose): следом обычно идут форки ревизии, их пишет свой канал.
+        /// </summary>
+        private void ReportRejected(UxrFirearmReplayDivergence d)
+        {
+            ReplayRejectedTotal++;
+            _rejected.TryGetValue(d.RejectReason, out int seen);
+            _rejected[d.RejectReason] = ++seen;
+            UxrFirearmReadinessState state = _weapon.GetReadinessState(d.TriggerIndex);
+            string message = $"{Tag} Replay фиксации отклонён ({d.RejectReason}): {Explain(d.RejectReason)}. Операция {d.Operation}, " +
+                             $"магазин {Name(d.Magazine)} ({d.MagazineIdentity}); ревизии: ожидаемая {d.ExpectedRevision}, следующая {d.NextRevision}, " +
+                             $"локальная {d.LocalRevision}; учёт спуска {(_weapon.UsesReadinessLedger(d.TriggerIndex) ? "включён" : "не включён")}, " +
+                             $"инициализирован {state?.ReadinessInitialized == true}. Фиксация не применена — следующие фиксации этого ствола " +
+                             $"разойдутся по ревизии. {Context(d.TriggerIndex, d.Replay)}";
+            if (seen == 1) GameLog.WeaponSystem.Error(message, _owner);
+            else GameLog.WeaponSystem.Verbose($"{message} Повтор №{seen}.", _owner);
+        }
+
+        private static string Explain(UxrFirearmReplayRejectReason reason)
+        {
+            switch (reason)
+            {
+                case UxrFirearmReplayRejectReason.LedgerDisabled: return "учёт спуска у получателя не включён (WeaponSystem ещё не подключил порт учёта)";
+                case UxrFirearmReplayRejectReason.NoRuntimeTrigger: return "у оружия нет runtime-данных спуска (Awake UxrFirearmWeapon не прошёл)";
+                case UxrFirearmReplayRejectReason.Reentrant: return "фиксация того же спуска уже пишется";
+                case UxrFirearmReplayRejectReason.MalformedCommit: return "фиксация противоречит сама себе (ревизии, операция, Pending или M)";
+                case UxrFirearmReplayRejectReason.MagazineUnresolved: return "магазин фиксации не найден у получателя по UniqueId";
+                case UxrFirearmReplayRejectReason.MagazineNotAllowed: return "магазин фиксации не годится этому спуску (нет UxrFirearmMag, привязка запаса, ёмкость)";
+                case UxrFirearmReplayRejectReason.StateMismatch: return "ревизия совпала, но состояние учёта получателя не допускает операцию";
+                default: return "причина не указана SDK";
+            }
         }
 
         // В-Л5: сбой уведомления после записи. Учёт записан и разослан, стрельба не блокируется.

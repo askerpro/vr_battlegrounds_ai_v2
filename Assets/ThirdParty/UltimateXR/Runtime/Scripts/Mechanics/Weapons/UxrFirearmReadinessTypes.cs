@@ -25,8 +25,25 @@ namespace UltimateXR.Mechanics.Weapons
     /// DeltaMismatch — ревизия совпала, M получателя не сходится с дельтой операции: применено значение автора.
     /// RevisionFork — ревизия не совпала: фиксация не применена, сервер публикует поправку.
     /// CorrectionApplied — получатель применил поправку сервера.
+    /// ReplayRejected (VR Battlegrounds patch 76) — replay отклонил фиксацию не по ревизии (причина —
+    /// <see cref="UxrFirearmReplayDivergence.RejectReason"/>): прежде такой отказ был молчаливым.
+    /// Событие локальное, в сеть и снимок не попадает: значения перечисления можно дописывать в конец.
     /// </summary>
-    public enum UxrFirearmReplayDivergenceKind { DeltaMismatch, RevisionFork, CorrectionApplied }
+    public enum UxrFirearmReplayDivergenceKind { DeltaMismatch, RevisionFork, CorrectionApplied, ReplayRejected }
+
+    /// <summary>
+    /// VR Battlegrounds patch 76: почему replay отклонил фиксацию учёта, не дойдя до применения.
+    /// LedgerDisabled — учёт спуска у получателя не включён (<c>TryEnableReadiness</c> ещё не вызван);
+    /// NoRuntimeTrigger — нет runtime-данных спуска (Awake оружия не прошёл); Reentrant — фиксация того же спуска
+    /// уже пишется; MalformedCommit — фиксация противоречит сама себе (ревизии, вид операции, Pending, M);
+    /// MagazineUnresolved — магазин фиксации не найден по identity; MagazineNotAllowed — магазин не годится этому
+    /// спуску (нет UxrFirearmMag, чужая привязка встроенного запаса, M больше ёмкости);
+    /// StateMismatch — ревизия совпала, но состояние «до» получателя не допускает операцию.
+    /// </summary>
+    public enum UxrFirearmReplayRejectReason
+    {
+        None, LedgerDisabled, NoRuntimeTrigger, Reentrant, MalformedCommit, MagazineUnresolved, MagazineNotAllowed, StateMismatch
+    }
 
     /// <summary>Данные инцидента расхождения учёта. Лог пишет игровой владелец портов (SDK не знает GameLog).</summary>
     public sealed class UxrFirearmReplayDivergence
@@ -40,6 +57,8 @@ namespace UltimateXR.Mechanics.Weapons
         /// <summary>M получателя до replay, ожидаемое после по дельте операции, после-значение автора. -1 — неприменимо.</summary>
         public int ReceiverRoundsBefore = -1, ReceiverExpectedRoundsAfter = -1, AuthorRoundsAfter = -1;
         public bool Replay;
+        /// <summary>VR Battlegrounds patch 76: причина для <see cref="UxrFirearmReplayDivergenceKind.ReplayRejected"/>, иначе None.</summary>
+        public UxrFirearmReplayRejectReason RejectReason;
     }
 
     public readonly struct UxrFirearmTriggerDecision

@@ -114,7 +114,9 @@ namespace VrBattlegrounds.Weapons
         private WeaponEjectionExecutor _ejectionOut;
         private WeaponLedgerIntegrity _integrity;
 
-        private bool _configured, _started, _stepping, _draining, _dispatching, _subscribed;
+        // _prepared — пассивная часть (порт и учёт SDK, подписки, исполнители): события SDK уже ставятся в очередь.
+        // _configured — машина запущена шагом Configured (T01/T05): шаги, команды учёту, кадр.
+        private bool _prepared, _configured, _started, _stepping, _draining, _dispatching, _subscribed;
         private bool _haveContext, _lastCtx;
         private int _initAttempts, _initRejects;
         private WS.WeaponRole _lastRole;
@@ -127,6 +129,8 @@ namespace VrBattlegrounds.Weapons
         private WS.PoseTarget _poseTarget;
 
         public override bool IsConfigured => _configured;
+        /// <summary>Учёт SDK подключён портом (пассивная часть, с OnEnable); машина может быть ещё не запущена.</summary>
+        internal bool IsLedgerAttached => _prepared;
         public override WeaponReadinessProfile Profile => _profile;
         public override int TriggerIndex => _triggerIndex;
         public WeaponMechanismRig Rig => _rig;
@@ -157,17 +161,31 @@ namespace VrBattlegrounds.Weapons
 
         // ── Жизненный цикл ──────────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Активная часть: шаг Configured (T01 — однократный Initialize у автора). Пассивная часть уже сделана в OnEnable;
+        /// если она не удалась (порядок Awake, ошибка данных) — полная настройка с логом причины.
+        /// </summary>
         private void Start()
         {
             _started = true;
-            Configure(out _);
+            if (_configured) return;
+            if (_prepared) Activate();
+            else Configure(out _);
         }
 
+        /// <summary>
+        /// Пассивная часть при активации объекта — до Start (ledger-spawn-ready). Клиент получает spawn и фиксацию
+        /// Initialize автора одной пачкой: объект уже активен, Start ещё не вызван. Учёт SDK должен быть включён к этому
+        /// моменту, иначе replay отклоняется и ствол навсегда расходится по ревизии. Команд учёту и шагов машины здесь нет;
+        /// события SDK до Start ставятся в очередь и разбираются шагом Configured. Повторный OnEnable после Start — полная
+        /// настройка, как прежде. Отказ здесь молчит: Start повторит настройку и запишет причину.
+        /// </summary>
         private void OnEnable()
         {
             UxrStateSaveImplementer.StateSerialized -= OnStateSerialized;
             UxrStateSaveImplementer.StateSerialized += OnStateSerialized;
             if (_started) Configure(out _);
+            else Prepare(false, out _);
         }
 
         private void OnDisable()
@@ -189,11 +207,22 @@ namespace VrBattlegrounds.Weapons
         /// <summary>Настроить хост по профилю и rig (Start/OnEnable). false — ствол не управляется, причина в логе.</summary>
         public bool Configure(out string error)
         {
-            if (_configured) Teardown();
+            if (!Prepare(true, out error)) return false;
+            Activate();
+            return true;
+        }
+
+        /// <summary>
+        /// Пассивная часть настройки: проверка данных, порт и учёт SDK (<c>TryEnableReadiness</c>), подписки, исполнители,
+        /// новая машина. Команд учёту и шагов машины нет. Идемпотентна: повторный вызов сначала снимает прежнее.
+        /// </summary>
+        private bool Prepare(bool log, out string error)
+        {
+            if (_prepared) Teardown();
             _weapon = GetComponent<UxrFirearmWeapon>();
             if (!TryValidate(out error))
             {
-                GameLog.WeaponSystem.Error($"[WeaponSystem] {name}: не настроен — {error}", this);
+                if (log) GameLog.WeaponSystem.Error($"[WeaponSystem] {name}: не настроен — {error}", this);
                 return false;
             }
             if (_port == null)
@@ -210,10 +239,12 @@ namespace VrBattlegrounds.Weapons
                 _ejectionOut = new WeaponEjectionExecutor(_weapon, _ejectionPort, _ejection, _feedbackDefaults);
                 _integrity = new WeaponLedgerIntegrity(_weapon, this);
             }
+            // До порта: если учёт включить не удалось, отказ replay (SDK-патч 76, LedgerDisabled) всё равно виден в логе.
+            _integrity.Attach();
             if (!_port.TryInstall(out error))
             {
                 _port.Uninstall();
-                GameLog.WeaponSystem.Error($"[WeaponSystem] {name}: не настроен — {error}", this);
+                if (log) GameLog.WeaponSystem.Error($"[WeaponSystem] {name}: не настроен — {error}", this);
                 return false;
             }
             _action = new WeaponActionSensor(_rig);
@@ -221,7 +252,6 @@ namespace VrBattlegrounds.Weapons
             _action.HandleReleased += OnHandleReleased;
             _weapon.StateChanged += OnWeaponStateChanged;
             _subscribed = true;
-            _integrity.Attach();
             _pose.Attach();
             _trigger.Reset();
             _magazine.Rebase();
@@ -231,10 +261,16 @@ namespace VrBattlegrounds.Weapons
             _viewDirty = true;
             _initAttempts = _initRejects = 0;
             _machine = new WS.WeaponStateMachine(_axes);
+            _prepared = true;
+            return true;
+        }
+
+        /// <summary>Запуск машины: события, накопленные с OnEnable, разбираются, затем шаг Configured.</summary>
+        private void Activate()
+        {
             _configured = true;
             StepNow(WS.WeaponEvent.Of(WS.WeaponEventKind.Configured)); // T01: однократная миграция учёта у автора
             Drain();
-            return true;
         }
 
         private void Teardown()
@@ -254,7 +290,7 @@ namespace VrBattlegrounds.Weapons
             _feedback?.Reset();
             _trigger?.Reset();
             _queue.Clear();
-            _configured = false;
+            _prepared = _configured = false;
         }
 
         /// <summary>
@@ -263,7 +299,7 @@ namespace VrBattlegrounds.Weapons
         /// </summary>
         public bool TryValidateConfiguration(out string error)
         {
-            if (_configured) { error = null; return true; }
+            if (_prepared) { error = null; return true; }
             _weapon = GetComponent<UxrFirearmWeapon>();
             return TryValidate(out error);
         }
@@ -458,7 +494,7 @@ namespace VrBattlegrounds.Weapons
         private void Enqueue(in WS.WeaponEvent e, bool rateOfFire = false, bool recapture = false)
         {
             InvalidateLostAutomation();
-            if (!_configured) return;
+            if (!_prepared) return; // до Start (пассивная часть) событие ждёт шага Configured
             _viewDirty = true;
             Pending pending = recapture ? new Pending { Event = e, Recapture = true } : Capture(e, rateOfFire);
             _queue.Enqueue(pending);
@@ -646,7 +682,7 @@ namespace VrBattlegrounds.Weapons
 
         private void OnWeaponStateChanged(object sender, UxrSyncEventArgs args)
         {
-            if (!_configured || !ReferenceEquals(sender, _weapon)) return;
+            if (!_prepared || !ReferenceEquals(sender, _weapon)) return;
             _viewDirty = true;
             if (_trigger.TryParse(args))
             {
@@ -662,7 +698,7 @@ namespace VrBattlegrounds.Weapons
         private void OnStateSerialized(object sender, UxrStateSaveEventArgs args)
         {
             if (this == null) { UxrStateSaveImplementer.StateSerialized -= OnStateSerialized; return; }
-            if (!_configured || !ReferenceEquals(sender, _weapon) || args?.Serializer == null || !args.Serializer.IsReading) return;
+            if (!_prepared || !ReferenceEquals(sender, _weapon) || args?.Serializer == null || !args.Serializer.IsReading) return;
             if (_automationGranted)
             {
                 RevokeAutomation();

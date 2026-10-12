@@ -51,6 +51,10 @@ namespace VrBattlegrounds.Weapons
         /// <summary>Команды порта в работе: SDK-события, поднятые ею, — свои фиксации.</summary>
         public bool CommandInFlight => _inFlight || _initializing;
 
+        /// <summary>
+        /// Занять порты SDK и включить учёт спуска. Вызывается пассивной подготовкой хоста при активации объекта
+        /// (OnEnable, до Start): replay фиксаций, пришедший в кадре спавна, уже застаёт учёт включённым. Команд учёту нет.
+        /// </summary>
         public bool TryInstall(out string error)
         {
             error = null;
@@ -214,7 +218,8 @@ namespace VrBattlegrounds.Weapons
             trigger == _trigger && StateEventAuthority.IsWorldAuthority && Evidence(LedgerCommandKind.RefillForAutomation, _inFlightRevision);
 
         // Поправку учёта из сети принимает только клиент: сервер — арбитр порядка и сам её публикует (п. 3a, В-Л6).
-        private bool CanAcceptCorrection(int trigger) => trigger == _trigger && _host != null && _host.IsConfigured && !Mirror.NetworkServer.active;
+        // Достаточно подключённого учёта (OnEnable): поправка в кадре спавна до Start тоже применяется.
+        private bool CanAcceptCorrection(int trigger) => trigger == _trigger && _host != null && _host.IsLedgerAttached && !Mirror.NetworkServer.active;
 
         private bool Evidence(LedgerCommandKind kind, uint revision) => _inFlight && _inFlightKind == kind && _inFlightRevision == revision;
 

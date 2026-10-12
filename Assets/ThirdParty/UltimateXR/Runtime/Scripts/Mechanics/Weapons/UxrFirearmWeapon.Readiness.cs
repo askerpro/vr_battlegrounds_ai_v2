@@ -21,6 +21,10 @@ namespace UltimateXR.Mechanics.Weapons
         //   автора (ReadinessReplayDiverged), при форке ревизии фиксацию не применяет — сервер публикует поправку;
         // - команда учёта внутри чужого BeginSync отклоняется (иначе не ушла бы в сеть — класс Б);
         // - сбой уведомлений после записи не блокирует стрельбу (В-Л5): только ReadinessFaulted для лога.
+        //
+        // VR Battlegrounds patch 76 (ledger-spawn-ready): отказ replay фиксации не по ревизии (учёт не включён, магазин
+        // не разрешён, фиксация противоречива, состояние «до» не допускает операцию) — ReadinessReplayDiverged с
+        // ReplayRejected и причиной. Формат фиксации и снимка не менялся.
         private readonly HashSet<int> _readinessEnabled = new HashSet<int>();
         public Func<int, bool> CanAuthorReadinessAction { get; set; }
         public Action<int> RefreshPhysicalActionState { get; set; }
@@ -319,6 +323,9 @@ namespace UltimateXR.Mechanics.Weapons
         /// дельта M без членства в гнезде (replay не зависит от порядка событий grab-менеджера и учёта).
         /// <paramref name="divergence"/>: RevisionFork при отказе replay из-за ревизии; DeltaMismatch при принятой
         /// фиксации, у которой M получателя не сходится с дельтой (применяется значение автора).
+        /// VR Battlegrounds patch 76: любой другой отказ replay — ReplayRejected с причиной (раньше молчаливый:
+        /// получатель навсегда оставался на старой ревизии, а поправку публикует только сервер при своём форке).
+        /// У автора отказ команды по-прежнему без события — это обычный false команды.
         /// </summary>
         private bool ValidateReadinessCommit(UxrFirearmReadinessCommit commit, out UxrFirearmReplayDivergence divergence)
         {
@@ -328,30 +335,37 @@ namespace UltimateXR.Mechanics.Weapons
             if (commit == null || commit.StateAfter == null ||
                 (int)commit.Operation < (int)UxrFirearmReadinessOperation.Initialize ||
                 (int)commit.Operation > (int)UxrFirearmReadinessOperation.AmmoAdmission ||
-                commit.Operation == UxrFirearmReadinessOperation.MagazineChanged || commit.Operation == UxrFirearmReadinessOperation.Reconcile ||
-                !UsesReadinessLedger(commit.TriggerIndex) ||
-                !_runtimeTriggers.TryGetValue(commit.TriggerIndex, out var runtime) || _readinessCommitting.Contains(commit.TriggerIndex) ||
-                (!replay && !(commit.Operation == UxrFirearmReadinessOperation.AmmoAdmission ? CanCommitAmmoAdmission(commit.TriggerIndex) :
-                    commit.Operation == UxrFirearmReadinessOperation.Cancel ? CanOwnReadiness(commit.TriggerIndex) : CanWriteReadiness(commit.TriggerIndex)))) return false;
+                commit.Operation == UxrFirearmReadinessOperation.MagazineChanged || commit.Operation == UxrFirearmReadinessOperation.Reconcile)
+                return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.MalformedCommit, out divergence);
 #pragma warning restore 0618
+            if (!UsesReadinessLedger(commit.TriggerIndex)) return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.LedgerDisabled, out divergence);
+            if (!_runtimeTriggers.TryGetValue(commit.TriggerIndex, out var runtime))
+                return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.NoRuntimeTrigger, out divergence);
+            if (_readinessCommitting.Contains(commit.TriggerIndex)) return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.Reentrant, out divergence);
+            if (!replay && !(commit.Operation == UxrFirearmReadinessOperation.AmmoAdmission ? CanCommitAmmoAdmission(commit.TriggerIndex) :
+                    commit.Operation == UxrFirearmReadinessOperation.Cancel ? CanOwnReadiness(commit.TriggerIndex) : CanWriteReadiness(commit.TriggerIndex))) return false;
             var after = commit.StateAfter;
             if (commit.ExpectedRevision == uint.MaxValue || commit.NextRevision != commit.ExpectedRevision + 1 ||
-                after.Revision != commit.NextRevision || !after.ReadinessInitialized || commit.MagazineRoundsAfter < 0) return false;
-            // Pending после фиксации принадлежит магазину фиксации; без Pending identity цикла пуста.
-            if (after.ChamberCyclePending ? after.CycleMagazineIdentity != commit.ReferencedMagazineIdentity : after.CycleMagazineIdentity != Guid.Empty) return false;
+                after.Revision != commit.NextRevision || !after.ReadinessInitialized || commit.MagazineRoundsAfter < 0 ||
+                // Pending после фиксации принадлежит магазину фиксации; без Pending identity цикла пуста.
+                (after.ChamberCyclePending ? after.CycleMagazineIdentity != commit.ReferencedMagazineIdentity : after.CycleMagazineIdentity != Guid.Empty))
+                return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.MalformedCommit, out divergence);
             var mag = commit.ReferencedMagazine;
-            if (commit.ReferencedMagazineIdentity != Guid.Empty && (mag == null || mag.UniqueId != commit.ReferencedMagazineIdentity)) return false;
+            if (commit.ReferencedMagazineIdentity != Guid.Empty && (mag == null || mag.UniqueId != commit.ReferencedMagazineIdentity))
+                return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.MagazineUnresolved, out divergence);
             UxrFirearmMag ammo = null;
             if (mag == null)
             {
-                if (commit.ReferencedMagazineIdentity != Guid.Empty || commit.MagazineRoundsAfter != 0) return false;
+                if (commit.ReferencedMagazineIdentity != Guid.Empty || commit.MagazineRoundsAfter != 0)
+                    return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.MalformedCommit, out divergence);
             }
             else
             {
                 ammo = mag.GetComponent<UxrFirearmMag>();
                 if (mag.UniqueId == Guid.Empty || ammo == null || !ammo.IsFixedStoreBindingValid(this, commit.TriggerIndex) ||
                     commit.MagazineRoundsAfter > ammo.Capacity ||
-                    (ammo.IsFixedAmmoStore && commit.MagazineRoundsAfter + (after.ChamberRound ? 1 : 0) > ammo.Capacity)) return false;
+                    (ammo.IsFixedAmmoStore && commit.MagazineRoundsAfter + (after.ChamberRound ? 1 : 0) > ammo.Capacity))
+                    return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.MagazineNotAllowed, out divergence);
             }
             if (!replay && mag != GetCurrentReadinessMagazine(commit.TriggerIndex)) return false;
             uint revision = runtime.Readiness?.Revision ?? 0;
@@ -362,20 +376,26 @@ namespace UltimateXR.Mechanics.Weapons
                 return false;
             }
             var before = WithValidPending(runtime.Readiness, commit.ReferencedMagazineIdentity);
-            if (!ValidatePostShotEmptyActionCommit(commit, before)) return false;
+            bool stateAllows = ValidatePostShotEmptyActionCommit(commit, before);
             switch (commit.Operation)
             {
-                case UxrFirearmReadinessOperation.EmptyRestAcknowledged: if (!ValidateEmptyRestCommit(commit, before)) return false; break;
-                case UxrFirearmReadinessOperation.CloseOnly: if (!ValidateCloseOnlyCommit(commit, before)) return false; break;
+                case UxrFirearmReadinessOperation.EmptyRestAcknowledged: stateAllows = stateAllows && ValidateEmptyRestCommit(commit, before); break;
+                case UxrFirearmReadinessOperation.CloseOnly: stateAllows = stateAllows && ValidateCloseOnlyCommit(commit, before); break;
                 case UxrFirearmReadinessOperation.Shot:
                     // Автор — фактический M; replay — M до выстрела, объявленный автором (расхождение ловит дельта ниже).
-                    if (!ValidateShotCommit(commit, before, replay ? commit.MagazineRoundsAfter + (after.ChamberRound ? 1 : 0) : receiverRounds)) return false;
+                    stateAllows = stateAllows &&
+                        ValidateShotCommit(commit, before, replay ? commit.MagazineRoundsAfter + (after.ChamberRound ? 1 : 0) : receiverRounds);
                     break;
                 case UxrFirearmReadinessOperation.AmmoAdmission:
-                    if (before?.ReadinessInitialized != true || ammo == null || !ammo.IsFixedAmmoStore) return false;
+                    if (!stateAllows || before?.ReadinessInitialized != true || ammo == null || !ammo.IsFixedAmmoStore) { stateAllows = false; break; }
                     var expected = (UxrFirearmReadinessState)before.Clone(); expected.Revision = commit.NextRevision;
-                    if (!expected.Equals(after)) return false;
+                    stateAllows = expected.Equals(after);
                     break;
+            }
+            if (!stateAllows)
+            {
+                if (replay) divergence = CreateRejection(UxrFirearmReplayRejectReason.StateMismatch, commit, revision, receiverRounds);
+                return false;
             }
             int expectedRounds = ExpectedRoundsAfter(commit, before, receiverRounds, ammo != null ? ammo.Capacity : 0);
             if (expectedRounds != commit.MagazineRoundsAfter)
@@ -410,6 +430,23 @@ namespace UltimateXR.Mechanics.Weapons
             ReceiverRoundsBefore = receiverRounds, ReceiverExpectedRoundsAfter = expectedRounds,
             AuthorRoundsAfter = commit.MagazineRoundsAfter, Replay = IsReadinessReplay
         };
+
+        // VR Battlegrounds patch 76: отказ replay видим (ReplayRejected с причиной); у автора — просто false.
+        private bool RejectReplay(UxrFirearmReadinessCommit commit, bool replay, UxrFirearmReplayRejectReason reason,
+            out UxrFirearmReplayDivergence divergence)
+        {
+            uint localRevision = commit != null && _runtimeTriggers.TryGetValue(commit.TriggerIndex, out var runtime) ? runtime.Readiness?.Revision ?? 0 : 0;
+            divergence = replay && commit != null ? CreateRejection(reason, commit, localRevision, -1) : null;
+            return false;
+        }
+
+        private UxrFirearmReplayDivergence CreateRejection(UxrFirearmReplayRejectReason reason, UxrFirearmReadinessCommit commit,
+            uint localRevision, int receiverRounds)
+        {
+            var divergence = CreateDivergence(UxrFirearmReplayDivergenceKind.ReplayRejected, commit, localRevision, receiverRounds, -1);
+            divergence.RejectReason = reason;
+            return divergence;
+        }
 
         private void RaiseReplayDivergence(UxrFirearmReplayDivergence divergence)
         {

@@ -7,6 +7,7 @@ using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
+using VrBattlegrounds.LevelDesign;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
@@ -36,7 +37,9 @@ namespace VrBattlegrounds.DevTools.StressTest
     /// <para>
     /// <b>Фазы.</b> Обычный прогон: разгон → «база» → «куклы» → «куклы+хлам» → «куклы: по карте».
     /// Прогон по скинам (<see cref="StressTestConfig.perSkinPhases"/>): разгон → «база» →
-    /// «куклы: &lt;префаб&gt;» на каждый скин. Сервер шлёт инициатору
+    /// «куклы: &lt;префаб&gt;» на каждый скин. Раскладка «арена» (<see cref="StressTestConfig.arenaLayout"/>):
+    /// разгон → «база» → «куклы: арена» — куклы на полу физической арены карты с закреплёнными корнями.
+    /// Сервер шлёт инициатору
     /// начало каждой фазы (<see cref="StressTestStatusMessage"/>), клиент по ним открывает
     /// фазы в своём логе. Выделенный сервер пишет и свой лог (время тика); на хосте
     /// второй рекордер не заводится — процесс один, его меряет клиентская половина.
@@ -76,6 +79,8 @@ namespace VrBattlegrounds.DevTools.StressTest
         private bool _finished;
         private string _abortReason = "прерван";
         private int _phaseNumber;   // сколько фаз открыто — для LastRun
+        private ArenaFloor _arena;  // раскладка «арена»: найдена при приёме запроса
+        private string _placement = string.Empty;   // итог раскладки «арена» — для заметки фазы и LastRun
 
         // ── Запросы ─────────────────────────────────────────────────────────
 
@@ -89,9 +94,25 @@ namespace VrBattlegrounds.DevTools.StressTest
 
             if (!CanStart(conn, out PlayerSession session, out string reason))
             {
-                GameLog.Perf.Warning($"[StressTest] Отказ в старте (conn {conn.connectionId}): {reason}.");
-                conn.Send(new StressTestStatusMessage { kind = StressTestStatusKind.Rejected, text = reason });
+                Refuse(conn, reason);
                 return;
+            }
+
+            StressTestConfig config = msg.ToConfig();
+            ArenaFloor arena = null;
+            if (config.arenaLayout)
+            {
+                if (config.perSkinPhases)
+                {
+                    Refuse(conn, "раскладка «арена» несовместима с прогоном по скинам");
+                    return;
+                }
+                // Без арены — отказ, а не тихий откат на другую раскладку: замер был бы не тем, что просили.
+                if (!ArenaFloor.TryFind(out arena, out reason))
+                {
+                    Refuse(conn, reason);
+                    return;
+                }
             }
 
             // Не DontDestroyOnLoad: смена сцены уничтожает кукол вместе с ней, и прогон
@@ -100,7 +121,14 @@ namespace VrBattlegrounds.DevTools.StressTest
             var server = go.AddComponent<StressTestServer>();
             server._initiator = conn;
             server._session = session;
-            server._config = msg.ToConfig();
+            server._config = config;
+            server._arena = arena;
+        }
+
+        private static void Refuse(NetworkConnectionToClient conn, string reason)
+        {
+            GameLog.Perf.Warning($"[StressTest] Отказ в старте (conn {conn.connectionId}): {reason}.");
+            conn.Send(new StressTestStatusMessage { kind = StressTestStatusKind.Rejected, text = reason });
         }
 
         private static bool CanStart(NetworkConnectionToClient conn, out PlayerSession session, out string reason)
@@ -152,7 +180,8 @@ namespace VrBattlegrounds.DevTools.StressTest
             }
 
             GameLog.Perf.Info($"[StressTest] Сервер: старт для {_session.PlayerName}, кукол {_config.puppetCount}, предметов {_config.clutterCount}, " +
-                              $"{(_config.perSkinPhases ? "по скинам" : _config.mapOnly ? "только по карте" : "обычный")}, скины: {PlannedSkins()}.");
+                              $"{(_config.perSkinPhases ? "по скинам" : _config.arenaLayout ? "арена" : _config.mapOnly ? "только по карте" : "обычный")}, " +
+                              $"скины: {PlannedSkins()}.");
 
             UxrManager.StageUpdated += OnUxrStageUpdated;
             StartCoroutine(Run());
@@ -192,8 +221,9 @@ namespace VrBattlegrounds.DevTools.StressTest
             yield return Phase("разгон", _config.warmupSeconds, measured: false, note: null);
             yield return Phase("база", _config.phaseSeconds, measured: true, note: null);
 
-            if (_config.perSkinPhases) yield return RunPerSkin();
-            else                       yield return RunStandard();
+            if (_config.perSkinPhases)    yield return RunPerSkin();
+            else if (_config.arenaLayout) yield return RunArena();
+            else                          yield return RunStandard();
 
             Finish(completed: true, "полный прогон");
             Destroy(gameObject);
@@ -233,6 +263,19 @@ namespace VrBattlegrounds.DevTools.StressTest
                                    note: $"убрано объектов: {removed}; " + SpawnNote());
                 yield return Phase("куклы: по карте", _config.phaseSeconds, measured: true, note: null);
             }
+        }
+
+        /// <summary>
+        /// Раскладка «арена»: одна фаза нагрузки — куклы на полу физической арены, корни закреплены.
+        /// Порядок фаз повторяет <see cref="StressTestPlan.Phases"/>.
+        /// </summary>
+        private IEnumerator RunArena()
+        {
+            if (_config.puppetCount <= 0) yield break;
+            SpawnPuppets(PuppetLayout.Arena, _config.puppetSkin);
+            yield return Phase(StressTestPlan.ArenaPhaseName + "~успокоение", _config.settleSeconds, measured: false,
+                               note: _placement.Length > 0 ? SpawnNote() + "; " + _placement : SpawnNote());
+            yield return Phase(StressTestPlan.ArenaPhaseName, _config.phaseSeconds, measured: true, note: null);
         }
 
         /// <summary>
@@ -329,7 +372,7 @@ namespace VrBattlegrounds.DevTools.StressTest
                 _recorder.WriteLine("=== итог прогона (сервер): " + reason + "\n" + _report.BuildResultText());
             }
 
-            LastRun = new StressTestRunRecord(RunDirectory, completed, reason, _phaseNumber);
+            LastRun = new StressTestRunRecord(RunDirectory, completed, reason, _phaseNumber, _placement);
 
             Send(new StressTestStatusMessage
             {
@@ -352,6 +395,8 @@ namespace VrBattlegrounds.DevTools.StressTest
             Rows,
             /// <summary>Кольцом 8–15 м вокруг игрока, лицом в случайную сторону.</summary>
             MapRing,
+            /// <summary>По полу физической арены, лицом в случайную сторону, корни закреплены.</summary>
+            Arena,
         }
 
         /// <summary>
@@ -371,6 +416,12 @@ namespace VrBattlegrounds.DevTools.StressTest
             }
 
             int count = Mathf.Max(0, _config.puppetCount);
+            List<StressTestLayout.ArenaSpot> spots = null;
+            if (layout == PuppetLayout.Arena)
+            {
+                spots = PlaceOnArena(count);
+                count = spots.Count;
+            }
             _currentSkins = JoinNames(_prefabs, puppetSkin, count);
 
             var rng = new System.Random(unchecked(System.Environment.TickCount * 31 + count));
@@ -382,7 +433,13 @@ namespace VrBattlegrounds.DevTools.StressTest
                 Vector3 position;
                 Quaternion rotation;
 
-                if (layout == PuppetLayout.MapRing)
+                if (layout == PuppetLayout.Arena)
+                {
+                    StressTestLayout.ArenaSpot spot = spots[i];
+                    position = new Vector3(spot.Position.x, ArenaFloorY(spot.Position), spot.Position.y);
+                    rotation = Quaternion.Euler(0f, spot.YawDeg, 0f);
+                }
+                else if (layout == PuppetLayout.MapRing)
                 {
                     StressTestLayout.RingPlacement(i, count, _config.mapMinRadius, _config.mapMaxRadius, ringPhase, rng,
                                                    out Vector3 offset, out float yaw);
@@ -408,7 +465,7 @@ namespace VrBattlegrounds.DevTools.StressTest
 
                 float delay = count > 1 ? Mathf.Lerp(0.1f, _config.maxDelaySeconds, (float)i / (count - 1)) : 0.1f;
                 StressPuppet puppet = go.AddComponent<StressPuppet>();
-                puppet.Initialize(delay, position, rotation);
+                puppet.Initialize(delay, position, rotation, fixedRoot: layout == PuppetLayout.Arena);
 
                 NetworkServer.Spawn(go);
                 _puppets.Add(puppet);
@@ -419,6 +476,133 @@ namespace VrBattlegrounds.DevTools.StressTest
             {
                 GameLog.Perf.Warning($"[StressTest] По карте: для {offMap} из {count} кукол не нашлось свободного пола — " +
                                      "стоят на высоте игрока в исходной точке кольца.");
+            }
+
+            // Отчёт выделенного сервера — фактическое число кукол на арене, а не запрошенное.
+            if (layout == PuppetLayout.Arena && _report != null) _report.puppetCount = _puppets.Count;
+        }
+
+        // ── Арена ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Места кукол на полу арены (<see cref="StressTestLayout.ArenaPlacement"/>): запретные зоны — препятствия
+        /// и станции арсенала арены плюс место игрока на старте; точка годна, если капсула роста человека там
+        /// свободна от геометрии сцены (декор, не размеченный препятствием). Итог — в <see cref="_placement"/> и лог.
+        /// </summary>
+        private List<StressTestLayout.ArenaSpot> PlaceOnArena(int count)
+        {
+            var exclusions = new List<Rect>(_arena.Exclusions);
+            // Игрок на старте: кукла вплотную к камере — не нагрузка лобби, а заслонённый кадр.
+            float half = _config.puppetSpacing;
+            exclusions.Add(new Rect(_startRootPosition.x - half, _startRootPosition.z - half, half * 2f, half * 2f));
+
+            var spots = new List<StressTestLayout.ArenaSpot>(count);
+            float floorY = _arena.FloorY;
+            int placed = StressTestLayout.ArenaPlacement(_arena.Floor, StressTestLayout.ArenaWallMargin, exclusions,
+                StressTestLayout.ArenaExclusionMargin, count, _config.puppetSpacing, StressTestLayout.ArenaDefaultSeed + count,
+                spots, p => IsBodySpaceFree(new Vector3(p.x, floorY, p.y)));
+
+            int shortfall = count - placed;
+            _placement = $"арена «{_arena.Name}»: расставлено кукол {placed} из {count}" +
+                         (shortfall > 0 ? $", не поместилось {shortfall}" : "");
+
+            Rect f = _arena.Floor;
+            string details = $"пол X {f.xMin:F2}..{f.xMax:F2}, Z {f.yMin:F2}..{f.yMax:F2}, высота {floorY:F2}; " +
+                             $"отступ от стен {StressTestLayout.ArenaWallMargin:F1} м, шаг кукол {_config.puppetSpacing:F1} м; " +
+                             $"запретных зон {exclusions.Count} (препятствий {_arena.ObstacleCount}, станций {_arena.StationCount}, игрок)";
+            if (_arena.Problems.Length > 0) details += $"; пропущены разметки: {_arena.Problems}";
+
+            if (shortfall > 0) GameLog.Perf.Warning($"[StressTest] {_placement} — свободного пола не хватило. {details}.");
+            else               GameLog.Perf.Info($"[StressTest] {_placement}. {details}.");
+            return spots;
+        }
+
+        /// <summary>
+        /// Высота пола под куклой: видимый пол сцены под точкой (не дальше <see cref="MaxFloorStep"/> от пола
+        /// арены), иначе — верх пола арены.
+        /// </summary>
+        private float ArenaFloorY(Vector2 xz) =>
+            TryFindFloor(new Vector3(xz.x, 0f, xz.y), _arena.FloorY, out float floorY) ? floorY : _arena.FloorY;
+
+        /// <summary>
+        /// Физическая арена загруженной карты (<see cref="PhysicalArenaDefinition"/>, зона level-design — только
+        /// чтение): прямоугольник пола, высота пола и запретные зоны — препятствия арены
+        /// (<see cref="PhysicalObstacleMarker"/>) и станции арсенала её сцены (поднятый корпус и место игрока у неё).
+        /// </summary>
+        private sealed class ArenaFloor
+        {
+            public string Name;
+            public Rect Floor;
+            public float FloorY;
+            public readonly List<Rect> Exclusions = new List<Rect>();
+            public int ObstacleCount;
+            public int StationCount;
+            /// <summary>Разметки, которые не прочитались (имя: причина), через «; »; пусто — все прочитаны.</summary>
+            public string Problems = string.Empty;
+
+            public static bool TryFind(out ArenaFloor arena, out string reason)
+            {
+                arena = null;
+                PhysicalArenaDefinition[] found = FindObjectsByType<PhysicalArenaDefinition>();
+                if (found.Length == 0)
+                {
+                    reason = "раскладка «арена»: в загруженной сцене нет физической арены (PhysicalArenaDefinition)";
+                    return false;
+                }
+                if (found.Length > 1)
+                {
+                    reason = $"раскладка «арена»: в загруженных сценах арен {found.Length} — какую мерить, неясно";
+                    return false;
+                }
+
+                PhysicalArenaDefinition definition = found[0];
+                if (!definition.Valid(out string invalid))
+                {
+                    reason = $"раскладка «арена»: арена «{definition.name}» не прошла проверку — {invalid}";
+                    return false;
+                }
+                if (!definition.TryFloorBounds(out Bounds floor))
+                {
+                    reason = $"раскладка «арена»: у арены «{definition.name}» нет габаритов пола";
+                    return false;
+                }
+
+                arena = new ArenaFloor
+                {
+                    Name   = $"{definition.gameObject.scene.name}/{definition.name}",
+                    Floor  = StressTestLayout.FloorRect(floor),
+                    FloorY = floor.max.y,
+                };
+
+                var problems = new List<string>();
+                foreach (PhysicalObstacleMarker marker in definition.GetComponentsInChildren<PhysicalObstacleMarker>(true))
+                {
+                    if (marker.TryBounds(definition, out Bounds bounds, out string why))
+                    {
+                        arena.Exclusions.Add(StressTestLayout.FloorRect(bounds));
+                        arena.ObstacleCount++;
+                    }
+                    else problems.Add($"{marker.name}: {why}");
+                }
+
+                foreach (ArsenalStationAnchor station in FindObjectsByType<ArsenalStationAnchor>())
+                {
+                    if (station.gameObject.scene != definition.gameObject.scene) continue;
+                    Bounds footprint = station.RaisedBoundsWorld;
+                    footprint.Encapsulate(station.StandingPosition);
+                    arena.Exclusions.Add(StressTestLayout.FloorRect(footprint));
+                    arena.StationCount++;
+                }
+
+                if (problems.Count > 0)
+                {
+                    arena.Problems = string.Join("; ", problems);
+                    GameLog.Perf.Warning($"[StressTest] Арена «{arena.Name}»: не прочитаны разметки препятствий — {arena.Problems}. " +
+                                         "Их место из раскладки не исключено; остаётся проверка капсулы роста по геометрии сцены.");
+                }
+
+                reason = null;
+                return true;
             }
         }
 

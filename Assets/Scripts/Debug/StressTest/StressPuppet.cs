@@ -27,6 +27,7 @@ namespace VrBattlegrounds.DevTools.StressTest
         private Transform _rightHand;
         private Vector3    _anchorPosition;
         private Quaternion _anchorRotation;
+        private bool       _fixedRoot;
         private string _leftPose;
         private string _rightPose;
         private float  _leftBlend  = -1f;
@@ -37,17 +38,27 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         public UxrAvatar Avatar => _avatar;
 
-        public void Initialize(float delay, Vector3 anchorPosition, Quaternion anchorRotation)
+        /// <summary>
+        /// Корень закреплён на якоре (раскладка «арена»): кукла повторяет голову, кисти и пальцы
+        /// игрока относительно своего корня, но не перемещение и поворот его корня — телепорт игрока
+        /// между точками обзора кукол не двигает.
+        /// </summary>
+        public bool FixedRoot => _fixedRoot;
+
+        /// <param name="fixedRoot">См. <see cref="FixedRoot"/>; false — корень повторяет смещение корня игрока.</param>
+        public void Initialize(float delay, Vector3 anchorPosition, Quaternion anchorRotation, bool fixedRoot = false)
         {
             Delay           = delay;
             _anchorPosition = anchorPosition;
             _anchorRotation = anchorRotation;
+            _fixedRoot      = fixedRoot;
             _avatar = GetComponent<UxrAvatar>();
         }
 
         /// <summary>
         /// Применяет снимок. Корень — якорь куклы, сдвинутый так же, как корень игрока
-        /// сдвинулся от старта прогона; голова и кисти — в координатах своего корня.
+        /// сдвинулся от старта прогона (при <see cref="FixedRoot"/> — сам якорь);
+        /// голова и кисти — в координатах своего корня.
         /// </summary>
         public void Apply(in AvatarPoseSample sample)
         {
@@ -59,8 +70,15 @@ namespace VrBattlegrounds.DevTools.StressTest
             if (_rightHand == null) _rightHand = _avatar.GetHandBone(UxrHandSide.Right);
 
             Transform root = _avatar.transform;
-            root.SetPositionAndRotation(_anchorPosition + _anchorRotation * sample.rootPosition,
-                                        _anchorRotation * sample.rootRotation);
+            if (_fixedRoot)
+            {
+                root.SetPositionAndRotation(_anchorPosition, _anchorRotation);
+            }
+            else
+            {
+                root.SetPositionAndRotation(_anchorPosition + _anchorRotation * sample.rootPosition,
+                                            _anchorRotation * sample.rootRotation);
+            }
 
             Place(root, _head,      sample.headPosition,      sample.headRotation);
             Place(root, _leftHand,  sample.leftHandPosition,  sample.leftHandRotation);

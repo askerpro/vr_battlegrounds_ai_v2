@@ -88,5 +88,67 @@ namespace VrBattlegrounds.Tests.DevTools
             StringAssert.Contains("Фаз 8", text);
             StringAssert.Contains("2 мин 57 с", text);
         }
+
+        // ── Раскладка «арена» ───────────────────────────────────────────────
+
+        private static StressTestConfig ArenaConfig(string mode)
+        {
+            var args = new System.Collections.Generic.Dictionary<string, string> { ["layout"] = "arena" };
+            if (mode != null) args["mode"] = mode;
+            Assert.IsNull(StressTestArgs.Parse(args, 3, out _, out StressTestConfig config));
+            return config;
+        }
+
+        [Test]
+        public void Arena_BaseThenSingleArenaPair()
+        {
+            StressTestConfig config = ArenaConfig("map-only");
+            Assert.IsTrue(config.arenaLayout);
+            Assert.AreEqual(0, config.clutterCount);
+            CollectionAssert.AreEqual(new[]
+            {
+                "разгон", "база",
+                StressTestPlan.ArenaPhaseName + "~успокоение", StressTestPlan.ArenaPhaseName,
+            }, Names(config, 3));
+        }
+
+        [Test]
+        public void Arena_NormalMode_SamePlan()
+        {
+            CollectionAssert.AreEqual(Names(ArenaConfig("map-only"), 3), Names(ArenaConfig(null), 3));
+        }
+
+        [Test]
+        public void Arena_NoPuppets_OnlyBase()
+        {
+            StressTestConfig config = ArenaConfig("map-only");
+            config.puppetCount = 0;
+            CollectionAssert.AreEqual(new[] { "разгон", "база" }, Names(config, 3));
+        }
+
+        [Test]
+        public void Arena_SurvivesNetworkMessage()
+        {
+            StressTestConfig back = StressTestRequestMessage.Start(ArenaConfig("map-only")).ToConfig();
+            Assert.IsTrue(back.arenaLayout);
+        }
+
+        [TestCase("per-skin", null)]
+        [TestCase("map-only", "5")]
+        public void Arena_IncompatibleArgs_Refused(string mode, string clutter)
+        {
+            var args = new System.Collections.Generic.Dictionary<string, string> { ["layout"] = "arena", ["mode"] = mode };
+            if (clutter != null) args["clutter"] = clutter;
+            Assert.IsNotNull(StressTestArgs.Parse(args, 3, out _, out StressTestConfig config));
+            Assert.IsNull(config);
+        }
+
+        [Test]
+        public void Arena_UnknownLayout_Refused_DescribeShowsArena()
+        {
+            var args = new System.Collections.Generic.Dictionary<string, string> { ["layout"] = "rows" };
+            Assert.IsNotNull(StressTestArgs.Parse(args, 3, out _, out _));
+            StringAssert.Contains("layout=arena", StressTestArgs.Describe(PerfRunMode.MapOnly, ArenaConfig("map-only")));
+        }
     }
 }

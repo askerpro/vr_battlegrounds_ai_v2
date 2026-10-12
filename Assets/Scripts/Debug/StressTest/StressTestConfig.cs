@@ -70,5 +70,13 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         /// <summary>Кольцо «по карте»: дальний радиус, м.</summary>
         public float mapMaxRadius = 15f;
+
+        /// <summary>
+        /// Раскладка «арена»: после «базы» одна фаза нагрузки — куклы на полу физической арены карты
+        /// (<c>PhysicalArenaDefinition</c>) с отступом от стен, препятствий и станций арсенала, лицом в разные
+        /// стороны; корни кукол закреплены (<see cref="StressPuppet.FixedRoot"/>). Рядов, хлама и кольца нет;
+        /// с прогоном по скинам несовместима. Нет арены в сцене — сервер отказывает в старте.
+        /// </summary>
+        public bool arenaLayout;
     }
 }

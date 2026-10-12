@@ -46,6 +46,9 @@ namespace VrBattlegrounds.DevTools.StressTest
         /// <summary>Фазы короткого прогона, секунды: проверить, что всё работает, а не мерить.</summary>
         public const float ShortPhaseSeconds = 10f;
 
+        /// <summary>Измеряемая фаза раскладки «арена» (<see cref="StressTestConfig.arenaLayout"/>).</summary>
+        public const string ArenaPhaseName = "куклы: арена";
+
         public static StressTestConfig BuildConfig(PerfRunMode mode, int puppetSkin, int puppetCount)
         {
             var config = new StressTestConfig
@@ -78,6 +81,13 @@ namespace VrBattlegrounds.DevTools.StressTest
             if (config.perSkinPhases)
             {
                 for (int i = 0; i < skinCount; i++) AddPair(phases, "куклы: скин " + (i + 1), config);
+                return phases;
+            }
+
+            // Раскладка «арена» заменяет нагрузочные фазы любого режима, кроме прогона по скинам.
+            if (config.arenaLayout)
+            {
+                if (config.puppetCount > 0) AddPair(phases, ArenaPhaseName, config);
                 return phases;
             }
 

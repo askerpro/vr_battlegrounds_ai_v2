@@ -32,6 +32,8 @@ review; optimisation in a foreign zone is done by its owner from your spec/revie
   not set the rate; 72 vs 90 Hz undecided.
 - Spike: frame > budget x1.5 and > level x2. Log line: change >= 1 ms and >= 15 %.
 - Headset request: CPU 4 / GPU 2 (repeat <= once per 10 s), FFR 0.75. Prod load: player + 9 remote, 40 items.
+- Scene Lobby (user, 2026-10-13): phase «база» (no puppets), worst view, Test build, Quest 3, FFR 0.75, GPU 2 —
+  `ovr_gpu` p50 <= 7 ms. Guides (not yet budgets): setpass <= ~40, visible tris <= ~150k.
 - No budget yet for GC, draw calls/SetPass/triangles, memory, network, server frame (backlog `budget-baseline`).
 - Last measurement (journal 2026-09-29): CPU-bound, 9 puppets p50 15.5 ms > 13.9.
 

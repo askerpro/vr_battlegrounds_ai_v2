@@ -1,6 +1,6 @@
 # Стресс-тест на шлеме без рук: сценарий perf-stress, арена, обход точек обзора
 
-Обновлено: 2026-10-12 (вечер). Владелец: эксперт `performance`. Worktree: `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`,
+Обновлено: 2026-10-13. Владелец: эксперт `performance`. Worktree: `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`,
 ветка `claude/performance`. Начата по решению пользователя («начинай свою часть»).
 
 ## Цель и границы
@@ -19,9 +19,8 @@
 |---|---|---|
 | `setup` | документы задачи, задача в `expert.json` (вливается сразу) | merged `ec711f2df` |
 | `scenario` | сценарий `perf-stress` без рук: обе роли, параметры `-e2eArg`, артефакты | merged `fa83395aa` |
-| `controller-free-launch` | Test-сборки Quest стартуют без пробуждения контроллеров: рук в манифесте (Test only) | шлем GREEN без контроллеров, принят пользователем; EditMode 45/45 |
-| `prod-vs-test` | perf-stress на Prod-сборке против Test (решение пользователя 2026-10-13); нужен маршрут Prod у launch-infra | planned |
-| `arena-layout` | раскладка кукол «внутри арены», корни кукол не следуют за игроком | planned |
+| `controller-free-launch` | Test-сборки Quest стартуют без пробуждения контроллеров: рук в манифесте (Test only) | merged `3cabcc1ab` |
+| `arena-layout` | раскладка кукол «внутри арены», корни кукол не следуют за игроком | шлем GREEN 14/14, 9/9 кукол; EditMode 75/75; принят пользователем по анализу |
 | `view-tour` | обход точек обзора, метрики по точкам; после этапа `e2e-views` launch-infra | planned |
 | `docs` | раздел в `Docs/perf-stress-test.md`; порядок с legs-ik/`quest-perf` (тот же файл) — согласовать | planned |
 
@@ -34,6 +33,10 @@
 
 ## Сделано
 
+- `arena-layout`: куклы по полу арены Lobby (9/9, 7 запретных зон, отступ 1 м), корни закреплены;
+  `Tools/e2e/results/20261013-185319-quest-perf-stress`; визуально в шлеме не проверялось — принято по прогону и логу.
+  Инструмент разбивки GPU — `Tools/Perf/quest_gpu_breakdown.py`.
+
 - `controller-free-launch`: Test-APK (ревизия 5d614df4de60) — `uses-feature handtracking required=false` + разрешение
   (aapt); Prod-APK — без записей рук; perf-stress GREEN без пробуждения контроллеров
   (`Tools/e2e/results/20261013-011525-quest-perf-stress`), система: «Is hands or controller». Prod APK 355 с против Test 150 с.
@@ -43,4 +46,4 @@
 ## Дальше
 
 - `controller-free-launch` (решение пользователя 2026-10-12): проект — Details.md «Этап `controller-free-launch`».
-- `arena-layout`, `view-tour`, `docs`.
+- `view-tour` (следующий), затем `docs`. `prod-vs-test` снят: бюджеты — по Test-сборке (решение пользователя 2026-10-13).

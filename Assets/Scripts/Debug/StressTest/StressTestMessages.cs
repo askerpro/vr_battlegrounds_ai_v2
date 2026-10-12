@@ -18,6 +18,7 @@ namespace VrBattlegrounds.DevTools.StressTest
         public bool  perSkinPhases;
         public bool  mapSpreadPhase;
         public bool  mapOnly;
+        public bool  arenaLayout;
 
         public static StressTestRequestMessage Start(StressTestConfig config) => new StressTestRequestMessage
         {
@@ -31,6 +32,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             perSkinPhases  = config.perSkinPhases,
             mapSpreadPhase = config.mapSpreadPhase,
             mapOnly        = config.mapOnly,
+            arenaLayout    = config.arenaLayout,
         };
 
         public StressTestConfig ToConfig() => new StressTestConfig
@@ -44,6 +46,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             perSkinPhases  = perSkinPhases,
             mapSpreadPhase = mapSpreadPhase,
             mapOnly        = mapOnly,
+            arenaLayout    = arenaLayout,
         };
     }
 

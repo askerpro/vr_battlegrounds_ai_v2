@@ -23,8 +23,13 @@ namespace VrBattlegrounds.DevTools.StressTest
         public const string KeyPhase   = "phase_s";
         public const string KeyWarmup  = "warmup_s";
         public const string KeySkin    = "skin";
+        public const string KeyLayout  = "layout";
 
-        private static readonly string[] KnownKeys = { KeyMode, KeyPuppets, KeyClutter, KeyPhase, KeyWarmup, KeySkin };
+        /// <summary>Значения <c>layout</c>: раскладка режима (по умолчанию) и куклы на полу арены.</summary>
+        public const string LayoutDefault = "default";
+        public const string LayoutArena   = "arena";
+
+        private static readonly string[] KnownKeys = { KeyMode, KeyPuppets, KeyClutter, KeyPhase, KeyWarmup, KeySkin, KeyLayout };
 
         private static readonly IReadOnlyDictionary<string, string> NoArgs = new Dictionary<string, string>();
 
@@ -61,6 +66,14 @@ namespace VrBattlegrounds.DevTools.StressTest
             if (args.TryGetValue(KeyMode, out string modeText) && !TryParseMode(modeText, out mode))
                 return $"{KeyMode}=«{modeText}»: допустимо normal, short, map-only, per-skin";
 
+            bool arena = false;
+            if (args.TryGetValue(KeyLayout, out string layoutText))
+            {
+                if (layoutText == LayoutArena) arena = true;
+                else if (layoutText != LayoutDefault)
+                    return $"{KeyLayout}=«{layoutText}»: допустимо {LayoutDefault}, {LayoutArena}";
+            }
+
             var defaults = new StressTestConfig();
             int   puppets = defaults.puppetCount;
             int   clutter = defaults.clutterCount;
@@ -73,7 +86,8 @@ namespace VrBattlegrounds.DevTools.StressTest
                         ?? ReadPositive(args, KeyPhase, ref phase)
                         ?? ReadPositive(args, KeyWarmup, ref warmup)
                         ?? ReadInt(args, KeySkin, StressTestLayout.MixedSkins, int.MaxValue, ref skin)
-                        ?? CheckApplicable(args, mode);
+                        ?? CheckApplicable(args, mode)
+                        ?? (arena ? CheckArenaApplicable(args, mode) : null);
             if (error != null) return error;
 
             if (skin != StressTestLayout.MixedSkins && skin >= skinCount)
@@ -89,6 +103,12 @@ namespace VrBattlegrounds.DevTools.StressTest
             config.clutterCount = clutter;
             if (args.ContainsKey(KeyPhase))  config.phaseSeconds  = phase;
             if (args.ContainsKey(KeyWarmup)) config.warmupSeconds = warmup;
+            if (arena)
+            {
+                // Хлама в раскладке «арена» нет — 0, чтобы условия прогона в отчёте не врали.
+                config.arenaLayout  = true;
+                config.clutterCount = 0;
+            }
             return null;
         }
 
@@ -106,14 +126,18 @@ namespace VrBattlegrounds.DevTools.StressTest
                 planSeconds, reserveSeconds, need, availableSeconds);
         }
 
-        /// <summary>Условия прогона одной строкой: <c>mode=normal puppets=9 clutter=40 phase_s=40 warmup_s=5 skin=-1</c>.</summary>
+        /// <summary>
+        /// Условия прогона одной строкой: <c>mode=normal puppets=9 clutter=40 phase_s=40 warmup_s=5 skin=-1</c>;
+        /// раскладка «арена» дописывает <c>layout=arena</c>.
+        /// </summary>
         public static string Describe(PerfRunMode mode, StressTestConfig config)
         {
             if (config == null) return $"{KeyMode}={ModeName(mode)}";
-            return string.Format(CultureInfo.InvariantCulture, "{0}={1} {2}={3} {4}={5} {6}={7:0.##} {8}={9:0.##} {10}={11}",
+            string text = string.Format(CultureInfo.InvariantCulture, "{0}={1} {2}={3} {4}={5} {6}={7:0.##} {8}={9:0.##} {10}={11}",
                 KeyMode, ModeName(mode), KeyPuppets, config.puppetCount, KeyClutter, config.clutterCount,
                 KeyPhase, config.phaseSeconds, KeyWarmup, config.warmupSeconds,
                 KeySkin, mode == PerfRunMode.PerSkin ? "all" : config.puppetSkin.ToString(CultureInfo.InvariantCulture));
+            return config.arenaLayout ? $"{text} {KeyLayout}={LayoutArena}" : text;
         }
 
         private static bool TryParseMode(string text, out PerfRunMode mode)
@@ -142,6 +166,19 @@ namespace VrBattlegrounds.DevTools.StressTest
                 return string.Format(CultureInfo.InvariantCulture,
                     "{0} и {1} не действуют в {2}=short: фазы по {3:0} с; другая длительность — {2}=normal {0}=N",
                     KeyPhase, KeyWarmup, KeyMode, StressTestPlan.ShortPhaseSeconds);
+            return null;
+        }
+
+        /// <summary>
+        /// Раскладка «арена» — одна фаза нагрузки вместо фаз режима: несовместима с прогоном по скинам
+        /// (там своя расстановка на каждый скин) и с хламом (его в этой раскладке нет).
+        /// </summary>
+        private static string CheckArenaApplicable(IReadOnlyDictionary<string, string> args, PerfRunMode mode)
+        {
+            if (mode == PerfRunMode.PerSkin)
+                return $"{KeyLayout}={LayoutArena} не действует в {KeyMode}=per-skin: прогон по скинам ставит кукол рядами";
+            if (args.ContainsKey(KeyClutter))
+                return $"{KeyClutter} не действует в {KeyLayout}={LayoutArena}: хлама в этой раскладке нет";
             return null;
         }
 

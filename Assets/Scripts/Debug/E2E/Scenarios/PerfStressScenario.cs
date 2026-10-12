@@ -42,6 +42,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// </para>
     ///
     /// <para>
+    /// Раскладка <c>layout=arena</c> (<see cref="StressTestArgs"/>) — куклы на полу физической арены карты; нет арены —
+    /// сервер отказывает в старте (проверка «старт принят сервером»). Сколько кукол поместилось — в summary сервера.
+    /// </para>
+    ///
+    /// <para>
     /// FFR, уровни CPU/GPU и настройки шлема сценарий не трогает. Поза лежащего шлема статична — это условие прогона
     /// (<c>pose=static</c> в summary вердикта).
     /// </para>
@@ -504,6 +509,14 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             {
                 bool completed = RunCompleted(run, plannedPhases, out string detail);
                 result.Set(CheckServerCompleted, completed, detail);
+
+                // Раскладка «арена»: фактическое число кукол и недостача — в условия прогона. Не проверка:
+                // бюджета на недостачу нет, её оценивает performance по отчёту.
+                if (run.Placement.Length > 0)
+                {
+                    conditions += "; " + run.Placement;
+                    GameLog.Perf.Info($"[E2E perf-stress] Сервер: {run.Placement}.");
+                }
             }
 
             bool written = ReportWritten(runDirectory, out string reportDetail);

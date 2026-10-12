@@ -1,4 +1,4 @@
-Обновлено 2026-10-12. Кандидаты вне хаба; порядок — приоритет.
+Обновлено 2026-10-13. Кандидаты вне хаба; порядок — приоритет.
 
 1. `quest3-target` — `Assets/XR/Settings/OculusSettings.asset`: `TargetQuest2: 1`, `TargetQuest3/3S/Pro: 0`; в собранном Test APK (ревизия d51aa3a9ecf7) в манифесте нет `com.oculus.supportedDevices` и VR-категории. Выяснить, не идёт ли Quest 3 в режиме совместимости Quest 2 (разрешение глаз, частота, доступные уровни CPU/GPU) — это меняет все замеры; сверить с release-сборкой; `Assets/XR/Settings` ни у кого не в owns — решение пользователя 2026-10-13: пока НЕ включать (владелец `Assets/XR/Settings` не назначен); вернуться перед релизом/`budget-baseline` — находка launch-infra 4873, проверка APK 2026-10-12.
 2. `budget-baseline` — согласовать бюджеты: частота 72/90 Гц, кадр по подсистемам, GC/кадр, draw calls/SetPass/треугольники, память (`gfx_mb`), кадр выделенного сервера, сеть; записать в `Docs/perf-stress-test.md` (сейчас есть только кадр) — journal 2026-09-29.
@@ -9,3 +9,4 @@
 7. `projectile-cost-review` — методика и ревью замера T-24 на Quest (`UxrWeaponManager.UpdateManager`, 2/4 стрелка) у weapon-system — `Docs/combat-networking.md` «Что измерить на Quest — и как».
 8. `default-pipeline` — `ProjectSettings/GraphicsSettings.asset` ссылается на сэмпловый URP-Balanced из ThirdParty; нужен ли свой default — journal 2026-09-28 quest-graphics-baseline.
 9. `ffr-intermediate-texture` — у `Default_Forward_Renderer` Intermediate Texture = Always; не теряет ли FFR основные проходы — `Docs/perf-stress-test.md` «Дальше».
+10. `hand-tracking-permission-name` — Horizon OS: `com.oculus.permission.HAND_TRACKING` устарело, советует `horizonos.permission.HAND_TRACKING` (logcat прогона 2026-10-13); добавить новое имя в `QuestControllerFreeManifest` (Test) и проверку валидатора, проверить запуск без контроллеров на шлеме — зона сборки launch-infra.

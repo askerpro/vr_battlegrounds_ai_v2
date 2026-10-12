@@ -20,15 +20,23 @@ namespace VrBattlegrounds.DevTools.StressTest
         /// <summary>Сколько фаз открыто за прогон, включая разгон и успокоения.</summary>
         public int PhasesSeen { get; }
 
-        public StressTestRunRecord(string directory, bool completed, string endReason, int phasesSeen)
+        /// <summary>
+        /// Итог раскладки кукол, если сервер её подсчитывал (раскладка «арена»: сколько расставлено из
+        /// запрошенных и недостача); пусто — не подсчитывалась.
+        /// </summary>
+        public string Placement { get; }
+
+        public StressTestRunRecord(string directory, bool completed, string endReason, int phasesSeen, string placement = null)
         {
             Directory  = directory ?? string.Empty;
             Completed  = completed;
             EndReason  = endReason ?? string.Empty;
             PhasesSeen = phasesSeen;
+            Placement  = placement ?? string.Empty;
         }
 
         public override string ToString() =>
-            $"{(Completed ? "полный" : "прерван")}: {EndReason}; фаз открыто {PhasesSeen}; каталог «{Directory}»";
+            $"{(Completed ? "полный" : "прерван")}: {EndReason}; фаз открыто {PhasesSeen}; каталог «{Directory}»" +
+            (Placement.Length > 0 ? $"; {Placement}" : "");
     }
 }

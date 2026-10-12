@@ -32,11 +32,8 @@
       "tasks/perf-stress-scenario/**",
       "experts/performance/**"
     ], "after": [{"task": "perf-stress-scenario", "stage": "scenario", "state": "merged"}], "needs": [{"contract": "quest-device-run", "revision": 5, "aspects": ["launch", "device-prep"], "readiness": "agreed"}]},
-    {"id": "prod-vs-test", "writes": [
-      "tasks/perf-stress-scenario/**",
-      "experts/performance/**"
-    ], "after": [{"task": "perf-stress-scenario", "stage": "controller-free-launch", "state": "merged"}], "needs": []},
     {"id": "arena-layout", "writes": [
+      "Tools/Perf/**",
       "Assets/Scripts/Debug/StressTest/**",
       "Assets/Scripts/Debug/E2E/Scenarios/PerfStressScenario.cs",
       "Assets/Tests/EditMode/DevTools/StressTestLayoutTests.cs",

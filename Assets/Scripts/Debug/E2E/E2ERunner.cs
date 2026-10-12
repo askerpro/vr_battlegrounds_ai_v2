@@ -304,6 +304,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new MapRunRelayBarrierScenario();
             yield return new MapRunRelayBarrierScenario(startupRoute: true);
             yield return new DeviceSmokeScenario();
+            yield return new PerfStressScenario();
         }
 
         private static IE2EScenario Resolve(string name)

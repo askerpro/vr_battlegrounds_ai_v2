@@ -52,3 +52,13 @@ lobby-decoration 4449 (переслан launch-infra 4453), код `Assets/Scrip
 спавна на каждой точке). Клиент на старте каждой «~успокоение» переходит на её точку; в отчёт фазы — id точки и
 фактическая поза камеры. Метрики по точке — фазы отчёта (p50/p95/max кадра, ovr_gpu, ovr_cpu), отдельного
 views.json нет: один источник. Высота глаз = трекинг лежащего шлема, не 1,6 м — условие в отчёте.
+
+API хелпера (launch-infra 4718, файл `Assets/Scripts/Debug/E2E/E2EViews.cs`, этап `e2e-views`; точная сигнатура —
+по файлу после вливания): `E2EViews.TryLoadFromContext(ctx, out views, out error)` — точки из `-e2eArg views=<путь>`
+(дирижёр `-ViewsFile` кладёт копию обеим сторонам); `E2EViews.GoTo(point, outcome, settleFrames=3)` — только
+`yield return null`; `E2EViewOutcome`: Succeeded, Error, CameraPosition, Yaw, Pitch, Roll, EyeHeight, DeviationXZ,
+DeviationYaw, FloorDeviation.
+
+Условие замера GPU (4718): лежащий шлем даёт камеру на 0,80 м и тангаж +32° вниз — для GPU-замера лобби шлем ставить
+на подставку ровно на высоте глаз, взгляд горизонтально. Фактические высота и тангаж из outcome — в отчёт фазы;
+прогон с тангажом далеко от 0° для сравнения сцен не годится.

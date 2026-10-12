@@ -51,6 +51,15 @@ namespace VrBattlegrounds.DevTools.StressTest
     {
         public static StressTestServer Current { get; private set; }
 
+        /// <summary>
+        /// Итог последнего прогона на этой машине; null — прогонов с запуска не было. Пишет только
+        /// <see cref="Finish"/>; читают наблюдатели (сценарий e2e <c>perf-stress</c>).
+        /// </summary>
+        public static StressTestRunRecord LastRun { get; private set; }
+
+        /// <summary>Каталог отчёта этого прогона; пусто на хосте — там свой лог только у клиентской половины.</summary>
+        public string RunDirectory => _report != null ? _report.Directory : string.Empty;
+
         private NetworkConnectionToClient _initiator;
         private PlayerSession _session;
         private StressTestConfig _config;
@@ -66,6 +75,7 @@ namespace VrBattlegrounds.DevTools.StressTest
         private Quaternion _startRootRotation;
         private bool _finished;
         private string _abortReason = "прерван";
+        private int _phaseNumber;   // сколько фаз открыто — для LastRun
 
         // ── Запросы ─────────────────────────────────────────────────────────
 
@@ -283,6 +293,7 @@ namespace VrBattlegrounds.DevTools.StressTest
                 if (note != null) PerfEvents.Note(note);
             }
 
+            _phaseNumber++;
             Send(new StressTestStatusMessage
             {
                 kind         = StressTestStatusKind.Phase,
@@ -317,6 +328,8 @@ namespace VrBattlegrounds.DevTools.StressTest
                 _report.Save();
                 _recorder.WriteLine("=== итог прогона (сервер): " + reason + "\n" + _report.BuildResultText());
             }
+
+            LastRun = new StressTestRunRecord(RunDirectory, completed, reason, _phaseNumber);
 
             Send(new StressTestStatusMessage
             {

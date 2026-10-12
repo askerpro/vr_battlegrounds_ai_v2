@@ -19,7 +19,6 @@
       "Assets/Tests/EditMode/DevTools/StressTestPlanTests.cs",
       "Assets/Tests/EditMode/DevTools/PerfStressScenarioArgsTests.cs",
       "Assets/Tests/EditMode/DevTools/PerfStressScenarioArgsTests.cs.meta",
-      "Docs/perf-stress-test.md",
       "tasks/perf-stress-scenario/**",
       "experts/performance/**"
     ], "after": [{"task": "perf-stress-scenario", "stage": "setup", "state": "merged"}], "needs": [{"contract": "quest-device-run", "revision": 3, "aspects": ["scenario-args", "result", "artifacts", "lifecycle"], "readiness": "agreed"}]},
@@ -28,7 +27,6 @@
       "Assets/Scripts/Debug/E2E/Scenarios/PerfStressScenario.cs",
       "Assets/Tests/EditMode/DevTools/StressTestLayoutTests.cs",
       "Assets/Tests/EditMode/DevTools/StressTestPlanTests.cs",
-      "Docs/perf-stress-test.md",
       "tasks/perf-stress-scenario/**",
       "experts/performance/**"
     ], "after": [{"task": "perf-stress-scenario", "stage": "scenario", "state": "merged"}], "needs": []},
@@ -37,9 +35,13 @@
       "Assets/Scripts/Debug/E2E/Scenarios/PerfStressScenario.cs",
       "Assets/Tests/EditMode/DevTools/StressTestPlanTests.cs",
       "Assets/Tests/EditMode/DevTools/PerfStressScenarioArgsTests.cs",
+      "tasks/perf-stress-scenario/**",
+      "experts/performance/**"
+    ], "after": [{"task": "perf-stress-scenario", "stage": "arena-layout", "state": "merged"}], "needs": []},
+    {"id": "docs", "writes": [
       "Docs/perf-stress-test.md",
       "tasks/perf-stress-scenario/**",
       "experts/performance/**"
-    ], "after": [{"task": "perf-stress-scenario", "stage": "arena-layout", "state": "merged"}], "needs": []}
+    ], "after": [{"task": "perf-stress-scenario", "stage": "view-tour", "state": "merged"}], "needs": []}
   ]
 }

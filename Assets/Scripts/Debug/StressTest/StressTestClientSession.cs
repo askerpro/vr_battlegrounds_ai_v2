@@ -37,6 +37,18 @@ namespace VrBattlegrounds.DevTools.StressTest
         /// <summary>Последнее слово сервера: отказ в старте или итог прогона.</summary>
         public static string LastServerText { get; private set; } = string.Empty;
 
+        /// <summary>
+        /// Сколько отказов в старте пришло от сервера с запуска процесса. Наблюдатель (сценарий e2e) отличает
+        /// по нему новый отказ от старого текста <see cref="LastServerText"/>.
+        /// </summary>
+        public static int RejectionCount { get; private set; }
+
+        /// <summary>Итог последнего прогона на этой машине; null — прогонов с запуска не было. Пишет только <see cref="Finish"/>.</summary>
+        public static StressTestRunRecord LastRun { get; private set; }
+
+        /// <summary>Каталог отчёта этого прогона (<see cref="PerfRunReport.Directory"/>).</summary>
+        public string RunDirectory => _report != null ? _report.Directory : string.Empty;
+
         private PerfFrameRecorder _recorder;
         private PerfRunReport _report;
         private bool   _phaseOpen;
@@ -74,6 +86,7 @@ namespace VrBattlegrounds.DevTools.StressTest
                 case StressTestStatusKind.Rejected:
                     GameLog.Perf.Warning($"[StressTest] Сервер отказал: {msg.text}.");
                     LastServerText = "отказ: " + msg.text;
+                    RejectionCount++;
                     PerfOverlay.Show("Стресс-тест не запущен:\n" + msg.text, 6f);
                     break;
 
@@ -197,6 +210,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             string result = _report.BuildResultText();
             _recorder.WriteLine("=== итог прогона: " + reason + "\n" + result);
             LastServerText = completed ? "прогон завершён: " + reason : "прогон прерван: " + reason;
+            LastRun = new StressTestRunRecord(_report.Directory, completed, reason, _phaseNumber);
             PerfOverlay.Show($"Стресс-тест {(completed ? "завершён" : "прерван: " + reason)}\n{result}\nЛог: perf/{_report.startedAt}", 30f);
 
             Destroy(gameObject);

@@ -30,8 +30,8 @@
       "after": [
         {
           "task": "death-body-defer",
-          "stage": "deferred-body",
-          "state": "verified"
+          "stage": "death-equipment-drop",
+          "state": "merged"
         }
       ],
       "needs": []

@@ -278,6 +278,7 @@ MonoBehaviour:
   - {fileID: 7216203593504186662, guid: ccc6dfdf9762a7c4899e851730650ff3, type: 3}
   - {fileID: 8859971145314977072, guid: f23541848a356704c91ef319b42d5a00, type: 3}
   - {fileID: 3977005126615661593, guid: d7dcf2f69bb944c8ba65f34db4af7ec8, type: 3}
+  - {fileID: 3977005126615661593, guid: 2aa0ab6714e2413f9d829637b62df0c0, type: 3}
   exceptionsDisconnect: 1
   snapshotSettings:
     bufferTimeMultiplier: 2
@@ -547,10 +548,6 @@ MonoBehaviour:
   _realToVirtualOffset: {x: 0, y: 0, z: 0}
   _realToVirtualRotation: {x: 0, y: 0, z: 0, w: 1}
   _realToVirtualScale: 1
-  _heightOffset: 0
-  _accumulatedHeightOffset: 0
-  _accumulatedScaleMultiplier: 1
-  _preserveAvatarPositionAcrossScenes: 1
 --- !u!114 &9171964167861690565
 MonoBehaviour:
   m_ObjectHideFlags: 0

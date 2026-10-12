@@ -29,7 +29,7 @@
 | Этап | Состояние |
 |---|---|
 | `task-setup` | документы задачи, `expert.json`, журнал |
-| `frame-stack` | planned: патч SDK UltimateXR 74 (зарезервирован), ревью `UxrManager` у avatar-ik, Unity-проверки, приёмка пользователем |
+| `frame-stack` | патч SDK 74: ревью avatar-ik одобрено (4714), Unity — тикет 479 зелёный; ярус C не выполнен |
 | `regression-tests` | planned: после приёмки — тесты утечки и чужого кадра |
 
 ## Проверки

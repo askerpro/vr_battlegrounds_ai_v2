@@ -507,6 +507,36 @@ MEF 0,12→0,11 — разрыв сохраняется, вывод 2026-10-04 �
 правила в инструменте (тип хвата из роли точки: основная/вторая/помпа/деталь/ручка),
 подсказки — дельта сгиба по пальцу к медиане SDK без выхода за глубину, сдвиг кисти.
 
+### contact-metrics фаза 2b — грубые нарушения, лист ревью, предпросмотр правки, 2026-10-12
+
+Код в `HandPoseReview/**`: `HandPoseGripRules.cs` (тип хвата по роли точки/ограничениям grabbable,
+override `GripType`; severity gross ≥10мм / miss / ладонь вне предмета, notable 5–10мм; n≤4 —
+`low_confidence`; вердикты в `Findings`), `Calibration/contact-bands-v1.json` (полосы из
+calib-fbb5bd5b-01), `HandPoseBendSolver.cs` (подсказка curl к P50 полосы: зазор — сгиб,
+проникновение — разгиб, предел по глубине), `HandPoseReviewSheet.cs` (коллаж ладонь/от глаз/большой
+палец/тыл, мм и severity по пальцам), `HandPoseEditPreview.cs` (`Run`/`RunJson`: правка curl/сдвиг/
+поворот → временная копия → переизмерение → лист «до/после»; хеш подтверждает, что поза/префаб не
+изменены), схема отчёта4. Видимость дефекта не автоматизирована (решение пользователя).
+Проверки: worker464/470/476/484 (последняя — вход177e9ba0, база ec711f2d, result bc25e43f, finish
+accepted, paths=[]); EditMode **65/65**; авто-тип **82/82** на калибровке (правило подогнано под SDK-
+набор, ручки планшета проекта не проверялись).
+
+| Кейс | Итог | Подсказка → итог после |
+|---|---|---|
+| SDK Cyborg Gun, Machinegun p1, BigHands Battery, LockRotation | ok | — |
+| MEF Scar p0 R | notable gap | curl T+38 M/R/L+12 → ok |
+| MEF Scar p0 L | gross miss | сгиб без разгиба → ok |
+| MEF MP5K p0 R | gross gap | → notable (M упёрся в глубину) |
+| MEF AK105 p0 R | notable penetration | разгиб M −9°: −11,9→+0,3мм → ok |
+| MEF AR15 p1 R | gross miss | все пальцы ≤3мм от цели → ok |
+| MEF AR15_Magazine p0 R | gross miss | → notable |
+| MEF MKR9 p0 L | gross miss | без изменений — кисть не на рукояти, нужен сдвиг кисти |
+
+Листы ревью: `reports/mef-grip-audit/rules-364fcb65-01/cases/*/review-*.png`. Подсказка — стартовая
+точка для LLM/человека, не исправление: проникновение проксимальных фаланг не устраняет, сдвиг
+кисти вдоль рукояти не считает. Старые драйверы calib/audit ищут `FitRasterLabels.Text`
+отражением — после новой перегрузки поиск неоднозначен.
+
 ### Прежнее исследование Hand Pose Fit (2026-10-04…07) — сверка 2026-10-11
 
 Отчёты вне Git в основном checkout: `F:/UnityProjects/Vr_Battlegrounds_ai/Docs/tasks/report/hand-pose-fit-2026-10-05/`

@@ -214,6 +214,40 @@
       ]
     },
     {
+      "id": "pilot-split",
+      "writes": [
+        "Assets/Scripts/Bots/**",
+        "Assets/Scripts/Debug/BotCombatStand/**",
+        "Assets/Tests/EditMode/Bots/**",
+        "tasks/bots-fix/**"
+      ],
+      "after": [
+        {
+          "task": "bots-fix",
+          "stage": "clip-cutover",
+          "state": "accepted"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "script-brain",
+      "writes": [
+        "Assets/Scripts/Bots/**",
+        "Assets/Scripts/Debug/BotCombatStand/**",
+        "Assets/Tests/EditMode/Bots/**",
+        "tasks/bots-fix/**"
+      ],
+      "after": [
+        {
+          "task": "bots-fix",
+          "stage": "pilot-split",
+          "state": "accepted"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "pf-quest",
       "writes": [
         "tasks/bots-fix/**",
@@ -222,7 +256,7 @@
       "after": [
         {
           "task": "bots-fix",
-          "stage": "clip-cutover",
+          "stage": "script-brain",
           "state": "accepted"
         }
       ],

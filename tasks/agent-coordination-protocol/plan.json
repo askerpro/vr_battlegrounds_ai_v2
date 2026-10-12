@@ -363,6 +363,29 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "hooks-lfs-rules",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "AGENTS.md",
+        ".agents/rules/project-workflows.md",
+        ".githooks/post-rewrite",
+        ".githooks/post-merge",
+        "Docs/agents/lfs-worktrees.md",
+        "Docs/agents/text-eol.md",
+        "Tools/agents/configure_lfs_worktree.py",
+        "Tools/agents/serialized_repair.py",
+        "Tools/agents/tests/test_lfs_worktree_policy.py"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "eol-phaseb-inbox-unread",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

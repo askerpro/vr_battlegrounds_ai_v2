@@ -106,3 +106,8 @@ Modeoff по поручению пользователя сохраняется;
 Сопровождающий — Claude. Runtime ce950de88a7d27b51b27a71515e7309af1afc864: inbox --unread,
 readonly gate, register UX, EOL-защиты broker. Продукт: Unity YAML/ProjectSettings/tasks в LF,
 бинарные .asset — binary, pre-push EOL-проверка. [Проверки](changelog/2026-10-11-eol-phaseb-inbox-unread.md).
+
+## LFS-хуки и правила Play — 2026-10-12
+
+post-rewrite/post-merge гидратируют LFS main/worker после rebase/merge (инцидент 4567); Play только
+через PlayLaunch; launcher serialized_repair.py. [Проверки](changelog/2026-10-12-hooks-lfs-rules.md).

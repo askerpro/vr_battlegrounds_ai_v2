@@ -7,13 +7,44 @@
   "doc_path": "tasks/network-state-review/Readme.md",
   "title": "Анализ состояния сетевой зоны и разбор бэклога",
   "stages": [
-    {"id": "state-review", "writes": [
-      "tasks/network-state-review/**",
-      "experts/network/**"
-    ], "after": [], "needs": []},
-    {"id": "journal-publish", "writes": [
-      "tasks/network-state-review/**",
-      "experts/network/**"
-    ], "after": [{"task": "network-state-review", "stage": "state-review", "state": "merged"}], "needs": []}
+    {
+      "id": "state-review",
+      "writes": [
+        "tasks/network-state-review/**",
+        "experts/network/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "journal-publish",
+      "writes": [
+        "tasks/network-state-review/**",
+        "experts/network/**"
+      ],
+      "after": [
+        {
+          "task": "network-state-review",
+          "stage": "state-review",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "journal-2026-10-12",
+      "writes": [
+        "tasks/network-state-review/**",
+        "experts/network/**"
+      ],
+      "after": [
+        {
+          "task": "network-state-review",
+          "stage": "journal-publish",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    }
   ]
 }

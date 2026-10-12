@@ -17,7 +17,8 @@
 | Этап | Состояние |
 |---|---|
 | `state-review` | merged `ac238e942`: задача, `expert.json` |
-| `journal-publish` | публикация журнала ревью 2026-10-11 и пункта backlog |
+| `journal-publish` | merged `95cf4f29d`: журнал ревью 2026-10-11 |
+| `journal-2026-10-12` | журнал ревью 2026-10-12 (боты, смерть, StateSync) и backlog |
 
 ## Сделано
 

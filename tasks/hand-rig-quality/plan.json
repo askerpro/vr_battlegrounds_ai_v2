@@ -126,6 +126,25 @@
       "needs": []
     },
     {
+      "id": "sdk-hands-seam",
+      "writes": [
+        "Assets/Models/Avatars/MEF_SdkHands/**",
+        "Assets/Prefabs/Player/Experimental/MEF_sdk_hands/**",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "hand-graft-exp",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "grip-authoring",
       "writes": [
         "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/**",
@@ -145,6 +164,11 @@
         {
           "task": "hand-rig-quality",
           "stage": "hand-graft-exp",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "sdk-hands-seam",
           "state": "merged"
         }
       ],
@@ -180,6 +204,11 @@
         {
           "task": "hand-rig-quality",
           "stage": "hand-graft-exp",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "sdk-hands-seam",
           "state": "merged"
         }
       ],

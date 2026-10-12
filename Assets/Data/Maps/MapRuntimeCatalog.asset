@@ -34,7 +34,7 @@ MonoBehaviour:
   - Map: {fileID: 11400000, guid: 3cb6e2d8f6b78f6459e99216bc9d5831, type: 2}
     ScenePath: Assets/Scenes/Lobby.unity
     ContentFingerprint: 744c54c84675f189b00e48b602e1a731a21da8f9cc957540d111f22e7bf86b4e
-    ArsenalFingerprint: a35806abd3ab549a4049e23af8090b66
+    ArsenalFingerprint: 963e134eb97dea3de0895f654a28983e
   - Map: {fileID: 11400000, guid: 16a3be3dbee18c9469db1ed1b0bb7224, type: 2}
     ScenePath: Assets/Scenes/Maps/ServiceYard.unity
     ContentFingerprint: 5e477076b3b531f8926a260c9a70614c0ff2b6c1235f19858bd4b740e124956f

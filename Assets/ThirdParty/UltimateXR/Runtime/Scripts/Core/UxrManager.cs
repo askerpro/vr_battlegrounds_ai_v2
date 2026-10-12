@@ -1321,6 +1321,14 @@ namespace UltimateXR.Core
         /// </summary>
         private void Update()
         {
+            // VR Battlegrounds patch 74 (tasks/state-sync-depth-guard): граница кадра — вне стадий аватаров и вне
+            // ExecuteStateSyncEvent, открытых кадров синхронизации здесь быть не может. Оставленные исключением
+            // кадры снимаются, иначе все дальнейшие события считались бы вложенными и не уходили бы в сеть.
+            if (!IsInsideStateSync)
+            {
+                UxrStateSyncImplementer.ResetLeakedFrames($"{nameof(UxrManager)}.{nameof(Update)}");
+            }
+
 #if UNITY_EDITOR
             HandleEditorFocusChange();
 

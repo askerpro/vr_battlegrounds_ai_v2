@@ -45,6 +45,15 @@ namespace UltimateXR.Core.StateSync
 
         #endregion
 
+        #region Protected Overrides UxrStateSyncImplementer
+
+        /// <summary>
+        ///     VR Battlegrounds patch 74: владелец кадра в логах утечки — путь компонента в сцене.
+        /// </summary>
+        protected override string FrameOwnerDescription => _targetComponent != null ? _targetComponent.GetPathUnderScene() : $"(destroyed {typeof(T).Name})";
+
+        #endregion
+
         #region Public Methods
 
         /// <summary>
@@ -165,8 +174,8 @@ namespace UltimateXR.Core.StateSync
         /// <param name="options">Options. It's saved/used in all environments by default.</param>
         public void BeginSync(UxrStateSyncOptions options = UxrStateSyncOptions.Default)
         {
-            SyncCallDepth++;
-            _optionStack.Push(options);
+            // VR Battlegrounds patch 74: кадр в общей стопке вместо счётчика и локального стека опций.
+            PushFrame(options);
 
             if (SyncCallDepth > StateSyncCallDepthErrorThreshold)
             {
@@ -187,10 +196,12 @@ namespace UltimateXR.Core.StateSync
         /// </summary>
         public void CancelSync()
         {
-            if (SyncCallDepth > 0)
+            // VR Battlegrounds patch 74: снимается только свой кадр; оставленные над ним — с ошибкой в логе.
+            int index = TakeOwnFrame(nameof(CancelSync));
+
+            if (index >= 0)
             {
-                SyncCallDepth--;
-                _optionStack.Pop();
+                CloseOwnFrame(index, nameof(CancelSync));
             }
             else
             {
@@ -250,13 +261,16 @@ namespace UltimateXR.Core.StateSync
         /// <param name="e">The state change</param>
         public void EndSyncState(Action<UxrSyncEventArgs> raiseChangedEvent, UxrSyncEventArgs e)
         {
-            if (SyncCallDepth > 0)
+            // VR Battlegrounds patch 74: свой кадр из общей стопки; чужие кадры над ним — утечка, снимаются с ошибкой.
+            int index = TakeOwnFrame(nameof(EndSyncState));
+
+            if (index >= 0)
             {
-                e.Options = _optionStack.Pop();
+                e.Options = FrameOptions(index);
                 // VR Battlegrounds patch: событие остаётся внутри прежнего nesting depth,
                 // но исключение подписчика не оставляет уже извлечённый scope открытым.
                 try { raiseChangedEvent?.Invoke(e); }
-                finally { SyncCallDepth--; }
+                finally { CloseOwnFrame(index, nameof(EndSyncState)); }
             }
             else
             {
@@ -314,7 +328,6 @@ namespace UltimateXR.Core.StateSync
         private const BindingFlags PropertyFlags                    = EventFlags | BindingFlags.SetProperty;
 
         private readonly T                          _targetComponent;
-        private readonly Stack<UxrStateSyncOptions> _optionStack = new Stack<UxrStateSyncOptions>();
         private          bool                       _registered;
         private UxrManager _registeredManager;
         private bool _retired;

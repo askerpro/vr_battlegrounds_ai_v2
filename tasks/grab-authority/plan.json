@@ -8,23 +8,14 @@
   "title": "Авторство хвата: сброс рук при смерти и удержание предмета у автора",
   "stages": [
     {
-      "id": "death-release-authority",
-      "writes": [
-        "Assets/Scripts/Player/PlayerGrabManager.cs",
-        "Assets/Tests/EditMode/Interaction/**",
-        "Docs/manipulation/**",
-        "tasks/grab-authority/**"
-      ],
-      "after": [],
-      "needs": []
-    },
-    {
       "id": "held-motion",
       "writes": [
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.cs",
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.Manipulation.cs",
         "Assets/Tests/EditMode/Interaction/**",
         "Docs/manipulation/**",
+        ".claude/agent-memory/manipulation-expert/**",
+        "experts/manipulation/**",
         "tasks/grab-authority/**"
       ],
       "after": [],

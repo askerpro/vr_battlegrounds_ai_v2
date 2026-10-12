@@ -48,6 +48,14 @@ SDK владеет состоянием хвата (кто что держит, 
 `Interaction/OutOfWorldGuard.cs` (чистое `Decide`, сервер уничтожает сетевые), `LooseItems`/`LooseItemSweeper`,
 `Player/EquipmentStrip.cs`, `Player/Avatars/AvatarTeardown.cs`, `Player/Corpse/DeathDropEjection.cs`.
 
+- **Смерть** (факт прогонов 2026-10-12, `death-body-defer` gameplay + network 4303): руки отпускает только сервер —
+  `AvatarTeardown.ReleaseBeforeDestroy`/`ReleaseHandsOnServer` на верхнем уровне, в отложенном шаге смены тела
+  (`AvatarManager.CanReplaceBodyNow`), до `NetworkServer.Destroy`. Обработчики смерти (`Died`/`PlayerDied`) ничего
+  синхронизируемого не зовут; `PlayerGrabManager` на смерть не подписан.
+- **Удержание** (SDK-патч 73): сопротивление предмета (`UxrInterpolator`) — только если все держатели-аватары
+  `Local`; у бота на сервере и чужого игрока у наблюдателя предмет жёстко в кисти (кость кисти уже несёт
+  отставание автора). Держатель без аватара — прежнее поведение (`HeldResistanceAuthorityTests`).
+
 ## 5. Сеть
 
 - Единственный транспорт — `Network/NetworkStateRelay.cs` (Cmd → сервер применяет → Rpc остальным).
@@ -88,9 +96,8 @@ SDK владеет состоянием хвата (кто что держит, 
 
 ## 8. Кандидаты на проверку (гипотезы по чтению кода, 2026-10-10, не подтверждены прогоном)
 
-- `PlayerController.PlayerDied` поднимается на каждой машине, а `PlayerGrabManager.OnPlayerDied` вызывает
-  `ReleaseAllGrabbedObjects(propagate=true)` без проверки владельца; события `UxrGrabManager` проходят `ShouldSend`
-  всегда — возможен дубль по классу Issue 23. Проверить стендом/логом до правки.
+- ~~Дубль отпускания при смерти~~ — опровергнуто прогоном 2026-10-12: отпускание и сама смерть до клиентов не
+  доходили; исправлено в `death-body-defer` (см. §4).
 - Сервер применяет клиентские события хвата без проверки правил: `GrabRules` работают только на клиенте; серверная
   проверка есть только у арсенала (`ServerRejectTake`).
 - `UxrMagazinePocket.OnAnchorPlaced` на каждой машине зовёт `RemoveObjectFromAnchor(…, true)` — безопасно лишь потому,

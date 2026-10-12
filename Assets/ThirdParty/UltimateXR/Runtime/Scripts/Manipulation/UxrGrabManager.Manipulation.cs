@@ -1659,11 +1659,68 @@ namespace UltimateXR.Manipulation
 
             // Apply resistance
 
-            if (Features.HasFlag(UxrManipulationFeatures.ObjectResistance))
+            // VR Battlegrounds patch 73: сопротивление только у предмета в руках локального аватара.
+            if (Features.HasFlag(UxrManipulationFeatures.ObjectResistance) && AllowsHeldResistance(grabbableObject, manipulationInfo))
             {
                 grabbableObject.transform.SetLocalPositionAndRotation(UxrInterpolator.SmoothDampPosition(grabbableObject.LocalPositionBeforeUpdate, grabbableObject.transform.localPosition, grabbableObject.TranslationResistance),
                                                                       UxrInterpolator.SmoothDampRotation(grabbableObject.LocalRotationBeforeUpdate, grabbableObject.transform.localRotation, grabbableObject.RotationResistance));
             }
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 73: применять ли сопротивление (<see cref="UxrGrabbableObject.TranslationResistance" />/
+        ///     <see cref="UxrGrabbableObject.RotationResistance" />) к удерживаемому предмету. Сглаживание
+        ///     <see cref="UxrInterpolator" /> — ощущение инерции для игрока за этим шлемом. Для руки бота
+        ///     (<see cref="UxrAvatarMode.UpdateExternally" /> на сервере) и чужого игрока у наблюдателя оно даёт
+        ///     отставание предмета от кисти, поэтому такой предмет ставится в целевую позу жёстко (как при
+        ///     сопротивлении 0). Держатели — собственные хваты предмета и хваты его look-at детей.
+        ///     Сопротивление остаётся, только если каждый держатель-аватар локальный; держатель без аватара
+        ///     решение не меняет (поведение SDK без аватара прежнее). Без аллокаций.
+        ///     См. tasks/grab-authority/changelog/2026-10-12-sdk-73.md.
+        /// </summary>
+        /// <param name="grabbableObject">Удерживаемый предмет</param>
+        /// <param name="manipulationInfo">Его манипуляция или null (родитель look-at, которого держат только дети)</param>
+        /// <returns>false, если среди держателей есть аватар с режимом, отличным от <see cref="UxrAvatarMode.Local" /></returns>
+        private bool AllowsHeldResistance(UxrGrabbableObject grabbableObject, RuntimeManipulationInfo manipulationInfo)
+        {
+            if (manipulationInfo != null && !AreAvatarHoldersLocal(manipulationInfo.Grabs))
+            {
+                return false;
+            }
+
+            if (grabbableObject.DirectLookAtChildGrabbedCount > 0)
+            {
+                foreach (UxrGrabbableObject child in grabbableObject.DirectChildrenLookAts)
+                {
+                    if (_currentManipulations.TryGetValue(child, out RuntimeManipulationInfo childManipulationInfo) && !AreAvatarHoldersLocal(childManipulationInfo.Grabs))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 73: все ли аватары-держатели из списка хватов локальные
+        ///     (хват без аватара не учитывается). Прецедент — patch 16 (<c>IsLocalAffordanceGrabber</c>).
+        /// </summary>
+        /// <param name="grabs">Хваты манипуляции</param>
+        /// <returns>false, если хотя бы один хват принадлежит аватару не в режиме <see cref="UxrAvatarMode.Local" /></returns>
+        private static bool AreAvatarHoldersLocal(List<RuntimeGrabInfo> grabs)
+        {
+            for (int i = 0; i < grabs.Count; ++i)
+            {
+                UxrGrabber grabber = grabs[i].Grabber;
+
+                if (grabber != null && grabber.Avatar != null && grabber.Avatar.AvatarMode != UxrAvatarMode.Local)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -2161,7 +2218,10 @@ namespace UltimateXR.Manipulation
 
             // Apply resistance
 
-            if (useResistance && Features.HasFlag(UxrManipulationFeatures.ObjectResistance))
+            // VR Battlegrounds patch 73: тот же гейт, что в FinalizeManipulation (незахваченный предмет — прежнее поведение).
+            _currentManipulations.TryGetValue(grabbableObject, out RuntimeManipulationInfo heldManipulationInfo);
+
+            if (useResistance && Features.HasFlag(UxrManipulationFeatures.ObjectResistance) && AllowsHeldResistance(grabbableObject, heldManipulationInfo))
             {
                 grabbableObject.transform.SetLocalPositionAndRotation(UxrInterpolator.SmoothDampPosition(grabbableObject.LocalPositionBeforeUpdate, grabbableObject.transform.localPosition, grabbableObject.TranslationResistance),
                                                                       UxrInterpolator.SmoothDampRotation(grabbableObject.LocalRotationBeforeUpdate, grabbableObject.transform.localRotation, grabbableObject.RotationResistance));

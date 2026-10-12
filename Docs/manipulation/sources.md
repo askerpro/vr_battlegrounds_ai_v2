@@ -43,6 +43,7 @@
 | 49 | `UxrGrabbableObjectAnchor.IsCompatibleObjectTag` | совместимость по тегу публична |
 | 66 | `Haptics/UxrHapticClip.cs`, `UxrHapticWaveform.cs`, `UxrHapticPriority.cs` | форма, сила, приоритет, пауза, кулдаун, вторая рука в клипе — [запись](../../tasks/haptics-system/changelog/2026-10-08-sdk-66.md) |
 | 67 | `UxrGrabManager.cs` (`UpdateAffordances`), `UxrGrabManager.GrabCandidates.cs` | кандидат хвата руки — [запись](../../tasks/haptics-system/changelog/2026-10-09-sdk-67.md) |
+| 73 | `UxrGrabManager.Manipulation.cs` (`AllowsHeldResistance`) | сопротивление удерживаемого предмета только у Local-держателей — [запись](../../tasks/grab-authority/changelog/2026-10-12-sdk-73.md) |
 | T-39 | `UxrGrabManager.PlacementReadiness.cs`, `.WeaponHandoff.cs`, `UxrManipulationEventArgs.cs` | `GetAnchorPlacementCandidate`; свежий снимок позы в Grabbing |
 | 65 | `Devices/UxrControllerInput.cs`, `UxrUnityXRControllerInput.cs`, `Haptics/UxrHapticRouting.cs` | перехват вибраций SDK в `HapticService` (`SdkHapticRouter`) — [запись](../../tasks/haptics-system/changelog/2026-10-11-sdk-65.md) |
 

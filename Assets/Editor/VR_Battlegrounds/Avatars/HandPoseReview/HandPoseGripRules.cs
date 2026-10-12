@@ -83,13 +83,11 @@ namespace VrBattlegrounds.Editor.HandPoseReview
     {
         public static readonly string[] GripTypes = { "pistol_grip", "foregrip", "pump", "pinch_small", "handle" };
         public static readonly string[] Severities = { "ok", "notable", "gross" };
-        // Наибольший габарит «мелкого» свободного предмета (батарейка, лампа, граната, магазин), м.
-        public const float SmallObjectMaxMeters = .15f;
 
         /// <summary>
         /// Роль точки: оружие — точка спуска (pistol_grip), другая точка корневого grabbable (foregrip),
         /// магазин (pinch_small), другой дочерний grabbable оружия (pump). Без оружия: магазин/патрон — pinch_small,
-        /// механизм с закреплённым перемещением или ручка родительского grabbable — handle, мелкий предмет (габарит < 15 см) — pinch_small, крупный — handle.
+        /// механизм с закреплённым перемещением или ручка, управляющая направлением родителя, — handle, прочие — pinch_small.
         /// </summary>
         public static string DetectGripType(UxrGrabbableObject grabbable, int point, out string reason)
         {
@@ -107,11 +105,11 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             // Закреплённый на месте механизм (рычаг, ручка генератора): перемещение Locked, допускается только поворот.
             // Ограничение смещения само по себе не делает предмет ручкой: батарейка SDK — RestrictLocalOffset.
             if (grabbable.TranslationConstraint == UxrTranslationConstraintMode.Locked) {reason = "translation_locked_mechanism";return "handle";}
-            // Ручка большего grabbable (LaserGrip SDK): зависит от родительского предмета и управляет им.
-            if (grabbable.UsesGrabbableParentDependency) {reason = "grabbable_parent_dependency";return "handle";}
-            float size = RendererExtent(grabbable.transform);
-            reason = (size < SmallObjectMaxMeters ? "small_object_" : "large_object_") + (size * 1000).ToString("0", CultureInfo.InvariantCulture) + "mm";
-            return size < SmallObjectMaxMeters ? "pinch_small" : "handle";
+            // Ручка, управляющая направлением родительского предмета (LaserGrip SDK).
+            if (grabbable.ControlParentDirection && grabbable.IsConstrained) {reason = "controls_parent_direction";return "handle";}
+            // Габарит не различает типы (батарейка SDK 0,5 м, у LaserGrip renderer — только кнопка): свободный предмет — щипок/обхват детали.
+            reason = "free_item";
+            return "pinch_small";
         }
 
         static List<(UxrGrabbableObject grabbable, int point)> TriggerPoints(UxrFirearmWeapon weapon)
@@ -127,23 +125,6 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                     if (grabbable && index is int point) result.Add((grabbable, point));
                 }
             return result;
-        }
-
-        static float RendererExtent(Transform root)
-        {
-            bool any = false;var bounds = new Bounds();
-            // Те же renderer, что попадают в поверхность предмета: без превью-кистей SDK и подсветки хвата.
-            foreach (var renderer in root.GetComponentsInChildren<Renderer>(false)) {
-                if (!renderer.enabled || renderer is ParticleSystemRenderer || renderer.GetComponent<UxrGrabbableObjectPreviewMeshProxy>() || renderer.name.IndexOf("GrabHighlight", StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                Mesh mesh = renderer is SkinnedMeshRenderer skin ? skin.sharedMesh : renderer.GetComponent<MeshFilter>()?.sharedMesh;
-                if (!mesh) continue;
-                Bounds local = mesh.bounds;var matrix = renderer.transform.localToWorldMatrix;
-                for (int i = 0; i < 8; i++) {
-                    var corner = matrix.MultiplyPoint3x4(local.center + Vector3.Scale(local.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1)));
-                    if (!any) {bounds = new Bounds(corner, Vector3.zero);any = true;} else bounds.Encapsulate(corner);
-                }
-            }
-            return any ? Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z)) : 0;
         }
 
         public static string Severity(double excessMm, float notableMm, float grossMm) => excessMm >= grossMm ? "gross" : excessMm >= notableMm ? "notable" : "ok";

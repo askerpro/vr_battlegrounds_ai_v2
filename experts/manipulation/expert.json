@@ -3,8 +3,8 @@
   "id": "manipulation",
   "owner": "manipulation",
   "tasks": ["haptics-system", "grab-authority"],
-  "reviewed_sha": "081ec6777d6b47015c317c3a58ae296adcc32693",
-  "reviewed_at": "2026-10-11",
+  "reviewed_sha": "4b9f862065471ea29804850a66c1ae12c24d2228",
+  "reviewed_at": "2026-10-12",
   "owns": [
     "Assets/Scripts/Haptics/**",
     "Assets/Scripts/Interaction/**",

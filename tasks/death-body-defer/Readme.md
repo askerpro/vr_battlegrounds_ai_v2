@@ -40,7 +40,13 @@
 ## Состояние
 
 - 2026-10-12: задача заведена, дизайн согласован.
-- 2026-10-12: `deferred-body` реализован в ветке `claude/death-body-defer` (e11f915f9 + 029219ed8, ещё одна
-  правка по ревью network в работе). Ревью: network ACK (4388, 4396), manipulation — хват одобрен по коду (4386),
-  прогон стенда идёт. Проверено: офлайн-компиляция VrBattlegrounds без weaver. Unity-прогоны не выполнены.
+- 2026-10-12: `deferred-body` реализован (3 коммита fix, после rebase на origin/dev — e625cf5d8, 920428536,
+  28d12b7e4). Ревью: network ACK (4388, 4396), manipulation — хват одобрен по коду (4386). Проверено:
+  стенд manipulation по e11f915f9 (до rebase) — PASS (4537: ServerOnly + 2 клиента, TestMap2, смерть у обоих
+  клиентов, одно серверное ReleaseObject на руку, одна поза, kin=False; смерть без призрака не покрыта);
+  офлайн-компиляция VrBattlegrounds (Roslyn, без weaver Mirror; зависимые сборки не собирались) — 0 ошибок.
+  НЕ выполнены: компиляция в Unity с weaver, PlayerDeathSignalScenario, RoundReadinessMatchScenario,
+  AvatarSwapDeathReplicationScenario, ярус C network (хост, поздний вход).
+- 2026-10-12: принят пользователем (сессия эксперта gameplay); вливание в origin/dev. Детали — [Details.md](Details.md).
+- Дальше: `accepted-tests` (тесты под новые ожидания, удаление пустого RpcOnDied), затем `death-equipment-drop`.
 - Ждут этот этап: bots-fix `pf-equipment` (переставят `after` с grab-authority на `deferred-body`).

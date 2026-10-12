@@ -29,6 +29,15 @@ YAML в Git хранится в LF, а в старых рабочих копия
 
 - 2026-10-12: код `AssetHash` написан. Офлайн-оракул (Python, тот же алгоритм) на 9 входах каталога + `.meta`:
   хеш CRLF-рабочей копии == хеш LF-blob Git == хеш синтетической CRLF-версии — ALL OK. Unity не запускался.
+- 2026-10-12, аренда 503 (база b624fdb3c, вход 7237de44, результат e68fd064 IMPORTED), CRLF-рабочая копия worker
+  (Lobby.unity — 27012 CR):
+  - новый код загружен (рефлексия), отпечаток пресета лобби в Unity = расчёт по LF-blob Git (`bb0ef3a4…`);
+  - `RebakeCatalog`: preflight passed, 7/7 карт, 0 отказов (до исправления в этом worker — 13 ложных `Stale`);
+  - все 14 записанных отпечатков (7 карт × content/arsenal) совпали с независимым расчётом по Git входа A;
+  - EditMode (группы Maps/MapCatalogIntegrity/MapRunContract): 253, 6 FAIL — все известные вне этапа
+    (ArsenalMapGeometry TestMap1, Ambience BotCombatStand, LD-текстуры, LobbyLayout, LD20, LD23); каталог-тесты PASS;
+  - Play лобби через PlayLaunch (host): Ready, MapPlayable, MapRunValid, StartupError пусто, Console errors 0, cleanup ok.
+  - diff каталога: только 14 строк отпечатков. Ждёт приёмки пользователя.
 - Связи: weapon-system `sight-arsenal-dedupe` вписывает одну строку отпечатка лобби (разрешение 4912) —
   после их вливания rebase и штатный rebake перезапишут все отпечатки форматом v2. `lobby-decoration`
   (level-design) тоже пишет каталог — после вливания этого этапа их rebake даст стабильные значения.

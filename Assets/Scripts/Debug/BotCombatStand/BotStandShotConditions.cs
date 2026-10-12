@@ -41,6 +41,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             public bool AccumulatorWasEnabled;
             public int AppliedFrame = -1;
             public bool AppliedBeforeFirstShot;
+            /// <summary>Выстрелы стрелка на момент выбора этого оружия (смена оружия в case: пистолет → покупка).</summary>
+            public int ShotsWhenSelected;
             public float MaxAccumulatorPitch, MaxAccumulatorYaw;
             public object Triggers;
         }
@@ -75,7 +77,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     if (firearm == null) continue;
                     if (!_weapons.TryGetValue(firearm, out WeaponState state))
                     {
-                        state = new WeaponState { Firearm = firearm, Triggers = TriggersField?.GetValue(firearm) };
+                        state = new WeaponState { Firearm = firearm, Triggers = TriggersField?.GetValue(firearm), ShotsWhenSelected = gunner.ShotsFired };
                         _weapons[firearm] = state;
                     }
                     if (_noRecoil && state.AppliedFrame < 0) Suppress(state, gunner);
@@ -109,7 +111,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 state.Accumulator.enabled = false;
             }
             state.AppliedFrame = Time.frameCount;
-            state.AppliedBeforeFirstShot = gunner.ShotsFired == 0;
+            // До первого выстрела именно этим оружием: выстрелы прежнего (пистолет до покупки) не считаются.
+            state.AppliedBeforeFirstShot = gunner.ShotsFired == state.ShotsWhenSelected;
         }
 
         /// <summary>Корневой grabbable огнестрела по тому же правилу, что у SDK (RootGrabbable) и WeaponUseContext.</summary>

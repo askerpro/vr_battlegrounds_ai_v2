@@ -1,0 +1,81 @@
+{
+ "package": "bots-fix eq-round1: замер этапа pf-equipment (кобура, без оружия, покупка, смерть, призрак, регрессия эталонов)",
+ "date": "2026-10-12",
+ "basedOn": "tasks/bots-fix/tools/pf-round5",
+ "spec": "tasks/bots-fix/pf-equipment-spec.md",
+ "technicalInput": "checkpoint eq-round1 с незакоммиченной реализацией pf-prototype (Assets/Scripts/Bots/**, Assets/Scripts/Debug/BotCombatStand/**, BotStandRecorder, PlayersManager); payload-ы ассеты не пишут",
+ "outputRoot": "tasks/bots-fix/reports/eq-round1",
+ "expectedChangedPaths": [],
+ "queue": {
+  "phases": "p1 = H 30, HE 30, U 20, P 35, D1 20 (135 с); p2 = D2 20, G 40, E 30, PE 30 (120 с)",
+  "defaults": "PlayerFlow=true, T07, seed 101, Capture стенда=false; снимки — payload BotStandVisualCapture в заданные секунды (H, U, P, G)"
+ },
+ "steps": [
+  {
+   "id": "B0",
+   "tool": "execute_code",
+   "payload": "b0-preflight.cs",
+   "kind": "read-only",
+   "repeatable": true,
+   "pass": "passed=true"
+  },
+  {
+   "id": "B3",
+   "tool": "execute_code",
+   "payload": "b3-runtime-launch.cs",
+   "kind": "mutation (enter Play)",
+   "repeatable": false,
+   "pre": "B0 PASS; renew lease",
+   "pass": "started=true; затем B5: launch Ready, stand Running -> finished (warmup гибрид PPK T07 1 с)"
+  },
+  {
+   "id": "B5",
+   "tool": "execute_code",
+   "payload": "b5-runtime-status.cs",
+   "kind": "read-only",
+   "repeatable": true
+  },
+  {
+   "id": "B4",
+   "tool": "execute_code",
+   "payload": "b4-runtime-queue.cs",
+   "kind": "mutation (RunCases chain)",
+   "repeatable": false,
+   "pre": "warmup finished, invalidFixture=0, Live=Combat",
+   "pass": "B5.queue.state=completed",
+   "terminal": "queue.state=failed/live-ended/aborted -> сразу B6, finish"
+  },
+  {
+   "id": "console",
+   "tool": "read_console",
+   "kind": "read-only",
+   "pre": "до B6",
+   "pass": "ошибки сохраняются в отчёт"
+  },
+  {
+   "id": "B6",
+   "tool": "execute_code",
+   "payload": "b6-runtime-stop.cs",
+   "kind": "mutation (exit Play)",
+   "repeatable": false,
+   "pass": "B5: editor.playing=false, launch.state=Idle, stand.owned=false"
+  },
+  {
+   "id": "finish",
+   "tool": "broker finish",
+   "pre": "B6 выполнен (или terminal)"
+  },
+  {
+   "id": "copy",
+   "tool": "копирование отчётов worker -> tasks/bots-fix/reports/eq-round1 (не git add)"
+  },
+  {
+   "id": "verdict",
+   "tool": "python -I tasks/bots-fix/tools/eq-round1/analyze.py",
+   "kind": "offline, после finish"
+  }
+ ],
+ "offlineChecks": {
+  "compile": "compile-check.ps1: 7 сборок + payload; Assembly-CSharp-Editor может дать чужие ошибки Weapons/Sights (нет вложенных asmdef в Library main checkout) — не блокер"
+ }
+}

@@ -36,6 +36,11 @@ namespace VrBattlegrounds.Bots
         Preparing,
         /// <summary>SDK отказал в выстреле (темп, CanUse).</summary>
         Rejected,
+        /// <summary>
+        /// Первый выстрел после экипировки ждёт хвата поддержки (оружие с точкой поддержки, в т.ч. пистолет) или таймаута
+        /// <see cref="BotRuntimeController.SupportTimeoutSeconds"/> (eq-round2, решение эксперта). Запрос снят без выстрела.
+        /// </summary>
+        AwaitingSupport,
         /// <summary>TryToShootRound(0) вернул true.</summary>
         Fired
     }

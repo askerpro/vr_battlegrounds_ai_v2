@@ -5,6 +5,7 @@ using UltimateXR.Core;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Network;
+using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Bots
 {
@@ -39,6 +40,7 @@ namespace VrBattlegrounds.Bots
         private UxrAvatar _avatar;
         private BotBody _body;
         private NetworkIdentity _identity;
+        private PlayerController _player;
         private Transform _camera;
         private BotInputFrame _frame;
         private bool _hasFrame;
@@ -51,6 +53,12 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>Кадр Unity последней записи.</summary>
         public int AppliedFrame { get; private set; } = -1;
+
+        /// <summary>
+        /// Тело — призрак бота (тело выбывшего): драйвер ведёт его и мёртвым (корень, камера, кисти в позе покоя).
+        /// Ставит только <see cref="BotRuntimeController.SetGhostKit"/>. Иначе погибшее тело не ведётся.
+        /// </summary>
+        public bool DrivesDeadBody { get; internal set; }
 
         /// <summary>Пишет ли драйвер на этой машине: сервер/хост, автор мира, аватар без владельца.</summary>
         public bool CanDrive => NetworkServer.active && StateEventAuthority.IsWorldAuthority && _avatar != null &&
@@ -68,6 +76,7 @@ namespace VrBattlegrounds.Bots
             _avatar = GetComponent<UxrAvatar>();
             _body = GetComponent<BotBody>();
             _identity = GetComponent<NetworkIdentity>();
+            _player = GetComponent<PlayerController>();
         }
 
         private void OnEnable()
@@ -95,6 +104,14 @@ namespace VrBattlegrounds.Bots
         private void OnStageUpdated(UxrUpdateStage stage)
         {
             if (stage != UxrUpdateStage.AvatarUsingTracking || !_hasFrame || !CanDrive) return;
+            // Погибшее тело драйвер не ведёт (этап pf-equipment): после !IsAlive ни корня, ни камеры, ни кистей —
+            // тело до смены на призрака (AvatarManager, deferred-body) остаётся в последней позе, отпускает сервер.
+            // Призрак (DrivesDeadBody) — ведётся: он ходит туда, куда велит директор.
+            if (_player != null && !_player.IsAlive && !DrivesDeadBody)
+            {
+                _hasFrame = false;
+                return;
+            }
 
             using (ApplyMarker.Auto())
             {

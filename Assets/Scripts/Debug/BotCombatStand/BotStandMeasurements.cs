@@ -87,7 +87,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             result.Metrics["travelMeters"] = travel;
             if (frames.Any(f=>!f.LegalTarget)) result.Findings.Add("Незаконная выбранная цель.");
             if (frames.Any(f=>f.InsideSolid)) result.Findings.Add("Центр корпуса оказался внутри статического коллайдера.");
-            if (frames.Any(f=>f.Shots>0 && !f.Author)) result.Findings.Add("Оружие стрелявшего тела без author authority.");
+            // Только кадры с оружием в руке: после уборки в кобуру/смерти счётчик выстрелов остаётся, а оружия в руке нет.
+            if (frames.Any(f=>f.Shots>0 && f.Weapon!=null && !f.Author)) result.Findings.Add("Оружие стрелявшего тела без author authority.");
             if (result.Id=="T09" && frames.Any(f=>f.Shots>0)) result.Findings.Add("Выстрел в сценарии без законного противника.");
             if (result.Findings.Count>0) result.Status="Failed";
         }

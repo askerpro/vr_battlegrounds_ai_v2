@@ -127,7 +127,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     var category = options.Rifle ? WeaponCategory.Rifle : WeaponCategory.Pistol;
                     WeaponInfo weapon = Weapons?.FirstOrDefault(w => w != null && w.Category == category && w.WeaponPrefab != null && (string.IsNullOrEmpty(options.WeaponName) || w.name == options.WeaponName));
                     if (weapon == null) throw new InvalidOperationException("Нет оружия нужной категории.");
-                    _session.Begin(id, weapon, options);
+                    WeaponInfo purchase = string.IsNullOrEmpty(options.PurchaseWeaponName) ? null :
+                        Weapons?.FirstOrDefault(w => w != null && w.WeaponPrefab != null && w.name == options.PurchaseWeaponName);
+                    _session.Begin(id, weapon, options, purchase);
                     BotStandMeasurements.ValidateFixture(id, _session);
                     _conditions = new BotStandShotConditions(_session, options);
                     _probe = new BotStandPlayerFlowProbe(_session, options.PlayerFlow);

@@ -238,8 +238,10 @@ namespace VrBattlegrounds.Bots
 
             bool alive = avatar.IsAlive;
             int token = BotSenses.ShopToken(avatar);
-            // В бою восприятие и маршруты принадлежат Blaze, а не всеведущему NearestEnemy.
-            bool fighting = stage == BotStage.Combat && alive;
+            // В бою восприятие и маршруты принадлежат Blaze, а не всеведущему NearestEnemy. Режим P: без оружия (Unarmed)
+            // Blaze не создаётся — не атакует и не просит выстрел; ноги — по приказу (домой, к закупке).
+            bool armed = mind.BodyMode != BotBodyMode.PlayerFlow || gunner.HasWeapon;
+            bool fighting = stage == BotStage.Combat && alive && armed;
             combat?.SetCombatEnabled(fighting);
 
             BotOrder order = BotOrders.Decide(new BotSituation
@@ -395,14 +397,24 @@ namespace VrBattlegrounds.Bots
             if (avatar.GetComponent<BotGunner>() == null) avatar.gameObject.AddComponent<BotGunner>();
             if (avatar.GetComponent<BotCombatDriver>() == null) avatar.gameObject.AddComponent<BotCombatDriver>();
 
-            // Режим P: адаптер «кукловод» — один писатель позы (драйвер), хват SDK, поза оружия, порядок кадра.
-            // Только при новом теле: без поиска компонентов в каждом тике.
-            if (mind.BodyMode == BotBodyMode.PlayerFlow && !ReferenceEquals(mind.LastBody, avatar))
+            // Режим P: адаптер «кукловод» — один писатель позы (драйвер) и порядок кадра на каждом теле бота; комплект —
+            // один раз на тело (без поиска компонентов в каждом тике). Живое тело — полный: хват SDK (BotHands), поза
+            // оружия (BotWeaponAim). Тело, пришедшее мёртвым (призрак выбывшего, AvatarManager), — комплект призрака:
+            // драйвер ведёт его без оружия (кисти в покое), BotBody только источник ног/курса/взгляда — призрак ходит,
+            // куда велит директор, но не хватает и не стреляет. Погибшее живое тело комплект не меняет — оно не ведётся
+            // до смены на призрака. Призрак, оживший на месте (стратегия без призрака), получает полный комплект.
+            if (mind.BodyMode == BotBodyMode.PlayerFlow &&
+                (!ReferenceEquals(mind.PlayerFlowBody, avatar) || (mind.PlayerFlowGhostKit && avatar.IsAlive)))
             {
+                bool ghost = !avatar.IsAlive;
                 if (avatar.GetComponent<BotAvatarDriver>() == null) avatar.gameObject.AddComponent<BotAvatarDriver>();
-                if (avatar.GetComponent<BotHands>() == null) avatar.gameObject.AddComponent<BotHands>();
-                if (avatar.GetComponent<BotWeaponAim>() == null) avatar.gameObject.AddComponent<BotWeaponAim>();
-                if (avatar.GetComponent<BotRuntimeController>() == null) avatar.gameObject.AddComponent<BotRuntimeController>();
+                if (!ghost && avatar.GetComponent<BotHands>() == null) avatar.gameObject.AddComponent<BotHands>();
+                if (!ghost && avatar.GetComponent<BotWeaponAim>() == null) avatar.gameObject.AddComponent<BotWeaponAim>();
+                var runtime = avatar.GetComponent<BotRuntimeController>();
+                if (runtime == null) runtime = avatar.gameObject.AddComponent<BotRuntimeController>();
+                runtime.SetGhostKit(ghost);
+                mind.PlayerFlowBody = avatar;
+                mind.PlayerFlowGhostKit = ghost;
             }
 
             mind.LastBody = avatar;

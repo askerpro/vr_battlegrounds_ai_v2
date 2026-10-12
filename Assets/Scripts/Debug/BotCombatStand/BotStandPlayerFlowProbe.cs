@@ -21,6 +21,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
     /// время маркеров бот-кода и GC кадра (<see cref="ProfilerRecorder"/>); по событиям — исходы запросов выстрела
     /// (<see cref="BotRuntimeController.ShotSampled"/>), попадания в контрольную цель (<c>UxrActor.DamageReceived</c>),
     /// исходящие байты Mirror на аватар и сессию бота (<c>NetworkDiagnostics.OutMessageEvent</c>), ошибки консоли.
+    /// Этап pf-equipment: хронология снаряжения (цели и прибытие кистей, хваты, уборка в кобуру, выбор оружия, выстрелы,
+    /// смерть, призрак, новое тело), время подвода кисти, зазор кисть–снап в момент хвата, состав бот-компонентов каждого
+    /// тела, писатели и действия после смерти, Unarmed (Blaze/выстрелы/поза покоя).
     /// </summary>
     public sealed class BotStandPlayerFlowProbe : IDisposable
     {
@@ -30,7 +33,11 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             "BotAvatarDriver.Apply", "BotHands.Tick", "BotWeaponAim.Solve", "BotGunner.Sees",
             // Кадр выстрела: весь блок выстрела, гейт, automation, тракт SDK, подписчики стенда.
             "BotRuntimeController.Shot", "BotGunner.ShotGate", "BotGunner.Automation", "BotGunner.TryToShootRound",
-            "BotRuntimeController.ShotSampled"
+            "BotRuntimeController.ShotSampled",
+            // Этап pf-equipment: цели и траектории кистей, уборка; вложенные — поза покоя, подвод к снапу, уборка;
+            // вызовы SDK хвата/отпускания из BotHands.
+            "BotRuntimeController.Equipment", "BotRuntimeController.Equipment.Rest", "BotRuntimeController.Equipment.Reach",
+            "BotRuntimeController.Equipment.Stow", "BotHands.GrabObject", "BotHands.Release"
         };
         private static readonly string[] OutcomeNames = Enum.GetNames(typeof(BotShotOutcome));
         private const int MaxTimelineEvents = 24;
@@ -55,6 +62,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         /// <summary>Зазор, выше которого кадр разбирается по причине (досягаемость/прочее), мм.</summary>
         private const float GapAttributionMm = 10f;
         private const int MaxConsoleSamples = 8;
+        private const int MaxEquipmentEvents = 96;
+        /// <summary>Сколько первых выстрелов каждого выбранного оружия попадает в хронологию снаряжения.</summary>
+        private const int ShotsPerWeaponInTimeline = 3;
 
         private readonly BotStandSession _session;
         private readonly bool _playerFlow;
@@ -122,7 +132,47 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private BotAvatarDriver _driver;
         private BotRuntimeController _runtime;
         private BotWeaponAim _aim;
+        private BotHands _hands;
+        private BotCombatDriver _combat;
         private uint _avatarNetId, _sessionNetId;
+
+        // ── Этап pf-equipment ──
+        private readonly List<object> _equipment = new List<object>();
+        private readonly List<object> _bodies = new List<object>();
+        private readonly List<float> _reachPrimarySeconds = new List<float>(), _stowSeconds = new List<float>();
+        private readonly List<float> _raiseSeconds = new List<float>(), _supportReachSeconds = new List<float>();
+        private readonly List<float> _grabGrabberMm = new List<float>(), _grabCommandedMm = new List<float>();
+        private readonly List<float> _supportGrabGrabberMm = new List<float>(), _supportGrabCommandedMm = new List<float>();
+        private int _reachTimeoutsSeen, _supportTimeoutsSeen, _shotsGateClosed;
+        // Хват после прибытия кисти (eq-round2: должно быть ≤ 0,15 с, в т.ч. на ходу) и первый выстрел после экипировки.
+        private readonly List<float> _primaryGrabAfterArrival = new List<float>(), _supportGrabAfterArrival = new List<float>();
+        private readonly List<float> _firstShotAfterEquip = new List<float>();
+        private float _primaryArrivedAt = -1f, _supportArrivedAt = -1f, _equippedAt = -1f;
+        private BotHandGoal _rightGoal, _leftGoal;
+        private bool _rightArrivedSeen, _leftArrivedSeen;
+        private int _primaryGrabsSeen, _supportGrabsSeen, _supportReleasesSeen, _stowsSeen, _stowsPlacedSeen;
+        private UxrFirearmWeapon _selectedSeen;
+        private bool _selectedAnchoredSeen;
+        private int _selectedShots;
+        private UxrGrabbableObject _stowedGrip;
+        private float _stowedAt;
+        /// <summary>Оружие прежнего тела при смене тела (смерть → призрак): где оно через секунду — в руке, якоре, на полу.</summary>
+        private UxrFirearmWeapon _previousWeapon;
+        private Vector3 _previousFeet;
+        private float _previousWeaponAt;
+        /// <summary>Секунды после смены тела до замера оружия прежнего тела.</summary>
+        private const float PreviousWeaponSeconds = 1f;
+        private bool _aliveSeen, _bodyBornDead;
+        private int _shotsSeen, _shotsPreviousBodies, _bodyChanges;
+        private int _driverWritesDead, _grabsDead, _shotsDead, _ghostHandsAimFrames, _deadFrames;
+        // Призрак: его ведёт тот же драйвер (кисти в покое); куда он дошёл по приказу директора.
+        private BotBody _botBody;
+        private int _ghostFrames, _ghostDriverWrites, _ghostRestFrames, _ghostBodies;
+        private float _ghostTravel, _ghostStart = -1f, _ghostReachedZoneAfter = -1f;
+        private Vector3 _ghostPrevious, _ghostFirstFeet, _ghostLastFeet;
+        private bool _ghostKnown;
+        private int _ghostTeam;
+        private int _unarmedFrames, _unarmedBlazeFrames, _unarmedRestFrames, _unarmedShotRequests;
         private UxrActor _subjectActor, _targetActor;
         private bool _disposed;
 
@@ -158,6 +208,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 if (_gc.Valid) _gcBytes.Add(_gc.LastValue);
 
                 bool settling = UpdateSettle();
+                SampleEquipment();
                 SampleFeet();
                 SampleMuzzle();
                 SampleGrips(settling);
@@ -172,6 +223,14 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         {
             if (_player == player) return;
             if (_runtime != null) _runtime.ShotSampled -= OnShot;
+            if (_gunner != null) _shotsPreviousBodies += _gunner.ShotsFired;
+            if (_player != null)
+            {
+                _bodyChanges++;
+                _previousWeapon = _gunner != null ? _gunner.SelectedFirearm : null;
+                _previousFeet = _player.transform.position;
+                _previousWeaponAt = Time.time;
+            }
             _player = player;
             _avatar = player.GetComponent<UxrAvatar>();
             _gunner = player.GetComponent<BotGunner>();
@@ -185,6 +244,302 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             _footReady = false;
             _rootKnown = false;
             _rightEpoch = _leftEpoch = 0;
+
+            _hands = player.GetComponent<BotHands>();
+            _combat = player.GetComponent<BotCombatDriver>();
+            _botBody = player.GetComponent<BotBody>();
+            _ghostKnown = false;
+            _rightGoal = _leftGoal = BotHandGoal.None;
+            _rightArrivedSeen = _leftArrivedSeen = false;
+            _primaryGrabsSeen = _hands != null ? _hands.PrimaryGrabs : 0;
+            _supportGrabsSeen = _hands != null ? _hands.SupportGrabs : 0;
+            _supportReleasesSeen = _hands != null ? _hands.SupportReleases : 0;
+            _stowsSeen = _hands != null ? _hands.Stows : 0;
+            _stowsPlacedSeen = _hands != null ? _hands.StowsPlaced : 0;
+            _reachTimeoutsSeen = _runtime != null ? _runtime.ReachTimeouts : 0;
+            _supportTimeoutsSeen = _runtime != null ? _runtime.SupportTimeouts : 0;
+            _primaryArrivedAt = _supportArrivedAt = _equippedAt = -1f;
+            _selectedSeen = null;
+            _selectedAnchoredSeen = false;
+            _shotsSeen = _gunner != null ? _gunner.ShotsFired : 0;
+            _aliveSeen = player.IsAlive;
+            _bodyBornDead = !player.IsAlive;
+            _bodies.Add(DescribeBody(player, "bind"));
+            Equipment(_bodyChanges == 0 ? "firstBody" : _bodyBornDead ? "ghostOrDeadBody" : "newBody",
+                player.SourcePrefab != null ? player.SourcePrefab.name : player.name, null);
+        }
+
+        /// <summary>
+        /// Состав тела: сколько каких бот-компонентов (повторные — признак двойного добавления), жив ли, кто пишет позу
+        /// (на призраке BotBody пишет сам — как в dev; компонентов адаптера быть не должно). Аллокации — только при смене тела.
+        /// </summary>
+        private static Dictionary<string, object> DescribeBody(PlayerController player, string when)
+        {
+            var body = player.GetComponent<BotBody>();
+            return new Dictionary<string, object>
+            {
+                ["when"] = when, ["time"] = Time.time, ["frame"] = Time.frameCount, ["body"] = player.GetInstanceID(),
+                ["prefab"] = player.SourcePrefab != null ? player.SourcePrefab.name : null, ["alive"] = player.IsAlive,
+                ["botAvatarDriver"] = player.GetComponents<BotAvatarDriver>().Length,
+                ["botHands"] = player.GetComponents<BotHands>().Length,
+                ["botWeaponAim"] = player.GetComponents<BotWeaponAim>().Length,
+                ["botRuntimeController"] = player.GetComponents<BotRuntimeController>().Length,
+                ["botGunner"] = player.GetComponents<BotGunner>().Length,
+                ["botBody"] = player.GetComponents<BotBody>().Length,
+                ["botNavigator"] = player.GetComponents<BotNavigator>().Length,
+                ["botCombatDriver"] = player.GetComponents<BotCombatDriver>().Length,
+                ["botBodyWritesPose"] = body != null && !body.PoseDrivenExternally,
+                ["runtimeGhostKit"] = player.GetComponent<BotRuntimeController>() is BotRuntimeController runtime && runtime.Ghost
+            };
+        }
+
+        /// <summary>
+        /// Хронология снаряжения после всех стадий кадра: цели и прибытие кистей (время подвода), хваты (источник —
+        /// якорь/свободный предмет, зазор граббер↔снап и заданная кисть↔снап в кадре хвата), отпускание поддержки,
+        /// уборка (лёг ли в якорь), выбор оружия, первые выстрелы, смерть; после смерти — запись драйвера, хваты и
+        /// выстрелы (ожидается 0); Unarmed — Blaze, запросы выстрела, поза покоя. Только чтение.
+        /// </summary>
+        private void SampleEquipment()
+        {
+            if (_player == null) return;
+            float now = Time.time;
+            bool alive = _player.IsAlive;
+            if (_aliveSeen && !alive) Equipment("death", null, null);
+            else if (!_aliveSeen && alive) Equipment("revivedInPlace", null, null);
+            _aliveSeen = alive;
+
+            int shots = _gunner != null ? _gunner.ShotsFired : 0;
+            int grabs = _hands != null ? _hands.PrimaryGrabs + _hands.SupportGrabs : 0;
+            if (!alive)
+            {
+                _deadFrames++;
+                bool written = _driver != null && _driver.AppliedFrame == Time.frameCount;
+                // Погибшее живое тело (до смены на призрака) не ведётся; призрака ведёт драйвер — это допустимо.
+                if (written && !_bodyBornDead) _driverWritesDead++;
+                if (grabs > _primaryGrabsSeen + _supportGrabsSeen) _grabsDead += grabs - _primaryGrabsSeen - _supportGrabsSeen;
+                if (shots > _shotsSeen) _shotsDead += shots - _shotsSeen;
+                if (_bodyBornDead) SampleGhost(written);
+            }
+
+            if (_runtime != null)
+            {
+                if (_runtime.RightGoal != _rightGoal)
+                {
+                    _rightGoal = _runtime.RightGoal;
+                    _rightArrivedSeen = false;
+                    Equipment("right:" + _rightGoal, null, _runtime.RightGoalSeconds);
+                }
+                if (!_rightArrivedSeen && _runtime.RightArrived)
+                {
+                    _rightArrivedSeen = true;
+                    float took = now - _runtime.RightGoalSince;
+                    if (_rightGoal == BotHandGoal.ReachPrimary) _reachPrimarySeconds.Add(took);
+                    else if (_rightGoal == BotHandGoal.Stow) _stowSeconds.Add(took);
+                    else if (_rightGoal == BotHandGoal.Aim) _raiseSeconds.Add(took);
+                    if (_rightGoal == BotHandGoal.ReachPrimary) _primaryArrivedAt = now;
+                    Equipment("rightArrived:" + _rightGoal, null, took);
+                }
+                if (_runtime.LeftGoal != _leftGoal)
+                {
+                    _leftGoal = _runtime.LeftGoal;
+                    _leftArrivedSeen = false;
+                    Equipment("left:" + _leftGoal, null, null);
+                }
+                if (_runtime.SupportTimeouts > _supportTimeoutsSeen)
+                {
+                    _supportTimeoutsSeen = _runtime.SupportTimeouts;
+                    Equipment("supportTimeout", null, RuntimeSupportTimeout());
+                }
+                if (_runtime.ReachTimeouts > _reachTimeoutsSeen)
+                {
+                    _reachTimeoutsSeen = _runtime.ReachTimeouts;
+                    Equipment("reachTimeout", null, Nullable(_runtime.RightReachGapMm));
+                }
+                if (!_leftArrivedSeen && _runtime.LeftArrived)
+                {
+                    _leftArrivedSeen = true;
+                    float took = now - _runtime.LeftGoalSince;
+                    if (_leftGoal == BotHandGoal.Support)
+                    {
+                        _supportReachSeconds.Add(took);
+                        _supportArrivedAt = now;
+                    }
+                    Equipment("leftArrived:" + _leftGoal, null, took);
+                }
+            }
+
+            UxrFirearmWeapon selected = _gunner != null ? _gunner.SelectedFirearm : null;
+            BotHands.TryResolveGrips(selected, out UxrGrabbableObject grip, out int primary, out _);
+            if (_hands != null)
+            {
+                if (_hands.PrimaryGrabs > _primaryGrabsSeen)
+                {
+                    GrabEvent("primaryGrab", _hands.LastPrimaryGrab, _grabGrabberMm, _grabCommandedMm);
+                    if (_primaryArrivedAt >= 0f) _primaryGrabAfterArrival.Add(now - _primaryArrivedAt);
+                    _primaryArrivedAt = -1f;
+                    _equippedAt = now;
+                }
+                if (_hands.SupportGrabs > _supportGrabsSeen)
+                {
+                    GrabEvent("supportGrab", _hands.LastSupportGrab, _supportGrabGrabberMm, _supportGrabCommandedMm);
+                    if (_supportArrivedAt >= 0f) _supportGrabAfterArrival.Add(now - _supportArrivedAt);
+                    _supportArrivedAt = -1f;
+                }
+                if (_hands.SupportReleases > _supportReleasesSeen) Equipment("supportRelease", Name(selected), null);
+                if (_hands.Stows > _stowsSeen)
+                {
+                    // Имя — убранного предмета (BotHands), не выбранного: к этому кадру стрелок уже выбрал покупку.
+                    bool placed = _hands.StowsPlaced > _stowsPlacedSeen;
+                    UxrGrabbableObject stowed = _hands.LastStowedItem;
+                    Equipment(placed ? "stowPlacedByRelease" : "stowReleasedNotPlaced", stowed != null ? stowed.name : null,
+                        _hands.LastStowAnchor);
+                    _stowedGrip = stowed;
+                    _stowedAt = now;
+                }
+                _primaryGrabsSeen = _hands.PrimaryGrabs;
+                _supportGrabsSeen = _hands.SupportGrabs;
+                _supportReleasesSeen = _hands.SupportReleases;
+                _stowsSeen = _hands.Stows;
+                _stowsPlacedSeen = _hands.StowsPlaced;
+            }
+
+            // Убранный пистолет: в якоре ли он после отпускания (плавное размещение SDK) — одно событие.
+            if (_stowedGrip != null && now - _stowedAt > 0.05f)
+            {
+                Equipment(_stowedGrip.CurrentAnchor != null ? "stowedInAnchor:" + _stowedGrip.CurrentAnchor.name : "stowedNotInAnchor",
+                    _stowedGrip.name, now - _stowedAt);
+                _stowedGrip = null;
+            }
+
+            if (_previousWeapon != null && now - _previousWeaponAt >= PreviousWeaponSeconds) PreviousWeaponEvent();
+            else if (!ReferenceEquals(_previousWeapon, null) && _previousWeapon == null)
+            {
+                Equipment("previousBodyWeapon", null, "destroyed");
+                _previousWeapon = null;
+            }
+
+            if (selected != _selectedSeen)
+            {
+                Equipment("selected", Name(selected), grip != null && grip.CurrentAnchor != null ? "inAnchor" : "free");
+                _selectedSeen = selected;
+                _selectedShots = 0;
+            }
+            _selectedAnchoredSeen = grip != null && grip.CurrentAnchor != null;
+
+            if (alive && shots > _shotsSeen)
+            {
+                if (_runtime != null && !_runtime.SupportGateOpen) _shotsGateClosed += shots - _shotsSeen;
+                if (_equippedAt >= 0f)
+                {
+                    _firstShotAfterEquip.Add(now - _equippedAt);
+                    _equippedAt = -1f;
+                }
+                _selectedShots += shots - _shotsSeen;
+                if (_selectedShots <= ShotsPerWeaponInTimeline) Equipment("shot", Name(selected), shots);
+            }
+            _shotsSeen = shots;
+
+            if (alive && _gunner != null && !_gunner.HasWeapon)
+            {
+                _unarmedFrames++;
+                if (_combat != null && _combat.CombatActive) _unarmedBlazeFrames++;
+                if (_gunner.ShotRequested) _unarmedShotRequests++;
+                if (_runtime != null && _runtime.RightGoal == BotHandGoal.Rest && _runtime.LeftGoal == BotHandGoal.Rest) _unarmedRestFrames++;
+            }
+        }
+
+        /// <summary>
+        /// Кадр призрака: комплект без рук/прицела (компоненты BotHands/BotWeaponAim — ожидается 0), запись драйвера
+        /// (допустима: он единственный писатель), кисти в покое, путь ног и вход в зону спавна своей команды
+        /// (приказ директора — GoHome). Только чтение.
+        /// </summary>
+        private void SampleGhost(bool written)
+        {
+            _ghostFrames++;
+            if (written) _ghostDriverWrites++;
+            if (_hands != null || _aim != null) _ghostHandsAimFrames++;
+            if (_runtime != null && _runtime.RightGoal == BotHandGoal.Rest && _runtime.LeftGoal == BotHandGoal.Rest) _ghostRestFrames++;
+            if (_botBody == null) return;
+            Vector3 feet = _botBody.Feet;
+            if (!_ghostKnown)
+            {
+                _ghostKnown = true;
+                _ghostBodies++;
+                _ghostStart = Time.time;
+                _ghostFirstFeet = feet;
+                _ghostTeam = _player.Session != null ? _player.Session.TeamIndex : 0;
+                Equipment("ghostDriven", _runtime != null && _runtime.Ghost ? "ghostKit" : "noGhostKit", written);
+            }
+            else _ghostTravel += Planar(feet - _ghostPrevious);
+            _ghostPrevious = feet;
+            _ghostLastFeet = feet;
+            if (_ghostReachedZoneAfter < 0f && _player.Session != null && _player.Session.IsInSpawnZone)
+            {
+                _ghostReachedZoneAfter = Time.time - _ghostStart;
+                Equipment("ghostInOwnSpawnZone", null, _ghostReachedZoneAfter);
+            }
+        }
+
+        /// <summary>Расстояние по полу от последней точки призрака до точки спавна его команды (конец case), метры; -1 — нет.</summary>
+        private float GhostDistanceToOwnZone()
+        {
+            if (_ghostBodies == 0) return -1f;
+            foreach (VrBattlegrounds.Maps.TeamSpawnZone zone in UnityEngine.Object.FindObjectsByType<VrBattlegrounds.Maps.TeamSpawnZone>(FindObjectsSortMode.None))
+                if (zone != null && zone.Team != null && zone.Team.teamIndex == _ghostTeam && zone.SpawnPoint != null)
+                    return Planar(zone.SpawnPoint.position - _ghostLastFeet);
+            return -1f;
+        }
+
+        /// <summary>
+        /// Хват (замер BotHands в кадре хвата, до GrabObject): предмет, откуда (якорь/свободный — по прошлому кадру), зазор
+        /// фактического граббера и заданного драйвером граббера до снапа SDK.
+        /// </summary>
+        private void GrabEvent(string kind, BotGrabMoment moment, List<float> grabber, List<float> commanded)
+        {
+            if (!float.IsNaN(moment.GrabberToSnapMm)) grabber.Add(moment.GrabberToSnapMm);
+            if (!float.IsNaN(moment.CommandedToSnapMm) && !float.IsInfinity(moment.CommandedToSnapMm)) commanded.Add(moment.CommandedToSnapMm);
+            Equipment(kind, moment.Item != null ? moment.Item.name : null, new Dictionary<string, object>
+            {
+                ["source"] = kind == "primaryGrab" ? (_selectedAnchoredSeen ? "anchor" : "free") : "weapon",
+                ["grabFrame"] = moment.Frame,
+                ["grabberToSnapMm"] = Nullable(moment.GrabberToSnapMm),
+                ["commandedToSnapMm"] = Nullable(moment.CommandedToSnapMm),
+                ["commandedToSnapDeg"] = Nullable(moment.CommandedToSnapDegrees)
+            });
+        }
+
+        /// <summary>
+        /// Оружие прежнего тела через <see cref="PreviousWeaponSeconds"/> после смены тела: держит ли его кто-то, в якоре ли
+        /// оно, высота над ногами прежнего тела (упало ли), есть ли Rigidbody с физикой. Сравнить с человеком — тот же путь
+        /// gameplay (AvatarTeardown/ServerDropEquipment). Только чтение.
+        /// </summary>
+        private void PreviousWeaponEvent()
+        {
+            UxrFirearmWeapon weapon = _previousWeapon;
+            _previousWeapon = null;
+            BotHands.TryResolveGrips(weapon, out UxrGrabbableObject grip, out _, out _);
+            Rigidbody body = grip != null ? grip.GetComponent<Rigidbody>() : null;
+            Equipment("previousBodyWeapon", weapon.name, new Dictionary<string, object>
+            {
+                ["grabbed"] = grip != null && UxrGrabManager.HasInstance && UxrGrabManager.Instance.IsBeingGrabbed(grip),
+                ["anchor"] = grip != null && grip.CurrentAnchor != null ? grip.CurrentAnchor.name : null,
+                ["heightAbovePreviousRootM"] = weapon.transform.position.y - _previousFeet.y,
+                ["rigidbodyDynamic"] = body != null && !body.isKinematic
+            });
+        }
+
+        private static float RuntimeSupportTimeout() => BotRuntimeController.SupportTimeoutSeconds;
+
+        private static string Name(UxrFirearmWeapon firearm) => firearm != null ? firearm.name : null;
+
+        private void Equipment(string kind, string what, object value)
+        {
+            if (_equipment.Count >= MaxEquipmentEvents) return;
+            _equipment.Add(new Dictionary<string, object>
+            {
+                ["event"] = kind, ["what"] = what, ["value"] = value, ["time"] = Time.time - _start, ["frame"] = Time.frameCount,
+                ["body"] = _player != null ? _player.GetInstanceID() : 0
+            });
         }
 
         private void BindTarget(PlayerController target)
@@ -507,7 +862,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         {
             float seconds = Mathf.Max(1e-3f, Time.time - _start);
             int bots = Mathf.Max(1, _session.OwnedBots.Count);
-            int shots = _gunner != null ? _gunner.ShotsFired : 0;
+            // Выстрелы всех тел бота в case (смерть/возрождение меняют стрелка).
+            int shots = _shotsPreviousBodies + (_gunner != null ? _gunner.ShotsFired : 0);
             int connections = NetworkServer.connections.Count;
 
             var markers = new Dictionary<string, object>();
@@ -628,6 +984,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 },
                 ["consoleErrors"] = _consoleErrors,
                 ["consoleErrorSamples"] = _consoleSamples,
+                ["equipment"] = EquipmentMetrics(),
                 ["criteria"] = new Dictionary<string, object>
                 {
                     ["muzzleAtShotMedianLe1_5deg"] = _muzzleShot.Count > 0 && (float)shotMuzzle["median"] <= 1.5f,
@@ -639,6 +996,106 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     ["note"] = "Флаги для оценки главным агентом; статус сценария не меняют. Скольжение стоп и время — сравнить с Hybrid."
                 }
             };
+        }
+
+        /// <summary>Сводка этапа pf-equipment в <c>playerFlow.equipment</c>.</summary>
+        private Dictionary<string, object> EquipmentMetrics()
+        {
+            var bodies = new List<object>(_bodies);
+            if (_player != null) bodies.Add(DescribeBody(_player, "end"));
+            bool duplicates = false;
+            foreach (object entry in bodies)
+            {
+                foreach (var pair in (Dictionary<string, object>)entry)
+                    if (pair.Value is int count && count > 1 && pair.Key.StartsWith("bot", StringComparison.Ordinal)) duplicates = true;
+            }
+            var script = new List<object>();
+            if (_session.Equipment != null) foreach (var entry in _session.Equipment.Log) script.Add(entry);
+            return new Dictionary<string, object>
+            {
+                ["timeline"] = _equipment,
+                ["script"] = script,
+                ["handReachSeconds"] = new Dictionary<string, object>
+                {
+                    ["reachPrimary"] = Stats(_reachPrimarySeconds), ["raiseToAim"] = Stats(_raiseSeconds), ["stowToHolster"] = Stats(_stowSeconds),
+                    ["leftToSupport"] = Stats(_supportReachSeconds),
+                    ["plannedRangeSeconds"] = new[] { BotHandTrajectory.MinSeconds, BotHandTrajectory.MaxSeconds },
+                    ["note"] = "От смены цели кисти до прибытия (BotHandTrajectory): подвод к снапу (кобура/покупка), подъём на прицел, " +
+                               "к кобуре, левая к поддержке. 0 — кисть уже была на месте (короче 1 см/3°)."
+                },
+                ["grabMoment"] = new Dictionary<string, object>
+                {
+                    ["grabberToSnapMm"] = Stats(_grabGrabberMm), ["commandedToSnapMm"] = Stats(_grabCommandedMm),
+                    ["support"] = new Dictionary<string, object>
+                    {
+                        ["grabberToSnapMm"] = Stats(_supportGrabGrabberMm), ["commandedToSnapMm"] = Stats(_supportGrabCommandedMm)
+                    },
+                    ["arriveMm"] = BotHands.ArriveMm, ["arriveDeg"] = BotHands.ArriveDegrees,
+                    ["grabToleranceMm"] = BotHands.GrabMm, ["grabToleranceDeg"] = BotHands.GrabDegrees,
+                    ["primaryGrabAfterArrivalSeconds"] = Stats(_primaryGrabAfterArrival),
+                    ["supportGrabAfterArrivalSeconds"] = Stats(_supportGrabAfterArrival),
+                    ["reachTimeouts"] = _runtime != null ? _runtime.ReachTimeouts : 0,
+                    ["note"] = "Замер BotHands в кадре хвата (LateUpdate, после всех стадий, до GrabObject): фактический граббер и заданный " +
+                               "драйвером граббер против снапа SDK этого кадра. Хват только при заданном ≤ arriveMm/arriveDeg."
+                },
+                ["bodies"] = bodies,
+                ["bodyChanges"] = _bodyChanges,
+                ["afterDeath"] = new Dictionary<string, object>
+                {
+                    ["deadFrames"] = _deadFrames, ["dyingBodyDriverWrites"] = _driverWritesDead, ["grabs"] = _grabsDead, ["shots"] = _shotsDead,
+                    ["note"] = "Мёртвые кадры (погибшее тело до смены и призрак): хваты и выстрелы — ожидается 0; запись драйвера в погибшее " +
+                               "живое тело — 0 (отпускание при смерти — сервер, AvatarTeardown). Запись в призрака — в ghost."
+                },
+                ["ghost"] = new Dictionary<string, object>
+                {
+                    ["bodies"] = _ghostBodies, ["frames"] = _ghostFrames, ["driverWrites"] = _ghostDriverWrites,
+                    ["adapterHandsAimComponentFrames"] = _ghostHandsAimFrames, ["restPoseFrames"] = _ghostRestFrames,
+                    ["travelMeters"] = _ghostTravel,
+                    ["firstFeet"] = _ghostBodies > 0 ? new[] { _ghostFirstFeet.x, _ghostFirstFeet.y, _ghostFirstFeet.z } : null,
+                    ["lastFeet"] = _ghostBodies > 0 ? new[] { _ghostLastFeet.x, _ghostLastFeet.y, _ghostLastFeet.z } : null,
+                    ["reachedOwnSpawnZoneAfterSeconds"] = _ghostReachedZoneAfter,
+                    ["distanceToOwnSpawnPointMeters"] = GhostDistanceToOwnZone(),
+                    ["note"] = "Призрака ведёт тот же BotAvatarDriver (комплект призрака: без BotHands/BotWeaponAim, кисти в покое), " +
+                               "BotBody только источник ног; директор велит GoHome — путь и вход в зону своей команды. -1 — не дошёл/нет."
+                },
+                ["unarmed"] = new Dictionary<string, object>
+                {
+                    ["frames"] = _unarmedFrames, ["blazeActiveFrames"] = _unarmedBlazeFrames, ["shotRequestFrames"] = _unarmedShotRequests,
+                    ["restPoseFrames"] = _unarmedRestFrames,
+                    ["note"] = "Живое тело без оружия: Blaze не должен быть активен, запросов выстрела нет, обе кисти в позе покоя."
+                },
+                ["hands"] = _hands == null ? null : (object)new Dictionary<string, object>
+                {
+                    ["primaryGrabs"] = _hands.PrimaryGrabs, ["supportGrabs"] = _hands.SupportGrabs,
+                    ["supportReleases"] = _hands.SupportReleases, ["stows"] = _hands.Stows, ["stowsPlaced"] = _hands.StowsPlaced
+                },
+                ["criteria"] = new Dictionary<string, object>
+                {
+                    ["noDuplicateBotComponents"] = !duplicates,
+                    ["noActionsAfterDeath"] = _driverWritesDead == 0 && _grabsDead == 0 && _shotsDead == 0,
+                    ["ghostDrivenWithoutHandsAim"] = _ghostBodies == 0 || (_ghostDriverWrites > 0 && _ghostHandsAimFrames == 0),
+                    ["unarmedNoBlazeNoShots"] = _unarmedBlazeFrames == 0 && _unarmedShotRequests == 0,
+                    ["grabGapLt10mm"] = (_grabGrabberMm.Count + _supportGrabGrabberMm.Count) > 0 &&
+                                        MaxOf(_grabGrabberMm) < 10f && MaxOf(_grabCommandedMm) < 10f &&
+                                        MaxOf(_supportGrabGrabberMm) < 10f && MaxOf(_supportGrabCommandedMm) < 10f,
+                    ["handReachWithinPlanned"] = MaxOf(_reachPrimarySeconds) <= BotHandTrajectory.CeilingSeconds &&
+                                                 MaxOf(_stowSeconds) <= BotHandTrajectory.CeilingSeconds &&
+                                                 MaxOf(_supportReachSeconds) <= BotHandTrajectory.CeilingSeconds,
+                    ["grabWithin150msOfArrival"] = MaxOf(_primaryGrabAfterArrival) <= 0.15f && MaxOf(_supportGrabAfterArrival) <= 0.15f,
+                    ["noShotBeforeSupportOrTimeout"] = _shotsGateClosed == 0,
+                    ["note"] = "Флаги для оценки главным агентом; статус сценария не меняют. Время подвода — по кадрам пробы; потолок " +
+                               "прибытия BotHandTrajectory.CeilingSeconds (длинный кадр редактора может его превысить — смотреть timeline)."
+                },
+                ["firstShotAfterEquipSeconds"] = Stats(_firstShotAfterEquip),
+                ["supportTimeouts"] = _runtime != null ? _runtime.SupportTimeouts : 0
+            };
+        }
+
+        private static float MaxOf(List<float> values)
+        {
+            float max = 0f;
+            for (int i = 0; i < values.Count; i++) max = Mathf.Max(max, values[i]);
+            return max;
         }
 
         private static Dictionary<string, object> Stats(List<float> values)

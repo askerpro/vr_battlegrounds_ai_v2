@@ -52,7 +52,9 @@ namespace VrBattlegrounds.Bots
     /// из обработчика стадии UXR: выстрел — <see cref="ExecuteRequestedShot"/> из LateUpdate <see cref="BotRuntimeController"/>.
     /// Гейт: фактический луч дула смотрит в точку прицеливания ИИ (допуск <see cref="BotPlayerFlowSettings.MaxShotAimErrorDegrees"/>)
     /// и путь пули до неё не перекрыт ничем, кроме цели; промах по силуэту при неточности ИИ — нормальный выстрел.
-    /// Выстрел — только после true от <c>RequestAutomationPreparation</c>.
+    /// Выстрел — только после true от <c>RequestAutomationPreparation</c>. Покупка после выбора стартового пистолета
+    /// (<see cref="OfferPurchase"/>): пистолет сначала убирается в свою кобуру (<see cref="StowFirearm"/>, исполняют
+    /// <see cref="BotRuntimeController"/> и <see cref="BotHands"/>), затем покупка появляется у кисти.
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -82,6 +84,8 @@ namespace VrBattlegrounds.Bots
         private bool _armRequested;
         private WeaponInfo _armWith;
         private float _nextArmAttempt;
+        /// <summary>Кобура, из которой взят стартовый пистолет (режим P: туда же он убирается перед покупкой).</summary>
+        private UxrGrabbableObjectAnchor _holster;
 
         /// <summary>Ствол относительно кисти — снимается после стадии захвата, см. <see cref="OnStageUpdated"/>.</summary>
         private bool _gripKnown;
@@ -112,6 +116,9 @@ namespace VrBattlegrounds.Bots
         public bool PlayerFlow => _playerFlow;
 
         /// <summary>Включает режим P. Зовёт только <see cref="BotRuntimeController"/>.</summary>
+        /// <summary>Режим P: снять запрос Blaze без выстрела (правило огня порядка кадра — ждём поддержку). Зовёт только BotRuntimeController.</summary>
+        internal void DeclineRequestedShot() => _shotRequested = false;
+
         internal void SetPlayerFlow(bool enabled)
         {
             _playerFlow = enabled;
@@ -121,6 +128,21 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>Выбранное оружие (купленное/из кобуры), даже если ещё не в руке; null — нет.</summary>
         public UxrFirearmWeapon SelectedFirearm => _weapon != null ? _firearm : null;
+
+        /// <summary>У бота есть оружие (выбрано: в руке, в кобуре или у кисти после покупки). Нет — Unarmed.</summary>
+        public bool HasWeapon => _weapon != null;
+
+        /// <summary>
+        /// Режим P: пришла покупка, а выбран стартовый пистолет — сначала он убирается (кобура или, без неё, отпускание),
+        /// потом покупка появляется у кисти. Пока так — стрелок не целится и не стреляет.
+        /// </summary>
+        public bool SwapPending => _playerFlow && _armWith != null && _weapon != null && !_spawnedByBot;
+
+        /// <summary>Режим P: оружие в руке, которое надо убрать перед покупкой (<see cref="SwapPending"/>); null — нечего убирать.</summary>
+        public UxrFirearmWeapon StowFirearm => SwapPending && IsHolding ? _firearm : null;
+
+        /// <summary>Кобура выбранного стартового пистолета (якорь, откуда он взят); null — оружие не из кобуры.</summary>
+        public UxrGrabbableObjectAnchor Holster => _weapon != null && !_spawnedByBot ? _holster : null;
 
         /// <summary>Режим P: есть цель и точка прицеливания ИИ (центр тела + разброс).</summary>
         public bool HasAimPoint => _hasAimPoint;
@@ -180,6 +202,26 @@ namespace VrBattlegrounds.Bots
             if (_armRequested) return;
             _armRequested = true;
             _armWith = purchase;
+        }
+
+        /// <summary>
+        /// Режим P (этап pf-equipment): покупка, оплаченная штатным серверным путём экономики (<see cref="BotShopper"/>),
+        /// пришла после выбора оружия. Оружие ещё не выбрано — как <see cref="Arm"/>; выбран стартовый пистолет — он
+        /// убирается (<see cref="SwapPending"/>), покупка появляется у кисти. Уже есть купленный ствол — отказ: одна
+        /// покупка на тело. Гибрид — отказ. false — покупка не принята (оружие не меняется).
+        /// </summary>
+        public bool OfferPurchase(WeaponInfo purchase)
+        {
+            if (purchase == null || !_playerFlow) return false;
+            if (!_armRequested)
+            {
+                Arm(purchase);
+                return true;
+            }
+            if (_armWith != null || (_weapon != null && _spawnedByBot)) return false;
+            _armWith = purchase;
+            _nextArmAttempt = 0f; // после уборки пистолета покупка — сразу, без паузы повторной попытки
+            return true;
         }
 
         /// <summary>Отбой: оружие больше не брать (матча нет, раунд кончился). Что в руке — остаётся.</summary>
@@ -278,9 +320,9 @@ namespace VrBattlegrounds.Bots
                 }
             }
 
-            if (!mode.WeaponsEnabled)
+            if (!mode.WeaponsEnabled || SwapPending)
             {
-                // Закупка и отсчёт: оружие в руке, стрелять рано.
+                // Закупка и отсчёт: оружие в руке, стрелять рано. Режим P: пистолет убирается под покупку — не целиться.
                 Idle();
                 return;
             }
@@ -322,8 +364,9 @@ namespace VrBattlegrounds.Bots
             UxrGrabber grabber = _avatar.GetGrabber(UxrHandSide.Right);
             if (grabber == null || UxrGrabManager.Instance == null) return false;
 
-            // Своё оружие выпало (не держит никто) — подобрать его же, а не спавнить ещё одно.
-            if (_weapon == null || UxrGrabManager.Instance.IsBeingGrabbed(_grabbable))
+            // Своё оружие выпало (не держит никто) — подобрать его же, а не спавнить ещё одно. Режим P: стартовый
+            // пистолет убран под покупку (SwapPending, не в руке) — теперь покупка.
+            if (_weapon == null || UxrGrabManager.Instance.IsBeingGrabbed(_grabbable) || SwapPending)
             {
                 _weapon = null;
                 if (_armWith != null) SpawnPurchase(grabber);
@@ -383,6 +426,7 @@ namespace VrBattlegrounds.Bots
                 if (placed == null || placed.GetComponent<UxrFirearmWeapon>() == null) continue;
 
                 Bind(placed.gameObject, spawnedByBot: false);
+                _holster = anchor;
                 return;
             }
         }

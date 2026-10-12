@@ -34,6 +34,31 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         /// меняются. По умолчанию выключено.
         /// </summary>
         public bool NoRecoil;
+
+        // ── Снаряжение проверяемого бота (этап pf-equipment, только режим P; исполняет BotStandEquipmentScript) ──
+
+        /// <summary>
+        /// Оружие (WeaponName/Rifle, только пистолет) выдаётся в кобуру штатной выдачей стартового пистолета
+        /// (<c>PlayerLoadoutManager.ServerGiveWeapon</c>, как <c>StartingSidearmPolicy</c>); бот берёт его сам (<c>Arm(null)</c>).
+        /// </summary>
+        public bool HolsterStart;
+        /// <summary>Без оружия (Unarmed): кобура пуста, <c>Arm(null)</c> — бот ничего не берёт, Blaze не создаётся.</summary>
+        public bool Unarmed;
+        /// <summary>Имя WeaponInfo покупки из <c>BotCombatStand.Weapons</c>; пусто — без покупки.</summary>
+        public string PurchaseWeaponName;
+        /// <summary>
+        /// Когда (секунды от начала case) оплатить покупку штатной экономикой (<c>BotShopper.TryPay</c>) и отдать её боту
+        /// (<c>BotGunner.OfferPurchase</c>: пистолет в руке сначала убирается в кобуру). &lt; 0 — не покупать.
+        /// </summary>
+        public float PurchaseAtSeconds = -1f;
+        /// <summary>Когда нанести проверяемому боту смертельный урон (<c>UxrActor.ReceiveDamage</c>, штатная смерть). &lt; 0 — нет.</summary>
+        public float KillAtSeconds = -1f;
+        /// <summary>
+        /// Когда оживить погибшего (<c>PlayerController.Respawn</c>, как раунд Elimination; в Respawn-режиме призрак сам не
+        /// оживает) — новое тело получает снаряжение так же, как в начале case. &lt; 0 — нет.
+        /// </summary>
+        public float RespawnAtSeconds = -1f;
+
         public BotStandScenarioId[] Cases;
     }
 

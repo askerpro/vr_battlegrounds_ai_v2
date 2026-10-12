@@ -18,6 +18,13 @@ namespace VrBattlegrounds.Bots
         /// <summary>Тело, которое бот вёл в прошлый тик: сменилось — новое ставится на ноги прежнего.</summary>
         public Component LastBody;
 
+        /// <summary>
+        /// Режим <see cref="BotBodyMode.PlayerFlow"/>: тело, на которое уже добавлен комплект адаптера (один раз на тело),
+        /// и какой: призрак (<see cref="PlayerFlowGhostKit"/> — драйвер и порядок кадра без рук/прицела) или полный.
+        /// </summary>
+        public Component PlayerFlowBody;
+        public bool PlayerFlowGhostKit;
+
         /// <summary>Где стоял бот (ноги) и куда смотрел — для нового тела.</summary>
         public bool HasPlace;
         public Vector3 Feet;

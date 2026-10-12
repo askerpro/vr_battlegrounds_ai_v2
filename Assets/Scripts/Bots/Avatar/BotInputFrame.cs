@@ -5,7 +5,7 @@ namespace VrBattlegrounds.Bots
     /// <summary>
     /// Намерения бота на один кадр в режиме <see cref="BotBodyMode.PlayerFlow"/> — то, что у человека приходит
     /// со шлема и контроллеров: поза корня (точка пола и курс), голова в пространстве трекинга (локально к пивоту
-    /// <c>UxrAvatar.CameraController</c>, как HMD), мировые позы двух кистей, спуск, хват, сброс.
+    /// <c>UxrAvatar.CameraController</c>, как HMD), мировые позы двух кистей, спуск, хват, сброс, уборка в кобуру.
     /// Собирает <see cref="BotRuntimeController"/> в Update, исполняют <see cref="BotAvatarDriver"/> (позы) и
     /// <see cref="BotHands"/> (хват/сброс). Значимый тип без ссылок на сцену — кадр не аллоцирует.
     /// </summary>
@@ -38,5 +38,14 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>Сброс: в руке предмет, который не является выбранным оружием.</summary>
         public bool Release;
+
+        /// <summary>Отпустить поддержку левой рукой (перед уборкой оружия в кобуру: размещение SDK — только с одной рукой).</summary>
+        public bool ReleaseSupport;
+
+        /// <summary>
+        /// Убрать оружие: кисть у якоря кобуры — отпустить штатным путём человека (<c>UxrGrabManager.TryRelease</c>:
+        /// SDK сам кладёт предмет в ближайший совместимый якорь в радиусе, иначе роняет).
+        /// </summary>
+        public bool Stow;
     }
 }

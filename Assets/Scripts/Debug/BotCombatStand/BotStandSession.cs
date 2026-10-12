@@ -22,15 +22,18 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         public PlayerSession Subject { get; private set; }
         public PlayerSession Target => _target;
         public System.Collections.Generic.IReadOnlyList<PlayerSession> OwnedBots => _ownedBots;
+        /// <summary>Сценарий снаряжения проверяемого бота (этап pf-equipment): начало, покупка, смерть, возрождение.</summary>
+        public BotStandEquipmentScript Equipment { get; private set; }
         private BotStandScenarioId _id;
         private BotStandRunOptions _options;
         private int _configuredRig;
         private bool _targetSeen;
         private Collider[] _hiddenTargetColliders;
 
-        public void Begin(BotStandScenarioId id, WeaponInfo weapon, BotStandRunOptions options)
+        public void Begin(BotStandScenarioId id, WeaponInfo weapon, BotStandRunOptions options, WeaponInfo purchase = null)
         {
             _id = id; _options = options;
+            BotStandEquipmentScript.Validate(options, weapon, purchase);
             if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority)
                 throw new InvalidOperationException("Стенду нужна серверная authority.");
             if (BotDirector.Instance != null && BotDirector.Instance.Bots.Count != 0)
@@ -43,7 +46,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             if (options.AvatarIndex >= 0)
                 AvatarManager.Instance.ChangeAvatar(null, Subject, Subject.TeamIndex, options.AvatarIndex);
             Place(Subject, id == BotStandScenarioId.T03 || id == BotStandScenarioId.T04 || id == BotStandScenarioId.T05 ? new Vector3(-3.5f, 0f, -4f) : new Vector3(0f, 0f, -5f), 0f);
-            if (weapon != null) Subject.ActiveAvatar.GetComponent<BotGunner>().Arm(weapon);
+            Equipment = new BotStandEquipmentScript(options, weapon, purchase);
+            Equipment.Equip(Subject, "начало case");
 
             if (id == BotStandScenarioId.T02)
             {
@@ -74,10 +78,15 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             }
         }
 
-        /// <summary>Двигает только контрольную цель. Проверяемому боту не выдаёт маршруты или состояния.</summary>
+        /// <summary>
+        /// Двигает только контрольную цель. Проверяемому боту не выдаёт маршруты или состояния; снаряжение по времени —
+        /// <see cref="BotStandEquipmentScript"/> (штатные серверные пути).
+        /// </summary>
         public void Tick(float elapsed, float duration)
         {
             if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority) return;
+            // Снаряжение проверяемого бота по времени (покупка, смерть, возрождение) — штатными серверными путями.
+            Equipment?.Tick(Subject, elapsed);
             var brain = Subject?.ActiveAvatar != null ? Subject.ActiveAvatar.GetComponent<BotCombatDriver>()?.Brain : null;
             if (brain != null && _configuredRig != brain.GetInstanceID())
             {

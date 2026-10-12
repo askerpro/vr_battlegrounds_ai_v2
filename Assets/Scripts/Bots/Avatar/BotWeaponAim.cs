@@ -82,11 +82,8 @@ namespace VrBattlegrounds.Bots
         private Vector2 _openLoop;     // x — тангаж, y — курс, градусы
         private Vector2 _compensation; // применяемая поправка, градусы
 
-        private bool _restCaptured, _restKnown;
-        private Vector3 _rightShoulderFromEye, _leftShoulderFromEye; // исходная поза, система корня, масштаб 1
-        private float _rightArmRest, _leftArmRest;
-        private PlayerController _player;
-        private AvatarCalibrationApplier _applier;
+        /// <summary>Плечи от глаз и длины рук из исходной позы префаба тела (общая с позой покоя геометрия).</summary>
+        private readonly BotArmRestGeometry _geometry = new BotArmRestGeometry();
 
         /// <summary>Последнее решение: насколько W* отведено к корпусу ради досягаемости, метры (0 — не понадобилось).</summary>
         public float LastReachPullback { get; private set; }
@@ -130,55 +127,34 @@ namespace VrBattlegrounds.Bots
             return true;
         }
 
-        private void Awake()
-        {
-            _player = GetComponent<PlayerController>();
-        }
-
         /// <summary>
-        /// Один раз: смещения плеч от глаз и длины рук из исходной позы префаба тела (не из живого скелета — его пишет IK).
-        /// false — префаба/костей нет; тогда плечо оценивается от глаз (<see cref="ShoulderFromEye"/>) без ограничения
-        /// досягаемости.
+        /// Поза правой кисти, при которой удерживаемое за основную рукоять оружие стоит так, как его поставит якорь
+        /// <paramref name="anchor"/>: <c>DropAlignTransform</c> предмета совпадает с <c>AlignTransform</c> якоря (то же
+        /// выравнивание, что делает SDK при размещении). Геометрия снапа и якоря читается у SDK в этом вызове, не
+        /// кешируется; поза предмета не пишется — кисть только подводится, размещает SDK (<see cref="BotHands"/>).
         /// </summary>
-        private bool EnsureRestGeometry()
+        public bool TryStow(UxrAvatar avatar, UxrGrabbableObject grip, int primary, UxrGrabbableObjectAnchor anchor, out Pose hand)
         {
-            if (_restCaptured) return _restKnown;
-            _restCaptured = true;
-            _applier = GetComponent<AvatarCalibrationApplier>();
+            hand = default;
+            UxrGrabber grabber = avatar != null ? avatar.GetGrabber(UxrHandSide.Right) : null;
+            Transform bone = avatar != null ? avatar.GetHandBone(UxrHandSide.Right) : null;
+            if (grabber == null || bone == null || grip == null || anchor == null) return false;
+            if (!grip.ComputeRequiredGrabberTransform(grabber, primary, out Vector3 snap, out Quaternion snapRotation, false)) return false;
 
-            GameObject prefab = _player != null ? _player.SourcePrefab : null;
-            UxrAvatar rest = prefab != null ? prefab.GetComponent<UxrAvatar>() : null;
-            if (rest == null || rest.AvatarRig == null) return _restKnown = false;
+            Transform weapon = grip.transform;
+            Transform drop = grip.DropAlignTransform;
+            Transform align = anchor.AlignTransform;
+            if (drop == null || align == null) return false;
+            Quaternion weaponInverse = Quaternion.Inverse(weapon.rotation);
+            Vector3 snapLocal = weaponInverse * (snap - weapon.position);
+            Quaternion snapLocalRotation = weaponInverse * snapRotation;
+            Vector3 dropLocal = weaponInverse * (drop.position - weapon.position);
+            Quaternion dropLocalRotation = weaponInverse * drop.rotation;
 
-            Transform root = rest.transform;
-            Quaternion inverse = Quaternion.Inverse(root.rotation);
-            UxrAvatarHead head = rest.AvatarRig.Head;
-            Vector3 eyes;
-            if (head != null && head.LeftEye != null && head.RightEye != null)
-                eyes = (head.LeftEye.position + head.RightEye.position) * 0.5f;
-            else if (head != null && head.Head != null && _applier != null && _applier.EyesBaseHeight > 0f)
-                eyes = new Vector3(head.Head.position.x, root.position.y + _applier.EyesBaseHeight, head.Head.position.z);
-            else return _restKnown = false;
-
-            if (!RestArm(rest, UxrHandSide.Right, out Vector3 rightShoulder, out _rightArmRest) ||
-                !RestArm(rest, UxrHandSide.Left, out Vector3 leftShoulder, out _leftArmRest)) return _restKnown = false;
-
-            _rightShoulderFromEye = inverse * (rightShoulder - eyes);
-            _leftShoulderFromEye = inverse * (leftShoulder - eyes);
-            return _restKnown = true;
-        }
-
-        /// <summary>Плечо и длина руки в исходной позе префаба (плечевая кость + предплечье до запястья).</summary>
-        private static bool RestArm(UxrAvatar rest, UxrHandSide side, out Vector3 shoulder, out float length)
-        {
-            shoulder = default;
-            length = 0f;
-            UxrAvatarArm arm = rest.GetArm(side);
-            Transform wrist = arm != null && arm.Hand != null ? arm.Hand.Wrist : null;
-            if (arm == null || arm.UpperArm == null || arm.Forearm == null || wrist == null) return false;
-            shoulder = arm.UpperArm.position;
-            length = Vector3.Distance(arm.UpperArm.position, arm.Forearm.position) + Vector3.Distance(arm.Forearm.position, wrist.position);
-            return length > 0.05f;
+            Quaternion placedRotation = align.rotation * Quaternion.Inverse(dropLocalRotation);
+            Vector3 placedPosition = align.position - placedRotation * dropLocal;
+            hand = HandFromGrabber(bone, grabber.transform, placedPosition + placedRotation * snapLocal, placedRotation * snapLocalRotation);
+            return true;
         }
 
         /// <summary>
@@ -230,12 +206,12 @@ namespace VrBattlegrounds.Bots
                 }
 
                 // Плечи этого кадра — из ввода (глаза и курс головы, которые пишет драйвер) и исходной позы рига, без IK.
-                bool restKnown = EnsureRestGeometry();
-                float scale = _applier != null && _applier.AppliedScale > 0f ? _applier.AppliedScale : 1f;
+                bool restKnown = _geometry.Ensure(this);
+                float scale = _geometry.Scale;
                 Quaternion headYaw = Quaternion.Euler(0f, head.eulerAngles.y, 0f);
-                Vector3 rightShoulder = restKnown ? eye + headYaw * (_rightShoulderFromEye * scale) : eye + body * (ShoulderFromEye * heightScale);
-                Vector3 leftShoulder = restKnown ? eye + headYaw * (_leftShoulderFromEye * scale) : Vector3.zero;
-                float rightArm = _rightArmRest * scale, leftArm = _leftArmRest * scale;
+                Vector3 rightShoulder = restKnown ? eye + headYaw * (_geometry.RightShoulderFromEye * scale) : eye + body * (ShoulderFromEye * heightScale);
+                Vector3 leftShoulder = restKnown ? eye + headYaw * (_geometry.LeftShoulderFromEye * scale) : Vector3.zero;
+                float rightArm = _geometry.RightArm * scale, leftArm = _geometry.LeftArm * scale;
                 Vector3 hold = (rifle ? RifleHold : PistolHold) * heightScale;
                 float bodyYaw = body.eulerAngles.y;
 

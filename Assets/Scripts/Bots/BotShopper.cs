@@ -61,6 +61,21 @@ namespace VrBattlegrounds.Bots
             return choice;
         }
 
+        /// <summary>
+        /// Оплатить выбранный ствол той же точкой, что стена арсенала и <see cref="Buy"/>
+        /// (<see cref="MatchEconomy.ServerTryPurchase"/>, <c>itemNetId = 0</c>). Без экономики (Respawn, разминка) — бесплатно.
+        /// Для покупки, решённой не правилами <see cref="BotBuyPlan"/> (стенд, этап pf-equipment). false — не по карману.
+        /// </summary>
+        public static bool TryPay(PlayerSession bot, WeaponInfo choice)
+        {
+            if (bot == null || choice == null) return false;
+            MatchEconomy economy = MatchEconomy.Current;
+            if (economy == null) return true;
+            if (!economy.ServerTryPurchase(bot, choice, 0)) return false;
+            GameLog.Arsenal.Info($"[BotShopper] {bot.PlayerName}: ${economy.GetMoney(bot)} после покупки → {choice.DisplayName}.");
+            return true;
+        }
+
         private static BotBuyKind KindFor(PlayerSession bot, int money)
         {
             var mode = Managers.MapReferee.Instance != null ? Managers.MapReferee.Instance.ActiveGameMode as EliminationMode : null;

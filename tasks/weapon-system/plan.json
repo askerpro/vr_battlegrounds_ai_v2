@@ -371,6 +371,11 @@
           "task": "weapon-system",
           "stage": "sight-iron-kits",
           "state": "verified"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "ledger-spawn-ready",
+          "state": "verified"
         }
       ],
       "needs": []
@@ -460,6 +465,11 @@
           "task": "weapon-system",
           "stage": "ejection-manual",
           "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "ledger-spawn-ready",
+          "state": "verified"
         }
       ],
       "needs": []
@@ -487,6 +497,11 @@
           "task": "bots-fix",
           "stage": "clip-cutover",
           "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "ledger-spawn-ready",
+          "state": "verified"
         }
       ],
       "needs": []
@@ -522,6 +537,11 @@
         {
           "task": "weapon-system",
           "stage": "sight-iron-kits",
+          "state": "verified"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "ledger-spawn-ready",
           "state": "verified"
         }
       ],
@@ -569,6 +589,21 @@
         "Assets/Editor/VR_Battlegrounds/Gameplay/SightSplit.meta",
         "Assets/Tests/EditMode/SightSplit/**",
         "Assets/Tests/EditMode/SightSplit.meta"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "ledger-spawn-ready",
+      "writes": [
+        "Assets/Scripts/Weapons/WeaponSystem/WeaponSystem.cs",
+        "Assets/Scripts/Weapons/WeaponSystem/UxrReadinessLedgerPort.cs",
+        "Assets/Scripts/Weapons/WeaponLedgerIntegrity.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.Readiness.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmReadinessTypes.cs",
+        "Assets/Tests/EditMode/Weapons/LedgerSpawnReadyTests.cs",
+        "Assets/Tests/EditMode/Weapons/LedgerSpawnReadyTests.cs.meta",
+        "tasks/weapon-system/changelog/2026-10-12-sdk-76.md"
       ],
       "after": [],
       "needs": []

@@ -12,6 +12,9 @@ namespace VrBattlegrounds.Bots
         /// <summary>Место на базе — индекс в <see cref="BotHomeSlot"/>, раздаёт директор по порядку ботов.</summary>
         public int HomeSlot;
 
+        /// <summary>Как тело получает позу; задаётся при создании бота и переживает смену тела.</summary>
+        public BotBodyMode BodyMode;
+
         /// <summary>Тело, которое бот вёл в прошлый тик: сменилось — новое ставится на ноги прежнего.</summary>
         public Component LastBody;
 

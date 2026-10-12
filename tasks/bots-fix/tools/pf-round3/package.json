@@ -1,0 +1,125 @@
+{
+ "package": "bots-fix pf-round3: DEVELOPMENT-замер этапа pf-prototype — новый гейт выстрела, ZeroAiAimSpread/NoRecoil, отставание оружия, эпизоды стоп",
+ "date": "2026-10-12",
+ "basedOn": "tasks/bots-fix/tools/pf-round2",
+ "spec": "tasks/bots-fix/pf-prototype-spec.md «Критерии этапа»",
+ "technicalInput": "checkpoint pf-round3 с незакоммиченной реализацией pf-prototype (Assets/Scripts/Bots/**, Assets/Scripts/Debug/BotCombatStand/**, BotStandRecorder, PlayersManager); payload-ы ассеты не пишут",
+ "outputRoot": "tasks/bots-fix/reports/pf-round3",
+ "expectedChangedPaths": [],
+ "queue": {
+  "caseSeconds": 30,
+  "phases": "Live Respawn 300 с: p1 = E, PE, F, R (7 case), p2 = S, PF, B (5 case); у каждой фазы свой Play/warmup (runtime/<phase>/)",
+  "combos": [
+   {
+    "id": "E-ak105",
+    "zero": true,
+    "noRecoil": true
+   },
+   {
+    "id": "PE-ppk",
+    "zero": true,
+    "noRecoil": true,
+    "cases": [
+     "T07"
+    ]
+   },
+   {
+    "id": "F-ak105",
+    "zero": false,
+    "noRecoil": false
+   },
+   {
+    "id": "R-ak105",
+    "zero": true,
+    "noRecoil": false
+   },
+   {
+    "id": "S-ak105",
+    "zero": false,
+    "noRecoil": true
+   },
+   {
+    "id": "PF-ppk",
+    "zero": false,
+    "noRecoil": false,
+    "cases": [
+     "T07"
+    ]
+   },
+   {
+    "id": "B-ak105",
+    "playerFlow": false
+   }
+  ],
+  "defaults": "PlayerFlow=true, seed 101, T07+T05, Capture, AvatarIndex=-1"
+ },
+ "steps": [
+  {
+   "id": "B0",
+   "tool": "execute_code",
+   "payload": "b0-preflight.cs",
+   "kind": "read-only",
+   "repeatable": true,
+   "pass": "passed=true"
+  },
+  {
+   "id": "B3",
+   "tool": "execute_code",
+   "payload": "b3-runtime-launch.cs",
+   "kind": "mutation (enter Play)",
+   "repeatable": false,
+   "pre": "B0 PASS; renew lease",
+   "pass": "started=true; затем B5: launch Ready, stand Running -> finished (warmup гибрид PPK T07 1 с)"
+  },
+  {
+   "id": "B5",
+   "tool": "execute_code",
+   "payload": "b5-runtime-status.cs",
+   "kind": "read-only",
+   "repeatable": true
+  },
+  {
+   "id": "B4",
+   "tool": "execute_code",
+   "payload": "b4-runtime-queue.cs",
+   "kind": "mutation (RunCases chain)",
+   "repeatable": false,
+   "pre": "warmup finished, invalidFixture=0, Live=Combat",
+   "pass": "B5.queue.state=completed",
+   "terminal": "queue.state=failed/live-ended/aborted -> сразу B6, finish"
+  },
+  {
+   "id": "console",
+   "tool": "read_console",
+   "kind": "read-only",
+   "pre": "до B6",
+   "pass": "ошибки сохраняются в отчёт"
+  },
+  {
+   "id": "B6",
+   "tool": "execute_code",
+   "payload": "b6-runtime-stop.cs",
+   "kind": "mutation (exit Play)",
+   "repeatable": false,
+   "pass": "B5: editor.playing=false, launch.state=Idle, stand.owned=false"
+  },
+  {
+   "id": "finish",
+   "tool": "broker finish",
+   "pre": "B6 выполнен (или terminal)"
+  },
+  {
+   "id": "copy",
+   "tool": "копирование отчётов worker -> tasks/bots-fix/reports/pf-round3 (не git add)"
+  },
+  {
+   "id": "verdict",
+   "tool": "python -I tasks/bots-fix/tools/pf-round3/analyze.py",
+   "kind": "offline, после finish"
+  }
+ ],
+ "offlineChecks": {
+  "compile": "compile-check.ps1: 7 сборок + 5/5 payload",
+  "analyzer": "smoke на копии отчётов pf-round2 (E/PE/B)"
+ }
+}

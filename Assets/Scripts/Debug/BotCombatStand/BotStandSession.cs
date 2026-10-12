@@ -36,7 +36,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             if (BotDirector.Instance != null && BotDirector.Instance.Bots.Count != 0)
                 throw new InvalidOperationException("Есть чужие боты — стенд их не удаляет.");
             var director = BotDirector.EnsureInstance();
-            Subject = director.AddBot();
+            var mode = options.PlayerFlow ? BotBodyMode.PlayerFlow : BotBodyMode.Hybrid;
+            Subject = director.AddBot(mode);
             if (Subject != null) _ownedBots.Add(Subject);
             if (Subject == null || Subject.ActiveAvatar == null) throw new InvalidOperationException("Бот не создан.");
             if (options.AvatarIndex >= 0)
@@ -46,7 +47,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
             if (id == BotStandScenarioId.T02)
             {
-                var other = director.AddBot();
+                var other = director.AddBot(mode);
                 if(other!=null) _ownedBots.Add(other);
                 if(other?.ActiveAvatar==null) throw new InvalidOperationException("Нет второго бота.");
                 Place(other, new Vector3(0f, 0f, 5f), 180f);

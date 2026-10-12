@@ -35,6 +35,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private UnityEngine.Random.State _random;
         private bool _randomSaved;
         private BotStandCaseResult _activeCase;
+        private BotStandPlayerFlowProbe _probe;
+        private BotStandShotConditions _conditions;
         private readonly List<BotStandCaseResult> _results = new List<BotStandCaseResult>();
 
         private void Awake() => Instance = this;
@@ -124,6 +126,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     if (weapon == null) throw new InvalidOperationException("Нет оружия нужной категории.");
                     _session.Begin(id, weapon, options);
                     BotStandMeasurements.ValidateFixture(id, _session);
+                    _conditions = new BotStandShotConditions(_session, options);
+                    _probe = new BotStandPlayerFlowProbe(_session, options.PlayerFlow);
                     CaseStarted?.Invoke(result, _session);
                 }
                 catch (NotSupportedException e) { result.Status = "Unsupported"; result.Error = e.Message; }
@@ -138,6 +142,18 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     yield return new WaitForSeconds(0.1f);
                 }
                 result.Duration = Time.time - start;
+                if (_probe != null)
+                {
+                    try { _probe.WriteMetrics(result); }
+                    catch (Exception e) { result.Metrics["playerFlowError"] = e.Message; }
+                    _probe.Dispose(); _probe = null;
+                }
+                if (_conditions != null)
+                {
+                    try { _conditions.WriteMetrics(result); }
+                    catch (Exception e) { result.Metrics["shotConditionsError"] = e.Message; }
+                    _conditions.Dispose(); _conditions = null;
+                }
                 BotStandMeasurements.Evaluate(result);
                 if (result.Frames.Count == 0 && result.Status != "InvalidFixture" && result.Status != "Unsupported") { result.Status = "InvalidFixture"; result.Error = "Нет кадров акторов."; }
                 try { CaseFinished?.Invoke(result); }
@@ -178,6 +194,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             }
             finally
             {
+                _probe?.Dispose(); _probe=null;
+                _conditions?.Dispose(); _conditions=null;
                 var owned=_session; _session=null;
                 try { owned?.Dispose(); }
                 finally { if (_randomSaved) { UnityEngine.Random.state = _random; _randomSaved = false; } }

@@ -66,6 +66,17 @@ namespace VrBattlegrounds.Bots
         private bool _combatMovesBody;
         private bool _hasLeftHandPose;
         private Pose _leftHandPose;
+        private int _preparedFrame = -1;
+
+        /// <summary>
+        /// Режим <see cref="BotBodyMode.PlayerFlow"/>: корень, камеру и кисти пишет <see cref="BotAvatarDriver"/>, этот
+        /// компонент — только источник ног, курса и взгляда (<see cref="PrepareFrame"/>, <see cref="HeadRotation"/>,
+        /// <see cref="TryGetRestHands"/>) и ничего не пишет. Один писатель трансформов в каждый момент.
+        /// </summary>
+        public bool PoseDrivenExternally { get; private set; }
+
+        /// <summary>Передать запись позы драйверу (true) или вернуть себе (false). Зовёт только <see cref="BotAvatarDriver"/>.</summary>
+        internal void SetPoseDrivenExternally(bool external) => PoseDrivenExternally = external;
 
         /// <summary>Вооружённая анимация на отдельном риге; корень самого аватара не двигается.</summary>
         public void SetCombatPoseSource(Animator source, bool movesBody = false)
@@ -92,6 +103,8 @@ namespace VrBattlegrounds.Bots
         /// <summary>Коррекция обеих кистей при наведении оружия; базовая поза остаётся клиповой.</summary>
         public void SetWeaponHands(Pose left, Pose right)
         {
+            // В режиме P кисти пишет только BotAvatarDriver.
+            if (PoseDrivenExternally) return;
             _hasLeftHandPose = true;
             _leftHandPose = left;
             SetRightHandPose(right.position, right.rotation);
@@ -180,10 +193,44 @@ namespace VrBattlegrounds.Bots
         /// <summary>
         /// Поза ставится в конце стадии <see cref="UxrUpdateStage.Update"/>: IK аватара
         /// (<see cref="UxrUpdateStage.PostProcess"/>) ещё впереди и возьмёт её в этом же кадре.
+        /// В режиме P (<see cref="PoseDrivenExternally"/>) не пишет ничего.
         /// </summary>
         private void OnStageUpdated(UxrUpdateStage stage)
         {
-            if (stage != UxrUpdateStage.Update || _avatar == null) return;
+            if (stage != UxrUpdateStage.Update || _avatar == null || PoseDrivenExternally) return;
+
+            PrepareFrame();
+            Quaternion body = BodyRotation;
+
+            if (_head != null)
+            {
+                Vector3 eye = _feet + Vector3.up * EyeHeight;
+                _head.SetPositionAndRotation(eye, HeadRotation(eye));
+            }
+
+            bool animated = TryGetWeaponPose(out Pose left, out Pose right);
+            if (_hasLeftHandPose && _leftHand != null)
+                _leftHand.SetPositionAndRotation(_leftHandPose.position, _leftHandPose.rotation);
+            else if (animated && _leftHand != null)
+                _leftHand.SetPositionAndRotation(left.position, left.rotation);
+            else Place(body, _leftHand, _leftHandLocalPosition, _leftHandLocalRotation);
+
+            if (_hasRightHandPose && _rightHand != null)
+                _rightHand.SetPositionAndRotation(_rightHandPosition, _rightHandRotation);
+            else if (animated && _rightHand != null)
+                _rightHand.SetPositionAndRotation(right.position, right.rotation);
+            else
+                Place(body, _rightHand, _rightHandLocalPosition, _rightHandLocalRotation);
+        }
+
+        /// <summary>
+        /// Логика кадра без записи трансформов: ноги и курс (от Blaze-рига в бою, иначе доворот), снятие исходной позы
+        /// кистей. Один раз за кадр; в гибриде — из стадии Update, в режиме P — из <see cref="BotRuntimeController"/>.
+        /// </summary>
+        public void PrepareFrame()
+        {
+            if (_avatar == null || _preparedFrame == Time.frameCount) return;
+            _preparedFrame = Time.frameCount;
 
             // Камера и кости доступны после инициализации UltimateXR — берутся лениво.
             if (_head == null)      _head      = _avatar.CameraTransform;
@@ -200,44 +247,29 @@ namespace VrBattlegrounds.Bots
                 _walking = (_feet - from).sqrMagnitude > 1e-6f;
             }
             else Turn();
+        }
 
+        /// <summary>Куда смотрит голова из точки глаз: на цель, по ходу или осматривается по сторонам.</summary>
+        public Quaternion HeadRotation(Vector3 eye)
+        {
             Quaternion body = BodyRotation;
+            if (_hasLookTarget && (_lookTarget - eye).sqrMagnitude > 0.01f)
+                return Quaternion.LookRotation(_lookTarget - eye, Vector3.up);
+            if (_walking) return body;
 
-            if (_head != null)
-            {
-                Vector3 eye = _feet + Vector3.up * EyeHeight;
-                Quaternion headRotation;
+            float sway = Mathf.Sin((Time.time + _phase) * (2f * Mathf.PI / LookSwayPeriod)) * LookSwayDegrees;
+            return body * Quaternion.Euler(0f, sway, 0f);
+        }
 
-                if (_hasLookTarget && (_lookTarget - eye).sqrMagnitude > 0.01f)
-                {
-                    headRotation = Quaternion.LookRotation(_lookTarget - eye, Vector3.up);
-                }
-                else if (_walking)
-                {
-                    headRotation = body;
-                }
-                else
-                {
-                    float sway = Mathf.Sin((Time.time + _phase) * (2f * Mathf.PI / LookSwayPeriod)) * LookSwayDegrees;
-                    headRotation = body * Quaternion.Euler(0f, sway, 0f);
-                }
-
-                _head.SetPositionAndRotation(eye, headRotation);
-            }
-
-            bool animated = TryGetWeaponPose(out Pose left, out Pose right);
-            if (_hasLeftHandPose && _leftHand != null)
-                _leftHand.SetPositionAndRotation(_leftHandPose.position, _leftHandPose.rotation);
-            else if (animated && _leftHand != null)
-                _leftHand.SetPositionAndRotation(left.position, left.rotation);
-            else Place(body, _leftHand, _leftHandLocalPosition, _leftHandLocalRotation);
-
-            if (_hasRightHandPose && _rightHand != null)
-                _rightHand.SetPositionAndRotation(_rightHandPosition, _rightHandRotation);
-            else if (animated && _rightHand != null)
-                _rightHand.SetPositionAndRotation(right.position, right.rotation);
-            else
-                Place(body, _rightHand, _rightHandLocalPosition, _rightHandLocalRotation);
+        /// <summary>Кисти в позе префаба относительно ног и курса (опущенные руки без оружия). false — поза ещё не снята.</summary>
+        public bool TryGetRestHands(out Pose left, out Pose right)
+        {
+            left = right = default;
+            if (!_handsCaptured) return false;
+            Quaternion body = BodyRotation;
+            left = new Pose(_feet + body * _leftHandLocalPosition, body * _leftHandLocalRotation);
+            right = new Pose(_feet + body * _rightHandLocalPosition, body * _rightHandLocalRotation);
+            return true;
         }
 
         /// <summary>Корпус доворачивается к цели, иначе — по ходу. Корень не трогается.</summary>

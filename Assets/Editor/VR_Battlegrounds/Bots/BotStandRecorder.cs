@@ -68,9 +68,10 @@ namespace VrBattlegrounds.EditorTools
                 var shooter=driver.Brain!=null ? driver.Brain.coverShooterBehaviour as BlazeAISpace.CoverShooterBehaviour : null;
                 if(shooter!=_observedBrain) { if(_observedBrain!=null) _observedBrain.shootEvent.RemoveListener(Requested); _observedBrain=shooter; if(shooter!=null) shooter.shootEvent.AddListener(Requested); }
                 if(gun.Firearm!=_observedWeapon) { if(_observedWeapon!=null) _observedWeapon.ProjectileShot-=Fired; _observedWeapon=gun.Firearm; if(_observedWeapon!=null) _observedWeapon.ProjectileShot+=Fired; }
-                var weaponInfo=gun.Firearm!=null ? gun.Firearm.GetComponent<WeaponComponent>()?.WeaponData : null;
-                string readinessReason="Отсутствует ReadinessProfile";
-                bool profileValid=weaponInfo!=null && weaponInfo.ReadinessProfile!=null && weaponInfo.ReadinessProfile.TryValidate(out readinessReason);
+                // Профиль готовности — у хоста оружия на префабе (WeaponSystem), как берёт его BotGunner; WeaponData его не дублирует.
+                var system=gun.Firearm!=null ? gun.Firearm.GetComponent<VrBattlegrounds.Weapons.WeaponSystem>() : null;
+                string readinessReason=system==null ? "Нет WeaponSystem у оружия" : !system.IsConfigured ? "WeaponSystem не настроен" : "Отсутствует профиль WeaponSystem";
+                bool profileValid=system!=null && system.IsConfigured && system.Profile!=null && system.Profile.TryValidate(out readinessReason);
                 _readinessError=profileValid ? null : readinessReason;
                 var clips = source != null ? source.GetCurrentAnimatorClipInfo(0).Select(c => new { name = c.clip.name, weight = c.weight,
                     path = AssetDatabase.GetAssetPath(c.clip), guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(c.clip)) }).ToArray() : null;
@@ -157,7 +158,8 @@ namespace VrBattlegrounds.EditorTools
         private static Dictionary<string,string> SourceHashes()
         {
             var hashes=new Dictionary<string,string>();
-            foreach(var path in new[] { "Assets/Scripts/Bots/BotBody.cs", "Assets/Scripts/Bots/BotCombatDriver.cs", "Assets/Scripts/Bots/BotGunner.cs", "Assets/Scripts/Bots/BotNavMesh.cs", "Assets/Resources/Bots/BotPistol.controller", "Assets/Resources/Bots/BotRifle.controller" })
+            foreach(var path in new[] { "Assets/Scripts/Bots/BotBody.cs", "Assets/Scripts/Bots/BotCombatDriver.cs", "Assets/Scripts/Bots/BotGunner.cs", "Assets/Scripts/Bots/BotNavMesh.cs", "Assets/Resources/Bots/BotPistol.controller", "Assets/Resources/Bots/BotRifle.controller",
+                "Assets/Scripts/Bots/BotRuntimeController.cs", "Assets/Scripts/Bots/BotAimMath.cs", "Assets/Scripts/Bots/Avatar/BotAvatarDriver.cs", "Assets/Scripts/Bots/Avatar/BotHands.cs", "Assets/Scripts/Bots/Avatar/BotWeaponAim.cs" })
                 using(var stream=File.OpenRead(path)) using(var sha=System.Security.Cryptography.SHA256.Create())
                     hashes[path]=BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","").ToLowerInvariant();
             return hashes;

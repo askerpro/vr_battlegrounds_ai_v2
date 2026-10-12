@@ -201,8 +201,11 @@ namespace VrBattlegrounds.Managers
         /// Создаёт и регистрирует сессию бота: тот же префаб, что у игрока, но спавн без
         /// владельца (<c>NetworkServer.Spawn</c> вместо <c>AddPlayerForConnection</c>).
         /// Аватар создаёт вызывающий — <c>AvatarManager.SpawnAvatar(null, …)</c>.
+        /// <paramref name="initialCalibration"/> — калибровка, которую выбрали боты (рост глаз и т. п.); принимается
+        /// тем же <c>ServerAcceptCalibration(…, Connect)</c>, что у человека при подключении, и до спавна —
+        /// значение уезжает в данных спавна. null — бот без калибровки (как раньше).
         /// </summary>
-        public PlayerSession CreateBotSession(string playerName, string deviceToken)
+        public PlayerSession CreateBotSession(string playerName, string deviceToken, PlayerCalibration? initialCalibration = null)
         {
             if (_playerSessionPrefab == null)
             {
@@ -218,6 +221,10 @@ namespace VrBattlegrounds.Managers
             session.IsAdmin = false;
             session.Role = GameRole.Player;
             session.PlayerName = playerName;
+
+            // До спавна, как у игрока при подключении: границы — PlayerCalibrationRules.
+            if (initialCalibration.HasValue)
+                session.ServerAcceptCalibration(initialCalibration.Value, PlayerSession.CalibrationOrigin.Connect);
 
             NetworkServer.Spawn(sessionGO);
             RegisterBot(session);

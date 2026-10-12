@@ -9,3 +9,5 @@
 6. `docs-sync` — после clip-cutover обновить прежний гибрид в `Docs/gameplay.md` «Матч с ботами (T-48)», `Docs/tasks/bots-blaze-integration.md`, строках ботов `Docs/game-manager.md`.
 7. `low-crouch` — присед ботов после приёмки native legs (avatar-ik) — `Docs/tasks/bots-blaze-integration.md` «Приёмка».
 8. `heavy-bot` — судьба Heavy, исключённого из клиповой схемы — `tasks/bots-fix/Details.md` «Цель и мотивация».
+
+- `dev-hybrid-no-fire` — в origin/dev боты матча (гибрид BotGunner.FireRequestedShot) не стреляют из AK105/PPK и большинства стволов: профиль готовности ищется в WeaponData (там null), а он на WeaponSystem префаба; замер pf-round1/2 (база 0 выстрелов). Закрывается clip-cutover (переход матча на player-flow) или точечным фиксом гибрида по решению пользователя — `tasks/bots-fix/player-flow-plan.md`.

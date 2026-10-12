@@ -18,6 +18,22 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         public bool HandFit;
         public string WeaponName;
         public int AvatarIndex = -1;
+        /// <summary>
+        /// Режим тела проверяемых ботов: false — гибрид dev (по умолчанию), true — вариант P «кукловод»
+        /// (<c>BotBodyMode.PlayerFlow</c>, этап pf-prototype). Матч от этого не меняется.
+        /// </summary>
+        public bool PlayerFlow;
+        /// <summary>
+        /// Только стенд, режим P: точка прицеливания ИИ — ровно центр тела цели (без разброса ИИ). Компенсация отдачи в
+        /// BotWeaponAim не меняется. По умолчанию выключено.
+        /// </summary>
+        public bool ZeroAiAimSpread;
+        /// <summary>
+        /// Только стенд: у оружия ботов стенда нет отдачи — корневую отдачу SDK запрещает политика
+        /// <c>IUxrFirearmRootRecoilPolicy</c> на экземпляре, <c>RecoilAccumulator</c> экземпляра выключен. Префабы не
+        /// меняются. По умолчанию выключено.
+        /// </summary>
+        public bool NoRecoil;
         public BotStandScenarioId[] Cases;
     }
 

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Mirror;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VrBattlegrounds.Core;
@@ -42,6 +43,8 @@ namespace VrBattlegrounds.Bots
     public sealed class BotDirector : MonoBehaviour
     {
         public static BotDirector Instance { get; private set; }
+
+        private static readonly ProfilerMarker ThinkMarker = new ProfilerMarker("BotDirector.Think");
 
         private readonly List<PlayerSession> _bots = new List<PlayerSession>();
         private readonly Dictionary<PlayerSession, BotMind> _minds = new Dictionary<PlayerSession, BotMind>();
@@ -104,7 +107,14 @@ namespace VrBattlegrounds.Bots
         }
 
         /// <summary>Добавляет бота. null — сервер не готов (нет менеджеров).</summary>
-        public PlayerSession AddBot()
+        public PlayerSession AddBot() => AddBot(BotBodyMode.Hybrid);
+
+        /// <summary>
+        /// Добавляет бота с выбранным режимом тела. <see cref="BotBodyMode.PlayerFlow"/> (этап pf-prototype) включает
+        /// только стенд; сессия такого бота получает калибровку роста (<see cref="BotPlayerFlowSettings.Calibration"/>)
+        /// до спавна, как человек при подключении. null — сервер не готов (нет менеджеров).
+        /// </summary>
+        public PlayerSession AddBot(BotBodyMode mode)
         {
             PlayersManager players = PlayersManager.Instance;
             if (!NetworkServer.active || players == null || AvatarManager.Instance == null)
@@ -114,18 +124,19 @@ namespace VrBattlegrounds.Bots
             }
 
             int number = _nextNumber++;
-            PlayerSession session = players.CreateBotSession($"Бот {number}", TokenPrefix + number);
+            PlayerSession session = players.CreateBotSession($"Бот {number}", TokenPrefix + number,
+                mode == BotBodyMode.PlayerFlow ? BotPlayerFlowSettings.Calibration : (VrBattlegrounds.PhysicalSpaceUtils.PlayerCalibration?)null);
             if (session == null) return null;
 
             _bots.Add(session);
-            _minds[session] = new BotMind { HomeSlot = _bots.Count - 1 };
+            _minds[session] = new BotMind { HomeSlot = _bots.Count - 1, BodyMode = mode };
 
             // Команда — до тела: спавн берёт зону команды. Сами режимы команду не выдают
             // (у разминки команд нет, матч ждёт выбора) — выбираем.
             ChooseTeam(session, force: true);
             SpawnBody(session);
 
-            GameLog.Player.Info($"[BotDirector] Добавлен {session.PlayerName}: команда {TeamName(session)}, скин {session.AvatarIndex}.");
+            GameLog.Player.Info($"[BotDirector] Добавлен {session.PlayerName}: команда {TeamName(session)}, скин {session.AvatarIndex}, тело {mode}.");
             return session;
         }
 
@@ -204,7 +215,10 @@ namespace VrBattlegrounds.Bots
                     continue;
                 }
 
-                Think(bot, MindOf(bot), stage);
+                using (ThinkMarker.Auto())
+                {
+                    Think(bot, MindOf(bot), stage);
+                }
             }
         }
 
@@ -302,7 +316,12 @@ namespace VrBattlegrounds.Bots
             GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             if (mode == null || mode.IsWarmup || mode.Teams == null || mode.Teams.Length == 0) return;
 
-            bool inModeTeam = mode.Teams.Any(t => t != null && t.teamIndex == bot.TeamIndex);
+            // Цикл, а не Any с лямбдой: тик каждого бота в бою без аллокаций.
+            bool inModeTeam = false;
+            foreach (TeamData team in mode.Teams)
+            {
+                if (team != null && team.teamIndex == bot.TeamIndex) { inModeTeam = true; break; }
+            }
             if (inModeTeam && mode.TeamChoiceLocked && !force) return;
 
             var humans = new List<int>();
@@ -375,6 +394,16 @@ namespace VrBattlegrounds.Bots
             if (avatar.GetComponent<BotNavigator>() == null) avatar.gameObject.AddComponent<BotNavigator>();
             if (avatar.GetComponent<BotGunner>() == null) avatar.gameObject.AddComponent<BotGunner>();
             if (avatar.GetComponent<BotCombatDriver>() == null) avatar.gameObject.AddComponent<BotCombatDriver>();
+
+            // Режим P: адаптер «кукловод» — один писатель позы (драйвер), хват SDK, поза оружия, порядок кадра.
+            // Только при новом теле: без поиска компонентов в каждом тике.
+            if (mind.BodyMode == BotBodyMode.PlayerFlow && !ReferenceEquals(mind.LastBody, avatar))
+            {
+                if (avatar.GetComponent<BotAvatarDriver>() == null) avatar.gameObject.AddComponent<BotAvatarDriver>();
+                if (avatar.GetComponent<BotHands>() == null) avatar.gameObject.AddComponent<BotHands>();
+                if (avatar.GetComponent<BotWeaponAim>() == null) avatar.gameObject.AddComponent<BotWeaponAim>();
+                if (avatar.GetComponent<BotRuntimeController>() == null) avatar.gameObject.AddComponent<BotRuntimeController>();
+            }
 
             mind.LastBody = avatar;
         }

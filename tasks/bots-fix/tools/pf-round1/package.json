@@ -1,0 +1,35 @@
+{
+  "package": "bots-fix pf-round1: DEVELOPMENT-замер этапа pf-prototype (бот = обычный аватар игрока, режим PlayerFlow) на BotCombatStand",
+  "date": "2026-10-12",
+  "basedOn": "tasks/bots-fix/tools/aim-round4 (B0/B3/B4/B5/B6, без клиповых B1/B2/B7)",
+  "spec": "tasks/bots-fix/pf-prototype-spec.md «Критерии этапа»",
+  "technicalInput": "checkpoint pf-round1 с незакоммиченной реализацией pf-prototype (Assets/Scripts/Bots/**, Assets/Scripts/Debug/BotCombatStand/**, BotStandRecorder, PlayersManager); payload-ы ассеты не пишут",
+  "outputRoot": "tasks/bots-fix/reports/pf-round1",
+  "expectedChangedPaths": [],
+  "queue": {
+    "caseSeconds": 30,
+    "body": "AvatarIndex=-1: штатный выбор BotSkin.PickHittable команды бота (Terrorists[0] = Optimized_MEF_Player); проверяется inputs.json avatarPath и b-subject.json",
+    "combos": [
+      {"id": "pf-mef-ak105", "playerFlow": true, "weapon": "AK105_Weapon", "cases": ["T07", "T05"], "seeds": [101]},
+      {"id": "base-mef-ak105", "playerFlow": false, "weapon": "AK105_Weapon", "cases": ["T07", "T05"], "seeds": [101]},
+      {"id": "pf-mef-ppk", "playerFlow": true, "weapon": "PPK_Weapon", "cases": ["T07"], "seeds": [101], "optional": true}
+    ],
+    "expectedCaseSeconds": 150
+  },
+  "steps": [
+    {"id": "B0", "tool": "execute_code", "payload": "b0-preflight.cs", "kind": "read-only", "repeatable": true, "pass": "passed=true"},
+    {"id": "B3", "tool": "execute_code", "payload": "b3-runtime-launch.cs", "kind": "mutation (enter Play)", "repeatable": false,
+     "pre": "B0 PASS; renew lease", "pass": "started=true; затем B5: launch Ready, stand Running -> finished (warmup гибрид PPK T07 1 с)"},
+    {"id": "B5", "tool": "execute_code", "payload": "b5-runtime-status.cs", "kind": "read-only", "repeatable": true},
+    {"id": "B4", "tool": "execute_code", "payload": "b4-runtime-queue.cs", "kind": "mutation (RunCases chain)", "repeatable": false,
+     "pre": "warmup finished, invalidFixture=0, Live=Combat", "pass": "B5.queue.state=completed",
+     "terminal": "queue.state=failed/live-ended/aborted -> сразу B6, finish"},
+    {"id": "console", "tool": "read_console", "kind": "read-only", "pre": "до B6", "pass": "ошибки сохраняются в отчёт"},
+    {"id": "B6", "tool": "execute_code", "payload": "b6-runtime-stop.cs", "kind": "mutation (exit Play)", "repeatable": false,
+     "pass": "B5: editor.playing=false, launch.state=Idle, stand.owned=false"},
+    {"id": "finish", "tool": "broker finish", "pre": "B6 выполнен (или terminal)"},
+    {"id": "copy", "tool": "копирование отчётов worker -> tasks/bots-fix/reports/pf-round1 (не git add)"},
+    {"id": "verdict", "tool": "python -I tasks/bots-fix/tools/pf-round1/analyze.py", "kind": "offline, после finish"}
+  ],
+  "offlineChecks": {"compile": "compile-check.ps1: 7 сборок + 5/5 payload, 0 ошибок"}
+}

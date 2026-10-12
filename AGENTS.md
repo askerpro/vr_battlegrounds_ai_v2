@@ -113,7 +113,7 @@ Before reading or running a helper, discover its actual path with `rg --files` i
 | Session/roles/devices | [session architecture](Docs/session-architecture.md) |
 | Weapons/avatars/menu | Matching asset section; recipes in .claude/skills/add-weapon, setup-avatar or add-menu-screen |
 | Map hierarchy/geometry | [scene hierarchy](Docs/scene-hierarchy.md), asset rules and occlusion/validation steps |
-| Unity automation/tests | [Unity access](.agents/rules/project-workflows.md#unity-access) and [verification](.agents/rules/project-workflows.md#verification-and-acceptance); multi-process probes: [test stand](Docs/test-stand.md); Play — только через PlayLaunch ([test stand](Docs/test-stand.md), «Как агенту включить Play (через Offline)»), прямой `EditorApplication.isPlaying` запрещён |
+| Unity automation/tests | [Unity access](.agents/rules/project-workflows.md#unity-access) and [verification](.agents/rules/project-workflows.md#verification-and-acceptance); multi-process probes: [test stand](Docs/test-stand.md); Play — только через PlayLaunch ([test stand](Docs/test-stand.md), «Как агенту включить Play (через Offline)»), прямой `EditorApplication.isPlaying = true` запрещён (выход `= false` — шаг 4 рецепта) |
 | MCP failure | Current sections of [MCP diagnostics](Docs/unity-mcp.md); old 9.x fixes are historical |
 | Coordination/integration | [integration route](.agents/rules/project-workflows.md#integration-and-coordination); enforced details: [agent_coordination](.agents/rules/agent_coordination.md) |
 | Task docs/delegation/LFS | Matching section of [workflow details](.agents/rules/project-workflows.md); LFS: [worktrees](Docs/agents/lfs-worktrees.md) |

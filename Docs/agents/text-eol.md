@@ -18,7 +18,9 @@ checkout/renormalize: файлы сходятся к LF при сохранен�
 Порча serialized binary (LF→CRLF при старой материализации): аудит
 `python Tools/agents/editor-broker.py serialized-audit --repo <worktree>`, восстановление
 `python Tools/agents/serialized_repair.py --repo <worktree>` (dry-run), затем `--apply`
-при закрытой Unity этого worktree.
+при закрытой Unity этого worktree. Если утилита не может определить состояние Unity
+(процессы не перечислить, нет `-projectPath`), `--apply` откажет до явного
+`--editor-closed-confirmed` — только после ручной проверки, что Unity закрыта.
 
 Перед checkpoint и публикацией проверьте только явно принадлежащие вам файлы:
 `python Tools/agents/check_text_eol.py --repo . --staged --path Assets/Scripts/Your.cs`.

@@ -506,7 +506,11 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Build
   `-ServerPlayer`. `-DryRunBuild` — только проверить условия и напечатать команду Unity (код 0). Только в checkout с
   полными ассетами (основной, worker): в лёгком агентском worktree (LFS-роль `agent`, ассеты — указатели) `-Build`
   отказывает — агент собирает пару на worker через `StartPairBuild`, копирует `Build\` к себе и запускает с `-Apk`
-  и `-ServerPlayer`.
+  и `-ServerPlayer`. **Проверка LFS** (до запуска Unity, и в `-DryRunBuild`): роль `main` не гарантирует полных файлов,
+  поэтому дирижёр берёт `git lfs ls-files -n` и у каждого существующего файла читает первые 200 байт; начало
+  `version https://git-lfs.github.com/spec/v1` — указатель. Есть указатели — отказ (код 2): до 10 путей, общее число и
+  подсказка `git lfs checkout -- <пути>` / `git lfs pull --include=...` (много путей — `git lfs checkout` или
+  `git lfs pull` целиком). git-lfs недоступен — тоже отказ: проверку не выполнить.
 - **Редактор открыт** (`Temp\UnityLockfile` занят) — `-Build` отказывает (код 2). Пара собирается в редакторе:
   `VrBattlegrounds.EditorTools.E2EPlayerBuilder.StartPairBuild("Build/e2e-pair-status.json")` (агент — на worker под
   арендой) ставит сборку в `delayCall` и сразу возвращает; пустой файл статуса — сборка идёт, JSON (`serverPassed`,
@@ -525,7 +529,8 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -Build
 (каждый уходит обеим сторонам как `-e2eArg`; в режиме `-File` несколько — через запятую; без пробелов и запятых
 в значениях), `-Apk` (`install -r` и SHA-256 в `run.json`), `-Serial`, `-Adb` (иначе PATH, затем Android SDK Unity
 версии проекта), `-ServerPlayer` (по умолчанию `Build\e2e\VrBattlegrounds.exe`), `-NetworkPort`/`-DiscoveryPort`
-(0 и 0 — авто, как у Run-E2E), `-ServerAddress` (по умолчанию IPv4 ПК в подсети `wlan0` шлема), `-Package`, `-Activity`.
+(0 и 0 — авто, как у Run-E2E), `-ServerAddress` (по умолчанию IPv4 ПК в подсети `wlan0` шлема), `-Package`, `-Activity`,
+`-ViewsFile` (точки обзора, ниже).
 
 Отказ с кодом 2 до прогона, ничего не трогая: нет adb или устройства (нужно ровно одно в состоянии `device`, либо
 `-Serial`), приложение уже запущено (`pidof`) — не наш процесс, нет плеера сервера, нет общей подсети, неверные
@@ -546,6 +551,13 @@ force-stop`, гашение своего серверного PID и потом�
 возвращает** его (решение пользователя 2026-10-12: перезапуск со шлема не восстанавливает связь с ПК надёжно) —
 переподключить Link вручную; в `run.json` — блок `link`.
 
+> **После `-StopLink` Link может не подключиться совсем** (наблюдалось 2026-10-12 после нескольких прогонов подряд):
+> шлем показывает выбор Air Link/Quest Link, а связь с ПК не встаёт. Выбор ПК на шлеме, запуск приложения Meta Quest
+> Link и переподключение кабеля не помогли — помог только аварийный перезапуск Link на ПК (приложение Meta Quest Link →
+> перезапуск среды выполнения; нужен человек). Причина, по наблюдению: `OVRServer_x64` на ПК держит оборванную
+> `force-stop` сессию. Поэтому `-StopLink` — только когда Link в ближайшее время не нужен; на шлеме при этом ничего
+> не выключается (Link-клиент остаётся установленным и включённым).
+
 Папка `Tools/e2e/results/<yyyyMMdd-HHmmss>-quest-<сценарий>/`: `server.json`, `server.log`, `client-1.json`,
 `client-1.logcat.txt` (процесс приложения, все теги), `unity.logcat.txt` (тег Unity), `logcat-stream.txt` (весь
 logcat за прогон потоком — кольцевой буфер шлема мал), `logcat-full.txt` (только если pid не найден),
@@ -563,6 +575,37 @@ logcat за прогон потоком — кольцевой буфер шле
 `Application.persistentDataPath`, иначе красная проверка «артефакт вне persistentDataPath». Самопроверка каркаса —
 сценарий `device-smoke` (сервер ждёт подключение с сессией, клиент — `NetworkClient.isConnected`, с `artifact=1`
 обе стороны пишут `persistentDataPath/e2e-smoke/<utc>.txt`). Во время прогона редактор и MCP на этом ПК не трогать.
+
+**Точки обзора (`-ViewsFile <json>`).** Файл задаёт, куда встать и куда смотреть, — для замеров «что видно отсюда»:
+
+```json
+{ "views": [
+  { "name": "arena-center", "x": 0, "y": -0.01, "z": 0, "yaw": 0 },
+  { "name": "spawn-a", "x": 12.5, "z": -4, "yaw": 90 }
+] }
+```
+
+`x`, `z` — точка пола, над которой окажется камера; `y` — уровень пола (необязателен: тогда текущий пол аватара);
+`yaw` — курс взгляда в градусах (0 — +Z, 90 — +X). Имена уникальны, символы — как у `-Arg` (`[A-Za-z0-9_.:/=+@%-]`),
+других полей нет; порядок точек сохраняется. Ошибка формата — отказ (код 2) до устройства; `-Arg views=...` вместе с
+`-ViewsFile` — тоже отказ. Задаются **только пол и курс**: высота глаз, тангаж и крен остаются от трекинга шлема.
+Для повторяемости ставить шлем на подставку на высоте глаз ровно — по вертикально смотрящей камере курс не определён,
+и точка не обходится.
+
+Дирижёр копирует файл в папку прогона (`views.json`), в persistentDataPath сервера
+(`%USERPROFILE%\AppData\LocalLow\<companyName>\<productName>\e2e\<прогон>\views.json`, имена из ProjectSettings этого
+checkout) и на шлем (`mkdir -p`, `adb push` в `/sdcard/Android/data/<pkg>/files/e2e/<прогон>/views.json`) и передаёт обеим
+сторонам `-e2eArg views=e2e/<прогон>/views.json` — путь от persistentDataPath. В `run.json` — блок `views` (`source`,
+`sha256`, `count`, `names`, `arg`, пути копий, `pushed`, `serverCopied`).
+
+В сценарии: `E2EViews.TryLoadFromContext(context, out views, out error)` читает файл (путь — внутри persistentDataPath
+или относительный к нему), `yield return E2EViews.GoTo(точка, outcome)` переносит свой аватар штатным
+`UxrManager.MoveAvatarTo` (единственный писатель позы; без записи в трансформы, трекинг, ввод и калибровку), ждёт
+3 кадра и снимает фактическую позу камеры: позицию, курс, тангаж, крен, высоту глаз над полом, пол аватара и отклонения
+от запроса по XZ, курсу и уровню пола. `E2EViews.ToJson(outcomes)` — артефакт. В `device-smoke` клиент после своей
+сессии и аватара обходит точки, пишет `persistentDataPath/e2e-smoke/views-<utc>.json` (забирается в
+`artifacts/client-1/`) и выносит проверку «обход точек обзора» (все точки достигнуты, отклонение XZ < 0.05 м, курс
+< 2°); сервер — проверку «файл точек обзора прочитан» с именами по порядку.
 
 #### Что где лежит
 

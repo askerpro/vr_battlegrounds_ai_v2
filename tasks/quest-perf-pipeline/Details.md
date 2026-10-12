@@ -170,3 +170,35 @@ versionName APK `0.1.0+d1e3da3ba8fc`, run.json `builds.check` «ревизии �
 `-Build` (batch) вживую не запускался: в агентском worktree LFS-роль `agent` → дирижёр отказывает (добавлено после
 проверки: ассеты-указатели дали бы битую сборку); `-DryRunBuild` и отказ проверены. Не проверено: `-Build` в
 основном checkout, `RunPairBatch` в batch-режиме.
+
+### Запрос lobby-decoration 4449 — замер GPU лобби (2026-10-12)
+
+Level-design по поручению пользователя: Lobby + 9 удалённых аватаров, ovr_gpu/ovr_cpu по точкам обзора, без рук.
+Разбор (ответ 4451): perf-stress, расстановка «внутри арены», метрики по точкам — performance (переслано 4453);
+механизм обхода точек — launch-infra, этап `e2e-views`: хелпер `E2EViews` ставит взгляд официальным
+`UxrManager.TeleportLocalAvatar` (пол+yaw, не второй писатель), пишет фактическую позу камеры; высота глаз = трекинг
+лежащего шлема (точная 1.6 м — только тестовый XR-адаптер, backlog xr-input). Ревью avatar-ik запрошено (4455).
+Сборка ветки lobby-decoration — штатно через worker (`StartPairBuild`); для человека в основном checkout `-Build`
+получит проверку LFS-указателей (`git lfs ls-files` + сигнатура pointer) в этапе `e2e-views`.
+
+Ревью avatar-ik 4459: согласен, второго писателя нет. API — `UxrManager.Instance.MoveAvatarTo(UxrAvatar.LocalAvatar,
+floorPos, forward)` (синхронный, путь игрового `PlayerController.RpcDevTeleport`; TeleportLocalAvatar допустим, но
+прерывает телепорт-корутины); вызывать из своей корутины, не из AvatarUpdated/StageUpdated; ждать 3 кадра (ноги).
+Задаётся только проекция камеры на пол и yaw; тангаж/крен/высота — от лежащего шлема; в результат — фактическая поза
+камеры и тангаж. Пол/калибровку/пивот не трогать. Для повторяемости — шлем на подставке на высоте глаз ровно.
+Будущий xr-input: один источник в слоте ввода до стадии Manipulation, без записи в кости/пивот/калибровку.
+
+### Живая проверка `e2e-views` (2026-10-12)
+
+Worker, аренда 472, вход `d2e9c075`: компиляция и AndroidCompileGate PASS, `E2EViews` загружен; `StartPairBuild` PASS
+(728 с, ревизия `d2e9c075b741`, без модального окна — opt-out в сессии уже 0). Побочные `MapRuntimeCatalog.asset`,
+`PC.asset` — unexpected, не доставлены.
+
+Шлем (Quest 3, без Link): `Run-QuestE2E.ps1 -Scenario device-smoke -Apk … -Arg artifact=1 -ViewsFile
+tasks/quest-perf-pipeline/tools/lobby-views.json` — **GREEN** `20261012-033522-quest-device-smoke`: сервер 4/4
+(файл точек прочитан, 8 имён по порядку), клиент 3/3, «обход точек обзора» 8/8 — отклонение XZ ≤ 0,0001 м, курс ≤ 0,01°;
+ревизии совпадают. Фактическая камера: высота глаз 0,80 м, тангаж +32,2°, крен −2,4° на всех точках — шлем лежит с
+наклоном вниз; для перф-замера лобби нерепрезентативно → шлем на подставку ровно на высоте глаз (совет avatar-ik).
+`tools/lobby-views.json` — точки из запроса level-design 4449 (пол x/z + yaw, высоту не задаём).
+
+Не проверено: `-Build` с LFS-проверкой в основном checkout (там 0 указателей из 2206, проверено только чтением).

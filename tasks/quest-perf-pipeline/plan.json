@@ -88,6 +88,26 @@
           "readiness": "agreed"
         }
       ]
+    },
+    {
+      "id": "e2e-views",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/E2EViews.cs",
+        "Assets/Scripts/Debug/E2E/E2EViews.cs.meta",
+        "Assets/Scripts/Debug/E2E/Scenarios/DeviceSmokeScenario.cs",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Docs/testing.md",
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "quest-build",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

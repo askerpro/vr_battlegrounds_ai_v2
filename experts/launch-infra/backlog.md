@@ -42,3 +42,7 @@ PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
 full suite, клик toolbar, Quest, synthetic XR/gameplay E2E не приняты; предупреждения TeamRegistry из аудита383 —
 с gameplay; `Tools/e2e/Run-E2E.ps1`, `Tools/release/`, `ProjectSettings/VirtualProjectsConfig.json` вне writes
 этапов — только новым этапом.
+
+- `troubleshooting-link` — запись в `Docs/troubleshooting.md` (раздел «Сборка и инструменты»): Link не подключается
+  после `-StopLink`, помогает только перезапуск среды Meta Quest Link на ПК (2026-10-12). Пока описано в
+  `Docs/testing.md`; в troubleshooting — когда этап `hand-rig-quality/documentation` освободит файл.

@@ -22,6 +22,11 @@ PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
    sceneId расходятся. Связано с `stands-migration`. Плюс: логи клонов MPPM (Library/VP/*/Logs/Editor.log) перезаписываются
    каждым Play — PlayLaunch должен архивировать лог клона на RunId/фазу (брокер --output Library/VP не принимает).
    Отчёты: worktree bots tasks/bots-fix/reports/net-round1/runtime/attempt-2/.
+0c. `stand-deferred-client` — просьба bots 5068 (не блокер): «новый игрок входит в идущий бой». Выбран вариант (б):
+   `PlayLaunchConfiguration.DeferredClients` — участник стартует отключённым (не входит в Ready) + адресное действие
+   `connect` (StandRequest). Вариант (а) connect-fresh со сменой токена посреди прогона отклонён: второй путь к
+   идентичности/сессии участника. (в) H1C с хостом в клоне — пока не нужен (Role=host, ClientCount=1 достаточно).
+   Порядок: после `stand-multiprocess-sceneid`.
 1. `live-smoke-runner` → этап `e2e-log-verdict` — агрегация ошибок всех процессов и механизм известных шумов для `series-smoke-e2e` — MRB «Известные шумы тестов и харнесса», VTS «Финальная проверка383».
 2. `async-player-build` — `E2EPlayerBuilder.Run()` блокирует главный поток (таймаут MCP), пачкает `PC.asset`, `ProjectSettings.asset`, `MapRuntimeCatalog.asset`; ложное «устарел» — `Docs/testing.md` «Шероховатость: проверка свежести билда». Диагностика 2026-10-11 (чтение кода): `PC.asset` — URP
    `ShaderBuildPreprocessor` под Standalone+Development, мусор, зона performance; `ProjectSettings.asset` — снимок
@@ -58,3 +63,6 @@ full suite, клик toolbar, Quest, synthetic XR/gameplay E2E не принят
   `OculusBuildProcessor` не видит лоадер из-за смены в памяти в `XrBuildSettingsScope`. Влияние: категория в лаунчере,
   список устройств, проверка LateLatching/SpaceWarp дирижёром (`renderCheck=unknown`). Сессия в прогонах доходит до
   VISIBLE, не FOCUSED — проверить связь с prox/фокусом.
+
+- Запуск на Quest без контроллеров — передан performance (решение пользователя, 5181): этап controller-free-launch задачи
+  perf-stress-scenario; launch-infra — стык (признак Test/e2e-сборки в GameBuilder, ревью, zone-ack), заметки — 5183.

@@ -56,6 +56,11 @@
           "task": "weapon-system",
           "stage": "sight-arsenal-dedupe",
           "state": "merged"
+        },
+        {
+          "task": "catalog-fingerprint",
+          "stage": "env-independent",
+          "state": "merged"
         }
       ],
       "needs": []

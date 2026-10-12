@@ -37,7 +37,10 @@ YAML в Git хранится в LF, а в старых рабочих копия
   - EditMode (группы Maps/MapCatalogIntegrity/MapRunContract): 253, 6 FAIL — все известные вне этапа
     (ArsenalMapGeometry TestMap1, Ambience BotCombatStand, LD-текстуры, LobbyLayout, LD20, LD23); каталог-тесты PASS;
   - Play лобби через PlayLaunch (host): Ready, MapPlayable, MapRunValid, StartupError пусто, Console errors 0, cleanup ok.
-  - diff каталога: только 14 строк отпечатков. Ждёт приёмки пользователя.
+  - diff каталога: только 14 строк отпечатков.
+- 2026-10-12: `env-independent` принят пользователем (сессия эксперта gameplay); вливание в origin/dev. Входы каталога
+  в origin/dev после базы b624fdb3c не менялись — отпечатки актуальны. Не проверено: две реальные сборки
+  (сервер/клиент) из разных рабочих копий. Дальше: `accepted-tests` (EditMode: CRLF и LF дают один отпечаток).
 - Связи: weapon-system `sight-arsenal-dedupe` вписывает одну строку отпечатка лобби (разрешение 4912) —
   после их вливания rebase и штатный rebake перезапишут все отпечатки форматом v2. `lobby-decoration`
   (level-design) тоже пишет каталог — после вливания этого этапа их rebake даст стабильные значения.

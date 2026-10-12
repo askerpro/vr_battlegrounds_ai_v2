@@ -2,10 +2,12 @@
 #if !VRBG_NO_E2E
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
 using Mirror;
+using UltimateXR.Avatar;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Managers;
@@ -30,7 +32,16 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// так проверяется сбор артефактов дирижёром с обеих сторон.
     /// </para>
     ///
-    /// <para>Игровое состояние сценарий не меняет: только наблюдает за сетью и пишет свой файл.</para>
+    /// <para>
+    /// <b>Точки обзора.</b> С <c>-e2eArg views=&lt;путь&gt;</c> (файл точек, <see cref="E2EViews"/>) клиент после своей
+    /// сессии и аватара обходит точки штатным <c>UxrManager.MoveAvatarTo</c>, пишет
+    /// <c>persistentDataPath/e2e-smoke/views-&lt;utc&gt;.json</c> и объявляет его артефактом; проверка «обход точек обзора»
+    /// зелёная, если все точки достигнуты с отклонением по XZ меньше <see cref="ViewsMaxDeviationXZ"/> м и по курсу меньше
+    /// <see cref="ViewsMaxDeviationYaw"/>°. Сервер только читает тот же файл (имена точек по порядку) — так проверяется
+    /// доставка файла обеим сторонам.
+    /// </para>
+    ///
+    /// <para>Без <c>views</c> игровое состояние сценарий не меняет: только наблюдает за сетью и пишет свой файл.</para>
     /// </summary>
     public class DeviceSmokeScenario : IE2EScenario
     {
@@ -39,6 +50,20 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckServerUp = "сервер поднят";
         private const string CheckClientJoined = "клиент подключился";
         private const string CheckArtifact = "файл-артефакт записан и объявлен";
+        private const string CheckViews = "обход точек обзора";
+        private const string CheckViewsRead = "файл точек обзора прочитан";
+
+        /// <summary>Допуск отклонения пола аватара от точки по горизонтали, м.</summary>
+        private const float ViewsMaxDeviationXZ = 0.05f;
+
+        /// <summary>Допуск отклонения курса камеры от запрошенного, градусы.</summary>
+        private const float ViewsMaxDeviationYaw = 2f;
+
+        /// <summary>Сколько ждать своего аватара после сессии.</summary>
+        private const float AvatarWait = 60f;
+
+        /// <summary>Выдержка после появления аватара: спавн успевает поставить его на место до первого переноса.</summary>
+        private const float AvatarSettleHold = 1f;
 
         /// <summary>Запас до общего таймаута исполнителя: вердикт сценария должен успеть записаться раньше.</summary>
         private const float TimeoutMargin = 10f;
@@ -59,11 +84,16 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private IEnumerator RunServer(E2EContext context, E2EResult result)
         {
             bool wantArtifact = WantsArtifact(context);
-            if (wantArtifact) result.Declare(CheckServerUp, CheckClientJoined, CheckArtifact);
-            else result.Declare(CheckServerUp, CheckClientJoined);
+            bool wantViews = WantsViews(context);
+            result.Declare(CheckServerUp, CheckClientJoined);
+            if (wantArtifact) result.Declare(CheckArtifact);
+            if (wantViews) result.Declare(CheckViewsRead);
 
             DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
             float deadline = Now + context.Timeout - TimeoutMargin;
+
+            // Серверу из файла точек нужны только имена по порядку; переносить ему нечего.
+            if (wantViews) ReadViewNames(context, result);
 
             var up = new E2EWaitOutcome();
             yield return E2EWait.Until(up, "NetworkServer.active", Mathf.Min(60f, Remaining(deadline)),
@@ -109,13 +139,23 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private IEnumerator RunClient(E2EContext context, E2EResult result)
         {
             bool wantArtifact = WantsArtifact(context);
-            if (wantArtifact) result.Declare(CheckClientJoined, CheckArtifact);
-            else result.Declare(CheckClientJoined);
+            bool wantViews = WantsViews(context);
+            result.Declare(CheckClientJoined);
+            if (wantArtifact) result.Declare(CheckArtifact);
+            if (wantViews) result.Declare(CheckViews);
 
             DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
             float deadline = Now + context.Timeout - TimeoutMargin;
 
             if (wantArtifact) WriteArtifact(context, result);
+
+            // Файл точек читается до подключения: ошибка формата видна сразу, подключение проверяется всё равно.
+            IReadOnlyList<E2EViewPoint> views = null;
+            if (wantViews && !E2EViews.TryLoadFromContext(context, out views, out string viewsError))
+            {
+                result.Set(CheckViews, false, viewsError);
+                result.Summary = "файл точек обзора не прочитан";
+            }
 
             var discovered = new E2EWaitOutcome();
             yield return E2EWait.Until(discovered, "подключение через Discovery", Mathf.Min(DiscoveryWait, Remaining(deadline)),
@@ -140,6 +180,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 result.Summary = "клиент не получил сессию на сервере";
                 yield break;
             }
+
+            if (views != null)
+                yield return WalkViews(views, result, deadline);
 
             yield return E2EWait.Hold(Mathf.Min(ClientHold, Remaining(deadline)));
         }
@@ -172,6 +215,130 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             NetworkManager manager = NetworkManager.singleton;
             return $"адрес менеджера={(manager != null ? manager.networkAddress : "менеджера нет")}, " +
                    $"NetworkClient.active={NetworkClient.active}, isConnected={NetworkClient.isConnected}";
+        }
+
+        // ── Точки обзора ─────────────────────────────────────────────────────
+
+        private static bool WantsViews(E2EContext context) => !string.IsNullOrEmpty(context.Arg(E2EViews.ArgKey));
+
+        /// <summary>Сервер: читает файл точек и отчитывается именами по порядку.</summary>
+        private static void ReadViewNames(E2EContext context, E2EResult result)
+        {
+            if (!E2EViews.TryLoadFromContext(context, out IReadOnlyList<E2EViewPoint> views, out string error))
+            {
+                result.Set(CheckViewsRead, false, error);
+                return;
+            }
+
+            var names = new string[views.Count];
+            for (int i = 0; i < views.Count; i++) names[i] = views[i].Name;
+            result.Set(CheckViewsRead, true, $"точек {views.Count}: {string.Join(", ", names)}");
+        }
+
+        /// <summary>
+        /// Клиент: ждёт свой аватар (аватар сессии и есть <c>UxrAvatar.LocalAvatar</c>), обходит точки через
+        /// <see cref="E2EViews.GoTo"/>, пишет views-&lt;utc&gt;.json и выносит проверку по допускам.
+        /// </summary>
+        private static IEnumerator WalkViews(IReadOnlyList<E2EViewPoint> views, E2EResult result, float deadline)
+        {
+            var avatarReady = new E2EWaitOutcome();
+            yield return E2EWait.Until(avatarReady, "свой аватар сессии с камерой (UxrAvatar.LocalAvatar)",
+                Mathf.Min(AvatarWait, Remaining(deadline)), LocalAvatarReady, DescribeAvatar);
+            if (!avatarReady.Succeeded)
+            {
+                result.Set(CheckViews, false, avatarReady.Diagnosis);
+                result.Summary = "нет своего аватара — точки обзора не обойдены";
+                yield break;
+            }
+
+            yield return E2EWait.Hold(Mathf.Min(AvatarSettleHold, Remaining(deadline)));
+
+            var outcomes = new List<E2EViewOutcome>(views.Count);
+            foreach (E2EViewPoint point in views)
+            {
+                var outcome = new E2EViewOutcome();
+                yield return E2EViews.GoTo(point, outcome);
+                outcomes.Add(outcome);
+                GameLog.Debug.Info($"[E2E] Точка обзора '{point.Name}': {DescribeOutcome(outcome)}");
+            }
+
+            string path = WriteViews(outcomes, out string writeError);
+            bool accepted = path != null && result.AddArtifact(path);
+
+            int reached = 0;
+            var failures = new List<string>();
+            foreach (E2EViewOutcome o in outcomes)
+            {
+                bool ok = o.Succeeded &&
+                          o.DeviationXZ < ViewsMaxDeviationXZ &&
+                          Mathf.Abs(o.DeviationYaw) < ViewsMaxDeviationYaw;
+                if (ok) reached++;
+                else failures.Add($"'{o.Point.Name}': {DescribeOutcome(o)}");
+            }
+
+            var detail = new StringBuilder();
+            detail.Append(string.Format(CultureInfo.InvariantCulture,
+                "достигнуто {0}/{1} (допуск XZ < {2:F2} м, курс < {3:F0}°)", reached, outcomes.Count,
+                ViewsMaxDeviationXZ, ViewsMaxDeviationYaw));
+            if (outcomes.Count > 0 && outcomes[0].Succeeded)
+                detail.Append("; первая точка: ").Append(DescribeOutcome(outcomes[0]));
+            if (failures.Count > 0) detail.Append("; не достигнуты: ").Append(string.Join("; ", failures));
+            if (path == null) detail.Append("; views.json не записан: ").Append(writeError);
+            else if (!accepted) detail.Append("; views.json записан, но AddArtifact отклонил '").Append(path).Append('\'');
+            else detail.Append("; артефакт ").Append(path);
+
+            bool passed = failures.Count == 0 && accepted;
+            result.Set(CheckViews, passed, detail.ToString());
+            if (!passed) result.Summary = "обход точек обзора не прошёл";
+        }
+
+        /// <summary>Свой аватар готов к переносу: LocalAvatar с камерой — это аватар своей сессии.</summary>
+        private static bool LocalAvatarReady()
+        {
+            UxrAvatar avatar = UxrAvatar.LocalAvatar;
+            PlayerSession session = PlayerSession.LocalSession;
+            return avatar != null && avatar.CameraComponent != null &&
+                   session != null && session.ActiveAvatar != null &&
+                   session.ActiveAvatar.gameObject == avatar.gameObject;
+        }
+
+        private static string DescribeAvatar()
+        {
+            UxrAvatar avatar = UxrAvatar.LocalAvatar;
+            PlayerSession session = PlayerSession.LocalSession;
+            return $"LocalAvatar={(avatar != null ? avatar.name : "null")}, " +
+                   $"камера={(avatar != null && avatar.CameraComponent != null ? "есть" : "нет")}, " +
+                   $"ActiveAvatar сессии={(session != null && session.ActiveAvatar != null ? session.ActiveAvatar.name : "null")}";
+        }
+
+        private static string DescribeOutcome(E2EViewOutcome o)
+        {
+            if (!o.Succeeded) return "ошибка: " + o.Error;
+            return string.Format(CultureInfo.InvariantCulture,
+                "откл. XZ {0:F3} м, курс {1:F2}°, пол {2:F3} м; камера ({3:F2}, {4:F2}, {5:F2}), курс {6:F1}°, " +
+                "тангаж {7:F1}°, крен {8:F1}°, глаза {9:F2} м",
+                o.DeviationXZ, o.DeviationYaw, o.DeviationFloorY,
+                o.CameraPosition.x, o.CameraPosition.y, o.CameraPosition.z,
+                o.CameraYaw, o.CameraPitch, o.CameraRoll, o.EyeHeight);
+        }
+
+        /// <summary>Пишет итоги обхода в persistentDataPath/e2e-smoke/views-&lt;utc&gt;.json; путь или null с причиной.</summary>
+        private static string WriteViews(IReadOnlyList<E2EViewOutcome> outcomes, out string error)
+        {
+            error = null;
+            string path = Path.Combine(Application.persistentDataPath, "e2e-smoke",
+                "views-" + DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmssfff'Z'", CultureInfo.InvariantCulture) + ".json");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, E2EViews.ToJson(outcomes), new UTF8Encoding(false));
+                return path;
+            }
+            catch (Exception e)
+            {
+                error = $"'{path}': {e.GetType().Name}: {e.Message}";
+                return null;
+            }
         }
 
         // ── Артефакт ─────────────────────────────────────────────────────────

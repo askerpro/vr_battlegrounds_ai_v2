@@ -20,7 +20,12 @@
 # (<база>+<ревизия>, BuildRevisionStamp). Ревизия APK читается из versionName установленного пакета,
 # ревизия сервера — из appVersion его результата; разные ревизии или ревизия, которой нет, — код 2.
 # -Build собирает пару одной ревизией batch-режимом Unity (редактор этого checkout должен быть закрыт;
-# при открытом — StartPairBuild в редакторе, затем прогон с -Apk).
+# при открытом — StartPairBuild в редакторе, затем прогон с -Apk). До запуска Unity -Build проверяет, что
+# LFS-ассеты checkout — полные файлы, а не указатели (git lfs ls-files + сигнатура указателя в первых 200 байтах).
+#
+# Точки обзора (-ViewsFile): локальный JSON { "views": [ { "name", "x", "y"?, "z", "yaw" } ] } проверяется до
+# прогона, копируется в папку прогона, на шлем (files/e2e/<прогон>/views.json) и в persistentDataPath сервера
+# (e2e/<прогон>/views.json); обе стороны получают -e2eArg views=e2e/<прогон>/views.json (путь от persistentDataPath).
 #
 # Коды возврата:
 #   0 — все проверки обеих сторон зелёные
@@ -89,7 +94,10 @@ param(
     [int]      $BuildTimeoutMinutes = 90,
 
     # Путь к Unity.exe для -Build. Пусто — версия из ProjectSettings/ProjectVersion.txt в Unity Hub.
-    [string]   $Unity = ''
+    [string]   $Unity = '',
+
+    # Локальный JSON точек обзора; уходит обеим сторонам как -e2eArg views=<путь от persistentDataPath>.
+    [string]   $ViewsFile = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -497,6 +505,101 @@ function Get-ArtifactDestination([string] $Directory, [string] $Leaf) {
     return $candidate
 }
 
+# Файлы git LFS, которые на диске лежат указателями, а не содержимым. git lfs ls-files -n — пути отслеживаемых файлов;
+# из каждого существующего читаются только первые 200 байт и сравниваются с сигнатурой указателя.
+# error — проверка не выполнена (git lfs недоступен), tracked — число отслеживаемых путей, pointers — пути-указатели.
+function Get-LfsPointerFiles([string] $Root) {
+    $result = [ordered]@{ error = $null; tracked = 0; pointers = (New-Object System.Collections.Generic.List[string]) }
+    $ls = $null
+    try { $ls = Invoke-Tool 'git' @('-C', $Root, '-c', 'core.quotepath=false', 'lfs', 'ls-files', '-n') 300 }
+    catch { $result.error = 'git не запустился: ' + $_.Exception.Message; return $result }
+    if ($ls.TimedOut -or $ls.ExitCode -ne 0) {
+        $result.error = 'git lfs ls-files завершился с кодом ' + $ls.ExitCode + ': ' + ($ls.Out + ' ' + $ls.Err).Trim()
+        return $result
+    }
+
+    $signature = 'version https://git-lfs.github.com/spec/v1'
+    $buffer = New-Object byte[] 200
+    foreach ($line in ($ls.Out -split "`r?`n")) {
+        if ($line -eq '') { continue }
+        $result.tracked++
+        $full = Join-Path $Root ($line -replace '/', '\')
+        if (-not [System.IO.File]::Exists($full)) { continue }
+        $read = 0
+        $stream = $null
+        try {
+            $stream = [System.IO.File]::Open($full, 'Open', 'Read', 'ReadWrite')
+            $read = $stream.Read($buffer, 0, $buffer.Length)
+        }
+        catch { continue }
+        finally { if ($null -ne $stream) { $stream.Dispose() } }
+        if ($read -ge $signature.Length -and [System.Text.Encoding]::ASCII.GetString($buffer, 0, $signature.Length) -ceq $signature) {
+            $result.pointers.Add($line)
+        }
+    }
+    return $result
+}
+
+function Test-JsonNumber($Value) {
+    if ($Value -is [int] -or $Value -is [long] -or $Value -is [decimal]) { return $true }
+    if ($Value -is [double]) { return -not ([double]::IsNaN($Value) -or [double]::IsInfinity($Value)) }
+    return $false
+}
+
+# Проверка файла точек обзора — те же правила, что у E2EViews.Load: корень-объект с непустым массивом views;
+# у точки только поля name, x, y, z, yaw; name — уникальная строка из символов $SafeToken; x, z, yaw — числа; y — число,
+# если задан. Возвращает error ($null — файл годен), names (по порядку) и count.
+function Read-ViewsFile([string] $Path) {
+    $result = [ordered]@{ error = $null; names = @(); count = 0 }
+    $data = $null
+    try { $data = ConvertFrom-Json ([System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)) }
+    catch { $result.error = 'JSON не разбирается: ' + $_.Exception.Message; return $result }
+    if ($null -eq $data -or $data -isnot [System.Management.Automation.PSCustomObject]) { $result.error = 'корень должен быть объектом { "views": [...] }'; return $result }
+    $viewsProperty = $data.PSObject.Properties | Where-Object { $_.Name -ceq 'views' }
+    if ($null -eq $viewsProperty -or $viewsProperty.Value -isnot [System.Array]) { $result.error = 'нет массива "views"'; return $result }
+    $items = @($viewsProperty.Value)
+    if ($items.Count -eq 0) { $result.error = 'массив "views" пуст'; return $result }
+
+    $allowed = @('name', 'x', 'y', 'z', 'yaw')
+    $seen = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
+    $names = New-Object System.Collections.Generic.List[string]
+    for ($i = 0; $i -lt $items.Count; $i++) {
+        $item = $items[$i]
+        if ($item -isnot [System.Management.Automation.PSCustomObject]) { $result.error = 'views[' + $i + '] не объект'; return $result }
+        $fields = @{}
+        foreach ($p in $item.PSObject.Properties) {
+            if ($allowed -cnotcontains $p.Name) { $result.error = 'views[' + $i + ']: неизвестное поле "' + $p.Name + '" (допустимы name, x, y, z, yaw)'; return $result }
+            $fields[$p.Name] = $p.Value
+        }
+        $name = $fields['name']
+        if ($name -isnot [string] -or $name -eq '') { $result.error = 'views[' + $i + ']: нет строки "name"'; return $result }
+        if ($name -notmatch $SafeToken) { $result.error = 'views[' + $i + ']: имя "' + $name + '" с недопустимыми символами (разрешены ' + $SafeToken + ')'; return $result }
+        if (-not $seen.Add($name)) { $result.error = 'views[' + $i + ']: имя "' + $name + '" повторяется'; return $result }
+        foreach ($key in @('x', 'z', 'yaw')) {
+            if (-not $fields.ContainsKey($key) -or -not (Test-JsonNumber $fields[$key])) {
+                $result.error = 'views[' + $i + '] "' + $name + '": нет числа "' + $key + '"'; return $result
+            }
+        }
+        if ($fields.ContainsKey('y') -and -not (Test-JsonNumber $fields['y'])) {
+            $result.error = 'views[' + $i + '] "' + $name + '": "y" не число'; return $result
+        }
+        $names.Add($name)
+    }
+    $result.names = $names.ToArray()
+    $result.count = $names.Count
+    return $result
+}
+
+# persistentDataPath Windows-плеера сервера: %USERPROFILE%\AppData\LocalLow\<companyName>\<productName> из
+# ProjectSettings этого checkout (плеер, собранный из другого checkout с другими именами, сюда не попадёт).
+function Get-ServerDataPath {
+    $settings = Join-Path $RepoRoot 'ProjectSettings\ProjectSettings.asset'
+    $company = Select-String -LiteralPath $settings -Pattern '^\s*companyName:\s*(.+?)\s*$' | Select-Object -First 1
+    $product = Select-String -LiteralPath $settings -Pattern '^\s*productName:\s*(.+?)\s*$' | Select-Object -First 1
+    if ($null -eq $company -or $null -eq $product) { return $null }
+    return (Join-Path $env:USERPROFILE ('AppData\LocalLow\' + $company.Matches[0].Groups[1].Value + '\' + $product.Matches[0].Groups[1].Value))
+}
+
 # ══════════════════════════════════════════════════════════════════════════
 #  1. Проверки до прогона: при отказе ни устройство, ни ПК не тронуты
 # ══════════════════════════════════════════════════════════════════════════
@@ -531,6 +634,18 @@ foreach ($item in $Arg) {
     }
 }
 
+# ── точки обзора (-ViewsFile) ──
+$viewsInfo = $null
+if (-not [string]::IsNullOrEmpty($ViewsFile)) {
+    if ($argKeys.Contains('views')) { Stop-Refused '-ViewsFile и -Arg views=... несовместимы: путь к точкам задаёт дирижёр' }
+    if (-not (Test-Path -LiteralPath $ViewsFile -PathType Leaf)) { Stop-Refused ('-ViewsFile не найден: ' + $ViewsFile) }
+    $ViewsFile = (Resolve-Path -LiteralPath $ViewsFile).Path
+    $viewsInfo = Read-ViewsFile $ViewsFile
+    if ($null -ne $viewsInfo.error) { Stop-Refused ('-ViewsFile ' + $ViewsFile + ': ' + $viewsInfo.error) }
+    $ServerDataPath = Get-ServerDataPath
+    if ($null -eq $ServerDataPath) { Stop-Refused 'в ProjectSettings/ProjectSettings.asset нет companyName/productName — не найти persistentDataPath сервера' }
+}
+
 $autoPorts = ($NetworkPort -eq 0 -and $DiscoveryPort -eq 0)
 if (-not $autoPorts) {
     $portError = ''
@@ -563,6 +678,31 @@ if ($Build) {
             ('  VrBattlegrounds.EditorTools.E2EPlayerBuilder.StartPairBuild("' + $PairStatusInEditor + '"),'),
             'человек — в основном checkout. Затем запусти без -Build с -Apk и -ServerPlayer на собранную пару.')
     }
+
+    # Роль «main» не гарантирует полных файлов: часть LFS-ассетов может остаться указателями (частичный pull,
+    # include/exclude). Сборка из них — битая игра, поэтому до Unity проверяются сами файлы.
+    $lfs = Get-LfsPointerFiles $RepoRoot
+    if ($null -ne $lfs.error) {
+        Stop-Refused ('-Build: проверка LFS-указателей не выполнена — ' + $lfs.error) @('Нужен git с git-lfs в PATH.')
+    }
+    if ($lfs.pointers.Count -gt 0) {
+        $shown = @($lfs.pointers | Select-Object -First 10)
+        $hints = @('Первые пути:')
+        foreach ($p in $shown) { $hints += ('  ' + $p) }
+        if ($lfs.pointers.Count -le $shown.Count) {
+            $hints += 'Выгрузи содержимое (checkout — если объекты уже в локальном LFS-хранилище, иначе pull):'
+            $hints += ('  git lfs checkout -- ' + (($shown | ForEach-Object { '"' + $_ + '"' }) -join ' '))
+            $hints += ('  git lfs pull --include="' + ($shown -join ',') + '"')
+        }
+        else {
+            $hints += 'Выгрузи содержимое всех указателей (checkout — если объекты уже в локальном LFS-хранилище, иначе pull):'
+            $hints += '  git lfs checkout'
+            $hints += '  git lfs pull'
+        }
+        Stop-Refused ('-Build: в checkout ' + $lfs.pointers.Count + ' из ' + $lfs.tracked +
+            ' LFS-файлов — указатели, а не содержимое; Unity собрал бы битую игру.') $hints
+    }
+    Write-Host ('  LFS: ' + $lfs.tracked + ' отслеживаемых файлов, указателей нет')
 
     if (Test-EditorOpen (Join-Path $RepoRoot 'Temp\UnityLockfile')) {
         Stop-Refused ('редактор открыт; соберите пару в редакторе: VrBattlegrounds.EditorTools.E2EPlayerBuilder.StartPairBuild("' +
@@ -674,7 +814,7 @@ $linkComponent = Get-LinkComponent
 if ($null -ne $linkComponent -and -not $StopLink) {
     Stop-Refused ('шлем ' + $Serial + ' в Quest Link (' + $linkComponent + ' на переднем плане) — игра не получит фокус.') @(
         'Выйди из Link на шлеме (быстрые настройки → Quest Link → отключить) и повтори прогон,',
-        'или запусти с -StopLink: дирижёр закроет Link (обратно не возвращает — переподключишь сам).')
+        'или запусти с -StopLink: дирижёр закроет Link (обратно не возвращает; связь с ПК может потребовать перезапуска среды Link на ПК).')
 }
 $linkStopped = $false
 
@@ -777,6 +917,14 @@ $clientTokens = @(
     '-e2eDeviceToken', $deviceToken
 )
 foreach ($pair in $scenarioArgs) { $serverArgs += @('-e2eArg', $pair); $clientTokens += @('-e2eArg', $pair) }
+
+# Точки обзора: один относительный путь от persistentDataPath для обеих сторон; файл кладётся в оба места до запуска.
+$viewsArgPath = $null
+if ($null -ne $viewsInfo) {
+    $viewsArgPath = 'e2e/' + $runId + '/views.json'
+    $serverArgs += @('-e2eArg', ('views=' + $viewsArgPath))
+    $clientTokens += @('-e2eArg', ('views=' + $viewsArgPath))
+}
 foreach ($token in $clientTokens) {
     if ($token -notmatch $SafeToken) { Stop-Refused ('аргумент шлема с недопустимыми символами: "' + $token + '"') }
 }
@@ -813,10 +961,26 @@ $manifest = [ordered]@{
     builds = [ordered]@{ server = $null; client = $null; revisionServer = $null; revisionClient = $null; check = $null }
     link = [ordered]@{ wasActive = ($null -ne $linkComponent); component = $linkComponent; stopped = $false; restored = $null; detail = $null }
     artifacts = [ordered]@{ server = @(); client = @() }
+    views = $null
     files = @()
     failure = $null
     exitCode = 2
     verdict = $null
+}
+
+if ($null -ne $viewsInfo) {
+    $manifest.views = [ordered]@{
+        source = $ViewsFile
+        sha256 = (Get-FileHash -LiteralPath $ViewsFile -Algorithm SHA256).Hash.ToLowerInvariant()
+        count = $viewsInfo.count
+        names = $viewsInfo.names
+        arg = $viewsArgPath
+        local = 'views.json'
+        device = ($deviceFilesDir + '/' + $viewsArgPath)
+        server = (Join-Path $ServerDataPath ($viewsArgPath -replace '/', '\'))
+        pushed = $false
+        serverCopied = $false
+    }
 }
 
 Write-Section 'Конфигурация прогона'
@@ -827,6 +991,9 @@ Write-Host ('  сценарий:   ' + $Scenario + ', карта ' + $Map + ', �
 Write-Host ('  таймаут:    ' + $Timeout + ' с (сценариям ' + $scenarioTimeout + ' с)')
 Write-Host ('  порты:      KCP ' + $NetworkPort + ', Discovery ' + $DiscoveryPort)
 Write-Host ('  брандмауэр: ' + $firewall.Detail)
+if ($null -ne $manifest.views) {
+    Write-Host ('  точки:      ' + $manifest.views.count + ' из ' + $ViewsFile + ' (' + ($manifest.views.names -join ', ') + ')')
+}
 Write-Host ('  результат:  ' + $runDir)
 
 $serverProc = $null
@@ -942,6 +1109,26 @@ try {
     else { Write-Host ('  versionName ' + $version.versionName + ', ревизия APK ' + $installedRevision) }
     if ($null -ne $pairRevision -and $installedRevision -cne $pairRevision) {
         throw ('сборки из разных ревизий: собрана пара ' + $pairRevision + ', на шлеме установлен ' + (Format-VersionForReport $version.versionName))
+    }
+
+    # ── точки обзора: папка прогона, persistentDataPath сервера, шлем (после установки APK — каталог уже приложения) ──
+    if ($null -ne $manifest.views) {
+        Write-Section 'Кладу файл точек обзора обеим сторонам'
+        $viewsLocal = Join-Path $runDir 'views.json'
+        Copy-Item -LiteralPath $ViewsFile -Destination $viewsLocal -Force -ErrorAction Stop
+
+        New-Item -ItemType Directory -Path (Split-Path -Parent $manifest.views.server) -Force | Out-Null
+        Copy-Item -LiteralPath $viewsLocal -Destination $manifest.views.server -Force -ErrorAction Stop
+        $manifest.views.serverCopied = $true
+        Write-Host ('  сервер: ' + $manifest.views.server)
+
+        $deviceViewsDir = $manifest.views.device.Substring(0, $manifest.views.device.LastIndexOf('/'))
+        $mkdir = Invoke-AdbShell @('mkdir', '-p', $deviceViewsDir) 30
+        if ($mkdir.ExitCode -ne 0) { throw ('mkdir -p ' + $deviceViewsDir + ' на шлеме не удался: ' + ($mkdir.Out + ' ' + $mkdir.Err).Trim()) }
+        $push = Invoke-Adb @('push', $viewsLocal, $manifest.views.device) 60
+        if ($push.ExitCode -ne 0) { throw ('adb push файла точек не удался: ' + ($push.Out + ' ' + $push.Err).Trim()) }
+        $manifest.views.pushed = $true
+        Write-Host ('  шлем:   ' + $manifest.views.device)
     }
 
     # ── сервер ──
@@ -1066,7 +1253,7 @@ finally {
     # Link-клиента со шлема не восстанавливает связь с ПК надёжно) — отмечаем в run.json и подсказываем человеку.
     if ($linkStopped) {
         $manifest.link.restored = $false
-        $manifest.link.detail = 'Link закрыт на время прогона и автоматически не возвращается — переподключи его на шлеме, если нужен'
+        $manifest.link.detail = 'Link закрыт на время прогона и автоматически не возвращается — переподключи на шлеме; если связь с ПК не встаёт, перезапусти среду Meta Quest Link на ПК (Docs/testing.md)'
         Write-Host ('  Quest Link: ' + $manifest.link.detail) -ForegroundColor Yellow
     }
 

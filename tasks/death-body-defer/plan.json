@@ -23,6 +23,8 @@
       "id": "accepted-tests",
       "writes": [
         "Assets/Tests/EditMode/Player/**",
+        "Assets/Tests/EditMode/Network/RpcCarriesNoStateTests.cs",
+        "Assets/Scripts/Player/PlayerController.cs",
         "tasks/death-body-defer/**"
       ],
       "after": [
@@ -30,6 +32,23 @@
           "task": "death-body-defer",
           "stage": "deferred-body",
           "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "death-equipment-drop",
+      "writes": [
+        "Assets/Scripts/Player/PlayerLoadoutManager.cs",
+        "Assets/Scripts/Player/Avatars/AvatarManager.cs",
+        "Assets/Scripts/Player/Avatars/AvatarTeardown.cs",
+        "tasks/death-body-defer/**"
+      ],
+      "after": [
+        {
+          "task": "death-body-defer",
+          "stage": "deferred-body",
+          "state": "merged"
         }
       ],
       "needs": []

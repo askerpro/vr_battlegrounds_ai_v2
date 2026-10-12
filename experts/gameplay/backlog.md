@@ -10,3 +10,4 @@
 8. `station-uxr-id-canvas` — world-space канвас на станции даст ложный отказ по пустому UXR id — MRB «Известные ограничения».
 9. `team-lifecycle-warnings` — teamID0 missing / PlayersManager duplicates из аудита383 — `tasks/vr-test-stand/Details.md` «Финальная проверка383».
 10. `minplayers-bots` — определить и записать, считаются ли боты в minPlayers (правило твоё по карте ред. 2) — `tasks/vr-test-stand/Details.md`, поиск `minPlayers`.
+11. `arsenal-legacy-docs-delete` — удалить `Docs/tasks/arsenal-generator-design.md` и `-plan.md` по запросу infra (inbox #1140, механизм `deletes`). Сначала: дополнить `tasks/arsenal-generator/plan.md` (10 КБ против старых 45 КБ) нужным из старого плана; ссылки в `Docs/README.md:108,218,753` (общий индекс — нужен владелец Docs) и `Docs/UltimateXR/sdk-patches.md:1802` (исторический журнал). Затем cleanup-этап в плане arsenal-generator с точными `deletes`.

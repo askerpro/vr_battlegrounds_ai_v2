@@ -30,9 +30,17 @@
    manipulation (хват). Проверки: `PlayerDeathSignalScenario`, `RoundReadinessMatchScenario`, стенд
    manipulation 453 (ServerOnly + 2 клиента: одно ReleaseObject на руку от сервера, одна поза предмета у всех,
    0 `UxrComponentNotFound`), EditMode Player/Avatars. Затем проверка пользователем в Unity.
-2. `accepted-tests` — после приёмки пользователем: обновить тесты под новые ожидания.
+2. `accepted-tests` — после приёмки пользователем: обновить тесты под новые ожидания; удалить пустой
+   `PlayerController.RpcOnDied` вместе с правкой `RpcCarriesNoStateTests`.
+3. `death-equipment-drop` — после вливания `deferred-body` (согласие network 4396):
+   `PlayerLoadoutManager.ServerHandlePlayerDied` сбрасывает снаряжение внутри `DieInternal`, вложенное событие
+   до клиентов не доходит (предмет остаётся в кобуре мёртвого тела у клиентов). Снять подписку `PlayerDied`,
+   сбрасывать только в отложенном шаге верхнего уровня (`ReleaseBeforeDestroy` / ветка без замены), один писатель.
 
 ## Состояние
 
-- 2026-10-12: задача заведена, дизайн согласован; реализация не начата.
+- 2026-10-12: задача заведена, дизайн согласован.
+- 2026-10-12: `deferred-body` реализован в ветке `claude/death-body-defer` (e11f915f9 + 029219ed8, ещё одна
+  правка по ревью network в работе). Ревью: network ACK (4388, 4396), manipulation — хват одобрен по коду (4386),
+  прогон стенда идёт. Проверено: офлайн-компиляция VrBattlegrounds без weaver. Unity-прогоны не выполнены.
 - Ждут этот этап: bots-fix `pf-equipment` (переставят `after` с grab-authority на `deferred-body`).

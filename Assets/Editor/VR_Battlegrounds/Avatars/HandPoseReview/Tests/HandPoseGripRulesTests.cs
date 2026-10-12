@@ -152,6 +152,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview.Tests
         [TestCase("Assets/Prefabs/Weapons/Shotgun/Shotgun.prefab", "0/3", 0, "pump")]
         [TestCase("Assets/Prefabs/Weapons/AR15/AR15_Magazine.prefab", "", 0, "pinch_small")]
         [TestCase("Assets/Prefabs/Weapons/Scar/Scar.prefab", "", 0, "pistol_grip")]
+        [TestCase("Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/Lab/Battery.prefab", "", 0, "pinch_small")]
         public void GripTypeFollowsPointRole(string path, string indexPath, int point, string expected)
         {
             var root = AssetDatabase.LoadAssetAtPath<GameObject>(path);Assert.That(root, Is.Not.Null, path);

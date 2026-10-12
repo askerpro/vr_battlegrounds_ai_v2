@@ -89,7 +89,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         /// <summary>
         /// Роль точки: оружие — точка спуска (pistol_grip), другая точка корневого grabbable (foregrip),
         /// магазин (pinch_small), другой дочерний grabbable оружия (pump). Без оружия: магазин/патрон — pinch_small,
-        /// механизм с закреплённым перемещением — handle, мелкий предмет (габарит < 15 см) — pinch_small, крупный — handle.
+        /// механизм с закреплённым перемещением или ручка родительского grabbable — handle, мелкий предмет (габарит < 15 см) — pinch_small, крупный — handle.
         /// </summary>
         public static string DetectGripType(UxrGrabbableObject grabbable, int point, out string reason)
         {
@@ -107,6 +107,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             // Закреплённый на месте механизм (рычаг, ручка генератора): перемещение Locked, допускается только поворот.
             // Ограничение смещения само по себе не делает предмет ручкой: батарейка SDK — RestrictLocalOffset.
             if (grabbable.TranslationConstraint == UxrTranslationConstraintMode.Locked) {reason = "translation_locked_mechanism";return "handle";}
+            // Ручка большего grabbable (LaserGrip SDK): зависит от родительского предмета и управляет им.
+            if (grabbable.UsesGrabbableParentDependency) {reason = "grabbable_parent_dependency";return "handle";}
             float size = RendererExtent(grabbable.transform);
             reason = (size < SmallObjectMaxMeters ? "small_object_" : "large_object_") + (size * 1000).ToString("0", CultureInfo.InvariantCulture) + "mm";
             return size < SmallObjectMaxMeters ? "pinch_small" : "handle";
@@ -130,7 +132,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         static float RendererExtent(Transform root)
         {
             bool any = false;var bounds = new Bounds();
-            foreach (var renderer in root.GetComponentsInChildren<Renderer>(true)) {
+            // Те же renderer, что попадают в поверхность предмета: без превью-кистей SDK и подсветки хвата.
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>(false)) {
+                if (!renderer.enabled || renderer is ParticleSystemRenderer || renderer.GetComponent<UxrGrabbableObjectPreviewMeshProxy>() || renderer.name.IndexOf("GrabHighlight", StringComparison.OrdinalIgnoreCase) >= 0) continue;
                 Mesh mesh = renderer is SkinnedMeshRenderer skin ? skin.sharedMesh : renderer.GetComponent<MeshFilter>()?.sharedMesh;
                 if (!mesh) continue;
                 Bounds local = mesh.bounds;var matrix = renderer.transform.localToWorldMatrix;

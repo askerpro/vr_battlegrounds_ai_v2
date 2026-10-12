@@ -98,6 +98,16 @@
     {
       "id": "hand-graft-exp",
       "writes": [
+        "Assets/Art/Avatars/MEF_SdkHands.meta",
+        "Assets/Art/Avatars/MEF_SdkHands/**",
+        "Assets/Prefabs/Managers/--- MANAGERS ---.prefab",
+        "Assets/Data/Player/Avatars/TeamAvatarStrategy.asset",
+        "Assets/Data/Player/Avatars/AvatarsRegistry.asset",
+        "Assets/Data/Player/Avatars/MEF_sdk_hands.asset.meta",
+        "Assets/Data/Player/Avatars/MEF_sdk_hands.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_sdk_hands*",
+        "Assets/Models/Avatars/MEF_SdkHands.meta",
+        "Assets/Models/Avatars/MEF_SdkHands/**",
         "tasks/hand-rig-quality/Readme.md",
         "tasks/hand-rig-quality/Details.md",
         "tasks/hand-rig-quality/plan.json",

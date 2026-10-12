@@ -7,7 +7,9 @@
 Первый caller — RenderMode; caller отвечает за prevalidation и компенсацию игровых изменений.
 **Tech Stack:** Unity 6, C#, UltimateXR state sync, Mirror relay, Unity Test Runner/NUnit.
 **Spec:** [Design.md](Design.md).
-**Статус:** DRAFT, 2026-10-09; реализация требует отдельного разрешения.
+**Статус:** ОТЛОЖЕНО решением пользователя 2026-10-12 (событие 4651, вердикт network 4625). Вместо плана —
+вариант C (C2 network, C1 avatar-ik), см. статус [Design.md](Design.md). Исходный DRAFT 2026-10-09 сохранён как
+справка для возможного возврата.
 
 ## Global Constraints
 

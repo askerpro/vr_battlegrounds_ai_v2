@@ -7,7 +7,10 @@
 SDK Explicit policy запрещает непреднамеренный fallback; runtime scanner отсутствует.
 **Tech Stack:** Unity 6 URP, C#, UltimateXR, Unity Editor SerializedObject/PrefabUtility, NUnit.
 **Spec:** [Design.md](Design.md).
-**Статус:** DRAFT, 2026-10-09; просмотр плана не является разрешением реализации.
+**Статус:** ПРИНЯТ как основа в упрощённом виде решением пользователя 2026-10-12 (событие 4651). Упрощение задачи 3:
+staging-префаб, backup/promotion/restore и тесты `FailedStagingLeavesTargetUntouched`/`FailedPromotionRestoresTarget`
+не делаются — Validate до сохранения, при ошибке цель не записывается, откат через Git. Реализация — задача
+`avatar-renderer-ownership` (worktree avatar-ik) после `legs-ik/pose-set`; перед ней перепроверить ссылки на строки.
 
 ## Global Constraints
 

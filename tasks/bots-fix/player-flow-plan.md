@@ -245,6 +245,8 @@ armed-development) остаётся архивом в ветке и в dev не 
 | pf-round2 (457) | AK105 45/45; 62% Occluded из-за гейта «луч в силуэт»; PPK смещён 12 см (MainGripAimLock) |
 | pf-round3 (462) | Эталон без отдачи/неточности: AK105 109/110, PPK 75/75; S/R/F/PF hitRate 0,42–0,86 при atShot ≤0,8°; PF смещение 34 мм |
 | pf-round4 (469) | PE 59/59, E 62/62; PF 34 мм устранено (поддержка после устоявшегося хвата); F hitRate 0,61–0,85; выстрел: TryToShootRound ~80% стоимости |
+| pf-round5 (490) | После SDK-патча 73 (manipulation): weaponLag p95 35–42 → 10–14 мм (остаток = расчётный откат root recoil 10,5 мм), поддержка на ходу; E 64/64 |
+| pf-demo (482) | Демо 90/90/60 с: AK105 201/150, PPK 217/125, AK105 125/104; 0 ошибок; **пользователь принял этап 0 («вливай»)** |
 
 Открыто: хвост зазора кисть–снап AK105 p95 35–45 мм = отставание предмета при движении (held-motion, SDK-патч 73
 manipulation); MainGripAimLock + held-motion у людей (finding 4442/4445 weapon-system/manipulation); стоимость

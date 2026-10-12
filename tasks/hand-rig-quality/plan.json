@@ -139,6 +139,11 @@
           "task": "hand-rig-quality",
           "stage": "contact-metrics",
           "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "hand-graft-exp",
+          "state": "merged"
         }
       ],
       "needs": []

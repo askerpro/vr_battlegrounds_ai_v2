@@ -15,6 +15,10 @@ checkout/renormalize: файлы сходятся к LF при сохранен�
 (без локальных изменений) файлов. 36 бинарных Unity SerializedFile .asset
 (LightingData, NavMesh, TerrainData) помечены binary в .gitattributes; vendor .cs/.shader
 остаются CRLF по умолчанию. Default `* text=auto eol=crlf` не меняется.
+Порча serialized binary (LF→CRLF при старой материализации): аудит
+`python Tools/agents/editor-broker.py serialized-audit --repo <worktree>`, восстановление
+`python Tools/agents/serialized_repair.py --repo <worktree>` (dry-run), затем `--apply`
+при закрытой Unity этого worktree.
 
 Перед checkpoint и публикацией проверьте только явно принадлежащие вам файлы:
 `python Tools/agents/check_text_eol.py --repo . --staged --path Assets/Scripts/Your.cs`.

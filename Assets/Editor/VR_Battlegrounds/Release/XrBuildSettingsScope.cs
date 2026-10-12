@@ -97,6 +97,22 @@ namespace VrBattlegrounds.EditorTools.Release
             return manager != null && manager.activeLoaders.Any(l => l != null && l.GetType().FullName == OculusLoaderType);
         }
 
+        /// <summary>
+        /// Настройки XR группы для диагностики, только чтение: <c>InitManagerOnStart</c>, число и типы лоадеров.
+        /// </summary>
+        public static string Describe(BuildTargetGroup group)
+        {
+            XRGeneralSettings settings = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(group);
+            if (settings == null) return $"XR {group}: настроек нет";
+
+            XRManagerSettings manager = settings.Manager;
+            string loaders = manager == null
+                ? "XRManagerSettings нет"
+                : $"лоадеров {manager.activeLoaders.Count} [{string.Join(", ", manager.activeLoaders.Select(l => l == null ? "null" : l.GetType().Name))}]";
+
+            return $"XR {group}: InitManagerOnStart {settings.InitManagerOnStart}, {loaders}";
+        }
+
         public void Dispose()
         {
             foreach (Snapshot s in _snapshots)

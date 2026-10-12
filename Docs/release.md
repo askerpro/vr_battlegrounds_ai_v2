@@ -9,7 +9,7 @@ Android-планшете. Код — `Assets/Editor/VR_Battlegrounds/Release/`.
 |---|---|
 | Редактор | `Tools/VR Battlegrounds/Release/Собрать всё (сервер, Quest, планшет)` или по одной |
 | Проверка без сборки | `Tools/VR Battlegrounds/Release/Проверить UXR id (без сборки)` |
-| CLI, редактор закрыт | `powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 [-Targets quest,tablet] [-Config Test\|Prod]` |
+| CLI, редактор закрыт | `powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 [-Targets quest,tablet] [-Config Test\|Prod]` — запуск Unity на группу платформ |
 | Агент | `GameBuilder.Build(new[] { BuildProfile.Server }, BuildConfig.Test)` → `Result.Summary` |
 | Пара для прогона на шлеме | `E2EPlayerBuilder.StartPairBuild(<статус>)` в редакторе или `Run-QuestE2E.ps1 -Build` — [testing.md](testing.md) |
 
@@ -106,7 +106,48 @@ versionName магазина не трогаем. Пару для прогона
 заданные в памяти до него, пропадают. Так первая сборка Quest вышла без Oculus: в манифесте не было
 `com.oculus.intent.category.VR`, шлем запускал её плоским окном — чёрный экран без VR. Сейчас
 `XrBuildSettingsScope` оборачивает только `BuildPlayer`, а перед сборкой Quest проверяется, что лоадер
-Oculus на месте. Проверка на шлеме: `adb shell dumpsys package <пакет> | findstr Category` — должна быть
+Oculus на месте.
+
+## Quest собирается только редактором, скомпилированным под Android
+
+VR-категорию и `com.oculus.supportedDevices` дописывает в манифест `OculusManifest` (Oculus XR Plugin,
+`IPostGenerateGradleAndroidProject`, callbackOrder 10000). Класс обёрнут в `#if UNITY_ANDROID`: он есть только
+в editor-сборке, скомпилированной при активной платформе Android. Переключение платформы внутри вызова
+(`GameBuilder`, `BuildPlayer`) editor-скрипты не перекомпилирует — это происходит позже, с перезагрузкой домена.
+Поэтому редактор на Standalone, переключившись на Android и сразу собрав Quest, выпускает плоский APK, хотя
+лоадер Oculus на месте (2026-10-12, аренда 516: worker на Standalone). То же было у `Build-Game.ps1 -Targets all`:
+`-buildTarget` выбирался по первому профилю, `server` → Win64. Под тем же `#if` и Mirror `AndroidManifestHelper`
+(`CHANGE_WIFI_MULTICAST_STATE` для LAN-discovery) — он нужен и Quest, и планшету.
+
+Правило и проверки:
+
+- `GameBuilder.Build` до любой сборки проверяет `QuestManifestValidator.OculusManifestCompiled()` — есть ли в
+  домене тип `UnityEditor.XR.Oculus.OculusManifest`. Нет — ошибка без сборки для любого Android-профиля (Quest и
+  планшет): «Переключи активную платформу на Android, дождись компиляции и повтори; batch — запускай Unity с
+  -buildTarget Android». Планшету VR-категория не нужна, но без Android-домена Mirror не добавит multicast, и
+  LAN-discovery не найдёт сервер — правило одно: Android собирает только редактор, скомпилированный под Android;
+- `Build-Game.ps1` запускает Unity отдельно на группу платформ: `quest,tablet` — один запуск с
+  `-buildTarget Android`, `server` — отдельный с `-buildTarget Win64`; у каждого свой лог
+  `Logs/build-<дата>-android.log` / `-server.log`. Первая упавшая группа останавливает скрипт (код 1);
+- `E2EPlayerBuilder.StartPairBuild` в редакторе не на Android запоминает задание в `SessionState`, переключает
+  платформу (`SwitchActiveBuildTargetAsync`) и продолжает после перекомпиляции (`[InitializeOnLoadMethod]`):
+  Quest первым, затем e2e-плеер Windows. Файл статуса всё это время пустой. Ошибки компиляции под Android или
+  три перезагрузки домена без Android — ошибка в статус, задание снимается. `RunPairBatch` без Android-домена
+  сразу завершается с кодом 1 — Unity для него запускается с `-buildTarget Android`.
+
+Манифест проверяется дважды, по одним правилам:
+
+- **после генерации Gradle** — `QuestManifestValidator` (callbackOrder 10001, сразу за Oculus), только
+  в сборке `GameBuilder` Android-профиля. Quest без `com.oculus.intent.category.VR` или без
+  `com.oculus.supportedDevices` — `BuildFailedException` до Gradle; в тексте настройки XR Android
+  (`InitManagerOnStart`, лоадеры) и есть ли `OculusManifest` в editor-сборке. Планшет с VR-категорией — тоже ошибка;
+- **по готовому APK** — `aapt dump xmltree <apk> AndroidManifest.xml` (старшие build-tools из SDK редактора,
+  иначе встроенного в модуль Android). Нет aapt — предупреждение в итоге сборщика, не ошибка.
+
+`supportedDevices` без Quest 3 (`eureka`/`quest3`) — предупреждение: `TargetQuest3` в
+`Assets/XR/Settings/OculusSettings.asset` выключен, список шлемов — зона performance.
+
+Проверка на шлеме: `adb shell dumpsys package <пакет> | findstr Category` — должна быть
 строка `com.oculus.intent.category.VR`.
 
 ## Что меняется на время сборки
@@ -115,6 +156,9 @@ Oculus на месте. Проверка на шлеме: `adb shell dumpsys pac
 
 - лоадеры и `InitManagerOnStart` XR Management — в памяти, **без** `AssetDatabase.SaveAssets()`
   (`XRPackageMetadataStore.AssignLoader` его зовёт и сохранил бы невыданные на диск id — known-issues #11);
+- e2e-плеер Windows (`E2EPlayerBuilder`) собирается в том же скоупе, что Dedicated Server: без
+  `InitManagerOnStart`, иначе e2e-сервер получал Oculus от Standalone и пытался поднять шлем. Платформа
+  перед ним явно переключается на Windows до скоупа, поэтому после пары редактор остаётся на Standalone;
 - идентификатор Android-пакета (планшет), min SDK Android (Quest);
 - `bundleVersion` со штампом ревизии (тест, e2e) — возвращается и сохраняется `AssetDatabase.SaveAssets()`;
 - активная платформа — после сборки в редакторе переключается обратно.
@@ -143,4 +187,5 @@ subtarget в `EditorUserBuildSettings.androidBuildSubtarget`, и PVRTC оста�
 - `applicationIdentifier` Android — шаблонный `com.UnityTechnologies.com.unity.template.urpblank`. Сменить
   до первой установки на устройства: смена потом — это новое приложение.
 - Первая сборка каждой платформы долгая (IL2CPP, импорт текстур под Android); переключения платформы —
-  реимпорт, поэтому «Собрать всё» начинает с текущей платформы.
+  реимпорт, поэтому «Собрать всё» начинает с текущей платформы. С Quest «Собрать всё» работает только из
+  редактора на Android (Quest, планшет, затем сервер); на Standalone сборка откажет до старта.

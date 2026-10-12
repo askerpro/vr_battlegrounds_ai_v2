@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -41,6 +43,20 @@ namespace VrBattlegrounds.EditorTools.Release
     /// Профиль меняет настройки только на время сборки и возвращает их: XR-лоадеры
     /// (<see cref="XrBuildSettingsScope" />), идентификатор пакета планшета, min SDK Quest.
     /// Роль планшета включается <c>extraScriptingDefines</c>, без правки Player Settings.
+    /// </para>
+    ///
+    /// <para>
+    /// Манифест Android проверяется дважды: после генерации Gradle (<see cref="QuestManifestValidator" />)
+    /// и по готовому APK через aapt. Quest без <c>com.oculus.intent.category.VR</c> или планшет с ней —
+    /// сборка падает: такой Quest на шлеме открылся бы плоским окном.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Quest — только из редактора, скомпилированного под Android.</b> VR-категорию дописывает
+    /// <c>OculusManifest</c> под <c>#if UNITY_ANDROID</c>; переключение платформы внутри сборки editor-скрипты
+    /// не перекомпилирует. Поэтому до любой сборки проверяется
+    /// <see cref="QuestManifestValidator.OculusManifestCompiled" />: нет типа — Quest не собирается вовсе.
+    /// CLI запускает Unity с <c>-buildTarget Android</c> для Android-профилей (Tools/release/Build-Game.ps1).
     /// </para>
     ///
     /// <para>
@@ -89,6 +105,9 @@ namespace VrBattlegrounds.EditorTools.Release
 
         /// <summary><c>PlayerSettings.activeInputHandler</c>: 0 — старый Input Manager, 1 — Input System, 2 — оба.</summary>
         private const int ActiveInputHandlingBoth = 2;
+
+        /// <summary>Сколько ждать aapt при проверке манифеста APK.</summary>
+        private const int ToolTimeoutMs = 120000;
 
         /// <summary>Итог сборки одного или нескольких профилей.</summary>
         public sealed class Result
@@ -198,6 +217,20 @@ namespace VrBattlegrounds.EditorTools.Release
 
             string[] scenes = EnabledScenes();
             bool needsAndroid = ordered.Any(p => p != BuildProfile.Server);
+
+            // Набор editor-типов задан компиляцией домена и в этом вызове не меняется (переключение платформы
+            // не перекомпилирует), поэтому проверка — до всех сборок, а не перед Quest после сервера.
+            // Любая Android-сборка — только из редактора, скомпилированного под Android: обработчики манифеста под
+            // #if UNITY_ANDROID иначе не существуют. Quest: OculusManifest (VR-категория — без неё плоское окно).
+            // Tablet: Mirror AndroidManifestHelper (CHANGE_WIFI_MULTICAST_STATE — без него LAN-discovery не найдёт сервер).
+            if (needsAndroid && !QuestManifestValidator.OculusManifestCompiled())
+            {
+                string profilesText = string.Join(", ", ordered.Where(p => p != BuildProfile.Server));
+                return result.Fail(profilesText + ": editor-скрипты скомпилированы не под Android (нет UNITY_ANDROID): " +
+                                   "обработчики манифеста не сработают — Quest выйдет плоским окном (нет OculusManifest), " +
+                                   "планшет без разрешения multicast для LAN-discovery (Mirror AndroidManifestHelper). " +
+                                   "Переключи активную платформу на Android, дождись компиляции и повтори; batch — Unity с -buildTarget Android");
+            }
 
             UxrIdFingerprint baseline = Preflight(scenes, needsAndroid, result);
             if (!result.Passed) return result;
@@ -468,6 +501,8 @@ namespace VrBattlegrounds.EditorTools.Release
                     // XR выставляется только после переключения платформы: переключение реимпортирует
                     // XRGeneralSettingsPerBuildTarget.asset с диска, и лоадеры, заданные в памяти раньше,
                     // терялись — Quest собирался без Oculus, без VR-категории в манифесте, чёрный экран.
+                    bool android = spec.Group == BuildTargetGroup.Android;
+
                     using (var buildConfig = new BuildConfigScope(spec.Named, config))
                     using (new XrBuildSettingsScope(profile))
                     {
@@ -479,21 +514,42 @@ namespace VrBattlegrounds.EditorTools.Release
                             return false;
                         }
 
-                        report = BuildPipeline.BuildPlayer(options);
+                        // Манифест проверяется сразу после генерации Gradle (QuestManifestValidator) —
+                        // только в этой сборке и только для Android-профиля.
+                        if (android) QuestManifestValidator.Arm(profile);
+
+                        try
+                        {
+                            report = BuildPipeline.BuildPlayer(options);
+                        }
+                        finally
+                        {
+                            if (android) QuestManifestValidator.Disarm();
+                        }
                     }
 
                     double seconds = (DateTime.UtcNow - started).TotalSeconds;
+
+                    if (android)
+                    {
+                        foreach (string warning in QuestManifestValidator.TakeWarnings())
+                            result.Lines.Add($"ВНИМАНИЕ: {profile}: {warning}");
+                    }
 
                     if (report != null) result.Lines.Add(HeaviestAssets(profile, report));
 
                     if (report == null || report.summary.result != BuildResult.Succeeded)
                     {
+                        if (android && QuestManifestValidator.LastError.Length > 0)
+                            result.Fail($"{profile}: {QuestManifestValidator.LastError}");
+
                         result.Fail($"{profile}: сборка {report?.summary.result.ToString() ?? "без отчёта"}, " +
                                     $"ошибок: {report?.summary.totalErrors ?? 0} — подробности выше в консоли");
                         return false;
                     }
 
                     if (!SameIds(profile, "после сборки", scenes, baseline, result)) return false;
+                    if (android && !CheckApkManifest(profile, spec.Path, result)) return false;
 
                     baseline.WriteTo(directory, profile);
                     if (profile == BuildProfile.Server) CopyServerLauncher(directory);
@@ -550,6 +606,154 @@ namespace VrBattlegrounds.EditorTools.Release
                    string.Join(", ", byType.OrderByDescending(p => p.Value).Take(8).Select(p => $"{p.Key} {Mb(p.Value)}")) +
                    "\n  Тяжелее всего:\n" +
                    string.Join("\n", bySource.OrderByDescending(p => p.Value).Take(25).Select(p => $"  {Mb(p.Value),10}  {typeOf[p.Key]}  {p.Key}"));
+        }
+
+        // ── Манифест готового APK ──────────────────────────────────────
+
+        /// <summary>
+        /// Вторая проверка манифеста — по готовому APK через <c>aapt dump xmltree</c>, по тем же правилам
+        /// (<see cref="QuestManifestValidator.Evaluate" />): между генерацией Gradle и APK манифест ещё
+        /// сливается с библиотеками. Нет aapt или он не отработал — предупреждение: проверка после
+        /// генерации Gradle уже прошла.
+        /// </summary>
+        private static bool CheckApkManifest(BuildProfile profile, string apkPath, Result result)
+        {
+            string aapt = FindAapt(out string searched);
+
+            if (aapt == null)
+            {
+                result.Lines.Add($"ВНИМАНИЕ: {profile}: aapt не найден (build-tools в {searched}) — манифест APK не проверен, " +
+                                 "проверка после генерации Gradle прошла");
+                return true;
+            }
+
+            if (!RunTool(aapt, $"dump xmltree \"{apkPath}\" AndroidManifest.xml", out string output, out string error))
+            {
+                result.Lines.Add($"ВНИМАНИЕ: {profile}: aapt не прочитал манифест APK ({error}) — проверка после генерации Gradle прошла");
+                return true;
+            }
+
+            QuestManifestValidator.ManifestFacts facts = QuestManifestValidator.ReadAaptXmlTree(output);
+            var warnings = new List<string>();
+            string failure = QuestManifestValidator.Evaluate(profile, facts, warnings);
+
+            foreach (string warning in warnings)
+            {
+                string line = $"ВНИМАНИЕ: {profile}: {warning}";
+                if (!result.Lines.Contains(line)) result.Lines.Add(line);
+            }
+
+            if (failure != null)
+            {
+                result.Fail($"{profile}: манифест готового APK: {failure} ({facts}); aapt: {aapt}");
+                return false;
+            }
+
+            result.Lines.Add($"{profile}: манифест APK — {facts} (aapt)");
+            return true;
+        }
+
+        /// <summary>
+        /// <c>aapt</c> старшей версии build-tools: сначала SDK из настроек Android редактора, потом
+        /// встроенный в модуль Android. null — не найден; <paramref name="searched" /> — где искали.
+        /// </summary>
+        private static string FindAapt(out string searched)
+        {
+            var roots = new List<string>();
+            string configured = AndroidSdkRoot();
+            if (!string.IsNullOrEmpty(configured)) roots.Add(configured);
+            roots.Add(Path.Combine(EditorApplication.applicationContentsPath, "PlaybackEngines", "AndroidPlayer", "SDK"));
+
+            string exe = Application.platform == RuntimePlatform.WindowsEditor ? "aapt.exe" : "aapt";
+            searched = string.Join("; ", roots);
+
+            foreach (string root in roots)
+            {
+                string buildTools = Path.Combine(root, "build-tools");
+                if (!Directory.Exists(buildTools)) continue;
+
+                string best = Directory.GetDirectories(buildTools)
+                                       .Select(dir => (dir, version: Version.TryParse(Path.GetFileName(dir), out Version v) ? v : null))
+                                       .Where(x => x.version != null && File.Exists(Path.Combine(x.dir, exe)))
+                                       .OrderByDescending(x => x.version)
+                                       .Select(x => Path.Combine(x.dir, exe))
+                                       .FirstOrDefault();
+
+                if (best != null) return best;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// <c>UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath</c> через отражение: прямая ссылка
+        /// на UnityEditor.Android.Extensions не скомпилировалась бы в редакторе без модуля Android.
+        /// </summary>
+        private static string AndroidSdkRoot()
+        {
+            try
+            {
+                Type settings = AppDomain.CurrentDomain.GetAssemblies()
+                                         .FirstOrDefault(a => a.GetName().Name == "UnityEditor.Android.Extensions")
+                                         ?.GetType("UnityEditor.Android.AndroidExternalToolsSettings");
+
+                return settings?.GetProperty("sdkRootPath", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as string;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        private static bool RunTool(string exe, string arguments, out string output, out string error)
+        {
+            output = string.Empty;
+            error = string.Empty;
+
+            var info = new System.Diagnostics.ProcessStartInfo(exe, arguments)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
+
+            try
+            {
+                using (System.Diagnostics.Process process = System.Diagnostics.Process.Start(info))
+                {
+                    if (process == null)
+                    {
+                        error = "процесс не запустился";
+                        return false;
+                    }
+
+                    var stderr = process.StandardError.ReadToEndAsync();
+                    output = process.StandardOutput.ReadToEnd();
+
+                    if (!process.WaitForExit(ToolTimeoutMs))
+                    {
+                        try { process.Kill(); }
+                        catch (InvalidOperationException) { }
+
+                        error = $"не ответил за {ToolTimeoutMs / 1000} с";
+                        return false;
+                    }
+
+                    error = stderr.Result.Trim();
+                    if (process.ExitCode == 0) return true;
+
+                    error = $"код {process.ExitCode}: {error}";
+                    return false;
+                }
+            }
+            catch (Exception e) when (e is System.ComponentModel.Win32Exception || e is InvalidOperationException || e is IOException)
+            {
+                error = e.Message;
+                return false;
+            }
         }
 
         /// <summary>

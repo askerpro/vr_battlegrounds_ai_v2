@@ -143,6 +143,9 @@ namespace VrBattlegrounds.Maps.Runtime
             MapLoader.MapLoadStarted -= HandleMapLoadStarted;
             MapLoader.MapLoadCancelled -= HandleMapLoadCancelled;
             Loaded.Remove(this);
+            // Сцена карты уничтожается (смена сцены Mirror, выход): станции уходят вместе с ней — разборка запуска
+            // не переподвешивает их предметы в корень, иначе те пережили бы выгрузку вне сцены.
+            ArsenalStationComposer.ReleaseWithScene(gameObject.scene);
             RetireServerRun("выгрузка сцены");
             DisposeLocalScope();
         }

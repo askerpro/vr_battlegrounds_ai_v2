@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UltimateXR.Core.Unique;
 using UltimateXR.Manipulation;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using VrBattlegrounds.Maps.Runtime;
 using VrBattlegrounds.Network;
 
@@ -13,8 +14,17 @@ namespace VrBattlegrounds.Arsenal
 
     /// <summary>
     ///     Собранная станция одного запуска карты. Владеет только тем, что создала сама: слотами в рядах корпуса.
-    ///     <see cref="Dispose" /> уничтожает свои слоты, но всё, что к ним прицепилось извне (предметы в слотах),
-    ///     сначала отцепляет — чужое через родителя не уничтожается.
+    ///     <see cref="Dispose" /> уничтожает свои слоты. Чужие предметы в слотах (оружие, магазины) зависят от того,
+    ///     живёт ли сцена дальше:
+    ///     <list type="bullet">
+    ///     <item>сцена живёт (отказ запуска, остановка сервера, отказ клиента) — предметы верхнего уровня отцепляются
+    ///     в корень своей сцены, вложенные в них (стартовый магазин, затвор) едут с родителем; через родителя
+    ///     чужое не уничтожается;</item>
+    ///     <item>сцена уходит (владелец сцены объявил <see cref="ArsenalStationComposer.ReleaseWithScene" />) —
+    ///     ничего не переподвешивается: предметы уничтожаются вместе со сценой, сетевые снимаются Mirror
+    ///     (<c>NetworkIdentity.OnDestroy</c> → <c>NetworkServer.Destroy</c>). Новый корень, рождённый во время
+    ///     выгрузки, пережил бы её вне сцены.</item>
+    ///     </list>
     /// </summary>
     public sealed class ArsenalCompositionHandle : IDisposable
     {
@@ -26,6 +36,15 @@ namespace VrBattlegrounds.Arsenal
         public bool IsActive { get; internal set; }
         public bool IsDisposed { get; private set; }
 
+        /// <summary>
+        ///     Разборка пойдёт вместе с уничтожением сцены станции: чужие предметы не отцеплять. Ставит только
+        ///     <see cref="ArsenalStationComposer.ReleaseWithScene" /> по объявлению владельца сцены.
+        /// </summary>
+        public bool ReleasesWithScene { get; private set; }
+
+        /// <summary>Сцена станции на момент сборки: по ней владелец сцены находит её станции, даже уже уничтоженные.</summary>
+        internal Scene StationScene { get; }
+
         private readonly HashSet<Transform> _ownedTransforms = new HashSet<Transform>();
 
         internal ArsenalCompositionHandle(ArsenalStationDescription description, MapRunScope scope, ArsenalStationCompositionBinding station,
@@ -36,8 +55,14 @@ namespace VrBattlegrounds.Arsenal
             Station = station;
             Slots = slots;
             Assignments = assignments;
+            StationScene = station != null ? station.gameObject.scene : default;
             foreach (ArsenalSlotController slot in slots)
                 _ownedTransforms.UnionWith(slot.GetComponentsInChildren<Transform>(true));
+        }
+
+        internal void MarkReleasesWithScene()
+        {
+            if (!IsDisposed) ReleasesWithScene = true;
         }
 
         public void Dispose()
@@ -48,12 +73,37 @@ namespace VrBattlegrounds.Arsenal
             foreach (ArsenalSlotController slot in Slots)
             {
                 if (slot == null) continue;
-                // Предмет, лежащий в слоте или прицепленный к нему извне, — не наш: отцепить до уничтожения.
-                foreach (UxrGrabbableObject item in slot.GetComponentsInChildren<UxrGrabbableObject>(true))
-                    if (!_ownedTransforms.Contains(item.transform)) item.transform.SetParent(null, true);
+                if (!ReleasesWithScene) DetachForeignItems(slot.transform);
                 if (Application.isPlaying) UnityEngine.Object.Destroy(slot.gameObject);
                 else UnityEngine.Object.DestroyImmediate(slot.gameObject);
             }
+        }
+
+        /// <summary>
+        ///     Сцена живёт: чужой предмет верхнего уровня (между ним и слотом нет чужого хватаемого предка) отцепить в
+        ///     корень до уничтожения слота. Вложенный в чужой предмет (стартовый магазин в оружии, затвор) остаётся в
+        ///     родителе: вырванный из оружия, он стал бы отдельным предметом без родителя.
+        /// </summary>
+        private void DetachForeignItems(Transform slot)
+        {
+            UxrGrabbableObject[] items = slot.GetComponentsInChildren<UxrGrabbableObject>(true);
+            // Сначала решить по нетронутой иерархии, потом отцеплять: отцепление меняет предков остальных.
+            var detach = new List<Transform>(items.Length);
+            foreach (UxrGrabbableObject item in items)
+                if (!_ownedTransforms.Contains(item.transform) && !HasForeignGrabbableAncestor(item.transform, slot))
+                    detach.Add(item.transform);
+            foreach (Transform item in detach) item.SetParent(null, true);
+        }
+
+        /// <summary>
+        ///     Есть ли между предметом и слотом чужой хватаемый предмет — тот, что отцепится сам и увезёт вложенное.
+        ///     Свой хватаемый предок уничтожается со слотом и вложенное не спасает.
+        /// </summary>
+        private bool HasForeignGrabbableAncestor(Transform item, Transform slot)
+        {
+            for (Transform parent = item.parent; parent != null && parent != slot; parent = parent.parent)
+                if (!_ownedTransforms.Contains(parent) && parent.GetComponent<UxrGrabbableObject>() != null) return true;
+            return false;
         }
     }
 
@@ -205,9 +255,21 @@ namespace VrBattlegrounds.Arsenal
             return ArsenalCompositionReadiness.Passed;
         }
 
+        /// <summary>
+        ///     Владелец сцены карты (<c>MapBootstrap.OnDestroy</c>) объявляет: сцена уничтожается, её станции будут
+        ///     разобраны вместе с ней. Вызывать до разборки scope запуска. Живые сборки этой сцены при
+        ///     <see cref="ArsenalCompositionHandle.Dispose" /> не переподвешивают предметы в корень — те уходят со сценой.
+        /// </summary>
+        internal static void ReleaseWithScene(Scene scene)
+        {
+            foreach (ArsenalCompositionHandle handle in Live.Values)
+                if (handle.StationScene == scene) handle.MarkReleasesWithScene();
+        }
+
         internal static void Forget(ArsenalCompositionHandle handle)
         {
-            if (handle.Station != null && Live.TryGetValue(handle.Station, out ArsenalCompositionHandle current) && ReferenceEquals(current, handle))
+            // Ссылка, а не Unity-null: при выгрузке станция бывает уничтожена раньше разборки, запись всё равно снять.
+            if (!ReferenceEquals(handle.Station, null) && Live.TryGetValue(handle.Station, out ArsenalCompositionHandle current) && ReferenceEquals(current, handle))
                 Live.Remove(handle.Station);
         }
     }

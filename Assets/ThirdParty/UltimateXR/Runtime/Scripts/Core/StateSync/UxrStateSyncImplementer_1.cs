@@ -76,7 +76,9 @@ namespace UltimateXR.Core.StateSync
                 try
                 {
                     // Set new property value using reflection
-                    _targetComponent.GetType().GetProperty(propertyChangedEventArgs.PropertyName, PropertyFlags).SetValue(_targetComponent, propertyChangedEventArgs.Value);
+                    // VR Battlegrounds patch 80: PropertyInfo из кеша (тип компонента, имя) вместо GetProperty на каждое событие.
+                    // Не найдено — null не кешируется, SetValue на null даёт тот же NullReferenceException.
+                    GetCachedProperty(_targetComponent.GetType(), propertyChangedEventArgs.PropertyName).SetValue(_targetComponent, propertyChangedEventArgs.Value);
                 }
                 catch (Exception exception)
                 {
@@ -90,36 +92,44 @@ namespace UltimateXR.Core.StateSync
             {
                 try
                 {
-                    if (methodInvokedEventArgs.Parameters == null || !methodInvokedEventArgs.Parameters.Any())
+                    // VR Battlegrounds patch 80: выбор метода через кеш MethodEntry (тип компонента, имя) — те же
+                    // вызовы рефлексии и тот же порядок веток, но каждый найденный MethodInfo ищется один раз.
+                    // Отрицательные результаты (null, исключения) не кешируются и повторяются как раньше.
+                    Type        componentType = _targetComponent.GetType();
+                    string      methodName    = methodInvokedEventArgs.MethodName;
+                    object[]    parameters    = methodInvokedEventArgs.Parameters;
+                    MethodEntry methodEntry   = GetMethodEntry(componentType, methodName);
+
+                    if (parameters == null || parameters.Length == 0)
                     {
                         // Invoke without arguments
-                        _targetComponent.GetType().GetMethod(methodInvokedEventArgs.MethodName, MethodFlags).Invoke(_targetComponent, null);
+                        methodEntry.GetByName().Invoke(_targetComponent, null);
                     }
                     else
                     {
                         // Invoke method using same parameters using reflection. Make sure we select the correct overload.
 
-                        bool anyIsNull = methodInvokedEventArgs.Parameters.Any(p => p == null);
+                        bool anyIsNull = AnyIsNull(parameters);
 
-                        if (_targetComponent.GetType().GetMethods(MethodFlags).Count(m => m.Name.Equals(methodInvokedEventArgs.MethodName)) == 1)
+                        if (methodEntry.GetCount() == 1)
                         {
                             // There are no overloads
-                            _targetComponent.GetType().GetMethod(methodInvokedEventArgs.MethodName, MethodFlags).Invoke(_targetComponent, methodInvokedEventArgs.Parameters);
+                            methodEntry.GetByName().Invoke(_targetComponent, parameters);
                         }
                         else if (!anyIsNull)
                         {
                             // We can look for a method specifying the parameter types.
-                            _targetComponent.GetType().GetMethod(methodInvokedEventArgs.MethodName, MethodFlags, null, methodInvokedEventArgs.Parameters.Select(p => p.GetType()).ToArray(), null).Invoke(_targetComponent, methodInvokedEventArgs.Parameters);
+                            methodEntry.GetByArgumentTypes(parameters).Invoke(_targetComponent, parameters);
                         }
                         else
                         {
                             // We have a call where a parameter is null, so we can't infer the parameter type. Try to find a method with the same parameter count.
 
-                            MethodInfo method = _targetComponent.GetType().GetMethods(MethodFlags).FirstOrDefault(x => x.Name.Equals(methodInvokedEventArgs.MethodName) && x.GetParameters().Length == methodInvokedEventArgs.Parameters.Length);
+                            MethodInfo method = methodEntry.GetByParameterCount(parameters.Length);
 
                             if (method != null)
                             {
-                                method.Invoke(_targetComponent, methodInvokedEventArgs.Parameters);
+                                method.Invoke(_targetComponent, parameters);
                             }
                             else
                             {
@@ -320,7 +330,215 @@ namespace UltimateXR.Core.StateSync
 
         #endregion
 
+        #region Private Methods
+
+        /// <summary>
+        ///     VR Battlegrounds patch 80: свойство для синхронизации из кеша. Тот же вызов
+        ///     <c>GetProperty(name, PropertyFlags)</c>, что и раньше; в кеш попадает только найденное свойство,
+        ///     null и исключения (ArgumentNullException, AmbiguousMatchException) не кешируются.
+        /// </summary>
+        private static PropertyInfo GetCachedProperty(Type componentType, string propertyName)
+        {
+            if (s_propertyCache.TryGetValue((componentType, propertyName), out PropertyInfo property))
+            {
+                return property;
+            }
+
+            property = componentType.GetProperty(propertyName, PropertyFlags);
+
+            if (property != null)
+            {
+                s_propertyCache[(componentType, propertyName)] = property;
+            }
+
+            return property;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 80: запись кеша методов для пары (тип компонента, имя метода). Новая запись
+        ///     попадает в словарь только вместе с первым положительным результатом (см. <see cref="MethodEntry" />):
+        ///     имя приходит из сетевого события, и несуществующие имена не должны копить записи.
+        /// </summary>
+        private static MethodEntry GetMethodEntry(Type componentType, string methodName)
+        {
+            return s_methodCache.TryGetValue((componentType, methodName), out MethodEntry entry) ? entry : new MethodEntry(componentType, methodName);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 80: замена <c>Parameters.Any(p => p == null)</c> без замыкания и перечислителя.
+        ///     Сравнение то же — ссылочное с null для object (уничтоженный UnityEngine.Object не считается null).
+        /// </summary>
+        private static bool AnyIsNull(object[] parameters)
+        {
+            for (int i = 0; i < parameters.Length; ++i)
+            {
+                if (parameters[i] == null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        #endregion
+
         #region Private Types & Data
+
+        /// <summary>
+        ///     VR Battlegrounds patch 80: кеш выбора метода для одной пары (тип компонента, имя метода).
+        ///     Каждое поле повторяет ровно один прежний вызов рефлексии и заполняется только успешным результатом:
+        ///     null и исключения не кешируются, следующий вызов повторит поиск и даст то же исключение.
+        ///     Метаданные типа в рантайме неизменны, поэтому кешированный результат совпадает с повторным поиском.
+        ///     Запись без единого положительного результата в словарь не попадает (<see cref="Remember" />).
+        /// </summary>
+        private sealed class MethodEntry
+        {
+            public MethodEntry(Type componentType, string methodName)
+            {
+                _componentType = componentType;
+                _methodName    = methodName;
+            }
+
+            /// <summary>
+            ///     Число методов с этим именем в <c>GetMethods(MethodFlags)</c>. Считается один раз;
+            ///     0 не кешируется (любой вызов с этим именем всё равно закончится ошибкой).
+            /// </summary>
+            public int GetCount()
+            {
+                if (_count <= 0)
+                {
+                    _count = _componentType.GetMethods(MethodFlags).Count(m => m.Name.Equals(_methodName));
+
+                    if (_count > 0)
+                    {
+                        Remember();
+                    }
+                }
+
+                return _count;
+            }
+
+            /// <summary>
+            ///     <c>GetMethod(name, MethodFlags)</c>. Прежний код вызывал его в двух ветках — без аргументов и при
+            ///     единственном методе с этим именем; вызов один и тот же, поэтому и результат общий.
+            ///     AmbiguousMatchException (перегрузки при вызове без аргументов) не кешируется.
+            /// </summary>
+            public MethodInfo GetByName()
+            {
+                if (_byName == null)
+                {
+                    _byName = _componentType.GetMethod(_methodName, MethodFlags);
+
+                    if (_byName != null)
+                    {
+                        Remember();
+                    }
+                }
+
+                return _byName;
+            }
+
+            /// <summary>
+            ///     <c>GetMethod(name, MethodFlags, null, types, null)</c>, где types — точные рантайм-типы аргументов
+            ///     (все не null). Результат стандартного binder зависит только от типа, имени и этих типов, поэтому
+            ///     ключ — их последовательность. Поиск в кеше без выделения памяти; массив типов создаётся только
+            ///     при промахе.
+            /// </summary>
+            public MethodInfo GetByArgumentTypes(object[] parameters)
+            {
+                for (int i = 0; i < _byArgumentTypes.Count; ++i)
+                {
+                    if (TypesMatch(_byArgumentTypes[i].Key, parameters))
+                    {
+                        return _byArgumentTypes[i].Value;
+                    }
+                }
+
+                Type[] types = new Type[parameters.Length];
+
+                for (int i = 0; i < parameters.Length; ++i)
+                {
+                    types[i] = parameters[i].GetType();
+                }
+
+                MethodInfo method = _componentType.GetMethod(_methodName, MethodFlags, null, types, null);
+
+                if (method != null)
+                {
+                    _byArgumentTypes.Add(new KeyValuePair<Type[], MethodInfo>(types, method));
+                    Remember();
+                }
+
+                return method;
+            }
+
+            /// <summary>
+            ///     Первый в порядке <c>GetMethods(MethodFlags)</c> метод с этим именем и числом параметров — ветка, где
+            ///     среди аргументов есть null. null (не найдено) не кешируется.
+            /// </summary>
+            public MethodInfo GetByParameterCount(int parameterCount)
+            {
+                if (_byParameterCount.TryGetValue(parameterCount, out MethodInfo method))
+                {
+                    return method;
+                }
+
+                method = _componentType.GetMethods(MethodFlags).FirstOrDefault(x => x.Name.Equals(_methodName) && x.GetParameters().Length == parameterCount);
+
+                if (method != null)
+                {
+                    _byParameterCount[parameterCount] = method;
+                    Remember();
+                }
+
+                return method;
+            }
+
+            /// <summary>
+            ///     Кладёт запись в словарь при первом положительном результате; повторный вызов ничего не меняет.
+            /// </summary>
+            private void Remember()
+            {
+                if (!_remembered)
+                {
+                    _remembered                                   = true;
+                    s_methodCache[(_componentType, _methodName)] = this;
+                }
+            }
+
+            private static bool TypesMatch(Type[] types, object[] parameters)
+            {
+                if (types.Length != parameters.Length)
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < types.Length; ++i)
+                {
+                    if (types[i] != parameters[i].GetType())
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            private readonly List<KeyValuePair<Type[], MethodInfo>> _byArgumentTypes  = new List<KeyValuePair<Type[], MethodInfo>>();
+            private readonly Dictionary<int, MethodInfo>            _byParameterCount = new Dictionary<int, MethodInfo>();
+            private readonly Type                                   _componentType;
+            private readonly string                                 _methodName;
+            private          int                                    _count;
+            private          MethodInfo                             _byName;
+            private          bool                                   _remembered;
+        }
+
+        // VR Battlegrounds patch 80: кеши рефлексии SyncState. Ключ — рантайм-тип компонента (T — лишь базовый тип)
+        // и имя члена. Только main thread: SyncState вызывается из UxrManager на главном потоке Unity, поэтому
+        // словари без lock. Перезагрузка домена (перекомпиляция) сбрасывает статические поля вместе с типами.
+        private static readonly Dictionary<(Type, string), PropertyInfo> s_propertyCache = new Dictionary<(Type, string), PropertyInfo>();
+        private static readonly Dictionary<(Type, string), MethodEntry>  s_methodCache   = new Dictionary<(Type, string), MethodEntry>();
 
         private const int          StateSyncCallDepthErrorThreshold = 100;
         private const BindingFlags EventFlags                       = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;

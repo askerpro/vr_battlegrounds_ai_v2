@@ -22,9 +22,12 @@
     {
       "id": "accepted-tests",
       "writes": [
-        "Assets/Tests/EditMode/Player/**",
+        "Assets/Tests/EditMode/Player/AvatarTeardownTests.cs",
+        "Assets/Tests/EditMode/Managers/AvatarManagerDeferredBodyTests.cs",
+        "Assets/Tests/EditMode/Managers/AvatarManagerDeferredBodyTests.cs.meta",
         "Assets/Tests/EditMode/Network/RpcCarriesNoStateTests.cs",
         "Assets/Scripts/Player/PlayerController.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/AvatarSwapDeathReplicationScenario.cs",
         "tasks/death-body-defer/**"
       ],
       "after": [

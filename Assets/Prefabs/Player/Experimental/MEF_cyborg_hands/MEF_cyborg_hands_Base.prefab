@@ -3945,7 +3945,7 @@ PrefabInstance:
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: _defaultHandPose
       value: 
-      objectReference: {fileID: 11400000, guid: 35ada27abb29756408af02424b528e47, type: 2}
+      objectReference: {fileID: 11400000, guid: 3f8364620cf31c447a54358fb66bfd35, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: _rig._head._head
       value: 
@@ -4013,43 +4013,43 @@ PrefabInstance:
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[0]'
       value: 
-      objectReference: {fileID: 11400000, guid: 2d0f6f31290ad714992f21d677510671, type: 2}
+      objectReference: {fileID: 11400000, guid: 260fce01e924d374392f6b19acdcbee4, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[1]'
       value: 
-      objectReference: {fileID: 11400000, guid: 19418487ecdea5345be6b8b4cf48a466, type: 2}
+      objectReference: {fileID: 11400000, guid: 35d1272eb78bded458c5bd2c1ab6de06, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[2]'
       value: 
-      objectReference: {fileID: 11400000, guid: a3ede59e0c27be540b6aca0d5ccbf457, type: 2}
+      objectReference: {fileID: 11400000, guid: c3eeace805620e647aa31cb8ce93fd23, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[3]'
       value: 
-      objectReference: {fileID: 11400000, guid: 4e3345a17eb54244787f9952b854e528, type: 2}
+      objectReference: {fileID: 11400000, guid: a97321595cc43c84eae7e44ace2372b6, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[4]'
       value: 
-      objectReference: {fileID: 11400000, guid: 9ea05102ecfc93d47bad137bd5701205, type: 2}
+      objectReference: {fileID: 11400000, guid: 1bd4608dd84147e4fbe5926a9fd50944, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[5]'
       value: 
-      objectReference: {fileID: 11400000, guid: 6f302090bb3779343a0adcd7e5cb2bcb, type: 2}
+      objectReference: {fileID: 11400000, guid: c157dd6730f11534f8d9716db0f1acbc, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[6]'
       value: 
-      objectReference: {fileID: 11400000, guid: f42a476dd8661cf4ab9e29a9c04edcb4, type: 2}
+      objectReference: {fileID: 11400000, guid: 4328f3ca6a4aa4a4eb6330ce6bdf8a3d, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[7]'
       value: 
-      objectReference: {fileID: 11400000, guid: 154724961cfc73b4ea8a0b46cb540a80, type: 2}
+      objectReference: {fileID: 11400000, guid: bc075099a961fc948894bdb1070e9517, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[8]'
       value: 
-      objectReference: {fileID: 11400000, guid: d56c67fb2df3f454b87d065dcf3dd2f4, type: 2}
+      objectReference: {fileID: 11400000, guid: b37e3204d1e8c924d9e6a7be826df7e2, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[9]'
       value: 
-      objectReference: {fileID: 11400000, guid: b4a4680a4f9f6534592bf4b7f8ef4832, type: 2}
+      objectReference: {fileID: 11400000, guid: 813db6a8ed095564aac562471aac78d0, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: _rig._rightArm._clavicle
       value: 
@@ -4069,27 +4069,27 @@ PrefabInstance:
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[10]'
       value: 
-      objectReference: {fileID: 11400000, guid: befa0b849d2a7264ca4bf79253fd1ecf, type: 2}
+      objectReference: {fileID: 11400000, guid: ac1f5e617474a3a46af3ee10e094e016, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[11]'
       value: 
-      objectReference: {fileID: 11400000, guid: 723e0043cdbfc5d4da7bc2b653ed585b, type: 2}
+      objectReference: {fileID: 11400000, guid: b8d441f919755034f8664d9370b7aff2, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[12]'
       value: 
-      objectReference: {fileID: 11400000, guid: c5643f84a82766e4b9579460d9f7104e, type: 2}
+      objectReference: {fileID: 11400000, guid: 4354f147728470247b7f8fcd0440cd95, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[13]'
       value: 
-      objectReference: {fileID: 11400000, guid: 362fb6cef5dd33147bde4826973409f1, type: 2}
+      objectReference: {fileID: 11400000, guid: dbb57ee8b96b9c041b60a1b6a35b0494, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[14]'
       value: 
-      objectReference: {fileID: 11400000, guid: 0b1b03e4f01f42b4797ffbe40b98c623, type: 2}
+      objectReference: {fileID: 11400000, guid: 42d62e4997b50e24987ef68571977ce3, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[15]'
       value: 
-      objectReference: {fileID: 11400000, guid: 35ada27abb29756408af02424b528e47, type: 2}
+      objectReference: {fileID: 11400000, guid: 3f8364620cf31c447a54358fb66bfd35, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[16]'
       value: 
@@ -4109,23 +4109,23 @@ PrefabInstance:
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[20]'
       value: 
-      objectReference: {fileID: 11400000, guid: 3260743ce360f814f8643cf6a0fcce7d, type: 2}
+      objectReference: {fileID: 11400000, guid: 44ea1f76294e38d47885b28c3a3438bd, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[21]'
       value: 
-      objectReference: {fileID: 11400000, guid: 80445f7d7f1e50b4fa5391ff26cf0e47, type: 2}
+      objectReference: {fileID: 11400000, guid: c9c63e454247d6c4d949ab26bd5f2f88, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[22]'
       value: 
-      objectReference: {fileID: 11400000, guid: 22963577298ee6b43801b532eab8a27e, type: 2}
+      objectReference: {fileID: 11400000, guid: 847fcb01f6e19e7478553c43c6532863, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[23]'
       value: 
-      objectReference: {fileID: 11400000, guid: e95a9c1dfc23d384fa12ed7b3141fe46, type: 2}
+      objectReference: {fileID: 11400000, guid: dcabcdee226065943a69427e8801f5c9, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[24]'
       value: 
-      objectReference: {fileID: 11400000, guid: 21bc978bf2087474f9c7f733d53aa938, type: 2}
+      objectReference: {fileID: 11400000, guid: e653c36e3a9f04d4fb2cbac5f983bc6f, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[25]'
       value: 
@@ -4133,151 +4133,151 @@ PrefabInstance:
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[26]'
       value: 
-      objectReference: {fileID: 11400000, guid: 2e9ea2dcd0030c943b9f0d66d37e5b57, type: 2}
+      objectReference: {fileID: 11400000, guid: fa71e0190285fc343becf6f82ff0c1fa, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[27]'
       value: 
-      objectReference: {fileID: 11400000, guid: cd883342aa67cf2409975e0a0d2e79e1, type: 2}
+      objectReference: {fileID: 11400000, guid: cc7b46910b3f59646996668c403767d8, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[28]'
       value: 
-      objectReference: {fileID: 11400000, guid: 2854deffc6888c34fa7e24a7bb675f55, type: 2}
+      objectReference: {fileID: 11400000, guid: 907f2e2f46a596f4496aba53a815e909, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[29]'
       value: 
-      objectReference: {fileID: 11400000, guid: afc6a177c2974304ca92ebebdfad67ec, type: 2}
+      objectReference: {fileID: 11400000, guid: 755b6bf0ee646c84b8e8d9f9ede487e0, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[30]'
       value: 
-      objectReference: {fileID: 11400000, guid: e8f9363567afdeb4a96d96f19099fec1, type: 2}
+      objectReference: {fileID: 11400000, guid: 7e2b5913c3f90f043bd5ea5c85d59841, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[31]'
       value: 
-      objectReference: {fileID: 11400000, guid: ab3b4a5121be9594b83e601b0fa5648e, type: 2}
+      objectReference: {fileID: 11400000, guid: 56f373d38c0d6d1469a8e33faa184670, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[32]'
       value: 
-      objectReference: {fileID: 11400000, guid: 6b42e3d4300cff54d8e2bb4958ae5052, type: 2}
+      objectReference: {fileID: 11400000, guid: 97f6cd5debc11df4eae876e82d47d7aa, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[33]'
       value: 
-      objectReference: {fileID: 11400000, guid: 20f1183c36a20c44d8e2cf19a1f81b5a, type: 2}
+      objectReference: {fileID: 11400000, guid: c3ce1af3fe76eb8469c78798575439c1, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[34]'
       value: 
-      objectReference: {fileID: 11400000, guid: 62b9e052d3a4b6d4f8e2445a8e3a2e69, type: 2}
+      objectReference: {fileID: 11400000, guid: 8bb0a400e9dc12a4299e17d4f23419a2, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[35]'
       value: 
-      objectReference: {fileID: 11400000, guid: 78c6e3beadfbe914494c4d4360c6a703, type: 2}
+      objectReference: {fileID: 11400000, guid: 429cb66fa6dcbe546b51426405a6af88, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[36]'
       value: 
-      objectReference: {fileID: 11400000, guid: 549346bbd493aef45945c2da77711406, type: 2}
+      objectReference: {fileID: 11400000, guid: 05a115df20ab9334ebfdb3ae672a7c78, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[37]'
       value: 
-      objectReference: {fileID: 11400000, guid: 2cc0188dc6c72824ab7e48fdb5a00b1b, type: 2}
+      objectReference: {fileID: 11400000, guid: 46fc73f0ab8def742991790ff578f272, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[38]'
       value: 
-      objectReference: {fileID: 11400000, guid: 23ed7c7cf56ade942958b9cc8bb09a04, type: 2}
+      objectReference: {fileID: 11400000, guid: ccf318eb50b9edc409d829df964fafe7, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[39]'
       value: 
-      objectReference: {fileID: 11400000, guid: a77702ab13eed7d4fa1e3523ec60168d, type: 2}
+      objectReference: {fileID: 11400000, guid: cf6043152865be24eb9592b01d01c275, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[40]'
       value: 
-      objectReference: {fileID: 11400000, guid: 1149a919220a0d14bb86f9ccc78a7d00, type: 2}
+      objectReference: {fileID: 11400000, guid: f8be455c91bc8384fa783d95e1a3bbd7, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[41]'
       value: 
-      objectReference: {fileID: 11400000, guid: 1de6808cbb620054f8c2d47b5e8e59fe, type: 2}
+      objectReference: {fileID: 11400000, guid: 63b5099894a4dd14d92eb2c63a9cb33a, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[42]'
       value: 
-      objectReference: {fileID: 11400000, guid: add697708842557458159fcb5433abdc, type: 2}
+      objectReference: {fileID: 11400000, guid: ef35bc6ef404eac469931a0320dc8fa9, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[43]'
       value: 
-      objectReference: {fileID: 11400000, guid: f262308c71410d74a8797be34cd86f4d, type: 2}
+      objectReference: {fileID: 11400000, guid: 02563df981715f640a5adf9df6c1ae05, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[44]'
       value: 
-      objectReference: {fileID: 11400000, guid: ded836912ddf29c4fad89020e7f2a606, type: 2}
+      objectReference: {fileID: 11400000, guid: 818530d9ea7b26d40add71cb256a521e, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[45]'
       value: 
-      objectReference: {fileID: 11400000, guid: ab88765ab14b14b4c870585a7c9e862d, type: 2}
+      objectReference: {fileID: 11400000, guid: 1458cdf0dd69b294391cc5415d7699a3, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[46]'
       value: 
-      objectReference: {fileID: 11400000, guid: 2289f73b084969d40b5b5cd58e0f15b8, type: 2}
+      objectReference: {fileID: 11400000, guid: 9891b932290f75748843f8b6a6eef618, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[47]'
       value: 
-      objectReference: {fileID: 11400000, guid: a895f28a5c28c604a9c235caf84a5607, type: 2}
+      objectReference: {fileID: 11400000, guid: a5d40ee130b373d4eb6e46a55ecf2ea3, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[48]'
       value: 
-      objectReference: {fileID: 11400000, guid: e6213ce4ca5c0094b829a12cf0363372, type: 2}
+      objectReference: {fileID: 11400000, guid: a8f0c12373c44a14581020cf060e1d22, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[49]'
       value: 
-      objectReference: {fileID: 11400000, guid: 6e31d3dd521663d488aeb0ecd957c91d, type: 2}
+      objectReference: {fileID: 11400000, guid: cd2f84f4493becf46bb683d42792bc59, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[50]'
       value: 
-      objectReference: {fileID: 11400000, guid: 1171db6b6f9b93b4bb652e1f2a4706ea, type: 2}
+      objectReference: {fileID: 11400000, guid: 10a75940882d39b48bef5bee35067d6f, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[51]'
       value: 
-      objectReference: {fileID: 11400000, guid: 752eb229ab9858b48ac383e629aec580, type: 2}
+      objectReference: {fileID: 11400000, guid: 192f22487947dbd4fbeac1dc346afd0b, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[52]'
       value: 
-      objectReference: {fileID: 11400000, guid: 469004b4b8559614d89abeada0622319, type: 2}
+      objectReference: {fileID: 11400000, guid: a8781e1aee176734da800cb7d93f5a75, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[53]'
       value: 
-      objectReference: {fileID: 11400000, guid: 3b657e856cc485d4f88c8c403d055084, type: 2}
+      objectReference: {fileID: 11400000, guid: 90d7d7bc4a70a194e8905c100b1205c8, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[54]'
       value: 
-      objectReference: {fileID: 11400000, guid: ede1b84dbc394b24681868c3b51f4075, type: 2}
+      objectReference: {fileID: 11400000, guid: 2bcf0221709c3a3468e19b64e205861f, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[55]'
       value: 
-      objectReference: {fileID: 11400000, guid: 5d1d94db0ee43be43a476dc2fcbd34f6, type: 2}
+      objectReference: {fileID: 11400000, guid: 9084214af7b1d1e4aa0bc7379a914f79, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[56]'
       value: 
-      objectReference: {fileID: 11400000, guid: dacacfb899ee86a49b5f4519ac05a024, type: 2}
+      objectReference: {fileID: 11400000, guid: fff20e71630e63d47aea4684a8b247d0, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[57]'
       value: 
-      objectReference: {fileID: 11400000, guid: ac42c266fbe21d0499b5f251c7ae1c0c, type: 2}
+      objectReference: {fileID: 11400000, guid: 9fdcce4d685527345b58b8906e2e6602, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[58]'
       value: 
-      objectReference: {fileID: 11400000, guid: 4e191ba0f536f8c4bbb3450ed49d058e, type: 2}
+      objectReference: {fileID: 11400000, guid: 4d5d74e6a95f68d49ad545bacac01e6a, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[59]'
       value: 
-      objectReference: {fileID: 11400000, guid: 937e7123711459445aadc02b111891a1, type: 2}
+      objectReference: {fileID: 11400000, guid: 3eec75e099da7764d86285e218200477, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[60]'
       value: 
-      objectReference: {fileID: 11400000, guid: 6c946d4a32ab0c64a8e3e94781ebd236, type: 2}
+      objectReference: {fileID: 11400000, guid: 150112ad7d049ca4a9de971e17ea84c5, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[61]'
       value: 
-      objectReference: {fileID: 11400000, guid: 8d31119d6b069c448a75dd2f10d3de20, type: 2}
+      objectReference: {fileID: 11400000, guid: d259549880877a845bd6780bc625eea3, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: '_handPoses.Array.data[62]'
       value: 
-      objectReference: {fileID: 11400000, guid: 4894b2eff10d95644a4084f94273fca6, type: 2}
+      objectReference: {fileID: 11400000, guid: abd7a0b24d1efb24e9bdfb9fd8cb009f, type: 2}
     - target: {fileID: 4835366009434776386, guid: a58abb6b878ca5b40b79c14fae6f5645, type: 3}
       propertyPath: _rig._leftArm._hand._wrist
       value: 

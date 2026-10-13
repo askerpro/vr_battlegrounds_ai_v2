@@ -1,0 +1,132 @@
+{
+ "package": "bots-fix net-round1: этап pf-network — бот PlayerFlow на сервере, наблюдатели на клиентах (S2C, H1C, поздний вход, reconnect)",
+ "date": "2026-10-12",
+ "basedOn": "tasks/bots-fix/tools/eq-round3",
+ "spec": "tasks/bots-fix/pf-network-spec.md",
+ "technicalInput": "checkpoint net-round1 attempt-5 с незакоммиченными BotStandNetObserver(+Gate), asmdef стенда (+Mirror.Components), BotStandPlayerFlowProbe (байты цели), BotStandRunOptions.LaneOffsetX + BotStandSession (сдвиг раскладки); payload-ы ассеты не пишут, BotStandNetPoses (новый), BotStandPoseGrid (новый); attempt-6: BotStandNtWire/BotStandNetSendMarkers/BotStandNetReceiveTrace (новые), BotStandNetObserver(+Gate: ClientNoRecoil), BotStandRunOptions.ClientNoRecoil, BotCombatStand (маркеры отправки до Begin), BotStandShotConditions.RootGrabbable internal",
+ "outputRoot": "tasks/bots-fix/reports/net-round1",
+ "expectedChangedPaths": [],
+ "launch": {
+  "route": "PlayLaunch.Plan -> PlayLaunch.Play(json, owner 'bots-fix.net-round1') -> Status; BotCombatStandEditor не используется (он задаёт ClientCount=0)",
+  "S2C": "Role=server, ClientCount=2: main = выделенный сервер (стенд, проба), 'Player 2' и 'Player 3' = клиенты-игроки без команды режима",
+  "H1C": "Role=host, ClientCount=1: main = ПК-хост (стенд), 'Player 2' = клиент. Вариант спеки Role=client + хост-клон невозможен: стенд исполняется только в главном редакторе (MCP), а адресных команд «выполнить код в клоне» нет",
+  "common": "сцена Assets/Scenes/Debug/BotCombatStand.unity, ModeId=respawn, AutoGoLive=false, BotCount=0, GameRole=Player, NetworkPortPolicy=auto, Readiness=map-playable",
+  "observer": "B3 пишет заявку <ProjectRoot>/Temp/BotStandNetObserver/request.json (папка отчётов — абсолютная, срок 30 мин); каждый процесс при входе в Play (RuntimeInitializeOnLoadMethod) создаёт BotStandNetObserver, который работает только у чистого клиента; B6 удаляет заявку",
+  "lateJoinAndReconnect": "адресные команды PlayModeTestStand.Send disconnect/reconnect клиенту 'Player 3' (epoch/ProcessSessionId из свежего PlayLaunch.Status). Поздний вход = клиент отключён до начала case и подключается во время case с тем же DeviceToken (штатное восстановление сессии); «свежего» опоздавшего с новым токеном PlayLaunch не умеет — см. запрос launch-infra в отчёте",
+  "clientsNotTargets": "штатно: Respawn = выбор команды игроком (teamAssignment PlayerChoice, никто не назначает), разминка без команд -> у клиентов TeamIndex=0; BotCombatDriver.IsEnemy и BotSenses.NearestEnemy исключают TeamIndex=0; BotTeamChoice считает команды режима, клиенты без команды выбор бота не меняют. B4 перед каждым case: у всех клиентов-игроков TeamIndex=0, иначе стоп. Кода в боте/матче не добавлено.",
+  "clientPlacement": "без нейтральной зоны и NetworkStartPosition на сцене стенда игрок без команды появляется в (0,0,0) — на линии огня T07; стенд сдвигает раскладку case: BotStandRunOptions.LaneOffsetX=4 (бот (4,0,-5), цель (4,0,5)); позиции клиентов и расстояние до линии — queue.json clientsAtStart. Постоянное решение сцены — нейтральная TeamSpawnZone/NetworkStartPosition сбоку (BotCombatStandBuilder + пересборка сцены в Unity), отдельным решением."
+ },
+ "runs": [
+  {
+   "topology": "S2C",
+   "phase": "p1",
+   "combos": "E-ak105-ref 30 (NoRecoil+ZeroAiAimSpread, эталон угла), A-ak105-recoil 30, P-holster-purchase 35 (PPK из кобуры, покупка AK105 на 10 с), G-ghost-respawn-ak105 40 (смерть 8 с, возрождение 20 с)"
+  },
+  {
+   "topology": "S2C",
+   "phase": "p2",
+   "combos": "LJ-late-ak105 45 (Player 3 отключён до case, reconnect 15 с), LH-late-holster 45 (покупка 8 с, reconnect 22 с: PPK в кобуре, AK в руке), RC-reconnect-ak105 45 (disconnect 12 с, reconnect 22 с)"
+  },
+  {
+   "topology": "H1C",
+   "phase": "p1",
+   "combos": "E-ak105-ref, P-holster-purchase, G-ghost-respawn-ak105 (если хост допустим планом B0)"
+  },
+  {
+   "topology": "S2C",
+   "phase": "p1",
+   "attempt": "attempt-6",
+   "variants": "A1 (ClientNoRecoil=false), A2 (ClientNoRecoil=true) — два запуска B3..B6, папки runtime/attempt-6/S2C-p1-A1 и -A2",
+   "combos": "A-ak105-recoil 30, LJ-late-ak105 45 (Player 3 отключён до case, reconnect 15 с)"
+  }
+ ],
+ "steps": [
+  {
+   "id": "B0",
+   "tool": "execute_code",
+   "payload": "b0-preflight.cs",
+   "kind": "read-only",
+   "repeatable": true,
+   "pass": "passed=true (оба плана S2C/H1C Passed, SceneKind=Game); отчёт reports/net-round1/attempt-3/preflight-*.json"
+  },
+  {
+   "id": "B3",
+   "tool": "execute_code",
+   "payload": "b3-runtime-launch.cs",
+   "kind": "mutation (заявка наблюдателя + enter Play всех процессов)",
+   "repeatable": false,
+   "pre": "B0 PASS; в payload-ах B3/B4/B5/B6 выставить одинаковые Topology/Phase; renew lease",
+   "pass": "started=true; затем B5: launch.ready=true, все участники Connected, MapRunValid"
+  },
+  {
+   "id": "B5",
+   "tool": "execute_code",
+   "payload": "b5-runtime-status.cs",
+   "kind": "read-only",
+   "repeatable": true
+  },
+  {
+   "id": "B4",
+   "tool": "execute_code",
+   "payload": "b4-runtime-queue.cs",
+   "kind": "mutation (GoLive + RunCases + адресные disconnect/reconnect)",
+   "repeatable": false,
+   "pre": "launch Ready",
+   "pass": "B5.queue.state=completed; clients[].bodies>0 у каждого клиента; clientsAtStart: teamIndex=0, distanceToLaneM>=1.5",
+   "terminal": "queue.state=failed/live-ended/aborted -> сразу B6, finish"
+  },
+  {
+   "id": "console",
+   "tool": "read_console",
+   "kind": "read-only",
+   "pre": "до B6",
+   "pass": "ошибки главного процесса сохраняются в отчёт; ошибки клиентов — console в их отчётах"
+  },
+  {
+   "id": "B6",
+   "tool": "execute_code",
+   "payload": "b6-runtime-stop.cs",
+   "kind": "mutation (PlayLaunch.Cancel своего owner, удаление заявки)",
+   "repeatable": false,
+   "pass": "B5: editor.playing=false, launch.state=Idle, CleanupPassed=true, clients[].final=true"
+  },
+  {
+   "id": "next-phase",
+   "tool": "повтор B3..B6 со следующей парой Topology/Phase (S2C p2, затем H1C p1) в той же аренде или отдельной"
+  },
+  {
+   "id": "finish",
+   "tool": "broker finish",
+   "pre": "B6 последней фазы выполнен (или terminal)"
+  },
+  {
+   "id": "copy",
+   "tool": "копирование worker:tasks/bots-fix/reports/net-round1 -> tasks/bots-fix/reports/net-round1 (не git add); логи клонов: worker:Library/VP/*/Logs/Editor.log (или -logFile клона) -> reports/net-round1/logs/"
+  },
+  {
+   "id": "verdict",
+   "tool": "python -I tasks/bots-fix/tools/net-round1/analyze.py",
+   "kind": "offline, после finish"
+  }
+ ],
+ "reports": {
+  "server": "runtime/attempt-3/<topology>-<phase>/<combo>/summary.json (cases[0].Metrics.playerFlow: muzzle, network.bytesPerSecondPerClient + target, serverMs BotHands.CanGrab/SnapCheck/GrabQuery/ResolveGrips/GrabObject/Release, equipment.stowDropped)",
+  "queue": "runtime/attempt-3/<topology>-<phase>/queue.json (UTC начала/конца case, токен/netId/команда бота, clientsAtStart, адресные команды и их исходы)",
+  "clients": "runtime/attempt-3/<topology>-<phase>/clients/<participant>-pid<pid>.json (схема bot-stand-net-observer@1: rtt/буфер/кадр клиента — ряды, пока подключён; свой аватар исключён из проверки бот-компонентов)",
+  "verdict": "verdict.json",
+  "poseSamples": "server: summary cases[0].Metrics.playerFlow.netShotPoses.samples; client: bodies[].poseSamples, bodies[].ntApplied; verdict: combos[].clients[].poseDecomposition",
+  "abCompare": "verdict.json abCompare[<attempt>/<topology>-<phase>][combo].A1/A2[участник]: wristRvsServerMm, afterNtWristRvsServerMm, barrelToRayDeg, gapResets, bakedY, bakedSumDeltaYM, strictBakedFromTransform"
+ },
+ "offlineChecks": {
+  "compile": "compile-check.ps1: 7 сборок + payload-ы (C# 7.3); недостающие в csproj основного checkout ссылки asmdef добавляются из Library/ScriptAssemblies; Assembly-CSharp-Editor — 11 чужих ошибок Weapons/Sights (офлайн-артефакт), payload-ы берут Assembly-CSharp-Editor.dll основного checkout"
+ },
+ "attempt": "attempt-6",
+ "attempts": {
+  "attempt-1": "тикет 515: клиенты GameRole=Spectator не получили сессию (GameNetworkManager.OnSpectatorConnect не реализован), MapPlayable=false, WaitingReady; до case не дошло. Отчёты runtime/S2C-p1 (без папки попытки).",
+  "attempt-2": "клиенты GameRole=Player; папки runtime/attempt-2/<topology>-<phase> и preflight attempt-2/ — B3 не упирается в launch.json попытки 1.",
+  "attempt-3": "тикет 521: наблюдатель работает; ledgerDivergences = выстрелам у клиентов с начала (5092 weapon-system); у переподключившегося угол ствол↔луч 10–56° (медианы), пользователь видит у клиента автомат у ног дулом вверх.",
+  "attempt-4": "тикет 525: decompose пуст (matched=0: у клиентов с начала выстрелы отклоняются форком учёта 5092/5162; S2C p2 не запустилась — KCP timeout клиента). wristOverwrite у клиентов — единицы мм/°; preDriver↔final запястья сервера ~4 см/<1°; NT тела 4 (root Local, Camera Local, CC_Base_L/R_Hand World = GetHandBone); на клиенте syncDirection NT бота = ClientToServer.",
+  "attempt-5": "разложение позы без выстрелов: сервер и клиент пишут позы на сетке серверного времени 0,25 с (корень, камера, запястья, оружие в правой руке и его ShotSource; сервер — и запястья до драйвера), ключ (netId аватара, узел); клиент — проверка применения снимков NT (ntApplied); analyze.py poseDecomposition.",
+  "attempt-6": "A/B по разбору 5520 (network): Mirror NTUnreliable достраивает непереданные оси из трансформа после ResetState — поза клиента после UXR (отдача SDK копии, KeepGripsInPlace) запекается в снимок, правое запястье дрейфует по Y. Маркеры: сервер — Metrics.netSendMarkers (флаги каждой отправки NT корня/камеры/кистей, серия [t,кадр,флаги,x,y,z], паузы > порога сброса, спавн: Y камеры в SpawnMessage и кадр первой записи драйвера); клиент — bodies[].netReceive (ResetState gap/empty, bakedCandidates, sumDeltaYM, fillEqualsPrevFinal, камера в кадре спавна, RPC до спавна), bodies[].clientNoRecoil, wristOverwrite.right/left. Порядок: B0 → (Variant=A1 во всех B3/B4/B5/B6) B3 → B5 Ready → B4 → B5 completed → B6 → (Variant=A2) B3 → B5 → B4 → B5 → B6 → finish → copy → analyze (abCompare)."
+ }
+}

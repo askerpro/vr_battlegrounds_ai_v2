@@ -48,5 +48,12 @@
   НЕ выполнены: компиляция в Unity с weaver, PlayerDeathSignalScenario, RoundReadinessMatchScenario,
   AvatarSwapDeathReplicationScenario, ярус C network (хост, поздний вход).
 - 2026-10-12: принят пользователем (сессия эксперта gameplay); вливание в origin/dev. Детали — [Details.md](Details.md).
-- Дальше: `accepted-tests` (тесты под новые ожидания, удаление пустого RpcOnDied), затем `death-equipment-drop`.
-- Ждут этот этап: bots-fix `pf-equipment` (переставят `after` с grab-authority на `deferred-body`).
+- `deferred-body` влит 160223c7b.
+- 2026-10-13: `death-equipment-drop` (5df9e415d поверх SDK-патча 75 manipulation 8306c6a86): PlayerLoadoutManager не
+  подписан на PlayerDied; ServerDropEquipment зовёт только AvatarTeardown с верхнего уровня (ReleaseBeforeDestroy /
+  ReleaseDeadBodyOnServer). Ревью: network ACK 5293, manipulation 5154. Стенд manipulation 560 (Server + 2 клиента,
+  TestMap2) — PASS: смерть человека→призрак, удаление бота, смерть бота→призрак; одно снятие с якоря на предмет,
+  0 OutOfWorldGuard, поза у клиентов = серверной до 0,01 м, карман пуст. Офлайн-компиляция — 0 ошибок (без weaver).
+  НЕ покрыто: смерть без смены тела (ReleaseDeadBodyOnServer; в игре сейчас призрак назначен всегда) — тестом в
+  `accepted-tests`; собственные Unity-сценарии gameplay. Принят пользователем 2026-10-13; вливание в origin/dev.
+- Дальше: `accepted-tests` — тесты под новые ожидания обоих этапов, удаление пустого RpcOnDied, тест ветки без замены.

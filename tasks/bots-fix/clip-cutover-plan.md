@@ -55,3 +55,12 @@ BotHands+BotWeaponAim (живой), BotRuntimeController.SetKit. Призрак 
 Риски: минимальный аниматор Blaze; сервер при 9 ботах (FindObjectsByType в TryHomePoint, GetComponent в Think,
 GetComponentInParent в Target — кешировать); пик конца раунда (9 призраков); корень теперь движется (трафик, прыжки
 ног); MaxTeamSize=4 — только автодобор BotMatchPlan; база 8 (4×4), предел 10 (5×5) — ответ gameplay 6030.
+
+## Ход cc-0 (2026-10-14)
+
+M1 — матч не стартует (минимум 2 и обе команды); M3 — раунд 1 полностью (Combat p50/p95 28,5/41,1 мс, закупки сходятся,
+выстрелов 0 — гибрид, ошибок 0); M8 — сорван дефектом игры: экспоненциальный прогрев UltimateXR на сервере с графикой
+при нескольких спавнах в одном кадре (journal 2026-10-14-precache-doubling, network 6231). База M3 тоже искажена
+(2^9 копий прогрева) — cc-0 повторить после исправления network. Тела ботов на смене раунда пересоздаёт режим
+(призрак в Resolution, живое на Setup) — поведение gameplay. AvatarSpawnPointResolver не находит точек ботов на TestMap1.
+

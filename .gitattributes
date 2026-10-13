@@ -267,3 +267,5 @@ Assets/ThirdParty/Mirror/Examples/Tanks/Scenes/MirrorTanks/NavMesh.asset binary
 Assets/ThirdParty/Mirror/Examples/TopDownShooter/Scenes/MirrorTopDownShooter/NavMesh.asset binary
 "Assets/ThirdParty/RootMotion/FinalIK/_DEMOS/Assets/Environments/Desert Terrain.asset" binary
 "Assets/ThirdParty/RootMotion/FinalIK/_DEMOS/Assets/Environments/Random Terrain.asset" binary
+# Окклюзия Lobby (85 MiB serialized binary) — в LFS: бюджет serialized binary брокера 64 MiB на blob в Git.
+Assets/Scenes/Lobby/OcclusionCullingData.asset filter=lfs diff=lfs merge=lfs -text

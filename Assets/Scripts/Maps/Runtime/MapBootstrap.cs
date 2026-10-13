@@ -150,6 +150,40 @@ namespace VrBattlegrounds.Maps.Runtime
             DisposeLocalScope();
         }
 
+        /// <summary>
+        /// Через кадр после загрузки сцены — проверка, что прежняя карта ушла целиком (arsenal-unload-teardown): ни одного
+        /// хватаемого предмета вне сцены и, на сервере, ни одного сетевого объекта не из этой карты и не из
+        /// DontDestroyOnLoad. Одна строка в лог на процесс; ненулевые счётчики — Warning (её ищет e2e map-run-startup-route).
+        /// </summary>
+        private System.Collections.IEnumerator Start()
+        {
+            yield return null;
+            ReportPreviousSceneLeftovers();
+        }
+
+        private void ReportPreviousSceneLeftovers()
+        {
+            Scene own = gameObject.scene;
+            int outside = 0;
+            foreach (UltimateXR.Manipulation.UxrGrabbableObject item in
+                     FindObjectsByType<UltimateXR.Manipulation.UxrGrabbableObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (item != null && !item.gameObject.scene.IsValid()) outside++;
+
+            int foreign = 0;
+            if (NetworkServer.active)
+                foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+                {
+                    if (identity == null) { foreign++; continue; }
+                    Scene scene = identity.gameObject.scene;
+                    if (!scene.IsValid() || (scene != own && scene.name != "DontDestroyOnLoad")) foreign++;
+                }
+
+            string line = $"[MapBootstrap] {own.name}: после загрузки — grabbable вне сцены={outside}, " +
+                          $"spawned вне карты={(NetworkServer.active ? foreign.ToString() : "-")}.";
+            if (outside > 0 || foreign > 0) GameLog.Match.Warning(line, this);
+            else GameLog.Match.Info(line, this);
+        }
+
         private void Update()
         {
             if (NetworkServer.active) UpdateServer();

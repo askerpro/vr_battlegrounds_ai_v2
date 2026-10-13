@@ -941,8 +941,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
   _uxrUniqueId: 69b1b79e-8d30-4f35-8788-cf6078404868
-  __prefabGuid: 
-  __isInPrefab: 0
+  __prefabGuid: fb9ee97dde176d3439ae7de27efa2e3b
+  __isInPrefab: 1
 --- !u!1 &2959895717404941485
 GameObject:
   m_ObjectHideFlags: 0
@@ -2391,8 +2391,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
   _uxrUniqueId: f9a4b5fe-aa10-4712-9694-eaf63b93d381
-  __prefabGuid: 
-  __isInPrefab: 0
+  __prefabGuid: fb9ee97dde176d3439ae7de27efa2e3b
+  __isInPrefab: 1
 --- !u!1 &8016014706161018463
 GameObject:
   m_ObjectHideFlags: 0
@@ -2471,8 +2471,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
   _uxrUniqueId: 062acda5-65d8-4705-9347-d67dfb741958
-  __prefabGuid: 
-  __isInPrefab: 0
+  __prefabGuid: fb9ee97dde176d3439ae7de27efa2e3b
+  __isInPrefab: 1
 --- !u!1 &8170544757547608323
 GameObject:
   m_ObjectHideFlags: 0
@@ -2835,8 +2835,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
   _uxrUniqueId: 335fe372-9120-4d1c-869a-9365494e7104
-  __prefabGuid: 
-  __isInPrefab: 0
+  __prefabGuid: fb9ee97dde176d3439ae7de27efa2e3b
+  __isInPrefab: 1
 --- !u!1 &9154042817742007528
 GameObject:
   m_ObjectHideFlags: 0

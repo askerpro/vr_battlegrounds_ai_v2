@@ -32,7 +32,13 @@ namespace Mirror
         // никогда. Раз в keyframeInterval уходят все синхронизируемые оси.
         [Tooltip("VR Battlegrounds patch 3: interval in seconds of a full snapshot with all synced axes, even if unchanged. Recovers lost unreliable deltas. 0 disables.")]
         public float keyframeInterval = 1f;
+        // Сразу после спавна приёмник может ещё не обработать спавн и молча отбросить первые снимки,
+        // а цель (камера аватара) получает позу кадром позже спавна. Первые keyframeWarmup секунд с первой
+        // отправки каждая отправка — полный снимок, чтобы не ждать следующего ключевого снимка с позой спавна.
+        [Tooltip("VR Battlegrounds patch 3: seconds after the first send during which every send is a full snapshot. 0 disables.")]
+        public float keyframeWarmup = 0.5f;
         double lastKeyframeTime = double.MinValue;
+        double firstSendTime = double.MinValue;
 
         // Приёмник: значение осей, последнее полученное от отправителя, отдельно от буфера интерполяции.
         // ResetState его не сбрасывает. Непришедшие оси берутся отсюда, а не из трансформа: трансформ цели
@@ -551,7 +557,9 @@ namespace Mirror
             if (keyframeInterval <= 0f) return false;
 
             double now = NetworkTime.localTime;
-            if (lastKeyframeTime != double.MinValue && now - lastKeyframeTime < keyframeInterval) return false;
+            if (firstSendTime == double.MinValue) firstSendTime = now;
+            bool warmup = keyframeWarmup > 0f && now - firstSendTime < keyframeWarmup;
+            if (!warmup && lastKeyframeTime != double.MinValue && now - lastKeyframeTime < keyframeInterval) return false;
 
             if (syncPosition) fullChange |= Changed.Pos;
             if (syncRotation) fullChange |= compressRotation ? (Changed.CompressRot | Changed.Rot) : Changed.Rot;

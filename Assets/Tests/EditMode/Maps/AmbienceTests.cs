@@ -5,12 +5,15 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using VrBattlegrounds.LobbyAudio;
 
 namespace VrBattlegrounds.Tests.Maps
 {
     /// <summary>
     /// На картах и в лобби играет фоновый эмбиент (пользователь: «в игре тихо как в гробу»): зацикленный, стартует
     /// сам, не объёмный (фон, а не точка в мире). Offline — стартовый экран без мира, эмбиент не требуется.
+    /// «Стартует сам» — Play On Awake или <see cref="LobbyAmbienceDirector" /> на том же объекте: в Lobby фон
+    /// включает единственный владелец расписания звука (принято пользователем 2026-10-13).
     /// </summary>
     public class AmbienceTests
     {
@@ -28,8 +31,9 @@ namespace VrBattlegrounds.Tests.Maps
                 {
                     bool found = scene.GetRootGameObjects()
                                       .SelectMany(r => r.GetComponentsInChildren<AudioSource>(true))
-                                      .Any(s => s.clip != null && s.loop && s.playOnAwake && s.spatialBlend < 0.5f && s.gameObject.activeInHierarchy);
-                    if (!found) failures.Add($"{buildScene.path}: нет зацикленного фонового звука (loop, Play On Awake, 2D)");
+                                      .Any(s => s.clip != null && s.loop && (s.playOnAwake || s.GetComponent<LobbyAmbienceDirector>() != null)
+                                                && s.spatialBlend < 0.5f && s.gameObject.activeInHierarchy);
+                    if (!found) failures.Add($"{buildScene.path}: нет зацикленного фонового звука (loop, Play On Awake или директор эмбиента, 2D)");
                 }
                 finally
                 {

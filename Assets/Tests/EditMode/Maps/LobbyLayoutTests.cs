@@ -9,13 +9,16 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Interaction;
+using VrBattlegrounds.LevelDesign;
 using VrBattlegrounds.Maps;
 
 namespace VrBattlegrounds.Tests.Maps
 {
     /// <summary>
-    /// Планировка лобби (<c>Lobby.unity</c>): по краю — столы по пояс и две неподвижные
-    /// станции общей нейтральной зоны, за краем — мишени. Проёмы станций делят столешницы.
+    /// Планировка лобби (<c>Lobby.unity</c>, принята пользователем 2026-10-13): навес над ареной,
+    /// столы по пояс на северном, южном и западном краях, восточный край открыт на базу; одна
+    /// неподвижная станция общей нейтральной зоны у западной стены; за северным и южным краями —
+    /// стрельбища по четыре дорожки. Проём станции делит западную столешницу.
     ///
     /// <para>
     /// Сцена открывается превью-сценой, игровой цикл не нужен: всё проверяется геометрией
@@ -26,10 +29,12 @@ namespace VrBattlegrounds.Tests.Maps
     public class LobbyLayoutTests
     {
         private const string LobbyPath = "Assets/Scenes/Lobby.unity";
-        private const string RangeRootName = "LobbyRange";
-        private const string TablesName = "Tables";
+        private const string TablesPath = "Environment/ArmoryRangeZone/InteriorDecoration/Tables";
 
         private const float EyeHeight = 1.4f;
+
+        /// <summary>На сколько навес короче арены с каждого торца (север и юг).</summary>
+        private const float CanopyEndInset = 2f;
 
         private Scene _scene;
 
@@ -54,23 +59,24 @@ namespace VrBattlegrounds.Tests.Maps
             return b;
         }
 
-        private Transform RangeChild(string name)
+        private Transform Tables()
         {
-            GameObject root = _scene.GetRootGameObjects().FirstOrDefault(r => r.name == RangeRootName);
-            Assert.IsNotNull(root, $"В лобби нет корня '{RangeRootName}' со столами и мишенями.");
-            Transform child = root.transform.Find(name);
-            Assert.IsNotNull(child, $"В '{RangeRootName}' нет '{name}'.");
-            return child;
+            string[] path = TablesPath.Split('/');
+            GameObject root = _scene.GetRootGameObjects().FirstOrDefault(r => r.name == path[0]);
+            Assert.IsNotNull(root, $"В лобби нет корня '{path[0]}'.");
+            Transform tables = root.transform.Find(string.Join("/", path.Skip(1)));
+            Assert.IsNotNull(tables, $"В лобби нет '{TablesPath}'.");
+            return tables;
         }
 
         // ── Арсенал ──────────────────────────────────────────────────────────
 
         [Test]
-        public void Две_станции_арсенала_принадлежат_нейтральной_зоне_и_смотрят_на_арену()
+        public void Станция_арсенала_одна_принадлежит_нейтральной_зоне_и_смотрит_на_арену()
         {
             ArsenalWallController[] walls = All<ArsenalWallController>().ToArray();
-            Assert.AreEqual(2, walls.Length,
-                "В лобби должны быть две станции арсенала: " + string.Join(", ", walls.Select(w => w.name)));
+            Assert.AreEqual(1, walls.Length,
+                "В лобби должна быть одна станция арсенала: " + string.Join(", ", walls.Select(w => w.name)));
             TeamSpawnZone[] zones = All<TeamSpawnZone>().Where(z => z.gameObject.activeInHierarchy).ToArray();
             Assert.AreEqual(1, zones.Length, "В лобби одна нейтральная зона.");
             Assert.IsNull(zones[0].HomeTeam, "Общий арсенал лобби не принадлежит команде.");
@@ -140,11 +146,11 @@ namespace VrBattlegrounds.Tests.Maps
         }
 
         [Test]
-        public void По_краю_столы_по_пояс()
+        public void По_краю_столы_по_пояс_восток_открыт()
         {
             Bounds arena = ArenaFloor();
             int ground = LayerMask.NameToLayer("Ground");
-            Transform tables = RangeChild(TablesName);
+            Transform tables = Tables();
             var sides = new HashSet<Vector2Int>();
             var problems = new List<string>();
 
@@ -171,18 +177,21 @@ namespace VrBattlegrounds.Tests.Maps
                 if (alongX) sides.Add(new Vector2Int(0, d.z > 0 ? 1 : -1));
                 else sides.Add(new Vector2Int(d.x > 0 ? 1 : -1, 0));
 
+                // Навес короче арены на 2 м с каждого торца: северный и южный столы стоят по его краю.
                 float toEdge = alongX ? arena.extents.z - Mathf.Abs(d.z) : arena.extents.x - Mathf.Abs(d.x);
-                if (toEdge > 1f) problems.Add($"{table.name}: стоит в {toEdge:F1} м от края, а не по краю");
+                float allowed = alongX ? CanopyEndInset + 0.5f : 1f;
+                if (toEdge > allowed) problems.Add($"{table.name}: стоит в {toEdge:F1} м от края, а не по краю");
             }
 
             Assert.IsEmpty(problems, string.Join("\n", problems));
-            Assert.AreEqual(4, sides.Count, "Столы стоят не по всем четырём краям: " + string.Join(", ", sides));
+            var expected = new HashSet<Vector2Int> { new Vector2Int(0, 1), new Vector2Int(0, -1), new Vector2Int(-1, 0) };
+            Assert.IsTrue(sides.SetEquals(expected), "Столы должны стоять по северному, южному и западному краям: " + string.Join(", ", sides));
         }
 
         [Test]
         public void Положенное_на_стол_оружие_и_магазин_лежат()
         {
-            Transform tables = RangeChild(TablesName);
+            Transform tables = Tables();
             Transform table = tables.Cast<Transform>().First();
             // Проёмы станций оставляют пустоту в центре общего bounds стола. Кладём предмет
             // на настоящую верхнюю твёрдую часть, а не в центр прежнего цельного столешничного объёма.
@@ -296,21 +305,24 @@ namespace VrBattlegrounds.Tests.Maps
             }
 
             Assert.IsEmpty(problems, string.Join("\n", problems));
-            Assert.AreEqual(4, sides.Count, "Мишени стоят не со всех четырёх сторон: " + string.Join(", ", sides));
+            var expected = new HashSet<Vector2Int> { new Vector2Int(0, 1), new Vector2Int(0, -1) };
+            Assert.IsTrue(sides.SetEquals(expected), "Мишени должны стоять за северным и южным краями: " + string.Join(", ", sides));
         }
 
         [Test]
         public void За_краем_нельзя_телепортироваться()
         {
-            GameObject root = _scene.GetRootGameObjects().FirstOrDefault(r => r.name == RangeRootName);
-            Assert.IsNotNull(root, $"В лобби нет корня '{RangeRootName}'.");
+            PhysicalArenaDefinition arena = All<PhysicalArenaDefinition>().Single();
+            Assert.IsTrue(arena.TryFloorBounds(out Bounds floor), "Нет границ пола PhysicalArenaDefinition.");
+            floor.Expand(0.1f);
 
             int ground = LayerMask.NameToLayer("Ground");
-            string[] onGround = root.GetComponentsInChildren<Collider>(true)
-                                    .Where(c => c.gameObject.layer == ground)
-                                    .Select(c => c.name).ToArray();
+            string[] outside = All<Collider>()
+                .Where(c => !c.isTrigger && c.gameObject.layer == ground)
+                .Where(c => !floor.Contains(c.bounds.min) || !floor.Contains(c.bounds.max))
+                .Select(c => $"{c.name} {c.bounds.min}–{c.bounds.max}").ToArray();
 
-            Assert.IsEmpty(onGround, "Геометрия за краем на слое Ground — туда можно телепортироваться: " + string.Join(", ", onGround));
+            Assert.IsEmpty(outside, "Геометрия за краем на слое Ground — туда можно телепортироваться: " + string.Join(", ", outside));
         }
     }
 }

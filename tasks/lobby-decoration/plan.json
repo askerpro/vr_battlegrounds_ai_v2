@@ -41,10 +41,21 @@
         "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/**",
         "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration.meta",
         "Assets/Scenes/Lobby.unity",
-        "Assets/Scenes/Lobby/OcclusionCullingData.asset",
-        "Assets/Scenes/Lobby/OcclusionCullingData.asset.meta",
         "Assets/Data/Maps/MapRuntimeCatalog.asset",
-        "tasks/lobby-decoration/implementation/**"
+        "tasks/lobby-decoration/implementation/**",
+        "Assets/Scenes/Lobby/**",
+        "Assets/Scripts/Debug/LobbyDetail/**",
+        "Assets/Scripts/Debug/LobbyDetail.meta",
+        "Assets/Scripts/Maps/ShootingRangeDisplay.cs",
+        "Assets/Scripts/Maps/ShootingRangePhotoCapture.cs",
+        "Assets/Scripts/UI/Menu/MenuDebug.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Rendering/FX/UxrPlanarReflectionUrp.cs",
+        "ProjectSettings/QualitySettings.asset",
+        ".gitattributes",
+        "tasks/lobby-decoration/changelog/**",
+        "Assets/Tests/EditMode/Maps/LobbyLayoutTests.cs",
+        "Assets/Tests/EditMode/Maps/AmbienceTests.cs",
+        "Assets/Tests/EditMode/Arsenal/ArsenalMapGeometryTests.cs"
       ],
       "after": [
         {

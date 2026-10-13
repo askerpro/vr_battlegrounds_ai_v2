@@ -154,6 +154,26 @@
       "needs": []
     },
     {
+      "id": "cyborg-grips",
+      "writes": [
+        "Assets/Prefabs/Weapons/**",
+        "Assets/Prefabs/UI/Menu/Tablet/Tablet_Base.prefab",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/**",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "sdk-hands-seam",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "wrist-gap",
       "writes": [
         "Assets/Models/Avatars/MEF_CyborgHands/**",
@@ -169,6 +189,11 @@
         {
           "task": "hand-rig-quality",
           "stage": "sdk-hands-seam",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "cyborg-grips",
           "state": "merged"
         }
       ],

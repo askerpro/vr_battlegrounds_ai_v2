@@ -1,5 +1,99 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1738090941625486265
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7997273948906108304}
+  - component: {fileID: 8069852267188708644}
+  m_Layer: 0
+  m_Name: Grab Right (MEF_cyborg_hands)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7997273948906108304
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738090941625486265}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.44246608, y: 0.28885946, z: -0.6135847, w: 0.586769}
+  m_LocalPosition: {x: -0.0125394575, y: 0.03744115, z: -0.019891588}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4305324643179855010}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8069852267188708644
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738090941625486265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
+  _uxrUniqueId: 286d1838-7934-45c9-a3eb-1eb1774ab916
+  __prefabGuid: 626f7b098f08c144c9b9b9350d4bebce
+  __isInPrefab: 1
+--- !u!1 &6305962179918061757
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6813436738408535383}
+  - component: {fileID: 115027765655974946}
+  m_Layer: 0
+  m_Name: Grab Left (MEF_cyborg_hands)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6813436738408535383
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6305962179918061757}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.3147631, y: -0.38338906, z: -0.6031609, w: 0.624607}
+  m_LocalPosition: {x: 0.013260346, y: 0.04681866, z: -0.024785612}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4305324643179855010}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &115027765655974946
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6305962179918061757}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
+  _uxrUniqueId: d3a7ed33-496b-4637-b78a-54da85fea5fb
+  __prefabGuid: 626f7b098f08c144c9b9b9350d4bebce
+  __isInPrefab: 1
 --- !u!1001 &645584468361961970
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -57,6 +151,10 @@ PrefabInstance:
       value: Weapon
       objectReference: {fileID: 0}
     - target: {fileID: 3073932324336181207, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      propertyPath: __isInPrefab
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3073932324336181207, guid: c563684d5177f9347aa42336107d430f, type: 3}
       propertyPath: __prefabGuid
       value: 626f7b098f08c144c9b9b9350d4bebce
       objectReference: {fileID: 0}
@@ -64,6 +162,26 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 7563d57d-9d4d-4f55-a158-79e795ba34a1
       objectReference: {fileID: 0}
+    - target: {fileID: 3073932324336181207, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.size
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3073932324336181207, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[4]._handPose
+      value: 
+      objectReference: {fileID: 11400000, guid: 50e73c61f1d966d409da705792e92e86, type: 2}
+    - target: {fileID: 3073932324336181207, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[4]._avatarPrefabGuid
+      value: 71b74b0d08444f49bbb7aa2828d0890a
+      objectReference: {fileID: 0}
+    - target: {fileID: 3073932324336181207, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[4]._gripAlignTransformHandLeft
+      value: 
+      objectReference: {fileID: 6813436738408535383}
+    - target: {fileID: 3073932324336181207, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[4]._gripAlignTransformHandRight
+      value: 
+      objectReference: {fileID: 7997273948906108304}
     - target: {fileID: 3431812011678784814, guid: c563684d5177f9347aa42336107d430f, type: 3}
       propertyPath: __prefabGuid
       value: 626f7b098f08c144c9b9b9350d4bebce
@@ -226,7 +344,13 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 3695773404243238224, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      insertIndex: 1
+      addedObject: {fileID: 6813436738408535383}
+    - targetCorrespondingSourceObject: {fileID: 3695773404243238224, guid: c563684d5177f9347aa42336107d430f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7997273948906108304}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 2987762542248386242, guid: c563684d5177f9347aa42336107d430f, type: 3}
       insertIndex: -1
@@ -253,6 +377,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.OutOfWorldGuard
   _killY: -50
+--- !u!4 &4305324643179855010 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3695773404243238224, guid: c563684d5177f9347aa42336107d430f, type: 3}
+  m_PrefabInstance: {fileID: 645584468361961970}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &5979098199777735407 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6489569987061388061, guid: c563684d5177f9347aa42336107d430f, type: 3}

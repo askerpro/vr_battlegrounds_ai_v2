@@ -886,6 +886,12 @@ MonoBehaviour:
       _fallbackClipType: 8
       _fallbackAmplitude: 1
       _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
     _triggerGrabbable: {fileID: 1242512473979761646}
     _grabbableGrabPointIndex: 0
     _triggerTransform: {fileID: 1915744866267325951}
@@ -956,6 +962,12 @@ MonoBehaviour:
     _fallbackClipType: 6
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticBack:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -963,6 +975,12 @@ MonoBehaviour:
     _fallbackClipType: 6
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticForwardWhenLoaded:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -970,6 +988,12 @@ MonoBehaviour:
     _fallbackClipType: 10
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticBackWhenLoaded:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -977,6 +1001,12 @@ MonoBehaviour:
     _fallbackClipType: 10
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
 --- !u!114 &4364170250667198631
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2997,6 +3027,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 0b36e110-4ab1-44ff-ae85-96bc5db9797b
       objectReference: {fileID: 0}
+    - target: {fileID: 1284325851761561960, guid: 4d3a79244e8df3f498b26da0ff300b22, type: 3}
+      propertyPath: __prefabGuid
+      value: 94a13f5e5f57d2548929b0d7b2f8ebe3
+      objectReference: {fileID: 0}
     - target: {fileID: 1330957599471866978, guid: 4d3a79244e8df3f498b26da0ff300b22, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -3109,6 +3143,14 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 819b04a9-f9b5-47f0-8c94-475cd0d2e116
       objectReference: {fileID: 0}
+    - target: {fileID: 6656468965616015168, guid: 4d3a79244e8df3f498b26da0ff300b22, type: 3}
+      propertyPath: __prefabGuid
+      value: 94a13f5e5f57d2548929b0d7b2f8ebe3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6728313163275286413, guid: 4d3a79244e8df3f498b26da0ff300b22, type: 3}
+      propertyPath: __prefabGuid
+      value: 94a13f5e5f57d2548929b0d7b2f8ebe3
+      objectReference: {fileID: 0}
     - target: {fileID: 6808676472584905788, guid: 4d3a79244e8df3f498b26da0ff300b22, type: 3}
       propertyPath: __prefabGuid
       value: 94a13f5e5f57d2548929b0d7b2f8ebe3
@@ -3124,6 +3166,10 @@ PrefabInstance:
     - target: {fileID: 7929279128962623369, guid: 4d3a79244e8df3f498b26da0ff300b22, type: 3}
       propertyPath: _uxrUniqueId
       value: e1f78715-58e8-43c3-b64e-e513f2ef67ee
+      objectReference: {fileID: 0}
+    - target: {fileID: 8747085612947306425, guid: 4d3a79244e8df3f498b26da0ff300b22, type: 3}
+      propertyPath: __prefabGuid
+      value: 94a13f5e5f57d2548929b0d7b2f8ebe3
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 1412278637253806567, guid: 4d3a79244e8df3f498b26da0ff300b22, type: 3}

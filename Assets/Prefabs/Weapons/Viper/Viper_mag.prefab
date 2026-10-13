@@ -306,6 +306,53 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &7096253937444750575
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 158565467795456129}
+  - component: {fileID: 6409291071144389704}
+  m_Layer: 0
+  m_Name: Grab Left (MEF_cyborg_hands)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &158565467795456129
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7096253937444750575}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.16839135, y: 0.08393632, z: -0.6689946, w: 0.7190587}
+  m_LocalPosition: {x: -0.021183133, y: -0.08841163, z: -0.012547925}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3413705116868534887}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6409291071144389704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7096253937444750575}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
+  _uxrUniqueId: e4472dc3-b094-4b53-8048-c659d8645fec
+  __prefabGuid: e2881f975378c1d4c865fc5f94053e45
+  __isInPrefab: 1
 --- !u!1 &7193458536201421860
 GameObject:
   m_ObjectHideFlags: 0
@@ -509,6 +556,53 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.041718565, y: 0.14523655, z: 0.027988546}
   m_Center: {x: -0.0002163956, y: 0.03805346, z: 0.0000012782402}
+--- !u!1 &7871355644932963055
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8630310298128052577}
+  - component: {fileID: 3280765877311992243}
+  m_Layer: 0
+  m_Name: Grab Right (MEF_cyborg_hands)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8630310298128052577
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7871355644932963055}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.10922671, y: 0.1528238, z: 0.7739649, w: -0.6047255}
+  m_LocalPosition: {x: 0.015113749, y: -0.08818072, z: -0.015742168}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3413705116868534887}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3280765877311992243
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7871355644932963055}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
+  _uxrUniqueId: 826e7030-39b6-4f21-84a5-a0513849c136
+  __prefabGuid: e2881f975378c1d4c865fc5f94053e45
+  __isInPrefab: 1
 --- !u!1 &8487331006637978402
 GameObject:
   m_ObjectHideFlags: 0
@@ -727,6 +821,14 @@ PrefabInstance:
       propertyPath: __prefabGuid
       value: e2881f975378c1d4c865fc5f94053e45
       objectReference: {fileID: 0}
+    - target: {fileID: 3746344488545942219, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      propertyPath: __prefabGuid
+      value: e2881f975378c1d4c865fc5f94053e45
+      objectReference: {fileID: 0}
+    - target: {fileID: 4419615530931569860, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      propertyPath: __prefabGuid
+      value: e2881f975378c1d4c865fc5f94053e45
+      objectReference: {fileID: 0}
     - target: {fileID: 4538414050320807998, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       propertyPath: __isInPrefab
       value: 1
@@ -753,28 +855,48 @@ PrefabInstance:
       objectReference: {fileID: 4462300241381332066}
     - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       propertyPath: _grabPoint._avatarGripPoseEntries.Array.size
-      value: 4
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[3]._handPose
       value: 
       objectReference: {fileID: 11400000, guid: e2f8bc7c0195daa4092d8071a7494e7f, type: 2}
     - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[4]._handPose
+      value: 
+      objectReference: {fileID: 11400000, guid: 50e73c61f1d966d409da705792e92e86, type: 2}
+    - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[3]._poseBlendValue
       value: 0.68
+      objectReference: {fileID: 0}
+    - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[4]._poseBlendValue
+      value: 0.33
       objectReference: {fileID: 0}
     - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[3]._avatarPrefabGuid
       value: b6fe59db941fa944696ece5e1aabc032
       objectReference: {fileID: 0}
     - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[4]._avatarPrefabGuid
+      value: 71b74b0d08444f49bbb7aa2828d0890a
+      objectReference: {fileID: 0}
+    - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[3]._gripAlignTransformHandLeft
       value: 
       objectReference: {fileID: 8524401035228170537}
     - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[4]._gripAlignTransformHandLeft
+      value: 
+      objectReference: {fileID: 158565467795456129}
+    - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[3]._gripAlignTransformHandRight
       value: 
       objectReference: {fileID: 1090871819635135228}
+    - target: {fileID: 4784470809893769418, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[4]._gripAlignTransformHandRight
+      value: 
+      objectReference: {fileID: 8630310298128052577}
     - target: {fileID: 4794460246865054677, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       propertyPath: m_LocalScale.x
       value: 1
@@ -883,11 +1005,22 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4794460246865054677, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3379922935437886179}
+    - targetCorrespondingSourceObject: {fileID: 2666320936581189665, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      insertIndex: 1
+      addedObject: {fileID: 158565467795456129}
+    - targetCorrespondingSourceObject: {fileID: 2666320936581189665, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+      insertIndex: 4
+      addedObject: {fileID: 8630310298128052577}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 7658064994636483981, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1442898750744904915}
   m_SourcePrefab: {fileID: 100100000, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+--- !u!4 &3413705116868534887 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2666320936581189665, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
+  m_PrefabInstance: {fileID: 747393528287081030}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &5248415697463523731 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4794460246865054677, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}

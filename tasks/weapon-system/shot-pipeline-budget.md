@@ -24,6 +24,22 @@ performance: кадр с выстрелом ≤ 13,9 мс при игроке + 
 Сценарии (а)/(б) со стрелком-человеком — после `xr-input` launch-infra; формат записи общий, сценарий их уже
 предусматривает параметром `mode=shooter`.
 
+**Согласовано 2026-10-14 (6197/6198/6203/6217/6219):**
+- План принят performance; сцена Lobby, 2 прогона на сценарий по 90 выстрелов (steady ≥ 87), остывание 2–3 мин;
+  расхождение p50 > 10 % — третий прогон. frames.csv — артефакт (колонки в заголовке). Строки фаз
+  «=== фаза «shot-cost: <сегмент>»» для `quest_gpu_breakdown.py --phases`. Логи StateSync (`_logLevelCore 5`) —
+  часть цены Development, не вычитать, отметить в условиях. Оценка «игрок + 9 удалённых» = p95 perf-stress + Δ
+  кадра выстрела наблюдателя.
+- Стреляет бот штатным путём: отладочный драйвер bots `BotShotCostDriver` (их этап после clip-cutover cc-1):
+  AddBot → Arm AK105 → хват BotHands → BotWeaponAim в точку стены → N раз `BotGunner.ExecuteRequestedShot` →
+  `WeaponSystem` → `TryToShootRound(0)`; без Combat/Blaze; без аллокаций и поисков по сцене в кадре. Сценарий сам
+  оружие бота не трогает (вариант «второй стрелок» отклонён bots).
+- Сценарий `shot-cost` (`ShotCostScenario.cs`, `ShotCostFrameLog.cs`) — в owns weapon-system; строка в
+  `E2ERunner.cs` — zone-request launch-infra. `-Arg` через запятую, без пробелов.
+- Зависимости: bots-fix/clip-cutover merged, этап стенда bots (`BotShotCostDriver`),
+  quest-perf-pipeline/e2e-log-verdict merged (DeclareKnownNoise). Открыто: gameplay — бот-сессия в Lobby.
+- Точки бота и стены не совпадают с точками view-tour (`lobby-views.json`).
+
 ## Метод (6156)
 
 - Сборка: Test-пара (Development, IL2CPP Release) через `E2EPlayerBuilder.StartPairBuild` на worker из

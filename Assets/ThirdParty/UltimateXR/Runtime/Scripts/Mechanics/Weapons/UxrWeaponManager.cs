@@ -52,7 +52,8 @@ namespace UltimateXR.Mechanics.Weapons
                 return;
             }
 
-            UpdateProjectiles();
+            // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+            using (UxrWeaponProfilerMarkers.ProjectileUpdate.Auto()) UpdateProjectiles();
         }
 
         /// <summary>
@@ -319,17 +320,21 @@ namespace UltimateXR.Mechanics.Weapons
                                 damage      *= _projectiles[i].DamageMultiplier;
                                 impactForce *= _projectiles[i].DamageMultiplier;
 
-                                if (_projectiles[i].ProjectileDeflectSource != null)
+                                // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+                                using (UxrWeaponProfilerMarkers.ImpactActor.Auto())
                                 {
-                                    // Came from a shot deflected by a UxrProjectileDeflect
-                                    targetActor.ReceiveImpact(_projectiles[i].ProjectileDeflectSource.Owner, raycastHit, damage, impactForce);
-                                }
-                                else
-                                {
-                                    // Direct hit from a projectile
-                                    // SDK72: transfer/drop не переписывает shooter уже выпущенного projectile.
-                                    UxrActor weaponOwner = _projectiles[i].WeaponOwner;
-                                    targetActor.ReceiveImpact(weaponOwner != null ? weaponOwner : null, raycastHit, damage, impactForce);
+                                    if (_projectiles[i].ProjectileDeflectSource != null)
+                                    {
+                                        // Came from a shot deflected by a UxrProjectileDeflect
+                                        targetActor.ReceiveImpact(_projectiles[i].ProjectileDeflectSource.Owner, raycastHit, damage, impactForce);
+                                    }
+                                    else
+                                    {
+                                        // Direct hit from a projectile
+                                        // SDK72: transfer/drop не переписывает shooter уже выпущенного projectile.
+                                        UxrActor weaponOwner = _projectiles[i].WeaponOwner;
+                                        targetActor.ReceiveImpact(weaponOwner != null ? weaponOwner : null, raycastHit, damage, impactForce);
+                                    }
                                 }
                             }
                             else
@@ -338,12 +343,16 @@ namespace UltimateXR.Mechanics.Weapons
 
                                 if (_projectiles[i].ShotDescriptor.PrefabInstantiateOnImpact)
                                 {
-                                    Vector3    instantiateForward = Vector3.Reflect(projectileForward, raycastHit.normal).normalized;
-                                    GameObject newInstance        = Instantiate(_projectiles[i].ShotDescriptor.PrefabInstantiateOnImpact, raycastHit.point, Quaternion.LookRotation(instantiateForward));
-
-                                    if (_projectiles[i].ShotDescriptor.PrefabInstantiateOnImpactLife >= 0.0f)
+                                    // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+                                    using (UxrWeaponProfilerMarkers.ImpactFx.Auto())
                                     {
-                                        Destroy(newInstance, _projectiles[i].ShotDescriptor.PrefabInstantiateOnImpactLife);
+                                        Vector3    instantiateForward = Vector3.Reflect(projectileForward, raycastHit.normal).normalized;
+                                        GameObject newInstance        = Instantiate(_projectiles[i].ShotDescriptor.PrefabInstantiateOnImpact, raycastHit.point, Quaternion.LookRotation(instantiateForward));
+
+                                        if (_projectiles[i].ShotDescriptor.PrefabInstantiateOnImpactLife >= 0.0f)
+                                        {
+                                            Destroy(newInstance, _projectiles[i].ShotDescriptor.PrefabInstantiateOnImpactLife);
+                                        }
                                     }
                                 }
 
@@ -357,11 +366,13 @@ namespace UltimateXR.Mechanics.Weapons
                                 UxrOverrideImpactDecal overrideDecal = raycastHit.collider.GetComponentInParent<UxrOverrideImpactDecal>();
 
                                 // Generate decal?
-                                UxrImpactDecal.CheckCreateDecal(raycastHit,
-                                                                _projectiles[i].ShotDescriptor.CreateDecalLayerMask,
-                                                                overrideDecal != null ? overrideDecal.DecalToUse : _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecal,
-                                                                _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecalLife,
-                                                                _projectiles[i].ShotDescriptor.DecalFadeoutDuration);
+                                // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+                                using (UxrWeaponProfilerMarkers.ImpactDecal.Auto())
+                                    UxrImpactDecal.CheckCreateDecal(raycastHit,
+                                                                    _projectiles[i].ShotDescriptor.CreateDecalLayerMask,
+                                                                    overrideDecal != null ? overrideDecal.DecalToUse : _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecal,
+                                                                    _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecalLife,
+                                                                    _projectiles[i].ShotDescriptor.DecalFadeoutDuration);
 
                                 // SDK72: уничтоженный captured actor даёт null, не нового держателя оружия.
                                 UxrActor weaponOwner = _projectiles[i].WeaponOwner;
@@ -370,11 +381,13 @@ namespace UltimateXR.Mechanics.Weapons
                                 if (penetration.Kind == UxrPenetrationKind.Penetrate)
                                 {
                                     // VR Battlegrounds patch (Патч 32): та же дырка на выходной грани.
-                                    UxrImpactDecal.CheckCreateDecal(penetration.ExitHit,
-                                                                    _projectiles[i].ShotDescriptor.CreateDecalLayerMask,
-                                                                    overrideDecal != null ? overrideDecal.DecalToUse : _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecal,
-                                                                    _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecalLife,
-                                                                    _projectiles[i].ShotDescriptor.DecalFadeoutDuration);
+                                    // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+                                    using (UxrWeaponProfilerMarkers.ImpactDecal.Auto())
+                                        UxrImpactDecal.CheckCreateDecal(penetration.ExitHit,
+                                                                        _projectiles[i].ShotDescriptor.CreateDecalLayerMask,
+                                                                        overrideDecal != null ? overrideDecal.DecalToUse : _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecal,
+                                                                        _projectiles[i].ShotDescriptor.PrefabScenarioImpactDecalLife,
+                                                                        _projectiles[i].ShotDescriptor.DecalFadeoutDuration);
                                 }
                             }
 

@@ -5,6 +5,7 @@ using UltimateXR.Core.StateSave;
 using UltimateXR.Core.StateSync;
 using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
+using Unity.Profiling;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Network;
@@ -41,6 +42,11 @@ namespace VrBattlegrounds.Weapons
     {
         private const int DrainLimit = 64;
         private const float LedgerRefreshSeconds = 1f;
+
+        // Маркеры профайлера тракта выстрела (shot-cost-probe): только замер, без аллокаций.
+        private static readonly ProfilerMarker SampleBeforeShotMarker = new ProfilerMarker("WS.SampleBeforeShot");
+        private static readonly ProfilerMarker OnStateChangedMarker = new ProfilerMarker("WS.OnStateChanged");
+        private static readonly ProfilerMarker DispatchMarker = new ProfilerMarker("WS.Dispatch");
 
         [SerializeField] private int _triggerIndex;
         [SerializeField] private WeaponReadinessProfile _profile;
@@ -400,6 +406,7 @@ namespace VrBattlegrounds.Weapons
         /// <summary>Повторный замер перед выстрелом SDK (порт <c>RefreshPhysicalActionState</c>, план п. 3.4).</summary>
         internal void SampleBeforeShot()
         {
+            using var profile = SampleBeforeShotMarker.Auto();
             InvalidateLostAutomation();
             if (!_configured || _stepping || _draining || _dispatching || !CanCommandNow()) return;
             StepNow(WS.WeaponEvent.Of(WS.WeaponEventKind.ActionSampled));
@@ -589,6 +596,7 @@ namespace VrBattlegrounds.Weapons
 
         private void Dispatch(in Pending pending)
         {
+            using var profile = DispatchMarker.Auto();
             _dispatching = true;
             try
             {
@@ -683,6 +691,7 @@ namespace VrBattlegrounds.Weapons
         private void OnWeaponStateChanged(object sender, UxrSyncEventArgs args)
         {
             if (!_prepared || !ReferenceEquals(sender, _weapon)) return;
+            using var profile = OnStateChangedMarker.Auto();
             _viewDirty = true;
             if (_trigger.TryParse(args))
             {

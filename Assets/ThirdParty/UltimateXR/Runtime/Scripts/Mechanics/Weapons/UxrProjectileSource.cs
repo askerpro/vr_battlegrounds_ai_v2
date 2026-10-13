@@ -131,13 +131,19 @@ namespace UltimateXR.Mechanics.Weapons
                 var shot = _shotTypes[shotTypeIndex];
                 if (shot.PrefabInstantiateOnTipWhenShot)
                 {
-                    GameObject newInstance = Instantiate(shot.PrefabInstantiateOnTipWhenShot, shot.Tip.position, shot.Tip.rotation);
-                    newInstance.transform.parent = shot.PrefabInstantiateOnTipParent ? transform : null;
-                    if (shot.PrefabInstantiateOnTipLife >= 0f) Destroy(newInstance, shot.PrefabInstantiateOnTipLife);
+                    // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+                    using (UxrWeaponProfilerMarkers.SourceMuzzleFx.Auto())
+                    {
+                        GameObject newInstance = Instantiate(shot.PrefabInstantiateOnTipWhenShot, shot.Tip.position, shot.Tip.rotation);
+                        newInstance.transform.parent = shot.PrefabInstantiateOnTipParent ? transform : null;
+                        if (shot.PrefabInstantiateOnTipLife >= 0f) Destroy(newInstance, shot.PrefabInstantiateOnTipLife);
+                    }
                 }
                 // Register может начать создание projectile и затем упасть: такой частичный результат нельзя retry.
                 outcome = UxrFirearmShotEmissionOutcome.Indeterminate;
-                UxrWeaponManager.Instance.RegisterNewProjectileShot(this, shot, projectileSource, projectileOrientation);
+                // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+                using (UxrWeaponProfilerMarkers.SourceProjectile.Auto())
+                    UxrWeaponManager.Instance.RegisterNewProjectileShot(this, shot, projectileSource, projectileOrientation);
                 outcome = UxrFirearmShotEmissionOutcome.Emitted;
                 if (_weaponAnimator != null && !string.IsNullOrEmpty(shot.ShotAnimationVarName)) _weaponAnimator.SetTrigger(shot.ShotAnimationVarName);
                 ShotFired?.Invoke(shotTypeIndex);

@@ -1,6 +1,7 @@
 using UltimateXR.Audio;
 using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
+using Unity.Profiling;
 using UnityEngine;
 using VrBattlegrounds.Weapons.Core;
 
@@ -20,6 +21,9 @@ namespace VrBattlegrounds.Weapons
     /// </summary>
     internal sealed class WeaponAudioExecutor
     {
+        // Маркер профайлера тракта выстрела (shot-cost-probe): разрешение клипа и проигрывание.
+        private static readonly ProfilerMarker AudioMarker = new ProfilerMarker("WS.Audio");
+
         private readonly UxrFirearmWeapon _weapon;
         private readonly int _trigger;
         private readonly WeaponAudioSet _set;
@@ -38,6 +42,7 @@ namespace VrBattlegrounds.Weapons
         {
             if (_weapon == null) return;
             if (cue == WeaponCue.DryFire && reason == WeaponNotReadyReason.Obstructed) return; // владелец — BarrelObstruction (до E)
+            using var profile = AudioMarker.Auto();
             UxrAudioSample sample = WeaponAudioSet.Resolve(_set, _defaults != null ? _defaults.Audio : null, cue, out WeaponFeedbackSource source);
             if (cue == WeaponCue.DryFire || cue == WeaponCue.Refusal)
             {

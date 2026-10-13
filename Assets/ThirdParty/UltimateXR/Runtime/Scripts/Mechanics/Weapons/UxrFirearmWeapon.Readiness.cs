@@ -528,48 +528,57 @@ namespace UltimateXR.Mechanics.Weapons
         }
         private bool TryShootReadinessRound(int triggerIndex)
         {
-            if (!CanWriteReadiness(triggerIndex)) return false;
-            RefreshPhysicalActionState(triggerIndex);
-            if (!IsReadyToFire(triggerIndex)) return false;
-            var runtime = _runtimeTriggers[triggerIndex];
-            if (runtime.LastShotTimer > 0f || _weaponSource == null) return false;
-            var trigger = _triggers[triggerIndex]; int shotIndex = trigger.ProjectileShotIndex;
-            if (shotIndex < 0 || shotIndex >= _weaponSource.ShotTypes.Count || _weaponSource.ShotTypes[shotIndex].ShotSource == null ||
-                _weaponSource.ShotTypes[shotIndex].ProjectilePrefab == null) return false;
-            var state = GetAuthorState(triggerIndex);
-            if (state.ShotSequence == uint.MaxValue) return false;
-            state.ShotSequence++; state.ChamberRound = false;
-            int rounds = GetMagazineRounds(triggerIndex);
-            if (trigger.CycleType != UxrShotCycle.ManualReload && rounds > 0) { rounds--; state.ChamberRound = true; }
-            // Атомарный marker consumption: Source outcome не меняет его после публикации.
-            state.PostShotEmptyAction = !state.ChamberRound && rounds == 0;
-            var commit = CreateReadinessCommit(triggerIndex, state, GetCurrentReadinessMagazine(triggerIndex), rounds, UxrFirearmReadinessOperation.Shot);
-            var source = _weaponSource.ShotTypes[shotIndex].ShotSource;
-            commit.SourcePosition = source.position;
-            commit.EmissionOutcome = UxrFirearmShotEmissionOutcome.Emitted;
-            // Producer — только автор. Guard запрещает синхронную повторную запись из delegate.
-            _readinessCommitting.Add(triggerIndex);
-            try
+            // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+            using (UxrWeaponProfilerMarkers.ShotPrepare.Auto())
             {
-                commit.SourceOrientation = ShotOrientationModifier != null ? ShotOrientationModifier(triggerIndex, source.rotation) : source.rotation;
-                if (!ValidateShotDescriptor(shotIndex, commit.SourcePosition, commit.SourceOrientation)) return false;
-                var plan = AdditionalShotPlan != null ? AdditionalShotPlan(triggerIndex) : null;
-                if (plan != null)
+                if (!CanWriteReadiness(triggerIndex)) return false;
+                RefreshPhysicalActionState(triggerIndex);
+                if (!IsReadyToFire(triggerIndex)) return false;
+            }
+            UxrFirearmReadinessCommit commit;
+            // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+            using (UxrWeaponProfilerMarkers.ShotBuildCommit.Auto())
+            {
+                var runtime = _runtimeTriggers[triggerIndex];
+                if (runtime.LastShotTimer > 0f || _weaponSource == null) return false;
+                var trigger = _triggers[triggerIndex]; int shotIndex = trigger.ProjectileShotIndex;
+                if (shotIndex < 0 || shotIndex >= _weaponSource.ShotTypes.Count || _weaponSource.ShotTypes[shotIndex].ShotSource == null ||
+                    _weaponSource.ShotTypes[shotIndex].ProjectilePrefab == null) return false;
+                var state = GetAuthorState(triggerIndex);
+                if (state.ShotSequence == uint.MaxValue) return false;
+                state.ShotSequence++; state.ChamberRound = false;
+                int rounds = GetMagazineRounds(triggerIndex);
+                if (trigger.CycleType != UxrShotCycle.ManualReload && rounds > 0) { rounds--; state.ChamberRound = true; }
+                // Атомарный marker consumption: Source outcome не меняет его после публикации.
+                state.PostShotEmptyAction = !state.ChamberRound && rounds == 0;
+                commit = CreateReadinessCommit(triggerIndex, state, GetCurrentReadinessMagazine(triggerIndex), rounds, UxrFirearmReadinessOperation.Shot);
+                var source = _weaponSource.ShotTypes[shotIndex].ShotSource;
+                commit.SourcePosition = source.position;
+                commit.EmissionOutcome = UxrFirearmShotEmissionOutcome.Emitted;
+                // Producer — только автор. Guard запрещает синхронную повторную запись из delegate.
+                _readinessCommitting.Add(triggerIndex);
+                try
                 {
-                    if (plan.Length > MaximumAdditionalShots) return false;
-                    commit.AdditionalShots = new UxrAdditionalShotCommit[plan.Length];
-                    for (int i = 0; i < plan.Length; i++)
+                    commit.SourceOrientation = ShotOrientationModifier != null ? ShotOrientationModifier(triggerIndex, source.rotation) : source.rotation;
+                    if (!ValidateShotDescriptor(shotIndex, commit.SourcePosition, commit.SourceOrientation)) return false;
+                    var plan = AdditionalShotPlan != null ? AdditionalShotPlan(triggerIndex) : null;
+                    if (plan != null)
                     {
-                        var shot = plan[i];
-                        if (!ValidateShotDescriptor(shot.ShotIndex, shot.Position, shot.Orientation)) return false;
-                        commit.AdditionalShots[i] = new UxrAdditionalShotCommit { ShotIndex = shot.ShotIndex,
-                            Position = shot.Position, Orientation = shot.Orientation, Outcome = UxrFirearmShotEmissionOutcome.NotEmitted };
+                        if (plan.Length > MaximumAdditionalShots) return false;
+                        commit.AdditionalShots = new UxrAdditionalShotCommit[plan.Length];
+                        for (int i = 0; i < plan.Length; i++)
+                        {
+                            var shot = plan[i];
+                            if (!ValidateShotDescriptor(shot.ShotIndex, shot.Position, shot.Orientation)) return false;
+                            commit.AdditionalShots[i] = new UxrAdditionalShotCommit { ShotIndex = shot.ShotIndex,
+                                Position = shot.Position, Orientation = shot.Orientation, Outcome = UxrFirearmShotEmissionOutcome.NotEmitted };
+                        }
                     }
                 }
+                catch { return false; }
+                finally { _readinessCommitting.Remove(triggerIndex); }
+                if (!CanWriteReadiness(triggerIndex) || !IsReadyToFire(triggerIndex)) return false;
             }
-            catch { return false; }
-            finally { _readinessCommitting.Remove(triggerIndex); }
-            if (!CanWriteReadiness(triggerIndex) || !IsReadyToFire(triggerIndex)) return false;
             return CommitShotSynced(commit);
         }
         public const int MaximumAdditionalShots = 31;
@@ -588,7 +597,10 @@ namespace UltimateXR.Mechanics.Weapons
         private bool CommitShotSynced(UxrFirearmReadinessCommit commit)
         {
             if (commit?.Operation != UxrFirearmReadinessOperation.Shot || IsNestedLedgerCommand(nameof(CommitShotSynced))) return false;
-            if (!ValidateReadinessCommit(commit, out var divergence)) { RaiseReplayDivergence(divergence); return false; }
+            bool valid; UxrFirearmReplayDivergence divergence;
+            // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+            using (UxrWeaponProfilerMarkers.ShotValidate.Auto()) valid = ValidateReadinessCommit(commit, out divergence);
+            if (!valid) { RaiseReplayDivergence(divergence); return false; }
             var runtime = _runtimeTriggers[commit.TriggerIndex];
             bool replay = IsReadinessReplay, endAttempted = false;
             Exception failure = null; bool success = false;
@@ -596,7 +608,8 @@ namespace UltimateXR.Mechanics.Weapons
             BeginSync();
             try
             {
-                failure = WriteReadinessCommit(commit);
+                // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+                using (UxrWeaponProfilerMarkers.ShotWrite.Auto()) failure = WriteReadinessCommit(commit);
                 if (failure != null && !replay) commit.EmissionOutcome = UxrFirearmShotEmissionOutcome.NotEmitted;
                 var trigger = _triggers[commit.TriggerIndex];
                 runtime.LastShotTimer = trigger.MaxShotFrequency > 0 ? 1f / trigger.MaxShotFrequency : -1f;
@@ -634,10 +647,16 @@ namespace UltimateXR.Mechanics.Weapons
                 if (!replay && success && failure == null)
                 {
                     runtime.RecoilTimer = trigger.RecoilDurationSeconds;
-                    try { trigger.ShotAudio?.Play(commit.SourcePosition); OnProjectileShot(commit.TriggerIndex); }
+                    try
+                    {
+                        // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+                        using (UxrWeaponProfilerMarkers.ShotAudio.Auto()) trigger.ShotAudio?.Play(commit.SourcePosition);
+                        using (UxrWeaponProfilerMarkers.ShotEvent.Auto()) OnProjectileShot(commit.TriggerIndex);
+                    }
                     catch (Exception exception) { failure = exception; success = false; }
                 }
-                endAttempted = true; EndSyncMethod(new object[] { commit });
+                // VR Battlegrounds patch 79: маркер профайлера (shot-cost-probe).
+                endAttempted = true; using (UxrWeaponProfilerMarkers.ShotEndSync.Auto()) EndSyncMethod(new object[] { commit });
             }
             catch (Exception exception) { if (failure == null) failure = exception; }
             finally { if (!endAttempted) CancelSync(); _readinessCommitting.Remove(commit.TriggerIndex); }

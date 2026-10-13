@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UltimateXR.Mechanics.Weapons;
+using Unity.Profiling;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Weapons.Core;
@@ -21,6 +22,9 @@ namespace VrBattlegrounds.Weapons
     internal sealed class WeaponEjectionExecutor
     {
         private const float MaxInheritedSpeed = 6f;
+
+        // Маркер профайлера тракта выстрела (shot-cost-probe): выпуск патрона/гильзы.
+        private static readonly ProfilerMarker EjectionMarker = new ProfilerMarker("WS.Ejection");
 
         private readonly UxrFirearmWeapon _weapon;
         private readonly WeaponEjectionPort _port;
@@ -55,6 +59,7 @@ namespace VrBattlegrounds.Weapons
         public void Play(WeaponCue cue)
         {
             if (!WeaponEjectionSet.IsEjectionCue(cue) || _weapon == null) return;
+            using var profile = EjectionMarker.Auto();
             WeaponEjectile ejectile = WeaponEjectionSet.Resolve(_set, _defaults != null ? _defaults.Ejection : null, cue, out _);
             if (ejectile == null) return;
             if (!_port.TryGetWorldPose(out Vector3 position, out Quaternion port))

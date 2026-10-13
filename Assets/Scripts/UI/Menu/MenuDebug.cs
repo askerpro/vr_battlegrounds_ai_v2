@@ -73,6 +73,8 @@ namespace VrBattlegrounds.UI.Menu
             snapshot.Append(admin).Append('|').Append(DebugPerfReadout.Visible).Append('|').Append(DebugHitMarkers.Visible)
                     .Append('|').Append(DebugFingerTipRays.Visible);
             foreach (DebugTeleportTarget t in targets) snapshot.Append('|').Append(t.Id).Append(t.Label);
+            LobbyDetailTuner tuner = LobbyDetailTuner.Current;
+            if (tuner != null) snapshot.Append('|').Append(tuner.Describe());
 
             if (snapshot.ToString() != _lastSnapshot)
             {
@@ -125,6 +127,20 @@ namespace VrBattlegrounds.UI.Menu
                 MenuKit.Button(row, "Убрать всех", () => RequestBots(add: false), MenuButtonRole.Danger);
             }
 
+            // ── Детализация лобби ──────────────────────────────────────────
+            // Только в сцене с LobbyDetailTuner: подбор правил ухудшения среднего и дальнего планов.
+            LobbyDetailTuner tuner = LobbyDetailTuner.Current;
+            if (tuner != null)
+            {
+                MenuKit.Section(Content, "Детализация лобби");
+                TunerRow(tuner, $"Средний план с {tuner.MidStart:0} м", LobbyDetailTuner.Parameter.MidStart);
+                TunerRow(tuner, $"Дальний план с {Mathf.Max(tuner.FarStart, tuner.MidStart):0} м", LobbyDetailTuner.Parameter.FarStart);
+                TunerRow(tuner, $"Средний: уровень {tuner.MidLevel}", LobbyDetailTuner.Parameter.MidLevel);
+                MenuKit.Label(Content, LobbyDetailTuner.DescribeLevel(tuner.MidLevel), MenuTextRole.Caption, MenuColorRole.TextSecondary);
+                TunerRow(tuner, $"Дальний: уровень {tuner.FarLevel}", LobbyDetailTuner.Parameter.FarLevel);
+                MenuKit.Label(Content, LobbyDetailTuner.DescribeLevel(tuner.FarLevel), MenuTextRole.Caption, MenuColorRole.TextSecondary);
+            }
+
             // ── Телепорт ───────────────────────────────────────────────────
             MenuKit.Section(Content, "Телепорт");
             if (teleportIds.Count == 0) MenuKit.EmptyState(Content, "На карте нет точек.");
@@ -148,6 +164,14 @@ namespace VrBattlegrounds.UI.Menu
             string stress = StressTestClientSession.IsRunning ? "идёт" : "не идёт";
             string reply = string.IsNullOrEmpty(DebugModeNetwork.LastReply) ? "" : "\nСервер: " + DebugModeNetwork.LastReply;
             return $"Сеть: {net} · права админа: {(admin ? "да" : "нет")} · стресс-тест: {stress} · ботов: {BotNetwork.CountVisibleBots()}{reply}";
+        }
+
+        private void TunerRow(LobbyDetailTuner tuner, string label, LobbyDetailTuner.Parameter parameter)
+        {
+            RectTransform row = MenuKit.Row(Content);
+            MenuKit.Label(row, label);
+            MenuKit.Button(row, "−", () => { tuner.Step(parameter, -1); _lastSnapshot = ""; });
+            MenuKit.Button(row, "+", () => { tuner.Step(parameter, +1); _lastSnapshot = ""; });
         }
 
         private static void RequestBots(bool add)

@@ -124,10 +124,10 @@ namespace VrBattlegrounds.Network
             // Автор определяется не компонентом: хват — аргументами, здоровье — сервером.
             if (target is UxrGrabManager || target is UxrActor) return true;
 
-            // Locomotion пересчитывается и на копиях аватара. В частности, Mirror
-            // вызывает OnDisable при Destroy ещё до удаления из spawned: проверка
-            // одного despawn не отсекает чужой UpdateTeleportState. Автор движения
-            // тот же, что у аватара; здоровье и серверный сброс хвата выше не меняются.
+            // Locomotion пересчитывается и на копиях аватара (UpdateTeleportState и др.):
+            // такое событие шлёт только автор аватара. Снятие объекта сетью отсекает
+            // отдельно DespawnedObjectEventFilter (на клиенте — с Mirror patch 4). Автор
+            // движения тот же, что у аватара; здоровье и серверный сброс хвата выше не меняются.
             if (target is UxrLocomotion)
             {
                 UxrAvatar avatar = target.GetComponentInParent<UxrAvatar>(true);

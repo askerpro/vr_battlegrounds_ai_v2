@@ -11,11 +11,21 @@ namespace VrBattlegrounds.Network
     ///     <para>
     ///     Часть компонентов UltimateXR синхронизирует себя из <c>OnDisable</c> — например,
     ///     <c>UxrTeleportLocomotion</c> зовёт <c>UpdateTeleportState(false, false, false, identity)</c>.
-    ///     Mirror снимает объект сразу (убирает из <c>spawned</c>, зовёт <c>OnStopClient</c>), а
-    ///     <c>GameObject.Destroy</c> отложен до конца кадра, и <c>OnDisable</c> срабатывает уже после.
-    ///     Событие уходит другой стороне, где объекта больше нет:
+    ///     <c>OnDisable</c> срабатывает синхронно внутри <c>GameObject.Destroy</c> (и
+    ///     <c>SetActive(false)</c>), <c>OnDestroy</c> — в конце кадра. Событие уходит другой
+    ///     стороне, где объекта больше нет:
     ///     <c>UxrComponentNotFoundException … Sender: Player_… /…/TeleportLeft</c>. Так бывает при
     ///     каждой смене скина — и у своего аватара, и у копии чужого.
+    ///     </para>
+    ///
+    ///     <para>
+    ///     Порядок снятия, на который опирается фильтр. Сервер (и хост): <c>NetworkServer.Destroy</c>
+    ///     убирает объект из <c>NetworkServer.spawned</c> до <c>Destroy</c>. Клиент:
+    ///     <c>NetworkClient.DestroyObject</c> зовёт <c>OnStopLocalPlayer</c>/<c>OnStopClient</c>
+    ///     (объект ещё в <c>spawned</c>), затем убирает его из <c>spawned</c> и <c>owned</c> и только
+    ///     потом зовёт unspawn-обработчик, <c>Destroy</c> или <c>SetActive(false)</c> — это
+    ///     VR Battlegrounds patch 4 Mirror (tasks/network-sync-hardening, дефект 6048). До патча клиент
+    ///     убирал объект после <c>Destroy</c>, и событие своего аватара из <c>OnDisable</c> проходило.
     ///     </para>
     ///
     ///     <para>

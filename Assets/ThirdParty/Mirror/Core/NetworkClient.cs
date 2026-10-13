@@ -1768,6 +1768,13 @@ namespace Mirror
 
                 identity.OnStopClient();
 
+                // VR Battlegrounds patch 4 (tasks/network-sync-hardening): вынимаем из spawned и owned до
+                // unspawn-обработчика, Destroy и SetActive(false), как сервер. OnDisable срабатывает внутри
+                // Destroy синхронно, и событие уничтожаемого объекта уходило на сервер, где его уже нет.
+                // OnStopLocalPlayer/OnStopClient выше ещё видят объект в spawned.
+                connection.owned.Remove(identity); // if any
+                spawned.Remove(netId);
+
                 // custom unspawn handler for this prefab? (for prefab pools etc.)
                 if (InvokeUnSpawnHandler(identity.assetId, identity.gameObject))
                 {
@@ -1788,10 +1795,6 @@ namespace Mirror
                     // reset for scene objects
                     identity.ResetState();
                 }
-
-                // remove from dictionary no matter how it is unspawned
-                connection.owned.Remove(identity); // if any
-                spawned.Remove(netId);
             }
             //else Debug.LogWarning($"Did not find target for destroy message for {netId}");
         }

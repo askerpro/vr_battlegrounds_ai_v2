@@ -537,6 +537,36 @@ accepted, paths=[]); EditMode **65/65**; авто-тип **82/82** на кали
 кисти вдоль рукояти не считает. Старые драйверы calib/audit ищут `FitRasterLabels.Text`
 отражением — после новой перегрузки поиск неоднозначен.
 
+### cyborg-grips — записи хвата MEF_cyborg_hands и позы под кисть Cyborg — 2026-10-13
+
+**Записи (коммит 090437f35):** 77 записей на GUID Base 71b74b0d… в 42 префабах — запись Cyborg (8e0e,
+иначе e746), для оружия без Cyborg-записи — запись MEF; 154 align-копии «… (MEF_cyborg_hands)»; ручка
+планшета справа — из e746. Отчёты: `reports/cyborg-grips/phaseA-01`, `phaseB-01`, `fit-02`, `play-01`.
+
+**Шлем 1 (worker563):** всё оружие из паков — «пальцы выкручены наружу, как переломаны»; поза по
+умолчанию не как у Cyborg. Причины (подтверждены кодом и замером в Unity):
+- позы HandsPack/Kinemation/MEF `Gun` записаны без пястных (`_hasMetacarpalInfo: 0`), у кисти Cyborg на
+  Player пястные есть; `UxrRuntimeFingerDescriptor` (ветка без пястной) считает проксимальную от
+  запястья, а `UxrAvatarRig.HandRuntimeTransformation` пишет её как localRotation под пястной — рантайм
+  против редактора **179°** у всех 30 поз, у поз SDK 0°. Редакторный путь ставит фалангу в мире, поэтому
+  статические снимки дефект почти не показывали; анализатор оценил Scar лишь «notable»;
+- список поз Base пришёл от `PlayerBase_SdkHands`: 28 поз и поза по умолчанию — BigHands.
+
+**Исправление (коммит ceeba5ed7, worker564):** 30 поз перекодированы на кисть Cyborg с пястными
+(мировой путь на Player в исходной позе → `new UxrHandDescriptor`) в `MEF_cyborg_hands/HandPoses`, ссылки
+в `_handPoses` Base заменены — рантайм/редактор 0°, форма 0°; 28 поз BigHands → одноимённые Cyborg,
+по умолчанию `Cyborg/Default` (BigHands остался `DemoLabLaser` — у Cyborg нет). Драйвер:
+`reports/cyborg-grips/tools/pose-retarget.cs.txt`, итоги `retarget-01-measure|apply/result.json`.
+`SaveAsPrefabAsset` из `LoadPrefabContents` сбросил у Base `__prefabGuid` (→ GUID родителя),
+`__isInPrefab` и Mirror `_assetId` — возвращены до коммита; урок для следующих драйверов.
+
+**Шлем 2 (worker565): «обе проблемы исправлены».** Остаётся посадка: позы MEF на кисти Cyborg сидят
+хуже из-за разницы кистей; записи Cyborg на оружии из паков неточны — точка смещена, зазоры ладони и
+пальцев, рукоять взята выше/ниже естественного хвата. Дальше — ручная доводка или автоподгонка.
+
+**Хвосты:** системный патч SDK (поза без пястных на кисти с пястными) — отдельным этапом с
+`patch-reserve`; сторож рантайм/редактор в анализаторе; дефект `_prefabGuid` у `PlayerBase_SdkHands`.
+
 ### Кисть Cyborg — основа; план следующего этапа стыка — 2026-10-13
 
 **Проверка в шлеме (worker541, `MEF_cyborg_hands` третьим скином террористов):** «рука киборга гораздо

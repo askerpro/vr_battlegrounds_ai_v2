@@ -331,6 +331,8 @@ namespace VrBattlegrounds.Tests.Managers
         {
             SilenceMirrorNoise();
             Kill(_body);
+            // Сессия харнесса — объект сцены (sceneId ≠ 0): Destroy снимает её с сети, isServer гаснет —
+            // ветка «сессия не на сервере» (в игре уничтоженная сессия попадает в ту же проверку как null).
             NetworkServer.Destroy(_session.gameObject);
 
             Assert.DoesNotThrow(RunLateUpdate);
@@ -348,7 +350,13 @@ namespace VrBattlegrounds.Tests.Managers
             GameObject go = CreateNetworkObject(name);
             UxrActor actor = go.AddComponent<UxrActor>();
             PlayerController player = go.AddComponent<PlayerController>();
-            EnableNetworking(go);
+            NetworkIdentity identity = EnableNetworking(go);
+
+            // В игре тело — клон префаба (Instantiate), у него sceneId = 0, и NetworkServer.Destroy его уничтожает.
+            // Объект, собранный в сцене редактора, получает sceneId в OnValidate NetworkIdentity — для Mirror это
+            // объект сцены, и Destroy его только снимает с сети (UnSpawn + SetActive(false)), не уничтожая.
+            identity.sceneId = 0;
+
             InvokeLifecycleMethod(player, "Awake");
             SpawnOnServer(player);
             player.SourcePrefab = _livingPrefab;

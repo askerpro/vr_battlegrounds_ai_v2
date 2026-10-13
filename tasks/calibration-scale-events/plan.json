@@ -1,0 +1,21 @@
+{
+  "task_id": "calibration-scale-events",
+  "owner": "avatar-ik",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/avatar-ik/Vr_Battlegrounds_ai",
+  "base_sha": "5761bb36b1e7a737a58e779dfff8380458248ad2",
+  "doc_path": "tasks/calibration-scale-events/Readme.md",
+  "title": "События смены масштаба калибровки",
+  "stages": [
+    {
+      "id": "scale-events",
+      "writes": [
+        "Assets/Scripts/PhysicalSpaceUtils/AvatarCalibrationApplier.cs",
+        "Assets/Tests/EditMode/Calibration/CalibrationScaleEventsTests.cs",
+        "tasks/calibration-scale-events/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

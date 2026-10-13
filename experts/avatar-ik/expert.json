@@ -4,7 +4,8 @@
   "owner": "avatar-ik",
   "tasks": [
     "legs-ik",
-    "avatar-renderer-regression"
+    "avatar-renderer-regression",
+    "calibration-scale-events"
   ],
   "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
   "reviewed_at": "2026-10-11",

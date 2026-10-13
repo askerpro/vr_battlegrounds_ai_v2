@@ -7,20 +7,31 @@
   "doc_path": "tasks/state-sync-depth-guard/Readme.md",
   "title": "Сторож глубины StateSync: единая стопка кадров (C2)",
   "stages": [
-    {"id": "task-setup", "writes": [
-      "tasks/state-sync-depth-guard/**",
-      "experts/network/**"
-    ], "after": [], "needs": []},
-    {"id": "frame-stack", "writes": [
-      "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/StateSync/UxrStateSyncImplementer.cs",
-      "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/StateSync/UxrStateSyncImplementer_1.cs",
-      "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/UxrManager.cs",
-      "tasks/state-sync-depth-guard/**"
-    ], "after": [{"task": "state-sync-depth-guard", "stage": "task-setup", "state": "merged"}], "needs": []},
-    {"id": "regression-tests", "writes": [
-      "Assets/Tests/EditMode/Network/StateSyncFrameStackTests.cs",
-      "Assets/Tests/EditMode/Network/StateSyncFrameStackTests.cs.meta",
-      "tasks/state-sync-depth-guard/**"
-    ], "after": [{"task": "state-sync-depth-guard", "stage": "frame-stack", "state": "merged"}], "needs": []}
+    {
+      "id": "task-setup",
+      "writes": [
+        "tasks/state-sync-depth-guard/**",
+        "experts/network/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "frame-stack",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/StateSync/UxrStateSyncImplementer.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/StateSync/UxrStateSyncImplementer_1.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/UxrManager.cs",
+        "tasks/state-sync-depth-guard/**"
+      ],
+      "after": [
+        {
+          "task": "state-sync-depth-guard",
+          "stage": "task-setup",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    }
   ]
 }

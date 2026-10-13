@@ -7,15 +7,15 @@
   "doc_path": "tasks/uniqueid-stale-registry/Readme.md",
   "title": "Реестр UniqueId: записи уничтоженных компонентов",
   "stages": [
-    {"id": "registry-fix", "writes": [
-      "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/Unique/UxrUniqueIdImplementer_1.cs",
-      "tasks/uniqueid-stale-registry/**",
-      "experts/network/**"
-    ], "after": [], "needs": []},
-    {"id": "regression-tests", "writes": [
-      "Assets/Tests/EditMode/Network/UniqueIdStaleRegistryTests.cs",
-      "Assets/Tests/EditMode/Network/UniqueIdStaleRegistryTests.cs.meta",
-      "tasks/uniqueid-stale-registry/**"
-    ], "after": [{"task": "uniqueid-stale-registry", "stage": "registry-fix", "state": "merged"}], "needs": []}
+    {
+      "id": "registry-fix",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/Unique/UxrUniqueIdImplementer_1.cs",
+        "tasks/uniqueid-stale-registry/**",
+        "experts/network/**"
+      ],
+      "after": [],
+      "needs": []
+    }
   ]
 }

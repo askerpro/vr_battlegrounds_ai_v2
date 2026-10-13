@@ -7,15 +7,15 @@
   "doc_path": "tasks/mirror-nt-keyframe/Readme.md",
   "title": "Mirror NTU: храповик осей и ключевой снимок",
   "stages": [
-    {"id": "nt-patch", "writes": [
-      "Assets/ThirdParty/Mirror/Components/NetworkTransform/NetworkTransformUnreliable.cs",
-      "tasks/mirror-nt-keyframe/**",
-      "experts/network/**"
-    ], "after": [], "needs": []},
-    {"id": "regression-tests", "writes": [
-      "Assets/Tests/EditMode/Network/NetworkTransformKeyframeTests.cs",
-      "Assets/Tests/EditMode/Network/NetworkTransformKeyframeTests.cs.meta",
-      "tasks/mirror-nt-keyframe/**"
-    ], "after": [{"task": "mirror-nt-keyframe", "stage": "nt-patch", "state": "merged"}], "needs": []}
+    {
+      "id": "nt-patch",
+      "writes": [
+        "Assets/ThirdParty/Mirror/Components/NetworkTransform/NetworkTransformUnreliable.cs",
+        "tasks/mirror-nt-keyframe/**",
+        "experts/network/**"
+      ],
+      "after": [],
+      "needs": []
+    }
   ]
 }

@@ -1,0 +1,66 @@
+{
+  "task_id": "network-sync-hardening",
+  "owner": "network",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/network/Vr_Battlegrounds_ai",
+  "base_sha": "26129282b420936cf1e7a6a741383e09cf5cf390",
+  "doc_path": "tasks/network-sync-hardening/Readme.md",
+  "title": "Сеть: событие снятого объекта, стоимость StateSync, регрессионные тесты",
+  "stages": [
+    {
+      "id": "teleport-state",
+      "writes": [
+        "Assets/ThirdParty/Mirror/Core/NetworkClient.cs",
+        "Assets/Scripts/Network/DespawnedObjectEventFilter.cs",
+        "Assets/Scripts/Network/NetworkStateRelay.cs",
+        "Assets/Scripts/Network/StateEventAuthority.cs",
+        "tasks/network-sync-hardening/Readme.md",
+        "tasks/network-sync-hardening/plan.json",
+        "tasks/network-sync-hardening/changelog/2026-10-14-mirror-4.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "statesync-cost",
+      "writes": [
+        "Assets/Scripts/Network/UxrLogLevelPolicy.cs",
+        "Assets/Scripts/Network/UxrLogLevelPolicy.cs.meta",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/StateSync/UxrStateSyncImplementer_1.cs",
+        "tasks/network-sync-hardening/changelog/2026-10-14-sdk-80.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "regression-tests",
+      "writes": [
+        "Assets/Tests/EditMode/Network/StateSyncFrameStackTests.cs",
+        "Assets/Tests/EditMode/Network/StateSyncFrameStackTests.cs.meta",
+        "Assets/Tests/EditMode/Network/NetworkTransformKeyframeTests.cs",
+        "Assets/Tests/EditMode/Network/NetworkTransformKeyframeTests.cs.meta",
+        "Assets/Tests/EditMode/Network/UniqueIdStaleRegistryTests.cs",
+        "Assets/Tests/EditMode/Network/UniqueIdStaleRegistryTests.cs.meta",
+        "Assets/Tests/EditMode/Network/DespawnedObjectEventFilterTests.cs",
+        "Assets/Tests/EditMode/Network/UxrLogLevelPolicyTests.cs",
+        "Assets/Tests/EditMode/Network/UxrLogLevelPolicyTests.cs.meta",
+        "Assets/Tests/EditMode/Network/StateSyncMethodCacheTests.cs",
+        "Assets/Tests/EditMode/Network/StateSyncMethodCacheTests.cs.meta",
+        "tasks/network-sync-hardening/**"
+      ],
+      "after": [
+        {
+          "task": "network-sync-hardening",
+          "stage": "teleport-state",
+          "state": "merged"
+        },
+        {
+          "task": "network-sync-hardening",
+          "stage": "statesync-cost",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

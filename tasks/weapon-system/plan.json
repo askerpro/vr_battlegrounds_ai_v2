@@ -319,6 +319,14 @@
       "needs": []
     },
     {
+      "id": "aimlock-held-lag",
+      "writes": [
+        "Assets/Scripts/Weapons/MainGripAimLock.cs"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
       "id": "ejection-manual",
       "writes": [
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmReadinessTypes.cs",

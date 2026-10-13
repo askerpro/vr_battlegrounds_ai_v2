@@ -321,7 +321,9 @@
     {
       "id": "aimlock-held-lag",
       "writes": [
-        "Assets/Scripts/Weapons/MainGripAimLock.cs"
+        "Assets/Scripts/Weapons/MainGripAimLock.cs",
+        "Assets/Tests/EditMode/Weapons/MainGripAimLockHeldLagTests.cs",
+        "Assets/Tests/EditMode/Weapons/MainGripAimLockHeldLagTests.cs.meta"
       ],
       "after": [],
       "needs": []
@@ -409,6 +411,21 @@
         {
           "task": "weapon-system",
           "stage": "shot-cost-probe",
+          "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "aimlock-held-lag",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction-run",
           "state": "merged"
         }
       ],

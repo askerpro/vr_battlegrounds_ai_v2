@@ -45,13 +45,21 @@
         "Assets/Scripts/Interaction/UxrMagazinePocket.cs",
         "Assets/Scripts/Interaction/LooseItems.cs",
         "Assets/Scripts/Player/PlayerLoadoutManager.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObjectAnchor.StateSave.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObject.StateSave.cs",
         "Assets/Tests/EditMode/Interaction/**",
         "Docs/manipulation/**",
         ".claude/agent-memory/manipulation-expert/**",
         "experts/manipulation/**",
         "tasks/grab-authority/**"
       ],
-      "after": [],
+      "after": [
+        {
+          "task": "death-body-defer",
+          "stage": "death-equipment-drop",
+          "state": "merged"
+        }
+      ],
       "needs": []
     }
   ]

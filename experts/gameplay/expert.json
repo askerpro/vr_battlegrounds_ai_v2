@@ -4,7 +4,6 @@
   "owner": "gameplay",
   "tasks": [
     "arsenal-generator",
-    "death-body-defer",
     "catalog-fingerprint",
     "arsenal-unload-teardown"
   ],

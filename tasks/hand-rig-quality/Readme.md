@@ -117,6 +117,11 @@ LLM и человека и предпросмотр правки на време
 по плану R0–R5 (`grip-extraction-run`); шов у манжеты и `grip-authoring` — после.
 [План](Details.md#grip-extraction-tools-и-план-извлечения-хватов--2026-10-13-решение-пользователя).
 
+**grip-extraction влит (2026-10-14, `e16b86b82`).** Инструмент + пилот на 6 стволах (`MEF_cyborg_hands`): R0 PASS,
+посадка по центру ладони, шлем «стало гораздо лучше». Перед `grip-extraction-run`: влить исправление
+`_assetId` в инструмент (ветка `codex/grip-extraction-assetid-fix`, условие weapon-system 6388 — Normalize,
+сверка с диском, `NetworkAssetIdOnDiskTests`); MKR9 левая основная — мимо рукояти (бэклог).
+
 ## План аудита
 
 1. **Инвентарь:** объединить префабы, все WeaponInfo и предметы игровых сцен;

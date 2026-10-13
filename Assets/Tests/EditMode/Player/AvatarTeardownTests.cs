@@ -263,12 +263,20 @@ namespace VrBattlegrounds.Tests.Player
                 UxrGrabbableObjectAnchor holster = Holster(harness.Avatar);
                 Assume.That(holster, Is.Not.Null, $"У аватара {c.AvatarPath} нет свободной кобуры.");
 
-                GameObject holstered = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(c.WeaponPath));
+                GameObject weaponPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(c.WeaponPath);
+                GameObject holstered = Object.Instantiate(weaponPrefab);
 
                 try
                 {
+                    // WeaponComponent в префабе нет: игра ставит его сетевому инстансу оружия из реестра
+                    // (NetworkUxrIdentity.InstanceCreated → AttachByPrefab). Тот же штатный путь — иначе сброс
+                    // принял бы ствол за «не оружие» и не тронул бы его.
+                    WeaponComponent.AttachByPrefab(weaponPrefab, holstered);
+                    WeaponComponent weapon = holstered.GetComponent<WeaponComponent>();
+                    Assert.IsTrue(weapon != null && weapon.WeaponData != null,
+                                  $"Контроль харнесса: {c.WeaponPath} не получил WeaponComponent — его нет в WeaponRegistry?");
+
                     UxrGrabbableObject item = holstered.GetComponent<UxrGrabbableObject>();
-                    Assume.That(holstered.GetComponent<WeaponComponent>(), Is.Not.Null, $"У {c.WeaponPath} нет WeaponComponent — сброс его не тронет.");
 
                     Assert.IsTrue(Manager.PlaceObject(item, holster, UxrPlacementOptions.None, false), "Контроль харнесса: оружие не встало в кобуру.");
                     Assert.AreSame(holster, item.CurrentAnchor, "Контроль харнесса: оружие в кобуре.");

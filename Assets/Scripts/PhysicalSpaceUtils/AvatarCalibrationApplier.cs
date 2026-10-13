@@ -7,6 +7,7 @@ using UltimateXR.Devices;
 using UnityEngine;
 using Mirror;
 using UltimateXR.Core;
+using UltimateXR.Core.StateSync;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Network;
 
@@ -89,6 +90,33 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         /// <summary>Применённый масштаб скелета.</summary>
         public float AppliedScale { get; private set; } = 1f;
 
+        /// <summary>Порог реальной смены масштаба, начиная с которого срабатывают события масштаба.</summary>
+        public const float ScaleChangeEpsilon = 1e-4f;
+
+        /// <summary>
+        /// Перед сменой масштаба скелета: (применитель, старый масштаб, новый масштаб). Контракт
+        /// <c>calibration-scale-events</c> r1 (<c>tasks/calibration-scale-events</c>).
+        ///
+        /// <para>
+        /// Синхронно, в том же вызове <see cref="Apply" /> и том же кадре, до записи масштаба <c>Dummy Forward</c>.
+        /// Срабатывает только при реальной смене масштаба (больше <see cref="ScaleChangeEpsilon" />) и на каждой
+        /// машине, где применяется калибровка: сервер, владелец (предсказание, подтверждение, откат), каждый
+        /// наблюдатель (хук калибровки, спавн, смена скина). Подписка — через <see cref="For" />.
+        /// </para>
+        /// <para>
+        /// Обработчик не открывает синхронизацию UltimateXR и не меняет калибровку. Исключение обработчика
+        /// пишется в лог и калибровку не прерывает.
+        /// </para>
+        /// </summary>
+        public event Action<AvatarCalibrationApplier, float, float> ScaleChanging;
+
+        /// <summary>
+        /// После смены масштаба скелета: (применитель, старый масштаб, новый масштаб). Масштаб <c>Dummy Forward</c>
+        /// и поля BodyIK уже записаны, <see cref="AppliedScale" /> новый; смещение рук и место — ещё нет.
+        /// Те же правила, что у <see cref="ScaleChanging" />.
+        /// </summary>
+        public event Action<AvatarCalibrationApplier, float, float> ScaleChanged;
+
         /// <summary>Базовый рост глаз этой модели (<c>UxrBodyIKSettings.EyesBaseHeight</c>), 0 — неизвестен.</summary>
         public float EyesBaseHeight
         {
@@ -122,6 +150,18 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 _pivot.localPosition = _pivotBase + new Vector3(0f, calibration.FloorOffset, 0f);
 
             float scale = calibration.ScaleFor(_eyesBaseHeight);
+            float previousAppliedScale = AppliedScale;
+
+            // Контракт calibration-scale-events r1: события — только при реальной смене масштаба скелета.
+            // Старый масштаб берётся с самого Dummy Forward: это фактическое состояние, а не запомненное.
+            float oldScale = _dummyForward != null ? _dummyForward.localScale.x : scale;
+            bool scaleChanges = _dummyForward != null && Mathf.Abs(scale - oldScale) > ScaleChangeEpsilon;
+
+            if (scaleChanges)
+            {
+                ReportIfInsideStateSync();
+                RaiseScaleEvent(ScaleChanging, nameof(ScaleChanging), oldScale, scale);
+            }
 
             if (_dummyForward != null)
                 _dummyForward.localScale = new Vector3(scale, scale, scale);
@@ -131,6 +171,11 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 NeckField?.SetValue(_bodyIK, _neckBase * scale);
                 ForwardField?.SetValue(_bodyIK, _forwardBase * scale);
             }
+
+            AppliedScale = scale;
+
+            if (scaleChanges)
+                RaiseScaleEvent(ScaleChanged, nameof(ScaleChanged), oldScale, scale);
 
             // Патч SDK 54: каждое устройство принадлежит конкретному аватару, общей статики нет.
             if (ownAvatar)
@@ -145,7 +190,7 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
             if (applyPlacement && calibration.Placement.HasValue)
                 ApplyPlacement(calibration, ownAvatar, synchronizePlacement);
 
-            if (Applied != calibration || !Mathf.Approximately(AppliedScale, scale))
+            if (Applied != calibration || !Mathf.Approximately(previousAppliedScale, scale))
             {
                 GameLog.PhysicalSpace.Verbose(
                     $"[AvatarCalibrationApplier] {name}: {calibration}, масштаб {scale:F3} (EyesBaseHeight {_eyesBaseHeight:F2}), " +
@@ -154,6 +199,48 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
 
             Applied = calibration;
             AppliedScale = scale;
+        }
+
+        /// <summary>
+        /// Все вызывающие <see cref="Apply" /> — на верхнем уровне (команда, хук калибровки, подключение, связь с
+        /// аватаром). Вызов изнутри синхронизации UltimateXR нарушил бы контракт событий масштаба: обработчик
+        /// оказался бы вложенным. Это ошибка вызывающего — пишем её, события всё равно идут в том же кадре.
+        /// </summary>
+        private void ReportIfInsideStateSync()
+        {
+            bool insideSync = UxrStateSyncImplementer.SyncCallDepth > 0 ||
+                              (UxrManager.Instance != null && UxrManager.Instance.IsInsideStateSync);
+            if (!insideSync) return;
+
+            GameLog.PhysicalSpace.Error(
+                $"[AvatarCalibrationApplier] {name}: смена масштаба вызвана изнутри синхронизации UltimateXR " +
+                $"(глубина {UxrStateSyncImplementer.SyncCallDepth}). Калибровку нужно применять на верхнем уровне — " +
+                "контракт calibration-scale-events.", this);
+        }
+
+        /// <summary>
+        /// Вызывает обработчики по одному: упавший обработчик пишется в лог, остальные и сама калибровка продолжаются.
+        /// Список обработчиков строится только при реальной смене масштаба — это редкое событие.
+        /// </summary>
+        private void RaiseScaleEvent(Action<AvatarCalibrationApplier, float, float> handlers, string eventName,
+                                     float oldScale, float newScale)
+        {
+            if (handlers == null) return;
+
+            foreach (Delegate handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<AvatarCalibrationApplier, float, float>)handler)(this, oldScale, newScale);
+                }
+                catch (Exception exception)
+                {
+                    GameLog.PhysicalSpace.Error(
+                        $"[AvatarCalibrationApplier] {name}: обработчик {eventName} " +
+                        $"({handler.Method.DeclaringType?.Name}.{handler.Method.Name}) упал, калибровка продолжается: {exception}",
+                        this);
+                }
+            }
         }
 
         private void ApplyPlacement(PlayerCalibration calibration, bool ownAvatar, bool synchronizePlacement)

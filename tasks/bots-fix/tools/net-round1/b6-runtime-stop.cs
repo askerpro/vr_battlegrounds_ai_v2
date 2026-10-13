@@ -6,7 +6,7 @@ const string Root = "tasks/bots-fix/reports/net-round1";
 const string Topology = "S2C";   // S2C | H1C
 const string Phase = "p1";       // p1 | p2
 const string Owner = "bots-fix.net-round1";
-const string Attempt = "attempt-6"; // новая папка попытки: прежние runtime/<topology>-<phase> не мешают B3
+const string Attempt = "attempt-9"; // новая папка попытки: прежние runtime/<topology>-<phase> не мешают B3
 const string Variant = "A1";     // attempt-6 A/B: A1 — ClientNoRecoil=false, A2 — ClientNoRecoil=true; "" — без варианта
 string RunRoot = Root + "/runtime/" + Attempt + "/" + Topology + "-" + Phase + (Variant.Length > 0 ? "-" + Variant : "");
 var status = JsonUtility.FromJson<VrBattlegrounds.EditorTools.TestStand.PlayLaunchStatus>(VrBattlegrounds.EditorTools.TestStand.PlayLaunch.Status());

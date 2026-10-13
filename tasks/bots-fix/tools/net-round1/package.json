@@ -38,6 +38,20 @@
    "attempt": "attempt-6",
    "variants": "A1 (ClientNoRecoil=false), A2 (ClientNoRecoil=true) — два запуска B3..B6, папки runtime/attempt-6/S2C-p1-A1 и -A2",
    "combos": "A-ak105-recoil 30, LJ-late-ak105 45 (Player 3 отключён до case, reconnect 15 с)"
+  },
+  {
+   "topology": "S2C",
+   "phase": "p1",
+   "attempt": "attempt-8",
+   "variants": "A1 (ClientNoRecoil=false), один запуск B3..B6, папка runtime/attempt-8/S2C-p1-A1",
+   "combos": "A-ak105-recoil 30, G-ghost-respawn-ak105 40 (смерть 8 с, возрождение 20 с), LJ-late-ak105 45"
+  },
+  {
+   "topology": "S2C",
+   "phase": "p1",
+   "attempt": "attempt-9",
+   "variants": "A1 (ClientNoRecoil=false), один запуск B3..B6, папка runtime/attempt-9/S2C-p1-A1",
+   "combos": "P-holster-purchase 35 (PPK из кобуры, покупка AK105 на 10 с), LH-late-holster 45 (Player 3 отключён до case, покупка 8 с, reconnect 22 с), G-ghost-respawn-ak105 40 (смерть 8 с, возрождение 20 с), LJ-late-ak105 45 (Player 3 отключён до case, reconnect 15 с)"
   }
  ],
  "steps": [
@@ -120,13 +134,15 @@
  "offlineChecks": {
   "compile": "compile-check.ps1: 7 сборок + payload-ы (C# 7.3); недостающие в csproj основного checkout ссылки asmdef добавляются из Library/ScriptAssemblies; Assembly-CSharp-Editor — 11 чужих ошибок Weapons/Sights (офлайн-артефакт), payload-ы берут Assembly-CSharp-Editor.dll основного checkout"
  },
- "attempt": "attempt-6",
+ "attempt": "attempt-9",
  "attempts": {
   "attempt-1": "тикет 515: клиенты GameRole=Spectator не получили сессию (GameNetworkManager.OnSpectatorConnect не реализован), MapPlayable=false, WaitingReady; до case не дошло. Отчёты runtime/S2C-p1 (без папки попытки).",
   "attempt-2": "клиенты GameRole=Player; папки runtime/attempt-2/<topology>-<phase> и preflight attempt-2/ — B3 не упирается в launch.json попытки 1.",
   "attempt-3": "тикет 521: наблюдатель работает; ledgerDivergences = выстрелам у клиентов с начала (5092 weapon-system); у переподключившегося угол ствол↔луч 10–56° (медианы), пользователь видит у клиента автомат у ног дулом вверх.",
   "attempt-4": "тикет 525: decompose пуст (matched=0: у клиентов с начала выстрелы отклоняются форком учёта 5092/5162; S2C p2 не запустилась — KCP timeout клиента). wristOverwrite у клиентов — единицы мм/°; preDriver↔final запястья сервера ~4 см/<1°; NT тела 4 (root Local, Camera Local, CC_Base_L/R_Hand World = GetHandBone); на клиенте syncDirection NT бота = ClientToServer.",
   "attempt-5": "разложение позы без выстрелов: сервер и клиент пишут позы на сетке серверного времени 0,25 с (корень, камера, запястья, оружие в правой руке и его ShotSource; сервер — и запястья до драйвера), ключ (netId аватара, узел); клиент — проверка применения снимков NT (ntApplied); analyze.py poseDecomposition.",
-  "attempt-6": "A/B по разбору 5520 (network): Mirror NTUnreliable достраивает непереданные оси из трансформа после ResetState — поза клиента после UXR (отдача SDK копии, KeepGripsInPlace) запекается в снимок, правое запястье дрейфует по Y. Маркеры: сервер — Metrics.netSendMarkers (флаги каждой отправки NT корня/камеры/кистей, серия [t,кадр,флаги,x,y,z], паузы > порога сброса, спавн: Y камеры в SpawnMessage и кадр первой записи драйвера); клиент — bodies[].netReceive (ResetState gap/empty, bakedCandidates, sumDeltaYM, fillEqualsPrevFinal, камера в кадре спавна, RPC до спавна), bodies[].clientNoRecoil, wristOverwrite.right/left. Порядок: B0 → (Variant=A1 во всех B3/B4/B5/B6) B3 → B5 Ready → B4 → B5 completed → B6 → (Variant=A2) B3 → B5 → B4 → B5 → B6 → finish → copy → analyze (abCompare)."
+  "attempt-6": "A/B по разбору 5520 (network): Mirror NTUnreliable достраивает непереданные оси из трансформа после ResetState — поза клиента после UXR (отдача SDK копии, KeepGripsInPlace) запекается в снимок, правое запястье дрейфует по Y. Маркеры: сервер — Metrics.netSendMarkers (флаги каждой отправки NT корня/камеры/кистей, серия [t,кадр,флаги,x,y,z], паузы > порога сброса, спавн: Y камеры в SpawnMessage и кадр первой записи драйвера); клиент — bodies[].netReceive (ResetState gap/empty, bakedCandidates, sumDeltaYM, fillEqualsPrevFinal, камера в кадре спавна, RPC до спавна), bodies[].clientNoRecoil, wristOverwrite.right/left. Порядок: B0 → (Variant=A1 во всех B3/B4/B5/B6) B3 → B5 Ready → B4 → B5 completed → B6 → (Variant=A2) B3 → B5 → B4 → B5 → B6 → finish → copy → analyze (abCompare).",
+  "attempt-8": "Короткий повтор S2C после доработки патча Mirror 3 (network 5619, keyframeWarmup 0,5 с). Маркеры: клиент — netReceive.model (patched: после сброса оси из последнего полученного), series каждого пакета, settle (оседание камеры/запястий тела, появившегося при подключённом клиенте: cameraSettleMs, samples); сервер — fullSends/fullSendsFirst500ms, ntSettings (\"не найден\" вместо значений по умолчанию). analyze: combos[].settle (медиана/max по телам, ожидание ≤ ~0,5 с), serverWarmup, strict.patchedRunsOver1s. Офлайн-разбор attempt-7: strict-events.py.",
+  "attempt-9": "Повтор яруса C поверх origin/dev 8306c6a86 (manipulation 75: якоря у опоздавшего, поза после снятия с якоря) и незакоммиченного патча Mirror network (NetworkTransformUnreliable.cs f876148f9). S2C p1 A1: P-holster-purchase, LH-late-holster, G-ghost-respawn-ak105, LJ-late-ak105. Проверки: пистолет в кобуре бота у клиентов после TryRelease и AK105 в руке; у опоздавшего PPK в кобуре и AK в руке без дублей хвата; оружие после смерти не проваливается; первое исполнение исправленных метрик settle (камера ±1 см, запястья ±3 см против серверной серии в системе NT)."
  }
 }

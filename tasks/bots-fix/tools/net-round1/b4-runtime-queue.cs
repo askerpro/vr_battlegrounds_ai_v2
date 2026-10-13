@@ -18,7 +18,7 @@ const string Root = "tasks/bots-fix/reports/net-round1";
 const string Topology = "S2C";   // S2C | H1C
 const string Phase = "p1";       // p1 | p2
 const string LateClient = "Player 3";
-const string Attempt = "attempt-6";
+const string Attempt = "attempt-9";
 const string Variant = "A1";     // attempt-6 A/B: A1 — ClientNoRecoil=false, A2 — ClientNoRecoil=true; "" — без варианта
 const float LaneOffsetX = 4f;   // бот (4,0,-5), цель (4,0,5): клиенты в (0,0,0) в 4 м от линии огня
 string RunRoot = Root + "/runtime/" + Attempt + "/" + Topology + "-" + Phase + (Variant.Length > 0 ? "-" + Variant : "");
@@ -28,11 +28,11 @@ var t07 = new[] { VrBattlegrounds.DevTools.BotCombatStand.BotStandScenarioId.T07
 // preDisconnect — отключить LateClient до начала case (он не видел бота); reconnectAt/disconnectAt — секунды от начала case.
 var all = new[] {
     new { id = "E-ak105-ref", phases = "H1C-p1", weapon = "AK105_Weapon", rifle = true, seconds = 30f, zero = true, noRecoil = true, holster = false, purchase = (string)null, purchaseAt = -1f, killAt = -1f, respawnAt = -1f, preDisconnect = false, disconnectAt = -1f, reconnectAt = -1f },
-    new { id = "A-ak105-recoil", phases = "S2C-p1", weapon = "AK105_Weapon", rifle = true, seconds = 30f, zero = false, noRecoil = false, holster = false, purchase = (string)null, purchaseAt = -1f, killAt = -1f, respawnAt = -1f, preDisconnect = false, disconnectAt = -1f, reconnectAt = -1f },
-    new { id = "P-holster-purchase", phases = "H1C-p1", weapon = "PPK_Weapon", rifle = false, seconds = 35f, zero = false, noRecoil = false, holster = true, purchase = "AK105_Weapon", purchaseAt = 10f, killAt = -1f, respawnAt = -1f, preDisconnect = false, disconnectAt = -1f, reconnectAt = -1f },
+    new { id = "A-ak105-recoil", phases = "", weapon = "AK105_Weapon", rifle = true, seconds = 30f, zero = false, noRecoil = false, holster = false, purchase = (string)null, purchaseAt = -1f, killAt = -1f, respawnAt = -1f, preDisconnect = false, disconnectAt = -1f, reconnectAt = -1f },
+    new { id = "P-holster-purchase", phases = "S2C-p1,H1C-p1", weapon = "PPK_Weapon", rifle = false, seconds = 35f, zero = false, noRecoil = false, holster = true, purchase = "AK105_Weapon", purchaseAt = 10f, killAt = -1f, respawnAt = -1f, preDisconnect = false, disconnectAt = -1f, reconnectAt = -1f },
+    new { id = "LH-late-holster", phases = "S2C-p1,S2C-p2", weapon = "PPK_Weapon", rifle = false, seconds = 45f, zero = false, noRecoil = false, holster = true, purchase = "AK105_Weapon", purchaseAt = 8f, killAt = -1f, respawnAt = -1f, preDisconnect = true, disconnectAt = -1f, reconnectAt = 22f },
     new { id = "G-ghost-respawn-ak105", phases = "S2C-p1,H1C-p1", weapon = "AK105_Weapon", rifle = true, seconds = 40f, zero = false, noRecoil = false, holster = false, purchase = (string)null, purchaseAt = -1f, killAt = 8f, respawnAt = 20f, preDisconnect = false, disconnectAt = -1f, reconnectAt = -1f },
     new { id = "LJ-late-ak105", phases = "S2C-p1,S2C-p2", weapon = "AK105_Weapon", rifle = true, seconds = 45f, zero = false, noRecoil = false, holster = false, purchase = (string)null, purchaseAt = -1f, killAt = -1f, respawnAt = -1f, preDisconnect = true, disconnectAt = -1f, reconnectAt = 15f },
-    new { id = "LH-late-holster", phases = "S2C-p2", weapon = "PPK_Weapon", rifle = false, seconds = 45f, zero = false, noRecoil = false, holster = true, purchase = "AK105_Weapon", purchaseAt = 8f, killAt = -1f, respawnAt = -1f, preDisconnect = true, disconnectAt = -1f, reconnectAt = 22f },
     new { id = "RC-reconnect-ak105", phases = "S2C-p2", weapon = "AK105_Weapon", rifle = true, seconds = 45f, zero = false, noRecoil = false, holster = false, purchase = (string)null, purchaseAt = -1f, killAt = -1f, respawnAt = -1f, preDisconnect = false, disconnectAt = 12f, reconnectAt = 22f } };
 string phaseKey = Topology + "-" + Phase;
 var combos = all.Where(c => c.phases.Split(',').Contains(phaseKey)).ToArray();

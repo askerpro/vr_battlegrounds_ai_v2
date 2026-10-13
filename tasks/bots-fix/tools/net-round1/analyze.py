@@ -7,6 +7,11 @@
 attempt-6 (A/B «отдача копии наблюдателя»): сервер — Metrics.netSendMarkers (флаги каждой отправки NT, серия позиций),
 клиенты — bodies[].netReceive (ResetState, подстановка осей из трансформа, камера в спавне), bodies[].clientNoRecoil.
 netMarkers в каждом case; abCompare — дрейф правого запястья A1 (ClientNoRecoil=false) против A2 (true).
+
+attempt-7+ (патч Mirror 3): модель клиента netReceive.model = patched — после сброса оси из последнего полученного; строгий
+маркер patched — расхождение последнего полученного (series клиента) с серверной позицией той же метки дольше 1 с у одного
+тела. attempt-8: settle — оседание камеры/запястий тела, появившегося при подключённом клиенте (ожидание ≤ ~0,5 с), и
+серверный прогрев полными снимками (fullSendsFirst500ms).
 """
 import argparse
 import glob
@@ -230,6 +235,140 @@ def server_markers(case):
     return {"avatars": compact, "error": markers.get("error")}, series
 
 
+PATCHED_WINDOW_S = 1.0
+SETTLE_TOLERANCE_M = 0.01
+# Запястье у наблюдателя — итог IK и хвата копии (KeepGripsInPlace, отдача копии «как у людей»), а не принятая NT-поза:
+# дрейф медиана 3–7 мм (attempt-7), поэтому оседание запястья — в 3 см от серверной позы; остаток выводится отдельно.
+WRIST_SETTLE_TOLERANCE_M = 0.03
+SETTLE_TAIL_S = 1.0
+# Часы показанной позы у клиента (NetworkTime.time − сдвиг) в отдельных кадрах скачут на ±0,5 с (attempt-9, LJ):
+# отклонение — расстояние до ближайшей серверной позы в окне ±0,2 с от метки (проверка «поза на серверной траектории»).
+SETTLE_TIME_SLACK_S = 0.2
+SETTLE_TIME_STEP_S = 0.01
+# Первый кадр после фриза клиента (кадр > 0,1 с; в Play Mode клонов бывает 0,5 с): часы уже ушли, NT ещё не применён —
+# сэмпл не оценивается (считается в hitchFrames).
+SETTLE_HITCH_S = 0.1
+
+
+def patched_strict(rows, server_rows):
+    """
+    Серия пакетов клиента [метка, кадр, флаги, источник, x, y, z] против серверной позиции той же метки: отрезки, где
+    последнее полученное расходится с сервером больше 1 см (макс. по осям), и сколько они жили (до пакета, где ≤ 1 см).
+    """
+    runs, start = [], None
+    peak = 0.0
+    last = None
+    for row in rows:
+        server = server_rows.get(round(row[0], 4))
+        if server is None or None in (row[4], row[5], row[6], server[3], server[4], server[5]):
+            continue
+        dev = max(abs(row[4] - server[3]), abs(row[5] - server[4]), abs(row[6] - server[5]))
+        last = row
+        if dev > SETTLE_TOLERANCE_M:
+            if start is None:
+                start, peak = row, 0.0
+            peak = max(peak, dev)
+        elif start is not None:
+            runs.append({"startStamp": start[0], "clientFrame": start[1], "endStamp": row[0],
+                         "durationS": round(row[0] - start[0], 3), "maxDevM": round(peak, 4), "closed": True})
+            start = None
+    if start is not None and last is not None:
+        runs.append({"startStamp": start[0], "clientFrame": start[1], "endStamp": last[0],
+                     "durationS": round(last[0] - start[0], 3), "maxDevM": round(peak, 4), "closed": False})
+    return runs
+
+
+def server_lerp(server_rows_sorted, t):
+    """Серверная позиция [x, y, z] на время t: линейно между соседними отправками (как интерполяция клиента)."""
+    prev = None
+    for row in server_rows_sorted:
+        if None in row[3:6]:
+            continue
+        if row[0] >= t - 1e-6:
+            if prev is None or row[0] - prev[0] < 1e-6:
+                return list(row[3:6]) if prev is None or abs(row[0] - t) < 1e-6 else list(prev[3:6])
+            k = (t - prev[0]) / (row[0] - prev[0])
+            return [prev[3 + i] + (row[3 + i] - prev[3 + i]) * k for i in range(3)]
+        prev = row
+    return list(prev[3:6]) if prev is not None else None
+
+
+def server_nearest_dev(server_rows_sorted, t, value, axes):
+    """Минимум max|value − сервер| по осям axes среди серверных поз в окне t ± SETTLE_TIME_SLACK_S."""
+    rows = [r for r in server_rows_sorted if None not in r[3:6]]
+    if not rows:
+        return None
+    lo, hi = t - SETTLE_TIME_SLACK_S, t + SETTLE_TIME_SLACK_S
+    window = [r for r in rows if lo <= r[0] <= hi]
+    times = [lo + SETTLE_TIME_STEP_S * i for i in range(int(round((hi - lo) / SETTLE_TIME_STEP_S)) + 1)]
+    times += [r[0] for r in window]
+    best = None
+    for moment in times:
+        server = server_lerp(rows, moment)
+        if server is None:
+            continue
+        dev = max(abs(value[i] - server[axis]) for i, axis in enumerate(axes))
+        best = dev if best is None or dev < best else best
+    return best
+
+
+def settle_ms(samples, ok):
+    """Мс от спавна до сэмпла, с которого ok(row) держится до конца окна; None — не осело."""
+    index = None
+    for i in range(len(samples) - 1, -1, -1):
+        if not ok(samples[i]):
+            break
+        index = i
+    return None if index is None else round(samples[index][0] * 1000.0, 1)
+
+
+def body_settle(body, series):
+    receive = body.get("netReceive") or {}
+    settle = receive.get("settle")
+    if not settle or not settle.get("samples"):
+        return None
+    net_id = body.get("avatarNetId")
+    raw = settle["samples"]
+    samples = [row for i, row in enumerate(raw) if i == 0 or row[0] - raw[i - 1][0] <= SETTLE_HITCH_S]
+    # attempt-8: 10 полей (цель 1,65 × масштаб; запястья в мире, а серверная серия — в системе NT: несравнимо) —
+    # запястья не оцениваются. С 2026-10-13: 9 полей, камера Y и запястья в системе координат своего NT.
+    legacy = bool(samples) and len(samples[0]) >= 10
+    wrist_r, wrist_l = 3, 6
+    camera_rows = sorted((series.get((net_id, "camera")) or {}).values())
+    right_rows = sorted((series.get((net_id, "wristR")) or {}).values())
+    left_rows = sorted((series.get((net_id, "wristL")) or {}).values())
+
+    def camera_dev(row):
+        return None if row[2] is None else server_nearest_dev(camera_rows, row[1], [row[2]], [1])
+
+    def wrist_dev(row, rows, offset):
+        if None in row[offset:offset + 3]:
+            return None
+        return server_nearest_dev(rows, row[1], row[offset:offset + 3], [0, 1, 2])
+
+    def ok(dev, tolerance):
+        return lambda row: (lambda d: d is not None and d <= tolerance)(dev(row))
+
+    def tail(dev):
+        end = samples[-1][0] if samples else 0.0
+        values = [d for d in (dev(r) for r in samples if r[0] >= end - SETTLE_TAIL_S) if d is not None]
+        return {"medianMm": round(statistics.median(values) * 1000.0, 1), "maxMm": round(max(values) * 1000.0, 1)} if values else None
+
+    if legacy:
+        right_rows = left_rows = []
+    right = lambda r: wrist_dev(r, right_rows, wrist_r)
+    left = lambda r: wrist_dev(r, left_rows, wrist_l)
+    return {
+        "avatarNetId": net_id, "epoch": body.get("epoch"), "spawnSinceConnectS": settle.get("spawnSinceConnectS"),
+        "cameraSettleMsVsServer": settle_ms(samples, ok(camera_dev, SETTLE_TOLERANCE_M)) if camera_rows else None,
+        "wristRSettleMs": settle_ms(samples, ok(right, WRIST_SETTLE_TOLERANCE_M)) if right_rows else None,
+        "wristLSettleMs": settle_ms(samples, ok(left, WRIST_SETTLE_TOLERANCE_M)) if left_rows else None,
+        "tailDev": {"camera": tail(camera_dev) if camera_rows else None, "wristR": tail(right) if right_rows else None,
+                    "wristL": tail(left) if left_rows else None, "lastS": SETTLE_TAIL_S},
+        "samples": len(samples), "hitchFrames": len(raw) - len(samples), "wristComparable": not legacy,
+    }
+
+
 def client_net_receive(bots, series):
     """
     Маркеры приёма у клиента: по ролям NT суммы счётчиков; строгий bakedFromTransform — событие ResetState, где PosY не
@@ -265,10 +404,23 @@ def client_net_receive(bots, series):
             total["sumAbsDeltaYM"] = round(total["sumAbsDeltaYM"] + baked.get("sumAbsDeltaYM", 0.0), 5)
             total["snapshotMismatch"] += (nt.get("snapshotCheck") or {}).get("mismatch", 0)
             row = strict.setdefault(role, {"events": 0, "matchedServer": 0, "bakedFromTransform": 0, "sumDeltaYM": 0.0,
-                                           "fillMinusServerYmm": []})
+                                           "fillMinusServerYmm": [], "patchedRuns": 0, "patchedRunsOver1s": [],
+                                           "patchedMaxDurationS": 0.0})
             server_rows = series.get((body.get("avatarNetId"), role)) or {}
+            patched = receive.get("model") == "patched"
+            if patched and nt.get("series"):
+                runs = patched_strict(nt["series"], server_rows)
+                row["patchedRuns"] += len(runs)
+                for run in runs:
+                    row["patchedMaxDurationS"] = max(row["patchedMaxDurationS"], run["durationS"])
+                    if run["durationS"] > PATCHED_WINDOW_S:
+                        row["patchedRunsOver1s"].append({"avatarNetId": body.get("avatarNetId"), **run})
+            total["model"] = receive.get("model") or "legacy"
             for event in nt.get("resetEvents") or []:
                 if (event.get("flags") or 0) & POS_Y:
+                    continue
+                # Прежний строгий маркер — только когда оси реально взяты из трансформа (patched: source=transform).
+                if event.get("source") not in (None, "transform"):
                     continue
                 row["events"] += 1
                 server = server_rows.get(round(event.get("stamp") or -1, 4))
@@ -284,8 +436,35 @@ def client_net_receive(bots, series):
                         row["sumDeltaYM"] = round(row["sumDeltaYM"] + fill[1] - previous[1], 5)
     for row in strict.values():
         row["fillMinusServerYmm"] = stats(row["fillMinusServerYmm"])
+    settles = [s for s in (body_settle(b, series) for b in bots) if s]
     return {"byRole": roles, "strict": strict, "cameraAtSpawn": cameras, "droppedNotSpawned": dropped,
-            "clientNoRecoilInstalls": installs}
+            "clientNoRecoilInstalls": installs, "settle": settles}
+
+
+def settle_summary(clients):
+    """Тела, появившиеся при подключённом клиенте (> 1 с после подключения): медиана/максимум оседания по телам."""
+    bodies = [s for c in clients.values() for s in ((c.get("netReceive") or {}).get("settle") or [])
+              if (s.get("spawnSinceConnectS") or 0) > 1.0]
+
+    def agg(key):
+        scope = [b for b in bodies if not key.startswith("wrist") or b.get("wristComparable", True)]
+        values = [b[key] for b in scope if b.get(key) is not None]
+        missing = sum(1 for b in scope if b.get(key) is None)
+        return {**stats(values), "notSettled": missing, "notComparable": len(bodies) - len(scope)}
+    return {"bodies": len(bodies), "cameraSettleMsVsServer": agg("cameraSettleMsVsServer"),
+            "wristRSettleMs": agg("wristRSettleMs"), "wristLSettleMs": agg("wristLSettleMs"), "expectationMs": 500,
+            "toleranceM": {"camera": SETTLE_TOLERANCE_M, "wrist": WRIST_SETTLE_TOLERANCE_M}, "timeSlackS": SETTLE_TIME_SLACK_S}
+
+
+def server_warmup(server):
+    """Сервер: полные снимки в первые 0,5 с после первой отправки каждого NT тела (прогрев патча)."""
+    rows = []
+    for avatar in (server.get("netSendMarkers") or {}).get("avatars") or []:
+        for role, nt in (avatar.get("nts") or {}).items():
+            rows.append({"netId": avatar.get("netId"), "kind": avatar.get("kind"), "role": role,
+                         "sendsFirst500ms": nt.get("sendsFirst500ms"), "fullSendsFirst500ms": nt.get("fullSendsFirst500ms"),
+                         "fullSends": nt.get("fullSends"), "ntSettings": nt.get("ntSettings")})
+    return rows
 
 
 def server_case(run_root, combo):
@@ -481,11 +660,14 @@ def main():
             clients = {p: client_case(r, entry, server) for p, r in reports.items()}
             server = {k: v for k, v in server.items() if k not in ("shotPoses", "poseSamples", "netSeries")}
             combo_flags = flags(combo, server, clients)
+            settle = settle_summary(clients)
+            warmup = server_warmup(server)
             at_start = entry.get("clientsAtStart") or []
             if at_start:
                 combo_flags["clientsWithoutModeTeam"] = all(c.get("teamIndex") == 0 for c in at_start)
                 combo_flags["clientsOffLane1_5m"] = all((c.get("distanceToLaneM") or 0) >= 1.5 for c in at_start if c.get("position"))
             run["combos"][combo] = {"server": server, "clients": clients, "clientsAtStart": at_start,
+                                    "settle": settle, "serverWarmup": warmup,
                                     "botTeamIndex": entry.get("botTeamIndex"), "flags": combo_flags}
         run["flags"] = {
             "clientConsoleErrorsZero": all((c["consoleErrors"] or 0) == 0 for c in run["clients"].values()),
@@ -506,6 +688,10 @@ def main():
             angles = {p: c["barrelToRayDeg"] for p, c in data["clients"].items()}
             print("  ", combo, "server:", data["server"].get("status"), "shots", data["server"].get("shots"),
                   "| clientAngles", json.dumps(angles), "| FAILED" if failed else "| ok", failed)
+            if data.get("settle", {}).get("bodies"):
+                st = data["settle"]
+                print("      settle bodies", st["bodies"], "camera vsServer", json.dumps(st["cameraSettleMsVsServer"]),
+                      "wristR", json.dumps(st["wristRSettleMs"]), "wristL", json.dumps(st["wristLSettleMs"]))
             for participant, client in data["clients"].items():
                 receive = client.get("netReceive") or {}
                 if receive.get("byRole"):

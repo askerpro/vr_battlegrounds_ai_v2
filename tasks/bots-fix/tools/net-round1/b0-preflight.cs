@@ -4,7 +4,7 @@
 // attempt-2: клиенты — обычные игроки (GameRole=Player); зрители не получают сессию (OnSpectatorConnect не реализован).
 const string Root = "tasks/bots-fix/reports/net-round1";
 const string ScenePath = "Assets/Scenes/Debug/BotCombatStand.unity";
-const string Attempt = "attempt-6";
+const string Attempt = "attempt-9";
 var blockers = new List<string>();
 var notes = new List<string>();
 if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || EditorApplication.isUpdating)

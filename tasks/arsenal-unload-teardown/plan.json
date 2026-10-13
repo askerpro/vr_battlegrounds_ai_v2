@@ -1,0 +1,38 @@
+{
+  "task_id": "arsenal-unload-teardown",
+  "owner": "gameplay",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/gameplay/Vr_Battlegrounds_ai",
+  "base_sha": "2a5ed8f07574f41ca896505ee320d97244c4c0fa",
+  "doc_path": "tasks/arsenal-unload-teardown/Readme.md",
+  "title": "Разборка станций арсенала при выгрузке карты не оставляет предметы вне сцены",
+  "stages": [
+    {
+      "id": "top-level-detach",
+      "writes": [
+        "Assets/Scripts/Arsenal/ArsenalStationComposer.cs",
+        "Assets/Scripts/Maps/Runtime/MapRunAuthority.cs",
+        "Assets/Scripts/Maps/Runtime/MapBootstrap.cs",
+        "tasks/arsenal-unload-teardown/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "accepted-tests",
+      "writes": [
+        "Assets/Tests/EditMode/Arsenal/ArsenalCompositionTeardownTests.cs",
+        "Assets/Tests/EditMode/Arsenal/ArsenalCompositionTeardownTests.cs.meta",
+        "tasks/arsenal-unload-teardown/**"
+      ],
+      "after": [
+        {
+          "task": "arsenal-unload-teardown",
+          "stage": "top-level-detach",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

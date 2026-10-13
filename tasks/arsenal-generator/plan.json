@@ -1,8 +1,8 @@
 {
   "task_id": "arsenal-generator",
-  "owner": "arsenal-generator",
+  "owner": "gameplay",
   "client": "claude",
-  "worktree": "F:/CodexWorktrees/arsenal-generator/Vr_Battlegrounds_ai",
+  "worktree": "F:/CodexWorktrees/gameplay/Vr_Battlegrounds_ai",
   "base_sha": "ebeb2de7bb22e6033a4c376b1ca7e9e529b35bac",
   "doc_path": "tasks/arsenal-generator/Readme.md",
   "title": "Генератор станций арсенала",
@@ -106,39 +106,14 @@
       "needs": []
     },
     {
-      "id": "decorations",
+      "id": "planning",
       "writes": [
-        "Assets/Prefabs/Arsenal/Decorations/**",
-        "Assets/Scripts/Arsenal/ArsenalDecorationDescriptor.cs",
-        "Assets/Scripts/Arsenal/ArsenalStationResolver.cs",
-        "Assets/Scripts/Arsenal/ArsenalStationComposer.cs",
-        "Assets/Data/Arsenal/ArsenalCompositionCatalog.asset",
-        "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalCompositionMetadataCompiler.cs",
-        "Docs/Arsenal/**",
         "tasks/arsenal-generator/**"
       ],
       "after": [
         {
           "task": "arsenal-generator",
           "stage": "composer-presentation",
-          "state": "merged"
-        }
-      ],
-      "needs": []
-    },
-    {
-      "id": "prefab-preview",
-      "writes": [
-        "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalPrefabStagePreview.cs",
-        "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalDecorationDescriptorEditor.cs",
-        "Assets/Scripts/Arsenal/ArsenalPriceTag.cs",
-        "Docs/Arsenal/**",
-        "tasks/arsenal-generator/**"
-      ],
-      "after": [
-        {
-          "task": "arsenal-generator",
-          "stage": "decorations",
           "state": "merged"
         }
       ],
@@ -155,8 +130,52 @@
       "after": [
         {
           "task": "arsenal-generator",
-          "stage": "composer-presentation",
-          "state": "accepted"
+          "stage": "planning",
+          "state": "merged"
+        },
+        {
+          "task": "arsenal-unload-teardown",
+          "stage": "top-level-detach",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "prefab-preview",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalPrefabStagePreview.cs",
+        "Assets/Scripts/Arsenal/ArsenalPriceTag.cs",
+        "Docs/Arsenal/**",
+        "tasks/arsenal-generator/**"
+      ],
+      "after": [
+        {
+          "task": "arsenal-generator",
+          "stage": "acceptance",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "decorations",
+      "writes": [
+        "Assets/Prefabs/Arsenal/**",
+        "Assets/Scripts/Arsenal/ArsenalDecorationDescriptor.cs",
+        "Assets/Scripts/Arsenal/ArsenalStationResolver.cs",
+        "Assets/Scripts/Arsenal/ArsenalStationDescription.cs",
+        "Assets/Scripts/Arsenal/ArsenalCompositionCatalog.cs",
+        "Assets/Data/Arsenal/ArsenalCompositionCatalog.asset",
+        "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalCompositionMetadataCompiler.cs",
+        "Docs/Arsenal/**",
+        "tasks/arsenal-generator/**"
+      ],
+      "after": [
+        {
+          "task": "arsenal-generator",
+          "stage": "prefab-preview",
+          "state": "merged"
         }
       ],
       "needs": []

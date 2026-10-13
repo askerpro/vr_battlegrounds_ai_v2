@@ -58,21 +58,40 @@ and user communication. Keep detailed execution traces in task artifacts, outsid
   задачами всегда проходит через canonical inbox; native-уведомление возможно только
   внутри одного семейства после свежей проверки обоих адресов, и не означает ACK.
 - Inbox is notifications, not ACK (ACK is `contract-ack` for contracts/plans). On every check run
-  `python Tools/agents/coordination.py inbox --task <task> --owner <owner> --unread`: it returns
+  `python Tools/agents/coordination.py inbox --task <task> --owner <owner> --unread --as "<address>"`: it returns
   unread messages and relevant notices in order and marks them read; repeat while
   `pagination.has_more=true` (`--limit 50`, `--max-bytes 20000`). Other service history is
   summarized in `pagination.system_read` (open recent_ids with `inbox --event <id>`). Plain
-  `inbox` and `watch-inbox` mark nothing; manual `ack-events` is not needed. Register with
+  `inbox` marks nothing; manual `ack-events` is not needed. Register with
   `register --document tasks/<task-id>/Readme.md` (not plan.json). In the Codex sandbox,
   register/begin/message/`inbox --unread` and other writing coordination commands need
   escalation (the hub is outside the writable root); `attempt to write a readonly database`
   means retry with escalation.
-- At session start/resume, check inbox and hub status. If the client provides a native
-  Monitor that delivers process output into the agent context, the principal agent MUST
-  attach one bounded read-only watch-inbox for its task/session and restart it after timeout
-  while the session continues. Do not create duplicates or substitute an unattended daemon.
-  Signals require fresh inbox/status checks; monitoring never ACKs or executes requests.
-  See [monitor lifecycle](.agents/rules/agent_coordination.md#штатный-monitor-inbox).
+- The task inbox is handled by the leading session, the one that published its address with
+  route-publish. Always run `python Tools/agents/coordination.py inbox --owner <owner> [--task <task>]
+  --unread --as "<your address from the first line of ListAgents, name [ref]>"`. The hub is now in warn
+  mode: a call without `--as` still marks events but returns `binding_warning`. After the switch to
+  enforce (by the maintainer, on the user's decision) sessions without `--as` or with someone else's
+  address get the leading session's task events view-only: nothing is marked, the task is listed in
+  `pagination.view_only_tasks`, repeating is useless. Do not copy someone else's address into `--as`.
+  If your address changed, run route-publish for each of your active tasks. Do not use `ack-events` for
+  the leading session; if it returned `route_warnings`, tell that session the task-id/event_id.
+  Wait for new events with a background command (Bash, run_in_background):
+  `python Tools/agents/coordination.py wait-inbox --owner <owner> --as "<address>"`. It marks nothing
+  and ends with one JSON line: `inbox_ready` — run the command from `command_argv` (`instruction` is the
+  same command as a Bash string), handle the events and start wait-inbox again; `timeout` (after 12 h) —
+  just restart it; `error` — do not restart wait-inbox until `coordination.py status` succeeds.
+  `watch-inbox` is deprecated. Do not use periodic alarms, Monitor loops or ScheduleWakeup to check the
+  hub. See [inbox and waiting](.agents/rules/agent_coordination.md#inbox-и-ожидание-событий).
+- Questions and decisions for the user go only through the AskUserQuestion tool, never as plain
+  text at the end of a turn. Before asking, finish everything that does not depend on the answer.
+  Give options with the recommended one first; the user can always answer freely via Other.
+  A Stop hook returns the turn if the final message looks like a plain-text question.
+- Before AskUserQuestion, process your inbox (contract-ack, zone-ack, replies to other agents):
+  an open dialog freezes the expert's inter-agent coordination until the human answers.
+  Reminders about an earlier unanswered question do not create new dialogs.
+- On a wake-up (background command finished, subagent notification) with nothing to report,
+  answer with one short line or nothing.
 - Report worker, broker/proxy, coordination-hook and agent-infra issues to the hub:
   address task agent-coordination-protocol, kind infra_issue, with an explicit
   'for the worker and agent-infra maintainer' label, symptom/impact, reproduction,

@@ -35,6 +35,13 @@ namespace VrBattlegrounds.Editor.Avatars
 
             /// <summary>Масштаб корпуса пака в тех же осях — делитель для перевода в масштаб префаба.</summary>
             public float BodyScale;
+
+            /// <summary>
+            /// Центр ладони кадра в тех же осях, что <see cref="BodyPosition" /> (определение SDK
+            /// <c>UxrAvatarHand.GetPalmCenter</c>: среднее запястья и proximal указательного и мизинца), без масштаба.
+            /// Нужен якорю «центр ладони» Grip Extraction; прежний конвейер его не читает.
+            /// </summary>
+            public Vector3 PalmCenter;
         }
 
         /// <param name="model">Меш рук пака (<c>Modelas/&lt;папка&gt;/Mesh/*.FBX</c>)</param>
@@ -76,7 +83,8 @@ namespace VrBattlegrounds.Editor.Avatars
                     Hand         = new UxrHandDescriptor(arm, handAxes, fingerAxes),
                     BodyPosition = relative.GetColumn(3),
                     BodyRotation = relative.rotation,
-                    BodyScale    = relative.lossyScale.x
+                    BodyScale    = relative.lossyScale.x,
+                    PalmCenter   = hand.inverse.MultiplyPoint3x4(PalmCenterWorld(arm.Hand))
                 };
             }
             finally
@@ -122,6 +130,17 @@ namespace VrBattlegrounds.Editor.Avatars
             }
 
             return bone;
+        }
+
+        /// <summary>Центр ладони в мире — ровно SDK <c>UxrAvatarHand.GetPalmCenter</c>; общее с <see cref="KinemationPoseExtractor" />.</summary>
+        internal static Vector3 PalmCenterWorld(UxrAvatarHand hand)
+        {
+            if (!hand.GetPalmCenter(out Vector3 center))
+            {
+                throw new KeyNotFoundException("Центр ладони: нужны запястье и proximal указательного и мизинца.");
+            }
+
+            return center;
         }
 
         /// <summary>Оси ладони и пальцев по текущей позе — общее с <see cref="KinemationPoseExtractor" />.</summary>

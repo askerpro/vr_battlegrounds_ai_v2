@@ -378,8 +378,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 foreach(var pair in edit.FingerCurlDeg??new Dictionary<string,float>()) {
                     if(!fingers.TryGetValue(pair.Key,out var f)) throw new ArgumentException("Неизвестный палец: "+pair.Key);
                     if(float.IsNaN(pair.Value)||Mathf.Abs(pair.Value)>120) throw new ArgumentException("Curl пальца вне [-120; 120]°: "+pair.Key);
-                    var weights=FitFingerChain.SdkWeights(pair.Key);var bones=new[]{f.Proximal,f.Intermediate,f.Distal};
-                    for(int i=0;i<3;i++) if(bones[i]) bones[i].Rotate(fingerAxes.LocalRight,weights[i]*pair.Value,Space.Self);
+                    FitFingerChain.ApplyCurl(f,pair.Key,fingerAxes,pair.Value);
                 }
                 Matrix4x4 frameToWorld=_worldToFrame.inverse;Quaternion basis=frameToWorld.rotation;
                 Quaternion rotation=basis*axes.Rotation(edit.HandRotationDeg)*Quaternion.Inverse(basis);

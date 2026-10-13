@@ -1,0 +1,155 @@
+using System;
+using System.IO;
+using UnityEditor;
+
+namespace VrBattlegrounds.Editor.Avatars
+{
+    /// <summary>Опора посадки предмета в кисть цели.</summary>
+    public enum GripAnchor
+    {
+        /// <summary>Прежний конвейер: предмет относительно запястья, подобие вокруг запястья (HandsPackGripAligner).</summary>
+        Wrist,
+
+        /// <summary>Центр ладони (SDK GetPalmCenter) и универсальные оси кисти источника совпадают с теми же у цели.</summary>
+        PalmCenter
+    }
+
+    /// <summary>Как поза пальцев попадает в ассет цели.</summary>
+    public enum GripPoseEncoding
+    {
+        /// <summary>Дескриптор источника как есть (вторая рука — Mirrored): прежний импортёр, профиль MEF.</summary>
+        AsSource,
+
+        /// <summary>
+        /// Мировой путь на риге цели (<c>UxrAvatarRig.UpdateHandUsingDescriptor</c>) из исходной позы, затем
+        /// <c>new UxrHandDescriptor(avatar, side)</c> — поза получает пястные, если они есть у цели
+        /// (reports/cyborg-grips/pose-transfer-diagnosis.md).
+        /// </summary>
+        TargetRigWorld
+    }
+
+    /// <summary>
+    /// Профиль кисти цели: на каком риге сажать и кодировать позу, по какому GUID писать запись хвата, куда класть позы
+    /// и как называть align. Встроенные профили — <see cref="Mef" /> (прежний импортёр) и <see cref="MefCyborgHands" />.
+    /// </summary>
+    public sealed class GripTargetProfile
+    {
+        public const string MefName            = "MEF";
+        public const string MefCyborgHandsName = "MEF_cyborg_hands";
+
+        private const string CyborgFolder   = "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands";
+        private const string CyborgBaseGuid = "71b74b0d08444f49bbb7aa2828d0890a";
+
+        public string Name;
+
+        /// <summary>Префаб аватара, на котором считаются посадка (запястье, центр ладони, граббер) и кодирование позы.</summary>
+        public string RigPrefabPath;
+
+        /// <summary>Префаб, чей GUID — ключ записи хвата (<c>UxrGripPoseInfo.AvatarPrefabGuid</c>).</summary>
+        public string RecordAvatarPath;
+
+        /// <summary>Ожидаемый GUID записи (сторож), null — без проверки.</summary>
+        public string ExpectedRecordGuid;
+
+        /// <summary>База поз (<c>_handPoses</c>), где SDK ищет позу по имени.</summary>
+        public string PoseRegistryPath;
+
+        /// <summary>Папка поз; null — папка рецепта (как прежний импортёр).</summary>
+        public string PoseFolder;
+
+        /// <summary>Имя папки аватара в align: <c>Grabs/&lt;источник&gt;/&lt;поза&gt;/&lt;AlignAvatarName&gt;/Left|Right</c>.</summary>
+        public string AlignAvatarName;
+
+        public GripAnchor       Anchor;
+        public GripPoseEncoding Encoding;
+
+        /// <summary>Apply дописывает новые позы в <see cref="PoseRegistryPath" /> (иначе только проверка и предупреждения).</summary>
+        public bool RegisterPoses;
+
+        /// <summary>Apply удаляет прежние align записи, если на них больше никто не ссылается (как прежний импортёр).</summary>
+        public bool RemoveReplacedAligns;
+
+        /// <summary>Пальцы 2–5 рига должны иметь пястные (иначе — ошибка профиля).</summary>
+        public bool RequireMetacarpals;
+
+        public string PoseFolderFor(GripSourcePoint point) => PoseFolder ?? point.LegacyPoseFolder;
+
+        public string PosePathFor(GripSourcePoint point) => $"{PoseFolderFor(point)}/{point.Pose}.asset";
+
+        /// <summary>Прежний импортёр паков: MEF_Base_Avatar, база поз PlayerBase_NonSdkHands, опора — запястье.</summary>
+        public static GripTargetProfile Mef()
+        {
+            string avatar = HandsPackPoseImporter.GripAvatars[0];
+            return new GripTargetProfile
+            {
+                Name                 = MefName,
+                RigPrefabPath        = avatar,
+                RecordAvatarPath     = avatar,
+                PoseRegistryPath     = HandsPackPoseImporter.PoseBase,
+                PoseFolder           = null,
+                AlignAvatarName      = Path.GetFileNameWithoutExtension(avatar),
+                Anchor               = GripAnchor.Wrist,
+                Encoding             = GripPoseEncoding.AsSource,
+                RegisterPoses        = true,
+                RemoveReplacedAligns = true,
+                RequireMetacarpals   = false
+            };
+        }
+
+        /// <summary>
+        /// Кисть Cyborg: геометрия и грабберы — Player (с пястными), записи — по GUID Base, позы — папка HandPoses аватара,
+        /// опора — центр ладони. Base в первом прогоне не пишется; прежние align-копии не удаляются.
+        /// </summary>
+        public static GripTargetProfile MefCyborgHands() =>
+            new GripTargetProfile
+            {
+                Name                 = MefCyborgHandsName,
+                RigPrefabPath        = $"{CyborgFolder}/MEF_cyborg_hands_Player.prefab",
+                RecordAvatarPath     = $"{CyborgFolder}/MEF_cyborg_hands_Base.prefab",
+                ExpectedRecordGuid   = CyborgBaseGuid,
+                PoseRegistryPath     = $"{CyborgFolder}/MEF_cyborg_hands_Base.prefab",
+                PoseFolder           = $"{CyborgFolder}/HandPoses",
+                AlignAvatarName      = MefCyborgHandsName,
+                Anchor               = GripAnchor.PalmCenter,
+                Encoding             = GripPoseEncoding.TargetRigWorld,
+                RegisterPoses        = false,
+                RemoveReplacedAligns = false,
+                RequireMetacarpals   = true
+            };
+
+        public static GripTargetProfile Get(string name)
+        {
+            if (string.Equals(name, MefName, StringComparison.OrdinalIgnoreCase)) return Mef();
+            if (string.Equals(name, MefCyborgHandsName, StringComparison.OrdinalIgnoreCase)) return MefCyborgHands();
+            throw new ArgumentException($"target: неизвестный профиль «{name}» (есть {MefName}, {MefCyborgHandsName}).");
+        }
+
+        /// <summary>Копия с переопределениями запроса (null — как в профиле).</summary>
+        public GripTargetProfile With(GripAnchor? anchor, GripPoseEncoding? encoding, bool? registerPoses, bool? removeReplacedAligns)
+        {
+            var copy = (GripTargetProfile)MemberwiseClone();
+            copy.Anchor               = anchor ?? Anchor;
+            copy.Encoding             = encoding ?? Encoding;
+            copy.RegisterPoses        = registerPoses ?? RegisterPoses;
+            copy.RemoveReplacedAligns = removeReplacedAligns ?? RemoveReplacedAligns;
+            return copy;
+        }
+
+        /// <summary>GUID записи хвата; сверяется с <see cref="ExpectedRecordGuid" />.</summary>
+        public string ResolveRecordGuid()
+        {
+            string guid = AssetDatabase.AssetPathToGUID(RecordAvatarPath);
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentException($"{Name}: нет префаба записи {RecordAvatarPath}");
+            }
+
+            if (ExpectedRecordGuid != null && guid != ExpectedRecordGuid)
+            {
+                throw new ArgumentException($"{Name}: GUID {RecordAvatarPath} = {guid}, ожидался {ExpectedRecordGuid}");
+            }
+
+            return guid;
+        }
+    }
+}

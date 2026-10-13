@@ -45,11 +45,14 @@ namespace VrBattlegrounds.Editor.Avatars
     {
         public const string PoseFolder = "Assets/Art/HandPoses/HandsPack";
 
-        private const string Pack       = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/";
-        private const string PoseBase   = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
+        /// <summary>Папка align-трансформов поз паков под <c>Grabs</c> (общая у Hands и KINEMATION).</summary>
+        internal const string AlignSource = "HandsPack";
 
-        /// <summary>Аватары, чьим записям хвата на оружии назначаются позы пака.</summary>
-        private static readonly string[] GripAvatars = { "Assets/Prefabs/Player/MEF_Base_Avatar.prefab" };
+        private const string Pack       = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/";
+        internal const string PoseBase  = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
+
+        /// <summary>Аватары, чьим записям хвата на оружии назначаются позы пака (профиль MEF Grip Extraction читает тот же список).</summary>
+        internal static readonly string[] GripAvatars = { "Assets/Prefabs/Player/MEF_Base_Avatar.prefab" };
 
         public static readonly HandsPackPoseRecipe[] Recipes = new[]
         {
@@ -126,7 +129,7 @@ namespace VrBattlegrounds.Editor.Avatars
             GameLog.Debug.Info($"[HandsPackPoseImporter] Поз: {imported.Count} → {string.Join(", ", imported.Select(i => i.Recipe.PoseFolder ?? PoseFolder).Distinct())}");
         }
 
-        private static HandsPackPoseExtractor.Sample ExtractSample(HandsPackPoseRecipe recipe)
+        internal static HandsPackPoseExtractor.Sample ExtractSample(HandsPackPoseRecipe recipe)
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>($"{Pack}{recipe.Folder}/Mesh/{recipe.Mesh}.FBX");
             AnimationClip clip = AssetDatabase.FindAssets("t:AnimationClip", new[] { $"{Pack}{recipe.Folder}/Animations" })
@@ -166,9 +169,12 @@ namespace VrBattlegrounds.Editor.Avatars
             return asset;
         }
 
-        private static void RegisterOnPoseBase(IEnumerable<UxrHandPoseAsset> poses)
+        private static void RegisterOnPoseBase(IEnumerable<UxrHandPoseAsset> poses) => RegisterOnPoseBase(PoseBase, poses);
+
+        /// <summary>Дописывает позы в <c>_handPoses</c> базы поз (по ссылке); общее с Grip Extraction.</summary>
+        internal static void RegisterOnPoseBase(string poseBase, IEnumerable<UxrHandPoseAsset> poses)
         {
-            GameObject root   = AssetDatabase.LoadAssetAtPath<GameObject>(PoseBase);
+            GameObject root   = AssetDatabase.LoadAssetAtPath<GameObject>(poseBase);
             var        avatar = new SerializedObject(root.GetComponent<UxrAvatar>());
             SerializedProperty list = avatar.FindProperty("_handPoses");
 
@@ -233,7 +239,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// Удаляет трансформ выравнивания, если на него больше не ссылается ни одна запись хвата префаба,
         /// и опустевшие папки над ним (до корня префаба).
         /// </summary>
-        private static void RemoveUnused(GameObject root, Transform old, Transform current)
+        internal static void RemoveUnused(GameObject root, Transform old, Transform current)
         {
             if (old == null || old == current || !old.IsChildOf(root.transform) || old.name == "Grabs") return;
 
@@ -254,11 +260,14 @@ namespace VrBattlegrounds.Editor.Avatars
             }
         }
 
-        /// <summary><c>MeshContainer/Grabs/HandsPack/&lt;поза&gt;/&lt;аватар&gt;/&lt;сторона&gt;</c> (или от корня, если <c>MeshContainer/Grabs</c> нет); создаётся при отсутствии.</summary>
-        private static Transform AlignTransform(Transform root, string pose, string avatar, UxrHandSide side)
+        /// <summary>
+        /// <c>MeshContainer/Grabs/&lt;источник&gt;/&lt;поза&gt;/&lt;аватар&gt;/&lt;сторона&gt;</c> (или от корня, если <c>MeshContainer/Grabs</c> нет);
+        /// создаётся при отсутствии. Источник паков — <see cref="AlignSource" />.
+        /// </summary>
+        internal static Transform AlignTransform(Transform root, string pose, string avatar, UxrHandSide side, string source = AlignSource)
         {
             Transform parent = root.Find("MeshContainer/Grabs") ?? root;
-            foreach (string name in new[] { "HandsPack", pose, avatar, side.ToString() })
+            foreach (string name in new[] { source, pose, avatar, side.ToString() })
             {
                 Transform child = parent.Find(name);
                 if (child == null)

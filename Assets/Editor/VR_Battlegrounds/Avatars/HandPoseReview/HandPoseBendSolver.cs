@@ -44,6 +44,17 @@ namespace VrBattlegrounds.Editor.HandPoseReview
 
         public static float[] SdkWeights(string finger) => finger == "thumb" ? new[] {.1f, .3f, 1f} : new[] {1f, 1f, 1f};
 
+        /// <summary>
+        /// Curl пальца на костях аватара как UxrAvatarRig.CurlFinger: proximal/intermediate/distal поворачиваются вокруг
+        /// LocalRight осей пальцев (Space.Self) с весами <see cref="SdkWeights" />. Одно правило для предпросмотра правки
+        /// (HandPoseFitSnapshot.CaptureEdited) и кодирования позы (Grip Extraction).
+        /// </summary>
+        public static void ApplyCurl(UltimateXR.Avatar.Rig.UxrAvatarFinger finger, string fingerName, UltimateXR.Core.Math.UxrUniversalLocalAxes fingerAxes, float curlDeg)
+        {
+            var weights = SdkWeights(fingerName);var bones = new[] {finger.Proximal, finger.Intermediate, finger.Distal};
+            for (int i = 0; i < 3; i++) if (bones[i]) bones[i].Rotate(fingerAxes.LocalRight, weights[i] * curlDeg, Space.Self);
+        }
+
         /// <summary>Жёсткая модель: точка сегмента s (0 proximal, 1 intermediate, 2 distal) после curl на угол, градусы.</summary>
         public Vector3 Apply(Vector3 p, int segment, float curlDeg)
         {

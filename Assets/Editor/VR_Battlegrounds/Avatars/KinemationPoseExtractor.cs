@@ -79,7 +79,8 @@ namespace VrBattlegrounds.Editor.Avatars
                     Hand         = new UxrHandDescriptor(arm, handAxes, fingerAxes),
                     BodyPosition = relative.GetColumn(3),
                     BodyRotation = relative.rotation,
-                    BodyScale    = 1f
+                    BodyScale    = 1f,
+                    PalmCenter   = hand.inverse.MultiplyPoint3x4(HandsPackPoseExtractor.PalmCenterWorld(arm.Hand))
                 };
             }
             finally

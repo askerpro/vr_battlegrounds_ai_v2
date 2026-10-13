@@ -310,7 +310,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 ["botNavigator"] = player.GetComponents<BotNavigator>().Length,
                 ["botCombatDriver"] = player.GetComponents<BotCombatDriver>().Length,
                 ["botBodyWritesPose"] = body != null && !body.PoseDrivenExternally,
-                ["runtimeGhostKit"] = player.GetComponent<BotRuntimeController>() is BotRuntimeController runtime && runtime.Ghost
+                ["runtimeGhostKit"] = player.GetComponent<BotRuntimeController>() is BotRuntimeController runtime && runtime.Passive
             };
         }
 
@@ -496,7 +496,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 _ghostStart = Time.time;
                 _ghostFirstFeet = feet;
                 _ghostTeam = _player.Session != null ? _player.Session.TeamIndex : 0;
-                Equipment("ghostDriven", _runtime != null && _runtime.Ghost ? "ghostKit" : "noGhostKit", written);
+                Equipment("ghostDriven", _runtime != null && _runtime.Passive ? "ghostKit" : "noGhostKit", written);
             }
             else _ghostTravel += Planar(feet - _ghostPrevious);
             _ghostPrevious = feet;

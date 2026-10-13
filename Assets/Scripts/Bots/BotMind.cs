@@ -1,5 +1,7 @@
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Core;
+using VrBattlegrounds.Maps;
 
 namespace VrBattlegrounds.Bots
 {
@@ -12,18 +14,14 @@ namespace VrBattlegrounds.Bots
         /// <summary>Место на базе — индекс в <see cref="BotHomeSlot"/>, раздаёт директор по порядку ботов.</summary>
         public int HomeSlot;
 
-        /// <summary>Как тело получает позу; задаётся при создании бота и переживает смену тела.</summary>
-        public BotBodyMode BodyMode;
-
-        /// <summary>Тело, которое бот вёл в прошлый тик: сменилось — новое ставится на ноги прежнего.</summary>
-        public Component LastBody;
-
         /// <summary>
-        /// Режим <see cref="BotBodyMode.PlayerFlow"/>: тело, на которое уже добавлен комплект адаптера (один раз на тело),
-        /// и какой: призрак (<see cref="PlayerFlowGhostKit"/> — драйвер и порядок кадра без рук/прицела) или полный.
+        /// Комплект бот-компонентов текущего тела (<see cref="BotKit"/>): один раз на тело, ссылки без поиска в тике.
+        /// Пишет только директор (по <c>AvatarSpawned</c>, повышение пассивного — в тике).
         /// </summary>
-        public Component PlayerFlowBody;
-        public bool PlayerFlowGhostKit;
+        public BotKitRefs Kit;
+
+        /// <summary>Страховка тика (комплект собран не по событию) уже предупредила — второй раз не пишем.</summary>
+        public bool KitFallbackWarned;
 
         /// <summary>Где стоял бот (ноги) и куда смотрел — для нового тела.</summary>
         public bool HasPlace;
@@ -32,6 +30,16 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>Сцена, где запомнено место: после смены карты место не переносится.</summary>
         public int SceneHandle = -1;
+
+        /// <summary>
+        /// Кеш зоны спавна своей команды (место на базе): ищется по сцене только при смене сцены или команды, либо когда
+        /// зона перестала принадлежать команде (смена сторон). Пишет директор.
+        /// </summary>
+        public TeamSpawnZone HomeZone;
+        public TeamData HomeTeam;
+        public int HomeScene = -1;
+        /// <summary>Зоны нет — следующий поиск не раньше этого времени (без поиска по сцене в каждом тике).</summary>
+        public float HomeRetryAt;
 
         /// <summary>Закупка, к которой относится решение (номер раунда; без раундов — тело). -1 — не покупал.</summary>
         public int ShopToken = -1;

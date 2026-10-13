@@ -56,7 +56,7 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>
         /// Тело — призрак бота (тело выбывшего): драйвер ведёт его и мёртвым (корень, камера, кисти в позе покоя).
-        /// Ставит только <see cref="BotRuntimeController.SetGhostKit"/>. Иначе погибшее тело не ведётся.
+        /// Ставит только <see cref="BotRuntimeController.SetKit"/>. Иначе погибшее тело не ведётся.
         /// </summary>
         public bool DrivesDeadBody { get; internal set; }
 

@@ -39,8 +39,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             if (BotDirector.Instance != null && BotDirector.Instance.Bots.Count != 0)
                 throw new InvalidOperationException("Есть чужие боты — стенд их не удаляет.");
             var director = BotDirector.EnsureInstance();
-            var mode = options.PlayerFlow ? BotBodyMode.PlayerFlow : BotBodyMode.Hybrid;
-            Subject = director.AddBot(mode);
+            Subject = director.AddBot();
             if (Subject != null) _ownedBots.Add(Subject);
             if (Subject == null || Subject.ActiveAvatar == null) throw new InvalidOperationException("Бот не создан.");
             if (options.AvatarIndex >= 0)
@@ -51,7 +50,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
             if (id == BotStandScenarioId.T02)
             {
-                var other = director.AddBot(mode);
+                var other = director.AddBot();
                 if(other!=null) _ownedBots.Add(other);
                 if(other?.ActiveAvatar==null) throw new InvalidOperationException("Нет второго бота.");
                 Place(other, Lane(new Vector3(0f, 0f, 5f)), 180f);
@@ -63,11 +62,14 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             var opponent = teams.FirstOrDefault(t => t != null &&
                 (id == BotStandScenarioId.T09 ? t.teamIndex == Subject.TeamIndex : t.teamIndex != Subject.TeamIndex));
             if (opponent == null) throw new InvalidOperationException("Нет нужной команды контрольной цели.");
-            _target = PlayersManager.Instance.CreateBotSession("Контрольная цель", "bot-stand-target-" + Guid.NewGuid().ToString("N"));
+            // Цель — тоже игрок без шлема (калибровка роста как у бота) с пассивным комплектом: драйвер держит корень,
+            // камеру на росте 1,65 и кисти в покое; без хвата, Blaze и выстрелов. Директор её не ведёт (не его бот).
+            _target = PlayersManager.Instance.CreateBotSession("Контрольная цель", "bot-stand-target-" + Guid.NewGuid().ToString("N"),
+                BotPlayerFlowSettings.Calibration);
             SessionTeamAssigner.Apply(_target, opponent, BotSkin.PickHittable(opponent), "BotCombatStand");
             AvatarManager.Instance.SpawnAvatar(null, null, _target);
             if (_target.ActiveAvatar == null) throw new InvalidOperationException("Нет тела контрольной цели.");
-            _target.ActiveAvatar.gameObject.AddComponent<BotBody>();
+            if (BotKit.Attach(_target.ActiveAvatar, BotKitKind.Passive) == null) throw new InvalidOperationException("Нет комплекта контрольной цели.");
             Place(_target, Lane(id == BotStandScenarioId.T01 ? new Vector3(-8f, 0f, 5f) : new Vector3(0f, 0f, 5f)), 180f);
             // Неуязвимость не подменяет прицел/выстрел: настоящий урон остаётся, цель выдерживает короткую серию.
             if (StateEventAuthority.IsWorldAuthority) _target.ActiveAvatar._actor.Life = 100000f;
@@ -108,11 +110,15 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         /// <summary>Точка раскладки case со сдвигом <see cref="BotStandRunOptions.LaneOffsetX"/> (мультипроцессный стенд).</summary>
         private Vector3 Lane(Vector3 feet) => _options != null ? feet + new Vector3(_options.LaneOffsetX, 0f, 0f) : feet;
 
+        /// <summary>
+        /// Ставит тело с комплектом бота (<see cref="BotKit"/>): ноги и курс. Без комплекта — ошибка раскладки (InvalidFixture):
+        /// компоненты бота добавляет только BotKit.
+        /// </summary>
         public static void Place(PlayerSession session, Vector3 feet, float yaw)
         {
             if (session?.ActiveAvatar == null) return;
             var body = session.ActiveAvatar.GetComponent<BotBody>();
-            if (body == null) body = session.ActiveAvatar.gameObject.AddComponent<BotBody>();
+            if (body == null) throw new InvalidOperationException("У тела " + session.PlayerName + " нет комплекта бота (BotBody).");
             body.Place(feet, yaw);
         }
 

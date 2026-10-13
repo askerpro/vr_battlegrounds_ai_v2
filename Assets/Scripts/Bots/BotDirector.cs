@@ -38,6 +38,8 @@ namespace VrBattlegrounds.Bots
     /// <item><b>Команда</b> — <see cref="BotTeamChoice"/> (выравнивает составы), скин — <see cref="BotSkin"/>.</item>
     /// <item><b>Тело</b> после смены карты возвращает директор (у бота нет соединения); новое тело
     /// встаёт на ноги прежнего (<see cref="BotMind"/>).</item>
+    /// <item><b>Комплект</b> бот-компонентов — один раз на тело по <c>AvatarSpawned</c> (<see cref="BotKit"/>): живое —
+    /// полный, призрак — пассивный; ссылки — в <see cref="BotMind.Kit"/>, тик не ищет компоненты.</item>
     /// </list>
     /// </summary>
     public sealed class BotDirector : MonoBehaviour
@@ -106,15 +108,13 @@ namespace VrBattlegrounds.Bots
             }
         }
 
-        /// <summary>Добавляет бота. null — сервер не готов (нет менеджеров).</summary>
-        public PlayerSession AddBot() => AddBot(BotBodyMode.Hybrid);
-
         /// <summary>
-        /// Добавляет бота с выбранным режимом тела. <see cref="BotBodyMode.PlayerFlow"/> (этап pf-prototype) включает
-        /// только стенд; сессия такого бота получает калибровку роста (<see cref="BotPlayerFlowSettings.Calibration"/>)
-        /// до спавна, как человек при подключении. null — сервер не готов (нет менеджеров).
+        /// Добавляет бота — обычного игрока без шлема (player-flow): сессия получает калибровку роста
+        /// (<see cref="BotPlayerFlowSettings.Calibration"/>) до спавна, как человек при подключении; комплект
+        /// бот-компонентов тело получает по <c>AvatarSpawned</c> (<see cref="BotKit"/>). null — сервер не готов
+        /// (нет менеджеров).
         /// </summary>
-        public PlayerSession AddBot(BotBodyMode mode)
+        public PlayerSession AddBot()
         {
             PlayersManager players = PlayersManager.Instance;
             if (!NetworkServer.active || players == null || AvatarManager.Instance == null)
@@ -124,19 +124,18 @@ namespace VrBattlegrounds.Bots
             }
 
             int number = _nextNumber++;
-            PlayerSession session = players.CreateBotSession($"Бот {number}", TokenPrefix + number,
-                mode == BotBodyMode.PlayerFlow ? BotPlayerFlowSettings.Calibration : (VrBattlegrounds.PhysicalSpaceUtils.PlayerCalibration?)null);
+            PlayerSession session = players.CreateBotSession($"Бот {number}", TokenPrefix + number, BotPlayerFlowSettings.Calibration);
             if (session == null) return null;
 
             _bots.Add(session);
-            _minds[session] = new BotMind { HomeSlot = _bots.Count - 1, BodyMode = mode };
+            _minds[session] = new BotMind { HomeSlot = _bots.Count - 1 };
 
             // Команда — до тела: спавн берёт зону команды. Сами режимы команду не выдают
             // (у разминки команд нет, матч ждёт выбора) — выбираем.
             ChooseTeam(session, force: true);
             SpawnBody(session);
 
-            GameLog.Player.Info($"[BotDirector] Добавлен {session.PlayerName}: команда {TeamName(session)}, скин {session.AvatarIndex}, тело {mode}.");
+            GameLog.Player.Info($"[BotDirector] Добавлен {session.PlayerName}: команда {TeamName(session)}, скин {session.AvatarIndex}.");
             return session;
         }
 
@@ -226,23 +225,41 @@ namespace VrBattlegrounds.Bots
         private void Think(PlayerSession bot, BotMind mind, BotStage stage)
         {
             PlayerController avatar = bot.ActiveAvatar;
-            EnsureBody(bot, avatar);
+            BotKitRefs kit = mind.Kit;
+            if (kit == null || !ReferenceEquals(kit.Avatar, avatar))
+            {
+                // Страховка: комплект собирается по AvatarSpawned; сюда тело приходит без него только при ошибке потока.
+                if (!mind.KitFallbackWarned)
+                {
+                    mind.KitFallbackWarned = true;
+                    GameLog.Player.Warning($"[BotDirector] {bot.PlayerName}: тело без комплекта бота (AvatarSpawned не дошёл) — комплект из тика.", avatar);
+                }
+                AttachKit(mind, avatar);
+                kit = mind.Kit;
+                if (kit == null) return;
+            }
+            else if (kit.Passive && avatar.IsAlive)
+            {
+                // Призрак ожил на месте (стратегия без призрака) — полный комплект на то же тело.
+                kit = mind.Kit = BotKit.Upgrade(kit);
+            }
 
-            var body = avatar.GetComponent<BotBody>();
-            var legs = avatar.GetComponent<BotNavigator>();
-            var gunner = avatar.GetComponent<BotGunner>();
+            BotBody body = kit.Body;
+            BotNavigator legs = kit.Legs;
+            BotGunner gunner = kit.Gunner;
+            BotCombatDriver combat = kit.Combat;
             if (body == null || legs == null || gunner == null) return;
-            var combat = avatar.GetComponent<BotCombatDriver>();
 
-            mind.Remember(body, SceneManager.GetActiveScene().handle);
+            int scene = SceneManager.GetActiveScene().handle;
+            mind.Remember(body, scene);
 
             bool alive = avatar.IsAlive;
             int token = BotSenses.ShopToken(avatar);
-            // В бою восприятие и маршруты принадлежат Blaze, а не всеведущему NearestEnemy. Режим P: без оружия (Unarmed)
-            // Blaze не создаётся — не атакует и не просит выстрел; ноги — по приказу (домой, к закупке).
-            bool armed = mind.BodyMode != BotBodyMode.PlayerFlow || gunner.HasWeapon;
-            bool fighting = stage == BotStage.Combat && alive && armed;
-            combat?.SetCombatEnabled(fighting);
+            // В бою восприятие и маршруты принадлежат Blaze, а не всеведущему NearestEnemy. Без оружия (Unarmed)
+            // Blaze не создаётся — не атакует и не просит выстрел; ноги — по приказу (домой, к закупке). Пассивный
+            // комплект (призрак) Blaze не имеет.
+            bool fighting = stage == BotStage.Combat && alive && gunner.HasWeapon;
+            if (combat != null) combat.SetCombatEnabled(fighting);
 
             BotOrder order = BotOrders.Decide(new BotSituation
             {
@@ -257,7 +274,7 @@ namespace VrBattlegrounds.Bots
             else switch (order)
             {
                 case BotOrder.GoHome:
-                    if (TryHomePoint(bot, mind, out Vector3 home)) legs.GoTo(home);
+                    if (TryHomePoint(bot, mind, scene, out Vector3 home)) legs.GoTo(home);
                     else legs.Stop();
                     break;
                 default:
@@ -284,24 +301,45 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>
         /// Место бота на базе: точка вокруг центра зоны спавна его команды (своё у каждого бота, чтобы не стояли
-        /// друг в друге). Не влезает в план зоны — центр зоны.
+        /// друг в друге). Не влезает в план зоны — центр зоны. Зона кешируется в <see cref="BotMind"/>: поиск по сцене —
+        /// только при смене сцены или команды, когда кешированная зона перестала быть зоной команды (смена сторон) или
+        /// исчезла; без зоны — не чаще <see cref="HomeRetrySeconds"/>.
         /// </summary>
-        private static bool TryHomePoint(PlayerSession bot, BotMind mind, out Vector3 point)
+        private static bool TryHomePoint(PlayerSession bot, BotMind mind, int scene, out Vector3 point)
         {
             point = default;
             TeamData team = bot.Team;
             if (team == null) return false;
 
+            TeamSpawnZone zone = mind.HomeZone;
+            bool keyChanged = mind.HomeScene != scene || mind.HomeTeam != team;
+            if (zone == null || zone.Team != team)
+            {
+                if (keyChanged || Time.time >= mind.HomeRetryAt) zone = FindHomeZone(team);
+                else zone = null;
+                mind.HomeZone = zone;
+                mind.HomeScene = scene;
+                mind.HomeTeam = team;
+                if (zone == null) mind.HomeRetryAt = Time.time + HomeRetrySeconds;
+            }
+            if (zone == null) return false;
+
+            Vector3 center = zone.SpawnPoint.position;
+            Vector3 slot = center + zone.SpawnPoint.rotation * BotHomeSlot.Offset(mind.HomeSlot);
+            point = zone.ContainsInPlan(slot) ? slot : center;
+            return true;
+        }
+
+        /// <summary>Повтор поиска зоны спавна, когда её не нашлось, секунды.</summary>
+        private const float HomeRetrySeconds = 2f;
+
+        private static TeamSpawnZone FindHomeZone(TeamData team)
+        {
             foreach (TeamSpawnZone zone in FindObjectsByType<TeamSpawnZone>(FindObjectsSortMode.None))
             {
-                if (zone == null || zone.Team != team) continue;
-
-                Vector3 center = zone.SpawnPoint.position;
-                Vector3 slot = center + zone.SpawnPoint.rotation * BotHomeSlot.Offset(mind.HomeSlot);
-                point = zone.ContainsInPlan(slot) ? slot : center;
-                return true;
+                if (zone != null && zone.Team == team) return zone;
             }
-            return false;
+            return null;
         }
 
         // ── Команда ─────────────────────────────────────────────────────────
@@ -365,59 +403,46 @@ namespace VrBattlegrounds.Bots
         }
 
         /// <summary>
-        /// Тело сменилось (смерть → призрак, возрождение, скин) — в том же кадре: компоненты бота и ноги прежнего
+        /// Тело сменилось (смерть → призрак, возрождение, скин) — в том же кадре: комплект бота и ноги прежнего
         /// тела. Иначе новое тело кадр стояло бы головой на полу у корня (на базе) и зона спавна приняла бы призрака.
         /// </summary>
         private void OnAvatarSpawned(PlayerController avatar)
         {
             if (avatar == null || !NetworkServer.active) return;
 
-            PlayerSession bot = _bots.Find(b => b != null && b.ActiveAvatar == avatar);
+            PlayerSession bot = null;
+            for (int i = 0; i < _bots.Count; i++)
+            {
+                if (_bots[i] != null && _bots[i].ActiveAvatar == avatar) { bot = _bots[i]; break; }
+            }
             if (bot == null) return;
 
-            EnsureBody(bot, avatar);
+            AttachKit(MindOf(bot), avatar);
         }
 
-        private void EnsureBody(PlayerSession bot, PlayerController avatar)
+        /// <summary>
+        /// Комплект бот-компонентов — один раз на тело (<see cref="BotKit"/>). Повторный <c>AvatarSpawned</c> для того же
+        /// тела (вложенная смена тела в <c>AvatarManager.ReplaceBody</c>) ничего не добавляет; пассивное тело, ожившее на
+        /// месте, повышается до живого. Живое тело — полный комплект; пришедшее мёртвым (призрак выбывшего) — пассивный:
+        /// драйвер ведёт его без оружия (кисти в покое), BotBody — источник ног/курса/взгляда; призрак ходит, куда велит
+        /// директор, но не хватает и не стреляет. Погибшее живое тело комплект не меняет — оно не ведётся до смены на
+        /// призрака. Новое тело на той же карте встаёт на ноги прежнего.
+        /// </summary>
+        private static void AttachKit(BotMind mind, PlayerController avatar)
         {
             if (avatar == null) return;
 
-            BotMind mind = MindOf(bot);
-            var body = avatar.GetComponent<BotBody>();
-            if (body == null)
+            if (mind.Kit != null && ReferenceEquals(mind.Kit.Avatar, avatar))
             {
-                body = avatar.gameObject.AddComponent<BotBody>();
-
-                // Тело сменилось на этой же карте — бот продолжает с того места, куда дошёл.
-                if (mind.HasPlace && mind.SceneHandle == SceneManager.GetActiveScene().handle)
-                    body.Place(mind.Feet, mind.Yaw);
+                if (mind.Kit.Passive && avatar.IsAlive) mind.Kit = BotKit.Upgrade(mind.Kit);
+                return;
             }
 
-            if (avatar.GetComponent<BotNavigator>() == null) avatar.gameObject.AddComponent<BotNavigator>();
-            if (avatar.GetComponent<BotGunner>() == null) avatar.gameObject.AddComponent<BotGunner>();
-            if (avatar.GetComponent<BotCombatDriver>() == null) avatar.gameObject.AddComponent<BotCombatDriver>();
+            mind.Kit = BotKit.Attach(avatar, avatar.IsAlive ? BotKitKind.Live : BotKitKind.Passive);
 
-            // Режим P: адаптер «кукловод» — один писатель позы (драйвер) и порядок кадра на каждом теле бота; комплект —
-            // один раз на тело (без поиска компонентов в каждом тике). Живое тело — полный: хват SDK (BotHands), поза
-            // оружия (BotWeaponAim). Тело, пришедшее мёртвым (призрак выбывшего, AvatarManager), — комплект призрака:
-            // драйвер ведёт его без оружия (кисти в покое), BotBody только источник ног/курса/взгляда — призрак ходит,
-            // куда велит директор, но не хватает и не стреляет. Погибшее живое тело комплект не меняет — оно не ведётся
-            // до смены на призрака. Призрак, оживший на месте (стратегия без призрака), получает полный комплект.
-            if (mind.BodyMode == BotBodyMode.PlayerFlow &&
-                (!ReferenceEquals(mind.PlayerFlowBody, avatar) || (mind.PlayerFlowGhostKit && avatar.IsAlive)))
-            {
-                bool ghost = !avatar.IsAlive;
-                if (avatar.GetComponent<BotAvatarDriver>() == null) avatar.gameObject.AddComponent<BotAvatarDriver>();
-                if (!ghost && avatar.GetComponent<BotHands>() == null) avatar.gameObject.AddComponent<BotHands>();
-                if (!ghost && avatar.GetComponent<BotWeaponAim>() == null) avatar.gameObject.AddComponent<BotWeaponAim>();
-                var runtime = avatar.GetComponent<BotRuntimeController>();
-                if (runtime == null) runtime = avatar.gameObject.AddComponent<BotRuntimeController>();
-                runtime.SetGhostKit(ghost);
-                mind.PlayerFlowBody = avatar;
-                mind.PlayerFlowGhostKit = ghost;
-            }
-
-            mind.LastBody = avatar;
+            // Тело сменилось на этой же карте — бот продолжает с того места, куда дошёл.
+            if (mind.Kit != null && mind.HasPlace && mind.SceneHandle == SceneManager.GetActiveScene().handle)
+                mind.Kit.Body.Place(mind.Feet, mind.Yaw);
         }
 
         private static string TeamName(PlayerSession session)

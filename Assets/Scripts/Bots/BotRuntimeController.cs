@@ -39,7 +39,7 @@ namespace VrBattlegrounds.Bots
     /// </para>
     ///
     /// <para>
-    /// <b>Призрак</b> (<see cref="Ghost"/>, комплект без <see cref="BotHands"/> и <see cref="BotWeaponAim"/>): тот же
+    /// <b>Пассивный комплект</b> (<see cref="Passive"/>: призрак, цель стенда; без <see cref="BotHands"/> и <see cref="BotWeaponAim"/>): тот же
     /// единственный писатель — драйвер (корень, камера, кисти в позе покоя относительно тела, как Unarmed); ноги, курс и
     /// взгляд — <see cref="BotBody"/> (сам не пишет). Ни хвата, ни прицела, ни выстрелов; Blaze не создаётся (директор).
     /// </para>
@@ -133,27 +133,30 @@ namespace VrBattlegrounds.Bots
         /// <summary>Сколько раз огонь открыт по таймауту поддержки (событие supportTimeout стенда).</summary>
         public int SupportTimeouts { get; private set; }
 
-        /// <summary>Комплект призрака: тело выбывшего ведётся без оружия — без хвата, прицела и выстрелов.</summary>
-        public bool Ghost { get; private set; }
+        /// <summary>
+        /// Пассивный комплект (<see cref="BotKitKind.Passive"/>: призрак выбывшего, контрольная цель стенда): тело ведётся
+        /// без оружия — без хвата, прицела и выстрелов, и мёртвым тоже.
+        /// </summary>
+        public bool Passive { get; private set; }
 
         /// <summary>
-        /// Ведётся ли тело: сервер, автор мира, драйвер может писать; живое — полный комплект, мёртвое — только призрак
+        /// Ведётся ли тело: сервер, автор мира, драйвер может писать; живое — любой комплект, мёртвое — только пассивный
         /// (погибшее живое тело до смены на призрака не ведётся).
         /// </summary>
         private bool CanControl => NetworkServer.active && StateEventAuthority.IsWorldAuthority && !NetworkServer.isLoadingScene &&
-                                   _player != null && _avatar != null && _driver != null && _driver.CanDrive && (_player.IsAlive || Ghost);
+                                   _player != null && _avatar != null && _driver != null && _driver.CanDrive && (_player.IsAlive || Passive);
 
         /// <summary>
-        /// Комплект тела. Зовёт только <see cref="BotDirector"/> сразу после добавления компонентов: призрак — без
-        /// <see cref="BotHands"/>/<see cref="BotWeaponAim"/> (драйвер ведёт и мёртвое тело), полный — с ними (после
-        /// оживления на месте директор добавляет их и переключает комплект).
+        /// Комплект тела. Зовёт только <see cref="BotKit"/> сразу после добавления компонентов: пассивный — без
+        /// <see cref="BotHands"/>/<see cref="BotWeaponAim"/> (драйвер ведёт и мёртвое тело), живой — с ними (при повышении
+        /// пассивного <see cref="BotKit.Upgrade"/> добавляет их и переключает комплект).
         /// </summary>
-        internal void SetGhostKit(bool ghost)
+        internal void SetKit(bool passive)
         {
-            Ghost = ghost;
+            Passive = passive;
             _hands = GetComponent<BotHands>();
             _aim = GetComponent<BotWeaponAim>();
-            if (_driver != null) _driver.DrivesDeadBody = ghost;
+            if (_driver != null) _driver.DrivesDeadBody = passive;
             if (_aim != null) _aim.ResetCompensation();
         }
 
@@ -202,7 +205,7 @@ namespace VrBattlegrounds.Bots
             using (LateUpdateMarker.Auto())
             {
                 // Призраку после всех стадий делать нечего: ни видимости, ни выстрела, ни хвата.
-                if (!CanControl || Ghost || _hands == null || _aim == null) return;
+                if (!CanControl || Passive || _hands == null || _aim == null) return;
 
                 int interval = Mathf.Max(1, SeesIntervalFrames);
                 if (interval == 1 || (Time.frameCount + _seesPhase) % interval == 0) _gunner.RefreshSees();
@@ -312,7 +315,7 @@ namespace VrBattlegrounds.Bots
             bool reach = false, stowing = false, reachOnBody = false;
 
             // Призрак (или комплект без рук/прицела) — без оружия: обе кисти в позе покоя.
-            UxrFirearmWeapon firearm = Ghost || _hands == null || _aim == null ? null : _gunner.SelectedFirearm;
+            UxrFirearmWeapon firearm = Passive || _hands == null || _aim == null ? null : _gunner.SelectedFirearm;
             bool resolved = BotHands.TryResolveGrips(firearm, out UxrGrabbableObject grip, out int primary, out int support);
             bool holdsPrimary = resolved && _hands.Holds(grip, primary, UxrHandSide.Right);
             bool holdsSupport = resolved && support >= 0 && _hands.Holds(grip, support, UxrHandSide.Left);

@@ -7,6 +7,7 @@ using NUnit.Framework;
 using UltimateXR.Core;
 using UltimateXR.Core.StateSync;
 using UltimateXR.Mechanics.Weapons;
+using UltimateXR.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VrBattlegrounds.Player;
@@ -51,11 +52,18 @@ namespace VrBattlegrounds.Tests.Managers
         private PlayerController _body;
         private int _replacements;
         private readonly List<string> _managerErrors = new List<string>();
+        private bool _hadNetworkManager;
 
         [SetUp]
         public void Prepare()
         {
             SilenceMirrorNoise();
+
+            // Урон (UxrActor.OnReceiveDamage → UxrNetworkManager.NoSessionOrSessionOwner) автосоздаёт синглтон сети SDK
+            // без реализации. Был ли он до теста — HasInstance, не Instance: тот создал бы его сам.
+            TestEnvironmentContract.ResetDestroyedSingleton<UxrNetworkManager>();
+            _hadNetworkManager = UxrNetworkManager.HasInstance;
+
             Assert.That(UxrStateSyncImplementer.SyncCallDepth, Is.Zero, "[TestEnvironment] Открыт чужой кадр синхронизации UltimateXR.");
             Assert.That(UxrManager.HasInstance && UxrManager.Instance.IsInsideStateSync, Is.False,
                         "[TestEnvironment] UxrManager исполняет принятое событие.");
@@ -101,6 +109,8 @@ namespace VrBattlegrounds.Tests.Managers
             }
 
             if (_strategy != null) Object.DestroyImmediate(_strategy);
+
+            RemoveAutoCreatedNetworkManager();
         }
 
         // ── Постановка изнутри синхронизации ─────────────────────────────
@@ -364,6 +374,30 @@ namespace VrBattlegrounds.Tests.Managers
             actor.Life = 100f;
             Assert.That(player.Session, Is.SameAs(_session), "[TestEnvironment] Тело не связано с сессией.");
             return player;
+        }
+
+        /// <summary>
+        /// Убирает <c>UxrNetworkManager</c>, автосозданный уроном этого теста: без реализации сети он переживал бы тест, и
+        /// у соседей <c>HasInstance</c> становилось истинным — снятие с якоря (патч 75,
+        /// <c>StartPhysicsSyncAfterAnchorRemoval</c>) разыменовывало пустой <c>NetworkImplementation</c>. Менеджер, бывший до
+        /// теста, и менеджер с реализацией не трогаются. <c>OnDestroy</c> SDK в EditMode не зовётся — синглтон сбрасывается руками.
+        /// </summary>
+        private void RemoveAutoCreatedNetworkManager()
+        {
+            if (_hadNetworkManager || !UxrNetworkManager.HasInstance) return;
+
+            UxrNetworkManager created = UxrNetworkManager.Instance;
+            if (created.NetworkImplementation != null) return;
+
+            FieldInfo singleton = null;
+            for (Type type = typeof(UxrNetworkManager); type != null && singleton == null; type = type.BaseType)
+            {
+                singleton = type.GetField("s_instance", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            }
+            Assert.IsNotNull(singleton, "[TestEnvironment] Изменился контракт singleton UxrNetworkManager.");
+
+            Object.DestroyImmediate(created.gameObject);
+            if (ReferenceEquals(singleton.GetValue(null), created)) singleton.SetValue(null, null);
         }
 
         /// <summary>Смертельный урон — штатный путь смерти (UxrActor.DieInternal внутри BeginSync).</summary>

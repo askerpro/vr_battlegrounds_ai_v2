@@ -2,7 +2,7 @@
   "schema_version": 2,
   "id": "network",
   "owner": "network",
-  "tasks": ["network-state-review", "state-sync-depth-guard", "mirror-nt-keyframe"],
+  "tasks": ["network-state-review", "state-sync-depth-guard", "mirror-nt-keyframe", "uniqueid-stale-registry"],
   "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
   "reviewed_at": "2026-10-11",
   "owns": [

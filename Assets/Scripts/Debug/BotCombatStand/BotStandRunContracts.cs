@@ -19,12 +19,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         public string WeaponName;
         public int AvatarIndex = -1;
         /// <summary>
-        /// Режим тела проверяемых ботов: false — гибрид dev (по умолчанию), true — вариант P «кукловод»
-        /// (<c>BotBodyMode.PlayerFlow</c>, этап pf-prototype). Матч от этого не меняется.
-        /// </summary>
-        public bool PlayerFlow;
-        /// <summary>
-        /// Только стенд, режим P: точка прицеливания ИИ — ровно центр тела цели (без разброса ИИ). Компенсация отдачи в
+        /// Только стенд: точка прицеливания ИИ — ровно центр тела цели (без разброса ИИ). Компенсация отдачи в
         /// BotWeaponAim не меняется. По умолчанию выключено.
         /// </summary>
         public bool ZeroAiAimSpread;
@@ -51,7 +46,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         /// </summary>
         public bool ClientNoRecoil;
 
-        // ── Снаряжение проверяемого бота (этап pf-equipment, только режим P; исполняет BotStandEquipmentScript) ──
+        // ── Снаряжение проверяемого бота (этап pf-equipment; исполняет BotStandEquipmentScript) ──
 
         /// <summary>
         /// Оружие (WeaponName/Rifle, только пистолет) выдаётся в кобуру штатной выдачей стартового пистолета

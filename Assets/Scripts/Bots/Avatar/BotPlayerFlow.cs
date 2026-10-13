@@ -2,22 +2,7 @@ using VrBattlegrounds.PhysicalSpaceUtils;
 
 namespace VrBattlegrounds.Bots
 {
-    /// <summary>Как тело бота получает позу.</summary>
-    public enum BotBodyMode
-    {
-        /// <summary>Текущий путь dev: корень стоит, голову и кисти пишет <see cref="BotBody"/>, хват/выстрел — <see cref="BotGunner"/>.</summary>
-        Hybrid,
-
-        /// <summary>
-        /// Вариант P «кукловод» (этап pf-prototype): бот — обычный аватар игрока без владельца; корень, камеру и кисти
-        /// пишет один <see cref="BotAvatarDriver"/> до стадии Manipulation, хват — <see cref="BotHands"/> через SDK,
-        /// поза оружия — <see cref="BotWeaponAim"/>, порядок кадра — <see cref="BotRuntimeController"/>.
-        /// Только сервер/хост; включается конфигом стенда, матч по умолчанию остаётся <see cref="Hybrid"/>.
-        /// </summary>
-        PlayerFlow
-    }
-
-    /// <summary>Исход запроса выстрела Blaze в режиме P (<see cref="BotGunner.ExecuteRequestedShot"/>).</summary>
+    /// <summary>Исход запроса выстрела Blaze (<see cref="BotGunner.ExecuteRequestedShot"/>).</summary>
     public enum BotShotOutcome
     {
         /// <summary>Запроса не было.</summary>
@@ -62,7 +47,7 @@ namespace VrBattlegrounds.Bots
         public UnityEngine.Collider Blocker;
     }
 
-    /// <summary>Параметры режима <see cref="BotBodyMode.PlayerFlow"/>, которые выбирают боты.</summary>
+    /// <summary>Параметры player-flow ботов (бот — обычный аватар игрока без владельца).</summary>
     public static class BotPlayerFlowSettings
     {
         /// <summary>Рост глаз бота, метры (в границах <see cref="PlayerCalibrationRules"/>).</summary>

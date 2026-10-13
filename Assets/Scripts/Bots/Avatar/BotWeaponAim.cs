@@ -10,7 +10,7 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Bots
 {
     /// <summary>
-    /// Режим <see cref="BotBodyMode.PlayerFlow"/>: желаемая поза оружия W* и позы кистей из неё.
+    /// Player-flow: желаемая поза оружия W* и позы кистей из неё.
     ///
     /// <para>
     /// W*: ствол (<c>ShotSource</c>) смотрит в точку прицеливания ИИ, верх — по мировой вертикали, без завала;

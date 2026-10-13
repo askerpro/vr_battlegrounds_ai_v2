@@ -2,12 +2,12 @@ using UnityEngine;
 
 namespace VrBattlegrounds.Bots
 {
-    /// <summary>Куда драйвер ведёт кисть бота в режиме <see cref="BotBodyMode.PlayerFlow"/> (этап pf-equipment).</summary>
+    /// <summary>Куда драйвер ведёт кисть бота в player-flow (этап pf-equipment).</summary>
     public enum BotHandGoal
     {
         /// <summary>Цели ещё не было (первый кадр тела).</summary>
         None,
-        /// <summary>Поза покоя относительно корпуса (<see cref="BotBody.TryGetRestHands"/>): без оружия, после отпускания.</summary>
+        /// <summary>Поза покоя относительно корпуса (<see cref="BotArmRestGeometry"/>): без оружия, после отпускания.</summary>
         Rest,
         /// <summary>К снапу основной рукояти неудерживаемого оружия: в кобуре, у кисти после покупки, на полу.</summary>
         ReachPrimary,

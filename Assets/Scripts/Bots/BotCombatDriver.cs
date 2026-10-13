@@ -137,7 +137,7 @@ namespace VrBattlegrounds.Bots
             if (!combat)
             {
                 _proxy.SetActive(true);
-                _body.SetCombatPoseSource(_animator, false);
+                // Вне боя прокси только играет позу: ноги ведёт навигатор (BotBody не берёт их у прокси).
                 return;
             }
 
@@ -250,7 +250,7 @@ namespace VrBattlegrounds.Bots
                 enemyLeaveEvent = new UnityEvent()
             };
             _proxy.SetActive(true);
-            _body.SetCombatPoseSource(_animator, true);
+            _body.SetCombatLegsSource(_proxy.transform);
         }
 
         private bool IsEnemy(GameObject candidate)
@@ -273,7 +273,7 @@ namespace VrBattlegrounds.Bots
 
         private void RemoveProxy()
         {
-            if (_body != null) _body.SetCombatPoseSource(null);
+            if (_body != null) _body.SetCombatLegsSource(null);
             if (_proxy != null)
             {
                 _proxy.SetActive(false); // Close освобождает занятость укрытия до Destroy.

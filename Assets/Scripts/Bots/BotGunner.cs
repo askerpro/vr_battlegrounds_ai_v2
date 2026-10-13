@@ -17,15 +17,16 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Bots
 {
     /// <summary>
-    /// Стрелок бота. Только сервер, вешается рядом с <see cref="BotBody"/>.
+    /// Стрелок бота. Только сервер, часть комплекта бота (<see cref="BotKit"/>).
     ///
     /// <para>
     /// <b>Оружие настоящее.</b> Что взять, решает директор (<see cref="Arm"/>, T-48): купленный ствол
     /// (<see cref="BotShopper"/>) заспавнен как у стены арсенала (<see cref="NetworkUxrIdentity"/>, магазин вложен в
     /// префаб), без покупки — стартовый пистолет из своей кобуры (его выдаёт <c>StartingSidearmPolicy</c>, как всем).
-    /// В руку — штатным <c>UxrGrabManager.GrabObject</c>. Захват синхронизируемый, а автор аватара без владельца —
-    /// сервер (<c>StateEventAuthority</c>), поэтому клиенты видят бота с оружием в руке. Захват же делает бота
-    /// владельцем оружия (<c>UxrWeapon.Owner</c>), и убийство засчитывается ему.
+    /// Стрелок только <b>выбирает</b> оружие: кисть к снапу подводит драйвер (<see cref="BotRuntimeController"/>),
+    /// хватает <see cref="BotHands"/> штатным SDK. Захват синхронизируемый, а автор аватара без владельца — сервер
+    /// (<c>StateEventAuthority</c>), поэтому клиенты видят бота с оружием в руке. Захват же делает бота владельцем
+    /// оружия (<c>UxrWeapon.Owner</c>), и убийство засчитывается ему.
     /// </para>
     ///
     /// <para>
@@ -46,10 +47,10 @@ namespace VrBattlegrounds.Bots
     /// </para>
     ///
     /// <para>
-    /// <b>Режим P</b> (<see cref="BotBodyMode.PlayerFlow"/>, <see cref="SetPlayerFlow"/>): стрелок остаётся владельцем
-    /// выбора оружия (покупка/кобура), цели и точки прицеливания и исполнителем выстрела, но не хватает сам
-    /// (<see cref="BotHands"/>), не ставит кисти (<see cref="BotWeaponAim"/> → <see cref="BotAvatarDriver"/>) и не стреляет
-    /// из обработчика стадии UXR: выстрел — <see cref="ExecuteRequestedShot"/> из LateUpdate <see cref="BotRuntimeController"/>.
+    /// <b>Player-flow</b>: стрелок — владелец выбора оружия (покупка/кобура), цели и точки прицеливания и исполнитель
+    /// выстрела, но не хватает сам (<see cref="BotHands"/>), не ставит кисти (<see cref="BotWeaponAim"/> →
+    /// <see cref="BotAvatarDriver"/>) и не стреляет из обработчика стадии UXR: выстрел — <see cref="ExecuteRequestedShot"/>
+    /// из LateUpdate <see cref="BotRuntimeController"/>.
     /// Гейт: фактический луч дула смотрит в точку прицеливания ИИ (допуск <see cref="BotPlayerFlowSettings.MaxShotAimErrorDegrees"/>)
     /// и путь пули до неё не перекрыт ничем, кроме цели; промах по силуэту при неточности ИИ — нормальный выстрел.
     /// Выстрел — только после true от <c>RequestAutomationPreparation</c>. Покупка после выбора стартового пистолета
@@ -84,13 +85,8 @@ namespace VrBattlegrounds.Bots
         private bool _armRequested;
         private WeaponInfo _armWith;
         private float _nextArmAttempt;
-        /// <summary>Кобура, из которой взят стартовый пистолет (режим P: туда же он убирается перед покупкой).</summary>
+        /// <summary>Кобура, из которой взят стартовый пистолет (туда же он убирается перед покупкой).</summary>
         private UxrGrabbableObjectAnchor _holster;
-
-        /// <summary>Ствол относительно кисти — снимается после стадии захвата, см. <see cref="OnStageUpdated"/>.</summary>
-        private bool _gripKnown;
-        private Vector3 _gripPosition;
-        private Quaternion _gripRotation;
 
         private PlayerController _target;
         private bool _shotRequested;
@@ -100,7 +96,6 @@ namespace VrBattlegrounds.Bots
         private static readonly ProfilerMarker GateMarker = new ProfilerMarker("BotGunner.ShotGate");
         private static readonly ProfilerMarker AutomationMarker = new ProfilerMarker("BotGunner.Automation");
         private static readonly ProfilerMarker ShootRoundMarker = new ProfilerMarker("BotGunner.TryToShootRound");
-        private bool _playerFlow;
         private bool _hasAimPoint;
         private Vector3 _aimPoint;
         private Vector3 _aimCenter;
@@ -112,19 +107,8 @@ namespace VrBattlegrounds.Bots
         private UxrGrabbableObject _triggerGrip;
         private BotCombatDriver _combat;
 
-        /// <summary>Режим P: хват/кисти/выстрел ведут компоненты <see cref="BotBodyMode.PlayerFlow"/>.</summary>
-        public bool PlayerFlow => _playerFlow;
-
-        /// <summary>Включает режим P. Зовёт только <see cref="BotRuntimeController"/>.</summary>
-        /// <summary>Режим P: снять запрос Blaze без выстрела (правило огня порядка кадра — ждём поддержку). Зовёт только BotRuntimeController.</summary>
+        /// <summary>Снять запрос Blaze без выстрела (правило огня порядка кадра — ждём поддержку). Зовёт только BotRuntimeController.</summary>
         internal void DeclineRequestedShot() => _shotRequested = false;
-
-        internal void SetPlayerFlow(bool enabled)
-        {
-            _playerFlow = enabled;
-            _shotRequested = false;
-            _hasAimPoint = false;
-        }
 
         /// <summary>Выбранное оружие (купленное/из кобуры), даже если ещё не в руке; null — нет.</summary>
         public UxrFirearmWeapon SelectedFirearm => _weapon != null ? _firearm : null;
@@ -133,22 +117,22 @@ namespace VrBattlegrounds.Bots
         public bool HasWeapon => _weapon != null;
 
         /// <summary>
-        /// Режим P: пришла покупка, а выбран стартовый пистолет — сначала он убирается (кобура или, без неё, отпускание),
+        /// Пришла покупка, а выбран стартовый пистолет — сначала он убирается (кобура или, без неё, отпускание),
         /// потом покупка появляется у кисти. Пока так — стрелок не целится и не стреляет.
         /// </summary>
-        public bool SwapPending => _playerFlow && _armWith != null && _weapon != null && !_spawnedByBot;
+        public bool SwapPending => _armWith != null && _weapon != null && !_spawnedByBot;
 
-        /// <summary>Режим P: оружие в руке, которое надо убрать перед покупкой (<see cref="SwapPending"/>); null — нечего убирать.</summary>
+        /// <summary>Оружие в руке, которое надо убрать перед покупкой (<see cref="SwapPending"/>); null — нечего убирать.</summary>
         public UxrFirearmWeapon StowFirearm => SwapPending && IsHolding ? _firearm : null;
 
         /// <summary>Кобура выбранного стартового пистолета (якорь, откуда он взят); null — оружие не из кобуры.</summary>
         public UxrGrabbableObjectAnchor Holster => _weapon != null && !_spawnedByBot ? _holster : null;
 
-        /// <summary>Режим P: есть цель и точка прицеливания ИИ (центр тела + разброс).</summary>
+        /// <summary>Есть цель и точка прицеливания ИИ (центр тела + разброс).</summary>
         public bool HasAimPoint => _hasAimPoint;
         public Vector3 AimPoint => _aimPoint;
 
-        /// <summary>Режим P: центр тела цели этого кадра (куда смотрит голова и идёт луч видимости).</summary>
+        /// <summary>Центр тела цели этого кадра (куда смотрит голова и идёт луч видимости).</summary>
         public Vector3 AimCenter => _aimCenter;
 
         /// <summary>Blaze попросил выстрел в этом кадре (ещё не исполнен).</summary>
@@ -184,7 +168,7 @@ namespace VrBattlegrounds.Bots
         /// <summary>Цель; null — нет.</summary>
         public PlayerController Target => _target;
 
-        /// <summary>Цель видна из фактического ствола после стадии Manipulation.</summary>
+        /// <summary>Цель видна из фактического ствола (<see cref="RefreshSees"/>, после всех стадий кадра).</summary>
         public bool SeesTarget { get; private set; }
 
         /// <summary>Директор уже велел взять оружие этому телу.</summary>
@@ -205,14 +189,14 @@ namespace VrBattlegrounds.Bots
         }
 
         /// <summary>
-        /// Режим P (этап pf-equipment): покупка, оплаченная штатным серверным путём экономики (<see cref="BotShopper"/>),
+        /// Покупка (этап pf-equipment), оплаченная штатным серверным путём экономики (<see cref="BotShopper"/>),
         /// пришла после выбора оружия. Оружие ещё не выбрано — как <see cref="Arm"/>; выбран стартовый пистолет — он
         /// убирается (<see cref="SwapPending"/>), покупка появляется у кисти. Уже есть купленный ствол — отказ: одна
-        /// покупка на тело. Гибрид — отказ. false — покупка не принята (оружие не меняется).
+        /// покупка на тело. false — покупка не принята (оружие не меняется).
         /// </summary>
         public bool OfferPurchase(WeaponInfo purchase)
         {
-            if (purchase == null || !_playerFlow) return false;
+            if (purchase == null) return false;
             if (!_armRequested)
             {
                 Arm(purchase);
@@ -236,44 +220,6 @@ namespace VrBattlegrounds.Bots
             _body = GetComponent<BotBody>();
             _player = GetComponent<PlayerController>();
             _avatar = GetComponent<UxrAvatar>();
-        }
-
-        private void OnEnable()
-        {
-            UxrManager.StageUpdated += OnStageUpdated;
-        }
-
-        private void OnDisable()
-        {
-            UxrManager.StageUpdated -= OnStageUpdated;
-        }
-
-        /// <summary>
-        /// Хват «кисть → ствол» снимается в конце стадии <see cref="UxrUpdateStage.Animation"/>:
-        /// захват (<see cref="UxrUpdateStage.Manipulation"/>) уже подтянул оружие к кисти,
-        /// и трансформы согласованы. Снятый посреди кадра (кисть сдвинута, оружие ещё на старом
-        /// месте) он был бы ошибочным, а прицел по нему — обратной связью, уносящей ствол в бесконечность.
-        /// </summary>
-        private void OnStageUpdated(UxrUpdateStage stage)
-        {
-            // В режиме P выстрел — из LateUpdate верхнего уровня (BotRuntimeController), не из обработчика стадии.
-            if (stage != UxrUpdateStage.Animation || _playerFlow) return;
-
-            Transform hand = _body != null ? _body.RightHand : null;
-            Transform muzzle = MuzzleOf(_firearm);
-            if (hand == null || muzzle == null || !IsHolding)
-            {
-                _gripKnown = false;
-                return;
-            }
-
-            Vector3 offset = muzzle.position - hand.position;
-            if (offset.sqrMagnitude > 1.5f * 1.5f) return; // оружие ещё не у кисти
-
-            _gripPosition = Quaternion.Inverse(hand.rotation) * offset;
-            _gripRotation = Quaternion.Inverse(hand.rotation) * muzzle.rotation;
-            _gripKnown = true;
-            FireRequestedShot();
         }
 
         private void OnDestroy()
@@ -313,16 +259,15 @@ namespace VrBattlegrounds.Bots
 
             if (!IsHolding)
             {
-                if (!_armRequested || Time.time < _nextArmAttempt || !TryTakeWeapon())
-                {
-                    Idle();
-                    return;
-                }
+                // Оружие только выбирается; в руку его берёт BotHands по прибытии кисти. Пока не в руке — без прицела.
+                if (_armRequested && Time.time >= _nextArmAttempt) SelectWeapon();
+                Idle();
+                return;
             }
 
             if (!mode.WeaponsEnabled || SwapPending)
             {
-                // Закупка и отсчёт: оружие в руке, стрелять рано. Режим P: пистолет убирается под покупку — не целиться.
+                // Закупка и отсчёт: оружие в руке, стрелять рано. Пистолет убирается под покупку — не целиться.
                 Idle();
                 return;
             }
@@ -331,10 +276,9 @@ namespace VrBattlegrounds.Bots
         }
 
         private bool IsHolding =>
-            _weapon != null && _grabbable != null && UxrGrabManager.Instance != null &&
-            (_playerFlow ? HeldByOwnHand() : UxrGrabManager.Instance.IsBeingGrabbedBy(_grabbable, _avatar));
+            _weapon != null && _grabbable != null && UxrGrabManager.Instance != null && HeldByOwnHand();
 
-        /// <summary>Режим P: держит ли предмет своя рука — по грабберам аватара, без LINQ SDK в кадре.</summary>
+        /// <summary>Держит ли предмет своя рука — по грабберам аватара, без LINQ SDK в кадре.</summary>
         private bool HeldByOwnHand()
         {
             UxrGrabber right = _avatar.GetGrabber(UxrHandSide.Right);
@@ -352,20 +296,23 @@ namespace VrBattlegrounds.Bots
             _hasAimPoint = false;
             SeesTarget = false;
             _body.LookAt(null);
-            _body.ClearRightHandPose();
         }
 
         // ── Оружие ──────────────────────────────────────────────────────────
 
-        private bool TryTakeWeapon()
+        /// <summary>
+        /// Выбрать оружие (не в руке): своё выпавшее — его же, иначе покупку у кисти или стартовый пистолет из кобуры.
+        /// Стрелок только выбирает; кисть к снапу подводит драйвер, хватает <see cref="BotHands"/> через SDK.
+        /// </summary>
+        private void SelectWeapon()
         {
             _nextArmAttempt = Time.time + ArmRetrySeconds;
 
             UxrGrabber grabber = _avatar.GetGrabber(UxrHandSide.Right);
-            if (grabber == null || UxrGrabManager.Instance == null) return false;
+            if (grabber == null || UxrGrabManager.Instance == null) return;
 
-            // Своё оружие выпало (не держит никто) — подобрать его же, а не спавнить ещё одно. Режим P: стартовый
-            // пистолет убран под покупку (SwapPending, не в руке) — теперь покупка.
+            // Своё оружие выпало (не держит никто) — подобрать его же, а не спавнить ещё одно. Стартовый пистолет
+            // убран под покупку (SwapPending, не в руке) — теперь покупка.
             if (_weapon == null || UxrGrabManager.Instance.IsBeingGrabbed(_grabbable) || SwapPending)
             {
                 _weapon = null;
@@ -373,28 +320,11 @@ namespace VrBattlegrounds.Bots
                 else TakeHolstered();
             }
 
-            if (_weapon == null) return false;
-
-            if (_firearm == null || _grabbable == null)
+            if (_weapon != null && (_firearm == null || _grabbable == null))
             {
                 GameLog.Player.Warning($"[BotGunner] {name}: у '{_weapon.name}' нет UxrFirearmWeapon/UxrGrabbableObject.");
                 DropWeaponRef();
-                return false;
             }
-
-            // Режим P: стрелок только выбрал оружие; кисть к снапу подводит драйвер, хватает BotHands через SDK.
-            if (_playerFlow) return false;
-
-            UxrGrabManager.Instance.GrabObject(grabber, _grabbable, 0, true);
-
-            if (!IsHolding)
-            {
-                GameLog.Player.Warning($"[BotGunner] {name}: захват '{_weapon.name}' не состоялся.");
-                return false;
-            }
-
-            GameLog.Player.Info($"[BotGunner] {name}: взял '{_weapon.name}', патронов {_firearm.GetAmmoLeft(0)}.");
-            return true;
         }
 
         /// <summary>Купленный ствол — спавн у кисти, как у стены арсенала.</summary>
@@ -408,9 +338,9 @@ namespace VrBattlegrounds.Bots
 
             instance.transform.SetPositionAndRotation(grabber.transform.position, grabber.transform.rotation);
             instance.SetActive(true);
-            // Режим P: снап основной рукояти — сразу в граббере (после активации: снапы инициализирует SDK), чтобы
-            // штатная проверка расстояния (CanBeGrabbedByGrabber) пропустила хват в этом же кадре, до шага физики.
-            if (_playerFlow) AlignPrimaryToGrabber(instance, grabber);
+            // Снап основной рукояти — сразу в граббере (после активации: снапы инициализирует SDK), чтобы штатная
+            // проверка расстояния (CanBeGrabbedByGrabber) пропустила хват в этом же кадре, до шага физики.
+            AlignPrimaryToGrabber(instance, grabber);
             NetworkUxrIdentity.SpawnServerObject(instance);
 
             Bind(instance, spawnedByBot: true);
@@ -480,24 +410,19 @@ namespace VrBattlegrounds.Bots
                 return;
             }
 
-            if (_playerFlow)
-            {
-                // Режим P: без GetComponentsInChildren в кадре — коллайдеры цели снимаются при смене цели.
-                Bounds bounds = CachedBodyOf(_target);
-                _aimCenter = bounds.center;
-                _aimPoint = ZeroAimSpread ? bounds.center : bounds.center + Vector3.Scale(_aimOffset, bounds.extents);
-                _hasAimPoint = true;
-                _body.LookAt(bounds.center);
-                return;
-            }
-
-            Bounds body = BodyOf(_target);
-            Vector3 aimPoint = body.center + Vector3.Scale(_aimOffset, body.extents);
-            _body.LookAt(body.center);
-            PoseRightHand(aimPoint);
+            // Без GetComponentsInChildren в кадре — коллайдеры цели снимаются при смене цели.
+            Bounds bounds = CachedBodyOf(_target);
+            _aimCenter = bounds.center;
+            _aimPoint = ZeroAimSpread ? bounds.center : bounds.center + Vector3.Scale(_aimOffset, bounds.extents);
+            _hasAimPoint = true;
+            _body.LookAt(bounds.center);
         }
 
-        /// <summary>Габариты твёрдых коллайдеров цели по снятому при смене цели списку (режим P, без аллокаций в кадре).</summary>
+        /// <summary>
+        /// Куда целиться: габариты твёрдых коллайдеров цели — в них и попадает пуля (<c>QueryTriggerInteraction.Ignore</c>),
+        /// по снятому при смене цели списку, без аллокаций в кадре. Не голова-камера: у игрока без шлема (редактор)
+        /// камера лежит на полу, а тело стоит в позе префаба.
+        /// </summary>
         private Bounds CachedBodyOf(PlayerController target)
         {
             if (_cachedTarget != target)
@@ -519,23 +444,23 @@ namespace VrBattlegrounds.Bots
             return found ? bounds : new Bounds(BotSenses.FeetOf(target) + Vector3.up * 1.3f, new Vector3(0.4f, 0.8f, 0.4f));
         }
 
-        // ── Режим P: видимость и выстрел из LateUpdate верхнего уровня ─────
+        // ── Видимость и выстрел из LateUpdate верхнего уровня ──────────────
 
         /// <summary>
-        /// Видимость цели для директора (режим P): луч из дула в центр тела первым упирается в цель. Каденцию задаёт
+        /// Видимость цели для директора: луч из дула в центр тела первым упирается в цель. Каденцию задаёт
         /// <see cref="BotRuntimeController.SeesIntervalFrames"/>; гейт выстрела от неё не зависит.
         /// </summary>
         public void RefreshSees()
         {
             using (SeesMarker.Auto())
             {
-                SeesTarget = _playerFlow && CanFightNow() && _boundShot != null && _boundShot.ShotSource != null &&
+                SeesTarget = CanFightNow() && _boundShot != null && _boundShot.ShotSource != null &&
                              IsTargetHit(_boundShot.ShotSource.position, _aimCenter - _boundShot.ShotSource.position);
             }
         }
 
         /// <summary>
-        /// Исполнить запрос Blaze (режим P). LateUpdate верхнего уровня, после всех стадий кадра. Гейт:
+        /// Исполнить запрос Blaze. LateUpdate верхнего уровня, после всех стадий кадра. Гейт:
         /// (а) фактический луч дула отклонён от точки прицеливания ИИ не больше
         /// <see cref="BotPlayerFlowSettings.MaxShotAimErrorDegrees"/> — иначе <see cref="BotShotOutcome.NotAimed"/>;
         /// (б) луч дула маской выстрела до дистанции точки прицеливания не упирается ни во что, кроме коллайдеров цели
@@ -549,7 +474,7 @@ namespace VrBattlegrounds.Bots
             _lastBlocker = null;
             if (!_shotRequested) return BotShotOutcome.None;
             _shotRequested = false;
-            if (!_playerFlow || !CanFightNow()) return BotShotOutcome.Blocked;
+            if (!CanFightNow()) return BotShotOutcome.Blocked;
             Transform muzzle = Muzzle;
             if (muzzle == null) return BotShotOutcome.Blocked;
 
@@ -652,132 +577,11 @@ namespace VrBattlegrounds.Bots
                    BotSenses.Stage() == BotStage.Combat;
         }
 
-        /// <summary>После Manipulation ствол уже следует кисти: LOS и выстрел используют одну позу.</summary>
-        private void FireRequestedShot()
-        {
-            bool shoot = _shotRequested;
-            _shotRequested = false;
-            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
-            if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority || _player == null || !_player.IsAlive ||
-                !IsHolding || mode == null || !mode.WeaponsEnabled || _target == null || !_target.IsAlive ||
-                BotSenses.Stage() != BotStage.Combat)
-            {
-                SeesTarget = false;
-                return;
-            }
-            SeesTarget = Sees(_target, BodyOf(_target).center);
-            if (!SeesTarget || !shoot) return;
-
-            // Выстрел шлёт только автор предмета в руке (Issue 23); у бота — сервер.
-            if (!StateEventAuthority.IsAuthorOfItem(_firearm)) return;
-
-            // Capability берётся у фактически выбранного оружия, а не из заявки на закупку.
-            // Missing opt-in не разрешает молча вернуться к старому ammo setter.
-            if (!_firearm.TryGetComponent(out WeaponComponent selected) || selected.WeaponData == null ||
-                selected.WeaponData.ReadinessProfile == null ||
-                !selected.WeaponData.ReadinessProfile.TryValidate(out _)) return;
-            var profile = selected.WeaponData.ReadinessProfile;
-            bool ledger = _firearm.UsesReadinessLedger(0);
-            if (profile.AmmoCapability == VrBattlegrounds.Weapons.WeaponAmmoCapability.LegacyAmmo)
-            {
-                if (ledger) return;
-                // Явная legacy capability сохраняет штатный SDK magazine writer.
-                if (_firearm.GetAmmoLeft(0) <= 0)
-                    _firearm.SetAmmoLeft(0, _firearm.GetAmmoCapacity(0));
-            }
-            else
-            {
-                if (!ledger || !_firearm.TryGetComponent(out VrBattlegrounds.Weapons.WeaponReadinessController readiness) ||
-                    readiness.Profile != profile) return;
-                if (!_firearm.IsReadyToFire(0) && !readiness.RequestAutomationPreparation()) return;
-            }
-
-            if (_firearm.TryToShootRound(0))
-            {
-                ShotsFired++;
-
-                // Следующая пуля — в другую точку тела; больше единицы — мимо края.
-                _aimOffset = Random.insideUnitSphere * AimSpread;
-
-            }
-        }
-
-        /// <summary>
-        /// Куда целиться: габариты твёрдых коллайдеров цели — в них и попадает пуля
-        /// (<c>QueryTriggerInteraction.Ignore</c>). Не голова-камера: у игрока без шлема
-        /// (редактор) камера лежит на полу, а тело стоит в позе префаба.
-        /// </summary>
-        private static Bounds BodyOf(PlayerController target)
-        {
-            bool found = false;
-            Bounds bounds = new Bounds(BotSenses.FeetOf(target) + Vector3.up * 1.3f, new Vector3(0.4f, 0.8f, 0.4f));
-
-            foreach (Collider collider in target.GetComponentsInChildren<Collider>())
-            {
-                if (collider.isTrigger || !collider.enabled) continue;
-
-                if (found) bounds.Encapsulate(collider.bounds);
-                else bounds = collider.bounds;
-                found = true;
-            }
-
-            return bounds;
-        }
-
-        /// <summary>
-        /// Ставит правую кисть так, чтобы ствол (<c>ShotSource</c>) смотрел в точку.
-        /// Хват «кисть → ствол» постоянен: оружие жёстко следует за грабером.
-        /// База обеих кистей — текущий humanoid-клип; прицел корректирует их вместе.
-        /// </summary>
-        private void PoseRightHand(Vector3 aimPoint)
-        {
-            if (!_gripKnown || !_body.TryGetWeaponPose(out Pose left, out Pose right)) return;
-
-            Vector3 relPosition = _gripPosition;
-            Quaternion relRotation = _gripRotation;
-
-            Vector3 muzzleAt = right.position + right.rotation * relPosition;
-
-            Vector3 direction = aimPoint - muzzleAt;
-            if (direction.sqrMagnitude < 0.01f) return;
-
-            Quaternion muzzleRotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
-            Quaternion handRotation = muzzleRotation * Quaternion.Inverse(relRotation);
-            Vector3 handPosition = muzzleAt - handRotation * relPosition;
-
-            Quaternion correction = handRotation * Quaternion.Inverse(right.rotation);
-            Pose aimedLeft = new Pose(handPosition + correction * (left.position - right.position), correction * left.rotation);
-            _body.SetWeaponHands(aimedLeft, new Pose(handPosition, handRotation));
-        }
-
-        /// <summary>Луч из ствола в центр тела цели маской выстрела первым упирается в цель.</summary>
-        private bool Sees(PlayerController target, Vector3 center)
-        {
-            UxrShotDescriptor shot = ShotOf(_firearm);
-            if (shot == null || shot.ShotSource == null) return false;
-
-            Vector3 origin = shot.ShotSource.position;
-            if (!Physics.Raycast(origin, center - origin, out RaycastHit hit, MaxRange,
-                                 shot.CollisionLayerMask, QueryTriggerInteraction.Ignore))
-            {
-                return false;
-            }
-
-            UxrActor actor = hit.collider.GetComponentInParent<UxrActor>();
-            return actor != null && actor == target._actor;
-        }
-
         private static UxrShotDescriptor ShotOf(UxrFirearmWeapon firearm)
         {
             UxrProjectileSource source = firearm != null ? firearm.GetComponent<UxrProjectileSource>() : null;
             return source != null && source.ShotTypes.Count > 0 ? source.ShotTypes[0] : null;
         }
 
-        /// <summary>Источник выстрела (дуло) первого типа выстрела; null — нет оружия или источника.</summary>
-        public static Transform MuzzleOf(UxrFirearmWeapon firearm)
-        {
-            UxrShotDescriptor shot = ShotOf(firearm);
-            return shot != null ? shot.ShotSource : null;
-        }
     }
 }

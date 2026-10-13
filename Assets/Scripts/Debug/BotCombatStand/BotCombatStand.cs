@@ -135,7 +135,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     _session.Begin(id, weapon, options, purchase);
                     BotStandMeasurements.ValidateFixture(id, _session);
                     _conditions = new BotStandShotConditions(_session, options);
-                    _probe = new BotStandPlayerFlowProbe(_session, options.PlayerFlow);
+                    _probe = new BotStandPlayerFlowProbe(_session);
                     CaseStarted?.Invoke(result, _session);
                 }
                 catch (NotSupportedException e) { result.Status = "Unsupported"; result.Error = e.Message; }

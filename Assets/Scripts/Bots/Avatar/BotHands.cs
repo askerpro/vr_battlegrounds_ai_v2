@@ -23,7 +23,7 @@ namespace VrBattlegrounds.Bots
     }
 
     /// <summary>
-    /// Режим <see cref="BotBodyMode.PlayerFlow"/>: хват и отпускание оружия бота штатным SDK, обеими руками.
+    /// Player-flow: хват и отпускание оружия бота штатным SDK, обеими руками.
     /// Только сервер под <see cref="StateEventAuthority.IsWorldAuthority"/>; вызывается из LateUpdate верхнего уровня
     /// (<see cref="BotRuntimeController"/>), никогда из обработчика события UXR.
     ///

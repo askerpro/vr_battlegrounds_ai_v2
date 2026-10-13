@@ -44,9 +44,6 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         public static void Validate(BotStandRunOptions options, WeaponInfo weapon, WeaponInfo purchase)
         {
             if (options == null) return;
-            bool equipment = options.HolsterStart || options.Unarmed || options.PurchaseAtSeconds >= 0f;
-            if (equipment && !options.PlayerFlow)
-                throw new InvalidOperationException("HolsterStart/Unarmed/покупка по времени — только режим PlayerFlow.");
             if (options.HolsterStart && options.Unarmed)
                 throw new InvalidOperationException("HolsterStart и Unarmed взаимоисключающие.");
             if (options.HolsterStart && (weapon == null || weapon.Category != WeaponCategory.Pistol))

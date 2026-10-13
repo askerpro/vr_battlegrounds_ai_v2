@@ -15,7 +15,7 @@ using VrBattlegrounds.Weapons;
 namespace VrBattlegrounds.DevTools.BotCombatStand
 {
     /// <summary>
-    /// Замеры этапа pf-prototype на стенде (оба режима тела — гибрид даёт базу). Только чтение: ничего не пишет в
+    /// Замеры player-flow ботов на стенде (база гибрида — отчёты cc-0 / pf-round). Только чтение: ничего не пишет в
     /// трансформы, хват, оружие и учёт. Покадрово — после всех стадий UXR (<c>UxrManager.AvatarsUpdated</c>):
     /// ошибка дула к точке прицеливания ИИ, зазоры граббер↔снап (фактический и заданный драйвером), скольжение стоп,
     /// время маркеров бот-кода и GC кадра (<see cref="ProfilerRecorder"/>); по событиям — исходы запросов выстрела
@@ -69,7 +69,6 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private const int ShotsPerWeaponInTimeline = 3;
 
         private readonly BotStandSession _session;
-        private readonly bool _playerFlow;
         private readonly float _start;
         private readonly ProfilerRecorder[] _recorders = new ProfilerRecorder[MarkerNames.Length];
         private readonly List<float>[] _markerMs = new List<float>[MarkerNames.Length];
@@ -193,10 +192,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private UxrActor _subjectActor, _targetActor;
         private bool _disposed;
 
-        public BotStandPlayerFlowProbe(BotStandSession session, bool playerFlow)
+        public BotStandPlayerFlowProbe(BotStandSession session)
         {
             _session = session;
-            _playerFlow = playerFlow;
             _start = Time.time;
             for (int i = 0; i < MarkerNames.Length; i++)
             {
@@ -291,12 +289,11 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         }
 
         /// <summary>
-        /// Состав тела: сколько каких бот-компонентов (повторные — признак двойного добавления), жив ли, кто пишет позу
-        /// (на призраке BotBody пишет сам — как в dev; компонентов адаптера быть не должно). Аллокации — только при смене тела.
+        /// Состав тела: сколько каких бот-компонентов (повторные — признак двойного добавления), жив ли, какой комплект
+        /// (призрак — пассивный: без BotHands/BotWeaponAim/BotCombatDriver). Аллокации — только при смене тела.
         /// </summary>
         private static Dictionary<string, object> DescribeBody(PlayerController player, string when)
         {
-            var body = player.GetComponent<BotBody>();
             return new Dictionary<string, object>
             {
                 ["when"] = when, ["time"] = Time.time, ["frame"] = Time.frameCount, ["body"] = player.GetInstanceID(),
@@ -309,7 +306,6 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 ["botBody"] = player.GetComponents<BotBody>().Length,
                 ["botNavigator"] = player.GetComponents<BotNavigator>().Length,
                 ["botCombatDriver"] = player.GetComponents<BotCombatDriver>().Length,
-                ["botBodyWritesPose"] = body != null && !body.PoseDrivenExternally,
                 ["runtimeGhostKit"] = player.GetComponent<BotRuntimeController>() is BotRuntimeController runtime && runtime.Passive
             };
         }
@@ -736,7 +732,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         }
 
         /// <summary>
-        /// Граббер↔снап после всех стадий и (режим P) заданная драйвером кисть↔снап, миллиметры. Переходные кадры
+        /// Граббер↔снап после всех стадий и заданная драйвером кисть↔снап, миллиметры. Переходные кадры
         /// (<paramref name="settling"/>) — только в сырые ряды. Возвращает заданный зазор (NaN — не измерен).
         /// </summary>
         private float Gap(UxrGrabbableObject grip, int point, UxrHandSide side, bool commanded, Pose hand, bool settling,
@@ -978,7 +974,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
             result.Metrics["playerFlow"] = new Dictionary<string, object>
             {
-                ["mode"] = _playerFlow ? "PlayerFlow" : "Hybrid",
+                ["mode"] = "PlayerFlow",
                 ["frames"] = _frames,
                 ["seconds"] = seconds,
                 ["bots"] = bots,
@@ -1044,7 +1040,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                                    "gapFrames: кадры вне переходных с заданным зазором > 10 мм, с недостижимым (excess > −5 мм) запястьем или без."
                     },
                     ["note"] = "GrabberToSnap — фактический граббер после всех стадий против снапа SDK (оружие следует граббер в том же кадре); " +
-                               "CommandedToSnap — кисть, заданная драйвером до Manipulation, против снапа SDK после кадра (только режим P)."
+                               "CommandedToSnap — кисть, заданная драйвером до Manipulation, против снапа SDK после кадра."
                 },
                 ["footSlide"] = new Dictionary<string, object>
                 {
@@ -1057,7 +1053,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     ["lowestFootAboveRootMeters"] = Stats(_footAboveRoot),
                     ["slidePerTravelMeter"] = _bodyTravel > 0.01f ? _plantedSlide / _bodyTravel : 0f,
                     ["note"] = $"Стопа «стоит»: не выше нижней стопы кадра на {PlantedAboveLowest} м и |vy| < {PlantedVerticalSpeed} м/с в мире; " +
-                               "скольжение — горизонтальный путь стопы между двумя такими кадрами подряд; база — тот же сценарий в Hybrid."
+                               "скольжение — горизонтальный путь стопы между двумя такими кадрами подряд; база — тот же сценарий с базой cc-0 / pf-round."
                 },
                 ["serverMs"] = markers,
                 ["gcAllocBytesPerFrame"] = Stats(_gcBytes),
@@ -1098,7 +1094,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     ["weaponToGrabberLt1mm"] = _primaryGrabberMm.Count > 0 && (float)primaryGrabber["p95"] < 1f,
                     ["consoleErrorsZero"] = _consoleErrors == 0,
                     ["allHitsCreditedToBot"] = _foreignDamage == 0,
-                    ["note"] = "Флаги для оценки главным агентом; статус сценария не меняют. Скольжение стоп и время — сравнить с Hybrid."
+                    ["note"] = "Флаги для оценки главным агентом; статус сценария не меняют. Скольжение стоп и время — сравнить с базой cc-0 / pf-round."
                 }
             };
         }

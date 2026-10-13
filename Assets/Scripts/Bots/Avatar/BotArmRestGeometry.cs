@@ -8,7 +8,7 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Bots
 {
     /// <summary>
-    /// Статическая геометрия рук тела бота (режим <see cref="BotBodyMode.PlayerFlow"/>): смещения плеч от глаз и длины рук
+    /// Статическая геометрия рук тела бота (player-flow): смещения плеч от глаз и длины рук
     /// из исходной позы префаба тела (<c>PlayerController.SourcePrefab</c>, риг без IK), снимается один раз на тело.
     /// Живой скелет не читается — адаптер источник ввода, как контроллеры человека. Масштаб — калибровка
     /// (<c>AvatarCalibrationApplier.AppliedScale</c>). Используют <see cref="BotWeaponAim"/> (плечи для досягаемости) и

@@ -13,9 +13,9 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Bots
 {
     /// <summary>
-    /// Порядок кадра бота в режиме <see cref="BotBodyMode.PlayerFlow"/> (вариант P «кукловод»). Только сервер/хост,
-    /// только аватар без владельца. Владельцы: корень/камера/кисти — <see cref="BotAvatarDriver"/>; ноги, курс и взгляд —
-    /// <see cref="BotBody"/> (от Blaze-рига/навигатора); оружие, цель и выстрел — <see cref="BotGunner"/>; хват —
+    /// Порядок кадра бота (player-flow, вариант P «кукловод»): бот — обычный аватар игрока без владельца. Только
+    /// сервер/хост, только аватар без владельца; собирает <see cref="BotKit"/>. Владельцы: корень/камера/кисти —
+    /// <see cref="BotAvatarDriver"/>; ноги, курс и взгляд — <see cref="BotBody"/> (от Blaze-прокси/навигатора); оружие, цель и выстрел — <see cref="BotGunner"/>; хват —
     /// <see cref="BotHands"/>; поза оружия — <see cref="BotWeaponAim"/>. Этот компонент только вызывает их по порядку.
     ///
     /// <para>Кадр сервера:</para>
@@ -39,9 +39,10 @@ namespace VrBattlegrounds.Bots
     /// </para>
     ///
     /// <para>
-    /// <b>Пассивный комплект</b> (<see cref="Passive"/>: призрак, цель стенда; без <see cref="BotHands"/> и <see cref="BotWeaponAim"/>): тот же
-    /// единственный писатель — драйвер (корень, камера, кисти в позе покоя относительно тела, как Unarmed); ноги, курс и
-    /// взгляд — <see cref="BotBody"/> (сам не пишет). Ни хвата, ни прицела, ни выстрелов; Blaze не создаётся (директор).
+    /// <b>Пассивный комплект</b> (<see cref="Passive"/>: призрак, цель стенда; без <see cref="BotHands"/>,
+    /// <see cref="BotWeaponAim"/> и <see cref="BotCombatDriver"/>): тот же единственный писатель — драйвер (корень, камера,
+    /// кисти в позе покоя относительно тела, как Unarmed); ноги, курс и взгляд — <see cref="BotBody"/> (сам не пишет).
+    /// Ни хвата, ни прицела, ни выстрелов, ни Blaze.
     /// </para>
     /// </summary>
     [DisallowMultipleComponent, DefaultExecutionOrder(11000)]
@@ -178,14 +179,12 @@ namespace VrBattlegrounds.Bots
                 enabled = false;
                 return;
             }
-            _gunner.SetPlayerFlow(true);
             // Разнести raycast-ы видимости разных ботов по кадрам.
             _seesPhase = (GetHashCode() & 0x7fffffff) % Mathf.Max(1, SeesIntervalFrames);
         }
 
         private void OnDisable()
         {
-            if (_gunner != null) _gunner.SetPlayerFlow(false);
             if (_aim != null) _aim.ResetCompensation();
         }
 

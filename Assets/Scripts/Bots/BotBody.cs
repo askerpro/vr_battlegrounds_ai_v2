@@ -1,121 +1,51 @@
-using UltimateXR.Avatar;
-using UltimateXR.Core;
 using UnityEngine;
 
 namespace VrBattlegrounds.Bots
 {
     /// <summary>
-    /// Поза бота. Аватар бота — обычный аватар игрока без владельца, то есть в режиме
-    /// <see cref="UxrAvatarMode.UpdateExternally"/>, как чужой игрок на шлеме: тело строит IK
-    /// по голове (<c>CameraTransform</c>) и кистям. У живого игрока их двигает
-    /// <c>NetworkTransform</c> с его шлема, у бота — этот компонент на сервере, а клиентам
-    /// поза уходит тем же <c>NetworkTransform</c> (<c>ServerToClient</c>, см.
-    /// <c>ServerAuthoredAvatar</c>). Приём тот же, что у куклы стресс-теста (<c>StressPuppet</c>).
+    /// Ноги, курс и взгляд бота — <b>источник</b>, а не писатель позы. Аватар бота — обычный аватар игрока без владельца
+    /// (player-flow): корень, камеру и кисти пишет только <see cref="BotAvatarDriver"/> по кадру
+    /// <see cref="BotRuntimeController"/>; этот компонент ничего не пишет в трансформы.
     ///
     /// <para>
-    /// <b>Бот ходит, как человек в арене (T-48): корень стоит, движется голова.</b> Игроки
-    /// перемещаются только физически — корень аватара остаётся на месте калибровки, а по залу идёт
-    /// камера, и тело с IK догоняет её. У бота <see cref="Feet"/> — точка пола под головой:
-    /// в бою её ведёт Blaze-риг, вне боя — <see cref="BotNavigator"/>. Голова стоит над ней
-    /// на росте человека, кисти берутся из вооружённой humanoid-анимации, а без неё — из позы
-    /// префаба относительно <see cref="Feet"/> и <see cref="Yaw"/>. Корень бота не двигается.
-    /// Так клиенты видят бота
-    /// тем же путём, что удалённого игрока, а зона спавна (<c>TeamSpawnZone</c> проверяет центр
-    /// головы) — там, где он стоит.
+    /// <see cref="Feet"/> — где бот стоит: в бою — корень Blaze-прокси (<see cref="SetCombatLegsSource"/>), вне боя — шаги
+    /// <see cref="BotNavigator"/> (<see cref="WalkTo"/>). Курс доворачивается к цели или по ходу, голова смотрит на цель,
+    /// по ходу или осматривается (<see cref="HeadRotation"/>).
     /// </para>
     ///
     /// <para>
-    /// Тело сменяется (смерть → призрак → возрождение, смена скина) <b>на месте прежнего корня</b>
-    /// (<c>AvatarManager.ReplaceBody</c>), а бот ушёл головой далеко от корня. Поэтому новое тело
-    /// получает прежние ноги через <see cref="Place"/> от директора (<see cref="BotMind"/>),
-    /// иначе призрак погибшего появлялся бы у себя на базе.
+    /// Тело сменяется (смерть → призрак → возрождение, смена скина) — новое тело получает прежние ноги через
+    /// <see cref="Place"/> от директора (<see cref="BotMind"/>), иначе призрак погибшего появлялся бы у себя на базе.
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class BotBody : MonoBehaviour
     {
-        private const float EyeHeight = 1.65f;
         private const float LookSwayDegrees = 25f;
         private const float LookSwayPeriod = 6f;
         private const float TurnDegreesPerSecond = 240f;
 
-        private UxrAvatar _avatar;
-        private Transform _head;
-        private Transform _leftHand;
-        private Transform _rightHand;
-
         private bool _placed;
         private Vector3 _feet;
         private float _yaw;
-
-        private bool _handsCaptured;
-        private Vector3 _leftHandLocalPosition;
-        private Quaternion _leftHandLocalRotation;
-        private Vector3 _rightHandLocalPosition;
-        private Quaternion _rightHandLocalRotation;
         private float _phase;
 
         private bool _hasLookTarget;
         private Vector3 _lookTarget;
         private bool _walking;
         private Vector3 _walkDirection;
-        private bool _hasRightHandPose;
-        private Vector3 _rightHandPosition;
-        private Quaternion _rightHandRotation;
-        private Animator _combatPoseSource;
-        private bool _combatMovesBody;
-        private bool _hasLeftHandPose;
-        private Pose _leftHandPose;
+        private Transform _combatLegs;
         private int _preparedFrame = -1;
 
         /// <summary>
-        /// Режим <see cref="BotBodyMode.PlayerFlow"/>: корень, камеру и кисти пишет <see cref="BotAvatarDriver"/>, этот
-        /// компонент — только источник ног, курса и взгляда (<see cref="PrepareFrame"/>, <see cref="HeadRotation"/>,
-        /// <see cref="TryGetRestHands"/>) и ничего не пишет. Один писатель трансформов в каждый момент.
+        /// Источник ног и курса в бою — корень Blaze-прокси (<see cref="BotCombatDriver"/>); null — вне боя (навигатор).
         /// </summary>
-        public bool PoseDrivenExternally { get; private set; }
-
-        /// <summary>Передать запись позы драйверу (true) или вернуть себе (false). Зовёт только <see cref="BotAvatarDriver"/>.</summary>
-        internal void SetPoseDrivenExternally(bool external) => PoseDrivenExternally = external;
-
-        /// <summary>Вооружённая анимация на отдельном риге; корень самого аватара не двигается.</summary>
-        public void SetCombatPoseSource(Animator source, bool movesBody = false)
+        public void SetCombatLegsSource(Transform legs)
         {
-            if (_combatPoseSource == source && _combatMovesBody == movesBody) return;
-            _combatPoseSource = source;
-            _combatMovesBody = movesBody;
-            ClearRightHandPose();
+            if (_combatLegs == legs) return;
+            _combatLegs = legs;
             LookAt(null);
         }
-
-        public bool TryGetWeaponPose(out Pose left, out Pose right)
-        {
-            left = right = default;
-            if (_combatPoseSource == null || !_combatPoseSource.isActiveAndEnabled) return false;
-            Transform l = _combatPoseSource.GetBoneTransform(HumanBodyBones.LeftHand);
-            Transform r = _combatPoseSource.GetBoneTransform(HumanBodyBones.RightHand);
-            if (l == null || r == null) return false;
-            left = new Pose(l.position, l.rotation);
-            right = new Pose(r.position, r.rotation);
-            return true;
-        }
-
-        /// <summary>Коррекция обеих кистей при наведении оружия; базовая поза остаётся клиповой.</summary>
-        public void SetWeaponHands(Pose left, Pose right)
-        {
-            // В режиме P кисти пишет только BotAvatarDriver.
-            if (PoseDrivenExternally) return;
-            _hasLeftHandPose = true;
-            _leftHandPose = left;
-            SetRightHandPose(right.position, right.rotation);
-            // Update стрелка может идти после стадии Update UXR; BotBody остаётся автором
-            // кистей, применяет их сразу, а Manipulation подтянет оружие до проверки выстрела.
-            if (_leftHand != null) _leftHand.SetPositionAndRotation(left.position, left.rotation);
-            if (_rightHand != null) _rightHand.SetPositionAndRotation(right.position, right.rotation);
-        }
-
-        /// <summary>Кость правой кисти — нужна стрелку, чтобы пересчитать хват оружия.</summary>
-        public Transform RightHand => _rightHand;
 
         /// <summary>Точка пола под головой — где бот стоит. До первого кадра — корень.</summary>
         public Vector3 Feet => _placed ? _feet : transform.position;
@@ -154,34 +84,9 @@ namespace VrBattlegrounds.Bots
             if (target.HasValue) _lookTarget = target.Value;
         }
 
-        /// <summary>Поставить правую кисть в мировую позу (стрелок целится). Сбрасывается <see cref="ClearRightHandPose"/>.</summary>
-        public void SetRightHandPose(Vector3 position, Quaternion rotation)
-        {
-            _hasRightHandPose = true;
-            _rightHandPosition = position;
-            _rightHandRotation = rotation;
-        }
-
-        public void ClearRightHandPose()
-        {
-            _hasRightHandPose = false;
-            _hasLeftHandPose = false;
-        }
-
         private void Awake()
         {
-            _avatar = GetComponent<UxrAvatar>();
             _phase = Random.value * LookSwayPeriod;
-        }
-
-        private void OnEnable()
-        {
-            UxrManager.StageUpdated += OnStageUpdated;
-        }
-
-        private void OnDisable()
-        {
-            UxrManager.StageUpdated -= OnStageUpdated;
         }
 
         private void EnsurePlaced()
@@ -191,59 +96,20 @@ namespace VrBattlegrounds.Bots
         }
 
         /// <summary>
-        /// Поза ставится в конце стадии <see cref="UxrUpdateStage.Update"/>: IK аватара
-        /// (<see cref="UxrUpdateStage.PostProcess"/>) ещё впереди и возьмёт её в этом же кадре.
-        /// В режиме P (<see cref="PoseDrivenExternally"/>) не пишет ничего.
-        /// </summary>
-        private void OnStageUpdated(UxrUpdateStage stage)
-        {
-            if (stage != UxrUpdateStage.Update || _avatar == null || PoseDrivenExternally) return;
-
-            PrepareFrame();
-            Quaternion body = BodyRotation;
-
-            if (_head != null)
-            {
-                Vector3 eye = _feet + Vector3.up * EyeHeight;
-                _head.SetPositionAndRotation(eye, HeadRotation(eye));
-            }
-
-            bool animated = TryGetWeaponPose(out Pose left, out Pose right);
-            if (_hasLeftHandPose && _leftHand != null)
-                _leftHand.SetPositionAndRotation(_leftHandPose.position, _leftHandPose.rotation);
-            else if (animated && _leftHand != null)
-                _leftHand.SetPositionAndRotation(left.position, left.rotation);
-            else Place(body, _leftHand, _leftHandLocalPosition, _leftHandLocalRotation);
-
-            if (_hasRightHandPose && _rightHand != null)
-                _rightHand.SetPositionAndRotation(_rightHandPosition, _rightHandRotation);
-            else if (animated && _rightHand != null)
-                _rightHand.SetPositionAndRotation(right.position, right.rotation);
-            else
-                Place(body, _rightHand, _rightHandLocalPosition, _rightHandLocalRotation);
-        }
-
-        /// <summary>
-        /// Логика кадра без записи трансформов: ноги и курс (от Blaze-рига в бою, иначе доворот), снятие исходной позы
-        /// кистей. Один раз за кадр; в гибриде — из стадии Update, в режиме P — из <see cref="BotRuntimeController"/>.
+        /// Логика кадра без записи трансформов: ноги и курс (от Blaze-прокси в бою, иначе доворот). Один раз за кадр;
+        /// зовёт <see cref="BotRuntimeController"/> перед сборкой кадра намерений.
         /// </summary>
         public void PrepareFrame()
         {
-            if (_avatar == null || _preparedFrame == Time.frameCount) return;
+            if (_preparedFrame == Time.frameCount) return;
             _preparedFrame = Time.frameCount;
 
-            // Камера и кости доступны после инициализации UltimateXR — берутся лениво.
-            if (_head == null)      _head      = _avatar.CameraTransform;
-            if (_leftHand == null)  _leftHand  = _avatar.GetHandBone(UxrHandSide.Left);
-            if (_rightHand == null) _rightHand = _avatar.GetHandBone(UxrHandSide.Right);
-
             EnsurePlaced();
-            CaptureHands();
-            if (_combatMovesBody && _combatPoseSource != null && _combatPoseSource.isActiveAndEnabled)
+            if (_combatLegs != null && _combatLegs.gameObject.activeInHierarchy)
             {
                 Vector3 from = _feet;
-                _feet = _combatPoseSource.transform.position;
-                _yaw = _combatPoseSource.transform.eulerAngles.y;
+                _feet = _combatLegs.position;
+                _yaw = _combatLegs.eulerAngles.y;
                 _walking = (_feet - from).sqrMagnitude > 1e-6f;
             }
             else Turn();
@@ -261,17 +127,6 @@ namespace VrBattlegrounds.Bots
             return body * Quaternion.Euler(0f, sway, 0f);
         }
 
-        /// <summary>Кисти в позе префаба относительно ног и курса (опущенные руки без оружия). false — поза ещё не снята.</summary>
-        public bool TryGetRestHands(out Pose left, out Pose right)
-        {
-            left = right = default;
-            if (!_handsCaptured) return false;
-            Quaternion body = BodyRotation;
-            left = new Pose(_feet + body * _leftHandLocalPosition, body * _leftHandLocalRotation);
-            right = new Pose(_feet + body * _rightHandLocalPosition, body * _rightHandLocalRotation);
-            return true;
-        }
-
         /// <summary>Корпус доворачивается к цели, иначе — по ходу. Корень не трогается.</summary>
         private void Turn()
         {
@@ -285,29 +140,6 @@ namespace VrBattlegrounds.Bots
 
             float wanted = Quaternion.LookRotation(flat, Vector3.up).eulerAngles.y;
             _yaw = Mathf.MoveTowardsAngle(_yaw, wanted, TurnDegreesPerSecond * Time.deltaTime);
-        }
-
-        /// <summary>
-        /// Первое положение кистей относительно корня — поза префаба до первого IK. Дальше она
-        /// держится относительно корпуса (ноги и разворот), иначе кисти висели бы в мире, пока бот идёт.
-        /// </summary>
-        private void CaptureHands()
-        {
-            if (_handsCaptured || _leftHand == null || _rightHand == null) return;
-
-            Transform root = transform;
-            Quaternion inverse = Quaternion.Inverse(root.rotation);
-            _leftHandLocalPosition  = inverse * (_leftHand.position - root.position);
-            _leftHandLocalRotation  = inverse * _leftHand.rotation;
-            _rightHandLocalPosition = inverse * (_rightHand.position - root.position);
-            _rightHandLocalRotation = inverse * _rightHand.rotation;
-            _handsCaptured = true;
-        }
-
-        private void Place(Quaternion body, Transform target, Vector3 localPosition, Quaternion localRotation)
-        {
-            if (target == null || !_handsCaptured) return;
-            target.SetPositionAndRotation(_feet + body * localPosition, body * localRotation);
         }
     }
 }

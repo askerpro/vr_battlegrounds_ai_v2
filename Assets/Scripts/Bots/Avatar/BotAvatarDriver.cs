@@ -10,7 +10,7 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Bots
 {
     /// <summary>
-    /// Режим <see cref="BotBodyMode.PlayerFlow"/>: <b>единственный писатель</b> корня, камеры и костей кистей бота
+    /// Player-flow (бот — обычный аватар игрока без владельца): <b>единственный писатель</b> корня, камеры и костей кистей бота
     /// (<c>UxrAvatar.Left/RightHandBone</c>) — тех же трансформов, что у удалённого игрока пишет <c>NetworkTransform</c>.
     /// Только у аватара без владельца и только на сервере/хосте; клиенты получают позу штатным <c>NetworkTransform</c>
     /// (<c>ServerAuthoredAvatar</c>), бот-компонентов у них нет.
@@ -28,17 +28,15 @@ namespace VrBattlegrounds.Bots
     /// Не пишет кости скелета, пивот камеры, Dummy Forward, масштаб, поля BodyIK; не использует UxrLocomotion и
     /// UxrControllerInput. Камера пишется локально к пивоту (как HMD в пространстве трекинга) — движется вместе с
     /// корнем, без сглаживания. Корень ставится одним кадром: скачок больше teleportDistance UXR сам переносит ноги.
-    /// <see cref="BotBody"/> в этом режиме — только источник ног/курса/взгляда (<see cref="BotBody.PoseDrivenExternally"/>).
+    /// <see cref="BotBody"/> — только источник ног/курса/взгляда, в трансформы не пишет.
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(BotBody))]
     public sealed class BotAvatarDriver : MonoBehaviour
     {
         private static readonly ProfilerMarker ApplyMarker = new ProfilerMarker("BotAvatarDriver.Apply");
 
         private UxrAvatar _avatar;
-        private BotBody _body;
         private NetworkIdentity _identity;
         private PlayerController _player;
         private Transform _camera;
@@ -74,7 +72,6 @@ namespace VrBattlegrounds.Bots
         private void Awake()
         {
             _avatar = GetComponent<UxrAvatar>();
-            _body = GetComponent<BotBody>();
             _identity = GetComponent<NetworkIdentity>();
             _player = GetComponent<PlayerController>();
         }
@@ -89,15 +86,12 @@ namespace VrBattlegrounds.Bots
                 return;
             }
 
-            // Один писатель: BotBody с этого момента только источник ног/курса/взгляда.
-            _body.SetPoseDrivenExternally(true);
             UxrManager.StageUpdated += OnStageUpdated;
         }
 
         private void OnDisable()
         {
             UxrManager.StageUpdated -= OnStageUpdated;
-            if (_body != null) _body.SetPoseDrivenExternally(false);
             _hasFrame = false;
         }
 

@@ -3,7 +3,7 @@ using UnityEngine;
 namespace VrBattlegrounds.Bots
 {
     /// <summary>
-    /// Намерения бота на один кадр в режиме <see cref="BotBodyMode.PlayerFlow"/> — то, что у человека приходит
+    /// Намерения бота на один кадр в player-flow — то, что у человека приходит
     /// со шлема и контроллеров: поза корня (точка пола и курс), голова в пространстве трекинга (локально к пивоту
     /// <c>UxrAvatar.CameraController</c>, как HMD), мировые позы двух кистей, спуск, хват, сброс, уборка в кобуру.
     /// Собирает <see cref="BotRuntimeController"/> в Update, исполняют <see cref="BotAvatarDriver"/> (позы) и

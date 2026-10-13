@@ -187,7 +187,6 @@
       "id": "item-clicks",
       "writes": [
         "Assets/Prefabs/UI/Menu/Tablet/Tablet_Base.prefab",
-        "Assets/Resources/HapticRoles.asset",
         "Assets/Data/Haptics/**",
         "tasks/haptics-system/**"
       ],
@@ -195,6 +194,11 @@
         {
           "task": "haptics-system",
           "stage": "sources",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "cyborg-grips",
           "state": "merged"
         }
       ],

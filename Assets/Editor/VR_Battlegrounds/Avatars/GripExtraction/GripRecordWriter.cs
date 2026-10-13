@@ -42,6 +42,8 @@ namespace VrBattlegrounds.Editor.Avatars
                     Transform        right     = HandsPackPoseImporter.AlignTransform(root.transform, point.Pose, profile.AlignAvatarName, UxrHandSide.Right, source);
                     Place(root.transform, left, point.Hand(nameof(UxrHandSide.Left)));
                     Place(root.transform, right, point.Hand(nameof(UxrHandSide.Right)));
+                    BindToPrefab(left, weaponPath);
+                    BindToPrefab(right, weaponPath);
 
                     grabPoint.CheckAddGripPoseInfo(recordGuid);
                     UxrGripPoseInfo grip     = grabPoint.GetGripPoseInfo(recordGuid);
@@ -90,6 +92,22 @@ namespace VrBattlegrounds.Editor.Avatars
         }
 
         /// <summary>Мировая поза align от корня — как HandsPackGripAligner.Place (SetPositionAndRotation).</summary>
+        /// <summary>
+        /// Компонент align, созданный в <c>LoadPrefabContents</c>, сохраняется без prefab provenance
+        /// (<c>__prefabGuid</c> пуст, <c>__isInPrefab</c>=0), в отличие от остальных точек хвата префаба.
+        /// Проставляет GUID префаба, не меняя уже записанный ID; у существующих компонентов ничего не меняет.
+        /// </summary>
+        private static void BindToPrefab(Transform align, string weaponPath)
+        {
+            if (!align.TryGetComponent(out UxrGrabbableObjectSnapTransform snap)) return;
+            var    serialized = new SerializedObject(snap);
+            string prefabGuid = AssetDatabase.AssetPathToGUID(weaponPath);
+            if (serialized.FindProperty("__isInPrefab").boolValue && serialized.FindProperty("__prefabGuid").stringValue == prefabGuid) return;
+
+            string stored = serialized.FindProperty("_uxrUniqueId").stringValue;
+            snap.SetEditorUniqueId(Guid.TryParse(stored, out Guid id) && id != Guid.Empty ? id : Guid.NewGuid(), true, prefabGuid);
+        }
+
         private static void Place(Transform root, Transform align, GripHandResult hand)
         {
             if (hand == null)

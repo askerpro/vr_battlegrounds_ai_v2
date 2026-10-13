@@ -40,18 +40,18 @@ BotHands+BotWeaponAim (живой), BotRuntimeController.SetKit. Призрак 
 
 | # | Что |
 |---|---|
-| cc-0 | База гибрида + `BotStandMatchProbe` (матч 1/3/9 на ПК: кадр, маркеры, GC; S2C-наблюдатель) |
+| cc-0 | База гибрида + `BotStandMatchProbe` (матч 1/3/8(+10) на ПК: кадр, маркеры, GC; S8 со зрителями) — [cc0-spec.md](cc0-spec.md) |
 | cc-1 | Перевод матча и удаление гибрида (атомарно), минимальный прокси, стенд, сторож BotAuthorityTests |
 | cc-2 | Покупки: OfferPurchase, Arm(), BotAddOptions.AutoEquip, PurchaseOfferedBody, case DirectorEquip |
-| cc-3 | Замеры стенда и матча (M1/M3/M9 ПК-хост, S9 ServerOnly+2 клиента), ревью avatar-ik/performance, демо |
+| cc-3 | Замеры стенда и матча (M1/M3/M8(+M10) ПК-хост, S8 ServerOnly+2 зрителя), ревью avatar-ik/performance, демо |
 | cc-4 | Документы (T-48, blaze-integration, combat-stand, раздел gameplay.md T-48), binding r3, Readme/plan |
 | cc-5 | После приёмки: EditMode-тесты; удаление bots-fix-clip-archive и parked/pose-fit |
 
 Критерии: стенд — эталоны 100%, 5 пунктов pf-equipment, DirectorEquip (один ствол), цель стоит, 0 ошибок, комплект
 один раз; матч Elimination ≥4 раундов — фазы, закупки сходятся с экономикой, стрельба при видимом враге, смерть →
-призрак → возрождение, конец матча, 0 ошибок/исключений/Relay; ПК-сервер 9 ботов p95 не хуже базы cc-0, GC не
-растёт с N; S9 байт/с на бота ≤ удалённого человека.
+призрак → возрождение, конец матча, 0 ошибок/исключений/Relay; ПК-сервер 8 ботов p95 не хуже базы cc-0, GC не
+растёт с N; S8 байт/с на бота ≤ удалённого человека.
 
 Риски: минимальный аниматор Blaze; сервер при 9 ботах (FindObjectsByType в TryHomePoint, GetComponent в Think,
 GetComponentInParent в Target — кешировать); пик конца раунда (9 призраков); корень теперь движется (трафик, прыжки
-ног); MaxTeamSize=4 против «≤10» (вопрос gameplay).
+ног); MaxTeamSize=4 — только автодобор BotMatchPlan; база 8 (4×4), предел 10 (5×5) — ответ gameplay 6030.

@@ -327,6 +327,22 @@
       "needs": []
     },
     {
+      "id": "shot-cost-probe",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.Readiness.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrProjectileSource.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeaponManager.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeaponProfilerMarkers.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeaponProfilerMarkers.cs.meta",
+        "Assets/Scripts/Weapons/WeaponSystem/WeaponSystem.cs",
+        "Assets/Scripts/Weapons/WeaponSystem/WeaponEjectionExecutor.cs",
+        "Assets/Scripts/Weapons/WeaponSystem/WeaponAudioExecutor.cs",
+        "tasks/weapon-system/changelog/2026-10-13-sdk-79.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
       "id": "ejection-manual",
       "writes": [
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmReadinessTypes.cs",
@@ -388,6 +404,11 @@
         {
           "task": "hand-rig-quality",
           "stage": "cyborg-grips",
+          "state": "merged"
+        },
+        {
+          "task": "weapon-system",
+          "stage": "shot-cost-probe",
           "state": "merged"
         }
       ],

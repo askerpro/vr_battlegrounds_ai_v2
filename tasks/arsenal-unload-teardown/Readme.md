@@ -29,3 +29,13 @@
 ## Состояние
 
 - 2026-10-13: задача заведена.
+- 2026-10-14: `top-level-detach` — `ArsenalCompositionHandle.Dispose` отцепляет только чужие предметы верхнего уровня;
+  `MapBootstrap.OnDestroy` → `ArsenalStationComposer.ReleaseWithScene` (явный признак выгрузки от владельца сцены) —
+  при выгрузке предметы уходят со сценой, без переподвешивания в корень; `Forget` по ссылке. Диагностика: через кадр
+  после загрузки карты строка `[MapBootstrap] <карта>: после загрузки — grabbable вне сцены=M, spawned вне карты=N`
+  (Warning при ненулевых). Ревью: network ACK 6107, manipulation 6201. Проверка: launch-infra Run-E2E
+  map-run-startup-route (TestMap1, выделенный сервер + 2 клиента, перезагрузка карты, плеер кандидата ad72274) —
+  GREEN (6334): 0 «Tried to ignore collisions» (до исправления 88), 0 «not cleaned up», 0 UxrComponentNotFound,
+  0 ошибок Relay, счётчики 0/0 в обе загрузки. Ограничение: плеер до вердикта по логам (0cd489fd) — полный вердикт в
+  прогоне после вливания. Офлайн-компиляция VrBattlegrounds — 0 ошибок. Принят пользователем 2026-10-14; вливание.
+- Дальше: `accepted-tests` (EditMode-тест разборки: вложенные предметы, выгрузка).

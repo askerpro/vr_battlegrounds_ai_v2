@@ -428,6 +428,15 @@ namespace UltimateXR.Core.Unique
         {
             if (s_componentsById.TryGetValue(id, out T c))
             {
+                // VR Battlegrounds patch 77: уничтоженный без OnDestroy владелец (объект ни разу не был активен)
+                // — не адресат. Его записи снимаются, поиск отвечает «не найден», как для незарегистрированного.
+                if (c == null)
+                {
+                    PurgeDeadOwner(c);
+                    component = null;
+                    return false;
+                }
+
                 component = c;
                 return true;
             }
@@ -441,6 +450,12 @@ namespace UltimateXR.Core.Unique
         {
             foreach (KeyValuePair<Guid, T> pair in s_componentsById)
             {
+                // VR Battlegrounds patch 77: уничтоженные владельцы в перечисление не попадают.
+                if (pair.Value == null)
+                {
+                    continue;
+                }
+
                 yield return pair.Value;
             }
         }
@@ -498,13 +513,15 @@ namespace UltimateXR.Core.Unique
 
             // Try to get new unique ID
 
-            if (ComponentsById.ContainsKey(newId))
+            // VR Battlegrounds patch 77: id уничтоженного владельца свободен — новый экземпляр того же объекта
+            // сцены получает исходный id (как на сервере), а не CollisionN.
+            if (IsIdTakenByLiveOwner(newId))
             {
                 // Handle collisions
 
                 int collisionIterations = 0;
 
-                while (ComponentsById.ContainsKey(newId))
+                while (IsIdTakenByLiveOwner(newId))
                 {
                     int collisionCount = s_idCollisions[unprocessedId];
 
@@ -566,6 +583,43 @@ namespace UltimateXR.Core.Unique
             if (!s_idsByComponent.TryGetValue(component, out HashSet<Guid> owned))
                 s_idsByComponent.Add(component, owned = new HashSet<Guid>());
             owned.Add(id);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 77: занят ли id живым владельцем. Запись за уничтоженным владельцем
+        ///     снимается здесь же — она остаётся, когда объект уничтожен, ни разу не став активным (компоненты
+        ///     неактивных объектов регистрируются без Awake, а OnDestroy у них Unity не вызывает).
+        /// </summary>
+        private static bool IsIdTakenByLiveOwner(Guid id)
+        {
+            if (!s_componentsById.TryGetValue(id, out T owner))
+            {
+                return false;
+            }
+
+            if (owner == null)
+            {
+                PurgeDeadOwner(owner);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 77: снимает все записи уничтоженного владельца (по обратному индексу).
+        /// </summary>
+        private static void PurgeDeadOwner(T deadOwner)
+        {
+            if (ReferenceEquals(deadOwner, null) || !s_idsByComponent.TryGetValue(deadOwner, out HashSet<Guid> owned))
+            {
+                return;
+            }
+
+            foreach (Guid id in new List<Guid>(owned))
+            {
+                RemoveIdIfOwnedBy(id, deadOwner);
+            }
         }
 
         /// <summary>VR Battlegrounds: удаление только если ID принадлежит именно этому компоненту.</summary>

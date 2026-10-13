@@ -1,0 +1,21 @@
+{
+  "task_id": "uniqueid-stale-registry",
+  "owner": "network",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/network/Vr_Battlegrounds_ai",
+  "base_sha": "01181ba222611c7360377b17a73cc25ad23191f6",
+  "doc_path": "tasks/uniqueid-stale-registry/Readme.md",
+  "title": "Реестр UniqueId: записи уничтоженных компонентов",
+  "stages": [
+    {"id": "registry-fix", "writes": [
+      "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/Unique/UxrUniqueIdImplementer_1.cs",
+      "tasks/uniqueid-stale-registry/**",
+      "experts/network/**"
+    ], "after": [], "needs": []},
+    {"id": "regression-tests", "writes": [
+      "Assets/Tests/EditMode/Network/UniqueIdStaleRegistryTests.cs",
+      "Assets/Tests/EditMode/Network/UniqueIdStaleRegistryTests.cs.meta",
+      "tasks/uniqueid-stale-registry/**"
+    ], "after": [{"task": "uniqueid-stale-registry", "stage": "registry-fix", "state": "merged"}], "needs": []}
+  ]
+}

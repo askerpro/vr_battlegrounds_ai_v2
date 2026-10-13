@@ -27,6 +27,25 @@ namespace Mirror
         protected Changed cachedChangedComparison;
         protected bool hasSentUnchangedPosition;
 
+        // VR Battlegrounds patch 3 (tasks/mirror-nt-keyframe): ключевой снимок и последнее полученное значение.
+        // Отправитель шлёт только изменившиеся оси; потерянная ось, которая потом не меняется, не восстанавливалась
+        // никогда. Раз в keyframeInterval уходят все синхронизируемые оси.
+        [Tooltip("VR Battlegrounds patch 3: interval in seconds of a full snapshot with all synced axes, even if unchanged. Recovers lost unreliable deltas. 0 disables.")]
+        public float keyframeInterval = 1f;
+        double lastKeyframeTime = double.MinValue;
+
+        // Приёмник: значение осей, последнее полученное от отправителя, отдельно от буфера интерполяции.
+        // ResetState его не сбрасывает. Непришедшие оси берутся отсюда, а не из трансформа: трансформ цели
+        // на приёмнике правят другие писатели (хват, IK, отдача), и чтение назад запекало их правки в буфер.
+        bool hasClientReceived;
+        Vector3 clientReceivedPosition;
+        Quaternion clientReceivedRotation;
+        Vector3 clientReceivedScale;
+        bool hasServerReceived;
+        Vector3 serverReceivedPosition;
+        Quaternion serverReceivedRotation;
+        Vector3 serverReceivedScale;
+
         // update //////////////////////////////////////////////////////////////
         // Update applies interpolation
         void Update()
@@ -123,9 +142,11 @@ namespace Mirror
                 // receiver gets it from batch timestamp to save bandwidth.
                 TransformSnapshot snapshot = Construct();
 
-                cachedChangedComparison = CompareChangedSnapshots(snapshot);
+                // VR Battlegrounds patch 3: ключевой снимок — все оси, даже без изменений.
+                bool keyframe = TryTakeKeyframe(out Changed fullChange);
+                cachedChangedComparison = keyframe ? fullChange : CompareChangedSnapshots(snapshot);
 
-                if ((cachedChangedComparison == Changed.None || cachedChangedComparison == Changed.CompressRot) && hasSentUnchangedPosition && onlySyncOnChange) { return; }
+                if (!keyframe && (cachedChangedComparison == Changed.None || cachedChangedComparison == Changed.CompressRot) && hasSentUnchangedPosition && onlySyncOnChange) { return; }
 
                 SyncData syncData = new SyncData(cachedChangedComparison, snapshot);
 
@@ -209,9 +230,11 @@ namespace Mirror
                 // receiver gets it from batch timestamp to save bandwidth.
                 TransformSnapshot snapshot = Construct();
 
-                cachedChangedComparison = CompareChangedSnapshots(snapshot);
+                // VR Battlegrounds patch 3: ключевой снимок и от владельца — сервер пересылает его наблюдателям.
+                bool keyframe = TryTakeKeyframe(out Changed fullChange);
+                cachedChangedComparison = keyframe ? fullChange : CompareChangedSnapshots(snapshot);
 
-                if ((cachedChangedComparison == Changed.None || cachedChangedComparison == Changed.CompressRot) && hasSentUnchangedPosition && onlySyncOnChange) { return; }
+                if (!keyframe && (cachedChangedComparison == Changed.None || cachedChangedComparison == Changed.CompressRot) && hasSentUnchangedPosition && onlySyncOnChange) { return; }
 
                 SyncData syncData = new SyncData(cachedChangedComparison, snapshot);
 
@@ -274,6 +297,9 @@ namespace Mirror
                 if (syncPosition) SetPosition(reader.ReadVector3());
                 if (syncRotation) SetRotation(reader.ReadQuaternion());
                 if (syncScale) SetScale(reader.ReadVector3());
+
+                // VR Battlegrounds patch 3: поза спавна — первое полученное значение осей приёмника.
+                SetClientReceived(GetPosition(), GetRotation(), GetScale());
             }
         }
 
@@ -384,6 +410,12 @@ namespace Mirror
 
             UpdateSyncData(ref syncData, serverSnapshots);
 
+            // VR Battlegrounds patch 3: запомнить полученное (полные оси после достройки).
+            hasServerReceived = true;
+            serverReceivedPosition = syncData.position;
+            serverReceivedRotation = syncData.quatRotation;
+            serverReceivedScale = syncData.scale;
+
             AddSnapshot(serverSnapshots, connectionToClient.remoteTimeStamp + timeStampAdjustment + offset, syncData.position, syncData.quatRotation, syncData.scale);
         }
 
@@ -420,16 +452,24 @@ namespace Mirror
 
             UpdateSyncData(ref syncData, clientSnapshots);
 
+            // VR Battlegrounds patch 3: запомнить полученное (полные оси после достройки).
+            SetClientReceived(syncData.position, syncData.quatRotation, syncData.scale);
+
             AddSnapshot(clientSnapshots, NetworkClient.connection.remoteTimeStamp + timeStampAdjustment + offset, syncData.position, syncData.quatRotation, syncData.scale);
         }
 
         protected virtual void UpdateSyncData(ref SyncData syncData, SortedList<double, TransformSnapshot> snapshots)
         {
+            // VR Battlegrounds patch 3: непришедшие оси — из последнего ПОЛУЧЕННОГО значения (буфер, а после
+            // ResetState — сохранённое значение приёмника), а не из трансформа цели. Трансформ — только если
+            // от отправителя ещё ничего не получено.
+            GetReceivedBaseline(snapshots, out Vector3 basePosition, out Quaternion baseRotation, out Vector3 baseScale);
+
             if (syncData.changedDataByte == Changed.None || syncData.changedDataByte == Changed.CompressRot)
             {
-                syncData.position = snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].position : GetPosition();
-                syncData.quatRotation = snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].rotation : GetRotation();
-                syncData.scale = snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].scale : GetScale();
+                syncData.position = basePosition;
+                syncData.quatRotation = baseRotation;
+                syncData.scale = baseScale;
             }
             else
             {
@@ -437,25 +477,112 @@ namespace Mirror
                 // because if not syncing position, NT will not apply any position data
                 // to the target during Apply().
 
-                syncData.position.x = (syncData.changedDataByte & Changed.PosX) > 0 ? syncData.position.x : (snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].position.x : GetPosition().x);
-                syncData.position.y = (syncData.changedDataByte & Changed.PosY) > 0 ? syncData.position.y : (snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].position.y : GetPosition().y);
-                syncData.position.z = (syncData.changedDataByte & Changed.PosZ) > 0 ? syncData.position.z : (snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].position.z : GetPosition().z);
+                syncData.position.x = (syncData.changedDataByte & Changed.PosX) > 0 ? syncData.position.x : basePosition.x;
+                syncData.position.y = (syncData.changedDataByte & Changed.PosY) > 0 ? syncData.position.y : basePosition.y;
+                syncData.position.z = (syncData.changedDataByte & Changed.PosZ) > 0 ? syncData.position.z : basePosition.z;
 
                 // If compressRot is true, we already have the Quat in syncdata.
                 if ((syncData.changedDataByte & Changed.CompressRot) == 0)
                 {
-                    syncData.vecRotation.x = (syncData.changedDataByte & Changed.RotX) > 0 ? syncData.vecRotation.x : (snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].rotation.eulerAngles.x : GetRotation().eulerAngles.x);
-                    syncData.vecRotation.y = (syncData.changedDataByte & Changed.RotY) > 0 ? syncData.vecRotation.y : (snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].rotation.eulerAngles.y : GetRotation().eulerAngles.y); ;
-                    syncData.vecRotation.z = (syncData.changedDataByte & Changed.RotZ) > 0 ? syncData.vecRotation.z : (snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].rotation.eulerAngles.z : GetRotation().eulerAngles.z);
+                    Vector3 baseEuler = baseRotation.eulerAngles;
+                    syncData.vecRotation.x = (syncData.changedDataByte & Changed.RotX) > 0 ? syncData.vecRotation.x : baseEuler.x;
+                    syncData.vecRotation.y = (syncData.changedDataByte & Changed.RotY) > 0 ? syncData.vecRotation.y : baseEuler.y;
+                    syncData.vecRotation.z = (syncData.changedDataByte & Changed.RotZ) > 0 ? syncData.vecRotation.z : baseEuler.z;
 
                     syncData.quatRotation = Quaternion.Euler(syncData.vecRotation);
                 }
                 else
                 {
-                    syncData.quatRotation = (syncData.changedDataByte & Changed.Rot) > 0 ? syncData.quatRotation : (snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].rotation : GetRotation());
+                    syncData.quatRotation = (syncData.changedDataByte & Changed.Rot) > 0 ? syncData.quatRotation : baseRotation;
                 }
 
-                syncData.scale = (syncData.changedDataByte & Changed.Scale) > 0 ? syncData.scale : (snapshots.Count > 0 ? snapshots.Values[snapshots.Count - 1].scale : GetScale());
+                syncData.scale = (syncData.changedDataByte & Changed.Scale) > 0 ? syncData.scale : baseScale;
+            }
+        }
+
+        // VR Battlegrounds patch 3 ////////////////////////////////////////////
+
+        // Опорное значение для непришедших осей: последний снимок буфера, иначе сохранённое полученное значение
+        // этого направления, иначе (ничего ещё не получено) трансформ цели.
+        void GetReceivedBaseline(SortedList<double, TransformSnapshot> snapshots, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            if (snapshots.Count > 0)
+            {
+                TransformSnapshot last = snapshots.Values[snapshots.Count - 1];
+                position = last.position;
+                rotation = last.rotation;
+                scale = last.scale;
+                return;
+            }
+
+            if (ReferenceEquals(snapshots, clientSnapshots) && hasClientReceived)
+            {
+                position = clientReceivedPosition;
+                rotation = clientReceivedRotation;
+                scale = clientReceivedScale;
+                return;
+            }
+
+            if (ReferenceEquals(snapshots, serverSnapshots) && hasServerReceived)
+            {
+                position = serverReceivedPosition;
+                rotation = serverReceivedRotation;
+                scale = serverReceivedScale;
+                return;
+            }
+
+            position = GetPosition();
+            rotation = GetRotation();
+            scale = GetScale();
+        }
+
+        void SetClientReceived(Vector3 position, Quaternion rotation, Vector3 scale)
+        {
+            hasClientReceived = true;
+            clientReceivedPosition = position;
+            clientReceivedRotation = rotation;
+            clientReceivedScale = scale;
+        }
+
+        // Пора ли ключевого снимка; полный набор флагов синхронизируемых осей. Первая отправка — всегда полная.
+        bool TryTakeKeyframe(out Changed fullChange)
+        {
+            fullChange = Changed.None;
+            if (keyframeInterval <= 0f) return false;
+
+            double now = NetworkTime.localTime;
+            if (lastKeyframeTime != double.MinValue && now - lastKeyframeTime < keyframeInterval) return false;
+
+            if (syncPosition) fullChange |= Changed.Pos;
+            if (syncRotation) fullChange |= compressRotation ? (Changed.CompressRot | Changed.Rot) : Changed.Rot;
+            if (syncScale) fullChange |= Changed.Scale;
+            if (fullChange == Changed.None) return false;
+
+            lastKeyframeTime = now;
+            return true;
+        }
+
+        // Телепорт задаёт новую позу напрямую: она же — новое полученное значение приёмника.
+        protected override void OnTeleport(Vector3 destination)
+        {
+            base.OnTeleport(destination);
+            RememberTeleport();
+        }
+
+        protected override void OnTeleport(Vector3 destination, Quaternion rotation)
+        {
+            base.OnTeleport(destination, rotation);
+            RememberTeleport();
+        }
+
+        void RememberTeleport()
+        {
+            if (hasClientReceived) SetClientReceived(GetPosition(), GetRotation(), GetScale());
+            if (hasServerReceived)
+            {
+                serverReceivedPosition = GetPosition();
+                serverReceivedRotation = GetRotation();
+                serverReceivedScale = GetScale();
             }
         }
     }

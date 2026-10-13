@@ -1,0 +1,21 @@
+{
+  "task_id": "mirror-nt-keyframe",
+  "owner": "network",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/network/Vr_Battlegrounds_ai",
+  "base_sha": "a1040a95f5d01a6e11c4535dcf6607c56103c877",
+  "doc_path": "tasks/mirror-nt-keyframe/Readme.md",
+  "title": "Mirror NTU: храповик осей и ключевой снимок",
+  "stages": [
+    {"id": "nt-patch", "writes": [
+      "Assets/ThirdParty/Mirror/Components/NetworkTransform/NetworkTransformUnreliable.cs",
+      "tasks/mirror-nt-keyframe/**",
+      "experts/network/**"
+    ], "after": [], "needs": []},
+    {"id": "regression-tests", "writes": [
+      "Assets/Tests/EditMode/Network/NetworkTransformKeyframeTests.cs",
+      "Assets/Tests/EditMode/Network/NetworkTransformKeyframeTests.cs.meta",
+      "tasks/mirror-nt-keyframe/**"
+    ], "after": [{"task": "mirror-nt-keyframe", "stage": "nt-patch", "state": "merged"}], "needs": []}
+  ]
+}

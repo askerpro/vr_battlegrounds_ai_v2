@@ -1,4 +1,4 @@
-Обновлено 2026-10-11. Кандидаты вне хаба; порядок — приоритет.
+Обновлено 2026-10-13. Кандидаты вне хаба; порядок — приоритет.
 
 1. `hand-writer-contract` — контракт порядка писателей кисти с avatar-ik (список — AGENT.md «Invariants»); bots-fix пишет `BotBody`/`UxrArmIKSolver` — analysis.md «Минимальная база знаний», `expert-map.md`.
 2. `grip-pose-coverage` — `GrabPoseCoverageTests` влит красным (d8d94cf9: MEF без хвата планшета/жетона/части оружия, Cyborg — пистолета/M16/дробовика), генератора переноса поз на базы нет; сверить с инвентарём mef-grip-audit.
@@ -12,3 +12,5 @@
 8. `grips-kb-docs` — продуктовая KB `Docs/grips/`; этап documentation её не покрывает — analysis.md «Минимальная база знаний».
 9. `profile-awake-adapter` — старт `.codex/agents/avatar-grip-expert.toml` через awake; файл у влитого expert-registration, нужен новый этап.
 10. `stale-grab-comments` — manipulation: устаревшие комментарии GrabRules/TwoHandGrabPolicy о порядке CanGrabDelegate — analysis.md «Подтверждено исходниками» п.2.
+11. `sdk-no-metacarpal-pose` — патч SDK: поза без пястных на кисти с пястными в рантайме ставит проксимальную от запястья под пястной (179°; `UxrRuntimeFingerDescriptor` ветка без пястной + `UxrAvatarRig.HandRuntimeTransformation`). Сейчас обойдено перекодировкой поз `MEF_cyborg_hands/HandPoses`; любая новая поза без пястных сломается так же. `patch-reserve`, регрессия по всем аватарам — Details.md «cyborg-grips».
+12. `fit-runtime-guard` — Hand Pose Fit: сторож «рантайм против редактора» (угол фаланг после `UxrRuntimeHandDescriptor` и мирового пути) и правдоподобие суставов; анализатор оценил выкрученную кисть Scar лишь notable — Details.md «cyborg-grips».

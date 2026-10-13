@@ -175,6 +175,58 @@
       "needs": []
     },
     {
+      "id": "grip-extraction",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction/**",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction.meta",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandsPackPoseExtractor.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/KinemationPoseExtractor.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandsPackGripAligner.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandsPackPoseImporter.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/**",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "cyborg-grips",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "contact-metrics",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "grip-extraction-run",
+      "writes": [
+        "Assets/Prefabs/Weapons/**",
+        "Assets/Prefabs/UI/Menu/Tablet/Tablet_Base.prefab",
+        "Assets/Prefabs/UI/Menu/Tablet/Tablet.prefab",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/**",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "wrist-gap",
       "writes": [
         "Assets/Models/Avatars/MEF_CyborgHands/**",
@@ -195,6 +247,11 @@
         {
           "task": "hand-rig-quality",
           "stage": "cyborg-grips",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction-run",
           "state": "merged"
         }
       ],
@@ -230,6 +287,11 @@
         {
           "task": "hand-rig-quality",
           "stage": "wrist-gap",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction",
           "state": "merged"
         }
       ],
@@ -276,6 +338,11 @@
           "task": "hand-rig-quality",
           "stage": "wrist-gap",
           "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction",
+          "state": "merged"
         }
       ],
       "needs": []
@@ -307,6 +374,11 @@
         {
           "task": "legs-ik",
           "stage": "sit-clip",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction",
           "state": "merged"
         }
       ],

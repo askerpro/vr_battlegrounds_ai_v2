@@ -23,7 +23,13 @@ YAML в Git хранится в LF, а в старых рабочих копия
 
 1. `env-independent` — `MapRunPreflight.cs` + пересборка `MapRuntimeCatalog.asset` в Unity (`RebakeCatalog`),
    preflight 7/7, EditMode Maps (`MapCatalogIntegrityTests`, `MapRunContractTests`), Play лобби до Ready.
-2. `accepted-tests` — после приёмки: EditMode-тест нормализации (CRLF и LF дают один отпечаток).
+2. `preview-loaded-scene` (находка launch-infra 5478, 2026-10-13) — сборка из открытого Editor падает, если сцена
+   карты из каталога загружена: `MapRunPreflight.Validate` открывает её копию через `OpenPreviewScene`, объекты копии
+   получают те же sceneId, `NetworkIdentity.AssignSceneID` бросает. Исправление (дизайн согласован с launch-infra
+   5483): уже загруженную сцену проверять саму, без preview; dirty — именованный отказ `Scene.Dirty:<map>` с
+   подсказкой сохранить; иначе как раньше. Второго предохранителя в GameBuilder нет — правило одно, в preflight.
+3. `accepted-tests` — после приёмки обоих этапов: `MapRunPreflightTests` — CRLF и LF дают один отпечаток;
+   загруженная/dirty сцена.
 
 ## Состояние
 

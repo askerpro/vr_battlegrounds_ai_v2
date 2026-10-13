@@ -1,7 +1,13 @@
-Обновлено 2026-10-11. Кандидаты вне хаба; порядок — приоритет. MRB = `tasks/map-runtime-bootstrap/`.
+Обновлено 2026-10-13. Кандидаты вне хаба; порядок — приоритет. MRB = `tasks/map-runtime-bootstrap/`.
+Решение пользователя 2026-10-13: сначала то, что мешает игровой логике и чего ждут другие; `arsenal-generator`
+(декор, этапы planning…decorations) отложен.
 
-1. `direct-play-route-verify` — сверить «Play из сцены карты идёт Offline → Lobby → карта» с PlayLaunch native-play (`PlayLaunch.cs` зовёт ServerStartupRoute) и `DebugOrchestrator.TryAutoLoadMap`, с launch-infra — MRB Details «Известные ограничения».
-2. `known-noise-content` — список шума `series-smoke-e2e`: причина и владелец каждого пункта (механизм — launch-infra) — MRB Details «Известные шумы тестов и харнесса».
+1. `series-smoke` (+ бывший `known-noise-content`) — смок-тест серии матчей передан от launch-infra (5863/5869): сценарий
+   `SeriesSmoke`, критерии и шум сценария — мои; каркас `e2e-smoke-kit` (барьер шагов с data, роль процесса, журнал
+   UTC, `-Arg`, abort) — launch-infra после `e2e-log-verdict` (проект: `tasks/quest-perf-pipeline/Details.md`
+   «Каркас для смок-теста серии e2e-smoke-kit», ревью 5880/5883, network 5888). План сценария и шум — MRB Details
+   «Этапы series-smoke…» и «Известные шумы тестов и харнесса». Завести этап и сообщить id launch-infra.
+2. `direct-play-route-verify` — сверить «Play из сцены карты идёт Offline → Lobby → карта» с PlayLaunch native-play (`PlayLaunch.cs` зовёт ServerStartupRoute) и `DebugOrchestrator.TryAutoLoadMap`, с launch-infra — MRB Details «Известные ограничения».
 3. `game-check-multiplayer` — два клиента, поздний вход, шлем, клиент долго в лобби, отмена загрузки при живом сервере — MRB Readme «Следующий шаг» п.4, Details «Не проверено».
 4. `map-bootstrap-cleanup` — пути отчётов `MapBootstrapMigration.cs:38`, `MapRunPreflight.cs:72`; комментарий `MapRunContractTests.cs:15`; ветки `codex/tmp/map-bootstrap-*` — MRB Readme п.2.
 5. `map-bootstrap-user-fixes` — правки по проверке пользователя 2026-10-07, список ждёт пользователя — MRB Readme п.3.

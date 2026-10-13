@@ -18,16 +18,32 @@
       "needs": []
     },
     {
-      "id": "accepted-tests",
+      "id": "preview-loaded-scene",
       "writes": [
-        "Assets/Tests/EditMode/Maps/**",
+        "Assets/Editor/VR_Battlegrounds/Maps/MapRunPreflight.cs",
         "tasks/catalog-fingerprint/**"
       ],
       "after": [
         {
           "task": "catalog-fingerprint",
           "stage": "env-independent",
-          "state": "verified"
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "accepted-tests",
+      "writes": [
+        "Assets/Tests/EditMode/Maps/MapRunPreflightTests.cs",
+        "Assets/Tests/EditMode/Maps/MapRunPreflightTests.cs.meta",
+        "tasks/catalog-fingerprint/**"
+      ],
+      "after": [
+        {
+          "task": "catalog-fingerprint",
+          "stage": "preview-loaded-scene",
+          "state": "merged"
         }
       ],
       "needs": []

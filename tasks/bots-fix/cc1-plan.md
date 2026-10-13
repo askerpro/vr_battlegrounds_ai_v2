@@ -11,8 +11,10 @@
 - Масштаб прокси — как сейчас (`lossyScale`), поведение Blaze не меняем в этом подэтапе.
 - Запасной 1-с клип в состояниях прокси — только если A/B провалит пустые состояния (коммит cc-1d).
 - Документы (`Docs/README.md`, `experts/bots/AGENT.md`, `combat-stand.md`) — в cc-4.
-- **Открыто (пользователь):** сторож `BotAuthorityTests` ищет `_firearm.SetAmmoLeft(` — после удаления гибрида
-  он покраснеет; править в cc-1 (исключение из правила «тесты после приёмки») или `[Ignore]` до cc-5.
+- Сторож `BotAuthorityTests` правится в cc-1 — решение пользователя 2026-10-14 (исключение из правила «тесты после
+  приёмки»): автор — до `RequestAutomationPreparation` и `TryToShootRound`, `SetAmmoLeft` нет.
+- Боты засчитываются в `minPlayersToStart` (EliminationMode.IsPlayersReady → PlayersManager.Sessions, бот — сессия);
+  матч из 1 бота не стартует по правилу (минимум 2 и обе команды не пусты) — подтверждено замером cc-0 M1/M3.
 
 ## 1. Удаляется
 

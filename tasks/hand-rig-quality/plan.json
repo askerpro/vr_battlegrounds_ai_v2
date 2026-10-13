@@ -158,6 +158,7 @@
       "writes": [
         "Assets/Prefabs/Weapons/**",
         "Assets/Prefabs/UI/Menu/Tablet/Tablet_Base.prefab",
+        "Assets/Prefabs/UI/Menu/Tablet/Tablet.prefab",
         "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/**",
         "tasks/hand-rig-quality/Readme.md",
         "tasks/hand-rig-quality/Details.md",

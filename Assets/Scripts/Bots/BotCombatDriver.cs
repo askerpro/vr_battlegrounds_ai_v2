@@ -1,12 +1,10 @@
 using BlazeAISpace;
 using Mirror;
 using UltimateXR.Avatar;
-using UltimateXR.Avatar.Controllers;
 using UltimateXR.Manipulation;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Events;
-using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Maps;
 using VrBattlegrounds.Network;
@@ -15,133 +13,148 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Bots
 {
     /// <summary>
-    /// Серверный адаптер готового Blaze Cover Shooter. Пакет ведёт самостоятельный риг у ног,
-    /// BotBody переносит его позу в VR-аватар, BotGunner исполняет shootEvent настоящим оружием.
-    /// Этот компонент не содержит собственных боевых решений.
+    /// Серверный адаптер готового Blaze Cover Shooter. В бою Blaze ведёт минимальный прокси у ног (свой GameObject с
+    /// NavMeshAgent и generic-аниматором без клипов, <see cref="ProxyControllerResource"/>); <see cref="BotBody"/> берёт
+    /// с его корня ноги и курс (<see cref="BotBody.SetCombatLegsSource"/>), <see cref="BotGunner"/> исполняет shootEvent
+    /// настоящим оружием. Прокси существует только в Combat. Этот компонент не содержит собственных боевых решений;
+    /// типы Blaze есть только здесь.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(BotBody), typeof(BotGunner))]
     public sealed class BotCombatDriver : MonoBehaviour
     {
+        /// <summary>
+        /// Контроллер прокси в Resources: 6 состояний слоя 0 без motion — Idle (по умолчанию), Move, Back, Left, Right,
+        /// Shoot (их имена играет Blaze). Генерирует <c>BotBlazeProxySetup</c> (меню редактора), ассет коммитится.
+        /// </summary>
+        public const string ProxyControllerResource = "Bots/BotBlazeProxy";
+
+        /// <summary>Пауза перед повторной попыткой создать прокси, секунды.</summary>
+        private const float RetrySeconds = 2f;
+
+        private static RuntimeAnimatorController _proxyController;
+        private static bool _proxyControllerLoaded;
+
         private BotBody _body;
         private BotGunner _gunner;
         private PlayerController _player;
+        private UxrAvatar _avatar;
+        private System.Func<Collider, bool> _ignoreOwnCollider;
         private GameObject _proxy;
         private BlazeAI _blaze;
-        private Animator _animator;
-        private BotCombatAssets _assets;
         private float _nextAttempt;
         private bool _warned;
+        private GameObject _targetSource;
+        private PlayerController _target;
 
         public bool CombatActive => _blaze != null && _proxy != null && _proxy.activeInHierarchy;
-        public PlayerController Target => _blaze != null && _blaze.enemyToAttack != null
-            ? _blaze.enemyToAttack.GetComponentInParent<PlayerController>() : null;
+
+        /// <summary>Цель Blaze; игрок ищется только при смене цели (без GetComponentInParent в каждом обращении).</summary>
+        public PlayerController Target
+        {
+            get
+            {
+                GameObject enemy = _blaze != null ? _blaze.enemyToAttack : null;
+                if (!ReferenceEquals(enemy, _targetSource))
+                {
+                    _targetSource = enemy;
+                    _target = enemy != null ? enemy.GetComponentInParent<PlayerController>() : null;
+                }
+                return _target;
+            }
+        }
+
         public BlazeAI Brain => _blaze;
-        /// <summary>Фактический источник оружейной позы для наблюдателя стенда, включая idle.</summary>
-        public Animator PoseAnimator => _animator;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            _proxyController = null;
+            _proxyControllerLoaded = false;
+        }
 
         private void Awake()
         {
             _body = GetComponent<BotBody>();
             _gunner = GetComponent<BotGunner>();
             _player = GetComponent<PlayerController>();
+            _avatar = GetComponent<UxrAvatar>();
+            _ignoreOwnCollider = IsOwnCollider;
         }
 
-        /// <summary>Единственная граница Combat: вне неё директор ведёт домой прежним навигатором.</summary>
+        /// <summary>Единственная граница Combat: вне неё прокси нет, директор ведёт домой навигатором.</summary>
         public void SetCombatEnabled(bool active)
         {
-            if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority || NetworkServer.isLoadingScene ||
+            if (!active || !NetworkServer.active || !StateEventAuthority.IsWorldAuthority || NetworkServer.isLoadingScene ||
                 _player == null || !_player.IsAlive)
             {
                 RemoveProxy();
                 return;
             }
-            // Оружейный idle нужен и при возвращении/закупке. Вне Combat риг только играет позу,
-            // его корень следует BotBody; навигации и боевых компонентов на нём нет.
-            if (!active && _gunner.Firearm == null)
-            {
-                RemoveProxy();
-                return;
-            }
-            if (_proxy != null && active != CombatActive)
-            {
-                RemoveProxy();
-                _nextAttempt = 0f;
-            }
-            if (_proxy == null && Time.time >= _nextAttempt) CreateProxy(active);
+            if (_proxy == null && Time.time >= _nextAttempt) CreateProxy();
         }
 
         private void Update()
         {
             if (_proxy == null) return;
             if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority ||
-                NetworkServer.isLoadingScene || !_player.IsAlive)
+                NetworkServer.isLoadingScene || !_player.IsAlive || BotSenses.Stage() != BotStage.Combat)
             {
                 RemoveProxy();
                 return;
             }
-            if (CombatActive && BotSenses.Stage() != BotStage.Combat)
-            {
-                SetCombatEnabled(false);
-                return;
-            }
-            if (CombatActive && (_blaze.navmeshAgent == null || !_blaze.navmeshAgent.isOnNavMesh))
+            if (_blaze.navmeshAgent == null || !_blaze.navmeshAgent.isOnNavMesh)
             {
                 RemoveProxy();
-                _nextAttempt = Time.time + 2f;
-                return;
+                _nextAttempt = Time.time + RetrySeconds;
             }
-            var controller = _gunner.WeaponCategory == WeaponCategory.Rifle ? _assets.rifle : _assets.pistol;
-            if (_animator.runtimeAnimatorController != controller)
-            {
-                _animator.runtimeAnimatorController = controller;
-                if (_blaze != null) _blaze.animManager.ResetLastState();
-            }
-            if (!CombatActive) _proxy.transform.SetPositionAndRotation(_body.Feet, _body.BodyRotation);
         }
 
-        private void CreateProxy(bool combat)
+        /// <summary>Контроллер прокси из Resources — один раз на процесс; нет ассета — одна ошибка, бой ботов выключен.</summary>
+        private static RuntimeAnimatorController ProxyController()
         {
-            _nextAttempt = Time.time + 2f;
-            _assets = Resources.Load<BotCombatAssets>(BotCombatAssets.ResourcePath);
-            var avatarController = GetComponent<UxrStandardAvatarController>();
-            GameObject rig = avatarController != null ? avatarController.Legs.locomotionRig : null;
-            Vector3 start = _body.Feet;
-            if (_assets == null || _assets.pistol == null || _assets.rifle == null || rig == null ||
-                combat && !BotNavMesh.TryGetPoint(_body.Feet, out start))
+            if (_proxyControllerLoaded) return _proxyController;
+            _proxyControllerLoaded = true;
+            _proxyController = Resources.Load<RuntimeAnimatorController>(ProxyControllerResource);
+            if (_proxyController == null)
+                GameLog.Player.Error($"[BotCombat] Нет контроллера прокси Blaze Resources/{ProxyControllerResource}.controller — " +
+                                     "сгенерируйте его меню Tools/VR Battlegrounds/Bots/Build Blaze Proxy Controller; бой ботов выключен.");
+            return _proxyController;
+        }
+
+        /// <summary>
+        /// Минимальный прокси: неактивный GameObject (позиция, курс, масштаб тела, слой IgnoreRaycast, DontSave) →
+        /// BlazeAI (Animator/NavMeshAgent/CapsuleCollider/AudioSource добавляет RequireComponent) → контроллер без клипов,
+        /// без root motion, AlwaysAnimate → агент, капсула, поведения → активация. Humanoid и кости не нужны.
+        /// </summary>
+        private void CreateProxy()
+        {
+            _nextAttempt = Time.time + RetrySeconds;
+            RuntimeAnimatorController controller = ProxyController();
+            if (controller == null) return;
+            if (!BotNavMesh.TryGetPoint(_body.Feet, out Vector3 start))
             {
                 if (!_warned)
                 {
-                    GameLog.Player.Warning($"[BotCombat] {name}: нужны BotCombatAssets, humanoid rig и NavMesh; бой остановлен.", this);
+                    GameLog.Player.Warning($"[BotCombat] {name}: нет NavMesh под ногами; бой остановлен.", this);
                     _warned = true;
                 }
                 return;
             }
 
-            _proxy = Instantiate(rig, start, _body.BodyRotation);
-            _proxy.name = name + "_BlazeCombat";
+            _proxy = new GameObject(name + "_BlazeCombat");
             _proxy.SetActive(false);
             _proxy.hideFlags = HideFlags.DontSave;
-            foreach (Transform child in _proxy.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = 2;
+            _proxy.layer = 2;
+            _proxy.transform.SetPositionAndRotation(start, _body.BodyRotation);
             _proxy.transform.localScale = transform.lossyScale;
-            _animator = _proxy.GetComponent<Animator>();
-            if (_animator == null || _animator.avatar == null || !_animator.avatar.isHuman)
-            {
-                GameLog.Player.Error($"[BotCombat] {name}: копия рига не humanoid.", this);
-                RemoveProxy();
-                return;
-            }
-            _animator.runtimeAnimatorController = _gunner.WeaponCategory == WeaponCategory.Rifle ? _assets.rifle : _assets.pistol;
-            _animator.applyRootMotion = false;
-            _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            if (!combat)
-            {
-                _proxy.SetActive(true);
-                // Вне боя прокси только играет позу: ноги ведёт навигатор (BotBody не берёт их у прокси).
-                return;
-            }
 
             _blaze = _proxy.AddComponent<BlazeAI>();
+            var animator = _proxy.GetComponent<Animator>();
+            animator.runtimeAnimatorController = controller;
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+
             var agent = _proxy.GetComponent<NavMeshAgent>();
             agent.radius = 0.3f;
             agent.height = 1.8f;
@@ -229,7 +242,7 @@ namespace VrBattlegrounds.Bots
             _blaze.TargetFilter = IsEnemy;
             _blaze.CoverFilter = IsProtectiveCover;
             _blaze.RequireCompletePaths = true;
-            _blaze.ColliderIgnoreFilter = collider => collider.GetComponentInParent<UxrAvatar>() == GetComponent<UxrAvatar>();
+            _blaze.ColliderIgnoreFilter = _ignoreOwnCollider;
             _blaze.waypoints = new Waypoints { randomize = true, randomizeRadius = 15f };
             _blaze.fallBackPoints = System.Array.Empty<Vector3>();
             _blaze.vision = new Vision
@@ -271,6 +284,9 @@ namespace VrBattlegrounds.Bots
             return surface == null || surface.Class == CoverClass.Hard;
         }
 
+        /// <summary>Свой коллайдер (тело этого бота) Blaze не считает ни укрытием, ни препятствием обзора.</summary>
+        private bool IsOwnCollider(Collider collider) => collider.GetComponentInParent<UxrAvatar>() == _avatar;
+
         private void RemoveProxy()
         {
             if (_body != null) _body.SetCombatLegsSource(null);
@@ -281,7 +297,8 @@ namespace VrBattlegrounds.Bots
             }
             _proxy = null;
             _blaze = null;
-            _animator = null;
+            _targetSource = null;
+            _target = null;
         }
 
         private void OnDisable() => RemoveProxy();

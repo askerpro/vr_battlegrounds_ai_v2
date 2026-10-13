@@ -14,7 +14,10 @@ using VrBattlegrounds.Arsenal;
 
 namespace VrBattlegrounds.EditorTools
 {
-    /// <summary>Наблюдатель после SDK: действительные клипы, итоговые кисти и многоракурсные PNG.</summary>
+    /// <summary>
+    /// Наблюдатель после SDK: состояние и время аниматора Blaze-прокси (A/B пустых состояний), итоговые кисти и
+    /// многоракурсные PNG — по снимку на каждое новое состояние Blaze тела.
+    /// </summary>
     [InitializeOnLoad]
     public static class BotStandRecorder
     {
@@ -64,7 +67,9 @@ namespace VrBattlegrounds.EditorTools
             if (driver == null || body == null || gun == null || avatar == null) return;
             try
             {
-                Animator source = driver.PoseAnimator;
+                // Аниматор минимального прокси Blaze (только в Combat): состояние, клипы (A — пусто, B — 1-с клип), время.
+                Animator source = driver.Brain != null ? driver.Brain.anim : null;
+                string animState = driver.Brain != null && driver.Brain.animManager != null ? driver.Brain.animManager.currentState : null;
                 var shooter=driver.Brain!=null ? driver.Brain.coverShooterBehaviour as BlazeAISpace.CoverShooterBehaviour : null;
                 if(shooter!=_observedBrain) { if(_observedBrain!=null) _observedBrain.shootEvent.RemoveListener(Requested); _observedBrain=shooter; if(shooter!=null) shooter.shootEvent.AddListener(Requested); }
                 if(gun.Firearm!=_observedWeapon) { if(_observedWeapon!=null) _observedWeapon.ProjectileShot-=Fired; _observedWeapon=gun.Firearm; if(_observedWeapon!=null) _observedWeapon.ProjectileShot+=Fired; }
@@ -75,7 +80,7 @@ namespace VrBattlegrounds.EditorTools
                 _readinessError=profileValid ? null : readinessReason;
                 var clips = source != null ? source.GetCurrentAnimatorClipInfo(0).Select(c => new { name = c.clip.name, weight = c.weight,
                     path = AssetDatabase.GetAssetPath(c.clip), guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(c.clip)) }).ToArray() : null;
-                string clip = clips != null && clips.Length > 0 ? clips[0].name : "none";
+                string clip = !string.IsNullOrEmpty(animState) ? animState : clips != null && clips.Length > 0 ? clips[0].name : "none";
                 var left = avatar.GetHandBone(UxrHandSide.Left); var right = avatar.GetHandBone(UxrHandSide.Right);
                 var targetPlayer = _session.Target != null ? _session.Target.ActiveAvatar : null;
                 var targetAvatar = targetPlayer != null ? targetPlayer.GetComponent<UltimateXR.Avatar.UxrAvatar>() : null;
@@ -95,7 +100,7 @@ namespace VrBattlegrounds.EditorTools
                         .Take(6).Select(h => new { name = h.collider.name, distance = h.distance, layer = h.collider.gameObject.layer }).ToArray()
                     : null;
                 Frames.Add(new { frame = Time.frameCount, time = Time.time, bodyId = player.GetInstanceID(),
-                    state = driver.Brain != null ? driver.Brain.state.ToString() : "visual-idle", clips,
+                    state = driver.Brain != null ? driver.Brain.state.ToString() : "no-combat", animState, clips,
                     normalizedTime = source != null ? source.GetCurrentAnimatorStateInfo(0).normalizedTime : 0,
                     left = left != null ? new[] { left.position.x, left.position.y, left.position.z } : null,
                     right = right != null ? new[] { right.position.x, right.position.y, right.position.z } : null,
@@ -158,10 +163,15 @@ namespace VrBattlegrounds.EditorTools
         private static Dictionary<string,string> SourceHashes()
         {
             var hashes=new Dictionary<string,string>();
-            foreach(var path in new[] { "Assets/Scripts/Bots/BotBody.cs", "Assets/Scripts/Bots/BotCombatDriver.cs", "Assets/Scripts/Bots/BotGunner.cs", "Assets/Scripts/Bots/BotNavMesh.cs", "Assets/Resources/Bots/BotPistol.controller", "Assets/Resources/Bots/BotRifle.controller",
+            foreach(var path in new[] { "Assets/Scripts/Bots/BotBody.cs", "Assets/Scripts/Bots/BotCombatDriver.cs", "Assets/Scripts/Bots/BotGunner.cs", "Assets/Scripts/Bots/BotNavMesh.cs", BotBlazeProxySetup.ControllerPath,
+                "Assets/Scripts/Bots/BotKit.cs", "Assets/Scripts/Bots/BotDirector.cs",
                 "Assets/Scripts/Bots/BotRuntimeController.cs", "Assets/Scripts/Bots/BotAimMath.cs", "Assets/Scripts/Bots/Avatar/BotAvatarDriver.cs", "Assets/Scripts/Bots/Avatar/BotHands.cs", "Assets/Scripts/Bots/Avatar/BotWeaponAim.cs" })
+            {
+                // Нет файла (контроллер прокси ещё не сгенерирован) — отметка в inputs, а не исключение записи.
+                if(!File.Exists(path)) { hashes[path]="missing"; continue; }
                 using(var stream=File.OpenRead(path)) using(var sha=System.Security.Cryptography.SHA256.Create())
                     hashes[path]=BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","").ToLowerInvariant();
+            }
             return hashes;
         }
 

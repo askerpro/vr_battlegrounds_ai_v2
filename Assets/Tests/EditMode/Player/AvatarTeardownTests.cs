@@ -2,13 +2,17 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Mirror;
 using NUnit.Framework;
 using UltimateXR.Avatar;
 using UltimateXR.Manipulation;
 using UnityEditor;
 using UnityEngine;
+using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Interaction;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Player.Avatars;
+using VrBattlegrounds.Tests.Network;
 using Object = UnityEngine.Object;
 
 namespace VrBattlegrounds.Tests.Player
@@ -40,7 +44,7 @@ namespace VrBattlegrounds.Tests.Player
     {
         private static UxrGrabManager Manager => UxrGrabManager.Instance;
 
-        private static TwoHandGrabCase AnyCase()
+        internal static TwoHandGrabCase AnyCase()
         {
             List<TwoHandGrabCase> cases = TwoHandGrabCases.Collect();
             Assume.That(cases.Count, Is.GreaterThan(0), "Нет ни одной пары оружие–аватар с позами хвата.");
@@ -107,6 +111,35 @@ namespace VrBattlegrounds.Tests.Player
                 harness.DestroyAvatarLikePlayMode();
                 Assert.AreEqual(0, CountDeadGrabs(), "После изъятия и уничтожения аватара остались захваты мёртвой руки.");
             }
+        }
+
+        /// <summary>
+        /// Мёртвое тело без смены (<see cref="AvatarTeardown.ReleaseDeadBodyOnServer"/>, death-body-defer) освобождает
+        /// только сервер — авторитет мира: отпускание и сброс уходят остальным машинам событием. Без сервера (клиент;
+        /// здесь — EditMode без Mirror) метод не трогает ничего, иначе отпускание размножилось бы на каждой машине.
+        /// Контроль среды — <see cref="Освобождение_перед_уничтожением_не_оставляет_захватов_мёртвой_руки"/>: там же
+        /// без сервера <see cref="AvatarTeardown.ReleaseBeforeDestroy"/> руку отпускает. С сервером —
+        /// <see cref="AvatarTeardownServerTests"/>.
+        /// </summary>
+        [Test]
+        public void Мёртвое_тело_без_сервера_ничего_не_отпускает()
+        {
+            Assume.That(NetworkServer.active, Is.False, "[TestEnvironment] Тест рассчитан на EditMode без сервера Mirror.");
+            TwoHandGrabCase c = AnyCase();
+
+            using (var harness = new TwoHandGrabHarness(c.WeaponPath, c.AvatarPath, c.SupportPoint))
+            {
+                PlayerController player = harness.Avatar.GetComponent<PlayerController>();
+                Assert.IsNotNull(player, $"У аватара {c.AvatarPath} нет PlayerController.");
+
+                AvatarTeardown.ReleaseDeadBodyOnServer(player, "тест");
+
+                Assert.IsTrue(Manager.IsBeingGrabbed(harness.Grabbable),
+                              "Не сервер отпустил предмет из руки мёртвого тела — на клиентах отпускание размножилось бы.");
+                Assert.AreSame(harness.Grabbable, harness.Right.GrabbedObject, "Рука мёртвого тела без сервера что-то отпустила.");
+            }
+
+            Assert.DoesNotThrow(() => AvatarTeardown.ReleaseDeadBodyOnServer(null, "тест"), "Пустое тело — ничего не делать.");
         }
 
         [Test]
@@ -193,5 +226,80 @@ namespace VrBattlegrounds.Tests.Player
         }
 
         private static bool IsDead(object unityObject) => unityObject is Object o ? o == null : unityObject == null;
+    }
+
+    /// <summary>
+    /// Мёртвое тело без смены на сервере (death-body-defer, death-equipment-drop): стратегия без призрака или префаб
+    /// не нашёлся — тело остаётся, а <see cref="AvatarManager"/> зовёт <see cref="AvatarTeardown.ReleaseDeadBodyOnServer"/>.
+    /// Обработчики смерти больше ничего не отпускают и не роняют, поэтому без этого шага мёртвое тело держало бы
+    /// предмет в руке и оружие в кобуре до возрождения.
+    ///
+    /// <para>
+    /// Харнесс — настоящий аватар проекта с настоящим оружием в руке (<see cref="TwoHandGrabHarness"/>) и вторым
+    /// экземпляром того же оружия в кобуре аватара; сервер Mirror поднят <see cref="MirrorTestHarness"/>, иначе
+    /// гейт метода и <c>[Server]</c> у <see cref="PlayerLoadoutManager.ServerDropEquipment"/> заглушили бы всё.
+    /// </para>
+    /// </summary>
+    public class AvatarTeardownServerTests : MirrorTestHarness
+    {
+        private static UxrGrabManager Manager => UxrGrabManager.Instance;
+
+        [Test]
+        public void Мёртвое_тело_на_сервере_отпускает_руки_и_роняет_оружие_из_кобуры()
+        {
+            SilenceMirrorNoise();
+            TwoHandGrabCase c = AvatarTeardownTests.AnyCase();
+
+            using (var harness = new TwoHandGrabHarness(c.WeaponPath, c.AvatarPath, c.SupportPoint))
+            {
+                PlayerController player = harness.Avatar.GetComponent<PlayerController>();
+                Assert.IsNotNull(player, $"У аватара {c.AvatarPath} нет PlayerController.");
+                Assume.That(player.GetComponent<PlayerLoadoutManager>(), Is.Not.Null, $"У аватара {c.AvatarPath} нет PlayerLoadoutManager.");
+
+                // Сетевые компоненты аватара связываются с NetworkIdentity в её Awake, которого в EditMode нет. Без связи
+                // SyncList кармана (ServerClearMagazines) спросит isServer у пустого netIdentity.
+                EnableNetworking(harness.Avatar);
+
+                UxrGrabbableObjectAnchor holster = Holster(harness.Avatar);
+                Assume.That(holster, Is.Not.Null, $"У аватара {c.AvatarPath} нет свободной кобуры.");
+
+                GameObject holstered = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(c.WeaponPath));
+
+                try
+                {
+                    UxrGrabbableObject item = holstered.GetComponent<UxrGrabbableObject>();
+                    Assume.That(holstered.GetComponent<WeaponComponent>(), Is.Not.Null, $"У {c.WeaponPath} нет WeaponComponent — сброс его не тронет.");
+
+                    Assert.IsTrue(Manager.PlaceObject(item, holster, UxrPlacementOptions.None, false), "Контроль харнесса: оружие не встало в кобуру.");
+                    Assert.AreSame(holster, item.CurrentAnchor, "Контроль харнесса: оружие в кобуре.");
+                    Assert.IsTrue(Manager.IsBeingGrabbed(harness.Grabbable), "Контроль харнесса: оружие в руке.");
+
+                    AvatarTeardown.ReleaseDeadBodyOnServer(player, "тест");
+
+                    Assert.IsFalse(Manager.IsBeingGrabbed(harness.Grabbable), "Мёртвое тело без смены держит оружие в руке.");
+                    Assert.IsNull(harness.Right.GrabbedObject, "Рука мёртвого тела всё ещё что-то держит.");
+                    Assert.IsNull(item.CurrentAnchor, "Оружие осталось в кобуре мёртвого тела — сброс снаряжения не вызван.");
+                    Assert.IsNull(holster.CurrentPlacedObject, "Кобура мёртвого тела всё ещё занята.");
+                    Assert.IsTrue(harness.Weapon != null && holstered != null,
+                                  "Снаряжение мёртвого тела уничтожено — при смерти оно падает, изымается только при смене скина.");
+                }
+                finally
+                {
+                    if (holstered != null) Object.DestroyImmediate(holstered);
+                }
+            }
+        }
+
+        /// <summary>Свободная кобура аватара: карман тела (не гнездо магазина у оружия), сначала спина и бедро.</summary>
+        private static UxrGrabbableObjectAnchor Holster(GameObject avatar)
+        {
+            List<UxrGrabbableObjectAnchor> pockets = avatar.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true)
+                                                           .Where(a => AnchorRole.IsAvatarPocket(a) && a.GetComponent<UxrMagazinePocket>() == null &&
+                                                                       a.CurrentPlacedObject == null)
+                                                           .ToList();
+
+            return pockets.FirstOrDefault(a => AnchorRole.Get(a) == AnchorRoleKind.Primary || AnchorRole.Get(a) == AnchorRoleKind.Secondary) ??
+                   pockets.FirstOrDefault();
+        }
     }
 }

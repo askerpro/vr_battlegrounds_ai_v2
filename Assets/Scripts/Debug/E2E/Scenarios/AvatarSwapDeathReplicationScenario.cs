@@ -51,7 +51,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     ///     <see cref="PlayerController.RestoreHealth" />. Именно <c>Life</c> едет по каналу
     ///     состояния, и именно из него клиент считает <c>PlayerController.IsAlive</c>.
     ///     <c>PlayerController.Die()</c> для проверки не годится: сам он <c>Life</c>
-    ///     не меняет и шлёт только <c>RpcOnDied</c> по каналу Mirror, то есть мимо
+    ///     не меняет. Каналом состояния смерть доходит до клиентов событием
+    ///     <c>UxrActor.DieInternal</c> (смертельный урон), а <c>Die()</c> добавляет к нему
+    ///     только Mirror — труп (<c>ServerBecomeCorpse</c>, RPC) и смену тела, то есть мимо
     ///     проверяемого канала. Штатный путь урона недоступен: оружия в headless-режиме нет.
     ///     </para>
     ///

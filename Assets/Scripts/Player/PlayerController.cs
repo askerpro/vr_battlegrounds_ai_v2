@@ -361,8 +361,6 @@ namespace VrBattlegrounds.Player
 
             if (Session != null) Session.ServerSetEliminated(true);
 
-            RpcOnDied();
-
             // Кто убил — по урону (DamageLedger): убийца, ассисты. Режиму и статистике серии.
             Ledger.Resolve(Session, out PlayerSession killer, out System.Collections.Generic.List<PlayerSession> assists);
             Ledger.Clear();
@@ -415,23 +413,6 @@ namespace VrBattlegrounds.Player
             if (Session != null)
                 Session.GetComponent<WallPass.WallPassMonitor>()?.ResetForServerTeleport(position);
             RpcDevTeleport(position, rotation);
-        }
-
-        /// <summary>
-        /// Смерть дошла до клиента сообщением Mirror — только лог (сверка с <see cref="PlayerDied"/>,
-        /// который приходит каналом состояния UltimateXR).
-        ///
-        /// <para>
-        /// Предметы из рук здесь больше не отпускаются (death-body-defer, zone-ack manipulation).
-        /// Единственный отпускающий при смерти — сервер в <see cref="AvatarTeardown.ReleaseBeforeDestroy"/>
-        /// на верхнем уровне, при смене тела на призрака: одно <c>ReleaseObject</c> на руку, одна поза
-        /// предмета у всех. Страховка владельца давала второе отпускание со своей скоростью броска.
-        /// </para>
-        /// </summary>
-        [ClientRpc]
-        private void RpcOnDied()
-        {
-            GameLog.Player.Verbose($"[PlayerController] {name}: смерть подтверждена сервером (RPC).", this);
         }
 
         /// <summary>

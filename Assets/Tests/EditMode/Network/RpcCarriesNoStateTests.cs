@@ -30,8 +30,6 @@ namespace VrBattlegrounds.Tests.Network
                 "полноту снимка сторожит StateSnapshotCoverageTests",
             ["NetworkStateRelay.TargetLoadInitialState"] =
                 "это и есть снимок для опоздавшего — ответ на запрос самого клиента",
-            ["PlayerController.RpcOnDied"] =
-                "страховка владельца: отпустить предметы из рук в момент гибели; смерть — Life в снимке, наблюдатель — SyncVar",
             ["PlayerController.RpcBecomeCorpse"] =
                 "эффект: локальный рэгдолл погибшего, на игру не влияет; выбывание — SyncVar сессии",
             ["PlayerController.RpcReleaseLocalItems"] =

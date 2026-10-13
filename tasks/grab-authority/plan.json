@@ -38,6 +38,21 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "pocket-active-hide",
+      "writes": [
+        "Assets/Scripts/Interaction/UxrMagazinePocket.cs",
+        "Assets/Scripts/Interaction/LooseItems.cs",
+        "Assets/Scripts/Player/PlayerLoadoutManager.cs",
+        "Assets/Tests/EditMode/Interaction/**",
+        "Docs/manipulation/**",
+        ".claude/agent-memory/manipulation-expert/**",
+        "experts/manipulation/**",
+        "tasks/grab-authority/**"
+      ],
+      "after": [],
+      "needs": []
     }
   ]
 }

@@ -85,6 +85,7 @@ namespace VrBattlegrounds.Editor.Avatars
 
             if (save)
             {
+                NormalizeNetworkAssetId(weaponPath);
                 GripPrefabIdentityGuard.Verify(weaponPath, before);
             }
 
@@ -92,6 +93,33 @@ namespace VrBattlegrounds.Editor.Avatars
         }
 
         /// <summary>Мировая поза align от корня — как HandsPackGripAligner.Place (SetPositionAndRotation).</summary>
+        /// <summary>
+        /// <c>SaveAsPrefabAsset</c> из изолированной сцены пишет <c>NetworkIdentity._assetId: 0</c>, а сторож по
+        /// загруженному ассету этого не видит (Mirror в памяти восстанавливает канон). Возвращает канон на диск
+        /// штатным <see cref="VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer" /> и сверяет файл:
+        /// число = <c>NetworkIdentity.AssetGuidToUint</c> от GUID префаба (условие zone-ack weapon-system).
+        /// </summary>
+        private static void NormalizeNetworkAssetId(string weaponPath)
+        {
+            string text = System.IO.File.ReadAllText(weaponPath);
+            if (!text.Contains("_assetId")) return;
+
+            VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.Normalize(new[] { weaponPath }, false);
+            uint canonical = Mirror.NetworkIdentity.AssetGuidToUint(new Guid(AssetDatabase.AssetPathToGUID(weaponPath)));
+            string saved = System.IO.File.ReadAllText(weaponPath);
+            System.Text.RegularExpressions.Match onDisk = System.Text.RegularExpressions.Regex.Match(saved, @"^  _assetId: (\d+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+            if (!onDisk.Success)
+            {
+                // Вариант префаба: число лежит в переопределении.
+                onDisk = System.Text.RegularExpressions.Regex.Match(saved, @"propertyPath: _assetId\r?\n\s+value: (\d+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+            }
+
+            if (!onDisk.Success || onDisk.Groups[1].Value != canonical.ToString())
+            {
+                throw new InvalidOperationException($"{weaponPath}: _assetId на диске {(onDisk.Success ? onDisk.Groups[1].Value : "нет")}, канон {canonical}");
+            }
+        }
+
         /// <summary>
         /// Компонент align, созданный в <c>LoadPrefabContents</c>, сохраняется без prefab provenance
         /// (<c>__prefabGuid</c> пуст, <c>__isInPrefab</c>=0), в отличие от остальных точек хвата префаба.

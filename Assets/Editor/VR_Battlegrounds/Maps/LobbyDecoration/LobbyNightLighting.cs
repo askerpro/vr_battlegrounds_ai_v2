@@ -55,7 +55,20 @@ namespace VrBattlegrounds.EditorTools
             { "ConstructionZone", .3f },
             { "PerimeterZone", .15f },
             { "OuterGround", .15f },
+            { "SharedBase", .3f },
         };
+
+        // Запечённая ночь без realtime-света темнее превью: источники ярче (решение пользователя 2026-10-13).
+        private const float BakedBoost = 1.6f;
+
+        private static float Boost(bool bake) => bake ? BakedBoost : 1f;
+
+        // Ограда базы в плане (X, Z), как в раскладке зон 2026-10-11.
+        private static readonly Vector2 BaseMin = new Vector2(-15f, -26f);
+        private static readonly Vector2 BaseMax = new Vector2(57f, 27f);
+
+        // Периметр за оградой — без проб: ambient вместо экстраполяции проб базы.
+        private const string AmbientOnlyZone = "PerimeterZone";
 
         [MenuItem(MenuRoot + "Ночной пресет освещения")]
         public static void Apply() => Run(false);
@@ -81,7 +94,7 @@ namespace VrBattlegrounds.EditorTools
             try
             {
                 var moon = ApplyLights(environment.transform, bake, log);
-                ApplyRenderSettings(materials.Sky, moon, log);
+                ApplyRenderSettings(materials.Sky, moon, bake, log);
                 ApplyEmissiveMaterials(environment.transform, materials, log);
                 if (bake)
                 {
@@ -243,15 +256,15 @@ namespace VrBattlegrounds.EditorTools
 
         // ---------- RenderSettings ----------
 
-        private static void ApplyRenderSettings(Material sky, Light moon, StringBuilder log)
+        private static void ApplyRenderSettings(Material sky, Light moon, bool bake, StringBuilder log)
         {
             Undo.RecordObject(SceneRenderSettingsObject(), "Ночные RenderSettings");
             RenderSettings.skybox = sky;
             RenderSettings.sun = moon;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = AmbientSky;
-            RenderSettings.ambientEquatorColor = AmbientEquator;
-            RenderSettings.ambientGroundColor = AmbientGround;
+            RenderSettings.ambientSkyColor = AmbientSky * Boost(bake);
+            RenderSettings.ambientEquatorColor = AmbientEquator * Boost(bake);
+            RenderSettings.ambientGroundColor = AmbientGround * Boost(bake);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = FogColor;
@@ -305,12 +318,14 @@ namespace VrBattlegrounds.EditorTools
                     if (moon != null) throw new InvalidOperationException("В Environment больше одного главного направленного света.");
                     moon = light;
                     light.name = "CampMoonlight";
-                    light.lightmapBakeType = LightmapBakeType.Realtime; // главный свет считается всегда; без теней почти бесплатен.
+                    // Бюджет GPU Quest (2026-10-13, пользователь): в запечённой ночи realtime-света нет совсем,
+                    // динамика (игроки, оружие) освещается пробами.
+                    light.lightmapBakeType = bake ? LightmapBakeType.Baked : LightmapBakeType.Realtime;
                     light.color = MoonColor;
-                    light.intensity = .22f;
+                    light.intensity = .22f * Boost(bake);
                     light.shadows = LightShadows.None;
                     light.transform.rotation = Quaternion.Euler(32f, 135f, 0f); // луна на северо-западе, над стрельбищем.
-                    realtime++;
+                    if (bake) baked++; else realtime++;
                 }
                 else if (name == "InteriorWarmLight") { Warm(light, bake, 4.5f, 6.5f); if (bake) baked++; else realtime++; }
                 else if (name == "ExteriorWarmLight" || name == "CanopyWarmLight")
@@ -321,22 +336,23 @@ namespace VrBattlegrounds.EditorTools
                 }
                 else if (LitsRange(light))
                 {
-                    // Стрельбище — главный объект: прямой свет realtime (игроки/оружие/мишени), отскок в лайтмапе.
-                    light.lightmapBakeType = LightmapBakeType.Mixed;
+                    // Стрельбище — главный объект: в превью прямой свет realtime, в запечённой ночи — Baked
+                    // (мишени и оружие освещаются пробами стрельбища).
+                    light.lightmapBakeType = bake ? LightmapBakeType.Baked : LightmapBakeType.Mixed;
                     light.color = FloodWhite;
-                    light.intensity = 180f;
+                    light.intensity = 180f * Boost(bake);
                     light.range = 30f;
                     light.spotAngle = 100f;
                     light.innerSpotAngle = 70f;
-                    light.shadows = LightShadows.None;
-                    light.renderMode = LightRenderMode.ForcePixel;
-                    mixed++;
+                    light.shadows = bake ? LightShadows.Soft : LightShadows.None;
+                    light.renderMode = bake ? LightRenderMode.Auto : LightRenderMode.ForcePixel;
+                    if (bake) baked++; else mixed++;
                 }
                 else if (light.type == LightType.Spot)
                 {
                     // Прожекторы территории (КПП, казармы): пятно на подходах.
                     light.color = FloodWhite;
-                    light.intensity = 110f;
+                    light.intensity = 110f * Boost(bake);
                     light.range = Mathf.Max(light.range, 24f);
                     light.spotAngle = 80f;
                     light.innerSpotAngle = 55f;
@@ -355,7 +371,7 @@ namespace VrBattlegrounds.EditorTools
         private static void Warm(Light light, bool bake, float intensity, float range)
         {
             light.color = WarmLamp;
-            light.intensity = intensity;
+            light.intensity = intensity * Boost(bake);
             light.range = range;
             light.bounceIntensity = 1f;
             if (bake) { light.lightmapBakeType = LightmapBakeType.Baked; light.shadows = LightShadows.Soft; light.shapeRadius = .15f; }
@@ -443,8 +459,8 @@ namespace VrBattlegrounds.EditorTools
                     if (small || !hasUv2)
                     {
                         renderer.receiveGI = ReceiveGI.LightProbes;
-                        // Пробы стоят только над ареной и стрельбищем; дальние зоны оставляют свой режим (ambient).
-                        if (zone.name == "ArmoryRangeZone") renderer.lightProbeUsage = LightProbeUsage.BlendProbes;
+                        // Пробы покрывают арену, стрельбища и базу внутри ограды; периметр — ambient.
+                        renderer.lightProbeUsage = zone.name == AmbientOnlyZone ? LightProbeUsage.Off : LightProbeUsage.BlendProbes;
                         probeLit++;
                     }
                     else
@@ -499,11 +515,22 @@ namespace VrBattlegrounds.EditorTools
             for (float z = floor.min.z + .25f; z <= floor.max.z - .2f; z += 2.5f)
                 foreach (float h in new[] { .3f, 1.3f, 2.5f })
                     positions.Add(new Vector3(x, y0 + h, z));
-            // Стрельбище: мишени и пули на север от арены. Шаг 4 м, две высоты.
+            // Стрельбища: мишени и пули на север и на юг от арены. Шаг 4 м, две высоты.
             for (float x = floor.min.x - 3f; x <= floor.max.x + 3f; x += 4f)
-            for (float z = floor.max.z + 2f; z <= floor.max.z + 26f; z += 4f)
+            for (float d = 2f; d <= 26f; d += 4f)
+                foreach (float z in new[] { floor.max.z + d, floor.min.z - d })
                 foreach (float h in new[] { .5f, 2.5f })
                     positions.Add(new Vector3(x, y0 + h, z));
+            // База внутри ограды: реквизит под запечёнными прожекторами и лампами. Шаг 5 м, две высоты;
+            // арена и стрельбища уже покрыты плотнее.
+            var dense = new Bounds(floor.center, floor.size + new Vector3(8f, 0f, 56f));
+            for (float x = BaseMin.x; x <= BaseMax.x; x += 5f)
+            for (float z = BaseMin.y; z <= BaseMax.y; z += 5f)
+            {
+                if (dense.Contains(new Vector3(x, floor.center.y, z))) continue;
+                foreach (float h in new[] { .5f, 2.5f })
+                    positions.Add(new Vector3(x, y0 + h, z));
+            }
             var local = probes.transform;
             probes.probePositions = positions.Select(p => local.InverseTransformPoint(p)).ToArray();
             log.AppendLine("Light probes: " + positions.Count + " точек в " + ContainerName + "/" + ProbeGroupName + ".");

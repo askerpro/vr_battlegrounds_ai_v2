@@ -34,8 +34,12 @@ namespace VrBattlegrounds.EditorTools
         private const float MaxThreshold = 0.999f;
         private const float MinGap = 0.0005f;
 
-        private const int NearTextureLimit = 1024;
-        private const int FarTextureLimit = 512;
+        // Бюджет GPU Lobby (решение пользователя 2026-10-13, «в ущерб картинке»): разбивка performance показала
+        // упор в чтение текстур — все текстуры Lobby на Android сжаты ASTC, ближние 512, дальние 256.
+        private const int NearTextureLimit = 512;
+        private const int FarTextureLimit = 256;
+        private const TextureImporterFormat NearFormat = TextureImporterFormat.ASTC_6x6;
+        private const TextureImporterFormat FarFormat = TextureImporterFormat.ASTC_8x8;
         private static readonly string[] TextureFolders = { "Assets/Art/Lobby/", "Assets/Materials/Lobby/" };
         private const string NearZone = "ArmoryRangeZone";
 
@@ -114,6 +118,101 @@ namespace VrBattlegrounds.EditorTools
             GameLog.Perf.Info("[LobbyQuestBudget] " + summary + ". Отчёт: " + Report + "lod-distances.txt");
         }
 
+        // Дальний декор (решение пользователя 2026-10-13, бюджет GPU): дальше FarDistance от края пола арены
+        // объект с LOD показывает только последний уровень; мелочь дальше DropDistance не рисуется совсем.
+        // Стрельбище (NearZone) и светильники с ночной эмиссией не трогаются.
+        private const float FarDistance = 10f;
+        private const float DropDistance = 15f;
+        private const float SmallSize = 1.2f;
+        private const string NightMaterialPrefix = "LobbyNight";
+
+        [MenuItem(Menu + "Quest: дальний декор — худший LOD, мелочь убрать")]
+        public static void ApplyFarDecor()
+        {
+            Scene scene = CheckScene();
+            GameObject environment = Root(scene, "Environment");
+            Transform nearZone = environment.transform.Find(NearZone)
+                ?? throw new InvalidOperationException("Нет Environment/" + NearZone + ".");
+            var arena = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<LevelDesign.PhysicalArenaDefinition>(true)).Single();
+            if (!arena.TryFloorBounds(out Bounds floor)) throw new InvalidOperationException("Нет границ пола PhysicalArenaDefinition.");
+
+            Undo.IncrementCurrentGroup();
+            Undo.SetCurrentGroupName("Lobby Quest: дальний декор");
+            int group = Undo.GetCurrentGroup();
+            var lines = new List<string> { DateTime.Now.ToString("O", CultureInfo.InvariantCulture) };
+            int lastLodOnly = 0, droppedGroups = 0, droppedRenderers = 0;
+
+            var lodRenderers = new HashSet<Renderer>();
+            foreach (LODGroup lodGroup in environment.GetComponentsInChildren<LODGroup>(true))
+            {
+                LOD[] lods = lodGroup.GetLODs();
+                Renderer[] all = lods.SelectMany(l => l.renderers).Where(r => r != null).ToArray();
+                foreach (Renderer r in all) lodRenderers.Add(r);
+                if (all.Length == 0 || lodGroup.transform.IsChildOf(nearZone) || !lodGroup.gameObject.activeInHierarchy || all.Any(IsNightFixture)) continue;
+
+                Bounds bounds = all[0].bounds;
+                foreach (Renderer r in all) bounds.Encapsulate(r.bounds);
+                float distance = DistanceToFloor(floor, bounds.center);
+                if (distance < FarDistance) continue;
+
+                if (bounds.size.magnitude < SmallSize && distance >= DropDistance)
+                {
+                    foreach (Renderer r in all) Disable(r);
+                    droppedGroups++;
+                    lines.Add("убран " + PathOf(lodGroup.transform) + " d=" + F(distance));
+                    continue;
+                }
+                if (lods.Length < 2) continue;
+
+                for (int i = 0; i < lods.Length - 1; i++)
+                    foreach (Renderer r in lods[i].renderers)
+                        if (r != null && !lods[lods.Length - 1].renderers.Contains(r)) Disable(r);
+                Undo.RecordObject(lodGroup, "Lobby Quest: дальний декор");
+                LOD last = lods[lods.Length - 1];
+                lodGroup.SetLODs(new[] { new LOD(last.screenRelativeTransitionHeight, last.renderers) });
+                if (PrefabUtility.IsPartOfPrefabInstance(lodGroup)) PrefabUtility.RecordPrefabInstancePropertyModifications(lodGroup);
+                lastLodOnly++;
+            }
+
+            foreach (Renderer renderer in environment.GetComponentsInChildren<Renderer>(true))
+            {
+                if (lodRenderers.Contains(renderer) || !renderer.enabled || !renderer.gameObject.activeInHierarchy
+                    || renderer.transform.IsChildOf(nearZone) || IsNightFixture(renderer)) continue;
+                float distance = DistanceToFloor(floor, renderer.bounds.center);
+                if (distance < DropDistance || renderer.bounds.size.magnitude >= SmallSize) continue;
+                Disable(renderer);
+                droppedRenderers++;
+                lines.Add("убран " + PathOf(renderer.transform) + " d=" + F(distance));
+            }
+
+            Undo.CollapseUndoOperations(group);
+            EditorSceneManager.MarkSceneDirty(scene);
+            string summary = "Дальний декор: только последний LOD у " + lastLodOnly + " LODGroup; убрано мелких LODGroup " + droppedGroups +
+                             ", отдельных рендереров " + droppedRenderers + " (дальше " + FarDistance + "/" + DropDistance + " м от пола арены, мельче " + SmallSize + " м).";
+            lines.Insert(1, summary);
+            WriteReport("far-decor.txt", lines);
+            GameLog.Perf.Info("[LobbyQuestBudget] " + summary + " Отчёт: " + Report + "far-decor.txt");
+        }
+
+        private static void Disable(Renderer renderer)
+        {
+            if (!renderer.enabled) return;
+            Undo.RecordObject(renderer, "Lobby Quest: дальний декор");
+            renderer.enabled = false;
+            if (PrefabUtility.IsPartOfPrefabInstance(renderer)) PrefabUtility.RecordPrefabInstancePropertyModifications(renderer);
+        }
+
+        internal static bool IsNightFixture(Renderer renderer) =>
+            renderer.sharedMaterials.Any(m => m != null && m.name.StartsWith(NightMaterialPrefix, StringComparison.Ordinal));
+
+        // Горизонтальное расстояние от точки до прямоугольника пола арены.
+        internal static float DistanceToFloor(Bounds floor, Vector3 point)
+        {
+            float dx = Mathf.Max(0f, Mathf.Abs(point.x - floor.center.x) - floor.extents.x);
+            float dz = Mathf.Max(0f, Mathf.Abs(point.z - floor.center.z) - floor.extents.z);
+            return Mathf.Sqrt(dx * dx + dz * dz);
+        }
+
         [MenuItem(Menu + "Quest: лимит текстур дальних объектов")]
         public static void ApplyTextureLimits()
         {
@@ -145,9 +244,9 @@ namespace VrBattlegrounds.EditorTools
             try
             {
                 foreach (string path in near.OrderBy(p => p))
-                    if (Limit(path, NearTextureLimit, lines)) nearSet++; else skipped++;
+                    if (Limit(path, NearTextureLimit, NearFormat, lines)) nearSet++; else skipped++;
                 foreach (string path in far.OrderBy(p => p))
-                    if (Limit(path, FarTextureLimit, lines)) farSet++; else skipped++;
+                    if (Limit(path, FarTextureLimit, FarFormat, lines)) farSet++; else skipped++;
             }
             finally
             {
@@ -175,22 +274,24 @@ namespace VrBattlegrounds.EditorTools
             return true;
         }
 
-        /// <summary>Только уменьшает Android-лимит; Standalone и прочие платформы не трогает.</summary>
-        private static bool Limit(string path, int limit, List<string> lines)
+        /// <summary>
+        /// Android: размер не больше лимита и ASTC не мельче заданного блока (уже более грубый ASTC сохраняется).
+        /// Standalone и прочие платформы не трогает.
+        /// </summary>
+        private static bool Limit(string path, int limit, TextureImporterFormat format, List<string> lines)
         {
             if (!(AssetImporter.GetAtPath(path) is TextureImporter importer)) return false;
             TextureImporterPlatformSettings settings = importer.GetPlatformTextureSettings(AndroidPlatform);
-            if (settings.overridden && settings.maxTextureSize <= limit) return false;
-            if (!settings.overridden)
-            {
-                importer.GetSourceTextureWidthAndHeight(out int width, out int height);
-                if (Mathf.Min(Mathf.Max(width, height), importer.maxTextureSize) <= limit) return false;
-            }
+            importer.GetSourceTextureWidthAndHeight(out int width, out int height);
+            int size = settings.overridden ? settings.maxTextureSize : importer.maxTextureSize;
+            bool sizeOk = Mathf.Min(Mathf.Max(width, height), size) <= limit;
+            bool formatOk = settings.overridden && IsAstc(settings.format) && AstcBlock(settings.format) >= AstcBlock(format);
+            if (sizeOk && formatOk) return false;
 
             string before = settings.overridden ? settings.maxTextureSize + "/" + settings.format : "нет override";
-            if (!settings.overridden || !IsAstc(settings.format)) settings.format = TextureImporterFormat.ASTC_6x6;
+            if (!formatOk) settings.format = format;
             settings.overridden = true;
-            settings.maxTextureSize = limit;
+            settings.maxTextureSize = Mathf.Min(size, limit);
             importer.SetPlatformTextureSettings(settings);
             importer.SaveAndReimport();
             lines.Add(limit + ": " + path + " (было " + before + ")");
@@ -198,6 +299,13 @@ namespace VrBattlegrounds.EditorTools
         }
 
         private static bool IsAstc(TextureImporterFormat format) => format.ToString().StartsWith("ASTC", StringComparison.Ordinal);
+
+        // Сторона блока ASTC_NxN (больше — грубее и дешевле); HDR и прочие варианты — по той же цифре.
+        private static int AstcBlock(TextureImporterFormat format)
+        {
+            string digits = new string(format.ToString().SkipWhile(c => !char.IsDigit(c)).TakeWhile(char.IsDigit).ToArray());
+            return int.TryParse(digits, out int block) ? block : 0;
+        }
 
         private static void CollectTextures(Renderer renderer, HashSet<string> into)
         {

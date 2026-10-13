@@ -45,7 +45,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             if (Subject == null || Subject.ActiveAvatar == null) throw new InvalidOperationException("Бот не создан.");
             if (options.AvatarIndex >= 0)
                 AvatarManager.Instance.ChangeAvatar(null, Subject, Subject.TeamIndex, options.AvatarIndex);
-            Place(Subject, id == BotStandScenarioId.T03 || id == BotStandScenarioId.T04 || id == BotStandScenarioId.T05 ? new Vector3(-3.5f, 0f, -4f) : new Vector3(0f, 0f, -5f), 0f);
+            Place(Subject, Lane(id == BotStandScenarioId.T03 || id == BotStandScenarioId.T04 || id == BotStandScenarioId.T05 ? new Vector3(-3.5f, 0f, -4f) : new Vector3(0f, 0f, -5f)), 0f);
             Equipment = new BotStandEquipmentScript(options, weapon, purchase);
             Equipment.Equip(Subject, "начало case");
 
@@ -54,7 +54,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 var other = director.AddBot(mode);
                 if(other!=null) _ownedBots.Add(other);
                 if(other?.ActiveAvatar==null) throw new InvalidOperationException("Нет второго бота.");
-                Place(other, new Vector3(0f, 0f, 5f), 180f);
+                Place(other, Lane(new Vector3(0f, 0f, 5f)), 180f);
                 if (weapon != null) other.ActiveAvatar.GetComponent<BotGunner>().Arm(weapon);
                 return;
             }
@@ -68,7 +68,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             AvatarManager.Instance.SpawnAvatar(null, null, _target);
             if (_target.ActiveAvatar == null) throw new InvalidOperationException("Нет тела контрольной цели.");
             _target.ActiveAvatar.gameObject.AddComponent<BotBody>();
-            Place(_target, id == BotStandScenarioId.T01 ? new Vector3(-8f, 0f, 5f) : new Vector3(0f, 0f, 5f), 180f);
+            Place(_target, Lane(id == BotStandScenarioId.T01 ? new Vector3(-8f, 0f, 5f) : new Vector3(0f, 0f, 5f)), 180f);
             // Неуязвимость не подменяет прицел/выстрел: настоящий урон остаётся, цель выдерживает короткую серию.
             if (StateEventAuthority.IsWorldAuthority) _target.ActiveAvatar._actor.Life = 100000f;
             if(options.Profile==BotStandProfile.Capability)
@@ -98,12 +98,15 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             if (_target?.ActiveAvatar == null) return;
             float phase = elapsed / Mathf.Max(1f, duration);
             if(brain!=null && brain.enemyToAttack!=null) _targetSeen=true;
-            if (_id == BotStandScenarioId.T01 && _targetSeen && elapsed >= 3f) Place(_target, new Vector3(0,0,5), 180);
-            if (_id == BotStandScenarioId.T05) Place(_target, new Vector3(phase < .4f ? 0 : 7,0,5), 180);
-            if (_id == BotStandScenarioId.T06) Place(_target, new Vector3(0,0,Mathf.Lerp(6,-3, Mathf.PingPong(phase*2,1))), 180);
-            if (_id == BotStandScenarioId.T08) Place(_target, new Vector3(phase > .3f && phase < .7f ? -8 : 0,0,5), 180);
+            if (_id == BotStandScenarioId.T01 && _targetSeen && elapsed >= 3f) Place(_target, Lane(new Vector3(0,0,5)), 180);
+            if (_id == BotStandScenarioId.T05) Place(_target, Lane(new Vector3(phase < .4f ? 0 : 7,0,5)), 180);
+            if (_id == BotStandScenarioId.T06) Place(_target, Lane(new Vector3(0,0,Mathf.Lerp(6,-3, Mathf.PingPong(phase*2,1)))), 180);
+            if (_id == BotStandScenarioId.T08) Place(_target, Lane(new Vector3(phase > .3f && phase < .7f ? -8 : 0,0,5)), 180);
             if (_id == BotStandScenarioId.T09 && phase > .5f) _target.Role = GameRole.Spectator;
         }
+
+        /// <summary>Точка раскладки case со сдвигом <see cref="BotStandRunOptions.LaneOffsetX"/> (мультипроцессный стенд).</summary>
+        private Vector3 Lane(Vector3 feet) => _options != null ? feet + new Vector3(_options.LaneOffsetX, 0f, 0f) : feet;
 
         public static void Place(PlayerSession session, Vector3 feet, float yaw)
         {

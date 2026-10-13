@@ -1,1 +1,1 @@
-{"name":"VrBattlegrounds.BotCombatStand","rootNamespace":"VrBattlegrounds.DevTools.BotCombatStand","references":["VrBattlegrounds","UltimateXR","Mirror","BlazeAI.Runtime","Unity.Newtonsoft.Json"],"includePlatforms":[],"autoReferenced":true,"defineConstraints":["UNITY_EDITOR"]}
+{"name":"VrBattlegrounds.BotCombatStand","rootNamespace":"VrBattlegrounds.DevTools.BotCombatStand","references":["VrBattlegrounds","UltimateXR","Mirror","Mirror.Components","BlazeAI.Runtime","Unity.Newtonsoft.Json"],"includePlatforms":[],"autoReferenced":true,"defineConstraints":["UNITY_EDITOR"]}

@@ -40,6 +40,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private BotStandCaseResult _activeCase;
         private BotStandPlayerFlowProbe _probe;
         private BotStandShotConditions _conditions;
+        /// <summary>Маркеры отправки NT тел без владельца (net-round1 attempt-6); создаются до спавна бота case.</summary>
+        private BotStandNetSendMarkers _netMarkers;
         private readonly List<BotStandCaseResult> _results = new List<BotStandCaseResult>();
 
         private void Awake() => Instance = this;
@@ -129,6 +131,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     if (weapon == null) throw new InvalidOperationException("Нет оружия нужной категории.");
                     WeaponInfo purchase = string.IsNullOrEmpty(options.PurchaseWeaponName) ? null :
                         Weapons?.FirstOrDefault(w => w != null && w.WeaponPrefab != null && w.name == options.PurchaseWeaponName);
+                    _netMarkers = new BotStandNetSendMarkers();
                     _session.Begin(id, weapon, options, purchase);
                     BotStandMeasurements.ValidateFixture(id, _session);
                     _conditions = new BotStandShotConditions(_session, options);
@@ -152,6 +155,12 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     try { _probe.WriteMetrics(result); }
                     catch (Exception e) { result.Metrics["playerFlowError"] = e.Message; }
                     _probe.Dispose(); _probe = null;
+                }
+                if (_netMarkers != null)
+                {
+                    try { _netMarkers.WriteMetrics(result); }
+                    catch (Exception e) { result.Metrics["netSendMarkersError"] = e.Message; }
+                    _netMarkers.Dispose(); _netMarkers = null;
                 }
                 if (_conditions != null)
                 {
@@ -201,6 +210,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             {
                 _probe?.Dispose(); _probe=null;
                 _conditions?.Dispose(); _conditions=null;
+                _netMarkers?.Dispose(); _netMarkers=null;
                 var owned=_session; _session=null;
                 try { owned?.Dispose(); }
                 finally { if (_randomSaved) { UnityEngine.Random.state = _random; _randomSaved = false; } }

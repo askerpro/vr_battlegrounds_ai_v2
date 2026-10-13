@@ -108,6 +108,19 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
         private long _bytes;
         private int _messages;
+        // Этап pf-network: та же выборка для контрольной цели (кукла с сервера) — сравнение «бот не дороже».
+        private long _targetBytes;
+        private int _targetMessages;
+        private uint _targetAvatarNetId, _targetSessionNetId;
+        // Этап pf-network: поза каждого выстрела на сервере для сверки с клиентом на той же метке времени.
+        private const int MaxShotPoses = 400;
+        private readonly List<object> _shotPoses = new List<object>();
+        private readonly List<object> _networkInventory = new List<object>();
+        private float[] _preDriverWristL, _preDriverWristR;
+        private int _preDriverFrame = -1;
+        private Pose _preDriverPoseL, _preDriverPoseR;
+        // Периодическая выборка поз на сетке серверного времени (0,25 с) — сверка с клиентом без выстрелов.
+        private readonly BotStandPoseGrid _poseGrid = new BotStandPoseGrid(800);
         private int _hits, _foreignDamage;
         private readonly List<string> _occludedExamples = new List<string>();
         private readonly List<float> _notAimedDeg = new List<float>();
@@ -192,6 +205,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             }
             _gc = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame");
             UxrManager.AvatarsUpdated += Sample;
+            UxrManager.StageUpdating += OnStageUpdating;
             NetworkDiagnostics.OutMessageEvent += OnOutMessage;
             Application.logMessageReceived += OnLog;
         }
@@ -206,6 +220,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 Bind(player);
                 BindTarget(_session.Target != null ? _session.Target.ActiveAvatar : null);
                 _frames++;
+                SamplePoseGrid();
 
                 for (int i = 0; i < _recorders.Length; i++)
                     if (_recorders[i].Valid) _markerMs[i].Add(_recorders[i].LastValue * 1e-6f);
@@ -243,6 +258,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             _aim = player.GetComponent<BotWeaponAim>();
             if (_runtime != null) _runtime.ShotSampled += OnShot;
             _avatarNetId = player.netId;
+            _poseGrid.Reset();
             _sessionNetId = player.Session != null ? player.Session.netId : 0;
             _subjectActor = player._actor;
             _footReady = false;
@@ -269,6 +285,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             _aliveSeen = player.IsAlive;
             _bodyBornDead = !player.IsAlive;
             _bodies.Add(DescribeBody(player, "bind"));
+            if (_networkInventory.Count < 8) _networkInventory.Add(BotStandNetPoses.Inventory(_avatar));
             Equipment(_bodyChanges == 0 ? "firstBody" : _bodyBornDead ? "ghostOrDeadBody" : "newBody",
                 player.SourcePrefab != null ? player.SourcePrefab.name : player.name, null);
         }
@@ -557,6 +574,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         {
             UxrActor actor = target != null ? target._actor : null;
             if (_targetActor == actor) return;
+            _targetAvatarNetId = target != null ? target.netId : 0;
+            _targetSessionNetId = target != null && target.Session != null ? target.Session.netId : 0;
             if (_targetActor != null) _targetActor.DamageReceived -= OnDamage;
             _targetActor = actor;
             if (_targetActor != null) _targetActor.DamageReceived += OnDamage;
@@ -830,6 +849,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             {
                 _lastShotTime = Time.time;
                 if (sample.HasError) _muzzleShot.Add(sample.Error.Angle);
+                RecordShotPose();
             }
             else if (sample.Outcome == BotShotOutcome.NotAimed && !float.IsNaN(sample.GateAimErrorDeg))
             {
@@ -840,6 +860,59 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 GameObject blocker = sample.Blocker.gameObject;
                 _occludedExamples.Add(blocker.name + " (слой " + LayerMask.LayerToName(blocker.layer) + ")");
             }
+        }
+
+        /// <summary>
+        /// Начало PostUpdate UXR (до записи драйвера): запястья, какими их видит NetworkTransform, если его LateUpdate
+        /// (рассылка ServerToClient, порядок 0) отработал раньше UxrManager.LateUpdate (тоже порядок 0).
+        /// </summary>
+        private void OnStageUpdating(UxrUpdateStage stage)
+        {
+            if (stage != UxrUpdateStage.AvatarUsingTracking || _avatar == null) return;
+            _preDriverWristL = BotStandNetPoses.Pose(_avatar.GetHandBone(UxrHandSide.Left));
+            _preDriverWristR = BotStandNetPoses.Pose(_avatar.GetHandBone(UxrHandSide.Right));
+            Transform left = _avatar.GetHandBone(UxrHandSide.Left), right = _avatar.GetHandBone(UxrHandSide.Right);
+            if (left != null) _preDriverPoseL = new Pose(left.position, left.rotation);
+            if (right != null) _preDriverPoseR = new Pose(right.position, right.rotation);
+            _preDriverFrame = Time.frameCount;
+        }
+
+        /// <summary>
+        /// Кадр сервера после всех стадий UXR: позы на сетке серверного времени (<c>NetworkTime.localTime</c> — та же шкала,
+        /// что метки снимков NT у клиента). Запястья до записи драйвера — рядом: NT мог разослать любую из двух поз.
+        /// </summary>
+        private void SamplePoseGrid()
+        {
+            if (_avatar == null) return;
+            BotStandPoseSet set = BotStandPoseSet.Capture(_avatar);
+            if (_preDriverFrame == Time.frameCount)
+            {
+                set.HasPreDriver = true;
+                set.PreWristL = _preDriverPoseL;
+                set.PreWristR = _preDriverPoseR;
+            }
+            _poseGrid.Feed(NetworkTime.localTime, set, _avatarNetId);
+        }
+
+        /// <summary>
+        /// Выстрел на сервере (LateUpdate 11000, после всех стадий UXR этого кадра): метка <c>NetworkTime.localTime</c>
+        /// (= метка батча Mirror, с которой событие выстрела придёт клиенту), мировая поза ShotSource, корень, камера,
+        /// запястья (после IK и до записи драйвера), идентификаторы оружия. Клиент пишет то же на этой метке.
+        /// </summary>
+        private void RecordShotPose()
+        {
+            if (_shotPoses.Count >= MaxShotPoses || _avatar == null || _gunner == null) return;
+            UxrFirearmWeapon firearm = _gunner.Firearm;
+            NetworkIdentity identity = firearm != null ? firearm.GetComponentInParent<NetworkIdentity>() : null;
+            _shotPoses.Add(new Dictionary<string, object>
+            {
+                ["t"] = NetworkTime.localTime, ["frame"] = Time.frameCount, ["muzzle"] = BotStandNetPoses.Pose(_gunner.Muzzle),
+                ["rig"] = BotStandNetPoses.Rig(_avatar),
+                ["preDriverWristL"] = _preDriverFrame == Time.frameCount ? _preDriverWristL : null,
+                ["preDriverWristR"] = _preDriverFrame == Time.frameCount ? _preDriverWristR : null,
+                ["weaponUniqueId"] = firearm != null ? firearm.UniqueId.ToString() : null,
+                ["weaponNetId"] = identity != null ? identity.netId : 0u, ["avatarNetId"] = _avatarNetId
+            });
         }
 
         private void OnDamage(object sender, UxrDamageEventArgs e)
@@ -856,7 +929,14 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             if (info.message is RpcMessage rpc) netId = rpc.netId;
             else if (info.message is EntityStateMessage state) netId = state.netId;
             else return;
-            if (netId == 0 || (netId != _avatarNetId && netId != _sessionNetId)) return;
+            if (netId == 0) return;
+            if (netId == _targetAvatarNetId || netId == _targetSessionNetId)
+            {
+                _targetBytes += (long)info.bytes * info.count;
+                _targetMessages += info.count;
+                return;
+            }
+            if (netId != _avatarNetId && netId != _sessionNetId) return;
             _bytes += (long)info.bytes * info.count;
             _messages += info.count;
         }
@@ -986,8 +1066,22 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     ["bytesAllClients"] = _bytes, ["messages"] = _messages, ["connections"] = connections,
                     ["bytesPerSecondAllClients"] = _bytes / seconds,
                     ["bytesPerSecondPerClient"] = connections > 0 ? _bytes / seconds / connections : 0f,
+                    ["target"] = new Dictionary<string, object>
+                    {
+                        ["bytesAllClients"] = _targetBytes, ["messages"] = _targetMessages,
+                        ["bytesPerSecondPerClient"] = connections > 0 ? _targetBytes / seconds / connections : 0f,
+                        ["note"] = "Контрольная цель стенда — аватар без владельца, позу пишет сервер (как кукла): база сравнения байт/с."
+                    },
                     ["note"] = connections > 0 ? "RpcMessage/EntityStateMessage с netId аватара и сессии бота." :
                         "Клиентов нет — Mirror ничего не рассылает; байт/с на бота этим стендом не измерен (нужен клиент)."
+                },
+                ["netShotPoses"] = new Dictionary<string, object>
+                {
+                    ["shots"] = _shotPoses, ["bodies"] = _networkInventory, ["samples"] = _poseGrid.Samples,
+                    ["sampleIntervalSeconds"] = BotStandPoseGrid.Interval,
+                    ["note"] = "Сверка с клиентом (BotStandNetObserver.shotPoses) по метке t = NetworkTime.localTime сервера = метка " +
+                               "батча Mirror. rig — после всех стадий UXR кадра выстрела; preDriverWrist — в начале PostUpdate UXR этого " +
+                               "кадра (что увидел бы NetworkTransform, если его LateUpdate раньше UxrManager)."
                 },
                 ["weaponUseContext"] = new Dictionary<string, object>
                 {
@@ -1171,6 +1265,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             if (_disposed) return;
             _disposed = true;
             UxrManager.AvatarsUpdated -= Sample;
+            UxrManager.StageUpdating -= OnStageUpdating;
             NetworkDiagnostics.OutMessageEvent -= OnOutMessage;
             Application.logMessageReceived -= OnLog;
             if (_runtime != null) _runtime.ShotSampled -= OnShot;

@@ -116,9 +116,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         }
 
         /// <summary>Корневой grabbable огнестрела по тому же правилу, что у SDK (RootGrabbable) и WeaponUseContext.</summary>
-        private static UxrGrabbableObject RootGrabbable(UxrFirearmWeapon firearm)
+        internal static UxrGrabbableObject RootGrabbable(UxrFirearmWeapon firearm)
         {
-            if (!firearm.TryGetTriggerGrip(0, out UxrGrabbableObject grip, out _) || grip == null) return null;
+            if (firearm == null || !firearm.TryGetTriggerGrip(0, out UxrGrabbableObject grip, out _) || grip == null) return null;
             return grip.UsesGrabbableParentDependency && grip.GrabbableParent != null ? grip.GrabbableParent : grip;
         }
 

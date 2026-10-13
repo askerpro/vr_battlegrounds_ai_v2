@@ -376,6 +376,11 @@
           "task": "weapon-system",
           "stage": "ledger-spawn-ready",
           "state": "verified"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "cyborg-grips",
+          "state": "merged"
         }
       ],
       "needs": []

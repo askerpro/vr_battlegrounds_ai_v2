@@ -2038,6 +2038,17 @@ namespace UltimateXR.Manipulation
             _regularPhysicsSyncCoroutine = null;
         }
 
+        /// <summary>
+        ///     VR Battlegrounds patch 75 (5133): синхронизация физики после снятия с якоря, начатая внутри чужого
+        ///     синхронизируемого метода. Вложенное событие не уходит в сеть, поэтому первое <see cref="UpdateRigidbody" />
+        ///     отправляется кадром позже, уже с верхнего уровня.
+        /// </summary>
+        private IEnumerator DeferredPhysicsSyncCoroutine(float intervalSeconds)
+        {
+            yield return null;
+            yield return RegularPhysicsSyncCoroutine(null, intervalSeconds);
+        }
+
         #endregion
 
         #region Event Trigger Methods
@@ -2138,6 +2149,39 @@ namespace UltimateXR.Manipulation
             }
 
             Released?.Invoke(this, e);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 75 (5133): после <see cref="UxrGrabManager.RemoveObjectFromAnchor" /> предмет может
+        ///     стать динамическим (смерть/удаление аватара), но событие снятия не несёт позы, а синхронизация физики
+        ///     SDK стартует только при отпускании рукой. Запускает ту же <see cref="RegularPhysicsSyncCoroutine" /> без
+        ///     руки: первое событие с позой уходит сразу после снятия, затем — с интервалом до засыпания тела. Только у
+        ///     автора снятия: повтор события на другой машине (<see cref="UxrManager.IsInsideStateSync" />) ничего не шлёт.
+        /// </summary>
+        internal void StartPhysicsSyncAfterAnchorRemoval()
+        {
+            if (!UxrGlobalSettings.Instance.SyncGrabbablePhysics ||
+                _rigidBodySource == null ||
+                _rigidBodySource.isKinematic ||
+                IsBeingGrabbed ||
+                CurrentAnchor != null ||
+                !isActiveAndEnabled ||
+                UxrManager.Instance.IsInsideStateSync ||
+                !UxrNetworkManager.HasInstance ||
+                UxrNetworkManager.Instance.NetworkImplementation.HasNetworkTransformSyncComponents(gameObject))
+            {
+                return;
+            }
+
+            if (_regularPhysicsSyncCoroutine != null)
+            {
+                StopCoroutine(_regularPhysicsSyncCoroutine);
+            }
+
+            float intervalSeconds = UxrGlobalSettings.Instance.GrabbableSyncIntervalSeconds;
+            _regularPhysicsSyncCoroutine = UxrStateSyncImplementer.SyncCallDepth > 0
+                                               ? StartCoroutine(DeferredPhysicsSyncCoroutine(intervalSeconds))
+                                               : StartCoroutine(RegularPhysicsSyncCoroutine(null, intervalSeconds));
         }
 
         /// <summary>

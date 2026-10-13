@@ -456,6 +456,9 @@ namespace UltimateXR.Manipulation
             }
             
             EndSyncMethod(new object[] { grabbableObject, propagateEvents, unparent });
+
+            // VR Battlegrounds patch 75 (5133): после события снятия — поза ставшего динамическим предмета, только у автора.
+            grabbableObject.StartPhysicsSyncAfterAnchorRemoval();
         }
 
         /// <summary>

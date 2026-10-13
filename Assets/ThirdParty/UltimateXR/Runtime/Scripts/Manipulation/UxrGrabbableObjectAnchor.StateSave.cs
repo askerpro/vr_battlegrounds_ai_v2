@@ -3,7 +3,9 @@
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
 // --------------------------------------------------------------------------------------------------------------------
+using System;
 using UltimateXR.Core.StateSave;
+using UltimateXR.Exceptions; // VR Battlegrounds patch 75: UxrComponentNotFoundException
 
 namespace UltimateXR.Manipulation
 {
@@ -17,7 +19,26 @@ namespace UltimateXR.Manipulation
 
             if (level > UxrStateSaveLevel.ChangesSincePreviousSave)
             {
-                SerializeStateValue(level, options, nameof(_currentPlacedObject), ref _currentPlacedObject);
+                // VR Battlegrounds patch 75: содержимое якоря пишется всегда (см. UxrGrabbableObject.StateSave.cs),
+                // после чтения ссылки согласует менеджер.
+                UxrGrabbableObject placedBeforeLoad   = _currentPlacedObject;
+                Guid               unresolvedPlacedId = Guid.Empty;
+
+                try
+                {
+                    SerializeStateValue(level, options | UxrStateSaveOptions.DontCheckCache, nameof(_currentPlacedObject), ref _currentPlacedObject);
+                }
+                catch (UxrComponentNotFoundException e) when (isReading)
+                {
+                    // Предмет ещё не зарегистрирован у клиента: ссылка прочитана целиком, согласование — при его появлении.
+                    unresolvedPlacedId   = e.UniqueId;
+                    _currentPlacedObject = null;
+                }
+
+                if (isReading)
+                {
+                    UxrGrabManager.Instance.ReconcileLoadedAnchor(this, placedBeforeLoad, unresolvedPlacedId);
+                }
             }
         }
     }

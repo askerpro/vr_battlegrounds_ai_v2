@@ -20,6 +20,24 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "late-join-anchors",
+      "writes": [
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObject.StateSave.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObjectAnchor.StateSave.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.StateSave.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.Manipulation.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObject.cs",
+        "Assets/Tests/EditMode/Interaction/**",
+        "Docs/manipulation/**",
+        ".claude/agent-memory/manipulation-expert/**",
+        "experts/manipulation/**",
+        "tasks/grab-authority/**"
+      ],
+      "after": [],
+      "needs": []
     }
   ]
 }

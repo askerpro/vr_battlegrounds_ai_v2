@@ -64,6 +64,14 @@ SDK владеет состоянием хвата (кто что держит, 
   `UxrGrabManager` проходят всегда. Код из Update/таймера/физики/RPC проверяет `IsAuthorOfItem`/`IsWorldAuthority`
   (Issue 23 — двойные выстрелы/урон).
 - `Network/NetworkUxrIdentity.cs` — уникальный id для спавненных в рантайме (NET-16).
+- **Поздний вход** (SDK-патч 75): опоздавший получает `SaveStateChanges(ChangesSinceBeginning)`; размещение в якоре
+  (`_currentAnchor`/`_currentPlacedObject`) пишется в снимок всегда (`DontCheckCache` только на уровне снимка), после
+  чтения его раскладывает один локальный согласователь `UxrGrabManager.ReconcileLoadedPlacement/ReconcileLoadedAnchor`
+  (ссылки, родитель, kinematic — без событий); якорь, ещё не зарегистрированный у опоздавшего, ждёт
+  `UxrComponent.GlobalRegistered` (строка `deferred`).
+- **Снятие с якоря** (патч 75): `RemoveObjectFromAnchor` не несёт позы; ставший динамическим предмет синхронизирует
+  физику от автора снятия (`StartPhysicsSyncAfterAnchorRemoval` → `RegularPhysicsSyncCoroutine`, как при отпускании),
+  повтор события на клиенте ничего не шлёт. Иначе у клиентов предмет падал от своей позы кобуры (5133).
 
 ## 6. Вибрация
 

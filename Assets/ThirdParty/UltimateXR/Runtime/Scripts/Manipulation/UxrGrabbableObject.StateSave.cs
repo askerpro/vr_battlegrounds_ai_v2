@@ -5,8 +5,10 @@
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
 // --------------------------------------------------------------------------------------------------------------------
+using System;
 using UltimateXR.Core;
 using UltimateXR.Core.StateSave;
+using UltimateXR.Exceptions; // VR Battlegrounds patch 75: UxrComponentNotFoundException
 
 namespace UltimateXR.Manipulation
 {
@@ -38,7 +40,28 @@ namespace UltimateXR.Manipulation
 
             // Backing fields for public properties
 
-            SerializeStateValue(level, options, nameof(_currentAnchor),             ref _currentAnchor);
+            // VR Battlegrounds patch 75: размещение пишется всегда. Сравнение с начальным значением сервера
+            // теряло предмет, родившийся в якоре и вернувшийся в него: у позднего клиента он вне якоря.
+            UxrGrabbableObjectAnchor anchorBeforeLoad   = _currentAnchor;
+            Guid                     unresolvedAnchorId = Guid.Empty;
+
+            // VR Battlegrounds patch 75: принудительная запись — только для снимка (как у якоря). Сюда инкрементальные уровни и так не доходят
+            // (ранний выход выше), условие держит инвариант, если выход когда-нибудь сдвинут.
+            UxrStateSaveOptions anchorOptions = level > UxrStateSaveLevel.ChangesSincePreviousSave ? options | UxrStateSaveOptions.DontCheckCache : options;
+
+            try
+            {
+                SerializeStateValue(level, anchorOptions, nameof(_currentAnchor), ref _currentAnchor);
+            }
+            catch (UxrComponentNotFoundException e) when (isReading)
+            {
+                // VR Battlegrounds patch 75: якорь (на аватаре, появившемся у клиента позже снимка) ещё не
+                // зарегистрирован. Ссылка уже прочитана целиком, поток не сбит: остальное состояние читается дальше,
+                // а размещение согласователь доведёт, когда якорь зарегистрируется.
+                unresolvedAnchorId = e.UniqueId;
+                _currentAnchor     = null;
+            }
+
             SerializeStateValue(level, options, nameof(_isPlaceable),               ref _isPlaceable);
             SerializeStateValue(level, options, nameof(_isLockedInPlace),           ref _isLockedInPlace);
             SerializeStateValue(level, options, nameof(_priority),                  ref _priority);
@@ -94,6 +117,13 @@ namespace UltimateXR.Manipulation
             // Private vars
 
             SerializeStateValue(level, options, nameof(_grabPointEnabledStates), ref _grabPointEnabledStates);
+
+            if (isReading)
+            {
+                // VR Battlegrounds patch 75: чтение присвоило только поле; родителя, позу в якоре, kinematic
+                // и обратную ссылку якоря приводит согласователь менеджера, без событий синхронизации.
+                UxrGrabManager.Instance.ReconcileLoadedPlacement(this, anchorBeforeLoad, unresolvedAnchorId);
+            }
         }
 
         #endregion

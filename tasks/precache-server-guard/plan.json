@@ -1,0 +1,20 @@
+{
+  "task_id": "precache-server-guard",
+  "owner": "network",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/network/Vr_Battlegrounds_ai",
+  "base_sha": "a84b9f2ceae9bfa7ff9c8982f4d39cedf0aef8c9",
+  "doc_path": "tasks/precache-server-guard/Readme.md",
+  "title": "Прогрев UltimateXR не запускается на сервере без своего игрока",
+  "stages": [
+    {"id": "guard", "writes": [
+      "Assets/Scripts/Network/HeadlessPrecacheGuard.cs",
+      "tasks/precache-server-guard/**",
+      "experts/network/**"
+    ], "after": [], "needs": []},
+    {"id": "regression-tests", "writes": [
+      "Assets/Tests/EditMode/Network/HeadlessPrecacheGuardTests.cs",
+      "tasks/precache-server-guard/**"
+    ], "after": [{"task": "precache-server-guard", "stage": "guard", "state": "merged"}], "needs": []}
+  ]
+}

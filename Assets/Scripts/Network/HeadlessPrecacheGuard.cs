@@ -1,3 +1,4 @@
+using Mirror;
 using UltimateXR.Core;
 using UltimateXR.Core.Unique;
 using UnityEngine;
@@ -27,47 +28,76 @@ namespace VrBattlegrounds.Network
     /// Прогревать шейдеры и пулы эффектов без рендера бессмысленно, поэтому на такой машине прогрев
     /// выключен целиком. На хосте и шлеме всё как было: там есть свой локальный аватар.
     /// </para>
+    ///
+    /// <para>
+    /// <b>Сервер с графикой</b> (выделенный сервер в редакторе, оконная сборка сервера; дефект 6231, 2026-10-14):
+    /// своего аватара у него тоже нет, и ровно тот же перезапуск с удвоением повесил редактор при матче ботов
+    /// (8 тел, 40 ГБ). Прогрев нужен только машине со своим игроком, поэтому он выключен и у процесса «только
+    /// сервер» (<c>NetworkServer.active && !NetworkClient.active</c>). Роль известна лишь после старта сети, поэтому
+    /// решение принимается при загрузке каждой сцены: сервер после старта всегда грузит сцену карты, до первого
+    /// спавна тела.
+    /// </para>
     /// </summary>
     public static class HeadlessPrecacheGuard
     {
-        /// <summary>Нужен ли прогрев UltimateXR этой машине.</summary>
+        /// <summary>Нужен ли прогрев UltimateXR машине по рендеру (без учёта роли).</summary>
         public static bool ShouldPrecache(bool isBatchMode, GraphicsDeviceType graphics)
         {
             return !isBatchMode && graphics != GraphicsDeviceType.Null;
         }
 
+        /// <summary>
+        /// Нужен ли прогрев UltimateXR машине: есть рендер и есть свой игрок. Процесс «только сервер» (без своего
+        /// клиента) не прогревает даже с графикой.
+        /// </summary>
+        public static bool ShouldPrecache(bool isBatchMode, GraphicsDeviceType graphics, bool isServerOnly)
+        {
+            return !isServerOnly && ShouldPrecache(isBatchMode, graphics);
+        }
+
+        /// <summary>Решение для этой машины сейчас: рендер и текущая сетевая роль.</summary>
+        private static bool ShouldPrecacheNow()
+        {
+            bool isServerOnly = NetworkServer.active && !NetworkClient.active;
+            return ShouldPrecache(Application.isBatchMode, SystemInfo.graphicsDeviceType, isServerOnly);
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Install()
         {
-            if (ShouldPrecache(Application.isBatchMode, SystemInfo.graphicsDeviceType)) return;
-
             // UxrManager лежит в сценах (Lobby, карты): обращение к Instance до их загрузки создало бы
             // свой экземпляр вместо настроенного в сцене. Флаг ставим после загрузки каждой сцены — до
-            // первого спавна аватара, который и запускает прогрев.
+            // первого спавна аватара, который и запускает прогрев. Подписка всегда: роль (сервер или нет)
+            // становится известна только после старта сети.
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            if (ShouldPrecacheNow()) return;
+
             int registered = RegisterDisabledUniqueIds(scene);
 
             if (!UxrManager.HasInstance || !UxrManager.Instance.UsePrecaching) return;
 
             UxrManager.Instance.UsePrecaching = false;
-            GameLog.Network.Info($"[HeadlessPrecacheGuard] Машина без графики — прогрев UltimateXR выключен (сцена {scene.name}), " +
+            string reason = ShouldPrecache(Application.isBatchMode, SystemInfo.graphicsDeviceType)
+                ? "сервер без своего игрока"
+                : "машина без графики";
+            GameLog.Network.Info($"[HeadlessPrecacheGuard] {reason} — прогрев UltimateXR выключен (сцена {scene.name}), " +
                                  $"выключенных компонентов с id зарегистрировано: {registered}.");
         }
 
         /// <summary>
         /// Машина без графики, состав карты собран (<c>MapBootstrap</c>): зарегистрировать выключенные компоненты с
-        /// id ещё раз. <see cref="OnSceneLoaded"/> видел сцену до сборки — службы, созданные и перенесённые в неё
-        /// позже, он не застал. Повтор безопасен: <c>RegisterIfNecessary</c> идемпотентна. На машине с графикой
+        /// id ещё раз (то же условие: машина без графики или сервер без своего игрока). <see cref="OnSceneLoaded"/> видел сцену до сборки — службы, созданные и перенесённые в неё
+        /// позже, он не застал. Повтор безопасен: <c>RegisterIfNecessary</c> идемпотентна. На машине, которая прогревает,
         /// ничего не делает — там регистрацию выполняет прогрев SDK.
         /// </summary>
         public static int RegisterAfterComposition(Scene scene)
         {
-            if (ShouldPrecache(Application.isBatchMode, SystemInfo.graphicsDeviceType)) return 0;
+            if (ShouldPrecacheNow()) return 0;
             return RegisterDisabledUniqueIds(scene);
         }
 

@@ -111,3 +111,9 @@ readonly gate, register UX, EOL-защиты broker. Продукт: Unity YAML/
 
 post-rewrite/post-merge гидратируют LFS main/worker после rebase/merge (инцидент 4567); Play только
 через PlayLaunch; launcher serialized_repair.py. [Проверки](changelog/2026-10-12-hooks-lfs-rules.md).
+
+## Вопросы человеку и wait-inbox — 2026-10-14
+
+Вопросы пользователю — только AskUserQuestion; Stop-хук возвращает ход на вопрос текстом, открытые
+вопросы видны на доске («Ждут вашего ответа»). Ожидание inbox — фоновый wait-inbox вместо Monitor-циклов;
+inbox --unread --as (режим warn). Runtime eb4ab1d. [Проверки](changelog/2026-10-14-human-questions-wait-inbox.md).

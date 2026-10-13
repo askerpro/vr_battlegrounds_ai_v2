@@ -386,6 +386,26 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "human-questions-wait-inbox",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "AGENTS.md",
+        ".agents/rules/agent_coordination.md",
+        ".agents/rules/project-workflows.md",
+        ".claude/settings.json",
+        "Tools/agents/coordination-hook.py",
+        "experts/COMMON.md"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "hooks-lfs-rules",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

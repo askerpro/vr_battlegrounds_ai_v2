@@ -52,6 +52,10 @@ namespace UltimateXR.Rendering.FX
         [SerializeField] private float     _clipPlaneOffset;
         [SerializeField] private LayerMask _reflectLayers = -1;
 
+        // VR Battlegrounds patch 78: в отражение попадает только то, что ближе этого расстояния от плоскости
+        // зеркала (ближний план и игроки); дальше — фон камеры. 0 — без ограничения (как в SDK).
+        [SerializeField] private float _maxReflectionDistance;
+
         #endregion
 
         #region Unity
@@ -156,6 +160,13 @@ namespace UltimateXR.Rendering.FX
                 return;
             }
 
+            // VR Battlegrounds patch 78: зеркало вне кадра или камера за его плоскостью — отражение не рисуется,
+            // текстура хранит последний кадр.
+            if (!IsMirrorInView(renderCamera))
+            {
+                return;
+            }
+
             // Avoid recursive rendering
 
             if (s_insideRendering)
@@ -174,6 +185,7 @@ namespace UltimateXR.Rendering.FX
                 if (_disablePixelLights) QualitySettings.pixelLightCount = 0;
                 CopyCameraData(renderCamera, reflectionCamera);
                 reflectionCamera.cullingMask = ~(1 << 4) & _reflectLayers.value;
+                LimitReflection(renderCamera, reflectionCamera);
                 foreach (OwnedMaterialSlot slot in _ownedMaterials)
                 {
                     Material m = slot.Copy;
@@ -208,6 +220,49 @@ namespace UltimateXR.Rendering.FX
         #endregion
 
         #region Private Methods
+
+        // VR Battlegrounds patch 78: зеркало в пирамиде видимости камеры (для XR — общей для обоих глаз)
+        // и камера перед отражающей стороной.
+        private bool IsMirrorInView(Camera renderCamera)
+        {
+            Vector3 normal = -_mirrorTransform.forward;
+            if (Vector3.Dot(renderCamera.transform.position - _mirrorTransform.position, normal) <= 0.0f)
+            {
+                return false;
+            }
+
+            return GeometryUtility.TestPlanesAABB(GeometryUtility.CalculateFrustumPlanes(renderCamera.cullingMatrix), _mirrorRenderer.bounds);
+        }
+
+        // VR Battlegrounds patch 78: камера отражения не рисует дальнее (дистанция отсечения по всем слоям
+        // считается от отражённой камеры: её расстояние до плоскости + _maxReflectionDistance), тени и пост-эффекты.
+        private void LimitReflection(Camera renderCamera, Camera reflectionCamera)
+        {
+            if (_maxReflectionDistance > 0.0f)
+            {
+                float toPlane   = Mathf.Abs(Vector3.Dot(renderCamera.transform.position - _mirrorTransform.position, _mirrorTransform.forward));
+                float distances = Mathf.Min(renderCamera.farClipPlane, toPlane + _maxReflectionDistance);
+                float[] layers  = new float[32];
+                for (int i = 0; i < layers.Length; i++)
+                {
+                    layers[i] = distances;
+                }
+                reflectionCamera.layerCullSpherical = true;
+                reflectionCamera.layerCullDistances = layers;
+            }
+            else
+            {
+                reflectionCamera.layerCullDistances = new float[32];
+            }
+
+#if ULTIMATEXR_UNITY_URP
+            UniversalAdditionalCameraData data = reflectionCamera.GetUniversalAdditionalCameraData();
+            data.renderShadows        = false;
+            data.renderPostProcessing = false;
+            data.requiresDepthOption  = CameraOverrideOption.Off;
+            data.requiresColorOption  = CameraOverrideOption.Off;
+#endif
+        }
 
         // VR Battlegrounds: динамические reflection параметры принадлежат renderer-specific copies.
         // Shared assets и оба уровня MaterialPropertyBlock никогда не изменяются.

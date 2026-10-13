@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "entries": [
+    { "id": "fw-server-only", "regex": "^Framework noise", "reason": "fixture: only server process", "scope": "server" },
+    { "id": "fw-stack", "regex": "\\nVrBattlegrounds\\.Probe\\.Noisy:", "reason": "fixture: matched by stack frame", "scope": "any" }
+  ]
+}

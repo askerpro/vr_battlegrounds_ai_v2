@@ -1,0 +1,3 @@
+--------- beginning of crash
+10-12 18:10:59.100  1111  1150 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 1150 (UnityMain), pid 1111 (rpblank)
+10-12 18:10:59.102  1111  1150 E CRASH   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***

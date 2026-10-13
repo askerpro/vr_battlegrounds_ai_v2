@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "entries": [
+    { "id": "good-one", "regex": "^ok$", "reason": "fixture", "scope": "any" },
+    { "id": "bad-one", "regex": "([", "reason": "fixture: broken regex", "scope": "any" }
+  ]
+}

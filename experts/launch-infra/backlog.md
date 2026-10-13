@@ -35,7 +35,23 @@ PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
 0e. `stand-back-to-back` — аренда 539: S2C сразу за предыдущим прогоном не уложился в TimeoutSeconds=90 — клоны MPPM
    стартовали через ~70 с (ждали выхода клонов прошлого прогона), LaunchNotReady. Для серий ботов: до Start ждать выхода
    клонов прошлого RunId или отсчитывать таймаут от появления клонов. Порядок: после вливания stand-preview-preflight.
-1. `live-smoke-runner` → этап `e2e-log-verdict` — агрегация ошибок всех процессов и механизм известных шумов для `series-smoke-e2e` — MRB «Известные шумы тестов и харнесса», VTS «Финальная проверка383».
+0f. `e2e-smoke-kit` — решение пользователя 2026-10-13: смок-тест серии матчей (сценарий и критерии) пишет gameplay
+   сам, launch-infra готовит каркас; предложение gameplay — 5863. Каркас: вердикт по логам (этап e2e-log-verdict),
+   `-Arg` → `-e2eArg` в Run-E2E.ps1 (как в Run-QuestE2E), руководство «мультипроцессный сценарий» в Docs/testing.md,
+   плюс что попросит gameplay. Ответ gameplay 5869 (согласен; сценарий, критерии и шум сценария — их этап). Нужно от
+   каркаса по важности: (1) барьер между процессами — именованные шаги, сервер ждёт N клиентов и наоборот, таймаут шага
+   — именованный провал с ролью и шагом; (2) сценарий и сбор логов переживают смену карты (MapLoader/ServerChangeScene),
+   вердикт после финала серии; (3) роль/идентичность процесса (server/client N/late) и сводный результат по процессам;
+   (4) длинный таймаут и параметры режима через -Arg; (5) журнал шагов сценария с временем и ролью в итоге;
+   (6) поздний клиент учитывается барьерами отдельно. Не нужно: админ-команды, отдельный детектор sync-ошибок.
+   Сначала проверить, что из этого уже есть (E2EContext.Role, -Timeout, -LateClientDelay, MapRunRelayBarrierScenario).
+   Снять `map-runtime-bootstrap/series-smoke-e2e` с моего плана, когда gameplay сообщит id своего этапа.
+0g. Перезапуски по вердикту логов (обещано владельцам): `map-run-startup-route` после вливания gameplay
+   `arsenal-unload-teardown/top-level-detach` (критерии 6071: 0 предметов вне сцены, нет «not cleaned up», 0 «Tried to
+   ignore collisions»; защита manipulation 6079 — 0 её Error); `dedicated-server-arsenal` после исправления network
+   `teleport-state-unknown-target`. Записи `kind=defect` в `Tools/e2e/known-noise.json` удалять после исправления.
+1. `e2e-log-verdict` — принят 2026-10-13 (журнал `2026-10-13-e2e-log-verdict-accepted.md`). Остаток: настоящий прогон
+   `Run-QuestE2E` на шлеме с вердиктом по логам (проверено только на фикстурах) — при свободном шлеме.
 2. `async-player-build` — `E2EPlayerBuilder.Run()` блокирует главный поток (таймаут MCP), пачкает `PC.asset`, `ProjectSettings.asset`, `MapRuntimeCatalog.asset`; ложное «устарел» — `Docs/testing.md` «Шероховатость: проверка свежести билда». Диагностика 2026-10-11 (чтение кода): `PC.asset` — URP
    `ShaderBuildPreprocessor` под Standalone+Development, мусор, зона performance; `ProjectSettings.asset` — снимок
    Player Settings посреди сборки (XR `preloadedAssets`), мусор, моя зона (`GameBuilder.cs:181-203` восстанавливает,

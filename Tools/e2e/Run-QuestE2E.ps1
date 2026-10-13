@@ -32,11 +32,18 @@
 # с позой шлема). Серверу флаг не передаётся. До устройства манифест APK (-Apk или собранный -Build) разбирается
 # aapt: включённые LateLatching/SpaceWarp при симуляции — код 2; проверить нельзя — предупреждение, renderCheck=unknown.
 #
+# Вердикт по логам (контракт r4, Tools/e2e/E2ELogVerdict.psm1): ошибки лога обеих сторон (logIssues их результатов)
+# сверяются с известным шумом каркаса (Tools/e2e/known-noise.json) и сценария (knownNoise); нативные падения ищутся
+# в server.log и в logcat шлема только по pid приложения (поток logcat содержит все процессы устройства). Итог —
+# log-verdict.json и блок logVerdict в run.json и summary.json. -LogVerdict enforce (по умолчанию): неожиданные
+# ошибки или падения делают зелёный прогон кодом 1; -LogVerdict report — только отчёт.
+#
 # Коды возврата:
-#   0 — все проверки обеих сторон зелёные
-#   1 — сценарий поймал отказ (completed, но есть красные проверки)
+#   0 — все проверки обеих сторон зелёные, в логах нет неожиданных ошибок (или -LogVerdict report)
+#   1 — сценарий поймал отказ (completed, но есть красные проверки) или при enforce — неожиданные ошибки в логах
 #   2 — прогон не состоялся: нет устройства/плеера/правила брандмауэра, нет вердикта, битый JSON,
-#       не собран артефакт, сборки из разных ревизий или без ревизии, не собралась пара (-Build), нет run.json
+#       не собран артефакт, сборки из разных ревизий или без ревизии, не собралась пара (-Build), нет run.json,
+#       при enforce — битый список известного шума (вердикт по логам вынести нельзя)
 #
 # Запуск:
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1
@@ -107,14 +114,24 @@ param(
 
     # Симуляция позы головы на шлеме: высота глаз в метрах (-e2eHeadPose eye=<м>), calib (цель из калибровки)
     # или off (реальный трекинг шлема — для замеров с настоящей позой).
-    [string]   $HeadPose = '1.6'
+    [string]   $HeadPose = '1.6',
+
+    # Вердикт по логам: enforce — неожиданные ошибки в логах делают прогон RED (код 1); report — только отчёт.
+    [ValidateSet('enforce', 'report')]
+    [string]   $LogVerdict = 'enforce'
 )
 
 $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$ContractRevision = 3
+try { Import-Module (Join-Path $PSScriptRoot 'E2ELogVerdict.psm1') -Force -ErrorAction Stop }
+catch {
+    Write-Host ''
+    Write-Host ('ОТКАЗ: модуль вердикта по логам не загружен: ' + $_.Exception.Message) -ForegroundColor Red
+    exit 2
+}
+$ContractRevision = 5
 # Символы, допустимые в аргументах строки -e unity "<...>": её разбирают и sh шлема, и Unity по пробелам.
 $SafeToken = '^[A-Za-z0-9_.:/=+@%-]+$'
 
@@ -1161,6 +1178,7 @@ $manifest = [ordered]@{
     failure = $null
     exitCode = 2
     verdict = $null
+    logVerdict = $null
 }
 
 if ($null -ne $viewsInfo) {
@@ -1595,6 +1613,49 @@ finally {
     if ($exitCode -eq 1) { $verdict = 'RED — сценарий поймал отказ' }
     if ($exitCode -eq 0) { $verdict = 'GREEN — все проверки зелёные' }
 
+    # ── вердикт по логам (r4) ──
+    Write-Section 'Вердикт по логам'
+    $logProcesses = @(@{ process = 'server'; data = $serverData }, @{ process = 'client-1'; data = $clientData })
+    $logRaw = New-Object System.Collections.ArrayList
+    $logNotes = New-Object System.Collections.ArrayList
+    [void]$logRaw.Add(@{ process = 'server'; path = $serverLog; pid = $null })
+    if ($deviceStarted) {
+        if ($null -ne $appPid) {
+            # Поток logcat — все процессы устройства: нативные падения берём только по pid приложения.
+            [void]$logRaw.Add(@{ process = 'client-1'; path = (Join-Path $runDir 'logcat-stream.txt'); pid = $appPid })
+            [void]$logRaw.Add(@{ process = 'client-1'; path = (Join-Path $runDir 'client-1.logcat.txt'); pid = $appPid })
+        }
+        else { [void]$logNotes.Add('client-1: pid приложения не найден — нативные падения шлема в logcat не проверены') }
+    }
+    try {
+        $logResult = Invoke-E2ELogVerdict -Mode $LogVerdict -Processes $logProcesses -RawLogs $logRaw.ToArray() `
+            -Notes $logNotes.ToArray() -OutPath (Join-Path $runDir 'log-verdict.json')
+    }
+    catch {
+        $logResult = New-E2ELogVerdictError $LogVerdict $_.Exception.Message (Join-Path $runDir 'log-verdict.json')
+    }
+    Write-E2ELogVerdictSummary $logResult
+    $exitBeforeLogs = $exitCode
+    $exitCode = Get-E2ELogVerdictExitCode $exitCode $logResult
+    if ($exitCode -ne $exitBeforeLogs) {
+        if ($exitCode -eq 1) { $verdict = 'RED — проверки зелёные, но в логах неожиданные ошибки или нативные падения' }
+        if ($exitCode -eq 2) {
+            $verdict = 'INCONCLUSIVE — прогон не состоялся, вердикт вынести нельзя'
+            $reasons.Add('вердикт по логам вынести нельзя: ' + $logResult.error)
+        }
+    }
+    $manifest.logVerdict = [ordered]@{
+        mode = $logResult.mode
+        verdict = $logResult.verdict
+        unexpected = @($logResult.unexpected).Count
+        known = @($logResult.known).Count
+        native = @($logResult.native).Count
+        dropped = $logResult.dropped
+        error = $logResult.error
+        file = 'log-verdict.json'
+        contractRule = 'quest-device-run r4: вердикт по логам'
+    }
+
     $manifest.failure = $null
     if ($reasons.Count -gt 0) { $manifest.failure = ($reasons -join '; ') }
     $manifest.exitCode = $exitCode
@@ -1606,6 +1667,7 @@ finally {
         networkPort = $NetworkPort; discoveryPort = $DiscoveryPort; serverAddress = $ServerAddress
         startedLocal = $stamp; verdict = $verdict; exitCode = $exitCode; failure = $manifest.failure
         roles = $roleReports
+        logVerdict = $manifest.logVerdict
     }
     try { Write-TextFile (Join-Path $runDir 'summary.json') ($summary | ConvertTo-Json -Depth 8) } catch {}
     try {

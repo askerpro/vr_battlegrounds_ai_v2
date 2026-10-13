@@ -119,6 +119,7 @@
         "Tools/e2e/known-noise.json",
         "Tools/e2e/Run-E2E.ps1",
         "Tools/e2e/Run-QuestE2E.ps1",
+        "Tools/TestStand/**",
         "Docs/testing.md",
         "tasks/quest-perf-pipeline/**",
         "experts/launch-infra/**"
@@ -132,6 +133,11 @@
         {
           "task": "quest-perf-pipeline",
           "stage": "e2e-head-pose",
+          "state": "merged"
+        },
+        {
+          "task": "vr-test-stand",
+          "stage": "stand-preview-preflight",
           "state": "merged"
         }
       ],
@@ -203,6 +209,33 @@
           "readiness": "agreed"
         }
       ]
+    },
+    {
+      "id": "e2e-smoke-kit",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/E2EContext.cs",
+        "Assets/Scripts/Debug/E2E/E2EResult.cs",
+        "Assets/Scripts/Debug/E2E/E2EWait.cs",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/E2EBarrier.cs",
+        "Assets/Scripts/Debug/E2E/E2EBarrier.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs",
+        "Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs",
+        "Tools/e2e/Run-E2E.ps1",
+        "Tools/TestStand/**",
+        "Docs/testing.md",
+        "Docs/release.md",
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "e2e-log-verdict",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

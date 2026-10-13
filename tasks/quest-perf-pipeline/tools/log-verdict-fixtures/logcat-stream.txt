@@ -1,0 +1,8 @@
+--------- beginning of main
+10-12 18:10:57.189  1111  1150 I Unity   : [E2E] fixture start
+10-12 18:10:58.001  2222  2230 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0 in tid 2230 (other), pid 2222 (com.other.app)
+10-12 18:10:58.002  2222  2230 F DEBUG   : other app backtrace
+10-12 18:10:59.100  1111  1150 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 1150 (UnityMain), pid 1111 (rpblank)
+10-12 18:10:59.101  2222  2231 I other   : unrelated line between
+10-12 18:10:59.102  1111  1150 E CRASH   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-12 18:10:59.103  1111  1150 E CRASH   : pid: 1111, tid: 1150, name: UnityMain

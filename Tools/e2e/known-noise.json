@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "teleport-state-unknown-target",
+      "kind": "defect",
+      "owner": "network",
+      "ticket": "backlog network teleport-state-unknown-target (inbox 6054)",
+      "scope": "server",
+      "regex": "UxrSyncEventArgs\\.DeserializeEventBinary: Target component wasn't found for event\\. Event is Method call UpdateTeleportState",
+      "reason": "Сервер получает UpdateTeleportState для компонентов рук клиента, которых нет в его реестре UniqueId. Прогон dedicated-server-arsenal 2026-10-13 (Tools/e2e/results/20261013-211416-dedicated-server-arsenal), ошибка с августа. Дефект, а не шум: прогон остаётся красным до исправления."
+    },
+    {
+      "id": "anchored-ignore-collision-prefab",
+      "kind": "defect",
+      "owner": "gameplay",
+      "ticket": "arsenal-unload-teardown/top-level-detach (inbox 6092); защита manipulation — 6079",
+      "scope": "server",
+      "regex": "(?s)Tried to ignore collisions with a Collider that belongs to a GameObject whose transform is not part of a UnityScene.*AnchoredItemCollisionIgnore",
+      "reason": "После перезагрузки карты на выделенном сервере ArsenalCompositionHandle.Dispose отцепляет оружие и магазины в корень, они переживают выгрузку вне сцены; симптом — AnchoredItemCollisionIgnore зовёт Physics.IgnoreCollision с коллайдером не из сцены каждый FixedUpdate (разбор manipulation 6073). Прогон map-run-startup-route 2026-10-13 (Tools/e2e/results/20261013-211149-map-run-startup-route). Дефект, а не шум: прогон остаётся красным до исправления."
+    }
+  ]
+}

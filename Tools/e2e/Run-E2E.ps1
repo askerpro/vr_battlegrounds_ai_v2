@@ -19,10 +19,16 @@
 # запустил сам (и их потомков по ParentProcessId), — никогда не по имени процесса:
 # сирота чужого прогона сидит на своих портах и этому прогону не мешает.
 #
+# Вердикт по логам (контракт quest-device-run r4, Tools/e2e/E2ELogVerdict.psm1): ошибки лога каждого процесса
+# (logIssues его результата) сверяются с известным шумом каркаса (Tools/e2e/known-noise.json) и сценария
+# (knownNoise), в логах плееров ищутся нативные падения. Итог — log-verdict.json и блок logVerdict в summary.json.
+# -LogVerdict enforce (по умолчанию): неожиданные ошибки или падения делают зелёный прогон кодом 1;
+# -LogVerdict report — только отчёт.
+#
 # Коды возврата:
-#   0 — все проверки зелёные
-#   1 — проверки прошли, часть красная (находка воспроизводится)
-#   2 — прогон не состоялся, вердикт вынести нельзя
+#   0 — все проверки зелёные, в логах нет неожиданных ошибок (или -LogVerdict report)
+#   1 — проверки прошли, часть красная (находка воспроизводится), или при enforce — неожиданные ошибки в логах
+#   2 — прогон не состоялся, вердикт вынести нельзя (в том числе битый список известного шума при enforce)
 #
 # Запуск:
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1
@@ -60,13 +66,23 @@ param(
     [int]    $DiscoveryPort = 0,
 
     # Не проверять свежесть билда относительно исходников.
-    [switch] $SkipStaleCheck
+    [switch] $SkipStaleCheck,
+
+    # Вердикт по логам: enforce — неожиданные ошибки в логах делают прогон RED (код 1); report — только отчёт.
+    [ValidateSet('enforce', 'report')]
+    [string] $LogVerdict = 'enforce'
 )
 
 $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+try { Import-Module (Join-Path $PSScriptRoot 'E2ELogVerdict.psm1') -Force -ErrorAction Stop }
+catch {
+    Write-Host ''
+    Write-Host ('Модуль вердикта по логам не загружен: ' + $_.Exception.Message) -ForegroundColor Red
+    exit 2
+}
 if ([string]::IsNullOrEmpty($Player)) {
     $Player = Join-Path $RepoRoot 'Build\e2e\VrBattlegrounds.exe'
 }
@@ -439,10 +455,15 @@ $roleReports = New-Object System.Collections.ArrayList
 $anyMissing = $false
 $anyRedCheck = $false
 $anyInconclusive = $false
+# Вход вердикта по логам: результаты процессов (без результата — $null) и логи плееров.
+$logProcesses = New-Object System.Collections.ArrayList
+$logRaw = New-Object System.Collections.ArrayList
 
 foreach ($item in $expected) {
     $role = $item.role
+    [void]$logRaw.Add(@{ process = $role; path = $item.log; pid = $null })
     if (-not (Test-Path $item.path)) {
+        [void]$logProcesses.Add(@{ process = $role; data = $null })
         $anyMissing = $true
         Write-Host ''
         Write-Host ('[' + $role + '] файла результата нет: ' + $item.path) -ForegroundColor Red
@@ -455,6 +476,7 @@ foreach ($item in $expected) {
 
     $data = $null
     try { $data = ConvertFrom-Json (Get-Content -Path $item.path -Raw) } catch {}
+    [void]$logProcesses.Add(@{ process = $role; data = $data })
 
     if ($null -eq $data) {
         $anyMissing = $true
@@ -503,6 +525,23 @@ $verdictColour = 'Yellow'
 if ($exitCode -eq 1) { $verdict = 'RED — сценарий поймал отказ'; $verdictColour = 'Red' }
 if ($exitCode -eq 0) { $verdict = 'GREEN — все проверки зелёные'; $verdictColour = 'Green' }
 
+# ── 8. Вердикт по логам (r4) ──────────────────────────────────────────────
+Write-Section 'Вердикт по логам'
+$logVerdictPath = Join-Path $runDir 'log-verdict.json'
+try {
+    $logResult = Invoke-E2ELogVerdict -Mode $LogVerdict -Processes $logProcesses.ToArray() -RawLogs $logRaw.ToArray() -OutPath $logVerdictPath
+}
+catch {
+    $logResult = New-E2ELogVerdictError $LogVerdict $_.Exception.Message $logVerdictPath
+}
+Write-E2ELogVerdictSummary $logResult
+$exitBeforeLogs = $exitCode
+$exitCode = Get-E2ELogVerdictExitCode $exitCode $logResult
+if ($exitCode -ne $exitBeforeLogs) {
+    if ($exitCode -eq 1) { $verdict = 'RED — проверки зелёные, но в логах неожиданные ошибки или нативные падения'; $verdictColour = 'Red' }
+    if ($exitCode -eq 2) { $verdict = 'INCONCLUSIVE — вердикт по логам вынести нельзя: ' + $logResult.error; $verdictColour = 'Yellow' }
+}
+
 $summary = [pscustomobject]@{
     scenario = $Scenario
     map = $Map
@@ -513,6 +552,16 @@ $summary = [pscustomobject]@{
     verdict = $verdict
     exitCode = $exitCode
     roles = $roleReports
+    logVerdict = [ordered]@{
+        mode = $logResult.mode
+        verdict = $logResult.verdict
+        unexpected = @($logResult.unexpected).Count
+        known = @($logResult.known).Count
+        native = @($logResult.native).Count
+        dropped = $logResult.dropped
+        error = $logResult.error
+        file = 'log-verdict.json'
+    }
 }
 $summary | ConvertTo-Json -Depth 8 | Set-Content -Path (Join-Path $runDir 'summary.json') -Encoding UTF8
 

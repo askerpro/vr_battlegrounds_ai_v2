@@ -1,0 +1,7 @@
+Mono path[0] = 'fixture'
+[E2E] Старт харнесса: fixture
+Crash!!!
+SymInit: Symbol-SearchPath: 'fixture'
+0x00007FF6 (VrBattlegrounds) Probe::Crash
+0x00007FF7 (VrBattlegrounds) Probe::Main
+========== END OF STACKTRACE ===========

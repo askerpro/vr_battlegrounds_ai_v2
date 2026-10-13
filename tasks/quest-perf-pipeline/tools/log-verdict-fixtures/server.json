@@ -1,0 +1,17 @@
+{
+  "scenario": "device-smoke",
+  "role": "server",
+  "passed": true,
+  "status": "completed",
+  "summary": "fixture",
+  "checks": [
+    { "name": "fixture", "passed": true, "detail": "ok" }
+  ],
+  "logIssues": [
+    { "type": "Error", "message": "Framework noise 42", "stack": "VrBattlegrounds.Probe.Server:Tick ()", "count": 7, "firstAtSeconds": 1.50 },
+    { "type": "Error", "message": "Unexpected server failure", "stack": "VrBattlegrounds.Probe.Server:Fail ()", "count": 1, "firstAtSeconds": 3.25 }
+  ],
+  "logIssuesDropped": 0,
+  "knownNoise": [
+  ]
+}

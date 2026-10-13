@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using VrBattlegrounds.Core;
 
@@ -21,6 +22,17 @@ namespace VrBattlegrounds.DevTools.E2E
         public string Name;
         public bool Passed;
         public string Detail = string.Empty;
+    }
+
+    /// <summary>
+    /// Известный шум сценария: ошибка лога, которую сценарий ожидает и считает безвредной.
+    /// <see cref="Regex"/> сверяет дирижёр с текстом «первая строка + "\n" + начало стека» записи лога.
+    /// </summary>
+    public sealed class E2EKnownNoise
+    {
+        public string Id = string.Empty;
+        public string Regex = string.Empty;
+        public string Reason = string.Empty;
     }
 
     /// <summary>
@@ -72,8 +84,20 @@ namespace VrBattlegrounds.DevTools.E2E
 
         private readonly List<E2ECheck> _checks = new List<E2ECheck>();
         private readonly List<string> _artifacts = new List<string>();
+        private readonly List<E2EKnownNoise> _knownNoise = new List<E2EKnownNoise>();
+        private readonly E2ELogCapture _logCapture = new E2ELogCapture();
 
         public IReadOnlyList<E2ECheck> Checks => _checks;
+
+        /// <summary>
+        /// Захват ошибок лога процесса (контракт quest-device-run r4). Подписывается первой записью заглушки
+        /// (<see cref="StatusStarted"/>) и снимается финальной записью (любой другой статус) — см. <see cref="WriteTo"/>.
+        /// На <see cref="Passed"/> не влияет: вердикт по логам выносит дирижёр.
+        /// </summary>
+        public E2ELogCapture LogCapture => _logCapture;
+
+        /// <summary>Известный шум, объявленный сценарием через <see cref="DeclareKnownNoise"/>.</summary>
+        public IReadOnlyList<E2EKnownNoise> KnownNoise => _knownNoise;
 
         /// <summary>
         /// Файлы и каталоги, которые дирижёр заберёт в папку прогона после вердикта. Только абсолютные пути
@@ -255,6 +279,43 @@ namespace VrBattlegrounds.DevTools.E2E
             }
         }
 
+        /// <summary>
+        /// Объявляет известный шум сценария: ошибку лога, которую дирижёр отнесёт к known, а не к неожиданным.
+        /// <paramref name="regex"/> (.NET, с учётом регистра) сверяется с текстом «первая строка + "\n" + начало
+        /// стека» каждой записи лога этого процесса. <paramref name="reason"/> обязан объяснять, почему ошибка
+        /// безвредна и откуда это известно. Повтор <paramref name="id"/> заменяет прежнее объявление.
+        /// Пустой id/regex/reason или неверный regex не принимаются: <c>GameLog.Error</c>, и эта ошибка
+        /// сама попадёт в вердикт по логам как неожиданная.
+        /// </summary>
+        /// <returns>true — шум объявлен.</returns>
+        public bool DeclareKnownNoise(string id, string regex, string reason)
+        {
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrEmpty(regex) || string.IsNullOrWhiteSpace(reason))
+            {
+                GameLog.Error($"[E2E] Шум сценария '{id}' не объявлен: id, regex и reason обязательны.");
+                return false;
+            }
+
+            try
+            {
+                // Только проверка синтаксиса: сверяет дирижёр, тем же движком .NET.
+                _ = new Regex(regex, RegexOptions.CultureInvariant);
+            }
+            catch (ArgumentException e)
+            {
+                GameLog.Error($"[E2E] Шум сценария '{id}' не объявлен: неверный regex '{regex}': {e.Message}");
+                return false;
+            }
+
+            var noise = new E2EKnownNoise { Id = id, Regex = regex, Reason = reason };
+            int index = _knownNoise.FindIndex(n => n.Id == id);
+            if (index >= 0)
+                _knownNoise[index] = noise;
+            else
+                _knownNoise.Add(noise);
+            return true;
+        }
+
         public string ToJson()
         {
             StringBuilder sb = new StringBuilder(1024);
@@ -292,6 +353,37 @@ namespace VrBattlegrounds.DevTools.E2E
                 sb.Append('\n');
             }
 
+            sb.Append("  ],\n");
+
+            // Вердикт по логам (r4): поля добавлены в конец — прежние потребители JSON их не замечают.
+            List<E2ELogIssue> issues = _logCapture.Snapshot();
+            sb.Append("  \"logIssues\": [\n");
+            for (int i = 0; i < issues.Count; i++)
+            {
+                E2ELogIssue issue = issues[i];
+                sb.Append("    { \"type\": ").Append(Json(issue.Type))
+                  .Append(", \"message\": ").Append(Json(issue.Message))
+                  .Append(", \"stack\": ").Append(Json(issue.Stack))
+                  .Append(", \"count\": ").Append(issue.Count.ToString(CultureInfo.InvariantCulture))
+                  .Append(", \"firstAtSeconds\": ").Append(issue.FirstAtSeconds.ToString("F2", CultureInfo.InvariantCulture))
+                  .Append(" }");
+                if (i < issues.Count - 1) sb.Append(',');
+                sb.Append('\n');
+            }
+            sb.Append("  ],\n");
+            sb.Append("  \"logIssuesDropped\": ").Append(_logCapture.Dropped.ToString(CultureInfo.InvariantCulture)).Append(",\n");
+
+            sb.Append("  \"knownNoise\": [\n");
+            for (int i = 0; i < _knownNoise.Count; i++)
+            {
+                E2EKnownNoise noise = _knownNoise[i];
+                sb.Append("    { \"id\": ").Append(Json(noise.Id))
+                  .Append(", \"regex\": ").Append(Json(noise.Regex))
+                  .Append(", \"reason\": ").Append(Json(noise.Reason))
+                  .Append(" }");
+                if (i < _knownNoise.Count - 1) sb.Append(',');
+                sb.Append('\n');
+            }
             sb.Append("  ]\n}");
             return sb.ToString();
         }
@@ -300,9 +392,18 @@ namespace VrBattlegrounds.DevTools.E2E
         /// Атомарно (насколько это возможно) пишет вердикт в файл.
         /// Исключения глушатся: упавшая запись результата не должна уронить процесс,
         /// но обязана попасть в лог.
+        ///
+        /// Заодно ведёт захват лога (<see cref="LogCapture"/>): запись заглушки <see cref="StatusStarted"/>
+        /// подписывает его (повторно — без эффекта), финальная запись (completed/error/timeout) снимает
+        /// подписку до сериализации — в файл уходит итог, ошибки после вердикта в него уже не попадут.
         /// </summary>
         public void WriteTo(string path)
         {
+            if (Status == StatusStarted)
+                _logCapture.Install();
+            else
+                _logCapture.Uninstall();
+
             if (string.IsNullOrEmpty(path))
                 return;
 

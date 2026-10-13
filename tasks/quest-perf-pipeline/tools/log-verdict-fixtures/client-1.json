@@ -1,0 +1,19 @@
+{
+  "scenario": "device-smoke",
+  "role": "client-1",
+  "passed": true,
+  "status": "completed",
+  "summary": "fixture",
+  "checks": [
+    { "name": "fixture", "passed": true, "detail": "ok" }
+  ],
+  "logIssues": [
+    { "type": "Error", "message": "Framework noise 42", "stack": "", "count": 2, "firstAtSeconds": 2.00 },
+    { "type": "Exception", "message": "NullReferenceException: Object reference not set to an instance of an object", "stack": "VrBattlegrounds.Probe.Noisy:Update ()", "count": 3, "firstAtSeconds": 4.00 },
+    { "type": "Error", "message": "Scenario noise: probe шум", "stack": "VrBattlegrounds.Probe.Scenario:Run ()", "count": 1, "firstAtSeconds": 5.00 }
+  ],
+  "logIssuesDropped": 0,
+  "knownNoise": [
+    { "id": "scn-probe", "regex": "^Scenario noise: probe", "reason": "fixture: declared by scenario" }
+  ]
+}

@@ -11,8 +11,20 @@ namespace UnityEngine
         public static string version = "0.0.0-harness";
         public static string unityVersion = "harness";
         public static RuntimePlatform platform = RuntimePlatform.WindowsEditor;
+        // Лог процесса для E2ELogCapture: событие и ручной вызов теста вместо движка Unity.
+        public delegate void LogCallback(string condition, string stackTrace, LogType type);
+        public static event LogCallback logMessageReceivedThreaded;
+        public static int LogSubscriberCount => logMessageReceivedThreaded?.GetInvocationList().Length ?? 0;
+        public static void RaiseLog(string condition, string stackTrace, LogType type) => logMessageReceivedThreaded?.Invoke(condition, stackTrace, type);
     }
     public enum RuntimePlatform { WindowsEditor = 7, WindowsPlayer = 2, Android = 11 }
+    public enum LogType { Error = 0, Assert = 1, Warning = 2, Log = 3, Exception = 4 }
+    public enum RuntimeInitializeLoadType { AfterSceneLoad = 0, BeforeSceneLoad = 1, AfterAssembliesLoaded = 2, BeforeSplashScreen = 3, SubsystemRegistration = 4 }
+    [System.AttributeUsage(System.AttributeTargets.Method)]
+    public sealed class RuntimeInitializeOnLoadMethodAttribute : System.Attribute
+    {
+        public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType loadType) { }
+    }
     public static class Debug
     {
         public static bool isDebugBuild = true;

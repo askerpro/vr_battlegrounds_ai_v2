@@ -52,12 +52,25 @@ namespace VrBattlegrounds.EditorTools.TestStand
         internal static string FilePath => Path.Combine(ProjectRoot, "Temp", "VRBattlegroundsTestStand", "active.json");
         internal static int CurrentPid => Process.GetCurrentProcess().Id;
 
+        // Попыток доступа к файлу при IOException (координатор и клоны MPPM читают/пишут его каждый кадр).
+        private const int IoAttempts = 5;
+        private const int IoRetryDelayMs = 2;
+
+        // Последний успешно прочитанный текст descriptor этого процесса: ответ при кратком сбое чтения.
+        private static string _lastText;
+
+        /// <summary>
+        /// null — прогона нет: файла нет, он пуст/битый или координатор завершился. Кратковременный сбой
+        /// доступа (координатор в этот момент заменяет файл) не означает «прогона нет»: возвращается последнее
+        /// прочитанное значение, иначе участник покинул бы идущий прогон.
+        /// </summary>
         internal static StandManifest Read()
         {
-            if (!File.Exists(FilePath)) return null;
+            string text = ReadText();
+            if (text == null) return null;
             try
             {
-                var value = JsonUtility.FromJson<StandManifest>(File.ReadAllText(FilePath));
+                var value = JsonUtility.FromJson<StandManifest>(text);
                 if (value == null || string.IsNullOrEmpty(value.RunId) || value.OwnerPid < 1) return null;
                 using (var owner = Process.GetProcessById(value.OwnerPid))
                     if (owner.HasExited) return null;
@@ -66,13 +79,59 @@ namespace VrBattlegrounds.EditorTools.TestStand
             catch (Exception) { return null; }
         }
 
+        private static string ReadText()
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    // FileShare.Delete: открытый читателем файл не мешает координатору заменить или удалить его.
+                    using (var stream = new FileStream(FilePath, FileMode.Open, FileAccess.Read,
+                        FileShare.ReadWrite | FileShare.Delete))
+                    using (var reader = new StreamReader(stream, new System.Text.UTF8Encoding(false)))
+                        return _lastText = reader.ReadToEnd();
+                }
+                catch (FileNotFoundException) { return _lastText = null; }
+                catch (DirectoryNotFoundException) { return _lastText = null; }
+                catch (IOException)
+                {
+                    if (attempt >= IoAttempts) return _lastText;
+                    System.Threading.Thread.Sleep(IoRetryDelayMs);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    if (attempt >= IoAttempts) return _lastText;
+                    System.Threading.Thread.Sleep(IoRetryDelayMs);
+                }
+            }
+        }
+
+        /// <summary>Только координатор. Атомарная замена; при занятости файла — повтор, затем исключение вызывающему.</summary>
         internal void Write()
         {
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
             string temporary = FilePath + ".new";
             File.WriteAllText(temporary, JsonUtility.ToJson(this), new System.Text.UTF8Encoding(false));
-            if (File.Exists(FilePath)) File.Replace(temporary, FilePath, null);
-            else File.Move(temporary, FilePath);
+            Retry(() =>
+            {
+                if (File.Exists(FilePath)) File.Replace(temporary, FilePath, null);
+                else File.Move(temporary, FilePath);
+            });
+        }
+
+        /// <summary>Только координатор: конец прогона.</summary>
+        internal static void Delete() => Retry(() => { if (File.Exists(FilePath)) File.Delete(FilePath); });
+
+        private static void Retry(Action action)
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                try { action(); return; }
+                catch (Exception e) when ((e is IOException || e is UnauthorizedAccessException) && attempt < IoAttempts)
+                {
+                    System.Threading.Thread.Sleep(IoRetryDelayMs);
+                }
+            }
         }
 
         internal static string ParticipantName()

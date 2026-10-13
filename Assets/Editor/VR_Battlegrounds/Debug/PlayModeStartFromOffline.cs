@@ -174,6 +174,16 @@ namespace VrBattlegrounds.Editor
 
                 if (CurrentStart() != StartKind.Offline) return;
 
+                // Сетевой старт через Offline: preview-сцены префабов с NetworkIdentity Mirror заспавнит как объекты сцены,
+                // у клиентов — «Spawn scene object not found» (Details vr-test-stand §16). Тот же отказ, что у Play Launch.
+                string previewRefusal = PreviewSceneNetworkGuard.DescribeRefusal();
+                if (!string.IsNullOrEmpty(previewRefusal))
+                {
+                    GameLog.Debug.Error("[PlayLaunch] Toolbar Play отклонён: " + previewRefusal);
+                    EditorApplication.isPlaying = false;
+                    return;
+                }
+
                 Scene activeScene = EditorSceneManager.GetActiveScene();
                 
                 // Если мы уже в оффлайн-сцене, ничего специально делать не нужно

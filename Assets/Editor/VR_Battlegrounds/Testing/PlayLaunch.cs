@@ -39,6 +39,10 @@ namespace VrBattlegrounds.EditorTools.TestStand
         public bool CleanupPassed;
         public bool Playing;
         public StandParticipantState[] Participants;
+        /// <summary>Каталог архива логов участников прогона: &lt;ProjectRoot&gt;/Logs/VRBattlegroundsTestStand/&lt;RunId&gt;.</summary>
+        public string LogArchiveDirectory;
+        /// <summary>Готовые архивы «&lt;participant&gt;-&lt;pid&gt;.log»; пишутся при Release/Leave участника, во время running пусто.</summary>
+        public string[] LogArchives;
     }
 
     /// <summary>Один facade окна и MCP. Backend запуска остаётся у PlayModeTestStand/штатной сети.</summary>
@@ -48,6 +52,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
         private const string RequestKey = "VrBattlegrounds.PlayLaunch.Request";
         private const string ErrorKey = "VrBattlegrounds.PlayLaunch.Error";
         private const string NativePreviousSceneKey = "VrBattlegrounds.PlayLaunch.NativePreviousScene";
+        internal const string PreviewSceneNetworkObjectsCode = "PreviewSceneNetworkObjects";
         private static readonly PlayLaunchRequestOwner RequestOwner = new PlayLaunchRequestOwner();
         private static IDisposable _lease;
         private static string _lastState;
@@ -188,6 +193,9 @@ namespace VrBattlegrounds.EditorTools.TestStand
                     if (config.HasOwnedServer && map.kind.ToString() != "Lobby" && !string.IsNullOrEmpty(config.ModeId) &&
                         !(map.supportedModes ?? Array.Empty<VrBattlegrounds.GameModes.GameModeData>()).Any(m => m != null && m.modeId == config.ModeId))
                         throw new PlayLaunchException("ModeIncompatible", "Карта не поддерживает modeId " + config.ModeId);
+                    // Сетевой сценарий: preview-сцены с NetworkIdentity Mirror заспавнит как scene objects без пары у клиентов.
+                    string preview = PreviewSceneNetworkGuard.DescribeRefusal();
+                    if (preview != null) throw new PlayLaunchException(PreviewSceneNetworkObjectsCode, preview);
                 }
                 var frozen = config.Copy();
                 frozen.SceneSource = game ? "scene" : config.SceneSource;
@@ -237,8 +245,20 @@ namespace VrBattlegrounds.EditorTools.TestStand
                 if (expectedPlanHash != null && expectedPlanHash != plan.PlanHash) throw new PlayLaunchException("PlanChanged", "План изменился после preview.");
                 Acquire(owner, plan); request = ReadRequest();
             }
-            else if (request.Owner != owner || (!string.IsNullOrEmpty(json) && JsonUtility.ToJson(Resolve(json)) != JsonUtility.ToJson(request.Plan)))
-                throw new PlayLaunchException("RequestOwnerBusy", "Нельзя заменить чужой/замороженный запрос.");
+            else
+            {
+                if (request.Owner != owner) throw new PlayLaunchException("RequestOwnerBusy", "Нельзя заменить чужой/замороженный запрос.");
+                // Между Request и Play могли открыть Prefab Mode или загрузить содержимое префаба: тот же preflight, что в Resolve.
+                // До сравнения JSON: иначе отказ Resolve выглядел бы как подмена замороженного запроса.
+                string preview = request.Plan.SceneKind == "Game" ? PreviewSceneNetworkGuard.DescribeRefusal() : null;
+                if (preview != null)
+                {
+                    ReleaseCompletedRun(request.RunId);
+                    return JsonUtility.ToJson(new ResolvedPlayPlan { Code = PreviewSceneNetworkObjectsCode, Message = preview });
+                }
+                if (!string.IsNullOrEmpty(json) && JsonUtility.ToJson(Resolve(json)) != JsonUtility.ToJson(request.Plan))
+                    throw new PlayLaunchException("RequestOwnerBusy", "Нельзя заменить чужой/замороженный запрос.");
+            }
             if (expectedPlanHash != null && expectedPlanHash != request.Plan.PlanHash) throw new PlayLaunchException("PlanChanged", "Запрос имеет другой plan hash.");
             return Begin(request, false);
         }
@@ -284,10 +304,17 @@ namespace VrBattlegrounds.EditorTools.TestStand
             }
             string state = !string.IsNullOrEmpty(error) ? "Failed" : run == null ? (ReadRequest() != null ? "Requested" : "Idle") :
                 run.Phase == "stopping" ? "Stopping" : ready ? "Ready" : "WaitingReady";
-            return JsonUtility.ToJson(new PlayLaunchStatus { RunId = run?.RunId ?? ReadRequest()?.RunId ?? backend.LastRunId,
+            string runId = run?.RunId ?? ReadRequest()?.RunId ?? backend.LastRunId;
+            string archive = string.IsNullOrEmpty(runId) ? null : PlayModeStandParticipant.LogArchiveDirectory(runId);
+            // Архивы появляются только при Release/Leave; в running каталог не читаем — Tick вызывает Status каждый кадр.
+            string[] archives = archive != null && (run == null || run.Phase != "running") && Directory.Exists(archive)
+                ? Directory.GetFiles(archive, "*.log").Select(p => p.Replace('\\', '/')).OrderBy(p => p, StringComparer.Ordinal).ToArray()
+                : Array.Empty<string>();
+            return JsonUtility.ToJson(new PlayLaunchStatus { RunId = runId,
                 Owner = run?.Owner ?? ReadRequest()?.Owner, State = state, Error = error, Ready = ready,
                 CleanupPassed = ReadRequest() != null && run == null ? false : backend.CleanupPassed, Playing = backend.Playing,
-                Participants = ReadRequest() != null && run == null ? Array.Empty<StandParticipantState>() : backend.Participants });
+                Participants = ReadRequest() != null && run == null ? Array.Empty<StandParticipantState>() : backend.Participants,
+                LogArchiveDirectory = archive, LogArchives = archives });
         }
         public static string Cancel(string runId, string owner)
         {

@@ -133,6 +133,11 @@
           "task": "quest-perf-pipeline",
           "stage": "e2e-head-pose",
           "state": "merged"
+        },
+        {
+          "task": "vr-test-stand",
+          "stage": "stand-preview-preflight",
+          "state": "merged"
         }
       ],
       "needs": [

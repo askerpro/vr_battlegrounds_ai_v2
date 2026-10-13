@@ -615,3 +615,50 @@ StartClient на активном клиенте.
   -e2eDiscoveryPort», код выхода 2, шов отказал `PortInvalid`, сеть не стартовала.
 Не проверено: параллельный прогон двух дирижёров; живой отказ bind discovery на сервере; `VRBG_NO_E2E`-сборка
 (новый код под тем же `#if`, шов в рантайме без ссылок на E2E); полный EditMode suite; шлем не нужен.
+
+## 16. Ошибки «Spawn scene object not found» в мультипроцессе (находка bots 5080, разбор 2026-10-12)
+
+Гипотеза bots (стенд напрямую vs Offline у клиентов) не подтвердилась: сервер и клиенты стартуют из Offline
+(`PlayLaunch.cs:173,198`, `PlayModeTestStand.cs:72,306,315`), стенд — Game (MapRoot), в DebugMaps.
+Причина (~85%): 5 префиксов sceneId из ошибок = FNV-хеш `scene.path` (`NetworkIdentity.cs:519-536`) путей ПРЕФАБОВ
+оружия (browninghipower, mp5k, uzi, revolver, scar — Assets/Prefabs/Weapons/*). В долгоживущем worker-редакторе висят
+preview-сцены (LoadPrefabContents без выгрузки / Prefab Mode) с NetworkIdentity; Mirror `NetworkScenePostProcess`
+(`FindObjectsOfTypeAll`, `:25-29,88`) даёт им sceneId, `NetworkServer.SpawnObjects` (`:1486-1518`) спавнит —
+клиентам нечего сопоставить (`NetworkClient.cs:1246`). Те же 21 id в attempt-2/3/4 bots и в чужом прогоне TestMap2
+(`unity-editor-worker/.../Library/VP/mppm4877b184/Logs/Editor.log:1098-2118`) — не зависит от стенда.
+Раскладка: сопровождающий — проверка/рестарт worker-редактора, детект preview-сцен с NetworkIdentity между арендами;
+network — патч Mirror (исключать EditorSceneManager.IsPreviewScene в NetworkScenePostProcess/Utils.IsSceneObject);
+launch-infra — preflight PlayLaunch (отказ PreviewSceneNetworkObjects со списком путей) + архив логов клонов
+(PlayModeStandParticipant: длина лога при Sync, хвост в <ProjectRoot>/Logs/VRBattlegroundsTestStand/<RunId>/ при
+Release/Leave; путь в StandParticipantState). bots — содержимое стенда не трогать.
+
+**Проверка worker, аренда 533** (вход `92f24b79`, база `a311cdb1`, 2026-10-13; evidence вне Git:
+`tasks/vr-test-stand/reports/stand-preview-preflight-533/`):
+- Компиляция чистая; AndroidCompileGate PASS, ошибок 0.
+- Отказ детерминирован: `LoadPrefabContents(MP5K)` → Plan S2C TestMap2 `PreviewSceneNetworkObjects` с путём префаба;
+  после `UnloadPrefabContents` — `Passed=true`. Worker на момент аренды был чист (сопровождающий перезапустил редактор).
+- Прогон S2C TestMap2 (RunId `77a34ab7…`): Ready, 2 сессии, аватары 176/174; «Spawn scene object not found» и
+  «Could not spawn assetId» — 0 в обоих клонах. Корень §16 подтверждён: на чистом редакторе ошибок нет.
+- Архивы клонов полные; архив `main` неполный — Editor.log worker общий с основным редактором (infra_issue).
+- Дефект остановки (не связан с этим этапом, но блокирует серии прогонов): `StandManifest.Write` → `File.Replace`
+  IOException (клон читал файл через `File.ReadAllText` без FileShare.Delete); `PlayModeTestStand.Tick` взводил
+  `_nativeStopRequested` до записи → `Stop` не вызван, прогон завис в Stopping. Тот же сбой у читателя:
+  `Read()` глотал IOException → null → участник `Leave()` из идущего прогона — вероятная причина плавающих
+  LaunchNotReady/Timeout (bots 5185). Восстановлено ручным `NativeMethod("Stop")`: Idle, CleanupPassed=true.
+  Исправление (writes +StandManifest.cs, план rev 36): чтение с `FileShare.ReadWrite|Delete`, повтор и последнее
+  прочитанное значение при кратком сбое; запись/удаление с повтором; флаг остановки — после успешной записи.
+  Проверено офлайн: EditorBinding 0 ошибок/0 предупреждений, ProtocolHarness 32/32. Unity-проверка — следующая аренда
+  (серия S2C подряд со штатным Cancel).
+
+**Проверка worker, аренда 539** (вход `e9d083b0`, база `a311cdb1`, 2026-10-13; evidence вне Git:
+`tasks/vr-test-stand/reports/stand-manifest-race-539/`): компиляция чистая, новые методы `StandManifest` загружены.
+Серия S2C TestMap2 со штатным Cancel:
+- прогон 1 (`d55fbd03`): Ready, 2 сессии, аватары 176/174 → Cancel → Idle, CleanupPassed=true, 3 архива;
+- прогон 2 (`35262724`, сразу после 1): клоны MPPM стартовали через ~70 с после Play (ждали выхода клонов прогона 1),
+  штатный таймаут 90 с → Failed/LaunchNotReady; стенд сам дошёл до конца: descriptor удалён, Play выкл.;
+- прогон 3 (`ff4b09a5`, после выхода клонов): Ready → Cancel → Idle, CleanupPassed=true, 3 архива.
+В логах клонов прогонов 1 и 3: «Spawn scene object not found», «Could not spawn assetId», «Transport Error» — 0.
+IOException и «Остановка отложена» в аренде — 0: гонка не воспроизвелась; проверено отсутствие регрессии, а не
+перехват. Итог worker: Play выкл., preview-сцен 1, Offline.unity не dirty, finish accepted, путей 0.
+Наблюдение: запуск вплотную за предыдущим прогоном может не уложиться в TimeoutSeconds=90 (старт клонов MPPM) —
+кандидат backlog: ждать выхода клонов прошлого прогона до Start или отсчитывать таймаут от старта клонов.

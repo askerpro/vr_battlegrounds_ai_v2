@@ -27,6 +27,14 @@ PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
    `connect` (StandRequest). Вариант (а) connect-fresh со сменой токена посреди прогона отклонён: второй путь к
    идентичности/сессии участника. (в) H1C с хостом в клоне — пока не нужен (Role=host, ClientCount=1 достаточно).
    Порядок: после `stand-multiprocess-sceneid`.
+0d. `stand-kcp-timeout` — находка bots 5185 (низкий/средний): S2C p2 (bots-fix net-round1 attempt-4, тикет 525) — клиенты нашли
+   сервер через Discovery (kcp://192.168.1.245:<port>), но Client/Server Transport Error Timeout 10000 ms, PlayLaunch Failed
+   LaunchNotReady; повтор часто проходит. Гипотезы: блок главного потока при входе клона (спавн «призрачных» объектов из
+   preview-сцен worker — §16), потеря первого рукопожатия KCP. Проверить после рестарта worker-редактора; если останется —
+   разбор логов bots attempt-4/logs/S2C-p2-*.log. Порядок: после stand-preview-preflight.
+0e. `stand-back-to-back` — аренда 539: S2C сразу за предыдущим прогоном не уложился в TimeoutSeconds=90 — клоны MPPM
+   стартовали через ~70 с (ждали выхода клонов прошлого прогона), LaunchNotReady. Для серий ботов: до Start ждать выхода
+   клонов прошлого RunId или отсчитывать таймаут от появления клонов. Порядок: после вливания stand-preview-preflight.
 1. `live-smoke-runner` → этап `e2e-log-verdict` — агрегация ошибок всех процессов и механизм известных шумов для `series-smoke-e2e` — MRB «Известные шумы тестов и харнесса», VTS «Финальная проверка383».
 2. `async-player-build` — `E2EPlayerBuilder.Run()` блокирует главный поток (таймаут MCP), пачкает `PC.asset`, `ProjectSettings.asset`, `MapRuntimeCatalog.asset`; ложное «устарел» — `Docs/testing.md` «Шероховатость: проверка свежести билда». Диагностика 2026-10-11 (чтение кода): `PC.asset` — URP
    `ShaderBuildPreprocessor` под Standalone+Development, мусор, зона performance; `ProjectSettings.asset` — снимок
@@ -64,5 +72,37 @@ full suite, клик toolbar, Quest, synthetic XR/gameplay E2E не принят
   список устройств, проверка LateLatching/SpaceWarp дирижёром (`renderCheck=unknown`). Сессия в прогонах доходит до
   VISIBLE, не FOCUSED — проверить связь с prox/фокусом.
 
+- `prod-build-route` — решение пользователя 2026-10-13 (через performance, 5410): Prod-сборки — на отдельном checkout
+  со своей Library, чтобы не сбрасывать кэш Test (IL2CPP Master против Release, общий Library/Bee). Моя часть (ответ
+  2026-10-13): `Build-Game.ps1 -ProjectPath`, проверка закрытого редактора, SHA в отчёте, `Docs/release.md`,
+  предупреждение GameBuilder о Prod в общей Library. agent-infra — размещение prod-checkout, перевод на SHA, очередь.
+  Порядок: после stand-preview-preflight. Замер для `Docs/release.md` (5416, аренда 537, 5d614df4, Ryzen 9 5900X):
+  Test пара 396 с (сервер 72 с, Quest APK 150 с инкрементально); Prod Quest — шаг APK 355 с (2578 МБ), стена 634 с.
+  Prod-манифест: VR-категория, supportedDevices quest2, записей рук нет. Цена сброса кэша Test после Prod не мерена.
+  Решение пользователя 2026-10-13: Quest 3 (TargetQuest3) пока не включаем — предупреждение валидатора остаётся.
+
 - Запуск на Quest без контроллеров — передан performance (решение пользователя, 5181): этап controller-free-launch задачи
   perf-stress-scenario; launch-infra — стык (признак Test/e2e-сборки в GameBuilder, ревью, zone-ack), заметки — 5183.
+
+- `xr-input` уточнён bots (5206→ответ, 2026-10-12): общий тестовый XR-адаптер для e2e и ботов «бот = настоящий клиентский
+  Local-аватар, ввод от Blaze/скрипта» — голова + оба контроллера + grip/trigger (+ стики или MoveAvatarTo), в плеере И в
+  редакторе/MPPM-клонах. Не блокер; состав и сроки bots пришлёт после проекта архитектуры режимов. Условия avatar-ik
+  (4459/4877): один источник в слоте ввода до Manipulation, без записи в кости/пивот/калибровку; база — E2EHeadPose.
+  Состав от bots 5252 и условия avatar-ik 5295 приняты (ответ 5337/5341, 2026-10-12): уровень UXR (скриптовые
+  UxrTrackingDevice/UxrControllerInput вместо UxrUnityXR*), голова 6DoF в пространстве трекинга, оба контроллера 6DoF,
+  grip/trigger/Button1-2/стики, `IXrInputSource.TryRead(frame, out XrInputFrame)` без аллокаций, ParticipantInputs в
+  play-launch-control (новая ревизия), двойная защита релиза + тест. Порядок: после stand-preview-preflight — контракт
+  xr-input r1 на ACK bots/avatar-ik до кода; срок — к device-executor bots (после их clip-cutover).
+
+- Стык controller-free-launch: zone-ack на GameBuilder.cs дан (5330), условия — 5343 (Arm/Disarm в try/finally, Prod
+  без изменений, порядок 10001/10002 с валидатором, diff до merge-request). После вливания принять
+  `QuestControllerFreeManifest.cs` и `QuestManifestValidator.cs` в owns. Ревью 64d2546ef (5352 → ответ): убрать
+  ArmedConfig, который переживает Disarm, и передавать config в CheckApkManifest явно; проверить, что Prod-манифест без
+  HAND_TRACKING. После вливания — моя правка `Docs/release.md` (порядок 10001 вставка / 10002 валидатор). Позже —
+  ошибка вставки через LastError/result.Fail вместо голого BuildFailedException. Финальный 3cabcc1ab0 одобрен (5496);
+  тесты в `Release/Tests/` — перенести в `Assets/Tests/EditMode` при передаче owns.
+
+- `docs-build-open-map` — находка lobby-decoration 5476: сборка из открытого редактора падает, если открыта карта
+  каталога (MapRunPreflight открывает её повторно через OpenPreviewScene → дубликат sceneId). Исправление — gameplay
+  (5483, этап в catalog-fingerprint, старт по решению пользователя). Мне — обход «открыть пустую сцену перед сборкой»
+  в `Docs/testing.md` (раздел сборки пары) ближайшим документным коммитом.

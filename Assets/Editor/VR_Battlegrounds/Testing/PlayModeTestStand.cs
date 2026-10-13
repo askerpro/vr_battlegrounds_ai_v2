@@ -248,10 +248,16 @@ namespace VrBattlegrounds.EditorTools.TestStand
             bool released = _run.Participants.All(p => Peers.TryGetValue(p, out var state) && !state.Active && state.ProfileRestored && state.MarkerCount == 0);
             if (!_nativeStopRequested && (released || EditorApplication.timeSinceStartup - _stopRequestedAt > 8))
             {
-                _nativeStopRequested = true;
                 _run.NativeStopRequested = true;
                 _run.ReleasedParticipants = Peers.Values.Where(p => p.RunId == _run.RunId).ToArray();
-                _run.Write();
+                try { _run.Write(); }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+                {
+                    // Флаг не взведён — следующий кадр повторит запись и остановку; иначе прогон завис бы в stopping.
+                    GameLog.Debug.Warning("[TestStand] Остановка отложена: descriptor занят (" + e.Message + ")");
+                    return;
+                }
+                _nativeStopRequested = true;
                 NativeMethod("Stop").Invoke(null, null);
             }
             if (_nativeStopRequested && !EditorApplication.isPlayingOrWillChangePlaymode && NativeState() == "Idle") Restore();
@@ -336,7 +342,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
                 _temporaryScenario = active as ScriptableObject;
             if (previous != null) SetScenario(previous);
             EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(_run.PreviousStartScenePath);
-            if (File.Exists(StandManifest.FilePath)) File.Delete(StandManifest.FilePath);
+            StandManifest.Delete();
             if (_temporaryScenario != null) UnityEngine.Object.DestroyImmediate(_temporaryScenario);
             _temporaryScenario = null;
             _run = null;

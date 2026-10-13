@@ -1,7 +1,7 @@
 # Адресный стенд и интеграция Play Launch
 
-Обновлено: 2026-10-11. Владелец: эксперт `launch-infra`. Worktree: `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
-ветка `codex/vr-test-stand`, база `17293aa3c`. План хаба rev 32.
+Обновлено: 2026-10-13. Владелец: эксперт `launch-infra`. Worktree: `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
+ветка `codex/vr-test-stand`. План хаба rev 36.
 
 ## Цель и границы
 
@@ -15,9 +15,9 @@ PlayLaunch владеет frozen config; PlayModeTestStand — MPE/IPC; GameNetw
 ParticipantId, ProcessSessionId; reconnect проверяет epoch/avatar. Ready требует свежих heartbeat и фактического
 допуска карты. Порты Editor: один писатель (`PlayLaunchNetworkPorts`) применяет frozen пару до старта сети.
 
-Полный анализ: [Details.md](Details.md) (история итераций, §14 — порты). Машинный план: [plan.json](plan.json).
-Контракт [play-launch-control](contracts/play-launch-control.json) r1 active. Инструкции: [Docs/test-stand.md](../../Docs/test-stand.md).
-SDK patch 58 — [changelog](changelog/2026-10-08-sdk-58.md).
+Полный анализ: [Details.md](Details.md) (история итераций, §14 — порты, §16 — sceneId в мультипроцессе).
+Машинный план: [plan.json](plan.json). Контракт [play-launch-control](contracts/play-launch-control.json) r1 active.
+Инструкции: [Docs/test-stand.md](../../Docs/test-stand.md). SDK patch 58 — [changelog](changelog/2026-10-08-sdk-58.md).
 
 ## Этапы
 
@@ -28,27 +28,25 @@ SDK patch 58 — [changelog](changelog/2026-10-08-sdk-58.md).
 | `checkout-network-ports` | merged `07002dde` (прогон worker383) |
 | `expert-workspace-pilot-handoff` | merged `1001415b` |
 | `e2e-run-isolation` | merged `7ceb8a08` (worker 421) |
+| `agent-play-recipe` | merged `7c42ac5d` |
+| `stand-preview-preflight` | принят пользователем 2026-10-13, вливается |
 
-## Текущий этап: `e2e-run-isolation`
+## Этап `stand-preview-preflight`
 
-Дефекты дирижёра собранных плееров [Tools/e2e/Run-E2E.ps1](../../Tools/e2e/Run-E2E.ps1):
-1. Портов нет: все процессы на 7778/47777 — SocketException при Play на worker.
-2. Клиент ищет сервер через Discovery на общем 47777 и может подключиться к чужому серверу.
-3. Гашение по имени процесса убивает плееры других worktree.
+Ошибки «Spawn scene object not found» у клиентов мультипроцессного стенда (находка bots 5080) давали preview-сцены
+префабов оружия, висевшие в долгоживущем worker-редакторе: Mirror выдавал их объектам sceneId и спавнил на сервере.
+Сделано:
+- отказ `PreviewSceneNetworkObjects` в PlayLaunch (Plan/Play) и в обычном Play, со списком префабов;
+- архив лога каждого участника в `Logs/VRBattlegroundsTestStand/<RunId>/` (MPPM перезаписывал логи клонов);
+- гонка descriptor `active.json`: чтение с общим доступом и последним значением при сбое, повтор записи/удаления,
+  флаг остановки после успешной записи — раньше стенд зависал в Stopping, а клон мог выйти из прогона.
 
-Решение: Run-E2E.ps1 выбирает свободную пару UDP и передаёт её CLI (`-e2eNetworkPort`, `-e2eDiscoveryPort`) всем
-процессам прогона; гасит только свои PID. В плеере пару применяет E2E-харнесс через launch hook
-`DebugBootstrapGate.PlayerBeforeNetworkStart` (в Editor остаётся прежний писатель). Порт discovery в плеере —
-публичное свойство Mirror `NetworkDiscoveryBase` (патч SDK, номер через patch-reserve).
+Проверено на worker (аренды 533, 539): отказ при открытом MP5K и проход после выгрузки; S2C TestMap2 Ready дважды,
+sceneId-ошибок 0; штатная остановка до Idle; AndroidCompileGate PASS; ProtocolHarness 32/32. Гонка во второй аренде
+не воспроизвелась — проверено отсутствие регрессии. Архив `main` на worker неполный (общий Editor.log, infra_issue
+5403). Патч Mirror для исключения preview-сцен — кандидат network (5302).
 
-Зона network: согласие с 6 условиями, ACK диффа, zone-ack event 3566 (Details §15).
-
-**Состояние:** реализовано, проверено на worker (аренда 421): компиляция и AndroidCompileGate PASS, сборка плеера
-PASS, `map-run-startup-route` GREEN дважды — на автопаре и при занятых 7778/47777; неполная пара даёт `error` без
-старта сети. Принято пользователем, влито `7ceb8a08`; публикация базы worker — ticket 431.
-
-Следом: `e2e-log-verdict` (агрегация логов всех процессов, механизм известных шумов), затем
-`map-runtime-bootstrap/series-smoke-e2e`.
+Следом: `quest-perf-pipeline/e2e-log-verdict`, затем `map-runtime-bootstrap/series-smoke-e2e`.
 
 ## Ограничения
 

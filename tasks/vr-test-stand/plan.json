@@ -203,6 +203,31 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "stand-preview-preflight",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayLaunch.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayModeTestStand.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/StandProtocol.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/StandManifest.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PreviewSceneNetworkGuard.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PreviewSceneNetworkGuard.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Debug/PlayModeStartFromOffline.cs",
+        "Tools/TestStand/UnityStubs.cs",
+        "Docs/test-stand.md",
+        "tasks/vr-test-stand/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "vr-test-stand",
+          "stage": "agent-play-recipe",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

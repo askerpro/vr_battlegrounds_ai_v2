@@ -48,6 +48,20 @@ namespace VrBattlegrounds.EditorTools.TestStand
         private static E2ERunner _e2e;
 #endif
         private const string BaselineKey = "VrBattlegrounds.TestStand.Baseline";
+        private const string LogArchiveKey = "VrBattlegrounds.TestStand.LogArchive";
+        // Release перед domain reload не завершает прогон: архив лога в этот момент не пишется.
+        private static bool _reloading;
+
+        /// <summary>Начало прогона в логе консоли этого процесса; SessionState переживает domain reload.</summary>
+        [Serializable]
+        private sealed class LogArchive
+        {
+            public string RunId;
+            public string Participant;
+            public string Source;
+            public long Start;
+            public bool Archived;
+        }
 
         [Serializable]
         private sealed class Baseline
@@ -62,7 +76,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
         {
             EditorApplication.update += Tick;
             EditorApplication.playModeStateChanged += HandlePlay;
-            AssemblyReloadEvents.beforeAssemblyReload += Leave;
+            AssemblyReloadEvents.beforeAssemblyReload += LeaveBeforeReload;
             EditorApplication.quitting += Leave;
             SceneManager.sceneLoaded += HandleScene;
             Sync();
@@ -110,6 +124,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
             catch { Release(); throw; }
             _restored = false;
             _startupError = null;
+            BeginLogArchive(next.RunId, participant);
             _gate = new StandRequestGate(next.RunId, participant, Session, 256, StandManifest.CurrentPid);
             EventService.Start();
             _unsubscribe = EventService.RegisterEventHandler(StandManifest.CommandEvent(next.RunId, Session),
@@ -298,6 +313,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
 
         private static void Release()
         {
+            bool active = _gate != null;
             if (DebugBootstrapGate.EditorClientAddressOverride == _clientAddress)
                 DebugBootstrapGate.EditorClientAddressOverride = null;
             _clientAddress = null;
@@ -321,9 +337,84 @@ namespace VrBattlegrounds.EditorTools.TestStand
             _launch?.Dispose(); _launch = null;
             _profile?.Dispose(); _profile = null;
             if (_run != null) _restored = LocalClientProfile.OverrideStateKey == _originalProfile;
+            if (!_reloading) ArchiveLog(active);
         }
 
         private static void Leave() { Release(); _run = null; _connectionEpoch = 0; _connected = false; }
+        private static void LeaveBeforeReload() { _reloading = true; Leave(); }
+
+        /// <summary>Каталог архива логов прогона в исходном checkout (клон MPPM пишет туда же, а не в свою VP-копию).</summary>
+        internal static string LogArchiveDirectory(string runId) =>
+            System.IO.Path.Combine(StandManifest.ProjectRoot, "Logs", "VRBattlegroundsTestStand", runId).Replace('\\', '/');
+
+        private static string LogArchivePath(string runId, string participant, int pid)
+        {
+            char[] name = participant.ToCharArray();
+            char[] invalid = System.IO.Path.GetInvalidFileNameChars();
+            for (int i = 0; i < name.Length; i++) if (Array.IndexOf(invalid, name[i]) >= 0) name[i] = '_';
+            return LogArchiveDirectory(runId) + "/" + new string(name) + "-" + pid + ".log";
+        }
+
+        private static LogArchive ReadLogArchive()
+        {
+            string json = SessionState.GetString(LogArchiveKey, "");
+            return string.IsNullOrEmpty(json) ? null : JsonUtility.FromJson<LogArchive>(json);
+        }
+
+        /// <summary>Запоминает длину лога консоли при входе участника в прогон; reload того же прогона смещение не сдвигает.</summary>
+        private static void BeginLogArchive(string runId, string participant)
+        {
+            try
+            {
+                var saved = ReadLogArchive();
+                if (saved != null && saved.RunId == runId) return;
+                // Прошлый прогон ушёл без Release (reload/падение координатора): сохраняем его хвост сейчас.
+                if (saved != null && !saved.Archived) WriteLogArchive(saved);
+                string source = Application.consoleLogPath;
+                long start = !string.IsNullOrEmpty(source) && System.IO.File.Exists(source) ? new System.IO.FileInfo(source).Length : 0;
+                SessionState.SetString(LogArchiveKey, JsonUtility.ToJson(new LogArchive { RunId = runId, Participant = participant, Source = source, Start = start }));
+            }
+            catch (Exception e) { GameLog.Debug.Warning("[TestStand] Архив лога: не удалось запомнить начало прогона: " + e.Message); }
+        }
+
+        /// <summary>
+        /// Release/Leave: хвост лога прогона. Повтор пишет только снятие активного допуска того же прогона
+        /// (перезапись более полным хвостом); холостые Release без допуска каждый кадр файл не копируют.
+        /// </summary>
+        private static void ArchiveLog(bool active)
+        {
+            var saved = ReadLogArchive();
+            if (saved == null || (saved.Archived && !(active && saved.RunId == _run?.RunId))) return;
+            WriteLogArchive(saved);
+        }
+
+        private static void WriteLogArchive(LogArchive saved)
+        {
+            string target = null;
+            try
+            {
+                target = LogArchivePath(saved.RunId, saved.Participant, StandManifest.CurrentPid);
+                if (string.IsNullOrEmpty(saved.Source) || !System.IO.File.Exists(saved.Source))
+                    throw new System.IO.FileNotFoundException("Нет лога консоли: " + saved.Source);
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target));
+                // Редактор держит лог открытым на запись: читаем с общим доступом.
+                using (var input = new System.IO.FileStream(saved.Source, System.IO.FileMode.Open, System.IO.FileAccess.Read,
+                    System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete))
+                using (var output = new System.IO.FileStream(target, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read))
+                {
+                    // Лог короче запомненной длины — файл пересоздан, копируем целиком.
+                    input.Seek(input.Length >= saved.Start ? saved.Start : 0, System.IO.SeekOrigin.Begin);
+                    input.CopyTo(output);
+                }
+                GameLog.Debug.Info("[TestStand] Лог участника " + saved.Participant + " сохранён: " + target);
+            }
+            catch (Exception e) { GameLog.Debug.Warning("[TestStand] Архив лога " + (target ?? saved.RunId) + " не записан: " + e.Message); }
+            finally
+            {
+                saved.Archived = true;
+                SessionState.SetString(LogArchiveKey, JsonUtility.ToJson(saved));
+            }
+        }
         private static void UpdateConnectionEpoch()
         {
             bool connected = NetworkClient.isConnected;

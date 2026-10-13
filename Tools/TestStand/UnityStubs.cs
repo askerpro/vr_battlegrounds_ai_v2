@@ -5,6 +5,17 @@ namespace UnityEngine
     {
         public static bool isEditor = true;
         public static string dataPath = "test-project/Assets";
+        // Условия сборки и путь данных для E2EResult (артефакты, buildGuid): значения теста, не эмуляция платформы.
+        public static string persistentDataPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "vrbg-harness-persistent");
+        public static string buildGUID = "";
+        public static string version = "0.0.0-harness";
+        public static string unityVersion = "harness";
+        public static RuntimePlatform platform = RuntimePlatform.WindowsEditor;
+    }
+    public enum RuntimePlatform { WindowsEditor = 7, WindowsPlayer = 2, Android = 11 }
+    public static class Debug
+    {
+        public static bool isDebugBuild = true;
     }
     public static class PlayerPrefs
     {

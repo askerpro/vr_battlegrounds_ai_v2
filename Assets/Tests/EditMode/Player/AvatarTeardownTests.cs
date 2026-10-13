@@ -6,6 +6,7 @@ using Mirror;
 using NUnit.Framework;
 using UltimateXR.Avatar;
 using UltimateXR.Manipulation;
+using UltimateXR.Networking;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
@@ -244,26 +245,75 @@ namespace VrBattlegrounds.Tests.Player
     {
         private static UxrGrabManager Manager => UxrGrabManager.Instance;
 
+        private FieldInfo _networkSingleton;
+        private object _hiddenNetworkManager;
+
+        /// <summary>
+        /// <c>UxrNetworkManager</c> без реализации сети прячется на время теста. Его создаёт сам SDK: синглтон
+        /// автосоздаётся при первом <c>UxrNetworkManager.Instance</c> — например, <c>NoSessionOrSessionOwner</c> в
+        /// <c>UxrActor.OnReceiveDamage</c> у любого теста с уроном, прошедшего раньше. С ним <c>HasInstance</c> истинно,
+        /// и <c>UxrGrabbableObject.StartPhysicsSyncAfterAnchorRemoval</c> (патч 75) после снятия с якоря разыменовывает
+        /// пустой <c>NetworkImplementation</c> — тест падал голым NRE только в полном прогоне. Настоящий менеджер сети
+        /// (с реализацией) не трогается; спрятанный возвращается в TearDown.
+        /// </summary>
+        [SetUp]
+        public void HideNetworkManagerWithoutImplementation()
+        {
+            _hiddenNetworkManager = null;
+            for (System.Type type = typeof(UxrNetworkManager); type != null && _networkSingleton == null; type = type.BaseType)
+            {
+                _networkSingleton = type.GetField("s_instance", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            }
+            Assert.IsNotNull(_networkSingleton, "[TestEnvironment] Изменился контракт singleton UxrNetworkManager.");
+
+            TestEnvironmentContract.ResetDestroyedSingleton<UxrNetworkManager>();
+
+            // HasInstance первым: обращение к Instance само создало бы менеджер.
+            if (UxrNetworkManager.HasInstance && UxrNetworkManager.Instance.NetworkImplementation == null)
+            {
+                _hiddenNetworkManager = _networkSingleton.GetValue(null);
+                _networkSingleton.SetValue(null, null);
+            }
+        }
+
+        [TearDown]
+        public void RestoreNetworkManager()
+        {
+            if (_hiddenNetworkManager != null && _networkSingleton.GetValue(null) == null)
+                _networkSingleton.SetValue(null, _hiddenNetworkManager);
+            _hiddenNetworkManager = null;
+        }
+
         [Test]
         public void Мёртвое_тело_на_сервере_отпускает_руки_и_роняет_оружие_из_кобуры()
         {
             SilenceMirrorNoise();
+            Assert.IsTrue(NetworkServer.active, "[TestEnvironment] Нет активного сервера Mirror.");
+            Assert.IsFalse(UxrNetworkManager.HasInstance && UxrNetworkManager.Instance.NetworkImplementation == null,
+                           "[TestEnvironment] Есть UxrNetworkManager без реализации сети — снятие с якоря упадёт в патче 75.");
             TwoHandGrabCase c = AvatarTeardownTests.AnyCase();
 
             using (var harness = new TwoHandGrabHarness(c.WeaponPath, c.AvatarPath, c.SupportPoint))
             {
+                Assert.IsTrue(UxrGrabManager.HasInstance, "[TestEnvironment] Нет UxrGrabManager — ServerDropEquipment молча выйдет.");
+                Assert.IsNotNull(harness.Avatar, $"[TestEnvironment] Нет экземпляра аватара {c.AvatarPath}.");
+                Assert.IsNotNull(harness.Right, "[TestEnvironment] Нет правой руки аватара.");
+
                 PlayerController player = harness.Avatar.GetComponent<PlayerController>();
                 Assert.IsNotNull(player, $"У аватара {c.AvatarPath} нет PlayerController.");
                 Assume.That(player.GetComponent<PlayerLoadoutManager>(), Is.Not.Null, $"У аватара {c.AvatarPath} нет PlayerLoadoutManager.");
 
                 // Сетевые компоненты аватара связываются с NetworkIdentity в её Awake, которого в EditMode нет. Без связи
                 // SyncList кармана (ServerClearMagazines) спросит isServer у пустого netIdentity.
+                Assert.IsNotNull(harness.Avatar.GetComponent<NetworkIdentity>(), $"У аватара {c.AvatarPath} нет NetworkIdentity.");
                 EnableNetworking(harness.Avatar);
+                Assert.IsNotNull(player.netIdentity, "[TestEnvironment] Нет связи PlayerController с NetworkIdentity после Awake.");
 
                 UxrGrabbableObjectAnchor holster = Holster(harness.Avatar);
                 Assume.That(holster, Is.Not.Null, $"У аватара {c.AvatarPath} нет свободной кобуры.");
 
                 GameObject weaponPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(c.WeaponPath);
+                Assert.IsNotNull(weaponPrefab, $"[TestEnvironment] Нет префаба {c.WeaponPath}.");
                 GameObject holstered = Object.Instantiate(weaponPrefab);
 
                 try
@@ -271,12 +321,14 @@ namespace VrBattlegrounds.Tests.Player
                     // WeaponComponent в префабе нет: игра ставит его сетевому инстансу оружия из реестра
                     // (NetworkUxrIdentity.InstanceCreated → AttachByPrefab). Тот же штатный путь — иначе сброс
                     // принял бы ствол за «не оружие» и не тронул бы его.
+                    Assert.IsNotNull(WeaponRegistry.Instance, "[TestEnvironment] Нет WeaponRegistry (Resources).");
                     WeaponComponent.AttachByPrefab(weaponPrefab, holstered);
                     WeaponComponent weapon = holstered.GetComponent<WeaponComponent>();
                     Assert.IsTrue(weapon != null && weapon.WeaponData != null,
                                   $"Контроль харнесса: {c.WeaponPath} не получил WeaponComponent — его нет в WeaponRegistry?");
 
                     UxrGrabbableObject item = holstered.GetComponent<UxrGrabbableObject>();
+                    Assert.IsNotNull(item, $"У {c.WeaponPath} нет UxrGrabbableObject.");
 
                     Assert.IsTrue(Manager.PlaceObject(item, holster, UxrPlacementOptions.None, false), "Контроль харнесса: оружие не встало в кобуру.");
                     Assert.AreSame(holster, item.CurrentAnchor, "Контроль харнесса: оружие в кобуре.");

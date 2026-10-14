@@ -6,7 +6,7 @@
     "performance-onboarding",
     "perf-stress-scenario"
   ],
-  "reviewed_sha": "ce8a365b4f6062e743c3fa20e2ef1172ed7a06c1",
+  "reviewed_sha": "5cfc55248ecc5264b257bc2a0793559ebfa66a3a",
   "reviewed_at": "2026-10-14",
   "owns": [
     "Docs/perf-stress-test.md",

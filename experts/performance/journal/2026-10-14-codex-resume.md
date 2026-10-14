@@ -1,7 +1,7 @@
 # Продолжение в Codex: карта актуализирована, view-tour ждёт текущий EditMode
 
 Хаб: `performance-onboarding/onboarding` merged; в `perf-stress-scenario` четыре первых этапа merged,
-`view-tour` running, `gpu-tool-phases` и `docs` planned. Принятие обхода пользователем сохранено;
+`view-tour` planned с блокером MCP-тестов, `gpu-tool-phases` и `docs` planned. Принятие обхода пользователем сохранено;
 Android-компиляция на текущем worker PASS, итог EditMode ещё не получен.
 `view-tour` возвращён в planned после инфраструктурного сбоя тестов; пользовательская приёмка runtime сохранена.
 Ветка `claude/performance` сверена с origin/dev d3c62ca5e.
@@ -26,3 +26,14 @@ R=9a23d26f8, paths=0. Admission освобождён; infra_issue 6790 отпр�
 Полные отчёты: tasks/perf-stress-scenario/reports/validation-20261014-634/.
 Общую инфраструктуру performance не изменял; новых заявок не оставлено. Это блокер проверки, не провал тестов.
 Подготовка GPU-этапа: tasks/perf-stress-scenario/contracts/gpu-tool-phases-notes.md. Код этого этапа не начат.
+
+После уведомления 6805 о восстановлении worker выполнен fetch/rebase на origin/dev 97a320c88;
+собственные owns/watch исходники до/после совпадают, карта reviewed_sha обновлена до 5cfc55248.
+Заявка 645 подготовлена только для чтения сохранённого исхода потерянного EditMode (TestJobsV1),
+сразу release после пакета. Общий worker ready не означает, что тесты 634 завершились или прошли.
+
+Запрос level-design 6813 обработан независимым bounded source-review, ответ в хабе 6875.
+Quality 9 names/18 zero, 140 meta только group rename; стабильный snapshot cc485d9bd + diff895a39b7…,
+155 файлов drift0. Кодовых блокеров нет; независимое disjointness140/112 требует export protected GUID.
+Apply выделяет коллекции на событиях; UI/restore/Quest gates открыты. Полный отчёт:
+tasks/performance-onboarding/reports/scene-detail-6813/source-review.md.

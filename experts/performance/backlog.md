@@ -34,10 +34,19 @@
   Аренда 634 закрыта: AndroidCompileGate PASS (0 ошибок), EditMode потерял plugin session до `job_id`/итога.
   Admission этапа освобождён (planned); подтверждённого результата Unity-тестов нет, merge закрыт этим блокером;
   обход уже принят пользователем. Infra_issue 6678 остаётся свидетельством исходного блокера.
-  Текущий MCP-блокер направлен сопровождающему событием 6790; новых заявок не оставлено.
+  Текущий MCP-блокер направлен сопровождающему событием 6790. После worker_ready_resume 6805 заявка 645
+  читает сохранённый TestJobsV1 для установления исхода; новые тесты не запускает.
 - weapon-system 6747: 30 SDK/WS/bots-маркеров и native buffer capture пока uncommitted, только offline-результаты.
   Ревью точного кандидата — после bots driver/runtime probe; отсутствие Reset в Update и overhead не признаны
   подтверждёнными на Quest. Сбой MCP нашего пакета отправлен сопровождающему (6768).
+- weapon-system 6903: будущие точные GPU-фазы `shot-cost: bot` / `shot-cost: away`; producer
+  ShotCostScenario ждёт BotShotCostDriver. Runtime-маркеров ещё нет, Editor synthetic probe не заменяет
+  Quest-замер. Уточнение внесено в gpu-tool-phases-notes; источник старого T23/T24 для этого не используется.
 - Проверка точности обхода: `view.ok` сейчас не ограничивает deviationXZ/yaw/floor. В принятом прогоне
   16/16 поз точные (XZ ≤ 2,39e-7 м, yaw/floor = 0). Согласовать допуски до изменения автоматического вердикта;
   не считать исторический GREEN проверкой отрицательного случая. Подробности: task reports/view-tour-review-20261014-codex.md.
+- `scene-detail` 6813 → ревью 6875: Quality/140 meta/event-driven source проверены на стабильном snapshot
+  cc485d9bd + diff 895a39b7a72e…; кодовых блокеров нет. Нужен export 112 protected GUID того же snapshot
+  для независимой проверки пересечения. Apply имеет burst allocations; runtime/UI/Quest бюджеты открыты.
+- Карта owns/watch_paths после rebase на origin/dev 97a320c88 сверена до 5cfc55248: diff исходников пуст;
+  reviewed_sha обновлён. Это не новое подтверждение Unity/Quest.

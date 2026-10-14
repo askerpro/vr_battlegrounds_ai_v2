@@ -350,7 +350,7 @@ Diff — network до checkpoint, gameplay — ревью API.
    - `RunQuestBatch()` собирает только `BuildProfile.Quest` (`BuildConfig.Test`) на Android без переключения на Win64;
    - `RunBatch()` и `RunQuestBatch()` принимают `-buildRevision <ревизия>` и `-serverStatus` / `-questStatus`.
 3. В `Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs`:
-   - `Result.CheckoutPath` записывается в `last-build.json`;
+   - `Result.CheckoutPath` включён в `Summary` сборки; отдельный `last-build.json` этот код не пишет;
    - `RunBatch()` поддерживает `-buildRevision <ревизия>` и `-compareBuildRoot <путь>` для кросс-worktree сверки
      `uxr-ids.txt`;
    - добавлено предупреждение при запуске `Prod`-сборки в `unity-editor-worker`.
@@ -359,7 +359,8 @@ Diff — network до checkpoint, gameplay — ревью API.
      `build-<config>-win64` и `build-<config>-android`;
    - проверки перед сборкой: отсутствие `Temp\UnityLockfile`, запрет `vrb.lfs.role=agent`, 0 LFS pointer-файлов,
      совпадение `HEAD` SHA и чистоты между парными worktree, единый `-buildRevision`;
-   - поддержка `-Ref <git-ref>` (перевод обоих сборочных worktree на один коммит + `git lfs pull`) и `-DryRun` /
-     `-DryRunBuild`.
+   - `Build-Game.ps1` поддерживает `-Ref <git-ref>` (перевод обоих сборочных worktree на один коммит + LFS hydrate)
+     и `-DryRun`; `Run-QuestE2E.ps1` поддерживает `-DryRunBuild`, требует уже совпадающих SHA пары,
+     параметра `-Ref` у него нет.
 5. Документация обновлена в `Docs/release.md` и `Docs/agents/lfs-worktrees.md`.
 

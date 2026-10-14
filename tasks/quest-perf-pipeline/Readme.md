@@ -1,77 +1,85 @@
-# Автоматический перф-прогон на шлеме Quest и каркас E2E
+# Автоматический прогон Quest и каркас E2E
 
-Обновлено: 2026-10-14 (передача сессии Codex, событие хаба 6545). Владелец: эксперт `launch-infra`.
-Worktree: `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`, ветка `codex/vr-test-stand`.
-Последний WIP-коммит: `049080ed5` (каркас `e2e-smoke-kit`, НЕ принят, не влит). План хаба rev 22.
+Обновлено: 2026-10-14. Владелец: launch-infra; worktree `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
+ветка `codex/vr-test-stand`. Пользователь принял проверенный объём 2026-10-14;
+идёт подготовка принятого коммита и fast-forward вливания.
+Проверенная сборка: input `87643327108f`, база `d3c62ca5e`; локальные правки сохранены.
 
-## Цель
+## Цель и границы
 
-Одна команда без участия человека: собрать Android-билд → установить на шлем через adb → запустить сценарий →
-закрыть приложение → забрать логи и результаты → машиночитаемый итог. Плюс общий E2E-каркас для сценариев экспертов
-(вердикт по логам, мультипроцессные сценарии) и маршрут сборок.
+Одна команда: сборка → установка APK → запуск клиента Quest и выделенного ПК-сервера → закрытие →
+логи/артефакты → вердикт. Launch-infra владеет дирижёрами, сборками и каркасом E2E.
+Содержание сценариев — эксперты-потребители; метрики — performance, сценарий серии — gameplay.
+Контракт `quest-device-run` r5; регистрация сценария в E2ERunner проходит ревью launch-infra.
 
-## Границы
-
-- launch-infra: дирижёры (`Tools/e2e/Run-E2E.ps1`, `Run-QuestE2E.ps1`), сборки, E2E-каркас (`Assets/Scripts/Debug/E2E/*.cs`
-  верхний уровень), `Tools/e2e/known-noise.json`, вердикт.
-- Содержание сценариев, ожидания и шум сценария — эксперт-потребитель (контракт `quest-device-run` r5). Регистрация
-  сценария — одна строка в `E2ERunner` через ревью launch-infra. `Scenarios/**` — не в owns launch-infra.
-- performance: метрики и бюджеты. gameplay: сценарий серии матчей. network: ревью сетевой части каркаса.
-
-## Статус этапов
+## Статус
 
 | Этап | Состояние |
 |---|---|
-| `design`, `device-runner`, `quest-build`, `e2e-views`, `quest-vr-manifest`, `e2e-head-pose` | merged (ef477dc2 … a311cdb1) |
-| `e2e-log-verdict` | merged `0cd489fd` (принят 2026-10-13) |
-| `e2e-smoke-kit` | **running**, WIP `049080ed5`, не проверен в Unity |
-| `build-checkouts` | реализован в worktree + развёрнуты 4 сборочных worktree (`build-{test,prod}-{win64,android}`) |
+| design, device-runner, quest-build, e2e-views, e2e-log-verdict, quest-vr-manifest, e2e-head-pose | merged; e2e-log-verdict принят 2026-10-13 |
+| e2e-smoke-kit | принят пользователем 2026-10-14, подготовка вливания; worker **637 DONE**, input 87643327108f |
+| build-checkouts | planned в хабе; код 93d7dfbc3 уже в origin/dev; четыре worktree зарегистрированы, настоящие сборки не проверены |
 
-## Следующий шаг (конкретно)
+В текущем diff исправлены lock перед любым `-Ref` checkout/hydrate, отказ при ошибке Git LFS и
+поля путей PairStatus. Эти исправления приняты вместе с каркасом по fixture 9/9. Сборочные worktree чистые, полностью LFS,
+на 93d7dfbc3; Library/Build отсутствуют — кеши не прогреты.
 
-1. Дождаться, пока сопровождающий опубликует базу worker (тикет 607 FAILED из-за переимпорта 29 материалов лобби;
-   материалы уже в origin/dev `77ef97d15`; request-base самим НЕ подавать, ждать объявления 6535/6539).
-2. `git fetch` + rebase ветки на origin/dev (сохранить WIP). Проверить, что `e2e-smoke-kit` всё ещё `running`
-   (`coordination.py status`); если допуск истёк — `stop` → `begin` (нужен `contract-ack quest-device-run 5`).
-3. Офлайн: `dotnet run --project Tools/TestStand/ProtocolHarness.csproj` (ожидается 67/67).
-4. Worker (штатно: checkpoint → request → claim → begin → guard): компиляция без ошибок, AndroidCompileGate, сборка e2e-плеера
-   через одноразовый `EditorApplication.update` (delayCall в worker не срабатывает) — образец
-   `tasks/vr-test-stand/tools/e2e-isolation-build.cs.txt`; finish (побочные `PC.asset` — ожидаемо, не принимать).
-5. Скопировать плеер в `Build/e2e` worktree и выполнить
-   `Run-E2E.ps1 -Scenario e2e-kit-selftest -Map TestMap1 -Clients 2 -Timeout 300`. Итог network (просили в 6425/6437):
-   число рукопожатий на соединение, повторы после смены карты, 0 «Unknown message id» в логах клиентов. Плюс прогнать
-   существующие `map-run-startup-route` и `dedicated-server-arsenal` (раннер теперь сам крутит вложенные ожидания).
-6. Отчёт пользователю → приёмка → коммит/rebase/verify/accept/merge-request/merge-execute → request-base.
-7. После вливания: сообщить gameplay (они заведут задачу series-smoke и пришлют id) → снять
-   `map-runtime-bootstrap/series-smoke-e2e` с плана той задачи.
+## Свежие проверки
+
+- ProtocolHarness: **67 passed / 0 failed**; EditorBinding: **0 ошибок / 0 предупреждений**.
+- Launcher fixture: до правок 3/9, после **9/9**, повтор principal 9/9. Независимое ревью без блокирующих замечаний.
+- Сухая маршрутизация Test, Prod и Quest E2E — exit 0; Unity/adb не запускались.
+- AndroidCompileGate в Unity worker: **PASS, errors=[]**. Windows E2E-плеер собран за 71,773 с.
+- `e2e-kit-selftest`: **19/19, enforce GREEN**, сервер + два клиента; один hello на соединение,
+  ready повторно отправлен после reload, Unknown message id = 0, потерь/дублей журнала нет.
+- `map-run-startup-route`: **14/14, enforce GREEN** на базе с исправлением `ec0887cf5`.
+- `dedicated-server-arsenal`: **24/24 функционально**, но **enforce RED, exit 1**:
+  четыре серверные ошибки `teleport-state-unknown-target`. Передано network: 6850.
+- Добавлен счётчик `logVerdict.defects` в summary; исправленный `anchored-ignore-collision-prefab`
+  снят из списка по чистому прогону карты. Неисправленный teleport остаётся дефектом.
+- Проверки log-verdict: **15/15**; повторная обработка полных результатов текущим JSON —
+  GREEN / GREEN / RED (4 дефекта). Summary на реальном RED показывает defects=4.
+
+Unity-компиляция и Windows runtime подтверждены; физический Quest и четыре выделенные сборки
+не проверены. Полные логи и результаты — `reports/2026-10-14-status/` вне Git.
+
+## Следующий шаг
+
+Дождаться исправления network и повторить `dedicated-server-arsenal` на принятой ревизии.
+Ответ 6866: фикс пока только в candidate `01e8b7748d`, их worker 643 ждёт проверки;
+принятого SHA нет, старый прогон не является проверкой этого исправления.
+Каркас и правки дирижёров приняты → штатное вливание; gameplay затем пришлёт id задачи серии,
+после чего снять старый series-smoke-e2e из map-runtime-bootstrap. Отдельно проверить настоящие
+Test/Prod × Windows/Android сборки и сохранение кешей; физический Quest — когда шлем свободен.
+
+637 завершена штатно сразу после сборки; плеер сохранён в `Build/e2e-worker-637/`.
+Все процессы трёх прогонов остановлены. Единственный побочный `PC.asset` в результате брокера
+не принят (`accepted=false`), receive не выполнялся; это не отменяет PASS сборки.
 
 ## Ждёт пользователя
 
-- Приёмка `e2e-smoke-kit` после проверки на worker (пункт 5).
-- Прогон `Run-QuestE2E` на шлеме с вердиктом по логам (пока проверен только на фикстурах) — когда шлем свободен.
+Проверенный Windows-каркас и инфраструктурные правки приняты ответом
+«Принять проверенный объём (рекомендуется)». Полный арсенальный сценарий остаётся RED
+до исправления network; физический Quest-прогон ещё не выполнен, четыре сборочных кеша не проверены.
 
 ## Решения пользователя
 
-- 2026-10-11: автоматический конвейер на шлеме; шлем — настоящий клиент выделенного ПК-сервера.
-- 2026-10-13: «ошибки исправлять, не фильтровать» — в `known-noise.json` только доказанно безвредный шум; известные
-  дефекты `kind=defect` (owner/ticket) оставляют прогон red.
-- 2026-10-13: «смок тесты серии матчей… может подготовить им инфру чтобы они могли сами написать тесты?» — сценарий
-  серии пишет gameplay, launch-infra — каркас (`e2e-smoke-kit`).
-- 2026-10-13: принят `e2e-log-verdict` (без прогона на шлеме).
-- 2026-10-14: «нам точно нужен отдельный воркер для прод сборок, чтобы кеш не сбрасывался» + «для тест сборок я бы тоже
-  создал по отдельному ворктри на платформу» (AskUserQuestion) → 4 выделенных сборочных worktree с полным LFS
-  (`build-test-win64`, `build-test-android`, `build-prod-win64`, `build-prod-android`), этап `build-checkouts`.
-- 2026-10-14: Quest 3 (TargetQuest3) пока не включаем — предупреждение валидатора остаётся.
+- 2026-10-11: автоматический конвейер; Quest — клиент выделенного ПК-сервера.
+- 2026-10-13: ошибки исправлять, не фильтровать; сценарий серии пишет gameplay; e2e-log-verdict принят.
+- 2026-10-14: четыре сборочных worktree Test/Prod × Windows/Android для сохранения кешей;
+  TargetQuest3 пока не включать.
 
-## Риски и ловушки
+## Риски
 
-- Сборка e2e-плеера в worker меняет `Assets/URPDefaultResources/PC.asset` → finish `unexpected`, это ожидаемо.
-- Каркас: процесс без `-e2eScenario` к e2e-серверу не подключать (hello-рукопожатие это закрывает, но проверено только
-  чтением кода). `VRBG_E2E_CORE_ONLY` — define только харнесса, в Unity-профили не попадает.
-- Хвосты вне writes этапа (бэклог 0h): probe `managed_e2e_worker_probe.py` ждёт роль `client`; PlayLaunch не передаёт
-  `-e2eArg`/позднего клиента.
-- Коммуникация: `inbox --unread --as "<свой адрес>"`; ожидание — `coordination.py wait-inbox --owner launch-infra --as
-  "<адрес>"` фоновой командой; в Codex вопросы пользователю — явным сообщением «ЖДЁТ ОТВЕТА» + этот раздел.
+Встроенная MCP-сессия Codex завершена; отдельный штатный клиент работоспособен. Сопровождающий
+исследует EDITOR_DELAYCALL_STALLED. Owner inbox частично view-only из-за старого route другой задачи;
+infra_issue 6653. При отсутствии выделенного пути возможен fallback в текущий checkout; сейчас не сработал.
+629 отменена до claim; 632 CANCELLED после истечения OFFERED, claim отказал, Unity-действий не было.
+637 завершена с диагностическими hello send/receive; результат network передан в событии 6829.
+Хвосты PlayLaunch/-e2eArg/позднего клиента — бэклог 0h.
 
-Подробности: [Details.md](Details.md) (проект каркаса и условия network/gameplay). План: [plan.json](plan.json).
-Отчёты — `reports/` (вне Git; diff ревью — `reports/e2e-smoke-kit/`).
+Подробности: [Details.md](Details.md), [план](plan.json),
+[changelog](changelog/2026-10-14-resume-and-launcher-preflight.md). В scope e2e-smoke-kit добавлен
+known-noise.json для согласованного снятия исправленного дефекта. Из-за общих GameBuilder/Docs
+build-checkouts упорядочен после e2e-smoke-kit; в scope каркаса внесены принятые исправления
+двух дирижёров. Чужие этапы/области не изменены.

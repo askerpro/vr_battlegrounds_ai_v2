@@ -7,8 +7,8 @@
     "map-runtime-bootstrap",
     "quest-perf-pipeline"
   ],
-  "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
-  "reviewed_at": "2026-10-11",
+  "reviewed_sha": "6a95b322e30514ba9ce45d07991fcad17108638b",
+  "reviewed_at": "2026-10-14",
   "owns": [
     "Packages/manifest.json",
     "Packages/packages-lock.json",

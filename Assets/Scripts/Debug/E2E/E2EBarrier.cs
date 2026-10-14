@@ -1089,6 +1089,7 @@ namespace VrBattlegrounds.DevTools.E2E
             {
                 NetworkClient.Send(new E2EHelloMessage { role = Core.Role ?? string.Empty });
                 _helloSent = true;
+                GameLog.Debug.Info($"[E2E] Барьер: e2e-hello → сервер (роль {Core.Role})");
             }
 
             Outgoing.Clear();
@@ -1116,6 +1117,7 @@ namespace VrBattlegrounds.DevTools.E2E
                 TrackedConnections[connection.connectionId] = tracked;
             }
             tracked.Hello = true;
+            GameLog.Debug.Info($"[E2E] Барьер: e2e-hello ← соединение {connection.connectionId} (запуск {Core.ServerRun})");
         }
 
         private static void RegisterClientHandlers()

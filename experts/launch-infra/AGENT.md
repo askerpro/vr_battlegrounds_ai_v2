@@ -31,20 +31,26 @@ debug mode, E2E framework, test XR input, builds.
 ## Architecture
 - `Assets/Editor/VR_Battlegrounds/Testing/`: `PlayLaunch.cs` — launcher; `PlayLaunchNetworkPorts.cs` — ports;
   `PlayModeTestStand.cs`, `PlayModeStandParticipant.cs`, `StandManifest.cs`, `StandProtocol.cs` — MMP; `Tools/TestStand/Program.cs`.
+  `PreviewSceneNetworkGuard.cs` — preflight of network objects in preview scenes.
 - `Assets/Editor/VR_Battlegrounds/Debug/`: `PlayLaunchWindow.cs`; `PlayModeStartFromOffline.cs`, `EditorFocusPauseMenu.cs` —
   normal Play; `E2EPlayerBuilder.cs`.
 - `Assets/Scripts/Debug/Bootstrap/`: `PlayLaunchConfiguration.cs`, `PlayLaunchProfileStore.cs`, `DebugBootstrapSettings.cs` —
   profile; `DebugOrchestrator.cs` — role/launch part only. Seam: `Assets/Scripts/Debug/DebugBootstrapGate.cs`.
 - `Assets/Scripts/Debug/DebugMode/`: `DebugMode.cs`, `DebugAdminPolicy.cs`, `DebugGestureInput.cs`, `DebugPerfReadout.cs`.
 - `Assets/Scripts/Debug/E2E/`: `E2ERunner.cs`, `IE2EScenario.cs`, `E2EContext.cs`, `E2EResult.cs`, `E2EWait.cs`.
+  `E2EBarrier.cs` — run-bound handshake and step journal; `E2EPlayerPorts.cs` — isolated port pair;
+  `E2ELogCapture.cs` — log evidence; `E2EViews.cs` and `E2EHeadPose.cs` — views and test head pose.
 - MPPM: `ProjectSettings/VirtualProjectsConfig.json`, `ProjectSettings/MultiplayerManager.asset`.
 - Builds: `Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs`, `BuildSceneResolver.cs`; `Tools/release/Build-Game.ps1`,
   `Tools/release/server/Start-Server.ps1`; `Tools/e2e/Run-E2E.ps1`.
+  `BuildRevisionStamp.cs`, `XrBuildSettingsScope.cs`, `QuestManifestValidator.cs`, `QuestControllerFreeManifest.cs` —
+  build revision/XR/manifest; `Tools/e2e/Run-QuestE2E.ps1` — split Test builds and Quest device orchestration.
+  Dedicated build checkouts are per Config/Platform; their deployment does not prove a warmed cache or a passed build.
 
 ## Details (grep the heading)
 - `Docs/test-stand.md` «Профиль и обычный Play», «Локальные сетевые порты», «Адресные команды и reconnect».
 - `Docs/testing.md` «Ярус C · Два процесса», «Подводные камни, найденные прогоном»,
   «Уровень 3 · Multiplayer Play Mode», «Уровень 4»; `Docs/release.md` «Как собрать», «Конфигурация: тест и прод».
 - `Docs/troubleshooting.md` «Порт для сервера уже занят», «Выделенный сервер», «В Multiplayer Play Mode сыпется».
-- `tasks/vr-test-stand/Details.md` (93 KB) «4. Конфликты», «5. Рекомендуемая архитектура», «13. Приёмка»,
-  «14. Локальные порты»; its Readme lags.
+- `tasks/vr-test-stand/Details.md` «4. Конфликты», «5. Рекомендуемая архитектура», «13. Приёмка»,
+  «14. Локальные порты»; current stage status is in Readme and the hub.

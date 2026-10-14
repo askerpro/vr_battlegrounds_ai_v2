@@ -1,19 +1,42 @@
 ## Обещания другим агентам (передача Codex 2026-10-14)
 
-- network: после worker-прогона `e2e-kit-selftest` прислать итог — рукопожатия на соединение, повторы после смены карты,
-  0 «Unknown message id» (6425, 6437/6441/6445). Diff сетевой части уже прошёл ревью.
+Возобновление 2026-10-14: хаб подтверждает `vr-test-stand` rev36 (всё merged),
+`quest-perf-pipeline` rev26 (`e2e-smoke-kit` принят, подготовка вливания; `build-checkouts` planned),
+`map-runtime-bootstrap` rev23 (`series-smoke-e2e` planned, остальные этапы merged).
+Текущий WIP `6a95b322e`; сборочная инфраструктура `93d7dfbc3` уже в `origin/dev = d3c62ca5e`.
+Объявление 6695 сняло остановку FIFO; заявка e2e-smoke-kit **637 DONE**, input `87643327108f`.
+AndroidCompileGate PASS, Windows build PASS; selftest 19/19 GREEN, map-startup 14/14 GREEN.
+Арсенал 24/24 функционально, enforce RED: четыре teleport-state-unknown-target, network уведомлён 6850.
+Пользователь принял проверенный Windows-каркас и launcher9/9 2026-10-14;
+физический Quest, реальные четыре сборки/кеши и сетевой дефект остаются открытыми.
+632 CANCELLED после истечения OFFERED (claim отказал), Unity-действий не было.
+629 отменена до claim для включения двух диагностических hello-логов; поведение протокола не менялось.
+Отдельный MCP-клиент через штатный proxy прошёл initialize/read (48 инструментов).
+Старый route map-runtime-bootstrap в другом checkout оставляет owner inbox частично view-only;
+это не ACK и не допуск, собственные текущие routes очищены.
+
+- network: итог передан 6829 — один hello на соединение, повтор ready после смены карты,
+  0 «Unknown message id», потерь/дублей журнала нет (6425, 6437/6441/6445).
 - gameplay: сообщить о вливании `e2e-smoke-kit` → они заводят задачу series-smoke и шлют id → снять
   `map-runtime-bootstrap/series-smoke-e2e` (6403/6408). Прогон `map-run-startup-route` с полным вердиктом по логам на базе
-  с исправлением арсенала (ec0887cf5 или новее) → удалить дефект `anchored-ignore-collision-prefab` из
-  `Tools/e2e/known-noise.json` и сообщить в inbox `arsenal-unload-teardown` (6367).
+  с исправлением арсенала ec0887cf5: 14/14 GREEN, полный вердикт чистый; дефект
+  `anchored-ignore-collision-prefab` удалён из `Tools/e2e/known-noise.json`; результат передан 6892 (6367).
 - network: после исправления `teleport-state-unknown-target` — перезапуск `dedicated-server-arsenal`, удалить дефект (6054/6062).
-- manipulation: их защита в AnchoredItemCollisionIgnore с одним GameLog.Error на сцену (6079) — проверить в том же прогоне.
+  Ответ 6866: candidate 01e8b7748d, worker643 ждёт собственных gates; accepted SHA ещё нет.
+- manipulation: прогон карты с их защитой AnchoredItemCollisionIgnore (6079) чистый;
+  ошибочная ветка guard не сработала, её поведение этим прогоном не доказано; уведомление 6896.
 - weapon-system: сценарий shot-cost — дать zone-ack на строку в `E2ERunner.cs`, когда пришлют zone-request; их этап после
   `e2e-log-verdict` (6198/6206); сцена — вариант (A) Lobby или доработка пары для BotCombatStand (6221).
 - bots/avatar-ik: контракт `xr-input` r1 (contract-propose) до кода — 5337/5341, условия avatar-ik 5295.
-- performance/agent-infra: `build-checkouts` — ждать ответа agent-infra о размещении checkout (6457), потом реализация и
-  замеры performance (6455).
+  Напоминание legs-ik 6758: отдельного r1 пока нет; ревью по control-modes-plan.md81+,
+  ACK до кода, один writer камеры, штатный UxrControllerTracking запястий, без костей/BodyIK/калибровки.
+  e2e-head-pose/quest-device-run r5 не заменяет xr-input. Кандидат не выбран, код ввода не начат.
+- performance/agent-infra: четыре `build-checkouts` развёрнуты на 93d7dfbc3, чистые и LFS hydrated;
+  lock preflight и ошибки LFS исправлены, fixture 9/9. Настоящие сборки/прогрев и замеры performance
+  ещё не выполнены (6455/6457); этап planned и упорядочен после e2e-smoke-kit.
 - performance: перенести тесты `Release/Tests/**` в `Assets/Tests/EditMode` при удобном случае (5496).
+- agent-infra: обращение 6653 — прежний Claude route другой задачи и view-only owner inbox;
+  встроенная MCP-сессия Codex завершена, отдельный штатный proxy-клиент работоспособен.
 
 Обновлено 2026-10-14. Кандидаты вне хаба; порядок — приоритет. VTS = `tasks/vr-test-stand/Details.md`,
 MRB = `tasks/map-runtime-bootstrap/Details.md`,
@@ -144,6 +167,7 @@ full suite, клик toolbar, Quest, synthetic XR/gameplay E2E не принят
   тесты в `Release/Tests/` — перенести в `Assets/Tests/EditMode` при передаче owns.
 
 - `docs-build-open-map` — находка lobby-decoration 5476: сборка из открытого редактора падает, если открыта карта
-  каталога (MapRunPreflight открывает её повторно через OpenPreviewScene → дубликат sceneId). Исправление — gameplay
-  (5483, этап в catalog-fingerprint, старт по решению пользователя). Мне — обход «открыть пустую сцену перед сборкой»
-  в `Docs/testing.md` (раздел сборки пары) ближайшим документным коммитом.
+  каталога (повторный OpenPreviewScene → дубликат sceneId). Gameplay сообщил 6907: preview-loaded-scene
+  принят и влит в origin/dev97a320c88, preflight3/3 и Windows build с открытой Lobby PASS.
+  Own Docs/testing.md актуализирован: чистая загруженная карта проверяется без preview, dirty даёт отказ;
+  обход пустой сценой не требуется. Доказательства gameplay, наш runtimeinput87643327108f старше фикса.

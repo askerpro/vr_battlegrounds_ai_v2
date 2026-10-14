@@ -224,6 +224,9 @@
         "Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs",
         "Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs",
         "Tools/e2e/Run-E2E.ps1",
+        "Tools/e2e/known-noise.json",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Tools/release/Build-Game.ps1",
         "Tools/TestStand/**",
         "Docs/testing.md",
         "Docs/release.md",
@@ -258,6 +261,11 @@
         {
           "task": "quest-perf-pipeline",
           "stage": "e2e-log-verdict",
+          "state": "merged"
+        },
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "e2e-smoke-kit",
           "state": "merged"
         }
       ],

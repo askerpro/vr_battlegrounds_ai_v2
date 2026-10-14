@@ -1,0 +1,44 @@
+// Тело execute_code: только в собственной RUNNING-аренде worker после guard.
+// Один пакет сборки Windows e2e; повтор при таймауте сначала проверяет этот же файл статуса.
+// Блокирующий Run выполняется в одноразовом update; delayCall на worker может зависать.
+string root = System.IO.Path.GetFullPath(".");
+string status = System.IO.Path.Combine(root, "tasks", "quest-perf-pipeline", "reports",
+    "e2e-smoke-kit", "build-a1.json");
+if (System.IO.File.Exists(status))
+    return "already scheduled; inspect durable status: " + status;
+if (UnityEditor.EditorApplication.isPlaying || UnityEditor.EditorApplication.isCompiling
+    || UnityEditor.EditorApplication.isUpdating || UnityEditor.BuildPipeline.isBuildingPlayer)
+    return "not scheduled: Editor is busy";
+
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(status));
+System.IO.File.WriteAllText(status, "{\"state\":\"queued\"}", new System.Text.UTF8Encoding(false));
+System.Func<string, string> escape = text => (text ?? string.Empty)
+    .Replace("\\", "\\\\").Replace("\"", "\\\"")
+    .Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t");
+UnityEditor.EditorApplication.CallbackFunction once = null;
+once = () =>
+{
+    // Снять подписку до BuildPlayer: вложенный update не должен запускать вторую сборку.
+    UnityEditor.EditorApplication.update -= once;
+    string json;
+    try
+    {
+        if (UnityEditor.EditorApplication.isPlaying || UnityEditor.EditorApplication.isCompiling
+            || UnityEditor.EditorApplication.isUpdating || UnityEditor.BuildPipeline.isBuildingPlayer)
+            throw new System.InvalidOperationException("Editor became busy before the scheduled build");
+        System.IO.File.WriteAllText(status, "{\"state\":\"building\"}", new System.Text.UTF8Encoding(false));
+        var result = VrBattlegrounds.EditorTools.E2EPlayerBuilder.Run();
+        json = "{\"state\":\"completed\",\"passed\":" + (result.Passed ? "true" : "false")
+            + ",\"seconds\":" + result.Seconds.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)
+            + ",\"revision\":\"" + escape(result.Revision) + "\",\"path\":\"" + escape(result.Path)
+            + "\",\"summary\":\"" + escape(result.Summary) + "\"}";
+    }
+    catch (System.Exception error)
+    {
+        json = "{\"state\":\"completed\",\"passed\":false,\"summary\":\""
+            + escape(error.GetType().Name + ": " + error.Message) + "\"}";
+    }
+    System.IO.File.WriteAllText(status, json, new System.Text.UTF8Encoding(false));
+};
+UnityEditor.EditorApplication.update += once;
+return "scheduled: " + status;

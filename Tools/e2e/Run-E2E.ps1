@@ -640,6 +640,7 @@ $summary = [pscustomobject]@{
         verdict = $logResult.verdict
         unexpected = @($logResult.unexpected).Count
         known = @($logResult.known).Count
+        defects = @($logResult.defects).Count
         native = @($logResult.native).Count
         dropped = $logResult.dropped
         error = $logResult.error

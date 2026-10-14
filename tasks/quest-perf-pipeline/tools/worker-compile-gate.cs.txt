@@ -1,0 +1,9 @@
+// Только собственная RUNNING-аренда после guard; корень сверяется до запуска ворот.
+string root = System.IO.Path.GetFullPath(".").Replace('\\', '/').TrimEnd('/');
+if (!string.Equals(root, "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Unexpected worker root: " + root);
+if (UnityEditor.EditorApplication.isPlaying || UnityEditor.EditorApplication.isCompiling
+    || UnityEditor.EditorApplication.isUpdating || UnityEditor.BuildPipeline.isBuildingPlayer)
+    throw new System.InvalidOperationException("Editor is busy");
+var gate = VrBattlegrounds.EditorTools.AndroidCompileGate.Run();
+return new { root, passed = gate.Passed, errors = gate.Errors, summary = gate.Summary };

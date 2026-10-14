@@ -476,6 +476,12 @@ Play Launch ([test-stand.md](test-stand.md) «Локальные сетевые 
 `-executeMethod VrBattlegrounds.EditorTools.E2EPlayerBuilder.RunBatch`. Из-под живого
 редактора батч не работает: проект залочен `Library/`.
 
+Перед сборкой открытая чистая карта допустима: `MapRunPreflight` проверяет загруженную сцену
+без повторного `OpenPreviewScene`. Dirty-карта даёт отказ `Scene.Dirty:<map>` — её нужно сохранить.
+Открывать пустую сцену как обход больше не требуется после принятого `preview-loaded-scene`
+(код `02d367fe7`, публикация `97a320c88`; Unity preflight 3/3 и Windows build с открытой Lobby).
+Доказательства владельца gameplay — [catalog-fingerprint](../tasks/catalog-fingerprint/Details.md).
+
 | Что | Время |
 |---|---|
 | Первая полная сборка плеера | ~5 мин |

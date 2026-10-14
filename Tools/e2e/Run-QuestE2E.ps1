@@ -1345,8 +1345,8 @@ try {
                 revision     = $SharedBuildRevision
                 serverPassed = ($null -ne $serverData -and [bool]$serverData.serverPassed -and $serverRun.ExitCode -eq 0)
                 questPassed  = ($null -ne $questData -and [bool]$questData.questPassed -and $questRun.ExitCode -eq 0)
-                serverOutput = $(if ($null -ne $serverData) { [string]$serverData.serverOutput } else { $ServerPlayer })
-                questOutput  = $(if ($null -ne $questData) { [string]$questData.questOutput } else { $BuiltApk })
+                serverOutput = $(if ($null -ne $serverData -and -not [string]::IsNullOrWhiteSpace([string]$serverData.serverPath)) { [string]$serverData.serverPath } else { $ServerPlayer })
+                questOutput  = $(if ($null -ne $questData -and -not [string]::IsNullOrWhiteSpace([string]$questData.apkPath)) { [string]$questData.apkPath } else { $BuiltApk })
                 error        = ($combinedErrors -join '; ')
             }
             Write-TextFile $pairStatusPath ($pairObj | ConvertTo-Json -Depth 4)

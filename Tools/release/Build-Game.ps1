@@ -112,7 +112,10 @@ function Test-EditorLocked([string] $WorktreePath) {
 
 function Get-LfsPointerFiles([string] $WorktreePath) {
     $lfsFiles = @(& git -C $WorktreePath -c core.quotepath=false lfs ls-files -n 2>$null)
-    if ($LASTEXITCODE -ne 0 -or $lfsFiles.Count -eq 0) {
+    if ($LASTEXITCODE -ne 0) {
+        throw "Не удалось проверить Git LFS в $WorktreePath (git lfs ls-files, код $LASTEXITCODE)."
+    }
+    if ($lfsFiles.Count -eq 0) {
         return @()
     }
     $pointers = New-Object System.Collections.Generic.List[string]
@@ -213,6 +216,14 @@ foreach ($run in $runs) {
 
 $activeWorktrees = @($runs | ForEach-Object { $_.ProjectPath } | Select-Object -Unique)
 
+# Проверяем всю группу до переключения любого checkout и гидратации LFS.
+foreach ($wt in $activeWorktrees) {
+    if (Test-EditorLocked $wt) {
+        Write-Host "Проект открыт в редакторе ($wt). Закрой его или собирай из меню Tools/VR Battlegrounds/Release." -ForegroundColor Red
+        exit 2
+    }
+}
+
 if (-not [string]::IsNullOrWhiteSpace($Ref)) {
     $targetSha = (& git -C $RepoRoot rev-parse "$Ref^{commit}" 2>$null)
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($targetSha)) {
@@ -264,7 +275,12 @@ foreach ($wt in $activeWorktrees) {
         exit 2
     }
 
-    $pointers = @(Get-LfsPointerFiles $wt)
+    try {
+        $pointers = @(Get-LfsPointerFiles $wt)
+    } catch {
+        Write-Host ('Отказ сборки: ' + $_.Exception.Message) -ForegroundColor Red
+        exit 2
+    }
     if ($pointers.Count -gt 0) {
         $sample = ($pointers | Select-Object -First 5) -join ', '
         Write-Host "Отказ сборки: в $wt обнаружены негидратированные Git LFS pointer-файлы ($($pointers.Count) шт., например: $sample)." -ForegroundColor Red

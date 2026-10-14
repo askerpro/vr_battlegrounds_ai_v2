@@ -1,6 +1,6 @@
 # Адресный стенд и интеграция Play Launch
 
-Обновлено: 2026-10-14 (передача сессии Codex, 6545). Владелец: эксперт `launch-infra`. Worktree:
+Обновлено: 2026-10-14 (возобновление Codex, свежая сверка хаба rev 36). Владелец: эксперт `launch-infra`. Worktree:
 `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`, ветка `codex/vr-test-stand` (общая с quest-perf-pipeline).
 План хаба rev 36. **Все этапы влиты; активной работы нет.** Кандидаты следующих этапов — бэклог эксперта
 `experts/launch-infra/backlog.md` (0c stand-deferred-client, 0d stand-kcp-timeout, 0e stand-back-to-back, 0h хвосты).
@@ -57,7 +57,10 @@ sceneId-ошибок 0; штатная остановка до Idle; AndroidComp
 не воспроизвелась — проверено отсутствие регрессии. Архив `main` на worker неполный (общий Editor.log, infra_issue
 5403). Патч Mirror для исключения preview-сцен — кандидат network (5302).
 
-Следом: `quest-perf-pipeline/e2e-log-verdict`, затем `map-runtime-bootstrap/series-smoke-e2e`.
+`quest-perf-pipeline/e2e-log-verdict` уже влит (`0cd489fd`). Сейчас выполняется
+`quest-perf-pipeline/e2e-smoke-kit`; после его вливания gameplay заведёт собственную задачу серии
+и сообщит id, затем старый planned `map-runtime-bootstrap/series-smoke-e2e` будет снят из плана.
+Свежая проверка каркаса и её ограничения — в Readme задачи `quest-perf-pipeline`.
 
 ## Ограничения
 

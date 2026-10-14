@@ -1,8 +1,8 @@
 # Стресс-тест на шлеме без рук: сценарий perf-stress, арена, обход точек обзора
 
-Обновлено: 2026-10-14 (продолжение в Codex). Владелец: эксперт `performance`. Worktree:
+Обновлено: 2026-10-15 (продолжение в Codex). Владелец: эксперт `performance`. Worktree:
 `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`, ветка `claude/performance` (HEAD — последний коммит ветки;
-работа этапа `view-tour` — bd7dd0127 после rebase на origin/dev 97a320c88). Начата по решению пользователя («начинай свою часть»).
+работа этапа `view-tour` — 832d7f50f после rebase на origin/dev 54673ba496). Начата по решению пользователя («начинай свою часть»).
 
 ## Цель и границы
 
@@ -19,27 +19,21 @@
 | `scenario` | сценарий `perf-stress` без рук, обе роли, `-e2eArg`, артефакты | merged `fa83395aa` |
 | `controller-free-launch` | Test-APK стартует без пробуждения контроллеров (руки в манифесте, Test only) | merged `3cabcc1ab` |
 | `arena-layout` | куклы по полу арены, корни не следуют за игроком; `Tools/Perf/quest_gpu_breakdown.py` | merged `2a5ed8f07` |
-| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **planned, блокер EditMode MCP**: runtime принят пользователем; AndroidCompileGate PASS (634); независимый запуск654 снова потерял соединение до `job_id`/итога (7008); admission/lease освобождены |
+| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **planned, блокер EditMode MCP**: runtime принят пользователем; свежий AndroidCompileGate PASS0 (670); новый запуск670 после SDKunity-mcp2 потерял соединение до `job_id`/итога (7318); worker освобождён |
 | `gpu-tool-phases` | `quest_gpu_breakdown.py --phases <имена>` — профайлер в произвольных фазах (обещано weapon-system) | planned |
 | `docs` | раздел в `Docs/perf-stress-test.md` (обход, арена, без рук, бюджет сцен); файл точек → `Tools/Perf/views/Lobby.json` | planned |
 
 ## Следующий шаг (конкретно)
 
-1. `view-tour`: после диагностики повторного MCP-сбоя (infra_issue7008, продолжение6790/6940)
-   дождаться исправления receipt/result инфраструктуры (ответ7216), затем подготовить новый ограниченный
-   пакет по подтверждённому маршруту. Recovery664/7202 восстановил startup, не менял run_tests/TestJobManager;
-   старые634/654 UNKNOWN, повтор ради одного startup не рекомендован. Старый исход634 не восстановлен:
-   ни `job_id`, ни подтверждённого результата не получено. Диагностика 645 завершена: current job пуст,
-   среди четырёх сохранённых jobs своего запуска нет; старый итог остаётся неизвестным.
-   Fetch/rebase на `origin/dev` выполнен 2026-10-14 (97a320c88, diff собственного кода после rebase пуст).
-   AndroidCompileGate PASS на входе38af7597. Между ним и новым входом83032bde4 player C#/Packages/
-   asmdef/asmref/rsp/ProjectSettings не менялись; единственный C# diff — Editor MapRunPreflight,
-   текущий broker begin обновил Editor без ошибок. Независимый пакет654 DONE/received,
-   input83032bde4, база97a320c88: снова нет job_id/итога. Новых заявок не оставлено.
-   Следующая проверка существующего EditMode `VrBattlegrounds.Tests.DevTools` — после диагноза owner,
-   без сборки. Ожидается: все зелёные, новых 17 (8 в `StressTestPlanTests` «Обход точек
-   обзора», 9 случаев в `PerfStressScenarioArgsTests` «views»). Красное — чинить тесты/код в своей ветке, повтор.
-   Затем finish/receive → зафиксировать проверку и прежнюю приёмку → штатное fast-forward в origin/dev;
+1. `view-tour`: дождаться диагноза сопровождающего по infra_issue7318 (продолжение7008),
+   затем готовить следующий ограниченный пакет только по подтверждённому маршруту.
+   После worker_ready7257/SDKunity-mcp2 проведён новый независимый пакет670: свежая
+   AndroidCompileGate PASS0; run_tests EditMode/DevTools потерял plugin session до job_id.
+   Исходы634/654/670 UNKNOWN; инфраструктурные smoke-проверки не заменяют результаты DevTools.
+   Никаких retry/replay/clear_stuck/Refresh/саморемонта. Отчёты670 сохранены в ignored reports/;
+   finish без --artifact завершён, R a66b06b000ed, paths0/unexpected0, worker освобождён.
+   Ожидаемое подтверждение: весь DevTools зелёный, включая 17 новых случаев (8 Plan +9 Args).
+   Затем зафиксировать проверку и прежнюю приёмку → штатное fast-forward в origin/dev;
    в mode off — legacy pipeline, в enforced — verify/accept/merge-request/merge-execute.
 2. `gpu-tool-phases`: `--phases` в `Tools/Perf/quest_gpu_breakdown.py` (сейчас слушает только «база»/«куклы…»);
    README рядом. Нужен weapon-system для замера стоимости выстрела (метод 6156).
@@ -51,6 +45,14 @@
 
 ## Возобновление 2026-10-14
 
+- 2026-10-15 после worker_ready7257: свой route epoch9; fetch/rebase origin/dev54673ba496
+  без конфликтов, runtime/test diff bd7dd0127→832d7f50f пуст, карта owns/watch без новых изменений.
+  Пакет670/input28afff074/epoch566: AndroidCompileGate PASS0, run_tests один раз вернул
+  `plugin session12cf785b-e214-4a7b-9471-b6ef4bd5070e disconnected while awaiting command_result`,
+  job_id/data отсутствует. Native guard после idle/responsive; finish запущен сразу,
+  R a66b06b000ed paths0/unexpected0. Runtime VERSION eb4ab1d981654f3bcd64cd4eb546cbcc950370d6.
+  Infra_issue7318 отправлен в canonical inbox и подтверждённый Codex-чат сопровождающего.
+  Подробности: `reports/validation-20261015-670/`; новых Unity-заявок не оставлено.
 - После уведомления worker_ready_resume 6805 обновлён собственный маршрут (epoch 6), inbox обработан.
   Восстановление общей очереди не объявляет исправленным частный MCP-сбой тестов 6790.
   Диагностическая заявка 645: прочитать сохранённые TestJobsV1/CurrentTestJobIdV1 в собственной аренде,

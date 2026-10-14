@@ -37,7 +37,10 @@
   Текущий MCP-блокер направлен сопровождающему событием 6790. После worker_ready_resume 6805 заявка 645
   завершила чтение TestJobsV1: свой634 не найден, currentJob пуст, старый исход неизвестен. Worker освобождён;
   report-only receive остановлен (6940), R не принимается. Независимый EditMode654 снова потерял plugin session
-  до job_id/итога; DONE/received, paths0, admission освобождён. Infra_issue7008; новых заявок нет.
+  до job_id/итога; DONE/received, paths0, admission освобождён. Infra_issue7008.
+  После worker_ready7257/SDKunity-mcp2 пакет670: свежая AndroidCompileGate PASS0, снова plugin disconnect
+  до job_id/result; UNKNOWN. DONE/received R a66b06b000ed, paths0; infra_issue7318 отправлен hub+Codex.
+  Runtime VERSION eb4ab1d981654f3bcd64cd4eb546cbcc950370d6; новых заявок до диагноза сопровождающего нет.
 - weapon-system 6747: 30 SDK/WS/bots-маркеров и native buffer capture пока uncommitted, только offline-результаты.
   Ревью точного кандидата — после bots driver/runtime probe; отсутствие Reset в Update и overhead не признаны
   подтверждёнными на Quest. Сбой MCP нашего пакета отправлен сопровождающему (6768).
@@ -69,4 +72,5 @@
   нет нового гейта/бюджета/perf PASS/разрешения реализации. Humanwrittenreview уnetwork/user.
 - Policy7160 учтена: infra issue hub+проверенный nativeCodex без вопросов;7008 дополнительно уведомлён.
   Recovery7202 восстанавливаетstartup, неfix testresult. Ответ7216:634/654 UNKNOWN, неreplay/clear_stuck;
-  view-tour ждёт durable start receipt/command_id/job_id и полного terminalresult черезreload.
+  SDKunity-mcp2 проверен сопровождающим на infrastructure smoke, но свой670 повторил потерю receipt;
+  view-tour ждёт диагноза7318 и полного DevTools result. Новая policy7257 запрещает самостоятельный ремонт/обход infra.

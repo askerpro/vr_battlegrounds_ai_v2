@@ -64,3 +64,13 @@ M1 — матч не стартует (минимум 2 и обе команды
 (2^9 копий прогрева) — cc-0 повторить после исправления network. Тела ботов на смене раунда пересоздаёт режим
 (призрак в Resolution, живое на Setup) — поведение gameplay. AvatarSpawnPointResolver не находит точек ботов на TestMap1.
 
+## Состояние на конец дня 2026-10-14 (работа остановлена решением пользователя)
+
+- cc-1a/b/c + сторож BotAuthorityTests — в ветке bots-fix (48bdf2c75, f55da44de, 12b7f8759, 13f410e8b), офлайн-компиляция
+  PASS (tools/cc1-offline). Unity не проверялся: контроллер BotBlazeProxy.controller ещё не сгенерирован.
+- Незакоммичено (код, ждёт проверки): Assets/Scripts/Debug/BotCombatStand/BotStandMatchProbe.cs(+meta),
+  tasks/bots-fix/tools/cc0-match/, tasks/bots-fix/tools/cc1-round1/ (пакет первого Unity-раунда cc-1, тикет 608 отменён).
+- Дальше: rebase на origin/dev (выпуск infra a84b9f2ce, материалы лобби 77ef97d15); cc1-round1 (генерация контроллера,
+  компиляция, EditMode, стенд, A/B прокси); после вливания сторожа network (f645d72f9) — M8 регрессия/база cc-0 и замер
+  «до» для avatar-ik (поздний клиент к серверу с 8 ботами, 6344).
+

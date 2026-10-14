@@ -1,0 +1,20 @@
+{
+  "task_id": "codex-specialist-startup",
+  "owner": "coordination-maintenance",
+  "client": "codex",
+  "worktree": "F:/CodexWorktrees/agent-coordination-protocol/Vr_Battlegrounds_ai",
+  "base_sha": "a09bac8e9146d2604968bd239b1d0f19a8bcf336",
+  "doc_path": "tasks/codex-specialist-startup/Readme.md",
+  "title": "Автоматическая роль основной сессии Codex",
+  "stages": [
+    {
+      "id": "configuration",
+      "writes": [
+        ".codex/config.toml",
+        "tasks/codex-specialist-startup/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

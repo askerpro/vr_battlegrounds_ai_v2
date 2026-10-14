@@ -1,7 +1,7 @@
 {
   "task_id": "haptics-system",
   "owner": "manipulation",
-  "client": "claude",
+  "client": "codex",
   "worktree": "F:/CodexWorktrees/manipulation/Vr_Battlegrounds_ai",
   "base_sha": "4640ccd500edc0fd55a7d97738e1e0fb9e6e9ae6",
   "doc_path": "tasks/haptics-system/Readme.md",

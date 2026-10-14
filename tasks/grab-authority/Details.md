@@ -192,3 +192,30 @@ Finish сразу после terminal:660 DONE, R `eb1ad70bc07cf6488e69d995a90df
 paths=[] unexpected=[], receive received=true/paths=[]. Worker освобождён на принятую базу.
 Негативный RED-снимок в candidate не входит. Кандидат сверяется с GREEN по Assets/Packages/ProjectSettings;
 различия допустимы только в task/expert docs и исключённых из этапа haptics-документах.
+
+## Вливание принятого этапа
+
+WIP сохранён в локальной backup-ветке `codex/manipulation-pocket-wip-backup-20261014` и свёрнут
+в `feae75b5626d51e967882ca3a7df35ef71d6c7a7` (20 принадлежащих этапу файлов).
+Документы haptics остались локально. Совпадение Assets/Packages/ProjectSettings/Tools с
+проверенным GREEN input подтверждено `git diff --exit-code`, код возврата0.
+Финальные физические/staged LF-проверки14/14, issues=[]; staged diff-check чистый.
+
+SHA проверен и принят в hub. Merge-request `311bbf32220b4985bd87a1d462c29539`, epoch5:
+merge-execute вернул merged, push_in_progress=false, remote_head=feae75b56.
+Свежий fetch подтвердил origin/dev=feae75b56; force-push не использовался.
+Публикация принятой базы worker подана штатно №661; QUEUED пока не объявляется DONE.
+
+Локальная ветка dev наблюдалась на `e78dc38ad8bd761847a6654c39af13109a3909d3`,
+remote dev на feae75b56. Подтверждены ancestry и main checkout на другой ветке scene-detail;
+штатный `git fetch origin dev:dev` обновил только ref dev fast-forward до feae75b56.
+Файлы main checkout не менялись, его ветка не переключалась.
+
+Публикация661 завершена DONE, result_sha=feae75b56. Свежая конфигурация брокера
+подтверждает baseline_sha=feae75b5626d51e967882ca3a7df35ef71d6c7a7.
+
+Обещанные уведомления сохранены и опубликованы последовательно:
+network7085, weapon-system7087, bots7089, gameplay7091, launch-infra7093, avatar-ik7095.
+Native-доставка не заявляется и не заменяет ACK; сообщение о merged содержит точный SHA и доказательства.
+Завершающий документационный commit обновляет только task/expert статусы и ранее локальные
+haptics-документы. Mode off проверен вновь; прямой fast-forward допустим в legacy-ветке правил.

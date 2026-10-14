@@ -1,6 +1,6 @@
 # grab-authority — авторство хвата, поздний вход, карман и кобуры
 
-Обновлено2026-10-14. Владелец `manipulation`, Codex; worktree
+Обновлено 2026-10-14. Владелец `manipulation`, Codex; worktree
 `F:/CodexWorktrees/manipulation/Vr_Battlegrounds_ai`, ветка `haptics`.
 План [plan.json](plan.json), зарегистрированная редакция13; доказательства [Details.md](Details.md).
 
@@ -11,7 +11,7 @@
 | `held-motion` — SDK73 | влит `ae016723c` |
 | `late-join-anchors` — SDK75 | влит `8306c6a86`, принят по стенду |
 | `death-release-authority` | снят: реализован gameplay `death-body-defer` |
-| `pocket-active-hide` | пользователь принял; GREEN660 пройден; кандидат готовится к вливанию |
+| `pocket-active-hide` | **влит `feae75b56`** fast-forward в origin/dev; принят пользователем, GREEN 470/470 |
 | `holster-calibration-scale` | planned; после merged `scale-events` и `pocket-active-hide` |
 
 ## Принятая архитектура
@@ -39,8 +39,11 @@ Collision-ignore пропускает объекты вне сцены с одн
 Пользователь2026-10-14: «считай я принял - вливай». Вопросов по приёмке нет;
 новая физическая Quest-проверка агентом не заявляется.
 
-После свёртки WIP: verify → accept → merge-request → merge-execute, затем request-base и
-уведомления network/weapon-system/bots/gameplay/launch-infra. Игровые файлы кандидата сверяются с GREEN.
+WIP свёрнут в один принятый коммит `feae75b5626d51e967882ca3a7df35ef71d6c7a7`.
+Verify/accept/merge-execute завершены; remote dev и merged в хабе проверены.
+Публикация worker-базы №661 DONE: текущая база `feae75b56`, подтверждена конфигурацией брокера.
+Владельцы уведомлены (inbox 7085/7087/7089/7091/7093/7095); локальный ref dev синхронизирован fast-forward.
+Игровые файлы коммита полностью совпадают с GREEN.
 Документы другой своей задачи haptics остаются локально и не входят в этот этап.
 
 Кобуры: контракт `calibration-scale-events` r1 agreed, события ещё не merged.

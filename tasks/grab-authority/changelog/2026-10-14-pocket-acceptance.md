@@ -22,3 +22,7 @@ GREEN660: AndroidCompileGate PASS0,470/470 профильных тестов,0 f
 новые9/9 и LooseItems12/12. Полные доказательства в reports/worker-660-green/ (вне Git).
 660 DONE, receive paths=[] unexpected=[]. При commit сверяется совпадение игровых файлов
 с проверенным GREEN-снимком; пользовательская приёмка записывается в hub для конкретного SHA.
+
+Влито fast-forward в origin/dev: `feae75b5626d51e967882ca3a7df35ef71d6c7a7`.
+Hub: verified → accepted → merged, request `311bbf32220b4985bd87a1d462c29539`.
+Удалённая ветка подтверждена свежим fetch; публикация worker-базы №661 DONE, базаfeae75b56.

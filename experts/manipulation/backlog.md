@@ -1,8 +1,8 @@
 Обновлено 2026-10-14 (сверка хаба и брокера в Codex). Кандидаты вне хаба; порядок — приоритет. §N — `Docs/manipulation/architecture.md`.
 
-1. `anchored-ignore-guard` — реализован в `grab-authority/pocket-active-hide`, ещё не влит. Пропуск коллайдеров вне сцены + один GameLog.Error на handle (launch-infra 6032/6075); null-проверка `NetworkImplementation` патча 75 (gameplay 6160). Ревью без findings; текущий worker641 DONE: Android PASS, EditMode604/613 (9 известных отказов вне этапа), приёмка pending. Ветка rebased, доказательства — `tasks/grab-authority/Details.md`. Корень утечки — разборка арсенала при выгрузке, gameplay.
+1. `anchored-ignore-guard` — влит с `grab-authority/pocket-active-hide` (`feae75b56`), принят пользователем. Пропуск объектов вне сцены + одна GameLog.Error на handle; null-проверка SDK75 включена. GREEN660: Android PASS и470/470, RED655 подтвердил чувствительность тестов. launch-infra7093/gameplay7091 уведомлены. Корень прежней утечки — разборка арсенала, gameplay.
 2. `holster-calibration-scale` — уже этап `grab-authority`, planned. Согласованное решение: локально на каждой машине запомнить мировой масштаб предметов в якорях по `ScaleChanging`, вернуть через `localScale` по `ScaleChanged`; без снятия с якоря и синхронизации UXR. Контракт `calibration-scale-events` r1 agreed; `scale-events` running после rebase, прогон638 Android PASS и 26/26 существующих тестов (6819), приёмка pending, не merged. Ждёт также вливания `pocket-active-hide`.
-3. `pocket-active-hide` — уже этап `grab-authority`, running, не влит. Хранение под выключенным контейнером реализовано и исторически проверено стендом592/601; последние защитные правки прошли компиляцию и профильные существующие проверки на worker641. Весь набор604/613 (9 известных отказов вне этапа); весь этап ждёт отложенной приёмки в шлеме. Подробности и ограничения — Readme задачи.
+3. `pocket-active-hide` — принят и влит `feae75b56`, база опубликована661 DONE. Storage/масштаб/события закреплены новыми тестами, GREEN660470/470. Более широкий641 сохраняет9 известных внешних отказов; не маскируются. Подробности — Readme/Details задачи.
 4. `pocket-nonnetworked-items` — встроенный (не сетевой, без NetworkIdentity) магазин оружия, положенный в карман рукой, не попадает в `_pocketMagazines` (SyncList по netId) → опоздавший не видит его в кармане (стенд pocket-active-hide, тикет 592; не регрессия). Вариант: состояние кармана по UniqueId через снимок UXR вместо netId — с network.
 5. `grabproxy-client-send` — при уничтожении тела клиенты шлют `IsGrabbable=False` для `GrabProxy` кармана (сервер отбрасывает: «Target component wasn't found»; прогоны 453/465/526/540) — синхронизируемый вызов не от автора.
 6. `server-grab-validation` — сервер не проверяет правила хвата, кроме арсенала (`ServerRejectTake`); с network — §8.
@@ -20,9 +20,9 @@
 
 ## Обещания другим агентам (на 2026-10-14)
 
-- weapon-system (5665/6312) и network (5738/6343): дифф pocket-active-hide уже у них; после вливания — уведомить (stage_merged_notice).
-- bots-fix: «боты с оружием в матчах» — наши блокеры закрыты (патчи 73, 75; смерть — gameplay); после вливания pocket-active-hide уведомить (поздний вход магазинов кармана).
-- launch-infra (6032/6075): страховка AnchoredItemCollisionIgnore — один GameLog.Error на сцену; сообщить после вливания.
-- gameplay (6160): null-проверка NetworkImplementation в патче 75 — в pocket-active-hide; сообщить после вливания.
+- weapon-system7087 и network7085: уведомлены о вливании pocket-active-hide.
+- bots-fix7089: уведомлён о позднем входе магазинов кармана; наши прежние блокеры закрыты.
+- launch-infra7093: уведомлён о влитой защите AnchoredItemCollisionIgnore.
+- gameplay7091: уведомлён о влитой null-проверке SDK75.
 - avatar-ik (calibration-scale-events r1, ACK 5985): подписчик manipulation для кобур — локально на каждой машине; этап holster-calibration-scale после вливания их scale-events.
 - avatar-grip (5678): зависимость item-clicks от hand-rig-quality/cyborg-grips выполнена (merged, сверено в хабе 2026-10-14); остаётся sources.

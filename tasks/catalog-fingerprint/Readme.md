@@ -1,52 +1,58 @@
-# Отпечатки каталога карт не зависят от окружения
+# catalog-fingerprint — отпечатки каталога карт и preflight
 
-2026-10-12. Владелец — эксперт `gameplay`. Задача выбрана пользователем 2026-10-12 («бейкер утилиту исправь»).
+Владелец — эксперт `gameplay`. Обновлено 2026-10-14 (передача Claude → Codex). Машинный план — [plan.json](plan.json).
 
-## Проблема
+## Статус
 
-`MapRunPreflight.AssetHash` был `AssetDatabase.GetAssetDependencyHash` — хеш сырых байтов файла. После EOL PhaseB
-YAML в Git хранится в LF, а в старых рабочих копиях лежит в CRLF, пока Unity не пересохранит файл. Один коммит
-давал разные отпечатки:
-- ложные `Catalog.Content.Stale` / `Catalog.Arsenal.Stale` в preflight (weapon-system 4757: rebake в worker
-  поменял отпечатки всех 7 карт, хотя менялся только пресет лобби);
-- каталог пересобирается при сборке (`MapCatalogBuildStep` → `RebakeCatalog`), а клиент сверяет свой
-  `ContentFingerprint` с серверным (`MapBootstrap.cs:690`) — сборки одного коммита с разных машин могли
-  отказать друг другу («разные сборки»).
+| Этап | Состояние | Где |
+|---|---|---|
+| `env-independent` | влит, принят пользователем 2026-10-12 | origin/dev e330b6162 |
+| `preview-loaded-scene` | код готов, **Unity не проверен**, этап в хабе `planned` (остановлен при передаче) | ветка `claude/preview-loaded-scene`, HEAD 3eb3aff7f (код e219e2341) |
+| `accepted-tests` | не начат | после `preview-loaded-scene ≥ merged` |
 
-## Решение
+## Что сделано
 
-`AssetHash` = SHA256 содержимого файла и его `.meta`; текстовый YAML Unity (`%YAML…` / `fileFormatVersion:`)
-хешируется с CRLF → LF (как хранит Git), бинарный ассет — как есть. Версии формата: `asset-content-v2`,
-`map-content-v2`, `arsenal-content-v2` — старый каталог явно устаревает, нужен `RebakeCatalog`.
+- `env-independent`: `MapRunPreflight.AssetHash` = SHA256 содержимого файла + `.meta`, текстовый YAML Unity с CRLF→LF
+  (как в Git), формат v2. Причина: `GetAssetDependencyHash` зависел от EOL рабочей копии → ложные `Catalog.*.Stale` и
+  риск «разные сборки» клиент/сервер (`MapCatalogBuildStep` пересобирает каталог при сборке, `MapBootstrap.cs:690`
+  сверяет отпечаток). Проверено в аренде 503 (CRLF-копия worker): RebakeCatalog 7/7, 14 отпечатков = расчёт по
+  LF-blob Git, EditMode Maps 253 (6 известных FAIL level-design вне этапа), Play лобби Ready.
+- `preview-loaded-scene` (находка launch-infra 5478, дизайн согласован 5483): если сцена карты уже загружена в Editor,
+  `Validate` проверяет её саму (общий `ValidateSceneContent`), preview не открывает; dirty — отказ `Scene.Dirty:<map>`
+  с подсказкой сохранить; иначе прежний путь `OpenPreviewScene`. Офлайн-компиляция Editor-сборки — 0 ошибок.
 
-## Этапы
+## Следующий шаг
 
-1. `env-independent` — `MapRunPreflight.cs` + пересборка `MapRuntimeCatalog.asset` в Unity (`RebakeCatalog`),
-   preflight 7/7, EditMode Maps (`MapCatalogIntegrityTests`, `MapRunContractTests`), Play лобби до Ready.
-2. `preview-loaded-scene` (находка launch-infra 5478, 2026-10-13) — сборка из открытого Editor падает, если сцена
-   карты из каталога загружена: `MapRunPreflight.Validate` открывает её копию через `OpenPreviewScene`, объекты копии
-   получают те же sceneId, `NetworkIdentity.AssignSceneID` бросает. Исправление (дизайн согласован с launch-infra
-   5483): уже загруженную сцену проверять саму, без preview; dirty — именованный отказ `Scene.Dirty:<map>` с
-   подсказкой сохранить; иначе как раньше. Второго предохранителя в GameBuilder нет — правило одно, в preflight.
-3. `accepted-tests` — после приёмки обоих этапов: `MapRunPreflightTests` — CRLF и LF дают один отпечаток;
-   загруженная/dirty сцена.
+1. `git switch claude/preview-loaded-scene`, rebase на origin/dev (там материалы лобби URP 77ef97d15), `begin` этапа
+   `preview-loaded-scene`, checkpoint → request (`--task catalog-fingerprint`) → claim → begin → guard.
+2. В аренде: (а) RebakeCatalog с открытой сохранённой Lobby — passed, сцена не закрыта/не сохранена; (б) Lobby dirty
+   (`EditorSceneManager.MarkSceneDirty`) → отказ `Scene.Dirty:Lobby`, сцена осталась dirty; (в) сборка e2e-плеера с
+   открытой Lobby (`E2EPlayerBuilder.Run` через одноразовый `EditorApplication.update`, не delayCall) — нет ошибки
+   sceneId; (г) RebakeCatalog без открытых карт — как раньше. Результат аренды со сборкой меняет
+   `Assets/URPDefaultResources/PC.asset` (известный побочный эффект сборщика launch-infra) — не принимать (`receive`).
+3. Показать результат пользователю → приёмка → вливание → сообщить launch-infra (inbox quest-perf-pipeline: обход
+   «открыть пустую сцену перед сборкой» в Docs/testing.md больше не нужен) и level-design (lobby-decoration).
+4. `accepted-tests`: `Assets/Tests/EditMode/Maps/MapRunPreflightTests.cs` (+.meta) — CRLF и LF дают один отпечаток;
+   загруженная чистая / dirty сцена.
 
-## Состояние
+## Ждёт пользователя
 
-- 2026-10-12: код `AssetHash` написан. Офлайн-оракул (Python, тот же алгоритм) на 9 входах каталога + `.meta`:
-  хеш CRLF-рабочей копии == хеш LF-blob Git == хеш синтетической CRLF-версии — ALL OK. Unity не запускался.
-- 2026-10-12, аренда 503 (база b624fdb3c, вход 7237de44, результат e68fd064 IMPORTED), CRLF-рабочая копия worker
-  (Lobby.unity — 27012 CR):
-  - новый код загружен (рефлексия), отпечаток пресета лобби в Unity = расчёт по LF-blob Git (`bb0ef3a4…`);
-  - `RebakeCatalog`: preflight passed, 7/7 карт, 0 отказов (до исправления в этом worker — 13 ложных `Stale`);
-  - все 14 записанных отпечатков (7 карт × content/arsenal) совпали с независимым расчётом по Git входа A;
-  - EditMode (группы Maps/MapCatalogIntegrity/MapRunContract): 253, 6 FAIL — все известные вне этапа
-    (ArsenalMapGeometry TestMap1, Ambience BotCombatStand, LD-текстуры, LobbyLayout, LD20, LD23); каталог-тесты PASS;
-  - Play лобби через PlayLaunch (host): Ready, MapPlayable, MapRunValid, StartupError пусто, Console errors 0, cleanup ok.
-  - diff каталога: только 14 строк отпечатков.
-- 2026-10-12: `env-independent` принят пользователем (сессия эксперта gameplay); вливание в origin/dev. Входы каталога
-  в origin/dev после базы b624fdb3c не менялись — отпечатки актуальны. Не проверено: две реальные сборки
-  (сервер/клиент) из разных рабочих копий. Дальше: `accepted-tests` (EditMode: CRLF и LF дают один отпечаток).
-- Связи: weapon-system `sight-arsenal-dedupe` вписывает одну строку отпечатка лобби (разрешение 4912) —
-  после их вливания rebase и штатный rebake перезапишут все отпечатки форматом v2. `lobby-decoration`
-  (level-design) тоже пишет каталог — после вливания этого этапа их rebake даст стабильные значения.
+- Приёмка `preview-loaded-scene` после Unity-прогона.
+
+## Решения пользователя
+
+- 2026-10-12: «бейкер утилиту исправь» — `env-independent`; weapon-system на время исправления разрешён вариант А
+  (одна строка отпечатка лобби вручную, 4912). «принимаю» — `env-independent`.
+- 2026-10-13: «идем по твоим рекомендациям — arsenal пока откладываем» — `preview-loaded-scene` взят в работу.
+
+## Риски и ловушки
+
+- Каталог пересобирать только `MapBootstrapMigration.RebakeCatalog`, YAML руками не править.
+- Отпечатки v2 зависят только от содержимого; любая правка сцены/MapData/реестра режимов/пресета требует rebake.
+- Не проверено: две реальные сборки (сервер/клиент) из разных рабочих копий.
+
+## Коммуникация (для Codex)
+
+Inbox: `python Tools/agents/coordination.py inbox --owner gameplay --unread --as "<свой адрес>"`; ожидание —
+`wait-inbox --owner gameplay --as "<свой адрес>"` фоновой командой. Вопросы пользователю — явным сообщением с пометкой
+«ЖДЁТ ОТВЕТА» и дублем в «Ждёт пользователя».

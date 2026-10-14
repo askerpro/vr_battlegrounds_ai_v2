@@ -1,41 +1,53 @@
-# Разборка станций арсенала при выгрузке карты не оставляет предметы вне сцены
+# arsenal-unload-teardown — разборка станций арсенала при выгрузке карты
 
-2026-10-13. Владелец — эксперт `gameplay`. Находка manipulation 6071/6073 (копия launch-infra 6032/6077); приоритет
-пользователя — то, что мешает игровой логике и чего ждут другие.
+Владелец — эксперт `gameplay`. Обновлено 2026-10-14 (передача Claude → Codex). Машинный план — [plan.json](plan.json),
+подробности — [Details.md](Details.md).
 
-## Проблема
+## Статус
 
-На выделенном сервере после перезагрузки карты — 88× Error «Tried to ignore collisions … not part of a UnityScene»,
-прогон launch-infra `map-run-startup-route` красный. Цепочка: `MapBootstrap.OnDestroy` (:146) → `RetireServerRun` →
-`MapRunAuthority.DisposeScope` (:199) → `ArsenalCompositionHandle.Dispose` (`ArsenalStationComposer.cs:44-56`):
-обходит `slot.GetComponentsInChildren<UxrGrabbableObject>(true)` и делает `SetParent(null, true)` каждому чужому
-предмету, включая вложенные в оружие (стартовые магазины, Slide). Это идёт во время выгрузки сцены — новые корни
-переживают выгрузку вне сцены; `AnchoredItemCollisionIgnore` (manipulation) у оставшегося оружия трогает коллайдеры вне
-сцены. Оставшееся серверное оружие держит `NetworkIdentity` в `NetworkServer.spawned`.
+| Этап | Состояние | Где |
+|---|---|---|
+| `top-level-detach` | влит, принят пользователем 2026-10-14 | origin/dev ec0887cf5 (fix 66ce3afcf, diag 4a66b6680) |
+| `accepted-tests` | не начат | после `top-level-detach ≥ merged` (выполнено) |
 
-## Решение (направление)
+## Что сделано
 
-1. Отцеплять только предметы верхнего уровня (без хватаемого предка ниже слота) — вложенные едут с родителем.
-2. При разборке во время выгрузки сцены не переподвешивать в корень: предметы уходят вместе со сценой (сетевые — без
-   висящих записей в `spawned`). Отцепление в корень остаётся только для разборки при живой сцене.
+- Находка manipulation 6071 / launch-infra 6032: на выделенном сервере после перезагрузки карты 88× «Tried to ignore
+  collisions … not part of a UnityScene». `ArsenalCompositionHandle.Dispose` отцеплял в корень каждый чужой
+  `UxrGrabbableObject`, включая вложенные магазины/Slide, и делал это при выгрузке сцены.
+- Исправление: отцеплять только чужие предметы верхнего уровня; явный признак выгрузки от владельца сцены —
+  `MapBootstrap.OnDestroy` → `ArsenalStationComposer.ReleaseWithScene(scene)` → `Dispose` ничего не переподвешивает,
+  предметы уходят со сценой (сетевые снимает Mirror). `Forget` сверяет станцию по ссылке.
+- Постоянная диагностика: через кадр после загрузки карты `MapBootstrap` пишет «[MapBootstrap] <карта>: после загрузки —
+  grabbable вне сцены=M, spawned вне карты=N» (Match; Warning при ненулевых).
+- Проверки: ревью network ACK 6107, manipulation 6201; launch-infra Run-E2E map-run-startup-route (TestMap1, сервер +
+  2 клиента, перезагрузка) — GREEN 6334: 0 вместо 88, 0 «not cleaned up», 0 UxrComponentNotFound, 0 Relay, 0/0.
 
-## Этапы
+## Следующий шаг
 
-1. `top-level-detach` — правка разборки; проверки: после `MapLoader.LoadMap` той же карты 0 `UxrGrabbableObject` с
-   невалидной сценой, нет «not cleaned up», 0 «Tried to ignore collisions»; прогон launch-infra `map-run-startup-route`.
-   Ревью: manipulation (предметы/якоря), network (spawned).
-2. `accepted-tests` — после приёмки: EditMode-тест разборки (вложенные предметы, выгрузка).
+1. Дождаться штатного прогона launch-infra map-run-startup-route с полным вердиктом по логам на базе после вливания
+   (запрошен 6367) и снятия дефекта `anchored-ignore-collision-prefab` из `Tools/e2e/known-noise.json`. Если Warning
+   счётчика ненулевой — разобрать (возможен ложный N>0, если сетевые объекты сервера штатно живут вне сцены карты и
+   DontDestroyOnLoad).
+2. `accepted-tests`: `Assets/Tests/EditMode/Arsenal/ArsenalCompositionTeardownTests.cs` (+.meta) — вложенный предмет
+   не отцепляется отдельно, верхний — отцепляется при живой сцене, при `ReleaseWithScene` — ничего не переподвешивается.
+   Затем прогон в аренде, показ пользователю, вливание.
 
-## Состояние
+## Ждёт пользователя
 
-- 2026-10-13: задача заведена.
-- 2026-10-14: `top-level-detach` — `ArsenalCompositionHandle.Dispose` отцепляет только чужие предметы верхнего уровня;
-  `MapBootstrap.OnDestroy` → `ArsenalStationComposer.ReleaseWithScene` (явный признак выгрузки от владельца сцены) —
-  при выгрузке предметы уходят со сценой, без переподвешивания в корень; `Forget` по ссылке. Диагностика: через кадр
-  после загрузки карты строка `[MapBootstrap] <карта>: после загрузки — grabbable вне сцены=M, spawned вне карты=N`
-  (Warning при ненулевых). Ревью: network ACK 6107, manipulation 6201. Проверка: launch-infra Run-E2E
-  map-run-startup-route (TestMap1, выделенный сервер + 2 клиента, перезагрузка карты, плеер кандидата ad72274) —
-  GREEN (6334): 0 «Tried to ignore collisions» (до исправления 88), 0 «not cleaned up», 0 UxrComponentNotFound,
-  0 ошибок Relay, счётчики 0/0 в обе загрузки. Ограничение: плеер до вердикта по логам (0cd489fd) — полный вердикт в
-  прогоне после вливания. Офлайн-компиляция VrBattlegrounds — 0 ошибок. Принят пользователем 2026-10-14; вливание.
-- Дальше: `accepted-tests` (EditMode-тест разборки: вложенные предметы, выгрузка).
+- Ничего (этап принят). `accepted-tests` — приёмка после прогона.
+
+## Решения пользователя
+
+- 2026-10-13: «чиним то, что мешает игровой логике и что ждут другие» — задача взята в работу.
+- 2026-10-14: «Принимаю, вливай» (AskUserQuestion) — `top-level-detach`, полный вердикт по логам — после вливания.
+
+## Риски и ловушки
+
+- После отцепления при живой сцене у предмета может остаться ссылка на уничтоженный якорь слота (было и до правки).
+- `arsenal-generator/acceptance` (отложен) идёт после этого этапа — порядок записан в его plan.json.
+
+## Коммуникация (для Codex)
+
+Inbox: `python Tools/agents/coordination.py inbox --owner gameplay --unread --as "<свой адрес>"`; ожидание —
+`wait-inbox --owner gameplay --as "<свой адрес>"` фоновой командой. Вопросы пользователю — сообщением «ЖДЁТ ОТВЕТА».

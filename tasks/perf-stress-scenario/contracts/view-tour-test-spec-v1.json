@@ -1,0 +1,77 @@
+{
+  "schema": "performance-view-tour-test-spec/1",
+  "status": "prepared-awaiting-supported-executor",
+  "task_id": "perf-stress-scenario",
+  "stage": "view-tour",
+  "owner": "performance",
+  "created": "2026-10-15",
+  "purpose": "Подтвердить существующие DevTools EditMode-тесты принятого пользователем view-tour.",
+  "executor": {
+    "access": "Только опубликованный штатный маршрут через editor broker и собственную RUNNING аренду.",
+    "selection": "После подтверждения сопровождающего: исправленный MCP или выпущенный production CLI executor.",
+    "current_blocker_event": 7318,
+    "policy_event": 7375,
+    "direct_cli_or_alternative_client": false,
+    "infra_repair_by_requester": false
+  },
+  "input": {
+    "reference_checkpoint_sha": "28afff07470f524780b001587c6303907de185e6",
+    "reference_base_sha": "54673ba496688efbb5c0dd1aaba6287cbe8feb4a",
+    "reference_source_commit": "832d7f50f",
+    "source_worktree": "F:/CodexWorktrees/performance/Vr_Battlegrounds_ai",
+    "bind_before_request": "После fetch/rebase создать новый immutable checkpoint и связать его SHA, SHA256 этой спецификации и новый run_id с новой заявкой. Не переиспользовать ticket/lease неизвестных запусков.",
+    "physical_source_sha256": {
+      "Assets/Tests/EditMode/DevTools/StressTestPlanTests.cs": "f8a420e0660b6a143fe439dacfd5378c23109f34c90ad9e79b531b0dbd1569aa",
+      "Assets/Tests/EditMode/DevTools/PerfStressScenarioArgsTests.cs": "a554fe45ef58819a0f9918483ab700f366f0c6a41a4bb806d0c501fa0c474cc8",
+      "Assets/Tests/EditMode/VrBattlegrounds.Tests.EditMode.asmdef": "b132e2e37001388c1b6b3525301227420a49babed5a7e068787e8d6ca4ee4878"
+    },
+    "hash_scope": "Физические байты своего checkout на момент подготовки; executor обязан связать канонические входные blobs с новым checkpoint. Изменение EOL не считается изменением логики, но требует явной новой привязки доказательств."
+  },
+  "tests": {
+    "mode": "EditMode",
+    "assembly_names": ["VrBattlegrounds.Tests.EditMode"],
+    "namespace": "VrBattlegrounds.Tests.DevTools",
+    "namespace_match": "Только этот namespace и его дочерние; не подменять всю сборку или соседние группы.",
+    "include_all_case_details": true,
+    "expected_total": null,
+    "total_rule": "Записать discovery manifest до запуска; total > 0 и точное совпадение множества discovered/terminal cases. Общее число DevTools заранее не выдумывается.",
+    "required_new_cases": 17,
+    "required_methods": [
+      {"fixture": "StressTestPlanTests", "method": "ViewTour_BaseOnEveryView_ThenPuppetsOnEveryView", "cases": 1},
+      {"fixture": "StressTestPlanTests", "method": "ViewTour_OnlyNamedPhasesMeasured_SettleNot", "cases": 1},
+      {"fixture": "StressTestPlanTests", "method": "ViewTour_NoPuppets_OnlyBaseViews", "cases": 1},
+      {"fixture": "StressTestPlanTests", "method": "ViewTour_NormalMode_SamePlanAsMapOnly", "cases": 1},
+      {"fixture": "StressTestPlanTests", "method": "ViewTour_PhaseNames_FromPrefixes", "cases": 1},
+      {"fixture": "StressTestPlanTests", "method": "ViewTour_DefaultConfig_NoTour", "cases": 1},
+      {"fixture": "StressTestPlanTests", "method": "ViewTour_SurvivesNetworkMessage_NullBecomesEmpty", "cases": 1},
+      {"fixture": "StressTestPlanTests", "method": "ViewTour_ViewPointExclusion_KeepsPuppetsOutOfClearance", "cases": 1},
+      {"fixture": "PerfStressScenarioArgsTests", "method": "Views_TurnsOnArena_ShortPhasesByDefault", "cases": 1},
+      {"fixture": "PerfStressScenarioArgsTests", "method": "Views_ExplicitPhase_Wins", "cases": 1},
+      {"fixture": "PerfStressScenarioArgsTests", "method": "Views_ShortMode_KeepsShortPhases", "cases": 1},
+      {"fixture": "PerfStressScenarioArgsTests", "method": "Views_WithLayoutArena_Accepted", "cases": 1},
+      {"fixture": "PerfStressScenarioArgsTests", "method": "Views_Incompatible_Refused", "cases": 4,
+        "arguments": [["views", " "], ["views", "v.json", "layout", "default"], ["views", "v.json", "mode", "per-skin"], ["views", "v.json", "clutter", "5"]]},
+      {"fixture": "PerfStressScenarioArgsTests", "method": "Views_DescribeShowsViewCount", "cases": 1}
+    ]
+  },
+  "outputs": {
+    "logical_root": "tasks/perf-stress-scenario/reports/unity-tests/{run_id}/",
+    "required": ["run-receipt.json", "discovered-tests.json", "test-results.xml", "editor.log", "terminal-result.json", "evidence.json"],
+    "binding": "Физический output root согласовывается с опубликованной схемой executor перед request; вне Assets, уникален для run_id, внутри разрешённой области отчётов. Сохранить полные outputs в ignored reports своего checkout до finish; --artifact для Git-доставки отчётов не применять.",
+    "evidence_fields": ["run_id", "ticket_id", "request_id", "job_id_or_executor_operation_id", "input_sha", "spec_sha256", "runtime_version", "unity_version", "worker_root", "worker_pid", "worker_session", "started_utc", "finished_utc", "exit_code", "artifact_sha256"],
+    "secrets": "Не сохранять и не пересылать capability tokens и секреты; ошибки и логи redacted без потери идентификаторов операции."
+  },
+  "acceptance": {
+    "passed": "Свежий, полностью атрибутированный terminal Result и XML: каждый discovered case Passed, failed/skipped/inconclusive=0, все 17 новых случаев присутствуют ровно в нужном количестве; штатный executor подтверждает нормальное завершение.",
+    "unknown": "Нет квитанции или полного terminal result/XML, разрыв транспорта, timeout либо потеря корреляции: UNKNOWN, без автоматического retry/replay/clear_stuck/Refresh.",
+    "failed": "Полный атрибутированный итог с отказом теста: FAILED с полным XML/log; не терять Result при отрицательном состоянии.",
+    "scope": "EditMode логика DevTools. Не APK/Quest, не перф-бюджеты, не повторная игровая приёмка."
+  },
+  "cleanup": [
+    "До запуска guard подтверждает собственную RUNNING аренду, input/root/session и idle; не прерывать чужие операции.",
+    "Один независимый запуск на новый run_id; во время активной операции только наблюдение своего job и штатный renew.",
+    "Полный terminal result и отчёты сохранить до finish. Затем сразу штатный finish/restore и receive, включая FAILED при idle.",
+    "При UNKNOWN сначала readonly native/durable состояние: не finish поверх активных tests/compile/Play и не чинить общую инфраструктуру. Немедленно infra_issue сопровождающему через hub и подтверждённый Codex канал.",
+    "Выходной diff Unity-ассетов не ожидается. Неожиданные пути сохранить в broker result, не принимать автоматически. Не удалять чужие файлы/отчёты и не менять общий worker за пределами штатного broker flow."
+  ]
+}

@@ -27,6 +27,9 @@
 
 1. `view-tour`: дождаться диагноза сопровождающего по infra_issue7318 (продолжение7008),
    затем готовить следующий ограниченный пакет только по подтверждённому маршруту.
+   По infra_status7375 подготовлена `contracts/view-tour-test-spec-v1.json`: неизменяемая
+   спецификация фильтров/17 новых случаев, XML/log/receipt/correlation и cleanup. Это подготовка,
+   не запуск и не утверждение совместимости с пока не выпущенной схемой CLI executor.
    После worker_ready7257/SDKunity-mcp2 проведён новый независимый пакет670: свежая
    AndroidCompileGate PASS0; run_tests EditMode/DevTools потерял plugin session до job_id.
    Исходы634/654/670 UNKNOWN; инфраструктурные smoke-проверки не заменяют результаты DevTools.

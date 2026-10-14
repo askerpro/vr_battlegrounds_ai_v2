@@ -21,7 +21,7 @@
 | `scenario` | сценарий `perf-stress` без рук: обе роли, параметры `-e2eArg`, артефакты | merged `fa83395aa` |
 | `controller-free-launch` | Test-сборки Quest стартуют без пробуждения контроллеров: рук в манифесте (Test only) | merged `3cabcc1ab` |
 | `arena-layout` | раскладка кукол «внутри арены», корни кукол не следуют за игроком | merged `2a5ed8f07` |
-| `view-tour` | обход точек обзора (`views=<файл>`), метрики по точкам | шлем GREEN, принят пользователем 2026-10-14; тесты EditMode |
+| `view-tour` | обход точек обзора (`views=<файл>`), метрики по точкам | шлем GREEN, принят пользователем 2026-10-14; тесты EditMode написаны, прогон на worker не состоялся (worker остановлен до 2026-10-15) — затем verify/accept/merge |
 | `docs` | раздел в `Docs/perf-stress-test.md`; порядок с legs-ik/`quest-perf` (тот же файл) — согласовать | planned |
 
 ## Зависимости

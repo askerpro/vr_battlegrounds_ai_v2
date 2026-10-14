@@ -46,7 +46,8 @@ namespace VrBattlegrounds.DevTools.E2E
 {
     public class E2EContext { public static E2EContext Create(string scenario, string role, string path, float timeout, string map, int clients, string address, string token, bool external) => new(); }
     public class E2EResult { public string Status; public bool Passed; }
-    public class E2ERunner : UnityEngine.MonoBehaviour { public bool Finished; public E2EResult Result; public static E2ERunner Begin(E2EContext context, bool quit) => null; }
+    public class E2ERunner : UnityEngine.MonoBehaviour { public bool Finished; public E2EResult Result; public static E2ERunner Begin(E2EContext context, bool quit) => null; public static bool IsRegistered(string name) => false; }
+    public static class E2EBarrier { public static void Arm(string runId) { } public static void Disarm() { } public static void Poll() { } }
 }
 namespace VrBattlegrounds.Maps.Runtime
 {

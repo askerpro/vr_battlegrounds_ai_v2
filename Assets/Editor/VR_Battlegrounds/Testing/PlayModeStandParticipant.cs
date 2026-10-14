@@ -126,6 +126,11 @@ namespace VrBattlegrounds.EditorTools.TestStand
             _startupError = null;
             BeginLogArchive(next.RunId, participant);
             _gate = new StandRequestGate(next.RunId, participant, Session, 256, StandManifest.CurrentPid);
+#if !VRBG_NO_E2E
+            // Обработчики барьера e2e — у всех участников до команды run-e2e: сервер начинает сценарий первым и шлёт
+            // e2e-ready клиентам, у которых без этого не было бы обработчика (Mirror разорвал бы соединение).
+            E2EBarrier.Arm(next.RunId);
+#endif
             EventService.Start();
             _unsubscribe = EventService.RegisterEventHandler(StandManifest.CommandEvent(next.RunId, Session),
                 (Func<string, object[], object>)HandleCommand);
@@ -136,6 +141,9 @@ namespace VrBattlegrounds.EditorTools.TestStand
             try
             {
                 Sync();
+#if !VRBG_NO_E2E
+                if (_gate != null && EditorApplication.isPlaying) E2EBarrier.Poll();
+#endif
                 if (_run == null || EditorApplication.timeSinceStartup < _nextHello) return;
                 _nextHello = EditorApplication.timeSinceStartup + 0.5;
                 EventService.Emit(StandManifest.HelloEvent, JsonUtility.ToJson(Snapshot()), -1, EventDataSerialization.JsonUtility);
@@ -163,7 +171,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
 #if VRBG_NO_E2E
                 return StandReply.Error("E2EDisabled");
 #else
-                if (request.Scenario != "session-recovery-on-reconnect") return StandReply.Error("e2e-scenario-unsupported");
+                if (!E2ERunner.IsRegistered(request.Scenario)) return StandReply.Error("e2e-scenario-unsupported");
                 if (!EditorApplication.isPlaying || !DebugBootstrapGate.ManagedLaunchActive) return StandReply.Error("managed-launch-required");
                 if (_run.Configuration.AutoGoLive || _run.Configuration.BotCount != 0) return StandReply.Error("e2e-launch-conflict");
                 if (!MapRunAdmission.IsLocalPlayable || !(MapBootstrap.ForScene(SceneManager.GetActiveScene())?.LocalRunKey.IsValid ?? false) ||
@@ -176,7 +184,12 @@ namespace VrBattlegrounds.EditorTools.TestStand
                     local.Role != "client" || NetworkServer.active || !NetworkClient.active || !NetworkClient.isConnected)
                     return StandReply.Error("e2e-role-not-ready");
                 string result = System.IO.Path.Combine(StandManifest.ProjectRoot, "Temp", "VRBattlegroundsTestStand", _run.RunId, "e2e-" + StandManifest.ParticipantName() + ".json");
-                var context = E2EContext.Create(request.Scenario, local.Role == "server" || local.Role == "host" ? "server" : "client",
+                // Роль как в плеере: сервер — server, участник с индексом N в topology — client-N; клиентов — ClientCount.
+                int participantIndex = Array.IndexOf(_run.Participants, StandManifest.ParticipantName());
+                string e2eRole = local.Role == "server" || local.Role == "host" ? "server" : "client-" + participantIndex;
+                if (participantIndex < 0 || (e2eRole != "server" && (participantIndex < 1 || participantIndex > _run.Configuration.ClientCount)))
+                    return StandReply.Error("e2e-topology-unsupported");
+                var context = E2EContext.Create(request.Scenario, e2eRole,
                     result, request.ScenarioTimeoutSeconds, System.IO.Path.GetFileNameWithoutExtension(_run.TargetScenePath),
                     _run.Configuration.ClientCount, local.ClientAddress, ClientDeviceIdentity.BaseToken, true);
                 _e2e = E2ERunner.Begin(context, false);
@@ -327,6 +340,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
 #if !VRBG_NO_E2E
             if (_e2e != null) UnityEngine.Object.DestroyImmediate(_e2e.gameObject);
             _e2e = null;
+            if (active) E2EBarrier.Disarm();
 #endif
             _gate?.Revoke(); _gate = null;
             _unsubscribe?.Invoke(); _unsubscribe = null;

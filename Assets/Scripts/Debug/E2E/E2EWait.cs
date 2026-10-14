@@ -2,7 +2,9 @@
 #if !VRBG_NO_E2E
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.DevTools.E2E
 {
@@ -21,6 +23,12 @@ namespace VrBattlegrounds.DevTools.E2E
 
         /// <summary>Ожидание прервано досрочно: ждать дальше стало бессмысленно.</summary>
         public bool Aborted;
+
+        /// <summary>
+        /// Ожидание упало: условие или <c>abortIf</c> бросили исключение. Вместе с ним стоит <see cref="Aborted"/>,
+        /// причина — в <see cref="AbortReason"/>.
+        /// </summary>
+        public bool Faulted;
 
         /// <summary>Сколько реально прождали, секунд.</summary>
         public float Elapsed;
@@ -48,6 +56,9 @@ namespace VrBattlegrounds.DevTools.E2E
                 if (Succeeded)
                     return $"дождались «{What}» за {Elapsed:F2} с. {Observed}";
 
+                if (Faulted)
+                    return $"ждали «{What}», но ожидание упало на {Elapsed:F2} с: {AbortReason}. На этот момент: {Observed}";
+
                 if (Aborted)
                     return $"ждали «{What}» до {Timeout:F0} с, но ожидание оборвалось на {Elapsed:F2} с: " +
                            $"{AbortReason}. На этот момент: {Observed}";
@@ -72,6 +83,12 @@ namespace VrBattlegrounds.DevTools.E2E
     /// <para>Поэтому <see cref="Until"/> принимает две функции сверх условия:
     /// <c>observe</c> снимает состояние мира в момент выхода, <c>abortIf</c>
     /// отвечает на вопрос «есть ли ещё смысл ждать».</para>
+    ///
+    /// <para>Исключение внутри <c>condition</c> или <c>abortIf</c> — не обрыв прогона без вердикта, а именованный
+    /// провал ожидания (<see cref="E2EWaitOutcome.Faulted"/>) и ошибка в журнале Unity. Общий таймаут сценария
+    /// проверяет <see cref="E2ERunner"/> каждый кадр, в том числе внутри длинного ожидания: вложенные итераторы он
+    /// прокручивает сам (<see cref="E2EScenarioStepper"/>), а в вердикт таймаута пишет текущее ожидание
+    /// (<see cref="CurrentWait"/>).</para>
     /// </summary>
     public static class E2EWait
     {
@@ -80,6 +97,33 @@ namespace VrBattlegrounds.DevTools.E2E
         /// зависит от <c>timeScale</c> и встаёт на паузах загрузки сцены.
         /// </summary>
         public static float Now => Time.realtimeSinceStartup;
+
+        /// <summary>Что сценарий ждёт прямо сейчас (для вердикта общего таймаута); null — не ждёт.</summary>
+        public static string CurrentWait { get; private set; }
+
+        /// <summary>Когда началось текущее ожидание, по <see cref="Now"/>.</summary>
+        public static float CurrentWaitStarted { get; private set; }
+
+        /// <summary>
+        /// Отмечает текущее ожидание для диагностики общего таймаута. Dispose снимает отметку, если она ещё своя.
+        /// </summary>
+        public static IDisposable Track(string what, float timeoutSeconds)
+        {
+            var mark = new WaitMark(what + $" (срок {timeoutSeconds:F0} с)");
+            CurrentWait = mark.Text;
+            CurrentWaitStarted = Now;
+            return mark;
+        }
+
+        private sealed class WaitMark : IDisposable
+        {
+            public readonly string Text;
+            public WaitMark(string text) => Text = text;
+            public void Dispose()
+            {
+                if (ReferenceEquals(CurrentWait, Text)) CurrentWait = null;
+            }
+        }
 
         /// <summary>
         /// Ждёт выполнения <paramref name="condition"/> не дольше
@@ -111,31 +155,63 @@ namespace VrBattlegrounds.DevTools.E2E
             outcome.Timeout     = timeoutSeconds;
             outcome.Succeeded   = false;
             outcome.Aborted     = false;
+            outcome.Faulted     = false;
             outcome.AbortReason = string.Empty;
 
-            while (true)
+            using (Track($"«{what}»", timeoutSeconds))
             {
-                if (condition())
+                while (true)
                 {
-                    outcome.Succeeded = true;
-                    break;
-                }
-
-                if (abortIf != null)
-                {
-                    string reason = abortIf();
-                    if (!string.IsNullOrEmpty(reason))
+                    string fault = null;
+                    bool met = false;
+                    try
                     {
-                        outcome.Aborted     = true;
-                        outcome.AbortReason = reason;
+                        met = condition();
+                    }
+                    catch (Exception e)
+                    {
+                        fault = $"условие бросило исключение {e.GetType().Name}: {e.Message}";
+                        GameLog.Debug.Error($"[E2E] Ожидание «{what}»: {fault}\n{e}");
+                    }
+
+                    if (met)
+                    {
+                        outcome.Succeeded = true;
                         break;
                     }
+
+                    if (fault == null && abortIf != null)
+                    {
+                        try
+                        {
+                            string reason = abortIf();
+                            if (!string.IsNullOrEmpty(reason))
+                            {
+                                outcome.Aborted     = true;
+                                outcome.AbortReason = reason;
+                                break;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            fault = $"abortIf бросило исключение {e.GetType().Name}: {e.Message}";
+                            GameLog.Debug.Error($"[E2E] Ожидание «{what}»: {fault}\n{e}");
+                        }
+                    }
+
+                    if (fault != null)
+                    {
+                        outcome.Aborted     = true;
+                        outcome.Faulted     = true;
+                        outcome.AbortReason = fault;
+                        break;
+                    }
+
+                    if (Now >= deadline)
+                        break;
+
+                    yield return null;
                 }
-
-                if (Now >= deadline)
-                    break;
-
-                yield return null;
             }
 
             outcome.Elapsed  = Now - started;
@@ -149,8 +225,11 @@ namespace VrBattlegrounds.DevTools.E2E
         public static IEnumerator Hold(float seconds)
         {
             float until = Now + seconds;
-            while (Now < until)
-                yield return null;
+            using (Track($"выдержка {seconds:F0} с", seconds))
+            {
+                while (Now < until)
+                    yield return null;
+            }
         }
 
         /// <summary>
@@ -170,6 +249,80 @@ namespace VrBattlegrounds.DevTools.E2E
             catch (Exception e)
             {
                 return $"(снимок состояния упал: {e.GetType().Name}: {e.Message})";
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ручная прокрутка сценария вместе с вложенными итераторами (<c>yield return E2EWait.Until(...)</c>,
+    /// <c>yield return E2EBarrier.WaitClients(...)</c>). Раньше вложенный итератор уходил Unity как вложенная корутина:
+    /// исключение в нём не доходило до исполнителя, а общий таймаут не проверялся, пока ожидание не кончится.
+    ///
+    /// <para>Вложенный <see cref="IEnumerator"/> (в том числе <c>CustomYieldInstruction</c>) прокручивается здесь же;
+    /// остальное (<c>null</c>, <c>WaitForSeconds</c>, <c>AsyncOperation</c>…) отдаётся Unity как есть. Исключение
+    /// любого уровня выходит из <see cref="MoveNext"/> к вызывающему. <see cref="Dispose"/> закрывает все открытые
+    /// итераторы сверху вниз — их <c>finally</c> выполняются и при обрыве прогона.</para>
+    /// </summary>
+    public sealed class E2EScenarioStepper : IDisposable
+    {
+        private const int MaxDepth = 64;
+        private readonly Stack<IEnumerator> _stack = new Stack<IEnumerator>();
+
+        public E2EScenarioStepper(IEnumerator root)
+        {
+            if (root == null) throw new ArgumentNullException(nameof(root));
+            _stack.Push(root);
+        }
+
+        /// <summary>Глубина вложенности открытых итераторов (0 — сценарий закончен).</summary>
+        public int Depth => _stack.Count;
+
+        /// <summary>
+        /// Один шаг: true — <paramref name="yielded"/> надо отдать Unity (кадр, ожидание движка); false — сценарий
+        /// закончен. Закончившийся вложенный итератор сразу продолжает родителя в том же шаге.
+        /// </summary>
+        public bool MoveNext(out object yielded)
+        {
+            while (_stack.Count > 0)
+            {
+                IEnumerator top = _stack.Peek();
+                if (!top.MoveNext())
+                {
+                    _stack.Pop();
+                    continue;
+                }
+
+                object current = top.Current;
+                if (current is IEnumerator nested)
+                {
+                    if (_stack.Count >= MaxDepth)
+                        throw new InvalidOperationException($"вложенность итераторов сценария больше {MaxDepth}");
+                    _stack.Push(nested);
+                    continue;
+                }
+
+                yielded = current;
+                return true;
+            }
+
+            yielded = null;
+            return false;
+        }
+
+        /// <summary>Закрывает открытые итераторы (их <c>finally</c>); исключения при закрытии не пробрасываются.</summary>
+        public void Dispose()
+        {
+            while (_stack.Count > 0)
+            {
+                IEnumerator top = _stack.Pop();
+                try
+                {
+                    (top as IDisposable)?.Dispose();
+                }
+                catch (Exception e)
+                {
+                    GameLog.Debug.Warning($"[E2E] Закрытие итератора сценария: {e.GetType().Name}: {e.Message}");
+                }
             }
         }
     }

@@ -8,6 +8,8 @@
     <DefineConstants Condition="Exists('../../Assets/Editor/VR_Battlegrounds/Testing/StandProtocol.cs')">$(DefineConstants);STAND_PROTOCOL_PRESENT</DefineConstants>
     <DefineConstants Condition="Exists('../../Assets/Scripts/Core/ClientDeviceIdentity.cs')">$(DefineConstants);PROFILE_SCOPES_PRESENT;UNITY_EDITOR</DefineConstants>
     <DefineConstants Condition="Exists('../../Assets/Scripts/Debug/Bootstrap/PlayLaunchConfiguration.cs')">$(DefineConstants);LAUNCH_CONFIGURATION_PRESENT</DefineConstants>
+    <!-- Барьер e2e: в харнесс идёт только чистая логика, сетевая обвязка Mirror вырезана. -->
+    <DefineConstants>$(DefineConstants);VRBG_E2E_CORE_ONLY</DefineConstants>
   </PropertyGroup>
   <ItemGroup><Compile Remove="obj/**;bin/**;EditorBindingStubs.cs" /></ItemGroup>
   <ItemGroup>
@@ -17,6 +19,9 @@
     <Compile Include="../../Assets/Scripts/Core/ClientDeviceIdentity.cs" Link="Production/ClientDeviceIdentity.cs" Condition="Exists('../../Assets/Scripts/Core/ClientDeviceIdentity.cs')" />
     <Compile Include="../../Assets/Scripts/Debug/E2E/E2EResult.cs" Link="Production/E2EResult.cs" />
     <Compile Include="../../Assets/Scripts/Debug/E2E/E2ELogCapture.cs" Link="Production/E2ELogCapture.cs" />
+    <Compile Include="../../Assets/Scripts/Debug/E2E/E2EContext.cs" Link="Production/E2EContext.cs" />
+    <Compile Include="../../Assets/Scripts/Debug/E2E/E2EWait.cs" Link="Production/E2EWait.cs" />
+    <Compile Include="../../Assets/Scripts/Debug/E2E/E2EBarrier.cs" Link="Production/E2EBarrier.cs" />
     <Compile Include="../../Assets/Scripts/Debug/Bootstrap/PlayLaunchConfiguration.cs" Condition="Exists('../../Assets/Scripts/Debug/Bootstrap/PlayLaunchConfiguration.cs')" />
     <Compile Include="../../Assets/Scripts/Debug/Bootstrap/PlayLaunchProfileStore.cs" Condition="Exists('../../Assets/Scripts/Debug/Bootstrap/PlayLaunchProfileStore.cs')" />
   </ItemGroup>

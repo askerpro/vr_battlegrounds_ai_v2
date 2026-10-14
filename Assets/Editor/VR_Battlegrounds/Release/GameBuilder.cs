@@ -91,6 +91,12 @@ namespace VrBattlegrounds.EditorTools.Release
         private static readonly string[] RequiredDefines = { "MIRROR", "ULTIMATEXR_USE_MIRROR_SDK" };
 
         /// <summary>
+        /// Вырезает e2e-харнесс (Assets/Scripts/Debug/E2E, его сообщения Mirror) из прод-сборки всех профилей:
+        /// сервер, Quest и планшет одинаково не знают e2e-сообщений (условие network этапа e2e-smoke-kit).
+        /// </summary>
+        private const string NoE2EDefine = "VRBG_NO_E2E";
+
+        /// <summary>
         /// Ключ opt-out диалога «Unsupported Input Handling on Android» (кнопки «Ignore» / «Cancel Build»)
         /// из UnityEditor.Android.Extensions, CheckPrerequisites.ValidateInputHandling.
         /// </summary>
@@ -486,7 +492,7 @@ namespace VrBattlegrounds.EditorTools.Release
                         PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel32;
                     }
 
-                    string[] extraDefines = ExtraDefines(profile, spec, result);
+                    string[] extraDefines = ExtraDefines(profile, spec, config, result);
                     if (!result.Passed) return false;
 
                     if (spec.Group == BuildTargetGroup.Android)
@@ -824,8 +830,9 @@ namespace VrBattlegrounds.EditorTools.Release
         /// <summary>
         /// Define-символы сверх Player Settings цели. У Dedicated Server свой набор, в проекте
         /// пустой: без символов Standalone сервер собрался бы без интеграции Mirror в UltimateXR.
+        /// Прод (<see cref="BuildConfig.Prod" />) всем профилям добавляет <see cref="NoE2EDefine" />; тест — без изменений.
         /// </summary>
-        private static string[] ExtraDefines(BuildProfile profile, Spec spec, Result result)
+        private static string[] ExtraDefines(BuildProfile profile, Spec spec, BuildConfig config, Result result)
         {
             var own = new HashSet<string>(Split(PlayerSettings.GetScriptingDefineSymbols(spec.Named)));
             var extra = new List<string>();
@@ -835,6 +842,9 @@ namespace VrBattlegrounds.EditorTools.Release
 
             if (profile == BuildProfile.Tablet)
                 extra.Add(AdminDefine);
+
+            if (config == BuildConfig.Prod && !own.Contains(NoE2EDefine) && !extra.Contains(NoE2EDefine))
+                extra.Add(NoE2EDefine);
 
             var effective = new HashSet<string>(own.Concat(extra));
 

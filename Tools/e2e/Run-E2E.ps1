@@ -25,6 +25,11 @@
 # -LogVerdict enforce (по умолчанию): неожиданные ошибки или падения делают зелёный прогон кодом 1;
 # -LogVerdict report — только отчёт.
 #
+# Каркас мультипроцессного сценария (e2e-smoke-kit, Docs/testing.md): всем процессам уходят -e2eClients N
+# (роли client-1..client-N) и параметры -Arg ключ=значение как -e2eArg; при -LateClientDelay — -e2eLate client-N
+# (последний клиент поздний; серверу роль нужна, чтобы барьеры без includeLate его не ждали). Журналы шагов
+# процессов (steps в их результатах) сводятся в общую ленту по UTC — блок steps в summary.json.
+#
 # Коды возврата:
 #   0 — все проверки зелёные, в логах нет неожиданных ошибок (или -LogVerdict report)
 #   1 — проверки прошли, часть красная (находка воспроизводится), или при enforce — неожиданные ошибки в логах
@@ -34,6 +39,7 @@
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -Map TestMap2 -Timeout 420
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -NetworkPort 27778 -DiscoveryPort 27777
+#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -Scenario <имя> -Clients 3 -LateClientDelay 60 -Arg map1=TestMap1,map2=TestMap2
 
 [CmdletBinding()]
 param(
@@ -64,6 +70,10 @@ param(
     # автоматически две свободные. Задаются только вместе; один без другого — ошибка.
     [int]    $NetworkPort = 0,
     [int]    $DiscoveryPort = 0,
+
+    # Параметры сценария ключ=значение, каждый уходит всем процессам как -e2eArg (читает ctx.Arg).
+    # В режиме -File массив приходит одной строкой: несколько пар — через запятую. Без пробелов и кавычек.
+    [string[]] $Arg = @(),
 
     # Не проверять свежесть билда относительно исходников.
     [switch] $SkipStaleCheck,
@@ -175,6 +185,38 @@ if (-not $autoPorts) {
     }
 }
 
+# -Arg: в режиме -File массив приходит одной строкой через запятую (как в Run-QuestE2E.ps1).
+$scenarioArgs = New-Object System.Collections.Generic.List[string]
+$argKeys = New-Object System.Collections.Generic.List[string]
+foreach ($item in $Arg) {
+    foreach ($pair in ([string] $item -split ',')) {
+        if ($pair -eq '') { continue }
+        # Start-Process склеивает аргументы через пробел без кавычек: пробел или кавычка в значении разорвали бы его.
+        if ($pair -notmatch '^([^=\s"]+)=([^\s"]*)$') {
+            Write-Host ''
+            Write-Host ('-Arg "' + $pair + '": нужен вид ключ=значение, непустой ключ, без пробелов и кавычек') -ForegroundColor Red
+            exit 2
+        }
+        $argKey = $Matches[1]
+        if ($argKeys.Contains($argKey)) {
+            Write-Host ''
+            Write-Host ('-Arg: ключ "' + $argKey + '" задан повторно') -ForegroundColor Red
+            exit 2
+        }
+        $argKeys.Add($argKey)
+        $scenarioArgs.Add($pair)
+    }
+}
+
+# Поздний клиент — последний, если задана пауза и клиентов больше одного (как и прежде).
+$lateRole = ''
+if ($LateClientDelay -gt 0 -and $Clients -gt 1) { $lateRole = 'client-' + $Clients }
+
+# Общие аргументы каркаса для всех процессов: число клиентов, поздний клиент, параметры сценария.
+$commonArgs = @('-e2eClients', "$Clients")
+if ($lateRole -ne '') { $commonArgs += @('-e2eLate', $lateRole) }
+foreach ($pair in $scenarioArgs) { $commonArgs += @('-e2eArg', $pair) }
+
 $ProcessName = [System.IO.Path]::GetFileNameWithoutExtension($Player)
 
 # ── 1. Плеер на месте и не устарел ────────────────────────────────────────
@@ -271,6 +313,8 @@ Write-Host ('  собран:    ' + $playerStamp.ToString('u'))
 Write-Host ('  сценарий:  ' + $Scenario)
 Write-Host ('  карта:     ' + $Map)
 Write-Host ('  клиентов:  ' + $Clients)
+if ($lateRole -ne '') { Write-Host ('  поздний:   ' + $lateRole + ' через ' + $LateClientDelay + ' с') }
+if ($scenarioArgs.Count -gt 0) { Write-Host ('  параметры: ' + ($scenarioArgs -join ' ')) }
 Write-Host ('  таймаут:   ' + $Timeout + ' с (сценарию ' + $scenarioTimeout + ' с)')
 $portMode = 'заданы явно'
 if ($autoPorts) { $portMode = 'выбраны автоматически' }
@@ -297,11 +341,10 @@ try {
         '-e2eRole', 'server',
         '-e2eResult', $serverResult,
         '-e2eMap', $Map,
-        '-e2eClients', "$Clients",
         '-e2eTimeout', "$scenarioTimeout",
         '-e2eNetworkPort', "$NetworkPort",
         '-e2eDiscoveryPort', "$DiscoveryPort"
-    )
+    ) + $commonArgs
     $serverProc = Start-Player -ExtraArgs $serverArgs -LogPath $serverLog
     [void]$launched.Add($serverProc)
     [void]$expected.Add(@{ role = 'server'; path = $serverResult; log = $serverLog })
@@ -334,7 +377,7 @@ try {
     Write-Section ('Запускаю клиентов: ' + $Clients)
     for ($i = 1; $i -le $Clients; $i++) {
         $role = 'client-' + $i
-        if ($LateClientDelay -gt 0 -and $i -eq $Clients -and $Clients -gt 1) {
+        if ($role -eq $lateRole) {
             Write-Host ('  поздний вход: ' + $role + ' через ' + $LateClientDelay + ' с')
             Start-Sleep -Seconds $LateClientDelay
         }
@@ -354,7 +397,7 @@ try {
             '-e2eTimeout', "$scenarioTimeout",
             '-e2eNetworkPort', "$NetworkPort",
             '-e2eDiscoveryPort', "$DiscoveryPort"
-        )
+        ) + $commonArgs
 
         $clientProc = Start-Player -ExtraArgs $clientArgs -LogPath $clientLog
         [void]$launched.Add($clientProc)
@@ -458,6 +501,15 @@ $anyInconclusive = $false
 # Вход вердикта по логам: результаты процессов (без результата — $null) и логи плееров.
 $logProcesses = New-Object System.Collections.ArrayList
 $logRaw = New-Object System.Collections.ArrayList
+# Сводная лента шагов всех процессов (steps их результатов) и сколько записей процессы не сохранили.
+$stepFeed = New-Object System.Collections.ArrayList
+$stepsDropped = 0
+
+# Время шага как строка ISO UTC: Windows PowerShell оставляет строку, PowerShell 7 превращает её в DateTime.
+function ConvertTo-StepUtc($Value) {
+    if ($Value -is [datetime]) { return $Value.ToUniversalTime().ToString('o', [System.Globalization.CultureInfo]::InvariantCulture) }
+    return [string] $Value
+}
 
 foreach ($item in $expected) {
     $role = $item.role
@@ -504,6 +556,22 @@ foreach ($item in $expected) {
         Write-Host ('           ' + $check.detail) -ForegroundColor DarkGray
     }
 
+    # Журнал шагов процесса (необязательное поле: результаты старых сборок его не содержат).
+    if ($null -ne $data.PSObject.Properties['steps']) {
+        foreach ($step in @($data.steps)) {
+            if ($null -eq $step) { continue }
+            [void]$stepFeed.Add([pscustomobject][ordered]@{
+                utc = ConvertTo-StepUtc $step.utc
+                process = $role
+                role = $step.role
+                name = $step.name
+                data = $step.data
+                outcome = $step.outcome
+            })
+        }
+    }
+    if ($null -ne $data.PSObject.Properties['stepsDropped']) { $stepsDropped += [int] $data.stepsDropped }
+
     if ($data.status -ne 'completed') { $anyInconclusive = $true }
     if (-not $data.passed -and $data.status -eq 'completed') { $anyRedCheck = $true }
 
@@ -514,6 +582,17 @@ foreach ($item in $expected) {
         summary = $data.summary
         checks = $data.checks
     })
+}
+
+# Лента по UTC: строки ISO 8601 «o» в UTC одной длины, поэтому порядок строк = порядок времени.
+$sortedSteps = @($stepFeed | Sort-Object -Property @{ Expression = { $_.utc } }, @{ Expression = { $_.process } })
+if ($sortedSteps.Count -gt 0) {
+    Write-Section ('Лента шагов: ' + $sortedSteps.Count + ' (полностью — summary.json, блок steps)')
+    foreach ($step in ($sortedSteps | Select-Object -Last 30)) {
+        $stepColour = 'DarkGray'
+        if ($step.outcome -eq 'barrier-failed' -or $step.outcome -eq 'failed' -or $step.outcome -eq 'aborted') { $stepColour = 'Yellow' }
+        Write-Host ('  ' + $step.utc + '  ' + $step.process + '  ' + $step.outcome + '  ' + $step.role + ': ' + $step.name + '  ' + $step.data) -ForegroundColor $stepColour
+    }
 }
 
 if ($anyMissing -or $anyInconclusive) { $exitCode = 2 }
@@ -552,6 +631,10 @@ $summary = [pscustomobject]@{
     verdict = $verdict
     exitCode = $exitCode
     roles = $roleReports
+    lateRole = $lateRole
+    scenarioArgs = @($scenarioArgs)
+    steps = $sortedSteps
+    stepsDropped = $stepsDropped
     logVerdict = [ordered]@{
         mode = $logResult.mode
         verdict = $logResult.verdict

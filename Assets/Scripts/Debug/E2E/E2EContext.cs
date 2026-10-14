@@ -19,7 +19,8 @@ namespace VrBattlegrounds.DevTools.E2E
     /// -e2eResult        &lt;путь&gt;  куда писать JSON-вердикт; относительный путь — от Application.persistentDataPath
     /// -e2eTimeout       &lt;сек&gt;   общий таймаут сценария, по умолчанию 240
     /// -e2eMap           &lt;сцена&gt; карта, которую грузит сервер, по умолчанию TestMap2
-    /// -e2eClients       &lt;N&gt;     сколько клиентов ждёт сервер, по умолчанию 2
+    /// -e2eClients       &lt;N&gt;     сколько клиентов в прогоне (client-1..client-N), по умолчанию 2
+    /// -e2eLate          &lt;роль&gt;  поздний клиент прогона (client-N); всем процессам, см. ниже
     /// -e2eServerAddress &lt;ip&gt;    фоллбэк прямого подключения, если Discovery молчит
     /// -e2eDeviceToken   &lt;токен&gt; уникальный DeviceToken клиента (см. ниже)
     /// -e2eNetworkPort   &lt;порт&gt;  UDP-порт KCP прогона (только вместе с -e2eDiscoveryPort)
@@ -42,6 +43,13 @@ namespace VrBattlegrounds.DevTools.E2E
     /// процессы сидят на 7778/47777, и клиент через Discovery может найти чужой сервер. Ошибка в паре
     /// (задан один аргумент, не целое число, вне 1..65535, совпадение) не откатывается на порты по умолчанию:
     /// она попадает в <see cref="PortError"/>, и исполнитель валит прогон до запуска сценария.
+    ///
+    /// Про <c>-e2eLate</c>. Дирижёр передаёт его всем процессам с ролью позднего клиента: сервер исключает её из
+    /// барьеров без <c>includeLate</c>, сам поздний клиент видит <see cref="IsLateClient"/>. Нет значения или роль вне
+    /// client-1..client-N — <see cref="TopologyError"/>, исполнитель валит прогон до сценария.
+    ///
+    /// Про шаги. <see cref="Step"/> и <see cref="ServerStep"/> пишут журнал шагов и ведут барьер
+    /// (<c>E2EBarrier</c>): клиент — серверу, сервер — клиентам. Работают только у контекста, запущенного исполнителем.
     ///
     /// Про <c>-e2eDeviceToken</c>. <see cref="Network.GameNetworkManager"/> берёт токен
     /// устройства через <see cref="Core.ClientDeviceIdentity"/>, а два процесса одного билда на одной
@@ -76,6 +84,31 @@ namespace VrBattlegrounds.DevTools.E2E
         /// только сервер: клиентов на ПК гасит дирижёр.
         /// </summary>
         public bool QuitOnFinish { get; private set; }
+        /// <summary>Роль позднего клиента прогона (<c>-e2eLate</c>); null — позднего клиента нет.</summary>
+        public string LateRole { get; private set; }
+        /// <summary>Ошибка топологии (<c>-e2eLate</c>); null — задана корректно или не задана.</summary>
+        public string TopologyError { get; private set; }
+        /// <summary>Сколько клиентов в прогоне: роли client-1..client-N (<c>-e2eClients</c>); то же, что <see cref="ExpectedClients"/>.</summary>
+        public int ClientCount => ExpectedClients;
+        /// <summary>Индекс процесса: сервер/хост 0, <c>client-N</c> → N, роль вне схемы → -1.</summary>
+        public int ClientIndex => E2EStepRules.ClientIndexOf(Role);
+        /// <summary>Этот процесс — поздний клиент прогона.</summary>
+        public bool IsLateClient => LateRole != null && Role == LateRole;
+        /// <summary>Сторона сервера барьера: выделенный сервер или хост.</summary>
+        public bool IsServerSide => E2EStepRules.IsServerSideRole(Role);
+
+        /// <summary>
+        /// Шаг достигнут: запись в журнал шагов; клиент вдобавок отправляет его серверу (после e2e-ready, до него —
+        /// копит). Повтор с тем же data идемпотентен, с другим — обновляет data. false — шаг отброшен по лимиту
+        /// (имя ≤64, data ≤256, ≤512 шагов), ошибка — в журнале Unity.
+        /// </summary>
+        public bool Step(string name, string data = null) =>
+            E2EBarrierCore.Shared.Reach(this, name, data, DateTime.UtcNow);
+
+        /// <summary>Шаг сервера: журнал и рассылка клиентам (их <c>E2EBarrier.WaitServer</c>). Только сервер/хост.</summary>
+        public bool ServerStep(string name, string data = null) =>
+            E2EBarrierCore.Shared.ReachServer(this, name, data, DateTime.UtcNow);
+
         /// <summary>Симуляция позы головы запрошена корректным <c>-e2eHeadPose</c>.</summary>
         public bool HeadPoseEnabled { get; private set; }
         /// <summary>Цель симуляции, м (<c>eye=</c>); NaN — режим <c>calib</c> или симуляция не запрошена.</summary>
@@ -112,6 +145,18 @@ namespace VrBattlegrounds.DevTools.E2E
                 return null;
             }
 
+            return FromArgs(args);
+        }
+
+        /// <summary>
+        /// То же, что <see cref="FromCommandLine"/>, но из переданного массива аргументов (проверки харнесса).
+        /// null — нет <c>-e2eScenario</c>.
+        /// </summary>
+        public static E2EContext FromArgs(string[] args)
+        {
+            if (args == null)
+                return null;
+
             string scenario = Read(args, "-e2eScenario");
             if (string.IsNullOrEmpty(scenario))
                 return null;
@@ -127,16 +172,19 @@ namespace VrBattlegrounds.DevTools.E2E
             string portError = ReadPorts(args, out int networkPort, out int discoveryPort);
             bool portsValid = portError == null;
             string argError = ReadScenarioArgs(args, out Dictionary<string, string> scenarioArgs);
+            string topologyError = ReadLate(args, (int)clients, out string lateRole);
             E2EContext context = Create(scenario, role, ResolveResultPath(Read(args, "-e2eResult")), timeout,
                 ReadOr(args, "-e2eMap", "TestMap2"), (int)clients,
                 Read(args, "-e2eServerAddress"), Read(args, "-e2eDeviceToken"),
                 networkPort: portsValid ? networkPort : 0,
                 discoveryPort: portsValid ? discoveryPort : 0,
                 args: argError == null ? scenarioArgs : null,
-                quitOnFinish: Has(args, "-e2eQuitOnFinish"));
+                quitOnFinish: Has(args, "-e2eQuitOnFinish"),
+                lateRole: topologyError == null ? lateRole : null);
             // Не бросаем: исполнитель обязан записать ошибку в файл результата и не запускать сценарий.
             context.PortError = portError;
             context.ArgError = argError;
+            context.TopologyError = topologyError;
             context.HeadPoseError = ReadHeadPose(args, out bool headPose, out float headPoseEye);
             context.HeadPoseEnabled = headPose;
             context.HeadPoseEye = headPoseEye;
@@ -146,11 +194,17 @@ namespace VrBattlegrounds.DevTools.E2E
         /// <summary>Общий контекст для CLI и Editor; не запускает сеть и не меняет профиль.</summary>
         public static E2EContext Create(string scenario, string role, string resultPath = null, float timeout = 240f,
             string map = "TestMap2", int expectedClients = 2, string serverAddress = null, string deviceToken = null, bool externallyLaunched = false,
-            int networkPort = 0, int discoveryPort = 0, IReadOnlyDictionary<string, string> args = null, bool quitOnFinish = false)
+            int networkPort = 0, int discoveryPort = 0, IReadOnlyDictionary<string, string> args = null, bool quitOnFinish = false,
+            string lateRole = null)
         {
             if (string.IsNullOrEmpty(scenario) || string.IsNullOrEmpty(role)) throw new ArgumentException("Нужны сценарий и роль E2E.");
             if (float.IsNaN(timeout) || float.IsInfinity(timeout) || timeout <= 0 || expectedClients < 0)
                 throw new ArgumentException("Некорректные ожидания E2E.");
+            if (lateRole != null)
+            {
+                string lateError = E2EStepRules.ValidateClientRole(lateRole, expectedClients);
+                if (lateError != null) throw new ArgumentException("Некорректный поздний клиент E2E: " + lateError);
+            }
             if (networkPort != 0 || discoveryPort != 0)
             {
                 string portError = ValidatePorts(networkPort, discoveryPort);
@@ -158,7 +212,7 @@ namespace VrBattlegrounds.DevTools.E2E
             }
             return new E2EContext { Scenario = scenario, Role = role, ResultPath = resultPath, Timeout = timeout,
                 Map = map, ExpectedClients = expectedClients, ServerAddress = serverAddress, DeviceToken = deviceToken, ExternallyLaunched = externallyLaunched,
-                NetworkPort = networkPort, DiscoveryPort = discoveryPort, QuitOnFinish = quitOnFinish,
+                NetworkPort = networkPort, DiscoveryPort = discoveryPort, QuitOnFinish = quitOnFinish, LateRole = lateRole,
                 Args = args == null || args.Count == 0 ? EmptyArgs : Snapshot(args) };
         }
 
@@ -196,9 +250,12 @@ namespace VrBattlegrounds.DevTools.E2E
               .Append(", роль=").Append(Role)
               .Append(", карта=").Append(Map)
               .Append(", клиентов=").Append(ExpectedClients)
+              .Append(", индекс=").Append(ClientIndex)
               .Append(", таймаут=").Append(Timeout).Append("с")
               .Append(", порты=").Append(HasPorts ? $"KCP {NetworkPort} / Discovery {DiscoveryPort}" : "(по умолчанию сцены)")
               .Append(", результат=").Append(string.IsNullOrEmpty(ResultPath) ? "(не задан)" : ResultPath);
+            if (LateRole != null)
+                sb.Append(", поздний=").Append(LateRole).Append(IsLateClient ? " (этот процесс)" : string.Empty);
             if (QuitOnFinish)
                 sb.Append(", выход по вердикту");
             if (HeadPoseEnabled)
@@ -222,6 +279,8 @@ namespace VrBattlegrounds.DevTools.E2E
                 sb.Append(", ошибка параметров: ").Append(ArgError);
             if (HeadPoseError != null)
                 sb.Append(", ошибка позы головы: ").Append(HeadPoseError);
+            if (TopologyError != null)
+                sb.Append(", ошибка топологии: ").Append(TopologyError);
             return sb.ToString();
         }
 
@@ -303,6 +362,29 @@ namespace VrBattlegrounds.DevTools.E2E
                 result.Add(key, pair.Substring(separator + 1));
             }
 
+            return null;
+        }
+
+        /// <summary>
+        /// Разбирает <c>-e2eLate &lt;роль&gt;</c>. Флага нет — позднего клиента нет, без ошибки. Возвращает текст ошибки
+        /// или null; роль обязана быть из client-1..client-<paramref name="clientCount"/>.
+        /// </summary>
+        private static string ReadLate(string[] args, int clientCount, out string lateRole)
+        {
+            lateRole = null;
+            const string key = "-e2eLate";
+            if (!Has(args, key))
+                return null;
+
+            string value = Read(args, key);
+            if (string.IsNullOrEmpty(value) || value.StartsWith("-", StringComparison.Ordinal))
+                return key + " без роли: нужно -e2eLate client-<N>";
+
+            string error = E2EStepRules.ValidateClientRole(value, clientCount);
+            if (error != null)
+                return key + ": " + error;
+
+            lateRole = value;
             return null;
         }
 

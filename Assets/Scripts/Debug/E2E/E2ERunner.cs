@@ -30,7 +30,14 @@ namespace VrBattlegrounds.DevTools.E2E
         private bool _finished;
         private bool _quitServerOnFinish;
         private IDisposable _identityScope;
+        private int _writtenStepsVersion;
+        private float _nextInterimWrite;
         private static E2ERunner _active;
+
+        /// <summary>Проверка, которую ставит abort сервера у клиента.</summary>
+        public const string CheckServerAbort = "сервер не прерывал прогон";
+        /// <summary>Не чаще, чем раз в столько секунд, исполнитель переписывает файл результата ради новых шагов.</summary>
+        private const float InterimWriteSeconds = 1f;
         public bool Finished => _finished;
         public E2EResult Result => _result;
 
@@ -108,6 +115,9 @@ namespace VrBattlegrounds.DevTools.E2E
 
             GameLog.Debug.Info($"[E2E] Старт харнесса: {_context}");
 
+            // Барьер шагов: обработчики e2e-сообщений встанут при старте сети (опрос в Update), не раньше.
+            E2EBarrier.Activate(_context, _result);
+
             // Сервер до старта сети: первая сцена и прочее, что нельзя сделать из Run (он начнётся в Start, порядок
             // относительно GameNetworkDiscovery.Start не гарантирован). Окно — загрузка первой сцены (Offline):
             // менеджеры уже прошли Awake (каталог карт доступен), а Start, который поднимает сеть, ещё не вызван.
@@ -129,6 +139,22 @@ namespace VrBattlegrounds.DevTools.E2E
         private void Start()
         {
             if (_context != null) StartCoroutine(DriveScenario());
+        }
+
+        private void Update()
+        {
+            if (_context == null) return;
+            // Барьер опрашивает сеть и после вердикта: сервер ещё принимает шаги клиентов, клиент досылает свой failed.
+            E2EBarrier.Poll();
+
+            // Шаги — в файл и до вердикта: убитый дирижёром процесс оставит журнал, до какого шага дошёл.
+            if (!_finished && _result.Status == E2EResult.StatusStarted && _result.StepsVersion != _writtenStepsVersion &&
+                Time.realtimeSinceStartup >= _nextInterimWrite)
+            {
+                _writtenStepsVersion = _result.StepsVersion;
+                _nextInterimWrite = Time.realtimeSinceStartup + InterimWriteSeconds;
+                _result.WriteTo(_context.ResultPath);
+            }
         }
 
         // ── Прокрутка сценария ─────────────────────────────────────────────
@@ -155,6 +181,17 @@ namespace VrBattlegrounds.DevTools.E2E
                 yield break;
             }
 
+            // Неверная топология (-e2eLate): барьер ждал бы не тех клиентов.
+            if (_context.TopologyError != null)
+            {
+                _result.Status = E2EResult.StatusError;
+                _result.Summary = $"топология e2e: {_context.TopologyError}";
+                _result.AbortPending("прогон остановлен: топология e2e не разобрана");
+                GameLog.Error($"[E2E] Сценарий '{_context.Scenario}' остановлен: топология e2e: {_context.TopologyError}");
+                Finish(2);
+                yield break;
+            }
+
             IE2EScenario scenario = Resolve(_context.Scenario);
             if (scenario == null)
             {
@@ -164,10 +201,10 @@ namespace VrBattlegrounds.DevTools.E2E
                 yield break;
             }
 
-            // Сценарий прокручивается вручную, а не через yield return StartCoroutine:
-            // так исключение внутри него ловится здесь и попадает в файл результата,
-            // а не теряется в консоли Unity.
-            IEnumerator steps = scenario.Run(_context, _result);
+            // Сценарий прокручивается вручную, а не через yield return StartCoroutine, и вместе с вложенными
+            // итераторами (E2EWait.Until, барьер): исключение любого уровня ловится здесь и попадает в файл результата,
+            // а общий таймаут и abort сервера проверяются каждый кадр, в том числе внутри длинного ожидания.
+            var steps = new E2EScenarioStepper(scenario.Run(_context, _result));
             float deadline = _startedRealtime + _context.Timeout;
 
             while (true)
@@ -177,22 +214,37 @@ namespace VrBattlegrounds.DevTools.E2E
                 // Отказ шва портов в рантайме: дальше сценарий ушёл бы в фоллбэк StartClient на порт сцены.
                 if (E2EPlayerPorts.LastRefusal != null)
                 {
+                    steps.Dispose();
                     FailOnPorts(E2EPlayerPorts.LastRefusal);
+                    yield break;
+                }
+
+                // Abort сервера: клиент завершается сразу, именованным провалом.
+                string abort = _context.IsServerSide ? null : E2EBarrierCore.Shared.AbortReason;
+                if (abort != null)
+                {
+                    steps.Dispose();
+                    FailNamed(CheckServerAbort, "сервер прервал прогон: " + abort);
                     yield break;
                 }
 
                 try
                 {
-                    if (!steps.MoveNext())
+                    if (!steps.MoveNext(out current))
                     {
                         _result.Status = E2EResult.StatusCompleted;
                         break;
                     }
-
-                    current = steps.Current;
+                }
+                catch (E2EScenarioFailure failure)
+                {
+                    steps.Dispose();
+                    FailNamed(failure.Check, failure.Detail);
+                    yield break;
                 }
                 catch (Exception e)
                 {
+                    steps.Dispose();
                     _result.Status = E2EResult.StatusError;
                     _result.Summary = $"исключение в сценарии: {e.GetType().Name}: {e.Message}";
                     _result.AbortPending("сценарий упал с исключением");
@@ -203,8 +255,13 @@ namespace VrBattlegrounds.DevTools.E2E
 
                 if (Time.realtimeSinceStartup > deadline)
                 {
+                    // Текущее ожидание снимаем до закрытия итераторов: их finally снимают отметку.
+                    string waiting = E2EWait.CurrentWait;
+                    float waited = Time.realtimeSinceStartup - E2EWait.CurrentWaitStarted;
+                    steps.Dispose();
                     _result.Status = E2EResult.StatusTimeout;
-                    _result.Summary = $"сценарий не уложился в общий таймаут {_context.Timeout:F0} с";
+                    _result.Summary = $"сценарий не уложился в общий таймаут {_context.Timeout:F0} с" +
+                                      (waiting != null ? $"; шло ожидание {waiting}, прошло {waited:F0} с" : string.Empty);
                     _result.AbortPending($"общий таймаут {_context.Timeout:F0} с истёк");
                     Finish(3);
                     yield break;
@@ -217,6 +274,20 @@ namespace VrBattlegrounds.DevTools.E2E
                 _result.Summary = _result.Passed ? "все проверки зелёные" : "есть красные проверки";
 
             Finish(_result.Passed ? 0 : 1);
+        }
+
+        /// <summary>
+        /// Именованный провал (барьер, abort сервера): красная проверка с диагнозом, статус completed — вердикт RED
+        /// «сценарий поймал отказ», а не «прогон не состоялся».
+        /// </summary>
+        private void FailNamed(string check, string detail)
+        {
+            _result.Set(check, false, detail);
+            _result.AbortPending($"прогон остановлен: {check}");
+            _result.Summary = $"{check}: {detail}";
+            _result.Status = E2EResult.StatusCompleted;
+            GameLog.Debug.Warning($"[E2E] Сценарий '{_context.Scenario}' остановлен: {check}: {detail}");
+            Finish(1);
         }
 
         /// <summary>Прогон не состоялся из-за портов: вердикт «ошибка», сценарий дальше не крутится.</summary>
@@ -240,6 +311,15 @@ namespace VrBattlegrounds.DevTools.E2E
 
             _finished = true;
             _result.DurationSeconds = Time.realtimeSinceStartup - _startedRealtime;
+
+            // Провал виден другой стороне барьера: сервер рассылает abort, клиент шлёт шаг failed (до записи — в журнал).
+            if (!_result.Passed)
+            {
+                string reason = string.IsNullOrEmpty(_result.Summary) ? _result.Status : _result.Summary;
+                if (_context.IsServerSide) E2EBarrier.FailServer(reason);
+                else E2EBarrier.ReportClientFailure(_context, reason);
+            }
+
             _result.WriteTo(_context.ResultPath);
 
             GameLog.Debug.Info($"[E2E] Вердикт: passed={_result.Passed}, status={_result.Status}, {_result.Summary}");
@@ -282,6 +362,7 @@ namespace VrBattlegrounds.DevTools.E2E
             }
             _identityScope?.Dispose();
             _identityScope = null;
+            if (_context != null) E2EBarrier.Deactivate(_context);
             if (_active == this) _active = null;
         }
 
@@ -303,9 +384,13 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new ConnectPlaceAcrossMapScenario();
             yield return new MapRunRelayBarrierScenario();
             yield return new MapRunRelayBarrierScenario(startupRoute: true);
+            yield return new E2EKitSelfTestScenario();
             yield return new DeviceSmokeScenario();
             yield return new PerfStressScenario();
         }
+
+        /// <summary>Сценарий с таким именем зарегистрирован (регистр не важен).</summary>
+        public static bool IsRegistered(string name) => !string.IsNullOrEmpty(name) && Resolve(name) != null;
 
         private static IE2EScenario Resolve(string name)
         {

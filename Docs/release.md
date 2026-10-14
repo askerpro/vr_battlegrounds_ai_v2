@@ -55,6 +55,9 @@ Test). IL2CPP-настройки Android выставляет `BuildConfigScope`
 Прод со stripping Low может вырезать то, что UltimateXR и Mirror достают рефлексией: прод-сборку прогонять
 на шлеме целиком.
 
+Прод всем профилям (сервер, Quest, планшет) добавляет define `VRBG_NO_E2E` через `extraScriptingDefines`: e2e-харнесс
+и его сообщения Mirror в прод-сборку не попадают. Тест и e2e-плеер — без него.
+
 **Штамп ревизии** (тест и e2e-плеер, не прод): на время сборки `BuildRevisionStamp` ставит
 `bundleVersion = <база>+<ревизия>` (например `0.1.0+605c90736abc`; `-dirty` — есть изменения отслеживаемых файлов
 в `Assets/`, `Packages/`, `ProjectSettings/`; `unknown` — git недоступен, сборка не падает). Ревизия —

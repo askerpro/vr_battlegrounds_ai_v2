@@ -651,8 +651,8 @@ checkout) и на шлем (`mkdir -p`, `adb push` в `/sdcard/Android/data/<pkg
 | Плеер | `Build/e2e/` (в `.gitignore`) |
 
 Аргументы плеера: `-e2eScenario`, `-e2eRole`, `-e2eResult`, `-e2eTimeout`, `-e2eMap`,
-`-e2eClients`, `-e2eServerAddress`, `-e2eDeviceToken`, `-e2eNetworkPort`/`-e2eDiscoveryPort`, `-e2eArg ключ=значение`
-(повторяемый), `-e2eQuitOnFinish` (выход после вердикта в любой роли; относительный `-e2eResult` — от
+`-e2eClients`, `-e2eLate <роль>`, `-e2eServerAddress`, `-e2eDeviceToken`, `-e2eNetworkPort`/`-e2eDiscoveryPort`,
+`-e2eArg ключ=значение` (повторяемый), `-e2eQuitOnFinish` (выход после вердикта в любой роли; относительный `-e2eResult` — от
 `persistentDataPath`). Без `-e2eScenario` харнесс
 не поднимается вообще, поэтому в обычном билде он инертен.
 
@@ -660,8 +660,8 @@ checkout) и на шлем (`mkdir -p`, `adb push` в `/sdcard/Android/data/<pkg
 `[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]`. Причина: сцены и префабы здесь —
 общий ресурс, и тестовый компонент внутри `--- MANAGERS ---` ломал бы обычный запуск игры.
 
-Стрип из релиза — `#if !VRBG_NO_E2E`. Определять `VRBG_NO_E2E` в Scripting Define
-Symbols. Инвертированный вид намеренный: по умолчанию код **компилируется** и попадает
+Стрип из релиза — `#if !VRBG_NO_E2E`. Прод-сборка `GameBuilder` (конфигурация Prod) добавляет `VRBG_NO_E2E` всем
+профилям сама ([release.md](release.md)); вручную — в Scripting Define Symbols. Инвертированный вид намеренный: по умолчанию код **компилируется** и попадает
 под ворота уровня 0, а прячется только явным решением. Обычный `#if VRBG_E2E` вывел бы
 харнесс из-под компиляции и вернул бы класс ошибок BUILD-01.
 
@@ -736,6 +736,79 @@ result.DeclareKnownNoise("forced-disconnect",
 не меняются. `report` — вердикт считается и пишется, код прогона не меняется: для диагностики, когда известная, ещё
 не исправленная ошибка вне вашей зоны мешает увидеть результат сценария, и для замеров, где важен только сценарий.
 Постоянным обходом `report` не делать — ошибку исправить или объявить шум с доказательством.
+
+#### Мультипроцессный сценарий: барьер, шаги, роли
+
+Каркас этапа e2e-smoke-kit (`Assets/Scripts/Debug/E2E/E2EBarrier.cs`): сервер и клиенты синхронизируются **своими**
+шагами, а не игровым состоянием (`Score`, `HasGrabbedDogTag` и т.п. игра сбрасывает).
+
+**Роли.** `server` (или `host`) — индекс 0; `client-1..client-N`, N — `-e2eClients` (дирижёр шлёт всем процессам).
+В контексте: `ctx.ClientIndex`, `ctx.ClientCount`, `ctx.IsServerSide`, `ctx.IsLateClient`, `ctx.LateRole`. Поздний
+клиент — последний (`Run-E2E.ps1 -LateClientDelay`), всем процессам уходит `-e2eLate client-N`; сервер не ждёт его в
+барьерах без `includeLate`.
+
+**API.**
+- `ctx.Step(name, data = null)` — шаг достигнут: журнал; клиент ещё и отправляет его серверу. Повтор идемпотентен:
+  сервер хранит первое достижение и последнее data. Имя ≤64, data ≤256, ≤512 шагов — лишнее отброшено с ошибкой в логе.
+- `ctx.ServerStep(name, data = null)` — шаг сервера: журнал и рассылка клиентам.
+- `yield return E2EBarrier.WaitClients(ctx, step, timeout, includeLate: false, onReached: d => …)` — сервер ждёт всех
+  ожидаемых клиентов, `d` — роль → data. `yield return E2EBarrier.WaitServer(ctx, step, timeout, onReached: data => …)` —
+  клиент ждёт шаг сервера. Имена шагов динамические (`$"map-{i}-ready"`).
+- Провал барьера (таймаут, шаг `failed` ожидаемого клиента, ошибка роли) — красная проверка `barrier <шаг>` с
+  диагнозом «дошли …; нет …», прогон завершается сразу (RED, код 1). Красный сервер рассылает abort: клиенты сразу
+  завершаются проверкой «сервер не прерывал прогон». Красный клиент шлёт шаг `failed` (data — причина), сервер его видит.
+
+```csharp
+// Сервер: серия из двух карт.
+for (int i = 1; i <= 2; i++)
+{
+    string map = ctx.Arg("map" + i, "TestMap" + i);
+    ctx.ServerStep($"map-{i}-load", map);                // клиенты увидят, какую карту ждать
+    MapLoader.Instance.LoadMap(map);
+    yield return E2EBarrier.WaitClients(ctx, $"map-{i}-ready", 180f,
+        onReached: d => result.Set($"карта {i}", true, string.Join(", ", d.Keys)));
+}
+yield return E2EBarrier.WaitClients(ctx, "late-joined", 240f, includeLate: true);
+
+// Клиент.
+for (int i = 1; i <= 2; i++)
+{
+    string map = null;
+    yield return E2EBarrier.WaitServer(ctx, $"map-{i}-load", 240f, onReached: d => map = d);
+    yield return E2EWait.Until(onMap, "карта " + map, 180f, () => SceneManager.GetActiveScene().name == map);
+    ctx.Step($"map-{i}-ready", map);
+}
+```
+
+**Смена карты.** Пока клиент между сценами (NotReady) или переподключается, шаги копятся у него и уходят после нового
+`e2e-ready`; сервер дедуплицирует. Таймауты барьеров вокруг загрузки карты — с запасом: 120–240 с на сборке, общий
+`-Timeout` прогона — сумма всех с запасом. Поздний клиент ждите отдельным барьером (`includeLate: true`).
+
+**Параметры.** `Run-E2E.ps1 -Arg map1=TestMap1,map2=TestMap2` → `-e2eArg` всем процессам; в сценарии —
+`ctx.Arg("map1", "TestMap1")`. Пары — через запятую, без пробелов и кавычек.
+
+**Журнал шагов.** В результате процесса — `steps [{name, role, data, utc, outcome}]` и `stepsDropped`; `outcome`:
+`reached`, `updated`, `received` (шаг другой стороны), `failed`, `aborted`, `barrier-passed`, `barrier-failed`. Пока
+сценарий идёт, файл переписывается не чаще раза в секунду — у убитого процесса видно, до какого шага он дошёл.
+`Run-E2E.ps1` сводит журналы в общую ленту по UTC: блок `steps` в `summary.json` (поле `process` — чей файл), последние
+30 строк — в консоли.
+
+**Как гонять.** Локально: собрать e2e-плеер и `Run-E2E.ps1 -Scenario <имя> -Clients 2 [-LateClientDelay 60] [-Arg …]`.
+В редакторе: PlayLaunch-стенд (выделенный сервер + клиенты, [test stand](test-stand.md)) и команда `run-e2e` каждому
+участнику — разрешён любой сценарий из `E2ERunner`; роль `client-N` — по индексу участника, `-e2eClients` — число
+клиентов стенда; `-e2eArg` и поздний клиент в редакторе не передаются.
+
+**Самопроверка каркаса.** `Run-E2E.ps1 -Scenario e2e-kit-selftest -Map TestMap1 -Clients 2 -Timeout 300` — сервер и
+клиенты проходят барьеры `client-on-map-1` / `client-on-map-2` через перезагрузку той же карты; сервер проверяет, что
+пересланные после смены сцены шаги клиентов приняты без дублей. Красный — сначала чините каркас, потом игровые сценарии.
+
+**Как устроено (для ревью).** Сообщения Mirror только для e2e (`#if !VRBG_NO_E2E`), регистрирует их каркас сам,
+опросом старта сети, — только при `-e2eScenario` (в редакторе — в прогоне стенда). Сервер шлёт `e2e-ready` соединению,
+когда оно аутентифицировано и готово; до него клиент ничего не шлёт (неизвестный id сообщения разорвал бы соединение).
+Роль шага — из ожидаемого набора, одна роль — одно живое соединение (при переподключении прежнее соединение
+отпускается до 15 с), иначе ошибка запуска и провал барьеров. Обработчики только пишут журнал. Исключение в
+`condition`/`abortIf` у `E2EWait.Until` — провал ожидания (`Faulted`), а не обрыв прогона; вложенные ожидания
+исполнитель прокручивает сам, поэтому общий таймаут и abort проверяются каждый кадр.
 
 #### Сценарий `dedicated-server-arsenal` (NET-06, NET-13, NET-07, RDY-01)
 

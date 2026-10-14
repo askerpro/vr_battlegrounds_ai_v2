@@ -36,6 +36,20 @@ namespace VrBattlegrounds.DevTools.E2E
     }
 
     /// <summary>
+    /// Запись журнала шагов процесса (<c>steps</c> в JSON): шаг, кто его достиг, data, время UTC и исход
+    /// (<c>E2EStepOutcome</c>). Пишет барьер (<c>E2EBarrierCore</c>); дирижёр сводит журналы всех процессов
+    /// в общую ленту по времени.
+    /// </summary>
+    public sealed class E2EStepRecord
+    {
+        public string Name = string.Empty;
+        public string Role = string.Empty;
+        public string Data = string.Empty;
+        public DateTime Utc;
+        public string Outcome = string.Empty;
+    }
+
+    /// <summary>
     /// Результат прогона одного сценария в одном процессе.
     ///
     /// Пишется в файл <b>всегда</b>: сразу при старте (заглушка со статусом
@@ -86,6 +100,44 @@ namespace VrBattlegrounds.DevTools.E2E
         private readonly List<string> _artifacts = new List<string>();
         private readonly List<E2EKnownNoise> _knownNoise = new List<E2EKnownNoise>();
         private readonly E2ELogCapture _logCapture = new E2ELogCapture();
+        private readonly List<E2EStepRecord> _steps = new List<E2EStepRecord>();
+
+        /// <summary>Предел записей журнала шагов процесса; сверх него записи считаются в <see cref="StepsDropped"/>.</summary>
+        public const int MaxStepRecords = 2048;
+
+        /// <summary>Журнал шагов процесса в порядке записи (время — UTC).</summary>
+        public IReadOnlyList<E2EStepRecord> Steps => _steps;
+
+        /// <summary>Записи журнала шагов сверх <see cref="MaxStepRecords"/>.</summary>
+        public int StepsDropped { get; private set; }
+
+        /// <summary>Растёт с каждой попыткой записи в журнал шагов: исполнитель по нему решает, переписать ли файл.</summary>
+        public int StepsVersion { get; private set; }
+
+        /// <summary>
+        /// Добавляет запись журнала шагов. Время приводится к UTC. Сверх <see cref="MaxStepRecords"/> запись не
+        /// хранится, а считается в <see cref="StepsDropped"/>.
+        /// </summary>
+        public void AddStep(string name, string role, string data, DateTime utc, string outcome)
+        {
+            StepsVersion++;
+            if (_steps.Count >= MaxStepRecords)
+            {
+                StepsDropped++;
+                return;
+            }
+
+            if (utc.Kind == DateTimeKind.Local) utc = utc.ToUniversalTime();
+            else if (utc.Kind == DateTimeKind.Unspecified) utc = DateTime.SpecifyKind(utc, DateTimeKind.Utc);
+            _steps.Add(new E2EStepRecord
+            {
+                Name = name ?? string.Empty,
+                Role = role ?? string.Empty,
+                Data = data ?? string.Empty,
+                Utc = utc,
+                Outcome = outcome ?? string.Empty
+            });
+        }
 
         public IReadOnlyList<E2ECheck> Checks => _checks;
 
@@ -384,7 +436,24 @@ namespace VrBattlegrounds.DevTools.E2E
                 if (i < _knownNoise.Count - 1) sb.Append(',');
                 sb.Append('\n');
             }
-            sb.Append("  ]\n}");
+            sb.Append("  ],\n");
+
+            // Журнал шагов (e2e-smoke-kit): поля добавлены в конец, как logIssues.
+            sb.Append("  \"steps\": [\n");
+            for (int i = 0; i < _steps.Count; i++)
+            {
+                E2EStepRecord step = _steps[i];
+                sb.Append("    { \"name\": ").Append(Json(step.Name))
+                  .Append(", \"role\": ").Append(Json(step.Role))
+                  .Append(", \"data\": ").Append(Json(step.Data))
+                  .Append(", \"utc\": ").Append(Json(step.Utc.ToString("o", CultureInfo.InvariantCulture)))
+                  .Append(", \"outcome\": ").Append(Json(step.Outcome))
+                  .Append(" }");
+                if (i < _steps.Count - 1) sb.Append(',');
+                sb.Append('\n');
+            }
+            sb.Append("  ],\n");
+            sb.Append("  \"stepsDropped\": ").Append(StepsDropped.ToString(CultureInfo.InvariantCulture)).Append("\n}");
             return sb.ToString();
         }
 

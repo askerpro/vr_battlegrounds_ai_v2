@@ -29,6 +29,11 @@ namespace UnityEngine
     {
         public static bool isDebugBuild = true;
     }
+    // Часы E2EWait: тест двигает время вручную.
+    public static class Time
+    {
+        public static float realtimeSinceStartup;
+    }
     public static class PlayerPrefs
     {
         private static readonly System.Collections.Generic.Dictionary<string, string> Values = new();
@@ -42,12 +47,33 @@ namespace VrBattlegrounds.Core
 {
     public static class GameLog
     {
-        public static void Error(string text) { }
+        // Счётчик и последняя ошибка: проверки «именованной ошибки в журнал» без Unity.
+        public static int ErrorCount;
+        public static string LastError;
+        public static void Error(string text) { ErrorCount++; LastError = text; }
         public static readonly Channel Debug = new();
         public sealed class Channel
         {
             public void Warning(string text) { }
             public void Verbose(string text) { }
+            public void Info(string text) { }
+            public void Error(string text) => GameLog.Error(text);
         }
+    }
+}
+// Порты E2EContext: роль по умолчанию и пределы калибровки — значения теста, не эмуляция Mirror/игры.
+namespace Mirror
+{
+    public static class Utils
+    {
+        public static bool IsHeadless() => false;
+    }
+}
+namespace VrBattlegrounds.PhysicalSpaceUtils
+{
+    public static class PlayerCalibrationRules
+    {
+        public const float MinEyeHeight = 0.9f;
+        public const float MaxEyeHeight = 2.5f;
     }
 }

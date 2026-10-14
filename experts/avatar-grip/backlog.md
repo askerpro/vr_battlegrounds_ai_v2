@@ -1,4 +1,4 @@
-Обновлено 2026-10-13. Кандидаты вне хаба; порядок — приоритет.
+Обновлено 2026-10-14. Кандидаты вне хаба; порядок — приоритет.
 
 1. `hand-writer-contract` — контракт порядка писателей кисти с avatar-ik (список — AGENT.md «Invariants»); bots-fix пишет `BotBody`/`UxrArmIKSolver` — analysis.md «Минимальная база знаний», `expert-map.md`.
 2. `grip-pose-coverage` — `GrabPoseCoverageTests` влит красным (d8d94cf9: MEF без хвата планшета/жетона/части оружия, Cyborg — пистолета/M16/дробовика), генератора переноса поз на базы нет; сверить с инвентарём mef-grip-audit.
@@ -18,3 +18,17 @@
 14. `mkr9-left-main-placement` — MKR9 основная точка, левая рука: кисть мимо рукояти и у MEF (F4), и у `MEF_cyborg_hands` после Grip Extraction (палец 18мм, кисть мимо) — подтверждено в шлеме 2026-10-13; разобрать зеркалирование источника для левой руки (`PackClipGripSource`), затем перезаписать.
 15. `grip-fit-penetration` — после догиба пальцы местами чуть входят в меш рукояти (шлем 2026-10-13); ограничить curl по проникновению фаланг (не только подушечки) и/или итерация анализа после записи — Grip Extraction шаг 4.
 16. `mef-pack-pose-tests-left` — `HandsPackHandPoseTests`/`KinemationHandPoseTests` на Optimized_MEF_Player(_Black) красные: левая рука расходится с кадром пака на 10–23° (Scar/PPK/SniperRifle большой палец, Mk14/AK105/MKR9 пальцы); этапом grip-extraction не вызвано — сверить на базе, вход `mef-correction`/R4.
+
+## Обязательства перед другими агентами (2026-10-14)
+
+- **weapon-system** (zone-ack, 6129/6378/6388): до коммита префабов `Assets/Prefabs/Weapons/**` — список и diff
+  в хаб (`zone_diff`); `_assetId` канонический (Normalize + сверка с диском + `NetworkAssetIdOnDiskTests`).
+  Их `ejection-manual` стоит after `grip-extraction` и `grip-extraction-run` (план r58).
+- **avatar-ik**: zone-ack на `Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/**` перед begin
+  `grip-extraction-run`; ранее предложен ack на исправление `_prefabGuid` у `PlayerBase_SdkHands`
+  (GUID a58abb6b…) — не оформлено.
+- **network** (6429): взяли патч Mirror (`_assetId`/`sceneId` в preview-сцене) и общий помощник
+  сохранения префаба; старт по решению пользователя. До него нормализуем у себя.
+- **agent-infra** (6386/6426): в их бэклоге — finish даёт выполнить отложенные вызовы до снимка результата;
+  владельцу `NetworkAssetIdNormalizer` (network) — синхронная нормализация в постпроцессоре.
+- **haptics-system/item-clicks** (manipulation) ждали `cyborg-grips` merged — выполнено.

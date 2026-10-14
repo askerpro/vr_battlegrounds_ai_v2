@@ -1,0 +1,20 @@
+{
+  "task_id": "codex-manipulation-agent",
+  "updated_at": "2026-10-14",
+  "owner": "codex",
+  "client": "codex",
+  "goal": "Создать Codex-аналог manipulation-expert из существующего Claude-агента",
+  "status": "accepted_for_publication",
+  "acceptance": "2026-10-14: пользователь поручил закоммитить свою правку manipulation в origin/dev",
+  "steps": [
+    {"id": "inspect", "status": "completed"},
+    {"id": "adapt", "status": "completed"},
+    {"id": "verify-config-and-awake", "status": "completed"}
+  ],
+  "validation": {
+    "toml_and_references": "passed: TOML and plan JSON parsed; 5 references exist",
+    "utf8_lf": "passed: 4 files",
+    "awake": "passed: exit 0; 200 lines; reports/codex-manipulation-agent/awake.txt",
+    "spawned_codex_agent": "not_run"
+  }
+}

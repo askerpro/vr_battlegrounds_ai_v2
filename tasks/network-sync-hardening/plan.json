@@ -38,6 +38,7 @@
       "id": "avatar-event-design",
       "writes": [
         "tasks/network-sync-hardening/contracts/avatar-root-event-admission-v1.md",
+        "tasks/network-sync-hardening/avatar-root-implementation-plan.md",
         "tasks/network-sync-hardening/Readme.md",
         "tasks/network-sync-hardening/Details.md",
         "tasks/network-sync-hardening/plan.json",

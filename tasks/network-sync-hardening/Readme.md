@@ -1,6 +1,6 @@
 # Сеть: событие снятого объекта, стоимость StateSync, регрессионные тесты
 
-Обновлено: 2026-10-14, продолжение в Codex. Владелец: эксперт `network`. Worktree:
+Обновлено: 2026-10-15, продолжение в Codex. Владелец: эксперт `network`. Worktree:
 `F:/CodexWorktrees/network/Vr_Battlegrounds_ai`, ветка `claude/network`.
 
 ## Статус
@@ -26,7 +26,7 @@ R `fa8135f83e01a89f553cb6298ad3285229572c01`, paths=[]unexpected=[]. Режим 
 |---|---|---|---|
 | `teleport-state` (6048) | planned; 643 PASS, Windows 24/24, общий E2E RED | `4224310c4` | уточнить late ghost events → приёмка → вливание |
 | `statesync-cost` (5871) | planned после передачи; проверки 643 PASS | `74727da7a` | runtime/Quest → приёмка → вливание |
-| `avatar-event-design` | проект для ревью | [контракт v1](contracts/avatar-root-event-admission-v1.md) | ревью пользователя → план реализации |
+| `avatar-event-design` | проект одобрен; план для ревью | [контракт v1](contracts/avatar-root-event-admission-v1.md), [план](avatar-root-implementation-plan.md) | ревью плана и способ исполнения → реализация |
 | `regression-tests` | planned, after обоих merged | — | после приёмки обоих |
 
 ## Сделано (ветка `claude/network`)
@@ -64,6 +64,8 @@ R `fa8135f83e01a89f553cb6298ad3285229572c01`, paths=[]unexpected=[]. Режим 
    +20 байт на событие, без нового lifecycle writer/SDK-патча/дополнительного decode. Реализация не начата.
    Уточнение avatar-ik 7223 от 2026-10-15: CombineIdSource должен точно соответствовать текущему netId;
    одной проверки непустого значения недостаточно. Формула SDK и её CPU/GC-проверка добавлены в проект.
+   2026-10-15 пользователь одобрил проект для подготовки плана. [План реализации](avatar-root-implementation-plan.md)
+   подготовлен: baseline A → helper/relay → существующие проверки и приёмка → новые тесты. Код ещё не менялся.
 2. Приёмка пользователя (ниже), затем вливание; после вливания statesync-cost — сообщить weapon-system (замер выстрела
    до/после, этап shot-cost) и performance (копия), находка 5871.
 3. `regression-tests` после приёмки: StateSyncFrameStack (C2), NetworkTransformKeyframe (Mirror patch 3),
@@ -83,6 +85,7 @@ R `fa8135f83e01a89f553cb6298ad3285229572c01`, paths=[]unexpected=[]. Режим 
 
 - 2026-10-14: «сделай все в одной задаче» (teleport-state 6048, uxr-statesync-cost 5871, regression-tests).
 - 2026-10-14, Codex: «Подготовить проект исправления гонки в текущей задаче» — проект v1, без реализации.
+- 2026-10-15: «Одобрить проект и подготовить план» — подготовка плана реализации, без запуска implementation.
 - 2026-10-14, 6048: «Патч Mirror (Recommended)» — а не обвязка только для аватаров.
 - 2026-10-14, 5871: «Все плееры (Recommended)» — ограничение логов в Release и Development.
 - Правило по тестам (2026-10-13): «тесты берем когда других задач нет»; тесты — только после приёмки пользователем.
@@ -91,8 +94,8 @@ R `fa8135f83e01a89f553cb6298ad3285229572c01`, paths=[]unexpected=[]. Режим 
 
 - Mirror patch 4 при обновлении Mirror переносить вручную. Если ствол NPC когда-нибудь станет дочерним к аватару,
   `WeaponUseContext` в окне снятия получит пустого владельца (сейчас не так).
-- Остаётся гонка «событие уже в пути» при `ChangeAvatar` (дуга активна в момент смены тела) — в прогоне не видна;
-  её закрыли бы «надгробия» недавно уничтоженных id на сервере (не делалось).
+- Гонка root-события в пути наблюдалась в E2E 651 (первый RED, повтор GREEN). Одобрен проект отсечения
+  недоступного UxrAvatar root по spawned+UniqueId; код ещё не написан. Child targets/missing args вне v1.
 - Двойной `ChangeAvatar` за кадр («новый аватар в матче» → сразу новый) — вопрос к gameplay, не задан.
 - Хук `.claude/hooks/sdk-patch-guard.ps1` требует запись в исторический `Docs/UltimateXR/sdk-patches.md` — игнорировать
   до выпуска сопровождающего (6447/6474); журнал патча — `changelog/` задачи.

@@ -1,6 +1,6 @@
 # Пакет текущей проверки сетевых исправлений
 
-2026-10-14, network / Codex. Совместная проверка `network-sync-hardening` и `precache-server-guard`.
+2026-10-15, network / Codex. Совместная проверка `network-sync-hardening` и `precache-server-guard`.
 Код не принят; этот документ готовит действия и освобождение аренды, но не выдаёт допуск.
 
 ## Входное состояние и доказательства
@@ -179,8 +179,17 @@ server проверяет actual-target binding перед Execute/forward, clie
 
 Живой root с удалённой ссылкой в аргументах и дочерние target-компоненты вне этого scope сохраняют прежнюю
 строгую обработку. Отсутствие netId называется Unavailable, не доказанным retirement. Проект содержит границы
-доверия серверу, map/reconnect/AOI/final-release и наблюдаемую приёмку. До одобрения проекта нет product/test
-изменений, реализации, SDK reserve или новой Unity-заявки. Этап avatar-event-design — только task docs.
+доверия серверу, map/reconnect/AOI/final-release и наблюдаемую приёмку. Пользователь 2026-10-15 одобрил проект
+для подготовки [плана реализации](avatar-root-implementation-plan.md). Product/test изменений, реализации,
+SDK reserve или новой Unity-заявки нет. Этап avatar-event-design — только task docs.
+
+Отзывы: gameplay7180 — bounded no objections по release/body-swap/map/disconnect; avatar-ik7223 — без
+блокеров при точной проверке CombineIdSource текущего netId (учтено в 7bc8846ba). Performance7191 уточнил
+fanout и модель logical delta: 20*(Ncmd+sum actual RPC recipients)/T, SDK lookup не гарантированно O(1)/zeroalloc.
+SDK GetGuid использует SHA-256 и временные массивы; план сохраняет expected Guid только на синхронный send,
+без постоянного кеша жизни. Это source-review, не runtime/Quest/performance PASS и не formal contract-ack.
+Fetch origin/dev 2026-10-15: 8eb87791541fda68f67bcf99d35bdffb08879d9e; в рассмотренной области относительно
+97a320c88 изменился только PlayerLoadoutManager. Rebase не выполнялся; исходные runtime inputs не обновлены.
 
 После освобождения аренды локально:
 

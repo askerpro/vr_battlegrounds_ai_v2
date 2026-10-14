@@ -49,10 +49,16 @@
       "tasks/perf-stress-scenario/**",
       "experts/performance/**"
     ], "after": [{"task": "perf-stress-scenario", "stage": "arena-layout", "state": "merged"}], "needs": []},
-    {"id": "docs", "writes": [
-      "Docs/perf-stress-test.md",
+    {"id": "gpu-tool-phases", "writes": [
+      "Tools/Perf/**",
       "tasks/perf-stress-scenario/**",
       "experts/performance/**"
-    ], "after": [{"task": "perf-stress-scenario", "stage": "view-tour", "state": "merged"}], "needs": []}
+    ], "after": [{"task": "perf-stress-scenario", "stage": "view-tour", "state": "merged"}], "needs": []},
+    {"id": "docs", "writes": [
+      "Docs/perf-stress-test.md",
+      "Tools/Perf/views/**",
+      "tasks/perf-stress-scenario/**",
+      "experts/performance/**"
+    ], "after": [{"task": "perf-stress-scenario", "stage": "gpu-tool-phases", "state": "merged"}], "needs": []}
   ]
 }

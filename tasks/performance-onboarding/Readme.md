@@ -1,6 +1,6 @@
 # Исследование нового окружения и регистрация в хабе
 
-Обновлено: 2026-10-11. Владелец: эксперт `performance`. Worktree: `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`,
+Обновлено: 2026-10-14 (передача Codex). Владелец: эксперт `performance`. Worktree: `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`,
 ветка `claude/performance`. Создана по решению пользователя.
 
 ## Цель и границы
@@ -15,9 +15,16 @@
 
 | Этап | Состояние |
 |---|---|
-| `onboarding` | регистрация в хабе, задача в `expert.json` |
+| `onboarding` | merged `427ebf1df` |
 
 ## Дальше
 
-- Сверить бэклог с кодом на текущем `origin/dev` и предложить пользователю порядок работ.
-- Следить за чужими этапами в путях зоны (сейчас legs-ik `quest-perf` пишет `Docs/perf-stress-test.md`).
+- Задача-«дом»: от её имени — zone-ack и перф-ревью чужих этапов. Текущая работа — `perf-stress-scenario`
+  (см. её Readme), обещания другим агентам — `experts/performance/backlog.md` «Обещания…».
+- Хаб: `python Tools/agents/coordination.py inbox --owner performance --unread --as "<свой адрес>"`; ожидание —
+  фоновая `wait-inbox --owner performance --as "<адрес>"`. В Codex вопросы пользователю — явным сообщением
+  «ЖДЁТ ОТВЕТА» и строкой в «Ждёт пользователя» задачи.
+
+## Ждёт пользователя
+
+- Ничего открытого.

@@ -1,4 +1,4 @@
-Обновлено 2026-10-13. Кандидаты вне хаба; порядок — приоритет.
+Обновлено 2026-10-14. Кандидаты вне хаба; порядок — приоритет.
 
 1. `quest3-target` — `Assets/XR/Settings/OculusSettings.asset`: `TargetQuest2: 1`, `TargetQuest3/3S/Pro: 0`; в собранном Test APK (ревизия d51aa3a9ecf7) в манифесте нет `com.oculus.supportedDevices` и VR-категории. Выяснить, не идёт ли Quest 3 в режиме совместимости Quest 2 (разрешение глаз, частота, доступные уровни CPU/GPU) — это меняет все замеры; сверить с release-сборкой; `Assets/XR/Settings` ни у кого не в owns — решение пользователя 2026-10-13: пока НЕ включать (владелец `Assets/XR/Settings` не назначен); вернуться перед релизом/`budget-baseline` — находка launch-infra 4873, проверка APK 2026-10-12.
 2. `budget-baseline` — согласовать бюджеты: частота 72/90 Гц, кадр по подсистемам, GC/кадр, draw calls/SetPass/треугольники, память (`gfx_mb`), кадр выделенного сервера, сеть; записать в `Docs/perf-stress-test.md` (сейчас есть только кадр) — journal 2026-09-29.
@@ -11,3 +11,20 @@
 9. `ffr-intermediate-texture` — у `Default_Forward_Renderer` Intermediate Texture = Always; не теряет ли FFR основные проходы — `Docs/perf-stress-test.md` «Дальше».
 10. `hand-tracking-permission-name` — Horizon OS: `com.oculus.permission.HAND_TRACKING` устарело, советует `horizonos.permission.HAND_TRACKING` (logcat прогона 2026-10-13); добавить новое имя в `QuestControllerFreeManifest` (Test) и проверку валидатора, проверить запуск без контроллеров на шлеме — зона сборки launch-infra.
 11. `precache-guard-regression` — после вливания network precache-server-guard (f645d72f9): perf-stress с сервером с графикой (редактор/оконный сервер) — mem_mb сервера по фазам ровный, без ступеньки на спавне кукол; в логе «[HeadlessPrecacheGuard] сервер без своего игрока» — network 6326, дефект bots 6233.
+
+## Обещания другим агентам и ожидания (на 2026-10-14, передача Codex)
+
+- level-design `scene-detail` (6485 → ответ 6499, условия приняты 6504; zone-ack core на `QualitySettings.asset`
+  выдан, scope 739e82ce…): ревью diff `QualitySettings.asset` до их checkpoint (группы DetailBand0..8 вместо
+  LobbyBand0..8, limitBias 0 на всех уровнях, globalTextureMipmapLimit не трогать); перф-ревью `core`
+  (SceneDetailApplier — только OnEnable/OnDisable, без Update/поиска по сцене/аллокаций); приёмка `lobby-apply` —
+  мой обход 8 точек: худшая база ≤ 7 мс, куклы ovr_gpu не хуже 12,09, tex_mb не выше 1770. Файл точек —
+  перенести в `Tools/Perf/views/Lobby.json` (согласовано 6504; этап `docs` perf-stress-scenario).
+- level-design `lobby-decoration`: замер обхода 2026-10-14 отправлен (6467); повтор — по их готовности.
+- launch-infra `quest-perf-pipeline/build-checkouts` (6455, после e2e-smoke-kit): замер первой и инкрементальной
+  сборки Prod и Quest-Test на новых checkout; база сравнения 5416 (Prod APK 355 с, постановка 634 с; Test APK 150 с,
+  пара 396 с; пара с переключением 2026-10-14 — 2163 с).
+- weapon-system shot-cost (метод 6156): `--phases` в `Tools/Perf/quest_gpu_breakdown.py` (этап `gpu-tool-phases`),
+  ревью плана до прогона и цифр после.
+- avatar-ik legs-ik/`quest-perf`: тот же `Docs/perf-stress-test.md` — согласовать порядок до этапа `docs`.
+- `experts/performance/AGENT.md`: сверка карты по коммитам после reviewed_sha 716743336f (awake предупреждал) — не сделана.

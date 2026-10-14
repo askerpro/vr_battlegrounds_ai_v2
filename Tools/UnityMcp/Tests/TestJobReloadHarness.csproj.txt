@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems><ImplicitUsings>disable</ImplicitUsings><Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="__SOURCE__/Editor/Services/TestJobManager.cs" Link="Production/TestJobManager.cs" />
+    <Compile Include="__SOURCE__/Editor/Services/TestRunnerService.cs" Link="Production/TestRunnerService.cs" />
+    <Compile Include="__SOURCE__/Editor/Services/ITestRunnerService.cs" Link="Production/ITestRunnerService.cs" />
+    <Compile Include="__SOURCE__/Editor/Services/MCPServiceLocator.cs" Link="Production/MCPServiceLocator.cs" />
+    <Compile Include="__HARNESS__/TestJobReloadStubs.cs.txt" /><Compile Include="__HARNESS__/TestJobReloadTests.cs.txt" />
+  </ItemGroup>
+</Project>

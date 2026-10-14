@@ -92,8 +92,11 @@ try {
  if ($LASTEXITCODE -ne 0) { throw 'Патч жизненного цикла тестов не применим.' }
  & git --no-pager -c core.autocrlf=false apply --ignore-space-change "--directory=$relativeRoot" $testJobPatch
  if ($LASTEXITCODE -ne 0) { throw 'Патч жизненного цикла тестов не применён.' }
- if ((Get-FileHash -LiteralPath (Join-Path $packageRoot 'Editor/Services/TestJobManager.cs')).Hash -ne '395272A8507666A4D88D3B72E69023A03F25499712F1CB895877DFB2CCFF4A01') {
+ if ((Get-FileHash -LiteralPath (Join-Path $packageRoot 'Editor/Services/TestJobManager.cs')).Hash -ne 'CBC4952435AB4EF0A710726038EB4D4EDD254E30592916D9B4C3D92E1BB0EACA') {
   throw 'Результат патча жизненного цикла тестов не совпадает с проверенным hash.'
+ }
+ if ((Get-FileHash -LiteralPath (Join-Path $packageRoot 'Editor/Services/TestRunnerService.cs')).Hash -ne '291801256C293EF07F51BF53668FEC4A5A64E5CEDE7C89F755614D75F5B545F9') {
+  throw 'Результат патча terminal tree не совпадает с проверенным hash.'
  }
  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'OutputGuard/ExecuteCodeOutputGuard.cs') -Destination (Join-Path $packageRoot 'Editor/Helpers/ExecuteCodeOutputGuard.cs')
  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'OutputGuard/ExecuteCodeOutputGuard.cs.meta.txt') -Destination (Join-Path $packageRoot 'Editor/Helpers/ExecuteCodeOutputGuard.cs.meta')

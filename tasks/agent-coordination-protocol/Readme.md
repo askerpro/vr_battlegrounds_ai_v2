@@ -1,6 +1,6 @@
 # Координация агентов
 
-Обновлено: 2026-10-09. Владелец: coordination-maintenance, Codex.
+Обновлено: 2026-10-15. Владелец: coordination-maintenance, Codex.
 Checkout: F:/CodexWorktrees/agent-coordination-protocol/Vr_Battlegrounds_ai.
 
 ## Цель и границы
@@ -22,6 +22,19 @@ Checkout: F:/CodexWorktrees/agent-coordination-protocol/Vr_Battlegrounds_ai.
 отдельным этапом с владельцем области.
 
 ## Статус и проверки
+
+Текущее сопровождение: coordination mode off; очередь работает без плановой паузы.
+Проверенные исправления доставляются собственной заявкой сопровождающего в конец FIFO.
+Этап mcp-test-job-lifecycle влит в origin/dev c36f55e9; его прямая C# проба доказала
+сохранение активного prebuild и полного Failed Result, но не закрыла стандартный MCP путь.
+Свежие потери job_id расследуются отдельно как гонка неявного refresh/compile; для UI672
+native RunFinished/XML были, а MCP callbacks после reload не доставили результат.
+Параллельно подготовлены план миграции и offline контракт Unity CLI через тот же брокер
+в source worktree agent-infra. Production CLI executor ещё не реализован.
+Исторические проверки ниже относятся к прежним выпускам; актуальный live итог хранится
+в ignored reports, не считается игровой приёмкой других владельцев.
+
+### Историческое состояние до 2026-10-15
 
 - Миграция завершена, enforced включён; восемь активных владельцев зарегистрированы.
 - Inbox имеет свежую адресную выдачу и стабильную пагинацию; watch-inbox ограничен

@@ -1,0 +1,53 @@
+--- a/Editor/Services/TestJobManager.cs
++++ b/Editor/Services/TestJobManager.cs
+@@ -47,6 +47,7 @@
+     /// <summary>
+     /// Tracks async test jobs started via MCP tools. This is not intended to capture manual Test Runner UI runs.
+     /// </summary>
++    [InitializeOnLoad]
+     internal static class TestJobManager
+     {
+         // Keep this small to avoid ballooning payloads during polling.
+@@ -70,6 +71,14 @@
+         {
+             // Restore after domain reloads (e.g., compilation while a job is running).
+             TryRestoreFromSessionState();
++            // Callback receiver не сериализуется вместе с job. Восстановить его до
++            // первого editor update, даже если native registry ещё не возобновлён.
++            // Lazy locator создаёт один receiver; Execute/повтор тестов здесь запрещён.
++            if (HasRunningJob)
++            {
++                try { _ = MCPServiceLocator.Tests; }
++                catch (Exception ex) { McpLog.Error($"[TestJobManager] Restored callback registration failed: {ex.Message}"); }
++            }
+         }
+ 
+         public static string CurrentJobId
+--- a/Editor/Services/TestRunnerService.cs
++++ b/Editor/Services/TestRunnerService.cs
+@@ -636,9 +636,24 @@
+             };
+         }
+ 
++        // Terminal root содержит полное дерево NUnit; callback list теряется при domain reload.
++        private static IEnumerable<ITestResultAdaptor> TerminalLeaves(ITestResultAdaptor result)
++        {
++            if (result == null) yield break;
++            if (!result.HasChildren)
++            {
++                // Пустая suite не является testcase и не создаёт phantom result.
++                if (result.Test?.IsSuite != true) yield return result;
++                yield break;
++            }
++            foreach (var child in result.Children ?? Enumerable.Empty<ITestResultAdaptor>())
++                foreach (var leaf in TerminalLeaves(child)) yield return leaf;
++        }
++
+         internal static TestRunResult Create(ITestResultAdaptor summary, IReadOnlyList<ITestResultAdaptor> tests)
+         {
+-            var materializedTests = tests.Select(TestRunTestResult.FromAdaptor).ToList();
++            IEnumerable<ITestResultAdaptor> terminalTests = summary != null ? TerminalLeaves(summary) : tests;
++            var materializedTests = terminalTests.Select(TestRunTestResult.FromAdaptor).ToList();
+ 
+             int passed = summary?.PassCount
+                 ?? materializedTests.Count(t => string.Equals(t.State, "Passed", StringComparison.OrdinalIgnoreCase));

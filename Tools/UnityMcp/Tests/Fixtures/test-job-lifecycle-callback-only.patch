@@ -1,0 +1,85 @@
+--- a/Editor/Services/TestJobManager.cs
++++ b/Editor/Services/TestJobManager.cs
+@@ -1,6 +1,7 @@
+ using System;
+ using System.Collections.Generic;
+ using System.Linq;
++using System.Reflection;
+ using System.Threading.Tasks;
+ using MCPForUnity.Editor.Helpers;
+ using Newtonsoft.Json;
+@@ -46,6 +47,7 @@
+     /// <summary>
+     /// Tracks async test jobs started via MCP tools. This is not intended to capture manual Test Runner UI runs.
+     /// </summary>
++    [InitializeOnLoad]
+     internal static class TestJobManager
+     {
+         // Keep this small to avoid ballooning payloads during polling.
+@@ -69,6 +71,14 @@
+         {
+             // Restore after domain reloads (e.g., compilation while a job is running).
+             TryRestoreFromSessionState();
++            // Callback receiver не сериализуется вместе с job. Восстановить его до
++            // первого editor update, даже если native registry ещё не возобновлён.
++            // Lazy locator создаёт один receiver; Execute/повтор тестов здесь запрещён.
++            if (HasRunningJob)
++            {
++                try { _ = MCPServiceLocator.Tests; }
++                catch (Exception ex) { McpLog.Error($"[TestJobManager] Restored callback registration failed: {ex.Message}"); }
++            }
+         }
+ 
+         public static string CurrentJobId
+@@ -479,6 +489,23 @@
+             PersistToSessionState(force: true);
+         }
+ 
++        // Unity discovery/prebuild идёт до RunStarted; TotalTests=null не доказывает отказ старта.
++        // Неизвестный API или ошибка наблюдения не разрешают отвязать ещё живые callbacks.
++        private static bool NativeRunActiveOrUnknown()
++        {
++            try
++            {
++                var method = typeof(TestRunnerApi).GetMethod("IsRunActive",
++                    BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
++                if (method == null || method.ReturnType != typeof(bool)) return true;
++                return (bool)method.Invoke(null, null);
++            }
++            catch
++            {
++                return true;
++            }
++        }
++
+         internal static TestJob GetJob(string jobId)
+         {
+             if (string.IsNullOrWhiteSpace(jobId))
+@@ -495,14 +522,14 @@
+                     return null;
+                 }
+ 
+-                // Check if job is stuck in "running" state without having called OnRunStarted (TotalTests still null).
+-                // This happens when tests fail to initialize (e.g., unsaved scene, compilation issues).
+-                // After 15 seconds without initialization, auto-fail the job to prevent hanging.
++                // Timeout применим только к подтверждённо неактивному native runner.
++                // Живой discovery/prebuild сохраняет job, busy-флаг и привязку поздних callbacks.
+                 if (job.Status == TestJobStatus.Running && job.TotalTests == null)
+                 {
+                     long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                     long initTimeout = job.InitTimeoutMs > 0 ? job.InitTimeoutMs : DefaultInitializationTimeoutMs;
+-                    if (!EditorStateCache.GetActualIsCompiling() && !EditorApplication.isUpdating && now - job.StartedUnixMs > initTimeout)
++                    if (!EditorStateCache.GetActualIsCompiling() && !EditorApplication.isUpdating
++                        && now - job.StartedUnixMs > initTimeout && !NativeRunActiveOrUnknown())
+                     {
+                         McpLog.Warn($"[TestJobManager] Job {jobId} failed to initialize within {initTimeout}ms, auto-failing");
+                         job.Status = TestJobStatus.Failed;
+@@ -539,7 +566,7 @@
+             }
+ 
+             object resultPayload = null;
+-            if (job.Status == TestJobStatus.Succeeded && job.Result != null)
++            if (job.Status != TestJobStatus.Running && job.Result != null)
+             {
+                 resultPayload = job.Result.ToSerializable(job.Mode, includeDetails, includeFailedTests);
+             }

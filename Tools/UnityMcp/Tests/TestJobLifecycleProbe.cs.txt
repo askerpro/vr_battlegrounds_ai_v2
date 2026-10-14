@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -7,6 +8,8 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEditor.TestTools.TestRunner.Api;
+using UnityEditor;
+using UnityEditor.Compilation;
 
 namespace AgentInfra.TestJobLifecycleProbe
 {
@@ -15,17 +18,51 @@ namespace AgentInfra.TestJobLifecycleProbe
     [PrebuildSetup(typeof(LongPrebuild))]
     public sealed class LifecycleTests
     {
-        [Test]
+        [Test, Order(1)]
         public void ActivePrebuildKeepsJobAttached()
         {
             var receipt = JsonUtility.FromJson<PrebuildReceipt>(File.ReadAllText(LongPrebuild.ReportPath));
+            Assert.That(receipt.job_id, Is.EqualTo(ProbeState.CurrentJobId()), "Receipt принадлежит другому запуску.");
             Assert.That(receipt.passed, Is.True, JsonUtility.ToJson(receipt));
         }
 
-        [Test]
+        [Test, Order(0)]
         public void IntentionalFailureReturnsFullResult()
         {
             Assert.Fail("AGENT_INFRA_EXPECTED_FAILURE_RESULT_PROBE");
+        }
+
+        [UnityTest, Order(2)]
+        public IEnumerator MidrunReloadRetainsJobAndEarlierResults()
+        {
+            var id = ProbeState.CurrentJobId();
+            var prefix = ProbeState.ReloadKey(id);
+            // При replay IEnumerator после reload повторный запрос компиляции запрещён.
+            if (!SessionState.GetBool(prefix + ".requested", false))
+            {
+                SessionState.SetString(prefix + ".job", id);
+                SessionState.SetString(prefix + ".domain_before", ProbeState.DomainIdentity);
+                SessionState.SetBool(prefix + ".requested", true);
+                CompilationPipeline.RequestScriptCompilation();
+            }
+            yield return new RecompileScripts();
+            // После reload не полагаемся на locals старого iterator: identity хранится в SessionState.
+            var receiptId = SessionState.GetString(ProbeState.CurrentProbeJobKey, string.Empty);
+            var restoredPrefix = ProbeState.ReloadKey(receiptId);
+            var savedId = SessionState.GetString(restoredPrefix + ".job", string.Empty);
+            var before = SessionState.GetString(restoredPrefix + ".domain_before", string.Empty);
+            var after = ProbeState.DomainIdentity;
+            var current = ProbeState.CurrentJobId();
+            var receipt = new ReloadReceipt
+            {
+                job_id = receiptId, session_job_id = savedId, current_job_id_after = current,
+                domain_before = before, domain_after = after,
+                passed = savedId == receiptId && current == receiptId && !string.IsNullOrEmpty(before) && before != after
+            };
+            var path = LongPrebuild.PathForJob(receiptId, "reload-receipt.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllText(path, JsonUtility.ToJson(receipt, true));
+            Assert.That(receipt.passed, Is.True, JsonUtility.ToJson(receipt));
         }
     }
 
@@ -42,10 +79,38 @@ namespace AgentInfra.TestJobLifecycleProbe
         public string error;
     }
 
+    [Serializable]
+    public sealed class ReloadReceipt
+    {
+        public bool passed;
+        public string job_id, session_job_id, current_job_id_after, domain_before, domain_after;
+    }
+
+    internal static class ProbeState
+    {
+        public static readonly string DomainIdentity = Guid.NewGuid().ToString("N");
+        public const string CurrentProbeJobKey = "AgentInfra.TestJobLifecycleProbe.CurrentJob";
+        public static string ReloadKey(string id) => "AgentInfra.TestJobLifecycleProbe." + id + ".Reload";
+        public static string CurrentJobId()
+        {
+            const BindingFlags flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+            var manager = AppDomain.CurrentDomain.GetAssemblies()
+                .Select(assembly => assembly.GetType("MCPForUnity.Editor.Services.TestJobManager", false))
+                .First(type => type != null);
+            return (string)manager.GetProperty("CurrentJobId", flags).GetValue(null);
+        }
+    }
+
     public sealed class LongPrebuild : IPrebuildSetup
     {
-        public static string ReportPath => Path.GetFullPath(
-            "tasks/agent-coordination-protocol/reports/mcp-test-job-lifecycle-20261015/prebuild-receipt.json");
+        public static string ReportPath => PathForJob(
+            SessionState.GetString(ProbeState.CurrentProbeJobKey, string.Empty), "prebuild-receipt.json");
+        public static string PathForJob(string id, string filename)
+        {
+            if (!Guid.TryParse(id, out var parsed)) throw new InvalidOperationException("Receipt требует текущий job_id.");
+            return Path.GetFullPath("tasks/agent-coordination-protocol/reports/mcp-test-job-lifecycle-20261015/"
+                + parsed.ToString("N") + "/" + filename);
+        }
 
         public void Setup()
         {
@@ -56,6 +121,7 @@ namespace AgentInfra.TestJobLifecycleProbe
             var current = manager.GetProperty("CurrentJobId", flags);
             var id = (string)current.GetValue(null);
             if (string.IsNullOrEmpty(id)) throw new InvalidOperationException("Стенд запускается только через MCP job.");
+            SessionState.SetString(ProbeState.CurrentProbeJobKey, id);
 
             // Реальная native prebuild-фаза превышает стандартные 15 с до RunStarted.
             // Этот единственный ограниченный sleep не запускает и не меняет игровую механику.

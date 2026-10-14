@@ -1,0 +1,28 @@
+--- a/Editor/Services/TestRunnerService.cs
++++ b/Editor/Services/TestRunnerService.cs
+@@ -636,9 +636,24 @@
+             };
+         }
+ 
++        // Terminal root содержит полное дерево NUnit; callback list теряется при domain reload.
++        private static IEnumerable<ITestResultAdaptor> TerminalLeaves(ITestResultAdaptor result)
++        {
++            if (result == null) yield break;
++            if (!result.HasChildren)
++            {
++                // Пустая suite не является testcase и не создаёт phantom result.
++                if (result.Test?.IsSuite != true) yield return result;
++                yield break;
++            }
++            foreach (var child in result.Children ?? Enumerable.Empty<ITestResultAdaptor>())
++                foreach (var leaf in TerminalLeaves(child)) yield return leaf;
++        }
++
+         internal static TestRunResult Create(ITestResultAdaptor summary, IReadOnlyList<ITestResultAdaptor> tests)
+         {
+-            var materializedTests = tests.Select(TestRunTestResult.FromAdaptor).ToList();
++            IEnumerable<ITestResultAdaptor> terminalTests = summary != null ? TerminalLeaves(summary) : tests;
++            var materializedTests = terminalTests.Select(TestRunTestResult.FromAdaptor).ToList();
+ 
+             int passed = summary?.PassCount
+                 ?? materializedTests.Count(t => string.Equals(t.State, "Passed", StringComparison.OrdinalIgnoreCase));

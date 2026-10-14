@@ -104,7 +104,8 @@ with temporary_project() as temporary:
     assert script_bytes.count(b"contents = NormalizeNewlines(contents);") == 2
     assert script_bytes.count(b"working = NormalizeNewlines(working);") == 2
     test_job = package / "Editor/Services/TestJobManager.cs"
-    assert hashlib.sha256(test_job.read_bytes()).hexdigest() == "395272a8507666a4d88d3b72e69023a03f25499712f1cb895877dfb2ccff4a01"
+    assert hashlib.sha256(test_job.read_bytes()).hexdigest() == "cbc4952435ab4ef0a710726038eb4d4edd254e30592916d9b4c3d92e1bb0eaca"
+    assert hashlib.sha256((package / "Editor/Services/TestRunnerService.cs").read_bytes()).hexdigest() == "291801256c293ef07f51bf53668fec4a5a64e5cede7c89f755614d75f5b545f9"
     expected = execute.read_bytes()
     refused = subprocess.run(command, cwd=project, env=environment, capture_output=True, timeout=15)
     assert refused.returncode != 0, "existing embedded package was overwritten"

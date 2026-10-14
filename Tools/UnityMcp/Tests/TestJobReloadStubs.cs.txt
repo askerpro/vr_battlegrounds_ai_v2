@@ -1,0 +1,148 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+
+// Только границы Unity/API и неиспользуемые сервисы. Автомат, callback receiver и lazy locator — production.
+namespace UnityEngine
+{
+    public class ScriptableObject { public static T CreateInstance<T>() where T : new() => new T(); public static void DestroyImmediate(object value) { } }
+    public static class Application { public static string dataPath = Path.Combine(AppContext.BaseDirectory, "Assets"); }
+}
+namespace UnityEngine.SceneManagement
+{
+    public struct Scene { public bool isDirty; public string path,name; public bool IsValid() => true; }
+    public static class SceneManager { public static int sceneCount; public static Scene GetSceneAt(int index) => new Scene(); }
+}
+namespace UnityEditor.SceneManagement
+{
+    public static class EditorSceneManager { public static bool SaveScene(UnityEngine.SceneManagement.Scene scene) => true; }
+}
+namespace UnityEditor
+{
+    [AttributeUsage(AttributeTargets.Class)] public class InitializeOnLoadAttribute : Attribute { }
+    public enum EnterPlayModeOptions { None=0, DisableDomainReload=1, DisableSceneReload=2 }
+    public static class EditorSettings { public static bool enterPlayModeOptionsEnabled; public static EnterPlayModeOptions enterPlayModeOptions; }
+    public static class EditorApplication { public static bool isUpdating, isPlaying, isPlayingOrWillChangePlaymode; public static Action delayCall; public static void QueuePlayerLoopUpdate() { } }
+    public static class SessionState
+    {
+        private static Dictionary<string,string> Values = new();
+        public static string GetString(string key, string fallback) => Values.TryGetValue(key,out var value) ? value : fallback;
+        public static void SetString(string key,string value) => Values[key]=value;
+        public static bool GetBool(string key,bool fallback) => bool.TryParse(GetString(key,""),out var v) ? v : fallback;
+        public static void SetBool(string key,bool value) => SetString(key,value.ToString());
+        public static int GetInt(string key,int fallback) => int.TryParse(GetString(key,""),out var v) ? v : fallback;
+        public static void SetInt(string key,int value) => SetString(key,value.ToString());
+        public static string Export() => System.Text.Json.JsonSerializer.Serialize(Values);
+        public static void Import(string snapshot) => Values=System.Text.Json.JsonSerializer.Deserialize<Dictionary<string,string>>(snapshot);
+    }
+}
+namespace UnityEditorInternal { public static class InternalEditorUtility { public static bool isApplicationActive=true; } }
+namespace Newtonsoft.Json
+{
+    public static class JsonConvert
+    {
+        public static string SerializeObject(object value) => System.Text.Json.JsonSerializer.Serialize(value);
+        public static T DeserializeObject<T>(string value) => System.Text.Json.JsonSerializer.Deserialize<T>(value);
+    }
+}
+namespace UnityEditor.TestTools.TestRunner.Api
+{
+    public enum TestMode { EditMode, PlayMode }
+    public class Filter { public TestMode testMode; public string[] testNames,groupNames,categoryNames,assemblyNames; }
+    public class ExecutionSettings { public Filter filter; public ExecutionSettings(Filter f) { filter=f; } }
+    public interface ITestAdaptor { bool HasChildren { get; } bool IsSuite { get; } IEnumerable<ITestAdaptor> Children { get; } string Name { get; } string FullName { get; } }
+    public interface ITestResultAdaptor
+    {
+        bool HasChildren { get; } IEnumerable<ITestResultAdaptor> Children { get; } ITestAdaptor Test { get; } int PassCount { get; } int FailCount { get; } int SkipCount { get; }
+        string Name { get; } string FullName { get; } string ResultState { get; } double Duration { get; } string Message { get; } string StackTrace { get; } string Output { get; }
+    }
+    public interface ICallbacks { void RunStarted(ITestAdaptor tests); void RunFinished(ITestResultAdaptor result); void TestStarted(ITestAdaptor test); void TestFinished(ITestResultAdaptor result); }
+    public class TestRunnerApi
+    {
+        public static bool Active;
+        public static int ExecuteCalls;
+        public static readonly List<ICallbacks> Callbacks=new();
+        internal static bool IsRunActive() => Active;
+        public void RegisterCallbacks(ICallbacks receiver) => Callbacks.Add(receiver);
+        public void UnregisterCallbacks(ICallbacks receiver) => Callbacks.Remove(receiver);
+        public string Execute(ExecutionSettings settings) { ExecuteCalls++; Active=true; return "fixture-native-guid"; }
+        public void RetrieveTestList(TestMode mode,Action<ITestAdaptor> callback) => callback(new Node("fixture",false));
+        // События — внешняя граница framework. Они не синтезируются production readiness.
+        public static void Complete(bool failed)
+        {
+            var one=new Node("Fixture.One",false); var two=new Node("Fixture.Two",false);
+            var root=new Node("Fixture",true,new[] {one,two});
+            foreach(var receiver in Callbacks.ToArray()) receiver.RunStarted(root);
+            foreach(var item in new[] {new Result(one,false),new Result(two,failed)})
+                foreach(var receiver in Callbacks.ToArray()) { receiver.TestStarted(item.Test); receiver.TestFinished(item); }
+            Active=false;
+            var summary=new Result(root,failed) { PassCount=failed?1:2, FailCount=failed?1:0, Children=new[] {new Result(one,false),new Result(two,failed)} };
+            foreach(var receiver in Callbacks.ToArray()) receiver.RunFinished(summary);
+        }
+    }
+    public static class MidrunBoundary
+    {
+        public static Node First() => new Node("Fixture.Parameterized(1)",false);
+        public static Node Last() => new Node("Fixture.Parameterized(2)",false);
+        public static Node Suite() => new Node("Fixture.Parameterized",true,new[] {First(),Last()});
+        public static void BeforeReload()
+        {
+            foreach(var receiver in TestRunnerApi.Callbacks.ToArray())
+            {
+                receiver.RunStarted(Suite());receiver.TestStarted(First());receiver.TestFinished(new Result(First(),true));
+            }
+        }
+        public static void FinishAfterReload()
+        {
+            var last=new Result(Last(),false) {ResultState="Skipped",Message="fixture skip"};
+            foreach(var receiver in TestRunnerApi.Callbacks.ToArray()) {receiver.TestStarted(last.Test);receiver.TestFinished(last);}
+            var old=new Result(First(),true);
+            var nested=new Result(Suite(),true) {Children=new[] {old,last},FailCount=1,SkipCount=1};
+            var rootNode=new Node("Fixture.Root",true,new[] {Suite()});
+            var terminal=new Result(rootNode,true) {Children=new[] {nested},FailCount=1,SkipCount=1};
+            TestRunnerApi.Active=false;
+            foreach(var receiver in TestRunnerApi.Callbacks.ToArray()) receiver.RunFinished(terminal);
+        }
+        public static void EmptySuite()
+        {
+            var node=new Node("Fixture.EmptySuite",false,isSuite:true);
+            var terminal=new Result(node,false);
+            TestRunnerApi.Active=false;
+            foreach(var receiver in TestRunnerApi.Callbacks.ToArray()) receiver.RunFinished(terminal);
+        }
+    }
+    public class Node : ITestAdaptor
+    {
+        public Node(string name,bool children,IEnumerable<ITestAdaptor> items=null,bool? isSuite=null) {Name=name;HasChildren=children;Children=items;IsSuite=isSuite??children;}
+        public bool HasChildren {get;} public bool IsSuite {get;} public IEnumerable<ITestAdaptor> Children {get;} public string Name {get;} public string FullName => Name;
+    }
+    public class Result : ITestResultAdaptor
+    {
+        public Result(ITestAdaptor test,bool failed) { Test=test; ResultState=failed?"Failed":"Passed"; Message=failed?"fixture assertion":""; }
+        public bool HasChildren=>Test.HasChildren; public IEnumerable<ITestResultAdaptor> Children {get;set;} public ITestAdaptor Test {get;} public int PassCount {get;set;} public int FailCount {get;set;} public int SkipCount {get;set;}
+        public string Name=>Test.Name; public string FullName=>Test.FullName; public string ResultState {get;set;} public double Duration=>0.25; public string Message {get;set;} public string StackTrace=>"fixture stack"; public string Output=>"fixture output";
+    }
+}
+namespace MCPForUnity.Editor.Helpers
+{
+    public static class McpLog { public static void Info(string v) {} public static void Warn(string v) {} public static void Error(string v) {} }
+}
+namespace MCPForUnity.Editor.Services
+{
+    public static class EditorStateCache { public static bool GetActualIsCompiling()=>false; }
+    public static class TestRunStatus { public static bool IsRunning; public static void MarkStarted(UnityEditor.TestTools.TestRunner.Api.TestMode mode)=>IsRunning=true; public static void MarkFinished()=>IsRunning=false; }
+    public static class TestRunnerNoThrottle { public static void ApplyNoThrottlingPreemptive() {} }
+    public interface IBridgeControlService {} public class BridgeControlService:IBridgeControlService {}
+    public interface IClientConfigurationService {} public class ClientConfigurationService:IClientConfigurationService {}
+    public interface IPathResolverService {} public class PathResolverService:IPathResolverService {}
+    public interface IPackageUpdateService {} public class PackageUpdateService:IPackageUpdateService {}
+    public interface IPlatformService {} public class PlatformService:IPlatformService {}
+    public interface IToolDiscoveryService {} public class ToolDiscoveryService:IToolDiscoveryService {}
+    public interface IResourceDiscoveryService {} public class ResourceDiscoveryService:IResourceDiscoveryService {}
+    public interface IServerManagementService {} public class ServerManagementService:IServerManagementService {}
+    public interface IPackageDeploymentService {} public class PackageDeploymentService:IPackageDeploymentService {}
+}
+namespace MCPForUnity.Editor.Services.Transport { public class TransportManager {} }
+namespace MCPForUnity.Editor.Services.Transport.Transports { }

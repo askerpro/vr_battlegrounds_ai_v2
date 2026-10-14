@@ -423,6 +423,11 @@
           "task": "agent-coordination-protocol",
           "stage": "mcp-test-job-lifecycle",
           "state": "merged"
+        },
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "maintenance-fifo-cli-guidance",
+          "state": "merged"
         }
       ],
       "needs": []
@@ -443,6 +448,22 @@
           "stage": "human-questions-wait-inbox",
           "state": "merged"
         }
+      ],
+      "needs": []
+    },
+    {
+      "id": "maintenance-fifo-cli-guidance",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "AGENTS.md",
+        ".agents/rules/agent_coordination.md",
+        ".agents/rules/project-workflows.md",
+        ".agents/rules/unity_mcp.md",
+        "Tools/UnityMcp/**",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraTestJobLifecycleProbe/**"
+      ],
+      "after": [
+        {"task": "agent-coordination-protocol", "stage": "mcp-test-job-lifecycle", "state": "merged"}
       ],
       "needs": []
     }

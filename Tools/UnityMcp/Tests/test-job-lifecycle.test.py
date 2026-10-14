@@ -26,6 +26,11 @@ with zipfile.ZipFile(args.archive) as upstream:
     entries = [name for name in upstream.namelist() if name.endswith("/MCPForUnity/Editor/Services/TestJobManager.cs")]
     assert len(entries) == 1, "Неоднозначный pinned source"
     original = upstream.read(entries[0]).replace(b"\r\n", b"\n")
+    service_entries = [name for name in upstream.namelist() if name.endswith("/MCPForUnity/Editor/Services/TestRunnerService.cs")]
+    assert len(service_entries) == 1
+    service = upstream.read(service_entries[0]).replace(b"\r\n", b"\n")
+    assert hashlib.sha256(service).hexdigest() == "b5f25bffbcee394d746f4a67b7cfaba1bf3e24279f581d79fec7c20098d6ee23"
+    source.with_name("TestRunnerService.cs").write_bytes(service)
     assert hashlib.sha256(original).hexdigest() == "80be4984f63398ba8d3484a514e131f131b9a562757e713b07d0ac73fc164476", "Неизвестный upstream"
 source.write_bytes(original)
 if not args.upstream:

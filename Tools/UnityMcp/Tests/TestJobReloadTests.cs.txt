@@ -1,0 +1,100 @@
+using System;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.Loader;
+using System.Text.Json;
+using MCPForUnity.Editor.Services;
+using UnityEditor;
+using UnityEditor.TestTools.TestRunner.Api;
+
+// Каждый сценарий загружает production в новый CLR context: statics/locator/callback list не переживают reload.
+public static class TestJobReloadTests
+{
+    public static string Snapshot(bool active)
+    {
+        if(active)
+        {
+            var id=TestJobManager.StartJob(TestMode.EditMode);
+            var job=TestJobManager.GetJob(id);
+            job.StartedUnixMs=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()-60_000;
+            typeof(TestJobManager).GetMethod("PersistToSessionState",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,new object[]{true});
+        }
+        return SessionState.Export();
+    }
+    public static string MidrunSnapshot()
+    {
+        TestJobManager.StartJob(TestMode.EditMode);
+        MidrunBoundary.BeforeReload();
+        typeof(TestJobManager).GetMethod("PersistToSessionState",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,new object[]{true});
+        // Только SessionState metadata переносится. Native result tree — внешняя boundary, не JSON engine objects.
+        return SessionState.Export();
+    }
+    private static void InitializeDomain()
+    {
+        foreach(var type in typeof(TestJobManager).Assembly.GetTypes())
+            if(type.IsDefined(typeof(InitializeOnLoadAttribute),false)) RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+    }
+    public static string Scenario(string snapshot,string kind)
+    {
+        SessionState.Import(snapshot);
+        // Framework сначала восстанавливает сериализованные job data; native runner registry ещё пуст.
+        TestRunnerApi.Active=false;
+        InitializeDomain();
+        int atInit=TestRunnerApi.Callbacks.Count;
+        InitializeDomain(); InitializeDomain();
+        if(kind=="empty") return JsonSerializer.Serialize(new {atInit,callbackCount=TestRunnerApi.Callbacks.Count,executes=TestRunnerApi.ExecuteCalls});
+        // Эмуляция завершения ResumeRunningJobs до первого update; никаких новых Execute.
+        TestRunnerApi.Active=kind!="inactive";
+        var id=TestJobManager.CurrentJobId;
+        var job=TestJobManager.GetJob(id);
+        if(kind=="midrun") MidrunBoundary.FinishAfterReload();
+        else if(kind=="zero") MidrunBoundary.EmptySuite();
+        else if(kind!="inactive") TestRunnerApi.Complete(kind=="failed");
+        var terminal=TestJobManager.GetJob(id);
+        var result=TestJobManager.ToSerializable(terminal,true,true);
+        return JsonSerializer.Serialize(new {atInit,callbackCount=TestRunnerApi.Callbacks.Count,executes=TestRunnerApi.ExecuteCalls,
+            status=terminal.Status.ToString(),completed=terminal.CompletedTests,error=terminal.Error,receipt=result});
+    }
+    private static string DomainCall(string method,params object[] args)
+    {
+        var context=new AssemblyLoadContext("fixture-"+Guid.NewGuid(),true);
+        try
+        {
+            var assembly=context.LoadFromAssemblyPath(typeof(TestJobReloadTests).Assembly.Location);
+            return (string)assembly.GetType(nameof(TestJobReloadTests)).GetMethod(method).Invoke(null,args);
+        }
+        finally {context.Unload();}
+    }
+    private static void Require(bool ok,string message) {if(!ok)throw new Exception(message);}
+    private static int Main()
+    {
+        Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+        int passed=0,failed=0;
+        var active=DomainCall(nameof(Snapshot),true);var empty=DomainCall(nameof(Snapshot),false);var midrun=DomainCall(nameof(MidrunSnapshot));
+        void Test(string name,Action body) {try{body();passed++;Console.WriteLine("PASS "+name);}catch(Exception e){failed++;Console.WriteLine("FAIL "+name+": "+e.Message);}}
+        JsonElement Run(string kind) => JsonDocument.Parse(DomainCall(nameof(Scenario),kind=="empty"?empty:kind=="midrun"?midrun:active,kind)).RootElement;
+        Test("receiver восстановлен до update и до native registry",()=>{var r=Run("failed");Require(r.GetProperty("atInit").GetInt32()==1,"нет receiver после domain load");Require(r.GetProperty("executes").GetInt32()==0,"восстановление повторило native Execute");});
+        Test("late failed callbacks возвращают полный результат",()=>{var r=Run("failed");var result=r.GetProperty("receipt").GetProperty("result");Require(r.GetProperty("status").GetString()=="Failed"&&r.GetProperty("completed").GetInt32()==2,"late callback result потерян");Require(r.GetProperty("error").ValueKind==JsonValueKind.Null,"ошибка теста смешана с init timeout");Require(result.GetProperty("summary").GetProperty("failed").GetInt32()==1&&result.GetProperty("results").GetArrayLength()==2,"failed full result потерян");});
+        Test("late succeeded callbacks возвращают полный результат",()=>{var r=Run("passed");Require(r.GetProperty("status").GetString()=="Succeeded"&&r.GetProperty("completed").GetInt32()==2,"успешные callbacks потеряны");Require(r.GetProperty("receipt").GetProperty("result").GetProperty("results").GetArrayLength()==2,"полный result потерян");});
+        Test("повторная initialization не дублирует callbacks",()=>Require(Run("passed").GetProperty("callbackCount").GetInt32()==1,"receiver отсутствует либо дублируется"));
+        Test("без persisted active job нет eager receiver",()=>{var r=Run("empty");Require(r.GetProperty("callbackCount").GetInt32()==0&&r.GetProperty("executes").GetInt32()==0,"пустой domain создал test service/run");});
+        Test("inactive expired job не получает выдуманный результат",()=>{var r=Run("inactive");Require(r.GetProperty("status").GetString()=="Failed"&&r.GetProperty("executes").GetInt32()==0,"inactive job false accepted");Require(r.GetProperty("receipt").GetProperty("result").ValueKind==JsonValueKind.Null&&r.GetProperty("error").GetString().Contains("initialize"),"выдумана result квитанция");});
+        Test("mid-run reload СЃРѕС…СЂР°РЅСЏРµС‚ earlier failed Рё nested skipped full details",()=>
+        {
+            var r=Run("midrun");var payload=r.GetProperty("receipt").GetProperty("result");var results=payload.GetProperty("results");
+            Require(r.GetProperty("status").GetString()=="Failed"&&r.GetProperty("completed").GetInt32()==2,"midrun callbacks/progress РїРѕС‚РµСЂСЏРЅС‹");
+            Require(payload.GetProperty("summary").GetProperty("total").GetInt32()==2&&results.GetArrayLength()==2,"summary обещает2, fullresults потерял earlier leaf");
+            var old=results.EnumerateArray().First(x=>x.GetProperty("fullName").GetString()=="Fixture.Parameterized(1)");
+            Require(old.GetProperty("state").GetString()=="Failed"&&old.GetProperty("message").GetString()=="fixture assertion"&&old.GetProperty("output").GetString()=="fixture output"&&old.GetProperty("stackTrace").GetString()=="fixture stack","earlier failed full details РїРѕС‚РµСЂСЏРЅС‹");
+            Require(results.EnumerateArray().Any(x=>x.GetProperty("fullName").GetString()=="Fixture.Parameterized(2)"&&x.GetProperty("state").GetString()=="Skipped"),"nested parameterized skipped leaf РїРѕС‚РµСЂСЏРЅ");
+            Require(payload.GetProperty("summary").GetProperty("failed").GetInt32()==1&&payload.GetProperty("summary").GetProperty("skipped").GetInt32()==1,"native summary изменён");
+        });
+        Test("empty terminal suite не превращается в выдуманный testcase",()=>
+        {
+            var payload=Run("zero").GetProperty("receipt").GetProperty("result");
+            Require(payload.GetProperty("summary").GetProperty("total").GetInt32()==0&&payload.GetProperty("results").GetArrayLength()==0,"создан phantom result для empty suite");
+        });
+        Console.WriteLine($"RESULT passed={passed} failed={failed}");return failed==0?0:1;
+    }
+}

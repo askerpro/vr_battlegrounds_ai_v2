@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 // Только границы Unity. Автомат состояний взят из настоящего TestJobManager.cs через Compile Include.
 namespace UnityEditor
 {
+    [AttributeUsage(AttributeTargets.Class)] public class InitializeOnLoadAttribute : Attribute { }
     public static class EditorApplication
     {
         public static bool isUpdating;

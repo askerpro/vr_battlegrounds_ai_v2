@@ -37,8 +37,10 @@ Network; AndroidCompileGate.
 ## Состояние на 2026-10-14 (остановка по решению пользователя, рассылка 6539)
 
 - Код: `f645d72f9` (ветка `claude/network`), офлайн-компиляция VrBattlegrounds 0 ошибок. Не влито.
-- Unity-проверка в аренде была запущена; итог — см. ниже (дописывается по отчёту) или повторить вместе с проверкой
-  `network-sync-hardening` (`ccfaf5991` включает этот коммит).
+- Unity-проверка НЕ выполнена: тикет брокера 610 (key `precache-server-guard-guard-1`) ~2 ч в QUEUED — голова очереди
+  606 стояла (упал publication-runner, infra_issue 6459; затем RECOVERY_REQUIRED из-за материалов лобби), отменён
+  по СТОП 6539 (CANCELLED, аренды не было). Повторить новым key одной проверкой вместе с `network-sync-hardening`
+  (`ccfaf5991` включает этот коммит). AndroidCompileGate: `execute_code` → `VrBattlegrounds.EditorTools.AndroidCompileGate.Run()`.
 - avatar-ik принял сторож (6340) и делает корень — UltimateXR patch 81 (`uxr-precache-once`, 91470fff6); ревью network
   6527: ACK с условием обнулять `_precacheCoroutine` при обрыве корутины.
 - bots (6330) и performance (6332) сделают регрессию после вливания.

@@ -3,6 +3,10 @@
 Обновлено: 2026-10-13. Владелец: эксперт `network`. Worktree: `F:/CodexWorktrees/network/Vr_Battlegrounds_ai`,
 ветка `claude/network`. Решение пользователя 2026-10-13: «да чини реестр». Находка manipulation 5710/5714, bots 5706.
 
+## Статус (2026-10-14, передача Claude → Codex)
+
+ЗАКРЫТА. Код влит в origin/dev (`registry-fix` 3a6bcda44, SDK-патч 77), принят пользователем 2026-10-14 («Принять и влить»). Этап `regression-tests` перенесён в задачу `network-sync-hardening` (план ред. 2 без него). Таймаут UxrUniqueIdOnDiskTests — не патч (A/B: «нагретый» редактор 125–149 с). Больше ничего не ждёт.
+
 ## Проблема
 
 Компоненты в неактивных объектах регистрируются без Awake (`UxrManager.cs:2121-2125`). Объект, уничтоженный ни

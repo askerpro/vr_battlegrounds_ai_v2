@@ -3,6 +3,10 @@
 Обновлено: 2026-10-13. Владелец: эксперт `network`. Worktree: `F:/CodexWorktrees/network/Vr_Battlegrounds_ai`,
 ветка `claude/network`. Решение пользователя 2026-10-13: «делай патч». Находка bots 5510, вердикт 5520, A/B 5532.
 
+## Статус (2026-10-14, передача Claude → Codex)
+
+ЗАКРЫТА. Код влит в origin/dev (`nt-patch` 1296993be, Mirror patch 3), принят пользователем 2026-10-13 («Принять и влить»). Этап `regression-tests` перенесён в задачу `network-sync-hardening` (план ред. 2 без него). Больше ничего не ждёт.
+
 ## Проблема
 
 1. Храповик. После `ResetState` (onlySyncOnChange, тишина дольше bufferResetMultiplier×sendInterval) `UpdateSyncData`

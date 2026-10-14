@@ -4,6 +4,10 @@
 ветка `claude/network`. Создана по решению пользователя (через сопровождающего agent-infra-b1).
 Адрес в хабе: `vr-battlegrounds-ai-c6 [cf2d5e]`.
 
+## Статус (2026-10-14, передача Claude → Codex)
+
+АКТИВНА как задача-«дом» эксперта network (inbox по owner, zone-ack, ревью сетевой части чужих этапов). Кода нет. Текущие задачи эксперта: `precache-server-guard`, `network-sync-hardening` (см. их Readme); обещания другим агентам и кандидаты — `experts/network/backlog.md` (раздел «Обещания и ожидания»). Inbox: `coordination.py inbox --owner network --unread --as "<свой адрес>"`, ожидание — `wait-inbox` фоновой командой; route публикует новая сессия (старый адрес в шапке ниже устарел).
+
 ## Цель и границы
 
 Задача-«дом» эксперта network в хабе: адрес, inbox по owner и право выдавать zone-ack за свою зону.

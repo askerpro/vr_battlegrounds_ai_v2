@@ -1,5 +1,28 @@
 Обновлено 2026-10-14. Кандидаты вне хаба; порядок — приоритет.
 
+## Обещания и ожидания (2026-10-14, передача Claude → Codex)
+
+Активные задачи: `precache-server-guard` (сторож прогрева, `f645d72f9`), `network-sync-hardening` (Mirror patch 4
+`ccfaf5991`, SDK-патч 80 `859b06777`). Обе: код готов, Unity не проверено, ждут приёмки пользователя — см. их Readme.
+
+Обещано другим (кому — что — событие):
+- bots (`bots-fix`) и performance (`perf-stress-scenario`): сообщить о вливании `precache-server-guard` — они делают
+  регрессию (матч 8 ботов / perf-stress на сервере с графикой). 6324→6330, 6326→6332.
+- weapon-system (+ копия performance): после вливания `statesync-cost` — замер выстрела до/после (этап shot-cost), 5871.
+- avatar-ik (`uxr-precache-once`, UltimateXR patch 81, 91470fff6): ревью 6527 — ACK с условием обнулять
+  `_precacheCoroutine` при обрыве корутины; ждём их строку diff в inbox (повторное полное ревью не нужно) и замер
+  bots клиента позднего входа (childCount `UxrPrecachedInstances` до/после).
+- launch-infra (`quest-perf-pipeline`, e2e-smoke-kit): сетевое ACK дано (6425, 6437; условия выполнены 6441/6445).
+  Ждём итог прогона на worker: рукопожатий на соединение, повторы после смены карты, 0 «Unknown message id», по
+  возможности два прогона в одном Play. Если что-то не так — ревью этой части.
+- avatar-grip (`hand-rig-quality`), 6429: Mirror-патч preview-сцены (`_assetId`/sceneId, пункт `mirror-preview-scene-objects`
+  ниже) и общий помощник сохранения префаба — взяты в зону network; запуск по решению пользователя; при старте
+  сообщить им номер патча и этап. До того они нормализуют `_assetId` сами.
+- manipulation (`grab-authority`, карман): закрыто — ACK 6343, условие снято 6352. gameplay 6342/6373 — без возражений.
+- Сопровождающий: infra_issue 6447 (хук sdk-patch-guard) принят в работу (6474) — ждать выпуска, ничего не делать.
+
+## Кандидаты
+
 1. `direct-mirror-inventory` — реестр прямых путей Mirror мимо UXR (16 NetworkBehaviour, 14 Cmd, 14 ClientRpc, 2 TargetRpc, 9 NetworkMessage, SyncVar): состояние/событие, кто шлёт, опоздавший, reconnect, ServerOnly, хост; сверка с `RpcCarriesNoStateTests`. Состав (grep 2026-10-11): `PlayerSession` 10 Cmd, `PlayerController` 4 Rpc; GameMode, EliminationMode, RespawnMode, MapReferee, Series, SessionManager, TeamNameService, MapRunAuthority (8 Rpc); MatchEconomy 1 Rpc; арсенал 4 класса SyncVar; `CartridgeIntake` 2 Cmd + TargetRpc; сообщения: боты 2, DebugMode 3, StressTest 2, подключение 2 — `Docs/tasks/T-34-late-join-state-snapshot.md` «Все экземпляры».
 2. `message-rules` — единые правила NetworkMessage: `RegisterHandler` (GameNetworkManager) против `ReplaceHandler` (BotNetwork, BotMatchNetwork, DebugModeNetwork, StressTestNetwork), проверка роли/авторитета отправителя, регистрация/снятие по жизненному циклу — grep `ReplaceHandler<` в `Assets/Scripts`.
 3. `late-join-parity` — ярус C сценария `late-join-state-parity`: T-34 🔧, снимок с жизнью у второго процесса и гонка `Life = 0` раньше снимка не проверены — T-34 «Сделано (2026-09-29)», «Проверки».

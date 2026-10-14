@@ -5,6 +5,10 @@
 отложить, C2 запустить задачей network раньше C1 (avatar-ik, RenderMode).
 Основание: [журнал](../../experts/network/journal/2026-10-12-state-sync-depth.md), вердикт 4625.
 
+## Статус (2026-10-14, передача Claude → Codex)
+
+ЗАКРЫТА. Код влит в origin/dev (`frame-stack` 57da8d595, SDK-патч 74), принят пользователем 2026-10-12. Этап `regression-tests` перенесён в задачу `network-sync-hardening` (план ред. 2 без него). Больше ничего не ждёт.
+
 ## Проблема
 
 `UxrStateSyncImplementer.SyncCallDepth` — статический счётчик процесса, а стек опций у каждого компонента

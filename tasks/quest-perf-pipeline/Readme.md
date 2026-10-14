@@ -1,6 +1,6 @@
 # Автоматический прогон Quest и каркас E2E
 
-Обновлено: 2026-10-14. Владелец: launch-infra; worktree `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
+Обновлено: 2026-10-15. Владелец: launch-infra; worktree `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
 ветка `codex/vr-test-stand`. Пользователь принял проверенный объём 2026-10-14;
 fast-forward влит в `origin/dev`: `be120d280522321f166484f29d3b3fc81a00e4a5`.
 Проверенная сборка: input `87643327108f`, база `d3c62ca5e`; локальные правки сохранены.
@@ -18,11 +18,15 @@ fast-forward влит в `origin/dev`: `be120d280522321f166484f29d3b3fc81a00e4a5
 |---|---|
 | design, device-runner, quest-build, e2e-views, e2e-log-verdict, quest-vr-manifest, e2e-head-pose | merged; e2e-log-verdict принят 2026-10-13 |
 | e2e-smoke-kit | принят пользователем и влит 2026-10-14, be120d280; worker **637 DONE**, input 87643327108f |
-| build-checkouts | planned в хабе; код 93d7dfbc3 уже в origin/dev; четыре worktree зарегистрированы, настоящие сборки не проверены |
+| build-checkouts | развёртывание выполнено93d7dfbc3; этап проверки running, новые инструкции готовятся; первые/повторные сборки не проверены |
 
 В текущем diff исправлены lock перед любым `-Ref` checkout/hydrate, отказ при ошибке Git LFS и
 поля путей PairStatus. Эти исправления приняты вместе с каркасом по fixture 9/9. Сборочные worktree чистые, полностью LFS,
-на 93d7dfbc3; Library/Build отсутствуют — кеши не прогреты.
+на 93d7dfbc3; Library/Build отсутствуют — кеши не прогреты. Свежий audit 2026-10-15:
+4/4 clean,8828/8828 LFS present,missing0/pointer0. Antigravity не требуется повторно создавать checkout.
+Пользователь подтвердил следующий объём: реальные сборки и инструменты на этих checkout,
+инструкции всех агентов с готовыми командами. Общая инструкция направляется сопровождающему;
+до назначения общей пары разрешён dry-run без -Ref, batch не запускается.
 
 ## Свежие проверки
 

@@ -34,6 +34,51 @@ Android-планшете. Код — `Assets/Editor/VR_Battlegrounds/Release/`.
   3. Тестовые сборки в обоих worktree штампуются единым `-buildRevision <sha12>`, а после завершения сверяются отпечатки `uxr-ids.txt` между `build-<cfg>-win64/Build/Server` и `build-<cfg>-android/Build/Quest|Tablet`.
 - При запуске `Prod`-сборки в `unity-editor-worker` `GameBuilder` выводит явное предупреждение в `Result.Summary`.
 
+### Агенту: сборка в выделенном checkout
+
+Агент запускает дирижёры из своего task-worktree; Unity batch работает в соответствующем
+`build-<config>-<platform>` из таблицы выше. Общий Editor, `unity-editor-worker` и лёгкий
+agent-worktree не используются для обычной сборки плеера. Доступ к общей сборочной паре
+предварительно согласуется с сопровождающим; отсутствие UnityLockfile само по себе не резервирует пару.
+Сейчас маршрут batch-допуска согласуется в infra_issue7288: до явного решения владельца
+допуска и назначения пары разрешена только проверка без `-Ref` и без запуска Unity.
+
+1. Выбери полный immutable SHA: принятый коммит `origin/dev` или собственный технический checkpoint
+   с нужными изменениями. Незакоммиченный diff исходного task-worktree в сборку не переносится.
+2. Проверь выбранную пару: пути из таблицы, LFS-роль `build`, чистота, полный LFS и закрытый Editor.
+   Явно передавай оба пути, чтобы отсутствующий checkout дал отказ вместо fallback в текущий проект.
+3. После подтверждённого допуска и назначения пары используй реальную команду
+   `Build-Game.ps1 -Ref <полный SHA>` для перевода обоих checkout на одну ревизию, гидратации и сборки.
+   `-Ref ... -DryRun` не переводит checkout и не гидратирует LFS: команды preview строятся
+   по текущему HEAD, поэтому такой вывод не доказывает сборку выбранного SHA.
+4. Повторная сборка на том же SHA сохраняет отдельные
+   `Library/Bee/IL2CPP`; не очищай кеши вручную.
+
+```powershell
+# Подготовка команды Test; sha — проверенный полный SHA выбранного коммита/checkpoint.
+$sha = git rev-parse HEAD
+$win = 'F:/CodexWorktrees/build-test-win64/Vr_Battlegrounds_ai'
+$android = 'F:/CodexWorktrees/build-test-android/Vr_Battlegrounds_ai'
+# Проверка текущей пары: не запускает Unity и не переключает SHA.
+pwsh -NoProfile -File Tools/release/Build-Game.ps1 -Targets 'quest,server' -Config Test -Win64Worktree $win -AndroidWorktree $android -DryRun
+# Шаблон реальной сборки: до решения7288 и назначения пары НЕ запускать.
+# pwsh -NoProfile -File Tools/release/Build-Game.ps1 -Targets 'quest,server' -Config Test -Win64Worktree $win -AndroidWorktree $android -Ref $sha
+```
+
+Для Prod замени `Test` на `Prod`, а пути — на `build-prod-win64` / `build-prod-android`.
+Для планшета добавь `tablet` к `-Targets`. Результаты находятся в **целевом checkout**:
+`Build/Server/`, `Build/Quest/`, `Build/Tablet/`; логи дирижёра — `Logs/build-*.log`
+исходного task-worktree. Сохраняй команду, полный SHA, config/platform, время, код возврата,
+итог builder и пути артефактов в `tasks/<task-id>/reports/`. Отдельный `last-build.json` не создаётся.
+
+Quest E2E использует `Tools/e2e/Run-QuestE2E.ps1 -Build` с явными
+`-Win64BuildWorktree` / `-AndroidBuildWorktree`; без устройства проверяй `-Build -DryRunBuild`.
+У этого дирижёра нет `-Ref`: пару заранее выравнивает `Build-Game.ps1`.
+Windows E2E-плеер — `build-test-win64/Build/e2e/VrBattlegrounds.exe`; пример полного
+устройственного запуска — [testing.md](testing.md), «Прогон на шлеме».
+Агент не использует `-UseCurrentWorktree`, `-SingleWorktreeBuild` или меню чужого Editor как обход.
+Отказ инфраструктуры передаётся сопровождающему через hub infra_issue и проверенный Codex канал.
+
 ### Конфигурация: тест и прод
 
 Переключатель в меню `Tools/VR Battlegrounds/Release/Конфигурация: …` или `-Config Test|Prod` (по умолчанию

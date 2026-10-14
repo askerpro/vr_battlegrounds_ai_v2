@@ -1,7 +1,7 @@
 ## Обещания другим агентам (передача Codex 2026-10-14)
 
 Возобновление 2026-10-14: хаб подтверждает `vr-test-stand` rev36 (всё merged),
-`quest-perf-pipeline` rev26 (`e2e-smoke-kit` принят и merged be120d280; `build-checkouts` planned),
+`quest-perf-pipeline` rev26 (`e2e-smoke-kit` принят и merged be120d280; `build-checkouts` running: проверка и инструкции),
 `map-runtime-bootstrap` rev23 (`series-smoke-e2e` planned, остальные этапы merged).
 Текущий WIP `6a95b322e`; сборочная инфраструктура `93d7dfbc3` уже в `origin/dev = d3c62ca5e`.
 Объявление 6695 сняло остановку FIFO; заявка e2e-smoke-kit **637 DONE**, input `87643327108f`.
@@ -33,7 +33,11 @@ AndroidCompileGate PASS, Windows build PASS; selftest 19/19 GREEN, map-startup 1
   e2e-head-pose/quest-device-run r5 не заменяет xr-input. Кандидат не выбран, код ввода не начат.
 - performance/agent-infra: четыре `build-checkouts` развёрнуты на 93d7dfbc3, чистые и LFS hydrated;
   lock preflight и ошибки LFS исправлены, fixture 9/9. Настоящие сборки/прогрев и замеры performance
-  ещё не выполнены (6455/6457); этап planned и упорядочен после e2e-smoke-kit.
+  ещё не выполнены (6455/6457); этап running и упорядочен после e2e-smoke-kit.
+  2026-10-15 пользователь уточнил: проверять уже существующие checkout/дирижёры и обновить
+  инструкции всех агентов. Свежий audit4/4 clean,8828LFS,missing0/pointer0; три документированные
+  dry-run Test/Prod/QuestE2E exit0. Общая инструкция и допуск общей пары — maintainer7288;
+  собственные Docs/release/AGENT обновляются. До назначения пары только dry-run безRef/Unity.
 - performance: перенести тесты `Release/Tests/**` в `Assets/Tests/EditMode` при удобном случае (5496).
 - agent-infra: обращение 6653 — прежний Claude route другой задачи и view-only owner inbox;
   встроенная MCP-сессия Codex завершена, отдельный штатный proxy-клиент работоспособен.

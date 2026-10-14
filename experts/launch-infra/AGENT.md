@@ -47,6 +47,18 @@ debug mode, E2E framework, test XR input, builds.
   build revision/XR/manifest; `Tools/e2e/Run-QuestE2E.ps1` — split Test builds and Quest device orchestration.
   Dedicated build checkouts are per Config/Platform; their deployment does not prove a warmed cache or a passed build.
 
+## Agent builds
+- Run `Tools/release/Build-Game.ps1` or `Tools/e2e/Run-QuestE2E.ps1` from your own task worktree,
+  targeting the assigned dedicated build pair. Use explicit Win64/Android paths and an immutable SHA.
+- Get explicit batch admission (pending infra_issue7288) AND assignment of the shared pair
+  from the maintainer before `-Ref` or Unity batch. A closed Editor
+  is not an exclusive reservation. Read-only dry-run without `-Ref` is allowed before assignment.
+- Do not build ordinary players in the human Editor, unity-editor-worker or lightweight agent checkout;
+  do not use fallback flags as a workaround. Exact commands and output paths: `Docs/release.md`,
+  section «Агенту: сборка в выделенном checkout».
+- Infrastructure refusals go immediately to hub infra_issue + verified Codex maintainer channel.
+  Do not repair broker/proxy/hooks/MCP or retry an unknown mutation yourself.
+
 ## Details (grep the heading)
 - `Docs/test-stand.md` «Профиль и обычный Play», «Локальные сетевые порты», «Адресные команды и reconnect».
 - `Docs/testing.md` «Ярус C · Два процесса», «Подводные камни, найденные прогоном»,

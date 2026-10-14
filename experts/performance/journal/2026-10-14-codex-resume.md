@@ -37,3 +37,10 @@ Quality 9 names/18 zero, 140 meta только group rename; стабильны�
 155 файлов drift0. Кодовых блокеров нет; независимое disjointness140/112 требует export protected GUID.
 Apply выделяет коллекции на событиях; UI/restore/Quest gates открыты. Полный отчёт:
 tasks/performance-onboarding/reports/scene-detail-6813/source-review.md.
+
+Диагностика645 DONE: чтение SessionState PASS, currentJob пуст, четыре jobs; ни один не совпадает
+со временем своего634. Старый исход неизвестен. Raw41480bytes, SHA25604fda9a47d… сохранён.
+finish --artifact включил report-only JSON в R9dd929ea6 как unexpected; receive остановлен,
+R не интегрируется. Worker освобождён, инфраструктура не менялась; отчёт6940.
+После проверки отсутствия активного job/idle Editor подготовлен новый независимый EditMode654,
+input83032bde4, base97a320c88. Код совпадает с compile input38af7597; старый запуск не засчитывается.

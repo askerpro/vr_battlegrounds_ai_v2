@@ -62,6 +62,8 @@ R `fa8135f83e01a89f553cb6298ad3285229572c01`, paths=[]unexpected=[]. Режим 
    658 ServerOnly+8 ботов завершён. Пользователь выбрал подготовку проекта исправления гонки в этой задаче.
    [Проект v1](contracts/avatar-root-event-admission-v1.md): узкий AvatarRoot admission по Mirror netId и SDK UniqueId,
    +20 байт на событие, без нового lifecycle writer/SDK-патча/дополнительного decode. Реализация не начата.
+   Уточнение avatar-ik 7223 от 2026-10-15: CombineIdSource должен точно соответствовать текущему netId;
+   одной проверки непустого значения недостаточно. Формула SDK и её CPU/GC-проверка добавлены в проект.
 2. Приёмка пользователя (ниже), затем вливание; после вливания statesync-cost — сообщить weapon-system (замер выстрела
    до/после, этап shot-cost) и performance (копия), находка 5871.
 3. `regression-tests` после приёмки: StateSyncFrameStack (C2), NetworkTransformKeyframe (Mirror patch 3),

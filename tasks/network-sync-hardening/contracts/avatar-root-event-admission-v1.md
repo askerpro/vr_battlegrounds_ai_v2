@@ -1,6 +1,7 @@
 # Допуск событий корня сетевого аватара, проект v1
 
 2026-10-14. Владелец: network. Задача: network-sync-hardening.
+Уточнение 2026-10-15 по avatar-ik review 7223: проверка точного источника выравнивания текущего netId.
 Статус: **проект для ревью пользователя; реализация не разрешена этим документом и не выполнена**.
 Пользователь выбрал подготовку проекта в текущей задаче. Новых игровых тестов и изменений SDK/ассетов нет.
 
@@ -105,11 +106,14 @@ root до SDK и довериться серверному binding исходн�
 
 1. Сохранить существующие Network-option, DespawnedObjectEventFilter, StateEventAuthority и prealignment gate.
 2. Capture metadata выполняется в Send после выхода из очереди AvatarStateEventGate. Для scoped root получить
-   NetworkIdentity на том же GameObject, netId > 0, выровненный CombineIdSource и запись собственного spawned,
+   NetworkIdentity на том же GameObject, netId > 0 и точное равенство
+   `((IUxrUniqueId)avatar).CombineIdSource == netId.ToString().GetGuid()` по существующему SDK API.
+   Непустого CombineIdSource недостаточно: он мог относиться к иному netId. Также требуется запись собственного spawned,
    указывающую на **тот же экземпляр** identity. Зафиксировать его текущий UniqueId. Для остальных целей —
    точную пару 0/Guid.Empty.
 3. Сериализовать событие прежним SerializeEventBinary(component).
-4. Перед отправкой повторно проверить существование source и то же identity/netId/UniqueId/spawned membership.
+4. Перед отправкой повторно проверить существование source и то же identity/netId/UniqueId/spawned membership,
+   включая соответствие CombineIdSource текущему netId по указанной формуле.
    Убраный/сменившийся source не отправлять; уже сериализованные байты не переназначать новому телу.
 5. Передать metadata и byte[] в прежнюю ветку server RPC или ready-client Command.
 
@@ -127,6 +131,8 @@ UxrGrabManager, оружие, карманы, UxrLocomotion и дочерние 
    не вызывать SDK и не отправлять RPC. Живая identity без ожидаемого сетевого UxrAvatar root — InvalidEnvelopeBinding.
    Если root существует, его текущий IUxrUniqueId.UniqueId обязан совпасть с avatarRootUniqueId;
    иначе InvalidEnvelopeBinding, также до SDK.
+   Его CombineIdSource должен соответствовать этому netId по той же формуле; непустое, но иное значение —
+   binding/alignment ошибка, а не нормальный stale drop. SDK identity не перевыравнивать ради приёма.
    Через существующий untyped UxrUniqueIdImplementer.TryGetComponentById проверить, что этот GUID разрешается
    в **тот же экземпляр** root. Живой Mirror root с отсутствующим/неверным SDK registry mapping — отдельная
    binding/registry ошибка, а не нормальный stale drop. Registry не перезаписывать и не Register/Unregister ради допуска.
@@ -150,6 +156,7 @@ UxrGrabManager, оружие, карманы, UxrLocomotion и дочерние 
 3. При nonzero проверить согласованность пары, NetworkClient.spawned и сетевой root до SDK.
    Недоступная цель → AvatarRootUnavailable. У доступного root его текущий UniqueId должен совпасть с metadata;
    mismatch → InvalidEnvelopeBinding. Это не разрешение искать замену/новое тело.
+   Проверка точного CombineIdSource текущего netId также обязательна; иное значение диагностируется как alignment ошибка.
    Тот же untyped SDK lookup обязан вернуть этот root instance; иной/отсутствующий mapping диагностируется
    как binding/registry ошибка до Execute, без исправления registry. Lookup не разбирает SDK event payload.
 4. Вызвать прежний ExecuteStateSyncEvent(byte[]) один раз. SDK-ошибки остаются ошибками.
@@ -206,7 +213,7 @@ invalid binding, scoped applied. Раздельно для server/client; без
 | Финальное освобождение старого тела | Не отсекается сравнением ActiveAvatar; порядок release → Destroy сохранён |
 | Несетевые root, предметы, ammo admission | Прежняя семантика, без новых запретов по владельцу/держателю |
 | ServerOnly +2 клиента; host+client; замена тела/карта/reconnect | Действующая синхронизация сохранена, late-root rejection наблюдён отдельно |
-| Стоимость | +20 байт на каждое событие; без нового decode/коллекций/строк на admission hot path при Verbose off; измерить фактический трафик/GC/CPU на player/Quest |
+| Стоимость | +20 байт на каждое событие; без нового decode; измерить трафик/GC/CPU, включая вычисление ожидаемого CombineIdSource. Нулевые аллокации ещё не доказаны |
 
 До пользовательской проверки изменённого gameplay: компиляция, Android gate и применимые существующие
 Network/Weapons checks, затем существующий dedicated-server-arsenal и ручная смена тела через штатный UI/API.
@@ -226,3 +233,10 @@ reject до decode действительно не вызывает decoder/Exec
 6. Пользовательская проверка, затем регрессионные тесты и принятый commit/integration штатным путём.
 
 Ни проект, ни owner review, ни существующие PASS643/658 не означают приёмку ещё не написанной правки.
+
+## Уточнение source-review 7223
+
+Проверено по UxrMirrorAvatar.OnStartServer/OnStartLocalPlayer/OnStartClient: в InitializeNetworkAvatar передаётся
+netId.ToString(), затем SDK вызывает avatar.CombineUniqueId(uniqueId.GetGuid(), true). Поэтому проект требует
+точного источника для текущего netId, а не только CombineIdSource != Empty. Стоимость соответствующей проверки
+включена в CPU/GC-приёмку; способ исключить лишние вычисления/аллокации уточняется в плане реализации.

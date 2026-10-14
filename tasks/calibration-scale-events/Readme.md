@@ -9,11 +9,20 @@ manipulation (задача `grab-authority`) на время смены масш
 
 ## Статус
 
-Обновлено 2026-10-14 (передача Codex). Владелец — эксперт `avatar-ik`. Ветка `avatar-ik/calibration-scale-events`,
-код — `eb97eac1a`, далее документы (база origin/dev `a84b9f2ce`; origin/dev ушёл вперёд). Контракт
-`calibration-scale-events` r1 — agreed (ACK manipulation 6036). Этап `scale-events` в хабе — **verified на старом
-SHA `8ec241cd9`** (worker 590: компиляция 0 ошибок, тесты калибровки 26/26). Текущий SHA на worker не проверен:
-очередь стояла на восстановлении базы лобби (606/607). Аренд и тикетов нет. Актуальное рабочее место эксперта —
+Обновлено 2026-10-14, продолжение Codex. Владелец — эксперт `avatar-ik`. Ветка `avatar-ik/calibration-scale-events`
+перебазирована на origin/dev `d3c62ca5e`, срез кода `f4ac8c20f`; конфликтов нет, исходник applier не изменился.
+Непринятый патч прогрева сохранён отдельно, stash `7c77e9f76c296936b274588472281993e5e6c44c`;
+после проверки калибровки основная сессия вернёт ветку прогрева. Контракт
+`calibration-scale-events` r1 — agreed (ACK manipulation 6036). Исторический verified относился к
+SHA `8ec241cd9` (worker590: компиляция 0 ошибок, тесты калибровки 26/26). Исторический worker611 отменён до запуска.
+Свежая проверка: checkpoint `31edcc4de594d8b19a588d67fe23b29fb7d4ba9b`, worker638 DONE;
+Unity-компиляция точного исходника/наличие событий в загруженной сборке — PASS, AndroidCompileGate — PASS,
+существующие тесты — **26/26, failed=0, skipped=0**. Finish: paths=[], unexpected=[].
+Отчёт `reports/worker-638/summary.json` и полные ответы MCP внутри задачи, вне Git.
+План revision3; свежий **verified** в хабе относится к checkpoint `31edcc4de` (epoch5),
+перепроверка заменяет историческую. Пользовательская приёмка остаётся впереди.
+Свежая офлайн-компиляция UltimateXR555/VrBattlegrounds459 исходников — exit0, errors0;
+логи `reports/resume-compile/out/` внутри задачи, вне Git. Актуальное рабочее место эксперта —
 на ветке `avatar-ik/uxr-precache-once`.
 
 ## Сделано
@@ -28,10 +37,7 @@ SHA `8ec241cd9`** (worker 590: компиляция 0 ошибок, тесты �
 
 ## Следующий шаг
 
-1. Worker (когда сопровождающий откроет очередь): компиляция, `AndroidCompileGate`, тесты
-   `VrBattlegrounds.Tests.Network.CalibrationHeightReplicationTests`, `CalibrationScaleReplicationTests`,
-   `PlayerCalibrationOwnerTests` (26). Обычный checkpoint может отклониться — тогда `checkpoint --onto-baseline`.
-   Для `verify` нового SHA нужен новый токен: `stop` этапа (verified устарел) → `begin`.
+1. Перепроверка на принятой базе и свежий verify выполнены (worker638, checkpoint31edcc4de).
 2. Приёмка пользователем в шлеме (ниже) → тесты событий в `Assets/Tests/EditMode/Calibration/` (новый файл в
    `Network/` попал бы в зону network) → `accept` → merge-request → merge-execute.
 3. После вливания — сообщить manipulation (`grab-authority`): события в origin/dev.
@@ -49,10 +55,10 @@ SHA `8ec241cd9`** (worker 590: компиляция 0 ошибок, тесты �
 
 ## Риски и ловушки
 
-- Прямой `git push` в origin/dev блокировал классификатор Claude; маршрут — брокер. `request-base` — только после
-  разрешения сопровождающего (6535).
+- Прямой `git push` в origin/dev блокировал классификатор Claude; маршрут — брокер. Запрет6535 снят6695;
+  публикация базы — только после принятого вливания по штатному маршруту.
 - `watch-ticket` при timeout отдаёт exit 0 и ok:false — смотреть JSON; оффер живёт 60 с.
-- Inbox: `inbox --owner avatar-ik --unread --as "<адрес сессии>"`, ожидание — `wait-inbox` фоновой командой; в Codex
-  вопросы пользователю — сообщением «ЖДЁТ ОТВЕТА» и строкой здесь.
+- Inbox: `inbox --owner avatar-ik --unread --as "<адрес сессии>"`, ожидание — `wait-inbox` фоновой командой;
+  вопросы пользователю — штатным инструментом, новых вопросов по уже записанной приёмке нет.
 
 Машинный план — [plan.json](plan.json).

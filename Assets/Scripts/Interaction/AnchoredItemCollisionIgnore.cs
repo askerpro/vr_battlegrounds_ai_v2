@@ -34,6 +34,16 @@ namespace VrBattlegrounds.Interaction
         private readonly List<Collider> _bodyColliders = new List<Collider>();
         private readonly List<Collider> _itemColliders = new List<Collider>();
 
+        /// <summary>
+        /// Сцены (handle), о которых уже сообщено: предмет вне действительной сцены — утечка разборки
+        /// (например, предметы пережили выгрузку карты, launch-infra 6032). Одна ошибка на сцену, а не
+        /// на пару и не каждый шаг физики: дефект виден в вердикте по логам, но лог не засоряется.
+        /// </summary>
+        private static readonly HashSet<int> ReportedScenes = new HashSet<int>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => ReportedScenes.Clear();
+
         private void Awake()
         {
             _body    = GetComponent<Rigidbody>();
@@ -53,6 +63,14 @@ namespace VrBattlegrounds.Interaction
         public void SyncIgnoredCollisions()
         {
             if (_anchors == null) Awake();
+
+            // Предмет вне действительной сцены (пережил выгрузку): физика его пар не трогается.
+            if (!gameObject.scene.IsValid())
+            {
+                ReportOutOfScene(gameObject);
+                for (int i = 0; i < _placed.Length; i++) _placed[i] = null;
+                return;
+            }
 
             for (int i = 0; i < _anchors.Length; i++)
             {
@@ -89,10 +107,27 @@ namespace VrBattlegrounds.Interaction
             item.GetComponentsInChildren(true, _itemColliders);
 
             foreach (Collider a in _bodyColliders)
+            {
+                if (!a.gameObject.scene.IsValid()) { ReportOutOfScene(a.gameObject); continue; }
                 foreach (Collider b in _itemColliders)
+                {
+                    // Коллайдер вне действительной сцены (предмет пережил выгрузку) — Physics.IgnoreCollision
+                    // на нём бросает ошибку движка; пару, которой больше нет, разводить незачем.
+                    if (!b.gameObject.scene.IsValid()) { ReportOutOfScene(b.gameObject); continue; }
                     Physics.IgnoreCollision(a, b, ignore);
+                }
+            }
 
             GameLog.WeaponSystem.Verbose($"[AnchoredItemCollisionIgnore] {name} ↔ {item.name}: ignore={ignore} ({_bodyColliders.Count}×{_itemColliders.Count})", this);
+        }
+
+        private static void ReportOutOfScene(GameObject leaked)
+        {
+            if (!ReportedScenes.Add(leaked.scene.handle)) return;
+            GameLog.WeaponSystem.Error(
+                $"[AnchoredItemCollisionIgnore] предмет вне действительной сцены: {leaked.name} (сцена '{leaked.scene.name}', " +
+                "valid=" + leaked.scene.IsValid() + ") — утечка разборки, пары столкновений пропущены. Одно сообщение на сцену.",
+                leaked);
         }
     }
 }

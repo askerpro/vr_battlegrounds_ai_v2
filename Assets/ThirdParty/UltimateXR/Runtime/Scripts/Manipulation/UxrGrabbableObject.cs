@@ -2168,6 +2168,7 @@ namespace UltimateXR.Manipulation
                 !isActiveAndEnabled ||
                 UxrManager.Instance.IsInsideStateSync ||
                 !UxrNetworkManager.HasInstance ||
+                UxrNetworkManager.Instance.NetworkImplementation == null || // VR Battlegrounds patch 75: менеджер без реализации сети (EditMode)
                 UxrNetworkManager.Instance.NetworkImplementation.HasNetworkTransformSyncComponents(gameObject))
             {
                 return;

@@ -17,6 +17,9 @@
   `register` → `begin` (новый токен; verify — им). Правку плана лучше делать до первого `begin`.
 - Голову в шлеме — `PlayLaunch.Plan/Play` (Role host, ClientCount 0, сцена Lobby), стоп — `PlayLaunch.Cancel(run, owner)`
   до `CleanupPassed=true`. `GhostAvatar.prefab` не пересохранять через `SaveAsPrefabAsset` — портит UXR id и `_assetId`.
+- Inbox (выпуск 2026-10-14): ждать фоновым `coordination.py wait-inbox --owner manipulation --as "<адрес из ListAgents>"`
+  (run_in_background); по inbox_ready — `inbox --unread --as ...`, обработать, перезапустить. `--as` всегда. Вопросы
+  пользователю — только AskUserQuestion. Rebase worktree — когда субагенты в нём не коммитят.
 - Ключ `request --key` уникален навсегда: повтор с другим содержимым — отказ «ключ уже закреплён».
 - Пока у этапа нет `begin`, хук пускает только простые команды координации без пайпов, `$(...)` и циклов; полный SHA
   — отдельной командой `git rev-parse HEAD`. После `verify` допуск этапа закрыт.

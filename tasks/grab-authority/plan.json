@@ -1,11 +1,11 @@
 {
   "task_id": "grab-authority",
   "owner": "manipulation",
-  "client": "claude",
+  "client": "codex",
   "worktree": "F:/CodexWorktrees/manipulation/Vr_Battlegrounds_ai",
   "base_sha": "12aa19ac320989d5540d276da33c86a1efca12aa",
   "doc_path": "tasks/grab-authority/Readme.md",
-  "title": "Авторство хвата: сброс рук при смерти и удержание предмета у автора",
+  "title": "Авторство хвата, поздний вход, карман и масштаб предметов в кобурах",
   "stages": [
     {
       "id": "held-motion",
@@ -44,6 +44,8 @@
       "writes": [
         "Assets/Scripts/Interaction/UxrMagazinePocket.cs",
         "Assets/Scripts/Interaction/LooseItems.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObject.cs",
+        "Assets/Scripts/Interaction/AnchoredItemCollisionIgnore.cs",
         "Assets/Scripts/Player/PlayerLoadoutManager.cs",
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObjectAnchor.StateSave.cs",
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabbableObject.StateSave.cs",
@@ -57,6 +59,29 @@
         {
           "task": "death-body-defer",
           "stage": "death-equipment-drop",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "holster-calibration-scale",
+      "writes": [
+        "Assets/Scripts/Interaction/**",
+        "Assets/Tests/EditMode/Interaction/**",
+        "Docs/manipulation/**",
+        "experts/manipulation/**",
+        "tasks/grab-authority/**"
+      ],
+      "after": [
+        {
+          "task": "calibration-scale-events",
+          "stage": "scale-events",
+          "state": "merged"
+        },
+        {
+          "task": "grab-authority",
+          "stage": "pocket-active-hide",
           "state": "merged"
         }
       ],

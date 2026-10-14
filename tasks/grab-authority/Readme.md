@@ -1,37 +1,54 @@
-# grab-authority — авторство хвата: сброс рук при смерти и удержание предмета у автора
+# grab-authority — авторство хвата, поздний вход, карман и кобуры
 
-Обновлено 2026-10-12. Владелец: эксперт `manipulation` (`claude --agent manipulation-expert`), постоянный worktree
-`F:/CodexWorktrees/manipulation/Vr_Battlegrounds_ai`, ветка `haptics`. База знаний — [Docs/manipulation/](../../Docs/manipulation/invariants.md).
+Обновлено2026-10-14. Владелец `manipulation`, Codex; worktree
+`F:/CodexWorktrees/manipulation/Vr_Battlegrounds_ai`, ветка `haptics`.
+План [plan.json](plan.json), зарегистрированная редакция13; доказательства [Details.md](Details.md).
 
-## Цель и мотивация
+## Статус
 
-Решение пользователя 2026-10-12 «бот = обычный аватар» (bots-fix, `tasks/bots-fix/player-flow-plan.md`): бот идёт
-штатным потоком игрока, хват SDK штатный, автор аватара без владельца — сервер. Два места системы хвата стали
-блокерами (ревью 4188/4215, пользователь выбрал делать их первыми 2026-10-12):
+| Этап | Состояние |
+|---|---|
+| `held-motion` — SDK73 | влит `ae016723c` |
+| `late-join-anchors` — SDK75 | влит `8306c6a86`, принят по стенду |
+| `death-release-authority` | снят: реализован gameplay `death-body-defer` |
+| `pocket-active-hide` | пользователь принял; GREEN660 пройден; кандидат готовится к вливанию |
+| `holster-calibration-scale` | planned; после merged `scale-events` и `pocket-active-hide` |
 
-1. **Сброс рук при смерти без автора.** `PlayerController.OnActorDied` → `PlayerGrabManager.ReleaseAllGrabbedObjects`
-   зовёт синхронизируемый `ReleaseObject(..., true)` на каждой машине (класс Issue 23; инвариант 12). Возможны
-   дубль и расхождение (клиент роняет предмет со своей скоростью). Блокер этапа 1 bots («смерть со сбросом»).
-2. **Отставание удерживаемого предмета.** Сопротивление корня (AK105 0.03/0.05) считается на каждой машине в мировых
-   координатах: ~5° при повороте 90°/с, а движение корня мимо `AvatarMoved` (у `UpdateExternally` событие игнорируется,
-   `UxrGrabManager.cs:412`; прямую запись корня NT/BotBody событие не видит) не переносит оружие при телепорте и
-   ходьбе. Страдают боты и удалённые игроки у наблюдателей.
+## Принятая архитектура
 
-## Этапы
+SDK владеет grab-state. Карман переносит магазин под собственный выключенный `Storage` на корне
+`UxrAvatar`, сохраняет `activeSelf=true` и мировой масштаб. `ItemStored` — единственный путь
+серверной записи netId в `_pocketMagazines`; клиент ждёт `identity.isClient` перед скрытием.
+Collision-ignore пропускает объекты вне сцены с одной ошибкой на handle; уточнение SDK75 проверяет
+наличие реализации сети. Сокращение снимка SDK75 отозвано, `DontCheckCache` сохранён.
 
-| Этап | Суть | Состояние |
-|---|---|---|
-| `death-release-authority` | Прогон 2026-10-12: отпускание и сама смерть до клиентов не доходят ([факты](changelog/2026-10-12-death-probe.md)). Вариант C network 4303: реализация — в совместном этапе gameplay `death-body-defer/deferred-body` (наш zone-ack на `PlayerGrabManager`); у нас — ревью диффа хвата и прогон-проверка | снят из плана: реализуется в `death-body-defer/deferred-body` (gameplay) |
-| `held-motion` | SDK-патч (номер — `patch-reserve`): сопротивление только у автора держащего аватара и относительно его корня; ACK weapon-system по значениям в префабах; проверка — EditMode-метрика (шлем не нужен, решение 2026-10-12) | влит `ae016723c`; замер bots подтвердил (p95 35–42 → 10–14 мм, остаток — отдача) |
-| `late-join-anchors` | Поздний вход (bots 5076, тикет 517): опоздавший не видит предмет в якоре/кобуре — снимок `ChangesSinceBeginning` не пишет размещение, равное начальному, а чтение задаёт только поля. SDK-патч: размещение писать всегда (`DontCheckCache`) + согласование после загрузки в `UxrGrabManager`; ревью network; стенд S2C с опоздавшим. Плюс 5133 (ACK network 5300): после серверного снятия с якоря автор шлёт позу/скорость (`RegularPhysicsSyncCoroutine`), иначе у клиентов ствол проваливается — блокер gameplay `death-equipment-drop` | влит `8306c6a86`, принят по стенду 2026-10-13 |
-| `pocket-active-hide` | Карман прятал магазин `SetActive(false)` — Mirror не спавнит его опоздавшему (network 5458). Вариант B: неактивный контейнер кармана (`lossyScale` 1, под корнем аватара), `activeSelf` предмета не пишется; `ItemStored` — единственная запись в `_pocketMagazines` (возвращённые рукой магазины, гильзы); Warning по таймауту `ResolvePendingBindings`; сокращение снимка патча 75 (форсировать `_currentAnchor`, только если текущий или начальный якорь не null). ACK network 5738, weapon-system 5665 | ждёт вливания gameplay `death-body-defer/death-equipment-drop` (общий `PlayerLoadoutManager.cs`) |
+## Проверки
 
-## Синхронизация
+- GREEN660, снимок `4da5bea753` на базе `97a320c884`: AndroidCompileGate PASS0,
+  полный профильный набор470/470,0 failed/skipped; новые тесты9/9, LooseItems12/12.
+- RED655:14/21,7 ожидаемых отказов на возвращённой деактивации магазина и снятой защите физики.
+  Рабочие продуктовые файлы восстановлены побайтово, Unity-generated meta/GUID получены штатно.
+- 660 DONE, receive paths=[] unexpected=[]. Полный XML: `reports/worker-660-green/TestResults.xml`, вне Git.
+- Более широкий641:604/613,9 отказов в других областях (пол BotCombatStand×5, позы магазинов×4);
+  владельцы подтвердили6917/6926. Этот набор не объявляется зелёным.
+- Исторические S2C592/601: магазины и16 патронов видны опоздавшему; калибровка не искажает размер.
+  [Журнал](changelog/2026-10-13-pocket-active-hide.md). Новое независимое ревью без P1/P2.
 
-- bots-fix: их `pf-equipment` ставит `after` на `death-body-defer/deferred-body`; их этап `held-motion` снят (4228).
-- weapon-system: значения сопротивления в префабах оружия — их; ACK до `held-motion`.
-- network: ревью сетевой части (автор ownerless-аватара, поздний вход).
+## Приёмка и следующий шаг
 
-## Следующий шаг
+Пользователь2026-10-14: «считай я принял - вливай». Вопросов по приёмке нет;
+новая физическая Quest-проверка агентом не заявляется.
 
-`pocket-active-hide` — после ACK network и weapon-system: реализация, стенд S2C с опоздавшим, шлем (карман как раньше).
+После свёртки WIP: verify → accept → merge-request → merge-execute, затем request-base и
+уведомления network/weapon-system/bots/gameplay/launch-infra. Игровые файлы кандидата сверяются с GREEN.
+Документы другой своей задачи haptics остаются локально и не входят в этот этап.
+
+Кобуры: контракт `calibration-scale-events` r1 agreed, события ещё не merged.
+На каждой машине локально сохранить мировой масштаб по `ScaleChanging`, восстановить через
+`localScale` по `ScaleChanged`, без снятия с якоря и синхронизации UXR.
+
+## Ограничения и процесс
+
+Несетевой встроенный магазин в кармане ещё не передаётся опоздавшему — отдельный backlog.
+Inbox обработан; межзадачные сообщения идут в canonical inbox, старый Claude-route очищен.
+Координация off, Unity-аренда обязательна. Все подробные трассы в ignored reports.

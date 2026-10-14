@@ -103,10 +103,17 @@ namespace VrBattlegrounds.Tests.Interaction
         public void Спрятанный_в_карман_не_ничей()
         {
             UxrGrabbableObject item = CreateItem(kinematic: false);
-            item.gameObject.SetActive(false);
+            GameObject storage = Track(new GameObject("Storage"));
+            storage.SetActive(false);
+            item.transform.SetParent(storage.transform, true);
 
+            Assert.IsTrue(item.gameObject.activeSelf, "Собственный activeSelf нужен магазину для позднего сетевого спавна.");
+            Assert.IsFalse(item.gameObject.activeInHierarchy);
             Assert.IsFalse(LooseItems.IsLoose(item),
-                "Карман прячет магазины выключенными — уборка их не трогает.");
+                "Карман прячет магазины выключенным родителем — уборка их не трогает.");
+
+            item.transform.SetParent(null, true);
+            Assert.IsTrue(LooseItems.IsLoose(item), "После выхода из контейнера брошенный предмет снова ничей.");
         }
 
         [Test]

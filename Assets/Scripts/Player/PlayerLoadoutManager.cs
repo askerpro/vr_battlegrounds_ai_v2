@@ -51,11 +51,19 @@ namespace VrBattlegrounds.Player
         /// <summary>Менеджеры всех игроков на этом сервере.</summary>
         public static IReadOnlyList<PlayerLoadoutManager> ServerInstances => ServerInstancesList;
 
-        /// <summary><c>netId</c> магазинов, лежащих в кармане. Пишет только сервер.</summary>
+        /// <summary>
+        /// <c>netId</c> магазинов, лежащих в кармане. Пишет только сервер; добавляет — единственным путём,
+        /// по <see cref="UxrMagazinePocket.ItemStored"/> (выдача, возврат рукой, гильзы ручного заряжания),
+        /// снимает — по <see cref="UxrMagazinePocket.ItemReleased"/> и при уничтожении.
+        /// </summary>
         private readonly SyncList<uint> _pocketMagazines = new SyncList<uint>();
 
-        /// <summary>Магазины из списка, которые у клиента ещё не заспавнились.</summary>
-        private readonly HashSet<uint> _pendingBindings = new HashSet<uint>();
+        /// <summary>Сколько ждать спавна магазина из списка, прежде чем предупредить.</summary>
+        private const float PendingBindingWarningSeconds = 5f;
+
+        /// <summary>Магазины из списка, которые у клиента ещё не заспавнились: netId → когда начали ждать.</summary>
+        private readonly Dictionary<uint, float> _pendingBindings = new Dictionary<uint, float>();
+        private readonly HashSet<uint> _warnedBindings = new HashSet<uint>();
         private readonly List<uint> _resolvedBindings = new List<uint>();
 
         private UxrAvatar _avatar;
@@ -93,6 +101,8 @@ namespace VrBattlegrounds.Player
 
             if (Pocket != null)
             {
+                Pocket.ItemStored -= ServerHandleItemStored;
+                Pocket.ItemStored += ServerHandleItemStored;
                 Pocket.ItemReleased -= ServerHandleItemReleased;
                 Pocket.ItemReleased += ServerHandleItemReleased;
             }
@@ -115,7 +125,10 @@ namespace VrBattlegrounds.Player
             ServerInstancesList.Remove(this);
 
             if (_pocket != null)
+            {
+                _pocket.ItemStored -= ServerHandleItemStored;
                 _pocket.ItemReleased -= ServerHandleItemReleased;
+            }
         }
 
         /// <summary>
@@ -312,7 +325,7 @@ namespace VrBattlegrounds.Player
                 return;
             }
 
-            _pocketMagazines.Add(identity.netId);
+            // На учёт кармана магазин ставит ServerHandleItemStored — по событию самого кармана.
             Pocket.ForceStoreItem(grabbable);
         }
 
@@ -328,6 +341,22 @@ namespace VrBattlegrounds.Player
                 NetworkServer.Destroy(magazine.gameObject);
             else
                 Destroy(magazine.gameObject);
+        }
+
+        /// <summary>
+        /// Магазин лёг в карман на сервере — ставим его на учёт. Единственный путь записи в
+        /// <see cref="_pocketMagazines"/>: так учитываются и выданные сервером магазины, и возвращённые
+        /// в карман рукой (размещение в якорь кармана реплицирует UltimateXR), и гильзы ручного заряжания.
+        /// </summary>
+        private void ServerHandleItemStored(UxrGrabbableObject item)
+        {
+            if (!isServer || item == null) return;
+
+            NetworkIdentity identity = item.GetComponent<NetworkIdentity>();
+            if (identity == null || identity.netId == 0) return;
+
+            if (!_pocketMagazines.Contains(identity.netId))
+                _pocketMagazines.Add(identity.netId);
         }
 
         /// <summary>Магазин покинул карман на сервере — снимаем его с учёта.</summary>
@@ -390,7 +419,11 @@ namespace VrBattlegrounds.Player
             _pocketMagazines.OnAdd += HandleMagazineAdded;
 
             foreach (uint netId in _pocketMagazines)
-                _pendingBindings.Add(netId);
+                AddPendingBinding(netId);
+
+            // Магазин с netId меньше нашего уже запущен — прячем сразу; остальные пачки опоздавшего
+            // (запуск идёт по порядку netId) — в ближайшем Update.
+            ResolvePendingBindings();
         }
 
         public override void OnStopClient()
@@ -403,7 +436,16 @@ namespace VrBattlegrounds.Player
 
         private void HandleMagazineAdded(int index)
         {
-            _pendingBindings.Add(_pocketMagazines[index]);
+            AddPendingBinding(_pocketMagazines[index]);
+
+            // Спавн нового магазина приходит раньше дельты списка — обычно его можно спрятать сразу.
+            ResolvePendingBindings();
+        }
+
+        private void AddPendingBinding(uint netId)
+        {
+            if (!_pendingBindings.ContainsKey(netId))
+                _pendingBindings.Add(netId, Time.unscaledTime);
         }
 
         private void Update()
@@ -421,9 +463,12 @@ namespace VrBattlegrounds.Player
             if (Pocket == null) return;
 
             _resolvedBindings.Clear();
+            int stored = 0;
 
-            foreach (uint netId in _pendingBindings)
+            foreach (KeyValuePair<uint, float> pending in _pendingBindings)
             {
+                uint netId = pending.Key;
+
                 if (!_pocketMagazines.Contains(netId))
                 {
                     // Магазин уже достали или убрали — прятать нечего.
@@ -431,19 +476,53 @@ namespace VrBattlegrounds.Player
                     continue;
                 }
 
-                if (!NetworkClient.spawned.TryGetValue(netId, out NetworkIdentity identity) || identity == null)
+                // Только запущенный у клиента объект (isClient ставит BootstrapIdentity после ApplySpawnPayload).
+                // При опоздании Mirror применяет спавн пачки по порядку netId: магазин уже в spawned, но ещё
+                // выключен и без Awake. Спрятанный в выключенный контейнер, он так и не проснётся — NetworkBehaviours
+                // остаются null, OnStartClient падает и Mirror рвёт соединение (стенд, тикет 584).
+                if (!NetworkClient.spawned.TryGetValue(netId, out NetworkIdentity identity) || identity == null ||
+                    !identity.isClient)
+                {
+                    WarnIfBindingStuck(netId, pending.Value);
                     continue;
+                }
 
                 UxrGrabbableObject grabbable = identity.GetComponent<UxrGrabbableObject>();
-                if (grabbable != null) Pocket.ForceStoreItem(grabbable);
+                if (grabbable != null && !Pocket.Contains(grabbable))
+                {
+                    Pocket.ForceStoreItem(grabbable);
+                    stored++;
+                    GameLog.Player.Verbose(
+                        $"[Loadout] {name}: магазин netId={netId} ({grabbable.name}) привязан к карману, " +
+                        $"патронов {UxrMagazinePocket.RoundsOf(grabbable)}, мировой масштаб {grabbable.transform.lossyScale}.", this);
+                }
 
                 _resolvedBindings.Add(netId);
             }
 
             foreach (uint netId in _resolvedBindings)
+            {
                 _pendingBindings.Remove(netId);
+                _warnedBindings.Remove(netId);
+            }
 
             _resolvedBindings.Clear();
+
+            if (stored > 0)
+                GameLog.Player.Info($"[Loadout] {name}: привязано к карману магазинов {stored}, в кармане {Pocket.Count}.", this);
+        }
+
+        /// <summary>
+        /// Магазин из списка кармана долго не спавнится у клиента — однократное предупреждение. Так выглядел
+        /// дефект скрытия через <c>SetActive(false)</c>: Mirror не спавнит опоздавшему выключенные объекты.
+        /// </summary>
+        private void WarnIfBindingStuck(uint netId, float since)
+        {
+            if (Time.unscaledTime - since < PendingBindingWarningSeconds || !_warnedBindings.Add(netId)) return;
+
+            GameLog.Network.Warning(
+                $"[Loadout] {name}: магазин netId={netId} из кармана не заспавнился у клиента за " +
+                $"{PendingBindingWarningSeconds:0} с — в карман не спрятан.", this);
         }
     }
 }

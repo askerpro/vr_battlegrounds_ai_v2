@@ -6,6 +6,7 @@ using UltimateXR.Core;
 using UltimateXR.Manipulation;
 using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
+using VrBattlegrounds.Core;
 using VrBattlegrounds.Weapons;
 
 namespace VrBattlegrounds.Interaction
@@ -21,6 +22,15 @@ namespace VrBattlegrounds.Interaction
     /// гнездо оружия решает совместимость. Четвёртый магазин типа якорь не принимает (валидатор размещения).
     /// Раньше общая вместимость 4 делилась жадно, и второй ствол оставался без магазинов.
     /// </para>
+    ///
+    /// <para>
+    /// <b>Прячет родитель, а не сам предмет</b> (этап grab-authority/pocket-active-hide). Спрятанный предмет
+    /// лежит под собственным выключенным контейнером кармана; его <c>activeSelf</c> карман не трогает. Mirror
+    /// спавнит опоздавшему только объекты с <c>activeSelf</c> = true (<c>SpawnObserversForConnection</c>):
+    /// прежнее <c>SetActive(false)</c> оставляло опоздавшего без магазинов в кармане и без магазина,
+    /// который достанут позже. Локально всё как раньше: предмет неактивен в иерархии — не кандидат на
+    /// хват, не «лежащий» (<see cref="LooseItems.IsLoose"/>), без Update.
+    /// </para>
     /// </summary>
     [RequireComponent(typeof(UxrGrabbableObjectAnchor))]
     public class UxrMagazinePocket : MonoBehaviour
@@ -33,6 +43,13 @@ namespace VrBattlegrounds.Interaction
         private UxrGrabbableObjectAnchor _anchor;
 
         /// <summary>
+        /// Выключенный контейнер спрятанных предметов. Это вид, а не сетевой объект: создаётся на каждой
+        /// машине сам, без NetworkIdentity и состояния UltimateXR, в сцену не сохраняется.
+        /// </summary>
+        private Transform _storage;
+        private bool _scaleWarned;
+
+        /// <summary>
         /// Рука достала магазин из кармана. Магазины хранятся вне якоря, поэтому событие якоря
         /// <c>Removed</c> при этом не приходит — слушать нужно это (звук доставания, <see cref="AnchorSound" />).
         /// </summary>
@@ -43,6 +60,12 @@ namespace VrBattlegrounds.Interaction
         /// по сети. Сервер по нему снимает магазин с учёта кармана.
         /// </summary>
         public event Action<UxrGrabbableObject> ItemReleased;
+
+        /// <summary>
+        /// Предмет спрятан в карман — всё равно как: выдан сервером или положен рукой (в том числе
+        /// пришедшим по сети размещением). Сервер по нему ставит магазин на учёт кармана.
+        /// </summary>
+        public event Action<UxrGrabbableObject> ItemStored;
 
         private void Awake()
         {
@@ -102,11 +125,13 @@ namespace VrBattlegrounds.Interaction
             // Если это магазин и для его типа есть место
             if ((mag != null || e.GrabbableObject.GetComponent<Cartridge>() != null) && CanStore(e.GrabbableObject))
             {
-                StoreItem(e.GrabbableObject);
-                
-                // Мгновенно снимаем объект с Якоря, чтобы Якорь снова стал пустым и мог принимать следующие магазины
+                // Мгновенно снимаем объект с Якоря, чтобы Якорь снова стал пустым и мог принимать следующие магазины.
+                // Сначала снять, потом прятать: снятие переподвешивает предмет к родителю якоря (кость таза),
+                // и спрятанный раньше магазин остался бы видимым под телом, а не в контейнере.
                 UxrGrabManager.Instance.RemoveObjectFromAnchor(e.GrabbableObject, true);
-                
+
+                StoreItem(e.GrabbableObject);
+
                 // Сообщаем якорю, что теперь у нас есть предметы, и прокси можно хватать
                 _anchor.UpdateGrabProxyState();
             }
@@ -139,6 +164,9 @@ namespace VrBattlegrounds.Interaction
                 return _storedItems.Count;
             }
         }
+
+        /// <summary>Спрятан ли предмет в этом кармане.</summary>
+        public bool Contains(UxrGrabbableObject item) => item != null && _storedItems.Contains(item);
 
         /// <summary>Сколько магазинов одного типа держит карман.</summary>
         public int PerTypeLimit => _perTypeLimit;
@@ -217,15 +245,17 @@ namespace VrBattlegrounds.Interaction
 
             // Достаёт магазин из кармана только машина владельца (прокси-захват решается
             // локально), а остальным приходит уже захват конкретного магазина. У них он
-            // лежит здесь выключенным — его нужно достать, иначе в чужой руке окажется
-            // невидимый предмет.
-            item.Grabbing -= OnStoredItemGrabbing;
-            item.Grabbing += OnStoredItemGrabbing;
+            // лежит здесь в выключенном контейнере — его нужно достать, иначе в чужой руке
+            // окажется невидимый предмет.
+            item.Grabbing -= OnStoredItemTaken;
+            item.Grabbing += OnStoredItemTaken;
 
-            // Скрываем и делаем дочерним объектом кармана
-            item.transform.SetParent(this.transform);
-            
-            // Сбрасываем физику
+            // Размещение спрятанного предмета в обход ExtractMagazine (например, в гнездо оружия по сети)
+            // тоже выводит его из кармана: иначе он окажется в мире и при этом останется на учёте кармана.
+            item.Placing -= OnStoredItemTaken;
+            item.Placing += OnStoredItemTaken;
+
+            // Сбрасываем физику до ухода в выключенную иерархию: там тело выпадает из симуляции.
             Rigidbody rb = item.GetComponent<Rigidbody>();
             // У кинематического тела скорости нет — Unity на запись ругается предупреждением.
             if (rb != null && !rb.isKinematic)
@@ -233,8 +263,74 @@ namespace VrBattlegrounds.Interaction
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
-            
-            item.gameObject.SetActive(false);
+
+            // Прячем родителем: activeSelf предмета остаётся true, и Mirror спавнит его опоздавшему.
+            item.transform.SetParent(Storage, true);
+
+            ItemStored?.Invoke(item);
+        }
+
+        /// <summary>
+        /// Выключенный контейнер спрятанных предметов; создаётся по требованию.
+        ///
+        /// <para>
+        /// Висит прямо под корнем аватара, а не под костью таза, на которой карман. Кость масштабирует
+        /// калибровка роста (<c>AvatarCalibrationApplier</c> — опора «Dummy Forward» над скелетом), и
+        /// спрятанный магазин уменьшался вместе с телом, а при выходе из кармана сохранял искажённый
+        /// масштаб. Корень аватара калибровка не трогает. Кроме того, Mirror отдаёт опоздавшему
+        /// <c>localScale</c> предмета относительно родителя, а тот у опоздавшего рождается без родителя.
+        /// Поэтому мировой масштаб контейнера держим единичным; предмет переподвешивается с сохранением
+        /// мирового масштаба (у корней префабов магазинов он свой, например 0.7) — и не искажается.
+        /// </para>
+        /// </summary>
+        private Transform Storage
+        {
+            get
+            {
+                if (_storage == null)
+                {
+                    var root = new GameObject($"{name} Storage");
+
+                    // Служебный объект вида: ни в сцену редактора, ни в билд (как NetworkUxrIdentity.Dormitory).
+                    root.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+                    root.SetActive(false);
+                    _storage = root.transform;
+
+                    UxrAvatar avatar = GetComponentInParent<UxrAvatar>(true);
+                    _storage.SetParent(avatar != null ? avatar.transform : transform.root, false);
+                }
+
+                KeepUnitWorldScale(_storage);
+                return _storage;
+            }
+        }
+
+        private void KeepUnitWorldScale(Transform container)
+        {
+            Transform parent = container.parent;
+            Vector3 parentScale = parent != null ? parent.lossyScale : Vector3.one;
+            if ((parentScale - Vector3.one).sqrMagnitude <= 1e-8f)
+            {
+                container.localScale = Vector3.one;
+                return;
+            }
+
+            // Корень аватара не масштабируется — иначе масштаб опоздавшему уйдёт неверным. Выравниваем и сообщаем.
+            container.localScale = new Vector3(SafeInverse(parentScale.x), SafeInverse(parentScale.y), SafeInverse(parentScale.z));
+            if (!_scaleWarned)
+            {
+                _scaleWarned = true;
+                GameLog.Player.Warning($"[Pocket] {name}: мировой масштаб родителя контейнера кармана {parentScale} ≠ 1 — " +
+                                       "контейнер выровнен обратным масштабом.", this);
+            }
+        }
+
+        private static float SafeInverse(float value) => Mathf.Abs(value) > 1e-6f ? 1f / value : 1f;
+
+        private void OnDestroy()
+        {
+            // Контейнер живёт вместе с карманом — как прежде спрятанные предметы, дочерние карману.
+            if (_storage != null) Destroy(_storage.gameObject);
         }
 
         /// <summary>
@@ -299,22 +395,34 @@ namespace VrBattlegrounds.Interaction
             return root.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true);
         }
 
-        /// <summary>Возвращает спрятанный предмет в мир: список, видимость, родитель.</summary>
+        /// <summary>
+        /// Возвращает спрятанный предмет в мир: список, родитель. Видимость возвращает уход из
+        /// выключенного контейнера — свой <c>activeSelf</c> предмет не терял.
+        /// </summary>
         private void Release(UxrGrabbableObject item)
         {
-            item.Grabbing -= OnStoredItemGrabbing;
+            item.Grabbing -= OnStoredItemTaken;
+            item.Placing -= OnStoredItemTaken;
             _storedItems.Remove(item);
-            item.gameObject.SetActive(true);
-            item.transform.SetParent(null);
+            item.transform.SetParent(null, true);
+
+            GameLog.Player.Verbose($"[Pocket] {item.name} покинул карман {name}: патронов {RoundsOf(item)}, " +
+                                   $"мировой масштаб {item.transform.lossyScale}.", this);
 
             ItemReleased?.Invoke(item);
         }
 
+        /// <summary>Патроны магазина для лога; не магазин — «-».</summary>
+        public static string RoundsOf(UxrGrabbableObject item)
+        {
+            return item != null && item.TryGetComponent(out UxrFirearmMag mag) ? mag.Rounds.ToString() : "-";
+        }
+
         /// <summary>
-        /// Спрятанный магазин схватили в обход <see cref="ExtractMagazine"/> — захват
+        /// Спрятанный магазин схватили (или разместили) в обход <see cref="ExtractMagazine"/> — захват
         /// пришёл по сети с машины владельца кармана.
         /// </summary>
-        private void OnStoredItemGrabbing(object sender, UxrManipulationEventArgs e)
+        private void OnStoredItemTaken(object sender, UxrManipulationEventArgs e)
         {
             UxrGrabbableObject item = e.GrabbableObject;
             if (item == null || !_storedItems.Contains(item)) return;

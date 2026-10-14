@@ -60,3 +60,6 @@
   в source не принимать, canonical сохранить. Механизм URP17.4.0 подтверждён main/worker source,
   без runtime/perf PASS. Native report18:02–18:04MSK старше заявки65120:29 (review note7021);
   свежую build/output/input корреляцию проверяет owner, unexpected-R disposition — штатный maintainer.
+- Уточнениеnetwork7023 проверено: history18:04:16Z внутри651 +386files/4hashes +6roleidentity поддерживают
+  свежийbuild; прежнийtimestamp mismatch не доказывает stalebuild. Первый functional24/24 RED/unexpected4,
+  второй24/24 GREEN/logs0; launchpath неattest, Quest/perfнепроверены. URPdisposition7025 неизменен.

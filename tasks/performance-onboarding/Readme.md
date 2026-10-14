@@ -42,3 +42,9 @@
 Review note7021: native build report18:02–18:04MSK предшествует заявке65120:29, свежий BuildPASS
 этим файлом не подтверждён. Owner/agent-infra уведомлены, source/receive/ACK не менялись.
 Отчёт: reports/network-7005/urp-prefilter-review.md; raw snapshot и primary-check рядом.
+
+Уточнение7023: alternative correlation поддерживает свежую build identity651 — execution history
+внутри lease, export386files/EXE+3DLL hashes, шесть role JSON с одной revision/buildGuid.
+Старые native DateTime не используются для freshness; причина конверсии остаётся предположением owner.
+Первая серия functional24/24, но RED/unexpected4; вторая24/24 GREEN/logs0. Это не perf/Quest acceptance,
+launch executable path в role JSON не аттестован. Отчёт: reports/network-7005/correlation-review.md.

@@ -16,3 +16,22 @@
 13. `revolver-manual` — ручное заряжание револьвера по патрону, идея пользователя — roadmap п. 5.
 14. `pocket-grab-priority` — наблюдать: у кармана рука берёт пистолет за поддержку вместо магазина; правило `GrabRules` — через manipulation — roadmap.
 15. `sight-open-questions` — WeaponRegistry и дубли `*_SightReview`, Viper, SniperRifle, MKR9, Approved/Apply, zoom, eyebox — `Docs/weapons/sight-calibration.md` п. 7.2–7.9.
+
+## Обещания другим агентам (на 2026-10-14)
+
+- avatar-grip `hand-rig-quality/grip-extraction-run`: ревью diff остальных префабов оружия до вливания; условия
+  zone-ack — только записи хвата MEF_cyborg_hands + align, `_assetId` неизменен (Normalize + сверка с диском,
+  `NetworkAssetIdOnDiskTests`), редакторным инструментом (6129, 6378, 6388).
+- manipulation `grab-authority/pocket-active-hide`: ревью дано (6312); их diff, если затронет `UxrFirearmMag`/учёт, —
+  снова нам. Кобуры (оружие в кобуре искажается калибровкой, 0.427) — их отдельный этап, следить. После вливания
+  патча 75 уточнить комментарий `MagazineEject` («падает у всех» → поза от стрелка) — обещано в 5455.
+- bots `BotShotCostDriver` (6217): прислать точку бота и точку стены в Lobby (не совпадают с точками view-tour из
+  `tasks/quest-perf-pipeline/tools/lobby-views.json`; при необходимости — у level-design), N=90, R=10/с.
+- gameplay 6222: ждём ответ — бот-сессия/спавн тела бота в Lobby вне матча для замера.
+- launch-infra 6198: `zone-request` на строку `E2ERunner.cs` для сценария `shot-cost`, diff строки им на ревью;
+  взять `ShotCostScenario.cs`/`ShotCostFrameLog.cs` (+.meta) в owns (`experts/weapon-system/expert.json`).
+- performance 6203/6219: план замера принят; ревью кода рекордера и формул анализатора — у них до прогона; слот
+  шлема согласовать после их view-tour.
+- bots-fix 6096/6131: после clip-cutover cc-1 устареют комментарии о ботах в `WeaponReadinessController.cs:8/18` и
+  `WeaponSystem.cs` ~409 — поправить в `cleanup-h` или ближайшей правке WeaponSystem.
+- network 5871/5896: после их правки логов UXR/кеша MethodInfo — повторный замер выстрела нашим сценарием.

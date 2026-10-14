@@ -7,103 +7,78 @@
 Раньше за одно и то же отвечали несколько компонентов и правили состояние друг за другом: рассинхрон позы,
 двойные звуки, сетевая ошибка учёта.
 
+## Передача (2026-10-14, Claude → Codex)
+
+Владелец — эксперт `weapon-system` (роль: `experts/weapon-system/AGENT.md`, backlog и журнал там же).
+Worktree `F:/CodexWorktrees/weapon-system/Vr_Battlegrounds_ai`, ветка `claude/weapon-system`
+(сохранена и на origin). Хаб: задача `weapon-system`, план r58+. Координация — режим off.
+- Inbox: `python Tools/agents/coordination.py inbox --owner weapon-system --unread --as "<свой адрес>"`;
+  ожидание — `wait-inbox --owner weapon-system --as "<свой адрес>"` фоновой командой (не Monitor/watch-inbox).
+- Вопросы пользователю: в Codex — явным сообщением с пометкой «ЖДЁТ ОТВЕТА» + строка в «Ждёт пользователя» ниже
+  (AskUserQuestion — только Claude). Route не трогать вручную: новая сессия публикует адрес сама.
+- Аренд и заявок worker у задачи нет (последние 578/587/596 закрыты). Worker/брокер выключены до команды.
+
 ## Статус
 
-2026-10-13 — `aimlock-held-lag` влит (`2bc2e9f6`): пистолет двумя руками не фиксирует отставание, если поддержку
-взяли на ходу. Принято в шлеме, тесты 31/31. Следующий — `shot-cost-probe` (маркеры профайлера тракта выстрела,
-SDK-патч 79, готовы в ветке `ws/shot-cost-probe`), затем замер на Quest с performance.
+**Ветка `claude/weapon-system` = origin/dev + 1 коммит `f59ae8341`** — этап `shot-cost-probe` (running в хабе):
+маркеры профайлера тракта выстрела, SDK-патч 79 ([changelog](changelog/2026-10-13-sdk-79.md)). Поведение не
+меняют; офлайн-компиляция OK; ревью diff сделано; Unity/тесты не запускались; в origin/dev НЕ влиты — нужны для
+замера `shot-pipeline-budget`, вливать вместе с ним/после проверки в Unity.
 
-2026-10-13 — `ledger-spawn-ready` влит (`a1c93d40`, SDK-патч 76): наблюдатели теряли Initialize учёта у ствола,
-заспавненного при подключённом клиенте (учёт включался только в `Start`), и навсегда расходились по ревизии —
-не видели выстрелов ствола в руках сервера/хоста/бота. Учёт теперь включается в `OnEnable`, отказ replay
-виден в логе. Находка bots-fix 5092, разбор совпал с network 5339. Ярус C bots-fix подтвердил (5500, тикет 543):
-S2C, все выстрелы сервера применены у клиентов (включая опоздавших и reconnect), 0 форков, 0 отказов replay.
-Случай стены арсенала стенд не покрывает — проверка человеком на двух клиентах в `acceptance-g`.
-
-Находка manipulation 5444 (магазин кармана не доходит до опоздавшего): корень — `UxrMagazinePocket.StoreItem`
-выключает заспавненный объект, Mirror не спавнит его новому клиенту. Исправляет manipulation по решению network
-5460; наши дополнения — 5462 (магазин, возвращённый в карман рукой, вне SyncList; шаг приёмки учёта ствола).
-
-2026-10-12 — **калибровка прицелов**, главный приоритет пользователя ([решения](../../Docs/weapons/decisions.md) «Прицелы»).
-- `sight-tr15-optic`: коллиматор эталона TR15 Sight Review перенесён в основной TR15 через `Tr15OpticBuilder`,
-  принят в шлеме, коммит `9d5276eb`. Builder теперь сохраняет Mirror `_assetId` (раньше обнулял).
-- `sight-iron-kits` влит (`a3b06c63`): инструменты автосведения — комплекты TR15/MX68, SightAdjustablePart,
-  решатель «Свести», таблица, writer `WeaponSightAuthoring`, окно Sight Auto-Zero (комплект на планке и
-  «Родной прицел» через разделитель SightSplit). Опробовано пользователем на стенде; тесты 104/104.
-  Запись в таблицу и применение к префабам выключены — финальная калибровка отдельной задачей.
-- `sight-arsenal-dedupe` влит (`b624fdb3`): стена лобби 20 стволов без копий Sight Review; в каталоге одна
-  строка — отпечаток арсенала лобби (разрешение gameplay 4912). Штатная пересборка каталога с отпечатком,
-  не зависящим от EOL, — этап gameplay `catalog-fingerprint`.
-- Хаб use-context: все этапы записаны merged (`record-merged`, 74de9191), контракты active.
-
-Обновлено 2026-10-11. Владелец — эксперт `weapon-system`; задача перенесена в его постоянный worktree
-`F:/CodexWorktrees/weapon-system/Vr_Battlegrounds_ai`, ветка `claude/weapon-system` (хаб 3358/3361, план r39).
-
-Выполняется `use-context`: единый контекст руки и экипировки для реальной стрельбы NPC.
-2026-10-11 пользователь принял механику в шлеме (аренда 425, Play Mode `Offline.unity`) на совместном
-пакете checkpoint `d21bec7e`: own21 + foundation bots-fix `93f67ded` + полные метки SDK71.
-Дальше тесты, accepted commit и merge. [План и бриф](use-context.md), история проверок — [Details.md](Details.md) «Сделано».
-
-`codex-expert`: [адаптер Codex](../../.codex/agents/weapon-system-expert.toml) приведён к общему шаблону
-экспертов (3275); правила роли — `experts/weapon-system/AGENT.md`. Отдельный запуск Codex не проверялся.
-
-Влиты: B, C, C2, `drive` (5285ceb7), `waves-f` (5af1c7ef), `ejection` (722d14df), `expert-kb` (cd497223).
-На машине F1–F4; F5 ещё legacy. Есть вылет, четыре категории отклика, повтор инициализации и запрет
-перехвата второй рукой. Подробности — база знаний и журналы этапов.
-
-## Архитектура
-
-Чистая машина (`Assets/Scripts/Weapons/Core`) → датчики → порт учёта SDK → исполнители. Полное описание, инварианты,
-решения пользователя — база знаний [`Docs/weapons/`](../../Docs/weapons/README.md).
-
-## План
-
-Очередь этапов и риски — [`Docs/weapons/roadmap.md`](../../Docs/weapons/roadmap.md) (единственный источник).
-2026-10-10: план r37 подготовлен; база обновлена fetch/rebase до accepted `1001415b`, WIP сохранён.
-Контекст, SDK70 и SDK71 технически verified. Full-context exact13 candidate
-`d8dec7e3` включает VR/Equipment grant и SDK prerequisites. SDK72 атрибуция verified `21fcd298`,
-`weapon-equipment-shooter@1` agreed обеими сторонами. Actor adapter принадлежит bots-fix.
-Canonical authoring выделен отдельным этапом на writer и два prefab; `ejection-manual` следует после него.
-Binding exact11 8435c229 с actor adapter сверён; разрешён DEVELOPMENT overlay в reports,
-production Assets остаются у bots-fix. SDK lifetime-порт реализован по решению пользователя.
-Проект `ejection-manual` — [ejection-manual.md](ejection-manual.md), SDK-патч 69.
-Машинный план — [plan.json](plan.json); подробности — [Details.md](Details.md); спецификация машины —
-[refactor-plan.md](refactor-plan.md); учёт C2 — [ledger-single-source.md](ledger-single-source.md); журналы этапов —
-`changelog/`; скрипты (офлайн-компиляция, claim, продление допуска) — [tools/](tools/Readme.md).
-
-## Синхронизация
-
-- Контракты: `weapon-use-context@2` (владелец мы, agreed), `weapon-equipment-binding@1` (bots-fix; agreed, ещё не accepted),
-  `haptics-api@1` (haptics-system).
-- Сопровождающий: строки `Docs/weapons` в `AGENTS.md` и `Docs/README.md` — отдельный выпуск после миграции (1494).
-
-## Проверка
-
-C2, `drive`, `waves-f`, `ejection` — шлем пользователя, Android PASS, EditMode (последний: аренда 337, 401 тест,
-1 красный вне этапа — бюджет треугольников R08). Подробности — журналы `changelog/`.
+Влито 2026-10-12…13: `aimlock-held-lag` (`2bc2e9f6`, принято в шлеме, тесты 31/31), `ledger-spawn-ready`
+(`a1c93d40`, SDK-патч 76, подтверждён ярусом C bots-fix 5500), прицелы `sight-tr15-optic`/`sight-iron-kits`/
+`sight-arsenal-dedupe`, use-context (`74de9191`). История — `changelog/`, журналы `experts/weapon-system/journal/`.
 
 ## Следующий шаг
 
-Совместный пакет принят пользователем 2026-10-11. Что уже есть:
+1. **`shot-pipeline-budget`** — замер стоимости выстрела на Quest ([проект](shot-pipeline-budget.md), метод
+   performance 6156, план принят 6203). Решено: сцена Lobby; бот стреляет на ПК-сервере через отладочный драйвер
+   bots `BotShotCostDriver` (их этап после clip-cutover cc-1), шлем-наблюдатель; сценарий E2E `shot-cost`
+   (`ShotCostScenario.cs`, `ShotCostFrameLog.cs` в `Assets/Scripts/Debug/E2E/Scenarios/` — в owns weapon-system по
+   6198), строка в `E2ERunner.cs` — `zone-request` launch-infra. Блокеры: bots-fix/clip-cutover merged; этап
+   драйвера bots; ответ gameplay 6222 (бот-сессия в Lobby). `quest-perf-pipeline/e2e-log-verdict` уже влит
+   (`0cd489fd`). Можно начинать независимое: `tasks/weapon-system/tools/shot_cost_report.py` (`--selftest`),
+   рекордер `ShotCostFrameLog` (без аллокаций в кадре, по образцу `PerfFrameRecorder`). Этап добавить в plan.json,
+   когда закроется `shot-cost-probe` (хаб: один running-этап на worktree).
+2. Затем пулы по цифрам (вспышка/трассер/звук/попадания — наши; логи UXR `_logLevelCore 5` и рефлексия
+   StateSync на клиентах — network 5871/5896).
+3. Очередь этапов: `ejection-manual` (после shot-cost-probe, aimlock, hand-rig-quality/grip-extraction-run) →
+   `trigger-e` → `acceptance-g` (после bots-fix/clip-cutover) → `cleanup-h`. Roadmap — `Docs/weapons/roadmap.md`.
 
-- NPC-прогоны bots-fix на own21: ticket413/415/419 (3427/3455/3584). Подтверждены выстрелы SDK, учёт,
-  ActorSource и damage credit у MEF и Cyborg на PPK и AK105.
-- Сетевое ревью network (3597): ACK совместного вливания одним пакетом. Условия 3–5 переданы
-  bots-fix (3603), они обязательны до clip-cutover.
-- Условия manipulation по `weapon-grab-lifetime` r2 (3447) выполнены: метки `VR Battlegrounds patch 71`,
-  патч 67 и `GrabCandidates.cs` не тронуты.
-- Аренда 425: импорт без ошибок, Mirror weaver обработал Binding, Missing Script 0; шлем — OK.
-  Замечание пользователя про скольжение PPK в ладони при отдаче вынесено в backlog `recoil-hand-follow`:
-  это штатная SDK-отдача, пакет её не меняет.
+## Ждёт пользователя
 
-Аренда 428: AndroidCompileGate PASS, тесты оружия 236/236 (включая новые use-context),
-хват/сеть/боты/аватары 777 PASS + 1 Ignored. Коммиты: foundation bots-fix, затем use-context;
-вливание fast-forward в origin/dev `74de9191`. Журнал — [changelog/2026-10-11-use-context.md](changelog/2026-10-11-use-context.md).
-В хабе этапы пакета use-context проведены до merged отдельным docs-кандидатом поверх origin/dev,
-который содержит влитый код; это активирует контракты `weapon-use-context`, `weapon-grab-lifetime`
-и `weapon-equipment-shooter` и снимает зависимость clip-cutover у bots-fix.
-Следующие этапы: `ejection-manual`, затем `trigger-e` → `acceptance-g` → `cleanup-h`.
+- Финальная калибровка прицелов — отдельной задачей по его команде (инструменты влиты, запись/Apply выключены).
+- `recoil-hand-follow` — воспроизвести «оружие при отдаче заходит в меш кисти» (backlog п. 4), когда он даст время.
+- Приоритет network-правок логов UXR/рефлексии (5896) — решение пользователя о запуске.
 
-Наши authoring/readback/idempotence и Android уже PASS, asset review завершён: 0 замечаний.
-Свежая офлайн-компиляция пакета: Core/UltimateXR554/Game434/DebugBootstrap6/Editor263/Tests231 exit0.
-[Готовность к merge](reports/merge-readiness.md), [текущие результаты](Details.md).
+## Решения пользователя (свежие; полный список — `Docs/weapons/decisions.md`)
+
+- 2026-10-13 «да я бы брал это из бэклога … остальное чиним»: shot-cost, aimlock-held-lag; recoil-hand-follow —
+  «надо будет воспроизвести — оставляем пока в бэклоге».
+- 2026-10-13: отставание оружия от контроллера допустимо, пока виртуальная кисть идёт с оружием
+  («если отстает от контроллера а виртуальная рука и оружие двигаются вместе то это ок»).
+- 2026-10-13 «проверено - проблем нет» — приёмка aimlock-held-lag в шлеме.
+- 2026-10-14: замер shot-cost — «Сначала только бот» (стрелок-человек после `xr-input` launch-infra).
+- 2026-10-12: калибровка прицелов — «пока делаем только инструменты - финальная калибровка будем отдельной задачей».
+
+## Риски и ловушки
+
+- `SaveAsPrefabAsset` обнуляет `NetworkIdentity._assetId` — после записи префаба `NetworkAssetIdNormalizer` +
+  сверка с диском; тест `Assets/Tests/EditMode/Prefabs/NetworkAssetIdOnDiskTests.cs`. Касается и чужих писателей
+  (avatar-grip поймано 6378).
+- Ответ `editor-broker.py claim` писать в файл целиком (потерянный токен блокирует очередь всех).
+- MCP `run_tests` часто рвёт сессию на старте — проверить `guard` (`is_test_running`) перед повтором; результаты
+  в `%USERPROFILE%/AppData/LocalLow/DefaultCompany/VR Battlegrounds/TestResults.xml` (сверять время).
+- В редакторе worker `Time.deltaTime` бывает 0,333 с → тесты сопротивления Inconclusive (окружение).
+- Харнесс `TwoHandGrabHarness` не вешает граббер на кость кисти (`UxrHandIntegration.Awake`) — см.
+  `MainGripAimLockHeldLagTests`.
+- Изменение running-этапа (writes) хаб запрещает: stop → register → begin.
+- После каждого `register` повторить `contract-ack` пяти контрактов (ACK привязан к ревизии плана).
+
+## Архитектура и синхронизация
+
+Машина (`Assets/Scripts/Weapons/Core`) → датчики → порт учёта SDK → исполнители. База знаний —
+[`Docs/weapons/`](../../Docs/weapons/README.md). Контракты: `weapon-use-context@2`, `weapon-grab-lifetime@2`,
+`weapon-equipment-shooter@1` (наши, active), `weapon-equipment-binding@2` (bots-fix), `haptics-api@1`.
+Машинный план — [plan.json](plan.json); подробности — [Details.md](Details.md); спецификация машины —
+[refactor-plan.md](refactor-plan.md); скрипты — [tools/](tools/Readme.md).

@@ -9,9 +9,12 @@
 
 ## Статус
 
-Обновлено 2026-10-13. Владелец — эксперт `avatar-ik`, ветка `avatar-ik/calibration-scale-events` от
-`origin/dev`, worktree `F:/CodexWorktrees/avatar-ik/Vr_Battlegrounds_ai`. По решению пользователя идёт до
-`legs-ik/pose-set`. Контракт `calibration-scale-events` r1 предложен manipulation, код — после их ACK.
+Обновлено 2026-10-14 (остановка по решению пользователя, 6539). Ветка `avatar-ik/calibration-scale-events`, HEAD
+`eb97eac1a` на базе `a84b9f2ce` (origin/dev ушёл вперёд — следующий checkpoint, вероятно, `--onto-baseline`).
+Контракт r1 agreed (ACK manipulation 6036). Код готов; офлайн-компиляция 0 ошибок. Этап verified на старом SHA
+`8ec241cd9` (worker 590: компиляция 0 ошибок, тесты калибровки 26/26). Перепроверка нового SHA на worker не
+выполнена: очередь стояла на восстановлении базы (тикеты 606/607). Вливание — через брокер (решение пользователя);
+до него — приёмка пользователем в шлеме (калибровка роста в лобби, без ошибок `AvatarCalibrationApplier`).
 
 ## Архитектурное решение
 
@@ -39,4 +42,5 @@
 
 ## Следующий шаг
 
-ACK контракта от manipulation; затем код, компиляция на worker, приёмка пользователем, вливание.
+Перепроверка на worker (компиляция, AndroidCompileGate, 26 тестов) → приёмка пользователем → тесты событий в
+`Assets/Tests/EditMode/Calibration/` → вливание через брокер (request-base — только после разрешения сопровождающего).

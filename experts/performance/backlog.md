@@ -56,3 +56,7 @@
   для независимой проверки пересечения. Apply имеет burst allocations; runtime/UI/Quest бюджеты открыты.
 - Карта owns/watch_paths после rebase на origin/dev 97a320c88 сверена до 5cfc55248: diff исходников пуст;
   reviewed_sha обновлён. Это не новое подтверждение Unity/Quest.
+- network-sync-hardening7005 → disposition7025: generated prefilter delta3полей PC.asset в Rb11d19aa57
+  в source не принимать, canonical сохранить. Механизм URP17.4.0 подтверждён main/worker source,
+  без runtime/perf PASS. Native report18:02–18:04MSK старше заявки65120:29 (review note7021);
+  свежую build/output/input корреляцию проверяет owner, unexpected-R disposition — штатный maintainer.

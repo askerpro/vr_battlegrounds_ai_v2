@@ -35,3 +35,10 @@
 переименований, 140 texture-meta меняют только имя группы. Snapshot HEAD cc485d9bd, diff SHA256 895a39b7a72e…,
 155 файлов без drift. Для ACK protected-инварианта запрошен export 112 GUID; runtime/UI/Quest приёмка открыта.
 `Apply` событийный, но выделяет коллекции при применении правил. Отчёт: reports/scene-detail-6813/source-review.md.
+
+`network-sync-hardening`, запрос7005 → owner disposition7025: три derived shader-prefilter поля
+`PC.asset` в Rb11d19aa57 не принимать в source, canonical asset сохранить. URP17.4.0 updater/save
+подтверждён, main/worker source hashes совпадают; runtime/variants counts не измерялись.
+Review note7021: native build report18:02–18:04MSK предшествует заявке65120:29, свежий BuildPASS
+этим файлом не подтверждён. Owner/agent-infra уведомлены, source/receive/ACK не менялись.
+Отчёт: reports/network-7005/urp-prefilter-review.md; raw snapshot и primary-check рядом.

@@ -109,6 +109,15 @@ param(
     # Путь к Unity.exe для -Build. Пусто — версия из ProjectSettings/ProjectVersion.txt в Unity Hub.
     [string]   $Unity = '',
 
+    # Выделенный Win64 сборочный worktree для -Build (Build\e2e\VrBattlegrounds.exe). Пусто — авто-выбор build-test-win64.
+    [string]   $Win64BuildWorktree = '',
+
+    # Выделенный Android сборочный worktree для -Build (Build\Quest\VrBattlegrounds_Quest.apk). Пусто — авто-выбор build-test-android.
+    [string]   $AndroidBuildWorktree = '',
+
+    # Принудительно собирать пару в одном текущем worktree ($RepoRoot) через RunPairBatch.
+    [switch]   $SingleWorktreeBuild,
+
     # Локальный JSON точек обзора; уходит обеим сторонам как -e2eArg views=<путь от persistentDataPath>.
     [string]   $ViewsFile = '',
 
@@ -523,6 +532,30 @@ function Get-UnityBuildArgs([string] $StatusPath, [string] $LogPath) {
     )
 }
 
+function Get-UnityQuestBuildArgs([string] $WorktreePath, [string] $Revision, [string] $StatusPath, [string] $LogPath) {
+    return @(
+        '-batchmode', '-quit',
+        '-projectPath', $WorktreePath,
+        '-buildTarget', 'Android',
+        '-executeMethod', 'VrBattlegrounds.EditorTools.E2EPlayerBuilder.RunQuestBatch',
+        '-buildRevision', $Revision,
+        '-pairStatus', $StatusPath,
+        '-logFile', $LogPath
+    )
+}
+
+function Get-UnityServerBuildArgs([string] $WorktreePath, [string] $Revision, [string] $StatusPath, [string] $LogPath) {
+    return @(
+        '-batchmode', '-quit',
+        '-projectPath', $WorktreePath,
+        '-buildTarget', 'Win64',
+        '-executeMethod', 'VrBattlegrounds.EditorTools.E2EPlayerBuilder.RunBatch',
+        '-buildRevision', $Revision,
+        '-serverStatus', $StatusPath,
+        '-logFile', $LogPath
+    )
+}
+
 # Свободное имя для артефакта в папке назначения (одинаковые имена с разных путей не затирают друг друга).
 function Get-ArtifactDestination([string] $Directory, [string] $Leaf) {
     $candidate = Join-Path $Directory $Leaf
@@ -839,57 +872,89 @@ if (-not $autoPorts) {
 $UnityPath = ''
 $BuiltApk = Join-Path $RepoRoot 'Build\Quest\VrBattlegrounds_Quest.apk'
 $PairStatusInEditor = 'Build/e2e-pair-status.json'
+$UseSplitBuildWorktrees = $false
+$ResolvedWin64BuildWorktree = $RepoRoot
+$ResolvedAndroidBuildWorktree = $RepoRoot
+$SharedBuildRevision = ''
 if ($DryRunBuild -and -not $Build) { Stop-Refused '-DryRunBuild работает только вместе с -Build' }
 if ($Build) {
     if (-not [string]::IsNullOrEmpty($Apk)) { Stop-Refused '-Build и -Apk несовместимы: -Build ставит APK, собранный в этом прогоне' }
     if (-not [string]::IsNullOrEmpty($ServerPlayer)) { Stop-Refused '-Build и -ServerPlayer несовместимы: сервер — e2e-плеер, собранный в этом прогоне' }
     if ($BuildTimeoutMinutes -lt 1) { Stop-Refused ('-BuildTimeoutMinutes меньше 1: ' + $BuildTimeoutMinutes) }
 
-    # Лёгкий агентский worktree (роль LFS «agent») держит вместо больших ассетов LFS-указатели: batch Unity на нём
-    # импортировал бы указатели как ассеты и собрал бы битую игру (Docs/agents/lfs-worktrees.md). Роль читаем штатным
-    # Tools/agents/configure_lfs_worktree.py status: основной checkout («main») и worker держат полные файлы.
-    $lfsRole = ''
-    try {
-        $lfsStatus = Invoke-Tool 'python' @('-X', 'utf8', (Join-Path $RepoRoot 'Tools\agents\configure_lfs_worktree.py'), 'status') 60
-        if ($lfsStatus.Out -match '"role"\s*:\s*"([^"]+)"') { $lfsRole = $Matches[1] }
-    } catch {}
-    if ($lfsRole -eq 'agent') {
-        Stop-Refused '-Build недоступен в этом checkout: LFS-роль «agent», большие ассеты — указатели.' @(
-            'Собери пару там, где ассеты полные: агент — на worker под арендой через',
-            ('  VrBattlegrounds.EditorTools.E2EPlayerBuilder.StartPairBuild("' + $PairStatusInEditor + '"),'),
-            'человек — в основном checkout. Затем запусти без -Build с -Apk и -ServerPlayer на собранную пару.')
+    $defaultWin64BuildWt = 'F:\CodexWorktrees\build-test-win64\Vr_Battlegrounds_ai'
+    $defaultAndroidBuildWt = 'F:\CodexWorktrees\build-test-android\Vr_Battlegrounds_ai'
+
+    if (-not $SingleWorktreeBuild) {
+        if (-not [string]::IsNullOrWhiteSpace($Win64BuildWorktree) -or -not [string]::IsNullOrWhiteSpace($AndroidBuildWorktree)) {
+            $winCandidate = if (-not [string]::IsNullOrWhiteSpace($Win64BuildWorktree)) { $Win64BuildWorktree } else { $defaultWin64BuildWt }
+            $androidCandidate = if (-not [string]::IsNullOrWhiteSpace($AndroidBuildWorktree)) { $AndroidBuildWorktree } else { $defaultAndroidBuildWt }
+            if (-not (Test-Path -LiteralPath $winCandidate)) { Stop-Refused ('Win64 сборочный worktree не найден: ' + $winCandidate) }
+            if (-not (Test-Path -LiteralPath $androidCandidate)) { Stop-Refused ('Android сборочный worktree не найден: ' + $androidCandidate) }
+            $ResolvedWin64BuildWorktree = (Resolve-Path -LiteralPath $winCandidate).Path
+            $ResolvedAndroidBuildWorktree = (Resolve-Path -LiteralPath $androidCandidate).Path
+            $UseSplitBuildWorktrees = ($ResolvedWin64BuildWorktree -ne $ResolvedAndroidBuildWorktree)
+        }
+        elseif ((Test-Path -LiteralPath $defaultWin64BuildWt) -and (Test-Path -LiteralPath $defaultAndroidBuildWt)) {
+            $ResolvedWin64BuildWorktree = (Resolve-Path -LiteralPath $defaultWin64BuildWt).Path
+            $ResolvedAndroidBuildWorktree = (Resolve-Path -LiteralPath $defaultAndroidBuildWt).Path
+            $UseSplitBuildWorktrees = $true
+        }
     }
 
-    # Роль «main» не гарантирует полных файлов: часть LFS-ассетов может остаться указателями (частичный pull,
-    # include/exclude). Сборка из них — битая игра, поэтому до Unity проверяются сами файлы.
-    $lfs = Get-LfsPointerFiles $RepoRoot
-    if ($null -ne $lfs.error) {
-        Stop-Refused ('-Build: проверка LFS-указателей не выполнена — ' + $lfs.error) @('Нужен git с git-lfs в PATH.')
-    }
-    if ($lfs.pointers.Count -gt 0) {
-        $shown = @($lfs.pointers | Select-Object -First 10)
-        $hints = @('Первые пути:')
-        foreach ($p in $shown) { $hints += ('  ' + $p) }
-        if ($lfs.pointers.Count -le $shown.Count) {
-            $hints += 'Выгрузи содержимое (checkout — если объекты уже в локальном LFS-хранилище, иначе pull):'
-            $hints += ('  git lfs checkout -- ' + (($shown | ForEach-Object { '"' + $_ + '"' }) -join ' '))
-            $hints += ('  git lfs pull --include="' + ($shown -join ',') + '"')
+    $buildWorktreesToCheck = @($ResolvedAndroidBuildWorktree, $ResolvedWin64BuildWorktree | Select-Object -Unique)
+    foreach ($buildWt in $buildWorktreesToCheck) {
+        # Лёгкий агентский worktree (роль LFS «agent») держит вместо больших ассетов LFS-указатели: batch Unity на нём
+        # импортировал бы указатели как ассеты и собрал бы битую игру (Docs/agents/lfs-worktrees.md).
+        $lfsRole = ''
+        try {
+            $roleRes = Invoke-Tool 'git' @('-C', $buildWt, 'config', '--worktree', '--get', 'vrb.lfs.role') 15
+            if ($roleRes.ExitCode -eq 0) { $lfsRole = $roleRes.Out.Trim() }
+        } catch {}
+        if ($lfsRole -eq 'agent') {
+            Stop-Refused ('-Build недоступен в checkout ' + $buildWt + ': LFS-роль «agent», большие ассеты — указатели.') @(
+                'Используй выделенные сборочные worktree build-test-win64 и build-test-android или основной checkout.')
         }
-        else {
-            $hints += 'Выгрузи содержимое всех указателей (checkout — если объекты уже в локальном LFS-хранилище, иначе pull):'
-            $hints += '  git lfs checkout'
-            $hints += '  git lfs pull'
-        }
-        Stop-Refused ('-Build: в checkout ' + $lfs.pointers.Count + ' из ' + $lfs.tracked +
-            ' LFS-файлов — указатели, а не содержимое; Unity собрал бы битую игру.') $hints
-    }
-    Write-Host ('  LFS: ' + $lfs.tracked + ' отслеживаемых файлов, указателей нет')
 
-    if (Test-EditorOpen (Join-Path $RepoRoot 'Temp\UnityLockfile')) {
-        Stop-Refused ('редактор открыт; соберите пару в редакторе: VrBattlegrounds.EditorTools.E2EPlayerBuilder.StartPairBuild("' +
-            $PairStatusInEditor + '") (агент — на worker под арендой), затем запустите без -Build с -Apk') @(
-            'Пустой файл статуса — сборка идёт; JSON с serverPassed/questPassed — закончена.',
-            ('Затем: Run-QuestE2E.ps1 -Apk ' + $BuiltApk))
+        $lfs = Get-LfsPointerFiles $buildWt
+        if ($null -ne $lfs.error) {
+            Stop-Refused ('-Build: проверка LFS-указателей в ' + $buildWt + ' не выполнена — ' + $lfs.error) @('Нужен git с git-lfs в PATH.')
+        }
+        if ($lfs.pointers.Count -gt 0) {
+            $shown = @($lfs.pointers | Select-Object -First 10)
+            $hints = @('Первые пути:')
+            foreach ($p in $shown) { $hints += ('  ' + $p) }
+            $hints += 'Выгрузи содержимое указателей в сборочном worktree:'
+            $hints += ('  python Tools/agents/configure_lfs_worktree.py hydrate --worktree "' + $buildWt + '"')
+            Stop-Refused ('-Build: в checkout ' + $buildWt + ' ' + $lfs.pointers.Count + ' из ' + $lfs.tracked +
+                ' LFS-файлов — указатели, а не содержимое; Unity собрал бы битую игру.') $hints
+        }
+        Write-Host ('  LFS (' + $buildWt + '): ' + $lfs.tracked + ' отслеживаемых файлов, указателей нет')
+
+        if (Test-EditorOpen (Join-Path $buildWt 'Temp\UnityLockfile')) {
+            Stop-Refused ('редактор открыт в ' + $buildWt + '; закрой его перед batch-сборкой или соберите пару в редакторе: VrBattlegrounds.EditorTools.E2EPlayerBuilder.StartPairBuild("' +
+                $PairStatusInEditor + '")') @(
+                'Пустой файл статуса — сборка идёт; JSON с serverPassed/questPassed — закончена.')
+        }
+    }
+
+    if ($UseSplitBuildWorktrees) {
+        $androidShaRes = Invoke-Tool 'git' @('-C', $ResolvedAndroidBuildWorktree, 'rev-parse', 'HEAD') 15
+        $win64ShaRes = Invoke-Tool 'git' @('-C', $ResolvedWin64BuildWorktree, 'rev-parse', 'HEAD') 15
+        $androidSha = $androidShaRes.Out.Trim()
+        $win64Sha = $win64ShaRes.Out.Trim()
+        if ($androidSha -eq '' -or $win64Sha -eq '' -or $androidSha -cne $win64Sha) {
+            Stop-Refused ('-Build: сборочные worktree находятся на разных ревизиях: Android (' + $ResolvedAndroidBuildWorktree + ') = ' + $androidSha + ', Win64 (' + $ResolvedWin64BuildWorktree + ') = ' + $win64Sha) @(
+                'Выровняй оба сборочных worktree на один коммит перед парной сборкой.')
+        }
+        foreach ($buildWt in $buildWorktreesToCheck) {
+            $dirtyRes = Invoke-Tool 'git' @('-C', $buildWt, 'status', '--porcelain', '--', 'Assets', 'Packages', 'ProjectSettings') 30
+            if ($dirtyRes.Out.Trim() -ne '') {
+                Stop-Refused ('-Build: в сборочном worktree ' + $buildWt + ' есть незакоммиченные правки в Assets/Packages/ProjectSettings; парная сборка из двух worktree требует чистых копий на одном SHA.')
+            }
+        }
+        $shortShaRes = Invoke-Tool 'git' @('-C', $ResolvedAndroidBuildWorktree, 'rev-parse', '--short=12', 'HEAD') 15
+        $SharedBuildRevision = $shortShaRes.Out.Trim()
     }
 
     if ([string]::IsNullOrEmpty($Unity)) {
@@ -899,14 +964,27 @@ if ($Build) {
     }
     if (-not (Test-Path -LiteralPath $Unity)) { Stop-Refused ('не найден Unity: ' + $Unity + '. Укажи путь параметром -Unity.') }
     $UnityPath = (Resolve-Path -LiteralPath $Unity).Path
-    $ServerPlayer = [System.IO.Path]::GetFullPath((Join-Path $RepoRoot 'Build\e2e\VrBattlegrounds.exe'))
+    $BuiltApk = [System.IO.Path]::GetFullPath((Join-Path $ResolvedAndroidBuildWorktree 'Build\Quest\VrBattlegrounds_Quest.apk'))
+    $ServerPlayer = [System.IO.Path]::GetFullPath((Join-Path $ResolvedWin64BuildWorktree 'Build\e2e\VrBattlegrounds.exe'))
 
     if ($DryRunBuild) {
         $previewDir = Join-Path $RepoRoot 'Tools\e2e\results\<прогон>'
-        $previewArgs = Get-UnityBuildArgs (Join-Path $previewDir 'pair-status.json') (Join-Path $previewDir 'unity-build.log')
         Write-Section 'Сухой прогон -Build: Unity не запускается, устройство и ПК не тронуты'
-        Write-Host ('  редактор этого checkout закрыт, Unity: ' + $UnityPath)
-        Write-Host ('  команда: ' + (ConvertTo-CommandLineArg $UnityPath) + ' ' + (($previewArgs | ForEach-Object { ConvertTo-CommandLineArg $_ }) -join ' '))
+        if ($UseSplitBuildWorktrees) {
+            $questPreviewArgs = Get-UnityQuestBuildArgs $ResolvedAndroidBuildWorktree $SharedBuildRevision (Join-Path $previewDir 'quest-status.json') (Join-Path $previewDir 'unity-build-quest.log')
+            $serverPreviewArgs = Get-UnityServerBuildArgs $ResolvedWin64BuildWorktree $SharedBuildRevision (Join-Path $previewDir 'server-status.json') (Join-Path $previewDir 'unity-build-server.log')
+            Write-Host ('  режим:         раздельные сборочные worktree без переключения платформы (ревизия ' + $SharedBuildRevision + ')')
+            Write-Host ('  Unity:         ' + $UnityPath)
+            Write-Host ('  Android WT:    ' + $ResolvedAndroidBuildWorktree)
+            Write-Host ('  команда Quest: ' + (ConvertTo-CommandLineArg $UnityPath) + ' ' + (($questPreviewArgs | ForEach-Object { ConvertTo-CommandLineArg $_ }) -join ' '))
+            Write-Host ('  Win64 WT:      ' + $ResolvedWin64BuildWorktree)
+            Write-Host ('  команда серв.: ' + (ConvertTo-CommandLineArg $UnityPath) + ' ' + (($serverPreviewArgs | ForEach-Object { ConvertTo-CommandLineArg $_ }) -join ' '))
+        }
+        else {
+            $previewArgs = Get-UnityBuildArgs (Join-Path $previewDir 'pair-status.json') (Join-Path $previewDir 'unity-build.log')
+            Write-Host ('  редактор этого checkout закрыт, Unity: ' + $UnityPath)
+            Write-Host ('  команда: ' + (ConvertTo-CommandLineArg $UnityPath) + ' ' + (($previewArgs | ForEach-Object { ConvertTo-CommandLineArg $_ }) -join ' '))
+        }
         Write-Host ('  предел:  ' + $BuildTimeoutMinutes + ' мин')
         Write-Host ('  APK:     ' + $BuiltApk)
         Write-Host ('  сервер:  ' + $ServerPlayer)
@@ -1225,36 +1303,96 @@ try {
     if ($Build) {
         Write-Section 'Собираю пару: e2e-плеер сервера и APK Quest/Test одной ревизии (batch Unity)'
         $pairStatusPath = Join-Path $runDir 'pair-status.json'
-        $unityLog = Join-Path $runDir 'unity-build.log'
-        $unityBuildArgs = Get-UnityBuildArgs $pairStatusPath $unityLog
-        $manifest.build = [ordered]@{
-            status = 'running'; revision = $null; durationSeconds = $null; unityExitCode = $null
-            unity = $UnityPath; args = $unityBuildArgs; statusFile = 'pair-status.json'; log = 'unity-build.log'; error = $null
-        }
-        if (Test-EditorOpen (Join-Path $RepoRoot 'Temp\UnityLockfile')) {
-            $manifest.build.status = 'not-started'
-            throw 'редактор этого checkout открылся до сборки — собери пару в редакторе (StartPairBuild) и запусти с -Apk'
-        }
-        Write-Host ('  лог Unity: ' + $unityLog + ' (предел ' + $BuildTimeoutMinutes + ' мин)')
         $buildStarted = Get-Date
-        $unityRun = Invoke-Tool $UnityPath $unityBuildArgs ($BuildTimeoutMinutes * 60)
-        $manifest.build.durationSeconds = [math]::Round(((Get-Date) - $buildStarted).TotalSeconds)
-        $manifest.build.unityExitCode = $unityRun.ExitCode
-        $pairData = Read-ResultJson $pairStatusPath
-        if ($null -ne $pairData) { $manifest.build.revision = [string] $pairData.revision }
 
-        if ($unityRun.TimedOut) {
-            $manifest.build.status = 'timeout'
-            throw ('сборка пары не уложилась в ' + $BuildTimeoutMinutes + ' мин, Unity остановлен; смотри ' + $unityLog)
+        if ($UseSplitBuildWorktrees) {
+            $questStatusPath = Join-Path $runDir 'quest-status.json'
+            $serverStatusPath = Join-Path $runDir 'server-status.json'
+            $questLog = Join-Path $runDir 'unity-build-quest.log'
+            $serverLog = Join-Path $runDir 'unity-build-server.log'
+            $questBuildArgs = Get-UnityQuestBuildArgs $ResolvedAndroidBuildWorktree $SharedBuildRevision $questStatusPath $questLog
+            $serverBuildArgs = Get-UnityServerBuildArgs $ResolvedWin64BuildWorktree $SharedBuildRevision $serverStatusPath $serverLog
+            $manifest.build = [ordered]@{
+                status = 'running'; mode = 'split-worktrees'; revision = $SharedBuildRevision; durationSeconds = $null; unityExitCode = $null
+                unity = $UnityPath
+                androidWorktree = $ResolvedAndroidBuildWorktree; win64Worktree = $ResolvedWin64BuildWorktree
+                questArgs = $questBuildArgs; serverArgs = $serverBuildArgs
+                statusFile = 'pair-status.json'; log = 'unity-build-quest.log, unity-build-server.log'; error = $null
+            }
+            foreach ($buildWt in @($ResolvedAndroidBuildWorktree, $ResolvedWin64BuildWorktree)) {
+                if (Test-EditorOpen (Join-Path $buildWt 'Temp\UnityLockfile')) {
+                    $manifest.build.status = 'not-started'
+                    throw ('редактор открылся в ' + $buildWt + ' до старта сборки')
+                }
+            }
+
+            Write-Host ('  [1/2] Quest APK (Android WT: ' + $ResolvedAndroidBuildWorktree + '), лог: ' + $questLog)
+            $questRun = Invoke-Tool $UnityPath $questBuildArgs ($BuildTimeoutMinutes * 60)
+            $questData = Read-ResultJson $questStatusPath
+
+            Write-Host ('  [2/2] Server e2e (Win64 WT: ' + $ResolvedWin64BuildWorktree + '), лог: ' + $serverLog)
+            $serverRun = Invoke-Tool $UnityPath $serverBuildArgs ($BuildTimeoutMinutes * 60)
+            $serverData = Read-ResultJson $serverStatusPath
+
+            $manifest.build.durationSeconds = [math]::Round(((Get-Date) - $buildStarted).TotalSeconds)
+            $manifest.build.unityExitCode = $(if ($questRun.ExitCode -ne 0) { $questRun.ExitCode } else { $serverRun.ExitCode })
+
+            $combinedErrors = New-Object System.Collections.Generic.List[string]
+            if ($null -ne $questData -and -not [string]::IsNullOrWhiteSpace([string]$questData.error)) { $combinedErrors.Add([string]$questData.error) }
+            if ($null -ne $serverData -and -not [string]::IsNullOrWhiteSpace([string]$serverData.error)) { $combinedErrors.Add([string]$serverData.error) }
+
+            $pairObj = [ordered]@{
+                revision     = $SharedBuildRevision
+                serverPassed = ($null -ne $serverData -and [bool]$serverData.serverPassed -and $serverRun.ExitCode -eq 0)
+                questPassed  = ($null -ne $questData -and [bool]$questData.questPassed -and $questRun.ExitCode -eq 0)
+                serverOutput = $(if ($null -ne $serverData) { [string]$serverData.serverOutput } else { $ServerPlayer })
+                questOutput  = $(if ($null -ne $questData) { [string]$questData.questOutput } else { $BuiltApk })
+                error        = ($combinedErrors -join '; ')
+            }
+            Write-TextFile $pairStatusPath ($pairObj | ConvertTo-Json -Depth 4)
+            $pairData = Read-ResultJson $pairStatusPath
+
+            if ($questRun.TimedOut -or $serverRun.TimedOut) {
+                $manifest.build.status = 'timeout'
+                throw ('сборка пары не уложилась в предел ' + $BuildTimeoutMinutes + ' мин; смотри ' + $questLog + ' и ' + $serverLog)
+            }
+            if (-not ($pairData.serverPassed -and $pairData.questPassed)) {
+                $manifest.build.status = 'failed'
+                $manifest.build.error = [string] $pairData.error
+                throw ('сборка пары не удалась: ' + [string] $pairData.error + '; смотри ' + $questLog + ', ' + $serverLog + ' и pair-status.json')
+            }
         }
-        if ($null -eq $pairData) {
-            $manifest.build.status = 'failed'
-            throw ('сборка пары не оставила статуса (код Unity ' + $unityRun.ExitCode + '); смотри ' + $unityLog)
-        }
-        if (-not ($pairData.serverPassed -and $pairData.questPassed) -or $unityRun.ExitCode -ne 0) {
-            $manifest.build.status = 'failed'
-            $manifest.build.error = [string] $pairData.error
-            throw ('сборка пары не удалась: ' + [string] $pairData.error + ' (код Unity ' + $unityRun.ExitCode + '); смотри ' + $unityLog + ' и pair-status.json')
+        else {
+            $unityLog = Join-Path $runDir 'unity-build.log'
+            $unityBuildArgs = Get-UnityBuildArgs $pairStatusPath $unityLog
+            $manifest.build = [ordered]@{
+                status = 'running'; revision = $null; durationSeconds = $null; unityExitCode = $null
+                unity = $UnityPath; args = $unityBuildArgs; statusFile = 'pair-status.json'; log = 'unity-build.log'; error = $null
+            }
+            if (Test-EditorOpen (Join-Path $RepoRoot 'Temp\UnityLockfile')) {
+                $manifest.build.status = 'not-started'
+                throw 'редактор этого checkout открылся до сборки — собери пару в редакторе (StartPairBuild) и запусти с -Apk'
+            }
+            Write-Host ('  лог Unity: ' + $unityLog + ' (предел ' + $BuildTimeoutMinutes + ' мин)')
+            $unityRun = Invoke-Tool $UnityPath $unityBuildArgs ($BuildTimeoutMinutes * 60)
+            $manifest.build.durationSeconds = [math]::Round(((Get-Date) - $buildStarted).TotalSeconds)
+            $manifest.build.unityExitCode = $unityRun.ExitCode
+            $pairData = Read-ResultJson $pairStatusPath
+            if ($null -ne $pairData) { $manifest.build.revision = [string] $pairData.revision }
+
+            if ($unityRun.TimedOut) {
+                $manifest.build.status = 'timeout'
+                throw ('сборка пары не уложилась в ' + $BuildTimeoutMinutes + ' мин, Unity остановлен; смотри ' + $unityLog)
+            }
+            if ($null -eq $pairData) {
+                $manifest.build.status = 'failed'
+                throw ('сборка пары не оставила статуса (код Unity ' + $unityRun.ExitCode + '); смотри ' + $unityLog)
+            }
+            if (-not ($pairData.serverPassed -and $pairData.questPassed) -or $unityRun.ExitCode -ne 0) {
+                $manifest.build.status = 'failed'
+                $manifest.build.error = [string] $pairData.error
+                throw ('сборка пары не удалась: ' + [string] $pairData.error + ' (код Unity ' + $unityRun.ExitCode + '); смотри ' + $unityLog + ' и pair-status.json')
+            }
         }
         foreach ($builtFile in @($BuiltApk, $ServerPlayer)) {
             if (-not (Test-Path -LiteralPath $builtFile)) {

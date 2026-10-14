@@ -1,4 +1,21 @@
-Обновлено 2026-10-11. Кандидаты вне хаба; порядок — приоритет. VTS = `tasks/vr-test-stand/Details.md`,
+## Обещания другим агентам (передача Codex 2026-10-14)
+
+- network: после worker-прогона `e2e-kit-selftest` прислать итог — рукопожатия на соединение, повторы после смены карты,
+  0 «Unknown message id» (6425, 6437/6441/6445). Diff сетевой части уже прошёл ревью.
+- gameplay: сообщить о вливании `e2e-smoke-kit` → они заводят задачу series-smoke и шлют id → снять
+  `map-runtime-bootstrap/series-smoke-e2e` (6403/6408). Прогон `map-run-startup-route` с полным вердиктом по логам на базе
+  с исправлением арсенала (ec0887cf5 или новее) → удалить дефект `anchored-ignore-collision-prefab` из
+  `Tools/e2e/known-noise.json` и сообщить в inbox `arsenal-unload-teardown` (6367).
+- network: после исправления `teleport-state-unknown-target` — перезапуск `dedicated-server-arsenal`, удалить дефект (6054/6062).
+- manipulation: их защита в AnchoredItemCollisionIgnore с одним GameLog.Error на сцену (6079) — проверить в том же прогоне.
+- weapon-system: сценарий shot-cost — дать zone-ack на строку в `E2ERunner.cs`, когда пришлют zone-request; их этап после
+  `e2e-log-verdict` (6198/6206); сцена — вариант (A) Lobby или доработка пары для BotCombatStand (6221).
+- bots/avatar-ik: контракт `xr-input` r1 (contract-propose) до кода — 5337/5341, условия avatar-ik 5295.
+- performance/agent-infra: `build-checkouts` — ждать ответа agent-infra о размещении checkout (6457), потом реализация и
+  замеры performance (6455).
+- performance: перенести тесты `Release/Tests/**` в `Assets/Tests/EditMode` при удобном случае (5496).
+
+Обновлено 2026-10-14. Кандидаты вне хаба; порядок — приоритет. VTS = `tasks/vr-test-stand/Details.md`,
 MRB = `tasks/map-runtime-bootstrap/Details.md`,
 PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
 
@@ -46,6 +63,9 @@ PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
    (6) поздний клиент учитывается барьерами отдельно. Не нужно: админ-команды, отдельный детектор sync-ошибок.
    Сначала проверить, что из этого уже есть (E2EContext.Role, -Timeout, -LateClientDelay, MapRunRelayBarrierScenario).
    Снять `map-runtime-bootstrap/series-smoke-e2e` с моего плана, когда gameplay сообщит id своего этапа.
+0h. Хвосты `e2e-smoke-kit` (вне writes этапа): `tasks/vr-test-stand/tools/managed_e2e_worker_probe.py:247` ждёт роль
+   `client`, теперь `client-N`; `-e2eArg` и поздний клиент в PlayLaunch (поля StandRequest, `StandProtocol.cs`);
+   `Run-QuestE2E.ps1` не передаёт клиенту `-e2eClients` (безвредно, сверка по N сервера).
 0g. Перезапуски по вердикту логов (обещано владельцам): `map-run-startup-route` после вливания gameplay
    `arsenal-unload-teardown/top-level-detach` (критерии 6071: 0 предметов вне сцены, нет «not cleaned up», 0 «Tried to
    ignore collisions»; защита manipulation 6079 — 0 её Error); `dedicated-server-arsenal` после исправления network
@@ -88,6 +108,11 @@ full suite, клик toolbar, Quest, synthetic XR/gameplay E2E не принят
   список устройств, проверка LateLatching/SpaceWarp дирижёром (`renderCheck=unknown`). Сессия в прогонах доходит до
   VISIBLE, не FOCUSED — проверить связь с prox/фокусом.
 
+- `build-checkouts` (этап хаба `quest-perf-pipeline/build-checkouts`, rev 22, после e2e-smoke-kit) — решения пользователя
+  2026-10-14: Prod — отдельный checkout (повтор 6449); Test-пара — отдельный Quest-checkout на Android (AskUserQuestion),
+  сервер Test — в editor-worker без переключения платформы. Library worker 37 ГБ → два checkout ~60–75 ГБ. Размещение,
+  перевод на SHA, очередь — agent-infra (запрос 2026-10-14). Моя часть: `-ProjectPath`, проверка закрытого редактора,
+  SHA в отчёте, пара = сервер (worker) + APK (Quest-checkout) со сверкой ревизий, Docs/release.md.
 - `prod-build-route` — решение пользователя 2026-10-13 (через performance, 5410): Prod-сборки — на отдельном checkout
   со своей Library, чтобы не сбрасывать кэш Test (IL2CPP Master против Release, общий Library/Bee). Моя часть (ответ
   2026-10-13): `Build-Game.ps1 -ProjectPath`, проверка закрытого редактора, SHA в отчёте, `Docs/release.md`,

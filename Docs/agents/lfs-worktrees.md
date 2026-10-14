@@ -10,13 +10,14 @@
 
 | Роль | Фильтр checkout | Работа с ассетами |
 |---|---|---|
-| Новый агент | `git-lfs filter-process --skip` | Указатели; адресное извлечение только для задачи |
-| Основной checkout | `--skip`, затем post-checkout / post-merge / post-rewrite | Сохранённые полные файлы; hooks извлекают объекты из локального кеша |
-| Зарегистрированный Unity worker | Полный filter-process в worktree config | Настоящие файлы перед импортом Unity |
+| Новый агент (`agent`) | `git-lfs filter-process --skip` | Указатели; адресное извлечение только для задачи |
+| Основной checkout (`main`) | `--skip`, затем post-checkout / post-merge / post-rewrite | Сохранённые полные файлы; hooks извлекают объекты из локального кеша |
+| Зарегистрированный Unity worker (`worker`) | Полный filter-process в worktree config | Настоящие файлы перед импортом Unity |
+| Сборочные worktree (`build`) | Полный filter-process в worktree config | Полные ассеты для безпереключательных сборок (`build-test-win64`, `build-test-android`, `build-prod-win64`, `build-prod-android`) |
 
-`git worktree add` использует настройки вызывающей рабочей копии. Поэтому основной checkout также оставляет smudge выключенным: его полное извлечение выполняется отдельно после checkout, а создаваемый из него агент не получает гигабайты файлов. Worker имеет отдельное полное переопределение. При ручном создании из worker использовать `git worktree add --no-checkout`, настроить роль целевого worktree, затем выполнить checkout из него.
+`git worktree add` использует настройки вызывающей рабочей копии. Поэтому основной checkout также оставляет smudge выключенным: его полное извлечение выполняется отдельно после checkout, а создаваемый из него агент не получает гигабайты файлов. Worker и выделенные сборочные worktree (`buildWorktrees` в `Tools/agents/lfs-worktree-policy.json`) имеют отдельное полное переопределение (`hydration = full`). При ручном создании из worker использовать `git worktree add --no-checkout`, настроить роль целевого worktree, затем выполнить checkout из него.
 
-В `.git/config` интегратор включает `extensions.worktreeConfig=true` и общий skip; в `config.worktree` задаются исключения ролей. Нельзя глобально экспортировать `GIT_LFS_SKIP_SMUDGE`: переменная перекрывает и полное извлечение worker.
+В `.git/config` интегратор включает `extensions.worktreeConfig=true` и общий skip; в `config.worktree` задаются исключения ролей. Нельзя глобально экспортировать `GIT_LFS_SKIP_SMUDGE`: переменная перекрывает и полное извлечение worker/build.
 
 ## Настройка машины и нового агента
 

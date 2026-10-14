@@ -134,12 +134,93 @@ namespace VrBattlegrounds.EditorTools
             return Build(null, requiredDebugScenes);
         }
 
-        /// <summary>Точка входа для -executeMethod: код возврата 0 или 1.</summary>
+        /// <summary>
+        /// Точка входа для -executeMethod (Windows e2e-плеер): код возврата 0 или 1.
+        /// Необязательные аргументы: <c>-buildRevision &lt;ревизия&gt;</c>, <c>-serverStatus &lt;путь&gt;</c>.
+        /// </summary>
         public static void RunBatch()
         {
-            Result result = Run();
+            string[] args = Environment.GetCommandLineArgs();
+            string revisionArg = null;
+            string statusArg = null;
+
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] == "-buildRevision") revisionArg = args[i + 1];
+                if (args[i] == "-serverStatus") statusArg = args[i + 1];
+            }
+
+            Result result = revisionArg != null ? Run(revisionArg) : Run();
+            if (!string.IsNullOrEmpty(statusArg))
+            {
+                string statusPath = ResolveStatusPath(statusArg);
+                var status = new PairStatus
+                {
+                    serverPassed = result.Passed,
+                    revision = result.Revision,
+                    serverSummary = result.Summary,
+                    serverPath = result.Path,
+                    error = result.Passed ? string.Empty : result.Message,
+                    durationSeconds = Math.Round(result.Seconds)
+                };
+                WriteStatusFile(statusPath, JsonUtility.ToJson(status, true));
+            }
+
             Debug.Log(result.Summary);
             EditorApplication.Exit(result.Passed ? 0 : 1);
+        }
+
+        /// <summary>
+        /// Точка входа для -executeMethod в выделенном Android сборочном worktree (<c>build-test-android</c>):
+        /// собирает только APK Quest (<see cref="BuildConfig.Test" />) без переключения платформы на Windows.
+        /// Необязательные аргументы: <c>-buildRevision &lt;ревизия&gt;</c>, <c>-pairStatus &lt;путь&gt;</c>
+        /// (или <c>-questStatus &lt;путь&gt;</c>).
+        /// </summary>
+        public static void RunQuestBatch()
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            string revisionArg = null;
+            string statusArg = null;
+
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] == "-buildRevision") revisionArg = args[i + 1];
+                if (args[i] == "-pairStatus" || args[i] == "-questStatus") statusArg = args[i + 1];
+            }
+
+            string path = ResolveStatusPath(statusArg);
+            DateTime started = DateTime.UtcNow;
+
+            if (!QuestManifestValidator.OculusManifestCompiled())
+            {
+                var refused = new PairStatus
+                {
+                    error = "editor-скрипты скомпилированы не под Android (нет OculusManifest): Quest вышел бы плоским — " +
+                            "запускай Unity с -buildTarget Android"
+                };
+                WriteStatusFile(path, JsonUtility.ToJson(refused, true));
+                LogPair(refused, path);
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            WriteStatusFile(path, string.Empty);
+
+            string revision = revisionArg ?? BuildRevisionStamp.ReadRevision(out _);
+            GameBuilder.Result quest = GameBuilder.Build(new[] { BuildProfile.Quest }, BuildConfig.Test, revision);
+            var status = new PairStatus
+            {
+                questPassed = quest.Passed,
+                revision = quest.Revision.Length > 0 ? quest.Revision : (revision ?? string.Empty),
+                questSummary = quest.Summary,
+                apkPath = GameBuilder.OutputPathFor(BuildProfile.Quest),
+                error = quest.Passed ? string.Empty : "APK Quest не собран",
+                durationSeconds = Math.Round((DateTime.UtcNow - started).TotalSeconds)
+            };
+            WriteStatusFile(path, JsonUtility.ToJson(status, true));
+            if (quest.Passed) Debug.Log(quest.Summary);
+            else Debug.LogError(quest.Summary);
+            EditorApplication.Exit(quest.Passed ? 0 : 1);
         }
 
         // ── Пара для прогона на шлеме ──────────────────────────────────

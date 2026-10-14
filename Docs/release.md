@@ -9,9 +9,30 @@ Android-планшете. Код — `Assets/Editor/VR_Battlegrounds/Release/`.
 |---|---|
 | Редактор | `Tools/VR Battlegrounds/Release/Собрать всё (сервер, Quest, планшет)` или по одной |
 | Проверка без сборки | `Tools/VR Battlegrounds/Release/Проверить UXR id (без сборки)` |
-| CLI, редактор закрыт | `powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 [-Targets quest,tablet] [-Config Test\|Prod]` — запуск Unity на группу платформ |
+| CLI, выделенные сборочные worktree (по умолчанию) | `powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 [-Targets all\|server,quest,tablet] [-Config Test\|Prod] [-Ref <commit>] [-DryRun]` |
+| CLI, в текущем checkout | `powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 -UseCurrentWorktree [-Targets ...] [-Config Test\|Prod]` |
 | Агент | `GameBuilder.Build(new[] { BuildProfile.Server }, BuildConfig.Test)` → `Result.Summary` |
-| Пара для прогона на шлеме | `E2EPlayerBuilder.StartPairBuild(<статус>)` в редакторе или `Run-QuestE2E.ps1 -Build` — [testing.md](testing.md) |
+| Пара для прогона на шлеме | `Run-QuestE2E.ps1 -Build` (batch по умолчанию собирает через `build-test-android` + `build-test-win64` без переключения платформы) или `E2EPlayerBuilder.StartPairBuild(<статус>)` в редакторе — [testing.md](testing.md) |
+
+### Выделенные сборочные worktree (без переключения платформы и без очереди воркера)
+
+Чтобы тестовые и релизные сборки не переключали платформу туда-обратно (`Android ↔ Win64`), не перетирали кэш `Library/Bee` между `Test` и `Prod` и не занимали интерактивный `unity-editor-worker`, используются **4 выделенных сборочных worktree** с ролью LFS `build` (`hydration = full`, см. [agents/lfs-worktrees.md](agents/lfs-worktrees.md)):
+
+| Назначение | Платформа (`-buildTarget`) | Путь worktree | Профили |
+|---|---|---|---|
+| **Test — Win64** | `Win64` | `F:\CodexWorktrees\build-test-win64\Vr_Battlegrounds_ai` | `Server` (`Test`), `e2e`-сервер (`Build/e2e/VrBattlegrounds.exe`) |
+| **Test — Android** | `Android` | `F:\CodexWorktrees\build-test-android\Vr_Battlegrounds_ai` | `Quest` (`Test`), `Tablet` (`Test`) |
+| **Prod — Win64** | `Win64` | `F:\CodexWorktrees\build-prod-win64\Vr_Battlegrounds_ai` | `Server` (`Prod`) |
+| **Prod — Android** | `Android` | `F:\CodexWorktrees\build-prod-android\Vr_Battlegrounds_ai` | `Quest` (`Prod`), `Tablet` (`Prod`) |
+
+Правила работы со сборочными worktree:
+- `Build-Game.ps1` по умолчанию автоматически направляет `quest,tablet` в `build-<config>-android`, а `server` — в `build-<config>-win64` (если папки существуют; ключ `-UseCurrentWorktree` возвращает сборку в текущий checkout).
+- `Run-QuestE2E.ps1 -Build` по умолчанию собирает APK Quest в `build-test-android` (`E2EPlayerBuilder.RunQuestBatch`) и Windows e2e-плеер сервера в `build-test-win64` (`E2EPlayerBuilder.RunBatch`) без единого переключения платформы и без аренды `unity-editor-worker` (ключ `-SingleWorktreeBuild` возвращает сборку в один checkout через `RunPairBatch`).
+- Перед стартом `Unity.exe` скрипты проверяют, что:
+  1. В целевых сборочных worktree закрыт редактор (`Temp/UnityLockfile`) и `vrb.lfs.role != agent`, а все отслеживаемые LFS-файлы гидратированы (нет указателей `version https://git-lfs.github.com/spec/v1`).
+  2. Оба парных worktree (`win64` и `android`) находятся на одном `HEAD` SHA и не содержат незакоммиченных правок в `Assets/`, `Packages/`, `ProjectSettings/` (параметр `-Ref <commit>` в `Build-Game.ps1` переключает задействованные сборочные worktree на нужный коммит и дотягивает LFS).
+  3. Тестовые сборки в обоих worktree штампуются единым `-buildRevision <sha12>`, а после завершения сверяются отпечатки `uxr-ids.txt` между `build-<cfg>-win64/Build/Server` и `build-<cfg>-android/Build/Quest|Tablet`.
+- При запуске `Prod`-сборки в `unity-editor-worker` `GameBuilder` выводит явное предупреждение в `Result.Summary`.
 
 ### Конфигурация: тест и прод
 

@@ -331,3 +331,35 @@ Prod добавляет его всем профилям; (3) Reliable, имя/�
 именованная ошибка; (4) роль из ожидаемого набора, одна роль — одно живое соединение, после штатной аутентификации;
 (5) обработчики только пишут журнал; (6) таймауты вокруг смены карты с запасом; (7) host — отдельная роль.
 Diff — network до checkpoint, gameplay — ревью API.
+
+### Выделенные сборочные worktree `build-checkouts` (2026-10-14)
+
+Решение пользователя (2026-10-14, AskUserQuestion): выделить **4 отдельных сборочных worktree** (по одному на пару
+`<Config, Platform>`) с полным LFS (`role = build`, `hydration = full`), чтобы исключить переключение платформы Unity,
+сброс кешей `Library`/Bee/IL2CPP и простои очереди интерактивного `unity-editor-worker`:
+- `F:/CodexWorktrees/build-test-win64/Vr_Battlegrounds_ai` (`Server` Test + `e2e` Windows сервер)
+- `F:/CodexWorktrees/build-test-android/Vr_Battlegrounds_ai` (`Quest` Test + `Tablet` Test)
+- `F:/CodexWorktrees/build-prod-win64/Vr_Battlegrounds_ai` (`Server` Prod)
+- `F:/CodexWorktrees/build-prod-android/Vr_Battlegrounds_ai` (`Quest` Prod + `Tablet` Prod)
+
+Реализовано:
+1. В `Tools/agents/lfs-worktree-policy.json` и `Tools/agents/configure_lfs_worktree.py` добавлена роль `build`
+   (`buildHydration = full`, `buildWorktrees` на 4 пути) с автоматическим `git lfs pull` и защитой от pointer-файлов;
+   покрыто тестом в `Tools/agents/tests/test_lfs_worktree_policy.py` (3/3 OK).
+2. В `Assets/Editor/VR_Battlegrounds/Debug/E2EPlayerBuilder.cs`:
+   - `RunQuestBatch()` собирает только `BuildProfile.Quest` (`BuildConfig.Test`) на Android без переключения на Win64;
+   - `RunBatch()` и `RunQuestBatch()` принимают `-buildRevision <ревизия>` и `-serverStatus` / `-questStatus`.
+3. В `Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs`:
+   - `Result.CheckoutPath` записывается в `last-build.json`;
+   - `RunBatch()` поддерживает `-buildRevision <ревизия>` и `-compareBuildRoot <путь>` для кросс-worktree сверки
+     `uxr-ids.txt`;
+   - добавлено предупреждение при запуске `Prod`-сборки в `unity-editor-worker`.
+4. В `Tools/release/Build-Game.ps1` и `Tools/e2e/Run-QuestE2E.ps1`:
+   - автоматическая маршрутизация групп `StandaloneWindows64` и `Android` в соответствующую пару
+     `build-<config>-win64` и `build-<config>-android`;
+   - проверки перед сборкой: отсутствие `Temp\UnityLockfile`, запрет `vrb.lfs.role=agent`, 0 LFS pointer-файлов,
+     совпадение `HEAD` SHA и чистоты между парными worktree, единый `-buildRevision`;
+   - поддержка `-Ref <git-ref>` (перевод обоих сборочных worktree на один коммит + `git lfs pull`) и `-DryRun` /
+     `-DryRunBuild`.
+5. Документация обновлена в `Docs/release.md` и `Docs/agents/lfs-worktrees.md`.
+

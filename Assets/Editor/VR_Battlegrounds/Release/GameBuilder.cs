@@ -118,11 +118,15 @@ namespace VrBattlegrounds.EditorTools.Release
             /// <summary>Штамп ревизии исходников; пусто — сборка без штампа (прод).</summary>
             public string Revision = string.Empty;
 
+            /// <summary>Корень checkout, из которого выполнялась сборка.</summary>
+            public string CheckoutPath = string.Empty;
+
             public readonly List<string> Lines = new List<string>();
 
             public string Summary =>
                 ResultMarker + (Passed ? " PASS" : " FAIL") + (Fingerprint.Length > 0 ? $" — UXR id {Fingerprint}" : "") +
                 (Revision.Length > 0 ? $" — ревизия {Revision}" : "") +
+                (CheckoutPath.Length > 0 ? $" — checkout {CheckoutPath}" : "") +
                 "\n" + string.Join("\n", Lines);
 
             public Result Fail(string message)
@@ -207,9 +211,31 @@ namespace VrBattlegrounds.EditorTools.Release
         /// один раз (<see cref="BuildRevisionStamp.ReadRevision" />). <c>null</c> — посчитать здесь.
         /// Для <see cref="BuildConfig.Prod" /> штампа нет, ревизия игнорируется.
         /// </summary>
-        public static Result Build(IEnumerable<BuildProfile> profiles, BuildConfig config, string revision)
+        public static Result Build(IEnumerable<BuildProfile> profiles, BuildConfig config, string revision) =>
+            Build(profiles, config, revision, null);
+
+        /// <summary>
+        /// То же с дополнительными корневыми папками <c>Build/</c> других сборочных worktree для кросс-сверки <c>uxr-ids.txt</c>.
+        /// </summary>
+        public static Result Build(
+            IEnumerable<BuildProfile> profiles,
+            BuildConfig config,
+            string revision,
+            IEnumerable<string> externalBuildRoots)
         {
-            var result = new Result();
+            var result = new Result
+            {
+                CheckoutPath = Path.GetFullPath(".")
+            };
+
+            if (config == BuildConfig.Prod &&
+                result.CheckoutPath.IndexOf("unity-editor-worker", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                result.Lines.Add(
+                    "ВНИМАНИЕ: Prod-сборка запущена в рабочем checkout воркера (unity-editor-worker) с общей dev-Library; " +
+                    "для релизных сборок используй выделенные сборочные worktree build-prod-win64 и build-prod-android.");
+            }
+
             List<BuildProfile> ordered = OrderBySwitches(profiles.Distinct());
 
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -282,24 +308,29 @@ namespace VrBattlegrounds.EditorTools.Release
                 result.Fail($"UXR id на диске изменились при сохранении после сборки ({baseline.Hash} → {afterSave}) — " +
                             "сборки собраны со старыми id, пересобери всё.");
 
-            if (result.Passed) CompareWithOtherBuilds(ordered, baseline, result);
+            if (result.Passed) CompareWithOtherBuilds(ordered, baseline, result, externalBuildRoots);
             return result;
         }
 
         /// <summary>
         /// Точка входа для -executeMethod. Аргументы: <c>-buildProfile all|server,quest,tablet</c>,
-        /// <c>-config test|prod</c> (<c>-development</c> — то же, что test). Код возврата 0 или 1.
+        /// <c>-config test|prod</c> (<c>-development</c> — то же, что test),
+        /// <c>-buildRevision &lt;ревизия&gt;</c>, <c>-compareBuildRoot &lt;путь&gt;</c>. Код возврата 0 или 1.
         /// </summary>
         public static void RunBatch()
         {
             string[] args = Environment.GetCommandLineArgs();
             string profileArg = "all";
             BuildConfig config = BuildConfig.Test;
+            string revisionArg = null;
+            var compareRoots = new List<string>();
 
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "-buildProfile" && i + 1 < args.Length) profileArg = args[i + 1];
                 if (args[i] == "-development") config = BuildConfig.Test;
+                if (args[i] == "-buildRevision" && i + 1 < args.Length) revisionArg = args[i + 1];
+                if (args[i] == "-compareBuildRoot" && i + 1 < args.Length) compareRoots.Add(args[i + 1]);
                 if (args[i] == "-config" && i + 1 < args.Length &&
                     !Enum.TryParse(args[i + 1], true, out config))
                 {
@@ -325,7 +356,7 @@ namespace VrBattlegrounds.EditorTools.Release
                 }
             }
 
-            Result result = Build(profiles, config);
+            Result result = Build(profiles, config, revisionArg, compareRoots);
             Log(result);
             EditorApplication.Exit(result.Passed ? 0 : 1);
         }
@@ -819,17 +850,35 @@ namespace VrBattlegrounds.EditorTools.Release
             return extra.ToArray();
         }
 
-        private static void CompareWithOtherBuilds(List<BuildProfile> built, UxrIdFingerprint baseline, Result result)
+        private static void CompareWithOtherBuilds(
+            List<BuildProfile> built,
+            UxrIdFingerprint baseline,
+            Result result,
+            IEnumerable<string> externalBuildRoots = null)
         {
             foreach (BuildProfile other in (BuildProfile[])Enum.GetValues(typeof(BuildProfile)))
             {
                 if (built.Contains(other)) continue;
 
-                string hash = UxrIdFingerprint.ReadHash(System.IO.Path.GetDirectoryName(SpecFor(other).Path));
+                string localDir = System.IO.Path.GetDirectoryName(SpecFor(other).Path);
+                string hash = UxrIdFingerprint.ReadHash(localDir);
                 if (hash != null && hash != baseline.Hash)
                 {
                     result.Lines.Add($"ВНИМАНИЕ: {other} в {OutputRoot}/ собран с другими UXR id ({hash}) — " +
                                      "с новой сборкой по сети не сойдётся, пересобери его.");
+                }
+
+                if (externalBuildRoots == null) continue;
+                foreach (string extRoot in externalBuildRoots)
+                {
+                    if (string.IsNullOrWhiteSpace(extRoot)) continue;
+                    string extDir = Path.Combine(extRoot, other.ToString());
+                    string extHash = UxrIdFingerprint.ReadHash(extDir);
+                    if (extHash != null && extHash != baseline.Hash)
+                    {
+                        result.Lines.Add($"ВНИМАНИЕ: {other} в {extRoot} собран с другими UXR id ({extHash}) — " +
+                                         "с новой сборкой по сети не сойдётся, пересобери его.");
+                    }
                 }
             }
         }

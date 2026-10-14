@@ -1,7 +1,18 @@
 # Адресный стенд и интеграция Play Launch
 
-Обновлено: 2026-10-13. Владелец: эксперт `launch-infra`. Worktree: `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
-ветка `codex/vr-test-stand`. План хаба rev 36.
+Обновлено: 2026-10-14 (передача сессии Codex, 6545). Владелец: эксперт `launch-infra`. Worktree:
+`F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`, ветка `codex/vr-test-stand` (общая с quest-perf-pipeline).
+План хаба rev 36. **Все этапы влиты; активной работы нет.** Кандидаты следующих этапов — бэклог эксперта
+`experts/launch-infra/backlog.md` (0c stand-deferred-client, 0d stand-kcp-timeout, 0e stand-back-to-back, 0h хвосты).
+
+## Ждёт пользователя
+
+Нет открытых вопросов по этой задаче.
+
+## Решения пользователя
+
+- 2026-10-12: «смок тесты на то, что игра работает по сети мы будем делать на ботах… надо их разблокировать» →
+  этап `stand-preview-preflight` (принят и влит 2026-10-13, `d2fe15ae`).
 
 ## Цель и границы
 
@@ -29,7 +40,7 @@ ParticipantId, ProcessSessionId; reconnect проверяет epoch/avatar. Read
 | `expert-workspace-pilot-handoff` | merged `1001415b` |
 | `e2e-run-isolation` | merged `7ceb8a08` (worker 421) |
 | `agent-play-recipe` | merged `7c42ac5d` |
-| `stand-preview-preflight` | принят пользователем 2026-10-13, вливается |
+| `stand-preview-preflight` | merged `d2fe15ae` (принят 2026-10-13) |
 
 ## Этап `stand-preview-preflight`
 

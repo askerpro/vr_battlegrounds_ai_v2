@@ -22,7 +22,7 @@ class LfsWorktreeTests(unittest.TestCase):
     def test_agent_pointer_main_and_worker_bytes(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
-            main, worker, before, agent = [base / name for name in ("main", "worker", "before", "agent")]
+            main, worker, build_wt, before, agent = [base / name for name in ("main", "worker", "build-test-win64", "before", "agent")]
             main.mkdir()
             def git(root, *args):
                 return policy.git(root, *args)
@@ -35,7 +35,10 @@ class LfsWorktreeTests(unittest.TestCase):
             (main / "image.tga").write_bytes(payload)
             config = main / "Tools/agents/lfs-worktree-policy.json"
             config.parent.mkdir(parents=True)
-            config.write_text(json.dumps({"workerRegistry": ".agent-state/editor-broker/config.json"}))
+            config.write_text(json.dumps({
+                "workerRegistry": ".agent-state/editor-broker/config.json",
+                "buildWorktrees": [str(build_wt)],
+            }))
             shutil.copy2(Path(__file__).parents[1] / "configure_lfs_worktree.py", config.parent / "configure_lfs_worktree.py")
             hook = main / ".githooks/post-checkout"
             hook.parent.mkdir()
@@ -56,13 +59,18 @@ class LfsWorktreeTests(unittest.TestCase):
             self.assertEqual(result["hydration"], "full_after_checkout")
             git(main, "config", "core.hooksPath", ".githooks")
             git(main, "worktree", "add", "--detach", str(agent), "HEAD")
+            git(main, "worktree", "add", "--detach", str(build_wt), "HEAD")
             pointer = (agent / "image.tga").read_bytes()
             self.assertTrue(pointer.startswith(b"version https://git-lfs.github.com/spec/v1"))
             self.assertLess(len(pointer), 200)
             self.assertEqual(policy.apply(agent)["hydration"], "skip")
             self.assertEqual(policy.apply(worker)["hydration"], "full")
+            build_applied = policy.apply(build_wt)
+            self.assertEqual(build_applied["role"], "build")
+            self.assertEqual(build_applied["hydration"], "full")
+            self.assertEqual((build_wt / "image.tga").read_bytes(), payload)
             # --filters — тот же маршрут получения рабочего содержимого, что у broker.
-            for root in (worker,):
+            for root in (worker, build_wt):
                 data = subprocess.check_output(["git", "-C", str(root), "cat-file", "--filters", "HEAD:image.tga"])
                 self.assertEqual(data, payload)
             pointer_again = subprocess.check_output(["git", "-C", str(agent), "cat-file", "--filters", "HEAD:image.tga"])

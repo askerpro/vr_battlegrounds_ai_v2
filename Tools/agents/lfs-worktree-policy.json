@@ -4,7 +4,14 @@
   "agentHydration": "skip",
   "mainHydration": "full_after_checkout",
   "workerHydration": "full",
+  "buildHydration": "full",
   "workerRegistry": ".agent-state/editor-broker/config.json",
+  "buildWorktrees": [
+    "F:/CodexWorktrees/build-test-win64/Vr_Battlegrounds_ai",
+    "F:/CodexWorktrees/build-test-android/Vr_Battlegrounds_ai",
+    "F:/CodexWorktrees/build-prod-win64/Vr_Battlegrounds_ai",
+    "F:/CodexWorktrees/build-prod-android/Vr_Battlegrounds_ai"
+  ],
   "binaryRoots": [
     "Assets/ThirdParty/KINEMATION",
     "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update",

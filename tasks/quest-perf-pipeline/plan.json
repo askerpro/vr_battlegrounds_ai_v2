@@ -219,12 +219,38 @@
         "Assets/Scripts/Debug/E2E/E2ERunner.cs",
         "Assets/Scripts/Debug/E2E/E2EBarrier.cs",
         "Assets/Scripts/Debug/E2E/E2EBarrier.cs.meta",
+        "Assets/Scripts/Debug/E2E/Scenarios/E2EKitSelfTestScenario.cs.meta",
+        "Assets/Scripts/Debug/E2E/Scenarios/E2EKitSelfTestScenario.cs",
         "Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs",
         "Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs",
         "Tools/e2e/Run-E2E.ps1",
         "Tools/TestStand/**",
         "Docs/testing.md",
         "Docs/release.md",
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "e2e-log-verdict",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "build-checkouts",
+      "writes": [
+        "Tools/release/Build-Game.ps1",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Debug/E2EPlayerBuilder.cs",
+        "Tools/agents/lfs-worktree-policy.json",
+        "Tools/agents/configure_lfs_worktree.py",
+        "Tools/agents/tests/test_lfs_worktree_policy.py",
+        "Docs/release.md",
+        "Docs/agents/lfs-worktrees.md",
         "tasks/quest-perf-pipeline/**",
         "experts/launch-infra/**"
       ],

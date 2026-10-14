@@ -1,6 +1,6 @@
 # Исследование нового окружения и регистрация в хабе
 
-Обновлено: 2026-10-14 (статус сверён с хабом в Codex). Владелец: эксперт `performance`. Worktree: `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`,
+Обновлено: 2026-10-15 (статус и входящие ревью сверены с хабом в Codex). Владелец: эксперт `performance`. Worktree: `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`,
 ветка `claude/performance`. Создана по решению пользователя.
 
 ## Цель и границы
@@ -48,3 +48,12 @@ Review note7021: native build report18:02–18:04MSK предшествует з
 Старые native DateTime не используются для freshness; причина конверсии остаётся предположением owner.
 Первая серия functional24/24, но RED/unexpected4; вторая24/24 GREEN/logs0. Это не perf/Quest acceptance,
 launch executable path в role JSON не аттестован. Отчёт: reports/network-7005/correlation-review.md.
+
+## Ревью 2026-10-15
+
+`network-sync-hardening`, проект avatar-root-event-admission-v1: запрос7148 → ответ7191.
+CPU/traffic-модель и существующий метод A/B согласованы с уточнениями: +20B каждому событию,
+фактический RPC fanout; прежние server2/client1 decode; untyped SDK lookup O(K) и allocation scope
+для normal/dead-owner/writer-growth/diagnostics разделены. Observed event rates в draft отсутствуют,
+численных новых бюджетов, perf PASS и разрешения реализации нет. Human written review остаётся у owner/user.
+Отчёт: reports/network-7148/design-perf-review.md (draft8709a407…, source snapshotfb8d736c…, drift0).

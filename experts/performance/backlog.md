@@ -63,3 +63,6 @@
 - Уточнениеnetwork7023 проверено: history18:04:16Z внутри651 +386files/4hashes +6roleidentity поддерживают
   свежийbuild; прежнийtimestamp mismatch не доказывает stalebuild. Первый functional24/24 RED/unexpected4,
   второй24/24 GREEN/logs0; launchpath неattest, Quest/perfнепроверены. URPdisposition7025 неизменен.
+- network7148 → design review7191: root-event envelope+20B/fanout, lookupO(K), existingdecode2/1 и
+  allocation scope сверены. Метод existing A/B согласован с уточнениями, eventrates отсутствуют;
+  нет нового гейта/бюджета/perf PASS/разрешения реализации. Humanwrittenreview уnetwork/user.

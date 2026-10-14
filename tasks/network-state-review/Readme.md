@@ -1,12 +1,16 @@
 # Анализ состояния сетевой зоны и разбор бэклога
 
-Обновлено: 2026-10-11. Владелец: эксперт `network`. Worktree: `F:/CodexWorktrees/network/Vr_Battlegrounds_ai`,
+Обновлено: 2026-10-14, продолжение в Codex. Владелец: эксперт `network`. Worktree: `F:/CodexWorktrees/network/Vr_Battlegrounds_ai`,
 ветка `claude/network`. Создана по решению пользователя (через сопровождающего agent-infra-b1).
-Адрес в хабе: `vr-battlegrounds-ai-c6 [cf2d5e]`.
+Старые адреса Claude очищены в хабе; canonical inbox остаётся каналом связи.
 
 ## Статус (2026-10-14, передача Claude → Codex)
 
-АКТИВНА как задача-«дом» эксперта network (inbox по owner, zone-ack, ревью сетевой части чужих этапов). Кода нет. Текущие задачи эксперта: `precache-server-guard`, `network-sync-hardening` (см. их Readme); обещания другим агентам и кандидаты — `experts/network/backlog.md` (раздел «Обещания и ожидания»). Inbox: `coordination.py inbox --owner network --unread --as "<свой адрес>"`, ожидание — `wait-inbox` фоновой командой; route публикует новая сессия (старый адрес в шапке ниже устарел).
+АКТИВНА как задача-«дом» эксперта network (inbox по owner, zone-ack, ревью сетевой части чужих этапов). Кода нет.
+Текущие задачи: `precache-server-guard`, `network-sync-hardening`; код готов, текущая Unity-проверка и приёмка
+не выполнены. Обещания и кандидаты — `experts/network/backlog.md`. Inbox обработан текущей сессией Codex
+`01a13af5-485c-7ef1-99c6-9e1f1dd753aa`; решение 6589 прочитано, ответ 6647 записан.
+Запрос готовности worker — 6643; остановка снята объявлением 6805, согласованные проверки продолжаются через FIFO.
 
 ## Цель и границы
 

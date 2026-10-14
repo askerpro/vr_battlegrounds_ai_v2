@@ -1,23 +1,26 @@
 # Сеть: событие снятого объекта, стоимость StateSync, регрессионные тесты
 
-Обновлено: 2026-10-14 (передача Claude → Codex). Владелец: эксперт `network`. Worktree:
+Обновлено: 2026-10-14, продолжение в Codex. Владелец: эксперт `network`. Worktree:
 `F:/CodexWorktrees/network/Vr_Battlegrounds_ai`, ветка `claude/network`.
 
 ## Статус
 
-**Код обоих кодовых этапов готов, НЕ проверен в Unity, НЕ принят, НЕ влит.** Проверено только офлайн-компиляцией.
+**Код обоих кодовых этапов готов, НЕ проверен в Unity, НЕ принят, НЕ влит.** Офлайн-компиляция — исторический
+результат предыдущей сессии; после rebase повторно не выполнялась. Свежая база `origin/dev` — `d3c62ca5e`,
+HEAD перед актуализацией документов — `edcfca552` (0 коммитов позади, 7 впереди). Режим координации — off.
+Старый running `statesync-cost` снят штатным stop: сейчас активной проверки и аренды нет.
 
 | Этап | Хаб | Код | Дальше |
 |---|---|---|---|
-| `teleport-state` (6048) | planned: begin отказан «один worktree — один выполняемый этап» | `ccfaf5991` | begin после закрытия `statesync-cost` (или одновременно, если хаб разрешит) |
-| `statesync-cost` (5871) | running, token `b53217a4c38041ebaaa17c4303b71432` | `859b06777` | Unity → приёмка → вливание |
+| `teleport-state` (6048) | planned, код уже в ветке | `6d66c53e2` | готовность worker → Unity → приёмка → вливание |
+| `statesync-cost` (5871) | planned после stop при передаче | `ce7b348eb` | тот же общий пакет проверки |
 | `regression-tests` | planned, after обоих merged | — | после приёмки обоих |
 
 ## Сделано (ветка `claude/network`)
 
-- `9bd9564c2` — план задачи, перенос этапов `regression-tests` из `state-sync-depth-guard`, `mirror-nt-keyframe`,
+- `8265a98c3` — план задачи, перенос этапов `regression-tests` из `state-sync-depth-guard`, `mirror-nt-keyframe`,
   `uniqueid-stale-registry` (их планы ред. 2 без этого этапа), backlog.
-- `859b06777` — **statesync-cost**:
+- `ce7b348eb` — **statesync-cost** (до rebase `859b06777`):
   - UltimateXR patch 80 (`Core/StateSync/UxrStateSyncImplementer_1.cs`): кеш `PropertyInfo`/`MethodInfo` по
     (рантайм-тип компонента, имя) в `SyncState` вместо `GetProperty`/`GetMethods`+LINQ на каждое событие. Поведение,
     порядок веток и исключения 1:1; отрицательные результаты не кешируются; только main thread. Патч 74 не тронут.
@@ -26,7 +29,7 @@
     уровни логов UltimateXR = min(ассет, Warnings); подробные — при `DebugMode.Enabled` (подписка на `Changed`) или
     флаге `-uxr-log-verbose`. Редактор и `Resources/UxrGlobalSettings.asset` не меняются.
   - Журнал: `changelog/2026-10-14-sdk-80.md`. Компиляция: UltimateXR 555 файлов 0 ошибок, VrBattlegrounds 460 — 0.
-- `ccfaf5991` — **teleport-state**:
+- `6d66c53e2` — **teleport-state** (до rebase `ccfaf5991`):
   - Mirror patch 4 (`Assets/ThirdParty/Mirror/Core/NetworkClient.cs`, `DestroyObject`): `connection.owned.Remove` и
     `spawned.Remove` сразу после `OnStopClient`, до unspawn-обработчика/`Destroy`/`SetActive(false)` — как сервер.
     Причина 6048: `OnDisable` `UxrTeleportLocomotion` внутри синхронного `Destroy` своего аватара слал
@@ -40,10 +43,12 @@
 
 ## Дальше (конкретный следующий шаг)
 
-1. Одна Unity-проверка в аренде worker вершины ветки (≥ `ccfaf5991`; включает и `precache-server-guard`): компиляция с
+1. Одна Unity-проверка в аренде worker вершины ветки (содержит `6d66c53e2`; включает и `precache-server-guard`): компиляция с
    weaver, AndroidCompileGate, EditMode `VrBattlegrounds.Tests.Network` + `Weapons` (затронуты `LedgerSpawnReadyTests`,
    `PlayerCalibrationOwnerTests` — путь `ExecuteStateSyncEvent → SyncState`). Отчёт — `tasks/network-sync-hardening/reports/`.
-   Worker/брокер на 2026-10-14 выключены — ждать объявления сопровождающего; перед заявкой fetch/rebase origin/dev.
+   Объявление 6805 сняло СТОП 6539: FIFO работает, заявки разрешены. DelayCall-предупреждение само не блокирует
+   admission; текущую готовность установит begin. Перед заявкой fetch и rebase при отставании.
+   Порядок и критерии — [Details.md](Details.md).
 2. Приёмка пользователя (ниже), затем вливание; после вливания statesync-cost — сообщить weapon-system (замер выстрела
    до/после, этап shot-cost) и performance (копия), находка 5871.
 3. `regression-tests` после приёмки: StateSyncFrameStack (C2), NetworkTransformKeyframe (Mirror patch 3),
@@ -80,6 +85,7 @@
 
 ## Координация
 
-- Inbox: `python Tools/agents/coordination.py inbox --owner network --unread --as "<свой адрес>"`, повторять пока
-  `has_more`; ожидание — `wait-inbox --owner network --as "<свой адрес>"` фоновой командой. Route опубликует новая сессия.
-- Вопросы пользователю: в Codex — явным сообщением с пометкой «ЖДЁТ ОТВЕТА» и дублировать в «Ждёт пользователя».
+- Старые маршруты Claude очищены; ownership/worktree сохранены. Canonical inbox: `python -B -X utf8
+  Tools/agents/coordination.py inbox --owner network --unread --as "01a13af5-485c-7ef1-99c6-9e1f1dd753aa"`.
+  Повторять при `has_more=true`; `/root` не является межсессионным адресом. СТОП снят объявлением 6805.
+- Вопросы пользователю — штатным инструментом вопросов; приёмка пока не запрашивается: сначала Unity-проверки.

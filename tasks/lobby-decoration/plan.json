@@ -48,7 +48,6 @@
         "Assets/Scripts/Debug/LobbyDetail.meta",
         "Assets/Scripts/Maps/ShootingRangeDisplay.cs",
         "Assets/Scripts/Maps/ShootingRangePhotoCapture.cs",
-        "Assets/Scripts/UI/Menu/MenuDebug.cs",
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Rendering/FX/UxrPlanarReflectionUrp.cs",
         "ProjectSettings/QualitySettings.asset",
         ".gitattributes",

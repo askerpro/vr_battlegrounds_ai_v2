@@ -78,3 +78,64 @@ Unity-null). При выгрузке станция бывает уничтож�
   `UxrGrabbableObject` с `!scene.IsValid()`, нет «not cleaned up», 0 «Tried to ignore collisions»; прогон
   launch-infra `map-run-startup-route`; отказ запуска / перезапуск сервера в сцене — предметы в слотах не
   уничтожены, вложенные магазины остаются в оружии.
+
+## Этап accepted-tests, возобновление 2026-10-14
+
+Механика top-level-detach принята пользователем и влита; ограничение «тесты после приёмки» выполнено.
+Независимая подготовка регрессионных тестов поручена отдельному worker с единственным writable-путём
+`Assets/Tests/EditMode/Arsenal/ArsenalCompositionTeardownTests.cs`. Продуктовые исходники не меняются.
+
+План: синтетическая станция и слот; проверка верхнего чужого предмета при живой сцене,
+сохранение вложенного чужого предмета в его родителе, отсутствие переподвешивания при ReleaseWithScene,
+сохранение владения своими вложенными transforms и корректная очистка Live при Unity-null станции.
+GUID нового .meta создаст Unity в последующей аренде. Затем scoped EditMode-прогон и приёмка пользователя.
+
+Unity-прогон пока не начат: собственная заявка catalog-fingerprint 625 имеет blocker выдачи capability,
+infra_issue 6704; сопровождающий разбирает его. Подготовка тестов не является PASS этапа.
+
+Блокер 625 затем снят через исходный stdout claim; аренда завершена. Тестовый файл подготовлен:
+8 случаев, статическое ревью без новых блокеров. Roslyn Unity 6000.4.1f1 скомпилировал этот единственный
+файл против 284 текущих ссылок worker: exit_code=0, compiler.txt пустой. Это compile-only, не NUnit PASS.
+SHA256 исходника 08a46006a5b136cc5ace422033d338f8aacf718d0bd0b112fdb64b4fcea1ccee.
+Локальный отчёт: [reports/compile-tests/report.json](reports/compile-tests/report.json), вне Git.
+
+Подготовлена и поставлена в FIFO заявка 633, input 0ae82425decd984c604382a4807e20f447a685c9;
+выход — Unity-generated .meta тестового файла. В аренде: scoped NUnit class, снимок состава сцен
+и UxrGrabManager до/после (включая cleanup), terminal job → немедленный finish, затем отчёт.
+Попытка coordination begin дала UNORDERED_OVERLAP с отложенным arsenal-generator/acceptance;
+это внутренняя проверка CLI. В действующем общем mode off begin ради допуска инструментов не нужен;
+пакет исполняется штатным legacy-маршрутом, с сохранением владельца и аренды Unity.
+
+## Фактическая попытка 640
+
+Заявки 633 и 636 не исполнялись: OFFERED истёк; 636 задержала автоматическая проверка разрешения.
+Infra_issue6803 передан сопровождающему. Task-local acquire-test-lease.py объединяет только штатные
+request/watch-ticket/claim/begin/guard после предварительного разрешения; capability берётся из собственного
+claim stdout приватно, не из БД и не записывается в отчёты.
+
+Аренда640, input1fdc3046f611e7ba3cae94265a3e2680c48c954d: run_tests потерял MCP plugin session при ожидании
+ответа; job_id не получен. Повторного запуска не было. До/после: UxrGrabManager=0, Live=0, preview=0,
+setup=[], Editor idle. Это не NUnit PASS. Finish640 DONE, result8447d05683d269207a7838469103d490cfe8a8af,
+unexpected=[]; receive получил единственный Unity-generated .meta, guid ca7b39726bc307049a5bb7c37cf7d2f5.
+Отчёт [reports/attempt-640.json](reports/attempt-640.json),
+SHA256 f52a6762ff156ea62bbe807658a2539bf481a1a174a571120a047141e233cef5; infra_issue6863.
+
+В текущем MCP package TestJobManager сохраняет StartJob в SessionState до запуска Unity TestRunner:
+MCPForUnity.TestJobsV1 и MCPForUnity.CurrentTestJobIdV1. Следующая собственная аренда сначала читает эту
+durable запись, устанавливает исход640 и только затем решает о новом прогоне. Чужие jobs не очищаются.
+
+Подготовленный повторный input дополнен полученным .meta: 2bf166035a08dc6899bb1885a80744781b63e0df,
+GUID сохраняется. Собственная QUEUED649 отменена до claim, watcher завершён; замена653 QUEUED.
+В хабе accepted-tests RUNNING; у отложенного arsenal-generator/acceptance записан порядок после этих
+регрессий (rev21), оба этапа касаются Arsenal tests. Этот порядок соответствует приоритету пользователя.
+
+launch-infra6892 подтвердил отдельный E2E на87643327108f с принятой механикой: map-run-startup-route14/14,
+strict enforce GREEN exit0, full logs, unexpected/defects/native/dropped=0. Их изменение known-noise пока
+не принято/не влито. Это проверка запуска/перезагрузки карты, не результат нового NUnit fixture.
+
+Principal прочитал исходные summary.json и log-verdict.json в launch-infra checkout 2026-10-14 17:38 UTC:
+14/14, exit0, enforce=green, unexpected/defects/native/dropped=0, rawLogs present для server/client-1/client-2.
+SHA256 summary8958d7b77d3766c77cd826205d3165e6b09bb558711f830896ad4b689a274d48,
+log-verdict a368e3f4736eb17041f6a4c92fdd50a9f5607ecb17f9f1ed2b0e7a1b841b26af.
+Evidence root: F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai/tasks/quest-perf-pipeline/reports/
+2026-10-14-status/runtime/20261014-195744-map-run-startup-route/.

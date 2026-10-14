@@ -8,8 +8,8 @@
 | Этап | Состояние | Где |
 |---|---|---|
 | `env-independent` | влит, принят пользователем 2026-10-12 | origin/dev e330b6162 |
-| `preview-loaded-scene` | принят пользователем 2026-10-14; Unity 3/3 preflight PASS, Windows E2E build PASS; вливание | ветка `claude/preview-loaded-scene`, код 02d367fe7, база d3c62ca5e; аренда 625 освобождена |
-| `accepted-tests` | не начат | после `preview-loaded-scene ≥ merged` |
+| `preview-loaded-scene` | принят и влит 2026-10-14; Unity 3/3 preflight PASS, Windows E2E build PASS | origin/dev 97a320c88; stage_merged 6800; база опубликована 639 DONE / 6808 |
+| `accepted-tests` | выполняется в хабе; 7 случаев, compile-only PASS, статическое ревью без блокеров; NUnit ещё не запускался | заявка 650 QUEUED, вход 21cfe21d1d5d |
 
 ## Что сделано
 
@@ -28,13 +28,11 @@
 
 ## Следующий шаг
 
-1. Приёмка получена 2026-10-14: «Принимаю, влить». Выполнить fast-forward публикацию принятого этапа;
-   тесты арсенала выполняются независимо.
+1. `accepted-tests`: scoped Unity-прогон `Assets/Tests/EditMode/Maps/MapRunPreflightTests.cs`, получение Unity-generated
+   .meta, фактические результаты и отдельная приёмка. 7 случаев: YAML/meta LF–CRLF, бинарные байты, одиночный CR,
+   загруженная чистая / dirty сцена. Каталог клонируется в памяти; setup и отчёт восстанавливаются.
 2. Результат аренды 84bc9c0de949 содержит только побочный `PC.asset`; `receive` не выполнялся.
-3. После приёмки: вливание → сообщить launch-infra (inbox quest-perf-pipeline: обход
-   «открыть пустую сцену перед сборкой» в Docs/testing.md больше не нужен) и level-design (lobby-decoration).
-4. `accepted-tests`: `Assets/Tests/EditMode/Maps/MapRunPreflightTests.cs` (+.meta) — CRLF и LF дают один отпечаток;
-   загруженная чистая / dirty сцена.
+3. Вливание выполнено fast-forward; launch-infra и level-design уведомлены через hub.
 
 ## Ждёт пользователя
 

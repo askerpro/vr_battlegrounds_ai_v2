@@ -1,6 +1,6 @@
 # arsenal-unload-teardown — разборка станций арсенала при выгрузке карты
 
-Владелец — эксперт `gameplay`. Обновлено 2026-10-14 (передача Claude → Codex). Машинный план — [plan.json](plan.json),
+Владелец — эксперт `gameplay`. Обновлено 2026-10-14 (Codex возобновил работу). Машинный план — [plan.json](plan.json),
 подробности — [Details.md](Details.md).
 
 ## Статус
@@ -8,7 +8,7 @@
 | Этап | Состояние | Где |
 |---|---|---|
 | `top-level-detach` | влит, принят пользователем 2026-10-14 | origin/dev ec0887cf5 (fix 66ce3afcf, diag 4a66b6680) |
-| `accepted-tests` | не начат | после `top-level-detach ≥ merged` (выполнено) |
+| `accepted-tests` | выполняется в хабе; 8 случаев, compile-only PASS; запуск 640 потерял MCP-ответ, NUnit не подтверждён | новая заявка 653 QUEUED, вход 2bf166035a08 с сохранённым GUID; 640 DONE |
 
 ## Что сделано
 
@@ -25,13 +25,13 @@
 
 ## Следующий шаг
 
-1. Дождаться штатного прогона launch-infra map-run-startup-route с полным вердиктом по логам на базе после вливания
-   (запрошен 6367) и снятия дефекта `anchored-ignore-collision-prefab` из `Tools/e2e/known-noise.json`. Если Warning
-   счётчика ненулевой — разобрать (возможен ложный N>0, если сетевые объекты сервера штатно живут вне сцены карты и
-   DontDestroyOnLoad).
+1. launch-infra выполнил обещание 6367: на input87643327108f с ec0887cf5 в базе — 14/14, strict enforce GREEN exit0,
+   полные логи, unexpected/defects/native/dropped=0 (сообщение 6892). Снятие
+   `anchored-ignore-collision-prefab` из known-noise.json у владельца ещё не принято/не влито.
 2. `accepted-tests`: `Assets/Tests/EditMode/Arsenal/ArsenalCompositionTeardownTests.cs` (+.meta) — вложенный предмет
    не отцепляется отдельно, верхний — отцепляется при живой сцене, при `ReleaseWithScene` — ничего не переподвешивается.
-   Затем прогон в аренде, показ пользователю, вливание.
+   Установить исход прерванного run_tests через durable TestJob SessionState; затем подтверждённый scoped прогон,
+   показ пользователю, вливание. Не повторять неизвестный исход вслепую.
 
 ## Ждёт пользователя
 
@@ -49,5 +49,5 @@
 
 ## Коммуникация (для Codex)
 
-Inbox: `python Tools/agents/coordination.py inbox --owner gameplay --unread --as "<свой адрес>"`; ожидание —
-`wait-inbox --owner gameplay --as "<свой адрес>"` фоновой командой. Вопросы пользователю — сообщением «ЖДЁТ ОТВЕТА».
+Inbox gameplay разобран 2026-10-14; устаревший маршрут Claude очищен. Вопросы и приёмка — через
+доступный инструмент запроса ввода, решения также записывать в задаче.

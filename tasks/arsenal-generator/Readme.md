@@ -1,7 +1,7 @@
 # arsenal-generator — станции арсенала из пресета
 
-Владелец — эксперт `gameplay` (передана от агента arsenal-generator 2026-10-11). Обновлено 2026-10-14 (передача
-Claude → Codex). Машинный план — [plan.json](plan.json), план этапов — [plan.md](plan.md), анализ — [Details.md](Details.md),
+Владелец — эксперт `gameplay` (передана от агента arsenal-generator 2026-10-11). Обновлено 2026-10-14 (Codex сверил
+статус хаба, rev 21; задача остаётся отложенной). Машинный план — [plan.json](plan.json), план этапов — [plan.md](plan.md), анализ — [Details.md](Details.md),
 миграция — [new-flow.md](new-flow.md).
 
 ## Цель
@@ -15,7 +15,7 @@ Claude → Codex). Машинный план — [plan.json](plan.json), пла�
 |---|---|
 | `composer-presentation` | влит eb0f09065 (новый флоу, раскладки слота, все карты; принят 2026-10-09) |
 | `planning` | `planned`; черновик плана под новый флоу — [plan.md](plan.md) (перенесён из ветки `claude/arsenal-generator` a78dd5b9c) |
-| `acceptance` | `planned`; после `planning` и `arsenal-unload-teardown/top-level-detach` (влит) |
+| `acceptance` | `planned`; после `planning` и `arsenal-unload-teardown/accepted-tests` (механика уже влита) |
 | `prefab-preview` | `planned`; превью слотов пресета в Prefab Mode корпуса |
 | `decorations` | `planned`; ждёт выбора пользователя A/B (ниже) |
 
@@ -40,9 +40,11 @@ Claude → Codex). Машинный план — [plan.json](plan.json), пла�
 
 - Инвариант: станция собирается детерминированно по MapRunKey; один писатель представления слотов
   `ArsenalSupportProjection`.
-- `plan.json` правьте только из актуальной версии (хаб rev 18); в ветке `claude/arsenal-generator` лежит старая.
+- `plan.json` правьте только из актуальной версии (хаб rev 21); в ветке `claude/arsenal-generator` лежит старая.
+- Регрессии разборки предшествуют будущей приёмке генератора: оба этапа затрагивают Arsenal tests,
+  и выбранный пользователем приоритет исправления игровой логики сохранён в зависимостях.
 
 ## Коммуникация (для Codex)
 
-Inbox: `python Tools/agents/coordination.py inbox --owner gameplay --unread --as "<свой адрес>"`; ожидание —
-`wait-inbox --owner gameplay --as "<свой адрес>"` фоновой командой. Вопросы пользователю — сообщением «ЖДЁТ ОТВЕТА».
+Inbox gameplay разобран 2026-10-14; устаревший маршрут Claude очищен. Вопросы и приёмка — через
+доступный инструмент запроса ввода; решения также записывать в задаче.

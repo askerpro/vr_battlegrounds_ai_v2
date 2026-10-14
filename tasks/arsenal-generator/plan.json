@@ -1,7 +1,7 @@
 {
   "task_id": "arsenal-generator",
   "owner": "gameplay",
-  "client": "claude",
+  "client": "codex",
   "worktree": "F:/CodexWorktrees/gameplay/Vr_Battlegrounds_ai",
   "base_sha": "ebeb2de7bb22e6033a4c376b1ca7e9e529b35bac",
   "doc_path": "tasks/arsenal-generator/Readme.md",
@@ -136,6 +136,11 @@
         {
           "task": "arsenal-unload-teardown",
           "stage": "top-level-detach",
+          "state": "merged"
+        },
+        {
+          "task": "arsenal-unload-teardown",
+          "stage": "accepted-tests",
           "state": "merged"
         }
       ],

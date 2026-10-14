@@ -7,8 +7,8 @@
     "catalog-fingerprint",
     "arsenal-unload-teardown"
   ],
-  "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
-  "reviewed_at": "2026-10-11",
+  "reviewed_sha": "97a320c88469cb2a74d89adb0a6b6edd23536753",
+  "reviewed_at": "2026-10-14",
   "owns": [
     "Docs/game-manager.md",
     "Docs/Arsenal/**",

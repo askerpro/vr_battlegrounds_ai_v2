@@ -1,21 +1,24 @@
-Обновлено 2026-10-14 (передача Claude → Codex). Кандидаты вне хаба; порядок — приоритет. MRB = `tasks/map-runtime-bootstrap/`.
+Обновлено 2026-10-14 (Codex возобновил работу, inbox разобран). Кандидаты вне хаба; порядок — приоритет. MRB = `tasks/map-runtime-bootstrap/`.
 Решение пользователя 2026-10-13: сначала то, что мешает игровой логике и чего ждут другие; `arsenal-generator`
 (декор, этапы planning…decorations) отложен.
 
 ## Текущая очередь задач хаба (порядок по приоритету пользователя)
 
-1. `catalog-fingerprint/preview-loaded-scene` — Unity-прогон и приёмка (ветка `claude/preview-loaded-scene`, Readme задачи).
-2. `arsenal-unload-teardown/accepted-tests`, затем `catalog-fingerprint/accepted-tests`.
+1. `catalog-fingerprint/preview-loaded-scene` — принят и FF-влит origin/dev97a320c88, база опубликована639 DONE;
+   Unity 3/3 preflight PASS, Windows E2E build PASS. Побочный PC.asset не принят; зависимые владельцы уведомлены.
+2. `arsenal-unload-teardown/accepted-tests` — 8 случаев подготовлены, compile-only PASS; run_tests640 оборвал MCP
+   без job_id, NUnit не подтверждён. Получен только Unity-generated .meta, восстановление durable TestJob исхода.
+   Повторный пакет653 с сохранённым GUID в очереди; `catalog-fingerprint/accepted-tests` —7 случаев,
+   compile-only PASS, пакет650 в очереди. Оба этапа RUNNING в хабе.
 3. `series-smoke` — когда launch-infra вольёт `e2e-smoke-kit` (кандидат п.1 ниже).
 
 ## Обещания другим агентам (кому — что — событие)
 
 - launch-infra (quest-perf-pipeline): после вливания `e2e-smoke-kit` завести задачу `series-smoke` и прислать id —
   тогда они снимут `map-runtime-bootstrap/series-smoke-e2e` со своего плана (5869, 6403; API kit принят 6403, их 6408).
-- launch-infra: ждём их прогон map-run-startup-route с полным вердиктом по логам после вливания arsenal-unload-teardown
-  и снятие дефекта `anchored-ignore-collision-prefab` из known-noise.json (просьба 6367).
-- launch-infra: после вливания `preview-loaded-scene` сообщить, что обход «открыть пустую сцену перед сборкой» больше не
-  нужен (5483).
+- launch-infra: прогон map-run-startup-route выполнен (6892): 14/14 strict GREEN, полные логи, дефектов/потерь нет.
+  Снятие `anchored-ignore-collision-prefab` у владельца ещё не принято/не влито.
+- launch-infra: о вливании `preview-loaded-scene` уведомлён; обход «открыть пустую сцену перед сборкой» больше не нужен.
 - level-design (lobby-decoration): если до их вливания снова изменится сцена лобби — сверить новую строку
   ContentFingerprint лобби по расчёту v2 (zone-ack 6060 выдан на текущую строку 2380eef1…).
 - manipulation: null-проверка `NetworkImplementation` в патче 75 — их малый этап (6204), с нашей стороны ничего.

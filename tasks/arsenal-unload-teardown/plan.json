@@ -1,7 +1,7 @@
 {
   "task_id": "arsenal-unload-teardown",
   "owner": "gameplay",
-  "client": "claude",
+  "client": "codex",
   "worktree": "F:/CodexWorktrees/gameplay/Vr_Battlegrounds_ai",
   "base_sha": "2a5ed8f07574f41ca896505ee320d97244c4c0fa",
   "doc_path": "tasks/arsenal-unload-teardown/Readme.md",

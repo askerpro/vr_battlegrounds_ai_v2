@@ -10,7 +10,9 @@
 Повтор того же E2E GREEN/enforce 24/24; первый RED не снят. Server-only+8 ботов с графикой 658 завершён:
 Ready, precache=false, childCount/liveCopies=0 в трёх снимках за 92,36 с. Физическая Quest-приёмка pending.
 Поздние ghost events — подтверждённое окно без server-side retirement admission; gameplay 7027 подтвердил
-отсутствие общего retirement-сигнала. Новое архитектурное исправление не начато; решение о продолжении открыто.
+отсутствие общего retirement-сигнала. Пользователь выбрал проект исправления в этой задаче:
+`contracts/avatar-root-event-admission-v1.md` — AvatarRoot netId+UniqueId, один owner Mirror, +20 Б/event,
+без нового decode/SDK patch. Проект на ревью; реализация не начата.
 
 Обещано другим (кому — что — событие):
 - bots (`bots-fix`) и performance (`perf-stress-scenario`): сообщить о вливании `precache-server-guard` — они делают

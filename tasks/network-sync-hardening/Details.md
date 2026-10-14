@@ -168,6 +168,20 @@ effect_unknown=true/exit2. completed означает получение MCP-о�
 после 3/3 PASS на подставном транспорте. Повторный source-review снял оба P1. Это tool-проверки без процессов,
 MCP/Unity; исправленная версия helper в live Unity после этого не запускалась. Игровые тесты не изменены.
 
+## Проект исправления поздних событий аватара
+
+После выбора пользователя подготовлен [контракт v1](contracts/avatar-root-event-admission-v1.md).
+Предлагается только scope source UxrAvatar с UxrMirrorAvatar: добавить к relay-пакету Mirror netId и уже
+существующий SDK UniqueId корня. Mirror.spawned остаётся единственным владельцем доступности тела;
+нового флага retirement у gameplay, tombstones и SDK-патча нет. Sender capture/revalidate после gate;
+server проверяет actual-target binding перед Execute/forward, client проверяет пару ID до обычного SDK-вызова.
+Цена фиксированного формата — +20 байт каждому событию, в том числе unscoped; число decode не увеличивается.
+
+Живой root с удалённой ссылкой в аргументах и дочерние target-компоненты вне этого scope сохраняют прежнюю
+строгую обработку. Отсутствие netId называется Unavailable, не доказанным retirement. Проект содержит границы
+доверия серверу, map/reconnect/AOI/final-release и наблюдаемую приёмку. До одобрения проекта нет product/test
+изменений, реализации, SDK reserve или новой Unity-заявки. Этап avatar-event-design — только task docs.
+
 После освобождения аренды локально:
 
 ```powershell

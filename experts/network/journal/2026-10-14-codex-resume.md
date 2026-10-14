@@ -86,3 +86,17 @@
   повторный source-review без findings. Это не игровые тесты и не повторная Unity-проверка helper.
 - Полные сводки: `reports/e2e-651-summary.json`, `reports/worker-658-summary.json` задачи network-sync-hardening.
   Код не принят и не влит; Quest и решение по поздним ghost events остаются открытыми.
+
+## Проект AvatarRoot admission
+
+- Пользователь выбрал «Подготовить проект исправления гонки в текущей задаче». Добавлен только docs-этап
+  avatar-event-design; исходники, ассеты и игровые тесты не менялись. Unity-заявок нет.
+- Source-review показал, что для найденных четырёх root events достаточно существующего Mirror.spawned;
+  новый gameplay retirement writer не нужен. General NetworkTarget и SDK resolver оставлены отдельными вариантами.
+- Проект v1: netId + существующий IUxrUniqueId.UniqueId корня рядом с прежним SDK byte[]; server actual binding
+  перед forward, client preflight pair check при доверии проверившему payload серверу. Фиксированная цена +20 Б
+  каждому событию сохраняет прежнее число decode и SDK execution context. Реализация ждёт ревью проекта.
+- Fetch origin/dev `39afa05bd`: scoped accepted diff Network/PlayerAvatars/MirrorCore/UXRStateSync пуст,
+  checkout не rebased; прежние runtime результаты остаются привязаны к прежним inputs. Отчёт feasibility в reports/.
+- Свежий Codex listing подтвердил собственный thread UUID; routes двух незавершённых задач опубликованы как
+  codex-app (epoch3). Canonical inbox остаётся основным каналом, маршруты чужих задач не менялись.

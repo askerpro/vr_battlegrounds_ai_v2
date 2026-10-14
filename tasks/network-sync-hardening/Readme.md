@@ -26,6 +26,7 @@ R `fa8135f83e01a89f553cb6298ad3285229572c01`, paths=[]unexpected=[]. Режим 
 |---|---|---|---|
 | `teleport-state` (6048) | planned; 643 PASS, Windows 24/24, общий E2E RED | `4224310c4` | уточнить late ghost events → приёмка → вливание |
 | `statesync-cost` (5871) | planned после передачи; проверки 643 PASS | `74727da7a` | runtime/Quest → приёмка → вливание |
+| `avatar-event-design` | проект для ревью | [контракт v1](contracts/avatar-root-event-admission-v1.md) | ревью пользователя → план реализации |
 | `regression-tests` | planned, after обоих merged | — | после приёмки обоих |
 
 ## Сделано (ветка `claude/network`)
@@ -58,8 +59,9 @@ R `fa8135f83e01a89f553cb6298ad3285229572c01`, paths=[]unexpected=[]. Режим 
 1. Проверки 643 и Windows build 651 завершены. До продуктовых правок уточнить воспроизводимость поздних событий
    GhostAvatar: повтор candidate GREEN, для attribution запрошен сопоставимый baseline у владельца E2E.
    Четыре отправки первого RED идут из Start/Update, до client OnDisable; серверного retired-avatar gate нет.
-   658 ServerOnly+8 ботов завершён. Текущее открытое решение — отдельный retired-avatar admission/lifecycle
-   механизм для подтверждённого окна ghost events; новые продуктовые правки не начаты. Порядок — [Details.md](Details.md).
+   658 ServerOnly+8 ботов завершён. Пользователь выбрал подготовку проекта исправления гонки в этой задаче.
+   [Проект v1](contracts/avatar-root-event-admission-v1.md): узкий AvatarRoot admission по Mirror netId и SDK UniqueId,
+   +20 байт на событие, без нового lifecycle writer/SDK-патча/дополнительного decode. Реализация не начата.
 2. Приёмка пользователя (ниже), затем вливание; после вливания statesync-cost — сообщить weapon-system (замер выстрела
    до/после, этап shot-cost) и performance (копия), находка 5871.
 3. `regression-tests` после приёмки: StateSyncFrameStack (C2), NetworkTransformKeyframe (Mirror patch 3),
@@ -78,6 +80,7 @@ R `fa8135f83e01a89f553cb6298ad3285229572c01`, paths=[]unexpected=[]. Режим 
 ## Решения пользователя
 
 - 2026-10-14: «сделай все в одной задаче» (teleport-state 6048, uxr-statesync-cost 5871, regression-tests).
+- 2026-10-14, Codex: «Подготовить проект исправления гонки в текущей задаче» — проект v1, без реализации.
 - 2026-10-14, 6048: «Патч Mirror (Recommended)» — а не обвязка только для аватаров.
 - 2026-10-14, 5871: «Все плееры (Recommended)» — ограничение логов в Release и Development.
 - Правило по тестам (2026-10-13): «тесты берем когда других задач нет»; тесты — только после приёмки пользователем.
@@ -96,7 +99,8 @@ R `fa8135f83e01a89f553cb6298ad3285229572c01`, paths=[]unexpected=[]. Режим 
 
 ## Координация
 
-- Старые маршруты Claude очищены; ownership/worktree сохранены. Canonical inbox: `python -B -X utf8
+- Старые маршруты Claude очищены; собственные network-sync-hardening/precache routes опубликованы по свежему
+  Codex listing (channel codex-app). Ownership/worktree сохранены. Canonical inbox: `python -B -X utf8
   Tools/agents/coordination.py inbox --owner network --unread --as "01a13af5-485c-7ef1-99c6-9e1f1dd753aa"`.
   Повторять при `has_more=true`; `/root` не является межсессионным адресом. СТОП снят объявлением 6805.
 - Вопросы пользователю — штатным инструментом вопросов; приёмка пока не запрашивается: сначала Unity-проверки.

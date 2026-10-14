@@ -38,13 +38,13 @@ contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), gri
    решению пользователя. Порядок прохода: apply с опорой по ладони + анализ → только `Recommended`
    подсказки (curl, сдвиг по нормали; руку «мимо рукояти» не догибать) → второй apply → листы ревью → шлем.
    Перед begin: zone-ack avatar-ik на `MEF_cyborg_hands/**`; до коммита — список и diff weapon-system.
-4. После: `wrist-gap` (зазор 2–3 см + материал «уступает кисти»), `grip-authoring` (ручные точки
+4. Убрать `MEF_sdk_hands` из `Assets/Data/Teams/Terrorists_Team.asset` (решение 2026-10-14; реестр аватаров и
+   префабы оставить; проверить `TeamAvatarsTests`; правка через Unity, зона avatar-ik — уведомить).
+5. После: `wrist-gap` (зазор 2–3 см + материал «уступает кисти»), `grip-authoring` (ручные точки
    подушечек как источник Grip Extraction), palm-validation, dynamic-probes, mef-correction.
 
 ## Ждёт пользователя
 
-- Оставить ли `MEF_sdk_hands` (кисть BigHands) вторым скином террористов или убрать — вопрос открыт.
-- Запуск патча Mirror у network (`_assetId`/`sceneId` в preview-сцене, событие 6429) — по решению пользователя.
 - R4 (заменить хваты MEF посадкой по ладони) и R5 (покрытие Cyborg/BigHands) — решение после R2/R3.
 - Удалить вручную `C:\renders` (агент удалять вне workspace не может).
 
@@ -58,6 +58,8 @@ contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), gri
   параметрами»; название «grip extraction tools + план по экстракшну»; опора — центр ладони клипа пака.
 - 2026-10-13: «стало гораздо лучше… всё, что сделано уже можно выпускать»; MKR9 левая мимо — подтверждено.
 - 2026-10-14: `_assetId` — «все 3» предложения владельцам; пилот починить вручную и влить, не ждать фикса.
+- 2026-10-14: `MEF_sdk_hands` — убрать из команды террористов (основа — `MEF_cyborg_hands`; префабы оставить как эксперимент).
+- 2026-10-14: патч Mirror у network — после их текущих работ (network-sync-hardening); до него нормализуем у себя.
 
 ## Риски и ловушки
 

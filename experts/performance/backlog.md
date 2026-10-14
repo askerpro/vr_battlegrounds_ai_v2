@@ -36,13 +36,18 @@
   обход уже принят пользователем. Infra_issue 6678 остаётся свидетельством исходного блокера.
   Текущий MCP-блокер направлен сопровождающему событием 6790. После worker_ready_resume 6805 заявка 645
   завершила чтение TestJobsV1: свой634 не найден, currentJob пуст, старый исход неизвестен. Worker освобождён;
-  report-only receive остановлен (6940), R не принимается. Новый независимый EditMode-пакет654 в FIFO.
+  report-only receive остановлен (6940), R не принимается. Независимый EditMode654 снова потерял plugin session
+  до job_id/итога; DONE/received, paths0, admission освобождён. Infra_issue7008; новых заявок нет.
 - weapon-system 6747: 30 SDK/WS/bots-маркеров и native buffer capture пока uncommitted, только offline-результаты.
   Ревью точного кандидата — после bots driver/runtime probe; отсутствие Reset в Update и overhead не признаны
   подтверждёнными на Quest. Сбой MCP нашего пакета отправлен сопровождающему (6768).
 - weapon-system 6903: будущие точные GPU-фазы `shot-cost: bot` / `shot-cost: away`; producer
   ShotCostScenario ждёт BotShotCostDriver. Runtime-маркеров ещё нет, Editor synthetic probe не заменяет
   Quest-замер. Уточнение внесено в gpu-tool-phases-notes; источник старого T23/T24 для этого не используется.
+- weapon-system6984: synthetic Editor recorder probe648 PASS по отчёту владельца (345 кадров, 41 emission,
+  mismatches0; analyzer warm3/steady38/errors0/warnings11, comparison_complete=false). GC baseline включает
+  фон Editor; GC=0, стоимость оружия/сети и Quest не подтверждены. Реальный bot observer ждёт driver/clip-cutover.
+  Это не наше независимое ревью кандидата и не hardware acceptance.
 - Проверка точности обхода: `view.ok` сейчас не ограничивает deviationXZ/yaw/floor. В принятом прогоне
   16/16 поз точные (XZ ≤ 2,39e-7 м, yaw/floor = 0). Согласовать допуски до изменения автоматического вердикта;
   не считать исторический GREEN проверкой отрицательного случая. Подробности: task reports/view-tour-review-20261014-codex.md.

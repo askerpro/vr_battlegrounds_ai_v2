@@ -44,3 +44,12 @@ finish --artifact включил report-only JSON в R9dd929ea6 как unexpecte
 R не интегрируется. Worker освобождён, инфраструктура не менялась; отчёт6940.
 После проверки отсутствия активного job/idle Editor подготовлен новый независимый EditMode654,
 input83032bde4, base97a320c88. Код совпадает с compile input38af7597; старый запуск не засчитывается.
+
+Независимая проверка654 / epoch551 снова потеряла plugin55158773… до job_id/итога. Один run_tests,
+не retry. После вызова own guard/native state idle, currentJob/lastRun=null, active tests=false.
+Finish/receive DONE, R3efdf8f04, paths0/unexpected0. Admission освобождён; infra_issue7008.
+Полные ответы: tasks/perf-stress-scenario/reports/validation-20261014-654/.
+Своего EditMode PASS/FAIL нет, задача не принята повторно/не влита; новых заявок не оставлено.
+До исправления владельцем: view-tour planned с BLOCKED reason, GPU/docs planned по зависимостям.
+Player C#/Packages/assembly/config входов38af7597 и83032bde4 совпадают; единственный C# diff —
+Editor MapRunPreflight, текущий broker begin обновил Editor без ошибок. APK/Quest заново не проверялись.

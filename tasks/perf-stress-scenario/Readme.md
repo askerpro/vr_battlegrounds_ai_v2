@@ -19,21 +19,26 @@
 | `scenario` | сценарий `perf-stress` без рук, обе роли, `-e2eArg`, артефакты | merged `fa83395aa` |
 | `controller-free-launch` | Test-APK стартует без пробуждения контроллеров (руки в манифесте, Test only) | merged `3cabcc1ab` |
 | `arena-layout` | куклы по полу арены, корни не следуют за игроком; `Tools/Perf/quest_gpu_breakdown.py` | merged `2a5ed8f07` |
-| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **planned, блокер EditMode MCP**: runtime принят пользователем; AndroidCompileGate PASS (634), запуск тестов потерял соединение до `job_id`/итога; admission освобождён |
+| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **planned, блокер EditMode MCP**: runtime принят пользователем; AndroidCompileGate PASS (634); независимый запуск654 снова потерял соединение до `job_id`/итога (7008); admission/lease освобождены |
 | `gpu-tool-phases` | `quest_gpu_breakdown.py --phases <имена>` — профайлер в произвольных фазах (обещано weapon-system) | planned |
 | `docs` | раздел в `Docs/perf-stress-test.md` (обход, арена, без рук, бюджет сцен); файл точек → `Tools/Perf/views/Lobby.json` | planned |
 
 ## Следующий шаг (конкретно)
 
-1. `view-tour`: после диагностики MCP-тестов (infra_issue 6790) восстановить исход потерянного запуска:
+1. `view-tour`: после диагностики повторного MCP-сбоя (infra_issue7008, продолжение6790/6940)
+   подготовить новый ограниченный пакет по подтверждённому маршруту. Старый исход634 не восстановлен:
    ни `job_id`, ни подтверждённого результата не получено. Диагностика 645 завершена: current job пуст,
    среди четырёх сохранённых jobs своего запуска нет; старый итог остаётся неизвестным.
    Fetch/rebase на `origin/dev` выполнен 2026-10-14 (97a320c88, diff собственного кода после rebase пуст).
-   AndroidCompileGate уже PASS на входе 38af7597 (код совпадает с веткой). Затем штатный begin этапа
-   и новый независимый пакет 654 (input83032bde4, база97a320c88) для существующего EditMode `VrBattlegrounds.Tests.DevTools`,
+   AndroidCompileGate PASS на входе38af7597. Между ним и новым входом83032bde4 player C#/Packages/
+   asmdef/asmref/rsp/ProjectSettings не менялись; единственный C# diff — Editor MapRunPreflight,
+   текущий broker begin обновил Editor без ошибок. Независимый пакет654 DONE/received,
+   input83032bde4, база97a320c88: снова нет job_id/итога. Новых заявок не оставлено.
+   Следующая проверка существующего EditMode `VrBattlegrounds.Tests.DevTools` — после диагноза owner,
    без сборки. Ожидается: все зелёные, новых 17 (8 в `StressTestPlanTests` «Обход точек
    обзора», 9 случаев в `PerfStressScenarioArgsTests` «views»). Красное — чинить тесты/код в своей ветке, повтор.
-   Затем finish аренды → `verify` → `accept` → `merge-request`/`merge-execute` (fast-forward в origin/dev).
+   Затем finish/receive → зафиксировать проверку и прежнюю приёмку → штатное fast-forward в origin/dev;
+   в mode off — legacy pipeline, в enforced — verify/accept/merge-request/merge-execute.
 2. `gpu-tool-phases`: `--phases` в `Tools/Perf/quest_gpu_breakdown.py` (сейчас слушает только «база»/«куклы…»);
    README рядом. Нужен weapon-system для замера стоимости выстрела (метод 6156).
 3. `docs`: порядок правки `Docs/perf-stress-test.md` согласовать с avatar-ik (legs-ik/`quest-perf` пишет тот же файл).
@@ -53,6 +58,10 @@
   finish --artifact пометил report-only путь unexpected; receive отказал, R9dd929ea6 не интегрируется.
   Worker освобождён. Infra_issue6940. После fresh-state проверки подготовлен независимый запуск654;
   будущий PASS относится только к его job/input и не меняет неизвестный исход634.
+- Проверка654 завершена без результата тестов: `run_tests` один раз; plugin55158773-2ac5-4c91-93a0-ed0ec8df956c
+  disconnected до job_id. После вызова guard/native state idle, currentJob=null/lastRun=null.
+  Finish/receive DONE, R3efdf8f04, paths0/unexpected0; admission возвращён в planned с BLOCKED reason.
+  Infra_issue7008; полные ответы reports/validation-20261014-654/. Retry/replay/clear_stuck не применялись.
 - Хаб сверён: четыре первых этапа merged; `view-tour` возвращён в planned после неуспешного пакета
   проверки (в причине stop — MCP-блокер); `gpu-tool-phases` и `docs` planned. Это не отменяет приёмку runtime.
 - Inbox performance обработан: новых адресных сообщений нет. Прежние маршруты Claude очищены;

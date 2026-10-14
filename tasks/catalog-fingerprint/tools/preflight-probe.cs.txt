@@ -1,0 +1,64 @@
+// Одноразовая проверка в собственной RUNNING-аренде; не является тестом продукта.
+var reportPath = "tasks/catalog-fingerprint/reports/preflight-loaded-scene.json";
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+var checks = new System.Collections.Generic.List<object>();
+var errors = new System.Collections.Generic.List<string>();
+var original = UnityEditor.SceneManagement.EditorSceneManager.GetSceneManagerSetup();
+var lobbyPath = "Assets/Scenes/Lobby.unity";
+System.Func<string> diskHash = () => {
+    using (var hash = System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(hash.ComputeHash(System.IO.File.ReadAllBytes(lobbyPath)));
+};
+System.Func<string> snapshot = () => {
+    var scenes = new System.Collections.Generic.List<object>();
+    for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++) {
+        var s = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+        var identities = new System.Collections.Generic.List<object>();
+        if (s.isLoaded) foreach (var root in s.GetRootGameObjects())
+            foreach (var id in root.GetComponentsInChildren<Mirror.NetworkIdentity>(true))
+                identities.Add(new { instance = id.GetInstanceID(), sceneId = id.sceneId });
+        scenes.Add(new { s.handle, s.path, s.name, s.isLoaded, s.isDirty, identities });
+    }
+    return Newtonsoft.Json.JsonConvert.SerializeObject(new {
+        setup = UnityEditor.SceneManagement.EditorSceneManager.GetSceneManagerSetup(),
+        active = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle, scenes
+    });
+};
+try {
+    var lobby = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(lobbyPath, UnityEditor.SceneManagement.OpenSceneMode.Single);
+    var before = snapshot();
+    var bytesBefore = diskHash();
+    bool cleanPassed;
+    var clean = VrBattlegrounds.EditorTools.MapBootstrapMigration.RebakeCatalog(out cleanPassed);
+    var after = snapshot();
+    bool cleanOk = cleanPassed && before == after && bytesBefore == diskHash() && !lobby.isDirty;
+    checks.Add(new { name = "loaded-clean", passed = cleanOk, preflight = clean, before, after, bytesUnchanged = bytesBefore == diskHash() });
+    UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(lobby);
+    before = snapshot();
+    bool dirtyPassed;
+    var dirty = VrBattlegrounds.EditorTools.MapBootstrapMigration.RebakeCatalog(out dirtyPassed);
+    after = snapshot();
+    var dirtyJson = Newtonsoft.Json.Linq.JObject.FromObject(dirty);
+    bool namedRefusal = false;
+    foreach (var failure in dirtyJson["failures"]) if ((string)failure == "Scene.Dirty:Lobby") namedRefusal = true;
+    bool dirtyOk = !dirtyPassed && namedRefusal && before == after && lobby.isDirty && bytesBefore == diskHash();
+    checks.Add(new { name = "loaded-dirty", passed = dirtyOk, preflight = dirty, before, after, bytesUnchanged = bytesBefore == diskHash() });
+    // Временная dirty-сцена создана этим пакетом: закрыть без сохранения.
+    UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Single);
+    before = snapshot();
+    bool previewPassed;
+    var preview = VrBattlegrounds.EditorTools.MapBootstrapMigration.RebakeCatalog(out previewPassed);
+    after = snapshot();
+    bool previewOk = previewPassed && before == after;
+    checks.Add(new { name = "no-loaded-map", passed = previewOk, preflight = preview, before, after });
+} catch (System.Exception error) {
+    errors.Add(error.ToString());
+} finally {
+    UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Single);
+    if (original.Length > 0) UnityEditor.SceneManagement.EditorSceneManager.RestoreSceneManagerSetup(original);
+}
+bool allPassed = errors.Count == 0 && checks.Count == 3;
+foreach (var check in checks) if (!(bool)Newtonsoft.Json.Linq.JObject.FromObject(check)["passed"]) allPassed = false;
+var report = new { passed = allPassed, checkCount = checks.Count, checks, errors, unityVersion = UnityEngine.Application.unityVersion, reportPath };
+System.IO.File.WriteAllText(reportPath, Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented));
+return new { passed = allPassed, checkCount = checks.Count, errorCount = errors.Count, reportPath };

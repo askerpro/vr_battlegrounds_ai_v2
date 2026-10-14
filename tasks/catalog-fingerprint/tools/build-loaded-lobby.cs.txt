@@ -1,0 +1,53 @@
+// Сборка запускается один раз из update, чтобы не блокировать ответ MCP.
+var reportPath = "tasks/catalog-fingerprint/reports/build-loaded-lobby.json";
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+if (System.IO.File.Exists(reportPath)) throw new System.InvalidOperationException("Report.Exists:" + reportPath);
+System.IO.File.WriteAllText(reportPath, "{\"phase\":\"queued\",\"passed\":false}");
+UnityEditor.EditorApplication.CallbackFunction run = null;
+run = () => {
+    UnityEditor.EditorApplication.update -= run;
+    var original = UnityEditor.SceneManagement.EditorSceneManager.GetSceneManagerSetup();
+    var errors = new System.Collections.Generic.List<string>();
+    UnityEngine.Application.LogCallback capture = (message, stack, type) => {
+        if (type == UnityEngine.LogType.Error || type == UnityEngine.LogType.Exception || type == UnityEngine.LogType.Assert)
+            errors.Add(message + "\n" + stack);
+    };
+    System.Func<string> snapshot = () => {
+        var s = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        var identities = new System.Collections.Generic.List<object>();
+        if (s.isLoaded) foreach (var root in s.GetRootGameObjects())
+            foreach (var id in root.GetComponentsInChildren<Mirror.NetworkIdentity>(true))
+                // InstanceID живёт только до пересоздания объекта при BuildPlayer; контракт использует sceneId.
+                identities.Add(new { sceneId = id.sceneId });
+        return Newtonsoft.Json.JsonConvert.SerializeObject(new {
+            setup = UnityEditor.SceneManagement.EditorSceneManager.GetSceneManagerSetup(),
+            s.handle, s.path, s.isDirty, identities
+        });
+    };
+    string before = "", after = "";
+    object build = null;
+    bool passed = false;
+    try {
+        UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Lobby.unity", UnityEditor.SceneManagement.OpenSceneMode.Single);
+        before = snapshot();
+        UnityEngine.Application.logMessageReceived += capture;
+        System.IO.File.WriteAllText(reportPath, "{\"phase\":\"building\",\"passed\":false}");
+        var result = VrBattlegrounds.EditorTools.E2EPlayerBuilder.Run();
+        build = result;
+        after = snapshot();
+        bool sceneIdError = false;
+        foreach (var error in errors) if (error.IndexOf("sceneId", System.StringComparison.OrdinalIgnoreCase) >= 0) sceneIdError = true;
+        passed = result.Passed && !sceneIdError && before == after;
+    } catch (System.Exception error) {
+        errors.Add(error.ToString());
+    } finally {
+        UnityEngine.Application.logMessageReceived -= capture;
+        UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Single);
+        if (original.Length > 0) UnityEditor.SceneManagement.EditorSceneManager.RestoreSceneManagerSetup(original);
+        System.IO.File.WriteAllText(reportPath, Newtonsoft.Json.JsonConvert.SerializeObject(new {
+            phase = "completed", passed, build, before, after, errors, reportPath
+        }, Newtonsoft.Json.Formatting.Indented));
+    }
+};
+UnityEditor.EditorApplication.update += run;
+return new { scheduled = true, reportPath };

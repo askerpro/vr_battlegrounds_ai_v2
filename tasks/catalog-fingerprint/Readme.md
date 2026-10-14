@@ -1,13 +1,14 @@
 # catalog-fingerprint — отпечатки каталога карт и preflight
 
-Владелец — эксперт `gameplay`. Обновлено 2026-10-14 (передача Claude → Codex). Машинный план — [plan.json](plan.json).
+Владелец — эксперт `gameplay`. Обновлено 2026-10-14 (Codex возобновил работу). Машинный план — [plan.json](plan.json),
+подробности и условия проверки — [Details.md](Details.md).
 
 ## Статус
 
 | Этап | Состояние | Где |
 |---|---|---|
 | `env-independent` | влит, принят пользователем 2026-10-12 | origin/dev e330b6162 |
-| `preview-loaded-scene` | код готов, **Unity не проверен**, этап в хабе `planned` (остановлен при передаче) | ветка `claude/preview-loaded-scene`, HEAD 3eb3aff7f (код e219e2341) |
+| `preview-loaded-scene` | принят пользователем 2026-10-14; Unity 3/3 preflight PASS, Windows E2E build PASS; вливание | ветка `claude/preview-loaded-scene`, код 02d367fe7, база d3c62ca5e; аренда 625 освобождена |
 | `accepted-tests` | не начат | после `preview-loaded-scene ≥ merged` |
 
 ## Что сделано
@@ -20,30 +21,31 @@
 - `preview-loaded-scene` (находка launch-infra 5478, дизайн согласован 5483): если сцена карты уже загружена в Editor,
   `Validate` проверяет её саму (общий `ValidateSceneContent`), preview не открывает; dirty — отказ `Scene.Dirty:<map>`
   с подсказкой сохранить; иначе прежний путь `OpenPreviewScene`. Офлайн-компиляция Editor-сборки — 0 ошибок.
+- 2026-10-14, аренда 625, вход 68380ccb532f: чистая Lobby / dirty Lobby / ни одной открытой карты — 3/3 PASS.
+  Windows E2E-плеер собран за 967 с с открытой Lobby, ошибок 0; setup, dirty=false и sceneId 701398374 сохранены.
+  Сырой составной отчёт `passed=false` сравнивал ещё transient InstanceID, изменившийся при сборке;
+  это не критерий preflight. Исходный отчёт сохранён; подробная расшифровка — Details.md.
 
 ## Следующий шаг
 
-1. `git switch claude/preview-loaded-scene`, rebase на origin/dev (там материалы лобби URP 77ef97d15), `begin` этапа
-   `preview-loaded-scene`, checkpoint → request (`--task catalog-fingerprint`) → claim → begin → guard.
-2. В аренде: (а) RebakeCatalog с открытой сохранённой Lobby — passed, сцена не закрыта/не сохранена; (б) Lobby dirty
-   (`EditorSceneManager.MarkSceneDirty`) → отказ `Scene.Dirty:Lobby`, сцена осталась dirty; (в) сборка e2e-плеера с
-   открытой Lobby (`E2EPlayerBuilder.Run` через одноразовый `EditorApplication.update`, не delayCall) — нет ошибки
-   sceneId; (г) RebakeCatalog без открытых карт — как раньше. Результат аренды со сборкой меняет
-   `Assets/URPDefaultResources/PC.asset` (известный побочный эффект сборщика launch-infra) — не принимать (`receive`).
-3. Показать результат пользователю → приёмка → вливание → сообщить launch-infra (inbox quest-perf-pipeline: обход
+1. Приёмка получена 2026-10-14: «Принимаю, влить». Выполнить fast-forward публикацию принятого этапа;
+   тесты арсенала выполняются независимо.
+2. Результат аренды 84bc9c0de949 содержит только побочный `PC.asset`; `receive` не выполнялся.
+3. После приёмки: вливание → сообщить launch-infra (inbox quest-perf-pipeline: обход
    «открыть пустую сцену перед сборкой» в Docs/testing.md больше не нужен) и level-design (lobby-decoration).
 4. `accepted-tests`: `Assets/Tests/EditMode/Maps/MapRunPreflightTests.cs` (+.meta) — CRLF и LF дают один отпечаток;
    загруженная чистая / dirty сцена.
 
 ## Ждёт пользователя
 
-- Приёмка `preview-loaded-scene` после Unity-прогона.
+- Ничего для `preview-loaded-scene`: принят пользователем. `accepted-tests` — отдельная следующая приёмка.
 
 ## Решения пользователя
 
 - 2026-10-12: «бейкер утилиту исправь» — `env-independent`; weapon-system на время исправления разрешён вариант А
   (одна строка отпечатка лобби вручную, 4912). «принимаю» — `env-independent`.
 - 2026-10-13: «идем по твоим рекомендациям — arsenal пока откладываем» — `preview-loaded-scene` взят в работу.
+- 2026-10-14: «Принимаю, влить (рекомендуется)» в диалоге приёмки текущего прогона — `preview-loaded-scene`.
 
 ## Риски и ловушки
 
@@ -53,6 +55,5 @@
 
 ## Коммуникация (для Codex)
 
-Inbox: `python Tools/agents/coordination.py inbox --owner gameplay --unread --as "<свой адрес>"`; ожидание —
-`wait-inbox --owner gameplay --as "<свой адрес>"` фоновой командой. Вопросы пользователю — явным сообщением с пометкой
-«ЖДЁТ ОТВЕТА» и дублем в «Ждёт пользователя».
+Inbox разобран 2026-10-14; передача подтверждена событием 6559. Устаревший маршрут Claude очищен.
+Вопросы и приёмка пользователя — через доступный инструмент запроса ввода; решения также записывать в задаче.

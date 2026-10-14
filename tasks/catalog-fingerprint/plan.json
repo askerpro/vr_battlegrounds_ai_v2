@@ -1,7 +1,7 @@
 {
   "task_id": "catalog-fingerprint",
   "owner": "gameplay",
-  "client": "claude",
+  "client": "codex",
   "worktree": "F:/CodexWorktrees/gameplay/Vr_Battlegrounds_ai",
   "base_sha": "160223c7b01b2ad8ceab2a7c8132237256bf5382",
   "doc_path": "tasks/catalog-fingerprint/Readme.md",

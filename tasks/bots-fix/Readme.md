@@ -1,7 +1,68 @@
-# Боты: Blaze AI, полные клипы и экипировка
+# Боты: бот — обычный аватар игрока (player-flow), Blaze AI, экипировка
 
-Обновлено: 2026-10-11 (вечер). Владелец: эксперт `bots` (Claude), worktree `F:/CodexWorktrees/bots/Vr_Battlegrounds_ai`.
-[Полный анализ](Details.md), [машинный план](plan.json).
+Обновлено: 2026-10-14 (передача Claude → Codex). Владелец: эксперт `bots`, worktree
+`F:/CodexWorktrees/bots/Vr_Battlegrounds_ai`, ветка `bots-fix`. [Полный анализ](Details.md), [машинный план](plan.json).
+
+## Текущее состояние (2026-10-14) — читать первым
+
+**Этап `clip-cutover` RUNNING** (хаб). Влиты в origin/dev: `pf-prototype` 43531cea3, `pf-equipment` a1040a95f,
+`pf-network` 5761bb36b (принят пользователем по демо demo-2 2026-10-13). Проект этапа —
+[clip-cutover-plan.md](clip-cutover-plan.md) (в конце — «Ход cc-0» и «Состояние на конец дня»), ТЗ cc-0 —
+[cc0-spec.md](cc0-spec.md), план cc-1 — [cc1-plan.md](cc1-plan.md). Будущее — [control-modes-plan.md](control-modes-plan.md)
+(pilot-split, script-brain), архитектура — [player-flow-plan.md](player-flow-plan.md).
+
+Ветка `bots-fix` (не влита): cc-1a `48bdf2c75` (BotKit), cc-1b `f55da44de` (удаление гибрида), cc-1c `12b7f8759`
+(минимальный Blaze-прокси, генератор BotBlazeProxySetup), `13f410e8b` (сторож BotAuthorityTests), документы, затем
+WIP-коммит с пробой матча `BotStandMatchProbe.cs` и пакетами `tools/cc0-match/`, `tools/cc1-round1/` (SHA — в логе ветки,
+сообщение начинается с `wip(bots-fix)`). Офлайн-компиляция: `tasks/bots-fix/tools/cc1-offline/compile-check.ps1` — PASS.
+
+### Следующий шаг
+1. `git fetch` + rebase `bots-fix` на origin/dev (выпуск infra a84b9f2ce, материалы лобби 77ef97d15), адресный stash
+   для незакоммиченного; офлайн-компиляция.
+2. Unity-раунд cc-1 по пакету `tasks/bots-fix/tools/cc1-round1/package.json` (новый checkpoint `--onto-baseline`,
+   новый key — `bots-cc1-round1-1` отменён): меню «Tools/VR Battlegrounds/Bots/Build Blaze Proxy Controller» →
+   `Assets/Resources/Bots/BotBlazeProxy.controller` (+ .meta папки — только из worker через receive, не руками) →
+   компиляция → EditMode (Bots + DevTools.BotTeamChoice/BotSession) → стенд p1/p2 (эталоны E/PE 100%, кобура, Unarmed,
+   покупка, смерть/призрак, состав комплекта, цель стоит, A/B прокси T01/T06/T08) → analyze.
+3. После вливания сторожа network `f645d72f9` (precache-server-guard): матч 8 ботов (регрессия для network 6324 = база
+   cc-0 M8) и замер «до» для avatar-ik 6344 (поздний клиент к серверу с 8 ботами: childCount UxrManager, *(Clone)
+   прогрева, память). Затем матч cc-1 (M8, S8) против базы cc-0.
+4. Ревью зон до вливания clip-cutover (cc1-plan.md §6), демо пользователю, cc-2 (покупки), cc-4 документы, cc-5 тесты.
+
+### Ждёт пользователя
+- Приёмка cc-1 после Unity-раунда (визуально — демо стенда/матча).
+- Предложение по зачистке мёртвого кода (не отвечено): удаление гибрида в критериях clip-cutover; отдельный этап
+  dead-code-sweep перед pf-quest; общую зачистку предложить другим экспертам.
+
+### Решения пользователя (недавние)
+- 2026-10-13 «можно мержить» — pf-network по демо demo-2; «резиновые руки» при покупке — в бэклог (purchase-rubber-arms).
+- 2026-10-13 «да начинай clip-cutover».
+- 2026-10-14 «мое решение поправить в cc-1» — BotAuthorityTests правится в cc-1 (исключение из «тесты после приёмки»).
+- 2026-10-14 «боты должны засчитываться в minplayerstostart» — уже так (EliminationMode → PlayersManager.Sessions).
+- 2026-10-13 «бот и клиент отличаются только источником ввода»; режимы кукловод/клиентский ввод; «от простого к
+  сложному — сначала автоподготовка, потом ручная процедурная» (control-modes-plan.md).
+- 2026-10-12 player-flow — единственная архитектура ботов; клиповый путь удаляется (clip-cutover).
+- Замеры матча — 8 (4×4) и 10 (5×5) ботов, не 9 (ответ gameplay 6030).
+
+### Риски и ловушки
+- **Дефект прогрева UltimateXR** (journal experts/bots/journal/2026-10-14-precache-doubling.md): на сервере с графикой
+  несколько спавнов тел в одном кадре удваивают копии прогрева → worker съел 40 ГБ (тикет 600). До вливания сторожа
+  network НЕ запускать матч ≥ 8 ботов на worker. База cc-0 M3 искажена (2^9 копий) — переснять.
+- Элиминейшн не стартует при 1 боте (минимум 2, обе команды); клиенты-Player без команды блокируют старт матча;
+  Spectator не реализован (OnSpectatorConnect) — для S8 нужно решение gameplay/launch-infra.
+- Сторож замера B4 ставить только изнутри Play (перезагрузка домена снимает его при запуске Play).
+- Агенту запрещено убивать процессы (taskkill отклонён) — при зависании worker просить пользователя.
+- Worker может зависнуть на xrCreateInstance при запущенном Oculus/Link — ждать/просить пользователя закрыть Dash.
+- Старые payload-ы `tools/*` (кроме cc0-match, cc1-*) используют удалённое поле `PlayerFlow` и не компилируются.
+- AvatarSpawnPointResolver не находит точки спавна ботов на TestMap1 (все тела в (0,0,0)).
+
+### Координация
+`inbox --owner bots --unread --as "<свой адрес>"`; ожидание — фоновая `wait-inbox --owner bots --as "<свой адрес>"`.
+AskUserQuestion — только Claude; в Codex вопрос пользователю — явным сообщением «ЖДЁТ ОТВЕТА» + этот раздел «Ждёт
+пользователя». Обещания другим агентам — `experts/bots/backlog.md` (раздел «Обещания»). Аренд и QUEUED-тикетов нет
+(608 отменён 2026-10-14).
+
+## История (до 2026-10-14)
 
 ## Переход на штатный поток игрока (2026-10-12)
 

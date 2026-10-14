@@ -1,0 +1,53 @@
+{
+ "package": "bots-fix cc0-match: подэтап cc-0 clip-cutover — база матча гибрида (клипы, origin/dev) и BotStandMatchProbe",
+ "date": "2026-10-13",
+ "basedOn": "tasks/bots-fix/tools/net-round1",
+ "spec": "tasks/bots-fix/cc0-spec.md",
+ "technicalInput": "checkpoint --onto-baseline с незакоммиченными Assets/Scripts/Debug/BotCombatStand/BotStandMatchProbe.cs(+.meta); код ботов и игры не меняется",
+ "outputRoot": "tasks/bots-fix/reports/cc0-match",
+ "expectedChangedPaths": [],
+ "launch": {
+  "route": "PlayLaunch.Plan -> PlayLaunch.Play(json, owner 'bots-fix.cc0-match') -> Status; BotCombatStandEditor и сцена стенда не используются",
+  "common": "SceneSource=scene, ScenePath=Assets/Scenes/Maps/TestMap1.unity (первая карта MapRegistry — её же берёт BotMatchStarter; maxPlayers 10; NavMesh ботов строится в памяти сервера по коллайдерам, BotNavMesh), ModeId=elimination, AutoGoLive=true, MinPlayers=люди+N, BotCount=N, HostIsAdmin=false, NetworkPortPolicy=auto",
+  "bots": "DebugOrchestrator.OnServerSceneChanged -> BotDirector.EnsureCount(BotCount): без предела MaxTeamSize (он только у BotMatchPlan/BotMatchStarter, автодобор «Матч с ботами»); команды — BotTeamChoice (выравнивание)",
+  "goLive": "DebugOrchestrator.TryGoLive на SessionConnected (боты — тоже сессии) при Sessions >= MinPlayers; запасной GoLive — сторож B4 через 45 с при полном составе",
+  "M": "Role=host, ClientCount=0: main = ПК-хост (человек без команды режима, вне составов)",
+  "S8P": "Role=server, ClientCount=2, GameRole=Player: замена зрителей ТЗ — GameRole=Spectator не получает сессию (GameNetworkManager.OnSpectatorConnect не реализован); Elimination teamAssignment=PlayerChoice — клиентам команды не раздаются (TeamIndex=0), проба проверяет inModeTeam=false на каждой смене фазы",
+  "S8": "вариант со Spectator (Readiness=connected) оставлен в payload-ах, по решению главной сессии не запускается",
+  "probe": "B3 пишет заявку <ProjectRoot>/Temp/BotStandMatchProbe/request.json (папка отчётов — абсолютная, срок 25 мин); каждый процесс при входе в Play создаёт BotStandMatchProbe (сервер — матч/кадр/исход; клиент — вход/кадр; все — консоль); B6 удаляет заявку"
+ },
+ "runs": [
+  { "run": "M1", "role": "host", "clients": 0, "bots": 1 },
+  { "run": "M3", "role": "host", "clients": 0, "bots": 3 },
+  { "run": "M8", "role": "host", "clients": 0, "bots": 8 },
+  { "run": "S8P", "role": "server", "clients": 2, "bots": 8 },
+  { "run": "M10", "role": "host", "clients": 0, "bots": 10, "optional": true }
+ ],
+ "steps": [
+  { "id": "B0", "tool": "execute_code", "payload": "b0-preflight.cs", "kind": "read-only", "repeatable": true,
+    "pass": "passed=true (планы всех прогонов Passed, SceneKind=Game)" },
+  { "id": "pause", "tool": "пауза 10–20 с после предыдущего прогона (выход клонов MPPM)" },
+  { "id": "B3", "tool": "execute_code", "payload": "b3-runtime-launch.cs", "kind": "mutation (заявка пробы + enter Play всех процессов)", "repeatable": false,
+    "pre": "B0 PASS; Run одинаков во всех B3/B4/B5/B6", "pass": "started=true; затем B5: launch.Ready=true" },
+  { "id": "B5", "tool": "execute_code", "payload": "b5-runtime-status.cs", "kind": "read-only", "repeatable": true },
+  { "id": "B4", "tool": "execute_code", "payload": "b4-runtime-watch.cs", "kind": "mutation (сторож: запасной GoLive, стоп по концу матча / 5-му раунду / 480 с Live / нет Live 120 с)", "repeatable": false,
+    "pre": "launch Ready", "pass": "installed=true; B5 раз в 1–2 мин с renew до watch.state=stopped и launch Idle" },
+  { "id": "console", "tool": "read_console", "kind": "read-only", "pre": "до B6 (ошибки главного процесса также в отчёте пробы)" },
+  { "id": "B6", "tool": "execute_code", "payload": "b6-runtime-stop.cs", "kind": "mutation (Cancel своего owner, если ещё идёт; удаление заявки; stop.json)", "repeatable": "идемпотентен при Idle",
+    "pass": "B5: editor.playing=false, launch.State=Idle, CleanupPassed=true, probe/*.json final=true" },
+  { "id": "next-run", "tool": "повтор pause..B6 со следующим Run" },
+  { "id": "finish", "tool": "broker finish", "pre": "B6 последнего прогона пакета (или terminal)" },
+  { "id": "copy", "tool": "копирование worker:tasks/bots-fix/reports/cc0-match -> tasks/bots-fix/reports/cc0-match (не git add); архивы логов участников worker:Logs/VRBattlegroundsTestStand/<RunId>/ -> reports/cc0-match/logs/" },
+  { "id": "verdict", "tool": "python -I tasks/bots-fix/tools/cc0-match/analyze.py --attempt attempt-1", "kind": "offline, после finish" }
+ ],
+ "reports": {
+  "server": "runtime/<attempt>/<run>/probe/main-pid<pid>.json (схема bot-stand-match-probe@1: match.timeline — phase/roundBegan/roundScored/money/balance/body/kill/shot/hit/matchFinished с t от входа в Play; frame.byLabel и frame.windows — кадр/GC/маркеры по фазам; serverNetwork — исход по категориям netId)",
+  "clients": "runtime/<attempt>/<run>/probe/Player_2-pid<pid>.json, Player_3-…: clientNetwork (вход по категориям и netId), frame, console",
+  "watch": "runtime/<attempt>/<run>/watch.json (переходы сторожа, причина стопа)",
+  "verdict": "verdict.json, table.md"
+ },
+ "offlineChecks": {
+  "compile": "compile-check.ps1: 7 сборок + payload-ы (C# 7.3) — копия net-round1"
+ },
+ "attempt": "attempt-1"
+}

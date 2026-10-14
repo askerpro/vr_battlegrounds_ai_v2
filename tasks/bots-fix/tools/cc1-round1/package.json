@@ -1,0 +1,44 @@
+{
+ "package": "bots-fix cc1-round1: первый Unity-раунд подэтапа cc-1 (clip-cutover) — генерация контроллера Blaze-прокси, EditMode, стенд player-flow без гибрида, A/B минимального прокси (вариант A)",
+ "date": "2026-10-14",
+ "basedOn": "tasks/bots-fix/tools/eq-round3 (стенд single-process), tasks/bots-fix/tools/cc0-match (compile-check с payload-ами)",
+ "spec": "tasks/bots-fix/cc1-plan.md (разделы 3-6), tasks/bots-fix/clip-cutover-plan.md",
+ "technicalInput": "checkpoint --onto-baseline: коммиты cc-1a/b/c + тест (HEAD bots-fix) и незакоммиченные Assets/Scripts/Debug/BotCombatStand/BotStandMatchProbe.cs(+.meta)",
+ "outputRoot": "tasks/bots-fix/reports/cc1-round1",
+ "expectedChangedPaths": ["Assets/Resources/Bots.meta", "Assets/Resources/Bots/BotBlazeProxy.controller", "Assets/Resources/Bots/BotBlazeProxy.controller.meta"],
+ "phaseSubstitution": "B3/B4/B5/B6 содержат const Phase = \"p1\"; для второго Play отправляется тот же текст с Phase = \"p2\"",
+ "queue": {
+  "p1": "E-ak105-ref 30 (AK105, ZeroAiAimSpread+NoRecoil), PE-ppk-ref 30 (PPK, то же), H-ppk-holster 30, U-unarmed 20, P-purchase-ak105 35 (покупка в 10 с, PPK в кобуру) — T07, seed 101 (145 с)",
+  "p2": "G-ghost-respawn-ak105 40 (T07, смерть 8 с, возрождение 20 с), AB-T01-ak105 25, AB-T06-ak105 25, AB-T08-ak105 25 (115 с)",
+  "observer": "B4 подписан на UxrManager.AvatarsUpdated (каждый кадр, только чтение) и Application.logMessageReceived; пишет Metrics[\"cc1\"] (kit, target, proxy, log, memory) и <case>/cc1-trace.json"
+ },
+ "steps": [
+  { "id": "B0", "tool": "execute_code", "payload": "b0-preflight.cs", "kind": "read-only", "repeatable": true, "pass": "passed=true" },
+  { "id": "M1", "tool": "execute_menu_item", "menu": "Tools/VR Battlegrounds/Bots/Build Blaze Proxy Controller", "kind": "mutation (ассет контроллера)", "repeatable": "генератор повторяем, но не повторять после executionCompleted",
+    "pass": "консоль: [BotBlazeProxySetup] PASS; затем импорт без ошибок компиляции" },
+  { "id": "console-compile", "tool": "read_console", "kind": "read-only", "pass": "0 ошибок компиляции" },
+  { "id": "B1", "tool": "execute_code", "payload": "b1-controller-check.cs", "kind": "read-only", "repeatable": true,
+    "pass": "passed=true: 1 слой, 0 параметров, 6 состояний без motion, Idle по умолчанию, .meta папки и ассета, Resources.Load" },
+  { "id": "T1", "tool": "run_tests", "mode": "EditMode", "group_names": ["^VrBattlegrounds\\.Tests\\.Bots\\.", "^VrBattlegrounds\\.Tests\\.DevTools\\.(BotTeamChoiceTests|BotSessionTests)"],
+    "kind": "tests", "pass": "get_test_job: failed=0" },
+  { "id": "B3", "tool": "execute_code", "payload": "b3-runtime-launch.cs", "kind": "mutation (enter Play)", "repeatable": false,
+    "pre": "B0 и B1 PASS; renew", "pass": "started=true; затем B5: launch Ready, stand Running -> finished (warmup PPK T07 1 с)" },
+  { "id": "B5", "tool": "execute_code", "payload": "b5-runtime-status.cs", "kind": "read-only", "repeatable": true },
+  { "id": "B4", "tool": "execute_code", "payload": "b4-runtime-queue.cs", "kind": "mutation (RunCases chain + наблюдатель)", "repeatable": false,
+    "pre": "warmup finished, invalidFixture=0, Live=Combat", "pass": "B5.queue.state=completed",
+    "terminal": "failed/live-ended/aborted -> сразу console и B6; рост [CameraFade]/памяти между case — B6 и стоп (дефект прогрева UXR)" },
+  { "id": "console", "tool": "read_console", "kind": "read-only", "pre": "до B6" },
+  { "id": "B6", "tool": "execute_code", "payload": "b6-runtime-stop.cs", "kind": "mutation (exit Play)", "repeatable": false,
+    "pass": "B5: editor.playing=false, launch.state=Idle, stand.owned=false" },
+  { "id": "p2", "tool": "B3..B6 с Phase=p2" },
+  { "id": "finish", "tool": "broker finish", "pre": "B6 последней фазы (или terminal)" },
+  { "id": "copy", "tool": "копирование worker:tasks/bots-fix/reports/cc1-round1 -> tasks/bots-fix/reports/cc1-round1 (не git add)" },
+  { "id": "receive", "tool": "broker receive", "pass": "в worktree: Assets/Resources/Bots.meta, Assets/Resources/Bots/BotBlazeProxy.controller(+.meta) — git status" },
+  { "id": "verdict", "tool": "python -I tasks/bots-fix/tools/cc1-round1/analyze.py", "kind": "offline, после finish", "out": "verdict.json, table.md" }
+ ],
+ "offlineChecks": {
+  "compile": "compile-check.ps1: 7 сборок + payload-ы b*.cs (C# 6 по умолчанию; codedom worker)",
+  "cc1Offline": "tasks/bots-fix/tools/cc1-offline/compile-check.ps1"
+ },
+ "notMeasured": ["вариант B прокси (1-с клип) — не выполняется в этом раунде, только отчёт", "байт/с на бота — клиентов нет"]
+}

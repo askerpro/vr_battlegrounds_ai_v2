@@ -2,7 +2,7 @@
 
 Обновлено: 2026-10-14. Владелец: launch-infra; worktree `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
 ветка `codex/vr-test-stand`. Пользователь принял проверенный объём 2026-10-14;
-идёт подготовка принятого коммита и fast-forward вливания.
+fast-forward влит в `origin/dev`: `be120d280522321f166484f29d3b3fc81a00e4a5`.
 Проверенная сборка: input `87643327108f`, база `d3c62ca5e`; локальные правки сохранены.
 
 ## Цель и границы
@@ -17,7 +17,7 @@
 | Этап | Состояние |
 |---|---|
 | design, device-runner, quest-build, e2e-views, e2e-log-verdict, quest-vr-manifest, e2e-head-pose | merged; e2e-log-verdict принят 2026-10-13 |
-| e2e-smoke-kit | принят пользователем 2026-10-14, подготовка вливания; worker **637 DONE**, input 87643327108f |
+| e2e-smoke-kit | принят пользователем и влит 2026-10-14, be120d280; worker **637 DONE**, input 87643327108f |
 | build-checkouts | planned в хабе; код 93d7dfbc3 уже в origin/dev; четыре worktree зарегистрированы, настоящие сборки не проверены |
 
 В текущем diff исправлены lock перед любым `-Ref` checkout/hydrate, отказ при ошибке Git LFS и
@@ -39,6 +39,8 @@
   снят из списка по чистому прогону карты. Неисправленный teleport остаётся дефектом.
 - Проверки log-verdict: **15/15**; повторная обработка полных результатов текущим JSON —
   GREEN / GREEN / RED (4 дефекта). Summary на реальном RED показывает defects=4.
+- После чистого rebase на 39afa05bd собственные source blobs не изменились: новый SHA
+  be120d280 повторно проверен ProtocolHarness 67/67, EditorBinding 0/0, launcher 9/9 и log-verdict 15/15.
 
 Unity-компиляция и Windows runtime подтверждены; физический Quest и четыре выделенные сборки
 не проверены. Полные логи и результаты — `reports/2026-10-14-status/` вне Git.
@@ -48,7 +50,7 @@ Unity-компиляция и Windows runtime подтверждены; физи
 Дождаться исправления network и повторить `dedicated-server-arsenal` на принятой ревизии.
 Ответ 6866: фикс пока только в candidate `01e8b7748d`, их worker 643 ждёт проверки;
 принятого SHA нет, старый прогон не является проверкой этого исправления.
-Каркас и правки дирижёров приняты → штатное вливание; gameplay затем пришлёт id задачи серии,
+Каркас и правки дирижёров влиты; gameplay пришлёт id задачи серии,
 после чего снять старый series-smoke-e2e из map-runtime-bootstrap. Отдельно проверить настоящие
 Test/Prod × Windows/Android сборки и сохранение кешей; физический Quest — когда шлем свободен.
 

@@ -1,7 +1,7 @@
 ## Обещания другим агентам (передача Codex 2026-10-14)
 
 Возобновление 2026-10-14: хаб подтверждает `vr-test-stand` rev36 (всё merged),
-`quest-perf-pipeline` rev26 (`e2e-smoke-kit` принят, подготовка вливания; `build-checkouts` planned),
+`quest-perf-pipeline` rev26 (`e2e-smoke-kit` принят и merged be120d280; `build-checkouts` planned),
 `map-runtime-bootstrap` rev23 (`series-smoke-e2e` planned, остальные этапы merged).
 Текущий WIP `6a95b322e`; сборочная инфраструктура `93d7dfbc3` уже в `origin/dev = d3c62ca5e`.
 Объявление 6695 сняло остановку FIFO; заявка e2e-smoke-kit **637 DONE**, input `87643327108f`.

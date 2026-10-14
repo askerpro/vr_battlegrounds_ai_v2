@@ -1,7 +1,7 @@
 {
   "task_id": "perf-stress-scenario",
   "owner": "performance",
-  "client": "claude",
+  "client": "codex",
   "worktree": "F:/CodexWorktrees/performance/Vr_Battlegrounds_ai",
   "base_sha": "2c3148767e5e511d9b9def5bee654cf179c6f694",
   "doc_path": "tasks/perf-stress-scenario/Readme.md",

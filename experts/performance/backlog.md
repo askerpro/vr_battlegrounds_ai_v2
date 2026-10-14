@@ -27,4 +27,11 @@
 - weapon-system shot-cost (метод 6156): `--phases` в `Tools/Perf/quest_gpu_breakdown.py` (этап `gpu-tool-phases`),
   ревью плана до прогона и цифр после.
 - avatar-ik legs-ik/`quest-perf`: тот же `Docs/perf-stress-test.md` — согласовать порядок до этапа `docs`.
-- `experts/performance/AGENT.md`: сверка карты по коммитам после reviewed_sha 716743336f (awake предупреждал) — не сделана.
+- `experts/performance/AGENT.md`: карта сверена по owns/watch_paths от 716743336f до ce8a365b4,
+  уточнены обход и GPU-инструмент. `reviewed_sha` обновлён; это ревью карты исходников, не Unity/Quest PASS.
+- `perf-stress-scenario/view-tour`: FIFO возобновлена сопровождающим (6695); предложение 622 истекло,
+  повторная заявка EditMode 626 ожидается с немедленным claim. Результата Unity-тестов нет;
+  обход уже принят пользователем. Infra_issue 6678 остаётся свидетельством исходного блокера.
+- Проверка точности обхода: `view.ok` сейчас не ограничивает deviationXZ/yaw/floor. В принятом прогоне
+  16/16 поз точные (XZ ≤ 2,39e-7 м, yaw/floor = 0). Согласовать допуски до изменения автоматического вердикта;
+  не считать исторический GREEN проверкой отрицательного случая. Подробности: task reports/view-tour-review-20261014-codex.md.

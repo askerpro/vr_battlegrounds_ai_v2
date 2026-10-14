@@ -1,8 +1,8 @@
 # Стресс-тест на шлеме без рук: сценарий perf-stress, арена, обход точек обзора
 
-Обновлено: 2026-10-14 (передача Codex). Владелец: эксперт `performance`. Worktree:
+Обновлено: 2026-10-14 (продолжение в Codex). Владелец: эксперт `performance`. Worktree:
 `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`, ветка `claude/performance` (HEAD — последний коммит ветки;
-работа этапа `view-tour` — 909fb967a). Начата по решению пользователя («начинай свою часть»).
+работа этапа `view-tour` — f73086b9a, прежний SHA до rebase — 909fb967a). Начата по решению пользователя («начинай свою часть»).
 
 ## Цель и границы
 
@@ -19,13 +19,14 @@
 | `scenario` | сценарий `perf-stress` без рук, обе роли, `-e2eArg`, артефакты | merged `fa83395aa` |
 | `controller-free-launch` | Test-APK стартует без пробуждения контроллеров (руки в манифесте, Test only) | merged `3cabcc1ab` |
 | `arena-layout` | куклы по полу арены, корни не следуют за игроком; `Tools/Perf/quest_gpu_breakdown.py` | merged `2a5ed8f07` |
-| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **running**: шлем GREEN, принят пользователем 2026-10-14; тесты написаны (909fb967a), НЕ прогнаны — worker был выключен |
+| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **running**: принят пользователем 2026-10-14; 17 новых тестов написаны, EditMode ожидает FIFO (повторная заявка 626) |
 | `gpu-tool-phases` | `quest_gpu_breakdown.py --phases <имена>` — профайлер в произвольных фазах (обещано weapon-system) | planned |
 | `docs` | раздел в `Docs/perf-stress-test.md` (обход, арена, без рук, бюджет сцен); файл точек → `Tools/Perf/views/Lobby.json` | planned |
 
 ## Следующий шаг (конкретно)
 
-1. `view-tour`: rebase на `origin/dev`; заявка worker (checkpoint → request → claim → begin → guard) — только
+1. `view-tour`: fetch/rebase на `origin/dev` выполнен 2026-10-14 (d3c62ca5e, изменений при rebase нет).
+   Публикация 621 завершена. Заявка 626 поставлена; после OFFERED — claim → begin → guard, только
    компиляция + EditMode `VrBattlegrounds.Tests.DevTools` (StressTest*, PerfStressScenarioArgsTests, PerfLogicTests),
    без сборки (тесты рантайм не меняют). Ожидается: все зелёные, новых 17 (8 в `StressTestPlanTests` «Обход точек
    обзора», 9 случаев в `PerfStressScenarioArgsTests` «views»). Красное — чинить тесты/код в своей ветке, повтор.
@@ -36,7 +37,29 @@
 
 ## Ждёт пользователя
 
-- Ничего открытого по этой задаче. (В Codex вопросы — явным сообщением с пометкой «ЖДЁТ ОТВЕТА» + строка здесь.)
+- Ничего открытого по этой задаче. Уточнения и решения — через доступный инструмент вопросов пользователю.
+
+## Возобновление 2026-10-14
+
+- Хаб сверён: четыре первых этапа merged, `view-tour` running, `gpu-tool-phases` и `docs` planned.
+- Inbox performance обработан: новых адресных сообщений нет. Прежние маршруты Claude очищены;
+  `perf-stress-scenario` переведён на справочный client Codex (rev 9), опубликован собственный маршрут
+  `codex-desktop/01a13af4-33f9-7740-8274-1f3226b0275e`. Чужие маршруты не менялись.
+- Рабочая копия на старте чистая. Основной checkout только для чтения; Unity — исключительно через собственную аренду.
+- Подготовленный пакет: компиляция и существующие EditMode-тесты DevTools, без Play и без сборки пары APK/сервера.
+- Worker: публикации 620/621 DONE, база d3c62ca5e. Сопровождающий возобновил FIFO (уведомление 6695).
+  Вход проверки 38af759779eeef71dba8dd17f9fd7047533e109e; билет 622 CANCELLED (`offer_expired`),
+  повторный 626 QUEUED. Ожидание настроено с немедленным claim после OFFERED.
+  Общую инфраструктуру из этой сессии не меняли; `EDITOR_DELAYCALL_STALLED` сопровождающий исследует отдельно.
+  Доступного собственного lease нет. Результат компиляции и EditMode пока не получен.
+  Infra_issue отправлен сопровождающему: `agent-coordination-protocol`, событие 6678.
+  `route-resolve` получателя вернул `manual / recipient_cleared`; native-уведомление недоступно.
+- Независимый обзор diff и 17 новых тестов завершён. Ограничение: `view.ok` не проверяет точность позиции/курса;
+  исходный принятый Quest-отчёт проверен отдельно: 16/16 поз, yaw/floor deviation 0, XZ ≤ 2,39e-7 м.
+  Отчёт и ограничения — `reports/view-tour-review-20261014-codex.md` (вне Git).
+- Подготовка следующего GPU-этапа сохранена в `contracts/gpu-tool-phases-notes.md`:
+  точные имена, безопасные выходные ключи, временные границы и отсутствующие маркеры оружейного сценария.
+  Этапы `gpu-tool-phases` и `docs` не начинались, их зависимости сохранены.
 
 ## Решения пользователя
 

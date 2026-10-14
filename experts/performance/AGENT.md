@@ -53,6 +53,10 @@ before/after measurement or justification; reject a perf PASS without measuremen
 
 ## Architecture
 - Run (phases, puppets, recording): `Assets/Scripts/Debug/StressTest/StressTestServer.cs`, `StressTestClientSession.cs`, `StressTestPlan.cs`.
+- View tour: `Assets/Scripts/Debug/E2E/Scenarios/PerfStressScenario.cs` uses launch-infra `E2EViews` and a shared views file;
+  server owns the phase plan, client records the measured phase's `PerfViewReport`. `view.ok` currently checks execution/timing;
+  compare recorded XZ/yaw/floor deviations separately before accepting a measurement. Puppets use fixed arena roots.
+- Quest GPU capture: `Tools/Perf/quest_gpu_breakdown.py`; realtime timings are budget evidence, detailed driver captures only show proportions.
 - Metrics (windows, spikes, ovr_*): `Assets/Scripts/Debug/StressTest/PerfFrameRecorder.cs`, `PerfStats.cs`, `OculusPerfStats.cs`, `PerfEvents.cs`.
 - Entry: `Assets/Scripts/Debug/StressTest/StressTestLauncher.cs`; `Assets/Editor/VR_Battlegrounds/Debug/StressTestMenu.cs`.
 - Headset levels/FFR: `Assets/Scripts/Core/PerformanceLevelInstaller.cs`, `PerformanceLevelPolicy.cs`, `FoveatedRenderingInstaller.cs`, `GameSettings.cs`.

@@ -3,7 +3,7 @@
   "owner": "network",
   "client": "codex",
   "worktree": "F:/CodexWorktrees/network/Vr_Battlegrounds_ai",
-  "base_sha": "d3c62ca5e12d9beeceb57954c8ad751e9690d60d",
+  "base_sha": "97a320c88469cb2a74d89adb0a6b6edd23536753",
   "doc_path": "tasks/network-sync-hardening/Readme.md",
   "title": "Сеть: событие снятого объекта, стоимость StateSync, регрессионные тесты",
   "stages": [
@@ -16,6 +16,7 @@
         "Assets/Scripts/Network/StateEventAuthority.cs",
         "tasks/network-sync-hardening/Readme.md",
         "tasks/network-sync-hardening/Details.md",
+        "tasks/network-sync-hardening/tools/**",
         "tasks/network-sync-hardening/plan.json",
         "tasks/network-sync-hardening/changelog/2026-10-14-mirror-4.md"
       ],

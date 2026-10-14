@@ -74,3 +74,108 @@ Editor-проверка не доказывает установку полит�
 Добавить матрицу холодного/тёплого кеша, перегрузок/null/наследования и ошибок рефлексии; лог-политику 10 категорий;
 StateSyncFrameStack, NetworkTransformKeyframe, UniqueIdStaleRegistry — в согласованном regression-tests этапе.
 До приёмки пользователя новые тесты и изменения ожиданий не выполняются.
+
+## Пакет Windows E2E после проверки 643
+
+Проверка 643 завершена: input `01e8b7748dfb`, compiled metadata и четыре SHA256 совпали, Android PASS/0 ошибок,
+EditMode Network/Weapons 429/429 PASS, 0 failed/skipped. Finish/receive: DONE, paths=[], unexpected=[],
+result `29583b14aa46c38e0410a831e32b07c17b70e742`. Продуктовый код и тесты между проверкой и сборкой не меняются.
+
+Отдельный подготовленный пакет: capture activeBuildTarget/group → `E2EPlayerBuilder.Run()` → полный result
+(Passed/Path/Revision/RevisionWarning/Message/Summary) → экспорт **всего** worker `Build/e2e/` в новую папку
+своего `Build/network-sync-hardening-<input>/` → восстановление исходного build target/group при изменении →
+ожидание окончания импорта/компиляции → немедленно finish/receive, включая отказ сборки. До заявки — fetch и
+rebase при отставании, checkpoint и проверка совпадения Assets-tree с input 643. Код smoke-kit не импортируется.
+Рабочий каталог и input должны совпасть с собственным guard. Новые scene/assets/settings руками не правятся.
+
+Builder уже есть в принятой базе `97a320c88`, фиксированный output `Build/e2e/VrBattlegrounds.exe`.
+Не подменять BuildRevision аргументом; проверить фактическую Revision кандидата, исходник Mirror и сборку.
+Из worker только читать сгенерированный build и копировать в свой checkout; ignored binaries в Git не добавлять.
+При неизвестном исходе вызова не повторять Run: сначала durable execute output, Editor.log и готовность/файлы.
+
+### Фактический результат 651 и E2E
+
+Worker 651 завершён и освобождён: input `8432b0ce35e6`, тот же Assets-tree, Windows BuildReport Succeeded,
+0 ошибок / 105 предупреждений. Ответ Run оборвался; повторного запуска не было. Успех подтверждён native
+BuildReport и durable execute history с revision кандидата. Времена BuildSummary после ToUniversalTime не
+используются как доказательство свежести: DateTime Unity может иметь Kind=Unspecified. Экспортированы все 386
+файлов в `Build/network-sync-hardening-8432b0ce-651`; exe и три основные DLL сверены по SHA256.
+
+Finish вернул R `b11d19aa57df1c0a85f08577fc7f7b23e83b3399`, accepted=false: неожиданный
+`Assets/URPDefaultResources/PC.asset` (три поля shader prefilter). Этот ассет не импортирован, receive/ack не
+вызывались; результат сохранён для решения сопровождающего и владельца performance. Исходная платформа возвращена.
+Performance 7025 после source review URP: discard только эти три derived editor prefilter поля, не переносить
+R-delta в canonical source; authored light/shadow settings не менялись. Штатное закрытие R передано сопровождающему.
+
+`Tools/e2e/results/20261014-211134-dedicated-server-arsenal`: все 24 функциональные проверки прошли,
+строгий LogVerdict RED: четыре группы / шесть ошибок на сервере, SetAvatarRenderMode и SetCurrentHandPose.
+UpdateTeleportState error=0, dropped=0, native crashes=0. Все три роли: appVersion `0.1.0+8432b0ce35e6`,
+buildGuid `139612a59cb641c091b884182b2373ef`. После прогона собственные процессы отсутствуют, UDP 51831/51832 свободны.
+Это Windows ServerOnly+2 clients, не Quest и не полная приёмка. Отчёты `worker-651-*.json` и исходные E2E JSON.
+
+Повтор неизменного плеера `20261014-212454-dedicated-server-arsenal`: GREEN/enforce, functional24/24,
+unexpected0/knownDefects0/native0/dropped0, тот же appVersion/buildGuid. Собственные процессы завершены,
+UDP57031/57032 освобождены. Первый RED не объявляется закрытым. Source-аудит не нашёл серверной защиты retired
+avatar до decoder; локальный spawned filter защищает только исходящую сторону. Решение затрагивает lifetime
+envelope/admission либо scoped decoder/tombstones, требует отдельного архитектурного выбора без подавления логов.
+Отчёт `reports/retired-avatar-event-architecture.md`. Baseline-повтор запрошен владельцу существующего плеера.
+Gameplay 7027 подтвердил отсутствие общего retirement-сигнала или принятого этапа; ReplaceBody/disconnect
+освобождают перед Destroy, смена карты идёт через Mirror, dead-body release тело не удаляет. Новое решение не начато.
+
+## Следующий отдельный пакет: сервер с графикой и восемью ботами
+
+Только существующий PlayLaunch API, без новых тестов/компонентов/recorder и без импорта незавершённого SDK81.
+После свежего fetch/checkpoint/request/claim/begin/guard проверить root/input, idle, clean scenes, prefab stage,
+отсутствие чужого launch, batch=false, graphics!=Null. Если worker без графики, завершить пакет как неподходящий.
+Сохранить baseline Configuration/startScene/scene setup, точные profile bytes, EditorPrefs presence/value,
+SHA256 EditorSettings и EditorBuildSettings. Разовый JSON: Server, TestMap1, elimination, ClientCount=0,
+BotCount=8, AutoGoLive=true, NetworkPortPolicy=auto; Plan → один Play с PlanHash → Status до Ready/Failed.
+
+Снять раздельные read-only наблюдения при готовности и через ограниченный интервал: Server=true/Client=false,
+ровно восемь Bots с восемью ActiveAvatar; UsePrecaching=false, IsPrecaching=false, childCount и живые элементы
+существующего _dynamicInstances не растут. WorkingSet/PrivateMemory — отдельные наблюдения стандартного API,
+не пороговый perf-тест и не доказательство стабильности памяти на длинном интервале. При runaway/ошибке
+сохранить исход и остановить свой run. Затем Cancel только своего RunId/owner, ждать Idle/Playing=false/
+CleanupPassed=true/RequestActive=false, сравнить baseline, дождаться завершения операций и сразу finish.
+Receive выполнять только для результата в разрешённых собственных путях; побочные foreign assets не принимать.
+
+### Фактический результат 658
+
+Пакет выполнен на input `5c5329ec17ba33fafe409c0273b135fc6a81f287`, Assets-tree тот же 643/651.
+Direct3D11, batch=false, ServerOnly, TestMap1; Ready с valid MapRunKey, Bots=8/ActiveAvatar=8.
+Три отдельных снимка за 92,36 с: UsePrecaching=false, IsPrecaching=false, childCount=0, known/live copies=0;
+поле _dynamicInstances найдено, словарь не создавался. Guard-log: «сервер без своего игрока — прогрев UltimateXR
+выключен», зарегистрировано 14 выключенных компонентов с id. SDK81 отсутствует в input.
+
+OS Get-Process PID41776: за 54,35 с working set 4213,50→4233,00 MiB, private 10472,22→10472,09 MiB.
+Unity Mono Process memory API вернул 0; эти значения не использованы. Нет порога/долговременного perf PASS,
+это не проверка NPC-моделей/оружия и не пользовательская/Quest-приёмка.
+
+Cancel своего run `c7db6db2d1e649d4b07a9454a7a6a9b2` → Idle, Playing=false, CleanupPassed=true,
+RequestActive=false. Configuration/startScene/profile bytes/6 EditorPrefs/2 ProjectSettings hashes совпали;
+edit scene setup отличается: чистая Untitled → чистая Offline. Полное baseline equality=false; infra 7048,
+ручной правки общего worker не было. Finish выполнен до диагностики: R `fa8135f83e01a89f553cb6298ad3285229572c01`,
+accepted=true, paths=[]unexpected=[], receive=true, аренда освобождена. Отчёты `worker-658-*.json`,
+`worker-658-main.log`; компактная сводка `reports/worker-658-summary.json`.
+
+## Локальный MCP-клиент
+
+В helper `tools/mcp_call.py` после ревью исправлены два реальных отказа: selection.isError теперь останавливает
+целевой запрос и сохраняет instance/raw selection; disconnected-awaiting-command-result после мутации отмечен
+effect_unknown=true/exit2. completed означает получение MCP-ответа, а не доказательство Unity-эффекта.
+Исходные отчёты 651 не переписывались; при том обрыве Run не повторялся.
+`python -B -X utf8 tasks/network-sync-hardening/tools/test_mcp_call.py`: до исправления 2 failure/1 error,
+после 3/3 PASS на подставном транспорте. Повторный source-review снял оба P1. Это tool-проверки без процессов,
+MCP/Unity; исправленная версия helper в live Unity после этого не запускалась. Игровые тесты не изменены.
+
+После освобождения аренды локально:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/e2e/Run-E2E.ps1 -Scenario dedicated-server-arsenal -Map TestMap1 -Clients 2 -Timeout 300 -Player <свой-экспорт>/VrBattlegrounds.exe -LogVerdict enforce
+```
+
+Порты выбирает штатный runner. Он завершает только свои PID/потомков; проверить cleanup и UDP-пару. Отчёты —
+`Tools/e2e/results/<timestamp>-dedicated-server-arsenal/` плюс ссылки/сводка в reports задачи. Нужны три
+completed/passed, один buildGuid/ожидаемая appVersion, exit=0, log-verdict green, все captured=true,
+unexpected/defects/native/dropped=0 и отдельно 0 UpdateTeleportState/target-not-found. Это Windows runtime,
+не физическая Quest-приёмка. Статический маршрут и границы freshness-check — `reports/network-e2e-route.md`.

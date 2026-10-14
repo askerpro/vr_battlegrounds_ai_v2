@@ -5,22 +5,34 @@
 
 ## Статус
 
-**Код обоих кодовых этапов готов, НЕ проверен в Unity, НЕ принят, НЕ влит.** Офлайн-компиляция — исторический
-результат предыдущей сессии; после rebase повторно не выполнялась. Свежая база `origin/dev` — `d3c62ca5e`,
-HEAD перед актуализацией документов — `edcfca552` (0 коммитов позади, 7 впереди). Режим координации — off.
-Старый running `statesync-cost` снят штатным stop: сейчас активной проверки и аренды нет.
+**Unity-компиляция, Android gate и 429 существующих Network/Weapons тестов прошли. Код НЕ принят, НЕ влит.**
+Тикет 643 DONE: input `01e8b7748dfbf2545e6642fce2834ffeb1a5a5f4`, база `97a320c88`, все четыре SHA256 совпали,
+загружены новые методы/поля, Android 0 ошибок, EditMode 429 passed / 0 failed / 0 skipped. Finish/receive:
+paths=[], unexpected=[], result `29583b14aa46c38e0410a831e32b07c17b70e742`.
+Windows build 651: Succeeded, 0 ошибок / 105 предупреждений, input `8432b0ce35e6`, тот же Assets-tree.
+Аренда освобождена. Побочный PC.asset не импортирован; R сохранён для сопровождающего.
+E2E `20261014-211134-dedicated-server-arsenal`: functional 24/24, строгий RED (четыре отклонённых события /
+шесть Error-логов SetAvatarRenderMode и SetCurrentHandPose). UpdateTeleportState error=0, dropped=0, native=0.
+ID относятся к уже заменённому GhostAvatar netId224; причинная регрессия SDK80/Mirror4 не установлена.
+Подробности и границы — [Details.md](Details.md), трасса `reports/2026-10-14-e2e-error-diagnosis.md`.
+Повтор той же сборки `20261014-212454-dedicated-server-arsenal`: GREEN/enforce, 24/24, unexpected=0,
+known defects=0, native=0, dropped=0. Первый RED сохраняется: окно поздних ghost events нестабильно.
+Графический ServerOnly+8 Bots/8 ActiveAvatar: 658 завершён/получен, input `5c5329ec17ba`, Direct3D11,
+Ready; три снимка за 92,36 с: precache=false, копии/childCount=0. Это краткая PC-проверка guard, не perf/Quest.
+Cleanup Idle; profile/prefs/settings совпали, edit scene Untitled→Offline (infra 7048). Lease освобождена,
+R `fa8135f83e01a89f553cb6298ad3285229572c01`, paths=[]unexpected=[]. Режим координации — off.
 
 | Этап | Хаб | Код | Дальше |
 |---|---|---|---|
-| `teleport-state` (6048) | planned, код уже в ветке | `6d66c53e2` | готовность worker → Unity → приёмка → вливание |
-| `statesync-cost` (5871) | planned после stop при передаче | `ce7b348eb` | тот же общий пакет проверки |
+| `teleport-state` (6048) | planned; 643 PASS, Windows 24/24, общий E2E RED | `4224310c4` | уточнить late ghost events → приёмка → вливание |
+| `statesync-cost` (5871) | planned после передачи; проверки 643 PASS | `74727da7a` | runtime/Quest → приёмка → вливание |
 | `regression-tests` | planned, after обоих merged | — | после приёмки обоих |
 
 ## Сделано (ветка `claude/network`)
 
-- `8265a98c3` — план задачи, перенос этапов `regression-tests` из `state-sync-depth-guard`, `mirror-nt-keyframe`,
+- `99163aa9e` — план задачи, перенос этапов `regression-tests` из `state-sync-depth-guard`, `mirror-nt-keyframe`,
   `uniqueid-stale-registry` (их планы ред. 2 без этого этапа), backlog.
-- `ce7b348eb` — **statesync-cost** (до rebase `859b06777`):
+- `74727da7a` — **statesync-cost** (раньше `ce7b348eb`, изначально `859b06777`):
   - UltimateXR patch 80 (`Core/StateSync/UxrStateSyncImplementer_1.cs`): кеш `PropertyInfo`/`MethodInfo` по
     (рантайм-тип компонента, имя) в `SyncState` вместо `GetProperty`/`GetMethods`+LINQ на каждое событие. Поведение,
     порядок веток и исключения 1:1; отрицательные результаты не кешируются; только main thread. Патч 74 не тронут.
@@ -29,7 +41,7 @@ HEAD перед актуализацией документов — `edcfca552` 
     уровни логов UltimateXR = min(ассет, Warnings); подробные — при `DebugMode.Enabled` (подписка на `Changed`) или
     флаге `-uxr-log-verbose`. Редактор и `Resources/UxrGlobalSettings.asset` не меняются.
   - Журнал: `changelog/2026-10-14-sdk-80.md`. Компиляция: UltimateXR 555 файлов 0 ошибок, VrBattlegrounds 460 — 0.
-- `6d66c53e2` — **teleport-state** (до rebase `ccfaf5991`):
+- `4224310c4` — **teleport-state** (раньше `6d66c53e2`, изначально `ccfaf5991`):
   - Mirror patch 4 (`Assets/ThirdParty/Mirror/Core/NetworkClient.cs`, `DestroyObject`): `connection.owned.Remove` и
     `spawned.Remove` сразу после `OnStopClient`, до unspawn-обработчика/`Destroy`/`SetActive(false)` — как сервер.
     Причина 6048: `OnDisable` `UxrTeleportLocomotion` внутри синхронного `Destroy` своего аватара слал
@@ -43,12 +55,11 @@ HEAD перед актуализацией документов — `edcfca552` 
 
 ## Дальше (конкретный следующий шаг)
 
-1. Одна Unity-проверка в аренде worker вершины ветки (содержит `6d66c53e2`; включает и `precache-server-guard`): компиляция с
-   weaver, AndroidCompileGate, EditMode `VrBattlegrounds.Tests.Network` + `Weapons` (затронуты `LedgerSpawnReadyTests`,
-   `PlayerCalibrationOwnerTests` — путь `ExecuteStateSyncEvent → SyncState`). Отчёт — `tasks/network-sync-hardening/reports/`.
-   Объявление 6805 сняло СТОП 6539: FIFO работает, заявки разрешены. DelayCall-предупреждение само не блокирует
-   admission; текущую готовность установит begin. Перед заявкой fetch и rebase при отставании.
-   Порядок и критерии — [Details.md](Details.md).
+1. Проверки 643 и Windows build 651 завершены. До продуктовых правок уточнить воспроизводимость поздних событий
+   GhostAvatar: повтор candidate GREEN, для attribution запрошен сопоставимый baseline у владельца E2E.
+   Четыре отправки первого RED идут из Start/Update, до client OnDisable; серверного retired-avatar gate нет.
+   658 ServerOnly+8 ботов завершён. Текущее открытое решение — отдельный retired-avatar admission/lifecycle
+   механизм для подтверждённого окна ghost events; новые продуктовые правки не начаты. Порядок — [Details.md](Details.md).
 2. Приёмка пользователя (ниже), затем вливание; после вливания statesync-cost — сообщить weapon-system (замер выстрела
    до/после, этап shot-cost) и performance (копия), находка 5871.
 3. `regression-tests` после приёмки: StateSyncFrameStack (C2), NetworkTransformKeyframe (Mirror patch 3),

@@ -2,21 +2,29 @@
 
 ## Обещания и ожидания (2026-10-14, передача Claude → Codex)
 
-Активные задачи: `precache-server-guard` (сторож прогрева, `59262d43b`), `network-sync-hardening` (Mirror patch 4
-`6d66c53e2`, SDK-патч 80 `ce7b348eb`). SHA актуальны после rebase на `origin/dev` `d3c62ca5e`.
-Обе: код готов; сначала текущая Unity-проверка, затем приёмка пользователя. Устаревшие running сняты штатным stop;
-на предыдущей остановке аренды не было. СТОП 6539 снят объявлением 6805; общий пакет Unity продолжается через FIFO.
+Активные задачи: `precache-server-guard` (сторож прогрева, `ecfbfdee7`), `network-sync-hardening` (Mirror patch 4
+`4224310c4`, SDK-патч 80 `74727da7a`). SHA после rebase на `97a320c88`; Unity-проверка — собственный тикет 643.
+Обе: Unity/Android/EditMode Network+Weapons проверены в 643 (429/429, 0 failed/skipped), код не принят/не влит.
+Устаревшие running сняты штатным stop; СТОП 6539 снят объявлением 6805. Windows build 651 PASS, аренда освобождена;
+побочный PC.asset не импортирован. E2E functional 24/24, LogVerdict RED: поздние события GhostAvatar, teleport error=0.
+Повтор того же E2E GREEN/enforce 24/24; первый RED не снят. Server-only+8 ботов с графикой 658 завершён:
+Ready, precache=false, childCount/liveCopies=0 в трёх снимках за 92,36 с. Физическая Quest-приёмка pending.
+Поздние ghost events — подтверждённое окно без server-side retirement admission; gameplay 7027 подтвердил
+отсутствие общего retirement-сигнала. Новое архитектурное исправление не начато; решение о продолжении открыто.
 
 Обещано другим (кому — что — событие):
 - bots (`bots-fix`) и performance (`perf-stress-scenario`): сообщить о вливании `precache-server-guard` — они делают
   регрессию (матч 8 ботов / perf-stress на сервере с графикой). 6324→6330, 6326→6332.
 - weapon-system (+ копия performance): после вливания `statesync-cost` — замер выстрела до/после (этап shot-cost), 5871.
 - avatar-ik (`uxr-precache-once`, UltimateXR patch 81, 91470fff6): ревью 6527 — ACK с условием обнулять
-  `_precacheCoroutine` при обрыве корутины; ждём их строку diff в inbox (повторное полное ревью не нужно) и замер
+  `_precacheCoroutine` при обрыве корутины. Условие OnDisable/exception снято source-ревью 6854 на `b00b03f33`;
+  исчезновение аватара без scene change отдельно передано владельцу. Ждём runtime-прерывание и замер
   bots клиента позднего входа (childCount `UxrPrecachedInstances` до/после).
 - launch-infra (`quest-perf-pipeline`, e2e-smoke-kit): сетевое ACK дано (6425, 6437; условия выполнены 6441/6445).
-  Ждём итог прогона на worker: рукопожатий на соединение, повторы после смены карты, 0 «Unknown message id», по
-  возможности два прогона в одном Play. Если что-то не так — ревью этой части.
+  Результат 6829: Windows input `87643327108f`, selftest 19/19 по сообщению владельца, hello=1/соединение,
+  ready повторяется после reload, Unknown message id=0. Это не Quest/reconnect. Ответ о получении — 6866.
+  Прогон арсенала 6850 имеет 4 teleport errors, но в его input нет нашего Mirror4. Собственный run с патчем:
+  teleport error=0, общий RED по другим событиям; владельцу передано 6998, приёмки/вливания нет.
 - avatar-grip (`hand-rig-quality`), 6429: Mirror-патч preview-сцены (`_assetId`/sceneId, пункт `mirror-preview-scene-objects`
   ниже) и общий помощник сохранения префаба — взяты в зону network; решение 6589: запуск после `network-sync-hardening`;
   ответ прочитанному решению — 6647; при старте

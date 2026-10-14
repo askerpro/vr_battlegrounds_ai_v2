@@ -7,8 +7,13 @@
 ## Статус (2026-10-14, передача Claude → Codex)
 
 АКТИВНА как задача-«дом» эксперта network (inbox по owner, zone-ack, ревью сетевой части чужих этапов). Кода нет.
-Текущие задачи: `precache-server-guard`, `network-sync-hardening`; код готов, текущая Unity-проверка и приёмка
-не выполнены. Обещания и кандидаты — `experts/network/backlog.md`. Inbox обработан текущей сессией Codex
+Текущие задачи: `precache-server-guard`, `network-sync-hardening`; код готов, worker 643 подтвердил компиляцию,
+Android scripts и 429/429 существующих Network/Weapons тестов. Windows build 651 PASS, E2E functional 24/24,
+общий LogVerdict RED: поздние события уже заменённого GhostAvatar; teleport error=0.
+Повтор E2E GREEN/enforce 24/24; первый RED сохраняется как нестабильное окно поздних ghost events.
+Server+8 ботов с графикой 658 завершён: Ready, precache=false, копии=0 в трёх снимках за 92,36 с.
+Quest и пользовательская приёмка не завершены; отдельное архитектурное исправление ghost events не начато.
+Обещания и кандидаты — `experts/network/backlog.md`. Inbox обработан текущей сессией Codex
 `01a13af5-485c-7ef1-99c6-9e1f1dd753aa`; решение 6589 прочитано, ответ 6647 записан.
 Запрос готовности worker — 6643; остановка снята объявлением 6805, согласованные проверки продолжаются через FIFO.
 

@@ -15,6 +15,23 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "role-sessionstart",
+      "writes": [
+        ".codex/hooks/session_context.py",
+        ".codex/hooks.json",
+        "Tools/experts/tests/test_session_context.py",
+        "tasks/codex-specialist-startup/**"
+      ],
+      "after": [
+        {
+          "task": "codex-specialist-startup",
+          "stage": "configuration",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

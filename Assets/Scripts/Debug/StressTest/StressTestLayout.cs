@@ -100,7 +100,7 @@ namespace VrBattlegrounds.DevTools.StressTest
         public const float ArenaWallMargin = 1.0f;
 
         /// <summary>
-        /// Запас вокруг запретной зоны (препятствие, станция арсенала, место игрока), м: полширины
+        /// Запас вокруг запретной зоны (препятствие, станция арсенала, место игрока, точка обзора), м: полширины
         /// плеч куклы плюс зазор, чтобы руки не входили в препятствие.
         /// </summary>
         public const float ArenaExclusionMargin = 0.5f;
@@ -136,6 +136,24 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         /// <summary>Проекция мировых габаритов на пол: прямоугольник X/Z (<c>Rect.y</c> — мировой Z).</summary>
         public static Rect FloorRect(Bounds bounds) => new Rect(bounds.min.x, bounds.min.z, bounds.size.x, bounds.size.z);
+
+        /// <summary>
+        /// Радиус пола вокруг точки обзора без кукол, м: камера обхода не оказывается внутри куклы и не упирается в неё
+        /// взглядом.
+        /// </summary>
+        public const float ViewPointClearance = 1.5f;
+
+        /// <summary>
+        /// Запретная зона точки обзора для <see cref="ArenaPlacement"/>: квадрат с центром в
+        /// <paramref name="floorXZ"/> (мировые X/Z) и полустороной <see cref="ViewPointClearance"/> минус
+        /// <see cref="ArenaExclusionMargin"/> — после запаса раскладки квадрат накрывает весь круг радиуса
+        /// <see cref="ViewPointClearance"/>.
+        /// </summary>
+        public static Rect ViewPointExclusion(Vector2 floorXZ)
+        {
+            float half = Mathf.Max(0f, ViewPointClearance - ArenaExclusionMargin);
+            return new Rect(floorXZ.x - half, floorXZ.y - half, half * 2f, half * 2f);
+        }
 
         /// <summary>
         /// Расстановка кукол по полу арены — без сцены, детерминированно по <paramref name="seed"/>.

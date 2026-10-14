@@ -78,5 +78,20 @@ namespace VrBattlegrounds.DevTools.StressTest
         /// с прогоном по скинам несовместима. Нет арены в сцене — сервер отказывает в старте.
         /// </summary>
         public bool arenaLayout;
+
+        /// <summary>Потолок точек обзора: сервер отказывает в старте при большем числе.</summary>
+        public const int MaxViews = 32;
+
+        /// <summary>
+        /// Обход точек обзора: имена точек по порядку; пусто — обхода нет. Вместо «базы» и фаз раскладки — по паре фаз
+        /// на точку без кукол («база: &lt;точка&gt;»), затем спавн кукол и по паре фаз на точку с ними
+        /// («куклы: &lt;точка&gt;»), см. <see cref="StressTestPlan.Phases"/>. На каждой «~успокоение» клиент переносит свой
+        /// аватар в точку. Требует <see cref="arenaLayout"/>: куклы на арене не заходят в точки обзора.
+        /// Сами точки (координаты) в конфиге не ездят — каждая сторона читает один файл прогона.
+        /// </summary>
+        public string[] viewNames = Array.Empty<string>();
+
+        /// <summary>Идёт обход точек обзора (<see cref="viewNames"/> не пуст).</summary>
+        public bool HasViewTour => viewNames != null && viewNames.Length > 0;
     }
 }

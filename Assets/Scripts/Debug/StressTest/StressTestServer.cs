@@ -39,6 +39,8 @@ namespace VrBattlegrounds.DevTools.StressTest
     /// Прогон по скинам (<see cref="StressTestConfig.perSkinPhases"/>): разгон → «база» →
     /// «куклы: &lt;префаб&gt;» на каждый скин. Раскладка «арена» (<see cref="StressTestConfig.arenaLayout"/>):
     /// разгон → «база» → «куклы: арена» — куклы на полу физической арены карты с закреплёнными корнями.
+    /// Обход точек обзора (<see cref="StressTestConfig.viewNames"/>, только с «ареной»): разгон → «база: &lt;точка&gt;»
+    /// по всем точкам → спавн кукол на арене → «куклы: &lt;точка&gt;» по всем точкам; переносит аватар клиент.
     /// Сервер шлёт инициатору
     /// начало каждой фазы (<see cref="StressTestStatusMessage"/>), клиент по ним открывает
     /// фазы в своём логе. Выделенный сервер пишет и свой лог (время тика); на хосте
@@ -81,8 +83,65 @@ namespace VrBattlegrounds.DevTools.StressTest
         private int _phaseNumber;   // сколько фаз открыто — для LastRun
         private ArenaFloor _arena;  // раскладка «арена»: найдена при приёме запроса
         private string _placement = string.Empty;   // итог раскладки «арена» — для заметки фазы и LastRun
+        private List<Vector2> _viewFloors;          // обход точек обзора: точки пола (мировые X/Z) — запретные зоны арены
+
+        /// <summary>
+        /// Точки обзора, которые серверу передал его сценарий e2e (<see cref="ProvideViewTour"/>): имена по порядку и
+        /// точки пола. Запрос обхода от клиента сверяется с ними по именам — оба получают один файл прогона.
+        /// Пишут только <see cref="ProvideViewTour"/> и <see cref="ClearViewTour"/>.
+        /// </summary>
+        private static string[] s_viewTourNames;
+        private static Vector2[] s_viewTourFloors;
 
         // ── Запросы ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Точки обзора для запросов обхода на этом сервере: имена по порядку и точки пола (мировые X/Z — Vector2.y это
+        /// мировой Z). Зовёт серверный сценарий e2e, прочитав тот же файл точек, что и клиент; без них сервер в обходе
+        /// отказывает. Стресс-тест типов e2e не знает — только имена и точки.
+        /// </summary>
+        public static void ProvideViewTour(IReadOnlyList<string> names, IReadOnlyList<Vector2> floorPoints)
+        {
+            if (names == null || floorPoints == null || names.Count != floorPoints.Count)
+            {
+                GameLog.Perf.Error("[StressTest] Точки обзора не приняты: имён и точек пола должно быть поровну.");
+                ClearViewTour();
+                return;
+            }
+
+            s_viewTourNames = new string[names.Count];
+            s_viewTourFloors = new Vector2[floorPoints.Count];
+            for (int i = 0; i < names.Count; i++)
+            {
+                s_viewTourNames[i] = names[i];
+                s_viewTourFloors[i] = floorPoints[i];
+            }
+        }
+
+        public static void ClearViewTour()
+        {
+            s_viewTourNames = null;
+            s_viewTourFloors = null;
+        }
+
+        /// <summary>Обход из запроса против точек сервера: null — годится, иначе причина отказа.</summary>
+        private static string CheckViewTour(StressTestConfig config)
+        {
+            if (!config.arenaLayout)
+                return "обход точек обзора — только с раскладкой «арена»: ряды кукол перед игроком после переноса стояли бы где попало";
+            if (config.viewNames.Length > StressTestConfig.MaxViews)
+                return $"точек обзора {config.viewNames.Length}, наибольшее {StressTestConfig.MaxViews}";
+            if (s_viewTourNames == null)
+                return "обход точек обзора: серверу не переданы точки (сценарий perf-stress на сервере с -e2eArg views=...)";
+            if (s_viewTourNames.Length != config.viewNames.Length)
+                return $"точки обзора клиента и сервера разошлись: у клиента {config.viewNames.Length}, у сервера {s_viewTourNames.Length}";
+            for (int i = 0; i < s_viewTourNames.Length; i++)
+            {
+                if (s_viewTourNames[i] != config.viewNames[i])
+                    return $"точки обзора клиента и сервера разошлись: №{i + 1} «{config.viewNames[i]}» у клиента, «{s_viewTourNames[i]}» у сервера";
+            }
+            return null;
+        }
 
         internal static void HandleRequest(NetworkConnectionToClient conn, StressTestRequestMessage msg)
         {
@@ -115,6 +174,18 @@ namespace VrBattlegrounds.DevTools.StressTest
                 }
             }
 
+            List<Vector2> viewFloors = null;
+            if (config.HasViewTour)
+            {
+                string tourError = CheckViewTour(config);
+                if (tourError != null)
+                {
+                    Refuse(conn, tourError);
+                    return;
+                }
+                viewFloors = new List<Vector2>(s_viewTourFloors);
+            }
+
             // Не DontDestroyOnLoad: смена сцены уничтожает кукол вместе с ней, и прогон
             // обязан закончиться тут же, а не мерить пустую новую карту.
             var go = new GameObject("StressTestServer");
@@ -123,6 +194,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             server._session = session;
             server._config = config;
             server._arena = arena;
+            server._viewFloors = viewFloors;
         }
 
         private static void Refuse(NetworkConnectionToClient conn, string reason)
@@ -181,6 +253,7 @@ namespace VrBattlegrounds.DevTools.StressTest
 
             GameLog.Perf.Info($"[StressTest] Сервер: старт для {_session.PlayerName}, кукол {_config.puppetCount}, предметов {_config.clutterCount}, " +
                               $"{(_config.perSkinPhases ? "по скинам" : _config.arenaLayout ? "арена" : _config.mapOnly ? "только по карте" : "обычный")}, " +
+                              (_config.HasViewTour ? $"обход точек обзора: {_config.viewNames.Length}, " : "") +
                               $"скины: {PlannedSkins()}.");
 
             UxrManager.StageUpdated += OnUxrStageUpdated;
@@ -219,14 +292,47 @@ namespace VrBattlegrounds.DevTools.StressTest
         private IEnumerator Run()
         {
             yield return Phase("разгон", _config.warmupSeconds, measured: false, note: null);
-            yield return Phase("база", _config.phaseSeconds, measured: true, note: null);
 
-            if (_config.perSkinPhases)    yield return RunPerSkin();
-            else if (_config.arenaLayout) yield return RunArena();
-            else                          yield return RunStandard();
+            if (_config.HasViewTour)
+            {
+                yield return RunViewTour();
+            }
+            else
+            {
+                yield return Phase("база", _config.phaseSeconds, measured: true, note: null);
+
+                if (_config.perSkinPhases)    yield return RunPerSkin();
+                else if (_config.arenaLayout) yield return RunArena();
+                else                          yield return RunStandard();
+            }
 
             Finish(completed: true, "полный прогон");
             Destroy(gameObject);
+        }
+
+        /// <summary>
+        /// Обход точек обзора: пара фаз на точку без кукол, затем куклы на арене (запретные зоны — и точки обзора)
+        /// и пара фаз на точку с ними. Аватар в точку переносит клиент в начале каждой «~успокоение»; сервер
+        /// только держит фазы. Порядок фаз повторяет <see cref="StressTestPlan.Phases"/>.
+        /// </summary>
+        private IEnumerator RunViewTour()
+        {
+            foreach (string view in _config.viewNames)
+                yield return ViewPhases(StressTestPlan.ViewPhaseName(view, withPuppets: false), note: null);
+
+            if (_config.puppetCount <= 0) yield break;
+
+            // Спавн — в начале первого успокоения с куклами: рывок спавна в замер не попадает.
+            SpawnPuppets(PuppetLayout.Arena, _config.puppetSkin);
+            string spawnNote = _placement.Length > 0 ? SpawnNote() + "; " + _placement : SpawnNote();
+            for (int i = 0; i < _config.viewNames.Length; i++)
+                yield return ViewPhases(StressTestPlan.ViewPhaseName(_config.viewNames[i], withPuppets: true), i == 0 ? spawnNote : null);
+        }
+
+        private IEnumerator ViewPhases(string name, string note)
+        {
+            yield return Phase(name + StressTestPlan.SettleSuffix, _config.settleSeconds, measured: false, note: note);
+            yield return Phase(name, _config.phaseSeconds, measured: true, note: null);
         }
 
         private IEnumerator RunStandard()
@@ -495,6 +601,9 @@ namespace VrBattlegrounds.DevTools.StressTest
             // Игрок на старте: кукла вплотную к камере — не нагрузка лобби, а заслонённый кадр.
             float half = _config.puppetSpacing;
             exclusions.Add(new Rect(_startRootPosition.x - half, _startRootPosition.z - half, half * 2f, half * 2f));
+            // Точки обзора: камера обхода не должна оказаться внутри куклы или вплотную к ней.
+            int viewZones = _viewFloors != null ? _viewFloors.Count : 0;
+            for (int i = 0; i < viewZones; i++) exclusions.Add(StressTestLayout.ViewPointExclusion(_viewFloors[i]));
 
             var spots = new List<StressTestLayout.ArenaSpot>(count);
             float floorY = _arena.FloorY;
@@ -509,7 +618,8 @@ namespace VrBattlegrounds.DevTools.StressTest
             Rect f = _arena.Floor;
             string details = $"пол X {f.xMin:F2}..{f.xMax:F2}, Z {f.yMin:F2}..{f.yMax:F2}, высота {floorY:F2}; " +
                              $"отступ от стен {StressTestLayout.ArenaWallMargin:F1} м, шаг кукол {_config.puppetSpacing:F1} м; " +
-                             $"запретных зон {exclusions.Count} (препятствий {_arena.ObstacleCount}, станций {_arena.StationCount}, игрок)";
+                             $"запретных зон {exclusions.Count} (препятствий {_arena.ObstacleCount}, станций {_arena.StationCount}, игрок" +
+                             (viewZones > 0 ? $", точек обзора {viewZones} — радиус {StressTestLayout.ViewPointClearance:F1} м)" : ")");
             if (_arena.Problems.Length > 0) details += $"; пропущены разметки: {_arena.Problems}";
 
             if (shortfall > 0) GameLog.Perf.Warning($"[StressTest] {_placement} — свободного пола не хватило. {details}.");

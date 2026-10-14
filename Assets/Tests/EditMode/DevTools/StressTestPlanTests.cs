@@ -150,5 +150,101 @@ namespace VrBattlegrounds.Tests.DevTools
             Assert.IsNotNull(StressTestArgs.Parse(args, 3, out _, out _));
             StringAssert.Contains("layout=arena", StressTestArgs.Describe(PerfRunMode.MapOnly, ArenaConfig("map-only")));
         }
+
+        // ── Обход точек обзора ──────────────────────────────────────────────
+
+        private static StressTestConfig ViewTourConfig(string mode, params string[] views)
+        {
+            StressTestConfig config = ArenaConfig(mode);
+            config.viewNames = views;
+            return config;
+        }
+
+        [Test]
+        public void ViewTour_BaseOnEveryView_ThenPuppetsOnEveryView()
+        {
+            StressTestConfig config = ViewTourConfig("map-only", "север", "юг");
+            Assert.IsTrue(config.HasViewTour);
+            CollectionAssert.AreEqual(new[]
+            {
+                "разгон",
+                "база: север~успокоение", "база: север",
+                "база: юг~успокоение", "база: юг",
+                "куклы: север~успокоение", "куклы: север",
+                "куклы: юг~успокоение", "куклы: юг",
+            }, Names(config, 3));
+        }
+
+        [Test]
+        public void ViewTour_OnlyNamedPhasesMeasured_SettleNot()
+        {
+            foreach (StressTestPlannedPhase phase in StressTestPlan.Phases(ViewTourConfig("map-only", "a", "b"), 3))
+            {
+                bool settle = phase.Name.EndsWith(StressTestPlan.SettleSuffix) || phase.Name == "разгон";
+                Assert.AreEqual(!settle, phase.Measured, phase.Name);
+            }
+        }
+
+        [Test]
+        public void ViewTour_NoPuppets_OnlyBaseViews()
+        {
+            StressTestConfig config = ViewTourConfig("map-only", "a");
+            config.puppetCount = 0;
+            CollectionAssert.AreEqual(new[] { "разгон", "база: a~успокоение", "база: a" }, Names(config, 3));
+        }
+
+        [Test]
+        public void ViewTour_NormalMode_SamePlanAsMapOnly()
+        {
+            CollectionAssert.AreEqual(Names(ViewTourConfig("map-only", "a", "b"), 3),
+                Names(ViewTourConfig(null, "a", "b"), 3));
+        }
+
+        [Test]
+        public void ViewTour_PhaseNames_FromPrefixes()
+        {
+            Assert.AreEqual("база: x", StressTestPlan.ViewPhaseName("x", withPuppets: false));
+            Assert.AreEqual("куклы: x", StressTestPlan.ViewPhaseName("x", withPuppets: true));
+        }
+
+        [Test]
+        public void ViewTour_DefaultConfig_NoTour()
+        {
+            Assert.IsFalse(new StressTestConfig().HasViewTour);
+            var config = new StressTestConfig { viewNames = null };
+            Assert.IsFalse(config.HasViewTour);
+        }
+
+        [Test]
+        public void ViewTour_SurvivesNetworkMessage_NullBecomesEmpty()
+        {
+            StressTestConfig back = StressTestRequestMessage.Start(ViewTourConfig("map-only", "a", "b")).ToConfig();
+            CollectionAssert.AreEqual(new[] { "a", "b" }, back.viewNames);
+            Assert.IsTrue(back.arenaLayout);
+
+            var message = StressTestRequestMessage.Start(new StressTestConfig());
+            message.viewNames = null;
+            StressTestConfig empty = message.ToConfig();
+            Assert.IsNotNull(empty.viewNames);
+            Assert.IsFalse(empty.HasViewTour);
+        }
+
+        [Test]
+        public void ViewTour_ViewPointExclusion_KeepsPuppetsOutOfClearance()
+        {
+            var floor = UnityEngine.Rect.MinMaxRect(-7.75f, -9.48f, 7.75f, 9.48f);
+            var points = new[] { UnityEngine.Vector2.zero, new UnityEngine.Vector2(4f, -5f), new UnityEngine.Vector2(-5f, 6f) };
+            var exclusions = points.Select(StressTestLayout.ViewPointExclusion).ToArray();
+
+            var spots = new System.Collections.Generic.List<StressTestLayout.ArenaSpot>();
+            StressTestLayout.ArenaPlacement(floor, StressTestLayout.ArenaWallMargin, exclusions,
+                StressTestLayout.ArenaExclusionMargin, 9, 1.2f, StressTestLayout.ArenaDefaultSeed + 9, spots);
+
+            Assert.Greater(spots.Count, 0);
+            foreach (StressTestLayout.ArenaSpot spot in spots)
+                foreach (UnityEngine.Vector2 point in points)
+                    Assert.GreaterOrEqual(UnityEngine.Vector2.Distance(spot.Position, point),
+                        StressTestLayout.ViewPointClearance - 1e-3f, "кукла в круге точки обзора");
+        }
     }
 }

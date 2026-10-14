@@ -25,11 +25,18 @@ namespace VrBattlegrounds.DevTools.StressTest
         public const string KeySkin    = "skin";
         public const string KeyLayout  = "layout";
 
+        /// <summary>
+        /// Путь к файлу точек обзора — тот же ключ, что у хелпера e2e (<c>E2EViews.ArgKey</c>; строкой, а не ссылкой:
+        /// стресс-тест от каркаса e2e не зависит). Здесь только признак обхода и проверка совместимости; сам файл
+        /// читает сценарий через <c>E2EViews</c> и кладёт имена точек в <see cref="StressTestConfig.viewNames"/>.
+        /// </summary>
+        public const string KeyViews   = "views";
+
         /// <summary>Значения <c>layout</c>: раскладка режима (по умолчанию) и куклы на полу арены.</summary>
         public const string LayoutDefault = "default";
         public const string LayoutArena   = "arena";
 
-        private static readonly string[] KnownKeys = { KeyMode, KeyPuppets, KeyClutter, KeyPhase, KeyWarmup, KeySkin, KeyLayout };
+        private static readonly string[] KnownKeys = { KeyMode, KeyPuppets, KeyClutter, KeyPhase, KeyWarmup, KeySkin, KeyLayout, KeyViews };
 
         private static readonly IReadOnlyDictionary<string, string> NoArgs = new Dictionary<string, string>();
 
@@ -74,6 +81,18 @@ namespace VrBattlegrounds.DevTools.StressTest
                     return $"{KeyLayout}=«{layoutText}»: допустимо {LayoutDefault}, {LayoutArena}";
             }
 
+            // Обход точек обзора всегда на раскладке «арена»: куклы стоят по полу с запретом вокруг точек обзора,
+            // а не рядами перед игроком, которые после переноса оказались бы где угодно.
+            bool views = args.TryGetValue(KeyViews, out string viewsText);
+            if (views)
+            {
+                if (string.IsNullOrWhiteSpace(viewsText))
+                    return $"{KeyViews}=: путь к файлу точек пуст";
+                if (args.ContainsKey(KeyLayout) && !arena)
+                    return $"{KeyViews} требует {KeyLayout}={LayoutArena} (или без {KeyLayout}): обход ставит кукол на арену";
+                arena = true;
+            }
+
             var defaults = new StressTestConfig();
             int   puppets = defaults.puppetCount;
             int   clutter = defaults.clutterCount;
@@ -102,6 +121,8 @@ namespace VrBattlegrounds.DevTools.StressTest
             config.puppetCount  = puppets;
             config.clutterCount = clutter;
             if (args.ContainsKey(KeyPhase))  config.phaseSeconds  = phase;
+            // Обход: фаза на точку короче обычной — точек много (8 точек × 2 обхода); короткий режим задаёт свои.
+            else if (views && mode != PerfRunMode.Short) config.phaseSeconds = StressTestPlan.ViewTourPhaseSeconds;
             if (args.ContainsKey(KeyWarmup)) config.warmupSeconds = warmup;
             if (arena)
             {
@@ -128,7 +149,7 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         /// <summary>
         /// Условия прогона одной строкой: <c>mode=normal puppets=9 clutter=40 phase_s=40 warmup_s=5 skin=-1</c>;
-        /// раскладка «арена» дописывает <c>layout=arena</c>.
+        /// раскладка «арена» дописывает <c>layout=arena</c>, обход точек обзора — <c>views=&lt;число точек&gt;</c>.
         /// </summary>
         public static string Describe(PerfRunMode mode, StressTestConfig config)
         {
@@ -137,7 +158,9 @@ namespace VrBattlegrounds.DevTools.StressTest
                 KeyMode, ModeName(mode), KeyPuppets, config.puppetCount, KeyClutter, config.clutterCount,
                 KeyPhase, config.phaseSeconds, KeyWarmup, config.warmupSeconds,
                 KeySkin, mode == PerfRunMode.PerSkin ? "all" : config.puppetSkin.ToString(CultureInfo.InvariantCulture));
-            return config.arenaLayout ? $"{text} {KeyLayout}={LayoutArena}" : text;
+            if (config.arenaLayout) text += $" {KeyLayout}={LayoutArena}";
+            if (config.HasViewTour) text += $" {KeyViews}={config.viewNames.Length}";
+            return text;
         }
 
         private static bool TryParseMode(string text, out PerfRunMode mode)
@@ -171,14 +194,16 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         /// <summary>
         /// Раскладка «арена» — одна фаза нагрузки вместо фаз режима: несовместима с прогоном по скинам
-        /// (там своя расстановка на каждый скин) и с хламом (его в этой раскладке нет).
+        /// (там своя расстановка на каждый скин) и с хламом (его в этой раскладке нет). Обход точек обзора
+        /// (<see cref="KeyViews"/>) включает её сам — те же ограничения, текст называет обход.
         /// </summary>
         private static string CheckArenaApplicable(IReadOnlyDictionary<string, string> args, PerfRunMode mode)
         {
+            string what = args.ContainsKey(KeyViews) ? $"{KeyViews} (обход точек обзора)" : $"{KeyLayout}={LayoutArena}";
             if (mode == PerfRunMode.PerSkin)
-                return $"{KeyLayout}={LayoutArena} не действует в {KeyMode}=per-skin: прогон по скинам ставит кукол рядами";
+                return $"{what} не действует в {KeyMode}=per-skin: прогон по скинам ставит кукол рядами";
             if (args.ContainsKey(KeyClutter))
-                return $"{KeyClutter} не действует в {KeyLayout}={LayoutArena}: хлама в этой раскладке нет";
+                return $"{KeyClutter} не действует с {what}: хлама в раскладке «арена» нет";
             return null;
         }
 

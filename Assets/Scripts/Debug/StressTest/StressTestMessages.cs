@@ -19,6 +19,8 @@ namespace VrBattlegrounds.DevTools.StressTest
         public bool  mapSpreadPhase;
         public bool  mapOnly;
         public bool  arenaLayout;
+        /// <summary>Имена точек обзора (<see cref="StressTestConfig.viewNames"/>); массив строк Mirror пишет сам, null — пусто.</summary>
+        public string[] viewNames;
 
         public static StressTestRequestMessage Start(StressTestConfig config) => new StressTestRequestMessage
         {
@@ -33,6 +35,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             mapSpreadPhase = config.mapSpreadPhase,
             mapOnly        = config.mapOnly,
             arenaLayout    = config.arenaLayout,
+            viewNames      = config.viewNames,
         };
 
         public StressTestConfig ToConfig() => new StressTestConfig
@@ -47,6 +50,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             mapSpreadPhase = mapSpreadPhase,
             mapOnly        = mapOnly,
             arenaLayout    = arenaLayout,
+            viewNames      = viewNames ?? System.Array.Empty<string>(),
         };
     }
 

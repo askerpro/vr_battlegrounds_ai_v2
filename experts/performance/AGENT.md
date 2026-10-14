@@ -35,7 +35,8 @@ review; optimisation in a foreign zone is done by its owner from your spec/revie
 - Scene Lobby (user, 2026-10-13): phase «база» (no puppets), worst view, Test build, Quest 3, FFR 0.75, GPU 2 —
   `ovr_gpu` p50 <= 7 ms. Guides (not yet budgets): setpass <= ~40, visible tris <= ~150k.
 - No budget yet for GC, draw calls/SetPass/triangles, memory, network, server frame (backlog `budget-baseline`).
-- Last measurement (journal 2026-09-29): CPU-bound, 9 puppets p50 15.5 ms > 13.9.
+- Last measurement (journal 2026-10-14 lobby-view-tour): Lobby base worst view 10.8 ms GPU > 7; puppets in view
+  CPU-bound up to 18.4 ms > 13.9. Compare scenes by fixed views (`views=<file>`), never by a lying headset.
 
 ## How to measure
 1. Stress test: tablet -> «Отладка» -> «Перф-тесты» (debug mode: both sticks 2 s) or menu

@@ -168,5 +168,57 @@ namespace VrBattlegrounds.Tests.DevTools
             StressTestConfig perSkin = ParseOk(Args("mode", "per-skin"), out PerfRunMode perSkinMode);
             StringAssert.Contains("skin=all", StressTestArgs.Describe(perSkinMode, perSkin));
         }
+
+        // ── Обход точек обзора (views) ──────────────────────────────────────
+
+        [Test]
+        public void Views_TurnsOnArena_ShortPhasesByDefault()
+        {
+            StressTestConfig config = ParseOk(Args("mode", "map-only", "views", "lobby-views.json"), out _);
+            Assert.IsTrue(config.arenaLayout, "обход ставит кукол на арену");
+            Assert.AreEqual(StressTestPlan.ViewTourPhaseSeconds, config.phaseSeconds);
+            Assert.IsFalse(config.HasViewTour, "имена точек кладёт сценарий после чтения файла, не разбор");
+        }
+
+        [Test]
+        public void Views_ExplicitPhase_Wins()
+        {
+            StressTestConfig config = ParseOk(Args("views", "v.json", "phase_s", "30"), out _);
+            Assert.AreEqual(30f, config.phaseSeconds);
+        }
+
+        [Test]
+        public void Views_ShortMode_KeepsShortPhases()
+        {
+            StressTestConfig config = ParseOk(Args("mode", "short", "views", "v.json"), out _);
+            Assert.AreEqual(StressTestPlan.ShortPhaseSeconds, config.phaseSeconds);
+            Assert.IsTrue(config.arenaLayout);
+        }
+
+        [Test]
+        public void Views_WithLayoutArena_Accepted()
+        {
+            Assert.IsTrue(ParseOk(Args("views", "v.json", "layout", "arena"), out _).arenaLayout);
+        }
+
+        [TestCase("views", " ")]
+        [TestCase("views", "v.json", "layout", "default")]
+        [TestCase("views", "v.json", "mode", "per-skin")]
+        [TestCase("views", "v.json", "clutter", "5")]
+        public void Views_Incompatible_Refused(params string[] pairs)
+        {
+            StringAssert.Contains("views", ParseError(Args(pairs)));
+        }
+
+        [Test]
+        public void Views_DescribeShowsViewCount()
+        {
+            StressTestConfig config = ParseOk(Args("views", "v.json"), out PerfRunMode mode);
+            StringAssert.DoesNotContain("views=", StressTestArgs.Describe(mode, config));
+            config.viewNames = new[] { "a", "b", "c" };
+            string text = StressTestArgs.Describe(mode, config);
+            StringAssert.Contains("layout=arena", text);
+            StringAssert.Contains("views=3", text);
+        }
     }
 }

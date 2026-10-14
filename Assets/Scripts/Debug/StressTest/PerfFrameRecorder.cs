@@ -27,6 +27,13 @@ namespace VrBattlegrounds.DevTools.StressTest
         public int    spikes;
         public List<PerfMetricReport> metrics = new List<PerfMetricReport>();
 
+        /// <summary>
+        /// Точка обзора фазы (обход, <see cref="StressTestConfig.viewNames"/>) и фактическая поза камеры. JsonUtility
+        /// пишет объект всегда: <c>name</c> пуст — фаза без обхода. Пишет только клиентская половина
+        /// (<see cref="StressTestClientSession.SetPhaseView"/>) при закрытии фазы.
+        /// </summary>
+        public PerfViewReport view = new PerfViewReport();
+
         public PerfSummary Get(string key)
         {
             foreach (PerfMetricReport m in metrics)
@@ -35,6 +42,34 @@ namespace VrBattlegrounds.DevTools.StressTest
             }
             return default;
         }
+    }
+
+    /// <summary>
+    /// Точка обзора фазы и поза камеры после переноса — снимок итога переноса (<c>E2EViewOutcome</c> сценария e2e),
+    /// без ссылки на типы e2e. Высота глаз и тангаж задаёт трекинг (или симуляция позы), не перенос: для сравнения
+    /// сцен годятся фазы с высотой глаз ~1,6 м и тангажом около 0°.
+    /// </summary>
+    [Serializable]
+    public sealed class PerfViewReport
+    {
+        /// <summary>Имя точки; пусто — фаза без обхода.</summary>
+        public string name = "";
+        /// <summary>Перенос выполнен вовремя и поза снята.</summary>
+        public bool   ok;
+        /// <summary>Почему перенос не удался; пусто при успехе.</summary>
+        public string error = "";
+        /// <summary>Мировая позиция камеры после переноса.</summary>
+        public Vector3 camera;
+        /// <summary>Курс, тангаж (плюс — вверх) и крен камеры, градусы.</summary>
+        public float  yaw;
+        public float  pitch;
+        public float  roll;
+        /// <summary>Высота камеры над точкой пола, м.</summary>
+        public float  eyeHeight;
+        /// <summary>Отклонения пола аватара от точки: по горизонтали (м), курса (градусы), уровня пола (м).</summary>
+        public float  deviationXZ;
+        public float  deviationYaw;
+        public float  deviationFloorY;
     }
 
     [Serializable]

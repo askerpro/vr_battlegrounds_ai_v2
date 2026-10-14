@@ -1,6 +1,6 @@
 # Стресс-тест на шлеме без рук: сценарий perf-stress, арена, обход точек обзора
 
-Обновлено: 2026-10-13. Владелец: эксперт `performance`. Worktree: `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`,
+Обновлено: 2026-10-14. Владелец: эксперт `performance`. Worktree: `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`,
 ветка `claude/performance`. Начата по решению пользователя («начинай свою часть»).
 
 ## Цель и границы
@@ -20,8 +20,8 @@
 | `setup` | документы задачи, задача в `expert.json` (вливается сразу) | merged `ec711f2df` |
 | `scenario` | сценарий `perf-stress` без рук: обе роли, параметры `-e2eArg`, артефакты | merged `fa83395aa` |
 | `controller-free-launch` | Test-сборки Quest стартуют без пробуждения контроллеров: рук в манифесте (Test only) | merged `3cabcc1ab` |
-| `arena-layout` | раскладка кукол «внутри арены», корни кукол не следуют за игроком | шлем GREEN 14/14, 9/9 кукол; EditMode 75/75; принят пользователем по анализу |
-| `view-tour` | обход точек обзора, метрики по точкам; после этапа `e2e-views` launch-infra | planned |
+| `arena-layout` | раскладка кукол «внутри арены», корни кукол не следуют за игроком | merged `2a5ed8f07` |
+| `view-tour` | обход точек обзора (`views=<файл>`), метрики по точкам | шлем GREEN, принят пользователем 2026-10-14; тесты EditMode |
 | `docs` | раздел в `Docs/perf-stress-test.md`; порядок с legs-ik/`quest-perf` (тот же файл) — согласовать | planned |
 
 ## Зависимости
@@ -33,6 +33,8 @@
 
 ## Сделано
 
+- `view-tour`: 8 точек Lobby × (база, куклы), 33/33 фаз, 16/16 переносов, GREEN (`Tools/e2e/results/20261014-022853-quest-perf-stress`);
+  база Lobby не в бюджете 7 мс — худшая точка 10,83 мс (таблица `reports/view-tour-20261014.md`, level-design 6467).
 - `arena-layout`: куклы по полу арены Lobby (9/9, 7 запретных зон, отступ 1 м), корни закреплены;
   `Tools/e2e/results/20261013-185319-quest-perf-stress`; визуально в шлеме не проверялось — принято по прогону и логу.
   Инструмент разбивки GPU — `Tools/Perf/quest_gpu_breakdown.py`.
@@ -45,5 +47,6 @@
 
 ## Дальше
 
-- `controller-free-launch` (решение пользователя 2026-10-12): проект — Details.md «Этап `controller-free-launch`».
-- `view-tour` (следующий), затем `docs`. `prod-vs-test` снят: бюджеты — по Test-сборке (решение пользователя 2026-10-13).
+- `docs` (следующий); `Tools/Perf/quest_gpu_breakdown.py --phases` для weapon-system — отдельным этапом.
+- Отдельные checkout сборок (Prod, Quest-Test) — `quest-perf-pipeline/build-checkouts` launch-infra (6455), от нас замер времени.
+- `prod-vs-test` снят: бюджеты — по Test-сборке (решение пользователя 2026-10-13).

@@ -49,6 +49,23 @@ namespace VrBattlegrounds.DevTools.StressTest
         /// <summary>Измеряемая фаза раскладки «арена» (<see cref="StressTestConfig.arenaLayout"/>).</summary>
         public const string ArenaPhaseName = "куклы: арена";
 
+        /// <summary>Хвост имени неизмеряемой фазы успокоения перед измеряемой фазой с тем же началом.</summary>
+        public const string SettleSuffix = "~успокоение";
+
+        /// <summary>
+        /// Измеряемая фаза обхода точек обзора по умолчанию, секунды (параметр <c>phase_s</c> не задан): точек
+        /// много, а одной фазе на точку хватает 20 с для p50/p95 кадра и GPU.
+        /// </summary>
+        public const float ViewTourPhaseSeconds = 20f;
+
+        /// <summary>Начало имён фаз обхода без кукол и с куклами: «база: &lt;точка&gt;», «куклы: &lt;точка&gt;».</summary>
+        public const string ViewBasePrefix    = "база: ";
+        public const string ViewPuppetsPrefix = "куклы: ";
+
+        /// <summary>Имя измеряемой фазы точки обзора; её успокоение — то же имя плюс <see cref="SettleSuffix"/>.</summary>
+        public static string ViewPhaseName(string view, bool withPuppets) =>
+            (withPuppets ? ViewPuppetsPrefix : ViewBasePrefix) + view;
+
         public static StressTestConfig BuildConfig(PerfRunMode mode, int puppetSkin, int puppetCount)
         {
             var config = new StressTestConfig
@@ -75,8 +92,21 @@ namespace VrBattlegrounds.DevTools.StressTest
             var phases = new List<StressTestPlannedPhase>
             {
                 new StressTestPlannedPhase("разгон", config.warmupSeconds, false),
-                new StressTestPlannedPhase("база", config.phaseSeconds, true),
             };
+
+            // Обход точек обзора: вместо «базы» — точки без кукол, затем спавн кукол на арене и точки с ними.
+            // Сервер принимает обход только с раскладкой «арена» (StressTestServer.HandleRequest).
+            if (config.HasViewTour)
+            {
+                foreach (string view in config.viewNames) AddPair(phases, ViewPhaseName(view, withPuppets: false), config);
+                if (config.puppetCount > 0)
+                {
+                    foreach (string view in config.viewNames) AddPair(phases, ViewPhaseName(view, withPuppets: true), config);
+                }
+                return phases;
+            }
+
+            phases.Add(new StressTestPlannedPhase("база", config.phaseSeconds, true));
 
             if (config.perSkinPhases)
             {
@@ -137,7 +167,7 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         private static void AddPair(List<StressTestPlannedPhase> phases, string name, StressTestConfig config)
         {
-            phases.Add(new StressTestPlannedPhase(name + "~успокоение", config.settleSeconds, false));
+            phases.Add(new StressTestPlannedPhase(name + SettleSuffix, config.settleSeconds, false));
             phases.Add(new StressTestPlannedPhase(name, config.phaseSeconds, true));
         }
     }

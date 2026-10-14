@@ -47,6 +47,16 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// </para>
     ///
     /// <para>
+    /// <b>Обход точек обзора</b> (<c>-e2eArg views=&lt;файл&gt;</c>, дирижёр <c>-ViewsFile</c> кладёт копию обеим сторонам):
+    /// обе роли читают файл через <see cref="E2EViews"/>; имена точек едут в конфиге запроса, сервер получает точки пола
+    /// (<see cref="StressTestServer.ProvideViewTour"/>) — запретные зоны раскладки «арена» и сверку имён с клиентом. План —
+    /// <see cref="StressTestPlan.Phases"/>: «база: &lt;точка&gt;» по всем точкам, затем «куклы: &lt;точка&gt;». Клиент в начале
+    /// каждой «~успокоение» переносит аватар (<see cref="E2EViews.GoTo"/>, прокрутка вручную в цикле прогона) и отдаёт
+    /// позу камеры в отчёт фазы (<see cref="StressTestClientSession.SetPhaseView"/>, поле <c>view</c> в summary.json).
+    /// Проверка <see cref="CheckViews"/>: каждый перенос выполнен до начала замера фазы.
+    /// </para>
+    ///
+    /// <para>
     /// FFR, уровни CPU/GPU и настройки шлема сценарий не трогает. Поза лежащего шлема статична — это условие прогона
     /// (<c>pose=static</c> в summary вердикта).
     /// </para>
@@ -66,6 +76,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckCompleted = "все фазы плана пройдены, прогон не прерван";
         private const string CheckReport    = "отчёт записан (summary.json и perf.log)";
         private const string CheckFocus     = "приложение в фокусе весь прогон";
+        private const string CheckViews     = "точки обзора пройдены";
 
         private const string CheckServerJoined    = "клиент подключился к серверу";
         private const string CheckServerStarted   = "прогон начат на сервере";
@@ -114,12 +125,30 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// Ложь — прогон запускать нельзя, summary уже заполнен.
         /// </summary>
         private static bool Prepare(E2EContext context, E2EResult result, out PerfRunMode mode, out StressTestConfig config,
-                                    out int plannedPhases, out float planSeconds)
+                                    out IReadOnlyList<E2EViewPoint> views, out int plannedPhases, out float planSeconds)
         {
             int skinCount = StressTestServer.CollectAvatarPrefabs().Count;
             string error = StressTestArgs.Parse(context.Args, skinCount, out mode, out config);
             plannedPhases = 0;
             planSeconds = 0f;
+            views = null;
+
+            // Точки обзора: параметр views разрешил StressTestArgs, сам файл читает хелпер каркаса e2e.
+            if (error == null && !E2EViews.TryLoadFromContext(context, out views, out string viewsError) && viewsError != null)
+                error = $"{StressTestArgs.KeyViews}: {viewsError}";
+            if (error == null && views != null)
+            {
+                if (views.Count > StressTestConfig.MaxViews)
+                {
+                    error = $"{StressTestArgs.KeyViews}: точек {views.Count}, наибольшее {StressTestConfig.MaxViews}";
+                }
+                else
+                {
+                    var names = new string[views.Count];
+                    for (int i = 0; i < views.Count; i++) names[i] = views[i].Name;
+                    config.viewNames = names;
+                }
+            }
 
             if (error != null)
             {
@@ -209,8 +238,12 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий perf-stress");
             float deadline = Now + context.Timeout - TimeoutMargin;
 
-            if (!Prepare(context, result, out PerfRunMode mode, out StressTestConfig config, out int plannedPhases, out float planSeconds))
+            if (!Prepare(context, result, out PerfRunMode mode, out StressTestConfig config, out IReadOnlyList<E2EViewPoint> views,
+                         out int plannedPhases, out float planSeconds))
                 yield break;
+
+            ViewTour tour = views != null ? new ViewTour(views, config) : null;
+            if (tour != null) result.Declare(CheckViews);
 
             string conditions = Conditions(mode, config);
             // Прогон обязан кончиться за FinishReserve + ServerLead до своего срока — см. ServerLead.
@@ -292,7 +325,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             result.Set(CheckStart, true, $"попыток {attempts}; каталог {runDirectory}");
             GameLog.Perf.Info($"[E2E perf-stress] Прогон начат: {runDirectory}.");
 
-            // ── прогон: ждём конца, фокус — каждый кадр ──
+            // ── прогон: ждём конца, фокус — каждый кадр, перенос в точку обзора — в начале её «~успокоение» ──
             float runStarted = Now;
             var focus = new FocusWatch();
             focus.Begin();
@@ -301,6 +334,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 while (StressTestClientSession.IsRunning && Now < deadline)
                 {
                     focus.Sample();
+                    tour?.Step(StressTestClientSession.Current);
                     yield return null;
                 }
             }
@@ -325,6 +359,13 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             bool written = ReportWritten(runDirectory, out string reportDetail);
             result.Set(CheckReport, written, reportDetail);
             result.Set(CheckFocus, focus.Losses == 0, focus.Describe());
+            if (tour != null)
+            {
+                bool toured = tour.AllPassed(out string tourDetail);
+                result.Set(CheckViews, toured, tourDetail);
+                conditions += "; " + tour.Brief();
+                GameLog.Perf.Info($"[E2E perf-stress] Клиент: точки обзора — {tourDetail}");
+            }
 
             if (!string.IsNullOrEmpty(runDirectory) && Directory.Exists(runDirectory))
                 result.AddArtifact(runDirectory);
@@ -450,6 +491,161 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 (System.Diagnostics.Stopwatch.GetTimestamp() - since) / (double)System.Diagnostics.Stopwatch.Frequency;
         }
 
+        /// <summary>
+        /// Обход точек обзора на клиенте: следит за фазами сессии (<see cref="StressTestClientSession.PhaseNumber"/>), на
+        /// старте «~успокоение» точки запускает <see cref="E2EViews.GoTo"/> и прокручивает его по кадру из цикла прогона —
+        /// хелпер отдаёт только <c>yield return null</c>, вложенной корутины нет. Итог переноса — в отчёт измеряемой фазы
+        /// через <see cref="StressTestClientSession.SetPhaseView"/>; писатель отчёта — сессия.
+        /// </summary>
+        private sealed class ViewTour
+        {
+            private struct Target
+            {
+                public E2EViewPoint Point;
+                public string MeasuredPhase;
+                public bool WithPuppets;
+            }
+
+            private sealed class Record
+            {
+                public Target Target;
+                public PerfViewReport View;
+            }
+
+            private readonly Dictionary<string, Target> _bySettlePhase = new Dictionary<string, Target>(StringComparer.Ordinal);
+            private readonly List<Record> _records = new List<Record>();
+            private readonly IReadOnlyList<E2EViewPoint> _views;
+            private readonly bool _withPuppets;
+            private readonly int _expected;
+
+            private int _lastPhase;
+            private IEnumerator _goTo;
+            private E2EViewOutcome _outcome;
+            private Target _target;
+            private int _targetPhase;
+
+            public ViewTour(IReadOnlyList<E2EViewPoint> views, StressTestConfig config)
+            {
+                _views = views;
+                _withPuppets = config.puppetCount > 0;
+                AddTargets(withPuppets: false);
+                if (_withPuppets) AddTargets(withPuppets: true);
+                _expected = _withPuppets ? views.Count * 2 : views.Count;
+            }
+
+            private void AddTargets(bool withPuppets)
+            {
+                foreach (E2EViewPoint point in _views)
+                {
+                    string measured = StressTestPlan.ViewPhaseName(point.Name, withPuppets);
+                    _bySettlePhase[measured + StressTestPlan.SettleSuffix] =
+                        new Target { Point = point, MeasuredPhase = measured, WithPuppets = withPuppets };
+                }
+            }
+
+            /// <summary>Кадр прогона: новая фаза — возможно, начало переноса; идущий перенос — ещё шаг.</summary>
+            public void Step(StressTestClientSession session)
+            {
+                if (session == null) return;
+
+                if (session.PhaseNumber != _lastPhase)
+                {
+                    _lastPhase = session.PhaseNumber;
+                    if (session.PhaseName != null && _bySettlePhase.TryGetValue(session.PhaseName, out Target target))
+                    {
+                        // Прошлый перенос не кончился ни за своё успокоение, ни за замер — точка не пройдена.
+                        if (_goTo != null) Complete(session, "перенос не завершился до следующей точки");
+                        _target = target;
+                        _targetPhase = session.PhaseNumber;
+                        _outcome = new E2EViewOutcome();
+                        _goTo = E2EViews.GoTo(target.Point, _outcome);
+                    }
+                }
+
+                if (_goTo != null && !_goTo.MoveNext())
+                {
+                    Complete(session, session.PhaseNumber != _targetPhase
+                        ? "перенос закончился после начала замера фазы — успокоение короче переноса"
+                        : null);
+                }
+            }
+
+            private void Complete(StressTestClientSession session, string lateError)
+            {
+                E2EViewOutcome o = _outcome;
+                bool ok = o.Succeeded && lateError == null;
+                string error = ok ? "" : lateError ?? (string.IsNullOrEmpty(o.Error) ? "перенос не выполнен" : o.Error);
+                var view = new PerfViewReport
+                {
+                    name            = _target.Point.Name,
+                    ok              = ok,
+                    error           = error,
+                    camera          = o.CameraPosition,
+                    yaw             = o.CameraYaw,
+                    pitch           = o.CameraPitch,
+                    roll            = o.CameraRoll,
+                    eyeHeight       = o.EyeHeight,
+                    deviationXZ     = o.DeviationXZ,
+                    deviationYaw    = o.DeviationYaw,
+                    deviationFloorY = o.DeviationFloorY,
+                };
+                _records.Add(new Record { Target = _target, View = view });
+                session.SetPhaseView(_target.MeasuredPhase, view);
+                _goTo = null;
+                _outcome = null;
+            }
+
+            /// <summary>Все переносы плана выполнены вовремя. Деталь — по точке: без кукол и с куклами, высота глаз, тангаж.</summary>
+            public bool AllPassed(out string detail)
+            {
+                int ok = 0;
+                foreach (Record r in _records) if (r.View.ok) ok++;
+
+                var parts = new List<string>(_views.Count);
+                foreach (E2EViewPoint point in _views)
+                {
+                    string line = point.Name + ": " + Describe(point.Name, withPuppets: false);
+                    if (_withPuppets) line += ", " + Describe(point.Name, withPuppets: true);
+                    parts.Add(line);
+                }
+
+                detail = $"переносов {ok} из {_expected} по плану; " + string.Join("; ", parts);
+                return ok == _expected && _records.Count == _expected;
+            }
+
+            private string Describe(string view, bool withPuppets)
+            {
+                string tag = withPuppets ? "куклы" : "база";
+                foreach (Record r in _records)
+                {
+                    if (r.Target.Point.Name != view || r.Target.WithPuppets != withPuppets) continue;
+                    return r.View.ok
+                        ? string.Format(CultureInfo.InvariantCulture, "{0} ok, глаза {1:F2} м, тангаж {2:F1}°", tag, r.View.eyeHeight, r.View.pitch)
+                        : $"{tag} ОШИБКА: {r.View.error}";
+                }
+                return tag + " не начат";
+            }
+
+            /// <summary>Коротко для условий прогона: сколько переносов и разброс высоты глаз и тангажа.</summary>
+            public string Brief()
+            {
+                int ok = 0;
+                float minEye = float.MaxValue, maxEye = float.MinValue, minPitch = float.MaxValue, maxPitch = float.MinValue;
+                foreach (Record r in _records)
+                {
+                    if (!r.View.ok) continue;
+                    ok++;
+                    minEye   = Mathf.Min(minEye, r.View.eyeHeight);
+                    maxEye   = Mathf.Max(maxEye, r.View.eyeHeight);
+                    minPitch = Mathf.Min(minPitch, r.View.pitch);
+                    maxPitch = Mathf.Max(maxPitch, r.View.pitch);
+                }
+                if (ok == 0) return $"обход: переносов 0 из {_expected}";
+                return string.Format(CultureInfo.InvariantCulture,
+                    "обход: переносов {0} из {1}, глаза {2:F2}..{3:F2} м, тангаж {4:F1}..{5:F1}°", ok, _expected, minEye, maxEye, minPitch, maxPitch);
+            }
+        }
+
         // ── Сервер ──────────────────────────────────────────────────────────
 
         private IEnumerator RunServer(E2EContext context, E2EResult result)
@@ -459,8 +655,26 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий perf-stress");
             float deadline = Now + context.Timeout - TimeoutMargin;
 
-            if (!Prepare(context, result, out PerfRunMode mode, out StressTestConfig config, out int plannedPhases, out float planSeconds))
+            if (!Prepare(context, result, out PerfRunMode mode, out StressTestConfig config, out IReadOnlyList<E2EViewPoint> views,
+                         out int plannedPhases, out float planSeconds))
                 yield break;
+
+            // Точки пола — серверу стресс-теста: запретные зоны раскладки и сверка имён с запросом клиента.
+            if (views != null)
+            {
+                var names = new List<string>(views.Count);
+                var floors = new List<Vector2>(views.Count);
+                foreach (E2EViewPoint view in views)
+                {
+                    names.Add(view.Name);
+                    floors.Add(new Vector2(view.Floor.x, view.Floor.z));
+                }
+                StressTestServer.ProvideViewTour(names, floors);
+            }
+            else
+            {
+                StressTestServer.ClearViewTour();
+            }
 
             string conditions = Conditions(mode, config);
             float startDeadline = deadline - planSeconds - FinishReserve;

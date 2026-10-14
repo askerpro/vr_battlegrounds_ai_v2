@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using VrBattlegrounds.Core;
@@ -60,6 +61,8 @@ namespace VrBattlegrounds.DevTools.StressTest
         private float  _nextOverlayAt;
         private bool   _finished;
         private int    _phaseNumber;
+        // Точки обзора измеряемых фаз, ещё не закрытых: имя фазы → снимок (SetPhaseView).
+        private readonly Dictionary<string, PerfViewReport> _pendingViews = new Dictionary<string, PerfViewReport>();
 
         // ── Сообщения сервера ───────────────────────────────────────────────
 
@@ -164,7 +167,42 @@ namespace VrBattlegrounds.DevTools.StressTest
             _phaseOpen = false;
 
             PerfPhaseReport phase = _recorder.EndPhase();
-            if (phase != null) _report.phases.Add(phase);
+            if (phase == null) return;
+
+            if (_pendingViews.TryGetValue(phase.name, out PerfViewReport view))
+            {
+                phase.view = view;
+                _pendingViews.Remove(phase.name);
+            }
+            _report.phases.Add(phase);
+        }
+
+        /// <summary>
+        /// Точка обзора измеряемой фазы <paramref name="phaseName"/> и фактическая поза камеры — в отчёт этой фазы
+        /// (<c>summary.json</c>, поле <c>view</c>) и строкой в perf.log. Зовёт наблюдатель, который переносит аватар
+        /// (сценарий e2e обхода), обычно в её «~успокоение»; фаза уже закрыта — пишется в её отчёт сразу. Отчёт
+        /// по-прежнему пишет только эта сессия.
+        /// </summary>
+        public void SetPhaseView(string phaseName, PerfViewReport view)
+        {
+            if (_finished || string.IsNullOrEmpty(phaseName) || view == null) return;
+
+            _recorder.WriteLine(view.ok
+                ? string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "точка обзора «{0}» для фазы «{1}»: камера ({2:F2}, {3:F2}, {4:F2}), курс {5:F0}°, тангаж {6:F1}°, " +
+                    "глаза {7:F2} м, отклонение {8:F2} м",
+                    view.name, phaseName, view.camera.x, view.camera.y, view.camera.z, view.yaw, view.pitch,
+                    view.eyeHeight, view.deviationXZ)
+                : $"точка обзора «{view.name}» для фазы «{phaseName}»: перенос не удался — {view.error}",
+                warning: !view.ok);
+
+            foreach (PerfPhaseReport closed in _report.phases)
+            {
+                if (closed.name != phaseName) continue;
+                closed.view = view;
+                return;
+            }
+            _pendingViews[phaseName] = view;
         }
 
         private void Update()

@@ -52,8 +52,9 @@
   16/16 поз точные (XZ ≤ 2,39e-7 м, yaw/floor = 0). Согласовать допуски до изменения автоматического вердикта;
   не считать исторический GREEN проверкой отрицательного случая. Подробности: task reports/view-tour-review-20261014-codex.md.
 - `scene-detail` 6813 → ревью 6875: Quality/140 meta/event-driven source проверены на стабильном snapshot
-  cc485d9bd + diff 895a39b7a72e…; кодовых блокеров нет. Нужен export 112 protected GUID того же snapshot
-  для независимой проверки пересечения. Apply имеет burst allocations; runtime/UI/Quest бюджеты открыты.
+  cc485d9bd + diff 895a39b7a72e…; кодовых блокеров нет. Export/proof7186 проверен, gap112/140 закрыт
+  подтверждением7220: intersection[], 112meta byte-identicalHEAD, 147stageinputs прежние, drift0.
+  Apply имеет burst allocations; runtime/UI/Quest бюджеты открыты. Это static snapshot, не grant/runtime PASS.
 - Карта owns/watch_paths после rebase на origin/dev 97a320c88 сверена до 5cfc55248: diff исходников пуст;
   reviewed_sha обновлён. Это не новое подтверждение Unity/Quest.
 - network-sync-hardening7005 → disposition7025: generated prefilter delta3полей PC.asset в Rb11d19aa57
@@ -66,3 +67,6 @@
 - network7148 → design review7191: root-event envelope+20B/fanout, lookupO(K), existingdecode2/1 и
   allocation scope сверены. Метод existing A/B согласован с уточнениями, eventrates отсутствуют;
   нет нового гейта/бюджета/perf PASS/разрешения реализации. Humanwrittenreview уnetwork/user.
+- Policy7160 учтена: infra issue hub+проверенный nativeCodex без вопросов;7008 дополнительно уведомлён.
+  Recovery7202 восстанавливаетstartup, неfix testresult. Ответ7216:634/654 UNKNOWN, неreplay/clear_stuck;
+  view-tour ждёт durable start receipt/command_id/job_id и полного terminalresult черезreload.

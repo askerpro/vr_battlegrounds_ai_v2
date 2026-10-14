@@ -33,7 +33,8 @@
 
 `scene-detail`, запрос 6813 → ответ 6875: статических блокеров не найдено; Quality содержит только девять
 переименований, 140 texture-meta меняют только имя группы. Snapshot HEAD cc485d9bd, diff SHA256 895a39b7a72e…,
-155 файлов без drift. Для ACK protected-инварианта запрошен export 112 GUID; runtime/UI/Quest приёмка открыта.
+155 файлов без drift. Gap protected-инварианта закрыт дополнительной проверкой7186 → подтверждение7220;
+runtime/UI/Quest приёмка открыта.
 `Apply` событийный, но выделяет коллекции при применении правил. Отчёт: reports/scene-detail-6813/source-review.md.
 
 `network-sync-hardening`, запрос7005 → owner disposition7025: три derived shader-prefilter поля
@@ -57,3 +58,9 @@ CPU/traffic-модель и существующий метод A/B соглас
 для normal/dead-owner/writer-growth/diagnostics разделены. Observed event rates в draft отсутствуют,
 численных новых бюджетов, perf PASS и разрешения реализации нет. Human written review остаётся у owner/user.
 Отчёт: reports/network-7148/design-perf-review.md (draft8709a407…, source snapshotfb8d736c…, drift0).
+
+`scene-detail`, evidence7186 → подтверждение7220: 252 unique GUID/path =112 protected +140 changed,
+intersection[], duplicates0; все112 meta byte-identical HEADcc485d9bd, все140 меняют только group name.
+259 physical hashes совпали proof7e2f34d70c…, drift0; 147 stage inputs совпадают с первоначальным review,
+whole diff изменён task-docs, целиком не принимается. Classification из authoring export;
+собственного Unity collector/immutable grant/runtime приёмки нет. Отчёт: reports/scene-detail-7186/protected-review.md.

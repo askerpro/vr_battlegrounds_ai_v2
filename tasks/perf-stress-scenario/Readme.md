@@ -26,7 +26,9 @@
 ## Следующий шаг (конкретно)
 
 1. `view-tour`: после диагностики повторного MCP-сбоя (infra_issue7008, продолжение6790/6940)
-   подготовить новый ограниченный пакет по подтверждённому маршруту. Старый исход634 не восстановлен:
+   дождаться исправления receipt/result инфраструктуры (ответ7216), затем подготовить новый ограниченный
+   пакет по подтверждённому маршруту. Recovery664/7202 восстановил startup, не менял run_tests/TestJobManager;
+   старые634/654 UNKNOWN, повтор ради одного startup не рекомендован. Старый исход634 не восстановлен:
    ни `job_id`, ни подтверждённого результата не получено. Диагностика 645 завершена: current job пуст,
    среди четырёх сохранённых jobs своего запуска нет; старый итог остаётся неизвестным.
    Fetch/rebase на `origin/dev` выполнен 2026-10-14 (97a320c88, diff собственного кода после rebase пуст).
@@ -62,6 +64,13 @@
   disconnected до job_id. После вызова guard/native state idle, currentJob=null/lastRun=null.
   Finish/receive DONE, R3efdf8f04, paths0/unexpected0; admission возвращён в planned с BLOCKED reason.
   Infra_issue7008; полные ответы reports/validation-20261014-654/. Retry/replay/clear_stuck не применялись.
+- 2026-10-15: пользовательская policy7160 подтверждена в canonical inbox и прямом user turn
+  сопровождающего: infra issue сразу hub + проверенный Codex channel, без вопроса пользователю.
+  Открытый7008 дополнительно уведомлён через native channel, собственный маршрут обновлён(epoch7).
+  Recovery7202 завершён сопровождающим/owner; 7216 отдельно сохраняет test-result blocker:
+  неизвестные старые исходы, lost-start receipt и потеря Result после reload не исправлены recovery.
+  Новых Unity-заявок/мутаций нет. Следующий шаг инфраструктуры — durable command_id/job_id/start receipt
+  и полный terminal result, затем независимая проверка DevTools. Gameplay приёмка не меняется.
 - Хаб сверён: четыре первых этапа merged; `view-tour` возвращён в planned после неуспешного пакета
   проверки (в причине stop — MCP-блокер); `gpu-tool-phases` и `docs` planned. Это не отменяет приёмку runtime.
 - Inbox performance обработан: новых адресных сообщений нет. Прежние маршруты Claude очищены;

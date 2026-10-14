@@ -1,0 +1,114 @@
+using System;
+using System.Reflection;
+using System.Collections.Generic;
+using MCPForUnity.Editor.Services;
+using UnityEditor.TestTools.TestRunner.Api;
+
+internal static class TestJobTests
+{
+    private static int passed, failed;
+    private static void Require(bool ok, string message) { if (!ok) throw new Exception(message); }
+    private static object Field(object value, string name) => value.GetType().GetProperty(name).GetValue(value);
+    private static void Reset()
+    {
+        if (TestJobManager.HasRunningJob) TestJobManager.ClearStuckJob();
+        UnityEditor.SessionState.Clear();
+        UnityEditor.EditorApplication.isUpdating = false;
+        EditorStateCache.Compiling = false;
+        TestRunStatus.IsRunning = false;
+        TestRunnerApi.Active = false;
+        TestRunnerApi.ThrowOnQuery = false;
+        MCPServiceLocator.Tests = new TestService();
+    }
+    private static void Test(string name, Action body)
+    {
+        Reset();
+        try { body(); passed++; Console.WriteLine("PASS " + name); }
+        catch (Exception error) { failed++; Console.WriteLine("FAIL " + name + ": " + error.Message); }
+    }
+    private static TestJob Start(long ageMs = 60_000, long initTimeout = 0)
+    {
+        var id = TestJobManager.StartJob(TestMode.EditMode, initTimeoutMs: initTimeout);
+        var job = TestJobManager.GetJob(id);
+        // Возраст реального production job: без ожидания минуты и без копии timeout-алгоритма.
+        job.StartedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - ageMs;
+        return job;
+    }
+    private static void RequireAttached(TestJob job)
+    {
+        var observed = TestJobManager.GetJob(job.JobId);
+        Require(observed.Status == TestJobStatus.Running, "живой native run помечен failed");
+        Require(TestJobManager.CurrentJobId == job.JobId, "потеряна привязка поздних callbacks");
+        Require(TestRunStatus.IsRunning, "ложно освобождён busy-флаг тестов");
+        Require(observed.Error == null && observed.FinishedUnixMs == null, "появился ложный terminal receipt");
+    }
+    private static void Complete(TestJob job, TestRunResult result)
+    {
+        TestJobManager.OnRunFinished();
+        TestRunStatus.MarkFinished();
+        TestRunnerApi.Active = false;
+        TestJobManager.FinalizeCurrentJobFromRunFinished(result);
+    }
+    private static int Main()
+    {
+#if TEST_NATIVE_MISSING || TEST_NATIVE_WRONG_TYPE
+        Test("неизвестный native API сохраняет initialization", () => RequireAttached(Start()));
+#else
+        Test("prebuild дольше 15с сохраняет job и поздний полный результат", () =>
+        {
+            var job = Start(); RequireAttached(job);
+            TestJobManager.OnRunStarted(2);
+            TestJobManager.OnLeafTestFinished("late.one", false, null);
+            TestJobManager.OnLeafTestFinished("late.two", false, null);
+            var result = new TestRunResult(); Complete(job, result);
+            var terminal = TestJobManager.GetJob(job.JobId);
+            Require(terminal.Status == TestJobStatus.Succeeded && terminal.CompletedTests == 2, "поздние callbacks потеряны");
+            Require(ReferenceEquals(Field(TestJobManager.ToSerializable(terminal, false, false), "result"), result.Payload), "полный поздний Result потерян");
+        });
+        Test("ошибка native query консервативно сохраняет job", () =>
+        {
+            var job = Start(); TestRunnerApi.ThrowOnQuery = true; RequireAttached(job);
+        });
+        Test("подтверждённо inactive initialization сохраняет timeout", () =>
+        {
+            MCPServiceLocator.Tests.StartNative = false; var job = Start();
+            var observed = TestJobManager.GetJob(job.JobId);
+            Require(observed.Status == TestJobStatus.Failed && observed.Error.Contains("initialize"), "timeout inactive job исчез");
+            Require(!TestJobManager.HasRunningJob && !TestRunStatus.IsRunning, "inactive job удерживает очередь");
+        });
+        Test("explicit initialization timeout соблюдён", () =>
+        {
+            MCPServiceLocator.Tests.StartNative = false; var job = Start(60_000, 120_000); RequireAttached(job);
+            job.StartedUnixMs -= 120_000;
+            Require(TestJobManager.GetJob(job.JobId).Status == TestJobStatus.Failed, "explicit timeout игнорируется");
+        });
+        Test("compilation не вызывает initialization failure", () =>
+        {
+            MCPServiceLocator.Tests.StartNative = false; var job = Start(); EditorStateCache.Compiling = true; RequireAttached(job);
+        });
+        Test("import не вызывает initialization failure", () =>
+        {
+            MCPServiceLocator.Tests.StartNative = false; var job = Start(); UnityEditor.EditorApplication.isUpdating = true; RequireAttached(job);
+        });
+        Test("failed test run возвращает полный Result и include flags", () =>
+        {
+            var job = Start(0); TestJobManager.OnRunStarted(1);
+            TestJobManager.OnLeafTestFinished("failure", true, "assertion");
+            var result = new TestRunResult { Failed = 1 }; Complete(job, result);
+            var terminal = TestJobManager.GetJob(job.JobId);
+            var response = TestJobManager.ToSerializable(terminal, true, true);
+            Require(terminal.Status == TestJobStatus.Failed && terminal.Error == null, "ошибка теста смешана с infrastructure error");
+            Require(ReferenceEquals(Field(response, "result"), result.Payload), "failed Result вырезан из ответа");
+            Require(result.Details && result.FailedTests, "include flags не переданы сериализатору результата");
+        });
+        Test("infrastructure failure без Result остаётся result=null", () =>
+        {
+            MCPServiceLocator.Tests.StartNative = false; var job = Start();
+            var response = TestJobManager.ToSerializable(TestJobManager.GetJob(job.JobId), true, true);
+            Require(Field(response, "result") == null && Field(response, "error") != null, "создан выдуманный terminal Result");
+        });
+#endif
+        Console.WriteLine($"RESULT passed={passed} failed={failed}");
+        return failed == 0 ? 0 : 1;
+    }
+}

@@ -92,11 +92,22 @@ and user communication. Keep detailed execution traces in task artifacts, outsid
   Reminders about an earlier unanswered question do not create new dialogs.
 - On a wake-up (background command finished, subagent notification) with nothing to report,
   answer with one short line or nothing.
-- Report worker, broker/proxy, coordination-hook and agent-infra issues to the hub:
-  address task agent-coordination-protocol, kind infra_issue, with an explicit
-  'for the worker and agent-infra maintainer' label, symptom/impact, reproduction,
-  ticket/event/commit IDs and evidence links. Then notify through the native channel
-  when available. Do not leave the report only in chat or self-repair shared infrastructure.
+- При проблеме agent-infra, worker, broker/proxy, coordination hooks или MCP сразу
+  сообщи сопровождающему: canonical inbox, адрес agent-coordination-protocol,
+  kind infra_issue, с пометкой «Для сопровождающего worker и agent-infra», затем
+  подтверждённый native канал с task-id/event_id. Пользователь прямо разрешил эти
+  уведомления; отдельно спрашивать его не нужно. Сохрани worktree, task/stage,
+  ticket, request/job IDs, runtime/VERSION, симптом и redacted error/evidence.
+  Если канал недоступен, сообщи об этом человеку; не оставляй отчёт только в чате.
+- Агенты не чинят и не обходят инфраструктуру самостоятельно, включая локальные
+  инфраструктурные launchers/config, маршрутизацию и состояние занятого worker.
+  Ремонт, recovery и deployment выполняет только явно назначенный сопровождающий.
+  Собственная аренда worker не является назначением на обслуживание. Разрешены
+  read-only status/log/help и работа по собственной разрешённой игровой или SDK-задаче,
+  включая исправления и сборки в своём build checkout. Продолжай независимую работу.
+  При неизвестном исходе Unity-операции не делай retry/replay, clear_stuck или recover
+  и не освобождай активную операцию через finish. После подтверждённого завершения
+  своего подготовленного пакета и cleanup сразу выполни штатный finish.
 - At session start/resume, the principal agent refreshes its own native route in the hub
   from a fresh native listing, or clears it when this client cannot address peer sessions.
   Before notifying another task, resolve its candidate and confirm both endpoints in a
@@ -149,6 +160,13 @@ Detailed operating commands: [editor broker](F:/UnityProjects/agent-infra/docs/e
 аудируются; expiry возвращает обычный режим. Это не передача чужой области и не
 отмена аренды worker, контрактов, ACK или публикации через брокер. Команды и порядок:
 [аварийный режим с аудитом](.agents/rules/agent_coordination.md#аварийный-режим-pretooluse-с-аудитом).
+
+Решение пользователя от 2026-10-15: прежнее общее разрешение на локальный
+emergency-hook не заменяет явного назначения на инфраструктурный ремонт и не
+разрешает обход infra-блокера без такого назначения. Оно не даёт доступа к общему
+хабу, worker или MCP для самостоятельного ремонта. Явные разрешения на собственную
+игровую/SDK-задачу и build-исправления сохраняются; общий mode off также не назначает
+агента сопровождающим.
 
 
 ## Временный общий mode off

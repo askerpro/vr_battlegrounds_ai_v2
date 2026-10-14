@@ -1,11 +1,11 @@
 {
   "task_id": "agent-coordination-protocol",
   "owner": "coordination-maintenance",
-  "client": "claude",
+  "client": "codex",
   "worktree": "F:/CodexWorktrees/agent-coordination-protocol/Vr_Battlegrounds_ai",
   "base_sha": "edcb79e84eb72443a63fc4de7d7c66dec0bd8fe2",
   "doc_path": "tasks/agent-coordination-protocol/Readme.md",
-  "title": "Внедрение протокола координации",
+  "title": "Р’РЅРµРґСЂРµРЅРёРµ РїСЂРѕС‚РѕРєРѕР»Р° РєРѕРѕСЂРґРёРЅР°С†РёРё",
   "stages": [
     {
       "id": "rollout",
@@ -412,6 +412,30 @@
       "writes": [
         "tasks/agent-coordination-protocol/**",
         "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Materials/**"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "human-questions-wait-inbox",
+          "state": "merged"
+        },
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "mcp-test-job-lifecycle",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "mcp-test-job-lifecycle",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "Tools/UnityMcp/**",
+        "Assets/Editor/VR_Battlegrounds/AgentInfraTestJobLifecycleProbe/**",
+        "AGENTS.md",
+        ".agents/rules/agent_coordination.md",
+        ".agents/rules/unity_mcp.md"
       ],
       "after": [
         {

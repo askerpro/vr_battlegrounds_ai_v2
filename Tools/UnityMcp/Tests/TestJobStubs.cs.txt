@@ -1,0 +1,97 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+// Только границы Unity. Автомат состояний взят из настоящего TestJobManager.cs через Compile Include.
+namespace UnityEditor
+{
+    public static class EditorApplication
+    {
+        public static bool isUpdating;
+        public static Action delayCall;
+    }
+    public static class SessionState
+    {
+        private static readonly Dictionary<string, string> Values = new();
+        public static string GetString(string key, string fallback) => Values.TryGetValue(key, out var value) ? value : fallback;
+        public static void SetString(string key, string value) => Values[key] = value;
+        public static void Clear() => Values.Clear();
+    }
+}
+namespace UnityEditorInternal
+{
+    public static class InternalEditorUtility { public static bool isApplicationActive = true; }
+}
+namespace UnityEditor.TestTools.TestRunner.Api
+{
+    public enum TestMode { EditMode, PlayMode }
+    public class TestRunnerApi
+    {
+        public static bool Active;
+        public static bool ThrowOnQuery;
+#if !TEST_NATIVE_MISSING
+#if TEST_NATIVE_WRONG_TYPE
+        internal static string IsRunActive() => "неизвестный API";
+#else
+        internal static bool IsRunActive()
+        {
+            if (ThrowOnQuery) throw new InvalidOperationException("недоступна граница Unity");
+            return Active;
+        }
+#endif
+#endif
+    }
+}
+namespace Newtonsoft.Json
+{
+    public static class JsonConvert
+    {
+        public static string SerializeObject(object value) => System.Text.Json.JsonSerializer.Serialize(value);
+        public static T DeserializeObject<T>(string value) => System.Text.Json.JsonSerializer.Deserialize<T>(value);
+    }
+}
+namespace MCPForUnity.Editor.Helpers
+{
+    public static class McpLog
+    {
+        public static void Warn(string value) { }
+        public static void Error(string value) { }
+    }
+}
+namespace MCPForUnity.Editor.Services
+{
+    public class TestFilterOptions { }
+    public class TestRunResult
+    {
+        public int Failed;
+        public readonly object Payload = new object();
+        public bool Details, FailedTests;
+        public object ToSerializable(string mode, bool includeDetails, bool includeFailedTests)
+        {
+            Details = includeDetails; FailedTests = includeFailedTests;
+            return Payload;
+        }
+    }
+    public static class EditorStateCache
+    {
+        public static bool Compiling;
+        public static bool GetActualIsCompiling() => Compiling;
+    }
+    public static class TestRunStatus
+    {
+        public static bool IsRunning;
+        public static void MarkFinished() => IsRunning = false;
+    }
+    public class TestService
+    {
+        public bool StartNative = true;
+        public Task<TestRunResult> RunTestsAsync(UnityEditor.TestTools.TestRunner.Api.TestMode mode, TestFilterOptions options)
+        {
+            TestRunStatus.IsRunning = true;
+            UnityEditor.TestTools.TestRunner.Api.TestRunnerApi.Active = StartNative;
+            // Подготовка/prebuild ещё выполняется: callback RunStarted придёт позднее.
+            return new TaskCompletionSource<TestRunResult>().Task;
+        }
+    }
+    public static class MCPServiceLocator { public static TestService Tests = new(); }
+}

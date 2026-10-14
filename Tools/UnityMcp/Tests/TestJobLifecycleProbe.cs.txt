@@ -1,0 +1,85 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
+using UnityEditor.TestTools.TestRunner.Api;
+
+namespace AgentInfra.TestJobLifecycleProbe
+{
+    // Временный инфраструктурный стенд: намеренный Failed проверяет доставку результата.
+    // Устанавливается только в собственной аренде; finish сохраняет .meta и убирает стенд с worker.
+    [PrebuildSetup(typeof(LongPrebuild))]
+    public sealed class LifecycleTests
+    {
+        [Test]
+        public void ActivePrebuildKeepsJobAttached()
+        {
+            var receipt = JsonUtility.FromJson<PrebuildReceipt>(File.ReadAllText(LongPrebuild.ReportPath));
+            Assert.That(receipt.passed, Is.True, JsonUtility.ToJson(receipt));
+        }
+
+        [Test]
+        public void IntentionalFailureReturnsFullResult()
+        {
+            Assert.Fail("AGENT_INFRA_EXPECTED_FAILURE_RESULT_PROBE");
+        }
+    }
+
+    [Serializable]
+    public sealed class PrebuildReceipt
+    {
+        public bool passed;
+        public string job_id;
+        public string current_job_id_after;
+        public bool native_active;
+        public long elapsed_ms;
+        public string status;
+        public bool total_is_null;
+        public string error;
+    }
+
+    public sealed class LongPrebuild : IPrebuildSetup
+    {
+        public static string ReportPath => Path.GetFullPath(
+            "tasks/agent-coordination-protocol/reports/mcp-test-job-lifecycle-20261015/prebuild-receipt.json");
+
+        public void Setup()
+        {
+            const BindingFlags flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+            var manager = AppDomain.CurrentDomain.GetAssemblies()
+                .Select(assembly => assembly.GetType("MCPForUnity.Editor.Services.TestJobManager", false))
+                .First(type => type != null);
+            var current = manager.GetProperty("CurrentJobId", flags);
+            var id = (string)current.GetValue(null);
+            if (string.IsNullOrEmpty(id)) throw new InvalidOperationException("Стенд запускается только через MCP job.");
+
+            // Реальная native prebuild-фаза превышает стандартные 15 с до RunStarted.
+            // Этот единственный ограниченный sleep не запускает и не меняет игровую механику.
+            Thread.Sleep(17000);
+            var native = typeof(TestRunnerApi).GetMethod("IsRunActive", flags, null, Type.EmptyTypes, null);
+            var active = native != null && (bool)native.Invoke(null, null);
+            var job = manager.GetMethod("GetJob", flags).Invoke(null, new object[] { id });
+            var jobType = job.GetType();
+            var receipt = new PrebuildReceipt
+            {
+                job_id = id,
+                current_job_id_after = (string)current.GetValue(null),
+                native_active = active,
+                elapsed_ms = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    - (long)jobType.GetProperty("StartedUnixMs").GetValue(job),
+                status = jobType.GetProperty("Status").GetValue(job).ToString(),
+                total_is_null = jobType.GetProperty("TotalTests").GetValue(job) == null,
+                error = (string)jobType.GetProperty("Error").GetValue(job)
+            };
+            receipt.passed = receipt.native_active && receipt.elapsed_ms > 15000
+                && receipt.status == "Running" && receipt.total_is_null
+                && receipt.current_job_id_after == id && string.IsNullOrEmpty(receipt.error);
+            Directory.CreateDirectory(Path.GetDirectoryName(ReportPath));
+            File.WriteAllText(ReportPath, JsonUtility.ToJson(receipt, true));
+        }
+    }
+}

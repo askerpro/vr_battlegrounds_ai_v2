@@ -1,0 +1,2 @@
+# Пустая context-строка unified patch обязана сохранять один пробел-префикс.
+test-job-lifecycle-10.2.0.patch whitespace=-blank-at-eol

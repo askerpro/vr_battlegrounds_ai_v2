@@ -406,6 +406,21 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "lobby-materials-urp",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Materials/**"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "human-questions-wait-inbox",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

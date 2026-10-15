@@ -7,6 +7,19 @@
 
 ## Статус
 
+- **738 DONE/receive**, A=`0a8a1b4de`, B=`6669db54f`, epoch625,
+  R=`de33426c3fe8e68b39218dcd1cede44feb2f5881`, paths0/unexpected0; своей аренды нет.
+  B0/B1 PASS, fresh discovery49/T1 **49/49 PASS** с полным coverage, missing0/extra0.
+  Console1 — известная EditMode ошибка UxrActor.Destroy. Пять p3 cases NeedsReview, InvalidFixture/runtime errors/CameraFade0.
+  Broker закрепил57 reports; локальная копия `reports/received738/cc1-round9/`: 41 527 253 байта, SHA256 mismatch0.
+  Новый G:30/30 DamageReceived согласованы с историей тел, old12/new18/ghost0, foreign/null/destroyed/dropped/errors0.
+  Старый734 foreign1 не воспроизведён и остаётся UNKNOWN/FAIL; G не включал условный shot-tail.
+  DirectorEquip:1 Buy/1 accepted Offer/1 эффективный Arm;133 inventory samples показывают1 новый Mk14 net204,
+  без наблюдаемых дублей. Это sampled inventory, не полный spawn/despawn provenance.
+  AB:1598 совместных кадров root/Feet/camera; движение тела подтверждено, proxy↔root <0,7мм.
+  Bone feet/точная latency/визуальная приёмка открыты. [Итоги738](changelog/2026-10-15-round9.md).
+  Собственный HEAD=`450d1e41d`, rebased accepted6669; stash`63e8db0a4` и резервная ссылка сохранены.
+  Новые code changes существуют как непринятый рабочий diff и technical input, в origin/dev не опубликованы.
 - **734 DONE/receive**, A=`932d9cda5`, B=`47c010277`, epoch621, R=`42f37db64992b6dfb3b9a8733bf7c8ec3e80f916`:
   paths0/unexpected0. Аренда завершена. Без borrowed SDK81. Собственный HEAD=`3274e0b7b`, accepted base=`05506131`.
   B0/B1 PASS; discovery 8 fixtures/49 Runnable; штатный T1 **49/49 PASS**, missing0/extra0.
@@ -190,9 +203,10 @@ E: попадания10/22, PE25/28; target root однажды сместилс
 
 Текущий порядок после734:
 
-1. Пассивный bounded журнал DamageReceived/истории тел для G, без изменения прежних hit/foreign counters.
-2. DirectorEquip: отдельный наблюдаемый сценарий штатного Director с AutoEquip=true; доказать один OfferPurchase
-   на body/token, отказ без повторов, сброс round/map/match и второй матч с тем же Mind. Scripted P этого не доказывает.
+1. Журналы G и DirectorEquip внедрены и проверены в738; старый foreign1 и неупражнённые отрицательные ветви не закрыты.
+2. Готовится `tools/cc2-director/`: непрерывный функциональный ServerOnly M2, четыре естественных раунда,
+   штатный Stop→GoLive и второй матч с тем же Mind. Это не Host perf и не естественный конец матча.
+   Отказ OfferPurchase, сброс map/reload и pause/resume требуют отдельных реально наблюдаемых переходов.
 3. Новый точный input и FIFO-пакет для оставшихся runtime вопросов; полный матч, M8/M10/S8 и поздний вход
    по согласованной perf-методике7933 со свежей hybrid baseline. SDK81/shot observer требуют отдельных актуальных grants.
 4. Зональное ревью и демонстрация пользователю. После Unity/headset-приёмки — актуализация тестов cc-5,

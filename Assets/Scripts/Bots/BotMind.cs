@@ -2,6 +2,7 @@ using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Maps;
+using VrBattlegrounds.Maps.Runtime;
 using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Bots
@@ -45,7 +46,11 @@ namespace VrBattlegrounds.Bots
         /// <summary>Зоны нет — следующий поиск не раньше этого времени (без поиска по сцене в каждом тике).</summary>
         public float HomeRetryAt;
 
-        /// <summary>Закупка, к которой относится решение (номер раунда; без раундов — тело). -1 — не покупал.</summary>
+        private MapRunKey _shopRunKey;
+        private ulong _shopModeEpoch;
+        private PlayerController _shopBody;
+
+        /// <summary>Закупка внутри запуска карты и эпохи режима (номер раунда; без раундов — тело). -1 — не покупал.</summary>
         public int ShopToken = -1;
 
         /// <summary>Купленное в этой закупке; null — воюет стартовым пистолетом.</summary>
@@ -59,6 +64,23 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>Решение о покупке в закупке <paramref name="token"/> принято.</summary>
         public bool ShoppedFor(int token) => ShopToken == token;
+
+        /// <summary>
+        /// Директор сменил контекст закупки: новый запуск карты, режим или жизнь без раундов — новое решение.
+        /// В Elimination <paramref name="body"/> — null: смена тела в том же раунде не оплачивает покупку повторно.
+        /// </summary>
+        public void SyncPurchaseContext(MapRunKey runKey, ulong modeEpoch, PlayerController body)
+        {
+            if (_shopRunKey == runKey && _shopModeEpoch == modeEpoch && ReferenceEquals(_shopBody, body)) return;
+
+            _shopRunKey = runKey;
+            _shopModeEpoch = modeEpoch;
+            _shopBody = body;
+            ShopToken = -1;
+            Purchase = null;
+            PurchaseOfferedBody = null;
+            PurchaseOfferedToken = -1;
+        }
 
         public void Remember(BotBody body, int sceneHandle)
         {

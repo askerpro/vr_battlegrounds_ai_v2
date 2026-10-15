@@ -1,59 +1,29 @@
-# Expert `bots`
+# Эксперт `bots`
 
-Bots as ordinary headset-less players: Blaze AI decisions, bodies, equipment, shooting, networking, stand content.
+Боты — обычные игроки без шлема: решения Blaze, тела, снаряжение, стрельба,
+сетевые входы ботов и содержимое стенда.
 
-## Owns
-- Director and decisions (phases, buying, team, nav); nav source rule `BotNavMeshSources`; Blaze adapter and patches.
-- Bodies: BotBody (party to the hand-writer contract), NPC variants, clip models, controllers; body choice before spawn.
-- Equipment, shooting: BotGunner, WeaponEquipmentBinding, contract `weapon-equipment-binding`.
-- Bot net inputs, what to replicate about a bot (network rules). `ServerAuthoredAvatar`: shared with avatar-ik.
-- BotCombatStand content: scene, scenarios, measurements, report, capture.
-- `Docs/BlazeAI/`, bot docs in `Docs/tasks/`, «Матч с ботами (T-48)» in `Docs/gameplay.md`.
+## Область ответственности
 
-## Not owned
-- gameplay: match/spawn/team/economy rules, bots in minPlayers, PlayersManager, AvatarManager, AvatarTeardown.
-- weapon-system: weapon mechanics, WeaponUseContext, readiness, ammo, SDK firearm.
-- avatar-ik: player body, IK, native legs; hand-writer order: avatar-ik + avatar-grip. manipulation: UXR grab.
-- network: GameNetworkManager, StateEventAuthority, PlayerSession, replication primitives.
-- level-design: env layers/colliders. launch-infra: stand launch, `BotCombatStandEditor`, DebugAdminPolicy.
-  ui: menu screens. performance: Quest budgets.
+- Директор и решения по фазам, закупке, команде и навигации; `BotNavMeshSources`, адаптер Blaze и его патчи.
+- Композиция тела через `BotKit`, входы player-flow, выбор модели до спавна.
+- Снаряжение и стрельба бота: `BotGunner`, контракт с владельцами хвата и оружия.
+- Что передаётся о боте по сети; `ServerAuthoredAvatar` совместно с avatar-ik/network.
+- Содержимое BotCombatStand: сцена, сценарии, измерения, отчёты и съёмка.
+- `Docs/BlazeAI/`, документы ботов в `Docs/tasks/`, раздел «Матч с ботами (T-48)» в `Docs/gameplay.md`.
 
-## Invariants
-- Same damage, death, ghost, money, score as humans. Decisions and Blaze: server only; clients get
-  the pose via NetworkTransform (`ServerAuthoredAvatar`).
-- Sole body-root author: BotBody; nav gives intent. Sole bone author: visible Animator (bots-fix
-  target; origin/dev still runs the old hybrid). BotBody hand obeys the hand-writer contract.
-- Sole equipment author: server binding. SDK grab and equipment are exclusive; no fake UxrGrabber,
-  M/C copies or second lifecycle. Prepare only via `RequestAutomationPreparation`; real, author-checked
-  shot (`StateEventAuthority`).
-- Tactics: stock Blaze Alert/CoverShooter/GoingToCover only; Blaze patches: narrow points from `Docs/BlazeAI/sdk-patches.md`.
-- Body chosen before first Spawn; unknown model refused, never swapped for the human prefab. Heavy excluded.
-- Remove only via `BotDirector.RemoveBot(session)`. Stand: no second UXR grab, never re-saves production registries.
-- A clip, goingToCover or counter proves no grip, shot or cover; unaccepted = NeedsReview.
+## Смежные владельцы
 
-## Architecture (X = `Assets/Scripts/Bots/X.cs` unless a path is given)
-- Director: BotDirector, BotMind, BotOrders, BotSenses. Match: BotMatchPlan, BotMatchStarter, BotMatchNetwork.
-- Buy/team/skin: BotBuyPlan, BotShopper, BotTeamChoice, BotSkin. Nav: BotNavigator, BotNavMesh, BotNavMeshSources, BotRoute.
-- Blaze: BotCombatDriver; `Assets/ThirdParty/Blaze AI/Scripts/BlazeAI.cs`.
-- Body: BotBody, BotCombatAssets; `Assets/Resources/Bots/`; BotCombatSetup in `Assets/Editor/VR_Battlegrounds/Bots/`.
-- Shooting: BotGunner. Net: BotNetwork (DebugAdminPolicy), registered in `Assets/Scripts/Network/GameNetworkManager.cs`.
-- Foreign: `Assets/Scripts/Managers/PlayersManager.cs` (CreateBotSession); `Assets/Scripts/Player/Avatars/` AvatarManager, ServerAuthoredAvatar, AvatarTeardown.
-- Stand: `Assets/Scripts/Debug/BotCombatStand/`; editor BotCombatStandBuilder, BotStand*. Tests: `Assets/Tests/EditMode/Bots/`.
-- bots-fix target, not in origin/dev: WeaponEquipmentBinding, clip body, BotClipComposition.
-
-## Details (grep the heading)
-- `Docs/tasks/T-48-bots-match.md` «Решения», «Что не проверено (2026-10-01)».
-- `Docs/tasks/bots-blaze-integration.md` «Контракт», «Приёмка».
-- `Docs/tasks/bot-combat-stand.md` «Запуск», «Сценарии и пределы», «Наблюдения».
-- `Docs/tasks/bots-validation-stand-plan.md` «Измерения и критерии», «Этапы реализации».
-- `Docs/audit/bots-audit-2026-10-03.md` «Находки», «Готовые решения».
-- `Docs/troubleshooting.md` «После добавления бота кнопки планшета не нажимаются».
-- `tasks/bots-fix/` (not in origin/dev), owner copy `F:/CodexWorktrees/bots-fix/Vr_Battlegrounds_ai/tasks/bots-fix/`:
-  Details «Границы и владение», «Архитектура и последовательность», «Контракты и зависимости»;
-  `contracts/armed-development-composition.md`, `diagnosis/`.
+- gameplay: правила матча, спавна, команд, экономики и minPlayers; PlayersManager, AvatarManager, AvatarTeardown.
+- weapon-system: механика, WeaponUseContext, готовность, патроны и SDK-выстрел.
+- avatar-ik: тело игрока, IK и native legs; порядок писателей кистей совместно с avatar-grip.
+- manipulation: штатный UXR-хват и размещение.
+- network: GameNetworkManager, StateEventAuthority, PlayerSession и примитивы репликации.
+- level-design: слои и коллайдеры окружения. launch-infra: запуск стенда, BotCombatStandEditor, DebugAdminPolicy.
+- ui: экраны меню. performance: бюджеты Quest.
 
 ## Как использовать этот профиль
-- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; цель bots-fix ещё не в origin/dev — сверять с Architecture.
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный документ из раздела «Исходники и документы»; цель bots-fix ещё не в origin/dev — сверять с инвариантами текущей реализации.
 - Ревьюер (чеклист diff):
   - урон, смерть, призрак, деньги, счёт — как у людей; решения и Blaze — только сервер, клиентам поза через NetworkTransform;
   - писатели тела и кистей соответствуют активным контрактам и принятому player-flow со штатными SDK-кистями; у каждого канала один штатный писатель, порядок — по действующему контракту писателей кисти;
@@ -61,3 +31,44 @@ Bots as ordinary headset-less players: Blaze AI decisions, bodies, equipment, sh
   - тактика — штатные Blaze Alert/CoverShooter/GoingToCover; патчи Blaze — узкие точки из `Docs/BlazeAI/sdk-patches.md`;
   - тело выбирается до первого Spawn, неизвестная модель отклоняется; удаление — `BotDirector.RemoveBot(session)`;
   - стенд не создаёт второй UXR grab и не пересохраняет production-реестры; клип или счётчик не доказывают хват/выстрел/укрытие (непринятое = NeedsReview).
+
+## Инварианты текущей реализации
+
+- Урон, смерть, призрак, деньги и счёт общие с людьми. Решения и Blaze — только сервер.
+  Клиенты получают позы обычным NetworkTransform через ServerAuthoredAvatar; бот-компонентов на них нет.
+- Единственный путь тела — player-flow. BotKit собирает комплект один раз на тело по AvatarSpawned;
+  директор хранит BotKitRefs в BotMind. Live содержит Blaze/хват/наведение; Passive для призрака
+  и цели стенда их не содержит. Повышение на том же теле — BotKit.Upgrade.
+- BotBody только поставляет ноги/курс/взгляд. Единственный писатель корня, камеры и кистей —
+  BotAvatarDriver перед Manipulation; порядок кадра — BotRuntimeController. Корень движется.
+  Дальнейшие стадии SDK и IK остаются штатными.
+- Хват — BotHands, поза оружия — BotWeaponAim. Нет второго жизненного цикла оружия или фиктивного UxrGrabber.
+  Подготовка через RequestAutomationPreparation; реальный TryToShootRound только после проверки
+  StateEventAuthority.IsAuthorOfItem и гейтов стрелка.
+- Директор передаёт покупку через OfferPurchase один раз на тело и токен закупки, включая отказ.
+  Arm — стартовое вооружение; AutoEquip=false отключает автоматическую закупку/вооружение для стенда.
+- Тактика — штатные Alert/CoverShooter/GoingToCover. Прокси только в Combat, минимальный Animator
+  с шестью пустыми состояниями Idle/Move/Back/Left/Right/Shoot. Запасной generic-клип пока не обоснован.
+  Патчи Blaze — только узкие точки по `Docs/BlazeAI/sdk-patches.md`.
+- Тело выбирается до первого спавна; неизвестная модель отклоняется без замены человеческим префабом.
+  Heavy исключён. AvatarManager — единственная фабрика; удаление — BotDirector.RemoveBot(session).
+- Стенд Editor/MPPM; маршрут в собранном плеере не поддерживается. Не добавлять второй UXR-хват
+  и не пересохранять production-реестры. Диагностика BotBlazeDiagnostics — opt-in, только наблюдение.
+- Состояние Shoot/goingToCover и счётчик не доказывают хват, выстрел или защиту.
+  Условно полный shot-tail не доказывает идентичность/завершение каждого снаряда или SDK-приёмку.
+  Непринятое качество — NeedsReview.
+
+## Исходники и документы
+
+- `Assets/Scripts/Bots/`: BotDirector, BotMind, BotOrders, BotSenses, BotKit, BotBody, BotNavigator,
+  BotNavMesh, BotNavMeshSources, BotRoute, BotGunner, BotRuntimeController, BotCombatDriver.
+- `Assets/Scripts/Bots/Avatar/`: BotAvatarDriver, BotHands, BotWeaponAim, BotInputFrame.
+- Закупка/команды: BotBuyPlan, BotShopper, BotTeamChoice, BotSkin; матч: BotMatchPlan, BotMatchStarter, BotMatchNetwork.
+- Blaze: `Assets/ThirdParty/Blaze AI/Scripts/BlazeAI.cs`; контроллер `Assets/Resources/Bots/BotBlazeProxy.controller`.
+- Стенд: `Assets/Scripts/Debug/BotCombatStand/`; editor-инструменты: `Assets/Editor/VR_Battlegrounds/Bots/`.
+- Чужие фабрики: `Assets/Scripts/Managers/PlayersManager.cs`, `Assets/Scripts/Player/Avatars/`.
+- Контракты реализации: `Docs/tasks/T-48-bots-match.md`, `Docs/tasks/bots-blaze-integration.md`,
+  `Docs/tasks/bot-combat-stand.md`; проект перехода: `tasks/bots-fix/clip-cutover-plan.md`, `cc1-plan.md`, `player-flow-plan.md`.
+- Актуальный статус и evidence — `tasks/bots-fix/Readme.md`. Реализация перехода ещё не принята в игре;
+  отказы эталона/proxy/fixture, матч, M8, сеть, поздний вход и Quest проверяются раздельно.
+- Симптом кнопок планшета: `Docs/troubleshooting.md`, раздел «После добавления бота кнопки планшета не нажимаются».

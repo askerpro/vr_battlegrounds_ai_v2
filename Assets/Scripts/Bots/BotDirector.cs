@@ -8,6 +8,7 @@ using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Maps;
+using VrBattlegrounds.Maps.Runtime;
 using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Player.Avatars;
@@ -311,6 +312,8 @@ namespace VrBattlegrounds.Bots
 
             bool alive = avatar.IsAlive;
             int token = BotSenses.ShopToken(avatar);
+            bool purchaseContextReady = mind.AutoEquip && TrySyncPurchaseContext(mind, avatar);
+            bool shopped = mind.ShoppedFor(token);
             // В бою восприятие и маршруты принадлежат Blaze, а не всеведущему NearestEnemy. Без оружия (Unarmed)
             // Blaze не создаётся — не атакует и не просит выстрел; ноги — по приказу (домой, к закупке). Пассивный
             // комплект (призрак) Blaze не имеет.
@@ -338,17 +341,18 @@ namespace VrBattlegrounds.Bots
                     break;
             }
 
-            if (mind.AutoEquip && BotOrders.ShouldShop(order, alive, mind.ShoppedFor(token), free: Economy.MatchEconomy.Current == null))
+            if (purchaseContextReady && BotOrders.ShouldShop(order, alive, shopped, free: Economy.MatchEconomy.Current == null))
             {
                 mind.Purchase = BotShopper.Buy(bot);
                 mind.ShopToken = token;
+                shopped = true;
             }
 
             if (mind.AutoEquip)
             {
-                if (BotOrders.ShouldArm(stage, alive, mind.ShoppedFor(token)))
+                if (BotOrders.ShouldArm(stage, alive, shopped))
                 {
-                    if (mind.ShoppedFor(token) && mind.Purchase != null &&
+                    if (purchaseContextReady && shopped && mind.Purchase != null &&
                         (!ReferenceEquals(mind.PurchaseOfferedBody, avatar) || mind.PurchaseOfferedToken != token))
                     {
                         // Даже отказ стрелка завершает предложение: не повторяем его из каждого тика.
@@ -364,8 +368,24 @@ namespace VrBattlegrounds.Bots
                     gunner.StandDown();
             }
 
-            if (BotOrders.ShouldDeclareReady(order, alive, bot.IsInSpawnZone, mind.ShoppedFor(token), bot.ReadyState))
+            if (purchaseContextReady && BotOrders.ShouldDeclareReady(order, alive, bot.IsInSpawnZone, shopped, bot.ReadyState))
                 bot.ServerSetReady(true, "бот закупился и стоит на базе");
+        }
+
+        /// <summary>Контекст закупки берётся только из опубликованного запуска и его текущего режима.</summary>
+        private static bool TrySyncPurchaseContext(BotMind mind, PlayerController avatar)
+        {
+            MapReferee referee = MapReferee.Instance;
+            GameMode mode = referee != null ? referee.ActiveGameMode : null;
+            MapRunAuthority authority = MapRunAuthority.Instance;
+            if (referee == null || mode == null || authority == null) return false;
+
+            MapRunSnapshot snapshot = authority.Current;
+            if (!snapshot.IsReady || !snapshot.Key.IsValid || snapshot.ModeEpoch == 0 ||
+                snapshot.RefereeNetId != referee.netId || snapshot.ActiveModeNetId != mode.netId) return false;
+
+            mind.SyncPurchaseContext(snapshot.Key, snapshot.ModeEpoch, mode is EliminationMode ? null : avatar);
+            return true;
         }
 
         // ── База ────────────────────────────────────────────────────────────

@@ -161,6 +161,15 @@ EditorStateCache/TestRunStatus и прочие неиспользуемые се
 не подтверждены. Обязательны собственная lease, контролируемый live reload, сохранённый
 job_id, поздние callbacks и полный terminal result; затем штатный finish/receive.
 
+Живая проверка 2026-10-15, ticket681/epoch577: стандартный MCP run_tests вернул
+job32c8e651bd1a422f9ccd7f9c24cf2c2f; prebuild25524мс без init timeout,
+midrun reload сменил domain nonce при том же job_id. get_test_job доставил все
+3 детали (2 Passed + 1 intentional Failed), включая message/stack ошибки до reload.
+Доказательства сопровождающего: reports/maintenance-fifo-cli-20261015/681-live-proof.json
+и 681-standard-result-1.json. Это отдельная Unity-runtime проверка, не игровая приёмка.
+Terminal counts брать из Result.summary/details: progress.completed после reload
+пока отражает только поздние callbacks (в этой пробе1/3).
+
 Патч не сохраняет полный Result в SessionState: upstream намеренно исключает его.
 Дополнительный reload после terminal до получения результата всё ещё может потерять
 payload. Durable receipt, восстановление старых результатов из XML и native client

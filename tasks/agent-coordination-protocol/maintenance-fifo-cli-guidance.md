@@ -57,11 +57,35 @@ Source commit agent-infra: `de5035a57e7f08a157ef1878777c73d7c5055c23`.
 offline prototype 22 — OK. Широкий прогон во время подготовки: 1003 OK, 12 skipped;
 новые проверки reservation, добавленные после его старта, выполнены отдельно.
 Immutable wheel реальным uvx entrypoint подтвердил 71 dependency pin, helper/tool
-hashes и импорт main без вызова main/запуска сервера. Live deployment ещё впереди.
+hashes и импорт main без вызова main/запуска сервера.
+
+## Живая проверка и выпуск
+
+Билет 681, epoch 577, вход `10f12a9bac044a84075f1c518b8ac869ae27ee89`,
+база `8eb87791541fda68f67bcf99d35bdffb08879d9e`. Runtime выпущен как
+`f6387f9dd19ff4547e7f98c53e6e4718d5735933`, wheel — из source de5035a.
+Дополнительный narrow commit f6387f9 устраняет ложный отказ на retired шаблоне,
+оставшемся только в старом runtime: реальные active/managed файлы worker должны
+совпадать побайтово. Отдельно прошли 21 queued + 3 legacy теста, независимые 5
+regressions и отрицательная проверка чужого bridge-config. Выпуск сохранил backup,
+FIFO и pause=false; Unity PID 41776 не останавливался.
+
+Стандартный MCP run_tests вернул job `32c8e651bd1a422f9ccd7f9c24cf2c2f`.
+Prebuild занял 25524 мс и сохранил Running/native active без init timeout.
+Реальный midrun reload сменил domain nonce и сохранил job_id. get_test_job вернул
+terminal Failed с полным Result: 3 leaf details, 2 Passed и 1 намеренный Failed,
+включая прежние message/stack. Intentional failure проверяет доставку ошибки,
+а не игровую приёмку. MCP initialize и фактический вызов Unity после замены
+Python backend проверены точной конфигурацией сопровождающего.
+
+Полные receipts и hashes: ignored reports/maintenance-fifo-cli-20261015/681-live-proof.json
+и 681-standard-result-1.json. После reload live progress.completed показывает 1,
+хотя terminal Result.summary/details содержат все 3: итоговые counts читать из
+Result, этот отдельный хвост отображения progress не объявлен исправленным.
 
 Package pins, двухфайловая установка и managed reload доказательства:
 [Tools/UnityMcp/README.md](../../Tools/UnityMcp/README.md).
-Подготовленный live probe ожидает 3 leaf results: 2 PASS и 1 намеренный FAIL,
+Живой probe доставил 3 leaf results: 2 PASS и 1 намеренный FAIL,
 долгий prebuild и реальный reload. Это инфраструктурная проверка доставки;
 полный Result получить до finish. Долговременный cache после последующего terminal
 reload остаётся ограничением upstream и не объявляется исправленным этим этапом.

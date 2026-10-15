@@ -52,6 +52,10 @@ launch executable path в role JSON не аттестован. Отчёт: repor
 
 ## Ревью 2026-10-15
 
+`bots-fix`, запрос7882: метод cc3 — свежие baseline/candidate × observedN8/N10 при одинаковом
+SDK guard/base/условиях; отдельная S8 network пара. Исходные p95/GC критерии сохранены,
+новых численных допусков и Quest/cc3 PASS нет. Отчёт: reports/bots-7882/performance-method.md.
+
 `agent-coordination-protocol`, asset side effect7919: R713 PC.asset содержит те же input/result
 blobs и три derived prefilter поля, что651. Свежие worker URP17.4.0 hashes совпали;
 UpdateShaderKeywordPrefiltering/SaveAssetIfDirty подтверждены. Решение: побочку не принимать,

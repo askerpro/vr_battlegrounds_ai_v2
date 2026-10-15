@@ -132,3 +132,8 @@ Heartbeat checkout остановлен штатно, statusPAUSED; повтор
 
 Пользователь15.10 ответил «Принять и влить» на пакет readerfix,9новых fixture cases и отчётность
 матрицы. Разрешены принятый коммит и штатное FF-вливание; физический Quest/GPU остаются вне приёмки.
+
+Readerfix FF опубликован e83af8413de0ebd726df27a7321f23131c9cf073, remoteSHA подтверждён,
+localdev mirror обновлён. На итоговой базе fixture18/18; после второго doc-onlyrebase все8путей
+равны принятому05b1b5b33, EOLrange issues0. Первый push штатно отказал после параллельного
+документационного98eed6c1c, затем fetch/rebase/pushSUCCESS; forcepush не применялся.

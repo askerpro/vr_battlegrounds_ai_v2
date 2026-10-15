@@ -5,9 +5,9 @@ quest-perf-pipeline: матрица4checkout завершена,8/8builderPASS,3
 Prodrepeat17мин45с. Все4root clean/free/no-lock, Library/Build сохранены; Testcache hashes
 и creationtimes до/послеProd совпали. Fullresults и694проверенных архивных файлов в taskreports.
 Heartbeat checkout штатно остановлен после матрицы. Readerfix18/18/reviewclean принят15.10,
-пользователь поручил штатное FF-вливание; публикация выполняется.
+FF влит e83af8413, remoteSHA проверен; финальная fixture18/18, EOLrange issues0.
 DevTools129/129 принят и FF влит6669db54f, публикация737DONE; hub lifecycle merged,
-plan30: DevTools merged → build-checkouts verified0bef1d608, приёмка reader получена.
+plan30: DevTools merged → build-checkouts; приёмка reader и публикация e83af8413 выполнены.
 Рецепты самостоятельных Test и Windows-rendered E2E
 переданы scene-detail8313/8325; новых GPUзапусков/профилей нет. Общий AGENTScandidate8039
 и оценка build-брокера у сопровождающего; нового build-механизма нет.

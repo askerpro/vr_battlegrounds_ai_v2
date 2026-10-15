@@ -16,7 +16,7 @@ Launch-infra владеет сборщиками, запуском и карка
 |---|---|
 | design, device-runner, quest-build, e2e-views, e2e-log-verdict, quest-vr-manifest, e2e-head-pose | merged |
 | e2e-smoke-kit | принят14.10 и влит be120d280; Windows selftest19/19, map-startup14/14 GREEN |
-| build-checkouts | пользователь принял15.10 reader fix,9новых проверок и отчётность; подготовка штатного FF-вливания, матрица8/8builder PASS |
+| build-checkouts | принят15.10 и FF влит e83af8413; reader fix,9новых проверок и отчётность, матрица8/8builder PASS |
 | devtools-contract-tests | merged6669db54f, принят15.10,129/129PASS; публикация737DONE; lifecycle закрыт штатно |
 
 ## Четыре checkout и фактическая матрица
@@ -43,7 +43,11 @@ Library создавались первым проходом и сохранял
 RED15/18 → GREEN18/18, principal18/18; независимое review clean, realmanifest9/9 cases.
 Три последующих реальных pipeline exit0 используют caller SHA256
 `AB74B435E3AA879AC447AA76CCD8EE34FE740FC164EDFD9A95B60378BA49C1BD`.
-Reader принят пользователем15.10 отдельным пакетом; в DevTools commit он не входил.
+Reader принят пользователем15.10 отдельным пакетом и FF опубликован
+`e83af8413de0ebd726df27a7321f23131c9cf073`; remote SHA проверен, localdev mirror обновлён.
+После rebase все8путей равны принятому05b1b5b33; итоговые fixture18/18, EOLrange issues0.
+В DevTools commit reader не входил. Повторная fixture:
+[accepted-summary.json](reports/uxr-reader-accepted/accepted-summary.json).
 
 Полный итог: [matrix-result.json](reports/build-checkouts-validation/matrix-result.json),
 [final-checkout-state.json](reports/build-checkouts-validation/final-checkout-state.json).
@@ -82,8 +86,10 @@ Ignored reports в R не captured. После rebase полные Assets/Packag
 в [devtools-validation.md](contracts/devtools-validation.md). Пока build-stage был running,
 DevTools begin не допускался. План30 задаёт фактический порядок публикации: DevTools merged,
 затем build-checkouts. Штатные verify/accept/record-merged DevTools выполнены без обходных флагов;
-build-checkouts verified0bef1d608; пользовательская приёмка получена15.10, SHA публикации оформляется. Receipts:
+build-checkouts первоначально verified0bef1d608; приёмка15.10 и публикация e83af8413 выполнены. Receipts:
 [lifecycle-reconcile](reports/lifecycle-reconcile/13-final-own-status.json).
+Итоговый build-checkouts record-merged8480 успешен: verified-content, content_drift0,
+dependency_gaps0; [accepted-record-merged.json](reports/build-checkouts-validation/accepted-record-merged.json).
 
 ## Инструкции и межзадачные ответы
 
@@ -109,7 +115,7 @@ Performance получил DevTools результаты8230 и принятое
 
 ## Осталось
 
-Опубликовать принятый минимальный reader fix с9новыми fixture cases и отчётностью матрицы.
+Проверить FIFO-публикацию принятой базы перед следующей worker-заявкой.
 Далее отдельный собственный dedicated-server-arsenal на принятом network1e945a996:
 исторический наш24/24functional/enforceRED4teleport не заменяет новый прогон, чужой713GREEN24/24
 не является нашим подтверждением. Frozen74bd старше network-исправления.
